@@ -1,0 +1,19 @@
+verbose 0
+rand_seed 0
+universe_only 1
+disable_universe 0
+left_handed 0
+self_damage 0.5
+team_damage 0.2
+player_damage 0.5
+speed_mult 1.0
+player_name Deathtool
+unlimited_weapons 0
+window_width 1920
+window_height 1200
+color_bit_depth 32
+refresh_rate 60
+ship_def_file universe/ship_defs.txt
+end
+
+

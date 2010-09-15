@@ -1,0 +1,23 @@
+Universe Class Hierarchy
+
+uobject
+  uobj_rgen
+    uobj_solid
+      urev_body
+        umoon
+        uplanet
+      ustar
+    ussystem
+    ugalaxy
+    ucell
+  free_obj
+    stationary_obj
+      sobj_asteroid
+    uparticle
+    us_projectile
+    u_ship
+      attached_ship
+      orbiting_ship
+      multipart_ship
+u_ship_base
+

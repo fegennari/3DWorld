@@ -1,0 +1,37 @@
+# Cornell Box Example
+m 1.0
+t 0.0 0.0 -1.0
+
+# Walls
+l 0.8 1.0 1.0 1.0 1.0 -1 1 # White
+B -1.0  1.0   -1.0  1.0    0.0  0.2 # Top
+B -1.0  1.0   -1.0  1.0   -1.0 -0.9 # Bottom
+B -1.0  1.0   -1.0 -0.9   -1.0  0.1 # Front
+B -1.0  1.0    0.9  1.0   -1.0  0.1 # Back
+
+l 0.8 1.0 0.0 0.0 1.0 -1 1 # Red
+B -1.0 -0.9   -1.0  1.0   -1.0  0.1 # Left
+
+l 0.8 0.0 1.0 0.0 1.0 -1 1 # Green
+B  0.9  1.0   -1.0  1.0   -1.0  0.1 # Right
+
+#n 1
+#B -0.1  0.1   -0.1  0.1    0.0  0.2 # Top Window
+#n 0
+
+l 0.8 1.0 1.0 1.0 1.0 -1 1 # White
+B -0.4 -0.1   -0.4 -0.1   -0.88 -0.3 # Box
+
+# shiny, semi-transparent sphere
+l 0.8 1.0 1.0 1.0 0.3 -1 1 1.6 # glass
+r 1.0 100.0 # set specularity
+S 0.4 0.3 -0.6 0.25
+r 0.0 0.0 # reset specularity
+
+l 0.8 1.0 1.0 1.0 1.0 -1 1 # White
+S 0.0 0.0 -0.1 0.01
+# light source: radius pos color [dir beamwidth [inner_radius]
+L 0.5  0.0 0.0 -0.1  1.0 1.0 1.0 1.0  0.0 0.0 -1.0  0.5  0.0 # pointed down
+
+q # Quit
+

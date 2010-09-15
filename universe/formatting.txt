@@ -1,0 +1,48 @@
+# 3DWorld Universe Mode Ship and Weapon Definitions File
+# Frank Gennari 8/2/06
+
+#                  comment to end of line
+point              <float x> <float y> <float z>
+<enum ship_id>     {USC_FIGHTER | USC_X1EXTREME | USC_FRIGATE | USC_DESTROYER | USC_LCRUISER | USC_HCRUISER | USC_BCRUISER | USC_ENFORCER | USC_CARRIER | USC_ARMAGEDDON | USC_SHADOW | USC_DEFSAT | USC_STARBASE | USC_BCUBE | USC_BSPHERE | USC_BTCUBE | USC_BSPH_SM | USC_BSHUTTLE | USC_TRACTOR | USC_GUNSHIP | USC_NIGHTMARE | USC_DWCARRIER | USC_DWEXTERM | USC_WRAITH | USC_ABOMIN | USC_REAPER | USC_DEATHORB | USC_SUPPLY | USC_ANTI_MISS | USC_JUGGERNAUT | USC_SAUCER | USC_SAUCER_V2 | USC_MOTHERSHIP | USC_HUNTER | USC_SEIGE | USC_COLONY | USC_ARMED_COL | USC_HW_COL | USC_STARPORT | USC_HW_SPORT}
+<enum weap_id>     {UWEAP_NONE | UWEAP_TARGET | UWEAP_QUERY | UWEAP_RENAME | UWEAP_DESTROY | UWEAP_PBEAM | UWEAP_EBEAM | UWEAP_REPULSER | UWEAP_TRACTORB | UWEAP_G_HOOK | UWEAP_LRCPA | UWEAP_ENERGY | UWEAP_ATOMIC | UWEAP_ROCKET | UWEAP_NUKEDEV | UWEAP_TORPEDO | UWEAP_EMP | UWEAP_PT_DEF | UWEAP_DFLARE | UWEAP_CHAFF | UWEAP_FIGHTER | UWEAP_B_BAY | UWEAP_CRU_BAY | UWEAP_SOD_BAY | UWEAP_BOARDING | UWEAP_NM_BAY | UWEAP_RFIRE | UWEAP_FUSCUT | UWEAP_SHIELDD | UWEAP_THUNDER | UWEAP_ESTEAL | UWEAP_WRAI_BAY | UWEAP_STAR | UWEAP_HUNTER | UWEAP_DEATHORB | UWEAP_LITNING | UWEAP_INFERNO | UWEAP_PARALYZE | UWEAP_MIND_C | UWEAP_SAUC_BAY | UWEAP_SEIGEC}
+<enum explosion_t> {ETYPE_NONE | ETYPE_FIRE | ETYPE_NUCLEAR | ETYPE_ENERGY | ETYPE_ATOMIC | ETYPE_PLASMA | ETYPE_EMP | ETYPE_STARB | ETYPE_FUSION | ETYPE_EBURST | ETYPE_ESTEAL | ETYPE_ANIM_FIRE | ETYPE_SIEGE}
+<enum alignment>   {NEUTRAL | PLAYER | GOV | PIRATE | RED | BLUE | ORANGE | PURPLE}
+<enum ai_type>     {AI_IGNORE | AI_RETREAT | AI_ATT_WAIT | AI_ATT_ENEMY | AI_ATT_ALL | AI_SEEKING | AI_NONE}
+<enum target_type> {TARGET_CLOSEST | TARGET_ATTACKER | TARGET_LAST | TARGET_PARENT}
+<color>            <float R> <float G> <float B> <float A>
+$GLOBAL_REGEN  <float regen_time(s)>
+$RAND_SEED     <unsigned seed>
+$SPAWN_DIST    <float dist>
+$START_POS     <point start_pos>
+$HYPERSPEED    <float hyperspeed_mult>
+$SPEED_SCALE   <float ship_speed_scale>
+$PLAYER_TURN   <float player_turn_rate>
+$SPAWN_HWORLD  <bool respawn_requires_homeworld>
+$PLAYER_ENEMY  <bool player_is_enemy_team>
+$BUILD_ANY     <bool teams_can_build_any_ships>
+$TEAM_CREDITS  <enum alignment> <unsigned num_team_credits(K)>
+$SHIP          <enum ship_id> <string name> cost(K) ncrew nengines radius cr_scale mass cargo exp_scale accel decel roll_rate max_speed max_turn stability max_shields max_armor shield_re armor_re max_t hull_str damage_abs min_att_dist min_app_dist sensor_dist fire_dist stray_dist reversible stoppable has_hyper has_fast_speed mpredict has_cloak regen_ammo regen_fighters regen_crew parallel_fire symmetric self_shadow cont_frag for_boarding can_board orbiting_dock dynamic_cobjs uses_tdir emits_light engine_lights suicides kamikaze no_disable uses_mesh2d turreted weap_spread shield_sects draw_passes death_delay regen_delay <color base_color> <enum explosion_t> <enum explosion_sub_t>
+$WEAP          <enum weap_id> <string name> cost ammo_cost radius cr_scale bradius damage fire_delay(s) firing_error regen_time range speed seek_dist def_ammo nshots lifetime(s) btime(s) max_t mass w_mass a_mass force f_inv armor preference hit_proj hit_all c2_flag no_coll no_exp_dam const_dam no_ffire is_beam secondary hyper_fire point_def is_decoy ignores_shields shield_d_only no_light parallel_fire turreted auto_orient no_ship_vel det_on_exp symmetric is_fighter do_regen {<enum ship_id> | <enum weap_id>} <enum explosion_t>
+$WBEAM         <enum weap_id> <color brc1> <color brc2> <color beamc1> <color beamc2> <float bw_escale> <bool drains energy> <bool paralyzes> <bool mind control> <bool multi-segment>
+$SHIP_WEAP     <enum ship_id> {[$WEAP_PT] $ADD}*
+$WEAP_PT       <point pt>*
+$ADD           <enum weap_id> [num=1] [ammo=default_ammo]
+$PLAYER_WEAP   {$ADD}*
+$MESH_PARAMS   <enum ship_id> <enum ship_id> <bool deform> <bool remove> <bool expand> <bool uniform_expand> <bool trans>
+$SHIP_CYLINDER <enum ship_id> <point p1> <point p2> <float r1> <float r2> <end_type> [<float dscale>]
+$SHIP_CUBE     <enum ship_id> <float x1> <float x2> <float y1> <float y2> <float z1> <float z2> [<float dscale>]
+$SHIP_SPHERE   <enum ship_id> <point center> <float radius> [<float dscale>]
+$SHIP_TORUS    <enum ship_id> <point center> <float r_inner> <float r_outer> [<float dscale>]
+$SHIP_BCYLIN   <enum ship_id> <point p1> <point p2> <float r1> <float r2>  <float x1> <float x2> <float y1> <float y2> <float z1> <float z2> [<float dscale>]
+$FLEET         <string name> <unsigned multiplier> <enum alignment> <enum ai_type> <enum target_type> <float rand_gen_dist> <point pos> <unsigned counts>+ [<float flagship_child_stray_dist> <enum ship_id>]
+$SHIP_ADD_INIT <bool enabled> {$ALIGN}*
+$SHIP_ADD_GEN  <bool enabled> {$ALIGN}*
+$SHIP_BUILD    <unsigned counts>+
+$ALIGN         <enum alignment> <unsigned num> <unsigned counts>+
+$SHIP_NAMES    <unsigned num> <string names>*
+$ADD_SHIP      <enum ship_id> <unsigned num> <enum alignment> <enum ai_type> <enum target_type> <bool guardian> <bool kamikaze> [point pos]
+$ADD_ASTEROID  <unsigned num> <unsigned model> <float min_radius> <float max_radius> [point pos]
+$BLACK_HOLE    <point pos> <float radius>
+$PLAYER        <enum ship_id> <enum alignment>
+$LAST_PARENT   
+$END           

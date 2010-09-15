@@ -1,0 +1,595 @@
+# 3DWorld Universe Mode Ship and Weapon Definitions File
+# Frank Gennari 8/2/06
+
+$GLOBAL_REGEN 20.0 # ship regen delay in seconds (0.0 disables)
+$SPAWN_DIST   0.2
+$START_POS    -0.0796 0.3075 -0.8893  # new computer
+$HYPERSPEED   100.0
+$SPEED_SCALE  1.0
+$PLAYER_TURN  8.6
+$SPAWN_HWORLD 0
+$PLAYER_ENEMY 0
+$RAND_SEED    1
+
+$ADD_ASTEROID 10 3 0.005 0.02 # type number rseed rmin rmax
+
+#$BLACK_HOLE  -0.3 0.0 0.0  0.025
+
+# credits (in K)
+$TEAM_CREDITS PLAYER 1000
+$TEAM_CREDITS PIRATE 5000
+$TEAM_CREDITS RED    0
+$TEAM_CREDITS BLUE   0
+$TEAM_CREDITS ORANGE 10000
+$TEAM_CREDITS PURPLE 10000
+
+# ships
+# name cost(K) ncrew nengines radius cr_scale mass cargo exp_scale accel decel roll_rate max_speed max_turn stability max_shields max_armor shield_re armor_re max_t hull_str damage_abs min_att_dist min_app_dist sensor_dist fire_dist stray_dist reversible stoppable has_hyper has_fast_speed mpredict has_cloak regen_fighters regen_ammo regen_crew parallel_fire symmetric self_shadow cont_frag for_boarding can_board orbiting_dock dynamic_cobjs uses_tdir emits_light engine_lights suicides kamikaze no_disable uses_mesh2d turreted weap_spread shield_sects draw_passes death_delay regen_delay base_color exp_type exp_subtype
+#                    name                  cost  crew   ne  radius crs   mass    cargo  exps  accel decel roll  msp   turn   stab msh    mar    sre   are   maxt hull   dam  mad  mapd sdist fdist stray rev stp hyp hfs mp  ck  rf  ra  rc  pf  sym ssh cfr fb  cb  od  dc  utd elt enl sui kam nod um  tur ws  ss  dp  dd   rd   color               exp_type        exp_subtype
+$SHIP USC_FIGHTER    "Fighter"             1     1      3   0.40   2.10  1.1     0.1    9.0   0.45  0.39  34.0  24.0  190.0  0.8  100    50     0.5   0.2   150  2.0    1.8  6.0  6.0  3.5   1.3   100.0 0   1   0   1   1   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   1   1   0.0  0.0  0.75 0.75 0.75 1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_FIGHTER
+$SHIP USC_X1EXTREME  "X1 Extreme"          2     1      3   0.44   1.80  1.6     0.15   9.0   0.48  0.45  36.0  25.0  210.0  1.0  200    100    2.0   0.7   160  5.0    2.0  5.0  5.0  6.5   1.5   0.0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   1   1   0.0  0.0  0.9  0.65 0.05 1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_X1EXTREME
+$SHIP USC_FRIGATE    "Frigate"             4     20     3   0.96   1.55  5.0     0.6    8.0   0.41  0.36  30.0  23.0  170.0  1.0  300    150    1.5   0.4   180  8.0    2.2  1.5  1.5  8.0   2.0   0.0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   1   1   0.6  0.0  0.75 0.75 0.75 1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_FRIGATE
+$SHIP USC_DESTROYER  "Destroyer"           10    60     8   1.20   1.66  11.0    1.5    8.0   0.38  0.33  26.0  22.0  150.0  1.0  650    250    2.5   0.6   180  18.0   2.4  1.2  1.5  8.0   2.0   0.0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   1   1   1   1   1.2  0.0  0.75 0.75 0.75 1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_DESTROYER
+$SHIP USC_LCRUISER   "Light Cruiser"       30    280    4   2.20   1.45  35.0    3.0    8.0   0.35  0.34  22.0  19.0  110.0  1.1  1500   500    6.0   5.0   180  40.0   2.6  1.1  1.2  9.0   2.5   0.0   0   1   1   1   0   0   0   0   0   0   0   0   1   0   1   0   0   0   0   0   0   0   0   0   1   1   1   1   1.8  0.0  0.75 0.75 0.75 1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_LCRUISER
+$SHIP USC_HCRUISER   "Heavy Cruiser"       45    300    4   2.20   1.45  45.0    2.0    8.0   0.28  0.28  19.0  17.0  80.0   1.0  1600   600    4.0   5.0   180  44.0   2.6  1.1  1.2  9.0   2.5   0.0   0   1   1   1   0   0   0   0   0   0   0   0   1   0   1   0   0   0   0   0   0   0   0   0   1   1   1   1   2.2  0.0  0.75 0.75 0.75 1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_HCRUISER
+$SHIP USC_BCRUISER   "Battlecruiser"       120   800    4   3.50   1.40  100.0   15.0   8.0   0.26  0.28  16.0  20.0  60.0   1.0  3500   1000   10.0  1.0   200  120.0  3.8  1.1  1.2  10.0  1.8   0.0   0   1   1   1   0   0   0   0   0   0   0   0   1   0   1   0   0   0   0   2   0   0   0   0   1   1   1   1   3.0  0.0  0.75 0.75 0.75 1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_BCRUISER
+$SHIP USC_ENFORCER   "Enforcer"            1000  3300   7   5.40   1.30  520.0   20.0   8.0   0.40  0.38  15.0  23.5  50.0   1.4  24000  12000  20.0  10.0  240  500.0  5.2  1.0  1.0  12.0  2.6   0.0   0   1   1   1   0   0   0   1   0   0   0   0   1   0   1   0   0   0   0   0   0   0   0   0   2   1   1   1   4.0  0.0  1.0  1.0  1.0  1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_ENFORCER
+$SHIP USC_CARRIER    "Carrier"             130   1500   2   3.60   1.40  130.0   12.0   8.0   0.12  0.16  12.0  12.0  30.0   1.5  4000   2000   5.0   2.5   180  150.0  2.8  1.1  8.0  10.0  2.5   0.0   0   1   1   1   0   0   1   1   0   0   0   0   1   0   1   0   0   1   0   2   0   0   0   0   2   1   1   1   3.0  0.0  0.75 0.75 0.75 1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_CARRIER
+$SHIP USC_ARMAGEDDON "Armageddon"          135   2500   2   4.40   1.40  260.0   10.0   10.0  0.10  0.13  14.0  11.0  40.0   1.8  3000   500    14.0  5.0   110  160.0  2.5  1.0  1.1  11.0  2.8   0.0   0   1   1   1   0   0   1   0   0   0   0   0   1   0   1   0   0   0   0   2   0   0   0   1   2   2   1   1   3.5  0.0  0.6  0.25 0.1  1.0  ETYPE_STARB     ETYPE_ANIM_FIRE # USC_ARMAGEDDON
+$SHIP USC_SHADOW     "Shadow"              18    44     0   1.35   1.40  12.0    0.5    5.0   0.56  0.56  42.0  28.0  240.0  1.0  650    100    12.0  4.0   130  6.0    2.0  1.0  1.0  9.0   1.0   70.0  0   1   1   1   1   1   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   1   1   1.6  0.0  0.5  0.5  0.5  1.0  ETYPE_STARB     ETYPE_ANIM_FIRE # USC_SHADOW
+$SHIP USC_DEFSAT     "Defense Sat"         15    0      0   1.80   1.60  60.0    0.0    7.0   0.00  0.06  0.0   2.0   10.0   1.9  0      800    0.0   8.0   120  50.0   2.0  1.0  1.0  10.0  3.0   0.0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   2   1   1   1   2.0  0.0  0.75 0.75 0.75 1.0  ETYPE_STARB     ETYPE_ANIM_FIRE # USC_DEFSAT
+$SHIP USC_STARBASE   "Starbase"            100   10000  0   5.20   1.20  400.0   60.0   7.0   0.00  0.08 -1.5   1.0   0.0    1.7  10000  1000   4.0   5.0   100  180.0  3.2  1.0  1.0  12.0  3.0   0.0   0   1   0   0   0   0   1   1   1   0   0   1   0   0   1   0   0   0   0   0   0   0   1   0   2   4   1   1   5.0  0.0  1.0  1.0  0.8  1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_STARBASE
+$SHIP USC_BCUBE      "Borg Cube"           4000  50000  0   8.00   1.70  2000.0  200.0  8.0   0.00  0.05  0.0   0.5   0.0    1.6  50000  10000  50.0  60.0  220  800.0  5.0  1.0  1.0  12.0  3.0   0.0   0   1   0   0   0   0   1   1   1   0   0   0   0   0   1   0   0   0   1   0   0   0   0   0   2   1   1   2   8.0  0.0  0.2  0.7  0.2  1.0  ETYPE_PLASMA    ETYPE_ANIM_FIRE # USC_BCUBE
+$SHIP USC_BSPHERE    "Borg Sphere"         800   12000  0   4.20   1.00  500.0   50.0   8.0   0.30  0.25  0.0   18.0  180.0  1.2  20000  4000   45.0  55.0  220  350.0  4.5  1.0  1.0  12.0  3.0   0.0   0   1   1   1   1   0   0   1   0   0   1   0   1   0   1   0   0   0   1   0   0   0   0   0   2   1   1   2   6.0  0.0  0.2  0.7  0.2  1.0  ETYPE_PLASMA    ETYPE_ANIM_FIRE # USC_BSPHERE
+$SHIP USC_BTCUBE     "Borg Tactical Cube"  240   1500   0   3.00   1.70  140.0   30.0   8.0   0.40  0.36  18.0  19.5  200.0  1.1  5000   1000   30.0  40.0  220  200.0  4.0  1.0  1.0  10.0  2.8   0.0   0   1   1   1   1   0   0   1   0   0   0   0   1   0   1   0   0   0   1   0   0   0   0   0   1   1   1   2   4.0  0.0  0.2  0.7  0.2  1.0  ETYPE_PLASMA    ETYPE_ANIM_FIRE # USC_BTCUBE
+$SHIP USC_BSPH_SM    "Borg Fighter"        70    40     0   1.20   1.00  22.0    1.0    8.0   0.50  0.48  32.0  21.0  220.0  1.0  1000   200    80.0  85.0  220  20.0   3.0  1.0  1.0  8.0   2.4   0.0   0   1   0   1   1   0   0   0   0   0   1   0   0   0   1   0   0   0   1   0   0   0   0   0   0   1   1   2   1.5  0.0  0.2  0.7  0.2  1.0  ETYPE_PLASMA    ETYPE_ANIM_FIRE # USC_BSPH_SM
+$SHIP USC_BSHUTTLE   "Boarding Shuttle"    1.5   80     2   0.60   1.50  2.5     0.0    6.0   0.46  0.49  23.0  18.5  200.0  1.0  50     200    20.0  10.0  80   12.0   1.5 -1.0 -1.0  2.0   1.0   60.0  0   1   0   0   0   0   0   0   0   0   0   0   0   1   1   0   0   0   0   0   0   0   0   0   0   1   1   1   0.4  0.0  0.75 0.75 0.75 1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_BSHUTTLE
+$SHIP USC_TRACTOR    "Tractor"             6     12     4   1.50   1.50  20.0    2.0    4.0   0.60  0.48  10.0  10.0  40.0   1.0  0      400    0.0   0.5   190  22.0   1.2  1.0  1.0  4.0   1.0   0.0   0   1   0   1   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   1   0   0   0   1   1   1   1.6  0.0  0.5  0.5  0.5  1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_TRACTOR
+$SHIP USC_GUNSHIP    "Predator Gunship"    25    400    4   2.50   1.30  28.0    4.0    10.0  0.36  0.34  18.0  15.0  70.0   1.0  1300   500    7.0   3.0   160  20.0   2.0  1.0  1.0  8.0   1.8   0.0   0   1   1   1   1   0   0   0   0   0   0   0   1   0   1   0   0   0   0   0   0   0   0   0   2   4   1   1   1.6  0.0  1.0  1.0  1.0  1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_GUNSHIP
+$SHIP USC_NIGHTMARE  "Nightmare"           16    24     1   1.00   1.30  8.2     0.1    12.0  0.44  0.40  32.0  22.5  180.0  1.1  450    300    8.0   3.5   200  12.0   2.5  1.0  1.0  6.0   1.3   200.0 0   1   0   1   1   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   1   1   1   1   0.8  0.0  1.0  0.0  0.0  1.0  ETYPE_ANIM_FIRE ETYPE_ANIM_FIRE # USC_NIGHTMARE
+$SHIP USC_DWCARRIER  "Dreamworld Carrier"  180   1200   2   3.80   1.44  192.0   5.0    8.0   0.24  0.22  15.0  16.0  70.0   1.0  3000   1000   15.0  8.0   210  140.0  2.7  1.0  1.0  12.0  2.4   0.0   0   1   1   1   0   0   1   1   0   1   0   0   1   0   1   0   0   0   1   0   0   0   0   0   1   1   1   2   3.2  0.0  0.18 0.18 0.18 1.0  ETYPE_STARB     ETYPE_ANIM_FIRE # USC_DWCARRIER
+$SHIP USC_DWEXTERM   "DW Exterminator"     6666  13000  8   7.66   2.00  800.0   40.0   6.0   0.14  0.15  11.0  16.0  35.0   0.9  22000  22000  20.0  9.0   230  600.0  4.5  1.0  1.0  12.0  1.4   0.0   0   1   1   1   0   0   0   1   0   0   0   0   1   0   1   0   0   0   1   0   0   0   0   0   2   1   3   1   7.2  0.0  0.22 0.22 0.22 1.0  ETYPE_STARB     ETYPE_ANIM_FIRE # USC_DWEXTERM
+$SHIP USC_WRAITH     "Wraith"              14    0      0   0.80   2.00  3.0     0.0    0.0   0.80  1.20  20.0  18.0  250.0  1.0  0      400    0.0   16.0  250  50.0   1.7  1.0  0.5  7.0   1.0   0.0   0   1   0   1   0   0   1   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   1   1   2   0.0  0.0  0.1  0.5  1.0  0.4  ETYPE_NONE      ETYPE_ANIM_FIRE # USC_WRAITH
+$SHIP USC_ABOMIN     "Abomination"         260   3000   0   2.70   1.35  200.0   0.0    9.0   0.78  0.78  50.0  21.5  215.0  1.0  0      3200   0.0   20.0  400  2000.0 2.1  1.0  1.0  7.0   1.0   0.0   0   1   0   1   0   0   0   0   0   0   0   0   0   0   0   0   1   0   1   0   0   1   1   0   0   1   1   1   2.0  0.0  0.63 0.6  0.57 1.0  ETYPE_FUSION    ETYPE_FUSION    # USC_ABOMIN
+$SHIP USC_REAPER     "Reaper"              300   0      0   2.80   1.80  30.0    0.0    15.0  0.40  0.50  40.0  16.0  190.0  1.0  2400   200    24.0  8.0   350  400.0  2.9  1.1  2.0  10.0  1.0   0.0   0   1   1   1   0   0   1   0   0   0   0   0   1   0   0   0   1   0   1   1   0   0   0   0   2   1   1   1   4.5  0.0  0.9  0.65 0.05 0.5  ETYPE_FUSION    ETYPE_ANIM_FIRE # USC_REAPER
+$SHIP USC_DEATH_ORB  "Death Orb"           20    0      0   0.90   1.00  2.5     0.0    5.0   1.00  1.10  45.0  30.0  210.0  1.0  400    40     30.0  12.0  300  50.0   2.3  1.0  1.0  1.0   1.0   4.0   0   1   0   0   1   0   0   0   0   0   1   0   0   0   0   0   0   0   1   0   0   1   0   0   1   1   1   1   0.0  0.0  0.1  0.5  1.0  0.75 ETYPE_FUSION    ETYPE_ANIM_FIRE # USC_DEATH_ORB
+$SHIP USC_SUPPLY     "Supply Ship"         42    420    6   3.20   1.85  125.0   20.0   6.0   0.20  0.18  14.0  16.0  38.0   1.0  800    300    1.1   0.5   120  15.0   1.9  1.0  1.0  4.0   2.0   0.0   0   1   1   1   0   0   0   0   0   0   0   0   1   0   1   0   0   0   0   0   0   0   0   0   1   1   2   1   2.8  0.0  0.7  0.6  0.5  1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_SUPPLY
+$SHIP USC_ANTI_MISS  "Anti-Missile Drone"  8     0      0   0.86   1.20  25.0    0.0    7.0   0.00  0.10  0.0   4.0   0.0    2.0  0      250    0.0   12.0  120  24.0   2.0  1.0  1.0  10.0  1.0   0.0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   1   0   2   1   1   1   1.5  0.0  0.75 0.75 0.75 1.0  ETYPE_STARB     ETYPE_ANIM_FIRE # USC_ANTI_MISS
+$SHIP USC_JUGGERNAUT "Juggernaut"          90    128    0   3.00   1.60  90.0    15.0   16.0  0.16  0.18  15.0  18.0  65.0   1.0  0      5000   0.0   6.5   220  250.0  4.0  1.0  1.0  10.0  1.5   0.0   0   1   1   1   0   0   0   1   0   1   0   0   1   0   1   0   0   0   0   0   0   1   0   0   0   1   1   1   4.5  0.0  0.0  1.0  0.0  1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_JUGGERNAUT
+$SHIP USC_SAUCER     "Flying Saucer"       20    90     1   2.40   1.50  40.0    8.0    5.0   0.52  0.54  16.0  14.0  300.0  1.2  1200   600    15.0  7.0   150  60.0   2.0  1.0  1.0  9.5   1.8   0.0   0   1   1   1   1   0   0   0   0   0   0   0   1   0   1   0   0   0   0   1   0   0   0   0   2   1   1   1   2.5  0.0  0.6  0.6  0.6  1.0  ETYPE_FUSION    ETYPE_ANIM_FIRE # USC_SAUCER
+$SHIP USC_SAUCER_V2  "Flying Saucer MKII"  24    90     1   2.40   1.50  40.0    8.0    5.0   0.56  0.46 -160.0 22.0  160.0  1.0  1200   600    15.0  7.0   150  60.0   2.0  1.0  1.0  8.0   2.2   0.0   0   1   1   1   1   0   0   0   0   0   0   0   1   0   1   0   0   0   0   1   0   0   0   0   2   1   1   1   2.5  0.0  0.6  0.6  0.6  1.0  ETYPE_FUSION    ETYPE_ANIM_FIRE # USC_SAUCER_V2
+$SHIP USC_MOTHERSHIP "Alien Mothership"    400   2000   1   6.40   1.50  750.0   60.0   5.0   0.50  0.52  8.0   13.5  150.0  1.4  7000   3000   30.0  14.0  150  240.0  3.0  1.0  1.0  10.0  1.7   0.0   0   1   1   1   1   0   0   0   0   0   0   0   1   0   1   0   0   0   0   1   0   0   0   0   2   1   1   1   5.0  0.0  0.5  0.5  0.5  1.0  ETYPE_FUSION    ETYPE_ANIM_FIRE # USC_MOTHERSHIP
+$SHIP USC_HUNTER     "Headhunter"          0.5   0      1   0.30   1.75  0.4     0.0    35.0  0.62  0.00  0.0   26.0  280.0  1.0  0      80     0.0   10.0  200  1.5    1.0 -1.0 -1.0  1.8   1.0   0.0   0   0   0   0   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   1   0   0   0   1   1   1   0.0  0.0  0.7  0.7  0.7  1.0  ETYPE_FUSION    ETYPE_ANIM_FIRE # USC_HUNTER
+$SHIP USC_SEIGE      "Seige Ship"          250   1800   3   3.40   1.40  180.0   25.0   12.0  0.18  0.28  11.0  15.0  36.0   2.0  2000   1000   20.0  10.0  220  300.0  2.7  1.0  20.0 12.0  3.2   0.0   0   1   1   1   1   0   0   1   0   0   0   0   1   0   1   0   0   1   0   0   0   0   0   0   1   1   1   1   4.2  0.0  0.6  0.6  0.6  1.0  ETYPE_NUCLEAR   ETYPE_ANIM_FIRE # USC_SEIGE
+$SHIP USC_COLONY     "Planetary Colony"    30    20000  0   1.10   1.40  450.0   100.0  4.0   0.00  0.00  0.0   0.0   0.0    2.0  0      3000   0.0   5.0   70   200.0  1.5  1.0  1.0  8.0   3.0   0.0   0   1   0   0   0   0   0   0   1   0   0   0   0   0   0   1   0   1   0   0   0   0   1   0   2   1   1   1   2.0  0.0  0.5  0.5  0.5  1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_COLONY
+$SHIP USC_ARMED_COL  "Armed Colony"        50    21000  0   1.30   1.40  500.0   100.0  4.0   0.00  0.00  0.0   0.0   0.0    2.5  2000   3000   15.0  10.0  70   400.0  2.0  1.0  1.0  9.0   3.0   0.0   0   1   0   0   0   0   0   1   1   0   0   0   0   0   0   1   0   1   0   0   0   0   1   0   2   1   1   1   2.5  0.0  0.5  0.5  0.5  1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_ARMED_COL
+$SHIP USC_HW_COL     "Heavy Weaps Colony"  100   22000  0   1.40   1.40  600.0   100.0  4.0   0.00  0.00  0.0   0.0   0.0    3.0  6000   4000   20.0  15.0  70   500.0  3.0  1.0  1.0  10.0  3.0   0.0   0   1   0   0   0   0   0   1   1   0   0   0   0   0   0   1   0   1   0   0   0   0   1   0   2   1   1   1   3.0  0.0  0.5  0.5  0.5  1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_HW_COL
+$SHIP USC_STARPORT   "Starport Colony"     90    24000  0   1.60   1.40  700.0   100.0  4.0   0.00  0.00  0.0   0.0   0.0    2.5  6000   4000   15.0  10.0  70   500.0  2.5  1.0  1.0  10.0  3.0   0.0   0   1   0   0   0   0   1   1   1   0   0   0   0   0   0   1   0   1   0   0   0   0   1   0   2   1   1   1   3.0  0.0  0.5  0.5  0.5  1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_STARPORT
+$SHIP USC_HW_SPORT   "HW Starport Colony"  150   25000  0   1.65   1.40  800.0   100.0  4.0   0.00  0.00  0.0   0.0   0.0    3.0  9000   5000   20.0  15.0  70   500.0  3.0  1.0  1.0  10.0  3.0   0.0   0   1   0   0   0   0   1   1   1   0   0   0   0   0   0   1   0   1   0   0   0   0   1   0   2   1   1   1   3.5  0.0  0.5  0.5  0.5  1.0  ETYPE_FIRE      ETYPE_ANIM_FIRE # USC_HW_SPORT
+#                    name                  cost  crew   ne  radius crs   mass    cargo  exps  accel decel roll  msp   turn   stab msh    mar    sre   are   maxt hull   dam  mad  mapd sdist fdist stray rev stp hyp hfs mp  ck  rf  ra  rc  pf  sym ssh cfr fb  cb  od  dc  utd elt enl sui kam nod um  tur ws  ss  dp  dd   rd   color               exp_type        exp_subtype
+
+
+# weapons:
+# name cost ammo_cost radius cr_scale bradius damage fire_delay(s) firing_error regen_time range speed seek_dist def_ammo nshots lifetime(s) btime(s) max_t mass w_mass a_mass force f_inv armor preference hit_proj hit_all c2_flag no_coll no_exp_dam const_dam no_ffire is_beam secondary hyper_fire point_def is_decoy ignores_shields shield_d_only no_light parallel_fire turreted auto_orient no_ship_vel det_on_exp symmetric is_fighter do_regen ammo_type exp_type
+#                    name                   cost   acst radius crs  brad  dam    fd    ferr  reg_t  range  speed seekd  ammo  nsh lt    bt    tmax    mass   wmass amass force f_inv armor pref hp  ha  c2  nc  ned cd  nff ib  sec hf  pd  id  ish sdo nlt pf  tu  ao  nsv doe sym fi  dr  ammo_type      exp_type
+$WEAP UWEAP_NONE     "Unarmed"              0      0    0      1.0  0.0   0.0    0.00  0.0   0.0    0.0    0.0   0.0    0     0   0.0   0.0   0.0     0.0    0.00  0.0   0.0   0.0   0.0   0.0  0   0   0   0   1   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   1   0   0   UWEAP_NONE     ETYPE_NONE      # UWEAP_NONE
+$WEAP UWEAP_TARGET   "Target Select"        0      0    0      1.0  0.0   0.0    0.00  0.0   0.0    2.0E4  0.0   0.0    0     1   0.0   0.0   0.0     0.0    0.00  0.0   0.0   0.0   0.0   0.0  1   0   0   0   1   0   1   0   1   1   0   0   0   0   1   0  -1   0   0   0   1   0   0   UWEAP_NONE     ETYPE_NONE      # UWEAP_TARGET (note: player only, can't be turreted)
+$WEAP UWEAP_QUERY    "Object Query"         0      0    0      1.0  0.0   0.0    0.00  0.0   0.0    1.0E5  0.0   0.0    0     1   0.0   0.0   0.0     0.0    0.00  0.0   0.0   0.0   0.0   0.0  1   0   0   0   1   0   1   0   1   1   0   0   0   0   1   0  -1   0   0   0   1   0   0   UWEAP_NONE     ETYPE_NONE      # UWEAP_QUERY  (note: player only, can't be turreted)
+$WEAP UWEAP_RENAME   "Object Rename"        0      0    0      1.0  0.0   0.0    1.00  0.0   0.0    1.0E4  0.0   0.0    0     1   0.0   0.0   0.0     0.0    0.00  0.0   0.0   0.0   0.0   0.0  1   0   0   0   1   0   1   0   1   1   0   0   0   0   1   0  -1   0   0   0   1   0   0   UWEAP_NONE     ETYPE_NONE      # UWEAP_RENAME (note: player only, can't be turreted)
+$WEAP UWEAP_DESTROY  "Destroy"              0      0    0      1.0  0.0   0.0    0.50  0.0   0.0    4.0E5  0.0   0.0    0     1   0.0   0.0   0.0     0.0    0.00  0.0   0.0   0.0   0.0   0.0  1   1   0   0   1   0   0   0   1   1   0   0   0   0   1   0   0   0   0   0   1   0   0   UWEAP_NONE     ETYPE_NONE      # UWEAP_DESTROY
+$WEAP UWEAP_PBEAM    "Plasma Beam"          10000  0    0.14   2.2  0.0   2.7    0.00  0.04  0.0    100.0  0.0   0.0    0     1   0.0   0.0   2000.0  0.100  8.00  0.0   1.0   0.0   0.0   0.0  1   0   0   0   1   0   0   1   0   1   0   0   0   0   1   0   1   0   0   0   1   0   0   UWEAP_NONE     ETYPE_PLASMA    # UWEAP_PBEAM
+$WEAP UWEAP_EBEAM    "Energy Beam"          400    0    0.11   2.0  0.0   0.44   0.00  0.14  0.3    26.0   0.0   0.0    1000  1   0.0   0.0   1500.0  0.050  0.40  0.0   0.3   0.0   0.0   0.0  0   0   0   0   1   0   0   1   0   0   0   0   0   0   1   0   1   0   0   0   1   0   1   UWEAP_NONE     ETYPE_ENERGY    # UWEAP_EBEAM
+$WEAP UWEAP_REPULSER "Repulser Beam"        600    0    0.15   2.0  0.0   0.15   0.00  0.12  0.0    80.0   0.0   0.0    0     1   0.0   0.0   1000.0  0.080  2.00  0.0   3.6   0.1   0.0   0.0  0   0   0   0   1   0   0   1   0   0   0   0   0   1   1   0   1   0   0   0   1   0   0   UWEAP_NONE     ETYPE_FIRE      # UWEAP_REPULSER
+$WEAP UWEAP_TRACTORB "Tractor Beam"         5000   0    0.27   1.6  0.0   0.0    0.00  0.30  0.0    60.0   0.0   0.0    0     1   0.0   0.0   250.0   0.010  4.00  0.0  -25.0  1.0   0.0   0.0  0   0   0   0   1   0   1   1   0   0   0   0   0   0   1   0   2   0   0   0   1   0   0   UWEAP_NONE     ETYPE_PLASMA    # UWEAP_TRACTORB
+$WEAP UWEAP_G_HOOK   "Grappling Hook"       500    0    0.12   1.4  0.0   0.0    0.00  0.06  0.0    40.0   0.0   0.0    0     1   0.0   0.0   200.0   0.004  0.40  0.0  -8.0   1.0   0.0   0.0  0   0   0   0   1   0   1   1   0   0   0   0   0   0   1   0   2   0   0   0   1   0   0   UWEAP_NONE     ETYPE_FUSION    # UWEAP_G_HOOK
+$WEAP UWEAP_LRCPA    "Charged Plasma Acc"   1500   0    0.20   1.0  0.5   36.0   1.60  0.08  0.0    105.0  0.0   0.0    0     1   0.0   0.0   3000.0  0.900  3.00  0.0   1.1   0.2   0.0   0.0  0   0   0   0   1   0   0   0   0   0   0   0   0   0   1   0  -1   0   0   0   1   0   0   UWEAP_NONE     ETYPE_FIRE      # UWEAP_LRCPA
+$WEAP UWEAP_ENERGY   "Energy Pulse"         100    0    0.10   1.8  0.0   6.0    0.48  0.15  0.0    0.0    2.80  0.0    0     1   0.5   0.0   800.0   0.016  0.05  0.0   0.0   0.0   0.0   0.0  1   0   1   0   1   0   0   0   0   0   0   0   0   0   1   0   1   0   0   0   1   0   0   UWEAP_ENERGY   ETYPE_ENERGY    # UWEAP_ENERGY
+$WEAP UWEAP_ATOMIC   "Deatomizer Pulse"     200    0    0.13   1.8  0.0   12.0   0.95  0.20  0.0    0.0    2.50  0.0    0     1   0.6   0.0   900.0   0.024  0.10  0.0   0.0   0.0   0.0   0.0  1   0   1   0   1   0   0   0   0   0   0   0   0   0   1   0   1   0   0   0   1   0   0   UWEAP_ATOMIC   ETYPE_ATOMIC    # UWEAP_ATOMIC
+$WEAP UWEAP_ROCKET   "Rocket"               250    10   0.20   1.7  1.6   45.0   0.65  0.16  6.0    0.0    1.40  50.0   20    1   22.0  0.25  160.0   0.250  0.10  0.03  0.0   0.0   8.0   0.0  1   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   2   0   0   0   0   0   UWEAP_ROCKET   ETYPE_FIRE      # UWEAP_ROCKET
+$WEAP UWEAP_NUKEDEV  "219 Nuclear Device"   700    25   0.32   1.5  3.8   125.0  1.20  0.35  16.0   0.0    0.86  100.0  8     1   12.0  0.6   150.0   0.600  1.00  0.08  0.0   0.0   20.0  0.0  1   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   2   0   0   0   0   0   UWEAP_NUKEDEV  ETYPE_NUCLEAR   # UWEAP_NUKEDEV
+$WEAP UWEAP_TORPEDO  "Torpedo"              1800   100  0.26   1.3  2.5   176.0  1.00  0.10  12.0   0.0    1.20  120.0  12    1   30.0  0.2   200.0   0.500  1.50  0.10  0.0   0.0   25.0  0.0  1   0   0   0   0   0   0   0   1   0   0   0   0   0   1   0   0   2   0   0   1   0   1   UWEAP_TORPEDO  ETYPE_PLASMA    # UWEAP_TORPEDO
+$WEAP UWEAP_EMP      "EMP Generator"        6000   0    0.40   1.0  13.5  106.0  4.00  0.02  0.0    0.0    2.40  0.0    0     1   0.5   0.0   5000.0  0.040  5.20  0.0   8.0   0.0   0.0   0.0  0   0   1   1   1   1   1   0   1   0   0   0   0   0   1   0  -1   0   0   0   0   0   0   UWEAP_EMP      ETYPE_EMP       # UWEAP_EMP
+$WEAP UWEAP_PT_DEF   "Point Defense"        1200   0    0.18   1.0  0.4   15.0   1.10  0.56  0.0    32.0   0.0   0.0    0     1   0.0   0.0   400.0   0.001  1.20  0.0   0.1   0.0   5.0   0.0  1   0   0   0   1   0   0   0   0   0   1   0   0   0   1   0   1   0   0   0   1   0   0   UWEAP_NONE     ETYPE_FIRE      # UWEAP_PT_DEF
+$WEAP UWEAP_DFLARE   "Decoy Flare"          500    20   0.28   1.4  0.8   3.0    2.20  0.24  20.0   0.0    0.30  0.0    4     1   8.0   0.0   600.0   0.400  0.80  0.05  0.0   0.0   13.0  1.0  1   0   0   0   0   0   0   0   1   0   0   1   0   0   1   0   1   2   0   0   1   0   0   UWEAP_DFLARE   ETYPE_ENERGY    # UWEAP_DFLARE
+$WEAP UWEAP_CHAFF    "Chaff"                400    10   0.18   1.5  0.0   0.0    2.40  1.80  15.0   0.0    0.08  0.0    10    24  10.0  0.0   220.0   0.200  0.50  0.04  0.0   0.0   7.0   2.0  1   0   0   0   1   0   0   0   1   0   0   1   0   0   0   0   1   0   0   0   0   0   1   UWEAP_CHAFF    ETYPE_NONE      # UWEAP_CHAFF
+$WEAP UWEAP_FIGHTER  "Fighter Bay"          7500   0    0.0    1.0  0.0   0.0    0.80  60.0  40.0   0.0    0.0   0.0    4     1   0.0   0.0   0.0     0.0    5.0   0.0   0.0   0.0   0.0   0.0  0   0   0   0   0   0   1   0   1   0   0   0   0   0   1   1   2   0   0   0   0   1   0   USC_FIGHTER    ETYPE_NONE      # UWEAP_FIGHTER
+$WEAP UWEAP_B_BAY    "Borg Fighter Bay"     60000  0    0.0    1.0  0.0   0.0    1.50  20.0  200.0  0.0    0.0   0.0    2     1   0.0   0.0   0.0     0.0    50.0  0.0   0.0   0.0   0.0   0.0  0   0   0   0   0   0   1   0   1   1   0   0   0   0   1   1   2   0   0   0   0   1   0   USC_BSPH_SM    ETYPE_NONE      # UWEAP_B_BAY
+$WEAP UWEAP_CRU_BAY  "Cruiser Bay"          20000  0    0.0    1.0  0.0   0.0    2.00  90.0  400.0  0.0    0.0   0.0    1     1   0.0   0.0   0.0     0.0    45.0  0.0   0.0   0.0   0.0   0.0  0   0   0   0   0   0   1   0   1   0   0   0   0   0   1   1   2   0   0   0   0   1   0   USC_LCRUISER   ETYPE_NONE      # UWEAP_CRU_BAY
+$WEAP UWEAP_SOD_BAY  "Shadow Bay"           16000  0    0.0    1.0  0.0   0.0    1.25  80.0  160.0  0.0    0.0   0.0    2     1   0.0   0.0   0.0     0.0    25.0  0.0   0.0   0.0   0.0   0.0  0   0   0   0   0   0   1   0   1   0   0   0   0   0   1   1   2   0   0   0   0   1   0   USC_SHADOW     ETYPE_NONE      # UWEAP_SOD_BAY
+$WEAP UWEAP_BOARDING "Board Shuttle Bay"    12000  0    0.0    1.0  0.0   0.0    3.00  10.0  80.0   50.0   0.0   0.0    2     1   0.0   0.0   0.0     0.0    7.0   0.0   0.0   0.0   0.0   0.0  0   0   0   0   0   0   1   0   1   0   0   0   0   0   1   1   2   0   0   0   0   1   0   USC_BSHUTTLE   ETYPE_NONE      # UWEAP_BOARDING
+$WEAP UWEAP_NM_BAY   "Nightmare Bay"        14000  0    0.0    1.0  0.0   0.0    1.20  80.0  30.0   0.0    0.0   0.0    2     1   0.0   0.0   0.0     0.0    18.0  0.0   0.0   0.0   0.0   0.0  0   0   0   0   0   0   1   0   1   0   0   0   0   0   1   1   2   0   0   0   0   1   0   USC_NIGHTMARE  ETYPE_NONE      # UWEAP_NM_BAY
+$WEAP UWEAP_RFIRE    "Ring of Fire"         3000   0    0.16   1.0  6.0   90.0   1.00  0.06  0.0    0.0    2.00  0.0    0     1   0.4   0.0   10000   0.100  2.1   0.0   4.0   0.0   0.0   0.0  1   1   0   1   1   1   1   0   1   0   0   0   0   0   1   0  -1   0   0   0   0   0   0   UWEAP_RFIRE    ETYPE_NONE      # UWEAP_RFIRE
+$WEAP UWEAP_FUSCUT   "Fusion Cutter"        6500   0    0.18   2.1  0.0   1.3    0.00  0.25  0.5    33.0   0.0   0.0    200   1   0.0   0.0   1800.0  0.040  2.2   0.0   0.6   0.0   0.0   0.0  0   0   0   0   1   0   0   1   0   1   0   0   1   0   1   0  -1   0   0   0   1   0   1   UWEAP_NONE     ETYPE_FUSION    # UWEAP_FUSCUT
+$WEAP UWEAP_SHIELDD  "Shield Destabilizer"  220    0    0.08   2.0  0.0   6.7    0.25  1.00  8.0    0.0    3.50  0.0    0     1   0.35  0.0   500.0   0.010  0.06  0.0   0.0   0.0   0.0   0.0  0   0   1   0   0   0   0   0   0   0   0   0   0   1   1   0   1   0   0   0   0   0   0   UWEAP_SHIELDD  ETYPE_ENERGY    # UWEAP_SHIELDD
+$WEAP UWEAP_THUNDER  "Thunderhead Missile"  4000   400  0.36   2.0  4.0   30.0   1.80  0.22  32.0   0.0    1.10  20.0   4     1   9.0   0.35  240.0   0.700  1.30  0.12  0.0   0.1   32.0  1.0  1   0   0   0   0   0   0   0   1   0   0   0   0   0   1   0   1   0   0   0   1   0   0   UWEAP_THUNDER  ETYPE_EBURST    # UWEAP_THUNDER
+$WEAP UWEAP_ESTEAL   "Energy Stealer"       8000   0    0.17   2.0  0.0   3.8    0.00  0.35  0.08   45.0   0.0   0.0    60    1   0.0   0.0   1600.0  0.022  1.25  0.0   0.4   0.0   0.0   2.0  1   0   0   0   1   0   0   1   0   1   0   0   0   0   1   0   0   0   0   0   1   0   1   UWEAP_NONE     ETYPE_ESTEAL    # UWEAP_ESTEAL
+$WEAP UWEAP_WRAI_BAY "Wraith Bay"           6000   0    0.0    1.0  0.0   0.0    1.00  70.0  10.0   0.0    0.0   0.0    0     1   0.0   0.0   0.0     0.0    0.2   0.0   0.0   0.0   0.0   0.0  0   0   0   0   0   0   1   0   1   0   0   0   0   0   1   1   2   0   0   0   0   1   0   USC_WRAITH     ETYPE_NONE      # UWEAP_WRAI_BAY
+$WEAP UWEAP_STAR     "Star"                 200000 5000 1.2    4.0  2.5   400.0  2.50  0.01  25.0   0.0    1.30  18.0   1     1   10.0  1.2   100000  20.0   20.0  4.0   50.0  2.0   0.0  -1.0  1   1   1   1   1   1   1   0   0   0   0   0   0   0   1   0  -1   0   1   1   1   0   1   UWEAP_STAR     ETYPE_FUSION    # UWEAP_STAR
+$WEAP UWEAP_HUNTER   "Headhunter Bay"       5000   0    0.0    1.0  0.0   0.0    2.75  220.0 100.0  1500   0.0   0.0    8     1   0.0   0.0   0.0     0.0    6.0   0.0   0.0   0.0   0.0   1.0  0   0   0   0   0   0   1   0   1   0   0   0   0   0   1   0   1   1   0   0   0   1   0   USC_HUNTER     ETYPE_NONE      # UWEAP_HUNTER
+$WEAP UWEAP_DEATHORB "Death Orb Bay"        25000  0    0.0    1.0  0.0   0.0    0.50  150.0 5.0    1500   0.0   0.0    4     1   0.0   0.0   0.0     0.0    6.0   0.0   0.0   0.0   0.0   0.0  0   0   0   0   0   0   1   0   1   0   0   0   0   0   1   0   1   1   0   0   0   1   0   USC_DEATH_ORB  ETYPE_NONE      # UWEAP_DEATHORB
+$WEAP UWEAP_LITNING  "Lightning"            6000   0    0.24   2.0  0.0   2.8    0.00  0.20  0.0    60.0   0.0   0.0    0     1   0.0   0.0   1000.0  0.060  1.2   0.0   0.8   0.0   0.0   0.0  1   0   0   0   1   0   0   1   0   0   0   0   0   0   1   0   1   0   0   0   1   0   0   UWEAP_NONE     ETYPE_NUCLEAR   # UWEAP_LITNING
+$WEAP UWEAP_INFERNO  "Inferno"              50000  0    6.8    1.0  5.5   1.3    0.00  0.5   0.0    25.0   0.0   0.0    0     1   0.0   0.0   20000   0.100  20.0  0.0   0.5   0.0   0.0   0.0  0   0   0   0   1   0   1   1   1   0   0   0   0   0   1   0   0   0   0   0   1   0   0   UWEAP_NONE     ETYPE_ANIM_FIRE # UWEAP_INFERNO
+$WEAP UWEAP_PARALYZE "Paralyze"             100000 0    0.35   2.0  0.0   22.0   0.00  0.07  0.0    70.0   0.0   0.0    0     1   0.0   0.0   2000.0  0.020  15.0  0.0  -1.0   0.0   0.0   0.0  0   0   0   0   1   0   0   1   1   1   0   0   0   0   1   0   0   0   0   0   1   0   0   UWEAP_NONE     ETYPE_STARB     # UWEAP_PARALYZE
+$WEAP UWEAP_MIND_C   "Mind Control"         75000  0    0.45   2.0  0.0   0.0    0.00  0.04  0.0    25.0   0.0   0.0    0     1   0.0   0.0   1000.0  0.010  10.0  0.0  -2.0   0.0   0.0   0.0  0   0   0   0   1   0   0   1   1   0   0   0   0   0   1   0   0   0   0   0   1   0   0   UWEAP_NONE     ETYPE_FUSION    # UWEAP_MIND_C
+$WEAP UWEAP_SAUC_BAY "Flying Saucer Bay"    25000  0    0.0    1.0  0.0   0.0    3.50  100.0 250.0  0.0    0.0   0.0    2     1   0.0   0.0   0.0     0.0    30.0  0.0   0.0   0.0   0.0   0.0  0   0   0   0   0   0   1   0   1   0   0   0   0   0   1   0   1   0   0   0   0   1   0   USC_SAUCER     ETYPE_NONE      # UWEAP_SAUC_BAY
+$WEAP UWEAP_SEIGEC   "Seige Cannon"         15000  0    0.6    2.0  16.0  250.0  2.40  0.01  0.0    0.0    12.0  0.0    0     1   8.0   1.5   1000.0  1.50   36.0  0.0   0.0   0.6   50.0  0.0  0   0   0   0   0   0   0   0   1   0   0   0   0   0   1   0  -1   0   0   0   0   0   0   UWEAP_SEIGEC   ETYPE_SIEGE     # UWEAP_SEIGEC
+#                    name                   cost   acst radius crs  brad  dam    fd    ferr  reg_t  range  speed seekd  ammo  nsh lt    bt    tmax    mass   wmass amass force f_inv armor pref hp  ha  c2  nc  ned cd  nff ib  sec hf  pd  id  ish sdo nlt pf  tu  ao  nsv doe sym fi  dr  ammo_type      exp_type
+
+
+# beam weapons <enum weap_id> <color brc1> <color brc2> <color beamc1> <color beamc2> <float bw_escale> <bool drains energy> <bool temperature source> <bool paralyzes> <bool mind control> <bool multi-segment>
+$WBEAM UWEAP_PBEAM     0.0 1.0 0.0 1.0  0.5 1.0 0.5 1.0  0.0 1.0 0.0 1.0  0.0 1.0 0.0 1.0  1.0 0 0 0 0 0
+$WBEAM UWEAP_EBEAM     1.0 1.0 1.0 1.0  1.0 0.0 1.0 1.0  1.0 0.0 1.0 1.0  1.0 1.0 1.0 1.0  0.6 0 0 0 0 0
+$WBEAM UWEAP_REPULSER  1.0 0.5 0.5 1.0  1.0 1.0 1.0 0.0  1.0 0.0 0.0 1.0  1.0 0.5 0.5 1.0  0.5 0 0 0 0 0
+$WBEAM UWEAP_TRACTORB  0.0 0.0 1.0 1.0  1.0 1.0 1.0 0.0  0.5 0.5 1.0 1.0  0.0 0.0 1.0 1.0  3.2 0 0 0 0 0
+$WBEAM UWEAP_G_HOOK    0.7 0.7 0.7 1.0  0.7 0.7 0.7 0.0  0.5 0.5 0.5 1.0  0.5 0.5 0.5 1.0  1.0 0 0 0 0 0
+$WBEAM UWEAP_LRCPA     1.0 1.0 0.0 1.0  1.0 0.0 0.0 1.0  1.0 1.0 0.8 1.0  1.0 0.5 0.0 1.0  2.0 0 0 0 0 0
+$WBEAM UWEAP_PT_DEF    0.0 1.0 0.0 1.0  0.0 1.0 0.0 1.0  0.0 1.0 0.0 1.0  0.0 1.0 0.0 1.0  1.0 0 0 0 0 0
+$WBEAM UWEAP_FUSCUT    0.5 0.5 1.0 1.0  1.0 1.0 1.0 1.0  1.0 1.0 1.0 1.0  1.0 1.0 1.0 1.0  1.0 0 0 0 0 0
+$WBEAM UWEAP_ESTEAL    0.1 1.0 0.5 1.0  0.1 1.0 0.2 1.0  0.1 0.5 1.0 1.0  0.1 1.0 0.5 1.0  1.2 1 0 0 0 0
+$WBEAM UWEAP_LITNING   0.5 0.5 1.0 0.5  0.3 0.3 1.0 0.0  0.7 0.7 1.0 1.0  0.7 0.7 1.0 1.0  1.0 0 0 0 0 1
+$WBEAM UWEAP_INFERNO   1.0 1.0 1.0 0.4  1.0 1.0 1.0 0.4  1.0 1.0 1.0 0.0  1.0 1.0 1.0 0.0  1.0 0 1 0 0 0
+$WBEAM UWEAP_PARALYZE  1.0 0.9 0.0 1.0  1.0 0.9 0.0 1.0  1.0 0.9 0.0 1.0  1.0 0.9 0.0 1.0  1.0 0 0 1 0 1
+$WBEAM UWEAP_MIND_C    1.0 0.0 0.0 1.0  1.0 0.0 0.0 1.0  0.0 0.0 1.0 1.0  1.0 0.0 0.0 1.0  1.0 0 0 0 1 0
+
+
+# add weapons to ship classes: weapon_class number_of_weapons init_weapon_ammo
+$SHIP_WEAP USC_FIGHTER
+$ADD UWEAP_ROCKET    1  10
+$ADD UWEAP_ENERGY    2
+
+$SHIP_WEAP USC_X1EXTREME
+$ADD UWEAP_ROCKET    1  18
+$ADD UWEAP_ENERGY    2
+
+$SHIP_WEAP USC_FRIGATE
+$ADD UWEAP_ROCKET    2  32
+$ADD UWEAP_ENERGY    3
+$ADD UWEAP_EBEAM     1
+
+$SHIP_WEAP USC_DESTROYER
+$ADD UWEAP_ROCKET    2  48
+$ADD UWEAP_ENERGY    5
+$ADD UWEAP_EBEAM     2
+
+$SHIP_WEAP USC_LCRUISER
+$ADD UWEAP_ROCKET    2  60
+$ADD UWEAP_NUKEDEV   1  8
+$ADD UWEAP_ATOMIC    6
+$ADD UWEAP_EBEAM     2
+$ADD UWEAP_FIGHTER   1  4
+
+$SHIP_WEAP USC_HCRUISER
+$ADD UWEAP_ROCKET    3  80
+$ADD UWEAP_NUKEDEV   2  12
+$ADD UWEAP_ATOMIC    4
+$WEAP_PT -0.226 -0.226 1.2  -0.226 0.226 1.2  0.226 0.226 1.2  0.226 -0.226 1.2
+$ADD UWEAP_LRCPA     2
+$WEAP_PT # empty
+$ADD UWEAP_FIGHTER   1  4
+
+$SHIP_WEAP USC_ENFORCER
+$WEAP_PT 0.0 0.135 0.8  0.096 0.096 0.8  0.135 0.0 0.8  0.096 -0.096 0.8  0.0 -0.135 0.8  -0.096 -0.096 0.8  -0.135 0.0 0.8  -0.096 0.096 0.8
+$ADD UWEAP_ROCKET    8  320
+$ADD UWEAP_NUKEDEV   8  180
+$ADD UWEAP_LRCPA     8
+$WEAP_PT # empty
+$ADD UWEAP_EMP       4
+$ADD UWEAP_PT_DEF    4
+$ADD UWEAP_CRU_BAY   2
+
+$SHIP_WEAP USC_BCRUISER
+$ADD UWEAP_EMP       2
+$WEAP_PT -0.08 -0.16 1.3  -0.08 0.16 1.3  0.08 0.16 1.3  0.08 -0.16 1.3
+$ADD UWEAP_NUKEDEV   4  80
+$ADD UWEAP_LRCPA     4
+
+$SHIP_WEAP USC_CARRIER
+$ADD UWEAP_ROCKET    4  280
+$ADD UWEAP_NUKEDEV   3  40
+$ADD UWEAP_ATOMIC    8
+$WEAP_PT 0.0 0.38 -0.2
+$ADD UWEAP_EBEAM     6
+$WEAP_PT 0.0 0.19 1.1
+$ADD UWEAP_PT_DEF    1
+$WEAP_PT 0.0 0.6 0.2
+$ADD UWEAP_FIGHTER   4  16
+
+$SHIP_WEAP USC_ARMAGEDDON
+$ADD UWEAP_TORPEDO   2  40
+$ADD UWEAP_TRACTORB  1
+$ADD UWEAP_EBEAM     12
+$ADD UWEAP_SOD_BAY   2  4
+
+$SHIP_WEAP USC_SHADOW
+$ADD UWEAP_EMP       1
+
+$SHIP_WEAP USC_DEFSAT
+$ADD UWEAP_ROCKET    4  350
+$ADD UWEAP_NUKEDEV   3  150
+$ADD UWEAP_REPULSER  1
+$ADD UWEAP_LRCPA     1
+$ADD UWEAP_PT_DEF    2
+
+$SHIP_WEAP USC_STARBASE
+$ADD UWEAP_ROCKET    6  800
+$ADD UWEAP_NUKEDEV   4  360
+$ADD UWEAP_ATOMIC    12
+$ADD UWEAP_EBEAM     8
+$ADD UWEAP_PT_DEF    4
+$WEAP_PT -1.25 0.0 0.0  0.0 -1.25 0.0  1.25 0.0 0.0  0.0 1.25 0.0
+$ADD UWEAP_FIGHTER   4  8
+
+$SHIP_WEAP USC_BCUBE
+$WEAP_PT -1 -1 -1  -1 -1 1  -1 1 -1  -1 1 1  1 -1 -1  1 -1 1  1 1 -1  1 1 1
+$ADD UWEAP_PBEAM     8
+$ADD UWEAP_TORPEDO   8  1600
+$ADD UWEAP_TRACTORB  3
+$ADD UWEAP_BOARDING  4  8
+$ADD UWEAP_B_BAY     2  4
+
+$SHIP_WEAP USC_BSPHERE
+$ADD UWEAP_TORPEDO   4  600
+$ADD UWEAP_PBEAM     5
+$ADD UWEAP_TRACTORB  2
+#$ADD UWEAP_BOARDING  1  2
+
+$SHIP_WEAP USC_BTCUBE
+$ADD UWEAP_TORPEDO   2  100
+$ADD UWEAP_PBEAM     2
+$ADD UWEAP_TRACTORB  1
+
+$SHIP_WEAP USC_BSPH_SM
+$ADD UWEAP_TORPEDO   1  4
+$ADD UWEAP_PBEAM     1
+
+$SHIP_WEAP USC_BSHUTTLE
+#$ADD UWEAP_G_HOOK    1
+
+$SHIP_WEAP USC_TRACTOR
+$ADD UWEAP_TRACTORB  1
+
+$SHIP_WEAP USC_GUNSHIP
+$ADD UWEAP_ENERGY    8
+$ADD UWEAP_ATOMIC    4
+$ADD UWEAP_SHIELDD   8
+$ADD UWEAP_ROCKET    4  120
+$ADD UWEAP_PT_DEF    1
+
+$SHIP_WEAP USC_NIGHTMARE
+$ADD UWEAP_RFIRE     1
+$ADD UWEAP_ROCKET    2  8
+$ADD UWEAP_THUNDER   1  4
+
+$SHIP_WEAP USC_DWCARRIER
+$ADD UWEAP_ATOMIC    12
+$ADD UWEAP_NM_BAY    2  4
+$ADD UWEAP_ROCKET    0  128 # nightmare ammo only
+$ADD UWEAP_THUNDER   0  60  # nightmare ammo only
+$WEAP_PT -0.06 0.1 0.8  0.06 0.1 0.8
+$ADD UWEAP_DFLARE    2  16
+$ADD UWEAP_FUSCUT    4
+
+$SHIP_WEAP USC_DWEXTERM
+$WEAP_PT 0.0 0.042 1.78  0.03 0.03 1.78  0.042 0.0 1.78  0.03 -0.03 1.78  0.0 -0.042 1.78  -0.03 -0.03 1.78  -0.042 0.0 1.78  -0.03 0.03 1.78
+$ADD UWEAP_LRCPA     32 # front
+$ADD UWEAP_FUSCUT    32 2000 # not much ammo
+$WEAP_PT 0.18 0.217 0.525  -0.18 0.217 0.525
+$ADD UWEAP_THUNDER   8  512 # turreted projectiles
+$WEAP_PT 0.15 0.214 0.195  -0.15 0.214 0.195  0.15 0.214 -0.045  -0.15 0.214 -0.045  0.225 0.214 -1.05  -0.225 0.214 -1.05  0.225 0.214 -1.5  -0.225 0.214 -1.5
+$ADD UWEAP_ATOMIC    40 # assorted turrets
+$ADD UWEAP_EBEAM     40 100000
+$WEAP_PT 0.828 -0.435 -1.68  -0.828 -0.435 -1.68
+$ADD UWEAP_ENERGY    16 # rear
+$WEAP_PT 0.000 0.220 1.575
+$ADD UWEAP_SHIELDD   16
+$WEAP_PT 0.000 -0.618 0.21
+$ADD UWEAP_ESTEAL    4
+$WEAP_PT 0.180 0.216 0.525  -0.180 0.216 0.525  0.828 -0.435 -1.68  -0.828 -0.435 -1.68  0.000 -0.618 0.21
+$ADD UWEAP_PT_DEF    10
+$WEAP_PT 0.000 -0.31 0.21
+$ADD UWEAP_STAR      1  10
+
+$SHIP_WEAP USC_WRAITH
+$ADD UWEAP_ESTEAL    1
+$ADD UWEAP_WRAI_BAY  1  0
+
+$SHIP_WEAP USC_ABOMIN
+$WEAP_PT 0.0 0.0 3.32
+$ADD UWEAP_INFERNO   1
+$ADD UWEAP_PARALYZE  1
+$ADD UWEAP_MIND_C    1
+
+$SHIP_WEAP USC_REAPER
+$ADD UWEAP_DEATHORB  1 4
+$ADD UWEAP_LITNING   1
+
+$SHIP_WEAP USC_DEATH_ORB
+$ADD UWEAP_LITNING   1
+
+$SHIP_WEAP USC_SUPPLY
+$ADD UWEAP_ENERGY    6
+$ADD UWEAP_ROCKET    1  800
+$ADD UWEAP_NUKEDEV   0  300
+$ADD UWEAP_THUNDER   0  50
+$ADD UWEAP_DFLARE    0  100
+$ADD UWEAP_BOARDING  0  1
+
+$SHIP_WEAP USC_ANTI_MISS
+$ADD UWEAP_ENERGY    3
+$ADD UWEAP_PT_DEF    3
+$ADD UWEAP_DFLARE    2  50
+$ADD UWEAP_CHAFF     1  20
+
+$SHIP_WEAP USC_JUGGERNAUT
+$WEAP_PT -0.7  1.00 1.0  0.7  1.00 1.0
+$ADD UWEAP_NUKEDEV   2  200
+$WEAP_PT -0.7 -0.15 1.0  0.7 -0.25 1.0
+$ADD UWEAP_RFIRE     2
+
+$SHIP_WEAP USC_SAUCER
+$WEAP_PT  0.90 0.34 0.00  -0.45 0.34 0.78  -0.45 0.34 -0.78
+$ADD UWEAP_EBEAM     9
+$WEAP_PT  0.45 0.34 0.78  -0.90 0.34 0.00   0.45 0.34 -0.78
+$ADD UWEAP_ENERGY    18
+$WEAP_PT 0.0 0.7 0.0
+$ADD UWEAP_SHIELDD   4
+
+$SHIP_WEAP USC_SAUCER_V2
+$WEAP_PT  0.90 0.00 0.33  -0.45 0.78 0.33  -0.45 -0.78 0.33
+$ADD UWEAP_EBEAM     9
+$WEAP_PT  0.45 0.78 0.33  -0.90 0.00 0.33   0.45 -0.78 0.33
+$ADD UWEAP_ENERGY    18
+$WEAP_PT 0.0 0.7 0.0
+$ADD UWEAP_SHIELDD   4
+
+$SHIP_WEAP USC_MOTHERSHIP
+$WEAP_PT  0.90 0.25 0.00   0.28 0.25 0.86  -0.73 0.25  0.53  -0.73 0.25 -0.53   0.28 0.25 -0.86
+$ADD UWEAP_EBEAM     15
+$WEAP_PT  0.73 0.25 0.53  -0.28 0.25 0.86  -0.90 0.25  0.00  -0.28 0.25 -0.86   0.73 0.25 -0.53
+$ADD UWEAP_ATOMIC    30
+$WEAP_PT 0.0 1.13 0.0
+$ADD UWEAP_TRACTORB  1
+$ADD UWEAP_DFLARE    1 100
+$WEAP_PT 0.0 -0.5 0.0
+$ADD UWEAP_SAUC_BAY  3 6
+
+$SHIP_WEAP USC_SEIGE
+$WEAP_PT -0.13 0.6 1.36  0.13 0.6 1.36
+$ADD UWEAP_SEIGEC    2
+$WEAP_PT 0.0 -1.12 0.42
+$ADD UWEAP_LITNING   1
+$ADD UWEAP_PT_DEF    1
+
+
+$SHIP_WEAP USC_COLONY
+$ADD UWEAP_ENERGY    2 # if a target hides in the planet atmosphere, this is the only weapon that can hit it
+$WEAP_PT 0.0 0.0 1.0
+$ADD UWEAP_ATOMIC    1
+$ADD UWEAP_PT_DEF    1
+
+$SHIP_WEAP USC_ARMED_COL
+$ADD UWEAP_ENERGY    3
+$WEAP_PT 0.0 0.0 1.0
+$ADD UWEAP_ATOMIC    2
+$ADD UWEAP_PT_DEF    2
+$ADD UWEAP_ROCKET    2  500
+$ADD UWEAP_REPULSER  1
+
+$SHIP_WEAP USC_HW_COL
+$ADD UWEAP_ENERGY    4
+$WEAP_PT 0.0 0.0 1.0
+$ADD UWEAP_ATOMIC    3
+$ADD UWEAP_PT_DEF    3
+$ADD UWEAP_ROCKET    3  500
+$ADD UWEAP_REPULSER  2
+$ADD UWEAP_HUNTER    1  60
+$ADD UWEAP_THUNDER   1  80
+
+$SHIP_WEAP USC_STARPORT
+$ADD UWEAP_ENERGY    3
+$WEAP_PT 0.0 0.0 1.0
+$ADD UWEAP_ATOMIC    2
+$ADD UWEAP_PT_DEF    2
+$ADD UWEAP_ROCKET    2  500
+$ADD UWEAP_REPULSER  1
+$ADD UWEAP_FIGHTER   2  8
+$ADD UWEAP_BOARDING  1  2
+$ADD UWEAP_CRU_BAY   1  1
+
+$SHIP_WEAP USC_HW_SPORT
+$ADD UWEAP_ENERGY    4
+$WEAP_PT 0.0 0.0 1.0
+$ADD UWEAP_ATOMIC    3
+$ADD UWEAP_PT_DEF    3
+$ADD UWEAP_ROCKET    3  500
+$ADD UWEAP_REPULSER  2
+$ADD UWEAP_HUNTER    1  60
+$ADD UWEAP_THUNDER   1  80
+$ADD UWEAP_FIGHTER   2  8
+$ADD UWEAP_BOARDING  1  2
+$ADD UWEAP_CRU_BAY   1  1
+
+
+# configure player ship and add special weapons
+$PLAYER USC_X1EXTREME PLAYER
+
+$PLAYER_WEAP
+$ADD UWEAP_NONE
+$ADD UWEAP_TARGET
+$ADD UWEAP_QUERY
+$ADD UWEAP_RENAME
+$ADD UWEAP_DESTROY
+$ADD UWEAP_PBEAM
+$ADD UWEAP_TRACTORB
+$ADD UWEAP_TORPEDO
+$ADD UWEAP_FIGHTER
+$ADD UWEAP_B_BAY
+$ADD UWEAP_CRU_BAY
+$ADD UWEAP_HUNTER
+$ADD UWEAP_DFLARE   2 20
+$ADD UWEAP_CHAFF
+$ADD UWEAP_EMP
+$ADD UWEAP_RFIRE
+$ADD UWEAP_THUNDER
+$ADD UWEAP_INFERNO  1
+$ADD UWEAP_PARALYZE 1
+$ADD UWEAP_MIND_C   1
+$ADD UWEAP_SEIGEC
+
+
+# setup explosion mesh parameters: deform remove expand uniform_expand trans
+$MESH_PARAMS USC_ARMAGEDDON 1 1 0 0 0
+
+
+# setup bounding cube/cylinder dimensions (cylinder: front then back with front in -Z direction)
+$SHIP_CYLINDER USC_FRIGATE     0.0 -0.6 0.0  0.0 0.6 0.0  1.66 1.66 1
+$SHIP_CYLINDER USC_DESTROYER   0.0 0.0 -0.96  0.0 0.0 0.9  0.7 0.7 0  0.8  # p1 p2 r1 r2 check_ends [dscale]
+$SHIP_SPHERE   USC_DESTROYER   0.0 0.0 -0.96  0.7  1.1  # x y z r [dscale]
+$SHIP_CYLINDER USC_DESTROYER   0.0 0.0  0.9  0.0 0.0 1.2  1.25 1.25 1  0.8
+
+$SHIP_CYLINDER USC_LCRUISER    0.0  0.0  -1.2   0.0   0.0  1.05  0.25 0.4 2
+$SHIP_CYLINDER USC_LCRUISER    0.8  0.0 -0.22   0.8  0.0 1.08  0.16 0.16 1  1.1
+$SHIP_CYLINDER USC_LCRUISER   -0.8  0.0 -0.22  -0.8  0.0 1.08  0.16 0.16 1  1.1
+$SHIP_CYLINDER USC_LCRUISER    0.0  0.8 -0.22   0.0  0.8 1.08  0.16 0.16 1  1.1
+$SHIP_CYLINDER USC_LCRUISER    0.0 -0.8 -0.22   0.0 -0.8 1.08  0.16 0.16 1  1.1
+$SHIP_CUBE     USC_LCRUISER   -0.68 0.68  -0.10 0.10  0.22  0.62
+$SHIP_CUBE     USC_LCRUISER   -0.10 0.10  -0.68 0.68  0.22  0.62
+
+$SHIP_CYLINDER USC_HCRUISER    0.0  0.0 -1.00   0.0  0.0 1.00  0.45 0.45 2
+$SHIP_CYLINDER USC_HCRUISER    0.8  0.0 -0.22   0.8  0.0 1.08  0.16 0.16 1  1.1
+$SHIP_CYLINDER USC_HCRUISER   -0.8  0.0 -0.22  -0.8  0.0 1.08  0.16 0.16 1  1.1
+$SHIP_CYLINDER USC_HCRUISER    0.0  0.8 -0.22   0.0  0.8 1.08  0.16 0.16 1  1.1
+$SHIP_CYLINDER USC_HCRUISER    0.0 -0.8 -0.22   0.0 -0.8 1.08  0.16 0.16 1  1.1
+$SHIP_CUBE     USC_HCRUISER   -0.68 0.68  -0.10 0.10  0.22  0.62
+$SHIP_CUBE     USC_HCRUISER   -0.10 0.10  -0.68 0.68  0.22  0.62
+
+$SHIP_CYLINDER USC_BCRUISER    0.0 0.0 -0.74  0.0 0.0 0.68  0.66 0.72 2
+$SHIP_CYLINDER USC_ENFORCER    0.0 0.0 -1.30  0.0 0.0 1.20  0.00 0.68 1
+
+$SHIP_CUBE     USC_CARRIER    -0.40 0.40 -0.19 0.19 -1.10 1.34  0.8  # x1 x2 y1 y2 z1 z2 [dscale]
+$SHIP_CUBE     USC_CARRIER    -0.58 0.58  -0.045 0.045  0.47  0.73  # engine support
+$SHIP_CYLINDER USC_CARRIER     0.0  0.14  0.2   0.0 0.4   0.2  0.22 0.22 1  1.2 # more damage if hit in turret
+$SHIP_CYLINDER USC_CARRIER    -0.7  0.0   0.0  -0.7 0.0   1.2  0.14 0.14 1  1.1 # slightly more damage if hit in engines
+$SHIP_CYLINDER USC_CARRIER     0.7  0.0   0.0   0.7 0.0   1.2  0.14 0.14 1  1.1 # slightly more damage if hit in engines
+$SHIP_CYLINDER USC_CARRIER     0.0 -0.09 -1.1   0.0 0.26 -1.1  0.20 0.20 1  1.2 # more damage if hit in control center
+
+$SHIP_CUBE     USC_ARMAGEDDON -0.54 0.54 -0.88 -0.48 -0.60 0.75  1.25 # more damage if hit in crew box
+$SHIP_CYLINDER USC_ARMAGEDDON  0.0 0.0 -0.74  0.0 0.0 0.74  0.66 0.66 2
+$SHIP_SPHERE   USC_SHADOW      0.0 0.0  0.6   0.9
+$SHIP_SPHERE   USC_SHADOW      0.0 0.0 -0.55  0.9
+$SHIP_CUBE     USC_DEFSAT     -1.5 1.55 -0.40 0.40 -0.05 0.05  1.5 # more damage if hit in solar panels
+$SHIP_CYLINDER USC_DEFSAT      0.0 0.0 -1.4  0.0 0.0 1.30  0.50 0.50 1
+$SHIP_CUBE     USC_BCUBE      -1.00 1.00 -1.00 1.00 -1.00 1.00
+$SHIP_CUBE     USC_BTCUBE     -1.00 1.00 -1.00 1.00 -1.00 1.00
+$SHIP_BCYLIN   USC_GUNSHIP     0.0 0.0 -1.3   0.0 0.0 0.12  0.36 1.08   -1.08 1.08 -0.50 0.50 -1.3 0.12
+$SHIP_BCYLIN   USC_GUNSHIP     0.0 0.0 0.12   0.0 0.0 1.28  1.08 0.47   -1.08 1.08 -0.50 0.50 0.12 1.28
+$SHIP_BCYLIN   USC_DWCARRIER   0.0 0.0 -1.42  0.0 0.0 1.36  0.20 0.90   -0.72 0.72 -0.38 0.41 -1.42 1.36  # x1 x2 y1 y2 z1 z2 p1 p2 r1 r2 [dscale]
+
+$SHIP_CYLINDER USC_SUPPLY      0.0 0.0 -1.88  0.0 0.0 -0.40  0.50 0.50 1 # front
+$SHIP_CYLINDER USC_SUPPLY      0.0 0.0 -0.40  0.0 0.0  0.59  0.18 0.18 0 # middle
+$SHIP_CYLINDER USC_SUPPLY      0.0 0.0  0.59  0.0 0.0  1.70  0.48 0.70 1 # back
+
+$SHIP_CUBE     USC_DWEXTERM   -0.21 0.21 -0.09 0.21 -1.95 -0.70  # front
+$SHIP_CUBE     USC_DWEXTERM   -0.60 0.60 -0.61 0.21 -0.70  0.24  # middle
+$SHIP_CUBE     USC_DWEXTERM   -0.28 0.28 -0.09 0.16  0.24  0.62  # connector
+$SHIP_CUBE     USC_DWEXTERM   -0.81 0.81 -0.40 0.21  0.62  2.025 # back
+
+$SHIP_CYLINDER USC_SAUCER      0.0  0.0  0.0   0.0 0.65 0.0   1.53 0.15 1
+$SHIP_CYLINDER USC_SAUCER      0.0 -0.45 0.0   0.0 0.0  0.0   0.3  1.53 0
+$SHIP_CYLINDER USC_SAUCER_V2   0.0  0.0 -0.65  0.0 0.0  0.0   0.15 1.53 1
+$SHIP_CYLINDER USC_SAUCER_V2   0.0  0.0  0.0   0.0 0.0  0.45  1.53 0.30 0
+$SHIP_CYLINDER USC_MOTHERSHIP  0.0  0.0  0.0   0.0 0.49 0.0   1.53 0.15 1
+$SHIP_CYLINDER USC_MOTHERSHIP  0.0 -0.34 0.0   0.0 0.0  0.0   0.3  1.53 0
+$SHIP_CYLINDER USC_MOTHERSHIP  0.0  0.45 0.0   0.0 1.13 0.0   0.225 0.0 0  1.5 # more damage on antenna
+
+$SHIP_CYLINDER USC_COLONY      0.0 0.0 -1.00  0.0 0.0 1.0  1.00 1.00 1
+$SHIP_CYLINDER USC_ARMED_COL   0.0 0.0 -1.15  0.0 0.0 1.0  1.00 1.00 1
+$SHIP_CYLINDER USC_HW_COL      0.0 0.0 -1.15  0.0 0.0 1.0  1.25 1.25 1
+$SHIP_CYLINDER USC_STARPORT    0.0 0.0 -1.15  0.0 0.0 1.0  1.25 1.25 1
+$SHIP_CYLINDER USC_HW_SPORT    0.0 0.0 -1.15  0.0 0.0 1.0  1.25 1.25 1
+
+$SHIP_TORUS    USC_STARBASE    0.0 0.0 0.0  0.2 1.0  # center ri ro [dscale]
+$SHIP_CYLINDER USC_STARBASE    0.0   0.0 -0.7   0.0    0.0  0.7  0.16 0.16 1 # center
+$SHIP_CYLINDER USC_STARBASE    0.0   1.0  0.0   0.0    0.1  0.0  0.07 0.07 0
+$SHIP_CYLINDER USC_STARBASE    0.87  0.5  0     0.087  0.05 0.0  0.07 0.07 0
+$SHIP_CYLINDER USC_STARBASE    0.87 -0.5  0     0.087 -0.05 0.0  0.07 0.07 0
+$SHIP_CYLINDER USC_STARBASE    0.0  -1.0  0.0   0.0   -0.1  0.0  0.07 0.07 0
+$SHIP_CYLINDER USC_STARBASE   -0.87 -0.5  0.0  -0.087 -0.05 0.0  0.07 0.07 0
+$SHIP_CYLINDER USC_STARBASE   -0.87  0.5  0.0  -0.087  0.05 0.0  0.07 0.07 0
+
+$SHIP_CUBE     USC_SEIGE      -0.60 0.60  -0.2 1.12  -1.40 0.85         # front
+$SHIP_CYLINDER USC_SEIGE       0.0 -0.3   0.4  0.0 0.3   0.4  1.0 1.0 1 # back
+$SHIP_CYLINDER USC_SEIGE       0.0 -1.04 -0.3  0.0 -0.2 -0.3  0.1 0.9 0 # bottom
+
+
+
+# add fleets: name enabled <counts> [<float flagship_child_stray_dist> <enum ship_id>]
+# FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
+$FLEET "defenders" 0 RED    AI_ATT_ENEMY  TARGET_CLOSEST  0.12   0.0  0.0  0.0
+  0   0   0   0   0   0   0   0   0   2   2   30  8   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+$FLEET "attackers" 0 BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  0.24   1.5  1.5  1.5
+  4   24  20  16  8   8   5   0   3   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   4   0   0   0   0   0
+  
+$FLEET "Alien"     0 RED    AI_ATT_ENEMY  TARGET_CLOSEST  0.08   0.0  0.1 -0.1
+  0   0   0   0   0   0   0   0   0   8   0   0   0   0   1   0   6   0   0   0   0   8   0   16  0   0   0   0   0   8   0   0   0   0   0   0   0   0   0   0
+$FLEET "GP Gov"    0 BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  0.08  -0.7  0.0  0.5
+  0   16  16  16  8   8   8   1   8   0   0   0   0   0   0   0   0   0   0   8   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  
+$FLEET "Timetest1"  0 RED    AI_ATT_ENEMY  TARGET_CLOSEST  5.0   10.0 10.0 10.0
+  1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   0   1   1   1   1   1   1   0   0   0   0   0   1   1   1   0   0   0   0   0   0   0   0   0   0
+$FLEET "Timetest2"  0 BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  5.0   10.0 10.0 10.0
+  1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   0   1   1   1   1   1   1   0   0   0   0   0   1   1   1   0   0   0   0   0   0   0   0   0   0
+
+# x40 ships
+# some other locs: 17.1 29.4 -63.8   97.0 6.8 -3.1   -50.1 22.1 -63.9   76.1 6.2 -33.4
+$FLEET "Team Human"  0  RED    AI_ATT_ENEMY  TARGET_CLOSEST  5.0   63.0 -50.0 45.0
+  0   1   5   6   3   3   5   2   5   0   0   0   0   0   0   0   0   0   0   6   0   0   0   0   0   0   0   4   0   0   0   0   0   0   0   0   0   0   0   0
+$FLEET "Team DW"     0  BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  5.0   0.0  -70.0 70.0
+  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   24  14  2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+$FLEET "Team Alien"  0  PURPLE AI_ATT_ENEMY  TARGET_CLOSEST  5.0   34.0 -67.0 83.0
+  0   0   0   0   0   0   0   0   0   3   6   0   0   0   0   0   0   0   0   0   0   0   0   6   4   3   4   0   0   4   4   4   2   0   0   0   0   0   0   0
+$FLEET "Team Borg"   0  ORANGE AI_ATT_ENEMY  TARGET_CLOSEST  5.0   16.0 -25.0 23.0
+  0   0   0   0   0   0   0   0   0   0   0   0   0   0   4   12  24  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  
+$FLEET "Test"   0  RED   AI_ATT_ENEMY  TARGET_CLOSEST  0.1   0.2  0.0  0.0
+  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+$FLEET "Test"   0  BLUE  AI_ATT_ENEMY  TARGET_CLOSEST  0.1   0.2  0.0  0.0
+  0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+
+
+# setup ship generation probabilities: <gen/init> enabled num(per alignment)
+$SHIP_ADD_GEN  1
+#                 num FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
+  $ALIGN NEUTRAL  4   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN GOV      4   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN RED      4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0
+  $ALIGN BLUE     4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+
+$SHIP_ADD_INIT 1
+#                 num FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
+  $ALIGN NEUTRAL  0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN PLAYER   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN GOV      0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN PIRATE   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN RED      25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
+  $ALIGN BLUE     25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
+# $ALIGN ORANGE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
+# $ALIGN PURPLE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
+
+$SHIP_BUILD           0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+
+
+# $SHIP_NAMES 8 "foo" "bar" "baz" "foozle" "fizzle" "bob" "yomamma" "clown"
+
+# type number alignment targeting ai_type guardian kamikaze [px py pz]
+$ADD_SHIP USC_BCUBE    0 BLUE    AI_ATT_ENEMY TARGET_CLOSEST 1 0
+$LAST_PARENT
+$ADD_SHIP USC_BSPHERE  0 BLUE    AI_ATT_ENEMY TARGET_CLOSEST 1 0
+$ADD_SHIP USC_STARBASE 1 GOV     AI_ATT_ENEMY TARGET_CLOSEST 0 0 -0.08 -0.03 -0.05
+$ADD_SHIP USC_ENFORCER 0 RED     AI_ATT_ENEMY TARGET_CLOSEST 1 0
+$ADD_SHIP USC_FIGHTER  0 BLUE    AI_ATT_ENEMY TARGET_CLOSEST 0 0 0.035 0.02 0.07
+$ADD_SHIP USC_DWEXTERM 0 PIRATE  AI_ATT_ENEMY TARGET_CLOSEST 0 0 # 42.8 5.4 16.8
+$ADD_SHIP USC_BCUBE    0 GOV     AI_ATT_ENEMY TARGET_CLOSEST 1 0 # 19.2 9.0 1.2
+
+$END
+

@@ -1,0 +1,196 @@
+// 3D World - OpenGL CS184 Computer Graphics Project
+// by Frank Gennari
+// 5/12/02
+
+#ifndef _TREE_H_
+#define _TREE_H_
+
+#include "3DWorld.h"
+#include "memory_alloc.h"
+
+
+unsigned const CYLIN_CACHE_ENTRIES  = 4;
+unsigned const BRANCH_CACHE_ENTRIES = 3;
+
+
+struct blastr; // forward reference
+
+
+struct tree_leaf { // size = 28 + 48 = 76
+
+	int coll_index;
+	float color, lred, lgreen;
+	vector3d norm;
+	point pts[4];
+
+	tree_leaf() : coll_index(-1) {}
+	void create_init_color(bool deterministic);
+	colorRGB calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const;
+};
+
+
+inline bool comp_leaf(const tree_leaf &A, const tree_leaf &B) {
+
+	return (A.pts[0].mag_sq() < B.pts[0].mag_sq());
+}
+
+
+struct tree_cylin : public cylinder_3dw { // size = 61 (64)
+
+	int coll_index;
+	char which_branch;
+	float length, deg_rotate;
+	vector3d rotate;
+
+	tree_cylin() : coll_index(-1) {}
+
+	void assign_params(char branch, float r1_, float r2_, float len, float drot) {
+		which_branch = branch;
+		r1           = r1_;
+		r2           = r2_;
+		length       = len;
+		deg_rotate   = drot;
+	}
+	unsigned get_num_div() const {return (N_CYL_SIDES >> 1) - ((which_branch - 1) << 2);}
+};
+
+
+struct tree_branch { // size = 12
+
+	tree_cylin *cylin;
+	float total_length;
+	short num_cylins, num_branches;
+
+	void clear_num() {
+		num_cylins = num_branches = 0;
+	}
+};
+
+
+class tree { // size = BIG
+
+	static reusable_mem<tree_cylin >   cylin_cache [CYLIN_CACHE_ENTRIES ];
+	static reusable_mem<tree_branch>   branch_cache[BRANCH_CACHE_ENTRIES];
+	static reusable_mem<tree_branch *> branch_ptr_cache;
+
+	int type, created, trseed1, trseed2, branch_vbo, leaf_vbo;
+	bool no_delete, reset_leaves, leaves_changed;
+	vector<vert_norm_tc_color> leaf_data;
+	point gen_pos, sphere_center;
+	float sphere_radius, init_deadness, deadness, damage;
+	vector<tree_cylin> all_cylins;
+	colorRGBA color, base_color, leaf_color, bcolor;
+	tree_branch base, *branches_34[2], **branches;
+	int base_num_cylins, ncib;
+	int num_1_branches, num_big_branches_min, num_big_branches_max;
+	int num_2_branches_min, num_2_branches_max;
+	int num_34_branches[2], num_3_branches_min, num_3_branches_max;
+	int tree_slimness, tree_wideness, base_break_off;
+	float base_radius, base_length_min, base_length_max, base_curveness;
+	float branch_curveness, branch_upwardness, branch_distribution, branch_1_distribution;
+	float base_var, num_cylin_factor, base_cylin_factor;
+	float branch_1_var, branch_1_rad_var, branch_1_start, branch_2_var, branch_2_rad_var, branch_2_start;
+	float branch_4_max_radius, rotate_factor;
+	float angle_rotate, branch_min_angle, branch_max_angle, branch_1_random_rotate;
+	float max_2_angle_rotate, max_3_angle_rotate;  //max angle to rotate 3rd order branches around from the 2nd order branch
+
+	//branch_4 specs
+	float branch_4_distribution;
+	int num_4_branches_per_occurance, num_4_cylins;
+	float branch_4_rad_var, branch_4_var, branch_4_length;
+
+	//leaves specs
+	vector<tree_leaf> leaves;
+	int num_min_leaves, num_max_leaves, leaf_min_angle, leaf_max_angle;
+	float num_leaves_per_occ, damage_scale;
+
+	vector<unsigned> qs_list; // list of quad strip indexes for branch rendering
+
+public:
+	tree() : created(0), branch_vbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0), leaves_changed(0) {}
+	void gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z, bool add_cobjs, int ix);
+	void regen_tree(point &pos, int recalc_shadows, int index);
+	void gen_tree_shadows(char light_sources, int index);
+	void add_tree_collision_objects(int ix);
+	void remove_collision_objects();
+	void remove_leaf(unsigned i, bool update_data);
+	void burn_leaves();
+	bool damage_leaf(unsigned i, float damage_done);
+	void blast_damage(blastr const *const blast_radius);
+	void lightning_damage(point const &ltpos);
+	void drop_leaves();
+	void gen_leaf_color();
+	colorRGB get_leaf_color(unsigned i) const;
+	void clear_vbo();
+	void draw_tree(bool invalidate_norms);
+	void create_base_cylin(int i);
+	float gen_bc_size(float branch_var);
+	float gen_bc_size2(float branch_var);
+	void gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int which, bool rad_var_test);
+	void gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int which);
+	void create_1_order_branch(int base_cylin_num, float rotate_start, int branch_num);
+	void create_2nd_order_branch(int i, int j, int cylin_num, bool branch_deflected, int rotation);
+	void create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, bool branch_deflected, int rotation);
+	void gen_b4(tree_branch &branch, int &this_branch, int i, int k);
+	void create_4th_order_branches();
+	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int this_branch);
+	void create_one_branch_array();
+	void create_leaves();
+	void add_leaves_to_cylin(tree_cylin &cylin, float tsize);
+	void copy_color(colorRGB const &color, unsigned i);
+	void change_leaf_color(colorRGBA &base_color, unsigned i);
+	void shift_tree(vector3d const &vd);
+	int delete_tree();
+	point get_gen_pos()  const {return gen_pos;}
+	bool get_no_delete() const {return no_delete;}
+	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
+};
+
+
+class small_tree { // size = 81 (82)
+
+	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
+	vector<int> coll_id;
+	float height, width, r_angle, rx, ry, rv[3];
+	point pos;
+	colorRGBA color;
+	vector<point> points; // for high detail pine trees
+
+public:
+	small_tree() {}
+	small_tree(point const &p, float h, float w, int t, bool calc_z);
+	void setup_rotation();
+	vector3d get_rot_dir() const;
+	void add_cobjs(cobj_params &cp, cobj_params const &cp_trunk);
+	void remove_cobjs();
+	void calc_points();
+	void draw(int mode) const;
+	void translate_by(vector3d const &vd) {pos += vd;}
+	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
+	point get_pos() const {return pos;}
+};
+
+
+
+// function prototypes - tree
+float get_tree_z_bottom(float z);
+void remove_tree_cobjs(vector<tree> &t_trees);
+void draw_trees(vector<tree> &ts);
+void delete_trees(vector<tree> &ts);
+void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old);
+void shift_trees(vector<tree> &t_trees, vector3d const &vd);
+void add_tree_cobjs(vector<tree> &t_trees);
+void clear_tree_vbos(vector<tree> &t_trees);
+
+// function prototypes - small trees
+int add_small_tree(point const &pos, float height, float width, int tree_type, bool calc_z);
+void gen_small_tree(small_tree &st, point const &pos, float height, float width, int tree_type, int calc_z);
+void add_small_tree_coll_objs();
+void remove_small_tree_cobjs();
+void gen_small_trees();
+void draw_small_trees();
+void shift_small_trees(vector3d const &vd);
+
+
+#endif
+

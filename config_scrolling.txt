@@ -1,0 +1,63 @@
+ntrees 6
+nsmileys 6
+verbose 0
+rand_seed 0
+load_hmv 0 0 0 -3.0 1.0
+load_coll_objs 0
+glaciate 1
+dynamic_mesh_scroll 1
+disable_universe 0
+disable_inf_terrain 0
+disable_water 0
+disable_scenery 0
+read_landscape 0
+read_heightmap 0
+
+gravity 1.0
+mesh_height 1.0
+mesh_scale 1.0
+camera_height 0.0
+tree_size 1.0
+sun_rot 0.4
+shadow_detail 6
+tree_coll_level 2
+default_ground_tex -1
+ground_effects_level 9
+# mesh_seed 2
+
+left_handed 0
+self_damage 0.5
+team_damage 0.2
+smiley_damage 1.0
+player_damage 0.5
+smiley_accuracy 0.96
+smiley_speed 0.95
+speed_mult 1.0
+free_for_all 1
+teams 2
+num_dodgeballs 3
+crater_size 0.1
+player_name Deathtool
+
+unlimited_weapons 0
+
+mesh_size  128 128 64
+scene_size 4.0 4.0 4.0
+# mesh_size  192 192 64
+# scene_size 6.0 6.0 6.0
+
+window_width 1920
+window_height 1200
+color_bit_depth 32
+refresh_rate 75
+
+state_file state.txt
+mesh_file mesh.txt 1.0 1.0 0
+coll_obj_file coll_objs/COLL_OBJS_Test.TXT
+ship_def_file universe/ship_defs.txt
+
+end
+team_start 0 -1.8 -1.8 1.8 -1.0
+team_start 1 -1.8 1.0 1.8 1.8
+
+

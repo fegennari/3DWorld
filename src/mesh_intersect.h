@@ -1,0 +1,77 @@
+// 3D World - Mesh Intersection classes header
+// by Frank Gennari
+// 6/30/06
+#ifndef _MESH_INTERSECT_H_
+#define _MESH_INTERSECT_H_
+
+#include "3DWorld.h"
+
+
+struct bsp_tree_node {
+
+	float z[2];
+	bsp_tree_node() {clear();}
+	void assign(float z1_, float z2_) {z[0] = z1_; z[1] = z2_;}
+
+	void z_union(bsp_tree_node const &n) {
+		z[0] = min(z[0], n.z[0]);
+		z[1] = max(z[1], n.z[1]);
+	}
+	void merge(bsp_tree_node const &n1, bsp_tree_node const &n2) {
+		z[0] = min(n1.z[0], n2.z[0]);
+		z[1] = max(n1.z[1], n2.z[1]);
+	}
+	void clear() {z[0] = z[1] = 0.0;}
+};
+
+
+class mesh_bsp_tree; // forward reference
+
+
+class mesh_intersector {
+
+	point v1, v2;
+	vector3d v2_v1;
+	int xpos, ypos, fast;
+	float zval;
+
+	bool line_int_surface_cached();
+	bool line_intersect_surface();
+	bool line_intersect_surface_fast();
+	bool check_iter_clip(int fast2);
+	bool line_intersect_plane(int x1, int x2, int y1, int y2);
+	bool intersect_mesh_quad(int x, int y);
+	bool intersect_plane(point const &mesh_pt, vector3d const &norm, bool sign);
+
+public:
+	friend class mesh_bsp_tree;
+	mesh_intersector(point const &v1_, point const &v2_, int fast_) :
+		v1(v1_), v2(v2_), v2_v1(v2 - v1), xpos(0), ypos(0), fast(fast_), zval(0.0) {}
+	bool get_intersection(int &xpos_, int &ypos_, float &zval_, bool cached);
+	bool get_intersection();
+	bool get_any_non_intersection(point const *const pts, unsigned npts);
+};
+
+
+class mesh_bsp_tree {
+
+	bool dir0; // first subdivision direction
+	unsigned nlevels; // inclusive
+	int xpos, ypos;
+	float zval;
+	bsp_tree_node **tree; // {level, y/x}
+	mesh_intersector intersector;
+
+	bool search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level); // could almost be const
+
+public:
+	mesh_bsp_tree();
+	~mesh_bsp_tree();
+	bool search(point const &v1, point const &v2, int &xpos_, int &ypos_, float &zval_); // could almost be const
+	bsp_tree_node const &get_root() const {assert(tree && tree[0]); return tree[0][0];}
+};
+
+
+#endif _MESH_INTERSECT_H_
+
+

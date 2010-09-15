@@ -1,0 +1,10 @@
+# Place Items
+# *** FIX ***
+I 27 0 0.0 0.0 0.0 # testing - add health
+
+# Appearance Spots
+#A 0.0 0.0 # Bad - Inside House
+#A 4.0 4.0
+
+# Place Waypoints
+#p 0.0 -4.0

@@ -1,0 +1,6 @@
+# lightbulb
+# shatterable?
+e 0
+# base - write
+l 0.4 1.0 1.0 1.0 1.0 -1 1 # white glass
+# bulb - write
