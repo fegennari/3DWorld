@@ -207,6 +207,7 @@ void rotate_into_dir(vector3d const &dir, point const &pos) {
 
 void draw_blasts() {
 
+	//RESET_TIME;
 	bool const universe(world_mode == WMODE_UNIVERSE);
 	glDisable(GL_LIGHTING);
 	enable_blend();
@@ -239,18 +240,15 @@ void draw_blasts() {
 			// use distance_to_camera() for non-universe mode?
 			//float const sscale(universe ? 2.2/min(0.02f, distance_to_camera(pos)) : 1.0);
 			float const sscale(universe ? 0.4/sqrt(size*distance_to_camera(pos)) : 1.0);
-			int ndiv(int(250.0*size*sscale));
-			ndiv = max(4, min(N_SPHERE_DIV, ndiv));
-			glPushMatrix();
-			global_translate(pos);
+			int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*size*sscale))));
 
 			switch (br.type) {
 			case ETYPE_FIRE:
 			case ETYPE_PLASMA:
 			case ETYPE_EBURST:
 				select_texture(PLASMA_TEX);
-				//draw_subdiv_sphere(all_zeros, size, ndiv, 1, 0); // incorrect bfc due to transforms
-				draw_sphere_at_tc(all_zeros, size, ndiv, 1, 1);
+				//draw_subdiv_sphere(make_pt_global(pos), size, ndiv, 1, 0); // incorrect bfc due to transforms
+				draw_sphere_at_tc(make_pt_global(pos), size, ndiv, 1, 1);
 				glDisable(GL_TEXTURE_2D);
 				break;
 
@@ -261,8 +259,11 @@ void draw_blasts() {
 					glEnable(GL_ALPHA_TEST);
 					glAlphaFunc(GL_GREATER, 0.4*(1.0 - timescale));
 					//glEnable(GL_CULL_FACE);
+					glPushMatrix();
+					global_translate(pos);
 					rotate_about(90.0*timescale, br.dir);
 					draw_sphere_dlist(all_zeros, size, ndiv, 1);
+					glPopMatrix();
 					//glDisable(GL_CULL_FACE);
 					glDisable(GL_TEXTURE_2D);
 					glDisable(GL_ALPHA_TEST);
@@ -275,6 +276,8 @@ void draw_blasts() {
 			case ETYPE_NUCLEAR:
 			case ETYPE_SIEGE:
 				glDepthMask(GL_FALSE);
+				glPushMatrix();
+				global_translate(pos);
 
 				if (br.type == ETYPE_STARB && has_multitex()) {
 					rotate_into_dir((universe ? br.dir : all_zeros), pos);
@@ -291,19 +294,20 @@ void draw_blasts() {
 					draw_textured_quad(2.0*size, 2.0*size, BLUR_TEX);
 					glDisable(GL_TEXTURE_2D);
 				}
+				glPopMatrix();
 				glDepthMask(GL_TRUE);
 				break;
 
 			default:
 				assert(0);
 			} // switch
-			glPopMatrix();
 		} // visibility test
 	} // for i
 	//glDisable(GL_ALPHA_TEST);
 	gluQuadricTexture(quadric, GL_FALSE);
 	disable_blend();
 	glEnable(GL_LIGHTING);
+	//PRINT_TIME("Draw Blasts");
 }
 
 
