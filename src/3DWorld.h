@@ -314,7 +314,7 @@ struct pos_dir_up { // defines a view frustum
 };
 
 
-struct cylinder_3dw {
+struct cylinder_3dw { // size = 32
 
 	point p1, p2;
 	float r1, r2;
@@ -902,8 +902,8 @@ void init_subdiv_lighting();
 void get_occluders();
 
 // function prototypes - draw primitives
-vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, float radius2, unsigned ndiv,
-										   vector3d &v12, float const *const perturb_map=NULL, float s_beg=0.0, float s_end=1.0);
+vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, float radius2, unsigned ndiv, vector3d &v12,
+										   float const *const perturb_map=NULL, float s_beg=0.0, float s_end=1.0, int force_dim=-1);
 void draw_cylinder(float length, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends, bool first_end_only=0, bool last_end_only=0);
 void draw_cylinder_nstacks(float len, float r1, float r2, int ndiv, int nstacks, bool texture);
 void draw_cylinder(point const &p1, float length, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends);

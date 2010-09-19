@@ -33,7 +33,7 @@ int const TREE_4TH_BRANCHES  = 0; // 1 = branches, 2 = branches + leaves
 int const TREE_COLL          = 2;
 int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
-int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
+int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow) - broken?
 bool const USE_VBOS          = 1;
 
 
@@ -43,7 +43,7 @@ reusable_mem<tree_branch *> tree::branch_ptr_cache;
 
 
 // tree helper methods
-void rotate_all(point &rotate, float angle, float x, float y, float z);
+void rotate_all(point const &rotate, float angle, float x, float y, float z);
 int generate_next_cylin(int cylin_num, float branch_curveness, int ncib, bool branch_just_created, bool &branch_deflected);
 void process_leaf(vector<tree_leaf> &leaves, point start, point rotate, float b_deg_rot, float tsize);
 
@@ -121,9 +121,9 @@ void tree::gen_tree_shadows(char light_sources, int index) {
 	if (!enable_shadow_envelope(sphere_center, sphere_radius, light_sources, 1)) return;
 
 	for (unsigned i = 0; i < all_cylins.size(); i++) {
-		tree_cylin const &c(all_cylins[i]);
-		if ((c.which_branch + 2) > shadow_detail) return;
-		cylinder_shadow(c.p1, c.p2, c.r1, c.r2, light_sources, 0, 0, (c.which_branch < 2));
+		draw_cylin const &c(all_cylins[i]);
+		if ((c.level + 2) > shadow_detail) return;
+		cylinder_shadow(c.p1, c.p2, c.r1, c.r2, light_sources, 0, 0, (c.level < 2));
 	}
 	if (shadow_detail < 6) return;
 	
@@ -148,10 +148,10 @@ void tree::add_tree_collision_objects(int ix) {
 	cp.shadow = 0; // will be handled by gen_tree_shadows()
 
 	for (unsigned i = 0; i < all_cylins.size(); i++) {
-		tree_cylin &c(all_cylins[i]);
+		draw_cylin &c(all_cylins[i]);
 
-		if (c.which_branch < min(tree_coll_level, 4)) {
-			c.coll_index = add_coll_cylinder(c.p1, c.p2, c.r1, c.r2, cp, -1, ((c.which_branch == 0) ? 0 : 1));
+		if (c.level < min(tree_coll_level, 4)) {
+			c.coll_index = add_coll_cylinder(c.p1, c.p2, c.r1, c.r2, cp, -1, ((c.level == 0) ? 0 : 1));
 		}
 		else {
 			c.coll_index = -1;
@@ -440,27 +440,29 @@ void tree::draw_tree(bool invalidate_norms) {
 			}
 			data.reserve(sz);
 			vector_point_norm prev_vpn;
+			// FIXME: use element array buffer?
 
 			for (unsigned i = 0; i < numcylin; i++) {
-				tree_cylin const &cylin(all_cylins[i]);
+				draw_cylin const &cylin(all_cylins[i]);
 				unsigned const ndiv(cylin.get_num_div());
 				point const ce[2] = {cylin.p1, cylin.p2};
 				float const ndiv_inv(1.0/ndiv);
 				vector3d v12; // (ce[1] - ce[0]).get_norm()
-				vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12));
-				bool const is_trunk(cylin.which_branch == 0);
-				bool const prev_connect(is_trunk && i > 0 && p2p_dist(all_cylins[i-1].p2, cylin.p1) < cylin.r1);
+				vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
+				bool const smooth_branch(cylin.level <= 5);
+				bool const prev_connect(smooth_branch && i > 0 && (cylin.level == all_cylins[i-1].level) && (cylin.branch_id == all_cylins[i-1].branch_id));
 
 				for (unsigned S = 0; S < ndiv; ++S) { // ndiv can change
 					for (unsigned j = 0; j < 2; ++j) {
-						unsigned const s((S+j)%ndiv);
-						vector3d const n(vpn.n[s] + vpn.n[(s+ndiv-1)%ndiv]); // not normalized
+						unsigned const s((S+j)%ndiv), sm1((s+ndiv-1)%ndiv);
 						float const tx(1.0 - (S+j)*ndiv_inv);
-						point const p[2] = {(prev_connect ? prev_vpn.p[(s<<1)+1] : vpn.p[(s<<1)+0]), vpn.p[(s<<1)+1]};
-						for (unsigned i = 0; i < 2; ++i) data.push_back(vert_norm_tc(p[i^j], n, tx, float(i^j)));
+						vector3d const norm(vpn.n[s] + vpn.n[sm1]); // not normalized
+						vector3d const n[2] = {(prev_connect ? (prev_vpn.n[s] + prev_vpn.n[sm1]) : norm), norm};
+						point    const p[2] = {(prev_connect ? prev_vpn.p[(s<<1)+1] : vpn.p[(s<<1)+0]), vpn.p[(s<<1)+1]};
+						for (unsigned i = 0; i < 2; ++i) data.push_back(vert_norm_tc(p[i^j], n[i^j], tx, float(i^j)));
 					}
 				}
-				if (is_trunk) prev_vpn = vpn;
+				if (smooth_branch) prev_vpn = vpn;
 				qs_list[i] = data.size(); // end position
 			} // for i
 			assert(data.size() == data.capacity());
@@ -489,26 +491,18 @@ void tree::draw_tree(bool invalidate_norms) {
 		vector3d const t_to_c(vector3d(camera, sphere_center).get_norm());
 
 		for (unsigned i = 0; i < all_cylins.size(); i++) {
-			tree_cylin const &cylin(all_cylins[i]);
+			draw_cylin const &cylin(all_cylins[i]);
 			float const bsize((cylin.r1 + cylin.r2)*InvSqrt(p2p_dist_sq(camera, cylin.p1)));
 			unsigned ndiv(min(cylin.get_num_div(), unsigned(bs_scale*bsize)));
-			if (cylin.which_branch == 0) ndiv = max(ndiv, 3U);
+			if (cylin.level == 0) ndiv = max(ndiv, 3U);
 			if (ndiv == 0) continue;
 
-			if (ndiv <= 3) {
-				vector3d view_dir(t_to_c);
-				orthogonalize_dir(view_dir, (cylin.p2 - cylin.p1), view_dir, 1);
-				view_dir.do_glNormal();
-			}
-			if (ndiv < 3) { // draw as a line
-				if (ndiv >= 2) glLineWidth(ndiv);
-				draw_line(cylin.p1, cylin.p2);
-				if (ndiv >= 2) glLineWidth(1.0);
-			}
-			else if (ndiv <= 3) { // draw as a quad
+			if (ndiv <= 3) { // draw as a quad
 				int npts(0);
 				point pts[4];
-				vector3d v2;
+				vector3d view_dir(t_to_c), v2;
+				orthogonalize_dir(view_dir, (cylin.p2 - cylin.p1), view_dir, 1);
+				view_dir.do_glNormal();
 				cylinder_quad_projection(pts, cylin, t_to_c, v2, npts);
 				glBegin((npts == 4) ? GL_QUADS : GL_TRIANGLES);
 
@@ -518,24 +512,13 @@ void tree::draw_tree(bool invalidate_norms) {
 				glEnd();
 			}
 			else { // draw as a cylinder
-				glPushMatrix();
-				translate_to(cylin.p1);
-				rotate_about(cylin.deg_rotate, cylin.rotate);
-
-				if (bs_scale*bsize <= SMALL_NDIV || cylin.r1 == cylin.r2) {
-					// Note: r_approx has been set to 0 because it's faster not to use a dlist here
-					draw_cylin_fast(cylin.r1, cylin.r2, cylin.length, ndiv, 1, 0, 0);
-				}
-				else { // slow
-					gluCylinder(quadric, cylin.r1, cylin.r2, cylin.length, ndiv, 1);
-				}
-				glPopMatrix();
+				draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, ndiv, 1); // slow, but shouldn't be used anymore
 			}
 		} // for i
 		gluQuadricTexture(quadric, GL_FALSE);
 	} // end branch draw
 	glDisable(GL_TEXTURE_2D);
-	if (deadness >= 1.0 || init_deadness >= 1.0) return;
+	if (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0) return;
 
 	// draw leaves
 	unsigned nleaves(leaves.size());
@@ -736,10 +719,41 @@ inline void update_radius(point const &end, point const &sc, float &radius) {
 }
 
 
-void tree::create_one_branch_array() {
+void tree::process_cylins(tree_cylin const *const cylins, unsigned num) {
+
+	for (unsigned i = 0; i < num; ++i) {
+		assert(cylins[i].r1 > 0.0 || cylins[i].r2 > 0.0);
+		assert(cylins[i].p1 != cylins[i].p2);
+		update_radius(cylins[i].p2, sphere_center, sphere_radius);
+		all_cylins.push_back(cylins[i]);
+
+		if (leaves.capacity() > 0) { // leaves was reserved
+			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
+				float tsize((mesh_scale*base_radius/(TREE_SIZE*tree_size) + 10.0/mesh_scale2)/18.0);
+				if (type == 3) tsize *= 1.5; // this tree type has larger leaves
+				add_leaves_to_cylin(cylins[i], tsize);
+			}
+		}
+	}
+}
+
+
+void tree::create_leaves_and_one_branch_array() {
 
 	assert(all_cylins.empty());
+
+	//tree leaf variables
+	if (deadness < 1.0 && !DISABLE_LEAVES) {
+		unsigned nl(unsigned((1.0 - init_deadness)*num_leaves_per_occ*all_cylins.size()) + 1); // determine the number of leaves
+		leaves.reserve(nl);
+	}
+
+	//set the bounding sphere center
+	assert(base_num_cylins > 0);
+	sphere_center = base.cylin[max(0, (base_num_cylins - 2))].p2; // will be reset later
 	sphere_radius = 0.0;
+
+	//process cylinders
 	unsigned num_total_cylins(base_num_cylins); // start with trunk cylinders
 
 	for (int i = 0; i < num_1_branches; i++) {
@@ -752,33 +766,20 @@ void tree::create_one_branch_array() {
 			num_total_cylins += branches_34[w][i].num_cylins;
 		}
 	}
-	all_cylins.resize(num_total_cylins);
-	tree_cylin *all_cylins_ptr(&all_cylins.front());
-	memcpy(all_cylins_ptr, base.cylin, base_num_cylins*sizeof(tree_cylin));
-	int cylin_so_far(base_num_cylins);
-	
-	//set the bounding sphere center
-	sphere_center = base.cylin[base_num_cylins - 2].p2;
+	all_cylins.reserve(num_total_cylins);
+	process_cylins(base.cylin, base_num_cylins);
 
 	for (int i = 0; i < num_1_branches; i++) { //add the first and second order branches
 		for (int k = 0; k < (branches[i][0].num_branches + 1); k++) {
-			memcpy(all_cylins_ptr + cylin_so_far, branches[i][k].cylin, branches[i][k].num_cylins*sizeof(tree_cylin));
-			cylin_so_far += branches[i][k].num_cylins;
+			process_cylins(branches[i][k].cylin, branches[i][k].num_cylins);
 		}
 	}
 	for (unsigned w = 0; w < 2; ++w) {
 		for (int i = 0; i < num_34_branches[w]; i++) { //add the third and fourth order branches
-			memcpy(all_cylins_ptr + cylin_so_far, branches_34[w][i].cylin, branches_34[w][i].num_cylins*sizeof(tree_cylin));
-			cylin_so_far += branches_34[w][i].num_cylins;
+			process_cylins(branches_34[w][i].cylin,  branches_34[w][i].num_cylins);
 		}
 	}
-	assert(cylin_so_far == all_cylins.size());
-
-	for (unsigned i = 0; i < all_cylins.size(); ++i) { // compute radius
-		assert(all_cylins[i].r1 > 0.0 || all_cylins[i].r2 > 0.0);
-		assert(all_cylins[i].p1 != all_cylins[i].p2);
-		update_radius(all_cylins[i].p2, sphere_center, sphere_radius);
-	}
+	assert(all_cylins.size() == all_cylins.capacity());
 
 	//now delete the branches b/c they are unneccessary
 	cylin_cache [2].reusable_free(branches_34[0][0].cylin);
@@ -792,6 +793,19 @@ void tree::create_one_branch_array() {
 		cylin_cache [3].reusable_free(branches_34[1][0].cylin);
 		branch_cache[2].reusable_free(branches_34[1]);
 	}
+	max_leaves = max(max_leaves, unsigned(leaves.size()));
+
+	if (ENABLE_CLIP_LEAVES == 2) {
+		for (unsigned i = 0; i < leaves.size(); i++) {
+			leaves[i].pts[0] -= sphere_center;
+		}
+		sort(leaves.begin(), leaves.end(), comp_leaf);
+
+		for (unsigned i = 0; i < leaves.size(); i++) {
+			leaves[i].pts[0] += sphere_center;
+		}
+	}
+	if (!leaves.empty()) damage_scale = 1.0/leaves.size();
 }
 
 
@@ -810,7 +824,7 @@ inline void setup_rotate(vector3d &rotate, float rotate_start, float temp_deg) {
 }
 
 
-inline void rotate_around_axis(tree_cylin &c) {
+inline void rotate_around_axis(tree_cylin const &c) {
 
 	rotate_all(c.rotate, c.deg_rotate/TO_DEG, 0.0, 0.0, c.length);
 }
@@ -857,7 +871,7 @@ inline void turn_into_i(float *m) {
 }
 
 
-void rotate_all(point &rotate, float angle, float x, float y, float z) {
+void rotate_all(point const &rotate, float angle, float x, float y, float z) {
 
 	static float langle(0.0), sin_term(0.0), cos_term(1.0);
 
@@ -1010,15 +1024,19 @@ void tree::gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z,
 		int num_b_to_create(0);
 
 		if (i == 0) {
-			cylin.assign_params(0, base_radius, base_radius*base_var, length*(num_cylin_factor/base_num_cylins), 0.0);
+			cylin.assign_params(0, 0, base_radius, base_radius*base_var, length*(num_cylin_factor/base_num_cylins), 0.0);
 			cylin.p1 = pos;
 			cylin.rotate.assign(cos_ar, sin_ar, 0.0);
-			if (i == (base_num_cylins-1)) rotate_cylin(cylin);
 		}
 		else {
-			create_base_cylin(i);
+			tree_cylin &lcylin(base.cylin[i-1]);
+			cylin.assign_params(0, 0, lcylin.r2, lcylin.r2*base_var, lcylin.length*base_var*(base_cylin_factor/base_num_cylins),
+				int(sinf(-PI_TWO + i*PI/base_num_cylins)*base_curveness));
+			cylin.rotate.assign(lcylin.rotate.x, lcylin.rotate.y, 0.0);
+			rotate_cylin(lcylin);
+			add_rotation(cylin.p1, lcylin.p1, BASE_LEN_SCALE);
 		}
-		if (i == (base_num_cylins-1)) rotate_cylin(cylin);
+		if (i == (base_num_cylins-1)) rotate_cylin(cylin); // last cylin
 
 		if (base_break_off <= (i+1)) {
 			float const temp_num(branch_distribution*((float)num_1_branches)/init_num_cyl*(float(i+2-base_break_off))/(float(num_b_so_far+1)));
@@ -1050,28 +1068,16 @@ void tree::gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z,
 	bool const mesh_disabled(is_mesh_disabled(get_xpos(pos.x), get_ypos(pos.y)));
 	float const lmp(mesh_disabled ? (pos.z - TREE_DEPTH) : get_tree_z_bottom(lowest_mesh_point(pos, base_radius)));
 
-	if (pos.z > lmp) { // add the final cylinder section (possibly to the bottom of the mesh)
+	if (pos.z > lmp) { // add the bottom cylinder section (possibly to the bottom of the mesh)
 		tree_cylin &cylin(base.cylin[base_num_cylins]);
-		cylin.assign_params(0, base_radius, base_radius, (pos.z - lmp), 180.0);
+		cylin.assign_params(0, 1, base_radius, base_radius, (pos.z - lmp), 180.0);
 		cylin.p1 = cylin.p2 = pos;
 		cylin.rotate.assign(1.0, 0.0, 0.0);
 		rotate_cylin(cylin);
 		++base_num_cylins;
 	}
-	create_one_branch_array();
-	create_leaves();
+	create_leaves_and_one_branch_array();
 	if (add_cobjs) add_tree_collision_objects(ix);
-}
-
-
-void tree::create_base_cylin(int i) {
-
-	tree_cylin &cylin(base.cylin[i]), &lcylin(base.cylin[i-1]);
-	cylin.assign_params(0, lcylin.r2, lcylin.r2*base_var, lcylin.length*base_var*(base_cylin_factor/base_num_cylins),
-		int(sinf(-PI_TWO + i*PI/base_num_cylins)*base_curveness));
-	cylin.rotate.assign(lcylin.rotate.x, lcylin.rotate.y, 0.0);
-	rotate_cylin(lcylin);
-	add_rotation(cylin.p1, lcylin.p1, BASE_LEN_SCALE);
 }
 
 
@@ -1087,16 +1093,16 @@ inline float tree::gen_bc_size2(float branch_var) {
 }
 
 
-void tree::gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int which, bool rad_var_test) {
+void tree::gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test) {
 
-	cylin.assign_params(which, lcylin.r2, (rad_var_test ? lcylin.r1*gen_bc_size(rad_var) : 0.0),
-		((which == 4) ? branch_4_length*var : lcylin.length*gen_bc_size(var)), lcylin.deg_rotate);
+	cylin.assign_params(level, branch_id, lcylin.r2, (rad_var_test ? lcylin.r1*gen_bc_size(rad_var) : 0.0),
+		((level == 4) ? branch_4_length*var : lcylin.length*gen_bc_size(var)), lcylin.deg_rotate);
 	rotate_around_axis(lcylin);
 	add_rotation(cylin.p1, lcylin.p1, BRANCH_LEN_SCALE);
 }
 
 
-void tree::gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int which) {
+void tree::gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int level, int branch_id) {
 
 	rotate_around_axis(src_cylin);
 	add_rotation(cylin.p1, src_cylin.p1, BRANCH_LEN_SCALE);
@@ -1107,9 +1113,9 @@ void tree::gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstar
 		deg_rotate = rand_gen(int(branch_min_angle - rotate_start), int(branch_max_angle));
 	}
 	if (rand2() & 1) deg_rotate *= -1.0;
-	if (which == 2 && deg_rotate < 0.0) deg_rotate *= 0.5;
+	if (level == 2 && deg_rotate < 0.0) deg_rotate *= 0.5;
 	deg_rotate += src_cylin.deg_rotate;
-	cylin.assign_params(which, radius1, radius1*gen_bc_size2(rad_var), bstart*src_cylin.length*(num_cylin_factor/ncib), deg_rotate);
+	cylin.assign_params(level, branch_id, radius1, radius1*gen_bc_size2(rad_var), bstart*src_cylin.length*(num_cylin_factor/ncib), deg_rotate);
 }
 
 
@@ -1126,7 +1132,7 @@ void tree::create_1_order_branch(int base_cylin_num, float rotate_start, int bra
 	add_rotation(cylin.p1, base.cylin[base_cylin_num].p1, BRANCH_LEN_SCALE);
 	setup_rotate(cylin.rotate, rotate_start, 0.0);
 	float const radius1(base_radius*branch_1_start);
-	cylin.assign_params(1, radius1, radius1*gen_bc_size(branch_1_rad_var),
+	cylin.assign_params(1, branch_num, radius1, radius1*gen_bc_size(branch_1_rad_var),
 		radius1*6*((float)rand_gen(7,10)/10)*(num_cylin_factor/ncib),
 		(tree_slimness + (tree_wideness-tree_slimness)*rand_gen(6,10)/10.0*(num_1_branches - branch_num)/num_1_branches));
 
@@ -1150,7 +1156,7 @@ void tree::create_1_order_branch(int base_cylin_num, float rotate_start, int bra
 	for (int j = 1; j < branch.num_cylins; j++) {
 		tree_cylin &cylin(branch.cylin[j]), &lcylin(branch.cylin[j-1]);
 		branch_just_created = false;
-		gen_next_cylin(cylin, lcylin, branch_1_var, branch_1_rad_var, 1, (j < branch.num_cylins-1));
+		gen_next_cylin(cylin, lcylin, branch_1_var, branch_1_rad_var, 1, branch_num, (j < branch.num_cylins-1));
 		float temp_num2;
 
 		//calculate p1, based on the end point of lasy cylinder--------------------
@@ -1195,7 +1201,7 @@ void tree::create_2nd_order_branch(int i, int j, int cylin_num, bool branch_defl
 	tree_branch &branch(branches[i][j]);
 	tree_cylin &cylin(branch.cylin[0]), &src_cylin(branches[i][0].cylin[cylin_num]);
 	branch.num_cylins = branches[i][0].num_cylins - cylin_num;
-	gen_first_cylin(cylin, src_cylin, branch_2_start, branch_2_rad_var, rotate_start, 2);
+	gen_first_cylin(cylin, src_cylin, branch_2_start, branch_2_rad_var, rotate_start, 2, j);
 	gen_cylin_rotate(cylin.rotate, src_cylin.rotate, rotate_start*rotation);
 
 	//generate stats for the third order branches
@@ -1215,7 +1221,7 @@ void tree::create_2nd_order_branch(int i, int j, int cylin_num, bool branch_defl
 	//create rest of the cylinders
 	for (index = 1; index < branch.num_cylins; index++) {
 		tree_cylin &cylin(branch.cylin[index]), &lcylin(branch.cylin[index-1]);
-		gen_next_cylin(cylin, lcylin, branch_2_var, branch_2_rad_var, 2, (index < branch.num_cylins-1));
+		gen_next_cylin(cylin, lcylin, branch_2_var, branch_2_rad_var, 2, j, (index < branch.num_cylins-1));
 		float const temp_num2(float((index+1)*temp_num_big_branches)/((num_3_branches_created+1)*((float)branch.num_cylins)) +
 			float(temp_num_big_branches/(((float)branch.num_cylins)*(num_3_branches_created+1))));
 		if (temp_num*branch_1_distribution >= 1.0 && num_3_branches_created < branch.num_branches) branch_just_created = true;
@@ -1254,7 +1260,7 @@ void tree::create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, 
 	tree_branch &branch(branches_34[0][branch_num]);
 	tree_cylin &cylin(branch.cylin[0]), &src_cylin(branches[i][j].cylin[cylin_num]);
 	branch.num_cylins = branches[i][j].num_cylins - cylin_num;
-	gen_first_cylin(cylin, src_cylin, branch_2_start, branch_2_rad_var, rotate_start, 3);
+	gen_first_cylin(cylin, src_cylin, branch_2_start, branch_2_rad_var, rotate_start, 3, branch_num);
 	gen_cylin_rotate(cylin.rotate, src_cylin.rotate, rotate_start*rotation);
 
 	//generate stats for the third order branches
@@ -1264,7 +1270,7 @@ void tree::create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, 
 	//create rest of the cylinders
 	for (index = 1; index < branch.num_cylins; index++) {
 		tree_cylin &cylin(branch.cylin[index]), &lcylin(branch.cylin[index-1]);
-		gen_next_cylin(cylin, lcylin, branch_2_var, branch_2_rad_var, 3, (index < branch.num_cylins-1));
+		gen_next_cylin(cylin, lcylin, branch_2_var, branch_2_rad_var, 3, branch_num, (index < branch.num_cylins-1));
 		cylin.rotate = lcylin.rotate;
 		int const deg_added(generate_next_cylin(index, branch_curveness, branch.num_cylins, branch_just_created, branch_deflected));
 		cylin.deg_rotate += ((branch.cylin[0].deg_rotate < 0.0) ? deg_added : -deg_added);
@@ -1274,7 +1280,7 @@ void tree::create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, 
 }
 
 
-void tree::gen_b4(tree_branch &branch, int &this_branch, int i, int k) {
+void tree::gen_b4(tree_branch &branch, int &branch_num, int i, int k) {
 
 	int ncib(branch.num_cylins);
 
@@ -1287,7 +1293,7 @@ void tree::gen_b4(tree_branch &branch, int &this_branch, int i, int k) {
 			for (int l = 0; l < num_4_branches_per_occurance; l++) {
 				rotate_start += 360.0/num_4_branches_per_occurance*l + rand_gen(1,30);
 				if (rotate_start > 360.0) rotate_start -= 360.0;
-				generate_4th_order_branch(branch, j, rotate_start, temp_deg, this_branch++);
+				generate_4th_order_branch(branch, j, rotate_start, temp_deg, branch_num++);
 			}
 		}
 	}
@@ -1304,7 +1310,7 @@ void tree::create_4th_order_branches() {
 	branch_4_var                 = 0.70;
 	branch_4_length              = 0.006; //0.03;
 	branch_4_max_radius          = 0.008;
-	int this_branch(0);
+	int branch_num(0);
 	assert(num_34_branches[1] > 0);
 	branch_cache[2].reusable_malloc(branches_34[1],          num_34_branches[1]);
 	cylin_cache [3].reusable_malloc(branches_34[1][0].cylin, num_34_branches[1]*ncib);
@@ -1314,27 +1320,27 @@ void tree::create_4th_order_branches() {
 	}
 	for (int i = 0; i < num_1_branches; i++) { // b1->b4
 		for (int k = 0; k < (branches[i][0].num_branches + 1); k++) {
-			gen_b4(branches[i][k], this_branch, i, k); // b2->b4
+			gen_b4(branches[i][k], branch_num, i, k); // b2->b4
 		}
 	}
 	for (int i = 0; i < num_34_branches[0]; i++) { // b2->b4
-		gen_b4(branches_34[0][i], this_branch, i, 0);
+		gen_b4(branches_34[0][i], branch_num, i, 0);
 	}
-	num_34_branches[1] = this_branch;
+	num_34_branches[1] = branch_num;
 }
 
 
-void tree::generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int this_branch) {
+void tree::generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num) {
 	
 	int index(0);
 	bool branch_deflected(false);
-	tree_branch &branch(branches_34[1][this_branch]);
+	tree_branch &branch(branches_34[1][branch_num]);
 	tree_cylin &cylin(branch.cylin[0]);
 	setup_rotate(cylin.rotate, rotate_start, temp_deg);
 	tree_cylin &src_cylin(src_branch.cylin[j]);
 	branch.num_cylins = num_4_cylins;
 	float const radius1(src_branch.cylin[int(0.65*src_branch.num_cylins)].r2*0.9);
-	cylin.assign_params(4, radius1, radius1*gen_bc_size2(branch_4_rad_var), branch_4_length,
+	cylin.assign_params(4, branch_num, radius1, radius1*gen_bc_size2(branch_4_rad_var), branch_4_length,
 		src_cylin.deg_rotate + ((src_cylin.deg_rotate > 0.0) ? 1 : -1)*rand_gen(0,60));
 	rotate_around_axis(src_cylin);
 	add_rotation(cylin.p1, src_cylin.p1, BRANCH_LEN_SCALE);
@@ -1342,7 +1348,7 @@ void tree::generate_4th_order_branch(tree_branch &src_branch, int j, float rotat
 	
 	for (index = 1; index < branch.num_cylins; index++) {
 		tree_cylin &cylin(branch.cylin[index]), &lcylin(branch.cylin[index-1]);
-		gen_next_cylin(cylin, lcylin, branch_4_var, branch_4_rad_var, 4, (index < branch.num_cylins-1));
+		gen_next_cylin(cylin, lcylin, branch_4_var, branch_4_rad_var, 4, branch_num, (index < branch.num_cylins-1));
 		int const deg_added(generate_next_cylin(index, branch_curveness, branch.num_cylins, false, branch_deflected));
 		gen_cylin_rotate(cylin.rotate, lcylin.rotate, deg_added*rotate_factor);
 		cylin.rotate.z = lcylin.rotate.z;
@@ -1382,7 +1388,7 @@ void process_leaf(vector<tree_leaf> &leaves, point start, point rotate, float b_
 }
 
 
-void tree::add_leaves_to_cylin(tree_cylin &cylin, float tsize) {
+void tree::add_leaves_to_cylin(tree_cylin const &cylin, float tsize) {
 
 	static float acc(0.0);
 	point start;
@@ -1402,39 +1408,6 @@ void tree::add_leaves_to_cylin(tree_cylin &cylin, float tsize) {
 		add_rotation(start, cylin.p1, 0.9);
 		process_leaf(leaves, start, rotate, cylin.deg_rotate, tsize);
 	}
-}
-
-
-void tree::create_leaves() {
-
-	if (deadness >= 1.0 || DISABLE_LEAVES) return;
-
-	//tree leaf variables
-	unsigned nl(unsigned((1.0 - init_deadness)*num_leaves_per_occ*all_cylins.size()) + 1); // determine the number of leaves
-	float tsize((mesh_scale*base_radius/(TREE_SIZE*tree_size) + 10.0/mesh_scale2)/18.0);
-	if (type == 3) tsize *= 1.5; // this tree type has larger leaves
-	leaves.reserve(nl);
-
-	for (unsigned i = 0; i < all_cylins.size(); ++i) {
-		if (all_cylins[i].which_branch > 1 && (all_cylins[i].which_branch < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
-			add_leaves_to_cylin(all_cylins[i], tsize);
-		}
-	}
-	assert(unsigned(base_num_cylins - 2) < all_cylins.size());
-	max_leaves    = max(max_leaves, unsigned(leaves.size()));
-	sphere_center = all_cylins[base_num_cylins - 2].p2; // will be reset later
-
-	if (ENABLE_CLIP_LEAVES == 2) {
-		for (unsigned i = 0; i < leaves.size(); i++) {
-			leaves[i].pts[0] -= sphere_center;
-		}
-		sort(leaves.begin(), leaves.end(), comp_leaf);
-
-		for (unsigned i = 0; i < leaves.size(); i++) {
-			leaves[i].pts[0] += sphere_center;
-		}
-	}
-	damage_scale = 1.0/leaves.size();
 }
 
 

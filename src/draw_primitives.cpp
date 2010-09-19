@@ -32,21 +32,24 @@ extern GLUquadricObj* quadric;
 
 // create class sd_cylin_d?
 // perturb_map usage is untested
-vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, float radius2, unsigned ndiv,
-										   vector3d &v12, float const *const perturb_map, float s_beg, float s_end)
+vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, float radius2, unsigned ndiv, vector3d &v12,
+										   float const *const perturb_map, float s_beg, float s_end, int force_dim)
 {
 	assert(ndiv > 0 && ndiv < 100000);
 	v12 = (ce[1] - ce[0]).get_norm();
 	float const r[2] = {radius1, radius2};
 	float const cs_scale(TWO_PI/(float)ndiv);
 	vector3d vtest(v12), vab[2];
+	unsigned dim(0);
 
-	if (fabs(v12.x) < fabs(v12.y)) { // pick any vector as long as it's not parallel to v12
-		if (fabs(v12.x) < fabs(v12.z)) vtest.x += 0.5; else vtest.z += 0.5;
+	if (force_dim >= 0) {
+		assert(force_dim < 3);
+		dim = force_dim;
 	}
 	else {
-		if (fabs(v12.y) < fabs(v12.z)) vtest.y += 0.5; else vtest.z += 0.5;
+		dim = (fabs(v12.x) < fabs(v12.y)) ? ((fabs(v12.x) < fabs(v12.z)) ? 0 : 2) : ((fabs(v12.y) < fabs(v12.z)) ? 1 : 2);
 	}
+	vtest[dim] += 0.5;
 	cross_product(vtest, v12, vab[0]);  // vab[0] is orthogonal to v12
 	cross_product(v12, vab[0], vab[1]); // vab[1] is orthogonal to v12 and vab[0]
 	for (unsigned i = 0; i < 2; ++i) vab[i].normalize();

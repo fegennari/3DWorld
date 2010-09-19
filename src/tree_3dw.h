@@ -35,23 +35,30 @@ inline bool comp_leaf(const tree_leaf &A, const tree_leaf &B) {
 }
 
 
-struct tree_cylin : public cylinder_3dw { // size = 61 (64)
+struct draw_cylin : public cylinder_3dw { // size = 39 (40)
 
 	int coll_index;
-	char which_branch;
+	unsigned char level;
+	unsigned short branch_id;
+
+	draw_cylin() : coll_index(-1) {}
+	unsigned get_num_div() const {return (N_CYL_SIDES >> 1) - ((level - 1) << 2);}
+};
+
+
+struct tree_cylin : public draw_cylin { // size = 59 (60)
+
 	float length, deg_rotate;
 	vector3d rotate;
 
-	tree_cylin() : coll_index(-1) {}
-
-	void assign_params(char branch, float r1_, float r2_, float len, float drot) {
-		which_branch = branch;
-		r1           = r1_;
-		r2           = r2_;
-		length       = len;
-		deg_rotate   = drot;
+	void assign_params(unsigned char lev, unsigned short bid, float r1_, float r2_, float len, float drot) {
+		level      = lev;
+		branch_id  = bid;
+		r1         = r1_;
+		r2         = r2_;
+		length     = len;
+		deg_rotate = drot;
 	}
-	unsigned get_num_div() const {return (N_CYL_SIDES >> 1) - ((which_branch - 1) << 2);}
 };
 
 
@@ -78,7 +85,7 @@ class tree { // size = BIG
 	vector<vert_norm_tc_color> leaf_data;
 	point gen_pos, sphere_center;
 	float sphere_radius, init_deadness, deadness, damage;
-	vector<tree_cylin> all_cylins;
+	vector<draw_cylin> all_cylins;
 	colorRGBA color, base_color, leaf_color, bcolor;
 	tree_branch base, *branches_34[2], **branches;
 	int base_num_cylins, ncib;
@@ -123,20 +130,19 @@ public:
 	colorRGB get_leaf_color(unsigned i) const;
 	void clear_vbo();
 	void draw_tree(bool invalidate_norms);
-	void create_base_cylin(int i);
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);
-	void gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int which, bool rad_var_test);
-	void gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int which);
+	void gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test);
+	void gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int level, int branch_id);
 	void create_1_order_branch(int base_cylin_num, float rotate_start, int branch_num);
 	void create_2nd_order_branch(int i, int j, int cylin_num, bool branch_deflected, int rotation);
 	void create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, bool branch_deflected, int rotation);
-	void gen_b4(tree_branch &branch, int &this_branch, int i, int k);
+	void gen_b4(tree_branch &branch, int &branch_num, int i, int k);
 	void create_4th_order_branches();
-	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int this_branch);
-	void create_one_branch_array();
-	void create_leaves();
-	void add_leaves_to_cylin(tree_cylin &cylin, float tsize);
+	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
+	void process_cylins(tree_cylin const *const cylins, unsigned num);
+	void create_leaves_and_one_branch_array();
+	void add_leaves_to_cylin(tree_cylin const &cylin, float tsize);
 	void copy_color(colorRGB const &color, unsigned i);
 	void change_leaf_color(colorRGBA &base_color, unsigned i);
 	void shift_tree(vector3d const &vd);
