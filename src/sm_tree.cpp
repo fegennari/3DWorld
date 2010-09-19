@@ -339,7 +339,7 @@ void small_tree::draw(int mode) const {
 			}
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb)), len(hval*height + (zb - zbot));
 
-			if (0.5*window_width*(w1 + w2)/distance_to_camera(pos) < 1.2) { // draw as line
+			if (800.0*(w1 + w2) < distance_to_camera(pos)) { // draw as line
 				colorRGBA t_color(tcolor);
 				t_color.modulate_with(texture_color(WOOD_TEX));
 				vector3d view_dir(get_camera_pos(), pos);
