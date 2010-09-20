@@ -33,7 +33,7 @@ int const TREE_4TH_BRANCHES  = 0; // 1 = branches, 2 = branches + leaves
 int const TREE_COLL          = 2;
 int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
-int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow) - broken?
+int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
 bool const USE_VBOS          = 1;
 
 
@@ -435,12 +435,12 @@ void tree::draw_tree(bool invalidate_norms) {
 			unsigned sz(0);
 
 			for (unsigned i = 0; i < numcylin; i++) { // determine required data size
-				unsigned const ndiv();
 				sz += 4*all_cylins[i].get_num_div();
 			}
 			data.reserve(sz);
-			vector_point_norm prev_vpn;
 			// FIXME: use element array buffer?
+#if 1
+			vector_point_norm prev_vpn;
 
 			for (unsigned i = 0; i < numcylin; i++) {
 				draw_cylin const &cylin(all_cylins[i]);
@@ -449,8 +449,7 @@ void tree::draw_tree(bool invalidate_norms) {
 				float const ndiv_inv(1.0/ndiv);
 				vector3d v12; // (ce[1] - ce[0]).get_norm()
 				vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
-				bool const smooth_branch(cylin.level <= 5);
-				bool const prev_connect(smooth_branch && i > 0 && (cylin.level == all_cylins[i-1].level) && (cylin.branch_id == all_cylins[i-1].branch_id));
+				bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
 
 				for (unsigned S = 0; S < ndiv; ++S) { // ndiv can change
 					for (unsigned j = 0; j < 2; ++j) {
@@ -459,12 +458,50 @@ void tree::draw_tree(bool invalidate_norms) {
 						vector3d const norm(vpn.n[s] + vpn.n[sm1]); // not normalized
 						vector3d const n[2] = {(prev_connect ? (prev_vpn.n[s] + prev_vpn.n[sm1]) : norm), norm};
 						point    const p[2] = {(prev_connect ? prev_vpn.p[(s<<1)+1] : vpn.p[(s<<1)+0]), vpn.p[(s<<1)+1]};
-						for (unsigned i = 0; i < 2; ++i) data.push_back(vert_norm_tc(p[i^j], n[i^j], tx, float(i^j)));
+						for (unsigned d = 0; d < 2; ++d) data.push_back(vert_norm_tc(p[d^j], n[d^j], tx, float(d^j)));
 					}
 				}
-				if (smooth_branch) prev_vpn = vpn;
+				prev_vpn   = vpn;
 				qs_list[i] = data.size(); // end position
 			} // for i
+#else
+			vector<vector_point_norm> vpns;
+			unsigned cur(0), cur_level(0), cur_branch(0), ndiv(0);
+
+			while (1) {
+				for (unsigned i = cur; (i < numcylin && (all_cylins[i].level == cur_level) && (all_cylins[i].branch_id == cur_branch)); ++i) {
+					draw_cylin const &cylin(all_cylins[i]);
+					ndiv = cylin.get_num_div();
+					point const ce[2] = {cylin.p1, cylin.p2};
+					vector3d v12; // (ce[1] - ce[0]).get_norm()
+					vpns.push_back(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
+				}
+				float const ndiv_inv(1.0/ndiv);
+
+				for (unsigned v = 0; v < vpns.size(); ++v, ++cur) {
+					bool const beg(v == 0), end(v == vpns.size()-1);
+					unsigned const vp(beg ? 0 : v-1), vn(end ? vpns.size()-1 : v+1); // prev, next
+
+					for (unsigned S = 0; S < ndiv; ++S) {
+						for (unsigned j = 0; j < 2; ++j) {
+							unsigned const s((S+j)%ndiv), sm1((s+ndiv-1)%ndiv);
+							float const tx(1.0 - (S+j)*ndiv_inv);
+							// average prev/next cylinder with current, normal is not normalized
+							vector3d const n[2] = {(vpns[v].n[s] + vpns[v].n[sm1]) + (vpns[vp].n[s] + vpns[vp].n[sm1]),
+								                   (vpns[v].n[s] + vpns[v].n[sm1]) + (vpns[vn].n[s] + vpns[vn].n[sm1])};
+							point    const p[2] = {(vpns[v].p[(s<<1)+0] + vpns[vp].p[(s<<1)+!beg])*0.5,
+								                   (vpns[v].p[(s<<1)+1] + vpns[vn].p[(s<<1)+ end])*0.5};
+							for (unsigned d = 0; d < 2; ++d) data.push_back(vert_norm_tc(p[d^j], n[d^j], tx, float(d^j)));
+						}
+					}
+					qs_list[cur] = data.size(); // end position
+				}
+				vpns.resize(0);
+				if (cur == numcylin) break;
+				cur_level  = all_cylins[cur].level;
+				cur_branch = all_cylins[cur].branch_id;
+			} // for i
+#endif
 			assert(data.size() == data.capacity());
 			branch_vbo = create_vbo();
 			assert(branch_vbo > 0);
@@ -479,7 +516,6 @@ void tree::draw_tree(bool invalidate_norms) {
 		glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
 		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
 		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(point) + sizeof(vector3d)));
-		unsigned ix(0);
 		unsigned const num(qs_list[min(numcylin-1, max((numcylin/8), unsigned(1.5*numcylin*mscale/dist_cs)))]); // branch LOD
 		glDrawArrays(GL_QUADS, 0, num);
 		glEnable(GL_COLOR_ARRAY);

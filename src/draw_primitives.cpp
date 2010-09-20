@@ -30,16 +30,10 @@ extern GLUquadricObj* quadric;
 // ******************** CURVE GENERATORS ********************
 
 
-// create class sd_cylin_d?
-// perturb_map usage is untested
-vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, float radius2, unsigned ndiv, vector3d &v12,
-										   float const *const perturb_map, float s_beg, float s_end, int force_dim)
-{
-	assert(ndiv > 0 && ndiv < 100000);
-	v12 = (ce[1] - ce[0]).get_norm();
-	float const r[2] = {radius1, radius2};
-	float const cs_scale(TWO_PI/(float)ndiv);
-	vector3d vtest(v12), vab[2];
+void get_ortho_vectors(vector3d const &v12, vector3d *vab, int force_dim) {
+
+	assert(vab != NULL);
+	vector3d vtest(v12);
 	unsigned dim(0);
 
 	if (force_dim >= 0) {
@@ -50,9 +44,23 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 		dim = (fabs(v12.x) < fabs(v12.y)) ? ((fabs(v12.x) < fabs(v12.z)) ? 0 : 2) : ((fabs(v12.y) < fabs(v12.z)) ? 1 : 2);
 	}
 	vtest[dim] += 0.5;
-	cross_product(vtest, v12, vab[0]);  // vab[0] is orthogonal to v12
-	cross_product(v12, vab[0], vab[1]); // vab[1] is orthogonal to v12 and vab[0]
+	cross_product(vtest, v12,    vab[0]); // vab[0] is orthogonal to v12
+	cross_product(v12,   vab[0], vab[1]); // vab[1] is orthogonal to v12 and vab[0]
 	for (unsigned i = 0; i < 2; ++i) vab[i].normalize();
+}
+
+
+// create class sd_cylin_d?
+// perturb_map usage is untested
+vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, float radius2, unsigned ndiv, vector3d &v12,
+										   float const *const perturb_map, float s_beg, float s_end, int force_dim)
+{
+	assert(ndiv > 0 && ndiv < 100000);
+	v12 = (ce[1] - ce[0]).get_norm();
+	float const r[2] = {radius1, radius2};
+	float const cs_scale(TWO_PI/(float)ndiv);
+	vector3d vab[2];
+	get_ortho_vectors(v12, vab, force_dim);
 	static vector_point_norm vpn;
 	unsigned s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end));
 	if (s1 == ndiv) s0 = 0; // make wraparound correct

@@ -43,6 +43,7 @@ struct draw_cylin : public cylinder_3dw { // size = 39 (40)
 
 	draw_cylin() : coll_index(-1) {}
 	unsigned get_num_div() const {return (N_CYL_SIDES >> 1) - ((level - 1) << 2);}
+	bool can_merge(draw_cylin const &c) const {return (level == c.level && branch_id == c.branch_id);}
 };
 
 
