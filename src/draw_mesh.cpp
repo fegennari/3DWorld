@@ -1232,6 +1232,12 @@ public:
 		return camera_pdu.sphere_visible_test(get_center(), radius);
 	}
 
+	void bind_vbos() {
+		assert(vbo > 0 && ivbo > 0);
+		bind_vbo(vbo,  0);
+		bind_vbo(ivbo, 1);
+	}
+
 	bool draw(vector<vert_norm> &data, vector<unsigned short> &indices, vector<unsigned char> smask[]) { // make const or make vbo mutable?
 		assert(size > 0);
 		if (!is_visible()) return 0; // not visible to camera
@@ -1252,15 +1258,13 @@ public:
 		if (vbo == 0) {
 			create_data(data, indices, smask);
 			vbo  = create_vbo();
-			bind_vbo(vbo,  0);
-			upload_vbo_data(&data.front(), data.size()*ptr_stride, 0);
 			ivbo = create_vbo();
-			bind_vbo(ivbo, 1);
+			bind_vbos();
+			upload_vbo_data(&data.front(),    data.size()*ptr_stride,                0);
 			upload_vbo_data(&indices.front(), indices.size()*sizeof(unsigned short), 1);
 		}
 		else {
-			bind_vbo(vbo,  0);
-			bind_vbo(ivbo, 1);
+			bind_vbos();
 		}
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
 		glNormalPointer(   GL_FLOAT, ptr_stride, (void *)sizeof(point));
