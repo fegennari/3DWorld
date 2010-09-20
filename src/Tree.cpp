@@ -439,7 +439,6 @@ void tree::draw_tree(bool invalidate_norms) {
 			}
 			data.reserve(sz);
 			// FIXME: use element array buffer?
-#if 1
 			vector_point_norm prev_vpn;
 
 			for (unsigned i = 0; i < numcylin; i++) {
@@ -464,44 +463,6 @@ void tree::draw_tree(bool invalidate_norms) {
 				prev_vpn   = vpn;
 				qs_list[i] = data.size(); // end position
 			} // for i
-#else
-			vector<vector_point_norm> vpns;
-			unsigned cur(0), cur_level(0), cur_branch(0), ndiv(0);
-
-			while (1) {
-				for (unsigned i = cur; (i < numcylin && (all_cylins[i].level == cur_level) && (all_cylins[i].branch_id == cur_branch)); ++i) {
-					draw_cylin const &cylin(all_cylins[i]);
-					ndiv = cylin.get_num_div();
-					point const ce[2] = {cylin.p1, cylin.p2};
-					vector3d v12; // (ce[1] - ce[0]).get_norm()
-					vpns.push_back(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
-				}
-				float const ndiv_inv(1.0/ndiv);
-
-				for (unsigned v = 0; v < vpns.size(); ++v, ++cur) {
-					bool const beg(v == 0), end(v == vpns.size()-1);
-					unsigned const vp(beg ? 0 : v-1), vn(end ? vpns.size()-1 : v+1); // prev, next
-
-					for (unsigned S = 0; S < ndiv; ++S) {
-						for (unsigned j = 0; j < 2; ++j) {
-							unsigned const s((S+j)%ndiv), sm1((s+ndiv-1)%ndiv);
-							float const tx(1.0 - (S+j)*ndiv_inv);
-							// average prev/next cylinder with current, normal is not normalized
-							vector3d const n[2] = {(vpns[v].n[s] + vpns[v].n[sm1]) + (vpns[vp].n[s] + vpns[vp].n[sm1]),
-								                   (vpns[v].n[s] + vpns[v].n[sm1]) + (vpns[vn].n[s] + vpns[vn].n[sm1])};
-							point    const p[2] = {(vpns[v].p[(s<<1)+0] + vpns[vp].p[(s<<1)+!beg])*0.5,
-								                   (vpns[v].p[(s<<1)+1] + vpns[vn].p[(s<<1)+ end])*0.5};
-							for (unsigned d = 0; d < 2; ++d) data.push_back(vert_norm_tc(p[d^j], n[d^j], tx, float(d^j)));
-						}
-					}
-					qs_list[cur] = data.size(); // end position
-				}
-				vpns.resize(0);
-				if (cur == numcylin) break;
-				cur_level  = all_cylins[cur].level;
-				cur_branch = all_cylins[cur].branch_id;
-			} // for i
-#endif
 			assert(data.size() == data.capacity());
 			branch_vbo = create_vbo();
 			assert(branch_vbo > 0);
