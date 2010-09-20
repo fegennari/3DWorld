@@ -81,7 +81,7 @@ class tree { // size = BIG
 	static reusable_mem<tree_branch>   branch_cache[BRANCH_CACHE_ENTRIES];
 	static reusable_mem<tree_branch *> branch_ptr_cache;
 
-	int type, created, trseed1, trseed2, branch_vbo, leaf_vbo;
+	int type, created, trseed1, trseed2, branch_vbo, branch_ivbo, leaf_vbo;
 	bool no_delete, reset_leaves, leaves_changed;
 	vector<vert_norm_tc_color> leaf_data;
 	point gen_pos, sphere_center;
@@ -111,11 +111,11 @@ class tree { // size = BIG
 	vector<tree_leaf> leaves;
 	int num_min_leaves, num_max_leaves, leaf_min_angle, leaf_max_angle;
 	float num_leaves_per_occ, damage_scale;
-
-	vector<unsigned> qs_list; // list of quad strip indexes for branch rendering
+	unsigned num_branch_quads;
 
 public:
-	tree() : created(0), branch_vbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0), leaves_changed(0) {}
+	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0),
+		     reset_leaves(0), leaves_changed(0), num_branch_quads(0) {}
 	void gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z, bool add_cobjs, int ix);
 	void regen_tree(point &pos, int recalc_shadows, int index);
 	void gen_tree_shadows(char light_sources, int index);
@@ -129,7 +129,8 @@ public:
 	void drop_leaves();
 	void gen_leaf_color();
 	colorRGB get_leaf_color(unsigned i) const;
-	void clear_vbo();
+	void clear_vbos();
+	void bind_vbos();
 	void draw_tree(bool invalidate_norms);
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);

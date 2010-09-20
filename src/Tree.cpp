@@ -388,13 +388,23 @@ inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGB
 }
 
 
-void tree::clear_vbo() {
+void tree::clear_vbos() {
 
-	qs_list.clear();
 	delete_vbo(branch_vbo);
+	delete_vbo(branch_ivbo);
 	delete_vbo(leaf_vbo);
-	branch_vbo = 0;
-	leaf_vbo   = 0;
+	branch_vbo       = 0;
+	branch_ivbo      = 0;
+	leaf_vbo         = 0;
+	num_branch_quads = 0;
+}
+
+
+void tree::bind_vbos() {
+
+	assert(branch_vbo > 0 && branch_ivbo > 0);
+	bind_vbo(branch_vbo,  0);
+	bind_vbo(branch_ivbo, 1);
 }
 
 
@@ -429,17 +439,17 @@ void tree::draw_tree(bool invalidate_norms) {
 		size_t const branch_stride(sizeof(vert_norm_tc));
 
 		if (branch_vbo == 0) { // create vbo
-			assert(qs_list.empty());
-			qs_list.resize(numcylin);
+			assert(num_branch_quads == 0);
 			vector<vert_norm_tc> data;
-			unsigned sz(0);
+			vector<unsigned short> indices, cur_ix, last_ix;
 
 			for (unsigned i = 0; i < numcylin; i++) { // determine required data size
-				sz += 4*all_cylins[i].get_num_div();
+				num_branch_quads += all_cylins[i].get_num_div();
 			}
-			data.reserve(sz);
-			// FIXME: use element array buffer?
-			vector_point_norm prev_vpn;
+			indices.reserve(4*num_branch_quads);
+			//data.reserve(4*num_branch_quads);
+			data.reserve(3*num_branch_quads/2); // 1.5x should be sufficient
+			//vector_point_norm prev_vpn;
 
 			for (unsigned i = 0; i < numcylin; i++) {
 				draw_cylin const &cylin(all_cylins[i]);
@@ -449,39 +459,59 @@ void tree::draw_tree(bool invalidate_norms) {
 				vector3d v12; // (ce[1] - ce[0]).get_norm()
 				vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
 				bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
+				last_ix.resize(ndiv+1);
+				cur_ix.resize(ndiv+1);
 
 				for (unsigned S = 0; S < ndiv; ++S) { // ndiv can change
 					for (unsigned j = 0; j < 2; ++j) {
 						unsigned const s((S+j)%ndiv), sm1((s+ndiv-1)%ndiv);
 						float const tx(1.0 - (S+j)*ndiv_inv);
 						vector3d const norm(vpn.n[s] + vpn.n[sm1]); // not normalized
-						vector3d const n[2] = {(prev_connect ? (prev_vpn.n[s] + prev_vpn.n[sm1]) : norm), norm};
+						/*vector3d const n[2] = {(prev_connect ? (prev_vpn.n[s] + prev_vpn.n[sm1]) : norm), norm};
 						point    const p[2] = {(prev_connect ? prev_vpn.p[(s<<1)+1] : vpn.p[(s<<1)+0]), vpn.p[(s<<1)+1]};
-						for (unsigned d = 0; d < 2; ++d) data.push_back(vert_norm_tc(p[d^j], n[d^j], tx, float(d^j)));
+						for (unsigned d = 0; d < 2; ++d) data.push_back(vert_norm_tc(p[d^j], n[d^j], tx, float(d^j)));*/
+
+						for (unsigned d = 0; d < 2; ++d) {
+							bool const k((d^j) != 0);
+
+							if (k == 0 && prev_connect) {
+								indices.push_back(last_ix[s]);
+							}
+							else {
+								indices.push_back(data.size());
+								data.push_back(vert_norm_tc(vpn.p[(s<<1)+k], norm, tx, float(k^(i&1))));
+								if (k == 1) cur_ix[s] = indices.back();
+							}
+						}
 					}
 				}
-				prev_vpn   = vpn;
-				qs_list[i] = data.size(); // end position
+				cur_ix.swap(last_ix);
+				//prev_vpn = vpn;
 			} // for i
-			assert(data.size() == data.capacity());
-			branch_vbo = create_vbo();
-			assert(branch_vbo > 0);
-			bind_vbo(branch_vbo);
-			upload_vbo_data(&data.front(), data.size()*branch_stride);
+			//assert(data.size() == data.capacity());
+			assert(data.size() < (1<<16)); // must fit in unsigned short
+			branch_vbo  = create_vbo();
+			branch_ivbo = create_vbo();
+			bind_vbos();
+			upload_vbo_data(&data.front(),    data.size()*branch_stride,             0);
+			upload_vbo_data(&indices.front(), indices.size()*sizeof(unsigned short), 1);
 		} // end create vbo
+		else {
+			bind_vbos();
+		}
 		// use vbo for rendering
-		assert(qs_list.size() == numcylin);
-		bind_vbo(branch_vbo);
 		glDisable(GL_COLOR_ARRAY);
 		glDisableClientState(GL_COLOR_ARRAY);
 		glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
 		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
 		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(point) + sizeof(vector3d)));
-		unsigned const num(qs_list[min(numcylin-1, max((numcylin/8), unsigned(1.5*numcylin*mscale/dist_cs)))]); // branch LOD
-		glDrawArrays(GL_QUADS, 0, num);
+		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
+		//glDrawArrays(GL_QUADS, 0, num);
+		glDrawElements(GL_QUADS, num, GL_UNSIGNED_SHORT, 0);
 		glEnable(GL_COLOR_ARRAY);
 		glEnableClientState(GL_COLOR_ARRAY);
-		bind_vbo(0);
+		bind_vbo(0, 0);
+		bind_vbo(0, 1);
 	}
 	else { // draw branches
 		gluQuadricTexture(quadric, GL_TRUE);
@@ -698,7 +728,7 @@ void delete_trees(vector<tree> &ts) {
 
 int tree::delete_tree() {
 
-	clear_vbo();
+	clear_vbos();
 	if (!created)  return 0;
 	if (tree_coll_level) remove_collision_objects();
 	if (no_delete) return 0;
@@ -1585,7 +1615,7 @@ void add_tree_cobjs(vector<tree> &t_trees) {
 void clear_tree_vbos(vector<tree> &t_trees) {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].clear_vbo();
+		t_trees[i].clear_vbos();
 	}
 }
 
