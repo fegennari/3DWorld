@@ -1256,10 +1256,10 @@ void uobj_draw_data::draw_defsat() const {
 	// draw solar panels
 	color_b.do_glColor();
 	if (specular_en) set_specular(0.8, 90.0);
-	select_texture(WATER_TEX);
+	select_texture(PARTB_TEX);
 	
 	for (unsigned i = 0; i < 2; ++i) {
-		draw_cube(point((i ? -1.0 : 1.0), 0.0, 0.0), 1.1, 0.8,  0.1, 0, (dlights ? max(1, ndiv/4) : 1), 1);
+		draw_cube(point((i ? -1.0 : 1.0), 0.0, 0.0), 1.1, 0.8,  0.1, 1, (dlights ? max(1, ndiv/4) : 1), 1, 4.0);
 	}
 	glDisable(GL_TEXTURE_2D);
 	set_cloak_color(GRAY);
@@ -1307,7 +1307,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		color_b.do_glColor();
 
 		if (is_cube) {
-			draw_cube(all_zeros, 1.95, 1.95, 1.95, 1, ndiv2, 0, &view_dir);
+			draw_cube(all_zeros, 1.95, 1.95, 1.95, 1, ndiv2, 0, 1.0, &view_dir);
 		}
 		else {
 			draw_sphere_dlist(all_zeros, 0.97, ndiv2, 1);
@@ -1322,7 +1322,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		outer_color.do_glColor();
 
 		if (is_cube) {
-			draw_cube(all_zeros, 2.0, 2.0, 2.0, 1, ndiv2, 0, &view_dir);
+			draw_cube(all_zeros, 2.0, 2.0, 2.0, 1, ndiv2, 0, 1.0, &view_dir);
 		}
 		else {
 			draw_sphere_dlist(all_zeros, 1.0, ndiv2, 1);

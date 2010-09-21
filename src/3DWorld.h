@@ -947,7 +947,7 @@ void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, color
 void begin_line_tquad_draw();
 void end_line_tquad_draw();
 void draw_animated_billboard(point const &pos, float size, float timescale);
-void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv=0, vector3d const *const view_dir=NULL);
+void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv=0, float texture_scale=1.0, vector3d const *const view_dir=NULL);
 void draw_simple_polygon(point const *const points, int npoints, vector3d const &norm);
 void draw_simple_extruded_polygon(float thick, point const *const points, int npoints);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);

@@ -839,8 +839,9 @@ void draw_animated_billboard(point const &pos, float size, float timescale) { //
 
 
 // need to do something with tex coords for scale
-void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv, vector3d const *const view_dir) {
-
+void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv,
+			   float texture_scale, vector3d const *const view_dir)
+{
 	point pt;
 	glPushMatrix();
 	translate_to(pos);
@@ -877,10 +878,12 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 
 				for (unsigned s1 = 0; s1 <= ndivs[d[1]]; ++s1) {
 					float s[2];
-					pt[d[1]] = s[1] = steps[d[1]]*s1;
+					pt[d[1]] = steps[d[1]]*s1;
+					s[1]     = texture_scale*pt[d[1]];
 
 					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-						pt[d[0]] = s[0] = va[k^j]; // need to orient the vertices differently for each side
+						pt[d[0]] = va[k^j]; // need to orient the vertices differently for each side
+						s[0]     = texture_scale*pt[d[0]];
 						if (texture) glTexCoord2fv(s);
 						pt.do_glVertex();
 					}
