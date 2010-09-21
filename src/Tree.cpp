@@ -429,13 +429,13 @@ void tree::draw_tree(bool invalidate_norms) {
 		size_t const branch_stride(sizeof(vert_norm_tc));
 
 		if (branch_vbo == 0) { // create vbo
-			// using an array element buffer is much more complex but not much faster
+			// using an array element buffer is much more complex but not much faster, though it does use less memory
 			assert(num_branch_quads == 0);
-			vector<vert_norm_tc> data;
 
 			for (unsigned i = 0; i < numcylin; i++) { // determine required data size
 				num_branch_quads += all_cylins[i].get_num_div();
 			}
+			vector<vert_norm_tc> data;
 			data.reserve(4*num_branch_quads);
 			vector_point_norm prev_vpn;
 
