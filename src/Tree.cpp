@@ -1499,10 +1499,8 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 		unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1, XY_MULT_SIZE/num_trees));
 		unsigned const skip_val(max(1, int(1.0/sqrt((mesh_scale*mesh_scale2))))); // similar to deterministic gen in scenery.cpp
 
-		for (unsigned i = 1; i < unsigned(MESH_Y_SIZE-1); i += skip_val) {
-			for (unsigned j = 1; j < unsigned(MESH_X_SIZE-1); j += skip_val) {
-		//for (int i = -2*MESH_Y_SIZE; i < 3*MESH_Y_SIZE; i += skip_val) {
-			//for (int j = -2*MESH_X_SIZE; j < 3*MESH_X_SIZE; j += skip_val) {
+		for (int i = get_ext_y1(); i < get_ext_y2(); i += skip_val) {
+			for (int j = get_ext_x1(); j < get_ext_x2(); j += skip_val) {
 				if (scrolling) {
 					int const ox(j + dx_scroll), oy(i + dy_scroll); // positions in original coordinate system
 					if (ox >= 1 && ox <= MESH_X_SIZE-1 && oy >= 1 && oy <= MESH_Y_SIZE-1) continue; // use orignal tree from last position

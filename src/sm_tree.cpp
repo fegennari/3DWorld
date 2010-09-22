@@ -105,10 +105,8 @@ void gen_small_trees() {
 	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), skip_val(max(1, int(1.0/sqrt((mesh_scale*mesh_scale2)))));
 	//PRINT_TIME("Delete");
 	
-	for (int i = 1; i < MESH_Y_SIZE-1; i += skip_val) {
-		for (int j = 1; j < MESH_X_SIZE-1; j += skip_val) {
-	//for (int i = -2*MESH_Y_SIZE; i < 3*MESH_Y_SIZE; i += skip_val) {
-		//for (int j = -2*MESH_X_SIZE; j < 3*MESH_X_SIZE; j += skip_val) {
+	for (int i = get_ext_y1(); i < get_ext_y2(); i += skip_val) {
+		for (int j = get_ext_x1(); j < get_ext_x2(); j += skip_val) {
 			rseed1 = 657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index;
 			rseed2 = 845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index;
 			if (((rand2() + rand2())%tree_prob) != 0) continue; // not selected

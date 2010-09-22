@@ -735,10 +735,8 @@ void gen_scenery_deterministic() {
 	float const min_log_z  (water_plane_z - 0.040*zmax_est);
 	clear_scenery_objs();
 
-	for (int i = 1; i < MESH_Y_SIZE-1; ++i) {
-		for (int j = 1; j < MESH_X_SIZE-1; ++j) {
-	//for (int i = -2*MESH_Y_SIZE; i < 3*MESH_Y_SIZE; ++i) {
-		//for (int j = -2*MESH_X_SIZE; j < 3*MESH_X_SIZE; ++j) {
+	for (int i = get_ext_y1(); i < get_ext_y2(); ++i) {
+		for (int j = get_ext_x1(); j < get_ext_x2(); ++j) {
 			rseed1 = 786433* (i + yoff2) + 196613 *rand_gen_index;
 			rseed2 = 6291469*(j + xoff2) + 1572869*rand_gen_index;
 			int const val((rand2() + rand2())%smod);
