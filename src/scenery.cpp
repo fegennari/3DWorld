@@ -46,6 +46,7 @@ extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoo
 extern long rseed1, rseed2;
 extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, max_water_height;
 extern GLUquadricObj* quadric;
+extern pt_line_drawer tree_trunk_pld; // we can use this for plant trunks
 
 
 void gen_scenery_deterministic();
@@ -634,10 +635,20 @@ public:
 			}
 		}
 		if (mode & 1) {
-			int const ndiv(max(3, min(N_CYL_SIDES, int(5.0*sscale*radius/distance_to_camera(pos)))));
-			select_texture(WOOD_TEX);
-			set_color(pltype[type].stemc*color_scale);
-			draw_fast_cylinder(pos, pos+point(0.0, 0.0, height), radius, 0.0, ndiv, 1);
+			colorRGBA color(pltype[type].stemc*color_scale);
+			float const dist(distance_to_camera(pos));
+
+			if (1600.0*(do_zoom ? ZOOM_FACTOR : 1.0)*radius < dist) { // draw as line
+				color.modulate_with(texture_color(WOOD_TEX));
+				vector3d const view_dir(get_camera_pos(), pos);
+				tree_trunk_pld.add_line(pos, view_dir, color, (pos + point(0.0, 0.0, 0.75*height)), view_dir, color);
+			}
+			else {
+				int const ndiv(max(3, min(N_CYL_SIDES, int(5.0*sscale*radius/dist))));
+				select_texture(WOOD_TEX);
+				set_color(color);
+				draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
+			}
 		}
 		if (mode & 2) {
 			glPushMatrix();
@@ -827,14 +838,17 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 		draw_scenery_vector(logs,   sscale);
 		draw_scenery_vector(stumps, sscale);
 		gluQuadricTexture(quadric, GL_FALSE);
+
+		for (unsigned i = 0; i < plants.size(); ++i) {
+			plants[i].draw(sscale, 1); // draw stem
+		}
+		tree_trunk_pld.draw_and_clear();
 	}
 	if (draw_transparent) {
 		enable_blend();
 
-		for (unsigned pass = 0; pass < 2; ++pass) { // first pass: draw stem, second pass: draw leaves
-			for (unsigned i = 0; i < plants.size(); ++i) {
-				plants[i].draw(sscale, (1 << pass));
-			}
+		for (unsigned i = 0; i < plants.size(); ++i) {
+			plants[i].draw(sscale, 2); // draw leaves
 		}
 		disable_blend();
 	}

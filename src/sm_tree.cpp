@@ -182,7 +182,7 @@ void draw_small_trees() {
 	gluQuadricTexture(quadric, GL_FALSE);
 	glDisable(GL_TEXTURE_2D);
 	tree_trunk_pld.draw_and_clear();
-	//PRINT_TIME("small tree draw"); // 47
+	//PRINT_TIME("small tree draw");
 }
 
 
@@ -318,7 +318,7 @@ void small_tree::draw(int mode) const {
 	bool const cobj_coll(pine_tree && (mode & 2) && small_trees.size() < 100); // only cull pine tree leaves if there aren't too many
 	if (!sphere_in_camera_view(pos2, radius, (cobj_coll ? 2 : 0))) return;
 	float const dist(distance_to_camera(pos));
-	float const size((do_zoom ? ZOOM_FACTOR : 1.0)*SM_TREE_QUALITY*stt[type].ss*width*window_width/dist);
+	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size(zoom_f*SM_TREE_QUALITY*stt[type].ss*width*window_width/dist);
 	int const max_sides(N_CYL_SIDES/2);
 
 	// slow because of:
@@ -336,7 +336,7 @@ void small_tree::draw(int mode) const {
 			}
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 
-			if (800.0*(w1 + w2) < distance_to_camera(pos)) { // draw as line
+			if (800.0*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
 				colorRGBA t_color(tcolor);
 				t_color.modulate_with(texture_color(WOOD_TEX));
 				vector3d view_dir(get_camera_pos(), pos);
