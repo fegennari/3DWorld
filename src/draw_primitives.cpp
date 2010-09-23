@@ -341,11 +341,27 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 						float const *const exp_map, point const *const pt_shift, float expand, float s_beg, float s_end)
 { // no draw_ends
 	assert(radius1 > 0.0 || radius2 > 0.0);
+	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
+
+	/*if (radius2 == 0.0 && p1.x == p2.x && p1.y == p2.y && !use_quads && !perturb_map && !draw_ends && s_beg == 0.0 && s_end == 1.0) {
+		glBegin(GL_TRIANGLE_FAN); // draw a cone
+		if (texture) glTexCoord2f(0.0, 1.0);
+		(p2 - p1).get_norm().do_glNormal();
+		p2.do_glVertex();
+
+		for (int s = 0; s <= ndiv; ++s) {
+			float const theta(TWO_PI*s/ndiv), dx(sinf(theta)), dy(cosf(theta)); // inefficient
+			if (texture) glTexCoord2f(float(s)/ndiv, 0.0);
+			point(dx, dy, 0.0).do_glNormal();
+			(p1 + point(radius1*dx, radius1*dy, 0.0)).do_glVertex();
+		}
+		glEnd();
+		return;
+	}*/
 	point const ce[2] = {p1, p2};
 	float const ndiv_inv(1.0/ndiv);
 	vector3d v12; // (ce[1] - ce[0]).get_norm()
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, perturb_map, s_beg, s_end));
-	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
 	if (expand != 0.0) expand *= 0.5; // 1/2, for normalization
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end));
 
@@ -385,8 +401,10 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 	}
 	if (draw_ends) {
 		assert(!render_map && !exp_map && !pt_shift && expand == 0.0 && s0 == 0 && s1 == ndiv); // not yet supported
+		float const r[2] = {radius1, radius2};
 
 		for (unsigned i = 0; i < 2; ++i) {
+			if (r[i] == 0.0) continue;
 			vector3d const norm(v12*(i ? 1.0 : -1.0));
 			norm.do_glNormal();
 			glBegin(GL_TRIANGLE_FAN);
