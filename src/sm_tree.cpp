@@ -173,11 +173,10 @@ void draw_small_trees() {
 	//set_lighted_sides(2);
 
 	// two pass draw is more efficient because it avoids texture thrashing
-	for (unsigned i = 0; i < small_trees.size(); ++i) { // first pass: draw trunk
-		small_trees[i].draw(1);
-	}
-	for (unsigned i = 0; i < small_trees.size(); ++i) { // second pass: draw leaves
-		small_trees[i].draw(2);
+	for (unsigned pass = 0; pass < 2; ++pass) { // first pass: draw trunk, second pass: draw leaves
+		for (unsigned i = 0; i < small_trees.size(); ++i) {
+			small_trees[i].draw(1 << pass);
+		}
 	}
 	//set_lighted_sides(1);
 	gluQuadricTexture(quadric, GL_FALSE);
@@ -253,7 +252,7 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params const &cp_trunk) {
 	cp.tid = stt[type].tid;
 
 	if (type != T_BUSH && type != T_SH_PINE) {
-		point const p1(pos + dir*(get_tree_z_bottom(pos.z - 0.2f*width) - pos.z)), p2(pos + dir*(0.65*height));
+		point const p1(pos + dir*(get_tree_z_bottom(pos.z - 0.2f*width, pos) - pos.z)), p2(pos + dir*(0.65*height));
 		coll_id.push_back(add_coll_cylinder(p1, p2, stt[type].ws*width, stt[type].w2*width, cp_trunk, -1, 1));
 	}
 	switch (type) {
@@ -335,7 +334,7 @@ void small_tree::draw(int mode) const {
 			for (unsigned i = 0; i < 3; ++i) {
 				tcolor[i] = min(1.0f, tcolor[i]*(0.85f + 0.3f*rv[i]));
 			}
-			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb)), len(hval*height + (zb - zbot));
+			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 
 			if (800.0*(w1 + w2) < distance_to_camera(pos)) { // draw as line
 				colorRGBA t_color(tcolor);

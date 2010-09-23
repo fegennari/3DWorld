@@ -90,9 +90,9 @@ inline int rand_gen(int start, int end) {
 }
 
 
-float get_tree_z_bottom(float z) {
+float get_tree_z_bottom(float z, point const &pos) {
 
-	return max(zbottom, (z - TREE_DEPTH));
+	return (is_over_mesh(pos) ? max(zbottom, (z - TREE_DEPTH)) : (z - TREE_DEPTH));
 }
 
 
@@ -1059,7 +1059,7 @@ void tree::gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z,
 
 	// cylinder from base into ground
 	bool const mesh_disabled(is_mesh_disabled(get_xpos(pos.x), get_ypos(pos.y)));
-	float const lmp(mesh_disabled ? (pos.z - TREE_DEPTH) : get_tree_z_bottom(lowest_mesh_point(pos, base_radius)));
+	float const lmp(mesh_disabled ? (pos.z - TREE_DEPTH) : get_tree_z_bottom(lowest_mesh_point(pos, base_radius), pos));
 
 	if (pos.z > lmp) { // add the bottom cylinder section (possibly to the bottom of the mesh)
 		tree_cylin &cylin(base.cylin[base_num_cylins]);

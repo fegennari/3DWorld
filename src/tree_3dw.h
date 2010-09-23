@@ -179,7 +179,7 @@ public:
 
 
 // function prototypes - tree
-float get_tree_z_bottom(float z);
+float get_tree_z_bottom(float z, point const &pos);
 void remove_tree_cobjs(vector<tree> &t_trees);
 void draw_trees(vector<tree> &ts);
 void delete_trees(vector<tree> &ts);
