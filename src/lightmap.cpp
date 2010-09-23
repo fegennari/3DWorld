@@ -902,6 +902,7 @@ void add_smoke(point const &pos, float val) {
 	if (!lmc) return;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos) || pos.z >= v_collision_matrix[ypos][xpos].zmax) return; // above all cobjs/outside
+	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return;
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
 	smoke_enabled = 1;
 }
@@ -1072,13 +1073,11 @@ bool has_smoke(point const *const pts, unsigned npts) { // currently only used i
 	int mmi[2][2], mmiz[2];
 	float mmf[3][2];
 	if (!get_check_pts_bounds(pts, npts, NULL, mmi, mmf)) return 0;
+	point const camera(get_camera_pos());
 
 	for (unsigned i = 0; i < 2; ++i) {
 		mmiz[i] = max(0, min(MESH_SIZE[2]-1, get_zpos(mmf[2][i])));
 	}
-	point const camera(get_camera_pos());
-	unsigned num(0);
-	
 	for (int y = mmi[1][0]; y <= mmi[1][1]; ++y) {
 		for (int x = mmi[0][0]; x <= mmi[0][1]; ++x) { // check if light has changed since last frame?
 			for (int z = mmiz[0]; z <= mmiz[1]; ++z) {

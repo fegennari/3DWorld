@@ -821,12 +821,12 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 		select_texture(ROCK_SPHERE_TEX);
 		set_color(WHITE);
 		draw_scenery_vector(surface_rocks, sscale);
-		gluQuadricTexture(quadric, GL_TRUE);
 		draw_scenery_vector(rocks,  sscale); // can unset gluQuadricTexture
 		set_color(TREE_C);
 		gluQuadricTexture(quadric, GL_TRUE);
 		draw_scenery_vector(logs,   sscale);
 		draw_scenery_vector(stumps, sscale);
+		gluQuadricTexture(quadric, GL_FALSE);
 	}
 	if (draw_transparent) {
 		enable_blend();
@@ -838,7 +838,7 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 		}
 		disable_blend();
 	}
-	gluQuadricTexture(quadric, GL_FALSE);
+	// *** draw grass? ***
 	glDisable(GL_TEXTURE_2D);
 }
 

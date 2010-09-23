@@ -609,6 +609,7 @@ void tree::draw_tree(bool invalidate_norms) {
 				leaves[i].color = min(1.0f, (l.color + LEAF_HEAL_RATE*fticks));
 				copy_color(l.calc_leaf_color(leaf_color, base_color), i);
 			}
+			// *** add sun flare from transparency when sun is behind the leaf? ***
 			reset_leaves   = 1; // Do we want to update the normals and collision objects as well?
 			leaves_changed = 1;
 		}
@@ -626,6 +627,7 @@ void tree::draw_tree(bool invalidate_norms) {
 				float const scale((l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1)) ? LEAF_SHADOW_VAL : 1.0);
 				leaf_data[j+(i<<2)].n = l.norm*scale;
 			}
+			// *** update colors based on ambient occlusion ***
 		}
 		leaves_changed = 1;
 	}
