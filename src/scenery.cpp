@@ -587,6 +587,7 @@ class s_plant : public scenery_obj { // size = 40
 
 public:
 	s_plant() : coll_id2(-1), height(1.0) {}
+	bool operator<(s_plant const &p) const {return (type < p.type);}
 
 	int create(int x, int y, int use_xy, float minz) {
 		points.clear();
@@ -618,7 +619,7 @@ public:
 		coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cp); // leaves
 	}
 
-	void draw(float sscale) { // modifies points, so non-const
+	void draw(float sscale, int mode) { // modifies points, so non-const
 		if (!sphere_in_camera_view(pos, (height + radius), 2)) return;
 		int const light(get_light());
 		float color_scale(SHADOW_VAL);
@@ -632,42 +633,45 @@ public:
 				break;
 			}
 		}
-		float const wscale(250.0*radius*msms2);
-		int const ndiv(max(3, min(N_CYL_SIDES, int(5.0*sscale*radius/distance_to_camera(pos)))));
-		glPushMatrix();
-		translate_to(pos);
-		gluQuadricTexture(quadric, GL_TRUE);
-		select_texture(WOOD_TEX);
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.75);
-		set_color(pltype[type].stemc*color_scale);
-		gluCylinder(quadric, radius, 0.0, height, ndiv, 1);
-		set_color(pltype[type].leafc*color_scale);
-		select_texture(pltype[type].tid);
-		glNormal3f(0.0, 0.0, 1.0);
-		set_lighted_sides(2);
-		glScalef(wscale, wscale, 1.0);
+		if (mode & 1) {
+			int const ndiv(max(3, min(N_CYL_SIDES, int(5.0*sscale*radius/distance_to_camera(pos)))));
+			select_texture(WOOD_TEX);
+			set_color(pltype[type].stemc*color_scale);
+			draw_fast_cylinder(pos, pos+point(0.0, 0.0, height), radius, 0.0, ndiv, 1);
+		}
+		if (mode & 2) {
+			glPushMatrix();
+			translate_to(pos);
+			glEnable(GL_ALPHA_TEST);
+			glAlphaFunc(GL_GREATER, 0.75);
+			set_color(pltype[type].leafc*color_scale);
+			select_texture(pltype[type].tid);
+			glNormal3f(0.0, 0.0, 1.0);
+			set_lighted_sides(2);
+			float const wscale(250.0*radius*msms2);
+			glScalef(wscale, wscale, 1.0);
 
-		if (points.empty()) { // compute points
-			float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
-			unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
-			float rdeg(30.0);
+			if (points.empty()) { // compute points
+				float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
+				unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
+				float rdeg(30.0);
 
-			for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
-				for (unsigned k = 0; k < nrings; ++k) {
-					float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
-					float const theta(TWO_PI*(3.3*j + k/5.0) + theta0);
-					float const z((j + 3.0)*height/(nlevels + 4.0));
-					int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
-					rdeg += 0.01*(val - 150);
-					add_rotated_quad_pts(points, theta, sz, rdeg/45.0, z);
+				for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
+					for (unsigned k = 0; k < nrings; ++k) {
+						float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
+						float const theta(TWO_PI*(3.3*j + k/5.0) + theta0);
+						float const z((j + 3.0)*height/(nlevels + 4.0));
+						int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
+						rdeg += 0.01*(val - 150);
+						add_rotated_quad_pts(points, theta, sz, rdeg/45.0, z);
+					}
 				}
 			}
+			draw_quads_from_pts(points);
+			glDisable(GL_ALPHA_TEST);
+			set_lighted_sides(1);
+			glPopMatrix();
 		}
-		draw_quads_from_pts(points);
-		glPopMatrix();
-		glDisable(GL_ALPHA_TEST);
-		set_lighted_sides(1);
 	}
 
 	void remove_cobjs() {
@@ -770,6 +774,7 @@ void gen_scenery_deterministic() {
 		}
 	}
 	surface_rock_cache.clear_unref();
+	sort(plants.begin(), plants.end()); // sort by type
 }
 
 
@@ -825,7 +830,12 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 	}
 	if (draw_transparent) {
 		enable_blend();
-		draw_scenery_vector(plants, sscale);
+
+		for (unsigned pass = 0; pass < 2; ++pass) { // first pass: draw stem, second pass: draw leaves
+			for (unsigned i = 0; i < plants.size(); ++i) {
+				plants[i].draw(sscale, (1 << pass));
+			}
+		}
 		disable_blend();
 	}
 	gluQuadricTexture(quadric, GL_FALSE);
