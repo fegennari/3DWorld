@@ -208,18 +208,15 @@ void shape3d::add_vertex(unsigned vertex, unsigned face_id, unsigned &face_count
 void shape3d::draw(bool skip_color_set) const {
 
 	if (points.empty()) return;
-	int lcid(-1);
 	
 	if (points.size() < 3 || faces.size() < 1) {
 		cout << "Invalid shape: Cannot draw." << endl;
 		return;
 	}
+	unsigned lcid(0);
 	if (colors.empty() && tid >= 0) select_texture(tid);
 	enable_blend();
 	if (!skip_color_set) set_color(color);
-	glPushMatrix();
-	translate_to(pos);
-	uniform_scale(scale);
 	set_fill_mode();
 	glBegin(GL_TRIANGLES);
 
@@ -227,7 +224,7 @@ void shape3d::draw(bool skip_color_set) const {
 		if (!colors.empty()) {
 			unsigned const color_id(faces[i].color_id);
 
-			if (color_id != lcid) {
+			if (i == 0 || color_id != lcid) {
 				glEnd();
 				select_texture(colors[color_id].tid);
 				if (!skip_color_set) set_color(colors[color_id].c);
@@ -264,13 +261,13 @@ void shape3d::draw(bool skip_color_set) const {
 					glTexCoord2f(tex_scale*p.x, tex_scale*p.z);
 				}
 			}
-			p.do_glVertex();
+			//p.do_glVertex();
+			(p*scale + pos).do_glVertex();
 		}
 	}
 	glEnd();
-	glPopMatrix();
 	disable_blend();
-	glDisable(GL_TEXTURE_2D);
+	if (tid >= 0) glDisable(GL_TEXTURE_2D);
 	set_specular(0.0, 0.0);
 }
 
