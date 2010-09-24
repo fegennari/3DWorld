@@ -599,17 +599,34 @@ void tree::draw_tree(bool invalidate_norms) {
 			vector3d const delta((new_dir - orig_dir) - sphere_center);
 			leaf_data[(i<<2)+1].v = l.pts[1] + delta;
 			leaf_data[(i<<2)+2].v = l.pts[2] + delta;
-			vector3d const normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
+			vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
+			vector3d mod_norm(normal);
 
-			for (unsigned j = 0; j < 4; ++j) {
-				float const scale(leaf_data[j+(i<<2)].n.mag()); // contains shadow scaling
-				leaf_data[j+(i<<2)].n = normal*scale; // update the normals, even though this slows the algorithm down
+			// add sun flare and transparency/scattering when sun is behind the leaf
+			if (1) {
+				point const lpos((p1 + p2)*0.5);
+				vector3d const dir_to_camera(get_camera_pos() - lpos), dir_to_light(get_light_pos() - lpos);
+				float const dp1(dot_product(normal, dir_to_camera)), dp2(dot_product(normal, dir_to_light));
+				
+				if ((dp1 < 0.0) ^ (dp2 < 0.0)) { // looking at unlit side
+					mod_norm *= -0.5; // reverse and halve
+					float const dp3(dot_product(dir_to_camera.get_norm(), dir_to_light.get_norm()));
+
+					if (dp3 < -0.95) { // camera behind leaf
+						float const val(-20.0*(dp3 + 0.95));
+						mod_norm = mod_norm*(1.0 - val) + dir_to_light.get_norm()*((dp2 < 0.0) ? 1.0 : -1.0)*val; // max light
+					}
+				}
+			}
+			for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
+				float const mag(leaf_data[j+(i<<2)].n.mag()); // contains shadow scaling
+				bool const shadowed(fabs(mag - LEAF_SHADOW_VAL) < 0.1);
+				leaf_data[j+(i<<2)].n = (shadowed ? normal*mag : mod_norm);
 			}
 			if (LEAF_HEAL_RATE > 0.0 && l.color > 0.0 && l.color < 1.0) { // leaf heal
 				leaves[i].color = min(1.0f, (l.color + LEAF_HEAL_RATE*fticks));
 				copy_color(l.calc_leaf_color(leaf_color, base_color), i);
 			}
-			// *** add sun flare from transparency when sun is behind the leaf? ***
 			reset_leaves   = 1; // Do we want to update the normals and collision objects as well?
 			leaves_changed = 1;
 		}
@@ -622,12 +639,13 @@ void tree::draw_tree(bool invalidate_norms) {
 	if (gen_arrays || (invalidate_norms && tree_coll_level >= 4)) { // process leaf shadows/normals
 		for (unsigned i = 0; i < nleaves; i++) {
 			tree_leaf const &l(leaves[i]);
+			// update colors based on ambient occlusion
+			//float const c_scale(CLIP_TO_01(p2p_dist(l.pts[0], sphere_center)/sphere_radius)), n_scale(1.0/a_scale);
 
 			for (unsigned j = 0; j < 4; ++j) {
 				float const scale((l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1)) ? LEAF_SHADOW_VAL : 1.0);
 				leaf_data[j+(i<<2)].n = l.norm*scale;
 			}
-			// *** update colors based on ambient occlusion ***
 		}
 		leaves_changed = 1;
 	}
