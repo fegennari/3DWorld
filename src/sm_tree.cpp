@@ -13,6 +13,7 @@ float const TREE_DIST_RAND  = 0.2;
 float const TREE_DIST_MH_S  = 100.0;
 float const SM_TREE_AMT     = 0.55;
 float const SM_TREE_QUALITY = 1.0;
+float const LINE_THRESH     = 800.0;
 bool const SMALL_TREE_COLL  = 1;
 bool const DRAW_COBJS       = 0; // for debugging
 int  const NUM_SMALL_TREES  = 40000;
@@ -41,7 +42,7 @@ sm_tree_type const stt[NUM_ST_TYPES] = {
 
 
 vector<small_tree> small_trees;
-pt_line_drawer tree_trunk_pld;
+pt_line_drawer tree_scenery_pld;
 
 
 extern int window_width, shadow_detail, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
@@ -181,7 +182,7 @@ void draw_small_trees() {
 	//set_lighted_sides(1);
 	gluQuadricTexture(quadric, GL_FALSE);
 	glDisable(GL_TEXTURE_2D);
-	tree_trunk_pld.draw_and_clear();
+	tree_scenery_pld.draw_and_clear();
 	//PRINT_TIME("small tree draw");
 }
 
@@ -336,14 +337,11 @@ void small_tree::draw(int mode) const {
 			}
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 
-			if (800.0*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
-				colorRGBA t_color(tcolor);
-				t_color.modulate_with(texture_color(WOOD_TEX));
-				vector3d view_dir(get_camera_pos(), pos);
-				view_dir.z = 0.0; // trunk is (near) vertical, so we want the x/y components only
+			if (LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
+				//vector3d view_dir(get_camera_pos(), pos);
+				//view_dir.z = 0.0; // trunk is (near) vertical, so we want the x/y components only
 				vector3d const dir(get_rot_dir());
-				tree_trunk_pld.add_line((pos + dir*(zbot - pos.z)),       view_dir, t_color,
-						                (pos + dir*(zbot - pos.z + len)), view_dir, t_color);
+				tree_scenery_pld.add_textured_line((pos + dir*(zbot - pos.z)), (pos + dir*(zbot - pos.z + len)), tcolor, WOOD_TEX);
 			}
 			else { // draw as cylinder
 				set_color(tcolor);

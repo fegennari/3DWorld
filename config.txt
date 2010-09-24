@@ -12,7 +12,7 @@ disable_water 0
 disable_scenery 0
 read_landscape 0
 read_heightmap 0
-scenery_extent 0
+scenery_extent 2
 
 tree_deadness 0.0
 leaf_color 0.0 0.0 0.0  0.5  0.2 # summer

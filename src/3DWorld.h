@@ -498,6 +498,8 @@ public:
 		lines.push_back(vnc(v1, n1, c1));
 		lines.push_back(vnc(v2, n2, c2));
 	}
+	void add_textured_pt(point const &v, colorRGBA c, int tid);
+	void add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid);
 	void draw() const;
 	void draw_and_clear() {draw(); clear();}
 	unsigned get_mem() const {return (points.capacity() + lines.capacity())*sizeof(vnc);}

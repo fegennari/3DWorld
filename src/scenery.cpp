@@ -12,6 +12,7 @@ using namespace std;
 bool     const NO_ISLAND_SCENERY = 1;
 unsigned const ROCK_NDIV         = 24;
 float    const SHADOW_VAL        = 0.5;
+float    const PT_LINE_THRESH    = 800.0;
 
 
 enum {PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, NUM_PLANT_TYPES};
@@ -37,6 +38,8 @@ plant_type const pltype[NUM_PLANT_TYPES] = {
 	plant_type(COFFEE_TEX,  LT_BROWN, WHITE)
 };
 
+colorRGBA const log_colors[4] = {BLACK, PTREE_C, TREE_C, TREE_C};
+
 
 int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 float msms2(1.0);
@@ -46,26 +49,12 @@ extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoo
 extern long rseed1, rseed2;
 extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, max_water_height;
 extern GLUquadricObj* quadric;
-extern pt_line_drawer tree_trunk_pld; // we can use this for plant trunks
+extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 
 
 void gen_scenery_deterministic();
 
-
-inline bool set_color_by_type(int type, float cscale) {
-
-	switch (type) {
-	case 0: return 0;
-	case 1:
-		set_color(PTREE_C*cscale);
-		break;
-	case 2: case 3:
-		set_color(TREE_C*cscale);
-		break;
-	default: assert(0);
-	}
-	return 1;
-}
+inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
 
 
 // ************ SCENERY OBJECT CLASSES ************
@@ -124,7 +113,7 @@ float scenery_obj::get_shadowed_color(point const &p, float eff_radius) const { 
 }
 
 
-void scenery_obj::set_atten_color(colorRGBA c) const {
+colorRGBA scenery_obj::get_atten_color(colorRGBA c) const {
 
 	if (!DISABLE_WATER && (pos.z + radius) < max_water_height) {
 		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
@@ -133,7 +122,7 @@ void scenery_obj::set_atten_color(colorRGBA c) const {
 			water_color_atten(((float *)&(c.red)), x, y, (pos + point(0.0, 0.0, radius)));
 		}
 	}
-	set_color(c);
+	return c;
 }
 
 
@@ -321,7 +310,7 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 void rock_shape3d::draw() const {
 
 	if (in_camera_view()) {
-		set_atten_color(color*get_shadowed_color(pos, 0.5*radius));
+		set_color(get_atten_color(color*get_shadowed_color(pos, 0.5*radius)));
 		shape3d::draw(1);
 	}
 }
@@ -408,12 +397,20 @@ public:
 	void draw(float sscale) const {
 		assert(surface);
 		if (!in_camera_view(0.0)) return;
-		set_atten_color(WHITE);
+		colorRGBA const color(get_atten_color(WHITE)*get_shadowed_color(pos, radius));
+		float const dist(distance_to_camera(pos));
+
+		if (2*get_pt_line_thresh()*radius < dist) { // draw as point
+			tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
+			return;
+		}
+		set_color(color);
+		select_texture(ROCK_SPHERE_TEX);
 		glPushMatrix();
 		translate_to(pos);
 		uniform_scale(scale);
 		rotate_into_plus_z(dir);
-		surface->sd.draw_ndiv_pow2(sscale*radius/distance_to_camera(pos));
+		surface->sd.draw_ndiv_pow2(sscale*radius/dist);
 		glPopMatrix();
 	}
 
@@ -452,8 +449,16 @@ public:
 	void draw(float sscale) const {
 		float const rmax(1.3*radius);
 		if (!in_camera_view(rmax)) return;
-		set_atten_color(WHITE*get_shadowed_color(pos, rmax));
-		int const ndiv(max(4, min(N_SPHERE_DIV, int(sscale*radius/distance_to_camera(pos)))));
+		colorRGBA const color(get_atten_color(WHITE)*get_shadowed_color(pos, rmax));
+		float const dist(distance_to_camera(pos));
+
+		if (2*get_pt_line_thresh()*radius < dist) { // draw as point
+			tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
+			return;
+		}
+		set_color(color);
+		int const ndiv(max(4, min(N_SPHERE_DIV, int(sscale*radius/dist))));
+		select_texture(ROCK_SPHERE_TEX);
 		glPushMatrix();
 		translate_to(pos);
 		rotate_about(angle, dir);
@@ -509,9 +514,16 @@ public:
 
 	void draw(float sscale) const {
 		float const sz(max(length, max(radius, radius2)));
-		if (!in_camera_view(sz)) return;
-		if (!set_color_by_type(type, get_shadowed_color((pos + pt2)*0.5, sz))) return;
-		int const ndiv(max(3, min(N_CYL_SIDES, int(2.0*sscale*radius/distance_to_camera(pos)))));
+		if (type == 0 || !in_camera_view(sz)) return;
+		colorRGBA const color(log_colors[type]*get_shadowed_color((pos + pt2)*0.5, sz));
+		float const dist(distance_to_camera(pos));
+
+		if (get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
+			tree_scenery_pld.add_textured_line(pos, pt2, color, WOOD_TEX);
+			return;
+		}
+		set_color(color);
+		int const ndiv(max(3, min(N_CYL_SIDES, int(2.0*sscale*radius/dist))));
 		select_texture(WOOD_TEX);
 		glPushMatrix();
 		translate_to(pos);
@@ -519,10 +531,7 @@ public:
 		gluCylinder(quadric, radius, radius2, length, ndiv, 1);
 		select_texture(TREE_END_TEX);
 		draw_circle_normal(0.0, radius, ndiv, 1);
-		glPopMatrix();
-		glPushMatrix();
-		translate_to(pt2);
-		rotate_by_vector(dir, 0.0);
+		glTranslatef(0.0, 0.0, length);
 		draw_circle_normal(0.0, radius2, ndiv, 0);
 		glPopMatrix();
 	}
@@ -565,9 +574,16 @@ public:
 
 	void draw(float sscale) const {
 		float const sz(max(height, max(radius, radius2)));
-		if (!in_camera_view(sz)) return;
-		if (!set_color_by_type(type, get_shadowed_color(point(pos.x, pos.y, (pos.z + 0.5*height)), sz))) return;
-		int const ndiv(max(3, min(N_CYL_SIDES, int(2.2*sscale*radius/distance_to_camera(pos)))));
+		if (type == 0 || !in_camera_view(sz)) return;
+		colorRGBA const color(log_colors[type]*get_shadowed_color(point(pos.x, pos.y, (pos.z + 0.5*height)), sz));
+		float const dist(distance_to_camera(pos));
+
+		if (get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
+			tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, height)), color, WOOD_TEX);
+			return;
+		}
+		set_color(color);
+		int const ndiv(max(3, min(N_CYL_SIDES, int(2.2*sscale*radius/dist))));
 		select_texture(WOOD_TEX);
 		glPushMatrix();
 		translate_to(pos);
@@ -638,10 +654,8 @@ public:
 			colorRGBA color(pltype[type].stemc*color_scale);
 			float const dist(distance_to_camera(pos));
 
-			if (1600.0*(do_zoom ? ZOOM_FACTOR : 1.0)*radius < dist) { // draw as line
-				color.modulate_with(texture_color(WOOD_TEX));
-				vector3d const view_dir(get_camera_pos(), pos);
-				tree_trunk_pld.add_line(pos, view_dir, color, (pos + point(0.0, 0.0, 0.75*height)), view_dir, color);
+			if (2*get_pt_line_thresh()*radius < dist) { // draw as line
+				tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
 			}
 			else {
 				int const ndiv(max(3, min(N_CYL_SIDES, int(5.0*sscale*radius/dist))));
@@ -829,11 +843,8 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 		for (unsigned i = 0; i < rock_shapes.size(); ++i) { // draw rock shapes
 			rock_shapes[i].draw();
 		}
-		select_texture(ROCK_SPHERE_TEX);
-		set_color(WHITE);
 		draw_scenery_vector(surface_rocks, sscale);
 		draw_scenery_vector(rocks,  sscale); // can unset gluQuadricTexture
-		set_color(TREE_C);
 		gluQuadricTexture(quadric, GL_TRUE);
 		draw_scenery_vector(logs,   sscale);
 		draw_scenery_vector(stumps, sscale);
@@ -842,7 +853,8 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw(sscale, 1); // draw stem
 		}
-		tree_trunk_pld.draw_and_clear();
+		glDisable(GL_TEXTURE_2D);
+		tree_scenery_pld.draw_and_clear();
 	}
 	if (draw_transparent) {
 		enable_blend();
@@ -851,9 +863,9 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 			plants[i].draw(sscale, 2); // draw leaves
 		}
 		disable_blend();
+		glDisable(GL_TEXTURE_2D);
 	}
 	// *** draw grass? ***
-	glDisable(GL_TEXTURE_2D);
 }
 
 
