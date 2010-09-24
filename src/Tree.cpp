@@ -544,7 +544,7 @@ void tree::draw_tree(bool invalidate_norms) {
 		for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
 			for (unsigned j = 0; j < 4; ++j) {
 				leaf_data[j+(i<<2)].v = leaves[i].pts[j] - sphere_center;
-				leaf_data[j+(i<<2)].n = leaves[i].norm;
+				leaf_data[j+(i<<2)].n = leaves[i].norm*leaf_data[j+(i<<2)].n.mag();
 			}
 		}
 		reset_leaves   = 0;

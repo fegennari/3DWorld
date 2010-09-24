@@ -350,6 +350,9 @@ struct colorRGB { // size = 12
 		}
 		return R; // never gets here
 	}
+	void operator*=(float val) {
+		R *= val; G *= val; B *= val;
+	}
 };
 
 
