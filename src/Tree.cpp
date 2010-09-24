@@ -388,6 +388,12 @@ inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGB
 }
 
 
+inline float tree_leaf::get_norm_scale(unsigned pt_ix) const {
+
+	return ((shadow_bits & (1 << pt_ix)) ? LEAF_SHADOW_VAL : 1.0);
+}
+
+
 void tree::clear_vbo() {
 
 	delete_vbo(branch_vbo);
@@ -544,7 +550,7 @@ void tree::draw_tree(bool invalidate_norms) {
 		for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
 			for (unsigned j = 0; j < 4; ++j) {
 				leaf_data[j+(i<<2)].v = leaves[i].pts[j] - sphere_center;
-				leaf_data[j+(i<<2)].n = leaves[i].norm*leaf_data[j+(i<<2)].n.mag();
+				leaf_data[j+(i<<2)].n = leaves[i].norm*leaves[i].get_norm_scale(j);
 			}
 		}
 		reset_leaves   = 0;
@@ -619,9 +625,8 @@ void tree::draw_tree(bool invalidate_norms) {
 				}
 			}
 			for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
-				float const mag(leaf_data[j+(i<<2)].n.mag()); // contains shadow scaling
-				bool const shadowed(fabs(mag - LEAF_SHADOW_VAL) < 0.1);
-				leaf_data[j+(i<<2)].n = (shadowed ? normal*mag : mod_norm);
+				float const scale(l.get_norm_scale(j));
+				leaf_data[j+(i<<2)].n = ((scale < 1.0) ? normal*scale : mod_norm);
 			}
 			if (LEAF_HEAL_RATE > 0.0 && l.color > 0.0 && l.color < 1.0) { // leaf heal
 				leaves[i].color = min(1.0f, (l.color + LEAF_HEAL_RATE*fticks));
@@ -638,13 +643,15 @@ void tree::draw_tree(bool invalidate_norms) {
 	}
 	if (gen_arrays || (invalidate_norms && tree_coll_level >= 4)) { // process leaf shadows/normals
 		for (unsigned i = 0; i < nleaves; i++) {
-			tree_leaf const &l(leaves[i]);
+			tree_leaf &l(leaves[i]);
+			l.shadow_bits = 0;
 			// update colors based on ambient occlusion
 			//float const c_scale(CLIP_TO_01(p2p_dist(l.pts[0], sphere_center)/sphere_radius)), n_scale(1.0/a_scale);
 
 			for (unsigned j = 0; j < 4; ++j) {
-				float const scale((l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1)) ? LEAF_SHADOW_VAL : 1.0);
-				leaf_data[j+(i<<2)].n = l.norm*scale;
+				bool const shadowed(l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1));
+				l.shadow_bits |= (int(shadowed) << j);
+				leaf_data[j+(i<<2)].n = l.norm*l.get_norm_scale(j);
 			}
 		}
 		leaves_changed = 1;

@@ -16,16 +16,17 @@ unsigned const BRANCH_CACHE_ENTRIES = 3;
 struct blastr; // forward reference
 
 
-struct tree_leaf { // size = 28 + 48 = 76
+struct tree_leaf { // size = 32 + 48 = 80
 
-	int coll_index;
+	int coll_index, shadow_bits;
 	float color, lred, lgreen;
 	vector3d norm;
 	point pts[4];
 
-	tree_leaf() : coll_index(-1) {}
+	tree_leaf() : coll_index(-1), shadow_bits(0) {}
 	void create_init_color(bool deterministic);
 	colorRGB calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const;
+	float get_norm_scale(unsigned pt_ix) const;
 };
 
 
