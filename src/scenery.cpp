@@ -636,6 +636,24 @@ public:
 		coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cp); // leaves
 	}
 
+	void gen_points() {
+		float const wscale(250.0*radius*msms2);
+		float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
+		unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
+		float rdeg(30.0);
+
+		for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
+			for (unsigned k = 0; k < nrings; ++k) {
+				float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
+				float const theta(TWO_PI*(3.3*j + k/5.0) + theta0);
+				float const z((j + 3.0)*height/(nlevels + 4.0));
+				int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
+				rdeg += 0.01*(val - 150);
+				add_rotated_quad_pts(points, theta, rdeg/45.0, z, pos, vector3d(sz*wscale, sz*wscale, sz));
+			}
+		}
+	}
+
 	void draw(float sscale, int mode) { // modifies points, so non-const
 		if (!sphere_in_camera_view(pos, (height + radius), 2)) return;
 		int const light(get_light());
@@ -665,37 +683,16 @@ public:
 			}
 		}
 		if (mode & 2) {
-			glPushMatrix();
-			translate_to(pos);
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.75);
 			set_color(pltype[type].leafc*color_scale);
 			select_texture(pltype[type].tid);
 			glNormal3f(0.0, 0.0, 1.0);
 			set_lighted_sides(2);
-			float const wscale(250.0*radius*msms2);
-			glScalef(wscale, wscale, 1.0);
-
-			if (points.empty()) { // compute points
-				float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
-				unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
-				float rdeg(30.0);
-
-				for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
-					for (unsigned k = 0; k < nrings; ++k) {
-						float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
-						float const theta(TWO_PI*(3.3*j + k/5.0) + theta0);
-						float const z((j + 3.0)*height/(nlevels + 4.0));
-						int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
-						rdeg += 0.01*(val - 150);
-						add_rotated_quad_pts(points, theta, sz, rdeg/45.0, z);
-					}
-				}
-			}
+			if (points.empty()) gen_points();
 			draw_quads_from_pts(points);
 			glDisable(GL_ALPHA_TEST);
 			set_lighted_sides(1);
-			glPopMatrix();
 		}
 	}
 

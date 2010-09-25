@@ -295,6 +295,7 @@ void small_tree::calc_points() {
 	unsigned const nlevels(6), nrings(5);
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
 	float const ms(mesh_scale*mesh_scale2), rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
+	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
 	points.reserve(4*nlevels*nrings);
 
 	for (unsigned j = 0; j < nlevels; ++j) {
@@ -302,7 +303,7 @@ void small_tree::calc_points() {
 			float const sz(0.5*(height0 + 0.03/ms)*((nlevels - j - 0.4)/(float)nlevels));
 			float const theta(TWO_PI*(3.3*j + k/(float)nrings) + theta0);
 			float const z((j /*+ k/(2.0*nrings)*/ + 1.8)*height0/(nlevels + 2.8) - rd*sz);
-			add_rotated_quad_pts(points, theta, sz, rd, z);
+			add_rotated_quad_pts(points, theta, rd, z, center, vector3d(sz, sz, sz));
 		}
 	}
 }
@@ -338,8 +339,6 @@ void small_tree::draw(int mode) const {
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 
 			if (LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
-				//vector3d view_dir(get_camera_pos(), pos);
-				//view_dir.z = 0.0; // trunk is (near) vertical, so we want the x/y components only
 				vector3d const dir(get_rot_dir());
 				tree_scenery_pld.add_textured_line((pos + dir*(zbot - pos.z)), (pos + dir*(zbot - pos.z + len)), tcolor, WOOD_TEX);
 			}
@@ -357,16 +356,17 @@ void small_tree::draw(int mode) const {
 		}
 	}
 	if (mode & 2) {
-		glPushMatrix();
-		translate_to(pos);
-		if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
+		if (!pine_tree) {
+			glPushMatrix();
+			translate_to(pos);
+			if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
+		}
 		int const nsides(max(3, min(max_sides, (int)size)));
 		set_color(color);
 		select_texture(stt[type].tid);
 
 		switch (type) { // draw leaves
 		case T_PINE: // pine tree
-			glTranslatef(0.0, 0.0, 0.35*height);
 		case T_SH_PINE: // short pine tree
 			set_lighted_sides(2);
 			enable_blend();
@@ -413,7 +413,7 @@ void small_tree::draw(int mode) const {
 
 		default: assert(0);
 		}
-		glPopMatrix();
+		if (!pine_tree) glPopMatrix();
 	}
 }
 
