@@ -6,6 +6,7 @@
 #include "mesh.h"
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
+#include <GL/glext.h>
 
 
 float const W_TEX_SCALE0     = 1.0;
@@ -1182,7 +1183,7 @@ public:
 				} // for sy
 			} // for x
 		} // for y
-		//PRINT_TIME("Texture Gen");
+		//if (tex_bs == 0) {PRINT_TIME("Texture Gen");}
 		bool const mipmaps(0); // mipmaps are too slow to build, not sure what wrap/mirror mode is best
 		setup_texture(tid, GL_MODULATE, GL_LINEAR, mipmaps, 1, 1, 1, 1);
 		assert(tid > 0);
@@ -1192,11 +1193,12 @@ public:
 			gluBuild2DMipmaps(GL_TEXTURE_2D, 3, tsize, tsize, GL_RGB, GL_UNSIGNED_BYTE, data);
 		}
 		else {
+			//bool const has_comp(has_extension("GL_ARB_texture_compression")); GL_COMPRESSED_RGB - too slow
 			glTexImage2D(GL_TEXTURE_2D, 0, 3, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 		}
 		glDisable(GL_TEXTURE_2D);
 		delete [] data;
-		//PRINT_TIME("Texture Upload");
+		//if (tex_bs == 0) {PRINT_TIME("Texture Upload");}
 	}
 
 	void check_texture() {

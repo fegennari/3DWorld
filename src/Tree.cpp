@@ -58,7 +58,7 @@ colorRGBA leaf_base_color(BLACK);
 
 
 extern bool has_snow;
-extern int window_width, shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model;
+extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll;
 extern long rseed1, rseed2;
 extern float zmin, zmax_est, zbottom, water_plane_z, mesh_scale, mesh_scale2, temperature, fticks, tree_size, vegetation;

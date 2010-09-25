@@ -1717,7 +1717,6 @@ int main(int argc, char** argv) {
 	load_flare_textures(); // Sun Flare
 	setup_dlists();
 	//cout << "Extensions: " << (char*) glGetString(GL_EXTENSIONS) << endl;
-	//RenderbufferStorageEXT(RENDERBUFFER_EXT, DEPTH_STENCIL_EXT, 1024, 768); //GL_DEPTH_STENCIL_NV
 
 	if (!universe_only) { // universe mode should be able to do without these initializations
 		init_objects();
