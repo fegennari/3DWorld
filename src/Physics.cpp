@@ -1237,7 +1237,7 @@ void bubble::apply_physics(unsigned i) {
 		status = 0; // frozen
 		return;
 	}
-	time  += max(1, iticks);
+	time  += iticks;
 	pos.z += tstep*velocity;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
@@ -1268,7 +1268,7 @@ void particle_cloud::apply_physics(unsigned i) {
 				camera_smoke[1] += 2.0*csmoke + 0.15/(cdist + 0.3); // directional smoke (in front of camera)
 				camera_smoke[0] += 0.2/(cdist + 0.3);
 			}
-			add_smoke(pos, 1.0);
+			if (time > 0) add_smoke(pos, 1.0);
 		}
 	}
 	else {
@@ -1286,7 +1286,7 @@ void particle_cloud::apply_physics(unsigned i) {
 			if (obj.check_vert_collision(0, 0, 0)) break;
 		}
 		pos       = obj.pos;
-		time     += max(1, iticks);
+		time     += iticks;
 		density  *= 0.97;
 		darkness *= 0.98;
 		radius   *= 1.04;
@@ -1308,7 +1308,7 @@ void fire::apply_physics(unsigned i) {
 	do_area_effect_damage(pos, 2.0*radius, damage, i, source, FIRE);
 	int const rn(max(1, int(8.0 + 0.02/(0.1 + sqrt(radius*sqrt(heat))))));
 	if (rand()%rn == 0) gen_smoke(pos);
-	time   += max(1, iticks);
+	time   += iticks;
 	point pos2(pos);
 	pos2.z -= radius;
 	bool underwater(is_underwater(pos2));
