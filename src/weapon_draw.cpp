@@ -326,7 +326,7 @@ inline void rotate_to_dir(vector3d const &dir, float vadd, float vmult) {
 int select_dodgeball_texture(int shooter) {
 
 	if (UNLIMITED_WEAPONS && game_mode == 2 && !obj_groups[coll_id[BALL]].reorderable) { // can change when other players throw a ball 
-		return dodgeball_tids[obj_groups[coll_id[BALL]].choose_object() % NUM_DB_TIDS];
+		return dodgeball_tids[obj_groups[coll_id[BALL]].choose_object(1) % NUM_DB_TIDS]; // peek=1
 	}
 	bool const default_tex(sstates == NULL || shooter == NO_SOURCE || sstates[shooter].balls.empty());
 	assert(shooter >= CAMERA_ID && shooter < num_smileys);

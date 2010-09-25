@@ -165,7 +165,7 @@ template<typename T> class obj_vector_t : public vector<T> {
 public:
 	obj_vector_t(unsigned sz=0) : vector<T>(sz), cur_avail(0) {}
 
-	unsigned choose_element() {
+	unsigned choose_element(bool peek=0) {
 		assert(!empty());
 		assert(cur_avail < size());
 		vector<T> const &v(*this);
@@ -179,7 +179,7 @@ public:
 		}
 		unsigned const chosen(cur_avail);
 		assert(chosen < size());
-		inc_cur_avail();
+		if (!peek) inc_cur_avail();
 		return chosen;
 	}
 
@@ -244,7 +244,7 @@ public:
 	void sort_and_calc_end();
 	void remove_reset_cobjs();
 	unsigned max_objects() const {return objects.size();}
-	int choose_object();
+	int choose_object(bool peek=0);
 	void create_object_at(unsigned i, point const &pos);
 	void enable();
 	void disable();

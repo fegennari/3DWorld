@@ -565,11 +565,12 @@ void obj_group::create_object_at(unsigned i, point const &pos) {
 }
 
 
-int obj_group::choose_object()  { // could return unsigned?
+int obj_group::choose_object(bool peek)  { // could return unsigned?
 	
 	enable();
 	assert(max_objects() > 0); // enabled == 1 should be true after before the object is used
-	if (!reorderable) return objects.choose_element();
+	if (!reorderable) return objects.choose_element(peek);
+	assert(!peek);
 	// Note: To guarantee correctness, the times of all objects should be updated by a constant amount per frame
 	// Note: Assumes objects are sorted oldest to newest, with all unused objects at the end
 	if (end_id <  max_objects()) return end_id++; // unused object
