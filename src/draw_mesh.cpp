@@ -1131,15 +1131,7 @@ public:
 						}
 						int const id(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
 						texture const &t1(textures[id]);
-						
-						//int const tof(t1.ncolors*(((ty<<tex_bs)&(t1.height-1))*t1.width + ((tx<<tex_bs)&(t1.width-1))));
-						
-						int const xtile((ty<<tex_bs)/t1.height), ytile((tx<<tex_bs)/t1.width);
-						int xix((tx<<tex_bs)&(t1.width-1)), yix((ty<<tex_bs)&(t1.height-1));
-						if ((325531*xtile + 2345239*ytile)&(1<<7)) xix = t1.width  - xix - 1;
-						if ((4633445*xtile + 363466*ytile)&(1<<9)) yix = t1.height - yix - 1;
-						int const tof(t1.ncolors*(yix*t1.width + xix));
-						
+						int const tof(t1.ncolors*(((ty<<tex_bs)&(t1.height-1))*t1.width + ((tx<<tex_bs)&(t1.width-1))));
 						unsigned char *td(data + off);
 						
 						if (k1 == k2) { // single texture
