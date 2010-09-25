@@ -16,7 +16,6 @@ float const NDIV_SCALE = 120.0;
 extern bool smoke_enabled;
 extern int draw_model, display_mode, destroy_thresh, do_zoom, xoff2, yoff2;
 extern float temperature;
-extern GLUquadricObj* quadric;
 extern obj_type object_types[];
 extern dwobject def_objects[];
 extern texture textures[];
@@ -307,7 +306,6 @@ void coll_obj::set_npoints() {
 
 void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir) { // dir does not need to be normalized
 
-	gluQuadricTexture(quadric, GL_TRUE);
 	int const dim(get_max_dim(dir));
 	point p1, p2;
 	
@@ -335,7 +333,7 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 		if (is_occluded(occluders, pts, ncorners, camera)) return;
 	}
 	//if (brad/distance_to_camera(center) < 0.01) return; // too far/small
-	int const textured(select_texture(cp.tid));
+	bool const textured(select_texture(cp.tid));
 	float const ar(textured ? get_tex_ar(cp.tid) : 1.0);
 	bool const no_lighting(cp.color == BLACK && !smoke_enabled /*&& cp.specular == 0.0*/);
 	if (is_semi_trans()) enable_blend();
@@ -356,8 +354,7 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 			int const nsides(min(N_CYL_SIDES, max(3, (int)size)));
 			if (no_lighting) cp.color.do_glColor();
 			if (textured) setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (p2 - p1));
-			draw_subdiv_cylinder(p1, p2, radius, radius2, nsides, 1, !(cp.surfs & 1), (cp.surfs == 1), i, no_lighting);
-			if (textured) gluQuadricTexture(quadric, GL_FALSE);
+			draw_subdiv_cylinder(p1, p2, radius, radius2, nsides, 1, !(cp.surfs & 1), (cp.surfs == 1), i, no_lighting, textured);
 		}
 		break;
 
@@ -367,8 +364,7 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 			int const nsides(min(N_SPHERE_DIV, max(5, (int)size)));
 			if (no_lighting) cp.color.do_glColor();
 			if (textured) setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z);
-			draw_subdiv_sphere_at(points[0], radius, nsides, i, no_lighting);
-			if (textured) gluQuadricTexture(quadric, GL_FALSE);
+			draw_subdiv_sphere_at(points[0], radius, nsides, i, no_lighting, textured);
 		}
 		break;
 
@@ -376,10 +372,7 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 		draw_extruded_polygon(thickness, points, NULL, npoints, norm, i);
 		break;
 	}
-	if (textured) {
-		if (type != COLL_CUBE) disable_texgen();
-		glDisable(GL_TEXTURE_2D);
-	}
+	if (textured) disable_textures_texgen();
 	if (is_semi_trans()) disable_blend();
 }
 

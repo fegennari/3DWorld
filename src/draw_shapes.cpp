@@ -54,6 +54,7 @@ extern int display_mode, camera_mode, camera_view, do_zoom, xoff2, yoff2;
 extern float max_proj_rad, subdiv_size_mult, ztop, zbottom, zmax, zmin;
 extern float DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
 extern point up_vector;
+extern GLUquadricObj* quadric;
 extern vector<int> weap_cobjs;
 extern vector<coll_obj> coll_objects;
 extern platform_cont platforms; // only needed for empty test
@@ -1476,7 +1477,7 @@ void draw_extruded_polygon(float thick, point const *const points, const vector3
 
 
 void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float radius2, int nsides, int nstacks,
-						  bool draw_ends, bool no_bfc, int cobj, bool no_lighting)
+						  bool draw_ends, bool no_bfc, int cobj, bool no_lighting, bool textured)
 {
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	assert(size_t(cobj) < coll_objects.size());
@@ -1484,7 +1485,9 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
 		if (!no_lighting) c.cp.color.do_glColor();
+		if (textured) gluQuadricTexture(quadric, GL_TRUE);
 		draw_rotated_cylinder(p1, p2, radius1, radius2, nsides, nstacks, draw_ends);
+		if (textured) gluQuadricTexture(quadric, GL_FALSE);
 		return;
 	}
 	bool const no_clip(no_bfc || c.is_semi_trans());
@@ -1549,7 +1552,7 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 }
 
 
-void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, bool no_lighting) {
+void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, bool no_lighting, bool textured) {
 
 	assert(radius > 0.0);
 	assert(size_t(cobj) < coll_objects.size());
@@ -1557,7 +1560,9 @@ void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, b
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
 		if (!no_lighting) c.cp.color.do_glColor();
+		if (textured) gluQuadricTexture(quadric, GL_TRUE);
 		draw_sphere_at(pos, radius, ndiv);
+		if (textured) gluQuadricTexture(quadric, GL_FALSE);
 		return;
 	}
 	bool const bfc(!c.is_semi_trans());
