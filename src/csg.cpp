@@ -1121,6 +1121,15 @@ void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cu
 }
 
 
+bool comp_cobjs_by_tid(coll_obj const &a, coll_obj const &b) {
+	return (a.cp.tid < b.cp.tid);
+}
+
+void sort_cobjs_by_tid(vector<coll_obj> &cobjs) {
+	sort(cobjs.begin(), cobjs.end(), comp_cobjs_by_tid);
+}
+
+
 color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_)
 	: tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), volume(volume_), color(cobj.cp.color)
 {

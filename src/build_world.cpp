@@ -674,6 +674,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 			remove_overlapping_cubes(fixed_cobjs);
 			merge_cubes(fixed_cobjs); // and alpha sort
 			subdiv_cubes(fixed_cobjs);
+			sort_cobjs_by_tid(fixed_cobjs);
 			check_cubes(fixed_cobjs); // sanity check, should be last
 
 			for (unsigned i = 0; i < fixed_cobjs.size(); ++i) {
