@@ -1648,12 +1648,31 @@ void get_enabled_lights() {
 }
 
 
+void begin_smoke_fog() {
+
+	glEnable(GL_FOG);
+	enable_fog_coord();
+	set_fog_coord(0.0);
+	glFogfv(GL_FOG_COLOR, (float *)&GRAY);
+	glFogf(GL_FOG_START, 0.1);
+	glFogf(GL_FOG_END, 2.5*Z_SCENE_SIZE); // FOG_DIST1
+}
+
+
+void end_smoke_fog() {
+
+	disable_fog_coord();
+	glDisable(GL_FOG);
+	reset_fog();
+}
+
+
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
 	RESET_TIME;
 	if (coll_objects.empty() || world_mode != WMODE_GROUND) return;
-	bool const TIMETEST(0), use_fog_coord(smoke_enabled);
+	bool const TIMETEST(0);
 	//bool const using_fog(glIsEnabled(GL_FOG) != 0);
 	static vector<pair<float, unsigned> > draw_last;
 	set_lighted_sides(2);
@@ -1663,15 +1682,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	//disable_textures_texgen();
 	//glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
+	if (smoke_enabled) begin_smoke_fog();
 
-	if (use_fog_coord) { // for smoke
-		glEnable(GL_FOG);
-		enable_fog_coord();
-		set_fog_coord(0.0);
-		glFogfv(GL_FOG_COLOR, (float *)&DK_GRAY);
-		glFogf(GL_FOG_START, 0.1);
-		glFogf(GL_FOG_END, 2.5*Z_SCENE_SIZE); // FOG_DIST1
-	}
 	if (draw_solid) {
 		get_enabled_lights(); // don't call twice per frame - can have problems with lightning
 		init_subdiv_lighting();
@@ -1709,12 +1721,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 		draw_last.resize(0);
 	}
-	if (use_fog_coord) {
-		set_fog_coord(0.0);
-		disable_fog_coord();
-	}
-	glDisable(GL_FOG);
-	reset_fog();
+	if (smoke_enabled) end_smoke_fog();
 	setup_smoke_fog(0);
 	setup_basic_fog();
 	glEnable(GL_LIGHTING);
@@ -2265,7 +2272,7 @@ void draw_fires() {
 	select_texture(FIRE_TEX);
 	order_vect_t order;
 	get_draw_order(fires, order);
-	if (SMOKE_FOG_COORD) enable_fog_coord();
+	if (SMOKE_FOG_COORD) begin_smoke_fog();
 	glBegin(GL_QUADS);
 
 	for (unsigned j = 0; j < order.size(); ++j) {
@@ -2275,14 +2282,14 @@ void draw_fires() {
 
 		if (SMOKE_FOG_COORD) {
 			colorRGBA c(WHITE);
-			float const fog(get_smoke_from_camera(pos, c));
-			if (fog) set_fog_coord(fog);
+			float const fog_val(get_smoke_from_camera(pos, c));
+			set_fog_coord(fog_val);
 			c.do_glColor();
 		}
 		draw_animated_billboard(pos, 4.0*fires[i].radius, (fires[i].time&15)/16.0);
 	}
 	glEnd();
-	if (SMOKE_FOG_COORD) disable_fog_coord();
+	if (SMOKE_FOG_COORD) end_smoke_fog();
 	glDisable(GL_ALPHA_TEST);
 	disable_blend();
 	glDisable(GL_TEXTURE_2D);

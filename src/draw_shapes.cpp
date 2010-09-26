@@ -249,6 +249,7 @@ void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned 
 		glColor4ubv(v.c);
 		v.p.do_glVertex();
 	}
+	if (smoke_enabled) set_fog_coord(0.0);
 	nverts += npts;
 	++nsurfaces;
 }
@@ -839,6 +840,7 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 		}
 		s0 = s_end - step[0]; // advance past merged strips
 		glEnd();
+		if (smoke_enabled) set_fog_coord(0.0);
 	}
 	return lighted;
 }
@@ -1025,7 +1027,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		}
 		else {
 			++dlists;
-			glCallList(it->second.status);
+			if (!(display_mode & 0x10)) glCallList(it->second.status);
 			return;
 		}
 	}
@@ -1484,7 +1486,7 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 	coll_obj const &c(coll_objects[cobj]);
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
-		if (!no_lighting) c.cp.color.do_glColor();
+		c.cp.color.do_glColor();
 		if (textured) gluQuadricTexture(quadric, GL_TRUE);
 		draw_rotated_cylinder(p1, p2, radius1, radius2, nsides, nstacks, draw_ends);
 		if (textured) gluQuadricTexture(quadric, GL_FALSE);
@@ -1559,7 +1561,7 @@ void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, b
 	coll_obj const &c(coll_objects[cobj]);
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
-		if (!no_lighting) c.cp.color.do_glColor();
+		c.cp.color.do_glColor();
 		if (textured) gluQuadricTexture(quadric, GL_TRUE);
 		draw_sphere_at(pos, radius, ndiv);
 		if (textured) gluQuadricTexture(quadric, GL_FALSE);

@@ -54,17 +54,17 @@ float const SMOKE_DIS_ZU     = 0.08;
 float const SMOKE_DIS_ZD     = 0.03;
 
 
-bool large_dlight(0), using_lightmap(0), lm_alloc(0), smoke_enabled(0), next_smoke(0), has_dl_sources(0);
+bool large_dlight(0), using_lightmap(0), lm_alloc(0), has_dl_sources(0), smoke_enabled(0), smoke_exists(0);
 unsigned cobj_counter(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
-float czmin0(0.0), lm_dz_adj(0.0), tot_smoke(0.0);
-float dlight_bb[3][2] = {0}, smoke_bb[3][2] = {0}, next_smoke_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
+float czmin0(0.0), lm_dz_adj(0.0);
+float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
 vector<lmcell> vldata_alloc;
 lmcell ***vlmap = NULL; // y, x, z
 dls_cell **ldynamic[2] = {NULL, NULL};
 vector<bool> x_used, y_used; // vector<char>?
 vector<light_source> light_sources, dl_sources, dl_sources2;
-flow_cache_e  flow_cache [FLOW_CACHE_SZ ];
+flow_cache_e flow_cache[FLOW_CACHE_SZ];
 
 
 extern int animate2, display_mode, frame_counter, read_light_file, write_light_file, read_light_file_l, write_light_file_l;
@@ -889,6 +889,134 @@ void build_lightmap(bool verbose) {
 }
 
 
+// *** SMOKE CODE ***
+
+
+class smoke_mask_t {
+	struct smoke_mask_entry { // size = 4
+		bool has_smoke, smoke_vis;
+		smoke_mask_entry() : has_smoke(0), smoke_vis(0) {}
+	};
+
+	unsigned nx, ny;
+	vector<smoke_mask_entry> smask;
+
+public:
+	bool enabled, smoke_vis;
+	float bbox[3][2], tot_smoke;
+
+	smoke_mask_t() {init(0,0);}
+
+	bool is_smoke_visible(point const &pos) const {
+		return sphere_in_camera_view(pos, HALF_DXY, 0);
+	}
+
+	void init(unsigned nx_, unsigned ny_) {
+		nx = nx_;
+		ny = ny_;
+		smask.resize(nx*ny);
+
+		for (unsigned i = 0; i < smask.size(); ++i) {
+			smask[i].has_smoke = smask[i].smoke_vis = 0;
+		}
+		for (unsigned i = 0; i < 3; ++i) { // set backwards so that nothing intersects
+			bbox[i][0] =  SCENE_SIZE[i];
+			bbox[i][1] = -SCENE_SIZE[i];
+		}
+		tot_smoke = 0.0;
+		enabled   = smoke_vis = 0;
+	}
+
+	void add_smoke(int x, int y, int z, float smoke_amt) {
+		assert(x >= 0 && y >= 0 && (unsigned)x < nx && (unsigned)y < ny);
+		point const pos(get_xval(x), get_yval(y), get_zval(z));
+
+		if (is_smoke_visible(pos)) {
+			int const xyz[3] = {x, y, z};
+
+			for (unsigned i = 0; i < 3; ++i) {
+				bbox[i][0] = min(bbox[i][0], pos[i]);
+				bbox[i][1] = max(bbox[i][1], pos[i]);
+			}
+			smoke_vis = 1;
+		}
+		smask[y*nx + x].has_smoke = 1;
+		tot_smoke += smoke_amt;
+		enabled    = 1;
+	}
+
+	bool check_smoke_vis(int x1, int y1, int x2, int y2) const { // ranged version
+		assert(x1 <= x2 && y1 <= y2);
+
+		for (int y = max(0, y1); y <= min((int)ny-1, y2); ++y) {
+			for (int x = max(0, x1); x <= min((int)nx-1, x2); ++x) {
+				if (smask[y*nx + x].smoke_vis) return 1;
+			}
+		}
+		return 0;
+	}
+
+	void adj_bbox() {
+		for (unsigned i = 0; i < 3; ++i) {
+			float const dval(SCENE_SIZE[i]/MESH_SIZE[i]);
+			bbox[i][0] -= dval;
+			bbox[i][1] += dval;
+		}
+	}
+
+	void trace_smoke_path(int xa, int ya, int xb, int yb) {
+		assert(!smask.empty());
+		int const dx(xb - xa), dy(yb - ya), steps(max(abs(dx), abs(dy)));
+		double const xinc(dx/(double)steps), yinc(dy/(double)steps);
+		double x(xa), y(ya);
+		bool saw_smoke(0);
+
+		for (int k = 0; k <= steps+1; ++k) { // DDA algorithm
+			int const xp((int)x), yp((int)y);
+			if (xp == xb && yp == yb) break;
+			if (xp < 0 || yp < 0 || (unsigned)xp >= nx || (unsigned)yp >= ny) break;
+			smoke_mask_entry &sm(smask[yp*nx + xp]);
+			saw_smoke    |= sm.has_smoke;
+			sm.smoke_vis |= saw_smoke;
+			x += xinc;
+			y += yinc;
+		}
+	}
+
+	void trace_smoke_to(point const &pos) {
+		if (nx == 0 || ny == 0) return;
+		int const x1(get_xpos(pos.x)), y1(get_ypos(pos.y));
+
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			for (int x = 0; x < MESH_X_SIZE; ++x) {
+				trace_smoke_path(x1, y1, x, (dir ? MESH_Y_SIZE-1 : 0));
+			}
+			for (int y = 0; y < MESH_Y_SIZE; ++y) {
+				trace_smoke_path(x1, y1, (dir ? MESH_X_SIZE-1 : 0), y);
+			}
+		}
+	}
+
+	void copy_from(smoke_mask_t const &sm) {
+		if (smask.empty()) {
+			assert(nx == 0 && ny == 0);
+			init(sm.nx, sm.ny);
+		}
+		assert(sm.nx == nx && sm.ny == ny && sm.smask.size() == smask.size());
+		tot_smoke = sm.tot_smoke;
+		enabled   = sm.enabled;
+		smoke_vis = sm.smoke_vis;
+		copy_cube_d(sm.bbox, bbox);
+		
+		for (unsigned i = 0; i < smask.size(); ++i) {
+			smask[i] = sm.smask[i];
+		}
+	}
+};
+
+smoke_mask_t smoke_mask, next_smoke_mask;
+
+
 inline void adjust_smoke_val(float &val, float delta) {
 
 	val = max(0.0f, min(SMOKE_MAX_VAL, (val + delta)));
@@ -897,14 +1025,14 @@ inline void adjust_smoke_val(float &val, float delta) {
 
 void add_smoke(point const &pos, float val) {
 
-	if (!DYNAMIC_SMOKE || val == 0.0 || pos.z >= czmax) return;
+	if (!DYNAMIC_SMOKE || (display_mode & 0x80) || val == 0.0 || pos.z >= czmax) return;
 	lmcell *const lmc(get_lmcell(pos));
 	if (!lmc) return;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos) || pos.z >= v_collision_matrix[ypos][xpos].zmax) return; // above all cobjs/outside
 	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return;
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
-	smoke_enabled = 1;
+	if (smoke_mask.is_smoke_visible(pos)) smoke_exists = 1;
 }
 
 
@@ -934,17 +1062,11 @@ void distribute_smoke_for_cell(int x, int y, int z) {
 	lmcell &lmc(vlmap[y][x][z]);
 	lmc.cached_smoke_density = lmc.cached_smoke_color = -1.0; // invalidate cache
 	if (lmc.smoke == 0.0) return;
-	tot_smoke += lmc.smoke;
 	if (lmc.smoke < 0.005f) {lmc.smoke = 0.0; return;}
-	next_smoke = 1;
-	int const xyz[3] = {x, y, z}, dx(rand()&1), dy(rand()&1); // randomize the processing order
+	int const dx(rand()&1), dy(rand()&1); // randomize the processing order
 	float const xy_rate(SMOKE_DIS_XY*SMOKE_SKIPVAL), z_rate[2] = {SMOKE_DIS_ZU, SMOKE_DIS_ZD};
+	next_smoke_mask.add_smoke(x, y, z, lmc.smoke);
 
-	for (unsigned i = 0; i < 3; ++i) {
-		float const val(get_dim_val(xyz[i], i));
-		next_smoke_bb[i][0] = min(next_smoke_bb[i][0], val);
-		next_smoke_bb[i][1] = max(next_smoke_bb[i][1], val);
-	}
 	for (unsigned d = 0; d < 2; ++d) { // x/y
 		diffuse_smoke(x+((d^dx) ? 1 : -1), y, z, lmc, xy_rate, xy_rate, 0, (d^dx));
 		diffuse_smoke(x, y+((d^dy) ? 1 : -1), z, lmc, xy_rate, xy_rate, 1, (d^dy));
@@ -955,27 +1077,31 @@ void distribute_smoke_for_cell(int x, int y, int z) {
 }
 
 
+void print_smoke_stats() {
+
+	cout << "tot_smoke = " << smoke_mask.tot_smoke << ", enabled: " << smoke_enabled << ", bb: ";
+	
+	for (unsigned i = 0; i < 3; ++i) {
+		cout << smoke_mask.bbox[i][0] << "," << smoke_mask.bbox[i][1] << " ";
+	}
+	cout << endl;
+}
+
+
 void distribute_smoke() { // called at most once per frame
 
-	//RESET_TIME;
-	if (!DYNAMIC_SMOKE || !smoke_enabled) return;
+	RESET_TIME;
+	if (!DYNAMIC_SMOKE || !smoke_exists) return;
 	assert(SMOKE_SKIPVAL > 0);
 	static int cur_skip(0);
 	
 	if (cur_skip == 0) {
-		//cout << "tot_smoke = " << tot_smoke << endl;
-		tot_smoke = 0.0;
-		copy_cube_d(next_smoke_bb, smoke_bb);
-		
-		for (unsigned i = 0; i < 3; ++i) { // set backwards so that nothing intersects
-			float const dval(SCENE_SIZE[i]/MESH_SIZE[i]);
-			smoke_bb[i][0]     -= dval;
-			smoke_bb[i][1]     += dval;
-			next_smoke_bb[i][0] =  SCENE_SIZE[i];
-			next_smoke_bb[i][1] = -SCENE_SIZE[i];
-		}
-		smoke_enabled = next_smoke;
-		next_smoke    = 0; // will be set back to 1 if there is actually smoke
+		//print_smoke_stats();
+		smoke_mask.copy_from(next_smoke_mask);
+		smoke_mask.adj_bbox();
+		smoke_enabled = smoke_mask.smoke_vis;
+		smoke_exists  = smoke_mask.enabled;
+		next_smoke_mask.init(MESH_X_SIZE, MESH_Y_SIZE);
 	}
 	for (int y = cur_skip; y < MESH_Y_SIZE; y += SMOKE_SKIPVAL) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -988,18 +1114,21 @@ void distribute_smoke() { // called at most once per frame
 		}
 	}
 	cur_skip = (cur_skip+1) % SMOKE_SKIPVAL;
+	smoke_mask.trace_smoke_to(get_camera_pos());
 	//PRINT_TIME("Distribute Smoke");
 }
 
 
 float get_smoke_from_camera(point pos, colorRGBA &color) {
 
-	if (!DYNAMIC_SMOKE || !smoke_enabled)     return 0.0;
+	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0.0;
 	point camera(get_camera_pos());
-	if (!do_line_clip(pos, camera, smoke_bb)) return 0.0;
+	if (!do_line_clip(pos, camera, smoke_mask.bbox)) {if (display_mode & 0x10) color = GREEN; return 0.0;}
 	assert(!is_nan(pos));
 	//assert(camera != pos); // ???
 	if (camera == pos) {cout << "*** Warning: camera == pos ***" << endl; return 0.0;}
+	//int const xp(get_xpos(pos.x)), yp(get_ypos(pos.y));
+	//if (!smoke_mask.check_smoke_vis(xp, yp, xp, yp)) return 0.0;
 	lmcell *const start_lmc(get_lmcell(pos));
 	float density(0.0), scolor(0.0);
 
@@ -1022,7 +1151,8 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 			float const smoke(min(SMOKE_MAX_CELL, lmc->smoke));
 			
 			if (smoke > 0.0) {
-				scolor   = ((density == 0.0) ? lmc->v : (smoke*lmc->v + (1.0 - smoke)*scolor));
+				float const val(0.5*(lmc->v + (lmc->c[0] + lmc->c[1] + lmc->c[2])/3.0)); // add in luminance from lights
+				scolor   = ((density == 0.0) ? val : (smoke*val + (1.0 - smoke)*scolor));
 				density += smoke;
 			}
 			cur += delta;
@@ -1033,11 +1163,15 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 		start_lmc->cached_smoke_density = (unsigned char)(254.0*density);
 		start_lmc->cached_smoke_color   = (unsigned char)(254.0*scolor);
 	}
-	if (density == 0.0) return 0.0;
-	float const white(density*scolor);
+	if (density == 0.0) {if (display_mode & 0x10) color = BLUE; return 0.0;}
+	// Note: We can't just set the color here, because the fog needs to be blended after textures are applied
+	// Note: We can't set the fog color directly per vertex, we can only set the object color
+	// This means we can only have fog/smoke ranging in color from FOG_COLOR to BLACK
+	float const brightness(density*scolor);
 	color.alpha = (1.0 - density)*color.alpha + density; // deal with transparent objects
-	if (scolor < 1.0) color *= (1.0 - density)/(1.0 - white); // BLACK: attenuation
-	return SMOKE_FOG_SCALE*white; // WHITE(GRAY): fog coord
+	if (scolor < 1.0) color *= (1.0 - density)/(1.0 - brightness); // BLACK: attenuation
+	if (display_mode & 0x10) color = RED;
+	return SMOKE_FOG_SCALE*brightness; // WHITE(GRAY): fog coord
 }
 
 
@@ -1069,20 +1203,64 @@ bool get_check_pts_bounds(point const *const pts, unsigned npts, float const bb[
 bool has_smoke(point const *const pts, unsigned npts) { // currently only used in draw_shapes.cpp dlist test
 
 	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0;
-	set_fog_coord(0.0); // clear fog in case it isn't set later
-	int mmi[2][2], mmiz[2];
+	int mmi[2][2];
 	float mmf[3][2];
 	if (!get_check_pts_bounds(pts, npts, NULL, mmi, mmf)) return 0;
 	point const camera(get_camera_pos());
+
+	for (unsigned i = 0; i < 3; ++i) { // test bbox against dynamic smoke bbox
+		if (max(camera[i], mmf[i][1]) < smoke_mask.bbox[i][0] || min(camera[i], mmf[i][0]) > smoke_mask.bbox[i][1]) return 0;
+	}
+#if 1
+	if (!smoke_mask.check_smoke_vis(mmi[0][0], mmi[1][0], mmi[0][1], mmi[1][1])) return 0;
+	//if (display_mode & 0x20) return 1;
+	colorRGBA c(WHITE);
+	
+	for (unsigned i = 0; i < npts; ++i) {
+		if (get_smoke_from_camera(pts[i], c) > 0.0) return 1;
+	}
+	return (get_smoke_from_camera(get_center(pts, npts), c) > 0.0);
+#else
+	int mmiz[2];
 
 	for (unsigned i = 0; i < 2; ++i) {
 		mmiz[i] = max(0, min(MESH_SIZE[2]-1, get_zpos(mmf[2][i])));
 	}
 	for (int y = mmi[1][0]; y <= mmi[1][1]; ++y) {
-		for (int x = mmi[0][0]; x <= mmi[0][1]; ++x) { // check if light has changed since last frame?
+		for (int x = mmi[0][0]; x <= mmi[0][1]; ++x) {
 			for (int z = mmiz[0]; z <= mmiz[1]; ++z) {
 				point const pos(get_xval(x), get_yval(y), get_zval(z));
-				if (check_line_clip(pos, camera, smoke_bb)) return 1;
+				if (check_line_clip(pos, camera, smoke_mask.bbox)) return 1;
+			}
+		}
+	}
+	return 0;
+#endif
+}
+
+
+// *** Dynamic Lights Code ***
+
+
+bool has_dynamic_lights(point const *const pts, unsigned npts) {
+
+	if (dl_sources.empty()) return 0;
+	assert(pts && npts > 0);
+	int mmi[2][2];
+	float mmf[3][2];
+	if (!get_check_pts_bounds(pts, npts, dlight_bb, mmi, mmf)) return 0;
+
+	for (int y = mmi[1][0]; y <= mmi[1][1]; ++y) {
+		if (!y_used[y]) continue;
+		
+		for (int x = mmi[0][0]; x <= mmi[0][1]; ++x) { // check if light has changed since last frame?
+			if (x_used[x] && ldynamic[0][y][x].check_z_range(mmf[2][0], mmf[2][1])) return 1;
+		}
+	}
+	if (large_dlight) {
+		for (int y = (mmi[1][0] >> LDYNAM_SUB_BS); y <= (mmi[1][1] >> LDYNAM_SUB_BS); ++y) {
+			for (int x = (mmi[0][0] >> LDYNAM_SUB_BS); x <= (mmi[0][1] >> LDYNAM_SUB_BS); ++x) {
+				if (ldynamic[1][y][x].check_z_range(mmf[2][0], mmf[2][1])) return 1;
 			}
 		}
 	}
@@ -1221,32 +1399,6 @@ bool is_shadowed_lightmap(point const &p) {
 	if (p.z <= czmin0)  return is_under_mesh(p);
 	lmcell const *const lmc(get_lmcell(p));
 	return (lmc ? (lmc->v < 1.0) : 0);
-}
-
-
-bool has_dynamic_lights(point const *const pts, unsigned npts) {
-
-	if (dl_sources.empty()) return 0;
-	assert(pts && npts > 0);
-	int mmi[2][2];
-	float mmf[3][2];
-	if (!get_check_pts_bounds(pts, npts, dlight_bb, mmi, mmf)) return 0;
-
-	for (int y = mmi[1][0]; y <= mmi[1][1]; ++y) {
-		if (!y_used[y]) continue;
-		
-		for (int x = mmi[0][0]; x <= mmi[0][1]; ++x) { // check if light has changed since last frame?
-			if (x_used[x] && ldynamic[0][y][x].check_z_range(mmf[2][0], mmf[2][1])) return 1;
-		}
-	}
-	if (large_dlight) {
-		for (int y = (mmi[1][0] >> LDYNAM_SUB_BS); y <= (mmi[1][1] >> LDYNAM_SUB_BS); ++y) {
-			for (int x = (mmi[0][0] >> LDYNAM_SUB_BS); x <= (mmi[0][1] >> LDYNAM_SUB_BS); ++x) {
-				if (ldynamic[1][y][x].check_z_range(mmf[2][0], mmf[2][1])) return 1;
-			}
-		}
-	}
-	return 0;
 }
 
 

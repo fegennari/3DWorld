@@ -1066,7 +1066,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x20;   break;
 	case '7': // toggle snow accumulation and clouds
 		display_mode ^= 0x40;   break;
-	case '8': // toggle water caustics (change text draw mode - stroke vs. bitmap - disabled)
+	case '8': // toggle water caustics/smoke (change text draw mode - stroke vs. bitmap - disabled)
 		display_mode ^= 0x80;   break;
 	case '9': // toggle ocean waves and leaf wind
 		display_mode ^= 0x0100; break;

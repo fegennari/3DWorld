@@ -352,7 +352,6 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(center),
 				min(distance_to_camera(p1), distance_to_camera(p2))))));
 			int const nsides(min(N_CYL_SIDES, max(3, (int)size)));
-			if (no_lighting) cp.color.do_glColor();
 			if (textured) setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (p2 - p1));
 			draw_subdiv_cylinder(p1, p2, radius, radius2, nsides, 1, !(cp.surfs & 1), (cp.surfs == 1), i, no_lighting, textured);
 		}
@@ -362,7 +361,6 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 		{
 			float const scale(0.7*NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const nsides(min(N_SPHERE_DIV, max(5, (int)size)));
-			if (no_lighting) cp.color.do_glColor();
 			if (textured) setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z);
 			draw_subdiv_sphere_at(points[0], radius, nsides, i, no_lighting, textured);
 		}
