@@ -54,7 +54,6 @@ extern int display_mode, camera_mode, camera_view, do_zoom, xoff2, yoff2;
 extern float max_proj_rad, subdiv_size_mult, ztop, zbottom, zmax, zmin;
 extern float DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
 extern point up_vector;
-extern GLUquadricObj* quadric;
 extern vector<int> weap_cobjs;
 extern vector<coll_obj> coll_objects;
 extern platform_cont platforms; // only needed for empty test
@@ -1490,9 +1489,7 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
 		c.cp.color.do_glColor();
-		if (textured) gluQuadricTexture(quadric, GL_TRUE);
-		draw_rotated_cylinder(p1, p2, radius1, radius2, nsides, nstacks, draw_ends);
-		if (textured) gluQuadricTexture(quadric, GL_FALSE);
+		draw_fast_cylinder(p1, p2, radius1, radius2, nsides, textured, draw_ends);
 		return;
 	}
 	bool const no_clip(no_bfc || c.is_semi_trans());
@@ -1565,9 +1562,7 @@ void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, b
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
 		c.cp.color.do_glColor();
-		if (textured) gluQuadricTexture(quadric, GL_TRUE);
-		draw_sphere_at(pos, radius, ndiv);
-		if (textured) gluQuadricTexture(quadric, GL_FALSE);
+		draw_subdiv_sphere(pos, radius, ndiv, textured, 1);
 		return;
 	}
 	bool const bfc(!c.is_semi_trans());
