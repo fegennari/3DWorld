@@ -1105,11 +1105,12 @@ bool has_smoke(point const *const pts, unsigned npts) { // currently only used i
 		if (max(camera[i], mmf[i][1]) < smoke_man.bbox[i][0] || min(camera[i], mmf[i][0]) > smoke_man.bbox[i][1]) return 0;
 	}
 	colorRGBA c(WHITE);
+	float const TOLER(0.1);
 	
 	for (unsigned i = 0; i < npts; ++i) {
-		if (get_smoke_from_camera(pts[i], c) > 0.0) return 1;
+		if (get_smoke_from_camera(pts[i], c) > TOLER) return 1;
 	}
-	return (get_smoke_from_camera(get_center(pts, npts), c) > 0.0); // test center point
+	return (get_smoke_from_camera(get_center(pts, npts), c) > TOLER); // test center point
 }
 
 
