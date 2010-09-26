@@ -2126,12 +2126,11 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	if (can_have_engine_lights() && !(eflags & 1)) {
 		setup_point_light(point(0.0, 0.0, -0.5), color_a, 3.0*radius, GL_LIGHT7);
 	}
-	select_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
 	glPushMatrix();
 	glScalef(1.0, 1.0, 0.1);
 	draw_sphere_dlist(all_zeros, 1.0, ndiv32, 1); // center
 	glPopMatrix();
-	gluQuadricTexture(quadric, GL_TRUE);
 	draw_cylinder_nstacks(0.4, 0.95, 0.15, ndiv32, nstacks, 1); // top
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -0.3);
