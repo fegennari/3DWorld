@@ -1677,6 +1677,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_lighted_sides(2);
 	set_fill_mode();
 	gluQuadricTexture(quadric, GL_FALSE);
+	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	//glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	if (smoke_enabled) begin_smoke_fog();
@@ -2101,10 +2103,10 @@ void fire::set_fire_color() const {
 void fire::draw() const {
 
 	assert(status);
-	double const tex_param1[4] = {0.2*rand_uniform(0.95, 1.05)/radius, 0.0, 0.0, rand_float()};
-	glTexGendv(GL_S, GL_EYE_PLANE, tex_param1);
-	double const tex_param2[4] = {0.0, 0.2*rand_uniform(0.95, 1.05)/radius, 0.0, rand_float()};
-	glTexGendv(GL_T, GL_EYE_PLANE, tex_param2);
+	float const tex_param1[4] = {0.2*rand_uniform(0.95, 1.05)/radius, 0.0, 0.0, rand_float()};
+	glTexGenfv(GL_S, GL_EYE_PLANE, tex_param1);
+	float const tex_param2[4] = {0.0, 0.2*rand_uniform(0.95, 1.05)/radius, 0.0, rand_float()};
+	glTexGenfv(GL_T, GL_EYE_PLANE, tex_param2);
 	set_fire_color();
 	int const ndiv(max(3, min(16, int(get_zoom_scale()*0.025*window_width/distance_to_camera(pos))))); // not a function of size
 	draw_sphere_dlist(pos, radius, ndiv, 1, 0);

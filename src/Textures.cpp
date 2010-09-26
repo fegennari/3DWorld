@@ -1370,12 +1370,12 @@ void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float t
 
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
-	double const tex_param1[4] = {sx, sy, sz, sw};
+	float const tex_param1[4] = {sx, sy, sz, sw};
 	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, mode);
-	glTexGendv(GL_S, GL_EYE_PLANE, tex_param1);
-	double const tex_param2[4] = {tx, ty, tz, tw};
+	glTexGenfv(GL_S, GL_EYE_PLANE, tex_param1);
+	float const tex_param2[4] = {tx, ty, tz, tw};
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, mode);
-	glTexGendv(GL_T, GL_EYE_PLANE, tex_param2);
+	glTexGenfv(GL_T, GL_EYE_PLANE, tex_param2);
 }
 
 
@@ -1412,9 +1412,9 @@ void setup_polygon_texgen(vector3d const &norm, float const scale[2]) {
 	int const GL_X[2] = {GL_S, GL_T};
 
 	for (unsigned i = 0; i < 2; ++i) { // ignoring xoff2/yoff2
-		double const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, 0.0};
+		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, 0.0};
 		glTexGeni(GL_X[i], GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-		glTexGendv(GL_X[i], GL_EYE_PLANE, tex_param);
+		glTexGenfv(GL_X[i], GL_EYE_PLANE, tex_param);
 	}
 }
 

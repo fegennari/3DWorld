@@ -1241,6 +1241,8 @@ void draw_coll_cube(float ar, int do_fill, int cobj) {
 	pair<float, unsigned> faces[6];
 	for (unsigned i = 0; i < 6; ++i) faces[i].second = i;
 	vector3d tex_delta(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
 
 	if (c.platform_id >= 0) { // make texture scroll with platform
 		assert(c.platform_id < (int)platforms.size());
@@ -1266,7 +1268,8 @@ void draw_coll_cube(float ar, int do_fill, int cobj) {
 		b[t1] = tscale[1];
 		a[3]  = tex_delta[t0]*tscale[0];
 		b[3]  = tex_delta[t1]*tscale[1];
-		setup_texgen_full(a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3], GL_EYE_LINEAR);
+		glTexGenfv(GL_S, GL_EYE_PLANE, a);
+		glTexGenfv(GL_T, GL_EYE_PLANE, b);
 
 		if (FAST_SHAPE_DRAW) {
 			c.cp.color.do_glColor();
