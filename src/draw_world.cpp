@@ -22,7 +22,7 @@ bool const NO_SHRAP_DLIGHT      = 1; // looks cool with dynamic lights, but very
 bool const SHOW_WAYPOINTS       = 0;
 bool const FASTER_SHADOWS       = 0;
 bool const TEST_DYN_GLOBAL_LT   = 0;
-bool const SMOKE_FOG_COORD      = 1;
+bool const SMOKE_FOG_COORD      = 1; // for fires only, though could implement for smoke
 unsigned const MAX_CFILTERS     = 10;
 unsigned const SHAD_NOBJ_THRESH = 200;
 float const NDIV_SCALE          = 1.6;
@@ -1673,18 +1673,15 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	RESET_TIME;
 	if (coll_objects.empty() || world_mode != WMODE_GROUND) return;
 	bool const TIMETEST(0);
-	//bool const using_fog(glIsEnabled(GL_FOG) != 0);
 	static vector<pair<float, unsigned> > draw_last;
 	set_lighted_sides(2);
 	set_fill_mode();
-	//setup_texgen(1.0, 1.0, 0.0, 0.0, 1.0, GL_EYE_LINEAR);
 	gluQuadricTexture(quadric, GL_FALSE);
-	//disable_textures_texgen();
 	//glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	if (smoke_enabled) begin_smoke_fog();
 
-	if (draw_solid) {
+	if (draw_solid) { // called first
 		get_enabled_lights(); // don't call twice per frame - can have problems with lightning
 		init_subdiv_lighting();
 		init_draw_stats();
@@ -1712,7 +1709,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			}
 		}
 	}
-	if (draw_trans) {
+	if (draw_trans) { // called second
 		sort(draw_last.begin(), draw_last.end()); // sort back to front
 
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
@@ -1726,7 +1723,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	setup_basic_fog();
 	glEnable(GL_LIGHTING);
 	//glDisable(GL_COLOR_MATERIAL);
-	gluQuadricTexture(quadric, GL_FALSE);
 	disable_textures_texgen();
 	set_lighted_sides(1);
 
@@ -2146,6 +2142,7 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 	glAlphaFunc(GL_GREATER, 0.01);
 	glEnable(GL_ALPHA_TEST); // makes it slower
 	enable_blend();
+	// SMOKE_FOG_COORD support?
 	glBegin(GL_QUADS);
 	draw_objects(pc);
 	glEnd();

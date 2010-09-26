@@ -892,43 +892,25 @@ void build_lightmap(bool verbose) {
 // *** SMOKE CODE ***
 
 
-class smoke_mask_t {
-	struct smoke_mask_entry { // size = 4
-		bool has_smoke, smoke_vis;
-		smoke_mask_entry() : has_smoke(0), smoke_vis(0) {}
-	};
-
-	unsigned nx, ny;
-	vector<smoke_mask_entry> smask;
-
-public:
+struct smoke_manager {
 	bool enabled, smoke_vis;
 	float bbox[3][2], tot_smoke;
 
-	smoke_mask_t() {init(0,0);}
+	smoke_manager() {reset();}
 
 	bool is_smoke_visible(point const &pos) const {
 		return sphere_in_camera_view(pos, HALF_DXY, 0);
 	}
-
-	void init(unsigned nx_, unsigned ny_) {
-		nx = nx_;
-		ny = ny_;
-		smask.resize(nx*ny);
-
-		for (unsigned i = 0; i < smask.size(); ++i) {
-			smask[i].has_smoke = smask[i].smoke_vis = 0;
-		}
+	void reset() {
 		for (unsigned i = 0; i < 3; ++i) { // set backwards so that nothing intersects
 			bbox[i][0] =  SCENE_SIZE[i];
 			bbox[i][1] = -SCENE_SIZE[i];
 		}
 		tot_smoke = 0.0;
-		enabled   = smoke_vis = 0;
+		enabled   = 0;
+		smoke_vis = 0;
 	}
-
 	void add_smoke(int x, int y, int z, float smoke_amt) {
-		assert(x >= 0 && y >= 0 && (unsigned)x < nx && (unsigned)y < ny);
 		point const pos(get_xval(x), get_yval(y), get_zval(z));
 
 		if (is_smoke_visible(pos)) {
@@ -940,22 +922,9 @@ public:
 			}
 			smoke_vis = 1;
 		}
-		smask[y*nx + x].has_smoke = 1;
 		tot_smoke += smoke_amt;
 		enabled    = 1;
 	}
-
-	bool check_smoke_vis(int x1, int y1, int x2, int y2) const { // ranged version
-		assert(x1 <= x2 && y1 <= y2);
-
-		for (int y = max(0, y1); y <= min((int)ny-1, y2); ++y) {
-			for (int x = max(0, x1); x <= min((int)nx-1, x2); ++x) {
-				if (smask[y*nx + x].smoke_vis) return 1;
-			}
-		}
-		return 0;
-	}
-
 	void adj_bbox() {
 		for (unsigned i = 0; i < 3; ++i) {
 			float const dval(SCENE_SIZE[i]/MESH_SIZE[i]);
@@ -963,58 +932,9 @@ public:
 			bbox[i][1] += dval;
 		}
 	}
-
-	void trace_smoke_path(int xa, int ya, int xb, int yb) {
-		assert(!smask.empty());
-		int const dx(xb - xa), dy(yb - ya), steps(max(abs(dx), abs(dy)));
-		double const xinc(dx/(double)steps), yinc(dy/(double)steps);
-		double x(xa), y(ya);
-		bool saw_smoke(0);
-
-		for (int k = 0; k <= steps+1; ++k) { // DDA algorithm
-			int const xp((int)x), yp((int)y);
-			if (xp == xb && yp == yb) break;
-			if (xp < 0 || yp < 0 || (unsigned)xp >= nx || (unsigned)yp >= ny) break;
-			smoke_mask_entry &sm(smask[yp*nx + xp]);
-			saw_smoke    |= sm.has_smoke;
-			sm.smoke_vis |= saw_smoke;
-			x += xinc;
-			y += yinc;
-		}
-	}
-
-	void trace_smoke_to(point const &pos) {
-		if (nx == 0 || ny == 0) return;
-		int const x1(get_xpos(pos.x)), y1(get_ypos(pos.y));
-
-		for (unsigned dir = 0; dir < 2; ++dir) {
-			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				trace_smoke_path(x1, y1, x, (dir ? MESH_Y_SIZE-1 : 0));
-			}
-			for (int y = 0; y < MESH_Y_SIZE; ++y) {
-				trace_smoke_path(x1, y1, (dir ? MESH_X_SIZE-1 : 0), y);
-			}
-		}
-	}
-
-	void copy_from(smoke_mask_t const &sm) {
-		if (smask.empty()) {
-			assert(nx == 0 && ny == 0);
-			init(sm.nx, sm.ny);
-		}
-		assert(sm.nx == nx && sm.ny == ny && sm.smask.size() == smask.size());
-		tot_smoke = sm.tot_smoke;
-		enabled   = sm.enabled;
-		smoke_vis = sm.smoke_vis;
-		copy_cube_d(sm.bbox, bbox);
-		
-		for (unsigned i = 0; i < smask.size(); ++i) {
-			smask[i] = sm.smask[i];
-		}
-	}
 };
 
-smoke_mask_t smoke_mask, next_smoke_mask;
+smoke_manager smoke_man, next_smoke_man;
 
 
 inline void adjust_smoke_val(float &val, float delta) {
@@ -1032,7 +952,7 @@ void add_smoke(point const &pos, float val) {
 	if (point_outside_mesh(xpos, ypos) || pos.z >= v_collision_matrix[ypos][xpos].zmax) return; // above all cobjs/outside
 	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return;
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
-	if (smoke_mask.is_smoke_visible(pos)) smoke_exists = 1;
+	if (smoke_man.is_smoke_visible(pos)) smoke_exists = 1;
 }
 
 
@@ -1065,7 +985,7 @@ void distribute_smoke_for_cell(int x, int y, int z) {
 	if (lmc.smoke < 0.005f) {lmc.smoke = 0.0; return;}
 	int const dx(rand()&1), dy(rand()&1); // randomize the processing order
 	float const xy_rate(SMOKE_DIS_XY*SMOKE_SKIPVAL), z_rate[2] = {SMOKE_DIS_ZU, SMOKE_DIS_ZD};
-	next_smoke_mask.add_smoke(x, y, z, lmc.smoke);
+	next_smoke_man.add_smoke(x, y, z, lmc.smoke);
 
 	for (unsigned d = 0; d < 2; ++d) { // x/y
 		diffuse_smoke(x+((d^dx) ? 1 : -1), y, z, lmc, xy_rate, xy_rate, 0, (d^dx));
@@ -1077,17 +997,6 @@ void distribute_smoke_for_cell(int x, int y, int z) {
 }
 
 
-void print_smoke_stats() {
-
-	cout << "tot_smoke = " << smoke_mask.tot_smoke << ", enabled: " << smoke_enabled << ", bb: ";
-	
-	for (unsigned i = 0; i < 3; ++i) {
-		cout << smoke_mask.bbox[i][0] << "," << smoke_mask.bbox[i][1] << " ";
-	}
-	cout << endl;
-}
-
-
 void distribute_smoke() { // called at most once per frame
 
 	RESET_TIME;
@@ -1096,12 +1005,12 @@ void distribute_smoke() { // called at most once per frame
 	static int cur_skip(0);
 	
 	if (cur_skip == 0) {
-		//print_smoke_stats();
-		smoke_mask.copy_from(next_smoke_mask);
-		smoke_mask.adj_bbox();
-		smoke_enabled = smoke_mask.smoke_vis;
-		smoke_exists  = smoke_mask.enabled;
-		next_smoke_mask.init(MESH_X_SIZE, MESH_Y_SIZE);
+		//cout << "tot_smoke: " << smoke_man.tot_smoke << ", enabled: " << smoke_enabled << endl;
+		smoke_man     = next_smoke_man;
+		smoke_man.adj_bbox();
+		smoke_enabled = smoke_man.smoke_vis;
+		smoke_exists  = smoke_man.enabled;
+		next_smoke_man.reset();
 	}
 	for (int y = cur_skip; y < MESH_Y_SIZE; y += SMOKE_SKIPVAL) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -1114,7 +1023,6 @@ void distribute_smoke() { // called at most once per frame
 		}
 	}
 	cur_skip = (cur_skip+1) % SMOKE_SKIPVAL;
-	smoke_mask.trace_smoke_to(get_camera_pos());
 	//PRINT_TIME("Distribute Smoke");
 }
 
@@ -1123,12 +1031,10 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 
 	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0.0;
 	point camera(get_camera_pos());
-	if (!do_line_clip(pos, camera, smoke_mask.bbox)) {if (display_mode & 0x10) color = GREEN; return 0.0;}
+	if (!do_line_clip(pos, camera, smoke_man.bbox)) return 0.0;
 	assert(!is_nan(pos));
 	//assert(camera != pos); // ???
 	if (camera == pos) {cout << "*** Warning: camera == pos ***" << endl; return 0.0;}
-	//int const xp(get_xpos(pos.x)), yp(get_ypos(pos.y));
-	//if (!smoke_mask.check_smoke_vis(xp, yp, xp, yp)) return 0.0;
 	lmcell *const start_lmc(get_lmcell(pos));
 	float density(0.0), scolor(0.0);
 
@@ -1163,19 +1069,18 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 		start_lmc->cached_smoke_density = (unsigned char)(254.0*density);
 		start_lmc->cached_smoke_color   = (unsigned char)(254.0*scolor);
 	}
-	if (density == 0.0) {if (display_mode & 0x10) color = BLUE; return 0.0;}
+	if (density == 0.0) return 0.0;
 	// Note: We can't just set the color here, because the fog needs to be blended after textures are applied
 	// Note: We can't set the fog color directly per vertex, we can only set the object color
 	// This means we can only have fog/smoke ranging in color from FOG_COLOR to BLACK
 	float const brightness(density*scolor);
 	color.alpha = (1.0 - density)*color.alpha + density; // deal with transparent objects
 	if (scolor < 1.0) color *= (1.0 - density)/(1.0 - brightness); // BLACK: attenuation
-	if (display_mode & 0x10) color = RED;
 	return SMOKE_FOG_SCALE*brightness; // WHITE(GRAY): fog coord
 }
 
 
-bool get_check_pts_bounds(point const *const pts, unsigned npts, float const bb[3][2], int mmi[2][2], float mmf[3][2]) {
+void get_check_pts_bounds(point const *const pts, unsigned npts, float mmf[3][2]) {
 
 	for (unsigned i = 0; i < 3; ++i) {
 		mmf[i][0] = mmf[i][1] = pts[0][i];
@@ -1186,56 +1091,25 @@ bool get_check_pts_bounds(point const *const pts, unsigned npts, float const bb[
 			mmf[j][1] = max(mmf[j][1], pts[i][j]);
 		}
 	}
-	if (bb) {
-		for (unsigned i = 0; i < 3; ++i) { // test bbox against dynamic light bbox
-			if (mmf[i][1] < bb[i][0] || mmf[i][0] > bb[i][1]) return 0;
-		}
-	}
-	for (unsigned i = 0; i < 2; ++i) { // convert bounding rectangle to voxel index
-		for (unsigned j = 0; j < 2; ++j) {
-			mmi[j][i] = max(0, min(MESH_SIZE[j]-1, get_dim_pos((mmf[j][i] - SHIFT_DXYZ[j]), j)));
-		}
-	}
-	return 1;
 }
 
 
 bool has_smoke(point const *const pts, unsigned npts) { // currently only used in draw_shapes.cpp dlist test
 
 	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0;
-	int mmi[2][2];
 	float mmf[3][2];
-	if (!get_check_pts_bounds(pts, npts, NULL, mmi, mmf)) return 0;
+	get_check_pts_bounds(pts, npts, mmf);
 	point const camera(get_camera_pos());
 
 	for (unsigned i = 0; i < 3; ++i) { // test bbox against dynamic smoke bbox
-		if (max(camera[i], mmf[i][1]) < smoke_mask.bbox[i][0] || min(camera[i], mmf[i][0]) > smoke_mask.bbox[i][1]) return 0;
+		if (max(camera[i], mmf[i][1]) < smoke_man.bbox[i][0] || min(camera[i], mmf[i][0]) > smoke_man.bbox[i][1]) return 0;
 	}
-#if 1
-	if (!smoke_mask.check_smoke_vis(mmi[0][0], mmi[1][0], mmi[0][1], mmi[1][1])) return 0;
-	//if (display_mode & 0x20) return 1;
 	colorRGBA c(WHITE);
 	
 	for (unsigned i = 0; i < npts; ++i) {
 		if (get_smoke_from_camera(pts[i], c) > 0.0) return 1;
 	}
-	return (get_smoke_from_camera(get_center(pts, npts), c) > 0.0);
-#else
-	int mmiz[2];
-
-	for (unsigned i = 0; i < 2; ++i) {
-		mmiz[i] = max(0, min(MESH_SIZE[2]-1, get_zpos(mmf[2][i])));
-	}
-	for (int y = mmi[1][0]; y <= mmi[1][1]; ++y) {
-		for (int x = mmi[0][0]; x <= mmi[0][1]; ++x) {
-			for (int z = mmiz[0]; z <= mmiz[1]; ++z) {
-				point const pos(get_xval(x), get_yval(y), get_zval(z));
-				if (check_line_clip(pos, camera, smoke_mask.bbox)) return 1;
-			}
-		}
-	}
-	return 0;
-#endif
+	return (get_smoke_from_camera(get_center(pts, npts), c) > 0.0); // test center point
 }
 
 
@@ -1246,10 +1120,18 @@ bool has_dynamic_lights(point const *const pts, unsigned npts) {
 
 	if (dl_sources.empty()) return 0;
 	assert(pts && npts > 0);
-	int mmi[2][2];
 	float mmf[3][2];
-	if (!get_check_pts_bounds(pts, npts, dlight_bb, mmi, mmf)) return 0;
+	get_check_pts_bounds(pts, npts, mmf);
+	int mmi[2][2];
 
+	for (unsigned i = 0; i < 3; ++i) { // test bbox against dynamic light bbox
+		if (mmf[i][1] < dlight_bb[i][0] || mmf[i][0] > dlight_bb[i][1]) return 0;
+	}
+	for (unsigned i = 0; i < 2; ++i) { // convert bounding rectangle to voxel index
+		for (unsigned j = 0; j < 2; ++j) {
+			mmi[j][i] = max(0, min(MESH_SIZE[j]-1, get_dim_pos((mmf[j][i] - SHIFT_DXYZ[j]), j)));
+		}
+	}
 	for (int y = mmi[1][0]; y <= mmi[1][1]; ++y) {
 		if (!y_used[y]) continue;
 		

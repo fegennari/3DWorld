@@ -1027,7 +1027,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		}
 		else {
 			++dlists;
-			if (!(display_mode & 0x10)) glCallList(it->second.status);
+			glCallList(it->second.status);
 			return;
 		}
 	}
