@@ -56,7 +56,7 @@ extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, spectate, do_zoom;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_size;
-extern float max_water_height, XY_SCENE_SIZE, czmax, camera_smoke[2], TIMESTEP, atmosphere, camera_shake;
+extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake;
 extern point ocean, surface_pos, camera_last_pos;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
@@ -571,13 +571,12 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		drop_pack(sstate, camera);
 		remove_reset_coll_obj(camera_coll_id);
 		init_sstate(CAMERA_ID, 0);
-		sstate.killer   = source;
-		frags           = 0;
-		camera_reset    = 0;
-		b2down          = 0;
-		camera_smoke[0] = 0.0;
-		following       = 0; // ???
-		orig_camera     = camera_origin;
+		sstate.killer = source;
+		frags         = 0;
+		camera_reset  = 0;
+		b2down        = 0;
+		following     = 0; // ???
+		orig_camera   = camera_origin;
 		++sstates[CAMERA_ID].deaths;
 	}
 	if (cam_filter_color.alpha > 0.0) add_camera_filter(cam_filter_color, CAMERA_SPHERE_TIME, -1, CAM_FILT_DAMAGE);

@@ -1721,7 +1721,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		draw_last.resize(0);
 	}
 	if (smoke_enabled) end_smoke_fog();
-	setup_smoke_fog(0);
 	setup_basic_fog();
 	glEnable(GL_LIGHTING);
 	//glDisable(GL_COLOR_MATERIAL);

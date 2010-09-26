@@ -38,7 +38,7 @@ obj_type object_types[NUM_TOT_OBJS];
 extern int num_groups, display_mode, frame_counter, game_mode, island, coll_border, camera_coll_id, ocean_set;
 extern int s_ball_id, world_mode, w_acc, is_snow, iticks, auto_time_adv, DISABLE_WATER, enable_fsource;
 extern float max_water_height, zmin, zmax, ztop, zbottom, ball_velocity, zmax_est, base_gravity, tstep, fticks;
-extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, camera_smoke[];
+extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax;
 extern point ocean;
 extern vector3d up_norm, orig_cdir;
 extern vector<valley> valleys;
@@ -1254,25 +1254,13 @@ void bubble::apply_physics(unsigned i) {
 void particle_cloud::apply_physics(unsigned i) {
 
 	unsigned const num_smoke_advance(5); // must be > 0
-	if (!status) return;
-	float csmoke(0.0), cdist(distance_to_camera(pos));
-	if (acc_smoke && cdist < 0.3) csmoke += 0.04;
+	if (status == 0) return;
 
 	if (pos.z >= (CLOUD_CEILING + zmax_est) || radius > 0.25 || is_underwater(pos)) { // smoke dies
+		if (acc_smoke && time > 0) add_smoke(pos, 1.0);
 		status = 0;
-
-		if (acc_smoke) {
-			if (cdist < 0.5) csmoke += 0.4;
-
-			if (sphere_in_camera_view(pos, radius, 3)){
-				camera_smoke[1] += 2.0*csmoke + 0.15/(cdist + 0.3); // directional smoke (in front of camera)
-				camera_smoke[0] += 0.2/(cdist + 0.3);
-			}
-			if (time > 0) add_smoke(pos, 1.0);
-		}
 	}
 	else {
-		if (acc_smoke) camera_smoke[1] += 2.0*csmoke + 0.12/(cdist + 0.3); // directional smoke (in front of camera)
 		vector3d v_flow(get_flow_velocity(pos));
 		int coll(0);
 		dwobject obj(SMOKE, pos, zero_vector, 1, 10000.0); // make a SMOKE object for collision detection
@@ -1294,7 +1282,6 @@ void particle_cloud::apply_physics(unsigned i) {
 		if (darkness < 0.0001) darkness = 0.0;
 		if (damage   > 0.0)    do_area_effect_damage(pos, radius, damage, i, source, GASSED);
 	}
-	if (acc_smoke) camera_smoke[0] += csmoke; // area smoke (surrounding camera)
 }
 
 

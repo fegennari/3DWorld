@@ -782,7 +782,6 @@ void disable_point_specular();
 void reset_fog();
 void set_light_atten(int light, float attenuation=1.0);
 void set_perspective(float fovy, float nc_scale);
-void setup_smoke_fog(bool update);
 void setup_basic_fog();
 void check_zoom();
 void reset_camera_pos();
@@ -1318,6 +1317,7 @@ void remove_overlapping_cubes(vector<coll_obj> &cobjs);
 unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir,
 					   float x1, float x2, float y1, float y2, float z1, float z2, int destroy_thresh);
 void subdiv_cubes(vector<coll_obj> &cobjs);
+void sort_cobjs_by_tid(vector<coll_obj> &cobjs);
 
 // function prototypes - ship
 upos_point_type const &get_player_pos();

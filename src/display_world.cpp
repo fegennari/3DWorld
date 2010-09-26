@@ -23,7 +23,7 @@ float const FOG_COLOR_ATTEN    = 0.5;
 
 bool mesh_invalidated(1);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0);
-float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0), camera_smoke[2] = {0.0, 0.0};
+float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
 
@@ -324,18 +324,7 @@ bool sun_in_view() { // universe sun radius?
 void config_bkg_color_and_clear(int underwater, float depth, bool no_fog) {
 
 	calc_bkg_color();
-	
-	if (!no_fog && (camera_smoke[0] + camera_smoke[1]) > 0.01) {
-		colorRGBA color;
-		blend_color(color, GRAY, bkg_color, min(1.0f, (camera_smoke[0] + camera_smoke[1])/60.0f), 0);
-		glClearColor_rgba(color);
-	}
-	else if (!no_fog && show_fog) {
-		glClearColor_rgba(GRAY);
-	}
-	else {
-		glClearColor_rgba(bkg_color);
-	}
+	glClearColor_rgba((!no_fog && show_fog) ? GRAY : bkg_color);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Clear the background
 
 	if (underwater) {
@@ -533,22 +522,6 @@ void draw_game_elements(int timer1) {
 }
 
 
-void setup_smoke_fog(bool update) {
-
-	float const tot_smoke(camera_smoke[0] + camera_smoke[1]);
-	if (show_fog || tot_smoke < 0.01) return;
-	glEnable(GL_FOG);
-	set_lighted_fog_color(DK_GRAY);
-	glFogf(GL_FOG_END, 200.0/tot_smoke);
-
-	if (update) {
-		if (animate2) camera_smoke[0] -= 1.0;
-		camera_smoke[0] = min(60.0f, max(0.0f, camera_smoke[0]));
-		camera_smoke[1] = min(40.0f, camera_smoke[1]);
-	}
-}
-
-
 void setup_basic_fog() {
 
 	if (!show_fog) return;
@@ -739,7 +712,6 @@ void display(void) {
 		auto_advance_time();
 		check_gl_error(3);
 		if (TIMETEST) PRINT_TIME("\n\n0");
-		setup_smoke_fog(1);
 		
 		if (combined_gu) { // light from current system's star
 			draw_universe_bkg(underwater, depth); // infinite universe as background
@@ -753,7 +725,6 @@ void display(void) {
 			set_light_atten(GL_LIGHT0, 1.0); // reset light0
 		}
 		check_gl_error(4);
-		if (animate2) camera_smoke[1] = 0.0;
 		if (TIMETEST) PRINT_TIME("1");
 
 		if (world_mode == WMODE_INF_TERRAIN) { // infinite terrain mode
@@ -770,7 +741,7 @@ void display(void) {
 				sun_flare();
 			}
 			// Is this correct? Camera smoke is a different kind of fog
-			if (show_fog || underwater || (camera_smoke[0] + camera_smoke[1]) > 0.01) glEnable(GL_FOG);
+			if (show_fog || underwater) glEnable(GL_FOG);
 			if (!show_lightning) l_strike.enabled = 0;
 			compute_brightness();
 			if (!combined_gu) draw_earth();
