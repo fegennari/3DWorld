@@ -237,13 +237,14 @@ inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d 
 
 void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned char shadowed, dqd_params const &p) {
 
-	for (int i = 0; i < npts; ++i) {
+	for (int i = 0; i < npts; ++i) { // much of the frame time is spent here
 		vertex_t &v(verts[ix[i]]);
 		
 		if (v.c[3] == 0) { // Note: shadowed should agree across all uses of this vertex
 			colorRGBA color;
-			v.fog = get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec);
-			for (unsigned j = 0; j < 4; ++j) v.c[j] = (unsigned char)(255.0*color[j]);
+			v.fog  = get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec);
+			v.c[3] = (unsigned char)(255.0*color[3]);
+			UNROLL_3X(v.c[i_] = (unsigned char)(255.0*color[i_]);)
 		}
 		if (smoke_enabled) set_fog_coord(v.fog);
 		glColor4ubv(v.c);
@@ -1018,7 +1019,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		lvmap::const_iterator const it(c_obj.lightmap.find(qddl));
 		bool const found(it != c_obj.lightmap.end());
 
-		if (!found || it->second.status == 0 || !glIsList(it->second.status)) { // sometimes can be a bad list?
+		if (!found || it->second.status == 0 /*|| !glIsList(it->second.status)*/) { // sometimes can be a bad list?
 			if (found) c_obj.lightmap.erase(qddl);
 			unsigned const dlist(glGenLists(1)); // shouldn't return 0
 			assert(glIsList(dlist));
@@ -1046,7 +1047,6 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	if (lod_scale != 1.0) calc_params(pts, dirs, len, ninv, n, lod_scale*subdiv_size_inv2); // smaller n
 	bool const occlusion_test(!use_dlist && (display_mode & 0x08) && !c_obj.occluders.empty());
 	bool in_strip(0), occluded(0);
-	int const GL_TYPE(tri ? GL_TRIANGLES : GL_QUADS);
 	unsigned const num_subdiv(n[0]*n[1]);
 	quad_div qd(dim, dir, QD_TAG_QUAD, face, shift_bits);
 	dqd_params params(q, tri, 0, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
@@ -1071,7 +1071,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		}
 	}
 	else if (tri) {
-		glBegin(GL_TYPE);
+		glBegin(GL_TRIANGLES);
 	}
 	for (unsigned s0 = 0; s0 < n[0]; ++s0) { // pre-subdivide large quads
 		unsigned const ix0(s0*nv1);
@@ -1113,7 +1113,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 					qd.tag &= ~QD_TAG_TRIANGLE;
 
 					if (!tri_begin) {
-						glBegin(GL_TYPE);
+						glBegin(GL_TRIANGLES);
 						tri_begin = 1;
 					}
 					else if (lighted != ALL_LT[4]) {
@@ -1123,7 +1123,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 				ixs[3] = ixs[2]; // have to recompute since dir is not constant due to scale
 				dqd_params params2(q, tri, 0, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
 				lighted = draw_quad_div(verts, ixs, params2, tri_begin);
-				if (!tri_begin) {glBegin(GL_TYPE); tri_begin = 1;}
+				if (!tri_begin) {glBegin(GL_TRIANGLES); tri_begin = 1;}
 				params.inherit_flags_from(params2);
 			}
 			else { // quad
