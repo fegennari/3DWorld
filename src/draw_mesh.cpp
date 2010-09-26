@@ -349,14 +349,16 @@ void gen_uw_lighting() {
 			for (int yy = bnds[0][1]; yy < bnds[1][1]; ++yy) {
 				assert(yy >= 0 && yy < MESH_Y_SIZE);
 				float const ysz(min(crng[1][1], rng[1][1]) - max(crng[0][1], rng[0][1])); // intersection: min(UB) - max(LB)
-				assert(ysz > 0.0);
+				assert(ysz >= 0.0);
+				if (ysz <= 0.0) continue;
 				crng[0][0] = init_cr[0];
 				crng[1][0] = init_cr[0] + DX_VAL;
 
 				for (int xx = bnds[0][0]; xx < bnds[1][0]; ++xx) {
 					assert(xx >= 0 && xx < MESH_X_SIZE);
 					float const xsz(min(crng[1][0], rng[1][0]) - max(crng[0][0], rng[0][0])); // intersection: min(UB) - max(LB)
-					assert(xsz > 0.0);
+					assert(xsz >= 0.0);
+					if (xsz <= 0.0) continue;
 					unsigned const ix(yy*MESH_X_SIZE + xx);
 					uw_mesh_lighting[ix].n += weight_n*xsz*ysz; // amount of light through patch of water hitting this mesh quad
 					uw_mesh_lighting[ix].d += weight_d*xsz*ysz;
