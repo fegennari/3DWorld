@@ -920,9 +920,11 @@ void free_scenery() {
 
 
 bool has_grass(0);
+pt_line_drawer grass_pld;
 
 extern int default_ground_tex, read_landscape;
 extern float zmin, zmax, h_sand[], h_dirt[];
+extern vector3d wind;
 
 
 bool snow_enabled();
@@ -931,17 +933,19 @@ bool snow_enabled();
 void gen_grass() {
 
 	has_grass = 0;
+	grass_pld.clear();
 	if (snow_enabled() || vegetation == 0.0 || read_landscape) return;
-	RESET_TIME;
+	int const light(get_light());
 	float const *h_tex(island ? h_sand     : h_dirt);
 	ttex  const *lttex(island ? lttex_sand : lttex_dirt);
 	int   const   NTEX(island ? NTEX_SAND  : NTEX_DIRT);
 	float const dz_inv(1.0/(zmax - zmin));
+	float const grass_length(0.008);
 	unsigned const num_grass(100);
 	unsigned grass_count(0);
 	
-	for (int y = 0; y < MESH_Y_SIZE; ++y) {
-		for (int x = 0; x < MESH_X_SIZE; ++x) {
+	for (int y = 0; y < MESH_Y_SIZE-1; ++y) {
+		for (int x = 0; x < MESH_X_SIZE-1; ++x) {
 			if (is_mesh_disabled(x, y)) continue; // mesh not drawn
 			if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater
 			float const xval(get_xval(x)), yval(get_yval(y));
@@ -968,21 +972,38 @@ void gen_grass() {
 					if (id2 != GROUND_TEX) density = 1.0 - t;
 					if (rand_float() >= density) continue; // skip - density too low
 				}
-				point const pos(xv, yv, mh);
+				vector3d const dir((plus_z + signed_rand_vector(0.25) + wind*0.25).get_norm());
+				point const p1(xv, yv, mh), p2(p1 + dir*grass_length);
+				bool const shadowed((shadow_mask[light][y][x] & SHADOWED_ALL) != 0);
+				// FIXME: use vis test for shadow borders
+				vector3d const normal(shadowed ? zero_vector : dir);
+				// FIXME: use textured quad(s) with better normal instead of line
+				colorRGBA const grass_color(rand_uniform(0.1, 0.35), rand_uniform(0.5, 0.75), rand_uniform(0.0, 0.1), 1.0);
+				grass_pld.add_line(p1, normal, grass_color, p2, normal, grass_color);
 				++grass_count;
 				has_grass = 1;
 			}
 		}
 	}
-	PRINT_TIME("Gen Grass");
 	cout << "grass: " << grass_count << " out of " << XY_MULT_SIZE*num_grass << endl;
+}
+
+
+// called when light source moves, and to regen VBO(s)
+void gen_grass_draw_data() {
+
+	// write
 }
 
 
 void draw_grass() {
 
-	if (!has_grass) return;
-	// write
+	if (!has_grass || snow_enabled()) return;
+	glDisable(GL_NORMALIZE);
+	// FIXME: use VBO
+	// FIXME: update shadows when light moves
+	grass_pld.draw();
+	glEnable(GL_NORMALIZE);
 }
 
 

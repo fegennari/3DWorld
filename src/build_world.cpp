@@ -585,13 +585,17 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		gen_scenery();
 		PRINT_TIME("Scenery generation");
 	}
-	if (!inf_terrain) gen_grass();
 	unsigned char sflags(0);
 	float const lf(fabs(sun_rot/PI - 1.0)); // light_factor
 	if (!scrolling || lf >= 0.4) sflags |= SUN_SHADOW;
 	if (!scrolling || lf <= 0.6) sflags |= MOON_SHADOW;
 	calc_visibility(sflags);
 	PRINT_TIME("Visibility calculation");
+
+	if (!inf_terrain) {
+		gen_grass();
+		PRINT_TIME("Grass generation");
+	}
 }
 
 
