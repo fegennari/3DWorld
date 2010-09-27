@@ -176,6 +176,7 @@ struct dqt_params {
 
 struct dqd_params {
 
+	bool double_sided;
 	int cobj, tri;
 	float ts_x, ts_y, t_tx, t_ty;
 	point origin;
@@ -191,9 +192,9 @@ struct dqd_params {
 
 	dqd_params(dqt_params const &q, int tr, int sub_tri, vector3d const &norm, quad_div const &qd_,
 		vector<vector<int> > const &s, bool idl, float const sp[2], unsigned ll, unsigned ns, unsigned al, bool nsc, bool usen) :
-		cobj(q.cobj), tri(tr), ts_x(q.ts_x), ts_y(q.ts_y), t_tx(q.t_tx), t_ty(q.t_ty), origin(q.origin),
-		normal(norm), color(q.color), qd(qd_), stest(s), lod_level(ll), num_internal(0), num_subdiv(ns), all_lighted(al),
-		all_shad(0xFF), all_unshad(0xFF), in_dlist(idl), all_int_surf(1), no_shadow_calc(nsc), use_n(usen)
+	    double_sided(q.double_sided), cobj(q.cobj), tri(tr), ts_x(q.ts_x), ts_y(q.ts_y), t_tx(q.t_tx), t_ty(q.t_ty),
+		origin(q.origin), normal(norm), color(q.color), qd(qd_), stest(s), lod_level(ll), num_internal(0), num_subdiv(ns),
+		all_lighted(al), all_shad(0xFF), all_unshad(0xFF), in_dlist(idl), all_int_surf(1), no_shadow_calc(nsc), use_n(usen)
 	{
 		spec[0] = sp[0]; spec[1] = sp[1];
 	}
@@ -428,7 +429,7 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 		unsigned cur_lighted(get_light_val(old_val.status, L));
 		static vector<int> cobjs;
 		cobjs.resize(0);
-		bool const visible(enabled_lights[L].lights_polygon(center, rsize, &p.normal));
+		bool const visible(enabled_lights[L].lights_polygon(center, rsize, (p.double_sided ? NULL : &p.normal)));
 
 		if (cur_lighted == 3) { // partially shadowed cached old value
 			assert(old_val.nvals);
@@ -900,8 +901,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	unsigned shifti(0);
 	point pts[4];
 	vector3d normals[4];
-	bool const double_sided(q.double_sided);
-	//if (c_obj.is_semi_trans()) double_sided = 1;
+	bool const double_sided(q.double_sided); // || c_obj.is_semi_trans()
 
 	if (DO_ROTATE && npts == 3) { // rotate points on triangles to improve subdivision direction
 		float minlen(0.0);
@@ -934,14 +934,21 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	assert(dir == 0 || dir == 1);
 	vector3d dirs[2]; // edge step lengths/directions
 	calc_params(pts, dirs, len, ninv, n, subdiv_size_inv2);
+	vector3d normal(cross_product(dirs[1], dirs[0]).get_norm());
 
 	unsigned shift_bits(1);
 	for (unsigned val = n[0]*n[1]+1; val > 0; val >>= 1, ++shift_bits) {}
 	assert(face < (1U<<(32-shift_bits)));
 	face <<= shift_bits;
-
-	vector3d normal(cross_product(dirs[1], dirs[0]).get_norm());
-	if (double_sided && !use_norms && dot_product_ptv(normal, camera, pos) < 0.0) normal.negate(); // viewing the back side
+	
+	if (double_sided && dot_product_ptv(normal, camera, pos) < 0.0) { // viewing the back side
+		if (use_norms) {
+			for (int i = 0; i < npts; ++i) {
+				normals[i].negate();
+			}
+		}
+		normal.negate();
+	}
 	vector3d const norm(use_norms ? get_center(normals, npts) : normal);
 	bool const bf_test(!no_shadow_edge && !double_sided);
 	bool back_facing(bf_test), dg_lights(0), has_d_shad(0);
@@ -1498,7 +1505,7 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 	point const ce[2] = {p1, p2};
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, nsides, v12));
-	dqt_params q(c.get_ref_pt(), 0, no_bfc, cobj, 0.0, 0.0, 0.0, 0.0, 1);
+	dqt_params q(c.get_ref_pt(), 0, no_bfc, cobj, 0.0, 0.0, 0.0, 0.0, 1); // no_bfc == double sided
 
 	for (int S = 0; S < nsides; ++S) { // nsides can change
 		int const index(S + (nsides<<8) + 1);
