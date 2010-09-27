@@ -54,6 +54,7 @@ float    const CAMERA_RADIUS    = 0.06;
 float    const ABSOLUTE_ZERO    = -273; // in degrees C
 float    const MAX_SPLASH_DEPTH = 0.1;
 float    const WATER_INDEX_REFRACT = 1.333;
+float    const WATER_COL_ATTEN  = 0.6;
 
 unsigned const TICKS_PER_SECOND = 40;
 
@@ -967,13 +968,19 @@ void draw_rotated_cylinder_dlist(point const &p1, point const &p2, float r, int 
 // function prototypes - draw mesh
 void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2);
 float get_cloud_shadow_atten(int x, int y);
+colorRGBA setup_mesh_lighting();
+void run_post_mesh_draw();
+void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize);
 void display_mesh();
 float display_mesh3(int const *const hole_bounds);
 void draw_water_sides(int check_zvals);
+float get_inf_terrain_fog_dist();
+
+// function prototypes - tiled mesh
+int get_tile_radius();
 float draw_tiled_terrain(bool add_hole);
 void clear_tiled_terrain();
 void reset_tiled_terrain_state();
-float get_inf_terrain_fog_dist();
 
 // function prototypes - map_view
 void draw_overhead_map();

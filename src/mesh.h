@@ -102,5 +102,11 @@ inline int get_ext_x2() {return (((int)scenery_extent + 1)*MESH_X_SIZE - 1);}
 inline int get_ext_y2() {return (((int)scenery_extent + 1)*MESH_Y_SIZE - 1);}
 
 
+inline float blend_light(float lfactor, bool has_sun, bool has_moon) {
+	float const lfs(5.0*(lfactor - 0.4)); // 0: all moon, 1: all sun
+	return lfs*has_sun + (1.0 - lfs)*has_moon;
+}
+
+
 #endif
 

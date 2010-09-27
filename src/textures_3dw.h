@@ -37,5 +37,9 @@ inline void unpack_color(unsigned char dst[3], colorRGBA const &src) {
 	UNROLL_3X(dst[i_] = (unsigned char)(255.0*src[i_]);)
 }
 
+inline unsigned get_norm_texels() {
+	return (world_mode == WMODE_INF_TERRAIN) ? 512 : get_texture_size(LANDSCAPE_TEX, 0);
+}
+
 
 #endif
