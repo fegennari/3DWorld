@@ -1303,6 +1303,9 @@ void free_scenery();
 void add_scenery_cobjs();
 void shift_scenery(vector3d const &vd);
 void add_plant(point const &pos, float height, float radius, int type, int calc_z);
+// grass
+void gen_grass();
+void draw_grass();
 
 // function prototypes - draw mech
 void draw_hmv();

@@ -791,6 +791,7 @@ void display(void) {
 			draw_coll_surfaces(1, 0);
 			if (TIMETEST) PRINT_TIME("6.5");
 			draw_scenery(1, 0);
+			draw_grass();
 			if (TIMETEST) PRINT_TIME("6.6");
 			draw_stuff(!underwater, timer1);
 

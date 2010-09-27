@@ -914,4 +914,76 @@ void free_scenery() {
 }
 
 
+// *** GRASS - Move to another file later ***
+
+#include "textures_3dw.h"
+
+
+bool has_grass(0);
+
+extern int default_ground_tex, read_landscape;
+extern float zmin, zmax, h_sand[], h_dirt[];
+
+
+bool snow_enabled();
+
+
+void gen_grass() {
+
+	has_grass = 0;
+	if (snow_enabled() || vegetation == 0.0 || read_landscape) return;
+	RESET_TIME;
+	float const *h_tex(island ? h_sand     : h_dirt);
+	ttex  const *lttex(island ? lttex_sand : lttex_dirt);
+	int   const   NTEX(island ? NTEX_SAND  : NTEX_DIRT);
+	float const dz_inv(1.0/(zmax - zmin));
+	unsigned const num_grass(100);
+	unsigned grass_count(0);
+	
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) {
+			if (is_mesh_disabled(x, y)) continue; // mesh not drawn
+			if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater
+			float const xval(get_xval(x)), yval(get_yval(y));
+
+			for (unsigned n = 0; n < num_grass; ++n) {
+				float const xv(rand_uniform(xval, xval + DX_VAL));
+				float const yv(rand_uniform(yval, yval + DY_VAL));
+				float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
+
+				if (default_ground_tex >= 0 || zmax == zmin) {
+					if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue;
+				}
+				else {
+					// look for dominant green component in generated landscape texture instead?
+					//float const relh(get_rel_height(mh, zmin, zmax));
+					float const relh((mh - zmin)*dz_inv);
+					int k1, k2;
+					float t;
+					get_tids(relh, NTEX-1, h_tex, k1, k2, t); // t==0 => use k1, t==1 => use k2
+					int const id1(lttex[k1].id), id2(lttex[k2].id);
+					if (id1 != GROUND_TEX && id2 != GROUND_TEX) continue; // not ground texture
+					float density(1.0);
+					if (id1 != GROUND_TEX) density = t;
+					if (id2 != GROUND_TEX) density = 1.0 - t;
+					if (rand_float() >= density) continue; // skip - density too low
+				}
+				point const pos(xv, yv, mh);
+				++grass_count;
+				has_grass = 1;
+			}
+		}
+	}
+	PRINT_TIME("Gen Grass");
+	cout << "grass: " << grass_count << " out of " << XY_MULT_SIZE*num_grass << endl;
+}
+
+
+void draw_grass() {
+
+	if (!has_grass) return;
+	// write
+}
+
+
 

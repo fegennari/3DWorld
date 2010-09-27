@@ -572,18 +572,20 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 
 	calc_motion_direction();
 	PRINT_TIME("Motion matrix generation");
+	bool const inf_terrain(world_mode == WMODE_INF_TERRAIN);
 
-	if (world_mode != WMODE_INF_TERRAIN && !rgt_only) {
+	if (!inf_terrain && !rgt_only) {
 		calc_watershed();
 		PRINT_TIME("Water generation");
 	}
 	reanimate_objects(); // allow stationary/stuck objects to move about the new terrain
 	PRINT_TIME("Object reanimation");
 
-	if (world_mode != WMODE_INF_TERRAIN || gen_trees) {
+	if (!inf_terrain || gen_trees) {
 		gen_scenery();
 		PRINT_TIME("Scenery generation");
 	}
+	if (!inf_terrain) gen_grass();
 	unsigned char sflags(0);
 	float const lf(fabs(sun_rot/PI - 1.0)); // light_factor
 	if (!scrolling || lf >= 0.4) sflags |= SUN_SHADOW;

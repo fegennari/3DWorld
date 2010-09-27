@@ -14,7 +14,6 @@ using std::string;
 float const TEXTURE_SMOOTH        = 0.01;
 float const TEXTURE_SMOOTH_I      = 0.1;
 float const SPHERE_SECTION        = 0.75;
-float const LAND_TEX_ATTEN        = 0.5;
 float const TEXTURE_SNOW_ACC_RATE = 0.05;
 int   const SNOW_ACC_RADIUS       = 3;
 float const LANDSCAPE_REGEN_AMT   = 0.05; // how much regen after LANDSCAPE_REGEN_MOD ticks
@@ -843,7 +842,7 @@ void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2
 }
 
 
-// USE LAND_TEX_ATTEN, multiple resolution texture passes?
+// multiple resolution texture passes?
 void create_landscape_texture() {
 
 	RESET_TIME;
