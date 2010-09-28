@@ -930,6 +930,21 @@ extern vector3d wind;
 bool snow_enabled();
 
 
+bool is_grass_shadowed(point const &pos, int light) {
+
+	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+	bool shadowed(0), unshadowed(0);
+
+	for (int y = max(0, ypos-1); y <= min(MESH_Y_SIZE-1, ypos+1); ++y) { // test 3x3 window around the point
+		for (int x = max(0, xpos-1); x <= min(MESH_X_SIZE-1, xpos+1); ++x) {
+			(((shadow_mask[light][y][x] & SHADOWED_ALL) != 0) ? shadowed : unshadowed) = 1;
+		}
+	}
+	if (shadowed != unshadowed) return shadowed; // only one was set, so mesh is in agreement
+	return !is_visible_to_light_cobj(pos, light, 0.0, -1, 1); // neither (off the mesh) or both (conflict)
+}
+
+
 void gen_grass() {
 
 	has_grass = 0;
@@ -974,9 +989,7 @@ void gen_grass() {
 				}
 				vector3d const dir((plus_z + signed_rand_vector(0.25) + wind*0.25).get_norm());
 				point const p1(xv, yv, mh), p2(p1 + dir*grass_length);
-				bool const shadowed((shadow_mask[light][y][x] & SHADOWED_ALL) != 0);
-				// FIXME: use vis test for shadow borders
-				vector3d const normal(shadowed ? zero_vector : dir);
+				vector3d const normal(is_grass_shadowed(p1, light) ? zero_vector : dir);
 				// FIXME: use textured quad(s) with better normal instead of line
 				colorRGBA const grass_color(rand_uniform(0.1, 0.35), rand_uniform(0.5, 0.75), rand_uniform(0.0, 0.1), 1.0);
 				grass_pld.add_line(p1, normal, grass_color, p2, normal, grass_color);
@@ -999,6 +1012,17 @@ void gen_grass_draw_data() {
 void draw_grass() {
 
 	if (!has_grass || snow_enabled()) return;
+	static int last_light(-1);
+	static point last_lpos(all_zeros);
+	int const light(get_light());
+	point lpos;
+	get_light_pos(lpos, light);
+
+	if (light != last_light || lpos != last_lpos) {
+		gen_grass_draw_data();
+		last_light = light;
+		last_lpos  = lpos;
+	}
 	glDisable(GL_NORMALIZE);
 	// FIXME: use VBO
 	// FIXME: update shadows when light moves
