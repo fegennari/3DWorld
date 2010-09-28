@@ -466,6 +466,7 @@ struct vert_norm_tc_color : public vert_norm_tc {
 	vert_norm_tc_color() {}
 	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGB const &c_)
 		: vert_norm_tc(v_, n_, ts, tt), c(c_) {}
+	static void set_vbo_arrays();
 };
 
 
@@ -1303,8 +1304,10 @@ void free_scenery();
 void add_scenery_cobjs();
 void shift_scenery(vector3d const &vd);
 void add_plant(point const &pos, float height, float radius, int type, int calc_z);
-// grass
+
+// function prototypes - grass
 void gen_grass();
+void gen_grass_draw_data();
 void draw_grass();
 
 // function prototypes - draw mech

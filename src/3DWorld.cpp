@@ -154,6 +154,7 @@ void clear_context() {
 	clear_all_lightmaps(1); // to clear display lists
 	free_dlists();
 	reset_snow_vbos();
+	gen_grass_draw_data();
 	clear_tree_vbos(t_trees);
 	reset_tiled_terrain_state();
 	clear_landscape_vbo = 1;

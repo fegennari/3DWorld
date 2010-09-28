@@ -670,10 +670,7 @@ void tree::draw_tree(bool invalidate_norms) {
 			upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride);
 			leaves_changed = 0;
 		}
-		glVertexPointer(  3, GL_FLOAT, leaf_stride, (void *)(0));
-		glNormalPointer(     GL_FLOAT, leaf_stride, (void *)(sizeof(point)));
-		glTexCoordPointer(2, GL_FLOAT, leaf_stride, (void *)(sizeof(point) + sizeof(vector3d)));
-		glColorPointer(   3, GL_FLOAT, leaf_stride, (void *)(sizeof(point) + sizeof(vector3d) + 2*sizeof(float)));
+		vert_norm_tc_color::set_vbo_arrays();
 	}
 	else {
 		glVertexPointer(  3, GL_FLOAT, leaf_stride, &(leaf_data.front().v));
