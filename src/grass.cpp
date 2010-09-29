@@ -8,8 +8,9 @@
 #include "gl_ext_arb.h"
 
 
-float    const GRASS_LENGTH = 0.008;
-unsigned const NUM_GRASS    = 100;
+float    const GRASS_LENGTH = 0.02;
+float    const GRASS_WIDTH  = 0.002;
+unsigned const NUM_GRASS    = 128;
 
 
 extern int island, default_ground_tex, read_landscape;
@@ -22,30 +23,42 @@ bool snow_enabled();
 
 class grass_manager_t {
 	
-	vector<vert_norm_tc_color> data;
+	struct grass_t { // size = 56
+		point p;
+		vector3d dir, n;
+		colorRGB c;
+		float w;
+
+		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, colorRGB const &c_, float w_)
+			: p(p_), dir(dir_), n(n_), c(c_), w(w_) {}
+	};
+
+	vector<grass_t> grass;
 	unsigned vbo;
 	bool vbo_valid;
 
 public:
 	grass_manager_t() : vbo(0), vbo_valid(0) {}
 	~grass_manager_t() {clear();}
-	size_t size() const {return (data.size() >> 1);} // 2 points per grass blade
-	bool empty()  const {return data.empty();}
+	size_t size() const {return grass.size();} // 2 points per grass blade
+	bool empty()  const {return grass.empty();}
 	void invalidate_vbo() {vbo_valid = 0;}
 	
 	void clear() {
 		delete_vbo(vbo);
-		vbo = 0;
-		data.clear();
+		vbo       = 0;
+		vbo_valid = 0;
+		grass.clear();
 	}
 
-	void add_grass(point const &p1) {
-		vector3d const dir((plus_z + signed_rand_vector(0.25) + wind*0.25).get_norm()); // FIXME: make dynamic?
-		point const p2(p1 + dir*(GRASS_LENGTH*rand_uniform(0.9, 1.1)));
-		colorRGB const grass_color(rand_uniform(0.1, 0.35), rand_uniform(0.5, 0.75), rand_uniform(0.0, 0.1));
-		// FIXME: use textured quad(s) with better normal instead of line
-		data.push_back(vert_norm_tc_color(p1, plus_z, 0.0, 0.0, grass_color));
-		data.push_back(vert_norm_tc_color(p2, plus_z, 0.1, 0.0, grass_color)); // second color different?
+	void add_grass(point const &pos) {
+		vector3d const dir((plus_z + signed_rand_vector(0.25) + wind*0.25).get_norm()); // FIXME: make dynamic? local wind?
+		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
+		//colorRGB const color(rand_uniform(0.1, 0.35), rand_uniform(0.5, 0.75), rand_uniform(0.0, 0.1)); // vary per vertex?
+		colorRGB const color(rand_uniform(0.3, 0.5), rand_uniform(0.6, 0.8), rand_uniform(0.1, 0.2)); // vary per vertex?
+		float const length(GRASS_LENGTH*rand_uniform(0.8, 1.2));
+		float const width( GRASS_WIDTH *rand_uniform(0.8, 1.2));
+		grass.push_back(grass_t(pos, dir*length, norm, color, width));
 	}
 
 	bool is_pt_shadowed(point const &pos) const {
@@ -64,20 +77,31 @@ public:
 
 	void gen_draw_data() {
 		if (empty()) return;
-		//cout << "mem used: " << data.size()*sizeof(vert_norm_tc_color) << endl;
-		// remove excess capacity from data?
+		RESET_TIME;
+		// remove excess capacity from grass?
+		vector<vert_norm_tc_color> data;
+		data.reserve(4*grass.size());
 
-		for (vector<vert_norm_tc_color>::iterator i = data.begin(); i != data.end(); i += 2) {
-			i->n = (i+1)->n = (is_pt_shadowed(i->v) ? zero_vector : ((i+1)->v - i->v).get_norm());
+		for (unsigned i = 0; i < grass.size(); ++i) {
+			point const p1(grass[i].p), p2(p1 + grass[i].dir);
+			vector3d const norm((is_pt_shadowed((p1 + p2)*0.5) ? zero_vector : /*grass[i].n*/plus_z));
+			vector3d const binorm(cross_product(grass[i].dir, grass[i].n).get_norm());
+			vector3d const delta(binorm*(0.5*grass[i].w));
+			data.push_back(vert_norm_tc_color(p1-delta,     norm, 0.9, 0.1, grass[i].c));
+			data.push_back(vert_norm_tc_color(p1+delta,     norm, 0.9, 0.9, grass[i].c));
+			data.push_back(vert_norm_tc_color(p2+delta*0.0, norm, 0.1, 0.9, grass[i].c));
+			data.push_back(vert_norm_tc_color(p2-delta*0.0, norm, 0.1, 0.1, grass[i].c));
 		}
 		bool const use_vbos(setup_gen_buffers_arb());
 		assert(use_vbos);
 		delete_vbo(vbo);
-		vbo = create_vbo();
+		vbo       = create_vbo();
+		vbo_valid = 1;
 		bind_vbo(vbo);
 		upload_vbo_data(&data.front(), data.size()*sizeof(vert_norm_tc_color));
 		bind_vbo(0);
-		vbo_valid = 1;
+		PRINT_TIME("Grass Gen Draw Data");
+		cout << "mem used: " << grass.size()*sizeof(grass_t) << ", vmem used: " << data.size()*sizeof(vert_norm_tc_color) << endl;
 	}
 
 	void draw() {
@@ -86,13 +110,22 @@ public:
 		assert(vbo_valid && vbo > 0);
 		bind_vbo(vbo);
 		vert_norm_tc_color::set_vbo_arrays();
-		//select_texture(GRASS_TEX);
+		//set_lighted_sides(2);
+		select_texture(GRASS_BLADE_TEX);
+		set_specular(0.1, 10.0);
+		enable_blend();
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.75);
 		glEnable(GL_COLOR_MATERIAL);
 		glDisable(GL_NORMALIZE);
-		glDrawArrays(GL_LINES, 0, data.size());
+		glDrawArrays(GL_QUADS, 0, 4*grass.size());
 		glDisable(GL_COLOR_MATERIAL);
 		glEnable(GL_NORMALIZE);
-		//glDisable(GL_TEXTURE_2D);
+		disable_blend();
+		set_specular(0.0, 1.0);
+		glDisable(GL_ALPHA_TEST);
+		glDisable(GL_TEXTURE_2D);
+		//set_lighted_sides(1);
 		bind_vbo(0);
 	}
 };
@@ -135,6 +168,7 @@ void gen_grass() {
 					if (id2 != GROUND_TEX) density = 1.0 - t;
 					if (rand_float() >= density) continue; // skip - density too low
 				}
+				// FIXME: no grass under cobjs
 				grass_manager.add_grass(point(xv, yv, mh));
 			}
 		}
