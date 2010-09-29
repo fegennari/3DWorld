@@ -71,7 +71,7 @@ texture(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
 texture(1, 0, 1024, 1024, 1, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
 texture(1, 0, 128,  128,  0, 3, 0, "@tree_end.raw"),  // not real file
 texture(1, 0, 128,  128,  1, 4, 1, "@tree_hemi.raw"), // not real file, mipmap for trees?
-texture(0, 1, 512,  512,  1, 3, 1, "@shingle.bmp"),   // not real file
+texture(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp"),   // not real file
 texture(0, 0, 256,  256,  1, 3, 1, "paneling.raw"),
 texture(0, 0, 256,  256,  1, 3, 1, "cblock.raw"),
 texture(0, 0, 128,  128,  0, 4, 0, "mj_leaf.raw"),
@@ -118,8 +118,9 @@ texture(0, 0, 16,   16,   1, 3, 0, "white.raw"),
 texture(0, 2, 512,  512,  0, 4, 0, "fire.raw"),
 texture(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
 texture(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
-texture(0, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
-texture(0, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
+texture(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
+texture(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
+texture(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
 };
 
