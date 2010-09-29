@@ -589,7 +589,7 @@ B 1.1  1.2  -2.0 -1.9 0.68 0.7
 D -0.75 0.0 0.0 1
 
 # Driveway
-y 4.0
+y 8.0
 l 0.9 1.0 1.0 1.0 1.0 47 1 # pink brick
 a 0 # Not Destroyable
 e 1
