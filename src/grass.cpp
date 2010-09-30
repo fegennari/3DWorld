@@ -14,6 +14,8 @@ float    const GRASS_WIDTH  = 0.002;
 unsigned const NUM_GRASS    = 128;
 
 
+bool grass_enabled(1);
+
 extern int island, default_ground_tex, read_landscape;
 extern float vegetation, zmin, zmax, h_sand[], h_dirt[];
 extern vector3d wind;
@@ -156,8 +158,6 @@ public:
 	}
 
 	void create_new_vbo() {
-		bool const use_vbos(setup_gen_buffers_arb());
-		assert(use_vbos);
 		delete_vbo(vbo);
 		vbo        = create_vbo();
 		vbo_valid  = 1;
@@ -249,10 +249,21 @@ public:
 grass_manager_t grass_manager;
 
 
+bool no_grass() {
+	return (NUM_GRASS == 0 || !grass_enabled || snow_enabled() || vegetation == 0.0 || read_landscape);
+}
+
+
 void gen_grass() {
 
+	bool const use_vbos(setup_gen_buffers_arb());
+		
+	if (!use_vbos) {
+		cout << "Warning: VBOs not supported, so grass cannot be enabled." << endl;
+		grass_enabled = 0;
+	}
 	grass_manager.clear();
-	if (NUM_GRASS == 0 || snow_enabled() || vegetation == 0.0 || read_landscape) return;
+	if (no_grass()) return;
 	grass_manager.gen_grass();
 	cout << "grass: " << grass_manager.size() << " out of " << XY_MULT_SIZE*NUM_GRASS << endl;
 }
@@ -263,7 +274,7 @@ void update_grass_vbos() {
 }
 
 void draw_grass() {
-	if (!snow_enabled()) grass_manager.draw();
+	if (!no_grass()) grass_manager.draw();
 }
 
 

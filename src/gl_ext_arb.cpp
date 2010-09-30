@@ -245,9 +245,9 @@ void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool i
 
 bool setup_gen_buffers_arb() {return 0;}
 unsigned create_vbo() {return 0;}
-void bind_vbo(unsigned id) {}
+void bind_vbo(unsigned id, bool is_index) {}
 void delete_vbo(unsigned id) {}
-void upload_vbo_data(void const *const data, size_t size) {}
+void upload_vbo_data(void const *const data, size_t size, bool is_index) {}
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index) {}
 
 #endif // USE_VBOS

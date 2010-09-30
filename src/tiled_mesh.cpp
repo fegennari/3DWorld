@@ -431,8 +431,6 @@ public:
 	}
 
 	float draw(bool add_hole) {
-		bool const use_vbos(setup_gen_buffers_arb());
-		assert(use_vbos);
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
 		glDisable(GL_TEXTURE_COORD_ARRAY);
@@ -544,6 +542,13 @@ void fill_gap() {
 float draw_tiled_terrain(bool add_hole) {
 
 	//RESET_TIME;
+	bool const vbo_supported(setup_gen_buffers_arb());
+		
+	if (!vbo_supported) {
+		cout << "Warning: VBOs not supported, so tiled mesh cannot be enabled." << endl;
+		tiled_mesh_display = 0;
+		return zmin;
+	}
 	terrain_tile_draw.update();
 	float const zmin(terrain_tile_draw.draw(add_hole));
 	if (add_hole) fill_gap(); // need to fill the gap on +x/+y

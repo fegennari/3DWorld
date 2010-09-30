@@ -818,7 +818,7 @@ void water_renderer::draw() const {
 
 void draw_water_sides(int check_zvals) {
 
-	if (!disable_inf_terrain && display_mode & 0x10) return;
+	if (!disable_inf_terrain && (display_mode & 0x10)) return;
 	water_renderer wr(resolution, resolution, check_zvals);
 	wr.draw();
 }

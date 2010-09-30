@@ -450,8 +450,6 @@ public:
 
 	void finalize() { // can only be called once
 		assert(vbo == 0 && ivbo == 0);
-		bool const vbo_supported(setup_gen_buffers_arb());
-		assert(vbo_supported);
 		assert((indices.size() & 3) == 0); // must be a multiple of 4
 		upload_ivbo();
 		vmap[0].clear();
@@ -672,6 +670,13 @@ bool snow_enabled() {
 void gen_snow_coverage() {
 
 	if (snow_depth <= 0.0 || num_snowflakes == 0) return; // disabled
+	bool const vbo_supported(setup_gen_buffers_arb());
+	
+	if (!vbo_supported) {
+		cout << "Warning: VBOs not supported, so snow cannot be enabled." << endl;
+		num_snowflakes = 0;
+		return;
+	}
 	cout << "Determining Snow Coverage" << endl;
 	voxel_map vmap;
 
