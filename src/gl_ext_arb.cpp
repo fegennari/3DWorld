@@ -185,6 +185,7 @@ PFNGLGENBUFFERSARBPROC    glGenBuffersARB    = NULL;
 PFNGLDELETEBUFFERSARBPROC glDeleteBuffersARB = NULL;
 PFNGLBINDBUFFERARBPROC    glBindBufferARB    = NULL;
 PFNGLBUFFERDATAARBPROC    glBufferDataARB    = NULL;
+PFNGLBUFFERSUBDATAARBPROC glBufferSubDataARB = NULL;
 
 
 bool setup_gen_buffers_arb() {
@@ -204,6 +205,8 @@ bool setup_gen_buffers_arb() {
 	assert(glBindBufferARB);
 	glBufferDataARB    = (PFNGLBUFFERDATAARBPROC)    wglGetProcAddress("glBufferDataARB");
 	assert(glBufferDataARB);
+	glBufferSubDataARB = (PFNGLBUFFERSUBDATAARBPROC) wglGetProcAddress("glBufferSubDataARB");
+	assert(glBufferSubDataARB);
 	return 1;
 }
 
@@ -233,6 +236,11 @@ void upload_vbo_data(void const *const data, size_t size, bool is_index) {
 	glBufferDataARB(get_buffer_target(is_index), size, data, GL_STATIC_DRAW_ARB);
 }
 
+void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index) {
+	assert(glBufferSubDataARB);
+	glBufferSubDataARB(get_buffer_target(is_index), offset, size, data);
+}
+
 #else
 
 bool setup_gen_buffers_arb() {return 0;}
@@ -240,6 +248,7 @@ unsigned create_vbo() {return 0;}
 void bind_vbo(unsigned id) {}
 void delete_vbo(unsigned id) {}
 void upload_vbo_data(void const *const data, size_t size) {}
+void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index) {}
 
 #endif // USE_VBOS
 
