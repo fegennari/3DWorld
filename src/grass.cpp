@@ -16,6 +16,7 @@ unsigned const NUM_GRASS    = 128;
 extern int island, default_ground_tex, read_landscape;
 extern float vegetation, zmin, zmax, h_sand[], h_dirt[];
 extern vector3d wind;
+extern vector<coll_obj> coll_objects;
 
 
 bool snow_enabled();
@@ -34,15 +35,20 @@ class grass_manager_t {
 	};
 
 	vector<grass_t> grass;
+	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
 	unsigned vbo;
-	bool vbo_valid;
+	bool vbo_valid, shadows_valid, data_valid;
+	int last_cobj;
+	int last_light;
+	point last_lpos;
 
 public:
-	grass_manager_t() : vbo(0), vbo_valid(0) {}
+	grass_manager_t() : vbo(0), vbo_valid(0), shadows_valid(0), data_valid(0), last_light(-1), last_lpos(all_zeros) {}
 	~grass_manager_t() {clear();}
-	size_t size() const {return grass.size();} // 2 points per grass blade
+	size_t size() const {return grass.size() ;} // 2 points per grass blade
 	bool empty()  const {return grass.empty();}
-	void invalidate_vbo() {vbo_valid = 0;}
+	void invalidate_vbo()     {vbo_valid     = 0;}
+	void invalidate_shadows() {shadows_valid = 0;}
 	
 	void clear() {
 		delete_vbo(vbo);
@@ -51,62 +57,166 @@ public:
 		grass.clear();
 	}
 
+	void gen_grass() {
+		RESET_TIME;
+		float const *h_tex(island ? h_sand     : h_dirt);
+		ttex  const *lttex(island ? lttex_sand : lttex_dirt);
+		int   const   NTEX(island ? NTEX_SAND  : NTEX_DIRT);
+		float const dz_inv(1.0/(zmax - zmin));
+		mesh_to_grass_map.resize(XY_MULT_SIZE+1, 0);
+		
+		for (int y = 0; y < MESH_Y_SIZE-1; ++y) {
+			for (int x = 0; x < MESH_X_SIZE-1; ++x) {
+				mesh_to_grass_map[y*MESH_X_SIZE+x] = grass.size();
+				if (is_mesh_disabled(x, y)) continue; // mesh not drawn
+				if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater
+				float const xval(get_xval(x)), yval(get_yval(y));
+
+				for (unsigned n = 0; n < NUM_GRASS; ++n) {
+					float const xv(rand_uniform(xval, xval + DX_VAL));
+					float const yv(rand_uniform(yval, yval + DY_VAL));
+					float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
+
+					if (default_ground_tex >= 0 || zmax == zmin) {
+						if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue;
+					}
+					else {
+						float const relh((mh - zmin)*dz_inv);
+						int k1, k2;
+						float t;
+						get_tids(relh, NTEX-1, h_tex, k1, k2, t); // t==0 => use k1, t==1 => use k2
+						int const id1(lttex[k1].id), id2(lttex[k2].id);
+						if (id1 != GROUND_TEX && id2 != GROUND_TEX) continue; // not ground texture
+						float density(1.0);
+						if (id1 != GROUND_TEX) density = t;
+						if (id2 != GROUND_TEX) density = 1.0 - t;
+						if (rand_float() >= density) continue; // skip - density too low
+					}
+					// FIXME: no grass under cobjs
+					add_grass(point(xv, yv, mh));
+				}
+			}
+		}
+		mesh_to_grass_map[XY_MULT_SIZE] = grass.size();
+		PRINT_TIME("Grass Generation");
+	}
+
 	void add_grass(point const &pos) {
-		vector3d const dir((plus_z + signed_rand_vector(0.25) + wind*0.25).get_norm()); // FIXME: make dynamic? local wind?
+		vector3d const dir((plus_z + signed_rand_vector(0.3) + wind*0.3).get_norm()); // FIXME: make dynamic? local wind?
 		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
 		//colorRGB const color(rand_uniform(0.1, 0.35), rand_uniform(0.5, 0.75), rand_uniform(0.0, 0.1)); // vary per vertex?
 		colorRGB const color(rand_uniform(0.3, 0.5), rand_uniform(0.6, 0.8), rand_uniform(0.1, 0.2)); // vary per vertex?
-		float const length(GRASS_LENGTH*rand_uniform(0.8, 1.2));
-		float const width( GRASS_WIDTH *rand_uniform(0.8, 1.2));
+		float const length(GRASS_LENGTH*rand_uniform(0.7, 1.3));
+		float const width( GRASS_WIDTH *rand_uniform(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
 	}
 
-	bool is_pt_shadowed(point const &pos) const {
+	bool is_pt_shadowed(point const &pos) {
 		int const light(get_light());
 		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 		bool shadowed(0), unshadowed(0);
+		//if (!point_outside_mesh(xpos, ypos) && (shadow_mask[light][ypos][xpos] & SHADOWED_ALL) == 0) return 0;
 
 		for (int y = max(0, ypos-1); y <= min(MESH_Y_SIZE-1, ypos+1); ++y) { // test 3x3 window around the point
 			for (int x = max(0, xpos-1); x <= min(MESH_X_SIZE-1, xpos+1); ++x) {
+				if (x != xpos && y != ypos) continue; // no diagonals - faster, slightly less accurate
 				(((shadow_mask[light][y][x] & SHADOWED_ALL) != 0) ? shadowed : unshadowed) = 1;
 			}
 		}
 		if (shadowed != unshadowed) return shadowed; // only one was set, so mesh is in agreement
-		return !is_visible_to_light_cobj(pos, light, 0.0, -1, 1); // neither (off the mesh) or both (conflict)
+
+		if (last_cobj >= 0) { // check to see if last cobj still intersects
+			assert(last_cobj < (int)coll_objects.size());
+			point lpos;
+			if (get_light_pos(lpos, light) && coll_objects[last_cobj].line_intersect(pos, lpos)) return 1;
+		}
+		return !is_visible_to_light_cobj(pos, light, 0.0, -1, 1, &last_cobj); // neither (off the mesh) or both (conflict)
 	}
 
-	void gen_draw_data() {
+	void find_shadows() {
+		if (empty()) return;
+		RESET_TIME;
+		last_cobj     = -1;
+		shadows_valid = 1;
+		data_valid    = 0;
+
+		for (unsigned i = 0; i < grass.size(); ++i) {
+			point const p1(grass[i].p), p2(p1 + grass[i].dir);
+			bool const shadowed(is_pt_shadowed((p1 + p2)*0.5)); // per vertex shadows?
+			grass[i].n.normalize();
+			grass[i].n *= (shadowed ? 0.001 : 1.0); // set normal near zero if shadowed
+		}
+		PRINT_TIME("Grass Find Shadows");
+	}
+
+	void create_new_vbo() {
+		bool const use_vbos(setup_gen_buffers_arb());
+		assert(use_vbos);
+		delete_vbo(vbo);
+		vbo        = create_vbo();
+		vbo_valid  = 1;
+		data_valid = 0;
+	}
+
+	void modify_data(int x, int y) { // unused
+		if (empty() || !vbo_valid || point_outside_mesh(x, y)) return;
+		assert(vbo > 0);
+		unsigned const ix(y*MESH_X_SIZE + x);
+		assert(ix+1 < mesh_to_grass_map.size());
+		unsigned const start(mesh_to_grass_map[ix]), end(mesh_to_grass_map[ix+1]);
+		if (start == end) return; // nothing to update
+		vector<vert_norm_tc_color> data;
+		// *** WRITE: resize, copy, update data ***
+		bind_vbo(vbo);
+		upload_vbo_sub_data(&data.front(), 3*start*sizeof(vert_norm_tc_color), data.size()*sizeof(vert_norm_tc_color));
+		bind_vbo(0);
+		//data_valid = 0;
+	}
+
+	void upload_data() {
 		if (empty()) return;
 		RESET_TIME;
 		// remove excess capacity from grass?
 		vector<vert_norm_tc_color> data;
-		data.reserve(4*grass.size());
+		data.reserve(3*grass.size());
 
 		for (unsigned i = 0; i < grass.size(); ++i) {
 			point const p1(grass[i].p), p2(p1 + grass[i].dir);
-			vector3d const norm((is_pt_shadowed((p1 + p2)*0.5) ? zero_vector : /*grass[i].n*/plus_z));
 			vector3d const binorm(cross_product(grass[i].dir, grass[i].n).get_norm());
 			vector3d const delta(binorm*(0.5*grass[i].w));
-			data.push_back(vert_norm_tc_color(p1-delta,     norm, 0.9, 0.1, grass[i].c));
-			data.push_back(vert_norm_tc_color(p1+delta,     norm, 0.9, 0.9, grass[i].c));
-			data.push_back(vert_norm_tc_color(p2+delta*0.0, norm, 0.1, 0.9, grass[i].c));
-			data.push_back(vert_norm_tc_color(p2-delta*0.0, norm, 0.1, 0.1, grass[i].c));
+			//vector3d const norm(grass[i].n);
+			vector3d const norm(plus_z*grass[i].n.mag());
+			float const tc_adj(0.1); // border around grass blade texture
+			data.push_back(vert_norm_tc_color(p1-delta, norm, 1.0-tc_adj,     tc_adj, grass[i].c));
+			data.push_back(vert_norm_tc_color(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, grass[i].c));
+			data.push_back(vert_norm_tc_color(p2,       norm,     tc_adj, 0.5,        grass[i].c));
 		}
-		bool const use_vbos(setup_gen_buffers_arb());
-		assert(use_vbos);
-		delete_vbo(vbo);
-		vbo       = create_vbo();
-		vbo_valid = 1;
 		bind_vbo(vbo);
 		upload_vbo_data(&data.front(), data.size()*sizeof(vert_norm_tc_color));
 		bind_vbo(0);
-		PRINT_TIME("Grass Gen Draw Data");
+		data_valid = 1;
+		PRINT_TIME("Grass Upload VBO");
 		cout << "mem used: " << grass.size()*sizeof(grass_t) << ", vmem used: " << data.size()*sizeof(vert_norm_tc_color) << endl;
+	}
+
+	void check_for_updates() {
+		if (!shadows_valid) find_shadows();
+		if (!vbo_valid    ) create_new_vbo();
+		if (!data_valid   ) upload_data();
 	}
 
 	void draw() {
 		if (empty()) return;
-		if (!vbo_valid) gen_draw_data();
+		int const light(get_light());
+		point lpos;
+		get_light_pos(lpos, light);
+
+		if (light != last_light || lpos != last_lpos) {
+			invalidate_shadows();
+			last_light = light;
+			last_lpos  = lpos;
+		}
+		check_for_updates();
 		assert(vbo_valid && vbo > 0);
 		bind_vbo(vbo);
 		vert_norm_tc_color::set_vbo_arrays();
@@ -118,7 +228,7 @@ public:
 		glAlphaFunc(GL_GREATER, 0.75);
 		glEnable(GL_COLOR_MATERIAL);
 		glDisable(GL_NORMALIZE);
-		glDrawArrays(GL_QUADS, 0, 4*grass.size());
+		glDrawArrays(GL_TRIANGLES, 0, 3*grass.size());
 		glDisable(GL_COLOR_MATERIAL);
 		glEnable(GL_NORMALIZE);
 		disable_blend();
@@ -137,48 +247,13 @@ void gen_grass() {
 
 	grass_manager.clear();
 	if (NUM_GRASS == 0 || snow_enabled() || vegetation == 0.0 || read_landscape) return;
-	float const *h_tex(island ? h_sand     : h_dirt);
-	ttex  const *lttex(island ? lttex_sand : lttex_dirt);
-	int   const   NTEX(island ? NTEX_SAND  : NTEX_DIRT);
-	float const dz_inv(1.0/(zmax - zmin));
-	
-	for (int y = 0; y < MESH_Y_SIZE-1; ++y) {
-		for (int x = 0; x < MESH_X_SIZE-1; ++x) {
-			if (is_mesh_disabled(x, y)) continue; // mesh not drawn
-			if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater
-			float const xval(get_xval(x)), yval(get_yval(y));
-
-			for (unsigned n = 0; n < NUM_GRASS; ++n) {
-				float const xv(rand_uniform(xval, xval + DX_VAL));
-				float const yv(rand_uniform(yval, yval + DY_VAL));
-				float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
-
-				if (default_ground_tex >= 0 || zmax == zmin) {
-					if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue;
-				}
-				else {
-					float const relh((mh - zmin)*dz_inv);
-					int k1, k2;
-					float t;
-					get_tids(relh, NTEX-1, h_tex, k1, k2, t); // t==0 => use k1, t==1 => use k2
-					int const id1(lttex[k1].id), id2(lttex[k2].id);
-					if (id1 != GROUND_TEX && id2 != GROUND_TEX) continue; // not ground texture
-					float density(1.0);
-					if (id1 != GROUND_TEX) density = t;
-					if (id2 != GROUND_TEX) density = 1.0 - t;
-					if (rand_float() >= density) continue; // skip - density too low
-				}
-				// FIXME: no grass under cobjs
-				grass_manager.add_grass(point(xv, yv, mh));
-			}
-		}
-	}
+	grass_manager.gen_grass();
 	cout << "grass: " << grass_manager.size() << " out of " << XY_MULT_SIZE*NUM_GRASS << endl;
 }
 
 
 // called when light source moves, and to regen VBO(s)
-void gen_grass_draw_data() {
+void update_grass_vbos() {
 
 	grass_manager.invalidate_vbo();
 }
@@ -186,20 +261,7 @@ void gen_grass_draw_data() {
 
 void draw_grass() {
 
-	if (grass_manager.empty() || snow_enabled()) return;
-	static int last_light(-1);
-	static point last_lpos(all_zeros);
-	int const light(get_light());
-	point lpos;
-	get_light_pos(lpos, light);
-
-	if (light != last_light || lpos != last_lpos) {
-		grass_manager.invalidate_vbo();
-		gen_grass_draw_data();
-		last_light = light;
-		last_lpos  = lpos;
-	}
-	grass_manager.draw();
+	if (!snow_enabled()) grass_manager.draw();
 }
 
 

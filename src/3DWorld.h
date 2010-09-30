@@ -1307,7 +1307,7 @@ void add_plant(point const &pos, float height, float radius, int type, int calc_
 
 // function prototypes - grass
 void gen_grass();
-void gen_grass_draw_data();
+void update_grass_vbos();
 void draw_grass();
 
 // function prototypes - draw mech
