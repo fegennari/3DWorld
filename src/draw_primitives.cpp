@@ -704,19 +704,19 @@ void rotate_towards_camera(point const &pos) {
 }
 
 
-void draw_textured_square(float size, int tid) {
+void draw_textured_square(float size, float z, int tid) {
 
-	draw_textured_quad(size, size, tid);
+	draw_textured_quad(size, size, z, tid);
 }
 
 
-void draw_textured_square_alpha_test(float size, int tid) {
+void draw_textured_square_alpha_test(float size, float z, int tid) {
 
 	GLboolean const blend(glIsEnabled(GL_BLEND));
 	if (!blend) enable_blend();
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.001);
-	draw_textured_quad(size, size, tid);
+	draw_textured_quad(size, size, z, tid);
 	glDisable(GL_ALPHA_TEST);
 	if (!blend) disable_blend();
 }
@@ -758,18 +758,18 @@ void disable_flares() {
 }
 
 
-void draw_textured_quad(float xsize, float ysize, int tid) {
+void draw_textured_quad(float xsize, float ysize, float z, int tid) {
 
 	select_texture(tid);
 	glNormal3f(0.0, 0.0, 1.0);
-	draw_tquad(xsize, ysize, 1);
+	draw_tquad(xsize, ysize, z, 1);
 }
 
 
-void draw_tquad(float xsize, float ysize, bool texture) {
+void draw_tquad(float xsize, float ysize, float z, bool texture) {
 
 	glBegin(GL_QUADS);
-	draw_one_tquad(-xsize, -ysize, xsize, ysize, 0.0, texture);
+	draw_one_tquad(-xsize, -ysize, xsize, ysize, z, texture);
 	glEnd();
 }
 

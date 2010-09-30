@@ -291,7 +291,7 @@ void draw_blasts() {
 				}
 				else {
 					rotate_into_dir(br.dir, pos);
-					draw_textured_quad(2.0*size, 2.0*size, BLUR_TEX);
+					draw_textured_quad(2.0*size, 2.0*size, 0.0, BLUR_TEX);
 					glDisable(GL_TEXTURE_2D);
 				}
 				glPopMatrix();

@@ -83,8 +83,8 @@ void show_blood_on_camera() {
 				translate_to(blood_spots[i].pos);
 				float const size(0.00006*blood_spots[i].size);
 				//draw_circle_normal(0.0, 0.3*size, N_SPHERE_DIV, 0);
-				//draw_textured_square(size, BLUR_TEX);
-				draw_tquad(size, size, 1);
+				//draw_textured_square(size, 0.0, BLUR_TEX);
+				draw_tquad(size, size, 0.0, 1);
 				glPopMatrix();
 			}
 			else {
@@ -455,11 +455,11 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				glEnable(GL_ALPHA_TEST);
 				glAlphaFunc(GL_GREATER, 0.95*alpha);
 				if (!shadowed) set_specular(0.9, 90.0);
-				if (ammo > 1) glTranslatef(0.0, 0.0, -0.025*radius*ammo);
+				float dz((ammo > 1) ? -0.025*radius*ammo : 0.0);
 
 				for (int w = 0; w < max(1, ammo); ++w) { // draw a blade for each ammo
-					draw_textured_square(radius, (sb_tex ? SAW_B_TEX : SAW_TEX));
-					glTranslatef(0.0, 0.0, 0.05*radius);
+					draw_textured_square(radius, dz, (sb_tex ? SAW_B_TEX : SAW_TEX));
+					dz += 0.05*radius;
 				}
 				if (!shadowed) set_specular(0.0, 0.0);
 				glDisable(GL_ALPHA_TEST);
@@ -667,7 +667,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_color_e(ORANGE);
 				glTranslatef(0.0, 0.0, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
-				draw_textured_square_alpha_test(size, BLUR_TEX);
+				draw_textured_square_alpha_test(size, 0.0, BLUR_TEX);
 				glDisable(GL_TEXTURE_2D);
 				set_color_e(BLACK);
 			}
@@ -687,7 +687,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					translate_to(translates[i]);
 					glPushMatrix();
 					if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
-					draw_textured_square_alpha_test(8.0*radius, BLUR_TEX); // can't rotate towards camera, already rotated
+					draw_textured_square_alpha_test(8.0*radius, 0.0, BLUR_TEX); // can't rotate towards camera, already rotated
 					glPopMatrix();
 				}
 				set_color_e(BLACK);

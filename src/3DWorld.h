@@ -941,13 +941,13 @@ void rotate_sphere_tex_to_dir(vector3d const &dir);
 void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool texture, bool disable_bfc=0);
 void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, bool do_tex);
 void rotate_towards_camera(point const &pos);
-void draw_textured_square(float size, int tid);
-void draw_textured_square_alpha_test(float size, int tid);
+void draw_textured_square(float size, float z, int tid);
+void draw_textured_square_alpha_test(float size, float z, int tid);
 void draw_flare(point const &pos, point const &xlate, float xsize, float ysize);
 void enable_flares(colorRGBA const &color, bool zoomed=0);
 void disable_flares();
-void draw_textured_quad(float xsize, float ysize, int tid);
-void draw_tquad(float xsize, float ysize, bool texture);
+void draw_textured_quad(float xsize, float ysize, float z, int tid);
+void draw_tquad(float xsize, float ysize, float z, bool texture);
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z, bool texture, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_one_mult_tex_quad(float x1, float y1, float x2, float y2, float z, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir,
