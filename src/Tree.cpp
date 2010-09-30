@@ -222,9 +222,9 @@ void draw_trees(vector<tree> &ts) {
 void tree::copy_color(colorRGB const &color, unsigned i) {
 
 	assert(i < leaf_data.size());
-
+	
 	for (unsigned j = 0; j < 4; ++j) {
-		leaf_data[j+(i<<2)].c = color;
+		leaf_data[j+(i<<2)].set_c(color);
 	}
 	leaves_changed = 1;
 }
@@ -375,7 +375,7 @@ colorRGB tree::get_leaf_color(unsigned i) const {
 	assert(i < leaves.size());
 	if (leaf_data.empty()) return leaves[i].calc_leaf_color(leaf_color, base_color);
 	assert(4*i < leaf_data.size());
-	return leaf_data[i<<2].c; // return color of first vertex since they all should be the same
+	return leaf_data[i<<2].get_c(); // return color of first vertex since they all should be the same
 }
 
 

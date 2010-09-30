@@ -158,6 +158,8 @@ float const SQRT_ZOOMF_INV  = 1.0/SQRT_ZOOMF;
 
 #define BITSHIFT_CEIL(num, bs) (((num-1) >> bs) + 1)
 
+#define UNROLL_3X(expr) {{unsigned const i_(0); expr} {unsigned const i_(1); expr} {unsigned const i_(2); expr}}
+
 
 enum {CAM_FILT_DAMAGE=0, CAM_FILT_FOG, CAM_FILT_BURN, CAMERA_FILT_BKG, CAM_FILT_UWATER};
 
@@ -442,7 +444,7 @@ struct colorRGBA { // size = 16
 };
 
 
-struct vert_norm {
+struct vert_norm { // size = 24
 	point v;
 	vector3d n;
 
@@ -452,7 +454,7 @@ struct vert_norm {
 };
 
 
-struct vert_norm_tc : public vert_norm {
+struct vert_norm_tc : public vert_norm { // size = 32
 	float t[2];
 
 	vert_norm_tc() {}
@@ -460,12 +462,14 @@ struct vert_norm_tc : public vert_norm {
 };
 
 
-struct vert_norm_tc_color : public vert_norm_tc {
-	colorRGB c;
+struct vert_norm_tc_color : public vert_norm_tc { // size = 36 (was 44)
+	unsigned char c[3];
 
 	vert_norm_tc_color() {}
 	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGB const &c_)
-		: vert_norm_tc(v_, n_, ts, tt), c(c_) {}
+		: vert_norm_tc(v_, n_, ts, tt) {set_c(c_);}
+	void set_c(colorRGB const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*c_[i_]);)}
+	colorRGB get_c() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	static void set_vbo_arrays();
 };
 
@@ -678,7 +682,6 @@ colorRGBA const BACKGROUND_NIGHT(BLACK);
 #define GET_DELTA_TIME   (glutGet(GLUT_ELAPSED_TIME) - timer1)
 #define PRINT_TIME(str) {cout << str << " time = " << GET_DELTA_TIME << endl;}
 
-#define UNROLL_3X(expr) {{unsigned const i_(0); expr} {unsigned const i_(1); expr} {unsigned const i_(2); expr}}
 
 inline void atten_by_water_depth(float *c, float dist) {
 	float const m[3] = {0.98, 0.97, 0.95};
