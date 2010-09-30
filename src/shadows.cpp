@@ -215,7 +215,7 @@ int get_shape_shadow_bb(const point *points, int npoints, int l, int quality, po
 						int &xmin, int &ymin, int &xmax, int &ymax, int &ret_val, unsigned char stype)
 {
 	assert(points != NULL);
-	int xp, yp, miss(0), ss2(0), saw(0);
+	int xp, yp, miss(0), ss2(0), saw(0), tot_pts(0);
 	float zval, radius;
 	point points2[1];
 	xmin = MESH_X_SIZE - SHADOW_BORDER - 1;
@@ -232,32 +232,45 @@ int get_shape_shadow_bb(const point *points, int npoints, int l, int quality, po
 		}
 	}
 	for (int i = 0; i < npoints; ++i) { // trace an outline with ray casting
-		if (!is_above_mesh(points[i])) {
-			xp = get_xpos(points[i].x);
-			yp = get_ypos(points[i].y);
+		point const &p_cur(points[i]), &p_next(points[(i+1)%npoints]);
+		float const len_thresh(16*HALF_DXY);
+		vector3d delta(zero_vector);
+		int nsteps(1);
+		point pt(p_cur);
 
-			if (!point_outside_mesh(xp, yp)) {
-				ADD_POINT_BB(xp, yp);
-				saw = 1;
-			}
+		if (!dist_less_than(p_cur, p_next, len_thresh)) {
+			nsteps = int(p2p_dist(p_cur, p_next)/len_thresh) + 1;
+			delta  = (p_next - p_cur)/float(nsteps);
 		}
-		else if (point_to_point_visibility(lpos, points[i], xp, yp, zval, 1, l)) {
-			float const piz(points[i].z); // piz = object z, lpos.z = light z, zval = mesh intersection z
+		for (int j = 0; j < nsteps; ++j) {
+			if (!is_above_mesh(pt)) {
+				xp = get_xpos(pt.x);
+				yp = get_ypos(pt.y);
 
-			if ((piz > lpos.z && piz       < zval)    // mesh   => object => light    - can this happen?
-				|| (piz < lpos.z && piz    > zval)    // light  => object => mesh
-				|| (piz > zval   && lpos.z < zval)    // object => mesh   => light  ? - can this happen?
-				|| (piz < zval   && lpos.z > zval)) { // light  => mesh   => object ?
-				ADD_POINT_BB(xp, yp);
-				saw = 1;
+				if (!point_outside_mesh(xp, yp)) {
+					ADD_POINT_BB(xp, yp);
+					saw = 1;
+				}
 			}
-		}
-		else {
-			ss2 |= check_shadow_edge_clip(points[i], lpos, xmin, xmax, ymin, ymax);
-			++miss;
-		}
-	}
-	if (miss >= (npoints+1)/2) ret_val |= (1 << l);
+			else if (point_to_point_visibility(lpos, pt, xp, yp, zval, 1, l)) {
+				// pt.z = object z, lpos.z = light z, zval = mesh intersection z
+				if ((pt.z > lpos.z && pt.z      < zval)    // mesh   => object => light    - can this happen?
+					|| (pt.z < lpos.z && pt.z   > zval)    // light  => object => mesh
+					|| (pt.z > zval   && lpos.z < zval)    // object => mesh   => light  ? - can this happen?
+					|| (pt.z < zval   && lpos.z > zval)) { // light  => mesh   => object ?
+					ADD_POINT_BB(xp, yp);
+					saw = 1;
+				}
+			}
+			else {
+				ss2 |= check_shadow_edge_clip(pt, lpos, xmin, xmax, ymin, ymax);
+				++miss;
+			}
+			++tot_pts;
+			pt += delta;
+		} // for j
+	} // for i
+	if (miss >= (tot_pts+1)/2) ret_val |= (1 << l);
 	if (!saw && (!ss2 || xmin > xmax || ymin > ymax)) return 0;
 	int const sborder((quality || npoints == 1) ? SHADOW_BORDER : 0);
 	xmin = max(xmin - sborder, 0);
