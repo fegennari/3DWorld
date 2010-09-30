@@ -487,7 +487,6 @@ void tree::draw_tree(bool invalidate_norms) {
 	}
 	else { // draw branches
 		gluQuadricTexture(quadric, GL_TRUE);
-		vector3d const t_to_c(vector3d(camera, sphere_center).get_norm());
 
 		for (unsigned i = 0; i < all_cylins.size(); i++) {
 			draw_cylin const &cylin(all_cylins[i]);
@@ -499,14 +498,15 @@ void tree::draw_tree(bool invalidate_norms) {
 			if (ndiv <= 3) { // draw as a quad
 				int npts(0);
 				point pts[4];
+				vector3d const t_to_c((camera - cylin.p1).get_norm());
 				vector3d view_dir(t_to_c), v2;
-				orthogonalize_dir(view_dir, (cylin.p2 - cylin.p1), view_dir, 1);
+				orthogonalize_dir(view_dir, (cylin.p2 - cylin.p1), view_dir, 0);
 				view_dir.do_glNormal();
 				cylinder_quad_projection(pts, cylin, t_to_c, v2, npts);
 				glBegin((npts == 4) ? GL_QUADS : GL_TRIANGLES);
 
 				for (int i = 0; i < npts; ++i) {
-					pts[i].do_glVertex(); // textures?
+					glTexCoord2f((i&1), (i>>1)); pts[i].do_glVertex(); // textures?
 				}
 				glEnd();
 			}
@@ -673,10 +673,10 @@ void tree::draw_tree(bool invalidate_norms) {
 		vert_norm_tc_color::set_vbo_arrays();
 	}
 	else {
-		glVertexPointer(  3, GL_FLOAT, leaf_stride, &(leaf_data.front().v));
-		glNormalPointer(     GL_FLOAT, leaf_stride, &(leaf_data.front().n));
-		glTexCoordPointer(2, GL_FLOAT, leaf_stride, &(leaf_data.front().t));
-		glColorPointer(   3, GL_FLOAT, leaf_stride, &(leaf_data.front().c));
+		glVertexPointer  (3, GL_FLOAT,         leaf_stride, &(leaf_data.front().v));
+		glNormalPointer  (   GL_FLOAT,         leaf_stride, &(leaf_data.front().n));
+		glTexCoordPointer(2, GL_FLOAT,         leaf_stride, &(leaf_data.front().t));
+		glColorPointer   (3, GL_UNSIGNED_BYTE, leaf_stride, &(leaf_data.front().c));
 	}
 	if (draw_model == 0) { // solid fill
 		enable_blend();
