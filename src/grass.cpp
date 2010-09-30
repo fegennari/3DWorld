@@ -111,7 +111,7 @@ public:
 	void add_grass(point const &pos) {
 		vector3d const dir((plus_z + signed_rand_vector(0.3) + wind*0.3).get_norm()); // FIXME: make dynamic? local wind?
 		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
-		//colorRGB const color(rand_uniform(0.1, 0.35), rand_uniform(0.5, 0.75), rand_uniform(0.0, 0.1)); // vary per vertex?
+		//colorRGB const color(rand_uniform(0.1, 0.35), rand_uniform(0.5, 0.75), rand_uniform(0.0, 0.1)); // untextured white triangle
 		colorRGB const color(rand_uniform(0.3, 0.5), rand_uniform(0.6, 0.8), rand_uniform(0.1, 0.2)); // vary per vertex?
 		float const length(GRASS_LENGTH*rand_uniform(0.7, 1.3));
 		float const width( GRASS_WIDTH *rand_uniform(0.7, 1.3));
@@ -122,7 +122,6 @@ public:
 		int const light(get_light());
 		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 		bool shadowed(0), unshadowed(0);
-		//if (!point_outside_mesh(xpos, ypos) && (shadow_mask[light][ypos][xpos] & SHADOWED_ALL) == 0) return 0;
 
 		for (int y = max(0, ypos-1); y <= min(MESH_Y_SIZE-1, ypos+1); ++y) { // test 3x3 window around the point
 			for (int x = max(0, xpos-1); x <= min(MESH_X_SIZE-1, xpos+1); ++x) {
@@ -259,15 +258,11 @@ void gen_grass() {
 }
 
 
-// called when light source moves, and to regen VBO(s)
 void update_grass_vbos() {
-
 	grass_manager.invalidate_vbo();
 }
 
-
 void draw_grass() {
-
 	if (!snow_enabled()) grass_manager.draw();
 }
 
