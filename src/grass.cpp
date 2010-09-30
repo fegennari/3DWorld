@@ -4,6 +4,7 @@
 
 #include "3DWorld.h"
 #include "mesh.h"
+#include "physics_objects.h"
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
 
@@ -16,6 +17,7 @@ unsigned const NUM_GRASS    = 128;
 extern int island, default_ground_tex, read_landscape;
 extern float vegetation, zmin, zmax, h_sand[], h_dirt[];
 extern vector3d wind;
+extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
 
 
@@ -69,13 +71,14 @@ public:
 			for (int x = 0; x < MESH_X_SIZE-1; ++x) {
 				mesh_to_grass_map[y*MESH_X_SIZE+x] = grass.size();
 				if (is_mesh_disabled(x, y)) continue; // mesh not drawn
-				if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater
+				if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater (make this dynamically update?)
 				float const xval(get_xval(x)), yval(get_yval(y));
 
 				for (unsigned n = 0; n < NUM_GRASS; ++n) {
 					float const xv(rand_uniform(xval, xval + DX_VAL));
 					float const yv(rand_uniform(yval, yval + DY_VAL));
 					float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
+					point const pos(xv, yv, mh);
 
 					if (default_ground_tex >= 0 || zmax == zmin) {
 						if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue;
@@ -92,8 +95,12 @@ public:
 						if (id2 != GROUND_TEX) density = 1.0 - t;
 						if (rand_float() >= density) continue; // skip - density too low
 					}
-					// FIXME: no grass under cobjs
-					add_grass(point(xv, yv, mh));
+					if (mesh_height[y][x] + SMALL_NUMBER < h_collision_matrix[y][x]) { // skip grass intersecting cobjs
+						dwobject obj(GRASS, pos); // make a GRASS object for collision detection
+						object_types[GRASS].radius = 0.0;
+						if (obj.check_vert_collision(0, 0, 0)) continue;
+					}
+					add_grass(pos);
 				}
 			}
 		}

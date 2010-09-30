@@ -92,7 +92,7 @@ int const obj_weapons[NUM_TOT_OBJS] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1
+	-1, -1, -1, -1, -1
 };
 
 
@@ -129,7 +129,7 @@ bool const damage_done_obj[NUM_TOT_OBJS] = {
 	0,0,0,0,0,1,1,0,1,1,
 	1,1,1,1,0,0,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,
-	0,0,0,0
+	0,0,0,0,0
 };
 
 string const obj_type_names[NUM_TOT_OBJS] = {
@@ -138,7 +138,7 @@ string const obj_type_names[NUM_TOT_OBJS] = {
 	"Projectile Hit", "Droplet", "Water Droplet", "Sand", "Dirt", "Rock", "Fragment", "Particle", "Health", "Shields",
 	"Powerup", "Weapon", "Ammo", "Pack", "Camera", "Precipitation", "Blast Radius", "Projectile", "laser beam", "Impact",
 	"Plasma Lightning Damage", "Laser", "Drowned", "Burned", "Fire", "Fell", "Froze", "Suffocated", "Crushed", "Poison Gas",
-	"Waypoint", "Smoke", "Dynamic Particle", "Skull"
+	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass"
 };
 
 string const powerup_names[NUM_POWERUPS] =
