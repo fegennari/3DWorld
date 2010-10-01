@@ -31,11 +31,11 @@ class grass_manager_t {
 	struct grass_t { // size = 56
 		point p;
 		vector3d dir, n;
-		colorRGB c;
+		unsigned char c[3];
 		float w;
 
-		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, colorRGB const &c_, float w_)
-			: p(p_), dir(dir_), n(n_), c(c_), w(w_) {}
+		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, unsigned char const *const c_, float w_)
+			: p(p_), dir(dir_), n(n_), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
 	};
 
 	vector<grass_t> grass;
@@ -113,8 +113,9 @@ public:
 	void add_grass(point const &pos) {
 		vector3d const dir((plus_z + signed_rand_vector(0.3) + wind*0.3).get_norm()); // FIXME: make dynamic? local wind?
 		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
-		//colorRGB const color(rand_uniform(0.1, 0.35), rand_uniform(0.5, 0.75), rand_uniform(0.0, 0.1)); // untextured white triangle
-		colorRGB const color(rand_uniform(0.3, 0.5), rand_uniform(0.6, 0.8), rand_uniform(0.1, 0.2)); // vary per vertex?
+		//(0.1, 0.35), (0.5, 0.75), (0.0, 0.1) // untextured white triangle
+		//unsigned char const color[3] = {rand_uniform(0.3, 0.5), rand_uniform(0.6, 0.8), rand_uniform(0.1, 0.2)}; // vary per vertex?
+		unsigned char const color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20}; // vary per vertex?
 		float const length(GRASS_LENGTH*rand_uniform(0.7, 1.3));
 		float const width( GRASS_WIDTH *rand_uniform(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
