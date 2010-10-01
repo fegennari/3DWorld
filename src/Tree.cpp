@@ -429,7 +429,7 @@ void tree::draw_tree(bool invalidate_norms, bool draw_branches, bool draw_leaves
 	if (TEST_RTREE_COBJS) return;
 
 	if (!draw_leaves || draw_branches) { // second pass only
-		int const level(island ? 1 : 2); // do we want to test the mesh in non-island mode?
+		int const level((island || get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh in non-island mode?
 		not_visible = !sphere_in_camera_view(sphere_center, 1.1*sphere_radius, level);
 	}
 	if (not_visible) return;
