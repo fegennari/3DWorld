@@ -2275,6 +2275,7 @@ void draw_fires() {
 	enable_blend();
 	glDisable(GL_LIGHTING);
 	//glDisable(GL_DEPTH_TEST);
+	//glEnable(MULTISAMPLE_ARB);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.04);
 	WHITE.do_glColor();
@@ -2300,6 +2301,7 @@ void draw_fires() {
 	glEnd();
 	if (SMOKE_FOG_COORD) end_smoke_fog();
 	glDisable(GL_ALPHA_TEST);
+	//glDisable(MULTISAMPLE_ARB);
 	disable_blend();
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
