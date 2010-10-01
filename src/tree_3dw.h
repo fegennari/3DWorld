@@ -83,7 +83,7 @@ class tree { // size = BIG
 	static reusable_mem<tree_branch *> branch_ptr_cache;
 
 	int type, created, trseed1, trseed2, branch_vbo, leaf_vbo;
-	bool no_delete, reset_leaves, leaves_changed;
+	bool no_delete, reset_leaves, leaves_changed, not_visible;
 	vector<vert_norm_tc_color> leaf_data;
 	point gen_pos, sphere_center;
 	float sphere_radius, init_deadness, deadness, damage;
@@ -115,7 +115,7 @@ class tree { // size = BIG
 	unsigned num_branch_quads;
 
 public:
-	tree() : created(0), branch_vbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0), leaves_changed(0), num_branch_quads(0) {}
+	tree() : created(0), branch_vbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0), leaves_changed(0), not_visible(0), num_branch_quads(0) {}
 	void gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z, bool add_cobjs, int ix);
 	void regen_tree(point &pos, int recalc_shadows, int index);
 	void gen_tree_shadows(char light_sources, int index);
@@ -130,7 +130,9 @@ public:
 	void gen_leaf_color();
 	colorRGB get_leaf_color(unsigned i) const;
 	void clear_vbo();
-	void draw_tree(bool invalidate_norms);
+	void draw_tree(bool invalidate_norms, bool draw_branches=1, bool draw_leaves=1);
+	void draw_tree_branches(float mscale, float dist_c, float dist_cs, bool use_vbos);
+	void draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, bool use_vbos);
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);
 	void gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test);
