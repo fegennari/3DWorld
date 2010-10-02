@@ -1229,7 +1229,6 @@ void draw_coll_cube(float ar, int do_fill, int cobj) {
 	bool const back_face_cull(!c.is_semi_trans()); // no alpha
 	point const pos(c.points[0]), camera(get_camera_pos());
 	bool inside(!back_face_cull);
-
 	bool const textured(c.cp.tid >= 0);
 	float const tscale[2] = {c.cp.tscale, get_tex_ar(c.cp.tid)*c.cp.tscale};
 
@@ -1247,8 +1246,6 @@ void draw_coll_cube(float ar, int do_fill, int cobj) {
 	pair<float, unsigned> faces[6];
 	for (unsigned i = 0; i < 6; ++i) faces[i].second = i;
 	vector3d tex_delta(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
 
 	if (c.platform_id >= 0) { // make texture scroll with platform
 		assert(c.platform_id < (int)platforms.size());
@@ -1269,14 +1266,16 @@ void draw_coll_cube(float ar, int do_fill, int cobj) {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
 		if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < c.d[dim][dir]) ^ dir))) continue;
 		unsigned const d0((dim+1)%3), d1((dim+2)%3), t0((2-dim)>>1), t1(1+((2-dim)>0));
-		float a[4] = {0.0}, b[4] = {0.0};
-		a[t0] = tscale[0];
-		b[t1] = tscale[1];
-		a[3]  = tex_delta[t0]*tscale[0];
-		b[3]  = tex_delta[t1]*tscale[1];
-		glTexGenfv(GL_S, GL_EYE_PLANE, a);
-		glTexGenfv(GL_T, GL_EYE_PLANE, b);
 
+		if (textured) {
+			float a[4] = {0.0}, b[4] = {0.0};
+			a[t0] = tscale[0];
+			b[t1] = tscale[1];
+			a[3]  = tex_delta[t0]*tscale[0];
+			b[3]  = tex_delta[t1]*tscale[1];
+			glTexGenfv(GL_S, GL_EYE_PLANE, a);
+			glTexGenfv(GL_T, GL_EYE_PLANE, b);
+		}
 		if (FAST_SHAPE_DRAW) {
 			c.cp.color.do_glColor();
 			glBegin(GL_QUADS);

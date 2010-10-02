@@ -370,7 +370,7 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 		draw_extruded_polygon(thickness, points, NULL, npoints, norm, i);
 		break;
 	}
-	if (textured) disable_textures_texgen();
+	if (textured) glDisable(GL_TEXTURE_2D); //disable_textures_texgen();
 	if (is_semi_trans()) disable_blend();
 }
 

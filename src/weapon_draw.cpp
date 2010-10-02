@@ -10,7 +10,7 @@ vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
 extern bool invalid_ccache, keep_lasers;
-extern int game_mode, window_width, window_height, frame_counter, camera_coll_id;
+extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode;
 extern int num_smileys, left_handed, iticks, do_zoom, camera_view, fired, UNLIMITED_WEAPONS;
 extern float fticks, max_proj_rad;
 extern obj_type object_types[];
@@ -434,17 +434,12 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				int const ndiv2(max(4, 2*(is_camera ? N_SPHERE_DIV : ndiv)/3));
 				float const len(dpos + radius), dv(4.0*radius/ndiv2);
 				assert(dv > 0.0);
-				float val(0.0);
 
-				while (val < len) { // draw extendor - large, split into smaller cylinders
+				for (float val=0.0; val < len; val += dv) { // draw extendor - large, split into smaller cylinders
 					point const cpos(pos0 + dir*(len - val - 0.5*dv)); // center of the segment
 					bool const shadowed2(!is_visible_to_light_cobj(cpos, light, cradius, cobj, 0));
 					set_color_alpha(colorRGBA(0.49, 0.51, 0.53, 1.0), cpos, alpha, shadowed2);
-					glPushMatrix();
-					glTranslatef(0.0, 0.0, (len - val));
-					draw_cylin_fast(0.0025, 0.0025, -min((len - val), dv), ndiv2, 0, 0);
-					glPopMatrix();
-					val += dv;
+					draw_fast_cylinder(point(0.0, 0.0, len-val), point(0.0, 0.0, max(0.0f, len-val-dv)), 0.0025, 0.0025, ndiv2, 0, 0);
 				}
 				glPopMatrix();
 				glRotatef(90.0, 1.0, 0.0, 0.0); // into horizontal plane

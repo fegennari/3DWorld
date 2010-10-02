@@ -1689,6 +1689,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	gluQuadricTexture(quadric, GL_FALSE);
 	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
 	//glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	if (smoke_enabled) begin_smoke_fog();

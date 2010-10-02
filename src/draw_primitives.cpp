@@ -761,7 +761,7 @@ void disable_flares() {
 void draw_textured_quad(float xsize, float ysize, float z, int tid) {
 
 	select_texture(tid);
-	glNormal3f(0.0, 0.0, 1.0);
+	plus_z.do_glNormal();
 	draw_tquad(xsize, ysize, z, 1);
 }
 
