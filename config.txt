@@ -1,4 +1,5 @@
 ntrees 5
+grass_density 100
 nsmileys 6
 verbose 0
 rand_seed 0

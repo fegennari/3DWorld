@@ -105,7 +105,7 @@ char player_name[MAX_CHARS] = "Player";
 extern bool clear_landscape_vbo;
 extern int flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, grass_density;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness;
 extern float mesh_scale, mesh_scale2, mesh_height_scale, smiley_acc, hmv_scale, last_temp, lm_dz_adj;
 extern point hmv_pos;
@@ -1364,6 +1364,9 @@ int load_config(string const &config_file) {
 		if (str[0] == '#') { // comment
 			char letter(getc(fp));
 			while (letter != '\n' && letter != EOF && letter != 0) letter = getc(fp);
+		}
+		else if (str == "grass_density") {
+			if (!read_uint(fp, grass_density)) cfg_err("grass density", error);
 		}
 		else if (str == "ntrees") {
 			if (!read_int(fp, num_trees) || num_trees < 0) cfg_err("number of trees", error);

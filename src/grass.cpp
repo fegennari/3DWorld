@@ -11,10 +11,10 @@
 
 float    const GRASS_LENGTH = 0.02;
 float    const GRASS_WIDTH  = 0.002;
-unsigned const NUM_GRASS    = 128;
 
 
 bool grass_enabled(1);
+unsigned grass_density(0);
 
 extern int island, default_ground_tex, read_landscape;
 extern float vegetation, zmin, zmax, h_sand[], h_dirt[];
@@ -28,7 +28,7 @@ bool snow_enabled();
 
 class grass_manager_t {
 	
-	struct grass_t { // size = 56
+	struct grass_t { // size = 48
 		point p;
 		vector3d dir, n;
 		unsigned char c[3];
@@ -56,8 +56,8 @@ public:
 	
 	void clear() {
 		delete_vbo(vbo);
-		vbo       = 0;
-		vbo_valid = 0;
+		vbo = 0;
+		vbo_valid = shadows_valid = data_valid = 0;
 		grass.clear();
 	}
 
@@ -76,7 +76,7 @@ public:
 				if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater (make this dynamically update?)
 				float const xval(get_xval(x)), yval(get_yval(y));
 
-				for (unsigned n = 0; n < NUM_GRASS; ++n) {
+				for (unsigned n = 0; n < grass_density; ++n) {
 					float const xv(rand_uniform(xval, xval + DX_VAL));
 					float const yv(rand_uniform(yval, yval + DY_VAL));
 					float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
@@ -251,12 +251,16 @@ grass_manager_t grass_manager;
 
 
 bool no_grass() {
-	return (NUM_GRASS == 0 || !grass_enabled || snow_enabled() || vegetation == 0.0 || read_landscape);
+	return (grass_density == 0 || !grass_enabled || snow_enabled() || vegetation == 0.0 || read_landscape);
 }
 
 
-void gen_grass() {
+void gen_grass(bool full_regen) {
 
+	if (!full_regen) { // update shadows only
+		grass_manager.invalidate_shadows();
+		return;
+	}
 	bool const use_vbos(setup_gen_buffers_arb());
 		
 	if (!use_vbos) {
@@ -266,7 +270,7 @@ void gen_grass() {
 	grass_manager.clear();
 	if (no_grass()) return;
 	grass_manager.gen_grass();
-	cout << "grass: " << grass_manager.size() << " out of " << XY_MULT_SIZE*NUM_GRASS << endl;
+	cout << "grass: " << grass_manager.size() << " out of " << XY_MULT_SIZE*grass_density << endl;
 }
 
 
