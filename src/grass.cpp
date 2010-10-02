@@ -46,6 +46,10 @@ class grass_manager_t {
 	int last_light;
 	point last_lpos;
 
+	bool hcm_chk(int x, int y) const {
+		return (!point_outside_mesh(x, y) && (mesh_height[y][x] + SMALL_NUMBER < h_collision_matrix[y][x]));
+	}
+
 public:
 	grass_manager_t() : vbo(0), vbo_valid(0), shadows_valid(0), data_valid(0), last_light(-1), last_lpos(all_zeros) {}
 	~grass_manager_t() {clear();}
@@ -97,7 +101,7 @@ public:
 						if (id2 != GROUND_TEX) density = 1.0 - t;
 						if (rand_float() >= density) continue; // skip - density too low
 					}
-					if (mesh_height[y][x] + SMALL_NUMBER < h_collision_matrix[y][x]) { // skip grass intersecting cobjs
+					if (hcm_chk(x, y) || hcm_chk(x+1, y) || hcm_chk(x, y+1) || hcm_chk(x+1, y+1)) { // skip grass intersecting cobjs
 						dwobject obj(GRASS, pos); // make a GRASS object for collision detection
 						object_types[GRASS].radius = 0.0;
 						if (obj.check_vert_collision(0, 0, 0)) continue;
@@ -113,9 +117,9 @@ public:
 	void add_grass(point const &pos) {
 		vector3d const dir((plus_z + signed_rand_vector(0.3) + wind*0.3).get_norm()); // FIXME: make dynamic? local wind?
 		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
+		// Vary color per vertex? Add precomputed lighting to color?
 		//(0.1, 0.35), (0.5, 0.75), (0.0, 0.1) // untextured white triangle
-		//unsigned char const color[3] = {rand_uniform(0.3, 0.5), rand_uniform(0.6, 0.8), rand_uniform(0.1, 0.2)}; // vary per vertex?
-		unsigned char const color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20}; // vary per vertex?
+		unsigned char const color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20};
 		float const length(GRASS_LENGTH*rand_uniform(0.7, 1.3));
 		float const width( GRASS_WIDTH *rand_uniform(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
@@ -231,6 +235,7 @@ public:
 		select_texture(GRASS_BLADE_TEX);
 		set_specular(0.1, 10.0);
 		enable_blend();
+		//glEnable(GL_POLYGON_SMOOTH);
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 		glEnable(GL_COLOR_MATERIAL);
