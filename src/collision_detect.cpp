@@ -1594,6 +1594,9 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (is_camera && (camera_coll_smooth || game_mode) && temperature <= W_FREEZE_POINT && is_underwater(pos)) {
 			pos.z = water_matrix[ypos][xpos]; // standing on ice
 		}
+		else {
+			modify_grass_at(pos, (type != FIRE), (type == FIRE));
+		}
 		pos.z += radius;
 	}
 	else {

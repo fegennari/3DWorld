@@ -9,8 +9,8 @@
 #include "gl_ext_arb.h"
 
 
-float    const GRASS_LENGTH = 0.02;
-float    const GRASS_WIDTH  = 0.002;
+float const GRASS_LENGTH = 0.02;
+float const GRASS_WIDTH  = 0.002;
 
 
 bool grass_enabled(1);
@@ -73,10 +73,10 @@ public:
 		float const dz_inv(1.0/(zmax - zmin));
 		mesh_to_grass_map.resize(XY_MULT_SIZE+1, 0);
 		
-		for (int y = 0; y < MESH_Y_SIZE-1; ++y) {
-			for (int x = 0; x < MESH_X_SIZE-1; ++x) {
+		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				mesh_to_grass_map[y*MESH_X_SIZE+x] = grass.size();
-				if (is_mesh_disabled(x, y)) continue; // mesh not drawn
+				if (x == MESH_X_SIZE-1 || y == MESH_Y_SIZE-1 || is_mesh_disabled(x, y)) continue; // mesh not drawn
 				if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater (make this dynamically update?)
 				float const xval(get_xval(x)), yval(get_yval(y));
 
@@ -169,29 +169,13 @@ public:
 		data_valid = 0;
 	}
 
-	void modify_data(int x, int y) { // unused
-		if (empty() || !vbo_valid || point_outside_mesh(x, y)) return;
-		assert(vbo > 0);
-		unsigned const ix(y*MESH_X_SIZE + x);
-		assert(ix+1 < mesh_to_grass_map.size());
-		unsigned const start(mesh_to_grass_map[ix]), end(mesh_to_grass_map[ix+1]);
+	void upload_data_to_vbo(unsigned start, unsigned end) const {
 		if (start == end) return; // nothing to update
+		assert(start < end && end <= grass.size());
 		vector<vert_norm_tc_color> data;
-		// *** WRITE: resize, copy, update data ***
-		bind_vbo(vbo);
-		upload_vbo_sub_data(&data.front(), 3*start*sizeof(vert_norm_tc_color), data.size()*sizeof(vert_norm_tc_color));
-		bind_vbo(0);
-		//data_valid = 0;
-	}
+		data.reserve(3*(end - start));
 
-	void upload_data() {
-		if (empty()) return;
-		RESET_TIME;
-		// remove excess capacity from grass?
-		vector<vert_norm_tc_color> data;
-		data.reserve(3*grass.size());
-
-		for (unsigned i = 0; i < grass.size(); ++i) {
+		for (unsigned i = start; i < end; ++i) {
 			point const p1(grass[i].p), p2(p1 + grass[i].dir);
 			vector3d const binorm(cross_product(grass[i].dir, grass[i].n).get_norm());
 			vector3d const delta(binorm*(0.5*grass[i].w));
@@ -203,11 +187,46 @@ public:
 			data.push_back(vert_norm_tc_color(p2,       norm,     tc_adj, 0.5,        grass[i].c));
 		}
 		bind_vbo(vbo);
-		upload_vbo_data(&data.front(), data.size()*sizeof(vert_norm_tc_color));
+
+		if (start == 0 && end == grass.size()) { // full data, do full upload
+			upload_vbo_data(&data.front(), data.size()*sizeof(vert_norm_tc_color));
+		}
+		else { // partial data, upload a subset
+			upload_vbo_sub_data(&data.front(), 3*start*sizeof(vert_norm_tc_color), data.size()*sizeof(vert_norm_tc_color));
+		}
 		bind_vbo(0);
+	}
+
+	void modify_grass(int x, int y, bool crush, bool burn) {
+		if (empty() || !vbo_valid || point_outside_mesh(x, y)) return;
+		assert(vbo > 0);
+		unsigned const ix(y*MESH_X_SIZE + x);
+		assert(ix+1 < mesh_to_grass_map.size());
+		unsigned const start(mesh_to_grass_map[ix]), end(mesh_to_grass_map[ix+1]);
+		assert(start <= end && end <= grass.size());
+
+		for (unsigned i = start; i < end; ++i) {
+			if (crush) {
+				float const length(grass[i].dir.mag());
+				grass[i].dir.z *= 0.8;
+				grass[i].dir   *= length/grass[i].dir.mag();
+			}
+			if (burn) {
+				UNROLL_3X(grass[i].c[i_] = (unsigned char)(0.95*grass[i].c[i_]);)
+			}
+		}
+		upload_data_to_vbo(start, end);
+		//data_valid = 0;
+	}
+
+	void upload_data() {
+		if (empty()) return;
+		RESET_TIME;
+		// remove excess capacity from grass?
+		upload_data_to_vbo(0, grass.size());
 		data_valid = 1;
 		PRINT_TIME("Grass Upload VBO");
-		cout << "mem used: " << grass.size()*sizeof(grass_t) << ", vmem used: " << data.size()*sizeof(vert_norm_tc_color) << endl;
+		cout << "mem used: " << grass.size()*sizeof(grass_t) << ", vmem used: " << 3*grass.size()*sizeof(vert_norm_tc_color) << endl;
 	}
 
 	void check_for_updates() {
@@ -218,6 +237,8 @@ public:
 
 	void draw() {
 		if (empty()) return;
+
+		// determine if ligthing has changed and possibly calculate shadows/upload VBO data
 		int const light(get_light());
 		point lpos;
 		get_light_pos(lpos, light);
@@ -228,6 +249,8 @@ public:
 			last_lpos  = lpos;
 		}
 		check_for_updates();
+
+		// draw the grass
 		assert(vbo_valid && vbo > 0);
 		bind_vbo(vbo);
 		vert_norm_tc_color::set_vbo_arrays();
@@ -285,6 +308,10 @@ void update_grass_vbos() {
 
 void draw_grass() {
 	if (!no_grass()) grass_manager.draw();
+}
+
+void modify_grass_at(point const &pos, bool crush, bool burn) {
+	if (!no_grass()) grass_manager.modify_grass(get_xpos(pos.x), get_ypos(pos.y), crush, burn);
 }
 
 

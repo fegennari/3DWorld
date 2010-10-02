@@ -143,7 +143,12 @@ void blastr::process() const { // land mode
 				mpt.x = get_xval(k);
 				mpt.z = mesh_height[j][k];
 				float const dist(p2p_dist_sq(pos, mpt));
-				if (dist < radsq) surface_damage[j][k] += 2.0E-6*damage/(dist + 0.01); // do mesh damage
+				
+				if (dist < radsq) {
+					float const damage(2.0E-6*damage/(dist + 0.01));
+					surface_damage[j][k] += damage; // do mesh damage
+					if (damage > 0.01) modify_grass_at(pos, 0, 1);
+				}
 			}
 		}
 	}
