@@ -791,12 +791,14 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 	point pos(0.0, 0.0, 0.22), spos(get_sstate_pos(shooter));
 	point const player(get_camera_pos());
 	enable_blend();
+	glEnable(GL_CULL_FACE);
 	select_texture(PLASMA_TEX);
 	float radius(object_types[PLASMA].radius);
 	obj_group &objg(obj_groups[cid]);
 	if (shooter == CAMERA_ID || (objg.get_obj(shooter).flags & CAMERA_VIEW)) ndiv *= 3;
 	draw_plasma(pos, radius, psize, ndiv, 0, 1, 0);
 	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_CULL_FACE);
 	bool const underwater(is_underwater(spos, 1));
 	if (!underwater && (rand()&31) == 0) gen_particles((pos + pos0), 1);
 	if (psize < 0.9*MAX_PLASMA_SIZE) return;
