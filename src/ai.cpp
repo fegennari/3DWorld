@@ -526,8 +526,8 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 	if (SSTEPS_PER_FRAME == 0.0) SSTEPS_PER_FRAME = (SSTEPS_PER_FRAME0/XY_SCENE_SIZE)*((float)XY_SUM_SIZE/256.0);
 	float const health_eq(min(4.0f*obj.health, (obj.health + sstate.shields)));
 	int xpos(get_xpos_clamp(opos.x)), ypos(get_ypos_clamp(opos.y)), xnew(xpos), ynew(ypos);
-	obj.angle += speed*fticks*SSTEPS_PER_FRAME; // sigma-delta A/D conversion
-	int const nsteps(max(1, (int)obj.angle));
+	obj.angle += speed*min(8.0f, fticks)*SSTEPS_PER_FRAME; // sigma-delta A/D conversion
+	int const nsteps(max(1, min(MAX_XY_SIZE, (int)obj.angle)));
 	obj.angle -= (float)nsteps;
 	bool const has_flight(sstate.powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT);
 	int const xcpos(get_xpos(target.x)), ycpos(get_ypos(target.y));
