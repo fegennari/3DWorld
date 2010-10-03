@@ -9,12 +9,9 @@
 #include "gl_ext_arb.h"
 
 
-float const GRASS_LENGTH = 0.02;
-float const GRASS_WIDTH  = 0.002;
-
-
 bool grass_enabled(1);
 unsigned grass_density(0);
+float grass_length(0.02), grass_width(0.002);
 
 extern int island, default_ground_tex, read_landscape;
 extern float vegetation, zmin, zmax, h_sand[], h_dirt[];
@@ -130,8 +127,8 @@ public:
 			//
 		}
 
-		float const length(GRASS_LENGTH*rand_uniform(0.7, 1.3));
-		float const width( GRASS_WIDTH *rand_uniform(0.7, 1.3));
+		float const length(grass_length*rand_uniform(0.7, 1.3));
+		float const width( grass_width *rand_uniform(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
 	}
 
@@ -186,7 +183,7 @@ public:
 		data.reserve(3*(end - start));
 
 		for (unsigned i = start; i < end; ++i) {
-			point const p1(grass[i].p), p2(p1 + grass[i].dir + point(0.0, 0.0, 0.05*GRASS_LENGTH));
+			point const p1(grass[i].p), p2(p1 + grass[i].dir + point(0.0, 0.0, 0.05*grass_length));
 			vector3d const binorm(cross_product(grass[i].dir, grass[i].n).get_norm());
 			vector3d const delta(binorm*(0.5*grass[i].w));
 			//vector3d const norm(grass[i].n);
@@ -213,9 +210,9 @@ public:
 		// determine radius at grass height
 		assert(radius > 0.0);
 		float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
-		if ((pos.z - radius) > (mh + GRASS_LENGTH)) return 0.0; // above grass
+		if ((pos.z - radius) > (mh + grass_length)) return 0.0; // above grass
 		if ((pos.z + radius) < mh) return 0.0; // below the mesh
-		float const height(pos.z - (mh + GRASS_LENGTH));
+		float const height(pos.z - (mh + grass_length));
 		float const rad((height > 0.0) ? sqrt(radius*radius - height*height) : radius);
 		x1 = get_xpos(pos.x - rad);
 		x2 = get_xpos(pos.x + rad);
@@ -281,7 +278,7 @@ public:
 					if (cut) {
 						float const length(g.dir.mag());
 
-						if (length > 0.25*GRASS_LENGTH) {
+						if (length > 0.25*grass_length) {
 							g.dir  *= reld;
 							updated = 1;
 						}

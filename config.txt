@@ -1,5 +1,4 @@
 ntrees 5
-grass_density 100
 nsmileys 6
 verbose 0
 rand_seed 0
@@ -14,6 +13,9 @@ disable_scenery 0
 read_landscape 0
 read_heightmap 0
 scenery_extent 0
+
+grass_density 100
+grass_size 0.02 0.002
 
 tree_deadness 0.0
 leaf_color 0.0 0.0 0.0  0.75  0.2 # summer
