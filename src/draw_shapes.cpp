@@ -238,6 +238,7 @@ inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d 
 void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned char shadowed, dqd_params const &p) {
 
 	for (int i = 0; i < npts; ++i) { // much of the frame time is spent here
+		assert(ix[i] < verts.size());
 		vertex_t &v(verts[ix[i]]);
 		
 		if (v.c[3] == 0) { // Note: shadowed should agree across all uses of this vertex

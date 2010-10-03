@@ -40,6 +40,7 @@ class grass_manager_t {
 
 	vector<grass_t> grass;
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
+	vector<unsigned char> modified;
 	unsigned vbo;
 	bool vbo_valid, shadows_valid, data_valid;
 	int last_cobj;
@@ -63,6 +64,8 @@ public:
 		vbo = 0;
 		vbo_valid = shadows_valid = data_valid = 0;
 		grass.clear();
+		mesh_to_grass_map.clear();
+		modified.clear();
 	}
 
 	void gen_grass() {
@@ -72,6 +75,7 @@ public:
 		int   const   NTEX(island ? NTEX_SAND  : NTEX_DIRT);
 		float const dz_inv(1.0/(zmax - zmin));
 		mesh_to_grass_map.resize(XY_MULT_SIZE+1, 0);
+		modified.resize(XY_MULT_SIZE, 0);
 		
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -176,7 +180,7 @@ public:
 		data.reserve(3*(end - start));
 
 		for (unsigned i = start; i < end; ++i) {
-			point const p1(grass[i].p), p2(p1 + grass[i].dir);
+			point const p1(grass[i].p), p2(p1 + grass[i].dir + point(0.0, 0.0, 0.05*GRASS_LENGTH));
 			vector3d const binorm(cross_product(grass[i].dir, grass[i].n).get_norm());
 			vector3d const delta(binorm*(0.5*grass[i].w));
 			//vector3d const norm(grass[i].n);
@@ -197,26 +201,71 @@ public:
 		bind_vbo(0);
 	}
 
-	void modify_grass(int x, int y, bool crush, bool burn) {
-		if (empty() || !vbo_valid || point_outside_mesh(x, y)) return;
-		assert(vbo > 0);
-		unsigned const ix(y*MESH_X_SIZE + x);
-		assert(ix+1 < mesh_to_grass_map.size());
-		unsigned const start(mesh_to_grass_map[ix]), end(mesh_to_grass_map[ix+1]);
-		assert(start <= end && end <= grass.size());
+	void modify_grass(point const &pos, float radius, bool crush, bool burn) {
+		if (empty() || !is_over_mesh(pos)) return;
 
-		for (unsigned i = start; i < end; ++i) {
-			if (crush) {
-				float const length(grass[i].dir.mag());
-				grass[i].dir.z *= 0.8;
-				grass[i].dir   *= length/grass[i].dir.mag();
-			}
-			if (burn) {
-				UNROLL_3X(grass[i].c[i_] = (unsigned char)(0.95*grass[i].c[i_]);)
-			}
-		}
-		upload_data_to_vbo(start, end);
-		//data_valid = 0;
+		// determine radius at grass height
+		float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
+		if ((pos.z - radius) > (mh + GRASS_LENGTH)) return; // above grass
+		if ((pos.z + radius) < mh) return; // below the mesh
+		float const height(pos.z - (mh + GRASS_LENGTH));
+		float const rad((height > 0.0) ? sqrt(radius*radius - height*height) : radius), rad_sq(rad*rad);
+		int const x1(get_xpos(pos.x - rad)), x2(get_xpos(pos.x + rad));
+		int const y1(get_ypos(pos.y - rad)), y2(get_ypos(pos.y + rad));
+
+		// modify grass within radius of pos
+		for (int y = y1; y <= y2; ++y) {
+			for (int x = x1; x <= x2; ++x) {
+				if (point_outside_mesh(x, y)) continue;
+				assert(vbo > 0);
+				unsigned const ix(y*MESH_X_SIZE + x);
+				assert(ix+1 < mesh_to_grass_map.size());
+				unsigned const start(mesh_to_grass_map[ix]), end(mesh_to_grass_map[ix+1]);
+				assert(start <= end && end <= grass.size());
+				if (start == end) continue; // no grass at this location
+				unsigned min_up(end), max_up(start);
+
+				for (unsigned i = start; i < end; ++i) {
+					grass_t &g(grass[i]);
+					float const dsq(p2p_dist_xy_sq(pos, g.p));
+					if (dsq > rad_sq) continue; // too far away
+					float const reld(sqrt(dsq)/rad), atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
+					bool updated(0);
+
+					if (crush) {
+						vector3d const sn(surface_normals[y][x]);
+						float const length(g.dir.mag()), dx(g.p.x - pos.x), dy(g.p.y - pos.y);
+
+						if (fabs(dot_product(g.dir/length, sn)) > 0.1) { // update if not flat against the mesh
+							vector3d const new_dir(vector3d(dx, dy, -(sn.x*dx + sn.y*dy)/sn.z).get_norm()); // point away from crusing point
+
+							if (dot_product(g.dir/length, new_dir) < 0.95) { // update if not already aligned
+								g.dir   = (g.dir*(atten_val/length) + new_dir*(1.0 - atten_val)).get_norm()*length;
+								g.n     = (g.n.get_norm()*atten_val + sn*(1.0 - atten_val)).get_norm()*g.n.mag();
+								updated = 1;
+							}
+						}
+					}
+					if (burn) {
+						UNROLL_3X(updated |= (g.c[i_] > 0);)
+						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_]);)}
+					}
+					if (updated) {
+						min_up = min(min_up, i);
+						max_up = max(max_up, i);
+					}
+				} // for i
+				if (min_up > max_up) continue; // nothing updated
+				// FIXME: only upload modified once per frame?
+				modified[ix] = 1;
+				if (vbo_valid) upload_data_to_vbo(min_up, max_up+1);
+				//data_valid = 0;
+			} // for x
+		} // for y
+	}
+
+	void heal_grass() {
+		// WRITE: fix dir and color for grass that has been crushed or burned using modified
 	}
 
 	void upload_data() {
@@ -310,8 +359,8 @@ void draw_grass() {
 	if (!no_grass()) grass_manager.draw();
 }
 
-void modify_grass_at(point const &pos, bool crush, bool burn) {
-	if (!no_grass()) grass_manager.modify_grass(get_xpos(pos.x), get_ypos(pos.y), crush, burn);
+void modify_grass_at(point const &pos, float radius, bool crush, bool burn) {
+	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn);
 }
 
 

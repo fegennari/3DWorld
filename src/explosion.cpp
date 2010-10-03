@@ -127,7 +127,6 @@ void blastr::process() const { // land mode
 	add_dynamic_light(min(3.5, 4.0*size), pos, light_color);
 	if (!animate2) return;
 	int ltime(0);
-	point mpt;
 
 	if (damage > 0.0) {
 		float rad(3.0*cur_size/(DX_VAL + DY_VAL));
@@ -137,20 +136,14 @@ void blastr::process() const { // land mode
 		float const radsq(rad*rad/SQRT2);
 
 		for (int j = y1; j < y2; ++j) {
-			mpt.y = get_yval(j);
-
 			for (int k = x1; k < x2; ++k) {
-				mpt.x = get_xval(k);
-				mpt.z = mesh_height[j][k];
-				float const dist(p2p_dist_sq(pos, mpt));
-				
-				if (dist < radsq) {
-					float const damage(2.0E-6*damage/(dist + 0.01));
-					surface_damage[j][k] += damage; // do mesh damage
-					if (damage > 0.01) modify_grass_at(pos, 0, 1);
-				}
+				point const mpt(get_xval(k), get_yval(j), mesh_height[j][k]);
+				float const dist_sq(p2p_dist_sq(pos, mpt));
+				if (dist_sq < radsq) surface_damage[j][k] += 2.0E-6*damage/(dist_sq + 0.01); // do mesh damage
 			}
 		}
+		//if (time == st_time) // only update grass on the first blast?
+		modify_grass_at(pos, 0.5*cur_size, 1, 1); // Note: calling this every time looks better, but is slower
 	}
 	if (gm_blast == 0 || time < ltime) { // used for object damage
 		ltime         = time;
