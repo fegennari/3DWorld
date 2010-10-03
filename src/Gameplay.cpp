@@ -1964,7 +1964,11 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 		int coll, xpos, ypos, cindex;
 		int const fdir(fframe > (delay/2)), ff(fdir ? (delay - fframe) : fframe); // fdir = forward
 		float range(get_projectile_range(pos, dir, 1.1*cradius, 1.5*cradius+CBLADE_EXT, coll_pos, coll_norm, coll, cindex, shooter, 0));
-		if (get_range_to_mesh(pos, dir, coll_pos, xpos, ypos)) range = min(range, p2p_dist(pos, coll_pos)-0.1f);
+		
+		if (get_range_to_mesh(pos, dir, coll_pos, xpos, ypos)) {
+			range = min(range, p2p_dist(pos, coll_pos)-0.1f);
+			if (CBLADE_EXT_PT*ff > (range - 0.8f*cradius)) modify_grass_at(coll_pos, 0.75*cradius, 0, 0, 1); // cut grass
+		}
 		sstate.dpos = max(0.0f, min(CBLADE_EXT_PT*ff, (range - 0.8f*cradius)));
 		pos += dir*sstate.dpos;
 	}
@@ -1974,7 +1978,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 	pos.z += 0.05;
 
 	// throw up debris
-	if (rand()%6 == 0) {
+	if ((rand()%6) == 0) {
 		point pos2(pos + dir*(1.25*cradius));
 		int const xpos(get_xpos(pos2.x)), ypos(get_ypos(pos2.y));
 		

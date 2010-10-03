@@ -1593,7 +1593,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		bool const on_ice(is_camera && (camera_coll_smooth || game_mode) && temperature <= W_FREEZE_POINT && is_underwater(pos));
 		if (on_ice) pos.z = water_matrix[ypos][xpos]; // standing on ice
 		pos.z += radius;
-		if (!on_ice) modify_grass_at(pos, radius, (type != FIRE), (type == FIRE));
+		if (!on_ice) modify_grass_at(pos, radius, (type != FIRE), (type == FIRE), 0);
 	}
 	else {
 		zceil = max(zceil, mh);

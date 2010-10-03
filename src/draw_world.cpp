@@ -479,8 +479,8 @@ void draw_group(obj_group &objg) {
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject const &obj(objg.get_obj(j));
 			if (obj.disabled()) continue;
-			float const scale(obj.init_dir.z);
-			if (!sphere_in_camera_view(obj.pos, 4.0*scale*LEAF_SIZE, clip_level)) continue;
+			float const scale(obj.init_dir.z), lsize(4.0*scale*LEAF_SIZE);
+			if (!sphere_in_camera_view(obj.pos, lsize, clip_level)) continue;
 			++num_drawn;
 			int const tree_type(obj.source);
 			assert(tree_type >= 0 && tree_type < NUM_TREE_TYPES);
@@ -491,8 +491,10 @@ void draw_group(obj_group &objg) {
 				select_texture(tid);
 				last_tid = tid;
 			}
+			point pos(obj.pos);
+			if (place_obj_on_grass(pos, 0.5*lsize)) pos.z = 0.5*(obj.pos.z + pos.z-0.5*lsize); // leaf is partially on grass
 			glPushMatrix();
-			translate_to(obj.pos);
+			translate_to(pos);
 			uniform_scale(scale);
 			rotate_about(obj.angle, obj.orientation);
 			glRotatef(TO_DEG*obj.init_dir.x, 0.0, 0.0, 1.0);

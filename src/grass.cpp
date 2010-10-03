@@ -121,9 +121,15 @@ public:
 	void add_grass(point const &pos) {
 		vector3d const dir((plus_z + signed_rand_vector(0.3) + wind*0.3).get_norm()); // FIXME: make dynamic? local wind?
 		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
-		// Vary color per vertex? Add precomputed lighting to color?
+		// Vary color per vertex?
 		//(0.1, 0.35), (0.5, 0.75), (0.0, 0.1) // untextured white triangle
 		unsigned char const color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20};
+
+		// Add precomputed lighting to color?
+		if (1) {
+			//
+		}
+
 		float const length(GRASS_LENGTH*rand_uniform(0.7, 1.3));
 		float const width( GRASS_WIDTH *rand_uniform(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
@@ -201,40 +207,88 @@ public:
 		bind_vbo(0);
 	}
 
-	void modify_grass(point const &pos, float radius, bool crush, bool burn) {
-		if (empty() || !is_over_mesh(pos)) return;
+	float get_xy_bounds(point const &pos, float radius, int &x1, int &y1, int &x2, int &y2) const {
+		if (empty() || !is_over_mesh(pos)) return 0.0;
 
 		// determine radius at grass height
+		assert(radius > 0.0);
 		float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
-		if ((pos.z - radius) > (mh + GRASS_LENGTH)) return; // above grass
-		if ((pos.z + radius) < mh) return; // below the mesh
+		if ((pos.z - radius) > (mh + GRASS_LENGTH)) return 0.0; // above grass
+		if ((pos.z + radius) < mh) return 0.0; // below the mesh
 		float const height(pos.z - (mh + GRASS_LENGTH));
-		float const rad((height > 0.0) ? sqrt(radius*radius - height*height) : radius), rad_sq(rad*rad);
-		int const x1(get_xpos(pos.x - rad)), x2(get_xpos(pos.x + rad));
-		int const y1(get_ypos(pos.y - rad)), y2(get_ypos(pos.y + rad));
+		float const rad((height > 0.0) ? sqrt(radius*radius - height*height) : radius);
+		x1 = get_xpos(pos.x - rad);
+		x2 = get_xpos(pos.x + rad);
+		y1 = get_ypos(pos.y - rad);
+		y2 = get_ypos(pos.y + rad);
+		return rad;
+	}
+
+	unsigned get_start_and_end(int x, int y, unsigned &start, unsigned &end) const {
+		unsigned const ix(y*MESH_X_SIZE + x);
+		assert(ix+1 < mesh_to_grass_map.size());
+		start = mesh_to_grass_map[ix];
+		end   = mesh_to_grass_map[ix+1];
+		assert(start <= end && end <= grass.size());
+		return ix;
+	}
+
+	bool place_obj_on_grass(point &pos, float radius) const {
+		int x1, y1, x2, y2;
+		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
+		if (rad == 0.0) return 0;
+		bool updated(0);
+
+		for (int y = y1; y <= y2; ++y) {
+			for (int x = x1; x <= x2; ++x) {
+				if (point_outside_mesh(x, y)) continue;
+				unsigned start, end;
+				get_start_and_end(x, y, start, end);
+				if (start == end) continue; // no grass at this location
+
+				for (unsigned i = start; i < end; ++i) {
+					float const dsq(p2p_dist_xy_sq(pos, grass[i].p));
+					if (dsq > rad*rad) continue; // too far away
+					pos.z   = max(pos.z, (grass[i].p.z + grass[i].dir.z + radius));
+					updated = 1;
+				}
+			}
+		}
+		return updated;
+	}
+
+	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut) {
+		int x1, y1, x2, y2;
+		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
+		if (rad == 0.0) return;
 
 		// modify grass within radius of pos
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
 				if (point_outside_mesh(x, y)) continue;
-				assert(vbo > 0);
-				unsigned const ix(y*MESH_X_SIZE + x);
-				assert(ix+1 < mesh_to_grass_map.size());
-				unsigned const start(mesh_to_grass_map[ix]), end(mesh_to_grass_map[ix+1]);
-				assert(start <= end && end <= grass.size());
+				unsigned start, end;
+				unsigned const ix(get_start_and_end(x, y, start, end));
 				if (start == end) continue; // no grass at this location
 				unsigned min_up(end), max_up(start);
 
 				for (unsigned i = start; i < end; ++i) {
 					grass_t &g(grass[i]);
 					float const dsq(p2p_dist_xy_sq(pos, g.p));
-					if (dsq > rad_sq) continue; // too far away
-					float const reld(sqrt(dsq)/rad), atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
+					if (dsq > rad*rad) continue; // too far away
+					float const reld(sqrt(dsq)/rad);
 					bool updated(0);
 
+					if (cut) {
+						float const length(g.dir.mag());
+
+						if (length > 0.25*GRASS_LENGTH) {
+							g.dir  *= reld;
+							updated = 1;
+						}
+					}
 					if (crush) {
 						vector3d const sn(surface_normals[y][x]);
-						float const length(g.dir.mag()), dx(g.p.x - pos.x), dy(g.p.y - pos.y);
+						float const length(g.dir.mag()), dx(g.p.x - pos.x), dy(g.p.y - pos.y), atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
 
 						if (fabs(dot_product(g.dir/length, sn)) > 0.1) { // update if not flat against the mesh
 							vector3d const new_dir(vector3d(dx, dy, -(sn.x*dx + sn.y*dy)/sn.z).get_norm()); // point away from crusing point
@@ -247,6 +301,7 @@ public:
 						}
 					}
 					if (burn) {
+						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
 						UNROLL_3X(updated |= (g.c[i_] > 0);)
 						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_]);)}
 					}
@@ -359,8 +414,12 @@ void draw_grass() {
 	if (!no_grass()) grass_manager.draw();
 }
 
-void modify_grass_at(point const &pos, float radius, bool crush, bool burn) {
-	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn);
+void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut) {
+	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut);
+}
+
+bool place_obj_on_grass(point &pos, float radius) {
+	return (!no_grass() && grass_manager.place_obj_on_grass(pos, radius));
 }
 
 

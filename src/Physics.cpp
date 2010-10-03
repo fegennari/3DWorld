@@ -808,6 +808,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if (radius >= LARGE_OBJ_RAD) check_vert_collision(obj_index, 1, iter); // adds instability though
 			assert(tstep > 0.0);
 			velocity = (pos - old_pos)/tstep;
+			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) modify_grass_at(pos, radius, 1, 0, 0);
 		}
 		else if (val == 1) { // stopped
 			if ((flags & PRECIPITATION) || (otype.flags & IS_PRECIP)) {

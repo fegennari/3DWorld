@@ -1314,7 +1314,8 @@ void add_plant(point const &pos, float height, float radius, int type, int calc_
 void gen_grass(bool full_regen);
 void update_grass_vbos();
 void draw_grass();
-void modify_grass_at(point const &pos, float radius, bool crush, bool burn);
+void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut);
+bool place_obj_on_grass(point &pos, float radius);
 
 // function prototypes - draw mech
 void draw_hmv();
