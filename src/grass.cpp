@@ -77,7 +77,8 @@ public:
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				mesh_to_grass_map[y*MESH_X_SIZE+x] = grass.size();
-				if (x == MESH_X_SIZE-1 || y == MESH_Y_SIZE-1 || is_mesh_disabled(x, y)) continue; // mesh not drawn
+				if (x == MESH_X_SIZE-1 || y == MESH_Y_SIZE-1) continue; // mesh not drawn
+				if (is_mesh_disabled(x, y) || is_mesh_disabled(x+1, y) || is_mesh_disabled(x, y+1) || is_mesh_disabled(x+1, y+1)) continue; // mesh disabled
 				if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater (make this dynamically update?)
 				float const xval(get_xval(x)), yval(get_yval(y));
 
