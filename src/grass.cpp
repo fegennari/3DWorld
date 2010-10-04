@@ -120,13 +120,8 @@ public:
 		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
 		// Vary color per vertex?
 		//(0.1, 0.35), (0.5, 0.75), (0.0, 0.1) // untextured white triangle
-		unsigned char const color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20};
-
+		unsigned char color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20};
 		// Add precomputed lighting to color?
-		if (1) {
-			//
-		}
-
 		float const length(grass_length*rand_uniform(0.7, 1.3));
 		float const width( grass_width *rand_uniform(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
@@ -254,7 +249,7 @@ public:
 		return updated;
 	}
 
-	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut) {
+	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh) {
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
@@ -275,6 +270,14 @@ public:
 					float const reld(sqrt(dsq)/rad);
 					bool updated(0);
 
+					if (update_mh) {
+						float const mh(interpolate_mesh_zval(g.p.x, g.p.y, 0.0, 0, 1));
+
+						if (fabs(g.p.z - mh) > 0.01*grass_width) {
+							g.p.z   = mh;
+							updated = 1;
+						}
+					}
 					if (cut) {
 						float const length(g.dir.mag());
 
@@ -411,8 +414,8 @@ void draw_grass() {
 	if (!no_grass()) grass_manager.draw();
 }
 
-void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut) {
-	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut);
+void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh) {
+	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {

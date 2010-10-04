@@ -1279,6 +1279,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 				size *= close*sqrt(XY_SCENE_SIZE);
 				hv    = add_crater_to_landscape_texture(pos.x, pos.y, size);
 				update_mesh_height(xpos, ypos, int(crater_dist/HALF_DXY), damage2, 0.0, 0);
+				modify_grass_at(pos, crater_dist, 0, 0, 0, 1); // update grass height
 			}
 			if ((h_collision_matrix[ypos][xpos] - mesh_height[ypos][xpos]) < SMALL_NUMBER) {
 				create_ground_rubble(pos, shooter, hv, close, !crater);
@@ -1967,7 +1968,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 		
 		if (get_range_to_mesh(pos, dir, coll_pos, xpos, ypos)) {
 			range = min(range, p2p_dist(pos, coll_pos)-0.1f);
-			if (CBLADE_EXT_PT*ff > (range - 0.8f*cradius)) modify_grass_at(coll_pos, 0.75*cradius, 0, 0, 1); // cut grass
+			if (CBLADE_EXT_PT*ff > (range - 0.8f*cradius)) modify_grass_at(coll_pos, 0.75*cradius, 0, 0, 1, 0); // cut grass
 		}
 		sstate.dpos = max(0.0f, min(CBLADE_EXT_PT*ff, (range - 0.8f*cradius)));
 		pos += dir*sstate.dpos;

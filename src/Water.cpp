@@ -1132,6 +1132,7 @@ int draw_spill_section(int x1, int y1, int x2, int y2, float z1, float z2, float
 
 				if (EROSION_RATE > 0.0) { // erode terrain
 					update_mesh_height(xv[i], yv[i], EROSION_DIST, EROSION_RATE*rate, 4.0, 1);
+					// update grass?
 				}
 			}
 		}

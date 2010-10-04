@@ -771,6 +771,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if (check_border_coll(pos)) status = 1; // keep it airborne
 			
 			if (object_bounce(0, cnorm, 0.0, 0.0, radius)) {
+				if (radius >= LARGE_OBJ_RAD) modify_grass_at(pos, 2.0*radius, 1, 0, 0, 0); // crush grass a lot
 				status = 1;
 				return; // objects bounce on mesh but not on collision objects
 			}
@@ -808,7 +809,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if (radius >= LARGE_OBJ_RAD) check_vert_collision(obj_index, 1, iter); // adds instability though
 			assert(tstep > 0.0);
 			velocity = (pos - old_pos)/tstep;
-			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) modify_grass_at(pos, radius, 1, 0, 0);
+			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) modify_grass_at(pos, radius, 1, 0, 0, 0); // crush grass
 		}
 		else if (val == 1) { // stopped
 			if ((flags & PRECIPITATION) || (otype.flags & IS_PRECIP)) {
