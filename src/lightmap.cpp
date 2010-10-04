@@ -1097,6 +1097,7 @@ void get_check_pts_bounds(point const *const pts, unsigned npts, float mmf[3][2]
 bool has_smoke(point const *const pts, unsigned npts) { // currently only used in draw_shapes.cpp dlist test
 
 	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0;
+	set_fog_coord(0.0); // reset smoke
 	float mmf[3][2];
 	get_check_pts_bounds(pts, npts, mmf);
 	point const camera(get_camera_pos());

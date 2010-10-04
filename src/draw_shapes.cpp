@@ -251,7 +251,6 @@ void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned 
 		glColor4ubv(v.c);
 		v.p.do_glVertex();
 	}
-	if (smoke_enabled) set_fog_coord(0.0);
 	nverts += npts;
 	++nsurfaces;
 }
@@ -842,7 +841,6 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 		}
 		s0 = s_end - step[0]; // advance past merged strips
 		glEnd();
-		if (smoke_enabled) set_fog_coord(0.0);
 	}
 	return lighted;
 }
