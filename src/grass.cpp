@@ -29,10 +29,11 @@ class grass_manager_t {
 		point p;
 		vector3d dir, n;
 		unsigned char c[3];
+		bool shadowed;
 		float w;
 
 		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, unsigned char const *const c_, float w_)
-			: p(p_), dir(dir_), n(n_), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
+			: p(p_), dir(dir_), n(n_), shadowed(0), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
 	};
 
 	vector<grass_t> grass;
@@ -158,9 +159,7 @@ public:
 
 		for (unsigned i = 0; i < grass.size(); ++i) {
 			point const p1(grass[i].p), p2(p1 + grass[i].dir);
-			bool const shadowed(is_pt_shadowed((p1 + p2)*0.5)); // per vertex shadows?
-			grass[i].n.normalize();
-			grass[i].n *= (shadowed ? 0.001 : 1.0); // set normal near zero if shadowed
+			grass[i].shadowed = is_pt_shadowed((p1 + p2)*0.5); // per vertex shadows?
 		}
 		PRINT_TIME("Grass Find Shadows");
 	}
@@ -176,18 +175,18 @@ public:
 		if (start == end) return; // nothing to update
 		assert(start < end && end <= grass.size());
 		vector<vert_norm_tc_color> data;
-		data.reserve(3*(end - start));
+		data.resize(3*(end - start));
 
-		for (unsigned i = start; i < end; ++i) {
-			point const p1(grass[i].p), p2(p1 + grass[i].dir + point(0.0, 0.0, 0.05*grass_length));
-			vector3d const binorm(cross_product(grass[i].dir, grass[i].n).get_norm());
-			vector3d const delta(binorm*(0.5*grass[i].w));
-			//vector3d const norm(grass[i].n);
-			vector3d const norm(plus_z*grass[i].n.mag());
+		for (unsigned i = start, ix = 0; i < end; ++i) {
+			grass_t const &g(grass[i]);
+			point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
+			vector3d const binorm(cross_product(g.dir, g.n).get_norm());
+			vector3d const delta(binorm*(0.5*g.w));
+			vector3d const &norm(g.shadowed ? zero_vector : plus_z); // use grass normal? 2-sided lighting?
 			float const tc_adj(0.1); // border around grass blade texture
-			data.push_back(vert_norm_tc_color(p1-delta, norm, 1.0-tc_adj,     tc_adj, grass[i].c));
-			data.push_back(vert_norm_tc_color(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, grass[i].c));
-			data.push_back(vert_norm_tc_color(p2,       norm,     tc_adj, 0.5,        grass[i].c));
+			data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
+			data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
+			data[ix++].assign(p2,       norm,     tc_adj, 0.5,        g.c);
 		}
 		bind_vbo(vbo);
 
@@ -288,15 +287,16 @@ public:
 						}
 					}
 					if (crush) {
-						vector3d const sn(surface_normals[y][x]);
-						float const length(g.dir.mag()), dx(g.p.x - pos.x), dy(g.p.y - pos.y), atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
+						vector3d const &sn(surface_normals[y][x]);
+						float const length(g.dir.mag());
 
-						if (fabs(dot_product(g.dir/length, sn)) > 0.1) { // update if not flat against the mesh
-							vector3d const new_dir(vector3d(dx, dy, -(sn.x*dx + sn.y*dy)/sn.z).get_norm()); // point away from crusing point
+						if (fabs(dot_product(g.dir, sn)) > 0.1*length) { // update if not flat against the mesh
+							float const dx(g.p.x - pos.x), dy(g.p.y - pos.y), atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
+							vector3d const new_dir(vector3d(dx, dy, -(sn.x*dx + sn.y*dy)/sn.z).get_norm()); // point away from crushing point
 
-							if (dot_product(g.dir/length, new_dir) < 0.95) { // update if not already aligned
+							if (dot_product(g.dir, new_dir) < 0.95*length) { // update if not already aligned
 								g.dir   = (g.dir*(atten_val/length) + new_dir*(1.0 - atten_val)).get_norm()*length;
-								g.n     = (g.n.get_norm()*atten_val + sn*(1.0 - atten_val)).get_norm()*g.n.mag();
+								g.n     = (g.n*atten_val + sn*(1.0 - atten_val)).get_norm();
 								updated = 1;
 							}
 						}
@@ -321,7 +321,7 @@ public:
 	}
 
 	void heal_grass() {
-		// WRITE: fix dir and color for grass that has been crushed or burned using modified
+		// WRITE: fix dir, length, and color for grass that has been crushed or burned using modified
 	}
 
 	void upload_data() {
@@ -377,6 +377,7 @@ public:
 		glDisable(GL_TEXTURE_2D);
 		//set_lighted_sides(1);
 		bind_vbo(0);
+		check_gl_error(40);
 	}
 };
 
