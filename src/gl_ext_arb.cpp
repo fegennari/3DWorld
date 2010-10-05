@@ -1,11 +1,27 @@
 // 3D World - GL EXT/ARB extension interface code
 // by Frank Gennari
 // 4/25/02
+#include "GL/glew.h"
 #include "3DWorld.h"
-//#define GL_GLEXT_PROTOTYPES 1
-#include "GL/glext.h"
+#define GL_GLEXT_PROTOTYPES 1
+#include <GL/glext.h>
 #include "gl_ext_arb.h"
 
+
+void init_glew() {
+
+	GLenum const err(glewInit());
+
+	if (GLEW_OK != err) {
+	  fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+	  assert(0);
+	}
+}
+
+void shader_test() {
+	//glCreateShader(GL_VERTEX_SHADER);
+	//glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
+}
 
 
 // ***************** MULTITEXTURING *****************
@@ -19,23 +35,10 @@ bool multitex_enabled[MAX_MULTITEX] = {0};
 
 #ifdef USE_MULTITEX
 
-PFNGLMULTITEXCOORD1FARBPROC     glMultiTexCoord1fARB     = NULL;
-PFNGLMULTITEXCOORD2FARBPROC     glMultiTexCoord2fARB     = NULL;
-PFNGLMULTITEXCOORD3FARBPROC     glMultiTexCoord3fARB     = NULL;
-PFNGLMULTITEXCOORD4FARBPROC     glMultiTexCoord4fARB     = NULL;
-PFNGLMULTITEXCOORD1FVARBPROC    glMultiTexCoord1fvARB    = NULL;
-PFNGLMULTITEXCOORD2FVARBPROC    glMultiTexCoord2fvARB    = NULL;
-PFNGLMULTITEXCOORD3FVARBPROC    glMultiTexCoord3fvARB    = NULL;
-PFNGLMULTITEXCOORD4FVARBPROC    glMultiTexCoord4fvARB    = NULL;
-PFNGLACTIVETEXTUREARBPROC       glActiveTextureARB       = NULL;
-PFNGLCLIENTACTIVETEXTUREARBPROC glClientActiveTextureARB = NULL;
-
-
 void set_multitex(unsigned tu_id) {
 
 	static bool inited(0);
 	if (!inited) setup_multitexture();
-	if (!glActiveTextureARB) return;
 	inited = 1;
 	assert(tu_id < MAX_MULTITEX); // Note: Assumes textures are defined sequentially
 	multitex_enabled[tu_id] = 1;
@@ -53,7 +56,6 @@ void select_multitex(int id, unsigned tu_id) {
 
 void disable_multitex(unsigned tu_id, bool reset) {
 
-	if (!glActiveTextureARB) return;
 	assert(tu_id < max_used_multitex);
 	multitex_enabled[tu_id] = 0;
 	if ((tu_id+1) == max_used_multitex) --max_used_multitex;
@@ -65,8 +67,6 @@ void disable_multitex(unsigned tu_id, bool reset) {
 
 void disable_multitex_a() {
 
-	if (!glActiveTextureARB) return;
-
 	for (unsigned i = 0; i < max_used_multitex; ++i) {
 		if (multitex_enabled[i]) disable_multitex(i, 0);
 	}
@@ -77,7 +77,6 @@ void disable_multitex_a() {
 
 void multitex_coord2f(GLfloat s, GLfloat t, unsigned tu_id) {
 
-	if (!glMultiTexCoord2fARB) return;
 	assert(tu_id < max_used_multitex);
 	glMultiTexCoord2fARB((GL_TEXTURE0_ARB + tu_id), s, t);
 	//glTexCoord2f(s, t);
@@ -94,25 +93,17 @@ void multitex_coord2f_a(GLfloat s, GLfloat t) {
 
 void setup_multitexture() { // Windows specific
 
-	if (glMultiTexCoord2fARB) return; // already setup
-
-	if (!has_extension("GL_ARB_multitexture")) {
+	if (!glMultiTexCoord2fARB) {
 		cout << "*** Can't find GL_ARB_multitexture extension ***" << endl;
 		assert(0);
 	}
-	glActiveTextureARB    = (PFNGLACTIVETEXTUREARBPROC)    wglGetProcAddress("glActiveTextureARB");
-	glMultiTexCoord2fARB  = (PFNGLMULTITEXCOORD2FARBPROC)  wglGetProcAddress("glMultiTexCoord2fARB");
-	glMultiTexCoord2fvARB = (PFNGLMULTITEXCOORD2FVARBPROC) wglGetProcAddress("glMultiTexCoord2fvARB");
-	assert(glActiveTextureARB);
-	assert(glMultiTexCoord2fARB);
-	assert(glMultiTexCoord2fvARB);
 	//glClientActiveTextureARB(GL_TEXTURE0_ARB);
 	//glTexCoordPointer(2, GL_FLOAT, 0, tp0);
 	//glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
 
-bool has_multitex() {return (glMultiTexCoord2fARB != NULL);}
+bool has_multitex() {return 1;}
 
 #else
 
@@ -134,24 +125,18 @@ bool has_multitex() {return 0;}
 
 #ifdef USE_FOG_COORD_EXT
 
-PFNGLFOGCOORDFEXTPROC glFogCoordfEXT = NULL;
-
 
 void setup_fog_coord_ext() {
 
-	if (glFogCoordfEXT) return; // already setup
-
-	if (!has_extension("EXT_fog_coord")) {
+	if (!glFogCoordfEXT) {
 		cout << "*** Can't find EXT_fog_coord extension ***" << endl;
 		assert(0);
 	}
-	glFogCoordfEXT = (PFNGLFOGCOORDFEXTPROC) wglGetProcAddress("glFogCoordfEXT");
-	assert(glFogCoordfEXT);
 }
 
 
 void set_fog_coord(GLfloat val) {
-	if (glFogCoordfEXT) glFogCoordfEXT(val);
+	glFogCoordfEXT(val);
 }
 
 void enable_fog_coord() {
@@ -181,37 +166,24 @@ bool has_fog_coord() {return 0;}
 
 #ifdef USE_VBOS
 
-PFNGLGENBUFFERSARBPROC    glGenBuffersARB    = NULL;
-PFNGLDELETEBUFFERSARBPROC glDeleteBuffersARB = NULL;
-PFNGLBINDBUFFERARBPROC    glBindBufferARB    = NULL;
-PFNGLBUFFERDATAARBPROC    glBufferDataARB    = NULL;
-PFNGLBUFFERSUBDATAARBPROC glBufferSubDataARB = NULL;
-
 
 bool setup_gen_buffers_arb() {
 
-	static bool setup(0);
-	if (setup) return (glGenBuffersARB != NULL); // already setup
-	setup = 1;
-	glGenBuffersARB    = (PFNGLGENBUFFERSARBPROC)    wglGetProcAddress("glGenBuffersARB");
+	static int retval(2);
 	
-	if (!glGenBuffersARB) {
-		cout << "*** glGenBuffersARB is not supported ***" << endl;
-		return 0;
+	if (retval == 2) { // not yet setup
+		if (!glGenBuffersARB) {
+			cout << "*** glGenBuffersARB is not supported ***" << endl;
+			retval = 0;
+		}
+		else {
+			retval = 1;
+		}
 	}
-	glDeleteBuffersARB = (PFNGLDELETEBUFFERSARBPROC) wglGetProcAddress("glDeleteBuffersARB");
-	assert(glDeleteBuffersARB);
-	glBindBufferARB    = (PFNGLBINDBUFFERARBPROC)    wglGetProcAddress("glBindBufferARB");
-	assert(glBindBufferARB);
-	glBufferDataARB    = (PFNGLBUFFERDATAARBPROC)    wglGetProcAddress("glBufferDataARB");
-	assert(glBufferDataARB);
-	glBufferSubDataARB = (PFNGLBUFFERSUBDATAARBPROC) wglGetProcAddress("glBufferSubDataARB");
-	assert(glBufferSubDataARB);
-	return 1;
+	return (retval != 0);
 }
 
 unsigned create_vbo() {
-	assert(glGenBuffersARB);
 	unsigned id;
 	glGenBuffersARB(1, &id);
 	return id;
@@ -220,24 +192,20 @@ unsigned create_vbo() {
 int get_buffer_target(bool is_index) {return (is_index ? GL_ELEMENT_ARRAY_BUFFER_ARB : GL_ARRAY_BUFFER_ARB);}
 
 void bind_vbo(unsigned id, bool is_index) {
-	assert(glBindBufferARB);
 	glBindBufferARB(get_buffer_target(is_index), id);
 }
 
 void delete_vbo(unsigned id) {
 	if (id == 0) return;
-	assert(glDeleteBuffersARB);
 	glDeleteBuffersARB(1, &id);
 }
 
 void upload_vbo_data(void const *const data, size_t size, bool is_index) {
 	// hard coded for drawing of static data
-	assert(glBufferDataARB);
 	glBufferDataARB(get_buffer_target(is_index), size, data, GL_STATIC_DRAW_ARB);
 }
 
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index) {
-	assert(glBufferSubDataARB);
 	glBufferSubDataARB(get_buffer_target(is_index), offset, size, data);
 }
 

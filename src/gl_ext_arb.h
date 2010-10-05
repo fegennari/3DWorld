@@ -18,6 +18,7 @@
 #define SAMPLE_COVERAGE_INVERT_ARB   0x80AB
 
 
+void init_glew();
 
 
 // multitexture prototypes

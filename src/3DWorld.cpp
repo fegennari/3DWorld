@@ -1700,6 +1700,8 @@ int main(int argc, char** argv) {
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;
 	cout << "."; cout.flush();
+	init_glew();
+	cout << "."; cout.flush();
 	init_window();
 	cout << ".GL Initialized." << endl;
 

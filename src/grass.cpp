@@ -312,8 +312,7 @@ public:
 					}
 				} // for i
 				if (min_up > max_up) continue; // nothing updated
-				// FIXME: only upload modified once per frame?
-				modified[ix] = 1;
+				modified[ix] = 1; // usually few duplicates each frame, except for cluster grenade explosions
 				if (vbo_valid) upload_data_to_vbo(min_up, max_up+1);
 				//data_valid = 0;
 			} // for x
