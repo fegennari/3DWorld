@@ -22,7 +22,7 @@ extern int display_framerate, mesh_type, is_cloudy, recreated, timer_a, stencil_
 extern int displayed, resolution, show_framerate, pause_frame, show_fog, camera_view, camera_mode, camera_surf_collide;
 extern int camera_coll_id, display_mode, frame_counter, ocean_set, island, map_x, map_y, tree_mode;
 extern float temperature, water_plane_z, sm_green_int, FOG_DIST1, FOG_DIST_W, FOG_DIST_UW0, FOG_DIST_UW3;
-extern float zcenter, leaf_color_coherence, tree_color_coherence, sun_radius, moon_radius, earth_radius, map_zoom, max_light[];
+extern float zcenter, leaf_color_coherence, tree_color_coherence, sun_radius, moon_radius, earth_radius, map_zoom;
 extern point ocean;
 extern vector3d wind;
 extern colorRGBA leaf_base_color;

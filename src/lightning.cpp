@@ -307,8 +307,6 @@ void do_lightning_damage(point &pos, float damage, int hit_water) {
 
 void lightning::draw() const {
 
-	//glLightfv(GL_LIGHT0, GL_DIFFUSE, max_light);
-	//glLightfv(GL_LIGHT1, GL_DIFFUSE, max_light);
 	//glEnable(GL_LIGHT2);
 	float const lscale(LITNING_LINEAR_I);
 	bool const add_light(!litning_dynamic && animate2), smooth_lightning(0);

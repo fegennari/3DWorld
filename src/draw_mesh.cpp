@@ -46,7 +46,7 @@ extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
-extern float max_light[], h_dirt[];
+extern float h_dirt[];
 
 
 void draw_sides_and_bottom();

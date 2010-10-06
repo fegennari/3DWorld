@@ -8,6 +8,17 @@
 #include "physics_objects.h"
 
 
+/* GL_LIGHT<N>:
+0: Sun, Universe Star
+1: Moon, Universe Ambient (universe mode)
+2: Lightning, Uobjs
+3: Universe Ambient (combined_gu), Uobjs
+4: Moon and Sky (local), Uobjs
+5: Uobjs
+6: Ship Engines, Uobjs
+7: Ship Engines */
+
+
 float const DSCALE             = 0.45;
 float const ASCALE             = 0.35;
 bool  const TIMETEST           = (GLOBAL_TIMETEST || 0);

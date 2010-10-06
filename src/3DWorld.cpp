@@ -89,7 +89,6 @@ vector<tree> t_trees;
 colorRGBA bkg_color;
 set<unsigned char> keys, keyset;
 char game_mode_string[256] = {"640x480:32@85"};
-float max_light[] = {1.0, 1.0, 1.0, 1.0};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 
 // camera variables

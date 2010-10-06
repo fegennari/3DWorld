@@ -354,6 +354,9 @@ public:
 		}
 		check_for_updates();
 
+		// check for dynamic light sources
+		// *** WRITE ***
+
 		// draw the grass
 		assert(vbo_valid && vbo > 0);
 		bind_vbo(vbo);

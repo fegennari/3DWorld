@@ -26,7 +26,7 @@ float gauss_rand_arr[N_RAND_DIST+2];
 
 
 extern int star_init, begin_motion, animate2;
-extern float max_light[], zmax_est, zmax, ztop;
+extern float zmax_est, zmax, ztop;
 extern int coll_id[];
 extern point leaf_points[];
 extern obj_group obj_groups[];
