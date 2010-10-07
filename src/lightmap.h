@@ -46,10 +46,10 @@ public:
 	light_source() {}
 	light_source(float sz, point const &p, colorRGBA const &c, bool id, vector3d const &d=plus_z, float bw=1.0, float ri=0.0);
 	void calc_cent();
-	colorRGBA get_color() const {return color;}
-	float get_radius()    const {return radius;}
-	float get_r_inner()   const {return r_inner;}
-	point get_center()    const {return center;}
+	colorRGBA const &get_color() const {return color;}
+	float get_radius()           const {return radius;}
+	float get_r_inner()          const {return r_inner;}
+	point const &get_center()    const {return center;}
 	CELL_LOC_T const *get_cent() const {return cent;}
 	float get_intensity_at(point const &pos) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;

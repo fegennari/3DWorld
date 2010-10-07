@@ -6,7 +6,13 @@
 #include "mesh.h"
 #include "physics_objects.h"
 #include "textures_3dw.h"
+#include "lightmap.h"
 #include "gl_ext_arb.h"
+
+
+int      const START_LIGHT = GL_LIGHT3;
+int      const END_LIGHT   = GL_LIGHT7 + 1;
+unsigned const MAX_LIGHTS  = unsigned(END_LIGHT - START_LIGHT);
 
 
 bool grass_enabled(1);
@@ -18,6 +24,7 @@ extern float vegetation, zmin, zmax, h_sand[], h_dirt[];
 extern vector3d wind;
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
+extern vector<light_source> dl_sources;
 
 
 bool snow_enabled();
@@ -38,8 +45,8 @@ class grass_manager_t {
 
 	vector<grass_t> grass;
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
-	vector<unsigned char> modified;
-	unsigned vbo;
+	vector<unsigned char> modified; // set, but unused
+	unsigned vbo, num_dlights;
 	bool vbo_valid, shadows_valid, data_valid;
 	int last_cobj;
 	int last_light;
@@ -50,7 +57,7 @@ class grass_manager_t {
 	}
 
 public:
-	grass_manager_t() : vbo(0), vbo_valid(0), shadows_valid(0), data_valid(0), last_light(-1), last_lpos(all_zeros) {}
+	grass_manager_t() : vbo(0), num_dlights(0), vbo_valid(0), shadows_valid(0), data_valid(0), last_light(-1), last_lpos(all_zeros) {}
 	~grass_manager_t() {clear();}
 	size_t size() const {return grass.size() ;} // 2 points per grass blade
 	bool empty()  const {return grass.empty();}
@@ -250,6 +257,8 @@ public:
 	}
 
 	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh) {
+		if (burn && is_underwater(pos)) burn = 0;
+		if (!burn && !crush && !cut && !update_mh) return; // nothing left to do
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
@@ -258,6 +267,7 @@ public:
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
 				if (point_outside_mesh(x, y)) continue;
+				bool const underwater(burn && has_water(x, y) && mesh_height[y][x] <= water_matrix[y][x]);
 				unsigned start, end;
 				unsigned const ix(get_start_and_end(x, y, start, end));
 				if (start == end) continue; // no grass at this location
@@ -301,7 +311,7 @@ public:
 							}
 						}
 					}
-					if (burn) {
+					if (burn && !underwater) {
 						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
 						UNROLL_3X(updated |= (g.c[i_] > 0);)
 						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_]);)}
@@ -339,6 +349,43 @@ public:
 		if (!data_valid   ) upload_data();
 	}
 
+	void enable_dynamic_lights() {
+		point const camera(get_camera_pos());
+		vector<pair<float, unsigned> > vis_lights;
+
+		for (unsigned i = 0; i < dl_sources.size(); ++i) {
+			light_source const &ls(dl_sources[i]);
+			float const radius(ls.get_radius());
+			if (radius == 0.0) continue; // not handling zero radius lights yet
+			if (!sphere_in_camera_view(ls.get_center(), radius, 0)) continue;
+			float const weight(p2p_dist(ls.get_center(), camera)/radius);
+			vis_lights.push_back(make_pair(weight, i));
+		}
+		sort(vis_lights.begin(), vis_lights.end());
+		num_dlights = min(vis_lights.size(), MAX_LIGHTS);
+
+		for (unsigned i = 0; i < num_dlights; ++i) {
+			int const gl_light(START_LIGHT+i);
+			light_source const &ls(dl_sources[vis_lights[i].second]);
+			float udiffuse[4] = {0}; // diffuse = 0 because we don't have correct normals
+			set_colors_and_enable_light(gl_light, (float *)(&ls.get_color()), udiffuse);
+			glLightf(gl_light, GL_CONSTANT_ATTENUATION,  1.0);
+			glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
+			glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 6.0/(ls.get_radius()*ls.get_radius()));
+			set_gl_light_pos(gl_light, ls.get_center(), 1.0); // point light source position
+		}
+		for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {
+			glEnable(i);
+		}
+	}
+
+	void disable_dynamic_lights() {
+		for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {
+			glDisable(i);
+		}
+		num_dlights = 0;
+	}
+
 	void draw() {
 		if (empty()) return;
 
@@ -355,7 +402,7 @@ public:
 		check_for_updates();
 
 		// check for dynamic light sources
-		// *** WRITE ***
+		enable_dynamic_lights();
 
 		// draw the grass
 		assert(vbo_valid && vbo > 0);
@@ -378,6 +425,7 @@ public:
 		glDisable(GL_ALPHA_TEST);
 		glDisable(GL_TEXTURE_2D);
 		//set_lighted_sides(1);
+		disable_dynamic_lights();
 		bind_vbo(0);
 		check_gl_error(40);
 	}

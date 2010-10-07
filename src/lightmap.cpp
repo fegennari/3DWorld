@@ -63,7 +63,7 @@ vector<lmcell> vldata_alloc;
 lmcell ***vlmap = NULL; // y, x, z
 dls_cell **ldynamic[2] = {NULL, NULL};
 vector<bool> x_used, y_used; // vector<char>?
-vector<light_source> light_sources, dl_sources, dl_sources2;
+vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic {cur frame, next frame}
 flow_cache_e flow_cache[FLOW_CACHE_SZ];
 
 
