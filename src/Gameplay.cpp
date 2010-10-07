@@ -1917,7 +1917,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	float const dscale((shooter >= CAMERA_ID) ? sstate.get_damage_scale() : 1.0);
 
 	if (closest < 0) {
-		if (intersect == 1 && !coll) surface_damage[ypos][xpos] += dscale;
+		if (intersect == 1 && !coll) {
+			surface_damage[ypos][xpos] += dscale;
+			if (is_laser) modify_grass_at(res_pos, 0.25*HALF_DXY, 0, 1, 0, 0); // burn
+		}
 		return res_pos;
 	}
 	if (closest_t != SMILEY && closest_t != CAMERA) {
