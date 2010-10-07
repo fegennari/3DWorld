@@ -1350,8 +1350,9 @@ void fire::apply_physics(unsigned i) {
 		gen_smoke(pos + point(0.0, 0.0, radius));
 		return;
 	}
-	surface_damage[ypos][xpos] += 20.0*radius*heat;
-
+	if (status != 2) { // near mesh
+		surface_damage[ypos][xpos] += 20.0*radius*heat;
+	}
 	if (radius > 0.04) { // split into smaller fires
 		for (unsigned i = 0; i < 2; ++i) {
 			pos2[i] = pos[i] + rand_uniform(-0.05, 0.05);
