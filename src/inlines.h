@@ -550,9 +550,7 @@ inline int get_region(point const &v, float const d[3][2]) {
 
 inline void blend_color(colorRGBA &C, const colorRGBA &A, const colorRGBA &B, float mix, int calc_alpha) {
 
-	C[0] = mix*A[0] + (1.0 - mix)*B[0];
-	C[1] = mix*A[1] + (1.0 - mix)*B[1];
-	C[2] = mix*A[2] + (1.0 - mix)*B[2];
+	UNROLL_3X(C[i_] = mix*A[i_] + (1.0 - mix)*B[i_];);
 	if (calc_alpha) C[3] = mix*A[3] + (1.0 - mix)*B[3];
 }
 

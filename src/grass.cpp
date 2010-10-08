@@ -39,6 +39,7 @@ class grass_manager_t {
 		bool shadowed;
 		float w;
 
+		grass_t() {} // optimization
 		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, unsigned char const *const c_, float w_)
 			: p(p_), dir(dir_), n(n_), shadowed(0), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
 	};
@@ -121,6 +122,7 @@ public:
 			}
 		}
 		mesh_to_grass_map[XY_MULT_SIZE] = grass.size();
+		remove_excess_cap(grass);
 		PRINT_TIME("Grass Generation");
 	}
 
@@ -336,7 +338,6 @@ public:
 	void upload_data() {
 		if (empty()) return;
 		RESET_TIME;
-		// remove excess capacity from grass?
 		upload_data_to_vbo(0, grass.size());
 		data_valid = 1;
 		PRINT_TIME("Grass Upload VBO");

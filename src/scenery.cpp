@@ -640,15 +640,18 @@ public:
 		float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
 		unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
 		float rdeg(30.0);
+		points.reserve(4*nlevels*nrings);
 
 		for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
+			float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
+			float const z((j + 3.0)*height/(nlevels + 4.0));
+			vector3d const scale(sz*wscale, sz*wscale, sz);
+
 			for (unsigned k = 0; k < nrings; ++k) {
-				float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
-				float const theta(TWO_PI*(3.3*j + k/5.0) + theta0);
-				float const z((j + 3.0)*height/(nlevels + 4.0));
+				float const theta(TWO_PI*(3.3*j + 0.2*k) + theta0);
 				int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
 				rdeg += 0.01*(val - 150);
-				add_rotated_quad_pts(points, theta, rdeg/45.0, z, pos, vector3d(sz*wscale, sz*wscale, sz));
+				add_rotated_quad_pts(points, theta, rdeg/45.0, z, pos, scale);
 			}
 		}
 	}
@@ -861,7 +864,6 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 		disable_blend();
 		glDisable(GL_TEXTURE_2D);
 	}
-	// *** draw grass? ***
 }
 
 

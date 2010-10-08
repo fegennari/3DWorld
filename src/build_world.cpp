@@ -776,12 +776,7 @@ void coll_obj::check_if_cube() {
 		}
 	}
 	type = COLL_CUBE;
-
-	for (unsigned i = 0; i < 3; ++i) {
-		for (unsigned j = 0; j < 2; ++j) {
-			d[i][j] = bb[i][j];
-		}
-	}
+	copy_cube_d(bb, d);
 	d[zdim][0] -= 0.5*thickness;
 	d[zdim][1] += 0.5*thickness;
 }

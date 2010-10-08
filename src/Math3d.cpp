@@ -1039,7 +1039,7 @@ void add_rotated_quad_pts(vector<point> &points, float theta, float rd, float z,
 }
 
 
-// n is already normalized
+// n is already normalized (unused)
 void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout) { // project vector v onto plane with normal n
 
 	double const m[3][3] = {

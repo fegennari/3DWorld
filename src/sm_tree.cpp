@@ -299,11 +299,13 @@ void small_tree::calc_points() {
 	points.reserve(4*nlevels*nrings);
 
 	for (unsigned j = 0; j < nlevels; ++j) {
+		float const sz(0.5*(height0 + 0.03/ms)*((nlevels - j - 0.4)/(float)nlevels));
+		float const z((j + 1.8)*height0/(nlevels + 2.8) - rd*sz);
+		vector3d const scale(sz, sz, sz);
+
 		for (unsigned k = 0; k < nrings; ++k) {
-			float const sz(0.5*(height0 + 0.03/ms)*((nlevels - j - 0.4)/(float)nlevels));
 			float const theta(TWO_PI*(3.3*j + k/(float)nrings) + theta0);
-			float const z((j /*+ k/(2.0*nrings)*/ + 1.8)*height0/(nlevels + 2.8) - rd*sz);
-			add_rotated_quad_pts(points, theta, rd, z, center, vector3d(sz, sz, sz));
+			add_rotated_quad_pts(points, theta, rd, z, center, scale);
 		}
 	}
 }
