@@ -36,7 +36,7 @@ tree_deadness -1.0
 grass_density 150
 grass_size 0.02 0.002
 
-unlimited_weapons 0
+unlimited_weapons 1
 
 left_handed 0
 self_damage 0.5

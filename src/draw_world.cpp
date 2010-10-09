@@ -338,9 +338,10 @@ void pt_line_drawer::draw() const {
 }
 
 
-void vert_norm_tc_color::set_vbo_arrays() {
+void vert_norm_tc_color::set_vbo_arrays(unsigned stride_mult) {
 
-	unsigned const stride(sizeof(vert_norm_tc_color));
+	assert(stride_mult > 0);
+	unsigned const stride(stride_mult*sizeof(vert_norm_tc_color));
 	glVertexPointer  (3, GL_FLOAT,         stride, (void *)(0));
 	glNormalPointer  (   GL_FLOAT,         stride, (void *)(sizeof(point)));
 	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(point) + sizeof(vector3d)));

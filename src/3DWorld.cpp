@@ -1704,6 +1704,7 @@ int main(int argc, char** argv) {
 	cout << "."; cout.flush();
 	init_window();
 	cout << ".GL Initialized." << endl;
+	//glutFullScreen();
 
 	if (srand_param == 1) {
 		rs = glutGet(GLUT_ELAPSED_TIME);

@@ -682,6 +682,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 		leaves_changed = 1;
 	}
 	assert(leaf_data.size() >= 4*leaves.size());
+	bool const draw_as_points(0); // testing
 
 	if (use_vbos) {
 		if (leaf_vbo == 0) {
@@ -695,13 +696,14 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 			upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride);
 			leaves_changed = 0;
 		}
-		vert_norm_tc_color::set_vbo_arrays();
+		vert_norm_tc_color::set_vbo_arrays(draw_as_points ? 4 : 1);
 	}
 	else {
-		glVertexPointer  (3, GL_FLOAT,         leaf_stride, &(leaf_data.front().v));
-		glNormalPointer  (   GL_FLOAT,         leaf_stride, &(leaf_data.front().n));
-		glTexCoordPointer(2, GL_FLOAT,         leaf_stride, &(leaf_data.front().t));
-		glColorPointer   (3, GL_UNSIGNED_BYTE, leaf_stride, &(leaf_data.front().c));
+		unsigned const stride((draw_as_points ? 4 : 1)*leaf_stride);
+		glVertexPointer  (3, GL_FLOAT,         stride, &(leaf_data.front().v));
+		glNormalPointer  (   GL_FLOAT,         stride, &(leaf_data.front().n));
+		glTexCoordPointer(2, GL_FLOAT,         stride, &(leaf_data.front().t));
+		glColorPointer   (3, GL_UNSIGNED_BYTE, stride, &(leaf_data.front().c));
 	}
 	if (draw_model == 0) { // solid fill
 		enable_blend();
@@ -711,13 +713,13 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 	set_lighted_sides(2);
 	set_specular(0.1, 10.0);
 	set_fill_mode();
-	select_texture(tree_types[type].leaf_tex);
+	if (!draw_as_points) select_texture(tree_types[type].leaf_tex); // what about texture color mod?
 	glPushMatrix();
 	translate_to(sphere_center);
 	uniform_scale(scale);
 	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
-	glDrawArrays(GL_QUADS, 0, 4*nl);
+	glDrawArrays((draw_as_points ? GL_POINTS : GL_QUADS), 0, nl);
 	glPopMatrix();
 	glDisable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
