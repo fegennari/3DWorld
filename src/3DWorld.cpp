@@ -1694,7 +1694,8 @@ int main(int argc, char** argv) {
 	cout << "."; cout.flush();
     glutInit(&argc, argv);
 	cout << "."; cout.flush();
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL /*| GLUT_MULTISAMPLE*/);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
+	//glutInitDisplayString("rgb double depth>=16 samples>=4");
 	cout << "."; cout.flush();
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;

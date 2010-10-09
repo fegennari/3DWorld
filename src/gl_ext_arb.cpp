@@ -16,6 +16,7 @@ void init_glew() {
 	  fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
 	  assert(0);
 	}
+	glEnable(GL_MULTISAMPLE_ARB);
 }
 
 void shader_test() {
