@@ -18,7 +18,7 @@ camera_height 0.0
 tree_size 1.0
 shadow_detail 6
 tree_coll_level 3
-default_ground_tex 0
+#default_ground_tex 0
 # mesh_seed 1
 
 left_handed 0
@@ -37,13 +37,13 @@ num_dodgeballs 3
 mesh_size  128 128 64
 scene_size 4.0 4.0 4.0
 
-window_width 1280
-window_height 1024
+window_width 1920
+window_height 1200
 color_bit_depth 32
 refresh_rate 75
 
 state_file state.txt
-coll_obj_file COLL_OBJS_River.TXT
+coll_obj_file coll_objs/COLL_OBJS_River.TXT
 # mesh_file mesh.txt 1.0 0.0
 # mh_filename_raw heightmap.raw 1.0 0.0
 mh_filename_bmp heightmap_river.bmp 12.0 -1.3

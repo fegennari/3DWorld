@@ -552,12 +552,10 @@ struct valley_w { // size = 8
 };
 
 
-struct surf_adv { // size = 8
+struct surf_adv { // size = 4
 
 	short x, y;
-	float dz;
-
-	void assign(int x_, int y_, float dz_) {x = x_; y = y_; dz = dz_;}
+	void assign(int x_, int y_) {x = x_; y = y_;}
 };
 
 

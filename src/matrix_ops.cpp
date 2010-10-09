@@ -355,17 +355,17 @@ void update_motion_zmin_matrices(int xpos, int ypos) {
 				new_x = nx;
 				new_y = ny;
 			}
-			else if ((dx > 0 || dy > 0) && new_z == old_z && this_z == new_z) {
+			else if (dx == 1 && dy == 1 && new_z == old_z && this_z == new_z) { // NE only
 				xlevel = nx;
 				ylevel = ny;
 			}
 		}
 	}
 	if (new_z < old_z) {
-		w_motion_matrix[ypos][xpos].assign(new_x, new_y, (old_z - new_z)); // was new_x
+		w_motion_matrix[ypos][xpos].assign(new_x, new_y); // was new_x
 	}
 	else { // force flat areas to still have flow: default flow is NE
-		w_motion_matrix[ypos][xpos].assign(xlevel, ylevel, 0.0);
+		w_motion_matrix[ypos][xpos].assign(xlevel, ylevel);
 	}
 	float z_min(zmin);
 
