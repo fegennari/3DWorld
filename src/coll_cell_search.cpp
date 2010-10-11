@@ -391,8 +391,12 @@ public:
 		: base_intersector(pos1_, pos2_), cpos(cpos_), cnorm(cnorm_), cindex(cindex_), test_alpha(test_alpha_),
 		ignore_cobj(ignore_cobj_), splash_val(splash_val_), tmin(1.0), splash(0) {cindex = -1;}
 
-	bool test_cell(coll_cell const &cell, int xpos, int ypos) {
-		if (splash_val == 0.0 || splash)     return 1;//(z1 <= cell.zmax && z2 >= cell.zmin);
+	bool test_cell(coll_cell const &cell, int xpos, int ypos) { // always returns 1
+		if (splash_val == 0.0 || splash) return 1;//(z1 <= cell.zmax && z2 >= cell.zmin);
+		return test_cell_splash(xpos, ypos);
+	}
+
+	bool test_cell_splash(int xpos, int ypos) {
 		if (!mesh_is_underwater(xpos, ypos)) return 1;
 		float const wmz(water_matrix[ypos][xpos]);
 		if ((pos1.z < wmz) ^ (pos2.z > wmz)) return 1;
@@ -637,7 +641,7 @@ public:
 			first  = 0;
 			last_x = xpos;
 			last_y = ypos;
-		}
+		} // for k
 		if (do_bnd_test) { // inefficient, but what can we do? take bounds of all cube corner points?
 			int const x1(max(0,           (bnds[0][0] - int(radius/DX_VAL))));
 			int const y1(max(0,           (bnds[1][0] - int(radius/DY_VAL))));
