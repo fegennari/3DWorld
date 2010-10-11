@@ -20,6 +20,136 @@ extern float czmin, czmax, zmin, zbottom, water_plane_z;
 extern vector<coll_obj> coll_objects;
 
 
+// *** Test BSP Tree of Static Collision Objects ***
+
+class cobj_bsp_tree {
+	struct bsp_node {
+		float d[3][2]; // bbox
+		unsigned b[3]; // {left, right, center} branches
+		unsigned start, end; // index into cixs for leaves
+
+		bsp_node() : start(0), end(0) {
+			UNROLL_3X(d[i_][0] = d[i_][1] = 0.0;)
+			UNROLL_3X(b[i_] = 0;) // kids of 0 means empty kids
+		}
+	};
+
+	struct coll_state {
+		point const &p1, p2;
+		point &cpos;
+		vector3d &cnorm;
+		int &cindex;
+		int ignore_cobj;
+		float tmin, tmax;
+
+		coll_state(point const &p1_, point const &p2_, point &cp, vector3d &cn, int &ci, int ic)
+			: p1(p1_), p2(p2_), cpos(cp), cnorm(cn), cindex(ci), ignore_cobj(ic), tmin(0.0), tmax(1.0) {}
+		void update_cpos() {cpos = p1 + (p2 - p1)*tmax;}
+	};
+
+	vector<coll_obj> const &cobjs;
+	vector<bsp_node> nodes;
+	vector<unsigned> cixs;
+	unsigned root_node;
+
+	inline coll_obj const &get_cobj(unsigned ix) const {
+		assert(ix < cixs.size() && cixs[ix] < cobjs.size());
+		return cobjs[cixs[ix]];
+	}
+
+	// Note: start by adding all cobjs to [start, end], then calc bbox, then split into branches and leaves
+	void calc_node_bbox(bsp_node &n) const {
+		assert(n.start < n.end);
+
+		for (unsigned i = n.start; i < n.end; ++i) { // check contained
+			if (i == 0) {
+				copy_cube_d(get_cobj(i).d, n.d);
+			}
+			else {
+				UNROLL_3X(n.d[i_][0] = min(n.d[i_][0], get_cobj(i).d[i_][0]);)
+				UNROLL_3X(n.d[i_][1] = max(n.d[i_][1], get_cobj(i).d[i_][1]);)
+			}
+		}
+	}
+
+	void build_tree(unsigned nix) {
+		assert(nix < nodes.size());
+		bsp_node &n(nodes[nix]);
+		assert(n.start < n.end);
+		if ((n.end - n.start) == 1) return; // base case, one kid
+		// write
+	}
+
+	bool test_cobj(point const &p1, point const &p2, coll_state &state, unsigned ix) const {
+		float t(0.0);
+		bool const ret(get_cobj(ix).line_int_exact(p1, p2, t, state.cnorm, state.tmin, state.tmax));
+		if (ret) state.tmax = t;
+		return ret;
+	}
+
+	bool search_tree(point p1, point p2, coll_state &state, unsigned nix) const {
+		assert(nix < nodes.size());
+		bsp_node const &n(nodes[nix]);
+		assert(n.start < n.end);
+		// write - clip p1 and p2
+		bool ret(0);
+
+		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+			ret |= test_cobj(p1, p2, state, i);
+		}
+
+		// FIXME: interate in correct order based on (p2 - p1)
+		for (unsigned i = 0; i < 3; ++i) { // check branches
+			if (n.b[i] == 0) continue; // empty branch
+			// write - bbox test
+			ret |= search_tree(p1, p2, state, n.b[i]);
+		}
+		return ret;
+	}
+
+public:
+	cobj_bsp_tree(vector<coll_obj> const &cobjs_) : cobjs(cobjs_), root_node(0) {}
+
+	void clear() {
+		cixs.clear();
+		nodes.clear();
+		root_node = 0;
+	}
+
+	void add_cobjs() {
+		RESET_TIME;
+		clear();
+		cixs.reserve(cobjs.size()); // ???
+
+		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
+			if (i->status != COLL_STATIC) continue;
+			//if (i->counter == cobj_counter) continue;
+			cixs.push_back(i - cobjs.begin());
+		}
+		if (cixs.empty()) return; // nothing to be done
+		bsp_node n;
+		n.start = 0;
+		n.end   = cixs.size();
+		calc_node_bbox(n);
+		root_node = nodes.size();
+		nodes.push_back(n);
+		build_tree(root_node);
+		PRINT_TIME("Cobj BSP Tree Create");
+	}
+
+	bool check_coll_line_exact(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj) const {
+		if (nodes.empty()) return 0;
+		coll_state state(p1, p2, cpos, cnorm, cindex, ignore_cobj);
+		bool const ret(search_tree(p1, p2, state, root_node));
+		if (ret) state.update_cpos();
+		return ret;
+	}
+};
+
+
+// *** End Test Code ***
+
+
 
 // false intersections are OK, used only for shadow calculations and such things
 // cobjs == NULL runs in a special mode
