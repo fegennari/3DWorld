@@ -92,9 +92,9 @@ bool ship_cube::sphere_intersect(point const &sc, float sr, point const &p_last,
 
 	if (calc_int) {
 		unsigned cdir; // unused
-		return sphere_cube_intersect(sc, sr, d, p_last, p_int, norm, cdir, 1);
+		return sphere_cube_intersect(sc, sr, *this, p_last, p_int, norm, cdir, 1);
 	}
-	return sphere_cube_intersect(sc, sr, d);
+	return sphere_cube_intersect(sc, sr, *this);
 }
 
 void ship_cube::translate(point const &p) {
@@ -108,13 +108,8 @@ void ship_cube::translate(point const &p) {
 
 void ship_cube::get_bounding_sphere(point &c, float &r) const {
 	
-	r = 0.0;
-
-	for (unsigned i = 0; i < 3; ++i) {
-		c[i] = 0.5*(d[i][0] + d[i][1]);
-		r   += (c[i] - d[i][0])*(c[i] - d[i][0]);
-	}
-	r = sqrt(r);
+	c = cube_t::get_center();
+	r = get_bsphere_radius();
 }
 
 void ship_cube::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv,
@@ -123,7 +118,7 @@ void ship_cube::draw_svol(point const &tpos, float cur_radius, point const &spos
 	assert(obj);
 	point spos_xf(spos);
 	obj->xform_point(spos_xf);
-	vector3d const shadow_dir((point(d[0][0], d[1][0], d[2][0]) + point(d[0][1], d[1][1], d[2][1]))*0.5 - spos_xf);
+	vector3d const shadow_dir(cube_t::get_center() - spos_xf);
 	upos_point_type pts[4];
 
 	for (unsigned dim = 0; dim < 3; ++dim) {

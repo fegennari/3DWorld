@@ -288,6 +288,69 @@ vector3d const zero_vector(0, 0, 0);
 vector3d const all_ones(1, 1, 1);
 
 
+struct cube_t { // size = 24
+
+	float d[3][2]; // {x,y,z},{min,max}
+
+	cube_t() {}
+	
+	cube_t(float x1, float x2, float y1, float y2, float z1, float z2) {
+		d[0][0] = x1; d[0][1] = x2;
+		d[1][0] = y1; d[1][1] = y2;
+		d[2][0] = z1; d[2][1] = z2;
+	}
+	void copy_from(cube_t const &c) {
+		UNROLL_3X(d[i_][0] = c.d[i_][0];)
+		UNROLL_3X(d[i_][1] = c.d[i_][1];)
+	}
+	void print() const;
+	bool is_near_zero_area() const;
+
+	void normalize() {
+		UNROLL_3X(if (d[i_][1] < d[i_][0]) swap(d[i_][0], d[i_][1]);)
+	}
+	bool is_zero_area() const {
+		UNROLL_3X(if (d[i_][0] == d[i_][1]) return 1;)
+		return 0;
+	}
+	bool intersects(const cube_t &cube, float toler) const {
+		UNROLL_3X(if (cube.d[i_][1] < (d[i_][0] + toler) || cube.d[i_][0] > (d[i_][1] - toler)) return 0;)
+		return 1;
+	}
+	bool contains_cube(const cube_t &cube) const {
+		UNROLL_3X(if (cube.d[i_][0] < d[i_][0] || cube.d[i_][1] > d[i_][1]) return 0;)
+		return 1;
+	}
+	bool contains_pt(point const &pt) const {
+		UNROLL_3X(if (pt[i_] < d[i_][0] || pt[i_] > d[i_][1]) return 0;)
+		return 1;
+	}
+	bool contains_pt_xy(point const &pt) const {
+		return (pt.x > d[0][0] && pt.x < d[0][1] && pt.y > d[1][0] && pt.y < d[1][1]);
+	}
+	bool quick_intersect_test(const cube_t &cube) const {
+		UNROLL_3X(if (cube.d[i_][0] >= d[i_][1] || cube.d[i_][1] <= d[i_][0]) return 0;)
+		return 1;
+	}
+	float get_volume() const {
+		return fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]);
+	}
+	float max_len() const {
+		float len(0.0);
+		UNROLL_3X(len = max(len, (d[i_][1] - d[i_][0]));)
+		return len;
+	}
+	point get_center() const {
+		return point(0.5*(d[0][0]+d[0][1]), 0.5*(d[1][0]+d[1][1]), 0.5*(d[2][0]+d[2][1]));
+	}
+	float get_bsphere_radius() const {
+		return 0.5*sqrt((d[0][1]-d[0][0])*(d[0][1]-d[0][0]) + (d[1][1]-d[1][0])*(d[1][1]-d[1][0]) + (d[2][1]-d[2][0])*(d[2][1]-d[2][0]));
+	}
+	bool cube_intersection(const cube_t &cube, cube_t &res) const;
+	vector3d closest_side_dir(point const &pos) const;
+};
+
+
 struct line_3dw { // unused
 
 	point p1, p2;
@@ -825,7 +888,7 @@ int  sphere_shadow2(point const &pos, float radius, char light_sources, int is_d
 int  sphere_shadow(point const &pos, float radius, char light_sources, int is_dynamic, int quality);
 int  cylinder_shadow(point p1, point p2, float radius1, float radius2, char light_sources, int shadow_ends, int is_dynamic, int quality);
 int  polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, char light_sources, int is_dynamic, int quality, int is_cube);
-int  cube_shadow(const float d0[3][2], char light_sources, int is_dynamic, int quality);
+int  cube_shadow(cube_t const &cube, char light_sources, int is_dynamic, int quality);
 void reset_shadows(unsigned char type);
 
 // function prototypes - mesh_intersect
@@ -1072,7 +1135,7 @@ float highest_mesh_point(point const &pt, float radius);
 
 // function prototypes - collision detection
 void set_coll_border();
-int  add_coll_cube(float d[3][2], cobj_params const &cparams, int platform_id=-1, int dhcm=0);
+int  add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
 void add_coll_cube_hollow(int *index, float d[3][2], cobj_params const &cparams, float thickness, int platform_id=-1, int dhcm=0);
 int  add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2,
 					   float radius, float radius2, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
@@ -1110,7 +1173,7 @@ float get_coll_energy(vector3d const &v1, vector3d const &v2, float mass);
 bool planar_contour_intersect(const point *points, unsigned npoints, point const &pos, vector3d const &norm);
 bool point_in_polygon_2d(float xval, float yval, const point *points, int npts, int dx, int dy);
 bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &norm, float dval,
-					  float const d[3][2], float &z1, float &z2);
+					  cube_t const &cube, float &z1, float &z2);
 void grow_poly_about_center(point *pts, unsigned npts, float scale);
 bool get_poly_zvals(vector<vector<point> > const &pts, float xv, float yv, float &z1, float &z2);
 void gen_poly_planes(point const *const points, unsigned npoints, vector3d const &norm, float thick, vector<point> pts[2]);
@@ -1139,8 +1202,8 @@ bool line_intersect_sphere(point const &p1, vector3d const &v12, point const &sc
 void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from, float radius, unsigned num_pts);
 bool line_torus_intersect(point const &p1, point const &p2, point const &tc, float ri, float ro, float &t);
 bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri, float ro, point &p_int, vector3d &norm, bool calc_int);
-bool sphere_cube_intersect(point const &pos, float radius, float const d[3][2]);
-bool sphere_cube_intersect(point const &pos, float radius, float const d[3][2], point const &p_last,
+bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube);
+bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last,
 						   point &p_int, vector3d &norm, unsigned &cdir, bool check_int, bool skip_z=0);
 bool do_line_clip(point &v1, point &v2, float const d[3][2]);
 bool get_line_clip(point const &v1, point const &v2, float const d[3][2], float &tmin, float &tmax);
@@ -1161,7 +1224,6 @@ void cylinder_quad_projection(point *pts, cylinder_3dw const &c, vector3d const 
 template<typename T> pointT<T> get_center_arb(pointT<T> const *const pts, int npts);
 unsigned get_cube_corners(float const d[3][2], point corners[8], point const &viewed_from=all_zeros, bool all_corners=1);
 void get_closest_cube_norm(float const d[3][2], point const &p, vector3d &norm);
-float cube_bounding_sphere(float const d[3][2], point &center);
 void cylinder_bounding_sphere(point const *const pts, float r1, float r2, point &center, float &radius);
 void polygon_bounding_sphere(const point *pts, int npts, float thick, point &center, float &radius);
 void add_rotated_quad_pts(vector<point> &points, float theta, float rd, float z, point const &pos, vector3d const &scale);

@@ -52,31 +52,19 @@ public:
 }; // class rect
 
 
-class csg_cube {
+class csg_cube : public cube_t {
 
-	float d[3][2]; // {x,y,z},{min,max}
 	unsigned char eflags;
 
 	csg_cube(unsigned char eflags0) : eflags(eflags0) {} // eflags constructor (internal)
 	bool subtract_from_internal(const csg_cube &cube, vector<csg_cube> &output) const;
 
 public:
-	csg_cube(float x1, float x2, float y1, float y2, float z1, float z2);
+	csg_cube(float x1, float x2, float y1, float y2, float z1, float z2)
+		: cube_t(x1, x2, y1, y2, z1, z2), eflags(0) {} // float constructor
 	csg_cube(const coll_obj &cobj, bool use_bounding_cube=0);
-	void print() const;
 	void write_to_cobj(coll_obj &cobj) const;
-	void normalize();
-	bool is_zero_area() const;
-	bool is_near_zero_area() const;
-	bool intersects(const csg_cube &cube, float toler) const;
-	bool contains_cube(const csg_cube &cube) const;
-	bool contains_pt(point const &pt) const;
 	bool cube_intersection(const csg_cube &cube, csg_cube &res) const;
-	bool quick_intersect_test(const coll_obj &cobj) const;
-	float volume() const;
-	float max_len() const;
-	point get_center() const {return cube_center(d);}
-	vector3d closest_side_dir(point const &pos) const;
 	bool subtract_from_cube(vector<coll_obj> &new_cobjs, coll_obj const &cobj) const;
 	bool subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cobj) const;
 	bool cube_merge(csg_cube &cube, bool proc_eflags); // const cube?

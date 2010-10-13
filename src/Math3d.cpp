@@ -146,13 +146,13 @@ bool point_in_polygon_2d(float sval, float tval, const point *points, int npts, 
 
 // z1 and z2 must be initialized (z1 > z2 to start)
 bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &norm, float dval,
-					  float const d[3][2], float &z1, float &z2)
+					  cube_t const &cube, float &z1, float &z2)
 {
 	assert(pts && npts >= 3);
 	unsigned num_inside[2] = {0, 0};
 
 	for (unsigned i = 0; i < npts; ++i) { // test the points
-		if (pts[i].x >= d[0][0] && pts[i].x <= d[0][1] && pts[i].y >= d[1][0] && pts[i].y <= d[1][1]) {
+		if (cube.contains_pt_xy(pts[i])) {
 			z1 = min(z1, pts[i].z);
 			z2 = max(z2, pts[i].z);
 			++num_inside[0];
@@ -163,7 +163,7 @@ bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &nor
 	for (unsigned i = 0; i < npts; ++i) { // test the edges
 		point edge[2] = {pts[i], pts[(i+1)%npts]};
 		
-		if (do_line_clip(edge[0], edge[1], d)) {
+		if (do_line_clip(edge[0], edge[1], cube.d)) {
 			for (unsigned j = 0; j < 2; ++j) {
 				z1 = min(z1, edge[j].z);
 				z2 = max(z2, edge[j].z);
@@ -172,10 +172,10 @@ bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &nor
 		}
 	}
 	if (num_inside[1] == npts) return 1;
-	float const xv(0.5*(d[0][0] + d[0][1])), yv(0.5*(d[1][0] + d[1][1]));
+	point const center(cube.get_center());
 
-	if (point_in_polygon_2d(xv, yv, pts, npts, 0, 1)) {
-		float const zv((fabs(norm.z) > 0.001) ? -(xv*norm.x + yv*norm.y + dval)/norm.z : pts[0].z);
+	if (point_in_polygon_2d(center.x, center.y, pts, npts, 0, 1)) {
+		float const zv((fabs(norm.z) > 0.001) ? -(center.x*norm.x + center.y*norm.y + dval)/norm.z : pts[0].z);
 		z1 = min(z1, zv);
 		z2 = max(z2, zv);
 		return 1;
@@ -780,24 +780,24 @@ bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri
 }
 
 
-bool sphere_cube_intersect(point const &pos, float radius, float const d[3][2]) { // slow but exact
+bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube) { // slow but exact
 
 	float dmin(0.0);
 	float const r2(radius*radius);
 
 	for (unsigned i = 0; i < 3 && dmin <= r2; ++i) {
-		if      (pos[i] < d[i][0]) dmin += (pos[i] - d[i][0])*(pos[i] - d[i][0]);
-		else if (pos[i] > d[i][1]) dmin += (pos[i] - d[i][1])*(pos[i] - d[i][1]);
+		if      (pos[i] < cube.d[i][0]) dmin += (pos[i] - cube.d[i][0])*(pos[i] - cube.d[i][0]);
+		else if (pos[i] > cube.d[i][1]) dmin += (pos[i] - cube.d[i][1])*(pos[i] - cube.d[i][1]);
 	}
 	return (dmin <= r2);
 }
 
 
 // p_int is the location of the sphere at intersection, norm is the normal of the intersected surface
-bool sphere_cube_intersect(point const &pos, float radius, float const d[3][2], point const &p_last, point &p_int,
+bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last, point &p_int,
 						   vector3d &norm, unsigned &cdir, bool check_int, bool skip_z)
 {
-	if (check_int && !sphere_cube_intersect(pos, radius, d)) return 0;
+	if (check_int && !sphere_cube_intersect(pos, radius, cube)) return 0;
 	float min_dist(0.0);
 	bool found(0);
 
@@ -808,7 +808,7 @@ bool sphere_cube_intersect(point const &pos, float radius, float const d[3][2], 
 		for (unsigned i = 0; i < unsigned(2 + !skip_z); ++i) {
 			for (unsigned j = 0; j < 2; ++j) {
 				//if (iter == 0 && pos[i] != p_last[i] && ((pos[i] - p_last[i]) < 0) ^ j) continue; // ignore back-facing sides (is this correct?)
-				float const dval(d[i][j]), delta(j ? 1.0 : -1.0), side_pos(dval + delta*radius);
+				float const dval(cube.d[i][j]), delta(j ? 1.0 : -1.0), side_pos(dval + delta*radius);
 				bool intersects(iter ? 1 : (((p_last[i] < side_pos) ^ j) && ((pos[i] >= side_pos) ^ j)));
 				if (!intersects) continue;
 				float const dist(fabs(pos[i] - side_pos));
@@ -998,13 +998,6 @@ void get_closest_cube_norm(float const d[3][2], point const &p, vector3d &norm) 
 	}
 	norm      = all_zeros;
 	norm[dim] = (dir ? 1.0 : -1.0);
-}
-
-
-float cube_bounding_sphere(float const d[3][2], point &center) {
-
-	center = cube_center(d);
-	return 0.5*sqrt((d[0][1]-d[0][0])*(d[0][1]-d[0][0]) + (d[1][1]-d[1][0])*(d[1][1]-d[1][0]) + (d[2][1]-d[2][0])*(d[2][1]-d[2][0]));
 }
 
 

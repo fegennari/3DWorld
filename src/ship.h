@@ -367,14 +367,11 @@ public:
 	float get_s_area() const {return PI*((check_ends ? (r1*r1 + r2*r2) : 0.0) + (r1 + r2)*get_length());}
 };
 
-class ship_cube : public ship_coll_obj {
-
-	float d[3][2];
+class ship_cube : public ship_coll_obj, public cube_t {
 
 public:
-	ship_cube(float x1=0.0, float x2=0.0, float y1=0.0, float y2=0.0, float z1=0.0, float z2=0.0, float ds=1.0) : ship_coll_obj(ds) {
-		d[0][0] = x1; d[0][1] = x2; d[1][0] = y1; d[1][1] = y2; d[2][0] = z1; d[2][1] = z2;
-	}
+	ship_cube(float x1=0.0, float x2=0.0, float y1=0.0, float y2=0.0, float z1=0.0, float z2=0.0, float ds=1.0)
+		: ship_coll_obj(ds), cube_t(x1, x2, y1, y2, z1, z2) {}
 	ship_cube* clone() const {return new ship_cube(*this);}
 	void translate(point const &p);
 	void draw(unsigned ndiv) const;
@@ -385,7 +382,7 @@ public:
 		free_obj const *const obj=NULL) const;
 	string get_name()   const {return "Cube";}
 	float const delta(unsigned i) const {return fabs(d[i][1] - d[i][0]);}
-	float get_volume() const {return delta(0)*delta(1)*delta(2);}
+	float get_volume() const {return cube_t::get_volume();}
 	float get_s_area() const {return 2.0*(delta(0)*delta(1) + delta(0)*delta(2) + delta(1)*delta(2));}
 };
 

@@ -154,13 +154,13 @@ public:
 };
 
 
-class coll_obj { // size = 236
+class coll_obj : public cube_t { // size = 236
 
 public:
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
 	char type, destroy, status, lighted;
 	int counter;
-	float d[3][2], radius, radius2, thickness, volume;
+	float radius, radius2, thickness, volume;
 	int id, platform_id;
 	short npoints;
 	unsigned char last_coll, coll_type;
@@ -185,7 +185,6 @@ public:
 	bool clip_in_2d(float const bb[2][2], float &ztop, int d1, int d2, int dir) const;
 	void set_npoints();
 	void print_bounds() const;
-	void get_bb_points(point pts[8]) const;
 	void bb_union(float bb[3][2], int init);
 	void draw_cobj(unsigned i);
 	void add_to_vector(vector<coll_obj> &cobjs, int type_);
@@ -256,11 +255,11 @@ struct coll_cell { // size = 40
 };
 
 
-struct color_tid_vol {
+struct color_tid_vol : public cube_t {
 
 	int tid, destroy;
 	bool draw;
-	float volume, d[3][2];
+	float volume;
 	colorRGBA color;
 	color_tid_vol(coll_obj const &cobj, float volume_);
 };

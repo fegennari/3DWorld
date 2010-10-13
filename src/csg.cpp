@@ -142,6 +142,59 @@ void rect::print() const {
 }
 
 
+// *** CUBE_T IMPLEMENTATION ***
+
+
+void cube_t::print() const {
+
+	for (unsigned i = 0; i < 3; ++i) {
+		for (unsigned j = 0; j < 2; ++j) {
+			cout << d[i][j] << ",";
+		}
+		cout << " ";
+	}
+}
+
+
+bool cube_t::is_near_zero_area() const {
+		
+	UNROLL_3X(if (fabs(d[i_][0] - d[i_][1]) < TOLER) return 1;)
+	return 0;
+}
+
+
+bool cube_t::cube_intersection(const cube_t &cube, cube_t &res) const { // flags are not set
+	
+	for (unsigned i = 0; i < 3; ++i) {
+		res.d[i][0] = max(d[i][0], cube.d[i][0]);
+		res.d[i][1] = min(d[i][1], cube.d[i][1]);
+		if (res.d[0] >= res.d[1]) return 0; // no intersection
+	}
+	return 1;
+}
+
+
+vector3d cube_t::closest_side_dir(point const &pos) const { // for fragment velocity
+
+	int dir(-1);
+	float mdist(0.0);
+	vector3d dv(zero_vector);
+
+	for (unsigned i = 0; i < 3; ++i) {
+		for (unsigned j = 0; j < 2; ++j) {
+			float const dist(fabs(d[i][j] - pos[i]));
+
+			if (dir == -1 || dist < mdist) {
+				mdist = dist;
+				dir   = (i << 1) + j;
+			}
+		}
+	}
+	dv[dir >> 1] = ((dir & 1) ? 1.0 : -1.0);
+	return dv;
+}
+
+
 // *** CSG_CUBE IMPLEMENTATION ***
 
 
@@ -255,157 +308,26 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 }
 
 
-csg_cube::csg_cube(float x1, float x2, float y1, float y2, float z1, float z2) : eflags(0) { // float constructor
-
-	d[0][0] = x1; d[0][1] = x2;
-	d[1][0] = y1; d[1][1] = y2;
-	d[2][0] = z1; d[2][1] = z2;
-	normalize();
-}
-
-
 csg_cube::csg_cube(const coll_obj &cobj, bool use_bounding_cube) : eflags(cobj.cp.surfs) { // coll_obj constructor
 
 	assert(use_bounding_cube || cobj.type == COLL_CUBE || cobj.is_cylinder());
-	memcpy(d, cobj.d, 6*sizeof(float));
+	copy_from(cobj);
 	normalize();
-}
-
-
-void csg_cube::print() const {
-
-	for (unsigned i = 0; i < 3; ++i) {
-		for (unsigned j = 0; j < 2; ++j) {
-			cout << d[i][j] << ",";
-		}
-		cout << " ";
-	}
 }
 
 
 inline void csg_cube::write_to_cobj(coll_obj &cobj) const {
 
 	assert(cobj.type == COLL_CUBE);
-	memcpy(cobj.d, d, 6*sizeof(float));
+	cobj.copy_from(*this);
 	cobj.cp.surfs = eflags;
-}
-
-
-void csg_cube::normalize() {
-
-	for (unsigned i = 0; i < 3; ++i) {
-		if (d[i][1] < d[i][0]) swap(d[i][0], d[i][1]);
-	}
-}
-
-
-bool csg_cube::is_zero_area() const {
-
-	for (unsigned i = 0; i < 3; ++i) {
-		if (d[i][0] == d[i][1]) return 1;
-	}
-	return 0;
-}
-
-
-bool csg_cube::is_near_zero_area() const {
-
-	for (unsigned i = 0; i < 3; ++i) {
-		if (fabs(d[i][0] - d[i][1]) < TOLER) return 1;
-	}
-	return 0;
-}
-
-
-bool csg_cube::intersects(const csg_cube &cube, float toler) const {
-
-	for (unsigned i = 0; i < 3; ++i) {
-		if (cube.d[i][1] < (d[i][0] + toler) || cube.d[i][0] > (d[i][1] - toler)) return 0;
-	}
-	return 1;
-}
-
-
-bool csg_cube::contains_cube(const csg_cube &cube) const { // test if we contain cube
-
-	for (unsigned i = 0; i < 3; ++i) {
-		if (cube.d[i][0] < d[i][0] || cube.d[i][1] > d[i][1]) return 0;
-	}
-	return 1;
-}
-
-
-bool csg_cube::contains_pt(point const &pt) const { // test if we contain pt
-
-	for (unsigned i = 0; i < 3; ++i) {
-		if (pt[i] < d[i][0] || pt[i] > d[i][1]) return 0;
-	}
-	return 1;
 }
 
 
 bool csg_cube::cube_intersection(const csg_cube &cube, csg_cube &res) const { // flags are not set
 
 	res.eflags = 0; // fix later
-	
-	for (unsigned i = 0; i < 3; ++i) {
-		res.d[i][0] = max(d[i][0], cube.d[i][0]);
-		res.d[i][1] = min(d[i][1], cube.d[i][1]);
-		if (res.d[0] >= res.d[1]) return 0; // no intersection
-	}
-	return 1;
-}
-
-
-bool csg_cube::quick_intersect_test(const coll_obj &cobj) const {
-
-	for (unsigned i = 0; i < 3; ++i) {
-		if (cobj.d[0][0] >= d[0][1] || cobj.d[0][1] <= d[0][0]) return 0;
-	}
-	return 1;
-}
-
-
-float csg_cube::volume() const {
-
-	float vol(1.0);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		vol *= (d[i][1] - d[i][0]);
-	}
-	return vol;
-}
-
-
-float csg_cube::max_len() const {
-
-	float len(0.0);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		len = max(len, (d[i][1] - d[i][0]));
-	}
-	return len;
-}
-
-
-vector3d csg_cube::closest_side_dir(point const &pos) const { // for fragment velocity
-
-	int dir(-1);
-	float mdist(0.0);
-	vector3d dv(zero_vector);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		for (unsigned j = 0; j < 2; ++j) {
-			float const dist(fabs(d[i][j] - pos[i]));
-
-			if (dir == -1 || dist < mdist) {
-				mdist = dist;
-				dir   = (i << 1) + j;
-			}
-		}
-	}
-	dv[dir >> 1] = ((dir & 1) ? 1.0 : -1.0);
-	return dv;
+	return cube_t::cube_intersection(cube, res);
 }
 
 
@@ -605,9 +527,7 @@ void get_cube_points(const float d[3][2], point pts[8]) {
 	for (i[0] = 0; i[0] < 2; ++i[0]) {
 		for (i[1] = 0; i[1] < 2; ++i[1]) {
 			for (i[2] = 0; i[2] < 2; ++i[2]) {
-				for (unsigned j = 0; j < 3; ++j) {
-					pts[(((i[0]<<1)+i[1])<<1)+i[2]][j] = d[j][i[j]];
-				}
+				UNROLL_3X(pts[(((i[0]<<1)+i[1])<<1)+i[2]][i_] = d[i_][i[i_]];)
 			}
 		}
 	}
@@ -911,7 +831,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	csg_cube const cube(x1, x2, y1, y2, z1, z2);
 	point center(cube.get_center());
 	if (cube.is_zero_area()) return 0;
-	float const sub_volume(cube.volume());
+	float const sub_volume(cube.get_volume());
 	vector<int> indices, to_remove, non_dest;
 	vector<coll_obj> new_cobjs;
 	vector<int> cvals;
@@ -1133,7 +1053,7 @@ void sort_cobjs_by_tid(vector<coll_obj> &cobjs) {
 color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_)
 	: tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), volume(volume_), color(cobj.cp.color)
 {
-	copy_cube_d(cobj.d, d);
+	copy_from(cobj);
 }
 
 

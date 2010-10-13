@@ -22,9 +22,9 @@ extern vector<coll_obj> coll_objects;
 
 // *** Test BSP Tree of Static Collision Objects ***
 
+
 class cobj_bsp_tree {
-	struct bsp_node {
-		float d[3][2]; // bbox
+	struct bsp_node : public cube_t {
 		unsigned b[3]; // {left, right, center} branches
 		unsigned start, end; // index into cixs for leaves
 
@@ -63,7 +63,7 @@ class cobj_bsp_tree {
 
 		for (unsigned i = n.start; i < n.end; ++i) { // check contained
 			if (i == 0) {
-				copy_cube_d(get_cobj(i).d, n.d);
+				n.copy_from(get_cobj(i));
 			}
 			else {
 				UNROLL_3X(n.d[i_][0] = min(n.d[i_][0], get_cobj(i).d[i_][0]);)
@@ -185,7 +185,7 @@ bool check_vert_collision_sphere(point const &pos, float radius, int skip_dynami
 		switch (cobj.type) { // within bounding box of collision object
 		case COLL_CUBE:
 			if (skip_dynamic >= 2 && cobj.cp.surfs == EF_ALL) break; // all sides hidden
-			if (!sphere_cube_intersect(pos, radius, cobj.d))  break;
+			if (!sphere_cube_intersect(pos, radius, cobj))  break;
 			coll = 1;
 			break;
 		case COLL_CYLINDER:
@@ -225,7 +225,7 @@ bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const
 
 	for (unsigned i = 0; i < npts; ++i) {
 		point const spts[3] = {pts[i], pts[(i+1)%npts], lpos};
-		point const center(get_center(spts, 3));
+		point const center(::get_center(spts, 3));
 		vector3d const pts_norm(get_poly_norm(spts));
 		point pt;
 
@@ -899,7 +899,7 @@ void get_occluders() { // 18M total, 380K unique
 	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {
 		coll_obj &cobj(coll_objects[i]);
 		if (!cobj.fixed || cobj.status != COLL_STATIC || cobj.cp.surfs == EF_ALL) continue;
-		get_coll_line_cobjs(camera, cube_center(cobj.d), i, coll_objects[i].occluders);
+		get_coll_line_cobjs(camera, cobj.get_center(), i, coll_objects[i].occluders);
 	}
 	if (skipval <= 1) {PRINT_TIME("Occlusion Preprocessing");}
 }

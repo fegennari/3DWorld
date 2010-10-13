@@ -411,12 +411,6 @@ template<typename T> inline pointT<T> get_center(const pointT<T> *pts, int npts)
 }
 
 
-inline point cube_center(float const d[3][2]) {
-
-	return point(0.5*(d[0][0] + d[0][1]), 0.5*(d[1][0] + d[1][1]), 0.5*(d[2][0] + d[2][1]));
-}
-
-
 // *********************** CAMERA STUFF ************************
 
 
@@ -522,16 +516,6 @@ inline bool do_line_clip_scene(point &v1, point &v2, float z1, float z2) {
 
 	float const d[3][2] = {{-X_SCENE_SIZE, X_SCENE_SIZE}, {-Y_SCENE_SIZE, Y_SCENE_SIZE}, {z1, z2}};
 	return do_line_clip(v1, v2, d);
-}
-
-
-inline void copy_cube_d(float const d_from[3][2], float d_to[3][2]) {
-
-	for (unsigned i = 0; i < 3; ++i) {
-		for (unsigned j = 0; j < 2; ++j) {
-			d_to[i][j] = d_from[i][j];
-		}
-	}
 }
 
 

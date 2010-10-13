@@ -129,7 +129,7 @@ void coll_obj::add_shadow(char light_sources, bool dynamic) const {
 
 	switch (type) {
 	case COLL_CUBE:
-		cube_shadow(d, light_sources, dynamic, 1);
+		cube_shadow(*this, light_sources, dynamic, 1);
 		break;
 	case COLL_SPHERE:
 		sphere_shadow(points[0], radius, light_sources, dynamic, 1);
@@ -512,21 +512,20 @@ int polygon_shadow(point const *points, vector3d const &norm, int npoints, float
 }
 
 
-int cube_shadow(const float d0[3][2], char light_sources, int is_dynamic, int quality) {
+int cube_shadow(cube_t const &cube, char light_sources, int is_dynamic, int quality) {
 
-	float d[3][2];
-	copy_cube_d(d0, d);
+	cube_t c(cube);
 
 	if (CLIP_SHADOW_CUBES) { // clip to xy scene - not perfect but better than nothing
-		d[0][0] = max(-X_SCENE_SIZE, d[0][0]);
-		d[1][0] = max(-Y_SCENE_SIZE, d[1][0]);
-		d[0][1] = min( X_SCENE_SIZE, d[0][1]);
-		d[1][1] = min( Y_SCENE_SIZE, d[1][1]);
+		c.d[0][0] = max(-X_SCENE_SIZE, c.d[0][0]);
+		c.d[1][0] = max(-Y_SCENE_SIZE, c.d[1][0]);
+		c.d[0][1] = min( X_SCENE_SIZE, c.d[0][1]);
+		c.d[1][1] = min( Y_SCENE_SIZE, c.d[1][1]);
 	}
 	int xmin, xmax, ymin, ymax, ret_val(0);
 	unsigned char const SHADOW_TYPE(is_dynamic ? DYNAMIC_SHADOW : OBJECT_SHADOW);
 	point lpos, pts[8];
-	get_cube_points(d, pts);
+	get_cube_points(c.d, pts);
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid(light_sources, l, lpos)) continue;
@@ -542,7 +541,7 @@ int cube_shadow(const float d0[3][2], char light_sources, int is_dynamic, int qu
 			for (int j = xmin; j <= xmax; ++j) {
 				if (shadow_mask[l][i][j] & SHADOW_TYPE) continue;
 				point const pt(get_xval(j), get_yval(i), mesh_height[i][j]);
-				if (check_line_clip(pt, lpos, d0)) shadow_mask[l][i][j] |= SHADOW_TYPE;
+				if (check_line_clip(pt, lpos, cube.d)) shadow_mask[l][i][j] |= SHADOW_TYPE;
 			}
 		}
 	}

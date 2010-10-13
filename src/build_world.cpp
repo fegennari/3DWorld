@@ -740,24 +740,20 @@ void coll_obj::add_to_vector(vector<coll_obj> &cobjs, int type_) {
 void coll_obj::check_if_cube() {
 
 	if (type != COLL_POLYGON || thickness == 0.0 || npoints != 4) return;
-	float bb[3][2] = {{points[0][0], points[0][0]}, {points[0][1], points[0][1]}, {points[0][2], points[0][2]}};
+	cube_t bb(points[0].x, points[0].x, points[0].y, points[0].y, points[0].z, points[0].z);
 
 	for (unsigned i = 1; i < 4; ++i) {
 		for (unsigned j = 0; j < 3; ++j) {
-			bb[j][0] = min(bb[j][0], points[i][j]);
-			bb[j][1] = max(bb[j][1], points[i][j]);
+			bb.d[j][0] = min(bb.d[j][0], points[i][j]);
+			bb.d[j][1] = max(bb.d[j][1], points[i][j]);
 		}
 	}
 	unsigned zdim(0), nz(0);
-	float smax(0.0);
-
-	for (unsigned j = 0; j < 3; ++j) {
-		smax = max(smax, fabs(bb[j][0] - bb[j][1]));
-	}
+	float const smax(bb.max_len());
 	float const tolerance(1.0E-6*smax);
 
 	for (unsigned j = 0; j < 3; ++j) {
-		if (fabs(bb[j][0] - bb[j][1]) < tolerance) {
+		if ((bb.d[j][0] - bb.d[j][1]) < tolerance) {
 			zdim = j;
 			++nz;
 		}
@@ -770,13 +766,13 @@ void coll_obj::check_if_cube() {
 			bool on_edge(0);
 			
 			for (unsigned k = 0; k < 2 && !on_edge; ++k) {
-				if (fabs(points[i][dims[j]] - bb[dims[j]][k]) < tolerance) on_edge = 1;
+				if (fabs(points[i][dims[j]] - bb.d[dims[j]][k]) < tolerance) on_edge = 1;
 			}
 			if (!on_edge) return; // not a cube
 		}
 	}
 	type = COLL_CUBE;
-	copy_cube_d(bb, d);
+	copy_from(bb);
 	d[zdim][0] -= 0.5*thickness;
 	d[zdim][1] += 0.5*thickness;
 }

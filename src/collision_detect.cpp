@@ -92,17 +92,15 @@ void add_coll_cube_to_matrix(int index, int dhcm) {
 }
 
 
-int add_coll_cube(float d[3][2], cobj_params const &cparams, int platform_id, int dhcm) {
+int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int dhcm) {
 
 	int const index(get_next_avail_index());
 	coll_obj &cobj(coll_objects[index]);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		if (d[i][1] < d[i][0]) swap(d[i][1], d[i][0]);
-	}
-	copy_cube_d(d, cobj.d);
+	cube.normalize();
+	cobj.copy_from(cube);
 	// cache the center point and radius
-	set_coll_obj_props(index, COLL_CUBE, cube_bounding_sphere(cobj.d, cobj.points[0]), 0.0, platform_id, cparams);
+	cobj.points[0] = cobj.get_center();
+	set_coll_obj_props(index, COLL_CUBE, cobj.get_bsphere_radius(), 0.0, platform_id, cparams);
 	add_coll_cube_to_matrix(index, dhcm);
 	return index;
 }
@@ -337,21 +335,21 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 	float const delta_z(sqrt(dzx*dzx + dzy*dzy));
 	vector<vector<point> > const *pts(NULL);
 	if (cobj.thickness > MIN_POLY_THICK2) pts = &thick_poly_to_sides(cobj.points, cobj.npoints, norm, cobj.thickness);
-	float d[3][2];
-	d[2][0] = zminc - SMALL_NUMBER;
-	d[2][1] = zmaxc + SMALL_NUMBER;
+	cube_t cube;
+	cube.d[2][0] = zminc - SMALL_NUMBER;
+	cube.d[2][1] = zmaxc + SMALL_NUMBER;
 
 	for (int i = y1-cb; i <= y2+cb; ++i) {
 		float const yv(get_yval(i));
-		d[1][0] = yv - dy - (i<=y1)*thick;
-		d[1][1] = yv + dy + (i>=y2)*thick;
+		cube.d[1][0] = yv - dy - (i<=y1)*thick;
+		cube.d[1][1] = yv + dy + (i>=y2)*thick;
 
 		for (int j = x1-cb; j <= x2+cb; ++j) {
 			float const xv(get_xval(j));
 			float z1(zminc), z2(zmaxc);
 			bool const add_to_hcm(i >= y1-1 && i <= y2+1 && j >= x1-1 && j <= x2+1);
-			d[0][0] = xv - dx - (j<=x1)*thick;
-			d[0][1] = xv + dx + (j>=x2)*thick;
+			cube.d[0][0] = xv - dx - (j<=x1)*thick;
+			cube.d[0][1] = xv + dx + (j>=x2)*thick;
 
 			if (add_to_hcm) {
 				swap(z1, z2);
@@ -365,12 +363,12 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 						vector3d const pn(get_poly_norm(p));
 
 						if (fabs(pn.z) > 1.0E-3) { // ignore near-vertical polygon edges (for now)
-							inside |= get_poly_zminmax(p, (*pts)[k].size(), pn, -dot_product(pn, p[0]), d, z1, z2);
+							inside |= get_poly_zminmax(p, (*pts)[k].size(), pn, -dot_product(pn, p[0]), cube, z1, z2);
 						}
 					}
 					if (!inside) continue;
 				}
-				else if (!get_poly_zminmax(cobj.points, cobj.npoints, norm, dval, d, z1, z2)) {
+				else if (!get_poly_zminmax(cobj.points, cobj.npoints, norm, dval, cube, z1, z2)) {
 					continue;
 				}
 				// adjust z bounds so that they are for the entire cell x/y bounds, not a single point (conservative)
@@ -439,7 +437,7 @@ int coll_obj::add_coll_cobj() {
 
 	switch (type) {
 	case COLL_CUBE:
-		cid = add_coll_cube(d, cp, platform_id);
+		cid = add_coll_cube(*this, cp, platform_id);
 		break;
 	case COLL_SPHERE:
 		cid = add_coll_sphere(points[0], radius, cp, platform_id);
@@ -890,7 +888,7 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 		switch (cobj.type) {
 		case COLL_CUBE:
 			coll = ((pval.x + radius) >= cobj.d[0][0] && (pval.x - radius) <= cobj.d[0][1] &&
-				(pval.y + radius) >= cobj.d[1][0] && (pval.y - radius) <= cobj.d[1][1]);
+				    (pval.y + radius) >= cobj.d[1][0] && (pval.y - radius) <= cobj.d[1][1]);
 			break;
 		case COLL_SPHERE:
 			coll = dist_less_than(pval, cobj.points[0], (cobj.radius + radius));
@@ -997,8 +995,8 @@ void vert_coll_detector::check_cobj(int index) {
 			float const xmax(cobj.d[0][1]), xmin(cobj.d[0][0]), ymax(cobj.d[1][1]), ymin(cobj.d[1][0]);
 			if (pos.x < (xmin-o_radius) || pos.x > (xmax+o_radius)) break;
 			if (pos.y < (ymin-o_radius) || pos.y > (ymax+o_radius)) break;
-			if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj.d))              break;
-			if (!sphere_cube_intersect(pos, o_radius, cobj.d, (pold - mdir), obj.pos, norm, cdir, 0)) break; // shouldn't get here much
+			if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj))        break;
+			if (!sphere_cube_intersect(pos, o_radius, cobj, (pold - mdir), obj.pos, norm, cdir, 0)) break; // shouldn't get here much
 			coll_bot = (cdir == 4);
 			lcoll    = 1;
 			//crcdir  |= (((cdir >> 1) + 1) % 3); // crcdir: x=1, y=2, z=0, cdir: -x0=0 +x=1 -y=2 +y=3 -z=4 +z=5
@@ -1010,7 +1008,7 @@ void vert_coll_detector::check_cobj(int index) {
 				break;
 			}
 			if (cdir == 5) { // +z collision
-				if (pos.x > cobj.d[0][0] && pos.x < cobj.d[0][1] && pos.y > cobj.d[1][0] && pos.y < cobj.d[1][1]) ++lcoll;
+				if (cobj.contains_pt_xy(pos)) ++lcoll;
 				float const rdist(max(max(max((pos.x-(xmax+o_radius)), ((xmin-o_radius)-pos.x)), (pos.y-(ymax+o_radius))), ((ymin-o_radius)-pos.y)));
 				
 				if (rdist > 0.0) {
@@ -1462,7 +1460,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		
 		switch (cobj.type) {
 		case COLL_CUBE:
-			if (pos.x >= cobj.d[0][0] && pos.x <= cobj.d[0][1] && pos.y >= cobj.d[1][0] && pos.y <= cobj.d[1][1]) {
+			if (cobj.contains_pt_xy(pos)) {
 				zt   = cobj.d[2][1];
 				zb   = cobj.d[2][0];
 				coll = 1;

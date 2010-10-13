@@ -137,7 +137,7 @@ void coll_obj::update_shadowed_cobjs(vector<coll_obj> &cobjs, vector<int> const 
 		if (cobj.type == COLL_CUBE && !indices.empty()) {
 			bool shadowed(0);
 			point pts[8];
-			cobj.get_bb_points(pts);
+			get_cube_points(cobj.d, pts);
 			point const lpos(get_light_pos());
 
 			for (unsigned m = 0; m < indices.size() && !shadowed; ++m) {
@@ -180,12 +180,6 @@ void coll_obj::print_bounds() const {
 }
 
 
-void coll_obj::get_bb_points(point pts[8]) const  {
-
-	get_cube_points(d, pts);
-}
-
-
 void coll_obj::bb_union(float bb[3][2], int init) {
 
 	for (unsigned i = 0; i < 3; ++i) {
@@ -199,7 +193,7 @@ void coll_obj::calc_size() {
 
 	switch (type) {
 	case COLL_CUBE: // use bbox
-		volume = fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]);
+		volume = get_volume();
 		break;
 	case COLL_SPHERE:
 	case COLL_POLYGON:
@@ -227,12 +221,12 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 
 	case COLL_SPHERE:
 		{
-			float cube[3][2];
+			cube_t cube;
 
 			for (unsigned i = 0; i < 2; ++i) {
-				cube[d1][i] = bb[0][i];
-				cube[d2][i] = bb[1][i];
-				cube[d3][i] = (i ? SCENE_SIZE[d3] : -SCENE_SIZE[d3]);
+				cube.d[d1][i] = bb[0][i];
+				cube.d[d2][i] = bb[1][i];
+				cube.d[d3][i] = (i ? SCENE_SIZE[d3] : -SCENE_SIZE[d3]);
 			}
 			if (!sphere_cube_intersect(points[0], radius, cube)) return 0; //val = d[d3][dir];
 			val = points[0][d3] + pow((PI/6.0), (1.0/3.0))*(dir ? radius : -radius); // doesn't seem to help
@@ -400,7 +394,7 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 		cylinder_bounding_sphere(points, radius, radius2, center, brad);
 		break;
 	case COLL_POLYGON:
-		center = get_center(points, npoints);
+		center = ::get_center(points, npoints);
 		brad   = radius;
 		break;
 	default:
@@ -426,7 +420,7 @@ point coll_obj::get_center_pt() const {
 	case COLL_CYLINDER_ROT:
 		return get_center_n2(points);
 	case COLL_POLYGON:
-		return get_center(points, npoints);
+		return ::get_center(points, npoints);
 	default:
 		assert(0);
 	}
