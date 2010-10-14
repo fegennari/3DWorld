@@ -180,6 +180,17 @@ public:
 		data_valid = 0;
 	}
 
+	vector3d interpolate_mesh_normal(point const &pos) const {
+		float const xp((pos.x + X_SCENE_SIZE)*DX_VAL_INV), yp((pos.y + Y_SCENE_SIZE)*DY_VAL_INV);
+		int const x0((int)xp), y0((int)yp);
+		if (point_outside_mesh(x0, y0) || point_outside_mesh(x0+1, y0+1)) return plus_z; // shouldn't get here
+		float const xpi(fabs(xp - (float)x0)), ypi(fabs(yp - (float)y0));
+		return vertex_normals[y0+0][x0+0]*((1.0 - xpi)*(1.0 - ypi))
+			 + vertex_normals[y0+1][x0+0]*((1.0 - xpi)*ypi)
+			 + vertex_normals[y0+0][x0+1]*(xpi*(1.0 - ypi))
+		     + vertex_normals[y0+1][x0+1]*(xpi*ypi);
+	}
+
 	void upload_data_to_vbo(unsigned start, unsigned end) const {
 		if (start == end) return; // nothing to update
 		assert(start < end && end <= grass.size());
@@ -191,7 +202,9 @@ public:
 			point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
 			vector3d const binorm(cross_product(g.dir, g.n).get_norm());
 			vector3d const delta(binorm*(0.5*g.w));
-			vector3d const &norm(g.shadowed ? zero_vector : plus_z); // use grass normal? 2-sided lighting?
+			//vector3d const &norm(g.shadowed ? zero_vector : plus_z); // use grass normal? 2-sided lighting?
+			//vector3d const &norm(g.shadowed ? zero_vector : surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]); // interpolate normals?
+			vector3d const &norm(g.shadowed ? zero_vector : interpolate_mesh_normal(p1));
 			float const tc_adj(0.1); // border around grass blade texture
 			data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
 			data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
@@ -411,7 +424,7 @@ public:
 		vert_norm_tc_color::set_vbo_arrays();
 		//set_lighted_sides(2);
 		select_texture(GRASS_BLADE_TEX);
-		set_specular(0.1, 10.0);
+		set_specular(0.05, 10.0);
 		enable_blend();
 		//glEnable(GL_POLYGON_SMOOTH);
 		glEnable(GL_ALPHA_TEST);
