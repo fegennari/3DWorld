@@ -719,7 +719,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 	uniform_scale(scale);
 	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
-	glDrawArrays((draw_as_points ? GL_POINTS : GL_QUADS), 0, nl);
+	glDrawArrays((draw_as_points ? GL_POINTS : GL_QUADS), 0, (draw_as_points ? 1 : 4)*nl);
 	glPopMatrix();
 	glDisable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
