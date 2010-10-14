@@ -481,6 +481,7 @@ void draw_group(obj_group &objg) {
 			dwobject const &obj(objg.get_obj(j));
 			if (obj.disabled()) continue;
 			float const scale(obj.init_dir.z), lsize(scale*LEAF_SIZE);
+			assert(lsize > 0.0);
 			if (!sphere_in_camera_view(obj.pos, 4.0*lsize, clip_level)) continue;
 			++num_drawn;
 			int const tree_type(obj.source);

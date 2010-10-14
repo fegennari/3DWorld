@@ -663,7 +663,12 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 
 		if (!(flags & UNDERWATER)) {
 			if (flags & FLOATING) {
-				if (otype.flags & OBJ_IS_FLAT) init_dir.z = 0.0;
+				if (otype.flags & OBJ_IS_FLAT) {
+					//init_dir.z = 0.0;
+					int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+					vector3d const wnorm(has_water(xpos, ypos) ? wat_vert_normals[ypos][xpos] : plus_z);
+					set_orient_for_coll(&wnorm);
+				}
 				if (WATER_SURF_FRICTION < 1.0) air_factor = (1.0 - WATER_SURF_FRICTION)*otype.air_factor;
 			}
 			else {

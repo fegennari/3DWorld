@@ -267,6 +267,7 @@ void gen_leaf_at(point const *const points, vector3d const &normal, int type, co
 	point const pos(get_center(points, 4));
 	vector3d const delta(points[1] - points[0]), ldelta(leaf_points[1] - leaf_points[0]);
 	float const leaf_size(delta.mag()/ldelta.mag());
+	assert(leaf_size > 0.0);
 	objg.create_object_at(max_t_i, pos);
 	dwobject &obj(objg.get_obj(max_t_i));
 	obj.init_dir.z = leaf_size; // sets leaf size
