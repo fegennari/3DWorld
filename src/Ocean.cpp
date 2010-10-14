@@ -333,7 +333,7 @@ void draw_sand(colorRGBA &color, float cscale, int mode) {
 		glPushMatrix();
 		glTranslatef(0.0, 0.0, oz3);
 		glColor3f(0.3*color.red, color.green, color.blue);
-		gluCylinder(quadric, 0.25*FAR_CLIP, 0.25*FAR_CLIP, 0.9*SAND_DEPTH, N_CYL_SIDES, 1);
+		gluCylinder(quadric, 0.25*FAR_CLIP, 0.25*FAR_CLIP, SAND_DEPTH-MWAVE_HEIGHT, N_CYL_SIDES, 1);
 		glPopMatrix();
 	}
 }
@@ -524,11 +524,11 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 	}
 	draw_sand(color, cscale, (camera.z <= ocean.z + 0.1));
 	if (show_fog) glDisable(GL_FOG);
+	select_texture(WATER_TEX);
 	setup_texgen(OCEAN_REPEAT, OCEAN_REPEAT, 0.0, 0.0);
 	float const OCEAN_SKEW_X(OCEAN_SKEW*X_SCENE_SIZE), OCEAN_SKEW_Y(OCEAN_SKEW*Y_SCENE_SIZE);
 	color.alpha = last_alpha;
 	color.do_glColor();
-	select_texture(WATER_TEX);
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, ocean.z);
 	glBegin(GL_QUADS);

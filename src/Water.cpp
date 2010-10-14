@@ -383,12 +383,12 @@ void draw_water() {
 	if (!island) {
 		if (camera.z >= water_plane_z) draw_water_sides(1);
 		glEnable(GL_COLOR_MATERIAL);
-		setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 		glDisable(GL_NORMALIZE);
 		enable_blend();
 		enable_point_specular();
 		glNormal3f(0.0, 0.0, 1.0); // probably unnecessary
 		select_water_ice_texture(color);
+		setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 		color.alpha *= 0.5;
 		wsd.init();
 		wsd.set_big_water();
@@ -454,6 +454,7 @@ void draw_water() {
 		calc_water_normals();
 	}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("Water Ripple Update");}
+	glEnable(GL_TEXTURE_2D);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 	glDisable(GL_NORMALIZE);
 	enable_blend();
