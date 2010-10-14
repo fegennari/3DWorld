@@ -213,7 +213,7 @@ void draw_trees(vector<tree> &ts) {
 #if 1
 		for (unsigned p = 0; p < 2; ++p) { // much faster for distant trees
 			for (unsigned i = 0; i < ts.size(); ++i) {
-				ts[i].draw_tree(lpos_change, p!=0, p==0);
+				ts[i].draw_tree(lpos_change, p==0, p!=0); // draw branches, then leaves
 			}
 		}
 #else
@@ -632,7 +632,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 			vector3d mod_norm(normal);
 
 			// add sun flare and transparency/scattering when sun is behind the leaf
-			if (1) {
+			if (l.shadow_bits != 15) { // not completely shadowed
 				point const lpos((p1 + p2)*0.5);
 				vector3d const dir_to_camera(get_camera_pos() - lpos), dir_to_light(get_light_pos() - lpos);
 				float const dp1(dot_product(normal, dir_to_camera)), dp2(dot_product(normal, dir_to_light));
@@ -641,7 +641,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 					mod_norm *= -0.5; // reverse and halve
 					float const dp3(dot_product(dir_to_camera.get_norm(), dir_to_light.get_norm()));
 
-					if (dp3 < -0.95) { // camera behind leaf
+					if (dp3 < -0.95) { // leaf between light source (sun) and camera
 						float const val(-20.0*(dp3 + 0.95));
 						mod_norm = mod_norm*(1.0 - val) + dir_to_light.get_norm()*((dp2 < 0.0) ? 1.0 : -1.0)*val; // max light
 					}
