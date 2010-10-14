@@ -361,11 +361,16 @@ void gen_uw_lighting() {
 }
 
 
-void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize) {
+void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex) {
 
 	float const tx(tex_scale*(((float)xoffset)/((float)xsize) + 0.5));
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty);
+
+	if (use_detail_tex && has_multitex()) { // blend in detail nose texture at 30x scale
+		select_multitex(NOISE_TEX, 1);
+		setup_texgen(30.0*tex_scale/TWO_XSS, 30.0*tex_scale/TWO_YSS, 0.0, 0.0);
+	}
 }
 
 
@@ -408,9 +413,12 @@ void display_mesh() { // fast array version
 	setup_mesh_lighting();
 	update_landscape_texture();
 	if (SHOW_MESH_TIME) PRINT_TIME("Landscape Texture");
-	set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
 	glDisable(GL_NORMALIZE);
-	if (!DISABLE_TEXTURES) select_texture(LANDSCAPE_TEX);
+
+	if (!DISABLE_TEXTURES) {
+		select_texture(LANDSCAPE_TEX);
+		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
+	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
 
 	if (ground_effects_level == 0 && setup_gen_buffers_arb()) {
@@ -565,12 +573,10 @@ float display_mesh3(int const *const hole_bounds) { // WM3 - infinite terrain
 
 	int const tex_xoff(xoff + xoff3 - xoff2), tex_yoff(yoff + yoff3 - yoff2);
 	unsigned const norm_texels(get_norm_texels());
-	unsigned last_tsize(0);
 	int tex_id(-1);
 	set_texture(last_h[0][1], tex_id);
-	last_tsize = get_texture_size(tex_id, 0);
-	set_landscape_texgen(((float)norm_texels)/last_tsize, tex_xoff, tex_yoff, MESH_X_SIZE, MESH_Y_SIZE);
 	select_texture(tex_id);
+	set_landscape_texgen(((float)norm_texels)/get_texture_size(tex_id, 0), tex_xoff, tex_yoff, MESH_X_SIZE, MESH_Y_SIZE);
 	setup_mesh_lighting();
 	setup_arrays(&varr.front(), &narr.front(), NULL);
 	//PRINT_TIME("Htable");
@@ -596,14 +602,10 @@ float display_mesh3(int const *const hole_bounds) { // WM3 - infinite terrain
 			}
 			else if (set_texture(last_h[0][j+1], tex_id)) {
 				if (c > 2) glDrawArrays(GL_TRIANGLE_STRIP, 0, c);
-				unsigned const new_tsize(get_texture_size(tex_id, 0));
-
-				if (new_tsize != last_tsize) {
-					set_landscape_texgen(((float)norm_texels)/new_tsize, tex_xoff, tex_yoff, MESH_X_SIZE, MESH_Y_SIZE);
-					last_tsize = new_tsize;
-				}
+				disable_textures_texgen();
 				select_texture(tex_id);
-				
+				set_landscape_texgen(((float)norm_texels)/get_texture_size(tex_id, 0), tex_xoff, tex_yoff, MESH_X_SIZE, MESH_Y_SIZE);
+
 				for (unsigned q = 0; q < 2; ++q) {
 					varr[q] = varr[c+q-2];
 					narr[q] = narr[c+q-2];

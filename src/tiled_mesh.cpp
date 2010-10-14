@@ -369,7 +369,7 @@ public:
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 		glPopMatrix();
-		if (tid > 0) glDisable(GL_TEXTURE_2D);
+		if (tid > 0) disable_textures_texgen();
 		return 1;
 	}
 };
@@ -465,7 +465,6 @@ public:
 			num_drawn += i->second->draw(data, indices, smask);
 		}
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
-		disable_textures_texgen();
 		run_post_mesh_draw();
 		return zmin;
 	}
@@ -493,8 +492,11 @@ void fill_gap() {
 
 	//RESET_TIME;
 	colorRGBA const color(setup_mesh_lighting());
-	set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
-	if (!DISABLE_TEXTURES) select_texture(LANDSCAPE_TEX);
+	
+	if (!DISABLE_TEXTURES) {
+		select_texture(LANDSCAPE_TEX);
+		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
+	}
 	vector<float> xv(MESH_X_SIZE+1), yv(MESH_Y_SIZE+1);
 	float const xstart(get_xval(xoff2)), ystart(get_yval(yoff2));
 

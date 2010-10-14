@@ -1395,6 +1395,7 @@ void disable_texgen() {
 
 void disable_textures_texgen() {
 
+	if (has_multitex()) disable_multitex_a();
 	disable_texgen();
 	glDisable(GL_TEXTURE_2D);
 }
