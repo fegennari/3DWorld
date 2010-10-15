@@ -6,6 +6,7 @@ load_hmv 0 0 0 0 0
 load_coll_objs 0
 disable_universe 1
 disable_water 1
+disable_inf_terrain 1
 disable_scenery 1
 read_landscape 1
 read_heightmap 0
