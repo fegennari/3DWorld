@@ -971,14 +971,14 @@ void create_landscape_texture() {
 					else {
 						RGB_BLOCK_COPY(temp, (ta.data+tofa));
 					}
-					float const val((vnz - sti[0])/(sti[1] - sti[0]));
-					BLEND_COLOR((tex_data+o2), (tex_data+o2), temp, CLIP_TO_01(val));
+					float const val(CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0])));
+					BLEND_COLOR((tex_data+o2), (tex_data+o2), temp, val);
 				}
 				else if (id2 == SNOW_TEX && vnz < sti[1]) { // snow
 					texture const &ta(textures[ROCK_TEX]);
 					int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
-					float const val(2.0*(vnz - sti[0])/(sti[1] - sti[0]));
-					BLEND_COLOR((tex_data+o2), (tex_data+o2), (ta.data+tofa), CLIP_TO_01(val));
+					float const val(CLIP_TO_01(2.0f*(vnz - sti[0])/(sti[1] - sti[0])));
+					BLEND_COLOR((tex_data+o2), (tex_data+o2), (ta.data+tofa), val);
 				}
 			}
 		} // for j

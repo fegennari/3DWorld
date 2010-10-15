@@ -187,6 +187,102 @@ public:
 		//PRINT_TIME("Create Data");
 	}
 
+	struct tex_weights {
+		unsigned char w[NTEX_DIRT];
+
+		tex_weights() {
+			for (unsigned i = 0; i < NTEX_DIRT; ++i) w[i] = 0;
+		}
+	};
+
+	void create_texture_new(unsigned tex_bs) {
+		assert(tid == 0);
+		assert(!island);
+		assert(zvals.size() == zvsize*zvsize);
+		unsigned const tsize(base_tsize >> tex_bs), scale(tsize/size);
+		float const dz_inv(1.0/(zmax - zmin)), fscale_inv(1.0/scale);
+		unsigned char *data(new unsigned char[3*tsize*tsize]); // RGB
+		vector<tex_weights> weights(zvsize*zvsize);
+
+		for (unsigned y = 0; y <= size; ++y) { // makes a big performance improvement
+			for (unsigned x = 0; x <= size; ++x) {
+				unsigned const ix(y*zvsize + x);
+				int k1, k2;
+				float t;
+				get_tids((zvals[ix] - zmin)*dz_inv, NTEX_DIRT-1, h_dirt, k1, k2, t);
+
+				// handle steep slopes (dirt/rock texture replaces grass texture)
+				/*int const id(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
+				float const sthresh[2] = {0.45, 0.7};
+				float const vnz(get_norm(ix).z);
+
+				if (vnz < sthresh[1]) {
+					if (id == GROUND_TEX || id2 == GROUND_TEX) { // ground/grass
+						texture const &ta(textures[DIRT_TEX]);
+						unsigned char temp[3];
+
+						if (id == GROUND_TEX || id2 == ROCK_TEX) {
+							texture const &tb(textures[ROCK_TEX]);
+							// temp = t*tb + (1.0 - t)*ta
+						}
+						else {
+							// temp = ta
+						}
+						float const val(CLIP_TO_01((vnz - sthresh[0])/(sthresh[1] - sthresh[0])));
+						// td = val*td + (1.0 - val)*temp
+					}
+					else if (id2 == SNOW_TEX) { // snow
+						texture const &ta(textures[ROCK_TEX]);
+						float const val(CLIP_TO_01(2.0*(vnz - sthresh[0])/(sthresh[1] - sthresh[0])));
+						// td = val*td + (1.0 - val)*ta
+					}
+				}*/
+				unsigned tt(unsigned(255*t));
+				weights[ix].w[k1] += 255 - tt;
+				weights[ix].w[k2] += tt;
+			} // for x
+		} // for y
+		for (unsigned ty = 0; ty < tsize; ++ty) {
+			for (unsigned tx = 0; tx < tsize; ++tx) {
+				unsigned const ix((ty/scale)*zvsize + (tx/scale)), off(3*(ty*tsize + tx));
+				unsigned const xpi(255*(tx&(scale-1))/scale), ypi(255*(ty&(scale-1))/scale); // in range (0,255-scale)
+				tex_weights const &tw00(weights[ix]), &tw01(weights[ix+1]), &tw10(weights[ix+zvsize]), &tw11(weights[ix+zvsize+1]);
+				unsigned color[3] = {0, 0, 0};
+
+				for (unsigned i = 0; i < NTEX_DIRT; ++i) {
+					if (tw00.w[i] || tw01.w[i] || tw10.w[i] || tw11.w[i]) {
+						unsigned const val((256 - xpi)*((255 - ypi)*tw00.w[i] + ypi*tw10.w[i]) + xpi*((255 - ypi)*tw01.w[i] + ypi*tw11.w[i])); // in range (0,2^24)
+						int const id(lttex_dirt[i].id);
+						texture const &t1(textures[id]);
+						int const tof(t1.ncolors*(((ty<<tex_bs)&(t1.height-1))*t1.width + ((tx<<tex_bs)&(t1.width-1))));
+						UNROLL_3X(color[i_] += val*t1.data[tof+i_];) // in range (0,2^32)
+					}
+				}
+				unsigned char *td(data + off);
+				UNROLL_3X(td[i_] = (color[i_] >> 24);)
+
+				// darken underwater regions
+				if (!DISABLE_WATER) {
+					float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
+					float const mh(((256 - xpi)*((256 - ypi)*mh00 + ypi*mh10) + xpi*((256 - ypi)*mh01 + ypi*mh11)) / (256*256));
+
+					if (mh < water_plane_z) {
+						float c[3] = {td[0], td[1], td[2]};
+						atten_by_water_depth(c, get_water_atten_factor(mh));
+						UNROLL_3X(td[i_] = (unsigned char)c[i_];)
+					}
+				}
+			} // for sx
+		} // for sy
+		bool const mipmaps(0); // mipmaps are too slow to build, not sure what wrap/mirror mode is best
+		setup_texture(tid, GL_MODULATE, GL_LINEAR, mipmaps, 1, 1, 1, 1);
+		assert(tid > 0);
+		assert(glIsTexture(tid));
+		glTexImage2D(GL_TEXTURE_2D, 0, 3, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glDisable(GL_TEXTURE_2D);
+		delete [] data;
+	}
+
 	void create_texture(unsigned tex_bs) {
 		assert(tid == 0);
 		assert(!island);
@@ -257,14 +353,14 @@ public:
 								else {
 									RGB_BLOCK_COPY(temp, (ta.data+tofa));
 								}
-								float const val((vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
-								BLEND_COLOR(td, td, temp, CLIP_TO_01(val));
+								float const val(CLIP_TO_01((vnz - sthresh[0])/(sthresh[1] - sthresh[0])));
+								BLEND_COLOR(td, td, temp, val);
 							}
 							else if (id2 == SNOW_TEX) { // snow
 								texture const &ta(textures[ROCK_TEX]);
 								int const tofa(ta.ncolors*(((ty<<tex_bs)&(ta.height-1))*ta.width + ((tx<<tex_bs)&(ta.width-1))));
-								float const val(2.0*(vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
-								BLEND_COLOR(td, td, (ta.data+tofa), CLIP_TO_01(val));
+								float const val(CLIP_TO_01(2.0f*(vnz - sthresh[0])/(sthresh[1] - sthresh[0])));
+								BLEND_COLOR(td, td, (ta.data+tofa), val);
 							}
 						}
 
@@ -554,8 +650,7 @@ float draw_tiled_terrain(bool add_hole) {
 	terrain_tile_draw.update();
 	float const zmin(terrain_tile_draw.draw(add_hole));
 	if (add_hole) fill_gap(); // need to fill the gap on +x/+y
-	//glFinish();
-	//PRINT_TIME("Tiled Terrain Draw");
+	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	return zmin;
 }
 
