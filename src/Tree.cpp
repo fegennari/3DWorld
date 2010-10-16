@@ -1564,7 +1564,7 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 				}
 				rseed1 = 805306457*(i + yoff2) + 12582917*(j + xoff2) + 100663319*rand_gen_index;
 				rseed2 = 6291469  *(j + xoff2) + 3145739 *(i + yoff2) + 1572869  *rand_gen_index;
-				unsigned const val(((unsigned)(rand2() + rand2()))%smod);
+				unsigned const val(((unsigned)rand2_2x_sum())%smod);
 				if (val <= 100)         continue; // scenery
 				if (val%tree_prob != 0) continue; // not selected
 				if ((rseed1&127)/128.0 >= vegetation) continue;

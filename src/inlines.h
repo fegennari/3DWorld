@@ -121,6 +121,14 @@ inline int rand2() {
 }
 
 
+inline int rand2_2x_sum() {
+
+	int val1(rand2());
+	swap(rseed1, rseed2);
+	return (val1 + rand2());
+}
+
+
 inline double rand2d() {
 
 	double rand_num;
