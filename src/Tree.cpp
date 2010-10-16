@@ -849,6 +849,12 @@ void tree::create_leaves_and_one_branch_array() {
 			leaves[i].pts[0] += sphere_center;
 		}
 	}
+	else {
+		/*for (unsigned i = 0; i < leaves.size(); ++i) { // scramble leaves so that LOD is unbiased/randomly sampled
+			swap(leaves[i], leaves[(i + 1572869)%leaves.size()]);
+		}*/
+		reverse(leaves.begin(), leaves.end()); // order leaves so that LOD removes from the center first, which is less noticeable
+	}
 	if (!leaves.empty()) damage_scale = 1.0/leaves.size();
 }
 
