@@ -83,7 +83,7 @@ class pt_line_drawer; // forward declaration
 
 void draw_cloud_volumes();
 void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, int ndiv_max, bool is_shadowed, pt_line_drawer &pld);
+					  bool do_texture, bool is_shadowed, pt_line_drawer &pld);
 void draw_weapon2(dwobject const &obj, float radius);
 void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, bool is_shadowed);
 void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type,
@@ -462,7 +462,6 @@ void draw_group(obj_group &objg) {
 	gluQuadricTexture(quadric, do_texture);
 	check_drawing_flags(flags, 1, 0);
 	int const clip_level((type == SMILEY || type == LANDMINE || type == ROCKET || type == BALL) ? 2 : 0);
-	int const div_max(is_droplet(type) ? (2*N_SPHERE_DIV)/3 : N_SPHERE_DIV);
 	bool const calc_shadow(color != BLACK || (otype.flags & (SPECULAR | LOW_SPECULAR)));
 	unsigned num_drawn(0);
 
@@ -551,7 +550,7 @@ void draw_group(obj_group &objg) {
 				if (!set_shadowed_color(color, pos, is_shadowed, 0)) obj.flags |= IN_DARKNESS;
 			}
 			++num_drawn;
-			int const ndiv(min(div_max, max(3, int(min(pt_size, 3.0f*sqrt(pt_size))))));
+			int const ndiv(min(N_SPHERE_DIV, max(3, int(min(pt_size, 3.0f*sqrt(pt_size))))));
 			draw_obj(objg, wap_vis_objs, type, radius, color, ndiv, j, is_shadowed, 0);
 		} // for j
 		for (unsigned k = 0; k < wap_vis_objs[0].size(); ++k) { // draw weapons
@@ -672,8 +671,7 @@ void draw_group(obj_group &objg) {
 			case ROCK:
 				color2 *= obj.orientation.y;
 				if (do_texture) tcolor *= obj.orientation.y;
-				draw_sized_point(obj, obj.orientation.x*radius, obj.orientation.x*cd_scale, color2, tcolor,
-					do_texture, N_SPHERE_DIV/3, is_shadowed, obj_pld);
+				draw_sized_point(obj, obj.orientation.x*radius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, is_shadowed, obj_pld);
 				break;
 
 			case FRAGMENT: // draw_fragment()?
@@ -686,7 +684,7 @@ void draw_group(obj_group &objg) {
 					set_lighted_sides(1);
 					break;
 				}
-				draw_sized_point(obj, radius*obj.vdeform.x, cd_scale, color2, tcolor, do_texture, N_SPHERE_DIV, is_shadowed, obj_pld);
+				draw_sized_point(obj, radius*obj.vdeform.x, cd_scale, color2, tcolor, do_texture, is_shadowed, obj_pld);
 				break;
 
 			default:
@@ -697,7 +695,7 @@ void draw_group(obj_group &objg) {
 					set_color(check_coll_line(pos, pos2, cindex, -1, 0, 0) ? RED : GREEN);
 					draw_line(pos, pos2);
 				}
-				draw_sized_point(obj, radius, cd_scale, color2, tcolor, do_texture, N_SPHERE_DIV, is_shadowed, obj_pld);
+				draw_sized_point(obj, radius, cd_scale, color2, tcolor, do_texture, is_shadowed, obj_pld);
 			} // switch (type)
 		} // for j
 		switch (type) {
@@ -732,7 +730,7 @@ void draw_group(obj_group &objg) {
 
 
 void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, int ndiv_max, bool is_shadowed, pt_line_drawer &pld)
+					  bool do_texture, bool is_shadowed, pt_line_drawer &pld)
 {
 	point pos(obj.pos);
 	point const camera(get_camera_pos());
@@ -790,14 +788,15 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 		return;
 	}
 	// draw as a sphere
-	int ndiv(min(ndiv_max, int(4.0*sqrt(point_dia))));
+	int ndiv(int(4.0*sqrt(point_dia)));
 
 	if (is_droplet(type)) {
-		ndiv = max(4, min(ndiv/2, (2*N_SPHERE_DIV)/5));
+		ndiv = min(ndiv/2, N_SPHERE_DIV/2);
 	}
 	else if (type == ROCK || type == SAND || type == DIRT || type == FRAGMENT) {
-		ndiv = max(4, ndiv/2);
+		ndiv /= 2;
 	}
+	ndiv = max(4, min(ndiv, N_SPHERE_DIV));
 	bool const cull_face(get_cull_face(type, color));
 	//enable_fog_coord();
 	//set_fog_coord(rand_uniform(0.0, 2.0));
