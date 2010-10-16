@@ -1598,6 +1598,7 @@ int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 
 	case W_BBBAT: // baseball bat
 		do_impact_damage(fpos, dir, velocity, fpos, radius, shooter, weapon_id, 1.0);
+		//cobj.register_coll() ???
 		return 1;
 
 	case W_PLASMA:
@@ -1867,8 +1868,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		res_pos = cpos;
 	}
 	if (coll && cindex >= 0 && closest < 0) { // hit cobjs (like tree leaves)
-		coll_objects[cindex].last_coll = TICKS_PER_SECOND/(is_laser ? 4 : 2);
-		coll_objects[cindex].coll_type = (is_laser ? BEAM : PROJECTILE);
+		coll_objects[cindex].register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), (is_laser ? BEAM : PROJECTILE));
 	}
 	
 	// process laser reflections
@@ -1968,10 +1968,20 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 		int coll, xpos, ypos, cindex;
 		int const fdir(fframe > (delay/2)), ff(fdir ? (delay - fframe) : fframe); // fdir = forward
 		float range(get_projectile_range(pos, dir, 1.1*cradius, 1.5*cradius+CBLADE_EXT, coll_pos, coll_norm, coll, cindex, shooter, 0));
-		
+		bool cobj_coll(coll && cindex >= 0);
+
 		if (get_range_to_mesh(pos, dir, coll_pos, xpos, ypos)) {
-			range = min(range, p2p_dist(pos, coll_pos)-0.1f);
+			float const mesh_range(p2p_dist(pos, coll_pos)-0.1f);
+
+			if (mesh_range < range) {
+				range     = mesh_range;
+				cobj_coll = 0;
+			}
 			if (CBLADE_EXT_PT*ff > (range - 0.8f*cradius)) modify_grass_at(coll_pos, 0.75*cradius, 0, 0, 1, 0); // cut grass
+		}
+		if (cobj_coll) {
+			assert(unsigned(cindex) < coll_objects.size());
+			coll_objects[cindex].register_coll(TICKS_PER_SECOND/2, IMPACT);
 		}
 		sstate.dpos = max(0.0f, min(CBLADE_EXT_PT*ff, (range - 0.8f*cradius)));
 		pos += dir*sstate.dpos;

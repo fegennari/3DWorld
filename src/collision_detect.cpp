@@ -1210,8 +1210,7 @@ void vert_coll_detector::check_cobj(int index) {
 		if (!(otype.flags & OBJ_IS_DROP) && type != LEAF && type != CHARRED && type != SHRAPNEL &&
 			type != BEAM && type != LASER && type != FIRE && type != SMOKE && type != PARTICLE)
 		{
-			coll_objects[index].last_coll = TICKS_PER_SECOND;
-			coll_objects[index].coll_type = IMPACT;
+			coll_objects[index].register_coll(TICKS_PER_SECOND, IMPACT);
 		}
 		obj.verify_data();
 		if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) obj.disable();

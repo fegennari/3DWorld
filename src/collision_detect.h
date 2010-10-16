@@ -219,6 +219,7 @@ public:
 	point get_ref_pt()    const {return ((platform_id >= 0) ? points[0] : all_zeros);}
 	bool line_intersect(point const &p1, point const &p2) const;
 	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const;
+	void register_coll(unsigned char coll_time, unsigned char coll_type_) {last_coll = coll_time; coll_type = coll_type_;}
 };
 
 
