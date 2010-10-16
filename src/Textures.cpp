@@ -44,9 +44,10 @@ struct lspot {
 texture textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel)
+// use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
 //texture(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
-texture(0, 0, 128,  128,  1, 3, 1, "grass29.raw"), // mipmap for trees?
+texture(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for trees?
 texture(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
 texture(0, 0, 512,  512,  1, 3, 1, "water.raw"),
 texture(0, 0, 64,   64,   1, 3, 1, "water_sm.raw"), // WATER2_TEX is unused
@@ -55,11 +56,11 @@ texture(0, 0, 64,   64,   1, 3, 0, "sun.raw"),
 texture(0, 0, 128,  128,  1, 3, 1, "moon.raw"),
 texture(0, 0, 256,  256,  1, 3, 0, "earth.raw"), // not sure why there is a black line when wrap is set to 0
 texture(0, 0, 64,   64,   1, 3, 1, "ice.raw"), // marble?
-texture(0, 0, 256,  256,  1, 3, 1, "snow.raw"),
+texture(0, 0, 256,  256,  1, 3, 2, "snow.raw"),
 texture(0, 0, 128,  128,  0, 4, 0, "leaf.raw"),
 texture(0, 0, 128,  128,  1, 4, 0, "bark.raw"),
-texture(0, 0, 512,  512,  1, 4, 1, "desert_sand.raw"),
-texture(0, 0, 256,  256,  1, 3, 1, "rock2.raw"),
+texture(0, 0, 512,  512,  1, 4, 2, "desert_sand.raw"),
+texture(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
 texture(0, 0, 512,  512,  1, 3, 1, "camoflage.raw"),
 texture(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
 texture(0, 1, 512,  512,  1, 3, 1, "brick1.bmp"),
@@ -112,7 +113,7 @@ texture(0, 3, 256,  256,  0, 4, 0, "papaya_leaf.raw"),
 texture(0, 3, 256,  256,  0, 4, 0, "coffee_leaf.raw"), // half the texture is wasted, but leaves must be square (for now)
 texture(0, 0, 256,  256,  1, 4, 0, "smiley_skull.raw"),
 texture(0, 0, 512,  512,  1, 3, 1, "ice.2.raw"),
-texture(0, 0, 256,  256,  1, 3, 1, "rock.03.raw"),
+texture(0, 0, 256,  256,  1, 3, 2, "rock.03.raw"),
 texture(0, 0, 16,   16,   1, 3, 0, "black.raw"),
 texture(0, 0, 16,   16,   1, 3, 0, "white.raw"),
 texture(0, 2, 512,  512,  0, 4, 0, "fire.raw"),
@@ -143,7 +144,6 @@ extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation;
 
 
 unsigned char *LoadTextureRAW(texture const &t, int index);
-void calc_texture_color(int index);
 void gen_smoke_texture();
 void gen_plasma_texture();
 void gen_disintegrate_texture();
@@ -197,7 +197,7 @@ void load_textures() {
 				textures[i].data = LoadTextureRAW(textures[i], i);
 			}
 		} // switch
-		calc_texture_color(i);
+		textures[i].init();
 		//assert(texture_name_map.find(textures[i].name) == texture_name_map.end());
 		texture_name_map[textures[i].name] = i; // multiply used textures such as sky.raw will be overwritten
 	}
@@ -290,13 +290,79 @@ void texture::free() {
 
 	delete [] data;
 	delete [] alt_data;
-	data = alt_data = NULL;
+	delete [] mm_data;
+	data = alt_data = mm_data = NULL;
+	mm_offsets.clear();
 }
 
 void texture::gl_delete() {
 
 	if (glIsTexture(tid)) glDeleteTextures(1, &tid);
 	tid = 0;
+}
+
+
+void texture::init() {
+
+	calc_color();
+	if (use_mipmaps == 2) build_mipmaps();
+}
+
+
+void texture::calc_color() {
+
+	float colors[4] = {0.0,0.0,0.0,0.0}, weight(0.0);
+	int const size(width*height);
+	if (data == NULL) {cout << "NULL texture: " << name << endl; assert(0);}
+
+	for(int i = 0; i < size; ++i) {
+		int const offset(i*ncolors);
+		float const cscale((ncolors == 4) ? data[offset+3]/255.0 : 1.0); // alpha scale
+		weight += cscale;
+
+		for (int j = 0; j < ncolors; ++j) {
+			colors[j] += ((j < 3) ? cscale : 1.0)*data[offset+j];
+		}
+	}
+	for (int j = 0; j < ncolors; ++j) {
+		color[j] = colors[j]/(255.0*weight);
+	}
+	if (ncolors == 3) color.alpha = 1.0;
+}
+
+
+void texture::build_mipmaps() {
+
+	assert(width == height);
+	assert(ncolors == 3 || ncolors == 4);
+	assert(mm_offsets.empty());
+	unsigned data_size(0);
+
+	for (unsigned tsz = width/2; tsz >= 1; tsz /= 2) {
+		mm_offsets.push_back(data_size);
+		data_size += ncolors*tsz*tsz;
+	}
+	mm_data = new unsigned char[data_size];
+	int const format((ncolors == 3) ? GL_RGB : GL_RGBA);
+
+	for (unsigned level = 0; level < mm_offsets.size(); ++level) {
+		unsigned const tsz(width >> level);
+		assert(tsz > 1);
+		gluScaleImage(format, tsz,   tsz,   GL_UNSIGNED_BYTE, get_mipmap_data(level),
+			                  tsz/2, tsz/2, GL_UNSIGNED_BYTE, (mm_data + mm_offsets[level]));
+	}
+}
+
+
+unsigned char const *texture::get_mipmap_data(unsigned level) const {
+
+	if (level == 0) { // base texture
+		assert(data != NULL);
+		return data;
+	}
+	assert(level-1 < mm_offsets.size());
+	assert(mm_data != NULL);
+	return (mm_data + mm_offsets[level-1]);
 }
 
 
@@ -481,30 +547,6 @@ unsigned char *LoadTextureRAW(texture const &t, int index) {
 }
 
 
-void calc_texture_color(int index) {
-
-	float colors[4] = {0.0,0.0,0.0,0.0}, weight(0.0);
-	int const width(textures[index].width), height(textures[index].height), size(width*height);
-	int const ncolors(textures[index].ncolors);
-	unsigned char const *tex_data(textures[index].data);
-	if (tex_data == NULL) {cout << "NULL texture: " << index << endl; assert(0);}
-
-	for(int i = 0; i < size; ++i) {
-		int const offset(i*ncolors);
-		float const cscale((ncolors == 4) ? tex_data[offset+3]/255.0 : 1.0); // alpha scale
-		weight += cscale;
-
-		for (int j = 0; j < ncolors; ++j) {
-			colors[j] += ((j < 3) ? cscale : 1.0)*tex_data[offset+j];
-		}
-	}
-	for (int j = 0; j < ncolors; ++j) {
-		textures[index].color[j] = colors[j]/(255.0*weight);
-	}
-	if (ncolors == 3) textures[index].color.alpha = 1.0;
-}
-
-
 void setup_texture(unsigned &tid, int type, int filter, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t) {
 
 	glGenTextures(1, &tid);
@@ -544,12 +586,12 @@ void init_texture(int id) {
 	if (SHOW_TEXTURE_MEMORY) {
 		static unsigned tmem(0);
 		unsigned tsize(t1.width*t1.height*t1.ncolors);
-		if (t1.use_mipmaps) tsize = unsigned(tsize*(1.0 + 1.0/4 + 1.0/16 + 1.0/64));
+		if (t1.use_mipmaps) tsize = 4*tsize/3;
 		tmem += tsize;
 		cout << "tmem = " << tmem << endl;
 	}
 	assert(t1.width > 0 && t1.height > 0 && t1.data != NULL);
-	setup_texture(t1.tid, GL_MODULATE/*GL_DECAL*/, GL_LINEAR, t1.use_mipmaps, t1.wrap, t1.wrap);
+	setup_texture(t1.tid, GL_MODULATE/*GL_DECAL*/, GL_LINEAR, (t1.use_mipmaps != 0), t1.wrap, t1.wrap);
 	GLenum const format((t1.ncolors == 4) ? GL_RGBA : GL_RGB);
 
 	if (t1.use_mipmaps) { // build our texture mipmaps

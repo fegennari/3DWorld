@@ -658,17 +658,22 @@ colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black
 
 struct texture { // size = 78 (80)
 
-	char type, format;
-	bool wrap, use_mipmaps;
+	char type, format, use_mipmaps;
+	bool wrap;
 	int width, height, ncolors;
-	unsigned char *data, *alt_data;
+	unsigned char *data, *alt_data, *mm_data;
 	std::string name;
 	GLuint tid;
 	colorRGBA color;
+	vector<unsigned> mm_offsets;
 
-	texture(char t, char f, int w, int h, bool wra, int nc, bool um, std::string const &n,
-		GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR) : type(t), format(f), wrap(wra), use_mipmaps(um),
-		width(w), height(h), ncolors(nc), data(NULL), alt_data(NULL), name(n), tid(tex), color(c) {}
+	texture(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n,
+		GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR) : type(t), format(f), use_mipmaps(um), wrap(wra),
+		width(w), height(h), ncolors(nc), data(NULL), alt_data(NULL), mm_data(0), name(n), tid(tex), color(c) {}
+	void init();
+	void calc_color();
+	void build_mipmaps();
+	unsigned char const *get_mipmap_data(unsigned level) const;
 	void set_to_color(colorRGBA const &c);
 	void alloc();
 	void free();

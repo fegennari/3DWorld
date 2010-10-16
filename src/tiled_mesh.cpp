@@ -85,9 +85,9 @@ public:
 
 	unsigned get_gpu_memory() const {
 		unsigned mem(0);
-		if (vbo  > 0) mem += 2*stride*size*sizeof(vert_norm);
-		if (ivbo > 0) mem += size*size*sizeof(unsigned short);
-		if (tid  > 0) mem += 3*gen_tsize*gen_tsize;
+		if (vbo  > 0) mem += 2*stride*size*sizeof(vert_norm); // 44MB
+		if (ivbo > 0) mem += size*size*sizeof(unsigned short); // 1MB
+		if (tid  > 0) mem += 3*gen_tsize*gen_tsize; // 34MB
 		return mem;
 	}
 
@@ -187,6 +187,9 @@ public:
 		//PRINT_TIME("Create Data");
 	}
 
+//#define GET_TEX_DATA(t, td, id, tx, ty, tex_bs) (t[id].data + t[id].ncolors*(((ty<<tex_bs)&(t[id].height-1))*t[id].width + ((tx<<tex_bs)&(t[id].width-1))))
+#define GET_TEX_DATA(t, td, id, tx, ty, tex_bs) (td[id] + t[id].ncolors*((ty&((t[id].height>>tex_bs)-1))*(t[id].width>>tex_bs) + (tx&((t[id].width>>tex_bs)-1))))
+
 	void create_texture(unsigned tex_bs) {
 		assert(tid == 0);
 		assert(!island);
@@ -197,7 +200,12 @@ public:
 		unsigned char *data(new unsigned char[3*tsize*tsize]); // RGB
 		int k1, k2, k3, k4;
 		float t;
+		unsigned char const *tex_data[NUM_TEXTURES] = {0};
 
+		for (unsigned i = 0; i < NTEX_DIRT; ++i) {
+			assert(lttex_dirt[i].id < NUM_TEXTURES);
+			tex_data[lttex_dirt[i].id] = textures[lttex_dirt[i].id].get_mipmap_data(tex_bs);
+		}
 		for (unsigned y = 0; y < size; ++y) { // makes a big performance improvement
 			for (unsigned x = 0; x < size; ++x) {
 				unsigned const ix(y*zvsize + x);
@@ -226,17 +234,15 @@ public:
 							get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, t);
 						}
 						int const id(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
-						texture const &t1(textures[id]);
-						int const tof(t1.ncolors*(((ty<<tex_bs)&(t1.height-1))*t1.width + ((tx<<tex_bs)&(t1.width-1))));
+						unsigned char const *t1_data(GET_TEX_DATA(textures, tex_data, id, tx, ty, tex_bs));
 						unsigned char *td(data + off);
 						
 						if (k1 == k2) { // single texture
-							RGB_BLOCK_COPY(td, (t1.data + tof));
+							RGB_BLOCK_COPY(td, t1_data);
 						}
 						else { // blend two textures - performance critical
-							texture const &t2(textures[id2]);
-							int const tof2(t2.ncolors*(((ty<<tex_bs)&(t2.height-1))*t2.width + ((tx<<tex_bs)&(t2.width-1))));
-							BLEND_COLOR(td, (t2.data + tof2), (t1.data + tof), t);
+							unsigned char const *t2_data(GET_TEX_DATA(textures, tex_data, id2, tx, ty, tex_bs));
+							BLEND_COLOR(td, t2_data, t1_data, t);
 						}
 
 						// handle steep slopes (dirt/rock texture replaces grass texture)
@@ -245,26 +251,23 @@ public:
 
 						if (vnz < sthresh[1]) {
 							if (id == GROUND_TEX || id2 == GROUND_TEX) { // ground/grass
-								texture const &ta(textures[DIRT_TEX]);
-								int const tofa(ta.ncolors*(((ty<<tex_bs)&(ta.height-1))*ta.width + ((tx<<tex_bs)&(ta.width-1))));
+								unsigned char const *ta_data(GET_TEX_DATA(textures, tex_data, DIRT_TEX, tx, ty, tex_bs));
 								unsigned char temp[3];
 
 								if (id == GROUND_TEX || id2 == ROCK_TEX) {
-									texture const &tb(textures[ROCK_TEX]);
-									int const tofb(tb.ncolors*(((ty<<tex_bs)&(tb.height-1))*tb.width + ((tx<<tex_bs)&(tb.width-1))));
-									BLEND_COLOR(temp, (tb.data+tofb), (ta.data+tofa), t);
+									unsigned char const *tb_data(GET_TEX_DATA(textures, tex_data, ROCK_TEX, tx, ty, tex_bs));
+									BLEND_COLOR(temp, tb_data, ta_data, t);
 								}
 								else {
-									RGB_BLOCK_COPY(temp, (ta.data+tofa));
+									RGB_BLOCK_COPY(temp, ta_data);
 								}
 								float const val(CLIP_TO_01((vnz - sthresh[0])/(sthresh[1] - sthresh[0])));
 								BLEND_COLOR(td, td, temp, val);
 							}
 							else if (id2 == SNOW_TEX) { // snow
-								texture const &ta(textures[ROCK_TEX]);
-								int const tofa(ta.ncolors*(((ty<<tex_bs)&(ta.height-1))*ta.width + ((tx<<tex_bs)&(ta.width-1))));
+								unsigned char const *ta_data(GET_TEX_DATA(textures, tex_data, ROCK_TEX, tx, ty, tex_bs));
 								float const val(CLIP_TO_01(2.0f*(vnz - sthresh[0])/(sthresh[1] - sthresh[0])));
-								BLEND_COLOR(td, td, (ta.data+tofa), val);
+								BLEND_COLOR(td, td, ta_data, val);
 							}
 						}
 
