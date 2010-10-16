@@ -527,6 +527,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	cout << "Generating scene..." << endl;
 	RESET_TIME;
 	static int st_valid(0);
+	bool const inf_terrain(world_mode == WMODE_INF_TERRAIN);
 
 	if (!st_valid) {
 		keep_sin_table = 0;
@@ -564,6 +565,10 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 			delete_trees(t_trees);
 		}
 	}
+	if (!inf_terrain || gen_trees) {
+		gen_scenery();
+		PRINT_TIME("Scenery generation");
+	}
 	add_all_coll_objects(coll_obj_file, (num_trees == 0 || cobjs_re_add));
 	PRINT_TIME("Collision object addition");
 
@@ -572,7 +577,6 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 
 	calc_motion_direction();
 	PRINT_TIME("Motion matrix generation");
-	bool const inf_terrain(world_mode == WMODE_INF_TERRAIN);
 
 	if (!inf_terrain && !rgt_only) {
 		calc_watershed();
@@ -581,10 +585,6 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	reanimate_objects(); // allow stationary/stuck objects to move about the new terrain
 	PRINT_TIME("Object reanimation");
 
-	if (!inf_terrain || gen_trees) {
-		gen_scenery();
-		PRINT_TIME("Scenery generation");
-	}
 	unsigned char sflags(0);
 	float const lf(fabs(sun_rot/PI - 1.0)); // light_factor
 	if (!scrolling || lf >= 0.4) sflags |= SUN_SHADOW;
