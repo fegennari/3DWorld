@@ -7,6 +7,7 @@
 
 
 #include "3DWorld.h"
+#include "collision_detect.h"
 
 
 struct spark_t {

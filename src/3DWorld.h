@@ -1158,6 +1158,7 @@ int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cinde
 // function prototypes - coll_cell_search
 void build_cobj_bsp_tree();
 bool check_coll_line_exact_bspt(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj);
+bool check_coll_line_bspt(point const &p1, point const &p2, int &cindex, int ignore_cobj);
 bool check_vert_collision_sphere(point const &pos, float radius, int skip_dynamic, bool trans_test, vector<int> *cobjs=NULL);
 bool check_coll_line(point pos1, point pos2, int &cindex, int c_obj, int skip_dynamic, int test_alpha);
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_norm, int &cindex,
