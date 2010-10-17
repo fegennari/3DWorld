@@ -1736,8 +1736,8 @@ int main(int argc, char** argv) {
 		t_trees.resize(num_trees);
 		init_models();
 		init_terrain_mesh();
-		gen_snow_coverage();
 		gen_scene(1, (world_mode == WMODE_GROUND), 0, 0, 0);
+		gen_snow_coverage();
 		create_object_groups();
 		init_game_state();
 		build_lightmap(1);
