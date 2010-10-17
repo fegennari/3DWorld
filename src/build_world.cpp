@@ -706,6 +706,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 		if (has_scenery2) add_scenery_cobjs();
 	}
 	cobj_optimize();
+	build_cobj_bsp_tree();
 }
 
 
