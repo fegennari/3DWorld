@@ -121,7 +121,7 @@ public:
 		}
 		if (cixs.empty()) return; // nothing to be done
 		assert(cixs.size() < (1 << 29));
-		nodes.reserve(3*cixs.size()/2); // conservative
+		nodes.reserve(6*cixs.size()/5); // conservative
 		root_node = nodes.size();
 		nodes.push_back(tree_node<NUM>(0, cixs.size()));
 		build_tree(root_node, 0);
