@@ -6,21 +6,20 @@
 #include "physics_objects.h"
 
 
-bool const BUILD_COBJ_BSP_TREE = 0;
+bool const BUILD_COBJ_TREE = 0;
 
 
 extern int display_mode;
 extern vector<coll_obj> coll_objects;
 
 
-class cobj_bsp_tree_t {
-	struct bsp_node : public cube_t { // size = 20
-		unsigned b[3]; // {left, right, center} branches
+class cobj_tree_base {
+protected:
+	struct tree_node_base : public cube_t { // size = 8
 		unsigned start, end; // index into cixs for leaves
 
-		bsp_node(unsigned s=0, unsigned e=0) : start(s), end(e) {
+		tree_node_base(unsigned s=0, unsigned e=0) : start(s), end(e) {
 			UNROLL_3X(d[i_][0] = d[i_][1] = 0.0;)
-			UNROLL_3X(b[i_] = 0;) // kids of 0 means empty kids
 		}
 	};
 
@@ -39,20 +38,19 @@ class cobj_bsp_tree_t {
 	};
 
 	vector<coll_obj> const &cobjs;
-	vector<bsp_node> nodes;
 	vector<unsigned> cixs;
-	unsigned root_node, starting_cobjs;
+	unsigned root_node;
 
 	coll_obj const &get_cobj(unsigned ix) const {
 		assert(ix < cixs.size() && cixs[ix] < cobjs.size());
 		return cobjs[cixs[ix]];
 	}
-	void mark_as_bin(unsigned ix, unsigned bix) {cixs[ix] |= (bix << 30);}
-	void unmark_as_bin(unsigned ix)             {cixs[ix] &= 0x0FFFFFFF;}
-	unsigned get_bin_ix(unsigned ix)            {return (cixs[ix] >> 30);}
+	void mark_as_bin(unsigned ix, unsigned bix) {cixs[ix] |= (bix << 29);}
+	void unmark_as_bin(unsigned ix)             {cixs[ix] &= 0x07FFFFFF;}
+	unsigned get_bin_ix(unsigned ix)            {return (cixs[ix] >> 29);}
 
 	// Note: start by adding all cobjs to [start, end], then calc bbox, then split into branches and leaves
-	void calc_node_bbox(bsp_node &n) const {
+	void calc_node_bbox(tree_node_base &n) const {
 		assert(n.start < n.end);
 		n.copy_from(get_cobj(n.start));
 
@@ -62,6 +60,50 @@ class cobj_bsp_tree_t {
 			UNROLL_3X(n.d[i_][1] = max(n.d[i_][1], cobj.d[i_][1]);)
 		}
 	}
+
+	bool test_cobj(coll_state &state, unsigned ix) const {
+		float t(0.0);
+		// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
+		bool const ret(get_cobj(ix).line_int_exact(state.p1, state.p2, t, state.cnorm, state.tmin, state.tmax));
+		
+		if (ret) {
+			state.tmax   = t;
+			state.cindex = cixs[ix];
+			state.update_cpos();
+		}
+		return ret;
+	}
+
+public:
+	cobj_tree_base(vector<coll_obj> const &cobjs_) : cobjs(cobjs_), root_node(0) {}
+
+	void clear() {
+		cixs.clear();
+		root_node = 0;
+	}
+
+	void setup_cixs() {
+		cixs.reserve(cobjs.size());
+
+		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
+			if (i->status != COLL_STATIC) continue;
+			cixs.push_back(i - cobjs.begin());
+		}
+		assert(cixs.size() < (1 << 29));
+	}
+}; // cobj_tree_base
+
+
+class cobj_bsp_tree_t : public cobj_tree_base {
+	struct bsp_node : public tree_node_base { // size = 20
+		unsigned b[3]; // {left, right, center} branches
+
+		bsp_node(unsigned s=0, unsigned e=0) : tree_node_base(s, e) {
+			UNROLL_3X(b[i_] = 0;) // kids of 0 means empty kids
+		}
+	};
+
+	vector<bsp_node> nodes;
 
 	void build_tree(unsigned nix, unsigned skip_dims) {
 		assert(nix < nodes.size());
@@ -108,7 +150,6 @@ class cobj_bsp_tree_t {
 		}
 
 		// check that dataset has been subdivided (not all in one bin)
-		//cout << "s: " << n.start << ", e: " << n.end << ", dim: " << dim << ", skip: " << skip_dims << ", counts: " << bin_count[0] << " " << bin_count[1] << " " << bin_count[2] << endl;
 		assert(bin_count[0] < num && bin_count[1] < num);
 
 		if (bin_count[2] == num) {
@@ -133,23 +174,11 @@ class cobj_bsp_tree_t {
 		n2.start = n2.end = 0; // branch node has no leaves
 	}
 
-	bool test_cobj(coll_state &state, unsigned ix) const {
-		float t(0.0);
-		// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
-		bool const ret(get_cobj(ix).line_int_exact(state.p1, state.p2, t, state.cnorm, state.tmin, state.tmax));
-		
-		if (ret) {
-			state.tmax   = t;
-			state.cindex = cixs[ix];
-		}
-		return ret;
-	}
-
-	bool search_tree(point p1, point p2, coll_state &state, unsigned nix) const {
+	bool search_tree(coll_state &state, unsigned nix) const {
 		assert(nix < nodes.size());
 		bsp_node const &n(nodes[nix]);
 		assert(n.start <= n.end);
-		if (!do_line_clip(p1, p2, n.d)) return 0;
+		if (!check_line_clip(state.p1, state.cpos, n.d)) return 0;
 		bool ret(0);
 
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
@@ -159,64 +188,167 @@ class cobj_bsp_tree_t {
 
 		// interate in correct order based on (p2 - p1)?
 		for (unsigned i = 0; i < 3; ++i) { // check branches
-			if (n.b[i] != 0) ret |= search_tree(p1, p2, state, n.b[i]);
+			if (n.b[i] != 0) ret |= search_tree(state, n.b[i]);
 			if (!state.exact && ret) return 1;
 		}
 		return ret;
 	}
 
 public:
-	cobj_bsp_tree_t(vector<coll_obj> const &cobjs_) : cobjs(cobjs_), root_node(0), starting_cobjs(0) {}
+	cobj_bsp_tree_t(vector<coll_obj> const &cobjs_) : cobj_tree_base(cobjs_) {}
 
 	void clear() {
-		cixs.clear();
+		cobj_tree_base::clear();
 		nodes.clear();
-		root_node = starting_cobjs = 0;
 	}
 
 	void add_cobjs() {
 		RESET_TIME;
 		clear();
-		starting_cobjs = cobjs.size();
-		cixs.reserve(starting_cobjs);
-
-		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-			if (i->status != COLL_STATIC) continue;
-			cixs.push_back(i - cobjs.begin());
-		}
+		setup_cixs();
 		if (cixs.empty()) return; // nothing to be done
-		assert(cixs.size() < (1 << 30));
 		nodes.reserve(3*cixs.size()/2); // conservative
 		root_node = nodes.size();
 		nodes.push_back(bsp_node(0, cixs.size()));
 		build_tree(root_node, 0);
 		PRINT_TIME("Cobj BSP Tree Create");
-		cout << "cobjs: " << starting_cobjs << ", leaves: " << cixs.size() << ", nodes: " << nodes.size() << endl; // testing
+		cout << "cobjs: " << cobjs.size() << ", leaves: " << cixs.size() << ", nodes: " << nodes.size() << endl; // testing
 	}
 
 	bool check_coll_line(point p1, point p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
 		cindex = -1;
 		if (nodes.empty()) return 0;
-		assert(cobjs.size() == starting_cobjs); // temporary, until we have dynamic BSP tree updates
+		cpos = p2;
 		coll_state state(p1, p2, cpos, cnorm, cindex, ignore_cobj, exact);
-		bool const ret(search_tree(p1, p2, state, root_node));
-		if (ret) state.update_cpos();
+		return search_tree(state, root_node);
+	}
+}; // cobj_bsp_tree_t
+
+
+class cobj_oct_tree_t : public cobj_tree_base {
+	struct tree_node : public tree_node_base { // size = 40
+		unsigned b[8]; // branches
+
+		tree_node(unsigned s=0, unsigned e=0) : tree_node_base(s, e) {
+			for (unsigned i = 0; i < 8; ++i) b[i] = 0; // kids of 0 means empty kids
+		}
+	};
+
+	vector<tree_node> nodes;
+
+	void build_tree(unsigned nix, bool make_leaf) {
+		assert(nix < nodes.size());
+		tree_node &n(nodes[nix]);
+		assert(n.start < n.end);
+		calc_node_bbox(n);
+		unsigned const num(n.end - n.start);
+		if (num <= 2 || make_leaf) return; // base case
+		
+		// determine split values
+		point const sval(n.get_center()); // center point
+
+		// split in this dimension: use upper 3 bits of cixs for storing bin index
+		for (unsigned i = n.start; i < n.end; ++i) {
+			coll_obj const &cobj(get_cobj(i));
+			point const center(cobj.get_center());
+			unsigned bix(0);
+
+			for (unsigned d = 0; d < 3; ++d) {
+				if (center[d] > sval[d]) bix |= (1 << d);
+			}
+			mark_as_bin(i, bix);
+		}
+		sort((cixs.begin() + n.start), (cixs.begin() + n.end)); // sort by bix then by ix
+		unsigned bin_count[8] = {0};
+
+		for (unsigned i = n.start; i < n.end; ++i) {
+			unsigned const bix(get_bin_ix(i));
+			assert(bix < 8);
+			++bin_count[bix];
+			unmark_as_bin(i);
+		}
+
+		// create child nodes and call recursively
+		unsigned cur(n.start);
+
+		for (unsigned bix = 0; bix < 8; ++bix) { // Note: this loop will invalidate the reference to 'n'
+			unsigned const count(bin_count[bix]);
+			if (count == 0) continue; // empty bin
+			unsigned const kid(nodes.size());
+			nodes[nix].b[bix] = kid;
+			nodes.push_back(tree_node(cur, cur+count));
+			build_tree(kid, (count == num)); // if all in one bin, make that bin a leaf
+			cur += count;
+		}
+		tree_node &n2(nodes[nix]); // create a new reference
+		assert(cur == n2.end);
+		n2.start = n2.end = 0; // branch node has no leaves
+	}
+
+	bool search_tree(coll_state &state, unsigned nix) const {
+		assert(nix < nodes.size());
+		tree_node const &n(nodes[nix]);
+		assert(n.start <= n.end);
+		if (!check_line_clip(state.p1, state.cpos, n.d)) return 0;
+		bool ret(0);
+
+		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+			ret |= test_cobj(state, i);
+			if (!state.exact && ret) return 1;
+		}
+
+		// interate in correct order based on (p2 - p1)?
+		for (unsigned i = 0; i < 8; ++i) { // check branches
+			if (n.b[i] != 0) ret |= search_tree(state, n.b[i]);
+			if (!state.exact && ret) return 1;
+		}
 		return ret;
 	}
-};
 
-cobj_bsp_tree_t cobj_bsp_tree(coll_objects);
+public:
+	cobj_oct_tree_t(vector<coll_obj> const &cobjs_) : cobj_tree_base(cobjs_) {}
+
+	void clear() {
+		cobj_tree_base::clear();
+		nodes.clear();
+	}
+
+	void add_cobjs() {
+		RESET_TIME;
+		clear();
+		setup_cixs();
+		assert(cixs.size() < (1 << 29));
+		//nodes.reserve(3*cixs.size()/2); // conservative
+		root_node = nodes.size();
+		nodes.push_back(tree_node(0, cixs.size()));
+		build_tree(root_node, 0);
+		PRINT_TIME("Cobj OCTTree Create");
+		cout << "cobjs: " << cobjs.size() << ", leaves: " << cixs.size() << ", nodes: " << nodes.size() << endl; // testing
+	}
+
+	bool check_coll_line(point p1, point p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
+		cindex = -1;
+		if (nodes.empty()) return 0;
+		cpos = p2;
+		coll_state state(p1, p2, cpos, cnorm, cindex, ignore_cobj, exact);
+		return search_tree(state, root_node);
+	}
+}; // cobj_oct_tree_t
+
+
+//cobj_bsp_tree_t cobj_tree(coll_objects);
+cobj_oct_tree_t cobj_tree(coll_objects);
 
 
 void build_cobj_bsp_tree() {
 
-	if (BUILD_COBJ_BSP_TREE) cobj_bsp_tree.add_cobjs();
+	if (BUILD_COBJ_TREE) cobj_tree.add_cobjs();
 }
 
 // can use with ray trace lighting, snow collision, maybe water reflections
 bool check_coll_line_exact_bspt(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj) {
 
-	return cobj_bsp_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
+	return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
 }
 
 // can use with snow shadows, grass shadows, tree leaf shadows
@@ -224,7 +356,7 @@ bool check_coll_line_bspt(point const &p1, point const &p2, int &cindex, int ign
 
 	vector3d cnorm; // unused
 	point cpos; // unused
-	return cobj_bsp_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0);
+	return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0);
 }
 
 

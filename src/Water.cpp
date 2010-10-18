@@ -299,7 +299,7 @@ public:
 		point cpos; // unused
 		vector3d cnorm; // unused
 		
-		if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, 0)) { // skip_dynamic if !begin_motion?, !skip_mesh?
+		if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, !begin_motion)) { // skip_dynamic if !begin_motion?, !skip_mesh?
 			get_object_color(cindex, rcolor);
 		}
 		if (rcolor.alpha > 0.0) {
