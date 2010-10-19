@@ -9,7 +9,7 @@
 
 bool const CACHE_COBJ_LITES   = 0;
 bool const CACHE_OCCLUDER     = 1;
-bool const USE_COBJ_BSP_TREE  = 0;
+bool const USE_COBJ_TREE      = 0;
 unsigned const QLP_CACHE_SIZE = 10000;
 float const GET_OCC_EXPAND    = 0.02;
 
@@ -662,8 +662,8 @@ public:
 
 bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha) {
 
-	if (USE_COBJ_BSP_TREE && skip_dynamic && !test_alpha) {
-		return check_coll_line_bspt(pos1, pos2, cindex, cobj);
+	if (USE_COBJ_TREE && skip_dynamic && !test_alpha) {
+		return check_coll_line_tree(pos1, pos2, cindex, cobj);
 	}
 	cindex = -1;
 	if (!do_line_clip_scene(pos1, pos2, czmin, czmax)) return 0;
@@ -676,8 +676,8 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dyn
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex,
 						   float splash_val, int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic)
 {
-	if (USE_COBJ_BSP_TREE && splash_val == 0.0 && skip_dynamic && !test_alpha) {
-		return check_coll_line_exact_bspt(pos1, pos2, cpos, cnorm, cindex, ignore_cobj);
+	if (USE_COBJ_TREE && splash_val == 0.0 && skip_dynamic && !test_alpha) {
+		return check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj);
 	}
 	cindex = -1;
 	float z_lb(czmin), z_ub(czmax);

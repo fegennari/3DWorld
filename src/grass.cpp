@@ -405,8 +405,7 @@ public:
 
 		// determine if ligthing has changed and possibly calculate shadows/upload VBO data
 		int const light(get_light());
-		point lpos;
-		get_light_pos(lpos, light);
+		point const lpos(get_light_pos());
 
 		if (light != last_light || lpos != last_lpos) {
 			invalidate_shadows();

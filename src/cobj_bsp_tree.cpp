@@ -266,19 +266,19 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 cobj_tree_t<8> cobj_tree(coll_objects); // 3: BSP Tree, 8: Octtree
 
 
-void build_cobj_bsp_tree() {
+void build_cobj_tree() {
 
 	if (BUILD_COBJ_TREE) cobj_tree.add_cobjs();
 }
 
 // can use with ray trace lighting, snow collision, maybe water reflections
-bool check_coll_line_exact_bspt(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj) {
+bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj) {
 
 	return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
 }
 
 // can use with snow shadows, grass shadows, tree leaf shadows
-bool check_coll_line_bspt(point const &p1, point const &p2, int &cindex, int ignore_cobj) {
+bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj) {
 
 	vector3d cnorm; // unused
 	point cpos; // unused
