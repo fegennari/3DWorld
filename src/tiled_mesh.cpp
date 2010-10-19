@@ -143,9 +143,7 @@ public:
 	void calc_light_src_shadows(vector<unsigned char> smask[], float const *sh_in, unsigned light) {
 		smask[light].resize(zvals.size());
 		sh_out[light].resize(zvsize + zvsize);
-		point lpos;
-		get_light_pos(lpos, light);
-		calc_mesh_shadows(light, lpos, &zvals.front(), &smask[light].front(), sh_in, &sh_out[light].front(), zvsize, zvsize);
+		calc_mesh_shadows(light, get_light_pos(light), &zvals.front(), &smask[light].front(), sh_in, &sh_out[light].front(), zvsize, zvsize);
 	}
 
 	void create_data(vector<vert_norm> &data, vector<unsigned short> &indices, vector<unsigned char> smask[]) {

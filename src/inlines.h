@@ -638,15 +638,13 @@ inline int get_max_dim(vector3d const v) {
 }
 
 
-inline int get_light()                {return ((light_factor >= 0.5) ? LIGHT_SUN : LIGHT_MOON);}
-inline int get_specular_light()       {return ((light_factor >= 0.4) ? LIGHT_SUN : LIGHT_MOON);} // sun takes priority
-inline int get_light_pos(point &lpos) {return get_light_pos(lpos, get_light());}
+inline int get_light()          {return ((light_factor >= 0.5) ? LIGHT_SUN : LIGHT_MOON);}
+inline int get_specular_light() {return ((light_factor >= 0.4) ? LIGHT_SUN : LIGHT_MOON);} // sun takes priority
 
-
-inline point get_light_pos() {
+inline point get_light_pos(int light=-1) {
 
 	point lpos;
-	get_light_pos(lpos);
+	get_light_pos(lpos, ((light >= 0) ? light : get_light()));
 	return lpos;
 }
 

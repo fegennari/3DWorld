@@ -1579,23 +1579,6 @@ void set_specular(float specularity, float shininess) {
 }
 
 
-point get_light_pos(int light) { // unused
-
-	float p[4];
-	double m[16];
-	point val(all_zeros);
-	glGetLightfv(light, GL_POSITION, p); // in eye space, not world space
-	glGetDoublev(GL_MODELVIEW_MATRIX, m);
-	
-	for (unsigned i = 0; i < 3; ++i) {
-		for (unsigned j = 0; j < 3; ++j) {
-			val[i] += p[j]*m[j+4*i];
-		}
-	}
-	return val;
-}
-
-
 void get_enabled_lights() {
 
 	float a[4], d[4], atten;
@@ -1612,7 +1595,7 @@ void get_enabled_lights() {
 			glGetLightfv(light, GL_CONSTANT_ATTENUATION, &atten);
 			assert(atten > 0.0);
 			colorRGBA const lcolor(colorRGBA(d[0]/atten, d[1]/atten, d[2]/atten, d[3]));
-			enabled_lights.push_back(light_source(0.0, gl_light_positions[i]/*get_light_pos(light)*/, lcolor, 0));
+			enabled_lights.push_back(light_source(0.0, gl_light_positions[i], lcolor, 0));
 			for (unsigned j = 0; j < 3; ++j) cur_ambient[j] += a[j]/atten;
 			++ncomp;
 			//cout << "A: "; cur_ambient.print(); cout << endl;
