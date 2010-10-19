@@ -69,7 +69,7 @@ void create_shadows() {
 		glColorMask(0, 0, 0, 0);
 		glStencilFunc(GL_ALWAYS, 1, ~0);
 		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
+		glCullFace(GL_BACK); // could use glFrontFace(GL_CW)
 		glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
 		inverts = draw_shadowed_objects(l); // draw_world.cpp
 		glCullFace(GL_FRONT);

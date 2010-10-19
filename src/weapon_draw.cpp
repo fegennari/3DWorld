@@ -128,8 +128,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 	int const surfs((wid == W_BLADE || wid == W_M16 || wid == W_SHOTGUN || wid == W_LASER) ? 1 : 0); // no cylinder ends
 	cobj_params cp(0.8, BLACK, DRAW_WEAP_COBJ, 1, NULL, weap_cobjs.size(), -1, 1.0, surfs, 0.0, 0.0, 1); // special mode - shadow but no coll
 	float rxy, radius;
-	vector3d v_trans, dirn(dir);
-	dirn.negate(); // used to be backwards
+	vector3d v_trans, dirn(dir*-1); // dir used to be backwards
 	point const pos0(get_final_pos(pos, dirn, cradius, 1.0, rxy, v_trans));
 	bool const has_xy_comp(dir.x != 0.0 || dir.y != 0.0);
 

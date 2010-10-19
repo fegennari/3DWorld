@@ -654,16 +654,8 @@ void ushadow_volume::draw_geom(upos_point_type const &pos, bool test) const {
 	}
 	GLenum const bf[2] = {GL_BACK, GL_FRONT}, zp[2] = {GL_INCR, GL_DECR};
 
-	/*for (unsigned spass = 0; spass < 2; ++spass) { // GL_STENCIL_TWO_SIDE_EXT?
-		bool const cull_front((spass != 0) ^ cv); // it seems like cv can always be 1
-		glCullFace(bf[cull_front]);
-		GLenum pass_action(zp[spass]), fail_action(GL_KEEP);
-		if (cv) swap(pass_action, fail_action);
-		glStencilOp(fail_action, fail_action, pass_action);
-		draw(pos);
-	}*/
 	for (unsigned spass = 0; spass < 2; ++spass) { // GL_STENCIL_TWO_SIDE_EXT?
-		glCullFace(bf[(spass == 0)]);
+		glCullFace(bf[spass == 0]);
 		glStencilOp(zp[spass], zp[spass], GL_KEEP);
 		draw(pos);
 	}

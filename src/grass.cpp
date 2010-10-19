@@ -127,12 +127,12 @@ public:
 	}
 
 	void add_grass(point const &pos) {
-		vector3d const dir((plus_z + signed_rand_vector(0.3) + wind*0.3).get_norm()); // FIXME: make dynamic? local wind?
+		vector3d const base_dir(plus_z);
+		//vector3d const base_dir(interpolate_mesh_normal(pos));
+		vector3d const dir((base_dir + signed_rand_vector(0.3) + wind*0.3).get_norm()); // make dynamic based on local wind?
 		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
-		// Vary color per vertex?
 		//(0.1, 0.35), (0.5, 0.75), (0.0, 0.1) // untextured white triangle
 		unsigned char color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20};
-		// Add precomputed lighting to color?
 		float const length(grass_length*rand_uniform(0.7, 1.3));
 		float const width( grass_width *rand_uniform(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
