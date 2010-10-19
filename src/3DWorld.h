@@ -868,7 +868,8 @@ void fire_weapon();
 bool has_extension(std::string const &ext);
 
 // function prototypes - visibility
-void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, unsigned char *smask, int xsize, int ysize);
+void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, unsigned char *smask,
+					   float const *sh_in, float *sh_out, int xsize, int ysize);
 void calc_visibility(char light_sources);
 bool is_visible_to_light_cobj(point const &pos, int light, float radius, int cobj, int skip_dynamic, int *cobj_ix=NULL);
 bool coll_pt_vis_test(point pos, point pos2, float dist, int &index, int cobj, int skip_dynamic, int test_alpha);

@@ -47,6 +47,7 @@ class tile_t {
 	unsigned tid, vbo, ivbo, size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, xstart, ystart, xstep, ystep;
 	vector<float> zvals;
+	vector<float> sh_out[NUM_LIGHT_SRC];
 
 public:
 	tile_t() : tid(0), vbo(0), ivbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {}
@@ -139,6 +140,14 @@ public:
 		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy).get_norm();
 	}
 
+	void calc_light_src_shadows(vector<unsigned char> smask[], float const *sh_in, unsigned light) {
+		smask[light].resize(zvals.size());
+		sh_out[light].resize(zvsize + zvsize);
+		point lpos;
+		get_light_pos(lpos, light);
+		calc_mesh_shadows(light, lpos, &zvals.front(), &smask[light].front(), sh_in, &sh_out[light].front(), zvsize, zvsize);
+	}
+
 	void create_data(vector<vert_norm> &data, vector<unsigned short> &indices, vector<unsigned char> smask[]) {
 		RESET_TIME;
 		assert(zvals.size() == zvsize*zvsize);
@@ -146,18 +155,12 @@ public:
 		indices.resize(4*size*size);
 		calc_start_step(init_dxoff, init_dyoff);
 
-		// FIXME: Need to shadow across adjacent tiles and update when new tiles are created
+		// FIXME: Need to shadow across adjacent tiles and update when new tiles are created: use sh_in
 		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
 		assert(has_sun || has_moon);
-		
-		if (has_sun)  {
-			smask[LIGHT_SUN ].resize(zvals.size());
-			calc_mesh_shadows(LIGHT_SUN,  sun_pos,  &zvals.front(), &smask[LIGHT_SUN ].front(), zvsize, zvsize);
-		}
-		if (has_moon) {
-			smask[LIGHT_MOON].resize(zvals.size());
-			calc_mesh_shadows(LIGHT_MOON, moon_pos, &zvals.front(), &smask[LIGHT_MOON].front(), zvsize, zvsize);
-		}
+		if (has_sun ) calc_light_src_shadows(smask, NULL, LIGHT_SUN );
+		if (has_moon) calc_light_src_shadows(smask, NULL, LIGHT_MOON);
+
 		for (unsigned y = 0; y <= size; ++y) {
 			for (unsigned x = 0; x <= size; ++x) {
 				unsigned const ix(y*zvsize + x);
