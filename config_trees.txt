@@ -33,7 +33,7 @@ default_ground_tex -1
 
 #snow_depth 0.05
 snow_random 0.0
-num_test_snowflakes 100000000
+num_test_snowflakes 100 # in M
 
 left_handed 0
 self_damage 0.5
