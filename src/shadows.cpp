@@ -122,6 +122,15 @@ void update_sun_and_moon() {
 }
 
 
+int light_valid(char light_sources, int l, point &lpos) {
+
+	if (!(light_sources & (1 << l))) return 0;
+	if ((l == LIGHT_SUN && light_factor < 0.4) || (l == LIGHT_MOON && light_factor > 0.6)) return 0;
+	if (!get_light_pos(lpos, l) || lpos.z < zmin) return 0;
+	return 1;
+}
+
+
 void coll_obj::add_shadow(char light_sources, bool dynamic) const {
 
 	if (status != COLL_STATIC || cp.color.alpha == 0.0 || !cp.shadow) return;
@@ -150,13 +159,34 @@ void coll_obj::add_shadow(char light_sources, bool dynamic) const {
 void add_cobj_shadows(char light_sources) {
 
 	if (ground_effects_level == 0) return; // disabled
+	//RESET_TIME;
+#if 0
+	// two problems with this approach, though this is *much* simpler
+	// 1. tree shadows are only added if tree cobjs are created
+	// 2. requires cobj_tree to be efficient
+	point lpos;
 
+	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
+		if (!light_valid(light_sources, l, lpos)) continue;
+		
+		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			for (int x = 0; x < MESH_X_SIZE; ++x) {
+				if (shadow_mask[l][y][x] & OBJECT_SHADOW) continue;
+				point const pos(get_xval(x), get_yval(y), mesh_height[y][x]);
+				int cindex; // unused
+				if (!coll_pt_vis_test(pos, lpos, 0.0, cindex, -1, 1, 0)) shadow_mask[l][y][x] |= OBJECT_SHADOW;
+			}
+		}
+	}
+#else
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
 		t_trees[i].gen_tree_shadows(light_sources, i);
 	}
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {
 		coll_objects[i].add_shadow(light_sources, 0);
 	}
+#endif
+	//PRINT_TIME("Cobj Shadows");
 }
 
 
@@ -278,15 +308,6 @@ int get_shape_shadow_bb(const point *points, int npoints, int l, int quality, po
 	xmax = min(xmax + sborder, MESH_X_SIZE-1);
 	ymax = min(ymax + sborder, MESH_Y_SIZE-1);
 	if (xmin == xmax && ymin == ymax && !point_outside_mesh(xmin, ymin) && (shadow_mask[l][ymin][xmin] & stype)) return 0; // already shadowed
-	return 1;
-}
-
-
-int light_valid(char light_sources, int l, point &lpos) {
-
-	if (!(light_sources & (1 << l))) return 0;
-	if ((l == LIGHT_SUN && light_factor < 0.4) || (l == LIGHT_MOON && light_factor > 0.6)) return 0;
-	if (!get_light_pos(lpos, l) || lpos.z < zmin) return 0;
 	return 1;
 }
 
