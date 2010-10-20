@@ -72,6 +72,7 @@ void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, 
 void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA color,
 					float line_length, int ignore_cobj, bool local, bool first_pt)
 {
+	assert(!is_nan(p1) && !is_nan(p2));
 	++tot_rays;
 
 	// find intersection point with scene cobjs
@@ -211,22 +212,34 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 			float const tweight((1.0 - rweight)*weight); // refracted weight
 			
 			if (tweight > WEIGHT_THRESH*weight0) {
+				bool no_transmit(0);
+
 				if (cobj.cp.refract_ix != 1.0) { // refracted
 					vector3d v_refract, v_refract2;
-					calc_refraction_angle(dir, v_refract, cnorm, 1.0, cobj.cp.refract_ix);
-					p_end = (p2 + v_refract*line_length);
-					vector3d cnorm2;
+					
+					if (calc_refraction_angle(dir, v_refract, cnorm, 1.0, cobj.cp.refract_ix)) {
+						p_end = (p2 + v_refract*line_length);
+						vector3d cnorm2;
 
-					// test for collision with reversed ray to get the other intersection point
-					if (cobj.line_int_exact(p_end, p2, t, cnorm2, 0.0, 1.0)) { // not sure what to do if fails or tmax >= 1.0
-						point const p_int(p_end + (p2 - p_end)*t);
-						if (!dist_less_than(p2, p_int, get_step_size())) add_path_to_lmcs(p2, p_int, weight, color, local, first_pt);
-						calc_refraction_angle(v_refract, v_refract2, cnorm2*-1, cobj.cp.refract_ix, 1.0);
-						p2    = p_int;
-						p_end = p2 + v_refract2*line_length;
+						// test for collision with reversed ray to get the other intersection point
+						if (cobj.line_int_exact(p_end, p2, t, cnorm2, 0.0, 1.0)) { // not sure what to do if fails or tmax >= 1.0
+							point const p_int(p_end + (p2 - p_end)*t);
+							if (!dist_less_than(p2, p_int, get_step_size())) add_path_to_lmcs(p2, p_int, weight, color, local, first_pt);
+							
+							if (calc_refraction_angle(v_refract, v_refract2, cnorm2*-1, cobj.cp.refract_ix, 1.0)) {
+								p2    = p_int;
+								p_end = p2 + v_refract2*line_length;
+							}
+							else {
+								no_transmit = 1; // total internal reflection (could process an internal reflection)
+							}
+						}
+					}
+					else {
+						no_transmit = 1; // total internal reflection (could process an internal reflection)
 					}
 				}
-				cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, local, first_pt); // transmitted
+				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, local, first_pt); // transmitted
 			}
 			weight *= rweight; // reflected weight
 		}

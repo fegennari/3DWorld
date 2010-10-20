@@ -344,7 +344,7 @@ struct base_intersector {
 };
 
 
-// test_alpha: 0 = allow any alpha value, 1 = require alpha = 1.0, 2 = get interseced cobj with max alpha
+// test_alpha: 0 = allow any alpha value, 1 = require alpha = 1.0, 2 = get intersected cobj with max alpha
 class line_intersector : public base_intersector {
 
 	int &cindex, skip_dynamic, test_alpha;

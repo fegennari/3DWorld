@@ -37,12 +37,15 @@ void calc_reflection_angle(vector3d const &v_inc, vector3d &v_ref, vector3d cons
 }
 
 
-void calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm, float n1, float n2) {
+bool calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm, float n1, float n2) {
 
 	assert(n2 != 0.0);
 	float const cos_t1(-dot_product(norm, v_inc)), n_ratio(n1/n2);
-	float const cos_t2(sqrt(1.0 - n_ratio*n_ratio*(1.0 - cos_t1*cos_t1)));
+	float const arg(1.0 - n_ratio*n_ratio*(1.0 - cos_t1*cos_t1));
+	if (arg < 0.0) return 0; // total internal reflection - no refraction angle
+	float const cos_t2(sqrt(arg));
 	v_ref = v_inc*n_ratio + norm*(n_ratio*cos_t1 - fabs(cos_t2));
+	return 1;
 }
 
 

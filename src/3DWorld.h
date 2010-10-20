@@ -1177,7 +1177,7 @@ float fix_angle(float angle);
 vector3d get_poly_norm(point const *points);
 void get_face_normal(shape3d &shape, int face_id);
 void calc_reflection_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm);
-void calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm, float n1, float n2);
+bool calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm, float n1, float n2);
 float get_fresnel_reflection(vector3d const &v_inc, vector3d const &norm, float n1, float n2);
 float get_reflected_weight(float fresnel_ref, float alpha);
 float get_coll_energy(vector3d const &v1, vector3d const &v2, float mass);

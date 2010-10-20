@@ -298,7 +298,8 @@ void gen_uw_lighting() {
 			point const p1(get_xval(x), get_yval(y), water_matrix[y][x]); // point on water surface
 			vector3d const dir(p1 - lpos);
 			vector3d v_refract(dir);
-			calc_refraction_angle(dir, v_refract, wat_vert_normals[y][x], 1.0, WATER_INDEX_REFRACT);
+			bool const refracted(calc_refraction_angle(dir, v_refract, wat_vert_normals[y][x], 1.0, WATER_INDEX_REFRACT));
+			assert(refracted); // can't have total internal reflection going into the water if the physics are sane
 			point const p2(p1 + v_refract.get_norm()*ssize); // distant point along refraction vector
 			int xpos(0), ypos(0);
 			float zval;
