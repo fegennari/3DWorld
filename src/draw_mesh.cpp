@@ -22,7 +22,7 @@ int   const DRAW_BORDER      = 3;
 
 int   const SHOW_MESH_TIME   = 0;
 int   const SHOW_NORMALS     = 0;
-int   const DEBUG_COLLS      = 0;
+int   const DEBUG_COLLS      = 0; // 0 = disabled, 1 = lines, 2 = cubes
 int   const DISABLE_TEXTURES = 0;
 
 
@@ -397,16 +397,34 @@ void display_mesh() { // fast array version
 	}
 	if (DEBUG_COLLS) {
 		glDisable(GL_LIGHTING);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-			glBegin(GL_TRIANGLE_STRIP);
-			
-			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				draw_coll_vert(i+0, j);
-				draw_coll_vert(i+1, j);
+		if (DEBUG_COLLS == 2) {
+			enable_blend();
+			colorRGBA(1.0, 0.0, 0.0, 0.1).do_glColor();
+
+			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
+				for (int j = 0; j < MESH_X_SIZE; ++j) {
+					if (v_collision_matrix[i][j].zmin < v_collision_matrix[i][j].zmax) {
+						point const p1(get_xval(j+0), get_yval(i+0),v_collision_matrix[i][j].zmin);
+						point const p2(get_xval(j+1), get_yval(i+1),v_collision_matrix[i][j].zmax);
+						draw_cube((p1 + p2)*0.5, (p2.x - p1.x), (p2.y - p1.y), (p2.z - p1.z), 0, 1);
+					}
+				}
 			}
-			glEnd();
+			disable_blend();
+		}
+		else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
+				glBegin(GL_TRIANGLE_STRIP);
+				
+				for (int j = 0; j < MESH_X_SIZE; ++j) {
+					draw_coll_vert(i+0, j);
+					draw_coll_vert(i+1, j);
+				}
+				glEnd();
+			}
 		}
 		glEnable(GL_LIGHTING);
 	}
