@@ -149,13 +149,10 @@ void add_coll_cylinder_to_matrix(int index, int dhcm) {
 	get_params(xx1, yy1, xx2, yy2, cb, cobj.d, dhcm);
 
 	if (cobj.type == COLL_CYLINDER_ROT) {
-		float zval(z1), rav(radius), xylen(sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)));
-		float const v1x(x1 - x2), v1y(y1 - y2); // vector along length of cylinder
+		float xylen(sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)));
 		float const rmin(min(radius, radius2)), rmax(max(radius, radius2));
-		bool const use_x(fabs(v1x) > fabs(v1y)), vertical(x1 == x2 && y1 == y2);
-		bool const calc_vert_zmm(z1 != z2 && radius != radius2 && rmax > HALF_DXY);
-		bool const rdir((radius < radius2) ^ (z1 < z2)), calc_zmm(fabs(z1 - z2) > TOLERANCE || radius != radius2);
-		float const rtop((z1 > z2) ? radius : radius2), rbot((z1 > z2) ? radius2 : radius);
+		bool const vertical(x1 == x2 && y1 == y2), horizontal(fabs(z1 - z2) < TOLERANCE);
+		bool const vert_trunc_cone(z1 != z2 && radius != radius2 && rmax > HALF_DXY);
 
 		for (int i = yy1-cb; i <= yy2+cb; ++i) {
 			float const yv(get_yval(i)), v2y(y1 - yv);
@@ -164,38 +161,18 @@ void add_coll_cylinder_to_matrix(int index, int dhcm) {
 				float xv(get_xval(j));
 
 				if (vertical) { // vertical
-					if (calc_vert_zmm) { // calculate zmin/zmax
+					if (vert_trunc_cone) { // calculate zmin/zmax
 						xv -= x1;
 						float const rval(min(rmax, (float)sqrt(xv*xv + v2y*v2y)));
-
-						if (rval > rmin) {
-							zmaxc = max(zmin0, min(zmax0, (rscale*(rval - (rdir ? rtop : rbot)) + z2)));
-						}
-						else {
-							zmaxc = zmax0;
-						}
-					}
+						zmaxc = ((rval > rmin) ? max(zmin0, min(zmax0, (rscale*(rval - rmin) + z2))) : zmax0);
+					} // else near constant radius, so zminc/zmaxc are correct
 				}
-				else { // non-vertical
-					if (calc_zmm) { // calculate zmin/zmax
-						float const v2x(x1 - xv); // cylinder->i,j vector
-						float t((v1x*v2x + v1y*v2y)/(v1x*v1x + v1y*v1y));
-
-						if (use_x) {
-							float const v3x(v2x - v1x*t); // vector from i,j to point along cylinder axis
-							t = (xv + v3x - x1)/(x2 - x1); // 0 => v1, 1 => v2
-						}
-						else { // use y
-							float const v3y(v2y - v1y*t); // vector from i,j to point along cylinder axis
-							t = (yv + v3y - y1)/(y2 - y1); // 0 => v1, 1 => v2
-						}
-						t = CLIP_TO_01(t);
-						if (z1 != z2) zval = z1 + t*(z2 - z1);
-						if (radius != radius2) rav = min(rmax, (r_off + t*dr));
-					}
-					assert(rav >= 0.0);
-					zminc = zval - rav;
-					zmaxc = zval + rav;
+				else if (horizontal) {
+					zminc = z1 - rmax;
+					zmaxc = z1 + rmax;
+				}
+				else { // diagonal
+					// too complex/slow to get this right, so just use the bbox zminc/zmaxc
 				}
 				int add_to_hcm(0);
 				
@@ -207,8 +184,13 @@ void add_coll_cylinder_to_matrix(int index, int dhcm) {
 						float const dist(fabs((x2-x1)*(y1-yv) - (x1-xv)*(y2-y1))/xylen - HALF_DXY);
 
 						if (dist < rmax) {
-							float const t(((x1-x2)*(x1-xv) + (y1-y2)*(y1-yv))/(xylen*xylen)); // location along cylinder axis
-							add_to_hcm = (t >= -dt && t <= 1.0+dt && dist < min(rmax, (r_off + t*dr)));
+							if (horizontal) {
+								float const t(((x1-x2)*(x1-xv) + (y1-y2)*(y1-yv))/(xylen*xylen)); // location along cylinder axis
+								add_to_hcm = (t >= -dt && t <= 1.0+dt && dist < min(rmax, (r_off + t*dr)));
+							}
+							else { // diagonal
+								add_to_hcm = 1; // again, too complex/slow to get this right, so just be conservative
+							}
 						}
 					}
 				}
