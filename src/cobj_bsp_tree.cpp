@@ -85,13 +85,17 @@ public:
 		cpos   = p2;
 		bool ret(0);
 		float t(0.0), tmin(0.0), tmax(1.0);
-
+		vector3d dinv(p2 - p1);
+		
+		for (unsigned i = 0; i < 3; ++i) {
+			dinv[i] = 1.0/((dinv[i] == 0.0) ? TOLERANCE : dinv[i]); // handle div-by-zero
+		}
 		for (unsigned nix = 0; nix < nodes.size(); ) {
 			tree_node const &n(nodes[nix]);
 			assert(n.start <= n.end);
-			
-			if (!check_line_clip(p1, cpos, n.d)) { // failed the bbox test
-				nix = n.next_node_id;
+
+			if (!get_line_clip2(p1, dinv, n.d)) {
+				nix = n.next_node_id; // failed the bbox test
 				assert(nix > 0);
 				continue;
 			}
