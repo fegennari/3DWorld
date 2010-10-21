@@ -924,26 +924,26 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	light_engine_pair(ecolor, 0, escale, 0.4, dy, (1.0 + 0.2*escale)); // average of two engines, eflags isn't quite right
 
 	// body
-	//set_ship_texture(HSTRIPE_TEX); // make sure to enable draw sphere texture
+	bool const textured(1);
+	if (textured) set_ship_texture(SHIP_HULL_TEX);
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -0.8);
 	glScalef(0.5, 1.5, 1.5);
 	invert_z();
-	draw_sphere_dlist(all_zeros, 0.4, ndiv, 0, 1); // rear
+	draw_sphere_dlist(all_zeros, 0.4, ndiv, textured, 1); // rear
 	invert_z();
 	gluCylinder(quadric, 0.4, 0.3, 0.6, ndiv, ndiv4); // main body
 	glTranslatef(0.0, 0.0, 0.55);
 	glScalef(1.0, 1.0, 3.06);
-	draw_sphere_dlist(all_zeros, 0.3, ndiv, 0, 1); // front
+	draw_sphere_dlist(all_zeros, 0.3, ndiv, textured, 1); // front
 	glPopMatrix();
-	//end_ship_texture();
 
 	// engine support wing
 	color_b.do_glColor();
 	glPushMatrix();
 	glTranslatef(0.0, dy, -0.2);
 	glScalef(1.1, 0.18, 1.2);
-	draw_sphere_dlist(all_zeros, 0.65, ndiv2, 0);
+	draw_sphere_dlist(all_zeros, 0.65, ndiv2, textured);
 	glPopMatrix();
 	set_cloak_color(GRAY);
 
@@ -966,15 +966,16 @@ void uobj_draw_data::draw_us_bcruiser() const {
 				draw_cylinder(0.8, erad, erad, ndiv3, ndiv4, 1, 1, 0);
 				glTranslatef(0.0, 0.0, -0.2);
 				set_lighted_sides(2);
-				draw_fast_cylinder(all_zeros, point(0.0, 0.0, 0.2), 0.6*erad, erad, ndiv3, 0);
+				draw_fast_cylinder(all_zeros, point(0.0, 0.0, 0.2), 0.6*erad, erad, ndiv3, textured);
 				set_lighted_sides(1);
 				glTranslatef(0.0, 0.0, 1.0);
 				glScalef(1.0, 1.0, 1.6);
-				draw_sphere_dlist(all_zeros, erad, ndiv3, 0, 1);
+				draw_sphere_dlist(all_zeros, erad, ndiv3, textured, 1);
 				glPopMatrix();
 			}
 		}
 	}
+	if (textured) end_ship_texture();
 	glPopMatrix(); // undo invert_z()
 
 	// draw engine glow
@@ -1489,9 +1490,9 @@ void uobj_draw_data::draw_nightmare() const {
 		for (unsigned i = 0; i < 4; ++i) {
 			float const x(1.0 - 2.0*(i&1)), y(1.0 - 2.0*(i>>1));
 			point const pt1(0.5*x, 0.5*y, 0.5), pt2(x, y, 1.0);
-			draw_fast_cylinder(pt1, pt2, 0.45, 0.0, ndiv2, 0);
+			draw_fast_cylinder(pt1, pt2, 0.45, 0.0, 4, 0); // 4 sided
 		}
-		draw_fast_cylinder(point(0.0, 0.0, 0.8), point(0.0, 0.0, 1.6), 0.45, 0.0, ndiv2, 0);
+		draw_fast_cylinder(point(0.0, 0.0, 0.8), point(0.0, 0.0, 1.6), 0.45, 0.0, ndiv, 0);
 	
 		GRAY.do_glColor();
 		glTranslatef(0.0, 0.0, -1.2);
