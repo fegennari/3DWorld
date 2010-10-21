@@ -650,6 +650,7 @@ void display(void) {
 		display_universe(); // infinite universe
 	}
 	else {
+		if (!pause_frame) uevent_advance_frame();
 		earth_radius = 2.0;
 		sun_radius   = 1.5;
 		moon_radius  = 2.0;
@@ -674,8 +675,6 @@ void display(void) {
 			time_index     = timer_b;
 			show_framerate = 0;
 		}
-		if (!pause_frame) uevent_advance_frame();
-		
 		if (show_framerate == 1) {
 			timer_a = glutGet(GLUT_ELAPSED_TIME);
 			show_framerate = 2;

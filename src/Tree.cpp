@@ -209,6 +209,7 @@ void draw_trees(vector<tree> &ts) {
 		static point last_lpos(all_zeros);
 		point const lpos(get_light_pos());
 		bool const lpos_change(lpos != last_lpos);
+		if (lpos_change) update_cobj_tree();
 
 #if 1
 		for (unsigned p = 0; p < 2; ++p) { // much faster for distant trees

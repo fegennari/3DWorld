@@ -1158,12 +1158,13 @@ int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cinde
 
 // function prototypes - coll_cell_search
 void build_cobj_tree();
+void update_cobj_tree();
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj);
 bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj);
 bool check_vert_collision_sphere(point const &pos, float radius, int skip_dynamic, bool trans_test, vector<int> *cobjs=NULL);
-bool check_coll_line(point pos1, point pos2, int &cindex, int c_obj, int skip_dynamic, int test_alpha);
-bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_norm, int &cindex,
-						   float splash_val=0.0, int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0);
+bool check_coll_line(point pos1, point pos2, int &cindex, int c_obj, int skip_dynamic, int test_alpha, bool no_tree=0);
+bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_norm, int &cindex, float splash_val=0.0,
+						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0, bool no_tree=0);
 bool cobj_contained(point pos1, const point *pts, unsigned npts, int cobj);
 bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs);
 bool coll_pt_vis_test_large2(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic, bool tl);

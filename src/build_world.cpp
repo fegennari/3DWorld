@@ -592,10 +592,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	calc_visibility(sflags);
 	PRINT_TIME("Visibility calculation");
 
-	if (!inf_terrain) {
-		gen_grass(generate_mesh != 0);
-		PRINT_TIME("Grass generation");
-	}
+	if (!inf_terrain) gen_grass(generate_mesh != 0);
 }
 
 

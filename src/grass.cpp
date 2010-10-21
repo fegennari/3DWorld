@@ -165,6 +165,7 @@ public:
 		last_cobj     = -1;
 		shadows_valid = 1;
 		data_valid    = 0;
+		update_cobj_tree();
 
 		for (unsigned i = 0; i < grass.size(); ++i) {
 			point const p1(grass[i].p), p2(p1 + grass[i].dir);

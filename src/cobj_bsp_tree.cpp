@@ -6,10 +6,12 @@
 #include "physics_objects.h"
 
 
-bool const BUILD_COBJ_TREE = 0;
+bool const BUILD_COBJ_TREE = 1;
 
 
-extern int display_mode;
+int last_update_frame(1); // first drawn frame is 1
+
+extern int display_mode, frame_counter;
 extern vector<coll_obj> coll_objects;
 
 
@@ -105,7 +107,9 @@ public:
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 				// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 				// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
-				bool const coll((int)cixs[i] != ignore_cobj && get_cobj(i).line_int_exact(p1, p2, t, cnorm, tmin, tmax));
+				if ((int)cixs[i] == ignore_cobj) continue;
+				coll_obj const &cobj(get_cobj(i));
+				bool const coll(cobj.status == COLL_STATIC && cobj.line_int_exact(p1, p2, t, cnorm, tmin, tmax));
 				
 				if (coll) {
 					cindex = cixs[i];
@@ -253,9 +257,15 @@ cobj_tree_t<8> cobj_tree(coll_objects); // 3: BSP Tree, 8: Octtree
 void build_cobj_tree() {
 
 	if (BUILD_COBJ_TREE) cobj_tree.add_cobjs();
+	last_update_frame = max(last_update_frame, frame_counter);
 }
 
-// can use with ray trace lighting, snow collision, maybe water reflections
+void update_cobj_tree() {
+
+	if (last_update_frame != frame_counter) build_cobj_tree();
+}
+
+// can use with ray trace lighting, snow collision?, maybe water reflections
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj) {
 
 	return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);

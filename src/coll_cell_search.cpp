@@ -9,7 +9,7 @@
 
 bool const CACHE_COBJ_LITES   = 0;
 bool const CACHE_OCCLUDER     = 1;
-bool const USE_COBJ_TREE      = 0;
+bool const USE_COBJ_TREE      = 1;
 unsigned const QLP_CACHE_SIZE = 10000;
 float const GET_OCC_EXPAND    = 0.02;
 
@@ -660,9 +660,14 @@ public:
 };
 
 
-bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha) {
+bool check_xy_delta(point const &p1, point const &p2) {
+	return (fabs(p2.x - p1.x) > DX_VAL || fabs(p2.y - p1.y) > DY_VAL); // faster to use grid bag instead of tree
+}
 
-	if (USE_COBJ_TREE && skip_dynamic && !test_alpha) {
+
+bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool no_tree) {
+
+	if (USE_COBJ_TREE && !no_tree && skip_dynamic && !test_alpha && check_xy_delta(pos1, pos2)) {
 		return check_coll_line_tree(pos1, pos2, cindex, cobj);
 	}
 	cindex = -1;
@@ -673,10 +678,10 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dyn
 }
 
 
-bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex,
-						   float splash_val, int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic)
+bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex, float splash_val,
+						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic, bool no_tree)
 {
-	if (USE_COBJ_TREE && splash_val == 0.0 && skip_dynamic && !test_alpha) {
+	if (USE_COBJ_TREE && !no_tree && splash_val == 0.0 && skip_dynamic && !test_alpha && check_xy_delta(pos1, pos2)) {
 		return check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj);
 	}
 	cindex = -1;
