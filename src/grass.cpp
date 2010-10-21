@@ -215,12 +215,13 @@ public:
 			data[ix++].assign(p2,       norm,     tc_adj, 0.5,        g.c);
 		}
 		bind_vbo(vbo);
+		unsigned const vntc_sz(sizeof(vert_norm_tc_color));
 
 		if (start == 0 && end == grass.size()) { // full data, do full upload
-			upload_vbo_data(&data.front(), data.size()*sizeof(vert_norm_tc_color));
+			upload_vbo_data(&data.front(), data.size()*vntc_sz);
 		}
 		else { // partial data, upload a subset
-			upload_vbo_sub_data(&data.front(), 3*start*sizeof(vert_norm_tc_color), data.size()*sizeof(vert_norm_tc_color));
+			upload_vbo_sub_data(&data.front(), 3*start*vntc_sz, data.size()*vntc_sz);
 		}
 		bind_vbo(0);
 	}

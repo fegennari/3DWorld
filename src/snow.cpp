@@ -448,6 +448,18 @@ public:
 		upload_vbo();
 	}
 
+	// unused
+	void update_region(unsigned offset, float dz) {
+		// FIXME: update range
+		assert(vbo);
+		assert(offset < data.size());
+		data[offset].v.z += dz;
+		// FIXME: update normal
+		bind_vbo(vbo, 0);
+		upload_vbo_sub_data(&data[offset], offset*sizeof(vert_norm), sizeof(vert_norm), 0);
+		bind_vbo(0, 0);
+	}
+
 	void finalize() { // can only be called once
 		assert(vbo == 0 && ivbo == 0);
 		assert((indices.size() & 3) == 0); // must be a multiple of 4
@@ -467,6 +479,7 @@ public:
 		glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
+		//update_region((32535*rand())%1000000, -0.01); // testing
 	}
 
 	void show_stats() const {
