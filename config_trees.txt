@@ -49,6 +49,9 @@ num_dodgeballs 3
 crater_size 0.1
 player_name Deathtool
 
+#grass_density 150
+#grass_size 0.02 0.002
+
 unlimited_weapons 0
 
 mesh_size  128 128 64
