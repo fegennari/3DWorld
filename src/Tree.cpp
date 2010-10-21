@@ -236,6 +236,10 @@ void tree::copy_color(colorRGB const &color, unsigned i) {
 	for (unsigned j = 0; j < 4; ++j) {
 		leaf_data[j+(i<<2)].set_c(color);
 	}
+	if (i < leaves.size() && leaves[i].coll_index >= 0) { // update cobj color so that leaf water reflection is correct
+		assert((unsigned)leaves[i].coll_index < coll_objects.size());
+		coll_objects[leaves[i].coll_index].cp.color = colorRGBA(color).modulate_with(texture_color(tree_types[type].leaf_tex));
+	}
 	leaves_changed = 1;
 }
 

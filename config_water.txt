@@ -26,6 +26,8 @@ mesh_seed 28
 #mesh_seed 58
 #mesh_seed 85
 
+#leaf_color 0.2 -0.6 0.0  0.6  0.2 # fall
+
 left_handed 0
 self_damage 0.5
 team_damage 0.2

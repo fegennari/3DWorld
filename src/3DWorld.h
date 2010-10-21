@@ -428,6 +428,7 @@ struct colorRGBA { // size = 16
 
 	colorRGBA() {}
 	colorRGBA(float r, float g, float b, float a=1.0) : red(r), green(g), blue(b), alpha(a) {}
+	colorRGBA(colorRGB const &color, float a=1.0) : red(color.R), green(color.G), blue(color.B), alpha(a) {}
 
 	bool operator==(const colorRGBA &c) const {
 		return (c.red == red && c.green == green && c.blue == blue && c.alpha == alpha);
