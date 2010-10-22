@@ -82,17 +82,12 @@ public:
 		cout << "cobjs: " << cobjs.size() << ", leaves: " << cixs.size() << ", nodes: " << nodes.size() << endl; // testing
 	}
 
-	vector3d get_dinv(point const &p1, point const &p2) const {
-		vector3d dinv(p2 - p1);
-		UNROLL_3X(dinv[i_] = 1.0/((dinv[i_] == 0.0) ? TOLERANCE : dinv[i_]);) // handle div-by-zero
-		return dinv;
-	}
-
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
 		cindex = -1;
 		bool ret(0);
 		float t(0.0), tmin(0.0), tmax(1.0);
-		vector3d dinv(get_dinv(p1, p2));
+		vector3d dinv(p2 - p1);
+		dinv.invert(0, 1);
 		
 		for (unsigned nix = 0; nix < nodes.size();) {
 			tree_node const &n(nodes[nix]);
@@ -115,7 +110,8 @@ public:
 					cindex = cixs[i];
 					cpos   = p1 + (p2 - p1)*t;
 					if (!exact) return 1; // return first hit
-					dinv   = get_dinv(p1, cpos);
+					dinv   = vector3d(cpos - p1);
+					dinv.invert(0, 1);
 					tmax   = t;
 					ret    = 1;
 				}
