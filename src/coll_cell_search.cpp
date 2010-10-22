@@ -644,10 +644,10 @@ public:
 			last_y = ypos;
 		} // for k
 		if (do_bnd_test) { // inefficient, but what can we do? take bounds of all cube corner points?
-			int const x1(max(0,           (bnds[0][0] - int(radius/DX_VAL))));
-			int const y1(max(0,           (bnds[1][0] - int(radius/DY_VAL))));
-			int const x2(min(MESH_X_SIZE, (bnds[0][1] + int(radius/DX_VAL))));
-			int const y2(min(MESH_Y_SIZE, (bnds[1][1] + int(radius/DY_VAL))));
+			int const x1(max(0,           (bnds[0][0] - int(radius*DX_VAL_INV))));
+			int const y1(max(0,           (bnds[1][0] - int(radius*DY_VAL_INV))));
+			int const x2(min(MESH_X_SIZE, (bnds[0][1] + int(radius*DX_VAL_INV))));
+			int const y2(min(MESH_Y_SIZE, (bnds[1][1] + int(radius*DY_VAL_INV))));
 
 			for (int y = y1; y <= y2; ++y) {
 				for (int x = x1; x <= x2; ++x) {

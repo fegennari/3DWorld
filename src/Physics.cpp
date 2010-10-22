@@ -890,7 +890,7 @@ int dwobject::surface_advance() {
 		if (pos.z < (h_coll - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
 		pos.z = h_coll; // recover it
 	}
-	float const s((pos.x - get_xval(xpos))/DX_VAL + 0.5), t((pos.y - get_yval(ypos))/DY_VAL + 0.5);
+	float const s((pos.x - get_xval(xpos))*DX_VAL_INV + 0.5), t((pos.y - get_yval(ypos))*DY_VAL_INV + 0.5);
 	int const xpp1(min(xpos+1, MESH_X_SIZE-1)), ypp1(min(ypos+1, MESH_Y_SIZE-1));
 	vector3d const &n00(vertex_normals[ypos][xpos]);
 	vector3d const &n01(vertex_normals[ypp1][xpos]);
@@ -1341,7 +1341,7 @@ void fire::apply_physics(unsigned i) {
 		velocity += vel*(0.005*tstep);
 		pos.x    += velocity.x;
 		pos.y    += velocity.y;
-		set_true_obj_height(pos, lpos, FAR_CLIP, velocity.z, FIRE, 0, 0);
+		set_true_obj_height(pos, lpos, FAR_CLIP, velocity.z, FIRE, 0, 0, 0);
 		pos.z    -= radius;
 		pos.z     = 0.9*lpos.z + 0.1*pos.z; // slow movement
 		//pos.z     = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.6*radius;
