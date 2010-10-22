@@ -42,7 +42,7 @@ int  get_next_avail_index();
 void free_index(int index);
 void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams);
 
-bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm);
+bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, bool crush_snow);
 
 
 
@@ -1377,7 +1377,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		float zval;
 		vector3d norm;
 		
-		if (get_snow_height(pos, radius, zval, norm)) {
+		if (get_snow_height(pos, radius, zval, norm, 1)) {
 			pos.z = zval + radius;
 			camera_on_snow = 1;
 			camera_in_air  = 0;
@@ -1423,10 +1423,10 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	float const step(step_height*radius), mh(int_mesh_zval_pt_off(pos, 1, 0)); // *** step height determined by fticks? ***
 	pos.z = max(pos.z, (mh + radius));
 
-	if (display_mode & 0x10) { // walk on snow
+	if (display_mode & 0x10) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
 		float zval;
 		vector3d norm;
-		if (get_snow_height(pos, radius, zval, norm)) pos.z = zval + radius;
+		if (get_snow_height(pos, radius, zval, norm, 1)) pos.z = zval + radius;
 	}
 	float zmu(mh), z1(pos.z - radius), z2(pos.z + radius);
 	if (is_camera) z2 += camera_zh; // add camera height

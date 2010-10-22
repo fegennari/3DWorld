@@ -781,7 +781,7 @@ void draw_snow() {
 }
 
 
-bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm) {
+bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, bool crush_snow) {
 
 	if (!has_snow || snow_strips.empty()) return 0;
 	voxel_t const v(p);
@@ -808,7 +808,7 @@ bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm) 
 		if ((p.z - radius) < z && (p.z + radius) > z) {
 			zval = z;
 			norm = s.get_norm(pos);
-			snow_draw.update_region(i, pos, s.get_size(), min(z, max((z - 0.25*radius), (p.z - radius))));
+			if (crush_snow) snow_draw.update_region(i, pos, s.get_size(), min(z, max((z - 0.25*radius), (p.z - radius))));
 			return 1;
 		}
 	}
