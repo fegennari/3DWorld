@@ -223,7 +223,7 @@ public:
 	void draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale=1.0,
 		float ar=1.0, vector3d const &stretch_dir=all_zeros) const;
 	void draw_engine_trail(point const &offset, float width, float w2s, float len, colorRGBA const &color) const;
-	void draw_ehousing_pair(float length, float r1, float r2, float lcone, float dx, float dy) const;
+	void draw_ehousing_pair(float length, float r1, float r2, float lcone, float dx, float dy, bool texture) const;
 	void draw_engine_pair(colorRGBA const &color, unsigned eflags_off, float escale, float dx, float dy, float dz,
 		float ar=1.0, vector3d const &stretch_dir=all_zeros) const;
 	void light_engine_pair(colorRGBA const &color, unsigned eflags_off, float escale, float dx, float dy, float dz) const;
