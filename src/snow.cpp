@@ -339,7 +339,7 @@ class snow_renderer {
 	unsigned vbo, ivbo;
 	float last_x;
 	vector<vert_norm> data;
-	vector<unsigned> indices;
+	vector<unsigned> indices, strip_offsets;
 	map<point, unsigned> vmap[2]; // {prev, next} rows
 
 public:
@@ -355,10 +355,13 @@ public:
 		}
 		indices.reserve(4*nquads);
 		data.reserve(5*nquads/4); // 20% extra
+		strip_offsets.reserve(strips.size()+1);
 
 		for (vector<strip_t>::const_iterator i = strips.begin(); i != strips.end(); ++i) {
+			strip_offsets.push_back(indices.size());
 			add_strip(*i);
 		}
+		strip_offsets.push_back(indices.size());
 		assert(indices.size() == 4*nquads);
 	}
 
@@ -448,15 +451,28 @@ public:
 		upload_vbo();
 	}
 
-	// unused
-	void update_region(unsigned offset, float dz) {
-		// FIXME: update range
+	void update_region(unsigned strip_ix, unsigned strip_pos, unsigned strip_len, float new_z) {
+		// FIXME: update a range at a time?
 		assert(vbo);
-		assert(offset < data.size());
-		data[offset].v.z += dz;
-		// FIXME: update normal
 		bind_vbo(vbo, 0);
-		upload_vbo_sub_data(&data[offset], offset*sizeof(vert_norm), sizeof(vert_norm), 0);
+		assert(strip_ix+1 < strip_offsets.size());
+		assert(strip_len >= 4); // at least one quad
+		unsigned const cur_six(strip_offsets[strip_ix]), next_six(strip_offsets[strip_ix+1]);
+		unsigned const num_quads((strip_len-2)/2), quad_ix(min(strip_pos/2, num_quads-1));
+		assert((next_six - cur_six) == 4*num_quads); // error check
+		unsigned const start_index_ix(cur_six + 4*quad_ix); // quad vertex index
+
+		for (unsigned i = 0; i < 4; ++i) { // 4 points on the quad
+			unsigned index_ix(start_index_ix + i);
+			assert(index_ix < indices.size());
+			assert(index_ix < next_six);
+			unsigned const data_ix(indices[index_ix]);
+			assert(data_ix < data.size());
+			vector3d const norm(((i < 2) ? 1.0 : -1.0), ((i & 1) ? -1.0 : 1.0), 0.0);
+			data[data_ix].n   = (data[data_ix].n + norm.get_norm())*0.5; // FIXME: very approximate
+			data[data_ix].v.z = new_z;
+			upload_vbo_sub_data(&data[data_ix], data_ix*sizeof(vert_norm), sizeof(vert_norm), 0);
+		}
 		bind_vbo(0, 0);
 	}
 
@@ -479,7 +495,6 @@ public:
 		glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
-		//update_region((32535*rand())%1000000, -0.01); // testing
 	}
 
 	void show_stats() const {
@@ -793,6 +808,7 @@ bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm) 
 		if ((p.z - radius) < z && (p.z + radius) > z) {
 			zval = z;
 			norm = s.get_norm(pos);
+			snow_draw.update_region(i, pos, s.get_size(), min(z, max((z - 0.25*radius), (p.z - radius))));
 			return 1;
 		}
 	}

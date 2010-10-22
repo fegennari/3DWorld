@@ -19,7 +19,7 @@ float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 
 
 // Global Variables
-bool have_drawn_cobj, have_platform_cobj;
+bool have_drawn_cobj, have_platform_cobj, camera_on_snow(0);
 int coll_border(0), camera_coll_id(-1);
 unsigned cobjs_removed(0), index_top(0);
 float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0);
@@ -1369,15 +1369,18 @@ void force_onto_surface_mesh(point &pos) { // for camera
 			camera_change = 0;
 			return;
 		}
-		set_true_obj_height(pos, camera_last_pos, C_STEP_HEIGHT, sstates[CAMERA_ID].zvel, CAMERA, CAMERA_ID, cflight); // status return value is unused?
+		set_true_obj_height(pos, camera_last_pos, C_STEP_HEIGHT, sstates[CAMERA_ID].zvel, CAMERA, CAMERA_ID, cflight, camera_on_snow); // status return value is unused?
 	}
+	camera_on_snow = 0;
+
 	if (display_mode & 0x10) { // walk on snow
 		float zval;
 		vector3d norm;
 		
 		if (get_snow_height(pos, radius, zval, norm)) {
 			pos.z = zval + radius;
-			camera_in_air = 0;
+			camera_on_snow = 1;
+			camera_in_air  = 0;
 		}
 	}
 	if (camera_coll_smooth) collision_detect_large_sphere(pos, radius, (unsigned char)0);
@@ -1405,7 +1408,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 
 
 // 0 = no change, 1 = moved up, 2 = falling, 3 = stuck
-int set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id, bool flight) {
+int set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id, bool flight, bool on_snow) {
 
 	int const xpos(get_xpos(pos.x) - xoff), ypos(get_ypos(pos.y) - yoff);
 	bool const is_camera(type == CAMERA), is_player(is_camera || type == SMILEY);
@@ -1584,7 +1587,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 			pos.z = zmu + radius;
 		}
 	}
-	if ((is_camera && camera_change) || mesh_scale_change) {
+	if ((is_camera && camera_change) || mesh_scale_change || on_snow) {
 		zvel = 0.0;
 	}
 	else if ((pos.z - lpos.z) < -step) { // falling through the air

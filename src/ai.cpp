@@ -763,7 +763,7 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 	else {
 		sstate.stopped_time = 0;
 	}
-	int ohval(set_true_obj_height(obj.pos, opos, C_STEP_HEIGHT, sstate.zvel, SMILEY, smiley_id, has_flight));
+	int ohval(set_true_obj_height(obj.pos, opos, C_STEP_HEIGHT, sstate.zvel, SMILEY, smiley_id, has_flight, 0));
 	float const zval(obj.pos.z);
 
 	if (recreated || mesh_scale_change || (zval - opos.z) < step_height || (has_flight && !no_down)) { // also gets them stuck in ice

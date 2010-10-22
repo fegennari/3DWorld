@@ -1172,7 +1172,7 @@ bool coll_pt_vis_test_large2(point pos1, point pos2, vector<int> &cobjs, int cob
 bool is_occluded(vector<int> const &occluders, point const *const pts0, int npts, point const &camera);
 void add_camera_cobj(point const &pos);
 void force_onto_surface_mesh(point &pos);
-int  set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id, bool flight);
+int  set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id, bool flight, bool on_snow);
 
 // function prototypes - math3d
 float fix_angle(float angle);
