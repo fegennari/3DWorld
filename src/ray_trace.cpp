@@ -22,11 +22,10 @@ extern bool has_snow;
 extern int read_light_file, write_light_file, read_light_file_l, write_light_file_l;
 extern float light_int_scale, light_int_scale_l, ztop, water_plane_z, temperature, snow_depth;
 extern char *lighting_file, *lighting_file_l;
-extern lmcell ***vlmap;
-extern vector<lmcell> vldata_alloc;
 extern vector<light_source> light_sources;
 extern vector<coll_obj> coll_objects;
 extern vector<laser_beam> lasers;
+extern lmap_manager_t lmap_manager;
 
 
 bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, bool crush_snow);
@@ -52,9 +51,9 @@ void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, 
 	if (!first_pt) p1 += step; // move past the first step so we don't double count
 
 	for (unsigned s = 0; s < nsteps+first_pt; ++s) {
-		lmcell *lmc(get_lmcell(p1));
+		lmcell *lmc(lmap_manager.get_lmcell(p1));
 		
-		if (lmc != NULL) {
+		if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
 			if (local) {
 				ADD_LIGHT_CONTRIB(cw, lmc->c);
 			}
@@ -264,52 +263,6 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 }
 
 
-bool read_lighting_file(char const *const fn, bool local) {
-
-	FILE *fp;
-	assert(fn != NULL);
-	if (!open_file(fp, fn, "lighting input", "rb")) return 0;
-	cout << "Reading lighting file from " << fn << endl;
-	unsigned data_size(0);
-	size_t const sz_read(fread(&data_size, sizeof(unsigned), 1, fp));
-	assert(sz_read == 1);
-
-	if (data_size != vldata_alloc.size()) {
-		cout << "Error: Lighting file " << fn << " data size of " << data_size
-			 << " does not equal the expected size of " << vldata_alloc.size() << ". Ignoring file." << endl;
-	}
-	else {
-		for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-			unsigned const sz(i->get_dsz(local));
-			size_t const nread(fread(i->get_offset(local), sizeof(float), sz, fp));
-			assert(nread == sz);
-		}
-	}
-	fclose(fp);
-	return 1;
-}
-
-
-bool write_lighting_file(char const *const fn, bool local) {
-
-	FILE *fp;
-	assert(fn != NULL);
-	if (!open_file(fp, fn, "lighting output", "wb")) return 0;
-	cout << "Writing lighting file to " << fn << endl;
-	unsigned const data_size(vldata_alloc.size());
-	size_t const sz_write(fwrite(&data_size, sizeof(unsigned), 1, fp));
-	assert(sz_write == 1);
-
-	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) { // const_iterator?
-		unsigned const sz(i->get_dsz(local));
-		size_t const nwrite(fwrite(i->get_offset(local), sizeof(float), sz, fp));
-		assert(nwrite == sz);
-	}
-	fclose(fp);
-	return 1;
-}
-
-
 struct rt_data {
 	unsigned ix, num;
 	int rseed;
@@ -319,6 +272,7 @@ struct rt_data {
 };
 
 
+// see https://computing.llnl.gov/tutorials/pthreads/
 void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose) {
 
 	assert(num_threads > 0 && num_threads < 100);
@@ -326,6 +280,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 	bool const single_thread(num_threads == 1);
 
 	for (unsigned t = 0; t < data.size(); ++t) {
+		// create a custom lmap_manager_t for each thread then merge them together?
 		data[t] = rt_data(t, num_threads, 234323*t, !single_thread, (verbose && single_thread));
 	}
 	if (single_thread) { // pthreads disabled
@@ -405,28 +360,16 @@ void *trace_ray_block(void *ptr) {
 void compute_ray_trace_lighting_global() {
 
 	if (read_light_file) {
-		read_lighting_file(lighting_file, 0);
+		lmap_manager.read_data_from_file(lighting_file, 0);
 	}
 	else {
 		cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
 		launch_threaded_job(NUM_THREADS, trace_ray_block, 1);
 	}
 	if (write_light_file) {
-		write_lighting_file(lighting_file, 0);
+		lmap_manager.write_data_to_file(lighting_file, 0);
 	}
-	
-	// apply global light scaling and normalize colors
-	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-		if (i->v == 0.0) continue;
-		i->v *= light_int_scale;
-		float const max_color(max(i->ac[0], max(i->ac[1], i->ac[2])));
-
-		if (max_color > 0.0) {
-			for (unsigned d = 0; d < 3; ++d) {
-				i->ac[d] /= max_color; // normalize color
-			}
-		}
-	}
+	lmap_manager.global_light_scale(light_int_scale);
 }
 
 
@@ -493,7 +436,7 @@ void *trace_ray_block_local(void *ptr) {
 void compute_ray_trace_lighting_local() {
 
 	if (read_light_file_l) {
-		read_lighting_file(lighting_file_l, 1);
+		lmap_manager.read_data_from_file(lighting_file_l, 1);
 	}
 	else if (0) { // TESTING - sun as local light source (not multithreaded)
 		point const sun_pos(get_sun_pos());
@@ -503,14 +446,84 @@ void compute_ray_trace_lighting_local() {
 		launch_threaded_job(NUM_THREADS, trace_ray_block_local, 1);
 	}
 	if (write_light_file_l) {
-		write_lighting_file(lighting_file_l, 1);
+		lmap_manager.write_data_to_file(lighting_file_l, 1);
 	}
-	// apply local light scaling and clamping
+	lmap_manager.local_light_scale(light_int_scale_l);
+}
+
+
+// lmap_manager_t
+
+
+bool lmap_manager_t::read_data_from_file(char const *const fn, bool local) {
+
+	FILE *fp;
+	assert(fn != NULL);
+	if (!open_file(fp, fn, "lighting input", "rb")) return 0;
+	cout << "Reading lighting file from " << fn << endl;
+	unsigned data_size(0);
+	size_t const sz_read(fread(&data_size, sizeof(unsigned), 1, fp));
+	assert(sz_read == 1);
+
+	if (data_size != vldata_alloc.size()) {
+		cout << "Error: Lighting file " << fn << " data size of " << data_size
+			 << " does not equal the expected size of " << vldata_alloc.size() << ". Ignoring file." << endl;
+	}
+	else {
+		for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
+			unsigned const sz(i->get_dsz(local));
+			size_t const nread(fread(i->get_offset(local), sizeof(float), sz, fp));
+			assert(nread == sz);
+		}
+	}
+	fclose(fp);
+	return 1;
+}
+
+
+bool lmap_manager_t::write_data_to_file(char const *const fn, bool local) const {
+
+	FILE *fp;
+	assert(fn != NULL);
+	if (!open_file(fp, fn, "lighting output", "wb")) return 0;
+	cout << "Writing lighting file to " << fn << endl;
+	unsigned const data_size(vldata_alloc.size());
+	size_t const sz_write(fwrite(&data_size, sizeof(unsigned), 1, fp));
+	assert(sz_write == 1);
+
+	for (vector<lmcell>::const_iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) { // const_iterator?
+		unsigned const sz(i->get_dsz(local));
+		size_t const nwrite(fwrite(i->get_offset(local), sizeof(float), sz, fp));
+		assert(nwrite == sz);
+	}
+	fclose(fp);
+	return 1;
+}
+
+
+void lmap_manager_t::global_light_scale(float scale) {
+
+	// apply global light scaling and normalize colors
 	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-		for (unsigned d = 0; d < 3; ++d) {
-			i->c[d] = min(1.0f, (i->c[d]*light_int_scale_l));
+		if (i->v == 0.0) continue;
+		i->v *= scale;
+		float const max_color(max(i->ac[0], max(i->ac[1], i->ac[2])));
+
+		if (max_color > 0.0) {
+			for (unsigned d = 0; d < 3; ++d) {
+				i->ac[d] /= max_color; // normalize color
+			}
 		}
 	}
 }
 
 
+void lmap_manager_t::local_light_scale(float scale) {
+
+	// apply local light scaling and clamping
+	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
+		for (unsigned d = 0; d < 3; ++d) {
+			i->c[d] = min(1.0f, (i->c[d]*scale));
+		}
+	}
+}
