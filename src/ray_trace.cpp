@@ -1,6 +1,7 @@
 // 3D World - Ray Tracing Code
 // by Frank Gennari
 // 2/14/10
+#include <pthread.h>
 #include "3DWorld.h"
 #include "lightmap.h"
 #include "gameplay.h"
@@ -14,7 +15,7 @@ float const SNOW_ALBEDO   = 0.9;
 float const ICE_ALBEDO    = 0.8;
 
 bool keep_lasers(0); // debugging mode
-unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000);
+unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), NUM_THREADS(1);
 unsigned long long start_rays(0), tot_rays(0), num_hits(0), cells_touched(0);
 
 extern bool has_snow;
@@ -28,7 +29,7 @@ extern vector<coll_obj> coll_objects;
 extern vector<laser_beam> lasers;
 
 
-bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm);
+bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, bool crush_snow);
 
 float get_scene_radius() {return sqrt(2.0*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
 float get_step_size()    {return 0.3*(DX_VAL + DY_VAL + DZ_VAL);}
@@ -128,7 +129,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 		vector3d snow_cnorm(cnorm);
 
 		// could iterate, but cpos won't necessarily converge because snow strips are discrete rather than smooth/interpolated
-		if (get_snow_height(cpos, 2.0*snow_depth, zval, snow_cnorm) && zval >= cpos.z) {
+		if (get_snow_height(cpos, 2.0*snow_depth, zval, snow_cnorm, 0) && zval >= cpos.z) {
 			assert(snow_cnorm.z >= 0.0);
 			vector3d const delta(p1 - cpos), delta_dir(delta.get_norm());
 			float const height(zval - cpos.z), dp(dot_product(snow_cnorm, delta_dir));
@@ -309,22 +310,75 @@ bool write_lighting_file(char const *const fn, bool local) {
 }
 
 
-void trace_rays_from_sky() {
+struct rt_data {
+	unsigned ix, num;
+	int rseed;
+	bool is_thread, verbose;
 
-	cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
+	rt_data(unsigned i=0, unsigned n=0, int s=0, bool t=0, bool v=0) : ix(i), num(n), rseed(s), is_thread(t), verbose(v) {}
+};
+
+
+void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose) {
+
+	assert(num_threads > 0 && num_threads < 100);
+	vector<rt_data> data(num_threads);
+	bool const single_thread(num_threads == 1);
+
+	for (unsigned t = 0; t < data.size(); ++t) {
+		data[t] = rt_data(t, num_threads, 234323*t, !single_thread, (verbose && single_thread));
+	}
+	if (single_thread) { // pthreads disabled
+		start_func((void *)(&data[0]));
+		return;
+	}
+	vector<pthread_t> threads(num_threads);
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+	for (unsigned t = 0; t < num_threads; ++t) {
+		int const rc(pthread_create(&threads[t], &attr, start_func, (void *)(&data[t]))); 
+		
+		if (rc) {
+			cout << "Error: Return code from pthread_create() is " << rc << endl;
+			assert(0);
+		}
+	}
+	pthread_attr_destroy(&attr);
+
+	for (unsigned t = 0; t < num_threads; ++t) {
+		int const rc(pthread_join(threads[t], NULL));
+		
+		if (rc) {
+			cout << "Error: return code from pthread_join() is " << rc << endl;
+			assert(0);
+		}
+	}
+}
+
+
+void *trace_ray_block(void *ptr) {
+
+	assert(ptr);
+	rt_data *data((rt_data *)ptr);
+	cout << "Starting on thread " << data->ix << endl;
+	assert(data->num > 0);
+	if (data->is_thread) srand(data->rseed);
+	unsigned const block_npts(max(1U, NPTS/data->num));
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
 	float const ray_wt(RAY_WEIGHT/(((float)NPTS)*NRAYS));
-	vector<point> pts(NPTS);
+	vector<point> pts(block_npts);
 	vector<vector3d> dirs(NRAYS);
 
-	for (unsigned p = 0; p < NPTS; ++p) {
+	for (unsigned p = 0; p < block_npts; ++p) {
 		pts[p] = signed_rand_vector_spherical(1.0, 0).get_norm()*scene_radius; // start the ray here
 	}
 	sort(pts.begin(), pts.end());
-	cout << "Global light source points: " << NPTS << ", progress: 0";
+	if (data->verbose) cout << "Global light source points: " << block_npts << ", progress: 0";
 
-	for (unsigned p = 0; p < NPTS; ++p) {
-		increment_printed_number(p);
+	for (unsigned p = 0; p < block_npts; ++p) {
+		if (data->verbose) increment_printed_number(p);
 		point const &pt(pts[p]);
 
 		for (unsigned r = 0; r < NRAYS; ++r) {
@@ -340,8 +394,11 @@ void trace_rays_from_sky() {
 			++start_rays;
 		}
 	}
-	cout << endl << "start rays: " << start_rays << ", total rays: " << tot_rays
-		 << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
+	if (data->verbose) {
+		cout << endl << "start rays: " << start_rays << ", total rays: " << tot_rays
+			 << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
+	}
+	return 0;
 }
 
 
@@ -351,7 +408,8 @@ void compute_ray_trace_lighting_global() {
 		read_lighting_file(lighting_file, 0);
 	}
 	else {
-		trace_rays_from_sky();
+		cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
+		launch_threaded_job(NUM_THREADS, trace_ray_block, 1);
 	}
 	if (write_light_file) {
 		write_lighting_file(lighting_file, 0);
@@ -372,7 +430,7 @@ void compute_ray_trace_lighting_global() {
 }
 
 
-void ray_trace_local_light_source(light_source const &ls, float line_length) {
+void ray_trace_local_light_source(light_source const &ls, float line_length, unsigned num_rays) {
 
 	point const &lpos(ls.get_center());
 	colorRGBA lcolor(ls.get_color());
@@ -382,7 +440,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length) {
 	check_coll_line(lpos, lpos, init_cobj, -1, 1, 2); // find most opaque (max alpha) containing object
 	assert(init_cobj < (int)coll_objects.size());
 	
-	for (unsigned n = 0; n < LOCAL_RAYS; ++n) {
+	for (unsigned n = 0; n < num_rays; ++n) {
 		vector3d const dir(signed_rand_vector_spherical(1.0, 0).get_norm());
 		float const weight(ray_wt*ls.get_dir_intensity(dir*-1));
 		if (weight == 0.0) continue;
@@ -409,25 +467,40 @@ void ray_trace_local_light_source(light_source const &ls, float line_length) {
 }
 
 
+void *trace_ray_block_local(void *ptr) {
+
+	assert(ptr);
+	rt_data *data((rt_data *)ptr);
+	cout << "Starting on thread " << data->ix << endl;
+	assert(data->num > 0);
+	if (data->is_thread) srand(data->rseed);
+	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
+	unsigned const num_rays(max(1U, LOCAL_RAYS/data->num));
+	
+	if (data->verbose) {
+		cout << "Local light sources: " << light_sources.size() << ", progress: 0";
+		cout.flush();
+	}
+	for (unsigned i = 0; i < light_sources.size(); ++i) {
+		if (data->verbose) increment_printed_number(i);
+		ray_trace_local_light_source(light_sources[i], line_length, num_rays);
+	}
+	if (data->verbose) cout << endl;
+	return 0;
+}
+
+
 void compute_ray_trace_lighting_local() {
 
 	if (read_light_file_l) {
 		read_lighting_file(lighting_file_l, 1);
 	}
-	else if (0) { // TESTING - sun as local light source
+	else if (0) { // TESTING - sun as local light source (not multithreaded)
 		point const sun_pos(get_sun_pos());
-		ray_trace_local_light_source(light_source(100.0, sun_pos, SUN_C, 0), 2.0*sun_pos.mag());
+		ray_trace_local_light_source(light_source(100.0, sun_pos, SUN_C, 0), 2.0*sun_pos.mag(), LOCAL_RAYS);
 	}
 	else {
-		float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
-		cout << "Local light sources: " << light_sources.size() << ", progress: 0";
-		cout.flush();
-
-		for (unsigned i = 0; i < light_sources.size(); ++i) {
-			increment_printed_number(i);
-			ray_trace_local_light_source(light_sources[i], line_length);
-		}
-		cout << endl;
+		launch_threaded_job(NUM_THREADS, trace_ray_block_local, 1);
 	}
 	if (write_light_file_l) {
 		write_lighting_file(lighting_file_l, 1);
