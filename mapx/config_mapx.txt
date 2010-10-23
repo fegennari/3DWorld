@@ -81,6 +81,7 @@ water_enabled_bmp mapx/water_enable128.bmp
 # mh_filename_raw heightmap.raw 1.0 0.0
 # mh_filename_bmp heightmap_house.bmp 1.1 0.0
 
+num_threads 8
 num_light_rays 50000 50000 1000000
 lighting_file mapx/lighting.data 0 1.5
 #lighting_file mapx/lighting.test.data 1 1.5
