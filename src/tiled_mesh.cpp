@@ -41,30 +41,22 @@ struct tile_xy_pair {
 };
 
 
+class tile_t;
+tile_t *get_tile_from_xy(tile_xy_pair const &tp);
+
+
 class tile_t {
 
 	int x1, y1, x2, y2, init_dxoff, init_dyoff;
 	unsigned tid, vbo, ivbo, size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, xstart, ystart, xstep, ystep;
 	vector<float> zvals;
-	vector<float> sh_out[NUM_LIGHT_SRC];
+	vector<unsigned char> smask[NUM_LIGHT_SRC];
+	vector<float> sh_out[NUM_LIGHT_SRC][2];
 
 public:
 	tile_t() : tid(0), vbo(0), ivbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {}
 	~tile_t() {clear_vbo_tid(1,1);}
-	float get_zmin() const {return mzmin;}
-	float get_zmax() const {return mzmax;}
-	
-	point get_center() const {
-		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
-	}
-
-	void calc_start_step(int dx, int dy) {
-		xstart = get_xval(x1 + dx);
-		ystart = get_yval(y1 + dy);
-		xstep  = (get_xval(x2 + dx) - xstart)/size;
-		ystep  = (get_yval(y2 + dy) - ystart)/size;
-	}
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2),
 		tid(0), vbo(0), ivbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0)
@@ -83,6 +75,19 @@ public:
 			cout << "create " << size << ": " << x << "," << y << ", coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;
 		}
 	}
+	float get_zmin() const {return mzmin;}
+	float get_zmax() const {return mzmax;}
+	
+	point get_center() const {
+		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
+	}
+
+	void calc_start_step(int dx, int dy) {
+		xstart = get_xval(x1 + dx);
+		ystart = get_yval(y1 + dy);
+		xstep  = (get_xval(x2 + dx) - xstart)/size;
+		ystep  = (get_yval(y2 + dy) - ystart)/size;
+	}
 
 	unsigned get_gpu_memory() const {
 		unsigned mem(0);
@@ -90,6 +95,13 @@ public:
 		if (ivbo > 0) mem += size*size*sizeof(unsigned short); // 1MB
 		if (tid  > 0) mem += 3*gen_tsize*gen_tsize; // 34MB
 		return mem;
+	}
+
+	void clear_shadows() {
+		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+			smask[l].clear();
+			for (unsigned d = 0; d < 2; ++d) sh_out[l][d].clear();
+		}
 	}
 
 	void clear_tid() {
@@ -103,6 +115,7 @@ public:
 			delete_vbo(vbo);
 			delete_vbo(ivbo);
 			vbo = ivbo = 0;
+			clear_shadows();
 		}
 		if (tclear) {clear_tid();}
 	}
@@ -140,25 +153,49 @@ public:
 		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy).get_norm();
 	}
 
-	void calc_light_src_shadows(vector<unsigned char> smask[], float const *sh_in, unsigned light) {
-		smask[light].resize(zvals.size());
-		sh_out[light].resize(zvsize + zvsize);
-		calc_mesh_shadows(light, get_light_pos(light), &zvals.front(), &smask[light].front(), sh_in, &sh_out[light].front(), zvsize, zvsize);
+	void calc_shadows(bool calc_sun, bool calc_moon) {
+		bool calc_light[NUM_LIGHT_SRC] = {0};
+		calc_light[LIGHT_SUN ] = calc_sun;
+		calc_light[LIGHT_MOON] = calc_moon;
+		tile_xy_pair const tp(x1/(int)size, y1/(int)size);
+
+		// FIXME: Need to apply the shadows created by new tiles to existing tiles
+		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // calculate mesh shadows for each light source
+			if (!calc_light[l])    continue; // light not enabled
+			if (!smask[l].empty()) continue; // already calculated (cached)
+			float const *sh_in[2] = {0, 0};
+			point const lpos(get_light_pos(l));
+			tile_xy_pair const adj_tp[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? -1 : 1)), tp.y),
+				                            tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? -1 : 1)))};
+
+			for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
+				sh_out[l][!d].resize(zvsize, MESH_MIN_Z); // init value really should not be used, but it sometimes is
+				tile_t *adj_tile(get_tile_from_xy(adj_tp[d]));
+				if (adj_tile == NULL) continue; // no adjacent tile
+				vector<float> const &adj_sh_out(adj_tile->sh_out[l][!d]);
+				
+				if (adj_sh_out.empty()) { // adjacent tile not initialized
+					adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON)); // recursive call on adjacent tile
+				}
+				assert(adj_sh_out.size() == zvsize);
+				sh_in[!d] = &adj_sh_out.front(); // chain our input to our neighbor's output
+			}
+			smask[l].resize(zvals.size());
+			calc_mesh_shadows(l, lpos, &zvals.front(), &smask[l].front(), zvsize, zvsize,
+				sh_in[0], sh_in[1], &sh_out[l][0].front(), &sh_out[l][1].front());
+		}
 	}
 
-	void create_data(vector<vert_norm> &data, vector<unsigned short> &indices, vector<unsigned char> smask[]) {
+	void create_data(vector<vert_norm> &data, vector<unsigned short> &indices) {
 		RESET_TIME;
 		assert(zvals.size() == zvsize*zvsize);
 		data.resize(stride*stride);
 		indices.resize(4*size*size);
 		calc_start_step(init_dxoff, init_dyoff);
-
-		// FIXME: Need to shadow across adjacent tiles and update when new tiles are created: use sh_in
 		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
 		assert(has_sun || has_moon);
-		if (has_sun ) calc_light_src_shadows(smask, NULL, LIGHT_SUN );
-		if (has_moon) calc_light_src_shadows(smask, NULL, LIGHT_MOON);
-
+		calc_shadows(has_sun, has_moon);
+		
 		for (unsigned y = 0; y <= size; ++y) {
 			for (unsigned x = 0; x <= size; ++x) {
 				unsigned const ix(y*zvsize + x);
@@ -339,7 +376,7 @@ public:
 		bind_vbo(ivbo, 1);
 	}
 
-	bool draw(vector<vert_norm> &data, vector<unsigned short> &indices, vector<unsigned char> smask[]) { // make const or make vbo mutable?
+	bool draw(vector<vert_norm> &data, vector<unsigned short> &indices) { // make const or make vbo mutable?
 		assert(size > 0);
 		if (!is_visible()) return 0; // not visible to camera
 
@@ -357,7 +394,7 @@ public:
 		unsigned ptr_stride(sizeof(vert_norm));
 
 		if (vbo == 0) {
-			create_data(data, indices, smask);
+			create_data(data, indices);
 			vbo  = create_vbo();
 			ivbo = create_vbo();
 			bind_vbos();
@@ -446,7 +483,6 @@ public:
 		unsigned long long mem(0);
 		vector<vert_norm> data;
 		vector<unsigned short> indices;
-		vector<unsigned char> smask[NUM_LIGHT_SRC];
 		static point last_sun(all_zeros), last_moon(all_zeros);
 		static bool last_water_en(1);
 		bool const water_en((display_mode & 0x04) != 0);
@@ -466,7 +502,7 @@ public:
 			if (add_hole && i->first.x == 0 && i->first.y == 0) continue;
 			if (i->second->get_rel_dist_to_camera() > 1.4)      continue; // too far to draw
 			zmin = min(zmin, i->second->get_zmin());
-			num_drawn += i->second->draw(data, indices, smask);
+			num_drawn += i->second->draw(data, indices);
 		}
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
@@ -478,10 +514,22 @@ public:
 			i->second->clear_vbo_tid(vclear, tclear);
 		}
 	}
+
+	tile_t *get_tile_from_xy(tile_xy_pair const &tp) {
+		tile_map::iterator it(tiles.find(tp));
+		if (it != tiles.end()) return it->second;
+		return NULL;
+	}
 };
 
 
 tile_draw_t terrain_tile_draw;
+
+
+tile_t *get_tile_from_xy(tile_xy_pair const &tp) {
+
+	return terrain_tile_draw.get_tile_from_xy(tp);
+}
 
 
 void draw_vert_color(colorRGBA c, float x, float y, float z) {

@@ -232,8 +232,8 @@ class mesh_shadow_gen {
 
 	float const *mh;
 	unsigned char *smask;
-	float const *sh_in;
-	float *sh_out;
+	float const *sh_in_x, *sh_in_y;
+	float *sh_out_x, *sh_out_y;
 	int xsize, ysize;
 	vector3d dir;
 
@@ -241,7 +241,8 @@ class mesh_shadow_gen {
 		assert(smask != NULL);
 		float const dist(2.0*XY_SUM_SIZE/sqrt(dir.x*dir.x + dir.y*dir.y));
 		point v2(v1 + vector3d(dir.x*dist, dir.y*dist, 0.0));
-		if (!do_line_clip_scene(v1, v2, zmin, zmax)) return; // edge case ([zmin, zmax] should contain 0.0)
+		float const d[3][2] = {{-X_SCENE_SIZE, get_xval(xsize)}, {-Y_SCENE_SIZE, get_yval(ysize)}, {zmin, zmax}};
+		if (!do_line_clip(v1, v2, d)) return; // edge case ([zmin, zmax] should contain 0.0)
 		int const xa(get_xpos(v1.x)), ya(get_ypos(v1.y)), xb(get_xpos(v2.x)), yb(get_ypos(v2.y));
 		int const dx(xb - xa), dy(yb - ya), steps(max(abs(dx), abs(dy)));
 		double const xinc(dx/(double)steps), yinc(dy/(double)steps);
@@ -250,10 +251,10 @@ class mesh_shadow_gen {
 		bool inited(0);
 		point cur(all_zeros);
 		int xstart(0), ystart(0), xend(xsize-1), yend(ysize-1);
-		if (dir.x < 0.0) swap(xstart, xend);
-		if (dir.y < 0.0) swap(ystart, yend);
+		if (dir.x <= 0.0) swap(xstart, xend);
+		if (dir.y <= 0.0) swap(ystart, yend);
 
-		for (int k = 0; k <= steps; ++k) { // DDA algorithm
+		for (int k = 0; ; ++k) { // DDA algorithm
 			int const xp((int)x), yp((int)y);
 			
 			if (xp >= 0 && yp >= 0 && xp < xsize && yp < ysize) {
@@ -262,32 +263,31 @@ class mesh_shadow_gen {
 				float const mh00(mh[yp*xsize+xp]), mh01(mh[yp*xsize+xp1]), mh10(mh[yp1*xsize+xp]), mh11(mh[yp1*xsize+xp1]);
 				float const mh((1.0 - xpi)*((1.0 - ypi)*mh00 + ypi*mh10) + xpi*((1.0 - ypi)*mh01 + ypi*mh11));
 				point const pt((-X_SCENE_SIZE + DX_VAL*x), (-Y_SCENE_SIZE + DY_VAL*y), mh);
-				
-				if (sh_in != NULL) { // use starting shadow height value
-					if (xp == xstart) {
-						cur    = point(pt.x, pt.y, sh_in[xsize + yp]);
-						inited = 1;
-					}
-					else if (yp == ystart) {
-						cur    = point(pt.x, pt.y, sh_in[xp]);
-						inited = 1;
-					}
+
+				// use starting shadow height value
+				if (sh_in_y != NULL && xp == xstart && sh_in_y[yp] > MESH_MIN_Z) {
+					cur    = point(pt.x, pt.y, sh_in_y[yp]);
+					inited = 1;
 				}
-				if (inited && ((pt[dim] - cur[dim])*dir.z/dir[dim] + cur.z) > pt.z) {
-					smask[yp*xsize+xp] |= MESH_SHADOW; // shadowed
+				else if (sh_in_x != NULL && yp == ystart && sh_in_x[xp] > MESH_MIN_Z) {
+					cur    = point(pt.x, pt.y, sh_in_x[xp]);
+					inited = 1;
+				}
+				float const shadow_z((pt[dim] - cur[dim])*dir.z/dir[dim] + cur.z);
+
+				if (inited && shadow_z > pt.z) { // shadowed
+					smask[yp*xsize+xp] |= MESH_SHADOW;
+					// set ending shadow height value
+					if (sh_out_y != NULL && xp == xend) sh_out_y[yp] = shadow_z;
+					if (sh_out_x != NULL && yp == yend) sh_out_x[xp] = shadow_z;
 				}
 				else {
 					cur = pt; // update point
 				}
-				if (sh_out != NULL) { // set ending shadow height value
-					if (xp == xend) {
-						sh_out[xsize + yp] = cur.z;
-					}
-					else if (yp == yend) {
-						sh_out[xp] = cur.z;
-					}
-				}
 				inited = 1;
+			}
+			else if (k > steps) {
+				break;
 			}
 			x += xinc;
 			y += yinc;
@@ -295,8 +295,8 @@ class mesh_shadow_gen {
 	}
 
 public:
-	mesh_shadow_gen(float const *const h, unsigned char *sm, float const *sh_in_, float *sh_out_, int xsz, int ysz)
-		: mh(h), smask(sm), sh_in(sh_in_), sh_out(sh_out_), xsize(xsz), ysize(ysz) {
+	mesh_shadow_gen(float const *const h, unsigned char *sm, int xsz, int ysz, float const *shix, float const *shiy, float *shox, float *shoy)
+		: mh(h), smask(sm), sh_in_x(shix), sh_in_y(shiy), sh_out_x(shox), sh_out_y(shoy), xsize(xsz), ysize(ysz) {
 		assert(mh != NULL && smask != NULL);
 	}
 
@@ -317,8 +317,8 @@ public:
 };
 
 
-void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, unsigned char *smask,
-					   float const *sh_in, float *sh_out, int xsize, int ysize)
+void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, unsigned char *smask, int xsize, int ysize,
+					   float const *sh_in_x, float const *sh_in_y, float *sh_out_x, float *sh_out_y)
 {
 	bool const no_shadow(l == LIGHT_MOON && combined_gu);
 	bool const all_shadowed(!no_shadow && lpos.z < zmin);
@@ -328,7 +328,7 @@ void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, uns
 	}
 	if (shadow_detail == 0 || no_shadow || FAST_VISIBILITY_CALC == 3) return;
 	if (lpos.x == 0.0 && lpos.y == 0.0) return; // straight down = no mesh shadows
-	mesh_shadow_gen(mh, smask, sh_in, sh_out, xsize, ysize).run(lpos);
+	mesh_shadow_gen(mh, smask, xsize, ysize, sh_in_x, sh_in_y, sh_out_x, sh_out_y).run(lpos);
 }
 
 
@@ -352,7 +352,7 @@ void calc_visibility(char light_sources) {
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!(light_sources & (1 << l))) continue;
 		// we use the first element of mesh_height and shadow_mask assuming they are allocated as one large array
-		calc_mesh_shadows(l, lpos[l], mesh_height[0], shadow_mask[l][0], NULL, NULL, MESH_X_SIZE, MESH_Y_SIZE);
+		calc_mesh_shadows(l, lpos[l], mesh_height[0], shadow_mask[l][0], MESH_X_SIZE, MESH_Y_SIZE);
 	} // for l
 	if (sst) PRINT_TIME("Landscape shadow");
 	if (!RAYCAST_OBJ_SHAD) add_cobj_shadows(light_sources);

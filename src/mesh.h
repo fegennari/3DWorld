@@ -14,6 +14,8 @@
 // should be based on mesh size
 int const DYNAMIC_MESH_SZ = 4096;
 
+float const MESH_MIN_Z = -1.0E6; // special mesh height that is guaranteed to be smaller than any mesh zval
+
 
 struct ripple_state {
 
