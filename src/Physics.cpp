@@ -584,6 +584,7 @@ vector3d get_local_wind(point const &pt) {
 	float const pressure((zmax - zbottom)/(zmax - mh)); // pressure is higher at the top of hills
 	vector3d v_ortho;
 	orthogonalize_dir(wind, vertex_normals[ypos][xpos], v_ortho, 0);
+	v_ortho.z *= 0.1; // z component of velocity is much smaller
 	float const hval((1.0 - rel_height)*(1.0 - rel_height)); // at surface: 1.0, middle: 0.25, top: 0.0
 	vector3d const local_wind(v_ortho*hval + wind*(1.0 - hval)); // wind follows the surface contour when close to the mesh
 
@@ -717,7 +718,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 					velocity.z  = -min(-velocity.z, otype.terminal_vel);
 				}
 				if (fabs(air_factor*local_wind.z) > fabs(velocity.z) || ((local_wind.z < 0) != (velocity.z < 0))) {
-					velocity.z = velocity.z + air_factor*local_wind.z;
+					velocity.z += air_factor*local_wind.z;
 				}
 			}
 		}
