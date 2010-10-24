@@ -782,7 +782,8 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			}
 			do_coll_damage();
 			if (status == 0) return;
-			velocity = zero_vector;
+			bool const stopped(otype.friction_factor >= STICK_THRESHOLD || (flags & XY_STOPPED) || velocity.mag_sq() < BOUNCE_CUTOFF);
+			velocity *= (stopped ? 0.0 : 0.95); // apply some damping
 		}
 		if (coll) {
 			bool const stat_coll((flags & STATIC_COBJ_COLL) != 0);
@@ -810,10 +811,10 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		int const val(surface_advance()); // move along ground
 
 		if (val == 2) { // moved, recalculate velocity from position change
-			status = 3;
+			status   = 3;
+			velocity = (pos - old_pos)/tstep;
 			if (radius >= LARGE_OBJ_RAD) check_vert_collision(obj_index, 1, iter); // adds instability though
 			assert(tstep > 0.0);
-			velocity = (pos - old_pos)/tstep;
 			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) modify_grass_at(pos, radius, 1, 0, 0, 0); // crush grass
 		}
 		else if (val == 1) { // stopped
@@ -903,7 +904,7 @@ int dwobject::surface_advance() {
 	vector3d mesh_vel(zero_vector);
 
 	if (dzn > TOLERANCE && dzn > friction) {
-		float vel((SURF_ADV_STEP/XY_SCENE_SIZE)*dzn*(1.0 - 0.5*friction));
+		float vel((SURF_ADV_STEP/XY_SCENE_SIZE)*dzn*(1.0 - 0.5*friction)/DEF_TIMESTEP);
 		assert(density > 0.0);
 		if ((flags & IN_WATER) && density >= WATER_DENSITY) vel *= (density - WATER_DENSITY)/density;
 
@@ -913,8 +914,11 @@ int dwobject::surface_advance() {
 			val        = 1;
 		}
 	}
-	pos  += mesh_vel*(tstep/DEF_TIMESTEP);
-	pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
+	float const vmult(friction); // FIXME: function of fticks?
+	vector3d const final_vel(mesh_vel*vmult + velocity*(1.0 - vmult));
+	pos.x += final_vel.x*tstep;
+	pos.y += final_vel.y*tstep;
+	pos.z  = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
 	return val+1;
 }
 
