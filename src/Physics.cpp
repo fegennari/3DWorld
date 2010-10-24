@@ -1201,7 +1201,7 @@ int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2,
 		zval = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0);
 		if ((pos.z - z_offset) < zval) pos.z = zval + z_offset;
 		norm = surface_normals[ypos][xpos];
-		elasticity *= LAND_ELASTICITY;
+		elasticity *= LAND_ELASTICITY*(1.0 - 0.5*get_grass_density(pos)); // half elastic in dense grass
 		if (spillway_matrix[ypos][xpos] >= short(frame_counter-1)) elasticity *= SPILL_ELASTIC;
 		break;
 
