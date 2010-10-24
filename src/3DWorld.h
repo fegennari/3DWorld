@@ -1404,6 +1404,7 @@ void update_grass_vbos();
 void draw_grass();
 void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh);
 bool place_obj_on_grass(point &pos, float radius);
+float get_grass_density(point const &pos);
 
 // function prototypes - draw mech
 void draw_hmv();

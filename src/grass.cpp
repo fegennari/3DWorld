@@ -276,6 +276,16 @@ public:
 		return updated;
 	}
 
+	float get_grass_density(point const &pos) {
+		if (empty() || !is_over_mesh(pos)) return 0.0;
+		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
+		if (point_outside_mesh(x, y))      return 0.0;
+		unsigned const ix(y*MESH_X_SIZE + x);
+		assert(ix+1 < mesh_to_grass_map.size());
+		unsigned const num_grass(mesh_to_grass_map[ix+1] - mesh_to_grass_map[ix]);
+		return ((float)num_grass)/((float)grass_density);
+	}
+
 	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh) {
 		if (burn && is_underwater(pos)) burn = 0;
 		if (!burn && !crush && !cut && !update_mh) return; // nothing left to do
@@ -490,6 +500,10 @@ void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool
 
 bool place_obj_on_grass(point &pos, float radius) {
 	return (!no_grass() && grass_manager.place_obj_on_grass(pos, radius));
+}
+
+float get_grass_density(point const &pos) {
+	return (no_grass() ? 0.0 : grass_manager.get_grass_density(pos));
 }
 
 

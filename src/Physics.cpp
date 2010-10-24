@@ -11,7 +11,7 @@ float    const KILL_DEPTH          = 12.0;
 float    const RECOVER_DEPTH       = 1.0;
 float    const BOUNCE_CUTOFF       = 4.0; // squared
 float    const WATER_SURF_FRICTION = 0.95;
-float    const SURF_ADV_STEP0      = 2.0;
+float    const SURF_ADV_STEP       = 2.0;
 float    const MAX_TEMP            = 37.0;
 float    const MIN_TEMP            = -18.0;
 float    const ICE_BOUNCE_ELAS     = 0.4;
@@ -38,7 +38,7 @@ obj_type object_types[NUM_TOT_OBJS];
 extern int num_groups, display_mode, frame_counter, game_mode, island, coll_border, camera_coll_id, ocean_set;
 extern int s_ball_id, world_mode, w_acc, is_snow, iticks, auto_time_adv, DISABLE_WATER, enable_fsource;
 extern float max_water_height, zmin, zmax, ztop, zbottom, ball_velocity, zmax_est, base_gravity, tstep, fticks;
-extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax;
+extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, grass_length;
 extern point ocean;
 extern vector3d up_norm, orig_cdir;
 extern vector<valley> valleys;
@@ -880,16 +880,18 @@ int dwobject::object_still_stopped(int obj_index) {
 int dwobject::surface_advance() {
 
 	obj_type const &otype(object_types[type]);
-	float const radius(otype.radius), friction(otype.friction_factor), density(otype.density);
-	if (friction >= STICK_THRESHOLD || (flags & XY_STOPPED)) return 1;
+	if (otype.friction_factor >= STICK_THRESHOLD || (flags & XY_STOPPED)) return 1; // stopped
 	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y)), val(0);
 	if (point_outside_mesh(xpos, ypos)) return 0; // object off edge
-	float const h_coll(mesh_height[ypos][xpos]);
+	float const h_coll(mesh_height[ypos][xpos]), radius(otype.radius), density(otype.density);
 
 	if (pos.z < (h_coll - RECOVER_DEPTH*radius)) { // below surface
 		if (pos.z < (h_coll - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
 		pos.z = h_coll; // recover it
 	}
+	float const grass_friction(0.1*min(1.0f, (grass_length/radius))*get_grass_density(pos));
+	float const friction(otype.friction_factor + grass_friction);
+	if (friction >= STICK_THRESHOLD) return 1; // stopped by grass
 	float const s((pos.x - get_xval(xpos))*DX_VAL_INV + 0.5), t((pos.y - get_yval(ypos))*DY_VAL_INV + 0.5);
 	int const xpp1(min(xpos+1, MESH_X_SIZE-1)), ypp1(min(ypos+1, MESH_Y_SIZE-1));
 	vector3d const &n00(vertex_normals[ypos][xpos]);
@@ -898,18 +900,20 @@ int dwobject::surface_advance() {
 	vector3d const &n11(vertex_normals[ypp1][xpp1]);
 	vector3d const snorm((n11*t + n10*(1.0-t))*s + (n01*t + n00*(1.0-t))*(1.0-s)); // interpolate across the quad
 	float const dzn(sqrt(snorm.x*snorm.x + snorm.y*snorm.y));
+	vector3d mesh_vel(zero_vector);
 
 	if (dzn > TOLERANCE && dzn > friction) {
-		float vel((SURF_ADV_STEP0/XY_SCENE_SIZE)*dzn*(1.0 - 0.5*friction)*(tstep/DEF_TIMESTEP));
+		float vel((SURF_ADV_STEP/XY_SCENE_SIZE)*dzn*(1.0 - 0.5*friction));
 		assert(density > 0.0);
 		if ((flags & IN_WATER) && density >= WATER_DENSITY) vel *= (density - WATER_DENSITY)/density;
 
-		if (!(flags & XY_STOPPED) && vel > TOLERANCE) {
-			pos.x += vel*DX_VAL*snorm.x/dzn;
-			pos.y += vel*DY_VAL*snorm.y/dzn;
-			val    = 1;
+		if (vel > TOLERANCE) {
+			mesh_vel.x = vel*DX_VAL*snorm.x/dzn;
+			mesh_vel.y = vel*DY_VAL*snorm.y/dzn;
+			val        = 1;
 		}
 	}
+	pos  += mesh_vel*(tstep/DEF_TIMESTEP);
 	pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
 	return val+1;
 }
