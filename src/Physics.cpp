@@ -806,7 +806,20 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		status = val;
 	} // end in the air
 	else { // on the ground
-		if ((otype.flags & COLL_DESTROYS) || check_border_coll(pos)) {assert(type != SMILEY); status = 0; return;}
+		if (check_border_coll(pos)) { // on edge of mesh
+			assert(type != SMILEY);
+			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+
+			if (point_outside_mesh(xpos, ypos)) { // too late, destroy it
+				status   = 0;
+			}
+			else { // make it roll/bounce off the mesh based on mesh normal
+				status   = 1;
+				velocity = surface_normals[ypos][xpos]*sqrt(BOUNCE_CUTOFF);
+			}
+			return;
+		}
+		if (otype.flags & COLL_DESTROYS) {assert(type != SMILEY); status = 0; return;}
 		if (flags & STATIC_COBJ_COLL) return; // stuck on vertical collision surface
 		if (check_water_collision(velocity.z) && (frozen || otype.density < WATER_DENSITY)) return;
 		if (otype.flags & OBJ_IS_FLAT) set_orient_for_coll(NULL);
