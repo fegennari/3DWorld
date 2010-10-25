@@ -915,8 +915,8 @@ int dwobject::surface_advance() {
 			val        = 1;
 		}
 	}
-	float const vmult(friction); // FIXME: function of fticks?
-	vector3d const final_vel(mesh_vel*vmult + velocity*(1.0 - vmult));
+	float const vmult(pow((1.0f - friction), fticks));
+	vector3d const final_vel(mesh_vel*(1.0 - vmult) + velocity*vmult);
 	pos.x += final_vel.x*tstep;
 	pos.y += final_vel.y*tstep;
 	pos.z  = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
@@ -1317,7 +1317,7 @@ void fire::apply_physics(unsigned i) {
 	bool underwater(is_underwater(pos2));
 
 	if (underwater && !island && temperature <= W_FREEZE_POINT) { // on/under ice
-		radius    *= 0.95; // slowly die out
+		radius    *= pow(0.95f, fticks); // slowly die out
 		underwater = 0;
 	}
 	if (time > (int)MAX_FIRE_TIME || radius < TOLERANCE || underwater) {
@@ -1346,10 +1346,10 @@ void fire::apply_physics(unsigned i) {
 		point const lpos(pos);
 		vector3d const local_wind(get_local_wind(pos));
 		vector3d const vel((local_wind.x + rand_uniform(-1.5, 1.5)), (local_wind.y + rand_uniform(-1.5, 1.5)), rand_uniform(-0.05, 0.0585));
-		velocity *= 0.95;
+		velocity *= pow(0.95f, fticks);
 		velocity += vel*(0.005*tstep);
-		pos.x    += velocity.x;
-		pos.y    += velocity.y;
+		pos.x    += fticks*velocity.x;
+		pos.y    += fticks*velocity.y;
 		set_true_obj_height(pos, lpos, FAR_CLIP, velocity.z, FIRE, 0, 0, 0);
 		pos.z    -= radius;
 		pos.z     = 0.9*lpos.z + 0.1*pos.z; // slow movement

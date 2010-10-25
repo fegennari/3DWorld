@@ -127,7 +127,7 @@ void do_look_at(vector3d const &rv1=plus_z, vector3d const &rv2=plus_z) {
 		center.x  += 0.05*CAMERA_RADIUS*camera_shake;
 		eye        = center - cview_dir*cview_radius;
 	}
-	camera_shake = -0.95*camera_shake;
+	camera_shake = -pow(0.95f, fticks)*camera_shake;
 	if (fabs(camera_shake) < 0.1) camera_shake = 0.0;
 	gluLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
 }

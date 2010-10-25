@@ -615,13 +615,6 @@ void calc_water_normals() {
 }
 
 
-inline float get_ripple_zval(int i, int j) {
-
-	float const zval(RIPPLE_DAMP1*(ripples[i][j].rval + RIPPLE_DAMP2*ripples[i][j].acc)); // ripple wave height
-	return ((fabs(zval) < TOLERANCE) ? 0.0 : zval); // prevent small floating point numbers
-}
-
-
 inline void update_water_edges(int i, int j) {
 
 	if (i > 0 && wminside[i-1][j] == 1) {
@@ -644,6 +637,7 @@ void compute_ripples() {
 	RESET_TIME;
 
 	if (temperature > W_FREEZE_POINT && (start_ripple || first_water_run)) {
+		float const rm_atten(pow(RIPPLE_MAT_ATTEN, fticks)), rdamp1(pow(RIPPLE_DAMP1, fticks)), rdamp2(RIPPLE_DAMP2*fticks);
 		start_ripple = 0;
 
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -654,7 +648,7 @@ void compute_ripples() {
 				float const rmij(ripples[i][j].rval);
 				float &acc(ripples[i][j].acc);
 				fix_fp_mag(acc);
-				acc *= RIPPLE_MAT_ATTEN;
+				acc *= rm_atten;
 				if (!start_ripple && fabs(acc) > 1.0E-6) start_ripple = 1;
 
 				// 00 0- -0 0+ +0 -- +- ++ -+  22  11
@@ -729,6 +723,12 @@ void compute_ripples() {
 		
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
+				float ripple_zval(0.0);
+
+				if (wminside[i][j]) {
+					float const zval(rdamp1*(ripples[i][j].rval + rdamp2*ripples[i][j].acc)); // ripple wave height
+					ripple_zval = ((fabs(zval) < TOLERANCE) ? 0.0 : zval); // prevent small floating point numbers
+				}
 				if (wminside[i][j] == 1) { // dynamic water
 					int const wsi(watershed_matrix[i][j].wsi);
 					assert(size_t(wsi) < valleys.size());
@@ -740,18 +740,17 @@ void compute_ripples() {
 					float const depth(valleys[wsi].depth);
 
 					if (depth < 0) {
-						ripples[i][j].rval *= RIPPLE_MAT_ATTEN;
+						ripples[i][j].rval *= rm_atten;
 						if (update_iter) water_matrix[i][j] = valleys[wsi].zval;
 						continue;
 					}
-					float const zval(max(min(get_ripple_zval(i, j), depth), -depth)); // max ripple height equals water depth
-					ripples[i][j].rval = RIPPLE_MAT_ATTEN*zval;
+					float const zval(max(min(ripple_zval, depth), -depth)); // max ripple height equals water depth
+					ripples[i][j].rval = rm_atten*zval;
 					water_matrix[i][j] = valleys[wsi].zval + zval;
 				}
 				else if (wminside[i][j] == 2) { // fixed water
-					float const zval(get_ripple_zval(i, j));
-					ripples[i][j].rval = RIPPLE_MAT_ATTEN*zval;
-					water_matrix[i][j] = water_plane_z + min(MAX_RIPPLE_HEIGHT, zval);
+					ripples[i][j].rval = rm_atten*ripple_zval;
+					water_matrix[i][j] = water_plane_z + min(MAX_RIPPLE_HEIGHT, ripple_zval);
 					water_matrix[i][j] = max(water_matrix[i][j], zbottom);
 				}
 				else if (update_iter && get_water_enabled(j, i)) {
@@ -944,7 +943,7 @@ void update_valleys() {
 		v.w_volume += v.fvol;
 		v.fvol      = 0.0;
 		v.blood_mix = CLIP_TO_01(v.blood_mix);
-		v.mud_mix   = ((v.mud_mix < 0.0001) ? 0.0 : CLIP_TO_01(v.mud_mix)*0.998); // slowly settles
+		v.mud_mix   = ((v.mud_mix < 0.0001) ? 0.0 : CLIP_TO_01(v.mud_mix)*pow(0.998f, fticks)); // slowly settles
 		float const dv(min((v.w_volume - v.lwv), MAX_WATER_ACC));
 		float delta_z(v.get_volume()*dv/v.area); // this is inaccurate because v.area is not constant
 		//if (v.old_area > 0.0 && v.area > 0.0 && v.area != v.old_area) delta_z -= (1.0 - v.old_area/(0.5*(v.area + v.old_area)))*v.dz;

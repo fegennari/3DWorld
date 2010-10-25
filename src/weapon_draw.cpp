@@ -75,7 +75,7 @@ void show_blood_on_camera() {
 	for (unsigned i = 0; i < NUM_BS; ++i) {
 		if (blood_spots[i].time > 0) {
 			blood_spots[i].time  -= max(1, iticks); // shrink blood spot
-			blood_spots[i].size  *= pow(0.99, max(1, iticks));
+			blood_spots[i].size  *= pow(0.99f, fticks);
 			blood_spots[i].pos.y -= 0.00001*sqrt(blood_spots[i].size)*fticks;
 
 			if (blood_spots[i].size > 0.1) { // draw it

@@ -46,7 +46,7 @@ float msms2(1.0);
 
 extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, DISABLE_WATER;
 extern long rseed1, rseed2;
-extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, max_water_height;
+extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, max_water_height, fticks;
 extern GLUquadricObj* quadric;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 
@@ -298,8 +298,9 @@ void rock_shape3d::add_cobjs() {
 bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 
 	if (radius < 0.02 || p2p_dist(pos_, pos) > (0.75*radius_ + 0.5*radius)) return 0;
-	radius *= 0.99; // chip off parts of the rock to make it smaller
-	scale  *= 0.99;
+	float const size_scale(pow(0.99f, fticks));
+	radius *= size_scale; // chip off parts of the rock to make it smaller
+	scale  *= size_scale;
 	remove_cobjs();
 	add_cobjs();
 	return 1;
