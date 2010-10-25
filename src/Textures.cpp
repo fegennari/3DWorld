@@ -828,11 +828,9 @@ colorRGBA get_landscape_texture_color(int xpos, int ypos) {
 	unsigned const x0(xpos*xstep), y0(ypos*ystep), x1(x0 + xstep), y1(y0 + ystep);
 	colorRGBA color(BLACK);
 
-	for (unsigned y = y0; y < y1; ++y) {
+	for (unsigned y = y0; y < y1; ++y) { // like creating a mipmap
 		for (unsigned x = x0; x < x1; ++x) {
-			for (unsigned i = 0; i < 3; ++i) {
-				color[i] += tex_data[3*(width*y + x) + i];
-			}
+			UNROLL_3X(color[i_] += tex_data[3*(width*y + x) + i_];)
 		}
 	}
 	color *= 1.0/(255.0*xstep*ystep);
@@ -1466,7 +1464,7 @@ void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, u
 
 	double s, t;
 	dir_to_sphere_s_t(dir, sdir, s, t);
-	tx = int(txsize*s)%txsize;
+	tx = int(txsize*s)%txsize; // size is not always a power of 2
 	ty = int(tysize*t)%tysize;
 
 	if (invert) {
@@ -1482,8 +1480,8 @@ float get_texture_alpha(unsigned tid, float xval, float yval) {
 	assert(tid < NUM_TEXTURES);
 	texture const &tex(textures[tid]);
 	assert(tex.ncolors == 4);
-	int tx(int(tex.width *xval) % tex.width);
-	int ty(int(tex.height*yval) % tex.height);
+	int tx(int(tex.width *xval) & (tex.width -1)); // width and height are a power of 2
+	int ty(int(tex.height*yval) & (tex.height-1));
 	if (tx < 0) tx += tex.width;
 	if (ty < 0) ty += tex.height;
 	assert(tx >= 0 && ty >= 0 && tx < tex.width && ty < tex.height);
