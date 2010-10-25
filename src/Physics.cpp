@@ -9,7 +9,8 @@
 
 float    const KILL_DEPTH          = 12.0;
 float    const RECOVER_DEPTH       = 1.0;
-float    const BOUNCE_CUTOFF       = 4.0; // squared
+float    const MIN_BOUNCE_VEL      = 2.0;
+float    const BOUNCE_CUTOFF       = MIN_BOUNCE_VEL*MIN_BOUNCE_VEL;
 float    const WATER_SURF_FRICTION = 0.95;
 float    const SURF_ADV_STEP       = 2.0;
 float    const MAX_TEMP            = 37.0;
@@ -612,11 +613,14 @@ void dwobject::do_coll_damage() {
 }
 
 
-inline bool check_border_coll(point const &pos) {
+inline int check_border_coll(point const &pos) {
 
-	return (MESH_BORDER_OBJ > 0 &&
-			(pos.x < -X_SCENE_SIZE+DX_VAL*MESH_BORDER_OBJ || pos.y < -Y_SCENE_SIZE+DY_VAL*MESH_BORDER_OBJ ||
-			(pos.x >  X_SCENE_SIZE-DX_VAL*MESH_BORDER_OBJ || pos.y >  Y_SCENE_SIZE-DY_VAL*MESH_BORDER_OBJ)));
+	if (MESH_BORDER_OBJ == 0) return 0;
+	if (pos.x < -X_SCENE_SIZE+DX_VAL*MESH_BORDER_OBJ) return 1;
+	if (pos.y < -Y_SCENE_SIZE+DY_VAL*MESH_BORDER_OBJ) return 2;
+	if (pos.x >  X_SCENE_SIZE-DX_VAL*MESH_BORDER_OBJ) return 3;
+	if (pos.y >  Y_SCENE_SIZE-DY_VAL*MESH_BORDER_OBJ) return 4;
+	return 0;
 }
 
 
@@ -806,16 +810,19 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		status = val;
 	} // end in the air
 	else { // on the ground
-		if (check_border_coll(pos)) { // on edge of mesh
+		int const border_coll(check_border_coll(pos));
+
+		if (border_coll) { // on edge of mesh
 			assert(type != SMILEY);
 			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
 			if (point_outside_mesh(xpos, ypos)) { // too late, destroy it
-				status   = 0;
+				status     = 0;
 			}
 			else { // make it roll/bounce off the mesh based on mesh normal
-				status   = 1;
-				velocity = surface_normals[ypos][xpos]*sqrt(BOUNCE_CUTOFF);
+				status     = 1;
+				velocity   = surface_normals[ypos][xpos]*MIN_BOUNCE_VEL;
+				velocity.z = 0.0;
 			}
 			return;
 		}
