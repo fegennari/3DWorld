@@ -578,10 +578,12 @@ vector3d get_local_wind(point const &pt) {
 	if (point_outside_mesh(xpos, ypos)) return wind;
 
 	// calculate direction of wind based on mesh orientation
-	float const mh(mesh_height[ypos][xpos]), rel_height((pt.z - mh)/(max(ztop, czmax) - mh));
-	if (rel_height <  0.0) return all_zeros; // under the mesh - no wind
-	if (rel_height >= 1.0) return wind; // above the top of the mesh
-	float const pressure((zmax - zbottom)/(zmax - mh)); // pressure is higher at the top of hills
+	float const mh(mesh_height[ypos][xpos]);
+	if (pt.z < mh)    return all_zeros; // under the mesh - no wind
+	float const szmax(max(ztop, czmax)); // scene zmax
+	if (pt.z > szmax) return wind; // above the top of the mesh
+	float const rel_height((pt.z - mh)/(szmax - mh)); // 0 at mesh level, 1 at scene_ztop
+	float const pressure(min(2.0, 0.5*(zmax - zbottom)/(zmax - mh))); // pressure is higher at the top of hills
 	vector3d v_ortho;
 	orthogonalize_dir(wind, vertex_normals[ypos][xpos], v_ortho, 0);
 	v_ortho.z *= 0.1; // z component of velocity is much smaller
@@ -812,8 +814,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		int const val(surface_advance()); // move along ground
 
 		if (val == 2) { // moved, recalculate velocity from position change
-			status   = 3;
-			velocity = (pos - old_pos)/tstep;
+			status = 3;
 			if (radius >= LARGE_OBJ_RAD) check_vert_collision(obj_index, 1, iter); // adds instability though
 			assert(tstep > 0.0);
 			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) modify_grass_at(pos, radius, 1, 0, 0, 0); // crush grass
@@ -882,7 +883,11 @@ int dwobject::object_still_stopped(int obj_index) {
 int dwobject::surface_advance() {
 
 	obj_type const &otype(object_types[type]);
-	if (otype.friction_factor >= STICK_THRESHOLD || (flags & XY_STOPPED)) return 1; // stopped
+	
+	if (otype.friction_factor >= STICK_THRESHOLD || (flags & XY_STOPPED)) { // stopped
+		velocity = zero_vector;
+		return 1;
+	}
 	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y)), val(0);
 	if (point_outside_mesh(xpos, ypos)) return 0; // object off edge
 	float const h_coll(mesh_height[ypos][xpos]), radius(otype.radius), density(otype.density);
@@ -893,7 +898,11 @@ int dwobject::surface_advance() {
 	}
 	float const grass_friction(0.1*min(1.0f, (grass_length/radius))*get_grass_density(pos));
 	float const friction(otype.friction_factor + grass_friction);
-	if (friction >= STICK_THRESHOLD) return 1; // stopped by grass
+	
+	if (friction >= STICK_THRESHOLD) { // stopped by grass
+		velocity = zero_vector;
+		return 1;
+	}
 	float const s((pos.x - get_xval(xpos))*DX_VAL_INV + 0.5), t((pos.y - get_yval(ypos))*DY_VAL_INV + 0.5);
 	int const xpp1(min(xpos+1, MESH_X_SIZE-1)), ypp1(min(ypos+1, MESH_Y_SIZE-1));
 	vector3d const &n00(vertex_normals[ypos][xpos]);
@@ -915,11 +924,11 @@ int dwobject::surface_advance() {
 			val        = 1;
 		}
 	}
-	float const vmult(pow((1.0f - friction), fticks));
-	vector3d const final_vel(mesh_vel*(1.0 - vmult) + velocity*vmult);
-	pos.x += final_vel.x*tstep;
-	pos.y += final_vel.y*tstep;
-	pos.z  = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
+	float const vmult((otype.flags & OBJ_IS_DROP) ? 0.0 : pow((1.0f - friction), fticks)); // droplets stick - no momentum
+	velocity = (mesh_vel*(1.0 - vmult) + velocity*vmult);
+	pos.x   += velocity.x*tstep;
+	pos.y   += velocity.y*tstep;
+	pos.z    = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
 	return val+1;
 }
 
