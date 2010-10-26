@@ -243,7 +243,7 @@ void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned 
 		
 		if (v.c[3] == 0) { // Note: shadowed should agree across all uses of this vertex
 			colorRGBA color;
-			v.fog  = get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec);
+			v.fog  = get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
 			v.c[3] = (unsigned char)(255.0*color[3]);
 			UNROLL_3X(v.c[i_] = (unsigned char)(255.0*color[i_]);)
 		}
@@ -826,7 +826,7 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 						created[shadowed] = 1;
 
 						for (unsigned r = 0; r < npts; ++r) {
-							cc.s[r] = get_vertex_color(cc.c[r], p.color, pts[r], shadowed, normals[r], p.spec);
+							cc.s[r] = get_vertex_color(cc.c[r], p.color, pts[r], shadowed, normals[r], p.spec, p.in_dlist);
 						}
 					}
 					vert_color_comp const &cc(ccomps[shadowed]);

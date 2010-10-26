@@ -1350,8 +1350,7 @@ void fire::apply_physics(unsigned i) {
 		underwater = 0;
 	}
 	if (time > (int)MAX_FIRE_TIME || radius < TOLERANCE || underwater) {
-		status = 0;
-		gen_smoke(pos + point(0.0, 0.0, radius));
+		extinguish();
 		return;
 	}
 	object_types[FIRE].radius = 1.75*radius;
@@ -1389,8 +1388,7 @@ void fire::apply_physics(unsigned i) {
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
 	if (radius <= 0.0001 || !point_interior_to_mesh(xpos, ypos)) {
-		status = 0;
-		gen_smoke(pos + point(0.0, 0.0, radius));
+		extinguish();
 		return;
 	}
 	if (status != 2) { // near mesh
@@ -1410,6 +1408,12 @@ void fire::apply_physics(unsigned i) {
 		radius -= 0.017;
 	}
 	if (damage > 0.005 && (rand()%int(0.8/damage)) == 0) gen_particles(pos, 1);
+}
+
+void fire::extinguish() {
+
+	status = 0;
+	gen_smoke(pos + point(0.0, 0.0, radius));
 }
 
 

@@ -1461,7 +1461,7 @@ bool has_smoke(point const *const pts, unsigned npts);
 bool has_dynamic_lights(point const *const pts, unsigned npts);
 bool is_shadowed_lightmap(point const &p);
 bool get_dynamic_light(int x, int y, int z, float const *const p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
-float get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed, vector3d const &norm, float const spec[2]);
+float get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed, vector3d const &norm, float const spec[2], bool no_dynamic);
 bool get_sd_light(int x, int y, int z, float const *const p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec);
 

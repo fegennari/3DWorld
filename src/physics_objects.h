@@ -100,6 +100,7 @@ struct fire : public basic_physics_obj { // size = 44
 	void set_fire_color() const;
 	void draw() const;
 	void apply_physics(unsigned i);
+	void extinguish();
 };
 
 

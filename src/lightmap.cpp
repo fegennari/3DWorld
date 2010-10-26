@@ -1429,12 +1429,13 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 
 
 // put this into a vertex shader?
-float get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed, vector3d const &norm, float const spec[2]) {
-
+float get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed,
+					   vector3d const &norm, float const spec[2], bool no_dynamic)
+{
 	a = c; // cur_ambient alpha is 1.0
 	
 	if (c != BLACK) {
-		get_indir_light(a, cur_ambient, p, 0, (shadowed != 0), &norm, spec);
+		get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
 		unsigned const num_lights(enabled_lights.size());
 		
 		for (unsigned i = 0; i < num_lights; ++i) { // add in diffuse + specular components
@@ -1452,7 +1453,7 @@ float get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigne
 		}
 		a.set_valid_color();
 	}
-	return (smoke_enabled ? get_smoke_from_camera(p, a) : 0.0);
+	return ((smoke_enabled && !no_dynamic) ? get_smoke_from_camera(p, a) : 0.0);
 }
 
 
