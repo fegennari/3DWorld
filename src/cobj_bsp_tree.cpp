@@ -9,8 +9,6 @@
 bool const BUILD_COBJ_TREE = 1;
 
 
-int last_update_frame(1); // first drawn frame is 1
-
 extern int display_mode, frame_counter;
 extern vector<coll_obj> coll_objects;
 
@@ -30,6 +28,7 @@ protected:
 	vector<coll_obj> const &cobjs;
 	vector<unsigned> cixs;
 	vector<tree_node> nodes;
+	bool is_static, is_dynamic;
 
 	coll_obj const &get_cobj(unsigned ix) const {
 		assert(ix < cixs.size() && cixs[ix] < cobjs.size());
@@ -53,23 +52,26 @@ protected:
 
 	void build_tree(unsigned nix, unsigned skip_dims) {assert(0);}
 
-
-public:
-	cobj_tree_t(vector<coll_obj> const &cobjs_) : cobjs(cobjs_) {}
-
-	void clear() {
-		nodes.clear();
-		cixs.clear();
+	bool obj_ok(coll_obj const &cobj) const {
+		return ((is_static && cobj.status == COLL_STATIC) || (is_dynamic && cobj.status == COLL_DYNAMIC));
 	}
 
-	void add_cobjs() {
+
+public:
+	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d) : cobjs(cobjs_), is_static(s), is_dynamic(d) {}
+
+	void clear() {
+		nodes.resize(0);
+		cixs.resize(0);
+	}
+
+	void add_cobjs(bool verbose) {
 		RESET_TIME;
 		clear();
-		cixs.reserve(cobjs.size());
+		if (is_static) cixs.reserve(cobjs.size());
 
 		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-			if (i->status != COLL_STATIC) continue;
-			cixs.push_back(i - cobjs.begin());
+			if (obj_ok(*i)) cixs.push_back(i - cobjs.begin());
 		}
 		if (cixs.empty()) return; // nothing to be done
 		assert(cixs.size() < (1 << 29));
@@ -78,12 +80,16 @@ public:
 		assert(nodes.size() == 1);
 		build_tree(0, 0);
 		nodes[0].next_node_id = nodes.size();
-		PRINT_TIME("Cobj BSP Tree Create");
-		cout << "cobjs: " << cobjs.size() << ", leaves: " << cixs.size() << ", nodes: " << nodes.size() << endl; // testing
+
+		if (verbose) {
+			PRINT_TIME("Cobj Tree Create");
+			cout << "cobjs: " << cobjs.size() << ", leaves: " << cixs.size() << ", nodes: " << nodes.size() << endl;
+		}
 	}
 
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
 		cindex = -1;
+		if (nodes.empty()) return 0;
 		bool ret(0);
 		float t(0.0), tmin(0.0), tmax(1.0);
 		vector3d dinv(p2 - p1);
@@ -104,7 +110,7 @@ public:
 				// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
 				if ((int)cixs[i] == ignore_cobj) continue;
 				coll_obj const &cobj(get_cobj(i));
-				bool const coll(cobj.status == COLL_STATIC && cobj.line_int_exact(p1, p2, t, cnorm, tmin, tmax));
+				bool const coll(obj_ok(cobj) && cobj.line_int_exact(p1, p2, t, cnorm, tmin, tmax));
 				
 				if (coll) {
 					cindex = cixs[i];
@@ -247,32 +253,41 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 }
 
 
-cobj_tree_t<8> cobj_tree(coll_objects); // 3: BSP Tree, 8: Octtree
+// 3: BSP Tree, 8: Octtree
+cobj_tree_t<8> cobj_tree_static (coll_objects, 1, 0);
+cobj_tree_t<8> cobj_tree_dynamic(coll_objects, 0, 1);
+int last_update_frame[2] = {1, 1}; // first drawn frame is 1
 
 
-void build_cobj_tree() {
-
-	if (BUILD_COBJ_TREE) cobj_tree.add_cobjs();
-	last_update_frame = max(last_update_frame, frame_counter);
+cobj_tree_t<8> &get_tree(bool dynamic) {
+	return (dynamic ? cobj_tree_dynamic : cobj_tree_static);
 }
 
-void update_cobj_tree() {
+void build_cobj_tree(bool dynamic) {
+	if (BUILD_COBJ_TREE) get_tree(dynamic).add_cobjs(!dynamic);
+}
 
-	if (last_update_frame != frame_counter) build_cobj_tree();
+void update_cobj_tree(bool dynamic) {
+
+	if (last_update_frame[dynamic] < frame_counter) {
+		last_update_frame[dynamic] = frame_counter;
+		build_cobj_tree(dynamic);
+	}
 }
 
 // can use with ray trace lighting, snow collision?, maybe water reflections
-bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj) {
-
-	return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
+bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos,
+								vector3d &cnorm, int &cindex, int ignore_cobj, bool dynamic)
+{
+	return get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
 }
 
 // can use with snow shadows, grass shadows, tree leaf shadows
-bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj) {
+bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic) {
 
 	vector3d cnorm; // unused
 	point cpos; // unused
-	return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0);
+	return get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0);
 }
 
 

@@ -299,8 +299,13 @@ public:
 		point cpos; // unused
 		vector3d cnorm; // unused
 		
-		if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, !begin_motion)) { // skip_dynamic if !begin_motion?, !skip_mesh?
+		if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, 1)) { // skip_dynamic if !begin_motion?, !skip_mesh?
 			get_object_color(cindex, rcolor);
+			ve0 = cpos;
+		}
+		if (begin_motion) { // find dynamic cobj intersection
+			update_cobj_tree(1);
+			if (check_coll_line_exact_tree(vs0, ve0, cpos, cnorm, cindex, -1, 1)) get_object_color(cindex, rcolor);
 		}
 		if (rcolor.alpha > 0.0) {
 			float const r(get_fresnel_reflection(view_dir*-1, n, 1.0, WATER_INDEX_REFRACT));
