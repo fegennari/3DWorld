@@ -145,6 +145,17 @@ void rect::print() const {
 // *** CUBE_T IMPLEMENTATION ***
 
 
+void cube_t::set_from_points(point const *const pts, unsigned npts) {
+
+	assert(npts > 0);
+	UNROLL_3X(d[i_][0] = d[i_][1] = pts[0][i_];)
+	
+	for (unsigned i = 1; i < npts; ++i) { // get bounding xy rectangle
+		UNROLL_3X(d[i_][0] = min(d[i_][0], pts[i][i_]); d[i_][1] = max(d[i_][1], pts[i][i_]);)
+	}
+}
+
+
 void cube_t::print() const {
 
 	for (unsigned i = 0; i < 3; ++i) {

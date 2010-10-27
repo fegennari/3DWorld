@@ -1081,31 +1081,16 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 }
 
 
-void get_check_pts_bounds(point const *const pts, unsigned npts, float mmf[3][2]) {
-
-	for (unsigned i = 0; i < 3; ++i) {
-		mmf[i][0] = mmf[i][1] = pts[0][i];
-	}
-	for (unsigned i = 1; i < npts; ++i) { // get bounding xy rectangle
-		for (unsigned j = 0; j < 3; ++j) {
-			mmf[j][0] = min(mmf[j][0], pts[i][j]);
-			mmf[j][1] = max(mmf[j][1], pts[i][j]);
-		}
-	}
-}
-
-
 bool has_smoke(point const *const pts, unsigned npts) { // currently only used in draw_shapes.cpp dlist test
 
 	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0;
 	set_fog_coord(0.0); // reset smoke
-	float mmf[3][2];
-	get_check_pts_bounds(pts, npts, mmf);
+	cube_t cube;
+	cube.set_from_points(pts, npts);
 	point const camera(get_camera_pos());
 
-	for (unsigned i = 0; i < 3; ++i) { // test bbox against dynamic smoke bbox
-		if (max(camera[i], mmf[i][1]) < smoke_man.bbox[i][0] || min(camera[i], mmf[i][0]) > smoke_man.bbox[i][1]) return 0;
-	}
+	// test bbox against dynamic smoke bbox
+	UNROLL_3X(if (max(camera[i_], cube.d[i_][1]) < smoke_man.bbox[i_][0] || min(camera[i_], cube.d[i_][0]) > smoke_man.bbox[i_][1]) return 0;)
 	colorRGBA c(WHITE);
 	float const TOLER(0.1);
 	
@@ -1123,29 +1108,29 @@ bool has_dynamic_lights(point const *const pts, unsigned npts) {
 
 	if (dl_sources.empty()) return 0;
 	assert(pts && npts > 0);
-	float mmf[3][2];
-	get_check_pts_bounds(pts, npts, mmf);
+	cube_t cube;
+	cube.set_from_points(pts, npts);
 	int mmi[2][2];
 
-	for (unsigned i = 0; i < 3; ++i) { // test bbox against dynamic light bbox
-		if (mmf[i][1] < dlight_bb[i][0] || mmf[i][0] > dlight_bb[i][1]) return 0;
-	}
+	// test bbox against dynamic light bbox
+	UNROLL_3X(if (cube.d[i_][1] < dlight_bb[i_][0] || cube.d[i_][0] > dlight_bb[i_][1]) return 0;)
+
 	for (unsigned i = 0; i < 2; ++i) { // convert bounding rectangle to voxel index
 		for (unsigned j = 0; j < 2; ++j) {
-			mmi[j][i] = max(0, min(MESH_SIZE[j]-1, get_dim_pos((mmf[j][i] - SHIFT_DXYZ[j]), j)));
+			mmi[j][i] = max(0, min(MESH_SIZE[j]-1, get_dim_pos((cube.d[j][i] - SHIFT_DXYZ[j]), j)));
 		}
 	}
 	for (int y = mmi[1][0]; y <= mmi[1][1]; ++y) {
 		if (!y_used[y]) continue;
 		
 		for (int x = mmi[0][0]; x <= mmi[0][1]; ++x) { // check if light has changed since last frame?
-			if (x_used[x] && ldynamic[0][y][x].check_z_range(mmf[2][0], mmf[2][1])) return 1;
+			if (x_used[x] && ldynamic[0][y][x].check_z_range(cube.d[2][0], cube.d[2][1])) return 1;
 		}
 	}
 	if (large_dlight) {
 		for (int y = (mmi[1][0] >> LDYNAM_SUB_BS); y <= (mmi[1][1] >> LDYNAM_SUB_BS); ++y) {
 			for (int x = (mmi[0][0] >> LDYNAM_SUB_BS); x <= (mmi[0][1] >> LDYNAM_SUB_BS); ++x) {
-				if (ldynamic[1][y][x].check_z_range(mmf[2][0], mmf[2][1])) return 1;
+				if (ldynamic[1][y][x].check_z_range(cube.d[2][0], cube.d[2][1])) return 1;
 			}
 		}
 	}

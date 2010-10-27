@@ -314,6 +314,7 @@ struct cube_t { // size = 24
 		UNROLL_3X(d[i_][0] = c.d[i_][0];)
 		UNROLL_3X(d[i_][1] = c.d[i_][1];)
 	}
+	void set_from_points(point const *const pts, unsigned npts);
 	void print() const;
 	bool is_near_zero_area() const;
 

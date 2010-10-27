@@ -373,18 +373,8 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 	if (thickness == 0.0) thickness = MIN_POLY_THICK;
 	cobj.norm = get_poly_norm(points);
 	assert(cobj.norm != zero_vector);
+	cobj.set_from_points(points, npoints); // set cube_t
 	
-	for (int i = 0; i < npoints; ++i) {
-		for (unsigned p = 0; p < 3; ++p) {
-			if (i == 0) {
-				cobj.d[p][0] = cobj.d[p][1] = points[i][p];
-			}
-			else {
-				cobj.d[p][0] = min(cobj.d[p][0], points[i][p]);
-				cobj.d[p][1] = max(cobj.d[p][1], points[i][p]);
-			}
-		}
-	}
 	for (unsigned p = 0; p < 3; ++p) {
 		float const thick(0.5*thickness*fabs(cobj.norm[p]));
 		cobj.d[p][0] -= thick;

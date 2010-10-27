@@ -738,14 +738,8 @@ void coll_obj::add_to_vector(vector<coll_obj> &cobjs, int type_) {
 void coll_obj::check_if_cube() {
 
 	if (type != COLL_POLYGON || thickness == 0.0 || npoints != 4) return;
-	cube_t bb(points[0].x, points[0].x, points[0].y, points[0].y, points[0].z, points[0].z);
-
-	for (unsigned i = 1; i < 4; ++i) {
-		for (unsigned j = 0; j < 3; ++j) {
-			bb.d[j][0] = min(bb.d[j][0], points[i][j]);
-			bb.d[j][1] = max(bb.d[j][1], points[i][j]);
-		}
-	}
+	cube_t bb;
+	bb.set_from_points(points, 4);
 	unsigned zdim(0), nz(0);
 	float const smax(bb.max_len());
 	float const tolerance(1.0E-6*smax);
