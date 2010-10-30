@@ -782,9 +782,8 @@ void display(void) {
 				display_mesh();
 
 				if (!disable_inf_terrain && !island && (display_mode & 0x10)) { // draw larger WM3 mesh
-					// FIXME: what about trees?
 					int const hole_bounds[4] = {0, MESH_X_SIZE-1, 0, MESH_Y_SIZE-1};
-					float const zmin2(display_mesh3(hole_bounds));
+					float const zmin2(display_mesh3(hole_bounds)); // no trees/scenery
 					
 					if (display_mode & 0x04) {
 						float const wpz(get_water_z_height());

@@ -159,7 +159,6 @@ public:
 		calc_light[LIGHT_MOON] = calc_moon;
 		tile_xy_pair const tp(x1/(int)size, y1/(int)size);
 
-		// FIXME: Need to apply the shadows created by new tiles to existing tiles
 		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // calculate mesh shadows for each light source
 			if (!calc_light[l])    continue; // light not enabled
 			if (!smask[l].empty()) continue; // already calculated (cached)
