@@ -1374,6 +1374,12 @@ bool get_sd_light(int x, int y, int z, float const *const p, float lightscale, f
 }
 
 
+#define INTERP_3D(v, val, op, xt, yt, zt) { \
+	float const vz0((1.0 - xt)*((1.0 - yt)*v[0][0][0]->op + yt*v[1][0][0]->op) + xt*((1.0 - yt)*v[0][1][0]->op + yt*v[1][1][0]->op)); \
+	float const vz1((1.0 - xt)*((1.0 - yt)*v[0][0][1]->op + yt*v[1][0][1]->op) + xt*((1.0 - yt)*v[0][1][1]->op + yt*v[1][1][1]->op)); \
+	val = (1.0 - zt)*vz0 + zt*vz1; }
+
+
 // maybe put this into a vertex shader?
 float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
 
@@ -1400,8 +1406,31 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 		lmcell const &lmc(lmap_manager.vlmap[y][x][z]);
 		
 		if (shadowed) {
-			val = lmc.v;
-			if (val > 0.0 && global_lighting) {UNROLL_3X(cscale[i_] *= lmc.ac[i_];)} // add indirect color
+			if (display_mode & 0x10) { // interpolate from block of 8 voxels
+				float const xv((p_adj.x + X_SCENE_SIZE)*DX_VAL_INV - 0.5); // always positive
+				float const yv((p_adj.y + Y_SCENE_SIZE)*DY_VAL_INV - 0.5);
+				float const zv((p_adj.z - czmin)*DZ_VAL_INV2 - 0.5);
+				int const xp = int(xv), yp = int(yv), zp = int(zv);
+				float const xt(xv - xp), yt(yv - yp), zt(zv - zp);
+				lmcell const *v[2][2][2]; // yxz
+
+				for (unsigned ny = 0; ny < 2; ++ny) {
+					for (unsigned nx = 0; nx < 2; ++nx) {
+						for (unsigned nz = 0; nz < 2; ++nz) {
+							v[ny][nx][nz] = (lmap_manager.is_valid_cell(xp+nx, yp+ny, zp+nz) ? &lmap_manager.vlmap[yp+ny][xp+nx][zp+nz] : &lmc);
+						}
+					}
+				}
+				INTERP_3D(v, val, v, xt, yt, zt);
+				
+				if (val > 0.0 && global_lighting) { // add indirect color
+					UNROLL_3X(float ci; INTERP_3D(v, ci, ac[i_], xt, yt, zt); cscale[i_] *= ci;)
+				}
+			}
+			else {
+				val = lmc.v;
+				if (val > 0.0 && global_lighting) {UNROLL_3X(cscale[i_] *= lmc.ac[i_];)} // add indirect color
+			}
 		}
 		ADD_LIGHT_CONTRIB(lmc.c, ls);
 	}
