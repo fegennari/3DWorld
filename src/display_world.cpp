@@ -525,10 +525,10 @@ void draw_game_elements(int timer1) {
 	draw_camera_weapon(1);
 	draw_projectile_effects();
 	if (TIMETEST) PRINT_TIME("C");
+	draw_scorches();
 	draw_smoke();
-	if (TIMETEST) PRINT_TIME("D");
 	draw_fires();
-	if (TIMETEST) PRINT_TIME("E");
+	if (TIMETEST) PRINT_TIME("D");
 	draw_scheduled_weapons();
 }
 

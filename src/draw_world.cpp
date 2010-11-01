@@ -70,6 +70,7 @@ extern obj_type object_types[];
 extern obj_vector_t<bubble> bubbles;
 extern obj_vector_t<particle_cloud> part_clouds, cloud_volumes;
 extern obj_vector_t<fire> fires;
+extern obj_vector_t<scorch_mark> scorches;
 extern float diffuse[], gauss_rand_arr[];
 extern texture textures[];
 extern player_state *sstates;
@@ -2098,16 +2099,31 @@ void fire::set_fire_color() const {
 }
 
 
+void set_color_with_fog(point const &pos, colorRGBA c) {
+
+	if (SMOKE_FOG_COORD) {
+		float const fog_val(get_smoke_from_camera(pos, c));
+		set_fog_coord(fog_val);
+	}
+	c.do_glColor();
+}
+
+
 void fire::draw() const {
 
 	assert(status);
-	float const tex_param1[4] = {0.2*rand_uniform(0.95, 1.05)/radius, 0.0, 0.0, rand_float()};
-	glTexGenfv(GL_S, GL_EYE_PLANE, tex_param1);
-	float const tex_param2[4] = {0.0, 0.2*rand_uniform(0.95, 1.05)/radius, 0.0, rand_float()};
-	glTexGenfv(GL_T, GL_EYE_PLANE, tex_param2);
-	set_fire_color();
-	int const ndiv(max(3, min(16, int(get_zoom_scale()*0.025*window_width/distance_to_camera(pos))))); // not a function of size
-	draw_sphere_dlist(pos, radius, ndiv, 1, 0);
+	point const pos2(pos + point(0.0, 0.0, 2.0*radius));
+	set_color_with_fog(pos2, WHITE);
+	draw_animated_billboard(pos2, 4.0*radius, (time&15)/16.0);
+}
+
+
+void scorch_mark::draw() const {
+
+	assert(status);
+	set_color_with_fog(pos, colorRGBA(0.0, 0.0, 0.0, get_alpha()));
+	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
+	draw_billboard(pos, (pos + orient), upv, radius, radius);
 }
 
 
@@ -2256,43 +2272,46 @@ void draw_cloud_volumes() {
 }
 
 
-void draw_fires() {
+template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int tid) {
 
-	// animated fire textured quad
-	if (fires.empty()) return;
+	if (objs.empty()) return;
 	enable_blend();
 	glDisable(GL_LIGHTING);
-	//glDisable(GL_DEPTH_TEST);
-	//glEnable(MULTISAMPLE_ARB);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.04);
-	WHITE.do_glColor();
-	select_texture(FIRE_TEX);
+	select_texture(tid);
 	order_vect_t order;
-	get_draw_order(fires, order);
+	get_draw_order(objs, order);
 	if (SMOKE_FOG_COORD) begin_smoke_fog();
 	glBegin(GL_QUADS);
 
 	for (unsigned j = 0; j < order.size(); ++j) {
 		unsigned const i(order[j].second);
-		assert(i < fires.size());
-		point const pos(fires[i].pos + point(0.0, 0.0, 2.0*fires[i].radius));
-
-		if (SMOKE_FOG_COORD) {
-			colorRGBA c(WHITE);
-			float const fog_val(get_smoke_from_camera(pos, c));
-			set_fog_coord(fog_val);
-			c.do_glColor();
-		}
-		draw_animated_billboard(pos, 4.0*fires[i].radius, (fires[i].time&15)/16.0);
+		assert(i < objs.size());
+		objs[i].draw();
 	}
 	glEnd();
 	if (SMOKE_FOG_COORD) end_smoke_fog();
 	glDisable(GL_ALPHA_TEST);
-	//glDisable(MULTISAMPLE_ARB);
 	disable_blend();
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
+}
+
+
+void draw_fires() {
+
+	// animated fire textured quad
+	//glDisable(GL_DEPTH_TEST);
+	//glEnable(MULTISAMPLE_ARB);
+	draw_billboarded_objs(fires, FIRE_TEX);
+	//glDisable(MULTISAMPLE_ARB);
+}
+
+
+void draw_scorches() {
+
+	draw_billboarded_objs(scorches, BLUR_CENT_TEX);
 }
 
 

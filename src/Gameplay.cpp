@@ -1869,6 +1869,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	}
 	if (coll && cindex >= 0 && closest < 0) { // hit cobjs (like tree leaves)
 		coll_objects[cindex].register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), (is_laser ? BEAM : PROJECTILE));
+
+		if (!is_laser && coll_objects[cindex].can_be_scorched()) {
+			gen_scorch_mark(coll_pos, 0.005, coll_norm, 1.0);
+		}
 	}
 	
 	// process laser reflections

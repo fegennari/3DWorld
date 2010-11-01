@@ -971,6 +971,7 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 void draw_bubbles();
 void draw_smoke();
 void draw_fires();
+void draw_scorches();
 void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned ix);
 void draw_camera_filters(vector<camera_filter> &cfs);
 void draw_projectile_effects();
@@ -1085,6 +1086,7 @@ bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 				   float r, float den, float dark, float dam, int src, bool as);
 void gen_smoke(point const &pos);
 bool gen_fire(point const &pos, float size, int source);
+void gen_scorch_mark(point const &pos, float radius, vector3d const &orient, float init_alpha=1.0);
 void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade=0);
 void gen_leaf_at(point const *const points, vector3d const &normal, int type, colorRGB const &color);
 void gen_cloud_volumes();

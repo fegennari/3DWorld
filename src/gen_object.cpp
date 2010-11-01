@@ -12,6 +12,7 @@ unsigned const NUM_STARS       = 2500;
 unsigned const MAX_BUBBLES     = 2000;
 unsigned const MAX_PART_CLOUDS = 200;
 unsigned const MAX_FIRES       = 50;
+unsigned const MAX_SCORCHES    = 1000;
 
 
 // Global Variables
@@ -22,6 +23,7 @@ obj_vector_t<bubble> bubbles(MAX_BUBBLES);
 obj_vector_t<particle_cloud> part_clouds(MAX_PART_CLOUDS);
 obj_vector_t<particle_cloud> cloud_volumes;
 obj_vector_t<fire> fires(MAX_FIRES);
+obj_vector_t<scorch_mark> scorches(MAX_SCORCHES);
 float gauss_rand_arr[N_RAND_DIST+2];
 
 
@@ -187,6 +189,18 @@ void fire::gen(point const &p, float size, int src) {
 }
 
 
+void scorch_mark::gen(point const &p, float r, vector3d const &o, float init_alpha) {
+
+	assert(r > 0.0 && init_alpha > 0.0);
+	init_gen_rand(p, 0.0, 0.0);
+	radius = r;
+	alpha  = init_alpha;
+	orient = o; // normal of attached surface at collision/anchor point
+	orient.normalize();
+	pos   += orient*rand_uniform(0.001, 0.002); // move away from the object it's attached to
+}
+
+
 void gen_bubble(point const &pos, float r, colorRGBA const &c) {
 
 	bubbles[bubbles.choose_element()].gen(pos, r, c);
@@ -239,6 +253,12 @@ bool gen_fire(point const &pos, float size, int source) {
 	if (!is_over_mesh(pos) || is_underwater(pos)) return 0; // off the mesh or under water/ice
 	fires[fires.choose_element()].gen(pos, size, source);
 	return 1;
+}
+
+
+void gen_scorch_mark(point const &pos, float radius, vector3d const &orient, float init_alpha) {
+
+	scorches[scorches.choose_element()].gen(pos, radius, orient, init_alpha);
 }
 
 

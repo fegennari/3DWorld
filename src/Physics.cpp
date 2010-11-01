@@ -23,6 +23,7 @@ float    const SPILL_ELASTIC       = 0.8; // also multiplied by LAND_ELASTICITY
 float    const WATER_DAMPING       = 0.1;
 float    const CRITICAL_ANGLE      = 0.5; // in radians, for skipping objects on water
 unsigned const MAX_FIRE_TIME       = 10000;
+unsigned const SCORCH_TIME         = 60*TICKS_PER_SECOND;
 bool     const ball_camera_view    = 0;
 bool     const PRINT_TIME_OF_DAY   = 1;
 
@@ -49,6 +50,7 @@ extern obj_group obj_groups[];
 extern obj_vector_t<bubble> bubbles;
 extern obj_vector_t<particle_cloud> part_clouds;
 extern obj_vector_t<fire> fires;
+extern obj_vector_t<scorch_mark> scorches;
 
 
 int get_obj_zval(point &pt, float &dz, float z_offset);
@@ -1410,10 +1412,25 @@ void fire::apply_physics(unsigned i) {
 	if (damage > 0.005 && (rand()%int(0.8/damage)) == 0) gen_particles(pos, 1);
 }
 
+
 void fire::extinguish() {
 
 	status = 0;
 	gen_smoke(pos + point(0.0, 0.0, radius));
+}
+
+
+void scorch_mark::apply_physics(unsigned i) {
+
+	if (!status) return;
+	time  += iticks;
+	if ((unsigned)time > SCORCH_TIME) status = 0;
+}
+
+
+float scorch_mark::get_alpha() const {
+
+	return alpha*CLIP_TO_01(1.0f - float(time)/float(SCORCH_TIME));
 }
 
 
@@ -1437,6 +1454,7 @@ void shift_other_objs(vector3d const &vd) {
 	shift_objs(bubbles,     vd);
 	shift_objs(part_clouds, vd);
 	shift_objs(fires,       vd);
+	shift_objs(scorches,    vd);
 }
 
 
@@ -1445,6 +1463,7 @@ void advance_physics_objects() {
 	apply_obj_physics(bubbles);
 	apply_obj_physics(part_clouds);
 	apply_obj_physics(fires);
+	apply_obj_physics(scorches);
 	total_wind += wind*fticks; // only when objects are enabled?
 }
 
@@ -1454,6 +1473,7 @@ void reset_other_objects_status() {
 	reset_status(bubbles);
 	reset_status(part_clouds);
 	reset_status(fires);
+	reset_status(scorches);
 }
 
 

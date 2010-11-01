@@ -57,7 +57,7 @@ struct basic_physics_obj { // size = 20
 };
 
 
-struct bubble : public basic_physics_obj { // size = 28
+struct bubble : public basic_physics_obj { // size = 44
 
 	float radius, velocity;
 	colorRGBA color;
@@ -68,7 +68,7 @@ struct bubble : public basic_physics_obj { // size = 28
 };
 
 
-struct particle_cloud : public basic_physics_obj { // size = 76
+struct particle_cloud : public basic_physics_obj { // size = 88
 
 	struct part {
 		point pos;
@@ -90,7 +90,7 @@ struct particle_cloud : public basic_physics_obj { // size = 76
 };
 
 
-struct fire : public basic_physics_obj { // size = 44
+struct fire : public basic_physics_obj { // size = 52
 
 	int source;
 	float radius, heat, cval, inten;
@@ -101,6 +101,18 @@ struct fire : public basic_physics_obj { // size = 44
 	void draw() const;
 	void apply_physics(unsigned i);
 	void extinguish();
+};
+
+
+struct scorch_mark : public basic_physics_obj { // size = 40
+
+	float radius, alpha;
+	vector3d orient;
+
+	void gen(point const &p, float r, vector3d const &o, float init_alpha=1.0);
+	void draw() const;
+	void apply_physics(unsigned i);
+	float get_alpha() const;
 };
 
 

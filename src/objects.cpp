@@ -409,6 +409,12 @@ bool coll_obj::truly_static() const {
 }
 
 
+bool coll_obj::can_be_scorched() const {
+
+	return (truly_static() && !is_semi_trans() && !no_draw());
+}
+
+
 point coll_obj::get_center_pt() const {
 
 	switch (type) {

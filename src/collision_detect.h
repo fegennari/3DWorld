@@ -211,6 +211,7 @@ public:
 	bool is_player()      const;
 	bool truly_static()   const;
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
+	bool can_be_scorched()const;
 	point get_center_pt() const;
 	float get_max_dim()   const;
 	void bounding_sphere(point &center, float &brad) const;

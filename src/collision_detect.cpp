@@ -1185,7 +1185,18 @@ void vert_coll_detector::check_cobj(int index) {
 			coll_objects[index].register_coll(TICKS_PER_SECOND, IMPACT);
 		}
 		obj.verify_data();
-		if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) obj.disable();
+		
+		if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
+			if (cobj.type == COLL_CUBE && cobj.can_be_scorched()) {
+				int const dir(cdir >> 1), ds((dir+1)%3), dt((dir+2)%3);
+				float const sz(5.0*otype.radius);
+				float const dmin(min(min((cobj.d[ds][1] - obj.pos[ds]), (obj.pos[ds] - cobj.d[ds][0])),
+					                 min((cobj.d[dt][1] - obj.pos[dt]), (obj.pos[dt] - cobj.d[dt][0]))));
+
+				if (dmin > sz) gen_scorch_mark((obj.pos - norm*o_radius), sz, norm, 0.75);
+			}
+			obj.disable();
+		}
 		deform_obj(obj, norm, v0);
 		if (cnorm != NULL) *cnorm = norm;
 		obj.flags |= OBJ_COLLIDED;
