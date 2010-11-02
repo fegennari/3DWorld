@@ -1471,6 +1471,12 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 // function prototypes - tessellate
 bool split_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts);
 
+// function prototypes - shaders
+bool setup_shaders();
+void clear_shaders();
+bool set_shader(std::string const &vs_name, std::string const &fs_name);
+void unset_shader();
+
 // function prototypes - screenshot (these are C functions)
 #ifdef ENABLE_JPEG
 extern "C" int screenshot(unsigned window_width, unsigned window_height, char *file_path);

@@ -1734,6 +1734,7 @@ int main(int argc, char** argv) {
 	load_textures();
 	load_flare_textures(); // Sun Flare
 	setup_dlists();
+	setup_shaders();
 	//cout << "Extensions: " << (char*) glGetString(GL_EXTENSIONS) << endl;
 
 	if (!universe_only) { // universe mode should be able to do without these initializations
