@@ -152,6 +152,7 @@ void clear_context() {
 	reset_textures();
 	clear_all_lightmaps(1); // to clear display lists
 	free_dlists();
+	clear_shaders();
 	reset_snow_vbos();
 	update_grass_vbos();
 	clear_tree_vbos(t_trees);

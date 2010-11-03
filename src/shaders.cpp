@@ -3,6 +3,7 @@
 // 11/1/10
 #include "GL/glew.h"
 #include "3DWorld.h"
+#include <fstream>
 
 using namespace std;
 
@@ -47,8 +48,13 @@ string_shad_map loaded_shaders[2]; // vertex=0, fragment=1
 bool load_shader_file(string const &fname, string &data) {
 
 	data.clear();
-	// write
-	return 0;
+	if (fname.empty()) return 0;
+	ifstream in(fname.c_str());
+	if (!in.good()) return 0;
+	string line;
+	while (std::getline(in, line)) data += line + '\n';
+	//cout << "shader data:" << endl << data << endl;
+	return 1;
 }
 
 
@@ -58,6 +64,7 @@ bool setup_shaders() {
 	cerr << "Error setting up vertex and fragment GLSL shaders." << endl;
 	return 0;
 }
+
 
 void clear_shaders() {
 
@@ -76,7 +83,7 @@ unsigned get_shader(string const &name, bool vf) {
 	if (it != loaded_shaders[vf].end()) return it->second; // already loaded
 
 	// create a new shader
-	string const fname(shaders_dir + "/" + name + (vf ? "_fs" : "_vs"));
+	string const fname(shaders_dir + "/" + name + (vf ? ".frag" : ".vert"));
 	string data;
 	
 	if (!load_shader_file(fname, data)) {
@@ -99,7 +106,7 @@ unsigned get_shader(string const &name, bool vf) {
 		if (len > 0) {
 			vector<char> info_log_msg(len);
 			glGetShaderInfoLog(shader, len, &len2, &info_log_msg.front()); 
-			assert(len == len2);
+			assert(len2 <= len);
 			cerr << "Info log: " << string(info_log_msg.begin(), info_log_msg.end()) << endl;
 		}
 		exit(1);
@@ -109,7 +116,7 @@ unsigned get_shader(string const &name, bool vf) {
 }
 
 
-bool set_shader(string const &vs_name, string const &fs_name) {
+bool set_shader_prog(string const &vs_name, string const &fs_name) {
 
 	// get the program
 	string const pname(vs_name + "," + fs_name); // unique program identifier
@@ -120,7 +127,7 @@ bool set_shader(string const &vs_name, string const &fs_name) {
 		program = it->second.p;
 	}
 	else { // create a new program
-		unsigned const program(glCreateProgram());
+		program = glCreateProgram();
 		unsigned const vs(get_shader(vs_name, 0));
 		unsigned const fs(get_shader(fs_name, 1));
 		glAttachShader(program, vs);
@@ -137,7 +144,7 @@ bool set_shader(string const &vs_name, string const &fs_name) {
 			if (len > 0) {
 				vector<char> info_log_msg(len);
 				glGetProgramInfoLog(program, len, &len2, &info_log_msg.front()); 
-				assert(len == len2);
+				assert(len2 <= len);
 				cerr << "Info log: " << string(info_log_msg.begin(), info_log_msg.end()) << endl;
 			}
 			exit(1);
@@ -150,7 +157,7 @@ bool set_shader(string const &vs_name, string const &fs_name) {
 }
 
 
-void unset_shader() {
+void unset_shader_prog() {
 
 	glUseProgram(0);
 }
