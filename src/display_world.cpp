@@ -26,7 +26,7 @@ bool  const DETERMINISTIC_TIME = 0;
 int   const TERRAIN_SCENERY    = 0; // trees, small trees, plants, etc.
 int   const KEEP_MESH          = 1;
 float const REL_SCROLL_DIST    = 0.4;
-float const LIGHT_W_VAL        = 0.0; // 0 = light at infinity, 1 = point source
+float const LIGHT_W_VAL        = 0.0; // 0 = directional/light at infinity, 1 = point source
 float const C_RADIUS0          = 0.01;
 float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.5;

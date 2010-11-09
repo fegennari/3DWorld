@@ -196,6 +196,14 @@ void remove_tree_cobjs(vector<tree> &t_trees) {
 }
 
 
+void draw_trees_bl(vector<tree> &ts, bool lpos_change, bool draw_branches, bool draw_leaves) {
+
+	for (unsigned i = 0; i < ts.size(); ++i) {
+		ts[i].draw_tree(lpos_change, draw_branches, draw_leaves);
+	}
+}
+
+
 void draw_trees(vector<tree> &ts) {
 
 	//glFinish(); // testing
@@ -212,15 +220,13 @@ void draw_trees(vector<tree> &ts) {
 		if (lpos_change) update_cobj_tree();
 
 #if 1
-		for (unsigned p = 0; p < 2; ++p) { // much faster for distant trees
-			for (unsigned i = 0; i < ts.size(); ++i) {
-				ts[i].draw_tree(lpos_change, p==0, p!=0); // draw branches, then leaves
-			}
-		}
+		// draw branches, then leaves: much faster for distant trees
+		draw_trees_bl(ts, lpos_change, 1, 0); // branches
+		if (display_mode & 0x08) set_shader_prog("tree_leaves", "tree_leaves");
+		draw_trees_bl(ts, lpos_change, 0, 1); // leaves
+		if (display_mode & 0x08) unset_shader_prog();
 #else
-		for (unsigned i = 0; i < ts.size(); ++i) { // slightly slower for near trees
-			ts[i].draw_tree(lpos_change);
-		}
+		draw_trees_bl(ts, lpos_change, 1, 1); // slightly faster for near trees
 #endif
 		last_lpos = lpos;
 		//glFinish(); // testing
@@ -634,27 +640,35 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 			leaf_data[(i<<2)+1].v = l.pts[1] + delta;
 			leaf_data[(i<<2)+2].v = l.pts[2] + delta;
 			vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
-			vector3d mod_norm(normal);
 
-			// add sun flare and transparency/scattering when sun is behind the leaf
-			if (l.shadow_bits != 15) { // not completely shadowed
-				point const lpos((p1 + p2)*0.5);
-				vector3d const dir_to_camera(get_camera_pos() - lpos), dir_to_light(get_light_pos() - lpos);
-				float const dp1(dot_product(normal, dir_to_camera)), dp2(dot_product(normal, dir_to_light));
-				
-				if ((dp1 < 0.0) ^ (dp2 < 0.0)) { // looking at unlit side
-					mod_norm *= -0.5; // reverse and halve
-					float const dp3(dot_product(dir_to_camera.get_norm(), dir_to_light.get_norm()));
-
-					if (dp3 < -0.95) { // leaf between light source (sun) and camera
-						float const val(-20.0*(dp3 + 0.95));
-						mod_norm = mod_norm*(1.0 - val) + dir_to_light.get_norm()*((dp2 < 0.0) ? 1.0 : -1.0)*val; // max light
-					}
+			if (display_mode & 0x08) { // custom shader version
+				for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
+					leaf_data[j+(i<<2)].n = normal*l.get_norm_scale(j);
 				}
 			}
-			for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
-				float const scale(l.get_norm_scale(j));
-				leaf_data[j+(i<<2)].n = ((scale < 1.0) ? normal*scale : mod_norm);
+			else {
+				vector3d mod_norm(normal);
+
+				// add sun flare and transparency/scattering when sun is behind the leaf
+				if (l.shadow_bits != 15) { // not completely shadowed
+					point const lpos((p1 + p2)*0.5);
+					vector3d const dir_to_camera(get_camera_pos() - lpos), dir_to_light(get_light_pos() - lpos);
+					float const dp1(dot_product(normal, dir_to_camera)), dp2(dot_product(normal, dir_to_light));
+					
+					if ((dp1 < 0.0) ^ (dp2 < 0.0)) { // looking at unlit side
+						mod_norm *= -0.5; // reverse and halve
+						float const dp3(dot_product(dir_to_camera.get_norm(), dir_to_light.get_norm()));
+
+						if (dp3 < -0.95) { // leaf between light source (sun) and camera
+							float const val(-20.0*(dp3 + 0.95));
+							mod_norm = mod_norm*(1.0 - val) + dir_to_light.get_norm()*((dp2 < 0.0) ? 1.0 : -1.0)*val; // max light
+						}
+					}
+				}
+				for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
+					float const scale(l.get_norm_scale(j));
+					leaf_data[j+(i<<2)].n = ((scale < 1.0) ? normal*scale : mod_norm);
+				}
 			}
 			if (LEAF_HEAL_RATE > 0.0 && l.color > 0.0 && l.color < 1.0) { // leaf heal
 				leaves[i].color = min(1.0f, (l.color + LEAF_HEAL_RATE*fticks));
