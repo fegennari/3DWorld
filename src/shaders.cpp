@@ -11,6 +11,22 @@ using namespace std;
 string const shaders_dir = "shaders";
 
 
+// uniform variables setup
+
+
+void setup_enabled_lights(int program) {
+
+	int enabled_gl_lights(0);
+
+	for (unsigned i = 0; i < 8; ++i) { // max of 8 lights (GL_LIGHT0 - GL_LIGHT7): sun, moon, lightning
+		int const light(GL_LIGHT0 + i); // should be sequential
+		if (glIsEnabled(light)) enabled_gl_lights |= (1 << i);
+	}
+	int const loc1(glGetUniformLocation(program, "enabled_gl_lights"));
+	glUniform1i(loc1, enabled_gl_lights);
+}
+
+
 struct program_t {
 	unsigned p, vs, fs;
 	program_t(unsigned p_=0, unsigned vs_=0, unsigned fs_=0) : p(p_), vs(vs_), fs(fs_) {}
@@ -153,6 +169,7 @@ bool set_shader_prog(string const &vs_name, string const &fs_name) {
 	}
 	assert(program);
 	glUseProgram(program);
+	setup_enabled_lights(program);
 	return 1; // can't fail yet
 }
 
