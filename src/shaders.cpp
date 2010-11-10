@@ -28,16 +28,17 @@ void setup_enabled_lights(int program) {
 
 
 struct program_t {
-	unsigned p, vs, fs;
-	program_t(unsigned p_=0, unsigned vs_=0, unsigned fs_=0) : p(p_), vs(vs_), fs(fs_) {}
+	unsigned p, vs, fs, gs;
+	program_t(unsigned p_=0, unsigned vs_=0, unsigned fs_=0, unsigned gs_=0) : p(p_), vs(vs_), fs(fs_), gs(gs_) {}
 };
 
 
 class string_prog_map : public map<string, program_t> {
 	void free_data() {
 		for (const_iterator i = begin(); i != end(); ++i) {
-			glDetachShader(i->second.p, i->second.vs);
-			glDetachShader(i->second.p, i->second.fs);
+			if (i->second.vs) glDetachShader(i->second.p, i->second.vs);
+			if (i->second.fs) glDetachShader(i->second.p, i->second.fs);
+			if (i->second.gs) glDetachShader(i->second.p, i->second.gs);
 			glDeleteProgram(i->second.p);
 		}
 	}
@@ -58,7 +59,7 @@ public:
 
 
 string_prog_map loaded_programs;
-string_shad_map loaded_shaders[2]; // vertex=0, fragment=1
+string_shad_map loaded_shaders[3]; // vertex=0, fragment=1, geometry=3
 
 
 bool load_shader_file(string const &fname, string &data) {
@@ -76,7 +77,7 @@ bool load_shader_file(string const &fname, string &data) {
 
 bool setup_shaders() {
 
-	if (GLEW_ARB_vertex_shader && GLEW_ARB_fragment_shader) return 1;
+	if (GLEW_ARB_vertex_shader && GLEW_ARB_fragment_shader && GL_EXT_geometry_shader4) return 1;
 	cerr << "Error setting up vertex and fragment GLSL shaders." << endl;
 	return 0;
 }
@@ -86,27 +87,31 @@ void clear_shaders() {
 
 	loaded_programs.clear();
 
-	for (unsigned d = 0; d < 2; ++d) {
+	for (unsigned d = 0; d < 3; ++d) {
 		loaded_shaders[d].clear();
 	}
 }
 
 
-unsigned get_shader(string const &name, bool vf) {
+unsigned get_shader(string const &name, unsigned type) {
 	
-	assert(!name.empty());
-	string_shad_map::const_iterator it(loaded_shaders[vf].find(name));
-	if (it != loaded_shaders[vf].end()) return it->second; // already loaded
+	int const shader_type_table   [3] = {GL_FRAGMENT_SHADER, GL_VERTEX_SHADER, GL_GEOMETRY_SHADER_EXT};
+	string const shader_name_table[3] = {"frag", "vert", "geom"};
+
+	assert(type < 3);
+	if (name.empty()) return 0; // none selected
+	string_shad_map::const_iterator it(loaded_shaders[type].find(name));
+	if (it != loaded_shaders[type].end()) return it->second; // already loaded
 
 	// create a new shader
-	string const fname(shaders_dir + "/" + name + (vf ? ".frag" : ".vert"));
+	string const fname(shaders_dir + "/" + name + "." + shader_name_table[type]);
 	string data;
 	
 	if (!load_shader_file(fname, data)) {
 		cerr << "Error loading shader file " << fname << ". Exiting." << endl;
 		exit(1);
 	}
-	unsigned const shader(glCreateShader(vf ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER));
+	unsigned const shader(glCreateShader(shader_type_table[type]));
 	assert(shader);
 	const char *src(data.c_str());
 	glShaderSource(shader, 1, &src, 0);
@@ -127,15 +132,16 @@ unsigned get_shader(string const &name, bool vf) {
 		}
 		exit(1);
 	}
-	loaded_shaders[vf][name] = shader; // cache the shader
+	loaded_shaders[type][name] = shader; // cache the shader
 	return shader;
 }
 
 
-bool set_shader_prog(string const &vs_name, string const &fs_name) {
-
+bool set_shader_prog(string const &vs_name, string const &fs_name, string const &gs_name,
+					 int in_prim, int out_prim, int verts_out)
+{
 	// get the program
-	string const pname(vs_name + "," + fs_name); // unique program identifier
+	string const pname(vs_name + "," + fs_name + "," + gs_name); // unique program identifier
 	string_prog_map::const_iterator it(loaded_programs.find(pname));
 	unsigned program(0);
 
@@ -146,8 +152,20 @@ bool set_shader_prog(string const &vs_name, string const &fs_name) {
 		program = glCreateProgram();
 		unsigned const vs(get_shader(vs_name, 0));
 		unsigned const fs(get_shader(fs_name, 1));
-		glAttachShader(program, vs);
-		glAttachShader(program, fs);
+		unsigned const gs(get_shader(gs_name, 2));
+		assert(vs && fs); // vertex and fragment shaders are required, geometry shader is optional
+		if (vs) glAttachShader(program, vs);
+		if (fs) glAttachShader(program, fs);
+		if (gs) glAttachShader(program, gs);
+
+		if (gs) { // setup geometry shader
+			assert(GL_EXT_geometry_shader4);
+			glProgramParameteriEXT(program, GL_GEOMETRY_INPUT_TYPE_EXT, in_prim);
+			glProgramParameteriEXT(program, GL_GEOMETRY_OUTPUT_TYPE_EXT, out_prim);
+			if (verts_out == 0) glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES_EXT, &verts_out); // get max
+			assert(verts_out > 0);
+			glProgramParameteriEXT(program, GL_GEOMETRY_VERTICES_OUT_EXT, verts_out);
+		}
 		glLinkProgram(program);
 		int status(0);
 		glGetProgramiv(program, GL_LINK_STATUS, &status);
@@ -165,7 +183,7 @@ bool set_shader_prog(string const &vs_name, string const &fs_name) {
 			}
 			exit(1);
 		}
-		loaded_programs[pname] = program_t(program, vs, fs); // cache the program
+		loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
 	}
 	assert(program);
 	glUseProgram(program);

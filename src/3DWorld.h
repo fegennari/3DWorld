@@ -1474,7 +1474,8 @@ bool split_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point
 // function prototypes - shaders
 bool setup_shaders();
 void clear_shaders();
-bool set_shader_prog(std::string const &vs_name, std::string const &fs_name);
+bool set_shader_prog(std::string const &vs_name, std::string const &fs_name, std::string const &gs_name="",
+					 int in_prim=0, int out_prim=0, int verts_out=0);
 void unset_shader_prog();
 
 // function prototypes - screenshot (these are C functions)
