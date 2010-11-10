@@ -207,7 +207,8 @@ public:
 			vector3d const binorm(cross_product(g.dir, g.n).get_norm());
 			vector3d const delta(binorm*(0.5*g.w));
 			//vector3d const &norm(g.shadowed ? zero_vector : plus_z); // use grass normal? 2-sided lighting?
-			//vector3d const &norm(g.shadowed ? zero_vector : surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]); // interpolate normals?
+			//vector3d const &norm(g.shadowed ? zero_vector : g.n);
+			//vector3d const &norm(g.shadowed ? zero_vector : surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]);
 			vector3d const &norm(g.shadowed ? zero_vector : interpolate_mesh_normal(p1));
 			float const tc_adj(0.1); // border around grass blade texture
 			data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);

@@ -968,7 +968,7 @@ void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride) { // strid
 }
 
 
-void draw_quads_from_pts(vector<point> const &points) {
+void draw_quads_from_pts(vector<vert_norm> const &points) {
 
 	if (points.empty()) return;
 	unsigned const MAX_QUADS(1000);
@@ -982,15 +982,12 @@ void draw_quads_from_pts(vector<point> const &points) {
 			gen_quad_tex_coords(tdata, MAX_QUADS, 2);
 			init = 1;
 		}
-		glDisable(GL_NORMAL_ARRAY);
-		glDisableClientState(GL_NORMAL_ARRAY);
 		glDisable(GL_COLOR_ARRAY);
 		glDisableClientState(GL_COLOR_ARRAY);
-		glVertexPointer(3,   GL_FLOAT, 0, &points[0]);
+		glVertexPointer(3,   GL_FLOAT, sizeof(vert_norm), &points[0].v);
+		glNormalPointer(     GL_FLOAT, sizeof(vert_norm), &points[0].n);
 		glTexCoordPointer(2, GL_FLOAT, 0, tdata+2); // offset by 2 (one tex coord) to fix texture orientation
 		glDrawArrays(GL_QUADS, 0, points.size());
-		glEnable(GL_NORMAL_ARRAY);
-		glEnableClientState(GL_NORMAL_ARRAY);
 		glEnable(GL_COLOR_ARRAY);
 		glEnableClientState(GL_COLOR_ARRAY);
 	}
@@ -1000,7 +997,8 @@ void draw_quads_from_pts(vector<point> const &points) {
 		for (unsigned p = 0; p < points.size(); p += 4) { // 00 10 11 01
 			for (unsigned i = 0; i < 4; ++i) {
 				glTexCoord2f(float(i==1||i==2), float(i==2||i==3));
-				points[p+i].do_glVertex();
+				points[p+i].n.do_glNormal();
+				points[p+i].v.do_glVertex();
 			}
 		}
 		glEnd();

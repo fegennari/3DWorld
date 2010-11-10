@@ -1042,14 +1042,20 @@ void polygon_bounding_sphere(const point *pts, int npts, float thick, point &cen
 }
 
 
-void add_rotated_quad_pts(vector<point> &points, float theta, float rd, float z, point const &pos, vector3d const &scale) {
+void add_rotated_quad_pts(vector<vert_norm> &points, float theta, float rd, float z, point const &pos, vector3d const &scale) {
 
 	check_sin_table();
 	float const tv(theta-0.25*PI), s(SINF(tv)/SQRT2), c(COSF(tv)/SQRT2);
+	point pts[4];
 
 	for (unsigned i = 0; i < 4; ++i) {
 		float const tv2(theta-i*PI_TWO);
-		points.push_back(point(scale.x*(SINF(tv2)+s), scale.y*(COSF(tv2)+c), rd*scale.z*(-1.0+2.0*(i>>1))+z) + pos);
+		pts[i].assign(scale.x*(SINF(tv2)+s), scale.y*(COSF(tv2)+c), rd*scale.z*(-1.0+2.0*(i>>1))+z);
+	}
+	vector3d const norm(cross_product((pts[1] - pts[0]), (pts[2] - pts[1])).get_norm());
+
+	for (unsigned i = 0; i < 4; ++i) {
+		points.push_back(vert_norm((pts[i] + pos), norm));
 	}
 }
 

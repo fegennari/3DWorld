@@ -219,15 +219,11 @@ void draw_trees(vector<tree> &ts) {
 		bool const lpos_change(lpos != last_lpos);
 		if (lpos_change) update_cobj_tree();
 
-#if 1
-		// draw branches, then leaves: much faster for distant trees
+		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
 		draw_trees_bl(ts, lpos_change, 1, 0); // branches
 		if (display_mode & 0x08) set_shader_prog("tree_leaves", "tree_leaves");
 		draw_trees_bl(ts, lpos_change, 0, 1); // leaves
 		if (display_mode & 0x08) unset_shader_prog();
-#else
-		draw_trees_bl(ts, lpos_change, 1, 1); // slightly faster for near trees
-#endif
 		last_lpos = lpos;
 		//glFinish(); // testing
 		//PRINT_TIME(((tree_mode & 2) ? "Large + Small Trees" : "Large Trees"));

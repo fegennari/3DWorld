@@ -374,7 +374,6 @@ void small_tree::draw(int mode) const {
 			enable_blend();
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.75);
-			glNormal3f(0.0, 0.0, 1.0); // *** not quite right ***
 			draw_quads_from_pts(points); // draw textured quad if far away?
 			glDisable(GL_ALPHA_TEST);
 			disable_blend();

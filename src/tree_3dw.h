@@ -163,7 +163,7 @@ class small_tree { // size = 81 (82)
 	float height, width, r_angle, rx, ry, rv[3];
 	point pos;
 	colorRGBA color;
-	vector<point> points; // for high detail pine trees
+	vector<vert_norm> points; // for high detail pine trees
 
 public:
 	small_tree() {}

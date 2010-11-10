@@ -600,7 +600,7 @@ class s_plant : public scenery_obj { // size = 40
 
 	int coll_id2;
 	float height;
-	vector<point> points;
+	vector<vert_norm> points;
 
 public:
 	s_plant() : coll_id2(-1), height(1.0) {}
@@ -688,9 +688,8 @@ public:
 		if (mode & 2) {
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.75);
-			set_color(pltype[type].leafc*color_scale);
+			(pltype[type].leafc*color_scale).do_glColor();
 			select_texture(pltype[type].tid);
-			glNormal3f(0.0, 0.0, 1.0);
 			set_lighted_sides(2);
 			if (points.empty()) gen_points();
 			draw_quads_from_pts(points);
@@ -858,11 +857,15 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 	}
 	if (draw_transparent) {
 		enable_blend();
+		glEnable(GL_COLOR_MATERIAL);
+		if (display_mode & 0x08) set_shader_prog("tree_leaves", "tree_leaves");
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw(sscale, 2); // draw leaves
 		}
+		if (display_mode & 0x08) unset_shader_prog();
 		disable_blend();
+		glDisable(GL_COLOR_MATERIAL);
 		glDisable(GL_TEXTURE_2D);
 	}
 }
