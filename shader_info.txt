@@ -6,13 +6,11 @@ Potential Shaders:
 - Requires high res wind map/texture
 - Per-frame per-object orientation calculation
 
-2. Leaf Transparency: Vertex Shader (or Geometry Shader with Leaf Wind
-calculation)
+<Completed> 2. Leaf Transparency: Vertex/Fragment Shader
 * Multiply normal by -0.5 if player is viewing the leaf side facing
 away from the light source
 * Multiply normal by -1.0 instead if the sun is behind the leaf
 + Should be simple, only modifies normal
-- Requires light and camera pos (ok)
 
 3. Grass Effects/Regen (crush, burn, cut, update z): Geometry Shader
 * Modify leaf pos/orient/length/color based on parameters
@@ -22,7 +20,7 @@ away from the light source
 pos/orient/color
 - Requires timestamp, and must update even if not visible
 
-4. Cobj Lighting: Vertex Shader (and/or maybe Fragment Shader)
+4. Cobj Lighting: Vertex/Fragment Shader
 * Apply shadows and lighting for each light source on each vertex
 * Lookup dynamic lights and colors
 + Major performance limiter
@@ -33,7 +31,7 @@ tree/grid/voxel lookups and iteration
 - Requires many different per-vertex parameters
 - May conflict with display lists/caching
 
-5. Ship Rendering: Vertex Shader or Geometry Shader
+5. Ship Rendering: Vertex/Fragment Shader or Geometry Shader
 * Add per-ship lighting with possibly unlimited number of light sources
 * Possibly better ship shadows
 + Could improve both performance and lighting quality
@@ -41,7 +39,7 @@ tree/grid/voxel lookups and iteration
 shader for some types
 - Lots of per-ship data, case splits, and LOD makes this complex
 
-6. Water Reflections: Fragment Shader (or maybe Vertex Shader)
+6. Water Reflections: Vertex/Fragment Shader
 * Apply sun/cloud/landscape/tree/objects reflection on water surface
 (and maybe refraction)
 * Possibly also ripples
@@ -52,7 +50,7 @@ shader for some types
 - May hit shader size limits or be too slow for a fragment shader, and
 using a pixel shader will only improve performance (not quality)
 
-7. Mesh Texturing: Fragment Shader
+7. Mesh Texturing: Vertex/Fragment Shader
 * Apply a height/slope/water dependent texture to the mesh based on
 blending source textures
 + Significant memory reduction due to generation of texture on the fly
@@ -61,18 +59,18 @@ vs. precalc/storage
 - May be too slow without precomputation
 - Where do the constants and water depth parameters come from?
 
-8. Mesh Underwater Caustics: Fragment Shader (or maybe Vertex Shader)
+8. Mesh Underwater Caustics: Vertex/Fragment Shader
 * Apply dynamic water caustics on underwater mesh
 + Improved performance and quality of caustics (though may be less noticeable)
 - Algorithm requires both mesh and water and has a global solution
 - May be too slow or complex for a fragment shader
 
-9. Snowflakes: Geometry Shader or Vertex Shader (not sure which)
+9. Snowflakes: Geometry Shader
 * Render snow pixels as textured snowflakes
 + Good simple practice geometry shader
 - Performance and quality may not change much
 
-10. Smoke/Clouds and/or Fires: Vertex and/or Fragment Shader
+10. Smoke/Clouds and/or Fires: Vertex/Fragment Shader
 * Render smoke and cloud particles and/or fires faster or with better
 quality/blending/lighting
 + Lots of possibilities here, plenty of research done on this topic
@@ -86,5 +84,4 @@ Improved Quality: 6, 8, 10, 4?, 5?
 Difficult: 4, 5, 6, maybe 3, 7, 10
 
 Geom Shader: 1, 2?, 3, 5, 9?
-Vertex Shader: 2, 4, 5, 6?, 8?, 9?, 10?
-Fragment Shader: 4, 6, 7, 8, 10?
+Vertex/Fragment Shader: 2, 4, 5, 6, 7, 8, 9, 10
