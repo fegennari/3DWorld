@@ -45,7 +45,7 @@ void main()
 	gl_Position = ftransform();
 	bool shadowed = (sqrt(dot(gl_Normal, gl_Normal)) < 0.4);
 
-	// transform the normal into eye space and normalize the result
+	// transform the normal into eye space, but don't normalize because it may be scaled for shadows, and we know there are no glScale() calls
 	vec3 normal = gl_NormalMatrix * gl_Normal;
 	
 	vec4 eye_space_pos = gl_ModelViewMatrix * gl_Vertex;
