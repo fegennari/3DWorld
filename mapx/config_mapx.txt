@@ -36,7 +36,7 @@ destroy_thresh 1
 ground_effects_level 1
 crater_size 0.1
 
-#grass_density 400
+grass_density 400
 grass_size 0.025 0.002
 
 unlimited_weapons 1
