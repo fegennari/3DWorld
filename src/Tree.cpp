@@ -221,7 +221,7 @@ void draw_trees(vector<tree> &ts) {
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
 		draw_trees_bl(ts, lpos_change, 1, 0); // branches
-		if (display_mode & 0x08) set_shader_prog("tree_leaves", "tree_leaves");
+		if (display_mode & 0x08) set_shader_prog("tree_leaves", "simple_texture");
 		draw_trees_bl(ts, lpos_change, 0, 1); // leaves
 		if (display_mode & 0x08) unset_shader_prog();
 		last_lpos = lpos;

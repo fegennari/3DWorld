@@ -5,7 +5,7 @@ vec4 add_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in 
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 lightDir = normalize(vec3(gl_LightSource[i].position));
 	
-	// Compute the ambient, diffuse, and globalAmbient terms
+	// compute the ambient and diffuse terms
 	vec4 diffuse = gl_Color * gl_LightSource[i].diffuse;
 	vec4 ambient = gl_Color * gl_LightSource[i].ambient;
 	vec4 color = ambient;
