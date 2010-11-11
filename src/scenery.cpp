@@ -858,12 +858,13 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 	if (draw_transparent) {
 		enable_blend();
 		glEnable(GL_COLOR_MATERIAL);
-		if (display_mode & 0x08) set_shader_prog("tree_leaves", "simple_texture");
+		setup_enabled_lights();
+		set_shader_prog("tree_leaves", "simple_texture");
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw(sscale, 2); // draw leaves
 		}
-		if (display_mode & 0x08) unset_shader_prog();
+		unset_shader_prog();
 		disable_blend();
 		glDisable(GL_COLOR_MATERIAL);
 		glDisable(GL_TEXTURE_2D);

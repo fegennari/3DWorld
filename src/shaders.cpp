@@ -11,10 +11,45 @@ using namespace std;
 string const shaders_dir = "shaders";
 
 
-// uniform variables setup
+// *** uniform variables setup ***
 
 
-void setup_enabled_lights(int program) {
+typedef map<string, float> u_float_map_t;
+typedef map<string, int  > u_int_map_t;
+u_float_map_t u_float_map;
+u_int_map_t   u_int_map;
+
+
+void add_uniform_float(string const &name, float val) {
+
+	assert(!name.empty());
+	u_float_map[name] = val;
+}
+
+
+void add_uniform_int(string const &name, int val) {
+
+	assert(!name.empty());
+	u_int_map[name] = val;
+}
+
+
+void setup_uniforms(int program) {
+
+	assert(program);
+
+	for (u_float_map_t::const_iterator i = u_float_map.begin(); i != u_float_map.end(); ++i) {
+		int const loc(glGetUniformLocation(program, i->first.c_str()));
+		glUniform1f(loc, i->second);
+	}
+	for (u_int_map_t::const_iterator i = u_int_map.begin(); i != u_int_map.end(); ++i) {
+		int const loc(glGetUniformLocation(program, i->first.c_str()));
+		glUniform1i(loc, i->second);
+	}
+}
+
+
+void setup_enabled_lights() {
 
 	int enabled_gl_lights(0);
 
@@ -22,9 +57,11 @@ void setup_enabled_lights(int program) {
 		int const light(GL_LIGHT0 + i); // should be sequential
 		if (glIsEnabled(light)) enabled_gl_lights |= (1 << i);
 	}
-	int const loc1(glGetUniformLocation(program, "enabled_gl_lights"));
-	glUniform1i(loc1, enabled_gl_lights);
+	add_uniform_int("enabled_gl_lights", enabled_gl_lights);
 }
+
+
+// *** shader and program setup ***
 
 
 struct program_t {
@@ -188,7 +225,7 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 	}
 	assert(program);
 	glUseProgram(program);
-	setup_enabled_lights(program);
+	setup_uniforms(program);
 	return 1; // can't fail yet
 }
 
@@ -196,5 +233,7 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 void unset_shader_prog() {
 
 	glUseProgram(0);
+	u_float_map.clear();
+	u_int_map.clear();
 }
 
