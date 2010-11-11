@@ -95,8 +95,8 @@ void clear_shaders() {
 
 unsigned get_shader(string const &name, unsigned type) {
 	
-	int const shader_type_table   [3] = {GL_FRAGMENT_SHADER, GL_VERTEX_SHADER, GL_GEOMETRY_SHADER_EXT};
-	string const shader_name_table[3] = {"frag", "vert", "geom"};
+	int const shader_type_table   [3] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER_EXT};
+	string const shader_name_table[3] = {"vert", "frag", "geom"};
 
 	assert(type < 3);
 	if (name.empty()) return 0; // none selected
@@ -159,6 +159,7 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 		if (gs) glAttachShader(program, gs);
 
 		if (gs) { // setup geometry shader
+			// Note: we MUST *NOT* be in a display list when we get here
 			assert(GL_EXT_geometry_shader4);
 			glProgramParameteriEXT(program, GL_GEOMETRY_INPUT_TYPE_EXT, in_prim);
 			glProgramParameteriEXT(program, GL_GEOMETRY_OUTPUT_TYPE_EXT, out_prim);
