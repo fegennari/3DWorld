@@ -48,7 +48,7 @@ sky_pos_orient cur_spo(point(0,0,0),0,0,0);
 vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 vector<light_source> enabled_lights;
-pt_line_drawer obj_pld;
+pt_line_drawer obj_pld, snow_pld;
 
 
 extern GLUquadricObj* quadric;
@@ -84,7 +84,7 @@ class pt_line_drawer; // forward declaration
 
 void draw_cloud_volumes();
 void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, bool is_shadowed, pt_line_drawer &pld);
+					  bool do_texture, bool is_shadowed);
 void draw_weapon2(dwobject const &obj, float radius);
 void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, bool is_shadowed);
 void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type,
@@ -584,7 +584,7 @@ void draw_group(obj_group &objg) {
 		int last_shadowed(-1);
 		//glDepthMask(0);
 
-		switch (type) {
+		switch (type) { // pre-draw
 		case SHRAPNEL:
 			glDisable(GL_LIGHTING);
 			glBegin(GL_TRIANGLES);
@@ -672,7 +672,7 @@ void draw_group(obj_group &objg) {
 			case ROCK:
 				color2 *= obj.orientation.y;
 				if (do_texture) tcolor *= obj.orientation.y;
-				draw_sized_point(obj, obj.orientation.x*radius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, is_shadowed, obj_pld);
+				draw_sized_point(obj, obj.orientation.x*radius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, is_shadowed);
 				break;
 
 			case FRAGMENT: // draw_fragment()?
@@ -685,7 +685,7 @@ void draw_group(obj_group &objg) {
 					set_lighted_sides(1);
 					break;
 				}
-				draw_sized_point(obj, radius*obj.vdeform.x, cd_scale, color2, tcolor, do_texture, is_shadowed, obj_pld);
+				draw_sized_point(obj, radius*obj.vdeform.x, cd_scale, color2, tcolor, do_texture, is_shadowed);
 				break;
 
 			default:
@@ -696,10 +696,10 @@ void draw_group(obj_group &objg) {
 					set_color(check_coll_line(pos, pos2, cindex, -1, 0, 0) ? RED : GREEN);
 					draw_line(pos, pos2);
 				}
-				draw_sized_point(obj, radius, cd_scale, color2, tcolor, do_texture, is_shadowed, obj_pld);
+				draw_sized_point(obj, radius, cd_scale, color2, tcolor, do_texture, is_shadowed);
 			} // switch (type)
 		} // for j
-		switch (type) {
+		switch (type) { // post-draw
 		case SHRAPNEL:
 			glEnd();
 			glEnable(GL_LIGHTING);
@@ -716,6 +716,14 @@ void draw_group(obj_group &objg) {
 			break;
 		}
 		//glDepthMask(1);
+
+		if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
+			setup_enabled_lights();
+			add_uniform_float("size", 2.0*radius); // FIXME: size no longer depends on angle
+			set_shader_prog("ad_lighting", "simple_texture", "pt_billboard", GL_POINTS, GL_TRIANGLE_STRIP, 6);
+			snow_pld.draw_and_clear();
+			unset_shader_prog();
+		}
 		glDisable(GL_TEXTURE_2D);
 		obj_pld.draw_and_clear();
 	} // small object
@@ -731,7 +739,7 @@ void draw_group(obj_group &objg) {
 
 
 void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, bool is_shadowed, pt_line_drawer &pld)
+					  bool do_texture, bool is_shadowed)
 {
 	point pos(obj.pos);
 	point const camera(get_camera_pos());
@@ -739,6 +747,7 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	if (do_zoom) point_dia *= ZOOM_FACTOR;
 	int const type(obj.type);
 	bool const draw_large(point_dia >= 2.5);
+	bool const draw_snowflake((display_mode & 0x08) && draw_large && type == SNOW);
 	bool const tail_type((object_types[type].flags & TAIL_WHEN_FALL) != 0);
 	bool const tail(tail_type && obj.status == 1 && obj.velocity.z < RAIN_TAIL_MIN_V && !(obj.flags & OBJ_COLLIDED));
 
@@ -747,7 +756,7 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 		pos2.z -= 2.0*fticks*TIMESTEP*obj.velocity.z;
 		colorRGBA color2(color);
 		color2.alpha *= min(1.0f, 0.5f*point_dia);
-		pld.add_line(pos2, (camera - pos2), ALPHA0, pos, (camera - pos), color2);
+		obj_pld.add_line(pos2, (camera - pos2), ALPHA0, pos, (camera - pos), color2);
 		return;
 	}
 	bool const precip((object_types[type].flags & IS_PRECIP) != 0);
@@ -764,18 +773,18 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 		select_texture(BLUR_TEX);
 		glNormal3f(0.0, 0.0, 1.0);
 		glBegin(GL_QUADS);
-		draw_billboard(pos, (pos + vector3d(0.0, 0.0, 1.0)), vector3d(1.0, 0.0, 0.0), 5.0*radius, 5.0*radius);
+		draw_billboard(pos, (pos + plus_z), vector3d(1.0, 0.0, 0.0), 5.0*radius, 5.0*radius);
 		glEnd();
 		glDisable(GL_TEXTURE_2D);
 		glDepthMask(GL_TRUE);
 		return;
 	}
-	if (!draw_large) { // draw as a point
+	if (!draw_large || draw_snowflake) { // draw as a point
 		colorRGBA a(do_texture ? tcolor : color);
 		get_shadowed_color(a, pos, is_shadowed, precip, 0);
 		bool const scatters(type == RAIN || type == SNOW);
 		vector3d const n(is_shadowed ? (pos - get_light_pos()) : ((scatters ? get_light_pos() : camera) - pos));
-		pld.add_pt(pos, n, a);
+		(draw_snowflake ? snow_pld : obj_pld).add_pt(pos, n, a);
 		return;
 	}
 	colorRGBA color_l(color);
