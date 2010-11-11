@@ -18,11 +18,14 @@ vec4 add_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in 
 		
 		if ((dp1 < 0.0) != (dp2 < 0.0)) { // looking at unlit side
 			normal *= -0.5; // reverse and halve
-			float dp3 = dot(dir_to_camera, dir_to_light);
+			
+			if (i == 0) {
+				float dp3 = dot(dir_to_camera, dir_to_light);
 
-			if (dp3 < -0.95) { // leaf between light source and eye
-				float val = -20.0*(dp3 + 0.95);
-				normal = normal*(1.0 - val) + dir_to_light*((dp2 < 0.0) ? 1.0 : -1.0)*val; // max light
+				if (dp3 < -0.95) { // leaf between light source and eye
+					float val = -20.0*(dp3 + 0.95);
+					normal = normal*(1.0 - val) + dir_to_light*((dp2 < 0.0) ? 1.0 : -1.0)*val; // max light
+				}
 			}
 		}
 		
