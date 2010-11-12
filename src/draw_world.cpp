@@ -582,7 +582,6 @@ void draw_group(obj_group &objg) {
 		bool const precip((objg.flags & PRECIPITATION) != 0);
 		int const num_draw_mode((type == SHELLC || type == SHRAPNEL || type == STAR5 || type == PARTICLE) ? 1 : 2);
 		int last_shadowed(-1);
-		//glDepthMask(0);
 
 		switch (type) { // pre-draw
 		case SHRAPNEL:
@@ -597,7 +596,6 @@ void draw_group(obj_group &objg) {
 			break;
 		case SNOW:
 			glDepthMask(GL_FALSE);
-			glBegin(GL_QUADS);
 			break;
 		}
 		for (unsigned j = 0; j < objg.end_id; ++j) {
@@ -711,18 +709,15 @@ void draw_group(obj_group &objg) {
 			glDisable(GL_ALPHA_TEST);
 			break;
 		case SNOW:
-			glEnd();
+			if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
+				setup_enabled_lights();
+				add_uniform_float("size", 2.0*radius); // Note: size no longer depends on angle
+				set_shader_prog("ad_lighting", "simple_texture", "pt_billboard", GL_POINTS, GL_TRIANGLE_STRIP, 6);
+				snow_pld.draw_and_clear();
+				unset_shader_prog();
+			}
 			glDepthMask(GL_TRUE);
 			break;
-		}
-		//glDepthMask(1);
-
-		if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
-			setup_enabled_lights();
-			add_uniform_float("size", 2.0*radius); // FIXME: size no longer depends on angle
-			set_shader_prog("ad_lighting", "simple_texture", "pt_billboard", GL_POINTS, GL_TRIANGLE_STRIP, 6);
-			snow_pld.draw_and_clear();
-			unset_shader_prog();
 		}
 		glDisable(GL_TEXTURE_2D);
 		obj_pld.draw_and_clear();
@@ -747,7 +742,7 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	if (do_zoom) point_dia *= ZOOM_FACTOR;
 	int const type(obj.type);
 	bool const draw_large(point_dia >= 2.5);
-	bool const draw_snowflake((display_mode & 0x08) && draw_large && type == SNOW);
+	bool const draw_snowflake(draw_large && type == SNOW);
 	bool const tail_type((object_types[type].flags & TAIL_WHEN_FALL) != 0);
 	bool const tail(tail_type && obj.status == 1 && obj.velocity.z < RAIN_TAIL_MIN_V && !(obj.flags & OBJ_COLLIDED));
 
@@ -790,13 +785,6 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	colorRGBA color_l(color);
 	set_color_v2(color_l, pos, obj.status, is_shadowed, precip);
 
-	if (type == SNOW) { // draw as billboard
-		assert(do_texture);
-		float const size(2.0*radius*((obj.angle == 0.0) ? 1.0 : obj.angle));
-		(get_light_pos() - pos).do_glNormal();
-		draw_billboard(pos, camera, up_vector, size, size); // set random radius
-		return;
-	}
 	// draw as a sphere
 	int ndiv(int(4.0*sqrt(point_dia)));
 
