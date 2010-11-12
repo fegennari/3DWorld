@@ -67,8 +67,6 @@ void upsurface::gen(float mag, float freq, unsigned ntests, float mm_scale) {
 		mag  *= M_ATTEN_FACTOR;
 		freq /= F_ATTEN_FACTOR;
 	}
-	check_sin_table();
-
 	for (unsigned i = 0; i < ntests; ++i) { // choose random test points to approximate max value (procedural way to do this?)
 		float val(0.0);
 
@@ -117,7 +115,6 @@ float upsurface::get_height_at(point const &pt, bool use_cache) const {
 		if (val_cache[cache_index].p == pt) return val_cache[cache_index].val;
 	}
 	float val(0.0);
-	check_sin_table();
 
 	for (unsigned k = 0; k < num_sines; ++k) { // performance critical
 		unsigned const index2(NUM_SINE_PARAMS*k);

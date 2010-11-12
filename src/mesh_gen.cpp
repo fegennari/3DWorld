@@ -99,6 +99,19 @@ void init_jterms();
 
 
 
+void create_sin_table() {
+
+	if (sin_table != NULL) return; // already setup
+	sin_table = new float[2*TSIZE];
+	cos_table = sin_table + TSIZE;
+
+	for (unsigned i = 0; i < TSIZE; ++i) {
+		sin_table[i] = sinf(i/sscale);
+		cos_table[i] = cosf(i/sscale);
+	}
+}
+
+
 void matrix_min_max(float **matrix, float &minval, float &maxval) {
 
 	assert(matrix);
@@ -692,7 +705,6 @@ void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny) {
 	}
 	float const msx(mscale*DX_VAL_INV), msy(mscale*DY_VAL_INV);
 	float const ms2(0.5*mscale), msz_inv(1.0/mscale_z);
-	check_sin_table();
 
 	if (end_eval_sin < F_TABLE_SIZE) {
 		float const xval(msx*xv[nx >> 1]), yval(msy*yv[ny >> 1]);
@@ -752,7 +764,6 @@ float eval_one_surface_point(float xval, float yval) {
 		return mesh_height[xy[1]][xy[0]]; // could interpolate?
 	}
 	float zval(0.0);
-	check_sin_table();
 	float const xv(mesh_scale*(xval + xoff2 - (MESH_X_SIZE >> 1))), yv(mesh_scale*(yval + yoff2 - (MESH_Y_SIZE >> 1)));
 
 	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) { // could use end_eval_sin?

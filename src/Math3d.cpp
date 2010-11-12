@@ -1044,7 +1044,6 @@ void polygon_bounding_sphere(const point *pts, int npts, float thick, point &cen
 
 void add_rotated_quad_pts(vector<vert_norm> &points, float theta, float rd, float z, point const &pos, vector3d const &scale) {
 
-	check_sin_table();
 	float const tv(theta-0.25*PI), s(SINF(tv)/SQRT2), c(COSF(tv)/SQRT2);
 	point pts[4];
 

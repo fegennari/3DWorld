@@ -4,6 +4,7 @@
 
 #include "mesh.h"
 #include "main.h"
+#include "sinf.h"
 #include "ship.h"
 #include "ship_util.h"
 #include "player_state.h"
@@ -125,6 +126,8 @@ void verify_wmode(player_state &sstate);
 
 void gen_snow_coverage();
 void reset_snow_vbos();
+
+void create_sin_table();
 
 
 
@@ -1729,6 +1732,7 @@ int main(int argc, char** argv) {
 		cout << "Failed to create quadric." << endl;
 		return 1;
 	}
+	create_sin_table();
 	gen_gauss_rand_arr();
 	set_scene_constants();
 	check_for_config_defaults(defaults_file);
