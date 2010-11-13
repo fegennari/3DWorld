@@ -1,5 +1,3 @@
-uniform int enabled_gl_lights;
-
 vec4 add_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in int i) {
 
 	// normalize the light's direction in eye space, directional light: position field is actually direction
@@ -57,6 +55,6 @@ void main()
 	// Compute the globalAmbient term
 	gl_FrontColor = gl_Color * gl_LightModel.ambient;
 	
-	if ((enabled_gl_lights & 1) != 0) gl_FrontColor += add_light_comp(shadowed, normal, eye_space_pos, 0);
-	if ((enabled_gl_lights & 2) != 0) gl_FrontColor += add_light_comp(shadowed, normal, eye_space_pos, 1);
+	if (enable_light0) gl_FrontColor += add_light_comp(shadowed, normal, eye_space_pos, 0);
+	if (enable_light1) gl_FrontColor += add_light_comp(shadowed, normal, eye_space_pos, 1);
 } 

@@ -18,6 +18,8 @@ typedef map<string, float> u_float_map_t;
 typedef map<string, int  > u_int_map_t;
 u_float_map_t u_float_map;
 u_int_map_t   u_int_map;
+string prepend_string[3]; // vertex=0, fragment=1, geometry=3
+string prog_name_suffix;
 
 
 void add_uniform_float(string const &name, float val) {
@@ -51,13 +53,15 @@ void setup_uniforms(int program) {
 
 void setup_enabled_lights() {
 
-	int enabled_gl_lights(0);
+	prog_name_suffix += ",el";
 
-	for (unsigned i = 0; i < 8; ++i) { // max of 8 lights (GL_LIGHT0 - GL_LIGHT7): sun, moon, lightning
-		int const light(GL_LIGHT0 + i); // should be sequential
-		if (glIsEnabled(light)) enabled_gl_lights |= (1 << i);
+	for (unsigned i = 0; i < 2; ++i) { // only 2 lights for now: 0=sun, 1=moon
+		bool const enabled(glIsEnabled(GL_LIGHT0 + i));
+		prog_name_suffix += (enabled ? '1' : '0');
+		ostringstream oss;
+		oss << "bool enable_light" << i << " = " << (enabled ? "true" : "false") << ";" << endl;
+		prepend_string[0] += oss.str(); // put into vertex shader
 	}
-	add_uniform_int("enabled_gl_lights", enabled_gl_lights);
 }
 
 
@@ -101,7 +105,6 @@ string_shad_map loaded_shaders[3]; // vertex=0, fragment=1, geometry=3
 
 bool load_shader_file(string const &fname, string &data) {
 
-	data.clear();
 	if (fname.empty()) return 0;
 	ifstream in(fname.c_str());
 	if (!in.good()) return 0;
@@ -134,15 +137,15 @@ unsigned get_shader(string const &name, unsigned type) {
 	
 	int const shader_type_table   [3] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER_EXT};
 	string const shader_name_table[3] = {"vert", "frag", "geom"};
-
 	assert(type < 3);
 	if (name.empty()) return 0; // none selected
-	string_shad_map::const_iterator it(loaded_shaders[type].find(name));
+	string const lookup_name(name + prepend_string[type]);
+	string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
 	if (it != loaded_shaders[type].end()) return it->second; // already loaded
 
 	// create a new shader
 	string const fname(shaders_dir + "/" + name + "." + shader_name_table[type]);
-	string data;
+	string data(prepend_string[type]);
 	
 	if (!load_shader_file(fname, data)) {
 		cerr << "Error loading shader file " << fname << ". Exiting." << endl;
@@ -169,7 +172,7 @@ unsigned get_shader(string const &name, unsigned type) {
 		}
 		exit(1);
 	}
-	loaded_shaders[type][name] = shader; // cache the shader
+	loaded_shaders[type][lookup_name] = shader; // cache the shader
 	return shader;
 }
 
@@ -178,7 +181,7 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 					 int in_prim, int out_prim, int verts_out)
 {
 	// get the program
-	string const pname(vs_name + "," + fs_name + "," + gs_name); // unique program identifier
+	string const pname(vs_name + "," + fs_name + "," + gs_name + prog_name_suffix); // unique program identifier
 	string_prog_map::const_iterator it(loaded_programs.find(pname));
 	unsigned program(0);
 
@@ -235,5 +238,7 @@ void unset_shader_prog() {
 	glUseProgram(0);
 	u_float_map.clear();
 	u_int_map.clear();
+	for (unsigned i = 0; i < 3; ++i) prepend_string[i].clear();
+	prog_name_suffix.clear();
 }
 
