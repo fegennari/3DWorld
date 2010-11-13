@@ -539,17 +539,19 @@ struct vert_norm_tc : public vert_norm { // size = 32
 
 
 struct vert_norm_tc_color : public vert_norm_tc { // size = 36 (was 44)
-	unsigned char c[3];
+	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
 
 	vert_norm_tc_color() {}
 	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGB const &c_)
 		: vert_norm_tc(v_, n_, ts, tt) {set_c(c_);}
-	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_)
-		: vert_norm_tc(v_, n_, ts, tt) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
-	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_) {
-		v = v_; n = n_; t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];
+	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGBA const &c_)
+		: vert_norm_tc(v_, n_, ts, tt) {set_c(c_); c[3] = (unsigned char)(255.0*CLIP_TO_01(c_[3]));}
+	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0)
+		: vert_norm_tc(v_, n_, ts, tt) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; if (has_alpha) c[3] = c_[3];}
+	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0) {
+		v = v_; n = n_; t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; if (has_alpha) c[3] = c_[3];
 	}
-	void set_c(colorRGB const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
+	template<typename T> void set_c(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
 	colorRGB get_c() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	static void set_vbo_arrays(unsigned stride_mult=1);
 };
