@@ -19,7 +19,7 @@ bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
-extern int island, default_ground_tex, read_landscape;
+extern int island, default_ground_tex, read_landscape, display_mode;
 extern float vegetation, zmin, zmax, h_sand[], h_dirt[];
 extern vector3d wind;
 extern obj_type object_types[];

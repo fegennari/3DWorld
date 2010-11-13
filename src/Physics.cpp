@@ -1193,8 +1193,10 @@ void reanimate_objects() {
 
 void accumulate_object(point const &pos, int type) {
 
+	if (pos.x < -X_SCENE_SIZE+0.1*DX_VAL || pos.x > X_SCENE_SIZE-0.1*DX_VAL ||
+		pos.y < -Y_SCENE_SIZE+0.1*DY_VAL || pos.y > Y_SCENE_SIZE-0.1*DY_VAL) return;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-	if (point_outside_mesh(xpos, ypos) || check_border_coll(pos)) return;
+	if (point_outside_mesh(xpos, ypos)) return;
 	w_acc = 1; // object inside volume
 
 	if (temperature > W_FREEZE_POINT) {

@@ -1226,58 +1226,34 @@ void add_snow_to_landscape_texture(point const &pos, float acc) {
 	if (point_outside_mesh(xpos, ypos)) return; // off the terrain area
 	if (wminside[ypos][xpos] && water_matrix[ypos][xpos] > mesh_height[ypos][xpos]) return; // underwater
 	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
-	int const tx(int(((float)width/(float)MESH_X_SIZE)*(pos.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5));
-	if (tx < 0 || tx >=  width) return;
-	int const ty(int(((float)width/(float)MESH_Y_SIZE)*(pos.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5));
-	if (ty < 0 || ty >= height) return;
+	int const tx(int(((float)width /(float)MESH_X_SIZE)*(pos.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5));
+	int const ty(int(((float)height/(float)MESH_Y_SIZE)*(pos.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5));
+	if (tx < 0 || tx >= width || ty < 0 || ty >= height) return;
 	skip_regrow = 1;
 	unsigned char *tex_data(textures[LANDSCAPE_TEX].data);
 	acc *= TEXTURE_SNOW_ACC_RATE;
 	float const acc255(255.0*acc);
-	int x1(tx), y1(ty), x2(tx), y2(ty);
-	
-	if (SNOW_ACC_RADIUS == 0) {
-		int const offset(3*(ty*width + tx));
+	int const rsq(SNOW_ACC_RADIUS*SNOW_ACC_RADIUS);
+	float const frad((float)rsq), inv_frad(1.0/frad);
+	int const x1(max(0, tx-SNOW_ACC_RADIUS)), x2(min(width -1, tx+SNOW_ACC_RADIUS));
+	int const y1(max(0, ty-SNOW_ACC_RADIUS)), y2(min(height-1, ty+SNOW_ACC_RADIUS));
 
-		if (acc >= 1.0) { // white
-			RGB_BLOCK_ASSIGN((tex_data+offset), 255, 255, 255);
-		}
-		else { // somewhat white
-			for (unsigned k = 0; k < 3; ++k) {
-				unsigned char const val((unsigned char)((float)tex_data[offset+k]*(1.0 - acc) + acc255));
-				tex_data[offset+k] = min((unsigned char)255, val);
+	for (int i = y1; i <= y2; ++i) {
+		int const dy(i*width), ysq((ty - i)*(ty - i));
+		if (ysq > rsq) continue; // can never satisfy condition below
+
+		for (int j = x1; j <= x2; ++j) {
+			int const dist(ysq + (tx - j)*(tx - j));
+			if (dist > rsq) continue;
+			int const offset(3*(dy + j));
+
+			if (acc >= 1.0) { // white
+				RGB_BLOCK_ASSIGN((tex_data+offset), 255, 255, 255);
+				continue;
 			}
-		}
-	}
-	else {
-		int const rsq(SNOW_ACC_RADIUS*SNOW_ACC_RADIUS);
-		float const frad((float)rsq), inv_frad(1.0/frad);
-		x1 = max(0, tx-SNOW_ACC_RADIUS);
-		y1 = max(0, ty-SNOW_ACC_RADIUS);
-		x2 = min(width, tx+SNOW_ACC_RADIUS);
-		y2 = min(height, ty+SNOW_ACC_RADIUS);
-
-		for (int i = y1; i <= y2; ++i) {
-			int const dy(i*width), ysq((ty - i)*(ty - i));
-			if (ysq > rsq) continue; // can never satisfy condition below
-
-			for (int j = x1; j <= x2; ++j) {
-				int const dist(ysq + (tx - j)*(tx - j));
-
-				if (dist <= rsq) {
-					int const offset(3*(dy + j));
-
-					if (acc >= 1.0) { // white
-						RGB_BLOCK_ASSIGN((tex_data+offset), 255, 255, 255);
-						continue;
-					}
-					float const mult((frad - (float)dist)*inv_frad), acc255s(acc255*mult), omacc(1.0 - acc*mult);
-
-					for (unsigned k = 0; k < 3; ++k) { // somewhat white
-						tex_data[offset+k] = min((unsigned char)255, (unsigned char)(tex_data[offset+k]*omacc + acc255s));
-					}
-				}
-			}
+			// somewhat white
+			float const mult((frad - (float)dist)*inv_frad), acc255s(acc255*mult), omacc(1.0 - acc*mult);
+			UNROLL_3X(tex_data[offset+i_] = (unsigned char)min(255, int(tex_data[offset+i_]*omacc + acc255s));)
 		}
 	}
 	lchanged0 = 1;
