@@ -1,7 +1,7 @@
 // 3D World - GL EXT/ARB extension interface code
 // by Frank Gennari
 // 4/25/02
-#include "GL/glew.h"
+#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #define GL_GLEXT_PROTOTYPES 1
 #include <GL/glext.h>

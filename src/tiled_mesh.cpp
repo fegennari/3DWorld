@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 9/26/10
 
+#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
 #include "textures_3dw.h"
@@ -404,7 +405,8 @@ public:
 		}
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
 		glNormalPointer(   GL_FLOAT, ptr_stride, (void *)sizeof(point));
-		glDrawElements(GL_QUADS, 4*size*size, GL_UNSIGNED_SHORT, 0);
+		glDrawRangeElements(GL_QUADS, 0, data.size(), 4*size*size, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
+		//glDrawElements(GL_QUADS, 4*size*size, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 		glPopMatrix();

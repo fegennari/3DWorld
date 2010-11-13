@@ -1,6 +1,7 @@
 // 3D World - Snow Accumulation and Renderign code
 // by Frank Gennari
 // 5/5/10
+#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
 #include "GL/glext.h"
@@ -492,7 +493,8 @@ public:
 		bind_vbo(ivbo, 1);
 		glVertexPointer(3, GL_FLOAT, sizeof(vert_norm), 0);
 		glNormalPointer(   GL_FLOAT, sizeof(vert_norm), (void *)sizeof(point));
-		glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
+		glDrawRangeElements(GL_QUADS, 0, data.size(), indices.size(), GL_UNSIGNED_INT, 0); // requires GL/glew.h
+		//glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 	}
@@ -808,7 +810,7 @@ bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, 
 		if ((p.z - radius) < z && (p.z + radius) > z) {
 			zval = z;
 			norm = s.get_norm(pos);
-			if (crush_snow) snow_draw.update_region(i, pos, s.get_size(), min(z, max((z - 0.25*radius), (p.z - radius))));
+			if (crush_snow) snow_draw.update_region(i, pos, s.get_size(), min(z, max((z - 0.25f*radius), (p.z - radius))));
 			return 1;
 		}
 	}
