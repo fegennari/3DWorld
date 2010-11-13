@@ -65,7 +65,7 @@ texture(0, 0, 512,  512,  1, 3, 1, "camoflage.raw"),
 texture(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
 texture(0, 1, 512,  512,  1, 3, 1, "brick1.bmp"),
 texture(0, 1, 512,  512,  1, 3, 1, "manhole.bmp"),
-texture(0, 0, 128,  128,  1, 4, 1, "palmtree.raw"),
+texture(0, 0, 128,  128,  1, 4, 0, "palmtree.raw"),
 texture(1, 0, 256,  256,  1, 4, 1, "@smoke.raw"),  // not real file
 texture(1, 0, 64,   64,   1, 4, 1, "@plasma.raw"), // not real file
 texture(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
