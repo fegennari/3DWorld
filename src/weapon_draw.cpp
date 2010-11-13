@@ -11,7 +11,7 @@ set<int> scheduled_weapons;
 
 extern bool invalid_ccache, keep_lasers;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode;
-extern int num_smileys, left_handed, iticks, do_zoom, camera_view, fired, UNLIMITED_WEAPONS;
+extern int num_smileys, left_handed, iticks, do_zoom, camera_view, fired, UNLIMITED_WEAPONS, animate2;
 extern float fticks, max_proj_rad;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
@@ -420,7 +420,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				static int lfc(0);
 				static float angle(0.0);
 				
-				if (frame_counter != lfc) {
+				if (frame_counter != lfc && animate2) {
 					lfc    = frame_counter;
 					angle += 6.0*fticks;
 				}
