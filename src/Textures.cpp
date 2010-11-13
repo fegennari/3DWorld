@@ -379,13 +379,10 @@ void texture::set_to_color(colorRGBA const &c) {
 		swap(data, alt_data);
 		return;
 	}
-	unsigned char c4[4];
-
-	for (unsigned i = 0; i < 4; ++i) {
-		c4[i] = unsigned char(255.0*c[i]);
-	}
+	color_wrapper c4;
+	c4.set_c4(c);
 	unsigned const sz(unsigned(width*height));
-	float const cw_scale(1.0/(float(c4[0]) + float(c4[1]) + float(c4[2])));
+	float const cw_scale(1.0/(float(c4.c[0]) + float(c4.c[1]) + float(c4.c[2])));
 
 	if (alt_data == NULL) {
 		alt_data = new unsigned char[sz*ncolors];
@@ -397,7 +394,7 @@ void texture::set_to_color(colorRGBA const &c) {
 		float const cscale(min(1.0, (unsigned(d[0]) + unsigned(d[1]) + unsigned(d[2]))*cw_scale));
 		
 		for (int n = 0; n < ncolors; ++n) {
-			d[n] = (unsigned char)min(255.0, (0.5*cscale*c4[n] + 0.5*alt_data[pos+n]));
+			d[n] = (unsigned char)min(255.0, (0.5*cscale*c4.c[n] + 0.5*alt_data[pos+n]));
 		}
 	}
 }

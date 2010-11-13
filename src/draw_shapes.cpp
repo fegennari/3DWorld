@@ -219,11 +219,10 @@ struct pt_pair { // size = 28
 };
 
 
-struct vertex_t { // size = 32
+struct vertex_t : public color_wrapper { // size = 32
 
 	point p;
 	vector3d n;
-	unsigned char c[4];
 	float fog;
 };
 
@@ -243,9 +242,8 @@ void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned 
 		
 		if (v.c[3] == 0) { // Note: shadowed should agree across all uses of this vertex
 			colorRGBA color;
-			v.fog  = get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
-			v.c[3] = (unsigned char)(255.0*color[3]);
-			UNROLL_3X(v.c[i_] = (unsigned char)(255.0*color[i_]);)
+			v.fog = get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
+			v.set_c4(color);
 		}
 		if (smoke_enabled) set_fog_coord(v.fog);
 		glColor4ubv(v.c);

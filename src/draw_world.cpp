@@ -314,9 +314,9 @@ void pt_line_drawer::add_textured_line(point const &v1, point const &v2, colorRG
 void pt_line_drawer::vnc_cont::draw(int type) const {
 	
 	if (empty()) return; // nothing to do
-	glVertexPointer(3, GL_FLOAT, sizeof(vnc), &(front().v));
-	glNormalPointer(   GL_FLOAT, sizeof(vnc), &(front().n));
-	glColorPointer( 4, GL_FLOAT, sizeof(vnc), &(front().c));
+	glVertexPointer(3, GL_FLOAT,         sizeof(vnc), &(front().v));
+	glNormalPointer(   GL_FLOAT,         sizeof(vnc), &(front().n));
+	glColorPointer( 4, GL_UNSIGNED_BYTE, sizeof(vnc), &(front().c));
 	glDrawArrays(type, 0, size());
 }
 

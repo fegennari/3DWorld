@@ -237,7 +237,7 @@ void tree::copy_color(colorRGB const &color, unsigned i) {
 	assert(i < leaf_data.size());
 	
 	for (unsigned j = 0; j < 4; ++j) {
-		leaf_data[j+(i<<2)].set_c(color);
+		leaf_data[j+(i<<2)].set_c3(color);
 	}
 	if (i < leaves.size() && leaves[i].coll_index >= 0) { // update cobj color so that leaf water reflection is correct
 		assert((unsigned)leaves[i].coll_index < coll_objects.size());
@@ -392,7 +392,7 @@ colorRGB tree::get_leaf_color(unsigned i) const {
 	assert(i < leaves.size());
 	if (leaf_data.empty()) return leaves[i].calc_leaf_color(leaf_color, base_color);
 	assert(4*i < leaf_data.size());
-	return leaf_data[i<<2].get_c(); // return color of first vertex since they all should be the same
+	return leaf_data[i<<2].get_c3(); // return color of first vertex since they all should be the same
 }
 
 
