@@ -222,3 +222,14 @@ void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool i
 #endif // USE_VBOS
 
 
+// ***************** Other *****************
+
+
+bool gen_mipmaps() {
+
+	if (!glGenerateMipmap) return 0;
+	glGenerateMipmap(GL_TEXTURE_2D);
+	return 1;
+}
+
+

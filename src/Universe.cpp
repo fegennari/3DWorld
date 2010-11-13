@@ -1503,7 +1503,7 @@ void uobj_solid::create_texture(unsigned size) {
 	size = min(size, get_max_tex_size());
 	vector<unsigned char> data(3*size*size);
 	gen_texture_data(&data.front(), size, USE_HEIGHTMAP);
-	setup_texture(tid, GL_MODULATE, GL_LINEAR, 0, 1, 1, 0, 1); // mirror so that the poles look more correct
+	setup_texture(tid, GL_MODULATE, 0, 0, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
 }
 

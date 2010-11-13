@@ -47,14 +47,14 @@ texture textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad 
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
 //texture(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
-texture(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for trees?
+texture(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
 texture(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
 texture(0, 0, 512,  512,  1, 3, 1, "water.raw"),
 texture(0, 0, 64,   64,   1, 3, 1, "water_sm.raw"), // WATER2_TEX is unused
 texture(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
-texture(0, 0, 64,   64,   1, 3, 0, "sun.raw"),
+texture(0, 0, 64,   64,   1, 3, 1, "sun.raw"),
 texture(0, 0, 128,  128,  1, 3, 1, "moon.raw"),
-texture(0, 0, 256,  256,  1, 3, 0, "earth.raw"), // not sure why there is a black line when wrap is set to 0
+texture(0, 0, 256,  256,  0, 3, 1, "earth.raw"),
 texture(0, 0, 64,   64,   1, 3, 1, "ice.raw"), // marble?
 texture(0, 0, 256,  256,  1, 3, 2, "snow.raw"),
 texture(0, 0, 128,  128,  0, 4, 0, "leaf.raw"),
@@ -69,7 +69,7 @@ texture(0, 0, 128,  128,  1, 4, 1, "palmtree.raw"),
 texture(1, 0, 256,  256,  1, 4, 1, "@smoke.raw"),  // not real file
 texture(1, 0, 64,   64,   1, 4, 1, "@plasma.raw"), // not real file
 texture(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
-texture(1, 0, 1024, 1024, 1, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
+texture(1, 0, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
 texture(1, 0, 128,  128,  0, 3, 0, "@tree_end.raw"),  // not real file
 texture(1, 0, 128,  128,  1, 4, 1, "@tree_hemi.raw"), // not real file, mipmap for trees?
 texture(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp"),   // not real file
@@ -84,9 +84,9 @@ texture(0, 0, 256,  256,  0, 4, 0, "plant2.raw"),
 texture(0, 0, 256,  256,  0, 4, 0, "plant3.raw"),
 texture(0, 0, 64,   64,   0, 4, 0, "hibiscus.raw"),
 texture(0, 0, 256,  256,  1, 3, 1, "@fence.raw"), // not real file, light paneling
-texture(0, 2, 128,  128,  1, 3, 0, "skull.raw"),
-texture(0, 0, 64,   64,   1, 3, 0, "radiation.raw"),
-texture(0, 2, 128,  128,  1, 3, 0, "yuck.raw"),
+texture(0, 2, 128,  128,  1, 3, 1, "skull.raw"),
+texture(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
+texture(0, 2, 128,  128,  1, 3, 1, "yuck.raw"),
 texture(0, 0, 256,  256,  0, 4, 0, "sawblade.raw"),
 texture(0, 0, 256,  256,  0, 4, 0, "sawblade_b.raw"),
 texture(0, 0, 256,  256,  0, 4, 1, "blur.raw"),
@@ -547,7 +547,7 @@ unsigned char *LoadTextureRAW(texture const &t, int index) {
 }
 
 
-void setup_texture(unsigned &tid, int type, int filter, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t) {
+void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t) {
 
 	glGenTextures(1, &tid);
 
@@ -563,16 +563,16 @@ void setup_texture(unsigned &tid, int type, int filter, bool mipmap, bool wrap_s
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_LINEAR_MIPMAP_NEAREST?
 	}
 	else {
-		// when texture area is small, use linear filter (bilinear filter the closest mipmap)
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+		// when texture area is small, use linear filter
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	}
 	// when texture area is large, bilinear filter the first mipmap
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	// if wrap is true,  the texture wraps over at the edges (repeat)
+	// if wrap is true,  the texture wraps over at the edges (repeat) or is mirrored
 	// if wrap is false, the texture ends at the edges (clamp)
-	int const mode_s(wrap_s ? (mirror_s ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP); // is mirrored supported on all video cards?
-	int const mode_t(wrap_t ? (mirror_t ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP); // is mirrored supported on all video cards?
+	int const mode_s(wrap_s ? (mirror_s ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE);
+	int const mode_t(wrap_t ? (mirror_t ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mode_s);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mode_t);
 }
@@ -591,7 +591,7 @@ void init_texture(int id) {
 		cout << "tmem = " << tmem << endl;
 	}
 	assert(t1.width > 0 && t1.height > 0 && t1.data != NULL);
-	setup_texture(t1.tid, GL_MODULATE/*GL_DECAL*/, GL_LINEAR, (t1.use_mipmaps != 0), t1.wrap, t1.wrap);
+	setup_texture(t1.tid, GL_MODULATE/*GL_DECAL*/, (t1.use_mipmaps != 0), t1.wrap, t1.wrap);
 	GLenum const format((t1.ncolors == 4) ? GL_RGBA : GL_RGB);
 
 	if (t1.use_mipmaps) { // build our texture mipmaps

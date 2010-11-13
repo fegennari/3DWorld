@@ -1292,7 +1292,7 @@ void load_textures();
 int get_texture_by_name(std::string const &name);
 bool select_texture(int id);
 float get_tex_ar(int id);
-void setup_texture(unsigned &tid, int type, int filter, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s=0, bool mirror_t=0);
+void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s=0, bool mirror_t=0);
 void init_texture(int id);
 void free_textures();
 void reset_textures();

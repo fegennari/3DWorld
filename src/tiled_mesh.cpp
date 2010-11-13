@@ -288,10 +288,12 @@ public:
 
 						if (vnz < sthresh[1]) {
 							if (id == GROUND_TEX || id2 == GROUND_TEX) { // ground/grass
+								assert(tex_data[DIRT_TEX]);
 								unsigned char const *ta_data(GET_TEX_DATA(textures, tex_data, DIRT_TEX, tx, ty, tex_bs));
 								unsigned char temp[3];
 
 								if (id == GROUND_TEX || id2 == ROCK_TEX) {
+									assert(tex_data[ROCK_TEX]);
 									unsigned char const *tb_data(GET_TEX_DATA(textures, tex_data, ROCK_TEX, tx, ty, tex_bs));
 									BLEND_COLOR(temp, tb_data, ta_data, t);
 								}
@@ -302,6 +304,7 @@ public:
 								BLEND_COLOR(td, td, temp, val);
 							}
 							else if (id2 == SNOW_TEX) { // snow
+								assert(tex_data[ROCK_TEX]);
 								unsigned char const *ta_data(GET_TEX_DATA(textures, tex_data, ROCK_TEX, tx, ty, tex_bs));
 								float const val(CLIP_TO_01(2.0f*(vnz - sthresh[0])/(sthresh[1] - sthresh[0])));
 								BLEND_COLOR(td, td, ta_data, val);
@@ -320,7 +323,7 @@ public:
 		} // for y
 		//if (tex_bs == 0) {PRINT_TIME("Texture Gen");}
 		bool const mipmaps(0); // mipmaps are too slow to build, not sure what wrap/mirror mode is best
-		setup_texture(tid, GL_MODULATE, GL_LINEAR, mipmaps, 1, 1, 1, 1);
+		setup_texture(tid, GL_MODULATE, mipmaps, 0, 0, 0, 0);
 		assert(tid > 0);
 		assert(glIsTexture(tid));
 

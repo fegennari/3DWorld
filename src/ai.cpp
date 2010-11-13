@@ -945,7 +945,7 @@ void init_smiley_texture(int smiley_id) {
 		}
 	}
 	if (sstates[smiley_id].tid == 0) {
-		setup_texture(sstates[smiley_id].tid, GL_MODULATE, GL_LINEAR, 0, 1, 1);
+		setup_texture(sstates[smiley_id].tid, GL_MODULATE, 0, 0, 0);
 	}
 	else {
 		glBindTexture(GL_TEXTURE_2D, sstates[smiley_id].tid);
