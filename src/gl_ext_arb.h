@@ -45,6 +45,7 @@ void bind_vbo(unsigned id, bool is_index=0);
 void delete_vbo(unsigned id);
 void upload_vbo_data(void const *const data, size_t size, bool is_index=0);
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index=0);
+bool gen_mipmaps();
 
 
 #endif // _GL_EXT_ARB_H_

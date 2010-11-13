@@ -322,18 +322,14 @@ public:
 			} // for x
 		} // for y
 		//if (tex_bs == 0) {PRINT_TIME("Texture Gen");}
-		bool const mipmaps(0); // mipmaps are too slow to build, not sure what wrap/mirror mode is best
+		bool const mipmaps(0); // mipmaps take about 33% more memory
 		setup_texture(tid, GL_MODULATE, mipmaps, 0, 0, 0, 0);
 		assert(tid > 0);
 		assert(glIsTexture(tid));
-
-		if (mipmaps) {
-			gluBuild2DMipmaps(GL_TEXTURE_2D, 3, tsize, tsize, GL_RGB, GL_UNSIGNED_BYTE, data);
-		}
-		else {
-			//bool const has_comp(has_extension("GL_ARB_texture_compression")); GL_COMPRESSED_RGB - too slow
-			glTexImage2D(GL_TEXTURE_2D, 0, 3, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		}
+		//bool const has_comp(has_extension("GL_ARB_texture_compression")); GL_COMPRESSED_RGB - too slow
+		//if (mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+		glTexImage2D(GL_TEXTURE_2D, 0, 3, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		if (mipmaps) gen_mipmaps();
 		glDisable(GL_TEXTURE_2D);
 		delete [] data;
 		//if (tex_bs == 0) {PRINT_TIME("Texture Upload");}

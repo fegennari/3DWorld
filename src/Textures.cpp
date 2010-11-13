@@ -558,14 +558,9 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 	// select modulate to mix texture with color for shading (decal keeps texture color)
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, type);
 
-	if (mipmap) {
-		// when texture area is small, use linear filter (bilinear filter the closest mipmap)
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_LINEAR_MIPMAP_NEAREST?
-	}
-	else {
-		// when texture area is small, use linear filter
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	}
+	// when texture area is small, use linear filter (bilinear filter the closest mipmap)
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR)); // GL_LINEAR_MIPMAP_NEAREST?
+
 	// when texture area is large, bilinear filter the first mipmap
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -592,14 +587,11 @@ void init_texture(int id) {
 	}
 	assert(t1.width > 0 && t1.height > 0 && t1.data != NULL);
 	setup_texture(t1.tid, GL_MODULATE/*GL_DECAL*/, (t1.use_mipmaps != 0), t1.wrap, t1.wrap);
+	// GL_BGRA is supposedly faster, but do we want to swap things here?
 	GLenum const format((t1.ncolors == 4) ? GL_RGBA : GL_RGB);
-
-	if (t1.use_mipmaps) { // build our texture mipmaps
-		gluBuild2DMipmaps(GL_TEXTURE_2D, t1.ncolors, t1.width, t1.height, format, GL_UNSIGNED_BYTE, t1.data);
-	}
-	else {
-		glTexImage2D(GL_TEXTURE_2D, 0, t1.ncolors, t1.width, t1.height, 0, format, GL_UNSIGNED_BYTE, t1.data);
-	}
+	//if (t1.use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+	glTexImage2D(GL_TEXTURE_2D, 0, t1.ncolors, t1.width, t1.height, 0, format, GL_UNSIGNED_BYTE, t1.data);
+	if (t1.use_mipmaps) gen_mipmaps();
 	assert(glIsTexture(t1.tid));
 }
 
