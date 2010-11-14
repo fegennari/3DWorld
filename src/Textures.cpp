@@ -118,7 +118,7 @@ texture(0, 0, 16,   16,   1, 3, 0, "black.raw"),
 texture(0, 0, 16,   16,   1, 3, 0, "white.raw"),
 texture(0, 2, 512,  512,  0, 4, 0, "fire.raw"),
 texture(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
-texture(0, 0, 256,  256,  0, 4, 1, "snowflake.raw"),
+texture(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
 texture(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
 texture(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
