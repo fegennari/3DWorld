@@ -49,10 +49,11 @@ float L1_SUBDIV_SIZE(1.0);
 
 extern bool smoke_enabled;
 extern unsigned cobj_counter;
-extern int coll_border, begin_motion, num_groups, camera_coll_id;
+extern int coll_border, begin_motion, num_groups, camera_coll_id, spectate;
 extern int display_mode, camera_mode, camera_view, do_zoom, xoff2, yoff2;
 extern float max_proj_rad, subdiv_size_mult, ztop, zbottom, zmax, zmin;
 extern float DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
+extern double camera_zh;
 extern point up_vector;
 extern vector<int> weap_cobjs;
 extern vector<coll_obj> coll_objects;
@@ -1618,7 +1619,9 @@ void add_coll_shadow_objs() {
 	bool light_in_front(1);
 
 	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID)) { // shadow the camera even when in the air (but not when dead)
-		shadow_objs.push_back(shadow_sphere(camera, CAMERA_RADIUS, camera_coll_id, 0));
+		point camera_pos(camera);
+		if (camera_mode == 1 && !spectate) camera_pos.z -= 0.5*camera_zh; // cancel out the z height that was previously added
+		shadow_objs.push_back(shadow_sphere(camera_pos, CAMERA_RADIUS, camera_coll_id, 0));
 	}
 	for (unsigned L = 0; L < num_lights && light_in_front; ++L) {
 		if (dot_product_ptv(cview_dir, enabled_lights[L].get_center(), camera) < 0.0) light_in_front = 0;
@@ -1631,7 +1634,7 @@ void add_coll_shadow_objs() {
 				
 			for (unsigned j = 0; j < objg.end_id; ++j) {
 				dwobject const &obj(objg.get_obj(j));
-				if (obj.disabled() || obj.status ==  !objg.obj_has_shadow(j)) continue;
+				if (obj.disabled() || obj.status == !objg.obj_has_shadow(j)) continue;
 				add_shadow_obj(obj.pos, radius, obj.coll_id, light_in_front);
 			}
 		}

@@ -132,6 +132,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 	point const pos0(get_final_pos(pos, dirn, cradius, 1.0, rxy, v_trans));
 	bool const has_xy_comp(dir.x != 0.0 || dir.y != 0.0);
 
+	// FIXME: animate some of these based on fire_val?
 	switch (wid) {
 	case W_UNARMED:
 		break;
