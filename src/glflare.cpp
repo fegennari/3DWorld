@@ -159,10 +159,10 @@ void load_flare_textures() {
 void free_flare_textures() {
 
 	for (unsigned i = 0; i < NUM_SHINE; i++) {
-		glDeleteTextures(1, &shineTex[i]);
+		free_texture(shineTex[i]);
 	}
 	for (unsigned i = 0; i < NUM_FLARE; i++) {
-		glDeleteTextures(1, &flareTex[i]);
+		free_texture(flareTex[i]);
 	}
 	tex_loaded = 0;
 }

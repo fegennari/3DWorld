@@ -166,7 +166,7 @@ void draw_overhead_map() {
 	setup_texture(tid, GL_MODULATE, 0, 0, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, nx, ny, 0, GL_RGB, GL_UNSIGNED_BYTE, &buf.front());
 	draw_tquad(0.58*((float)window_width)/((float)window_height), 0.58, -1.0, 1);
-	glDeleteTextures(1, &tid);
+	free_texture(tid);
 	glEnable(GL_LIGHTING);
 	glDisable(GL_TEXTURE_2D);
 	//PRINT_TIME("draw map")

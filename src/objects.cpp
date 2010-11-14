@@ -54,8 +54,7 @@ bool coll_obj::clear_lightmap_entry(lvmap::iterator it, int mode, unsigned keep,
 		status = 0; // erase?
 	}
 	if (tag == QD_TAG_TEXTURE && status != 0) { // texture
-		if (glIsTexture(status)) glDeleteTextures(1, &status);
-		status = 0; // erase?
+		free_texture(status); // erase?
 	}
 	if (mode != 1) {
 		if (keep > 0 && (tag == QD_TAG_QUAD || tag == QD_TAG_TRIANGLE)) { // backup precomputed lighting values

@@ -1417,7 +1417,7 @@ void uobj_solid::check_gen_texture(unsigned size) {
 		do_gen = 1;
 	}
 	else if (tsize0 != tsize) { // new texture size
-		glDeleteTextures(1, &tid); // delete old texture
+		::free_texture(tid); // delete old texture
 		do_gen = 1;
 	}
 	if (do_gen) {
@@ -2621,8 +2621,7 @@ void uobject::add_gravity_vector_base(vector3d &vgravity, point const &mpos, flo
 
 void uobj_solid::free_texture() { // and also free display list
 
-	if (glIsTexture(tid)) glDeleteTextures(1, &tid);
-	tid   = 0;
+	::free_texture(tid);
 	tsize = 0;
 }
 

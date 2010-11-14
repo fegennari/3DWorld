@@ -57,7 +57,7 @@ texture(0, 0, 128,  128,  1, 3, 1, "moon.raw"),
 texture(0, 0, 256,  256,  0, 3, 1, "earth.raw"),
 texture(0, 0, 64,   64,   1, 3, 1, "ice.raw"), // marble?
 texture(0, 0, 256,  256,  1, 3, 2, "snow.raw"),
-texture(0, 0, 128,  128,  0, 4, 0, "leaf.raw"),
+texture(0, 0, 128,  128,  0, 4, 1, "leaf.raw"),
 texture(0, 0, 128,  128,  1, 4, 0, "bark.raw"),
 texture(0, 0, 512,  512,  1, 4, 2, "desert_sand.raw"),
 texture(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
@@ -65,7 +65,7 @@ texture(0, 0, 512,  512,  1, 3, 1, "camoflage.raw"),
 texture(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
 texture(0, 1, 512,  512,  1, 3, 1, "brick1.bmp"),
 texture(0, 1, 512,  512,  1, 3, 1, "manhole.bmp"),
-texture(0, 0, 128,  128,  1, 4, 0, "palmtree.raw"),
+texture(0, 0, 128,  128,  1, 4, 1, "palmtree.raw"),
 texture(1, 0, 256,  256,  1, 4, 1, "@smoke.raw"),  // not real file
 texture(1, 0, 64,   64,   1, 4, 1, "@plasma.raw"), // not real file
 texture(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
@@ -75,14 +75,14 @@ texture(1, 0, 128,  128,  1, 4, 1, "@tree_hemi.raw"), // not real file, mipmap f
 texture(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp"),   // not real file
 texture(0, 0, 256,  256,  1, 3, 1, "paneling.raw"),
 texture(0, 0, 256,  256,  1, 3, 1, "cblock.raw"),
-texture(0, 0, 128,  128,  0, 4, 0, "mj_leaf.raw"),
-texture(0, 0, 128,  128,  0, 4, 0, "live_oak.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "leaf2.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "leaf3c.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "plant1.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "plant2.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "plant3.raw"),
-texture(0, 0, 64,   64,   0, 4, 0, "hibiscus.raw"),
+texture(0, 0, 128,  128,  0, 4, 1, "mj_leaf.raw"),
+texture(0, 0, 128,  128,  0, 4, 1, "live_oak.raw"),
+texture(0, 0, 256,  256,  0, 4, 1, "leaf2.raw"),
+texture(0, 0, 256,  256,  0, 4, 1, "leaf3c.raw"),
+texture(0, 0, 256,  256,  0, 4, 1, "plant1.raw"),
+texture(0, 0, 256,  256,  0, 4, 1, "plant2.raw"),
+texture(0, 0, 256,  256,  0, 4, 1, "plant3.raw"),
+texture(0, 0, 64,   64,   0, 4, 1, "hibiscus.raw"),
 texture(0, 0, 256,  256,  1, 3, 1, "@fence.raw"), // not real file, light paneling
 texture(0, 2, 128,  128,  1, 3, 1, "skull.raw"),
 texture(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
@@ -109,8 +109,8 @@ texture(0, 0, 512,  512,  1, 3, 1, "shiphull.raw"),
 texture(0, 0, 512,  512,  1, 3, 1, "bcube2.raw"),
 texture(0, 0, 512,  512,  1, 3, 1, "bcube_tactical.raw"),
 texture(0, 0, 512,  256,  1, 3, 1, "rock_sphere.raw"),
-texture(0, 3, 256,  256,  0, 4, 0, "papaya_leaf.raw"),
-texture(0, 3, 256,  256,  0, 4, 0, "coffee_leaf.raw"), // half the texture is wasted, but leaves must be square (for now)
+texture(0, 3, 256,  256,  0, 4, 1, "papaya_leaf.raw"),
+texture(0, 3, 256,  256,  0, 4, 1, "coffee_leaf.raw"), // half the texture is wasted, but leaves must be square (for now)
 texture(0, 0, 256,  256,  1, 4, 0, "smiley_skull.raw"),
 texture(0, 0, 512,  512,  1, 3, 1, "ice.2.raw"),
 texture(0, 0, 256,  256,  1, 3, 2, "rock.03.raw"),
@@ -118,7 +118,7 @@ texture(0, 0, 16,   16,   1, 3, 0, "black.raw"),
 texture(0, 0, 16,   16,   1, 3, 0, "white.raw"),
 texture(0, 2, 512,  512,  0, 4, 0, "fire.raw"),
 texture(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
+texture(0, 0, 256,  256,  0, 4, 1, "snowflake.raw"),
 texture(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
 texture(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
@@ -280,6 +280,13 @@ void setup_landscape_tex_colors(colorRGBA const &c1, colorRGBA const &c2) { // c
 }
 
 
+void free_texture(unsigned &tid) {
+
+	if (glIsTexture(tid)) glDeleteTextures(1, &tid);
+	tid = 0;
+}
+
+
 void texture::alloc() {
 
 	free();
@@ -297,8 +304,7 @@ void texture::free() {
 
 void texture::gl_delete() {
 
-	if (glIsTexture(tid)) glDeleteTextures(1, &tid);
-	tid = 0;
+	free_texture(tid);
 }
 
 
@@ -544,9 +550,47 @@ unsigned char *LoadTextureRAW(texture const &t, int index) {
 }
 
 
+void create_custom_mipmaps(texture const &t) {
+
+	unsigned const nc(t.ncolors);
+	assert(nc == 3 || nc == 4);
+	GLenum const format((nc == 4) ? GL_RGBA : GL_RGB);
+	unsigned const tsize(nc*t.width*t.height);
+	vector<unsigned char> idata, odata;
+	idata.resize(tsize);
+	memcpy(&idata.front(), t.data, tsize);
+
+	for (unsigned w = t.width, h = t.height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
+		unsigned const w1(max(w,    1U)), h1(max(h,    1U));
+		unsigned const w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
+		unsigned const xinc((w2 < w1) ? nc : 0), yinc((h2 < h1) ? nc*w1 : 0);
+		odata.resize(nc*w2*h2);
+
+		for (unsigned y = 0; y < h2; ++y) {
+			for (unsigned x = 0; x < w2; ++x) {
+				unsigned const ix1(nc*(y*w2+x)), ix2(nc*((y<<1)*w1+(x<<1)));
+
+				if (nc == 3) {
+					UNROLL_3X(odata[ix1+i_] = (unsigned char)(((unsigned)idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) >> 2);)
+				}
+				else { // custom alpha mipmaps
+					unsigned const a1(idata[ix2+3]), a2(idata[ix2+xinc+3]), a3(idata[ix2+yinc+3]), a4(idata[ix2+yinc+xinc+3]);
+					unsigned const a_sum(max(1U, (a1 + a2 + a3 + a4))); // no div by 0
+					UNROLL_3X(odata[ix1+i_] = (unsigned char)((a1*idata[ix2+i_] + a2*idata[ix2+xinc+i_] + a3*idata[ix2+yinc+i_] + a4*idata[ix2+yinc+xinc+i_]) / a_sum);)
+					odata[ix1+3] = max(max(a1, a2), max(a3, a4));
+				}
+			}
+		}
+		glTexImage2D(GL_TEXTURE_2D, level, nc, w2, h2, 0, format, GL_UNSIGNED_BYTE, &odata.front());
+		idata.swap(odata);
+	}
+}
+
+
 void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t) {
 
-	if (tid == 0) glGenTextures(1, &tid);
+	assert(tid == 0);
+	glGenTextures(1, &tid);
 
 	// select our current texture
 	glBindTexture(GL_TEXTURE_2D, tid);
@@ -588,7 +632,10 @@ void init_texture(int id) {
 	GLenum const format((t1.ncolors == 4) ? GL_RGBA : GL_RGB);
 	//if (t1.use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
 	glTexImage2D(GL_TEXTURE_2D, 0, t1.ncolors, t1.width, t1.height, 0, format, GL_UNSIGNED_BYTE, t1.data);
-	if (t1.use_mipmaps) gen_mipmaps();
+	
+	if (t1.use_mipmaps) {
+		if (t1.ncolors == 3) gen_mipmaps(); else create_custom_mipmaps(t1);
+	}
 	assert(glIsTexture(t1.tid));
 }
 
@@ -1042,7 +1089,7 @@ void create_landscape_texture() {
 			ls0_invalid = 1;
 		}
 	}
-	//textures[LANDSCAPE_TEX].gl_delete();
+	textures[LANDSCAPE_TEX].gl_delete(); // should we try to update rather than recreating from scratch?
 	init_texture(LANDSCAPE_TEX); // performance bottleneck
 	//glBindTexture(GL_TEXTURE_2D, textures[LANDSCAPE_TEX].tid);
 	//glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, tex_data);

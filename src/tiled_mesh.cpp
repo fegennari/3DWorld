@@ -106,8 +106,7 @@ public:
 	}
 
 	void clear_tid() {
-		if (tid > 0) glDeleteTextures(1, &tid);
-		tid       = 0;
+		free_texture(tid);
 		gen_tsize = 0;
 	}
 

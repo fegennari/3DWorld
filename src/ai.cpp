@@ -1099,8 +1099,7 @@ void select_smiley_texture(int smiley_id) {
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
 
 	if (!glIsTexture(sstates[smiley_id].tid)) {
-		glDeleteTextures(1, &sstates[smiley_id].tid);
-		sstates[smiley_id].tid = 0;
+		free_texture(sstates[smiley_id].tid);
 		init_smiley_texture(smiley_id);
 	}
 	assert(glIsTexture(sstates[smiley_id].tid));
@@ -1114,8 +1113,7 @@ void free_smiley_textures() {
 	if (sstates == NULL) return;
 
 	for (int i = 0; i < num_smileys; ++i) {
-		glDeleteTextures(1, &sstates[i].tid);
-		sstates[i].tid = 0;
+		free_texture(sstates[i].tid);
 	}
 }
 

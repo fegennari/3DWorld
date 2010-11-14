@@ -1303,6 +1303,7 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 void init_texture(int id);
 void free_textures();
 void reset_textures();
+void free_texture(unsigned &tid);
 void setup_landscape_tex_colors(colorRGBA const &c1, colorRGBA const &c2);
 colorRGBA texture_color(int tid);
 unsigned get_texture_size(int tid, bool dim);
