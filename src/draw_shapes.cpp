@@ -783,8 +783,6 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 	bool created[256] = {0};
 
 	// render the quads - is there a way to render these using a single textured quad?
-	glBegin(GL_QUAD_STRIP);
-
 	for (unsigned s0 = 0; s0 < n0; s0 += step[0]) {
 		unsigned const off1(min(n0, s0+step[0])), o0(off1*xstride), o1(s0*xstride);
 		unsigned s_end(off1);
@@ -801,7 +799,7 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 			s_end = min(s_end, n0);
 			if (more_strips && s_end < n0 && s_end > off1) --s_end;
 		}
-		//glBegin(GL_QUAD_STRIP);
+		glBegin(GL_QUAD_STRIP);
 		float const scale[2] = {DO_SCALE(p.tri, s_end, n0), DO_SCALE(p.tri, s0, n0)};
 		float const s_[2]    = {s_end*p.ninv[0], s0*p.ninv[0]};
 		point pos[2] = {(pts[0] + p.dirs[0]*s_end), (pts[0] + p.dirs[0]*s0)}; // s0max, s0min, dirs[0] => p[1] - p[0]
@@ -836,16 +834,13 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 					if (smoke_enabled) set_fog_coord(INTERP_1D(cc.s, s_[i], t_, npts, ));
 					a.do_glColor();
 					v.do_glVertex();
-					if (s0+1 < n0 && s1 == n1 && i == 0) {v.do_glVertex(); v.do_glVertex();} // zero area quad (end)
-					if (s0   > 0  && s1 == 0  && i == 1) {v.do_glVertex(); v.do_glVertex();} // zero area quad (start)
 				}
 				++nsurfaces;
 			} // else continue strip
 		}
 		s0 = s_end - step[0]; // advance past merged strips
-		//glEnd();
+		glEnd();
 	}
-	glEnd();
 	return lighted;
 }
 
