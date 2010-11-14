@@ -712,7 +712,7 @@ void draw_group(obj_group &objg) {
 			if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 				setup_enabled_lights();
 				add_uniform_float("size", 2.0*radius); // Note: size no longer depends on angle
-				set_shader_prog("ad_lighting", "simple_texture", "pt_billboard", GL_POINTS, GL_TRIANGLE_STRIP, 6);
+				set_shader_prog("ad_lighting", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
 				snow_pld.draw_and_clear();
 				unset_shader_prog();
 			}
