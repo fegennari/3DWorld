@@ -546,7 +546,7 @@ unsigned char *LoadTextureRAW(texture const &t, int index) {
 
 void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t) {
 
-	glGenTextures(1, &tid);
+	if (tid == 0) glGenTextures(1, &tid);
 
 	// select our current texture
 	glBindTexture(GL_TEXTURE_2D, tid);
@@ -1042,7 +1042,7 @@ void create_landscape_texture() {
 			ls0_invalid = 1;
 		}
 	}
-	textures[LANDSCAPE_TEX].gl_delete();
+	//textures[LANDSCAPE_TEX].gl_delete();
 	init_texture(LANDSCAPE_TEX); // performance bottleneck
 	//glBindTexture(GL_TEXTURE_2D, textures[LANDSCAPE_TEX].tid);
 	//glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, tex_data);
