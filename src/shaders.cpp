@@ -56,7 +56,7 @@ void setup_enabled_lights() {
 	prog_name_suffix += ",el";
 
 	for (unsigned i = 0; i < 2; ++i) { // only 2 lights for now: 0=sun, 1=moon
-		bool const enabled(glIsEnabled(GL_LIGHT0 + i));
+		GLboolean const enabled(glIsEnabled(GL_LIGHT0 + i));
 		prog_name_suffix += (enabled ? '1' : '0');
 		ostringstream oss;
 		oss << "bool enable_light" << i << " = " << (enabled ? "true" : "false") << ";" << endl;
