@@ -20,7 +20,7 @@ unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
 extern int island, default_ground_tex, read_landscape, display_mode;
-extern float vegetation, zmin, zmax, h_sand[], h_dirt[], sun_radius, moon_radius;
+extern float vegetation, zmin, zmax, h_sand[], h_dirt[];
 extern vector3d wind;
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
@@ -36,7 +36,7 @@ class grass_manager_t {
 		point p;
 		vector3d dir, n;
 		unsigned char c[3];
-		float shadowed;
+		bool shadowed;
 		float w;
 
 		grass_t() {} // optimization
@@ -138,7 +138,7 @@ public:
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
 	}
 
-	float is_pt_shadowed(point const &pos) {
+	bool is_pt_shadowed(point const &pos) {
 		int const light(get_light());
 
 		// determine if grass can be shadowed based on mesh shadow
@@ -152,28 +152,14 @@ public:
 				if ((shadow_mask[light][y][x] & SHADOWED_ALL) != 0) unshadowed = 0;
 			}
 		}
-		if (unshadowed) return 0.0; // no shadows on mesh, so no shadows on grass
+		if (unshadowed) return 0; // no shadows on mesh, so no shadows on grass
 
-		/*if (last_cobj >= 0) { // check to see if last cobj still intersects
+		if (last_cobj >= 0) { // check to see if last cobj still intersects
 			assert(last_cobj < (int)coll_objects.size());
 			point lpos;
-			if (get_light_pos(lpos, light) && coll_objects[last_cobj].line_intersect(pos, lpos)) return 1.0;
-		}*/
-		//return (is_visible_to_light_cobj(pos, light, 0.0, -1, 1, &last_cobj) ? 0.0 : 1.0); // neither (off the mesh) or both (conflict)
-		float shadowed(0.0);
-		
-		if (!is_visible_to_light_cobj(pos, light, 0.0, -1, 1, &last_cobj)) {
-			shadowed += 0.1;
-			assert(last_cobj < (int)coll_objects.size());
-			point lpos;
-			get_light_pos(lpos, light);
-
-			for (unsigned i = 0; i < 9; ++i) {
-				point const lpos2(lpos + signed_rand_vector_spherical(((light == LIGHT_SUN) ? sun_radius : moon_radius), 0));
-				if (coll_objects[last_cobj].line_intersect(pos, lpos2)) shadowed += 0.1;
-			}
+			if (get_light_pos(lpos, light) && coll_objects[last_cobj].line_intersect(pos, lpos)) return 1;
 		}
-		return shadowed;
+		return !is_visible_to_light_cobj(pos, light, 0.0, -1, 1, &last_cobj); // neither (off the mesh) or both (conflict)
 	}
 
 	void find_shadows() {
@@ -223,7 +209,7 @@ public:
 			//vector3d const &norm(g.shadowed ? zero_vector : plus_z); // use grass normal? 2-sided lighting?
 			//vector3d const &norm(g.shadowed ? zero_vector : g.n);
 			//vector3d const &norm(g.shadowed ? zero_vector : surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]);
-			vector3d const &norm(interpolate_mesh_normal(p1)*(1.0 - g.shadowed));
+			vector3d const &norm(g.shadowed ? zero_vector : interpolate_mesh_normal(p1));
 			float const tc_adj(0.1); // border around grass blade texture
 			data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
 			data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
