@@ -59,7 +59,7 @@ void setup_enabled_lights() {
 		GLboolean const enabled(glIsEnabled(GL_LIGHT0 + i));
 		prog_name_suffix += (enabled ? '1' : '0');
 		ostringstream oss;
-		oss << "bool enable_light" << i << " = " << (enabled ? "true" : "false") << ";" << endl;
+		oss << "const bool enable_light" << i << " = " << (enabled ? "true" : "false") << ";" << endl;
 		prepend_string[0] += oss.str(); // put into vertex shader
 	}
 }
