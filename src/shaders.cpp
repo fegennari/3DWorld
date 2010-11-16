@@ -133,6 +133,14 @@ void clear_shaders() {
 }
 
 
+void filename_split(string const &fname, vector<string> &fns, char sep) {
+
+	stringstream ss(fname);
+    string fn;
+    while(getline(ss, fn, sep)) fns.push_back(fn);
+}
+
+
 unsigned get_shader(string const &name, unsigned type) {
 	
 	int const shader_type_table   [3] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER_EXT};
@@ -144,12 +152,17 @@ unsigned get_shader(string const &name, unsigned type) {
 	if (it != loaded_shaders[type].end()) return it->second; // already loaded
 
 	// create a new shader
-	string const fname(shaders_dir + "/" + name + "." + shader_name_table[type]);
 	string data(prepend_string[type]);
-	
-	if (!load_shader_file(fname, data)) {
-		cerr << "Error loading shader file " << fname << ". Exiting." << endl;
-		exit(1);
+	vector<string> fns;
+	filename_split(name, fns, '+');
+
+	for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
+		string const fname(shaders_dir + "/" + *i + "." + shader_name_table[type]);
+
+		if (!load_shader_file(fname, data)) {
+			cerr << "Error loading shader file " << fname << ". Exiting." << endl;
+			exit(1);
+		}
 	}
 	unsigned const shader(glCreateShader(shader_type_table[type]));
 	assert(shader);
