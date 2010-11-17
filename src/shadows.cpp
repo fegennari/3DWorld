@@ -149,7 +149,7 @@ void coll_obj::add_shadow(char light_sources, bool dynamic) const {
 		break;
 	case COLL_POLYGON:
 		assert(npoints > 2);
-		polygon_shadow(points, norm, npoints, thickness, light_sources, dynamic, 1, 0);
+		polygon_shadow(points, norm, npoints, thickness, light_sources, dynamic, 1, 0, (has_poly_billboard_alpha() ? cp.tid : -1));
 		break;
 	default: assert(0);
 	}
@@ -161,9 +161,10 @@ void add_cobj_shadows(char light_sources) {
 	if (ground_effects_level == 0) return; // disabled
 	//RESET_TIME;
 #if 0
-	// two problems with this approach, though this is *much* simpler
+	// three problems with this approach, though this is *much* simpler
 	// 1. tree shadows are only added if tree cobjs are created
 	// 2. requires cobj_tree to be efficient
+	// 3. the test line wil not hit very small cobjs, so shadows will be missed
 	point lpos;
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
@@ -466,8 +467,9 @@ int cylinder_shadow(point p1, point p2, float radius1, float radius2, char light
 
 
 // used for cubes, leaves, etc.
-int polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, char light_sources, int is_dynamic, int quality, int is_cube) {
-
+int polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, char light_sources,
+				   int is_dynamic, int quality, int is_cube, int tid)
+{
 	assert(points && npoints >= 3);
 	if (npoints < 3) return 0;
 	int xmin, xmax, ymin, ymax, ret_val(0);
@@ -523,7 +525,10 @@ int polygon_shadow(point const *points, vector3d const &norm, int npoints, float
 					if (thick_poly_intersect(v1, pt, norm, pts, test_side, npoints)) shadowed = 1;
 				}
 				else { // test planar (2D) polygon
-					if (line_poly_intersect(v1, pt, points, npoints, norm)) shadowed = 1;
+					float t;
+					if (line_poly_intersect(pt, lpos, points, npoints, norm, t)) {
+						if (tid < 0 || !is_billboard_texture_transparent(points, (pt + v1*t), tid)) shadowed = 1;
+					}
 				}
 				if (shadowed) shadow_mask[l][i][j] |= SHADOW_TYPE;
 			}

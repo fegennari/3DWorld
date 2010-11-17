@@ -222,7 +222,7 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 				}
 				else { // test planar (2D) polygon
 					float t;
-					if (!line_poly_intersect(p1, (p1 + v1), points, npoints, norm, t)) return 0;
+					if (!line_poly_intersect(p1, p2, points, npoints, norm, t)) return 0;
 					return check_poly_billboard_alpha(p1, p2, t);
 				}
 			}

@@ -1501,6 +1501,23 @@ float get_texture_alpha(unsigned tid, float xval, float yval) {
 }
 
 
+bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid) {
+
+	// ordered: (s,t) => (0,1), (0,0), (1,0), (1,1)
+	float d[4]; // distance from coll point to quad edge
+
+	for (unsigned i = 0; i < 4; ++i) {
+		unsigned const in((i+1)&3);
+		d[i] = cross_product((pos - points[i]), (pos - points[in])).mag()/p2p_dist(points[i], points[in]);
+	}
+	assert(d[0] + d[2] > 0.0);
+	assert(d[1] + d[3] > 0.0);
+	float const tx(d[0]/((d[0] + d[2]))), ty(d[1]/(d[1] + d[3])); // y is upside down
+	assert(tx >= 0.0 && tx <= 1.0 && ty >= 0.0 && ty <= 1.0);
+	return (get_texture_alpha(tid, tx, ty) == 0.0);
+}
+
+
 void set_texture_specular(bool val) {
 
 	static bool inited(0), has_ext(0);

@@ -914,7 +914,8 @@ void disable_shadow_envelope(char light_sources);
 int  sphere_shadow2(point const &pos, float radius, char light_sources, int is_dynamic, int quality);
 int  sphere_shadow(point const &pos, float radius, char light_sources, int is_dynamic, int quality);
 int  cylinder_shadow(point p1, point p2, float radius1, float radius2, char light_sources, int shadow_ends, int is_dynamic, int quality);
-int  polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, char light_sources, int is_dynamic, int quality, int is_cube);
+int  polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, char light_sources,
+					int is_dynamic, int quality, int is_cube, int tid=-1);
 int  cube_shadow(cube_t const &cube, char light_sources, int is_dynamic, int quality);
 void reset_shadows(unsigned char type);
 
@@ -1325,6 +1326,7 @@ void disable_textures_texgen();
 void setup_polygon_texgen(vector3d const &norm, float const scale[2]);
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
 float get_texture_alpha(unsigned tid, float xval, float yval);
+bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);
 void set_texture_specular(bool val);
 
 // function prototypes - sun flares

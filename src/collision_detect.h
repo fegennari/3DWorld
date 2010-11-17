@@ -218,6 +218,7 @@ public:
 	// if we're a platform, then use a local reference point so that the texture offsets don't change when moving
 	// otherwise, use a global reference point so that textures tile correctly between adjacent shapes
 	point get_ref_pt()    const {return ((platform_id >= 0) ? points[0] : all_zeros);}
+	bool has_poly_billboard_alpha() const;
 	bool check_poly_billboard_alpha(point const &p1, point const &p2, float t) const;
 	bool line_intersect(point const &p1, point const &p2) const;
 	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const;

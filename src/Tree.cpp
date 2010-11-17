@@ -126,9 +126,10 @@ void tree::gen_tree_shadows(char light_sources, int index) {
 		cylinder_shadow(c.p1, c.p2, c.r1, c.r2, light_sources, 0, 0, (c.level < 2));
 	}
 	if (shadow_detail < 6) return;
+	int const ltid(tree_types[type].leaf_tex);
 	
 	for (unsigned i = 0; i < leaves.size(); i++) { // loop through leaves
-		polygon_shadow(leaves[i].pts, leaves[i].norm, 4, 0.0, light_sources, 0, 0, 0);
+		polygon_shadow(leaves[i].pts, leaves[i].norm, 4, 0.0, light_sources, 0, 0, 0, ltid);
 	}
 	disable_shadow_envelope(light_sources);
 }
