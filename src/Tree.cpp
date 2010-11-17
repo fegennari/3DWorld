@@ -167,6 +167,7 @@ void tree::add_tree_collision_objects(int ix) {
 		for (unsigned i = 0; i < leaves.size(); i++) { // loop through leaves
 			// *** scale leaf points based on actual aspect ratio/size of non transparent part of leaf texture? ***
 			leaves[i].coll_index = add_coll_polygon(leaves[i].pts, 4, cpl, 0.0, -1, 2);
+			coll_objects[leaves[i].coll_index].is_billboard = 1;
 		}
 	}
 	//PRINT_TIME("Tree Cobjs");

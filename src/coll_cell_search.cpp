@@ -221,7 +221,9 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 					if (thick_poly_intersect(v1, p1, norm, pts, test_side, npoints)) return 1;
 				}
 				else { // test planar (2D) polygon
-					if (line_poly_intersect(v1, p1, points, npoints, norm)) return 1;
+					float t;
+					if (!line_poly_intersect(p1, (p1 + v1), points, npoints, norm, t)) return 0;
+					return check_poly_billboard_alpha(p1, p2, t);
 				}
 			}
 			break;
@@ -324,6 +326,7 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 				}
 				if (!line_poly_intersect(p1, p2, points, npoints, norm, t)) return 0;
 				if (t > tmax || t < tmin) return 0;
+				if (!check_poly_billboard_alpha(p1, p2, t)) return 0;
 				cnorm = get_poly_dir_norm(norm, p1, v1, t);
 				return 1;
 			}

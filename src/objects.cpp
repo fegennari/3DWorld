@@ -447,6 +447,31 @@ float coll_obj::get_max_dim() const {
 }
 
 
+bool coll_obj::check_poly_billboard_alpha(point const &p1, point const &p2, float t) const {
+
+	if (type != COLL_POLYGON || thickness > MIN_POLY_THICK2 || npoints != 4 || !is_billboard) return 1;
+	if (cp.tid < 0 || textures[cp.tid].ncolors == 3) return 1; // no alpha channel texture
+	point const cpos(p1 + (p2 - p1)*t);
+	// ordered: (s,t) => (0,1), (0,0), (1,0), (1,1)
+	vector3d v[4]; // vertex to coll point vectors
+	float d[4]; // distance from coll point to quad edge
+
+	for (unsigned i = 0; i < 4; ++i) {
+		v[i] = cpos - points[i];
+	}
+	for (unsigned i = 0; i < 4; ++i) {
+		unsigned const in((i+1)&3);
+		d[i] = cross_product(v[i], v[in]).mag()/p2p_dist(points[i], points[in]);
+	}
+	assert(d[0] + d[2] > 0.0);
+	assert(d[1] + d[3] > 0.0);
+	float const tx(d[0]/((d[0] + d[2]))), ty(d[1]/(d[1] + d[3])); // y is upside down
+	assert(tx >= 0.0 && tx <= 1.0 && ty >= 0.0 && ty <= 1.0);
+	float const alpha(get_texture_alpha(cp.tid, tx, ty));
+	return (alpha > 0.0);
+}
+
+
 // ******************* OBJ_GROUP MEMBERS ******************
 
 

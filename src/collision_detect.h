@@ -164,7 +164,7 @@ public:
 	int id, platform_id;
 	short npoints;
 	unsigned char last_coll, coll_type;
-	bool fixed;
+	bool fixed, is_billboard;
 	point points[N_COLL_POLY_PTS];
 	vector3d norm;
 	vector<vector<int> > sobjs;
@@ -172,8 +172,8 @@ public:
 	set<int> shadow_depends;
 	lvmap lightmap;
 
-	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), counter(0), radius(0.0),
-		radius2(0.0), thickness(0.0), volume(0.0), id(-1), platform_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0) {}
+	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), counter(0), radius(0.0), radius2(0.0),
+		thickness(0.0), volume(0.0), id(-1), platform_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0), is_billboard(0) {}
 	void init();
 	void clear_lightmap(int mode, unsigned keep=0, bool keep_depends=0);
 	void clear_lightmap_if_lighted_eq(int shadowed, int partial);
@@ -218,6 +218,7 @@ public:
 	// if we're a platform, then use a local reference point so that the texture offsets don't change when moving
 	// otherwise, use a global reference point so that textures tile correctly between adjacent shapes
 	point get_ref_pt()    const {return ((platform_id >= 0) ? points[0] : all_zeros);}
+	bool check_poly_billboard_alpha(point const &p1, point const &p2, float t) const;
 	bool line_intersect(point const &p1, point const &p2) const;
 	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const;
 	void register_coll(unsigned char coll_time, unsigned char coll_type_) {last_coll = coll_time; coll_type = coll_type_;}
