@@ -46,8 +46,9 @@ void main()
 	if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse
 	
 	// Compute the globalAmbient term
-	gl_FrontColor = gl_Color * gl_LightModel.ambient;
+	vec4 color = gl_Color * gl_LightModel.ambient;
 	
-	if (enable_light0) gl_FrontColor += add_light_comp(shadowed, normal, eye_space_pos, 0);
-	if (enable_light1) gl_FrontColor += add_light_comp(shadowed, normal, eye_space_pos, 1);
+	if (enable_light0) color += add_light_comp(shadowed, normal, eye_space_pos, 0);
+	if (enable_light1) color += add_light_comp(shadowed, normal, eye_space_pos, 1);
+	gl_FrontColor = color;
 } 
