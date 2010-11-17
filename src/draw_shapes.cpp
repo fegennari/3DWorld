@@ -1218,7 +1218,7 @@ void draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, in
 }
 
 
-void draw_coll_cube(float ar, int do_fill, int cobj) {
+void draw_coll_cube(float ar, int do_fill, int cobj, int tid) {
 
 	assert(size_t(cobj) < coll_objects.size());
 	coll_obj const &c(coll_objects[cobj]);
@@ -1227,8 +1227,8 @@ void draw_coll_cube(float ar, int do_fill, int cobj) {
 	bool const back_face_cull(!c.is_semi_trans()); // no alpha
 	point const pos(c.points[0]), camera(get_camera_pos());
 	bool inside(!back_face_cull);
-	bool const textured(c.cp.tid >= 0);
-	float const tscale[2] = {c.cp.tscale, get_tex_ar(c.cp.tid)*c.cp.tscale};
+	bool const textured(tid >= 0);
+	float const tscale[2] = {c.cp.tscale, get_tex_ar(tid)*c.cp.tscale};
 
 	if (!inside) { // check if in the camera's view
 		float const dist(NEAR_CLIP + CAMERA_RADIUS);
@@ -1396,14 +1396,14 @@ void draw_polygon(point const *points, const vector3d *normals, int npoints, vec
 
 
 void draw_extruded_polygon(float thick, point const *const points, const vector3d *normals,
-						   int npoints, vector3d const &norm, int cobj)
+						   int npoints, vector3d const &norm, int cobj, int tid)
 {
 	assert(size_t(cobj) < coll_objects.size());
 	coll_obj const &c(coll_objects[cobj]);
 	thick = fabs(thick);
 	dqt_params q(c.get_ref_pt(), 0, 1, cobj, 0.0, 0.0, 0.0, 0.0, 0); // just set double_sided
-	bool const textured(c.cp.tid >= 0);
-	float const tscale[2] = {c.cp.tscale, get_tex_ar(c.cp.tid)*c.cp.tscale};
+	bool const textured(tid >= 0);
+	float const tscale[2] = {c.cp.tscale, get_tex_ar(tid)*c.cp.tscale};
 	
 	if (thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
 		if (textured) setup_polygon_texgen(norm, tscale);
@@ -1485,7 +1485,7 @@ void draw_extruded_polygon(float thick, point const *const points, const vector3
 
 
 void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float radius2, int nsides, int nstacks,
-						  bool draw_ends, bool no_bfc, int cobj, bool no_lighting, bool textured)
+						  bool draw_ends, bool no_bfc, int cobj, bool no_lighting, int tid)
 {
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	assert(size_t(cobj) < coll_objects.size());
@@ -1493,7 +1493,7 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
 		c.cp.color.do_glColor();
-		draw_fast_cylinder(p1, p2, radius1, radius2, nsides, textured, draw_ends);
+		draw_fast_cylinder(p1, p2, radius1, radius2, nsides, (tid >= 0), draw_ends);
 		return;
 	}
 	bool const no_clip(no_bfc || c.is_semi_trans());
@@ -1533,8 +1533,8 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 		}
 	} // for S
 	if (draw_ends) { // not quite right due to long thin triangles
-		if (c.cp.tid >= 0) { // textured
-			float const tscale[2] = {c.cp.tscale, get_tex_ar(c.cp.tid)*c.cp.tscale};
+		if (tid >= 0) { // textured
+			float const tscale[2] = {c.cp.tscale, get_tex_ar(tid)*c.cp.tscale};
 			setup_polygon_texgen(v12, tscale);
 		}
 		bool ends_bf[2];
@@ -1558,7 +1558,7 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 }
 
 
-void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, bool no_lighting, bool textured) {
+void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, bool no_lighting, int tid) {
 
 	assert(radius > 0.0);
 	assert(size_t(cobj) < coll_objects.size());
@@ -1566,7 +1566,7 @@ void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, b
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
 		c.cp.color.do_glColor();
-		draw_subdiv_sphere(pos, radius, ndiv, textured, 1);
+		draw_subdiv_sphere(pos, radius, ndiv, (tid >= 0), 1);
 		return;
 	}
 	bool const bfc(!c.is_semi_trans());

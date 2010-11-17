@@ -995,11 +995,11 @@ void exec_universe_text(std::string const &text);
 void init_draw_stats();
 void show_draw_stats();
 bool is_above_mesh(point const &pos);
-void draw_coll_cube(float ar, int do_fill, int cobj);
-void draw_extruded_polygon(float thick, const point *points, const vector3d *normals, int npoints, vector3d const &normr, int cobj);
+void draw_coll_cube(float ar, int do_fill, int cobj, int tid);
+void draw_extruded_polygon(float thick, const point *points, const vector3d *normals, int npoints, vector3d const &normr, int cobj, int tid);
 void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float radius2, int nsides, int nstacks,
-						  bool draw_ends, bool no_bfc, int cobj, bool no_lighting, bool textured);
-void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, bool no_lighting, bool textured);
+						  bool draw_ends, bool no_bfc, int cobj, bool no_lighting, int tid);
+void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, bool no_lighting, int tid);
 void clear_all_lightmaps(int mode, unsigned keep=0);
 void add_shadow_obj(point const &pos, float radius, int coll_id, bool light_in_front, bool lighted=0);
 void add_coll_shadow_objs();

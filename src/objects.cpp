@@ -326,15 +326,19 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 		if (is_occluded(occluders, pts, ncorners, camera)) return;
 	}
 	//if (brad/distance_to_camera(center) < 0.01) return; // too far/small
-	bool const textured(select_texture(cp.tid));
-	float const ar(textured ? get_tex_ar(cp.tid) : 1.0);
+	// we want everything to be textured for simplicity in code/shaders,
+	// so if there is no texture specified just use a plain white texture
+	int tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
+	bool const textured(select_texture(tid));
+	assert(textured);
+	float const ar(get_tex_ar(tid));
 	bool const no_lighting(cp.color == BLACK && !smoke_enabled /*&& cp.specular == 0.0*/);
 	if (is_semi_trans()) enable_blend();
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 
 	switch (type) {
 	case COLL_CUBE:
-		draw_coll_cube(ar, (draw_model == 0), i);
+		draw_coll_cube(ar, (draw_model == 0), i, tid);
 		break;
 
 	case COLL_CYLINDER:
@@ -345,8 +349,8 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(center),
 				min(distance_to_camera(p1), distance_to_camera(p2))))));
 			int const nsides(min(N_CYL_SIDES, max(3, (int)size)));
-			if (textured) setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (p2 - p1));
-			draw_subdiv_cylinder(p1, p2, radius, radius2, nsides, 1, !(cp.surfs & 1), (cp.surfs == 1), i, no_lighting, textured);
+			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (p2 - p1));
+			draw_subdiv_cylinder(p1, p2, radius, radius2, nsides, 1, !(cp.surfs & 1), (cp.surfs == 1), i, no_lighting, tid);
 		}
 		break;
 
@@ -354,16 +358,15 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 		{
 			float const scale(0.7*NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const nsides(min(N_SPHERE_DIV, max(5, (int)size)));
-			if (textured) setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z);
-			draw_subdiv_sphere_at(points[0], radius, nsides, i, no_lighting, textured);
+			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z);
+			draw_subdiv_sphere_at(points[0], radius, nsides, i, no_lighting, tid);
 		}
 		break;
 
 	case COLL_POLYGON:
-		draw_extruded_polygon(thickness, points, NULL, npoints, norm, i);
+		draw_extruded_polygon(thickness, points, NULL, npoints, norm, i, tid);
 		break;
 	}
-	if (textured) glDisable(GL_TEXTURE_2D); //disable_textures_texgen();
 	if (is_semi_trans()) disable_blend();
 }
 
