@@ -29,17 +29,15 @@ void disable_multitex(unsigned tu_id, bool reset);
 void disable_multitex_a();
 void multitex_coord2f(GLfloat s, GLfloat t, unsigned tu_id=0);
 void multitex_coord2f_a(GLfloat s, GLfloat t);
-bool has_multitex();
 
 // fog coord prototypes
-void setup_fog_coord_ext();
+void setup_fog_coord();
 void set_fog_coord(GLfloat val);
 void enable_fog_coord();
 void disable_fog_coord();
-bool has_fog_coord();
 
 // gen buffers prototypes
-bool setup_gen_buffers_arb();
+bool setup_gen_buffers();
 unsigned create_vbo();
 void bind_vbo(unsigned id, bool is_index=0);
 void delete_vbo(unsigned id);

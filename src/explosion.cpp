@@ -277,7 +277,7 @@ void draw_blasts() {
 				glPushMatrix();
 				global_translate(pos);
 
-				if (br.type == ETYPE_STARB && has_multitex()) {
+				if (br.type == ETYPE_STARB) {
 					rotate_into_dir((universe ? br.dir : all_zeros), pos);
 					select_multitex(BLUR_TEX,  0);
 					select_multitex(NOISE_TEX, 1);

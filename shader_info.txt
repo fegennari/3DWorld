@@ -50,3 +50,8 @@ quality/blending/lighting
 + Can include colored smoke (no caching)
 - May be too slow
 - Requires loading the smoke as a 3D texture every frame (non-sparse?), so may require too much bandwidth
+
+15. Planet Cloud Cover (Universe Mode): FS
+* Add procedurally generated, unique, animated cloud cover to planets
++ Better quality and more realistic
+- Need to figure out procedural noise (generation on GPU or texture)

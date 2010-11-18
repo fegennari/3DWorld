@@ -397,7 +397,7 @@ void texture::set_to_color(colorRGBA const &c) {
 	for (unsigned i = 0; i < sz; ++i) {
 		unsigned const pos(i*ncolors);
 		unsigned char *d(data + pos);
-		float const cscale(min(1.0, (unsigned(d[0]) + unsigned(d[1]) + unsigned(d[2]))*cw_scale));
+		float const cscale(min(1.0f, (unsigned(d[0]) + unsigned(d[1]) + unsigned(d[2]))*cw_scale));
 		
 		for (int n = 0; n < ncolors; ++n) {
 			d[n] = (unsigned char)min(255.0, (0.5*cscale*c4.c[n] + 0.5*alt_data[pos+n]));
@@ -1447,7 +1447,7 @@ void disable_texgen() {
 
 void disable_textures_texgen() {
 
-	if (has_multitex()) disable_multitex_a();
+	disable_multitex_a();
 	disable_texgen();
 	glDisable(GL_TEXTURE_2D);
 }

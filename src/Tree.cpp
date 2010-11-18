@@ -446,7 +446,7 @@ void tree::draw_tree(bool invalidate_norms, bool draw_branches, bool draw_leaves
 	float const mscale(mesh_scale*mesh_scale2);
 	float const dist_c(mscale*DIST_C_SCALE/(do_zoom ? ZOOM_FACTOR : 1.0));
 	float const dist_cs(distance_to_camera(sphere_center)*dist_c*(0.04/base_radius));
-	bool const use_vbos(USE_VBOS && setup_gen_buffers_arb());
+	bool const use_vbos(USE_VBOS && setup_gen_buffers());
 	if (draw_branches) draw_tree_branches(mscale, dist_c, dist_cs, use_vbos);
 	if (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0) return;
 	if (draw_leaves  ) draw_tree_leaves(invalidate_norms, mscale, dist_cs, use_vbos);

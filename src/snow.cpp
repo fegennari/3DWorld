@@ -4,7 +4,6 @@
 #include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
-#include "GL/glext.h"
 #include "gl_ext_arb.h"
 
 
@@ -700,7 +699,7 @@ bool snow_enabled() {
 void gen_snow_coverage() {
 
 	if (snow_depth <= 0.0 || num_snowflakes == 0) return; // disabled
-	bool const vbo_supported(setup_gen_buffers_arb());
+	bool const vbo_supported(setup_gen_buffers());
 	
 	if (!vbo_supported) {
 		cout << "Warning: VBOs not supported, so snow cannot be enabled." << endl;

@@ -595,7 +595,7 @@ void fill_gap() {
 float draw_tiled_terrain(bool add_hole) {
 
 	//RESET_TIME;
-	bool const vbo_supported(setup_gen_buffers_arb());
+	bool const vbo_supported(setup_gen_buffers());
 		
 	if (!vbo_supported) {
 		cout << "Warning: VBOs not supported, so tiled mesh cannot be enabled." << endl;

@@ -474,7 +474,7 @@ void gen_grass(bool full_regen) {
 		grass_manager.invalidate_shadows();
 		return;
 	}
-	bool const use_vbos(setup_gen_buffers_arb());
+	bool const use_vbos(setup_gen_buffers());
 		
 	if (!use_vbos) {
 		cout << "Warning: VBOs not supported, so grass cannot be enabled." << endl;

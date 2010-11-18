@@ -368,7 +368,7 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty);
 
-	if (use_detail_tex && has_multitex()) { // blend in detail nose texture at 30x scale
+	if (use_detail_tex) { // blend in detail nose texture at 30x scale
 		select_multitex(NOISE_TEX, 1);
 		setup_texgen(30.0*tex_scale/TWO_XSS, 30.0*tex_scale/TWO_YSS, 0.0, 0.0);
 	}
@@ -440,7 +440,7 @@ void display_mesh() { // fast array version
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
 
-	if (ground_effects_level == 0 && setup_gen_buffers_arb()) {
+	if (ground_effects_level == 0 && setup_gen_buffers()) {
 		static unsigned mesh_vbo(0);
 		
 		if (clear_landscape_vbo) {
