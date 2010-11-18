@@ -1,7 +1,7 @@
 #version 120
 #extension GL_EXT_geometry_shader4 : enable
 
-uniform float size;
+uniform float size = 1.0;
  
 // a passthrough geometry shader for color and position
 void main()

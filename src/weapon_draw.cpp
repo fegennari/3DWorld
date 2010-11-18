@@ -758,8 +758,9 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	float const fire_val((float)sstate.fire_frame/(float)delay);
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
 
-	if (display_mode & 0x10) { // FIXME: alpha blending of PC, alpha test of CB, shadowed color
+	if (display_mode & 0x10) { // FIXME: alpha blending of PC, shadowed color
 		setup_enabled_lights();
+		add_uniform_float("min_alpha", 0.75);
 		set_shader_prog("per_pixel_lighting_textured", "ads_lighting.part+per_pixel_lighting_textured");
 		select_texture(WHITE_TEX); // always textured
 	}

@@ -859,6 +859,7 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 		enable_blend();
 		glEnable(GL_COLOR_MATERIAL);
 		setup_enabled_lights();
+		add_uniform_float("min_alpha", 0.75);
 		set_shader_prog("tree_leaves", "simple_texture");
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
