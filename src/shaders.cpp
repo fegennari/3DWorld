@@ -60,7 +60,7 @@ void setup_enabled_lights() {
 		prog_name_suffix += (enabled ? '1' : '0');
 		ostringstream oss;
 		oss << "const bool enable_light" << i << " = " << (enabled ? "true" : "false") << ";" << endl;
-		prepend_string[0] += oss.str(); // put into vertex shader
+		for (unsigned s = 0; s < 2; ++s) prepend_string[s] += oss.str(); // put into vertex and fragment shaders
 	}
 }
 
