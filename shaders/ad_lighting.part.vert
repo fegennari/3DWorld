@@ -1,6 +1,6 @@
 vec4 add_light_comp(in vec3 normal, in int i) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
-	vec3 lightDir = normalize(vec3(gl_LightSource[i].position));
+	vec3 lightDir = normalize(gl_LightSource[i].position.xyz);
 		
 	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex.
 	float NdotL = dot(normal, lightDir);

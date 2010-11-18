@@ -1,14 +1,14 @@
 vec4 add_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in int i) {
 
 	// normalize the light's direction in eye space, directional light: position field is actually direction
-	vec3 lightDir = normalize(vec3(gl_LightSource[i].position));
+	vec3 lightDir = normalize(gl_LightSource[i].position.xyz);
 	
 	// compute the ambient and diffuse terms
 	vec4 diffuse = gl_Color * gl_LightSource[i].diffuse;
 	vec4 ambient = gl_Color * gl_LightSource[i].ambient;
 	
 	// calculate specular lighting and normal effects
-	vec3 dir_to_camera = normalize(vec3(0,0,0) - eye_space_pos.xyz);
+	vec3 dir_to_camera = normalize(vec3(0.0,0.0,0.0) - eye_space_pos.xyz);
 	vec3 dir_to_light  = normalize(gl_LightSource[i].position.xyz - eye_space_pos.xyz);
 	float dp1 = dot(normal, dir_to_camera);
 	float dp2 = dot(normal, dir_to_light);
@@ -23,12 +23,9 @@ vec4 add_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in 
 		}
 	}
 	
-	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex.
-	float NdotL = dot(normal, lightDir);
-	
-	// compute the specular and diffuse terms if not shadowed and NdotL is larger than zero
+	// compute the specular and diffuse terms if not shadowed
 	float NdotHV  = max(dot(normal, normalize(gl_LightSource[i].halfVector.xyz)), 0.0);
-	vec4 specular = ((!shadowed && NdotL > 0.0) ? 1.0 : 0.0) * gl_FrontMaterial.specular * gl_LightSource[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
+	vec4 specular = (shadowed ? 0.0 : 1.0) * gl_FrontMaterial.specular * gl_LightSource[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
 	return (ambient + specular + max(dot(normal, lightDir), 0.0)*diffuse);
 }
 
