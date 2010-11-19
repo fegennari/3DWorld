@@ -758,19 +758,16 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	float const fire_val((float)sstate.fire_frame/(float)delay);
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
 
-	if (display_mode & 0x10) { // FIXME: alpha blending of PC, shadowed color
+	if (draw_pass == 0) {
 		setup_enabled_lights();
-		add_uniform_float("min_alpha", 0.75);
+		add_uniform_float("min_alpha", 0.9*alpha);
 		set_shader_prog("per_pixel_lighting_textured", "ads_lighting.part+per_pixel_lighting_textured");
-		select_texture(WHITE_TEX); // always textured
+		select_texture(WHITE_TEX, 0); // always textured
 	}
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass);
 
-	if (display_mode & 0x10) {
-		glDisable(GL_TEXTURE_2D);
-		unset_shader_prog();
-	}
+	if (draw_pass == 0) unset_shader_prog();
 	if (shooter == CAMERA_ID) fired = 0;
 	if (cull_face) glDisable(GL_CULL_FACE);
 }
