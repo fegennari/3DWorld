@@ -235,12 +235,12 @@ void check_init_texture(int id) {
 }
 
 
-bool select_texture(int id) {
+bool select_texture(int id, bool enable) {
 
 	if (id < 0) return 0;
 	assert(id < NUM_TEXTURES);
 	check_init_texture(id);
-	glEnable(GL_TEXTURE_2D);
+	if (enable) glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, textures[id].tid);
 	return 1;
 }
