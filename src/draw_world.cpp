@@ -2152,8 +2152,9 @@ void draw_bubbles() {
 void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bool zoomed) {
 
 	enable_flares(color, zoomed); // color will be set per object
+	//select_multitex(CLOUD_TEX, 1);
 	glAlphaFunc(GL_GREATER, 0.01);
-	glEnable(GL_ALPHA_TEST); // makes it slower
+	glEnable(GL_ALPHA_TEST); // makes it faster
 	enable_blend();
 	// SMOKE_FOG_COORD support?
 	glBegin(GL_QUADS);
@@ -2162,6 +2163,7 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 	disable_blend();
 	glDisable(GL_ALPHA_TEST);
 	disable_flares();
+	//disable_multitex_a();
 }
 
 

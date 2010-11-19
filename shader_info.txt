@@ -3,6 +3,7 @@ Shaders:
 Completed:
 2. Leaf Transparency: VS
 9. Snowflakes: GS using billboards
+11. Per-Pixel Lighting: FS
 
 Not Implementable/Too Difficult or Inefficient
 1. Leaf Wind: GS - requires state
@@ -26,11 +27,6 @@ Todo:
 quality/blending/lighting
 + Lots of possibilities here, plenty of research done on this topic
 - Not sure what to do yet, or if the improvements would be significant
-
-11. Per-Pixel Lighting: FS
-* Use on player weapons, large dynamic objects with specular enabled
-+ Improved lighting quality
-- Need to deal with dynamic lights and textures vs. untextured objects
 
 12. Infinite Terrain Tiles - Underwater Attenuation: VS
 * Apply per-light, camera dependent color attenuation for underwater mesh
