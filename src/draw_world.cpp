@@ -466,9 +466,6 @@ void draw_group(obj_group &objg) {
 	bool const calc_shadow(color != BLACK || (otype.flags & (SPECULAR | LOW_SPECULAR)));
 	unsigned num_drawn(0);
 
-	glBegin(GL_QUADS); // fix for some glBegin()/glEnd() problem in a previous function
-	glEnd();
-
 	if (type == LEAF) { // leaves
 		int last_tid(-1);
 		set_lighted_sides(2);
