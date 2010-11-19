@@ -709,6 +709,7 @@ void draw_group(obj_group &objg) {
 			if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 				setup_enabled_lights();
 				add_uniform_float("size", 2.0*radius); // Note: size no longer depends on angle
+				add_uniform_int("tex0", 0);
 				set_shader_prog("ad_lighting.part+two_lights_no_xform", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
 				snow_pld.draw_and_clear();
 				unset_shader_prog();
@@ -1676,6 +1677,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	if (smoke_enabled) begin_smoke_fog();
 	//setup_enabled_lights();
+	//add_uniform_int("tex0", 0);
 	//set_shader_prog("texture_gen.part+no_lighting_texture_gen", "simple_texture");
 
 	if (draw_solid) { // called first

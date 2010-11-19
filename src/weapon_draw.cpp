@@ -761,6 +761,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	if (draw_pass == 0) {
 		setup_enabled_lights();
 		add_uniform_float("min_alpha", 0.9*alpha);
+		add_uniform_int("tex0", 0);
 		set_shader_prog("per_pixel_lighting_textured", "ads_lighting.part+per_pixel_lighting_textured");
 		select_texture(WHITE_TEX, 0); // always textured
 	}

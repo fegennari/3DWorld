@@ -1,6 +1,6 @@
 void main()
 {
-	setup_texgen();
+	setup_texgen(0);
 	gl_Position = ftransform();
 	vec3 normal = normalize(gl_NormalMatrix * gl_Normal); // eye space
 	vec4 color = gl_Color * gl_LightModel.ambient;

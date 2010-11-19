@@ -225,6 +225,7 @@ void draw_trees(vector<tree> &ts) {
 		draw_trees_bl(ts, lpos_change, 1, 0); // branches
 		setup_enabled_lights();
 		add_uniform_float("min_alpha", 0.75);
+		add_uniform_int("tex0", 0);
 		set_shader_prog("tree_leaves", "simple_texture");
 		draw_trees_bl(ts, lpos_change, 0, 1); // leaves
 		unset_shader_prog();

@@ -1,10 +1,10 @@
 varying vec3 normal;
-uniform sampler2D tex;
+uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 
 void main()
 {
-	vec4 texel = texture2D(tex, gl_TexCoord[0].st);
+	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	if (texel.a < min_alpha) discard;
 	
 	vec3 normal2 = normalize(normal); // renormalize

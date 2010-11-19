@@ -495,6 +495,13 @@ public:
 			clear_vbos_tids(0,1); // water changed, recreate textures
 			last_water_en = water_en;
 		}
+
+		if (display_mode & 0x08) {
+			setup_enabled_lights();
+			add_uniform_int("tex0", 0);
+			add_uniform_int("tex1", 1);
+			set_shader_prog("texture_gen.part+tiled_mesh", "multitex_2");
+		}
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
 			if (DEBUG_TILES) mem += i->second->get_gpu_memory();
@@ -503,6 +510,7 @@ public:
 			zmin = min(zmin, i->second->get_zmin());
 			num_drawn += i->second->draw(data, indices);
 		}
+		if (display_mode & 0x08) unset_shader_prog();
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
 		return zmin;
