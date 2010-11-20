@@ -8,6 +8,8 @@
 using namespace std;
 
 
+bool const DEBUG_VERBOSE = 0;
+
 string const shaders_dir = "shaders";
 
 
@@ -65,6 +67,14 @@ void setup_enabled_lights() {
 }
 
 
+void set_shader_prefix(string const &prefix, unsigned shader_type) {
+
+	assert(shader_type < 3);
+	prog_name_suffix += ",s" + ('0'+shader_type) + prefix;
+	prepend_string[shader_type] += prefix + '\n';
+}
+
+
 // *** shader and program setup ***
 
 
@@ -110,7 +120,7 @@ bool load_shader_file(string const &fname, string &data) {
 	if (!in.good()) return 0;
 	string line;
 	while (std::getline(in, line)) data += line + '\n';
-	//cout << "shader data:" << endl << data << endl;
+	if (DEBUG_VERBOSE) cout << "shader data:" << endl << data << endl;
 	return 1;
 }
 

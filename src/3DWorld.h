@@ -1486,6 +1486,7 @@ bool split_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point
 void add_uniform_float(std::string const &name, float val);
 void add_uniform_int  (std::string const &name, int   val);
 void setup_enabled_lights();
+void set_shader_prefix(std::string const &prefix, unsigned shader_type);
 bool setup_shaders();
 void clear_shaders();
 bool set_shader_prog(std::string const &vs_name, std::string const &fs_name, std::string const &gs_name="",
