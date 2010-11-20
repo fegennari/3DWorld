@@ -470,6 +470,17 @@ public:
 		//PRINT_TIME("Tiled Terrain Update");
 	}
 
+	static void setup_mesh_draw_shaders() {
+		 // FIXME: fog is still slightly off
+		setup_enabled_lights();
+		add_uniform_int("tex0", 0);
+		add_uniform_int("tex1", 1);
+		add_uniform_float("fog_scale", (show_fog ? 1.0 : 0.0));
+		add_uniform_float("water_plane_z", (DISABLE_WATER ? zmin : water_plane_z));
+		add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
+		set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "multitex_2");
+	}
+
 	float draw(bool add_hole) {
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
@@ -500,15 +511,8 @@ public:
 			clear_vbos_tids(0,1); // shaders changed, recreate textures
 			last_shader_en = shader_en;
 		}
-		if (shader_en) { // FIXME: fog is still slightly off
-			setup_enabled_lights();
-			add_uniform_int("tex0", 0);
-			add_uniform_int("tex1", 1);
-			add_uniform_float("fog_scale", (show_fog ? 1.0 : 0.0));
-			add_uniform_float("water_plane_z", (DISABLE_WATER ? zmin : water_plane_z));
-			add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
-			set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "multitex_2");
-		}
+		if (shader_en) setup_mesh_draw_shaders();
+		
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
 			if (DEBUG_TILES) mem += i->second->get_gpu_memory();
@@ -517,7 +521,7 @@ public:
 			zmin = min(zmin, i->second->get_zmin());
 			num_drawn += i->second->draw(data, indices);
 		}
-		if (!(display_mode & 0x08)) unset_shader_prog();
+		if (shader_en) unset_shader_prog();
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
 		return zmin;
@@ -548,7 +552,8 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp) {
 
 void draw_vert_color(colorRGBA c, float x, float y, float z) {
 
-	if (z < water_plane_z) atten_by_water_depth(&c.red, get_water_atten_factor(z));
+	bool const shader_en((display_mode & 0x08) == 0);
+	if (!shader_en && z < water_plane_z) atten_by_water_depth(&c.red, get_water_atten_factor(z));
 	c.do_glColor();
 	glVertex3f(x, y, z);
 }
@@ -572,6 +577,8 @@ void fill_gap() {
 	for (int i = 0; i <= MESH_Y_SIZE; ++i) {
 		yv[i] = (ystart + (i + 0.5)*DY_VAL);
 	}
+	bool const shader_en((display_mode & 0x08) == 0);
+	if (shader_en) terrain_tile_draw.setup_mesh_draw_shaders();
 
 	// draw +x
 	build_xy_mesh_arrays(&xv.front(), &yv[MESH_Y_SIZE], MESH_X_SIZE, 1);
@@ -600,6 +607,7 @@ void fill_gap() {
 	draw_vert_color(color, X_SCENE_SIZE       , Y_SCENE_SIZE, fast_eval_from_index(0, MESH_Y_SIZE, 0, 1));
 	glEnd();
 
+	if (shader_en) unset_shader_prog();
 	disable_textures_texgen();
 	glDisable(GL_COLOR_MATERIAL);
 	run_post_mesh_draw();
