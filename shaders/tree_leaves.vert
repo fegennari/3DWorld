@@ -26,7 +26,7 @@ vec4 add_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in 
 	// compute the specular and diffuse terms if not shadowed
 	float NdotHV  = max(dot(normal, normalize(gl_LightSource[i].halfVector.xyz)), 0.0);
 	vec4 specular = (shadowed ? 0.0 : 1.0) * gl_FrontMaterial.specular * gl_LightSource[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
-	return (ambient + specular + max(dot(normal, lightDir), 0.0)*diffuse);
+	return (ambient + specular + max(dot(normal, lightDir), 0.0)*diffuse)/gl_LightSource[i].constantAttenuation;
 }
 
 

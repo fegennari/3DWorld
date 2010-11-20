@@ -30,6 +30,7 @@ quality/blending/lighting
 
 12. Infinite Terrain Tiles - Underwater Attenuation: VS
 * Apply per-light, camera dependent color attenuation for underwater mesh
+* Implement fog
 + Tiled mesh UW light atten will look better and agree with regular mesh lighting
 + UW lighting no longer built into texture, so more efficient to enable/disable water
 

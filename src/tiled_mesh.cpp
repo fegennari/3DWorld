@@ -496,7 +496,7 @@ public:
 			last_water_en = water_en;
 		}
 
-		if (display_mode & 0x08) {
+		if (!(display_mode & 0x08)) { // FIXME: combined_gu, fog, add water attenuation
 			setup_enabled_lights();
 			add_uniform_int("tex0", 0);
 			add_uniform_int("tex1", 1);
@@ -510,7 +510,7 @@ public:
 			zmin = min(zmin, i->second->get_zmin());
 			num_drawn += i->second->draw(data, indices);
 		}
-		if (display_mode & 0x08) unset_shader_prog();
+		if (!(display_mode & 0x08)) unset_shader_prog();
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
 		return zmin;
