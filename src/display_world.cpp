@@ -479,7 +479,7 @@ void draw_universe_bkg(int underwater, float depth) {
 	setup_current_system();
 	glPushMatrix();
 	translate_to(get_camera_pos());
-	set_gl_light_pos(GL_LIGHT0, sun_pos, 1.0); // LIGHT_W_VAL? need 1.0 to use atten
+	set_gl_light_pos(GL_LIGHT0, sun_pos, LIGHT_W_VAL);
 	glPopMatrix();
 
 	// setup sun light source

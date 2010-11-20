@@ -500,7 +500,7 @@ public:
 			clear_vbos_tids(0,1); // shaders changed, recreate textures
 			last_shader_en = shader_en;
 		}
-		if (shader_en) { // FIXME: combined_gu ambient and fog are still slightly off
+		if (shader_en) { // FIXME: fog is still slightly off
 			setup_enabled_lights();
 			add_uniform_int("tex0", 0);
 			add_uniform_int("tex1", 1);

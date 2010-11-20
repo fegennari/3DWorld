@@ -26,7 +26,7 @@ vec4 add_light_comp(in vec3 normal, in int i) {
 	// compute the ambient and diffuse lighting
 	vec4 diffuse = gl_Color * gl_LightSource[i].diffuse;
 	vec4 ambient = gl_Color * gl_LightSource[i].ambient;
-	vec4 color = (ambient + max(dot(normal, lightDir), 0.0)*diffuse)/gl_LightSource[i].constantAttenuation;
+	vec4 color = (ambient + max(dot(normal, lightDir), 0.0)*diffuse);
 	
 	// apply underwater attenuation
 	if (gl_Vertex.z < water_plane_z) {
