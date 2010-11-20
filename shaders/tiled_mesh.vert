@@ -9,11 +9,8 @@ vec4 atten_color(in vec4 color, in float dist) {
 }
 
 float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) {
-	if (src_pos.z == targ_pos.z) return 0.0;
-	float t = min(1.0, (water_z - targ_pos.z)/abs(src_pos.z - targ_pos.z));
-	vec3 p_int = targ_pos + (src_pos - targ_pos)*t;
-	p_int.z = min(src_pos.z, water_z);
-	return length(p_int - targ_pos);
+	float t = clamp((water_z - targ_pos.z)/max(1.0E-6, abs(src_pos.z - targ_pos.z)), 0.0, 1.0);
+	return t*length(src_pos - targ_pos);
 }
 
 vec4 add_light_comp(in vec3 normal, in int i) {

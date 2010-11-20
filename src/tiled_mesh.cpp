@@ -312,7 +312,7 @@ public:
 						}
 
 						// darken underwater regions
-						if (!DISABLE_WATER && (display_mode & 0x08) && mh < water_plane_z) {
+						if (!DISABLE_WATER && (display_mode & 0x04) && (display_mode & 0x08) && mh < water_plane_z) {
 							float c[3] = {td[0], td[1], td[2]};
 							atten_by_water_depth(c, get_water_atten_factor(mh));
 							UNROLL_3X(td[i_] = (unsigned char)c[i_];)
@@ -471,11 +471,12 @@ public:
 	}
 
 	static void setup_mesh_draw_shaders() {
+		bool const water_en((display_mode & 0x04) != 0);
 		setup_enabled_lights();
 		add_uniform_int("tex0", 0);
 		add_uniform_int("tex1", 1);
 		add_uniform_float("fog_scale", (show_fog ? 1.0 : 0.0));
-		add_uniform_float("water_plane_z", (DISABLE_WATER ? zmin : water_plane_z));
+		add_uniform_float("water_plane_z", (water_en ? water_plane_z : zmin));
 		add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "multitex_2");
 	}
