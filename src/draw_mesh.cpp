@@ -40,7 +40,7 @@ vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, tiled_mesh_display;
 extern unsigned num_jterms;
-extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level;
+extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
@@ -848,6 +848,12 @@ void draw_water_sides(int check_zvals) {
 void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lighting, bool large_size) {
 
 	if (DISABLE_WATER) return;
+
+	if (display_mode & 0x0100) { // add small waves
+		static float time(0.0);
+		if (animate2) time += fticks;
+		zval += 0.01*sin(0.025*time);
+	}
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE);
 	float const vd_scale(large_size ? (tiled_mesh_display ? 2.0*get_tile_radius() : VIEW_DIST0)*SQRT2 : X_SCENE_SIZE/(X_SCENE_SIZE + DX_VAL));
 	float const dx(xoff*DX_VAL), dy(yoff*DY_VAL);
