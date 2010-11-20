@@ -935,7 +935,7 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 
 
 float get_inf_terrain_fog_dist() {
-	return (tiled_mesh_display ? 2.5*get_tile_radius()*XY_SCENE_SIZE : VIEW_DIST0*XY_SCENE_SIZE);
+	return (tiled_mesh_display ? 3.0*get_tile_radius()*XY_SCENE_SIZE : VIEW_DIST0*XY_SCENE_SIZE);
 }
 
 

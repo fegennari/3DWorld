@@ -471,7 +471,6 @@ public:
 	}
 
 	static void setup_mesh_draw_shaders() {
-		 // FIXME: fog is still slightly off
 		setup_enabled_lights();
 		add_uniform_int("tex0", 0);
 		add_uniform_int("tex1", 1);
