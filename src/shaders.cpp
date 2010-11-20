@@ -53,11 +53,11 @@ void setup_uniforms(int program) {
 }
 
 
-void setup_enabled_lights() {
+void setup_enabled_lights(unsigned num) {
 
 	prog_name_suffix += ",el";
 
-	for (unsigned i = 0; i < 2; ++i) { // only 2 lights for now: 0=sun, 1=moon
+	for (unsigned i = 0; i < num; ++i) { // 0=sun, 1=moon
 		GLboolean const enabled(glIsEnabled(GL_LIGHT0 + i));
 		prog_name_suffix += (enabled ? '1' : '0');
 		ostringstream oss;
