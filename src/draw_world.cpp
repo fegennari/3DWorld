@@ -1561,6 +1561,7 @@ int draw_shadowed_objects(int light) {
 void set_specular(float specularity, float shininess) {
 
 	static float last_shiny(-1.0), last_spec(-1.0);
+	if (is_cloudy && world_mode != WMODE_UNIVERSE) specularity *= 0.5;
 
 	if (specularity != last_spec) { // This materialfv stuff seems to take some time, so only set if changed since last call
 		float mat_specular[]  = {specularity, specularity, specularity, 1.0};
