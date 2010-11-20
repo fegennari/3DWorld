@@ -16,7 +16,7 @@ int  const TILE_RADIUS_IT    = 5; // WM3, in mesh sizes
 
 
 extern bool tiled_mesh_display;
-extern int xoff, yoff, island, DISABLE_WATER, display_mode;
+extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
 extern float zmax, zmin, water_plane_z, mesh_scale;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
@@ -312,7 +312,7 @@ public:
 						}
 
 						// darken underwater regions
-						if (!DISABLE_WATER && mh < water_plane_z) {
+						if (!DISABLE_WATER && (display_mode & 0x08) && mh < water_plane_z) {
 							float c[3] = {td[0], td[1], td[2]};
 							atten_by_water_depth(c, get_water_atten_factor(mh));
 							UNROLL_3X(td[i_] = (unsigned char)c[i_];)
@@ -483,24 +483,31 @@ public:
 		vector<vert_norm> data;
 		vector<unsigned short> indices;
 		static point last_sun(all_zeros), last_moon(all_zeros);
-		static bool last_water_en(1);
-		bool const water_en((display_mode & 0x04) != 0);
+		static bool last_water_en(1), last_shader_en(0);
+		bool const water_en ((display_mode & 0x04) != 0);
+		bool const shader_en((display_mode & 0x08) == 0);
 
 		if (sun_pos != last_sun || moon_pos != last_moon) {
 			clear_vbos_tids(1,0); // light source changed, clear vbos and build new shadow map
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}
-		if (water_en != last_water_en) { // should this be here?
+		if (water_en != last_water_en && !shader_en) { // should this be here?
 			clear_vbos_tids(0,1); // water changed, recreate textures
 			last_water_en = water_en;
 		}
-
-		if (!(display_mode & 0x08)) { // FIXME: combined_gu, fog, add water attenuation
+		if (shader_en != last_shader_en) {
+			clear_vbos_tids(0,1); // shaders changed, recreate textures
+			last_shader_en = shader_en;
+		}
+		if (shader_en) { // FIXME: combined_gu ambient and fog are still slightly off
 			setup_enabled_lights();
 			add_uniform_int("tex0", 0);
 			add_uniform_int("tex1", 1);
-			set_shader_prog("texture_gen.part+tiled_mesh", "multitex_2");
+			add_uniform_float("fog_scale", (show_fog ? 1.0 : 0.0));
+			add_uniform_float("water_plane_z", (DISABLE_WATER ? zmin : water_plane_z));
+			add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
+			set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "multitex_2");
 		}
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
