@@ -852,7 +852,7 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 	if (display_mode & 0x0100) { // add small waves
 		static float time(0.0);
 		if (animate2) time += fticks;
-		zval += 0.01*sin(0.025*time);
+		zval += 0.01*sin(1.0*time/TICKS_PER_SECOND);
 	}
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE);
 	float const vd_scale(large_size ? (tiled_mesh_display ? 2.0*get_tile_radius() : VIEW_DIST0)*SQRT2 : X_SCENE_SIZE/(X_SCENE_SIZE + DX_VAL));

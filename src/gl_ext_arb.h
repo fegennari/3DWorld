@@ -24,7 +24,7 @@ void init_glew();
 // multitexture prototypes
 void setup_multitexture();
 void set_multitex(unsigned tu_id);
-void select_multitex(int id, unsigned tu_id);
+void select_multitex(int id, unsigned tu_id, bool enable=1);
 void disable_multitex(unsigned tu_id, bool reset);
 void disable_multitex_a();
 void multitex_coord2f(GLfloat s, GLfloat t, unsigned tu_id=0);

@@ -2,8 +2,7 @@
 #extension GL_EXT_geometry_shader4 : enable
 
 uniform float size = 1.0;
- 
-// a passthrough geometry shader for color and position
+
 void main()
 {
 	gl_FrontColor = gl_FrontColorIn[0]; // all colors are the same
