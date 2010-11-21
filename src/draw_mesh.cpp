@@ -10,7 +10,6 @@
 
 float const W_TEX_SCALE0     = 1.0;
 float const WATER_WIND_EFF   = 0.0006;
-float const VIEW_DIST0       = 4.0;
 float const START_OFFSET0    = 0.05;
 float const PRESP_ANGLE_ADJ  = 1.5;
 float const VD_SCALE         = 1.0;
@@ -38,7 +37,7 @@ int island(0);
 float lt_green_int(1.0), sm_green_int(1.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, tiled_mesh_display;
+extern bool using_lightmap, has_dl_sources, combined_gu, has_snow;
 extern unsigned num_jterms;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
@@ -126,14 +125,6 @@ float integrate_water_dist(point const &targ_pos, point const &src_pos, float co
 	if (!point_outside_mesh(xp, yp)) p_int.z = min(src_pos.z, water_matrix[yp][xp]); // account for ripples
 	return p2p_dist(p_int, targ_pos)*mesh_scale;
 
-}
-
-
-inline void calc_norm(vector3d &norm, float *xv, float *yv, int xi, int yi, float z1, float z2, float z3, float z4) {
-
-	float const dx(xv[xi-1] - xv[xi+1]), dy(yv[yi-1] - yv[yi+1]);
-	norm.assign(dy*(z3 - z1), dx*(z4 - z2), dx*dy);
-	//norm.normalize();
 }
 
 
@@ -386,7 +377,7 @@ void display_mesh() { // fast array version
 
 	if (mesh_height == NULL) return; // no mesh to display
 	// can't put the hole in the right place, so only draw the tiled terrain
-	if (tiled_mesh_display && !island && (display_mode & 0x10) && (xoff2 != 0 || yoff2 != 0)) return;
+	if (!island && (display_mode & 0x10) && (xoff2 != 0 || yoff2 != 0)) return;
 	RESET_TIME;
 
 	if ((display_mode & 0x80) && !DISABLE_WATER && !ocean_set && zmin < max_water_height) {
@@ -538,133 +529,8 @@ int set_texture(float zval, int &tex_id) {
 
 float display_mesh3(int const *const hole_bounds) { // WM3 - infinite terrain
 
-	if (tiled_mesh_display) {
-		bool const add_hole((hole_bounds != NULL) && xoff2 == 0 && yoff2 == 0);
-		return draw_tiled_terrain(add_hole);
-	}
-
-	//RESET_TIME;
-	float const view_dist(Z_SCENE_SIZE*VIEW_DIST0);
-	static float xv[DYNAMIC_MESH_SZ], yv[DYNAMIC_MESH_SZ], xv2[DYNAMIC_MESH_SZ], yv2[DYNAMIC_MESH_SZ], last_h[2][DYNAMIC_MESH_SZ];
-	static vector3d last_n[DYNAMIC_MESH_SZ];
-	int const ssize((int)pow(RES_STEP, resolution-1));
-	float const step_size(STEP_SIZE*ssize);
-	float const x0(-STEP_SIZE*X_SCENE_SIZE), y0(-STEP_SIZE*Y_SCENE_SIZE);
-	float const xstep(step_size*DX_VAL), ystep(step_size*DY_VAL), ocxl(-cview_dir.x), ocyl(-cview_dir.y);
-	float const sz_off(((float)ssize)*Z_SCENE_SIZE*START_OFFSET0), xc(sz_off*ocxl), yc(sz_off*ocyl);
-	float const xo(xc - VD_SCALE*view_dist*ocxl), yo(yc - VD_SCALE*view_dist*ocyl);
-	float const d_far(VD_SCALE*view_dist*tan(0.5*PRESP_ANGLE_ADJ*PERSP_ANGLE*TO_RADIANS));
-	float const xfar1(xo - d_far*ocyl), xfar2(xo + d_far*ocyl), yfar1(yo + d_far*ocxl), yfar2(yo - d_far*ocxl);
-	float const bbx1(min(xc, min(xfar1, xfar2))), bbx2(max(xc, max(xfar1, xfar2)));
-	float const bby1(min(yc, min(yfar1, yfar2))), bby2(max(yc, max(yfar1, yfar2)));
-	int const x1(int((bbx1 - x0)/xstep) - DRAW_BORDER), x2(int((bbx2 - x0)/xstep) + DRAW_BORDER);
-	int const y1(int((bby1 - y0)/ystep) - DRAW_BORDER), y2(int((bby2 - y0)/ystep) + DRAW_BORDER);
-	int const nx(x2 - x1), ny(y2 - y1), xoff3(ssize*(xoff2/ssize)), yoff3(ssize*(yoff2/ssize));
-	float zmin2(FAR_CLIP), zmax2(-FAR_CLIP);
-	if (nx == 0 || ny == 0) return zmin2;
-	assert(nx > 2);
-	if (xoff2 != xoff3 || yoff2 != yoff3) glTranslatef(DX_VAL*(xoff3 - xoff2), DY_VAL*(yoff3 - yoff2), 0.0);
-	float x(x0 + (x1 + 1)*xstep), y(y0 + (y1 + 1)*ystep);
-
-	for (int i = 0; i < ny; ++i) {
-		yv[i]  = y;
-		yv2[i] = y + (yoff3 + 0.5)*DY_VAL; // FIXME: why the +0.5, and why is it -0.5 in x?
-		y     += ystep;
-	}
-	for (int j = 0; j < nx; ++j) {
-		xv[j]  = x;
-		xv2[j] = x + (xoff3 - 0.5)*DX_VAL;
-		x     += xstep;
-	}
-	//PRINT_TIME("Init");
-	build_xy_mesh_arrays(xv2, yv2, nx, ny);
-	//PRINT_TIME("Array Build");
-
-	for (int j = 1; j < nx-1; ++j) {
-		last_h[0][j] = fast_eval_from_index(j, 1, 1);
-		last_h[1][j] = fast_eval_from_index(j, 0, 1);
-		calc_norm(last_n[j], xv, yv, j, 0, last_h[0][j-1], last_h[1][j], last_h[0][j+1], fast_eval_from_index(j, 2, 1));
-	}
-	vector3d norm;
-	unsigned const nverts(2*(nx-2));
-	vector<point>    varr(nverts);
-	vector<vector3d> narr(nverts);
-
-	int const tex_xoff(xoff + xoff3 - xoff2), tex_yoff(yoff + yoff3 - yoff2);
-	unsigned const norm_texels(get_norm_texels());
-	int tex_id(-1);
-	set_texture(last_h[0][1], tex_id);
-	select_texture(tex_id);
-	set_landscape_texgen(((float)norm_texels)/get_texture_size(tex_id, 0), tex_xoff, tex_yoff, MESH_X_SIZE, MESH_Y_SIZE);
-	setup_mesh_lighting();
-	setup_arrays(&varr.front(), &narr.front(), NULL);
-	//PRINT_TIME("Htable");
-	glPushMatrix();
-	glTranslatef(xoff*DX_VAL, yoff*DY_VAL, 0.0);
-	
-	for (int i = 1; i < ny-2; ++i) {
-		unsigned c(0);
-
-		for (int j = 1; j < nx-1; ++j) {
-			float const zval(fast_eval_from_index(j, i+1, 1)); // FIXME: i+1?
-			calc_norm(norm, xv, yv, j, i, last_h[0][j-1], last_h[1][j], last_h[0][j+1], zval);
-
-			for (unsigned p = 0; p < 2; ++p, ++c) {
-				varr[c].assign(xv[j], yv[i+p-1], last_h[!p][j]);
-				narr[c] = (p ? norm : last_n[j]);
-			}
-			int const xpos(j + x1), ypos(i + y1);
-			
-			if (hole_bounds != NULL && ypos >= hole_bounds[2] && ypos < hole_bounds[3] && xpos+1 >= hole_bounds[0] && xpos+2 <= hole_bounds[1]) {
-				if (c > 2) glDrawArrays(GL_TRIANGLE_STRIP, 0, c);
-				c = 0;
-			}
-			else if (set_texture(last_h[0][j+1], tex_id)) {
-				if (c > 2) glDrawArrays(GL_TRIANGLE_STRIP, 0, c);
-				disable_textures_texgen();
-				select_texture(tex_id);
-				set_landscape_texgen(((float)norm_texels)/get_texture_size(tex_id, 0), tex_xoff, tex_yoff, MESH_X_SIZE, MESH_Y_SIZE);
-
-				for (unsigned q = 0; q < 2; ++q) {
-					varr[q] = varr[c+q-2];
-					narr[q] = narr[c+q-2];
-				}
-				c = 2;
-			}
-			last_h[1][j] = last_h[0][j];
-			last_h[0][j] = zval;
-			last_n[j]    = norm;
-			zmin2        = min(zmin2, zval);
-			zmax2        = max(zmax2, zval);
-		}
-		assert(c <= nverts);
-		if (c > 2) glDrawArrays(GL_TRIANGLE_STRIP, 0, c);
-	}
-	//PRINT_TIME("Render");
-	disable_textures_texgen();
-	run_post_mesh_draw();
-
-	if (SHOW_NORMALS) {
-		set_color(RED);
-		glNormal3f(0.0, 0.0, 1.0);
-		glBegin(GL_LINES);
-
-		for (int i = 1; i < ny-2; ++i) {
-			for (int j = 1; j < nx-1; ++j) {
-				float const zval(fast_eval_from_index(j, i, 1));
-				vector3d norm;
-				calc_norm(norm, xv, yv, j, i, fast_eval_from_index(j-1, i, 1), fast_eval_from_index(j, i-1, 1),
-					fast_eval_from_index(j+1, i, 1), fast_eval_from_index(j, i+1, 1));
-				glVertex3f(xv[j], yv[i], zval);
-				glVertex3f(xv[j]+norm.x, yv[i]+norm.y, zval+norm.z);
-			}
-		}
-		glEnd();
-	}
-	glPopMatrix();
-	if (verbose_mode && frame_counter%100 == 0) cout << 2*(nx-1)*(ny-2) << " triangles." << endl;
-	//PRINT_TIME("Done");
-	return zmin2;
+	bool const add_hole((hole_bounds != NULL) && xoff2 == 0 && yoff2 == 0);
+	return draw_tiled_terrain(add_hole);
 }
 
 
@@ -855,7 +721,7 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 		zval += 0.01*sin(1.0*time/TICKS_PER_SECOND);
 	}
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE);
-	float const vd_scale(large_size ? (tiled_mesh_display ? 2.0*get_tile_radius() : VIEW_DIST0)*SQRT2 : X_SCENE_SIZE/(X_SCENE_SIZE + DX_VAL));
+	float const vd_scale(large_size ? 2.0*get_tile_radius()*SQRT2 : X_SCENE_SIZE/(X_SCENE_SIZE + DX_VAL));
 	float const dx(xoff*DX_VAL), dy(yoff*DY_VAL);
 	float const vdx(vd_scale*X_SCENE_SIZE), vdy(vd_scale*Y_SCENE_SIZE);
 	static float wxoff(0.0), wyoff(0.0);
@@ -935,7 +801,7 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 
 
 float get_inf_terrain_fog_dist() {
-	return (tiled_mesh_display ? 3.0*get_tile_radius()*XY_SCENE_SIZE : VIEW_DIST0*XY_SCENE_SIZE);
+	return 3.0*get_tile_radius()*XY_SCENE_SIZE;
 }
 
 

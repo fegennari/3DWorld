@@ -19,6 +19,7 @@ bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
+extern bool grass_wind;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2;
 extern float vegetation, zmin, zmax, fticks, h_sand[], h_dirt[];
 extern vector3d wind;
@@ -433,7 +434,7 @@ public:
 		// check for dynamic light sources
 		enable_dynamic_lights();
 
-		if (display_mode & 0x10) {
+		if (grass_wind) {
 			// Note: shadowed normals are normalized, but all zeros
 			// Note: we can generate tex coords in the geom shader, so we don't need to pass them in
 			static float time(0.0);
@@ -464,7 +465,7 @@ public:
 		glEnable(GL_NORMALIZE);
 		disable_blend();
 		glDisable(GL_ALPHA_TEST);
-		if (display_mode & 0x10) unset_shader_prog();
+		if (grass_wind) unset_shader_prog();
 		disable_multitex_a();
 		disable_dynamic_lights();
 		bind_vbo(0);

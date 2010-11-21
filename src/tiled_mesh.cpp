@@ -15,7 +15,6 @@ int  const TILE_RADIUS       = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT    = 5; // WM3, in mesh sizes
 
 
-extern bool tiled_mesh_display;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
 extern float zmax, zmin, water_plane_z, mesh_scale;
 extern point sun_pos, moon_pos;
@@ -621,8 +620,7 @@ float draw_tiled_terrain(bool add_hole) {
 	bool const vbo_supported(setup_gen_buffers());
 		
 	if (!vbo_supported) {
-		cout << "Warning: VBOs not supported, so tiled mesh cannot be enabled." << endl;
-		tiled_mesh_display = 0;
+		cout << "Warning: VBOs not supported, so tiled mesh cannot be drawn." << endl;
 		return zmin;
 	}
 	terrain_tile_draw.update();
