@@ -207,10 +207,11 @@ public:
 			point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
 			vector3d const binorm(cross_product(g.dir, g.n).get_norm());
 			vector3d const delta(binorm*(0.5*g.w));
-			//vector3d const &norm(g.shadowed ? zero_vector : plus_z); // use grass normal? 2-sided lighting?
-			//vector3d const &norm(g.shadowed ? zero_vector : g.n);
-			//vector3d const &norm(g.shadowed ? zero_vector : surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]);
-			vector3d const &norm(g.shadowed ? zero_vector : interpolate_mesh_normal(p1));
+			float const nmag(g.shadowed ? 0.001 : 1.0);
+			//vector3d const &norm(plus_z*nmag); // use grass normal? 2-sided lighting?
+			//vector3d const &norm(g.n*nmag);
+			//vector3d const &norm(surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]*nmag);
+			vector3d const &norm(interpolate_mesh_normal(p1)*nmag);
 			float const tc_adj(0.1); // border around grass blade texture
 			data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
 			data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
@@ -435,17 +436,17 @@ public:
 		enable_dynamic_lights();
 
 		if (grass_wind) {
-			// Note: shadowed normals are normalized, but all zeros
-			// Note: we can generate tex coords in the geom shader, so we don't need to pass them in
+			// Note: no dynamic lighting yet
 			static float time(0.0);
 			if (animate2) time += fticks;
-			add_uniform_float("time", 1.0*time/TICKS_PER_SECOND);
+			add_uniform_float("time", 0.5*time/TICKS_PER_SECOND);
 			add_uniform_float("wind_x", wind.x);
 			add_uniform_float("wind_y", wind.y);
-			setup_enabled_lights();
 			add_uniform_int("tex0", 0);
 			add_uniform_int("tex_noise", 1);
-			set_shader_prog("ad_lighting.part+two_lights_texture", "simple_texture", "tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
+			setup_enabled_lights();
+			add_uniform_float("dist", 1.0*grass_length);
+			set_shader_prog("ad_lighting.part+grass_wind", "simple_texture");
 			select_multitex(CLOUD_TEX, 1, 0);
 		}
 
