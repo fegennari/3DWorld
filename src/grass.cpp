@@ -19,8 +19,8 @@ bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
-extern int island, default_ground_tex, read_landscape, display_mode;
-extern float vegetation, zmin, zmax, h_sand[], h_dirt[];
+extern int island, default_ground_tex, read_landscape, display_mode, animate2;
+extern float vegetation, zmin, zmax, fticks, h_sand[], h_dirt[];
 extern vector3d wind;
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
@@ -433,13 +433,26 @@ public:
 		// check for dynamic light sources
 		enable_dynamic_lights();
 
+		if (display_mode & 0x10) {
+			// Note: shadowed normals are normalized, but all zeros
+			// Note: we can generate tex coords in the geom shader, so we don't need to pass them in
+			static float time(0.0);
+			if (animate2) time += fticks;
+			add_uniform_float("time", 1.0*time/TICKS_PER_SECOND);
+			add_uniform_float("wind_x", wind.x);
+			add_uniform_float("wind_y", wind.y);
+			setup_enabled_lights();
+			add_uniform_int("tex0", 0);
+			add_uniform_int("tex_noise", 1);
+			set_shader_prog("ad_lighting.part+two_lights_texture", "simple_texture", "tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
+			select_multitex(CLOUD_TEX, 1, 0);
+		}
+
 		// draw the grass
 		assert(vbo_valid && vbo > 0);
 		bind_vbo(vbo);
 		vert_norm_tc_color::set_vbo_arrays();
-		//set_lighted_sides(2);
-		select_texture(GRASS_BLADE_TEX);
-		set_specular(0.05, 10.0);
+		select_multitex(GRASS_BLADE_TEX, 0);
 		enable_blend();
 		//glEnable(GL_POLYGON_SMOOTH);
 		glEnable(GL_ALPHA_TEST);
@@ -450,10 +463,9 @@ public:
 		glDisable(GL_COLOR_MATERIAL);
 		glEnable(GL_NORMALIZE);
 		disable_blend();
-		set_specular(0.0, 1.0);
 		glDisable(GL_ALPHA_TEST);
-		glDisable(GL_TEXTURE_2D);
-		//set_lighted_sides(1);
+		if (display_mode & 0x10) unset_shader_prog();
+		disable_multitex_a();
 		disable_dynamic_lights();
 		bind_vbo(0);
 		check_gl_error(40);

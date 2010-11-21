@@ -33,6 +33,8 @@ quality/blending/lighting
 * Grass blades move in the wind as a function of time and location using a noise texture (clouds?)
 + Improved realism of scene
 - Don't want to move crushed or burned grass blades
+- Difficult to efficiently and cleanly handle dynamic lights
+- Currenly too slow to use a geom shader for grass
 
 14. Full Scene Smoke Effects: VS (or FS?)
 * Integrate the smoke path from the vertex to the camera (possibly progressive)
