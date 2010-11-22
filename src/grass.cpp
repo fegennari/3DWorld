@@ -444,10 +444,10 @@ public:
 			add_uniform_float("wind_y", wind.y);
 			add_uniform_int("tex0", 0);
 			add_uniform_int("tex_noise", 1);
-			setup_enabled_lights();
+			setup_enabled_lights(8);
 			add_uniform_float("height", grass_length);
 			set_shader_prog("ad_lighting.part+grass_wind", "simple_texture");
-			select_multitex(CLOUD_TEX, 1, 0);
+			select_multitex(CLOUD_RAW_TEX, 1, 0);
 		}
 
 		// draw the grass
