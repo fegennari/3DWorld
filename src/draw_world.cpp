@@ -1674,12 +1674,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
-	//glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	if (smoke_enabled) begin_smoke_fog();
-	//setup_enabled_lights();
-	//add_uniform_int("tex0", 0);
-	//set_shader_prog("texture_gen.part+no_lighting_texture_gen", "simple_texture");
+	setup_enabled_lights();
+	add_uniform_int("tex0", 0);
+	set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
 
 	if (draw_solid) { // called first
 		get_enabled_lights(); // don't call twice per frame - can have problems with lightning
@@ -1718,11 +1717,10 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 		draw_last.resize(0);
 	}
-	//unset_shader_prog();
+	unset_shader_prog();
 	if (smoke_enabled) end_smoke_fog();
 	setup_basic_fog();
 	glEnable(GL_LIGHTING);
-	//glDisable(GL_COLOR_MATERIAL);
 	disable_textures_texgen();
 	set_lighted_sides(1);
 
