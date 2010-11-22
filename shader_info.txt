@@ -13,6 +13,7 @@ Not Implementable/Too Difficult or Inefficient
 6. Water Reflections: VS/FS - too inefficient per fragment, too complex per vertex
 8. Mesh Underwater Caustics: FS - requires global solution, dependent on other effects
 12. Infinite Terrain Tiles - Underwater Attenuation: VS
+13. Grass Moving in Wind: VS
 
 Todo:
 7. Mesh Texturing: FS
@@ -28,13 +29,6 @@ Todo:
 quality/blending/lighting
 + Lots of possibilities here, plenty of research done on this topic
 - Not sure what to do yet, or if the improvements would be significant
-
-13. Grass Moving in Wind: GS
-* Grass blades move in the wind as a function of time and location using a noise texture (clouds?)
-+ Improved realism of scene
-- Don't want to move crushed or burned grass blades
-- Difficult to efficiently and cleanly handle dynamic lights
-- Currenly too slow to use a geom shader for grass
 
 14. Full Scene Smoke Effects: VS (or FS?)
 * Integrate the smoke path from the vertex to the camera (possibly progressive)

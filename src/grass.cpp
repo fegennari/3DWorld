@@ -436,7 +436,6 @@ public:
 		enable_dynamic_lights();
 
 		if (grass_wind) {
-			// Note: no dynamic lighting yet
 			static float time(0.0);
 			if (animate2) time += fticks;
 			add_uniform_float("time", 0.5*time/TICKS_PER_SECOND);
@@ -444,7 +443,7 @@ public:
 			add_uniform_float("wind_y", wind.y);
 			add_uniform_int("tex0", 0);
 			add_uniform_int("tex_noise", 1);
-			setup_enabled_lights(8);
+			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
 			add_uniform_float("height", grass_length);
 			set_shader_prog("ad_lighting.part+grass_wind", "simple_texture");
 			select_multitex(CLOUD_RAW_TEX, 1, 0);
