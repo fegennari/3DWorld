@@ -1101,6 +1101,32 @@ bool has_smoke(point const *const pts, unsigned npts) { // currently only used i
 }
 
 
+void upload_smoke_3d_texture() {
+
+	RESET_TIME;
+	unsigned const sz(MESH_X_SIZE*MESH_Y_SIZE*MESH_Z_SIZE);
+	unsigned char *data = new unsigned char[4*sz]; // ordered by y, then x, then z
+	memset(data, 0, 4*sz);
+
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) {
+			lmcell const *const vlm(lmap_manager.vlmap[y][x]);
+			if (vlm == NULL) continue;
+			unsigned const off(MESH_Z_SIZE*(y*MESH_X_SIZE + x));
+
+			for (int z = 0; z < MESH_Z_SIZE; ++z) {
+				unsigned const off2(4*(off + z));
+				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(vlm[z].c[i_]));)
+				data[off2+3] = (unsigned char)(255*CLIP_TO_01(vlm[z].v)); // put luminance in the alpha channel
+			}
+		}
+	}
+	create_3d_texture(MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, 4, data);
+	delete [] data;
+	PRINT_TIME("Smoke Upload");
+}
+
+
 // *** Dynamic Lights Code ***
 
 

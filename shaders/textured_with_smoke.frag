@@ -1,4 +1,5 @@
 uniform sampler2D tex0;
+uniform sampler3D smoke_tex;
 varying vec3 eye, vpos;
 
 // add: volume texture, scene bounds, step delta
