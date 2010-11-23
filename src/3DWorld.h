@@ -1483,6 +1483,7 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 bool split_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts);
 
 // function prototypes - shaders
+void add_uniform_float_array(std::string const &name, float const *const val, unsigned num);
 void add_uniform_float(std::string const &name, float val);
 void add_uniform_int  (std::string const &name, int   val);
 void setup_enabled_lights(unsigned num=2);

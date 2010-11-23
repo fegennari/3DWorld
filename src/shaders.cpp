@@ -16,12 +16,22 @@ string const shaders_dir = "shaders";
 // *** uniform variables setup ***
 
 
+typedef pair<float const *, unsigned> float_arr_t;
+typedef map<string, float_arr_t> u_float_array_map_t;
 typedef map<string, float> u_float_map_t;
 typedef map<string, int  > u_int_map_t;
+u_float_array_map_t u_float_array_map;
 u_float_map_t u_float_map;
 u_int_map_t   u_int_map;
 string prepend_string[3]; // vertex=0, fragment=1, geometry=3
 string prog_name_suffix;
+
+
+void add_uniform_float_array(string const &name, float const *const val, unsigned num) {
+
+	assert(!name.empty());
+	u_float_array_map[name] = make_pair(val, num);
+}
 
 
 void add_uniform_float(string const &name, float val) {
@@ -42,6 +52,10 @@ void setup_uniforms(int program) {
 
 	assert(program);
 
+	for (u_float_array_map_t::const_iterator i = u_float_array_map.begin(); i != u_float_array_map.end(); ++i) {
+		int const loc(glGetUniformLocation(program, i->first.c_str()));
+		glUniform1fv(loc, i->second.second, i->second.first);
+	}
 	for (u_float_map_t::const_iterator i = u_float_map.begin(); i != u_float_map.end(); ++i) {
 		int const loc(glGetUniformLocation(program, i->first.c_str()));
 		glUniform1f(loc, i->second);
@@ -259,6 +273,7 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 void unset_shader_prog() {
 
 	glUseProgram(0);
+	u_float_array_map.clear();
 	u_float_map.clear();
 	u_int_map.clear();
 	for (unsigned i = 0; i < 3; ++i) prepend_string[i].clear();
