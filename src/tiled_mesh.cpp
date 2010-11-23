@@ -480,17 +480,7 @@ public:
 		// texturing parameters
 		add_uniform_int("tex0", 0);
 		add_uniform_int("tex1", 1);
-#if 0
-		for (unsigned i = 0; i < NTEX_DIRT; ++i) {
-			add_uniform_int((std::string("tex") + char('0'+i+2)), i+2);
-			select_multitex(lttex_dirt[i].id, i+2, 0);
-		}
-		add_uniform_float_array("h_tex", h_dirt, NTEX_DIRT);
-		add_uniform_int("no_water",      (DISABLE_WATER == 2));
-		add_uniform_int("no_vegetation", (vegetation    == 0.0));
-		add_uniform_float("zmin", zmin);
-		add_uniform_float("zmax", zmax);
-#endif
+
 		// fog parameters
 		add_uniform_float("fog_scale", (show_fog ? 1.0 : 0.0));
 
@@ -499,7 +489,7 @@ public:
 		add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 
 		// create the shader
-		set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "tiled_mesh_texgen");
+		set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "multitex_2");
 	}
 
 	float draw(bool add_hole) {
