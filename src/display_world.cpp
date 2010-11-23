@@ -787,7 +787,7 @@ void display(void) {
 					
 					if (display_mode & 0x04) {
 						float const wpz(get_water_z_height());
-						if (wpz >= zmin2) draw_water_plane(wpz, hole_bounds, 0, 1);
+						if (wpz >= zmin2) draw_water_plane(wpz, hole_bounds);
 					}
 				}
 			}
@@ -1022,7 +1022,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_solid_object_groups();
 	if (TIMETEST) PRINT_TIME("3.6");
 	draw_transparent(underwater);
-	if ((display_mode & 0x04) && water_plane_z >= zmin2) draw_water_plane(water_plane_z, NULL, 0, 1);
+	if ((display_mode & 0x04) && water_plane_z >= zmin2) draw_water_plane(water_plane_z, NULL);
 	draw_transparent(!underwater);
 	draw_game_elements(timer1);
 	if (shadows_enabled()) create_shadows();

@@ -976,7 +976,7 @@ float get_cloud_density(point const &pt, vector3d const &dir);
 void draw_sky(int order);
 void draw_stationary_sky(float radius, float density);
 void compute_brightness();
-void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lighting, bool large_size);
+void draw_water_plane(float zval, int const *const hole_bounds);
 void draw_bubbles();
 void draw_smoke();
 void draw_fires();

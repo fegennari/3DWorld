@@ -711,7 +711,7 @@ void draw_water_sides(int check_zvals) {
 }
 
 
-void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lighting, bool large_size) {
+void draw_water_plane(float zval, int const *const hole_bounds) {
 
 	if (DISABLE_WATER) return;
 
@@ -720,8 +720,7 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 		if (animate2) time += fticks;
 		zval += 0.01*sin(1.0*time/TICKS_PER_SECOND);
 	}
-	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE);
-	float const vd_scale(large_size ? 2.0*get_tile_radius()*SQRT2 : X_SCENE_SIZE/(X_SCENE_SIZE + DX_VAL));
+	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), vd_scale(2.0*get_tile_radius()*SQRT2);
 	float const dx(xoff*DX_VAL), dy(yoff*DY_VAL);
 	float const vdx(vd_scale*X_SCENE_SIZE), vdy(vd_scale*Y_SCENE_SIZE);
 	static float wxoff(0.0), wyoff(0.0);
@@ -733,16 +732,10 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 		wxoff -= WATER_WIND_EFF*wind.x*fticks;
 		wyoff -= WATER_WIND_EFF*wind.y*fticks;
 	}
-	if (disable_lighting) {
-		glDisable(GL_LIGHTING);
-		color.do_glColor();
-	}
-	else {
-		plus_z.do_glNormal();
-		set_color(color);
-	}
+	point const camera(get_camera_pos());
+	vector3d(0.0, 0.0, ((camera.z < zval) ? -1.0 : 1.0)).do_glNormal();
+	set_color(color);
 	set_fill_mode();
-	set_lighted_sides(2);
 	enable_blend();
 	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + wxoff), (tscale*(yoff2 - yoff)*DY_VAL + wyoff));
 	glPushMatrix();
@@ -750,7 +743,6 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 	glBegin(GL_QUADS);
 
 	if (hole_bounds) { // x1 x2 y1 y2
-		assert(large_size);
 		float const obnd[2][2] = {{dx-vdx, dx+vdx}, {dy-vdy, dy+vdy}}; // {x,y} x {1,2}
 		float ibnd[2][2]; // {x,y} x {1,2}
 
@@ -768,7 +760,6 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 			glVertex2f(ibnd[0][i], ibnd[1][0]);
 			glVertex2f(ibnd[0][i], ibnd[1][1]);
 			glVertex2f(obnd[0][i], ibnd[1][1]);
-			if (!disable_lighting) glNormal3f(0.0, 0.0, -1.0); // invert the normal
 		}
 	}
 	else {
@@ -780,7 +771,6 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 			float xval(dx - vdx);
 
 			for (unsigned j = 0; j < W_STEPS; ++j) {
-				//if (hole_bounds) {}
 				glVertex2f( xval,        yval);
 				glVertex2f((xval+xinc),  yval);
 				glVertex2f((xval+xinc), (yval+yinc));
@@ -794,7 +784,6 @@ void draw_water_plane(float zval, int const *const hole_bounds, bool disable_lig
 	glPopMatrix();
 	disable_blend();
 	set_specular(0.0, 1.0);
-	set_lighted_sides(1);
 	disable_textures_texgen();
 	glEnable(GL_LIGHTING);
 }
