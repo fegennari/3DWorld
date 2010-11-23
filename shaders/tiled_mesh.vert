@@ -1,15 +1,6 @@
 uniform float water_plane_z = 0.0;
 uniform float water_atten = 1.0;
 
-const int NTEX = 5; // sand, dirt, ground, rock, snow
-uniform float h_tex[NTEX];
-uniform int no_water = 0;
-uniform int no_vegetation = 0;
-uniform float zmin, zmax;
-
-varying float weights[NTEX];
-
-
 // underwater attenuation code
 vec4 atten_color(in vec4 color, in float dist) {
 	color.r *= (1.0 - min(0.98, 1.5*dist));
