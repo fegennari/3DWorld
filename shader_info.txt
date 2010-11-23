@@ -4,6 +4,8 @@ Completed:
 2. Leaf Transparency: VS
 9. Snowflakes: GS using billboards
 11. Per-Pixel Lighting: FS
+12. Infinite Terrain Tiles - Underwater Attenuation: VS
+13. Grass Moving in Wind: VS
 
 Not Implementable/Too Difficult or Inefficient
 1. Leaf Wind: GS - requires state
@@ -13,8 +15,6 @@ Not Implementable/Too Difficult or Inefficient
 6. Water Reflections: VS/FS - too inefficient per fragment, too complex per vertex
 7. Mesh Texturing: FS - too complex and inefficient, not worth the memor savings (for now)
 8. Mesh Underwater Caustics: FS - requires global solution, dependent on other effects
-12. Infinite Terrain Tiles - Underwater Attenuation: VS
-13. Grass Moving in Wind: VS
 
 Todo:
 10. Smoke/Clouds and/or Fires: VS/FS, or GS using billboards
