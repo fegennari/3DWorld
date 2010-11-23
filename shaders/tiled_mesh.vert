@@ -9,6 +9,8 @@ uniform float zmin, zmax;
 
 varying float weights[NTEX];
 
+
+// underwater attenuation code
 vec4 atten_color(in vec4 color, in float dist) {
 	color.r *= (1.0 - min(0.98, 1.5*dist));
 	color.g *= (1.0 - min(0.97, 0.9*dist));
@@ -45,12 +47,13 @@ vec4 add_light_comp(in vec3 normal, in int i) {
 	return color;
 }
 
+
+// texture generation code
 int update_lttex_ix(in int ix) { // note: assumes lttex_dirt (no islands)
 	if (no_water      == 1 && ix == 4) --ix; // snow
 	if (no_vegetation == 1 && ix == 2) ++ix; // ground
 	return ix;
 }
-
 
 void get_tids(in float relh) {
 	const float blend_border = 0.01;
@@ -67,10 +70,19 @@ void get_tids(in float relh) {
 	}
 }
 
+void setup_custom_texgen_weights() {
+	for (int i = 0; i < NTEX; ++i) weights[i] = 0.0;
+	float relh = (gl_Vertex.z - zmin)/(zmax - zmin);
+	get_tids(relh);
+}
+
+
+// main code
 void main()
 {
 	setup_texgen(0);
 	setup_texgen(1);
+	//setup_custom_texgen_weights();
 	gl_Position = ftransform();
 	vec3 normal = gl_NormalMatrix * gl_Normal; // eye space, not normalized
 	vec4 color = gl_Color * gl_LightModel.ambient;
@@ -78,9 +90,4 @@ void main()
 	if (enable_light1) color += add_light_comp(normal, 1);
 	gl_FrontColor = color;
 	set_fog();
-	
-	// custom texture generation
-	for (int i = 0; i < NTEX; ++i) weights[i] = 0.0;
-	float relh = (gl_Vertex.z - zmin)/(zmax - zmin);
-	get_tids(relh);
 } 

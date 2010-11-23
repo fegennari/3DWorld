@@ -480,7 +480,7 @@ public:
 		// texturing parameters
 		add_uniform_int("tex0", 0);
 		add_uniform_int("tex1", 1);
-
+#if 0
 		for (unsigned i = 0; i < NTEX_DIRT; ++i) {
 			add_uniform_int((std::string("tex") + char('0'+i+2)), i+2);
 			select_multitex(lttex_dirt[i].id, i+2, 0);
@@ -490,7 +490,7 @@ public:
 		add_uniform_int("no_vegetation", (vegetation    == 0.0));
 		add_uniform_float("zmin", zmin);
 		add_uniform_float("zmax", zmax);
-		
+#endif
 		// fog parameters
 		add_uniform_float("fog_scale", (show_fog ? 1.0 : 0.0));
 

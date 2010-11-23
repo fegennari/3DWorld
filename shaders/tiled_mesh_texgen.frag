@@ -17,8 +17,8 @@ vec4 get_weighted_tex(in vec2 tc) {
 void main()
 {
 	// process textures
-	vec4 texel0 = get_weighted_tex(gl_TexCoord[0].st);
-	//vec4 texel0 = texture2D(tex0, gl_TexCoord[0].st);
+	//vec4 texel0 = get_weighted_tex(gl_TexCoord[0].st);
+	vec4 texel0 = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 texel1 = texture2D(tex1, gl_TexCoord[1].st);
 	vec4 color = vec4((texel0.rgb * texel1.rgb * gl_Color.rgb), (texel0.a * texel1.a * gl_Color.a));
 	
