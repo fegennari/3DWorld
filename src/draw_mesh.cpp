@@ -738,6 +738,11 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	set_fill_mode();
 	enable_blend();
 	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + wxoff), (tscale*(yoff2 - yoff)*DY_VAL + wyoff));
+
+	//setup_enabled_lights();
+	//add_uniform_int("tex0", 0);
+	//set_shader_prog("texture_gen.part+per_pixel_lighting_texgen", "ads_lighting.part+per_pixel_lighting_textured"); // needs fog
+	
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, zval);
 	glBegin(GL_QUADS);
@@ -782,6 +787,7 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	}
 	glEnd();
 	glPopMatrix();
+	//unset_shader_prog();
 	disable_blend();
 	set_specular(0.0, 1.0);
 	disable_textures_texgen();
