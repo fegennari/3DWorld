@@ -24,6 +24,7 @@ unsigned const NUM_RAND_LTS  = 0;
 unsigned const FLOW_CACHE_BS = 17;
 unsigned const FLOW_CACHE_SZ = (1 << FLOW_CACHE_BS);
 int const SMOKE_SKIPVAL      = 6;
+int const SMOKE_SEND_SKIP    = 8;
 
 float const CTHRESH          = 0.025;
 float const MIN_LIGHT        = 0.0;
@@ -1101,29 +1102,52 @@ bool has_smoke(point const *const pts, unsigned npts) { // currently only used i
 }
 
 
-void upload_smoke_3d_texture() {
+unsigned upload_smoke_3d_texture() {
 
-	RESET_TIME;
+	//RESET_TIME;
+	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
+	static unsigned smoke_tid(0);
+	static int cur_block(0);
+	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
+	unsigned const y_start(cur_block*block_size), y_end(y_start + block_size);
 	unsigned const sz(MESH_X_SIZE*MESH_Y_SIZE*MESH_Z_SIZE);
-	unsigned char *data = new unsigned char[4*sz]; // ordered by y, then x, then z
-	memset(data, 0, 4*sz);
+	unsigned const ncomp(4);
+	static vector<unsigned char> data; // several MB
+	bool init_call(0);
+	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
 
-	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+	if (data.empty()) {
+		data.resize(ncomp*sz, 0);
+		init_call = 1;
+	}
+	else {
+		assert(data.size() == ncomp*sz); // sz should be constant (per config file/3DWorld session)
+		init_call = !glIsTexture(smoke_tid); // will recreate the texture
+	}
+	for (unsigned y = y_start; y < y_end; ++y) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			lmcell const *const vlm(lmap_manager.vlmap[y][x]);
-			if (vlm == NULL) continue;
+			if (vlm == NULL) continue; // x/y pairs that get into here should also be constant
 			unsigned const off(MESH_Z_SIZE*(y*MESH_X_SIZE + x));
 
 			for (int z = 0; z < MESH_Z_SIZE; ++z) {
-				unsigned const off2(4*(off + z));
+				unsigned const off2(ncomp*(off + z));
 				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(vlm[z].c[i_]));)
 				data[off2+3] = (unsigned char)(255*CLIP_TO_01(vlm[z].v)); // put luminance in the alpha channel
 			}
 		}
 	}
-	create_3d_texture(MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, 4, data);
-	delete [] data;
-	PRINT_TIME("Smoke Upload");
+	if (init_call) { // create texture
+		smoke_tid = create_3d_texture(MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, ncomp, data);
+	}
+	else { // update region/sync texture
+		unsigned const off(ncomp*y_start*MESH_X_SIZE*MESH_Z_SIZE);
+		assert(off < data.size());
+		update_3d_texture(smoke_tid, 0, y_start, 0, MESH_X_SIZE, block_size, MESH_Z_SIZE, ncomp, &data[off]);
+	}
+	cur_block = (cur_block+1) % SMOKE_SEND_SKIP;
+	//PRINT_TIME("Smoke Upload");
+	return smoke_tid;
 }
 
 

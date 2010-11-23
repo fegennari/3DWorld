@@ -1679,9 +1679,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
 	if (display_mode & 0x10) {
 		setup_enabled_lights();
+		set_multitex(1);
 		upload_smoke_3d_texture();
-		add_uniform_int("tex0", 0);
 		add_uniform_int("smoke_tex", 1);
+		set_multitex(0);
+		add_uniform_int("tex0", 0);
 		set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
 	}
 	if (draw_solid) { // called first
@@ -1721,7 +1723,10 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 		draw_last.resize(0);
 	}
-	if (display_mode & 0x10) unset_shader_prog();
+	if (display_mode & 0x10) {
+		unset_shader_prog();
+		disable_multitex_a();
+	}
 	if (smoke_enabled) end_smoke_fog();
 	setup_basic_fog();
 	glEnable(GL_LIGHTING);

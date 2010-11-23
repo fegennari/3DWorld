@@ -1472,7 +1472,7 @@ void add_dynamic_lights();
 void get_xyz(point const &p, int v[3]);
 void get_xyz_v2(point &p, int const v[3]);
 bool has_smoke(point const *const pts, unsigned npts);
-void upload_smoke_3d_texture();
+unsigned upload_smoke_3d_texture();
 bool has_dynamic_lights(point const *const pts, unsigned npts);
 bool is_shadowed_lightmap(point const &p);
 bool get_dynamic_light(int x, int y, int z, float const *const p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
