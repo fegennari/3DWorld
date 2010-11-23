@@ -94,6 +94,23 @@ void setup_multitexture() { // Windows specific
 }
 
 
+unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, unsigned char const *const data) {
+
+	assert(data);
+	unsigned tid(0);
+	glGenTextures(1, &tid);
+	glBindTexture(GL_TEXTURE_3D, tid);
+	assert(glIsTexture(tid));
+	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	GLenum const format((ncomp == 4) ? GL_RGBA : GL_RGB);
+	glTexImage3D(GL_TEXTURE_3D, 0, ncomp, xsz, ysz, zsz, 0, format, GL_UNSIGNED_BYTE, data);
+	return tid;
+}
+
+
 // ***************** FOG_COORD *****************
 
 
