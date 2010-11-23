@@ -16,7 +16,7 @@ int  const TILE_RADIUS_IT    = 5; // WM3, in mesh sizes
 
 
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
-extern float zmax, zmin, water_plane_z, mesh_scale;
+extern float zmax, zmin, water_plane_z, mesh_scale, vegetation;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture textures[];
@@ -474,13 +474,32 @@ public:
 	}
 
 	static void setup_mesh_draw_shaders() {
+		// ligthting parameters
 		setup_enabled_lights();
+
+		// texturing parameters
 		add_uniform_int("tex0", 0);
 		add_uniform_int("tex1", 1);
+
+		for (unsigned i = 0; i < NTEX_DIRT; ++i) {
+			add_uniform_int((std::string("tex") + char('0'+i+2)), i+2);
+			select_multitex(lttex_dirt[i].id, i+2, 0);
+		}
+		add_uniform_float_array("h_tex", h_dirt, NTEX_DIRT);
+		add_uniform_int("no_water",      (DISABLE_WATER == 2));
+		add_uniform_int("no_vegetation", (vegetation    == 0.0));
+		add_uniform_float("zmin", zmin);
+		add_uniform_float("zmax", zmax);
+		
+		// fog parameters
 		add_uniform_float("fog_scale", (show_fog ? 1.0 : 0.0));
+
+		// water parameters
 		add_uniform_float("water_plane_z", (has_water() ? water_plane_z : zmin));
 		add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
-		set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "multitex_2");
+
+		// create the shader
+		set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "tiled_mesh_texgen");
 	}
 
 	float draw(bool add_hole) {

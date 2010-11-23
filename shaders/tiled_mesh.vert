@@ -1,6 +1,14 @@
 uniform float water_plane_z = 0.0;
 uniform float water_atten = 1.0;
 
+const int NTEX = 5; // sand, dirt, ground, rock, snow
+uniform float h_tex[NTEX];
+uniform int no_water = 0;
+uniform int no_vegetation = 0;
+uniform float zmin, zmax;
+
+varying float weights[NTEX];
+
 vec4 atten_color(in vec4 color, in float dist) {
 	color.r *= (1.0 - min(0.98, 1.5*dist));
 	color.g *= (1.0 - min(0.97, 0.9*dist));
@@ -37,6 +45,28 @@ vec4 add_light_comp(in vec3 normal, in int i) {
 	return color;
 }
 
+int update_lttex_ix(in int ix) { // note: assumes lttex_dirt (no islands)
+	if (no_water      == 1 && ix == 4) --ix; // snow
+	if (no_vegetation == 1 && ix == 2) ++ix; // ground
+	return ix;
+}
+
+
+void get_tids(in float relh) {
+	const float blend_border = 0.01;
+	int k1;
+	for (k1 = 0; k1 < NTEX-1 && relh >= h_tex[k1]; ++k1) {} // find first texture with height greater than relh
+
+	if (k1 < NTEX-1 && (h_tex[k1] - relh) < blend_border) {
+		float t = 1.0 - (h_tex[k1] - relh)/blend_border;
+		weights[update_lttex_ix(k1)] = 1.0 - t;
+		weights[update_lttex_ix(k1+1)] = t;
+	}
+	else {
+		weights[update_lttex_ix(k1)] = 1.0;
+	}
+}
+
 void main()
 {
 	setup_texgen(0);
@@ -48,4 +78,9 @@ void main()
 	if (enable_light1) color += add_light_comp(normal, 1);
 	gl_FrontColor = color;
 	set_fog();
+	
+	// custom texture generation
+	for (int i = 0; i < NTEX; ++i) weights[i] = 0.0;
+	float relh = (gl_Vertex.z - zmin)/(zmax - zmin);
+	get_tids(relh);
 } 
