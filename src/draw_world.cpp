@@ -1684,6 +1684,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		add_uniform_int("smoke_tex", 1);
 		set_multitex(0);
 		add_uniform_int("tex0", 0);
+		add_uniform_float("x_scene_size", X_SCENE_SIZE);
+		add_uniform_float("y_scene_size", Y_SCENE_SIZE);
+		add_uniform_float("czmin", czmin);
+		add_uniform_float("czmax", czmax);
+		add_uniform_float("step_delta", 1.0*min(min(DX_VAL, DY_VAL), DZ_VAL));
 		set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
 	}
 	if (draw_solid) { // called first

@@ -1002,7 +1002,7 @@ void distribute_smoke_for_cell(int x, int y, int z) {
 void distribute_smoke() { // called at most once per frame
 
 	RESET_TIME;
-	if (!DYNAMIC_SMOKE || !smoke_exists) return;
+	if (!DYNAMIC_SMOKE || !smoke_exists || !animate2) return;
 	assert(SMOKE_SKIPVAL > 0);
 	static int cur_skip(0);
 	
@@ -1111,7 +1111,7 @@ unsigned upload_smoke_3d_texture() {
 	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
 	unsigned const y_start(cur_block*block_size), y_end(y_start + block_size);
 	unsigned const sz(MESH_X_SIZE*MESH_Y_SIZE*MESH_Z_SIZE);
-	unsigned const ncomp(4);
+	unsigned const ncomp(3);
 	static vector<unsigned char> data; // several MB
 	bool init_call(0);
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
@@ -1132,8 +1132,9 @@ unsigned upload_smoke_3d_texture() {
 
 			for (int z = 0; z < MESH_Z_SIZE; ++z) {
 				unsigned const off2(ncomp*(off + z));
-				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(vlm[z].c[i_]));)
-				data[off2+3] = (unsigned char)(255*CLIP_TO_01(vlm[z].v)); // put luminance in the alpha channel
+				data[off2+0] = (unsigned char)(255*CLIP_TO_01(vlm[z].smoke)); // R: smoke
+				data[off2+1] = (unsigned char)(255*CLIP_TO_01(vlm[z].v)); // G: val
+				data[off2+2] = (unsigned char)(255*CLIP_TO_01((vlm[z].c[0] + vlm[z].c[1] + vlm[z].c[2])/3.0f)); // B: luminance
 			}
 		}
 	}
