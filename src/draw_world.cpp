@@ -1666,31 +1666,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	RESET_TIME;
 	if (coll_objects.empty() || world_mode != WMODE_GROUND) return;
 	bool const TIMETEST(0);
-	static vector<pair<float, unsigned> > draw_last;
-	set_lighted_sides(2);
-	set_fill_mode();
-	gluQuadricTexture(quadric, GL_FALSE);
-	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
-	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
-	if (smoke_enabled) begin_smoke_fog();
 
-	if (display_mode & 0x10) {
-		setup_enabled_lights();
-		set_multitex(1);
-		upload_smoke_3d_texture();
-		add_uniform_int("smoke_tex", 1);
-		set_multitex(0);
-		add_uniform_int("tex0", 0);
-		add_uniform_float("x_scene_size", X_SCENE_SIZE);
-		add_uniform_float("y_scene_size", Y_SCENE_SIZE);
-		add_uniform_float("czmin", czmin);
-		add_uniform_float("czmax", czmax);
-		add_uniform_float("step_delta", 1.0*min(min(DX_VAL, DY_VAL), DZ_VAL));
-		set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
-	}
 	if (draw_solid) { // called first
 		get_enabled_lights(); // don't call twice per frame - can have problems with lightning
 		init_subdiv_lighting();
@@ -1704,18 +1680,45 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		if (TIMETEST) {PRINT_TIME("Add Shadows");}
 		get_occluders();
 		if (TIMETEST) {PRINT_TIME("Get Occluders");}
-	
-		if (have_drawn_cobj) {
-			for (unsigned i = 0; i < coll_objects.size(); ++i) {
-				if (coll_objects[i].no_draw()) continue;
+	}
+	static vector<pair<float, unsigned> > draw_last;
+	set_lighted_sides(2);
+	set_fill_mode();
+	gluQuadricTexture(quadric, GL_FALSE);
+	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
+	if (smoke_enabled) begin_smoke_fog();
+	bool const smoke_en(smoke_enabled);
+	bool const use_shaders((display_mode & 0x10) != 0);
 
-				if (coll_objects[i].is_semi_trans()) {
-					float const neg_dist_sq(-distance_to_camera_sq(coll_objects[i].get_center_pt()));
-					draw_last.push_back(make_pair(neg_dist_sq, i));
-				}
-				else {
-					coll_objects[i].draw_cobj(i);
-				}
+	if (use_shaders) {
+		setup_enabled_lights();
+		set_multitex(1);
+		upload_smoke_3d_texture();
+		add_uniform_int("smoke_tex", 1);
+		set_multitex(0);
+		add_uniform_int("tex0", 0);
+		add_uniform_float("x_scene_size", X_SCENE_SIZE);
+		add_uniform_float("y_scene_size", Y_SCENE_SIZE);
+		add_uniform_float("czmin", get_zval(0));
+		add_uniform_float("czmax", get_zval(MESH_Z_SIZE));
+		add_uniform_float("step_delta", HALF_DXY);
+		set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
+		smoke_enabled = 0;
+	}
+	if (draw_solid && have_drawn_cobj) {
+		for (unsigned i = 0; i < coll_objects.size(); ++i) {
+			if (coll_objects[i].no_draw()) continue;
+
+			if (coll_objects[i].is_semi_trans()) {
+				float const neg_dist_sq(-distance_to_camera_sq(coll_objects[i].get_center_pt()));
+				draw_last.push_back(make_pair(neg_dist_sq, i));
+			}
+			else {
+				coll_objects[i].draw_cobj(i);
 			}
 		}
 	}
@@ -1728,9 +1731,10 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 		draw_last.resize(0);
 	}
-	if (display_mode & 0x10) {
+	if (use_shaders) {
 		unset_shader_prog();
 		disable_multitex_a();
+		smoke_enabled = smoke_en;
 	}
 	if (smoke_enabled) end_smoke_fog();
 	setup_basic_fog();

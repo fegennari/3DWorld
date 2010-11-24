@@ -1049,7 +1049,7 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 		assert(density <= 1.0);
 	}
 	else {
-		float const step(0.5*(DX_VAL + DY_VAL));
+		float const step(HALF_DXY);
 		unsigned const cell_dist(unsigned(p2p_dist(camera, pos)/step));
 		vector3d const delta((camera - pos).get_norm()*step);
 		point cur(pos);
@@ -1108,10 +1108,11 @@ unsigned upload_smoke_3d_texture() {
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
 	static unsigned smoke_tid(0);
 	static int cur_block(0);
+	float const smoke_scale(1.0/SMOKE_MAX_CELL);
 	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
 	unsigned const y_start(cur_block*block_size), y_end(y_start + block_size);
 	unsigned const sz(MESH_X_SIZE*MESH_Y_SIZE*MESH_Z_SIZE);
-	unsigned const ncomp(3);
+	unsigned const ncomp(4);
 	static vector<unsigned char> data; // several MB
 	bool init_call(0);
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
@@ -1132,19 +1133,19 @@ unsigned upload_smoke_3d_texture() {
 
 			for (int z = 0; z < MESH_Z_SIZE; ++z) {
 				unsigned const off2(ncomp*(off + z));
-				data[off2+0] = (unsigned char)(255*CLIP_TO_01(vlm[z].smoke)); // R: smoke
-				data[off2+1] = (unsigned char)(255*CLIP_TO_01(vlm[z].v)); // G: val
-				data[off2+2] = (unsigned char)(255*CLIP_TO_01((vlm[z].c[0] + vlm[z].c[1] + vlm[z].c[2])/3.0f)); // B: luminance
+				lmcell const &lmc(vlm[z]);
+				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(0.5f*(lmc.v + lmc.c[i_])));) // combined colors
+				data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // R: smoke
 			}
 		}
 	}
 	if (init_call) { // create texture
-		smoke_tid = create_3d_texture(MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, ncomp, data);
+		smoke_tid = create_3d_texture(MESH_Z_SIZE, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data);
 	}
 	else { // update region/sync texture
 		unsigned const off(ncomp*y_start*MESH_X_SIZE*MESH_Z_SIZE);
 		assert(off < data.size());
-		update_3d_texture(smoke_tid, 0, y_start, 0, MESH_X_SIZE, block_size, MESH_Z_SIZE, ncomp, &data[off]);
+		update_3d_texture(smoke_tid, 0, 0, y_start, MESH_Z_SIZE, MESH_X_SIZE, block_size, ncomp, &data[off]);
 	}
 	cur_block = (cur_block+1) % SMOKE_SEND_SKIP;
 	//PRINT_TIME("Smoke Upload");
