@@ -1899,10 +1899,11 @@ colorRGBA get_cloud_color() {
 
 float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 
+	if (atmosphere == 0.0) return 0.0;
 	point lsint;
 	if (!line_sphere_int(dir*-1.0, pt, cur_spo.center, cur_spo.radius, lsint, 0)) return 0.0; // shouldn't get here?
 	vector3d const vdir(lsint - cur_spo.center);
-	return get_texture_alpha(CLOUD_TEX, (vdir.x/cur_spo.radius + cur_spo.dx), (vdir.y/cur_spo.radius + cur_spo.dy));
+	return atmosphere*get_texture_alpha(CLOUD_TEX, (vdir.x/cur_spo.radius + cur_spo.dx), (vdir.y/cur_spo.radius + cur_spo.dy));
 }
 
 
