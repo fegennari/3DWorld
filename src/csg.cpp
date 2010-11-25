@@ -151,7 +151,7 @@ void cube_t::set_from_points(point const *const pts, unsigned npts) {
 	UNROLL_3X(d[i_][0] = d[i_][1] = pts[0][i_];)
 	
 	for (unsigned i = 1; i < npts; ++i) { // get bounding xy rectangle
-		UNROLL_3X(d[i_][0] = min(d[i_][0], pts[i][i_]); d[i_][1] = max(d[i_][1], pts[i][i_]);)
+		union_with_pt(pts[i]);
 	}
 }
 
