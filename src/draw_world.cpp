@@ -795,8 +795,6 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	}
 	ndiv = max(4, min(ndiv, N_SPHERE_DIV));
 	bool const cull_face(get_cull_face(type, color));
-	//enable_fog_coord();
-	//set_fog_coord(rand_uniform(0.0, 2.0));
 	glPushMatrix();
 
 	if (cull_face) {
@@ -813,7 +811,6 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	draw_sphere_dlist(pos, radius, ndiv, do_texture);
 	if (cull_face) glDisable(GL_CULL_FACE);
 	glPopMatrix();
-	//disable_fog_coord();
 }
 
 
@@ -1693,9 +1690,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
-	if (smoke_enabled) begin_smoke_fog();
-	bool const smoke_en(smoke_enabled);
-	bool const use_shaders((display_mode & 0x10) != 0);
+	glFogfv(GL_FOG_COLOR, (float *)&GRAY); // for smoke
+	bool const use_shaders((display_mode & 0x10) == 0); // enabled by default
 
 	if (use_shaders) {
 		setup_enabled_lights();
@@ -1712,7 +1708,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		add_uniform_float("step_delta", HALF_DXY);
 		set_shader_prefix((string("const bool smoke_enabled = ") + (smoke_exists ? "true;" : "false;")), 0); // VS
 		set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
-		smoke_enabled = 0;
 	}
 	if (draw_solid && have_drawn_cobj) {
 		for (unsigned i = 0; i < coll_objects.size(); ++i) {
@@ -1739,10 +1734,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	if (use_shaders) {
 		unset_shader_prog();
 		disable_multitex_a();
-		smoke_enabled = smoke_en;
 	}
-	if (smoke_enabled) end_smoke_fog();
-	setup_basic_fog();
+	setup_basic_fog(); // reset values
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();
 	set_lighted_sides(1);

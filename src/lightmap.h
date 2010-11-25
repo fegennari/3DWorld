@@ -19,9 +19,8 @@ struct lmcell { // size = 40
 
 	float c[3], ac[3], v, smoke; // c: RGB, ac: indirect lighting color RGB
 	unsigned char lflow[3], pflow[3]; // flow: x, y, z
-	unsigned char cached_smoke_density, cached_smoke_color;
 	
-	lmcell() : v(0.0), smoke(0.0), cached_smoke_density(255), cached_smoke_color(255) {
+	lmcell() : v(0.0), smoke(0.0) {
 		UNROLL_3X(c[i_] = ac[i_] = 0.0; lflow[i_] = pflow[i_] = 255;)
 	}
 	// c[0],c[1],c[2] : ac[0],ac[1],ac[2],v

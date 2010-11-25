@@ -979,7 +979,6 @@ void distribute_smoke_for_cell(int x, int y, int z) {
 
 	if (!lmap_manager.is_valid_cell(x, y, z)) return;
 	lmcell &lmc(lmap_manager.vlmap[y][x][z]);
-	lmc.cached_smoke_density = lmc.cached_smoke_color = -1.0; // invalidate cache
 	if (lmc.smoke == 0.0) return;
 	if (lmc.smoke < 0.005f) {lmc.smoke = 0.0; return;}
 	int const dx(rand()&1), dy(rand()&1); // randomize the processing order
@@ -1033,18 +1032,12 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 	point camera(get_camera_pos());
 	if (!do_line_clip(pos, camera, smoke_man.bbox.d)) return 0.0;
 	assert(!is_nan(pos));
-	//assert(camera != pos); // ???
-	if (camera == pos) {cout << "*** Warning: camera == pos ***" << endl; return 0.0;}
+	if (camera == pos) return 0.0; // shouldn't get here?
 	lmcell *const start_lmc(lmap_manager.get_lmcell(pos));
 	float density(0.0), scolor(0.0);
 
 	if (start_lmc == NULL) {
 		density = scolor = 0.0;
-	}
-	else if (start_lmc->cached_smoke_density < 255) {
-		density = start_lmc->cached_smoke_density/254.0;
-		scolor  = start_lmc->cached_smoke_color  /254.0;
-		assert(density <= 1.0);
 	}
 	else {
 		float const step(HALF_DXY);
@@ -1066,8 +1059,6 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 		}
 		density = CLIP_TO_01(density);
 		scolor  = CLIP_TO_01(scolor);
-		start_lmc->cached_smoke_density = (unsigned char)(254.0*density);
-		start_lmc->cached_smoke_color   = (unsigned char)(254.0*scolor);
 	}
 	if (density == 0.0) return 0.0;
 	// Note: We can't just set the color here, because the fog needs to be blended after textures are applied
@@ -1077,27 +1068,6 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 	color.alpha = (1.0 - density)*color.alpha + density; // deal with transparent objects
 	if (scolor < 1.0) color *= (1.0 - density)/(1.0 - brightness); // BLACK: attenuation
 	return SMOKE_FOG_SCALE*brightness; // WHITE(GRAY): fog coord
-}
-
-
-bool has_smoke(point const *const pts, unsigned npts) { // currently only used in draw_shapes.cpp dlist test
-
-	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0;
-	set_fog_coord(0.0); // reset smoke
-	point const camera(get_camera_pos());
-	cube_t cube;
-	cube.set_from_points(pts, npts);
-	cube.union_with_pt(camera);
-
-	// test bbox against dynamic smoke bbox
-	if (!smoke_man.bbox.quick_intersect_test(cube)) return 0;
-	colorRGBA c(WHITE);
-	float const TOLER(0.1);
-	
-	for (unsigned i = 0; i < npts; ++i) {
-		if (get_smoke_from_camera(pts[i], c) > TOLER) return 1;
-	}
-	return (get_smoke_from_camera(get_center(pts, npts), c) > TOLER); // test center point
 }
 
 
@@ -1476,31 +1446,28 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 
 
 // put this into a vertex shader?
-float get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed,
-					   vector3d const &norm, float const spec[2], bool no_dynamic)
+void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed,
+					  vector3d const &norm, float const spec[2], bool no_dynamic)
 {
 	a = c; // cur_ambient alpha is 1.0
+	if (c == BLACK) return;
+	get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
+	unsigned const num_lights(enabled_lights.size());
 	
-	if (c != BLACK) {
-		get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
-		unsigned const num_lights(enabled_lights.size());
-		
-		for (unsigned i = 0; i < num_lights; ++i) { // add in diffuse + specular components
-			if (shadowed & (1 << i)) continue;
-			light_source const &lt(enabled_lights[i]);
-			float const lmag(lt.get_intensity_at(p));
-			if (lmag == 0.0) continue;
-			vector3d const dir(lt.get_center(), p);
-			float const dp(dot_product(norm, dir));
-			if (dp <= 0.0) continue;
-			//if (lt.is_dynamic()) {int cindex; if (check_coll_line(lt.get_center(), p, cindex, -1, 0, 1)) continue;} // slow
-			colorRGBA const &lsc(lt.get_color()); // ignoring a's alpha for now
-			float const mag(lmag*(dp*InvSqrt(dir.mag_sq()) + add_specular(p, dir, norm, spec)));
-			UNROLL_3X(a[i_] += mag*c[i_]*lsc[i_];)
-		}
-		a.set_valid_color();
+	for (unsigned i = 0; i < num_lights; ++i) { // add in diffuse + specular components
+		if (shadowed & (1 << i)) continue;
+		light_source const &lt(enabled_lights[i]);
+		float const lmag(lt.get_intensity_at(p));
+		if (lmag == 0.0) continue;
+		vector3d const dir(lt.get_center(), p);
+		float const dp(dot_product(norm, dir));
+		if (dp <= 0.0) continue;
+		//if (lt.is_dynamic()) {int cindex; if (check_coll_line(lt.get_center(), p, cindex, -1, 0, 1)) continue;} // slow
+		colorRGBA const &lsc(lt.get_color()); // ignoring a's alpha for now
+		float const mag(lmag*(dp*InvSqrt(dir.mag_sq()) + add_specular(p, dir, norm, spec)));
+		UNROLL_3X(a[i_] += mag*c[i_]*lsc[i_];)
 	}
-	return ((smoke_enabled && !no_dynamic) ? get_smoke_from_camera(p, a) : 0.0);
+	a.set_valid_color();
 }
 
 

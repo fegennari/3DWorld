@@ -47,7 +47,6 @@ unsigned long long max_lighted(0);
 float L1_SUBDIV_SIZE(1.0);
 
 
-extern bool smoke_enabled;
 extern unsigned cobj_counter;
 extern int coll_border, begin_motion, num_groups, camera_coll_id, spectate;
 extern int display_mode, camera_mode, camera_view, do_zoom, xoff2, yoff2;
@@ -224,7 +223,6 @@ struct vertex_t : public color_wrapper { // size = 32
 
 	point p;
 	vector3d n;
-	float fog;
 };
 
 
@@ -243,10 +241,9 @@ void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned 
 		
 		if (v.c[3] == 0) { // Note: shadowed should agree across all uses of this vertex
 			colorRGBA color;
-			v.fog = get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
+			get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
 			v.set_c4(color);
 		}
-		if (smoke_enabled) set_fog_coord(v.fog);
 		glColor4ubv(v.c);
 		v.p.do_glVertex();
 	}
@@ -564,7 +561,6 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 struct vert_color_comp {
 
 	colorRGBA c[4];
-	float s[4];
 };
 
 
@@ -825,13 +821,12 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 						created[shadowed] = 1;
 
 						for (unsigned r = 0; r < npts; ++r) {
-							cc.s[r] = get_vertex_color(cc.c[r], p.color, pts[r], shadowed, normals[r], p.spec, p.in_dlist);
+							get_vertex_color(cc.c[r], p.color, pts[r], shadowed, normals[r], p.spec, p.in_dlist);
 						}
 					}
 					vert_color_comp const &cc(ccomps[shadowed]);
 					colorRGBA a(interpolate_3d(cc.c, npts, s_[i], t_));
 					a.alpha = INTERP_1D(cc.c, s_[i], t_, npts, .alpha);
-					if (smoke_enabled) set_fog_coord(INTERP_1D(cc.s, s_[i], t_, npts, ));
 					a.do_glColor();
 					v.do_glVertex();
 				}
@@ -1007,7 +1002,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	float const spec[2] = {c_obj.cp.specular, c_obj.cp.shine};
 	bool const is_specular(ALLOW_SPECULAR && spec[0] > 0.0 && !back_facing && all_lighted != ALL_LT[1]);
 	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !is_specular && !q.is_quadric && !dg_lights &&
-		!has_d_shad && !has_smoke(pts, npts) && !has_dynamic_lights(pts, npts));
+		!has_d_shad && !has_dynamic_lights(pts, npts));
 	bool const no_subdiv(no_shadow_edge || is_black);
 	unsigned lod_level(1);
 	float lod_scale(1.0);
