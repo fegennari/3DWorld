@@ -60,6 +60,7 @@ unsigned cobj_counter(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
+cube_t cur_smoke_bb;
 dls_cell **ldynamic[2] = {NULL, NULL};
 vector<bool> x_used, y_used; // vector<char>?
 vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic {cur frame, next frame}
@@ -895,7 +896,8 @@ void build_lightmap(bool verbose) {
 
 struct smoke_manager {
 	bool enabled, smoke_vis;
-	float bbox[3][2], tot_smoke;
+	float tot_smoke;
+	cube_t bbox;
 
 	smoke_manager() {reset();}
 
@@ -904,8 +906,8 @@ struct smoke_manager {
 	}
 	void reset() {
 		for (unsigned i = 0; i < 3; ++i) { // set backwards so that nothing intersects
-			bbox[i][0] =  SCENE_SIZE[i];
-			bbox[i][1] = -SCENE_SIZE[i];
+			bbox.d[i][0] =  SCENE_SIZE[i];
+			bbox.d[i][1] = -SCENE_SIZE[i];
 		}
 		tot_smoke = 0.0;
 		enabled   = 0;
@@ -915,12 +917,7 @@ struct smoke_manager {
 		point const pos(get_xval(x), get_yval(y), get_zval(z));
 
 		if (is_smoke_visible(pos)) {
-			int const xyz[3] = {x, y, z};
-
-			for (unsigned i = 0; i < 3; ++i) {
-				bbox[i][0] = min(bbox[i][0], pos[i]);
-				bbox[i][1] = max(bbox[i][1], pos[i]);
-			}
+			bbox.union_with_pt(pos);
 			smoke_vis = 1;
 		}
 		tot_smoke += smoke_amt;
@@ -929,8 +926,8 @@ struct smoke_manager {
 	void adj_bbox() {
 		for (unsigned i = 0; i < 3; ++i) {
 			float const dval(SCENE_SIZE[i]/MESH_SIZE[i]);
-			bbox[i][0] -= dval;
-			bbox[i][1] += dval;
+			bbox.d[i][0] -= dval;
+			bbox.d[i][1] += dval;
 		}
 	}
 };
@@ -1012,6 +1009,7 @@ void distribute_smoke() { // called at most once per frame
 		smoke_man.adj_bbox();
 		smoke_enabled = smoke_man.smoke_vis;
 		smoke_exists  = smoke_man.enabled;
+		cur_smoke_bb  = smoke_man.bbox;
 		next_smoke_man.reset();
 	}
 	for (int y = cur_skip; y < MESH_Y_SIZE; y += SMOKE_SKIPVAL) { // split the computation across several frames
@@ -1033,7 +1031,7 @@ float get_smoke_from_camera(point pos, colorRGBA &color) {
 
 	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0.0;
 	point camera(get_camera_pos());
-	if (!do_line_clip(pos, camera, smoke_man.bbox)) return 0.0;
+	if (!do_line_clip(pos, camera, smoke_man.bbox.d)) return 0.0;
 	assert(!is_nan(pos));
 	//assert(camera != pos); // ???
 	if (camera == pos) {cout << "*** Warning: camera == pos ***" << endl; return 0.0;}
@@ -1086,12 +1084,13 @@ bool has_smoke(point const *const pts, unsigned npts) { // currently only used i
 
 	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0;
 	set_fog_coord(0.0); // reset smoke
+	point const camera(get_camera_pos());
 	cube_t cube;
 	cube.set_from_points(pts, npts);
-	point const camera(get_camera_pos());
+	cube.union_with_pt(camera);
 
 	// test bbox against dynamic smoke bbox
-	UNROLL_3X(if (max(camera[i_], cube.d[i_][1]) < smoke_man.bbox[i_][0] || min(camera[i_], cube.d[i_][0]) > smoke_man.bbox[i_][1]) return 0;)
+	if (!smoke_man.bbox.quick_intersect_test(cube)) return 0;
 	colorRGBA c(WHITE);
 	float const TOLER(0.1);
 	
@@ -1111,11 +1110,17 @@ unsigned upload_smoke_3d_texture() {
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
 	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
 	unsigned const y_start(cur_block*block_size), y_end(y_start + block_size);
-	unsigned const sz(MESH_X_SIZE*MESH_Y_SIZE*MESH_Z_SIZE);
+	// is it ok when texture z size is not a power of 2?
+	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize);
 	unsigned const ncomp(4);
 	static vector<unsigned char> data; // several MB
 	bool init_call(0);
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
+
+	colorRGBA cscale(cur_ambient);
+	float cmax(0.0);
+	UNROLL_3X(cmax = max(cmax, cscale[i_]);)
+	if (cmax > 0.0) cscale *= 1.0/cmax;
 
 	if (data.empty()) {
 		data.resize(ncomp*sz, 0);
@@ -1129,23 +1134,24 @@ unsigned upload_smoke_3d_texture() {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			lmcell const *const vlm(lmap_manager.vlmap[y][x]);
 			if (vlm == NULL) continue; // x/y pairs that get into here should also be constant
-			unsigned const off(MESH_Z_SIZE*(y*MESH_X_SIZE + x));
+			unsigned const off(zsize*(y*MESH_X_SIZE + x));
 
-			for (int z = 0; z < MESH_Z_SIZE; ++z) {
+			for (unsigned z = 0; z < zsize; ++z) {
 				unsigned const off2(ncomp*(off + z));
 				lmcell const &lmc(vlm[z]);
-				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(0.5f*(lmc.v + lmc.c[i_])));) // combined colors
+				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(0.5f*(lmc.v*lmc.ac[i_]*cscale[i_] + lmc.c[i_])));) // combined colors
 				data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // R: smoke
 			}
 		}
 	}
 	if (init_call) { // create texture
-		smoke_tid = create_3d_texture(MESH_Z_SIZE, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data);
+		cout << "Allocating " << zsize << " by " << MESH_X_SIZE << " by " << MESH_Y_SIZE << " smoke texture of " << ncomp*sz << " bytes." << endl;
+		smoke_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data);
 	}
 	else { // update region/sync texture
-		unsigned const off(ncomp*y_start*MESH_X_SIZE*MESH_Z_SIZE);
+		unsigned const off(ncomp*y_start*MESH_X_SIZE*zsize);
 		assert(off < data.size());
-		update_3d_texture(smoke_tid, 0, 0, y_start, MESH_Z_SIZE, MESH_X_SIZE, block_size, ncomp, &data[off]);
+		update_3d_texture(smoke_tid, 0, 0, y_start, zsize, MESH_X_SIZE, block_size, ncomp, &data[off]);
 	}
 	cur_block = (cur_block+1) % SMOKE_SEND_SKIP;
 	//PRINT_TIME("Smoke Upload");
