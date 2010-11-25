@@ -858,7 +858,7 @@ void draw_animated_billboard(point const &pos, float size, float timescale) { //
 
 // need to do something with tex coords for scale
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv,
-			   float texture_scale, vector3d const *const view_dir)
+			   float texture_scale, bool proportional_texture, vector3d const *const view_dir)
 {
 	point pt;
 	glPushMatrix();
@@ -868,9 +868,9 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 	float const step(1.0/float(ndiv));
 	unsigned ndivs[3] = {ndiv, ndiv, ndiv};
 	float    steps[3] = {step, step, step};
+	float const sizes[3] = {sx, sy, sz};
 
 	if (scale_ndiv) {
-		float const sizes[3] = {sx, sy, sz};
 		float const smax(max(sx, max(sy, sz)));
 
 		for (unsigned i = 0; i < 3; ++i) {
@@ -895,14 +895,16 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 				glBegin(GL_QUAD_STRIP);
 
 				for (unsigned s1 = 0; s1 <= ndivs[d[1]]; ++s1) {
-					float s[2];
 					pt[d[1]] = steps[d[1]]*s1;
-					s[1]     = texture_scale*pt[d[1]];
 
 					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 						pt[d[0]] = va[k^j]; // need to orient the vertices differently for each side
-						s[0]     = texture_scale*pt[d[0]];
-						if (texture) glTexCoord2fv(s);
+						
+						if (texture) {
+							float const s[2] = {(proportional_texture ? sizes[d[1]] : 1.0)*texture_scale*pt[d[1]],
+								                (proportional_texture ? sizes[d[0]] : 1.0)*texture_scale*pt[d[0]]};
+							glTexCoord2fv(s);
+						}
 						pt.do_glVertex();
 					}
 				}
