@@ -25,11 +25,11 @@ quality/blending/lighting
 
 14. Full Scene Smoke Effects: FS
 * Integrate the smoke path from the vertex to the camera (possibly progressive)
-+ Hopefully more efficient than current CPU algorithm
-+ More accurate/better effect if it can go in the FS
++ More efficient than current CPU algorithm when smoke is dense/widely distributed
++ More accurate/better effect in FS
 + More responsive/less lag
 + Can include colored smoke (no caching)
-- May be too slow
+- Adds more overhead than CPU algorithm, even when there is little or no smoke
 - Requires loading the smoke as a 3D texture every frame (non-sparse?), so may require too much bandwidth:
   0. Store sparse on CPU and do everything there: slow for dense smoke over entire scene, camera lag, per vertex (not per pixel)
   1. Store sparse matrix on CPU and GPU: too complex on GPU without pointers, and probably too slow due to branching
@@ -38,6 +38,7 @@ quality/blending/lighting
   4. Store sparse on CPU and dense on GPU, send update regions to GPU every frame: likely too much overhead in driver calls for many small updates
   5. Store sparse on CPU and dense on GPU, send entire data every frame: likely too much overhead in data conversion and transfer
   6. Perform entire algorithm using dense data on GPU: likely too complex and expensive, requires more data for flow values, difficult to sync
+  7: Store sparse and dense on CPU, convert and send entire matrix the first time, then convert and send smaller update blocks each frame: good
 
 15. Planet Cloud Cover (Universe Mode): FS
 * Add procedurally generated, unique, animated cloud cover to planets

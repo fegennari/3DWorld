@@ -1104,6 +1104,7 @@ bool has_smoke(point const *const pts, unsigned npts) { // currently only used i
 unsigned upload_smoke_3d_texture() {
 
 	//RESET_TIME;
+	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0;
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
 	static unsigned smoke_tid(0);
 	static int cur_block(0);
@@ -1130,6 +1131,9 @@ unsigned upload_smoke_3d_texture() {
 		assert(data.size() == ncomp*sz); // sz should be constant (per config file/3DWorld session)
 		init_call = !glIsTexture(smoke_tid); // will recreate the texture
 	}
+	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
+	if (!init_call && !smoke_exists) return smoke_tid;
+	
 	for (unsigned y = y_start; y < y_end; ++y) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			lmcell const *const vlm(lmap_manager.vlmap[y][x]);

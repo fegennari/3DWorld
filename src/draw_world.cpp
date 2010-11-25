@@ -52,7 +52,7 @@ pt_line_drawer obj_pld, snow_pld;
 
 
 extern GLUquadricObj* quadric;
-extern bool have_sun, underwater, smoke_enabled, have_drawn_cobj, using_lightmap, has_dl_sources;
+extern bool have_sun, underwater, smoke_enabled, have_drawn_cobj, using_lightmap, has_dl_sources, smoke_exists;
 extern int nstars, is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS, litning_dynamic;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
@@ -72,6 +72,7 @@ extern obj_vector_t<particle_cloud> part_clouds, cloud_volumes;
 extern obj_vector_t<fire> fires;
 extern obj_vector_t<scorch_mark> scorches;
 extern float diffuse[], gauss_rand_arr[];
+extern cube_t cur_smoke_bb;
 extern texture textures[];
 extern player_state *sstates;
 extern int coll_id[];
@@ -1704,8 +1705,10 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		add_uniform_float("x_scene_size", X_SCENE_SIZE);
 		add_uniform_float("y_scene_size", Y_SCENE_SIZE);
 		add_uniform_float("czmin", get_zval(0));
-		add_uniform_float("czmax", get_zval(MESH_Z_SIZE));
+		add_uniform_float("czmax", get_zval(MESH_SIZE[2]));
+		add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 		add_uniform_float("step_delta", HALF_DXY);
+		set_shader_prefix((string("const bool smoke_enabled = ") + (smoke_exists ? "true;" : "false;")), 1);
 		set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
 		smoke_enabled = 0;
 	}
