@@ -230,7 +230,7 @@ int get_texture_by_name(string const &name) {
 void check_init_texture(int id) {
 
 	// glIsTexture is slow on some machines???
-	if (textures[id].tid == 0) init_texture(id);
+	if (textures[id].tid == 0) textures[id].do_gl_init();
 	//assert(glIsTexture(textures[id].tid));
 }
 
@@ -293,13 +293,20 @@ void texture::alloc() {
 	data = new unsigned char[width*height*ncolors];
 }
 
+void texture::free_mm_data() {
+
+	delete [] mm_data;
+	mm_data = NULL;
+	mm_offsets.clear();
+}
+
 void texture::free() {
 
+	if (orig_data    != data) delete [] orig_data;
+	if (colored_data != data) delete [] colored_data;
 	delete [] data;
-	delete [] alt_data;
-	delete [] mm_data;
-	data = alt_data = mm_data = NULL;
-	mm_offsets.clear();
+	data = orig_data = colored_data = NULL;
+	free_mm_data();
 }
 
 void texture::gl_delete() {
@@ -311,7 +318,30 @@ void texture::gl_delete() {
 void texture::init() {
 
 	calc_color();
-	if (use_mipmaps == 2) build_mipmaps();
+	build_mipmaps();
+}
+
+
+void texture::do_gl_init() {
+
+	if (SHOW_TEXTURE_MEMORY) {
+		static unsigned tmem(0);
+		unsigned tsize(width*height*ncolors);
+		if (use_mipmaps) tsize = 4*tsize/3;
+		tmem += tsize;
+		cout << "tmem = " << tmem << endl;
+	}
+	assert(width > 0 && height > 0 && data != NULL);
+	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap);
+	// GL_BGRA is supposedly faster, but do we want to swap things here?
+	GLenum const format((ncolors == 4) ? GL_RGBA : GL_RGB);
+	//if (use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+	glTexImage2D(GL_TEXTURE_2D, 0, ncolors, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+	
+	if (use_mipmaps) {
+		if (ncolors == 3) gen_mipmaps(); else create_custom_mipmaps();
+	}
+	assert(glIsTexture(tid));
 }
 
 
@@ -339,9 +369,11 @@ void texture::calc_color() {
 
 void texture::build_mipmaps() {
 
+	if (use_mipmaps != 2) return; // not enabled
 	assert(width == height);
 	assert(ncolors == 3 || ncolors == 4);
-	assert(mm_offsets.empty());
+	if (!mm_offsets.empty()) {assert(mm_data); return;} // already built
+	assert(mm_data == NULL);
 	unsigned data_size(0);
 
 	for (unsigned tsz = width/2; tsz >= 1; tsz /= 2) {
@@ -376,33 +408,36 @@ void texture::set_to_color(colorRGBA const &c) {
 
 	assert(ncolors == 3 || ncolors == 4 && data != NULL);
 	if (c == color) return; // already set
-	if (c == ALPHA0 && alt_data == NULL) return; // color disabled (but never enabled)
+	if (c == ALPHA0 && (orig_data == NULL || data == orig_data)) return; // color disabled (but never enabled)
 	color = c;
 	gl_delete();
 
 	if (c == ALPHA0) { // color disabled
-		assert(alt_data != NULL);
-		swap(data, alt_data);
+		data = orig_data;
+		free_mm_data();
+		build_mipmaps();
 		return;
 	}
 	color_wrapper c4;
 	c4.set_c4(c);
 	unsigned const sz(unsigned(width*height));
 	float const cw_scale(1.0/(float(c4.c[0]) + float(c4.c[1]) + float(c4.c[2])));
+	if (colored_data == NULL) colored_data = new unsigned char[sz*ncolors];
+	if (orig_data == NULL) orig_data = data; // make a copy
+	data = colored_data;
+	assert(data != NULL);
 
-	if (alt_data == NULL) {
-		alt_data = new unsigned char[sz*ncolors];
-		swap(data, alt_data);
-	}
 	for (unsigned i = 0; i < sz; ++i) {
 		unsigned const pos(i*ncolors);
 		unsigned char *d(data + pos);
 		float const cscale(min(1.0f, (unsigned(d[0]) + unsigned(d[1]) + unsigned(d[2]))*cw_scale));
 		
 		for (int n = 0; n < ncolors; ++n) {
-			d[n] = (unsigned char)min(255.0, (0.5*cscale*c4.c[n] + 0.5*alt_data[pos+n]));
+			d[n] = (unsigned char)min(255.0, (0.5*cscale*c4.c[n] + 0.5*orig_data[pos+n]));
 		}
 	}
+	free_mm_data();
+	build_mipmaps();
 }
 
 
@@ -550,27 +585,26 @@ unsigned char *LoadTextureRAW(texture const &t, int index) {
 }
 
 
-void create_custom_mipmaps(texture const &t) {
+void texture::create_custom_mipmaps() {
 
-	unsigned const nc(t.ncolors);
-	assert(nc == 3 || nc == 4);
-	GLenum const format((nc == 4) ? GL_RGBA : GL_RGB);
-	unsigned const tsize(nc*t.width*t.height);
+	assert(ncolors == 3 || ncolors == 4);
+	GLenum const format((ncolors == 4) ? GL_RGBA : GL_RGB);
+	unsigned const tsize(ncolors*width*height);
 	vector<unsigned char> idata, odata;
 	idata.resize(tsize);
-	memcpy(&idata.front(), t.data, tsize);
+	memcpy(&idata.front(), data, tsize);
 
-	for (unsigned w = t.width, h = t.height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
+	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
 		unsigned const w1(max(w,    1U)), h1(max(h,    1U));
 		unsigned const w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
-		unsigned const xinc((w2 < w1) ? nc : 0), yinc((h2 < h1) ? nc*w1 : 0);
-		odata.resize(nc*w2*h2);
+		unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
+		odata.resize(ncolors*w2*h2);
 
 		for (unsigned y = 0; y < h2; ++y) {
 			for (unsigned x = 0; x < w2; ++x) {
-				unsigned const ix1(nc*(y*w2+x)), ix2(nc*((y<<1)*w1+(x<<1)));
+				unsigned const ix1(ncolors*(y*w2+x)), ix2(ncolors*((y<<1)*w1+(x<<1)));
 
-				if (nc == 3) {
+				if (ncolors == 3) {
 					UNROLL_3X(odata[ix1+i_] = (unsigned char)(((unsigned)idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) >> 2);)
 				}
 				else { // custom alpha mipmaps
@@ -581,7 +615,7 @@ void create_custom_mipmaps(texture const &t) {
 				}
 			}
 		}
-		glTexImage2D(GL_TEXTURE_2D, level, nc, w2, h2, 0, format, GL_UNSIGNED_BYTE, &odata.front());
+		glTexImage2D(GL_TEXTURE_2D, level, ncolors, w2, h2, 0, format, GL_UNSIGNED_BYTE, &odata.front());
 		idata.swap(odata);
 	}
 }
@@ -617,26 +651,7 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 void init_texture(int id) {
 
 	assert(id < NUM_TEXTURES);
-	texture &t1(textures[id]);
-
-	if (SHOW_TEXTURE_MEMORY) {
-		static unsigned tmem(0);
-		unsigned tsize(t1.width*t1.height*t1.ncolors);
-		if (t1.use_mipmaps) tsize = 4*tsize/3;
-		tmem += tsize;
-		cout << "tmem = " << tmem << endl;
-	}
-	assert(t1.width > 0 && t1.height > 0 && t1.data != NULL);
-	setup_texture(t1.tid, GL_MODULATE/*GL_DECAL*/, (t1.use_mipmaps != 0), t1.wrap, t1.wrap);
-	// GL_BGRA is supposedly faster, but do we want to swap things here?
-	GLenum const format((t1.ncolors == 4) ? GL_RGBA : GL_RGB);
-	//if (t1.use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-	glTexImage2D(GL_TEXTURE_2D, 0, t1.ncolors, t1.width, t1.height, 0, format, GL_UNSIGNED_BYTE, t1.data);
-	
-	if (t1.use_mipmaps) {
-		if (t1.ncolors == 3) gen_mipmaps(); else create_custom_mipmaps(t1);
-	}
-	assert(glIsTexture(t1.tid));
+	textures[id].do_gl_init();
 }
 
 

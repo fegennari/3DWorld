@@ -513,12 +513,9 @@ public:
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}
-		if (water_en != last_water_en && !shader_en) { // should this be here?
-			clear_vbos_tids(0,1); // water changed, recreate textures
-			last_water_en = water_en;
-		}
-		if (shader_en != last_shader_en) {
-			clear_vbos_tids(0,1); // shaders changed, recreate textures
+		if ((water_en != last_water_en && !shader_en) || shader_en != last_shader_en) {
+			clear_vbos_tids(0,1); // water or shaders changed, recreate textures
+			last_water_en  = water_en;
 			last_shader_en = shader_en;
 		}
 		if (shader_en) setup_mesh_draw_shaders();

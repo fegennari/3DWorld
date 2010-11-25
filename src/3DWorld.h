@@ -685,7 +685,7 @@ struct texture { // size = 78 (80)
 	char type, format, use_mipmaps;
 	bool wrap;
 	int width, height, ncolors;
-	unsigned char *data, *alt_data, *mm_data;
+	unsigned char *data, *orig_data, *colored_data, *mm_data;
 	std::string name;
 	GLuint tid;
 	colorRGBA color;
@@ -693,13 +693,17 @@ struct texture { // size = 78 (80)
 
 	texture(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n,
 		GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR) : type(t), format(f), use_mipmaps(um), wrap(wra),
-		width(w), height(h), ncolors(nc), data(NULL), alt_data(NULL), mm_data(0), name(n), tid(tex), color(c) {}
+		width(w), height(h), ncolors(nc), data(NULL), orig_data(NULL), colored_data(NULL), mm_data(0),
+		name(n), tid(tex), color(c) {}
 	void init();
+	void do_gl_init();
 	void calc_color();
 	void build_mipmaps();
+	void create_custom_mipmaps();
 	unsigned char const *get_mipmap_data(unsigned level) const;
 	void set_to_color(colorRGBA const &c);
 	void alloc();
+	void free_mm_data();
 	void free();
 	void gl_delete();
 };
@@ -1304,7 +1308,6 @@ int get_texture_by_name(std::string const &name);
 bool select_texture(int id, bool enable=1);
 float get_tex_ar(int id);
 void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s=0, bool mirror_t=0);
-void init_texture(int id);
 void free_textures();
 void reset_textures();
 void free_texture(unsigned &tid);

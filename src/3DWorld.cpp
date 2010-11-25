@@ -932,10 +932,12 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			reset_tiled_terrain_state();
 			
 			if (!combined_gu) {
+				setup_landscape_tex_colors(ALPHA0, ALPHA0);
 				glDisable(get_universe_ambient_light());
 				calc_visibility(SUN_SHADOW); // reclaculate sun
 				DISABLE_WATER = INIT_DISABLE_WATER;
 			}
+			create_landscape_texture();
 		}
 		break;
 
