@@ -1708,7 +1708,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		add_uniform_float("czmax", get_zval(MESH_SIZE[2]));
 		add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 		add_uniform_float("step_delta", HALF_DXY);
-		set_shader_prefix((string("const bool smoke_enabled = ") + (smoke_exists ? "true;" : "false;")), 1);
+		set_shader_prefix((string("const bool smoke_enabled = ") + (smoke_exists ? "true;" : "false;")), 0); // VS
 		set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
 		smoke_enabled = 0;
 	}
