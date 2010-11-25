@@ -1579,7 +1579,7 @@ void set_specular(float specularity, float shininess) {
 
 void get_enabled_lights() {
 
-	float a[4], d[4], atten;
+	float a[4], d[4], lval[4];
 	for (unsigned j = 0; j < 4; ++j) cur_ambient[j] = ((j == 3) ? 1.0 : 0.0); // reset value
 	unsigned ncomp(0);
 	enabled_lights.clear();
@@ -1588,9 +1588,11 @@ void get_enabled_lights() {
 		int const light(GL_LIGHT0 + i); // should be sequential
 
 		if (glIsEnabled(light)) {
+			float atten(1.0);
 			glGetLightfv(light, GL_AMBIENT, a);
 			glGetLightfv(light, GL_DIFFUSE, d);
-			glGetLightfv(light, GL_CONSTANT_ATTENUATION, &atten);
+			glGetLightfv(light, GL_POSITION, lval);
+			if (lval[3] != 0.0) glGetLightfv(light, GL_CONSTANT_ATTENUATION, &atten); // point light source only
 			assert(atten > 0.0);
 			colorRGBA const lcolor(colorRGBA(d[0]/atten, d[1]/atten, d[2]/atten, d[3]));
 			enabled_lights.push_back(light_source(0.0, gl_light_positions[i], lcolor, 0));

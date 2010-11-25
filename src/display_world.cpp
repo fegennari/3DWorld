@@ -369,6 +369,7 @@ void setup_lighting(int underwater, float depth) {
 	glDisable(GL_LIGHT2);
 	set_gl_light_pos(GL_LIGHT0, sun_pos,  LIGHT_W_VAL);
 	set_gl_light_pos(GL_LIGHT1, moon_pos, LIGHT_W_VAL);
+	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0); // reset attenuation to 1.0
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
 	set_fsource_light();
