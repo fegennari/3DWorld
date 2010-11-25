@@ -32,6 +32,7 @@ obj_group obj_groups[NUM_TOT_OBJS];
 dwobject def_objects[NUM_TOT_OBJS];
 point star_pts[2*N_STAR_POINTS];
 vector<coll_obj> fixed_cobjs;
+vector<portal> portals;
 
 extern bool have_platform_cobj;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
@@ -929,7 +930,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 		for (unsigned j = 0; j < 3; ++j) swap_dim[i][j] = swap_dim_[i][j];
 		mirror[i] = mirror_[i];
 	}
-	while (!end) { // available: b N Y ...
+	while (!end) { // available: b Y ...
 		assert(fp != NULL);
 		letter = (char)getc(fp);
 		
@@ -1281,6 +1282,19 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					cobj.npoints = 4; // have to reset every time in case it was a cube
 					cobj.add_to_vector(fixed_cobjs, COLL_POLYGON);
 				}
+			}
+			break;
+
+		case 'N': // portal: xyz1 xyz2 xyz3 xyz4
+			{
+				portal p;
+				for (unsigned i = 0; i < 4; ++i) {
+					if (fscanf(fp, "%f%f%f", &p.pts[i].x, &p.pts[i].y, &p.pts[i].z) != 3) {
+						return read_error(fp, "portal", coll_obj_file);
+					}
+					xform_pos(p.pts[i], tv, scale, mirror, swap_dim);
+				}
+				portals.push_back(p);
 			}
 			break;
 

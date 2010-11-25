@@ -721,6 +721,14 @@ struct camera_filter {
 };
 
 
+struct portal {
+
+	point pts[4]; // quads only, for now
+	void draw() const;
+	point get_center_pt() const {return (pts[0] + pts[1] + pts[2] + pts[3])*0.25;}
+};
+
+
 // colors
 colorRGBA const RED      (1.0,  0.0,  0.0,  1.0);
 colorRGBA const GREEN    (0.0,  1.0,  0.0,  1.0);

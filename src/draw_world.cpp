@@ -78,6 +78,7 @@ extern player_state *sstates;
 extern int coll_id[];
 extern vector<light_source> dynamic_lsources;
 extern vector<point> waypoints;
+extern vector<portal> portals;
 
 
 class pt_line_drawer; // forward declaration
@@ -1681,7 +1682,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		get_occluders();
 		if (TIMETEST) {PRINT_TIME("Get Occluders");}
 	}
-	static vector<pair<float, unsigned> > draw_last;
+	static vector<pair<float, int> > draw_last;
 	set_lighted_sides(2);
 	set_fill_mode();
 	gluQuadricTexture(quadric, GL_FALSE);
@@ -1723,11 +1724,26 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 	}
 	if (draw_trans) { // called second
+		if (use_shaders && smoke_exists) {
+			for (unsigned i = 0; i < portals.size(); ++i) {
+				float const neg_dist_sq(-distance_to_camera_sq(portals[i].get_center_pt()));
+				draw_last.push_back(make_pair(neg_dist_sq, -(int)(i+1)));
+			}
+		}
 		sort(draw_last.begin(), draw_last.end()); // sort back to front
 
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
-			unsigned const ix(draw_last[i].second);
-			coll_objects[ix].draw_cobj(ix);
+			int const ix(draw_last[i].second);
+
+			if (ix < 0) { // portal
+				unsigned const pix(-(ix+1));
+				assert(pix < portals.size());
+				portals[pix].draw();
+			}
+			else { // cobj
+				assert((unsigned)ix < coll_objects.size());
+				coll_objects[ix].draw_cobj(ix);
+			}
 		}
 		draw_last.resize(0);
 	}
@@ -1745,6 +1761,23 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		show_draw_stats();
 	}
 }
+
+
+void portal::draw() const {
+
+	float const scale[2] = {0.0, 0.0};
+	select_texture(WHITE_TEX, 0);
+	setup_polygon_texgen(plus_z, scale); // doesn't matter as long as it's set to something
+	enable_blend();
+	ALPHA0.do_glColor();
+	glBegin(GL_QUADS);
+
+	for (unsigned i = 0; i < 4; ++i) {
+		pts[i].do_glVertex();
+	}
+	glEnd();
+	disable_blend();
+};
 
 
 void draw_stars(float alpha) {

@@ -13,6 +13,7 @@ void main()
 	vec4 color = vec4(texel.rgb * gl_Color.rgb, texel.a * gl_Color.a);
 	
 	if (eye == vpos) {
+		if (color.a == 0.0) discard;
 		gl_FragColor = color;
 		return;
 	}
@@ -30,7 +31,8 @@ void main()
 		vec3 p = clamp(pos, 0.0, 1.0); // should be in [0.0, 1.0] range
 		vec4 tex_val = texture3D(smoke_tex, p.zxy); // rgba = {color.rgb, smoke}
 		float smoke = SMOKE_SCALE*tex_val.a*step_weight;
-		color = mix(color, vec4((tex_val.rgb * gl_Fog.color.rgb), 1.0), smoke);
+		vec3 rgb_comp = (tex_val.rgb * gl_Fog.color.rgb);
+		color = ((color.a == 0.0) ? vec4(rgb_comp, smoke) : mix(color, vec4(rgb_comp, 1.0), smoke));
 		pos += delta*step_weight;
 		step_weight = 1.0;
 	}
