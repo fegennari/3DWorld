@@ -23,7 +23,7 @@ void main()
 	vec3 dir   = eye - vpos;
 	vec3 delta = normalize(dir)*step_delta/scale;
 	float nsteps = length(dir)/step_delta;
-	int num_steps = 1 + int(nsteps); // round up
+	int num_steps = 1 + min(1000, int(nsteps)); // round up
 	float step_weight = fract(nsteps);
 	
 	// smoke volume iteration using 3D texture, pos to eye

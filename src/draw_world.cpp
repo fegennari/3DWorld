@@ -1770,6 +1770,7 @@ void portal::draw() const {
 	setup_polygon_texgen(plus_z, scale); // doesn't matter as long as it's set to something
 	enable_blend();
 	ALPHA0.do_glColor();
+	//WHITE.do_glColor();
 	glBegin(GL_QUADS);
 
 	for (unsigned i = 0; i < 4; ++i) {

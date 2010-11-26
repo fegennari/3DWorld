@@ -110,6 +110,12 @@ G 4.32 5.49 0.42 0.0065 1
 G -1.2 3.0  0.35 0.006  0 # MJ
 
 
+# Portals
+N  0.3  2.8 -0.6   0.3  2.8 -0.1  0.9  2.8 -0.1  0.9  2.8 -0.6
+N -0.3 -1.5  0.1  -0.3 -1.5  0.6  0.0 -1.5  0.6  0.0 -1.5  0.1
+N  1.2  1.5  0.1   1.2  1.5  0.6  1.2  1.8  0.6  1.2  1.8  0.1
+
+
 # Ceilings/Floors
 a 0 # non-destroyable
 y 8.0
@@ -219,6 +225,7 @@ l 0.7 1.0 1.0 1.0 1.0 49 1 # plaster/white paint
 B -1.68 -0.4 -1.88 -0.1 -0.01 0.05 # Above Back Room
 e 0
 
+
 y 3.0
 # Outside Walls Top
 l 0.9 1.0 1.0 1.0 1.0 16 1 # brick
@@ -273,16 +280,19 @@ n 0
 
 # Windows
 a 2 # destroyable/shatterable
-e 0
 l 0.7 0.9 0.9 0.9 0.2 -1 1 1.55 # semi-transparent glass
 r 0.8 90.0 # set specularity
+e 51
 B -1.6  -1.4  -1.96  -1.94 0.2   0.6 # Window Panes, Clockwise
 D 0.4 0.0 0.0 2 # step delta
+e 15
 B -1.76 -1.74  0.1   0.7  0.35  0.6
+e 51
 B -1.4  -0.8   2.74  2.76 0.35  0.6
 B -0.3  -0.1   2.74  2.76 0.35  0.575
 B  0.35  0.75  2.74  2.76 0.3   0.6
 B  0.3   0.9  -1.46 -1.44 0.275 0.6
+e 0
 r 0.0 1.0 # reset specularity
 a 1 # destroyable
 
@@ -322,9 +332,6 @@ B  0.3  0.9  2.7   2.8  -0.1  0.0
 e 19
 B  1.1  1.2 -2.0   2.8  -0.7  0.0
 e 0
-
-# Portals
-N 0.3 2.8 -0.6  0.3 2.8 -0.1  0.9 2.8 -0.1  0.9 2.8 -0.6
 
 # Paneling
 y 10.0
@@ -501,7 +508,9 @@ y 1.0
 # Windows
 a 2 #shatterable
 l 0.7 1.0 1.0 1.0 0.6 8 1 1.55 # Glass Block
+e 15
 B -1.78 -1.72 -1.21 -0.99 0.34 0.56
+e 0
 a 0 # non-destroyable
 
 # Back Porch
