@@ -36,6 +36,7 @@ void main()
 		pos += delta*step_weight;
 		step_weight = 1.0;
 	}
+	if (color.a == 0.0) discard;
 	gl_FragColor = color;
 	// update depth if density is large?
 }
