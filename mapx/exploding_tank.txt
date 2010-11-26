@@ -1,6 +1,6 @@
 # exploding tank
 l 0.87 0.45 0.4 0.4 1.0 -1 1 # gray metal - rust?, specular?
-a 3 # explodable
+a 4 # explodeable
 e 3
 C 0.0 0.0 0.1  0.0 0.0 0.5  0.1 0.1
 C 0.0 0.0 0.7  0.0 0.0 1.0  0.1 0.1

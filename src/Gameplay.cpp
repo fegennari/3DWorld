@@ -1063,7 +1063,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 		obj_group &objg(obj_groups[coll_id[FRAGMENT]]);
 
 		for (unsigned i = 0; i < cts.size(); ++i) {
-			if (cts[i].destroy >= EXPLODEABLE) {
+			if (cts[i].destroy == EXPLODEABLE) {
 				float const val(float(pow(double(cts[i].volume), 1.0/3.0))), exp_damage(25000.0*val + 0.25*damage + 500.0);
 				create_explosion(pos, shooter, 0, exp_damage, 10.0*val, BLAST_RADIUS, 0);
 				gen_fire(pos, min(4.0, 12.0*val), shooter);
@@ -1080,7 +1080,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 					for (unsigned j = 0; j < 3; ++j) { // only accurate for COLL_CUBE
 						fpos[j] = rand_uniform(cts[i].d[j][0], cts[i].d[j][1]); // generate inside of the shattered cobj's volume
 					}
-					vector3d vadd(fpos - pos); // average cdir and direction from collision point to fragment location
+					vector3d const vadd(fpos - pos); // average cdir and direction from collision point to fragment location
 
 					if (vadd.mag() > TOLERANCE) {
 						velocity += vadd.get_norm()*(cdir_mag/vadd.mag());

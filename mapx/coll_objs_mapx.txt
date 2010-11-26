@@ -211,9 +211,10 @@ B -3.5 -0.5  0.5  3.0  2.2  2.45 # skylight
 B -3.3 -0.7  0.7  2.8  1.6  1.85 # glass floor
 n 0
 e 0
-a 2 # destroyable/shatterable
+a 3 # destroyable/shatterable to portal
 l 0.7  0.8 0.8 0.8 0.3 -1 1 # semi-transparent glass
 B -3.5 -0.5  0.5  3.0  2.3  2.38 # skylight
+a 2 # destroyable/shatterable
 l 0.76 0.8 0.8 0.8 0.48 -1 1 # opaque glass
 B -3.3 -0.7  0.7  2.8  1.68 1.79 # glass floor
 a 1 # destroyable
@@ -356,7 +357,7 @@ n 0
 #######################################
 
 # windows
-a 2 # destroyable/shatterable
+a 3 # destroyable/shatterable to portal
 l 0.7 0.95 0.95 0.95 0.25 -1 1 1.55 # semi-transparent glass
 
 # specular windows are slower because they can't use dlists,

@@ -17,6 +17,8 @@ bool const CHECK_ADJACENCY    = 0; // doesn't seem to make any significant diffe
 int  const REMOVE_T_JUNCTIONS = 1; // fewer hole pixels and better ambient transitions but more cobjs and render time
 float const REL_DMAX          = 0.2;
 
+extern vector<portal> portals;
+
 
 // *** RECT IMPLEMENTATION ***
 
@@ -834,11 +836,50 @@ void process_negative_shapes(vector<coll_obj> &cobjs) { // negtive shapes should
 }
 
 
+void add_portal(coll_obj const &c) {
+
+	if (c.type == COLL_POLYGON) {
+		assert(c.npoints == 3 || c.npoints == 4);
+		portal p;
+
+		for (int i = 0; i < c.npoints; ++i) {
+			p.pts[i] = c.points[i]; // ignore thickness - use base polygon only
+		}
+		if (c.npoints == 3) p.pts[3] = p.pts[2]; // duplicate the last point
+		portals.push_back(p);
+	}
+	else if (c.type == COLL_CUBE) {
+		portal p;
+		float max_area(0.0);
+		
+		for (unsigned i = 0; i < 6; ++i) { // choose enabled side with max area
+			unsigned const dim(i>>1), dir(i&1), d0((dim+1)%3), d1((dim+2)%3);
+			if (c.cp.surfs & EFLAGS[dim][dir]) continue; // disabled side
+			float const area(fabs(c.d[d0][1] - c.d[d0][0])*fabs(c.d[d1][1] - c.d[d1][0]));
+
+			if (area > max_area) {
+				max_area = area;
+				point pos;
+				pos[dim] = c.d[dim][dir];
+
+				for (unsigned n = 0; n < 4; ++n) {
+					pos[d0] = c.d[d0][n<2];
+					pos[d1] = c.d[d1][(n&1)^(n<2)];
+					p.pts[n] = pos;
+				}
+			}
+		}
+		if (max_area > 0.0) portals.push_back(p);
+	}
+	// else other types are not supported yet (cylinder, sphere)
+}
+
+
 unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir,
 					   float x1, float x2, float y1, float y2, float z1, float z2, int min_destroy)
 {
 	//RESET_TIME;
-	if (destroy_thresh >= 2) return 0;
+	if (destroy_thresh >= EXPLODEABLE) return 0;
 	csg_cube const cube(x1, x2, y1, y2, z1, z2);
 	point center(cube.get_center());
 	if (cube.is_zero_area()) return 0;
@@ -868,7 +909,8 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		if (cobjs[i].status != COLL_STATIC || !cobjs[i].fixed) continue;
 		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), csg_obj(is_cube || is_cylinder);
 		int const D(cobjs[i].destroy);
-		if (D < SHATTERABLE && !csg_obj)  continue;
+		bool const shatter(D >= SHATTERABLE);
+		if (!shatter && !csg_obj)  continue;
 		csg_cube const cube2(cobjs[i], !csg_obj);
 		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
 
@@ -877,12 +919,13 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			continue;
 		}
 		float volume(cobjs[i].volume);
-		bool no_new_cubes(D >= SHATTERABLE || volume < TOLERANCE);
+		bool no_new_cubes(shatter || volume < TOLERANCE);
 
-		if (!csg_obj || subtract_cobj(new_cobjs, cube, cobjs[i]) || (D >= SHATTERABLE && is_cylinder)) {
+		if (!csg_obj || subtract_cobj(new_cobjs, cube, cobjs[i]) || (shatter && is_cylinder)) {
 			if (cobjs[i].cp.color.alpha == 1.0) destroyed = 1; // non-transparent - have to reset adjacent cobj hidden surfaces
 			if (no_new_cubes) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
+			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
 			indices.clear();
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
