@@ -38,5 +38,7 @@ void main()
 	}
 	if (color.a == 0.0) discard;
 	gl_FragColor = color;
-	// update depth if density is large?
+	
+	//need to convert coordinate space and set in early termination case
+	//gl_FragDepth = length(dir); // mean free path distance
 }
