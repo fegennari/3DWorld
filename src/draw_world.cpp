@@ -2190,7 +2190,6 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 	glAlphaFunc(GL_GREATER, 0.01);
 	glEnable(GL_ALPHA_TEST); // makes it faster
 	enable_blend();
-	//setup_smoke_shaders(0.01, 0, 1);
 	glBegin(GL_QUADS);
 	draw_objects(pc);
 	glEnd();
@@ -2204,7 +2203,14 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 void draw_smoke() {
 
 	if (part_clouds.empty()) return;
+	bool const use_shaders(0 && (display_mode & 0x10) == 0); // disabled
+	if (use_shaders) setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
 	draw_part_cloud(part_clouds, WHITE, 0);
+
+	if (use_shaders) {
+		unset_shader_prog();
+		disable_multitex_a();
+	}
 }
 
 

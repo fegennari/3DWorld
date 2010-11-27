@@ -7,6 +7,7 @@ Completed:
 12. Infinite Terrain Tiles - Underwater Attenuation: VS
 13. Grass Moving in Wind: VS
 14. Full Scene Smoke Effects: VS/FS - progressive upload, per-fragment smoke integration with clipping in VS
+10a. Fires/Scorch Marks Smoke Effects: VS/FS - see 14
 
 Not Implementable/Too Difficult or Inefficient
 1. Leaf Wind: GS - requires state
@@ -16,12 +17,12 @@ Not Implementable/Too Difficult or Inefficient
 6. Water Reflections: VS/FS - too inefficient per fragment, too complex per vertex
 7. Mesh Texturing: FS - too complex and inefficient, not worth the memor savings (for now)
 8. Mesh Underwater Caustics: FS - requires global solution, dependent on other effects
+10b. Smoke Puffs Smoke Effects: VS/FS - smoke puffs too large/high fill rate, FS smoke integration too slow
 
 Todo:
 10. Smoke/Clouds/Fires/Scorch Marks: VS/FS, or GS using billboards
 * Render smoke and cloud particles and/or fires faster or with better
 quality/blending/lighting
-* Add smoke effects using smoke shaders?
 + Lots of possibilities here, plenty of research done on this topic
 - Not sure what to do yet, or if the improvements would be significant
 
