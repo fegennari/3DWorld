@@ -12,6 +12,7 @@ void main()
 {
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 color = vec4(texel.rgb * gl_Color.rgb, texel.a * gl_Color.a);
+	if (keep_alpha && color.a <= min_alpha) discard;
 	
 	if (eye == vpos) {
 		if (color.a <= min_alpha) discard;
@@ -33,7 +34,7 @@ void main()
 		vec4 tex_val = texture3D(smoke_tex, p.zxy); // rgba = {color.rgb, smoke}
 		float smoke = SMOKE_SCALE*tex_val.a*step_weight;
 		vec3 rgb_comp = (tex_val.rgb * gl_Fog.color.rgb);
-		color = ((color.a == 0.0) ? vec4(rgb_comp, smoke) : mix(color, vec4(rgb_comp, 1.0), smoke));
+		color = ((!keep_alpha && color.a == 0.0) ? vec4(rgb_comp, smoke) : mix(color, vec4(rgb_comp, (keep_alpha ? color.a : 1.0)), smoke));
 		pos += delta*step_weight;
 		step_weight = 1.0;
 	}

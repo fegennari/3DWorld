@@ -22,7 +22,6 @@ bool const NO_SHRAP_DLIGHT      = 1; // looks cool with dynamic lights, but very
 bool const SHOW_WAYPOINTS       = 0;
 bool const FASTER_SHADOWS       = 0;
 bool const TEST_DYN_GLOBAL_LT   = 0;
-bool const SMOKE_FOG_COORD      = 1; // for fires only, though could implement for smoke
 unsigned const MAX_CFILTERS     = 10;
 unsigned const SHAD_NOBJ_THRESH = 200;
 float const NDIV_SCALE          = 1.6;
@@ -56,6 +55,7 @@ extern bool have_sun, underwater, smoke_enabled, have_drawn_cobj, using_lightmap
 extern int nstars, is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS, litning_dynamic;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
+extern unsigned smoke_tid;
 extern float zmin, light_factor, water_plane_z, fticks, perspective_fovy, perspective_nclip;
 extern float temperature, atmosphere, TIMESTEP, base_gravity, tan_term, LEAF_SIZE, zbottom, sun_rot;
 extern point light_pos, ocean, mesh_origin, flow_source, surface_pos, litning_pos, leaf_points[], star_pts[];
@@ -1642,22 +1642,26 @@ void get_enabled_lights() {
 }
 
 
-void begin_smoke_fog() {
+void setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha) {
 
-	glEnable(GL_FOG);
-	enable_fog_coord();
-	set_fog_coord(0.0);
-	glFogfv(GL_FOG_COLOR, (float *)&GRAY);
-	glFogf(GL_FOG_START, 0.1);
-	glFogf(GL_FOG_END, 2.5*Z_SCENE_SIZE); // FOG_DIST1
-}
-
-
-void end_smoke_fog() {
-
-	disable_fog_coord();
-	glDisable(GL_FOG);
-	reset_fog();
+	if (smoke_tid) {
+		set_multitex(1);
+		bind_3d_texture(smoke_tid);
+	}
+	add_uniform_int("smoke_tex", 1);
+	set_multitex(0);
+	add_uniform_int("tex0", 0);
+	add_uniform_float("min_alpha", min_alpha);
+	add_uniform_float("x_scene_size", X_SCENE_SIZE);
+	add_uniform_float("y_scene_size", Y_SCENE_SIZE);
+	add_uniform_float("czmin", get_zval(0));
+	add_uniform_float("czmax", get_zval(MESH_SIZE[2]));
+	add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
+	add_uniform_float("step_delta", HALF_DXY);
+	set_bool_shader_prefix("use_texgen",    use_texgen,   0); // VS
+	set_bool_shader_prefix("smoke_enabled", smoke_exists, 0); // VS
+	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
+	set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
 }
 
 
@@ -1695,25 +1699,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	bool const use_shaders((display_mode & 0x10) == 0); // enabled by default
 
 	if (use_shaders) {
-		setup_enabled_lights();
-		static unsigned smoke_tid(0);
-		if (draw_solid) smoke_tid = upload_smoke_3d_texture(); // first pass
-		
-		if (smoke_tid) {
-			set_multitex(1);
-			bind_3d_texture(smoke_tid);
-		}
-		add_uniform_int("smoke_tex", 1);
-		set_multitex(0);
-		add_uniform_int("tex0", 0);
-		add_uniform_float("x_scene_size", X_SCENE_SIZE);
-		add_uniform_float("y_scene_size", Y_SCENE_SIZE);
-		add_uniform_float("czmin", get_zval(0));
-		add_uniform_float("czmax", get_zval(MESH_SIZE[2]));
-		add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
-		add_uniform_float("step_delta", HALF_DXY);
-		set_shader_prefix((string("const bool smoke_enabled = ") + (smoke_exists ? "true;" : "false;")), 0); // VS
-		set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
+		if (draw_solid) upload_smoke_3d_texture(); // first pass
+		setup_smoke_shaders(0.0, 1, 0);
 	}
 	if (draw_solid && have_drawn_cobj) {
 		for (unsigned i = 0; i < coll_objects.size(); ++i) {
@@ -2153,21 +2140,11 @@ void fire::set_fire_color() const {
 }
 
 
-void set_color_with_fog(point const &pos, colorRGBA c) {
-
-	if (SMOKE_FOG_COORD) {
-		float const fog_val(get_smoke_from_camera(pos, c));
-		set_fog_coord(fog_val);
-	}
-	c.do_glColor();
-}
-
-
 void fire::draw() const {
 
 	assert(status);
 	point const pos2(pos + point(0.0, 0.0, 2.0*radius));
-	set_color_with_fog(pos2, WHITE);
+	WHITE.do_glColor();
 	draw_animated_billboard(pos2, 4.0*radius, (time&15)/16.0);
 }
 
@@ -2175,7 +2152,7 @@ void fire::draw() const {
 void scorch_mark::draw() const {
 
 	assert(status);
-	set_color_with_fog(pos, colorRGBA(0.0, 0.0, 0.0, get_alpha()));
+	colorRGBA(0.0, 0.0, 0.0, get_alpha()).do_glColor();
 	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	draw_billboard(pos, (pos + orient), upv, radius, radius);
 }
@@ -2213,7 +2190,7 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 	glAlphaFunc(GL_GREATER, 0.01);
 	glEnable(GL_ALPHA_TEST); // makes it faster
 	enable_blend();
-	// SMOKE_FOG_COORD support?
+	//setup_smoke_shaders(0.01, 0, 1);
 	glBegin(GL_QUADS);
 	draw_objects(pc);
 	glEnd();
@@ -2331,6 +2308,8 @@ void draw_cloud_volumes() {
 template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int tid) {
 
 	if (objs.empty()) return;
+	bool const use_shaders((display_mode & 0x10) == 0); // enabled by default
+	if (use_shaders) setup_smoke_shaders(0.04, 0, 1);
 	enable_blend();
 	glDisable(GL_LIGHTING);
 	glEnable(GL_ALPHA_TEST);
@@ -2338,7 +2317,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	select_texture(tid);
 	order_vect_t order;
 	get_draw_order(objs, order);
-	if (SMOKE_FOG_COORD) begin_smoke_fog();
+	glFogfv(GL_FOG_COLOR, (float *)&GRAY);
 	glBegin(GL_QUADS);
 
 	for (unsigned j = 0; j < order.size(); ++j) {
@@ -2347,7 +2326,11 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 		objs[i].draw();
 	}
 	glEnd();
-	if (SMOKE_FOG_COORD) end_smoke_fog();
+	
+	if (use_shaders) {
+		unset_shader_prog();
+		disable_multitex_a();
+	}
 	glDisable(GL_ALPHA_TEST);
 	disable_blend();
 	glDisable(GL_TEXTURE_2D);

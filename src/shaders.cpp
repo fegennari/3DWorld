@@ -74,9 +74,10 @@ void setup_enabled_lights(unsigned num) {
 	for (unsigned i = 0; i < num; ++i) { // 0=sun, 1=moon
 		GLboolean const enabled(glIsEnabled(GL_LIGHT0 + i));
 		prog_name_suffix += (enabled ? '1' : '0');
-		ostringstream oss;
-		oss << "const bool enable_light" << i << " = " << (enabled ? "true" : "false") << ";" << endl;
-		for (unsigned s = 0; s < 2; ++s) prepend_string[s] += oss.str(); // put into vertex and fragment shaders
+
+		for (unsigned s = 0; s < 2; ++s) { // put into vertex and fragment shaders
+			set_bool_shader_prefix((string("enable_light") + char('0'+i)), (enabled != 0), s);
+		}
 	}
 }
 
@@ -86,6 +87,12 @@ void set_shader_prefix(string const &prefix, unsigned shader_type) {
 	assert(shader_type < 3);
 	prog_name_suffix += ",s" + ('0'+shader_type) + prefix;
 	prepend_string[shader_type] += prefix + '\n';
+}
+
+
+void set_bool_shader_prefix(string const &name, bool val, unsigned shader_type) {
+	
+	set_shader_prefix((string("const bool ") + name + " = " + (val ? "true;" : "false;")), shader_type);
 }
 
 

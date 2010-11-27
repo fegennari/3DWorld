@@ -1,11 +1,17 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 varying vec3 eye, vpos;
 
-#define TEST_CLIP_T(reg, va, vb, vd, vc) {float t = ((va) - (vb))/(vd); if ((vc) > 0.0) {if (t > tmin) tmin = t;} else {if (t < tmax) tmax = t;}}
+#define TEST_CLIP_T(reg, va, vb, vd, vc) {float t = ((va) - (vb))/(vd); if ((vc) > 0.0) \
+                                          {if (t > tmin) tmin = t;} else {if (t < tmax) tmax = t;}}
 
 void main()
 {
-	setup_texgen(0);
+	if (use_texgen) {
+		setup_texgen(0);
+	}
+	else {
+		gl_TexCoord[0] = gl_MultiTexCoord0;
+	}	
 	gl_Position = ftransform();
 	gl_FrontColor = gl_Color;
 	

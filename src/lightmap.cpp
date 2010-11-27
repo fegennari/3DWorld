@@ -46,7 +46,6 @@ float const DLIGHT_AMBIENT   = 0.25; // in range [0.0, 1.0]
 float const DLIGHT_DIFFUSE   = 0.75; // in range [0.0, 1.0], DLIGHT_AMBIENT + DLIGHT_DIFFUSE should be close to 1.0
 float const LT_DIR_FALLOFF   = 0.005;
 float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
-float const SMOKE_FOG_SCALE  = 15.0;
 float const SMOKE_DENSITY    = 1.0;
 float const SMOKE_MAX_CELL   = 0.125;
 float const SMOKE_MAX_VAL    = 100.0;
@@ -56,7 +55,7 @@ float const SMOKE_DIS_ZD     = 0.03;
 
 
 bool large_dlight(0), using_lightmap(0), lm_alloc(0), has_dl_sources(0), smoke_enabled(0), smoke_exists(0);
-unsigned cobj_counter(0);
+unsigned cobj_counter(0), smoke_tid(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
@@ -1026,57 +1025,11 @@ void distribute_smoke() { // called at most once per frame
 }
 
 
-float get_smoke_from_camera(point pos, colorRGBA &color) {
-
-	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0.0;
-	point camera(get_camera_pos());
-	if (!do_line_clip(pos, camera, smoke_man.bbox.d)) return 0.0;
-	assert(!is_nan(pos));
-	if (camera == pos) return 0.0; // shouldn't get here?
-	lmcell *const start_lmc(lmap_manager.get_lmcell(pos));
-	float density(0.0), scolor(0.0);
-
-	if (start_lmc == NULL) {
-		density = scolor = 0.0;
-	}
-	else {
-		float const step(HALF_DXY);
-		unsigned const cell_dist(unsigned(p2p_dist(camera, pos)/step));
-		vector3d const delta((camera - pos).get_norm()*step);
-		point cur(pos);
-		lmcell const *lmc(start_lmc);
-
-		for (unsigned i = 0; i <= cell_dist && lmc != NULL; ++i) { // slow
-			float const smoke(min(SMOKE_MAX_CELL, lmc->smoke));
-			
-			if (smoke > 0.0) {
-				float const val(0.5*(lmc->v + (lmc->c[0] + lmc->c[1] + lmc->c[2])/3.0)); // add in luminance from lights
-				scolor   = ((density == 0.0) ? val : (smoke*val + (1.0 - smoke)*scolor));
-				density += smoke;
-			}
-			cur += delta;
-			lmc  = lmap_manager.get_lmcell(cur);
-		}
-		density = CLIP_TO_01(density);
-		scolor  = CLIP_TO_01(scolor);
-	}
-	if (density == 0.0) return 0.0;
-	// Note: We can't just set the color here, because the fog needs to be blended after textures are applied
-	// Note: We can't set the fog color directly per vertex, we can only set the object color
-	// This means we can only have fog/smoke ranging in color from FOG_COLOR to BLACK
-	float const brightness(density*scolor);
-	color.alpha = (1.0 - density)*color.alpha + density; // deal with transparent objects
-	if (scolor < 1.0) color *= (1.0 - density)/(1.0 - brightness); // BLACK: attenuation
-	return SMOKE_FOG_SCALE*brightness; // WHITE(GRAY): fog coord
-}
-
-
-unsigned upload_smoke_3d_texture() {
+bool upload_smoke_3d_texture() {
 
 	//RESET_TIME;
 	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0;
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
-	static unsigned smoke_tid(0);
 	static int cur_block(0);
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
 	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
@@ -1102,7 +1055,7 @@ unsigned upload_smoke_3d_texture() {
 		init_call = !glIsTexture(smoke_tid); // will recreate the texture
 	}
 	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
-	if (!init_call && !smoke_exists) return smoke_tid;
+	if (!init_call && !smoke_exists) return 0; // return 1?
 	
 	for (unsigned y = y_start; y < y_end; ++y) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -1129,7 +1082,7 @@ unsigned upload_smoke_3d_texture() {
 	}
 	cur_block = (cur_block+1) % SMOKE_SEND_SKIP;
 	//PRINT_TIME("Smoke Upload");
-	return smoke_tid;
+	return 1;
 }
 
 
