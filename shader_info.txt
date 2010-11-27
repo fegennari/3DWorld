@@ -6,6 +6,7 @@ Completed:
 11. Per-Pixel Lighting: FS
 12. Infinite Terrain Tiles - Underwater Attenuation: VS
 13. Grass Moving in Wind: VS
+14. Full Scene Smoke Effects: VS/FS - progressive upload, per-fragment smoke integration with clipping in VS
 
 Not Implementable/Too Difficult or Inefficient
 1. Leaf Wind: GS - requires state
@@ -17,28 +18,18 @@ Not Implementable/Too Difficult or Inefficient
 8. Mesh Underwater Caustics: FS - requires global solution, dependent on other effects
 
 Todo:
-10. Smoke/Clouds and/or Fires: VS/FS, or GS using billboards
+10. Smoke/Clouds/Fires/Scorch Marks: VS/FS, or GS using billboards
 * Render smoke and cloud particles and/or fires faster or with better
 quality/blending/lighting
+* Add smoke effects using smoke shaders?
 + Lots of possibilities here, plenty of research done on this topic
 - Not sure what to do yet, or if the improvements would be significant
 
-14. Full Scene Smoke Effects: FS
-* Integrate the smoke path from the vertex to the camera (possibly progressive)
-+ More efficient than current CPU algorithm when smoke is dense/widely distributed
-+ More accurate/better effect in FS
-+ More responsive/less lag
-+ Can include colored smoke (no caching)
-- Adds more overhead than CPU algorithm, even when there is little or no smoke
-- Requires loading the smoke as a 3D texture every frame (non-sparse?), so may require too much bandwidth:
-  0. Store sparse on CPU and do everything there: slow for dense smoke over entire scene, camera lag, per vertex (not per pixel)
-  1. Store sparse matrix on CPU and GPU: too complex on GPU without pointers, and probably too slow due to branching
-  2. Store dense  matrix on CPU and GPU: too slow to update on CPU side and too much memory, still have to transfer all that data
-  3. Store sparse on CPU and create dense version to send to GPU every frame: conversion and data transfer take too long
-  4. Store sparse on CPU and dense on GPU, send update regions to GPU every frame: likely too much overhead in driver calls for many small updates
-  5. Store sparse on CPU and dense on GPU, send entire data every frame: likely too much overhead in data conversion and transfer
-  6. Perform entire algorithm using dense data on GPU: likely too complex and expensive, requires more data for flow values, difficult to sync
-  7: Store sparse and dense on CPU, convert and send entire matrix the first time, then convert and send smaller update blocks each frame: good
+12b. Terrain Tile Water Env Reflection: VS or FS
+* Reflect sun, clouds, and sky
++ More agreement with standard mesh water
++ Better visual quality
+- Only clouds in finite mesh mode, inf terrain has fog
 
 15. Planet Cloud Cover (Universe Mode): FS
 * Add procedurally generated, unique, animated cloud cover to planets

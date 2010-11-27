@@ -5,7 +5,7 @@ uniform float min_alpha = 0.0;
 void main()
 {
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
-	if (texel.a < min_alpha) discard;
+	if (texel.a <= min_alpha) discard;
 	
 	vec3 normal2 = normalize(normal); // renormalize
 	vec4 color = gl_FrontMaterial.emission + gl_FrontMaterial.ambient * gl_LightModel.ambient;

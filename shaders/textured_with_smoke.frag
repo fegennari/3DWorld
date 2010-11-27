@@ -2,6 +2,7 @@ uniform float x_scene_size, y_scene_size, czmin, czmax; // scene bounds (world s
 uniform float step_delta;
 uniform sampler2D tex0;
 uniform sampler3D smoke_tex;
+uniform float min_alpha = 0.0;
 
 varying vec3 eye, vpos; // world space
 
@@ -13,7 +14,7 @@ void main()
 	vec4 color = vec4(texel.rgb * gl_Color.rgb, texel.a * gl_Color.a);
 	
 	if (eye == vpos) {
-		if (color.a == 0.0) discard;
+		if (color.a <= min_alpha) discard;
 		gl_FragColor = color;
 		return;
 	}
@@ -36,7 +37,7 @@ void main()
 		pos += delta*step_weight;
 		step_weight = 1.0;
 	}
-	if (color.a == 0.0) discard;
+	if (color.a <= min_alpha) discard;
 	gl_FragColor = color;
 	
 	//need to convert coordinate space and set in early termination case
