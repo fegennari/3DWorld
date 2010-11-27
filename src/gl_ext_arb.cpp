@@ -97,13 +97,19 @@ void setup_multitexture() { // Windows specific
 // ***************** 3D TEXTURES *****************
 
 
+void bind_3d_texture(unsigned tid) {
+
+	glBindTexture(GL_TEXTURE_3D, tid);
+	assert(glIsTexture(tid));
+}
+
+
 unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data) {
 
 	assert(data.size() == ncomp*xsz*ysz*zsz);
 	unsigned tid(0);
 	glGenTextures(1, &tid);
-	glBindTexture(GL_TEXTURE_3D, tid);
-	assert(glIsTexture(tid));
+	bind_3d_texture(tid);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -118,8 +124,7 @@ unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned nc
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data)
 {
-	glBindTexture(GL_TEXTURE_3D, tid);
-	assert(glIsTexture(tid));
+	bind_3d_texture(tid);
 	GLenum const format((ncomp == 4) ? GL_RGBA : GL_RGB);
 	glTexSubImage3D(GL_TEXTURE_3D, 0, xoff, yoff, zoff, xsz, ysz, zsz, format, GL_UNSIGNED_BYTE, data);
 }

@@ -1696,8 +1696,13 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
 	if (use_shaders) {
 		setup_enabled_lights();
-		set_multitex(1);
-		upload_smoke_3d_texture();
+		static unsigned smoke_tid(0);
+		if (draw_solid) smoke_tid = upload_smoke_3d_texture(); // first pass
+		
+		if (smoke_tid) {
+			set_multitex(1);
+			bind_3d_texture(smoke_tid);
+		}
 		add_uniform_int("smoke_tex", 1);
 		set_multitex(0);
 		add_uniform_int("tex0", 0);
