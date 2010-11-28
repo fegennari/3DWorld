@@ -24,7 +24,7 @@ unsigned const NUM_RAND_LTS  = 0;
 unsigned const FLOW_CACHE_BS = 17;
 unsigned const FLOW_CACHE_SZ = (1 << FLOW_CACHE_BS);
 int const SMOKE_SKIPVAL      = 6;
-int const SMOKE_SEND_SKIP    = 1;
+int const SMOKE_SEND_SKIP    = 8;
 
 float const CTHRESH          = 0.025;
 float const MIN_LIGHT        = 0.0;
