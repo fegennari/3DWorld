@@ -188,7 +188,15 @@ unsigned get_shader(string const &name, unsigned type) {
 	filename_split(name, fns, '+');
 
 	for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
-		string const fname(shaders_dir + "/" + *i + "." + shader_name_table[type]);
+		assert(!i->empty());
+		string fname(shaders_dir + "/" + *i);
+		
+		if ((*i)[i->size()-1] == '*') { // wildcard shader file: works with all shader types
+			fname.erase(fname.size()-1);
+		}
+		else { // add shader type extension
+			fname += "." + shader_name_table[type];
+		}
 
 		if (!load_shader_file(fname, data)) {
 			cerr << "Error loading shader file " << fname << ". Exiting." << endl;
