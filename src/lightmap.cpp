@@ -24,7 +24,7 @@ unsigned const NUM_RAND_LTS  = 0;
 unsigned const FLOW_CACHE_BS = 17;
 unsigned const FLOW_CACHE_SZ = (1 << FLOW_CACHE_BS);
 int const SMOKE_SKIPVAL      = 6;
-int const SMOKE_SEND_SKIP    = 8;
+int const SMOKE_SEND_SKIP    = 1;
 
 float const CTHRESH          = 0.025;
 float const MIN_LIGHT        = 0.0;
@@ -1028,23 +1028,13 @@ void distribute_smoke() { // called at most once per frame
 bool upload_smoke_3d_texture() {
 
 	//RESET_TIME;
-	if (!DYNAMIC_SMOKE || !smoke_enabled) return 0;
+	if (!DYNAMIC_SMOKE || !smoke_enabled || lmap_manager.vlmap == NULL) return 0;
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
-	static int cur_block(0);
-	float const smoke_scale(1.0/SMOKE_MAX_CELL);
-	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
-	unsigned const y_start(cur_block*block_size), y_end(y_start + block_size);
 	// is it ok when texture z size is not a power of 2?
 	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize);
 	unsigned const ncomp(4);
 	static vector<unsigned char> data; // several MB
 	bool init_call(0);
-	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
-
-	colorRGBA cscale(cur_ambient);
-	float cmax(0.0);
-	UNROLL_3X(cmax = max(cmax, cscale[i_]);)
-	if (cmax > 0.0) cscale *= 1.0/cmax;
 
 	if (data.empty()) {
 		data.resize(ncomp*sz, 0);
@@ -1056,6 +1046,21 @@ bool upload_smoke_3d_texture() {
 	}
 	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
 	if (!init_call && !smoke_exists) return 0; // return 1?
+
+	colorRGBA cscale(cur_ambient);
+	float cmax(0.0);
+	UNROLL_3X(cmax = max(cmax, cscale[i_]);)
+	if (cmax > 0.0) cscale *= 1.0/cmax;
+	static colorRGBA last_cscale(ALPHA0);
+	bool const full_update(init_call || cscale != last_cscale);
+	last_cscale = cscale;
+
+	static int cur_block(0);
+	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
+	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
+	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
+	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
+	float const smoke_scale(1.0/SMOKE_MAX_CELL);
 	
 	for (unsigned y = y_start; y < y_end; ++y) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -1066,8 +1071,11 @@ bool upload_smoke_3d_texture() {
 			for (unsigned z = 0; z < zsize; ++z) {
 				unsigned const off2(ncomp*(off + z));
 				lmcell const &lmc(vlm[z]);
-				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(0.5f*(lmc.v*lmc.ac[i_]*cscale[i_] + lmc.c[i_])));) // combined colors
-				data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // R: smoke
+
+				if (full_update) {
+					UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(0.5f*(lmc.v*lmc.ac[i_]*cscale[i_] + lmc.c[i_])));) // combined colors
+				}
+				data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // alpha: smoke
 			}
 		}
 	}
