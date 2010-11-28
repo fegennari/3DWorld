@@ -8,6 +8,8 @@ varying vec3 eye, vpos; // world space
 
 const float SMOKE_SCALE = 0.25;
 
+// Note: This may seem like it can go into the vertex shader as well,
+//       but we don't have the tex0 value there and can't determine the full init color
 void main()
 {
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);

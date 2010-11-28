@@ -1670,7 +1670,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha)
 	set_bool_shader_prefix("use_texgen",    use_texgen,   0); // VS
 	set_bool_shader_prefix("smoke_enabled", smoke_exists, 0); // VS
 	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
-	set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
+	set_shader_prog("texture_gen.part+line_clip.part+no_lt_texgen_smoke", "smoke_integrate.part*+textured_with_smoke");
 	return change_fog_color(GRAY);
 }
 
