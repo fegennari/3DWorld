@@ -1642,7 +1642,16 @@ void get_enabled_lights() {
 }
 
 
-void setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha) {
+colorRGBA change_fog_color(colorRGBA const &new_color) {
+
+	colorRGBA old_color;
+	glGetFloatv(GL_FOG_COLOR, (float *)&old_color);
+	glFogfv(GL_FOG_COLOR, (float *)&new_color); // for smoke
+	return old_color;
+}
+
+
+colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha) {
 
 	if (smoke_tid) {
 		set_multitex(1);
@@ -1662,6 +1671,15 @@ void setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha) {
 	set_bool_shader_prefix("smoke_enabled", smoke_exists, 0); // VS
 	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
 	set_shader_prog("texture_gen.part+no_lt_texgen_smoke", "textured_with_smoke");
+	return change_fog_color(GRAY);
+}
+
+
+void end_smoke_shaders(colorRGBA const &orig_fog_color) {
+
+	unset_shader_prog();
+	disable_multitex_a();
+	glFogfv(GL_FOG_COLOR, (float *)&orig_fog_color); // reset to original value
 }
 
 
@@ -1695,12 +1713,12 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
-	glFogfv(GL_FOG_COLOR, (float *)&GRAY); // for smoke
+	colorRGBA orig_fog_color;
 	bool const use_shaders((display_mode & 0x10) == 0); // enabled by default
 
 	if (use_shaders) {
 		if (draw_solid) upload_smoke_3d_texture(); // first pass
-		setup_smoke_shaders(0.0, 1, 0);
+		orig_fog_color = setup_smoke_shaders(0.0, 1, 0);
 	}
 	if (draw_solid && have_drawn_cobj) {
 		for (unsigned i = 0; i < coll_objects.size(); ++i) {
@@ -1739,11 +1757,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 		draw_last.resize(0);
 	}
-	if (use_shaders) {
-		unset_shader_prog();
-		disable_multitex_a();
-	}
-	setup_basic_fog(); // reset values
+	if (use_shaders) end_smoke_shaders(orig_fog_color);
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();
 	set_lighted_sides(1);
@@ -2204,13 +2218,10 @@ void draw_smoke() {
 
 	if (part_clouds.empty()) return;
 	bool const use_shaders(0 && (display_mode & 0x10) == 0); // disabled
-	if (use_shaders) setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
+	colorRGBA orig_fog_color;
+	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
 	draw_part_cloud(part_clouds, WHITE, 0);
-
-	if (use_shaders) {
-		unset_shader_prog();
-		disable_multitex_a();
-	}
+	if (use_shaders) end_smoke_shaders(orig_fog_color);
 }
 
 
@@ -2315,7 +2326,8 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 
 	if (objs.empty()) return;
 	bool const use_shaders((display_mode & 0x10) == 0); // enabled by default
-	if (use_shaders) setup_smoke_shaders(0.04, 0, 1);
+	colorRGBA orig_fog_color;
+	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.04, 0, 1);
 	enable_blend();
 	glDisable(GL_LIGHTING);
 	glEnable(GL_ALPHA_TEST);
@@ -2332,11 +2344,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 		objs[i].draw();
 	}
 	glEnd();
-	
-	if (use_shaders) {
-		unset_shader_prog();
-		disable_multitex_a();
-	}
+	if (use_shaders) end_smoke_shaders(orig_fog_color);
 	glDisable(GL_ALPHA_TEST);
 	disable_blend();
 	glDisable(GL_TEXTURE_2D);
