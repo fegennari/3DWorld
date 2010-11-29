@@ -446,7 +446,7 @@ public:
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
 			setup_fog_scale();
 			add_uniform_float("height", grass_length);
-			set_shader_prog("fog.part+ad_lighting.part+grass_wind", "linear_fog.part+simple_texture");
+			set_shader_prog("ad_lighting.part+grass_wind", "linear_fog.part+simple_texture");
 			select_multitex(CLOUD_RAW_TEX, 1, 0);
 		}
 

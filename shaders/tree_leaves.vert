@@ -47,6 +47,6 @@ void main()
 	
 	if (enable_light0) color += add_light_comp(shadowed, normal, eye_space_pos, 0);
 	if (enable_light1) color += add_light_comp(shadowed, normal, eye_space_pos, 1);
-	gl_FrontColor = color;
-	set_fog();
+	gl_FrontColor   = color;
+	gl_FogFragCoord = length(eye_space_pos.xyz);
 } 

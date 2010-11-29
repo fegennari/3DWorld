@@ -212,7 +212,7 @@ void set_leaf_shader(float min_alpha) {
 	setup_fog_scale();
 	add_uniform_float("min_alpha", min_alpha);
 	add_uniform_int("tex0", 0);
-	set_shader_prog("fog.part+tree_leaves", "linear_fog.part+simple_texture");
+	set_shader_prog("tree_leaves", "linear_fog.part+simple_texture");
 }
 
 

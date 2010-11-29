@@ -20,7 +20,7 @@ Not Implementable/Too Difficult or Inefficient
 10b. Smoke Puffs Smoke Effects: VS/FS - smoke puffs too large/high fill rate, FS smoke integration too slow
 
 Todo:
-10. Smoke/Clouds/Fires/Scorch Marks: VS/FS, or GS using billboards
+10. Smoke/Clouds/Fires: VS/FS, or GS using billboards
 * Render smoke and cloud particles and/or fires faster or with better
 quality/blending/lighting
 + Lots of possibilities here, plenty of research done on this topic
@@ -36,3 +36,12 @@ quality/blending/lighting
 * Add procedurally generated, unique, animated cloud cover to planets
 + Better quality and more realistic
 - Need to figure out procedural noise (generation on GPU or texture)
+
+16. Move more code into cobj shaders: VS/FS
+* Dynamic lighting (with shadows?)
+* Static lighting calc with shadows
++ Better quality if ligthing can be in FS
++ No need to subdivide shadowed/unshadowed quads/tris if using FS
++ Faster dynamic lights: no need to update dlist data each frame
+- Difficult/inefficient to handle shadows - another voxel integration algorithm
+- Difficult/complex/inefficient to iterate over a dynamic number of lights that vary per frame
