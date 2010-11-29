@@ -13,8 +13,7 @@ bool const CAMERA_CANDLE_LT  = 0;
 bool const CAMERA_FLASH_LT   = 0; // slow and low res, but looks cool
 bool const POLY_XY_OVER_CHK  = 0;
 bool const DYNAMIC_LT_FLOW   = 1;
-bool const EXACT_DYNAM_SHAD  = 0; // slow but looks cool
-bool const DYNAMIC_SMOKE     = 1; // slow but looks cool
+bool const DYNAMIC_SMOKE     = 1; // looks cool
 bool const SHOW_STAT_LIGHTS  = 0; // debugging
 bool const SHOW_DYNA_LIGHTS  = 0; // debugging
 unsigned const NUM_LT_SMOOTH = 2; // nominally 2
@@ -1280,7 +1279,7 @@ inline float add_specular(point const &p, vector3d ldir, vector3d const &norm, f
 }
 
 
-bool get_dynamic_light(int x, int y, int z, float const *const p, float lightscale, float *ls,
+bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls,
 					   vector3d const *const norm, float const *const spec)
 {
 	if (dl_sources.empty()) return 0;
@@ -1293,20 +1292,19 @@ bool get_dynamic_light(int x, int y, int z, float const *const p, float lightsca
 		dls_cell const &ldv(ldynamic[ldi][(y >> bs)][(x >> bs)]);
 		if (!ldv.check_z(p[2])) continue;
 		unsigned const lsz(ldv.size());
-		point const pt(p[0], p[1], p[2]);
 		CELL_LOC_T const cl[3] = {x, y, z}; // what about SHIFT_VAL?
 
 		for (unsigned l = 0; l < lsz; ++l) {
 			unsigned const ls_ix(ldv.get(l));
 			assert(ls_ix < dl_sources.size());
 			light_source const &lsrc(dl_sources[ls_ix]);
-			float cscale(lightscale*lsrc.get_intensity_at(pt));
+			float cscale(lightscale*lsrc.get_intensity_at(p));
 			if (cscale < CTHRESH) continue;
 			bool const directional(lsrc.is_directional());
 			point const &lpos(lsrc.get_center());
 			
 			if (norm || directional) {
-				vector3d const dir(lpos, pt);
+				vector3d const dir(lpos, p);
 
 				if (directional) {
 					cscale *= lsrc.get_dir_intensity(dir);
@@ -1315,15 +1313,11 @@ bool get_dynamic_light(int x, int y, int z, float const *const p, float lightsca
 				if (norm) { // ambient + diffuse + specular lighting
 					float const dp(dot_product(*norm, dir));
 					if (dp <= 0.0)        continue; // back facing
-					cscale *= (DLIGHT_AMBIENT + DLIGHT_DIFFUSE*dp*InvSqrt(dir.mag_sq()) + (spec ? add_specular(pt, dir, *norm, spec) : 0.0));
+					cscale *= (DLIGHT_AMBIENT + DLIGHT_DIFFUSE*dp*InvSqrt(dir.mag_sq()) + (spec ? add_specular(p, dir, *norm, spec) : 0.0));
 					if (cscale < CTHRESH) continue;
 				}
 			}
-			if (EXACT_DYNAM_SHAD) { // could further subdivide the surface as in draw_shapes::determine_shadow_matrix()
-				int cindex; // unused
-				if (check_coll_line(lpos, pt, cindex, -1, 0, 1)) continue; // skip_dynamic?
-			}
-			else if (DYNAMIC_LT_FLOW && using_lightmap && z >= 0) { // slow for large lights, and somewhat inaccurate
+			if (DYNAMIC_LT_FLOW && using_lightmap && z >= 0) { // slow for large lights, and somewhat inaccurate
 				CELL_LOC_T const *const c(lsrc.get_cent());
 				CELL_LOC_T c1[3], c2[3];
 				unsigned equal(0);
@@ -1349,7 +1343,7 @@ bool get_dynamic_light(int x, int y, int z, float const *const p, float lightsca
 
 
 // used on mesh and water
-bool get_sd_light(int x, int y, int z, float const *const p, float lightscale, float *ls, vector3d const *const norm, float const *const spec) {
+bool get_sd_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec) {
 
 	bool added(0);
 	assert(lm_alloc && lmap_manager.vlmap);
@@ -1399,7 +1393,7 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 		ADD_LIGHT_CONTRIB(lmc.c, ls);
 	}
 	if (!no_dynamic && !outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
-		get_dynamic_light(x, y, z, (float const*)&p, 1.0, (float *)&ls, norm, spec);
+		get_dynamic_light(x, y, z, p, 1.0, (float *)&ls, norm, spec);
 	}
 	UNROLL_3X(a[i_] *= (cscale[i_]*val + ls[i_]);) // unroll the loop
 	return val;

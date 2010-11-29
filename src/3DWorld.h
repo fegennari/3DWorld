@@ -1488,9 +1488,9 @@ void get_xyz_v2(point &p, int const v[3]);
 bool upload_smoke_3d_texture();
 bool has_dynamic_lights(point const *const pts, unsigned npts);
 bool is_shadowed_lightmap(point const &p);
-bool get_dynamic_light(int x, int y, int z, float const *const p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
+bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed, vector3d const &norm, float const spec[2], bool no_dynamic);
-bool get_sd_light(int x, int y, int z, float const *const p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
+bool get_sd_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec);
 
 // function prototypes - tessellate
@@ -1501,6 +1501,7 @@ void add_uniform_float_array(std::string const &name, float const *const val, un
 void add_uniform_float(std::string const &name, float val);
 void add_uniform_int  (std::string const &name, int   val);
 void setup_enabled_lights(unsigned num=2);
+void set_dynamic_lights_shader();
 void setup_fog_scale();
 void set_shader_prefix(std::string const &prefix, unsigned shader_type);
 void set_bool_shader_prefix(std::string const &name, bool val, unsigned shader_type);
