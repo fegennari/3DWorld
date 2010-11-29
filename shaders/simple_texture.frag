@@ -5,5 +5,6 @@ void main()
 {
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	if (texel.a <= min_alpha) discard;
-	gl_FragColor = vec4(texel.rgb * gl_Color.rgb, texel.a * gl_Color.a);
+	vec4 color = vec4(texel.rgb * gl_Color.rgb, texel.a * gl_Color.a);
+	gl_FragColor = apply_fog(color);
 }

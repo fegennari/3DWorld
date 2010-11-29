@@ -206,6 +206,16 @@ void draw_trees_bl(vector<tree> &ts, bool lpos_change, bool draw_branches, bool 
 }
 
 
+void set_leaf_shader(float min_alpha) {
+
+	setup_enabled_lights();
+	setup_fog_scale();
+	add_uniform_float("min_alpha", min_alpha);
+	add_uniform_int("tex0", 0);
+	set_shader_prog("fog.part+tree_leaves", "linear_fog.part+simple_texture");
+}
+
+
 void draw_trees(vector<tree> &ts) {
 
 	//glFinish(); // testing
@@ -223,10 +233,7 @@ void draw_trees(vector<tree> &ts) {
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
 		draw_trees_bl(ts, lpos_change, 1, 0); // branches
-		setup_enabled_lights();
-		add_uniform_float("min_alpha", 0.75);
-		add_uniform_int("tex0", 0);
-		set_shader_prog("tree_leaves", "simple_texture");
+		set_leaf_shader(0.75);
 		draw_trees_bl(ts, lpos_change, 0, 1); // leaves
 		unset_shader_prog();
 		last_lpos = lpos;

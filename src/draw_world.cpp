@@ -712,6 +712,7 @@ void draw_group(obj_group &objg) {
 				setup_enabled_lights();
 				add_uniform_float("size", 2.0*radius); // Note: size no longer depends on angle
 				add_uniform_int("tex0", 0);
+				set_shader_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
 				set_shader_prog("ad_lighting.part+two_lights_no_xform", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
 				snow_pld.draw_and_clear();
 				unset_shader_prog();

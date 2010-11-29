@@ -82,6 +82,12 @@ void setup_enabled_lights(unsigned num) {
 }
 
 
+void setup_fog_scale() {
+
+	add_uniform_float("fog_scale", (glIsEnabled(GL_FOG) ? 1.0 : 0.0));
+}
+
+
 void set_shader_prefix(string const &prefix, unsigned shader_type) {
 
 	assert(shader_type < 3);

@@ -1501,6 +1501,7 @@ void add_uniform_float_array(std::string const &name, float const *const val, un
 void add_uniform_float(std::string const &name, float val);
 void add_uniform_int  (std::string const &name, int   val);
 void setup_enabled_lights(unsigned num=2);
+void setup_fog_scale();
 void set_shader_prefix(std::string const &prefix, unsigned shader_type);
 void set_bool_shader_prefix(std::string const &name, bool val, unsigned shader_type);
 bool setup_shaders();

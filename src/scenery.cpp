@@ -52,6 +52,7 @@ extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 
 
 void gen_scenery_deterministic();
+void set_leaf_shader(float min_alpha);
 
 inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
 
@@ -858,10 +859,7 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 	if (draw_transparent) {
 		enable_blend();
 		glEnable(GL_COLOR_MATERIAL);
-		setup_enabled_lights();
-		add_uniform_float("min_alpha", 0.9);
-		add_uniform_int("tex0", 0);
-		set_shader_prog("tree_leaves", "simple_texture");
+		set_leaf_shader(0.9);
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw(sscale, 2); // draw leaves

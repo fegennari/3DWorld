@@ -772,6 +772,7 @@ void display(void) {
 				bool const is_ice(temperature <= W_FREEZE_POINT && (!island || camera.z > ocean.z));
 				colorRGBA fog_color(is_ice ? ICE_C : WATER_C); // under ice/water
 				fog_color *= FOG_COLOR_ATTEN;
+				fog_color.alpha = 1.0;
 				select_liquid_color(fog_color, camera);
 				set_lighted_fog_color(fog_color);
 				glFogf(GL_FOG_END, 0.2 + (0.25 + 0.75*fog_color.blue)*FOG_DIST_UW0*(camera.z - zmin)/((camera.z + depth) - zmin));

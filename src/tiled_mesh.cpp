@@ -15,7 +15,7 @@ int  const TILE_RADIUS       = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT    = 5; // WM3, in mesh sizes
 
 
-extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
+extern int xoff, yoff, island, DISABLE_WATER, display_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, vegetation;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
@@ -474,22 +474,20 @@ public:
 	}
 
 	static void setup_mesh_draw_shaders() {
-		// ligthting parameters
+		// ligthting and fog parameters
 		setup_enabled_lights();
+		setup_fog_scale();
 
 		// texturing parameters
 		add_uniform_int("tex0", 0);
 		add_uniform_int("tex1", 1);
-
-		// fog parameters
-		add_uniform_float("fog_scale", (show_fog ? 1.0 : 0.0));
 
 		// water parameters
 		add_uniform_float("water_plane_z", (has_water() ? water_plane_z : zmin));
 		add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 
 		// create the shader
-		set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "multitex_2");
+		set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "linear_fog.part+multitex_2");
 	}
 
 	float draw(bool add_hole) {

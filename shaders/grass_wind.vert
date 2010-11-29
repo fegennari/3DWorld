@@ -46,4 +46,5 @@ void main()
 	if (enable_light6) color += add_pt_light_comp(normal, epos, 6);
 	if (enable_light7) color += add_pt_light_comp(normal, epos, 7);
 	gl_FrontColor = color;
+	set_fog();
 } 
