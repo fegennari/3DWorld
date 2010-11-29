@@ -2217,7 +2217,7 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 
 void draw_smoke() {
 
-	if (part_clouds.empty()) return;
+	if (part_clouds.empty()) return; // Note: just because part_clouds is empty doesn't mean there is any enabled smoke
 	bool const use_shaders(0 && (display_mode & 0x10) == 0); // disabled
 	colorRGBA orig_fog_color;
 	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
@@ -2325,7 +2325,9 @@ void draw_cloud_volumes() {
 
 template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int tid) {
 
-	if (objs.empty()) return;
+	order_vect_t order;
+	get_draw_order(objs, order);
+	if (order.empty()) return;
 	bool const use_shaders((display_mode & 0x10) == 0); // enabled by default
 	colorRGBA orig_fog_color;
 	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.04, 0, 1);
@@ -2334,8 +2336,6 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.04);
 	select_texture(tid);
-	order_vect_t order;
-	get_draw_order(objs, order);
 	glFogfv(GL_FOG_COLOR, (float *)&GRAY);
 	glBegin(GL_QUADS);
 
