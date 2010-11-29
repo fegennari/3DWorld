@@ -25,6 +25,7 @@ u_float_map_t u_float_map;
 u_int_map_t   u_int_map;
 string prepend_string[3]; // vertex=0, fragment=1, geometry=3
 string prog_name_suffix;
+bool no_shader_unique[3] = {0};
 
 
 void add_uniform_float_array(string const &name, float const *const val, unsigned num) {
@@ -79,6 +80,13 @@ void setup_enabled_lights(unsigned num) {
 			set_bool_shader_prefix((string("enable_light") + char('0'+i)), (enabled != 0), s);
 		}
 	}
+}
+
+
+void set_dynamic_lights_shader() {
+
+	// WRITE - use prepend_string for vertex/fragment shader
+	no_shader_unique[0] = no_shader_unique[1] = 0;
 }
 
 
@@ -138,16 +146,25 @@ public:
 
 string_prog_map loaded_programs;
 string_shad_map loaded_shaders[3]; // vertex=0, fragment=1, geometry=3
+map<string, string> loaded_files;
 
 
 bool load_shader_file(string const &fname, string &data) {
 
 	if (fname.empty()) return 0;
+	map<string, string>::const_iterator i(loaded_files.find(fname));
+	
+	if (i != loaded_files.end()) {
+		data += i->second;
+		return 1;
+	}
 	ifstream in(fname.c_str());
 	if (!in.good()) return 0;
-	string line;
-	while (std::getline(in, line)) data += line + '\n';
-	if (DEBUG_VERBOSE) cout << "shader data:" << endl << data << endl;
+	string line, file_contents;
+	while (std::getline(in, line)) file_contents += line + '\n';
+	loaded_files[fname] = file_contents;
+	if (DEBUG_VERBOSE) cout << "shader data:" << endl << file_contents << endl;
+	data += file_contents;
 	return 1;
 }
 
@@ -185,9 +202,12 @@ unsigned get_shader(string const &name, unsigned type) {
 	assert(type < 3);
 	if (name.empty()) return 0; // none selected
 	string const lookup_name(name + prepend_string[type]);
-	string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
-	if (it != loaded_shaders[type].end()) return it->second; // already loaded
+	bool const no_unique(no_shader_unique[type]);
 
+	if (!no_unique) {
+		string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
+		if (it != loaded_shaders[type].end()) return it->second; // already loaded
+	}
 	// create a new shader
 	string data(prepend_string[type]);
 	vector<string> fns;
@@ -203,7 +223,6 @@ unsigned get_shader(string const &name, unsigned type) {
 		else { // add shader type extension
 			fname += "." + shader_name_table[type];
 		}
-
 		if (!load_shader_file(fname, data)) {
 			cerr << "Error loading shader file " << fname << ". Exiting." << endl;
 			exit(1);
@@ -230,7 +249,7 @@ unsigned get_shader(string const &name, unsigned type) {
 		}
 		exit(1);
 	}
-	loaded_shaders[type][lookup_name] = shader; // cache the shader
+	if (!no_unique) loaded_shaders[type][lookup_name] = shader; // cache the shader
 	return shader;
 }
 
@@ -239,8 +258,9 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 					 int in_prim, int out_prim, int verts_out)
 {
 	// get the program
-	string const pname(vs_name + "," + fs_name + "," + gs_name + prog_name_suffix); // unique program identifier
-	string_prog_map::const_iterator it(loaded_programs.find(pname));
+	string const pname(vs_name + "," + fs_name + "," + gs_name + "," + prog_name_suffix); // unique program identifier
+	bool const no_unique(no_shader_unique[0] || no_shader_unique[1] || no_shader_unique[2]);
+	string_prog_map::const_iterator it(no_unique ? loaded_programs.end() : loaded_programs.find(pname));
 	unsigned program(0);
 
 	if (it != loaded_programs.end()) { // program already exists
@@ -282,7 +302,7 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 			}
 			exit(1);
 		}
-		loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
+		if (!no_unique) loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
 	}
 	assert(program);
 	glUseProgram(program);
@@ -297,7 +317,11 @@ void unset_shader_prog() {
 	u_float_array_map.clear();
 	u_float_map.clear();
 	u_int_map.clear();
-	for (unsigned i = 0; i < 3; ++i) prepend_string[i].clear();
+	
+	for (unsigned i = 0; i < 3; ++i) {
+		prepend_string[i].clear();
+		no_shader_unique[i] = 0;
+	}
 	prog_name_suffix.clear();
 }
 
