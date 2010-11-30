@@ -1659,6 +1659,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha)
 		bind_3d_texture(smoke_tid);
 	}
 	add_uniform_int("smoke_tex", 1);
+	setup_dlights_for_shader();
 	set_multitex(0);
 	add_uniform_int("tex0", 0);
 	add_uniform_float("min_alpha", min_alpha);
@@ -1715,7 +1716,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glEnable(GL_TEXTURE_GEN_T);
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	colorRGBA orig_fog_color;
-	bool const use_shaders((display_mode & 0x10) == 0); // enabled by default
+	bool const use_shaders((display_mode & 0x80) == 0); // enabled by default
 
 	if (use_shaders) {
 		if (draw_solid) upload_smoke_3d_texture(); // first pass
@@ -2218,7 +2219,7 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 void draw_smoke() {
 
 	if (part_clouds.empty()) return; // Note: just because part_clouds is empty doesn't mean there is any enabled smoke
-	bool const use_shaders(0 && (display_mode & 0x10) == 0); // disabled
+	bool const use_shaders(0 && (display_mode & 0x80) == 0); // disabled
 	colorRGBA orig_fog_color;
 	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
 	draw_part_cloud(part_clouds, WHITE, 0);
@@ -2328,7 +2329,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	order_vect_t order;
 	get_draw_order(objs, order);
 	if (order.empty()) return;
-	bool const use_shaders((display_mode & 0x10) == 0); // enabled by default
+	bool const use_shaders((display_mode & 0x80) == 0); // enabled by default
 	colorRGBA orig_fog_color;
 	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.04, 0, 1);
 	enable_blend();
