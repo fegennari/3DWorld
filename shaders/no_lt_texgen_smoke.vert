@@ -1,5 +1,5 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
-varying vec3 eye, vpos, orig_vertex;
+varying vec3 eye, vpos;
 
 const int MAX_LIGHTS = 256;
 // store light_source as: center.xyz, radius, color.rgba
@@ -34,12 +34,11 @@ void main()
 	else {
 		gl_TexCoord[0] = gl_MultiTexCoord0;
 	}
-	orig_vertex = gl_Vertex.xyz;
 	gl_Position = ftransform();
 	//gl_FrontColor = gl_Color;
 	vec4 color = gl_Color;
 	
-	/*if (num_lights > 0) {
+	if (num_lights > 0) {
 		vec3 llc = vec3(-x_scene_size, -y_scene_size, czmin);
 		vec3 urc = vec3( x_scene_size,  y_scene_size, czmax);
 		vec3 scale = (urc - llc);
@@ -49,7 +48,7 @@ void main()
 			if (cscale < CTHRESH) continue;
 			color += vec4(get_tex_val(i,1).rgb, 0.0)*cscale;
 		}
-	}*/
+	}
 	gl_FrontColor = color;
 	
 	if (!smoke_enabled) {
