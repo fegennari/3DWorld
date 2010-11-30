@@ -58,7 +58,6 @@ public:
 class light_source { // size = 64
 
 	bool dynamic;
-	//bool changed;
 	float radius, radius_inv, r_inner, bwidth;
 	CELL_LOC_T cent[3];
 	point center;

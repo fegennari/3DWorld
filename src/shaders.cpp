@@ -25,7 +25,6 @@ u_float_map_t u_float_map;
 u_int_map_t   u_int_map;
 string prepend_string[3]; // vertex=0, fragment=1, geometry=3
 string prog_name_suffix;
-bool no_shader_unique[3] = {0};
 
 
 void add_uniform_float_array(string const &name, float const *const val, unsigned num) {
@@ -86,7 +85,7 @@ void setup_enabled_lights(unsigned num) {
 void set_dynamic_lights_shader() {
 
 	// WRITE - use prepend_string for vertex/fragment shader
-	no_shader_unique[0] = no_shader_unique[1] = 0;
+	// store light_source as 4xN 3 comp-texture: center.xyz, color.rgb, dir.xyz, {radius, r_inner, bwidth}
 }
 
 
@@ -197,17 +196,15 @@ void filename_split(string const &fname, vector<string> &fns, char sep) {
 
 unsigned get_shader(string const &name, unsigned type) {
 	
+	RESET_TIME;
 	int const shader_type_table   [3] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER_EXT};
 	string const shader_name_table[3] = {"vert", "frag", "geom"};
 	assert(type < 3);
 	if (name.empty()) return 0; // none selected
 	string const lookup_name(name + prepend_string[type]);
-	bool const no_unique(no_shader_unique[type]);
-
-	if (!no_unique) {
-		string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
-		if (it != loaded_shaders[type].end()) return it->second; // already loaded
-	}
+	string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
+	if (it != loaded_shaders[type].end()) return it->second; // already loaded
+	
 	// create a new shader
 	string data(prepend_string[type]);
 	vector<string> fns;
@@ -249,7 +246,8 @@ unsigned get_shader(string const &name, unsigned type) {
 		}
 		exit(1);
 	}
-	if (!no_unique) loaded_shaders[type][lookup_name] = shader; // cache the shader
+	loaded_shaders[type][lookup_name] = shader; // cache the shader
+	//PRINT_TIME("Create Shader"); // 43ms
 	return shader;
 }
 
@@ -258,9 +256,9 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 					 int in_prim, int out_prim, int verts_out)
 {
 	// get the program
+	RESET_TIME;
 	string const pname(vs_name + "," + fs_name + "," + gs_name + "," + prog_name_suffix); // unique program identifier
-	bool const no_unique(no_shader_unique[0] || no_shader_unique[1] || no_shader_unique[2]);
-	string_prog_map::const_iterator it(no_unique ? loaded_programs.end() : loaded_programs.find(pname));
+	string_prog_map::const_iterator it(loaded_programs.find(pname));
 	unsigned program(0);
 
 	if (it != loaded_programs.end()) { // program already exists
@@ -302,7 +300,8 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 			}
 			exit(1);
 		}
-		if (!no_unique) loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
+		loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
+		//PRINT_TIME("Create Program"); // 90ms
 	}
 	assert(program);
 	glUseProgram(program);
@@ -320,7 +319,6 @@ void unset_shader_prog() {
 	
 	for (unsigned i = 0; i < 3; ++i) {
 		prepend_string[i].clear();
-		no_shader_unique[i] = 0;
 	}
 	prog_name_suffix.clear();
 }
