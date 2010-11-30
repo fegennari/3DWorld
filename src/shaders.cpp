@@ -48,21 +48,30 @@ void add_uniform_int(string const &name, int val) {
 }
 
 
+int get_uniform_loc(int program, string const &name) {
+
+	int const loc(glGetUniformLocation(program, name.c_str()));
+	//cout << "name: " << name << ", loc: " << loc << endl;
+	//assert(loc >= 0); // Note: if variable is unused, loc will be -1
+	return loc;
+}
+
+
 void setup_uniforms(int program) {
 
 	assert(program);
 
 	for (u_float_array_map_t::const_iterator i = u_float_array_map.begin(); i != u_float_array_map.end(); ++i) {
-		int const loc(glGetUniformLocation(program, i->first.c_str()));
-		glUniform1fv(loc, i->second.second, i->second.first);
+		int const loc(get_uniform_loc(program, i->first));
+		if (loc >= 0) glUniform1fv(loc, i->second.second, i->second.first);
 	}
 	for (u_float_map_t::const_iterator i = u_float_map.begin(); i != u_float_map.end(); ++i) {
-		int const loc(glGetUniformLocation(program, i->first.c_str()));
-		glUniform1f(loc, i->second);
+		int const loc(get_uniform_loc(program, i->first));
+		if (loc >= 0) glUniform1f(loc, i->second);
 	}
 	for (u_int_map_t::const_iterator i = u_int_map.begin(); i != u_int_map.end(); ++i) {
-		int const loc(glGetUniformLocation(program, i->first.c_str()));
-		glUniform1i(loc, i->second);
+		int const loc(get_uniform_loc(program, i->first));
+		if (loc >= 0) glUniform1i(loc, i->second);
 	}
 }
 
@@ -79,13 +88,6 @@ void setup_enabled_lights(unsigned num) {
 			set_bool_shader_prefix((string("enable_light") + char('0'+i)), (enabled != 0), s);
 		}
 	}
-}
-
-
-void set_dynamic_lights_shader() {
-
-	// WRITE - use prepend_string for vertex/fragment shader
-	// store light_source as 4xN 3 comp-texture: center.xyz, color.rgb, dir.xyz, {radius, r_inner, bwidth}
 }
 
 
