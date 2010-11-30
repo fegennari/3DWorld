@@ -15,15 +15,11 @@ pt_pair clip_line(in vec3 v1, in vec3 v2, in float[6] bounds) {
 	TEST_CLIP_T(0x08, bounds[3], v1.y, dv.y, -dv.y); // +y plane
 	TEST_CLIP_T(0x10, bounds[4], v1.z, dv.z,  dv.z); // -z plane
 	TEST_CLIP_T(0x20, bounds[5], v1.z, dv.z, -dv.z); // +z plane
-	pt_pair res;
 	
 	if (tmin >= tmax) { // clipped away
-		res.v1 = v1;
-		res.v2 = v1;
+		return pt_pair(v1, v1);
 	}
 	else {
-		res.v1 = v1 + dv*tmax;
-		res.v2 = v1 + dv*tmin;
+		return pt_pair((v1 + dv*tmax), (v1 + dv*tmin));
 	}
-	return res;
 } 
