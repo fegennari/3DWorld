@@ -54,7 +54,7 @@ float const SMOKE_DIS_ZD     = 0.03;
 
 
 bool large_dlight(0), using_lightmap(0), lm_alloc(0), has_dl_sources(0), smoke_enabled(0), smoke_exists(0);
-unsigned cobj_counter(0), smoke_tid(0), dlights_tid(0);
+unsigned cobj_counter(0), smoke_tid(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
@@ -1264,21 +1264,14 @@ bool is_shadowed_lightmap(point const &p) {
 }
 
 
-void light_source::pack_to_floatv(float *data, point const &pos_off, point const &pos_scale) const {
+void light_source::pack_to_floatv(float *data) const {
 
 	// store light_source as: center.xyz, radius, color.rgba
 	assert(data);
-	UNROLL_3X(*(data++) = CLIP_TO_01((center[i_] - pos_off[i_])*pos_scale[i_]);)
+	UNROLL_3X(*(data++) = center[i_];)
 	*(data++) = radius;
 	UNROLL_3X(*(data++) = color[i_];)
 	*(data++) = color[3];
-}
-
-
-void bind_2d_texture(unsigned tid) {
-
-	glBindTexture(GL_TEXTURE_2D, tid);
-	assert(glIsTexture(tid));
 }
 
 
@@ -1289,36 +1282,16 @@ void setup_dlights_for_shader() {
 		return;
 	}
 	//RESET_TIME;
-	unsigned const MAX_LIGHTS = 256; // any more than this will be truncated
+	unsigned const MAX_LIGHTS = 10; // any more than this will be truncated
 	unsigned const num_lights(min(MAX_LIGHTS, dl_sources.size()));
 	unsigned const light_sz = 8; // 8 floats per light
 	unsigned const max_data_sz(light_sz*MAX_LIGHTS);
 	static float dl_data[max_data_sz] = {0}; // needs to stay in scope
-	point const llc(-X_SCENE_SIZE, -Y_SCENE_SIZE, get_zval(0));
-	point const urc( X_SCENE_SIZE,  Y_SCENE_SIZE, get_zval(MESH_SIZE[2]));
-	vector3d scale;
-	UNROLL_3X(scale[i_] = 1.0/(urc[i_] - llc[i_]);)
 	
 	for (unsigned i = 0; i < num_lights; ++i) {
-		dl_sources[i].pack_to_floatv((dl_data + light_sz*i), llc, scale);
+		dl_sources[i].pack_to_floatv(dl_data + light_sz*i);
 	}
-	bool const init_call(dlights_tid == 0 || !glIsTexture(dlights_tid));
-	set_multitex(2);
-	add_uniform_int("dlights_tex", 2);
-
-	if (init_call) { // create texture
-		glGenTextures(1, &dlights_tid);
-		bind_2d_texture(dlights_tid);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, 2, MAX_LIGHTS, 0, GL_RGBA, GL_FLOAT, dl_data);
-	}
-	else { // update texture
-		bind_2d_texture(dlights_tid);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 2, num_lights, GL_RGBA, GL_FLOAT, dl_data);
-	}
+	add_uniform_float_array("dl_data", dl_data, light_sz*num_lights);
 	add_uniform_int("num_lights", num_lights);
 	//PRINT_TIME("Dynamic Lights Shader Setup");
 }

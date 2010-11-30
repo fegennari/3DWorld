@@ -1,29 +1,22 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 varying vec3 eye, vpos;
 
-const int MAX_LIGHTS = 256;
 // store light_source as: center.xyz, radius, color.rgba
+//                               012  3       4567
+uniform float dl_data[10*8]; // max of N lights
 uniform int num_lights = 0;
-uniform sampler2D dlights_tex;
-uniform float x_scene_size, y_scene_size, czmin, czmax; // scene bounds (world space)
 
 const float CTHRESH = 0.02;
-const float t_scale = 1.0/MAX_LIGHTS;
 
-vec4 get_tex_val(int i, int which) {
-	return texture2D(dlights_tex, vec2(0.5*which, i*t_scale));
-}
-
-float get_intensity_at(in vec3 pos, in vec3 off, in vec3 scale, in int i) {
-	vec4 pos_r = get_tex_val(i,0);
-	float radius = pos_r.w;
-	if (radius == 0.0) return get_tex_val(i,1).a; // no falloff
-	vec3 center = pos_r.xyz*scale + off;
-	if (abs(pos.z - center.z) > radius) return 0.0; // fast test
+float get_intensity_at(in vec3 pos, in int off) {
+	float radius = dl_data[off+3];
+	if (radius == 0.0) return dl_data[off+7]; // no falloff
+	if (abs(pos.z - dl_data[off+2]) > radius) return 0.0; // fast test
+	vec3 center = vec3(dl_data[off+0], dl_data[off+1], dl_data[off+2]);
 	float dist = length(pos - center);
 	if (dist > radius) return 0.0;
 	float rscale = (radius - dist)/radius;
-	return rscale*rscale*get_tex_val(i,1).a; // quadratic 1/r^2 attenuation
+	return rscale*rscale*dl_data[off+7]; // quadratic 1/r^2 attenuation
 }
 
 void main()
@@ -33,21 +26,16 @@ void main()
 	}
 	else {
 		gl_TexCoord[0] = gl_MultiTexCoord0;
-	}
+	}	
 	gl_Position = ftransform();
 	//gl_FrontColor = gl_Color;
 	vec4 color = gl_Color;
 	
-	if (num_lights > 0) {
-		vec3 llc = vec3(-x_scene_size, -y_scene_size, czmin);
-		vec3 urc = vec3( x_scene_size,  y_scene_size, czmax);
-		vec3 scale = (urc - llc);
-		
-		for (int i = 0; i < num_lights; ++i) {
-			float cscale = get_intensity_at(gl_Vertex.xyz, llc, scale, i);
-			if (cscale < CTHRESH) continue;
-			color += vec4(get_tex_val(i,1).rgb, 0.0)*cscale;
-		}
+	for (int i = 0; i < num_lights; ++i) {
+		int off = 8*i;
+		float cscale = get_intensity_at(gl_Vertex.xyz, off);
+		if (cscale < CTHRESH) continue;
+		color += vec4(dl_data[off+4], dl_data[off+5], dl_data[off+6], 0.0)*cscale;
 	}
 	gl_FrontColor = color;
 	

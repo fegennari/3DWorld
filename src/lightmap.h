@@ -83,7 +83,7 @@ public:
 	void shift_by(vector3d const &vd);
 	void combine_with(light_source const &l);
 	void draw(int ndiv) const;
-	void pack_to_floatv(float *data, point const &pos_off, point const &pos_scale) const;
+	void pack_to_floatv(float *data) const;
 	
 	bool operator<(light_source const &l) { // compare: y, x, z, r
 		if (center.y < l.center.y) return 1;
