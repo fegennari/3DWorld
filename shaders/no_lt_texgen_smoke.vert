@@ -1,11 +1,9 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 varying vec3 eye, vpos;
 
-#extension GL_ARB_uniform_buffer_object : enable
-
 // store light_source as: center.xyz, radius, color.rgba
 //                               012  3       4567
-const int MAX_LIGHTS = 10;
+const int MAX_LIGHTS = 20;
 uniform float dl_data[8*MAX_LIGHTS]; // max of N lights (216 is the max size)
 uniform int num_lights = 0;
 

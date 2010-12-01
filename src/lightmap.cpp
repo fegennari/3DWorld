@@ -1277,12 +1277,12 @@ void light_source::pack_to_floatv(float *data) const {
 
 void setup_dlights_for_shader() {
 
-	if (!(display_mode & 0x10)) { // not enabled
+	if (!(display_mode & 0x10) || dl_sources.empty()) { // not enabled
 		add_uniform_int("num_lights", 0);
 		return;
 	}
 	//RESET_TIME;
-	unsigned const MAX_LIGHTS = 10; // any more than this will be truncated
+	unsigned const MAX_LIGHTS = 20; // any more than this will be truncated
 	unsigned const num_lights(min(MAX_LIGHTS, dl_sources.size()));
 	unsigned const light_sz = 8; // 8 floats per light
 	unsigned const max_data_sz(light_sz*MAX_LIGHTS);
@@ -1292,6 +1292,7 @@ void setup_dlights_for_shader() {
 		dl_sources[i].pack_to_floatv(dl_data + light_sz*i);
 	}
 	add_uniform_float_array("dl_data", dl_data, light_sz*num_lights);
+	//set_uniform_buffer_data(dl_data, light_sz*num_lights);
 	add_uniform_int("num_lights", num_lights);
 	//PRINT_TIME("Dynamic Lights Shader Setup");
 }

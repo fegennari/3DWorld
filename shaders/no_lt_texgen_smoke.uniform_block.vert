@@ -5,7 +5,7 @@ varying vec3 eye, vpos;
 
 // store light_source as: center.xyz, radius, color.rgba
 //                               012  3       4567
-const int MAX_LIGHTS = 10;
+const int MAX_LIGHTS = 20;
 uniform int num_lights = 0;
 
 layout(std140) uniform uniform_block {

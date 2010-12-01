@@ -17,7 +17,12 @@ string const shaders_dir = "shaders";
 // *** uniform variables setup ***
 
 
-typedef pair<float const *, unsigned> float_arr_t;
+struct float_arr_t {
+	float const *v;
+	unsigned s;
+	float_arr_t(float const *v_=NULL, unsigned s_=0) : v(v_), s(s_) {}
+};
+
 typedef map<string, float_arr_t> u_float_array_map_t;
 typedef map<string, float> u_float_map_t;
 typedef map<string, int  > u_int_map_t;
@@ -26,12 +31,13 @@ u_float_map_t u_float_map;
 u_int_map_t   u_int_map;
 string prepend_string[3]; // vertex=0, fragment=1, geometry=3
 string prog_name_suffix;
+float_arr_t float_ptr;
 
 
 void add_uniform_float_array(string const &name, float const *const val, unsigned num) {
 
 	assert(!name.empty());
-	u_float_array_map[name] = make_pair(val, num);
+	u_float_array_map[name] = float_arr_t(val, num);
 }
 
 
@@ -49,6 +55,14 @@ void add_uniform_int(string const &name, int val) {
 }
 
 
+void set_uniform_buffer_data(float const *data, unsigned size) {
+
+	assert(data);
+	assert(size);
+	float_ptr = float_arr_t(data, size);
+}
+
+
 int get_uniform_loc(int program, string const &name) {
 
 	int const loc(glGetUniformLocation(program, name.c_str()));
@@ -58,7 +72,7 @@ int get_uniform_loc(int program, string const &name) {
 }
 
 
-bool set_uniform_buffer(int program) {
+bool set_uniform_buffer(int program, float_arr_t const &float_ptr) {
 
 	// There's only one uniform block.
 	int const uniformBlockIndex(glGetUniformBlockIndex(program, "uniform_block"));
@@ -73,17 +87,21 @@ bool set_uniform_buffer(int program) {
 	glGetActiveUniformBlockiv(program, uniformBlockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &uniformBlockSize);
 	//cout << "block_size: " << uniformBlockSize << endl;
 
-	//SurfaceColor might change, so we'll query its offset/size.
+	// The data uniform will need to be updated, so we'll query its offset/size.
 	const char *name = "data";
 	unsigned index;
 	int offset, size;
-	//First, get the index for the uniform
+
+	// First, get the index for the uniform
 	glGetUniformIndices(program, 1, &name, &index);
 	assert((int)index >= 0);
-	//Use the index to query offset and size
+
+	// Use the index to query offset and size
 	glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_OFFSET, &offset);
 	glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_SIZE, &size);
 	//cout << "index: " << index << ", offset: " << offset << ", size: " << size << endl;
+	assert(float_ptr.s <= (unsigned)size);
+	size = min(size, (int)float_ptr.s);
 
 	// Create UBO
 	static unsigned buffer_id(0);
@@ -95,9 +113,8 @@ bool set_uniform_buffer(int program) {
 	glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize, NULL, GL_DYNAMIC_DRAW);
 
 	// Bind constants to UBO binding point 0
-	char data[1000] = {0};
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, buffer_id);
-	glBufferSubData(GL_UNIFORM_BUFFER, offset, size, &data);
+	glBufferSubData(GL_UNIFORM_BUFFER, offset, size, float_ptr.v);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0); // unbind
 	return 1;
 }
@@ -106,11 +123,11 @@ bool set_uniform_buffer(int program) {
 void setup_uniforms(int program) {
 
 	assert(program);
-	set_uniform_buffer(program);
+	if (float_ptr.v) set_uniform_buffer(program, float_ptr);
 
 	for (u_float_array_map_t::const_iterator i = u_float_array_map.begin(); i != u_float_array_map.end(); ++i) {
 		int const loc(get_uniform_loc(program, i->first));
-		if (loc >= 0) glUniform1fv(loc, i->second.second, i->second.first);
+		if (loc >= 0) glUniform1fv(loc, i->second.s, i->second.v);
 	}
 	for (u_float_map_t::const_iterator i = u_float_map.begin(); i != u_float_map.end(); ++i) {
 		int const loc(get_uniform_loc(program, i->first));
@@ -384,5 +401,6 @@ void unset_shader_prog() {
 		prepend_string[i].clear();
 	}
 	prog_name_suffix.clear();
+	float_ptr = float_arr_t();
 }
 

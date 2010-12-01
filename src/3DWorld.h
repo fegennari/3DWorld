@@ -1501,6 +1501,7 @@ bool split_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point
 void add_uniform_float_array(std::string const &name, float const *const val, unsigned num);
 void add_uniform_float(std::string const &name, float val);
 void add_uniform_int  (std::string const &name, int   val);
+void set_uniform_buffer_data(float const *data, unsigned size);
 void setup_enabled_lights(unsigned num=2);
 void setup_fog_scale();
 void set_shader_prefix(std::string const &prefix, unsigned shader_type);
