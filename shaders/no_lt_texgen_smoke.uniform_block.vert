@@ -6,20 +6,23 @@ varying vec3 eye, vpos;
 // store light_source as: center.xyz, radius, color.rgba
 //                               012  3       4567
 const int MAX_LIGHTS = 10;
-uniform float dl_data[8*MAX_LIGHTS]; // max of N lights (216 is the max size)
 uniform int num_lights = 0;
+
+layout(std140) uniform uniform_block {
+  float data[8*MAX_LIGHTS];
+};
 
 const float CTHRESH = 0.02;
 
 float get_intensity_at(in vec3 pos, in int off) {
-	float radius = dl_data[off+3];
-	if (radius == 0.0) return dl_data[off+7]; // no falloff
-	if (abs(pos.z - dl_data[off+2]) > radius) return 0.0; // fast test
-	vec3 center = vec3(dl_data[off+0], dl_data[off+1], dl_data[off+2]);
+	float radius = data[off+3];
+	if (radius == 0.0) return data[off+7]; // no falloff
+	if (abs(pos.z - data[off+2]) > radius) return 0.0; // fast test
+	vec3 center = vec3(data[off+0], data[off+1], data[off+2]);
 	float dist = length(pos - center);
 	if (dist > radius) return 0.0;
 	float rscale = (radius - dist)/radius;
-	return rscale*rscale*dl_data[off+7]; // quadratic 1/r^2 attenuation
+	return rscale*rscale*data[off+7]; // quadratic 1/r^2 attenuation
 }
 
 void main()
@@ -38,7 +41,7 @@ void main()
 		int off = 8*i;
 		float cscale = get_intensity_at(gl_Vertex.xyz, off);
 		if (cscale < CTHRESH) continue;
-		color += vec4(dl_data[off+4], dl_data[off+5], dl_data[off+6], 0.0)*cscale;
+		color += vec4(data[off+4], data[off+5], data[off+6], 0.0)*cscale;
 	}
 	gl_FrontColor = color;
 	

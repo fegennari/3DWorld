@@ -20,6 +20,7 @@ void main()
 	vec4 vertex = gl_Vertex;
 	
 	if (gl_TexCoord[0].s < 0.5) { // top vertex
+	//if ((gl_VertexID % 3) == 2) { // top vertex
 		// Note: grass motion amplitude should depend on dot(wind, gl_Normal), but the normal is incorrect
 		float tx = (time*wind_x + 1.2*vertex.x);
 		float ty = (time*wind_y + 1.2*vertex.y);

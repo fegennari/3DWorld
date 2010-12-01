@@ -8,7 +8,8 @@
 using namespace std;
 
 
-bool const DEBUG_VERBOSE = 0;
+bool const PRINT_SHADER = 0;
+bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
 
@@ -57,9 +58,55 @@ int get_uniform_loc(int program, string const &name) {
 }
 
 
+bool set_uniform_buffer(int program) {
+
+	// There's only one uniform block.
+	int const uniformBlockIndex(glGetUniformBlockIndex(program, "uniform_block"));
+	if (uniformBlockIndex < 0) return 0;
+	//cout << "ix: " << uniformBlockIndex << endl;
+
+	// Associate the uniform block to binding point 0
+	glUniformBlockBinding(program, uniformBlockIndex, 0);
+
+	// Get the uniform block's size
+	int uniformBlockSize;
+	glGetActiveUniformBlockiv(program, uniformBlockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &uniformBlockSize);
+	//cout << "block_size: " << uniformBlockSize << endl;
+
+	//SurfaceColor might change, so we'll query its offset/size.
+	const char *name = "data";
+	unsigned index;
+	int offset, size;
+	//First, get the index for the uniform
+	glGetUniformIndices(program, 1, &name, &index);
+	assert((int)index >= 0);
+	//Use the index to query offset and size
+	glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_OFFSET, &offset);
+	glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_SIZE, &size);
+	//cout << "index: " << index << ", offset: " << offset << ", size: " << size << endl;
+
+	// Create UBO
+	static unsigned buffer_id(0);
+	if (buffer_id == 0 || !glIsBuffer(buffer_id)) glGenBuffers(1, &buffer_id);
+	assert(buffer_id > 0);
+	glBindBuffer(GL_UNIFORM_BUFFER, buffer_id);
+	
+	// We can use BufferData to upload our data to the shader, since we know it's in the std140 layout
+	glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize, NULL, GL_DYNAMIC_DRAW);
+
+	// Bind constants to UBO binding point 0
+	char data[1000] = {0};
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, buffer_id);
+	glBufferSubData(GL_UNIFORM_BUFFER, offset, size, &data);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0); // unbind
+	return 1;
+}
+
+
 void setup_uniforms(int program) {
 
 	assert(program);
+	set_uniform_buffer(program);
 
 	for (u_float_array_map_t::const_iterator i = u_float_array_map.begin(); i != u_float_array_map.end(); ++i) {
 		int const loc(get_uniform_loc(program, i->first));
@@ -164,7 +211,7 @@ bool load_shader_file(string const &fname, string &data) {
 	string line, file_contents;
 	while (std::getline(in, line)) file_contents += line + '\n';
 	loaded_files[fname] = file_contents;
-	if (DEBUG_VERBOSE) cout << "shader data:" << endl << file_contents << endl;
+	if (PRINT_SHADER) cout << "shader data:" << endl << file_contents << endl;
 	data += file_contents;
 	return 1;
 }
@@ -193,6 +240,20 @@ void filename_split(string const &fname, vector<string> &fns, char sep) {
 	stringstream ss(fname);
     string fn;
     while(getline(ss, fn, sep)) fns.push_back(fn);
+}
+
+
+void print_shader_info_log(unsigned shader) {
+
+	int len(0), len2(0);
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+
+	if (len > 0) {
+		vector<char> info_log_msg(len);
+		glGetShaderInfoLog(shader, len, &len2, &info_log_msg.front()); 
+		assert(len2 <= len);
+		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end()) << endl;
+	}
 }
 
 
@@ -237,20 +298,27 @@ unsigned get_shader(string const &name, unsigned type) {
 
 	if (status != GL_TRUE) {
 		cerr << "Compilation of shader " << name << " failed with status " << status << endl;
-		int len(0), len2(0);
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
-
-		if (len > 0) {
-			vector<char> info_log_msg(len);
-			glGetShaderInfoLog(shader, len, &len2, &info_log_msg.front()); 
-			assert(len2 <= len);
-			cerr << "Info log: " << string(info_log_msg.begin(), info_log_msg.end()) << endl;
-		}
+		print_shader_info_log(shader);
 		exit(1);
 	}
+	if (PRINT_LOG) print_shader_info_log(shader);
 	loaded_shaders[type][lookup_name] = shader; // cache the shader
 	//PRINT_TIME("Create Shader"); // 43ms
 	return shader;
+}
+
+
+void print_program_info_log(unsigned program) {
+
+	int len(0), len2(0);
+	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
+
+	if (len > 0) {
+		vector<char> info_log_msg(len);
+		glGetProgramInfoLog(program, len, &len2, &info_log_msg.front()); 
+		assert(len2 <= len);
+		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end()) << endl;
+	}
 }
 
 
@@ -291,17 +359,10 @@ bool set_shader_prog(string const &vs_name, string const &fs_name, string const 
 
 		if (status != GL_TRUE) {
 			cerr << "Linking of program " << pname << " failed with status " << status << endl;
-			int len(0), len2(0);
-			glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
-
-			if (len > 0) {
-				vector<char> info_log_msg(len);
-				glGetProgramInfoLog(program, len, &len2, &info_log_msg.front()); 
-				assert(len2 <= len);
-				cerr << "Info log: " << string(info_log_msg.begin(), info_log_msg.end()) << endl;
-			}
+			print_program_info_log(program);
 			exit(1);
 		}
+		if (PRINT_LOG) print_program_info_log(program);
 		loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
 		//PRINT_TIME("Create Program"); // 90ms
 	}
