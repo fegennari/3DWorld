@@ -275,11 +275,13 @@ public:
 		float mesh_zval;
 		int const fast(2); // less accurate but faster
 		colorRGBA rcolor(ALPHA0);
+		bool mesh_int(0);
 
 		if (!skip_mesh && line_intersect_mesh(vs, ve, xpos, ypos, mesh_zval, fast, 1) /*&& mesh_zval > vs.z*/) { // not sure about this last test
 			float const t((mesh_zval - vs0.z)/(ve0.z - vs0.z));
-			ve0    = (vs0 + (ve0 - vs0)*t);
-			rcolor = get_landscape_color(xpos, ypos);
+			ve0      = (vs0 + (ve0 - vs0)*t);
+			rcolor   = get_landscape_color(xpos, ypos);
+			mesh_int = 1;
 			
 			if (dir.z < 0.0 && is_underwater(ve0)) {
 				// if mesh int point is underwater, attenuate along light path and blend like we do when drawing the mesh
@@ -290,11 +292,6 @@ public:
 				blend_color(rcolor, color, rcolor, 0.5, 1); // add in a watery color
 			}
 		}
-		else {
-			vector3d const vdir((ve0 - vs0).get_norm());
-			float const cloud_density(get_cloud_density(vs0, vdir)); // cloud_color vs. bkg_color
-			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs0, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
-		}
 		int cindex;
 		point cpos; // unused
 		vector3d cnorm; // unused
@@ -302,6 +299,11 @@ public:
 		if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, 1)) { // skip_dynamic if !begin_motion?, !skip_mesh?
 			get_object_color(cindex, rcolor);
 			ve0 = cpos;
+		}
+		else if (!mesh_int) { // no mesh intersect and no cobj intersect
+			vector3d const vdir((ve0 - vs0).get_norm());
+			float const cloud_density(get_cloud_density(vs0, vdir)); // cloud_color vs. bkg_color
+			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs0, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
 		}
 		if (begin_motion) { // find dynamic cobj intersection
 			update_cobj_tree(1);
