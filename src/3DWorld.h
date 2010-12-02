@@ -1502,6 +1502,7 @@ void add_uniform_float_array(unsigned program, std::string const &name, float co
 void add_uniform_float(unsigned program, std::string const &name, float val);
 void add_uniform_int  (unsigned program, std::string const &name, int   val);
 void add_attrib_float (unsigned program, std::string const &name, float val);
+void add_attrib_int   (unsigned program, std::string const &name, int   val);
 bool set_uniform_buffer_data(unsigned program, std::string const &name, float const *data, unsigned size);
 void setup_enabled_lights(unsigned num=2);
 void setup_fog_scale(unsigned program);

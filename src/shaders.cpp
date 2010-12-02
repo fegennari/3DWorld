@@ -70,6 +70,13 @@ void add_attrib_float(unsigned program, string const &name, float val) {
 }
 
 
+void add_attrib_int(unsigned program, string const &name, int val) {
+
+	int const loc(get_attrib_loc(program, name));
+	if (loc >= 0) glVertexAttrib1s(loc, val);
+}
+
+
 bool set_uniform_buffer_data(unsigned program, string const &name, float const *data, unsigned size) {
 
 	if (program == 0) program = active_program;
