@@ -840,9 +840,6 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 }
 
 
-void setup_local_dlights_for_shader(point const *const pts, unsigned npts);
-
-
 // currently only handles parallelograms and triangles
 // lighted: 0 = unknown, 1 = shad, 2 = unshad, 3 = partially shad, 4 = hidden int surf
 //          values per light source (per nibble of unsigned), so max light sources is 32/4 = 8
@@ -1009,8 +1006,6 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	bool const no_subdiv(no_shadow_edge || is_black);
 	unsigned lod_level(1);
 	float lod_scale(1.0);
-
-	//setup_local_dlights_for_shader(pts, npts); // testing
 
 	if (use_dlist) {
 		if ((!no_subdiv || LOD_NO_SUBDIV) && (n[0] > 1 || n[1] > 1)) { // might create dlists for the same LOD if there are no shadow edges

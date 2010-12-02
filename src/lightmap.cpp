@@ -1298,35 +1298,6 @@ void setup_dlights_for_shader(unsigned program) {
 }
 
 
-void setup_local_dlights_for_shader(point const *const pts, unsigned npts) {
-
-	if (!(display_mode & 0x10)) return;
-	static std::string name1("num_lights"), name2("dl_data");
-	unsigned const program(0);
-	unsigned const MAX_TOT_LIGHTS = 256;
-	unsigned const MAX_LOC_LIGHTS = 20; // any more than this will be truncated
-	unsigned const light_sz = 8; // 8 floats per light
-	unsigned const max_data_sz(light_sz*MAX_TOT_LIGHTS);
-	static float dl_data[max_data_sz] = {0}; // needs to stay in scope
-	unsigned used_lights(0);
-
-	if (has_dynamic_lights(pts, npts)) {
-		unsigned const num_lights(min(MAX_TOT_LIGHTS, dl_sources.size()));
-		
-		for (unsigned i = 0; i < num_lights; ++i) {
-			dl_sources[i].pack_to_floatv(dl_data + light_sz*i);
-			++used_lights;
-		}
-	}
-	if (used_lights > MAX_LOC_LIGHTS) {
-		// sort lights by radius/distance?
-		used_lights = MAX_LOC_LIGHTS;
-	}
-	if (used_lights > 0) add_uniform_float_array(program, name2, dl_data, light_sz*used_lights);
-	add_uniform_int(program, name1, used_lights);
-}
-
-
 inline float add_specular(point const &p, vector3d ldir, vector3d const &norm, float const *const spec) {
 
 	if (!spec || spec[0] == 0.0) return 0.0;
