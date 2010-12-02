@@ -13,7 +13,6 @@
 float const NDIV_SCALE = 120.0;
 
 
-extern bool smoke_enabled;
 extern int draw_model, display_mode, destroy_thresh, do_zoom, xoff2, yoff2;
 extern float temperature;
 extern obj_type object_types[];
@@ -310,6 +309,9 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 }
 
 
+void setup_local_dlights_for_shader(point const *const pts, unsigned npts);
+
+
 void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 
 	if (no_draw()) return;
@@ -332,9 +334,13 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 	bool const textured(select_texture(tid));
 	assert(textured);
 	float const ar(get_tex_ar(tid));
-	bool const no_lighting(cp.color == BLACK && !smoke_enabled /*&& cp.specular == 0.0*/);
+	bool const no_lighting(cp.color == BLACK/*&& cp.specular == 0.0*/);
 	if (is_semi_trans()) enable_blend();
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
+
+	//point pts[8];
+	//unsigned const ncorners(get_cube_corners(d, pts, all_zeros, 1));
+	//if (!no_lighting) setup_local_dlights_for_shader(pts, ncorners); // testing
 
 	switch (type) {
 	case COLL_CUBE:
