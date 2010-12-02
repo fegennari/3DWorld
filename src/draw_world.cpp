@@ -710,10 +710,10 @@ void draw_group(obj_group &objg) {
 		case SNOW:
 			if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 				setup_enabled_lights();
-				add_uniform_float("size", 2.0*radius); // Note: size no longer depends on angle
-				add_uniform_int("tex0", 0);
 				set_shader_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
-				set_shader_prog("ad_lighting.part+two_lights_no_xform", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
+				unsigned const p(set_shader_prog("ad_lighting.part+two_lights_no_xform", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3));
+				add_uniform_float(p, "size", 2.0*radius); // Note: size no longer depends on angle
+				add_uniform_int(p, "tex0", 0);
 				snow_pld.draw_and_clear();
 				unset_shader_prog();
 			}
@@ -1654,25 +1654,26 @@ colorRGBA change_fog_color(colorRGBA const &new_color) {
 
 colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha) {
 
+	set_bool_shader_prefix("use_texgen",    use_texgen,   0); // VS
+	set_bool_shader_prefix("smoke_enabled", smoke_exists, 0); // VS
+	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
+	unsigned const p(set_shader_prog("texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke"));
+	setup_dlights_for_shader(p);
+
 	if (smoke_tid) {
 		set_multitex(1);
 		bind_3d_texture(smoke_tid);
 	}
-	add_uniform_int("smoke_tex", 1);
-	setup_dlights_for_shader();
+	add_uniform_int(p, "smoke_tex", 1);
 	set_multitex(0);
-	add_uniform_int("tex0", 0);
-	add_uniform_float("min_alpha", min_alpha);
-	add_uniform_float("x_scene_size", X_SCENE_SIZE);
-	add_uniform_float("y_scene_size", Y_SCENE_SIZE);
-	add_uniform_float("czmin", get_zval(0));
-	add_uniform_float("czmax", get_zval(MESH_SIZE[2]));
-	add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
-	add_uniform_float("step_delta", HALF_DXY);
-	set_bool_shader_prefix("use_texgen",    use_texgen,   0); // VS
-	set_bool_shader_prefix("smoke_enabled", smoke_exists, 0); // VS
-	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
-	set_shader_prog("texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke");
+	add_uniform_int(p, "tex0", 0);
+	add_uniform_float(p, "min_alpha", min_alpha);
+	add_uniform_float(p, "x_scene_size", X_SCENE_SIZE);
+	add_uniform_float(p, "y_scene_size", Y_SCENE_SIZE);
+	add_uniform_float(p, "czmin", get_zval(0));
+	add_uniform_float(p, "czmax", get_zval(MESH_SIZE[2]));
+	add_uniform_float_array(p, "smoke_bb", &cur_smoke_bb.d[0][0], 6);
+	add_uniform_float(p, "step_delta", HALF_DXY);
 	return change_fog_color(GRAY);
 }
 

@@ -1488,7 +1488,7 @@ void get_xyz_v2(point &p, int const v[3]);
 bool upload_smoke_3d_texture();
 bool has_dynamic_lights(point const *const pts, unsigned npts);
 bool is_shadowed_lightmap(point const &p);
-void setup_dlights_for_shader();
+void setup_dlights_for_shader(unsigned program);
 bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed, vector3d const &norm, float const spec[2], bool no_dynamic);
 bool get_sd_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
@@ -1498,18 +1498,18 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 bool split_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts);
 
 // function prototypes - shaders
-void add_uniform_float_array(std::string const &name, float const *const val, unsigned num);
-void add_uniform_float(std::string const &name, float val);
-void add_uniform_int  (std::string const &name, int   val);
-void set_uniform_buffer_data(float const *data, unsigned size);
+void add_uniform_float_array(unsigned program, std::string const &name, float const *const val, unsigned num);
+void add_uniform_float(unsigned program, std::string const &name, float val);
+void add_uniform_int  (unsigned program, std::string const &name, int   val);
+bool set_uniform_buffer_data(unsigned program, std::string const &name, float const *data, unsigned size);
 void setup_enabled_lights(unsigned num=2);
-void setup_fog_scale();
+void setup_fog_scale(unsigned program);
 void set_shader_prefix(std::string const &prefix, unsigned shader_type);
 void set_bool_shader_prefix(std::string const &name, bool val, unsigned shader_type);
 bool setup_shaders();
 void clear_shaders();
-bool set_shader_prog(std::string const &vs_name, std::string const &fs_name, std::string const &gs_name="",
-					 int in_prim=0, int out_prim=0, int verts_out=0);
+unsigned set_shader_prog(std::string const &vs_name, std::string const &fs_name, std::string const &gs_name="",
+						 int in_prim=0, int out_prim=0, int verts_out=0);
 void unset_shader_prog();
 
 // function prototypes - screenshot (these are C functions)

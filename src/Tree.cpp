@@ -209,10 +209,10 @@ void draw_trees_bl(vector<tree> &ts, bool lpos_change, bool draw_branches, bool 
 void set_leaf_shader(float min_alpha) {
 
 	setup_enabled_lights();
-	setup_fog_scale();
-	add_uniform_float("min_alpha", min_alpha);
-	add_uniform_int("tex0", 0);
-	set_shader_prog("tree_leaves", "linear_fog.part+simple_texture");
+	unsigned const p(set_shader_prog("tree_leaves", "linear_fog.part+simple_texture"));
+	setup_fog_scale(p);
+	add_uniform_float(p, "min_alpha", min_alpha);
+	add_uniform_int(p, "tex0", 0);
 }
 
 

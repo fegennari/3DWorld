@@ -474,20 +474,13 @@ public:
 	}
 
 	static void setup_mesh_draw_shaders() {
-		// ligthting and fog parameters
 		setup_enabled_lights();
-		setup_fog_scale();
-
-		// texturing parameters
-		add_uniform_int("tex0", 0);
-		add_uniform_int("tex1", 1);
-
-		// water parameters
-		add_uniform_float("water_plane_z", (has_water() ? water_plane_z : zmin));
-		add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
-
-		// create the shader
-		set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "linear_fog.part+multitex_2");
+		unsigned const p(set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "linear_fog.part+multitex_2"));
+		setup_fog_scale(p);
+		add_uniform_int(p, "tex0", 0);
+		add_uniform_int(p, "tex1", 1);
+		add_uniform_float(p, "water_plane_z", (has_water() ? water_plane_z : zmin));
+		add_uniform_float(p, "water_atten", WATER_COL_ATTEN*mesh_scale);
 	}
 
 	float draw(bool add_hole) {

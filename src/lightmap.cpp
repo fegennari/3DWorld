@@ -1275,10 +1275,10 @@ void light_source::pack_to_floatv(float *data) const {
 }
 
 
-void setup_dlights_for_shader() {
+void setup_dlights_for_shader(unsigned program) {
 
 	if (!(display_mode & 0x10) || dl_sources.empty()) { // not enabled
-		add_uniform_int("num_lights", 0);
+		add_uniform_int(program, "num_lights", 0);
 		return;
 	}
 	//RESET_TIME;
@@ -1291,9 +1291,9 @@ void setup_dlights_for_shader() {
 	for (unsigned i = 0; i < num_lights; ++i) {
 		dl_sources[i].pack_to_floatv(dl_data + light_sz*i);
 	}
-	add_uniform_float_array("dl_data", dl_data, light_sz*num_lights);
-	//set_uniform_buffer_data(dl_data, light_sz*num_lights);
-	add_uniform_int("num_lights", num_lights);
+	add_uniform_float_array(program, "dl_data", dl_data, light_sz*num_lights);
+	//set_uniform_buffer_data(program, "data", dl_data, light_sz*num_lights);
+	add_uniform_int(program, "num_lights", num_lights);
 	//PRINT_TIME("Dynamic Lights Shader Setup");
 }
 

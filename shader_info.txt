@@ -46,3 +46,14 @@ quality/blending/lighting
 - Difficult/inefficient to handle shadows - another voxel integration algorithm
 - Difficult/complex/inefficient to iterate over a dynamic number of lights that vary per frame
 - Need to send more data to the GPU: normals, material properties, shadow info, ambient light values
+
+CPU:
+1. Replace draw_shapes glBegin()/glEnd() with vertex/color arrays
+2. Determine dynamic lights per primitive/cobj or per call to draw_quad_tri()
+
+GPU:
+1. Online searches
+2. Try putting light source iteration/light selection into geometry shader
+3. Try removing the conditionals
+4. Load enabled lights into VS as uniforms per-primitive/cobj
+5. Use a Texture Buffer Object / texture index
