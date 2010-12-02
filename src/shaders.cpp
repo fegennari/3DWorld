@@ -16,12 +16,15 @@ string const shaders_dir = "shaders";
 // *** uniform variables setup ***
 
 
+unsigned active_program(0);
 string prepend_string[3]; // vertex=0, fragment=1, geometry=3
 string prog_name_suffix;
 
 
 int get_uniform_loc(unsigned program, string const &name) {
 
+	if (program == 0) program = active_program;
+	assert(program && !name.empty());
 	int const loc(glGetUniformLocation(program, name.c_str()));
 	//cout << "name: " << name << ", loc: " << loc << endl;
 	//assert(loc >= 0); // Note: if variable is unused, loc will be -1
@@ -31,7 +34,6 @@ int get_uniform_loc(unsigned program, string const &name) {
 
 void add_uniform_float_array(unsigned program, string const &name, float const *const val, unsigned num) {
 
-	assert(program && !name.empty());
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1fv(loc, num, val);
 }
@@ -39,7 +41,6 @@ void add_uniform_float_array(unsigned program, string const &name, float const *
 
 void add_uniform_float(unsigned program, string const &name, float val) {
 
-	assert(program && !name.empty());
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1f(loc, val);
 }
@@ -47,7 +48,6 @@ void add_uniform_float(unsigned program, string const &name, float val) {
 
 void add_uniform_int(unsigned program, string const &name, int val) {
 
-	assert(program && !name.empty());
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1i(loc, val);
 }
@@ -55,6 +55,7 @@ void add_uniform_int(unsigned program, string const &name, int val) {
 
 bool set_uniform_buffer_data(unsigned program, string const &name, float const *data, unsigned size) {
 
+	if (program == 0) program = active_program;
 	assert(program && !name.empty());
 	assert(data && size);
 
@@ -349,6 +350,7 @@ unsigned set_shader_prog(string const &vs_name, string const &fs_name, string co
 	}
 	assert(program);
 	glUseProgram(program);
+	active_program = program;
 	return program;
 }
 
@@ -356,6 +358,7 @@ unsigned set_shader_prog(string const &vs_name, string const &fs_name, string co
 void unset_shader_prog() {
 
 	glUseProgram(0);
+	active_program = 0;
 	
 	for (unsigned i = 0; i < 3; ++i) {
 		prepend_string[i].clear();
