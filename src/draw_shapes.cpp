@@ -226,6 +226,132 @@ struct vertex_t : public color_wrapper { // size = 32
 };
 
 
+// ******************** BEGIN TESTING ********************
+template<typename T> class quad_tri_drawer {
+
+	vector<T> data;
+	int in_type, out_type;
+	bool in_strip;
+
+public:
+	// Note: in_type starts as GL_POINTS, which is something known to be invalid here
+	quad_tri_drawer(int out_type_) : in_type(GL_POINTS), out_type(out_type_), in_strip(0) {
+		assert(out_type == GL_TRIANGLES || out_type == GL_QUADS);
+	}
+	void clear() {data.resize(0); end();}
+	bool  empty() const {return data.empty();}
+	size_t size() const {return data.size();}
+
+	size_t get_num_prim() const {
+		if (out_type == GL_TRIANGLES) {
+			assert((size()%3) == 0);
+			return (size/3);
+		}
+		else if (out_type == GL_QUADS) {
+			assert((size()%4) == 0);
+			return (size/4);
+		}
+		return 0;
+	}
+
+	void begin(int type) {
+		in_strip = 0;
+
+		switch (type) {
+			case GL_TRIANGLE_STRIP:
+				in_strip = 1;
+			case GL_TRIANGLES:
+				in_type  = GL_TRIANGLES;
+				break;
+			case GL_QUAD_STRIP:
+				in_strip = 1;
+			case GL_QUADS:
+				in_type  = GL_QUADS;
+				break;
+			default:
+				assert(0);
+		}
+	}
+
+	void end() {
+		in_type  = GL_POINTS;
+		in_strip = 0;
+	}
+
+	void add_raw(T const &v) {
+		assert(in_type != GL_POINTS); // begin() never called
+		data.push_back(v);
+
+		if (in_type == GL_TRIANGLES && out_type == GL_QUADS) {
+			// convert 1 triangle into 1 quad by duplicating the last point
+			assert(!in_strip); // not yet supported
+			if ((size()&3) == 3) data.push_back(v); // last vertex of a triangle, duplicate the last point
+		}
+		if (in_type == GL_QUADS && out_type == GL_TRIANGLES) {
+			// convert 1 quad into 2 triangles by duplicating 2 intermediate points and reordering
+			assert(0); // not yet supported
+		}
+		else {
+			assert(in_type == out_type);
+		}
+	}
+
+	void add_vert(T const &v) {
+		if (in_strip) {
+			unsigned const sz(size());
+
+			if (in_type == GL_TRIANGLES && sz >= 3) {
+				data.push_back(data[sz-2]); // duplicate the last 2 points for each triangle after the first one
+				data.push_back(data[sz-1]);
+			}
+			else if (in_type == GL_QUADS && sz >= 4 && (sz&3) == 0) {
+				data.push_back(data[sz-1]); // duplicate the last 2 points for each quad after the first one
+				data.push_back(data[sz-2]); // note that they have been swapped so we need to swap them back
+			}
+		}
+		data.push_back(v);
+
+		if (in_strip && in_type == GL_QUADS) {
+			unsigned const sz(size());
+			if (sz > 0 && (sz&3) == 0) swap(data[sz-2], data[sz-1]); // swap the last two vertices
+		}
+	}
+
+	void draw(unsigned vbo) const { // vbo can be 0
+		if (empty() || get_num_prim() == 0) return; // will do error checking
+		data[0].set_state(vbo);
+		glDrawArrays(out_type, 0, size());
+	}
+	void draw_and_clear() {draw(); clear();}
+};
+
+
+struct vert_color : public color_wrapper { // size = 16
+	point v;
+	vert_color(point const &v_, colorRGBA const &c_) : v(v_) {set_c4(c_);}
+
+	void set_state(unsigned vbo) { // typically called on element 0
+		unsigned const stride(sizeof(*this));
+		glVertexPointer(3, GL_FLOAT,         stride, (vbo ? (void *)0             : &v));
+		glColorPointer (3, GL_UNSIGNED_BYTE, stride, (vbo ? (void *)sizeof(point) : &c));
+		glDisable(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisable(GL_NORMAL_ARRAY);
+		glDisableClientState(GL_NORMAL_ARRAY);
+	}
+	void reset_state() {
+		glEnable(GL_TEXTURE_COORD_ARRAY);
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glEnable(GL_NORMAL_ARRAY);
+		glEnableClientState(GL_NORMAL_ARRAY);
+	}
+};
+
+
+quad_tri_drawer<vert_color> shape_draw(GL_QUADS); // need to handle GL_QUAD_STRIP and GL_TRIANGLES
+// ******************** END TESTING ********************
+
+
 inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d const* const norm) const {
 	
 	if (norm && dot_product_ptv(*norm, center, pc) <= 0.0) return 0;
