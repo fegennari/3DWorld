@@ -13,7 +13,7 @@ bool const PRINT_LOG    = 0;
 string const shaders_dir = "shaders";
 
 
-// *** uniform variables setup ***
+// *** uniform/attrib variables setup ***
 
 
 unsigned active_program(0);
@@ -28,6 +28,16 @@ int get_uniform_loc(unsigned program, string const &name) {
 	int const loc(glGetUniformLocation(program, name.c_str()));
 	//cout << "name: " << name << ", loc: " << loc << endl;
 	//assert(loc >= 0); // Note: if variable is unused, loc will be -1
+	return loc;
+}
+
+
+int get_attrib_loc(unsigned program, string const &name) {
+
+	if (program == 0) program = active_program;
+	assert(program && !name.empty());
+	int const loc(glGetAttribLocation(program, name.c_str()));
+	assert(loc >= 0); // Note: if variable is unused, loc will be -1
 	return loc;
 }
 
@@ -50,6 +60,13 @@ void add_uniform_int(unsigned program, string const &name, int val) {
 
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1i(loc, val);
+}
+
+
+void add_attrib_float(unsigned program, string const &name, float val) {
+
+	int const loc(get_attrib_loc(program, name));
+	if (loc >= 0) glVertexAttrib1f(loc, val);
 }
 
 
