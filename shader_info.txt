@@ -18,6 +18,7 @@ Not Implementable/Too Difficult or Inefficient
 7. Mesh Texturing: FS - too complex and inefficient, not worth the memor savings (for now)
 8. Mesh Underwater Caustics: FS - requires global solution, dependent on other effects
 10b. Smoke Puffs Smoke Effects: VS/FS - smoke puffs too large/high fill rate, FS smoke integration too slow
+16. Dynamic Lighting of Cobjs: VS/FS - too slow to iterate over entire dlight set, too complex to use indexing/tree
 
 Todo:
 10. Smoke/Clouds/Fires: VS/FS, or GS using billboards
@@ -37,23 +38,10 @@ quality/blending/lighting
 + Better quality and more realistic
 - Need to figure out procedural noise (generation on GPU or texture)
 
-16. Move more code into cobj shaders: VS/FS
-* Dynamic lighting (with shadows?)
-* Static lighting calc with shadows
-+ Better quality if ligthing can be in FS
-+ No need to subdivide shadowed/unshadowed quads/tris if using FS
-+ Faster dynamic lights: no need to update dlist data each frame
-- Difficult/inefficient to handle shadows - another voxel integration algorithm
-- Difficult/complex/inefficient to iterate over a dynamic number of lights that vary per frame
+16. Static Light Sources/Shadows for Cobjs: FS
+* Static lighting calc with shadows, maybe as a texture
++ Better quality of shadows and specular
++ No need to subdivide shadowed/unshadowed quads/tris
 - Need to send more data to the GPU: normals, material properties, shadow info, ambient light values
+- Shadows as textures may be too expensive to manage (too many small textures)
 
-CPU:
-1. Replace draw_shapes glBegin()/glEnd() with vertex/color arrays
-2. Determine dynamic lights per primitive/cobj or per call to draw_quad_tri()
-
-GPU:
-1. Online searches
-2. Try putting light source iteration/light selection into geometry shader
-3. Try removing the conditionals
-4. Load enabled lights into VS as uniforms per-primitive/cobj
-5. Use a Texture Buffer Object / texture index
