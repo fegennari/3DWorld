@@ -94,10 +94,7 @@ colorRGBA setup_mesh_lighting() {
 
 void setup_arrays(void *varr, void *narr, void *carr) {
 
-	glDisable(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	if (!carr) glDisable(GL_COLOR_ARRAY);
-	if (carr) glEnableClientState(GL_COLOR_ARRAY); else glDisableClientState(GL_COLOR_ARRAY);
+	set_array_client_state(1, 0, 1, (carr != 0));
 	if (varr) glVertexPointer(3, GL_FLOAT, 0, varr);
 	if (narr) glNormalPointer(   GL_FLOAT, 0, narr);
 	if (carr) glColorPointer( 3, GL_FLOAT, 0, carr);
@@ -109,10 +106,6 @@ void run_post_mesh_draw() {
 	glEnable(GL_NORMALIZE);
 	glDisable(GL_COLOR_MATERIAL);
 	disable_blend();
-	glEnable(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnable(GL_COLOR_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
 }
 
 
@@ -458,10 +451,7 @@ void display_mesh() { // fast array version
 		else {
 			bind_vbo(mesh_vbo);
 		}
-		glDisable(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisable(GL_COLOR_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
+		set_array_client_state(1, 0, 1, 0);
 		glVertexPointer(3, GL_FLOAT, 2*sizeof(point), 0);
 		glNormalPointer(   GL_FLOAT, 2*sizeof(point), (void *)sizeof(point));
 

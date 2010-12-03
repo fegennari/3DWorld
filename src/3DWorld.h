@@ -888,6 +888,7 @@ struct color_tid_vol;
 bool check_gl_error(unsigned loc_id);
 void enable_blend();
 void disable_blend();
+void set_array_client_state(bool va, bool tca, bool na, bool ca);
 void set_lighted_sides(int num);
 void enable_point_specular();
 void disable_point_specular();

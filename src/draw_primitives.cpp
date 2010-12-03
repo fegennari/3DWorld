@@ -984,14 +984,11 @@ void draw_quads_from_pts(vector<vert_norm> const &points) {
 			gen_quad_tex_coords(tdata, MAX_QUADS, 2);
 			init = 1;
 		}
-		glDisable(GL_COLOR_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
+		set_array_client_state(1, 1, 1, 0);
 		glVertexPointer(3,   GL_FLOAT, sizeof(vert_norm), &points[0].v);
 		glNormalPointer(     GL_FLOAT, sizeof(vert_norm), &points[0].n);
 		glTexCoordPointer(2, GL_FLOAT, 0, tdata+2); // offset by 2 (one tex coord) to fix texture orientation
 		glDrawArrays(GL_QUADS, 0, points.size());
-		glEnable(GL_COLOR_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
 	}
 	else {
 		glBegin(GL_QUADS);

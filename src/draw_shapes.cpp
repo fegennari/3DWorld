@@ -332,18 +332,9 @@ struct vert_color : public color_wrapper { // size = 16
 
 	void set_state(unsigned vbo) { // typically called on element 0
 		unsigned const stride(sizeof(*this));
+		set_array_client_state(1, 0, 0, 1);
 		glVertexPointer(3, GL_FLOAT,         stride, (vbo ? (void *)0             : &v));
 		glColorPointer (3, GL_UNSIGNED_BYTE, stride, (vbo ? (void *)sizeof(point) : &c));
-		glDisable(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisable(GL_NORMAL_ARRAY);
-		glDisableClientState(GL_NORMAL_ARRAY);
-	}
-	void reset_state() {
-		glEnable(GL_TEXTURE_COORD_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glEnable(GL_NORMAL_ARRAY);
-		glEnableClientState(GL_NORMAL_ARRAY);
 	}
 };
 

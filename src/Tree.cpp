@@ -514,15 +514,12 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 		} // end create vbo
 		// use vbo for rendering
 		bind_vbo(branch_vbo);
-		glDisable(GL_COLOR_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
+		set_array_client_state(1, 1, 1, 0);
 		glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
 		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
 		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(point) + sizeof(vector3d)));
 		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
 		glDrawArrays(GL_QUADS, 0, num);
-		glEnable(GL_COLOR_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
 		bind_vbo(0);
 	}
 	else { // draw branches
@@ -684,6 +681,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 	}
 	assert(leaf_data.size() >= 4*leaves.size());
 	bool const draw_as_points(0); // testing
+	set_array_client_state(1, 1, 1, 1);
 
 	if (use_vbos) {
 		if (leaf_vbo == 0) {

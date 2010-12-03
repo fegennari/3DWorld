@@ -486,10 +486,7 @@ public:
 	float draw(bool add_hole) {
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
-		glDisable(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisable(GL_COLOR_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
+		set_array_client_state(1, 0, 1, 0);
 		setup_mesh_lighting();
 		unsigned num_drawn(0);
 		unsigned long long mem(0);

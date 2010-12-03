@@ -245,6 +245,24 @@ void disable_blend() {
 }
 
 
+void set_array_client_state(bool va, bool tca, bool na, bool ca) {
+
+	bool const enables[4] = {va, tca, na, ca};
+	int  const arrays [4] = {GL_VERTEX_ARRAY, GL_TEXTURE_COORD_ARRAY, GL_NORMAL_ARRAY, GL_COLOR_ARRAY};
+
+	for (unsigned i = 0; i < 4; ++i) {
+		if (enables[i]) {
+			glEnable(arrays[i]);
+			glEnableClientState(arrays[i]);
+		}
+		else {
+			glDisable(arrays[i]);
+			glDisableClientState(arrays[i]);
+		}
+	}
+}
+
+
 void set_lighted_sides(int num) {
 
 	assert(num == 1 || num == 2);
@@ -320,14 +338,6 @@ void set_gl_params() {
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glDisable(GL_COLOR_MATERIAL);
 	set_specular(0.0, 1.0);
-	glEnable(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnable(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnable(GL_NORMAL_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-	glEnable(GL_COLOR_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
 	//glEnable(GL_CULL_FACE);
 	//glCullFace(GL_FRONT);
 

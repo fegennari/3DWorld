@@ -329,12 +329,9 @@ void pt_line_drawer::draw() const {
 	GLboolean const col_mat_en(glIsEnabled(GL_COLOR_MATERIAL));
 	assert(!(lines.size() & 1));
 	if (!col_mat_en) glEnable(GL_COLOR_MATERIAL);
-	glDisable(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	set_array_client_state(1, 0, 1, 1);
 	points.draw(GL_POINTS);
 	lines.draw(GL_LINES);
-	glEnable(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	if (!col_mat_en) glDisable(GL_COLOR_MATERIAL);
 	last_a = last_d = BLACK;
 	//cout << "mem: " << get_mem() << endl;

@@ -90,7 +90,6 @@ void setup_multitexture() { // Windows specific
 	}
 	//glClientActiveTexture(GL_TEXTURE0);
 	//glTexCoordPointer(2, GL_FLOAT, 0, tp0);
-	//glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
 
