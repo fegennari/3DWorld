@@ -27,6 +27,7 @@ void set_multitex(unsigned tu_id);
 void select_multitex(int id, unsigned tu_id, bool enable=1);
 void disable_multitex(unsigned tu_id, bool reset);
 void disable_multitex_a();
+void multitex_coord_n(unsigned tu_id, float const *v, unsigned num);
 void multitex_coord2f(GLfloat s, GLfloat t, unsigned tu_id=0);
 void multitex_coord2f_a(GLfloat s, GLfloat t);
 

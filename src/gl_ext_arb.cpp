@@ -66,11 +66,23 @@ void disable_multitex_a() {
 }
 
 
+void multitex_coord_n(unsigned tu_id, float const *v, unsigned num) {
+
+	unsigned const id(GL_TEXTURE0 + tu_id);
+	switch (num) {
+		case 1: glMultiTexCoord1fv(id, v); break;
+		case 2: glMultiTexCoord2fv(id, v); break;
+		case 3: glMultiTexCoord3fv(id, v); break;
+		case 4: glMultiTexCoord4fv(id, v); break;
+		default: assert(0);
+	}
+}
+
+
 void multitex_coord2f(GLfloat s, GLfloat t, unsigned tu_id) {
 
 	assert(tu_id < max_used_multitex);
 	glMultiTexCoord2f((GL_TEXTURE0 + tu_id), s, t);
-	//glTexCoord2f(s, t);
 }
 
 

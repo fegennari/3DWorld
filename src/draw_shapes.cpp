@@ -1268,6 +1268,10 @@ void draw_coll_cube(float ar, int do_fill, int cobj, int tid) {
 			b[3]  = tex_delta[t1]*tscale[1];
 			glTexGenfv(GL_S, GL_EYE_PLANE, a);
 			glTexGenfv(GL_T, GL_EYE_PLANE, b);
+			//add_attrib_float_array(0, "texgen_s", a, 4);
+			//add_attrib_float_array(0, "texgen_t", b, 4);
+			//multitex_coord_n(0, a, 4);
+			//multitex_coord_n(1, b, 4);
 		}
 		if (FAST_SHAPE_DRAW) {
 			c.cp.color.do_glColor();
