@@ -451,6 +451,7 @@ public:
 		}
 
 		// draw the grass
+		set_array_client_state(1, 1, 1, 1);
 		assert(vbo_valid && vbo > 0);
 		bind_vbo(vbo);
 		vert_norm_tc_color::set_vbo_arrays();

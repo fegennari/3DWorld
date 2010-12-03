@@ -245,11 +245,12 @@ public:
 	size_t get_num_prim() const {
 		if (out_type == GL_TRIANGLES) {
 			assert((size()%3) == 0);
-			return (size/3);
+			return (size()/3);
 		}
 		else if (out_type == GL_QUADS) {
+			//cout << "size: " << size() << endl;
 			assert((size()%4) == 0);
-			return (size/4);
+			return (size()/4);
 		}
 		return 0;
 	}
@@ -271,14 +272,17 @@ public:
 			default:
 				assert(0);
 		}
+		//cout << "begin " << type << ", strip: " << in_strip << endl;
 	}
 
 	void end() {
+		//cout << "end" << endl;
 		in_type  = GL_POINTS;
 		in_strip = 0;
 	}
 
 	void add_raw(T const &v) {
+		//cout << "add_raw, size: " << size() << ", strip: " << in_strip << endl;
 		assert(in_type != GL_POINTS); // begin() never called
 		data.push_back(v);
 
@@ -287,7 +291,7 @@ public:
 			assert(!in_strip); // not yet supported
 			if ((size()&3) == 3) data.push_back(v); // last vertex of a triangle, duplicate the last point
 		}
-		if (in_type == GL_QUADS && out_type == GL_TRIANGLES) {
+		else if (in_type == GL_QUADS && out_type == GL_TRIANGLES) {
 			// convert 1 quad into 2 triangles by duplicating 2 intermediate points and reordering
 			assert(0); // not yet supported
 		}
@@ -297,6 +301,7 @@ public:
 	}
 
 	void add_vert(T const &v) {
+		//cout << "add, size: " << size() << ", strip: " << in_strip << endl;
 		if (in_strip) {
 			unsigned const sz(size());
 
@@ -309,7 +314,7 @@ public:
 				data.push_back(data[sz-2]); // note that they have been swapped so we need to swap them back
 			}
 		}
-		data.push_back(v);
+		add_raw(v);
 
 		if (in_strip && in_type == GL_QUADS) {
 			unsigned const sz(size());
@@ -322,15 +327,18 @@ public:
 		data[0].set_state(vbo);
 		glDrawArrays(out_type, 0, size());
 	}
-	void draw_and_clear() {draw(); clear();}
+	void draw_and_clear(unsigned vbo) {draw(vbo); clear();}
 };
 
 
 struct vert_color : public color_wrapper { // size = 16
 	point v;
-	vert_color(point const &v_, colorRGBA const &c_) : v(v_) {set_c4(c_);}
 
-	void set_state(unsigned vbo) { // typically called on element 0
+	vert_color() {}
+	vert_color(point const &v_, colorRGBA const &c_)     : v(v_) {set_c4(c_);}
+	vert_color(point const &v_, unsigned char const *c_) : v(v_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
+
+	void set_state(unsigned vbo) const { // typically called on element 0
 		unsigned const stride(sizeof(*this));
 		set_array_client_state(1, 0, 0, 1);
 		glVertexPointer(3, GL_FLOAT,         stride, (vbo ? (void *)0             : &v));
@@ -361,8 +369,7 @@ void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned 
 			get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
 			v.set_c4(color);
 		}
-		glColor4ubv(v.c);
-		v.p.do_glVertex();
+		shape_draw.add_vert(vert_color(v.p, v.c));
 	}
 	nverts += npts;
 	++nsurfaces;
@@ -888,7 +895,7 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 	// Note: could check if object is completely shadowed, but that rarely happens so it's probably not worth the trouble
 	if (!is_partial_shadow(lighted)) return lighted; // all shadowed or none shadowed
 	assert(nvals);
-	if (in_strip) {glEnd(); in_strip = 0;}
+	if (in_strip) {shape_draw.end(); in_strip = 0;}
 	//if (p.in_dlist) {} // create some textures instead of drawing - QD_TAG_TEXTURE
 	bool const more_strips(BETTER_QUALITY && !p.in_dlist && has_dynamic &&
 		scaled_view_dist(get_camera_pos(), pts[0]) <= DIST_CUTOFF);
@@ -912,7 +919,7 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 			s_end = min(s_end, n0);
 			if (more_strips && s_end < n0 && s_end > off1) --s_end;
 		}
-		glBegin(GL_QUAD_STRIP);
+		shape_draw.begin(GL_QUAD_STRIP);
 		float const scale[2] = {DO_SCALE(p.tri, s_end, n0), DO_SCALE(p.tri, s0, n0)};
 		float const s_[2]    = {s_end*p.ninv[0], s0*p.ninv[0]};
 		point pos[2] = {(pts[0] + p.dirs[0]*s_end), (pts[0] + p.dirs[0]*s0)}; // s0max, s0min, dirs[0] => p[1] - p[0]
@@ -944,14 +951,13 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 					vert_color_comp const &cc(ccomps[shadowed]);
 					colorRGBA a(interpolate_3d(cc.c, npts, s_[i], t_));
 					a.alpha = INTERP_1D(cc.c, s_[i], t_, npts, .alpha);
-					a.do_glColor();
-					v.do_glVertex();
+					shape_draw.add_vert(vert_color(v, a));
 				}
 				++nsurfaces;
 			} // else continue strip
 		}
 		s0 = s_end - step[0]; // advance past merged strips
-		glEnd();
+		shape_draw.end();
 	}
 	return lighted;
 }
@@ -1187,7 +1193,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		}
 	}
 	else if (tri) {
-		glBegin(GL_TRIANGLES);
+		shape_draw.begin(GL_TRIANGLES);
 	}
 	for (unsigned s0 = 0; s0 < n[0]; ++s0) { // pre-subdivide large quads
 		unsigned const ix0(s0*nv1);
@@ -1201,13 +1207,13 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 			}
 		}
 		if (no_subdiv) {
-			glBegin(GL_QUAD_STRIP); // is there any way to safely skip vertices for LOD draw?
+			shape_draw.begin(GL_QUAD_STRIP); // is there any way to safely skip vertices for LOD draw?
 
 			for (unsigned s1 = 0; s1 <= n[1]; ++s1) {
 				unsigned const ix(s0*nv1 + s1), ixs[2] = {ix, ix+nv1};
 				draw_verts(verts, ixs, 2, shad, params);
 			}
-			glEnd();
+			shape_draw.end();
 			continue;
 		}
 		unsigned last_lighted(0), last_ixs[2];
@@ -1229,7 +1235,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 					qd.tag &= ~QD_TAG_TRIANGLE;
 
 					if (!tri_begin) {
-						glBegin(GL_TRIANGLES);
+						shape_draw.begin(GL_TRIANGLES);
 						tri_begin = 1;
 					}
 					else if (lighted != ALL_LT[4]) {
@@ -1239,7 +1245,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 				ixs[3] = ixs[2]; // have to recompute since dir is not constant due to scale
 				dqd_params params2(q, tri, 0, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
 				lighted = draw_quad_div(verts, ixs, params2, tri_begin);
-				if (!tri_begin) {glBegin(GL_TRIANGLES); tri_begin = 1;}
+				if (!tri_begin) {shape_draw.begin(GL_TRIANGLES); tri_begin = 1;}
 				params.inherit_flags_from(params2);
 			}
 			else { // quad
@@ -1263,7 +1269,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 						draw_verts(verts, ixs2+2, 2, cur_shadowed, params);
 					}
 					else {
-						glBegin(GL_QUAD_STRIP);
+						shape_draw.begin(GL_QUAD_STRIP);
 						in_strip = 1;
 						draw_verts(verts, ixs2, npts, cur_shadowed, params);
 					}
@@ -1273,10 +1279,12 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 				}
 			} // not partial shadow && lighted != ALL_LT[4]
 		} // for s1
-		if (in_strip) {glEnd(); in_strip = 0;}
+		if (in_strip) {shape_draw.end(); in_strip = 0;}
 	} // for s0
 	assert(!tri || !in_strip);
-	if (!no_subdiv && tri) glEnd();
+	if (!no_subdiv && tri) shape_draw.end();
+	unsigned const vbo(0); // FIXME
+	shape_draw.draw_and_clear(vbo);
 	if (use_dlist) glEndList();
 
 	if (FULL_MAP_LOOKUP && VERTEX_LIGHTING && !no_shadow_calc && all_lighted == ALL_LT[0] && !occluded) {
