@@ -1749,6 +1749,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			}
 		}
 		sort(draw_last.begin(), draw_last.end()); // sort back to front
+		enable_blend();
 
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
 			int const ix(draw_last[i].second);
@@ -1763,6 +1764,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				coll_objects[ix].draw_cobj(ix);
 			}
 		}
+		disable_blend();
 		draw_last.resize(0);
 	}
 	if (use_shaders) end_smoke_shaders(orig_fog_color);

@@ -332,7 +332,6 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 	assert(textured);
 	float const ar(get_tex_ar(tid));
 	bool const no_lighting(cp.color == BLACK/*&& cp.specular == 0.0*/);
-	if (is_semi_trans()) enable_blend();
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 
 	switch (type) {
@@ -366,7 +365,6 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 		draw_extruded_polygon(thickness, points, NULL, npoints, norm, i, tid);
 		break;
 	}
-	if (is_semi_trans()) disable_blend();
 }
 
 
