@@ -349,6 +349,15 @@ void vert_norm_tc_color::set_vbo_arrays(unsigned stride_mult) {
 }
 
 
+void vert_color::set_state(unsigned vbo) const { // typically called on element 0
+	
+	unsigned const stride(sizeof(*this));
+	set_array_client_state(1, 0, 0, 1);
+	glVertexPointer(3, GL_FLOAT,         stride, (vbo ? (void *)0             : &v));
+	glColorPointer (4, GL_UNSIGNED_BYTE, stride, (vbo ? (void *)sizeof(point) : &c));
+}
+
+
 struct wap_obj {
 
 	bool is_shadowed;

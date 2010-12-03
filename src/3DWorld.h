@@ -551,6 +551,16 @@ struct color_wrapper { // size = 4
 };
 
 
+struct vert_color : public color_wrapper { // size = 16
+	point v;
+
+	vert_color() {}
+	vert_color(point const &v_, colorRGBA const &c_)     : v(v_) {set_c4(c_);}
+	vert_color(point const &v_, unsigned char const *c_) : v(v_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
+	void set_state(unsigned vbo) const;
+};
+
+
 struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size = 36
 	vert_norm_tc_color() {}
 	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGB const &c_)
