@@ -21,66 +21,81 @@ string prepend_string[3]; // vertex=0, fragment=1, geometry=3
 string prog_name_suffix;
 
 
-int get_uniform_loc(unsigned program, string const &name) {
+int get_uniform_loc(unsigned program, char const *const name) {
 
 	if (program == 0) program = active_program;
-	assert(program && !name.empty());
-	int const loc(glGetUniformLocation(program, name.c_str()));
+	assert(program && name);
+	int const loc(glGetUniformLocation(program, name));
 	//cout << "name: " << name << ", loc: " << loc << endl;
 	//assert(loc >= 0); // Note: if variable is unused, loc will be -1
 	return loc;
 }
 
 
-int get_attrib_loc(unsigned program, string const &name) {
+int get_attrib_loc(unsigned program, char const *const name) {
 
 	if (program == 0) program = active_program;
-	assert(program && !name.empty());
-	int const loc(glGetAttribLocation(program, name.c_str()));
+	assert(program && name);
+	int const loc(glGetAttribLocation(program, name));
 	assert(loc >= 0); // Note: if variable is unused, loc will be -1
 	return loc;
 }
 
 
-void add_uniform_float_array(unsigned program, string const &name, float const *const val, unsigned num) {
+void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num) {
 
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1fv(loc, num, val);
 }
 
 
-void add_uniform_float(unsigned program, string const &name, float val) {
+void add_uniform_float(unsigned program, char const *const name, float val) {
 
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1f(loc, val);
 }
 
 
-void add_uniform_int(unsigned program, string const &name, int val) {
+void add_uniform_int(unsigned program, char const *const name, int val) {
 
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1i(loc, val);
 }
 
 
-void add_attrib_float(unsigned program, string const &name, float val) {
+void add_attrib_float_array(unsigned program, char const *const name, float const * const val, unsigned num) {
+
+	int const loc(get_attrib_loc(program, name));
+	if (loc < 0) return;
+
+	switch (num) {
+		case 1: glVertexAttrib1fv(loc, val); break;
+		case 2: glVertexAttrib2fv(loc, val); break;
+		case 3: glVertexAttrib3fv(loc, val); break;
+		case 4: glVertexAttrib4fv(loc, val); break;
+		default: assert(0);
+	}
+}
+
+
+void add_attrib_float(unsigned program, char const *const name, float val) {
 
 	int const loc(get_attrib_loc(program, name));
 	if (loc >= 0) glVertexAttrib1f(loc, val);
 }
 
 
-void add_attrib_int(unsigned program, string const &name, int val) {
+void add_attrib_int(unsigned program, char const *const name, int val) {
 
 	int const loc(get_attrib_loc(program, name));
 	if (loc >= 0) glVertexAttrib1s(loc, val);
 }
 
 
-bool set_uniform_buffer_data(unsigned program, string const &name, float const *data, unsigned size) {
+bool set_uniform_buffer_data(unsigned program, char const *name, float const *data, unsigned size) {
 
 	if (program == 0) program = active_program;
-	assert(program && !name.empty());
+	assert(program && name);
 	assert(data && size);
 
 	// There's only one uniform block.
@@ -101,8 +116,7 @@ bool set_uniform_buffer_data(unsigned program, string const &name, float const *
 	int offset, buf_size;
 
 	// First, get the index for the uniform
-	char const *name_str = name.c_str();
-	glGetUniformIndices(program, 1, &name_str, &index);
+	glGetUniformIndices(program, 1, &name, &index);
 	assert((int)index >= 0);
 
 	// Use the index to query offset and size
