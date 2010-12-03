@@ -133,11 +133,11 @@ vector<colorRGBA> cached_ls_colors;
 typedef map<string, unsigned> name_map_t;
 name_map_t texture_name_map;
 
-
 int landscape_changed(0), lchanged0(0), skip_regrow(0), ltx1(0), lty1(0), ltx2(0), lty2(0), ls0_invalid(1);
 unsigned char *landscape0 = NULL;
 
 
+extern unsigned smoke_tid;
 extern int world_mode, island, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode;
 extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation;
@@ -269,6 +269,7 @@ void reset_textures() {
 	free_smiley_textures(); // should this be guarded by a conditional?
 	free_universe_textures();
 	free_flare_textures();
+	free_texture(smoke_tid);
 }
 
 
