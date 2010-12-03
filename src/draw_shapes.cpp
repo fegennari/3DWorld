@@ -1002,7 +1002,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	float const spec[2] = {c_obj.cp.specular, c_obj.cp.shine};
 	bool const is_specular(ALLOW_SPECULAR && spec[0] > 0.0 && !back_facing && all_lighted != ALL_LT[1]);
 	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !is_specular && !q.is_quadric && !dg_lights &&
-		!has_d_shad && ((display_mode & 0x10) || !has_dynamic_lights(pts, npts)));
+		!has_d_shad && !has_dynamic_lights(pts, npts));
 	bool const no_subdiv(no_shadow_edge || is_black);
 	unsigned lod_level(1);
 	float lod_scale(1.0);
@@ -1038,7 +1038,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		else if (LOD_QUAD_TRIS && (n[0] > 1 || n[1] > 1) && scaled_view_dist(camera, pos) > 2.4*DIST_CUTOFF) {
 			lod_scale = 0.5; // half the resolution
 		}
-		else if (DYNAM_RES_SCALE > 1.0 && (!(display_mode & 0x10) && has_dynamic_lights(pts, npts))) {
+		else if (DYNAM_RES_SCALE > 1.0 && has_dynamic_lights(pts, npts)) {
 			lod_scale = DYNAM_RES_SCALE; // LOD
 		}
 	}

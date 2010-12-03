@@ -1499,7 +1499,6 @@ void get_xyz_v2(point &p, int const v[3]);
 bool upload_smoke_3d_texture();
 bool has_dynamic_lights(point const *const pts, unsigned npts);
 bool is_shadowed_lightmap(point const &p);
-void setup_dlights_for_shader(unsigned program);
 bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed, vector3d const &norm, float const spec[2], bool no_dynamic);
 bool get_sd_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);

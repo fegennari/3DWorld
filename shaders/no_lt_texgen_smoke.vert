@@ -1,25 +1,6 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 varying vec3 eye, vpos;
 
-// store light_source as: center.xyz, radius, color.rgba
-//                               012  3       4567
-const int MAX_LIGHTS = 20;
-uniform float dl_data[8*MAX_LIGHTS]; // max of N lights (216 is the max size)
-uniform int num_lights = 0;
-
-const float CTHRESH = 0.02;
-
-float get_intensity_at(in vec3 pos, in int off) {
-	float radius = dl_data[off+3];
-	if (radius == 0.0) return dl_data[off+7]; // no falloff
-	if (abs(pos.z - dl_data[off+2]) > radius) return 0.0; // fast test
-	vec3 center = vec3(dl_data[off+0], dl_data[off+1], dl_data[off+2]);
-	float dist = length(pos - center);
-	if (dist > radius) return 0.0;
-	float rscale = (radius - dist)/radius;
-	return rscale*rscale*dl_data[off+7]; // quadratic 1/r^2 attenuation
-}
-
 void main()
 {
 	if (use_texgen) {
@@ -29,16 +10,7 @@ void main()
 		gl_TexCoord[0] = gl_MultiTexCoord0;
 	}	
 	gl_Position = ftransform();
-	//gl_FrontColor = gl_Color;
-	vec4 color = gl_Color;
-	
-	for (int i = 0; i < num_lights; ++i) {
-		int off = 8*i;
-		float cscale = get_intensity_at(gl_Vertex.xyz, off);
-		if (cscale < CTHRESH) continue;
-		color += vec4(dl_data[off+4], dl_data[off+5], dl_data[off+6], 0.0)*cscale;
-	}
-	gl_FrontColor = color;
+	gl_FrontColor = gl_Color;
 	
 	if (!smoke_enabled) {
 		eye  = vec3(0,0,0);

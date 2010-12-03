@@ -1264,7 +1264,7 @@ bool is_shadowed_lightmap(point const &p) {
 }
 
 
-void light_source::pack_to_floatv(float *data) const {
+void light_source::pack_to_floatv(float *data) const { // unused
 
 	// store light_source as: center.xyz, radius, color.rgba
 	assert(data);
@@ -1272,29 +1272,6 @@ void light_source::pack_to_floatv(float *data) const {
 	*(data++) = radius;
 	UNROLL_3X(*(data++) = color[i_];)
 	*(data++) = color[3];
-}
-
-
-void setup_dlights_for_shader(unsigned program) {
-
-	if (!(display_mode & 0x10) || dl_sources.empty()) { // not enabled
-		add_uniform_int(program, "num_lights", 0);
-		return;
-	}
-	//RESET_TIME;
-	unsigned const MAX_LIGHTS = 20; // any more than this will be truncated
-	unsigned const num_lights(min(MAX_LIGHTS, dl_sources.size()));
-	unsigned const light_sz = 8; // 8 floats per light
-	unsigned const max_data_sz(light_sz*MAX_LIGHTS);
-	static float dl_data[max_data_sz] = {0}; // needs to stay in scope
-	
-	for (unsigned i = 0; i < num_lights; ++i) {
-		dl_sources[i].pack_to_floatv(dl_data + light_sz*i);
-	}
-	add_uniform_float_array(program, "dl_data", dl_data, light_sz*num_lights);
-	//set_uniform_buffer_data(program, "data", dl_data, light_sz*num_lights);
-	add_uniform_int(program, "num_lights", num_lights);
-	//PRINT_TIME("Dynamic Lights Shader Setup");
 }
 
 
@@ -1440,7 +1417,7 @@ void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned
 {
 	a = c; // cur_ambient alpha is 1.0
 	if (c == BLACK) return;
-	get_indir_light(a, cur_ambient, p, (no_dynamic || (display_mode & 0x10)), (shadowed != 0), &norm, spec);
+	get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
 	unsigned const num_lights(enabled_lights.size());
 	
 	for (unsigned i = 0; i < num_lights; ++i) { // add in diffuse + specular components

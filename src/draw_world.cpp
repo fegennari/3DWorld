@@ -1664,7 +1664,6 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha)
 	set_bool_shader_prefix("smoke_enabled", smoke_exists, 0); // VS
 	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
 	unsigned const p(set_shader_prog("texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke"));
-	setup_dlights_for_shader(p);
 
 	if (smoke_tid) {
 		set_multitex(1);
