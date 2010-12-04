@@ -186,7 +186,7 @@ public:
 	void set_npoints();
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned i);
+	void draw_cobj(unsigned i, int &last_tid);
 	void add_to_vector(vector<coll_obj> &cobjs, int type_);
 	void check_if_cube();
 	void add_as_fixed_cobj();

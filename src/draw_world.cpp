@@ -1723,6 +1723,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	colorRGBA orig_fog_color;
 	bool const use_shaders((display_mode & 0x80) == 0); // enabled by default
+	int last_tid(-1);
 
 	if (use_shaders) {
 		if (draw_solid) upload_smoke_3d_texture(); // first pass
@@ -1737,7 +1738,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				draw_last.push_back(make_pair(neg_dist_sq, i));
 			}
 			else {
-				coll_objects[i].draw_cobj(i);
+				coll_objects[i].draw_cobj(i, last_tid);
 			}
 		}
 	}
@@ -1761,7 +1762,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			}
 			else { // cobj
 				assert((unsigned)ix < coll_objects.size());
-				coll_objects[ix].draw_cobj(ix);
+				coll_objects[ix].draw_cobj(ix, last_tid);
 			}
 		}
 		disable_blend();
@@ -1784,7 +1785,6 @@ void portal::draw() const {
 	float const scale[2] = {0.0, 0.0};
 	select_texture(WHITE_TEX, 0);
 	setup_polygon_texgen(plus_z, scale); // doesn't matter as long as it's set to something
-	enable_blend();
 	ALPHA0.do_glColor();
 	//WHITE.do_glColor();
 	glBegin(GL_QUADS);
@@ -1793,7 +1793,6 @@ void portal::draw() const {
 		pts[i].do_glVertex();
 	}
 	glEnd();
-	disable_blend();
 };
 
 

@@ -309,7 +309,7 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 }
 
 
-void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
+void coll_obj::draw_cobj(unsigned i, int &last_tid) { // non-const: modifies shadow state
 
 	if (no_draw()) return;
 	assert(status != COLL_FREED && !disabled());
@@ -327,13 +327,16 @@ void coll_obj::draw_cobj(unsigned i) { // non-const: modifies shadow state
 	//if (brad/distance_to_camera(center) < 0.01) return; // too far/small
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
-	int tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
-	bool const textured(select_texture(tid));
-	assert(textured);
+	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
 	float const ar(get_tex_ar(tid));
 	bool const no_lighting(cp.color == BLACK/*&& cp.specular == 0.0*/);
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 
+	if (tid != last_tid) {
+		bool const textured(select_texture(tid));
+		assert(textured);
+		last_tid = tid;
+	}
 	switch (type) {
 	case COLL_CUBE:
 		draw_coll_cube(ar, (draw_model == 0), i, tid);
