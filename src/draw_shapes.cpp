@@ -15,15 +15,12 @@ bool const VERTEX_LIGHTING   = 1;
 bool const VERBOSE_DYNAMIC   = 0;
 bool const TEST_DS_TIME      = 0;
 bool const MERGE_STRIPS      = 1; // makes display significantly faster but looks a little worse
-bool const BETTER_QUALITY    = 1; // slightly slower, but looks better (except for popping artifacts)
 bool const FULL_MAP_LOOKUP   = 1;
 bool const USE_DLIST         = 1;
-bool const ENABLE_DL_LOD     = 1; // faster but lower visual quality
-bool const ALLOW_SPECULAR    = 1;
+bool const ENABLE_DL_LOD     = 0; // faster but lower visual quality
 bool const DO_CIRC_PROJ_CLIP = 1;
 bool const RENDER_PART_INT   = 1; // if 1, render only the visible portions of the surface using the slow algorithm, if 0 render all of the surface using the fast algorithm
 bool const LOD_QUAD_TRIS     = 0; // slightly faster but somewhat lower quality (better off when dlists are enabled)
-bool const LOD_NO_SUBDIV     = 0; // faster but causes color popping effects when switching LOD levels on non subdivided shapes
 bool const FAST_SHAPE_DRAW   = 0; // disable lighting and subdivision of shapes
 int  const USE_MESH_INT      = 1; // 0 = none, 1 = high res, 2 = low res
 int  const VERBOSE           = 0; // 0, 1, 2, 3
@@ -773,8 +770,7 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 	assert(nvals);
 	if (in_strip) {glEnd(); in_strip = 0;}
 	//if (p.in_dlist) {} // create some textures instead of drawing - QD_TAG_TEXTURE
-	bool const more_strips(BETTER_QUALITY && !p.in_dlist && has_dynamic &&
-		scaled_view_dist(get_camera_pos(), pts[0]) <= DIST_CUTOFF);
+	bool const more_strips(!p.in_dlist && has_dynamic && scaled_view_dist(get_camera_pos(), pts[0]) <= DIST_CUTOFF);
 	static vert_color_comp ccomps[256]; // doesn't have to be static
 	bool created[256] = {0};
 
@@ -1000,7 +996,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	// 3. Must not be both specular and lit
 	// 4. Must not be part of a quadric (too many LODs)
 	float const spec[2] = {c_obj.cp.specular, c_obj.cp.shine};
-	bool const is_specular(ALLOW_SPECULAR && spec[0] > 0.0 && !back_facing && all_lighted != ALL_LT[1]);
+	bool const is_specular(spec[0] > 0.0 && !back_facing && all_lighted != ALL_LT[1]);
 	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !is_specular && !q.is_quadric && !dg_lights &&
 		!has_d_shad && !has_dynamic_lights(pts, npts));
 	bool const no_subdiv(no_shadow_edge || is_black);
@@ -1008,7 +1004,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	float lod_scale(1.0);
 
 	if (use_dlist) {
-		if ((!no_subdiv || LOD_NO_SUBDIV) && (n[0] > 1 || n[1] > 1)) { // might create dlists for the same LOD if there are no shadow edges
+		if (!no_subdiv && (n[0] > 1 || n[1] > 1)) { // might create dlists for the same LOD if there are no shadow edges
 			float const dist(scaled_view_dist(camera, pos));
 			unsigned const lod(unsigned(len[0]*dist*subdiv_size_inv2/(n[0]*DIST_CUTOFF) + 0.5));
 			lod_level = ((lod >= 4) ? 2 : 1); // two LOD levels for display lists
