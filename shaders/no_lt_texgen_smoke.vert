@@ -5,10 +5,6 @@ void main()
 {
 	if (use_texgen) {
 		setup_texgen(0);
-		/*gl_TexCoord[0].s = dot(gl_Vertex, gl_MultiTexCoord0);
-		gl_TexCoord[0].t = dot(gl_Vertex, gl_MultiTexCoord1);
-		gl_TexCoord[0].p = 0.0;
-		gl_TexCoord[0].q = 1.0;*/
 	}
 	else {
 		gl_TexCoord[0] = gl_MultiTexCoord0;
