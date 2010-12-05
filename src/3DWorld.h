@@ -1519,10 +1519,11 @@ bool split_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point
 void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num);
 void add_uniform_float(unsigned program, char const *const name, float val);
 void add_uniform_int  (unsigned program, char const *const name, int   val);
-void add_attrib_float_array(unsigned program, char const *const name, float const * const val, unsigned num);
-void add_attrib_float (unsigned program, char const *const name, float val);
-void add_attrib_int   (unsigned program, char const *const name, int   val);
 bool set_uniform_buffer_data(unsigned program, char const *name, float const *data, unsigned size);
+unsigned register_attrib_name(unsigned program, char const *name);
+void add_attrib_float_array(unsigned ix, float const *const val, unsigned num);
+void add_attrib_float (unsigned ix, float val);
+void add_attrib_int   (unsigned ix, int   val);
 void setup_enabled_lights(unsigned num=2);
 void setup_fog_scale(unsigned program);
 void set_shader_prefix(std::string const &prefix, unsigned shader_type);
