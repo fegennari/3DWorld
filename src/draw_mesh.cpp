@@ -730,7 +730,7 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + wxoff), (tscale*(yoff2 - yoff)*DY_VAL + wyoff));
 
 	//setup_enabled_lights();
-	//unsigned const p(set_shader_prog("texture_gen.part+per_pixel_lighting_texgen", "ads_lighting.part+per_pixel_lighting_textured")); // needs fog
+	//unsigned const p(set_shader_prog("texture_gen.part+per_pixel_lighting_texgen", "ads_lighting.part*+per_pixel_lighting_textured")); // needs fog
 	//add_uniform_int(p, "tex0", 0);
 	
 	glPushMatrix();

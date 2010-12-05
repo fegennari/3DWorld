@@ -439,7 +439,7 @@ public:
 			static float time(0.0);
 			if (animate2) time += fticks;
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
-			unsigned const p(set_shader_prog("ad_lighting.part+grass_wind", "linear_fog.part+simple_texture"));
+			unsigned const p(set_shader_prog("ad_lighting.part*+grass_wind", "linear_fog.part+simple_texture"));
 			add_uniform_float(p, "time", 0.5*time/TICKS_PER_SECOND);
 			add_uniform_float(p, "wind_x", wind.x);
 			add_uniform_float(p, "wind_y", wind.y);
