@@ -220,6 +220,12 @@ struct vertex_t : public color_wrapper { // size = 32
 
 	point p;
 	vector3d n;
+
+	void draw() const {
+		n.do_glNormal();
+		glColor4ubv(c);
+		p.do_glVertex();
+	}
 };
 
 
@@ -241,8 +247,7 @@ void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned 
 			get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
 			v.set_c4(color);
 		}
-		glColor4ubv(v.c);
-		v.p.do_glVertex();
+		v.draw();
 	}
 	nverts += npts;
 	++nsurfaces;
@@ -823,6 +828,7 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 					vert_color_comp const &cc(ccomps[shadowed]);
 					colorRGBA a(interpolate_3d(cc.c, npts, s_[i], t_));
 					a.alpha = INTERP_1D(cc.c, s_[i], t_, npts, .alpha);
+					n.do_glNormal();
 					a.do_glColor();
 					v.do_glVertex();
 				}

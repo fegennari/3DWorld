@@ -1066,13 +1066,15 @@ bool upload_smoke_3d_texture() {
 			lmcell const *const vlm(lmap_manager.vlmap[y][x]);
 			if (vlm == NULL) continue; // x/y pairs that get into here should also be constant
 			unsigned const off(zsize*(y*MESH_X_SIZE + x));
+			float const zthresh(is_mesh_disabled(x, y) ? czmin : mesh_height[y][x]);
 
 			for (unsigned z = 0; z < zsize; ++z) {
 				unsigned const off2(ncomp*(off + z));
 				lmcell const &lmc(vlm[z]);
 
 				if (full_update) {
-					UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(0.5f*(lmc.v*lmc.ac[i_]*cscale[i_] + lmc.c[i_])));) // combined colors
+					bool const bad(get_zval(z+1) < zthresh); // adjust by one because GPU will interpolate the texel
+					UNROLL_3X(data[off2+i_] = bad ? 0 : (unsigned char)(255*CLIP_TO_01(0.5f*(lmc.v*lmc.ac[i_]*cscale[i_] + lmc.c[i_])));)
 				}
 				data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // alpha: smoke
 			}
@@ -1080,7 +1082,7 @@ bool upload_smoke_3d_texture() {
 	}
 	if (init_call) { // create texture
 		cout << "Allocating " << zsize << " by " << MESH_X_SIZE << " by " << MESH_Y_SIZE << " smoke texture of " << ncomp*sz << " bytes." << endl;
-		smoke_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data);
+		smoke_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data, GL_LINEAR);
 	}
 	else { // update region/sync texture
 		unsigned const off(ncomp*y_start*MESH_X_SIZE*zsize);
