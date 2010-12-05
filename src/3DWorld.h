@@ -520,6 +520,7 @@ struct colorRGBA { // size = 16
 	bool is_valid() const {return (red >= 0 && green >= 0 && blue >= 0 && alpha >= 0 && red <= 1 && green <= 1 && blue <= 1 && alpha <= 1);}
 	void print() const {cout << "R: " << red << ", G: " << green << ", B: " << blue << ", A: " << alpha;}
 	void do_glColor() const {glColor4fv((float *)this);}
+	void do_glColor4ubv() const;
 };
 
 
@@ -549,6 +550,13 @@ struct color_wrapper { // size = 4
 	colorRGB  get_c3() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	colorRGBA get_c4() const {return colorRGBA(get_c3(), c[3]/255.0);}
 };
+
+
+inline void colorRGBA::do_glColor4ubv() const {
+	color_wrapper cw;
+	cw.set_c4(*this);
+	glColor4ubv(cw.c);
+}
 
 
 struct vert_color : public color_wrapper { // size = 16
