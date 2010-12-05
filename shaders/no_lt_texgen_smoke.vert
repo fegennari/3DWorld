@@ -1,5 +1,6 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
-varying vec3 eye, vpos;
+//uniform float step_delta;
+varying vec3 eye, vpos, spos;
 
 void main()
 {
@@ -11,6 +12,7 @@ void main()
 	}	
 	gl_Position = ftransform();
 	gl_FrontColor = gl_Color;
+	spos = gl_Vertex.xyz;
 	
 	if (!smoke_enabled) {
 		eye  = vec3(0,0,0);

@@ -1027,7 +1027,7 @@ void distribute_smoke() { // called at most once per frame
 bool upload_smoke_3d_texture() {
 
 	//RESET_TIME;
-	if (!DYNAMIC_SMOKE || !smoke_enabled || lmap_manager.vlmap == NULL) return 0;
+	if (lmap_manager.vlmap == NULL) return 0;
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
 	// is it ok when texture z size is not a power of 2?
 	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize);
@@ -1043,9 +1043,6 @@ bool upload_smoke_3d_texture() {
 		assert(data.size() == ncomp*sz); // sz should be constant (per config file/3DWorld session)
 		init_call = !glIsTexture(smoke_tid); // will recreate the texture
 	}
-	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
-	if (!init_call && !smoke_exists) return 0; // return 1?
-
 	colorRGBA cscale(cur_ambient);
 	float cmax(0.0);
 	UNROLL_3X(cmax = max(cmax, cscale[i_]);)
@@ -1053,6 +1050,9 @@ bool upload_smoke_3d_texture() {
 	static colorRGBA last_cscale(ALPHA0);
 	bool const full_update(init_call || cscale != last_cscale);
 	last_cscale = cscale;
+
+	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
+	if (!full_update && !smoke_exists) return 0; // return 1?
 
 	static int cur_block(0);
 	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
@@ -1087,7 +1087,7 @@ bool upload_smoke_3d_texture() {
 		assert(off < data.size());
 		update_3d_texture(smoke_tid, 0, 0, y_start, zsize, MESH_X_SIZE, block_size, ncomp, &data[off]);
 	}
-	cur_block = (cur_block+1) % SMOKE_SEND_SKIP;
+	if (!full_update) cur_block = (cur_block+1) % SMOKE_SEND_SKIP;
 	//PRINT_TIME("Smoke Upload");
 	return 1;
 }
@@ -1354,25 +1354,18 @@ bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 
 
 // used on mesh and water
-bool get_sd_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec) {
+void get_sd_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec) {
 
-	bool added(0);
 	assert(lm_alloc && lmap_manager.vlmap);
 
 	if (using_lightmap && lmap_manager.is_valid_cell(x, y, z)) {
 		float const *const color(lmap_manager.vlmap[y][x][z].c);
-		
-		if (color[0] > CTHRESH || color[1] > CTHRESH || color[2] >= CTHRESH) {
-			ADD_LIGHT_CONTRIB(color, ls);
-			added = 1;
-		}
+		ADD_LIGHT_CONTRIB(color, ls);
 	}
-	if (!dl_sources.empty()) added |= get_dynamic_light(x, y, z, p, lightscale, ls, norm, spec);
-	return added;
+	if (!dl_sources.empty()) get_dynamic_light(x, y, z, p, lightscale, ls, norm, spec);
 }
 
 
-// maybe put this into a vertex shader?
 float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
 
 	if (!SOFT_LIGHTING) {
@@ -1397,8 +1390,8 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 	else if (using_lightmap && p.z < czmax && lmap_manager.vlmap[y][x] != NULL) { // not above all collision objects and not empty cell
 		lmcell const &lmc(lmap_manager.vlmap[y][x][z]);
 		
-		if (shadowed) { // Note: could interpolate between voxels here, but it's slow and doesn't look any better
-			val = lmc.v;
+		if (shadowed) { // Note: this test is optional
+			val = lmc.v; // Note: could interpolate between voxels here, but it's slow and doesn't look any better
 			if (val > 0.0 && global_lighting) {UNROLL_3X(cscale[i_] *= lmc.ac[i_];)} // add indirect color
 		}
 		ADD_LIGHT_CONTRIB(lmc.c, ls);
@@ -1411,13 +1404,27 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 }
 
 
-// put this into a vertex shader?
+void get_dynamic_vert_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, vector3d const *const norm, float const *const spec) {
+
+	colorRGBA ls(BLACK);
+
+	if (!no_dynamic && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
+		bool const global_lighting(read_light_file || write_light_file);
+		point const p_adj((norm && !global_lighting) ? (p + (*norm)*(0.25*HALF_DXY)) : p);
+		int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY)), z(get_zpos(p_adj.z));
+		if (!point_outside_mesh(x, y)) get_dynamic_light(x, y, z, p, 1.0, (float *)&ls, norm, spec);
+	}
+	UNROLL_3X(a[i_] *= ls[i_];) // unroll the loop
+}
+
+
 void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed,
 					  vector3d const &norm, float const spec[2], bool no_dynamic)
 {
 	a = c; // cur_ambient alpha is 1.0
 	if (c == BLACK) return;
-	get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
+	//get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
+	get_dynamic_vert_light(a, cur_ambient, p, no_dynamic, &norm, spec);
 	unsigned const num_lights(enabled_lights.size());
 	
 	for (unsigned i = 0; i < num_lights; ++i) { // add in diffuse + specular components
@@ -1428,7 +1435,6 @@ void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned
 		vector3d const dir(lt.get_center(), p);
 		float const dp(dot_product(norm, dir));
 		if (dp <= 0.0) continue;
-		//if (lt.is_dynamic()) {int cindex; if (check_coll_line(lt.get_center(), p, cindex, -1, 0, 1)) continue;} // slow
 		colorRGBA const &lsc(lt.get_color()); // ignoring a's alpha for now
 		float const mag(lmag*(dp*InvSqrt(dir.mag_sq()) + add_specular(p, dir, norm, spec)));
 		UNROLL_3X(a[i_] += mag*c[i_]*lsc[i_];)
