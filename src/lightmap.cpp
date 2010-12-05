@@ -1043,13 +1043,9 @@ bool upload_smoke_3d_texture() {
 		assert(data.size() == ncomp*sz); // sz should be constant (per config file/3DWorld session)
 		init_call = !glIsTexture(smoke_tid); // will recreate the texture
 	}
-	colorRGBA cscale(cur_ambient);
-	float cmax(0.0);
-	UNROLL_3X(cmax = max(cmax, cscale[i_]);)
-	if (cmax > 0.0) cscale *= 1.0/cmax;
-	static colorRGBA last_cscale(ALPHA0);
-	bool const full_update(init_call || cscale != last_cscale);
-	last_cscale = cscale;
+	static colorRGBA last_cur_ambient(ALPHA0);
+	bool const full_update(init_call || cur_ambient != last_cur_ambient);
+	last_cur_ambient = cur_ambient;
 
 	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
 	if (!full_update && !smoke_exists) return 0; // return 1?
@@ -1074,7 +1070,7 @@ bool upload_smoke_3d_texture() {
 
 				if (full_update) {
 					bool const bad(get_zval(z+1) < zthresh); // adjust by one because GPU will interpolate the texel
-					UNROLL_3X(data[off2+i_] = bad ? 0 : (unsigned char)(255*CLIP_TO_01(0.5f*(lmc.v*lmc.ac[i_]*cscale[i_] + lmc.c[i_])));)
+					UNROLL_3X(data[off2+i_] = bad ? 0 : (unsigned char)(255*CLIP_TO_01(lmc.v*lmc.ac[i_]*cur_ambient[i_] + lmc.c[i_]));)
 				}
 				data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // alpha: smoke
 			}
