@@ -717,7 +717,7 @@ void draw_group(obj_group &objg) {
 			if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 				setup_enabled_lights();
 				set_shader_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
-				unsigned const p(set_shader_prog("ad_lighting.part+two_lights_no_xform", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3));
+				unsigned const p(set_shader_prog("ad_lighting.part*+two_lights_no_xform", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3));
 				add_uniform_float(p, "size", 2.0*radius); // Note: size no longer depends on angle
 				add_uniform_int(p, "tex0", 0);
 				snow_pld.draw_and_clear();
@@ -1663,7 +1663,8 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha)
 	set_bool_shader_prefix("use_texgen",    use_texgen,   0); // VS
 	set_bool_shader_prefix("smoke_enabled", smoke_exists, 0); // VS
 	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
-	unsigned const p(set_shader_prog("texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke"));
+	setup_enabled_lights();
+	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke"));
 
 	if (smoke_tid) {
 		set_multitex(1);
@@ -1679,6 +1680,8 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha)
 	add_uniform_float(p, "czmax", get_zval(MESH_SIZE[2]));
 	add_uniform_float_array(p, "smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	add_uniform_float(p, "step_delta", HALF_DXY);
+	unsigned const ix(register_attrib_name(p, "shadowed"));
+	assert(ix == 0); // only one for now
 	return change_fog_color(GRAY);
 }
 
@@ -1721,6 +1724,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
+	set_color_a(BLACK);
+	set_specular(0.0, 1.0);
 	colorRGBA orig_fog_color;
 	bool const use_shaders((display_mode & 0x80) == 0); // enabled by default
 	int last_tid(-1);
@@ -1772,6 +1777,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();
 	set_lighted_sides(1);
+	set_specular(0.0, 1.0);
 
 	if (draw_solid) {
 		if (TIMETEST) {PRINT_TIME("Final Draw");}

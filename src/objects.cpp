@@ -331,8 +331,8 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid) { // non-const: modifies sha
 	float const ar(get_tex_ar(tid));
 	bool const no_lighting(cp.color == BLACK/*&& cp.specular == 0.0*/);
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
-	if (cp.specular > 0.0) set_specular(cp.specular, cp.shine);
-	set_color(cp.color); // set material ambient and diffuse
+	set_specular(cp.specular, cp.shine);
+	set_color_d(cp.color); // set material ambient and diffuse
 
 	if (tid != last_tid) {
 		bool const textured(select_texture(tid));
@@ -370,7 +370,6 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid) { // non-const: modifies sha
 		draw_extruded_polygon(thickness, points, NULL, npoints, norm, i, tid);
 		break;
 	}
-	if (cp.specular > 0.0) set_specular(0.0, 1.0); // reset
 }
 
 

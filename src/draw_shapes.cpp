@@ -216,7 +216,7 @@ struct pt_pair { // size = 28
 };
 
 
-struct vertex_t : public color_wrapper { // size = 32
+struct vertex_t : public color_wrapper { // size = 28
 
 	point p;
 	vector3d n;
@@ -227,6 +227,13 @@ struct vertex_t : public color_wrapper { // size = 32
 		p.do_glVertex();
 	}
 };
+
+
+void set_shadowed_attrib(unsigned shadowed) {
+
+	bool const has_sun(light_factor >= 0.4);
+	add_attrib_float(0, float((shadowed << unsigned(!has_sun)) & 3));
+}
 
 
 inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d const* const norm) const {
@@ -247,6 +254,7 @@ void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned 
 			get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
 			v.set_c4(color);
 		}
+		set_shadowed_attrib(shadowed);
 		v.draw();
 	}
 	nverts += npts;
@@ -828,6 +836,7 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 					vert_color_comp const &cc(ccomps[shadowed]);
 					colorRGBA a(interpolate_3d(cc.c, npts, s_[i], t_));
 					a.alpha = INTERP_1D(cc.c, s_[i], t_, npts, .alpha);
+					set_shadowed_attrib(shadowed);
 					a.do_glColor4ubv();
 					n.do_glNormal();
 					v.do_glVertex();
