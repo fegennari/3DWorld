@@ -33,7 +33,7 @@ float const FOG_COLOR_ATTEN    = 0.5;
 
 
 bool mesh_invalidated(1);
-int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0);
+int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
@@ -244,11 +244,11 @@ float get_framerate(int &timer_b) {
 	static float fr_average(0.0);
 	timer_b = glutGet(GLUT_ELAPSED_TIME);
 
-	if (timer_a != timer_b) { // skip zero time frames?
-		float const framerate(1000.0/((float)timer_b - (float)timer_a));
+	if (timer_b > timer_a) { // skip zero time frames
+		float const framerate(1000.0/float(timer_b - timer_a));
 		timer_a = timer_b;
 		//return framerate;
-		unsigned const NUM_AVG = 5; // average over several frames
+		float const NUM_AVG = 5; // average over several frames
 		fr_average = ((fr_average == 0.0) ? framerate : ((NUM_AVG - 1)*fr_average + framerate)/NUM_AVG);
 	}
 	return fr_average;
