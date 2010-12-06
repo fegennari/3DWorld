@@ -998,7 +998,6 @@ colorRGBA const &get_landmine_light_color(int time);
 float get_landmine_sensor_height(float radius, int time);
 colorRGBA get_plasma_color(float size);
 void get_enabled_lights();
-void set_shadowed_attrib(unsigned shadowed);
 void draw_coll_surfaces(bool draw_solid, bool draw_trans);
 void draw_stars(float alpha);
 void draw_sun();

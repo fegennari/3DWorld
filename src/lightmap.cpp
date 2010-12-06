@@ -1402,13 +1402,26 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 }
 
 
+void get_dynamic_light_at_pt(colorRGBA &a, colorRGBA const &c, point const &p, vector3d const &norm, float const *const spec) {
+
+	if (dl_sources.empty() || p.z > dlight_bb[2][1] || p.z < dlight_bb[2][0]) return;
+	bool const global_lighting(read_light_file || write_light_file);
+	point const p_adj(global_lighting ? p : (p + norm*(0.25*HALF_DXY)));
+	int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY));
+	if (point_outside_mesh(x, y)) return;
+	colorRGBA ls(BLACK);
+	get_dynamic_light(x, y, get_zpos(p_adj.z), p, 1.0, (float *)&ls, &norm, spec);
+	UNROLL_3X(a[i_] += c[i_]*ls[i_];) // unroll the loop
+}
+
+
 void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed,
 					  vector3d const &norm, float const spec[2], bool no_dynamic)
 {
-#if 0
-	a = c; // cur_ambient alpha is 1.0
+	a = colorRGBA(0.0, 0.0, 0.0, c.alpha); // cur_ambient alpha is 1.0
 	if (c == BLACK) return;
-	get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
+	//get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
+	if (!no_dynamic) get_dynamic_light_at_pt(a, c, p, norm, spec);
 	unsigned const num_lights(enabled_lights.size());
 	
 	for (unsigned i = 0; i < num_lights; ++i) { // add in diffuse + specular components
@@ -1423,20 +1436,7 @@ void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned
 		float const mag(lmag*(dp*InvSqrt(dir.mag_sq()) + add_specular(p, dir, norm, spec)));
 		UNROLL_3X(a[i_] += mag*c[i_]*lsc[i_];)
 	}
-#else
-	a = colorRGBA(0.0, 0.0, 0.0, c.alpha);
-	if (no_dynamic || dl_sources.empty() || c == BLACK || p.z > dlight_bb[2][1] || p.z < dlight_bb[2][0]) return;
-	bool const global_lighting(read_light_file || write_light_file);
-	point const p_adj(global_lighting ? p : (p + norm*(0.25*HALF_DXY)));
-	int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY));
-	
-	if (!point_outside_mesh(x, y)) {
-		colorRGBA ls(BLACK);
-		get_dynamic_light(x, y, get_zpos(p_adj.z), p, 1.0, (float *)&ls, &norm, spec);
-		UNROLL_3X(a[i_] = c[i_]*ls[i_];) // unroll the loop
-		a.set_valid_color();
-	}
-#endif
+	a.set_valid_color();
 }
 
 

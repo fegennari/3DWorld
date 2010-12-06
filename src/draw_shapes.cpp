@@ -247,7 +247,6 @@ void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned 
 			get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
 			v.set_c4(color);
 		}
-		set_shadowed_attrib(shadowed);
 		v.draw();
 	}
 	nverts += npts;
@@ -829,7 +828,6 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 					vert_color_comp const &cc(ccomps[shadowed]);
 					colorRGBA a(interpolate_3d(cc.c, npts, s_[i], t_));
 					a.alpha = INTERP_1D(cc.c, s_[i], t_, npts, .alpha);
-					set_shadowed_attrib(shadowed);
 					a.do_glColor4ubv();
 					n.do_glNormal();
 					v.do_glVertex();
@@ -1004,8 +1002,8 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	// 3. Must not be both specular and lit
 	// 4. Must not be part of a quadric (too many LODs)
 	float const spec[2] = {c_obj.cp.specular, c_obj.cp.shine};
-	//bool const is_specular(spec[0] > 0.0 && !back_facing && all_lighted != ALL_LT[1]);
-	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc /*&& !is_specular*/ && !q.is_quadric && !dg_lights &&
+	bool const is_specular(spec[0] > 0.0 && !back_facing && all_lighted != ALL_LT[1]); // can relax this if we move lighting onto the GPU
+	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !is_specular && !q.is_quadric && !dg_lights &&
 		!has_d_shad && !has_dynamic_lights(pts, npts));
 	bool const no_subdiv(no_shadow_edge || is_black);
 	unsigned lod_level(1);

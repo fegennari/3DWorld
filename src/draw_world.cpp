@@ -1658,13 +1658,6 @@ colorRGBA change_fog_color(colorRGBA const &new_color) {
 }
 
 
-void set_shadowed_attrib(unsigned shadowed) {
-
-	bool const has_sun(light_factor >= 0.4);
-	add_attrib_float(0, float((shadowed << unsigned(!has_sun)) & 3));
-}
-
-
 colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha) {
 
 	set_bool_shader_prefix("use_texgen",    use_texgen,   0); // VS
@@ -1687,9 +1680,6 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha)
 	add_uniform_float(p, "czmax", get_zval(MESH_SIZE[2]));
 	add_uniform_float_array(p, "smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	add_uniform_float(p, "step_delta", HALF_DXY);
-	unsigned const ix(register_attrib_name(p, "shadowed"));
-	assert(ix == 0); // only one for now
-	set_shadowed_attrib(~0); // all shadowed (lighting is done on the CPU)
 	return change_fog_color(GRAY);
 }
 
