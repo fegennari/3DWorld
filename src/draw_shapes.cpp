@@ -878,7 +878,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		for (unsigned i = 0; i < num_lights; ++i) {
 			unsigned const lval(get_light_val(all_lighted, i));
 
-			if (lval == 0 || (lval == 2 && i < q.stest.size() && !q.stest[i].empty())) {
+			if ((lval == 0 && !first_render) || (lval == 2 && i < q.stest.size() && !q.stest[i].empty())) {
 				set_light_val(all_lighted, 3, i); // unknown or no static shadow, dynamic shadows still possible
 			}
 		}
@@ -1003,8 +1003,8 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	// 4. Must not be part of a quadric (too many LODs)
 	float const spec[2] = {c_obj.cp.specular, c_obj.cp.shine};
 	bool const is_specular(spec[0] > 0.0 && !back_facing && all_lighted != ALL_LT[1]); // can relax this if we move lighting onto the GPU
-	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !is_specular && !q.is_quadric && !dg_lights &&
-		!has_d_shad && !has_dynamic_lights(pts, npts));
+	bool const no_splits(!is_specular && !q.is_quadric && !no_shadow_calc && !dg_lights && !has_d_shad && !has_dynamic_lights(pts, npts));
+	bool const use_dlist(USE_DLIST && !first_render && no_splits);
 	bool const no_subdiv(no_shadow_edge || is_black);
 	unsigned lod_level(1);
 	float lod_scale(1.0);
@@ -1047,119 +1047,139 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	++cobj_counter;
 	if (lod_scale != 1.0) calc_params(pts, dirs, len, ninv, n, lod_scale*subdiv_size_inv2); // smaller n
 	bool const occlusion_test(!use_dlist && (display_mode & 0x08) && !c_obj.occluders.empty());
-	bool in_strip(0), occluded(0);
+	bool in_strip(0), occluded(0), skip_draw(0);
 	unsigned const num_subdiv(n[0]*n[1]);
 	quad_div qd(dim, dir, QD_TAG_QUAD, face, shift_bits);
 	dqd_params params(q, tri, 0, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
 	unsigned const nv0(n[0]+1), nv1(n[1]+1);
-	static vector<vertex_t> verts;
-	verts.resize(nv0*nv1);
-
-	for (unsigned s0 = 0; s0 < nv0; ++s0) {
-		point const pt(pts[0] + dirs[0]*s0); // pts[1]
-		vector3d_d const vs(dirs[1]*DO_SCALE(tri, s0, n[0])); // pts[3]
-
-		for (unsigned s1 = 0; s1 < nv1; ++s1) {
-			unsigned const ix(s0*nv1 + s1);
-			verts[ix].c[3] = 0; // initialize
-			verts[ix].p    = pt + vs*s1;
-			verts[ix].n    = (use_norms ? interpolate_3d(normals, npts, s1*ninv[1], s0*ninv[0]) : normal);
-		}
-	}
+	
 	if (no_subdiv) {
 		for (unsigned i = 0; i < num_lights; ++i) {
 			if (get_light_val(all_lighted, i) == 1) shad |= (1 << i);
+		}
+		if (no_splits) {
+			glBegin(GL_QUADS);
+			
+			for (unsigned i = 0; i < 4; ++i) {
+				vertex_t v;
+				v.p = pts[i];
+				v.n = (use_norms ? normals[i] : normal);
+				colorRGBA color;
+				get_vertex_color(color, params.color, v.p, shad, v.n, params.spec, 1);
+				v.set_c4(color);
+				v.draw();
+			}
+			glEnd();
+			nverts += 4;
+			++nsurfaces;
+			skip_draw = 1;
 		}
 	}
 	else if (tri) {
 		glBegin(GL_TRIANGLES);
 	}
-	for (unsigned s0 = 0; s0 < n[0]; ++s0) { // pre-subdivide large quads
-		unsigned const ix0(s0*nv1);
+	if (!skip_draw) {
+		static vector<vertex_t> verts;
+		verts.resize(nv0*nv1);
 
-		if (occlusion_test && n[0] > 1) { // test this row for occlusion
-			point const pts2[4] = {verts[ix0].p, verts[ix0+nv1-1].p, verts[ix0+nv1].p, verts[ix0+nv1+nv1-1].p};
+		for (unsigned s0 = 0; s0 < nv0; ++s0) {
+			point const pt(pts[0] + dirs[0]*s0); // pts[1]
+			vector3d_d const vs(dirs[1]*DO_SCALE(tri, s0, n[0])); // pts[3]
 
-			if (is_occluded(c_obj.occluders, pts2, 4, camera)) {
-				occluded = 1;
-				continue; // cull a full strip
+			for (unsigned s1 = 0; s1 < nv1; ++s1) {
+				unsigned const ix(s0*nv1 + s1);
+				verts[ix].c[3] = 0; // initialize
+				verts[ix].p    = pt + vs*s1;
+				verts[ix].n    = (use_norms ? interpolate_3d(normals, npts, s1*ninv[1], s0*ninv[0]) : normal);
 			}
 		}
-		if (no_subdiv) {
-			glBegin(GL_QUAD_STRIP); // is there any way to safely skip vertices for LOD draw?
+		for (unsigned s0 = 0; s0 < n[0]; ++s0) { // pre-subdivide large quads
+			unsigned const ix0(s0*nv1);
 
-			for (unsigned s1 = 0; s1 <= n[1]; ++s1) {
-				unsigned const ix(s0*nv1 + s1), ixs[2] = {ix, ix+nv1};
-				draw_verts(verts, ixs, 2, shad, params);
-			}
-			glEnd();
-			continue;
-		}
-		unsigned last_lighted(0), last_ixs[2];
+			if (occlusion_test && n[0] > 1) { // test this row for occlusion
+				point const pts2[4] = {verts[ix0].p, verts[ix0+nv1-1].p, verts[ix0+nv1].p, verts[ix0+nv1+nv1-1].p};
 
-		for (unsigned s1 = 0; s1 < n[1]; ++s1) {
-			unsigned const ix(ix0 + s1);
-			unsigned ixs[4] = {ix, ix+1, ix+nv1+1, ix+nv1};
-			qd.face = face + ix;
-
-			if (tri) {
-				bool tri_begin(1);
-
-				if (s0 < n[0]-1) { // not a single triangle at the top
-					qd.tag |=  QD_TAG_TRIANGLE;
-					unsigned const ixs2[4] = {ixs[0], ixs[2], ixs[3], ixs[3]};
-					dqd_params params_tri(q, tri, 1, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
-					lighted = draw_quad_div(verts, ixs2, params_tri, tri_begin);
-					params.inherit_flags_from(params_tri);
-					qd.tag &= ~QD_TAG_TRIANGLE;
-
-					if (!tri_begin) {
-						glBegin(GL_TRIANGLES);
-						tri_begin = 1;
-					}
-					else if (lighted != ALL_LT[4]) {
-						draw_verts(verts, ixs2, npts, test_all_light_val(lighted, 1), params_tri);
-					}
+				if (is_occluded(c_obj.occluders, pts2, 4, camera)) {
+					occluded = 1;
+					continue; // cull a full strip
 				}
-				ixs[3] = ixs[2]; // have to recompute since dir is not constant due to scale
-				dqd_params params2(q, tri, 0, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
-				lighted = draw_quad_div(verts, ixs, params2, tri_begin);
-				if (!tri_begin) {glBegin(GL_TRIANGLES); tri_begin = 1;}
-				params.inherit_flags_from(params2);
 			}
-			else { // quad
-				lighted = draw_quad_div(verts, ixs, params, in_strip);
-			}
-			assert(lighted != 0);
+			if (no_subdiv) {
+				glBegin(GL_QUAD_STRIP); // is there any way to safely skip vertices for LOD draw?
 
-			if (lighted != ALL_LT[4] && !is_partial_shadow(lighted)) {
-				unsigned char const cur_shadowed(test_all_light_val(lighted, 1));
+				for (unsigned s1 = 0; s1 <= n[1]; ++s1) {
+					unsigned const ix(s0*nv1 + s1), ixs[2] = {ix, ix+nv1};
+					draw_verts(verts, ixs, 2, shad, params);
+				}
+				glEnd();
+				continue;
+			}
+			unsigned last_lighted(0), last_ixs[2];
+
+			for (unsigned s1 = 0; s1 < n[1]; ++s1) {
+				unsigned const ix(ix0 + s1);
+				unsigned ixs[4] = {ix, ix+1, ix+nv1+1, ix+nv1};
+				qd.face = face + ix;
 
 				if (tri) {
-					draw_verts(verts, ixs, npts, cur_shadowed, params);
-				}
-				else { // technically, should never be able to directly transition between 1 and 0 unless the shadow falls exactly at the boundary
-					unsigned const ixs2[4] = {ixs[3], ixs[0], ixs[2], ixs[1]};
+					bool tri_begin(1);
 
-					if (in_strip) {
-						if (lighted != last_lighted) { // stutter the last point at the new lighting value so that there's no transition
-							draw_verts(verts, last_ixs, 2, cur_shadowed, params);
+					if (s0 < n[0]-1) { // not a single triangle at the top
+						qd.tag |=  QD_TAG_TRIANGLE;
+						unsigned const ixs2[4] = {ixs[0], ixs[2], ixs[3], ixs[3]};
+						dqd_params params_tri(q, tri, 1, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+						lighted = draw_quad_div(verts, ixs2, params_tri, tri_begin);
+						params.inherit_flags_from(params_tri);
+						qd.tag &= ~QD_TAG_TRIANGLE;
+
+						if (!tri_begin) {
+							glBegin(GL_TRIANGLES);
+							tri_begin = 1;
 						}
-						draw_verts(verts, ixs2+2, 2, cur_shadowed, params);
+						else if (lighted != ALL_LT[4]) {
+							draw_verts(verts, ixs2, npts, test_all_light_val(lighted, 1), params_tri);
+						}
 					}
-					else {
-						glBegin(GL_QUAD_STRIP);
-						in_strip = 1;
-						draw_verts(verts, ixs2, npts, cur_shadowed, params);
-					}
-					last_lighted = lighted;
-					last_ixs[0]  = ixs[2];
-					last_ixs[1]  = ixs[1];
+					ixs[3] = ixs[2]; // have to recompute since dir is not constant due to scale
+					dqd_params params2(q, tri, 0, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+					lighted = draw_quad_div(verts, ixs, params2, tri_begin);
+					if (!tri_begin) {glBegin(GL_TRIANGLES); tri_begin = 1;}
+					params.inherit_flags_from(params2);
 				}
-			} // not partial shadow && lighted != ALL_LT[4]
-		} // for s1
-		if (in_strip) {glEnd(); in_strip = 0;}
-	} // for s0
+				else { // quad
+					lighted = draw_quad_div(verts, ixs, params, in_strip);
+				}
+				assert(lighted != 0);
+
+				if (lighted != ALL_LT[4] && !is_partial_shadow(lighted)) {
+					unsigned char const cur_shadowed(test_all_light_val(lighted, 1));
+
+					if (tri) {
+						draw_verts(verts, ixs, npts, cur_shadowed, params);
+					}
+					else { // technically, should never be able to directly transition between 1 and 0 unless the shadow falls exactly at the boundary
+						unsigned const ixs2[4] = {ixs[3], ixs[0], ixs[2], ixs[1]};
+
+						if (in_strip) {
+							if (lighted != last_lighted) { // stutter the last point at the new lighting value so that there's no transition
+								draw_verts(verts, last_ixs, 2, cur_shadowed, params);
+							}
+							draw_verts(verts, ixs2+2, 2, cur_shadowed, params);
+						}
+						else {
+							glBegin(GL_QUAD_STRIP);
+							in_strip = 1;
+							draw_verts(verts, ixs2, npts, cur_shadowed, params);
+						}
+						last_lighted = lighted;
+						last_ixs[0]  = ixs[2];
+						last_ixs[1]  = ixs[1];
+					}
+				} // not partial shadow && lighted != ALL_LT[4]
+			} // for s1
+			if (in_strip) {glEnd(); in_strip = 0;}
+		} // for s0
+	} // !skip_draw
 	assert(!tri || !in_strip);
 	if (!no_subdiv && tri) glEnd();
 	if (use_dlist) glEndList();
