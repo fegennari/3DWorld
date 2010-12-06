@@ -1689,6 +1689,15 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha)
 	add_uniform_float(p, "step_delta", HALF_DXY);
 	unsigned const ix(register_attrib_name(p, "shadowed"));
 	assert(ix == 0); // only one for now
+	unsigned const ix2(register_attrib_name(p, "num_lights"));
+	assert(ix2 == 1); // only one for now
+
+	for (unsigned i = 0; i < 5; ++i) {
+		register_attrib_name(p, (string("dlp") + char('0'+i)).c_str());
+		register_attrib_name(p, (string("dlc") + char('0'+i)).c_str());
+	}
+
+	set_shadowed_attrib(~0); // all shadowed (lighting is done on the CPU)
 	return change_fog_color(GRAY);
 }
 
@@ -2238,11 +2247,7 @@ void draw_smoke() {
 	bool const use_shaders(1);
 	set_color(BLACK);
 	colorRGBA orig_fog_color;
-	
-	if (use_shaders) {
-		orig_fog_color = setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
-		set_shadowed_attrib(~0); // all shadowed (lighting is done on the CPU)
-	}
+	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
 	draw_part_cloud(part_clouds, WHITE, 0);
 	if (use_shaders) end_smoke_shaders(orig_fog_color);
 }
@@ -2385,6 +2390,7 @@ void draw_fires() {
 
 void draw_scorches() {
 
+	set_color(BLACK);
 	draw_billboarded_objs(scorches, BLUR_CENT_TEX);
 }
 

@@ -309,6 +309,9 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 }
 
 
+void find_dynamic_lights(cube_t const &c);
+
+
 void coll_obj::draw_cobj(unsigned i, int &last_tid) { // non-const: modifies shadow state
 
 	if (no_draw()) return;
@@ -333,6 +336,8 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid) { // non-const: modifies sha
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 	set_specular(cp.specular, cp.shine);
 	set_color_d(cp.color); // set material ambient and diffuse
+
+	find_dynamic_lights(*this);
 
 	if (tid != last_tid) {
 		bool const textured(select_texture(tid));

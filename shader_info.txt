@@ -45,3 +45,10 @@ quality/blending/lighting
 - Need to send more data to the GPU: normals, material properties, shadow info, ambient light values
 - Shadows as textures may be too expensive to manage (too many small textures)
 
+Dynamic Lights:
+1. Store all as uniforms: not enough constant memory
+2. Store all as a uniform block: too slow t initialize and iterate
+3. Store all as a texture: too slow to iterate (memory access)
+4. Store local, update with uniforms: too slow to update a uniform for each primitive
+5. Store local, update with attribute: too much data to send using attribute calls (no block transfer)
+
