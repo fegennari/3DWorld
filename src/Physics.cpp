@@ -1306,31 +1306,42 @@ void particle_cloud::apply_physics(unsigned i) {
 	if (status == 0) return;
 
 	if (pos.z >= (CLOUD_CEILING + zmax_est) || radius > 0.25 || is_underwater(pos)) { // smoke dies
-		if (acc_smoke && time > 0) add_smoke(pos, 1.0);
-		status = 0;
+		destroy();
+		return;
 	}
-	else {
-		vector3d v_flow(get_flow_velocity(pos));
-		int coll(0);
-		dwobject obj(SMOKE, pos, zero_vector, 1, 10000.0); // make a SMOKE object for collision detection
-		object_types[SMOKE].radius = radius;
-		unsigned const steps((czmax > -FAR_CLIP && pos.z > czmax) ? 1 : num_smoke_advance);
+	vector3d v_flow(get_flow_velocity(pos));
+	int coll(0);
+	dwobject obj(SMOKE, pos, zero_vector, 1, 10000.0); // make a SMOKE object for collision detection
+	object_types[SMOKE].radius = radius;
+	unsigned const steps((czmax > -FAR_CLIP && pos.z > czmax) ? 1 : num_smoke_advance);
 
-		for (unsigned j = 0; j < steps; ++j) {
-			vector3d vel((get_local_wind(obj.pos) + v_flow)*0.5);
-			vel.z   *= 0.5;
-			obj.pos += (vel + init_vel)*(tstep/(double)num_smoke_advance);
-			if (obj.check_vert_collision(0, 0, 0)) break;
+	for (unsigned j = 0; j < steps; ++j) {
+		vector3d vel((get_local_wind(obj.pos) + v_flow)*0.5);
+		vel.z   *= 0.5;
+		obj.pos += (vel + init_vel)*(tstep/(double)num_smoke_advance);
+		vector3d cnorm;
+		
+		if (obj.check_vert_collision(0, 0, 0, &cnorm)) {
+			// destroy the smoke if it's not damaging and hits the bottom of an object
+			if (cnorm.z < 0.5 && damage == 0.0) destroy();
+			break;
 		}
-		pos       = obj.pos;
-		time     += iticks;
-		density  *= 0.97;
-		darkness *= 0.98;
-		radius   *= 1.04;
-		if (density  < 0.0001) density  = 0.0;
-		if (darkness < 0.0001) darkness = 0.0;
-		if (damage   > 0.0)    do_area_effect_damage(pos, radius, damage, i, source, GASSED);
 	}
+	pos       = obj.pos;
+	time     += iticks;
+	density  *= 0.97;
+	darkness *= 0.98;
+	radius   *= 1.03;
+	if (density  < 0.0001) density  = 0.0;
+	if (darkness < 0.0001) darkness = 0.0;
+	if (damage   > 0.0)    do_area_effect_damage(pos, radius, damage, i, source, GASSED);
+}
+
+
+void particle_cloud::destroy() {
+
+	if (acc_smoke && time > 0) add_smoke(pos, 1.0);
+	status = 0;
 }
 
 

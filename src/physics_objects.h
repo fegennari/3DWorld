@@ -87,6 +87,7 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 	void draw() const;
 	void draw_part(point const &p, float r, colorRGBA c) const;
 	void apply_physics(unsigned i);
+	void destroy();
 };
 
 
