@@ -1689,14 +1689,6 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha)
 	add_uniform_float(p, "step_delta", HALF_DXY);
 	unsigned const ix(register_attrib_name(p, "shadowed"));
 	assert(ix == 0); // only one for now
-	unsigned const ix2(register_attrib_name(p, "num_lights"));
-	assert(ix2 == 1); // only one for now
-
-	for (unsigned i = 0; i < 5; ++i) {
-		register_attrib_name(p, (string("dlp") + char('0'+i)).c_str());
-		register_attrib_name(p, (string("dlc") + char('0'+i)).c_str());
-	}
-
 	set_shadowed_attrib(~0); // all shadowed (lighting is done on the CPU)
 	return change_fog_color(GRAY);
 }
@@ -2357,6 +2349,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	if (order.empty()) return;
 	colorRGBA const orig_fog_color(setup_smoke_shaders(0.04, 0, 1));
 	enable_blend();
+	set_color(BLACK);
 	glDisable(GL_LIGHTING);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.04);
@@ -2390,7 +2383,6 @@ void draw_fires() {
 
 void draw_scorches() {
 
-	set_color(BLACK);
 	draw_billboarded_objs(scorches, BLUR_CENT_TEX);
 }
 

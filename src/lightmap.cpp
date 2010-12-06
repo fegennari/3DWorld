@@ -1351,27 +1351,6 @@ bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 }
 
 
-void find_dynamic_lights(cube_t const &c) {
-
-	unsigned num(0);
-
-	for (unsigned i = 0; i < dl_sources.size(); ++i) {
-		light_source const &ls(dl_sources[i]);
-		float const radius(ls.get_radius());
-		point const &center(ls.get_center());
-		if (radius > 0.0 && !sphere_cube_intersect(center, radius, c)) continue;
-		float val[4];
-		UNROLL_3X(val[i_] = center[i_];)
-		val[3] = radius;
-		add_attrib_float_array(2*num+2, val, 4); // pos,radius
-		add_attrib_float_array(2*num+3, &ls.get_color().red, 4); // color
-		++num;
-		if (num == 5) break; // reached the limit
-	}
-	add_attrib_float(1, float(num));
-}
-
-
 // used on mesh and water
 void get_sd_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec) {
 
@@ -1446,7 +1425,7 @@ void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned
 	}
 #else
 	a = colorRGBA(0.0, 0.0, 0.0, c.alpha);
-	/*if (no_dynamic || dl_sources.empty() || c == BLACK || p.z > dlight_bb[2][1] || p.z < dlight_bb[2][0]) return;
+	if (no_dynamic || dl_sources.empty() || c == BLACK || p.z > dlight_bb[2][1] || p.z < dlight_bb[2][0]) return;
 	bool const global_lighting(read_light_file || write_light_file);
 	point const p_adj(global_lighting ? p : (p + norm*(0.25*HALF_DXY)));
 	int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY));
@@ -1456,7 +1435,7 @@ void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned
 		get_dynamic_light(x, y, get_zpos(p_adj.z), p, 1.0, (float *)&ls, &norm, spec);
 		UNROLL_3X(a[i_] = c[i_]*ls[i_];) // unroll the loop
 		a.set_valid_color();
-	}*/
+	}
 #endif
 }
 
