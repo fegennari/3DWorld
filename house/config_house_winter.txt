@@ -61,7 +61,7 @@ snow_file house/snow.no_leaves.map 0
 mesh_size  128 128 64
 # mesh_size  256 256 128
 scene_size 4.4 4.4 2.2
-subdiv_size_mult 1.0
+subdiv_size_mult 1.5
 
 window_width 1920
 window_height 1200
