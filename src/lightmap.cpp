@@ -147,7 +147,7 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2]) const {
 		}
 	}
 	else {
-		float const rb(radius - sqrt(CTHRESH));
+		float const rb(radius*(1.0 - sqrt(CTHRESH)));
 
 		for (unsigned d = 0; d < 3; ++d) {
 			for (unsigned j = 0; j < 2; ++j) {
@@ -522,6 +522,10 @@ void build_lightmap(bool verbose) {
 			if (need_lmcell[i][j]) ++nonempty;
 		}
 	}
+
+	// add cells surrounding static scene lights
+	// Note: this isn't really necessary when using ray casting for lighting,
+	//       but it helps ensure there are lmap cells around light sources to light the dynamic objects
 	for (unsigned i = 0; i < light_sources.size(); ++i) {
 		point bounds[2];
 		int bnds[3][2];
