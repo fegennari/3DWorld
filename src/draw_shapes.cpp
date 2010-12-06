@@ -229,13 +229,6 @@ struct vertex_t : public color_wrapper { // size = 28
 };
 
 
-void set_shadowed_attrib(unsigned shadowed) {
-
-	bool const has_sun(light_factor >= 0.4);
-	add_attrib_float(0, float((shadowed << unsigned(!has_sun)) & 3));
-}
-
-
 inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d const* const norm) const {
 	
 	if (norm && dot_product_ptv(*norm, center, pc) <= 0.0) return 0;

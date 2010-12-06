@@ -1658,6 +1658,13 @@ colorRGBA change_fog_color(colorRGBA const &new_color) {
 }
 
 
+void set_shadowed_attrib(unsigned shadowed) {
+
+	bool const has_sun(light_factor >= 0.4);
+	add_attrib_float(0, float((shadowed << unsigned(!has_sun)) & 3));
+}
+
+
 colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha) {
 
 	set_bool_shader_prefix("use_texgen",    use_texgen,   0); // VS
@@ -1726,14 +1733,10 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
-	colorRGBA orig_fog_color;
-	bool const use_shaders((display_mode & 0x80) == 0); // enabled by default
+	if (draw_solid) upload_smoke_3d_texture(); // first pass
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 1, 0));
 	int last_tid(-1);
-
-	if (use_shaders) {
-		if (draw_solid) upload_smoke_3d_texture(); // first pass
-		orig_fog_color = setup_smoke_shaders(0.0, 1, 0);
-	}
+	
 	if (draw_solid && have_drawn_cobj) {
 		for (unsigned i = 0; i < coll_objects.size(); ++i) {
 			if (coll_objects[i].no_draw()) continue;
@@ -1748,7 +1751,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 	}
 	if (draw_trans) { // called second
-		if (use_shaders && smoke_exists) {
+		if (smoke_exists) {
 			for (unsigned i = 0; i < portals.size(); ++i) {
 				float const neg_dist_sq(-distance_to_camera_sq(portals[i].get_center_pt()));
 				draw_last.push_back(make_pair(neg_dist_sq, -(int)(i+1)));
@@ -1773,7 +1776,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		disable_blend();
 		draw_last.resize(0);
 	}
-	if (use_shaders) end_smoke_shaders(orig_fog_color);
+	end_smoke_shaders(orig_fog_color);
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();
 	set_lighted_sides(1);
@@ -2232,9 +2235,14 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 void draw_smoke() {
 
 	if (part_clouds.empty()) return; // Note: just because part_clouds is empty doesn't mean there is any enabled smoke
-	bool const use_shaders(0 && (display_mode & 0x80) == 0); // disabled
+	bool const use_shaders(1);
+	set_color(BLACK);
 	colorRGBA orig_fog_color;
-	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
+	
+	if (use_shaders) {
+		orig_fog_color = setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
+		set_shadowed_attrib(~0); // all shadowed (lighting is done on the CPU)
+	}
 	draw_part_cloud(part_clouds, WHITE, 0);
 	if (use_shaders) end_smoke_shaders(orig_fog_color);
 }
@@ -2342,9 +2350,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	order_vect_t order;
 	get_draw_order(objs, order);
 	if (order.empty()) return;
-	bool const use_shaders((display_mode & 0x80) == 0); // enabled by default
-	colorRGBA orig_fog_color;
-	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.04, 0, 1);
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.04, 0, 1));
 	enable_blend();
 	glDisable(GL_LIGHTING);
 	glEnable(GL_ALPHA_TEST);
@@ -2359,7 +2365,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 		objs[i].draw();
 	}
 	glEnd();
-	if (use_shaders) end_smoke_shaders(orig_fog_color);
+	end_smoke_shaders(orig_fog_color);
 	glDisable(GL_ALPHA_TEST);
 	disable_blend();
 	glDisable(GL_TEXTURE_2D);
