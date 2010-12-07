@@ -1,6 +1,7 @@
 // 3D World - profile and lightmap code for lighting effects
 // by Frank Gennari
 // 1/16/06
+#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
 #include "csg.h"
@@ -1098,8 +1099,99 @@ bool upload_smoke_3d_texture() {
 // *** Dynamic Lights Code ***
 
 
+void setup_2d_texture(unsigned &tid) {
+
+	glGenTextures(1, &tid);
+	bind_2d_texture(tid);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+}
+
+
+void upload_dlights_textures() {
+
+	RESET_TIME;
+	static unsigned dl_tid(0), elem_tid(0), gb_tid(0); // FIXME: reset when context changes
+
+	// step 1: the light sources themselves
+	set_multitex(2); // texture unit 2
+	unsigned const max_dlights      = 1024; // must agree with value in shader
+	unsigned const floats_per_light = 8;
+	float dl_data[max_dlights*floats_per_light] = {0.0};
+	unsigned const ndl(min(max_dlights, dl_sources.size()));
+	unsigned const ysz(floats_per_light/4);
+	float const radius_scale(1.0/X_SCENE_SIZE);
+	vector3d const poff(-X_SCENE_SIZE, -Y_SCENE_SIZE, get_zval(0));
+	vector3d const pscale(0.5/X_SCENE_SIZE, 0.5/Y_SCENE_SIZE, 1.0/(get_zval(MESH_SIZE[2]) - poff.z));
+
+	for (unsigned i = 0; i < ndl; ++i) {
+		float *data(dl_data + i*floats_per_light);
+		dl_sources[i].pack_to_floatv(data); // {center,radius, color}
+		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale to [0,1] range
+		data[3] *= radius_scale;
+	}
+	if (dl_tid == 0 || !glIsTexture(dl_tid)) {
+		setup_2d_texture(dl_tid);
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data); // 2 x M
+	}
+	else {
+		bind_2d_texture(dl_tid);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ysz, ndl, GL_RGBA, GL_FLOAT, dl_data);
+	}
+
+	// step 2: grid bag entries
+	set_multitex(3); // texture unit 3
+	vector<unsigned> gb_data(XY_MULT_SIZE, 0);
+	unsigned const elem_tex_sz = 256; // must agree with value in shader
+	unsigned const max_gb_entries(elem_tex_sz*elem_tex_sz);
+	unsigned short elem_data[max_gb_entries] = {0};
+	unsigned elix(0);
+
+	for (int y = 0; y < MESH_Y_SIZE && elix < max_gb_entries; ++y) {
+		//if (!y_used[y]) continue; // ???
+		for (int x = 0; x < MESH_X_SIZE && elix < max_gb_entries; ++x) {
+			unsigned const gb_ix(x + y*MESH_X_SIZE); // {start, end, unused}
+			gb_data[gb_ix] = elix; // start_ix
+			vector<unsigned> const &ixs(ldynamic[0][y][x].get_src_ixs());
+			
+			for (unsigned i = 0; i < ixs.size() && elix < max_gb_entries; ++i) { // end if exceed max entries
+				if (ixs[i] >= ndl) continue; // dlight index is too high, skip
+				elem_data[elix++] = (unsigned short)ixs[i];
+			}
+			gb_data[gb_ix] += (elix << 16); // end_ix
+		}
+	}
+	if (elem_tid == 0 || !glIsTexture(elem_tid)) {
+		setup_2d_texture(elem_tid);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16UI_EXT, elem_tex_sz, elem_tex_sz, 0, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_SHORT, elem_data);
+	}
+	else {
+		bind_2d_texture(elem_tid);
+		unsigned const height(min(elem_tex_sz, (elix/elem_tex_sz+1))); // approximate ceiling
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_sz, height, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_SHORT, elem_data);
+	}
+
+	// step 3: grid bag(s)
+	set_multitex(4); // texture unit 4
+
+	if (gb_tid == 0 || !glIsTexture(gb_tid)) {
+		setup_2d_texture(gb_tid);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE32UI_EXT, MESH_X_SIZE, MESH_Y_SIZE, 0, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT, &gb_data.front()); // Nx x Ny
+	}
+	else {
+		bind_2d_texture(gb_tid);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MESH_X_SIZE, MESH_Y_SIZE, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT, &gb_data.front());
+	}
+	//PRINT_TIME("Dlight Texture Upload");
+	//cout << "ndl: " << ndl << ", elix: " << elix << ", gb_sz: " << XY_MULT_SIZE << endl;
+}
+
+
 bool has_dynamic_lights(point const *const pts, unsigned npts) {
 
+	return 0; // FIXME
 	if (dl_sources.empty()) return 0;
 	assert(pts && npts > 0);
 	cube_t cube;
@@ -1197,7 +1289,7 @@ void add_dynamic_lights() {
 	dl_sources.swap(dl_sources2);
 	if (CAMERA_CANDLE_LT) add_camera_candlelight();
 	if (CAMERA_FLASH_LT)  add_camera_flashlight();
-	int const area_cutoff(1 << 2*(LDYNAM_SUB_BS + 1));
+	//int const area_cutoff(1 << 2*(LDYNAM_SUB_BS + 1));
 	large_dlight = 0;
 
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
@@ -1225,11 +1317,11 @@ void add_dynamic_lights() {
 		int const xsize(bnds[0][1]-bnds[0][0]), ysize(bnds[1][1]-bnds[1][0]);
 		int const radius((max(xsize, ysize)>>1)), rsq(radius*radius);
 
-		if (xsize*ysize > area_cutoff) { // large radius light
+		/*if (xsize*ysize > area_cutoff) { // large radius light
 			for (unsigned j = 0; j < 4; ++j) bnds[j>>1][j&1] >>= LDYNAM_SUB_BS;
 			ldix         = 1;
 			large_dlight = 1;
-		}
+		}*/
 		int const xcent((bnds[0][1]+bnds[0][0])>>1), ycent((bnds[1][1]+bnds[1][0])>>1);
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
@@ -1425,7 +1517,7 @@ void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned
 	a = colorRGBA(0.0, 0.0, 0.0, c.alpha); // cur_ambient alpha is 1.0
 	if (c == BLACK) return;
 	//get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
-	if (!no_dynamic) get_dynamic_light_at_pt(a, c, p, norm, spec);
+	//if (!no_dynamic) get_dynamic_light_at_pt(a, c, p, norm, spec); // FIXME
 	unsigned const num_lights(enabled_lights.size());
 	
 	for (unsigned i = 0; i < num_lights; ++i) { // add in diffuse + specular components

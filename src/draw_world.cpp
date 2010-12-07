@@ -1665,6 +1665,9 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha)
 	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
 	setup_enabled_lights();
 	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke"));
+	add_uniform_int(p, "dlight_tex", 2);
+	add_uniform_int(p, "dlelm_tex", 3);
+	add_uniform_int(p, "dlgb_tex", 4);
 
 	if (smoke_tid) {
 		set_multitex(1);
@@ -1724,7 +1727,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
-	if (draw_solid) upload_smoke_3d_texture(); // first pass
+
+	if (draw_solid) { // first pass
+		upload_smoke_3d_texture();
+		upload_dlights_textures();
+	}
 	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 1, 0));
 	int last_tid(-1);
 	

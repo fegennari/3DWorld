@@ -121,6 +121,7 @@ public:
 	bool check_z(float z)    const {return (size() > 0 && z >= z1 && z <= z2);}
 	bool check_z_range(float zlo, float zhi) const {return (!lsrc.empty() && zlo <= z2 && zhi >= z1);}
 	void get_close_sources(point const &pos, float radius, vector<unsigned> &dlights) const;
+	vector<unsigned> const &get_src_ixs() const {return lsrc;}
 };
 
 
