@@ -622,14 +622,27 @@ void texture::create_custom_mipmaps() {
 }
 
 
+void bind_1d_texture(unsigned tid) {
+
+	glBindTexture(GL_TEXTURE_1D, tid);
+	assert(glIsTexture(tid));
+}
+
+
+void bind_2d_texture(unsigned tid) {
+
+	glBindTexture(GL_TEXTURE_2D, tid);
+	assert(glIsTexture(tid));
+}
+
+
 void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t) {
 
 	assert(tid == 0);
 	glGenTextures(1, &tid);
 
 	// select our current texture
-	glBindTexture(GL_TEXTURE_2D, tid);
-	assert(glIsTexture(tid));
+	bind_2d_texture(tid);
 
 	// select modulate to mix texture with color for shading (decal keeps texture color)
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, type);
