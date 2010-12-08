@@ -1658,11 +1658,12 @@ colorRGBA change_fog_color(colorRGBA const &new_color) {
 }
 
 
-colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha) {
+colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool do_lighting) {
 
 	set_bool_shader_prefix("use_texgen",    use_texgen,   0); // VS
 	set_bool_shader_prefix("smoke_enabled", smoke_exists, 0); // VS
 	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
+	set_bool_shader_prefix("do_lighting",   do_lighting,  1); // FS
 	setup_enabled_lights();
 	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke"));
 	add_uniform_int(p, "dlight_tex", 2);
@@ -1732,7 +1733,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		upload_smoke_3d_texture();
 		upload_dlights_textures();
 	}
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 1, 0));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 1, 0, 1));
 	int last_tid(-1);
 	
 	if (draw_solid && have_drawn_cobj) {
@@ -2236,7 +2237,7 @@ void draw_smoke() {
 	bool const use_shaders(1);
 	set_color(BLACK);
 	colorRGBA orig_fog_color;
-	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.01, 0, 1); // too slow, smoke is very overlapping/high fill rate
+	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.01, 0, 1, 0); // too slow, smoke is very overlapping/high fill rate
 	draw_part_cloud(part_clouds, WHITE, 0);
 	if (use_shaders) end_smoke_shaders(orig_fog_color);
 }
@@ -2344,7 +2345,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	order_vect_t order;
 	get_draw_order(objs, order);
 	if (order.empty()) return;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.04, 0, 1));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.04, 0, 1, 0));
 	enable_blend();
 	set_color(BLACK);
 	glDisable(GL_LIGHTING);

@@ -1155,8 +1155,9 @@ void upload_dlights_textures() {
 			unsigned const gb_ix(x + y*MESH_X_SIZE); // {start, end, unused}
 			gb_data[gb_ix] = elix; // start_ix
 			vector<unsigned> const &ixs(ldynamic[0][y][x].get_src_ixs());
+			unsigned const num_ixs(min(ixs.size(), 256U)); // max of 256 lights per bin
 			
-			for (unsigned i = 0; i < ixs.size() && elix < max_gb_entries; ++i) { // end if exceed max entries
+			for (unsigned i = 0; i < num_ixs && elix < max_gb_entries; ++i) { // end if exceed max entries
 				if (ixs[i] >= ndl) continue; // dlight index is too high, skip
 				elem_data[elix++] = (unsigned short)ixs[i];
 			}

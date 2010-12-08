@@ -28,8 +28,8 @@ vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
 	uint gb_ix  = texture2D(dlgb_tex, pos.xy).r; // get grid bag element index range (uint32)
 	uint st_ix  = (gb_ix & 0xFFFFU);
 	uint end_ix = ((gb_ix >> 16U) & 0xFFFFU);
-	const uint elem_tex_sz = 256; // must agree with value in C++ code
-	const uint max_dlights = 1024; // must agree with value in C++ code
+	const uint elem_tex_sz = 256;  // must agree with value in C++ code, or can use textureSize()
+	const uint max_dlights = 1024; // must agree with value in C++ code, or can use textureSize()
 	
 	for (uint i = st_ix; i < end_ix; ++i) { // iterate over grid bag elements
 		uint dl_ix  = texelFetch(dlelm_tex, ivec2((i%elem_tex_sz), (i/elem_tex_sz)), 0).r; // get dynamic light index (uint16)
@@ -39,6 +39,8 @@ vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
 		lpos_r.xyz += off;
 		lpos_r.w   *= x_scene_size;
 		color += lcolor.rgb * (lcolor.a * get_intensity_at(dlpos, lpos_r));
+		color  = clamp(color, 0.0, 1.0);
+		if (color.rgb == vec3(1,1,1)) break; // saturated
 	}
 	return color;
 }
@@ -50,14 +52,15 @@ void main()
 {
 	vec3 off   = vec3(-x_scene_size, -y_scene_size, czmin);
 	vec3 scale = vec3(2.0*x_scene_size, 2.0*y_scene_size, (czmax - czmin));
-	vec3 sp    = clamp((spos  - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
-	vec3 dlp   = clamp((dlpos - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+	vec3 lit_color  = gl_Color.rgb; // base color (with some lighting)
 	
-	vec3 indir_light = texture3D(smoke_tex, sp.zxy).rgb; // add indir light color from texture
-	vec3 lit_color   = gl_Color.rgb; // base color (with some lighting)
-	lit_color += gl_FrontMaterial.diffuse.rgb * indir_light; // indirect lighting
-	lit_color += add_dlights(dlp, off, scale); // dynamic lighting
-	lit_color  = clamp(lit_color, 0.0, 1.0);
+	if (do_lighting) {
+		vec3 sp  = clamp((spos  - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+		vec3 dlp = clamp((dlpos - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+		vec3 indir_light = texture3D(smoke_tex, sp.zxy).rgb; // add indir light color from texture
+		lit_color += gl_FrontMaterial.diffuse.rgb * indir_light; // indirect lighting
+		lit_color += add_dlights(dlp, off, scale); // dynamic lighting
+	}
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * gl_Color.a));
 	if (keep_alpha && color.a <= min_alpha) discard;
