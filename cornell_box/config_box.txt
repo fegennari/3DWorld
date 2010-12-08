@@ -48,7 +48,7 @@ num_dodgeballs 6
 
 mesh_size  64 64 64
 scene_size 1.2 1.2 1.2
-subdiv_size_mult 1.0
+subdiv_size_mult 2.0
 
 window_width 1920
 window_height 1200
