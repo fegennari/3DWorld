@@ -367,6 +367,7 @@ void print_program_info_log(unsigned program) {
 unsigned set_shader_prog(string const &vs_name, string const &fs_name, string const &gs_name,
 						 int in_prim, int out_prim, int verts_out)
 {
+	//cout << "shader version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 	// get the program
 	RESET_TIME;
 	string const pname(vs_name + "," + fs_name + "," + gs_name + "," + prog_name_suffix); // unique program identifier

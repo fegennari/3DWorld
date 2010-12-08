@@ -1105,8 +1105,8 @@ void setup_2d_texture(unsigned &tid) {
 	bind_2d_texture(tid);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 
 
@@ -1315,7 +1315,7 @@ void add_dynamic_lights() {
 		}
 		first = 0;
 		int const xsize(bnds[0][1]-bnds[0][0]), ysize(bnds[1][1]-bnds[1][0]);
-		int const radius((max(xsize, ysize)>>1)), rsq(radius*radius);
+		int const radius((max(xsize, ysize)>>1)+1), rsq(radius*radius);
 
 		/*if (xsize*ysize > area_cutoff) { // large radius light
 			for (unsigned j = 0; j < 4; ++j) bnds[j>>1][j&1] >>= LDYNAM_SUB_BS;
