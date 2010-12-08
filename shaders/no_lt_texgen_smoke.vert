@@ -22,7 +22,7 @@ void main()
 		vpos = vec3(0,0,0);
 		return;
 	}
-	vec3 v2 = (inverse(gl_ModelViewMatrix) * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
+	vec3 v2 = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
 	pt_pair res = clip_line(gl_Vertex.xyz, v2, smoke_bb);
 	eye  = res.v1;
 	vpos = res.v2;

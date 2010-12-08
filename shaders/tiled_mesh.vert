@@ -11,7 +11,7 @@ vec4 atten_color(in vec4 color, in float dist) {
 
 float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) {
 	float t = clamp((water_z - targ_pos.z)/max(1.0E-6, abs(src_pos.z - targ_pos.z)), 0.0, 1.0);
-	return t*length(src_pos - targ_pos);
+	return t*distance(src_pos, targ_pos);
 }
 
 vec4 add_light_comp(in vec3 normal, in int i) {
@@ -29,9 +29,8 @@ vec4 add_light_comp(in vec3 normal, in int i) {
 	// apply underwater attenuation
 	if (gl_Vertex.z < water_plane_z) {
 		//float dist = 2.5*(water_plane_z - gl_Vertex.z); // depth
-		mat4 mm_inv = inverse(gl_ModelViewMatrix);
-		vec4 eye = mm_inv * vec4(0.0, 0.0, 0.0, 1.0); // world space
-		vec4 light = mm_inv * gl_LightSource[i].position; // world space
+		vec4 eye   = gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0); // world space
+		vec4 light = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 		float dist = integrate_water_dist(gl_Vertex.xyz, eye.xyz, water_plane_z) + integrate_water_dist(gl_Vertex.xyz, light.xyz, water_plane_z);
 		color = atten_color(color, dist*water_atten);
 	}

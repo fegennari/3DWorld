@@ -40,7 +40,7 @@ void main()
 	vec3 normal = gl_NormalMatrix * gl_Normal;
 	
 	vec4 eye_space_pos = gl_ModelViewMatrix * gl_Vertex;
-	if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse
+	if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse (could use faceforward())
 	
 	// Compute the globalAmbient term
 	vec4 color = gl_Color * gl_LightModel.ambient;

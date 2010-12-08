@@ -16,7 +16,7 @@ float get_intensity_at(in vec3 pos, in vec4 lpos_r) {
 	float radius = lpos_r.w;
 	if (radius == 0.0) return 1.0; // no falloff
 	if (abs(pos.z - lpos_r.z) > radius) return 0.0; // fast test
-	float dist   = length(pos - lpos_r.xyz);
+	float dist   = distance(pos, lpos_r.xyz);
 	float rscale = max(0.0, (radius - dist))/radius;
 	float mag = 0.25 + 0.75*max(0.0, dot(normal, normalize(lpos_r.xyz - pos))); // ambient + diffuse
 	// FIXME: add specular

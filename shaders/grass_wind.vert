@@ -6,7 +6,7 @@ uniform sampler2D tex_noise;
 
 vec4 add_pt_light_comp(in vec3 normal, in vec4 epos, in int i) {
 	vec4 color = add_light_comp(normal, i);
-	float dist = length(gl_LightSource[i].position - epos);
+	float dist = distance(gl_LightSource[i].position, epos);
 	float atten = 1.0 / (gl_LightSource[i].constantAttenuation +
 						 gl_LightSource[i].linearAttenuation * dist +
 						 gl_LightSource[i].quadraticAttenuation * dist * dist);
