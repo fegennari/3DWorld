@@ -24,22 +24,17 @@ float get_intensity_at(in vec3 pos, in vec4 lpos_r) {
 }
 
 vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
-	vec3 color = vec3(0,0,0);
-	uint gb_ix = texture2D(dlgb_tex, pos.xy).r; // get grid bag element index range (uint32)
+	vec3 color  = vec3(0,0,0);
+	uint gb_ix  = texture2D(dlgb_tex, pos.xy).r; // get grid bag element index range (uint32)
 	uint st_ix  = (gb_ix & 0xFFFFU);
 	uint end_ix = ((gb_ix >> 16U) & 0xFFFFU);
 	const uint elem_tex_sz = 256; // must agree with value in C++ code
 	const uint max_dlights = 1024; // must agree with value in C++ code
 	
-	// FIXME: jagged edges?
 	for (uint i = st_ix; i < end_ix; ++i) { // iterate over grid bag elements
-		uint xval    = i % elem_tex_sz;
-		uint yval    = i / elem_tex_sz;
-		vec2 st_ix  = vec2(float(xval)/float(elem_tex_sz), float(yval)/float(elem_tex_sz));
-		uint dl_ix  = texture2D(dlelm_tex, st_ix).r; // get dynamic light index (uint16)
-		float t_val = float(dl_ix)/float(max_dlights);
-		vec4 lpos_r = texture2D(dlight_tex, vec2(0.0, t_val)); // light center, radius
-		vec4 lcolor = texture2D(dlight_tex, vec2(1.0, t_val)); // light color
+		uint dl_ix  = texelFetch(dlelm_tex, ivec2((i%elem_tex_sz), (i/elem_tex_sz)), 0).r; // get dynamic light index (uint16)
+		vec4 lpos_r = texelFetch(dlight_tex, ivec2(0, dl_ix), 0); // light center, radius
+		vec4 lcolor = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
 		lpos_r.xyz *= scale; // convert from [0,1] back into world space
 		lpos_r.xyz += off;
 		lpos_r.w   *= x_scene_size;
@@ -62,6 +57,7 @@ void main()
 	vec3 lit_color   = gl_Color.rgb; // base color (with some lighting)
 	lit_color += gl_FrontMaterial.diffuse.rgb * indir_light; // indirect lighting
 	lit_color += add_dlights(dlp, off, scale); // dynamic lighting
+	lit_color  = clamp(lit_color, 0.0, 1.0);
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * gl_Color.a));
 	if (keep_alpha && color.a <= min_alpha) discard;
