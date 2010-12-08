@@ -1134,7 +1134,7 @@ void upload_dlights_textures() {
 	}
 	if (dl_tid == 0 || !glIsTexture(dl_tid)) {
 		setup_2d_texture(dl_tid);
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data); // 2 x M
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data); // 2 x M
 	}
 	else {
 		bind_2d_texture(dl_tid);
@@ -1327,13 +1327,16 @@ void add_dynamic_lights() {
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			int const y_sq((y-ycent)*(y-ycent));
+			if (ldix == 0) y_used[y] = 1;
 
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
 				if (rsq == 1 || ((x-xcent)*(x-xcent) + y_sq) <= rsq) {
 					ldynamic[ldix][y][x].add_light(ix, bounds[0][2], bounds[1][2]); // could do flow clipping here?
-					if (ldix == 0) x_used[x] = y_used[y] = 1;
 				}
 			}
+		}
+		if (ldix == 0) {
+			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) x_used[x] = 1;
 		}
 	}
 	if (SHOW_STAT_LIGHTS) {
