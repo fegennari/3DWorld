@@ -8,7 +8,7 @@
 using namespace std;
 
 bool const PRINT_SHADER = 0;
-bool const PRINT_LOG    = 0;
+bool const PRINT_LOG    = 1;
 
 string const shaders_dir = "shaders";
 
@@ -294,7 +294,7 @@ void print_shader_info_log(unsigned shader) {
 		vector<char> info_log_msg(len);
 		glGetShaderInfoLog(shader, len, &len2, &info_log_msg.front()); 
 		assert(len2 <= len);
-		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end()) << endl;
+		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
 	}
 }
 
@@ -311,7 +311,8 @@ unsigned get_shader(string const &name, unsigned type) {
 	if (it != loaded_shaders[type].end()) return it->second; // already loaded
 	
 	// create a new shader
-	string data(prepend_string[type]);
+	string const version_info("#version 400\n");
+	string data(version_info + prepend_string[type]);
 	vector<string> fns;
 	filename_split(name, fns, '+');
 
@@ -341,6 +342,7 @@ unsigned get_shader(string const &name, unsigned type) {
 	if (status != GL_TRUE) {
 		cerr << "Compilation of shader " << name << " failed with status " << status << endl;
 		print_shader_info_log(shader);
+		cout << endl;
 		exit(1);
 	}
 	if (PRINT_LOG) print_shader_info_log(shader);
@@ -359,7 +361,7 @@ void print_program_info_log(unsigned program) {
 		vector<char> info_log_msg(len);
 		glGetProgramInfoLog(program, len, &len2, &info_log_msg.front()); 
 		assert(len2 <= len);
-		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end()) << endl;
+		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
 	}
 }
 
@@ -403,6 +405,7 @@ unsigned set_shader_prog(string const &vs_name, string const &fs_name, string co
 		if (status != GL_TRUE) {
 			cerr << "Linking of program " << pname << " failed with status " << status << endl;
 			print_program_info_log(program);
+			cout << endl;
 			exit(1);
 		}
 		if (PRINT_LOG) print_program_info_log(program);

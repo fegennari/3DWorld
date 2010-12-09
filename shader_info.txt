@@ -10,7 +10,6 @@ Completed:
 10a. Fires/Scorch Marks Smoke Effects: VS/FS - see 14
 
 Not Implementable/Too Difficult or Inefficient
-1. Leaf Wind: GS - requires state
 3. Grass Effects/Regen (crush, burn, cut, update z): GS - requires state
 4. Cobj Lighting: VS - too much data sent to GPU per frame
 5. Ship Rendering: VS/FS or Geometry Shader - too many shader loads per frame
@@ -18,9 +17,11 @@ Not Implementable/Too Difficult or Inefficient
 7. Mesh Texturing: FS - too complex and inefficient, not worth the memor savings (for now)
 8. Mesh Underwater Caustics: FS - requires global solution, dependent on other effects
 10b. Smoke Puffs Smoke Effects: VS/FS - smoke puffs too large/high fill rate, FS smoke integration too slow
-16. Dynamic Lighting of Cobjs: VS/FS - too slow to iterate over entire dlight set, too complex to use indexing/tree
 
 Todo:
+1. Leaf Wind: GS
+* Implement without state, like grass
+
 10. Smoke/Clouds/Fires: VS/FS, or GS using billboards
 * Render smoke and cloud particles and/or fires faster or with better
 quality/blending/lighting
@@ -45,10 +46,7 @@ quality/blending/lighting
 - Need to send more data to the GPU: normals, material properties, shadow info, ambient light values
 - Shadows as textures may be too expensive to manage (too many small textures)
 
-Dynamic Lights:
-1. Store all as uniforms: not enough constant memory
-2. Store all as a uniform block: too slow t initialize and iterate
-3. Store all as a texture: too slow to iterate (memory access)
-4. Store local, update with uniforms: too slow to update a uniform for each primitive
-5. Store local, update with attribute: too much data to send using attribute calls (no block transfer)
+17. Dynamic Lighting of Cobjs: VS/FS
+* Use Grid Bag data structure, per fragment
++ Looks better, Faster
 
