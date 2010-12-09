@@ -15,15 +15,14 @@ void main()
 	normal = normalize(gl_Normal);
 	
 	dlpos = gl_Vertex.xyz;
-	spos = gl_Vertex.xyz + (0.25*step_delta)*normal; // move slightly away from the vertex
+	spos  = gl_Vertex.xyz + (0.25*step_delta)*normal; // move slightly away from the vertex
+	eye   = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
 	
-	if (!smoke_enabled) {
-		eye  = vec3(0,0,0);
-		vpos = vec3(0,0,0);
+	if (!smoke_enabled) { // set t zero length vector
+		vpos = eye; // Note: eye is used for dynamic lights, but vpos is not
 		return;
 	}
-	vec3 v2 = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
-	pt_pair res = clip_line(gl_Vertex.xyz, v2, smoke_bb);
+	pt_pair res = clip_line(gl_Vertex.xyz, eye, smoke_bb);
 	eye  = res.v1;
 	vpos = res.v2;
 } 

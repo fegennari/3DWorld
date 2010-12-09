@@ -97,9 +97,11 @@ B  7.7   8.0  -0.9   2.6  -0.4  -0.1  1  # right (remove T-junctions)
 # first floor flooring
 e 1
 l 0.8 0.3 0.5 0.6 1.0 50 1 # tile
+r 0.5 50.0 # set specularity
 y 1.6
 B -7.4  -0.1  -5.4  5.9  0.0  0.014 # A
 B -0.1   7.4   0.1  5.9  0.0  0.014 # B
+r 0.0 1.0 # reset specularity
 a 1 # destroyable
 
 #######################################
@@ -390,7 +392,7 @@ B -7.43  -7.42  -5.3    5.8   0.1  0.4  # F
 D 0.0 0.0 0.6  3 # 1-4
 
 # skylights
-r 0.9 100.0 # set specularity
+#r 0.9 100.0 # set specularity
 e 60
 B -1.5   -0.2   -5.3   -4.0   2.32  2.37  # A
 B -7.3   -6.0    4.5    5.8   2.805 2.855 # B

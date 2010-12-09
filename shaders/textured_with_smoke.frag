@@ -18,9 +18,7 @@ float get_intensity_at(in vec3 pos, in vec4 lpos_r) {
 	if (abs(pos.z - lpos_r.z) > radius) return 0.0; // fast test
 	float dist   = distance(pos, lpos_r.xyz);
 	float rscale = max(0.0, (radius - dist))/radius;
-	float mag = 0.25 + 0.75*max(0.0, dot(normal, normalize(lpos_r.xyz - pos))); // ambient + diffuse
-	// FIXME: add specular
-	return mag*rscale*rscale; // quadratic 1/r^2 attenuation
+	return rscale*rscale; // quadratic 1/r^2 attenuation
 }
 
 vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
@@ -38,7 +36,12 @@ vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
 		lpos_r.xyz *= scale; // convert from [0,1] back into world space
 		lpos_r.xyz += off;
 		lpos_r.w   *= x_scene_size;
-		color += lcolor.rgb * (lcolor.a * get_intensity_at(dlpos, lpos_r));
+		float intensity = get_intensity_at(dlpos, lpos_r);
+		vec3 light_dir  = normalize(lpos_r.xyz - dlpos);
+		vec3 half_vect  = normalize(normalize(eye - dlpos) + light_dir); // Eye + L
+		float ad_mag    = 0.25 + 0.75*max(0.0, dot(normal, light_dir)); // ambient + diffuse
+		float spec_mag  = pow(max(dot(normal, half_vect), 0.0), gl_FrontMaterial.shininess);
+		color += lcolor.rgb * (gl_FrontMaterial.specular.rgb*spec_mag + vec3(1,1,1)*ad_mag) * (lcolor.a * intensity);
 		color  = clamp(color, 0.0, 1.0);
 		if (color.rgb == vec3(1,1,1)) break; // saturated
 	}
