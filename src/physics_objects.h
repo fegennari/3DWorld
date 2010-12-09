@@ -13,11 +13,13 @@
 struct spark_t {
 
 	float s;
-	point p;
+	point pos;
 	colorRGBA c;
+	static int status;
+	static float radius;
 
 	spark_t() {}
-	spark_t(point const &p_, colorRGBA const &c_, float s_) : p(p_), c(c_), s(s_) {}
+	spark_t(point const &p_, colorRGBA const &c_, float s_) : pos(p_), c(c_), s(s_) {}
 	void draw() const;
 };
 

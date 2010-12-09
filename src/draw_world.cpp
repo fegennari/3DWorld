@@ -456,6 +456,7 @@ void draw_group(obj_group &objg) {
 	RESET_TIME;
 	int const light(get_specular_light());
 	float specular_brightness(0.5*brightness);
+	set_specular(0.0, 1.0); // disable
 	colorRGBA color2;
 	set_fill_mode();
 	glEnable(GL_NORMALIZE);
@@ -512,7 +513,7 @@ void draw_group(obj_group &objg) {
 			for (unsigned c = 0; c < 3; ++c) leaf_color[c] *= obj.vdeform[c]; // vdeform.x is color_scale
 			if (leaf_color != BLACK) blend_color(leaf_color, dry_color, leaf_color, t, 0);
 			bool const shadowed(pt_is_shadowed(obj.pos, light, obj.status, radius, obj.coll_id, (fast+1)));
-			if (shadowed) set_specular(0.0, 1.0); else set_specular(0.1, 10.0);
+			if (shadowed) set_specular(0.0, 1.0); else set_specular(0.1, 10.0); // FIXME: should leaves on trees be a matching specular again?
 			set_shadowed_color(leaf_color, obj.pos, shadowed, 0);
 			glBegin(GL_QUADS);
 
@@ -585,7 +586,6 @@ void draw_group(obj_group &objg) {
 	else { // small objects
 		float const cd_scale(NDIV_SCALE*window_width*radius);
 		bool const precip((objg.flags & PRECIPITATION) != 0);
-		int const num_draw_mode((type == SHELLC || type == SHRAPNEL || type == STAR5 || type == PARTICLE) ? 1 : 2);
 		int last_shadowed(-1);
 
 		switch (type) { // pre-draw
@@ -655,7 +655,6 @@ void draw_group(obj_group &objg) {
 			}
 			switch (type) {
 			case SHELLC:
-				set_obj_specular(is_shadowed, obj.flags, specular_brightness);
 				set_color_v2(color2, pos, obj.status, is_shadowed, precip);
 				draw_shell_casing(pos, obj.orientation, obj.init_dir, radius, obj.angle, cd_scale, is_shadowed, obj.direction);
 				break;
@@ -2427,11 +2426,15 @@ void draw_camera_filters(vector<camera_filter> &cfs) {
 }
 
 
+int   spark_t::status = 0;
+float spark_t::radius = 0.0;
+
+
 void spark_t::draw() const {
 
 	c.do_glColor();
 	point const camera(get_camera_pos());
-	draw_billboard((p + (camera - p).get_norm()*0.02), camera, up_vector, s, s);
+	draw_billboard((pos + (camera - pos).get_norm()*0.02), camera, up_vector, s, s);
 }
 
 
@@ -2445,10 +2448,7 @@ void draw_sparks() {
 	glAlphaFunc(GL_GREATER, 0.01);
 	select_texture(BLUR_TEX);
 	glBegin(GL_QUADS);
-
-	for (unsigned i = 0; i < sparks.size(); ++i) { // draw spark(s)
-		sparks[i].draw();
-	}
+	draw_objects(sparks);
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
