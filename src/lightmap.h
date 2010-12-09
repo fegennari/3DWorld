@@ -76,7 +76,7 @@ public:
 	float get_intensity_at(point const &pos) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;
 	bool lights_polygon(point const &pc, float rsize, vector3d const* const norm=NULL) const;
-	void get_bounds(point bounds[2], int bnds[3][2]) const;
+	void get_bounds(point bounds[2], int bnds[3][2], float thresh) const;
 	bool is_visible()     const;
 	bool is_directional() const {return (bwidth < 1.0);}
 	bool is_dynamic()     const {return dynamic;}

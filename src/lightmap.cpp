@@ -9,9 +9,8 @@
 #include "gl_ext_arb.h"
 
 
-bool const SOFT_LIGHTING     = 1;
 bool const CAMERA_CANDLE_LT  = 0;
-bool const CAMERA_FLASH_LT   = 0; // slow and low res, but looks cool
+bool const CAMERA_FLASH_LT   = 0; // looks cool
 bool const POLY_XY_OVER_CHK  = 0;
 bool const DYNAMIC_LT_FLOW   = 1;
 bool const DYNAMIC_SMOKE     = 1; // looks cool
@@ -137,7 +136,7 @@ float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 }
 
 
-void light_source::get_bounds(point bounds[2], int bnds[3][2]) const {
+void light_source::get_bounds(point bounds[2], int bnds[3][2], float thresh) const {
 
 	if (radius == 0.0) {
 		for (unsigned d = 0; d < 3; ++d) {
@@ -148,7 +147,7 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2]) const {
 		}
 	}
 	else {
-		float const rb(radius*(1.0 - sqrt(CTHRESH)));
+		float const rb(radius*(1.0 - sqrt(thresh)));
 
 		for (unsigned d = 0; d < 3; ++d) {
 			for (unsigned j = 0; j < 2; ++j) {
@@ -484,7 +483,6 @@ void shift_lightmap(vector3d const &vd) {
 
 void regen_lightmap() {
 
-	if (!SOFT_LIGHTING) return;
 	assert(lmap_manager.vlmap != NULL);
 	clear_lightmap();
 	//assert(lmap_manager.vlmap == NULL);
@@ -495,7 +493,7 @@ void regen_lightmap() {
 
 void clear_lightmap() {
 
-	if (!SOFT_LIGHTING || lmap_manager.vlmap == NULL) return;
+	if (lmap_manager.vlmap == NULL) return;
 	if (using_lightmap) reset_flow_cache();
 	lmap_manager.clear();
 	using_lightmap = 0;
@@ -506,7 +504,7 @@ void clear_lightmap() {
 
 void build_lightmap(bool verbose) {
 
-	if (!SOFT_LIGHTING || lm_alloc) return; // what about recreating the lightmap if the scene has changed?
+	if (lm_alloc) return; // what about recreating the lightmap if the scene has changed?
 	if (verbose) cout << "Building lightmap" << endl;
 	RESET_TIME;
 	unsigned nonempty(0);
@@ -530,7 +528,7 @@ void build_lightmap(bool verbose) {
 	for (unsigned i = 0; i < light_sources.size(); ++i) {
 		point bounds[2];
 		int bnds[3][2];
-		light_sources[i].get_bounds(bounds, bnds);
+		light_sources[i].get_bounds(bounds, bnds, CTHRESH);
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
@@ -798,7 +796,7 @@ void build_lightmap(bool verbose) {
 			point bounds[2];
 			int bnds[3][2], cobj(-1), last_cobj(-1);
 			CELL_LOC_T const *const cent(ls.get_cent());
-			ls.get_bounds(bounds, bnds);
+			ls.get_bounds(bounds, bnds, CTHRESH);
 			if (SLT_LINE_TEST_WT > 0.0) check_coll_line(lpos, lpos, cobj, -1, 1, 2); // check cobj containment and ignore that shape
 
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
@@ -1113,12 +1111,13 @@ void setup_2d_texture(unsigned &tid) {
 void upload_dlights_textures() {
 
 	RESET_TIME;
+	assert(lm_alloc && lmap_manager.vlmap);
 	static unsigned dl_tid(0), elem_tid(0), gb_tid(0); // FIXME: reset when context changes
 
 	// step 1: the light sources themselves
 	set_multitex(2); // texture unit 2
 	unsigned const max_dlights      = 1024; // must agree with value in shader
-	unsigned const floats_per_light = 8;
+	unsigned const floats_per_light = 12;
 	float dl_data[max_dlights*floats_per_light] = {0.0};
 	unsigned const ndl(min(max_dlights, dl_sources.size()));
 	unsigned const ysz(floats_per_light/4);
@@ -1250,7 +1249,7 @@ void add_camera_flashlight() {
 
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d const &d, float bw) {
 
-	if (!SOFT_LIGHTING || !animate2) return;
+	if (!animate2) return;
 	float const sz_scale(sqrt(0.1*XY_SCENE_SIZE));
 	dl_sources2.push_back(light_source(sz_scale*sz, p, c, 1, d, bw));
 }
@@ -1258,7 +1257,7 @@ void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d co
 
 void clear_dynamic_lights() { // slow for large lights
 
-	if (!SOFT_LIGHTING /*|| !animate2*/) return;
+	//if (!animate2) return;
 	assert(ldynamic[0] && ldynamic[1]);
 	assert((int)x_used.size() == MESH_X_SIZE && (int)y_used.size() == MESH_Y_SIZE);
 
@@ -1282,7 +1281,7 @@ void clear_dynamic_lights() { // slow for large lights
 void add_dynamic_lights() {
 
 	//RESET_TIME;
-	if (!SOFT_LIGHTING || !animate2) return;
+	if (!animate2) return;
 	assert(ldynamic[0] && ldynamic[1]);
 	if ((int)x_used.size() != MESH_X_SIZE) x_used.resize(MESH_X_SIZE);
 	if ((int)y_used.size() != MESH_Y_SIZE) y_used.resize(MESH_Y_SIZE);
@@ -1308,7 +1307,7 @@ void add_dynamic_lights() {
 		int bnds[3][2];
 		unsigned ldix(0);
 		unsigned const ix(i);
-		ls.get_bounds(bounds, bnds);
+		ls.get_bounds(bounds, bnds, 0.0);
 		
 		for (unsigned j = 0; j < 3; ++j) {
 			dlight_bb[j][0] = (first ? bounds[0][j] : min(dlight_bb[j][0], bounds[0][j]));
@@ -1355,7 +1354,6 @@ void add_dynamic_lights() {
 
 bool is_shadowed_lightmap(point const &p) {
 
-	if (!SOFT_LIGHTING) return 0;
 	if (p.z <= czmin0)  return is_under_mesh(p);
 	lmcell const *const lmc(lmap_manager.get_lmcell(p));
 	return (lmc ? (lmc->v < 1.0) : 0);
@@ -1364,12 +1362,14 @@ bool is_shadowed_lightmap(point const &p) {
 
 void light_source::pack_to_floatv(float *data) const { // unused
 
-	// store light_source as: center.xyz, radius, color.rgba
+	// store light_source as: {center.xyz, radius}, {color.rgba}, {dir, bwidth}
 	assert(data);
 	UNROLL_3X(*(data++) = center[i_];)
 	*(data++) = radius;
-	UNROLL_3X(*(data++) = color[i_];)
+	UNROLL_3X(*(data++) = color[i_];) // [0,1]
 	*(data++) = color[3];
+	UNROLL_3X(*(data++) = 0.5*(1.0 + dir[i_]);) // map [-1,1] to [0,1]
+	*(data++) = bwidth; // [0,1]
 }
 
 
@@ -1466,10 +1466,7 @@ void get_sd_light(int x, int y, int z, point const &p, float lightscale, float *
 
 float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
 
-	if (!SOFT_LIGHTING) {
-		UNROLL_3X(a[i_] *= cscale[i_];)
-		return 1.0;
-	}
+	//UNROLL_3X(a[i_] *= cscale[i_];) return 1.0;
 	assert(lm_alloc && lmap_manager.vlmap);
 	bool const global_lighting(read_light_file || write_light_file);
 	float val(MAX_LIGHT);

@@ -9,15 +9,22 @@ uniform float min_alpha = 0.0;
 // clipped eye position, clipped vertex position, starting vertex position
 varying vec3 eye, vpos, spos, dlpos, normal; // world space
 
-const float SMOKE_SCALE = 0.25;
+const float SMOKE_SCALE    = 0.25;
+const float LT_DIR_FALLOFF = 0.005;
 
 
-float get_intensity_at(in vec3 pos, in vec4 lpos_r) {
-	float radius = lpos_r.w;
+float get_dir_light_scale(in vec3 pos, in vec3 lpos, in vec3 dir, in float bwidth) {
+	if (bwidth == 1.0) return 1.0;
+	vec3 obj_dir  = normalize(lpos - pos);
+	float dp      = dot(obj_dir, (2.0*dir - 1.0)); // map dir [0,1] to [-1,1]
+	float dp_norm = 0.5*(1.0 - dp); // dp = -1.0 to 1.0, bw = 0.0 to 1.0
+	return clamp(2.0*(dp_norm + bwidth + LT_DIR_FALLOFF - 1.0)/LT_DIR_FALLOFF, 0.0, 1.0);
+}
+
+float get_intensity_at(in vec3 pos, in vec3 lpos, in float radius) {
 	if (radius == 0.0) return 1.0; // no falloff
-	if (abs(pos.z - lpos_r.z) > radius) return 0.0; // fast test
-	float dist   = distance(pos, lpos_r.xyz);
-	float rscale = max(0.0, (radius - dist))/radius;
+	if (abs(pos.z - lpos.z) > radius) return 0.0; // fast test
+	float rscale = max(0.0, (radius - distance(pos, lpos)))/radius;
 	return rscale*rscale; // quadratic 1/r^2 attenuation
 }
 
@@ -33,10 +40,14 @@ vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
 		uint dl_ix  = texelFetch(dlelm_tex, ivec2((i%elem_tex_sz), (i/elem_tex_sz)), 0).r; // get dynamic light index (uint16)
 		vec4 lpos_r = texelFetch(dlight_tex, ivec2(0, dl_ix), 0); // light center, radius
 		vec4 lcolor = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
+		vec4 dir_w  = texelFetch(dlight_tex, ivec2(2, dl_ix), 0); // light direction, beamwidth
 		lpos_r.xyz *= scale; // convert from [0,1] back into world space
 		lpos_r.xyz += off;
 		lpos_r.w   *= x_scene_size;
-		float intensity = get_intensity_at(dlpos, lpos_r);
+		float intensity = get_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
+		if (intensity == 0.0) continue;
+		intensity      *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
+		if (intensity == 0.0) continue;
 		vec3 light_dir  = normalize(lpos_r.xyz - dlpos);
 		vec3 half_vect  = normalize(normalize(eye - dlpos) + light_dir); // Eye + L
 		float ad_mag    = 0.25 + 0.75*max(0.0, dot(normal, light_dir)); // ambient + diffuse
