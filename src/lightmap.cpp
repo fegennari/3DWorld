@@ -1132,7 +1132,7 @@ void upload_dlights_textures() {
 
 	RESET_TIME;
 	assert(lm_alloc && lmap_manager.vlmap);
-	static unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0); // FIXME: reset when context changes
+	static unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0); // reset when context changes?
 
 	// step 1: the light sources themselves
 	set_multitex(2); // texture unit 2

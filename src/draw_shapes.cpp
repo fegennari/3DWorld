@@ -47,8 +47,7 @@ float L1_SUBDIV_SIZE(1.0);
 extern unsigned cobj_counter;
 extern int coll_border, begin_motion, num_groups, camera_coll_id, spectate;
 extern int display_mode, camera_mode, camera_view, do_zoom, xoff2, yoff2;
-extern float max_proj_rad, subdiv_size_mult, ztop, zbottom, zmax, zmin;
-extern float DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
+extern float max_proj_rad, ztop, zbottom, zmax, zmin, DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
 extern double camera_zh;
 extern point up_vector;
 extern vector<int> weap_cobjs;
@@ -99,7 +98,7 @@ vector<shadow_sphere> shadow_objs;
 
 void init_draw_stats() {
 
-	L1_SUBDIV_SIZE = min(SHAPE_SPLIT_FACT*(X_SCENE_SIZE + Y_SCENE_SIZE), subdiv_size_mult*HALF_DXY);
+	L1_SUBDIV_SIZE = min(SHAPE_SPLIT_FACT*(X_SCENE_SIZE + Y_SCENE_SIZE), 2.0f*HALF_DXY);
 
 	if (L1_SUBDIV_SIZE > max_proj_rad) {
 		cout << "***** Changing max_proj_rad from " << max_proj_rad << " to " << L1_SUBDIV_SIZE << endl;

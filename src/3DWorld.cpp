@@ -79,7 +79,7 @@ unsigned num_snowflakes(0), scenery_extent(0);
 float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), tree_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0);
 float water_h_off(0.0), perspective_fovy(0.0), perspective_nclip(0.0), atmosphere(1.0), read_mesh_zmm(0.0);
-float subdiv_size_mult(2.0), light_int_scale(1.0), light_int_scale_l(1.0), snow_depth(0.0), snow_random(0.0);
+float light_int_scale(1.0), light_int_scale_l(1.0), snow_depth(0.0), snow_random(0.0);
 float init_temperature(DEF_TEMPERATURE);
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
@@ -1592,9 +1592,6 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "teams") {
 			if (!read_int(fp, teams) || teams <= 0) cfg_err("teams command", error);
-		}
-		else if (str == "subdiv_size_mult") {
-			if (!read_float(fp, subdiv_size_mult) || subdiv_size_mult <= 0.0) cfg_err("subdiv_size_mult command", error);
 		}
 		else if (str == "num_dodgeballs") {
 			if (!read_int(fp, num_dodgeballs)) cfg_err("num dodgeballs command", error);
