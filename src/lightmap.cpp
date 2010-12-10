@@ -18,7 +18,6 @@ bool const SHOW_STAT_LIGHTS  = 0; // debugging
 bool const SHOW_DYNA_LIGHTS  = 0; // debugging
 unsigned const NUM_LT_SMOOTH = 2; // nominally 2
 unsigned const NUM_XY_PASSES = 2; // nominally 2
-unsigned const LDYNAM_SUB_BS = 3; // power of two (3 and 4 work well)
 unsigned const NUM_RAND_LTS  = 0;
 unsigned const FLOW_CACHE_BS = 17;
 unsigned const FLOW_CACHE_SZ = (1 << FLOW_CACHE_BS);
@@ -59,10 +58,9 @@ float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHI
 float czmin0(0.0), lm_dz_adj(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
 cube_t cur_smoke_bb;
-dls_cell **ldynamic[2] = {NULL, NULL};
-vector<bool> x_used, y_used; // vector<char>?
+dls_cell **ldynamic = NULL;
 vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic {cur frame, next frame}
-flow_cache_e flow_cache[FLOW_CACHE_SZ];
+flow_cache_e flow_cache[FLOW_CACHE_SZ]; // 2MB
 lmap_manager_t lmap_manager;
 
 
@@ -553,17 +551,11 @@ void build_lightmap(bool verbose) {
 	MESH_SIZE[2] = zsize; // override MESH_SIZE[2]
 	float const zstep(czspan/zsize), scene_scale(MESH_X_SIZE/128.0);
 	float const z_atten(1.0 - (1.0 - Z_LT_ATTEN)/scene_scale), xy_atten(1.0 - (1.0 - XY_LT_ATTEN)/scene_scale);
-	unsigned const bs[2] = {0, LDYNAM_SUB_BS};
-
-	for (unsigned i = 0; i < 2; ++i) {
-		if (!ldynamic[i]) {
-			matrix_gen_2d(ldynamic[i], max(1, BITSHIFT_CEIL(MESH_X_SIZE, bs[i])), max(1, BITSHIFT_CEIL(MESH_Y_SIZE, bs[i])));
-		}
-	}
+	if (!ldynamic) matrix_gen_2d(ldynamic, MESH_X_SIZE, MESH_Y_SIZE);
 	lmap_manager.alloc(nbins, zsize, need_lmcell);
 	using_lightmap = (nonempty > 0);
 	lm_alloc       = 1;
-	assert(ldynamic[0] && ldynamic[1] && lmap_manager.vlmap);
+	assert(ldynamic && lmap_manager.vlmap);
 	if (verbose) cout << "zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;
 	int **z_light_depth = NULL;
 	matrix_gen_2d(z_light_depth);
@@ -1169,11 +1161,10 @@ void upload_dlights_textures() {
 	unsigned elix(0);
 
 	for (int y = 0; y < MESH_Y_SIZE && elix < max_gb_entries; ++y) {
-		//if (!y_used[y]) continue; // ???
 		for (int x = 0; x < MESH_X_SIZE && elix < max_gb_entries; ++x) {
 			unsigned const gb_ix(x + y*MESH_X_SIZE); // {start, end, unused}
 			gb_data[gb_ix] = elix; // start_ix
-			vector<unsigned> const &ixs(ldynamic[0][y][x].get_src_ixs());
+			vector<unsigned> const &ixs(ldynamic[y][x].get_src_ixs());
 			unsigned const num_ixs(min(ixs.size(), 256U)); // max of 256 lights per bin
 			
 			for (unsigned i = 0; i < num_ixs && elix < max_gb_entries; ++i) { // end if exceed max entries
@@ -1221,41 +1212,6 @@ void upload_dlights_textures() {
 }
 
 
-bool has_dynamic_lights(point const *const pts, unsigned npts) {
-
-	return 0; // FIXME
-	if (dl_sources.empty()) return 0;
-	assert(pts && npts > 0);
-	cube_t cube;
-	cube.set_from_points(pts, npts);
-	int mmi[2][2];
-
-	// test bbox against dynamic light bbox
-	UNROLL_3X(if (cube.d[i_][1] < dlight_bb[i_][0] || cube.d[i_][0] > dlight_bb[i_][1]) return 0;)
-
-	for (unsigned i = 0; i < 2; ++i) { // convert bounding rectangle to voxel index
-		for (unsigned j = 0; j < 2; ++j) {
-			mmi[j][i] = max(0, min(MESH_SIZE[j]-1, get_dim_pos((cube.d[j][i] - SHIFT_DXYZ[j]), j)));
-		}
-	}
-	for (int y = mmi[1][0]; y <= mmi[1][1]; ++y) {
-		if (!y_used[y]) continue;
-		
-		for (int x = mmi[0][0]; x <= mmi[0][1]; ++x) { // check if light has changed since last frame?
-			if (x_used[x] && ldynamic[0][y][x].check_z_range(cube.d[2][0], cube.d[2][1])) return 1;
-		}
-	}
-	if (large_dlight) {
-		for (int y = (mmi[1][0] >> LDYNAM_SUB_BS); y <= (mmi[1][1] >> LDYNAM_SUB_BS); ++y) {
-			for (int x = (mmi[0][0] >> LDYNAM_SUB_BS); x <= (mmi[0][1] >> LDYNAM_SUB_BS); ++x) {
-				if (ldynamic[1][y][x].check_z_range(cube.d[2][0], cube.d[2][1])) return 1;
-			}
-		}
-	}
-	return 0;
-}
-
-
 colorRGBA gen_fire_color(float &cval, float &inten) {
 
 	inten = max(0.6f, min(1.0f, (inten + 0.04f*fticks*signed_rand_float())));
@@ -1290,23 +1246,13 @@ void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d co
 void clear_dynamic_lights() { // slow for large lights
 
 	//if (!animate2) return;
-	assert(ldynamic[0] && ldynamic[1]);
-	assert((int)x_used.size() == MESH_X_SIZE && (int)y_used.size() == MESH_Y_SIZE);
-
-	if (!dl_sources.empty()) { // only clear if light pos/size has changed?
-		for (int y = 0; y < MESH_Y_SIZE; ++y) {
-			if (!y_used[y]) continue;
-			for (int x = 0; x < MESH_X_SIZE; ++x) ldynamic[0][y][x].clear();
-		}
-		for (int y = 0; y < BITSHIFT_CEIL(MESH_Y_SIZE, LDYNAM_SUB_BS); ++y) {
-			for (int x = 0; x < BITSHIFT_CEIL(MESH_X_SIZE, LDYNAM_SUB_BS); ++x) {
-				ldynamic[1][y][x].clear();
-			}
-		}
-		dl_sources.resize(0);
+	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
+	assert(ldynamic);
+	
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) ldynamic[y][x].clear();
 	}
-	for (int i = 0; i < MESH_X_SIZE; ++i) x_used[i] = 0;
-	for (int i = 0; i < MESH_Y_SIZE; ++i) y_used[i] = 0;
+	dl_sources.resize(0);
 }
 
 
@@ -1314,14 +1260,11 @@ void add_dynamic_lights() {
 
 	//RESET_TIME;
 	if (!animate2) return;
-	assert(ldynamic[0] && ldynamic[1]);
-	if ((int)x_used.size() != MESH_X_SIZE) x_used.resize(MESH_X_SIZE);
-	if ((int)y_used.size() != MESH_Y_SIZE) y_used.resize(MESH_Y_SIZE);
+	assert(ldynamic);
 	clear_dynamic_lights();
 	dl_sources.swap(dl_sources2);
 	if (CAMERA_CANDLE_LT) add_camera_candlelight();
 	if (CAMERA_FLASH_LT)  add_camera_flashlight();
-	//int const area_cutoff(1 << 2*(LDYNAM_SUB_BS + 1));
 	large_dlight = 0;
 
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
@@ -1337,7 +1280,6 @@ void add_dynamic_lights() {
 		if ((ls.get_center().z - ls.get_radius()) > max(ztop, czmax)) continue; // above everything, rarely occurs
 		point bounds[2];
 		int bnds[3][2];
-		unsigned ldix(0);
 		unsigned const ix(i);
 		ls.get_bounds(bounds, bnds, 0.0);
 		
@@ -1348,26 +1290,16 @@ void add_dynamic_lights() {
 		first = 0;
 		int const xsize(bnds[0][1]-bnds[0][0]), ysize(bnds[1][1]-bnds[1][0]);
 		int const radius((max(xsize, ysize)>>1)+1), rsq(radius*radius);
-
-		/*if (xsize*ysize > area_cutoff) { // large radius light
-			for (unsigned j = 0; j < 4; ++j) bnds[j>>1][j&1] >>= LDYNAM_SUB_BS;
-			ldix         = 1;
-			large_dlight = 1;
-		}*/
 		int const xcent((bnds[0][1]+bnds[0][0])>>1), ycent((bnds[1][1]+bnds[1][0])>>1);
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			int const y_sq((y-ycent)*(y-ycent));
-			if (ldix == 0) y_used[y] = 1;
 
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
 				if (rsq == 1 || ((x-xcent)*(x-xcent) + y_sq) <= rsq) {
-					ldynamic[ldix][y][x].add_light(ix, bounds[0][2], bounds[1][2]); // could do flow clipping here?
+					ldynamic[y][x].add_light(ix, bounds[0][2], bounds[1][2]); // could do flow clipping here?
 				}
 			}
-		}
-		if (ldix == 0) {
-			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) x_used[x] = 1;
 		}
 	}
 	if (SHOW_STAT_LIGHTS) {
@@ -1425,59 +1357,55 @@ bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 {
 	if (dl_sources.empty()) return 0;
 	assert(!point_outside_mesh(x, y));
+	dls_cell const &ldv(ldynamic[y][x]);
+	if (!ldv.check_z(p[2])) return 0;
+	unsigned const lsz(ldv.size());
+	CELL_LOC_T const cl[3] = {x, y, z}; // what about SHIFT_VAL?
 	bool added(0);
 	unsigned index(0);
 
-	for (unsigned ldi(!x_used[x] || !y_used[y]); ldi < (1U + large_dlight); ++ldi) {
-		unsigned const bs(ldi ? LDYNAM_SUB_BS : 0);
-		dls_cell const &ldv(ldynamic[ldi][(y >> bs)][(x >> bs)]);
-		if (!ldv.check_z(p[2])) continue;
-		unsigned const lsz(ldv.size());
-		CELL_LOC_T const cl[3] = {x, y, z}; // what about SHIFT_VAL?
+	for (unsigned l = 0; l < lsz; ++l) {
+		unsigned const ls_ix(ldv.get(l));
+		assert(ls_ix < dl_sources.size());
+		light_source const &lsrc(dl_sources[ls_ix]);
+		float cscale(lightscale*lsrc.get_intensity_at(p));
+		if (cscale < CTHRESH) continue;
+		bool const directional(lsrc.is_directional());
+		point const &lpos(lsrc.get_center());
+		
+		if (norm || directional) {
+			vector3d const dir(lpos, p);
 
-		for (unsigned l = 0; l < lsz; ++l) {
-			unsigned const ls_ix(ldv.get(l));
-			assert(ls_ix < dl_sources.size());
-			light_source const &lsrc(dl_sources[ls_ix]);
-			float cscale(lightscale*lsrc.get_intensity_at(p));
-			if (cscale < CTHRESH) continue;
-			bool const directional(lsrc.is_directional());
-			point const &lpos(lsrc.get_center());
-			
-			if (norm || directional) {
-				vector3d const dir(lpos, p);
-
-				if (directional) {
-					cscale *= lsrc.get_dir_intensity(dir);
-					if (cscale < CTHRESH) continue;
-				}
-				if (norm) { // ambient + diffuse + specular lighting
-					float const dp(dot_product(*norm, dir));
-					if (dp <= 0.0)        continue; // back facing
-					cscale *= (DLIGHT_AMBIENT + DLIGHT_DIFFUSE*dp*InvSqrt(dir.mag_sq()) + (spec ? add_specular(p, dir, *norm, spec) : 0.0));
-					if (cscale < CTHRESH) continue;
-				}
+			if (directional) {
+				cscale *= lsrc.get_dir_intensity(dir);
+				if (cscale < CTHRESH) continue;
 			}
-			if (DYNAMIC_LT_FLOW && using_lightmap && z >= 0) { // slow for large lights, and somewhat inaccurate
-				CELL_LOC_T const *const c(lsrc.get_cent());
-				CELL_LOC_T c1[3], c2[3];
-				unsigned equal(0);
-				
-				for (unsigned d = 0; d < 3; ++d) { // take one step towards each side in each direction
-					c1[d] = max(0, min(MESH_SIZE[d]-1, int(cl[d])));
-					c2[d] = max(0, min(MESH_SIZE[d]-1, int(c [d])));
-					if (c1[d] > c2[d]) --c1[d]; else if (c1[d] < c2[d]) ++c1[d];
-					if (c2[d] > c1[d]) --c2[d]; else if (c2[d] < c1[d]) ++c2[d]; else ++equal;
-				}
-				if (equal < 3) {
-					cscale *= get_flow_val(c2, c1, 1);
-					if (cscale < CTHRESH) continue;
-				}
+			if (norm) { // ambient + diffuse + specular lighting
+				float const dp(dot_product(*norm, dir));
+				if (dp <= 0.0)        continue; // back facing
+				cscale *= (DLIGHT_AMBIENT + DLIGHT_DIFFUSE*dp*InvSqrt(dir.mag_sq()) + (spec ? add_specular(p, dir, *norm, spec) : 0.0));
+				if (cscale < CTHRESH) continue;
 			}
-			colorRGBA const &lsc(lsrc.get_color());
-			UNROLL_3X(ls[i_] += lsc[i_]*cscale;)
-			added = 1;
 		}
+		if (DYNAMIC_LT_FLOW && using_lightmap && z >= 0) { // slow for large lights, and somewhat inaccurate
+			CELL_LOC_T const *const c(lsrc.get_cent());
+			CELL_LOC_T c1[3], c2[3];
+			unsigned equal(0);
+			
+			for (unsigned d = 0; d < 3; ++d) { // take one step towards each side in each direction
+				c1[d] = max(0, min(MESH_SIZE[d]-1, int(cl[d])));
+				c2[d] = max(0, min(MESH_SIZE[d]-1, int(c [d])));
+				if (c1[d] > c2[d]) --c1[d]; else if (c1[d] < c2[d]) ++c1[d];
+				if (c2[d] > c1[d]) --c2[d]; else if (c2[d] < c1[d]) ++c2[d]; else ++equal;
+			}
+			if (equal < 3) {
+				cscale *= get_flow_val(c2, c1, 1);
+				if (cscale < CTHRESH) continue;
+			}
+		}
+		colorRGBA const &lsc(lsrc.get_color());
+		UNROLL_3X(ls[i_] += lsc[i_]*cscale;)
+		added = 1;
 	}
 	return added;
 }
@@ -1531,26 +1459,11 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 }
 
 
-void get_dynamic_light_at_pt(colorRGBA &a, colorRGBA const &c, point const &p, vector3d const &norm, float const *const spec) {
-
-	if (dl_sources.empty() || p.z > dlight_bb[2][1] || p.z < dlight_bb[2][0]) return;
-	bool const global_lighting(read_light_file || write_light_file);
-	point const p_adj(global_lighting ? p : (p + norm*(0.25*HALF_DXY)));
-	int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY));
-	if (point_outside_mesh(x, y)) return;
-	colorRGBA ls(BLACK);
-	get_dynamic_light(x, y, get_zpos(p_adj.z), p, 1.0, (float *)&ls, &norm, spec);
-	UNROLL_3X(a[i_] += c[i_]*ls[i_];) // unroll the loop
-}
-
-
 void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed,
 					  vector3d const &norm, float const spec[2], bool no_dynamic)
 {
 	a = colorRGBA(0.0, 0.0, 0.0, c.alpha); // cur_ambient alpha is 1.0
 	if (c == BLACK) return;
-	//get_indir_light(a, cur_ambient, p, no_dynamic, (shadowed != 0), &norm, spec);
-	//if (!no_dynamic) get_dynamic_light_at_pt(a, c, p, norm, spec); // FIXME
 	unsigned const num_lights(enabled_lights.size());
 	
 	for (unsigned i = 0; i < num_lights; ++i) { // add in diffuse + specular components

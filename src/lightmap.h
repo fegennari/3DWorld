@@ -116,10 +116,11 @@ public:
 		z1 = min(z1, zmin);
 		z2 = max(z2, zmax);
 	}
-	size_t size()            const {return lsrc.size();}
+	size_t size() const {return lsrc.size();}
+	bool empty()  const {return lsrc.empty();}
 	unsigned get(unsigned i) const {return lsrc[i];} // no bounds checking
-	bool check_z(float z)    const {return (size() > 0 && z >= z1 && z <= z2);}
-	bool check_z_range(float zlo, float zhi) const {return (!lsrc.empty() && zlo <= z2 && zhi >= z1);}
+	bool check_z(float z)    const {return (!empty() && z >= z1 && z <= z2);}
+	bool check_z_range(float zlo, float zhi) const {return (!empty() && zlo <= z2 && zhi >= z1);}
 	void get_close_sources(point const &pos, float radius, vector<unsigned> &dlights) const;
 	vector<unsigned> const &get_src_ixs() const {return lsrc;}
 };
