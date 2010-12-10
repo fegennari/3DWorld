@@ -52,7 +52,7 @@ float const SMOKE_DIS_ZU     = 0.08;
 float const SMOKE_DIS_ZD     = 0.03;
 
 
-bool large_dlight(0), using_lightmap(0), lm_alloc(0), has_dl_sources(0), smoke_enabled(0), smoke_exists(0);
+bool large_dlight(0), using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), smoke_enabled(0), smoke_exists(0);
 unsigned cobj_counter(0), smoke_tid(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0);
@@ -1136,12 +1136,14 @@ void upload_dlights_textures() {
 	float const radius_scale(1.0/X_SCENE_SIZE);
 	vector3d const poff(-X_SCENE_SIZE, -Y_SCENE_SIZE, get_zval(0));
 	vector3d const pscale(0.5/X_SCENE_SIZE, 0.5/Y_SCENE_SIZE, 1.0/(get_zval(MESH_SIZE[2]) - poff.z));
+	has_dir_lights = 0;
 
 	for (unsigned i = 0; i < ndl; ++i) {
 		float *data(dl_data + i*floats_per_light);
 		dl_sources[i].pack_to_floatv(data); // {center,radius, color}
 		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale to [0,1] range
 		data[3] *= radius_scale;
+		has_dir_lights |= dl_sources[i].is_directional();
 	}
 	if (dl_tid == 0 || !glIsTexture(dl_tid)) {
 		setup_2d_texture(dl_tid);

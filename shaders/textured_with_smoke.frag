@@ -46,10 +46,13 @@ vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
 		lpos_r.xyz += off;
 		lpos_r.w   *= x_scene_size;
 		//if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case
-		vec4 lcolor = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
-		vec4 dir_w  = texelFetch(dlight_tex, ivec2(2, dl_ix), 0); // light direction, beamwidth
+		vec4 lcolor     = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
 		float intensity = get_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
-		intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
+		
+		if (has_dir_lights) {
+			vec4 dir_w = texelFetch(dlight_tex, ivec2(2, dl_ix), 0); // light direction, beamwidth
+			intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
+		}
 		//intensity *= get_flow_val(spos, lpos_r.xyz, off, scale);
 		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
 		vec3 half_vect = normalize(normalize(eye - dlpos) + light_dir); // Eye + L

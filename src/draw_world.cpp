@@ -51,7 +51,7 @@ pt_line_drawer obj_pld, snow_pld;
 
 
 extern GLUquadricObj* quadric;
-extern bool have_sun, underwater, smoke_enabled, have_drawn_cobj, using_lightmap, has_dl_sources, smoke_exists;
+extern bool have_sun, underwater, smoke_enabled, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
 extern int nstars, is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS, litning_dynamic;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
@@ -1659,10 +1659,11 @@ colorRGBA change_fog_color(colorRGBA const &new_color) {
 
 colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool do_lighting) {
 
-	set_bool_shader_prefix("use_texgen",    use_texgen,   0); // VS
-	set_bool_shader_prefix("smoke_enabled", smoke_exists, 0); // VS
-	set_bool_shader_prefix("keep_alpha",    keep_alpha,   1); // FS
-	set_bool_shader_prefix("do_lighting",   do_lighting,  1); // FS
+	set_bool_shader_prefix("use_texgen",     use_texgen,     0); // VS
+	set_bool_shader_prefix("smoke_enabled",  smoke_exists,   0); // VS
+	set_bool_shader_prefix("keep_alpha",     keep_alpha,     1); // FS
+	set_bool_shader_prefix("do_lighting",    do_lighting,    1); // FS
+	set_bool_shader_prefix("has_dir_lights", has_dir_lights, 1); // FS
 	setup_enabled_lights();
 	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke"));
 	add_uniform_int(p, "dlight_tex", 2);
