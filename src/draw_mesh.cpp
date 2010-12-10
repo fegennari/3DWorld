@@ -611,14 +611,15 @@ void water_renderer::draw_x_sides(bool neg_edge) const {
 	int const end_val(neg_edge ? 0 : MESH_X_SIZE-1);
 	float const limit(neg_edge ? -X_SCENE_SIZE : X_SCENE_SIZE-DX_VAL);
 	float yv(-Y_SCENE_SIZE);
+	bool in_quads(0);
 	glNormal3f(-1.0, 0.0, 0.0);
-	glBegin(GL_QUADS);
 
 	for (int i = 1; i < MESH_Y_SIZE; ++i) { // x sides
 		float const mh1(mesh_height[i][end_val]), mh2(mesh_height[i-1][end_val]);
 		float const wm1(water_matrix[i][end_val] - SMALL_NUMBER), wm2(water_matrix[i-1][end_val] - SMALL_NUMBER);
 
 		if (!check_zvals || mh1 < wm1 || mh2 < wm2) {
+			if (!in_quads) {glBegin(GL_QUADS); in_quads = 1;}
 			draw_vertex(limit, yv,        wm2,           1, tex_scale);
 			draw_vertex(limit, yv+DY_VAL, wm1,           1, tex_scale);
 			draw_vertex(limit, yv+DY_VAL, min(wm1, mh1), 1, tex_scale);
@@ -626,22 +627,24 @@ void water_renderer::draw_x_sides(bool neg_edge) const {
 		}
 		yv += DY_VAL;
 	}
-	glEnd();
+	if (in_quads) glEnd();
 }
+
 
 void water_renderer::draw_y_sides(bool neg_edge) const {
 
 	int const end_val(neg_edge ? 0 : MESH_Y_SIZE-1);
 	float const limit(neg_edge ? -Y_SCENE_SIZE : Y_SCENE_SIZE-DY_VAL);
 	float xv(-X_SCENE_SIZE);
+	bool in_quads(0);
 	glNormal3f(0.0, 1.0, 0.0);
-	glBegin(GL_QUADS);
 	
 	for (int i = 1; i < MESH_X_SIZE; ++i) { // y sides
 		float const mh1(mesh_height[end_val][i]), mh2(mesh_height[end_val][i-1]);
 		float const wm1(water_matrix[end_val][i] - SMALL_NUMBER), wm2(water_matrix[end_val][i-1] - SMALL_NUMBER);
 
 		if (!check_zvals || mh1 < wm1 || mh2 < wm2) {
+			if (!in_quads) {glBegin(GL_QUADS); in_quads = 1;}
 			draw_vertex(xv,        limit, wm2,           0, tex_scale);
 			draw_vertex(xv+DX_VAL, limit, wm1,           0, tex_scale);
 			draw_vertex(xv+DX_VAL, limit, min(wm1, mh1), 0, tex_scale);
@@ -649,7 +652,7 @@ void water_renderer::draw_y_sides(bool neg_edge) const {
 		}
 		xv += DX_VAL;
 	}
-	glEnd();
+	if (in_quads) glEnd();
 }
 
 
