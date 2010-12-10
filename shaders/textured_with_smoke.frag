@@ -1,7 +1,7 @@
 uniform float x_scene_size, y_scene_size, czmin, czmax; // scene bounds (world space)
 uniform float step_delta;
 uniform sampler2D tex0;
-uniform sampler3D smoke_tex;
+uniform sampler3D smoke_tex, flow_tex;
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 uniform float min_alpha = 0.0;
@@ -28,6 +28,12 @@ float get_intensity_at(in vec3 pos, in vec3 lpos, in float radius) {
 	return rscale*rscale; // quadratic 1/r^2 attenuation
 }
 
+// determine light transmission to this fragment using flow_tex
+float get_flow_val(in vec3 fpos, in vec3 lpos, in vec3 off, in vec3 scale) {
+	// write - nontrivial, really need a better intersection data structure, voxel grid is too coarse
+	return 1.0;
+}
+
 vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
 	vec3 color  = vec3(0,0,0);
 	uint gb_ix  = texture2D(dlgb_tex, pos.xy).r; // get grid bag element index range (uint32)
@@ -46,13 +52,14 @@ vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
 		lpos_r.w   *= x_scene_size;
 		float intensity = get_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
 		if (intensity == 0.0) continue;
-		intensity      *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
+		intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
 		if (intensity == 0.0) continue;
-		vec3 light_dir  = normalize(lpos_r.xyz - dlpos);
-		vec3 half_vect  = normalize(normalize(eye - dlpos) + light_dir); // Eye + L
-		float ad_mag    = 0.25 + 0.75*max(0.0, dot(normal, light_dir)); // ambient + diffuse
-		float spec_mag  = pow(max(dot(normal, half_vect), 0.0), gl_FrontMaterial.shininess);
-		color += lcolor.rgb * (gl_FrontMaterial.specular.rgb*spec_mag + vec3(1,1,1)*ad_mag) * (lcolor.a * intensity);
+		//intensity *= get_flow_val(spos, lpos_r.xyz, off, scale); if (intensity == 0.0) continue;
+		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
+		vec3 half_vect = normalize(normalize(eye - dlpos) + light_dir); // Eye + L
+		float diff_mag = max(0.0, dot(normal, light_dir)); // diffuse
+		float spec_mag = pow(max(dot(normal, half_vect), 0.0), gl_FrontMaterial.shininess);
+		color += lcolor.rgb * (gl_FrontMaterial.specular.rgb*spec_mag + vec3(1,1,1)*diff_mag) * (lcolor.a * intensity);
 		color  = clamp(color, 0.0, 1.0);
 		if (color.rgb == vec3(1,1,1)) break; // saturated
 	}
@@ -84,10 +91,12 @@ void main()
 		gl_FragColor = color;
 		return;
 	}
-	vec3 pos   = (vpos - off)/scale;
+	
+	// smoke code
 	vec3 dir   = eye - vpos;
+	vec3 pos   = (vpos - off)/scale;
 	vec3 delta = normalize(dir)*step_delta/scale;
-	float nsteps = length(dir)/step_delta;
+	float nsteps  = length(dir)/step_delta;
 	int num_steps = 1 + min(1000, int(nsteps)); // round up
 	float step_weight = fract(nsteps);
 	

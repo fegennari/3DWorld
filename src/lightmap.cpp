@@ -1033,8 +1033,7 @@ bool upload_smoke_3d_texture() {
 	if (lmap_manager.vlmap == NULL) return 0;
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
 	// is it ok when texture z size is not a power of 2?
-	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize);
-	unsigned const ncomp(4);
+	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(4);
 	static vector<unsigned char> data; // several MB
 	bool init_call(0);
 
@@ -1108,11 +1107,32 @@ void setup_2d_texture(unsigned &tid) {
 }
 
 
+unsigned upload_voxel_flow_texture() {
+
+	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(3);
+	vector<unsigned char> data(ncomp*sz, 255); // start at max flow
+
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) {
+			lmcell const *const vlm(lmap_manager.vlmap[y][x]);
+			if (vlm == NULL) continue;
+			unsigned const off(zsize*(y*MESH_X_SIZE + x));
+
+			for (unsigned z = 0; z < zsize; ++z) {
+				unsigned const off2(ncomp*(off + z));
+				UNROLL_3X(data[off2+i_] = vlm[z].lflow[i_];)
+			}
+		}
+	}
+	return create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data, GL_LINEAR);
+}
+
+
 void upload_dlights_textures() {
 
 	RESET_TIME;
 	assert(lm_alloc && lmap_manager.vlmap);
-	static unsigned dl_tid(0), elem_tid(0), gb_tid(0); // FIXME: reset when context changes
+	static unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0); // FIXME: reset when context changes
 
 	// step 1: the light sources themselves
 	set_multitex(2); // texture unit 2
@@ -1184,6 +1204,18 @@ void upload_dlights_textures() {
 		bind_2d_texture(gb_tid);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MESH_X_SIZE, MESH_Y_SIZE, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT, &gb_data.front());
 	}
+
+	// step 4: voxel flow
+#if 0
+	set_multitex(5); // texture unit 5
+
+	if (flow_tid == 0 || !glIsTexture(flow_tid)) {
+		flow_tid = upload_voxel_flow_texture();
+	}
+	else { // no dynamic updates
+		bind_3d_texture(flow_tid);
+	}
+#endif
 	//PRINT_TIME("Dlight Texture Upload");
 	//cout << "ndl: " << ndl << ", elix: " << elix << ", gb_sz: " << XY_MULT_SIZE << endl;
 }

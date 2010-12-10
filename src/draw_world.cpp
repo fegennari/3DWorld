@@ -1666,8 +1666,9 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	setup_enabled_lights();
 	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke"));
 	add_uniform_int(p, "dlight_tex", 2);
-	add_uniform_int(p, "dlelm_tex", 3);
-	add_uniform_int(p, "dlgb_tex", 4);
+	add_uniform_int(p, "dlelm_tex",  3);
+	add_uniform_int(p, "dlgb_tex",   4);
+	//add_uniform_int(p, "flow_tex",   5);
 
 	if (smoke_tid) {
 		set_multitex(1);
