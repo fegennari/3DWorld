@@ -21,7 +21,7 @@ float grass_length(0.02), grass_width(0.002);
 
 extern bool grass_wind;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2;
-extern float vegetation, zmin, zmax, fticks, h_sand[], h_dirt[];
+extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[];
 extern vector3d wind;
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
@@ -436,18 +436,11 @@ public:
 		enable_dynamic_lights();
 
 		if (grass_wind) {
-			static float time(0.0);
-			if (animate2) time += fticks;
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
-			unsigned const p(set_shader_prog("ad_lighting.part*+grass_wind", "linear_fog.part+simple_texture"));
-			add_uniform_float(p, "time", 0.5*time/TICKS_PER_SECOND);
-			add_uniform_float(p, "wind_x", wind.x);
-			add_uniform_float(p, "wind_y", wind.y);
-			add_uniform_int(p, "tex0", 0);
-			add_uniform_int(p, "tex_noise", 1);
+			unsigned const p(set_shader_prog("ad_lighting.part*+wind.part+grass_wind", "linear_fog.part+simple_texture"));
+			setup_wind_for_shader(p);
 			setup_fog_scale(p);
 			add_uniform_float(p, "height", grass_length);
-			select_multitex(CLOUD_RAW_TEX, 1, 0);
 		}
 
 		// draw the grass
@@ -476,6 +469,20 @@ public:
 };
 
 grass_manager_t grass_manager;
+
+
+void setup_wind_for_shader(unsigned p) {
+
+	static float time(0.0);
+	if (animate2) time = tfticks;
+	add_uniform_float(p, "time", 0.5*time/TICKS_PER_SECOND);
+	add_uniform_float(p, "wind_x", wind.x);
+	add_uniform_float(p, "wind_y", wind.y);
+	add_uniform_int(p, "tex0", 0);
+	add_uniform_int(p, "tex_noise", 1);
+	select_multitex(CLOUD_RAW_TEX, 1, 0);
+	set_multitex(0);
+}
 
 
 bool no_grass() {

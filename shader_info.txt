@@ -8,15 +8,15 @@ Completed:
 13. Grass Moving in Wind: VS
 14. Full Scene Smoke Effects: VS/FS - progressive upload, per-fragment smoke integration with clipping in VS
 10a. Fires/Scorch Marks Smoke Effects: VS/FS - see 14
+10b. Smoke Puffs Smoke Effects: VS/FS - OK with smaller smoke puffs
+17. Dynamic Lighting of Cobjs: FS
 
 Not Implementable/Too Difficult or Inefficient
 3. Grass Effects/Regen (crush, burn, cut, update z): GS - requires state
-4. Cobj Lighting: VS - too much data sent to GPU per frame
 5. Ship Rendering: VS/FS or Geometry Shader - too many shader loads per frame
 6. Water Reflections: VS/FS - too inefficient per fragment, too complex per vertex
 7. Mesh Texturing: FS - too complex and inefficient, not worth the memor savings (for now)
 8. Mesh Underwater Caustics: FS - requires global solution, dependent on other effects
-10b. Smoke Puffs Smoke Effects: VS/FS - smoke puffs too large/high fill rate, FS smoke integration too slow
 
 Todo:
 1. Leaf Wind: GS
@@ -43,10 +43,12 @@ quality/blending/lighting
 * Static lighting calc with shadows, maybe as a texture
 + Better quality of shadows and specular
 + No need to subdivide shadowed/unshadowed quads/tris
-- Need to send more data to the GPU: normals, material properties, shadow info, ambient light values
+- Need to send shadow information to the GPU per quad/vertex, which is slow
 - Shadows as textures may be too expensive to manage (too many small textures)
 
-17. Dynamic Lighting of Cobjs: VS/FS
-* Use Grid Bag data structure, per fragment
-+ Looks better, Faster
+17b. Dynamic Light Occlusion/Shadows: FS
++ Looks more correct
+- Visual artifacts due to high frequency sampling on an integer grid
+- Not enough grid resolution for small occluders
+- Slow (per pixel per light source)
 

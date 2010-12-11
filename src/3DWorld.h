@@ -1449,6 +1449,7 @@ void shift_scenery(vector3d const &vd);
 void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 
 // function prototypes - grass
+void setup_wind_for_shader(unsigned p);
 void gen_grass(bool full_regen);
 void update_grass_vbos();
 void draw_grass();

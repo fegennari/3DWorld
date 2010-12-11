@@ -8,7 +8,7 @@
 using namespace std;
 
 bool const PRINT_SHADER = 0;
-bool const PRINT_LOG    = 1;
+bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
 
