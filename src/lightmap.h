@@ -68,6 +68,7 @@ public:
 	light_source() {}
 	light_source(float sz, point const &p, colorRGBA const &c, bool id, vector3d const &d=plus_z, float bw=1.0, float ri=0.0);
 	void calc_cent();
+	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
 	float get_radius()           const {return radius;}
 	float get_r_inner()          const {return r_inner;}
@@ -84,16 +85,8 @@ public:
 	void combine_with(light_source const &l);
 	void draw(int ndiv) const;
 	void pack_to_floatv(float *data) const;
-	
-	bool operator<(light_source const &l) { // compare: y, x, z, r
-		if (center.y < l.center.y) return 1;
-		if (center.y > l.center.y) return 0;
-		if (center.x < l.center.x) return 1;
-		if (center.x > l.center.x) return 0;
-		if (center.z < l.center.z) return 1;
-		if (center.z > l.center.z) return 0;
-		return (radius < l.radius);
-	}
+	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
+	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
 };
 
 
@@ -105,17 +98,9 @@ class dls_cell {
 public:
 	dls_cell() : z1(FAR_CLIP), z2(-FAR_CLIP) {}
 
-	void clear() {
-		if (lsrc.capacity() > INIT_CCELL_SIZE) lsrc.clear(); else lsrc.resize(0);
-		z1 =  FAR_CLIP;
-		z2 = -FAR_CLIP;
-	}
-	void add_light(unsigned ix, float zmin, float zmax) {
-		if (lsrc.capacity() == 0) lsrc.reserve(INIT_CCELL_SIZE);
-		lsrc.push_back(ix);
-		z1 = min(z1, zmin);
-		z2 = max(z2, zmax);
-	}
+	void clear();
+	void add_light(unsigned ix, float zmin, float zmax);
+	bool check_add_light(unsigned ix) const;
 	size_t size() const {return lsrc.size();}
 	bool empty()  const {return lsrc.empty();}
 	unsigned get(unsigned i) const {return lsrc[i];} // no bounds checking

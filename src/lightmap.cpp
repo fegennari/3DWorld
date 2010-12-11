@@ -113,6 +113,13 @@ void light_source::calc_cent() {
 }
 
 
+void light_source::add_color(colorRGBA const &c) {
+
+	color = color*color.alpha + c*c.alpha;
+	color.alpha = 1.0;
+}
+
+
 float light_source::get_intensity_at(point const &pos) const {
 
 	if (radius == 0.0)                   return color[3]; // no falloff
@@ -1142,6 +1149,7 @@ void upload_dlights_textures() {
 		float *data(dl_data + i*floats_per_light);
 		dl_sources[i].pack_to_floatv(data); // {center,radius, color}
 		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale to [0,1] range
+		UNROLL_3X(data[i_+4] *= 0.1;) // scale color down
 		data[3] *= radius_scale;
 		has_dir_lights |= dl_sources[i].is_directional();
 	}
@@ -1258,6 +1266,45 @@ void clear_dynamic_lights() { // slow for large lights
 }
 
 
+void dls_cell::clear() {
+
+	if (lsrc.capacity() > INIT_CCELL_SIZE) lsrc.clear(); else lsrc.resize(0);
+	z1 =  FAR_CLIP;
+	z2 = -FAR_CLIP;
+}
+
+
+void dls_cell::add_light(unsigned ix, float zmin, float zmax) {
+	
+	if (lsrc.capacity() == 0) lsrc.reserve(INIT_CCELL_SIZE);
+	lsrc.push_back(ix);
+	z1 = min(z1, zmin);
+	z2 = max(z2, zmax);
+}
+
+
+bool dls_cell::check_add_light(unsigned ix) const {
+
+	if (empty()) return 1;
+	assert(ix < dl_sources.size());
+	light_source const &ls(dl_sources[ix]);
+	float const radius(ls.get_radius());
+
+	for (unsigned i = 0; i < lsrc.size(); ++i) {
+		unsigned const ix2(lsrc[i]);
+		assert(ix2 < dl_sources.size());
+		assert(ix2 != ix);
+		light_source &ls2(dl_sources[ix2]);
+		float const radius2(ls2.get_radius());
+		if (radius2 < radius) continue; // shouldn't get here because of radius sort
+		if (!dist_less_than(ls.get_center(), ls2.get_center(), 0.2*max(HALF_DXY, radius))) continue;
+		ls2.add_color(ls.get_color());
+		return 0;
+	}
+	return 1;
+}
+
+
 void add_dynamic_lights() {
 
 	//RESET_TIME;
@@ -1272,6 +1319,7 @@ void add_dynamic_lights() {
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
 		dl_sources.push_back(light_source(0.94, gen_rand_scene_pos(), BLUE, 1));
 	}
+	sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
 	unsigned const ndl(dl_sources.size());
 	has_dl_sources = (ndl > 0);
 	bool first(1);
@@ -1279,7 +1327,10 @@ void add_dynamic_lights() {
 	for (unsigned i = 0; i < ndl; ++i) {
 		light_source &ls(dl_sources[i]);
 		if (!ls.is_visible()) continue; // view culling
-		if ((ls.get_center().z - ls.get_radius()) > max(ztop, czmax)) continue; // above everything, rarely occurs
+		point const &center(ls.get_center());
+		if ((center.z - ls.get_radius()) > max(ztop, czmax)) continue; // above everything, rarely occurs
+		int xcent(get_xpos(center.x)), ycent(get_ypos(center.y));
+		if (!point_outside_mesh(xcent, ycent) && !ldynamic[ycent][xcent].check_add_light(i)) continue;
 		point bounds[2];
 		int bnds[3][2];
 		unsigned const ix(i);
@@ -1292,7 +1343,6 @@ void add_dynamic_lights() {
 		first = 0;
 		int const xsize(bnds[0][1]-bnds[0][0]), ysize(bnds[1][1]-bnds[1][0]);
 		int const radius((max(xsize, ysize)>>1)+1), rsq(radius*radius);
-		int const xcent((bnds[0][1]+bnds[0][0])>>1), ycent((bnds[1][1]+bnds[1][0])>>1);
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			int const y_sq((y-ycent)*(y-ycent));

@@ -157,7 +157,7 @@ void dwobject::add_obj_dynamic_light(int index) const {
 			if (type == SHRAPNEL && direction == W_GRENADE && (index % SHRAP_DLT_IX_MOD) != 0) break; // optimization hack
 			float stime;
 			colorRGBA const scolor(get_glowing_obj_color(pos, time, object_types[type].lifetime, stime, (type == SHRAPNEL), 0));
-			if (stime < 1.0) add_dynamic_light(0.25, pos, scolor);
+			if (stime < 1.0) add_dynamic_light(0.2, pos, scolor);
 		}
 		break;
 	}

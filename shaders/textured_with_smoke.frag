@@ -47,6 +47,7 @@ vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
 		lpos_r.w   *= x_scene_size;
 		//if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case
 		vec4 lcolor     = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
+		lcolor.rgb     *= 10.0; // unscale color
 		float intensity = get_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
 		
 		if (has_dir_lights) {
