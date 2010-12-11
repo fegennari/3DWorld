@@ -137,7 +137,7 @@ int landscape_changed(0), lchanged0(0), skip_regrow(0), ltx1(0), lty1(0), ltx2(0
 unsigned char *landscape0 = NULL;
 
 
-extern unsigned smoke_tid;
+extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, flow_tid;
 extern int world_mode, island, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode;
 extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation;
@@ -270,6 +270,10 @@ void reset_textures() {
 	free_universe_textures();
 	free_flare_textures();
 	free_texture(smoke_tid);
+	free_texture(dl_tid);
+	free_texture(elem_tid);
+	free_texture(gb_tid);
+	free_texture(flow_tid);
 }
 
 
@@ -1416,8 +1420,7 @@ void update_lt_section(int x1, int y1, int x2, int y2) {
 	}
 	GLenum const format((nc == 4) ? GL_RGBA : GL_RGB);
 	check_init_texture(LANDSCAPE_TEX);
-	assert(glIsTexture(t1.tid));
-	glBindTexture(GL_TEXTURE_2D, t1.tid);
+	bind_2d_texture(t1.tid);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, x1, y1, (x2-x1), (y2-y1), format, GL_UNSIGNED_BYTE, data);
 	delete [] copy;
 	//PRINT_TIME("LT Update");

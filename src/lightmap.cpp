@@ -52,8 +52,8 @@ float const SMOKE_DIS_ZU     = 0.08;
 float const SMOKE_DIS_ZD     = 0.03;
 
 
-bool large_dlight(0), using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), smoke_enabled(0), smoke_exists(0);
-unsigned cobj_counter(0), smoke_tid(0);
+bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), smoke_enabled(0), smoke_exists(0);
+unsigned cobj_counter(0), smoke_tid(0), dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
@@ -1042,7 +1042,7 @@ bool upload_smoke_3d_texture() {
 	}
 	else {
 		assert(data.size() == ncomp*sz); // sz should be constant (per config file/3DWorld session)
-		init_call = !glIsTexture(smoke_tid); // will recreate the texture
+		init_call = (smoke_tid == 0); // will recreate the texture
 	}
 	static colorRGBA last_cur_ambient(ALPHA0);
 	bool const full_update(init_call || cur_ambient != last_cur_ambient);
@@ -1131,7 +1131,6 @@ void upload_dlights_textures() {
 
 	RESET_TIME;
 	assert(lm_alloc && lmap_manager.vlmap);
-	static unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0); // reset when context changes?
 
 	// step 1: the light sources themselves
 	set_multitex(2); // texture unit 2
@@ -1147,13 +1146,13 @@ void upload_dlights_textures() {
 
 	for (unsigned i = 0; i < ndl; ++i) {
 		float *data(dl_data + i*floats_per_light);
-		dl_sources[i].pack_to_floatv(data); // {center,radius, color}
+		dl_sources[i].pack_to_floatv(data); // {center,radius, color, dir,beamwidth}
 		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale to [0,1] range
 		UNROLL_3X(data[i_+4] *= 0.1;) // scale color down
 		data[3] *= radius_scale;
 		has_dir_lights |= dl_sources[i].is_directional();
 	}
-	if (dl_tid == 0 || !glIsTexture(dl_tid)) {
+	if (dl_tid == 0) {
 		setup_2d_texture(dl_tid);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data); // 2 x M
 	}
@@ -1184,7 +1183,7 @@ void upload_dlights_textures() {
 			gb_data[gb_ix] += (elix << 16); // end_ix
 		}
 	}
-	if (elem_tid == 0 || !glIsTexture(elem_tid)) {
+	if (elem_tid == 0) {
 		setup_2d_texture(elem_tid);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16UI_EXT, elem_tex_sz, elem_tex_sz, 0, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_SHORT, elem_data);
 	}
@@ -1197,7 +1196,7 @@ void upload_dlights_textures() {
 	// step 3: grid bag(s)
 	set_multitex(4); // texture unit 4
 
-	if (gb_tid == 0 || !glIsTexture(gb_tid)) {
+	if (gb_tid == 0) {
 		setup_2d_texture(gb_tid);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE32UI_EXT, MESH_X_SIZE, MESH_Y_SIZE, 0, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT, &gb_data.front()); // Nx x Ny
 	}
@@ -1210,7 +1209,7 @@ void upload_dlights_textures() {
 #if 0
 	set_multitex(5); // texture unit 5
 
-	if (flow_tid == 0 || !glIsTexture(flow_tid)) {
+	if (flow_tid == 0) {
 		flow_tid = upload_voxel_flow_texture();
 	}
 	else { // no dynamic updates
@@ -1314,7 +1313,6 @@ void add_dynamic_lights() {
 	dl_sources.swap(dl_sources2);
 	if (CAMERA_CANDLE_LT) add_camera_candlelight();
 	if (CAMERA_FLASH_LT)  add_camera_flashlight();
-	large_dlight = 0;
 
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
 		dl_sources.push_back(light_source(0.94, gen_rand_scene_pos(), BLUE, 1));
