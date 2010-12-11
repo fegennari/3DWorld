@@ -437,7 +437,7 @@ public:
 
 		if (grass_wind) {
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
-			unsigned const p(set_shader_prog("ad_lighting.part*+wind.part+grass_wind", "linear_fog.part+simple_texture"));
+			unsigned const p(set_shader_prog("ad_lighting.part*+wind.part+grass", "linear_fog.part+simple_texture"));
 			setup_wind_for_shader(p);
 			setup_fog_scale(p);
 			add_uniform_float(p, "height", grass_length);
