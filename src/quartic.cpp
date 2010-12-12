@@ -1,6 +1,7 @@
 // found at:   http://www.maths.tcd.ie/~dwmalone/p/561-99/quartic.c
 // similar to: http://chem.skku.ac.kr/~wkpark/tutor/chem/pdb2pov/povray31/source/polysolv.c
 
+#include "globals.h"
 #include <stdio.h>
 #include <math.h>
 #include <iostream>

@@ -1,12 +1,12 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 4/25/02
+#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
 #include "sinf.h"
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
-#include "GL/glext.h"
 
 using std::string;
 

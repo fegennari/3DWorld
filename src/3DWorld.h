@@ -5,12 +5,7 @@
 #ifndef _3DWORLD_H_
 #define _3DWORLD_H_
 
-
-// fixes for MS Visual Studio 2005 performance problems
-#define _HAS_ITERATOR_DEBUGGING 0
-//#define _SECURE_SCL 0
-
-
+#include "globals.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <GL/glut.h>
@@ -28,6 +23,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <iterator>
 using std::vector;
 using std::deque;
 using std::set;

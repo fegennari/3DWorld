@@ -3,6 +3,7 @@
 
 /* load_luminace is a simplistic routine for reading an SGI .bw image file. */
 
+#include "globals.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
