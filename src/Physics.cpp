@@ -1351,7 +1351,7 @@ void fire::apply_physics(unsigned i) {
 	assert(radius > 0.0);
 	float const damage(0.5*heat*radius);
 	colorRGBA const fcolor(gen_fire_color(cval, inten));
-	if (damage > 0.007) add_dynamic_light(32.0*damage, pos, fcolor);
+	if (damage > 0.001) add_dynamic_light(32.0*damage, pos, fcolor);
 	do_area_effect_damage(pos, 2.0*radius, damage, i, source, FIRE);
 	int const rn(max(1, int(8.0 + 0.02/(0.1 + sqrt(radius*sqrt(heat))))));
 	if (rand()%rn == 0) gen_smoke(pos);

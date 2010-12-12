@@ -51,7 +51,7 @@ pt_line_drawer obj_pld, snow_pld;
 
 
 extern GLUquadricObj* quadric;
-extern bool have_sun, underwater, smoke_enabled, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
+extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
 extern int nstars, is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS, litning_dynamic;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;

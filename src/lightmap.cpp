@@ -52,7 +52,7 @@ float const SMOKE_DIS_ZU     = 0.08;
 float const SMOKE_DIS_ZD     = 0.03;
 
 
-bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), smoke_enabled(0), smoke_exists(0);
+bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), smoke_visible(0), smoke_exists(0);
 unsigned cobj_counter(0), smoke_tid(0), dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0);
@@ -918,6 +918,7 @@ struct smoke_manager {
 
 		if (is_smoke_visible(pos)) {
 			bbox.union_with_pt(pos);
+			cur_smoke_bb.union_with_pt(pos);
 			smoke_vis = 1;
 		}
 		tot_smoke += smoke_amt;
@@ -1003,10 +1004,10 @@ void distribute_smoke() { // called at most once per frame
 	static int cur_skip(0);
 	
 	if (cur_skip == 0) {
-		//cout << "tot_smoke: " << smoke_man.tot_smoke << ", enabled: " << smoke_enabled << endl;
+		//cout << "tot_smoke: " << smoke_man.tot_smoke << ", enabled: " << smoke_exists << ", visible: " << smoke_visible << endl;
 		smoke_man     = next_smoke_man;
 		smoke_man.adj_bbox();
-		smoke_enabled = smoke_man.smoke_vis;
+		smoke_visible = smoke_man.smoke_vis;
 		smoke_exists  = smoke_man.enabled;
 		cur_smoke_bb  = smoke_man.bbox;
 		next_smoke_man.reset();

@@ -321,6 +321,9 @@ struct cube_t { // size = 24
 	void union_with_pt(point const &pt) {
 		UNROLL_3X(d[i_][0] = min(d[i_][0], pt[i_]); d[i_][1] = max(d[i_][1], pt[i_]);)
 	}
+	void union_with_cube(cube_t const &c) {
+		UNROLL_3X(d[i_][0] = min(d[i_][0], c.d[i_][0]); d[i_][1] = max(d[i_][1], c.d[i_][1]);)
+	}
 	void normalize() {
 		UNROLL_3X(if (d[i_][1] < d[i_][0]) swap(d[i_][0], d[i_][1]);)
 	}
