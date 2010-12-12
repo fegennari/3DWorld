@@ -1501,6 +1501,7 @@ void clear_lightmap();
 void build_lightmap(bool verbose);
 void add_smoke(point const &pos, float val);
 void distribute_smoke();
+void add_line_light(point const &p1, point const &p2, colorRGBA const &color, float size, float intensity=1.0);
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c=WHITE, vector3d const &d=plus_z, float bw=1.0);
 colorRGBA gen_fire_color(float &cval, float &inten);
 void clear_dynamic_lights();

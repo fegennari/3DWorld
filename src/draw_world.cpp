@@ -99,7 +99,7 @@ void draw_skull(point const &pos, vector3d const &orient, float radius, int stat
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, bool is_shadowed);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, bool is_shadowed);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool is_shadowed);
-void draw_plasma(point const &pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time);
+void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time);
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, bool is_shadowed);
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool is_shadowed, bool is_cgrenade);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
@@ -402,7 +402,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_landmine(pos, radius, ndiv, obj.time, obj.source, is_shadowed);
 		break;
 	case PLASMA:
-		draw_plasma(pos, radius, obj.init_dir.x, ndiv, 1, !in_ammo, obj.time);
+		draw_plasma(pos, pos, radius, obj.init_dir.x, ndiv, 1, !in_ammo, obj.time);
 		break;
 	case GRENADE:
 		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), is_shadowed, 0);
@@ -1324,7 +1324,7 @@ colorRGBA get_plasma_color(float size) {
 }
 
 
-void draw_plasma(point const &pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time) {
+void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time) {
 
 	int const tmode(shpere_tex ? GL_SPHERE_MAP : GL_EYE_LINEAR);
 	colorRGBA const color(get_plasma_color(size + 0.5*(0.5 + 0.16*abs((time % 12) - 6))));
@@ -1335,7 +1335,7 @@ void draw_plasma(point const &pos, float radius, float size, int ndiv, int shper
 	draw_sphere_dlist(pos, size*radius, ndiv, 1);
 	glEnable(GL_LIGHTING);
 	disable_texgen();
-	if (gen_parts && !is_underwater(pos, 1) && (rand()&15) == 0) gen_particles(pos, 1);
+	if (gen_parts && !is_underwater(part_pos, 1) && (rand()&15) == 0) gen_particles(part_pos, 1);
 }
 
 

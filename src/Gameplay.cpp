@@ -1473,22 +1473,7 @@ void gamemode_fire_weapon() { // camera/player fire
 void add_laser_beam(laser_beam const &laser) {
 
 	lasers.push_back(laser);
-	if (!LASER_PATH_LIGHT) return;
-	float const size(0.4), step(0.2);
-	point p[2] = {laser.pts[0], laser.pts[1]};
-	
-	if (do_line_clip_scene(p[0], p[1], zbottom, max(ztop, czmax))) {
-		vector3d dir(p[1] - p[0]);
-		float const length(dir.mag());
-
-		if (length > TOLERANCE) {
-			dir /= length;
-
-			for (float d = 0.0; d < length; d += step) {
-				add_dynamic_light(size*CLIP_TO_01(sqrt(laser.intensity)), (p[0] + dir*d), RED);
-			}
-		}
-	}
+	if (LASER_PATH_LIGHT) add_line_light(laser.pts[0], laser.pts[1], RED, 0.4, min(1.0f, sqrt(laser.intensity)));
 }
 
 

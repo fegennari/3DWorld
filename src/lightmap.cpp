@@ -1252,6 +1252,20 @@ void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d co
 }
 
 
+void add_line_light(point const &p1, point const &p2, colorRGBA const &color, float size, float intensity) {
+
+	if (!animate2) return;
+	point p[2] = {p1, p2};
+	if (!do_line_clip_scene(p[0], p[1], zbottom, max(ztop, czmax))) return;
+	vector3d const dir(p[1] - p[0]);
+	float const length(dir.mag());
+
+	for (float d = 0.0; d <= length; d += 0.5*size) {
+		add_dynamic_light(size*intensity, (p[0] + dir*(d/max(length, TOLERANCE))), color);
+	}
+}
+
+
 void clear_dynamic_lights() { // slow for large lights
 
 	//if (!animate2) return;
@@ -1297,7 +1311,10 @@ bool dls_cell::check_add_light(unsigned ix) const {
 		float const radius2(ls2.get_radius());
 		if (radius2 < radius) continue; // shouldn't get here because of radius sort
 		if (!dist_less_than(ls.get_center(), ls2.get_center(), 0.2*max(HALF_DXY, radius))) continue;
-		ls2.add_color(ls.get_color());
+		colorRGBA color(ls.get_color());
+		float const rr(radius/radius2);
+		color.alpha *= rr*rr*rr; // scale by radius ratio cubed
+		ls2.add_color(color);
 		return 0;
 	}
 	return 1;
