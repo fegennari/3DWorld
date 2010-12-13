@@ -19,7 +19,7 @@ bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
-extern bool grass_wind;
+extern bool grass_wind, has_dir_lights;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[];
 extern vector3d wind;
@@ -436,8 +436,16 @@ public:
 		enable_dynamic_lights();
 
 		if (grass_wind) {
+#if 0 // per-pixel dynamic lighting - looks better, but slow
+			setup_enabled_lights(2); // L0-L1: static directional
+			set_bool_shader_prefix("has_dir_lights", has_dir_lights, 1); // FS
+			unsigned const p(set_shader_prog("ad_lighting.part*+wind.part+grass_pp_dl", "linear_fog.part+dynamic_lighting.part*+grass_with_dlights"));
+			setup_scene_bounds(p);
+			setup_dlight_textures(p);
+#else // per-vertex dynamic lighting, limited to 6 lights - faster
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
 			unsigned const p(set_shader_prog("ad_lighting.part*+wind.part+grass", "linear_fog.part+simple_texture"));
+#endif
 			setup_wind_for_shader(p);
 			setup_fog_scale(p);
 			add_uniform_float(p, "height", grass_length);

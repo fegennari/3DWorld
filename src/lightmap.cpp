@@ -1134,7 +1134,6 @@ void upload_dlights_textures() {
 	assert(lm_alloc && lmap_manager.vlmap);
 
 	// step 1: the light sources themselves
-	set_multitex(2); // texture unit 2
 	unsigned const max_dlights      = 1024; // must agree with value in shader
 	unsigned const floats_per_light = 12;
 	float dl_data[max_dlights*floats_per_light] = {0.0};
@@ -1163,7 +1162,6 @@ void upload_dlights_textures() {
 	}
 
 	// step 2: grid bag entries
-	set_multitex(3); // texture unit 3
 	vector<unsigned> gb_data(XY_MULT_SIZE, 0);
 	unsigned const elem_tex_sz = 256; // must agree with value in shader
 	unsigned const max_gb_entries(elem_tex_sz*elem_tex_sz);
@@ -1195,8 +1193,6 @@ void upload_dlights_textures() {
 	}
 
 	// step 3: grid bag(s)
-	set_multitex(4); // texture unit 4
-
 	if (gb_tid == 0) {
 		setup_2d_texture(gb_tid);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE32UI_EXT, MESH_X_SIZE, MESH_Y_SIZE, 0, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT, &gb_data.front()); // Nx x Ny
@@ -1219,6 +1215,23 @@ void upload_dlights_textures() {
 #endif
 	//PRINT_TIME("Dlight Texture Upload");
 	//cout << "ndl: " << ndl << ", elix: " << elix << ", gb_sz: " << XY_MULT_SIZE << endl;
+}
+
+
+void set_one_texture(unsigned p, unsigned tid, unsigned tu_id, const char *const name) {
+
+	set_multitex(tu_id); // texture unit
+	bind_2d_texture(tid);
+	add_uniform_int(p, name, tu_id);
+}
+
+
+void setup_dlight_textures(unsigned p) {
+
+	set_one_texture(p, dl_tid,   2, "dlight_tex");
+	set_one_texture(p, elem_tid, 3, "dlelm_tex");
+	set_one_texture(p, gb_tid,   4, "dlgb_tex");
+	//set_one_texture(p, flow_tid, 5, "flow_tex");
 }
 
 

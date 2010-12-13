@@ -3,6 +3,7 @@
 // 11/1/10
 #include "GL/glew.h"
 #include "3DWorld.h"
+#include "mesh.h" // for scene bounds
 #include <fstream>
 
 using namespace std;
@@ -177,6 +178,15 @@ void setup_enabled_lights(unsigned num) {
 			set_bool_shader_prefix((string("enable_light") + char('0'+i)), (enabled != 0), s);
 		}
 	}
+}
+
+
+void setup_scene_bounds(unsigned p) {
+
+	add_uniform_float(p, "x_scene_size", X_SCENE_SIZE);
+	add_uniform_float(p, "y_scene_size", Y_SCENE_SIZE);
+	add_uniform_float(p, "czmin", get_zval(0));
+	add_uniform_float(p, "czmax", get_zval(MESH_SIZE[2]));
 }
 
 

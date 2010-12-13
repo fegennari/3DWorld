@@ -1666,10 +1666,8 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	set_bool_shader_prefix("has_dir_lights", has_dir_lights, 1); // FS
 	setup_enabled_lights();
 	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "dynamic_lighting.part*+textured_with_smoke"));
-	add_uniform_int(p, "dlight_tex", 2);
-	add_uniform_int(p, "dlelm_tex",  3);
-	add_uniform_int(p, "dlgb_tex",   4);
-	//add_uniform_int(p, "flow_tex",   5);
+	setup_scene_bounds(p);
+	setup_dlight_textures(p);
 
 	if (smoke_tid) {
 		set_multitex(1);
@@ -1679,10 +1677,6 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	set_multitex(0);
 	add_uniform_int(p, "tex0", 0);
 	add_uniform_float(p, "min_alpha", min_alpha);
-	add_uniform_float(p, "x_scene_size", X_SCENE_SIZE);
-	add_uniform_float(p, "y_scene_size", Y_SCENE_SIZE);
-	add_uniform_float(p, "czmin", get_zval(0));
-	add_uniform_float(p, "czmax", get_zval(MESH_SIZE[2]));
 	add_uniform_float_array(p, "smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	add_uniform_float(p, "step_delta", HALF_DXY);
 	return change_fog_color(GRAY);
