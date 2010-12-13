@@ -716,7 +716,8 @@ void draw_group(obj_group &objg) {
 			if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 				setup_enabled_lights();
 				set_shader_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
-				unsigned const p(set_shader_prog("ad_lighting.part*+two_lights_no_xform", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3));
+				set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
+				unsigned const p(set_shader_prog("ads_lighting.part*+two_lights_no_xform", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3));
 				add_uniform_float(p, "size", 2.0*radius); // Note: size no longer depends on angle
 				add_uniform_int(p, "tex0", 0);
 				snow_pld.draw_and_clear();

@@ -436,15 +436,16 @@ public:
 		enable_dynamic_lights();
 
 		if (grass_wind) {
+			set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
 #if 0 // per-pixel dynamic lighting - looks better, but slow
 			setup_enabled_lights(2); // L0-L1: static directional
 			set_bool_shader_prefix("has_dir_lights", has_dir_lights, 1); // FS
-			unsigned const p(set_shader_prog("ad_lighting.part*+wind.part+grass_pp_dl", "linear_fog.part+dynamic_lighting.part*+grass_with_dlights"));
+			unsigned const p(set_shader_prog("ads_lighting.part*+wind.part+grass_pp_dl", "linear_fog.part+dynamic_lighting.part*+grass_with_dlights"));
 			setup_scene_bounds(p);
 			setup_dlight_textures(p);
 #else // per-vertex dynamic lighting, limited to 6 lights - faster
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
-			unsigned const p(set_shader_prog("ad_lighting.part*+wind.part+grass", "linear_fog.part+simple_texture"));
+			unsigned const p(set_shader_prog("ads_lighting.part*+wind.part+grass", "linear_fog.part+simple_texture"));
 #endif
 			setup_wind_for_shader(p);
 			setup_fog_scale(p);
@@ -458,6 +459,7 @@ public:
 		vert_norm_tc_color::set_vbo_arrays();
 		select_multitex(GRASS_BLADE_TEX, 0);
 		enable_blend();
+		set_specular(0.1, 10.0);
 		//glEnable(GL_POLYGON_SMOOTH);
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
@@ -466,6 +468,7 @@ public:
 		glDrawArrays(GL_TRIANGLES, 0, 3*grass.size());
 		glDisable(GL_COLOR_MATERIAL);
 		glEnable(GL_NORMALIZE);
+		set_specular(0.0, 1.0);
 		disable_blend();
 		glDisable(GL_ALPHA_TEST);
 		if (grass_wind) unset_shader_prog();
