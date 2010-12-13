@@ -209,8 +209,12 @@ void draw_trees_bl(vector<tree> &ts, bool lpos_change, bool draw_branches, bool 
 void set_leaf_shader(float min_alpha) {
 
 	setup_enabled_lights();
+#if 0 // wind on leaves
+	unsigned const p(set_shader_prog("tree_leaves", "linear_fog.part+simple_texture", "wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3));
+	setup_wind_for_shader(p);
+#else // no wind
 	unsigned const p(set_shader_prog("tree_leaves", "linear_fog.part+simple_texture"));
-	//setup_wind_for_shader(p);
+#endif
 	setup_fog_scale(p);
 	add_uniform_float(p, "min_alpha", min_alpha);
 	add_uniform_int(p, "tex0", 0);

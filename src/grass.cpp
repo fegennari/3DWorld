@@ -440,12 +440,12 @@ public:
 #if 0 // per-pixel dynamic lighting - looks better, but slow
 			setup_enabled_lights(2); // L0-L1: static directional
 			set_bool_shader_prefix("has_dir_lights", has_dir_lights, 1); // FS
-			unsigned const p(set_shader_prog("ads_lighting.part*+wind.part+grass_pp_dl", "linear_fog.part+dynamic_lighting.part*+grass_with_dlights"));
+			unsigned const p(set_shader_prog("ads_lighting.part*+wind.part*+grass_pp_dl", "linear_fog.part+dynamic_lighting.part*+grass_with_dlights"));
 			setup_scene_bounds(p);
 			setup_dlight_textures(p);
 #else // per-vertex dynamic lighting, limited to 6 lights - faster
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
-			unsigned const p(set_shader_prog("ads_lighting.part*+wind.part+grass", "linear_fog.part+simple_texture"));
+			unsigned const p(set_shader_prog("ads_lighting.part*+wind.part*+grass", "linear_fog.part+simple_texture"));
 #endif
 			setup_wind_for_shader(p);
 			setup_fog_scale(p);

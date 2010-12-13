@@ -17,7 +17,7 @@ void main()
 	vec3  wind  = normalize(vec3(wind_x, wind_y, 0.0));
 	float width = length(p1 - p0);
 	vec3 normal = normalize(cross((p1.xyz - p0.xyz), (p2.xyz - p0.xyz)));
-	float delta = width * abs(dot(wind, normal)) * get_wind_delta(p2.xyz);
+	float delta = width * abs(dot(wind, normal)) * get_wind_delta(p2.xyz, 1.0);
 	vec4 offset = vec4(delta*wind_x, delta*wind_y, 0.0, 0.0);
 	
 	gl_Position = p2 + offset;
