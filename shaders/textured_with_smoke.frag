@@ -22,7 +22,7 @@ void main()
 		vec3 dlp = clamp((dlpos - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
 		vec3 indir_light = texture3D(smoke_tex, sp.zxy).rgb; // add indir light color from texture
 		lit_color += gl_FrontMaterial.diffuse.rgb * indir_light; // indirect lighting
-		lit_color += add_dlights(dlp, off, scale, normal, dlpos, eye, x_scene_size); // dynamic lighting
+		if (enable_dlights) lit_color += add_dlights(dlp, off, scale, normal, dlpos, eye, x_scene_size); // dynamic lighting
 	}
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * gl_Color.a));

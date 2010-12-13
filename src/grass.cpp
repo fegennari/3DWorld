@@ -440,6 +440,7 @@ public:
 #if 0 // per-pixel dynamic lighting - looks better, but slow
 			setup_enabled_lights(2); // L0-L1: static directional
 			set_bool_shader_prefix("has_dir_lights", has_dir_lights, 1); // FS
+			set_bool_shader_prefix("enable_dlights", !dl_sources.empty(), 1); // FS
 			unsigned const p(set_shader_prog("ads_lighting.part*+wind.part*+grass_pp_dl", "linear_fog.part+dynamic_lighting.part*+grass_with_dlights"));
 			setup_scene_bounds(p);
 			setup_dlight_textures(p);

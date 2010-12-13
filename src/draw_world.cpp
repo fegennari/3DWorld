@@ -76,7 +76,7 @@ extern cube_t cur_smoke_bb;
 extern texture textures[];
 extern player_state *sstates;
 extern int coll_id[];
-extern vector<light_source> dynamic_lsources;
+extern vector<light_source> dl_sources;
 extern vector<point> waypoints;
 extern vector<portal> portals;
 
@@ -1665,6 +1665,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	set_bool_shader_prefix("keep_alpha",     keep_alpha,     1); // FS
 	set_bool_shader_prefix("do_lighting",    do_lighting,    1); // FS
 	set_bool_shader_prefix("has_dir_lights", has_dir_lights, 1); // FS
+	set_bool_shader_prefix("enable_dlights", !dl_sources.empty(), 1); // FS
 	setup_enabled_lights();
 	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "dynamic_lighting.part*+textured_with_smoke"));
 	setup_scene_bounds(p);
