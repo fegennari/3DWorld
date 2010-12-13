@@ -1665,7 +1665,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	set_bool_shader_prefix("do_lighting",    do_lighting,    1); // FS
 	set_bool_shader_prefix("has_dir_lights", has_dir_lights, 1); // FS
 	setup_enabled_lights();
-	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "textured_with_smoke"));
+	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "dynamic_lighting.part*+textured_with_smoke"));
 	add_uniform_int(p, "dlight_tex", 2);
 	add_uniform_int(p, "dlelm_tex",  3);
 	add_uniform_int(p, "dlgb_tex",   4);

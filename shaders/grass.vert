@@ -15,16 +15,14 @@ void main()
 	vec3 normal = gl_NormalMatrix * gl_Normal; // eye space (not normalized)
 	vec4 vertex = gl_Vertex;
 	
-	if (gl_TexCoord[0].s < 0.5) { // top vertex
-	//if ((gl_VertexID % 3) == 2) { // top vertex
-		// Note: grass motion amplitude should depend on dot(wind, gl_Normal), but the normal is incorrect
-		float delta = get_wind_delta(vertex.xyz) * height;
+	float motion_val = clamp((1.5 - 2.0*gl_TexCoord[0].s), 0.0, 1.0); // 1.0 for top vertex, 0.0 for bottom vertices
+	// Note: grass motion amplitude should depend on dot(wind, gl_Normal), but the normal is incorrect
+	float delta = get_wind_delta(vertex.xyz) * height * motion_val;
 		
-		// apply x/y delta but maintain the existing height
-		vec3 v = normalize(vec3(delta*wind_x, delta*wind_y, height)) * height;
-		v.z -= height;
-		vertex.xyz += v;
-	}
+	// apply x/y delta but maintain the existing height
+	vec3 v = normalize(vec3(delta*wind_x, delta*wind_y, height)) * height;
+	v.z   -= height;
+	vertex.xyz += v;
 	vec4 epos   = gl_ModelViewMatrix  * vertex;
 	gl_Position = gl_ProjectionMatrix * epos;
 	

@@ -1,70 +1,13 @@
 uniform float x_scene_size, y_scene_size, czmin, czmax; // scene bounds (world space)
 uniform float step_delta;
 uniform sampler2D tex0;
-uniform sampler3D smoke_tex, flow_tex;
-uniform sampler2D dlight_tex;
-uniform usampler2D dlelm_tex, dlgb_tex;
+uniform sampler3D smoke_tex;
 uniform float min_alpha = 0.0;
 
 // clipped eye position, clipped vertex position, starting vertex position
 varying vec3 eye, vpos, spos, dlpos, normal; // world space
 
-const float SMOKE_SCALE    = 0.25;
-const float LT_DIR_FALLOFF = 0.005;
-
-
-float get_dir_light_scale(in vec3 pos, in vec3 lpos, in vec3 dir, in float bwidth) {
-	vec3 obj_dir  = normalize(lpos - pos);
-	float dp      = dot(obj_dir, (2.0*dir - 1.0)); // map dir [0,1] to [-1,1]
-	float dp_norm = 0.5*(1.0 - dp); // dp = -1.0 to 1.0, bw = 0.0 to 1.0
-	return clamp(2.0*(dp_norm + bwidth + LT_DIR_FALLOFF - 1.0)/LT_DIR_FALLOFF, 0.0, 1.0);
-}
-
-float get_intensity_at(in vec3 pos, in vec3 lpos, in float radius) { // Note: doesn't handle the radius==0 case
-	float rscale = max(0.0, (radius - distance(pos, lpos)))/radius;
-	return rscale*rscale; // quadratic 1/r^2 attenuation
-}
-
-// determine light transmission to this fragment using flow_tex
-float get_flow_val(in vec3 fpos, in vec3 lpos, in vec3 off, in vec3 scale) {
-	// write - nontrivial, really need a better intersection data structure, voxel grid is too coarse
-	return 1.0;
-}
-
-vec3 add_dlights(in vec3 pos, in vec3 off, in vec3 scale) {
-	vec3 color  = vec3(0,0,0);
-	uint gb_ix  = texture2D(dlgb_tex, pos.xy).r; // get grid bag element index range (uint32)
-	uint st_ix  = (gb_ix & 0xFFFFU);
-	uint end_ix = ((gb_ix >> 16U) & 0xFFFFU);
-	const uint elem_tex_sz = 256;  // must agree with value in C++ code, or can use textureSize()
-	const uint max_dlights = 1024; // must agree with value in C++ code, or can use textureSize()
-	
-	for (uint i = st_ix; i < end_ix; ++i) { // iterate over grid bag elements
-		uint dl_ix  = texelFetch(dlelm_tex,  ivec2((i%elem_tex_sz), (i/elem_tex_sz)), 0).r; // get dynamic light index (uint16)
-		vec4 lpos_r = texelFetch(dlight_tex, ivec2(0, dl_ix), 0); // light center, radius
-		lpos_r.xyz *= scale; // convert from [0,1] back into world space
-		lpos_r.xyz += off;
-		lpos_r.w   *= x_scene_size;
-		//if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case
-		vec4 lcolor     = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
-		lcolor.rgb     *= 10.0; // unscale color
-		float intensity = get_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
-		
-		if (has_dir_lights) {
-			vec4 dir_w = texelFetch(dlight_tex, ivec2(2, dl_ix), 0); // light direction, beamwidth
-			intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
-		}
-		//intensity *= get_flow_val(spos, lpos_r.xyz, off, scale);
-		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
-		vec3 half_vect = normalize(normalize(eye - dlpos) + light_dir); // Eye + L
-		float diff_mag = max(0.0, dot(normal, light_dir)); // diffuse
-		float spec_mag = pow(max(dot(normal, half_vect), 0.0), gl_FrontMaterial.shininess);
-		color += lcolor.rgb * (gl_FrontMaterial.specular.rgb*spec_mag + vec3(1,1,1)*diff_mag) * (lcolor.a * intensity);
-		color  = clamp(color, 0.0, 1.0);
-	}
-	return color;
-}
-
+const float SMOKE_SCALE = 0.25;
 
 // Note: This may seem like it can go into the vertex shader as well,
 //       but we don't have the tex0 value there and can't determine the full init color
@@ -79,7 +22,7 @@ void main()
 		vec3 dlp = clamp((dlpos - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
 		vec3 indir_light = texture3D(smoke_tex, sp.zxy).rgb; // add indir light color from texture
 		lit_color += gl_FrontMaterial.diffuse.rgb * indir_light; // indirect lighting
-		lit_color += add_dlights(dlp, off, scale); // dynamic lighting
+		lit_color += add_dlights(dlp, off, scale, normal, dlpos, eye, x_scene_size); // dynamic lighting
 	}
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * gl_Color.a));
