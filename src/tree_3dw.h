@@ -146,6 +146,7 @@ public:
 	void process_cylins(tree_cylin const *const cylins, unsigned num);
 	void create_leaves_and_one_branch_array();
 	void add_leaves_to_cylin(tree_cylin const &cylin, float tsize);
+	void mark_leaf_changed(unsigned i);
 	void copy_color(colorRGB const &color, unsigned i);
 	void change_leaf_color(colorRGBA &base_color, unsigned i);
 	void shift_tree(vector3d const &vd);

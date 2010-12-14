@@ -52,7 +52,6 @@ extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 
 
 void gen_scenery_deterministic();
-void set_leaf_shader(float min_alpha);
 
 inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
 

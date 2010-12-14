@@ -250,6 +250,15 @@ void draw_trees(vector<tree> &ts) {
 }
 
 
+void tree::mark_leaf_changed(unsigned i) {
+
+	// Note: could keep track of the min/max changed leaf index and update a sub-range,
+	//       but removing leaves will swap/resize the leaf data and invalidate the ranges,
+	//       and many range updates may actually be slower than a full update
+	leaves_changed = 1;
+}
+
+
 void tree::copy_color(colorRGB const &color, unsigned i) {
 
 	assert(i < leaf_data.size());
@@ -261,7 +270,7 @@ void tree::copy_color(colorRGB const &color, unsigned i) {
 		assert((unsigned)leaves[i].coll_index < coll_objects.size());
 		coll_objects[leaves[i].coll_index].cp.color = colorRGBA(color).modulate_with(texture_color(tree_types[type].leaf_tex));
 	}
-	leaves_changed = 1;
+	mark_leaf_changed(i);
 }
 
 
@@ -293,7 +302,7 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 		for (unsigned j = 0; j < 4; ++j) { // shift vertex array (last one is now invalid)
 			leaf_data[j+i4] = leaf_data[j+tnl4];
 		}
-		leaves_changed = 1;
+		mark_leaf_changed(i);
 	}
 }
 
@@ -661,9 +670,9 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 				leaves[i].color = min(1.0f, (l.color + LEAF_HEAL_RATE*fticks));
 				copy_color(l.calc_leaf_color(leaf_color, base_color), i);
 			}
-			reset_leaves   = 1; // Do we want to update the normals and collision objects as well?
-			leaves_changed = 1;
-		}
+			reset_leaves = 1; // Do we want to update the normals and collision objects as well?
+			mark_leaf_changed(i);
+		} // for i
 	}
 	if (gen_arrays || leaf_color_changed) { // process leaf colors
 		for (unsigned i = 0; i < nleaves; i++) {
@@ -676,8 +685,6 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 		for (unsigned i = 0; i < nleaves; i++) {
 			tree_leaf &l(leaves[i]);
 			l.shadow_bits = 0;
-			// update colors based on ambient occlusion
-			//float const c_scale(CLIP_TO_01(p2p_dist(l.pts[0], sphere_center)/sphere_radius)), n_scale(1.0/a_scale);
 
 			for (unsigned j = 0; j < 4; ++j) {
 				bool const shadowed(l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1));
@@ -695,13 +702,12 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 		if (leaf_vbo == 0) {
 			leaf_vbo = create_vbo();
 			assert(leaf_vbo > 0);
-			leaves_changed = 1;
-		}
-		bind_vbo(leaf_vbo);
-
-		if (leaves_changed) {
+			bind_vbo(leaf_vbo);
 			upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride);
-			leaves_changed = 0;
+		}
+		else {
+			bind_vbo(leaf_vbo);
+			if (leaves_changed) upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride);
 		}
 		vert_norm_tc_color::set_vbo_arrays(draw_as_points ? 4 : 1);
 	}
@@ -736,6 +742,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 	glDisable(GL_ALPHA_TEST);
 	set_lighted_sides(1);
 	if (leaf_vbo > 0) bind_vbo(0);
+	leaves_changed = 0;
 }
 
 

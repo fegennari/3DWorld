@@ -1465,9 +1465,10 @@ void delete_hmv_shape();
 void add_shape_coll_objs();
 void shift_hmv(vector3d const &vd);
 
-// function prototypes - tree + sm_tree (see also tree.h)
+// function prototypes - tree + sm_tree (see also tree_3dw.h)
 void mult_leaf_points_by(float val);
 int get_tree_type_from_height(float zpos);
+void set_leaf_shader(float min_alpha);
 
 // function prototypes - csg
 void get_cube_points(const float d[3][2], point pts[8]);

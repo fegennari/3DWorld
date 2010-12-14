@@ -482,6 +482,7 @@ void draw_group(obj_group &objg) {
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 		glNormal3f(0.0, 1.0, 0.0);
+		//set_leaf_shader(0.75); // Note: needs colors, but we set a/d lighting for shadows
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject const &obj(objg.get_obj(j));
@@ -524,6 +525,7 @@ void draw_group(obj_group &objg) {
 			glEnd();
 			glPopMatrix();
 		}
+		//unset_shader_prog();
 		//glDisable(GL_TEXTURE_2D);
 		disable_blend();
 		set_specular(0.0, 1.0);
