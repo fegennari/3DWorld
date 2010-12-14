@@ -1058,17 +1058,20 @@ bool upload_smoke_3d_texture() {
 	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
+	lmcell default_lmc;
+	default_lmc.v = 1.0;
+	UNROLL_3X(default_lmc.ac[i_] = 1.0;)
 	
 	for (unsigned y = y_start; y < y_end; ++y) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			lmcell const *const vlm(lmap_manager.vlmap[y][x]);
-			if (vlm == NULL) continue; // x/y pairs that get into here should also be constant
+			if (vlm == NULL && !full_update) continue; // x/y pairs that get into here should also be constant
 			unsigned const off(zsize*(y*MESH_X_SIZE + x));
 			float const zthresh(is_mesh_disabled(x, y) ? czmin : mesh_height[y][x]);
 
 			for (unsigned z = 0; z < zsize; ++z) {
 				unsigned const off2(ncomp*(off + z));
-				lmcell const &lmc(vlm[z]);
+				lmcell const &lmc((vlm == NULL) ? default_lmc : vlm[z]);
 
 				if (full_update) {
 					bool const bad(get_zval(z+1) < zthresh); // adjust by one because GPU will interpolate the texel

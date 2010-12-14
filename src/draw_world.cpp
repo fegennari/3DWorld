@@ -2231,12 +2231,10 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 void draw_smoke() {
 
 	if (part_clouds.empty()) return; // Note: just because part_clouds is empty doesn't mean there is any enabled smoke
-	bool const use_shaders(1);
 	set_color(BLACK);
-	colorRGBA orig_fog_color;
-	if (use_shaders) orig_fog_color = setup_smoke_shaders(0.01, 0, 1, 0); // too slow, smoke is very overlapping/high fill rate
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.01, 0, 1, 0));
 	draw_part_cloud(part_clouds, WHITE, 0);
-	if (use_shaders) end_smoke_shaders(orig_fog_color);
+	end_smoke_shaders(orig_fog_color);
 }
 
 
