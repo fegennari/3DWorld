@@ -237,7 +237,9 @@ void draw_trees(vector<tree> &ts) {
 		if (lpos_change) update_cobj_tree();
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
+		colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 0, 0, 0, 1));
 		draw_trees_bl(ts, lpos_change, 1, 0); // branches
+		end_smoke_shaders(orig_fog_color);
 		set_leaf_shader(0.75);
 		draw_trees_bl(ts, lpos_change, 0, 1); // leaves
 		unset_shader_prog();
@@ -474,6 +476,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 	set_fill_mode();
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
+	BLACK.do_glColor();
 
 	if (use_vbos) { // draw with branch vbos
 		unsigned const numcylin(all_cylins.size());

@@ -15,14 +15,21 @@ void main()
 {
 	vec3 off   = vec3(-x_scene_size, -y_scene_size, czmin);
 	vec3 scale = vec3(2.0*x_scene_size, 2.0*y_scene_size, (czmax - czmin));
-	vec3 lit_color  = gl_Color.rgb; // base color (with some lighting)
+	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
+	vec3 normal2   = normalize(normal); // renormalize
 	
-	if (do_lighting) {
-		vec3 sp  = clamp((spos  - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
-		vec3 dlp = clamp((dlpos - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+	if (indir_lighting) {
+		vec3 sp    = clamp((spos  - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
 		vec3 indir_light = texture3D(smoke_tex, sp.zxy).rgb; // add indir light color from texture
 		lit_color += gl_FrontMaterial.diffuse.rgb * indir_light; // indirect lighting
-		if (enable_dlights) lit_color += add_dlights(dlp, off, scale, normal, dlpos, eye, x_scene_size); // dynamic lighting
+	}
+	if (direct_lighting) {
+		if (enable_light0) lit_color += add_light_comp(normal2, 0).rgb;
+		if (enable_light1) lit_color += add_light_comp(normal2, 1).rgb;
+	}
+	if (enable_dlights) {
+		vec3 dlp   = clamp((dlpos - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+		lit_color += add_dlights(dlp, off, scale, normal2, dlpos, eye, x_scene_size); // dynamic lighting
 	}
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * gl_Color.a));

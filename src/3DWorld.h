@@ -997,7 +997,7 @@ colorRGBA const &get_landmine_light_color(int time);
 float get_landmine_sensor_height(float radius, int time);
 colorRGBA get_plasma_color(float size);
 void get_enabled_lights();
-colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool do_lighting);
+colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting);
 void end_smoke_shaders(colorRGBA const &orig_fog_color);
 void draw_coll_surfaces(bool draw_solid, bool draw_trans);
 void draw_stars(float alpha);

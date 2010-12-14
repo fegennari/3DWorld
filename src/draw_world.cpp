@@ -1658,16 +1658,17 @@ colorRGBA change_fog_color(colorRGBA const &new_color) {
 }
 
 
-colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool do_lighting) {
+colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting) {
 
-	set_bool_shader_prefix("use_texgen",     use_texgen,     0); // VS
-	set_bool_shader_prefix("smoke_enabled",  smoke_exists,   0); // VS
-	set_bool_shader_prefix("keep_alpha",     keep_alpha,     1); // FS
-	set_bool_shader_prefix("do_lighting",    do_lighting,    1); // FS
-	set_bool_shader_prefix("has_dir_lights", has_dir_lights, 1); // FS
-	set_bool_shader_prefix("enable_dlights", !dl_sources.empty(), 1); // FS
+	set_bool_shader_prefix("use_texgen",      use_texgen,      0); // VS
+	set_bool_shader_prefix("smoke_enabled",   smoke_exists,    0); // VS
+	set_bool_shader_prefix("keep_alpha",      keep_alpha,      1); // FS
+	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
+	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
+	set_bool_shader_prefix("has_dir_lights",  has_dir_lights,  1); // FS
+	set_bool_shader_prefix("enable_dlights",  !dl_sources.empty(), 1); // FS
 	setup_enabled_lights();
-	unsigned const p(set_shader_prog("ads_lighting.part*+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "dynamic_lighting.part*+textured_with_smoke"));
+	unsigned const p(set_shader_prog("texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "ads_lighting.part*+dynamic_lighting.part*+textured_with_smoke"));
 	setup_scene_bounds(p);
 	setup_dlight_textures(p);
 
@@ -1730,7 +1731,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		upload_smoke_3d_texture();
 		upload_dlights_textures();
 	}
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 1, 0, 1));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 1, 0, 1, 0)); // Note: enable direct_lighting if processing sun/moon shadows here
 	int last_tid(-1);
 	
 	if (draw_solid && have_drawn_cobj) {
@@ -2232,7 +2233,7 @@ void draw_smoke() {
 
 	if (part_clouds.empty()) return; // Note: just because part_clouds is empty doesn't mean there is any enabled smoke
 	set_color(BLACK);
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.01, 0, 1, 0));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.01, 0, 1, 0, 0));
 	draw_part_cloud(part_clouds, WHITE, 0);
 	end_smoke_shaders(orig_fog_color);
 }
@@ -2340,7 +2341,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	order_vect_t order;
 	get_draw_order(objs, order);
 	if (order.empty()) return;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.04, 0, 1, 0));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.04, 0, 1, 0, 0));
 	enable_blend();
 	set_color(BLACK);
 	glDisable(GL_LIGHTING);
