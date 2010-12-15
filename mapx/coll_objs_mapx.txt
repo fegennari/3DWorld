@@ -364,7 +364,7 @@ l 0.7 0.95 0.95 0.95 0.25 -1 1 1.55 # semi-transparent glass
 
 # specular windows are slower because they can't use dlists,
 # and they're so transparent that the specular reflections are almost invisible
-#r 0.9 100.0 # set specularity
+r 0.9 100.0 # set specularity
 # z1,z2,y1,y2,x1,x2: 1 2 4 8 16 32, small x: 15, small y: 51, small z: 60
 y 0.2
 e 51
@@ -390,9 +390,10 @@ D 0.0 0.0 0.6  3 # 1-4
 e 15
 B -7.43  -7.42  -5.3    5.8   0.1  0.4  # F
 D 0.0 0.0 0.6  3 # 1-4
+r 0.0 1.0 # reset specularity
 
 # skylights
-#r 0.9 100.0 # set specularity
+r 0.9 100.0 # set specularity
 e 60
 B -1.5   -0.2   -5.3   -4.0   2.32  2.37  # A
 B -7.3   -6.0    4.5    5.8   2.805 2.855 # B

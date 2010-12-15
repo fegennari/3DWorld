@@ -508,9 +508,11 @@ y 1.0
 # Windows
 a 3 # destroyable/shatterable to portal
 l 0.7 1.0 1.0 1.0 0.6 8 1 1.55 # Glass Block
+r 0.8 90.0 # set specularity
 e 15
 B -1.78 -1.72 -1.21 -0.99 0.34 0.56
 e 0
+r 0.0 1.0 # reset specularity
 a 0 # non-destroyable
 
 # Back Porch
