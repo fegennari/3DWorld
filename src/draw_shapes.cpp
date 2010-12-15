@@ -869,7 +869,6 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	assert(rsize > 0.0);
 	bool const tri(npts == 3);
 	float const subdiv_size_inv2(1.0/L1_SUBDIV_SIZE); // do LOD here???
-	bool const is_black(q.color.red == 0.0 && q.color.green == 0.0 && q.color.blue == 0.0);
 	bool const use_norms(normals0 != NULL); // for quadrics: spheres and cylinders
 	unsigned shifti(0);
 	point pts[4];
@@ -979,6 +978,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	// 2. Must not be part of a quadric (too many LODs)
 	float const spec[2] = {c_obj.cp.specular, c_obj.cp.shine};
 	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !q.is_quadric && !has_d_shad);
+	bool const is_black(c_obj.cp.specular == 0.0 && q.color.red == 0.0 && q.color.green == 0.0 && q.color.blue == 0.0);
 	bool const no_subdiv(no_shadow_edge || is_black);
 	unsigned lod_level(1);
 	float lod_scale(1.0);

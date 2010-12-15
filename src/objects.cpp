@@ -329,7 +329,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid) { // non-const: modifies sha
 	// so if there is no texture specified just use a plain white texture
 	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
 	float const ar(get_tex_ar(tid));
-	bool const no_lighting(cp.color == BLACK/*&& cp.specular == 0.0*/);
+	bool const no_lighting(cp.color == BLACK && cp.specular == 0.0);
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 	set_specular(cp.specular, cp.shine);
 	set_color_d(cp.color); // set material ambient and diffuse
