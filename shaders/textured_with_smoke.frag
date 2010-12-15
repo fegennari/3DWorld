@@ -6,6 +6,7 @@ uniform float min_alpha = 0.0;
 
 // clipped eye position, clipped vertex position, starting vertex position
 varying vec3 eye, vpos, spos, dlpos, normal; // world space
+varying vec3 eye_norm;
 
 const float SMOKE_SCALE = 0.25;
 
@@ -16,7 +17,6 @@ void main()
 	vec3 off   = vec3(-x_scene_size, -y_scene_size, czmin);
 	vec3 scale = vec3(2.0*x_scene_size, 2.0*y_scene_size, (czmax - czmin));
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
-	vec3 normal2   = normalize(normal); // renormalize
 	
 	if (indir_lighting) {
 		vec3 sp    = clamp((spos  - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
@@ -24,12 +24,13 @@ void main()
 		lit_color += gl_FrontMaterial.diffuse.rgb * indir_light; // indirect lighting
 	}
 	if (direct_lighting) {
-		if (enable_light0) lit_color += add_light_comp(normal2, 0).rgb;
-		if (enable_light1) lit_color += add_light_comp(normal2, 1).rgb;
+		vec3 n = normalize(eye_norm);
+		if (enable_light0) lit_color += add_light_comp(n, 0).rgb;
+		if (enable_light1) lit_color += add_light_comp(n, 1).rgb;
 	}
 	if (enable_dlights) {
 		vec3 dlp   = clamp((dlpos - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
-		lit_color += add_dlights(dlp, off, scale, normal2, dlpos, eye, x_scene_size); // dynamic lighting
+		lit_color += add_dlights(dlp, off, scale, normalize(normal), dlpos, eye, x_scene_size); // dynamic lighting
 	}
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * gl_Color.a));

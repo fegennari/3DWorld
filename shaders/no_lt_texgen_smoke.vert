@@ -1,6 +1,7 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta;
 varying vec3 eye, vpos, spos, dlpos, normal;
+varying vec3 eye_norm;
 
 void main()
 {
@@ -12,7 +13,8 @@ void main()
 	}	
 	gl_Position = ftransform();
 	gl_FrontColor = gl_Color;
-	normal = normalize(gl_Normal);
+	normal   = normalize(gl_Normal);
+	eye_norm = normalize(gl_NormalMatrix * gl_Normal);
 	
 	dlpos = gl_Vertex.xyz;
 	spos  = gl_Vertex.xyz + (0.25*step_delta)*normal; // move slightly away from the vertex
