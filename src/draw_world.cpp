@@ -21,7 +21,6 @@ bool const SHOW_DRAW_TIME       = 0;
 bool const NO_SHRAP_DLIGHT      = 1; // looks cool with dynamic lights, but very slow
 bool const SHOW_WAYPOINTS       = 0;
 bool const FASTER_SHADOWS       = 0;
-bool const TEST_DYN_GLOBAL_LT   = 0;
 unsigned const MAX_CFILTERS     = 10;
 unsigned const SHAD_NOBJ_THRESH = 200;
 float const NDIV_SCALE          = 1.6;
@@ -53,7 +52,7 @@ pt_line_drawer obj_pld, snow_pld;
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
 extern int nstars, is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode;
-extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS, litning_dynamic;
+extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
 extern unsigned smoke_tid;
 extern float zmin, light_factor, water_plane_z, fticks, perspective_fovy, perspective_nclip;
@@ -1620,41 +1619,6 @@ void get_enabled_lights() {
 			//cout << "D: "; lcolor.print(); cout << endl;
 		}
 	}
-	if (l_strike.enabled && litning_dynamic) {
-		bool const dynamic(0);
-		enabled_lights.push_back(light_source(8.0*LITNING_LINEAR_I, litning_pos, LITN_C, dynamic));
-	}
-	if (TEST_DYN_GLOBAL_LT /*&& (display_mode & 0x10)*/) {
-		static point lpos(0.5, -0.5, 0.2);
-		static vector3d lvel(zero_vector);
-		bool const dynamic(1);
-
-		if (dynamic && animate2) {
-			vadd_rand(lvel, 0.0001);
-			lvel.set_max_mag(0.1f);
-			lpos += lvel*fticks;
-			float const lzmin(max(zbottom, czmin));
-			
-			if (lpos.z < lzmin) {
-				lpos.z = lzmin;
-				lvel.z = max(0.0f, lvel.z);
-			}
-		}
-		enabled_lights.push_back(light_source(7.5, lpos, BLUE, dynamic));
-		set_color(BLUE);
-		draw_sphere_at(lpos, 0.1, N_SPHERE_DIV);
-	}
-	if (0) { // testing
-		unsigned const cid(coll_id[BALL]), num(obj_groups[cid].max_objects());
-		bool const dynamic(0);
-
-		for (unsigned i = 0; i < num && enabled_lights.size() < 8; ++i) {
-			dwobject const &obj(obj_groups[cid].get_obj(i));
-			if (!obj.disabled()) enabled_lights.push_back(light_source(5.0, obj.pos, BLUE, dynamic));
-		}
-	}
-	assert(enabled_lights.size() <= 8); // uses bits in an unsigned char
-
 	if (ncomp > 0) {
 		cur_ambient      *= (0.5 + 0.5/ncomp); // only really valid for sun and moon
 		cur_ambient.alpha = 1.0;

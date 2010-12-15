@@ -24,7 +24,7 @@ int vmatrix_valid(0);
 float L_STRENGTH_MULT, L_DAMAGE_MULT;
 point litning_pos;
 
-extern int is_cloudy, game_mode, world_mode, ocean_set, iticks, DISABLE_WATER, animate2, litning_dynamic;
+extern int is_cloudy, game_mode, world_mode, ocean_set, iticks, DISABLE_WATER, animate2;
 extern float zmin, temperature, lt_green_int, water_plane_z, ztop, fticks;
 extern point ocean;
 extern vector<valley> valleys;
@@ -310,12 +310,12 @@ void lightning::draw() const {
 
 	//glEnable(GL_LIGHT2);
 	float const lscale(LITNING_LINEAR_I);
-	bool const add_light(!litning_dynamic && animate2), smooth_lightning(0);
+	bool const add_light(animate2), smooth_lightning(1);
 	if (smooth_lightning) {glEnable(GL_LINE_SMOOTH); enable_blend();}
 
 	for (unsigned i = 0; i < path.size(); ++i) {
 		assert(!path[i].points.empty());
-		if (add_light) add_dynamic_light(0.6*path[i].width*lscale, path[i].points.back(), LITN_C);
+		if (animate2) add_dynamic_light(0.6*path[i].width*lscale, path[i].points.back(), LITN_C);
 		path[i].draw();
 	}
 	if (add_light) add_dynamic_light(7.8*lscale, litning_pos, LITN_C);

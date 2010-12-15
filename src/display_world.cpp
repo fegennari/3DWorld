@@ -38,8 +38,8 @@ float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
 
-extern bool nop_frame, combined_gu, have_sun, use_stencil_shadows, clear_landscape_vbo;
-extern int auto_time_adv, flight, reset_timing, enable_fsource, run_forward, used_objs, show_lightning;
+extern bool nop_frame, combined_gu, have_sun, use_stencil_shadows, clear_landscape_vbo, show_lightning;
+extern int auto_time_adv, flight, reset_timing, enable_fsource, run_forward, used_objs;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, disable_inf_terrain;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, brightness;
 extern float water_h_off;
