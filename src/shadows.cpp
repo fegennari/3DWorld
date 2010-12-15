@@ -527,7 +527,7 @@ int polygon_shadow(point const *points, vector3d const &norm, int npoints, float
 				else { // test planar (2D) polygon
 					float t;
 					if (line_poly_intersect(pt, lpos, points, npoints, norm, t)) {
-						if (tid < 0 || !is_billboard_texture_transparent(points, (pt + v1*t), tid)) shadowed = 1;
+						if (tid < 0 || npoints != 4 || !is_billboard_texture_transparent(points, (pt + v1*t), tid)) shadowed = 1;
 					}
 				}
 				if (shadowed) shadow_mask[l][i][j] |= SHADOW_TYPE;

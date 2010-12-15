@@ -1092,6 +1092,7 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 void draw_simple_polygon(point const *const points, int npoints, vector3d const &norm);
 void draw_simple_extruded_polygon(float thick, point const *const points, int npoints);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
+void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
 void draw_quads_from_pts(vector<vert_norm> const &points);
 void free_dlists();
 void setup_dlists();

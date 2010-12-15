@@ -970,6 +970,16 @@ void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride) { // strid
 }
 
 
+void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // stride is in floats
+
+	for (unsigned i = 0, off = 0; i < num; i++) { // 01 00 10 11 for every quad
+		tdata[off] = -0.5; tdata[off+1] =  1.0; off += stride;
+		tdata[off] =  0.5; tdata[off+1] = -1.0; off += stride;
+		tdata[off] =  1.5; tdata[off+1] =  1.0; off += stride;
+	}
+}
+
+
 void draw_quads_from_pts(vector<vert_norm> const &points) {
 
 	if (points.empty()) return;
