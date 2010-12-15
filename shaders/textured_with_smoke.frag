@@ -7,8 +7,11 @@ uniform float min_alpha = 0.0;
 // clipped eye position, clipped vertex position, starting vertex position
 varying vec3 eye, vpos, spos, dlpos, normal; // world space
 varying vec3 eye_norm;
+varying float light_scale[8];
 
 const float SMOKE_SCALE = 0.25;
+
+#define ADD_LIGHT(i) lit_color += light_scale[i] * add_light_comp(n, i).rgb
 
 // Note: This may seem like it can go into the vertex shader as well,
 //       but we don't have the tex0 value there and can't determine the full init color
@@ -23,10 +26,16 @@ void main()
 		vec3 indir_light = texture3D(smoke_tex, sp.zxy).rgb; // add indir light color from texture
 		lit_color += gl_FrontMaterial.diffuse.rgb * indir_light; // indirect lighting
 	}
-	if (direct_lighting) {
+	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(eye_norm);
-		if (enable_light0) lit_color += add_light_comp(n, 0).rgb;
-		if (enable_light1) lit_color += add_light_comp(n, 1).rgb;
+		if (enable_light0) ADD_LIGHT(0);
+		if (enable_light1) ADD_LIGHT(1);
+		if (enable_light2) ADD_LIGHT(2);
+		if (enable_light3) ADD_LIGHT(3);
+		if (enable_light4) ADD_LIGHT(4);
+		if (enable_light5) ADD_LIGHT(5);
+		if (enable_light6) ADD_LIGHT(6);
+		if (enable_light7) ADD_LIGHT(7);
 	}
 	if (enable_dlights) {
 		vec3 dlp   = clamp((dlpos - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range

@@ -997,7 +997,8 @@ colorRGBA const &get_landmine_light_color(int time);
 float get_landmine_sensor_height(float radius, int time);
 colorRGBA get_plasma_color(float size);
 void get_enabled_lights();
-colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting);
+void set_shadowed_state(unsigned char shadowed);
+colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool smoke_en);
 void end_smoke_shaders(colorRGBA const &orig_fog_color);
 void draw_coll_surfaces(bool draw_solid, bool draw_trans);
 void draw_stars(float alpha);
@@ -1515,7 +1516,6 @@ void upload_dlights_textures();
 void setup_dlight_textures(unsigned p);
 bool is_shadowed_lightmap(point const &p);
 bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
-void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed, vector3d const &norm, float const spec[2], bool no_dynamic);
 void get_sd_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec);
 

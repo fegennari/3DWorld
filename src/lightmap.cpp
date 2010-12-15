@@ -97,8 +97,9 @@ bool is_under_mesh(point const &p) {
 
 
 // radius == 0.0 is really radius == infinity (no attenuation)
-light_source::light_source(float sz, point const &p, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri) :
-	dynamic(id), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius), r_inner(ri), bwidth(bw), center(p), dir(d.get_norm()), color(c)
+light_source::light_source(float sz, point const &p, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, int gl_id) :
+	dynamic(id), gl_light_id(gl_id), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
+	r_inner(ri), bwidth(bw), center(p), dir(d.get_norm()), color(c)
 {
 	assert(bw > 0.0 && bw <= 1.0);
 	calc_cent();
@@ -1027,7 +1028,7 @@ void distribute_smoke() { // called at most once per frame
 }
 
 
-bool upload_smoke_3d_texture() {
+bool upload_smoke_3d_texture() { // and indirect lighting information
 
 	//RESET_TIME;
 	if (lmap_manager.vlmap == NULL) return 0;
@@ -1541,30 +1542,5 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 	UNROLL_3X(a[i_] *= (cscale[i_]*val + ls[i_]);) // unroll the loop
 	return val;
 }
-
-
-void get_vertex_color(colorRGBA &a, colorRGBA const &c, point const &p, unsigned char shadowed,
-					  vector3d const &norm, float const spec[2], bool no_dynamic)
-{
-	a = colorRGBA(0.0, 0.0, 0.0, c.alpha); // cur_ambient alpha is 1.0
-	if (c == BLACK) return;
-	unsigned const num_lights(enabled_lights.size());
-	
-	for (unsigned i = 0; i < num_lights; ++i) { // add in diffuse + specular components
-		if (shadowed & (1 << i)) continue;
-		light_source const &lt(enabled_lights[i]);
-		float const lmag(lt.get_intensity_at(p));
-		if (lmag == 0.0) continue;
-		vector3d const dir(lt.get_center(), p);
-		float const dp(dot_product(norm, dir));
-		if (dp <= 0.0) continue;
-		colorRGBA const &lsc(lt.get_color()); // ignoring a's alpha for now
-		float const mag(lmag*(dp*InvSqrt(dir.mag_sq()) + add_specular(p, dir, norm, spec)));
-		UNROLL_3X(a[i_] += mag*c[i_]*lsc[i_];)
-	}
-	a.set_valid_color();
-}
-
-
 
 

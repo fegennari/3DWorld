@@ -310,7 +310,7 @@ void lightning::draw() const {
 
 	//glEnable(GL_LIGHT2);
 	float const lscale(LITNING_LINEAR_I);
-	bool const add_light(animate2), smooth_lightning(1);
+	bool const smooth_lightning(1);
 	if (smooth_lightning) {glEnable(GL_LINE_SMOOTH); enable_blend();}
 
 	for (unsigned i = 0; i < path.size(); ++i) {
@@ -318,7 +318,7 @@ void lightning::draw() const {
 		if (animate2) add_dynamic_light(0.6*path[i].width*lscale, path[i].points.back(), LITN_C);
 		path[i].draw();
 	}
-	if (add_light) add_dynamic_light(7.8*lscale, litning_pos, LITN_C);
+	if (animate2) add_dynamic_light(7.8*lscale, litning_pos, LITN_C);
 	if (smooth_lightning) {disable_blend(); glDisable(GL_LINE_SMOOTH);}
 }
 

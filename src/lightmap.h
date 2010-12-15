@@ -58,6 +58,7 @@ public:
 class light_source { // size = 64
 
 	bool dynamic;
+	char gl_light_id;
 	float radius, radius_inv, r_inner, bwidth;
 	CELL_LOC_T cent[3];
 	point center;
@@ -66,7 +67,7 @@ class light_source { // size = 64
 
 public:
 	light_source() {}
-	light_source(float sz, point const &p, colorRGBA const &c, bool id, vector3d const &d=plus_z, float bw=1.0, float ri=0.0);
+	light_source(float sz, point const &p, colorRGBA const &c, bool id, vector3d const &d=plus_z, float bw=1.0, float ri=0.0, int gl_id=-1);
 	void calc_cent();
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
@@ -81,6 +82,7 @@ public:
 	bool is_visible()     const;
 	bool is_directional() const {return (bwidth < 1.0);}
 	bool is_dynamic()     const {return dynamic;}
+	int  get_light_id()   const {assert(gl_light_id >= 0); return gl_light_id;}
 	void shift_by(vector3d const &vd);
 	void combine_with(light_source const &l);
 	void draw(int ndiv) const;

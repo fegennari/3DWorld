@@ -333,6 +333,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid) { // non-const: modifies sha
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 	set_specular(cp.specular, cp.shine);
 	set_color_d(cp.color); // set material ambient and diffuse
+	colorRGBA(0.0, 0.0, 0.0, cp.color.alpha).do_glColor();
 
 	if (tid != last_tid) {
 		bool const textured(select_texture(tid));

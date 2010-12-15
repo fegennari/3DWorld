@@ -215,13 +215,12 @@ struct pt_pair { // size = 28
 };
 
 
-struct vertex_t : public color_wrapper { // size = 28
+struct vertex_t { // size = 24
 
 	point p;
 	vector3d n;
 
 	void draw() const {
-		glColor4ubv(c);
 		n.do_glNormal();
 		p.do_glVertex();
 	}
@@ -235,18 +234,12 @@ inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d 
 }
 
 
-void draw_verts(vector<vertex_t> &verts, unsigned const *ix, int npts, unsigned char shadowed, dqd_params const &p) {
+void draw_verts(vector<vertex_t> const &verts, unsigned const *ix, int npts, unsigned char shadowed, dqd_params const &p) {
 
 	for (int i = 0; i < npts; ++i) { // much of the frame time is spent here
 		assert(ix[i] < verts.size());
-		vertex_t &v(verts[ix[i]]);
-		
-		if (v.c[3] == 0) { // Note: shadowed should agree across all uses of this vertex
-			colorRGBA color;
-			get_vertex_color(color, p.color, v.p, shadowed, v.n, p.spec, p.in_dlist);
-			v.set_c4(color);
-		}
-		v.draw();
+		set_shadowed_state(shadowed);
+		verts[ix[i]].draw();
 	}
 	nverts += npts;
 	++nsurfaces;
@@ -565,7 +558,7 @@ struct vert_color_comp {
 };
 
 
-unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &p, bool &in_strip) {
+unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_params &p, bool &in_strip) {
 
 	if (!VERTEX_LIGHTING) return ALL_LT[2]; // all unshadowed
 	++nquads;
@@ -775,8 +768,6 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 	if (in_strip) {glEnd(); in_strip = 0;}
 	//if (p.in_dlist) {} // create some textures instead of drawing - QD_TAG_TEXTURE
 	bool const more_strips(!p.in_dlist && has_dynamic && scaled_view_dist(get_camera_pos(), pts[0]) <= DIST_CUTOFF);
-	static vert_color_comp ccomps[256]; // doesn't have to be static
-	bool created[256] = {0};
 
 	// render the quads - is there a way to render these using a single textured quad?
 	for (unsigned s0 = 0; s0 < n0; s0 += step[0]) {
@@ -815,19 +806,7 @@ unsigned draw_quad_div(vector<vertex_t> &verts, unsigned const *ix, dqd_params &
 					vector3d const n(p.use_n ? interpolate_3d(normals, npts, s_[i], t_) : p.normal);
 					point const v(pos[i] + p.dirs[1]*(s1*scale[i])); // dirs[1] => p[3] - p[0]
 					unsigned char const shadowed(nvals[(i ? o1 : o0)+s1]);
-
-					if (!created[shadowed]) {
-						vert_color_comp &cc(ccomps[shadowed]);
-						created[shadowed] = 1;
-
-						for (unsigned r = 0; r < npts; ++r) {
-							get_vertex_color(cc.c[r], p.color, pts[r], shadowed, normals[r], p.spec, p.in_dlist);
-						}
-					}
-					vert_color_comp const &cc(ccomps[shadowed]);
-					colorRGBA a(interpolate_3d(cc.c, npts, s_[i], t_));
-					a.alpha = INTERP_1D(cc.c, s_[i], t_, npts, .alpha);
-					a.do_glColor4ubv();
+					set_shadowed_state(shadowed);
 					n.do_glNormal();
 					v.do_glVertex();
 				}
@@ -945,20 +924,20 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	}
 	vector3d const norm(use_norms ? get_center(normals, npts) : normal);
 	bool const bf_test(!no_shadow_edge && !double_sided);
-	bool back_facing(bf_test), dg_lights(0), has_d_shad(0);
+	bool back_facing(bf_test), has_d_shad(0);
 	unsigned char shad(0);
 
-	for (unsigned L = 0; L < num_lights; ++L) {
-		if (!enabled_lights[L].lights_polygon(pos, rsize)) continue;
-		bool const bf(dot_product_ptv(norm, enabled_lights[L].get_center(), pos) <= 0.0);
-		if (!bf && enabled_lights[L].is_dynamic()) dg_lights = 1;
-		if (!bf_test) continue;
+	if (bf_test) {
+		for (unsigned L = 0; L < num_lights; ++L) {
+			assert(!enabled_lights[L].is_dynamic());
+			if (!enabled_lights[L].lights_polygon(pos, rsize)) continue;
 
-		if (bf) { // back facing
-			shad |= (1 << L);
-		}
-		else {
-			back_facing = 0;
+			if (dot_product_ptv(norm, enabled_lights[L].get_center(), pos) <= 0.0) { // back facing
+				shad |= (1 << L);
+			}
+			else {
+				back_facing = 0;
+			}
 		}
 	}
 	if (back_facing) no_shadow = no_shadow_edge = 1; // back facing to all light sources
@@ -997,12 +976,9 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	}
 	// Requirements for using a display list:
 	// 1. Must have no dynamic shadows
-	// 2. Must have no dynamic lights
-	// 3. Must not be both specular and lit
-	// 4. Must not be part of a quadric (too many LODs)
+	// 2. Must not be part of a quadric (too many LODs)
 	float const spec[2] = {c_obj.cp.specular, c_obj.cp.shine};
-	bool const is_specular(spec[0] > 0.0 && !back_facing && require_any_lightval(all_lighted, 2, 3)); // can relax this if we move lighting onto the GPU
-	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !is_specular && !q.is_quadric && !dg_lights && !has_d_shad);
+	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !q.is_quadric && !has_d_shad);
 	bool const no_subdiv(no_shadow_edge || is_black);
 	unsigned lod_level(1);
 	float lod_scale(1.0);
@@ -1059,9 +1035,8 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 
 		for (unsigned s1 = 0; s1 < nv1; ++s1) {
 			unsigned const ix(s0*nv1 + s1);
-			verts[ix].c[3] = 0; // initialize
-			verts[ix].p    = pt + vs*s1;
-			verts[ix].n    = (use_norms ? interpolate_3d(normals, npts, s1*ninv[1], s0*ninv[0]) : normal);
+			verts[ix].p = pt + vs*s1;
+			verts[ix].n = (use_norms ? interpolate_3d(normals, npts, s1*ninv[1], s0*ninv[0]) : normal);
 		}
 	}
 	if (no_subdiv) {
@@ -1303,10 +1278,11 @@ bool camera_behind_polygon(point const *const points, int npoints, bool &cbf) {
 	point const center(get_center(points, npoints)), camera(get_camera_pos());
 	vector3d const dirs[2] = {vector3d(points[1], points[0]), vector3d(points[npoints-1], points[0])};
 	vector3d const normal(cross_product(dirs[0], dirs[1]));
+	float const rsize(max(dirs[0].mag(), dirs[1].mag()));
 	cbf = (dot_product_ptv(normal, camera, center) >= 0.0);
 
 	for (unsigned L = 0; L < enabled_lights.size(); ++L) {
-		if (!enabled_lights[L].lights_polygon(center, max(dirs[0].mag(), dirs[1].mag()))) continue;
+		if (!enabled_lights[L].lights_polygon(center, rsize)) continue;
 		bool const lbf(dot_product_ptv(normal, enabled_lights[L].get_center(), center) >= 0.0);
 		if (!(lbf ^ cbf)) return 0; // camera is on the opposite side of the polygon as all lights
 	}
