@@ -183,14 +183,14 @@ struct dqd_params {
 	unsigned n[2], lod_level, num_internal, num_subdiv, all_lighted;
 	float spec[2], len[2], ninv[2];
 	vector3d dirs[2];
-	unsigned char all_shad, all_unshad;
+	unsigned char all_shad, all_unshad, en_lt_bits;
 	bool in_dlist, all_int_surf, no_shadow_calc, use_n;
 
-	dqd_params(dqt_params const &q, int tr, int sub_tri, vector3d const &norm, quad_div const &qd_,
+	dqd_params(dqt_params const &q, int tr, int sub_tri, vector3d const &norm, unsigned char elb, quad_div const &qd_,
 		vector<vector<int> > const &s, bool idl, float const sp[2], unsigned ll, unsigned ns, unsigned al, bool nsc, bool usen) :
-	    double_sided(q.double_sided), cobj(q.cobj), tri(tr), ts_x(q.ts_x), ts_y(q.ts_y), t_tx(q.t_tx), t_ty(q.t_ty),
-		origin(q.origin), normal(norm), color(q.color), qd(qd_), stest(s), lod_level(ll), num_internal(0), num_subdiv(ns),
-		all_lighted(al), all_shad(0xFF), all_unshad(0xFF), in_dlist(idl), all_int_surf(1), no_shadow_calc(nsc), use_n(usen)
+	    double_sided(q.double_sided), cobj(q.cobj), tri(tr), ts_x(q.ts_x), ts_y(q.ts_y), t_tx(q.t_tx), t_ty(q.t_ty), origin(q.origin),
+		normal(norm), color(q.color), qd(qd_), stest(s), lod_level(ll), num_internal(0), num_subdiv(ns), all_lighted(al),
+		all_shad(0xFF), all_unshad(0xFF), en_lt_bits(elb), in_dlist(idl), all_int_surf(1), no_shadow_calc(nsc), use_n(usen)
 	{
 		spec[0] = sp[0]; spec[1] = sp[1];
 	}
@@ -419,7 +419,7 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 		unsigned cur_lighted(get_light_val(old_val.status, L));
 		static vector<int> cobjs;
 		cobjs.resize(0);
-		bool const visible(enabled_lights[L].lights_polygon(center, rsize, (p.double_sided ? NULL : &p.normal)));
+		bool const visible((p.en_lt_bits & (1 << L)) && enabled_lights[L].lights_polygon(center, rsize));
 
 		if (cur_lighted == 3) { // partially shadowed cached old value
 			assert(old_val.nvals);
@@ -552,12 +552,6 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 }
 
 
-struct vert_color_comp {
-
-	colorRGBA c[4];
-};
-
-
 unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_params &p, bool &in_strip) {
 
 	if (!VERTEX_LIGHTING) return ALL_LT[2]; // all unshadowed
@@ -683,8 +677,8 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 			assert(L < p.stest.size());
 			unsigned const num_spheres(p.stest[L].size());
 			if (num_spheres == 0) continue;
-			if (cur_lighted == 1 || cur_lighted == 4)                        continue; // already shadowed or hidden
-			if (!enabled_lights[L].lights_polygon(center, rsize, &p.normal)) continue;
+			if (cur_lighted == 1 || cur_lighted == 4) continue; // already shadowed or hidden
+			if (!(p.en_lt_bits & (1 << L)) || !enabled_lights[L].lights_polygon(center, rsize)) continue;
 			point const &lpos(enabled_lights[L].get_center());
 			vector3d const v1(center, lpos);
 
@@ -924,19 +918,21 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	vector3d const norm(use_norms ? get_center(normals, npts) : normal);
 	bool const bf_test(!no_shadow_edge && !double_sided);
 	bool back_facing(bf_test), has_d_shad(0);
-	unsigned char shad(0);
+	unsigned char shad(0), en_lt_bits(0);
 
-	if (bf_test) {
-		for (unsigned L = 0; L < num_lights; ++L) {
-			assert(!enabled_lights[L].is_dynamic());
-			if (!enabled_lights[L].lights_polygon(pos, rsize)) continue;
+	for (unsigned L = 0; L < num_lights; ++L) {
+		assert(!enabled_lights[L].is_dynamic());
+		if (!enabled_lights[L].lights_polygon(pos, rsize)) continue;
+		vector3d const dir(enabled_lights[L].get_center() - pos);
+		float const dp(use_norms ? max(max(dot_product(normals[0], dir), dot_product(normals[1], dir)),
+			max(dot_product(normals[2], dir), dot_product(normals[3], dir))) : dot_product(norm, dir));
 
-			if (dot_product_ptv(norm, enabled_lights[L].get_center(), pos) <= 0.0) { // back facing
-				shad |= (1 << L);
-			}
-			else {
-				back_facing = 0;
-			}
+		if (!double_sided && dp <= 0.0) { // back facing
+			shad |= (1 << L);
+		}
+		else {
+			en_lt_bits |= (1 << L); // only this needs to be computed when bf_test == 1
+			back_facing = 0;
 		}
 	}
 	if (back_facing) no_shadow = no_shadow_edge = 1; // back facing to all light sources
@@ -947,7 +943,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		if (q.stest.size() == num_lights) { // nonempty dynamic shadow objects
 			for (unsigned L = 0; L < num_lights; ++L) {
 				vector<int> const &qstest(q.stest[L]);
-				if (qstest.empty() || !enabled_lights[L].lights_polygon(pos, rsize, &normal)) continue;
+				if (qstest.empty() || !(en_lt_bits & (1 << L))) continue;
 				point const &lpos(enabled_lights[L].get_center());
 
 				for (unsigned s = 0; s < qstest.size(); ++s) { // find all potential sphere intersections
@@ -1024,7 +1020,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	bool in_strip(0), occluded(0);
 	unsigned const num_subdiv(n[0]*n[1]);
 	quad_div qd(dim, dir, QD_TAG_QUAD, face, shift_bits);
-	dqd_params params(q, tri, 0, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+	dqd_params params(q, tri, 0, normal, en_lt_bits, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
 	unsigned const nv0(n[0]+1), nv1(n[1]+1);
 	static vector<vertex_t> verts;
 	verts.resize(nv0*nv1);
@@ -1081,7 +1077,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 				if (s0 < n[0]-1) { // not a single triangle at the top
 					qd.tag |=  QD_TAG_TRIANGLE;
 					unsigned const ixs2[4] = {ixs[0], ixs[2], ixs[3], ixs[3]};
-					dqd_params params_tri(q, tri, 1, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+					dqd_params params_tri(q, tri, 1, normal, en_lt_bits, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
 					lighted = draw_quad_div(verts, ixs2, params_tri, tri_begin);
 					params.inherit_flags_from(params_tri);
 					qd.tag &= ~QD_TAG_TRIANGLE;
@@ -1095,7 +1091,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 					}
 				}
 				ixs[3] = ixs[2]; // have to recompute since dir is not constant due to scale
-				dqd_params params2(q, tri, 0, normal, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+				dqd_params params2(q, tri, 0, normal, en_lt_bits, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
 				lighted = draw_quad_div(verts, ixs, params2, tri_begin);
 				if (!tri_begin) {glBegin(GL_TRIANGLES); tri_begin = 1;}
 				params.inherit_flags_from(params2);

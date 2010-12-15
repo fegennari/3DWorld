@@ -11,6 +11,9 @@ varying float light_scale[8];
 
 const float SMOKE_SCALE = 0.25;
 
+// Note: dynamic point lights use reflection vector for specular, and specular doesn't move when the eye rotates
+//       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
+// FIXME: which is correct?
 #define ADD_LIGHT(i) lit_color += light_scale[i] * add_light_comp(n, i).rgb
 
 // Note: This may seem like it can go into the vertex shader as well,
