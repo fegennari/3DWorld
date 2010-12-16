@@ -44,7 +44,7 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 float msms2(1.0);
 
 
-extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, DISABLE_WATER;
+extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, DISABLE_WATER, draw_model;
 extern long rseed1, rseed2;
 extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, max_water_height, fticks;
 extern GLUquadricObj* quadric;
@@ -689,7 +689,7 @@ public:
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.9);
 			(pltype[type].leafc*color_scale).do_glColor();
-			select_texture(pltype[type].tid);
+			select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
 			set_lighted_sides(2);
 			if (points.empty()) gen_points();
 			draw_quads_from_pts(points);

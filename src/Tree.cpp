@@ -727,7 +727,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 	set_lighted_sides(2);
 	set_specular(0.1, 10.0);
 	set_fill_mode();
-	if (!draw_as_points) select_texture(tree_types[type].leaf_tex); // what about texture color mod?
+	if (!draw_as_points) select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
 	glPushMatrix();
 	translate_to(sphere_center);
 	uniform_scale(scale);
