@@ -105,7 +105,11 @@ void lightning::gen() {
 	}
 	int const rnum(int(fticks*LIGHTNING_FREQ));
 
-	if (rnum <= 1 || rand()%rnum != 0) {
+	if (!animate2) {
+		draw();
+		return;
+	}
+	if (rnum <= 1 || (rand()%rnum) != 0) {
 		if (enabled == 1) {
 			if (time < int(fticks*((float)LITNING_TIME))) {
 				draw();
@@ -116,10 +120,6 @@ void lightning::gen() {
 				enabled = 0;
 			}
 		}
-		return;
-	}
-	if (!animate2) {
-		draw();
 		return;
 	}
 	compute_volume_matrix_if_invalid();
