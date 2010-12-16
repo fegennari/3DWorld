@@ -2230,7 +2230,7 @@ void draw_smoke() {
 
 	if (part_clouds.empty()) return; // Note: just because part_clouds is empty doesn't mean there is any enabled smoke
 	set_color(BLACK);
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.01, 0, 1, 0, 0, 1, 1));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.01, 0, 1, 0, 0, 0, 1));
 	draw_part_cloud(part_clouds, WHITE, 0);
 	end_smoke_shaders(orig_fog_color);
 }
