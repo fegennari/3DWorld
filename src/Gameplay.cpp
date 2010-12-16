@@ -2367,7 +2367,7 @@ void update_game_frame() {
 		if (state.powerup >= 0 && state.powerup_time > 0 && obj_enabled) {
 			add_dynamic_light(1.3, pos, get_powerup_color(state.powerup));
 		}
-		if (SMILEY_GAS && game_mode == 1 && obj_enabled && state.powerup == PU_SHIELD && state.powerup_time > INIT_PU_SH_TIME && !(rand()&3)) {
+		if (SMILEY_GAS && game_mode == 1 && obj_enabled && state.powerup == PU_SHIELD && state.powerup_time > INIT_PU_SH_TIME && !(rand()&31)) {
 			vector3d const dir(get_sstate_dir(i)), vel(state.velocity*0.5 - dir*1.2);
 			point const spos(pos - dir*get_sstate_radius(i)); // generate gas
 			gen_arb_smoke(spos, DK_GREEN, vel, rand_uniform(0.01, 0.05), rand_uniform(0.3, 0.7), rand_uniform(0.2, 0.6), 10.0, i, 0);
