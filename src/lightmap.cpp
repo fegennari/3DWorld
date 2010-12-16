@@ -1331,7 +1331,7 @@ bool dls_cell::check_add_light(unsigned ix) const {
 		if (!dist_less_than(ls.get_center(), ls2.get_center(), 0.2*max(HALF_DXY, radius))) continue;
 		colorRGBA color(ls.get_color());
 		float const rr(radius/radius2);
-		color.alpha *= rr*rr*rr; // scale by radius ratio cubed
+		color.alpha *= rr*rr; // scale by radius ratio squared
 		ls2.add_color(color);
 		return 0;
 	}
@@ -1375,7 +1375,7 @@ void add_dynamic_lights() {
 		}
 		first = 0;
 		int const xsize(bnds[0][1]-bnds[0][0]), ysize(bnds[1][1]-bnds[1][0]);
-		int const radius((max(xsize, ysize)>>1)+1), rsq(radius*radius);
+		int const radius((max(xsize, ysize)>>1)+2), rsq(radius*radius);
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			int const y_sq((y-ycent)*(y-ycent));
