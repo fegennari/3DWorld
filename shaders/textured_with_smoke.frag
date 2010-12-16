@@ -1,4 +1,3 @@
-uniform float x_scene_size, y_scene_size, czmin, czmax; // scene bounds (world space)
 uniform float step_delta;
 uniform sampler2D tex0;
 uniform sampler3D smoke_tex;
@@ -40,10 +39,7 @@ void main()
 		if (enable_light6) ADD_LIGHT(6);
 		if (enable_light7) ADD_LIGHT(7);
 	}
-	if (enable_dlights) {
-		vec3 dlp   = clamp((dlpos - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
-		lit_color += add_dlights(dlp, off, scale, normalize(normal), dlpos, eye, x_scene_size); // dynamic lighting
-	}
+	if (enable_dlights) lit_color += add_dlights(dlpos, normalize(normal), eye); // dynamic lighting
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * gl_Color.a));
 	if (keep_alpha && color.a <= min_alpha) discard;

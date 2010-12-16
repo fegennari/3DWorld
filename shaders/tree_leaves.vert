@@ -44,9 +44,8 @@ void main()
 	
 	// Compute the globalAmbient term
 	vec4 color = gl_Color * gl_LightModel.ambient;
-	
 	if (enable_light0) color += add_light_comp(shadowed, normal, eye_space_pos, 0);
 	if (enable_light1) color += add_light_comp(shadowed, normal, eye_space_pos, 1);
-	gl_FrontColor   = color;
+	gl_FrontColor   = clamp(color, 0.0, 1.0);
 	gl_FogFragCoord = length(eye_space_pos.xyz);
 } 

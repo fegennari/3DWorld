@@ -10,6 +10,7 @@ Completed:
 10a. Fires/Scorch Marks Smoke Effects: VS/FS - see 14
 10b. Smoke Puffs Smoke Effects: VS/FS - OK with smaller smoke puffs
 17. Dynamic Lighting of Cobjs: FS
+16a. Static Light Sources for Cobjs: FS - specular in nicer
 
 Not Implementable/Too Difficult or Inefficient
 3. Grass Effects/Regen (crush, burn, cut, update z): GS - requires state
@@ -17,10 +18,9 @@ Not Implementable/Too Difficult or Inefficient
 6. Water Reflections: VS/FS - too inefficient per fragment, too complex per vertex
 7. Mesh Texturing: FS - too complex and inefficient, not worth the memor savings (for now)
 8. Mesh Underwater Caustics: FS - requires global solution, dependent on other effects
+1. Leaf Wind: GS - state too difficult, too slow, can't use quads, fill rate of 2x too high if using triangles for leaves
 
 Todo:
-1. Leaf Wind: GS
-* Implement without state, like grass
 
 10. Smoke/Clouds/Fires: VS/FS, or GS using billboards
 * Render smoke and cloud particles and/or fires faster or with better
@@ -39,11 +39,10 @@ quality/blending/lighting
 + Better quality and more realistic
 - Need to figure out procedural noise (generation on GPU or texture)
 
-16. Static Light Sources/Shadows for Cobjs: FS
-* Static lighting calc with shadows, maybe as a texture
-+ Better quality of shadows and specular
+16b. Static Light Sources/Shadows for Cobjs: FS
+* Add smoother/higher res shadows, maybe as a texture
++ Better quality of shadows
 + No need to subdivide shadowed/unshadowed quads/tris
-- Need to send shadow information to the GPU per quad/vertex, which is slow
 - Shadows as textures may be too expensive to manage (too many small textures)
 
 17b. Dynamic Light Occlusion/Shadows: FS
