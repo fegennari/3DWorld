@@ -1715,8 +1715,29 @@ int load_config(string const &config_file) {
 }
 
 
+#if 0
+#include <omp.h>
+ 
+ void open_mp_test() {
+   int th_id, nthreads;
+   #pragma omp parallel private(th_id)
+   {
+     th_id = omp_get_thread_num();
+     printf("Hello World from thread %d\n", th_id);
+     #pragma omp barrier
+     if ( th_id == 0 ) {
+       nthreads = omp_get_num_threads();
+       printf("There are %d threads\n",nthreads);
+     }
+   }
+ }
+#endif
+
+
+
 int main(int argc, char** argv) {
 
+	//open_mp_test(); // testing
 	cout << "Starting 3DWorld."; cout.flush();
 	int rs(1);
 	if (argc == 2) read_ueventlist(argv[1]);
