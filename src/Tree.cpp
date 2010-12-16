@@ -217,6 +217,7 @@ void set_leaf_shader(float min_alpha) {
 #endif
 	setup_fog_scale(p);
 	add_uniform_float(p, "min_alpha", min_alpha);
+	set_multitex(0);
 	add_uniform_int(p, "tex0", 0);
 }
 

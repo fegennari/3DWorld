@@ -779,6 +779,9 @@ void display(void) {
 			}
 			check_gl_error(6);
 			if (TIMETEST) PRINT_TIME("4");
+			setup_object_render_data();
+			check_gl_error(101);
+			if (TIMETEST) PRINT_TIME("4.5");
 			
 			if (display_mode & 0x01) { // draw mesh
 				display_mesh();
@@ -1011,6 +1014,8 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	}
 	//if (!camera_view) camera_shadow(camera);
 	if (TIMETEST) PRINT_TIME("3.2");
+	setup_object_render_data();
+	if (TIMETEST) PRINT_TIME("3.25");
 
 	if (display_mode & 0x01) {
 		zmin2 = display_mesh3(NULL);

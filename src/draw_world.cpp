@@ -1646,6 +1646,13 @@ void set_shadowed_state(unsigned char shadowed) {
 }
 
 
+void set_dlights_booleans(int shader_type) {
+
+	set_bool_shader_prefix("has_dir_lights",  has_dir_lights,      shader_type);
+	set_bool_shader_prefix("enable_dlights",  !dl_sources.empty(), shader_type);
+}
+
+
 colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool smoke_en) {
 
 	set_bool_shader_prefix("use_texgen",      use_texgen,      0); // VS
@@ -1653,8 +1660,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	set_bool_shader_prefix("keep_alpha",      keep_alpha,      1); // FS
 	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
 	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
-	set_bool_shader_prefix("has_dir_lights",  has_dir_lights,  1); // FS
-	set_bool_shader_prefix("enable_dlights",  !dl_sources.empty(), 1); // FS
+	set_dlights_booleans(1); // FS
 	setup_enabled_lights(8);
 	unsigned const p(set_shader_prog("texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "ads_lighting.part*+dynamic_lighting.part*+textured_with_smoke"));
 	setup_scene_bounds(p);
@@ -1685,27 +1691,32 @@ void end_smoke_shaders(colorRGBA const &orig_fog_color) {
 }
 
 
+void setup_object_render_data() {
+
+	RESET_TIME;
+	bool const TIMETEST(0);
+	get_enabled_lights(); // don't call twice per frame - can have problems with lightning
+	init_subdiv_lighting();
+	init_draw_stats();
+	if (TIMETEST) {PRINT_TIME("Init");}
+	distribute_smoke();
+	upload_smoke_3d_texture();
+	if (TIMETEST) {PRINT_TIME("Distribute Smoke");}
+	add_dynamic_lights();
+	upload_dlights_textures();
+	if (TIMETEST) {PRINT_TIME("Add Dlights");}
+	add_coll_shadow_objs();
+	if (TIMETEST) {PRINT_TIME("Add Shadows");}
+	get_occluders();
+	if (TIMETEST) {PRINT_TIME("Get Occluders");}
+}
+
+
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
 	RESET_TIME;
 	if (coll_objects.empty() || world_mode != WMODE_GROUND) return;
-	bool const TIMETEST(0);
-
-	if (draw_solid) { // called first
-		get_enabled_lights(); // don't call twice per frame - can have problems with lightning
-		init_subdiv_lighting();
-		init_draw_stats();
-		if (TIMETEST) {PRINT_TIME("Init");}
-		distribute_smoke();
-		if (TIMETEST) {PRINT_TIME("Distribute Smoke");}
-		add_dynamic_lights();
-		if (TIMETEST) {PRINT_TIME("Add Dlights");}
-		add_coll_shadow_objs();
-		if (TIMETEST) {PRINT_TIME("Add Shadows");}
-		get_occluders();
-		if (TIMETEST) {PRINT_TIME("Get Occluders");}
-	}
 	static vector<pair<float, int> > draw_last;
 	set_lighted_sides(2);
 	set_fill_mode();
@@ -1717,11 +1728,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
-
-	if (draw_solid) { // first pass
-		upload_smoke_3d_texture();
-		upload_dlights_textures();
-	}
 	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 1, 0, 1, 1, 1)); // Note: enable direct_lighting if processing sun/moon shadows here
 	int last_tid(-1);
 	
@@ -1771,7 +1777,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_specular(0.0, 1.0);
 
 	if (draw_solid) {
-		if (TIMETEST) {PRINT_TIME("Final Draw");}
+		//PRINT_TIME("Final Draw");
 		show_draw_stats();
 	}
 }
