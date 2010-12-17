@@ -208,12 +208,13 @@ void draw_trees_bl(vector<tree> &ts, bool lpos_change, bool draw_branches, bool 
 
 void set_leaf_shader(float min_alpha) {
 
-	setup_enabled_lights();
+	set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
+	setup_enabled_lights(2);
 #if 0 // wind on leaves
-	unsigned const p(set_shader_prog("tree_leaves", "linear_fog.part+simple_texture", "wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3));
+	unsigned const p(set_shader_prog("ads_lighting.part*+tree_leaves", "linear_fog.part+simple_texture", "wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3));
 	setup_wind_for_shader(p);
 #else // no wind
-	unsigned const p(set_shader_prog("tree_leaves", "linear_fog.part+simple_texture"));
+	unsigned const p(set_shader_prog("ads_lighting.part*+tree_leaves", "linear_fog.part+simple_texture"));
 #endif
 	setup_fog_scale(p);
 	add_uniform_float(p, "min_alpha", min_alpha);
@@ -597,16 +598,12 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 		gen_quad_tex_coords(&(leaf_data.front().t[0]), nleaves, leaf_stride/sizeof(float));
 	}
 	unsigned nl(nleaves);
-	float scale(1.0);
-
-	if (ENABLE_CLIP_LEAVES) {
-		nl = min(nl, max((nl/8), unsigned((use_vbos ? 4.0 : 2.0)*nl*mscale/dist_cs))); // leaf LOD
-		if (ENABLE_CLIP_LEAVES == 2) scale = pow(((double)nl)/((double)nleaves), (double)-0.333); // 1/(size^(-1/3))
-	}
+	if (ENABLE_CLIP_LEAVES) nl = min(nl, max((nl/8), unsigned((use_vbos ? 4.0 : 2.0)*nl*mscale/dist_cs))); // leaf LOD
+	
 	if (gen_arrays || (reset_leaves && !leaf_dynamic_en)) {
 		for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
 			for (unsigned j = 0; j < 4; ++j) {
-				leaf_data[j+(i<<2)].v = leaves[i].pts[j] - sphere_center;
+				leaf_data[j+(i<<2)].v = leaves[i].pts[j];
 				leaf_data[j+(i<<2)].n = leaves[i].norm*leaves[i].get_norm_scale(j);
 			}
 		}
@@ -659,7 +656,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 			point const p2((l.pts[0] + l.pts[3])*0.5); // base
 			vector3d const orig_dir(p1 - p2); // vector from base to tip
 			vector3d const new_dir(orig_dir*cos(angle) + l.norm*(orig_dir.mag()*sin(angle))); // s=orig_dir.get_norm(), t=l.norm
-			vector3d const delta((new_dir - orig_dir) - sphere_center);
+			vector3d const delta(new_dir - orig_dir);
 			leaf_data[(i<<2)+1].v = l.pts[1] + delta;
 			leaf_data[(i<<2)+2].v = l.pts[2] + delta;
 			vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
@@ -724,17 +721,15 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 	}
+	unsigned const num_dlights(enable_dynamic_lights(sphere_center, sphere_radius));
+	add_uniform_int(0, "num_dlights", num_dlights);
 	set_lighted_sides(2);
 	set_specular(0.1, 10.0);
 	set_fill_mode();
 	if (!draw_as_points) select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
-	glPushMatrix();
-	translate_to(sphere_center);
-	uniform_scale(scale);
 	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
 	glDrawArrays((draw_as_points ? GL_POINTS : GL_QUADS), 0, (draw_as_points ? 1 : 4)*nl);
-	glPopMatrix();
 	glDisable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
 	glDisable(GL_TEXTURE_2D);
@@ -742,6 +737,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 	set_specular(0.0, 1.0);
 	glDisable(GL_ALPHA_TEST);
 	set_lighted_sides(1);
+	disable_dynamic_lights(num_dlights);
 	if (leaf_vbo > 0) bind_vbo(0);
 	leaves_changed = 0;
 }
@@ -854,22 +850,10 @@ void tree::create_leaves_and_one_branch_array() {
 	}
 	max_leaves = max(max_leaves, unsigned(leaves.size()));
 
-	if (ENABLE_CLIP_LEAVES == 2) {
-		for (unsigned i = 0; i < leaves.size(); i++) {
-			leaves[i].pts[0] -= sphere_center;
-		}
-		sort(leaves.begin(), leaves.end(), comp_leaf);
-
-		for (unsigned i = 0; i < leaves.size(); i++) {
-			leaves[i].pts[0] += sphere_center;
-		}
-	}
-	else {
-		/*for (unsigned i = 0; i < leaves.size(); ++i) { // scramble leaves so that LOD is unbiased/randomly sampled
-			swap(leaves[i], leaves[(i + 1572869)%leaves.size()]);
-		}*/
-		reverse(leaves.begin(), leaves.end()); // order leaves so that LOD removes from the center first, which is less noticeable
-	}
+	/*for (unsigned i = 0; i < leaves.size(); ++i) { // scramble leaves so that LOD is unbiased/randomly sampled
+		swap(leaves[i], leaves[(i + 1572869)%leaves.size()]);
+	}*/
+	reverse(leaves.begin(), leaves.end()); // order leaves so that LOD removes from the center first, which is less noticeable
 	if (!leaves.empty()) damage_scale = 1.0/leaves.size();
 }
 

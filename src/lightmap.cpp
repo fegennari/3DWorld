@@ -1561,8 +1561,9 @@ unsigned enable_dynamic_lights(point const center, float radius) {
 		if (ls_radius == 0.0) continue; // not handling zero radius lights yet
 		if (radius > 0.0 && !dist_less_than(center, ls_center, (radius + ls_radius))) continue;
 		if (!sphere_in_camera_view(ls_center, ls_radius, 0)) continue;
-		float const weight(p2p_dist(ls_center, camera)/ls_radius);
-		vis_lights.push_back(make_pair(weight, i));
+		float weight(p2p_dist(ls_center, camera)); // distance from light to camera
+		if (radius > 0.0) weight += p2p_dist(ls_center, center); // distance from light to object center
+		vis_lights.push_back(make_pair(weight/ls_radius, i));
 	}
 	sort(vis_lights.begin(), vis_lights.end());
 	unsigned const num_dlights(min(vis_lights.size(), MAX_LIGHTS));
@@ -1576,9 +1577,6 @@ unsigned enable_dynamic_lights(point const center, float radius) {
 		glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
 		glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 6.0/(ls.get_radius()*ls.get_radius()));
 		set_gl_light_pos(gl_light, ls.get_center(), 1.0); // point light source position
-	}
-	for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {
-		glEnable(i);
 	}
 	return num_dlights;
 }

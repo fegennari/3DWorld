@@ -1,4 +1,6 @@
-vec4 add_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in int i) {
+uniform int num_dlights = 0;
+
+vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in int i) {
 
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 lightDir = normalize(gl_LightSource[i].position.xyz);
@@ -44,8 +46,13 @@ void main()
 	
 	// Compute the globalAmbient term
 	vec4 color = gl_Color * gl_LightModel.ambient;
-	if (enable_light0) color += add_light_comp(shadowed, normal, eye_space_pos, 0);
-	if (enable_light1) color += add_light_comp(shadowed, normal, eye_space_pos, 1);
+	if (enable_light0) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 0);
+	if (enable_light1) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 1);
+	vec3 n = normalize(normal);
+
+	for (int i = 2; i < num_dlights+2; ++i) { // add N dynamic point light sources
+		color += add_pt_light_comp(n, eye_space_pos, i);
+	}
 	gl_FrontColor   = clamp(color, 0.0, 1.0);
 	gl_FogFragCoord = length(eye_space_pos.xyz);
 } 

@@ -308,7 +308,6 @@ void do_lightning_damage(point &pos, float damage, int hit_water) {
 
 void lightning::draw() const {
 
-	//glEnable(GL_LIGHT2);
 	float const lscale(LITNING_LINEAR_I);
 	bool const smooth_lightning(1);
 	if (smooth_lightning) {glEnable(GL_LINE_SMOOTH); enable_blend();}
