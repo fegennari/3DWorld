@@ -1,3 +1,22 @@
+Rendered Object Types:
+L = static lighting, I = indirect lighting, D = dynamic lighting, S = shadows, K = smoke, F = fog, * = shader
+Cobjs: LIDSK*
+Mesh: LDsF
+Tiled Mesh: LsF*
+Water: LDF
+Tree Leaves: LDsF*
+Tree Branches: LDK*
+Grass: LDSF*
+Plants: LsF*
+Scenery: LsF
+Dynamic Objs: LIDSF
+Snow: LIDSF*
+Particles: LIDSF
+Smoke/Gas: LIDsK*
+Fires: K*
+Weapons: LIDs*
+
+
 Shaders:
 
 Completed:
