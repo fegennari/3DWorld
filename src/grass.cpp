@@ -10,11 +10,6 @@
 #include "gl_ext_arb.h"
 
 
-int      const START_LIGHT = GL_LIGHT3;
-int      const END_LIGHT   = GL_LIGHT7 + 1;
-unsigned const MAX_LIGHTS  = unsigned(END_LIGHT - START_LIGHT);
-
-
 bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
@@ -48,7 +43,7 @@ class grass_manager_t {
 	vector<grass_t> grass;
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
 	vector<unsigned char> modified; // set, but unused
-	unsigned vbo, num_dlights;
+	unsigned vbo;
 	bool vbo_valid, shadows_valid, data_valid;
 	int last_cobj;
 	int last_light;
@@ -59,7 +54,7 @@ class grass_manager_t {
 	}
 
 public:
-	grass_manager_t() : vbo(0), num_dlights(0), vbo_valid(0), shadows_valid(0), data_valid(0), last_light(-1), last_lpos(all_zeros) {}
+	grass_manager_t() : vbo(0), vbo_valid(0), shadows_valid(0), data_valid(0), last_light(-1), last_lpos(all_zeros) {}
 	~grass_manager_t() {clear();}
 	size_t size() const {return grass.size() ;} // 2 points per grass blade
 	bool empty()  const {return grass.empty();}
@@ -381,43 +376,6 @@ public:
 		if (!data_valid   ) upload_data();
 	}
 
-	void enable_dynamic_lights() {
-		point const camera(get_camera_pos());
-		vector<pair<float, unsigned> > vis_lights;
-
-		for (unsigned i = 0; i < dl_sources.size(); ++i) {
-			light_source const &ls(dl_sources[i]);
-			float const radius(ls.get_radius());
-			if (radius == 0.0) continue; // not handling zero radius lights yet
-			if (!sphere_in_camera_view(ls.get_center(), radius, 0)) continue;
-			float const weight(p2p_dist(ls.get_center(), camera)/radius);
-			vis_lights.push_back(make_pair(weight, i));
-		}
-		sort(vis_lights.begin(), vis_lights.end());
-		num_dlights = min(vis_lights.size(), MAX_LIGHTS);
-
-		for (unsigned i = 0; i < num_dlights; ++i) {
-			int const gl_light(START_LIGHT+i);
-			light_source const &ls(dl_sources[vis_lights[i].second]);
-			float udiffuse[4] = {0}; // diffuse = 0 because we don't have correct normals
-			set_colors_and_enable_light(gl_light, (float *)(&ls.get_color()), udiffuse);
-			glLightf(gl_light, GL_CONSTANT_ATTENUATION,  1.0);
-			glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
-			glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 6.0/(ls.get_radius()*ls.get_radius()));
-			set_gl_light_pos(gl_light, ls.get_center(), 1.0); // point light source position
-		}
-		for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {
-			glEnable(i);
-		}
-	}
-
-	void disable_dynamic_lights() {
-		for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {
-			glDisable(i);
-		}
-		num_dlights = 0;
-	}
-
 	void draw() {
 		if (empty()) return;
 
@@ -433,7 +391,7 @@ public:
 		check_for_updates();
 
 		// check for dynamic light sources
-		enable_dynamic_lights();
+		unsigned const num_dlights(enable_dynamic_lights());
 
 		if (grass_wind) {
 			set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
@@ -473,7 +431,7 @@ public:
 		glDisable(GL_ALPHA_TEST);
 		if (grass_wind) unset_shader_prog();
 		disable_multitex_a();
-		disable_dynamic_lights();
+		disable_dynamic_lights(num_dlights);
 		bind_vbo(0);
 		check_gl_error(40);
 	}

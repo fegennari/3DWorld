@@ -24,6 +24,10 @@ unsigned const FLOW_CACHE_SZ = (1 << FLOW_CACHE_BS);
 int const SMOKE_SKIPVAL      = 6;
 int const SMOKE_SEND_SKIP    = 8;
 
+int      const START_LIGHT   = GL_LIGHT2;
+int      const END_LIGHT     = GL_LIGHT7 + 1;
+unsigned const MAX_LIGHTS    = unsigned(END_LIGHT - START_LIGHT);
+
 float const CTHRESH          = 0.025;
 float const MIN_LIGHT        = 0.0;
 float const MAX_LIGHT        = 1.0;
@@ -1541,6 +1545,50 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 	}
 	UNROLL_3X(a[i_] *= (cscale[i_]*val + ls[i_]);) // unroll the loop
 	return val;
+}
+
+
+// within a sphere, unless radius == 0.0
+unsigned enable_dynamic_lights(point const center, float radius) {
+
+	point const camera(get_camera_pos());
+	vector<pair<float, unsigned> > vis_lights;
+
+	for (unsigned i = 0; i < dl_sources.size(); ++i) {
+		light_source const &ls(dl_sources[i]);
+		float const ls_radius(ls.get_radius());
+		point const &ls_center(ls.get_center());
+		if (ls_radius == 0.0) continue; // not handling zero radius lights yet
+		if (radius > 0.0 && !dist_less_than(center, ls_center, (radius + ls_radius))) continue;
+		if (!sphere_in_camera_view(ls_center, ls_radius, 0)) continue;
+		float const weight(p2p_dist(ls_center, camera)/ls_radius);
+		vis_lights.push_back(make_pair(weight, i));
+	}
+	sort(vis_lights.begin(), vis_lights.end());
+	unsigned const num_dlights(min(vis_lights.size(), MAX_LIGHTS));
+
+	for (unsigned i = 0; i < num_dlights; ++i) {
+		int const gl_light(START_LIGHT+i);
+		light_source const &ls(dl_sources[vis_lights[i].second]);
+		float udiffuse[4] = {0}; // diffuse = 0 because we don't have correct normals
+		set_colors_and_enable_light(gl_light, (float *)(&ls.get_color()), udiffuse);
+		glLightf(gl_light, GL_CONSTANT_ATTENUATION,  1.0);
+		glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
+		glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 6.0/(ls.get_radius()*ls.get_radius()));
+		set_gl_light_pos(gl_light, ls.get_center(), 1.0); // point light source position
+	}
+	for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {
+		glEnable(i);
+	}
+	return num_dlights;
+}
+
+
+void disable_dynamic_lights(unsigned num_dlights) {
+
+	for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {
+		glDisable(i);
+	}
 }
 
 
