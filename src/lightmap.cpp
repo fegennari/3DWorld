@@ -1140,6 +1140,16 @@ void upload_dlights_textures() {
 
 	RESET_TIME;
 	assert(lm_alloc && lmap_manager.vlmap);
+	static int supports_tex_int(2); // starts at unknown
+	
+	if (supports_tex_int == 2) {
+		supports_tex_int = has_extension("GL_EXT_texture_integer");
+		if (!supports_tex_int) cout << "Error: GL_EXT_texture_integer extension not supported. Dynamic lighting will not work correctly." << endl;
+	}
+	if (!supports_tex_int) {
+		dl_tid = elem_tid = gb_tid = 0; // should already be 0
+		return;
+	}
 
 	// step 1: the light sources themselves
 	unsigned const max_dlights      = 1024; // must agree with value in shader

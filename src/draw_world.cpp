@@ -54,7 +54,7 @@ extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_source
 extern int nstars, is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
-extern unsigned smoke_tid;
+extern unsigned smoke_tid, dl_tid;
 extern float zmin, light_factor, water_plane_z, fticks, perspective_fovy, perspective_nclip;
 extern float temperature, atmosphere, TIMESTEP, base_gravity, tan_term, LEAF_SIZE, zbottom, sun_rot;
 extern point light_pos, ocean, mesh_origin, flow_source, surface_pos, litning_pos, leaf_points[], star_pts[];
@@ -1648,15 +1648,15 @@ void set_shadowed_state(unsigned char shadowed) {
 
 void set_dlights_booleans(bool enable, int shader_type) {
 
-	set_bool_shader_prefix("has_dir_lights",  has_dir_lights,                  shader_type);
-	set_bool_shader_prefix("enable_dlights",  (enable && !dl_sources.empty()), shader_type);
+	set_bool_shader_prefix("has_dir_lights",  has_dir_lights, shader_type);
+	set_bool_shader_prefix("enable_dlights",  (enable && dl_tid > 0 && !dl_sources.empty()), shader_type);
 }
 
 
 colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en) {
 
 	set_bool_shader_prefix("use_texgen",      use_texgen,      0); // VS
-	set_bool_shader_prefix("smoke_enabled",   (smoke_en && smoke_exists), 0); // VS
+	set_bool_shader_prefix("smoke_enabled",   (smoke_en && smoke_exists && smoke_tid > 0), 0); // VS
 	set_bool_shader_prefix("keep_alpha",      keep_alpha,      1); // FS
 	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
 	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
@@ -1664,12 +1664,12 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	setup_enabled_lights(8);
 	unsigned const p(set_shader_prog("texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "ads_lighting.part*+dynamic_lighting.part*+textured_with_smoke"));
 	setup_scene_bounds(p);
-	setup_dlight_textures(p);
+	if (dlights && dl_tid > 0) setup_dlight_textures(p);
 	unsigned const ix(register_attrib_name(p, "shadow_val"));
 	assert(ix == 0); // only one attribute
 	add_attrib_float(ix, 0.0); // default is all unshadowed
 
-	if (smoke_tid) {
+	if (smoke_en && smoke_tid) {
 		set_multitex(1);
 		bind_3d_texture(smoke_tid);
 	}
