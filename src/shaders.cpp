@@ -271,6 +271,8 @@ bool load_shader_file(string const &fname, string &data) {
 
 bool setup_shaders() {
 
+	cout << "OpenGL Version: " << glGetString(GL_VERSION) << endl;
+	cout << "GLSL Shader Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 	if (GLEW_ARB_vertex_shader && GLEW_ARB_fragment_shader && GL_EXT_geometry_shader4) return 1;
 	cerr << "Error setting up vertex and fragment GLSL shaders." << endl;
 	return 0;
@@ -379,7 +381,6 @@ void print_program_info_log(unsigned program) {
 unsigned set_shader_prog(string const &vs_name, string const &fs_name, string const &gs_name,
 						 int in_prim, int out_prim, int verts_out)
 {
-	//cout << "shader version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 	// get the program
 	RESET_TIME;
 	string const pname(vs_name + "," + fs_name + "," + gs_name + "," + prog_name_suffix); // unique program identifier
