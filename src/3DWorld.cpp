@@ -252,11 +252,9 @@ void set_array_client_state(bool va, bool tca, bool na, bool ca) {
 
 	for (unsigned i = 0; i < 4; ++i) {
 		if (enables[i]) {
-			glEnable(arrays[i]);
 			glEnableClientState(arrays[i]);
 		}
 		else {
-			glDisable(arrays[i]);
 			glDisableClientState(arrays[i]);
 		}
 	}
