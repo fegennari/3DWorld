@@ -2142,6 +2142,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 	point const lpos(get_light_pos());
 	
 	if (!check_coll_line(p, lpos, cindex, -1, 1, 1)) { // not shadowed (slow, especially for lots of smoke near trees)
+		// Note: This can be moved into a shader, but the performance and quality improvement might not be significant
 		vector3d const dir((p - get_camera_pos()).get_norm());
 		float const dp(dot_product_ptv(dir, p, lpos));
 		blend_color(c, WHITE, c, 0.15, 0); // 15% ambient lighting (transmitted/scattered)
@@ -2154,6 +2155,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 	}
 	get_indir_light(c, WHITE, p, 0, 1, NULL, NULL); // could move outside of the parts loop if too slow
 	c.do_glColor();
+	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
 	draw_billboard(p, get_camera_pos(), up_vector, 4.0*r, 4.0*r);
 }
 

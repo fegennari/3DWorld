@@ -1728,14 +1728,28 @@ int load_config(string const &config_file) {
        printf("There are %d threads\n",nthreads);
      }
    }
+
+   RESET_TIME;
+   float val(0);
+
+   //omp_set_num_threads(4);
+   #pragma omp parallel for schedule(static,1) 
+   for (int i = 0; i < 10000000; ++i) {
+	   val += sinf(123*i) + 1.0;
+   }
+   PRINT_TIME("For Loop");
+   cout << "Val: " << val << endl;
+   exit(0);
  }
+#else
+void open_mp_test() {}
 #endif
 
 
 
 int main(int argc, char** argv) {
 
-	//open_mp_test(); // testing
+	open_mp_test(); // testing
 	cout << "Starting 3DWorld."; cout.flush();
 	int rs(1);
 	if (argc == 2) read_ueventlist(argv[1]);
