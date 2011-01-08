@@ -66,6 +66,7 @@ dls_cell **ldynamic = NULL;
 vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic {cur frame, next frame}
 flow_cache_e flow_cache[FLOW_CACHE_SZ]; // 2MB
 lmap_manager_t lmap_manager;
+vector<unsigned char> smoke_tex_data; // several MB
 
 
 extern int animate2, display_mode, frame_counter, read_light_file, write_light_file, read_light_file_l, write_light_file_l;
@@ -1032,6 +1033,12 @@ void distribute_smoke() { // called at most once per frame
 }
 
 
+void reset_smoke_tex_data() {
+
+	smoke_tex_data.clear();
+}
+
+
 bool upload_smoke_3d_texture() { // and indirect lighting information
 
 	//RESET_TIME;
@@ -1039,10 +1046,11 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
 	// is it ok when texture z size is not a power of 2?
 	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(4);
-	static vector<unsigned char> data; // several MB
 	bool init_call(0);
+	vector<unsigned char> &data(smoke_tex_data);
 
-	if (data.empty()) {
+	if (smoke_tex_data.empty()) {
+		free_texture(smoke_tid);
 		data.resize(ncomp*sz, 0);
 		init_call = 1;
 	}

@@ -62,6 +62,7 @@ int read_coll_objects(const char *coll_obj_file);
 void gen_star_points();
 int gen_game_obj(int type);
 point get_sstate_pos(int id);
+void reset_smoke_tex_data();
 
 
 
@@ -594,6 +595,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	PRINT_TIME("Visibility calculation");
 
 	if (!inf_terrain) gen_grass(generate_mesh != 0);
+	if (generate_mesh || gen_trees) reset_smoke_tex_data();
 }
 
 
