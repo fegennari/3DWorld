@@ -58,7 +58,7 @@ char *lighting_file(NULL), *lighting_file_l(NULL), *snow_file(NULL);
 
 // Global Variables
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), use_stencil_shadows(0), univ_stencil_shadows(1);
-bool univ_planet_lod(0), grass_wind(0), show_lightning(0);
+bool univ_planet_lod(0), grass_wind(0), show_lightning(0), disable_shaders(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
@@ -1317,6 +1317,13 @@ inline bool read_uint (FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) 
 inline bool read_float(FILE *fp, float    &val) {return (fscanf(fp, "%f", &val) == 1);}
 inline bool read_str  (FILE *fp, char     *val) {return (fscanf(fp, "%s",  val) == 1);}
 
+inline bool read_bool (FILE *fp, bool     &val) {
+	int tmp;
+	if (fscanf(fp, "%i", &tmp) != 1) return 0;
+	val = (tmp != 0);
+	return 1;
+}
+
 
 int check_for_config_defaults(const char *def_file) {
 
@@ -1565,6 +1572,9 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "disable_scenery") {
 			if (!read_int(fp, DISABLE_SCENERY)) cfg_err("disable scenery command", error);
+		}
+		else if (str == "disable_shaders") {
+			if (!read_bool(fp, disable_shaders)) cfg_err("disable shaders command", error);
 		}
 		else if (str == "read_landscape") {
 			if (!read_int(fp, read_landscape)) cfg_err("read landscape command", error);

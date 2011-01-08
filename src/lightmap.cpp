@@ -69,6 +69,7 @@ lmap_manager_t lmap_manager;
 vector<unsigned char> smoke_tex_data; // several MB
 
 
+extern bool disable_shaders;
 extern int animate2, display_mode, frame_counter, read_light_file, write_light_file, read_light_file_l, write_light_file_l;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE;
 extern colorRGBA cur_ambient;
@@ -1042,7 +1043,7 @@ void reset_smoke_tex_data() {
 bool upload_smoke_3d_texture() { // and indirect lighting information
 
 	//RESET_TIME;
-	if (lmap_manager.vlmap == NULL) return 0;
+	if (disable_shaders || lmap_manager.vlmap == NULL) return 0;
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
 	// is it ok when texture z size is not a power of 2?
 	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(4);
@@ -1148,6 +1149,7 @@ void upload_dlights_textures() {
 
 	RESET_TIME;
 	assert(lm_alloc && lmap_manager.vlmap);
+	if (disable_shaders) return;
 	static int supports_tex_int(2); // starts at unknown
 	
 	if (supports_tex_int == 2) {

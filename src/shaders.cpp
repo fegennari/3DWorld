@@ -18,6 +18,8 @@ string prepend_string[3]; // vertex=0, fragment=1, geometry=3
 string prog_name_suffix;
 vector<int> attrib_locs;
 
+extern bool disable_shaders;
+
 
 // *** uniform variables setup ***
 
@@ -35,6 +37,7 @@ int get_uniform_loc(unsigned program, char const *const name) {
 
 void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num) {
 
+	if (disable_shaders) return;
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1fv(loc, num, val);
 }
@@ -42,6 +45,7 @@ void add_uniform_float_array(unsigned program, char const *const name, float con
 
 void add_uniform_float(unsigned program, char const *const name, float val) {
 
+	if (disable_shaders) return;
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1f(loc, val);
 }
@@ -49,6 +53,7 @@ void add_uniform_float(unsigned program, char const *const name, float val) {
 
 void add_uniform_int(unsigned program, char const *const name, int val) {
 
+	if (disable_shaders) return;
 	int const loc(get_uniform_loc(program, name));
 	if (loc >= 0) glUniform1i(loc, val);
 }
@@ -56,6 +61,7 @@ void add_uniform_int(unsigned program, char const *const name, int val) {
 
 bool set_uniform_buffer_data(unsigned program, char const *name, float const *data, unsigned size) {
 
+	if (disable_shaders) return 0;
 	if (program == 0) program = active_program;
 	assert(program && name);
 	assert(data && size);
@@ -120,6 +126,7 @@ int get_attrib_loc(unsigned program, char const *const name) {
 
 unsigned register_attrib_name(unsigned program, char const *name) {
 
+	if (disable_shaders) return 0;
 	int const loc(get_attrib_loc(program, name));
 	unsigned const ix(attrib_locs.size());
 	attrib_locs.push_back(loc);
@@ -136,6 +143,7 @@ int attrib_loc_by_ix(unsigned ix) {
 
 void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) {
 
+	if (disable_shaders) return;
 	int const loc(attrib_loc_by_ix(ix));
 	if (loc < 0) return;
 
@@ -151,6 +159,7 @@ void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) {
 
 void add_attrib_float(unsigned ix, float val) {
 
+	if (disable_shaders) return;
 	int const loc(attrib_loc_by_ix(ix));
 	if (loc >= 0) glVertexAttrib1f(loc, val);
 }
@@ -158,6 +167,7 @@ void add_attrib_float(unsigned ix, float val) {
 
 void add_attrib_int(unsigned ix, int val) {
 
+	if (disable_shaders) return;
 	int const loc(attrib_loc_by_ix(ix));
 	if (loc >= 0) glVertexAttrib1s(loc, val);
 }
@@ -381,6 +391,7 @@ void print_program_info_log(unsigned program) {
 unsigned set_shader_prog(string const &vs_name, string const &fs_name, string const &gs_name,
 						 int in_prim, int out_prim, int verts_out)
 {
+	if (disable_shaders) return 0;
 	// get the program
 	RESET_TIME;
 	string const pname(vs_name + "," + fs_name + "," + gs_name + "," + prog_name_suffix); // unique program identifier
