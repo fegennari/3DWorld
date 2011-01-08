@@ -1611,6 +1611,9 @@ void tree::shift_tree(vector3d const &vd) { // tree has no single pos, have to t
 			leaves[j].pts[k] += vd;
 		}
 	}
+	for (unsigned i = 0; i < leaf_data.size(); ++i) {
+		leaf_data[i].v += vd;
+	}
 }
 
 
