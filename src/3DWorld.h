@@ -714,6 +714,7 @@ struct texture { // size = 78 (80)
 		name(n), tid(tex), color(c) {}
 	void init();
 	void do_gl_init();
+	GLenum calc_internal_format() const;
 	void calc_color();
 	void build_mipmaps();
 	void create_custom_mipmaps();

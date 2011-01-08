@@ -26,6 +26,7 @@ bool const RELOAD_TEX_ON_HOLE  = 0;
 bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update doesn't recompute the mipmaps
 bool const SHOW_TEXTURE_MEMORY = 0;
 bool const INSTANT_LTEX_COL    = 1;
+bool const COMPRESS_TEXTURES   = 1;
 float const SMOOTH_SKY_POLES   = 0.2;
 
 std::string const texture_dir("textures");
@@ -42,7 +43,7 @@ struct lspot {
 //0      1    2     3      4   5   6    7     8   9    10   11   12   13    14        15    16   17    18     19  20        21       22        23        ...
 
 texture textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
-// type: 0 = read from file, 1 = generated
+// type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel)
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
@@ -69,7 +70,7 @@ texture(0, 0, 128,  128,  1, 4, 1, "palmtree.raw"),
 texture(1, 0, 256,  256,  1, 4, 1, "@smoke.raw"),  // not real file
 texture(1, 0, 64,   64,   1, 4, 1, "@plasma.raw"), // not real file
 texture(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
-texture(1, 0, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
+texture(2, 0, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
 texture(1, 0, 128,  128,  0, 3, 0, "@tree_end.raw"),  // not real file
 texture(1, 0, 128,  128,  1, 4, 1, "@tree_hemi.raw"), // not real file, mipmap for trees?
 texture(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp"),   // not real file
@@ -190,7 +191,7 @@ void load_textures() {
 		case GRADIENT_TEX:  gen_gradient_texture();     break;
 
 		default:
-			if (textures[i].type == 1) { // generated texture
+			if (textures[i].type > 0) { // generated texture
 				alloc_texture(i);
 			}
 			else {
@@ -327,6 +328,14 @@ void texture::init() {
 }
 
 
+GLenum texture::calc_internal_format() const {
+
+	static int has_comp(2); // starts unknown
+	if (has_comp == 2) has_comp = has_extension("GL_ARB_texture_compression"); // unknown, calculate it
+	return ((COMPRESS_TEXTURES && has_comp && type != 2) ? ((ncolors == 4) ? GL_COMPRESSED_RGBA : GL_COMPRESSED_RGB) : ncolors);
+}
+
+
 void texture::do_gl_init() {
 
 	if (SHOW_TEXTURE_MEMORY) {
@@ -341,7 +350,7 @@ void texture::do_gl_init() {
 	// GL_BGRA is supposedly faster, but do we want to swap things here?
 	GLenum const format((ncolors == 4) ? GL_RGBA : GL_RGB);
 	//if (use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-	glTexImage2D(GL_TEXTURE_2D, 0, ncolors, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, format, GL_UNSIGNED_BYTE, data);
 	
 	if (use_mipmaps) {
 		if (ncolors == 3) gen_mipmaps(); else create_custom_mipmaps();
@@ -620,7 +629,7 @@ void texture::create_custom_mipmaps() {
 				}
 			}
 		}
-		glTexImage2D(GL_TEXTURE_2D, level, ncolors, w2, h2, 0, format, GL_UNSIGNED_BYTE, &odata.front());
+		glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, format, GL_UNSIGNED_BYTE, &odata.front());
 		idata.swap(odata);
 	}
 }
@@ -1124,9 +1133,6 @@ void create_landscape_texture() {
 	}
 	textures[LANDSCAPE_TEX].gl_delete(); // should we try to update rather than recreating from scratch?
 	init_texture(LANDSCAPE_TEX); // performance bottleneck
-	//glBindTexture(GL_TEXTURE_2D, textures[LANDSCAPE_TEX].tid);
-	//glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, tex_data);
-	//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, tex_data);
 	PRINT_TIME("Final");
 }
 
