@@ -16,7 +16,8 @@ float grass_length(0.02), grass_width(0.002);
 
 extern bool grass_wind, has_dir_lights;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2;
-extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[];
+extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness;
+extern colorRGBA leaf_base_color;
 extern vector3d wind;
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
@@ -127,8 +128,20 @@ public:
 		//vector3d const base_dir(interpolate_mesh_normal(pos));
 		vector3d const dir((base_dir + signed_rand_vector(0.3) + wind*0.3).get_norm()); // make dynamic based on local wind?
 		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
+
 		//(0.1, 0.35), (0.5, 0.75), (0.0, 0.1) // untextured white triangle
-		unsigned char color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20};
+		//unsigned char color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20}; // (0.3,0.5), (0.6,0.8), (0.1,0.18)
+		float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
+		float const base_color[3] = {0.3,  0.6, 0.08};
+		float const mod_color [3] = {0.2,  0.2, 0.08};
+		float const lbc_mult  [3] = {0.2,  0.4, 0.0 };
+		float const dead_color[3] = {0.75, 0.6, 0.0 };
+		unsigned char color[3];
+
+		for (unsigned i = 0; i < 3; ++i) {
+			float const ccomp(CLIP_TO_01(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rand_float()));
+			color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
+		}
 		float const length(grass_length*rand_uniform(0.7, 1.3));
 		float const width( grass_width *rand_uniform(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));

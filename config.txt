@@ -17,8 +17,12 @@ scenery_extent 0
 grass_density 100
 grass_size 0.02 0.002
 
-tree_deadness 0.0
-leaf_color 0.0 0.0 0.0  0.75  0.2 # summer
+tree_deadness 0.0 # 0.0 = alive, 1.0 = dead (winter)
+# R G B leaf_color_coherence tree_color_coherence
+#leaf_color 0.0 0.0 0.0  0.9  0.1 # spring
+leaf_color 0.0 0.0 0.0  0.6  0.2 # summer
+#leaf_color 0.2 -0.6 0.0  0.6  0.2 # fall
+#tree_deadness 1.0 # winter
 
 gravity 1.0
 mesh_height 0.7
