@@ -433,6 +433,11 @@ struct colorRGB { // size = 12
 	void operator*=(float val) {
 		R *= val; G *= val; B *= val;
 	}
+	void set_valid_color() {
+		R = CLIP_TO_01(R);
+		G = CLIP_TO_01(G);
+		B = CLIP_TO_01(B);
+	}
 };
 
 

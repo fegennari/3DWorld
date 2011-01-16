@@ -377,6 +377,7 @@ void process_groups() {
 					else {
 						unsigned spf(1);
 
+						// What about rolling objects (type_flags & OBJ_ROLLS) on the ground (status == 3)?
 						if (obj.status == 1 && is_over_mesh(pos) && !((obj_flags & XY_STOPPED) && (obj_flags & Z_STOPPED))) {
 							if (obj.flags & CAMERA_VIEW) { // smaller timesteps if camera view
 								spf = 4*LG_STEPS_PER_FRAME;

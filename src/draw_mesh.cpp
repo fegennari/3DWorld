@@ -177,7 +177,7 @@ class mesh_vertex_draw {
 		}
 		carr[c].set_to_val(color_scale);
 
-		if (DLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) { // somewhat slow
+		if (!(display_mode & 0x08) && DLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) { // somewhat slow
 			get_sd_light(j, i, get_zpos(varr[c].z), varr[c], DLIGHT_SCALE, &carr[c].R, &surface_normals[i][j], NULL);
 		}
 	}
@@ -216,7 +216,8 @@ class mesh_vertex_draw {
 		if (ground_effects_level >= 2 && !has_snow && light_scale > 0.0 && !(display_mode & 0x10)) {
 			light_scale *= get_cloud_shadow_atten(j, i);
 		}
-		narr[c] = ((light_scale == 0.0) ? vector3d(0.0, 0.0, 0.0) : vertex_normals[i][j]*light_scale);
+		// Note: normal is never set to zero because we need it for dynamic light sources
+		narr[c] = vertex_normals[i][j]*max(light_scale, 0.01f);
 	}
 
 public:
@@ -424,7 +425,7 @@ void display_mesh() { // fast array version
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
 
-	if (ground_effects_level == 0 && setup_gen_buffers()) {
+	if (ground_effects_level == 0 && setup_gen_buffers()) { // simpler, more efficient mesh draw
 		static unsigned mesh_vbo(0);
 		
 		if (clear_landscape_vbo) {
@@ -460,7 +461,20 @@ void display_mesh() { // fast array version
 		}
 		bind_vbo(0);
 	}
-	else {
+	else { // slower mesh draw with more features
+		bool const use_shaders((display_mode & 0x08) != 0);
+
+		if (use_shaders) {
+			set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
+			setup_enabled_lights();
+			set_dlights_booleans(1, 1); // FS
+			unsigned const p(set_shader_prog("ads_lighting.part*+fog.part+texture_gen.part+draw_mesh", "dynamic_lighting.part*+linear_fog.part+draw_mesh"));
+			setup_fog_scale(p);
+			add_uniform_int(p, "tex0", 0);
+			add_uniform_int(p, "tex1", 1);
+			setup_scene_bounds(p);
+			setup_dlight_textures(p);
+		}
 		float y(-Y_SCENE_SIZE);
 		mesh_vertex_draw mvd;
 
@@ -479,6 +493,7 @@ void display_mesh() { // fast array version
 			if (mvd.c > 1) glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
 			y += DY_VAL;
 		} // for i
+		if (use_shaders) unset_shader_prog();
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	disable_textures_texgen();
