@@ -336,7 +336,7 @@ public:
 			}
 			if (WLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) {
 				float const *const spec(w_spec[(temperature > W_FREEZE_POINT)]);
-				get_sd_light(j, i, get_zpos(v.z), v, WLIGHT_SCALE, (float *)&color, &n, spec);
+				get_sd_light(j, i, get_zpos(v.z), v, 0, WLIGHT_SCALE, (float *)&color, &n, spec);
 			}
 			last_row_colors[j] = color_ix(color, i);
 		}

@@ -1525,7 +1525,7 @@ void upload_dlights_textures();
 void setup_dlight_textures(unsigned p);
 bool is_shadowed_lightmap(point const &p);
 bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
-void get_sd_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
+void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec);
 unsigned enable_dynamic_lights(point const center=all_zeros, float radius=0.0);
 void disable_dynamic_lights(unsigned num_dlights);

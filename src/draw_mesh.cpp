@@ -177,8 +177,9 @@ class mesh_vertex_draw {
 		}
 		carr[c].set_to_val(color_scale);
 
-		if (!(display_mode & 0x08) && DLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) { // somewhat slow
-			get_sd_light(j, i, get_zpos(varr[c].z), varr[c], DLIGHT_SCALE, &carr[c].R, &surface_normals[i][j], NULL);
+		if (DLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) { // somewhat slow
+			get_sd_light(j, i, get_zpos(varr[c].z), varr[c], (!has_dl_sources || (display_mode & 0x08)),
+				DLIGHT_SCALE, &carr[c].R, &surface_normals[i][j], NULL);
 		}
 	}
 
