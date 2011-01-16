@@ -22,19 +22,12 @@ extern float h_dirt[];
 extern texture textures[];
 
 
-
-inline float get_water_atten_factor(float mh) {
-	return 2.5*WATER_COL_ATTEN*(water_plane_z - mh)*mesh_scale;
-}
-
-
 int get_tile_radius() {
 	return ((world_mode == WMODE_INF_TERRAIN) ? TILE_RADIUS_IT : TILE_RADIUS);
 }
 
 
 bool has_water () {return ((display_mode & 0x04) != 0);}
-bool use_shader() {return ((display_mode & 0x08) != 0);}
 
 
 struct tile_xy_pair {
@@ -313,13 +306,6 @@ public:
 								BLEND_COLOR(td, td, ta_data, val);
 							}
 						}
-
-						// darken underwater regions
-						if (!DISABLE_WATER && has_water() && !use_shader() && mh < water_plane_z) {
-							float c[3] = {td[0], td[1], td[2]};
-							atten_by_water_depth(c, get_water_atten_factor(mh));
-							UNROLL_3X(td[i_] = (unsigned char)c[i_];)
-						}
 					} // for sx
 				} // for sy
 			} // for x
@@ -491,20 +477,13 @@ public:
 		vector<vert_norm> data;
 		vector<unsigned short> indices;
 		static point last_sun(all_zeros), last_moon(all_zeros);
-		static bool last_water_en(1), last_shader_en(0);
-		bool const water_en(has_water()), shader_en(use_shader());
 
 		if (sun_pos != last_sun || moon_pos != last_moon) {
 			clear_vbos_tids(1,0); // light source changed, clear vbos and build new shadow map
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}
-		if ((water_en != last_water_en && !shader_en) || shader_en != last_shader_en) {
-			clear_vbos_tids(0,1); // water or shaders changed, recreate textures
-			last_water_en  = water_en;
-			last_shader_en = shader_en;
-		}
-		if (shader_en) setup_mesh_draw_shaders();
+		setup_mesh_draw_shaders();
 		
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
@@ -514,7 +493,7 @@ public:
 			zmin = min(zmin, i->second->get_zmin());
 			num_drawn += i->second->draw(data, indices);
 		}
-		if (shader_en) unset_shader_prog();
+		unset_shader_prog();
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
 		return zmin;
@@ -545,7 +524,6 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp) {
 
 void draw_vert_color(colorRGBA c, float x, float y, float z) {
 
-	if (!use_shader() && z < water_plane_z) atten_by_water_depth(&c.red, get_water_atten_factor(z));
 	c.do_glColor();
 	glVertex3f(x, y, z);
 }
@@ -569,7 +547,7 @@ void fill_gap() {
 	for (int i = 0; i <= MESH_Y_SIZE; ++i) {
 		yv[i] = (ystart + (i + 0.5)*DY_VAL);
 	}
-	if (use_shader()) terrain_tile_draw.setup_mesh_draw_shaders();
+	terrain_tile_draw.setup_mesh_draw_shaders();
 
 	// draw +x
 	build_xy_mesh_arrays(&xv.front(), &yv[MESH_Y_SIZE], MESH_X_SIZE, 1);
@@ -598,7 +576,7 @@ void fill_gap() {
 	draw_vert_color(color, X_SCENE_SIZE       , Y_SCENE_SIZE, fast_eval_from_index(0, MESH_Y_SIZE, 0, 1));
 	glEnd();
 
-	if (use_shader()) unset_shader_prog();
+	unset_shader_prog();
 	disable_textures_texgen();
 	glDisable(GL_COLOR_MATERIAL);
 	run_post_mesh_draw();
