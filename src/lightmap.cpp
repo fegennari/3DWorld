@@ -56,7 +56,7 @@ float const SMOKE_DIS_ZU     = 0.08;
 float const SMOKE_DIS_ZD     = 0.03;
 
 
-bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), smoke_visible(0), smoke_exists(0);
+bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), smoke_visible(0), smoke_exists(0), use_dense_voxels(0);
 unsigned cobj_counter(0), smoke_tid(0), dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0);
@@ -528,7 +528,7 @@ void build_lightmap(bool verbose) {
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			bool const fixed(!coll_objects.empty() && has_fixed_cobjs(j, i));
-			need_lmcell[i][j] = fixed;
+			need_lmcell[i][j] = (use_dense_voxels || fixed);
 			has_fixed        |= fixed;
 			if (need_lmcell[i][j]) ++nonempty;
 		}

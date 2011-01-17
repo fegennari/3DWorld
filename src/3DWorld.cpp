@@ -102,7 +102,7 @@ int orig_window, curr_window;
 char player_name[MAX_CHARS] = "Player";
 
 
-extern bool clear_landscape_vbo;
+extern bool clear_landscape_vbo, use_dense_voxels;
 extern int flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, NUM_THREADS, grass_density;
@@ -1575,6 +1575,9 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "disable_shaders") {
 			if (!read_bool(fp, disable_shaders)) cfg_err("disable shaders command", error);
+		}
+		else if (str == "use_dense_voxels") {
+			if (!read_bool(fp, use_dense_voxels)) cfg_err("use_dense_voxels command", error);
 		}
 		else if (str == "read_landscape") {
 			if (!read_int(fp, read_landscape)) cfg_err("read landscape command", error);
