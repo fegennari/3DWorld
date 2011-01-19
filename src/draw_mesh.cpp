@@ -37,7 +37,7 @@ int island(0);
 float lt_green_int(1.0), sm_green_int(1.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, has_dl_sources, combined_gu, has_snow;
+extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, draw_mesh_shader;
 extern unsigned num_jterms;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
@@ -178,7 +178,7 @@ class mesh_vertex_draw {
 		carr[c].set_to_val(color_scale);
 
 		if (DLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) { // somewhat slow
-			get_sd_light(j, i, get_zpos(varr[c].z), varr[c], (!has_dl_sources || (display_mode & 0x08)),
+			get_sd_light(j, i, get_zpos(varr[c].z), varr[c], (!has_dl_sources || draw_mesh_shader),
 				DLIGHT_SCALE, &carr[c].R, &surface_normals[i][j], NULL);
 		}
 	}
@@ -463,9 +463,7 @@ void display_mesh() { // fast array version
 		bind_vbo(0);
 	}
 	else { // slower mesh draw with more features
-		bool const use_shaders((display_mode & 0x08) != 0);
-
-		if (use_shaders) {
+		if (draw_mesh_shader) {
 			set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
 			setup_enabled_lights();
 			set_dlights_booleans(1, 1); // FS
@@ -494,7 +492,7 @@ void display_mesh() { // fast array version
 			if (mvd.c > 1) glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
 			y += DY_VAL;
 		} // for i
-		if (use_shaders) unset_shader_prog();
+		if (draw_mesh_shader) unset_shader_prog();
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	disable_textures_texgen();

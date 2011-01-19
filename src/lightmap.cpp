@@ -1376,6 +1376,7 @@ void add_dynamic_lights() {
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
 		dl_sources.push_back(light_source(0.94, gen_rand_scene_pos(), BLUE, 1));
 	}
+	// Note: do we want to sort by y/x position to minimize cache misses?
 	sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
 	unsigned const ndl(dl_sources.size());
 	has_dl_sources = (ndl > 0);
