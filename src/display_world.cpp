@@ -54,6 +54,8 @@ bool universe_intersection_test(point const &pos, vector3d const &dir, float ran
 void draw_snow();
 void update_temperature(bool verbose);
 
+void render_to_shadow_fbo(point const &lpos);
+
 
 inline void glClearColor_rgba(const colorRGBA &color) {
 
@@ -723,6 +725,8 @@ void display(void) {
 		auto_advance_time();
 		check_gl_error(3);
 		if (TIMETEST) PRINT_TIME("\n\n0");
+
+		//render_to_shadow_fbo(get_light_pos()); // TESTING
 		
 		if (combined_gu) { // light from current system's star
 			draw_universe_bkg(underwater, depth); // infinite universe as background
