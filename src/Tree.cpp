@@ -165,10 +165,11 @@ void tree::add_tree_collision_objects(int ix) {
 		lcolor.alpha = 1.0;
 		cobj_params cpl(0.3, lcolor, TEST_RTREE_COBJS, 0, NULL, ix, (TEST_RTREE_COBJS ? -1 : ltid), 1.0, 0, 0);
 		cpl.shadow = 0;
+		point const xlate(all_zeros); // for now
 
 		for (unsigned i = 0; i < leaves.size(); i++) { // loop through leaves
-			// *** scale leaf points based on actual aspect ratio/size of non transparent part of leaf texture? ***
-			leaves[i].coll_index = add_coll_polygon(leaves[i].pts, 4, cpl, 0.0, -1, 2);
+			// Note: line collisions with leaves will use the texture alpha component for a more exact test
+			leaves[i].coll_index = add_coll_polygon(leaves[i].pts, 4, cpl, 0.0, xlate, -1, 2);
 			coll_objects[leaves[i].coll_index].is_billboard = 1;
 		}
 	}
@@ -191,7 +192,7 @@ void tree::remove_collision_objects() {
 }
 
 
-void remove_tree_cobjs(vector<tree> &t_trees) {
+void remove_tree_cobjs(tree_cont_t &t_trees) {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
 		t_trees[i].remove_collision_objects();
@@ -199,7 +200,7 @@ void remove_tree_cobjs(vector<tree> &t_trees) {
 }
 
 
-void draw_trees_bl(vector<tree> &ts, bool lpos_change, bool draw_branches, bool draw_leaves) {
+void draw_trees_bl(tree_cont_t &ts, bool lpos_change, bool draw_branches, bool draw_leaves) {
 
 	for (unsigned i = 0; i < ts.size(); ++i) {
 		ts[i].draw_tree(lpos_change, draw_branches, draw_leaves);
@@ -224,7 +225,7 @@ void set_leaf_shader(float min_alpha) {
 }
 
 
-void draw_trees(vector<tree> &ts) {
+void draw_trees(tree_cont_t &ts) {
 
 	//glFinish(); // testing
 	//RESET_TIME;
@@ -744,7 +745,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 }
 
 
-void delete_trees(vector<tree> &ts) {
+void delete_trees(tree_cont_t &ts) {
 
 	unsigned deleted(0);
 
@@ -806,8 +807,8 @@ void tree::create_leaves_and_one_branch_array() {
 
 	//set the bounding sphere center
 	assert(base_num_cylins > 0);
-	sphere_center = base.cylin[max(0, (base_num_cylins - 2))].p2; // will be reset later
-	sphere_radius = 0.0;
+	sphere_center.z = base.cylin[max(0, (base_num_cylins - 2))].p2.z;
+	sphere_radius   = 0.0;
 
 	//process cylinders
 	unsigned num_total_cylins(base_num_cylins); // start with trunk cylinders
@@ -973,7 +974,7 @@ void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 
 void tree::gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z, bool add_cobjs, int ix) {
 
-	gen_pos = pos;
+	sphere_center = pos;
 	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 	leaf_data.clear();
 
@@ -1491,7 +1492,7 @@ int generate_next_cylin(int cylin_num, float branch_curveness, int ncib, bool br
 }
 
 
-void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
+void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
 
 	cout << "vegetation: " << vegetation << endl;
 	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
@@ -1513,7 +1514,7 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 		{ // keep old trees
 			if (recalc_shadows) calc_visibility(SUN_SHADOW | MOON_SHADOW | TREE_ONLY);
 			add_tree_cobjs(t_trees);
-			PRINT_TIME("gen tree fast");
+			PRINT_TIME(" gen tree fast");
 			return;
 		}
 		unsigned nkeep(0);
@@ -1522,7 +1523,7 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 			vector3d const vd(-dx_scroll*DX_VAL, -dy_scroll*DY_VAL, 0.0);
 
 			for (unsigned i = 0; i < t_trees.size(); ++i) { // keep any tree that's still in the scene
-				point const gen_pos(t_trees[i].get_gen_pos());
+				point const gen_pos(t_trees[i].get_center());
 				int const xp(get_xpos(gen_pos.x) - dx_scroll), yp(get_ypos(gen_pos.y) - dy_scroll);
 				bool const keep(xp >= 1 && xp <= MESH_X_SIZE-1 && yp >= 1 && yp <= MESH_Y_SIZE-1);
 				t_trees[i].set_no_delete(keep);
@@ -1552,7 +1553,7 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 			max_leaves = 0;
 			t_trees.resize(0);
 		}
-		PRINT_TIME("Delete Trees");
+		PRINT_TIME(" Delete Trees");
 		unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1, XY_MULT_SIZE/num_trees));
 		unsigned const skip_val(max(1, int(1.0/sqrt((mesh_scale*mesh_scale2))))); // similar to deterministic gen in scenery.cpp
 
@@ -1572,7 +1573,12 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 				pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 				if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
 				if (tree_mode == 3 && get_tree_type_from_height(pos.z) != 2) continue; // use a small (simple) tree here
-				// *** use max_unique_trees ***
+				
+				if (max_unique_trees > 0) {
+					rseed1 = rseed1 % max_unique_trees;
+					rseed2 = 12345;
+					// *** unique the trees so they can be reused? ***
+				}
 				t_trees.push_back(tree());
 				t_trees.back().regen_tree(pos, 0, t_trees.size()-1); // use random function #2 for trees
 			}
@@ -1586,7 +1592,7 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 		init       = 1;
 	}
 	if (recalc_shadows) calc_visibility(SUN_SHADOW | MOON_SHADOW | TREE_ONLY);
-	PRINT_TIME("Gen Trees");
+	PRINT_TIME(" Gen Trees");
 }
 
 
@@ -1602,7 +1608,6 @@ void tree::regen_tree(point &pos, int recalc_shadows, int index) {
 void tree::shift_tree(vector3d const &vd) { // tree has no single pos, have to translate every coordinate!!!
 
 	sphere_center += vd;
-	gen_pos       += vd;
 
 	for (unsigned j = 0; j < all_cylins.size(); ++j) {
 		all_cylins[j].p1 += vd;
@@ -1619,7 +1624,7 @@ void tree::shift_tree(vector3d const &vd) { // tree has no single pos, have to t
 }
 
 
-void shift_trees(vector<tree> &t_trees, vector3d const &vd) {
+void shift_trees(tree_cont_t &t_trees, vector3d const &vd) {
 
 	if (num_trees > 0) return; // dynamically created, not placed
 
@@ -1629,7 +1634,7 @@ void shift_trees(vector<tree> &t_trees, vector3d const &vd) {
 }
 
 
-void add_tree_cobjs(vector<tree> &t_trees) {
+void add_tree_cobjs(tree_cont_t &t_trees) {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
 		t_trees[i].add_tree_collision_objects(i);
@@ -1637,7 +1642,7 @@ void add_tree_cobjs(vector<tree> &t_trees) {
 }
 
 
-void clear_tree_vbos(vector<tree> &t_trees) {
+void clear_tree_vbos(tree_cont_t &t_trees) {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
 		t_trees[i].clear_vbo();

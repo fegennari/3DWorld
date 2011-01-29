@@ -310,6 +310,9 @@ struct cube_t { // size = 24
 		UNROLL_3X(d[i_][0] = c.d[i_][0];)
 		UNROLL_3X(d[i_][1] = c.d[i_][1];)
 	}
+	void translate(point const &p) {
+		UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)
+	}
 	void set_from_points(point const *const pts, unsigned npts);
 	void print() const;
 	bool is_near_zero_area() const;
@@ -1212,11 +1215,11 @@ float highest_mesh_point(point const &pt, float radius);
 // function prototypes - collision detection
 void set_coll_border();
 int  add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
-void add_coll_cube_hollow(int *index, float d[3][2], cobj_params const &cparams, float thickness, int platform_id=-1, int dhcm=0);
 int  add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2,
 					   float radius, float radius2, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
 int  add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
-int  add_coll_polygon(const point *points, int npoints, cobj_params const &cparams, float thickness, int platform_id=-1, int dhcm=0);
+int  add_coll_polygon(const point *points, int npoints, cobj_params const &cparams,
+	float thickness, point const &xlate=all_zeros, int platform_id=-1, int dhcm=0);
 int  remove_coll_object(int index, bool reset_draw=1);
 int  remove_reset_coll_obj(int &index);
 void purge_coll_freed(bool force);

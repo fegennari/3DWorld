@@ -85,7 +85,7 @@ class tree { // size = BIG
 	int type, created, trseed1, trseed2, branch_vbo, leaf_vbo;
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
 	vector<vert_norm_tc_color> leaf_data;
-	point gen_pos, sphere_center;
+	point sphere_center;
 	float sphere_radius, init_deadness, deadness, damage;
 	vector<draw_cylin> all_cylins;
 	colorRGBA color, base_color, leaf_color, bcolor;
@@ -151,7 +151,7 @@ public:
 	void change_leaf_color(colorRGBA &base_color, unsigned i);
 	void shift_tree(vector3d const &vd);
 	int delete_tree();
-	point get_gen_pos()  const {return gen_pos;}
+	point get_center()   const {return sphere_center;}
 	bool get_no_delete() const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
 };
@@ -181,16 +181,19 @@ public:
 };
 
 
+typedef vector<tree> tree_cont_t;
+
+
 
 // function prototypes - tree
 float get_tree_z_bottom(float z, point const &pos);
-void remove_tree_cobjs(vector<tree> &t_trees);
-void draw_trees(vector<tree> &ts);
-void delete_trees(vector<tree> &ts);
-void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old);
-void shift_trees(vector<tree> &t_trees, vector3d const &vd);
-void add_tree_cobjs(vector<tree> &t_trees);
-void clear_tree_vbos(vector<tree> &t_trees);
+void remove_tree_cobjs(tree_cont_t &t_trees);
+void draw_trees(tree_cont_t &ts);
+void delete_trees(tree_cont_t &ts);
+void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old);
+void shift_trees(tree_cont_t &t_trees, vector3d const &vd);
+void add_tree_cobjs(tree_cont_t &t_trees);
+void clear_tree_vbos(tree_cont_t &t_trees);
 
 // function prototypes - small trees
 int add_small_tree(point const &pos, float height, float width, int tree_type, bool calc_z);

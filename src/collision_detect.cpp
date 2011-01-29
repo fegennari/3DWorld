@@ -106,34 +106,6 @@ int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int
 }
 
 
-void add_coll_cube_hollow(int *index, float d[3][2], cobj_params const &cparams, int platform_id, float thickness) { // add six coll polygons
-
-	point points[4];
-	assert(index != NULL);
-
-	for (unsigned i = 0; i < 4; ++i) {
-		points[i].assign(d[0][i==1||i==2], d[1][i==2||i==3], d[2][1]);
-	}
-	index[0] = add_coll_polygon(points, 4, cparams, platform_id, thickness);
-	points[0].z = points[1].z = points[2].z = points[3].z = d[2][0];
-	index[1] = add_coll_polygon(points, 4, cparams, platform_id, thickness);
-	
-	for (unsigned i = 0; i < 4; ++i) {
-		points[i].assign(d[0][i==2||i==3], d[1][1], d[2][i==1||i==2]);
-	}
-	index[2] = add_coll_polygon(points, 4, cparams, platform_id, thickness);
-	points[0].y = points[1].y = points[2].y = points[3].y = d[1][0];
-	index[3] = add_coll_polygon(points, 4, cparams, platform_id, thickness);
-	
-	for (unsigned i = 0; i < 4; ++i) {
-		points[i].assign(d[0][1], d[1][i==1||i==2], d[2][i==2||i==3]);
-	}
-	index[4] = add_coll_polygon(points, 4, cparams, platform_id, thickness);
-	points[0].x = points[1].x = points[2].x = points[3].x = d[0][0];
-	index[5] = add_coll_polygon(points, 4, cparams, platform_id, thickness);
-}
-
-
 void add_coll_cylinder_to_matrix(int index, int dhcm) {
 
 	int xx1, xx2, yy1, yy2, cb;
@@ -364,8 +336,9 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 
 
 // must be planar, convex polygon with unique consecutive points
-int add_coll_polygon(const point *points, int npoints, cobj_params const &cparams, float thickness, int platform_id, int dhcm) {
-
+int add_coll_polygon(const point *points, int npoints, cobj_params const &cparams,
+	float thickness, point const &xlate, int platform_id, int dhcm)
+{
 	assert(npoints >= 3 && points != NULL); // too strict?
 	assert(npoints <= N_COLL_POLY_PTS);
 	int const index(get_next_avail_index());
@@ -374,6 +347,7 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 	cobj.norm = get_poly_norm(points);
 	assert(cobj.norm != zero_vector);
 	cobj.set_from_points(points, npoints); // set cube_t
+	cobj.translate(xlate);
 	
 	for (unsigned p = 0; p < 3; ++p) {
 		float const thick(0.5*thickness*fabs(cobj.norm[p]));
@@ -381,7 +355,7 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 		cobj.d[p][1] += thick;
 	}
 	for (int i = 0; i < npoints; ++i) {
-		cobj.points[i] = points[i];
+		cobj.points[i] = points[i] + xlate;
 	}
 	cobj.npoints   = npoints; // must do this after set_coll_obj_props
 	cobj.thickness = thickness;
@@ -419,7 +393,7 @@ int coll_obj::add_coll_cobj() {
 		cid = add_coll_cylinder(points[0], points[1], radius, radius2, cp, platform_id);
 		break;
 	case COLL_POLYGON:
-		cid = add_coll_polygon(points, npoints, cp, thickness, platform_id);
+		cid = add_coll_polygon(points, npoints, cp, thickness, all_zeros, platform_id);
 		break;
 	default:
 		assert(0);
@@ -578,7 +552,7 @@ void cobj_optimize() { // currently used for both statistical reporting and opti
 		if (coll_objects[i].status == COLL_STATIC) ++ncobj;
 	}
 	if (ncobj > 0) {
-		PRINT_TIME("Optimize");
+		PRINT_TIME(" Optimize");
 		cout << "bins = " << XY_MULT_SIZE << ", ne = " << nonempty << ", cobjs = " << ncobj
 			 << ", ent = " << ncv << ", per c = " << ncv/ncobj << ", per bin = " << ncv/XY_MULT_SIZE << endl;
 	}

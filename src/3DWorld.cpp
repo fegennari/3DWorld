@@ -86,7 +86,7 @@ point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
 GLUquadricObj* quadric(0);
 lightning l_strike;
-vector<tree> t_trees;
+tree_cont_t t_trees;
 colorRGBA bkg_color;
 set<unsigned char> keys, keyset;
 char game_mode_string[256] = {"640x480:32@85"};

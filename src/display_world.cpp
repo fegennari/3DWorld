@@ -47,7 +47,7 @@ extern double camera_zh;
 extern point mesh_origin, flow_source, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern colorRGBA sun_color, bkg_color;
 extern vector<camera_filter> cfilters;
-extern vector<tree> t_trees;
+extern tree_cont_t t_trees;
 
 void display_universe();
 void display_inf_terrain();

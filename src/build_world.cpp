@@ -45,7 +45,7 @@ extern unsigned init_item_counts[];
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
 extern platform_cont platforms;
-extern vector<tree> t_trees;
+extern tree_cont_t t_trees;
 extern lightning l_strike;
 extern vector<int> hmv_coll_obj;
 extern char *coll_obj_file;
