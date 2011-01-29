@@ -1632,7 +1632,7 @@ void add_coll_shadow_objs() {
 			add_shadow_obj(gen_rand_scene_pos(), object_types[BALL].radius, -1, light_in_front);
 		}
 	}
-	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME("Shadow Object Creation");}
+	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Shadow Object Creation");}
 	static bool test_all(0);
 	static set<unsigned> shadowed;
 	unsigned const ncobjs(coll_objects.size());
@@ -1650,7 +1650,7 @@ void add_coll_shadow_objs() {
 	}
 	test_all = 0;
 	shadowed.clear();
-	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME("Sobjs Reset");}
+	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Sobjs Reset");}
 	vector<int> cobjs;
 	unsigned nadded(0);
 
@@ -1681,7 +1681,7 @@ void add_coll_shadow_objs() {
 			//if (s > 0) draw_sphere_at(shadow_objs[s].pos, shadow_objs[s].radius, 16); // debugging
 		}
 	}
-	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME("Shadow Object Addition");}
+	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Shadow Object Addition");}
 }
 
 
@@ -1722,16 +1722,16 @@ void init_subdiv_lighting() {
 		}
 		invalid_shadows = 0;
 		clear_all_lightmaps(0, keep_lights); // clear all
-		if (VERBOSE_DYNAMIC) {PRINT_TIME("Lightmap Clear");}
+		if (VERBOSE_DYNAMIC) {PRINT_TIME(" Lighting Clear");}
 	}
 	else if (invalid_shadows == 2) {
 		invalid_shadows = 0;
 		clear_all_lightmaps(2); // update shadows
-		PRINT_TIME("Lightmap Bitset and Dlist Clear");
+		PRINT_TIME(" Lighting Bitset and Dlist Clear");
 	}
 	else if (colors != last_colors) {
 		clear_all_lightmaps(1); // clear only dlists/textures
-		if (VERBOSE_DYNAMIC) {PRINT_TIME("Lightmap Dlist Clear");}
+		if (VERBOSE_DYNAMIC) {PRINT_TIME(" Lighting Dlist Clear");}
 	}
 	last_lposes = lposes;
 	last_colors = colors;

@@ -573,7 +573,7 @@ void build_lightmap(bool verbose) {
 	if (verbose) cout << "zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;
 	int **z_light_depth = NULL;
 	matrix_gen_2d(z_light_depth);
-	if (verbose) PRINT_TIME("Lightmap Setup");
+	if (verbose) PRINT_TIME(" Lighting Setup");
 	bool const raytrace_lights_g(read_light_file   || write_light_file  );
 	bool const raytrace_lights_l(read_light_file_l || write_light_file_l);
 	float const light_off(raytrace_lights_g ? 0.0f : LIGHT_OFFSET);
@@ -689,7 +689,7 @@ void build_lightmap(bool verbose) {
 			} // for v
 		} // for j
 	} // for i
-	if (verbose) PRINT_TIME("Lightmap Z + Flow");
+	if (verbose) PRINT_TIME(" Lighting Z + Flow");
 	int const bnds[2][2] = {{0, MESH_X_SIZE-1}, {0, MESH_Y_SIZE-1}};
 	float const fbnds[2] = {(X_SCENE_SIZE - TOLER), (Y_SCENE_SIZE - TOLER)};
 	int counter(0);
@@ -789,7 +789,7 @@ void build_lightmap(bool verbose) {
 		} // for dim
 		pass_weight *= PASS_WEIGHT_ATT;
 	} // for pass
-	if (verbose) PRINT_TIME("Lightmap XY");
+	if (verbose) PRINT_TIME(" Lighting XY");
 
 	// add in static light sources
 	if (!raytrace_lights_l) {
@@ -837,7 +837,7 @@ void build_lightmap(bool verbose) {
 				} // for x
 			} // for y
 		} // for i
-		if (verbose) PRINT_TIME("Light Source Addition");
+		if (verbose) PRINT_TIME(" Light Source Addition");
 	}
 	float const lscales[4] = {1.0/SQRT3, 1.0/SQRT2, 1.0, 0.0};
 
@@ -878,23 +878,23 @@ void build_lightmap(bool verbose) {
 				} // for j
 			} // for i
 		} // for n
-		if (verbose) PRINT_TIME("Lightmap Smooth");
+		if (verbose) PRINT_TIME(" Lighting Smooth");
 	} // if LIGHT_SPREAD
 
 	if (raytrace_lights_g && nbins > 0) {
 		compute_ray_trace_lighting_global();
-		if (verbose) PRINT_TIME("Global Lightmap Ray Trace");
+		if (verbose) PRINT_TIME(" Global Lightmap Ray Trace");
 	}
 	if (raytrace_lights_l && nbins > 0) {
 		compute_ray_trace_lighting_local();
-		if (verbose) PRINT_TIME("Local Lightmap Ray Trace");
+		if (verbose) PRINT_TIME(" Local Lightmap Ray Trace");
 	}
 	// normalize final light value to [MIN_LIGHT, MAX_LIGHT]
 	lmap_manager.normalize_light_val(MIN_LIGHT, MAX_LIGHT, LIGHT_SCALE, light_off);
 	reset_cobj_counters();
 	matrix_delete_2d(z_light_depth);
 	matrix_delete_2d(need_lmcell);
-	PRINT_TIME("Lightmap");
+	PRINT_TIME(" Lighting");
 }
 
 

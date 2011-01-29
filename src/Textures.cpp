@@ -1101,7 +1101,7 @@ void create_landscape_texture() {
 			}
 		} // for j
 	} // for i
-	PRINT_TIME("Data Gen");
+	PRINT_TIME(" Data Gen");
 
 	if (!read_landscape) {
 		if (landscape0 == NULL || !scroll) { // initialize/copy entire texture
@@ -1109,7 +1109,7 @@ void create_landscape_texture() {
 			if (landscape0 == NULL) landscape0 = new unsigned char[totsize];
 			memcpy(landscape0, tex_data, totsize*sizeof(unsigned char));
 			ls0_invalid = 0;
-			PRINT_TIME("Landscape0 Gen");
+			PRINT_TIME(" Landscape0 Gen");
 		}
 		else if (lchanged0) { // create landscape0
 			for (int i = i0; i != i1; i += di) {
@@ -1125,7 +1125,7 @@ void create_landscape_texture() {
 				}
 			}
 			ls0_invalid = 0;
-			PRINT_TIME("Landscape0 Copy");
+			PRINT_TIME(" Landscape0 Copy");
 		}
 		else { // delay creation of landscape0 until it's needed
 			ls0_invalid = 1;
@@ -1133,7 +1133,7 @@ void create_landscape_texture() {
 	}
 	textures[LANDSCAPE_TEX].gl_delete(); // should we try to update rather than recreating from scratch?
 	init_texture(LANDSCAPE_TEX); // performance bottleneck
-	PRINT_TIME("Final");
+	PRINT_TIME(" Final");
 }
 
 

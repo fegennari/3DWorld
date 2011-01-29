@@ -82,7 +82,7 @@ public:
 		nodes[0].next_node_id = nodes.size();
 
 		if (verbose) {
-			PRINT_TIME("Cobj Tree Create");
+			PRINT_TIME(" Cobj Tree Create");
 			cout << "cobjs: " << cobjs.size() << ", leaves: " << cixs.size() << ", nodes: " << nodes.size() << endl;
 		}
 	}

@@ -31,7 +31,7 @@ extern float sun_rot, moon_rot, zmin, zmax, zbottom, ztop;
 extern point sun_pos, moon_pos, mesh_origin;
 extern vector3d up_norm;
 extern lightning l_strike;
-extern vector<tree> t_trees;
+extern tree_cont_t t_trees;
 extern vector<coll_obj> coll_objects;
 
 

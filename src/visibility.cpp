@@ -354,10 +354,10 @@ void calc_visibility(char light_sources) {
 		// we use the first element of mesh_height and shadow_mask assuming they are allocated as one large array
 		calc_mesh_shadows(l, lpos[l], mesh_height[0], shadow_mask[l][0], MESH_X_SIZE, MESH_Y_SIZE);
 	} // for l
-	if (sst) PRINT_TIME("Landscape shadow");
+	if (sst) PRINT_TIME(" Landscape shadow");
 	if (!RAYCAST_OBJ_SHAD) add_cobj_shadows(light_sources);
-	if (sst) PRINT_TIME("Tree shadow");
-	PRINT_TIME("Shadow");
+	if (sst) PRINT_TIME(" Tree shadow");
+	PRINT_TIME(" Shadow");
 }
 
 
