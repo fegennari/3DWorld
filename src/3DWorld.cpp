@@ -105,8 +105,8 @@ char player_name[MAX_CHARS] = "Player";
 extern bool clear_landscape_vbo, use_dense_voxels;
 extern int flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS, NUM_THREADS, grass_density;
-extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, NUM_THREADS, grass_density, max_unique_trees;
+extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
 extern float mesh_scale, mesh_scale2, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width;
 extern point hmv_pos;
 extern int coll_id[];
@@ -1407,6 +1407,12 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "ntrees") {
 			if (!read_int(fp, num_trees) || num_trees < 0) cfg_err("number of trees", error);
+		}
+		else if (str == "max_unique_trees") {
+			if (!read_uint(fp, max_unique_trees)) cfg_err("max_unique_trees", error);
+		}
+		else if (str == "nleaves_scale") {
+			if (!read_float(fp, nleaves_scale) || nleaves_scale <= 0.0) cfg_err("nleaves_scale", error);
 		}
 		else if (str == "nsmileys") {
 			if (!read_int(fp, num_smileys) || num_smileys < 0) cfg_err("number of smileys", error);

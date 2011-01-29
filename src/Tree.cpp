@@ -25,7 +25,6 @@ int   const LEAF_GEN_RAND2   = 200000; // larger is fewer leaves falling
 float const DIST_C_SCALE     = 0.25;
 float const LEAF_SHADOW_VAL  = 0.25;
 float const BR_SHADOW_VAL    = 0.6;
-float const NLEAVES_SCALE    = 1.0;
 float const TREE_DEPTH       = 0.1;
 float const BASE_LEN_SCALE   = 0.8; // determines base cylinder overlap
 float const BRANCH_LEN_SCALE = 0.9; // determines branch cylinder overlap
@@ -49,12 +48,12 @@ void process_leaf(vector<tree_leaf> &leaves, point start, point rotate, float b_
 
 
 // tree_mode: 0 = no trees, 1 = large only, 2 = small only, 3 = both large and small
-unsigned max_leaves(0);
+unsigned max_leaves(0), max_unique_trees(0);
 int tree_mode(1), tree_coll_level(TREE_COLL);
 float tree_temp_matrix[3], i_matrix[9], re_matrix[3];
-float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0);
-float LEAF_SIZE(REL_LEAF_SIZE*TREE_SIZE);
+float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), leaf_size(0.0);
 colorRGBA leaf_base_color(BLACK);
+point leaf_points[4]; // z = 0.0 -> -0.05
 
 
 extern bool has_snow;
@@ -69,12 +68,14 @@ extern texture textures[];
 extern vector<coll_obj> coll_objects;
 
 
-point leaf_points[4] = { // z = 0.0 -> -0.05
-	point(-2.0*LEAF_SIZE, 0.0, 0.0),
-	point(-2.0*LEAF_SIZE, 0.0, 4.0*LEAF_SIZE),
-	point( 2.0*LEAF_SIZE, 0.0, 4.0*LEAF_SIZE),
-	point( 2.0*LEAF_SIZE, 0.0, 0.0),
-};
+void calc_leaf_points() {
+
+	leaf_size = REL_LEAF_SIZE*TREE_SIZE/sqrt(nleaves_scale);
+	leaf_points[0].assign(-2.0*leaf_size, 0.0, 0.0);
+	leaf_points[1].assign(-2.0*leaf_size, 0.0, 4.0*leaf_size);
+	leaf_points[2].assign( 2.0*leaf_size, 0.0, 4.0*leaf_size);
+	leaf_points[3].assign( 2.0*leaf_size, 0.0, 0.0);
+}
 
 
 //tree related variables
@@ -1011,7 +1012,7 @@ void tree::gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z,
 	num_34_branches[1]   = 0;
 	if (size <= 0) size  = rand_gen(40, 80); // tree size
 	base_radius            = size * (0.1*tree_size*TREE_SIZE*tree_types[type].size/(mesh_scale*mesh_scale2));
-	num_leaves_per_occ     = NLEAVES_SCALE*0.01*(rand_gen(30, 60) + size);
+	num_leaves_per_occ     = 0.01*nleaves_scale*(rand_gen(30, 60) + size);
 	base_length_min        = rand_gen(4, 6) * base_radius;
 	base_length_max        = base_length_min * 1.5;
 	angle_rotate           = 60.0;
@@ -1541,7 +1542,7 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 					t_trees[i].set_no_delete(0);
 				}
 				else { // remove this tree from the vector
-					if (i != t_trees.size()-1) swap(t_trees[i], t_trees.back());
+					swap(t_trees[i], t_trees.back()); // deep copy = bad?
 					t_trees.pop_back();
 					--i;
 				}
@@ -1549,7 +1550,7 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 		}
 		else {
 			max_leaves = 0;
-			t_trees.clear();
+			t_trees.resize(0);
 		}
 		PRINT_TIME("Delete Trees");
 		unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1, XY_MULT_SIZE/num_trees));
@@ -1571,6 +1572,7 @@ void regen_trees(vector<tree> &t_trees, bool recalc_shadows, bool keep_old) {
 				pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 				if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
 				if (tree_mode == 3 && get_tree_type_from_height(pos.z) != 2) continue; // use a small (simple) tree here
+				// *** use max_unique_trees ***
 				t_trees.push_back(tree());
 				t_trees.back().regen_tree(pos, 0, t_trees.size()-1); // use random function #2 for trees
 			}

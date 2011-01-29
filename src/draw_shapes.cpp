@@ -1372,7 +1372,7 @@ void draw_extruded_polygon(float thick, point const *const points, const vector3
 	bool const textured(tid >= 0);
 	float const tscale[2] = {c.cp.tscale, get_tex_ar(tid)*c.cp.tscale};
 	
-	if (thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
+	if (/*FAST_SHAPE_DRAW ||*/ thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
 		if (textured) setup_polygon_texgen(norm, tscale);
 		draw_polygon(points, normals, npoints, norm, 0, 0, q);
 		return;

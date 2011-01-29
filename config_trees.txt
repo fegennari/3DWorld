@@ -1,4 +1,6 @@
 ntrees 200
+max_unique_trees 0
+nleaves_scale 1.0
 nsmileys 6
 verbose 0
 rand_seed 0

@@ -28,7 +28,6 @@ extern vector3d wind;
 extern colorRGBA leaf_base_color;
 extern GLUquadricObj* quadric;
 extern lightning l_strike;
-extern vector<tree> t_trees;
 extern obj_group obj_groups[];
 
 // camera variables

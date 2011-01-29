@@ -56,7 +56,7 @@ extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, U
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
 extern unsigned smoke_tid, dl_tid;
 extern float zmin, light_factor, water_plane_z, fticks, perspective_fovy, perspective_nclip;
-extern float temperature, atmosphere, TIMESTEP, base_gravity, tan_term, LEAF_SIZE, zbottom, sun_rot;
+extern float temperature, atmosphere, TIMESTEP, base_gravity, tan_term, zbottom, sun_rot, leaf_size;
 extern point light_pos, ocean, mesh_origin, flow_source, surface_pos, litning_pos, leaf_points[], star_pts[];
 extern vector3d wind;
 extern colorRGBA bkg_color, sun_color;
@@ -491,7 +491,7 @@ void draw_group(obj_group &objg) {
 			if (obj.disabled()) continue;
 			float const scale(obj.init_dir.z);
 			assert(scale > 0.0);
-			if (!sphere_in_camera_view(obj.pos, 4.0*scale*LEAF_SIZE, clip_level)) continue;
+			if (!sphere_in_camera_view(obj.pos, 4.0*scale*leaf_size, clip_level)) continue;
 			int const tree_type(obj.source);
 			assert(tree_type >= 0 && tree_type < NUM_TREE_TYPES);
 			int const tid(tree_types[tree_type].leaf_tex);
@@ -503,7 +503,7 @@ void draw_group(obj_group &objg) {
 
 		for (unsigned j = 0; j < ordering.size(); ++j) {
 			dwobject const &obj(objg.get_obj(ordering[j].second));
-			float const scale(obj.init_dir.z), lsize(scale*LEAF_SIZE);
+			float const scale(obj.init_dir.z), lsize(scale*leaf_size);
 			int const tid(ordering[j].first);
 			
 			if (draw_model == 0 && tid != last_tid) {
