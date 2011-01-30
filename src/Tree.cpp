@@ -531,7 +531,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 			branch_vbo = create_vbo();
 			assert(branch_vbo > 0);
 			bind_vbo(branch_vbo);
-			upload_vbo_data(&data.front(), data.size()*branch_stride);
+			upload_vbo_data(&data.front(), data.size()*branch_stride); // ~1.2MB
 		} // end create vbo
 		// use vbo for rendering
 		bind_vbo(branch_vbo);
@@ -703,7 +703,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 			leaf_vbo = create_vbo();
 			assert(leaf_vbo > 0);
 			bind_vbo(leaf_vbo);
-			upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride);
+			upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride); // ~150KB
 		}
 		else {
 			bind_vbo(leaf_vbo);
@@ -1495,11 +1495,12 @@ int generate_next_cylin(int cylin_num, float branch_curveness, int ncib, bool br
 void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
 
 	cout << "vegetation: " << vegetation << endl;
+	RESET_TIME;
 	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
 	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
+	int const ext_x1(get_ext_x1()), ext_x2(get_ext_x2()), ext_y1(get_ext_y1()), ext_y2(get_ext_y2());
 	static int init(0), last_rgi(0), last_xoff2(0), last_yoff2(0);
 	static float last_ms(0.0), last_ms2(0.0);
-	RESET_TIME;
 	if (tree_mode && recalc_shadows) reset_shadows(OBJECT_SHADOW);
 	
 	if (tree_mode & 2) {
@@ -1525,7 +1526,7 @@ void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
 			for (unsigned i = 0; i < t_trees.size(); ++i) { // keep any tree that's still in the scene
 				point const gen_pos(t_trees[i].get_center());
 				int const xp(get_xpos(gen_pos.x) - dx_scroll), yp(get_ypos(gen_pos.y) - dy_scroll);
-				bool const keep(xp >= 1 && xp <= MESH_X_SIZE-1 && yp >= 1 && yp <= MESH_Y_SIZE-1);
+				bool const keep(xp >= ext_x1 && xp <= ext_x2 && yp >= ext_y1 && yp <= ext_y2);
 				t_trees[i].set_no_delete(keep);
 
 				if (keep) { // shift it - don't have to recreate it
@@ -1557,11 +1558,11 @@ void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
 		unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1, XY_MULT_SIZE/num_trees));
 		unsigned const skip_val(max(1, int(1.0/sqrt((mesh_scale*mesh_scale2))))); // similar to deterministic gen in scenery.cpp
 
-		for (int i = get_ext_y1(); i < get_ext_y2(); i += skip_val) {
-			for (int j = get_ext_x1(); j < get_ext_x2(); j += skip_val) {
+		for (int i = ext_y1; i < ext_y2; i += skip_val) {
+			for (int j = ext_x1; j < ext_x2; j += skip_val) {
 				if (scrolling) {
 					int const ox(j + dx_scroll), oy(i + dy_scroll); // positions in original coordinate system
-					if (ox >= 1 && ox <= MESH_X_SIZE-1 && oy >= 1 && oy <= MESH_Y_SIZE-1) continue; // use orignal tree from last position
+					if (ox >= ext_x1 && ox <= ext_x2 && oy >= ext_y1 && oy <= ext_y2) continue; // use orignal tree from last position
 				}
 				rseed1 = 805306457*(i + yoff2) + 12582917*(j + xoff2) + 100663319*rand_gen_index;
 				rseed2 = 6291469  *(j + xoff2) + 3145739 *(i + yoff2) + 1572869  *rand_gen_index;
