@@ -631,11 +631,7 @@ void coll_obj::shift_by(vector3d const &vd) {
 	for (unsigned j = 0; j < unsigned(npoints); ++j) {
 		points[j] += vd;
 	}
-	for (unsigned j = 0; j < 3; ++j) {
-		for (unsigned k = 0; k < 2; ++k) {
-			d[j][k] += vd[j];
-		}
-	}
+	cube_t::translate(vd);
 	//clear_lightmap_if_lighted_eq(0, 0); // clear if unshadowed
 	clear_lightmap_if_lighted_eq(1, 1); // always clear
 }
