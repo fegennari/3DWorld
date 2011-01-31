@@ -116,9 +116,19 @@ inline colorRGBA get_leaf_base_color(int type) {
 }
 
 
+bool tree::is_over_mesh() const {
+
+	int const x1(get_xpos(sphere_center.x - sphere_radius)), y1(get_ypos(sphere_center.y - sphere_radius));
+	int const x2(get_xpos(sphere_center.x + sphere_radius)), y2(get_ypos(sphere_center.y + sphere_radius));
+	return (x1 < MESH_X_SIZE && y1 < MESH_Y_SIZE && x2 >= 0 && y2 >= 0); // completely off the mesh
+}
+
+
 void tree::gen_tree_shadows(char light_sources, int index) {
 
 	if (shadow_detail < 2 || !(tree_mode & 1) || !created) return;
+	// Note: not entirely correct since an off mesh tree can still cast a shadow on the mesh
+	if (!is_over_mesh()) return; // optimization
 	if (!enable_shadow_envelope(sphere_center, sphere_radius, light_sources, 1)) return;
 
 	for (unsigned i = 0; i < all_cylins.size(); i++) {
@@ -141,9 +151,7 @@ void tree::add_tree_collision_objects(int ix) {
 	//RESET_TIME;
 	if (!(tree_mode & 1) || !tree_coll_level || !created) return;
 	remove_collision_objects();
-	int const x1(get_xpos(sphere_center.x - sphere_radius)), y1(get_ypos(sphere_center.y - sphere_radius));
-	int const x2(get_xpos(sphere_center.x + sphere_radius)), y2(get_ypos(sphere_center.y + sphere_radius));
-	if (x1 >= MESH_X_SIZE || y1 >= MESH_Y_SIZE || x2 < 0 || y2 < 0) return; // completely off the mesh
+	if (!is_over_mesh()) return; // optimization
 	int const btid(tree_types[type].bark_tex);
 	colorRGBA const bcolor(tree_types[type].barkc);
 	cobj_params cp(0.8, bcolor, TEST_RTREE_COBJS, 0, NULL, ix, btid, 4.0, 1, 0);
@@ -974,7 +982,7 @@ void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 
 void tree::gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z, bool add_cobjs, int ix) {
 
-	sphere_center = pos;
+	sphere_center = pos; // z value will be reset later
 	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 	leaf_data.clear();
 
@@ -1570,7 +1578,8 @@ void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
 				if (val <= 100)         continue; // scenery
 				if (val%tree_prob != 0) continue; // not selected
 				if ((rseed1&127)/128.0 >= vegetation) continue;
-				point pos(get_xval(j), get_yval(i), 0.0);
+				point pos((get_xval(j) + 0.5*DX_VAL*rand2d()), (get_yval(i) + 0.5*DY_VAL*rand2d()), 0.0);
+				// Note: pos.z will be slightly different when calculated within vs. outside the mesh bounds
 				pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 				if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
 				if (tree_mode == 3 && get_tree_type_from_height(pos.z) != 2) continue; // use a small (simple) tree here
