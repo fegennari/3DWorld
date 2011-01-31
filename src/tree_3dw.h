@@ -117,7 +117,7 @@ class tree { // size = BIG
 public:
 	tree() : created(0), branch_vbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0), leaves_changed(0), not_visible(0), num_branch_quads(0) {}
 	bool is_over_mesh() const;
-	void gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z, bool add_cobjs, int ix);
+	void gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs, int ix);
 	void regen_tree(point &pos, int recalc_shadows, int index);
 	void gen_tree_shadows(char light_sources, int index);
 	void add_tree_collision_objects(int ix);

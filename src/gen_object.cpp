@@ -39,13 +39,12 @@ int valid_star_pos(point &pos);
 
 
 
-void gen_stars(int rand_seed, float alpha, int half_sphere) {
+void gen_stars(float alpha, int half_sphere) {
 
 	float const cmin[3] = {0.7, 0.9, 0.6};
 	int const num_stars(stars.size());
 
 	if (!star_init) {
-		if (rand_seed > 1) srand(rand_seed);
 		nstars    = num_stars - rand()%max(1, num_stars/4);
 		star_init = 1;
 

@@ -980,7 +980,7 @@ void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 
 
 
-void tree::gen_tree(point &pos, int &rand_seed, int size, int ttype, int calc_z, bool add_cobjs, int ix) {
+void tree::gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs, int ix) {
 
 	sphere_center = pos; // z value will be reset later
 	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
@@ -1608,9 +1608,7 @@ void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
 
 void tree::regen_tree(point &pos, int recalc_shadows, int index) {
 
-	static int rs_tree(1);
-	gen_tree(pos, rs_tree, 0, -1, 1, 1, index);
-	rs_tree = rand();
+	gen_tree(pos, 0, -1, 1, 1, index);
 	if (recalc_shadows) gen_tree_shadows((SUN_SHADOW | MOON_SHADOW), index);
 }
 

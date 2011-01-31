@@ -1010,11 +1010,10 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				cout << "Must set ntrees to zero in order to add trees through collision objects file." << endl;
 			}
 			else {
-				static int rs_tree2(1);
 				tree t;
 				t_trees.push_back(t);
 				xform_pos(pos, tv, scale, mirror, swap_dim);
-				t_trees.back().gen_tree(pos, rs_tree2, max(1, int(fvals[0]*scale)), ivals[0], !use_z, 0, t_trees.size()-1);
+				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*scale)), ivals[0], !use_z, 0, t_trees.size()-1);
 				tree_mode |= 1; // enable trees
 			}
 			break;

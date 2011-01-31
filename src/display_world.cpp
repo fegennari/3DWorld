@@ -360,7 +360,6 @@ void reset_planet_defaults() {
 
 void setup_lighting(int underwater, float depth) {
 
-	int const rs_stars(1);
 	float const lfd(5.0*(light_factor - 0.4)), lfn(1.0 - lfd);
 	
 	// background color code
@@ -403,7 +402,7 @@ void setup_lighting(int underwater, float depth) {
 		ambient[i] -= 0.05*cloud_cover;
 	}
 	if (light_factor <= 0.4) { // moon
-		gen_stars(rs_stars, 1.0, island);
+		gen_stars(1.0, island);
 		calc_moon_atten(ambient, diffuse, mlf);
 		sm_green_int = diffuse[1];
 		set_colors_and_enable_light(GL_LIGHT1, ambient, diffuse);
@@ -419,7 +418,7 @@ void setup_lighting(int underwater, float depth) {
 		draw_sun();
 	}
 	else { // sun and moon
-		gen_stars(rs_stars, lfn, island);
+		gen_stars(lfn, island);
 
 		for (unsigned i = 0; i < 3; ++i) { // should diffuse depend more on angle than ambient?
 			diffuse[i] = (diffuse[i] + 0.2)*lfd;

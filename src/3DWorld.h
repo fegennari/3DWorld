@@ -1134,7 +1134,7 @@ void reset_tiled_terrain_state();
 void draw_overhead_map();
 
 // function prototypes - gen_obj
-void gen_stars(int rand_seed, float alpha, int half_sphere);
+void gen_stars(float alpha, int half_sphere);
 void gen_star(star &star1, int half_sphere);
 void rand_xy_point(float zval, point &pt, unsigned flags);
 void gen_object_pos(point &position, unsigned flags);
