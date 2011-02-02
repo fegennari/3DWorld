@@ -14,6 +14,7 @@ disable_water 0
 disable_scenery 0
 read_landscape 0
 read_heightmap 0
+scenery_extent 0
 
 gravity 1.0
 mesh_height 1.0

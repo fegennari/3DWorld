@@ -139,9 +139,9 @@ void rock_shape3d::create(int x, int y, bool use_xy) {
 	radius = 0.0;
 	
 	for (unsigned i = 0; i < points.size(); ++i) { // calculate radius
-		float const dist(points[i].mag()); // check if correct - might need pos or average/center calculation
-		radius = max(radius, dist);
+		radius = max(radius, points[i].mag_sq()); // check if correct - might need pos or average/center calculation
 	}
+	radius = sqrt(radius);
 	pos.z += 0.1*radius;
 }
 
@@ -216,7 +216,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int &rand_seed, int typ
 			points[i] = gen_rand_vector2(size);
 		}
 		unsigned face(0), tot_used(0);
-		vector<bool> used(nverts, 0);
+		vector<unsigned char> used(nverts, 0);
 		edge_seen_set edges_seen;
 		deque<edge> edges; // incomplete faces
 
@@ -225,7 +225,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int &rand_seed, int typ
 			unsigned imin(0);
 			float dmin(0.0);
 
-			for (unsigned i = 0; i < nverts; ++i) {
+			for (unsigned i = 0; i < nverts; ++i) { // find closest point to cv
 				if (i == cv) continue;
 				float const d(p2p_dist_sq(points[cv], points[i]));
 				if (dmin == 0.0 || d < dmin) {dmin = d; imin = i;}
