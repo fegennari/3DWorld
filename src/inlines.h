@@ -122,8 +122,13 @@ inline int rand2() {
 
 
 inline int rand2_seed_mix() {
-	int val1(rand2()); swap(rseed1, rseed2); return (val1 + rand2()); // more random
-	//return (rseed1 ^ (rseed2 >> 8)); // faster
+	//int val1(rand2()); swap(rseed1, rseed2); return (val1 + rand2()); // more random
+	return (rseed1 ^ (rseed2 >> 8)); // faster (should call rand2_mix() after)
+}
+
+
+inline void rand2_mix() {
+	rand2(); swap(rseed1, rseed2);
 }
 
 

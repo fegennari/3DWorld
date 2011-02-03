@@ -1577,6 +1577,7 @@ void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
 				unsigned const val(((unsigned)rand2_seed_mix())%smod);
 				if (val <= 100)         continue; // scenery
 				if (val%tree_prob != 0) continue; // not selected
+				rand2_mix();
 				if ((rseed1&127)/128.0 >= vegetation) continue;
 				point pos((get_xval(j) + 0.5*DX_VAL*rand2d()), (get_yval(i) + 0.5*DY_VAL*rand2d()), 0.0);
 				// Note: pos.z will be slightly different when calculated within vs. outside the mesh bounds
