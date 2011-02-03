@@ -110,13 +110,13 @@ void gen_small_trees() {
 		for (int j = get_ext_x1(); j < get_ext_x2(); j += skip_val) {
 			rseed1 = 657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index;
 			rseed2 = 845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index;
-			if ((rand2_2x_sum()%tree_prob) != 0) continue; // not selected
+			if ((rand2_seed_mix()%tree_prob) != 0) continue; // not selected (20ms)
 			float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*signed_rand_float2());
 			float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*signed_rand_float2());
-			float const dist_test(get_rel_height(eval_one_surface_point((tds*(xpos+x0)-xoff2), (tds*(ypos+y0)-yoff2)), -zmax_est, zmax_est));
-			if (dist_test > (SM_TREE_AMT*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rand_float2())) continue;
+			float const dist_test(get_rel_height(eval_one_surface_point((tds*(xpos+x0)-xoff2), (tds*(ypos+y0)-yoff2)), -zmax_est, zmax_est)); // 20ms
+			if (dist_test > (SM_TREE_AMT*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rand_float2())) continue; // tree density function test
 			float const height(rand_uniform2(0.4*tsize, tsize)), width(rand_uniform2(0.25*height, 0.35*height));
-			float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1) - 0.1*height);
+			float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1) - 0.1*height); // 15ms
 			int const tree_type(get_tree_type_from_height(zpos));
 			if (tree_type == 0) continue;
 			int ttype;
@@ -138,7 +138,7 @@ void gen_small_trees() {
 	}
 	sort(small_trees.begin(), small_trees.end()); // sort by type
 	//PRINT_TIME("Gen");
-	add_small_tree_coll_objs();
+	add_small_tree_coll_objs(); // 20ms
 	//PRINT_TIME("Cobj");
 }
 

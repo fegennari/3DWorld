@@ -767,7 +767,7 @@ void gen_scenery_deterministic() {
 		for (int j = get_ext_x1(); j < get_ext_x2(); ++j) {
 			rseed1 = 786433* (i + yoff2) + 196613 *rand_gen_index;
 			rseed2 = 6291469*(j + xoff2) + 1572869*rand_gen_index;
-			int const val(rand2_2x_sum()%smod);
+			int const val(rand2_seed_mix()%smod);
 			if (val > 100) continue;
 			bool const veg((rseed1&127)/128.0 < vegetation);
 			

@@ -121,11 +121,9 @@ inline int rand2() {
 }
 
 
-inline int rand2_2x_sum() {
-
-	int val1(rand2());
-	swap(rseed1, rseed2);
-	return (val1 + rand2());
+inline int rand2_seed_mix() {
+	int val1(rand2()); swap(rseed1, rseed2); return (val1 + rand2()); // more random
+	//return (rseed1 ^ (rseed2 >> 8)); // faster
 }
 
 
