@@ -176,7 +176,16 @@ void draw_small_trees() {
 	// two pass draw is more efficient because it avoids texture thrashing
 	for (unsigned pass = 0; pass < 2; ++pass) { // first pass: draw trunk, second pass: draw leaves
 		for (unsigned i = 0; i < small_trees.size(); ++i) {
-			small_trees[i].draw(1 << pass);
+			small_tree const &t(small_trees[i]);
+			
+			if (pass == 1 && (i == 0 || small_trees[i-1].get_type() != t.get_type())) {
+				small_trees[i].pre_leaf_draw(); // first of this type
+			}
+			t.draw(1 << pass);
+			
+			if (pass == 1 && (i+1 == small_trees.size() || small_trees[i+1].get_type() != t.get_type())) {
+				t.post_leaf_draw(); // last of this type
+			}
 		}
 	}
 	//set_lighted_sides(1);
@@ -311,6 +320,61 @@ void small_tree::calc_points() {
 }
 
 
+void small_tree::pre_leaf_draw() const {
+
+	select_texture(stt[type].tid);
+
+	switch (type) {
+	case T_PINE: // pine tree
+	case T_SH_PINE: // short pine tree
+		set_lighted_sides(2);
+		enable_blend();
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.75);
+		break;
+	case T_DECID: // decidious tree
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.5);
+		break;
+	case T_TDECID: // tall decidious tree
+	case T_BUSH: // bush
+		break; // nothing
+	case T_PALM: // palm tree
+		enable_blend();
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.75);
+		break;
+	default:
+		assert(0);
+	}
+}
+
+
+void small_tree::post_leaf_draw() const {
+
+	switch (type) {
+	case T_PINE: // pine tree
+	case T_SH_PINE: // short pine tree
+		glDisable(GL_ALPHA_TEST);
+		disable_blend();
+		set_lighted_sides(1);
+		break;
+	case T_DECID: // decidious tree
+		glDisable(GL_ALPHA_TEST);
+		break;
+	case T_TDECID: // tall decidious tree
+	case T_BUSH: // bush
+		break; // nothing
+	case T_PALM: // palm tree
+		glDisable(GL_ALPHA_TEST);
+		disable_blend();
+		break;
+	default:
+		assert(0);
+	}
+}
+
+
 void small_tree::draw(int mode) const {
 
 	if (!(tree_mode & 2)) return; // disabled
@@ -358,64 +422,42 @@ void small_tree::draw(int mode) const {
 		}
 	}
 	if (mode & 2) {
-		if (!pine_tree) {
+		set_color(color);
+
+		if (pine_tree) {
+			draw_quads_from_pts(points); // draw textured quad if far away?
+		}
+		else { // palm or decidious
 			glPushMatrix();
 			translate_to(pos);
 			if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
-		}
-		int const nsides(max(3, min(max_sides, (int)size)));
-		set_color(color);
-		select_texture(stt[type].tid);
+			int const nsides(max(3, min(max_sides, (int)size)));
 
-		switch (type) { // draw leaves
-		case T_PINE: // pine tree
-		case T_SH_PINE: // short pine tree
-			set_lighted_sides(2);
-			enable_blend();
-			glEnable(GL_ALPHA_TEST);
-			glAlphaFunc(GL_GREATER, 0.75);
-			draw_quads_from_pts(points); // draw textured quad if far away?
-			glDisable(GL_ALPHA_TEST);
-			disable_blend();
-			set_lighted_sides(1);
-			break;
-
-		case T_DECID: // decidious tree
-			glEnable(GL_ALPHA_TEST);
-			glAlphaFunc(GL_GREATER, 0.5);
-			glTranslatef(0.0, 0.0, 0.75*height);
-			glScalef(1.2, 1.2, 0.8);
-			draw_sphere_dlist(all_zeros, width, nsides, 1);
-			glDisable(GL_ALPHA_TEST);
-			break;
-
-		case T_TDECID: // tall decidious tree
-			glTranslatef(0.0, 0.0, 1.0*height);
-			glScalef(0.7, 0.7, 1.6);
-			draw_sphere_dlist(all_zeros, width, nsides, 1);
-			break;
-
-		case T_BUSH: // bush
-			glScalef((0.1*height+0.8*width)/width, (0.1*height+0.8*width)/width, 1.0);
-			draw_sphere_dlist(all_zeros, width, nsides, 1);
-			//draw_cube_map_sphere(all_zeros, width, nsides, 1, 1); // slower, but looks better
-			break;
-
-		case T_PALM: // palm tree
-			enable_blend();
-			glTranslatef(0.0, 0.0, 0.71*height-0.5*width);
-			glScalef(1.2, 1.2, 0.5);
-			glEnable(GL_ALPHA_TEST);
-			glAlphaFunc(GL_GREATER, 0.75);
-			draw_sphere_dlist(all_zeros, width, nsides, 1, 1);
-			glDisable(GL_ALPHA_TEST);
-			disable_blend();
-			break;
-
-		default: assert(0);
-		}
-		if (!pine_tree) glPopMatrix();
-	}
+			switch (type) { // draw leaves
+			case T_DECID: // decidious tree
+				glTranslatef(0.0, 0.0, 0.75*height);
+				glScalef(1.2, 1.2, 0.8);
+				draw_sphere_dlist(all_zeros, width, nsides, 1);
+				break;
+			case T_TDECID: // tall decidious tree
+				glTranslatef(0.0, 0.0, 1.0*height);
+				glScalef(0.7, 0.7, 1.6);
+				draw_sphere_dlist(all_zeros, width, nsides, 1);
+				break;
+			case T_BUSH: // bush
+				glScalef((0.1*height+0.8*width)/width, (0.1*height+0.8*width)/width, 1.0);
+				draw_sphere_dlist(all_zeros, width, nsides, 1);
+				//draw_cube_map_sphere(all_zeros, width, nsides, 1, 1); // slower, but looks better
+				break;
+			case T_PALM: // palm tree
+				glTranslatef(0.0, 0.0, 0.71*height-0.5*width);
+				glScalef(1.2, 1.2, 0.5);
+				draw_sphere_dlist(all_zeros, width, nsides, 1, 1);
+				break;
+			}
+			glPopMatrix();
+		} // end pine else
+	} // end mode
 }
 
 

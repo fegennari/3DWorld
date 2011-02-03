@@ -175,10 +175,13 @@ public:
 	void add_cobjs(cobj_params &cp, cobj_params const &cp_trunk);
 	void remove_cobjs();
 	void calc_points();
+	void pre_leaf_draw() const;
+	void post_leaf_draw() const;
 	void draw(int mode) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}
+	int get_type()  const {return type;}
 };
 
 
