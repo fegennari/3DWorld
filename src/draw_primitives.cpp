@@ -972,7 +972,7 @@ void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride) { // strid
 
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // stride is in floats
 
-	for (unsigned i = 0, off = 0; i < num; i++) { // 01 00 10 11 for every quad
+	for (unsigned i = 0, off = 0; i < num; i++) { // for every tri
 		tdata[off] = -0.5; tdata[off+1] =  1.0; off += stride;
 		tdata[off] =  0.5; tdata[off+1] = -1.0; off += stride;
 		tdata[off] =  1.5; tdata[off+1] =  1.0; off += stride;
@@ -980,13 +980,14 @@ void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // s
 }
 
 
-void draw_quads_from_pts(vector<vert_norm> const &points) {
+void draw_quads_from_pts(vector<vert_norm> const &points, unsigned draw_num) {
 
 	if (points.empty()) return;
 	unsigned const MAX_QUADS(1000);
-	assert((points.size() & 3) == 0);
+	unsigned const num(draw_num ? min(points.size(), draw_num) : points.size());
+	assert((num & 3) == 0);
 
-	if (points.size()+1 < MAX_QUADS) {
+	if (num+1 < MAX_QUADS) {
 		static int init(0);
 		static float tdata[8*MAX_QUADS];
 
@@ -998,12 +999,12 @@ void draw_quads_from_pts(vector<vert_norm> const &points) {
 		glVertexPointer(3,   GL_FLOAT, sizeof(vert_norm), &points[0].v);
 		glNormalPointer(     GL_FLOAT, sizeof(vert_norm), &points[0].n);
 		glTexCoordPointer(2, GL_FLOAT, 0, tdata+2); // offset by 2 (one tex coord) to fix texture orientation
-		glDrawArrays(GL_QUADS, 0, points.size());
+		glDrawArrays(GL_QUADS, 0, num);
 	}
 	else {
 		glBegin(GL_QUADS);
 
-		for (unsigned p = 0; p < points.size(); p += 4) { // 00 10 11 01
+		for (unsigned p = 0; p < num; p += 4) { // 00 10 11 01
 			for (unsigned i = 0; i < 4; ++i) {
 				glTexCoord2f(float(i==1||i==2), float(i==2||i==3));
 				points[p+i].n.do_glNormal();

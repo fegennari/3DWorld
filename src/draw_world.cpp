@@ -337,14 +337,51 @@ void pt_line_drawer::draw() const {
 }
 
 
+void quad_batch_draw::add_quad_vect(vector<vert_norm> const &points, colorRGBA const &color) {
+	
+	assert(!(points.size() & 3)); // must be a multiple of 4
+	float const tcx[4] = {0,1,1,0}, tcy[4] = {0,0,1,1}; // 00 10 11 01
+	color_wrapper cw;
+	cw.set_c3(color);
+
+	for (unsigned i = 0; i < points.size(); ++i) {
+		verts.push_back(vert_norm_tc_color(points[i].v, points[i].n, tcx[i&3], tcy[i&3], cw.c));
+	}
+	unsigned const batch_size(4096);
+	if (size() > batch_size) draw_and_clear();
+}
+
+
+void quad_batch_draw::draw() const {
+	
+	if (verts.empty()) return;
+	assert(!(verts.size() & 3)); // must be a multiple of 4
+	verts.front().set_state();
+	glDrawArrays(GL_QUADS, 0, size());
+}
+
+
 void vert_norm_tc_color::set_vbo_arrays(unsigned stride_mult) {
 
 	assert(stride_mult > 0);
+	set_array_client_state(1, 1, 1, 1);
 	unsigned const stride(stride_mult*sizeof(vert_norm_tc_color));
 	glVertexPointer  (3, GL_FLOAT,         stride, (void *)(0));
 	glNormalPointer  (   GL_FLOAT,         stride, (void *)(sizeof(point)));
 	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(point) + sizeof(vector3d)));
 	glColorPointer   (3, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(point) + sizeof(vector3d) + 2*sizeof(float)));
+}
+
+
+void vert_norm_tc_color::set_state(unsigned stride_mult) const {
+	
+	assert(stride_mult > 0);
+	set_array_client_state(1, 1, 1, 1);
+	unsigned const stride(stride_mult*sizeof(*this));
+	glVertexPointer  (3, GL_FLOAT,         stride, &v);
+	glNormalPointer  (   GL_FLOAT,         stride, &n);
+	glTexCoordPointer(2, GL_FLOAT,         stride, &t);
+	glColorPointer   (3, GL_UNSIGNED_BYTE, stride, &c);
 }
 
 

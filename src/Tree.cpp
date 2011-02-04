@@ -704,7 +704,6 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 	}
 	assert(leaf_data.size() >= 4*leaves.size());
 	bool const draw_as_points(0); // testing
-	set_array_client_state(1, 1, 1, 1);
 
 	if (use_vbos) {
 		if (leaf_vbo == 0) {
@@ -720,11 +719,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 		vert_norm_tc_color::set_vbo_arrays(draw_as_points ? 4 : 1);
 	}
 	else {
-		unsigned const stride((draw_as_points ? 4 : 1)*leaf_stride);
-		glVertexPointer  (3, GL_FLOAT,         stride, &(leaf_data.front().v));
-		glNormalPointer  (   GL_FLOAT,         stride, &(leaf_data.front().n));
-		glTexCoordPointer(2, GL_FLOAT,         stride, &(leaf_data.front().t));
-		glColorPointer   (3, GL_UNSIGNED_BYTE, stride, &(leaf_data.front().c));
+		leaf_data.front().set_state(draw_as_points ? 4 : 1);
 	}
 	if (draw_model == 0) { // solid fill
 		enable_blend();

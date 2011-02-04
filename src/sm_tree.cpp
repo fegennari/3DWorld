@@ -132,6 +132,7 @@ void gen_small_trees() {
 				//if (tree_mode == 3) continue; // use a large (complex) tree here
 				ttype = T_DECID + rand2()%3; // decidious tree
 			}
+			//ttype = T_PINE; // TESTING
 			small_tree st(point(xpos, ypos, zpos), height, width, ttype, 0);
 			st.setup_rotation();
 			small_trees.push_back(st);
@@ -172,7 +173,6 @@ void draw_small_trees() {
 	if (small_trees.empty() || !(tree_mode & 2)) return;
 	set_fill_mode();
 	gluQuadricTexture(quadric, GL_TRUE);
-	//set_lighted_sides(2);
 
 	// two pass draw is more efficient because it avoids texture thrashing
 	for (unsigned pass = 0; pass < 2; ++pass) { // first pass: draw trunk, second pass: draw leaves
@@ -189,7 +189,6 @@ void draw_small_trees() {
 			}
 		}
 	}
-	//set_lighted_sides(1);
 	gluQuadricTexture(quadric, GL_FALSE);
 	glDisable(GL_TEXTURE_2D);
 	tree_scenery_pld.draw_and_clear();
@@ -425,14 +424,14 @@ void small_tree::draw(int mode) const {
 	if (mode & 2) {
 		set_color(color);
 
-		if (pine_tree) {
+		if (pine_tree) { // 30 quads per tree
 			draw_quads_from_pts(points); // draw textured quad if far away?
 		}
 		else { // palm or decidious
 			glPushMatrix();
 			translate_to(pos);
 			if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
-			int const nsides(max(3, min(max_sides, (int)size)));
+			int const nsides(max(6, min(max_sides, (int)size)));
 
 			switch (type) { // draw leaves
 			case T_DECID: // decidious tree

@@ -588,6 +588,7 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 		v = v_; n = n_; t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; if (has_alpha) c[3] = c_[3];
 	}
 	static void set_vbo_arrays(unsigned stride_mult=1);
+	void set_state(unsigned stride_mult=1) const;
 };
 
 
@@ -629,6 +630,18 @@ public:
 	void draw_and_clear() {draw(); clear();}
 	unsigned get_mem() const {return (points.capacity() + lines.capacity())*sizeof(vnc);}
 	bool empty() const {return (points.empty() && lines.empty());}
+};
+
+
+class quad_batch_draw { // unused, but could possibly use for pine trees and plants
+	vector<vert_norm_tc_color> verts;
+
+public:
+	void add_quad_vect(vector<vert_norm> const &points, colorRGBA const &color);
+	void draw() const;
+	void draw_and_clear() {draw(); verts.resize(0);}
+	size_t size() const {return verts.size();}
+	void reserve(size_t sz) {verts.reserve(sz);}
 };
 
 
@@ -1104,7 +1117,7 @@ void draw_simple_polygon(point const *const points, int npoints, vector3d const 
 void draw_simple_extruded_polygon(float thick, point const *const points, int npoints);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
-void draw_quads_from_pts(vector<vert_norm> const &points);
+void draw_quads_from_pts(vector<vert_norm> const &points, unsigned draw_num=0);
 void free_dlists();
 void setup_dlists();
 void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, bool restore_matrix, bool r_approx=0);
