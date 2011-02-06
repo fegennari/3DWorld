@@ -176,7 +176,7 @@ void add_attrib_int(unsigned ix, int val) {
 // *** other variables setup ***
 
 
-void setup_enabled_lights(unsigned num) {
+void setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
 	prog_name_suffix += ",el";
 
@@ -184,8 +184,10 @@ void setup_enabled_lights(unsigned num) {
 		GLboolean const enabled(glIsEnabled(GL_LIGHT0 + i));
 		prog_name_suffix += (enabled ? '1' : '0');
 
-		for (unsigned s = 0; s < 2; ++s) { // put into vertex and fragment shaders
-			set_bool_shader_prefix((string("enable_light") + char('0'+i)), (enabled != 0), s);
+		for (unsigned s = 0; s < 3; ++s) { // put into correct shader(s): V, F, G
+			if (shaders_enabled & (1<<s)) {
+				set_bool_shader_prefix((string("enable_light") + char('0'+i)), (enabled != 0), s);
+			}
 		}
 	}
 }

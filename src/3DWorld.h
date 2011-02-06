@@ -1558,7 +1558,7 @@ unsigned register_attrib_name(unsigned program, char const *name);
 void add_attrib_float_array(unsigned ix, float const *const val, unsigned num);
 void add_attrib_float (unsigned ix, float val);
 void add_attrib_int   (unsigned ix, int   val);
-void setup_enabled_lights(unsigned num=2);
+void setup_enabled_lights(unsigned num=2, unsigned shaders_enabled=3);
 void setup_scene_bounds(unsigned p);
 void setup_fog_scale(unsigned program);
 void set_shader_prefix(std::string const &prefix, unsigned shader_type);
