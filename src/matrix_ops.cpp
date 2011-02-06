@@ -51,7 +51,7 @@ short     ***volume_matrix;
 unsigned char ***shadow_mask;
 
 extern bool last_int, mesh_invalidated;
-extern int world_mode, MAX_RUN_DIST, island, xoff, yoff, I_TIMESCALE2;
+extern int world_mode, MAX_RUN_DIST, island, xoff, yoff, I_TIMESCALE2, DISABLE_WATER;
 extern float zmax, zmin, czmin, czmax, zbottom, water_plane_z, def_water_level, temperature, max_obj_radius;
 extern point ocean;
 
@@ -286,7 +286,7 @@ void get_matrix_point(int xpos, int ypos, point &pt) {
 
 int is_in_ice(int xpos, int ypos) {
 
-	if (temperature > W_FREEZE_POINT || point_outside_mesh(xpos, ypos)) return 0;
+	if (DISABLE_WATER || temperature > W_FREEZE_POINT || point_outside_mesh(xpos, ypos)) return 0;
 	return (wminside[ypos][xpos] && (!island || mesh_height[ypos][xpos] > (ocean.z + SMALL_NUMBER)));
 }
 
