@@ -724,7 +724,7 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 
 	if (display_mode & 0x0100) { // add small waves
 		static float time(0.0);
-		if (animate2) time += fticks;
+		if (animate2 && temperature > W_FREEZE_POINT) time += fticks;
 		zval += 0.01*sin(1.0*time/TICKS_PER_SECOND);
 	}
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), vd_scale(2.0*get_tile_radius()*SQRT2);

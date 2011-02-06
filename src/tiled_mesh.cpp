@@ -27,7 +27,7 @@ int get_tile_radius() {
 }
 
 
-bool has_water () {return ((display_mode & 0x04) != 0);}
+bool has_water () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 
 
 struct tile_xy_pair {
