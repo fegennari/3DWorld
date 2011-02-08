@@ -535,8 +535,8 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 				}
 				for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
 					for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
-						float const tx(fabs(S*ndiv_inv - 0.5));
-						data.push_back(vert_norm_tc(vpn.p[(S<<1)+j], vpn.n[S], tx, float(cylin_id + j))); // FIXME: average normals?
+						float const tx(2.0*fabs(S*ndiv_inv - 0.5));
+						data.push_back(vert_norm_tc(vpn.p[(S<<1)+j], vpn.n[S], tx, float(cylin_id + j))); // average normals?
 					}
 				}
 				for (unsigned S = 0; S < ndiv; ++S) { // create index data
