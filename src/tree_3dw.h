@@ -82,7 +82,7 @@ class tree { // size = BIG
 	static reusable_mem<tree_branch>   branch_cache[BRANCH_CACHE_ENTRIES];
 	static reusable_mem<tree_branch *> branch_ptr_cache;
 
-	int type, created, trseed1, trseed2, branch_vbo, leaf_vbo;
+	int type, created, trseed1, trseed2, branch_vbo, branch_ivbo, leaf_vbo;
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
 	vector<vert_norm_tc_color> leaf_data;
 	point sphere_center;
@@ -112,10 +112,11 @@ class tree { // size = BIG
 	vector<tree_leaf> leaves;
 	int num_min_leaves, num_max_leaves, leaf_min_angle, leaf_max_angle;
 	float num_leaves_per_occ, damage_scale;
-	unsigned num_branch_quads;
+	unsigned num_branch_quads, num_unique_pts;
 
 public:
-	tree() : created(0), branch_vbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0), leaves_changed(0), not_visible(0), num_branch_quads(0) {}
+	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
+		leaves_changed(0), not_visible(0), num_branch_quads(0), num_unique_pts(0) {}
 	bool is_over_mesh() const;
 	void gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs, int ix);
 	void regen_tree(point &pos, int recalc_shadows, int index);

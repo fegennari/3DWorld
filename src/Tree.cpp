@@ -2,6 +2,7 @@
 // by Hiral Patel and Frank Gennari
 // 3/15/02
 
+#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
 #include "tree_3dw.h"
@@ -453,10 +454,10 @@ inline float tree_leaf::get_norm_scale(unsigned pt_ix) const {
 void tree::clear_vbo() {
 
 	delete_vbo(branch_vbo);
+	delete_vbo(branch_ivbo);
 	delete_vbo(leaf_vbo);
-	branch_vbo = 0;
-	leaf_vbo   = 0;
-	num_branch_quads = 0;
+	branch_vbo = branch_ivbo = leaf_vbo = 0;
+	num_branch_quads = num_unique_pts   = 0;
 }
 
 
@@ -500,11 +501,79 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 	BLACK.do_glColor();
 
 	if (use_vbos) { // draw with branch vbos
-		unsigned const numcylin(all_cylins.size());
 		size_t const branch_stride(sizeof(vert_norm_tc));
-
+#if 1
 		if (branch_vbo == 0) { // create vbo
-			// using an array element buffer is much more complex but not much faster, though it does use less memory
+			assert(branch_ivbo == 0);
+			unsigned const numcylin(all_cylins.size());
+			assert(num_branch_quads == 0 && num_unique_pts == 0);
+
+			for (unsigned i = 0; i < numcylin; i++) { // determine required data size
+				bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
+				unsigned const ndiv(all_cylins[i].get_num_div());
+				num_branch_quads += ndiv;
+				num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
+			}
+			vector<vert_norm_tc> data;
+			vector<unsigned> idata; // unsigned short?
+			idata.reserve(4*num_branch_quads);
+			data.reserve(num_unique_pts);
+			unsigned cylin_id(0), data_pos(0), quad_id(0);
+
+			for (unsigned i = 0; i < numcylin; i++) {
+				draw_cylin const &cylin(all_cylins[i]);
+				unsigned const ndiv(cylin.get_num_div());
+				point const ce[2] = {cylin.p1, cylin.p2};
+				float const ndiv_inv(1.0/ndiv);
+				vector3d v12; // (ce[1] - ce[0]).get_norm()
+				vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
+				bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
+
+				if (!prev_connect) { // new cylinder section
+					data_pos = data.size();
+					quad_id  = cylin_id = 0;
+				}
+				for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
+					for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
+						float const tx(fabs(S*ndiv_inv - 0.5));
+						data.push_back(vert_norm_tc(vpn.p[(S<<1)+j], vpn.n[S], tx, float(cylin_id + j))); // FIXME: average normals?
+					}
+				}
+				for (unsigned S = 0; S < ndiv; ++S) { // create index data
+					bool const last_edge((quad_id % ndiv) == ndiv-1);
+					unsigned const ix(data_pos + quad_id++);
+					idata.push_back(ix);
+					idata.push_back(ix+ndiv);
+					idata.push_back(last_edge ? ix+1 : ix+ndiv+1);
+					idata.push_back(last_edge ? ix+1-ndiv : ix+1);
+				}
+				++cylin_id;
+			} // for i
+			assert(data.size()  == data.capacity());
+			assert(idata.size() == idata.capacity());
+			branch_vbo  = create_vbo();
+			branch_ivbo = create_vbo();
+			assert(branch_vbo > 0 && branch_ivbo > 0);
+			bind_vbo(branch_vbo,  0);
+			bind_vbo(branch_ivbo, 1);
+			upload_vbo_data(&data.front(),  data.size()*branch_stride,     0); // ~350KB
+			upload_vbo_data(&idata.front(), idata.size()*sizeof(unsigned), 1); // ~150KB
+		} // end create vbo
+		assert(branch_vbo > 0 && branch_ivbo > 0);
+		bind_vbo(branch_vbo,  0); // use vbo for rendering
+		bind_vbo(branch_ivbo, 1);
+		set_array_client_state(1, 1, 1, 0);
+		glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
+		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
+		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(point) + sizeof(vector3d)));
+		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
+		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_INT, 0);
+		bind_vbo(0, 0);
+		bind_vbo(0, 1);
+
+#else
+		if (branch_vbo == 0) { // create vbo
+			unsigned const numcylin(all_cylins.size());
 			assert(num_branch_quads == 0);
 
 			for (unsigned i = 0; i < numcylin; i++) { // determine required data size
@@ -523,7 +592,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 				vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
 				bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
 
-				for (unsigned S = 0; S < ndiv; ++S) { // ndiv can change
+				for (unsigned S = 0; S < ndiv; ++S) {
 					for (unsigned j = 0; j < 2; ++j) {
 						unsigned const s((S+j)%ndiv), sm1((s+ndiv-1)%ndiv);
 						float const tx(1.0 - (S+j)*ndiv_inv);
@@ -541,8 +610,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 			bind_vbo(branch_vbo);
 			upload_vbo_data(&data.front(), data.size()*branch_stride); // ~1.2MB
 		} // end create vbo
-		// use vbo for rendering
-		bind_vbo(branch_vbo);
+		bind_vbo(branch_vbo); // use vbo for rendering
 		set_array_client_state(1, 1, 1, 0);
 		glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
 		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
@@ -550,6 +618,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
 		glDrawArrays(GL_QUADS, 0, num);
 		bind_vbo(0);
+#endif
 	}
 	else { // draw branches
 		float const bs_scale(350.0*mscale/dist_c);
@@ -987,7 +1056,7 @@ void tree::gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs,
 	deadness = 0.0;
 	damage   = 0.0;
 	damage_scale = 0.0;
-	leaf_vbo = branch_vbo = 0;
+	leaf_vbo = branch_vbo = branch_ivbo = 0;
 	color.alpha = 1.0;
 
 	for (unsigned i = 0; i < 3; ++i) {
