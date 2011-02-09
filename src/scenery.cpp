@@ -679,7 +679,7 @@ public:
 				tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
 			}
 			else {
-				int const ndiv(max(3, min(N_CYL_SIDES, int(5.0*sscale*radius/dist))));
+				int const ndiv(max(3, min(N_CYL_SIDES, int(2.0*sscale*radius/dist))));
 				select_texture(WOOD_TEX);
 				set_color(color);
 				draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);

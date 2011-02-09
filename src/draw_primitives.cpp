@@ -8,7 +8,7 @@
 
 
 // predefined display lists
-enum {DLIST_CYLIN=0, DLIST_CYLINT, NUM_RES_DLIST};
+enum {DLIST_CYLIN=0, DLIST_CYLIN_T, DLIST_CONE, DLIST_CONE_T, NUM_RES_DLIST};
 
 bool const USE_SPHERE_DLIST = 1;
 bool const USE_CYLIN_DLIST  = 1;
@@ -342,22 +342,6 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 { // no draw_ends
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
-
-	/*if (radius2 == 0.0 && p1.x == p2.x && p1.y == p2.y && !use_quads && !perturb_map && !draw_ends && s_beg == 0.0 && s_end == 1.0) {
-		glBegin(GL_TRIANGLE_FAN); // draw a cone
-		if (texture) glTexCoord2f(0.0, 1.0);
-		(p2 - p1).get_norm().do_glNormal();
-		p2.do_glVertex();
-
-		for (int s = 0; s <= ndiv; ++s) {
-			float const theta(TWO_PI*s/ndiv), dx(sinf(theta)), dy(cosf(theta)); // inefficient
-			if (texture) glTexCoord2f(float(s)/ndiv, 0.0);
-			point(dx, dy, 0.0).do_glNormal();
-			(p1 + point(radius1*dx, radius1*dy, 0.0)).do_glVertex();
-		}
-		glEnd();
-		return;
-	}*/
 	point const ce[2] = {p1, p2};
 	float const ndiv_inv(1.0/ndiv);
 	vector3d v12; // (ce[1] - ce[0]).get_norm()
@@ -1056,15 +1040,8 @@ void setup_dlists() {
 			assert(glIsList(dl));
 			predef_dlists[i] = dl;
 			glNewList(dl, GL_COMPILE);
-
-			switch (i) {
-				case DLIST_CYLIN: // unit cylinder
-					draw_fast_cylinder(all_zeros, point(0.0, 0.0, 1.0), 1.0, 1.0, SMALL_NDIV, 0);
-					break;
-				case DLIST_CYLINT: // textured unit cylinder
-					draw_fast_cylinder(all_zeros, point(0.0, 0.0, 1.0), 1.0, 1.0, SMALL_NDIV, 1);
-					break;
-			}
+			draw_fast_cylinder(all_zeros, point(0.0, 0.0, 1.0), 1.0, ((i == DLIST_CYLIN || i == DLIST_CYLIN_T) ? 1.0 : 0.0),
+				SMALL_NDIV, (i == DLIST_CYLIN_T || i == DLIST_CONE_T));
 			glEndList();
 		}
 	}
@@ -1107,16 +1084,26 @@ void setup_dlists() {
 }
 
 
+void draw_cylin_cone_dlist(float r, float l, bool restore_matrix, int type) {
+
+	assert(type < NUM_RES_DLIST);
+	if (restore_matrix) glPushMatrix();
+	glScalef(r, r, l);
+	unsigned const list_id(predef_dlists[type]);
+	assert(glIsList(list_id));
+	glCallList(list_id);
+	if (restore_matrix) glPopMatrix();
+}
+
+
 void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, bool restore_matrix, bool r_approx) {
 
 	if (USE_CYLIN_DLIST && ndiv <= SMALL_NDIV && (r1 == r2 || (r_approx && fabs(r2 - r1) < 0.5*max(r1, r2)))) {
 		float const rav(0.5*(r1 + r2)); // inexact
-		if (restore_matrix) glPushMatrix();
-		glScalef(rav, rav, l);
-		unsigned const list_id(predef_dlists[texture ? DLIST_CYLINT : DLIST_CYLIN]);
-		assert(glIsList(list_id));
-		glCallList(list_id);
-		if (restore_matrix) glPopMatrix();
+		draw_cylin_cone_dlist(rav, l, restore_matrix, (texture ? DLIST_CYLIN_T : DLIST_CYLIN));
+	}
+	else if (USE_CYLIN_DLIST && ndiv <= SMALL_NDIV && r2 == 0.0) { // cone pointed up
+		draw_cylin_cone_dlist(r1, l, restore_matrix, (texture ? DLIST_CONE_T : DLIST_CONE));
 	}
 	else {
 		draw_fast_cylinder(all_zeros, point(0.0, 0.0, l), r1, r2, ndiv, texture);
