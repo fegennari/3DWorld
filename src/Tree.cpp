@@ -514,8 +514,10 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 				num_branch_quads += ndiv;
 				num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
 			}
+			typedef unsigned short index_t;
+			assert(num_unique_pts < (1 << 8*sizeof(index_t))); // cutting it close with 4th order branches
 			vector<vert_norm_tc> data;
-			vector<unsigned> idata; // unsigned short?
+			vector<index_t> idata;
 			idata.reserve(4*num_branch_quads);
 			data.reserve(num_unique_pts);
 			unsigned cylin_id(0), data_pos(0), quad_id(0);
@@ -536,6 +538,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 				for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
 					for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
 						float const tx(2.0*fabs(S*ndiv_inv - 0.5));
+						// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
 						data.push_back(vert_norm_tc(vpn.p[(S<<1)+j], vpn.n[S], tx, float(cylin_id + j))); // average normals?
 					}
 				}
@@ -556,8 +559,8 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 			assert(branch_vbo > 0 && branch_ivbo > 0);
 			bind_vbo(branch_vbo,  0);
 			bind_vbo(branch_ivbo, 1);
-			upload_vbo_data(&data.front(),  data.size()*branch_stride,     0); // ~350KB
-			upload_vbo_data(&idata.front(), idata.size()*sizeof(unsigned), 1); // ~150KB
+			upload_vbo_data(&data.front(),  data.size()*branch_stride,    0); // ~350KB
+			upload_vbo_data(&idata.front(), idata.size()*sizeof(index_t), 1); // ~75KB (with 16-bit index)
 		} // end create vbo
 		assert(branch_vbo > 0 && branch_ivbo > 0);
 		bind_vbo(branch_vbo,  0); // use vbo for rendering
@@ -567,7 +570,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
 		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(point) + sizeof(vector3d)));
 		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
-		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_INT, 0);
+		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 
