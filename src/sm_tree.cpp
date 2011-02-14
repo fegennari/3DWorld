@@ -13,7 +13,7 @@ float const TREE_DIST_RAND  = 0.2;
 float const TREE_DIST_MH_S  = 100.0;
 float const SM_TREE_AMT     = 0.55;
 float const SM_TREE_QUALITY = 1.0;
-float const LINE_THRESH     = 800.0;
+float const LINE_THRESH     = 700.0;
 bool const SMALL_TREE_COLL  = 1;
 bool const DRAW_COBJS       = 0; // for debugging
 int  const NUM_SMALL_TREES  = 40000;
@@ -31,21 +31,22 @@ struct sm_tree_type {
 		: tid(tid_), w2(w2_), ws(ws_), h(h_), ss(ss_), c(c_) {}
 };
 
-sm_tree_type const stt[NUM_ST_TYPES] = {
-	sm_tree_type(0.00, 0.10, 0.35, 0.4, PTREE_C, PINE_TEX),
-	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX), // GRASS_TEX?
-	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  GROUND_TEX),
-	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   GROUND_TEX),
-	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX),
-	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX),
+sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
+	sm_tree_type(0.00, 0.10, 0.35, 0.4, PTREE_C, PINE_TEX), // T_PINE
+	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX), // T_DECID // GRASS_TEX?
+	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  GROUND_TEX), // T_TDECID
+	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   GROUND_TEX), // T_BUSH
+	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX), // T_PALM
+	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX), // T_SH_PINE
 };
 
 
 vector<small_tree> small_trees;
 pt_line_drawer tree_scenery_pld;
+pt_line_drawer tree_leaf_sphere_pld;
 
 
-extern int window_width, shadow_detail, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
+extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode;
 extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, tree_size, vegetation, OCEAN_DEPTH;
 extern GLUquadricObj* quadric;
@@ -132,7 +133,7 @@ void gen_small_trees() {
 				//if (tree_mode == 3) continue; // use a large (complex) tree here
 				ttype = T_DECID + rand2()%3; // decidious tree
 			}
-			//ttype = T_PINE; // TESTING
+			//ttype = T_DECID; // TESTING
 			small_tree st(point(xpos, ypos, zpos), height, width, ttype, 0);
 			st.setup_rotation();
 			small_trees.push_back(st);
@@ -142,6 +143,7 @@ void gen_small_trees() {
 	//PRINT_TIME("Gen");
 	add_small_tree_coll_objs(); // 20ms
 	//PRINT_TIME("Cobj");
+	cout << "small trees: " << small_trees.size() << endl;
 }
 
 
@@ -185,6 +187,17 @@ void draw_small_trees() {
 			t.draw(1 << pass);
 			
 			if (pass == 1 && (i+1 == small_trees.size() || small_trees[i+1].get_type() != t.get_type())) {
+				if (!tree_leaf_sphere_pld.empty()) {
+					setup_enabled_lights(2); // ,4
+					set_shader_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
+					set_shader_prefix("#define USE_LIGHT_COLORS", 1); // FS
+					//set_shader_prefix("#define USE_COLOR_IN0", 2); // GS
+					//unsigned const p(set_shader_prog("pt_to_sphere", "simple_texture", "ads_lighting.part*+pt_to_sphere", GL_POINTS, GL_TRIANGLE_STRIP, 6));
+					unsigned const p(set_shader_prog("pt_to_sphere", "ads_lighting.part*+per_pixel_lighting_textured", "pt_to_sphere", GL_POINTS, GL_TRIANGLE_STRIP, 96));
+					add_uniform_int(p, "tex0", 0);
+					tree_leaf_sphere_pld.draw_and_clear();
+					unset_shader_prog();
+				}
 				t.post_leaf_draw(); // last of this type
 			}
 		}
@@ -297,7 +310,7 @@ void small_tree::remove_cobjs() {
 }
 
 
-void small_tree::calc_points() {
+void small_tree::calc_points() { // pine trees
 
 	// Note: thse coords could possibly be shared between all pine trees
 	if (!points.empty()) return;
@@ -322,8 +335,12 @@ void small_tree::calc_points() {
 
 void small_tree::pre_leaf_draw() const {
 
-	select_texture(stt[type].tid);
-
+	if ((type == T_PINE || type == T_SH_PINE) && (draw_model != 0)) {
+		glDisable(GL_TEXTURE_2D);
+	}
+	else {
+		select_texture(stt[type].tid);
+	}
 	switch (type) {
 	case T_PINE: // pine tree
 	case T_SH_PINE: // short pine tree
@@ -422,12 +439,12 @@ void small_tree::draw(int mode) const {
 		}
 	}
 	if (mode & 2) {
-		set_color(color);
-
 		if (pine_tree) { // 30 quads per tree
+			set_color(color);
 			draw_quads_from_pts(points); // draw textured quad if far away?
 		}
 		else { // palm or decidious
+			set_color(color);
 			glPushMatrix();
 			translate_to(pos);
 			if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
@@ -438,6 +455,7 @@ void small_tree::draw(int mode) const {
 				glTranslatef(0.0, 0.0, 0.75*height);
 				glScalef(1.2, 1.2, 0.8);
 				draw_sphere_dlist(all_zeros, width, nsides, 1);
+				//tree_leaf_sphere_pld.add_pt((pos + point(0.0, 0.0, 0.75*height)), vector3d(1.2*width, 1.2*width, 0.8*width), color);
 				break;
 			case T_TDECID: // tall decidious tree
 				glTranslatef(0.0, 0.0, 1.0*height);

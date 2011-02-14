@@ -76,16 +76,4 @@ void main()
 			create_quad(pts, norm, tex);
 		}
 	}
-
-#if 0
-	vec4 dx = vec4(0,0,1,1); // 01 00 11 10
-	vec4 dz = vec4(1,0,1,0);
-
-	for (int i = 0; i < 4; ++i) {
-		p[0][i] = (gl_ModelViewProjectionMatrix * (pos + vec4(scale.x*(2*dx[i]-1), 0, scale.z*(2*dz[i]-1), 0))).xyz;
-		n[0][i] = vec3(0,0,1);
-		t[0][i] = vec2(float(i>>1), float(!(i&1)));
-	}
-	create_quad(p[0], n[0], t[0]);
-#endif
 }
