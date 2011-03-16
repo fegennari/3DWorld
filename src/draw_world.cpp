@@ -85,7 +85,7 @@ class pt_line_drawer; // forward declaration
 
 void draw_cloud_volumes();
 void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, bool is_shadowed);
+					  bool do_texture, bool is_shadowed, bool is_chunky=0);
 void draw_weapon2(dwobject const &obj, float radius);
 void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, bool is_shadowed);
 void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type,
@@ -736,7 +736,7 @@ void draw_group(obj_group &objg) {
 					set_lighted_sides(1);
 					break;
 				}
-				draw_sized_point(obj, radius*obj.vdeform.x, cd_scale, color2, tcolor, do_texture, is_shadowed);
+				draw_sized_point(obj, radius*obj.vdeform.x, cd_scale, color2, tcolor, do_texture, is_shadowed, 1);
 				break;
 
 			default:
@@ -790,7 +790,7 @@ void draw_group(obj_group &objg) {
 
 
 void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, bool is_shadowed)
+					  bool do_texture, bool is_shadowed, bool is_chunky)
 {
 	point pos(obj.pos);
 	point const camera(get_camera_pos());
@@ -840,17 +840,6 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	}
 	colorRGBA color_l(color);
 	set_color_v2(color_l, pos, obj.status, is_shadowed, precip);
-
-	// draw as a sphere
-	int ndiv(int(4.0*sqrt(point_dia)));
-
-	if (is_droplet(type)) {
-		ndiv = min(ndiv/2, N_SPHERE_DIV/2);
-	}
-	else if (type == ROCK || type == SAND || type == DIRT || type == FRAGMENT) {
-		ndiv /= 2;
-	}
-	ndiv = max(4, min(ndiv, N_SPHERE_DIV));
 	bool const cull_face(get_cull_face(type, color));
 	glPushMatrix();
 
@@ -858,14 +847,43 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 		glCullFace(GL_BACK);
 		glEnable(GL_CULL_FACE);
 	}
-	if (quadric != 0 && ndiv > 3 && tail) { // cone on the tail of the raindrop
+
+	// draw as a sphere
+	if (is_chunky) {
+		assert(!tail);
+		if (do_texture) gluQuadricTexture(quadric, GL_TRUE);
+		vector3d const &v(obj.orientation);
+		int const ndiv(max(3, int(3 + 1.5*(v.x + v.y + v.z))));
 		translate_to(pos);
-		gluCylinder(quadric, radius, 0.0, 2.5*radius, (ndiv>>1), 1);
-		glTranslatef(0.0, 0.0, -0.6*radius);
-		glScalef(1.0, 1.0, 2.0);
-		pos = all_zeros;
+		glScalef((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
+		glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
+		uniform_scale(radius);
+		gluSphere(quadric, 1.0, ndiv, ndiv);
+		glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
+		glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
+		gluSphere(quadric, 1.0, ndiv, ndiv);
+		if (do_texture) gluQuadricTexture(quadric, GL_FALSE);
 	}
-	draw_sphere_dlist(pos, radius, ndiv, do_texture);
+	else {
+		int ndiv(int(4.0*sqrt(point_dia)));
+
+		if (is_droplet(type)) {
+			ndiv = min(ndiv/2, N_SPHERE_DIV/2);
+		}
+		else if (type == ROCK || type == SAND || type == DIRT || type == FRAGMENT) {
+			ndiv /= 2;
+		}
+		ndiv = max(4, min(ndiv, N_SPHERE_DIV));
+	
+		if (quadric != 0 && ndiv > 3 && tail) { // cone on the tail of the raindrop
+			translate_to(pos);
+			gluCylinder(quadric, radius, 0.0, 2.5*radius, (ndiv>>1), 1);
+			glTranslatef(0.0, 0.0, -0.6*radius);
+			glScalef(1.0, 1.0, 2.0);
+			pos = all_zeros;
+		}
+		draw_sphere_dlist(pos, radius, ndiv, do_texture);
+	}
 	if (cull_face) glDisable(GL_CULL_FACE);
 	glPopMatrix();
 }
