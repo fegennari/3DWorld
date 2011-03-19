@@ -209,24 +209,28 @@ void remove_tree_cobjs(tree_cont_t &t_trees) {
 }
 
 
-void draw_trees_bl(tree_cont_t &ts, bool lpos_change, bool draw_branches, bool draw_leaves) {
+void draw_trees_bl(tree_cont_t &ts, bool lpos_change, bool draw_branches, bool near_draw_leaves, bool draw_far_leaves) {
 
 	for (unsigned i = 0; i < ts.size(); ++i) {
-		ts[i].draw_tree(lpos_change, draw_branches, draw_leaves);
+		ts[i].draw_tree(lpos_change, draw_branches, near_draw_leaves, draw_far_leaves);
 	}
 }
 
 
-void set_leaf_shader(float min_alpha) {
+void set_leaf_shader(float min_alpha, bool use_wind) {
 
 	set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
 	setup_enabled_lights(2);
-#if 0 // wind on leaves
-	unsigned const p(set_shader_prog("ads_lighting.part*+tree_leaves", "linear_fog.part+simple_texture", "wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3));
-	setup_wind_for_shader(p);
-#else // no wind
-	unsigned const p(set_shader_prog("ads_lighting.part*+tree_leaves", "linear_fog.part+simple_texture"));
-#endif
+	unsigned p(0);
+	
+	if (use_wind) { // wind on leaves
+		// FIXME: leaves are drawn as quads, not triangles
+		p = set_shader_prog("ads_lighting.part*+tree_leaves", "linear_fog.part+simple_texture", "wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
+		setup_wind_for_shader(p);
+	}
+	else {
+		p = set_shader_prog("ads_lighting.part*+tree_leaves", "linear_fog.part+simple_texture");
+	}
 	setup_fog_scale(p);
 	add_uniform_float(p, "min_alpha", min_alpha);
 	set_multitex(0);
@@ -251,10 +255,13 @@ void draw_trees(tree_cont_t &ts) {
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
 		colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 0, 0, 0, 1, 1, 0)); // dynamic lights, but no smoke (yet)
-		draw_trees_bl(ts, lpos_change, 1, 0); // branches
+		draw_trees_bl(ts, lpos_change, 1, 0, 0); // branches
 		end_smoke_shaders(orig_fog_color);
-		set_leaf_shader(0.75);
-		draw_trees_bl(ts, lpos_change, 0, 1); // leaves
+		set_leaf_shader(0.75, 0);
+		draw_trees_bl(ts, lpos_change, 0, 0, 1); // far  leaves
+		//unset_shader_prog();
+		//set_leaf_shader(0.75, 1);
+		draw_trees_bl(ts, lpos_change, 0, 1, 0); // near leaves
 		unset_shader_prog();
 		last_lpos = lpos;
 		//glFinish(); // testing
@@ -461,12 +468,19 @@ void tree::clear_vbo() {
 }
 
 
-void tree::draw_tree(bool invalidate_norms, bool draw_branches, bool draw_leaves) {
+void tree::draw_tree(bool invalidate_norms, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves) {
 
 	if (!created) return;
 	rseed1 = trseed1;
 	rseed2 = trseed2;
 	gen_leaf_color();
+
+	float const mscale(mesh_scale*mesh_scale2);
+	float const dist_c(mscale*DIST_C_SCALE/(do_zoom ? ZOOM_FACTOR : 1.0));
+	float const dist_cs(distance_to_camera(sphere_center)*dist_c*(0.04/base_radius));
+	int const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
+	int const leaf_dynamic(leaf_dynamic_en && mscale/dist_cs > 0.5);
+	bool const draw_leaves(leaf_dynamic ? draw_near_leaves : draw_far_leaves);
 	
 	if (draw_leaves && deadness < 1.0 && init_deadness < 1.0) {
 		burn_leaves();
@@ -481,13 +495,10 @@ void tree::draw_tree(bool invalidate_norms, bool draw_branches, bool draw_leaves
 		not_visible = !sphere_in_camera_view(sphere_center, 1.1*sphere_radius, level);
 	}
 	if (not_visible) return;
-	float const mscale(mesh_scale*mesh_scale2);
-	float const dist_c(mscale*DIST_C_SCALE/(do_zoom ? ZOOM_FACTOR : 1.0));
-	float const dist_cs(distance_to_camera(sphere_center)*dist_c*(0.04/base_radius));
 	bool const use_vbos(USE_VBOS && setup_gen_buffers());
 	if (draw_branches) draw_tree_branches(mscale, dist_c, dist_cs, use_vbos);
 	if (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0) return;
-	if (draw_leaves  ) draw_tree_leaves(invalidate_norms, mscale, dist_cs, use_vbos);
+	if (draw_leaves  ) draw_tree_leaves(invalidate_norms, mscale, dist_cs, use_vbos, (leaf_dynamic + leaf_dynamic_en));
 }
 
 
@@ -659,11 +670,10 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 }
 
 
-void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, bool use_vbos) {
+void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, bool use_vbos, int leaf_dynamic) {
 
 	unsigned nleaves(leaves.size());
 	assert(nleaves <= max_leaves);
-	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0), leaf_dynamic(leaf_dynamic_en && mscale/dist_cs > 0.5);
 	bool const gen_arrays(leaf_data.empty());
 	unsigned const leaf_stride(sizeof(vert_norm_tc_color));
 
@@ -682,7 +692,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 	unsigned nl(nleaves);
 	if (ENABLE_CLIP_LEAVES) nl = min(nl, max((nl/8), unsigned((use_vbos ? 4.0 : 2.0)*nl*mscale/dist_cs))); // leaf LOD
 	
-	if (gen_arrays || (reset_leaves && !leaf_dynamic_en)) {
+	if (gen_arrays || (reset_leaves && !leaf_dynamic)) {
 		for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
 			for (unsigned j = 0; j < 4; ++j) {
 				leaf_data[j+(i<<2)].v = leaves[i].pts[j];
@@ -692,7 +702,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 		reset_leaves   = 0;
 		leaves_changed = 1;
 	}
-	if (leaf_dynamic) { // leaves move in wind or when struck by an object (somewhat slow)
+	if (leaf_dynamic > 1) { // leaves move in wind or when struck by an object (somewhat slow)
 		int last_xpos(0), last_ypos(0);
 		vector3d local_wind;
 
