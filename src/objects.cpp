@@ -349,8 +349,11 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id) { // non
 		assert(textured);
 		last_tid = tid;
 	}
-	if (start_group) glBegin(GL_TRIANGLES);
-	
+	if (start_group) {
+		unsigned char shadowed(255); // all shadowed
+		set_shadowed_state(shadowed);
+		glBegin(GL_TRIANGLES);
+	}
 	if (in_group) {
 		assert(type == COLL_POLYGON && thickness <= MIN_POLY_THICK2 && npoints == 3); // thin triangle
 		vector3d const normal(get_norm_camera_orient(norm, center));
