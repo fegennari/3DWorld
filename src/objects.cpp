@@ -356,7 +356,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		float const tscale[2] = {cp.tscale, ar*cp.tscale};
 		vector3d tex_dir(0,0,0);
 		tex_dir[pri_dim] = 1.0;
-		setup_polygon_texgen(tex_dir, tscale);
+		setup_polygon_texgen(tex_dir, tscale, cp.swap_txy);
 		unsigned char shadowed(255); // all shadowed
 		set_shadowed_state(shadowed);
 		glBegin(GL_TRIANGLES);
@@ -375,7 +375,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	}
 	switch (type) {
 	case COLL_CUBE:
-		draw_coll_cube(ar, (draw_model == 0), i, tid);
+		draw_coll_cube(ar, (draw_model == 0), i, tid, cp.swap_txy);
 		break;
 
 	case COLL_CYLINDER:
@@ -401,7 +401,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		break;
 
 	case COLL_POLYGON:
-		draw_extruded_polygon(thickness, points, NULL, npoints, norm, i, tid);
+		draw_extruded_polygon(thickness, points, NULL, npoints, norm, i, tid, cp.swap_txy);
 		break;
 	}
 }

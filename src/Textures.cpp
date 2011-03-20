@@ -1491,7 +1491,7 @@ void disable_textures_texgen() {
 }
 
 
-void setup_polygon_texgen(vector3d const &norm, float const scale[2]) {
+void setup_polygon_texgen(vector3d const &norm, float const scale[2], bool swap_txy) {
 
 	int const d0(get_min_dim(norm));
 	vector3d v[2] = {all_zeros, all_zeros};
@@ -1504,8 +1504,9 @@ void setup_polygon_texgen(vector3d const &norm, float const scale[2]) {
 
 	for (unsigned i = 0; i < 2; ++i) { // ignoring xoff2/yoff2
 		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, 0.0};
-		glTexGeni(GL_X[i], GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-		glTexGenfv(GL_X[i], GL_EYE_PLANE, tex_param);
+		int const gl_x(GL_X[(i != 0) ^ swap_txy]);
+		glTexGeni(gl_x, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+		glTexGenfv(gl_x, GL_EYE_PLANE, tex_param);
 	}
 }
 

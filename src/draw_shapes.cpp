@@ -1184,7 +1184,7 @@ void draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, in
 }
 
 
-void draw_coll_cube(float ar, int do_fill, int cobj, int tid) {
+void draw_coll_cube(float ar, int do_fill, int cobj, int tid, bool swap_txy) {
 
 	assert(size_t(cobj) < coll_objects.size());
 	coll_obj const &c(coll_objects[cobj]);
@@ -1237,8 +1237,8 @@ void draw_coll_cube(float ar, int do_fill, int cobj, int tid) {
 			b[t1] = tscale[1];
 			a[3]  = tex_delta[t0]*tscale[0];
 			b[3]  = tex_delta[t1]*tscale[1];
-			glTexGenfv(GL_S, GL_EYE_PLANE, a);
-			glTexGenfv(GL_T, GL_EYE_PLANE, b);
+			glTexGenfv((swap_txy ? GL_T : GL_S), GL_EYE_PLANE, a);
+			glTexGenfv((swap_txy ? GL_S : GL_T), GL_EYE_PLANE, b);
 		}
 		if (FAST_SHAPE_DRAW) {
 			c.cp.color.do_glColor();
@@ -1363,7 +1363,7 @@ void draw_polygon(point const *points, const vector3d *normals, int npoints, vec
 
 
 void draw_extruded_polygon(float thick, point const *const points, const vector3d *normals,
-						   int npoints, vector3d const &norm, int cobj, int tid)
+						   int npoints, vector3d const &norm, int cobj, int tid, bool swap_txy)
 {
 	assert(size_t(cobj) < coll_objects.size());
 	coll_obj const &c(coll_objects[cobj]);
@@ -1373,7 +1373,7 @@ void draw_extruded_polygon(float thick, point const *const points, const vector3
 	float const tscale[2] = {c.cp.tscale, get_tex_ar(tid)*c.cp.tscale};
 	
 	if (/*FAST_SHAPE_DRAW ||*/ thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
-		if (textured) setup_polygon_texgen(norm, tscale);
+		if (textured) setup_polygon_texgen(norm, tscale, swap_txy);
 		draw_polygon(points, normals, npoints, norm, 0, 0, q);
 		return;
 	}
@@ -1432,7 +1432,7 @@ void draw_extruded_polygon(float thick, point const *const points, const vector3
 				}
 				norm2.negate();
 			}
-			if (textured) setup_polygon_texgen(norm2, tscale);
+			if (textured) setup_polygon_texgen(norm2, tscale, swap_txy);
 			draw_polygon(&(pts[s].front()), ((normals && !s) ? n2 : NULL), npoints, norm2, s, 0, q); // draw bottom surface
 			if (!s) reverse(pts[s].begin(), pts[s].end());
 		}
@@ -1443,7 +1443,7 @@ void draw_extruded_polygon(float thick, point const *const points, const vector3
 			q.no_shadow = camera_behind_polygon(side_pts, 4, cbf2);
 
 			if (!bfc || !cbf2) {
-				if (textured) setup_polygon_texgen(get_poly_norm(side_pts), tscale);
+				if (textured) setup_polygon_texgen(get_poly_norm(side_pts), tscale, swap_txy);
 				draw_quad_tri(side_pts, NULL, 4, q.no_shadow, 1, i+4, q); // back face cull?
 			}
 		}
@@ -1502,7 +1502,7 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 	if (draw_ends) { // not quite right due to long thin triangles
 		if (tid >= 0) { // textured
 			float const tscale[2] = {c.cp.tscale, get_tex_ar(tid)*c.cp.tscale};
-			setup_polygon_texgen(v12, tscale);
+			setup_polygon_texgen(v12, tscale, 0);
 		}
 		bool ends_bf[2];
 		unsigned const i_end(1 + (radius2 != 0.0));

@@ -117,7 +117,7 @@ typedef map<quad_div, lv_val> lvmap;
 class obj_layer { // size = 56
 
 public:
-	bool draw, shadow;
+	bool draw, shadow, swap_txy;
 	float elastic, tscale, specular, shine, tdx, tdy, refract_ix;
 	int tid;
 	collision_func coll_func;
@@ -125,7 +125,7 @@ public:
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1,
 		float ts=1.0, float spec=0.0, float shi=0.0, float tx=0.0, float ty=0.0, float ri=1.0) :
-		draw(d), shadow(1), elastic(e), tscale(ts), specular(spec), shine(shi),
+		draw(d), shadow(1), swap_txy(0), elastic(e), tscale(ts), specular(spec), shine(shi),
 		tdx(0.0), tdy(0.0), refract_ix(ri), tid(ti), coll_func(cf), color(c) {}
 	
 	void set_params(float elastic_, colorRGBA const &color_, int tid_, bool draw_, float ri) {
@@ -134,7 +134,7 @@ public:
 	bool equal_params(const obj_layer &cobj) const {
 		return (color == cobj.color && tid == cobj.tid && tscale == cobj.tscale && specular == cobj.specular &&
 			shine == cobj.shine && draw == cobj.draw && elastic == cobj.elastic && tdx == cobj.tdx &&
-			tdy == cobj.tdy && refract_ix == cobj.refract_ix && coll_func == cobj.coll_func);
+			tdy == cobj.tdy && swap_txy == cobj.swap_txy && refract_ix == cobj.refract_ix && coll_func == cobj.coll_func);
 	}
 };
 

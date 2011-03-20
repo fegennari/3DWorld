@@ -1423,10 +1423,13 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			break;
 
-		case 'Y': // texture translate (cubes only)
+		case 'Y': // texture translate (cubes only), swap xy (cubes/polygons only): <tdx> <tdy> [<swap_xy>]
 			if (fscanf(fp, "%f%f", &cobj.cp.tdx, &cobj.cp.tdy) != 2) {
 				return read_error(fp, "texture translate", coll_obj_file);
 			}
+			ivals[0] = 0;
+			fscanf(fp, "%i", &ivals[0]); // optional
+			cobj.cp.swap_txy = (ivals[0] != 0);
 			break;
 
 		case 'n': // toggle negative shape

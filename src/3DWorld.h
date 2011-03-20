@@ -1065,8 +1065,9 @@ void exec_universe_text(std::string const &text);
 void init_draw_stats();
 void show_draw_stats();
 bool is_above_mesh(point const &pos);
-void draw_coll_cube(float ar, int do_fill, int cobj, int tid);
-void draw_extruded_polygon(float thick, const point *points, const vector3d *normals, int npoints, vector3d const &normr, int cobj, int tid);
+void draw_coll_cube(float ar, int do_fill, int cobj, int tid, bool swap_txy);
+void draw_extruded_polygon(float thick, const point *points, const vector3d *normals, int npoints,
+	vector3d const &norm, int cobj, int tid, bool swap_txy);
 void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float radius2, int nsides, int nstacks,
 						  bool draw_ends, bool no_bfc, int cobj, bool no_lighting, int tid);
 void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, bool no_lighting, int tid);
@@ -1395,7 +1396,7 @@ void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float t
 void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off=0.0, int mode=GL_EYE_LINEAR);
 void disable_texgen();
 void disable_textures_texgen();
-void setup_polygon_texgen(vector3d const &norm, float const scale[2]);
+void setup_polygon_texgen(vector3d const &norm, float const scale[2], bool swap_txy=0);
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
 float get_texture_alpha(unsigned tid, float xval, float yval);
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);
