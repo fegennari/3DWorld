@@ -28,6 +28,7 @@ float const ROTATE_RATE           = 10.0;
 // object variables
 bool printed_ngsp_warning(0);
 int num_groups(0), used_objs(0);
+unsigned next_cobj_group_id(0);
 obj_group obj_groups[NUM_TOT_OBJS];
 dwobject def_objects[NUM_TOT_OBJS];
 point star_pts[2*N_STAR_POINTS];
@@ -718,11 +719,12 @@ int read_error(FILE *fp, const char *param, const char *filename) {
 
 
 void set_cobj_params(coll_obj &cobj, float elastic, colorRGBA color, int tid, bool draw,
-					 int platform_id, bool has_layer, float refract_ix)
+					 int platform_id, bool has_layer, float refract_ix, int group_id=-1)
 {
 	if (!has_layer) cout << "* Warning: Shape found before a layer specification in config file. Using default layer." << endl;
 	assert(platform_id < (int)platforms.size());
 	cobj.platform_id = platform_id;
+	cobj.group_id    = group_id;
 	cobj.cp.set_params(elastic, color, tid, draw, refract_ix);
 }
 
@@ -809,7 +811,7 @@ void read_to_newline(std::ifstream &in) {
 }
 
 
-bool read_object_file(char *filename, vector<vector<point> > &ppts) {
+bool read_object_file(char *filename, vector<vector<point> > &ppts, bool verbose) {
 
 	assert(filename);
 	std::ifstream in(filename);
@@ -903,7 +905,7 @@ bool read_object_file(char *filename, vector<vector<point> > &ppts) {
 			return 0;
 		}
 	}
-	cout << "v: " << nv << ", f: " << nf << ", t: " << nt << ", n: " << nn << endl;
+	if (verbose) cout << "v: " << nv << ", f: " << nf << ", t: " << nt << ", n: " << nn << endl;
 	return 1;
 }
 
@@ -962,17 +964,20 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			break;
 
-		case 'O': // load *.obj file
-			if (fscanf(fp, "%s", str) != 1) {
+		case 'O': // load *.obj file: <filename> <group_cobjs>
+			if (fscanf(fp, "%s%i", str, &ivals[0]) != 2) {
 				return read_error(fp, "load object file command", coll_obj_file);
 			}
 			{
+				RESET_TIME;
 				vector<vector<point> > ppts;
 
-				if (!read_object_file(str, ppts)) {
+				if (!read_object_file(str, ppts, 1)) {
 					return read_error(fp, "object file data", coll_obj_file);
 				}
-				set_cobj_params(cobj, elastic, color, tid, draw, platform_id, has_layer, refract_ix);
+				bool const group_cobjs(ivals[0] != 0);
+				int const cobj_group_id(group_cobjs ? next_cobj_group_id++ : -1);
+				set_cobj_params(cobj, elastic, color, tid, draw, platform_id, has_layer, refract_ix, cobj_group_id);
 				cobj.thickness *= scale;
 				split_polygons.clear();
 
@@ -980,9 +985,10 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					for (unsigned j = 0; j < ppts[i].size(); ++j) {
 						xform_pos(ppts[i][j], tv, scale, mirror, swap_dim);
 					}
-					split_polygon(cobj, split_polygons, ppts[i]);
+					split_polygon_to_cobjs(cobj, split_polygons, ppts[i], group_cobjs);
 				}
 				add_polygons_to_cobj_vector(split_polygons);
+				PRINT_TIME("Obj File Load/Process");
 				break;
 			}
 
@@ -1226,7 +1232,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			set_cobj_params(cobj, elastic, color, tid, draw, platform_id, has_layer, refract_ix);
 			cobj.thickness *= scale;
 			split_polygons.clear();
-			split_polygon(cobj, split_polygons, poly_pts);
+			split_polygon_to_cobjs(cobj, split_polygons, poly_pts, 0);
 			add_polygons_to_cobj_vector(split_polygons);
 			break;
 

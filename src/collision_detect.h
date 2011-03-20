@@ -154,14 +154,14 @@ public:
 };
 
 
-class coll_obj : public cube_t { // size = 236
+class coll_obj : public cube_t { // size = 240
 
 public:
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
 	char type, destroy, status, lighted;
 	int counter;
 	float radius, radius2, thickness, volume;
-	int id, platform_id;
+	int id, platform_id, group_id;
 	short npoints;
 	unsigned char last_coll, coll_type;
 	bool fixed, is_billboard;
@@ -173,7 +173,7 @@ public:
 	lvmap lightmap;
 
 	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), counter(0), radius(0.0), radius2(0.0),
-		thickness(0.0), volume(0.0), id(-1), platform_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0), is_billboard(0) {}
+		thickness(0.0), volume(0.0), id(-1), platform_id(-1), group_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0), is_billboard(0) {}
 	void init();
 	void clear_lightmap(int mode, unsigned keep=0, bool keep_depends=0);
 	void clear_lightmap_if_lighted_eq(int shadowed, int partial);
@@ -186,7 +186,7 @@ public:
 	void set_npoints();
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned i, int &last_tid);
+	void draw_cobj(unsigned i, int &last_tid, int &last_group_id);
 	void add_to_vector(vector<coll_obj> &cobjs, int type_);
 	void check_if_cube();
 	void add_as_fixed_cobj();
@@ -200,7 +200,8 @@ public:
 	void add_shadow(char light_sources, bool dynamic) const;
 	bool cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const;
 	bool operator<(const coll_obj &cobj) const {return (volume < cobj.volume);} // sort by size
-	bool equal_params(const coll_obj &c) const {return (type == c.type && status == c.status && platform_id == c.platform_id && cp.equal_params(c.cp));}
+	bool equal_params(const coll_obj &c) const {return (type == c.type && status == c.status &&
+		platform_id == c.platform_id && group_id == c.group_id && cp.equal_params(c.cp));}
 	bool is_semi_trans()  const;
 	bool no_draw()        const {return (!cp.draw || status == COLL_UNUSED || status == COLL_FREED || cp.color.alpha == 0.0);}
 	bool disabled()       const {return (status != COLL_DYNAMIC && status != COLL_STATIC);}

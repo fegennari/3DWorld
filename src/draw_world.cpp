@@ -1784,7 +1784,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
 	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 1, 0, 1, 1, 1, 1)); // Note: enable direct_lighting if processing sun/moon shadows here
-	int last_tid(-1);
+	int last_tid(-1), last_group_id(-1);
 	
 	if (draw_solid && have_drawn_cobj) {
 		for (unsigned i = 0; i < coll_objects.size(); ++i) {
@@ -1795,7 +1795,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				draw_last.push_back(make_pair(neg_dist_sq, i));
 			}
 			else {
-				coll_objects[i].draw_cobj(i, last_tid);
+				coll_objects[i].draw_cobj(i, last_tid, last_group_id);
 			}
 		}
 	}
@@ -1819,12 +1819,13 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			}
 			else { // cobj
 				assert((unsigned)ix < coll_objects.size());
-				coll_objects[ix].draw_cobj(ix, last_tid);
+				coll_objects[ix].draw_cobj(ix, last_tid, last_group_id);
 			}
 		}
 		disable_blend();
 		draw_last.resize(0);
 	}
+	if (last_group_id >= 0) glEnd(); // end group
 	end_smoke_shaders(orig_fog_color);
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();

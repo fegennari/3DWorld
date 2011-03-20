@@ -309,7 +309,7 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 }
 
 
-void coll_obj::draw_cobj(unsigned i, int &last_tid) { // non-const: modifies shadow state
+void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id) { // non-const: modifies shadow state
 
 	if (no_draw()) return;
 	assert(status != COLL_FREED && !disabled());
@@ -331,14 +331,42 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid) { // non-const: modifies sha
 	float const ar(get_tex_ar(tid));
 	bool const no_lighting(cp.color == BLACK && cp.specular == 0.0);
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
-	set_specular(cp.specular, cp.shine);
-	set_color_d(cp.color); // set material ambient and diffuse
-	colorRGBA(0.0, 0.0, 0.0, cp.color.alpha).do_glColor();
 
+	// process groups
+	bool const in_group(group_id >= 0), same_group(group_id == last_group_id);
+	bool const start_group(in_group && !same_group), end_group(last_group_id >= 0 && !same_group);
+	last_group_id = group_id;
+	
+	if (end_group) {
+		glEnd();
+		set_lighted_sides(1);
+	}
+	if (!in_group || start_group) { // should be the same across groups
+		set_specular(cp.specular, cp.shine);
+		set_color_d(cp.color); // set material ambient and diffuse
+		colorRGBA(0.0, 0.0, 0.0, cp.color.alpha).do_glColor();
+	}
 	if (tid != last_tid) {
+		assert(!in_group || !same_group);
 		bool const textured(select_texture(tid));
 		assert(textured);
 		last_tid = tid;
+	}
+	if (start_group) {
+		set_lighted_sides(2);
+		glBegin(GL_TRIANGLES);
+	}
+	if (in_group) {
+		assert(type == COLL_POLYGON && thickness <= MIN_POLY_THICK2 && npoints == 3); // thin triangle
+		bool const inv_norm(dot_product_ptv(norm, get_camera_pos(), center) < 0.0);
+		vector3d const normal(norm*(inv_norm ? -1.0 : 1.0));
+		
+		for (unsigned i = 0; i < 3; ++i) {
+			// FIXME: tex coords
+			normal.do_glNormal(); // FIXME: smooth?
+			points[i].do_glVertex();
+		}
+		return;
 	}
 	switch (type) {
 	case COLL_CUBE:

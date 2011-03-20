@@ -6,5 +6,5 @@ m 0.16 # scale
 s 1 2 # swap Y and Z
 M 2 # mirror in Z
 
-O ..\Sponza\sponza.obj
+O ..\Sponza\sponza.obj 1
 

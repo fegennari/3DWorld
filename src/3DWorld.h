@@ -295,6 +295,15 @@ vector3d const zero_vector(0, 0, 0);
 vector3d const all_ones(1, 1, 1);
 
 
+struct triangle {
+
+	point pts[3];
+
+	triangle() {}
+	triangle(point const &p1, point const &p2, point const &p3) {pts[0] = p1; pts[1] = p2; pts[2] = p3;}
+};
+
+
 struct cube_t { // size = 24
 
 	float d[3][2]; // {x,y,z},{min,max}
@@ -1547,7 +1556,8 @@ unsigned enable_dynamic_lights(point const center=all_zeros, float radius=0.0);
 void disable_dynamic_lights(unsigned num_dlights);
 
 // function prototypes - tessellate
-bool split_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts);
+void split_polygon_to_tris(vector<triangle> &triangles_out, vector<point> const &poly_pts);
+bool split_polygon_to_cobjs(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pt, bool split_quads);
 
 // function prototypes - shaders
 void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num);

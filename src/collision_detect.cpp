@@ -399,8 +399,9 @@ int coll_obj::add_coll_cobj() {
 		assert(0);
 	}
 	assert(size_t(cid) < coll_objects.size());
-	coll_objects[cid].destroy     = destroy;
-	coll_objects[cid].fixed       = fixed;
+	coll_objects[cid].destroy  = destroy;
+	coll_objects[cid].fixed    = fixed;
+	coll_objects[cid].group_id = group_id;
 	return cid;
 }
 

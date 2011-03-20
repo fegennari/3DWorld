@@ -13,12 +13,6 @@
 #endif
 
 
-struct triangle {
-
-	point pts[3];
-};
-
-
 triangle cur_triangle;
 deque<triangle> triangles;
 deque<point> added_pts;
@@ -113,7 +107,7 @@ GLUtesselator *init_tess() {
 }
 
 
-void tessellate_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts) {
+void tessellate_polygon(vector<point> const &poly_pts) {
 
 	assert(!has_tess_error);
 	unsigned const size(poly_pts.size());
@@ -147,6 +141,40 @@ void tessellate_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<
 		assert(!mode_valid);
 	}
 	if (self_int) cout << "* Warning: Self-intersecting polygon." << endl;
+}
+
+
+// unused, but could be useful
+void split_polygon_to_tris(vector<triangle> &triangles_out, vector<point> const &poly_pts) {
+
+	unsigned const npts(poly_pts.size());
+	assert(npts >= 3);
+	
+	if (npts == 3) {
+		triangles_out.push_back(triangle(poly_pts[0], poly_pts[1], poly_pts[2]));
+	}
+	else {
+		tessellate_polygon(poly_pts);
+		copy(triangles.begin(), triangles.end(), back_inserter(triangles_out));
+		triangles.clear();
+	}
+}
+
+
+bool split_polygon_to_cobjs(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts, bool split_quads) {
+
+	unsigned const npts(poly_pts.size());
+	assert(npts >= 3);
+	
+	if (npts <= N_COLL_POLY_PTS && !(split_quads && npts > 3)) { // convexity test for (npts > 3) ?
+		for (unsigned i = 0; i < npts; ++i) {
+			cobj.points[i] = poly_pts[i];
+		}
+		cobj.npoints = npts;
+		split_polygons.push_back(cobj);
+		return 0;
+	}
+	tessellate_polygon(poly_pts);
 	cobj.npoints = 3; // triangles
 	
 	for (unsigned i = 0; i < triangles.size(); ++i) {
@@ -156,23 +184,6 @@ void tessellate_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<
 		split_polygons.push_back(cobj);
 	}
 	triangles.clear();
-}
-
-
-bool split_polygon(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts) {
-
-	unsigned const npts(poly_pts.size());
-	assert(npts >= 3);
-	
-	if (npts <= N_COLL_POLY_PTS) { // convexity test for (npts > 3) ?
-		for (unsigned i = 0; i < npts; ++i) {
-			cobj.points[i] = poly_pts[i];
-		}
-		cobj.npoints = npts;
-		split_polygons.push_back(cobj);
-		return 0;
-	}
-	tessellate_polygon(cobj, split_polygons, poly_pts);
 	assert(!split_polygons.empty());
 	return 1;
 }
