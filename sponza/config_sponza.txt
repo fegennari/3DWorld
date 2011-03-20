@@ -60,7 +60,7 @@ refresh_rate 75
 
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0
-coll_obj_file coll_objs/coll_objs_sponza.txt
+coll_obj_file sponza/coll_objs_sponza.txt
 ship_def_file universe/ship_defs.txt
 
 end

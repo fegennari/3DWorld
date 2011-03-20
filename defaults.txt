@@ -10,6 +10,6 @@ house/config_house.txt
 #config_river.txt
 #config_gym.txt
 #config_landscape.txt
-#config_sponza.txt
+#sponza/config_sponza.txt
 #laptop_overrides.txt
 

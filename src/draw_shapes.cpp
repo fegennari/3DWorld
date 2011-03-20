@@ -910,7 +910,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	if (double_sided && dot_product_ptv(normal, camera, pos) < 0.0) { // viewing the back side
 		if (use_norms) {
 			for (int i = 0; i < npts; ++i) {
-				normals[i].negate();
+				normals[i].negate(); // use get_norm_camera_orient()?
 			}
 		}
 		normal.negate();
