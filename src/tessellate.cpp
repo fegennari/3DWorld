@@ -161,12 +161,28 @@ void split_polygon_to_tris(vector<triangle> &triangles_out, vector<point> const 
 }
 
 
+bool is_poly_convex(vector<point> const &points) { // untested
+
+	unsigned const npts(points.size());
+	assert(npts >= 3);
+	if (npts == 3) return 1;
+	unsigned counts[2] = {0};
+	vector3d const norm(get_poly_norm(&points.front()));
+
+	for (unsigned i = 0; i < npts; ++i) {
+		unsigned const ip((i+npts-1)%npts), in((i+1)%npts);
+		++counts[dot_product(norm, cross_product(points[i]-points[ip], points[in]-points[i])) < 0.0];
+	}
+	return !(counts[0] && counts[1]);
+}
+
+
 bool split_polygon_to_cobjs(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts, bool split_quads) {
 
 	unsigned const npts(poly_pts.size());
 	assert(npts >= 3);
 	
-	if (npts <= N_COLL_POLY_PTS && !(split_quads && npts > 3)) { // convexity test for (npts > 3) ?
+	if (npts <= N_COLL_POLY_PTS && !(split_quads && npts > 3) && is_poly_convex(poly_pts)) { // triangle or convex quad
 		for (unsigned i = 0; i < npts; ++i) {
 			cobj.points[i] = poly_pts[i];
 		}
