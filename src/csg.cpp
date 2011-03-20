@@ -1095,12 +1095,16 @@ void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cu
 }
 
 
-bool comp_cobjs_by_tid(coll_obj const &a, coll_obj const &b) {
-	return (a.cp.tid < b.cp.tid);
+bool comp_cobjs_by_draw_params(coll_obj const &a, coll_obj const &b) {
+	if (a.cp.tid   < b.cp.tid)   return 1;
+	if (b.cp.tid   < a.cp.tid)   return 0;
+	if (a.group_id < b.group_id) return 1;
+	if (b.group_id < a.group_id) return 0;
+	return (get_max_dim(a.norm) < get_max_dim(b.norm));
 }
 
-void sort_cobjs_by_tid(vector<coll_obj> &cobjs) {
-	sort(cobjs.begin(), cobjs.end(), comp_cobjs_by_tid);
+void sort_cobjs_for_rendering(vector<coll_obj> &cobjs) {
+	sort(cobjs.begin(), cobjs.end(), comp_cobjs_by_draw_params);
 }
 
 

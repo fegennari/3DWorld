@@ -173,7 +173,8 @@ public:
 	lvmap lightmap;
 
 	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), counter(0), radius(0.0), radius2(0.0),
-		thickness(0.0), volume(0.0), id(-1), platform_id(-1), group_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0), is_billboard(0) {}
+		thickness(0.0), volume(0.0), id(-1), platform_id(-1), group_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0),
+		is_billboard(0), norm(all_zeros) {}
 	void init();
 	void clear_lightmap(int mode, unsigned keep=0, bool keep_depends=0);
 	void clear_lightmap_if_lighted_eq(int shadowed, int partial);
@@ -186,7 +187,7 @@ public:
 	void set_npoints();
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned i, int &last_tid, int &last_group_id);
+	void draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim);
 	void add_to_vector(vector<coll_obj> &cobjs, int type_);
 	void check_if_cube();
 	void add_as_fixed_cobj();

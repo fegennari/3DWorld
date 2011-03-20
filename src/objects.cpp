@@ -309,7 +309,7 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 }
 
 
-void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id) { // non-const: modifies shadow state
+void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim) { // non-const: modifies shadow state
 
 	if (no_draw()) return;
 	assert(status != COLL_FREED && !disabled());
@@ -333,33 +333,39 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id) { // non
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 
 	// process groups
-	bool const in_group(group_id >= 0), same_group(group_id == last_group_id);
+	int const pri_dim(::get_max_dim(norm));
+	bool const in_group(group_id >= 0), same_group(group_id == last_group_id && tid == last_tid && pri_dim == last_pri_dim);
 	bool const start_group(in_group && !same_group), end_group(last_group_id >= 0 && !same_group);
 	last_group_id = group_id;
-	if (end_group) glEnd();
+	last_pri_dim  = pri_dim;
 	
+	if (end_group) {
+		glEnd();
+	}
 	if (!in_group || start_group) { // should be the same across groups
 		set_specular(cp.specular, cp.shine);
 		set_color_d(cp.color); // set material ambient and diffuse
 		colorRGBA(0.0, 0.0, 0.0, cp.color.alpha).do_glColor();
 	}
 	if (tid != last_tid) {
-		assert(!in_group || !same_group);
 		bool const textured(select_texture(tid));
 		assert(textured);
 		last_tid = tid;
 	}
 	if (start_group) {
+		float const tscale[2] = {cp.tscale, ar*cp.tscale};
+		vector3d tex_dir(0,0,0);
+		tex_dir[pri_dim] = 1.0;
+		setup_polygon_texgen(tex_dir, tscale);
 		unsigned char shadowed(255); // all shadowed
 		set_shadowed_state(shadowed);
 		glBegin(GL_TRIANGLES);
 	}
-	if (in_group) {
+	if (in_group) { // FIXME: color bug when using dynamic lighting
 		assert(type == COLL_POLYGON && thickness <= MIN_POLY_THICK2 && npoints == 3); // thin triangle
 		vector3d const normal(get_norm_camera_orient(norm, center));
 		
 		for (unsigned i = 0; i < 3; ++i) {
-			// FIXME: tex coords
 			normal.do_glNormal(); // FIXME: smooth?
 			points[i].do_glVertex();
 		}
