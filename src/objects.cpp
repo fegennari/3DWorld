@@ -362,12 +362,14 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		glBegin(GL_TRIANGLES);
 	}
 	if (in_group) { // FIXME: color bug when using dynamic lighting
-		assert(type == COLL_POLYGON && thickness <= MIN_POLY_THICK2 && npoints == 3); // thin triangle
+		assert(type == COLL_POLYGON && thickness <= MIN_POLY_THICK2); // thin triangle/quad
 		vector3d const normal(get_norm_camera_orient(norm, center));
+		unsigned const ixs[6] = {0,1,2,0,2,3};
+		unsigned const nix((npoints == 3) ? 3 : 6); // triangle or quad (2 tris)
 		
-		for (unsigned i = 0; i < 3; ++i) {
+		for (unsigned i = 0; i < nix; ++i) {
 			normal.do_glNormal(); // FIXME: smooth?
-			points[i].do_glVertex();
+			points[ixs[i]].do_glVertex();
 		}
 		return;
 	}

@@ -986,7 +986,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					for (unsigned j = 0; j < ppts[i].size(); ++j) {
 						xform_pos(ppts[i][j], tv, scale, mirror, swap_dim);
 					}
-					split_polygon_to_cobjs(cobj, split_polygons, ppts[i], group_cobjs);
+					split_polygon_to_cobjs(cobj, split_polygons, ppts[i], 0);
 				}
 				add_polygons_to_cobj_vector(split_polygons);
 				PRINT_TIME("Obj File Load/Process");
