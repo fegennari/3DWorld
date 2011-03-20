@@ -471,6 +471,11 @@ template<typename T> inline pointT<T> make_pt_global(pointT<T> const &pos) {
 	return ((cur_origin == all_zeros) ? pos : (pos - cur_origin));
 }
 
+inline vector3d get_norm_camera_orient(vector3d const &normal, point const &center) {
+	bool const inv_norm(dot_product_ptv(normal, get_camera_pos(), center) < 0.0);
+	return normal*(inv_norm ? -1.0 : 1.0);
+}
+
 
 // *********************** FLOATING POINT ************************
 

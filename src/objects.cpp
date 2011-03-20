@@ -336,11 +336,8 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id) { // non
 	bool const in_group(group_id >= 0), same_group(group_id == last_group_id);
 	bool const start_group(in_group && !same_group), end_group(last_group_id >= 0 && !same_group);
 	last_group_id = group_id;
+	if (end_group) glEnd();
 	
-	if (end_group) {
-		glEnd();
-		set_lighted_sides(1);
-	}
 	if (!in_group || start_group) { // should be the same across groups
 		set_specular(cp.specular, cp.shine);
 		set_color_d(cp.color); // set material ambient and diffuse
@@ -352,14 +349,11 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id) { // non
 		assert(textured);
 		last_tid = tid;
 	}
-	if (start_group) {
-		set_lighted_sides(2);
-		glBegin(GL_TRIANGLES);
-	}
+	if (start_group) glBegin(GL_TRIANGLES);
+	
 	if (in_group) {
 		assert(type == COLL_POLYGON && thickness <= MIN_POLY_THICK2 && npoints == 3); // thin triangle
-		bool const inv_norm(dot_product_ptv(norm, get_camera_pos(), center) < 0.0);
-		vector3d const normal(norm*(inv_norm ? -1.0 : 1.0));
+		vector3d const normal(get_norm_camera_orient(norm, center));
 		
 		for (unsigned i = 0; i < 3; ++i) {
 			// FIXME: tex coords

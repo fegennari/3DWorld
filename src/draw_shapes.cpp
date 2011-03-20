@@ -1291,7 +1291,7 @@ void draw_polygon(point const *points, const vector3d *normals, int npoints, vec
 {
 	if (FAST_SHAPE_DRAW || (npoints != 3 && npoints != 4)) {
 		q.color.do_glColor();
-		draw_simple_polygon(points, npoints, norm);
+		draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
 		return;
 	}
 	bool const temp_ns(q.no_shadow); // subdivide based on L1_SUBDIV_SIZE
