@@ -61,9 +61,9 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 	bool const texture(tid >= 0 && glIsTexture(tid));
 	if (texture) select_texture(tid);
 	
-	if (lighted) {
+	if (lighted) { // set emission to color, ambient and diffuse to black
 		set_color_e(color);
-		set_color(color);
+		set_color(BLACK); // hack to fix material color bug
 	}
 	else {
 		set_shadowed_color(color, pos, !is_visible_to_light_cobj(pos, get_light(), radius, -1, 0), 0, 0);

@@ -344,7 +344,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	}
 	if (!in_group || start_group) { // should be the same across groups
 		set_specular(cp.specular, cp.shine);
-		set_color_d(cp.color); // set material ambient and diffuse
+		set_color_d(cp.color); // set material diffuse
 		colorRGBA(0.0, 0.0, 0.0, cp.color.alpha).do_glColor();
 	}
 	if (tid != last_tid) {
