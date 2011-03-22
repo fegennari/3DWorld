@@ -902,7 +902,7 @@ bool read_object_file(char *filename, vector<vector<point> > &ppts, bool verbose
 			read_to_newline(in); // ignore
 		}
 		else {
-			std::cerr << "Error: Undefined entry '" << s << "' in file " << filename << endl;
+			std::cerr << "Error: Undefined entry '" << s << "' in object file " << filename << endl;
 			return 0;
 		}
 	}
