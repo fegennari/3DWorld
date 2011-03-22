@@ -49,5 +49,21 @@ void main()
 	if (enable_light0) color += add_light_comp(normal, 0);
 	if (enable_light1) color += add_light_comp(normal, 1);
 	gl_FrontColor = color;
+
+	// calculate fog coord
+#if 0
 	set_fog();
+#else
+	vec4 eye = gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0); // world space
+
+	// could use different terms for inside/outside water?
+	if (gl_Vertex.z >= water_plane_z || eye.z <= water_plane_z) { // camera underwater or vertex above water
+		set_fog(); // standard underwater or open air fog
+	}
+	else { // camera above water, vertex under water - partial air fog
+		float t = (eye.z - water_plane_z)/(eye.z - gl_Vertex.z);
+		vec4 clipped_vert = mix(eye, gl_Vertex, t);
+		gl_FogFragCoord = length((gl_ModelViewMatrix * clipped_vert).xyz);
+	}
+#endif
 } 

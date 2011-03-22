@@ -21,6 +21,8 @@ extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture textures[];
 
+void draw_water_edge(float zval);
+
 
 int get_tile_radius() {
 	return ((world_mode == WMODE_INF_TERRAIN) ? TILE_RADIUS_IT : TILE_RADIUS);
@@ -493,6 +495,7 @@ public:
 			zmin = min(zmin, i->second->get_zmin());
 			num_drawn += i->second->draw(data, indices);
 		}
+		if (world_mode == WMODE_INF_TERRAIN) draw_water_edge(water_plane_z); // Note: doesn't take into account waves
 		unset_shader_prog();
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();

@@ -735,6 +735,16 @@ void draw_water_sides(int check_zvals) {
 }
 
 
+void draw_water_edge(float zval) { // used for WM3 tiled terrain
+
+	set_color(BLACK);
+	BLACK.do_glColor();
+	float const vd_scale(2.0*get_tile_radius()*SQRT2), dx(xoff*DX_VAL), dy(yoff*DY_VAL);
+	float const radius(0.5*vd_scale*(X_SCENE_SIZE + Y_SCENE_SIZE));
+	draw_fast_cylinder(point(dx, dy, zmin), point(dx, dy, zval), radius, radius, 64, 0);
+}
+
+
 void draw_water_plane(float zval, int const *const hole_bounds) {
 
 	if (DISABLE_WATER) return;
