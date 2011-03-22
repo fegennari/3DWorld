@@ -123,7 +123,7 @@ float integrate_water_dist(point const &targ_pos, point const &src_pos, float co
 
 void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2) {
 
-	float const scale(WATER_COL_ATTEN*((wminside[y][x] == 2) ? 1.0 : 2.0)), wh(water_matrix[y][x]);
+	float const scale(WATER_COL_ATTEN*((wminside[y][x] == 2) ? 1.0 : 2.0)), wh(water_matrix[y][x]); // higher for interior water
 	float const dist(scale*(integrate_water_dist(pos, p1, wh) + integrate_water_dist(pos, p2, wh)));
 	atten_by_water_depth(c, dist);
 }
@@ -574,7 +574,7 @@ void draw_sides_and_bottom() {
 				float const limit(d ? y2 : y1);
 				draw_vertex(xv,        limit, botz, 0, ts);
 				draw_vertex(xv+DX_VAL, limit, botz, 0, ts);
-				draw_vertex(xv+DX_VAL, limit, mesh_height[xy_ix][i], 0, ts);
+				draw_vertex(xv+DX_VAL, limit, mesh_height[xy_ix][i  ], 0, ts);
 				draw_vertex(xv,        limit, mesh_height[xy_ix][i-1], 0, ts);
 			}
 			xv += DX_VAL;
@@ -592,7 +592,7 @@ void draw_sides_and_bottom() {
 				float const limit(d ? x2 : x1);
 				draw_vertex(limit, yv,        botz, 1, ts);
 				draw_vertex(limit, yv+DY_VAL, botz, 1, ts);
-				draw_vertex(limit, yv+DY_VAL, mesh_height[i][xy_ix], 1, ts);
+				draw_vertex(limit, yv+DY_VAL, mesh_height[i][xy_ix  ], 1, ts);
 				draw_vertex(limit, yv,        mesh_height[i-1][xy_ix], 1, ts);
 			}
 			yv += DY_VAL;
@@ -609,15 +609,33 @@ class water_renderer {
 
 	int check_zvals;
 	float tex_scale;
+	colorRGBA color;
 
+	void draw_vert(float x, float y, float z, bool in_y, bool neg_edge) const;
 	void draw_x_sides(bool neg_edge) const;
 	void draw_y_sides(bool neg_edge) const;
 	void draw_sides(unsigned ix) const;
 
 public:
 	water_renderer(int ix, int iy, int cz) : check_zvals(cz), tex_scale(W_TEX_SCALE0/Z_SCENE_SIZE) {}
-	void draw() const;
+	void draw();
 };
+
+
+void water_renderer::draw_vert(float x, float y, float z, bool in_y, bool neg_edge) const { // in_y is slice orient
+
+	colorRGBA c(color);
+	point p(x, y, z), v(get_camera_pos());
+
+	if ((v[!in_y] - p[!in_y] < 0.0) ^ neg_edge) { // camera viewing the inside face of the water side
+		do_line_clip_scene(p, v, zbottom, z);
+		float const atten(WATER_COL_ATTEN*p2p_dist(p, v));
+		atten_by_water_depth(&c.red, atten);
+		c.alpha = CLIP_TO_01(atten);
+	}
+	set_color(c);
+	draw_vertex(x, y, z, in_y, tex_scale);
+}
 
 
 void water_renderer::draw_x_sides(bool neg_edge) const {
@@ -634,10 +652,10 @@ void water_renderer::draw_x_sides(bool neg_edge) const {
 
 		if (!check_zvals || mh1 < wm1 || mh2 < wm2) {
 			if (!in_quads) {glBegin(GL_QUADS); in_quads = 1;}
-			draw_vertex(limit, yv,        wm2,           1, tex_scale);
-			draw_vertex(limit, yv+DY_VAL, wm1,           1, tex_scale);
-			draw_vertex(limit, yv+DY_VAL, min(wm1, mh1), 1, tex_scale);
-			draw_vertex(limit, yv,        min(wm2, mh2), 1, tex_scale);
+			draw_vert(limit, yv,        wm2,           1, neg_edge);
+			draw_vert(limit, yv+DY_VAL, wm1,           1, neg_edge);
+			draw_vert(limit, yv+DY_VAL, min(wm1, mh1), 1, neg_edge);
+			draw_vert(limit, yv,        min(wm2, mh2), 1, neg_edge);
 		}
 		yv += DY_VAL;
 	}
@@ -659,10 +677,10 @@ void water_renderer::draw_y_sides(bool neg_edge) const {
 
 		if (!check_zvals || mh1 < wm1 || mh2 < wm2) {
 			if (!in_quads) {glBegin(GL_QUADS); in_quads = 1;}
-			draw_vertex(xv,        limit, wm2,           0, tex_scale);
-			draw_vertex(xv+DX_VAL, limit, wm1,           0, tex_scale);
-			draw_vertex(xv+DX_VAL, limit, min(wm1, mh1), 0, tex_scale);
-			draw_vertex(xv,        limit, min(wm2, mh2), 0, tex_scale);
+			draw_vert(xv,        limit, wm2,           0, neg_edge);
+			draw_vert(xv+DX_VAL, limit, wm1,           0, neg_edge);
+			draw_vert(xv+DX_VAL, limit, min(wm1, mh1), 0, neg_edge);
+			draw_vert(xv,        limit, min(wm2, mh2), 0, neg_edge);
 		}
 		xv += DX_VAL;
 	}
@@ -682,9 +700,8 @@ void water_renderer::draw_sides(unsigned ix) const {
 }
 
 
-void water_renderer::draw() const {
+void water_renderer::draw() { // modifies color
 
-	colorRGBA color;
 	select_water_ice_texture(color);
 	set_color(color);
 	set_fill_mode();
