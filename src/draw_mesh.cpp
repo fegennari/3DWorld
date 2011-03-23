@@ -774,11 +774,14 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	set_fill_mode();
 	enable_blend();
 	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + wxoff), (tscale*(yoff2 - yoff)*DY_VAL + wyoff));
+	bool const use_shader(1);
 
-	//setup_enabled_lights();
-	//unsigned const p(set_shader_prog("texture_gen.part+per_pixel_lighting_texgen", "ads_lighting.part*+per_pixel_lighting_textured")); // needs fog
-	//add_uniform_int(p, "tex0", 0);
-	
+	if (use_shader) {
+		setup_enabled_lights();
+		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_texgen", "linear_fog.part+ads_lighting.part*+per_pixel_lighting_textured"));
+		setup_fog_scale(p);
+		add_uniform_int(p, "tex0", 0);
+	}
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, zval);
 	glBegin(GL_QUADS);
@@ -823,7 +826,7 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	}
 	glEnd();
 	glPopMatrix();
-	//unset_shader_prog();
+	if (use_shader) unset_shader_prog();
 	disable_blend();
 	set_specular(0.0, 1.0);
 	disable_textures_texgen();

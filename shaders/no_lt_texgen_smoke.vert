@@ -30,6 +30,7 @@ void main()
 	}
 	if (!smoke_enabled) { // set t zero length vector
 		vpos = eye; // Note: eye is used for dynamic lights, but vpos is not
+		set_fog(); // set standard fog coord
 		return;
 	}
 	pt_pair res = clip_line(gl_Vertex.xyz, eye, smoke_bb);

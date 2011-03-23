@@ -1681,15 +1681,6 @@ void get_enabled_lights() {
 }
 
 
-colorRGBA change_fog_color(colorRGBA const &new_color) {
-
-	colorRGBA old_color;
-	glGetFloatv(GL_FOG_COLOR, (float *)&old_color);
-	glFogfv(GL_FOG_COLOR, (float *)&new_color); // for smoke
-	return old_color;
-}
-
-
 void set_shadowed_state(unsigned char shadowed) {
 
 	int sval(0);
@@ -1710,15 +1701,18 @@ void set_dlights_booleans(bool enable, int shader_type) {
 
 colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en) {
 
+	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
 	set_bool_shader_prefix("use_texgen",      use_texgen,      0); // VS
-	set_bool_shader_prefix("smoke_enabled",   (smoke_en && smoke_exists && smoke_tid > 0), 0); // VS
+	set_bool_shader_prefix("smoke_enabled",   smoke_enabled,   0); // VS
+	set_bool_shader_prefix("smoke_enabled",   smoke_enabled,   1); // FS
 	set_bool_shader_prefix("keep_alpha",      keep_alpha,      1); // FS
 	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
 	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
 	set_dlights_booleans(dlights, 1); // FS
 	setup_enabled_lights(8);
-	unsigned const p(set_shader_prog("texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "ads_lighting.part*+dynamic_lighting.part*+textured_with_smoke"));
+	unsigned const p(set_shader_prog("fog.part+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+textured_with_smoke"));
 	setup_scene_bounds(p);
+	setup_fog_scale(p); // fog scale for the case where smoke is disabled
 	if (dlights && dl_tid > 0) setup_dlight_textures(p);
 	unsigned const ix(register_attrib_name(p, "shadow_val"));
 	assert(ix == 0); // only one attribute
@@ -1734,7 +1728,13 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	add_uniform_float(p, "min_alpha", min_alpha);
 	add_uniform_float_array(p, "smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	add_uniform_float(p, "step_delta", HALF_DXY);
-	return change_fog_color(GRAY);
+	//return change_fog_color(GRAY);
+
+	// setup fog
+	colorRGBA old_fog_color;
+	glGetFloatv(GL_FOG_COLOR, (float *)&old_fog_color);
+	if (smoke_enabled) glFogfv(GL_FOG_COLOR, (float *)&GRAY); // for smoke
+	return old_fog_color;
 }
 
 

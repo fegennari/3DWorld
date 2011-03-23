@@ -46,6 +46,7 @@ void main()
 	
 	if (eye == vpos) {
 		if (color.a <= min_alpha) discard;
+		if (!smoke_enabled) color = apply_fog(color); // apply standard fog
 		gl_FragColor = color;
 		return;
 	}
