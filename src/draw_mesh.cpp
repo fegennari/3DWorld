@@ -123,7 +123,7 @@ float integrate_water_dist(point const &targ_pos, point const &src_pos, float co
 
 void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2) {
 
-	float const scale(WATER_COL_ATTEN*((wminside[y][x] == 2) ? 1.0 : 2.0)), wh(water_matrix[y][x]); // higher for interior water
+	float const scale(WATER_COL_ATTEN*((wminside[y][x] == 2) ? 1.0 : 4.0)), wh(water_matrix[y][x]); // higher for interior water
 	float const dist(scale*(integrate_water_dist(pos, p1, wh) + integrate_water_dist(pos, p2, wh)));
 	atten_by_water_depth(c, dist);
 }

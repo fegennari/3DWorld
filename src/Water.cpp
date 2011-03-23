@@ -34,6 +34,7 @@ float    const EVAP_TEMP_POINT     = 0.0;
 float    const W_TEX_STRETCH       = 2.0;
 float    const MAX_WATER_ACC       = 25.0;
 float    const DARK_WATER_ATTEN    = 1.0; // higher is lighter, lower is darker
+float    const INT_WATER_ATTEN     = 0.5; // for interior water
 unsigned const NUM_WATER_SPRINGS   = 2;
 unsigned const MAX_RIPPLE_STEPS    = 2;
 unsigned const UPDATE_STEP         = 8; // update water only every nth ripple computation
@@ -240,7 +241,7 @@ public:
 		}
 
 		// add some green at shallow view angles
-		blend_color(color, GREEN, color, 0.2*(1.0 - fabs(dot_product(view_dir, n))), 0);
+		blend_color(color, colorRGBA(0.0, 1.0, 0.5, 1.0), color, 0.25*(1.0 - fabs(dot_product(view_dir, n))), 0);
 
 		vector3d dir;
 		calc_reflection_angle(view_dir, dir, n);
@@ -387,7 +388,7 @@ void draw_water() {
 	}
 	float const tx_val(tx_scale*xoff2*DX_VAL + tdx), ty_val(ty_scale*yoff2*DX_VAL + tdy);
 
-	if (!island) {
+	if (!island) { // draw exterior water (oceans)
 		if (camera.z >= water_plane_z) draw_water_sides(1);
 		glEnable(GL_COLOR_MATERIAL);
 		glDisable(GL_NORMALIZE);
@@ -466,13 +467,15 @@ void draw_water() {
 	glDisable(GL_NORMALIZE);
 	enable_blend();
 	enable_point_specular();
-	glNormal3f(0.0, 0.0, 1.0); // probably unnecessary
-	glBegin(WATER_PRIM_TYPE);
 	unsigned nin(0);
 	int xin[4], yin[4], last_wsi(-1);
 	bool const disp_snow((display_mode & 0x40) && temperature <= SNOW_MAX_TEMP);
+	select_water_ice_texture(color);
+	color *= INT_WATER_ATTEN; // attenuate for interior water
 	colorRGBA wcolor(color);
+	glBegin(WATER_PRIM_TYPE);
 	
+	// draw interior water (ponds)
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			if (!is_ice && is_snow) update_accumulation(i, j);
@@ -527,6 +530,7 @@ void draw_water() {
 							else if (last_water != 1) {
 								glEnd();
 								select_water_ice_texture(color);
+								color *= INT_WATER_ATTEN; // attenuate for interior water
 								glBegin(WATER_PRIM_TYPE);
 								last_water = 1;
 							}
