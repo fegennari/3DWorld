@@ -304,13 +304,6 @@ void draw_cylinder(point const &p1, float length, float radius1, float radius2, 
 }
 
 
-// Note: Must be oriented in z direction
-void draw_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends) {
-	
-	draw_cylinder(p1, p2p_dist(p1, p2), radius1, radius2, ndiv, nstacks, draw_ends);
-}
-
-
 void xform_cylinder(point const &p1, point const &p2, vector3d const &scale) {
 
 	translate_to(p1);

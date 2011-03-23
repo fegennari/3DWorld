@@ -1084,7 +1084,6 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 void draw_cylinder(float length, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends, bool first_end_only=0, bool last_end_only=0);
 void draw_cylinder_nstacks(float len, float r1, float r2, int ndiv, int nstacks, bool texture);
 void draw_cylinder(point const &p1, float length, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends);
-void draw_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends);
 void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals);
 void draw_circle_normal_at_z(float z, float r_inner, float r_outer, int ndiv, int invert_normals);
 void draw_rotated_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int nstacks,
@@ -1137,6 +1136,7 @@ void draw_sphere_dlist_back_to_front(point const &pos, float radius, int ndiv, b
 void draw_rotated_cylinder_dlist(point const &p1, point const &p2, float r, int ndiv, vector3d const &scale=zero_vector);
 
 // function prototypes - draw mesh
+float integrate_water_dist(point const &targ_pos, point const &src_pos, float const water_z);
 void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2);
 float get_cloud_shadow_atten(int x, int y);
 colorRGBA setup_mesh_lighting();

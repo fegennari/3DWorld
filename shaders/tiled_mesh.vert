@@ -54,16 +54,11 @@ void main()
 #if 0
 	set_fog();
 #else
+	// clip the line to the water plane if the eye is above the water
+	// could use different terms/fog scaling/color for inside/outside water?
 	vec4 eye = gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0); // world space
-
-	// could use different terms for inside/outside water?
-	if (gl_Vertex.z >= water_plane_z || eye.z <= water_plane_z) { // camera underwater or vertex above water
-		set_fog(); // standard underwater or open air fog
-	}
-	else { // camera above water, vertex under water - partial air fog
-		float t = (eye.z - water_plane_z)/(eye.z - gl_Vertex.z);
-		vec4 clipped_vert = mix(eye, gl_Vertex, t);
-		gl_FogFragCoord = length((gl_ModelViewMatrix * clipped_vert).xyz);
-	}
+	float t = min(1.0, (eye.z - water_plane_z)/max(0.0, (eye.z - gl_Vertex.z)));
+	vec4 clipped_vert = mix(eye, gl_Vertex, ((t < 0.0) ? 1.0 : t));
+	gl_FogFragCoord = length((gl_ModelViewMatrix * clipped_vert).xyz);
 #endif
 } 

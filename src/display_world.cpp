@@ -29,7 +29,7 @@ float const REL_SCROLL_DIST    = 0.4;
 float const LIGHT_W_VAL        = 0.0; // 0 = directional/light at infinity, 1 = point source
 float const C_RADIUS0          = 0.01;
 float const CR_SCALE           = 0.1;
-float const FOG_COLOR_ATTEN    = 0.5;
+float const FOG_COLOR_ATTEN    = 0.75;
 
 
 bool mesh_invalidated(1);
@@ -545,6 +545,15 @@ void setup_basic_fog() {
 }
 
 
+void atten_uw_fog_color(colorRGBA &color, float depth) {
+
+	point const lpos(get_light_pos());
+	float const dist(depth*lpos.mag()/max(TOLERANCE, lpos.z));
+	atten_by_water_depth(&color.red, dist);
+	color *= FOG_COLOR_ATTEN;
+}
+
+
 void scroll_scene() {
 
 	RESET_TIME;
@@ -775,9 +784,9 @@ void display(void) {
 			if (underwater) {
 				bool const is_ice(temperature <= W_FREEZE_POINT && (!island || camera.z > ocean.z));
 				colorRGBA fog_color(is_ice ? ICE_C : WATER_C); // under ice/water
-				fog_color *= FOG_COLOR_ATTEN;
 				fog_color.alpha = 1.0;
 				select_liquid_color(fog_color, camera);
+				atten_uw_fog_color(fog_color, depth);
 				set_lighted_fog_color(fog_color);
 				glFogf(GL_FOG_END, 0.2 + (0.25 + 0.75*fog_color.blue)*FOG_DIST_UW0*(camera.z - zmin)/((camera.z + depth) - zmin));
 			}
@@ -982,8 +991,9 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 
 	if (show_fog) {
 		if (underwater) {
+			float const uw_val(); // 1.0-depth
 			colorRGBA fog_color((temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C);
-			fog_color *= FOG_COLOR_ATTEN;
+			atten_uw_fog_color(fog_color, (water_plane_z - camera.z));
 			set_lighted_fog_color(fog_color); // under water/ice
 			glFogf(GL_FOG_END, 0.3 + FOG_DIST_UW3*(camera.z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2)));
 		}
