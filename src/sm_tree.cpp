@@ -43,7 +43,6 @@ sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
 
 vector<small_tree> small_trees;
 pt_line_drawer tree_scenery_pld;
-pt_line_drawer tree_leaf_sphere_pld;
 
 
 extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
@@ -187,17 +186,6 @@ void draw_small_trees() {
 			t.draw(1 << pass);
 			
 			if (pass == 1 && (i+1 == small_trees.size() || small_trees[i+1].get_type() != t.get_type())) {
-				if (!tree_leaf_sphere_pld.empty()) {
-					setup_enabled_lights(2); // ,4
-					set_shader_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
-					set_shader_prefix("#define USE_LIGHT_COLORS", 1); // FS
-					//set_shader_prefix("#define USE_COLOR_IN0", 2); // GS
-					//unsigned const p(set_shader_prog("pt_to_sphere", "simple_texture", "ads_lighting.part*+pt_to_sphere", GL_POINTS, GL_TRIANGLE_STRIP, 6));
-					unsigned const p(set_shader_prog("pt_to_sphere", "ads_lighting.part*+per_pixel_lighting_textured", "pt_to_sphere", GL_POINTS, GL_TRIANGLE_STRIP, 96));
-					add_uniform_int(p, "tex0", 0);
-					tree_leaf_sphere_pld.draw_and_clear();
-					unset_shader_prog();
-				}
 				t.post_leaf_draw(); // last of this type
 			}
 		}
@@ -455,7 +443,6 @@ void small_tree::draw(int mode) const {
 				glTranslatef(0.0, 0.0, 0.75*height);
 				glScalef(1.2, 1.2, 0.8);
 				draw_sphere_dlist(all_zeros, width, nsides, 1);
-				//tree_leaf_sphere_pld.add_pt((pos + point(0.0, 0.0, 0.75*height)), vector3d(1.2*width, 1.2*width, 0.8*width), color);
 				break;
 			case T_TDECID: // tall decidious tree
 				glTranslatef(0.0, 0.0, 1.0*height);
