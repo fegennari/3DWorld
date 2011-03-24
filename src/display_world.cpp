@@ -539,7 +539,7 @@ void setup_basic_fog() {
 
 	if (!show_fog) return;
 	set_lighted_fog_color(GRAY);
-	glFogf(GL_FOG_END, FOG_DIST_W);
+	glFogf(GL_FOG_END, 2.5*Z_SCENE_SIZE);
 	glEnable(GL_FOG);
 }
 
@@ -570,20 +570,24 @@ void atten_uw_fog_color(colorRGBA &color, float depth) {
 
 void set_inf_terrain_fog(bool underwater, float zmin2) {
 
-	if (underwater) {
+	float fog_dist;
+	colorRGBA fog_color;
+
+	if (underwater) { // under water/ice
 		float const camera_z(get_camera_pos().z);
-		colorRGBA fog_color((temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C);
+		fog_color = (temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C;
 		atten_uw_fog_color(fog_color, (water_plane_z - camera_z));
-		set_lighted_fog_color(fog_color); // under water/ice
-		glFogf(GL_FOG_END, 0.3 + FOG_DIST_UW3*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2)));
+		fog_dist = 0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2));
 	}
 	else {
-		colorRGBA fog_color(GRAY);
+		fog_color = GRAY;
 		apply_red_sky(fog_color);
 		blend_color(fog_color, fog_color, bkg_color, 0.5, 1);
-		set_lighted_fog_color(fog_color);
-		glFogf(GL_FOG_END, get_inf_terrain_fog_dist());
+		fog_dist = get_inf_terrain_fog_dist();
 	}
+	set_lighted_fog_color(fog_color); // under water/ice
+	glFogf(GL_FOG_END, fog_dist);
+	glFogf(GL_FOG_DENSITY, 0.05); // density isn't used, but it doesn't hurt to set it to around this value in case it is
 	glEnable(GL_FOG);
 }
 
@@ -821,7 +825,8 @@ void display(void) {
 				select_liquid_color(fog_color, camera);
 				atten_uw_fog_color(fog_color, depth);
 				set_lighted_fog_color(fog_color);
-				glFogf(GL_FOG_END, 0.2 + (0.25 + 0.75*fog_color.blue)*FOG_DIST_UW0*(camera.z - zmin)/((camera.z + depth) - zmin));
+				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.blue)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
+				glFogf(GL_FOG_END, fog_dist);
 			}
 			check_gl_error(6);
 			if (TIMETEST) PRINT_TIME("4");
