@@ -562,6 +562,9 @@ void atten_uw_fog_color(colorRGBA &color, float depth) {
 	color  = color.modulate_with(light_color);
 	atten_by_water_depth(&color.red, depth);
 	color *= FOG_COLOR_ATTEN;
+	colorRGBA filt_color(color);
+	filt_color.alpha = 0.25;
+	add_camera_filter(filt_color, 1, -1, CAM_FILT_UWATER);
 }
 
 
