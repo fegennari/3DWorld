@@ -762,7 +762,9 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	static float wxoff(0.0), wyoff(0.0);
 	colorRGBA color;
 	select_water_ice_texture(color, ((world_mode == WMODE_INF_TERRAIN) ? &init_temperature : &temperature));
-	color.alpha *= ((display_mode & 0x20) ? 0.5 : 0.8);
+	bool const reflections(!(display_mode & 0x20));
+	if (!reflections) set_specular(0.0, 1.0);
+	color.alpha *= (reflections ? 0.7 : 0.5);
 
 	if (temperature > W_FREEZE_POINT) {
 		wxoff -= WATER_WIND_EFF*wind.x*fticks;
@@ -778,7 +780,7 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 
 	if (use_shader) {
 		setup_enabled_lights();
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_texgen", "linear_fog.part+ads_lighting.part*+per_pixel_lighting_textured"));
+		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_texgen", "linear_fog.part+ads_lighting.part*+water_plane"));
 		setup_fog_scale(p);
 		add_uniform_int(p, "tex0", 0);
 	}
