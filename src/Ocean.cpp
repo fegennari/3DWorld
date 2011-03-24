@@ -348,10 +348,10 @@ float scale_color(colorRGBA &color) {
 		cscale = light_factor;
 	}
 	else if (light_factor <= 0.4) { // moon
-		cscale = 0.7*fabs(moon_rot/PI - 1.0);
+		cscale = 0.7*get_moon_light_factor();
 	}
 	else { // sun + moon
-		cscale = 5.0*(light_factor*(light_factor - 0.4) + 0.7*fabs(moon_rot/PI - 1.0)*(0.6 - light_factor));
+		cscale = 5.0*(light_factor*(light_factor - 0.4) + 0.7*get_moon_light_factor()*(0.6 - light_factor));
 	}
 	color *= cscale;
 	return cscale;

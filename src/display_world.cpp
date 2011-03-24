@@ -296,7 +296,13 @@ void calc_bkg_color() {
 
 float get_lf_scale(float lf) {
 
-	return ((lf < 0.4) ? 0.0 : ((lf >= 0.6) ? 1.0 : 5.0*(lf - 0.4)));
+	return CLIP_TO_01(5.0f*(lf - 0.4f));
+}
+
+
+float get_moon_light_factor() {
+
+	return fabs(moon_rot/PI - 1.0);
 }
 
 
@@ -308,8 +314,8 @@ void add_sun_effect(colorRGBA &color) {
 	float cmult(have_sun ? get_lf_scale(light_factor) : 0.0); // light from sun
 
 	if (!combined_gu && light_factor < 0.6) { // light from moon
-		float const lfs(get_lf_scale(fabs(moon_rot/PI - 1.0)));
-		cmult += 0.5*((light_factor < 0.4) ? 1.0 : 5.0*(0.6 - light_factor))*lfs;
+		float const lfs(get_lf_scale(get_moon_light_factor()));
+		cmult += 0.5*CLIP_TO_01(5.0f*(0.6f - light_factor))*lfs;
 	}
 	color *= (0.8*cmult + 0.2);
 }
@@ -335,18 +341,11 @@ bool sun_in_view() { // universe sun radius?
 }
 
 
-void config_bkg_color_and_clear(int underwater, float depth, bool no_fog) {
+void config_bkg_color_and_clear(bool underwater, float depth, bool no_fog) {
 
 	calc_bkg_color();
 	glClearColor_rgba((!no_fog && show_fog) ? GRAY : bkg_color);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Clear the background
-
-	if (underwater) {
-		colorRGBA wcolor((temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C);
-		wcolor.alpha = 0.5*min(1.0f, max(0.0f, 2.0f*depth)+0.5f);
-		select_liquid_color(wcolor, get_camera_pos());
-		add_camera_filter(wcolor, 1, -1, CAM_FILT_UWATER);
-	}
 }
 
 
@@ -358,7 +357,7 @@ void reset_planet_defaults() {
 }
 
 
-void setup_lighting(int underwater, float depth) {
+void setup_lighting(bool underwater, float depth) {
 
 	float const lfd(5.0*(light_factor - 0.4)), lfn(1.0 - lfd);
 	
@@ -375,7 +374,7 @@ void setup_lighting(int underwater, float depth) {
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
 	set_fsource_light();
-	float const mlf(fabs(moon_rot/PI - 1.0));
+	float const mlf(get_moon_light_factor());
 	float ambient[4], diffuse[4];
 	ambient[3] = diffuse[3] = 1.0;
 
@@ -440,7 +439,7 @@ void setup_lighting(int underwater, float depth) {
 }
 
 
-void draw_universe_bkg(int underwater, float depth) {
+void draw_universe_bkg(bool underwater, float depth) {
 
 	RESET_TIME;
 
@@ -545,12 +544,44 @@ void setup_basic_fog() {
 }
 
 
+void add_uw_light_color_comp(int light, point const &lpos, float weight, colorRGBA &color) {
+
+	// check for in shadow? what about tiled terrain?
+	weight *= 0.5 + 0.5*max(0.0f, lpos.z/lpos.mag()); // vertical component (which penetrates water)
+	UNROLL_3X(color[i_] += weight;)
+}
+
+
 void atten_uw_fog_color(colorRGBA &color, float depth) {
 
-	point const lpos(get_light_pos());
-	float const dist(depth*lpos.mag()/max(TOLERANCE, lpos.z));
-	atten_by_water_depth(&color.red, dist);
+	colorRGBA light_color(BLACK);
+	float const lf(get_lf_scale(light_factor));
+	if (lf > 0.0) add_uw_light_color_comp(GL_LIGHT0, sun_pos,  lf,           light_color);
+	if (lf < 1.0) add_uw_light_color_comp(GL_LIGHT1, moon_pos, 0.5*(1.0-lf), light_color);
+	if (is_cloudy) light_color *= 0.5;
+	color  = color.modulate_with(light_color);
+	atten_by_water_depth(&color.red, depth);
 	color *= FOG_COLOR_ATTEN;
+}
+
+
+void set_inf_terrain_fog(bool underwater, float zmin2) {
+
+	if (underwater) {
+		float const camera_z(get_camera_pos().z);
+		colorRGBA fog_color((temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C);
+		atten_uw_fog_color(fog_color, (water_plane_z - camera_z));
+		set_lighted_fog_color(fog_color); // under water/ice
+		glFogf(GL_FOG_END, 0.3 + FOG_DIST_UW3*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2)));
+	}
+	else {
+		colorRGBA fog_color(GRAY);
+		apply_red_sky(fog_color);
+		blend_color(fog_color, fog_color, bkg_color, 0.5, 1);
+		set_lighted_fog_color(fog_color);
+		glFogf(GL_FOG_END, get_inf_terrain_fog_dist());
+	}
+	glEnable(GL_FOG);
 }
 
 
@@ -780,11 +811,10 @@ void display(void) {
 			update_weapon_cobjs(); // and update cblade
 			if (TIMETEST) PRINT_TIME("3");
 			if (!camera_view) camera_shadow(camera);
-			
+
 			if (underwater) {
 				bool const is_ice(temperature <= W_FREEZE_POINT && (!island || camera.z > ocean.z));
 				colorRGBA fog_color(is_ice ? ICE_C : WATER_C); // under ice/water
-				fog_color.alpha = 1.0;
 				select_liquid_color(fog_color, camera);
 				atten_uw_fog_color(fog_color, depth);
 				set_lighted_fog_color(fog_color);
@@ -802,6 +832,7 @@ void display(void) {
 				if (!disable_inf_terrain && !island && (display_mode & 0x10)) { // draw larger WM3 mesh
 					int const hole_bounds[4] = {0, MESH_X_SIZE-1, 0, MESH_Y_SIZE-1};
 					float const zmin2(display_mesh3(hole_bounds)); // no trees/scenery
+					//set_inf_terrain_fog(underwater, zmin2); // not right
 					
 					if (display_mode & 0x04) {
 						float const wpz(get_water_z_height());
@@ -988,24 +1019,8 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	ocean.z     = water_plane_z;
 	camera_mode = 1;
 	mesh_type   = 0;
-
-	if (show_fog) {
-		if (underwater) {
-			float const uw_val(); // 1.0-depth
-			colorRGBA fog_color((temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C);
-			atten_uw_fog_color(fog_color, (water_plane_z - camera.z));
-			set_lighted_fog_color(fog_color); // under water/ice
-			glFogf(GL_FOG_END, 0.3 + FOG_DIST_UW3*(camera.z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2)));
-		}
-		else {
-			colorRGBA fog_color(GRAY);
-			apply_red_sky(fog_color);
-			blend_color(fog_color, fog_color, bkg_color, 0.5, 1);
-			set_lighted_fog_color(fog_color);
-			glFogf(GL_FOG_END, get_inf_terrain_fog_dist());
-		}
-		glEnable(GL_FOG);
-	}
+	if (show_fog) set_inf_terrain_fog(underwater, zmin2);
+	
 	if (combined_gu) {
 		enable_blend();
 		select_texture(BLUR_TEX_INV);

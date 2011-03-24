@@ -943,6 +943,7 @@ void disable_point_specular();
 void reset_fog();
 void set_light_atten(int light, float attenuation=1.0);
 void set_perspective(float fovy, float nc_scale);
+float get_moon_light_factor();
 void setup_basic_fog();
 void check_zoom();
 void reset_camera_pos();
