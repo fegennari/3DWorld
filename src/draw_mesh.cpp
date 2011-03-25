@@ -780,7 +780,8 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 
 	if (use_shader) {
 		setup_enabled_lights();
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_texgen", "linear_fog.part+ads_lighting.part*+water_plane"));
+		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
+		unsigned const p(set_shader_prog("fog.part+texture_gen.part+water_plane", "linear_fog.part+ads_lighting.part*+water_plane"));
 		setup_fog_scale(p);
 		add_uniform_int(p, "tex0", 0);
 	}

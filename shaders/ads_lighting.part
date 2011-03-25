@@ -1,42 +1,46 @@
-vec4 add_light_specular(in vec3 normal, in int i) {
+vec4 add_light_specular_fast(in vec3 normal, in int i) {
 	float NdotHV = max(dot(normal, normalize(gl_LightSource[i].halfVector.xyz)), 0.0);
 	return gl_FrontLightProduct[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
 }
 
-#ifdef USE_LIGHT_COLORS
+vec4 add_light_specular(in vec3 normal, in vec3 lightDir, in vec4 epos, in int i) {
+	//vec3 half_vect = normalize(normalize(eye - epos) + lightDir); // Eye + L
+	vec3 half_vect = normalize(lightDir - normalize(epos.xyz)); // Eye + L = -eye_space_pos + L
+	float NdotHV = max(dot(normal, half_vect), 0.0);
+	return gl_FrontLightProduct[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
+}
 
 // Note: point light computation with no attenuation, or use vec3(0,0,0) for directional
-vec4 add_light_comp_pos(in vec3 normal, in vec3 pos, in int i) {
+vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i)
+{
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
-	vec3 lightDir = normalize(gl_LightSource[i].position.xyz - pos);
+	vec3 lightDir = normalize(gl_LightSource[i].position.xyz - epos.xyz);
+#ifdef USE_LIGHT_COLORS
 #ifdef USE_COLOR_IN0
 	vec4 color = gl_FrontColorIn[0];
 #else
 	vec4 color = gl_Color;
 #endif
-	vec4 diffuse  = color * gl_LightSource[i].diffuse;
-	vec4 ambient  = color * gl_LightSource[i].ambient;
-	return (ambient + max(dot(normal, lightDir), 0.0)*diffuse + add_light_specular(normal, i));
-}
-
+	vec4 diffuse = color * gl_LightSource[i].diffuse;
+	vec4 ambient = color * gl_LightSource[i].ambient;
 #else // use light material properties
-
-// Note: point light computation with no attenuation, or use vec3(0,0,0) for directional
-vec4 add_light_comp_pos(in vec3 normal, in vec3 pos, in int i) {
-	// normalize the light's direction in eye space; for directional light, position field is actually direction
-	vec3 lightDir = normalize(gl_LightSource[i].position.xyz - pos);
-	vec4 diffuse  = max(dot(normal, lightDir), 0.0) * gl_FrontLightProduct[i].diffuse;
-	return (gl_FrontLightProduct[i].ambient + add_light_specular(normal, i) + diffuse);
-}
-
+	vec4 diffuse = gl_FrontLightProduct[i].diffuse;
+	vec4 ambient = gl_FrontLightProduct[i].ambient;
 #endif
+#ifdef USE_GOOD_SPECULAR
+	vec4 specular = add_light_specular(normal, lightDir, epos, i);
+#else
+	vec4 specular = add_light_specular_fast(normal, i);
+#endif
+	return (ambient + max(dot(normal, lightDir), 0.0)*diffuse + specular);
+}
 
 vec4 add_light_comp(in vec3 normal, in int i) {
-	return add_light_comp_pos(normal, vec3(0,0,0), i);
+	return add_light_comp_pos(normal, vec4(0,0,0,0), i);
 }
 
 vec4 add_pt_light_comp(in vec3 normal, in vec4 epos, in int i) {
-	vec4 color  = add_light_comp_pos(normal, epos.xyz, i);
+	vec4 color  = add_light_comp_pos(normal, epos, i);
 	float dist  = distance(gl_LightSource[i].position, epos);
 	float atten = 1.0 / (gl_LightSource[i].constantAttenuation +
 						 gl_LightSource[i].linearAttenuation * dist +
