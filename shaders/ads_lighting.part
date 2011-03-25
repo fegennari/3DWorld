@@ -4,7 +4,6 @@ vec4 add_light_specular_fast(in vec3 normal, in int i) {
 }
 
 vec4 add_light_specular(in vec3 normal, in vec3 lightDir, in vec4 epos, in int i) {
-	//vec3 half_vect = normalize(normalize(eye - epos) + lightDir); // Eye + L
 	vec3 half_vect = normalize(lightDir - normalize(epos.xyz)); // Eye + L = -eye_space_pos + L
 	float NdotHV = max(dot(normal, half_vect), 0.0);
 	return gl_FrontLightProduct[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);

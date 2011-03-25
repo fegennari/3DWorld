@@ -1,0 +1,19 @@
+float safe_acosf(in float val) {
+	return acos(clamp(val, -1.0, 1.0));
+}
+
+float get_angle(in vec3 v1, in vec3 v2) {
+	return safe_acosf(dot(v1, v2));
+}
+
+float get_fresnel_reflection(in vec3 v_inc, in vec3 norm, in float n1, in float n2) { // vectors must be normalized
+	// http://en.wikipedia.org/wiki/Fresnel_equations
+	float theta_i = get_angle(v_inc, norm);
+	float cos_theta_i = cos(theta_i);
+	float sin_theta_i = sin(theta_i);
+	float val = (n1/n2)*sin_theta_i;
+	float cos_theta_t = sqrt(1.0 - val*val);
+	float rs_sqrt = (n1*cos_theta_i - n2*cos_theta_t)/(n1*cos_theta_i + n2*cos_theta_t);
+	float rp_sqrt = (n1*cos_theta_t - n2*cos_theta_i)/(n1*cos_theta_t + n2*cos_theta_i);
+	return 0.5*(rs_sqrt*rs_sqrt + rp_sqrt*rp_sqrt); // average of rs and rp
+}

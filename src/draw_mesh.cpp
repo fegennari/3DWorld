@@ -45,6 +45,7 @@ extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
+extern colorRGBA bkg_color;
 extern float h_dirt[];
 
 
@@ -763,8 +764,7 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	colorRGBA color;
 	select_water_ice_texture(color, ((world_mode == WMODE_INF_TERRAIN) ? &init_temperature : &temperature));
 	bool const reflections(!(display_mode & 0x20));
-	if (!reflections) set_specular(0.0, 1.0);
-	color.alpha *= (reflections ? 0.7 : 0.5);
+	color.alpha *= 0.5;
 
 	if (temperature > W_FREEZE_POINT) {
 		wxoff -= WATER_WIND_EFF*wind.x*fticks;
@@ -772,18 +772,34 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	}
 	point const camera(get_camera_pos());
 	vector3d(0.0, 0.0, ((camera.z < zval) ? -1.0 : 1.0)).do_glNormal();
-	set_color(color);
 	set_fill_mode();
 	enable_blend();
 	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + wxoff), (tscale*(yoff2 - yoff)*DY_VAL + wyoff));
 	bool const use_shader(1);
 
 	if (use_shader) {
+		colorRGBA rcolor;
+
+		if (world_mode == WMODE_INF_TERRAIN) {
+			glGetFloatv(GL_FOG_COLOR, (float *)&rcolor);
+		}
+		else {
+			blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
+		}
+		rcolor.alpha = 0.5*(0.5 + color.alpha); // ???
 		setup_enabled_lights();
 		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+water_plane", "linear_fog.part+ads_lighting.part*+water_plane"));
+		set_bool_shader_prefix("reflections", reflections, 1); // FS
+		unsigned const p(set_shader_prog("fog.part+texture_gen.part+water_plane", "linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane"));
 		setup_fog_scale(p);
 		add_uniform_int(p, "tex0", 0);
+		add_uniform_float_array(p, "water_color",   &color.red,  4);
+		add_uniform_float_array(p, "reflect_color", &rcolor.red, 4);
+		set_color(WHITE);
+	}
+	else {
+		if (reflections) color.alpha *= 1.5;
+		set_color(color);
 	}
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, zval);
