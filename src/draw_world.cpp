@@ -51,7 +51,7 @@ pt_line_drawer obj_pld, snow_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
-extern int nstars, is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode;
+extern int nstars, is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
 extern unsigned smoke_tid, dl_tid;
@@ -1912,35 +1912,34 @@ void draw_sun() {
 
 void draw_moon() {
 
+	if (show_fog) return; // don't draw when there is fog
 	point const pos(get_moon_pos());
+	if (!sphere_in_camera_view(pos, moon_radius, 1)) return;
+	set_color(WHITE);
+	glDisable(GL_LIGHT0);
+	glDisable(GL_LIGHT1);
+	float const ambient[4] = {0.05, 0.05, 0.05, 1.0}, diffuse[4] = {1.0, 1.0, 1.0, 1.0};
 
-	if (sphere_in_camera_view(pos, moon_radius, 1)) {
-		set_color(WHITE);
-		glDisable(GL_LIGHT0);
-		glDisable(GL_LIGHT1);
-		float const ambient[4] = {0.05, 0.05, 0.05, 1.0}, diffuse[4] = {1.0, 1.0, 1.0, 1.0};
+	if (have_sun) {
+		set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
+		set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
+	}
+	select_texture(MOON_TEX);
+	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0);
+	glDisable(GL_TEXTURE_2D);
+	if (light_factor < 0.6) glEnable(GL_LIGHT1); // moon
+	if (light_factor > 0.4) glEnable(GL_LIGHT0); // sun
+	glDisable(GL_LIGHT4);
 
-		if (have_sun) {
-			set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
-			set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
-		}
-		select_texture(MOON_TEX);
-		draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0);
-		glDisable(GL_TEXTURE_2D);
-		if (light_factor < 0.6) glEnable(GL_LIGHT1); // moon
-		if (light_factor > 0.4) glEnable(GL_LIGHT0); // sun
-		glDisable(GL_LIGHT4);
-
-		if (light_factor >= 0.4) { // fade moon into background color when the sun comes up
-			colorRGBA color = bkg_color;
-			color.alpha     = 5.0*(light_factor - 0.4);
-			glDisable(GL_LIGHTING);
-			enable_blend();
-			color.do_glColor();
-			draw_subdiv_sphere(pos, 1.2*moon_radius, N_SPHERE_DIV, 0, 0);
-			glEnable(GL_LIGHTING);
-			disable_blend();
-		}
+	if (light_factor >= 0.4) { // fade moon into background color when the sun comes up
+		colorRGBA color = bkg_color;
+		color.alpha     = 5.0*(light_factor - 0.4);
+		glDisable(GL_LIGHTING);
+		enable_blend();
+		color.do_glColor();
+		draw_subdiv_sphere(pos, 1.2*moon_radius, N_SPHERE_DIV, 0, 0);
+		glEnable(GL_LIGHTING);
+		disable_blend();
 	}
 }
 
@@ -1948,6 +1947,7 @@ void draw_moon() {
 // for some reason the texture is backwards, so we mirrored the image of the earth
 void draw_earth() {
 
+	if (show_fog) return; // don't draw when there is fog
 	point pos(mesh_origin + earth_pos);
 	if (camera_mode == 1) pos += surface_pos;
 	static float rot_angle(0.0);
