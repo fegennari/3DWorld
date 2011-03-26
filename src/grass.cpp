@@ -16,7 +16,7 @@ float grass_length(0.02), grass_width(0.002);
 
 extern bool has_dir_lights, has_snow;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2;
-extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness;
+extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
 extern colorRGBA leaf_base_color;
 extern vector3d wind;
 extern obj_type object_types[];
@@ -98,7 +98,7 @@ public:
 						if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue;
 					}
 					else {
-						float const relh((mh - zmin)*dz_inv);
+						float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
 						int k1, k2;
 						float t;
 						get_tids(relh, NTEX-1, h_tex, k1, k2, t); // t==0 => use k1, t==1 => use k2

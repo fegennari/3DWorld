@@ -1018,7 +1018,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		}
 	}
 	if (display_mode & 0x04) {
-		water_plane_z = get_water_z_height() + water_h_off;
+		water_plane_z = get_water_z_height();
 	}
 	else {
 		water_plane_z = -10*FAR_CLIP;

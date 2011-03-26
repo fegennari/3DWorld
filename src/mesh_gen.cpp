@@ -619,7 +619,7 @@ void set_zvals() {
 	ztop          = zmax;
 	zmin          = -zmax_est;
 	zmax          =  zmax_est;
-	water_plane_z = get_water_z_height() + water_h_off;
+	water_plane_z = get_water_z_height();
 	CLOUD_CEILING = CLOUD_CEILING0*Z_SCENE_SIZE;
 	LARGE_ZVAL    = max(LARGE_ZVAL, 100.0f*(CLOUD_CEILING + ztop));
 }
@@ -629,7 +629,7 @@ float get_water_z_height() {
 
 	float wpz(W_PLANE_Z);
 	if (GLACIATE && !island) wpz = DO_GLACIATE_EXP(wpz);
-	return wpz*zmax_est2 - zmax_est;
+	return wpz*zmax_est2 - zmax_est + water_h_off;
 }
 
 

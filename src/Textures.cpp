@@ -1006,8 +1006,8 @@ void create_landscape_texture() {
 			int const i1(min(myszm1, i+1)), j1(min(mxszm1, j+1));
 			float const mh00(mesh_height[i][j]), mh01(mesh_height[i][j1]), mh10(mesh_height[i1][j]), mh11(mesh_height[i1][j1]);
 			float const dist(fabs(mh01 - mh00) + fabs(mh00 - mh10) + fabs(mh01 - mh11) + fabs(mh10 - mh11));
-			float const relh1((min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
-			float const relh2((max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
+			float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
+			float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
 			int k1a, k1b, k2a, k2b;
 			float t;
 			get_tids(relh1, NTEXm1, h_tex, k1a, k2a, t);
@@ -1045,7 +1045,7 @@ void create_landscape_texture() {
 				if (tids[ypos][xpos] < 0) {
 					float const mh00(mesh_height[ypos][xpos]), mh01(mesh_height[ypos][xpos1]), mh10(mesh_height[ypos1][xpos]), mh11(mesh_height[ypos1][xpos1]);
 					float const mh((1.0 - xpi)*((1.0 - ypi)*mh00 + ypi*mh10) + xpi*((1.0 - ypi)*mh01 + ypi*mh11));
-					float const relh((mh - zmin)*dz_inv);
+					float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
 					get_tids(relh, NTEXm1, h_tex, k1, k2, t);
 					if (k1 != k2) assert(k2 == k1+1 || vegetation == 0.0);
 				}
@@ -1437,7 +1437,7 @@ int snow_height(point pos) {
 
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return 0;
-	double const relh((mesh_height[ypos][xpos] - zmin)/(zmax - zmin));
+	double const relh(relh_adj_tex + (mesh_height[ypos][xpos] - zmin)/(zmax - zmin));
 	return (island ? (relh > h_sand[2]) : (relh > h_dirt[2]));
 }
 

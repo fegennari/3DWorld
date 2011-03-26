@@ -16,7 +16,7 @@ int  const TILE_RADIUS_IT    = 5; // WM3, in mesh sizes
 
 
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
-extern float zmax, zmin, water_plane_z, mesh_scale, vegetation;
+extern float zmax, zmin, water_plane_z, mesh_scale, vegetation, relh_adj_tex;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture textures[];
@@ -248,8 +248,8 @@ public:
 				float const vnz10(get_norm(ix+zvsize).z), vnz11(get_norm(ix+zvsize+1).z);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
 				float const dist(fabs(mh01 - mh00) + fabs(mh00 - mh10) + fabs(mh01 - mh11) + fabs(mh10 - mh11));
-				float const relh1((min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
-				float const relh2((max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
+				float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
+				float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
 				get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2, t);
 				get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4, t);
 				bool const same_tid(k1 == k4);
@@ -265,7 +265,7 @@ public:
 						float const mh((1.0 - xpi)*((1.0 - ypi)*mh00 + ypi*mh10) + xpi*((1.0 - ypi)*mh01 + ypi*mh11));
 
 						if (!same_tid) {
-							float const relh((mh - zmin)*dz_inv);
+							float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
 							get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, t);
 						}
 						int const id(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
