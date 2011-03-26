@@ -1564,8 +1564,10 @@ bool split_polygon_to_cobjs(coll_obj cobj, vector<coll_obj> &split_polygons, vec
 
 // function prototypes - shaders
 void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num);
-void add_uniform_float(unsigned program, char const *const name, float val);
-void add_uniform_int  (unsigned program, char const *const name, int   val);
+void add_uniform_float      (unsigned program, char const *const name, float val);
+void add_uniform_int        (unsigned program, char const *const name, int   val);
+void add_uniform_vector3d   (unsigned program, char const *const name, vector3d  const &val);
+void add_uniform_color      (unsigned program, char const *const name, colorRGBA const &val);
 bool set_uniform_buffer_data(unsigned program, char const *name, float const *data, unsigned size);
 unsigned register_attrib_name(unsigned program, char const *name);
 void add_attrib_float_array(unsigned ix, float const *const val, unsigned num);

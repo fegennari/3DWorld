@@ -59,6 +59,22 @@ void add_uniform_int(unsigned program, char const *const name, int val) {
 }
 
 
+void add_uniform_vector3d(unsigned program, char const *const name, vector3d const &val) {
+
+	if (disable_shaders) return;
+	int const loc(get_uniform_loc(program, name));
+	if (loc >= 0) glUniform3fv(loc, 1, &val.x);
+}
+
+
+void add_uniform_color(unsigned program, char const *const name, colorRGBA const &val) {
+
+	if (disable_shaders) return;
+	int const loc(get_uniform_loc(program, name));
+	if (loc >= 0) glUniform4fv(loc, 1, &val.red);
+}
+
+
 bool set_uniform_buffer_data(unsigned program, char const *name, float const *data, unsigned size) {
 
 	if (disable_shaders) return 0;

@@ -793,8 +793,8 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 		unsigned const p(set_shader_prog("fog.part+texture_gen.part+water_plane", "linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane"));
 		setup_fog_scale(p);
 		add_uniform_int(p, "tex0", 0);
-		add_uniform_float_array(p, "water_color",   &color.red,  4);
-		add_uniform_float_array(p, "reflect_color", &rcolor.red, 4);
+		add_uniform_color(p, "water_color",   color);
+		add_uniform_color(p, "reflect_color", rcolor);
 		set_color(WHITE);
 	}
 	else {
