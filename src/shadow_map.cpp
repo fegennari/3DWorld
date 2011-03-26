@@ -14,26 +14,27 @@ unsigned fbo_id(0), depth_tid(0);
 extern int window_width, window_height;
 
 
+// Note: Reflections can be done with something similar
 void create_shadow_fbo() {
 	
 	// Try to use a texture depth component
 	glGenTextures(1, &depth_tid);
 	glBindTexture(GL_TEXTURE_2D, depth_tid);
 	
-	// GL_LINEAR does not make sense for depth texture. However, next tutorial shows usage of GL_LINEAR and PCF
+	// GL_LINEAR does not make sense for the depth texture.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	
 	// Remove artefact on the edges of the shadowmap
-	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
-	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	//glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
 	
 	// No need to force GL_DEPTH_COMPONENT24, drivers usually give you the max precision if available 
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SZ, SHADOW_MAP_SZ, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
-	// create a framebuffer object
+	// Create a framebuffer object
 	glGenFramebuffers(1, &fbo_id);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
 	
@@ -41,14 +42,14 @@ void create_shadow_fbo() {
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	
-	// attach the texture to FBO depth attachment point
+	// Attach the texture to FBO depth attachment point
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tid, 0);
 	
-	// check FBO status
+	// Check FBO status
 	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
 	assert(status == GL_FRAMEBUFFER_COMPLETE);
 	
-	// switch back to window-system-provided framebuffer
+	// Switch back to window-system-provided framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -60,7 +61,7 @@ void setup_shadow_fbo() {
 	assert(fbo_id    > 0);
 	assert(depth_tid > 0);
 
-	// This is important, if not here, FBO's depthbuffer won't be populated.
+	// This is important, if not here, the FBO's depthbuffer won't be populated.
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0,0,0,1.0f);
 	glEnable(GL_CULL_FACE);
@@ -92,7 +93,7 @@ void set_texture_matrix() {
 	glLoadIdentity();
 	glLoadMatrixd(bias);
 	
-	// concatating all matrice into one
+	// Concatating all matrice into one
 	glMultMatrixd(projection);
 	glMultMatrixd(modelView);
 	
@@ -119,9 +120,9 @@ void render_to_shadow_fbo(point const &lpos) {
 	setup_shadow_fbo();
 	
 	// First step: Render from the light POV to a FBO, store depth values only
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); //Rendering offscreen
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
 	
-	// Using the fixed pipeline to render to the depthbuffer
+	// Use the fixed pipeline to render to the depthbuffer
 	
 	// In the case we render the shadowmap to a higher resolution, the viewport must be modified accordingly.
 	glViewport(0, 0, SHADOW_MAP_SZ, SHADOW_MAP_SZ);
@@ -147,13 +148,13 @@ void render_to_shadow_fbo(point const &lpos) {
 	
 	glViewport(0, 0, window_width, window_height);
 	
-	//Enabling color write (previously disabled for light POV z-buffer rendering)
+	// Enable color write (previously disabled for light POV z-buffer rendering)
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); 
 	
 	// Clear previous frame values
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Using the shadow shader
+	// Use the shadow shader
 	//set_shader_prog("", ""); // FIXME
 	set_multitex(7); // using depth texture 7
 	glBindTexture(GL_TEXTURE_2D, depth_tid);
@@ -161,9 +162,9 @@ void render_to_shadow_fbo(point const &lpos) {
 	set_multitex(0);
 	//unset_shader_prog();
 
-	// back to camera space
+	// Back to camera space
 	
-	// DEBUG only. this piece of code draw the depth buffer onscreen
+	// DEBUG only. this piece of code draws the depth buffer onscreen
 #if 1
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
