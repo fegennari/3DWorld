@@ -1034,8 +1034,9 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		select_texture(BLUR_TEX_INV);
 		gluQuadricTexture(quadric, GL_TRUE);
 	}
-	set_color(BLACK); // black will turn into for color
+	set_color(bkg_color); // will turn into fog color
 	draw_sphere_at(camera, 0.9*FAR_CLIP, N_SPHERE_DIV);
+	//draw_sky(0);
 
 	if (combined_gu) {
 		gluQuadricTexture(quadric, GL_FALSE);
