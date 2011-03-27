@@ -2403,7 +2403,6 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.04);
 	select_texture(tid);
-	glFogfv(GL_FOG_COLOR, (float *)&GRAY);
 	glBegin(GL_QUADS);
 
 	for (unsigned j = 0; j < order.size(); ++j) {
