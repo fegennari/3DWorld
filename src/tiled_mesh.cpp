@@ -473,7 +473,6 @@ public:
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
 		set_array_client_state(1, 0, 1, 0);
-		setup_mesh_lighting();
 		unsigned num_drawn(0);
 		unsigned long long mem(0);
 		vector<vert_norm> data;
@@ -486,6 +485,8 @@ public:
 			last_moon = moon_pos;
 		}
 		setup_mesh_draw_shaders();
+		if (world_mode == WMODE_INF_TERRAIN && show_fog) draw_water_edge(water_plane_z); // Note: doesn't take into account waves
+		setup_mesh_lighting();
 		
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
@@ -495,7 +496,6 @@ public:
 			zmin = min(zmin, i->second->get_zmin());
 			num_drawn += i->second->draw(data, indices);
 		}
-		if (world_mode == WMODE_INF_TERRAIN && show_fog) draw_water_edge(water_plane_z); // Note: doesn't take into account waves
 		unset_shader_prog();
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();

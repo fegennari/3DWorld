@@ -738,13 +738,21 @@ void draw_water_sides(int check_zvals) {
 
 void draw_water_edge(float zval) { // used for WM3 tiled terrain
 
+	glDepthMask(GL_FALSE);
 	select_texture(WHITE_TEX);
 	set_color(BLACK);
 	BLACK.do_glColor();
 	float const vd_scale(2.0*get_tile_radius()*SQRT2), dx(xoff*DX_VAL), dy(yoff*DY_VAL);
 	float const radius(0.5*vd_scale*(X_SCENE_SIZE + Y_SCENE_SIZE));
-	draw_fast_cylinder(point(dx, dy, zmin), point(dx, dy, zval), radius, radius, 64, 0);
+	unsigned const num_stacks(16);
+	float const dz((zval - zmin)/num_stacks);
+
+	for (unsigned i = 0; i < num_stacks; ++i) {
+		float const z(zmin + i*dz);
+		draw_fast_cylinder(point(dx, dy, z), point(dx, dy, z+dz), radius, radius, 64, 0);
+	}
 	glDisable(GL_TEXTURE_2D);
+	glDepthMask(GL_TRUE);
 }
 
 
@@ -757,7 +765,7 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 		if (animate2 && temperature > W_FREEZE_POINT) time += fticks;
 		zval += 0.01*sin(1.0*time/TICKS_PER_SECOND);
 	}
-	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), vd_scale(2.0*get_tile_radius()*SQRT2);
+	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), vd_scale(2.5*get_tile_radius()*SQRT2);
 	float const dx(xoff*DX_VAL), dy(yoff*DY_VAL);
 	float const vdx(vd_scale*X_SCENE_SIZE), vdy(vd_scale*Y_SCENE_SIZE);
 	static float wxoff(0.0), wyoff(0.0);
