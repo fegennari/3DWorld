@@ -756,7 +756,7 @@ void draw_water_edge(float zval) { // used for WM3 tiled terrain
 }
 
 
-void draw_water_plane(float zval, int const *const hole_bounds) {
+void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole_bounds) {
 
 	if (DISABLE_WATER) return;
 
@@ -786,9 +786,20 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	bool const use_shader(1);
 
 	if (use_shader) {
+		set_multitex(1);
+
+		if (reflection_tid) {
+			glBindTexture(GL_TEXTURE_2D, reflection_tid);
+		}
+		else {
+			select_texture(WHITE_TEX, 0);
+		}
 		colorRGBA rcolor;
 
-		if (world_mode == WMODE_INF_TERRAIN) {
+		if (reflection_tid) {
+			rcolor = WHITE;
+		}
+		else if (world_mode == WMODE_INF_TERRAIN) {
 			glGetFloatv(GL_FOG_COLOR, (float *)&rcolor);
 		}
 		else {
@@ -800,7 +811,8 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 		set_bool_shader_prefix("reflections", reflections, 1); // FS
 		unsigned const p(set_shader_prog("fog.part+texture_gen.part+water_plane", "linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane"));
 		setup_fog_scale(p);
-		add_uniform_int(p, "tex0", 0);
+		add_uniform_int(p, "water_tex",      0);
+		add_uniform_int(p, "reflection_tex", 1);
 		add_uniform_color(p, "water_color",   color);
 		add_uniform_color(p, "reflect_color", rcolor);
 		set_color(WHITE);
@@ -853,7 +865,11 @@ void draw_water_plane(float zval, int const *const hole_bounds) {
 	}
 	glEnd();
 	glPopMatrix();
-	if (use_shader) unset_shader_prog();
+	
+	if (use_shader) {
+		disable_multitex_a();
+		unset_shader_prog();
+	}
 	disable_blend();
 	set_specular(0.0, 1.0);
 	disable_textures_texgen();

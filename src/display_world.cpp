@@ -39,8 +39,8 @@ upos_point_type cur_origin(all_zeros);
 
 
 extern bool nop_frame, combined_gu, have_sun, use_stencil_shadows, clear_landscape_vbo, show_lightning;
-extern int auto_time_adv, flight, reset_timing, enable_fsource, run_forward, used_objs;
-extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, disable_inf_terrain;
+extern int auto_time_adv, flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
+extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, brightness;
 extern float water_h_off;
 extern double camera_zh;
@@ -844,7 +844,7 @@ void display(void) {
 					
 					if (display_mode & 0x04) {
 						float const wpz(get_water_z_height());
-						if (wpz >= zmin2) draw_water_plane(wpz, hole_bounds);
+						if (wpz >= zmin2) draw_water_plane(wpz, 0, hole_bounds);
 					}
 				}
 			}
@@ -982,6 +982,61 @@ void draw_transparent(bool above_water) {
 }
 
 
+// *** TESTING ***
+// render scene reflection to texture
+void create_reflection_texture(unsigned reflection_tid, unsigned size, float water_z) {
+
+	//RESET_TIME;
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glViewport(0, 0, size, size);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+	do_look_at();
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glTranslatef(0.0, 0.0,  water_z); // translate to water plane
+	glScalef(1.0, 1.0, -1.0); // scale in z
+	glTranslatef(0.0, 0.0, -water_z); // translate back
+	double const plane[4] = {0.0, 0.0, 1.0, -water_z}; // water at z=-water_z (mirrored)
+	glEnable(GL_CLIP_PLANE0);
+	glClipPlane(GL_CLIP_PLANE0, plane);
+	display_mesh3(NULL); // FIXME: render more of the scene here
+	glDisable(GL_CLIP_PLANE0);
+	glPopMatrix();
+
+	// render reflection to texture
+	glBindTexture(GL_TEXTURE_2D, reflection_tid);
+	// glCopyTexSubImage2D copies the frame buffer to the bound texture
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, size, size);
+
+	// reset state
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glViewport(0, 0, window_width, window_height);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//PRINT_TIME("Create Reflection Texture");
+}
+
+
+unsigned create_reflection() {
+
+	unsigned const size(1024);
+	static unsigned reflection_tid(0);
+	
+	if (!glIsTexture(reflection_tid)) {
+		reflection_tid = 0; // never created or already freed
+		setup_texture(reflection_tid, GL_MODULATE, 0, 1, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, 3, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	}
+	create_reflection_texture(reflection_tid, size, water_plane_z);
+	check_gl_error(999);
+	return reflection_tid;
+}
+
+
 void display_inf_terrain() { // infinite terrain mode (Note: uses light params from ground mode)
 
 	static int init_xx(1);
@@ -1003,6 +1058,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	process_groups();
 	//reset_shadows(SHADOWED_ALL);
 	if (TIMETEST) PRINT_TIME("3.1");
+	bool draw_water(0);
 
 	if (init_x) {
 		reset_shadows(SHADOWED_ALL);
@@ -1019,6 +1075,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	}
 	if (display_mode & 0x04) {
 		water_plane_z = get_water_z_height();
+		draw_water    = (water_plane_z >= zmin2);
 	}
 	else {
 		water_plane_z = -10*FAR_CLIP;
@@ -1027,7 +1084,9 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	ocean.z     = water_plane_z;
 	camera_mode = 1;
 	mesh_type   = 0;
-	if (show_fog) set_inf_terrain_fog(underwater, zmin2);
+	unsigned reflection_tid(0);
+	if (show_fog  ) set_inf_terrain_fog(underwater, zmin2);
+	//if (draw_water) reflection_tid = create_reflection();
 	
 	if (combined_gu) {
 		enable_blend();
@@ -1067,7 +1126,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_solid_object_groups();
 	if (TIMETEST) PRINT_TIME("3.6");
 	draw_transparent(underwater);
-	if ((display_mode & 0x04) && water_plane_z >= zmin2) draw_water_plane(water_plane_z, NULL);
+	if (draw_water) draw_water_plane(water_plane_z, reflection_tid, NULL);
 	draw_transparent(!underwater);
 	draw_game_elements(timer1);
 	if (shadows_enabled()) create_shadows();

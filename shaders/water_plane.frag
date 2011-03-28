@@ -1,11 +1,11 @@
 varying vec3 normal;
 varying vec4 epos;
-uniform sampler2D tex0;
+uniform sampler2D water_tex, reflection_tex;
 uniform vec4 water_color, reflect_color;
 
 void main()
 {
-	vec4 color  = texture2D(tex0, gl_TexCoord[0].st) * water_color;
+	vec4 color  = texture2D(water_tex, gl_TexCoord[0].st) * water_color;
 	vec3 norm   = normalize(normal); // renormalize
 	vec3 epos_n = normalize(epos.xyz);
 
@@ -19,8 +19,9 @@ void main()
 		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), 0.2*(1.0 - abs(dot(epos_n, norm))));
 
 		// calculate reflections
-		float reflect_w = get_fresnel_reflection(-1.0*epos_n, norm, 1.0, 1.333);
-		color = mix(color, reflect_color, reflect_w);
+		float reflect_w  = get_fresnel_reflection(-1.0*epos_n, norm, 1.0, 1.333);
+		vec4 reflect_tex = vec4(texture2D(reflection_tex, gl_TexCoord[0].st).rgb, 1.0); // FIXME: use correct tex coords
+		color = mix(color, reflect_color * reflect_tex, reflect_w);
 	}
 
 	// determine final color with fog
