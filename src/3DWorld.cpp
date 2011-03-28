@@ -556,7 +556,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 
 // This function is called whenever the window is resized. 
 // Parameters are the new dimentions of the window
-void resize(int x,int y) {
+void resize(int x, int y) {
 
 	if (glutGetWindow() != curr_window) return; // only process the current window
 

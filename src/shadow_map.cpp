@@ -25,7 +25,7 @@ void create_shadow_fbo() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	
-	// Remove artefact on the edges of the shadowmap
+	// Remove artifact on the edges of the shadowmap
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	//glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
@@ -83,7 +83,7 @@ void set_texture_matrix() {
 		0.5, 0.0, 0.0, 0.0, 
 		0.0, 0.5, 0.0, 0.0,
 		0.0, 0.0, 0.5, 0.0,
-	0.5, 0.5, 0.5, 1.0};
+		0.5, 0.5, 0.5, 1.0};
 	
 	// Grab modelview and transformation matrices
 	glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
