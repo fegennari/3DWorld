@@ -1,5 +1,5 @@
 varying vec3 normal;
-varying vec4 epos;
+varying vec4 epos, proj_pos;
 uniform sampler2D water_tex, reflection_tex;
 uniform vec4 water_color, reflect_color;
 
@@ -20,13 +20,12 @@ void main()
 
 		// calculate reflections
 		float reflect_w  = get_fresnel_reflection(-1.0*epos_n, norm, 1.0, 1.333);
-		vec4 reflect_tex = vec4(texture2D(reflection_tex, gl_TexCoord[0].st).rgb, 1.0); // FIXME: use correct tex coords
+		vec2 ref_tex_st  = 0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5);
+		vec4 reflect_tex = vec4(texture2D(reflection_tex, ref_tex_st).rgb, 1.0);
 		color = mix(color, reflect_color * reflect_tex, reflect_w);
 	}
 
 	// determine final color with fog
 	vec4 frag_color = vec4(color.rgb * lighting.rgb, color.a * gl_FrontMaterial.diffuse.a); // use diffuse alpha directly
-	//float fog = clamp((gl_Fog.end - gl_FogFragCoord) * gl_Fog.scale, 0.0, 1.0);
-	//frag_color.a = mix(1.0, frag_color.a, fog);
 	gl_FragColor = apply_fog(frag_color);
 }

@@ -321,10 +321,11 @@ void add_sun_effect(colorRGBA &color) {
 }
 
 
-void set_lighted_fog_color(colorRGBA color) {
+colorRGBA set_lighted_fog_color(colorRGBA color) {
 
 	add_sun_effect(color);
 	glFogfv(GL_FOG_COLOR, (float *)&color);
+	return color;
 }
 
 
@@ -568,7 +569,7 @@ void atten_uw_fog_color(colorRGBA &color, float depth) {
 }
 
 
-void set_inf_terrain_fog(bool underwater, float zmin2) {
+colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
 
 	float fog_dist;
 	colorRGBA fog_color;
@@ -585,10 +586,11 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 		blend_color(fog_color, fog_color, bkg_color, 0.5, 1);
 		fog_dist = get_inf_terrain_fog_dist();
 	}
-	set_lighted_fog_color(fog_color); // under water/ice
+	fog_color = set_lighted_fog_color(fog_color); // under water/ice
 	glFogf(GL_FOG_END, fog_dist);
 	glFogf(GL_FOG_DENSITY, 0.05); // density isn't used, but it doesn't hurt to set it to around this value in case it is
 	glEnable(GL_FOG);
+	return fog_color;
 }
 
 
@@ -982,27 +984,33 @@ void draw_transparent(bool above_water) {
 }
 
 
-// *** TESTING ***
 // render scene reflection to texture
 void create_reflection_texture(unsigned reflection_tid, unsigned size, float water_z) {
 
 	//RESET_TIME;
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
+	// setup viewport and projection matrix
 	glViewport(0, 0, size, size);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glLoadIdentity();
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	set_perspective(PERSP_ANGLE, 1.0);
 	do_look_at();
 
+	// setup mirror transform
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glTranslatef(0.0, 0.0,  water_z); // translate to water plane
 	glScalef(1.0, 1.0, -1.0); // scale in z
 	glTranslatef(0.0, 0.0, -water_z); // translate back
+
+	// setup above-water clip plane
 	double const plane[4] = {0.0, 0.0, 1.0, -water_z}; // water at z=-water_z (mirrored)
 	glEnable(GL_CLIP_PLANE0);
 	glClipPlane(GL_CLIP_PLANE0, plane);
-	display_mesh3(NULL); // FIXME: render more of the scene here
+
+	// draw partial scene
+	display_mesh3(NULL);
+	// FIXME: render more of the scene here
 	glDisable(GL_CLIP_PLANE0);
 	glPopMatrix();
 
@@ -1023,12 +1031,13 @@ void create_reflection_texture(unsigned reflection_tid, unsigned size, float wat
 
 unsigned create_reflection() {
 
+	if (display_mode & 0x20) return 0; // reflections not enabled
 	unsigned const size(1024);
 	static unsigned reflection_tid(0);
 	
 	if (!glIsTexture(reflection_tid)) {
 		reflection_tid = 0; // never created or already freed
-		setup_texture(reflection_tid, GL_MODULATE, 0, 1, 1);
+		setup_texture(reflection_tid, GL_MODULATE, 0, 0, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, 3, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	create_reflection_texture(reflection_tid, size, water_plane_z);
@@ -1085,18 +1094,19 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	camera_mode = 1;
 	mesh_type   = 0;
 	unsigned reflection_tid(0);
-	if (show_fog  ) set_inf_terrain_fog(underwater, zmin2);
-	//if (draw_water) reflection_tid = create_reflection();
+	
+	if (show_fog) {
+		colorRGBA const fog_color(set_inf_terrain_fog(underwater, zmin2));
+		glClearColor_rgba(fog_color);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
+	if (draw_water) reflection_tid = create_reflection();
 	
 	if (combined_gu) {
 		enable_blend();
 		select_texture(BLUR_TEX_INV);
 		gluQuadricTexture(quadric, GL_TRUE);
 	}
-	set_color(bkg_color); // will turn into fog color
-	draw_sphere_at(camera, 0.9*FAR_CLIP, N_SPHERE_DIV);
-	//draw_sky(0);
-
 	if (combined_gu) {
 		gluQuadricTexture(quadric, GL_FALSE);
 		glDisable(GL_TEXTURE_2D);
