@@ -34,6 +34,7 @@ float const FOG_COLOR_ATTEN    = 0.75;
 
 bool mesh_invalidated(1);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
+unsigned reflection_tid(0);
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
@@ -984,8 +985,18 @@ void draw_transparent(bool above_water) {
 }
 
 
+void draw_inf_terrain_sun_flare() {
+
+	if (sun_in_view()) { // do sun flare
+		glDisable(GL_FOG);
+		sun_flare();
+		if (show_fog) glEnable(GL_FOG);
+	}
+}
+
+
 // render scene reflection to texture
-void create_reflection_texture(unsigned reflection_tid, unsigned size, float water_z) {
+void create_reflection_texture(unsigned tid, unsigned size, float water_z) {
 
 	//RESET_TIME;
 	// setup viewport and projection matrix
@@ -1009,13 +1020,14 @@ void create_reflection_texture(unsigned reflection_tid, unsigned size, float wat
 	glClipPlane(GL_CLIP_PLANE0, plane);
 
 	// draw partial scene
-	display_mesh3(NULL);
+	//draw_inf_terrain_sun_flare();
+	if (display_mode & 0x01) display_mesh3(NULL);
 	// FIXME: render more of the scene here
 	glDisable(GL_CLIP_PLANE0);
 	glPopMatrix();
 
 	// render reflection to texture
-	glBindTexture(GL_TEXTURE_2D, reflection_tid);
+	glBindTexture(GL_TEXTURE_2D, tid);
 	// glCopyTexSubImage2D copies the frame buffer to the bound texture
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, size, size);
 
@@ -1033,13 +1045,12 @@ unsigned create_reflection() {
 
 	if (display_mode & 0x20) return 0; // reflections not enabled
 	unsigned const size(1024);
-	static unsigned reflection_tid(0);
 	
-	if (!glIsTexture(reflection_tid)) {
-		reflection_tid = 0; // never created or already freed
+	if (!reflection_tid) {
 		setup_texture(reflection_tid, GL_MODULATE, 0, 0, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, 3, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
+	assert(glIsTexture(reflection_tid));
 	create_reflection_texture(reflection_tid, size, water_plane_z);
 	check_gl_error(999);
 	return reflection_tid;
@@ -1097,28 +1108,27 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	
 	if (show_fog) {
 		colorRGBA const fog_color(set_inf_terrain_fog(underwater, zmin2));
-		glClearColor_rgba(fog_color);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		if (!combined_gu) {
+			glClearColor_rgba(fog_color);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		}
 	}
-	if (draw_water) reflection_tid = create_reflection();
-	
 	if (combined_gu) {
 		enable_blend();
 		select_texture(BLUR_TEX_INV);
 		gluQuadricTexture(quadric, GL_TRUE);
-	}
-	if (combined_gu) {
+		set_color(bkg_color); // will turn into fog color
+		draw_sphere_at(get_camera_pos(), 0.9*FAR_CLIP, N_SPHERE_DIV);
+		//draw_sky(0);
 		gluQuadricTexture(quadric, GL_FALSE);
 		glDisable(GL_TEXTURE_2D);
 		disable_blend();
 	}
-	if (sun_in_view()) { // do sun flare
-		glDisable(GL_FOG);
-		glDisable(GL_DEPTH_TEST);
-		sun_flare();
-		glEnable(GL_DEPTH_TEST);
-		if (show_fog) glEnable(GL_FOG);
+	else if (draw_water) {
+		reflection_tid = create_reflection();
 	}
+	draw_inf_terrain_sun_flare();
 	//if (!camera_view) camera_shadow(camera);
 	if (TIMETEST) PRINT_TIME("3.2");
 	setup_object_render_data();

@@ -101,7 +101,7 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 			glBegin(GL_QUADS);
 		}
 		else if (bound_to != flareTex[flare[i].type]) {
-			glEnd();
+			if (bound_to) glEnd();
 			glBindTexture(GL_TEXTURE_2D, flareTex[flare[i].type]);
 			bound_to = flareTex[flare[i].type];
 			glBegin(GL_QUADS);
@@ -116,7 +116,7 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 		glTexCoord2f(0.0, 1.0);
 		(position + sx - sy).do_glVertex();
 	}
-	glEnd();
+	if (bound_to) glEnd();
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

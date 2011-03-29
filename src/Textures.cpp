@@ -138,7 +138,7 @@ int landscape_changed(0), lchanged0(0), skip_regrow(0), ltx1(0), lty1(0), ltx2(0
 unsigned char *landscape0 = NULL;
 
 
-extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, flow_tid;
+extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, flow_tid, reflection_tid;
 extern int world_mode, island, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode;
 extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation;
@@ -275,6 +275,7 @@ void reset_textures() {
 	free_texture(elem_tid);
 	free_texture(gb_tid);
 	free_texture(flow_tid);
+	free_texture(reflection_tid);
 }
 
 
