@@ -2,11 +2,8 @@ uniform float water_plane_z = 0.0;
 uniform float water_atten = 1.0;
 
 // underwater attenuation code
-vec4 atten_color(in vec4 color, in float dist) {
-	color.r *= (1.0 - min(0.98, 1.5*dist));
-	color.g *= (1.0 - min(0.97, 0.9*dist));
-	color.b *= (1.0 - min(0.95, 0.5*dist));
-	return color;
+void atten_color(inout vec4 color, in float dist) {
+	color.rgb *= vec3(1,1,1) - min(vec3(0.98, 0.97, 0.95), vec3(1.5, 0.9, 0.5)*dist);
 }
 
 float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) {
@@ -24,16 +21,14 @@ vec4 add_light_comp(in vec3 normal, in int i) {
 	// compute the ambient and diffuse lighting
 	vec4 diffuse = gl_Color * gl_LightSource[i].diffuse;
 	vec4 ambient = gl_Color * gl_LightSource[i].ambient;
-	vec4 color = (ambient + max(dot(normal, lightDir), 0.0)*diffuse);
+	vec4 color   = (ambient + max(dot(normal, lightDir), 0.0)*diffuse);
 	
 	// apply underwater attenuation
-	if (gl_Vertex.z < water_plane_z) {
-		//float dist = 2.5*(water_plane_z - gl_Vertex.z); // depth
-		vec4 eye   = gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0); // world space
-		vec4 light = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
-		float dist = integrate_water_dist(gl_Vertex.xyz, eye.xyz, water_plane_z) + integrate_water_dist(gl_Vertex.xyz, light.xyz, water_plane_z);
-		color = atten_color(color, dist*water_atten);
-	}
+	// Note: ok if vertex is above the water, dist will come out as 0
+	vec4 eye   = gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0); // world space
+	vec4 light = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
+	float dist = integrate_water_dist(gl_Vertex.xyz, eye.xyz, water_plane_z) + integrate_water_dist(gl_Vertex.xyz, light.xyz, water_plane_z);
+	atten_color(color, dist*water_atten);
 	return color;
 }
 
@@ -45,7 +40,7 @@ void main()
 	setup_texgen(1);
 	gl_Position = ftransform();
 	vec3 normal = gl_NormalMatrix * gl_Normal; // eye space, not normalized
-	vec4 color = gl_Color * gl_LightModel.ambient;
+	vec4 color  = gl_Color * gl_LightModel.ambient;
 	if (enable_light0) color += add_light_comp(normal, 0);
 	if (enable_light1) color += add_light_comp(normal, 1);
 	gl_FrontColor = color;
