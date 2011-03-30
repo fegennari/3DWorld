@@ -360,8 +360,6 @@ void reset_planet_defaults() {
 
 
 void setup_lighting(bool underwater, float depth) {
-
-	float const lfd(5.0*(light_factor - 0.4)), lfn(1.0 - lfd);
 	
 	// background color code
 	config_bkg_color_and_clear(underwater, depth, 0);
@@ -403,11 +401,9 @@ void setup_lighting(bool underwater, float depth) {
 		ambient[i] -= 0.05*cloud_cover;
 	}
 	if (light_factor <= 0.4) { // moon
-		gen_stars(1.0, island);
 		calc_moon_atten(ambient, diffuse, mlf);
 		sm_green_int = diffuse[1];
 		set_colors_and_enable_light(GL_LIGHT1, ambient, diffuse);
-		draw_moon();
 	}
 	else if (light_factor >= 0.6) { // sun
 		for (unsigned i = 0; i < 3; ++i) { // add more brightness
@@ -416,10 +412,9 @@ void setup_lighting(bool underwater, float depth) {
 		}
 		sm_green_int = diffuse[1];
 		set_colors_and_enable_light(GL_LIGHT0, ambient, diffuse);
-		draw_sun();
 	}
 	else { // sun and moon
-		gen_stars(lfn, island);
+		float const lfd(5.0*(light_factor - 0.4)), lfn(1.0 - lfd);
 
 		for (unsigned i = 0; i < 3; ++i) { // should diffuse depend more on angle than ambient?
 			diffuse[i] = (diffuse[i] + 0.2)*lfd;
@@ -435,6 +430,22 @@ void setup_lighting(bool underwater, float depth) {
 		calc_moon_atten(ambient, diffuse, mlf);
 		sm_green_int += lfn*diffuse[1];
 		set_colors_and_enable_light(GL_LIGHT1, ambient, diffuse); // moon
+	}
+}
+
+
+void draw_sun_moon_stars() {
+
+	if (light_factor <= 0.4) { // moon
+		gen_stars(1.0, island);
+		draw_moon();
+	}
+	else if (light_factor >= 0.6) { // sun
+		draw_sun();
+	}
+	else { // sun and moon
+		float const lfn(1.0 - 5.0*(light_factor - 0.4));
+		gen_stars(lfn, island);
 		draw_moon();
 		draw_sun();
 	}
@@ -801,6 +812,8 @@ void display(void) {
 				mesh_invalidated = 0;
 			}
 			// drawing code
+			if (!combined_gu) draw_sun_moon_stars();
+			
 			if (sun_in_view()) { // do sun flare
 				glDisable(GL_FOG);
 				sun_flare();
@@ -1028,6 +1041,7 @@ void create_reflection_texture(unsigned tid, unsigned size, float water_z) {
 
 	// render reflection to texture
 	glBindTexture(GL_TEXTURE_2D, tid);
+	glReadBuffer(GL_BACK);
 	// glCopyTexSubImage2D copies the frame buffer to the bound texture
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, size, size);
 
@@ -1106,7 +1120,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	mesh_type   = 0;
 	unsigned reflection_tid(0);
 	
-	if (show_fog) {
+	if (show_fog || underwater) {
 		colorRGBA const fog_color(set_inf_terrain_fog(underwater, zmin2));
 
 		if (!combined_gu) {
@@ -1120,15 +1134,16 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		gluQuadricTexture(quadric, GL_TRUE);
 		set_color(bkg_color); // will turn into fog color
 		draw_sphere_at(get_camera_pos(), 0.9*FAR_CLIP, N_SPHERE_DIV);
-		//draw_sky(0);
 		gluQuadricTexture(quadric, GL_FALSE);
 		glDisable(GL_TEXTURE_2D);
 		disable_blend();
 	}
-	else if (draw_water) {
-		reflection_tid = create_reflection();
+	else {
+		if (draw_water) reflection_tid = create_reflection();
+		draw_sun_moon_stars();
 	}
 	draw_inf_terrain_sun_flare();
+	//draw_sky(0);
 	//if (!camera_view) camera_shadow(camera);
 	if (TIMETEST) PRINT_TIME("3.2");
 	setup_object_render_data();
