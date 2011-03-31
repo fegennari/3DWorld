@@ -13,8 +13,9 @@ int map_x(0), map_y(0);
 float map_zoom(0.25);
 
 extern bool use_stencil_shadows;
-extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, world_mode, game_mode, num_smileys, DISABLE_WATER;
-extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation;
+extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, begin_motion;
+extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER;
+extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, water_h_off;
 extern int coll_id[];
 extern obj_group obj_groups[];
 
@@ -31,12 +32,13 @@ void draw_overhead_map() {
 		map_mode = 1;
 		return;
 	}
+	bool const no_water((DISABLE_WATER == 2) || !(display_mode & 0x04));
 	int bx1(0), by1(0), bx2(0), by2(0), nx(1);
 	while (min(window_width, window_height) > 2*nx) nx *= 2;
 	if (nx < 4) return;
 	int const ny(nx), nx2(nx/2), ny2(ny/2);
-	float const zmax2(zmax_est*(map_color ? 1.0 : 0.855));
-	float const scale(2.0*map_zoom*X_SCENE_SIZE*DX_VAL), scale8(8.0*scale);
+	float const zmax2(zmax_est*((map_color || no_water) ? 1.0 : 0.855));
+	float const scale(2.0*map_zoom*X_SCENE_SIZE*DX_VAL), scale_val(scale/64);
 	float x0(map_x + xoff2*DX_VAL), y0(map_y + yoff2*DY_VAL);
 	float const relh(get_rel_height(water_plane_z, -zmax_est, zmax_est));
 	float const hscale(0.5/zmax2), wpz(relh*2.0*zmax_est - zmax_est);	
@@ -47,22 +49,22 @@ void draw_overhead_map() {
 	map_heights[2] = 0.5*(lttex_dirt[1].zval + lttex_dirt[2].zval);
 	map_heights[3] = 0.5*(lttex_dirt[0].zval + lttex_dirt[1].zval);
 	map_heights[4] = hscale*(wpz + zmax2);
-	map_heights[5] = 0.5*map_heights[4];
+	map_heights[5] = 0.5*map_heights[4] + water_h_off/zmax_est;
 
 	colorRGBA const map_colors[6] = {
 		((DISABLE_WATER == 2) ? DK_GRAY : WHITE),
 		GRAY,
 		((vegetation == 0.0) ? colorRGBA(0.55,0.45,0.35,1.0) : GREEN),
 		LT_BROWN,
-		((DISABLE_WATER == 2) ? BROWN : colorRGBA(0.3,0.2,0.6)),
-		((DISABLE_WATER == 2) ? DK_BROWN : BLUE)};
+		(no_water ? BROWN    : colorRGBA(0.3,0.2,0.6)),
+		(no_water ? DK_BROWN : BLUE)};
 
 	for (unsigned i = 0; i < 6; ++i) {
 		map_heights[i] = pow(map_heights[i], glaciate_exp);
 	}
 	if (world_mode == WMODE_GROUND) {
 		float const xv(-(camera.x + map_x)/X_SCENE_SIZE), yv(-(camera.y + map_y)/Y_SCENE_SIZE);
-		float const xs(nx*DX_VAL/scale8), ys(ny*DY_VAL/scale8);
+		float const xs(DX_VAL/scale_val), ys(DY_VAL/scale_val);
 		x0 += camera.x;
 		y0 += camera.y;
 		bx1 = int(nx2 + xs*(xv - 1.0));
@@ -110,6 +112,8 @@ void draw_overhead_map() {
 					rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*pow(height, glaciate_exp_inv)); // un-glaciate: slow
 				}
 				else {
+					height += relh_adj_tex;
+
 					if (height <= map_heights[5]) {
 						unpack_color(rgb, map_colors[5]); // water
 					}
@@ -141,13 +145,13 @@ void draw_overhead_map() {
 			}
 		}
 	}
-	if (obj_groups[coll_id[SMILEY]].enabled) { // game_mode?
+	if (begin_motion && obj_groups[coll_id[SMILEY]].enabled) { // game_mode?
 		float const camx((world_mode == WMODE_GROUND) ? camera.x : 0.0), camy((world_mode == WMODE_GROUND) ? camera.y : 0.0);
 
 		for (int s = 0; s < num_smileys; ++s) { // add in smiley markers
 			point const spos(obj_groups[coll_id[SMILEY]].get_obj(s).pos);
-			int const xpos(int(nx2 + nx*((-camx - map_x + spos.x)/X_SCENE_SIZE)*DX_VAL/scale8));
-			int const ypos(int(ny2 + ny*((-camy - map_y + spos.y)/Y_SCENE_SIZE)*DY_VAL/scale8));
+			int const xpos(int(nx2 + ((-camx - map_x + spos.x)/X_SCENE_SIZE)*DX_VAL/scale_val));
+			int const ypos(int(ny2 + ((-camy - map_y + spos.y)/Y_SCENE_SIZE)*DY_VAL/scale_val));
 			colorRGBA const color(get_smiley_team_color(s));
 
 			for (int i = max(0, ypos-1); i < min(ny, ypos+1); ++i) {
