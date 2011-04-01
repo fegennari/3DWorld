@@ -1021,31 +1021,6 @@ void create_landscape_texture() {
 	int const j0((tox0 < 0) ? width -1 : 0), j1((tox0 < 0) ? -1 : width ), dj((tox0 < 0) ? -1 : 1);
 	int const wxtx(wx-tox0), wxtx3(3*wxtx), j00(max(0, -tox0)), j01(min(width, wx-tox0));
 	
-	// *** BEGIN TESTING ***
-	if (0) {
-		unsigned const nx(abs(j1 - j0)), ny(abs(i1 - i0));
-		vector<float> xv(nx), yv(ny);
-		float const x0(0.0), y0(0.0), scale(0.1);
-
-		for (int j = j0; j != j1; j += dj) {
-			xv[j-j0] = x0 + j*scale;
-		}
-		for (int i = i0; i != i1; i += di) {
-			yv[i-i0] = y0 + i*scale;
-		}
-		build_xy_mesh_arrays(&xv.front(), &yv.front(), nx, ny);
-
-		for (int i = i0; i != i1; i += di) {
-			for (int j = j0; j != j1; j += dj) {
-				float const height(0.5*(1.0 + fast_eval_from_index(j-j0, i-i0, 1, 0)/zmax_est));
-				unsigned const offset(3*(i*width + j));
-				unsigned char const val((unsigned char)(255.0*CLIP_TO_01(height)));
-				UNROLL_3X(tex_data[offset+i_] = val;)
-			}
-		}
-	}
-	else
-	// *** END TESTING ***
 	for (int i = i0; i != i1; i += di) {
 		int j10(j0);
 		float const yp(yscale*(float)i);
