@@ -498,7 +498,9 @@ void process_groups() {
 						int const ix(objg.choose_object());
 						objg.create_object_at(ix, (obj.pos + signed_rand_vector(radius)));
 						dwobject &obj(objg.get_obj(ix));
-						obj.vdeform.x = 0.6 + 0.5*rand_float(); // size
+						obj.vdeform.x   = 0.6 + 0.5*rand_float(); // size
+						obj.angle       = TWO_PI*rand_float();
+						obj.orientation = signed_rand_vector_norm();
 						for (unsigned j = 0; j < 3; ++j) obj.init_dir[j] = LT_GRAY[j];
 					}
 				}
