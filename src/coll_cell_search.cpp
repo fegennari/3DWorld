@@ -235,21 +235,21 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const {
 
 	float clip_tmin, clip_tmax;
-	if (!get_line_clip(p1, p2, d, clip_tmin, clip_tmax) || clip_tmin > tmax || clip_tmax < tmin) return 0;
-	vector3d v1(p2 - p1);
+	if (type != COLL_POLYGON && (!get_line_clip(p1, p2, d, clip_tmin, clip_tmax)
+		                         || clip_tmin > tmax || clip_tmax < tmin)) return 0;
 	
 	switch (type) {
 		case COLL_CUBE:
 			{
 				t = clip_tmin;
 				if (t > tmax || t < tmin) return 0;
-				get_closest_cube_norm(d, (p1 + v1*t), cnorm);
+				get_closest_cube_norm(d, (p1 + (p2 - p1)*t), cnorm);
 				return 1;
 			}
 		case COLL_SPHERE:
 			{
 				point coll_pos;
-				v1.normalize();
+				vector3d const v1((p2 - p1).get_norm());
 				if (!line_sphere_int(v1, p1, points[0], radius, coll_pos, 0)) return 0;
 				t = -1.0; // start at a bad value
 				
@@ -303,12 +303,12 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 					float tval;
 					static vector<point> pts[2];
 					gen_poly_planes(points, npoints, norm, thickness, pts);
-					unsigned const test_side(dot_product(v1, norm) > 0.0);
+					unsigned const test_side(dot_product((p2 - p1), norm) > 0.0);
 					point const *const points2(&(pts[test_side].front()));
 					
 					if (line_poly_intersect(p1, p2, points2, npoints, norm, tval) && (tval <= tmax && tval >= tmin)) {
 						t     = tval;
-						cnorm = get_poly_dir_norm(norm, p1, v1, t);
+						cnorm = get_poly_dir_norm(norm, p1, (p2 - p1), t);
 					}
 					for (int j = 0; j < npoints; ++j) { // now test the <npoints> sides
 						unsigned const jnext((j+1)%npoints);
@@ -318,7 +318,7 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 						if (line_poly_intersect(p1, p2, side_pts, 4, side_norm, tval)) {
 							if (tval < t && (tval <= tmax && tval >= tmin)) {
 								t     = tval;
-								cnorm = get_poly_dir_norm(side_norm, p1, v1, t);
+								cnorm = get_poly_dir_norm(side_norm, p1, (p2 - p1), t);
 							}
 						}
 					}
@@ -327,7 +327,7 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 				if (!line_poly_intersect(p1, p2, points, npoints, norm, t)) return 0;
 				if (t > tmax || t < tmin) return 0;
 				if (!check_poly_billboard_alpha(p1, p2, t)) return 0;
-				cnorm = get_poly_dir_norm(norm, p1, v1, t);
+				cnorm = get_poly_dir_norm(norm, p1, (p2 - p1), t);
 				return 1;
 			}
 	}

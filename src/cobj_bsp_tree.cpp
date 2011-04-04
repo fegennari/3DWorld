@@ -50,6 +50,16 @@ protected:
 		}
 	}
 
+	bool create_cixs() {
+		if (is_static) cixs.reserve(cobjs.size());
+
+		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
+			if (obj_ok(*i)) cixs.push_back(i - cobjs.begin());
+		}
+		assert(cixs.size() < (1 << 29));
+		return !cixs.empty();
+	}
+
 	void build_tree(unsigned nix, unsigned skip_dims) {assert(0);}
 
 	bool obj_ok(coll_obj const &cobj) const {
@@ -68,13 +78,7 @@ public:
 	void add_cobjs(bool verbose) {
 		RESET_TIME;
 		clear();
-		if (is_static) cixs.reserve(cobjs.size());
-
-		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-			if (obj_ok(*i)) cixs.push_back(i - cobjs.begin());
-		}
-		if (cixs.empty()) return; // nothing to be done
-		assert(cixs.size() < (1 << 29));
+		if (!create_cixs()) return; // nothing to be done
 		nodes.reserve(6*cixs.size()/5); // conservative
 		nodes.push_back(tree_node(0, cixs.size()));
 		assert(nodes.size() == 1);
@@ -110,9 +114,8 @@ public:
 				// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
 				if ((int)cixs[i] == ignore_cobj) continue;
 				coll_obj const &cobj(get_cobj(i));
-				bool const coll(obj_ok(cobj) && cobj.line_int_exact(p1, p2, t, cnorm, tmin, tmax));
 				
-				if (coll) {
+				if (obj_ok(cobj) && cobj.line_int_exact(p1, p2, t, cnorm, tmin, tmax)) {
 					cindex = cixs[i];
 					cpos   = p1 + (p2 - p1)*t;
 					if (!exact) return 1; // return first hit
@@ -129,7 +132,7 @@ public:
 }; // cobj_tree_t
 
 
-// BSP Tree (left, mid, right) kids
+// BSP Tree (left, right, mid) kids
 template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims) {
 	
 	assert(nix < nodes.size());
@@ -254,12 +257,13 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 
 
 // 3: BSP Tree, 8: Octtree
-cobj_tree_t<8> cobj_tree_static (coll_objects, 1, 0);
-cobj_tree_t<8> cobj_tree_dynamic(coll_objects, 0, 1);
+typedef cobj_tree_t<8> cobj_tree_type;
+cobj_tree_type cobj_tree_static (coll_objects, 1, 0);
+cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1);
 int last_update_frame[2] = {1, 1}; // first drawn frame is 1
 
 
-cobj_tree_t<8> &get_tree(bool dynamic) {
+cobj_tree_type &get_tree(bool dynamic) {
 	return (dynamic ? cobj_tree_dynamic : cobj_tree_static);
 }
 
