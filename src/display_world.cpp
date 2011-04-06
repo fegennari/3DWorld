@@ -1027,16 +1027,18 @@ void create_reflection_texture(unsigned tid, unsigned size, float water_z) {
 	glScalef(1.0, 1.0, -1.0); // scale in z
 	glTranslatef(0.0, 0.0, -water_z); // translate back
 
-	// setup above-water clip plane
-	double const plane[4] = {0.0, 0.0, 1.0, -water_z}; // water at z=-water_z (mirrored)
-	glEnable(GL_CLIP_PLANE0);
-	glClipPlane(GL_CLIP_PLANE0, plane);
-
 	// draw partial scene
-	//draw_inf_terrain_sun_flare();
-	if (display_mode & 0x01) display_mesh3(NULL);
+	draw_inf_terrain_sun_flare();
+
+	if (display_mode & 0x01) { // draw mesh
+		// setup above-water clip plane
+		double const plane[4] = {0.0, 0.0, 1.0, -water_z}; // water at z=-water_z (mirrored)
+		glEnable(GL_CLIP_PLANE0);
+		glClipPlane(GL_CLIP_PLANE0, plane);
+		display_mesh3(NULL);
+		glDisable(GL_CLIP_PLANE0);
+	}
 	// FIXME: render more of the scene here
-	glDisable(GL_CLIP_PLANE0);
 	glPopMatrix();
 
 	// render reflection to texture
