@@ -1139,7 +1139,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		disable_blend();
 	}
 	else {
-		if (draw_water) reflection_tid = create_reflection();
+		if (draw_water && !underwater) reflection_tid = create_reflection();
 		draw_sun_moon_stars();
 	}
 	draw_inf_terrain_sun_flare();
