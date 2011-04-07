@@ -636,6 +636,15 @@ void scroll_scene() {
 }
 
 
+float get_ocean_wave_height() {
+
+	if (!(display_mode & 0x0100)) return 0.0;
+	static float time(0.0);
+	if (animate2 && temperature > W_FREEZE_POINT) time += fticks;
+	return 0.01*sin(1.0*time/TICKS_PER_SECOND); // add small waves
+}
+
+
 // The display function. It is called whenever the window needs
 // redrawing (ie: overlapping window moves, resize, maximize)
 // display() is also called every so many milliseconds to provide a decent framerate
@@ -855,13 +864,10 @@ void display(void) {
 
 				if (!disable_inf_terrain && !island && (display_mode & 0x10)) { // draw larger WM3 mesh
 					int const hole_bounds[4] = {0, MESH_X_SIZE-1, 0, MESH_Y_SIZE-1};
-					float const zmin2(display_mesh3(hole_bounds)); // no trees/scenery
+					float const wpz(get_water_z_height() + get_ocean_wave_height());
+					float const zmin2(display_mesh3(hole_bounds, wpz)); // no trees/scenery
 					//set_inf_terrain_fog(underwater, zmin2); // not right
-					
-					if (display_mode & 0x04) {
-						float const wpz(get_water_z_height());
-						if (wpz >= zmin2) draw_water_plane(wpz, 0, hole_bounds);
-					}
+					if ((display_mode & 0x04) && wpz >= zmin2) draw_water_plane(wpz, 0, hole_bounds);
 				}
 			}
 			check_gl_error(7);
@@ -1035,7 +1041,7 @@ void create_reflection_texture(unsigned tid, unsigned size, float water_z) {
 		double const plane[4] = {0.0, 0.0, 1.0, -water_z}; // water at z=-water_z (mirrored)
 		glEnable(GL_CLIP_PLANE0);
 		glClipPlane(GL_CLIP_PLANE0, plane);
-		display_mesh3(NULL);
+		display_mesh3(NULL, water_z);
 		glDisable(GL_CLIP_PLANE0);
 	}
 	// FIXME: render more of the scene here
@@ -1110,7 +1116,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		}
 	}
 	if (display_mode & 0x04) {
-		water_plane_z = get_water_z_height();
+		water_plane_z = get_water_z_height() + get_ocean_wave_height();
 		draw_water    = (water_plane_z >= zmin2);
 	}
 	else {
@@ -1152,7 +1158,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (TIMETEST) PRINT_TIME("3.25");
 
 	if (display_mode & 0x01) {
-		zmin2 = display_mesh3(NULL);
+		zmin2 = display_mesh3(NULL, water_plane_z);
 		if (TIMETEST) PRINT_TIME("3.3");
 	}
 	draw_camera_weapon(0);

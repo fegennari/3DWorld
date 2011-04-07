@@ -532,10 +532,10 @@ int set_texture(float zval, int &tex_id) {
 }
 
 
-float display_mesh3(int const *const hole_bounds) { // WM3 - infinite terrain
+float display_mesh3(int const *const hole_bounds, float wpz) { // WM3 - infinite terrain
 
 	bool const add_hole((hole_bounds != NULL) && xoff2 == 0 && yoff2 == 0);
-	return draw_tiled_terrain(add_hole);
+	return draw_tiled_terrain(add_hole, wpz);
 }
 
 
@@ -759,12 +759,6 @@ void draw_water_edge(float zval) { // used for WM3 tiled terrain
 void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole_bounds) {
 
 	if (DISABLE_WATER) return;
-
-	if (display_mode & 0x0100) { // add small waves
-		static float time(0.0);
-		if (animate2 && temperature > W_FREEZE_POINT) time += fticks;
-		zval += 0.01*sin(1.0*time/TICKS_PER_SECOND);
-	}
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), vd_scale(2.5*get_tile_radius()*SQRT2);
 	float const dx(xoff*DX_VAL), dy(yoff*DY_VAL);
 	float const vdx(vd_scale*X_SCENE_SIZE), vdy(vd_scale*Y_SCENE_SIZE);

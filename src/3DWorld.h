@@ -1145,13 +1145,13 @@ colorRGBA setup_mesh_lighting();
 void run_post_mesh_draw();
 void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex=1);
 void display_mesh();
-float display_mesh3(int const *const hole_bounds);
+float display_mesh3(int const *const hole_bounds, float wpz);
 void draw_water_sides(int check_zvals);
 float get_inf_terrain_fog_dist();
 
 // function prototypes - tiled mesh
 int get_tile_radius();
-float draw_tiled_terrain(bool add_hole);
+float draw_tiled_terrain(bool add_hole, float wpz);
 void clear_tiled_terrain();
 void reset_tiled_terrain_state();
 

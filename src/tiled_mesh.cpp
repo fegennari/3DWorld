@@ -459,17 +459,17 @@ public:
 		//PRINT_TIME("Tiled Terrain Update");
 	}
 
-	static void setup_mesh_draw_shaders() {
+	static void setup_mesh_draw_shaders(float wpz) {
 		setup_enabled_lights();
 		unsigned const p(set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "linear_fog.part+multitex_2"));
 		setup_fog_scale(p);
 		add_uniform_int(p, "tex0", 0);
 		add_uniform_int(p, "tex1", 1);
-		add_uniform_float(p, "water_plane_z", (has_water() ? water_plane_z : zmin));
+		add_uniform_float(p, "water_plane_z", (has_water() ? wpz : zmin));
 		add_uniform_float(p, "water_atten", WATER_COL_ATTEN*mesh_scale);
 	}
 
-	float draw(bool add_hole) {
+	float draw(bool add_hole, float wpz) {
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
 		set_array_client_state(1, 0, 1, 0);
@@ -484,8 +484,8 @@ public:
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}
-		setup_mesh_draw_shaders();
-		if (world_mode == WMODE_INF_TERRAIN && show_fog) draw_water_edge(water_plane_z); // Note: doesn't take into account waves
+		setup_mesh_draw_shaders(wpz);
+		if (world_mode == WMODE_INF_TERRAIN && show_fog) draw_water_edge(wpz); // Note: doesn't take into account waves
 		setup_mesh_lighting();
 		
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
@@ -532,7 +532,7 @@ void draw_vert_color(colorRGBA c, float x, float y, float z) {
 }
 
 
-void fill_gap() {
+void fill_gap(float wpz) {
 
 	//RESET_TIME;
 	colorRGBA const color(setup_mesh_lighting());
@@ -550,7 +550,7 @@ void fill_gap() {
 	for (int i = 0; i <= MESH_Y_SIZE; ++i) {
 		yv[i] = (ystart + (i + 0.5)*DY_VAL);
 	}
-	terrain_tile_draw.setup_mesh_draw_shaders();
+	terrain_tile_draw.setup_mesh_draw_shaders(wpz);
 
 	// draw +x
 	build_xy_mesh_arrays(&xv.front(), &yv[MESH_Y_SIZE], MESH_X_SIZE, 1);
@@ -587,7 +587,7 @@ void fill_gap() {
 }
 
 
-float draw_tiled_terrain(bool add_hole) {
+float draw_tiled_terrain(bool add_hole, float wpz) {
 
 	//RESET_TIME;
 	bool const vbo_supported(setup_gen_buffers());
@@ -597,8 +597,8 @@ float draw_tiled_terrain(bool add_hole) {
 		return zmin;
 	}
 	terrain_tile_draw.update();
-	float const zmin(terrain_tile_draw.draw(add_hole));
-	if (add_hole) fill_gap(); // need to fill the gap on +x/+y
+	float const zmin(terrain_tile_draw.draw(add_hole, wpz));
+	if (add_hole) fill_gap(wpz); // need to fill the gap on +x/+y
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	return zmin;
 }
