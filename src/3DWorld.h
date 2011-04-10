@@ -178,7 +178,7 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	T x, y, z;
 
 	pointT() {}
-	pointT(T x_, T y_, T z_) : x(x_), y(y_), z(z_) {} // can't use initializer list
+	pointT(T x_, T y_, T z_) : x(x_), y(y_), z(z_) {}
 	pointT(pointT const &p1, pointT const &p2) : x(p1.x-p2.x), y(p1.y-p2.y), z(p1.z-p2.z) {} // take the difference (vector)
 	template<typename S> pointT(S const &p) : x(p.x), y(p.y), z(p.z) {}
 
@@ -403,6 +403,7 @@ struct pos_dir_up { // defines a view frustum
 	pos_dir_up(void) {}
 	pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f);
 	bool sphere_visible_test(point const &pos_, float radius) const;
+	bool cube_visible(cube_t const &cube) const;
 };
 
 

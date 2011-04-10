@@ -80,6 +80,10 @@ public:
 	point get_center() const {
 		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
 	}
+	cube_t get_cube() const {
+		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
+		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin, mzmax);
+	}
 
 	void calc_start_step(int dx, int dy) {
 		xstart = get_xval(x1 + dx);
@@ -354,7 +358,7 @@ public:
 	}
 
 	bool is_visible() const {
-		return camera_pdu.sphere_visible_test(get_center(), radius);
+		return (camera_pdu.sphere_visible_test(get_center(), radius) && camera_pdu.cube_visible(get_cube())); // chain them together
 	}
 
 	void bind_vbos() {

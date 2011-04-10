@@ -110,6 +110,42 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 }
 
 
+bool pos_dir_up::cube_visible(cube_t const &cube) const {
+
+	point cube_pts[8];
+	get_cube_points(cube.d, cube_pts);
+	bool npass(0), fpass(0); // near, far
+		
+	for (unsigned i = 0; i < 8 && !npass; ++i) {
+		vector3d const pv(cube_pts[i], pos);
+		npass = (dot_product(dir, pv) > near_);
+	}
+	if (!npass) return 0;
+
+	for (unsigned i = 0; i < 8 && !fpass; ++i) {
+		vector3d const pv(cube_pts[i], pos);
+		fpass = (dot_product(dir, pv) < far_);
+	}
+	if (!fpass) return 0;
+	vector3d const v[2] = {upv_,  cp};
+	float    const a[2] = {sterm, A*sterm};
+
+	for (unsigned xy = 0; xy < 2; ++xy) { // x, y
+		for (unsigned d = 0; d < 2; ++d) { // lo, hi
+			float const w(d ? -1.0 : 1.0);
+			bool pass(0);
+		
+			for (unsigned i = 0; i < 8 && !pass; ++i) {
+				vector3d const pv(cube_pts[i], pos);
+				pass = (w*dot_product(v[xy], pv) <= a[xy]*pv.mag());
+			}
+			if (!pass) return 0;
+		}
+	}
+	return 1;
+}
+
+
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 
 	if (radius*radius/p2p_dist_sq(viewer, sc) < 1.0E-6) { // small and far away
