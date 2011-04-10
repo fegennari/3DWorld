@@ -17,7 +17,7 @@ float const GET_OCC_EXPAND    = 0.02;
 int cobj_counter(0);
 
 extern int coll_border, display_mode;
-extern float czmin, czmax, zmin, zbottom, water_plane_z;
+extern float occluder_zmin, occluder_zmax, zmin, zbottom, water_plane_z;
 extern vector<coll_obj> coll_objects;
 
 
@@ -712,7 +712,7 @@ bool cobj_contained(point pos1, const point *pts, unsigned npts, int cobj) {
 	}
 	assert(npts > 0);
 	point pos2(pts[0]);
-	if (!do_line_clip_scene(pos1, pos2, czmin, czmax)) return 0;
+	if (!do_line_clip_scene(pos1, pos2, occluder_zmin, occluder_zmax)) return 0;
 	line_intersector_occlusion_cobjs lint(pos1, pos2, pts, npts);
 	coll_cell_line_iterator<line_intersector_occlusion_cobjs> ccli(lint, 1, 1, cobj);
 	
@@ -728,7 +728,7 @@ bool cobj_contained(point pos1, const point *pts, unsigned npts, int cobj) {
 bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 
 	cobjs.resize(0);
-	if (!do_line_clip_scene(pos1, pos2, czmin, czmax)) return 0;
+	if (!do_line_clip_scene(pos1, pos2, occluder_zmin, occluder_zmax)) return 0;
 	line_intersector_get_cobjs lint(pos1, pos2, cobjs);
 	coll_cell_line_iterator<line_intersector_get_cobjs> ccli(lint, 1, 1, cobj);
 	ccli.do_iter();

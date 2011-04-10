@@ -51,7 +51,7 @@ unsigned char ***shadow_mask;
 
 extern bool last_int, mesh_invalidated;
 extern int world_mode, MAX_RUN_DIST, island, xoff, yoff, I_TIMESCALE2, DISABLE_WATER;
-extern float zmax, zmin, czmin, czmax, zbottom, water_plane_z, def_water_level, temperature, max_obj_radius;
+extern float zmax, zmin, occluder_zmin, occluder_zmax, water_plane_z, def_water_level, temperature, max_obj_radius;
 extern point ocean;
 
 
@@ -159,8 +159,8 @@ void delete_matrices() { // called at the end of main()
 void compute_matrices() {
 
 	last_int = 0;
-	czmin    =  FAR_CLIP;
-	czmax    = -FAR_CLIP;
+	czmin = occluder_zmin =  FAR_CLIP;
+	czmax = occluder_zmax = -FAR_CLIP;
 
 	// initialize objects
 	reset_other_objects_status();
