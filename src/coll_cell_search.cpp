@@ -710,6 +710,7 @@ bool cobj_contained(point pos1, const point *pts, unsigned npts, int cobj) {
 	if (CACHE_OCCLUDER && last_cobj >= 0 && last_cobj != cobj && !coll_objects[last_cobj].disabled()) {
 		if (is_contained(pos1, pts, npts, coll_objects[last_cobj].d)) return 1;
 	}
+	if (occluder_zmin >= occluder_zmax) return 0;
 	assert(npts > 0);
 	point pos2(pts[0]);
 	if (!do_line_clip_scene(pos1, pos2, occluder_zmin, occluder_zmax)) return 0;
@@ -762,7 +763,7 @@ bool is_occluded(vector<int> const &occluders, point const *const pts, int npts,
 void get_occluders() { // 18M total, 380K unique
 
 	RESET_TIME;
-	if (!(display_mode & 0x08)) return;
+	if (!(display_mode & 0x08) || occluder_zmin >= occluder_zmax) return;
 	static unsigned startval(0), stopped_count(0);
 	static bool first_run(1);
 	unsigned const skipval(first_run ? 0 : 12); // spread update across many frames
