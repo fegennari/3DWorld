@@ -295,6 +295,19 @@ vector3d const zero_vector(0, 0, 0);
 vector3d const all_ones(1, 1, 1);
 
 
+template<typename T> struct plane_t : public pointT<T> { // unused
+	T d;
+
+	plane_t() {}
+	plane_t(T x_, T y_, T z_, T d_) : pointT(x_, y_, z_), d(d_) {}
+	plane_t(pointT<T> const &p, T d_) : pointT(p), d(d_) {}
+	void print() const {cout << x << ", " << y << ", " << z << ", " << d;}
+	bool operator==(const plane_t &p) const {return (p.x == x && p.y == y && p.z == z && p.d == d);}
+	bool operator!=(const plane_t &p) const {return !operator==(p);}
+	void assign(T x_, T y_, T z_) {x = x_; y = y_; z = z_;}
+};
+
+
 struct triangle {
 
 	point pts[3];

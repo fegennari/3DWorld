@@ -117,14 +117,12 @@ bool pos_dir_up::cube_visible(cube_t const &cube) const {
 	bool npass(0), fpass(0); // near, far
 		
 	for (unsigned i = 0; i < 8 && !npass; ++i) {
-		vector3d const pv(cube_pts[i], pos);
-		npass = (dot_product(dir, pv) > near_);
+		npass = (dot_product(dir, vector3d(cube_pts[i], pos)) > near_);
 	}
 	if (!npass) return 0;
 
 	for (unsigned i = 0; i < 8 && !fpass; ++i) {
-		vector3d const pv(cube_pts[i], pos);
-		fpass = (dot_product(dir, pv) < far_);
+		fpass = (dot_product(dir, vector3d(cube_pts[i], pos)) < far_);
 	}
 	if (!fpass) return 0;
 	vector3d const v[2] = {upv_,  cp};
