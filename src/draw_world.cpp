@@ -1498,7 +1498,7 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, bool is_shadowed, unsigned char type)
 {
-	if (!quadric || !sphere_in_camera_view(pos, radius, 0)) return; // approximate as a sphere
+	assert(quadric);
 	int const ndiv(max(3, min(N_SPHERE_DIV/2, int(cd_scale/distance_to_camera(pos)))));
 	//glDepthMask(1);
 	glPushMatrix();

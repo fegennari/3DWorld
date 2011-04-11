@@ -909,7 +909,7 @@ struct smoke_manager {
 	smoke_manager() {reset();}
 
 	bool is_smoke_visible(point const &pos) const {
-		return sphere_in_camera_view(pos, HALF_DXY, 0);
+		return sphere_in_camera_view(pos, HALF_DXY, 0); // could use cube_visible()
 	}
 	void reset() {
 		for (unsigned i = 0; i < 3; ++i) { // set backwards so that nothing intersects

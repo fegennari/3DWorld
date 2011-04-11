@@ -677,16 +677,17 @@ void draw_univ_objects(point const &pos) {
 
 		if (!is_bad && univ_sphere_vis_dist(pos, radius_scaled)) {
 			sorted.push_back(make_pair(-(p2p_dist(pos, camera) - radius_scaled), co.obj));
+
+			if (onscreen_display && (co.flags & OBJ_FLAGS_SHIP) && !co.obj->is_player_ship()) {		
+				if ((dist_less_than(pos, camera, ch_dist) || !(co.flags & (OBJ_FLAGS_DIST | OBJ_FLAGS_NEW_))) &&
+					co.obj->visibility() > 0.1 && co.obj->get_time() > 0)
+				{
+					draw_crosshair_from_camera(pos, alignment_colors[co.obj->get_align()]); // draw_crosshair?
+				}
+			}
 		}
 		else if (co.obj->has_lights()) {
 			co.obj->reset_lights(); // reset for next frame
-		}
-		if (onscreen_display && !is_bad && (co.flags & OBJ_FLAGS_SHIP) && univ_sphere_vis(pos, radius_scaled) && !co.obj->is_player_ship()) {		
-			if ((dist_less_than(pos, camera, ch_dist) || !(co.flags & (OBJ_FLAGS_DIST | OBJ_FLAGS_NEW_))) &&
-				co.obj->visibility() > 0.1 && co.obj->get_time() > 0)
-			{
-				draw_crosshair_from_camera(pos, alignment_colors[co.obj->get_align()]); // draw_crosshair?
-			}
 		}
 	}
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera

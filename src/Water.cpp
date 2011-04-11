@@ -232,7 +232,6 @@ public:
 
 		// Note: what about direct shadows on the water surface?
 		assert(inited);
-		//if (!sphere_in_camera_view(v, (DX_VAL + DY_VAL), 0)) return; // doesn't help
 		vector3d const view_dir((v - camera).get_norm());
 		
 		if (dot_product(view_dir, n) >= 0.0) { // back facing water
@@ -320,7 +319,7 @@ public:
 
 	void draw_water_vertex(int i, int j, point const &v, colorRGBA color) { // i=y, j=x
 
-		if (!sphere_in_camera_view(v, (DX_VAL + DY_VAL), 0)) return; // is this correct?
+		if (!sphere_in_camera_view(v, (DX_VAL + DY_VAL), 0)) return; // helps with reflections (is this correct?)
 		vector3d const &n(wat_vert_normals[i][j]);
 		assert(unsigned(j) < last_row_colors.size());
 		

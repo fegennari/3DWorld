@@ -379,7 +379,7 @@ uobject const *get_shadowing_object(uobject const &obj, ustar const &sun) { // u
 void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, s_object const &clobj, unsigned pass, bool no_move) {
 
 	ucell &cell(get_cell(cxyz));
-	if (!univ_sphere_vis(cell.rel_center, CELL_SPHERE_RAD)) return;
+	if (!univ_sphere_vis(cell.rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
 	
 	for (unsigned d = 0; d < 3; ++d) {
 		current.cellxyz[d] = cxyz[d] + uxyz[d];
