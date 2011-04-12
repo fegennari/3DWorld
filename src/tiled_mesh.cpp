@@ -260,11 +260,14 @@ public:
 				k2 = k4;
 				
 				for (unsigned sy = 0; sy < scale; ++sy) {
-					unsigned const ty(y*scale + sy);
+					// tx/ty skip one texel at the upper texture edges so that the edge texels are shared on both sides
+					// of the tile boundaries, ensuring a smooth texture transition between landscape tiles
+					unsigned const ty_dest(y*scale + sy), ty((ty_dest == tsize-1) ? 0 : ty_dest);
 					float const ypi(sy*fscale_inv);
 
 					for (unsigned sx = 0; sx < scale; ++sx) {
-						unsigned const tx(x*scale + sx), ix(y*zvsize + x), off(3*(ty*tsize + tx));
+						unsigned const tx_dest(x*scale + sx), tx((tx_dest == tsize-1) ? 0 : tx_dest);
+						unsigned const ix(y*zvsize + x), off(3*(ty_dest*tsize + tx_dest));
 						float const xpi(sx*fscale_inv);
 						float const mh((1.0 - xpi)*((1.0 - ypi)*mh00 + ypi*mh10) + xpi*((1.0 - ypi)*mh01 + ypi*mh11));
 
