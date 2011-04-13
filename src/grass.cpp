@@ -497,7 +497,7 @@ void update_grass_vbos() {
 }
 
 void draw_grass() {
-	if (!no_grass()) grass_manager.draw();
+	if (!no_grass() && (display_mode & 0x02)) grass_manager.draw();
 }
 
 void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh) {
