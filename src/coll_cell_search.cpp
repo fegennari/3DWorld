@@ -96,7 +96,7 @@ bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const
 
 	for (unsigned i = 0; i < npts; ++i) {
 		point const spts[3] = {pts[i], pts[(i+1)%npts], lpos};
-		point const center(::get_center(spts, 3));
+		point const center(get_center(spts, 3));
 		vector3d const pts_norm(get_poly_norm(spts));
 		point pt;
 
@@ -785,7 +785,7 @@ void get_occluders() { // 18M total, 380K unique
 	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {
 		coll_obj &cobj(coll_objects[i]);
 		if (!cobj.fixed || cobj.status != COLL_STATIC || cobj.cp.surfs == EF_ALL) continue;
-		get_coll_line_cobjs(camera, cobj.get_center(), i, coll_objects[i].occluders);
+		get_coll_line_cobjs(camera, cobj.get_cube_center(), i, coll_objects[i].occluders);
 	}
 	if (skipval <= 1) {PRINT_TIME("Occlusion Preprocessing");}
 }

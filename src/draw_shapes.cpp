@@ -155,58 +155,6 @@ void calc_params(point const *const pts, vector3d *dirs, float *len, float *ninv
 }
 
 
-struct dqt_params {
-
-	bool no_shadow, double_sided, is_quadric;
-	int cobj;
-	float ts_x, ts_y, t_tx, t_ty;
-	point origin;
-	colorRGBA const &color;
-	vector<vector<int> > const &stest;
-	
-	dqt_params(point const &o, bool ns, bool db, int cob, float tx, float ty, float tdx, float tdy, bool iq)
-		: no_shadow(ns), double_sided(db), is_quadric(iq), cobj(cob), ts_x(tx), ts_y(ty), t_tx(tdx), t_ty(tdy),
-		origin(o), color(coll_objects[cobj].cp.color), stest(coll_objects[cobj].sobjs) {}
-};
-
-
-struct dqd_params {
-
-	bool double_sided;
-	int cobj, tri;
-	float ts_x, ts_y, t_tx, t_ty;
-	point origin;
-	vector3d normal;
-	colorRGBA const &color;
-	quad_div const &qd;
-	vector<vector<int> > const &stest;
-	unsigned n[2], lod_level, num_internal, num_subdiv, all_lighted;
-	float spec[2], len[2], ninv[2];
-	vector3d dirs[2];
-	unsigned char all_shad, all_unshad, en_lt_bits;
-	bool in_dlist, all_int_surf, no_shadow_calc, use_n;
-
-	dqd_params(dqt_params const &q, int tr, int sub_tri, vector3d const &norm, unsigned char elb, quad_div const &qd_,
-		vector<vector<int> > const &s, bool idl, float const sp[2], unsigned ll, unsigned ns, unsigned al, bool nsc, bool usen) :
-	    double_sided(q.double_sided), cobj(q.cobj), tri(tr), ts_x(q.ts_x), ts_y(q.ts_y), t_tx(q.t_tx), t_ty(q.t_ty), origin(q.origin),
-		normal(norm), color(q.color), qd(qd_), stest(s), lod_level(ll), num_internal(0), num_subdiv(ns), all_lighted(al),
-		all_shad(0xFF), all_unshad(0xFF), en_lt_bits(elb), in_dlist(idl), all_int_surf(1), no_shadow_calc(nsc), use_n(usen)
-	{
-		spec[0] = sp[0]; spec[1] = sp[1];
-	}
-
-	void do_calc_params(point const *const pts) {
-		calc_params(pts, dirs, len, ninv, n, subdiv_size_inv);
-	}
-
-	void inherit_flags_from(dqd_params const &p) {
-		all_shad     &= p.all_shad;
-		all_unshad   &= p.all_unshad;
-		all_int_surf &= p.all_int_surf;
-	}
-};
-
-
 struct pt_pair { // size = 28
 
 	bool used;
@@ -227,6 +175,55 @@ struct vertex_t { // size = 24
 };
 
 
+struct dqt_params {
+
+	bool double_sided, is_quadric;
+	int cobj;
+	float ts_x, ts_y, t_tx, t_ty;
+	colorRGBA const &color;
+	vector<vector<int> > const &stest;
+	
+	dqt_params(bool db, int cob, float tx, float ty, float tdx, float tdy, bool iq)
+		: double_sided(db), is_quadric(iq), cobj(cob), ts_x(tx), ts_y(ty), t_tx(tdx), t_ty(tdy),
+		color(coll_objects[cobj].cp.color), stest(coll_objects[cobj].sobjs) {}
+	void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int dim, int dir, unsigned face, bool no_shadow_edge) const;
+	void draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, int dir) const;
+	void draw_polygon(point const *points, const vector3d *normals, int npoints, vector3d const &norm, int id, int subpoly) const;
+};
+
+
+struct dqd_params {
+
+	int cobj, tri;
+	vector3d normal;
+	quad_div const &qd;
+	vector<vector<int> > const &stest;
+	unsigned n[2], lod_level, num_internal, num_subdiv, all_lighted;
+	float spec[2], len[2], ninv[2];
+	vector3d dirs[2];
+	unsigned char all_shad, all_unshad, en_lt_bits;
+	bool in_dlist, all_int_surf, no_shadow_calc, use_n;
+
+	dqd_params(int cobj_, int tr, int sub_tri, vector3d const &norm, unsigned char elb, quad_div const &qd_,
+		vector<vector<int> > const &s, bool idl, float const sp[2], unsigned ll, unsigned ns, unsigned al, bool nsc, bool usen) :
+	    cobj(cobj_), tri(tr), normal(norm), qd(qd_), stest(s), lod_level(ll), num_internal(0), num_subdiv(ns), all_lighted(al),
+		all_shad(0xFF), all_unshad(0xFF), en_lt_bits(elb), in_dlist(idl), all_int_surf(1), no_shadow_calc(nsc), use_n(usen)
+	{
+		spec[0] = sp[0]; spec[1] = sp[1];
+	}
+	void do_calc_params(point const *const pts) {
+		calc_params(pts, dirs, len, ninv, n, subdiv_size_inv);
+	}
+	void inherit_flags_from(dqd_params const &p) {
+		all_shad     &= p.all_shad;
+		all_unshad   &= p.all_unshad;
+		all_int_surf &= p.all_int_surf;
+	}
+	unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &norms) const;
+	unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, bool &in_strip);
+};
+
+
 inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d const* const norm) const {
 	
 	if (norm && dot_product_ptv(*norm, center, pc) <= 0.0) return 0;
@@ -234,7 +231,7 @@ inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d 
 }
 
 
-void draw_verts(vector<vertex_t> const &verts, unsigned const *ix, int npts, unsigned char shadowed, dqd_params const &p) {
+void draw_verts(vector<vertex_t> const &verts, unsigned const *ix, int npts, unsigned char shadowed) {
 
 	for (int i = 0; i < npts; ++i) { // much of the frame time is spent here
 		assert(ix[i] < verts.size());
@@ -378,9 +375,9 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 }
 
 
-unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &norms, dqd_params &p) {
+unsigned dqd_params::determine_shadow_matrix(point const *const pts, vector<unsigned char> &norms) const {
 
-	unsigned const npts(3 + !p.tri);
+	unsigned const npts(3 + !tri);
 	bool under_mesh(1), above_mesh(1), outside_mesh(1), calced_mesh_z(0);
 	float mesh_ztop(zmin), qzmin(mesh_ztop + Z_SCENE_SIZE), rsize;
 
@@ -395,7 +392,7 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 	// find shadowing collision objects
 	bool do_mesh_intersect(!above_mesh);
 	++nvlight;
-	unsigned const n0(p.n[0]), n1(p.n[1]), xstride(n1+1), ystride(n0+1), numverts(xstride*ystride);
+	unsigned const n0(n[0]), n1(n[1]), xstride(n1+1), ystride(n0+1), numverts(xstride*ystride);
 	unsigned const num_lights(enabled_lights.size());
 	unsigned lighted(0);
 	point center;
@@ -403,15 +400,15 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 	for (unsigned i = 0; i < numverts; ++i) norms[i] = 0; // initialize to 0 (unshadowed)
 	assert(num_lights > 0);
 	lv_val old_val(0, NULL);
-	quad_div qd_old(p.qd);
+	quad_div qd_old(qd);
 	qd_old.tag |= QD_TAG_OLD;
-	lvmap::iterator const it(coll_objects[p.cobj].lightmap.find(qd_old));
+	lvmap::iterator const it(coll_objects[cobj].lightmap.find(qd_old));
 	
-	if (it != coll_objects[p.cobj].lightmap.end()) {
+	if (it != coll_objects[cobj].lightmap.end()) {
 		old_val = it->second; // computation can be skipped if light source has not changed since last time
 		assert(old_val.status > 0 && old_val.status < max_lighted);
 		assert(old_val.n0 == n0 && old_val.n1 == n1);
-		coll_objects[p.cobj].lightmap.erase(it);
+		coll_objects[cobj].lightmap.erase(it);
 	}
 	for (unsigned L = 0; L < num_lights; ++L) {
 		point const &lpos(enabled_lights[L].get_center());
@@ -419,7 +416,7 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 		unsigned cur_lighted(get_light_val(old_val.status, L));
 		static vector<int> cobjs;
 		cobjs.resize(0);
-		bool const visible((p.en_lt_bits & (1 << L)) && enabled_lights[L].lights_polygon(center, rsize));
+		bool const visible((en_lt_bits & (1 << L)) && enabled_lights[L].lights_polygon(center, rsize));
 
 		if (cur_lighted == 3) { // partially shadowed cached old value
 			assert(old_val.nvals);
@@ -428,7 +425,7 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 		else if (cur_lighted == 0 && visible && enabled_lights[L].is_dynamic()) {
 			cur_lighted = 2; // all lighted
 		}
-		else if (cur_lighted == 1 || !visible || coll_pt_vis_test_large(lpos, center, cobjs, p.cobj, rsize, 1, 1, pts, npts, lpos)) {
+		else if (cur_lighted == 1 || !visible || coll_pt_vis_test_large(lpos, center, cobjs, cobj, rsize, 1, 1, pts, npts, lpos)) {
 			cur_lighted = 1; // completely shadowed
 			for (unsigned i = 0; i < numverts; ++i) norms[i] |= L_mask;
 		}
@@ -469,7 +466,7 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 						point p_int;
 						float t; // unused
 
-						if (line_int_plane(c_pts[k], lpos, pts[0], p.normal, p_int, t, 1)) {
+						if (line_int_plane(c_pts[k], lpos, pts[0], normal, p_int, t, 1)) {
 							if (!bounds[j].used) {
 								bounds[j].p[0] = bounds[j].p[1] = p_int;
 								bounds[j].used = 1;
@@ -489,11 +486,11 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 				} // for j
 				for (unsigned s0 = 0; s0 <= n0; ++s0) {
 					int const offset(s0*xstride);
-					float const scale(DO_SCALE(p.tri, s0, n0));
+					float const scale(DO_SCALE(tri, s0, n0));
 					// shift test points by this amount from edges to make polygon meshes not shadow each other's corners
 					float const toler(0.001);
-					vector3d const vstep(p.dirs[1]*scale*(1.0 - toler)), vstep2(vstep*step);
-					point const pos0(pts[0] + p.dirs[0]*(s0*(1.0 - toler) + toler));
+					vector3d const vstep(dirs[1]*scale*(1.0 - toler)), vstep2(vstep*step);
+					point const pos0(pts[0] + dirs[0]*(s0*(1.0 - toler) + toler));
 					point pos(pos0 + vstep*toler);
 
 					for (unsigned s1 = 0; s1 <= n1; ++s1, pos += vstep) {
@@ -510,14 +507,14 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 									if (pos.z < bounds[j].p[0].z || pos.z > bounds[j].p[1].z) continue;
 								}
 								int const cindex(cobjs[j]);
-								assert(cindex != p.cobj);
+								assert(cindex != cobj);
 								coll_obj &c(coll_objects[cindex]);
 
 								// test for adjacent shapes from the same plane (different subdivided polygon triangles)?
 								if (c.line_intersect(pos, lpos)) { // intersection
 									if (j > 0) swap(cobjs[0], cobjs[j]); // move this cobj to the beginning to increase its priority
 									if (j > 0) swap(bounds[0], bounds[j]);
-									if (cindex != lci) c.shadow_depends.insert(p.cobj);
+									if (cindex != lci) c.shadow_depends.insert(cobj);
 									lci  = cindex;
 									coll = 1;
 
@@ -552,7 +549,7 @@ unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &
 }
 
 
-unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_params &p, bool &in_strip) {
+unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, bool &in_strip) {
 
 	if (!VERTEX_LIGHTING) return ALL_LT[2]; // all unshadowed
 	++nquads;
@@ -563,22 +560,22 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 		pts[i]     = verts[ix[i]].p;
 		normals[i] = verts[ix[i]].n;
 	}
-	p.do_calc_params(pts);
+	do_calc_params(pts);
 	unsigned char *nvals(NULL);
 	unsigned lighted(0);
-	unsigned const npts(3 + !p.tri), n0(p.n[0]), n1(p.n[1]);
+	unsigned const npts(3 + !tri), n0(n[0]), n1(n[1]);
 	unsigned const xstride(n1+1), ystride(n0+1), numverts(xstride*ystride), num_lights(enabled_lights.size());
 	static vector<unsigned char> norms, nval_buffer;
 	if (numverts > norms.size()) norms.resize(numverts);
-	bool const lighting_known(require_either_lightval(p.all_lighted, 1, 2));
+	bool const lighting_known(require_either_lightval(all_lighted, 1, 2));
 
 	if (lighting_known) { // minor optimization
-		lighted = p.all_lighted;
+		lighted = all_lighted;
 	}
 	else {
-		assert(size_t(p.cobj) < coll_objects.size());
-		coll_obj &c_obj(coll_objects[p.cobj]);
-		lvmap::const_iterator const it(c_obj.lightmap.find(p.qd));
+		assert(size_t(cobj) < coll_objects.size());
+		coll_obj &c_obj(coll_objects[cobj]);
+		lvmap::const_iterator const it(c_obj.lightmap.find(qd));
 		bool const cached(it != c_obj.lightmap.end());
 
 		// lighted: 0 = unknown, 1 = shadowed, 2 = unshadowed, 3 = partially shadowed, 4 = hidden
@@ -590,15 +587,15 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 			assert(it->second.n0 == n0 && it->second.n1 == n1);
 		} // cached
 		else { // new quad
-			if (p.no_shadow_calc) {
+			if (no_shadow_calc) {
 				lighted = ALL_LT[2]; // mark as unshadowed for now
 			}
 			else {
-				if (!p.tri && !c_obj.is_semi_trans() && check_face_containment(pts, npts, p.qd.dim, p.qd.dir, p.cobj)) {
+				if (!tri && !c_obj.is_semi_trans() && check_face_containment(pts, npts, qd.dim, qd.dir, cobj)) {
 					lighted = ALL_LT[4];
 				}
 				else {
-					lighted = determine_shadow_matrix(pts, norms, p);
+					lighted = determine_shadow_matrix(pts, norms);
 					//if (get_light_val(lighted, 0) == 2 || get_light_val(lighted, 0) == 3) {} // add light to this cell
 
 					if (is_partial_shadow(lighted)) {
@@ -613,22 +610,22 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 					}
 				} // face not contained
 				if (c_obj.status == COLL_STATIC) {
-					c_obj.lightmap[p.qd] = lv_val(lighted, n0, n1, nvals);
+					c_obj.lightmap[qd] = lv_val(lighted, n0, n1, nvals);
 					if (require_any_lightval(lighted, 2, 3)) c_obj.lighted = COBJ_LIT_TRUE; // some part of the surface is lit
 				}
 			}
 		} // !cached
-		if (FULL_MAP_LOOKUP && !p.no_shadow_calc) {
+		if (FULL_MAP_LOOKUP && !no_shadow_calc) {
 			bool const all_hidden(lighted == ALL_LT[4]);
 
-			if (!all_hidden || (RENDER_PART_INT && 2*p.num_internal++ > p.num_subdiv)) {
+			if (!all_hidden || (RENDER_PART_INT && 2*num_internal++ > num_subdiv)) {
 				for (unsigned i = 0; i < num_lights; ++i) {
 					unsigned const light_val(get_light_val(lighted, i));
-					if (light_val != 1) p.all_shad   &= ~(1 << i);
-					if (light_val != 2) p.all_unshad &= ~(1 << i);
+					if (light_val != 1) all_shad   &= ~(1 << i);
+					if (light_val != 2) all_unshad &= ~(1 << i);
 				}
 			}
-			if (!all_hidden) p.all_int_surf = 0;
+			if (!all_hidden) all_int_surf = 0;
 		}
 	} // !lighting_known
 	assert(lighted < max_lighted);
@@ -638,7 +635,7 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 		unsigned const val(get_light_val(lighted, L));
 		assert(val != 0);
 
-		if ((val == 2 || val == 3) && L < p.stest.size() && !p.stest[L].empty()) { // dynamic lights
+		if ((val == 2 || val == 3) && L < stest.size() && !stest[L].empty()) { // dynamic lights
 			has_dynamic = 1;
 			can_return  = 0;
 			break;
@@ -648,10 +645,10 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 		}
 	}
 	if (can_return) return lighted;
-	int step[2] = {p.lod_level, p.lod_level};
+	int step[2] = {lod_level, lod_level};
 	
-	if (!USE_DLIST || (ENABLE_DL_LOD && !p.in_dlist)) { // could use multiple display lists for LOD
-		gen_stepsize(get_camera_pos(), pts[0], step, p.n, p.len);
+	if (!USE_DLIST || (ENABLE_DL_LOD && !in_dlist)) { // could use multiple display lists for LOD
+		gen_stepsize(get_camera_pos(), pts[0], step, n, len);
 		if (USE_DLIST) {for (unsigned i = 0; i < 2; ++i) step[i] = min(3, step[i]);}
 	}
 
@@ -674,16 +671,16 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 					norms[i] |= ((cur_lighted == 1) ? L_mask : (old_nvals[i] & L_mask));
 				}
 			}
-			assert(L < p.stest.size());
-			unsigned const num_spheres(p.stest[L].size());
+			assert(L < stest.size());
+			unsigned const num_spheres(stest[L].size());
 			if (num_spheres == 0) continue;
 			if (cur_lighted == 1 || cur_lighted == 4) continue; // already shadowed or hidden
-			if (!(p.en_lt_bits & (1 << L)) || !enabled_lights[L].lights_polygon(center, rsize)) continue;
+			if (!(en_lt_bits & (1 << L)) || !enabled_lights[L].lights_polygon(center, rsize)) continue;
 			point const &lpos(enabled_lights[L].get_center());
 			vector3d const v1(center, lpos);
 
 			for (unsigned i = 0; i < num_spheres; ++i) { // find all potential sphere intersections
-				shadow_sphere const &ss(shadow_objs[p.stest[L][i]]);
+				shadow_sphere const &ss(shadow_objs[stest[L][i]]);
 				point const &spos(ss.pos);
 				float const sz(rsize + ss.radius);
 				if (!sphere_test_comp(center, spos, v1, sz*sz)) continue;
@@ -694,22 +691,22 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 				point p_int;
 				vector3d const v2(lpos, spos);
 				float const s2l_dist(v2.mag()), dist_to_light(v1.mag() + ss.radius);
-				float const dp(fabs(dot_product(p.normal, v1)/dist_to_light));
+				float const dp(fabs(dot_product(normal, v1)/dist_to_light));
 				float const expand(max(1.0f, dist_to_light/max(1.0E-6f, (s2l_dist - sz)))/dp);
-				float const sr_adj(expand*ss.radius + max(p.len[0]/n0, p.len[1]/n1));
+				float const sr_adj(expand*ss.radius + max(len[0]/n0, len[1]/n1));
 				float const rsq(sr_adj*sr_adj), rtot(expand*rsize + sr_adj);
 				unsigned s1_s(0), s1_e(n1);
 				
 				if (cp_clip) {
-					if (!line_int_plane(spos, lpos, pts[0], p.normal, p_int, t, 1)) continue; // this call is required to calculate p_int
+					if (!line_int_plane(spos, lpos, pts[0], normal, p_int, t, 1)) continue; // this call is required to calculate p_int
 					if (!dist_less_than(p_int, center, rtot)) continue;
 
-					if (!p.tri) { // minor performance improvement
+					if (!tri) { // minor performance improvement
 						swap(s1_s, s1_e);
 
 						for (unsigned s1 = 0, end_loop1 = 0; !end_loop1; s1 += step[1]) {
 							if (s1 >= n1) {s1 = n1; end_loop1 = 1;}
-							point const pos(pts[0] + p.dirs[1]*s1), p_end(pos + p.dirs[0]*n0);
+							point const pos(pts[0] + dirs[1]*s1), p_end(pos + dirs[0]*n0);
 							vector3d const vll(p_end, pos), cp(cross_product(vll, vector3d(pos - p_int)));
 							
 							if (cp.mag_sq() <= rsq*vll.mag_sq()) { // point-line distance => good scanline
@@ -723,9 +720,9 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 				}
 				for (unsigned s0 = 0, end_loop0 = 0; !end_loop0; s0 += step[0]) { // fill in mesh values
 					if (s0 >= n0) {s0 = n0; end_loop0 = 1;}
-					float const scale(DO_SCALE(p.tri, s0, n0));
-					point const pos0(pts[0] + p.dirs[0]*s0);
-					vector3d const vstep(p.dirs[1]*scale);
+					float const scale(DO_SCALE(tri, s0, n0));
+					point const pos0(pts[0] + dirs[0]*s0);
+					vector3d const vstep(dirs[1]*scale);
 
 					if (cp_clip && scale > 0.0) {
 						vector3d const vll((pos0 + vstep*n1), pos0), cp(cross_product(vll, vector3d(pos0 - p_int)));
@@ -760,8 +757,8 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 	if (!is_partial_shadow(lighted)) return lighted; // all shadowed or none shadowed
 	assert(nvals);
 	if (in_strip) {glEnd(); in_strip = 0;}
-	//if (p.in_dlist) {} // create some textures instead of drawing - QD_TAG_TEXTURE
-	bool const more_strips(!p.in_dlist && has_dynamic && scaled_view_dist(get_camera_pos(), pts[0]) <= DIST_CUTOFF);
+	//if (in_dlist) {} // create some textures instead of drawing - QD_TAG_TEXTURE
+	bool const more_strips(!in_dlist && has_dynamic && scaled_view_dist(get_camera_pos(), pts[0]) <= DIST_CUTOFF);
 
 	// render the quads - is there a way to render these using a single textured quad?
 	for (unsigned s0 = 0; s0 < n0; s0 += step[0]) {
@@ -781,9 +778,9 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 			if (more_strips && s_end < n0 && s_end > off1) --s_end;
 		}
 		glBegin(GL_QUAD_STRIP);
-		float const scale[2] = {DO_SCALE(p.tri, s_end, n0), DO_SCALE(p.tri, s0, n0)};
-		float const s_[2]    = {s_end*p.ninv[0], s0*p.ninv[0]};
-		point pos[2] = {(pts[0] + p.dirs[0]*s_end), (pts[0] + p.dirs[0]*s0)}; // s0max, s0min, dirs[0] => p[1] - p[0]
+		float const scale[2] = {DO_SCALE(tri, s_end, n0), DO_SCALE(tri, s0, n0)};
+		float const s_[2]    = {s_end*ninv[0], s0*ninv[0]};
+		point pos[2] = {(pts[0] + dirs[0]*s_end), (pts[0] + dirs[0]*s0)}; // s0max, s0min, dirs[0] => p[1] - p[0]
 
 		for (unsigned s1 = 0, end_loop = 0; !end_loop; s1 += step[1]) {
 			if (s1 >= n1) {s1 = n1; end_loop = 1;}
@@ -793,12 +790,12 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 				nvals[o0+s1] != nvals[o0+s1n] || nvals[o0+s1] != nvals[o0+s1p] ||
 				nvals[o1+s1] != nvals[o1+s1n] || nvals[o1+s1] != nvals[o1+s1p])
 			{
-				float const t_(s1*p.ninv[1]);
+				float const t_(s1*ninv[1]);
 				nverts += 2;
 
 				for (int i = 1; i >= 0; --i) {
-					vector3d const n(p.use_n ? interpolate_3d(normals, npts, s_[i], t_) : p.normal);
-					point const v(pos[i] + p.dirs[1]*(s1*scale[i])); // dirs[1] => p[3] - p[0]
+					vector3d const n(use_n ? interpolate_3d(normals, npts, s_[i], t_) : normal);
+					point const v(pos[i] + dirs[1]*(s1*scale[i])); // dirs[1] => p[3] - p[0]
 					unsigned char const shadowed(nvals[(i ? o1 : o0)+s1]);
 					set_shadowed_state(shadowed);
 					n.do_glNormal();
@@ -817,17 +814,17 @@ unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, dqd_pa
 // currently only handles parallelograms and triangles
 // lighted: 0 = unknown, 1 = shad, 2 = unshad, 3 = partially shad, 4 = hidden int surf
 //          values per light source (per nibble of unsigned), so max light sources is 32/4 = 8
-void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int dim, int dir, unsigned face, dqt_params const &q) {
+void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int dim, int dir, unsigned face, bool no_shadow_edge) const {
 
-	if (q.color.alpha == 0.0) return; // transparent
-	assert(size_t(q.cobj) < coll_objects.size());
+	if (color.alpha == 0.0) return; // transparent
+	assert(size_t(cobj) < coll_objects.size());
 	assert(npts == 3 || npts == 4);
-	coll_obj &c_obj(coll_objects[q.cobj]);
+	coll_obj &c_obj(coll_objects[cobj]);
 	point const camera(get_camera_pos());
 	if ((display_mode & 0x08) && is_occluded(c_obj.occluders, pts0, npts, camera)) return; // cull the entire face
 	unsigned const num_lights(enabled_lights.size());
 	quad_div qd2(dim, dir, QD_TAG_GLOBAL, face, 0); // set face to some magic value
-	bool no_shadow(q.no_shadow), no_shadow_edge(no_shadow), first_render(0);
+	bool first_render(0);
 	unsigned all_lighted(0), orig_all(0);
 	bool const no_shadow_calc(c_obj.platform_id < 0 && nvlight > MAX_CALC_PER_FRAME);
 
@@ -839,7 +836,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 			assert(all_lighted < max_lighted);
 			if (all_lighted == ALL_LT[4]) return; // entire surface is hidden
 		}
-		else if (check_face_containment(pts0, npts, dim, dir, q.cobj)) { // back facing and hidden
+		else if (check_face_containment(pts0, npts, dim, dir, cobj)) { // back facing and hidden
 			c_obj.lightmap[qd2] = lv_val(ALL_LT[4]);
 			return;
 		}
@@ -850,7 +847,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		for (unsigned i = 0; i < num_lights; ++i) {
 			unsigned const lval(get_light_val(all_lighted, i));
 
-			if ((lval == 0 && !first_render) || (lval == 2 && i < q.stest.size() && !q.stest[i].empty())) {
+			if ((lval == 0 && !first_render) || (lval == 2 && i < stest.size() && !stest[i].empty())) {
 				set_light_val(all_lighted, 3, i); // unknown or no static shadow, dynamic shadows still possible
 			}
 		}
@@ -867,7 +864,6 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	unsigned shifti(0);
 	point pts[4];
 	vector3d normals[4];
-	bool const double_sided(q.double_sided); // || c_obj.is_semi_trans()
 
 	if (DO_ROTATE && npts == 3) { // rotate points on triangles to improve subdivision direction
 		float minlen(0.0);
@@ -935,19 +931,18 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 			back_facing = 0;
 		}
 	}
-	if (back_facing) no_shadow = no_shadow_edge = 1; // back facing to all light sources
-	static vector<vector<int> > stest;
-	stest.resize(num_lights);
+	if (back_facing) no_shadow_edge = 1; // back facing to all light sources
+	static vector<vector<int> > filt_stest;
+	filt_stest.resize(num_lights);
 	
 	if (!no_shadow_edge) { // if not facing away from the light (already shadowed)
-		if (q.stest.size() == num_lights) { // nonempty dynamic shadow objects
+		if (stest.size() == num_lights) { // nonempty dynamic shadow objects
 			for (unsigned L = 0; L < num_lights; ++L) {
-				vector<int> const &qstest(q.stest[L]);
-				if (qstest.empty() || !(en_lt_bits & (1 << L))) continue;
+				if (stest[L].empty() || !(en_lt_bits & (1 << L))) continue;
 				point const &lpos(enabled_lights[L].get_center());
 
-				for (unsigned s = 0; s < qstest.size(); ++s) { // find all potential sphere intersections
-					unsigned const sts(qstest[s]);
+				for (unsigned s = 0; s < stest[L].size(); ++s) { // find all potential sphere intersections
+					unsigned const sts(stest[L][s]);
 					assert(sts < shadow_objs.size());
 					point const &spos(shadow_objs[sts].pos);
 					float const radius(rsize + shadow_objs[sts].radius);
@@ -955,16 +950,16 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 					if ((double_sided || (dot_product_ptv(norm, spos, pos) > 0.0)) &&
 						line_sphere_int_cont(pos, lpos, spos, radius))
 					{ // in front of quad
-						stest[L].push_back(sts); // point inside test might not be necessary
+						filt_stest[L].push_back(sts); // point inside test might not be necessary
 						has_d_shad = 1;
 					}
 				}
 			}
 		}
 		else {
-			unsigned const tot(total_size(q.stest));
+			unsigned const tot(total_size(stest));
 			if (tot > 0) {
-				cout << "num_lights = " << num_lights << ", q.stest.size() = " << q.stest.size() << ", tot_sz = " << tot << endl;
+				cout << "num_lights = " << num_lights << ", stest.size() = " << stest.size() << ", tot_sz = " << tot << endl;
 				assert(0);
 			}
 		}
@@ -973,8 +968,8 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	// 1. Must have no dynamic shadows
 	// 2. Must not be part of a quadric (too many LODs)
 	float const spec[2] = {c_obj.cp.specular, c_obj.cp.shine};
-	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !q.is_quadric && !has_d_shad);
-	bool const is_black(c_obj.cp.specular == 0.0 && q.color.red == 0.0 && q.color.green == 0.0 && q.color.blue == 0.0);
+	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !is_quadric && !has_d_shad);
+	bool const is_black(c_obj.cp.specular == 0.0 && color.red == 0.0 && color.green == 0.0 && color.blue == 0.0);
 	bool const no_subdiv(no_shadow_edge || is_black);
 	unsigned lod_level(1);
 	float lod_scale(1.0);
@@ -1020,7 +1015,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 	bool in_strip(0), occluded(0);
 	unsigned const num_subdiv(n[0]*n[1]);
 	quad_div qd(dim, dir, QD_TAG_QUAD, face, shift_bits);
-	dqd_params params(q, tri, 0, normal, en_lt_bits, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+	dqd_params params(cobj, tri, 0, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
 	unsigned const nv0(n[0]+1), nv1(n[1]+1);
 	static vector<vertex_t> verts;
 	verts.resize(nv0*nv1);
@@ -1059,7 +1054,7 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 
 			for (unsigned s1 = 0; s1 <= n[1]; ++s1) {
 				unsigned const ix(s0*nv1 + s1), ixs[2] = {ix, ix+nv1};
-				draw_verts(verts, ixs, 2, shad, params);
+				draw_verts(verts, ixs, 2, shad);
 			}
 			glEnd();
 			continue;
@@ -1077,8 +1072,8 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 				if (s0 < n[0]-1) { // not a single triangle at the top
 					qd.tag |=  QD_TAG_TRIANGLE;
 					unsigned const ixs2[4] = {ixs[0], ixs[2], ixs[3], ixs[3]};
-					dqd_params params_tri(q, tri, 1, normal, en_lt_bits, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
-					lighted = draw_quad_div(verts, ixs2, params_tri, tri_begin);
+					dqd_params params_tri(cobj, tri, 1, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+					lighted = params_tri.draw_quad_div(verts, ixs2, tri_begin);
 					params.inherit_flags_from(params_tri);
 					qd.tag &= ~QD_TAG_TRIANGLE;
 
@@ -1087,17 +1082,17 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 						tri_begin = 1;
 					}
 					else if (lighted != ALL_LT[4]) {
-						draw_verts(verts, ixs2, npts, test_all_light_val(lighted, 1), params_tri);
+						draw_verts(verts, ixs2, npts, test_all_light_val(lighted, 1));
 					}
 				}
 				ixs[3] = ixs[2]; // have to recompute since dir is not constant due to scale
-				dqd_params params2(q, tri, 0, normal, en_lt_bits, qd, stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
-				lighted = draw_quad_div(verts, ixs, params2, tri_begin);
+				dqd_params params2(cobj, tri, 0, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+				lighted = params2.draw_quad_div(verts, ixs, tri_begin);
 				if (!tri_begin) {glBegin(GL_TRIANGLES); tri_begin = 1;}
 				params.inherit_flags_from(params2);
 			}
 			else { // quad
-				lighted = draw_quad_div(verts, ixs, params, in_strip);
+				lighted = params.draw_quad_div(verts, ixs, in_strip);
 			}
 			assert(lighted != 0);
 
@@ -1105,21 +1100,21 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 				unsigned char const cur_shadowed(test_all_light_val(lighted, 1));
 
 				if (tri) {
-					draw_verts(verts, ixs, npts, cur_shadowed, params);
+					draw_verts(verts, ixs, npts, cur_shadowed);
 				}
 				else { // technically, should never be able to directly transition between 1 and 0 unless the shadow falls exactly at the boundary
 					unsigned const ixs2[4] = {ixs[3], ixs[0], ixs[2], ixs[1]};
 
 					if (in_strip) {
 						if (lighted != last_lighted) { // stutter the last point at the new lighting value so that there's no transition
-							draw_verts(verts, last_ixs, 2, cur_shadowed, params);
+							draw_verts(verts, last_ixs, 2, cur_shadowed);
 						}
-						draw_verts(verts, ixs2+2, 2, cur_shadowed, params);
+						draw_verts(verts, ixs2+2, 2, cur_shadowed);
 					}
 					else {
 						glBegin(GL_QUAD_STRIP);
 						in_strip = 1;
-						draw_verts(verts, ixs2, npts, cur_shadowed, params);
+						draw_verts(verts, ixs2, npts, cur_shadowed);
 					}
 					last_lighted = lighted;
 					last_ixs[0]  = ixs[2];
@@ -1150,11 +1145,11 @@ void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int di
 		}
 		c_obj.lightmap[qd2] = lv_val(all_lighted);
 	}
-	clear_vectors(stest);
+	clear_vectors(filt_stest);
 }
 
 
-void draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, int dir, dqt_params const &q) {
+void dqt_params::draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, int dir) const {
 
 	double const dv(DIV_VAL*L1_SUBDIV_SIZE);
 	unsigned const n1(max((unsigned)1, unsigned(fabs(d1b - d1a)/dv)));
@@ -1178,57 +1173,55 @@ void draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, in
 			for (unsigned i = 0; i < 4; ++i) {
 				pts[i].assign(v[i][dim], v[i][dim1], v[i][dim2]);
 			}
-			draw_quad_tri(pts, NULL, 4, dim, dir, (s1*n2 + s2), q);
+			draw_quad_tri(pts, NULL, 4, dim, dir, (s1*n2 + s2), 0);
 		}
 	}
 }
 
 
-void draw_coll_cube(float ar, int do_fill, int cobj, int tid, bool swap_txy) {
+void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 
-	assert(size_t(cobj) < coll_objects.size());
-	coll_obj const &c(coll_objects[cobj]);
-	int const sides((int)c.cp.surfs);
+	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
-	bool const back_face_cull(!c.is_semi_trans()); // no alpha
-	point const pos(c.points[0]), camera(get_camera_pos());
+	bool const back_face_cull(!is_semi_trans()); // no alpha
+	point const pos(points[0]), camera(get_camera_pos());
 	bool inside(!back_face_cull);
 	bool const textured(tid >= 0);
-	float const tscale[2] = {c.cp.tscale, get_tex_ar(tid)*c.cp.tscale};
+	float const ar(get_tex_ar(tid));
+	float const tscale[2] = {cp.tscale, ar*cp.tscale};
 
 	if (!inside) { // check if in the camera's view
 		float const dist(NEAR_CLIP + CAMERA_RADIUS);
 		inside = 1;
 
 		for (unsigned i = 0; i < 3 && inside; ++i) {
-			if (camera[i] <= c.d[i][0]-dist || camera[i] >= c.d[i][1]+dist) inside = 0;
+			if (camera[i] <= d[i][0]-dist || camera[i] >= d[i][1]+dist) inside = 0;
 		}
 	}
 	++ncubes;
-	assert((size_t)cobj < coll_objects.size());
-	dqt_params const q(c.get_ref_pt(), 0, 0, cobj, c.cp.tscale, ar*c.cp.tscale, c.cp.tdx, c.cp.tdy, 0);
+	dqt_params const q(0, id, cp.tscale, ar*cp.tscale, cp.tdx, cp.tdy, 0);
 	pair<float, unsigned> faces[6];
 	for (unsigned i = 0; i < 6; ++i) faces[i].second = i;
 	vector3d tex_delta(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
 
-	if (c.platform_id >= 0) { // make texture scroll with platform
-		assert(c.platform_id < (int)platforms.size());
-		tex_delta -= platforms[c.platform_id].get_delta();
+	if (platform_id >= 0) { // make texture scroll with platform
+		assert(platform_id < (int)platforms.size());
+		tex_delta -= platforms[platform_id].get_delta();
 	}
 	if (!back_face_cull) { // semi-transparent
 		for (unsigned i = 0; i < 6; ++i) {
 			unsigned const dim(i>>1), dir(i&1), d0((dim+1)%3), d1((dim+2)%3);
 			point pos;
-			pos[dim] = c.d[dim][dir];
-			pos[d0]  = 0.5*(c.d[d0][0] + c.d[d0][1]);
-			pos[d1]  = 0.5*(c.d[d1][0] + c.d[d1][1]);
+			pos[dim] = d[dim][dir];
+			pos[d0]  = 0.5*(d[d0][0] + d[d0][1]);
+			pos[d1]  = 0.5*(d[d1][0] + d[d1][1]);
 			faces[i].first = -p2p_dist_sq(pos, camera); // draw ordered furthest to closest to camera
 		}
 		sort(faces, (faces+6));
 	}
 	for (unsigned i = 0; i < 6; ++i) {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
-		if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < c.d[dim][dir]) ^ dir))) continue;
+		if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir))) continue;
 		unsigned const d0((dim+1)%3), d1((dim+2)%3), t0((2-dim)>>1), t1(1+((2-dim)>0));
 
 		if (textured) {
@@ -1237,27 +1230,27 @@ void draw_coll_cube(float ar, int do_fill, int cobj, int tid, bool swap_txy) {
 			b[t1] = tscale[1];
 			a[3]  = tex_delta[t0]*tscale[0];
 			b[3]  = tex_delta[t1]*tscale[1];
-			glTexGenfv((swap_txy ? GL_T : GL_S), GL_EYE_PLANE, a);
-			glTexGenfv((swap_txy ? GL_S : GL_T), GL_EYE_PLANE, b);
+			glTexGenfv((cp.swap_txy ? GL_T : GL_S), GL_EYE_PLANE, a);
+			glTexGenfv((cp.swap_txy ? GL_S : GL_T), GL_EYE_PLANE, b);
 		}
 		if (FAST_SHAPE_DRAW) {
-			c.cp.color.do_glColor();
+			cp.color.do_glColor();
 			glBegin(GL_QUADS);
 			point p;
-			p[d0 ] = c.d[d0][0];
-			p[d1 ] = c.d[d1][0];
-			p[dim] = c.d[dim][dir];
+			p[d0 ] = d[d0][0];
+			p[d1 ] = d[d1][0];
+			p[dim] = d[dim][dir];
 			p.do_glVertex();
-			p[d0 ] = c.d[d0][1];
+			p[d0 ] = d[d0][1];
 			p.do_glVertex();
-			p[d1 ] = c.d[d1][1];
+			p[d1 ] = d[d1][1];
 			p.do_glVertex();
-			p[d0 ] = c.d[d0][0];
+			p[d0 ] = d[d0][0];
 			p.do_glVertex();
 			glEnd();
 		}
 		else {
-			draw_quad(c.d[d0][0], c.d[d0][1], c.d[d1][0], c.d[d1][1], c.d[dim][dir], 2-dim, dir, q);
+			q.draw_quad(d[d0][0], d[d0][1], d[d1][0], d[d1][1], d[dim][dir], 2-dim, dir);
 		}
 	}
 }
@@ -1286,18 +1279,17 @@ bool camera_behind_polygon(point const *const points, int npoints, bool &cbf) {
 }
 
 
-void draw_polygon(point const *points, const vector3d *normals, int npoints, vector3d const &norm,
-				  int id, int subpoly, dqt_params &q)
+void dqt_params::draw_polygon(point const *points, const vector3d *normals, int npoints,
+	vector3d const &norm, int id, int subpoly) const
 {
 	if (FAST_SHAPE_DRAW || (npoints != 3 && npoints != 4)) {
-		q.color.do_glColor();
+		color.do_glColor();
 		draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
 		return;
 	}
-	bool const temp_ns(q.no_shadow); // subdivide based on L1_SUBDIV_SIZE
 	bool cbf(0);
 	unsigned npts(3);
-	q.no_shadow = (subpoly ? 0 : camera_behind_polygon(points, npoints, cbf));
+	bool const no_shadow(subpoly ? 0 : camera_behind_polygon(points, npoints, cbf));
 
 	if (npoints == 4) { // minimize cut length	
 		vector3d v01(points[0] - points[1]), v32(points[3] - points[2]);
@@ -1330,9 +1322,9 @@ void draw_polygon(point const *points, const vector3d *normals, int npoints, vec
 						swap(pts[1], pts[3]);
 					}
 					pts[4] = pts[1] + (pts[3] - pts[2]);
-					draw_quad_tri((pts+1), normals, 4, 2+cbf, !subpoly, id, q); // parallelogram
+					draw_quad_tri((pts+1), normals, 4, 2+cbf, !subpoly, id, no_shadow); // parallelogram
 					pts[2] = pts[4];
-					draw_quad_tri( pts,    normals, 3, 0+cbf, !subpoly, id, q); // triangle
+					draw_quad_tri( pts,    normals, 3, 0+cbf, !subpoly, id, no_shadow); // triangle
 					return;
 				}
 			} // normals test
@@ -1354,33 +1346,29 @@ void draw_polygon(point const *points, const vector3d *normals, int npoints, vec
 				if (normals != NULL) ++normals;
 				++points; // move pointer
 			}
-			draw_quad_tri(points2, normals2, 3, 0+cbf, !subpoly, id, q);
+			draw_quad_tri(points2, normals2, 3, 0+cbf, !subpoly, id, no_shadow);
 		} // parallelogram test
 	}
-	draw_quad_tri(points, normals, npts, 2+cbf, !subpoly, id, q);
-	q.no_shadow = temp_ns;
+	draw_quad_tri(points, normals, npts, 2+cbf, !subpoly, id, no_shadow);
 }
 
 
-void draw_extruded_polygon(float thick, point const *const points, const vector3d *normals,
-						   int npoints, vector3d const &norm, int cobj, int tid, bool swap_txy)
-{
-	assert(size_t(cobj) < coll_objects.size());
-	coll_obj const &c(coll_objects[cobj]);
-	thick = fabs(thick);
-	dqt_params q(c.get_ref_pt(), 0, 1, cobj, 0.0, 0.0, 0.0, 0.0, 0); // just set double_sided
+void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid) const {
+
+	float const thick(fabs(thickness));
+	dqt_params q(1, id, 0.0, 0.0, 0.0, 0.0, 0); // just set double_sided
 	bool const textured(tid >= 0);
-	float const tscale[2] = {c.cp.tscale, get_tex_ar(tid)*c.cp.tscale};
+	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
 	
 	if (/*FAST_SHAPE_DRAW ||*/ thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
-		if (textured) setup_polygon_texgen(norm, tscale, swap_txy);
-		draw_polygon(points, normals, npoints, norm, 0, 0, q);
+		if (textured) setup_polygon_texgen(norm, tscale, cp.swap_txy);
+		q.draw_polygon(points, normals, npoints, norm, 0, 0);
 		return;
 	}
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	static vector<point> pts[2];
 	gen_poly_planes(points, npoints, norm, thick, pts);
-	bool const bfc(!c.is_semi_trans()), cbf(camera_back_facing(&(pts[1].front()), npoints, norm)), back_facing(bfc && cbf);
+	bool const bfc(!is_semi_trans()), cbf(camera_back_facing(&(pts[1].front()), npoints, norm)), back_facing(bfc && cbf);
 	unsigned const nsides(unsigned(npoints)+2);
 	assert(nsides <= 6);
 	pair<int, unsigned> faces[6];
@@ -1432,44 +1420,40 @@ void draw_extruded_polygon(float thick, point const *const points, const vector3
 				}
 				norm2.negate();
 			}
-			if (textured) setup_polygon_texgen(norm2, tscale, swap_txy);
-			draw_polygon(&(pts[s].front()), ((normals && !s) ? n2 : NULL), npoints, norm2, s, 0, q); // draw bottom surface
+			if (textured) setup_polygon_texgen(norm2, tscale, cp.swap_txy);
+			q.draw_polygon(&(pts[s].front()), ((normals && !s) ? n2 : NULL), npoints, norm2, s, 0); // draw bottom surface
 			if (!s) reverse(pts[s].begin(), pts[s].end());
 		}
 		else { // draw sides
 			unsigned const i(s-2), ii((i+1)%npoints);
 			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
 			bool cbf2;
-			q.no_shadow = camera_behind_polygon(side_pts, 4, cbf2);
+			bool const no_shadow(camera_behind_polygon(side_pts, 4, cbf2));
 
 			if (!bfc || !cbf2) {
-				if (textured) setup_polygon_texgen(get_poly_norm(side_pts), tscale, swap_txy);
-				draw_quad_tri(side_pts, NULL, 4, q.no_shadow, 1, i+4, q); // back face cull?
+				if (textured) setup_polygon_texgen(get_poly_norm(side_pts), tscale, cp.swap_txy);
+				q.draw_quad_tri(side_pts, NULL, 4, no_shadow, 1, i+4, no_shadow); // back face cull?
 			}
 		}
 	}
 }
 
 
-void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float radius2, int nsides, int nstacks,
-						  bool draw_ends, bool no_bfc, int cobj, bool no_lighting, int tid)
-{
-	assert(radius1 > 0.0 || radius2 > 0.0);
-	assert(size_t(cobj) < coll_objects.size());
-	coll_obj const &c(coll_objects[cobj]);
+void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, bool no_bfc, bool no_lighting, int tid) const {
+
+	assert(radius > 0.0 || radius2 > 0.0);
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
-		c.cp.color.do_glColor();
-		draw_fast_cylinder(p1, p2, radius1, radius2, nsides, (tid >= 0), draw_ends);
+		cp.color.do_glColor();
+		draw_fast_cylinder(points[0], points[1], radius, radius2, nsides, (tid >= 0), draw_ends);
 		return;
 	}
-	bool const no_clip(no_bfc || c.is_semi_trans());
+	bool const no_clip(no_bfc || is_semi_trans());
 	point camera(get_camera_pos());
 	fix_nsides(nsides);
-	point const ce[2] = {p1, p2};
 	vector3d v12;
-	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, nsides, v12));
-	dqt_params q(c.get_ref_pt(), 0, no_bfc, cobj, 0.0, 0.0, 0.0, 0.0, 1); // no_bfc == double sided
+	vector_point_norm const &vpn(gen_cylinder_data(points, radius, radius2, nsides, v12));
+	dqt_params q(no_bfc, id, 0.0, 0.0, 0.0, 0.0, 1); // no_bfc == double sided
 
 	for (int S = 0; S < nsides; ++S) { // nsides can change
 		int const index(S + (nsides<<8) + 1);
@@ -1484,40 +1468,40 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 				normals[(i<<1)].normalize(); // is this necessary?
 				normals[(i<<1)+1] = normals[(i<<1)];
 			}
-			if (radius1 == radius2) {
-				draw_quad_tri(pts, normals, 4, 0, 0, index, q); // quad
+			if (radius == radius2) {
+				q.draw_quad_tri(pts, normals, 4, 0, 0, index, 0); // quad
 			}
-			else if (radius1 == 0.0) {
-				draw_quad_tri(pts, normals, 3, 0, 0, index, q); // triangle
+			else if (radius == 0.0) {
+				q.draw_quad_tri(pts, normals, 3, 0, 0, index, 0); // triangle
 			}
 			else if (radius2 == 0.0) {
 				pts[2] = pts[3]; // duplicate the last point
-				draw_quad_tri(pts, normals, 3, 0, 0, index, q); // triangle
+				q.draw_quad_tri(pts, normals, 3, 0, 0, index, 0); // triangle
 			}
 			else {
-				draw_polygon(pts, normals, 4, up_vector, index, 1, q); // polygon
+				q.draw_polygon(pts, normals, 4, up_vector, index, 1); // polygon
 			}
 		}
 	} // for S
 	if (draw_ends) { // not quite right due to long thin triangles
 		if (tid >= 0) { // textured
-			float const tscale[2] = {c.cp.tscale, get_tex_ar(tid)*c.cp.tscale};
+			float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
 			setup_polygon_texgen(v12, tscale, 0);
 		}
 		bool ends_bf[2];
 		unsigned const i_end(1 + (radius2 != 0.0));
 		q.double_sided = 0;
 
-		for (unsigned i = (radius1 == 0.0); i < i_end; ++i) {
-			ends_bf[i] = ((i != 0) ^ (dot_product_ptv(v12, camera, ce[i]) > 0.0));
+		for (unsigned i = (radius == 0.0); i < i_end; ++i) {
+			ends_bf[i] = ((i != 0) ^ (dot_product_ptv(v12, camera, points[i]) > 0.0));
 		}
 		for (int S = 0; S < nsides; ++S) { // nsides can change
 			int const index(S + (nsides<<8) + 1), nextS((S+1)%nsides); // prevS?
 
-			for (unsigned i = (radius1 == 0.0); i < i_end; ++i) {
+			for (unsigned i = (radius == 0.0); i < i_end; ++i) {
 				if (!ends_bf[i]) { // facing towards the camera
-					point const pts2[4] = {vpn.p[(S<<1)+i], vpn.p[(nextS<<1)+i], ce[i], ce[i]};
-					draw_quad_tri(pts2, NULL, 3, 4, i, index, q);
+					point const pts2[4] = {vpn.p[(S<<1)+i], vpn.p[(nextS<<1)+i], points[i], points[i]};
+					q.draw_quad_tri(pts2, NULL, 3, 4, i, index, 0);
 				}
 			}
 		}
@@ -1525,25 +1509,23 @@ void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float
 }
 
 
-void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, bool no_lighting, int tid) {
+void coll_obj::draw_subdiv_sphere_at(int ndiv, bool no_lighting, int tid) const {
 
 	assert(radius > 0.0);
-	assert(size_t(cobj) < coll_objects.size());
-	coll_obj const &c(coll_objects[cobj]);
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
-		c.cp.color.do_glColor();
-		draw_subdiv_sphere(pos, radius, ndiv, (tid >= 0), 1);
+		cp.color.do_glColor();
+		draw_subdiv_sphere(points[0], radius, ndiv, (tid >= 0), 1);
 		return;
 	}
-	bool const bfc(!c.is_semi_trans());
+	bool const bfc(!is_semi_trans());
 	fix_nsides(ndiv);
 	point camera(get_camera_pos());
-	sd_sphere_d sd(pos, radius, ndiv, NULL);
+	sd_sphere_d sd(points[0], radius, ndiv, NULL);
 	sd.gen_points_norms();
 	point **points   = sd.get_points();
 	vector3d **norms = sd.get_norms();
-	dqt_params q(c.get_ref_pt(), 0, 0, cobj, 0.0, 0.0, 0.0, 0.0, 1);
+	dqt_params q(0, id, 0.0, 0.0, 0.0, 0.0, 1);
 
 	for (int s = 0; s < ndiv; ++s) {
 		int const sn((s+1)%ndiv);
@@ -1555,7 +1537,7 @@ void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, b
 
 			if (!bfc || dot_product_ptv(get_center(normals, 4), camera, get_center(pts, 4)) > 0.0) { // back face culling
 				int const index(s + (t<<8) + (ndiv<<16) + 1);
-				draw_polygon(pts, normals, 4, up_vector, index, 1, q); // polygon segment
+				q.draw_polygon(pts, normals, 4, up_vector, index, 1); // polygon segment
 			}
 		}
 	}

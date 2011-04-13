@@ -108,7 +108,7 @@ void ship_cube::translate(point const &p) {
 
 void ship_cube::get_bounding_sphere(point &c, float &r) const {
 	
-	c = cube_t::get_center();
+	c = get_cube_center();
 	r = get_bsphere_radius();
 }
 
@@ -118,7 +118,7 @@ void ship_cube::draw_svol(point const &tpos, float cur_radius, point const &spos
 	assert(obj);
 	point spos_xf(spos);
 	obj->xform_point(spos_xf);
-	vector3d const shadow_dir(cube_t::get_center() - spos_xf);
+	vector3d const shadow_dir(get_cube_center() - spos_xf);
 	upos_point_type pts[4];
 
 	for (unsigned dim = 0; dim < 3; ++dim) {

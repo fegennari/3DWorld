@@ -379,7 +379,7 @@ struct cube_t { // size = 24
 		UNROLL_3X(len = max(len, (d[i_][1] - d[i_][0]));)
 		return len;
 	}
-	point get_center() const {
+	point get_cube_center() const {
 		return point(0.5*(d[0][0]+d[0][1]), 0.5*(d[1][0]+d[1][1]), 0.5*(d[2][0]+d[2][1]));
 	}
 	float get_bsphere_radius() const {
@@ -1081,12 +1081,6 @@ void exec_universe_text(std::string const &text);
 void init_draw_stats();
 void show_draw_stats();
 bool is_above_mesh(point const &pos);
-void draw_coll_cube(float ar, int do_fill, int cobj, int tid, bool swap_txy);
-void draw_extruded_polygon(float thick, const point *points, const vector3d *normals, int npoints,
-	vector3d const &norm, int cobj, int tid, bool swap_txy);
-void draw_subdiv_cylinder(point const &p1, point const &p2, float radius1, float radius2, int nsides, int nstacks,
-						  bool draw_ends, bool no_bfc, int cobj, bool no_lighting, int tid);
-void draw_subdiv_sphere_at(point const &pos, float radius, int ndiv, int cobj, bool no_lighting, int tid);
 void clear_all_lightmaps(int mode, unsigned keep=0);
 void add_shadow_obj(point const &pos, float radius, int coll_id, bool light_in_front, bool lighted=0);
 void add_coll_shadow_objs();

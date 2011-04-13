@@ -375,19 +375,18 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	}
 	switch (type) {
 	case COLL_CUBE:
-		draw_coll_cube(ar, (draw_model == 0), i, tid, cp.swap_txy);
+		draw_coll_cube((draw_model == 0), tid);
 		break;
 
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
 		{
-			point const p1(points[0]), p2(points[1]);
 			float const scale(NDIV_SCALE*get_zoom_scale());
 			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(center),
-				min(distance_to_camera(p1), distance_to_camera(p2))))));
+				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
 			int const nsides(min(N_CYL_SIDES, max(3, (int)size)));
-			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (p2 - p1));
-			draw_subdiv_cylinder(p1, p2, radius, radius2, nsides, 1, !(cp.surfs & 1), (cp.surfs == 1), i, no_lighting, tid);
+			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (points[1] - points[0]));
+			draw_subdiv_cylinder(nsides, 1, !(cp.surfs & 1), (cp.surfs == 1), no_lighting, tid);
 		}
 		break;
 
@@ -396,12 +395,12 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 			float const scale(0.7*NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const nsides(min(N_SPHERE_DIV, max(5, (int)size)));
 			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z);
-			draw_subdiv_sphere_at(points[0], radius, nsides, i, no_lighting, tid);
+			draw_subdiv_sphere_at(nsides, no_lighting, tid);
 		}
 		break;
 
 	case COLL_POLYGON:
-		draw_extruded_polygon(thickness, points, NULL, npoints, norm, i, tid, cp.swap_txy);
+		draw_extruded_polygon(NULL, tid);
 		break;
 	}
 }
@@ -432,7 +431,7 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 		cylinder_bounding_sphere(points, radius, radius2, center, brad);
 		break;
 	case COLL_POLYGON:
-		center = ::get_center(points, npoints);
+		center = get_center(points, npoints);
 		brad   = radius;
 		break;
 	default:
@@ -464,7 +463,7 @@ point coll_obj::get_center_pt() const {
 	case COLL_CYLINDER_ROT:
 		return get_center_n2(points);
 	case COLL_POLYGON:
-		return ::get_center(points, npoints);
+		return get_center(points, npoints);
 	default:
 		assert(0);
 	}

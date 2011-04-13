@@ -881,7 +881,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	//RESET_TIME;
 	if (destroy_thresh >= EXPLODEABLE) return 0;
 	csg_cube const cube(x1, x2, y1, y2, z1, z2);
-	point center(cube.get_center());
+	point center(cube.get_cube_center());
 	if (cube.is_zero_area()) return 0;
 	float const sub_volume(cube.get_volume());
 	vector<int> indices, to_remove, non_dest;

@@ -217,14 +217,17 @@ public:
 	point get_center_pt() const;
 	float get_max_dim()   const;
 	void bounding_sphere(point &center, float &brad) const;
-	// if we're a platform, then use a local reference point so that the texture offsets don't change when moving
-	// otherwise, use a global reference point so that textures tile correctly between adjacent shapes
-	point get_ref_pt()    const {return ((platform_id >= 0) ? points[0] : all_zeros);}
 	bool has_poly_billboard_alpha() const;
 	bool check_poly_billboard_alpha(point const &p1, point const &p2, float t) const;
 	bool line_intersect(point const &p1, point const &p2) const;
 	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const;
 	void register_coll(unsigned char coll_time, unsigned char coll_type_) {last_coll = coll_time; coll_type = coll_type_;}
+
+	// drawing code
+	void draw_coll_cube(int do_fill, int tid) const;
+	void draw_extruded_polygon(vector3d const *const normals, int tid) const;
+	void draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, bool no_bfc, bool no_lighting, int tid) const;
+	void draw_subdiv_sphere_at(int ndiv, bool no_lighting, int tid) const;
 };
 
 

@@ -215,12 +215,12 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 	if (num <= 2 || skip_dims) return; // base case
 	
 	// determine split values
-	point const sval(n.get_center()); // center point
+	point const sval(n.get_cube_center()); // center point
 
 	// split in this dimension: use upper 3 bits of cixs for storing bin index
 	for (unsigned i = n.start; i < n.end; ++i) {
 		coll_obj const &cobj(get_cobj(i));
-		point const center(cobj.get_center());
+		point const center(cobj.get_cube_center());
 		unsigned bix(0);
 
 		for (unsigned d = 0; d < 3; ++d) {
