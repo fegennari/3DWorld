@@ -1596,7 +1596,7 @@ unsigned enable_dynamic_lights(point const center, float radius) {
 		set_colors_and_enable_light(gl_light, (float *)(&ls.get_color()), udiffuse);
 		glLightf(gl_light, GL_CONSTANT_ATTENUATION,  1.0);
 		glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
-		glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 6.0/(ls.get_radius()*ls.get_radius()));
+		glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 10.0/(ls.get_radius()*ls.get_radius()));
 		set_gl_light_pos(gl_light, ls.get_center(), 1.0); // point light source position
 	}
 	return num_dlights;
