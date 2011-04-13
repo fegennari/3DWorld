@@ -327,9 +327,9 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	//if (brad/distance_to_camera(center) < 0.01) return; // too far/small
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
-	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
-	float const ar(get_tex_ar(tid));
 	bool const no_lighting(cp.color == BLACK && cp.specular == 0.0);
+	int const tid((cp.tid >= 0) ? cp.tid : (no_lighting ? BLACK_TEX : WHITE_TEX));
+	float const ar(get_tex_ar(tid));
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 
 	// process groups
