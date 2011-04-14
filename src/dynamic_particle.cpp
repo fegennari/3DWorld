@@ -52,7 +52,6 @@ dynamic_particle::dynamic_particle(point const &p, float r, vector3d const &v, c
 void dynamic_particle::gen_pos() {
 	
 	rand_xy_point(rand_uniform(zbottom, (MAX_D_HEIGHT + max(ztop, czmax))), pos, 0);
-	//pos.assign(-4.0, 0.0, 0.2);
 }
 
 
@@ -63,7 +62,7 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 	
 	if (lighted) { // set emission to color, ambient and diffuse to black
 		set_color_e(color);
-		set_color(BLACK); // hack to fix material color bug
+		set_color(RGBA0); // hack to fix material color bug
 	}
 	else {
 		set_shadowed_color(color, pos, !is_visible_to_light_cobj(pos, get_light(), radius, -1, 0), 0, 0);

@@ -328,7 +328,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
 	bool const no_lighting(cp.color == BLACK && cp.specular == 0.0);
-	int const tid((cp.tid >= 0) ? cp.tid : (no_lighting ? BLACK_TEX : WHITE_TEX));
+	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX); //(no_lighting ? BLACK_TEX : WHITE_TEX)
 	float const ar(get_tex_ar(tid));
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 

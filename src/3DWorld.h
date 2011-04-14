@@ -803,6 +803,7 @@ colorRGBA const YELLOW   (1.0,  1.0,  0.0,  1.0);
 colorRGBA const PURPLE   (0.5,  0.0,  0.6,  1.0);
 colorRGBA const TRANS    (1.0,  1.0,  1.0,  TRANS_AMOUNT);
 colorRGBA const ALPHA0   (1.0,  1.0,  1.0,  0.0);
+colorRGBA const RGBA0    (0.0,  0.0,  0.0,  0.0);
 colorRGBA const ALPHA0_5 (1.0,  1.0,  1.0,  0.5);
 colorRGBA const BROWN    (0.6,  0.25, 0.1,  1.0);
 colorRGBA const DK_BROWN (0.3,  0.15, 0.08, 1.0);
