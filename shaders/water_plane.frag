@@ -5,9 +5,8 @@ uniform vec4 water_color, reflect_color;
 
 void main()
 {
-	vec4 color  = texture2D(water_tex, gl_TexCoord[0].st) * water_color;
-	vec3 norm   = normalize(normal); // renormalize
-	vec3 epos_n = normalize(epos.xyz);
+	vec4 color = texture2D(water_tex, gl_TexCoord[0].st) * water_color;
+	vec3 norm  = normalize(normal); // renormalize
 
 	// calculate lighting
 	vec4 lighting = gl_FrontMaterial.emission + gl_FrontMaterial.ambient * gl_LightModel.ambient;
@@ -16,6 +15,7 @@ void main()
 
 	if (reflections) {
 		// add some green at shallow view angles
+		vec3 epos_n = normalize(epos.xyz);
 		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), 0.2*(1.0 - abs(dot(epos_n, norm))));
 
 		// calculate reflections
