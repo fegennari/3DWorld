@@ -760,6 +760,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 
 	if (draw_pass == 0) {
 		setup_enabled_lights();
+		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", 0, d); // VS/FS
 		unsigned const p(set_shader_prog("fog.part+per_pixel_lighting_textured", "linear_fog.part+ads_lighting.part*+per_pixel_lighting_textured"));
 		setup_fog_scale(p);
 		add_uniform_float(p, "min_alpha", 0.9*alpha);
