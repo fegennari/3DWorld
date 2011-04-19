@@ -803,6 +803,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 		setup_enabled_lights();
 		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		set_bool_shader_prefix("reflections", reflections, 1); // FS
+		set_bool_shader_prefix("add_waves", ((display_mode & 0x0100) != 0), 1); // FS
 		unsigned const p(set_shader_prog("fog.part+texture_gen.part+water_plane", "linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane"));
 		setup_fog_scale(p);
 		add_uniform_int(p, "water_tex",      0);

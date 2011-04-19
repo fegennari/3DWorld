@@ -20,8 +20,9 @@ void main()
 
 		// calculate reflections
 		float reflect_w  = get_fresnel_reflection(-1.0*epos_n, norm, 1.0, 1.333);
-		vec2 ref_tex_st  = 0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5);
-		vec4 reflect_tex = vec4(texture2D(reflection_tex, ref_tex_st).rgb, 1.0);
+		float ripple     = (add_waves ? 0.3*(texture2D(water_tex, 12.0*gl_TexCoord[0].st).g - 0.57) : 0.0);
+		vec2 ref_tex_st  = 0.5*proj_pos.xy/proj_pos.w + ripple + vec2(0.5, 0.5);
+		vec4 reflect_tex = vec4(texture2D(reflection_tex, clamp(ref_tex_st, 0.0, 1.0)).rgb, 1.0);
 		color = mix(color, reflect_color * reflect_tex, reflect_w);
 	}
 
