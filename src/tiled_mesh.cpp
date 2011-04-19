@@ -320,7 +320,7 @@ public:
 			} // for x
 		} // for y
 		//if (tex_bs == 0) {PRINT_TIME("Texture Gen");}
-		bool const mipmaps(0); // mipmaps take about 33% more memory
+		bool const mipmaps(1); // mipmaps take about 33% more memory
 		setup_texture(tid, GL_MODULATE, mipmaps, 0, 0, 0, 0);
 		assert(tid > 0 && glIsTexture(tid));
 		//if (mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
