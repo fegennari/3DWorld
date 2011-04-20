@@ -5,8 +5,16 @@ uniform vec4 water_color, reflect_color;
 
 void main()
 {
-	vec4 color = texture2D(water_tex, gl_TexCoord[0].st) * water_color;
-	vec3 norm  = normalize(normal); // renormalize
+	vec2 st     = gl_TexCoord[0].st;
+	vec4 color  = texture2D(water_tex, st) * water_color;
+	vec3 norm   = normalize(normal); // renormalize
+	vec2 ripple = vec2(0,0);
+
+	if (add_waves) {
+		// calculate ripple adjustment of normal and reflection based on scaled water texture
+		ripple = vec2(texture2D(water_tex, 12.0*st).g, texture2D(water_tex, 10.0*st+vec2(0.5,0.5)).g) - 0.575;
+		norm   = normalize(norm + 2.0*vec3(ripple, 0));
+	}
 
 	// calculate lighting
 	vec4 lighting = gl_FrontMaterial.emission + gl_FrontMaterial.ambient * gl_LightModel.ambient;
@@ -14,15 +22,15 @@ void main()
 	if (enable_light1) lighting += add_light_comp_pos(norm, epos, 1);
 
 	if (reflections) {
+		vec3 epos_n = normalize(normalize(epos.xyz) + 2.0*vec3(ripple, 0));
+
 		// add some green at shallow view angles
-		vec3 epos_n = normalize(epos.xyz);
 		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), 0.2*(1.0 - abs(dot(epos_n, norm))));
 
 		// calculate reflections
 		float reflect_w  = get_fresnel_reflection(-1.0*epos_n, norm, 1.0, 1.333);
-		float ripple     = (add_waves ? 0.3*(texture2D(water_tex, 12.0*gl_TexCoord[0].st).g - 0.57) : 0.0);
-		vec2 ref_tex_st  = 0.5*proj_pos.xy/proj_pos.w + ripple + vec2(0.5, 0.5);
-		vec4 reflect_tex = vec4(texture2D(reflection_tex, clamp(ref_tex_st, 0.0, 1.0)).rgb, 1.0);
+		vec2 ref_tex_st  = clamp(0.5*proj_pos.xy/proj_pos.w + 0.3*ripple + vec2(0.5, 0.5), 0.0, 1.0);
+		vec4 reflect_tex = vec4(texture2D(reflection_tex, ref_tex_st).rgb, 1.0);
 		color = mix(color, reflect_color * reflect_tex, reflect_w);
 	}
 
