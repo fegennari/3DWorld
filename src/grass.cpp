@@ -432,7 +432,6 @@ public:
 		select_multitex(GRASS_BLADE_TEX, 0);
 		enable_blend();
 		set_specular(0.1, 10.0);
-		//glEnable(GL_POLYGON_SMOOTH);
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 		glEnable(GL_COLOR_MATERIAL);

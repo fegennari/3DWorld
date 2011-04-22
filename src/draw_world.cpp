@@ -2423,9 +2423,7 @@ void draw_fires() {
 
 	// animated fire textured quad
 	//glDisable(GL_DEPTH_TEST);
-	//glEnable(MULTISAMPLE_ARB);
 	draw_billboarded_objs(fires, FIRE_TEX);
-	//glDisable(MULTISAMPLE_ARB);
 }
 
 

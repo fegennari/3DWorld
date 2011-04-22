@@ -14,7 +14,7 @@ void init_glew() {
 	  fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
 	  assert(0);
 	}
-	glEnable(GL_MULTISAMPLE);
+	glEnable(GL_MULTISAMPLE); // only works when using a multisampling graphics context
 }
 
 
