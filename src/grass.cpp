@@ -89,8 +89,8 @@ public:
 				float const xval(get_xval(x)), yval(get_yval(y));
 
 				for (unsigned n = 0; n < grass_density; ++n) {
-					float const xv(rand_uniform(xval, xval + DX_VAL));
-					float const yv(rand_uniform(yval, yval + DY_VAL));
+					float const xv(rand_uniform2(xval, xval + DX_VAL));
+					float const yv(rand_uniform2(yval, yval + DY_VAL));
 					float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
 					point const pos(xv, yv, mh);
 
@@ -142,8 +142,8 @@ public:
 			float const ccomp(CLIP_TO_01(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rand_float()));
 			color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
 		}
-		float const length(grass_length*rand_uniform(0.7, 1.3));
-		float const width( grass_width *rand_uniform(0.7, 1.3));
+		float const length(grass_length*rand_uniform2(0.7, 1.3));
+		float const width( grass_width *rand_uniform2(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
 	}
 
