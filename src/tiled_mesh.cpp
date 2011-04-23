@@ -494,14 +494,21 @@ public:
 		setup_mesh_draw_shaders(wpz);
 		if (world_mode == WMODE_INF_TERRAIN && show_fog) draw_water_edge(wpz); // Note: doesn't take into account waves
 		setup_mesh_lighting();
-		
+		vector<pair<float, tile_t *> > to_draw;
+
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
 			if (DEBUG_TILES) mem += i->second->get_gpu_memory();
 			if (add_hole && i->first.x == 0 && i->first.y == 0) continue;
-			if (i->second->get_rel_dist_to_camera() > 1.4)      continue; // too far to draw
+			float const dist(i->second->get_rel_dist_to_camera());
+			if (dist > 1.4) continue; // too far to draw
 			zmin = min(zmin, i->second->get_zmin());
-			num_drawn += i->second->draw(data, indices);
+			to_draw.push_back(make_pair(dist, i->second));
+		}
+		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
+
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			num_drawn += to_draw[i].second->draw(data, indices);
 		}
 		unset_shader_prog();
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
