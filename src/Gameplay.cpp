@@ -898,9 +898,9 @@ void landmine_collision(int index, int obj_index, vector3d const &velocity, poin
 		invalid_collision = 1;
 		return; // camera/smiley ran into his own landmine
 	}
-	smiley_collision(obj_index, index, velocity, position, energy, LANDMINE);
-	blast_radius(position, LANDMINE, index, obj.source, 0);
-	gen_smoke(position);
+	smiley_collision(obj_index, index, velocity, obj.pos, energy, LANDMINE);
+	blast_radius(obj.pos, LANDMINE, index, obj.source, 0);
+	gen_smoke(obj.pos);
 	obj.status = 0;
 }
 
@@ -1142,6 +1142,17 @@ void blast_radius(point const &pos, int type, int obj_index, int shooter, int ch
 }
 
 
+// returns true if there are no objects blocking the explosion
+bool check_explosion_damage(point const &p1, point const &p2, int cobj) {
+
+	int cindex;
+	if (line_intersect_mesh(p1, p2)) return 0;
+	if (!check_coll_line(p1, p2, cindex, cobj, 1, 0)) return 1;
+	assert((unsigned)cindex < coll_objects.size());
+	return (coll_objects[cindex].destroy >= SHATTERABLE); // blocked by a non destroyable static object
+}
+
+
 void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview) {
 
 	assert(damage >= 0.0 && size >= 0.0);
@@ -1158,11 +1169,11 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		add_blastr(pos, signed_rand_vector_norm(), 0.7*size, damage, int(1.5*time), shooter, WHITE, WHITE, ETYPE_ANIM_FIRE);
 		//add_blastr(pos, signed_rand_vector_norm(), 0.7*size, damage, time, shooter, YELLOW, RED, ETYPE_FIRE);
 	}
-	if (dist <= size && (type != IMPACT || shooter != CAMERA_ID) &&
-		(type != SEEK_D || !cview) && !line_intersect_mesh(pos, get_camera_pos(), 1))
-	{
-		br_source = type;
-		camera_collision(type, shooter, zero_vector, pos, damage*(1.02 - dist/size), BLAST_RADIUS);
+	if (dist <= size && (type != IMPACT || shooter != CAMERA_ID) && (type != SEEK_D || !cview)) {
+		if (check_explosion_damage(pos, get_camera_pos(), camera_coll_id)) {
+			br_source = type;
+			camera_collision(type, shooter, zero_vector, pos, damage*(1.02 - dist/size), BLAST_RADIUS);
+		}
 	}
 	for (int g = 0; g < num_groups; ++g) { // apply blast radius damage to objects
 		obj_group &objg(obj_groups[g]);
@@ -1183,7 +1194,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		for (unsigned i = 0; i < nobj; ++i) {
 			if (!objg.obj_within_dist(i, pos, size)) continue; // size+radius?
 			dwobject &obj(objg.get_obj(i));
-			if (large_obj && line_intersect_mesh(obj.pos, pos)) continue;
+			if (large_obj && !check_explosion_damage(pos, obj.pos, obj.coll_id)) continue; // blocked by an object
 			float const damage2(damage*(1.02 - p2p_dist(obj.pos, pos)/size));
 			
 			if (type2 == SMILEY && (type != IMPACT || shooter != (int)i)) {
