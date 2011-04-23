@@ -1,5 +1,6 @@
 uniform float water_plane_z = 0.0;
 uniform float water_atten = 1.0;
+//varying float water_depth;
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
@@ -38,12 +39,14 @@ void main()
 {
 	setup_texgen(0);
 	setup_texgen(1);
+	//setup_texgen(2);
 	gl_Position = ftransform();
 	vec3 normal = gl_NormalMatrix * gl_Normal; // eye space, not normalized
 	vec4 color  = gl_Color * gl_LightModel.ambient;
 	if (enable_light0) color += add_light_comp(normal, 0);
 	if (enable_light1) color += add_light_comp(normal, 1);
 	gl_FrontColor = color;
+	//water_depth   = (water_plane_z - gl_Vertex.z);
 
 	// calculate fog coord
 #if 0

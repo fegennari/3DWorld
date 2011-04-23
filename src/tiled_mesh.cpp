@@ -384,7 +384,7 @@ public:
 		}
 		glPushMatrix();
 		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
-		if (tid > 0) set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
+		if (tid > 0) set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE, 1, 0);
 		unsigned ptr_stride(sizeof(vert_norm));
 
 		if (vbo == 0) {
@@ -467,11 +467,13 @@ public:
 	}
 
 	static void setup_mesh_draw_shaders(float wpz) {
+
 		setup_enabled_lights();
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "linear_fog.part+multitex_2"));
+		unsigned const p(set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "linear_fog.part+multitex_2")); // +tiled_mesh
 		setup_fog_scale(p);
 		add_uniform_int(p, "tex0", 0);
 		add_uniform_int(p, "tex1", 1);
+		//add_uniform_int(p, "texw", 2);
 		add_uniform_float(p, "water_plane_z", (has_water() ? wpz : zmin));
 		add_uniform_float(p, "water_atten", WATER_COL_ATTEN*mesh_scale);
 	}
@@ -546,7 +548,7 @@ void fill_gap(float wpz) {
 	
 	if (!DISABLE_TEXTURES) {
 		select_texture(LANDSCAPE_TEX);
-		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
+		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE, 1, 0);
 	}
 	vector<float> xv(MESH_X_SIZE+1), yv(MESH_Y_SIZE+1);
 	float const xstart(get_xval(xoff2)), ystart(get_yval(yoff2));

@@ -34,7 +34,7 @@ struct fp_ratio {
 // Global Variables
 bool clear_landscape_vbo;
 int island(0);
-float lt_green_int(1.0), sm_green_int(1.0);
+float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, draw_mesh_shader;
@@ -349,7 +349,7 @@ void gen_uw_lighting() {
 }
 
 
-void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex) {
+void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex, bool use_uw_tex) {
 
 	float const tx(tex_scale*(((float)xoffset)/((float)xsize) + 0.5));
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
@@ -358,6 +358,10 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	if (use_detail_tex) { // blend in detail nose texture at 30x scale
 		select_multitex(NOISE_TEX, 1);
 		setup_texgen(30.0*tex_scale/TWO_XSS, 30.0*tex_scale/TWO_YSS, 0.0, 0.0);
+	}
+	if (use_uw_tex) {
+		select_multitex(WATER_TEX, 2);
+		setup_texgen(W_TEX_SCALE0/Z_SCENE_SIZE, W_TEX_SCALE0/Z_SCENE_SIZE, water_xoff, water_yoff);
 	}
 }
 
@@ -423,7 +427,7 @@ void display_mesh() { // fast array version
 
 	if (!DISABLE_TEXTURES) {
 		select_texture(LANDSCAPE_TEX);
-		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
+		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE, 1, 0);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
 
@@ -762,21 +766,20 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), vd_scale(2.5*get_tile_radius()*SQRT2);
 	float const dx(xoff*DX_VAL), dy(yoff*DY_VAL);
 	float const vdx(vd_scale*X_SCENE_SIZE), vdy(vd_scale*Y_SCENE_SIZE);
-	static float wxoff(0.0), wyoff(0.0);
 	colorRGBA color;
 	select_water_ice_texture(color, ((world_mode == WMODE_INF_TERRAIN) ? &init_temperature : &temperature));
 	bool const reflections(!(display_mode & 0x20));
 	color.alpha *= 0.5;
 
 	if (temperature > W_FREEZE_POINT) {
-		wxoff -= WATER_WIND_EFF*wind.x*fticks;
-		wyoff -= WATER_WIND_EFF*wind.y*fticks;
+		water_xoff -= WATER_WIND_EFF*wind.x*fticks;
+		water_yoff -= WATER_WIND_EFF*wind.y*fticks;
 	}
 	point const camera(get_camera_pos());
 	vector3d(0.0, 0.0, ((camera.z < zval) ? -1.0 : 1.0)).do_glNormal();
 	set_fill_mode();
 	enable_blend();
-	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + wxoff), (tscale*(yoff2 - yoff)*DY_VAL + wyoff));
+	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + water_xoff), (tscale*(yoff2 - yoff)*DY_VAL + water_yoff));
 	bool const use_shader(1);
 
 	if (use_shader) {

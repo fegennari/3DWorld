@@ -1163,7 +1163,7 @@ void water_color_atten_pt(float *c, int x, int y, point const &pos, point const 
 float get_cloud_shadow_atten(int x, int y);
 colorRGBA setup_mesh_lighting();
 void run_post_mesh_draw();
-void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex=1);
+void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex, bool use_uw_tex);
 void display_mesh();
 float display_mesh3(int const *const hole_bounds, float wpz);
 void draw_water_sides(int check_zvals);
