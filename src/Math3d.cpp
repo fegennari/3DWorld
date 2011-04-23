@@ -175,7 +175,7 @@ bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &nor
 		}
 	}
 	if (num_inside[1] == npts) return 1;
-	point const center(cube.get_center());
+	point const center(cube.get_cube_center());
 
 	if (point_in_polygon_2d(center.x, center.y, pts, npts, 0, 1)) {
 		float const zv((fabs(norm.z) > 0.001) ? -(center.x*norm.x + center.y*norm.y + dval)/norm.z : pts[0].z);

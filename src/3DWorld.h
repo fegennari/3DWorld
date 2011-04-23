@@ -464,6 +464,17 @@ struct colorRGB { // size = 12
 		G = CLIP_TO_01(G);
 		B = CLIP_TO_01(B);
 	}
+	void from_normal(vector3d const &n) { // for normal maps
+		R = 0.5*(n.x + 1.0);
+		G = 0.5*(n.y + 1.0);
+		B = 0.5*(n.z + 1.0);
+	}
+	void to_normal(vector3d &n) const { // for normal maps
+		n.x = 2.0*R - 1.0;
+		n.y = 2.0*G - 1.0;
+		n.z = 2.0*B - 1.0;
+	}
+	void do_glColor() const {glColor3fv((float *)this);}
 };
 
 
