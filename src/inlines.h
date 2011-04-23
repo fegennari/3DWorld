@@ -54,6 +54,50 @@ inline float InvSqrt(float x) {
 
 typedef float (*rand_func)(float, float);
 
+
+// this is a good random number generator written by Stephen E. Derenzo
+template<typename T> inline void randome_int(long &s1ptr, long &s2ptr, T &ranptr) {
+
+	if ((s1ptr = 40014*(s1ptr%53668) - 12211*(s1ptr/53668)) < 0) s1ptr += 2147483563;
+	if ((s2ptr = 40692*(s2ptr%52774) - 3791 *(s2ptr/52774)) < 0) s2ptr += 2147483399;
+	if ((ranptr = s1ptr - s2ptr) < 1) ranptr += 2147483562;
+}
+
+
+inline void randome(long &s1ptr, long &s2ptr, double &ranptr) {
+
+	randome_int(s1ptr, s2ptr, ranptr);
+	ranptr = ranptr/2147483563.;
+}
+
+
+inline int rand2() {
+
+	int rand_num;
+	randome_int(rseed1, rseed2, rand_num);
+	return rand_num;
+}
+
+
+inline int rand2_seed_mix() {
+	//int val1(rand2()); swap(rseed1, rseed2); return (val1 + rand2()); // more random
+	return (rseed1 ^ (rseed2 >> 8)); // faster (should call rand2_mix() after)
+}
+
+
+inline void rand2_mix() {
+	rand2(); swap(rseed1, rseed2);
+}
+
+
+inline double rand2d() {
+
+	double rand_num;
+	randome(rseed1, rseed2, rand_num);
+	return rand_num;
+}
+
+
 inline float rand_float() { // uniform 0 to 1
 	return 0.0001*(rand()%10000); // only 16-bit random numbers
 }
@@ -92,51 +136,6 @@ inline float rand_gaussian(float mean, float std_dev) {
 
 inline float rand_gaussian2(float mean, float std_dev) {
 	return mean + std_dev*rgauss2();
-}
-
-
-// this is a good random number generator written by Stephen E. Derenzo
-inline void randome(long &s1ptr, long &s2ptr, double &ranptr) {
-
-	if ((s1ptr = 40014*(s1ptr%53668) - 12211*(s1ptr/53668)) < 0) s1ptr += 2147483563;
-	if ((s2ptr = 40692*(s2ptr%52774) - 3791*(s2ptr/52774)) < 0)  s2ptr += 2147483399;
-	if ((ranptr = s1ptr - s2ptr) < 1) ranptr += 2147483562.;
-	ranptr = ranptr/2147483563.;
-}
-
-
-inline void randome_int(long &s1ptr, long &s2ptr, int &ranptr) {
-
-	if ((s1ptr = 40014*(s1ptr%53668) - 12211*(s1ptr/53668)) < 0) s1ptr += 2147483563;
-	if ((s2ptr = 40692*(s2ptr%52774) - 3791*(s2ptr/52774)) < 0)  s2ptr += 2147483399;
-	if ((ranptr = s1ptr - s2ptr) < 1) ranptr += 2147483562;
-}
-
-
-inline int rand2() {
-
-	int rand_num;
-	randome_int(rseed1, rseed2, rand_num);
-	return rand_num;
-}
-
-
-inline int rand2_seed_mix() {
-	//int val1(rand2()); swap(rseed1, rseed2); return (val1 + rand2()); // more random
-	return (rseed1 ^ (rseed2 >> 8)); // faster (should call rand2_mix() after)
-}
-
-
-inline void rand2_mix() {
-	rand2(); swap(rseed1, rseed2);
-}
-
-
-inline double rand2d() {
-
-	double rand_num;
-	randome(rseed1, rseed2, rand_num);
-	return rand_num;
 }
 
 
