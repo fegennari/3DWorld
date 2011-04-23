@@ -349,7 +349,7 @@ void gen_uw_lighting() {
 }
 
 
-void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex, bool use_uw_tex) {
+void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex) {
 
 	float const tx(tex_scale*(((float)xoffset)/((float)xsize) + 0.5));
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
@@ -358,10 +358,6 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	if (use_detail_tex) { // blend in detail nose texture at 30x scale
 		select_multitex(NOISE_TEX, 1);
 		setup_texgen(30.0*tex_scale/TWO_XSS, 30.0*tex_scale/TWO_YSS, 0.0, 0.0);
-	}
-	if (use_uw_tex) {
-		select_multitex(WATER_TEX, 2);
-		setup_texgen(W_TEX_SCALE0/Z_SCENE_SIZE, W_TEX_SCALE0/Z_SCENE_SIZE, water_xoff, water_yoff);
 	}
 }
 
@@ -427,7 +423,7 @@ void display_mesh() { // fast array version
 
 	if (!DISABLE_TEXTURES) {
 		select_texture(LANDSCAPE_TEX);
-		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE, 1, 0);
+		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
 
