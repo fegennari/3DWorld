@@ -109,7 +109,7 @@ weapon const weapons[NUM_WEAPONS+1] = {
 	weapon(0, 1, 1,   3,   BALL,     25,  1,  1,   1.5,  3.0, 0.0,    0.0,  0.05,  3.0,  "Dodgeball"       ),
 	weapon(0, 1, 30,  500, S_BALL,   18,  1,  1,   1.3,  3.3, 0.0,    0.0,  0.0,   1.5,  "Bouncy Ball"     ),
 	weapon(1, 1, 10,  100, ROCKET,   32,  1,  1,   0.7,  3.1, 1000.0, 0.42, 0.003, 0.0,  "Rocket Launcher" ),
-	weapon(0, 1, 5,   50,  LANDMINE, 30,  1,  1,   0.0,  2.0, 2000.0, 0.39, 0.0,   4.0,  "Proximity Mine"  ),
+	weapon(0, 1, 5,   50,  LANDMINE, 30,  1,  1,   0.0,  2.0, 4000.0, 0.39, 0.0,   4.0,  "Proximity Mine"  ),
 	weapon(1, 1, 5,   50,  SEEK_D,   60,  1,  1,   0.5,  2.5, 2300.0, 0.50, 0.0,   0.0,  "Seek and Destroy"),
 	weapon(0, 1, 25,  500, STAR5,    10,  1,  1,   1.1,  3.0, 0.0,    0.0,  0.015, 2.0,  "Throwing Star"   ),
 	weapon(1, 1, 100, 600, UNDEF,    2,   1,  1,   0.0,  0.0, 70.0,   0.0,  0.02,  0.0,  "M16"             ),

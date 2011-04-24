@@ -898,7 +898,7 @@ void landmine_collision(int index, int obj_index, vector3d const &velocity, poin
 		invalid_collision = 1;
 		return; // camera/smiley ran into his own landmine
 	}
-	smiley_collision(obj_index, index, velocity, obj.pos, energy, LANDMINE);
+	//smiley_collision(obj_index, index, velocity, obj.pos, energy, LANDMINE);
 	blast_radius(obj.pos, LANDMINE, index, obj.source, 0);
 	gen_smoke(obj.pos);
 	obj.status = 0;
