@@ -1040,7 +1040,7 @@ void dwobject::damage_object(float damage, point const &dpos, point const &shoot
 	health -= HEALTH_PER_DAMAGE*damage;
 	flags  &= ~STATIC_COBJ_COLL;
 
-	if (health >= 0) { // still alive, send it flying
+	if (health >= 0 && weapon != W_LASER) { // still alive, send it flying
 		status = 1;
 		if (type != LANDMINE) flags &= ~ALL_COLL_STOPPED;
 		update_vel_from_damage((pos - pos0)*((weapon == W_BLADE) ? -1.6*damage2 : damage2)); // W_BLADE : pull object towards you
