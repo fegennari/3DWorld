@@ -1434,13 +1434,13 @@ bool is_shadowed_lightmap(point const &p) {
 }
 
 
-void light_source::pack_to_floatv(float *data) const { // unused
+void light_source::pack_to_floatv(float *data) const {
 
 	// store light_source as: {center.xyz, radius}, {color.rgba}, {dir, bwidth}
 	assert(data);
 	UNROLL_3X(*(data++) = center[i_];)
 	*(data++) = radius;
-	UNROLL_3X(*(data++) = color[i_];) // [0,1]
+	UNROLL_3X(*(data++) = 0.5*(1.0 + color[i_]);) // map [-1,1] => [0,1] for negative light support
 	*(data++) = color[3];
 	UNROLL_3X(*(data++) = 0.5*(1.0 + dir[i_]);) // map [-1,1] to [0,1]
 	*(data++) = bwidth; // [0,1]

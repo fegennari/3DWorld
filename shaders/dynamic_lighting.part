@@ -39,6 +39,7 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye) {
 		//if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case
 		vec4 lcolor     = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
 		lcolor.rgb     *= 10.0; // unscale color
+		lcolor.rgb      = 2.0*lcolor.rgb - 1.0; // map [0,1] to [-1,1] for negative light support
 		float intensity = get_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
 		
 		if (has_dir_lights) {
@@ -51,5 +52,5 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye) {
 		float spec_mag = pow(max(dot(normal, half_vect), 0.0), gl_FrontMaterial.shininess);
 		color += lcolor.rgb * (gl_FrontMaterial.specular.rgb*spec_mag + vec3(1,1,1)*diff_mag) * (lcolor.a * intensity);
 	}
-	return clamp(color, 0.0, 1.0);
+	return min(color, 1.0);
 }

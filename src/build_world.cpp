@@ -163,6 +163,13 @@ void dwobject::add_obj_dynamic_light(int index) const {
 			if (stime < 1.0) add_dynamic_light(0.2, pos, scolor);
 		}
 		break;
+	case BALL:
+		{
+			colorRGBA colors[NUM_DB_TIDS] = {BLUE, colorRGBA(1.0, 0.5, 0.5, 1.0), colorRGBA(0.5, 1.0, 0.5, 1.0)};
+			colorRGBA const color((game_mode == 2) ? colors[index%NUM_DB_TIDS] : colorRGBA(-1.0, -1.0, -1.0, 1.0));
+			add_dynamic_light(0.8, pos, color);
+		}
+		break;
 	}
 }
 
