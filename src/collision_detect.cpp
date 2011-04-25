@@ -933,7 +933,7 @@ void vert_coll_detector::check_cobj(int index) {
 	if (z1 > zmaxc || z2 < zminc)                    return;
 	vector3d norm(zero_vector), pvel(zero_vector);
 	bool const player_step(player && (camera_change || (cobj.d[2][1] - z1) <= o_radius*C_STEP_HEIGHT));
-	bool coll_bot(0);
+	bool coll_top(0), coll_bot(0);
 	
 	if (cobj.platform_id >= 0) { // calculate platform velocity
 		assert(cobj.platform_id < (int)platforms.size());
@@ -949,6 +949,7 @@ void vert_coll_detector::check_cobj(int index) {
 			if (pos.y < (ymin-o_radius) || pos.y > (ymax+o_radius)) break;
 			if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj))        break;
 			if (!sphere_cube_intersect(pos, o_radius, cobj, (pold - mdir), obj.pos, norm, cdir, 0)) break; // shouldn't get here much
+			coll_top = (cdir == 5);
 			coll_bot = (cdir == 4);
 			lcoll    = 1;
 			//crcdir  |= (((cdir >> 1) + 1) % 3); // crcdir: x=1, y=2, z=0, cdir: -x0=0 +x=1 -y=2 +y=3 -z=4 +z=5
@@ -1014,6 +1015,7 @@ void vert_coll_detector::check_cobj(int index) {
 					norm.assign(0.0, 0.0, 1.0);
 					float const rdist(rad - radius);
 					obj.pos.z = zmaxc;
+					coll_top  = 1;
 					
 					if (rdist > 0.0) {
 						obj.pos.z -= o_radius;
@@ -1092,13 +1094,15 @@ void vert_coll_detector::check_cobj(int index) {
 		// collision with the top of a cube attached to a platform (on first iteration only)
 		if (cobj.platform_id >= 0) {
 			assert(cobj.platform_id < (int)platforms.size());
+			platform const &pf(platforms[cobj.platform_id]);
 			is_moving = (lcoll == 2);
 
 			if (animate2 && do_coll_funcs && iter == 0) {
-				if (lcoll == 2) { // move with the platform (clip v if large -z?)
-					obj.pos += platforms[cobj.platform_id].get_last_delta();
+				if (is_moving) { // move with the platform (clip v if large -z?)
+					obj.pos += pf.get_last_delta();
 				}
-				else if (coll_bot && platforms[cobj.platform_id].get_last_delta().z < 0.0) {
+				// the coll_top part isn't really right - we want to check for collsion with another object above
+				else if ((coll_bot && pf.get_last_delta().z < 0.0) /*|| (coll_top && pf.get_last_delta().z > 0.0)*/) {
 					if (type == CAMERA || type == SMILEY) {
 						int const ix((type == CAMERA) ? -1 : obj_index);
 						smiley_collision(ix, -2, vector3d(0.0, 0.0, -1.0), pos, 2000.0, CRUSHED); // lots of damage
@@ -1106,7 +1110,7 @@ void vert_coll_detector::check_cobj(int index) {
 				}
 			}
 			// reset last pos (init_dir) if object is only moving on a platform
-			bool const platform_moving(platforms[cobj.platform_id].is_moving());
+			bool const platform_moving(pf.is_moving());
 			//if (type == BALL && platform_moving) obj.init_dir = obj.pos;
 			if (platform_moving) obj.flags |= PLATFORM_COLL;
 		}
