@@ -25,8 +25,8 @@ void main()
 	
 	// calculate lighting: L0-L1 is directional
 	vec4 color = gl_Color * gl_LightModel.ambient;
-	if (enable_light0) color += add_light_comp(n, 0);
-	if (enable_light1) color += add_light_comp(n, 1);
+	if (enable_light0) color += add_pt_light_comp(n, epos, 0);
+	if (enable_light1) color += add_pt_light_comp(n, epos, 1);
 	gl_FrontColor   = color;
 	gl_FogFragCoord = length(epos.xyz);
 } 

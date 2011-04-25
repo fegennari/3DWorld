@@ -408,7 +408,8 @@ public:
 		unsigned const num_dlights(enable_dynamic_lights());
 
 		if (grass_wind) {
-			set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
+			set_shader_prefix("#define USE_LIGHT_COLORS",  0); // VS
+			set_shader_prefix("#define USE_GOOD_SPECULAR", 0); // VS
 #if 0 // per-pixel dynamic lighting - looks better, but slow
 			setup_enabled_lights(2); // L0-L1: static directional
 			set_dlights_booleans(1, 1); // FS
@@ -431,7 +432,7 @@ public:
 		vert_norm_tc_color::set_vbo_arrays();
 		select_multitex(GRASS_BLADE_TEX, 0);
 		enable_blend();
-		set_specular(0.1, 10.0);
+		set_specular(0.2, 20.0);
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 		glEnable(GL_COLOR_MATERIAL);
