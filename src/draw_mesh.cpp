@@ -767,7 +767,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 	bool const reflections(!(display_mode & 0x20));
 	color.alpha *= 0.5;
 
-	if (temperature > W_FREEZE_POINT) {
+	if (animate2 && temperature > W_FREEZE_POINT) {
 		water_xoff -= WATER_WIND_EFF*wind.x*fticks;
 		water_yoff -= WATER_WIND_EFF*wind.y*fticks;
 	}
@@ -798,7 +798,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 		else {
 			blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 		}
-		rcolor.alpha = 0.5*(0.5 + color.alpha); // ???
+		rcolor.alpha = 0.5*(0.5 + color.alpha);
 		setup_enabled_lights();
 		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		set_bool_shader_prefix("reflections", reflections, 1); // FS

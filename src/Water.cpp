@@ -311,9 +311,8 @@ public:
 		}
 		if (rcolor.alpha > 0.0) {
 			float const r(get_fresnel_reflection(view_dir*-1, n, 1.0, WATER_INDEX_REFRACT));
-			float const blend(0.5*(0.5 + r)*rcolor.alpha); // 50% pure reflect, 50% fresnel
 			rcolor.alpha = 1.0; // transparent objects
-			blend_color(color, rcolor, color, blend, 1);
+			blend_color(color, rcolor, color, r*rcolor.alpha, 1);
 		}
 	}
 
