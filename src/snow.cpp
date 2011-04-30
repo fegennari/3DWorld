@@ -16,6 +16,7 @@ bool has_snow(0);
 point vox_delta;
 map<int, unsigned> x_strip_map;
 
+extern bool disable_shaders;
 extern int display_mode, read_snow_file, write_snow_file;
 extern unsigned num_snowflakes;
 extern float ztop, zbottom, temperature, snow_depth, snow_random;
@@ -756,9 +757,8 @@ void draw_snow() {
 		PRINT_TIME("Snow Shadow Calculation");
 	}
 	//RESET_TIME;
-	bool const use_shader(1);
 
-	if (use_shader) {
+	if (!disable_shaders) {
 		setup_enabled_lights();
 		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", 1, d); // VS/FS
 		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
@@ -781,7 +781,7 @@ void draw_snow() {
 	glEnable(GL_NORMALIZE);
 	disable_blend();
 	set_specular(0.0, 1.0);
-	if (use_shader) unset_shader_prog();
+	if (!disable_shaders) unset_shader_prog();
 	//PRINT_TIME("Snow Draw");
 }
 

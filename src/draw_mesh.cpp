@@ -37,7 +37,7 @@ int island(0);
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, draw_mesh_shader;
+extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, draw_mesh_shader, disable_shaders;
 extern unsigned num_jterms;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
@@ -776,9 +776,8 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 	set_fill_mode();
 	enable_blend();
 	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + water_xoff), (tscale*(yoff2 - yoff)*DY_VAL + water_yoff));
-	bool const use_shader(1);
 
-	if (use_shader) {
+	if (!disable_shaders) {
 		set_multitex(1);
 
 		if (reflection_tid) {
@@ -860,7 +859,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 	glEnd();
 	glPopMatrix();
 	
-	if (use_shader) {
+	if (!disable_shaders) {
 		disable_multitex_a();
 		unset_shader_prog();
 	}

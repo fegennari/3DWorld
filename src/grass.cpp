@@ -14,7 +14,7 @@ bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
-extern bool has_dir_lights, has_snow;
+extern bool has_dir_lights, has_snow, disable_shaders;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
 extern colorRGBA leaf_base_color;
@@ -410,7 +410,7 @@ public:
 		check_for_updates();
 
 		// check for dynamic light sources
-		bool const grass_wind(!has_snow && (display_mode & 0x0100) != 0);
+		bool const grass_wind(!disable_shaders && !has_snow && (display_mode & 0x0100) != 0);
 		unsigned const num_dlights(enable_dynamic_lights());
 
 		if (grass_wind) {
