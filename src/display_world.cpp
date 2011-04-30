@@ -1015,11 +1015,11 @@ void draw_inf_terrain_sun_flare() {
 
 
 // render scene reflection to texture
-void create_reflection_texture(unsigned tid, unsigned size, float water_z) {
+void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float water_z) {
 
 	//RESET_TIME;
 	// setup viewport and projection matrix
-	glViewport(0, 0, size, size);
+	glViewport(0, 0, xsize, ysize);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -1051,7 +1051,7 @@ void create_reflection_texture(unsigned tid, unsigned size, float water_z) {
 	glBindTexture(GL_TEXTURE_2D, tid);
 	glReadBuffer(GL_BACK);
 	// glCopyTexSubImage2D copies the frame buffer to the bound texture
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, size, size);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize);
 
 	// reset state
 	glMatrixMode(GL_PROJECTION);
@@ -1066,14 +1066,20 @@ void create_reflection_texture(unsigned tid, unsigned size, float water_z) {
 unsigned create_reflection() {
 
 	if (display_mode & 0x20) return 0; // reflections not enabled
-	unsigned const size(1024);
-	
+	static unsigned last_xsize(0), last_ysize(0);
+	unsigned const xsize(min(window_width, 1024)), ysize(min(window_height, 1024));
+
+	if (last_xsize != xsize || last_ysize != ysize) {
+		free_texture(reflection_tid);
+		last_xsize = xsize;
+		last_ysize = ysize;
+	}
 	if (!reflection_tid) {
 		setup_texture(reflection_tid, GL_MODULATE, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, 3, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, 3, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	assert(glIsTexture(reflection_tid));
-	create_reflection_texture(reflection_tid, size, water_plane_z);
+	create_reflection_texture(reflection_tid, xsize, ysize, water_plane_z);
 	check_gl_error(999);
 	return reflection_tid;
 }
