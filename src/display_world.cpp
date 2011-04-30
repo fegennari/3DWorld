@@ -1067,7 +1067,7 @@ unsigned create_reflection() {
 
 	if (display_mode & 0x20) return 0; // reflections not enabled
 	static unsigned last_xsize(0), last_ysize(0);
-	unsigned const xsize(min(window_width, 1024)), ysize(min(window_height, 1024));
+	unsigned const xsize(window_width/2), ysize(window_height/2);
 
 	if (last_xsize != xsize || last_ysize != ysize) {
 		free_texture(reflection_tid);
