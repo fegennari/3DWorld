@@ -204,12 +204,19 @@ public:
 		     + vertex_normals[y0+1][x0+1]*(xpi*ypi);
 	}
 
-	void upload_data_to_vbo(unsigned start, unsigned end) const {
+	void upload_data_to_vbo(unsigned start, unsigned end, bool create) const {
 		if (start == end) return; // nothing to update
 		assert(start < end && end <= grass.size());
-		vector<vert_norm_tc_color> data;
-		data.resize(3*(end - start));
+		unsigned const num_verts(3*(end - start));
+		unsigned const block_size(3*4096); // must be a multiple of 3
+		unsigned const vntc_sz(sizeof(vert_norm_tc_color));
+		unsigned offset(3*start);
+		vector<vert_norm_tc_color> data(min(num_verts, block_size));
+		bind_vbo(vbo);
 
+		if (create) { // initial upload (setup, no data)
+			upload_vbo_data(NULL, 3*grass.size()*vntc_sz);
+		}
 		for (unsigned i = start, ix = 0; i < end; ++i) {
 			grass_t const &g(grass[i]);
 			point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
@@ -224,16 +231,15 @@ public:
 			data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
 			data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
 			data[ix++].assign(p2,       norm,     tc_adj, 0.5,        g.c);
-		}
-		bind_vbo(vbo);
-		unsigned const vntc_sz(sizeof(vert_norm_tc_color));
+			assert(ix <= data.size());
 
-		if (start == 0 && end == grass.size()) { // full data, do full upload
-			upload_vbo_data(&data.front(), data.size()*vntc_sz);
+			if (ix == block_size || i+1 == end) { // filled block or last entry
+				upload_vbo_sub_data(&data.front(), offset*vntc_sz, ix*vntc_sz); // upload part or all of the data
+				offset += ix;
+				ix = 0; // reset to the beginning of the buffer
+			}
 		}
-		else { // partial data, upload a subset
-			upload_vbo_sub_data(&data.front(), 3*start*vntc_sz, data.size()*vntc_sz);
-		}
+		assert(offset == 3*end);
 		bind_vbo(0);
 	}
 
@@ -364,7 +370,7 @@ public:
 				} // for i
 				if (min_up > max_up) continue; // nothing updated
 				modified[ix] = 1; // usually few duplicates each frame, except for cluster grenade explosions
-				if (vbo_valid) upload_data_to_vbo(min_up, max_up+1);
+				if (vbo_valid) upload_data_to_vbo(min_up, max_up+1, 0);
 				//data_valid = 0;
 			} // for x
 		} // for y
@@ -377,7 +383,7 @@ public:
 	void upload_data() {
 		if (empty()) return;
 		RESET_TIME;
-		upload_data_to_vbo(0, grass.size());
+		upload_data_to_vbo(0, grass.size(), 1);
 		data_valid = 1;
 		PRINT_TIME("Grass Upload VBO");
 		cout << "mem used: " << grass.size()*sizeof(grass_t) << ", vmem used: " << 3*grass.size()*sizeof(vert_norm_tc_color) << endl;
