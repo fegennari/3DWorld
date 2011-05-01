@@ -513,7 +513,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 
 	if (use_vbos) { // draw with branch vbos
 		size_t const branch_stride(sizeof(vert_norm_tc));
-#if 1
+
 		if (branch_vbo == 0) { // create vbo
 			assert(branch_ivbo == 0);
 			unsigned const numcylin(all_cylins.size());
@@ -584,55 +584,6 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
-
-#else
-		if (branch_vbo == 0) { // create vbo
-			unsigned const numcylin(all_cylins.size());
-			assert(num_branch_quads == 0);
-
-			for (unsigned i = 0; i < numcylin; i++) { // determine required data size
-				num_branch_quads += all_cylins[i].get_num_div();
-			}
-			vector<vert_norm_tc> data;
-			data.reserve(4*num_branch_quads);
-			vector_point_norm prev_vpn;
-
-			for (unsigned i = 0; i < numcylin; i++) {
-				draw_cylin const &cylin(all_cylins[i]);
-				unsigned const ndiv(cylin.get_num_div());
-				point const ce[2] = {cylin.p1, cylin.p2};
-				float const ndiv_inv(1.0/ndiv);
-				vector3d v12; // (ce[1] - ce[0]).get_norm()
-				vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
-				bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
-
-				for (unsigned S = 0; S < ndiv; ++S) {
-					for (unsigned j = 0; j < 2; ++j) {
-						unsigned const s((S+j)%ndiv), sm1((s+ndiv-1)%ndiv);
-						float const tx(1.0 - (S+j)*ndiv_inv);
-						vector3d const norm(vpn.n[s] + vpn.n[sm1]); // not normalized
-						vector3d const n[2] = {(prev_connect ? (prev_vpn.n[s] + prev_vpn.n[sm1]) : norm), norm};
-						point    const p[2] = {(prev_connect ? prev_vpn.p[(s<<1)+1] : vpn.p[(s<<1)+0]), vpn.p[(s<<1)+1]};
-						for (unsigned d = 0; d < 2; ++d) data.push_back(vert_norm_tc(p[d^j], n[d^j], tx, float(d^j)));
-					}
-				}
-				prev_vpn = vpn;
-			} // for i
-			assert(data.size() == data.capacity());
-			branch_vbo = create_vbo();
-			assert(branch_vbo > 0);
-			bind_vbo(branch_vbo);
-			upload_vbo_data(&data.front(), data.size()*branch_stride); // ~1.2MB
-		} // end create vbo
-		bind_vbo(branch_vbo); // use vbo for rendering
-		set_array_client_state(1, 1, 1, 0);
-		glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
-		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
-		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(point) + sizeof(vector3d)));
-		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
-		glDrawArrays(GL_QUADS, 0, num);
-		bind_vbo(0);
-#endif
 	}
 	else { // draw branches
 		float const bs_scale(350.0*mscale/dist_c);
