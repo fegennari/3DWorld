@@ -1770,8 +1770,6 @@ int main(int argc, char** argv) {
 
 	open_mp_test(); // testing
 	cout << "Starting 3DWorld."; cout.flush();
-	int rs(1);
-	if (argc == 2) read_ueventlist(argv[1]);
 	
     // Initialize GLUT
 	cout << "."; cout.flush();
@@ -1788,6 +1786,8 @@ int main(int argc, char** argv) {
 	init_window();
 	cout << ".GL Initialized." << endl;
 	//glutFullScreen();
+	if (argc == 2) read_ueventlist(argv[1]);
+	int rs(1);
 
 	if (srand_param == 1) {
 		rs = glutGet(GLUT_ELAPSED_TIME);
