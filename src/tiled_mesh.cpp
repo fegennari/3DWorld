@@ -388,6 +388,7 @@ public:
 		unsigned ptr_stride(sizeof(vert_norm));
 
 		if (vbo == 0) {
+			assert(ivbo == 0);
 			create_data(data, indices);
 			vbo  = create_vbo();
 			ivbo = create_vbo();

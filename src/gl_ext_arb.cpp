@@ -135,6 +135,7 @@ unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned nc
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data)
 {
+	assert(glIsTexture(tid));
 	bind_3d_texture(tid);
 	GLenum const format((ncomp == 4) ? GL_RGBA : GL_RGB);
 	glTexSubImage3D(GL_TEXTURE_3D, 0, xoff, yoff, zoff, xsz, ysz, zsz, format, GL_UNSIGNED_BYTE, data);

@@ -18,6 +18,7 @@ extern int window_width, window_height;
 void create_shadow_fbo() {
 	
 	// Try to use a texture depth component
+	assert(depth_tid == 0);
 	glGenTextures(1, &depth_tid);
 	glBindTexture(GL_TEXTURE_2D, depth_tid);
 	

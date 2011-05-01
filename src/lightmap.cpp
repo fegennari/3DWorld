@@ -891,6 +891,7 @@ void build_lightmap(bool verbose) {
 
 void setup_2d_texture(unsigned &tid) {
 
+	assert(tid == 0);
 	glGenTextures(1, &tid);
 	bind_2d_texture(tid);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

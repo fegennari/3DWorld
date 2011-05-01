@@ -75,6 +75,7 @@ void add_uniform_color(unsigned program, char const *const name, colorRGBA const
 }
 
 
+// unused, unfinished
 bool set_uniform_buffer_data(unsigned program, char const *name, float const *data, unsigned size) {
 
 	if (disable_shaders) return 0;
@@ -111,7 +112,7 @@ bool set_uniform_buffer_data(unsigned program, char const *name, float const *da
 	size = min(size, (unsigned)buf_size);
 
 	// Create UBO
-	static unsigned buffer_id(0);
+	static unsigned buffer_id(0); // FIXME: need to delete this later
 	if (buffer_id == 0 || !glIsBuffer(buffer_id)) glGenBuffers(1, &buffer_id);
 	assert(buffer_id > 0);
 	glBindBuffer(GL_UNIFORM_BUFFER, buffer_id);
