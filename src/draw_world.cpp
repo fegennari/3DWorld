@@ -51,10 +51,10 @@ pt_line_drawer obj_pld, snow_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
-extern int nstars, is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
+extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
-extern unsigned smoke_tid, dl_tid;
+extern unsigned smoke_tid, dl_tid, num_stars;
 extern float zmin, light_factor, water_plane_z, fticks, perspective_fovy, perspective_nclip;
 extern float temperature, atmosphere, TIMESTEP, base_gravity, tan_term, zbottom, sun_rot, leaf_size;
 extern point light_pos, ocean, mesh_origin, flow_source, surface_pos, litning_pos, leaf_points[], star_pts[];
@@ -1857,29 +1857,25 @@ void portal::draw() const {
 
 void draw_stars(float alpha) {
 
-	assert(unsigned(nstars) <= stars.size());
-	float intensity;
-	colorRGBA color, bkg;
+	assert(num_stars <= stars.size());
 	if (alpha <= 0.0) return;
-	color.alpha = 1.0;
-
-	for (unsigned j = 0; j < 3; ++j) {
-		bkg[j] = (1.0 - alpha)*bkg_color[j];
-	}
+	colorRGBA color(BLACK), bkg;
+	UNROLL_3X(bkg[i_] = (1.0 - alpha)*bkg_color[i_];)
 	glPushMatrix();
 	if (camera_mode == 1) translate_to(surface_pos);
 	up_norm.do_glNormal();
 	set_color(BLACK);
+	enable_blend();
+	glPointSize(2.0);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
 	glBegin(GL_POINTS);
 	
-	for (int i = 0; i < nstars; ++i) {
-		if ((rand()%2000) == 0) continue;
-		intensity = stars[i].intensity;
+	for (int i = 0; i < num_stars; ++i) {
+		if ((rand()%400) == 0) continue; // flicker out
 
 		for (unsigned j = 0; j < 3; ++j) {
-			float const c(stars[i].color[j]*intensity);
+			float const c(stars[i].color[j]*stars[i].intensity);
 			color[j] = ((alpha >= 1.0) ? c : (alpha*c + bkg[j]));
 		}
 		color.do_glColor();
@@ -1888,6 +1884,8 @@ void draw_stars(float alpha) {
 	glEnd();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
+	glPointSize(1.0);
+	disable_blend();
 	glPopMatrix();
 }
 

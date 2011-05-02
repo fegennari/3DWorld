@@ -8,7 +8,7 @@
 
 
 float    const SMOKE_ZVEL      = 3.0;
-unsigned const NUM_STARS       = 2500;
+unsigned const NUM_STARS       = 4000;
 unsigned const MAX_BUBBLES     = 2000;
 unsigned const MAX_PART_CLOUDS = 200;
 unsigned const MAX_FIRES       = 50;
@@ -16,7 +16,7 @@ unsigned const MAX_SCORCHES    = 1000;
 
 
 // Global Variables
-int nstars(0);
+unsigned num_stars(0);
 long rseed1(1), rseed2(1);
 vector<star> stars(NUM_STARS);
 obj_vector_t<bubble> bubbles(MAX_BUBBLES);
@@ -27,7 +27,7 @@ obj_vector_t<scorch_mark> scorches(MAX_SCORCHES);
 float gauss_rand_arr[N_RAND_DIST+2];
 
 
-extern int star_init, begin_motion, animate2;
+extern int star_init, begin_motion, animate2, show_fog;
 extern float zmax_est, zmax, ztop;
 extern int coll_id[];
 extern point leaf_points[];
@@ -35,52 +35,45 @@ extern obj_group obj_groups[];
 extern obj_type object_types[];
 
 
-int valid_star_pos(point &pos);
-
-
 
 void gen_stars(float alpha, int half_sphere) {
 
-	float const cmin[3] = {0.7, 0.9, 0.6};
-	int const num_stars(stars.size());
+	if (show_fog) return;
+	unsigned const cur_num_stars(stars.size());
 
 	if (!star_init) {
-		nstars    = num_stars - rand()%max(1, num_stars/4);
+		num_stars = cur_num_stars - rand()%max(1U, cur_num_stars/4);
 		star_init = 1;
 
-		for (int i = 0; i < nstars; ++i) {
+		for (unsigned i = 0; i < num_stars; ++i) {
 			gen_star(stars[i], half_sphere);
 		}
 	}
 	else {
-		nstars += rand()%max(1, num_stars/200);
-		int const old_num(nstars);
-		nstars  = min(nstars, num_stars);
+		num_stars += rand()%max(1U, cur_num_stars/200);
+		int const old_num(num_stars);
+		num_stars  = min(num_stars, cur_num_stars);
 
-		for (int i = old_num; i < nstars; ++i) {
+		for (unsigned i = old_num; i < num_stars; ++i) {
 			gen_star(stars[i], half_sphere);
 		}
-		if ((rand()&3) == 0) {
-			for (int i = 0; i < nstars; ++i) {
+		if ((rand()&15) == 0) {
+			float const cmin[3] = {0.7, 0.9, 0.6};
+
+			for (unsigned i = 0; i < num_stars; ++i) {
 				int const rnum(rand());
 
-				if (rnum%21 == 0) {
+				if (rnum%10 == 0) { // change intensity
 					stars[i].intensity *= 1.0 + 0.1*signed_rand_float();
-					stars[i].intensity = min(stars[i].intensity, 1.0f);
+					stars[i].intensity  = min(stars[i].intensity, 1.0f);
 				}
-				if (rnum%51 == 0) {
+				if (rnum%20 == 0) { // change color
 					for (unsigned j = 0; j < 3; ++j) {
-						stars[i].color[j] *= 1.0 + 0.05*signed_rand_float();
+						stars[i].color[j] *= 1.0 + 0.1*signed_rand_float();
 						stars[i].color[j]  = min(max(stars[i].color[j], cmin[j]), 1.0f);
 					}
 				}
-				if (rnum%101 == 0) {
-					point const orig_pos(stars[i].pos);
-					vadd_rand(stars[i].pos, 0.002);
-					for (unsigned d = 0; d < 3; ++d) stars[i].pos[d] *= SCENE_SIZE[d];
-					if (!valid_star_pos(stars[i].pos)) stars[i].pos = orig_pos;
-				}
-				if (rnum%1001 == 0) gen_star(stars[i], half_sphere);
+				if (rnum%2000 == 0) gen_star(stars[i], half_sphere); // create a new star and destroy the old
 			}
 		}
 	}
@@ -96,12 +89,6 @@ void gen_star(star &star1, int half_sphere) {
 	star1.pos       = rtp_to_xyz(radius, theta, phi);
 	star1.intensity = rand_uniform(0.1, 1.0);
 	star1.color.assign(rand_uniform(0.7, 1.0), rand_uniform(0.9, 1.0), rand_uniform(0.6, 1.0));
-}
-
-
-inline int valid_star_pos(point &pos) {
-
-	return !(pos.z < 0.0 || (fabs(pos.x) < 20.0*X_SCENE_SIZE && fabs(pos.y) < 20.0*Y_SCENE_SIZE && pos.z < 40.0*Z_SCENE_SIZE));
 }
 
 

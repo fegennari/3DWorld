@@ -1034,6 +1034,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	glTranslatef(0.0, 0.0, -water_z); // translate back
 
 	// draw partial scene
+	draw_sun_moon_stars();
 	draw_inf_terrain_sun_flare();
 
 	if (display_mode & 0x01) { // draw mesh
@@ -1179,7 +1180,6 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_transparent(!underwater);
 	draw_game_elements(timer1);
 	if (shadows_enabled()) create_shadows();
-	//gen_stars(1, 1.0, 0);
 	check_xy_offsets();
 	init_x = 0;
 	if (TIMETEST) PRINT_TIME("3.9");
