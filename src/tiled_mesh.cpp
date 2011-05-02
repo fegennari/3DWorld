@@ -399,8 +399,9 @@ public:
 		else {
 			bind_vbos();
 		}
+		// can store normals in a normal map texture, but a vertex texture fetch is slow
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
-		glNormalPointer(   GL_FLOAT, ptr_stride, (void *)sizeof(point)); // *** can store normals in a normal map texture ***
+		glNormalPointer(   GL_FLOAT, ptr_stride, (void *)sizeof(point));
 		glDrawRangeElements(GL_QUADS, 0, data.size(), 4*size*size, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
 		//glDrawElements(GL_QUADS, 4*size*size, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
