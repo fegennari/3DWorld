@@ -1871,7 +1871,7 @@ void draw_stars(float alpha) {
 	glDisable(GL_LIGHTING);
 	glBegin(GL_POINTS);
 	
-	for (int i = 0; i < num_stars; ++i) {
+	for (unsigned i = 0; i < num_stars; ++i) {
 		if ((rand()%400) == 0) continue; // flicker out
 
 		for (unsigned j = 0; j < 3; ++j) {

@@ -981,7 +981,7 @@ void vert_coll_detector::check_cobj(int index) {
 			if (player && cobj.cp.coll_func == landmine_collision) {
 				reff += 1.5*object_types[type].radius; // landmine
 			}
-			if (type == LANDMINE && (cobj.cp.coll_func == camera_collision || cobj.cp.coll_func == smiley_collision)) {
+			if (type == LANDMINE && cobj.is_player()) {
 				reff += 1.5*object_types[cobj.type].radius; // landmine
 			}
 			if (rad <= reff*reff) {

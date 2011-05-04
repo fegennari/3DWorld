@@ -1,6 +1,6 @@
 # Place Items
 # *** FIX ***
-I 27 0 0.0 0.0 0.0 # testing - add health
+#I 28 0 0.0 0.0 0.0 # testing - add health
 
 # Appearance Spots
 #A 0.0 0.0 # Bad - Inside House
