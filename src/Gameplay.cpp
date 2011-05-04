@@ -144,7 +144,7 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 	{
 		energy += object_types[type].damage;
 	}
-	if (type == SHIELD) sstates[target].shields = min(150.0, (100.0 + sstates[target].shields));
+	if (type == SHIELD) sstates[target].shields = min(MAX_SHIELDS, (100.0f + sstates[target].shields));
 	if (type == HEALTH || type == SHIELD || type == POWERUP) return 1;
 
 	if (source == target && energy > 0.0) { // hit yourself
@@ -2347,7 +2347,7 @@ void update_game_frame() {
 			state.powerup_time -= iticks;
 			if (state.powerup_time < 0) state.powerup_time = 0;
 		}
-		if (state.powerup == PU_REGEN && state.shields > 1.0) state.shields = min(150.0, state.shields + 0.075*fticks);
+		if (state.powerup == PU_REGEN && state.shields > 1.0) state.shields = min(MAX_SHIELDS, state.shields + 0.075f*fticks);
 		
 		if (state.plasma_loaded && state.weapon == W_PLASMA) {
 			state.plasma_size += state.get_fspeed_scale()*fticks*PLASMA_SIZE_INCREASE;

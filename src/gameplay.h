@@ -25,6 +25,7 @@ unsigned const BLAST_CHAIN_DELAY  = 3;
 float const FALL_HURT_VEL         = 4.0;
 float const FALL_HURT_HEIGHT      = 4.0;
 float const MAX_HEALTH            = 150.0;
+float const MAX_SHIELDS           = 150.0;
 float const MAX_REGEN_HEALTH      = 200.0;
 float const KILL_HEALTH           = 5.0;
 float const INIT_SHIELDS          = 10.0;
