@@ -168,6 +168,7 @@ conditions under which an object is viewable:
 	3. cobj vis check with center
 	4. cobj vis check with center and top
 	5. cobj vis check with all 7 points
+	6. cobj vis check with all 7 points, including dynamic objects
 */
 // dir must be normalized
 bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int max_level) {
@@ -222,10 +223,11 @@ bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int m
 	int index;
 	point qp[5];
 	unsigned const nrays((radius == 0.0 || max_level == 3) ? 1 : ((max_level == 4) ? 2 : 5));
+	bool const skip_dynamic(max_level < 6);
 	get_sphere_border_pts(qp, pos, viewer, radius, nrays);
 
 	for (unsigned i = 0; i < nrays; ++i) { // can see through transparent objects
-		if (coll_pt_vis_test(qp[i], viewer, ext_dist, index, -1, 0, 1)) return 1;
+		if (coll_pt_vis_test(qp[i], viewer, ext_dist, index, -1, skip_dynamic, 1)) return 1;
 	}
 	return 0; // case 7
 }
