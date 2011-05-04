@@ -536,20 +536,17 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 	// 0    1 5 3 7 2  8  4  6
 	for (step = 0; step < nsteps; ++step) {
 		if (sstate.target_visible) {
-			if (xcpos > xpos) {
-				if      (ycpos > ypos) cdir = 2;
-				else if (ycpos < ypos) cdir = 4;
-				else                   cdir = 3;
-			}
-			else if (xcpos < xpos) {
-				if      (ycpos > ypos) cdir = 8;
-				else if (ycpos < ypos) cdir = 6;
-				else                   cdir = 7;
+			if (xcpos == xpos && ycpos == ypos) {
+				cdir = 0;
 			}
 			else {
-				if      (ycpos > ypos) cdir = 1;
-				else if (ycpos < ypos) cdir = 5;
-				else                   cdir = 0;
+				point2d<float> tdir(xcpos - xpos, ycpos - ypos);
+				tdir.normalize();
+				float angle(atan2(tdir.y, tdir.x) + PI);
+				int const cmap[9] = {7,6,5,4,3,2,1,8,7}; // can wraparound by 1
+				int const val(int(angle/(PI/4) + 0.5));
+				assert(val >= 0 && val < 9);
+				cdir = cmap[val];
 			}
 			
 			// if there has been bloodshed and the smiley can see and attack the target
