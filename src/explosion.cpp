@@ -133,13 +133,13 @@ void blastr::process() const { // land mode
 		int const x1(max(x0 - (int)rad, 1)), x2(min(x0 + (int)rad, MESH_X_SIZE-1));
 		int const y1(max(y0 - (int)rad, 1)), y2(min(y0 + (int)rad, MESH_Y_SIZE-1));
 		rad *= (DX_VAL + DY_VAL)/SQRT2;
-		float const radsq(rad*rad/SQRT2);
+		float const radsq(rad*rad/SQRT2), dscale(2.0E-6*min(2000.0f, damage));
 
 		for (int j = y1; j < y2; ++j) {
 			for (int k = x1; k < x2; ++k) {
 				point const mpt(get_xval(k), get_yval(j), mesh_height[j][k]);
 				float const dist_sq(p2p_dist_sq(pos, mpt));
-				if (dist_sq < radsq) surface_damage[j][k] += 2.0E-6*damage/(dist_sq + 0.01); // do mesh damage
+				if (dist_sq < radsq) surface_damage[j][k] += dscale/(dist_sq + 0.01); // do mesh damage
 			}
 		}
 		//if (time == st_time) // only update grass on the first blast?
