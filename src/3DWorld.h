@@ -170,6 +170,11 @@ template<typename T> struct point2d { // size = 8
 	T mag_sq() const {return (x*x + y*y);}
 	T mag()    const {return sqrt(mag_sq());}
 	T cp_mag(point2d const &p) const {return (x*p.y - y*p.x);}
+
+	void normalize() {
+		T const d(mag());
+		if (d >= TOLERANCE) {x /= d; y /= d;}
+	}
 };
 
 
