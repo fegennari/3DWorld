@@ -365,6 +365,7 @@ public:
 		if (skip_dynamic >= 2 && !cobj.cp.draw)                  return 2;
 		if (test_alpha == 1 && cobj.is_semi_trans())             return 2; // semi-transparent, can see through
 		if (test_alpha == 2 && cobj.cp.color.alpha <= max_alpha) return 2;
+		if (test_alpha && cobj.is_invis_player())                return 2;
 		if (cobj.status == COLL_STATIC && (z1 > cell.zmax || z2 < cell.zmin)) return 0;
 		if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0])              return 2; // clip this shape
 		
@@ -429,6 +430,7 @@ public:
 		cobj.counter = cobj_counter;
 		if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0]) return 2; // clip this shape
 		if (test_alpha && cobj.is_semi_trans())     return 2; // semi-transparent, can see through
+		if (test_alpha && cobj.is_invis_player())   return 2; // should this be here?
 		if (cobj.cp.color.alpha == 0.0)             return 2; // transparent - what objects are these?
 		vector3d temp_norm;
 

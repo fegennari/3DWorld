@@ -211,6 +211,7 @@ public:
 	bool all_shadowed()   const {return 0;} // *** WRITE - check lightmap for all 1s (cache result) ***
 	bool is_occluder()    const {return (status == COLL_STATIC && type == COLL_CUBE && cp.draw && !is_semi_trans());}
 	bool is_player()      const;
+	bool is_invis_player()const;
 	bool truly_static()   const;
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
 	bool can_be_scorched()const;

@@ -418,6 +418,14 @@ bool coll_obj::is_player() const { // sort of a hack
 }
 
 
+bool coll_obj::is_invis_player() const { // sort of a hack
+	
+	if (cp.coll_func == smiley_collision && has_invisibility(cp.cf_index)) return 1;
+	if (cp.coll_func == camera_collision && has_invisibility(-1))          return 1;
+	return 0;
+}
+
+
 void coll_obj::bounding_sphere(point &center, float &brad) const {
 
 	switch (type) {
