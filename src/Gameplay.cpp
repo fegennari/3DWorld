@@ -2285,10 +2285,18 @@ void player_state::init(bool w_start) {
 	fall_counter  = 0;
 	last_dz       = 0.0;
 	last_zvel     = 0.0;
-	shields       = INIT_SHIELDS;
-	powerup       = ((INIT_PU_SH_TIME > 0) ? PU_SHIELD : -1);
-	powerup_time  = INIT_PU_SH_TIME;
 	velocity      = zero_vector;
+
+	if (game_mode == 1) {
+		shields       = INIT_SHIELDS;
+		powerup       = ((INIT_PU_SH_TIME > 0) ? PU_SHIELD : -1);
+		powerup_time  = INIT_PU_SH_TIME;
+	}
+	else {
+		shields       = 0.0;
+		powerup       = -1;
+		powerup_time  = 0;
+	}
 	waypts_used.clear();
 	unreachable.clear();
 	dest_mark.clear();
