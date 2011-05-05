@@ -28,7 +28,7 @@ vector<point> waypoints;
 extern int island, iticks, num_smileys, free_for_all, teams, frame_counter;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS;
-extern float fticks, temperature, zmax, ztop, XY_SCENE_SIZE, ball_velocity, TIMESTEP;
+extern float fticks, temperature, zmax, ztop, XY_SCENE_SIZE, ball_velocity, TIMESTEP, self_damage;
 extern point ocean, orig_camera, orig_cdir;
 extern int coll_id[];
 extern obj_group obj_groups[];
@@ -164,10 +164,17 @@ void smiley_fire_weapon(int smiley_id) {
 	int const &weapon(sstate.weapon);
 	if (smiley.disabled()) return;
 	if (sstate.target_visible != 1 && (weapon != W_LANDMINE || (rand()&3) != 0)) return;
+	int const last_weapon(weapon);
 	
 	if (weapon == W_UNARMED || (!UNLIMITED_WEAPONS && sstate.no_weap_or_ammo())) {
 		init_smiley_weapon(smiley_id); // out of ammo, switch weapons
-		sstate.fire_frame = 0;
+		if (weapon != last_weapon) sstate.fire_frame = 0;
+	}
+	if (sstate.target_visible && self_damage > 0.0 && sstate.powerup != PU_SHIELD && weapons[weapon].self_damage) { // can damage self
+		if (dist_less_than(sstate.target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
+			init_smiley_weapon(smiley_id); // switch weapons to avoid suicide
+			if (weapon != last_weapon) sstate.fire_frame = 0;
+		}
 	}
 	assert(!sstate.no_weap_or_ammo());
 	if (weapon == W_BALL && (rand()&15) != 0) return; // wait to throw
@@ -1007,7 +1014,7 @@ void init_smiley_weapon(int smiley_id) {
 		return;
 	}
 	do {
-		sstate.weapon = 1 + (rand()%(NUM_WEAPONS-2)); // no airstrike
+		sstate.weapon = 1 + (rand()%(NUM_WEAPONS-1)); // no cgrenade
 
 		if (sstate.weapon == W_BBBAT && bbat_iter++ < 10 && (rand()%8) != 0) { // only use baseball bat when in close range
 			if (bb_range == -1) {
@@ -1015,14 +1022,10 @@ void init_smiley_weapon(int smiley_id) {
 				if (sstate.target_visible) dist = p2p_dist(sstate.target_pos, obj_groups[coll_id[SMILEY]].get_obj(smiley_id).pos);
 				bb_range = (dist < 6.0*object_types[SMILEY].radius);
 			}
-			if (!bb_range) {
-				sstate.weapon = W_UNARMED;
-				continue;
-			}
+			if (!bb_range) sstate.weapon = W_UNARMED;
 		}
 		else if (sstate.weapon == W_SBALL && (rand()%5) != 0) {
-			sstate.weapon = W_UNARMED;
-			continue; // prefers not to use a bouncy ball
+			sstate.weapon = W_UNARMED; // prefers not to use a bouncy ball
 		}
 	} while (sstate.weapon == W_UNARMED || sstate.no_weap_or_ammo());
 
