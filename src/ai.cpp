@@ -154,6 +154,22 @@ point destination_marker::get_pos() const {
 // ********** SMILEY AI CODE **********
 
 
+bool proj_coll_test(point const &pos, point const &target_pos, vector3d const &orient,
+	float target_dist, float radius, int weapon, int coll_id)
+{
+	int xpos(0), ypos(0), index(0);
+	point coll_pos;
+	int const test_alpha((weapon == W_LASER) ? 1 : 3);
+	point const pos2(target_pos - orient*(1.2*radius));
+	if (!coll_pt_vis_test(pos, pos2, 1.2*radius, index, coll_id, 0, test_alpha)) return 0; // cobj collision
+		
+	if (get_range_to_mesh(pos, orient, coll_pos, xpos, ypos)) {
+		if (p2p_dist(pos, coll_pos) + 2.0*radius < target_dist) return 0; // mesh collision
+	}
+	return 1;
+}
+
+
 void smiley_fire_weapon(int smiley_id) {
 
 	if (!game_mode) return;
@@ -200,21 +216,25 @@ void smiley_fire_weapon(int smiley_id) {
 	if (smiley_acc <= 0.0) {
 		orient = smiley.orientation;
 	}
-	else if (smiley_acc < 1.0) { // add firing error
+	else if (smiley_acc < 1.0) { // add firing error (should this be before or after the range test?)
 		vadd_rand(orient, 0.1*((game_mode == 2) ? 0.5 : 1.0)*(1.0 - smiley_acc)/max(0.2f, min(1.0f, target_dist)));
 	}
 	orient.normalize();
 	
-	if (weapon != W_LANDMINE && weapon != W_BBBAT && target_dist > 1.2*radius) {
+	if (weapon != W_LANDMINE && weapon != W_BBBAT && target_dist > 2.0*radius) {
 		// make sure it has a clear shot (excluding invisible smileys)
-		int const test_alpha((weapon == W_LASER) ? 1 : 3);
-		int xpos(0), ypos(0), index(0);
-		point coll_pos;
-		point const pos2(sstate.target_pos - orient*(1.2*radius));
-		if (!coll_pt_vis_test(pos, pos2, 1.2*radius, index, smiley.coll_id, 0, test_alpha)) return; // cobj collision
-		
-		if (get_range_to_mesh(pos, orient, coll_pos, xpos, ypos)) {
-			if (p2p_dist(pos, coll_pos) + 2.0*radius < target_dist) return; // mesh collision
+		if (!proj_coll_test(pos, sstate.target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return;
+
+		if (weapon == W_ROCKET || weapon == W_SEEK_D || weapon == W_PLASMA) { // large projectile
+			assert(weapons[weapon].obj_id != UNDEF);
+			float const proj_radius(object_types[weapons[weapon].obj_id].radius);
+			point const pos2(pos + point(0.0, 0.0, -proj_radius));
+
+			if (!proj_coll_test(pos2, sstate.target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) {
+				orient   *= target_dist;
+				orient.z += min(proj_radius, 0.7f*radius); // shoot slightly upward
+				orient.normalize();
+			}
 		}
 	}
 	int &ammo(sstate.p_ammo[weapon]);
