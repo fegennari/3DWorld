@@ -445,6 +445,7 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 	vector<type_wt_t> types;
 	point targete(all_zeros), targeth(all_zeros);
 	player_state &sstate(sstates[smiley_id]);
+	int const last_target_visible(sstate.target_visible), last_target_type(sstate.target_type);
 	sstate.target_visible = 0;
 	sstate.target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup
 	float const health_eq(min(4.0f*health, (health + sstate.shields)));
@@ -477,10 +478,10 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		min_ih = find_nearest_obj(  obj.pos, smiley_id, targeth, disth, types);
 
 		if (!sstate.target_visible) { // can't find an enemy, choose health/pickup
-			sstate.target_pos = targeth;
+			if (min_ih >= 0) sstate.target_pos = targeth;
 		}
 		else if (min_ih < 0) { // can't find health/pickup, choose attack
-			sstate.target_pos = targete;
+			if (sstate.target_visible) sstate.target_pos = targete;
 		}
 		else { // found both item and enemy
 			float const dp(dot_product((obj.pos - targeth).get_norm(), (obj.pos - targete).get_norm()));
@@ -516,9 +517,14 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 			sstate.target_pos += o*(2.0*object_types[SMILEY].radius/o.mag());
 		}
 	}
-	if (sstate.target_type == 0) {
-		// no targets - use last known target location - *** WRITE ***
+#if 0 // need proper path finding for this to work correctly
+	if (!sstate.target_visible && last_target_visible == 1) { // no targets - use last known target enemy location
+		sstate.target_visible = last_target_visible;
+		sstate.target_type    = last_target_type;
+		sstate.objective_pos  = sstate.target_pos; // should still be valid
+		min_ie = sstate.target;
 	}
+#endif
 	if (sstate.target_visible == 1) assert(min_ie >= CAMERA_ID);
 	sstate.target = min_ie;
 }

@@ -2279,6 +2279,9 @@ void player_state::init(bool w_start) {
 	plasma_loaded = 0;
 	uw_time       = 0;
 	cb_hurt       = 0;
+	target_visible= 0;
+	target_type   = 0;
+	target        = 0;
 	plasma_size   = 1.0;
 	zvel          = 0.0;
 	stopped_time  = 0;
@@ -2323,6 +2326,12 @@ void init_sstate(int id, bool w_start) {
 
 	assert(sstates != NULL && id >= CAMERA_ID && id < num_smileys);
 	sstates[id].init(w_start);
+
+	for (int i = CAMERA_ID; i < num_smileys; ++i) {
+		if (sstates[i].target_visible == 1 && sstates[i].target == id) {
+			sstates[i].target_visible = 0;
+		}
+	}
 }
 
 
