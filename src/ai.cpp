@@ -158,7 +158,7 @@ void smiley_fire_weapon(int smiley_id) {
 
 	if (!game_mode) return;
 	int cid(coll_id[SMILEY]), status;
-	float range(0.0), target_dist;
+	float target_dist;
 	player_state &sstate(sstates[smiley_id]);
 	dwobject const &smiley(obj_groups[cid].get_obj(smiley_id));
 	int const &weapon(sstate.weapon);
@@ -205,42 +205,28 @@ void smiley_fire_weapon(int smiley_id) {
 	}
 	orient.normalize();
 	
-	if (weapon == W_LANDMINE) {
-		range = target_dist;
-	}
-	else { // make sure it has a clear shot (excluding invisible smileys)
-		bool const test_alpha(weapon == W_LASER);
+	if (weapon != W_LANDMINE && weapon != W_BBBAT && target_dist > 1.2*radius) {
+		// make sure it has a clear shot (excluding invisible smileys)
+		int const test_alpha((weapon == W_LASER) ? 1 : 3);
 		int xpos(0), ypos(0), index(0);
 		point coll_pos;
 		point const pos2(sstate.target_pos - orient*(1.2*radius));
-
-		if (coll_pt_vis_test(pos, pos2, 1.2*radius, index, smiley.coll_id, 0, test_alpha)) {
-			range = target_dist;
-			if (get_range_to_mesh(pos, orient, coll_pos, xpos, ypos)) range = p2p_dist(pos, coll_pos) + 2.0*radius;
+		if (!coll_pt_vis_test(pos, pos2, 1.2*radius, index, smiley.coll_id, 0, test_alpha)) return; // cobj collision
+		
+		if (get_range_to_mesh(pos, orient, coll_pos, xpos, ypos)) {
+			if (p2p_dist(pos, coll_pos) + 2.0*radius < target_dist) return; // mesh collision
 		}
 	}
-	if (range >= (target_dist - 1.25*radius)) {
-		int &ammo(sstate.p_ammo[weapon]);
-		assert(ammo >= 0);
-		if (weapon == W_GRENADE && (sstate.wmode&1) && ammo < 3) sstate.wmode = 0;
-		int chosen;
-		status = fire_projectile(pos, orient, smiley_id, chosen);
+	int &ammo(sstate.p_ammo[weapon]);
+	assert(ammo >= 0);
+	if (weapon == W_GRENADE && (sstate.wmode&1) && ammo < 3) sstate.wmode = 0;
+	int chosen;
+	status = fire_projectile(pos, orient, smiley_id, chosen);
 
-		if (status != 0 && !UNLIMITED_WEAPONS && !sstate.no_weap_or_ammo() && weapons[weapon].need_ammo) {
-			if (weapon == W_GRENADE && (sstate.wmode&1)) {
-				ammo -= 3; // cluster grenade
-			}
-			else {
-				--ammo;
-			}
-			if (ammo < 0) {
-				cout << "smiley = " << smiley_id << ", ammo = " << ammo << ", weapon = " << weapon
-					 << ", wmode = " << sstate.wmode << ", pw = " << sstate.p_weapons[weapon]
-					 << ", pa = " << sstate.p_ammo[weapon] << endl;
-			}
-			assert(ammo >= 0);
-			if (ammo == 0) sstate.fire_frame = 0; // could switch weapons
-		}
+	if (status != 0 && !UNLIMITED_WEAPONS && !sstate.no_weap_or_ammo() && weapons[weapon].need_ammo) {
+		ammo -= (weapon == W_GRENADE && (sstate.wmode&1)) ? 3 : 1; // check for cluster grenade
+		assert(ammo >= 0);
+		if (ammo == 0) sstate.fire_frame = 0; // could switch weapons
 	}
 }
 
