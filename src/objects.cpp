@@ -14,7 +14,7 @@ float const NDIV_SCALE = 120.0;
 
 
 extern int draw_model, display_mode, destroy_thresh, do_zoom, xoff2, yoff2;
-extern float temperature;
+extern float temperature, tfticks;
 extern obj_type object_types[];
 extern dwobject def_objects[];
 extern texture textures[];
@@ -573,13 +573,22 @@ void obj_group::init_group() {
 }
 
 
-void obj_group::sort_and_calc_end() {
+// normally called before using objects, but can be called dynamically later
+void obj_group::add_predef_obj(point const &pos, int type, int rtime) {
+	
+	predef_objs.push_back(predef_obj(pos, type, rtime));
+	reorderable = 0; // need to unset reorderable so that predef_objs indexes remain correct
+}
+
+
+void obj_group::preproc_this_frame() {
 
 	unsigned const nobjs(max_objects());
 	end_id = nobjs;
 	new_id = 0;
 
 	if (enabled && reorderable) { // some objects such as smileys are position dependent
+		assert(predef_objs.empty());
 		unsigned saw_id(0);
 		
 		for (unsigned j = 0; j < nobjs; ++j) {
@@ -592,6 +601,15 @@ void obj_group::sort_and_calc_end() {
 				end_id = j;
 				break;
 			}
+		}
+	}
+	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {
+		if (i->obj_used == -1) continue;
+		assert((unsigned)i->obj_used < max_objects());
+			
+		if (objects[i->obj_used].status == 0) { // unused object
+			i->obj_used = -1; // reset back to 'unused'
+			i->cur_time = tfticks;
 		}
 	}
 }
@@ -632,6 +650,28 @@ int obj_group::choose_object(bool peek)  { // could return unsigned?
 	if (end_id <  max_objects()) return end_id++; // unused object
 	if (new_id == max_objects()) new_id = 0; // wraparound (circular queue)
 	return new_id++; // used, old object (increment so that the first object isn't reused in the same frame)
+}
+
+
+// return value: 0 = skip object, 1 = use predef object, 2 = gen new object
+int obj_group::get_next_predef_obj(dwobject &obj, unsigned ix) {
+
+	if (predef_objs.empty()) return 2;
+	float min_time(0.0);
+	int best_obj(-1);
+
+	for (unsigned i = 0; i < predef_objs.size(); ++i) { // inefficient, but predef_objs should be small
+		if (predef_objs[i].obj_used >= 0) continue; // already in use
+		if (predef_objs[i].cur_time > 0.0 && (tfticks - predef_objs[i].cur_time) < predef_objs[i].regen_time) continue; // not regenerated
+		if (best_obj >= 0 && predef_objs[i].cur_time >= min_time) continue; // not the oldest
+		min_time = predef_objs[i].cur_time;
+		best_obj = i;
+	}
+	if (best_obj == -1) return ((max_objects() > predef_objs.size()) ? 2 : 0); // no valid predef_obj found
+	obj.pos       = predef_objs[best_obj].pos;
+	obj.direction = (unsigned char)predef_objs[best_obj].type;
+	predef_objs[best_obj].obj_used = ix;
+	return 1;
 }
 
 
@@ -693,6 +733,9 @@ void obj_group::shift(vector3d const &vd) {
 			objects[j].pos += vd;
 			if (type == SMILEY) shift_player_state(vd, j);
 		}
+	}
+	for (unsigned i = 0; i < predef_objs.size(); ++i) {
+		predef_objs[i].pos += vd;
 	}
 }
 

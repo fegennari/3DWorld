@@ -44,7 +44,6 @@ vector<spark_t> sparks;
 vector<laser_beam> lasers;
 text_message_params msg_params;
 string message;
-int coll_id[NUM_TOT_OBJS];
 blood_spot blood_spots[NUM_BS];
 player_state *sstates = NULL;
 team_info *teaminfo = NULL;
@@ -58,6 +57,7 @@ extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mo
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_size;
 extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake;
 extern point ocean, surface_pos, camera_last_pos;
+extern int coll_id[];
 extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern char player_name[];

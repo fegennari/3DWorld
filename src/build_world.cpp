@@ -31,6 +31,7 @@ int num_groups(0), used_objs(0);
 unsigned next_cobj_group_id(0);
 obj_group obj_groups[NUM_TOT_OBJS];
 dwobject def_objects[NUM_TOT_OBJS];
+int coll_id[NUM_TOT_OBJS] = {0};
 point star_pts[2*N_STAR_POINTS];
 vector<coll_obj> fixed_cobjs;
 vector<portal> portals;
@@ -41,7 +42,6 @@ extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, invalid_shadows, has_scenery2, UNLIMITED_WEAPONS;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin;
 extern point cpos2, orig_camera, orig_cdir;
-extern int coll_id[];
 extern unsigned init_item_counts[];
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
@@ -275,7 +275,7 @@ void process_groups() {
 	
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
-		objg.sort_and_calc_end();
+		objg.preproc_this_frame();
 		if (!objg.enabled) continue;
 		unsigned const flags(objg.flags);
 		obj_type const &otype(object_types[objg.type]);
@@ -338,28 +338,36 @@ void process_groups() {
 				if (type == BALL && (game_mode != 2 || UNLIMITED_WEAPONS)) continue; // not in dodgeball mode
 				++gen_count;
 				if (precip && temperature >= WATER_MAX_TEMP) continue; // skip it
-				obj = def_objects[type];
-
-				if (type == SMILEY) {
-					if (!gen_smiley_or_player_pos(pos, j)) {
-						if (!printed_ngsp_warning) cout << "No good smiley pos." << endl;
-						printed_ngsp_warning = 1;
-					}
+				dwobject new_obj(def_objects[type]);
+				int const ret(objg.get_next_predef_obj(new_obj, j));
+				if (ret == 0) continue; // skip this object (no slots available)
+				obj = new_obj;
+				
+				if (ret == 1) { // use a predefined object
+					assert(type != SMILEY); // use an appearance spot for a smiley
 				}
-				else {
-					gen_object_pos(pos, otype.flags);
-					assert(!is_nan(pos));
-					vadd_rand(obj.velocity, 1.0);
+				else { // standard random generation
+					if (type == SMILEY) {
+						if (!gen_smiley_or_player_pos(pos, j)) {
+							if (!printed_ngsp_warning) cout << "No good smiley pos." << endl;
+							printed_ngsp_warning = 1;
+						}
+					}
+					else {
+						gen_object_pos(pos, otype.flags);
+						assert(!is_nan(pos));
+						vadd_rand(obj.velocity, 1.0);
+					}
+					if (type != SMILEY && (otype.flags & NO_FALL)) {
+						pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
+					}
+					if (type == POWERUP || type == WEAPON || type == AMMO) {
+						obj.direction = (unsigned char)gen_game_obj(type);
+					}
 				}
 				if (otype.flags & OBJ_IS_FLAT) {
 					obj.init_dir = signed_rand_vector_norm();
 					obj.angle    = signed_rand_float();
-				}
-				if (type != SMILEY && (otype.flags & NO_FALL)) {
-					pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
-				}
-				if (type == POWERUP || type == WEAPON || type == AMMO) {
-					obj.direction = (unsigned char)gen_game_obj(type);
 				}
 				if (type == SNOW) obj.angle = rand_uniform(0.7, 1.3); // used as radius
 			}
@@ -920,6 +928,13 @@ bool read_object_file(char *filename, vector<vector<point> > &ppts, bool verbose
 }
 
 
+void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius) {
+
+	bool const interpolate(fscanf(fp, "%f", &pos.z) != 1);
+	if (interpolate) pos.z = interpolate_mesh_zval(pos.x, pos.y, interp_rad, 0, 0) + radius;
+}
+
+
 int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool const mirror_[3], bool const swap_dim_[3][3],
 					   coll_obj cobj, int tid=-1, int platform_id=-1, bool draw=1, bool has_layer=0, float elastic=0.5,
 					   colorRGBA color=WHITE, colorRGBA lcolor=WHITE, float refract_ix=1.0)
@@ -1078,9 +1093,8 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				return read_error(fp, "appearance spot", coll_obj_file);
 			}
 			{
-				bool const interpolate(fscanf(fp, "%f", &pos.z) != 1);
 				xform_pos(pos, tv, scale, mirror, swap_dim); // better not try to transform z
-				if (interpolate) pos.z = interpolate_mesh_zval(pos.x, pos.y, smiley_radius, 0, 0) + smiley_radius;
+				read_or_calc_zval(fp, pos, smiley_radius, smiley_radius);
 				app_spots.push_back(pos);
 			}
 			break;
@@ -1102,41 +1116,33 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			break;
 
-		case 'p': // smiley path waypoint
+		case 'p': // smiley path waypoint: xpos ypos [zpos]
 			if (fscanf(fp, "%f%f", &pos.x, &pos.y) != 2) {
 				return read_error(fp, "waypoint", coll_obj_file);
 			}
 			{
-				bool const interpolate(fscanf(fp, "%f", &pos.z) != 1);
 				xform_pos(pos, tv, scale, mirror, swap_dim); // better not try to transform z
-				if (interpolate) pos.z = interpolate_mesh_zval(pos.x, pos.y, SMALL_NUMBER, 0, 0) + smiley_radius;
+				read_or_calc_zval(fp, pos, SMALL_NUMBER, smiley_radius);
 				waypoints.push_back(pos);
 			}
 			break;
 
 		case 'I': // items (health=28, shield=29, powerup=30, weapon=31, ammo=32)
-			// obj_class obj_subtype regen_time x y z
-			if (fscanf(fp, "%i%i%i%f%f%f", &ivals[0], &ivals[1], &ivals[2], &pos.x, &pos.y, &pos.z) != 6) {
+			// obj_class obj_subtype regen_time(s) xpos ypos [zpos]
+			if (fscanf(fp, "%i%i%f%f%f", &ivals[0], &ivals[1], &fvals[0], &pos.x, &pos.y) != 5) {
 				return read_error(fp, "place item", coll_obj_file);
 			}
 			{
 				assert(ivals[0] >= 0 && ivals[0] < NUM_TOT_OBJS);
 				xform_pos(pos, tv, scale, mirror, swap_dim);
+				float const radius(object_types[ivals[0]].radius);
+				read_or_calc_zval(fp, pos, radius, radius);
 				init_objects();
-				create_object_groups(); // ???
+				create_object_groups();
 				int const cid(coll_id[ivals[0]]);
 				assert(cid < NUM_TOT_OBJS);
 				assert(obj_groups[cid].type == ivals[0]); // make sure this group is properly initialized
-				++obj_groups[cid].max_objs;
-				++obj_groups[cid].init_objects;
-				int const id(obj_groups[cid].choose_object());
-				assert(id >= 0);
-				obj_groups[cid].create_object_at(id, pos); // will enable
-				dwobject &obj(obj_groups[cid].get_obj(id));
-				obj.direction = (unsigned char)ivals[1];
-				obj.time      = ivals[2]; // regen time ???
-				starting_objs.push_back(obj); // is this used?
-				// *** WRITE ***
+				obj_groups[cid].add_predef_obj(pos, ivals[1], fvals[0]*TICKS_PER_SECOND);
 			}
 			break;
 

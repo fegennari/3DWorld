@@ -241,9 +241,21 @@ public:
 struct transform_data; // forward reference
 
 
+struct predef_obj { // size = 28
+
+	point pos;
+	int type, obj_used;
+	float regen_time, cur_time;
+
+	predef_obj(point const &pos_=all_zeros, int type_=0, float rtime=0)
+		: pos(pos_), type(type_), obj_used(-1), regen_time(rtime), cur_time(0) {}
+};
+
+
 class obj_group { // size = 36
 
 	obj_vector_t<dwobject> objects;
+	vector<predef_obj> predef_objs;
 	transform_data *td;
 
 public:
@@ -258,7 +270,7 @@ public:
 	unsigned get_updated_max_objs() const;
 	void update_app_rate(float const val, unsigned min_app, unsigned max_app);
 	void init_group();
-	void sort_and_calc_end();
+	void preproc_this_frame();
 	void remove_reset_cobjs();
 	unsigned max_objects() const {return objects.size();}
 	int choose_object(bool peek=0);
@@ -278,6 +290,8 @@ public:
 	bool temperature_ok() const;
 	bool obj_has_shadow(unsigned obj_id) const;
 	int get_ptype() const;
+	void add_predef_obj(point const &pos, int type, int rtime);
+	int get_next_predef_obj(dwobject &obj, unsigned ix);
 };
 
 
