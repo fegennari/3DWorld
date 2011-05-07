@@ -6,6 +6,7 @@
 #include "main.h"
 #include "timetest.h"
 #include "physics_objects.h"
+#include <fstream>
 
 
 /* GL_LIGHT<N>:
@@ -227,10 +228,28 @@ void draw_stuff(int draw_uw, int timer1) {
 }
 
 
+void log_location(point const &pos) {
+
+	static std::ofstream out;
+	static bool inited;
+
+	if (!inited) {
+		out.open("positions.log.txt");
+		inited = 1;
+	}
+	assert(out.good());
+	out << pos.x << " " << pos.y << " " << pos.z << endl;
+}
+
+
 void draw_frame_rate(float framerate) {
 
 	if (show_framerate) {
-		cout << "Framerate = " << framerate << " @ frame " << frame_counter << endl;
+		point const camera(get_camera_pos());
+		cout << "FPS: " << framerate << "  loc: (";
+		camera.print();
+		cout << ") @ frame " << frame_counter << endl;
+		log_location(camera);
 		show_framerate = 0;
 	}
 	if (display_framerate) {
