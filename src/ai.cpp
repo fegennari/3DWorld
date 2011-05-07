@@ -354,8 +354,16 @@ int find_nearest_obj(point &pos, int smiley_id, point &target, float &min_dist, 
 			dwobject const &obj(objg.get_obj(i));
 			if (obj.disabled() || (obj.flags & IN_DARKNESS))                 continue;
 			if (!is_over_mesh(obj.pos) || (island && (obj.pos.z < ocean.z))) continue;
-			if (!sphere_in_view(pdu, obj.pos, radius, 0))                    continue; // view culling
-			oddatav.push_back(od_data(type, i, dmult*p2p_dist_sq(pos, obj.pos)));
+			if (!sphere_in_view(pdu, obj.pos, radius, 0))                    continue; // view culling (disable for predef object locations?)
+			float cost(1.0);
+
+			for (int j = 0; j < num_smileys; ++j) { // too slow?
+				if (j != smiley_id && sstates[j].objective_pos == obj.pos) {
+					float const dist_ratio(p2p_dist(pos, obj.pos)/p2p_dist(obj_groups[coll_id[SMILEY]].get_obj(j).pos, obj.pos));
+					if (dist_ratio > 1.0) cost += dist_ratio; // icrease the cost since the other smiley will likely get there first
+				}
+			}
+			oddatav.push_back(od_data(type, i, cost*dmult*p2p_dist_sq(pos, obj.pos)));
 		}
 	}
 	if (oddatav.empty()) { // no objects
