@@ -607,7 +607,7 @@ void obj_group::preproc_this_frame() {
 		if (i->obj_used == -1) continue;
 		assert((unsigned)i->obj_used < max_objects());
 			
-		if (objects[i->obj_used].status == 0) { // unused object
+		if (objects[i->obj_used].disabled()) { // unused object
 			i->obj_used = -1; // reset back to 'unused'
 			i->cur_time = tfticks;
 		}

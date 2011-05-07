@@ -261,7 +261,7 @@ void add_target(vector<od_data> &oddatav, pos_dir_up const &pdu, point const &po
 }
 
 
-int find_nearest_enemy(point &pos, int smiley_id, point &target, int &target_visible, float &min_dist) {
+int find_nearest_enemy(point const &pos, point const &avoid_dir, int smiley_id, point &target, int &target_visible, float &min_dist) {
 
 	assert(smiley_id < num_smileys);
 	int min_i(NO_SOURCE), hitter(NO_SOURCE);
@@ -295,6 +295,7 @@ int find_nearest_enemy(point &pos, int smiley_id, point &target, int &target_vis
 	for (unsigned i = 0; i < oddatav.size(); ++i) { // find closest visible target
 		point const pos2(get_sstate_pos(oddatav[i].id));
 		if (island && (pos2.z < ocean.z)) continue;
+		if (avoid_dir != zero_vector && dot_product_ptv(pos2, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
 		float const dist(oddatav[i].dist);
 
 		if (sphere_in_view(pdu, pos2, radius, 5)) {
@@ -318,7 +319,7 @@ struct type_wt_t {
 };
 
 
-int find_nearest_obj(point &pos, int smiley_id, point &target, float &min_dist, vector<type_wt_t> types) { // health, powerup, etc.
+int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, point &target, float &min_dist, vector<type_wt_t> types) { // health, powerup, etc.
 
 	assert(smiley_id < num_smileys);
 	int min_ic(-1);
@@ -355,6 +356,7 @@ int find_nearest_obj(point &pos, int smiley_id, point &target, float &min_dist, 
 			if (obj.disabled() || (obj.flags & IN_DARKNESS))                 continue;
 			if (!is_over_mesh(obj.pos) || (island && (obj.pos.z < ocean.z))) continue;
 			if (!sphere_in_view(pdu, obj.pos, radius, 0))                    continue; // view culling (disable for predef object locations?)
+			if (avoid_dir != zero_vector && dot_product_ptv(obj.pos, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
 			float cost(1.0);
 
 			for (int j = 0; j < num_smileys; ++j) { // too slow?
@@ -464,20 +466,37 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 	sstate.target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup
 	float const health_eq(min(4.0f*health, (health + sstate.shields)));
 
+	// look for landmines and avoid them
+	point avoid_dir(zero_vector);
+	obj_group const &objg(obj_groups[coll_id[LANDMINE]]);
+	
+	if (objg.is_enabled()) {
+		float min_dist(weapons[LANDMINE].blast_radius);
+
+		for (unsigned i = 0; i < objg.end_id; ++i) {
+			dwobject const &obj2(objg.get_obj(i));
+			
+			if (!obj2.disabled() && !lm_coll_invalid(obj2) && obj2.source == smiley_id && dist_less_than(obj.pos, obj2.pos, min_dist)) {
+				avoid_dir  = (obj2.pos - obj.pos);
+				min_dist   = avoid_dir.mag();
+				avoid_dir /= min_dist;
+			}
+		}
+	}
 	if (game_mode == 2 && !UNLIMITED_WEAPONS) { // want the ball
 		if (sstate.p_ammo[W_BALL] > 0) { // already have a ball
-			min_ie = find_nearest_enemy(obj.pos, smiley_id, sstate.target_pos, sstate.target_visible, diste);
+			min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, sstate.target_pos, sstate.target_visible, diste);
 		}
 		if (!sstate.target_visible) { // don't have a ball or no enemy in sight
 			types.push_back(type_wt_t(BALL, 1.0));
-			min_ih = find_nearest_obj(obj.pos, smiley_id, sstate.target_pos, disth, types);
+			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types);
 		}
 	}
 	else if (health_eq < 20.0) { // want health (or shields)
 		types.push_back(type_wt_t(HEALTH, 1.5));
 		types.push_back(type_wt_t(SHIELD, (1.0 - sstate.shields/MAX_SHIELDS)));
-		min_ih = find_nearest_obj(obj.pos, smiley_id, sstate.target_pos, disth, types);
-		if (min_ih < 0) min_ie = find_nearest_enemy(obj.pos, smiley_id, sstate.target_pos, sstate.target_visible, diste);
+		min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types);
+		if (min_ih < 0) min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, sstate.target_pos, sstate.target_visible, diste);
 	}
 	else { // choose health/attack based on distance
 		// want to get powerup badly if you don't have one
@@ -488,8 +507,8 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		types.push_back(type_wt_t(WA_PACK, 1.0));
 		types.push_back(type_wt_t(SHIELD,  1.2*(1.0 - sstate.shields/MAX_SHIELDS))); // always below max since it ticks down over time
 		if (health < MAX_HEALTH) types.push_back(type_wt_t(HEALTH, 1.5*(1.0 - health/MAX_HEALTH)));
-		min_ie = find_nearest_enemy(obj.pos, smiley_id, targete, sstate.target_visible, diste);
-		min_ih = find_nearest_obj(  obj.pos, smiley_id, targeth, disth, types);
+		min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, targete, sstate.target_visible, diste);
+		min_ih = find_nearest_obj(  obj.pos, avoid_dir, smiley_id, targeth, disth, types);
 
 		if (!sstate.target_visible) { // can't find an enemy, choose health/pickup
 			if (min_ih >= 0) sstate.target_pos = targeth;
@@ -712,6 +731,7 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 					bad_move = 1; // don't go under water/blood
 				}
 				else if (xnew != xpos || ynew != ypos) {
+					// *** FIXME: check for walking into your own landmine, falling off a cliff, and other stupid decisions ***
 					obj.orientation = get_orient_from_mesh(xpos, ypos, xnew, ynew);
 					xpos = xnew;
 					ypos = ynew;
