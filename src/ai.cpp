@@ -332,54 +332,58 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 	pos_dir_up const pdu(pos, sorient, plus_z, tterm, sterm, NEAR_CLIP, FAR_CLIP);
 	min_dist = 0.0;
 
-	// process waypoints
-	if (sstate.waypoint_times.size() != waypoints.size()) {
-		sstate.waypoint_times.clear();
-		sstate.waypoint_times.resize(waypoints.size(), tfticks); // maybe resize, and maybe reset time to fticks
-	}
-	for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
-		point const &wp(waypoints[i]);
-		if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i)) continue;
-		
-		if (dist_less_than(wp, pos, sradius)) { // smiley has reached waypoint
-			sstate.waypts_used.insert(i); // insert as the last used waypoint and remove from consideration
-			sstate.waypoint_times[i] = tfticks;
-			continue;
-		}
-		if (WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0)) continue; // view culling - more detailed query later
-		float const delta_t(tfticks - sstate.waypoint_times[i]);
-		assert(delta_t >= 0.0);
-		float const time_weight(tfticks/max(1.0f, delta_t));
-		float const tot_weight(100.0*(time_weight + p2p_dist_sq(pos, wp)));
-		oddatav.push_back(od_data(WAYPOINT, i, tot_weight)); // add high weight to prefer other objects
-	}
-
-	// process dynamic pickup objects
+	// process dynamic pickup objects and waypoints
 	for (unsigned t = 0; t < types.size(); ++t) {
 		unsigned const type(types[t].type);
 		assert(t < NUM_TOT_OBJS);
-		if (UNLIMITED_WEAPONS && (type == WEAPON || type == AMMO || type == WA_PACK)) continue;
-		obj_group const &objg(obj_groups[coll_id[type]]);
-		if (!objg.is_enabled()) continue;
-		float const radius(object_types[type].radius), dmult(1.0/types[t].weight);
+		float const dmult(1.0/types[t].weight);
 
-		for (unsigned i = 0; i < objg.end_id; ++i) {
-			dwobject const &obj(objg.get_obj(i));
-			if (obj.disabled() || (obj.flags & IN_DARKNESS))                 continue;
-			if (!is_over_mesh(obj.pos) || (island && (obj.pos.z < ocean.z))) continue;
-			if (!sphere_in_view(pdu, obj.pos, radius, 0))                    continue; // view culling (disable for predef object locations?)
-			if (avoid_dir != zero_vector && dot_product_ptv(obj.pos, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
-			float cost(1.0);
-
-			for (int j = 0; j < num_smileys; ++j) { // too slow?
-				if (j != smiley_id && sstates[j].objective_pos == obj.pos) {
-					float const dist_ratio(p2p_dist(pos, obj.pos)/p2p_dist(obj_groups[coll_id[SMILEY]].get_obj(j).pos, obj.pos));
-					if (dist_ratio > 1.0) cost += dist_ratio; // icrease the cost since the other smiley will likely get there first
-				}
+		if (type == WAYPOINT) { // process waypoints
+			if (sstate.waypoint_times.size() != waypoints.size()) {
+				sstate.waypoint_times.clear();
+				sstate.waypoint_times.resize(waypoints.size(), tfticks); // maybe resize, and maybe reset time to fticks
 			}
-			oddatav.push_back(od_data(type, i, cost*dmult*p2p_dist_sq(pos, obj.pos)));
+			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
+				point const &wp(waypoints[i]);
+				if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i)) continue;
+		
+				if (dist_less_than(wp, pos, sradius)) { // smiley has reached waypoint
+					sstate.waypts_used.insert(i); // insert as the last used waypoint and remove from consideration
+					sstate.waypoint_times[i] = tfticks;
+					continue;
+				}
+				if (WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0)) continue; // view culling - more detailed query later
+				float const delta_t(tfticks - sstate.waypoint_times[i]);
+				assert(delta_t >= 0.0);
+				float const time_weight(tfticks/max(1.0f, delta_t));
+				float const tot_weight(dmult*(time_weight + p2p_dist_sq(pos, wp)));
+				oddatav.push_back(od_data(type, i, tot_weight)); // add high weight to prefer other objects
+			}
 		}
-	}
+		else { // not a waypoint (pickup item)
+			if (UNLIMITED_WEAPONS && (type == WEAPON || type == AMMO || type == WA_PACK)) continue;
+			obj_group const &objg(obj_groups[coll_id[type]]);
+			if (!objg.is_enabled()) continue;
+			float const radius(object_types[type].radius);
+
+			for (unsigned i = 0; i < objg.end_id; ++i) {
+				dwobject const &obj(objg.get_obj(i));
+				if (obj.disabled() || (obj.flags & IN_DARKNESS))                 continue;
+				if (!is_over_mesh(obj.pos) || (island && (obj.pos.z < ocean.z))) continue;
+				if (!sphere_in_view(pdu, obj.pos, radius, 0))                    continue; // view culling (disable for predef object locations?)
+				if (avoid_dir != zero_vector && dot_product_ptv(obj.pos, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
+				float cost(1.0);
+
+				for (int j = 0; j < num_smileys; ++j) { // too slow?
+					if (j != smiley_id && sstates[j].objective_pos == obj.pos) {
+						float const dist_ratio(p2p_dist(pos, obj.pos)/p2p_dist(obj_groups[coll_id[SMILEY]].get_obj(j).pos, obj.pos));
+						if (dist_ratio > 1.0) cost += dist_ratio; // icrease the cost since the other smiley will likely get there first
+					}
+				}
+				oddatav.push_back(od_data(type, i, cost*dmult*p2p_dist_sq(pos, obj.pos)));
+			}
+		}
+	} // for t
 	if (oddatav.empty()) { // no objects
 		sstate.unreachable.reset_try();
 		return min_ic;
@@ -549,7 +553,12 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		sstate.target_type   = 1; // enemy
 		sstate.objective_pos = sstate.target_pos;
 	}
-	else {
+	else { // targeting an item or nothing
+		if (min_ih < 0) { // no item - use a waypoint to move to a different place in the scene
+			types.clear();
+			types.push_back(type_wt_t(WAYPOINT, 1.0));
+			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types);
+		}
 		sstate.objective_pos = sstate.target_pos;
 		
 		if (min_ih >= 0) {
@@ -1180,6 +1189,110 @@ void free_smiley_textures() {
 	for (int i = 0; i < num_smileys; ++i) {
 		free_texture(sstates[i].tid);
 	}
+}
+
+
+void init_sstate(int id, bool w_start) {
+
+	assert(sstates != NULL && id >= CAMERA_ID && id < num_smileys);
+	sstates[id].init(w_start);
+
+	for (int i = CAMERA_ID; i < num_smileys; ++i) {
+		if (sstates[i].target_visible == 1 && sstates[i].target == id) {
+			sstates[i].target_visible = 0;
+		}
+	}
+}
+
+
+void init_smileys() {
+
+	for (int i = 0; i < num_smileys; ++i) {
+		init_smiley(i);
+	}
+}
+
+
+bool has_invisibility(int id) {
+
+	assert(id >= CAMERA_ID && id < num_smileys);
+	if (!game_mode)      return 0;
+	if (sstates == NULL) return 0; // not initialized - should this be an error?
+	return (sstates[id].powerup == PU_INVISIBILITY);
+}
+
+
+// ********** player_state **********
+
+
+void player_state::init(bool w_start) {
+
+	assert(balls.empty());
+	
+	for (int i = 0; i < NUM_WEAPONS; ++i) {
+		p_weapons[i] = 0;
+		p_ammo[i]    = 0;
+	}
+	if (!UNLIMITED_WEAPONS) {
+		if (w_start) {
+			p_weapons[W_UNARMED] = 2;
+			p_weapons[W_BBBAT]   = 2;
+			p_weapons[W_SBALL]   = 1;
+			p_ammo[W_SBALL]      = weapons[W_SBALL].def_ammo;
+			weapon               = W_SBALL;
+		}
+		else {
+			weapon = W_UNARMED;
+		}
+		wmode     = 0;
+	}
+	timer         = 0;
+	fire_frame    = 0;
+	was_hit       = 0;
+	rot_counter   = 0;
+	plasma_loaded = 0;
+	uw_time       = 0;
+	cb_hurt       = 0;
+	target_visible= 0;
+	target_type   = 0;
+	target        = 0;
+	plasma_size   = 1.0;
+	zvel          = 0.0;
+	stopped_time  = 0;
+	fall_counter  = 0;
+	last_dz       = 0.0;
+	last_zvel     = 0.0;
+	velocity      = zero_vector;
+
+	if (game_mode == 1) {
+		shields       = INIT_SHIELDS;
+		powerup       = ((INIT_PU_SH_TIME > 0) ? PU_SHIELD : -1);
+		powerup_time  = INIT_PU_SH_TIME;
+	}
+	else {
+		shields       = 0.0;
+		powerup       = -1;
+		powerup_time  = 0;
+	}
+	waypts_used.clear();
+	unreachable.clear();
+	dest_mark.clear();
+}
+
+
+bool player_state::no_weap() const {
+
+	assert(weapon < NUM_WEAPONS);
+	assert(p_weapons[weapon] >= 0);
+	return (!UNLIMITED_WEAPONS && weapons[weapon].need_weapon && p_weapons[weapon] == 0);
+}
+
+
+bool player_state::no_ammo() const {
+
+	assert(weapon < NUM_WEAPONS);
+	assert(p_ammo[weapon] >= 0);
+	return (!UNLIMITED_WEAPONS && weapons[weapon].need_ammo && p_ammo[weapon] == 0);
 }
 
 

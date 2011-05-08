@@ -2228,14 +2228,6 @@ void update_camera_velocity(vector3d const &v) {
 }
 
 
-void init_smileys() {
-
-	for (int i = 0; i < num_smileys; ++i) {
-		init_smiley(i);
-	}
-}
-
-
 void init_game_mode() {
 
 	string const str(string("Playing ") + ((game_mode == 1) ? "Deathmatch" : "Dodgeball") + " as " + player_name);
@@ -2249,100 +2241,6 @@ void init_game_mode() {
 		sstates[i].killer = NO_SOURCE; // no one
 		if (game_mode == 1) init_sstate(i, 1); // ???
 	}
-}
-
-
-void player_state::init(bool w_start) {
-
-	assert(balls.empty());
-	
-	for (int i = 0; i < NUM_WEAPONS; ++i) {
-		p_weapons[i] = 0;
-		p_ammo[i]    = 0;
-	}
-	if (!UNLIMITED_WEAPONS) {
-		if (w_start) {
-			p_weapons[W_UNARMED] = 2;
-			p_weapons[W_BBBAT]   = 2;
-			p_weapons[W_SBALL]   = 1;
-			p_ammo[W_SBALL]      = weapons[W_SBALL].def_ammo;
-			weapon               = W_SBALL;
-		}
-		else {
-			weapon = W_UNARMED;
-		}
-		wmode     = 0;
-	}
-	timer         = 0;
-	fire_frame    = 0;
-	was_hit       = 0;
-	rot_counter   = 0;
-	plasma_loaded = 0;
-	uw_time       = 0;
-	cb_hurt       = 0;
-	target_visible= 0;
-	target_type   = 0;
-	target        = 0;
-	plasma_size   = 1.0;
-	zvel          = 0.0;
-	stopped_time  = 0;
-	fall_counter  = 0;
-	last_dz       = 0.0;
-	last_zvel     = 0.0;
-	velocity      = zero_vector;
-
-	if (game_mode == 1) {
-		shields       = INIT_SHIELDS;
-		powerup       = ((INIT_PU_SH_TIME > 0) ? PU_SHIELD : -1);
-		powerup_time  = INIT_PU_SH_TIME;
-	}
-	else {
-		shields       = 0.0;
-		powerup       = -1;
-		powerup_time  = 0;
-	}
-	waypts_used.clear();
-	unreachable.clear();
-	dest_mark.clear();
-	waypoint_times.clear();
-}
-
-
-bool player_state::no_weap() const {
-
-	assert(weapon < NUM_WEAPONS);
-	assert(p_weapons[weapon] >= 0);
-	return (!UNLIMITED_WEAPONS && weapons[weapon].need_weapon && p_weapons[weapon] == 0);
-}
-
-
-bool player_state::no_ammo() const {
-
-	assert(weapon < NUM_WEAPONS);
-	assert(p_ammo[weapon] >= 0);
-	return (!UNLIMITED_WEAPONS && weapons[weapon].need_ammo && p_ammo[weapon] == 0);
-}
-
-
-void init_sstate(int id, bool w_start) {
-
-	assert(sstates != NULL && id >= CAMERA_ID && id < num_smileys);
-	sstates[id].init(w_start);
-
-	for (int i = CAMERA_ID; i < num_smileys; ++i) {
-		if (sstates[i].target_visible == 1 && sstates[i].target == id) {
-			sstates[i].target_visible = 0;
-		}
-	}
-}
-
-
-bool has_invisibility(int id) {
-
-	assert(id >= CAMERA_ID && id < num_smileys);
-	if (!game_mode)      return 0;
-	if (sstates == NULL) return 0; // not initialized - should this be an error?
-	return (sstates[id].powerup == PU_INVISIBILITY);
 }
 
 
