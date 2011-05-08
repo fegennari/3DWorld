@@ -171,7 +171,7 @@ conditions under which an object is viewable:
 	6. cobj vis check with all 7 points, including dynamic objects
 */
 // dir must be normalized
-bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int max_level) {
+bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int max_level, bool no_frustum_test) {
 
 	point const &viewer(pdu.pos);
 
@@ -179,12 +179,12 @@ bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int m
 		if (((fabs(pos.x) - radius) > ocean.x || (fabs(pos.y) - radius) > ocean.y)) return 0; // case 1
 		
 		if (is_over_mesh(pos)) { // added new check
-			if (viewer.z < ocean.z && (pos.z - radius) > ocean.z) return 0; // case 3a
-			if (viewer.z > ocean.z && (pos.z + radius) < ocean.z) return 0; // case 3b
+			if (viewer.z < ocean.z && (pos.z - radius) > ocean.z)  return 0; // case 3a
+			if (viewer.z > ocean.z && (pos.z + radius) < ocean.z)  return 0; // case 3b
 		}
 	}
-	if (!pdu.sphere_visible_test(pos, radius))        return 0;
-	if (max_level == 0 || world_mode != WMODE_GROUND) return 1;
+	if (!no_frustum_test && !pdu.sphere_visible_test(pos, radius)) return 0;
+	if (max_level == 0 || world_mode != WMODE_GROUND)              return 1;
 	
 	if (is_over_mesh(viewer)) {
 		float const zmax(pos.z + radius);

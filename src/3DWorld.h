@@ -997,7 +997,7 @@ void calc_view_test_terms(float &tterm, float &sterm, bool is_zoomed);
 void calc_viewing_cone();
 void set_camera_pdu();
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius);
-bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int max_level);
+bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int max_level, bool no_frustum_test=0);
 int  get_light_pos(point &lpos, int light);
 void update_sun_shadows();
 void create_shadows();

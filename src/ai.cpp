@@ -13,7 +13,7 @@ bool const NO_SMILEY_ACTION       = 0;
 bool const SMILEYS_LOOK_AT_TARGET = 1;
 bool const LEAD_SHOTS             = 0; // doesn't seem to make too much difference (or doesn't work correctly)
 bool const SMILEY_BUTT            = 1;
-bool const WAYPTS_ALWAYS_VIS      = 0;
+int const WAYPT_VIS_LEVEL         = 0; // 0: visible in frustum (like camera), 1 = visible from the position (any orientation), 2 = always visible
 unsigned const SMILEY_COLL_STEPS  = 10;
 unsigned const PMAP_SIZE          = (2*N_SPHERE_DIV)/3;
 int const WP_RESET_FRAMES         = 100; // Note: in frames, not ticks, fix?
@@ -340,7 +340,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			sstate.waypts_used.insert(i); // insert as the last used waypoint and remove from consideration
 			continue;
 		}
-		if (!WAYPTS_ALWAYS_VIS && !sphere_in_view(pdu, wp, 0.0, 0)) continue; // view culling - more detailed query later
+		if (WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0)) continue; // view culling - more detailed query later
 		oddatav.push_back(od_data(WAYPOINT, i, 100.0*p2p_dist_sq(pos, wp))); // add high weight to prefer other objects
 	}
 	for (unsigned t = 0; t < types.size(); ++t) {
@@ -405,7 +405,11 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			if (!sstate.unreachable.proc_target(pos, pos2, sstate.objective_pos, can_reach)) continue;
 		}
 		if (can_reach || not_too_high2) { // not_too_high2 - may be incorrect
-			if ((WAYPTS_ALWAYS_VIS && type == WAYPOINT) || sphere_in_view(pdu, pos2, oradius, ((type == BALL) ? 5 : 4))) {
+			int const max_vis_level((type == BALL) ? 5 : 4);
+			bool const skip_vis_test  (WAYPT_VIS_LEVEL == 2 && type == WAYPOINT);
+			bool const no_frustum_test(WAYPT_VIS_LEVEL == 1 && type == WAYPOINT);
+
+			if (skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) {
 				min_dist = sqrt(oddatav[i].dist); // find closest reachable/visible object
 				min_ic   = type;
 				target   = pos2;
