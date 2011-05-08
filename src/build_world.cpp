@@ -33,10 +33,11 @@ obj_group obj_groups[NUM_TOT_OBJS];
 dwobject def_objects[NUM_TOT_OBJS];
 int coll_id[NUM_TOT_OBJS] = {0};
 point star_pts[2*N_STAR_POINTS];
+vector<point> user_waypoints;
 vector<coll_obj> fixed_cobjs;
 vector<portal> portals;
 
-extern bool have_platform_cobj;
+extern bool have_platform_cobj, use_waypoints;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, invalid_shadows, has_scenery2, UNLIMITED_WEAPONS;
@@ -601,6 +602,15 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	calc_motion_direction();
 	PRINT_TIME("Motion matrix generation");
 
+	if (use_waypoints && !inf_terrain && !scrolling) {
+		create_waypoints(waypoints);
+		copy(user_waypoints.begin(), user_waypoints.end(), back_inserter(waypoints));
+		PRINT_TIME("Waypoint generation");
+	}
+	else {
+		waypoints = user_waypoints;
+	}
+
 	if (!inf_terrain && !rgt_only) {
 		calc_watershed();
 		PRINT_TIME("Water generation");
@@ -620,6 +630,12 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 }
 
 
+void shift_point_vector(vector<point> &pts, vector3d const &vd) {
+
+	for (unsigned i = 0; i < pts.size(); ++i) pts[i] += vd;
+}
+
+
 void shift_all_objs(vector3d const &vd) {
 
 	shift_fixed_cobjs(vd);
@@ -631,8 +647,9 @@ void shift_all_objs(vector3d const &vd) {
 	shift_other_objs(vd);
 	shift_light_sources(vd);
 	platforms.shift_by(vd);
-	for (unsigned i = 0; i < waypoints.size(); ++i) waypoints[i] += vd;
-	//for (unsigned i = 0; i < app_spots.size(); ++i) app_spots[i] += vd; // what if an appearance spot shifts off the map?
+	shift_point_vector(waypoints,      vd); // is this correct
+	shift_point_vector(user_waypoints, vd);
+	//shift_point_vector(app_spots,      vd); // what if an appearance spot shifts off the map?
 
 	if (begin_motion) {
 		for (int i = 0; i < num_groups; ++i) {
@@ -1123,7 +1140,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			{
 				xform_pos(pos, tv, scale, mirror, swap_dim); // better not try to transform z
 				read_or_calc_zval(fp, pos, SMALL_NUMBER, smiley_radius);
-				waypoints.push_back(pos);
+				user_waypoints.push_back(pos);
 			}
 			break;
 

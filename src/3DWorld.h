@@ -1609,6 +1609,9 @@ unsigned set_shader_prog(std::string const &vs_name, std::string const &fs_name,
 						 int in_prim=0, int out_prim=0, int verts_out=0);
 void unset_shader_prog();
 
+// function prototypes - waypoints
+void create_waypoints(vector<point> &waypoints);
+
 // function prototypes - screenshot (these are C functions)
 #ifdef ENABLE_JPEG
 extern "C" int screenshot(unsigned window_width, unsigned window_height, char *file_path);

@@ -323,7 +323,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 
 	assert(smiley_id < num_smileys);
 	int min_ic(-1);
-	float sradius(object_types[SMILEY].radius), sr_sq(sradius*sradius), ra_smiley(C_STEP_HEIGHT*sradius);
+	float sradius(object_types[SMILEY].radius), ra_smiley(C_STEP_HEIGHT*sradius);
 	float tterm, sterm;
 	vector3d const sorient(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).orientation);
 	player_state &sstate(sstates[smiley_id]);
@@ -333,15 +333,15 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 	min_dist = 0.0;
 
 	for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
-		point const wp(waypoints[i]);
+		point const &wp(waypoints[i]);
 		if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i)) continue;
 		
-		if (p2p_dist_sq(wp, pos) < sr_sq) { // smiley has reached waypoint
+		if (dist_less_than(wp, pos, sradius)) { // smiley has reached waypoint
 			sstate.waypts_used.insert(i); // insert as the last used waypoint and remove from consideration
 			continue;
 		}
 		if (!WAYPTS_ALWAYS_VIS && !sphere_in_view(pdu, wp, 0.0, 0)) continue; // view culling - more detailed query later
-		oddatav.push_back(od_data(WAYPOINT, i, 4.0*p2p_dist_sq(pos, wp))); // add weight of 4.0 to prefer other objects
+		oddatav.push_back(od_data(WAYPOINT, i, 100.0*p2p_dist_sq(pos, wp))); // add high weight to prefer other objects
 	}
 	for (unsigned t = 0; t < types.size(); ++t) {
 		unsigned const type(types[t].type);

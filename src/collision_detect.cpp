@@ -954,7 +954,7 @@ void vert_coll_detector::check_cobj(int index) {
 			lcoll    = 1;
 			//crcdir  |= (((cdir >> 1) + 1) % 3); // crcdir: x=1, y=2, z=0, cdir: -x0=0 +x=1 -y=2 +y=3 -z=4 +z=5
 
-			if (cdir != 4 && cdir != 5 && player_step) {
+			if (!coll_top && !coll_bot && player_step) {
 				lcoll   = 0; // can step up onto the object
 				obj.pos = pos; // reset pos
 				norm    = zero_vector;
