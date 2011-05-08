@@ -103,6 +103,7 @@ struct player_state { // size = big
 	int p_weapons[NUM_WEAPONS], p_ammo[NUM_WEAPONS];
 	unsigned char *tdata;
 	vector<int> balls;
+	vector<float> waypoint_times;
 	waypt_used_set waypts_used;
 	unreachable_pts unreachable;
 	destination_marker dest_mark;

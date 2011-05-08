@@ -28,7 +28,7 @@ vector<point> waypoints;
 extern int island, iticks, num_smileys, free_for_all, teams, frame_counter;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS;
-extern float fticks, temperature, zmax, ztop, XY_SCENE_SIZE, ball_velocity, TIMESTEP, self_damage;
+extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, ball_velocity, TIMESTEP, self_damage;
 extern point ocean, orig_camera, orig_cdir;
 extern int coll_id[];
 extern obj_group obj_groups[];
@@ -332,17 +332,29 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 	pos_dir_up const pdu(pos, sorient, plus_z, tterm, sterm, NEAR_CLIP, FAR_CLIP);
 	min_dist = 0.0;
 
+	// process waypoints
+	if (sstate.waypoint_times.size() != waypoints.size()) {
+		sstate.waypoint_times.clear();
+		sstate.waypoint_times.resize(waypoints.size(), tfticks); // maybe resize, and maybe reset time to fticks
+	}
 	for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
 		point const &wp(waypoints[i]);
 		if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i)) continue;
 		
 		if (dist_less_than(wp, pos, sradius)) { // smiley has reached waypoint
 			sstate.waypts_used.insert(i); // insert as the last used waypoint and remove from consideration
+			sstate.waypoint_times[i] = tfticks;
 			continue;
 		}
 		if (WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0)) continue; // view culling - more detailed query later
-		oddatav.push_back(od_data(WAYPOINT, i, 100.0*p2p_dist_sq(pos, wp))); // add high weight to prefer other objects
+		float const delta_t(tfticks - sstate.waypoint_times[i]);
+		assert(delta_t >= 0.0);
+		float const time_weight(tfticks/max(1.0f, delta_t));
+		float const tot_weight(100.0*(time_weight + p2p_dist_sq(pos, wp)));
+		oddatav.push_back(od_data(WAYPOINT, i, tot_weight)); // add high weight to prefer other objects
 	}
+
+	// process dynamic pickup objects
 	for (unsigned t = 0; t < types.size(); ++t) {
 		unsigned const type(types[t].type);
 		assert(t < NUM_TOT_OBJS);
@@ -469,6 +481,7 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 	sstate.target_visible = 0;
 	sstate.target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup
 	float const health_eq(min(4.0f*health, (health + sstate.shields)));
+	bool const almost_dead(health_eq < 20.0);
 
 	// look for landmines and avoid them
 	point avoid_dir(zero_vector);
@@ -496,12 +509,6 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types);
 		}
 	}
-	else if (health_eq < 20.0) { // want health (or shields)
-		types.push_back(type_wt_t(HEALTH, 1.5));
-		types.push_back(type_wt_t(SHIELD, (1.0 - sstate.shields/MAX_SHIELDS)));
-		min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types);
-		if (min_ih < 0) min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, sstate.target_pos, sstate.target_visible, diste);
-	}
 	else { // choose health/attack based on distance
 		// want to get powerup badly if you don't have one
 		float const pu_wt((sstates[smiley_id].powerup == 0) ? 1.5 : (1.0 - float(sstate.powerup_time)/POWERUP_TIME));
@@ -509,8 +516,8 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		types.push_back(type_wt_t(WEAPON,  0.8));
 		types.push_back(type_wt_t(AMMO,    0.7));
 		types.push_back(type_wt_t(WA_PACK, 1.0));
-		types.push_back(type_wt_t(SHIELD,  1.2*(1.0 - sstate.shields/MAX_SHIELDS))); // always below max since it ticks down over time
-		if (health < MAX_HEALTH) types.push_back(type_wt_t(HEALTH, 1.5*(1.0 - health/MAX_HEALTH)));
+		types.push_back(type_wt_t(SHIELD,  (almost_dead ? 10 : 1.2)*(1.0 - sstate.shields/MAX_SHIELDS))); // always below max since it ticks down over time
+		if (health < MAX_HEALTH) types.push_back(type_wt_t(HEALTH, (almost_dead ? 15 : 1.5)*(1.0 - health/MAX_HEALTH)));
 		min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, targete, sstate.target_visible, diste);
 		min_ih = find_nearest_obj(  obj.pos, avoid_dir, smiley_id, targeth, disth, types);
 
