@@ -932,7 +932,7 @@ void vert_coll_detector::check_cobj(int index) {
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
 	if (z1 > zmaxc || z2 < zminc)                    return;
 	vector3d norm(zero_vector), pvel(zero_vector);
-	bool const player_step(player && (camera_change || (cobj.d[2][1] - z1) <= o_radius*C_STEP_HEIGHT));
+	bool const player_step(player && ((type == CAMERA && camera_change) || (cobj.d[2][1] - z1) <= o_radius*C_STEP_HEIGHT));
 	bool coll_top(0), coll_bot(0);
 	
 	if (cobj.platform_id >= 0) { // calculate platform velocity
