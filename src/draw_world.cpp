@@ -19,7 +19,6 @@ bool const DEBUG_COLOR_COLLS    = 0;
 bool const DYNAMIC_OBJ_LIGHTS   = 1;
 bool const SHOW_DRAW_TIME       = 0;
 bool const NO_SHRAP_DLIGHT      = 1; // looks cool with dynamic lights, but very slow
-bool const SHOW_WAYPOINTS       = 0;
 bool const FASTER_SHADOWS       = 0;
 unsigned const MAX_CFILTERS     = 10;
 unsigned const SHAD_NOBJ_THRESH = 200;
@@ -76,7 +75,6 @@ extern texture textures[];
 extern player_state *sstates;
 extern int coll_id[];
 extern vector<light_source> dl_sources;
-extern vector<point> waypoints;
 extern vector<portal> portals;
 
 
@@ -145,12 +143,7 @@ void set_gl_light_pos(int light, point const &pos, float w) {
 
 void draw_solid_object_groups() {
 
-	if (SHOW_WAYPOINTS) {
-		set_color(WHITE);
-		for (unsigned i = 0; i < waypoints.size(); ++i) {
-			draw_sphere_at(waypoints[i], object_types[WAYPOINT].radius, N_SPHERE_DIV);
-		}
-	}
+	draw_waypoints();
 	draw_select_groups(1);
 	if (display_mode & 0x0200) d_part_sys.draw();
 }

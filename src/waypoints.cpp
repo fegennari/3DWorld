@@ -5,18 +5,86 @@
 #include "3DWorld.h"
 #include "mesh.h"
 #include "physics_objects.h"
+#include "player_state.h"
 
 
-extern int DISABLE_WATER, camera_change;
-extern float temperature, zmin;
+bool const SHOW_WAYPOINTS  = 1;
+int const WP_RESET_FRAMES  = 100; // Note: in frames, not ticks, fix?
+int const WP_RECENT_FRAMES = 200;
+
+vector<waypoint_t> waypoints;
+
+extern int DISABLE_WATER, camera_change, frame_counter, num_smileys;
+extern float temperature, zmin, tfticks;
 extern obj_type object_types[];
 extern dwobject def_objects[];
 extern vector<coll_obj> coll_objects;
 
 
+// ********** waypt_used_set **********
+
+
+void waypt_used_set::clear() {
+
+	used.clear();
+	last_wp    = 0;
+	last_frame = 0;
+}
+
+void waypt_used_set::insert(unsigned wp) { // called when a waypoint has been reached
+
+	last_wp    = wp;
+	last_frame = frame_counter;
+	used[wp]   = frame_counter;
+}
+
+bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or not a waypoint is valid based on when it was last used
+
+	if (last_frame > 0) {
+		if ((frame_counter - last_frame) >= WP_RECENT_FRAMES) {
+			clear(); // last_wp has expired, so all of the others must have expired as well
+			return 1;
+		}
+		if (wp == last_wp) return 0; // too recent (lasts used)
+	}
+	map<unsigned, int>::iterator it(used.find(wp));
+	if (it == used.end()) return 1; // new waypoint
+	if ((frame_counter - it->second) < WP_RESET_FRAMES) return 0; // too recent
+	used.erase(it); // lazy update - remove the waypoint when found to be expired
+	return 1;
+}
+
+
+// ********** waypoint_t **********
+
+
+waypoint_t::waypoint_t(point const &p=all_zeros, bool const up=0) : pos(p), user_placed(up) {
+
+	smiley_times.resize(num_smileys, tfticks);
+}
+
+
+void waypoint_t::mark_visited_by_smiley(unsigned const smiley_id) {
+
+	assert(smiley_id < smiley_times.size());
+	smiley_times[smiley_id] = tfticks;
+}
+
+
+float waypoint_t::get_time_since_last_visited(unsigned const smiley_id) const {
+
+	assert(smiley_id < smiley_times.size());
+	float const delta_t(tfticks - smiley_times[smiley_id]);
+	assert(delta_t >= 0.0);
+	return delta_t;
+}
+
+
+// ********** waypoint_builder **********
+
+
 class waypoint_builder {
 
-	vector<point> &waypoints;
 	float radius;
 
 	bool is_waypoint_valid(point const &pos, int coll_id) const {
@@ -31,7 +99,7 @@ class waypoint_builder {
 	}
 
 	void add_if_valid(point const &pos, int coll_id) {
-		if (is_waypoint_valid(pos, coll_id)) waypoints.push_back(pos);
+		if (is_waypoint_valid(pos, coll_id)) waypoints.push_back(waypoint_t(pos, 0));
 	}
 
 	void add_waypoint_rect(float x1, float y1, float x2, float y2, float z, int coll_id) {
@@ -55,8 +123,7 @@ class waypoint_builder {
 	}
 
 public:
-	waypoint_builder(vector<point> &waypoints_)
-		: waypoints(waypoints_), radius(object_types[SMILEY].radius) {}
+	waypoint_builder(void) : radius(object_types[SMILEY].radius) {}
 	
 	void add_cobj_waypoints(vector<coll_obj> const &cobjs) {
 		int const cc(camera_change);
@@ -116,15 +183,45 @@ public:
 };
 
 
-void create_waypoints(vector<point> &waypoints) {
+// ********** waypoint top level code **********
+
+
+void create_waypoints() {
 
 	RESET_TIME;
 	waypoints.clear();
-	waypoint_builder wb(waypoints);
+	waypoint_builder wb;
 	wb.add_cobj_waypoints(coll_objects);
 	wb.add_mesh_waypoints();
 	PRINT_TIME("  Waypoint Create");
 	cout << "Waypoints: " << waypoints.size() << ", cobjs: " << coll_objects.size() << endl;
+}
+
+
+void add_user_waypoints(vector<point> const &user_waypoints) {
+
+	for (unsigned i = 0; i < user_waypoints.size(); ++i) {
+		waypoints.push_back(waypoint_t(user_waypoints[i], 1));
+	}
+}
+
+
+void shift_waypoints(vector3d const &vd) {
+
+	for (unsigned i = 0; i < waypoints.size(); ++i) {
+		waypoints[i].pos += vd;
+	}
+}
+
+
+void draw_waypoints() {
+
+	if (!SHOW_WAYPOINTS) return;
+
+	for (unsigned i = 0; i < waypoints.size(); ++i) {
+		set_color(waypoints[i].user_placed ? YELLOW : WHITE);
+		draw_sphere_at(waypoints[i].pos, object_types[WAYPOINT].radius, N_SPHERE_DIV/2);
+	}
 }
 
 

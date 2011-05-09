@@ -38,6 +38,18 @@ struct od_data { // size = 12
 };
 
 
+struct waypoint_t {
+
+	point pos;
+	bool user_placed;
+	vector<float> smiley_times;
+
+	waypoint_t(point const &p, bool const up);
+	void mark_visited_by_smiley(unsigned const smiley_id);
+	float get_time_since_last_visited(unsigned const smiley_id) const;
+};
+
+
 class waypt_used_set {
 
 	unsigned last_wp;
@@ -103,7 +115,6 @@ struct player_state { // size = big
 	int p_weapons[NUM_WEAPONS], p_ammo[NUM_WEAPONS];
 	unsigned char *tdata;
 	vector<int> balls;
-	vector<float> waypoint_times;
 	waypt_used_set waypts_used;
 	unreachable_pts unreachable;
 	destination_marker dest_mark;

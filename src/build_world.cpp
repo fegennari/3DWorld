@@ -51,7 +51,7 @@ extern tree_cont_t t_trees;
 extern lightning l_strike;
 extern vector<int> hmv_coll_obj;
 extern char *coll_obj_file;
-extern vector<point> app_spots, waypoints;
+extern vector<point> app_spots;
 extern vector<light_source> light_sources;
 
 
@@ -603,13 +603,10 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	PRINT_TIME("Motion matrix generation");
 
 	if (use_waypoints && !inf_terrain && !scrolling) {
-		create_waypoints(waypoints);
-		copy(user_waypoints.begin(), user_waypoints.end(), back_inserter(waypoints));
+		create_waypoints();
 		PRINT_TIME("Waypoint generation");
 	}
-	else {
-		waypoints = user_waypoints;
-	}
+	add_user_waypoints(user_waypoints);
 
 	if (!inf_terrain && !rgt_only) {
 		calc_watershed();
@@ -647,7 +644,7 @@ void shift_all_objs(vector3d const &vd) {
 	shift_other_objs(vd);
 	shift_light_sources(vd);
 	platforms.shift_by(vd);
-	shift_point_vector(waypoints,      vd); // is this correct
+	shift_waypoints(vd); // is this correct?
 	shift_point_vector(user_waypoints, vd);
 	//shift_point_vector(app_spots,      vd); // what if an appearance spot shifts off the map?
 

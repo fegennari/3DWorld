@@ -16,13 +16,10 @@ bool const SMILEY_BUTT            = 1;
 int const WAYPT_VIS_LEVEL         = 0; // 0: visible in frustum (like camera), 1 = visible from the position (any orientation), 2 = always visible
 unsigned const SMILEY_COLL_STEPS  = 10;
 unsigned const PMAP_SIZE          = (2*N_SPHERE_DIV)/3;
-int const WP_RESET_FRAMES         = 100; // Note: in frames, not ticks, fix?
-int const WP_RECENT_FRAMES        = 200;
 
 
 float SSTEPS_PER_FRAME(0.0), smiley_speed(1.0), smiley_acc(0);
 vector<point> app_spots;
-vector<point> waypoints;
 
 
 extern int island, iticks, num_smileys, free_for_all, teams, frame_counter;
@@ -36,40 +33,8 @@ extern obj_type object_types[];
 extern player_state *sstates;
 extern team_info *teaminfo;
 extern vector<string> avail_smiley_names;
+extern vector<waypoint_t> waypoints;
 
-
-// ********** waypt_used_set **********
-
-
-void waypt_used_set::clear() {
-
-	used.clear();
-	last_wp    = 0;
-	last_frame = 0;
-}
-
-void waypt_used_set::insert(unsigned wp) { // called when a waypoint has been reached
-
-	last_wp    = wp;
-	last_frame = frame_counter;
-	used[wp]   = frame_counter;
-}
-
-bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or not a waypoint is valid based on when it was last used
-
-	if (last_frame > 0) {
-		if ((frame_counter - last_frame) >= WP_RECENT_FRAMES) {
-			clear(); // last_wp has expired, so all of the others must have expired as well
-			return 1;
-		}
-		if (wp == last_wp) return 0; // too recent (lasts used)
-	}
-	map<unsigned, int>::iterator it(used.find(wp));
-	if (it == used.end()) return 1; // new waypoint
-	if ((frame_counter - it->second) < WP_RESET_FRAMES) return 0; // too recent
-	used.erase(it); // lazy update - remove the waypoint when found to be expired
-	return 1;
-}
 
 
 // ********** unreachable_pts **********
@@ -339,23 +304,17 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		float const dmult(1.0/types[t].weight);
 
 		if (type == WAYPOINT) { // process waypoints
-			if (sstate.waypoint_times.size() != waypoints.size()) {
-				sstate.waypoint_times.clear();
-				sstate.waypoint_times.resize(waypoints.size(), tfticks); // maybe resize, and maybe reset time to fticks
-			}
 			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
-				point const &wp(waypoints[i]);
+				point const &wp(waypoints[i].pos);
 				if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i)) continue;
 		
 				if (dist_less_than(wp, pos, sradius)) { // smiley has reached waypoint
 					sstate.waypts_used.insert(i); // insert as the last used waypoint and remove from consideration
-					sstate.waypoint_times[i] = tfticks;
+					waypoints[i].mark_visited_by_smiley(smiley_id);
 					continue;
 				}
 				if (WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0)) continue; // view culling - more detailed query later
-				float const delta_t(tfticks - sstate.waypoint_times[i]);
-				assert(delta_t >= 0.0);
-				float const time_weight(tfticks/max(1.0f, delta_t));
+				float const time_weight(tfticks/max(1.0f, waypoints[i].get_time_since_last_visited(smiley_id)));
 				float const tot_weight(dmult*(time_weight + p2p_dist_sq(pos, wp)));
 				oddatav.push_back(od_data(type, i, tot_weight)); // add high weight to prefer other objects
 			}
@@ -398,7 +357,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 
 		if (type == WAYPOINT) {
 			assert(size_t(oddatav[i].id) < waypoints.size());
-			pos2 = waypoints[oddatav[i].id];
+			pos2 = waypoints[oddatav[i].id].pos;
 		}
 		else {
 			int const cid(coll_id[type]);
