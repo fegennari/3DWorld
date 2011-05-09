@@ -467,7 +467,7 @@ void init_objects() {
 	object_types[GASSED].color             = OLIVE;
 	object_types[GASSED].tid               = YUCK_TEX;
 
-	object_types[WAYPOINT].radius          = 0.02;
+	object_types[WAYPOINT].radius          = CAMERA_RADIUS;
 
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;

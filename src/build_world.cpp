@@ -37,7 +37,7 @@ vector<point> user_waypoints;
 vector<coll_obj> fixed_cobjs;
 vector<portal> portals;
 
-extern bool have_platform_cobj, use_waypoints;
+extern bool have_platform_cobj;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, invalid_shadows, has_scenery2, UNLIMITED_WEAPONS;
@@ -602,11 +602,10 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	calc_motion_direction();
 	PRINT_TIME("Motion matrix generation");
 
-	if (use_waypoints && !inf_terrain && !scrolling) {
-		create_waypoints();
-		PRINT_TIME("Waypoint generation");
+	if (!inf_terrain && !scrolling) {
+		create_waypoints(user_waypoints);
+		PRINT_TIME("Waypoint Creation");
 	}
-	add_user_waypoints(user_waypoints);
 
 	if (!inf_terrain && !rgt_only) {
 		calc_watershed();
@@ -959,7 +958,6 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 	unsigned line_num(1), npoints;
 	int end(0), use_z(0), use_vel(0), ivals[3];
 	float fvals[2];
-	float const smiley_radius(object_types[SMILEY].radius);
 	point pos(0.0, 0.0, 0.0);
 	vector3d tv0, vel;
 	vector<point> poly_pts;
@@ -1107,6 +1105,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				return read_error(fp, "appearance spot", coll_obj_file);
 			}
 			{
+				float const smiley_radius(object_types[SMILEY].radius);
 				xform_pos(pos, tv, scale, mirror, swap_dim); // better not try to transform z
 				read_or_calc_zval(fp, pos, smiley_radius, smiley_radius);
 				app_spots.push_back(pos);
@@ -1136,7 +1135,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			{
 				xform_pos(pos, tv, scale, mirror, swap_dim); // better not try to transform z
-				read_or_calc_zval(fp, pos, SMALL_NUMBER, smiley_radius);
+				read_or_calc_zval(fp, pos, SMALL_NUMBER, object_types[WAYPOINT].radius);
 				user_waypoints.push_back(pos);
 			}
 			break;

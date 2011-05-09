@@ -1610,8 +1610,7 @@ unsigned set_shader_prog(std::string const &vs_name, std::string const &fs_name,
 void unset_shader_prog();
 
 // function prototypes - waypoints
-void create_waypoints();
-void add_user_waypoints(vector<point> const &user_waypoints);
+void create_waypoints(vector<point> const &user_waypoints);
 void shift_waypoints(vector3d const &vd);
 void draw_waypoints();
 

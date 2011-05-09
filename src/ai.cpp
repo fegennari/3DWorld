@@ -284,7 +284,25 @@ struct type_wt_t {
 };
 
 
-int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, point &target, float &min_dist, vector<type_wt_t> types) { // health, powerup, etc.
+void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
+	vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu)
+{
+	assert(i < waypoints.size());
+	player_state &sstate(sstates[smiley_id]);
+	point const &wp(waypoints[i].pos);
+	if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i))     return;
+	if (WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0)) return; // view culling - more detailed query later
+	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this direction
+	if (i == curw) dmult *= 0.1; // prefer the current waypoint to avoid indecision
+	//float const time_weight(tfticks/max(1.0f, waypoints[i].get_time_since_last_visited(smiley_id)));
+	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
+	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp)));
+	oddatav.push_back(od_data(WAYPOINT, i, tot_weight)); // add high weight to prefer other objects
+}
+
+
+// health, shields, powerup, weapon, ammo, pack, waypoint
+int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, point &target, float &min_dist, vector<type_wt_t> types) {
 
 	assert(smiley_id < num_smileys);
 	int min_ic(-1);
@@ -304,19 +322,31 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		float const dmult(1.0/types[t].weight);
 
 		if (type == WAYPOINT) { // process waypoints
-			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
-				point const &wp(waypoints[i].pos);
-				if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i)) continue;
-		
-				if (dist_less_than(wp, pos, sradius)) { // smiley has reached waypoint
-					sstate.waypts_used.insert(i); // insert as the last used waypoint and remove from consideration
-					waypoints[i].mark_visited_by_smiley(smiley_id);
-					continue;
+			int curw(sstate.last_waypoint);
+			int ignore_w(-1);
+
+			if (curw >= 0) { // currently targeting a waypoint
+				assert((unsigned)curw < waypoints.size());
+
+				if (dist_less_than(waypoints[curw].pos, pos, sradius)) { // smiley has reached waypoint
+					//cout << "reached target waypoint " << curw << " at time " << tfticks << endl; // testing
+					sstate.waypts_used.insert(curw); // insert as the last used waypoint and remove from consideration
+					waypoints[curw].mark_visited_by_smiley(smiley_id);
+					vector<unsigned> const &next(waypoints[curw].next_wpts);
+
+					if (!next.empty()) { // choose next waypoint from graph
+						cout << "next size: " << next.size() << endl; // testing
+						for (unsigned i = 0; i < next.size(); ++i) {
+							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu);
+						}
+						continue;
+					}
+					ignore_w = curw; // don't pick this goal again
+					curw     = -1;
 				}
-				if (WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0)) continue; // view culling - more detailed query later
-				float const time_weight(tfticks/max(1.0f, waypoints[i].get_time_since_last_visited(smiley_id)));
-				float const tot_weight(dmult*(time_weight + p2p_dist_sq(pos, wp)));
-				oddatav.push_back(od_data(type, i, tot_weight)); // add high weight to prefer other objects
+			}
+			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
+				if (i != ignore_w) check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu);
 			}
 		}
 		else { // not a waypoint (pickup item)
@@ -375,9 +405,9 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		if (sstate.unreachable.cant_reach(pos2)) continue;
 		float const oradius(object_types[type].radius);
 		bool const ice(temperature <= W_FREEZE_POINT);
-		bool const not_too_high(pos2.z < max((mesh_height[ypos][xpos] + sradius + oradius), (pos.z + ra_smiley + oradius - sradius)));
-		bool const not_too_high2(pos2.z < interpolate_mesh_zval(pos2.x, pos2.y, oradius, 0, 0)     + ra_smiley + oradius);
-		bool const ice_height_ok(ice && wminside[ypos][xpos] && (pos2.z < water_matrix[ypos][xpos] + ra_smiley + oradius));
+		bool const not_too_high( pos2.z < max((mesh_height[ypos][xpos] + sradius + oradius), (pos.z + ra_smiley + oradius - sradius)));
+		bool const not_too_high2(pos2.z < interpolate_mesh_zval(pos2.x, pos2.y, oradius, 0, 0)      + ra_smiley + oradius);
+		bool const ice_height_ok(ice && wminside[ypos][xpos] && (pos2.z < water_matrix[ypos][xpos]  + ra_smiley + oradius));
 		bool const in_motion(obj && obj->status == 1 && obj->velocity.mag_sq() > 9.0);
 		bool const can_reach(not_too_high || ice_height_ok || in_motion);
 
@@ -388,6 +418,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			int const max_vis_level((type == WAYPOINT) ? 3 : ((type == BALL) ? 5 : 4));
 
 			if (skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) {
+				if (type == WAYPOINT) sstate.last_waypoint = oddatav[i].id;
 				min_dist = sqrt(oddatav[i].dist); // find closest reachable/visible object
 				min_ic   = type;
 				target   = pos2;
@@ -540,6 +571,7 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		min_ie = sstate.target;
 	}
 #endif
+	if (min_ih != WAYPOINT) sstate.last_waypoint = -1; // reset
 	if (sstate.target_visible == 1) assert(min_ie >= CAMERA_ID);
 	sstate.target = min_ie;
 }
@@ -1218,6 +1250,7 @@ void player_state::init(bool w_start) {
 	target_visible= 0;
 	target_type   = 0;
 	target        = 0;
+	last_waypoint = -1;
 	plasma_size   = 1.0;
 	zvel          = 0.0;
 	stopped_time  = 0;

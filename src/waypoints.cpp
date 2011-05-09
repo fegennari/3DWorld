@@ -14,6 +14,7 @@ int const WP_RECENT_FRAMES = 200;
 
 vector<waypoint_t> waypoints;
 
+extern bool use_waypoints;
 extern int DISABLE_WATER, camera_change, frame_counter, num_smileys;
 extern float temperature, zmin, tfticks;
 extern obj_type object_types[];
@@ -58,7 +59,7 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 // ********** waypoint_t **********
 
 
-waypoint_t::waypoint_t(point const &p=all_zeros, bool const up=0) : pos(p), user_placed(up) {
+waypoint_t::waypoint_t(point const &p=all_zeros, bool const up=0) : pos(p), user_placed(up), visited(0) {
 
 	smiley_times.resize(num_smileys, tfticks);
 }
@@ -68,6 +69,7 @@ void waypoint_t::mark_visited_by_smiley(unsigned const smiley_id) {
 
 	assert(smiley_id < smiley_times.size());
 	smiley_times[smiley_id] = tfticks;
+	visited = 1;
 }
 
 
@@ -123,7 +125,7 @@ class waypoint_builder {
 	}
 
 public:
-	waypoint_builder(void) : radius(object_types[SMILEY].radius) {}
+	waypoint_builder(void) : radius(object_types[WAYPOINT].radius) {}
 	
 	void add_cobj_waypoints(vector<coll_obj> const &cobjs) {
 		int const cc(camera_change);
@@ -186,23 +188,23 @@ public:
 // ********** waypoint top level code **********
 
 
-void create_waypoints() {
+void create_waypoints(vector<point> const &user_waypoints) {
 
 	RESET_TIME;
 	waypoints.clear();
-	waypoint_builder wb;
-	wb.add_cobj_waypoints(coll_objects);
-	wb.add_mesh_waypoints();
-	PRINT_TIME("  Waypoint Create");
-	cout << "Waypoints: " << waypoints.size() << ", cobjs: " << coll_objects.size() << endl;
-}
-
-
-void add_user_waypoints(vector<point> const &user_waypoints) {
-
+	
 	for (unsigned i = 0; i < user_waypoints.size(); ++i) {
 		waypoints.push_back(waypoint_t(user_waypoints[i], 1));
 	}
+	if (use_waypoints) {
+		waypoint_builder wb;
+		wb.add_cobj_waypoints(coll_objects);
+		wb.add_mesh_waypoints();
+		PRINT_TIME("  Waypoint Generation");
+	}
+	// determine waypoint connectivity
+	PRINT_TIME("  Waypoint Connectivity");
+	cout << "Waypoints: " << waypoints.size() << endl;
 }
 
 
@@ -219,8 +221,8 @@ void draw_waypoints() {
 	if (!SHOW_WAYPOINTS) return;
 
 	for (unsigned i = 0; i < waypoints.size(); ++i) {
-		set_color(waypoints[i].user_placed ? YELLOW : WHITE);
-		draw_sphere_at(waypoints[i].pos, object_types[WAYPOINT].radius, N_SPHERE_DIV/2);
+		set_color(waypoints[i].visited ? ORANGE : (waypoints[i].user_placed ? YELLOW : WHITE));
+		draw_sphere_at(waypoints[i].pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2);
 	}
 }
 
