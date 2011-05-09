@@ -586,8 +586,9 @@ void obj_group::preproc_this_frame() {
 	unsigned const nobjs(max_objects());
 	end_id = nobjs;
 	new_id = 0;
+	if (!enabled) return;
 
-	if (enabled && reorderable) { // some objects such as smileys are position dependent
+	if (reorderable) { // some objects such as smileys are position dependent
 		assert(predef_objs.empty());
 		unsigned saw_id(0);
 		
@@ -670,6 +671,7 @@ int obj_group::get_next_predef_obj(dwobject &obj, unsigned ix) {
 	if (best_obj == -1) return ((max_objects() > predef_objs.size()) ? 2 : 0); // no valid predef_obj found
 	obj.pos       = predef_objs[best_obj].pos;
 	obj.direction = (unsigned char)predef_objs[best_obj].type;
+	obj.flags    |= USER_PLACED;
 	predef_objs[best_obj].obj_used = ix;
 	return 1;
 }
@@ -707,6 +709,9 @@ void obj_group::disable() {
 	if ((object_types[type].flags & (OBJ_ROLLS | VERTEX_DEFORM))) {
 		delete td;
 		td = NULL;
+	}
+	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {
+		i->obj_used = -1;
 	}
 	enabled = 0;
 }

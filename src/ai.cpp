@@ -327,9 +327,10 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 
 			for (unsigned i = 0; i < objg.end_id; ++i) {
 				dwobject const &obj(objg.get_obj(i));
+				bool const placed((obj.flags & USER_PLACED) != 0);
 				if (obj.disabled() || (obj.flags & IN_DARKNESS))                 continue;
 				if (!is_over_mesh(obj.pos) || (island && (obj.pos.z < ocean.z))) continue;
-				if (!sphere_in_view(pdu, obj.pos, radius, 0))                    continue; // view culling (disable for predef object locations?)
+				if (!placed && !sphere_in_view(pdu, obj.pos, radius, 0))         continue; // view culling (disabled for predef object locations)
 				if (avoid_dir != zero_vector && dot_product_ptv(obj.pos, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
 				float cost(1.0);
 
@@ -354,16 +355,20 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		assert(type >= 0 && type < NUM_TOT_OBJS);
 		point pos2;
 		dwobject const *obj(NULL);
+		bool no_frustum_test(0), skip_vis_test(0);
 
 		if (type == WAYPOINT) {
 			assert(size_t(oddatav[i].id) < waypoints.size());
 			pos2 = waypoints[oddatav[i].id].pos;
+			no_frustum_test = (WAYPT_VIS_LEVEL == 1);
+			skip_vis_test   = (WAYPT_VIS_LEVEL == 2);
 		}
 		else {
 			int const cid(coll_id[type]);
 			assert(cid >= 0 && cid < NUM_TOT_OBJS);
 			obj  = &obj_groups[cid].get_obj(oddatav[i].id);
 			pos2 = obj->pos;
+			no_frustum_test = ((obj->flags & USER_PLACED) != 0);
 		}
 		int const xpos(get_xpos(pos2.x)), ypos(get_ypos(pos2.y));
 		if (point_outside_mesh(xpos, ypos))      continue;
@@ -380,9 +385,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			if (!sstate.unreachable.proc_target(pos, pos2, sstate.objective_pos, can_reach)) continue;
 		}
 		if (can_reach || not_too_high2) { // not_too_high2 - may be incorrect
-			int const max_vis_level((type == BALL) ? 5 : 4);
-			bool const skip_vis_test  (WAYPT_VIS_LEVEL == 2 && type == WAYPOINT);
-			bool const no_frustum_test(WAYPT_VIS_LEVEL == 1 && type == WAYPOINT);
+			int const max_vis_level((type == WAYPOINT) ? 3 : ((type == BALL) ? 5 : 4));
 
 			if (skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) {
 				min_dist = sqrt(oddatav[i].dist); // find closest reachable/visible object
