@@ -335,7 +335,6 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 					vector<unsigned> const &next(waypoints[curw].next_wpts);
 
 					if (!next.empty()) { // choose next waypoint from graph
-						cout << "next size: " << next.size() << endl; // testing
 						for (unsigned i = 0; i < next.size(); ++i) {
 							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu);
 						}

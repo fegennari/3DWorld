@@ -1399,7 +1399,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 int set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id, bool flight, bool on_snow) {
 
 	int const xpos(get_xpos(pos.x) - xoff), ypos(get_ypos(pos.y) - yoff);
-	bool const is_camera(type == CAMERA), is_player(is_camera || type == SMILEY);
+	bool const is_camera(type == CAMERA), is_player(is_camera || (type == SMILEY && id >= 0));
 
 	if (point_outside_mesh(xpos, ypos)) {
 		if (is_player) sstates[id].fall_counter = 0;

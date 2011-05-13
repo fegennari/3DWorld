@@ -89,15 +89,19 @@ class waypoint_builder {
 
 	float radius;
 
-	bool is_waypoint_valid(point const &pos, int coll_id) const {
-		if (!is_over_mesh(pos) || pos.z < zmin) return 0;
-		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
-		if (pos.z - radius < mesh_zval) return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
+	bool is_valid_cobj_placement(point const &pos, int coll_id) const {
 		dwobject obj(def_objects[SMILEY]); // create a fake temporary smiley object
 		obj.pos     = pos;
 		obj.pos.z  += SMALL_NUMBER; // move up slightly
 		obj.coll_id = coll_id; // ignore collisions with the current object
 		return !obj.check_vert_collision(0, 0, 0); // return true if no collision
+	}
+
+	bool is_waypoint_valid(point const &pos, int coll_id) const {
+		if (!is_over_mesh(pos) || pos.z < zmin) return 0;
+		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
+		if (pos.z - radius < mesh_zval) return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
+		return is_valid_cobj_placement(pos, coll_id);
 	}
 
 	void add_if_valid(point const &pos, int coll_id) {
@@ -182,10 +186,51 @@ public:
 			}
 		}
 	}
+
+	void connect_waypoints() {
+		unsigned cand_edges(0), num_edges(0), tot_steps(0);
+		float const step_size(1.0*radius), step_height(C_STEP_HEIGHT*radius);
+		int cindex(-1);
+
+		for (unsigned i = 0; i < waypoints.size(); ++i) {
+			for (unsigned j = 0; j < waypoints.size(); ++j) {
+				if (cindex >= 0) {
+					assert((unsigned)cindex < coll_objects.size());
+					if (coll_objects[cindex].line_intersect(waypoints[i].pos, waypoints[j].pos)) continue; // hit last cobj
+				}
+				if (i == j || check_coll_line(waypoints[i].pos, waypoints[j].pos, cindex, -1, 1, 0)) continue;
+				vector3d step(waypoints[j].pos - waypoints[i].pos);
+				float const dist(step.mag());
+				unsigned const num_steps(dist/step_size);
+				step *= step_size/dist;
+				point cur(waypoints[i].pos);
+				bool path_valid(1); // first and last points are guaranteed to be valid
+
+				for (unsigned s = 1; s < num_steps && path_valid; ++s) {
+					cur += step;
+					float zvel;
+					point lpos(cur - step);
+					int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, SMILEY, -2, 0, 0));
+					if (ret == 3) path_valid = 0; // stuck
+					if (!is_valid_cobj_placement(cur, -1)) path_valid = 0; // check if valid position
+					// FIXME: recompute step when cur.z changes
+					++tot_steps;
+				}
+				if (path_valid) {
+					waypoints[i].next_wpts.push_back(j);
+					++num_edges;
+				}
+				++cand_edges;
+			}
+		}
+		// FIXME: remove some duplicate colinear edges
+		cout << "cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
+	}
 };
 
 
 // ********** waypoint top level code **********
+
 
 
 void create_waypoints(vector<point> const &user_waypoints) {
@@ -196,13 +241,14 @@ void create_waypoints(vector<point> const &user_waypoints) {
 	for (unsigned i = 0; i < user_waypoints.size(); ++i) {
 		waypoints.push_back(waypoint_t(user_waypoints[i], 1));
 	}
+	waypoint_builder wb;
+
 	if (use_waypoints) {
-		waypoint_builder wb;
 		wb.add_cobj_waypoints(coll_objects);
 		wb.add_mesh_waypoints();
 		PRINT_TIME("  Waypoint Generation");
 	}
-	// determine waypoint connectivity
+	wb.connect_waypoints();
 	PRINT_TIME("  Waypoint Connectivity");
 	cout << "Waypoints: " << waypoints.size() << endl;
 }
@@ -219,11 +265,18 @@ void shift_waypoints(vector3d const &vd) {
 void draw_waypoints() {
 
 	if (!SHOW_WAYPOINTS) return;
+	pt_line_drawer pld;
 
-	for (unsigned i = 0; i < waypoints.size(); ++i) {
-		set_color(waypoints[i].visited ? ORANGE : (waypoints[i].user_placed ? YELLOW : WHITE));
-		draw_sphere_at(waypoints[i].pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2);
+	for (vector<waypoint_t>::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
+		set_color(i->visited ? ORANGE : (i->user_placed ? YELLOW : WHITE));
+		draw_sphere_at(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2);
+
+		for (vector<unsigned>::const_iterator j = i->next_wpts.begin(); j != i->next_wpts.end(); ++j) {
+			assert(*j < waypoints.size());
+			pld.add_line(i->pos, plus_z, WHITE, waypoints[*j].pos, plus_z, YELLOW);
+		}
 	}
+	pld.draw();
 }
 
 
