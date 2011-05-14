@@ -228,6 +228,7 @@ void add_target(vector<od_data> &oddatav, pos_dir_up const &pdu, point const &po
 
 int find_nearest_enemy(point const &pos, point const &avoid_dir, int smiley_id, point &target, int &target_visible, float &min_dist) {
 
+	//return -1;
 	assert(smiley_id < num_smileys);
 	int min_i(NO_SOURCE), hitter(NO_SOURCE);
 	float const radius(object_types[SMILEY].radius);
@@ -285,19 +286,19 @@ struct type_wt_t {
 
 
 void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
-	vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu)
+	vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next)
 {
 	assert(i < waypoints.size());
 	player_state &sstate(sstates[smiley_id]);
 	point const &wp(waypoints[i].pos);
-	if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i))     return;
-	if (WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0)) return; // view culling - more detailed query later
+	if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i))                  return;
+	if (!next && WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
 	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this direction
 	if (i == curw) dmult *= 0.1; // prefer the current waypoint to avoid indecision
 	//float const time_weight(tfticks/max(1.0f, waypoints[i].get_time_since_last_visited(smiley_id)));
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
 	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp)));
-	oddatav.push_back(od_data(WAYPOINT, i, tot_weight)); // add high weight to prefer other objects
+	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, next)); // add high weight to prefer other objects
 }
 
 
@@ -335,8 +336,9 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 					vector<unsigned> const &next(waypoints[curw].next_wpts);
 
 					if (!next.empty()) { // choose next waypoint from graph
+						//cout << "choose next waypoint" << endl;
 						for (unsigned i = 0; i < next.size(); ++i) {
-							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu);
+							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu, 1);
 						}
 						continue;
 					}
@@ -345,7 +347,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 				}
 			}
 			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
-				if (i != ignore_w) check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu);
+				if (i != ignore_w) check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu, 0);
 			}
 		}
 		else { // not a waypoint (pickup item)
@@ -390,7 +392,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			assert(size_t(oddatav[i].id) < waypoints.size());
 			pos2 = waypoints[oddatav[i].id].pos;
 			no_frustum_test = (WAYPT_VIS_LEVEL == 1);
-			skip_vis_test   = (WAYPT_VIS_LEVEL == 2);
+			skip_vis_test   = (WAYPT_VIS_LEVEL == 2 || oddatav[i].val);
 		}
 		else {
 			int const cid(coll_id[type]);

@@ -189,32 +189,35 @@ public:
 
 	void connect_waypoints() {
 		unsigned cand_edges(0), num_edges(0), tot_steps(0);
+		unsigned const num_waypoints(waypoints.size());
 		float const step_size(1.0*radius), step_height(C_STEP_HEIGHT*radius);
 		int cindex(-1);
 
-		for (unsigned i = 0; i < waypoints.size(); ++i) {
-			for (unsigned j = 0; j < waypoints.size(); ++j) {
+		for (unsigned i = 0; i < num_waypoints; ++i) {
+			point const start(waypoints[i].pos);
+
+			for (unsigned j = 0; j < num_waypoints; ++j) {
+				point const end(waypoints[j].pos);
+
 				if (cindex >= 0) {
 					assert((unsigned)cindex < coll_objects.size());
-					if (coll_objects[cindex].line_intersect(waypoints[i].pos, waypoints[j].pos)) continue; // hit last cobj
+					if (coll_objects[cindex].line_intersect(start, end)) continue; // hit last cobj
 				}
-				if (i == j || check_coll_line(waypoints[i].pos, waypoints[j].pos, cindex, -1, 1, 0)) continue;
-				vector3d step(waypoints[j].pos - waypoints[i].pos);
-				float const dist(step.mag());
-				unsigned const num_steps(dist/step_size);
-				step *= step_size/dist;
-				point cur(waypoints[i].pos);
+				if (i == j || check_coll_line(start, end, cindex, -1, 1, 0)) continue;
+				point cur(start);
 				bool path_valid(1); // first and last points are guaranteed to be valid
+				float zvel(0.0);
 
-				for (unsigned s = 1; s < num_steps && path_valid; ++s) {
-					cur += step;
-					float zvel;
-					point lpos(cur - step);
-					int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, SMILEY, -2, 0, 0));
+				while (path_valid && !dist_less_than(cur, end, 1.1*step_size)) {
+					point lpos(cur);
+					cur += (end - cur).get_norm()*step_size;
+					int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0));
 					if (ret == 3) path_valid = 0; // stuck
-					if (!is_valid_cobj_placement(cur, -1)) path_valid = 0; // check if valid position
-					// FIXME: recompute step when cur.z changes
+					if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)  path_valid = 0; // too high of a step
+					if (dist_less_than(cur, lpos, 0.1*step_size)) path_valid = 0; // not making progress
+					if (!is_valid_cobj_placement(cur, -1))        path_valid = 0; // check if valid position
 					++tot_steps;
+					//waypoints.push_back(waypoint_t(cur, 1)); // testing
 				}
 				if (path_valid) {
 					waypoints[i].next_wpts.push_back(j);
@@ -268,12 +271,22 @@ void draw_waypoints() {
 	pt_line_drawer pld;
 
 	for (vector<waypoint_t>::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
+		unsigned const wix(i - waypoints.begin());
 		set_color(i->visited ? ORANGE : (i->user_placed ? YELLOW : WHITE));
 		draw_sphere_at(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2);
 
 		for (vector<unsigned>::const_iterator j = i->next_wpts.begin(); j != i->next_wpts.end(); ++j) {
 			assert(*j < waypoints.size());
-			pld.add_line(i->pos, plus_z, WHITE, waypoints[*j].pos, plus_z, YELLOW);
+			assert(*j != wix);
+			waypoint_t const &w(waypoints[*j]);
+			bool bidir(0);
+
+			for (vector<unsigned>::const_iterator k = w.next_wpts.begin(); k != w.next_wpts.end() && !bidir; ++k) {
+				bidir = (*k == wix);
+			}
+			if (!bidir || *j < wix) {
+				pld.add_line(i->pos, plus_z, (bidir ? YELLOW : WHITE), w.pos, plus_z, (bidir ? YELLOW : ORANGE));
+			}
 		}
 	}
 	pld.draw();

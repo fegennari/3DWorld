@@ -1563,7 +1563,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		bool const on_ice(is_camera && (camera_coll_smooth || game_mode) && temperature <= W_FREEZE_POINT && is_underwater(pos));
 		if (on_ice) pos.z = water_matrix[ypos][xpos]; // standing on ice
 		pos.z += radius;
-		if (!on_ice) modify_grass_at(pos, radius, (type != FIRE), (type == FIRE), 0, 0);
+		if (!on_ice && type != WAYPOINT) modify_grass_at(pos, radius, (type != FIRE), (type == FIRE), 0, 0);
 	}
 	else {
 		zceil = max(zceil, mh);
@@ -1588,14 +1588,17 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (falling)        camera_in_air     = 1;
 		if (!camera_in_air) camera_invincible = 0;
 	}
-	if (flight) {
+	if (type = WAYPOINT) {
+		// do nothing
+	}
+	else if (flight) {
 		zvel = 0.0;
 		if (is_player) sstates[id].fall_counter = 0;
 	}
 	else if (falling) {
 		zvel  = max(-terminal_v, (zvel - g_acc));
 		pos.z = max(pos.z, (lpos.z + tstep*zvel));
-
+		
 		if (is_player) {
 			if (sstates[id].fall_counter == 0) sstates[id].last_dz = 0.0;
 			++sstates[id].fall_counter;
