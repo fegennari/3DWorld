@@ -294,8 +294,7 @@ void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id
 	if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i))                  return;
 	if (!next && WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
 	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this direction
-	if (i == curw) dmult *= 0.1; // prefer the current waypoint to avoid indecision
-	//float const time_weight(tfticks/max(1.0f, waypoints[i].get_time_since_last_visited(smiley_id)));
+	if (i == curw) dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
 	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp)));
 	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, next)); // add high weight to prefer other objects

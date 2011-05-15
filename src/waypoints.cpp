@@ -89,19 +89,21 @@ class waypoint_builder {
 
 	float radius;
 
-	bool is_valid_cobj_placement(point const &pos, int coll_id) const {
-		dwobject obj(def_objects[SMILEY]); // create a fake temporary smiley object
+	bool check_cobj_placement(point &pos, int coll_id) const {
+		dwobject obj(def_objects[WAYPOINT]); // create a fake temporary smiley object
 		obj.pos     = pos;
-		obj.pos.z  += SMALL_NUMBER; // move up slightly
 		obj.coll_id = coll_id; // ignore collisions with the current object
-		return !obj.check_vert_collision(0, 0, 0); // return true if no collision
+		bool const ret(!obj.check_vert_collision(0, 0, 0)); // return true if no collision
+		// FIXME: lampposts
+		pos = obj.pos;
+		return ret;
 	}
 
 	bool is_waypoint_valid(point const &pos, int coll_id) const {
-		if (!is_over_mesh(pos) || pos.z < zmin) return 0;
+		if (!is_over_mesh(pos) || pos.z < zmin || !point_interior_to_mesh(get_xpos(pos.x), get_ypos(pos.y))) return 0;
 		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 		if (pos.z - radius < mesh_zval) return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
-		return is_valid_cobj_placement(pos, coll_id);
+		return check_cobj_placement(point(pos), coll_id);
 	}
 
 	void add_if_valid(point const &pos, int coll_id) {
@@ -188,40 +190,63 @@ public:
 	}
 
 	void connect_waypoints() {
+		// FIXME: smoother smiley motion that actually follows waypoints
 		unsigned cand_edges(0), num_edges(0), tot_steps(0);
 		unsigned const num_waypoints(waypoints.size());
-		float const step_size(1.0*radius), step_height(C_STEP_HEIGHT*radius);
+		float const step_size(0.25*radius), step_height(C_STEP_HEIGHT*radius);
 		int cindex(-1);
+		vector<pair<float, unsigned> > cands(num_waypoints);
 
 		for (unsigned i = 0; i < num_waypoints; ++i) {
 			point const start(waypoints[i].pos);
 
 			for (unsigned j = 0; j < num_waypoints; ++j) {
-				point const end(waypoints[j].pos);
+				cands[j] = make_pair(p2p_dist_sq(start, waypoints[j].pos), j);
+			}
+			sort(cands.begin(), cands.end()); // closest to furthest
+
+			for (unsigned j = 0; j < cands.size(); ++j) {
+				unsigned const k(cands[j].second);
+				point const end(waypoints[k].pos);
+				vector3d const dir(end - start), dir_xy(vector3d(dir.x, dir.y, 0.0).get_norm());
+				float const dmag_inv(1.0/dir.xy_mag());
+				vector<unsigned> const &next(waypoints[i].next_wpts);
+				bool colinear(0);
+
+				for (unsigned l = 0; l < next.size() && !colinear; ++l) {
+					assert(next[l] < num_waypoints);
+					vector3d const dir2(waypoints[next[l]].pos - start), dir_xy2(vector3d(dir2.x, dir2.y, 0.0).get_norm());
+					colinear = (dot_product(dir_xy, dir_xy2) > 0.999);
+				}
+				if (colinear) continue;
 
 				if (cindex >= 0) {
 					assert((unsigned)cindex < coll_objects.size());
 					if (coll_objects[cindex].line_intersect(start, end)) continue; // hit last cobj
 				}
-				if (i == j || check_coll_line(start, end, cindex, -1, 1, 0)) continue;
-				point cur(start);
-				bool path_valid(1); // first and last points are guaranteed to be valid
+				if (i == k || check_coll_line(start, end, cindex, -1, 1, 0)) continue;
+				point cur(start); // first and last points are guaranteed to be valid
 				float zvel(0.0);
 
-				while (path_valid && !dist_less_than(cur, end, 1.1*step_size)) {
+				while (1) {
+					if (dist_less_than(cur, end, 1.1*step_size)) {
+						waypoints[i].next_wpts.push_back(k);
+						++num_edges;
+						break;
+					}
+					vector3d const delta((end - cur).get_norm());
 					point lpos(cur);
-					cur += (end - cur).get_norm()*step_size;
+					cur += delta*step_size;
 					int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0));
-					if (ret == 3) path_valid = 0; // stuck
-					if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)  path_valid = 0; // too high of a step
-					if (dist_less_than(cur, lpos, 0.1*step_size)) path_valid = 0; // not making progress
-					if (!is_valid_cobj_placement(cur, -1))        path_valid = 0; // check if valid position
+					if (ret == 3)                                           break; // stuck
+					if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)            break; // too high of a step
+					check_cobj_placement(cur, -1);
+					if (dot_product_ptv(delta, cur, lpos) < 0.01*step_size) break; // not making progress
+					float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv);
+					if (d > 2.0*radius)                                     break; // path deviation too long
+					// FIXME: allow more deviation from path to get around small obstacles
 					++tot_steps;
 					//waypoints.push_back(waypoint_t(cur, 1)); // testing
-				}
-				if (path_valid) {
-					waypoints[i].next_wpts.push_back(j);
-					++num_edges;
 				}
 				++cand_edges;
 			}
