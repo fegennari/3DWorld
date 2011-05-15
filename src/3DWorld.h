@@ -264,8 +264,10 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 		T const val_inv(1.0/val);
 		return pointT(x*val_inv, y*val_inv, z*val_inv);
 	}
-	T mag_sq() const {return (x*x + y*y + z*z);}
-	T mag()    const {return sqrt(mag_sq());}
+	T mag_sq()    const {return (x*x + y*y + z*z);}
+	T mag()       const {return sqrt(mag_sq());}
+	T xy_mag_sq() const {return (x*x + y*y);}
+	T xy_mag()    const {return sqrt(xy_mag_sq());}
 	bool is_nonzero() const {return (x != 0.0 || y != 0.0 || z != 0.0);}
 	void do_glVertex() const;
 	void do_glNormal() const;
