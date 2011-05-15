@@ -678,7 +678,7 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 								   bool check_ends, point &p_int, vector3d &norm, bool calc_int)
 {
 	float t, rad;
-	vector3d v1, v2;
+	vector3d v1, v2; // v1: cp1-cp2, v2: cp1-sc
 	if (!sphere_int_cylinder_pretest(sc, sr, cp1, cp2, r1, r2, check_ends, v1, v2, t, rad)) return 0;
 	int const tok(t >= 0.0 && t <= 1.0);
 	if (!calc_int && tok) return 1;
@@ -693,10 +693,10 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 	if (tok && rdist < rad) { // collision with side
 		float const val(rad - rdist + toler);
 
-		if (rdist < min(TOLERANCE, toler*rad)) { // rarely occurs
-			p_int    = sc;
-			p_int.x += val; // move out of the way in an arbitrary direction
-			norm.assign(1.0, 0.0, 0.0);
+		if (rdist < min(TOLERANCE, toler*rad)) { // center along cylinder centerline (rarely occurs)
+			norm  = all_zeros;
+			norm[get_min_dim(v1)] = 1.0; // move out of the way in an orthogonal direction
+			p_int = sc + norm*val;
 			return 1;
 		}
 		cpos[npos]  = sc;
