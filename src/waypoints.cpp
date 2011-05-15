@@ -94,7 +94,6 @@ class waypoint_builder {
 		obj.pos     = pos;
 		obj.coll_id = coll_id; // ignore collisions with the current object
 		bool const ret(!obj.check_vert_collision(0, 0, 0)); // return true if no collision
-		// FIXME: lampposts
 		pos = obj.pos;
 		return ret;
 	}
@@ -195,13 +194,21 @@ public:
 		unsigned const num_waypoints(waypoints.size());
 		float const step_size(0.25*radius), step_height(C_STEP_HEIGHT*radius);
 		int cindex(-1);
-		vector<pair<float, unsigned> > cands(num_waypoints);
+		vector<pair<float, unsigned> > cands;
 
 		for (unsigned i = 0; i < num_waypoints; ++i) {
 			point const start(waypoints[i].pos);
+			cands.resize(0);
 
 			for (unsigned j = 0; j < num_waypoints; ++j) {
-				cands[j] = make_pair(p2p_dist_sq(start, waypoints[j].pos), j);
+				point const end(waypoints[j].pos);
+
+				if (cindex >= 0) {
+					assert((unsigned)cindex < coll_objects.size());
+					if (coll_objects[cindex].line_intersect(start, end)) continue; // hit last cobj
+				}
+				if (i == j || check_coll_line(start, end, cindex, -1, 1, 0)) continue;
+				cands.push_back(make_pair(p2p_dist_sq(start, end), j));
 			}
 			sort(cands.begin(), cands.end()); // closest to furthest
 
@@ -219,12 +226,6 @@ public:
 					colinear = (dot_product(dir_xy, dir_xy2) > 0.999);
 				}
 				if (colinear) continue;
-
-				if (cindex >= 0) {
-					assert((unsigned)cindex < coll_objects.size());
-					if (coll_objects[cindex].line_intersect(start, end)) continue; // hit last cobj
-				}
-				if (i == k || check_coll_line(start, end, cindex, -1, 1, 0)) continue;
 				point cur(start); // first and last points are guaranteed to be valid
 				float zvel(0.0);
 

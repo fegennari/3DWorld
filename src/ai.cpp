@@ -13,7 +13,7 @@ bool const NO_SMILEY_ACTION       = 0;
 bool const SMILEYS_LOOK_AT_TARGET = 1;
 bool const LEAD_SHOTS             = 0; // doesn't seem to make too much difference (or doesn't work correctly)
 bool const SMILEY_BUTT            = 1;
-int const WAYPT_VIS_LEVEL         = 0; // 0: visible in frustum (like camera), 1 = visible from the position (any orientation), 2 = always visible
+int const WAYPT_VIS_LEVEL[2]      = {0, 2}; // {unconnected, connected}: 0: visible in frustum, 1 = visible from the position, 2 = always visible
 unsigned const SMILEY_COLL_STEPS  = 10;
 unsigned const PMAP_SIZE          = (2*N_SPHERE_DIV)/3;
 
@@ -291,13 +291,14 @@ void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id
 	assert(i < waypoints.size());
 	player_state &sstate(sstates[smiley_id]);
 	point const &wp(waypoints[i].pos);
+	bool const can_see(next || sstate.on_waypt_path);
 	if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i))                  return;
-	if (!next && WAYPT_VIS_LEVEL == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
+	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
 	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this direction
 	if (i == curw) dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
 	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp)));
-	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, next)); // add high weight to prefer other objects
+	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, can_see)); // add high weight to prefer other objects
 }
 
 
@@ -389,9 +390,10 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 
 		if (type == WAYPOINT) {
 			assert(size_t(oddatav[i].id) < waypoints.size());
+			bool const can_see(oddatav[i].val != 0 || sstate.on_waypt_path);
 			pos2 = waypoints[oddatav[i].id].pos;
-			no_frustum_test = (WAYPT_VIS_LEVEL == 1);
-			skip_vis_test   = (WAYPT_VIS_LEVEL == 2 || oddatav[i].val);
+			no_frustum_test = (WAYPT_VIS_LEVEL[can_see] == 1);
+			skip_vis_test   = (WAYPT_VIS_LEVEL[can_see] == 2);
 		}
 		else {
 			int const cid(coll_id[type]);
@@ -418,7 +420,10 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			int const max_vis_level((type == WAYPOINT) ? 3 : ((type == BALL) ? 5 : 4));
 
 			if (skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) {
-				if (type == WAYPOINT) sstate.last_waypoint = oddatav[i].id;
+				if (type == WAYPOINT) {
+					if (oddatav[i].id != sstate.last_waypoint) sstate.on_waypt_path = (oddatav[i].val != 0);
+					sstate.last_waypoint = oddatav[i].id;
+				}
 				min_dist = sqrt(oddatav[i].dist); // find closest reachable/visible object
 				min_ic   = type;
 				target   = pos2;
@@ -571,7 +576,10 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		min_ie = sstate.target;
 	}
 #endif
-	if (min_ih != WAYPOINT) sstate.last_waypoint = -1; // reset
+	if (min_ih != WAYPOINT) {
+		sstate.last_waypoint = -1; // reset
+		sstate.on_waypt_path = 0;
+	}
 	if (sstate.target_visible == 1) assert(min_ie >= CAMERA_ID);
 	sstate.target = min_ie;
 }
@@ -1251,6 +1259,7 @@ void player_state::init(bool w_start) {
 	target_type   = 0;
 	target        = 0;
 	last_waypoint = -1;
+	on_waypt_path = 0;
 	plasma_size   = 1.0;
 	zvel          = 0.0;
 	stopped_time  = 0;
