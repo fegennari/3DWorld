@@ -16,7 +16,7 @@ vector<waypoint_t> waypoints;
 
 extern bool use_waypoints;
 extern int DISABLE_WATER, camera_change, frame_counter, num_smileys;
-extern float temperature, zmin, tfticks;
+extern float temperature, zmin, tfticks, water_plane_z;
 extern obj_type object_types[];
 extern dwobject def_objects[];
 extern vector<coll_obj> coll_objects;
@@ -113,20 +113,20 @@ class waypoint_builder {
 		if (min(x2-x1, y2-y1) < radius) return; // too small to stand on
 		point const center(0.5*(x1+x2), 0.5*(y1+y2), z+radius);
 		add_if_valid(center, coll_id);
-		// *** WRITE ***
+		// FIXME: try more points?
 	}
 
 	void add_waypoint_circle(point const &p, float r, int coll_id) {
 		if (r < radius) return; // too small to stand on
 		add_if_valid(p + point(0.0, 0.0, radius), coll_id);
-		// *** WRITE ***
+		// could try more points
 	}
 
 	void add_waypoint_triangle(point const &p1, point const &p2, point const &p3, int coll_id) {
 		if (dist_less_than(p1, p2, 2*radius) || dist_less_than(p2, p3, 2*radius) || dist_less_than(p3, p1, 2*radius)) return; // too small to stand on
 		point const center(((p1 + p2 + p3) / 3.0) + point(0.0, 0.0, radius));
 		add_if_valid(center, coll_id);
-		// *** WRITE ***
+		// could try more points
 	}
 
 public:
@@ -135,6 +135,7 @@ public:
 	void add_cobj_waypoints(vector<coll_obj> const &cobjs) {
 		int const cc(camera_change);
 		camera_change = 0; // messes up collision detection code
+		unsigned const num_waypoints(waypoints.size());
 
 		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
 			if (i->status != COLL_STATIC) continue; // only looking for static objects
@@ -166,16 +167,20 @@ public:
 			default: assert(0);
 			}
 		}
+		cout << "Added " << (waypoints.size() - num_waypoints) << " cobj waypoints" << endl;
 		camera_change = cc;
 	}
 
 	void add_mesh_waypoints() {
-		for (int y = 0; y < MESH_Y_SIZE; ++y) {
-			for (int x = 0; x < MESH_X_SIZE; ++x) {
+		unsigned const mesh_skip_dist(15);
+		unsigned const num_waypoints(waypoints.size());
+
+		for (int y = 1; y < MESH_Y_SIZE-1; y += mesh_skip_dist) {
+			for (int x = 1; x < MESH_X_SIZE-1; x += mesh_skip_dist) {
 				if (is_mesh_disabled(x, y)) continue; // mesh disabled
 				float zval(mesh_height[y][x]);
 			
-				if (!DISABLE_WATER && has_water(x, y) && zval < water_matrix[y][x]) { // underwater
+				if (!DISABLE_WATER && has_water(x, y) && zval < water_plane_z) { // underwater
 					if (temperature <= W_FREEZE_POINT) { // ice
 						zval = water_matrix[y][x]; // walk on ice
 					}
@@ -183,9 +188,12 @@ public:
 						continue; // don't go underwater
 					}
 				}
-				// *** WRITE ***
+				// *** WRITE - more filtering ***
+				point const pos(get_xval(x), get_yval(y), (zval + radius));
+				add_if_valid(pos, -1);
 			}
 		}
+		cout << "Added " << (waypoints.size() - num_waypoints) << " terrain waypoints" << endl;
 	}
 
 	void connect_waypoints() {

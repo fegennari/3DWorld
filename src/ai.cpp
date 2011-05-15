@@ -292,9 +292,9 @@ void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id
 	player_state &sstate(sstates[smiley_id]);
 	point const &wp(waypoints[i].pos);
 	bool const can_see(next || sstate.on_waypt_path);
-	if (!is_over_mesh(wp) || !sstate.waypts_used.is_valid(i))                  return;
-	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
-	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this direction
+	if (!is_over_mesh(wp) || is_underwater(wp) || !sstate.waypts_used.is_valid(i)) return;
+	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))         return; // view culling - more detailed query later
+	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0)     return; // need to avoid this direction
 	if (i == curw) dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
 	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp)));
