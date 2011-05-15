@@ -904,7 +904,7 @@ class vert_coll_detector {
 public:
 	vert_coll_detector(dwobject &obj_, int obj_index_, int do_coll_funcs_, int iter_,
 		vector3d *cnorm_, vector3d const &mdir=zero_vector) :
-	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY), already_bounced(0),
+	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY || type == WAYPOINT), already_bounced(0),
 	coll(0), obj_index(obj_index_), do_coll_funcs(do_coll_funcs_), cdir(0),
 	lcoll(0), z_old(obj.pos.z), cnorm(cnorm_), pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity) {}
 	int check_coll();
@@ -927,7 +927,7 @@ void vert_coll_detector::check_cobj(int index) {
 	coll_obj const &cobj(coll_objects[index]);
 	if (cobj.no_collision())                         return; // collisions are disabled for this cobj
 	if (type == PROJC    && obj.source  == cobj.id)  return; // can't shoot yourself with a projectile
-	if (type == SMILEY   && obj.coll_id == cobj.id)  return; // can't collide with yourself
+	if (player           && obj.coll_id == cobj.id)  return; // can't collide with yourself
 	if (type == LANDMINE && invalid_coll(obj, cobj)) return;
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
 	if (z1 > zmaxc || z2 < zminc)                    return;
@@ -952,7 +952,6 @@ void vert_coll_detector::check_cobj(int index) {
 			coll_top = (cdir == 5);
 			coll_bot = (cdir == 4);
 			lcoll    = 1;
-			//crcdir  |= (((cdir >> 1) + 1) % 3); // crcdir: x=1, y=2, z=0, cdir: -x0=0 +x=1 -y=2 +y=3 -z=4 +z=5
 
 			if (!coll_top && !coll_bot && player_step) {
 				lcoll   = 0; // can step up onto the object
@@ -960,7 +959,7 @@ void vert_coll_detector::check_cobj(int index) {
 				norm    = zero_vector;
 				break;
 			}
-			if (cdir == 5) { // +z collision
+			if (coll_top) { // +z collision
 				if (cobj.contains_pt_xy(pos)) ++lcoll;
 				float const rdist(max(max(max((pos.x-(xmax+o_radius)), ((xmin-o_radius)-pos.x)), (pos.y-(ymax+o_radius))), ((ymin-o_radius)-pos.y)));
 				
@@ -1103,7 +1102,7 @@ void vert_coll_detector::check_cobj(int index) {
 				}
 				// the coll_top part isn't really right - we want to check for collsion with another object above
 				else if ((coll_bot && pf.get_last_delta().z < 0.0) /*|| (coll_top && pf.get_last_delta().z > 0.0)*/) {
-					if (type == CAMERA || type == SMILEY) {
+					if (player) {
 						int const ix((type == CAMERA) ? -1 : obj_index);
 						smiley_collision(ix, -2, vector3d(0.0, 0.0, -1.0), pos, 2000.0, CRUSHED); // lots of damage
 					} // other objects?
@@ -1114,7 +1113,7 @@ void vert_coll_detector::check_cobj(int index) {
 			//if (type == BALL && platform_moving) obj.init_dir = obj.pos;
 			if (platform_moving) obj.flags |= PLATFORM_COLL;
 		}
-		if (animate2 && type != CAMERA && type != SMILEY && obj.health <= 0.1) obj.disable();
+		if (animate2 && !player && obj.health <= 0.1) obj.disable();
 		vector3d v_old(zero_vector), v0(obj.velocity);
 		obj_type const &otype(object_types[type]);
 		float const friction(otype.friction_factor);
@@ -1233,7 +1232,7 @@ int vert_coll_detector::check_coll() {
 
 			// This is a big performance optimization, but isn't quite right in all cases,
 			// so don't use it if something important like a smiley or the player is involved
-			if (type != SMILEY && type != CAMERA) {
+			if (!player) {
 				if (o_radius < HALF_DXY && (z1 > c_zmax || z2 < c_zmin)) {subdiv = 0; break;}
 			}
 			if (subdiv) break;
