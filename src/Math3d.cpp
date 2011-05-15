@@ -696,7 +696,8 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 		if (rdist < min(TOLERANCE, toler*rad)) { // rarely occurs
 			p_int    = sc;
 			p_int.x += val; // move out of the way in an arbitrary direction
-			return 0;
+			norm.assign(1.0, 0.0, 0.0);
+			return 1;
 		}
 		cpos[npos]  = sc;
 		norms[npos] = v2;
