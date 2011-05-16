@@ -31,7 +31,6 @@ float const MAX_QUAD_LT_SIZE = 0.005;
 float const DIST_CUTOFF      = 2.0;
 float const DIV_VAL          = 5.0; // larger = larger polygons (less subdivision)
 float const TOLER_           = 1.0E-6;
-float const DYNAM_RES_SCALE  = 1.0; // smaller subdivision size for dynamic lights (better quality but slower and has popping artifacts)
 float const SHAPE_SPLIT_FACT = 0.0125; // smaller = more top level splitting
 
 float const subdiv_size_inv(1.0/MAX_QUAD_LT_SIZE);
@@ -198,15 +197,15 @@ struct dqd_params {
 	vector3d normal;
 	quad_div const &qd;
 	vector<vector<int> > const &stest;
-	unsigned n[2], lod_level, num_internal, num_subdiv, all_lighted;
+	unsigned n[2], num_internal, num_subdiv, all_lighted;
 	float spec[2], len[2], ninv[2];
 	vector3d dirs[2];
 	unsigned char all_shad, all_unshad, en_lt_bits;
 	bool in_dlist, all_int_surf, no_shadow_calc, use_n;
 
 	dqd_params(int cobj_, int tr, int sub_tri, vector3d const &norm, unsigned char elb, quad_div const &qd_,
-		vector<vector<int> > const &s, bool idl, float const sp[2], unsigned ll, unsigned ns, unsigned al, bool nsc, bool usen) :
-	    cobj(cobj_), tri(tr), normal(norm), qd(qd_), stest(s), lod_level(ll), num_internal(0), num_subdiv(ns), all_lighted(al),
+		vector<vector<int> > const &s, bool idl, float const sp[2], unsigned ns, unsigned al, bool nsc, bool usen) :
+	    cobj(cobj_), tri(tr), normal(norm), qd(qd_), stest(s), num_internal(0), num_subdiv(ns), all_lighted(al),
 		all_shad(0xFF), all_unshad(0xFF), en_lt_bits(elb), in_dlist(idl), all_int_surf(1), no_shadow_calc(nsc), use_n(usen)
 	{
 		spec[0] = sp[0]; spec[1] = sp[1];
@@ -645,7 +644,7 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 		}
 	}
 	if (can_return) return lighted;
-	int step[2] = {lod_level, lod_level};
+	int step[2] = {1, 1};
 	
 	if (!USE_DLIST || (ENABLE_DL_LOD && !in_dlist)) { // could use multiple display lists for LOD
 		gen_stepsize(get_camera_pos(), pts[0], step, n, len);
@@ -971,17 +970,9 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !is_quadric && !has_d_shad);
 	bool const is_black(c_obj.cp.specular == 0.0 && color.red == 0.0 && color.green == 0.0 && color.blue == 0.0);
 	bool const no_subdiv(no_shadow_edge || is_black);
-	unsigned lod_level(1);
-	float lod_scale(1.0);
 
 	if (use_dlist) {
-		if (!no_subdiv && (n[0] > 1 || n[1] > 1)) { // might create dlists for the same LOD if there are no shadow edges
-			float const dist(scaled_view_dist(camera, pos));
-			unsigned const lod(unsigned(len[0]*dist*subdiv_size_inv2/(n[0]*DIST_CUTOFF) + 0.5));
-			lod_level = ((lod >= 4) ? 2 : 1); // two LOD levels for display lists
-			if (no_subdiv) lod_scale = 1.0/float(lod_level);
-		}
-		quad_div const qddl(dim, dir, QD_TAG_DLIST, (face + lod_level), shift_bits);
+		quad_div const qddl(dim, dir, QD_TAG_DLIST, (face + 1), shift_bits);
 		lvmap::const_iterator const it(c_obj.lightmap.find(qddl));
 		bool const found(it != c_obj.lightmap.end());
 
@@ -1000,22 +991,16 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 	}
 	else if (no_subdiv) {
 		// use dot_product((camera - pos), norm)/p2p_dist(camera, pos)?
-		if (lod_level > 1) { // nothing
-		}
-		else if (LOD_QUAD_TRIS && (n[0] > 1 || n[1] > 1) && scaled_view_dist(camera, pos) > 2.4*DIST_CUTOFF) {
-			lod_scale = 0.5; // half the resolution
-		}
-		else if (DYNAM_RES_SCALE > 1.0) {
-			lod_scale = DYNAM_RES_SCALE; // LOD
+		if (LOD_QUAD_TRIS && (n[0] > 1 || n[1] > 1) && scaled_view_dist(camera, pos) > 2.4*DIST_CUTOFF) {
+			calc_params(pts, dirs, len, ninv, n, 0.5*subdiv_size_inv2); // smaller n (half the resolution)
 		}
 	}
 	++cobj_counter;
-	if (lod_scale != 1.0) calc_params(pts, dirs, len, ninv, n, lod_scale*subdiv_size_inv2); // smaller n
 	bool const occlusion_test(!use_dlist && (display_mode & 0x08) && !c_obj.occluders.empty());
 	bool in_strip(0), occluded(0);
 	unsigned const num_subdiv(n[0]*n[1]);
 	quad_div qd(dim, dir, QD_TAG_QUAD, face, shift_bits);
-	dqd_params params(cobj, tri, 0, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+	dqd_params params(cobj, tri, 0, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
 	unsigned const nv0(n[0]+1), nv1(n[1]+1);
 	static vector<vertex_t> verts;
 	verts.resize(nv0*nv1);
@@ -1072,7 +1057,7 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 				if (s0 < n[0]-1) { // not a single triangle at the top
 					qd.tag |=  QD_TAG_TRIANGLE;
 					unsigned const ixs2[4] = {ixs[0], ixs[2], ixs[3], ixs[3]};
-					dqd_params params_tri(cobj, tri, 1, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+					dqd_params params_tri(cobj, tri, 1, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
 					lighted = params_tri.draw_quad_div(verts, ixs2, tri_begin);
 					params.inherit_flags_from(params_tri);
 					qd.tag &= ~QD_TAG_TRIANGLE;
@@ -1086,7 +1071,7 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 					}
 				}
 				ixs[3] = ixs[2]; // have to recompute since dir is not constant due to scale
-				dqd_params params2(cobj, tri, 0, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, lod_level, num_subdiv, orig_all, no_shadow_calc, use_norms);
+				dqd_params params2(cobj, tri, 0, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
 				lighted = params2.draw_quad_div(verts, ixs, tri_begin);
 				if (!tri_begin) {glBegin(GL_TRIANGLES); tri_begin = 1;}
 				params.inherit_flags_from(params2);
