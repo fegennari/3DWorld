@@ -291,7 +291,7 @@ void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id
 	assert(i < waypoints.size());
 	player_state &sstate(sstates[smiley_id]);
 	point const &wp(waypoints[i].pos);
-	bool const can_see(next || sstate.on_waypt_path);
+	bool const can_see(next || (sstate.on_waypt_path && i == curw));
 	if (!is_over_mesh(wp) || is_underwater(wp) || !sstate.waypts_used.is_valid(i)) return;
 	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))         return; // view culling - more detailed query later
 	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0)     return; // need to avoid this direction
@@ -375,10 +375,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			}
 		}
 	} // for t
-	if (oddatav.empty()) { // no objects
-		sstate.unreachable.reset_try();
-		return min_ic;
-	}
+	if (oddatav.empty()) return min_ic;
 	sort(oddatav.begin(), oddatav.end());
 
 	for (unsigned i = 0; i < oddatav.size(); ++i) {
@@ -390,7 +387,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 
 		if (type == WAYPOINT) {
 			assert(size_t(oddatav[i].id) < waypoints.size());
-			bool const can_see(oddatav[i].val != 0 || sstate.on_waypt_path);
+			bool const can_see(oddatav[i].val != 0 || (sstate.on_waypt_path && oddatav[i].id == sstate.last_waypoint));
 			pos2 = waypoints[oddatav[i].id].pos;
 			no_frustum_test = (WAYPT_VIS_LEVEL[can_see] == 1);
 			skip_vis_test   = (WAYPT_VIS_LEVEL[can_see] == 2);
@@ -413,8 +410,8 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		bool const in_motion(obj && obj->status == 1 && obj->velocity.mag_sq() > 9.0);
 		bool const can_reach(not_too_high || ice_height_ok || in_motion);
 
-		if (not_too_high2) { // almost in reach, ultimate reachability questionable
-			if (!sstate.unreachable.proc_target(pos, pos2, sstate.objective_pos, can_reach)) continue;
+		if (type == WAYPOINT || not_too_high2) { // almost in reach, ultimate reachability questionable
+			if (!sstate.unreachable.proc_target(pos, pos2, sstate.objective_pos, (can_reach && type != WAYPOINT))) continue;
 		}
 		if (can_reach || not_too_high2) { // not_too_high2 - may be incorrect
 			int const max_vis_level((type == WAYPOINT) ? 3 : ((type == BALL) ? 5 : 4));
@@ -423,6 +420,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 				if (type == WAYPOINT) {
 					if (oddatav[i].id != sstate.last_waypoint) sstate.on_waypt_path = (oddatav[i].val != 0);
 					sstate.last_waypoint = oddatav[i].id;
+					sstate.last_wpt_dist = p2p_dist_xy(pos, pos2);
 				}
 				min_dist = sqrt(oddatav[i].dist); // find closest reachable/visible object
 				min_ic   = type;
@@ -576,10 +574,8 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		min_ie = sstate.target;
 	}
 #endif
-	if (min_ih != WAYPOINT) {
-		sstate.last_waypoint = -1; // reset
-		sstate.on_waypt_path = 0;
-	}
+	if (min_ih < 0) sstate.unreachable.reset_try(); // no target object
+	if (min_ih != WAYPOINT) sstate.reset_wpt_state();
 	if (sstate.target_visible == 1) assert(min_ie >= CAMERA_ID);
 	sstate.target = min_ie;
 }
@@ -817,11 +813,23 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 	}
 
 	// do actual movement
-	vector3d stepv((get_xval(xpos) - obj.pos.x), (get_yval(ypos) - obj.pos.y), 0.0);
+	if (sstate.target_visible && dist_less_than(obj.pos, target, step_dist)) {
+		obj.pos = target; // close enough to hit the target exactly
+	}
+	else { // FIXME: this is a crappy way of doing things, should use all angles instead of 8
+		vector3d stepv((get_xval(xpos) - obj.pos.x), (get_yval(ypos) - obj.pos.y), 0.0);
 
-	if (stepv.normalize_test()) {
-		vadd_rand(stepv, 0.1);
-		obj.pos += stepv*step_dist;
+		if (stepv.normalize_test()) {
+			if (sstate.on_waypt_path) { // following a waypoint
+				vector3d const target_dir(vector3d(target.x-obj.pos.x, target.y-obj.pos.y, 0.0).get_norm());
+				if (dot_product(target_dir, stepv) > 0.7) stepv = target_dir; // smoother, more accurate step
+			}
+			else { // add random jitter (dodging)
+				vadd_rand(stepv, 0.1);
+				stepv.normalize();
+			}
+			obj.pos += stepv*step_dist;
+		}
 	}
 	obj.velocity.assign(0.0, 0.0, -1.0);
 	point const wanted_pos(obj.pos);
@@ -1258,8 +1266,6 @@ void player_state::init(bool w_start) {
 	target_visible= 0;
 	target_type   = 0;
 	target        = 0;
-	last_waypoint = -1;
-	on_waypt_path = 0;
 	plasma_size   = 1.0;
 	zvel          = 0.0;
 	stopped_time  = 0;
@@ -1278,6 +1284,7 @@ void player_state::init(bool w_start) {
 		powerup       = -1;
 		powerup_time  = 0;
 	}
+	reset_wpt_state();
 	waypts_used.clear();
 	unreachable.clear();
 	dest_mark.clear();

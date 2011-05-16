@@ -8,9 +8,10 @@
 #include "player_state.h"
 
 
-bool const SHOW_WAYPOINTS  = 1;
-int const WP_RESET_FRAMES  = 100; // Note: in frames, not ticks, fix?
-int const WP_RECENT_FRAMES = 200;
+bool const SHOW_WAYPOINTS      = 1;
+bool const SHOW_WAYPOINT_EDGES = 0;
+int const WP_RESET_FRAMES      = 100; // Note: in frames, not ticks, fix?
+int const WP_RECENT_FRAMES     = 200;
 
 vector<waypoint_t> waypoints;
 
@@ -99,8 +100,7 @@ class waypoint_builder {
 	}
 
 	bool is_waypoint_valid(point const &pos, int coll_id) const {
-		if (!is_over_mesh(pos) || pos.z < zmin) return 0;
-		if (fabs(pos.x) > X_SCENE_SIZE-DX_VAL || fabs(pos.y) > Y_SCENE_SIZE-DY_VAL) return 0;
+		if (!is_over_mesh(pos) || pos.z < zmin || !point_interior_to_mesh(get_xpos(pos.x), get_ypos(pos.y))) return 0;
 		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 		if (pos.z - radius < mesh_zval) return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
 		return check_cobj_placement(point(pos), coll_id);
@@ -120,7 +120,6 @@ class waypoint_builder {
 	void add_waypoint_circle(point const &p, float r, int coll_id) {
 		if (r < radius) return; // too small to stand on
 		add_if_valid(p + point(0.0, 0.0, radius), coll_id);
-		// could try more points
 	}
 
 	void add_waypoint_triangle(point const &p1, point const &p2, point const &p3, int coll_id) {
@@ -178,7 +177,7 @@ public:
 
 		for (int yy = 0; yy <= MESH_Y_SIZE; yy += mesh_skip_dist) {
 			for (int xx = 0; xx <= MESH_X_SIZE; xx += mesh_skip_dist) {
-				int const x(max(1, min(MESH_X_SIZE-1, xx))), y(max(1, min(MESH_Y_SIZE-1, yy)));
+				int const x(max(1, min(MESH_X_SIZE-2, xx))), y(max(1, min(MESH_Y_SIZE-2, yy)));
 				if (is_mesh_disabled(x, y)) continue; // mesh disabled
 				float zval(mesh_height[y][x]);
 			
@@ -199,7 +198,6 @@ public:
 	}
 
 	void connect_waypoints() {
-		// FIXME: smoother smiley motion that actually follows waypoints
 		unsigned cand_edges(0), num_edges(0), tot_steps(0);
 		unsigned const num_waypoints(waypoints.size());
 		float const step_size(0.25*radius), step_height(C_STEP_HEIGHT*radius);
@@ -262,7 +260,6 @@ public:
 				++cand_edges;
 			}
 		}
-		// FIXME: remove some duplicate colinear edges
 		cout << "cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
 	}
 };
@@ -310,6 +307,7 @@ void draw_waypoints() {
 		unsigned const wix(i - waypoints.begin());
 		set_color(i->visited ? ORANGE : (i->user_placed ? YELLOW : WHITE));
 		draw_sphere_at(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2);
+		if (!SHOW_WAYPOINT_EDGES) continue;
 
 		for (vector<unsigned>::const_iterator j = i->next_wpts.begin(); j != i->next_wpts.end(); ++j) {
 			assert(*j < waypoints.size());
