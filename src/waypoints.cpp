@@ -99,7 +99,8 @@ class waypoint_builder {
 	}
 
 	bool is_waypoint_valid(point const &pos, int coll_id) const {
-		if (!is_over_mesh(pos) || pos.z < zmin || !point_interior_to_mesh(get_xpos(pos.x), get_ypos(pos.y))) return 0;
+		if (!is_over_mesh(pos) || pos.z < zmin) return 0;
+		if (fabs(pos.x) > X_SCENE_SIZE-DX_VAL || fabs(pos.y) > Y_SCENE_SIZE-DY_VAL) return 0;
 		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 		if (pos.z - radius < mesh_zval) return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
 		return check_cobj_placement(point(pos), coll_id);
@@ -172,11 +173,12 @@ public:
 	}
 
 	void add_mesh_waypoints() {
-		unsigned const mesh_skip_dist(15);
+		unsigned const mesh_skip_dist(16);
 		unsigned const num_waypoints(waypoints.size());
 
-		for (int y = 1; y < MESH_Y_SIZE-1; y += mesh_skip_dist) {
-			for (int x = 1; x < MESH_X_SIZE-1; x += mesh_skip_dist) {
+		for (int yy = 0; yy <= MESH_Y_SIZE; yy += mesh_skip_dist) {
+			for (int xx = 0; xx <= MESH_X_SIZE; xx += mesh_skip_dist) {
+				int const x(max(1, min(MESH_X_SIZE-1, xx))), y(max(1, min(MESH_Y_SIZE-1, yy)));
 				if (is_mesh_disabled(x, y)) continue; // mesh disabled
 				float zval(mesh_height[y][x]);
 			
