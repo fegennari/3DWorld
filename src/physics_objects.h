@@ -292,6 +292,7 @@ public:
 	int get_ptype() const;
 	void add_predef_obj(point const &pos, int type, int rtime);
 	int get_next_predef_obj(dwobject &obj, unsigned ix);
+	vector<predef_obj> const &get_predef_objs() const {return predef_objs;}
 };
 
 

@@ -40,13 +40,13 @@ struct od_data { // size = 12
 
 struct waypoint_t {
 
-	bool user_placed, visited, goal, temp;
+	bool user_placed, placed_item, visited, goal, temp;
 	float g_score, h_score, f_score;
 	point pos;
 	vector<float> smiley_times;
 	vector<unsigned> next_wpts, prev_wpts;
 
-	waypoint_t(point const &p=all_zeros, bool up=0, bool g=0, bool t=0);
+	waypoint_t(point const &p=all_zeros, bool up=0, bool i=0, bool g=0, bool t=0);
 	void mark_visited_by_smiley(unsigned const smiley_id);
 	float get_time_since_last_visited(unsigned const smiley_id) const;
 	void clear();
@@ -54,7 +54,7 @@ struct waypoint_t {
 
 
 struct wpt_goal {
-	int mode; // 0: none, 1: user waypoint, 2: goal waypoint, 3: wpt waypoint, 4: closest waypoint, 5: goal pos (new waypoint)
+	int mode; // 0: none, 1: user waypoint, 2: goal waypoint, 3: placed waypoint, 4: wpt waypoint, 5: closest waypoint, 6: goal pos (new waypoint)
 	unsigned wpt;
 	point pos;
 

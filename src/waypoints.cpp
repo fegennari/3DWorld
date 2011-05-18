@@ -16,8 +16,9 @@ int const WP_RECENT_FRAMES     = 200;
 vector<waypoint_t> waypoints;
 
 extern bool use_waypoints;
-extern int DISABLE_WATER, camera_change, frame_counter, num_smileys;
+extern int DISABLE_WATER, camera_change, frame_counter, num_smileys, num_groups;
 extern float temperature, zmin, tfticks, water_plane_z;
+extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
 extern vector<coll_obj> coll_objects;
@@ -60,8 +61,8 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 // ********** waypoint_t **********
 
 
-waypoint_t::waypoint_t(point const &p, bool up, bool g, bool t)
-	: user_placed(up), visited(0), goal(g), temp(t), g_score(0), h_score(0), f_score(0), pos(p)
+waypoint_t::waypoint_t(point const &p, bool up, bool i, bool g, bool t)
+	: user_placed(up), placed_item(i), visited(0), goal(g), temp(t), g_score(0), h_score(0), f_score(0), pos(p)
 {
 	clear();
 }
@@ -97,12 +98,10 @@ void waypoint_t::clear() {
 wpt_goal::wpt_goal(int m, unsigned w, point const &p) : mode(m), wpt(w), pos(p) {
 
 	switch (mode) {
-	case 0: break; // nothing
-	case 1: break; // nothing
-	case 2: break; // nothing
-	case 3: assert(wpt < waypoints.size()); break;
-	case 4: break; // nothing
-	case 5: assert(is_over_mesh(pos));      break;
+	case 0: case 1: case 2: case 3:         break; // nothing
+	case 4: assert(wpt < waypoints.size()); break;
+	case 5:                                 break; // nothing
+	case 6: assert(is_over_mesh(pos));      break;
 	default: assert(0);
 	}
 }
@@ -222,34 +221,22 @@ public:
 		cout << "Added " << (waypoints.size() - num_waypoints) << " terrain waypoints" << endl;
 	}
 
-	bool is_point_reachable(point const &start, point const &end, unsigned &tot_steps) const {
-		vector3d const dir(end - start);
-		float const step_size(0.25*radius);
-		float const dmag_inv(1.0/dir.xy_mag());
-		point cur(start);
-		float zvel(0.0);
+	void add_object_waypoints() {
+		unsigned const num_waypoints(waypoints.size());
 
-		while (!dist_less_than(cur, end, 1.1*step_size)) {
-			vector3d const delta((end - cur).get_norm());
-			point lpos(cur);
-			cur += delta*step_size;
-			int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0));
-			if (ret == 3)                                           return 0; // stuck
-			if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)            return 0; // too high of a step
-			check_cobj_placement(cur, -1);
-			if (dot_product_ptv(delta, cur, lpos) < 0.01*step_size) return 0; // not making progress
-			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv);
-			if (d > 2.0*radius)                                     return 0; // path deviation too long
-			// FIXME: allow more deviation from path to get around small obstacles
-			++tot_steps;
-			//waypoints.push_back(waypoint_t(cur, 1)); // testing
+		for (int i = 0; i < num_groups; ++i) {
+			obj_group &objg(obj_groups[i]);
+
+			for (vector<predef_obj>::const_iterator i = objg.get_predef_objs().begin(); i != objg.get_predef_objs().end(); ++i) {
+				waypoints.push_back(waypoint_t(i->pos, 0, 1));
+			}
 		}
-		return 1; // success
+		cout << "Added " << (waypoints.size() - num_waypoints) << " object placement waypoints" << endl;
 	}
 
 	unsigned add_temp_waypoint(point const &pos, bool connect, bool goal) {
 		unsigned const ix(waypoints.size());
-		waypoints.push_back(waypoint_t(pos, 0, goal, 1));
+		waypoints.push_back(waypoint_t(pos, 0, 0, goal, 1));
 
 		if (connect) {
 			connect_waypoints(0,  ix,    ix, ix+1, 0); // from existing waypoints to new waypoint
@@ -340,6 +327,31 @@ public:
 		if (verbose) cout << "cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
 	}
 
+	bool is_point_reachable(point const &start, point const &end, unsigned &tot_steps) const {
+		vector3d const dir(end - start);
+		float const step_size(0.25*radius);
+		float const dmag_inv(1.0/dir.xy_mag());
+		point cur(start);
+		float zvel(0.0);
+
+		while (!dist_less_than(cur, end, 0.8*radius)) {
+			vector3d const delta((end - cur).get_norm());
+			point lpos(cur);
+			cur += delta*step_size;
+			int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0));
+			if (ret == 3)                                        return 0; // stuck
+			if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)         return 0; // too high of a step
+			check_cobj_placement(cur, -1);
+			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress
+			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv);
+			if (d > 2.0*radius)                                  return 0; // path deviation too long
+			// FIXME: allow more deviation from path to get around small obstacles
+			++tot_steps;
+			//waypoints.push_back(waypoint_t(cur, 1)); // testing
+		}
+		return 1; // success
+	}
+
 	int find_closest_waypoint(point const &pos) const {
 		int closest(-1);
 		float closest_dsq(0.0);
@@ -367,12 +379,13 @@ class waypoint_search {
 	waypoint_builder wb;
 
 	float get_h_dist(unsigned cur) const {
-		return ((goal.mode >= 3) ? p2p_dist(waypoints[cur].pos, goal.pos) : 0.0);
+		return ((goal.mode >= 4) ? p2p_dist(waypoints[cur].pos, goal.pos) : 0.0);
 	}
 	bool is_goal(unsigned cur) const {
 		if (goal.mode == 1) return waypoints[cur].user_placed; // user waypoint
 		if (goal.mode == 2) return waypoints[cur].goal;        // goal waypoint
-		if (goal.mode >= 3) return (cur == goal.wpt);          // goal position or specific waypoint
+		if (goal.mode == 3) return waypoints[cur].placed_item; // placed item waypoint
+		if (goal.mode >= 4) return (cur == goal.wpt);          // goal position or specific waypoint
 		return 0;
 	}
 	void reconstruct_path(map<unsigned, unsigned> const &came_from, unsigned cur, vector<unsigned> &path) {
@@ -388,9 +401,9 @@ public:
 	float run_a_star(vector<pair<unsigned, float> > const &start, vector<unsigned> &path) {
 		if (waypoints.empty()) return 0.0; // nothing to do
 		assert(path.empty());
-		if (goal.mode == 3) goal.pos = waypoints[goal.wpt].pos; // specific waypoint
-		if (goal.mode == 4) goal.wpt = wb.find_closest_waypoint(goal.pos);
-		if (goal.mode == 5) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1); // goal position - add temp waypoint
+		if (goal.mode == 4) goal.pos = waypoints[goal.wpt].pos; // specific waypoint
+		if (goal.mode == 5) goal.wpt = wb.find_closest_waypoint(goal.pos);
+		if (goal.mode == 6) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1); // goal position - add temp waypoint
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: "; goal.pos.print(); cout << ", wpt: " << goal.wpt << endl;
 
 		set<unsigned> open;   // The set of nodes already evaluated.
@@ -448,7 +461,7 @@ public:
 				}
 			} // for i
 		}
-		if (goal.mode == 5) wb.remove_last_waypoint(); // goal position - remove temp waypoint
+		if (goal.mode == 6) wb.remove_last_waypoint(); // goal position - remove temp waypoint
 		//cout << "min_dist: " << min_dist << ", path length: " << path.size() << ", path: ";
 		//for (unsigned i = 0; i < path.size(); ++i) cout << path[i] << " ";
 		//cout << endl;
@@ -473,6 +486,7 @@ void create_waypoints(vector<point> const &user_waypoints) {
 	if (use_waypoints) {
 		wb.add_cobj_waypoints(coll_objects);
 		wb.add_mesh_waypoints();
+		wb.add_object_waypoints();
 		PRINT_TIME("  Waypoint Generation");
 	}
 	wb.connect_all_waypoints();
@@ -547,7 +561,11 @@ void draw_waypoints() {
 
 	for (vector<waypoint_t>::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
 		unsigned const wix(i - waypoints.begin());
-		set_color(i->visited ? ORANGE : (i->user_placed ? YELLOW : WHITE));
+		if      (i->visited)     set_color(ORANGE);
+		else if (i->goal)        set_color(RED);
+		else if (i->user_placed) set_color(YELLOW);
+		else if (i->placed_item) set_color(PURPLE);
+		else                     set_color(WHITE);
 		draw_sphere_at(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2);
 		if (!SHOW_WAYPOINT_EDGES) continue;
 
