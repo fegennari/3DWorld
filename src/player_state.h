@@ -40,15 +40,25 @@ struct od_data { // size = 12
 
 struct waypoint_t {
 
+	bool user_placed, visited, goal, temp;
+	float g_score, h_score, f_score;
 	point pos;
-	bool user_placed, visited;
 	vector<float> smiley_times;
-	vector<unsigned> next_wpts;
+	vector<unsigned> next_wpts, prev_wpts;
 
-	waypoint_t(point const &p, bool const up);
+	waypoint_t(point const &p=all_zeros, bool up=0, bool g=0, bool t=0);
 	void mark_visited_by_smiley(unsigned const smiley_id);
 	float get_time_since_last_visited(unsigned const smiley_id) const;
 	void clear();
+};
+
+
+struct wpt_goal {
+	int mode; // 0: none, 1: user waypoint, 2: goal waypoint, 3: wpt waypoint, 4: goal pos (new waypoint)
+	unsigned wpt;
+	point pos;
+
+	wpt_goal(int m=0, unsigned w=0, point const &p=all_zeros);
 };
 
 
@@ -142,6 +152,11 @@ struct player_state { // size = big
 		last_wpt_dist = 0.0;
 	}
 };
+
+
+// function prototypes
+int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal);
+void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal);
 
 
 #endif // _PLAYER_STATE_H_

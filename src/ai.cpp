@@ -13,7 +13,8 @@ bool const NO_SMILEY_ACTION       = 0;
 bool const SMILEYS_LOOK_AT_TARGET = 1;
 bool const LEAD_SHOTS             = 0; // doesn't seem to make too much difference (or doesn't work correctly)
 bool const SMILEY_BUTT            = 1;
-int const WAYPT_VIS_LEVEL[2]      = {0, 2}; // {unconnected, connected}: 0: visible in frustum, 1 = visible from the position, 2 = always visible
+int const WAYPT_VIS_LEVEL[2]      = {1, 2}; // {unconnected, connected}: 0: visible in frustum, 1 = visible from the position, 2 = always visible
+int const WAYPT_FOLLOW_ACC        = 2; // 0: use approx 8 direction nav, 1: use exact nav when aligned with the correct orient, 2: always use exact nav
 unsigned const SMILEY_COLL_STEPS  = 10;
 unsigned const PMAP_SIZE          = (2*N_SPHERE_DIV)/3;
 
@@ -26,6 +27,7 @@ extern int island, iticks, num_smileys, free_for_all, teams, frame_counter;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS;
 extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, ball_velocity, TIMESTEP, self_damage;
+extern double camera_zh;
 extern point ocean, orig_camera, orig_cdir;
 extern int coll_id[];
 extern obj_group obj_groups[];
@@ -325,6 +327,11 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		if (type == WAYPOINT) { // process waypoints
 			int curw(sstate.last_waypoint);
 			int ignore_w(-1);
+			// mode: 0: none, 1: user waypoint, 2: goal waypoint, 3: wpt waypoint, 4: goal pos (new waypoint)
+			wpt_goal goal(0, 0, all_zeros);
+			//wpt_goal goal(4, 0, point(-1.77535, 1.99193, 2.15036)); // mode, wpt, goal_pos
+			//wpt_goal goal(4, 0, get_camera_pos()-point(0.0, 0.0, camera_zh));
+			// FIXME: add closest waypoint option
 
 			if (curw >= 0) { // currently targeting a waypoint
 				assert((unsigned)curw < waypoints.size());
@@ -336,7 +343,10 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 					vector<unsigned> const &next(waypoints[curw].next_wpts);
 
 					if (!next.empty()) { // choose next waypoint from graph
-						//cout << "choose next waypoint" << endl;
+						//cout << "choose next waypoint, curw: " << curw << endl;
+						curw = find_optimal_next_waypoint(curw, goal); // can return -1
+						//cout << "next curw: " << curw << endl;
+
 						for (unsigned i = 0; i < next.size(); ++i) {
 							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu, 1);
 						}
@@ -349,6 +359,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
 				if (i != ignore_w) check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu, 0);
 			}
+			if (curw < 0) find_optimal_waypoint(pos, oddatav, goal);
 		}
 		else { // not a waypoint (pickup item)
 			if (UNLIMITED_WEAPONS && (type == WEAPON || type == AMMO || type == WA_PACK)) continue;
@@ -413,12 +424,13 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		if (type == WAYPOINT || not_too_high2) { // almost in reach, ultimate reachability questionable
 			if (!sstate.unreachable.proc_target(pos, pos2, sstate.objective_pos, (can_reach && type != WAYPOINT))) continue;
 		}
-		if (can_reach || not_too_high2) { // not_too_high2 - may be incorrect
+		if (can_reach || not_too_high2 || (type == WAYPOINT && sstate.on_waypt_path)) { // not_too_high2 - may be incorrect
 			int const max_vis_level((type == WAYPOINT) ? 3 : ((type == BALL) ? 5 : 4));
 
 			if (skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) {
 				if (type == WAYPOINT) {
 					if (oddatav[i].id != sstate.last_waypoint) sstate.on_waypt_path = (oddatav[i].val != 0);
+					//cout << "waypoint change from " << sstate.last_waypoint << " to " << oddatav[i].id << endl;
 					sstate.last_waypoint = oddatav[i].id;
 					sstate.last_wpt_dist = p2p_dist_xy(pos, pos2);
 				}
@@ -820,9 +832,9 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 		vector3d stepv((get_xval(xpos) - obj.pos.x), (get_yval(ypos) - obj.pos.y), 0.0);
 
 		if (stepv.normalize_test()) {
-			if (sstate.on_waypt_path) { // following a waypoint
+			if (WAYPT_FOLLOW_ACC > 0 && sstate.on_waypt_path) { // following a waypoint
 				vector3d const target_dir(vector3d(target.x-obj.pos.x, target.y-obj.pos.y, 0.0).get_norm());
-				if (dot_product(target_dir, stepv) > 0.7) stepv = target_dir; // smoother, more accurate step
+				if (WAYPT_FOLLOW_ACC > 1 || dot_product(target_dir, stepv) > 0.7) stepv = target_dir; // smoother, more accurate step
 			}
 			else { // add random jitter (dodging)
 				vadd_rand(stepv, 0.1);
