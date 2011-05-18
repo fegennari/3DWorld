@@ -101,7 +101,8 @@ wpt_goal::wpt_goal(int m, unsigned w, point const &p) : mode(m), wpt(w), pos(p) 
 	case 1: break; // nothing
 	case 2: break; // nothing
 	case 3: assert(wpt < waypoints.size()); break;
-	case 4: assert(is_over_mesh(pos));      break;
+	case 4: break; // nothing
+	case 5: assert(is_over_mesh(pos));      break;
 	default: assert(0);
 	}
 }
@@ -251,8 +252,8 @@ public:
 		waypoints.push_back(waypoint_t(pos, 0, goal, 1));
 
 		if (connect) {
-			connect_waypoints(0,  ix,    ix, ix+1, 1); // from existing waypoints to new waypoint
-			connect_waypoints(ix, ix+1,  0,  ix,   1); // from new waypoint to existing waypoints
+			connect_waypoints(0,  ix,    ix, ix+1, 0); // from existing waypoints to new waypoint
+			connect_waypoints(ix, ix+1,  0,  ix,   0); // from new waypoint to existing waypoints
 		}
 		return ix;
 	}
@@ -338,6 +339,22 @@ public:
 		}
 		if (verbose) cout << "cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
 	}
+
+	int find_closest_waypoint(point const &pos) const {
+		int closest(-1);
+		float closest_dsq(0.0);
+
+		// inefficient to iterate, might need acceleration structure
+		for (unsigned i = 0; i < waypoints.size(); ++i) {
+			float const dist_sq(p2p_dist_sq(pos, waypoints[i].pos));
+
+			if (closest < 0 || dist_sq < closest_dsq) {
+				closest_dsq = dist_sq;
+				closest     = i;
+			}
+		}
+		return closest;
+	}
 };
 
 
@@ -369,9 +386,11 @@ public:
 
 	// returns min distance to goal following connected waypoints along path
 	float run_a_star(vector<pair<unsigned, float> > const &start, vector<unsigned> &path) {
+		if (waypoints.empty()) return 0.0; // nothing to do
 		assert(path.empty());
 		if (goal.mode == 3) goal.pos = waypoints[goal.wpt].pos; // specific waypoint
-		if (goal.mode == 4) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1); // goal position - add temp waypoint
+		if (goal.mode == 4) goal.wpt = wb.find_closest_waypoint(goal.pos);
+		if (goal.mode == 5) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1); // goal position - add temp waypoint
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: "; goal.pos.print(); cout << ", wpt: " << goal.wpt << endl;
 
 		set<unsigned> open;   // The set of nodes already evaluated.
@@ -429,7 +448,7 @@ public:
 				}
 			} // for i
 		}
-		if (goal.mode == 4) wb.remove_last_waypoint(); // goal position - remove temp waypoint
+		if (goal.mode == 5) wb.remove_last_waypoint(); // goal position - remove temp waypoint
 		//cout << "min_dist: " << min_dist << ", path length: " << path.size() << ", path: ";
 		//for (unsigned i = 0; i < path.size(); ++i) cout << path[i] << " ";
 		//cout << endl;
@@ -465,14 +484,14 @@ void create_waypoints(vector<point> const &user_waypoints) {
 // find the optimal next waypoint when already on a waypoint path
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal) {
 
-	if (goal.mode == 0)   return -1; // nothing to do
-	RESET_TIME;
+	if (goal.mode == 0 || waypoints.empty()) return -1; // nothing to do
+	//RESET_TIME;
 	vector<unsigned> path;
 	waypoint_search ws(goal);
 	vector<pair<unsigned, float> > start;
 	start.push_back(make_pair(cur, 0.0));
 	ws.run_a_star(start, path);
-	PRINT_TIME("A Star");
+	//PRINT_TIME("A Star");
 	if (path.empty())     {cout << "*** NO PATH ***" << endl; return -1;} // no path to goal
 	assert(path[0] == cur);
 	if (path.size() == 1) {cout << "*** FINISHED! ***" << endl; return cur;} // already at goal
@@ -483,7 +502,7 @@ int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal) {
 // find the optimal next waypoint when not on a waypoint path (using visible waypoints as candidates)
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal) {
 
-	if (goal.mode == 0 || oddatav.empty()) return; // nothing to do
+	if (goal.mode == 0 || oddatav.empty() || waypoints.empty()) return; // nothing to do
 	RESET_TIME;
 	vector<pair<unsigned, float> > start;
 	waypoint_builder wb;
