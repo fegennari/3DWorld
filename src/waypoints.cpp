@@ -245,14 +245,11 @@ public:
 		cout << "Added " << (waypoints.size() - num_waypoints) << " object placement waypoints" << endl;
 	}
 
-	unsigned add_temp_waypoint(point const &pos, bool connect, bool goal) {
+	unsigned add_temp_waypoint(point const &pos, bool connect_in, bool connect_out, bool goal) {
 		unsigned const ix(waypoints.size());
 		waypoints.push_back(waypoint_t(pos, 0, 0, goal, 1));
-
-		if (connect) {
-			connect_waypoints(0,  ix,    ix, ix+1, 0); // from existing waypoints to new waypoint
-			connect_waypoints(ix, ix+1,  0,  ix,   0); // from new waypoint to existing waypoints
-		}
+		if (connect_in ) connect_waypoints(0,  ix,    ix, ix+1, 0); // from existing waypoints to new waypoint
+		if (connect_out) connect_waypoints(ix, ix+1,  0,  ix,   0); // from new waypoint to existing waypoints
 		return ix;
 	}
 
@@ -414,7 +411,7 @@ public:
 		assert(path.empty());
 		if (goal.mode == 4) goal.pos = waypoints[goal.wpt].pos; // specific waypoint
 		if (goal.mode == 5) goal.wpt = wb.find_closest_waypoint(goal.pos);
-		if (goal.mode == 6) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1); // goal position - add temp waypoint
+		if (goal.mode == 6) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1, 1); // goal position - add temp waypoint
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: "; goal.pos.print(); cout << ", wpt: " << goal.wpt << endl;
 
 		set<unsigned> open;   // The set of nodes already evaluated.
@@ -435,7 +432,7 @@ public:
 			// find min f_score waypoint in open
 			unsigned cur(0);
 
-			for (set<unsigned>::const_iterator i = open.begin(); i != open.end(); ++i) { // FIXME: inefficient, use a set/map/heap
+			for (set<unsigned>::const_iterator i = open.begin(); i != open.end(); ++i) { // inefficient, use a set/map/heap?
 				if (i == open.begin() || waypoints[*i].f_score < waypoints[cur].f_score) cur = *i;
 			}
 			assert(cur < waypoints.size());
@@ -512,16 +509,16 @@ void create_waypoints(vector<point> const &user_waypoints) {
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal) {
 
 	if (!goal.is_reachable()) return -1; // nothing to do
-	RESET_TIME;
+	//RESET_TIME;
 	vector<unsigned> path;
 	waypoint_search ws(goal);
 	vector<pair<unsigned, float> > start;
 	start.push_back(make_pair(cur, 0.0));
 	ws.run_a_star(start, path);
-	PRINT_TIME("A Star");
-	if (path.empty())     {cout << "*** NO PATH ***" << endl; return -1;} // no path to goal
+	//PRINT_TIME("A Star");
+	if (path.empty())     return -1; // no path to goal
 	assert(path[0] == cur);
-	if (path.size() == 1) {cout << "*** FINISHED! ***" << endl; return cur;} // already at goal
+	if (path.size() == 1) return cur; // already at goal
 	return path[1];
 }
 
@@ -531,31 +528,43 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 
 	if (oddatav.empty() || !goal.is_reachable()) return; // nothing to do
 	RESET_TIME;
+	vector<pair<float, unsigned> > cands;
 	vector<pair<unsigned, float> > start;
+	cands.reserve(oddatav.size());
 	waypoint_builder wb;
+	float min_dist(0.0);
 
 	for (unsigned i = 0; i < oddatav.size(); ++i) {
-		unsigned const id(oddatav[i].id);
+		cands.push_back(make_pair(p2p_dist(pos, waypoints[oddatav[i].id].pos), oddatav[i].id));
+	}
+	sort(cands.begin(), cands.end());
+
+	for (unsigned i = 0; i < cands.size(); ++i) {
+		unsigned const id(cands[i].second);
 		point const &wpos(waypoints[id].pos);
+		float const dist(cands[i].first);
+		if (min_dist > 0.0 && dist > 2.0*min_dist) break; // we're done
 		int cindex(-1);
 		unsigned tot_steps(0);
 
 		if (!check_coll_line(pos, wpos, cindex, -1, 1, 0) && wb.is_point_reachable(pos, wpos, tot_steps)) {
-			start.push_back(make_pair(id, p2p_dist(pos, wpos)));
+			min_dist = (start.empty() ? dist : min(dist, min_dist));
+			start.push_back(make_pair(id, dist));
 		}
 	}
 	//cout << "query size: " << oddatav.size() << ", start size: " << start.size() << endl;
 	waypoint_search ws(goal);
 	vector<unsigned> path;
 	ws.run_a_star(start, path);
-	if (path.empty()) {cout << "*** NO PATH 2 ***" << endl; return;} // no path found, nothing to do
+	PRINT_TIME("Find Optimal Waypoint");
+	//cout << "path length: " << path.size() << endl;
+	if (path.empty()) return; // no path found, nothing to do
 	unsigned const best(path[0]);
 
 	for (unsigned i = 0; i < oddatav.size(); ++i) {
 		oddatav[i].dist = ((oddatav[i].id == best) ? 1.0 : 1000.0); // large/small distance
 	}
 	//cout << "best found: " << best << endl;
-	PRINT_TIME("Find Optimal Waypoint");
 }
 
 

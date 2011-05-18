@@ -329,7 +329,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			// mode: 0: none, 1: user waypoint, 2: goal waypoint, 3: placed waypoint, 4: wpt waypoint, 5: closest waypoint, 6: goal pos (new waypoint)
 			wpt_goal goal(3, 0, all_zeros);
 			//wpt_goal goal(6, 0, point(-1.77535, 1.99193, 2.15036)); // mode, wpt, goal_pos
-			//wpt_goal goal(6, 0, get_camera_pos()-point(0.0, 0.0, camera_zh));
+			//wpt_goal goal(5, 0, get_camera_pos()-point(0.0, 0.0, camera_zh));
 
 			if (curw >= 0) { // currently targeting a waypoint
 				assert((unsigned)curw < waypoints.size());
@@ -1272,6 +1272,7 @@ void player_state::init(bool w_start) {
 		wmode     = 0;
 	}
 	timer         = 0;
+	init_frame    = frame_counter;
 	fire_frame    = 0;
 	was_hit       = 0;
 	rot_counter   = 0;
