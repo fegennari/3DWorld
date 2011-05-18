@@ -230,7 +230,6 @@ void add_target(vector<od_data> &oddatav, pos_dir_up const &pdu, point const &po
 
 int find_nearest_enemy(point const &pos, point const &avoid_dir, int smiley_id, point &target, int &target_visible, float &min_dist) {
 
-	//return -1;
 	assert(smiley_id < num_smileys);
 	int min_i(NO_SOURCE), hitter(NO_SOURCE);
 	float const radius(object_types[SMILEY].radius);
@@ -330,7 +329,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			// mode: 0: none, 1: user waypoint, 2: goal waypoint, 3: placed waypoint, 4: wpt waypoint, 5: closest waypoint, 6: goal pos (new waypoint)
 			wpt_goal goal(3, 0, all_zeros);
 			//wpt_goal goal(6, 0, point(-1.77535, 1.99193, 2.15036)); // mode, wpt, goal_pos
-			//wpt_goal goal(5, 0, get_camera_pos()-point(0.0, 0.0, camera_zh));
+			//wpt_goal goal(6, 0, get_camera_pos()-point(0.0, 0.0, camera_zh));
 
 			if (curw >= 0) { // currently targeting a waypoint
 				assert((unsigned)curw < waypoints.size());
@@ -529,7 +528,10 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		types.push_back(type_wt_t(WA_PACK, 1.0));
 		types.push_back(type_wt_t(SHIELD,  (almost_dead ? 10 : 1.2)*(1.0 - sstate.shields/MAX_SHIELDS))); // always below max since it ticks down over time
 		if (health < MAX_HEALTH) types.push_back(type_wt_t(HEALTH, (almost_dead ? 15 : 1.5)*(1.0 - health/MAX_HEALTH)));
-		min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, targete, sstate.target_visible, diste);
+
+		if (game_mode) {
+			min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, targete, sstate.target_visible, diste);
+		}
 		min_ih = find_nearest_obj(  obj.pos, avoid_dir, smiley_id, targeth, disth, types);
 
 		if (!sstate.target_visible) { // can't find an enemy, choose health/pickup
@@ -1146,8 +1148,10 @@ colorRGBA get_smiley_team_color(int smiley_id) {
 
 int gen_smiley_or_player_pos(point &pos, int index) {
 
+	float const radius(object_types[SMILEY].radius);
+
 	if (!app_spots.empty()) {
-		float const dmin(2.0*object_types[SMILEY].radius);
+		float const dmin(2.0*radius);
 		point pos0(pos);
 
 		for (unsigned i = 0; i < SMILEY_MAX_TRIES; ++i) {
@@ -1181,7 +1185,7 @@ int gen_smiley_or_player_pos(point &pos, int index) {
 		pos.y = 0.5*(yc + yd*signed_rand_float());
 		
 		if (is_good_smiley_pos(get_xpos(pos.x), get_ypos(pos.y))) {
-			pos.z = interpolate_mesh_zval(pos.x, pos.y, object_types[SMILEY].radius, 0, 0);
+			pos.z = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + radius;
 			return 1;
 		}
 	}

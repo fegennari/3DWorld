@@ -13,6 +13,7 @@ bool const SHOW_WAYPOINT_EDGES = 0;
 int const WP_RESET_FRAMES      = 100; // Note: in frames, not ticks, fix?
 int const WP_RECENT_FRAMES     = 200;
 
+bool has_user_placed(0), has_item_placed(0);
 vector<waypoint_t> waypoints;
 
 extern bool use_waypoints;
@@ -107,6 +108,15 @@ wpt_goal::wpt_goal(int m, unsigned w, point const &p) : mode(m), wpt(w), pos(p) 
 }
 
 
+bool wpt_goal::is_reachable() const {
+
+	if (mode == 0 || waypoints.empty()) return 0;
+	if (mode == 1 && !has_user_placed)  return 0;
+	if (mode == 3 && !has_item_placed)  return 0;
+	return 1;
+}
+
+
 // ********** waypoint_builder **********
 
 
@@ -118,7 +128,7 @@ class waypoint_builder {
 		dwobject obj(def_objects[WAYPOINT]); // create a fake temporary smiley object
 		obj.pos     = pos;
 		obj.coll_id = coll_id; // ignore collisions with the current object
-		bool const ret(!obj.check_vert_collision(0, 0, 0)); // return true if no collision
+		bool const ret(!obj.check_vert_collision(0, 0, 0, NULL, all_zeros, 1)); // return true if no collision (skip dynamic objects)
 		pos = obj.pos;
 		return ret;
 	}
@@ -229,6 +239,7 @@ public:
 
 			for (vector<predef_obj>::const_iterator i = objg.get_predef_objs().begin(); i != objg.get_predef_objs().end(); ++i) {
 				waypoints.push_back(waypoint_t(i->pos, 0, 1));
+				has_item_placed = 1;
 			}
 		}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " object placement waypoints" << endl;
@@ -338,7 +349,7 @@ public:
 			vector3d const delta((end - cur).get_norm());
 			point lpos(cur);
 			cur += delta*step_size;
-			int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0));
+			int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0, 1));
 			if (ret == 3)                                        return 0; // stuck
 			if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)         return 0; // too high of a step
 			check_cobj_placement(cur, -1);
@@ -399,7 +410,7 @@ public:
 
 	// returns min distance to goal following connected waypoints along path
 	float run_a_star(vector<pair<unsigned, float> > const &start, vector<unsigned> &path) {
-		if (waypoints.empty()) return 0.0; // nothing to do
+		if (!goal.is_reachable()) return 0.0; // nothing to do
 		assert(path.empty());
 		if (goal.mode == 4) goal.pos = waypoints[goal.wpt].pos; // specific waypoint
 		if (goal.mode == 5) goal.wpt = wb.find_closest_waypoint(goal.pos);
@@ -477,6 +488,8 @@ void create_waypoints(vector<point> const &user_waypoints) {
 
 	RESET_TIME;
 	waypoints.clear();
+	has_user_placed = (!user_waypoints.empty());
+	has_item_placed = 0;
 	
 	for (unsigned i = 0; i < user_waypoints.size(); ++i) {
 		waypoints.push_back(waypoint_t(user_waypoints[i], 1));
@@ -498,14 +511,14 @@ void create_waypoints(vector<point> const &user_waypoints) {
 // find the optimal next waypoint when already on a waypoint path
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal) {
 
-	if (goal.mode == 0 || waypoints.empty()) return -1; // nothing to do
-	//RESET_TIME;
+	if (!goal.is_reachable()) return -1; // nothing to do
+	RESET_TIME;
 	vector<unsigned> path;
 	waypoint_search ws(goal);
 	vector<pair<unsigned, float> > start;
 	start.push_back(make_pair(cur, 0.0));
 	ws.run_a_star(start, path);
-	//PRINT_TIME("A Star");
+	PRINT_TIME("A Star");
 	if (path.empty())     {cout << "*** NO PATH ***" << endl; return -1;} // no path to goal
 	assert(path[0] == cur);
 	if (path.size() == 1) {cout << "*** FINISHED! ***" << endl; return cur;} // already at goal
@@ -516,7 +529,7 @@ int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal) {
 // find the optimal next waypoint when not on a waypoint path (using visible waypoints as candidates)
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal) {
 
-	if (goal.mode == 0 || oddatav.empty() || waypoints.empty()) return; // nothing to do
+	if (oddatav.empty() || !goal.is_reachable()) return; // nothing to do
 	RESET_TIME;
 	vector<pair<unsigned, float> > start;
 	waypoint_builder wb;
@@ -527,7 +540,7 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 		int cindex(-1);
 		unsigned tot_steps(0);
 
-		if (!check_coll_line(pos, wpos, cindex, -1, 1, 0) /*&& wb.is_point_reachable(pos, wpos, tot_steps)*/) { // FIXME
+		if (!check_coll_line(pos, wpos, cindex, -1, 1, 0) && wb.is_point_reachable(pos, wpos, tot_steps)) {
 			start.push_back(make_pair(id, p2p_dist(pos, wpos)));
 		}
 	}

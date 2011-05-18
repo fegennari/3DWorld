@@ -140,7 +140,7 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 	int object_bounce(int coll_type, vector3d &norm, float elasticity2, float zval, float z_offset, vector3d const &obj_vel=zero_vector);
 	int object_still_stopped(int obj_index);
 	void do_coll_damage();
-	int check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm=NULL, vector3d const &mdir=all_zeros);
+	int check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm=NULL, vector3d const &mdir=all_zeros, bool skip_dynamic=0);
 	int multistep_coll(point const &last_pos, int obj_index, unsigned nsteps);
 	void update_vel_from_damage(vector3d const &dv);
 	void damage_object(float damage, point const &dpos, point const &shoot_pos, int weapon);

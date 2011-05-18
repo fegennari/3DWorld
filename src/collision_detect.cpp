@@ -889,7 +889,7 @@ class vert_coll_detector {
 
 	dwobject &obj;
 	int type, iter;
-	bool player, already_bounced;
+	bool player, already_bounced, skip_dynamic;
 	int coll, obj_index, do_coll_funcs;
 	unsigned cdir, lcoll;
 	float z_old, o_radius, z1, z2, c_zmax, c_zmin;
@@ -903,9 +903,9 @@ class vert_coll_detector {
 	void init_reset_pos();
 public:
 	vert_coll_detector(dwobject &obj_, int obj_index_, int do_coll_funcs_, int iter_,
-		vector3d *cnorm_, vector3d const &mdir=zero_vector) :
+		vector3d *cnorm_, vector3d const &mdir=zero_vector, bool skip_dynamic_=0) :
 	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY || type == WAYPOINT), already_bounced(0),
-	coll(0), obj_index(obj_index_), do_coll_funcs(do_coll_funcs_), cdir(0),
+	skip_dynamic(skip_dynamic_), coll(0), obj_index(obj_index_), do_coll_funcs(do_coll_funcs_), cdir(0),
 	lcoll(0), z_old(obj.pos.z), cnorm(cnorm_), pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity) {}
 	int check_coll();
 };
@@ -929,6 +929,7 @@ void vert_coll_detector::check_cobj(int index) {
 	if (type == PROJC    && obj.source  == cobj.id)  return; // can't shoot yourself with a projectile
 	if (player           && obj.coll_id == cobj.id)  return; // can't collide with yourself
 	if (type == LANDMINE && invalid_coll(obj, cobj)) return;
+	if (skip_dynamic && cobj.status == COLL_DYNAMIC) return;
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
 	if (z1 > zmaxc || z2 < zminc)                    return;
 	vector3d norm(zero_vector), pvel(zero_vector);
@@ -1268,9 +1269,9 @@ int vert_coll_detector::check_coll() {
 
 
 // 0 = non vert coll, 1 = X coll, 2 = Y coll, 3 = X + Y coll
-int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm, vector3d const &mdir) {
+int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm, vector3d const &mdir, bool skip_dynamic) {
 
-	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir);
+	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic);
 	return vcd.check_coll();
 }
 
@@ -1395,7 +1396,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 
 
 // 0 = no change, 1 = moved up, 2 = falling, 3 = stuck
-int set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id, bool flight, bool on_snow) {
+int set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id, bool flight, bool on_snow, bool skip_dynamic) {
 
 	int const xpos(get_xpos(pos.x) - xoff), ypos(get_ypos(pos.y) - yoff);
 	bool const is_camera(type == CAMERA), is_player(is_camera || (type == SMILEY && id >= 0));
@@ -1428,6 +1429,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		assert(unsigned(index) < coll_objects.size());
 		coll_obj const &cobj(coll_objects[index]);
 		if (cobj.no_collision()) continue;
+		if (skip_dynamic && cobj.status == COLL_DYNAMIC) continue;
 		
 		switch (cobj.type) {
 		case COLL_CUBE:

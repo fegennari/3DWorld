@@ -54,11 +54,13 @@ struct waypoint_t {
 
 
 struct wpt_goal {
+
 	int mode; // 0: none, 1: user waypoint, 2: goal waypoint, 3: placed waypoint, 4: wpt waypoint, 5: closest waypoint, 6: goal pos (new waypoint)
 	unsigned wpt;
 	point pos;
 
 	wpt_goal(int m=0, unsigned w=0, point const &p=all_zeros);
+	bool is_reachable() const;
 };
 
 
