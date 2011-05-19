@@ -134,7 +134,8 @@ class waypoint_builder {
 	}
 
 	bool is_waypoint_valid(point const &pos, int coll_id) const {
-		if (!is_over_mesh(pos) || pos.z < zmin || !point_interior_to_mesh(get_xpos(pos.x), get_ypos(pos.y))) return 0;
+		if (pos.z < zmin || pos.x < -X_SCENE_SIZE+DX_VAL || pos.x > X_SCENE_SIZE-DX_VAL ||
+			                pos.y < -Y_SCENE_SIZE+DY_VAL || pos.y > Y_SCENE_SIZE-DY_VAL) return 0;
 		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 		if (pos.z - radius < mesh_zval) return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
 		return check_cobj_placement(point(pos), coll_id);
