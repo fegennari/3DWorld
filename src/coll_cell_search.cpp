@@ -463,12 +463,13 @@ bool is_contained(point const &pos, point const *const pts, unsigned npts, float
 class line_intersector_occlusion_cobjs : public base_intersector { // tests for polygon occlusion
 
 	point const *const pts;
+	point viewer;
 	unsigned npts;
 	int coll_cobj;
 
 public:
-	line_intersector_occlusion_cobjs(point const &pos1_, point const &pos2_, const point *pts_, unsigned npts_)
-		: base_intersector(pos1_, pos2_), pts(pts_), npts(npts_), coll_cobj(-1) {}
+	line_intersector_occlusion_cobjs(point const &pos1_, point const &pos2_, point const &viewer_, const point *pts_, unsigned npts_)
+		: base_intersector(pos1_, pos2_), pts(pts_), viewer(viewer_), npts(npts_), coll_cobj(-1) {}
 	bool test_cell(coll_cell const &cell, int xpos, int ypos) const {return (z1 <= cell.occ_zmax && z2 >= cell.occ_zmin);}
 	int get_coll_cobj() const {return coll_cobj;}
 
@@ -477,7 +478,7 @@ public:
 		cobj.counter = cobj_counter;
 		if (!cobj.is_occluder() || z1 > cobj.d[2][1] || z2 < cobj.d[2][0]) return 2; // clip this shape
 		
-		if (is_contained(pos1, pts, npts, cobj.d))  {
+		if (is_contained(viewer, pts, npts, cobj.d))  {
 			coll_cobj = index;
 			return 1;
 		}
@@ -705,7 +706,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 }
 
 
-bool cobj_contained(point pos1, const point *pts, unsigned npts, int cobj) {
+bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj) {
 
 	static int last_cobj(-1);
 
@@ -714,9 +715,9 @@ bool cobj_contained(point pos1, const point *pts, unsigned npts, int cobj) {
 	}
 	if (occluder_zmin >= occluder_zmax) return 0;
 	assert(npts > 0);
-	point pos2(pts[0]);
-	if (!do_line_clip_scene(pos1, pos2, occluder_zmin, occluder_zmax)) return 0;
-	line_intersector_occlusion_cobjs lint(pos1, pos2, pts, npts);
+	point const viewer(pos1);
+	if (!do_line_clip_scene(pos1, center, occluder_zmin, occluder_zmax)) return 0;
+	line_intersector_occlusion_cobjs lint(pos1, center, viewer, pts, npts);
 	coll_cell_line_iterator<line_intersector_occlusion_cobjs> ccli(lint, 1, 1, cobj);
 	
 	if (ccli.do_iter()) {

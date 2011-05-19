@@ -147,7 +147,7 @@ bool pos_dir_up::cube_visible(cube_t const &cube) const {
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 
 	if (radius*radius/p2p_dist_sq(viewer, sc) < 1.0E-6) { // small and far away
-		return cobj_contained(viewer, &sc, 1, -1);
+		return cobj_contained(viewer, sc, &sc, 1, -1);
 	}
 	point pts[8];
 	
@@ -156,7 +156,7 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 			pts[i][j] = sc[j] + ((i&(1<<j)) ? -1.0 : 1.0)*radius;
 		}
 	}
-	return cobj_contained(viewer, pts, 8, -1);
+	return cobj_contained(viewer, sc, pts, 8, -1);
 }
 
 
