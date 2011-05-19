@@ -941,9 +941,12 @@ bool read_object_file(char *filename, vector<vector<point> > &ppts, bool verbose
 }
 
 
-void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius) {
-
+void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius,
+	vector3d const &tv, float scale, bool const mirror[3], bool const swap_dim[3][3])
+{
+	pos.z = 0.0;
 	bool const interpolate(fscanf(fp, "%f", &pos.z) != 1);
+	xform_pos(pos, tv, scale, mirror, swap_dim); // better not try to rotate z when interpolating
 	if (interpolate) pos.z = interpolate_mesh_zval(pos.x, pos.y, interp_rad, 0, 0) + radius;
 }
 
@@ -1106,8 +1109,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			{
 				float const smiley_radius(object_types[SMILEY].radius);
-				xform_pos(pos, tv, scale, mirror, swap_dim); // better not try to transform z
-				read_or_calc_zval(fp, pos, smiley_radius, smiley_radius);
+				read_or_calc_zval(fp, pos, smiley_radius, smiley_radius, tv, scale, mirror, swap_dim);
 				app_spots.push_back(pos);
 			}
 			break;
@@ -1134,8 +1136,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				return read_error(fp, "waypoint", coll_obj_file);
 			}
 			{
-				xform_pos(pos, tv, scale, mirror, swap_dim); // better not try to transform z
-				read_or_calc_zval(fp, pos, SMALL_NUMBER, object_types[WAYPOINT].radius);
+				read_or_calc_zval(fp, pos, SMALL_NUMBER, object_types[WAYPOINT].radius, tv, scale, mirror, swap_dim);
 				user_waypoints.push_back(pos);
 			}
 			break;
@@ -1147,9 +1148,8 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			{
 				assert(ivals[0] >= 0 && ivals[0] < NUM_TOT_OBJS);
-				xform_pos(pos, tv, scale, mirror, swap_dim);
 				float const radius(object_types[ivals[0]].radius);
-				read_or_calc_zval(fp, pos, radius, radius);
+				read_or_calc_zval(fp, pos, radius, radius, tv, scale, mirror, swap_dim);
 				init_objects();
 				create_object_groups();
 				int const cid(coll_id[ivals[0]]);

@@ -1,8 +1,8 @@
 # Place Items
 # testing - add health
-#I 28 0  2.0  0.0 -4.0 0.28
-#I 28 0  2.0  0.5 -4.0 0.28
-#I 28 0  2.0  1.0 -4.0 0.28
+#I 28 0  2.0  0.0 -4.0 0.13
+#I 28 0  2.0  0.5 -4.0 0.13
+#I 28 0  2.0  1.0 -4.0 0.13
 
 # Appearance Spots
 #A 0.0 0.0 # Bad - Inside House

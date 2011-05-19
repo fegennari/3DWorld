@@ -527,7 +527,7 @@ int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal) {
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal) {
 
 	if (oddatav.empty() || !goal.is_reachable()) return; // nothing to do
-	RESET_TIME;
+	//RESET_TIME;
 	vector<pair<float, unsigned> > cands;
 	vector<pair<unsigned, float> > start;
 	cands.reserve(oddatav.size());
@@ -556,7 +556,7 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 	waypoint_search ws(goal);
 	vector<unsigned> path;
 	ws.run_a_star(start, path);
-	PRINT_TIME("Find Optimal Waypoint");
+	//PRINT_TIME("Find Optimal Waypoint");
 	//cout << "path length: " << path.size() << endl;
 	if (path.empty()) return; // no path found, nothing to do
 	unsigned const best(path[0]);
