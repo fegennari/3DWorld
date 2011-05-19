@@ -1589,7 +1589,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (falling)        camera_in_air     = 1;
 		if (!camera_in_air) camera_invincible = 0;
 	}
-	if (type = WAYPOINT) {
+	if (type == WAYPOINT) {
 		// do nothing
 	}
 	else if (flight) {
