@@ -21,7 +21,7 @@ platform::platform(float fs, float rs, float sd, float rd, float dst, float ad,
 {
 	assert(shadow_mode <= 2);
 	assert(dir_ != all_zeros);
-	assert(fspeed > 0.0 && rspeed > 0.0 && sdelay >= 0.0 && rdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
+	assert(fspeed > 0.0 && rspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
 	reset();
 }
 
@@ -91,7 +91,7 @@ void platform::advance_timestep() {
 					if (dist_traveled + cur_dist > ext_dist) { // traveled past the end
 						dist_traveled = ext_dist - cur_dist;
 						ns_time      += dist_traveled/fspeed; // ns_time will generally still be neg at this step
-						ns_time      += rdelay; // add in reverse delay (ns_time can be pos or neg)
+						ns_time      += max(0.0f, rdelay); // add in reverse delay (ns_time can be pos or neg)
 						state         = ST_CHDIR;
 					}
 					else { // keep moving forward
@@ -102,6 +102,7 @@ void platform::advance_timestep() {
 				break;
 
 			case ST_CHDIR: // waiting to change direction
+				if (rdelay < 0.0) return; // no reverse phase - stay in this state forever
 				state = ST_REV; // time is up, reverse (fallthrough)
 			case ST_REV: // moving in reverse
 				{
