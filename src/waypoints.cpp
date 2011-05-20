@@ -164,6 +164,13 @@ class waypoint_builder {
 		// could try more points
 	}
 
+	void add_waypoint_poly(point const *const points, unsigned npoints, vector3d const &norm, int coll_id) {
+		assert(npoints == 3 || npoints == 4);
+		if (fabs(norm.z) < 0.5) return; // need a mostly vertical polygon to stand on
+		add_waypoint_triangle(points[0], points[1], points[2], coll_id);
+		if (npoints == 4) add_waypoint_triangle(points[0], points[2], points[3], coll_id); // quad only
+	}
+
 public:
 	waypoint_builder(void) : radius(object_types[WAYPOINT].radius) {}
 	
@@ -173,7 +180,7 @@ public:
 		unsigned const num_waypoints(waypoints.size());
 
 		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-			if (i->status != COLL_STATIC) continue; // only looking for static objects
+			if (i->status != COLL_STATIC || i->platform_id >= 0) continue; // only static objects (not platforms) - use i->truly_static()?
 
 			switch (i->type) {
 			case COLL_CUBE: // can stand on the top
@@ -191,10 +198,17 @@ public:
 
 			case COLL_POLYGON:
 				assert(i->npoints == 3 || i->npoints == 4); // triangle or quad
-				if (i->thickness > MIN_POLY_THICK2) break; // extruded polygons not yet handled
-				if (fabs(i->norm.z) < 0.5)          break; // need a mostly vertical polygon to stand on
-				add_waypoint_triangle(i->points[0], i->points[1], i->points[2], i->id);
-				if (i->npoints == 4) add_waypoint_triangle(i->points[0], i->points[2], i->points[3], i->id); // quad only
+				
+				if (i->thickness > MIN_POLY_THICK2) { // extruded polygon
+					vector<vector<point> > const &pts(thick_poly_to_sides(i->points, i->npoints, i->norm, i->thickness));
+
+					for (unsigned j = 0; j < pts.size(); ++j) {
+						add_waypoint_poly(&pts[j].front(), pts[j].size(), get_poly_norm(&pts[j].front()), i->id);
+					}
+				}
+				else {
+					add_waypoint_poly(i->points, i->npoints, i->norm, i->id);
+				}
 				break;
 
 			case COLL_SPHERE:       break; // not supported (can't stand on)
@@ -350,6 +364,7 @@ public:
 			int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0, 1));
 			if (ret == 3)                                        return 0; // stuck
 			if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)         return 0; // too high of a step
+			if ((cur.z - lpos.z) < -20.0*radius)                 return 0; // too high of a drop
 			check_cobj_placement(cur, -1);
 			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress
 			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv);
