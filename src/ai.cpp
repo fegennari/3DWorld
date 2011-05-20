@@ -299,7 +299,7 @@ void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id
 	if (waypoints[i].next_wpts.empty()) dmult *= 10.0; // increase the cost of waypoints disconnected from the rest of the waypoint graph
 	if (i == curw) dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
-	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp)));
+	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp))*rand_uniform(0.8, 1.2));
 	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, can_see)); // add high weight to prefer other objects
 }
 
