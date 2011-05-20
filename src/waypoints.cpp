@@ -12,6 +12,7 @@ bool const SHOW_WAYPOINTS      = 0;
 bool const SHOW_WAYPOINT_EDGES = 0;
 int const WP_RESET_FRAMES      = 100; // Note: in frames, not ticks, fix?
 int const WP_RECENT_FRAMES     = 200;
+float const MAX_FALL_DIST_MULT = 20.0;
 
 bool has_user_placed(0), has_item_placed(0);
 vector<waypoint_t> waypoints;
@@ -161,7 +162,7 @@ class waypoint_builder {
 		if (dist_less_than(p1, p2, 2*radius) || dist_less_than(p2, p3, 2*radius) || dist_less_than(p3, p1, 2*radius)) return; // too small to stand on
 		point const center(((p1 + p2 + p3) / 3.0) + point(0.0, 0.0, radius));
 		add_if_valid(center, coll_id);
-		// could try more points
+		// could try more points (corners?)
 	}
 
 	void add_waypoint_poly(point const *const points, unsigned npoints, vector3d const &norm, int coll_id) {
@@ -330,15 +331,26 @@ public:
 				unsigned const k(cands[j].second);
 				point const end(waypoints[k].pos);
 				vector3d const dir(end - start), dir_xy(vector3d(dir.x, dir.y, 0.0).get_norm());
-				bool colinear(0);
+				bool colinear(0), redundant(0);
 
 				for (unsigned l = 0; l < next.size() && !colinear; ++l) {
 					assert(next[l] < waypoints.size());
 					if (next[l] < to_start || next[l] >= to_end) continue; // no in the target range
 					vector3d const dir2(waypoints[next[l]].pos - start), dir_xy2(vector3d(dir2.x, dir2.y, 0.0).get_norm());
-					colinear = (dot_product(dir_xy, dir_xy2) > 0.999);
+					colinear = (dot_product(dir_xy, dir_xy2) > 0.99);
 				}
 				if (colinear) continue;
+
+				for (unsigned l = 0; l < next.size() && !redundant; ++l) {
+					vector<unsigned> const &next_next(waypoints[next[l]].next_wpts);
+					point const &wl(waypoints[next[l]].pos);
+
+					for (unsigned m = 0; m < next_next.size() && !redundant; ++m) {
+						point const &wm(waypoints[next_next[m]].pos);
+						redundant = (next_next[m] == k && (p2p_dist(start, wl) + p2p_dist(wl, wm) < 1.02*p2p_dist(start, wm)));
+					}
+				}
+				if (redundant) continue;
 
 				if (is_point_reachable(start, end, tot_steps)) {
 					add_edge(i, k);
@@ -364,12 +376,11 @@ public:
 			int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0, 1));
 			if (ret == 3)                                        return 0; // stuck
 			if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)         return 0; // too high of a step
-			if ((cur.z - lpos.z) < -20.0*radius)                 return 0; // too high of a drop
+			if ((cur.z - lpos.z) < -MAX_FALL_DIST_MULT*radius)   return 0; // too high of a drop
 			check_cobj_placement(cur, -1);
 			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress
-			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv);
+			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv); // point-line dist
 			if (d > 2.0*radius)                                  return 0; // path deviation too long
-			// FIXME: allow more deviation from path to get around small obstacles
 			++tot_steps;
 			//waypoints.push_back(waypoint_t(cur, 1)); // testing
 		}
@@ -486,9 +497,6 @@ public:
 			} // for i
 		}
 		if (goal.mode == 6) wb.remove_last_waypoint(); // goal position - remove temp waypoint
-		//cout << "min_dist: " << min_dist << ", path length: " << path.size() << ", path: ";
-		//for (unsigned i = 0; i < path.size(); ++i) cout << path[i] << " ";
-		//cout << endl;
 		return min_dist;
 	}
 };
@@ -544,14 +552,13 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 
 	if (oddatav.empty() || !goal.is_reachable()) return; // nothing to do
 	//RESET_TIME;
-	vector<pair<float, unsigned> > cands;
+	vector<pair<float, unsigned> > cands(oddatav.size());
 	vector<pair<unsigned, float> > start;
-	cands.reserve(oddatav.size());
 	waypoint_builder wb;
 	float min_dist(0.0);
 
 	for (unsigned i = 0; i < oddatav.size(); ++i) {
-		cands.push_back(make_pair(p2p_dist(pos, waypoints[oddatav[i].id].pos), oddatav[i].id));
+		cands[i] = make_pair(p2p_dist(pos, waypoints[oddatav[i].id].pos), oddatav[i].id);
 	}
 	sort(cands.begin(), cands.end());
 
@@ -568,19 +575,17 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 			start.push_back(make_pair(id, dist));
 		}
 	}
-	//cout << "query size: " << oddatav.size() << ", start size: " << start.size() << endl;
 	waypoint_search ws(goal);
 	vector<unsigned> path;
 	ws.run_a_star(start, path);
 	//PRINT_TIME("Find Optimal Waypoint");
-	//cout << "path length: " << path.size() << endl;
+	//cout << "query size: " << oddatav.size() << ", start size: " << start.size() << ", path length: " << path.size() << endl;
 	if (path.empty()) return; // no path found, nothing to do
 	unsigned const best(path[0]);
 
 	for (unsigned i = 0; i < oddatav.size(); ++i) {
 		oddatav[i].dist = ((oddatav[i].id == best) ? 1.0 : 1000.0); // large/small distance
 	}
-	//cout << "best found: " << best << endl;
 }
 
 
