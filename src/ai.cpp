@@ -302,7 +302,13 @@ void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id
 	bool const can_see(next || (sstate.on_waypt_path && i == curw));
 	if (!is_over_mesh(wp) || is_underwater(wp) || !sstate.waypts_used.is_valid(i)) return;
 	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))         return; // view culling - more detailed query later
-	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0)     return; // need to avoid this direction
+	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0)     return; // need to avoid this directio
+	unsigned other_smiley_targets(0);
+
+	for (unsigned s = 0; s < num_smileys; ++s) {
+		if (s != smiley_id && sstates[s].last_waypoint == i) ++other_smiley_targets;
+	}
+	dmult *= (1.0 + 1.0*other_smiley_targets); // increase distance cost if other smileys are going for the same waypoint
 	if (waypoints[i].next_wpts.empty()) dmult *= 10.0; // increase the cost of waypoints disconnected from the rest of the waypoint graph
 	if (i == curw) dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));

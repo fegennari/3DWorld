@@ -40,10 +40,10 @@ struct od_data { // size = 12
 
 struct waypoint_t {
 
-	bool user_placed, placed_item, visited, goal, temp;
+	bool user_placed, placed_item, goal, temp, visited;
 	float g_score, h_score, f_score;
 	point pos;
-	vector<float> smiley_times;
+	float last_smiley_time;
 	vector<unsigned> next_wpts, prev_wpts;
 
 	waypoint_t(point const &p=all_zeros, bool up=0, bool i=0, bool g=0, bool t=0);

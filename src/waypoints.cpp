@@ -64,7 +64,7 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 
 
 waypoint_t::waypoint_t(point const &p, bool up, bool i, bool g, bool t)
-	: user_placed(up), placed_item(i), visited(0), goal(g), temp(t), g_score(0), h_score(0), f_score(0), pos(p)
+	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0), g_score(0), h_score(0), f_score(0), pos(p)
 {
 	clear();
 }
@@ -72,16 +72,14 @@ waypoint_t::waypoint_t(point const &p, bool up, bool i, bool g, bool t)
 
 void waypoint_t::mark_visited_by_smiley(unsigned const smiley_id) {
 
-	assert(smiley_id < smiley_times.size());
-	smiley_times[smiley_id] = tfticks;
+	last_smiley_time = tfticks; // for now, we don't care which smiley
 	visited = 1;
 }
 
 
 float waypoint_t::get_time_since_last_visited(unsigned const smiley_id) const {
 
-	assert(smiley_id < smiley_times.size());
-	float const delta_t(tfticks - smiley_times[smiley_id]);
+	float const delta_t(tfticks - last_smiley_time); // for now, we don't care which smiley
 	assert(delta_t >= 0.0);
 	return delta_t;
 }
@@ -89,8 +87,7 @@ float waypoint_t::get_time_since_last_visited(unsigned const smiley_id) const {
 
 void waypoint_t::clear() {
 
-	smiley_times.resize(0);
-	smiley_times.resize(num_smileys, tfticks);
+	last_smiley_time = tfticks;
 	next_wpts.clear();
 	prev_wpts.clear();
 	visited = 0;
