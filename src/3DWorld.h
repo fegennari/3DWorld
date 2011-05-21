@@ -809,6 +809,14 @@ struct portal {
 };
 
 
+struct user_waypt_t {
+
+	int type;
+	point pos;
+	user_waypt_t(int type_=0, point const &pos_=all_zeros) : type(type_), pos(pos_) {}
+};
+
+
 // colors
 colorRGBA const RED      (1.0,  0.0,  0.0,  1.0);
 colorRGBA const GREEN    (0.0,  1.0,  0.0,  1.0);
@@ -1612,7 +1620,7 @@ unsigned set_shader_prog(std::string const &vs_name, std::string const &fs_name,
 void unset_shader_prog();
 
 // function prototypes - waypoints
-void create_waypoints(vector<point> const &user_waypoints);
+void create_waypoints(vector<user_waypt_t> const &user_waypoints);
 void shift_waypoints(vector3d const &vd);
 void draw_waypoints();
 

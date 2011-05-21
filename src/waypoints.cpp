@@ -14,7 +14,7 @@ int const WP_RESET_FRAMES      = 100; // Note: in frames, not ticks, fix?
 int const WP_RECENT_FRAMES     = 200;
 float const MAX_FALL_DIST_MULT = 20.0;
 
-bool has_user_placed(0), has_item_placed(0);
+bool has_user_placed(0), has_item_placed(0), has_wpt_goal(0);
 vector<waypoint_t> waypoints;
 
 extern bool use_waypoints;
@@ -100,9 +100,8 @@ void waypoint_t::clear() {
 wpt_goal::wpt_goal(int m, unsigned w, point const &p) : mode(m), wpt(w), pos(p) {
 
 	switch (mode) {
-	case 0: case 1: case 2: case 3:         break; // nothing
+	case 0: case 1: case 2: case 3: case 5: break; // nothing
 	case 4: assert(wpt < waypoints.size()); break;
-	case 5:                                 break; // nothing
 	case 6: assert(is_over_mesh(pos));      break;
 	default: assert(0);
 	}
@@ -113,7 +112,8 @@ bool wpt_goal::is_reachable() const {
 
 	if (mode == 0 || waypoints.empty()) return 0;
 	if (mode == 1 && !has_user_placed)  return 0;
-	if (mode == 3 && !has_item_placed)  return 0;
+	if (mode == 2 && !has_item_placed)  return 0;
+	if (mode == 3 && !has_wpt_goal)     return 0;
 	return 1;
 }
 
@@ -418,8 +418,8 @@ class waypoint_search {
 	}
 	bool is_goal(unsigned cur) const {
 		if (goal.mode == 1) return waypoints[cur].user_placed; // user waypoint
-		if (goal.mode == 2) return waypoints[cur].goal;        // goal waypoint
-		if (goal.mode == 3) return waypoints[cur].placed_item; // placed item waypoint
+		if (goal.mode == 2) return waypoints[cur].placed_item; // placed item waypoint
+		if (goal.mode == 3) return waypoints[cur].goal;        // goal waypoint
 		if (goal.mode >= 4) return (cur == goal.wpt);          // goal position or specific waypoint
 		return 0;
 	}
@@ -436,9 +436,11 @@ public:
 	float run_a_star(vector<pair<unsigned, float> > const &start, vector<unsigned> &path) {
 		if (!goal.is_reachable()) return 0.0; // nothing to do
 		assert(path.empty());
+		bool const orig_has_wpt_goal(has_wpt_goal);
 		if (goal.mode == 4) goal.pos = waypoints[goal.wpt].pos; // specific waypoint
 		if (goal.mode == 5) goal.wpt = wb.find_closest_waypoint(goal.pos);
 		if (goal.mode == 6) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1, 1); // goal position - add temp waypoint
+		if (goal.mode == 6) has_wpt_goal = 1;
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: "; goal.pos.print(); cout << ", wpt: " << goal.wpt << endl;
 
 		set<unsigned> open;   // The set of nodes already evaluated.
@@ -496,7 +498,10 @@ public:
 				}
 			} // for i
 		}
-		if (goal.mode == 6) wb.remove_last_waypoint(); // goal position - remove temp waypoint
+		if (goal.mode == 6) {
+			wb.remove_last_waypoint(); // goal position - remove temp waypoint
+			has_wpt_goal = orig_has_wpt_goal;
+		}
 		return min_dist;
 	}
 };
@@ -505,15 +510,17 @@ public:
 // ********** waypoint top level code **********
 
 
-void create_waypoints(vector<point> const &user_waypoints) {
+void create_waypoints(vector<user_waypt_t> const &user_waypoints) {
 
 	RESET_TIME;
 	waypoints.clear();
 	has_user_placed = (!user_waypoints.empty());
 	has_item_placed = 0;
+	has_wpt_goal    = 0;
 	
-	for (unsigned i = 0; i < user_waypoints.size(); ++i) {
-		waypoints.push_back(waypoint_t(user_waypoints[i], 1));
+	for (vector<user_waypt_t>::const_iterator i = user_waypoints.begin(); i != user_waypoints.end(); ++i) {
+		waypoints.push_back(waypoint_t(i->pos, 1, 0, (i->type == 1))); // goal is type 1
+		if (waypoints.back().goal) has_wpt_goal = 1;
 	}
 	waypoint_builder wb;
 

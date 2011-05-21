@@ -33,7 +33,7 @@ obj_group obj_groups[NUM_TOT_OBJS];
 dwobject def_objects[NUM_TOT_OBJS];
 int coll_id[NUM_TOT_OBJS] = {0};
 point star_pts[2*N_STAR_POINTS];
-vector<point> user_waypoints;
+vector<user_waypt_t> user_waypoints;
 vector<coll_obj> fixed_cobjs;
 vector<portal> portals;
 
@@ -644,7 +644,10 @@ void shift_all_objs(vector3d const &vd) {
 	shift_light_sources(vd);
 	platforms.shift_by(vd);
 	shift_waypoints(vd); // is this correct?
-	shift_point_vector(user_waypoints, vd);
+
+	for (vector<user_waypt_t>::iterator i = user_waypoints.begin(); i != user_waypoints.end(); ++i) {
+		i->pos += vd;
+	}
 	//shift_point_vector(app_spots,      vd); // what if an appearance spot shifts off the map?
 
 	if (begin_motion) {
@@ -1131,14 +1134,13 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			break;
 
-		case 'p': // smiley path waypoint: xpos ypos [zpos]
-			if (fscanf(fp, "%f%f", &pos.x, &pos.y) != 2) {
+		case 'p': // smiley path waypoint: type xpos ypos [zpos]
+			if (fscanf(fp, "%i%f%f", &ivals[0], &pos.x, &pos.y) != 3) { // type: 0 = normal, 1 = goal
 				return read_error(fp, "waypoint", coll_obj_file);
 			}
 			{
 				read_or_calc_zval(fp, pos, SMALL_NUMBER, object_types[WAYPOINT].radius, tv, scale, mirror, swap_dim);
-				//int type(0); fscanf(fp, "%i", &type); // can fail
-				user_waypoints.push_back(pos); // add types such as 'goal'?
+				user_waypoints.push_back(user_waypt_t(ivals[0], pos));
 			}
 			break;
 

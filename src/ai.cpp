@@ -23,6 +23,7 @@ float SSTEPS_PER_FRAME(0.0), smiley_speed(1.0), smiley_acc(0);
 vector<point> app_spots;
 
 
+extern bool has_wpt_goal;
 extern int island, iticks, num_smileys, free_for_all, teams, frame_counter;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS;
@@ -334,12 +335,12 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		if (type == WAYPOINT) { // process waypoints
 			int curw(sstate.last_waypoint);
 			int ignore_w(-1);
-			// mode: 0: none, 1: user waypoint, 2: goal waypoint, 3: placed waypoint, 4: wpt waypoint, 5: closest waypoint, 6: goal pos (new waypoint)
-			wpt_goal goal(3, 0, all_zeros);
+			// mode: 0: none, 1: user waypoint, 2: placed item waypoint, 3: goal waypoint, 4: wpt waypoint, 5: closest waypoint, 6: goal pos (new waypoint)
+			wpt_goal goal((has_wpt_goal ? 3 : 2), 0, all_zeros);
 			//wpt_goal goal(6, 0, point(-1.77535, 1.99193, 2.15036)); // mode, wpt, goal_pos
 			//wpt_goal goal(5, 0, get_camera_pos()-point(0.0, 0.0, camera_zh));
 
-			if (last_target_visible && last_target_type != 3 && (goal.mode == 0 || goal.mode == 1 || goal.mode == 3)) { // have a previous enemy/item target and no real goal
+			if (last_target_visible && last_target_type != 3 && goal.mode <= 2) { // have a previous enemy/item target and no real goal
 				goal.mode = 5; // closest waypoint
 				goal.pos  = sstate.target_pos; // should still be valid
 			}
