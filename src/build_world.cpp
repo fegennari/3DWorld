@@ -204,7 +204,7 @@ void dwobject::update_precip_type() {
 void process_platforms() {
 
 	if (animate2 && have_platform_cobj) {
-		int const max_i((game_mode && obj_groups[coll_id[SMILEY]].is_enabled()) ? num_smileys : 0);
+		int const max_i(obj_groups[coll_id[SMILEY]].is_enabled() ? num_smileys : 0);
 
 		for (int i = ((camera_mode == 1) ? CAMERA_ID : 0); i < max_i; ++i) {
 			platforms.check_activate(get_sstate_pos(i), CAMERA_RADIUS);

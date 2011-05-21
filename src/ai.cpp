@@ -433,6 +433,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		bool const can_reach(not_too_high || ice_height_ok || in_motion);
 
 		if (type == WAYPOINT || not_too_high2) { // almost in reach, ultimate reachability questionable
+			// Note: if a waypoint is found to be unreachable, it may be be avoided until the smiley dies
 			if (!sstate.unreachable.proc_target(pos, pos2, sstate.objective_pos, (can_reach && type != WAYPOINT))) continue;
 		}
 		if (can_reach || not_too_high2 || (type == WAYPOINT && sstate.on_waypt_path)) { // not_too_high2 - may be incorrect
