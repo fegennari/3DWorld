@@ -305,8 +305,9 @@ void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id
 
 
 // health, shields, powerup, weapon, ammo, pack, waypoint
-int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, point &target, float &min_dist, vector<type_wt_t> types) {
-
+int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, point &target,
+	float &min_dist, vector<type_wt_t> types, int last_target_visible, int last_target_type)
+{
 	assert(smiley_id < num_smileys);
 	int min_ic(-1);
 	float sradius(object_types[SMILEY].radius), ra_smiley(C_STEP_HEIGHT*sradius);
@@ -332,6 +333,10 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			//wpt_goal goal(6, 0, point(-1.77535, 1.99193, 2.15036)); // mode, wpt, goal_pos
 			//wpt_goal goal(5, 0, get_camera_pos()-point(0.0, 0.0, camera_zh));
 
+			if (last_target_visible && last_target_type != 3 && (goal.mode == 0 || goal.mode == 1 || goal.mode == 3)) { // have a previous enemy/item target and no real goal
+				goal.mode = 5; // closest waypoint
+				goal.pos  = sstate.target_pos; // should still be valid
+			}
 			if (curw >= 0) { // currently targeting a waypoint
 				assert((unsigned)curw < waypoints.size());
 
@@ -490,7 +495,7 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 	player_state &sstate(sstates[smiley_id]);
 	int const last_target_visible(sstate.target_visible), last_target_type(sstate.target_type);
 	sstate.target_visible = 0;
-	sstate.target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup
+	sstate.target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup, 3 = waypoint
 	float const health_eq(min(4.0f*health, (health + sstate.shields)));
 	bool const almost_dead(health_eq < 20.0);
 
@@ -517,7 +522,7 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		}
 		if (!sstate.target_visible) { // don't have a ball or no enemy in sight
 			types.push_back(type_wt_t(BALL, 1.0));
-			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types);
+			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types, last_target_visible, last_target_type);
 		}
 	}
 	else { // choose health/attack based on distance
@@ -533,7 +538,7 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		if (game_mode) {
 			min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, targete, sstate.target_visible, diste);
 		}
-		min_ih = find_nearest_obj(  obj.pos, avoid_dir, smiley_id, targeth, disth, types);
+		min_ih = find_nearest_obj(  obj.pos, avoid_dir, smiley_id, targeth, disth, types, last_target_visible, last_target_type);
 
 		if (!sstate.target_visible) { // can't find an enemy, choose health/pickup
 			if (min_ih >= 0) sstate.target_pos = targeth;
@@ -567,12 +572,12 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		if (min_ih < 0) { // no item - use a waypoint to move to a different place in the scene
 			types.clear();
 			types.push_back(type_wt_t(WAYPOINT, 1.0));
-			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types);
+			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types, last_target_visible, last_target_type);
 		}
 		sstate.objective_pos = sstate.target_pos;
 		
 		if (min_ih >= 0) {
-			sstate.target_type    = 2;
+			sstate.target_type    = (min_ih == WAYPOINT) ? 3 : 2;
 			sstate.target_visible = 2;
 		}
 		if (sstate.target_pos != obj.pos) { // look beyond the target
@@ -580,14 +585,6 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 			sstate.target_pos += o*(2.0*object_types[SMILEY].radius/o.mag());
 		}
 	}
-#if 0 // need proper path finding for this to work correctly
-	if (!sstate.target_visible && last_target_visible == 1) { // no targets - use last known target enemy location
-		sstate.target_visible = last_target_visible;
-		sstate.target_type    = last_target_type;
-		sstate.objective_pos  = sstate.target_pos; // should still be valid
-		min_ie = sstate.target;
-	}
-#endif
 	if (min_ih < 0) sstate.unreachable.reset_try(); // no target object
 	if (min_ih != WAYPOINT) sstate.reset_wpt_state();
 	if (sstate.target_visible == 1) assert(min_ie >= CAMERA_ID);
@@ -645,7 +642,7 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 			
 			// if there has been bloodshed and the smiley can see and attack the target
 			if      (target_type == 0) chase_target_var = 0;
-			else if (target_type == 2) chase_target_var = 4 + (150 - min(150, int(health_eq)))/15;
+			else if (target_type >= 2) chase_target_var = 4 + (150 - min(150, int(health_eq)))/15;
 			else if (health_eq < 10.0 && sstate.powerup != PU_DAMAGE) { // run away unless you have quad damage
 				if ((rand()&3) == 0) {
 					chase_target_var = 1;
