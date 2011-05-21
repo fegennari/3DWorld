@@ -665,15 +665,19 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 			unsigned const L_mask(1 << L);
 			unsigned cur_lighted(get_light_val(lighted, L));
 
-			if (cur_lighted == 1 || cur_lighted == 3) {
+			if (cur_lighted == 1) {
 				for (unsigned i = 0; i < numverts; ++i) {
-					norms[i] |= ((cur_lighted == 1) ? L_mask : (old_nvals[i] & L_mask));
+					norms[i] |= L_mask;
+				}
+			}
+			else if (cur_lighted == 3) {
+				for (unsigned i = 0; i < numverts; ++i) {
+					norms[i] |= (old_nvals[i] & L_mask);
 				}
 			}
 			assert(L < stest.size());
 			unsigned const num_spheres(stest[L].size());
-			if (num_spheres == 0) continue;
-			if (cur_lighted == 1 || cur_lighted == 4) continue; // already shadowed or hidden
+			if (num_spheres == 0 || cur_lighted == 1 || cur_lighted == 4) continue; // no spheres, already shadowed, or hidden
 			if (!(en_lt_bits & (1 << L)) || !enabled_lights[L].lights_polygon(center, rsize)) continue;
 			point const &lpos(enabled_lights[L].get_center());
 			vector3d const v1(center, lpos);
@@ -757,7 +761,6 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 	assert(nvals);
 	if (in_strip) {glEnd(); in_strip = 0;}
 	//if (in_dlist) {} // create some textures instead of drawing - QD_TAG_TEXTURE
-	bool const more_strips(!in_dlist && has_dynamic && scaled_view_dist(get_camera_pos(), pts[0]) <= DIST_CUTOFF);
 
 	// render the quads - is there a way to render these using a single textured quad?
 	for (unsigned s0 = 0; s0 < n0; s0 += step[0]) {
@@ -774,7 +777,6 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 				}
 			}
 			s_end = min(s_end, n0);
-			if (more_strips && s_end < n0 && s_end > off1) --s_end;
 		}
 		glBegin(GL_QUAD_STRIP);
 		float const scale[2] = {DO_SCALE(tri, s_end, n0), DO_SCALE(tri, s0, n0)};
