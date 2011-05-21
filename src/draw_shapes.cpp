@@ -1568,7 +1568,7 @@ void add_coll_shadow_objs() {
 				
 			for (unsigned j = 0; j < objg.end_id; ++j) {
 				dwobject const &obj(objg.get_obj(j));
-				if (obj.disabled() || obj.status == !objg.obj_has_shadow(j)) continue;
+				if (obj.disabled() || !objg.obj_has_shadow(j)) continue;
 				add_shadow_obj(obj.pos, radius, obj.coll_id, light_in_front);
 			}
 		}

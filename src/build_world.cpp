@@ -467,7 +467,7 @@ void process_groups() {
 						cp.cf_index = j;
 						obj.coll_id = add_coll_sphere(pos, radius, cp);
 					}
-					if (type != CHUNK && (type != S_BALL || obj.status == 1) && objg.obj_has_shadow(j)) { // to slow for all chunks and small balls
+					if (type != CHUNK && (type != S_BALL || obj.status == 1) && objg.obj_has_shadow(j)) { // too slow for all chunks and small balls
 						obj.shadow = sphere_shadow2(pos, radius, CHECK_ALL_SHADOW, 1, 0);
 					}
 				}
