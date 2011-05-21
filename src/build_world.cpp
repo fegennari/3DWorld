@@ -1137,7 +1137,8 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			{
 				read_or_calc_zval(fp, pos, SMALL_NUMBER, object_types[WAYPOINT].radius, tv, scale, mirror, swap_dim);
-				user_waypoints.push_back(pos);
+				//int type(0); fscanf(fp, "%i", &type); // can fail
+				user_waypoints.push_back(pos); // add types such as 'goal'?
 			}
 			break;
 

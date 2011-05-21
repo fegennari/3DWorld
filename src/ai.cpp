@@ -195,12 +195,18 @@ void smiley_fire_weapon(int smiley_id) {
 		if (weapon == W_ROCKET || weapon == W_SEEK_D || weapon == W_PLASMA) { // large projectile
 			assert(weapons[weapon].obj_id != UNDEF);
 			float const proj_radius(object_types[weapons[weapon].obj_id].radius);
-			point const pos2(pos + point(0.0, 0.0, -proj_radius));
+			point const pos2(pos + point(0.0, 0.0, -proj_radius)); // proj_radius up (+z)
 
 			if (!proj_coll_test(pos2, sstate.target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) {
 				orient   *= target_dist;
 				orient.z += min(proj_radius, 0.7f*radius); // shoot slightly upward
 				orient.normalize();
+			}
+			vector3d const check_dir(cross_product(orient, plus_z).get_norm()*proj_radius);
+
+			for (unsigned d = 0; d < 2; ++d) { // test left and right
+				point const pos3(pos + check_dir*(d ? 1.0 : -1.0));
+				if (!proj_coll_test(pos3, sstate.target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return;
 			}
 		}
 	}
