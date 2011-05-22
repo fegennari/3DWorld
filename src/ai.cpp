@@ -305,7 +305,7 @@ void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id
 	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0)     return; // need to avoid this directio
 	unsigned other_smiley_targets(0);
 
-	for (unsigned s = 0; s < num_smileys; ++s) {
+	for (int s = 0; s < num_smileys; ++s) {
 		if (s != smiley_id && sstates[s].last_waypoint == i) ++other_smiley_targets;
 	}
 	dmult *= (1.0 + 1.0*other_smiley_targets); // increase distance cost if other smileys are going for the same waypoint
@@ -620,13 +620,11 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 	if (NO_SMILEY_ACTION || obj.disabled()) return 0;
 	player_state &sstate(sstates[smiley_id]);
 	int step, move, moved(0), dir((int)obj.direction), ddir, cdir(0), chdir, ds_count;
-	int chase_target_var(0), target_type(sstate.target_type);
 	float const speed(sstate.get_rspeed_scale()), radius(object_types[SMILEY].radius);
 	assert(radius >= 0.0);
 	float const step_dist(smiley_speed*fticks*GROUND_SPEED), step_height(S_SH_SCALE*C_STEP_HEIGHT*radius);
 	point const opos(obj.pos);
 	point target(sstate.target_pos);
-	vector3d v(0.0, 0.0, 0.0);
 	int movements[9][2], dir_status[9];
 	if (SSTEPS_PER_FRAME == 0.0) SSTEPS_PER_FRAME = (SSTEPS_PER_FRAME0/XY_SCENE_SIZE)*((float)XY_SUM_SIZE/256.0);
 	float const health_eq(min(4.0f*obj.health, (obj.health + sstate.shields)));
@@ -636,6 +634,18 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 	obj.angle -= (float)nsteps;
 	bool const has_flight(sstate.powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT);
 	int const xcpos(get_xpos(target.x)), ycpos(get_ypos(target.y));
+
+	// target_type: 0=none, 1=enemy, 2=item, 3=waypoint
+	// the logic/rules:
+	// 1. don't go off the mesh if tt is 0 (others should guarantee this)
+	// 2. don't step too high on mesh
+	// 3. don't run into own landline
+	// 4. if dist is smaller than step, move to exact location
+	// 5. don't go underwater if tt is 0,1,2
+	// 6. if tt is 0, then change direction (bounce) when a collision occurs or when stuck
+	// enforce turn speed?
+	// handling of flight?
+	// don't get too close to enemy with ranged weapons?
 	
 	// STOP N S E W NE NW SE SW
 	// 0    1 5 3 7 2  8  4  6
@@ -653,50 +663,33 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 				assert(val >= 0 && val < 9);
 				cdir = cmap[val];
 			}
-			
-			// if there has been bloodshed and the smiley can see and attack the target
-			if      (target_type == 0) chase_target_var = 0;
-			else if (target_type >= 2) chase_target_var = 4 + (150 - min(150, int(health_eq)))/15;
-			else if (health_eq < 10.0 && sstate.powerup != PU_DAMAGE) { // run away unless you have quad damage
-				if ((rand()&3) == 0) {
-					chase_target_var = 1;
-					cdir = (cdir+4)%9; // reverse direction
-				}
-				else chase_target_var = rand()&1;
-			}
-			else if (health_eq < 15.0)  chase_target_var =     rand()%3; // 0, 1, 2 (1.0)
-			else if (health_eq < 40.0)  chase_target_var = 1 + rand()%2; // 1, 2 (1.5)
-			else if (health_eq < 100.0) chase_target_var = 1 + rand()%3; // don't care much, 1, 2, 3 (2.0)
-			else                        chase_target_var = 2 + rand()%3; // attack, 2, 3, 4 (3.0)
 		}
 		for (unsigned i = 0; i < 9; ++i) {
 			movements[i][0] = xpos;
 			movements[i][1] = ypos;
+			dir_status[i]   = 1;
 		}
-		int const edist(rand() & 1);
-
-		if (ypos < MESH_Y_SIZE-edist-1) { // N
+		if (ypos < MESH_Y_SIZE-1) { // N
 			++movements[8][1];
 			++movements[1][1];
 			++movements[2][1];
 		}
-		if (ypos > edist) { // S
+		if (ypos > 0) { // S
 			--movements[4][1];
 			--movements[5][1];
 			--movements[6][1];
 		}
-		if (xpos < MESH_X_SIZE-edist-1) { // E
+		if (xpos < MESH_X_SIZE-1) { // E
 			++movements[2][0];
 			++movements[3][0];
 			++movements[4][0];
 		}
-		if (xpos > edist) { // W
+		if (xpos > 0) { // W
 			--movements[6][0];
 			--movements[7][0];
 			--movements[8][0];
 		}
 		ds_count = 9;
-		for (unsigned i = 0; i < 9; ++i) dir_status[i] = 1;
 		unsigned tries(0);
 		
 		for (; tries < SMILEY_MAX_TRIES && ds_count > 0; ++tries) {
@@ -712,28 +705,25 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 			}
 			else {
 				do {
-					bool bias(0);
+					bool bias(1);
 					int const rval(rand());
 					move = rval%100;
 
-					if (move%20 < chase_target_var) { // move towards target
-						bias = 1;
+					if (dir_status[cdir] == 0) { // navagate around obstacle towards target
+						move = (rval>>8)&1;
+						dir  = (cdir+2*move-1+9)%9;
 
-						if (dir_status[cdir] == 0) { // navagate around obstacle towards target
-							move = (rval>>8)&1;
-							dir  = (cdir+2*move-1+9)%9;
-
-							if (dir == 0) dir = (cdir+4*move-2+9)%9;
+						if (dir == 0) dir = (cdir+4*move-2+9)%9;
+						if (dir_status[dir] != 0) cdir = dir;
+						else {
+							dir = (cdir-2*move+1+9)%9;
+							if (dir == 0) dir = (cdir-4*move+2+9)%9;
 							if (dir_status[dir] != 0) cdir = dir;
-							else {
-								dir = (cdir-2*move+1+9)%9;
-								if (dir == 0) dir = (cdir-4*move+2+9)%9;
-								if (dir_status[dir] != 0) cdir = dir;
-								else bias = 0;
-							}
+							else bias = 0;
 						}
-						else dir = cdir;
 					}
+					else dir = cdir;
+
 					if (!bias && move < int(100.0*SMILEY_DIR_FACTOR)) {
 						ddir  = 0;
 						chdir = (rval>>10)%15;
@@ -744,7 +734,7 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 						dir = (dir + (((rval>>16)&1) ? ddir : (9-ddir)))%9;
 					}
 				} while (dir_status[dir] == 0);
-			}
+			} // end else ds_count != 1
 			assert(dir >= 0 && dir < 9);
 
 			if (dir != 0) {
@@ -829,7 +819,7 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 			xpos = sstate.dest_mark.xpos;
 			ypos = sstate.dest_mark.ypos;
 			sstate.target_visible = 0;
-			sstate.target_type    = target_type = 1;
+			sstate.target_type    = 2; // like an item
 			sstate.objective_pos  = sstate.target_pos = target = sstate.dest_mark.get_pos();
 		}
 	}
@@ -892,8 +882,8 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 		obj.direction = (((int)obj.direction) + 4)%9; // stuck, turn around
 	}
 	if (has_flight) {
-		if ((target_type == 2 && target.z < opos.z && obj.pos.z < opos.z) || // want health/powerup below - go down
-			(target_type == 1 && sstate.weapon == W_BBBAT)) // have to go down for baseball bat hit
+		if ((sstate.target_type == 2 && target.z < opos.z && obj.pos.z < opos.z) || // want health/powerup below - go down
+			(sstate.target_type == 1 && sstate.weapon == W_BBBAT)) // have to go down for baseball bat hit
 		{
 			obj.pos.z = max(max(target.z, obj.pos.z), (opos.z - (no_down ? 0.0f : float(radius*rand_uniform(0.2, 0.6)))));
 		}
@@ -912,7 +902,7 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 		}
 		obj.pos.z = max(obj.pos.z, interpolate_mesh_zval(obj.pos.x, obj.pos.y, 0.0, 1, 1) + radius); // ignore ice
 	}
-	if (SMILEYS_LOOK_AT_TARGET && target_type != 0) {
+	if (SMILEYS_LOOK_AT_TARGET && sstate.target_type != 0) {
 		obj.orientation = ((target == obj.pos) ? signed_rand_vector_norm() : (target - obj.pos).get_norm());
 	}
 	if (obj.pos.x == opos.x && obj.pos.y == opos.y) {
@@ -931,7 +921,6 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 	}
 	if (is_water_temp && is_underwater(obj.pos, 1) && (rand()&1)) gen_bubble(obj.pos);
 	sstate.velocity = (obj.pos - opos)/(TIMESTEP*fticks);
-	sstate.ctv      = chase_target_var;
 	obj.status      = 3;
 	return 1;
 }
@@ -1135,11 +1124,10 @@ void smiley_action(int smiley_id) {
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
 	float depth(0.0);
 	player_state &sstate(sstates[smiley_id]);
-	int const weapon(sstate.weapon), chase(sstate.target_visible && sstate.ctv);
 	dwobject &smiley(obj_groups[coll_id[SMILEY]].get_obj(smiley_id));
 
-	if (chase && rand()%10 != 0) {
-		float const range(weapons[weapon].range);
+	if (sstate.target_visible && sstate.target_type == 1 && (rand()%10) != 0) {
+		float const range(weapons[sstate.weapon].range);
 		if (range == 0.0 || dist_less_than(sstate.target_pos, smiley.pos, range)) smiley_fire_weapon(smiley_id);
 	}
 	if (sstate.powerup == PU_REGEN) smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);

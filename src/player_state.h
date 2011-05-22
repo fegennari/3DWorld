@@ -120,7 +120,7 @@ struct player_state { // size = big
 	bool plasma_loaded, on_waypt_path;
 	int timer, target, objective, weapon, wmode, powerup, powerup_time, kills, deaths, cb_hurt, killer;
 	int init_frame, fire_frame, was_hit, hitter, target_visible, kill_time, rot_counter, uw_time;
-	int ctv, target_type, stopped_time, last_waypoint;
+	int target_type, stopped_time, last_waypoint;
 	unsigned tid, fall_counter, chunk_index;
 	float shields, plasma_size, zvel, dpos, last_dz, last_zvel, last_wpt_dist;
 	point target_pos, objective_pos, cb_pos;
@@ -135,7 +135,7 @@ struct player_state { // size = big
 
 	player_state() : plasma_loaded(0), on_waypt_path(0), timer(0), target(-1), objective(-1), weapon(0), wmode(0), powerup(0), powerup_time(0),
 		kills(0), deaths(0), cb_hurt(0), killer(NO_SOURCE), init_frame(0), fire_frame(0), was_hit(0), hitter(-2), target_visible(0),
-		kill_time(0), rot_counter(0), uw_time(0), ctv(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0), fall_counter(0),
+		kill_time(0), rot_counter(0), uw_time(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0), fall_counter(0),
 		chunk_index(0), shields(0.0), plasma_size(0.0), zvel(0.0), dpos(0.0), last_dz(0.0), last_zvel(0.0), last_wpt_dist(0.0),
 		target_pos(all_zeros), objective_pos(all_zeros), cb_pos(all_zeros), hit_dir(all_zeros), velocity(all_zeros), tdata(NULL) {}
 

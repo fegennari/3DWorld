@@ -375,7 +375,7 @@ public:
 			if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)         return 0; // too high of a step
 			if ((cur.z - lpos.z) < -MAX_FALL_DIST_MULT*radius)   return 0; // too high of a drop
 			check_cobj_placement(cur, -1);
-			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress
+			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress (too strict? local drops in z?)
 			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv); // point-line dist
 			if (d > 2.0*radius)                                  return 0; // path deviation too long
 			++tot_steps;
