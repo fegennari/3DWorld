@@ -921,7 +921,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		obj.direction = (((int)obj.direction) + 4)%9; // stuck, turn around
 	}
 	if (has_flight) {
-		if ((target_type == 2 && target_pos.z < opos.z && obj.pos.z < opos.z) || // want health/powerup below - go down
+		if ((target_type >= 2 && target_pos.z < opos.z && obj.pos.z < opos.z) || // want health/powerup/waypoint below - go down
 			(target_type == 1 && weapon == W_BBBAT)) // have to go down for baseball bat hit
 		{
 			obj.pos.z = max(max(target_pos.z, obj.pos.z), (opos.z - (no_down ? 0.0f : float(radius*rand_uniform(0.2, 0.6)))));
