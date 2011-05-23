@@ -865,10 +865,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		advance_camera(MOVE_RIGHT); break;
 
 	case 'q': // previous weapon
-		if (world_mode == WMODE_UNIVERSE) player_ship().switch_weapon(1); else switch_weapon(-1, 1);
+		if (world_mode == WMODE_UNIVERSE) player_ship().switch_weapon(1); else switch_player_weapon(-1);
 		break;
 	case 'e': // next weapon
-		if (world_mode == WMODE_UNIVERSE) player_ship().switch_weapon(0); else switch_weapon(1, 1);
+		if (world_mode == WMODE_UNIVERSE) player_ship().switch_weapon(0); else switch_player_weapon(1);
 		break;
 
 		// shadows
@@ -1179,7 +1179,7 @@ void keyboard2(int key, int x, int y) {
 	case GLUT_KEY_F4: // switch weapon mode
 		if (sstates != NULL) {
 			++sstates[CAMERA_ID].wmode;
-			verify_wmode(sstates[CAMERA_ID]);
+			sstates[CAMERA_ID].verify_wmode();
 		}
 		break;
 
@@ -1345,7 +1345,11 @@ int check_for_config_defaults(const char *def_file) {
 void fire_weapon() {
 
 	fire_key = 1;
-	if (world_mode != WMODE_UNIVERSE) gamemode_fire_weapon();
+
+	if (world_mode != WMODE_UNIVERSE) {
+		assert(sstates != NULL);
+		sstates[CAMERA_ID].gamemode_fire_weapon();
+	}
 }
 
 

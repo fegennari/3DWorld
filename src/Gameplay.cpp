@@ -289,30 +289,6 @@ unsigned create_blood(int index, int amt_denom, point const &pos, float obj_radi
 }
 
 
-int drop_weapon(vector3d const &coll_dir, vector3d const &nfront, point const &pos, int index, float energy, int type) {
-
-	if (game_mode != 1) return 0;
-	if (type == BEAM || type == BLAST_RADIUS || (type >= DROWNED && type <= CRUSHED)) return 0;
-	player_state &sstate(sstates[index]);
-	int const wa_id(sstate.weapon);
-
-	if ((rand()%20 == 0) && energy > 25.0 && (weapons[wa_id].need_weapon || (weapons[wa_id].need_ammo && sstate.p_ammo[wa_id] > 0))) {
-		float const frontv(dot_product(coll_dir, nfront)/(coll_dir.mag()*nfront.mag()));
-
-		if (frontv > 0.95) {
-			vector3d rv(signed_rand_float(), signed_rand_float(), 1.2*rand_float());
-			point const dpos(pos + rv*(2.0*object_types[SMILEY].radius));
-			drop_pack(sstate, dpos);
-			sstate.p_weapons[wa_id] = 0;
-			sstate.p_ammo[wa_id]    = 0;
-			if (index == CAMERA_ID) switch_weapon(1, 0); else init_smiley_weapon(index);
-			return 1;
-		}
-	}
-	return 0;
-}
-
-
 inline float get_shrapnel_damage(float energy, int index) {
 
 	return 0.5*energy + object_types[SHRAPNEL].damage*(1.0 -
@@ -320,18 +296,17 @@ inline float get_shrapnel_damage(float energy, int index) {
 }
 
 
-bool pickup_ball(int sid, int index) {
+bool player_state::pickup_ball(int index) {
 
 	if (game_mode != 2)    return 0;
-	assert(sid >= CAMERA_ID && sid < num_smileys);
 	dwobject &obj(obj_groups[coll_id[BALL]].get_obj(index));
 	if (obj.disabled())    return 0; // already picked up this frame?
 	if (UNLIMITED_WEAPONS) return 0; //obj.disable()?
-	assert(sstates[sid].p_ammo[W_BALL] == sstates[sid].balls.size());
-	sstates[sid].weapon            = W_BALL;
-	sstates[sid].p_weapons[W_BALL] = 1;
-	++sstates[sid].p_ammo[W_BALL];
-	sstates[sid].balls.push_back(index);
+	assert(p_ammo[W_BALL] == balls.size());
+	weapon            = W_BALL;
+	p_weapons[W_BALL] = 1;
+	++p_ammo[W_BALL];
+	balls.push_back(index);
 	obj.status = OBJ_STAT_RES; // reserved status
 	return 1;
 }
@@ -443,7 +418,7 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		break;
 
 	case BALL:
-		if (energy < 10.0 && pickup_ball(CAMERA_ID, obj_index)) {
+		if (energy < 10.0 && sstate.pickup_ball(obj_index)) {
 			print_text_onscreen("You have the ball", GREEN, 1.2, 2*MESSAGE_TIME/3, 1);
 		}
 		else cam_filter_color = RED;
@@ -483,7 +458,7 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 
 	if (alive) {
 		if (is_blood && cam_filter_color == RED) {
-			if (drop_weapon(coll_dir, cview_dir, camera, CAMERA_ID, energy, type)) {
+			if (sstate.drop_weapon(coll_dir, cview_dir, camera, CAMERA_ID, energy, type)) {
 				print_text_onscreen("Oops, you dropped your weapon!", RED, 1.2, 2*MESSAGE_TIME/3, 3);
 			}
 			if (camera_shake == 0.0) camera_shake = 1.0;
@@ -568,7 +543,7 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		}
 		if (frags > best_frags) best_frags = frags;
 		if (is_blood && !burned) blood_on_camera(rand()%10);
-		drop_pack(sstate, camera);
+		sstate.drop_pack(camera);
 		remove_reset_coll_obj(camera_coll_id);
 		init_sstate(CAMERA_ID, 0);
 		sstate.killer = source;
@@ -649,7 +624,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		break;
 
 	case BALL:
-		if (energy < 10.0) pickup_ball(index, obj_index);
+		if (energy < 10.0) sstate.pickup_ball(obj_index);
 		break;
 	case LANDMINE:
 		damage_type = 1;
@@ -686,7 +661,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 				sstate.hit_dir = coll_dir;
 			}
 		}
-		drop_weapon(coll_dir, vector3d(sstate.target_pos, obj_pos), obj_pos, index, energy, type);
+		sstate.drop_weapon(coll_dir, vector3d(sstate.target_pos, obj_pos), obj_pos, index, energy, type);
 		blood_v  *= 0.5;
 		coll_dir *= -4.0;
 	}
@@ -769,7 +744,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		}
 		if (!same_team(index, source)) update_kill_health(obj_groups[coll_id[SMILEY]].get_obj(source).health);
 	}
-	drop_pack(sstate, obj_pos);
+	sstate.drop_pack(obj_pos);
 	remove_reset_coll_obj(obji.coll_id);
 	++sstate.deaths;
 	sstate.killer = source;
@@ -784,30 +759,6 @@ int get_smiley_hit(vector3d &hdir, int index) {
 	if (sstates[index].was_hit == 0) return 0;
 	hdir = sstates[index].hit_dir;
 	return sstates[index].was_hit;
-}
-
-
-void drop_pack(player_state &sstate, point const &pos) {
-
-	if (UNLIMITED_WEAPONS) return; // no pack
-	int const wid(sstate.weapon), ammo(sstate.p_ammo[wid]);
-	if (!weapons[wid].need_weapon && (!weapons[wid].need_ammo || ammo == 0)) return; // no weapon/ammo
-	bool const dodgeball(game_mode == 2 && wid == W_BALL); // drop their balls
-	if (dodgeball) assert(ammo == sstate.balls.size());
-	unsigned const num(dodgeball ? ammo : 1);
-	int const type(dodgeball ? BALL : WA_PACK), cid(coll_id[type]);
-	obj_group &objg(obj_groups[cid]);
-
-	for (unsigned i = 0; i < num; ++i) {
-		int const max_t_i(dodgeball ? sstate.balls[i] : objg.choose_object());
-		dwobject &obj(objg.get_obj(max_t_i));
-		if (dodgeball) assert(obj.status == OBJ_STAT_RES);
-		objg.create_object_at(max_t_i, pos);
-		obj.direction = (unsigned char)(wid + 0.5);
-		obj.angle     = (dodgeball ? 1.0 : (ammo + 0.5));
-		obj.velocity  = gen_rand_vector(1.0, 6.0, PI_TWO);
-	}
-	if (dodgeball) sstate.balls.clear();
 }
 
 
@@ -1384,37 +1335,31 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 }
 
 
-void switch_weapon(int val, int verbose) {
+void switch_player_weapon(int val) {
 
-	if (game_mode == 0) return;
-	player_state &sstate(sstates[CAMERA_ID]);
+	if (sstates != NULL && game_mode) sstates[CAMERA_ID].switch_weapon(val, 1);
+}
+
+
+void player_state::switch_weapon(int val, int verbose) {
 
 	if (game_mode == 2) {
-		sstate.weapon = ((UNLIMITED_WEAPONS || sstate.p_ammo[W_BALL] > 0) ? W_BALL : W_UNARMED);
+		weapon = ((UNLIMITED_WEAPONS || p_ammo[W_BALL] > 0) ? W_BALL : W_UNARMED);
 		return;
 	}
 	do {
-		sstate.weapon = (sstate.weapon+NUM_WEAPONS+val)%NUM_WEAPONS;
-	} while (!UNLIMITED_WEAPONS && sstate.no_weap_or_ammo());
+		weapon = (weapon+NUM_WEAPONS+val)%NUM_WEAPONS;
+	} while (!UNLIMITED_WEAPONS && no_weap_or_ammo());
 
-	if (verbose) print_weapon(sstate.weapon);
-	sstate.wmode      = 0; // maybe don't reset this?
-	sstate.fire_frame = 0;
-	sstate.cb_hurt    = 0;
+	if (verbose) print_weapon(weapon);
+	wmode      = 0; // maybe don't reset this?
+	fire_frame = 0;
+	cb_hurt    = 0;
 }
 
 
-void verify_wmode(player_state &sstate) {
+void player_state::gamemode_fire_weapon() { // camera/player fire
 
-	if (sstate.weapon == W_GRENADE && (sstate.wmode & 1) &&
-		sstate.p_ammo[sstate.weapon] < int(weapons[W_CGRENADE].def_ammo) && !UNLIMITED_WEAPONS) sstate.wmode = 0;
-}
-
-
-void gamemode_fire_weapon() { // camera/player fire
-
-	assert(sstates != NULL);
-	player_state &sstate(sstates[CAMERA_ID]);
 	static int fire_frame(0);
 	if (frame_counter == fire_frame) return; // to prevent two fires in the same frame
 	fire_frame = frame_counter;
@@ -1427,56 +1372,54 @@ void gamemode_fire_weapon() { // camera/player fire
 		camera_reset = 1;
 		return;
 	}
-	int const weapon_id(sstate.weapon);
-
-	if (!UNLIMITED_WEAPONS && weapon_id != W_UNARMED && sstate.no_weap_or_ammo()) {
-		if (weapon_id != W_ROCKET && weapon_id != W_SEEK_D && weapon_id != W_PLASMA && weapon_id != W_GRENADE) { // this test is questionable
+	if (!UNLIMITED_WEAPONS && weapon != W_UNARMED && no_weap_or_ammo()) {
+		if (weapon != W_ROCKET && weapon != W_SEEK_D && weapon != W_PLASMA && weapon != W_GRENADE) { // this test is questionable
 			switch_weapon(1, 1);
-			if (sstate.weapon == W_BBBAT)   switch_weapon( 1, 1);
-			if (sstate.weapon == W_UNARMED) switch_weapon(-1, 1);
-			if (game_mode == 2 && sstate.weapon == W_BBBAT) switch_weapon(1, 1);
+			if (weapon == W_BBBAT)   switch_weapon( 1, 1);
+			if (weapon == W_UNARMED) switch_weapon(-1, 1);
+			if (game_mode == 2 && weapon == W_BBBAT) switch_weapon(1, 1);
 			return; // no weapon/out of ammo
 		}
 	}
 	else {
-		verify_wmode(sstate);
-		bool const fmode2(sstate.wmode & 1);
-		int const psize((int)ceil(sstate.plasma_size));
+		verify_wmode();
+		bool const fmode2(wmode & 1);
+		int const psize((int)ceil(plasma_size));
 		int chosen;
 		int const status(fire_projectile(camera, cview_dir, CAMERA_ID, chosen));
 		fired = 1;
 
-		if (status == 2 && weapon_id == W_SEEK_D && fmode2) { // follow the seek and destroy
+		if (status == 2 && weapon == W_SEEK_D && fmode2) { // follow the seek and destroy
 			if (chosen >= 0) obj_groups[coll_id[SEEK_D]].get_obj(chosen).flags |= CAMERA_VIEW;
 			orig_camera  = camera_origin; // camera is actually at the SEEK_D location, not quite right, but interesting
 			orig_cdir    = cview_dir;
 			camera_reset = 0;
 			following    = 1;
 		}
-		int &pammo(sstate.p_ammo[weapon_id]);
+		int &pammo(p_ammo[weapon]);
 
-		if (status != 0 && !UNLIMITED_WEAPONS && !sstate.no_weap() && pammo > 0) {
-			if (weapon_id == W_PLASMA && psize > 1) {
+		if (status != 0 && !UNLIMITED_WEAPONS && !no_weap() && pammo > 0) {
+			if (weapon == W_PLASMA && psize > 1) {
 				pammo = max(0, pammo-psize); // large plasma burst
 			}
-			else if (weapon_id == W_GRENADE && fmode2 && (pammo >= int(weapons[W_CGRENADE].def_ammo) || UNLIMITED_WEAPONS)) {
+			else if (weapon == W_GRENADE && fmode2 && (pammo >= int(weapons[W_CGRENADE].def_ammo) || UNLIMITED_WEAPONS)) {
 				pammo -= weapons[W_CGRENADE].def_ammo; // cluster grenade
 			}
-			else if (weapon_id != W_BLADE) {
+			else if (weapon != W_BLADE) {
 				--pammo;
 			}
 		}
 	}
 	//if (frame_counter == fire_frame) return;
-	int const dtime(int(sstate.get_fspeed_scale()*(frame_counter - sstate.timer)*fticks));
+	int const dtime(int(get_fspeed_scale()*(frame_counter - timer)*fticks));
 
-	if ((game_mode == 2 && weapon_id == W_BBBAT) || (!UNLIMITED_WEAPONS && sstate.no_ammo() &&
-		(weapon_id == W_LASER || dtime >= int(weapons[weapon_id].fire_delay))))
+	if ((game_mode == 2 && weapon == W_BBBAT) || (!UNLIMITED_WEAPONS && no_ammo() &&
+		(weapon == W_LASER || dtime >= int(weapons[weapon].fire_delay))))
 	{
 		switch_weapon(1, 1);
-		if (sstate.weapon == W_UNARMED) switch_weapon(1, 1);
-		if (sstate.weapon == W_BBBAT)   switch_weapon(1, 1);
-		if (sstate.weapon == W_UNARMED) switch_weapon(1, 1);
+		if (weapon == W_UNARMED) switch_weapon(1, 1);
+		if (weapon == W_BBBAT)   switch_weapon(1, 1);
+		if (weapon == W_UNARMED) switch_weapon(1, 1);
 	}
 }
 
@@ -1528,18 +1471,17 @@ void create_shrapnel(point const &pos, vector3d const &dir, float firing_error, 
 }
 
 
-int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
+int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 
 	chosen_obj = -1;
 	float damage_scale(1.0), range;
 	vector3d velocity(zero_vector);
-	player_state &sstate(sstates[shooter]);
-	assert(UNLIMITED_WEAPONS || !sstate.no_weap_or_ammo());
-	int const mode(sstate.wmode), weapon_id((sstate.weapon == W_GRENADE && (mode&1)) ? W_CGRENADE : sstate.weapon);
-	if (weapon_id == W_M16 && (mode&1) == 1) ++sstate.rot_counter;
-	int const dtime(int(sstate.get_fspeed_scale()*(frame_counter - sstate.timer)*fticks));
-	bool const rapid_fire(weapon_id == W_ROCKET && (mode&1));
-	weapon const &w(weapons[weapon_id]);
+	assert(UNLIMITED_WEAPONS || !no_weap_or_ammo());
+	int const weapon_id((weapon == W_GRENADE && (wmode&1)) ? W_CGRENADE : weapon);
+	if (weapon_id == W_M16 && (wmode&1) == 1) ++rot_counter;
+	int const dtime(int(get_fspeed_scale()*(frame_counter - timer)*fticks));
+	bool const rapid_fire(weapon_id == W_ROCKET && (wmode&1));
+	weapon_t const &w(weapons[weapon_id]);
 	int fire_delay((int)w.fire_delay);
 	if (UNLIMITED_WEAPONS && shooter != CAMERA_ID && weapon_id == W_LANDMINE) fire_delay *= 2; // avoid too many landmines
 	if (rapid_fire) fire_delay /= 3;
@@ -1552,13 +1494,13 @@ int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 	else if (dtime < fire_delay) {
 		return 0;
 	}
-	sstate.timer = frame_counter;
+	timer = frame_counter;
 	bool const underwater(is_underwater(fpos));
 	float firing_error(w.firing_error*(underwater ? UWATER_FERR_MUL : 1.0));
 	if (rapid_fire) firing_error *= 20.0;
 	dir.normalize();
 	point pos(fpos + dir*(0.1*radius));
-	sstate.fire_frame = max(1, fire_delay);
+	fire_frame = max(1, fire_delay);
 	float const damage(damage_scale*w.blast_damage), vel(ball_velocity*w.v_mult + w.v_add);
 
 	switch (weapon_id) {
@@ -1569,7 +1511,7 @@ int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 	}
 	switch (weapon_id) {
 	case W_M16: // line of sight damage
-		if ((mode&1) != 1) { // not firing shrapnel
+		if ((wmode&1) != 1) { // not firing shrapnel
 			if (dtime > 10) firing_error *= 0.1;
 			if (underwater) firing_error += UWATER_FERR_ADD;
 			projectile_test(fpos, dir, firing_error, damage, shooter, range);
@@ -1577,7 +1519,7 @@ int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 			return 1;
 		} // fallthrough to shotgun case
 	case W_SHOTGUN:
-		if ((mode&1) == 1) { // shrapnel cannon (might be from shrapnel chaingun)
+		if ((wmode&1) == 1) { // shrapnel cannon (might be from shrapnel chaingun)
 			create_shrapnel(pos, dir, firing_error, w.nshots, shooter, weapon_id);
 		}
 		else { // normal 12-gauge
@@ -1598,15 +1540,15 @@ int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 		return 1;
 
 	case W_PLASMA:
-		if ((mode&1) == 1) {
-			sstate.plasma_loaded = !sstate.plasma_loaded;
+		if ((wmode&1) == 1) {
+			plasma_loaded = !plasma_loaded;
 
-			if (sstate.plasma_loaded) {
-				sstate.plasma_size = 1.0;
+			if (plasma_loaded) {
+				plasma_size = 1.0;
 				return 0; // loaded but not fired
 			}
 		}
-		else sstate.plasma_loaded = 0;
+		else plasma_loaded = 0;
 		break;
 
 	case W_LASER: // line of sight damage
@@ -1654,15 +1596,15 @@ int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 	assert(cid >= 0 && cid < NUM_TOT_OBJS);
 	obj_group &objg(obj_groups[cid]);
 	assert(objg.max_objs > 0);
-	float const rdist(0.75 + ((weapon_id == W_PLASMA) ? 0.5*(sstate.plasma_size - 1.0) : 0.0)); // change?
+	float const rdist(0.75 + ((weapon_id == W_PLASMA) ? 0.5*(plasma_size - 1.0) : 0.0)); // change?
 	float const radius2(radius + object_types[type].radius);
 	assert(w.nshots <= objg.max_objs);
 	bool const dodgeball(game_mode == 2 && weapon_id == W_BALL && !UNLIMITED_WEAPONS);
-	if (dodgeball) assert(w.nshots <= sstate.balls.size());
+	if (dodgeball) assert(w.nshots <= balls.size());
 
 	for (unsigned shot = 0; shot < w.nshots; ++shot) {
-		int const chosen(dodgeball ? sstate.balls.back() : objg.choose_object());
-		if (dodgeball) sstate.balls.pop_back();
+		int const chosen(dodgeball ? balls.back() : objg.choose_object());
+		if (dodgeball) balls.pop_back();
 		chosen_obj = chosen;
 		assert(chosen >= 0); // make sure there is an object available
 		vector3d dir2(dir);
@@ -1685,9 +1627,9 @@ int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 
 		switch (weapon_id) {
 		case W_PLASMA:
-			obj.init_dir.x     = float(pow(double(sstate.plasma_size), 0.75)); // psize
-			obj.pos.z         += 0.2*radius2;
-			sstate.plasma_size = 1.0;
+			obj.init_dir.x  = float(pow(double(plasma_size), 0.75)); // psize
+			obj.pos.z      += 0.2*radius2;
+			plasma_size     = 1.0;
 			break;
 		case W_BALL:
 			obj.pos.z      += (0.2 + 0.2*(shooter >= 0))*radius2;
@@ -1699,7 +1641,7 @@ int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 			break;
 		}
 	}
-	if ((mode&1) == 0 && weapon_id == W_PLASMA) sstate.plasma_size = 1.0;
+	if ((wmode&1) == 0 && weapon_id == W_PLASMA) plasma_size = 1.0;
 	return 2;
 }
 
@@ -2246,81 +2188,88 @@ void init_game_mode() {
 void update_game_frame() {
 
 	assert(sstates != NULL);
-	player_state &sstate_camera(sstates[CAMERA_ID]);
-	if (sstate_camera.powerup_time < 0.0)   print_text_onscreen("Powerup Expired", WHITE, 1.0, MESSAGE_TIME/2, 1);
-	if (sstate_camera.powerup == PU_REGEN ) camera_health = min(MAX_REGEN_HEALTH, camera_health + 0.1f*fticks);
-	if (sstate_camera.powerup == PU_FLIGHT) flight = 1;
-	sstate_camera.kill_time += max(1, iticks);
-	obj_group const &objg(obj_groups[coll_id[SMILEY]]);
+	sstates[CAMERA_ID].update_camera_frame();
 	
 	for (int i = CAMERA_ID; i < num_smileys; ++i) {
-		player_state &state(sstates[i]);
-
-		if (state.powerup_time == 0) {
-			state.powerup = -1;
-		}
-		else if (animate2) {
-			state.powerup_time -= iticks;
-			if (state.powerup_time < 0) state.powerup_time = 0;
-		}
-		if (state.powerup == PU_REGEN && state.shields > 1.0) state.shields = min(MAX_SHIELDS, state.shields + 0.075f*fticks);
-		
-		if (state.plasma_loaded && state.weapon == W_PLASMA) {
-			state.plasma_size += state.get_fspeed_scale()*fticks*PLASMA_SIZE_INCREASE;
-			state.plasma_size  = min(state.plasma_size, MAX_PLASMA_SIZE);
-		}
-		state.fire_frame = max(0,    (state.fire_frame - iticks));
-		state.shields    = max(0.0f, (state.shields    - 0.01f*fticks));
-
-		// check temperature for too hot/too cold
-		if (i != CAMERA_ID && (!begin_motion || !objg.enabled)) continue;
-		obj_type const &objt(object_types[SMILEY]);
-		point const pos(get_sstate_pos(i));
-		bool const obj_enabled((i == CAMERA_ID && camera_mode == 1) || (i != CAMERA_ID && !objg.get_obj(i).disabled()));
-
-		if (temperature < 0.75*objt.min_t) {
-			float const damage(1.0*fticks/max(0.001f, (objt.min_t - temperature)/objt.min_t));
-			smiley_collision(i, -2, zero_vector, pos, damage, FROZEN);
-		}
-		if (temperature > 0.75*objt.max_t) {
-			float const damage(2.0*fticks/max(0.001f, (objt.max_t - temperature)/objt.max_t));
-			smiley_collision(i, -2, zero_vector, pos, damage, BURNED);
-			if (obj_enabled && (rand()&3) == 0) gen_smoke(pos);
-		}
-		if (atmosphere < 0.2) {
-			float const damage(1.0*fticks/max(atmosphere, 0.01f));
-			smiley_collision(i, -2, zero_vector, pos, damage, SUFFOCATED);
-		}
-		if (state.powerup >= 0 && state.powerup_time > 0 && obj_enabled) {
-			add_dynamic_light(1.3, pos, get_powerup_color(state.powerup));
-		}
-		if (SMILEY_GAS && game_mode == 1 && obj_enabled && state.powerup == PU_SHIELD && state.powerup_time > INIT_PU_SH_TIME && !(rand()&31)) {
-			vector3d const dir(get_sstate_dir(i)), vel(state.velocity*0.5 - dir*1.2);
-			point const spos(pos - dir*get_sstate_radius(i)); // generate gas
-			gen_arb_smoke(spos, DK_GREEN, vel, rand_uniform(0.01, 0.05), rand_uniform(0.3, 0.7), rand_uniform(0.2, 0.6), 10.0, i, 0);
-		}
+		sstates[i].update_sstate_game_frame(i);
 	}
 }
 
 
-void free_balls(int i) {
+void player_state::update_camera_frame() {
 
-	assert(sstates != NULL && i >= CAMERA_ID && i < num_smileys);
-	player_state &ss(sstates[i]);
-	if (ss.balls.empty()) return;
+	if (powerup_time < 0.0)   print_text_onscreen("Powerup Expired", WHITE, 1.0, MESSAGE_TIME/2, 1);
+	if (powerup == PU_REGEN ) camera_health = min(MAX_REGEN_HEALTH, camera_health + 0.1f*fticks);
+	if (powerup == PU_FLIGHT) flight = 1;
+	kill_time += max(1, iticks);
+}
+
+
+void player_state::update_sstate_game_frame(int i) {
+
+	if (powerup_time == 0) {
+		powerup = -1;
+	}
+	else if (animate2) {
+		powerup_time -= iticks;
+		if (powerup_time < 0) powerup_time = 0;
+	}
+	if (powerup == PU_REGEN && shields > 1.0) shields = min(MAX_SHIELDS, shields + 0.075f*fticks);
+		
+	if (plasma_loaded && weapon == W_PLASMA) {
+		plasma_size += get_fspeed_scale()*fticks*PLASMA_SIZE_INCREASE;
+		plasma_size  = min(plasma_size, MAX_PLASMA_SIZE);
+	}
+	fire_frame = max(0,    (fire_frame - iticks));
+	shields    = max(0.0f, (shields    - 0.01f*fticks));
+
+	// check temperature for too hot/too cold
+	obj_group const &objg(obj_groups[coll_id[SMILEY]]);
+	if (i != CAMERA_ID && (!begin_motion || !objg.enabled)) return;
+	obj_type const &objt(object_types[SMILEY]);
+	point const pos(get_sstate_pos(i));
+	bool const obj_enabled((i == CAMERA_ID && camera_mode == 1) || (i != CAMERA_ID && !objg.get_obj(i).disabled()));
+
+	if (temperature < 0.75*objt.min_t) {
+		float const damage(1.0*fticks/max(0.001f, (objt.min_t - temperature)/objt.min_t));
+		smiley_collision(i, -2, zero_vector, pos, damage, FROZEN);
+	}
+	if (temperature > 0.75*objt.max_t) {
+		float const damage(2.0*fticks/max(0.001f, (objt.max_t - temperature)/objt.max_t));
+		smiley_collision(i, -2, zero_vector, pos, damage, BURNED);
+		if (obj_enabled && (rand()&3) == 0) gen_smoke(pos);
+	}
+	if (atmosphere < 0.2) {
+		float const damage(1.0*fticks/max(atmosphere, 0.01f));
+		smiley_collision(i, -2, zero_vector, pos, damage, SUFFOCATED);
+	}
+	if (powerup >= 0 && powerup_time > 0 && obj_enabled) {
+		add_dynamic_light(1.3, pos, get_powerup_color(powerup));
+	}
+	if (SMILEY_GAS && game_mode == 1 && obj_enabled && powerup == PU_SHIELD && powerup_time > INIT_PU_SH_TIME && !(rand()&31)) {
+		vector3d const dir(get_sstate_dir(i)), vel(velocity*0.5 - dir*1.2);
+		point const spos(pos - dir*get_sstate_radius(i)); // generate gas
+		gen_arb_smoke(spos, DK_GREEN, vel, rand_uniform(0.01, 0.05), rand_uniform(0.3, 0.7), rand_uniform(0.2, 0.6), 10.0, i, 0);
+	}
+}
+
+
+void player_state::free_balls() {
+
+	if (balls.empty()) return;
 	obj_group &objg(obj_groups[coll_id[BALL]]);
 
 	if (objg.enabled) {
-		for (unsigned j = 0; j < ss.balls.size(); ++j) {
-			unsigned const index(ss.balls[j]);
+		for (unsigned j = 0; j < balls.size(); ++j) {
+			unsigned const index(balls[j]);
 			assert(objg.get_obj(index).disabled());
 			objg.get_obj(index).status = 0;
 		}
 	}
-	ss.balls.clear();
-	ss.p_weapons[W_BALL] = 0;
-	ss.p_ammo[W_BALL]    = 0;
-	if (ss.weapon == W_BALL) ss.weapon = W_UNARMED;
+	balls.clear();
+	p_weapons[W_BALL] = 0;
+	p_ammo[W_BALL]    = 0;
+	if (weapon == W_BALL) weapon = W_UNARMED;
 }
 
 
@@ -2329,7 +2278,7 @@ void free_dodgeballs(bool camera, bool smileys) {
 	if (sstates == NULL) return;
 
 	for (int i = (camera ? CAMERA_ID : 0); i < (smileys ? num_smileys : 0); ++i) {
-		free_balls(i);
+		sstates[i].free_balls();
 	}
 }
 
@@ -2353,9 +2302,11 @@ void change_game_mode() {
 		obj_groups[coll_id[types[i]]].set_enable(game_mode == 1);
 	}
 	obj_groups[coll_id[BALL]].set_enable(game_mode == 2);
-	if (game_mode == 2) switch_weapon(1, 1); // player switch to dodgeball
 
 	if (game_mode == 2) {
+		assert(sstates != NULL);
+		sstates[CAMERA_ID].switch_weapon(1, 1); // player switch to dodgeball
+
 		for (unsigned i = 0; i < ntypes; ++i) {
 			int const group(coll_id[types[i]]);
 			assert(group >= 0 && group < NUM_TOT_OBJS);

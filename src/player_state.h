@@ -115,6 +115,13 @@ struct destination_marker {
 };
 
 
+struct type_wt_t {
+	unsigned type;
+	float weight;
+	type_wt_t(unsigned t=0, float w=1.0) : type(t), weight(w) {}
+};
+
+
 struct player_state { // size = big
 
 	bool plasma_loaded, on_waypt_path;
@@ -142,6 +149,7 @@ struct player_state { // size = big
 	void init(bool w_start);
 	bool no_weap() const;
 	bool no_ammo() const;
+	void verify_wmode();
 	bool no_weap_or_ammo()   const {return (no_weap() || no_ammo());}
 	float get_damage_scale() const {return ((powerup == PU_DAMAGE) ? 4.0 : 1.0);}
 	float get_rspeed_scale() const {return ((powerup == PU_SPEED)  ? 1.5 : 1.0);}
@@ -153,6 +161,31 @@ struct player_state { // size = big
 		on_waypt_path = 0;
 		last_wpt_dist = 0.0;
 	}
+	void smiley_fire_weapon(int smiley_id);
+	int find_nearest_enemy(point const &pos, point const &avoid_dir, int smiley_id, point &target, int &target_visible, float &min_dist) const;
+	void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
+		vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next);
+	int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, point &target,
+		float &min_dist, vector<type_wt_t> types, int last_target_visible, int last_target_type);
+	int check_smiley_status(dwobject &obj, int smiley_id);
+	void drop_pack(point const &pos);
+	int drop_weapon(vector3d const &coll_dir, vector3d const &nfront, point const &pos, int index, float energy, int type);
+	void smiley_select_target(dwobject &obj, int smiley_id);
+	int smiley_motion(dwobject &obj, int smiley_id);
+	void advance(dwobject &obj, int smiley_id);
+	void shift(vector3d const &vd);
+	void init_smiley_weapon(int smiley_id);
+	void smiley_action(int smiley_id);
+
+	// camera members
+	void gamemode_fire_weapon();
+	void switch_weapon(int val, int verbose);
+	bool pickup_ball(int index);
+	int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj);
+	void update_camera_frame();
+	void update_sstate_game_frame(int i);
+	void free_balls();
+	void update_weapon_cobjs(int i);
 };
 
 

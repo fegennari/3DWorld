@@ -56,14 +56,14 @@ struct blood_spot { // size = 20
 };
 
 
-struct weapon { // size = 64
+struct weapon_t { // size = 64
 
 	bool self_damage, need_weapon, need_ammo;
 	unsigned def_ammo, max_ammo, obj_id, fire_delay, nshots, nfragments;
 	float v_mult, v_add, blast_damage, blast_radius, firing_error, range;
 	string name;
 
-	weapon(bool sd, bool nw, bool na, unsigned da, unsigned ma, unsigned oi, unsigned fd, unsigned ns, unsigned nf,
+	weapon_t(bool sd, bool nw, bool na, unsigned da, unsigned ma, unsigned oi, unsigned fd, unsigned ns, unsigned nf,
 		float vm, float va, float bd, float br, float fe, float ra, string const &name_)
 		: self_damage(sd), need_weapon(nw), need_ammo(na), def_ammo(da), max_ammo(ma), obj_id(oi), fire_delay(fd), nshots(ns),
 		nfragments(nf), v_mult(vm), v_add(va), blast_damage(bd), blast_radius(br), firing_error(fe), range(ra), name(name_) {}
@@ -94,24 +94,24 @@ float const CBLADE_EXT(0.5*CBLADE_EXT_PT*CBFD);
 
 
 // self_damage need_weapon need_ammo def_ammo max_ammo obj_id fire_delay nshots nfragments v_mult v_add blast_damage blast_radius firing_error range name
-weapon const weapons[NUM_WEAPONS+1] = {
-	weapon(0, 0, 0, 0,   0,   UNDEF,    0,   0,  0,   0.0,  0.0, 0.0,    0.0,  0.0,   0.0,  "Unarmed"         ),
-	weapon(0, 0, 0, 0,   0,   UNDEF,    23,  1,  1,   0.0,  0.0, 500.0,  0.25, 0.0,   0.25, "Baseball Bat"    ),
-	weapon(0, 0, 1, 1,   3,   BALL,     25,  1,  1,   1.5,  3.0, 0.0,    0.0,  0.05,  3.0,  "Dodgeball"       ),
-	weapon(0, 0, 1, 30,  500, S_BALL,   18,  1,  1,   1.3,  3.3, 0.0,    0.0,  0.0,   1.5,  "Bouncy Ball"     ),
-	weapon(1, 1, 1, 10,  100, ROCKET,   32,  1,  1,   0.7,  3.1, 1000.0, 0.42, 0.003, 0.0,  "Rocket Launcher" ),
-	weapon(1, 0, 1, 5,   50,  LANDMINE, 30,  1,  1,   0.0,  2.0, 4000.0, 0.39, 0.0,   4.0,  "Proximity Mine"  ),
-	weapon(1, 1, 1, 5,   50,  SEEK_D,   60,  1,  1,   0.5,  2.5, 2300.0, 0.50, 0.0,   0.0,  "Seek and Destroy"),
-	weapon(0, 0, 1, 25,  500, STAR5,    10,  1,  1,   1.1,  3.0, 0.0,    0.0,  0.015, 2.0,  "Throwing Star"   ),
-	weapon(0, 1, 1, 100, 600, UNDEF,    2,   1,  1,   0.0,  0.0, 70.0,   0.0,  0.02,  0.0,  "M16"             ),
-	weapon(0, 1, 1, 12,  100, UNDEF,    27,  24, 1,   0.0,  0.0, 50.0,   0.0,  0.08,  5.0,  "Shotgun"         ),
-	weapon(1, 0, 1, 12,  60,  GRENADE,  22,  1,  140, 1.0,  1.2, 700.0,  0.44, 0.01,  1.7,  "Grenade"         ),
-	weapon(0, 1, 1, 200, 800, UNDEF,    1,   1,  1,   0.0,  0.0, 16.0,   0.0,  0.0,   0.0,  "Laser"           ),
-	weapon(1, 1, 1, 20,  200, PLASMA,   13,  1,  1,   1.4,  3.5, 200.0,  0.43, 0.0,   3.8,  "Plasma Cannon"   ),
-	weapon(0, 1, 0, 1,   10,  UNDEF,    CBFD,1,  1,   1.5,  4.0, 40.0,   0.2,  0.0, CBLADE_EXT, "Carnage Blade"),
-	weapon(0, 1, 1, 50,  250, GASSED,   4,   1,  1,   1.2,  2.8, 100.0,  0.07, 0.1,   2.8,  "Gasser"),
+weapon_t const weapons[NUM_WEAPONS+1] = {
+	weapon_t(0, 0, 0, 0,   0,   UNDEF,    0,   0,  0,   0.0,  0.0, 0.0,    0.0,  0.0,   0.0,  "Unarmed"         ),
+	weapon_t(0, 0, 0, 0,   0,   UNDEF,    23,  1,  1,   0.0,  0.0, 500.0,  0.25, 0.0,   0.25, "Baseball Bat"    ),
+	weapon_t(0, 0, 1, 1,   3,   BALL,     25,  1,  1,   1.5,  3.0, 0.0,    0.0,  0.05,  3.0,  "Dodgeball"       ),
+	weapon_t(0, 0, 1, 30,  500, S_BALL,   18,  1,  1,   1.3,  3.3, 0.0,    0.0,  0.0,   1.5,  "Bouncy Ball"     ),
+	weapon_t(1, 1, 1, 10,  100, ROCKET,   32,  1,  1,   0.7,  3.1, 1000.0, 0.42, 0.003, 0.0,  "Rocket Launcher" ),
+	weapon_t(1, 0, 1, 5,   50,  LANDMINE, 30,  1,  1,   0.0,  2.0, 4000.0, 0.39, 0.0,   4.0,  "Proximity Mine"  ),
+	weapon_t(1, 1, 1, 5,   50,  SEEK_D,   60,  1,  1,   0.5,  2.5, 2300.0, 0.50, 0.0,   0.0,  "Seek and Destroy"),
+	weapon_t(0, 0, 1, 25,  500, STAR5,    10,  1,  1,   1.1,  3.0, 0.0,    0.0,  0.015, 2.0,  "Throwing Star"   ),
+	weapon_t(0, 1, 1, 100, 600, UNDEF,    2,   1,  1,   0.0,  0.0, 70.0,   0.0,  0.02,  0.0,  "M16"             ),
+	weapon_t(0, 1, 1, 12,  100, UNDEF,    27,  24, 1,   0.0,  0.0, 50.0,   0.0,  0.08,  5.0,  "Shotgun"         ),
+	weapon_t(1, 0, 1, 12,  60,  GRENADE,  22,  1,  140, 1.0,  1.2, 700.0,  0.44, 0.01,  1.7,  "Grenade"         ),
+	weapon_t(0, 1, 1, 200, 800, UNDEF,    1,   1,  1,   0.0,  0.0, 16.0,   0.0,  0.0,   0.0,  "Laser"           ),
+	weapon_t(1, 1, 1, 20,  200, PLASMA,   13,  1,  1,   1.4,  3.5, 200.0,  0.43, 0.0,   3.8,  "Plasma Cannon"   ),
+	weapon_t(0, 1, 0, 1,   10,  UNDEF,    CBFD,1,  1,   1.5,  4.0, 40.0,   0.2,  0.0, CBLADE_EXT, "Carnage Blade"),
+	weapon_t(0, 1, 1, 50,  250, GASSED,   4,   1,  1,   1.2,  2.8, 100.0,  0.07, 0.1,   2.8,  "Gasser"),
 	/* non-selectable */
-	weapon(1, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.8,  "Cluster Grenade" )
+	weapon_t(1, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.8,  "Cluster Grenade" )
 };
 
 int const obj_weapons[NUM_TOT_OBJS] = {
@@ -149,7 +149,6 @@ point get_sstate_pos(int id);
 vector3d get_sstate_dir(int id);
 
 int same_team(int source, int target);
-void drop_pack(player_state &sstate, point const &pos);
 string get_weapon_qualifier(int type, int index, int source);
 void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const &coll_dir, float blood_v, float md, float mv, int type, float health);
 int  damage_done(int type, int index);
@@ -158,13 +157,10 @@ void init_sstate(int id, bool w_start);
 int  get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, int &xpos, int &ypos);
 point projectile_test(point const &pos, vector3d const &vcf_, float firing_error, float damage,
 					  int shooter, float &range, float intensity=1.0, int ignore_cobj=-1);
-int fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj);
 float get_projectile_range(point const &pos, vector3d vcf, float dist, float range, point &coll_pos, vector3d &cnorm,
 						   int &coll, int &cindex, int source, int check_splash, int ignore_cobj=-1);
 void draw_plasmaball(point const &pos0, int shooter);
 void init_smiley(int smiley_id);
-void init_smiley_weapon(int smiley_id);
-void smiley_fire_weapon(int smiley_id);
 int  get_damage_source(int type, int index, int questioner);
 void gen_rubble(int type, int num, point const &pos, int shooter, float const p[7]);
 bool lm_coll_invalid(dwobject const &obj);

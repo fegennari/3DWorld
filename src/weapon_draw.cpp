@@ -284,28 +284,32 @@ point get_sstate_draw_pos(int shooter) {
 }
 
 
+void player_state::update_weapon_cobjs(int i) {
+
+	point const pos(get_sstate_draw_pos(i));
+	dpos = 0.0;
+		
+	if (weapon == W_BLADE) {
+		cb_pos = pos;
+		do_cblade_damage_and_update_pos(cb_pos, i);
+	}
+	if (powerup == PU_INVISIBILITY) return; // smiley's/player's shadow will still be there
+	float const fire_val(float(fire_frame)/float(max(1U, weapons[weapon].fire_delay)));
+	add_weapon_cobj(pos, get_sstate_dir(i), object_types[SMILEY].radius, dpos, fire_val, weapon, wmode);
+	add_weapon_lights(i);
+}
+
+
 void update_weapon_cobjs() { // and update cblade and lighting
 
 	clear_weap_cobjs();
 	if (!game_mode) return;
 	assert(sstates != NULL);
-	float const radius(object_types[SMILEY].radius);
 	bool const smileys_enabled(obj_groups[coll_id[SMILEY]].enabled);
 
 	for (int i = CAMERA_ID; i < num_smileys; ++i) { // if invisible, don't draw the weapon
 		if ((i != CAMERA_ID && !smileys_enabled) || (i == CAMERA_ID && camera_view)) continue;
-		player_state &ss(sstates[i]);
-		point const pos(get_sstate_draw_pos(i));
-		ss.dpos = 0.0;
-		
-		if (ss.weapon == W_BLADE) {
-			ss.cb_pos = pos;
-			do_cblade_damage_and_update_pos(ss.cb_pos, i);
-		}
-		if (ss.powerup == PU_INVISIBILITY) continue; // smiley's/player's shadow will still be there
-		float const fire_val(float(ss.fire_frame)/float(max(1U, weapons[ss.weapon].fire_delay)));
-		add_weapon_cobj(pos, get_sstate_dir(i), radius, ss.dpos, fire_val, ss.weapon, ss.wmode);
-		add_weapon_lights(i);
+		sstates[i].update_weapon_cobjs(i);
 	}
 }
 

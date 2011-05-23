@@ -119,7 +119,7 @@ point destination_marker::get_pos() const {
 }
 
 
-// ********** SMILEY AI CODE **********
+// ********** SMILEY AI CODE (player_state) **********
 
 
 bool proj_coll_test(point const &pos, point const &target_pos, vector3d const &orient,
@@ -138,45 +138,42 @@ bool proj_coll_test(point const &pos, point const &target_pos, vector3d const &o
 }
 
 
-void smiley_fire_weapon(int smiley_id) {
+void player_state::smiley_fire_weapon(int smiley_id) {
 
 	if (!game_mode) return;
 	int cid(coll_id[SMILEY]), status;
 	float target_dist;
-	player_state &sstate(sstates[smiley_id]);
 	dwobject const &smiley(obj_groups[cid].get_obj(smiley_id));
-	int const &weapon(sstate.weapon);
 	if (smiley.disabled()) return;
-	if (sstate.target_visible != 1 && (weapon != W_LANDMINE || (rand()&3) != 0)) return;
+	if (target_visible != 1 && (weapon != W_LANDMINE || (rand()&3) != 0)) return;
 	int const last_weapon(weapon);
 	
-	if (weapon == W_UNARMED || (!UNLIMITED_WEAPONS && sstate.no_weap_or_ammo())) {
+	if (weapon == W_UNARMED || (!UNLIMITED_WEAPONS && no_weap_or_ammo())) {
 		init_smiley_weapon(smiley_id); // out of ammo, switch weapons
-		if (weapon != last_weapon) sstate.fire_frame = 0;
+		if (weapon != last_weapon) fire_frame = 0;
 	}
-	if (sstate.target_visible && self_damage > 0.0 && sstate.powerup != PU_SHIELD && weapons[weapon].self_damage) { // can damage self
-		if (dist_less_than(sstate.target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
+	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && weapons[weapon].self_damage) { // can damage self
+		if (dist_less_than(target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
 			init_smiley_weapon(smiley_id); // switch weapons to avoid suicide
-			if (weapon != last_weapon) sstate.fire_frame = 0;
+			if (weapon != last_weapon) fire_frame = 0;
 		}
 	}
-	assert(!sstate.no_weap_or_ammo());
+	assert(!no_weap_or_ammo());
 	if (weapon == W_BALL && (rand()&15) != 0) return; // wait to throw
 	point pos(smiley.pos);
 	if (temperature <= W_FREEZE_POINT && is_underwater(pos)) return; // under ice
 	float const radius(object_types[SMILEY].radius);
 	pos.z      += 0.1*radius; // shoot slightly higher than center
-	vector3d orient(sstate.target_pos, pos);
+	vector3d orient(target_pos, pos);
 	target_dist = orient.mag();
 
-	if (LEAD_SHOTS && sstate.target_visible == 1 && smiley_acc > 0.0) { // should use smiley_acc, target_dist is not quite right
+	if (LEAD_SHOTS && target_visible == 1 && smiley_acc > 0.0) { // should use smiley_acc, target_dist is not quite right
 		float const vweap(weapons[weapon].v_add + ball_velocity*weapons[weapon].v_mult);
 
 		if (vweap > TOLERANCE) { // not an instant hit weapon
-			int const targ(sstate.target);
-			assert(targ >= CAMERA_ID && targ < num_smileys);
+			assert(target >= CAMERA_ID && target < num_smileys);
 			float const oz(orient.z);
-			orient   = lead_target(pos, sstate.target_pos, sstate.velocity, sstates[targ].velocity, vweap);
+			orient   = lead_target(pos, target_pos, velocity, sstates[target].velocity, vweap);
 			orient.z = oz; // ???
 			orient.normalize();
 		}
@@ -191,14 +188,14 @@ void smiley_fire_weapon(int smiley_id) {
 	
 	if (weapon != W_LANDMINE && weapon != W_BBBAT && target_dist > 2.0*radius) {
 		// make sure it has a clear shot (excluding invisible smileys)
-		if (!proj_coll_test(pos, sstate.target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return;
+		if (!proj_coll_test(pos, target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return;
 
 		if (weapon == W_ROCKET || weapon == W_SEEK_D || weapon == W_PLASMA) { // large projectile
 			assert(weapons[weapon].obj_id != UNDEF);
 			float const proj_radius(object_types[weapons[weapon].obj_id].radius);
 			point const pos2(pos + point(0.0, 0.0, -proj_radius)); // proj_radius up (+z)
 
-			if (!proj_coll_test(pos2, sstate.target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) {
+			if (!proj_coll_test(pos2, target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) {
 				orient   *= target_dist;
 				orient.z += min(proj_radius, 0.7f*radius); // shoot slightly upward
 				orient.normalize();
@@ -207,20 +204,20 @@ void smiley_fire_weapon(int smiley_id) {
 
 			for (unsigned d = 0; d < 2; ++d) { // test left and right
 				point const pos3(pos + check_dir*(d ? 1.0 : -1.0));
-				if (!proj_coll_test(pos3, sstate.target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return;
+				if (!proj_coll_test(pos3, target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return;
 			}
 		}
 	}
-	int &ammo(sstate.p_ammo[weapon]);
+	int &ammo(p_ammo[weapon]);
 	assert(ammo >= 0);
-	if (weapon == W_GRENADE && (sstate.wmode&1) && ammo < 3) sstate.wmode = 0;
+	if (weapon == W_GRENADE && (wmode&1) && ammo < 3) wmode = 0;
 	int chosen;
 	status = fire_projectile(pos, orient, smiley_id, chosen);
 
-	if (status != 0 && !UNLIMITED_WEAPONS && !sstate.no_weap_or_ammo() && weapons[weapon].need_ammo) {
-		ammo -= (weapon == W_GRENADE && (sstate.wmode&1)) ? 3 : 1; // check for cluster grenade
+	if (status != 0 && !UNLIMITED_WEAPONS && !no_weap_or_ammo() && weapons[weapon].need_ammo) {
+		ammo -= (weapon == W_GRENADE && (wmode&1)) ? 3 : 1; // check for cluster grenade
 		assert(ammo >= 0);
-		if (ammo == 0) sstate.fire_frame = 0; // could switch weapons
+		if (ammo == 0) fire_frame = 0; // could switch weapons
 	}
 }
 
@@ -235,16 +232,16 @@ void add_target(vector<od_data> &oddatav, pos_dir_up const &pdu, point const &po
 }
 
 
-int find_nearest_enemy(point const &pos, point const &avoid_dir, int smiley_id, point &target, int &target_visible, float &min_dist) {
+int player_state::find_nearest_enemy(point const &pos, point const &avoid_dir, int smiley_id, point &target, int &target_visible, float &min_dist) const {
 
 	assert(smiley_id < num_smileys);
 	int min_i(NO_SOURCE), hitter(NO_SOURCE);
 	float const radius(object_types[SMILEY].radius);
-	int const cid(coll_id[SMILEY]), killer(sstates[smiley_id].killer);
+	int const cid(coll_id[SMILEY]);
 	float tterm, sterm;
 	point const camera(get_camera_pos());
 	static vector<od_data> oddatav;
-	if (sstates[smiley_id].was_hit) hitter = sstates[smiley_id].hitter;
+	if (was_hit) hitter = hitter;
 	vector3d const sorient(obj_groups[cid].get_obj(smiley_id).orientation);
 	calc_view_test_terms(tterm, sterm, 0);
 	pos_dir_up const pdu(pos, sorient, plus_z, tterm, sterm, NEAR_CLIP, FAR_CLIP);
@@ -286,23 +283,15 @@ int find_nearest_enemy(point const &pos, point const &avoid_dir, int smiley_id, 
 }
 
 
-struct type_wt_t {
-	unsigned type;
-	float weight;
-	type_wt_t(unsigned t=0, float w=1.0) : type(t), weight(w) {}
-};
-
-
-void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
+void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
 	vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next)
 {
 	assert(i < waypoints.size());
-	player_state &sstate(sstates[smiley_id]);
 	point const &wp(waypoints[i].pos);
-	bool const can_see(next || (sstate.on_waypt_path && i == curw));
-	if (!is_over_mesh(wp) || is_underwater(wp) || !sstate.waypts_used.is_valid(i)) return;
-	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))         return; // view culling - more detailed query later
-	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0)     return; // need to avoid this directio
+	bool const can_see(next || (on_waypt_path && i == curw));
+	if (!is_over_mesh(wp) || is_underwater(wp) || !waypts_used.is_valid(i))    return;
+	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
+	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this directio
 	unsigned other_smiley_targets(0);
 
 	for (int s = 0; s < num_smileys; ++s) {
@@ -318,7 +307,7 @@ void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id
 
 
 // health, shields, powerup, weapon, ammo, pack, waypoint
-int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, point &target,
+int player_state::find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, point &target,
 	float &min_dist, vector<type_wt_t> types, int last_target_visible, int last_target_type)
 {
 	assert(smiley_id < num_smileys);
@@ -326,7 +315,6 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 	float sradius(object_types[SMILEY].radius), ra_smiley(C_STEP_HEIGHT*sradius);
 	float tterm, sterm;
 	vector3d const sorient(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).orientation);
-	player_state &sstate(sstates[smiley_id]);
 	static vector<od_data> oddatav;
 	calc_view_test_terms(tterm, sterm, 0);
 	pos_dir_up const pdu(pos, sorient, plus_z, tterm, sterm, NEAR_CLIP, FAR_CLIP);
@@ -339,7 +327,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 		float const dmult(1.0/types[t].weight);
 
 		if (type == WAYPOINT) { // process waypoints
-			int curw(sstate.last_waypoint);
+			int curw(last_waypoint);
 			int ignore_w(-1);
 			// mode: 0: none, 1: user waypoint, 2: placed item waypoint, 3: goal waypoint, 4: wpt waypoint, 5: closest waypoint, 6: goal pos (new waypoint)
 			wpt_goal goal((has_wpt_goal ? 3 : 2), 0, all_zeros);
@@ -348,14 +336,14 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 
 			if (last_target_visible && last_target_type != 3 && goal.mode <= 2) { // have a previous enemy/item target and no real goal
 				goal.mode = 5; // closest waypoint
-				goal.pos  = sstate.target_pos; // should still be valid
+				goal.pos  = target_pos; // should still be valid
 			}
 			if (curw >= 0) { // currently targeting a waypoint
 				assert((unsigned)curw < waypoints.size());
 
 				if (dist_less_than(waypoints[curw].pos, pos, sradius)) { // smiley has reached waypoint
 					//cout << "reached target waypoint " << curw << " at time " << tfticks << endl; // testing
-					sstate.waypts_used.insert(curw); // insert as the last used waypoint and remove from consideration
+					waypts_used.insert(curw); // insert as the last used waypoint and remove from consideration
 					waypoints[curw].mark_visited_by_smiley(smiley_id);
 					vector<unsigned> const &next(waypoints[curw].next_wpts);
 
@@ -415,7 +403,7 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 
 		if (type == WAYPOINT) {
 			assert(size_t(oddatav[i].id) < waypoints.size());
-			bool const can_see(oddatav[i].val != 0 || (sstate.on_waypt_path && oddatav[i].id == sstate.last_waypoint));
+			bool const can_see(oddatav[i].val != 0 || (on_waypt_path && oddatav[i].id == last_waypoint));
 			pos2 = waypoints[oddatav[i].id].pos;
 			no_frustum_test = (WAYPT_VIS_LEVEL[can_see] == 1);
 			skip_vis_test   = (WAYPT_VIS_LEVEL[can_see] == 2);
@@ -428,8 +416,8 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 			no_frustum_test = ((obj->flags & USER_PLACED) != 0);
 		}
 		int const xpos(get_xpos(pos2.x)), ypos(get_ypos(pos2.y));
-		if (point_outside_mesh(xpos, ypos))      continue;
-		if (sstate.unreachable.cant_reach(pos2)) continue;
+		if (point_outside_mesh(xpos, ypos)) continue;
+		if (unreachable.cant_reach(pos2))   continue;
 		float const oradius(object_types[type].radius);
 		bool const ice(temperature <= W_FREEZE_POINT);
 		bool const not_too_high( pos2.z < max((mesh_height[ypos][xpos] + sradius + oradius), (pos.z + ra_smiley + oradius - sradius)));
@@ -440,17 +428,17 @@ int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, po
 
 		if (type == WAYPOINT || not_too_high2) { // almost in reach, ultimate reachability questionable
 			// Note: if a waypoint is found to be unreachable, it may be be avoided until the smiley dies
-			if (!sstate.unreachable.proc_target(pos, pos2, sstate.objective_pos, (can_reach && type != WAYPOINT))) continue;
+			if (!unreachable.proc_target(pos, pos2, objective_pos, (can_reach && type != WAYPOINT))) continue;
 		}
-		if (can_reach || not_too_high2 || (type == WAYPOINT && sstate.on_waypt_path)) { // not_too_high2 - may be incorrect
+		if (can_reach || not_too_high2 || (type == WAYPOINT && on_waypt_path)) { // not_too_high2 - may be incorrect
 			int const max_vis_level((type == WAYPOINT) ? 3 : ((type == BALL) ? 5 : 4));
 
 			if (skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) {
 				if (type == WAYPOINT) {
-					if (oddatav[i].id != sstate.last_waypoint) sstate.on_waypt_path = (oddatav[i].val != 0);
-					//cout << "waypoint change from " << sstate.last_waypoint << " to " << oddatav[i].id << endl;
-					sstate.last_waypoint = oddatav[i].id;
-					sstate.last_wpt_dist = p2p_dist_xy(pos, pos2);
+					if (oddatav[i].id != last_waypoint) on_waypt_path = (oddatav[i].val != 0);
+					//cout << "waypoint change from " << last_waypoint << " to " << oddatav[i].id << endl;
+					last_waypoint = oddatav[i].id;
+					last_wpt_dist = p2p_dist_xy(pos, pos2);
 				}
 				min_dist = sqrt(oddatav[i].dist); // find closest reachable/visible object
 				min_ic   = type;
@@ -476,15 +464,15 @@ int is_good_smiley_pos(int xpos, int ypos) {
 }
 
 
-int check_smiley_status(dwobject &obj, int smiley_id) {
+int player_state::check_smiley_status(dwobject &obj, int smiley_id) {
 
 	assert(sstates != NULL);
 	if (obj.disabled()) return 0;
 
 	if (obj.time > object_types[SMILEY].lifetime) {
-		if (sstates) drop_pack(sstates[smiley_id], obj.pos);
+		drop_pack(obj.pos);
 		obj.status = 0; // smiley dies of old age (or boredom) after a REALLY long time
-		string const msg(sstates[smiley_id].name + " died of " + ((rand()&1) ? "boredom" : "old age"));
+		string const msg(name + " died of " + ((rand()&1) ? "boredom" : "old age"));
 		print_text_onscreen(msg, YELLOW, 1.0, MESSAGE_TIME, 0);
 		return 0;
 	}
@@ -499,18 +487,63 @@ int check_smiley_status(dwobject &obj, int smiley_id) {
 }
 
 
-void smiley_select_target(dwobject &obj, int smiley_id) {
+void player_state::drop_pack(point const &pos) {
+
+	if (UNLIMITED_WEAPONS) return; // no pack
+	int const ammo(p_ammo[weapon]);
+	if (!weapons[weapon].need_weapon && (!weapons[weapon].need_ammo || ammo == 0)) return; // no weapon/ammo
+	bool const dodgeball(game_mode == 2 && weapon == W_BALL); // drop their balls
+	if (dodgeball) assert(ammo == balls.size());
+	unsigned const num(dodgeball ? ammo : 1);
+	int const type(dodgeball ? BALL : WA_PACK), cid(coll_id[type]);
+	obj_group &objg(obj_groups[cid]);
+
+	for (unsigned i = 0; i < num; ++i) {
+		int const max_t_i(dodgeball ? balls[i] : objg.choose_object());
+		dwobject &obj(objg.get_obj(max_t_i));
+		if (dodgeball) assert(obj.status == OBJ_STAT_RES);
+		objg.create_object_at(max_t_i, pos);
+		obj.direction = (unsigned char)(weapon + 0.5);
+		obj.angle     = (dodgeball ? 1.0 : (ammo + 0.5));
+		obj.velocity  = gen_rand_vector(1.0, 6.0, PI_TWO);
+	}
+	if (dodgeball) balls.clear();
+}
+
+
+int player_state::drop_weapon(vector3d const &coll_dir, vector3d const &nfront, point const &pos, int index, float energy, int type) {
+
+	if (game_mode != 1) return 0;
+	if (type == BEAM || type == BLAST_RADIUS || (type >= DROWNED && type <= CRUSHED)) return 0;
+
+	if ((rand()%20 == 0) && energy > 25.0 && (weapons[weapon].need_weapon || (weapons[weapon].need_ammo && p_ammo[weapon] > 0))) {
+		float const frontv(dot_product(coll_dir, nfront)/(coll_dir.mag()*nfront.mag()));
+
+		if (frontv > 0.95) {
+			vector3d rv(signed_rand_float(), signed_rand_float(), 1.2*rand_float());
+			point const dpos(pos + rv*(2.0*object_types[SMILEY].radius));
+			drop_pack(dpos);
+			p_weapons[weapon] = 0;
+			p_ammo[weapon]    = 0;
+			if (index == CAMERA_ID) switch_weapon(1, 0); else init_smiley_weapon(index);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
+void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 
 	if (obj.disabled()) return;
 	int min_ie(NO_SOURCE), min_ih(-1);
 	float diste, disth, health(obj.health);
 	vector<type_wt_t> types;
 	point targete(all_zeros), targeth(all_zeros);
-	player_state &sstate(sstates[smiley_id]);
-	int const last_target_visible(sstate.target_visible), last_target_type(sstate.target_type);
-	sstate.target_visible = 0;
-	sstate.target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup, 3 = waypoint
-	float const health_eq(min(4.0f*health, (health + sstate.shields)));
+	int const last_target_visible(target_visible), last_target_type(target_type);
+	target_visible = 0;
+	target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup, 3 = waypoint
+	float const health_eq(min(4.0f*health, (health + shields)));
 	bool const almost_dead(health_eq < 20.0);
 
 	// look for landmines and avoid them
@@ -531,78 +564,78 @@ void smiley_select_target(dwobject &obj, int smiley_id) {
 		}
 	}
 	if (game_mode == 2 && !UNLIMITED_WEAPONS) { // want the ball
-		if (sstate.p_ammo[W_BALL] > 0) { // already have a ball
-			min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, sstate.target_pos, sstate.target_visible, diste);
+		if (p_ammo[W_BALL] > 0) { // already have a ball
+			min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, target_pos, target_visible, diste);
 		}
-		if (!sstate.target_visible) { // don't have a ball or no enemy in sight
+		if (!target_visible) { // don't have a ball or no enemy in sight
 			types.push_back(type_wt_t(BALL, 1.0));
-			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types, last_target_visible, last_target_type);
+			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, target_pos, disth, types, last_target_visible, last_target_type);
 		}
 	}
 	else { // choose health/attack based on distance
 		// want to get powerup badly if you don't have one
-		float const pu_wt((sstates[smiley_id].powerup == 0) ? 1.5 : (1.0 - float(sstate.powerup_time)/POWERUP_TIME));
+		float const pu_wt((powerup == 0) ? 1.5 : (1.0 - float(powerup_time)/POWERUP_TIME));
 		types.push_back(type_wt_t(POWERUP, pu_wt));
 		types.push_back(type_wt_t(WEAPON,  0.8));
 		types.push_back(type_wt_t(AMMO,    0.7));
 		types.push_back(type_wt_t(WA_PACK, 1.0));
-		types.push_back(type_wt_t(SHIELD,  (almost_dead ? 10 : 1.2)*(1.0 - sstate.shields/MAX_SHIELDS))); // always below max since it ticks down over time
+		types.push_back(type_wt_t(SHIELD,  (almost_dead ? 10 : 1.2)*(1.0 - shields/MAX_SHIELDS))); // always below max since it ticks down over time
 		if (health < MAX_HEALTH) types.push_back(type_wt_t(HEALTH, (almost_dead ? 15 : 1.5)*(1.0 - health/MAX_HEALTH)));
 
 		if (game_mode) {
-			min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, targete, sstate.target_visible, diste);
+			min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, targete, target_visible, diste);
 		}
 		min_ih = find_nearest_obj(  obj.pos, avoid_dir, smiley_id, targeth, disth, types, last_target_visible, last_target_type);
 
-		if (!sstate.target_visible) { // can't find an enemy, choose health/pickup
-			if (min_ih >= 0) sstate.target_pos = targeth;
+		if (!target_visible) { // can't find an enemy, choose health/pickup
+			if (min_ih >= 0) target_pos = targeth;
 		}
 		else if (min_ih < 0) { // can't find health/pickup, choose attack
-			if (sstate.target_visible) sstate.target_pos = targete;
+			if (target_visible) target_pos = targete;
 		}
 		else { // found both item and enemy
 			float const dp(dot_product((obj.pos - targeth).get_norm(), (obj.pos - targete).get_norm()));
 
 			if (diste <= disth || dp > 0.95) { // enemy is closer or in the direction of the desired pickup
-				sstate.target_pos = targete;
-				min_ih            = -1;
+				target_pos = targete;
+				min_ih     = -1;
 			}
 			else { // health/pickup is closer
-				sstate.target_pos     = targeth;
-				sstate.target_visible = 0;
+				target_pos     = targeth;
+				target_visible = 0;
 			}
 		}
 	}
-	if (sstate.target_visible) { // targeting and enemy
-		sstate.target_type   = 1;
-		sstate.objective_pos = sstate.target_pos;
+	if (target_visible) { // targeting and enemy
+		target_type   = 1;
+		objective_pos = target_pos;
 	}
-	else if (sstates[smiley_id].was_hit && sstates[smiley_id].hit_dir != zero_vector) { // turn around if hit in the back
-		sstate.target_pos    = obj.pos + sstates[smiley_id].hit_dir.get_norm();
-		sstate.target_type   = 1; // enemy
-		sstate.objective_pos = sstate.target_pos;
+	else if (was_hit && hit_dir != zero_vector) { // turn around if hit in the back
+		target_pos    = obj.pos + hit_dir.get_norm();
+		target_type   = 1; // enemy
+		objective_pos = target_pos;
 	}
 	else { // targeting an item or nothing
 		if (min_ih < 0) { // no item - use a waypoint to move to a different place in the scene
 			types.clear();
 			types.push_back(type_wt_t(WAYPOINT, 1.0));
-			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, sstate.target_pos, disth, types, last_target_visible, last_target_type);
+			min_ih = find_nearest_obj(obj.pos, avoid_dir, smiley_id, target_pos, disth, types, last_target_visible, last_target_type);
 		}
-		sstate.objective_pos = sstate.target_pos;
+		objective_pos = target_pos;
 		
 		if (min_ih >= 0) {
-			sstate.target_type    = (min_ih == WAYPOINT) ? 3 : 2;
-			sstate.target_visible = 2;
+			target_type    = (min_ih == WAYPOINT) ? 3 : 2;
+			target_visible = 2;
 		}
-		if (sstate.target_pos != obj.pos) { // look beyond the target
-			vector3d const o(sstate.target_pos - obj.pos); // motion direction
-			sstate.target_pos += o*(2.0*object_types[SMILEY].radius/o.mag());
+		if (target_pos != obj.pos) { // look beyond the target
+			vector3d const o(target_pos - obj.pos); // motion direction
+			target_pos += o*(2.0*object_types[SMILEY].radius/o.mag());
 		}
 	}
-	if (min_ih < 0) sstate.unreachable.reset_try(); // no target object
-	if (min_ih != WAYPOINT) sstate.reset_wpt_state();
-	if (sstate.target_visible == 1) assert(min_ie >= CAMERA_ID);
-	sstate.target = min_ie;
+	if (min_ih < 0) unreachable.reset_try(); // no target object
+	if (min_ih != WAYPOINT)  reset_wpt_state();
+	if (target_visible == 1) assert(min_ie >= CAMERA_ID);
+	target = min_ie;
 }
 
 
@@ -615,25 +648,23 @@ vector3d get_orient_from_mesh(int x1, int y1, int x2, int y2) {
 }
 
 
-int smiley_motion(dwobject &obj, int smiley_id) {
+int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 
 	if (NO_SMILEY_ACTION || obj.disabled()) return 0;
-	player_state &sstate(sstates[smiley_id]);
 	int step, move, moved(0), dir((int)obj.direction), ddir, cdir(0), chdir, ds_count;
-	float const speed(sstate.get_rspeed_scale()), radius(object_types[SMILEY].radius);
+	float const speed(get_rspeed_scale()), radius(object_types[SMILEY].radius);
 	assert(radius >= 0.0);
 	float const step_dist(smiley_speed*fticks*GROUND_SPEED), step_height(S_SH_SCALE*C_STEP_HEIGHT*radius);
 	point const opos(obj.pos);
-	point target(sstate.target_pos);
 	int movements[9][2], dir_status[9];
 	if (SSTEPS_PER_FRAME == 0.0) SSTEPS_PER_FRAME = (SSTEPS_PER_FRAME0/XY_SCENE_SIZE)*((float)XY_SUM_SIZE/256.0);
-	float const health_eq(min(4.0f*obj.health, (obj.health + sstate.shields)));
+	float const health_eq(min(4.0f*obj.health, (obj.health + shields)));
 	int xpos(get_xpos_clamp(opos.x)), ypos(get_ypos_clamp(opos.y)), xnew(xpos), ynew(ypos);
 	obj.angle += speed*min(8.0f, fticks)*SSTEPS_PER_FRAME; // sigma-delta A/D conversion
 	int const nsteps(max(1, min(MAX_XY_SIZE, (int)obj.angle)));
 	obj.angle -= (float)nsteps;
-	bool const has_flight(sstate.powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT);
-	int const xcpos(get_xpos(target.x)), ycpos(get_ypos(target.y));
+	bool const has_flight(powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT);
+	int const xcpos(get_xpos(target_pos.x)), ycpos(get_ypos(target_pos.y));
 
 	// target_type: 0=none, 1=enemy, 2=item, 3=waypoint
 	// the logic/rules:
@@ -650,7 +681,7 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 	// STOP N S E W NE NW SE SW
 	// 0    1 5 3 7 2  8  4  6
 	for (step = 0; step < nsteps; ++step) {
-		if (sstate.target_visible) {
+		if (target_visible) {
 			if (xcpos == xpos && ycpos == ypos) {
 				cdir = 0;
 			}
@@ -808,35 +839,35 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 	if (!DISABLE_WATER && is_water_temp && wminside[ypos][xpos] &&
 		water_matrix[ypos][xpos] >= max(obj.pos.z, (mesh_height[ypos][xpos] + radius)))
 	{ // stuck - underwater
-		sstate.dest_mark.update_dmin(xpos, ypos);
+		dest_mark.update_dmin(xpos, ypos);
 
 		for (unsigned i = 0; i < SMILEY_MAX_TRIES; ++i) { // find some randomly chosen dry spots to head for
 			int const xt(rand() % MESH_X_SIZE), yt(rand() % MESH_Y_SIZE); // rand() is only 16 bits here?
 			float const depth(wminside[yt][xt] ? (water_matrix[yt][xt] - mesh_height[yt][xt]) : 0.0);
-			sstate.dest_mark.add_candidate(xpos, ypos, xt, yt, depth, radius);
+			dest_mark.add_candidate(xpos, ypos, xt, yt, depth, radius);
 		}
-		if (sstate.dest_mark.valid) {
-			xpos = sstate.dest_mark.xpos;
-			ypos = sstate.dest_mark.ypos;
-			sstate.target_visible = 0;
-			sstate.target_type    = 2; // like an item
-			sstate.objective_pos  = sstate.target_pos = target = sstate.dest_mark.get_pos();
+		if (dest_mark.valid) {
+			xpos = dest_mark.xpos;
+			ypos = dest_mark.ypos;
+			target_visible = 0;
+			target_type    = 2; // like an item
+			objective_pos  = target_pos = target_pos = dest_mark.get_pos();
 		}
 	}
 	else {
-		sstate.dest_mark.clear();
+		dest_mark.clear();
 	}
 
 	// do actual movement
-	if (sstate.target_visible && dist_less_than(obj.pos, target, step_dist)) {
-		obj.pos = target; // close enough to hit the target exactly
+	if (target_visible && dist_less_than(obj.pos, target_pos, step_dist)) {
+		obj.pos = target_pos; // close enough to hit the target exactly
 	}
 	else { // FIXME: this is a crappy way of doing things, should use all angles instead of 8
 		vector3d stepv((get_xval(xpos) - obj.pos.x), (get_yval(ypos) - obj.pos.y), 0.0);
 
 		if (stepv.normalize_test()) {
-			if (WAYPT_FOLLOW_ACC > 0 && sstate.on_waypt_path) { // following a waypoint
-				vector3d const target_dir(vector3d(target.x-obj.pos.x, target.y-obj.pos.y, 0.0).get_norm());
+			if (WAYPT_FOLLOW_ACC > 0 && on_waypt_path) { // following a waypoint
+				vector3d const target_dir(vector3d(target_pos.x-obj.pos.x, target_pos.y-obj.pos.y, 0.0).get_norm());
 				if (WAYPT_FOLLOW_ACC > 1 || dot_product(target_dir, stepv) > 0.7) stepv = target_dir; // smoother, more accurate step
 			}
 			else { // add random jitter (dodging)
@@ -863,12 +894,12 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 		return 0;
 	}
 	if (coll && p2p_dist(obj.pos, opos) < p2p_dist(obj.pos, wanted_pos)) {
-		if (++sstate.stopped_time > 4) stuck = 1;
+		if (++stopped_time > 4) stuck = 1;
 	}
 	else {
-		sstate.stopped_time = 0;
+		stopped_time = 0;
 	}
-	int ohval(set_true_obj_height(obj.pos, opos, C_STEP_HEIGHT, sstate.zvel, SMILEY, smiley_id, has_flight, 0));
+	int ohval(set_true_obj_height(obj.pos, opos, C_STEP_HEIGHT, zvel, SMILEY, smiley_id, has_flight, 0));
 	float const zval(obj.pos.z);
 
 	if (recreated || mesh_scale_change || (zval - opos.z) < step_height || (has_flight && !no_down)) { // also gets them stuck in ice
@@ -882,10 +913,10 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 		obj.direction = (((int)obj.direction) + 4)%9; // stuck, turn around
 	}
 	if (has_flight) {
-		if ((sstate.target_type == 2 && target.z < opos.z && obj.pos.z < opos.z) || // want health/powerup below - go down
-			(sstate.target_type == 1 && sstate.weapon == W_BBBAT)) // have to go down for baseball bat hit
+		if ((target_type == 2 && target_pos.z < opos.z && obj.pos.z < opos.z) || // want health/powerup below - go down
+			(target_type == 1 && weapon == W_BBBAT)) // have to go down for baseball bat hit
 		{
-			obj.pos.z = max(max(target.z, obj.pos.z), (opos.z - (no_down ? 0.0f : float(radius*rand_uniform(0.2, 0.6)))));
+			obj.pos.z = max(max(target_pos.z, obj.pos.z), (opos.z - (no_down ? 0.0f : float(radius*rand_uniform(0.2, 0.6)))));
 		}
 		else {
 			obj.pos.z = min(min((zmax + 0.5f), (ztop + 1.0f)), max(obj.pos.z, opos.z));
@@ -902,8 +933,8 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 		}
 		obj.pos.z = max(obj.pos.z, interpolate_mesh_zval(obj.pos.x, obj.pos.y, 0.0, 1, 1) + radius); // ignore ice
 	}
-	if (SMILEYS_LOOK_AT_TARGET && sstate.target_type != 0) {
-		obj.orientation = ((target == obj.pos) ? signed_rand_vector_norm() : (target - obj.pos).get_norm());
+	if (SMILEYS_LOOK_AT_TARGET && target_type != 0) {
+		obj.orientation = ((target_pos == obj.pos) ? signed_rand_vector_norm() : (target_pos - obj.pos).get_norm());
 	}
 	if (obj.pos.x == opos.x && obj.pos.y == opos.y) {
 		if (obj.direction > 0 || rand()%4 == 0) obj.direction = (obj.direction + 1)%9; // last resort - force slow right turn
@@ -920,32 +951,43 @@ int smiley_motion(dwobject &obj, int smiley_id) {
 		update_cpos();
 	}
 	if (is_water_temp && is_underwater(obj.pos, 1) && (rand()&1)) gen_bubble(obj.pos);
-	sstate.velocity = (obj.pos - opos)/(TIMESTEP*fticks);
-	obj.status      = 3;
+	velocity   = (obj.pos - opos)/(TIMESTEP*fticks);
+	obj.status = 3;
 	return 1;
 }
 
 
-void advance_smiley(dwobject &obj, int smiley_id) { // seems to slightly favor smileys with later ids
+void advance_smiley(dwobject &obj, int smiley_id) {
 
 	assert(smiley_id < num_smileys);
+	sstates[smiley_id].advance(obj, smiley_id);
+}
+
+
+void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly favor smileys with later ids
+
 	assert(obj.type == SMILEY);
 	assert(obj_groups[coll_id[SMILEY]].enabled);
-	if (!check_smiley_status(obj, smiley_id)) {sstates[smiley_id].fall_counter = 0; return;}
+	if (!check_smiley_status(obj, smiley_id)) {fall_counter = 0; return;}
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
-	if (!smiley_motion(obj, smiley_id)) {sstates[smiley_id].fall_counter = 0; return;}
+	if (!smiley_motion(obj, smiley_id)) {fall_counter = 0; return;}
 	smiley_action(smiley_id);
+}
+
+
+void player_state::shift(vector3d const &vd) {
+
+	target_pos    += vd;
+	objective_pos += vd;
+	unreachable.shift_by(vd);
 }
 
 
 void shift_player_state(vector3d const &vd, int smiley_id) {
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
-	player_state &sstate(sstates[smiley_id]);
-	sstate.target_pos    += vd;
-	sstate.objective_pos += vd;
-	sstate.unreachable.shift_by(vd);
+	sstates[smiley_id].shift(vd);
 }
 
 
@@ -1037,8 +1079,8 @@ void init_smiley_texture(int smiley_id) {
 
 	assert(sstates != NULL);
 	int const texels(SMILEY_TEX_SIZE*SMILEY_TEX_SIZE), tbytes(3*texels);
-	unsigned char *tdata(sstates[smiley_id].tdata);
-	if (tdata == NULL) tdata = sstates[smiley_id].tdata = new unsigned char[tbytes];
+	if (sstates[smiley_id].tdata == NULL) sstates[smiley_id].tdata = new unsigned char[tbytes];
+	unsigned char *const tdata(sstates[smiley_id].tdata);
 	memset(tdata, 255, tbytes*sizeof(unsigned char));
 
 	if (SMILEY_BUTT) {
@@ -1068,7 +1110,7 @@ void init_smiley(int smiley_id) {
 	if (!objg.enabled) return;
 	init_smiley_texture(smiley_id);
 	init_sstate(smiley_id, (game_mode == 1));
-	init_smiley_weapon(smiley_id);
+	sstates[smiley_id].init_smiley_weapon(smiley_id);
 	dwobject &obj(objg.get_obj(smiley_id));
 	obj.direction     = 0;
 	obj.orientation   = signed_rand_vector(); // this is likely reset later
@@ -1085,55 +1127,53 @@ void init_smiley(int smiley_id) {
 }
 
 
-void init_smiley_weapon(int smiley_id) {
+void player_state::init_smiley_weapon(int smiley_id) {
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
 	int bbat_iter(0), bb_range(-1);
-	player_state &sstate(sstates[smiley_id]);
-	sstate.wmode = ((rand()&3) == 0);
+	wmode = ((rand()&3) == 0);
 
 	if (game_mode == 2) { // dodgeball mode
-		sstate.weapon     = ((UNLIMITED_WEAPONS || sstate.p_ammo[W_BALL] > 0) ? W_BALL : W_UNARMED);
-		sstate.fire_frame = 0;
+		weapon     = ((UNLIMITED_WEAPONS || p_ammo[W_BALL] > 0) ? W_BALL : W_UNARMED);
+		fire_frame = 0;
 		return;
 	}
 	do {
-		sstate.weapon = 1 + (rand()%(NUM_WEAPONS-1)); // no cgrenade
+		weapon = 1 + (rand()%(NUM_WEAPONS-1)); // no cgrenade
 
-		if (sstate.weapon == W_BBBAT && bbat_iter++ < 10 && (rand()%8) != 0) { // only use baseball bat when in close range
+		if (weapon == W_BBBAT && bbat_iter++ < 10 && (rand()%8) != 0) { // only use baseball bat when in close range
 			if (bb_range == -1) {
 				float dist(FAR_CLIP);
-				if (sstate.target_visible) dist = p2p_dist(sstate.target_pos, obj_groups[coll_id[SMILEY]].get_obj(smiley_id).pos);
+				if (target_visible) dist = p2p_dist(target_pos, obj_groups[coll_id[SMILEY]].get_obj(smiley_id).pos);
 				bb_range = (dist < 6.0*object_types[SMILEY].radius);
 			}
-			if (!bb_range) sstate.weapon = W_UNARMED;
+			if (!bb_range) weapon = W_UNARMED;
 		}
-		else if (sstate.weapon == W_SBALL && (rand()%5) != 0) {
-			sstate.weapon = W_UNARMED; // prefers not to use a bouncy ball
+		else if (weapon == W_SBALL && (rand()%5) != 0) {
+			weapon = W_UNARMED; // prefers not to use a bouncy ball
 		}
-	} while (sstate.weapon == W_UNARMED || sstate.no_weap_or_ammo());
+	} while (weapon == W_UNARMED || no_weap_or_ammo());
 
-	//sstate.weapon     = W_GRENADE; // set to force this as weapon choice (if available)
-	sstate.fire_frame = 0;
-	if (sstate.weapon == W_PLASMA && sstate.wmode == 1 && (rand()%4) != 0) sstate.plasma_loaded = 1; // fire it up!
+	//weapon     = W_GRENADE; // set to force this as weapon choice (if available)
+	fire_frame = 0;
+	if (weapon == W_PLASMA && wmode == 1 && (rand()%4) != 0) plasma_loaded = 1; // fire it up!
 }
 
 
-void smiley_action(int smiley_id) {
+void player_state::smiley_action(int smiley_id) {
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
 	float depth(0.0);
-	player_state &sstate(sstates[smiley_id]);
 	dwobject &smiley(obj_groups[coll_id[SMILEY]].get_obj(smiley_id));
 
-	if (sstate.target_visible && sstate.target_type == 1 && (rand()%10) != 0) {
-		float const range(weapons[sstate.weapon].range);
-		if (range == 0.0 || dist_less_than(sstate.target_pos, smiley.pos, range)) smiley_fire_weapon(smiley_id);
+	if (target_visible && target_type == 1 && (rand()%10) != 0) {
+		float const range(weapons[weapon].range);
+		if (range == 0.0 || dist_less_than(target_pos, smiley.pos, range)) smiley_fire_weapon(smiley_id);
 	}
-	if (sstate.powerup == PU_REGEN) smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);
+	if (powerup == PU_REGEN) smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);
 	if (rand()%500 == 0) init_smiley_weapon(smiley_id); // change weapons
-	if (sstate.was_hit > 0) --sstate.was_hit;
-	++sstate.kill_time;
+	if (was_hit > 0) --was_hit;
+	++kill_time;
 	check_underwater(smiley_id, depth);
 }
 
@@ -1247,9 +1287,6 @@ bool has_invisibility(int id) {
 }
 
 
-// ********** player_state **********
-
-
 void player_state::init(bool w_start) {
 
 	assert(balls.empty());
@@ -1309,6 +1346,7 @@ void player_state::init(bool w_start) {
 
 bool player_state::no_weap() const {
 
+	if (!game_mode) return 0;
 	assert(weapon < NUM_WEAPONS);
 	assert(p_weapons[weapon] >= 0);
 	return (!UNLIMITED_WEAPONS && weapons[weapon].need_weapon && p_weapons[weapon] == 0);
@@ -1317,9 +1355,16 @@ bool player_state::no_weap() const {
 
 bool player_state::no_ammo() const {
 
+	if (!game_mode) return 0;
 	assert(weapon < NUM_WEAPONS);
 	assert(p_ammo[weapon] >= 0);
 	return (!UNLIMITED_WEAPONS && weapons[weapon].need_ammo && p_ammo[weapon] == 0);
+}
+
+
+void player_state::verify_wmode() {
+
+	if (weapon == W_GRENADE && (wmode&1) && p_ammo[weapon] < int(weapons[W_CGRENADE].def_ammo) && !UNLIMITED_WEAPONS) wmode = 0;
 }
 
 
