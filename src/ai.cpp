@@ -895,7 +895,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		no_up   = (obj.pos.z < wanted_pos.z);
 	}
 	else {
-		clip_to_scene(obj.pos);
+		player_clip_to_scene(obj.pos);
 	}
 	if (obj.status == 0) { // killed
 		remove_reset_coll_obj(obj.coll_id);

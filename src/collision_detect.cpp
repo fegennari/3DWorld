@@ -1316,7 +1316,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 
 	if (!cflight) { // make sure camera is over simulation region
 		camera_in_air = 0;
-		clip_to_scene(pos);
+		player_clip_to_scene(pos);
 	}
 	remove_coll_object(camera_coll_id);
 	camera_coll_id = -1;
@@ -1329,7 +1329,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		coll  = camera_obj.multistep_coll(camera_last_pos, 0, nsteps);
 		pos.x = camera_obj.pos.x;
 		pos.y = camera_obj.pos.y;
-		if (!cflight) clip_to_scene(pos);
+		if (!cflight) player_clip_to_scene(pos);
 	}
 	else if (!cflight) {
 		pos.z           = int_mesh_zval_pt_off(pos, 1, 0) + radius;
