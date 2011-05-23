@@ -546,23 +546,31 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 	float const health_eq(min(4.0f*health, (health + shields)));
 	bool const almost_dead(health_eq < 20.0);
 
-	// look for landmines and avoid them
+	// look for landmines and [c]grenades and avoid them
 	point avoid_dir(zero_vector);
-	obj_group const &objg(obj_groups[coll_id[LANDMINE]]);
-	
-	if (objg.is_enabled()) {
-		float min_dist(weapons[LANDMINE].blast_radius);
+	int const check_ids[3] = {  GRENADE,   CGRENADE,   LANDMINE};
+	int const weap_ids [3] = {W_GRENADE, W_CGRENADE, W_LANDMINE};
 
-		for (unsigned i = 0; i < objg.end_id; ++i) {
-			dwobject const &obj2(objg.get_obj(i));
+	for (unsigned t = 0; t < 3; ++t) {
+		obj_group const &objg(obj_groups[coll_id[check_ids[t]]]);
+	
+		if (objg.is_enabled()) {
+			float min_dist(weapons[weap_ids[t]].blast_radius);
+
+			for (unsigned i = 0; i < objg.end_id; ++i) {
+				dwobject const &obj2(objg.get_obj(i));
 			
-			if (!obj2.disabled() && !lm_coll_invalid(obj2) && obj2.source == smiley_id && dist_less_than(obj.pos, obj2.pos, min_dist)) {
-				avoid_dir  = (obj2.pos - obj.pos);
-				min_dist   = avoid_dir.mag();
-				avoid_dir /= min_dist;
+				if (!obj2.disabled() && obj2.source == smiley_id && (check_ids[t] != LANDMINE || !lm_coll_invalid(obj2)) &&
+					dist_less_than(obj.pos, obj2.pos, min_dist))
+				{
+					avoid_dir  = (obj2.pos - obj.pos);
+					min_dist   = avoid_dir.mag();
+					avoid_dir /= min_dist;
+					break; // can only handle one right now
+				}
 			}
 		}
-	}
+	} // for t
 	if (game_mode == 2 && !UNLIMITED_WEAPONS) { // want the ball
 		if (p_ammo[W_BALL] > 0) { // already have a ball
 			min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, target_pos, target_visible, diste);
