@@ -98,12 +98,12 @@ bool destination_marker::add_candidate(int x1, int y1, int x2, int y2, float dep
 	if (depth > radius) { // still underwater
 		if ((valid && depth >= min_depth) || dmin_sq > 0) return 0; // deeper or already found land
 		min_depth = (valid ? min(min_depth, depth) : depth);
-		valid = 1;
-		return 1;
 	}
-	int const dist_sq((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2)); // must be nonzero
-	if (valid && dmin_sq != 0 && dist_sq >= dmin_sq) return 0;
-	dmin_sq = dist_sq;
+	else {
+		int const dist_sq((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2)); // must be nonzero
+		if (valid && dmin_sq != 0 && dist_sq >= dmin_sq) return 0;
+		dmin_sq = dist_sq;
+	}
 	xpos    = x2;
 	ypos    = y2;
 	valid   = 1;
@@ -682,6 +682,13 @@ float player_state::get_pos_cost(dwobject &obj, int smiley_id, point const &pos,
 }
 
 
+void add_rand_dir_change(vector3d &dir, float mag) {
+
+	dir += vector3d(mag*signed_rand_float(), mag*signed_rand_float(), 0.0);
+	dir.normalize();
+}
+
+
 int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 
 	if (NO_SMILEY_ACTION || obj.disabled()) return 0;
@@ -690,11 +697,12 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	float const step_dist(smiley_speed*fticks*GROUND_SPEED), step_height(S_SH_SCALE*C_STEP_HEIGHT*radius);
 	point const opos(obj.pos);
 	int xpos(get_xpos_clamp(opos.x)), ypos(get_ypos_clamp(opos.y));
-	bool const has_flight(powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT);
+	bool const has_flight(powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT), underwater(is_underwater(opos));
 	assert(!point_outside_mesh(xpos, ypos));
+	bool stuck(0), in_ice(0), no_up(0), no_down(0);
 	
 	// check for stuck underwater
-	if (is_water_temp && is_underwater(opos)) {
+	if (is_water_temp && underwater) {
 		dest_mark.update_dmin(xpos, ypos);
 
 		// find a valid dest mark
@@ -709,35 +717,39 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			target_type    = 2; // like an item
 			objective_pos  = target_pos = dest_mark.get_pos();
 		}
+		if (dest_mark.valid) assert(dest_mark.xpos > 0);
 	}
 	else {
 		dest_mark.clear();
 	}
 
 	// do actual movement
-	if (target_visible && dist_less_than(obj.pos, target_pos, step_dist)) {
-		obj.pos = target_pos; // close enough to hit the target exactly
+	if (!is_water_temp && underwater) {
+		obj.velocity = zero_vector; // stuck in ice, can't move
+		stuck = in_ice = 1;
 	}
 	else {
-		vector3d stepv(target_visible ? (target_pos - obj.pos) : obj.orientation); // continue along the same orient if no target visible
-
-		if (stepv.normalize_test() && !on_waypt_path) {
-			// FIXME: looks crappy, need to smooth
-			stepv += vector3d(0.1*signed_rand_float(), 0.1*signed_rand_float(), 0.0); // add random jitter (dodging)
-			stepv.normalize();
+		if (target_visible && dist_less_than(obj.pos, target_pos, step_dist)) {
+			obj.pos = target_pos; // close enough to hit the target exactly
 		}
-		obj.pos += stepv*step_dist;
+		else {
+			vector3d stepv(target_visible ? (target_pos - obj.pos) : obj.orientation); // continue along the same orient if no target visible
+
+			if (stepv.normalize_test()) {
+				if (!on_waypt_path && ((rand() % 200) == 0)) add_rand_dir_change(stepv, 1.0); // "dodging"
+			}
+			obj.pos += stepv*step_dist;
+		}
+		obj.velocity.assign(0.0, 0.0, -1.0);
+
+		// check if movement was valid
+		float const cost(get_pos_cost(obj, smiley_id, obj.pos, opos, radius, step_height));
+		if (cost > 0.0) cout << "cost: " << cost << endl; // testing
+		// FIXME: use cost for determining next move
 	}
-	obj.velocity.assign(0.0, 0.0, -1.0);
 	point const wanted_pos(obj.pos);
 
-	// check if movement was valid
-	float const cost(get_pos_cost(obj, smiley_id, wanted_pos, opos, radius, step_height));
-	if (cost > 0.0) cout << "cost: " << cost << endl; // testing
-	// FIXME: use cost for determining next move
-
 	// perform collision detection and mesh constraints to get z height
-	bool stuck(0), no_up(0), no_down(0);
 	int const coll(obj.multistep_coll(opos, smiley_id, SMILEY_COLL_STEPS));
 
 	if (has_flight) {
@@ -767,7 +779,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		obj.pos = opos; // reset to old position
 		ohval   = 3;
 	}
-	if (has_flight) {
+	if (has_flight && !in_ice) {
 		if ((target_type >= 2 && target_pos.z < opos.z && obj.pos.z < opos.z) || // want health/powerup/waypoint below - go down
 			(target_type == 1 && weapon == W_BBBAT)) // have to go down for baseball bat hit
 		{
@@ -790,24 +802,27 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	}
 
 	// set orientation
-	vector3d new_orient;
-
-	if (SMILEYS_LOOK_AT_TARGET && target_type != 0) {
-		new_orient = (target_pos - obj.pos).get_norm(); // target dir
+	if (in_ice) {
+		obj.orientation = all_zeros; // nothing
+	}
+	else if (SMILEYS_LOOK_AT_TARGET && target_type != 0) {
+		vector3d new_orient((target_pos - obj.pos).get_norm()); // target dir
+		if (new_orient != zero_vector) obj.orientation = new_orient;
 	}
 	else {
-		// FIXME: zval not smooth
-		new_orient = (obj.pos - opos).get_norm(); // actual movement dir
+		vector3d const new_orient((obj.pos - opos).get_norm()); // actual movement dir
+		obj.orientation.x = new_orient.x;
+		obj.orientation.y = new_orient.y;
+		obj.orientation.z = 0.95*obj.orientation.z + 0.05*new_orient.z; // smooth interpolation of zval
+		obj.orientation.normalize();
 	}
-	if (new_orient != zero_vector) obj.orientation = new_orient;
-
 	if (obj.orientation == zero_vector) {
 		obj.orientation = vector3d(1,0,0);
 	}
-	else if (stuck || ohval == 3) {
-		// FIXME: oscillations when really stuck
+	else if ((stuck || ohval == 3) && !in_ice) {
 		// FIXME: when hit edge, weight toward center of scene?
-		obj.orientation.negate(); // turn around - will this fix it?
+		obj.orientation.negate(); // turn around - will this fix it or just oscillate orient when really stuck?
+		add_rand_dir_change(obj.orientation, 0.25);
 	}
 
 	// set other state
