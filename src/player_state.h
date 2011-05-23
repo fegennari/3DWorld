@@ -12,6 +12,7 @@ using std::string;
 int const NUM_WEAPONS = 15;
 
 unsigned const POWERUP_TIME = unsigned(40*TICKS_PER_SECOND);
+float const S_SH_SCALE      = 2.0;
 
 
 struct bbox { // size = 20
@@ -107,7 +108,7 @@ struct destination_marker {
 	float min_depth;
 	bool valid;
 
-	destination_marker() : xpos(0), ypos(0), dmin_sq(0), min_depth(0.0) {}
+	destination_marker() : xpos(0), ypos(0), dmin_sq(0), min_depth(0.0), valid(0) {}
 	bool add_candidate(int x1, int y1, int x2, int y2, float depth, float radius);
 	void update_dmin(int x, int y) {if (valid) dmin_sq = (xpos - x)*(xpos - x) + (ypos - y)*(ypos - y);}
 	point get_pos() const;
@@ -171,6 +172,7 @@ struct player_state { // size = big
 	void drop_pack(point const &pos);
 	int drop_weapon(vector3d const &coll_dir, vector3d const &nfront, point const &pos, int index, float energy, int type);
 	void smiley_select_target(dwobject &obj, int smiley_id);
+	float get_pos_cost(dwobject &obj, int smiley_id, point const &pos, point const &opos, float radius, float step_height);
 	int smiley_motion(dwobject &obj, int smiley_id);
 	void advance(dwobject &obj, int smiley_id);
 	void shift(vector3d const &vd);

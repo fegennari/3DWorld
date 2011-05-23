@@ -14,12 +14,11 @@ bool const SMILEYS_LOOK_AT_TARGET = 1;
 bool const LEAD_SHOTS             = 0; // doesn't seem to make too much difference (or doesn't work correctly)
 bool const SMILEY_BUTT            = 1;
 int const WAYPT_VIS_LEVEL[2]      = {1, 2}; // {unconnected, connected}: 0: visible in frustum, 1 = visible from the position, 2 = always visible
-int const WAYPT_FOLLOW_ACC        = 2; // 0: use approx 8 direction nav, 1: use exact nav when aligned with the correct orient, 2: always use exact nav
 unsigned const SMILEY_COLL_STEPS  = 10;
 unsigned const PMAP_SIZE          = (2*N_SPHERE_DIV)/3;
 
 
-float SSTEPS_PER_FRAME(0.0), smiley_speed(1.0), smiley_acc(0);
+float smiley_speed(1.0), smiley_acc(0);
 vector<point> app_spots;
 
 
@@ -533,18 +532,7 @@ int player_state::drop_weapon(vector3d const &coll_dir, vector3d const &nfront, 
 }
 
 
-void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
-
-	if (obj.disabled()) return;
-	int min_ie(NO_SOURCE), min_ih(-1);
-	float diste, disth, health(obj.health);
-	vector<type_wt_t> types;
-	point targete(all_zeros), targeth(all_zeros);
-	int const last_target_visible(target_visible), last_target_type(target_type);
-	target_visible = 0;
-	target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup, 3 = waypoint
-	float const health_eq(min(4.0f*health, (health + shields)));
-	bool const almost_dead(health_eq < 20.0);
+vector3d get_avoid_dir(dwobject &obj, int smiley_id) {
 
 	// look for landmines and [c]grenades and avoid them
 	point avoid_dir(zero_vector);
@@ -570,7 +558,25 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 				}
 			}
 		}
-	} // for t
+	}
+	return avoid_dir;
+}
+
+
+void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
+
+	if (obj.disabled()) return;
+	int min_ie(NO_SOURCE), min_ih(-1);
+	float diste, disth, health(obj.health);
+	vector<type_wt_t> types;
+	point targete(all_zeros), targeth(all_zeros);
+	int const last_target_visible(target_visible), last_target_type(target_type);
+	target_visible = 0;
+	target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup, 3 = waypoint
+	float const health_eq(min(4.0f*health, (health + shields)));
+	bool const almost_dead(health_eq < 20.0);
+	vector3d const avoid_dir(get_avoid_dir(obj, smiley_id));
+
 	if (game_mode == 2 && !UNLIMITED_WEAPONS) { // want the ball
 		if (p_ammo[W_BALL] > 0) { // already have a ball
 			min_ie = find_nearest_enemy(obj.pos, avoid_dir, smiley_id, target_pos, target_visible, diste);
@@ -656,210 +662,52 @@ vector3d get_orient_from_mesh(int x1, int y1, int x2, int y2) {
 }
 
 
+float player_state::get_pos_cost(dwobject &obj, int smiley_id, point const &pos, point const &opos, float radius, float step_height) {
+
+	// target_type: 0=none, 1=enemy, 2=item, 3=waypoint
+	if (!is_over_mesh(pos)) return 10.0; // off the mesh - high cost
+	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+	if (point_outside_mesh(xpos, ypos)) return 10.0; // off the mesh - high cost
+
+	if (powerup != PU_FLIGHT) {
+		if (!is_mesh_disabled(xpos, ypos) && (mesh_height[ypos][xpos] - (opos.z - radius)) > step_height) return 8.0; // too high to step
+		if (!on_waypt_path && temperature > W_FREEZE_POINT && is_underwater(opos)) return 6.0; // don't go under water/blood
+	}
+	if (get_avoid_dir(obj, smiley_id) != zero_vector) return 4.0;
+	// don't get too close to enemy with ranged weapons
+	// enforce turn speed?
+	// handling of flight?
+	// don't fall to your death?
+	return 0.0; // good
+}
+
+
 int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 
 	if (NO_SMILEY_ACTION || obj.disabled()) return 0;
-	int step, move, moved(0), dir((int)obj.direction), ddir, cdir(0), chdir, ds_count;
 	float const speed(get_rspeed_scale()), radius(object_types[SMILEY].radius);
 	assert(radius >= 0.0);
 	float const step_dist(smiley_speed*fticks*GROUND_SPEED), step_height(S_SH_SCALE*C_STEP_HEIGHT*radius);
 	point const opos(obj.pos);
-	int movements[9][2], dir_status[9];
-	if (SSTEPS_PER_FRAME == 0.0) SSTEPS_PER_FRAME = (SSTEPS_PER_FRAME0/XY_SCENE_SIZE)*((float)XY_SUM_SIZE/256.0);
-	float const health_eq(min(4.0f*obj.health, (obj.health + shields)));
-	int xpos(get_xpos_clamp(opos.x)), ypos(get_ypos_clamp(opos.y)), xnew(xpos), ynew(ypos);
-	obj.angle += speed*min(8.0f, fticks)*SSTEPS_PER_FRAME; // sigma-delta A/D conversion
-	int const nsteps(max(1, min(MAX_XY_SIZE, (int)obj.angle)));
-	obj.angle -= (float)nsteps;
+	int xpos(get_xpos_clamp(opos.x)), ypos(get_ypos_clamp(opos.y));
 	bool const has_flight(powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT);
-	int const xcpos(get_xpos(target_pos.x)), ycpos(get_ypos(target_pos.y));
-
-	// target_type: 0=none, 1=enemy, 2=item, 3=waypoint
-	// the logic/rules:
-	// 1. don't go off the mesh if tt is 0 (others should guarantee this)
-	// 2. don't step too high on mesh
-	// 3. don't run into own landline
-	// 4. if dist is smaller than step, move to exact location
-	// 5. don't go underwater if tt is 0,1,2
-	// 6. if tt is 0, then change direction (bounce) when a collision occurs or when stuck
-	// enforce turn speed?
-	// handling of flight?
-	// don't get too close to enemy with ranged weapons?
+	assert(!point_outside_mesh(xpos, ypos));
 	
-	// STOP N S E W NE NW SE SW
-	// 0    1 5 3 7 2  8  4  6
-	for (step = 0; step < nsteps; ++step) {
-		if (target_visible) {
-			if (xcpos == xpos && ycpos == ypos) {
-				cdir = 0;
-			}
-			else {
-				point2d<float> tdir(xcpos - xpos, ycpos - ypos);
-				tdir.normalize();
-				float angle(atan2(tdir.y, tdir.x) + PI);
-				int const cmap[9] = {7,6,5,4,3,2,1,8,7}; // can wraparound by 1
-				int const val(int(angle/(PI/4) + 0.5));
-				assert(val >= 0 && val < 9);
-				cdir = cmap[val];
-			}
-		}
-		for (unsigned i = 0; i < 9; ++i) {
-			movements[i][0] = xpos;
-			movements[i][1] = ypos;
-			dir_status[i]   = 1;
-		}
-		if (ypos < MESH_Y_SIZE-1) { // N
-			++movements[8][1];
-			++movements[1][1];
-			++movements[2][1];
-		}
-		if (ypos > 0) { // S
-			--movements[4][1];
-			--movements[5][1];
-			--movements[6][1];
-		}
-		if (xpos < MESH_X_SIZE-1) { // E
-			++movements[2][0];
-			++movements[3][0];
-			++movements[4][0];
-		}
-		if (xpos > 0) { // W
-			--movements[6][0];
-			--movements[7][0];
-			--movements[8][0];
-		}
-		ds_count = 9;
-		unsigned tries(0);
-		
-		for (; tries < SMILEY_MAX_TRIES && ds_count > 0; ++tries) {
-			dir = (int)obj.direction;
-			if (tries == SMILEY_MAX_TRIES/2) dir = (dir + 1)%9; // force slow right turn
-			if (dir == 0 && rand()%10 < 5)   dir = rand()%9; // stopped, choose new dir
-			assert(dir >= 0 && dir < 9);
-
-			if (ds_count == 1) {
-				for (unsigned j = 0; j < 9; ++j) {
-					if (dir_status[j] != 0) {dir = j; break;}
-				}
-			}
-			else {
-				do {
-					bool bias(1);
-					int const rval(rand());
-					move = rval%100;
-
-					if (dir_status[cdir] == 0) { // navagate around obstacle towards target
-						move = (rval>>8)&1;
-						dir  = (cdir+2*move-1+9)%9;
-
-						if (dir == 0) dir = (cdir+4*move-2+9)%9;
-						if (dir_status[dir] != 0) cdir = dir;
-						else {
-							dir = (cdir-2*move+1+9)%9;
-							if (dir == 0) dir = (cdir-4*move+2+9)%9;
-							if (dir_status[dir] != 0) cdir = dir;
-							else bias = 0;
-						}
-					}
-					else dir = cdir;
-
-					if (!bias && move < int(100.0*SMILEY_DIR_FACTOR)) {
-						ddir  = 0;
-						chdir = (rval>>10)%15;
-
-						for (unsigned c = 0; c < 4; ++c) {
-							if (chdir >= ((1<<c)-1)) ++ddir;
-						}
-						dir = (dir + (((rval>>16)&1) ? ddir : (9-ddir)))%9;
-					}
-				} while (dir_status[dir] == 0);
-			} // end else ds_count != 1
-			assert(dir >= 0 && dir < 9);
-
-			if (dir != 0) {
-				ddir = dir - (int)obj.direction;
-				dir  = (int)obj.direction;
-				assert(dir >= 0 && dir < 9);
-				if (abs(ddir) == 4) dir += ((rand()&1) ? 1 : -1);
-				else if (ddir != 0) dir += (((ddir > 0 && ddir < 4) || ddir < -4) ? 1 : -1);
-				if        (dir < 1) dir += 8;
-				else if   (dir > 8) dir -= 8;
-			}
-			assert(dir >= 0 && dir < 9);
-			if (dir_status[dir] == 0) continue;
-			xnew = movements[dir][0];
-			ynew = movements[dir][1];
-			bool bad_move(point_outside_mesh(xnew, ynew));
-
-			if (!bad_move) {
-				float const mhyx(mesh_height[ynew][xnew]);
-
-				if ((mhyx - obj.pos.z) > step_height && !has_flight) {
-					bad_move = 1; // too high to step
-				}
-				else if (!has_flight && (is_water_temp &&
-					max(obj.pos.z, (mhyx + radius)) < water_matrix[ynew][xnew]) || (island && ((mhyx + radius) <= ocean.z)))
-				{
-					bad_move = 1; // don't go under water/blood
-				}
-				else if (xnew != xpos || ynew != ypos) {
-					// *** FIXME: check for walking into your own landmine, falling off a cliff, and other stupid decisions ***
-					obj.orientation = get_orient_from_mesh(xpos, ypos, xnew, ynew);
-					xpos = xnew;
-					ypos = ynew;
-				}
-				else if (rand()%10 < 5) {
-					cdir = (cdir+4)%9; // reverse direction
-					continue;
-				}
-			}
-			if (bad_move) {
-				dir_status[dir] = 0;
-				--ds_count;
-				continue;
-			}
-			assert(dir >= 0 && dir < 9);
-			obj.direction = (char)dir;
-			moved = 1;
-			break;
-		} // for tries
-		int cindex(-1);
-		assert(!point_outside_mesh(xpos, ypos));
-
-		if (!moved && (dir_status[0] == 0 || tries == SMILEY_MAX_TRIES-1)) { // stuck - not sure if this helps
-			int xpos2, ypos2; // usually takes one iteration, I think
-			do {xpos2 = (xpos + ((rand()&3) - 1));} while (xpos2 < 0 || xpos2 >= MESH_X_SIZE);
-			do {ypos2 = (ypos + ((rand()&3) - 1));} while (ypos2 < 0 || ypos2 >= MESH_Y_SIZE);
-			xpos = xpos2;
-			ypos = ypos2;
-			break;
-		}
-	} // for step
-	ypos = max((int)0, min(MESH_Y_SIZE-1, ypos));
-	xpos = max((int)0, min(MESH_X_SIZE-1, xpos));
-	assert(!point_outside_mesh(xnew, ynew));
-
-	if (!moved && (xnew != xpos || ynew != ypos)) {
-		obj.orientation = get_orient_from_mesh(xpos, ypos, xnew, ynew);
-		assert(dir >= 0 && dir < 9);
-		obj.direction = (char)dir;
-	}
-	if (!DISABLE_WATER && is_water_temp && wminside[ypos][xpos] &&
-		water_matrix[ypos][xpos] >= max(obj.pos.z, (mesh_height[ypos][xpos] + radius)))
-	{ // stuck - underwater
+	// check for stuck underwater
+	if (is_water_temp && is_underwater(opos)) {
 		dest_mark.update_dmin(xpos, ypos);
 
+		// find a valid dest mark
 		for (unsigned i = 0; i < SMILEY_MAX_TRIES; ++i) { // find some randomly chosen dry spots to head for
-			int const xt(rand() % MESH_X_SIZE), yt(rand() % MESH_Y_SIZE); // rand() is only 16 bits here?
-			float const depth(wminside[yt][xt] ? (water_matrix[yt][xt] - mesh_height[yt][xt]) : 0.0);
+			if (dest_mark.valid && dest_mark.min_depth == 0.0) break;
+			int const xt(1 + (rand() % (MESH_X_SIZE-2))), yt(1 + (rand() % (MESH_Y_SIZE-2))); // rand() is only 16 bits here?
+			float const depth(has_water(xt, yt) ? (water_matrix[yt][xt] - mesh_height[yt][xt]) : 0.0);
 			dest_mark.add_candidate(xpos, ypos, xt, yt, depth, radius);
 		}
 		if (dest_mark.valid) {
-			xpos = dest_mark.xpos;
-			ypos = dest_mark.ypos;
-			target_visible = 0;
+			target_visible = 1; // ???
 			target_type    = 2; // like an item
-			objective_pos  = target_pos = target_pos = dest_mark.get_pos();
+			objective_pos  = target_pos = dest_mark.get_pos();
 		}
 	}
 	else {
@@ -870,23 +718,25 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	if (target_visible && dist_less_than(obj.pos, target_pos, step_dist)) {
 		obj.pos = target_pos; // close enough to hit the target exactly
 	}
-	else { // FIXME: this is a crappy way of doing things, should use all angles instead of 8
-		vector3d stepv((get_xval(xpos) - obj.pos.x), (get_yval(ypos) - obj.pos.y), 0.0);
+	else {
+		vector3d stepv(target_visible ? (target_pos - obj.pos) : obj.orientation); // continue along the same orient if no target visible
 
-		if (stepv.normalize_test()) {
-			if (WAYPT_FOLLOW_ACC > 0 && on_waypt_path) { // following a waypoint
-				vector3d const target_dir(vector3d(target_pos.x-obj.pos.x, target_pos.y-obj.pos.y, 0.0).get_norm());
-				if (WAYPT_FOLLOW_ACC > 1 || dot_product(target_dir, stepv) > 0.7) stepv = target_dir; // smoother, more accurate step
-			}
-			else { // add random jitter (dodging)
-				vadd_rand(stepv, 0.1);
-				stepv.normalize();
-			}
-			obj.pos += stepv*step_dist;
+		if (stepv.normalize_test() && !on_waypt_path) {
+			// FIXME: looks crappy, need to smooth
+			stepv += vector3d(0.1*signed_rand_float(), 0.1*signed_rand_float(), 0.0); // add random jitter (dodging)
+			stepv.normalize();
 		}
+		obj.pos += stepv*step_dist;
 	}
 	obj.velocity.assign(0.0, 0.0, -1.0);
 	point const wanted_pos(obj.pos);
+
+	// check if movement was valid
+	float const cost(get_pos_cost(obj, smiley_id, wanted_pos, opos, radius, step_height));
+	if (cost > 0.0) cout << "cost: " << cost << endl; // testing
+	// FIXME: use cost for determining next move
+
+	// perform collision detection and mesh constraints to get z height
 	bool stuck(0), no_up(0), no_down(0);
 	int const coll(obj.multistep_coll(opos, smiley_id, SMILEY_COLL_STEPS));
 
@@ -901,7 +751,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		remove_reset_coll_obj(obj.coll_id);
 		return 0;
 	}
-	if (coll && p2p_dist(obj.pos, opos) < p2p_dist(obj.pos, wanted_pos)) {
+	if (coll && p2p_dist_sq(obj.pos, opos) < p2p_dist_sq(obj.pos, wanted_pos)) {
 		if (++stopped_time > 4) stuck = 1;
 	}
 	else {
@@ -916,9 +766,6 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	else if (!has_flight) {
 		obj.pos = opos; // reset to old position
 		ohval   = 3;
-	}
-	if (stuck || ohval == 3 || (!point_interior_to_mesh(xnew, ynew) && (rand()&3) == 0)) {
-		obj.direction = (((int)obj.direction) + 4)%9; // stuck, turn around
 	}
 	if (has_flight) {
 		if ((target_type >= 2 && target_pos.z < opos.z && obj.pos.z < opos.z) || // want health/powerup/waypoint below - go down
@@ -941,12 +788,29 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		}
 		obj.pos.z = max(obj.pos.z, interpolate_mesh_zval(obj.pos.x, obj.pos.y, 0.0, 1, 1) + radius); // ignore ice
 	}
+
+	// set orientation
+	vector3d new_orient;
+
 	if (SMILEYS_LOOK_AT_TARGET && target_type != 0) {
-		obj.orientation = ((target_pos == obj.pos) ? signed_rand_vector_norm() : (target_pos - obj.pos).get_norm());
+		new_orient = (target_pos - obj.pos).get_norm(); // target dir
 	}
-	if (obj.pos.x == opos.x && obj.pos.y == opos.y) {
-		if (obj.direction > 0 || rand()%4 == 0) obj.direction = (obj.direction + 1)%9; // last resort - force slow right turn
+	else {
+		// FIXME: zval not smooth
+		new_orient = (obj.pos - opos).get_norm(); // actual movement dir
 	}
+	if (new_orient != zero_vector) obj.orientation = new_orient;
+
+	if (obj.orientation == zero_vector) {
+		obj.orientation = vector3d(1,0,0);
+	}
+	else if (stuck || ohval == 3) {
+		// FIXME: oscillations when really stuck
+		// FIXME: when hit edge, weight toward center of scene?
+		obj.orientation.negate(); // turn around - will this fix it?
+	}
+
+	// set other state
 	if (spectate && smiley_id == 0 /*&& !camera_view*/) { // can only follow smiley 0 for now
 		obj_groups[coll_id[SMILEY]].get_obj(smiley_id).flags |= CAMERA_VIEW;
 		orig_camera   = camera_origin;
