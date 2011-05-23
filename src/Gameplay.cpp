@@ -855,15 +855,25 @@ void landmine_collision(int index, int obj_index, vector3d const &velocity, poin
 	obj.status = 0;
 }
 
+
+bool pushable_collision(int index, point const &position, float force, int type, int obj_type) {
+
+	if (type == CAMERA || type == SMILEY) {
+		dwobject &obj(obj_groups[coll_id[obj_type]].get_obj(index));
+
+		if (obj.status != 1 && obj.status != 2) {
+			elastic_collision(obj, position, 20.0, type); // add some extra energy so that we can push the skull
+			return 1;
+		}
+	}
+	return 0;
+}
+
 // something runs into a dodgeball
 void dodgeball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
 	if (type == CAMERA || type == SMILEY) {
-		dwobject &obj(obj_groups[coll_id[BALL]].get_obj(index));
-		energy = get_coll_energy(zero_vector, obj.velocity, object_types[obj.type].mass);
-
-		if ((obj.status != 1 && obj.status != 2) || (obj.flags & FLOATING)) {
-			elastic_collision(obj, position, 100.0, type); // add some extra energy so that we can push the ball
+		if (pushable_collision(index, position, 100.0, type, BALL)) {
 			if (game_mode != 2) return; // doesn't seem to help
 			energy = 0.0;
 		}
@@ -873,6 +883,13 @@ void dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 		default_obj_coll(index, obj_index, velocity, position, energy, type, BALL);
 	}
 }
+
+
+void skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+
+	pushable_collision(index, position, 200.0, type, SKULL);
+}
+
 
 void health_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
@@ -911,6 +928,7 @@ void pack_collision(int index, int obj_index, vector3d const &velocity, point co
 
 void sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
+	pushable_collision(index, position, 20.0, type, S_BALL);
 	default_obj_coll(index, obj_index, velocity, position, energy, type, S_BALL);
 }
 

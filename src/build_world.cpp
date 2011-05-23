@@ -315,6 +315,7 @@ void process_groups() {
 		case WA_PACK:  coll_func = pack_collision;      break;
 		case S_BALL:   coll_func = sball_collision;     break;
 		case BALL:     coll_func = dodgeball_collision; break;
+		case SKULL:    coll_func = skull_collision;     break;
 		}
 		//cout << "group %d %d\n", i, GET_DELTA_TIME);
 		RESET_TIME;

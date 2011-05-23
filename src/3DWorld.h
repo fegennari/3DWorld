@@ -1468,6 +1468,7 @@ void pack_collision(int index, int obj_index, vector3d const &velocity, point co
 void rock_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 void sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 void dodgeball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+void skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool lm_coll_invalid(dwobject const &obj);
 bool invalid_coll(dwobject const &obj, coll_obj const &cobj);
 int get_smiley_hit(vector3d &hdir, int index);
