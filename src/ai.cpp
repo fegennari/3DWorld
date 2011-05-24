@@ -537,7 +537,7 @@ int player_state::drop_weapon(vector3d const &coll_dir, vector3d const &nfront, 
 }
 
 
-vector3d get_avoid_dir(dwobject &obj, int smiley_id) {
+vector3d get_avoid_dir(point const &pos, int smiley_id) {
 
 	// look for landmines and [c]grenades and avoid them
 	point avoid_dir(zero_vector);
@@ -554,9 +554,9 @@ vector3d get_avoid_dir(dwobject &obj, int smiley_id) {
 				dwobject const &obj2(objg.get_obj(i));
 			
 				if (!obj2.disabled() && obj2.source == smiley_id && (check_ids[t] != LANDMINE || !lm_coll_invalid(obj2)) &&
-					dist_less_than(obj.pos, obj2.pos, min_dist))
+					dist_less_than(pos, obj2.pos, min_dist))
 				{
-					avoid_dir  = (obj2.pos - obj.pos);
+					avoid_dir  = (obj2.pos - pos);
 					min_dist   = avoid_dir.mag();
 					avoid_dir /= min_dist;
 					break; // can only handle one right now
@@ -580,7 +580,7 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 	target_type    = 0; // 0 = none, 1 = enemy, 2 = health/powerup, 3 = waypoint
 	float const health_eq(min(4.0f*health, (health + shields)));
 	bool const almost_dead(health_eq < 20.0);
-	vector3d const avoid_dir(get_avoid_dir(obj, smiley_id));
+	vector3d const avoid_dir(get_avoid_dir(obj.pos, smiley_id));
 
 	if (game_mode == 2 && !UNLIMITED_WEAPONS) { // want the ball
 		if (p_ammo[W_BALL] > 0) { // already have a ball
@@ -659,16 +659,7 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 }
 
 
-vector3d get_orient_from_mesh(int x1, int y1, int x2, int y2) {
-
-	assert(x1 != x2 || y1 != y2);
-	float zval(0.0);
-	if (!is_mesh_disabled(x1, y1) && !is_mesh_disabled(x2, y2)) zval = (mesh_height[y2][x2] - mesh_height[y1][x1]);
-	return vector3d((x2 - x1)*DX_VAL, (y2 - y1)*DY_VAL, zval).get_norm();
-}
-
-
-float player_state::get_pos_cost(dwobject &obj, int smiley_id, point const &pos, point const &opos, float radius, float step_height) {
+float player_state::get_pos_cost(int smiley_id, point const &pos, float radius, float step_height) {
 
 	// target_type: 0=none, 1=enemy, 2=item, 3=waypoint
 	if (!is_over_mesh(pos)) return 10.0; // off the mesh - high cost
@@ -676,13 +667,20 @@ float player_state::get_pos_cost(dwobject &obj, int smiley_id, point const &pos,
 	if (point_outside_mesh(xpos, ypos)) return 10.0; // off the mesh - high cost
 
 	if (powerup != PU_FLIGHT) {
-		if (!is_mesh_disabled(xpos, ypos) && (mesh_height[ypos][xpos] - (opos.z - radius)) > step_height) return 8.0; // too high to step
-		if (!on_waypt_path && temperature > W_FREEZE_POINT && is_underwater(opos)) return 6.0; // don't go under water/blood
+		if (!is_mesh_disabled(xpos, ypos)) {
+			float const dz(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) - (pos.z - radius));
+			if (dz > step_height) return 8.0; // too high to step
+		}
+		if (!on_waypt_path && temperature > W_FREEZE_POINT && is_underwater(pos)) return 6.0; // don't go under water/blood
 	}
-	if (get_avoid_dir(obj, smiley_id) != zero_vector) return 4.0;
-	// don't get too close to enemy with ranged weapons
+	if (get_avoid_dir(pos, smiley_id) != zero_vector) return 4.0;
+
+	if (target_type == 1 && weapon != W_BBBAT) { // don't get too close to enemy with ranged weapons
+		float const dist(p2p_dist(pos, target_pos)), range(weapons[weapon].range), rmin(8.0*radius);
+		float const min_dist((range == 0.0) ? rmin : min(0.25f*range, rmin));
+		if (dist < min_dist) return 2.0 + 0.01*(min_dist - dist);
+	}
 	// enforce turn speed?
-	// handling of flight?
 	// don't fall to your death?
 	return 0.0; // good
 }
@@ -693,6 +691,19 @@ void add_rand_dir_change(vector3d &dir, float mag) {
 	dir += vector3d(mag*signed_rand_float(), mag*signed_rand_float(), 0.0);
 	dir.normalize();
 }
+
+
+struct dir_cost_t {
+	float cost, dp;
+	vector3d dir;
+
+	dir_cost_t(float cost_, vector3d const &dir_, vector3d const &opt_dir)
+		: cost(cost_), dp(dot_product(dir_, opt_dir)), dir(dir_) {}
+
+	bool operator<(dir_cost_t const &dct) const {
+		return ((cost == dct.cost) ? (dp > dct.dp) : (cost < dct.cost));
+	}
+};
 
 
 int player_state::smiley_motion(dwobject &obj, int smiley_id) {
@@ -739,19 +750,48 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			obj.pos = target_pos; // close enough to hit the target exactly
 		}
 		else {
-			vector3d stepv(target_visible ? (target_pos - obj.pos) : obj.orientation); // continue along the same orient if no target visible
-
-			if (stepv.normalize_test()) {
-				if (!on_waypt_path && ((rand() % 200) == 0)) add_rand_dir_change(stepv, 1.0); // "dodging"
+			vector3d stepv;
+			
+			if (target_visible) {
+				stepv = (target_pos - obj.pos).get_norm();
+			}
+			else if (!(xpos > 1 && ypos > 1 && xpos < MESH_X_SIZE-1 && ypos < MESH_Y_SIZE-1)) {
+				stepv = vector3d(-obj.pos.x, -obj.pos.y, 0.0).get_norm(); // move toward the center of the scene (0,0)
+			}
+			else {
+				stepv = obj.orientation; // continue along the same orient if no target visible
+			}
+			if (!on_waypt_path && ((rand() % 200) == 0)) {
+				add_rand_dir_change(stepv, 1.0); // "dodging"
+				stepv.normalize();
 			}
 			obj.pos += stepv*step_dist;
+
+			// check if movement was valid
+			float const start_cost(get_pos_cost(smiley_id, obj.pos, radius, step_height));
+		
+			if (start_cost > 0.0) {
+				cout << "cost: " << start_cost << ", stepv: "; stepv.print(); cout << endl; // testing
+				vector<dir_cost_t> dcts;
+				unsigned const ndirs(16);
+
+				for (unsigned i = 0; i < ndirs; ++i) {
+					vector3d dir(stepv);
+					rotate_vector3d_norm(plus_z, TWO_PI*i/ndirs, dir);
+					float const cost(get_pos_cost(smiley_id, (opos + dir*step_dist), radius, step_height)); // FIXME: zval has not been set
+					dcts.push_back(dir_cost_t(cost, dir, stepv));
+				}
+				sort(dcts.begin(), dcts.end());
+				dir_cost_t const &best(dcts.front());
+				cout << "best: cost: " << best.cost << ", dp: " << best.dp << ", dir: "; best.dir.print(); cout << endl;
+
+				if (best.cost > 0.0) {
+					// FIXME: still not good, what to do?
+				}
+				obj.pos = opos + best.dir*step_dist;
+			}
 		}
 		obj.velocity.assign(0.0, 0.0, -1.0);
-
-		// check if movement was valid
-		float const cost(get_pos_cost(obj, smiley_id, obj.pos, opos, radius, step_height));
-		if (cost > 0.0) cout << "cost: " << cost << endl; // testing
-		// FIXME: use cost for determining next move
 	}
 	point const wanted_pos(obj.pos);
 
@@ -825,8 +865,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	if (obj.orientation == zero_vector) {
 		obj.orientation = vector3d(1,0,0);
 	}
-	else if ((stuck || ohval == 3) && !in_ice && target_type != 3) { // not on a waypoint
-		// FIXME: when hit edge, weight toward center of scene?
+	else if ((stuck || ohval == 3) && !in_ice && target_type != 3 && !dist_less_than(obj.pos, target_pos, 2.1*radius)) { // not on a waypoint
 		obj.orientation.negate(); // turn around - will this fix it or just oscillate orient when really stuck?
 		add_rand_dir_change(obj.orientation, 0.25);
 	}

@@ -174,7 +174,7 @@ struct player_state { // size = big
 	void drop_pack(point const &pos);
 	int drop_weapon(vector3d const &coll_dir, vector3d const &nfront, point const &pos, int index, float energy, int type);
 	void smiley_select_target(dwobject &obj, int smiley_id);
-	float get_pos_cost(dwobject &obj, int smiley_id, point const &pos, point const &opos, float radius, float step_height);
+	float get_pos_cost(int smiley_id, point const &pos, float radius, float step_height);
 	int smiley_motion(dwobject &obj, int smiley_id);
 	void advance(dwobject &obj, int smiley_id);
 	void shift(vector3d const &vd);
