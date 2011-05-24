@@ -1524,6 +1524,7 @@ void add_plant(point const &pos, float height, float radius, int type, int calc_
 
 // function prototypes - grass
 void setup_wind_for_shader(unsigned p);
+bool no_grass();
 void gen_grass(bool full_regen);
 void update_grass_vbos();
 void draw_grass();
