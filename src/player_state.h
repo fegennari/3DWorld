@@ -125,6 +125,11 @@ struct type_wt_t {
 
 struct player_state { // size = big
 
+	struct count_t {
+		unsigned c;
+		count_t(unsigned c_=0) : c(c_) {}
+	};
+
 	bool plasma_loaded, on_waypt_path;
 	int timer, target, objective, weapon, wmode, powerup, powerup_time, kills, deaths, cb_hurt, killer;
 	int init_frame, fire_frame, was_hit, hitter, target_visible, kill_time, rot_counter, uw_time;
@@ -137,6 +142,7 @@ struct player_state { // size = big
 	int p_weapons[NUM_WEAPONS], p_ammo[NUM_WEAPONS];
 	unsigned char *tdata;
 	vector<int> balls;
+	map<unsigned, count_t> blocked_waypts;
 	waypt_used_set waypts_used;
 	unreachable_pts unreachable;
 	destination_marker dest_mark;
@@ -148,6 +154,7 @@ struct player_state { // size = big
 		target_pos(all_zeros), objective_pos(all_zeros), cb_pos(all_zeros), hit_dir(all_zeros), velocity(all_zeros), tdata(NULL) {}
 
 	void init(bool w_start);
+	void reset_wpt_state();
 	bool no_weap() const;
 	bool no_ammo() const;
 	void verify_wmode();
@@ -156,12 +163,7 @@ struct player_state { // size = big
 	float get_rspeed_scale() const {return ((powerup == PU_SPEED)  ? 1.5 : 1.0);}
 	float get_fspeed_scale() const {return ((powerup == PU_SPEED)  ? 2.0 : 1.0);}
 	float get_shield_scale() const {return ((powerup == PU_SHIELD) ? 0.5 : 1.0);}
-
-	void reset_wpt_state() {
-		last_waypoint = -1;
-		on_waypt_path = 0;
-		last_wpt_dist = 0.0;
-	}
+	
 	void smiley_fire_weapon(int smiley_id);
 	int find_nearest_enemy(point const &pos, point const &avoid_dir, int smiley_id, point &target, int &target_visible, float &min_dist) const;
 	void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,

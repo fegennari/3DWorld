@@ -299,6 +299,8 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	dmult *= (1.0 + 1.0*other_smiley_targets); // increase distance cost if other smileys are going for the same waypoint
 	if (waypoints[i].next_wpts.empty()) dmult *= 10.0; // increase the cost of waypoints disconnected from the rest of the waypoint graph
 	if (i == curw) dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
+	map<unsigned, count_t>::const_iterator it(blocked_waypts.find(i));
+	if (it != blocked_waypts.end()) dmult *= (1.0 + (1 << it->second.c)); // exponential increase in cost for blocked waypoints
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
 	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp))*rand_uniform(0.8, 1.2));
 	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, can_see)); // add high weight to prefer other objects
@@ -394,23 +396,23 @@ int player_state::find_nearest_obj(point const &pos, point const &avoid_dir, int
 	sort(oddatav.begin(), oddatav.end());
 
 	for (unsigned i = 0; i < oddatav.size(); ++i) {
-		int const type(oddatav[i].type);
+		int const type(oddatav[i].type), id(oddatav[i].id);
 		assert(type >= 0 && type < NUM_TOT_OBJS);
 		point pos2;
 		dwobject const *obj(NULL);
 		bool no_frustum_test(0), skip_vis_test(0);
 
 		if (type == WAYPOINT) {
-			assert(size_t(oddatav[i].id) < waypoints.size());
-			bool const can_see(oddatav[i].val != 0 || (on_waypt_path && oddatav[i].id == last_waypoint));
-			pos2 = waypoints[oddatav[i].id].pos;
+			assert(size_t(id) < waypoints.size());
+			bool const can_see(oddatav[i].val != 0 || (on_waypt_path && id == last_waypoint));
+			pos2 = waypoints[id].pos;
 			no_frustum_test = (WAYPT_VIS_LEVEL[can_see] == 1);
 			skip_vis_test   = (WAYPT_VIS_LEVEL[can_see] == 2);
 		}
 		else {
 			int const cid(coll_id[type]);
 			assert(cid >= 0 && cid < NUM_TOT_OBJS);
-			obj  = &obj_groups[cid].get_obj(oddatav[i].id);
+			obj  = &obj_groups[cid].get_obj(id);
 			pos2 = obj->pos;
 			no_frustum_test = ((obj->flags & USER_PLACED) != 0);
 		}
@@ -434,15 +436,18 @@ int player_state::find_nearest_obj(point const &pos, point const &avoid_dir, int
 
 			if (skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) {
 				if (type == WAYPOINT) {
-					if (oddatav[i].id != last_waypoint) on_waypt_path = (oddatav[i].val != 0);
-					//cout << "waypoint change from " << last_waypoint << " to " << oddatav[i].id << endl;
-					last_waypoint = oddatav[i].id;
+					if (id != last_waypoint) on_waypt_path = (oddatav[i].val != 0);
+					//cout << "waypoint change from " << last_waypoint << " to " << id << endl;
+					last_waypoint = id;
 					last_wpt_dist = p2p_dist_xy(pos, pos2);
 				}
 				min_dist = sqrt(oddatav[i].dist); // find closest reachable/visible object
 				min_ic   = type;
 				target   = pos2;
 				break;
+			}
+			else if (type == WAYPOINT && id == last_waypoint) {
+				++blocked_waypts[id].c;
 			}
 		}
 	}
@@ -648,6 +653,7 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 	}
 	if (min_ih < 0) unreachable.reset_try(); // no target object
 	if (min_ih != WAYPOINT)  reset_wpt_state();
+	if (on_waypt_path)       blocked_waypts.clear();
 	if (target_visible == 1) assert(min_ie >= CAMERA_ID);
 	target = min_ie;
 }
@@ -702,7 +708,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	bool stuck(0), in_ice(0), no_up(0), no_down(0);
 	
 	// check for stuck underwater
-	if (is_water_temp && underwater) {
+	if (is_water_temp && underwater && !on_waypt_path) { // ok if on a waypoint path
 		dest_mark.update_dmin(xpos, ypos);
 
 		// find a valid dest mark
@@ -819,7 +825,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	if (obj.orientation == zero_vector) {
 		obj.orientation = vector3d(1,0,0);
 	}
-	else if ((stuck || ohval == 3) && !in_ice) {
+	else if ((stuck || ohval == 3) && !in_ice && target_type != 3) { // not on a waypoint
 		// FIXME: when hit edge, weight toward center of scene?
 		obj.orientation.negate(); // turn around - will this fix it or just oscillate orient when really stuck?
 		add_rand_dir_change(obj.orientation, 0.25);
@@ -1228,6 +1234,15 @@ void player_state::init(bool w_start) {
 	waypts_used.clear();
 	unreachable.clear();
 	dest_mark.clear();
+}
+
+
+void player_state::reset_wpt_state() {
+
+	last_waypoint = -1;
+	on_waypt_path = 0;
+	last_wpt_dist = 0.0;
+	blocked_waypts.clear();
 }
 
 
