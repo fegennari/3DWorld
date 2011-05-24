@@ -435,6 +435,16 @@ void draw_water() {
 	}
 	wsd.init();
 	if (DEBUG_WATER_TIME) {PRINT_TIME("Water Init");}
+
+	for (int i = 0; i < MESH_Y_SIZE; ++i) {
+		for (int j = 0; j < MESH_X_SIZE; ++j) {
+			if (wminside[i][j] == 1 && (rand()&255) == 0 && get_water_enabled(j, i) && !is_mesh_disabled(j, i)) {
+				modify_grass_at(point(get_xval(j), get_yval(i), mesh_height[i][j]), HALF_DXY, 0, 0, 0, 0, 1);
+			}
+		}
+	}
+	if (DEBUG_WATER_TIME) {PRINT_TIME("Grass Update");}
+
 	glEnable(GL_COLOR_MATERIAL);
 	update_valleys();
 	if (DEBUG_WATER_TIME) {PRINT_TIME("Water Valleys Update");}

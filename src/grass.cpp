@@ -303,9 +303,9 @@ public:
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh) {
+	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw) {
 		if (burn && is_underwater(pos)) burn = 0;
-		if (!burn && !crush && !cut && !update_mh) return; // nothing left to do
+		if (!burn && !crush && !cut && !update_mh && !check_uw) return; // nothing left to do
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
@@ -314,7 +314,7 @@ public:
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
 				if (point_outside_mesh(x, y)) continue;
-				bool const underwater(burn && has_water(x, y) && mesh_height[y][x] <= water_matrix[y][x]);
+				bool const underwater((burn || check_uw) && has_water(x, y) && mesh_height[y][x] <= water_matrix[y][x]);
 				unsigned start, end;
 				unsigned const ix(get_start_and_end(x, y, start, end));
 				if (start == end) continue; // no grass at this location
@@ -362,6 +362,11 @@ public:
 						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
 						UNROLL_3X(updated |= (g.c[i_] > 0);)
 						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_]);)}
+					}
+					if (check_uw && underwater && (g.p.z + g.dir.mag()) <= water_matrix[y][x]) {
+						unsigned char uwc[3] = {120,  100, 50};
+						UNROLL_3X(updated |= (g.c[i_] != uwc[i_]);)
+						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(0.9*g.c[i_] + 0.1*uwc[i_]);)}
 					}
 					if (updated) {
 						min_up = min(min_up, i);
@@ -506,8 +511,8 @@ void draw_grass() {
 	if (!no_grass() && (display_mode & 0x02)) grass_manager.draw();
 }
 
-void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh) {
-	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh);
+void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw) {
+	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {
