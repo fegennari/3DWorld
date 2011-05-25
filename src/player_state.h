@@ -45,7 +45,7 @@ struct waypoint_t {
 	float g_score, h_score, f_score;
 	point pos;
 	float last_smiley_time;
-	vector<unsigned> next_wpts, prev_wpts;
+	vector<unsigned> next_wpts, prev_wpts, visible_wpts;
 
 	waypoint_t(point const &p=all_zeros, bool up=0, bool i=0, bool g=0, bool t=0);
 	void mark_visited_by_smiley(unsigned const smiley_id);

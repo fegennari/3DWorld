@@ -90,6 +90,7 @@ void waypoint_t::clear() {
 	last_smiley_time = tfticks;
 	next_wpts.clear();
 	prev_wpts.clear();
+	visible_wpts.clear();
 	visited = 0;
 }
 
@@ -302,7 +303,7 @@ public:
 	}
 
 	void connect_waypoints(unsigned from_start, unsigned from_end, unsigned to_start, unsigned to_end, bool verbose) {
-		unsigned cand_edges(0), num_edges(0), tot_steps(0);
+		unsigned visible(0), cand_edges(0), num_edges(0), tot_steps(0);
 		unsigned const num_waypoints(waypoints.size());
 		int cindex(-1);
 		vector<pair<float, unsigned> > cands;
@@ -319,7 +320,9 @@ public:
 					if (coll_objects[cindex].line_intersect(start, end)) continue; // hit last cobj
 				}
 				if (i == j || check_coll_line(start, end, cindex, -1, 1, 0)) continue;
+				waypoints[i].visible_wpts.push_back(j);
 				cands.push_back(make_pair(p2p_dist_sq(start, end), j));
+				++visible;
 			}
 			sort(cands.begin(), cands.end()); // closest to furthest
 			vector<unsigned> const &next(waypoints[i].next_wpts);
@@ -356,7 +359,7 @@ public:
 				++cand_edges;
 			}
 		}
-		if (verbose) cout << "cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
+		if (verbose) cout << "vis edges: " << visible << ", cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
 	}
 
 	bool is_point_reachable(point const &start, point const &end, unsigned &tot_steps) const {
