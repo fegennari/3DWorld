@@ -786,19 +786,19 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			float const start_cost(get_pos_cost(smiley_id, obj.pos, opos, pdu, radius, step_height));
 		
 			if (start_cost > 0.0) {
-				cout << "cost: " << start_cost << ", stepv: "; stepv.print(); cout << endl; // testing
+				//cout << "cost: " << start_cost << ", stepv: "; stepv.print(); cout << endl; // testing
 				vector<dir_cost_t> dcts;
+				dcts.push_back(dir_cost_t(start_cost, stepv, stepv));
 				unsigned const ndirs(16);
 
-				for (unsigned i = 0; i < ndirs; ++i) {
+				for (unsigned i = 1; i < ndirs; ++i) {
 					vector3d dir(stepv);
 					rotate_vector3d_norm(plus_z, TWO_PI*i/ndirs, dir);
 					float const cost(get_pos_cost(smiley_id, (opos + step_dist_scale(obj, dir)*step_dist), opos, pdu, radius, step_height)); // FIXME: zval has not been set
 					dcts.push_back(dir_cost_t(cost, dir, stepv));
 				}
-				sort(dcts.begin(), dcts.end());
-				dir_cost_t const &best(dcts.front());
-				cout << "best: cost: " << best.cost << ", dp: " << best.dp << ", dir: "; best.dir.print(); cout << endl;
+				dir_cost_t const &best(*min_element(dcts.begin(), dcts.end()));
+				//cout << "best: cost: " << best.cost << ", dp: " << best.dp << ", dir: "; best.dir.print(); cout << endl;
 
 				if (best.cost > 0.0) {
 					// FIXME: still not good, what to do?
@@ -1085,22 +1085,20 @@ void player_state::init_smiley_weapon(int smiley_id) {
 		fire_frame = 0;
 		return;
 	}
-	do {
-		weapon = 1 + (rand()%(NUM_WEAPONS-1)); // no cgrenade
+	// we get here even when game_mode==0, but that's ok
+	vector<pair<float, unsigned> > choices;
+	float const dist(target_visible ? p2p_dist(target_pos, obj_groups[coll_id[SMILEY]].get_obj(smiley_id).pos) : 0.0);
 
-		if (weapon == W_BBBAT && bbat_iter++ < 10 && (rand()%8) != 0) { // only use baseball bat when in close range
-			if (bb_range == -1) {
-				float dist(FAR_CLIP);
-				if (target_visible) dist = p2p_dist(target_pos, obj_groups[coll_id[SMILEY]].get_obj(smiley_id).pos);
-				bb_range = (dist < 6.0*object_types[SMILEY].radius);
-			}
-			if (!bb_range) weapon = W_UNARMED;
-		}
-		else if (weapon == W_SBALL && (rand()%5) != 0) {
-			weapon = W_UNARMED; // prefers not to use a bouncy ball
-		}
-	} while (weapon == W_UNARMED || no_weap_or_ammo());
-
+	for (unsigned i = 1; i < NUM_WEAPONS-1; ++i) {
+		weapon = i;
+		if (no_weap_or_ammo()) continue;
+		float weight(rand_float());
+		if (weapons[i].range > 0.0 && dist > weapons[i].range) weight += 0.8;
+		if (i == W_BBBAT) weight *= 1.5;
+		if (i == W_SBALL) weight *= 1.2;
+		choices.push_back(make_pair(weight, i));
+	}
+	weapon     = (choices.empty() ? W_UNARMED : min_element(choices.begin(), choices.end())->second);
 	//weapon     = W_GRENADE; // set to force this as weapon choice (if available)
 	fire_frame = 0;
 	if (weapon == W_PLASMA && wmode == 1 && (rand()%4) != 0) plasma_loaded = 1; // fire it up!
