@@ -711,6 +711,15 @@ struct dir_cost_t {
 };
 
 
+vector3d step_dist_scale(dwobject const &obj, vector3d dir) {
+
+	float const dp(dot_product(obj.orientation, dir));
+	if (dp >  0.5) return dir;
+	if (dp < -0.5) return dir*BACKWARD_SPEED;
+	return                dir*SIDESTEP_SPEED;
+}
+
+
 int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 
 	if (NO_SMILEY_ACTION || obj.disabled()) return 0;
@@ -770,7 +779,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 				add_rand_dir_change(stepv, 1.0); // "dodging"
 				stepv.normalize();
 			}
-			obj.pos += stepv*step_dist;
+			obj.pos += step_dist_scale(obj, stepv)*step_dist;
 
 			// check if movement was valid
 			pos_dir_up const pdu(get_smiley_pdu(obj.pos, obj.orientation));
@@ -784,7 +793,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 				for (unsigned i = 0; i < ndirs; ++i) {
 					vector3d dir(stepv);
 					rotate_vector3d_norm(plus_z, TWO_PI*i/ndirs, dir);
-					float const cost(get_pos_cost(smiley_id, (opos + dir*step_dist), opos, pdu, radius, step_height)); // FIXME: zval has not been set
+					float const cost(get_pos_cost(smiley_id, (opos + step_dist_scale(obj, dir)*step_dist), opos, pdu, radius, step_height)); // FIXME: zval has not been set
 					dcts.push_back(dir_cost_t(cost, dir, stepv));
 				}
 				sort(dcts.begin(), dcts.end());
@@ -794,7 +803,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 				if (best.cost > 0.0) {
 					// FIXME: still not good, what to do?
 				}
-				obj.pos = opos + best.dir*step_dist;
+				obj.pos = opos + step_dist_scale(obj, best.dir)*step_dist;
 			}
 		}
 		obj.velocity.assign(0.0, 0.0, -1.0);

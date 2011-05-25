@@ -452,7 +452,7 @@ void init_objects() {
 	object_types[SKULL].lifetime           = 600;
 	object_types[SKULL].density            = 1.1;
 	object_types[SKULL].elasticity         = 0.75;
-	object_types[SKULL].health             = 50.0;
+	object_types[SKULL].health             = 25.0;
 	object_types[SKULL].color              = LT_GRAY;
 	object_types[SKULL].flags              = SPECULAR | SELECTABLE | BLEND | SEMI_TRANSPARENT | NO_WATER_DAMAGE;
 	object_types[SKULL].tid                = SMILEY_SKULL_TEX;

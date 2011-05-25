@@ -928,8 +928,8 @@ void pack_collision(int index, int obj_index, vector3d const &velocity, point co
 
 void sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	pushable_collision(index, position, 20.0, type, S_BALL);
 	default_obj_coll(index, obj_index, velocity, position, energy, type, S_BALL);
+	pushable_collision(index, position, 20.0, type, S_BALL);
 }
 
 

@@ -37,8 +37,6 @@ float const MOUSE_TRAN_ADJ = 0.01;   // mouse translate adjustment
 float const MOUSE_ANG_ADJ  = PI/350; // mouse camera angle increment
 float const MA_TOLERANCE   = 0.0001; // tolerance adjustment
 float const CAMERA_AIR_CONT= 0.5;
-float const SIDESTEP_SPEED = 0.9;
-float const BACKWARD_SPEED = 0.95;
 
 
 char *defaults_file    = "defaults.txt";

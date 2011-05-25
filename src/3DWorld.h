@@ -120,6 +120,8 @@ int      const SMILEY_NCHUNKS   = 25;
 int      const NUM_CHUNK_BLOCKS = 4;
 
 float    const GROUND_SPEED     = 0.0175;
+float    const SIDESTEP_SPEED   = 0.8;
+float    const BACKWARD_SPEED   = 0.85;
 float    const C_STEP_HEIGHT    = 0.6;
 float    const NEAR_CLIP        = 0.01;
 float    const FAR_CLIP         = 100.0;
