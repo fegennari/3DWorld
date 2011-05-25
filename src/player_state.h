@@ -165,16 +165,17 @@ struct player_state { // size = big
 	float get_shield_scale() const {return ((powerup == PU_SHIELD) ? 0.5 : 1.0);}
 	
 	void smiley_fire_weapon(int smiley_id);
-	int find_nearest_enemy(point const &pos, point const &avoid_dir, int smiley_id, point &target, int &target_visible, float &min_dist) const;
+	int find_nearest_enemy(point const &pos, pos_dir_up const &pdu, point const &avoid_dir, int smiley_id,
+		point &target, int &target_visible, float &min_dist) const;
 	void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
 		vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next);
-	int find_nearest_obj(point const &pos, point const &avoid_dir, int smiley_id, point &target,
+	int find_nearest_obj(point const &pos, pos_dir_up const &pdu, point const &avoid_dir, int smiley_id, point &target,
 		float &min_dist, vector<type_wt_t> types, int last_target_visible, int last_target_type);
 	int check_smiley_status(dwobject &obj, int smiley_id);
 	void drop_pack(point const &pos);
 	int drop_weapon(vector3d const &coll_dir, vector3d const &nfront, point const &pos, int index, float energy, int type);
 	void smiley_select_target(dwobject &obj, int smiley_id);
-	float get_pos_cost(int smiley_id, point const &pos, float radius, float step_height);
+	float get_pos_cost(int smiley_id, point const &pos, point const &opos, pos_dir_up const &pdu, float radius, float step_height);
 	int smiley_motion(dwobject &obj, int smiley_id);
 	void advance(dwobject &obj, int smiley_id);
 	void shift(vector3d const &vd);
