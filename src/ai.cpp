@@ -663,8 +663,9 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 }
 
 
-float player_state::get_pos_cost(int smiley_id, point const &pos, point const &opos, pos_dir_up const &pdu, float radius, float step_height) {
-
+float player_state::get_pos_cost(int smiley_id, point const &pos, point const &opos, pos_dir_up const &pdu,
+	float radius, float step_height, bool check_dists)
+{
 	// target_type: 0=none, 1=enemy, 2=item, 3=waypoint
 	if (!is_over_mesh(pos)) return 10.0; // off the mesh - high cost
 	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
@@ -678,12 +679,21 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 		if (!on_waypt_path && temperature > W_FREEZE_POINT && is_underwater(pos)) return 6.0; // don't go under water/blood
 	}
 	vector3d const avoid_dir(get_avoid_dir(pos, smiley_id, pdu));
-	if (avoid_dir != zero_vector) return 4.0 + dot_product(avoid_dir, (pos - opos).get_norm());
+	if (avoid_dir != zero_vector) return 4.0 + 0.1*dot_product(avoid_dir, (pos - opos).get_norm());
 
-	if (target_type == 1 && weapon != W_BBBAT) { // don't get too close to enemy with ranged weapons
-		float const dist(p2p_dist(pos, target_pos)), range(weapons[weapon].range), rmin(8.0*radius);
-		float const min_dist((range == 0.0) ? rmin : min(0.25f*range, rmin));
-		if (dist < min_dist) return 2.0 + 0.01*(min_dist - dist);
+	if (target_type == 1 && target != NO_SOURCE) { // don't get too close to enemy with ranged weapons
+		assert(target >= CAMERA_ID && target < num_smileys && target != smiley_id);
+		int cindex(-1);
+		if (check_coll_line(pos, target_pos, cindex, -1, 1, 0)) return 3.5; // target not visible
+		float const dist(p2p_dist(pos, target_pos));
+		float range(weapons[weapon].range);
+		if (range == 0.0) range = FAR_CLIP;
+		if (check_dists && dist > range)                   return (3.0 + 0.01*dist); // out of weapon range
+		float enemy_range(weapons[sstates[target].weapon].range);
+		if (enemy_range == 0.0) enemy_range = FAR_CLIP;
+		if (range > 2.0*enemy_range && dist < enemy_range) return (2.5 + 0.01*(enemy_range - dist)); // too close to enemy weapon range
+		float const min_dist(min(0.25*range, 8.0*radius));
+		if (weapon != W_BBBAT && dist < min_dist)          return (2.0 + 0.01*(min_dist    - dist)); // too close to enemy
 	}
 	// enforce turn speed?
 	// don't fall to your death?
@@ -702,6 +712,7 @@ struct dir_cost_t {
 	float cost, dp;
 	vector3d dir;
 
+	dir_cost_t() : cost(0.0), dp(0.0) {}
 	dir_cost_t(float cost_, vector3d const &dir_, vector3d const &opt_dir)
 		: cost(cost_), dp(dot_product(dir_, opt_dir)), dir(dir_) {}
 
@@ -783,22 +794,21 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 
 			// check if movement was valid
 			pos_dir_up const pdu(get_smiley_pdu(obj.pos, obj.orientation));
-			float const start_cost(get_pos_cost(smiley_id, obj.pos, opos, pdu, radius, step_height));
+			float const start_cost(get_pos_cost(smiley_id, obj.pos, opos, pdu, radius, step_height, 0));
 		
 			if (start_cost > 0.0) {
 				//cout << "cost: " << start_cost << ", stepv: "; stepv.print(); cout << endl; // testing
-				vector<dir_cost_t> dcts;
-				dcts.push_back(dir_cost_t(start_cost, stepv, stepv));
 				unsigned const ndirs(16);
+				vector<dir_cost_t> dcts(ndirs);
 
-				for (unsigned i = 1; i < ndirs; ++i) {
+				for (unsigned i = 0; i < ndirs; ++i) {
 					vector3d dir(stepv);
 					rotate_vector3d_norm(plus_z, TWO_PI*i/ndirs, dir);
-					float const cost(get_pos_cost(smiley_id, (opos + step_dist_scale(obj, dir)*step_dist), opos, pdu, radius, step_height)); // FIXME: zval has not been set
-					dcts.push_back(dir_cost_t(cost, dir, stepv));
+					float const cost(get_pos_cost(smiley_id, (opos + step_dist_scale(obj, dir)*step_dist), opos, pdu, radius, step_height, 1)); // FIXME: zval has not been set
+					dcts[i] = dir_cost_t(cost, dir, stepv);
 				}
 				dir_cost_t const &best(*min_element(dcts.begin(), dcts.end()));
-				//cout << "best: cost: " << best.cost << ", dp: " << best.dp << ", dir: "; best.dir.print(); cout << endl;
+				//if (best.dp < 1.0) cout << "best: cost: " << best.cost << ", dp: " << best.dp << ", dir: "; best.dir.print(); cout << endl;
 
 				if (best.cost > 0.0) {
 					// FIXME: still not good, what to do?
