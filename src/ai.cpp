@@ -155,13 +155,14 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	if (smiley.disabled()) return;
 	if (target_visible != 1 && (weapon != W_LANDMINE || (rand()&3) != 0)) return;
 	int const last_weapon(weapon);
+	weapon_t const &w(weapons[weapon]);
 	
 	if (weapon == W_UNARMED || (!UNLIMITED_WEAPONS && no_weap_or_ammo())) {
 		init_smiley_weapon(smiley_id); // out of ammo, switch weapons
 		if (weapon != last_weapon) fire_frame = 0;
 	}
-	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && weapons[weapon].self_damage) { // can damage self
-		if (dist_less_than(target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
+	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && w.self_damage) { // can damage self
+		if (dist_less_than(target_pos, smiley.pos, (w.blast_radius + object_types[SMILEY].radius))) { // will damage self
 			init_smiley_weapon(smiley_id); // switch weapons to avoid suicide
 			if (weapon != last_weapon) fire_frame = 0;
 		}
@@ -171,12 +172,15 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	point pos(smiley.pos);
 	if (temperature <= W_FREEZE_POINT && is_underwater(pos)) return; // under ice
 	float const radius(object_types[SMILEY].radius);
-	pos.z      += 0.1*radius; // shoot slightly higher than center
+
+	// aim up to account for gravity
+	float const aim_up_val(CLIP_TO_01(0.1f + ((w.obj_id == UNDEF) ? 0.0f : object_types[w.obj_id].gravity)));
+	pos.z      += aim_up_val*radius; // shoot slightly higher than center
 	vector3d orient(target_pos, pos);
 	target_dist = orient.mag();
 
 	if (LEAD_SHOTS && target_visible == 1 && smiley_acc > 0.0) { // should use smiley_acc, target_dist is not quite right
-		float const vweap(weapons[weapon].v_add + ball_velocity*weapons[weapon].v_mult);
+		float const vweap(w.v_add + ball_velocity*w.v_mult);
 
 		if (vweap > TOLERANCE) { // not an instant hit weapon
 			assert(target >= CAMERA_ID && target < num_smileys);
@@ -196,11 +200,12 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	
 	if (weapon != W_LANDMINE && weapon != W_BBBAT && target_dist > 2.0*radius) {
 		// make sure it has a clear shot (excluding invisible smileys)
-		if (!proj_coll_test(pos, target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return;
+		if (!proj_coll_test(pos, target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return; // Note: inexact, fails to account for gravity
 
+		// check if we need to fire above or to the side to avoid a projectile collision with an obstacle
 		if (weapon == W_ROCKET || weapon == W_SEEK_D || weapon == W_PLASMA) { // large projectile
-			assert(weapons[weapon].obj_id != UNDEF);
-			float const proj_radius(object_types[weapons[weapon].obj_id].radius);
+			assert(w.obj_id != UNDEF);
+			float const proj_radius(object_types[w.obj_id].radius);
 			point const pos2(pos + point(0.0, 0.0, -proj_radius)); // proj_radius up (+z)
 
 			if (!proj_coll_test(pos2, target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) {
@@ -222,7 +227,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	int chosen;
 	status = fire_projectile(pos, orient, smiley_id, chosen);
 
-	if (status != 0 && !UNLIMITED_WEAPONS && !no_weap_or_ammo() && weapons[weapon].need_ammo) {
+	if (status != 0 && !UNLIMITED_WEAPONS && !no_weap_or_ammo() && w.need_ammo) {
 		ammo -= (weapon == W_GRENADE && (wmode&1)) ? 3 : 1; // check for cluster grenade
 		assert(ammo >= 0);
 		if (ammo == 0) fire_frame = 0; // could switch weapons
