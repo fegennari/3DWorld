@@ -156,14 +156,13 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	if (smiley.disabled()) return;
 	if (target_visible != 1 && (weapon != W_LANDMINE || (rand()&3) != 0)) return;
 	int const last_weapon(weapon);
-	weapon_t const &w(weapons[weapon]);
 	
 	if (weapon == W_UNARMED || (!UNLIMITED_WEAPONS && no_weap_or_ammo())) {
 		init_smiley_weapon(smiley_id); // out of ammo, switch weapons
 		if (weapon != last_weapon) fire_frame = 0;
 	}
-	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && w.self_damage) { // can damage self
-		if (dist_less_than(target_pos, smiley.pos, (w.blast_radius + object_types[SMILEY].radius))) { // will damage self
+	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && weapons[weapon].self_damage) { // can damage self
+		if (dist_less_than(target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
 			init_smiley_weapon(smiley_id); // switch weapons to avoid suicide
 			if (weapon != last_weapon) fire_frame = 0;
 		}
@@ -173,6 +172,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	point pos(smiley.pos);
 	if (temperature <= W_FREEZE_POINT && is_underwater(pos)) return; // under ice
 	float const radius(object_types[SMILEY].radius);
+	weapon_t const &w(weapons[weapon]);
 
 	// aim up to account for gravity
 	float const aim_up_val(CLIP_TO_01(0.1f + ((w.obj_id == UNDEF) ? 0.0f : object_types[w.obj_id].gravity)));
