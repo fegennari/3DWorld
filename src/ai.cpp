@@ -95,6 +95,7 @@ void unreachable_pts::shift_by(vector3d const &vd) {
 bool destination_marker::add_candidate(int x1, int y1, int x2, int y2, float depth, float radius) {
 
 	if ((x1 == x2 && y1 == y2) || point_outside_mesh(x2, y2)) return 0;
+	depth = max(0.0f, depth); // can't have negative depth
 	
 	if (depth > radius) { // still underwater
 		if ((valid && depth >= min_depth) || dmin_sq > 0) return 0; // deeper or already found land
@@ -115,7 +116,7 @@ bool destination_marker::add_candidate(int x1, int y1, int x2, int y2, float dep
 point destination_marker::get_pos() const {
 
 	assert(!point_outside_mesh(xpos, ypos));
-	return point(get_xval(xpos), get_yval(ypos), mesh_height[ypos][xpos]);
+	return point(get_xval(xpos), get_yval(ypos), (mesh_height[ypos][xpos] + object_types[SMILEY].radius));
 }
 
 
@@ -756,11 +757,16 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	// check for stuck underwater
 	if (is_water_temp && underwater && !on_waypt_path) { // ok if on a waypoint path
 		dest_mark.update_dmin(xpos, ypos);
+		int xt(dest_mark.xpos), yt(dest_mark.ypos); // start with the last dest_mark used, if any (to remember a valid dry spot)
 
 		// find a valid dest mark
 		for (unsigned i = 0; i < SMILEY_MAX_TRIES; ++i) { // find some randomly chosen dry spots to head for
 			if (dest_mark.valid && dest_mark.min_depth == 0.0) break;
-			int const xt(1 + (rand() % (MESH_X_SIZE-2))), yt(1 + (rand() % (MESH_Y_SIZE-2))); // rand() is only 16 bits here?
+
+			if (i > 0 || !point_interior_to_mesh(xt, yt)) { // need to calculate a new one
+				xt = 1 + (rand() % (MESH_X_SIZE-2));
+				yt = 1 + (rand() % (MESH_Y_SIZE-2));
+			}
 			float const depth(has_water(xt, yt) ? (water_matrix[yt][xt] - mesh_height[yt][xt]) : 0.0);
 			dest_mark.add_candidate(xpos, ypos, xt, yt, depth, radius);
 		}
