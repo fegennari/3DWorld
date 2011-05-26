@@ -680,12 +680,16 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return 10.0; // off the mesh - high cost
 
-	if (powerup != PU_FLIGHT) {
-		if (!is_mesh_disabled(xpos, ypos)) {
-			float const dz(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) - (pos.z - radius));
-			if (dz > step_height) return 8.0; // too high to step
+	if (powerup != PU_FLIGHT && !is_mesh_disabled(xpos, ypos)) {
+		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1)), dz(zval - (pos.z - radius));
+		if (dz > step_height) return 8.0; // too high to step
+
+		if (!on_waypt_path && temperature > W_FREEZE_POINT) {
+			point correct_z_pos(pos);
+			if (fabs(pos.z - zval) < step_height) correct_z_pos.z = zval;
+			float depth(0.0);
+			if (is_underwater(correct_z_pos, 0, &depth)) return 6.0 + 0.01*depth; // don't go under water/blood
 		}
-		if (!on_waypt_path && temperature > W_FREEZE_POINT && is_underwater(pos)) return 6.0; // don't go under water/blood
 	}
 	vector3d const avoid_dir(get_avoid_dir(pos, smiley_id, pdu));
 	if (avoid_dir != zero_vector) return 4.0 + 0.1*dot_product(avoid_dir, (pos - opos).get_norm());
@@ -824,7 +828,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 					dcts[i] = dir_cost_t(cost, dir, stepv);
 				}
 				dir_cost_t const &best(*min_element(dcts.begin(), dcts.end()));
-				//if (best.dp < 1.0) cout << "best: cost: " << best.cost << ", dp: " << best.dp << ", dir: "; best.dir.print(); cout << endl;
+				//if (best.dp < 1.0) {cout << "best: cost: " << best.cost << ", dp: " << best.dp << ", dir: "; best.dir.print(); cout << endl;}
 
 				if (best.cost > 0.0) {
 					// FIXME: still not good, what to do?
