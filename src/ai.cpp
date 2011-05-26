@@ -700,8 +700,10 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 		float const min_dist(min(0.25*range, 8.0*radius));
 		if (weapon != W_BBBAT && dist < min_dist)          return (2.0 + 0.01*(min_dist    - dist)); // too close to enemy
 	}
+	if (powerup != PU_FLIGHT) { // Note: can still take fall damage with shielding
+		// don't fall to your death?
+	}
 	// enforce turn speed?
-	// don't fall to your death?
 	return 0.0; // good
 }
 

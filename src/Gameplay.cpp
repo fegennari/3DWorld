@@ -162,7 +162,7 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 		energy *= obj_groups[coll_id[type]].get_obj(obj_index).vdeform.x;
 	}
 	if (sstates[target].powerup == PU_SHIELD) {
-		if (source == target && (type != LANDMINE && type != FELL && type != DROWNED)) return 0;
+		if (source == target && (type != LANDMINE && type != FELL && type != DROWNED && type != CRUSHED)) return 0;
 		energy *= sstates[target].get_shield_scale();
 	}
 	if (type != FELL && type != DROWNED) energy *= sstates[source].get_damage_scale();
