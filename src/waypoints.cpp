@@ -98,9 +98,9 @@ void waypoint_t::clear() {
 wpt_goal::wpt_goal(int m, unsigned w, point const &p) : mode(m), wpt(w), pos(p) {
 
 	switch (mode) {
-	case 0: case 1: case 2: case 3: case 5: break; // nothing
+	case 0: case 1: case 2: case 3: case 5: case 6: break; // nothing
 	case 4: assert(wpt < waypoints.size()); break;
-	case 6: assert(is_over_mesh(pos));      break;
+	case 7: assert(is_over_mesh(pos));      break;
 	default: assert(0);
 	}
 }
@@ -387,15 +387,15 @@ public:
 		return 1; // success
 	}
 
-	int find_closest_waypoint(point const &pos) const {
-		int closest(-1);
+	int find_closest_waypoint(point const &pos, bool visible) const {
+		int closest(-1), cindex(-1);
 		float closest_dsq(0.0);
 
 		// inefficient to iterate, might need acceleration structure
 		for (unsigned i = 0; i < waypoints.size(); ++i) {
 			float const dist_sq(p2p_dist_sq(pos, waypoints[i].pos));
 
-			if (closest < 0 || dist_sq < closest_dsq) {
+			if ((closest < 0 || dist_sq < closest_dsq) && !check_coll_line(pos, waypoints[i].pos, cindex, -1, 1, 0)) {
 				closest_dsq = dist_sq;
 				closest     = i;
 			}
@@ -438,9 +438,10 @@ public:
 		assert(path.empty());
 		bool const orig_has_wpt_goal(has_wpt_goal);
 		if (goal.mode == 4) goal.pos = waypoints[goal.wpt].pos; // specific waypoint
-		if (goal.mode == 5) goal.wpt = wb.find_closest_waypoint(goal.pos);
-		if (goal.mode == 6) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1, 1); // goal position - add temp waypoint
-		if (goal.mode == 6) has_wpt_goal = 1;
+		if (goal.mode == 5) goal.wpt = wb.find_closest_waypoint(goal.pos, 0);
+		if (goal.mode == 6) goal.wpt = wb.find_closest_waypoint(goal.pos, 1);
+		if (goal.mode == 7) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1, 1); // goal position - add temp waypoint
+		if (goal.mode == 7) has_wpt_goal = 1;
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: "; goal.pos.print(); cout << ", wpt: " << goal.wpt << endl;
 
 		set<unsigned> open;   // The set of nodes already evaluated.
@@ -498,7 +499,7 @@ public:
 				}
 			} // for i
 		}
-		if (goal.mode == 6) {
+		if (goal.mode == 7) {
 			wb.remove_last_waypoint(); // goal position - remove temp waypoint
 			has_wpt_goal = orig_has_wpt_goal;
 		}

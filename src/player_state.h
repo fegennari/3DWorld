@@ -56,7 +56,7 @@ struct waypoint_t {
 
 struct wpt_goal {
 
-	int mode; // 0: none, 1: user waypoint, 2: placed item waypoint, 3: goal waypoint, 4: wpt waypoint, 5: closest waypoint, 6: goal pos (new waypoint)
+	int mode; // 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt wpt, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
 	unsigned wpt;
 	point pos;
 

@@ -16,7 +16,7 @@ bool const SMILEY_BUTT            = 1;
 int const WAYPT_VIS_LEVEL[2]      = {1, 2}; // {unconnected, connected}: 0: visible in frustum, 1 = visible from the position, 2 = always visible
 unsigned const SMILEY_COLL_STEPS  = 10;
 unsigned const PMAP_SIZE          = (2*N_SPHERE_DIV)/3;
-float const UNREACHABLE_TIME      = 0.5; // half a second
+float const UNREACHABLE_TIME      = 0.75; // in seconds
 
 
 float smiley_speed(1.0), smiley_acc(0);
@@ -299,7 +299,7 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	assert(i < waypoints.size());
 	point const &wp(waypoints[i].pos);
 	bool const can_see(next || (on_waypt_path && i == curw));
-	if (!is_over_mesh(wp) || is_underwater(wp) || !waypts_used.is_valid(i))    return;
+	if (!is_over_mesh(wp) || is_underwater(wp))                                return;
 	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
 	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this directio
 	unsigned other_smiley_targets(0);
@@ -308,10 +308,11 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 		if (s != smiley_id && sstates[s].last_waypoint == i) ++other_smiley_targets;
 	}
 	dmult *= (1.0 + 1.0*other_smiley_targets); // increase distance cost if other smileys are going for the same waypoint
-	if (waypoints[i].next_wpts.empty()) dmult *= 10.0; // increase the cost of waypoints disconnected from the rest of the waypoint graph
-	if (i == curw) dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
 	map<unsigned, count_t>::const_iterator it(blocked_waypts.find(i));
-	if (it != blocked_waypts.end()) dmult *= (1.0 + (1 << it->second.c)); // exponential increase in cost for blocked waypoints
+	if (it != blocked_waypts.end())     dmult *= (1.0 + (1 << it->second.c)); // exponential increase in cost for blocked waypoints
+	if (!waypts_used.is_valid(i))       dmult *= 100.0;
+	if (waypoints[i].next_wpts.empty()) dmult *= 10.0; // increase the cost of waypoints disconnected from the rest of the waypoint graph
+	if (i == curw)                      dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
 	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp))*rand_uniform(0.8, 1.2));
 	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, can_see)); // add high weight to prefer other objects
@@ -337,15 +338,16 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		if (type == WAYPOINT) { // process waypoints
 			int curw(last_waypoint);
 			int ignore_w(-1);
-			// mode: 0: none, 1: user waypoint, 2: placed item waypoint, 3: goal waypoint, 4: wpt waypoint, 5: closest waypoint, 6: goal pos (new waypoint)
-			wpt_goal goal((has_wpt_goal ? 3 : 2), 0, all_zeros);
-			//wpt_goal goal(6, 0, point(-1.77535, 1.99193, 2.15036)); // mode, wpt, goal_pos
-			//wpt_goal goal(5, 0, get_camera_pos()-point(0.0, 0.0, camera_zh));
+			// mode: 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt wpt, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
+			wpt_goal goal((has_wpt_goal ? 3 : 2), 0, all_zeros); // mode, wpt, goal_pos
+			//wpt_goal goal(6, 0, get_camera_pos()-point(0.0, 0.0, camera_zh)); // closest wpt visible to camera
 
 			if (last_target_visible && last_target_type != 3 && goal.mode <= 2) { // have a previous enemy/item target and no real goal
-				goal.mode = 5; // closest waypoint
+				goal.mode = 6; // closest visible waypoint
 				goal.pos  = target_pos; // should still be valid
 			}
+			// WRITE: add waypoint to a team member engaging an enemy
+
 			if (curw >= 0) { // currently targeting a waypoint
 				assert((unsigned)curw < waypoints.size());
 
@@ -363,6 +365,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 						for (unsigned i = 0; i < next.size(); ++i) {
 							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu, 1);
 						}
+						//cout << "size: " << oddatav.size() << endl;
 						continue;
 					}
 					ignore_w = curw; // don't pick this goal again
