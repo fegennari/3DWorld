@@ -531,7 +531,7 @@ void process_groups() {
 			}
 		} // for jj
 		objg.flags |= WAS_ADVANCED;
-		if (SHOW_PROC_TIME) {cout << "type = " << type << ", num = " << num_objs << " "; PRINT_TIME("Process");}
+		if (SHOW_PROC_TIME /*|| type == SMILEY*/) {cout << "type = " << type << ", num = " << num_objs << " "; PRINT_TIME("Process");}
 	} // for i
 	temp_change = 0;
 	recreated   = 0;

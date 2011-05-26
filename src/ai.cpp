@@ -65,7 +65,7 @@ bool unreachable_pts::proc_target(point const &pos, point const &target, point c
 			try_counts += max(1, iticks);
 
 			if (try_counts > int(UNREACHABLE_TIME*TICKS_PER_SECOND)) { // timeout - can't get object
-				if (!can_reach) cant_get.push_back(target); // give up, can't reach it
+				if (!can_reach) add(target); // give up, can't reach it
 				return 0;
 			}
 		}
@@ -339,7 +339,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		if (type == WAYPOINT) { // process waypoints
 			int curw(last_waypoint);
 			int ignore_w(-1);
-			// mode: 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt wpt, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
+			// mode: 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt index, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
 			wpt_goal goal((has_wpt_goal ? 3 : 2), 0, all_zeros); // mode, wpt, goal_pos
 			//wpt_goal goal(6, 0, get_camera_pos()-point(0.0, 0.0, camera_zh)); // closest wpt visible to camera
 
@@ -347,8 +347,12 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 				goal.mode = 6; // closest visible waypoint
 				goal.pos  = target_pos; // should still be valid
 			}
-			// WRITE: add waypoint to a team member engaging an enemy
-
+			if (goal.mode <= 2) {
+				for (int i = CAMERA_ID; i < num_smileys; ++i) {
+					if (i == smiley_id || !same_team(i, smiley_id)) continue;
+					// WRITE: add waypoint to a team member engaging an enemy
+				}
+			}
 			if (curw >= 0) { // currently targeting a waypoint
 				assert((unsigned)curw < waypoints.size());
 
@@ -369,7 +373,10 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 						//cout << "size: " << oddatav.size() << endl;
 						continue;
 					}
-					ignore_w = curw; // don't pick this goal again
+					// disconntected waypoint - should rarely get here
+					// don't pick this goal again, for a long time, otherwise we will get stuck here until another objective appears
+					unreachable.add(waypoints[curw].pos);
+					ignore_w = curw;
 					curw     = -1;
 				}
 			}
@@ -445,10 +452,12 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		if (can_reach || not_too_high2 || (type == WAYPOINT && on_waypt_path)) { // not_too_high2 - may be incorrect
 			int const max_vis_level((type == WAYPOINT) ? 3 : ((type == BALL) ? 5 : 4));
 
-			if (skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) {
+			if ((skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) &&
+				(powerup == PU_FLIGHT || is_valid_path(pos, pos2)))
+			{
+				// select this object as our target and return
 				if (type == WAYPOINT) {
 					if (id != last_waypoint) on_waypt_path = (oddatav[i].val != 0);
-					//cout << "waypoint change from " << last_waypoint << " to " << id << endl;
 					last_waypoint = id;
 					last_wpt_dist = p2p_dist_xy(pos, pos2);
 				}
@@ -688,16 +697,17 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 			point correct_z_pos(pos);
 			if (fabs(pos.z - zval) < step_height) correct_z_pos.z = zval;
 			float depth(0.0);
-			if (is_underwater(correct_z_pos, 0, &depth)) return 6.0 + 0.01*depth; // don't go under water/blood
+			if (is_underwater(correct_z_pos, 0, &depth))        return 6.0 + 0.01*depth; // don't go under water/blood
 		}
 	}
 	vector3d const avoid_dir(get_avoid_dir(pos, smiley_id, pdu));
-	if (avoid_dir != zero_vector) return 4.0 + 0.1*dot_product(avoid_dir, (pos - opos).get_norm());
+	if (avoid_dir != zero_vector)                               return 5.0 + 0.1*dot_product(avoid_dir, (pos - opos).get_norm());
+	if (powerup != PU_FLIGHT && !can_make_progress(pos, opos))  return 4.0; // can't make progress in this direction
 
 	if (target_type == 1 && target != NO_SOURCE) { // don't get too close to enemy with ranged weapons
 		assert(target >= CAMERA_ID && target < num_smileys && target != smiley_id);
 		int cindex(-1);
-		if (check_coll_line(pos, target_pos, cindex, -1, 1, 0)) return 3.5; // target not visible
+		if (check_coll_line(pos, target_pos, cindex, -1, 1, 0)) return 3.5; // target not visible / no line of sight
 		float const dist(p2p_dist(pos, target_pos));
 		float range(weapons[weapon].range);
 		if (range == 0.0) range = FAR_CLIP;

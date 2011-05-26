@@ -56,7 +56,7 @@ struct waypoint_t {
 
 struct wpt_goal {
 
-	int mode; // 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt wpt, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
+	int mode; // 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt index, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
 	unsigned wpt;
 	point pos;
 
@@ -98,6 +98,7 @@ public:
 	}
 	bool cant_reach(point const &pos) const;
 	bool proc_target(point const &pos, point const &target, point const &last_target, bool can_reach);
+	void add(point const &pos) {cant_get.push_back(pos);}
 	void shift_by(vector3d const &vd);
 };
 
@@ -197,6 +198,8 @@ struct player_state { // size = big
 // function prototypes
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal);
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal);
+bool can_make_progress(point const &pos, point const &opos);
+bool is_valid_path(point const &start, point const &end);
 
 
 #endif // _PLAYER_STATE_H_

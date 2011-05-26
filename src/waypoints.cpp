@@ -123,15 +123,6 @@ class waypoint_builder {
 
 	float radius;
 
-	bool check_cobj_placement(point &pos, int coll_id) const {
-		dwobject obj(def_objects[WAYPOINT]); // create a fake temporary smiley object
-		obj.pos     = pos;
-		obj.coll_id = coll_id; // ignore collisions with the current object
-		bool const ret(!obj.check_vert_collision(0, 0, 0, NULL, all_zeros, 1)); // return true if no collision (skip dynamic objects)
-		pos = obj.pos;
-		return ret;
-	}
-
 	bool is_waypoint_valid(point pos, int coll_id) const {
 		if (pos.z < zmin || !is_over_mesh(pos)) return 0;
 		player_clip_to_scene(pos); // make sure players can reach this waypoint
@@ -360,6 +351,16 @@ public:
 			}
 		}
 		if (verbose) cout << "vis edges: " << visible << ", cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
+	}
+
+
+	bool check_cobj_placement(point &pos, int coll_id) const {
+		dwobject obj(def_objects[WAYPOINT]); // create a fake temporary smiley object
+		obj.pos     = pos;
+		obj.coll_id = coll_id; // ignore collisions with the current object
+		bool const ret(!obj.check_vert_collision(0, 0, 0, NULL, all_zeros, 1)); // return true if no collision (skip dynamic objects)
+		pos = obj.pos;
+		return ret;
 	}
 
 	bool is_point_reachable(point const &start, point const &end, unsigned &tot_steps) const {
@@ -594,6 +595,25 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 	for (unsigned i = 0; i < oddatav.size(); ++i) {
 		oddatav[i].dist = ((oddatav[i].id == best) ? 1.0 : 1000.0); // large/small distance
 	}
+}
+
+
+// return true if coll_detect(pos) is closer to pos than opos
+bool can_make_progress(point const &pos, point const &opos) {
+
+	waypoint_builder wb;
+	point test_pos(pos);
+	wb.check_cobj_placement(test_pos, -1);
+	return (p2p_dist_xy_sq(test_pos, pos) < p2p_dist_xy_sq(test_pos, opos)); // ignore z
+}
+
+
+// return true if the path from start to end is traversable by a smiley/player
+bool is_valid_path(point const &start, point const &end) {
+
+	waypoint_builder wb;
+	unsigned tot_steps(0); // unused
+	return wb.is_point_reachable(start, end, tot_steps);
 }
 
 
