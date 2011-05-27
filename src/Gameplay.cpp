@@ -862,7 +862,7 @@ bool pushable_collision(int index, point const &position, float force, int type,
 		dwobject &obj(obj_groups[coll_id[obj_type]].get_obj(index));
 
 		if (obj.status != 1 && obj.status != 2) {
-			elastic_collision(obj, position, 20.0, type); // add some extra energy so that we can push the skull
+			elastic_collision(obj, position, force, type); // add some extra energy so that we can push the skull
 			return 1;
 		}
 	}
