@@ -39,7 +39,7 @@ obj_type object_types[NUM_TOT_OBJS];
 
 extern int num_groups, display_mode, frame_counter, game_mode, island, coll_border, camera_coll_id, ocean_set;
 extern int s_ball_id, world_mode, w_acc, is_snow, iticks, auto_time_adv, DISABLE_WATER, enable_fsource;
-extern float max_water_height, zmin, zmax, ztop, zbottom, ball_velocity, zmax_est, base_gravity, tstep, fticks;
+extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks;
 extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, grass_length;
 extern point ocean;
 extern vector3d up_norm, orig_cdir;

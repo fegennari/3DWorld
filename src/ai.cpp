@@ -27,7 +27,7 @@ extern bool has_wpt_goal;
 extern int island, iticks, num_smileys, free_for_all, teams, frame_counter;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS;
-extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, ball_velocity, TIMESTEP, self_damage;
+extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage;
 extern double camera_zh;
 extern point ocean, orig_camera, orig_cdir;
 extern int coll_id[];
@@ -181,7 +181,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	target_dist = orient.mag();
 
 	if (LEAD_SHOTS && target_visible == 1 && smiley_acc > 0.0) { // should use smiley_acc, target_dist is not quite right
-		float const vweap(w.v_add + ball_velocity*w.v_mult);
+		float const vweap(w.get_fire_vel());
 
 		if (vweap > TOLERANCE) { // not an instant hit weapon
 			assert(target >= CAMERA_ID && target < num_smileys);
@@ -719,13 +719,12 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 		int cindex(-1);
 		if (check_coll_line(pos, target_pos, cindex, -1, 1, 0)) return 3.5; // target not visible / no line of sight
 		float const dist(p2p_dist(pos, target_pos));
-		float range(weapons[weapon].range);
-		if (range == 0.0) range = FAR_CLIP;
+		float const range(weapon_range(1));
 		if (check_dists && dist > range) return (3.0 + 0.01*dist); // out of weapon range
+		// FIXME: use target_in_range()?
 
 		if (is_targeting_smiley(target, smiley_id, pos)) { // enemy (or camera) is targeting me
-			float enemy_range(weapons[sstates[target].weapon].range);
-			if (enemy_range == 0.0) enemy_range = FAR_CLIP;
+			float const enemy_range(sstates[target].weapon_range(1)); // use sstates[target].target_in_range?
 			if (range > 2.0*enemy_range && dist < enemy_range) return (2.5 + 0.01*(enemy_range - dist)); // too close to enemy weapon range
 		}
 		float const min_dist(min(0.25*range, 8.0*radius));
@@ -1140,21 +1139,41 @@ void player_state::init_smiley_weapon(int smiley_id) {
 	}
 	// we get here even when game_mode==0, but that's ok
 	vector<pair<float, unsigned> > choices;
-	float const dist(target_visible ? p2p_dist(target_pos, obj_groups[coll_id[SMILEY]].get_obj(smiley_id).pos) : 0.0);
+	point const &pos(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).pos);
 
 	for (unsigned i = 1; i < NUM_WEAPONS-1; ++i) {
 		weapon = i;
 		if (no_weap_or_ammo()) continue;
 		float weight(rand_float());
-		if (weapons[i].range > 0.0) weight += (dist > weapons[i].range) ? 0.8 : -0.2; // ranged weapon
+		float const range(weapon_range(0));
+		if (range > 0.0)  weight += (target_in_range(pos) ? -0.2 : 0.8); // ranged weapon
 		if (i == W_BBBAT) weight *= 1.5;
 		if (i == W_SBALL) weight *= 1.2;
 		choices.push_back(make_pair(weight, i));
 	}
+	fire_frame = 0;
 	weapon     = (choices.empty() ? W_UNARMED : min_element(choices.begin(), choices.end())->second);
 	//weapon     = W_GRENADE; // set to force this as weapon choice (if available)
-	fire_frame = 0;
 	if (weapon == W_PLASMA && wmode == 1 && (rand()%4) != 0) plasma_loaded = 1; // fire it up!
+}
+
+
+bool player_state::target_in_range(point const &pos) const {
+
+	if (!target_visible || target_type != 1 || target == NO_SOURCE) return 0;
+	float range(weapon_range(0));
+	
+	if (weapons[weapon].obj_id != LANDMINE && weapons[weapon].obj_id != UNDEF) {
+		assert(target >= CAMERA_ID && target < num_smileys);
+		vector3d const enemy_vel(sstates[target].velocity);
+		vector3d const enemy_dir((target_pos - pos).get_norm());
+		float const wvel(weapons[weapon].get_fire_vel()); // what about wmode==1?
+		float const rel_enemy_vel(dot_product(enemy_vel, enemy_dir));
+		assert(wvel > 0.0);
+		if (rel_enemy_vel > wvel) return 0; // enemy is moving away faster than our projectile
+		if (range > 0.0) range *= (wvel - rel_enemy_vel)/wvel; // adjust range based on enemy velocity
+	}
+	return (range == 0.0 || dist_less_than(target_pos, pos, range));
 }
 
 
@@ -1163,13 +1182,9 @@ void player_state::smiley_action(int smiley_id) {
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
 	float depth(0.0);
 	dwobject &smiley(obj_groups[coll_id[SMILEY]].get_obj(smiley_id));
-
-	if (target_visible && target_type == 1 && (rand()%10) != 0) {
-		float const range(weapons[weapon].range);
-		if (range == 0.0 || dist_less_than(target_pos, smiley.pos, range)) smiley_fire_weapon(smiley_id);
-	}
-	if (powerup == PU_REGEN) smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);
-	if (rand()%500 == 0) init_smiley_weapon(smiley_id); // change weapons
+	if (target_in_range(smiley.pos)) smiley_fire_weapon(smiley_id);
+	if (powerup == PU_REGEN)         smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);
+	if ((rand()%500) == 0)           init_smiley_weapon(smiley_id); // change weapons
 	if (was_hit > 0) --was_hit;
 	++kill_time;
 	check_underwater(smiley_id, depth);
@@ -1366,6 +1381,14 @@ bool player_state::no_ammo() const {
 	assert(weapon < NUM_WEAPONS);
 	assert(p_ammo[weapon] >= 0);
 	return (!UNLIMITED_WEAPONS && weapons[weapon].need_ammo && p_ammo[weapon] == 0);
+}
+
+
+float player_state::weapon_range(bool use_far_clip) const {
+
+	assert(weapon >= 0 && weapon <= NUM_WEAPONS);
+	float const range(weapons[weapon].range[wmode&1]);
+	return ((use_far_clip && range == 0.0) ? FAR_CLIP : range);
 }
 
 

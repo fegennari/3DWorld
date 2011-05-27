@@ -58,13 +58,17 @@ struct weapon_t { // size = 64
 
 	bool self_damage, need_weapon, need_ammo;
 	unsigned def_ammo, max_ammo, obj_id, fire_delay, nshots, nfragments;
-	float v_mult, v_add, blast_damage, blast_radius, firing_error, range;
+	float v_mult, v_add, blast_damage, blast_radius, firing_error, range[2];
 	string name;
 
 	weapon_t(bool sd, bool nw, bool na, unsigned da, unsigned ma, unsigned oi, unsigned fd, unsigned ns, unsigned nf,
-		float vm, float va, float bd, float br, float fe, float ra, string const &name_)
+		float vm, float va, float bd, float br, float fe, float ra1, float ra2, string const &name_)
 		: self_damage(sd), need_weapon(nw), need_ammo(na), def_ammo(da), max_ammo(ma), obj_id(oi), fire_delay(fd), nshots(ns),
-		nfragments(nf), v_mult(vm), v_add(va), blast_damage(bd), blast_radius(br), firing_error(fe), range(ra), name(name_) {}
+		nfragments(nf), v_mult(vm), v_add(va), blast_damage(bd), blast_radius(br), firing_error(fe), name(name_)
+	{
+		range[0] = ra1; range[1] = ra2;
+	}
+	float get_fire_vel() const;
 };
 
 
@@ -91,25 +95,25 @@ float const CBLADE_EXT_PT = 0.04;
 float const CBLADE_EXT(0.5*CBLADE_EXT_PT*CBFD);
 
 
-// self_damage need_weapon need_ammo def_ammo max_ammo obj_id fire_delay nshots nfragments v_mult v_add blast_damage blast_radius firing_error range name
+// self_damage need_weapon need_ammo def_ammo max_ammo obj_id fire_delay nshots nfragments v_mult v_add blast_damage blast_radius firing_error range1 range2 name
 weapon_t const weapons[NUM_WEAPONS+1] = {
-	weapon_t(0, 0, 0, 0,   0,   UNDEF,    0,   0,  0,   0.0,  0.0, 0.0,    0.0,  0.0,   0.0,  "Unarmed"         ),
-	weapon_t(0, 0, 0, 0,   0,   UNDEF,    23,  1,  1,   0.0,  0.0, 500.0,  0.25, 0.0,   0.25, "Baseball Bat"    ),
-	weapon_t(0, 0, 1, 1,   3,   BALL,     25,  1,  1,   1.5,  3.0, 0.0,    0.0,  0.05,  3.0,  "Dodgeball"       ),
-	weapon_t(0, 0, 1, 30,  500, S_BALL,   18,  1,  1,   1.3,  3.3, 0.0,    0.0,  0.0,   1.5,  "Bouncy Ball"     ),
-	weapon_t(1, 1, 1, 10,  100, ROCKET,   32,  1,  1,   0.7,  3.1, 1000.0, 0.42, 0.003, 0.0,  "Rocket Launcher" ),
-	weapon_t(1, 0, 1, 5,   50,  LANDMINE, 30,  1,  1,   0.0,  2.0, 4000.0, 0.39, 0.0,   4.0,  "Proximity Mine"  ),
-	weapon_t(1, 1, 1, 5,   50,  SEEK_D,   60,  1,  1,   0.5,  2.5, 2300.0, 0.50, 0.0,   0.0,  "Seek and Destroy"),
-	weapon_t(0, 0, 1, 25,  500, STAR5,    10,  1,  1,   1.1,  3.0, 0.0,    0.0,  0.015, 2.0,  "Throwing Star"   ),
-	weapon_t(0, 1, 1, 100, 600, UNDEF,    2,   1,  1,   0.0,  0.0, 70.0,   0.0,  0.02,  0.0,  "M16"             ),
-	weapon_t(0, 1, 1, 12,  100, UNDEF,    27,  24, 1,   0.0,  0.0, 50.0,   0.0,  0.08,  5.0,  "Shotgun"         ),
-	weapon_t(1, 0, 1, 12,  60,  GRENADE,  22,  1,  140, 1.0,  1.2, 700.0,  0.44, 0.01,  1.7,  "Grenade"         ),
-	weapon_t(0, 1, 1, 200, 800, UNDEF,    1,   1,  1,   0.0,  0.0, 16.0,   0.0,  0.0,   0.0,  "Laser"           ),
-	weapon_t(1, 1, 1, 20,  200, PLASMA,   13,  1,  1,   1.4,  3.5, 200.0,  0.43, 0.0,   3.8,  "Plasma Cannon"   ),
-	weapon_t(0, 1, 0, 1,   10,  UNDEF,    CBFD,1,  1,   1.5,  4.0, 40.0,   0.2,  0.0, CBLADE_EXT, "Carnage Blade"),
-	weapon_t(0, 1, 1, 50,  250, GASSED,   4,   1,  1,   1.2,  2.8, 80.0,   0.07, 0.1,   2.8,  "Gasser"),
+	weapon_t(0, 0, 0, 0,   0,   UNDEF,    0,   0,  0,   0.0,  0.0, 0.0,    0.0,  0.0,   0.0,  0.0,  "Unarmed"         ),
+	weapon_t(0, 0, 0, 0,   0,   UNDEF,    23,  1,  1,   0.0,  0.0, 500.0,  0.25, 0.0,   0.25, 0.25, "Baseball Bat"    ),
+	weapon_t(0, 0, 1, 1,   3,   BALL,     25,  1,  1,   1.5,  3.0, 0.0,    0.0,  0.05,  3.0,  3.0,  "Dodgeball"       ),
+	weapon_t(0, 0, 1, 30,  500, S_BALL,   18,  1,  1,   1.3,  3.3, 0.0,    0.0,  0.0,   1.4,  1.4,  "Bouncy Ball"     ),
+	weapon_t(1, 1, 1, 10,  100, ROCKET,   32,  1,  1,   0.7,  3.1, 1000.0, 0.42, 0.003, 0.0,  0.0,  "Rocket Launcher" ),
+	weapon_t(1, 0, 1, 5,   50,  LANDMINE, 30,  1,  1,   0.0,  2.0, 4000.0, 0.39, 0.0,   6.0,  2.0,  "Proximity Mine"  ),
+	weapon_t(1, 1, 1, 5,   50,  SEEK_D,   60,  1,  1,   0.5,  2.5, 2300.0, 0.50, 0.0,   0.0,  0.0,  "Seek and Destroy"),
+	weapon_t(0, 0, 1, 25,  500, STAR5,    10,  1,  1,   1.1,  3.0, 0.0,    0.0,  0.015, 2.0,  2.0,  "Throwing Star"   ),
+	weapon_t(0, 1, 1, 100, 600, UNDEF,    2,   1,  1,   0.0,  0.0, 70.0,   0.0,  0.02,  0.0,  2.8,  "M16"             ),
+	weapon_t(0, 1, 1, 12,  100, UNDEF,    27,  24, 1,   0.0,  0.0, 50.0,   0.0,  0.08,  5.0,  2.5,  "Shotgun"         ),
+	weapon_t(1, 0, 1, 12,  60,  GRENADE,  22,  1,  140, 1.0,  1.2, 700.0,  0.44, 0.01,  1.5,  1.6,  "Grenade"         ),
+	weapon_t(0, 1, 1, 200, 800, UNDEF,    1,   1,  1,   0.0,  0.0, 16.0,   0.0,  0.0,   0.0,  0.0,  "Laser"           ),
+	weapon_t(1, 1, 1, 20,  200, PLASMA,   13,  1,  1,   1.4,  3.5, 200.0,  0.43, 0.0,   3.8,  4.5,  "Plasma Cannon"   ),
+	weapon_t(0, 1, 0, 1,   10,  UNDEF,    CBFD,1,  1,   1.5,  4.0, 40.0,   0.2,  0.0, CBLADE_EXT, CBLADE_EXT, "Carnage Blade"),
+	weapon_t(0, 1, 1, 50,  250, GASSED,   4,   1,  1,   1.2,  2.8, 80.0,   0.07, 0.1,   2.8,  2.8,  "Gasser"),
 	/* non-selectable */
-	weapon_t(1, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.8,  "Cluster Grenade" )
+	weapon_t(1, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.6,  1.6,  "Cluster Grenade" )
 };
 
 int const obj_weapons[NUM_TOT_OBJS] = {

@@ -158,6 +158,7 @@ struct player_state { // size = big
 	void reset_wpt_state();
 	bool no_weap() const;
 	bool no_ammo() const;
+	float weapon_range(bool use_far_clip) const;
 	void verify_wmode();
 	bool no_weap_or_ammo()   const {return (no_weap() || no_ammo());}
 	float get_damage_scale() const {return ((powerup == PU_DAMAGE) ? 4.0 : 1.0);}
@@ -181,6 +182,7 @@ struct player_state { // size = big
 	void advance(dwobject &obj, int smiley_id);
 	void shift(vector3d const &vd);
 	void init_smiley_weapon(int smiley_id);
+	bool target_in_range(point const &pos) const;
 	void smiley_action(int smiley_id);
 
 	// camera members

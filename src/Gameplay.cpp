@@ -1489,6 +1489,12 @@ void create_shrapnel(point const &pos, vector3d const &dir, float firing_error, 
 }
 
 
+float weapon_t::get_fire_vel() const {
+
+	return (v_add + ball_velocity*v_mult);
+}
+
+
 int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 
 	chosen_obj = -1;
@@ -1519,7 +1525,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	dir.normalize();
 	point pos(fpos + dir*(0.1*radius));
 	fire_frame = max(1, fire_delay);
-	float const damage(damage_scale*w.blast_damage), vel(ball_velocity*w.v_mult + w.v_add);
+	float const damage(damage_scale*w.blast_damage), vel(w.get_fire_vel());
 
 	switch (weapon_id) {
 		case W_M16:     add_dynamic_light(1.0, fpos, YELLOW); break;
