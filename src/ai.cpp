@@ -681,6 +681,16 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 }
 
 
+bool is_targeting_smiley(int targeter, int targetee, point const &targetee_pos) {
+
+	assert(targeter >= CAMERA_ID && targeter < num_smileys);
+	assert(targetee >= CAMERA_ID && targetee < num_smileys);
+	assert(targeter != targetee);
+	if (targeter == CAMERA_ID) return sphere_in_camera_view(targetee_pos, 0.0, 0); // camera is targeting if target is in view
+	return (sstates[targeter].target_type == 1 && sstates[targeter].target == targetee);
+}
+
+
 float player_state::get_pos_cost(int smiley_id, point const &pos, point const &opos, pos_dir_up const &pdu,
 	float radius, float step_height, bool check_dists)
 {
@@ -697,7 +707,7 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 			point correct_z_pos(pos);
 			if (fabs(pos.z - zval) < step_height) correct_z_pos.z = zval;
 			float depth(0.0);
-			if (is_underwater(correct_z_pos, 0, &depth))        return 6.0 + 0.01*depth; // don't go under water/blood
+			if (is_underwater(correct_z_pos, 0, &depth)) return 6.0 + 0.01*depth; // don't go under water/blood
 		}
 	}
 	vector3d const avoid_dir(get_avoid_dir(pos, smiley_id, pdu));
@@ -711,12 +721,15 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 		float const dist(p2p_dist(pos, target_pos));
 		float range(weapons[weapon].range);
 		if (range == 0.0) range = FAR_CLIP;
-		if (check_dists && dist > range)                   return (3.0 + 0.01*dist); // out of weapon range
-		float enemy_range(weapons[sstates[target].weapon].range);
-		if (enemy_range == 0.0) enemy_range = FAR_CLIP;
-		if (range > 2.0*enemy_range && dist < enemy_range) return (2.5 + 0.01*(enemy_range - dist)); // too close to enemy weapon range
+		if (check_dists && dist > range) return (3.0 + 0.01*dist); // out of weapon range
+
+		if (is_targeting_smiley(target, smiley_id, pos)) { // enemy (or camera) is targeting me
+			float enemy_range(weapons[sstates[target].weapon].range);
+			if (enemy_range == 0.0) enemy_range = FAR_CLIP;
+			if (range > 2.0*enemy_range && dist < enemy_range) return (2.5 + 0.01*(enemy_range - dist)); // too close to enemy weapon range
+		}
 		float const min_dist(min(0.25*range, 8.0*radius));
-		if (weapon != W_BBBAT && dist < min_dist)          return (2.0 + 0.01*(min_dist    - dist)); // too close to enemy
+		if (weapon != W_BBBAT && dist < min_dist) return (2.0 + 0.01*(min_dist    - dist)); // too close to enemy
 	}
 	if (powerup != PU_FLIGHT) { // Note: can still take fall damage with shielding
 		// don't fall to your death?
@@ -1133,7 +1146,7 @@ void player_state::init_smiley_weapon(int smiley_id) {
 		weapon = i;
 		if (no_weap_or_ammo()) continue;
 		float weight(rand_float());
-		if (weapons[i].range > 0.0 && dist > weapons[i].range) weight += 0.8;
+		if (weapons[i].range > 0.0) weight += (dist > weapons[i].range) ? 0.8 : -0.2; // ranged weapon
 		if (i == W_BBBAT) weight *= 1.5;
 		if (i == W_SBALL) weight *= 1.2;
 		choices.push_back(make_pair(weight, i));
