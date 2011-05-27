@@ -701,12 +701,12 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 	if (point_outside_mesh(xpos, ypos)) return 10.0; // off the mesh - high cost
 
 	if (powerup != PU_FLIGHT && !is_mesh_disabled(xpos, ypos)) {
-		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1)), dz(zval - (pos.z - radius));
+		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) + radius), dz(zval - pos.z);
 		if (dz > step_height) return 8.0; // too high to step
 
 		if (!on_waypt_path && temperature > W_FREEZE_POINT) {
 			point correct_z_pos(pos);
-			if (fabs(pos.z - zval) < step_height) correct_z_pos.z = zval;
+			if (dz > -step_height) correct_z_pos.z = zval;
 			float depth(0.0);
 			if (is_underwater(correct_z_pos, 0, &depth)) return 6.0 + 0.01*depth; // don't go under water/blood
 		}
