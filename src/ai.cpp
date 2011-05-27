@@ -24,7 +24,7 @@ vector<point> app_spots;
 
 
 extern bool has_wpt_goal;
-extern int island, iticks, num_smileys, free_for_all, teams, frame_counter;
+extern int island, iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS;
 extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage;
@@ -322,7 +322,7 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 
 // health, shields, powerup, weapon, ammo, pack, waypoint
 int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, point const &avoid_dir, int smiley_id,
-	point &target, float &min_dist, vector<type_wt_t> types, int last_target_visible, int last_target_type)
+	point &target_pt, float &min_dist, vector<type_wt_t> types, int last_target_visible, int last_target_type)
 {
 	assert(smiley_id < num_smileys);
 	int min_ic(-1);
@@ -398,7 +398,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 				if (!is_over_mesh(obj.pos) || (island && (obj.pos.z < ocean.z))) continue;
 				if (!placed && !sphere_in_view(pdu, obj.pos, radius, 0))         continue; // view culling (disabled for predef object locations)
 				if (avoid_dir != zero_vector && dot_product_ptv(obj.pos, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
-				float cost(1.0);
+				float cost((target_pos == obj.pos) ? 0.75 : 1.0); // favor original targets
 
 				for (int j = 0; j < num_smileys; ++j) { // too slow?
 					if (j != smiley_id && sstates[j].objective_pos == obj.pos) {
@@ -451,9 +451,10 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		}
 		if (can_reach || not_too_high2 || (type == WAYPOINT && on_waypt_path)) { // not_too_high2 - may be incorrect
 			int const max_vis_level((type == WAYPOINT) ? 3 : ((type == BALL) ? 5 : 4));
+			bool skip_path_comp(target_pos == pos2 && (rand()&15) != 0); // infrequent updates if same target
 
 			if ((skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) &&
-				(powerup == PU_FLIGHT || is_valid_path(pos, pos2)))
+				(powerup == PU_FLIGHT || skip_path_comp || is_valid_path(pos, pos2)))
 			{
 				// select this object as our target and return
 				if (type == WAYPOINT) {
@@ -462,8 +463,8 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 					last_wpt_dist = p2p_dist_xy(pos, pos2);
 				}
 				min_dist = sqrt(oddatav[i].dist); // find closest reachable/visible object
-				min_ic   = type;
-				target   = pos2;
+				min_ic    = type;
+				target_pt = pos2;
 				break;
 			}
 			else if (type == WAYPOINT && id == last_waypoint) {
@@ -668,10 +669,10 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 			target_type    = (min_ih == WAYPOINT) ? 3 : 2;
 			target_visible = 2;
 		}
-		if (target_pos != obj.pos) { // look beyond the target
+		/*if (target_pos != obj.pos) { // look beyond the target
 			vector3d const o(target_pos - obj.pos); // motion direction
 			target_pos += o*(2.0*object_types[SMILEY].radius/o.mag());
-		}
+		}*/
 	}
 	if (min_ih < 0) unreachable.reset_try(); // no target object
 	if (min_ih != WAYPOINT)  reset_wpt_state();
