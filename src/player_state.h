@@ -177,7 +177,7 @@ struct player_state { // size = big
 	void drop_pack(point const &pos);
 	int drop_weapon(vector3d const &coll_dir, vector3d const &nfront, point const &pos, int index, float energy, int type);
 	void smiley_select_target(dwobject &obj, int smiley_id);
-	float get_pos_cost(int smiley_id, point const &pos, point const &opos, pos_dir_up const &pdu, float radius, float step_height, bool check_dists);
+	float get_pos_cost(int smiley_id, point pos, point const &opos, pos_dir_up const &pdu, float radius, float step_height, bool check_dists);
 	int smiley_motion(dwobject &obj, int smiley_id);
 	void advance(dwobject &obj, int smiley_id);
 	void shift(vector3d const &vd);
@@ -198,6 +198,7 @@ struct player_state { // size = big
 
 
 // function prototypes
+bool check_step_dz(point &cur, point const &lpos, float radius);
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal);
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal);
 bool can_make_progress(point const &pos, point const &opos);

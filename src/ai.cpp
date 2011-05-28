@@ -692,7 +692,7 @@ bool is_targeting_smiley(int targeter, int targetee, point const &targetee_pos) 
 }
 
 
-float player_state::get_pos_cost(int smiley_id, point const &pos, point const &opos, pos_dir_up const &pdu,
+float player_state::get_pos_cost(int smiley_id, point pos, point const &opos, pos_dir_up const &pdu,
 	float radius, float step_height, bool check_dists)
 {
 	// target_type: 0=none, 1=enemy, 2=item, 3=waypoint
@@ -700,15 +700,12 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return 10.0; // off the mesh - high cost
 
-	if (powerup != PU_FLIGHT && !is_mesh_disabled(xpos, ypos)) {
-		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) + radius), dz(zval - pos.z);
-		if (dz > step_height) return 8.0; // too high to step
+	if (powerup != PU_FLIGHT) {
+		if (!check_step_dz(pos, opos, radius)) return 9.0;
 
-		if (!on_waypt_path && temperature > W_FREEZE_POINT) {
-			point correct_z_pos(pos);
-			if (dz > -step_height) correct_z_pos.z = zval;
+		if (!on_waypt_path && temperature > W_FREEZE_POINT && !is_mesh_disabled(xpos, ypos)) {
 			float depth(0.0);
-			if (is_underwater(correct_z_pos, 0, &depth)) return 6.0 + 0.01*depth; // don't go under water/blood
+			if (is_underwater(pos, 0, &depth)) return 6.0 + 0.01*depth; // don't go under water/blood
 		}
 	}
 	vector3d const avoid_dir(get_avoid_dir(pos, smiley_id, pdu));
@@ -730,9 +727,6 @@ float player_state::get_pos_cost(int smiley_id, point const &pos, point const &o
 		}
 		float const min_dist(min(0.25*range, 8.0*radius));
 		if (weapon != W_BBBAT && dist < min_dist) return (2.0 + 0.01*(min_dist    - dist)); // too close to enemy
-	}
-	if (powerup != PU_FLIGHT) { // Note: can still take fall damage with shielding
-		// don't fall to your death?
 	}
 	// enforce turn speed?
 	return 0.0; // good

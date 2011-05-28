@@ -119,6 +119,17 @@ bool wpt_goal::is_reachable() const {
 // ********** waypoint_builder **********
 
 
+bool check_step_dz(point &cur, point const &lpos, float radius) {
+
+	float zvel(0.0);
+	int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0, 1));
+	if (ret == 3)                                      return 0; // stuck
+	if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)       return 0; // too high of a step
+	if ((cur.z - lpos.z) < -MAX_FALL_DIST_MULT*radius) return 0; // too far  of a drop
+	return 1;
+}
+
+
 class waypoint_builder {
 
 	float radius;
@@ -368,16 +379,12 @@ public:
 		float const step_size(0.25*radius);
 		float const dmag_inv(1.0/dir.xy_mag());
 		point cur(start);
-		float zvel(0.0);
 
 		while (!dist_less_than(cur, end, 0.8*radius)) {
 			vector3d const delta((end - cur).get_norm());
 			point lpos(cur);
 			cur += delta*step_size;
-			int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0, 1));
-			if (ret == 3)                                        return 0; // stuck
-			if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)         return 0; // too high of a step
-			if ((cur.z - lpos.z) < -MAX_FALL_DIST_MULT*radius)   return 0; // too high of a drop
+			if (!check_step_dz(cur, lpos, radius))               return 0;
 			check_cobj_placement(cur, -1);
 			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress (too strict? local drops in z?)
 			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv); // point-line dist
