@@ -39,18 +39,25 @@ struct od_data { // size = 12
 };
 
 
+typedef unsigned short wpt_ix_t;
+typedef vector<wpt_ix_t> waypt_adj_vect;
+
+
 struct waypoint_t {
 
 	bool user_placed, placed_item, goal, temp, visited;
+	int came_from;
 	float g_score, h_score, f_score;
 	point pos;
 	float last_smiley_time;
-	vector<unsigned> next_wpts, prev_wpts, visible_wpts;
+	waypt_adj_vect next_wpts, prev_wpts, visible_wpts;
 
 	waypoint_t(point const &p=all_zeros, bool up=0, bool i=0, bool g=0, bool t=0);
 	void mark_visited_by_smiley(unsigned const smiley_id);
 	float get_time_since_last_visited(unsigned const smiley_id) const;
 	void clear();
+	bool unreachable() const {return prev_wpts.empty();}
+	bool operator<(waypoint_t const &w) const {return (pos < w.pos);} // unused
 };
 
 

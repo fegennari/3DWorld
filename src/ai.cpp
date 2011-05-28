@@ -360,7 +360,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 					//cout << "reached target waypoint " << curw << " at time " << tfticks << endl; // testing
 					waypts_used.insert(curw); // insert as the last used waypoint and remove from consideration
 					waypoints[curw].mark_visited_by_smiley(smiley_id);
-					vector<unsigned> const &next(waypoints[curw].next_wpts);
+					waypt_adj_vect const &next(waypoints[curw].next_wpts);
 
 					if (!next.empty()) { // choose next waypoint from graph
 						//cout << "choose next waypoint, curw: " << curw << endl;
