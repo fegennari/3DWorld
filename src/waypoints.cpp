@@ -432,13 +432,27 @@ public:
 // ********** waypoint_search **********
 
 
+unsigned const PATH_CACHE_SIZE = 0;//(1 << 16);
+
+
 struct waypoint_cache {
 
 	vector<unsigned> open, closed; // tentative/already evaulated nodes
-	unsigned call_ix;
-	//map<pair<unsigned, unsigned>, pair<unsigned, float> > cached_searches; // maps {from, to} to {next, dist}
+	unsigned call_ix; // incremented each run_a_star() call
 
-	waypoint_cache() : call_ix(0) {}
+	struct path_cache_entry { // unused, but may be useful
+		unsigned short from, to, next;
+		float dist;
+		path_cache_entry() : from(0), to(0), next(0), dist(0.0) {}
+	};
+	vector<path_cache_entry> path_cache;
+
+	waypoint_cache() : call_ix(0) {
+		path_cache.resize(PATH_CACHE_SIZE);
+	}
+	path_cache_entry &cache_lookup(unsigned from, unsigned to) {
+		return path_cache[(from + (to << 16)) & (PATH_CACHE_SIZE-1)];
+	}
 };
 
 waypoint_cache global_wpt_cache;
