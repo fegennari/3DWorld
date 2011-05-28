@@ -250,12 +250,12 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 	int smiley_id, point &target, int &target_visible, float &min_dist) const
 {
 	assert(smiley_id < num_smileys);
-	int min_i(NO_SOURCE), hitter(NO_SOURCE);
+	int min_i(NO_SOURCE);
+	int const last_hitter(was_hit ? hitter : NO_SOURCE);
 	float const radius(object_types[SMILEY].radius);
 	int const cid(coll_id[SMILEY]);
 	point const camera(get_camera_pos());
 	static vector<od_data> oddatav;
-	if (was_hit) hitter = hitter;
 	min_dist = 0.0;
 
 	if (free_for_all) { // smileys attack each other, not only the player
@@ -264,13 +264,13 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 		for (int i = obj_groups[cid].max_objects()-1; i >= 0; --i) {
 			dwobject const &obj(obj_groups[cid].get_obj(i));
 			if (obj.disabled() || i == smiley_id || (obj.flags & IN_DARKNESS)) continue;
-			if (sstates[i].powerup == PU_INVISIBILITY && hitter != i)          continue; // invisible
+			if (sstates[i].powerup == PU_INVISIBILITY && last_hitter != i)     continue; // invisible
 			if (same_team(smiley_id, i)) continue; // don't shoot a teammate
-			add_target(oddatav, pdu, obj.pos, radius, i, hitter, killer);
+			add_target(oddatav, pdu, obj.pos, radius, i, last_hitter, killer);
 		}
 	}
-	if (camera_mode != 0 && !spectate && !same_team(smiley_id, CAMERA_ID) && (sstates[CAMERA_ID].powerup != PU_INVISIBILITY || hitter == CAMERA_ID)) {
-		add_target(oddatav, pdu, camera, radius, CAMERA_ID, hitter, killer); // camera IN_DARKNESS?
+	if (camera_mode != 0 && !spectate && !same_team(smiley_id, CAMERA_ID) && (sstates[CAMERA_ID].powerup != PU_INVISIBILITY || last_hitter == CAMERA_ID)) {
+		add_target(oddatav, pdu, camera, radius, CAMERA_ID, last_hitter, killer); // camera IN_DARKNESS?
 	}
 	sort(oddatav.begin(), oddatav.end());
 
