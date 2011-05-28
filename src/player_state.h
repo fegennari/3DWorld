@@ -152,7 +152,7 @@ struct player_state { // size = big
 	vector<int> balls;
 	map<unsigned, count_t> blocked_waypts;
 	waypt_used_set waypts_used;
-	unreachable_pts unreachable;
+	unreachable_pts unreachable[2]; // {objects, waypoints}
 	destination_marker dest_mark;
 
 	player_state() : plasma_loaded(0), on_waypt_path(0), timer(0), target(-1), objective(-1), weapon(0), wmode(0), powerup(0), powerup_time(0),

@@ -363,10 +363,12 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 					//cout << "reached target waypoint " << curw << " at time " << tfticks << endl; // testing
 					waypts_used.insert(curw); // insert as the last used waypoint and remove from consideration
 					waypoints[curw].mark_visited_by_smiley(smiley_id);
+					unreachable[1].clear();
 					waypt_adj_vect const &next(waypoints[curw].next_wpts);
 
 					if (!next.empty()) { // choose next waypoint from graph
 						//cout << "choose next waypoint, curw: " << curw << endl;
+						// FIXME: skip path waypoints that are in unreachable[1]?
 						curw = find_optimal_next_waypoint(curw, goal); // can return -1
 						//cout << "next curw: " << curw << endl;
 
@@ -377,8 +379,8 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 						continue;
 					}
 					// disconntected waypoint - should rarely get here
-					// don't pick this goal again, for a long time, otherwise we will get stuck here until another objective appears
-					unreachable.add(waypoints[curw].pos);
+					// don't pick this goal again until another waypoint is reached, otherwise we will get stuck here until another objective appears
+					unreachable[1].add(waypoints[curw].pos);
 					ignore_w = curw;
 					curw     = -1;
 				}
@@ -421,9 +423,10 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		assert(type >= 0 && type < NUM_TOT_OBJS);
 		point pos2;
 		dwobject const *obj(NULL);
+		bool const is_wpt(type == WAYPOINT);
 		bool no_frustum_test(0), skip_vis_test(0);
 
-		if (type == WAYPOINT) {
+		if (is_wpt) {
 			assert(size_t(id) < waypoints.size());
 			bool const can_see(oddatav[i].val != 0 || (on_waypt_path && id == last_waypoint));
 			pos2 = waypoints[id].pos;
@@ -438,8 +441,8 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 			no_frustum_test = ((obj->flags & USER_PLACED) != 0);
 		}
 		int const xpos(get_xpos(pos2.x)), ypos(get_ypos(pos2.y));
-		if (point_outside_mesh(xpos, ypos)) continue;
-		if (unreachable.cant_reach(pos2))   continue;
+		if (point_outside_mesh(xpos, ypos))       continue;
+		if (unreachable[is_wpt].cant_reach(pos2)) continue;
 		float const oradius(object_types[type].radius);
 		bool const ice(temperature <= W_FREEZE_POINT);
 		bool const not_too_high( pos2.z < max((mesh_height[ypos][xpos] + sradius + oradius), (pos.z + ra_smiley + oradius - sradius)));
@@ -448,19 +451,19 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		bool const in_motion(obj && obj->status == 1 && obj->velocity.mag_sq() > 9.0);
 		bool const can_reach(not_too_high || ice_height_ok || in_motion);
 
-		if (type == WAYPOINT || not_too_high2) { // almost in reach, ultimate reachability questionable
+		if (is_wpt || not_too_high2) { // almost in reach, ultimate reachability questionable
 			// Note: if a waypoint is found to be unreachable, it may be be avoided until the smiley dies
-			if (!unreachable.proc_target(pos, pos2, objective_pos, (can_reach && type != WAYPOINT))) continue;
+			if (!unreachable[is_wpt].proc_target(pos, pos2, objective_pos, (can_reach && !is_wpt))) continue;
 		}
-		if (can_reach || not_too_high2 || (type == WAYPOINT && on_waypt_path)) { // not_too_high2 - may be incorrect
-			int const max_vis_level((type == WAYPOINT) ? 3 : ((type == BALL) ? 5 : 4));
+		if (can_reach || not_too_high2 || (is_wpt && on_waypt_path)) { // not_too_high2 - may be incorrect
+			int const max_vis_level(is_wpt ? 3 : ((type == BALL) ? 5 : 4));
 			bool skip_path_comp(target_pos == pos2 && (rand()&15) != 0); // infrequent updates if same target
 
 			if ((skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) &&
 				(powerup == PU_FLIGHT || skip_path_comp || is_valid_path(pos, pos2)))
 			{
 				// select this object as our target and return
-				if (type == WAYPOINT) {
+				if (is_wpt) {
 					if (id != last_waypoint) on_waypt_path = (oddatav[i].val != 0);
 					last_waypoint = id;
 					last_wpt_dist = p2p_dist_xy(pos, pos2);
@@ -470,7 +473,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 				target_pt = pos2;
 				break;
 			}
-			else if (type == WAYPOINT && id == last_waypoint) {
+			else if (is_wpt && id == last_waypoint) {
 				++blocked_waypts[id].c;
 			}
 		}
@@ -677,8 +680,13 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 			target_pos += o*(2.0*object_types[SMILEY].radius/o.mag());
 		}*/
 	}
-	if (min_ih < 0) unreachable.reset_try(); // no target object
-	if (min_ih != WAYPOINT)  reset_wpt_state();
+	if (min_ih != WAYPOINT) {
+		unreachable[1].reset_try(); // no target waypoint
+		reset_wpt_state();
+	}
+	else if (min_ih < 0) {
+		unreachable[0].reset_try(); // no target item
+	}
 	if (on_waypt_path)       blocked_waypts.clear();
 	if (target_visible == 1) assert(min_ie >= CAMERA_ID);
 	target = min_ie;
@@ -977,7 +985,7 @@ void player_state::shift(vector3d const &vd) {
 
 	target_pos    += vd;
 	objective_pos += vd;
-	unreachable.shift_by(vd);
+	for (unsigned i = 0; i < 2; ++i) unreachable[i].shift_by(vd);
 }
 
 
@@ -1348,9 +1356,9 @@ void player_state::init(bool w_start) {
 		powerup       = -1;
 		powerup_time  = 0;
 	}
+	for (unsigned i = 0; i < 2; ++i) unreachable[i].clear();
 	reset_wpt_state();
 	waypts_used.clear();
-	unreachable.clear();
 	dest_mark.clear();
 }
 

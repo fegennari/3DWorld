@@ -9,8 +9,8 @@
 #include <queue>
 
 
-bool const SHOW_WAYPOINTS      = 0;
-bool const SHOW_WAYPOINT_EDGES = 0;
+bool const SHOW_WAYPOINTS      = 1;
+bool const SHOW_WAYPOINT_EDGES = 1;
 int const WP_RESET_FRAMES      = 100; // Note: in frames, not ticks, fix?
 int const WP_RECENT_FRAMES     = 200;
 float const MAX_FALL_DIST_MULT = 20.0;
