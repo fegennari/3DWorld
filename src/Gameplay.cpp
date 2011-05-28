@@ -887,7 +887,7 @@ void dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 
 void skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	pushable_collision(index, position, 200.0, type, SKULL);
+	pushable_collision(index, position, 250.0, type, SKULL);
 }
 
 
@@ -1578,8 +1578,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_LASER: // line of sight damage
 		{
 			projectile_test(fpos, dir, firing_error, damage, shooter, range);
-			laser_beam laser((range >= 0.9*FAR_CLIP), shooter, fpos, fpos, RED);
-			laser.pts[1] += dir*range;
+			laser_beam const laser((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
 			add_laser_beam(laser); // might not need to actually add laser itself for camera/player
 		}
 		break;
