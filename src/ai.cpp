@@ -295,12 +295,14 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 
 
 void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
-	vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next)
+	vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next, float max_dist_sq)
 {
 	assert(i < waypoints.size());
 	point const &wp(waypoints[i].pos);
+	float const dist_sq(p2p_dist_sq(pos, wp));
+	if (max_dist_sq > 0.0 && dist_sq > max_dist_sq)                            return; // too far away
 	bool const can_see(next || (on_waypt_path && i == curw));
-	if (!is_over_mesh(wp) || is_underwater(wp))                                return;
+	if (!is_over_mesh(wp) || is_underwater(wp))                                return; // invalid smiley location
 	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
 	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this directio
 	unsigned other_smiley_targets(0);
@@ -315,7 +317,7 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	if (waypoints[i].next_wpts.empty()) dmult *= 10.0; // increase the cost of waypoints disconnected from the rest of the waypoint graph
 	if (i == curw)                      dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
-	float const tot_weight(dmult*(0.5*time_weight + p2p_dist_sq(pos, wp))*rand_uniform(0.8, 1.2));
+	float const tot_weight(dmult*(0.5*time_weight + dist_sq)*rand_uniform(0.8, 1.2));
 	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, can_see)); // add high weight to prefer other objects
 }
 
@@ -373,7 +375,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 						//cout << "next curw: " << curw << endl;
 
 						for (unsigned i = 0; i < next.size(); ++i) {
-							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu, 1);
+							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu, 1, 0.0);
 						}
 						//cout << "size: " << oddatav.size() << endl;
 						continue;
@@ -385,8 +387,10 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 					curw     = -1;
 				}
 			}
+			float const max_dist(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE)), max_dist_sq(max_dist*max_dist);
+
 			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
-				if (i != ignore_w) check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu, 0);
+				if (i != ignore_w) check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu, 0, max_dist_sq);
 			}
 			if (curw < 0) find_optimal_waypoint(pos, oddatav, goal);
 		}

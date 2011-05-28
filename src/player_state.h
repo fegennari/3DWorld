@@ -177,7 +177,7 @@ struct player_state { // size = big
 	int find_nearest_enemy(point const &pos, pos_dir_up const &pdu, point const &avoid_dir, int smiley_id,
 		point &target, int &target_visible, float &min_dist) const;
 	void check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
-		vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next);
+		vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next, float max_dist_sq);
 	int find_nearest_obj(point const &pos, pos_dir_up const &pdu, point const &avoid_dir, int smiley_id, point &target_pt,
 		float &min_dist, vector<type_wt_t> types, int last_target_visible, int last_target_type);
 	int check_smiley_status(dwobject &obj, int smiley_id);
