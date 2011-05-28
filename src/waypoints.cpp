@@ -21,6 +21,7 @@ vector<waypoint_t> waypoints;
 extern bool use_waypoints;
 extern int DISABLE_WATER, camera_change, frame_counter, num_smileys, num_groups;
 extern float temperature, zmin, tfticks, water_plane_z;
+extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
@@ -65,7 +66,8 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 
 
 waypoint_t::waypoint_t(point const &p, bool up, bool i, bool g, bool t)
-	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0), came_from(-1), g_score(0), h_score(0), f_score(0), pos(p)
+	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0),
+	item_group(-1), item_ix(-1), came_from(-1), g_score(0), h_score(0), f_score(0), pos(p)
 {
 	clear();
 }
@@ -252,10 +254,13 @@ public:
 		unsigned const num_waypoints(waypoints.size());
 
 		for (int i = 0; i < num_groups; ++i) {
-			obj_group &objg(obj_groups[i]);
+			vector<predef_obj> const &objs(obj_groups[i].get_predef_objs());
 
-			for (vector<predef_obj>::const_iterator i = objg.get_predef_objs().begin(); i != objg.get_predef_objs().end(); ++i) {
-				waypoints.push_back(waypoint_t(i->pos, 0, 1));
+			for (unsigned j = 0; j < objs.size(); ++j) {
+				waypoint_t w(objs[j].pos, 0, 1);
+				w.item_group = i;
+				w.item_ix    = j;
+				waypoints.push_back(w);
 				has_item_placed = 1;
 			}
 		}
@@ -468,10 +473,22 @@ class waypoint_search {
 		return ((goal.mode >= 4) ? p2p_dist(waypoints[cur].pos, goal.pos) : 0.0);
 	}
 	bool is_goal(unsigned cur) const {
-		if (goal.mode == 1) return waypoints[cur].user_placed; // user waypoint
-		if (goal.mode == 2) return waypoints[cur].placed_item; // placed item waypoint
-		if (goal.mode == 3) return waypoints[cur].goal;        // goal waypoint
-		if (goal.mode >= 4) return (cur == goal.wpt);          // goal position or specific waypoint
+		waypoint_t const &w(waypoints[cur]);
+		if (goal.mode == 1) return w.user_placed;     // user waypoint
+		if (goal.mode == 3) return w.goal;            // goal waypoint
+		if (goal.mode >= 4) return (cur == goal.wpt); // goal position or specific waypoint
+
+		if (goal.mode == 2 && waypoints[cur].placed_item) { // placed item waypoint
+			if (w.item_group >= 0) { // check if item is present
+				assert(w.item_group < NUM_TOT_OBJS);
+				obj_group const &objg(obj_groups[w.item_group]);
+				if (!objg.is_enabled()) return 0;
+				vector<predef_obj> const &objs(objg.get_predef_objs());
+				assert(w.item_ix >= 0 && (unsigned)w.item_ix < objs.size());
+				return (objs[w.item_ix].obj_used >= 0); // in use
+			}
+			return 1;
+		}
 		return 0;
 	}
 	void reconstruct_path(unsigned cur, vector<unsigned> &path) {
