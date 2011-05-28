@@ -347,10 +347,13 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 				goal.mode = 6; // closest visible waypoint
 				goal.pos  = target_pos; // should still be valid
 			}
-			if (goal.mode <= 2) {
-				for (int i = CAMERA_ID; i < num_smileys; ++i) {
+			if (goal.mode <= 2) { // add waypoint to a team member engaging an enemy
+				for (int i = 0; i < num_smileys; ++i) { // what about camera/player (CAMERA_ID)?
 					if (i == smiley_id || !same_team(i, smiley_id)) continue;
-					// WRITE: add waypoint to a team member engaging an enemy
+					player_state const &ss(sstates[i]);
+					if (!ss.target_visible || ss.target_type != 1 || ss.target == NO_SOURCE) continue;
+					goal.mode = 6;
+					goal.pos  = ss.target_pos;
 				}
 			}
 			if (curw >= 0) { // currently targeting a waypoint
