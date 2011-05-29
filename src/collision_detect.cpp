@@ -1347,7 +1347,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		vector3d const dpos(pos, camera_last_pos);
 		camera_obj.pos    = pos;
 		camera_obj.pos.z += camera_zh;
-		camera_obj.check_vert_collision(0, 0, 0, NULL, dpos);
+		camera_obj.check_vert_collision(0, 0, 0, NULL, dpos, 1);
 		camera_obj.pos.z -= camera_zh;
 		pos               = camera_obj.pos;
 	}
