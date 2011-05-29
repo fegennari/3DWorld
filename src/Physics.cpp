@@ -615,17 +615,6 @@ void dwobject::do_coll_damage() {
 }
 
 
-inline int check_border_coll(point const &pos) {
-
-	if (MESH_BORDER_OBJ == 0) return 0;
-	if (pos.x < -X_SCENE_SIZE+DX_VAL*MESH_BORDER_OBJ) return 1;
-	if (pos.y < -Y_SCENE_SIZE+DY_VAL*MESH_BORDER_OBJ) return 2;
-	if (pos.x >  X_SCENE_SIZE-DX_VAL*MESH_BORDER_OBJ) return 3;
-	if (pos.y >  Y_SCENE_SIZE-DY_VAL*MESH_BORDER_OBJ) return 4;
-	return 0;
-}
-
-
 // 0 = out of range/expired, 1 = airborne, 2 = collision, 3 = moving on ground, 4 = motionless
 void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj_index) { // returns collision status
 
@@ -782,7 +771,6 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		}
 		if (val == 2 && !coll) { // collision with mesh surface but not vertical surface
 			if (iter == 0 && type == BLOOD) surf_collide_obj(); // only supports blood for now
-			if (check_border_coll(pos)) status = 1; // keep it airborne
 			
 			if (object_bounce(0, cnorm, 0.0, 0.0, radius)) {
 				if (radius >= LARGE_OBJ_RAD) modify_grass_at(pos, 2.0*radius, 1, 0, 0, 0); // crush grass a lot
@@ -812,20 +800,8 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		status = val;
 	} // end in the air
 	else { // on the ground
-		int const border_coll(check_border_coll(pos));
-
-		if (border_coll) { // on edge of mesh
-			assert(type != SMILEY);
-			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-
-			if (point_outside_mesh(xpos, ypos)) { // too late, destroy it
-				status     = 0;
-			}
-			else { // make it roll/bounce off the mesh based on mesh normal
-				status     = 1;
-				velocity   = surface_normals[ypos][xpos]*MIN_BOUNCE_VEL;
-				velocity.z = 0.0;
-			}
+		if (!is_over_mesh(pos)) { // rolled off the mesh - destroy it
+			status = 0;
 			return;
 		}
 		if (otype.flags & COLL_DESTROYS) {assert(type != SMILEY); status = 0; return;}
@@ -995,9 +971,9 @@ int dwobject::check_water_collision(float vz_old) {
 
 	obj_type const &otype(object_types[type]);
 	float const radius(otype.radius);
-	if (!island && ((pos.z - radius) > max_water_height))         return 0; // quick check for efficiency
+	if (!island && ((pos.z - radius) > max_water_height)) return 0; // quick check for efficiency
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-	if (point_outside_mesh(xpos, ypos) || check_border_coll(pos)) return 0; // off the mesh
+	if (point_outside_mesh(xpos, ypos))                   return 0; // off the mesh
 	bool splash(0), in_ocean(0);
 	float water_height;
 	vector3d old_v(velocity);
