@@ -799,7 +799,7 @@ int damage_done(int type, int index) {
 
 	if (cid >= 0) {
 		dwobject &obj(obj_groups[cid].get_obj(index));
-		if (obj.flags & WAS_PUSHED) return 0; // pushed after stopping, can no longer do damage
+		if (obj.flags & (WAS_PUSHED | FLOATING)) return 0; // floating on the water or pushed after stopping, can no longer do damage
 
 		if (type == LANDMINE) {
 			if (obj.status == 1 || lm_coll_invalid(obj)) return 0; // not activated
