@@ -14,6 +14,8 @@ bool const SHOW_WAYPOINT_EDGES = 0;
 int const WP_RESET_FRAMES      = 100; // Note: in frames, not ticks, fix?
 int const WP_RECENT_FRAMES     = 200;
 float const MAX_FALL_DIST_MULT = 20.0;
+float const STEP_SIZE_MULT     = 0.25; // waypoint connectivity algorithm (relative to smiley radius)
+float const STEP_SIZE_MULT2    = 0.50; // reachability tests (relative to smiley radius)
 
 bool has_user_placed(0), has_item_placed(0), has_wpt_goal(0);
 vector<waypoint_t> waypoints;
@@ -361,7 +363,7 @@ public:
 				}
 				if (redundant) continue;
 
-				if (is_point_reachable(start, end, tot_steps)) {
+				if (is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT)) {
 					add_edge(i, k);
 					++num_edges;
 				}
@@ -392,9 +394,9 @@ public:
 		return ret;
 	}
 
-	bool is_point_reachable(point const &start, point const &end, unsigned &tot_steps) const {
+	bool is_point_reachable(point const &start, point const &end, unsigned &tot_steps, float step_size_mult) const {
 		vector3d const dir(end - start);
-		float const step_size(0.25*radius);
+		float const step_size(step_size_mult*radius);
 		float const dmag_inv(1.0/dir.xy_mag());
 		point cur(start);
 
@@ -653,7 +655,7 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 		int cindex(-1);
 		unsigned tot_steps(0);
 
-		if (!check_coll_line(pos, wpos, cindex, -1, 1, 0) && wb.is_point_reachable(pos, wpos, tot_steps)) {
+		if (!check_coll_line(pos, wpos, cindex, -1, 1, 0) && wb.is_point_reachable(pos, wpos, tot_steps, STEP_SIZE_MULT2)) {
 			min_dist = (start.empty() ? dist : min(dist, min_dist));
 			start.push_back(make_pair(id, dist));
 		}
@@ -687,7 +689,7 @@ bool is_valid_path(point const &start, point const &end) {
 
 	waypoint_builder wb;
 	unsigned tot_steps(0); // unused
-	return wb.is_point_reachable(start, end, tot_steps);
+	return wb.is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT2);
 }
 
 

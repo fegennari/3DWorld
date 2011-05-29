@@ -1167,7 +1167,7 @@ void vert_coll_detector::check_cobj(int index) {
 			}
 		}
 		if (!(otype.flags & OBJ_IS_DROP) && type != LEAF && type != CHARRED && type != SHRAPNEL &&
-			type != BEAM && type != LASER && type != FIRE && type != SMOKE && type != PARTICLE)
+			type != BEAM && type != LASER && type != FIRE && type != SMOKE && type != PARTICLE && type != WAYPOINT)
 		{
 			coll_objects[index].register_coll(TICKS_PER_SECOND, IMPACT);
 		}
@@ -1557,8 +1557,8 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				}
 			}
 			any_coll = 1;
-		}
-	}
+		} // if coll
+	} // for k
 	if (!any_coll || z2 < zfloor) {
 		pos.z = mh;
 		bool const on_ice(is_camera && (camera_coll_smooth || game_mode) && temperature <= W_FREEZE_POINT && is_underwater(pos));
