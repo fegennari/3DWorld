@@ -347,7 +347,7 @@ template<typename T> void reset_status(vector<T> &objs) {
 #define OBJ_COLLIDED     0x0800
 #define PLATFORM_COLL    0x1000
 #define USER_PLACED      0x2000
-//#define x 0x4000
+#define WAS_PUSHED       0x4000
 //#define x 0x8000
 
 unsigned const XYZ_STOPPED(XY_STOPPED | Z_STOPPED);

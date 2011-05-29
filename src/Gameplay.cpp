@@ -350,7 +350,7 @@ int proc_coll_types(int type, int obj_index, float &energy) {
 		energy = 0.0; // no damage done
 	}
 	else if ((type == GRENADE || type == CGRENADE) && (rand()&3) == 0) {
-		obj_groups[ocid].get_obj(obj_index).time = object_types[type].lifetime;
+		obj_groups[ocid].get_obj(obj_index).time = object_types[type].lifetime; // maybe explode on collision
 	}
 	if (type == POWERUP || type == WEAPON || type == AMMO || type == WA_PACK) {
 		return (int)obj_groups[ocid].get_obj(obj_index).direction;
@@ -795,11 +795,17 @@ bool invalid_coll(dwobject const &obj, coll_obj const &cobj) {
 
 int damage_done(int type, int index) {
 
-	if (type == LANDMINE) {
-		dwobject &obj(obj_groups[coll_id[type]].get_obj(index));
-		if (obj.status == 1 || lm_coll_invalid(obj)) return 0; // not activated
-		obj.status = 0;
-		return 1;
+	int const cid(coll_id[type]);
+
+	if (cid >= 0) {
+		dwobject &obj(obj_groups[cid].get_obj(index));
+		if (obj.flags & WAS_PUSHED) return 0; // pushed after stopping, can no longer do damage
+
+		if (type == LANDMINE) {
+			if (obj.status == 1 || lm_coll_invalid(obj)) return 0; // not activated
+			obj.status = 0;
+			return 1;
+		}
 	}
 	return damage_done_obj[type];
 }
@@ -862,6 +868,7 @@ bool pushable_collision(int index, point const &position, float force, int type,
 		dwobject &obj(obj_groups[coll_id[obj_type]].get_obj(index));
 
 		if (obj.status != 1 && obj.status != 2) {
+			if (obj.status == 4) obj.flags |= WAS_PUSHED;
 			elastic_collision(obj, position, force, type); // add some extra energy so that we can push the skull
 			return 1;
 		}
