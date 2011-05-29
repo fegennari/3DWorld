@@ -1453,6 +1453,10 @@ void advance_physics_objects() {
 	apply_obj_physics(part_clouds);
 	apply_obj_physics(fires);
 	apply_obj_physics(scorches);
+
+	for (unsigned i = 0; i < scorches.size(); ++i) {
+		scorches[i].check_cobj();
+	}
 	total_wind += wind*fticks; // only when objects are enabled?
 }
 

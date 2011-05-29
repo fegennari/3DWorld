@@ -867,7 +867,8 @@ bool pushable_collision(int index, point const &position, float force, int type,
 	if (type == CAMERA || type == SMILEY) {
 		dwobject &obj(obj_groups[coll_id[obj_type]].get_obj(index));
 
-		if (obj.status != 1 && obj.status != 2) {
+		if (obj.status != 1 && obj.status != 2) { // only if on ground or stopped
+			// Note: an object resting on a destroyable static object will still have status 1 and will not be pushable
 			if (obj.status == 4) obj.flags |= WAS_PUSHED;
 			elastic_collision(obj, position, force, type); // add some extra energy so that we can push the skull
 			return 1;
@@ -945,7 +946,7 @@ void rock_collision(int index, int obj_index, vector3d const &velocity, point co
 	if (type != SEEK_D && type != ROCKET && type != IMPACT) return;
 	float num(rand_uniform(0.0, 6.0));
 	if (index == 0)          num *= 2.0; // large rock
-	if (type == SEEK_D)      num *= 2.0;
+	if      (type == SEEK_D) num *= 2.0;
 	else if (type == ROCKET) num *= 1.5;
 	int const shooter(get_damage_source(type, obj_index, index));
 	float const p[7] = {2.5, 5.0, 4.0, 0.2, 1.0, 0.5, 0.5};
@@ -1839,7 +1840,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		coll_objects[cindex].register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), (is_laser ? BEAM : PROJECTILE));
 
 		if (!is_laser && coll_objects[cindex].can_be_scorched()) {
-			gen_scorch_mark(coll_pos, 0.005, coll_norm, 1.0);
+			gen_scorch_mark(coll_pos, 0.005, coll_norm, cindex, 1.0);
 		}
 	}
 	

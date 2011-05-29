@@ -46,6 +46,29 @@ bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, 
 
 
 
+void scorch_mark::check_cobj() {
+
+	if (!status || cid < 0) return; // already disabled, or no bound cobj
+	
+	if ((unsigned)cid < coll_objects.size()) {
+		coll_obj const &cobj(coll_objects[cid]);
+		
+		if (cobj.status == COLL_STATIC && cobj.type == COLL_CUBE) {
+			if (cobj.platform_id >= 0) {
+				assert((unsigned)cobj.platform_id < platforms.size());
+				
+				if (platforms[cobj.platform_id].is_moving()) { // moving platform - remove
+					status = 0;
+					return;
+				}
+			}
+			if (sphere_cube_intersect(ipos, SMALL_NUMBER, cobj)) return; // still on a cobj
+		}
+	}
+	status = 0; // remove it
+}
+
+
 inline void get_params(int &x1, int &y1, int &x2, int &y2, int &cb, const float d[3][2], int dhcm, int min_cb=0) {
 
 	float const rmax(USE_COLL_BORDER ? 0.0 : max_obj_radius);
@@ -1180,7 +1203,7 @@ void vert_coll_detector::check_cobj(int index) {
 				float const dmin(min(min((cobj.d[ds][1] - obj.pos[ds]), (obj.pos[ds] - cobj.d[ds][0])),
 					                 min((cobj.d[dt][1] - obj.pos[dt]), (obj.pos[dt] - cobj.d[dt][0]))));
 
-				if (dmin > sz) gen_scorch_mark((obj.pos - norm*o_radius), sz, norm, 0.75);
+				if (dmin > sz) gen_scorch_mark((obj.pos - norm*o_radius), sz, norm, index, 0.75);
 			}
 			obj.disable();
 		}

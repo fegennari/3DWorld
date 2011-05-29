@@ -175,10 +175,12 @@ void fire::gen(point const &p, float size, int src) {
 }
 
 
-void scorch_mark::gen(point const &p, float r, vector3d const &o, float init_alpha) {
+void scorch_mark::gen(point const &p, float r, vector3d const &o, int cid_, float init_alpha) {
 
 	assert(r > 0.0 && init_alpha > 0.0);
+	ipos   = p;
 	init_gen_rand(p, 0.0, 0.0);
+	cid    = cid_;
 	radius = r;
 	alpha  = init_alpha;
 	orient = o; // normal of attached surface at collision/anchor point
@@ -242,9 +244,9 @@ bool gen_fire(point const &pos, float size, int source) {
 }
 
 
-void gen_scorch_mark(point const &pos, float radius, vector3d const &orient, float init_alpha) {
+void gen_scorch_mark(point const &pos, float radius, vector3d const &orient, int cid, float init_alpha) {
 
-	scorches[scorches.choose_element()].gen(pos, radius, orient, init_alpha);
+	scorches[scorches.choose_element()].gen(pos, radius, orient, cid, init_alpha);
 }
 
 

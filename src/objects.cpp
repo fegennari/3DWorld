@@ -456,7 +456,8 @@ bool coll_obj::truly_static() const {
 
 bool coll_obj::can_be_scorched() const {
 
-	return (truly_static() && !is_semi_trans() && !no_draw());
+	//return (truly_static() && !is_semi_trans() && !no_draw());
+	return (status == COLL_STATIC && !is_semi_trans() && !no_draw()); // allow destroyable objects
 }
 
 

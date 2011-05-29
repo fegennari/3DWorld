@@ -910,9 +910,10 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), csg_obj(is_cube || is_cylinder);
 		int const D(cobjs[i].destroy);
 		bool const shatter(D >= SHATTERABLE);
-		if (!shatter && !csg_obj)  continue;
+		if (!shatter && !csg_obj)         continue;
 		csg_cube const cube2(cobjs[i], !csg_obj);
 		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
+		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for nin-destroyable cobj between center and cube2?
 
 		if (D <= max(destroy_thresh, (min_destroy-1))) {
 			if (is_cube) non_dest.push_back(i);
@@ -949,7 +950,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		}
 	}
 	if (!to_remove.empty()) {
-		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // *** what about updating (removing) mesh shadows? ***
+		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // *** FIXME: what about updating (removing) mesh shadows? ***
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) {
 			remove_coll_object(to_remove[i]); // remove old collision object
