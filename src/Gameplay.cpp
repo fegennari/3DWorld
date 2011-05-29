@@ -894,7 +894,7 @@ void dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 
 void skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	pushable_collision(index, position, 250.0, type, SKULL);
+	pushable_collision(index, position, 2000.0, type, SKULL);
 }
 
 
