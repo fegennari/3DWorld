@@ -20,6 +20,7 @@ bool const DYNAMIC_OBJ_LIGHTS   = 1;
 bool const SHOW_DRAW_TIME       = 0;
 bool const NO_SHRAP_DLIGHT      = 1; // looks cool with dynamic lights, but very slow
 bool const FASTER_SHADOWS       = 0;
+bool const DYNAMIC_SMOKE_SHADOWS= 1; // slower, but looks nice
 unsigned const MAX_CFILTERS     = 10;
 unsigned const SHAD_NOBJ_THRESH = 200;
 float const NDIV_SCALE          = 1.6;
@@ -1701,6 +1702,9 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	set_bool_shader_prefix("keep_alpha",      keep_alpha,      1); // FS
 	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
 	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
+	// Note: dynamic_smoke_shadows applies to light0 only
+	// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
+	for (unsigned i = 0; i < 2; ++i) set_bool_shader_prefix("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, i); // VS/FS
 	set_dlights_booleans(dlights, 1); // FS
 	setup_enabled_lights(8);
 	unsigned const p(set_shader_prog("fog.part+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+textured_with_smoke"));
