@@ -292,7 +292,11 @@ bool check_face_containment(point const *const pts, unsigned npts, int dim, int 
 				if (pts[j][dk] < (c.d[dk][0]-TOLER_) || pts[j][dk] > (c.d[dk][1]+TOLER_)) contained = 0;
 			}
 		}
-		if (contained) return 1;
+		if (contained) {
+			// force shadow (and face containment) recomputation when this object is removed
+			coll_objects[cid].shadow_depends.insert(cobj);
+			return 1;
+		}
 	}
 	return 0;
 }
