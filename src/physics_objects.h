@@ -110,12 +110,12 @@ struct fire : public basic_physics_obj { // size = 52
 struct scorch_mark : public basic_physics_obj { // size = 52
 
 	int cid;
-	float radius, alpha;
+	float radius, alpha, rgb_val;
 	point ipos;
 	vector3d orient;
 
-	scorch_mark() : cid(-1), radius(0.0), alpha(1.0) {}
-	void gen(point const &p, float r, vector3d const &o, int cid_=-1, float init_alpha=1.0);
+	scorch_mark() : cid(-1), radius(0.0), alpha(1.0), rgb_val(0.0) {}
+	void gen(point const &p, float r, vector3d const &o, int cid_=-1, float init_alpha=1.0, float rgb_val_=0.0);
 	void draw() const;
 	bool is_on_cobj(int cobj) const;
 	void check_cobj();

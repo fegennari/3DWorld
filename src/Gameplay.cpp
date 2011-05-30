@@ -1840,7 +1840,8 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		coll_objects[cindex].register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), (is_laser ? BEAM : PROJECTILE));
 
 		if (!is_laser && coll_objects[cindex].can_be_scorched()) {
-			gen_scorch_mark(coll_pos, 0.005, coll_norm, cindex, 1.0);
+			bool const is_glass(coll_objects[cindex].cp.color.alpha <= 0.5);
+			gen_scorch_mark(coll_pos, 0.005, coll_norm, cindex, 1.0, (is_glass ? 1.0 : 0.0));
 		}
 	}
 	

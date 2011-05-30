@@ -2231,7 +2231,7 @@ void fire::draw() const {
 void scorch_mark::draw() const {
 
 	assert(status);
-	colorRGBA(0.0, 0.0, 0.0, get_alpha()).do_glColor();
+	colorRGBA(rgb_val, rgb_val, rgb_val, get_alpha()).do_glColor();
 	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	draw_billboard(pos, (pos + orient), upv, radius, radius);
 }
