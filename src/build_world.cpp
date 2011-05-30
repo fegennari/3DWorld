@@ -230,23 +230,9 @@ void object_line_coll(dwobject &obj, point const &old_pos, float radius, unsigne
 	if (check_coll_line_exact(old_pos, obj.pos, cpos, cnorm, cindex)) { // slower, but more correct
 		assert(cnorm != zero_vector);
 		obj.flags |= OBJ_COLLIDED;
-		obj.pos    = cpos + cnorm*radius;
+		obj.pos    = cpos + cnorm*(0.99*radius); // move so it only slightly collides
 		assert(!is_nan(obj.pos));
-		
-		if (cindex >= 0) {
-			assert((unsigned)cindex < coll_objects.size());
-			coll_obj const &cobj(coll_objects[cindex]);
-			bool const static_top_coll(cnorm.z == 1.0 && cobj.truly_static());
-
-			if (cobj.cp.coll_func != NULL) { // not quite right
-				cobj.cp.coll_func(cobj.cp.cf_index, obj_index, obj.velocity, obj.pos, 0.0, obj.type);
-			}
-			if (proc_object_stuck(obj, static_top_coll)) {
-				obj.velocity = zero_vector;
-				obj.pos     -= cnorm*(0.1*radius); // make it intersect
-			}
-			if (!static_top_coll) obj.flags &= ~STATIC_COBJ_COLL; // not collision with top
-		}
+		if (cindex >= 0) obj.check_vert_collision(obj_index, 1, 0, NULL, all_zeros, 0, cindex);
 	}
 }
 
