@@ -46,26 +46,50 @@ bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, 
 
 
 
+bool scorch_mark::is_on_cobj(int cobj) const {
+
+	if (cobj < 0) return 0;
+	assert((unsigned)cobj < coll_objects.size()); // can this fail if the cobj was destroyed? coll_objects only increases in size
+	coll_obj const &c(coll_objects[cobj]);
+	return (c.status == COLL_STATIC && c.type == COLL_CUBE && sphere_cube_intersect(ipos, SMALL_NUMBER, c));
+}
+
+
 void scorch_mark::check_cobj() {
 
 	if (!status || cid < 0) return; // already disabled, or no bound cobj
 	
-	if ((unsigned)cid < coll_objects.size()) {
-		coll_obj const &cobj(coll_objects[cid]);
+	if (!is_on_cobj(cid)) { // try to find the cobj this is attached to (likely a split part of the original)
+		int const xpos(get_xpos(ipos.x)), ypos(get_ypos(ipos.y));
 		
-		if (cobj.status == COLL_STATIC && cobj.type == COLL_CUBE) {
-			if (cobj.platform_id >= 0) {
-				assert((unsigned)cobj.platform_id < platforms.size());
-				
-				if (platforms[cobj.platform_id].is_moving()) { // moving platform - remove
-					status = 0;
-					return;
-				}
+		if (point_outside_mesh(xpos, ypos)) {
+			status = 0;
+			return;
+		}
+		vector<int> const &cvals(v_collision_matrix[ypos][xpos].cvals);
+		cid = -1;
+
+		for (unsigned i = 0; i < cvals.size(); ++i) {
+			if (is_on_cobj(cvals[i])) {
+				cid = cvals[i];
+				break;
 			}
-			if (sphere_cube_intersect(ipos, SMALL_NUMBER, cobj)) return; // still on a cobj
 		}
 	}
-	status = 0; // remove it
+	if (cid < 0) { // not found
+		status = 0; // remove it
+		return; // no longer on a cobj
+	}
+	int const pid(coll_objects[cid].platform_id);
+
+	if (pid >= 0) {
+		assert((unsigned)pid < platforms.size());
+				
+		if (platforms[pid].is_moving()) { // moving platform
+			status = 0; // remove it
+			return;
+		}
+	}
 }
 
 

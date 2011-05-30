@@ -117,6 +117,7 @@ struct scorch_mark : public basic_physics_obj { // size = 52
 	scorch_mark() : cid(-1), radius(0.0), alpha(1.0) {}
 	void gen(point const &p, float r, vector3d const &o, int cid_=-1, float init_alpha=1.0);
 	void draw() const;
+	bool is_on_cobj(int cobj) const;
 	void check_cobj();
 	void apply_physics(unsigned i);
 	float get_alpha() const;
