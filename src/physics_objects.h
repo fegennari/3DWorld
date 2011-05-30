@@ -335,6 +335,7 @@ template<typename T> void reset_status(vector<T> &objs) {
 #define IS_PRECIP        0x8000
 #define NO_WATER_DAMAGE  0x10000
 #define OBJ_IS_FLAT      0x20000
+#define OBJ_IS_CYLIN     0x40000
 
 // object flag bits
 #define XY_STOPPED       0x01

@@ -432,10 +432,10 @@ void init_objects() {
 	object_types[SHELLC].radius            = 0.0015;
 	object_types[SHELLC].lifetime          = 400;
 	object_types[SHELLC].density           = 1.8;
-	object_types[SHELLC].elasticity        = 0.7;
+	object_types[SHELLC].elasticity        = 0.8;
 	object_types[SHELLC].health            = 1000.0;
 	object_types[SHELLC].color             = GOLD;
-	object_types[SHELLC].flags             = SPECULAR | BLEND;
+	object_types[SHELLC].flags             = SPECULAR | BLEND | OBJ_IS_CYLIN;
 
 	object_types[PROJC].air_factor         = 0.0;
 	object_types[PROJC].friction_factor    = 0.0;
@@ -807,7 +807,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (otype.flags & COLL_DESTROYS) {assert(type != SMILEY); status = 0; return;}
 		if (flags & STATIC_COBJ_COLL) return; // stuck on vertical collision surface
 		if (check_water_collision(velocity.z) && (frozen || otype.density < WATER_DENSITY)) return;
-		if (otype.flags & OBJ_IS_FLAT) set_orient_for_coll(NULL);
+		if (otype.flags & (OBJ_IS_FLAT | OBJ_IS_CYLIN)) set_orient_for_coll(NULL);
 		point const old_pos(pos);
 		int const val(surface_advance()); // move along ground
 
@@ -857,9 +857,10 @@ int get_obj_zval(point &pt, float &dz, float z_offset) { // 0 = out of bounds/er
 
 int dwobject::object_still_stopped(int obj_index) {
 
-	float const zval(pos.z - object_types[type].radius - SMALL_NUMBER);
+	float const zval(pos.z - object_types[type].radius);
+	float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 
-	if ((zval - SMALL_NUMBER) <= interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0)) {
+	if ((zval - SMALL_NUMBER) <= mh) {
 		if (object_types[type].friction_factor >= STICK_THRESHOLD) {
 			return 1;
 		}
@@ -888,11 +889,11 @@ int dwobject::surface_advance() {
 	}
 	int xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y)), val(0);
 	if (point_outside_mesh(xpos, ypos)) return 0; // object off edge
-	float const h_coll(mesh_height[ypos][xpos]), radius(otype.radius), density(otype.density);
+	float const mesh_height(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0)), radius(otype.radius), density(otype.density);
 
-	if (pos.z < (h_coll - RECOVER_DEPTH*radius)) { // below surface
-		if (pos.z < (h_coll - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
-		pos.z = h_coll; // recover it
+	if (pos.z < (mesh_height - RECOVER_DEPTH*radius)) { // below surface
+		if (pos.z < (mesh_height - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
+		pos.z = mesh_height; // recover it
 	}
 	float const grass_friction(0.1*min(1.0f, (grass_length/radius))*get_grass_density(pos));
 	float const friction(otype.friction_factor + grass_friction);
@@ -926,7 +927,7 @@ int dwobject::surface_advance() {
 	velocity = (mesh_vel*(1.0 - vmult) + velocity*vmult);
 	pos.x   += velocity.x*tstep;
 	pos.y   += velocity.y*tstep;
-	pos.z    = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0) + radius;
+	pos.z    = mesh_height + radius;
 	return val+1;
 }
 

@@ -1497,9 +1497,11 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	//glDepthMask(1);
 	glPushMatrix();
 	translate_to(pos);
-	rotate_by_vector(init_dir, 0.0);
+	glRotatef(TO_DEG*init_dir.x, 0.0, 0.0, 1.0);
+	//rotate_by_vector(init_dir, 0.0);
 	rotate_about(angle, orient);
 	uniform_scale(radius);
+	set_lighted_sides(2);
 
 	if (type == 0) { // M16 shell casing
 		gluCylinder(quadric, 1.0, 1.0, 4.0, ndiv, 1);
@@ -1517,6 +1519,7 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	else {
 		assert(0);
 	}
+	set_lighted_sides(1);
 	glPopMatrix();
 	//glDepthMask(0);
 }

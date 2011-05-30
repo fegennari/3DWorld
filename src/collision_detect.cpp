@@ -1187,6 +1187,7 @@ void vert_coll_detector::check_cobj(int index) {
 			}
 			else {
 				already_bounced = 1;
+				if (otype.flags & OBJ_IS_CYLIN) obj.init_dir.x += PI*signed_rand_float();
 			}
 		}
 		else { // sticks
@@ -1197,8 +1198,18 @@ void vert_coll_detector::check_cobj(int index) {
 			obj.velocity = zero_vector; // I think this is correct
 		}
 		// only use cubes for now, because leaves colliding with tree leaves and branches and resetting the normals is too unstable
-		if ((otype.flags & OBJ_IS_FLAT) && cobj.type == COLL_CUBE) obj.set_orient_for_coll(&norm);
+		if (cobj.type == COLL_CUBE && (otype.flags & OBJ_IS_FLAT)) obj.set_orient_for_coll(&norm);
 		
+		if ((otype.flags & OBJ_IS_CYLIN) && !already_bounced) {
+			if (fabs(norm.z) == 1.0) { // z collision
+				obj.set_orient_for_coll(&norm);
+			}
+			else { // roll in the direction of the slope with axis along z
+				obj.orientation = vector3d(norm.x, norm.y, 0.0).get_norm();
+				obj.init_dir.x  = 0.0;
+				obj.angle       = 90.0;
+			}
+		}
 		if (do_coll_funcs && cobj.cp.coll_func != NULL) { // call collision function
 			invalid_collision = 0; // should already be 0
 			float energy_mult(1.0);

@@ -1468,7 +1468,8 @@ void create_shell_casing(point const &fpos, vector3d const &dir, int shooter, fl
 	obj.velocity    = gen_rand_vector(rand_uniform(0.0, 0.25*(type + 1)), 3.0, PI) + vector3d(dir.y*0.7, -dir.x*0.7, 5.0);
 	obj.orientation = signed_rand_vector_norm();
 	obj.angle       = rand_uniform(0.0, TWO_PI);
-	obj.init_dir    = dir;
+	//obj.init_dir    = dir;
+	obj.init_dir    = vector3d(PI*signed_rand_float(), 0.0, 0.0); // angle
 	obj.time        = -1;
 	obj.source      = shooter;
 	obj.direction   = type; // 0 = M16, 1 = shotgun
@@ -1560,9 +1561,9 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			for (int i = 0; i < int(w.nshots); ++i) { // can be slow if trees are involved
 				projectile_test(fpos, dir, firing_error, damage, shooter, range);
 			}
-			for (unsigned i = 0; i < 2; ++i) {
-				create_shell_casing(fpos, dir, shooter, radius, 1);
-			}
+		}
+		for (unsigned i = 0; i < 2; ++i) {
+			create_shell_casing(fpos, dir, shooter, radius, 1);
 		}
 		return 1;
 
