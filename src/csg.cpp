@@ -884,11 +884,10 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	point center(cube.get_cube_center());
 	if (cube.is_zero_area()) return 0;
 	float const sub_volume(cube.get_volume());
-	vector<int> indices, to_remove, non_dest;
+	vector<int> indices, to_remove;
 	vector<coll_obj> new_cobjs;
 	vector<int> cvals;
 	cdir = zero_vector;
-	bool destroyed(0);
 	unsigned const cobjs_size(cobjs.size());
 	float const maxlen(cube.max_len());
 	bool const is_small(maxlen < HALF_DXY);
@@ -909,21 +908,16 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		if (cobjs[i].status != COLL_STATIC || !cobjs[i].fixed) continue;
 		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), csg_obj(is_cube || is_cylinder);
 		int const D(cobjs[i].destroy);
+		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
 		bool const shatter(D >= SHATTERABLE);
 		if (!shatter && !csg_obj)         continue;
 		csg_cube const cube2(cobjs[i], !csg_obj);
 		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
-		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for nin-destroyable cobj between center and cube2?
-
-		if (D <= max(destroy_thresh, (min_destroy-1))) {
-			if (is_cube) non_dest.push_back(i);
-			continue;
-		}
+		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
 		float volume(cobjs[i].volume);
 		bool no_new_cubes(shatter || volume < TOLERANCE);
 
 		if (!csg_obj || subtract_cobj(new_cobjs, cube, cobjs[i]) || (shatter && is_cylinder)) {
-			if (cobjs[i].cp.color.alpha == 1.0) destroyed = 1; // non-transparent - have to reset adjacent cobj hidden surfaces
 			if (no_new_cubes) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
 			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
@@ -943,14 +937,10 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		}
 		new_cobjs.clear();
 	} // for k
-	if (destroyed) {
-		for (unsigned i = 0; i < non_dest.size(); ++i) {
-			assert((size_t)non_dest[i] < cobjs_size);
-			cobjs[non_dest[i]].clear_lightmap(0); // in case visibility of faces has changed
-		}
-	}
 	if (!to_remove.empty()) {
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // *** FIXME: what about updating (removing) mesh shadows? ***
+
+		// FIXME: update cobj connectivity and make unconnected cobjs fall
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) {
 			remove_coll_object(to_remove[i]); // remove old collision object
