@@ -784,16 +784,28 @@ bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri
 }
 
 
-bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube) { // slow but exact
+template<unsigned N> bool sphere_circle_cube_intersect(point const &pos, float radius, cube_t const &cube) { // slow but exact
 
 	float dmin(0.0);
 	float const r2(radius*radius);
 
-	for (unsigned i = 0; i < 3 && dmin <= r2; ++i) {
+	for (unsigned i = 0; i < N && dmin <= r2; ++i) {
 		if      (pos[i] < cube.d[i][0]) dmin += (pos[i] - cube.d[i][0])*(pos[i] - cube.d[i][0]);
 		else if (pos[i] > cube.d[i][1]) dmin += (pos[i] - cube.d[i][1])*(pos[i] - cube.d[i][1]);
 	}
 	return (dmin <= r2);
+}
+
+
+bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube) {
+
+	return sphere_circle_cube_intersect<2>(pos, radius, cube);
+}
+
+
+bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube) {
+
+	return sphere_circle_cube_intersect<3>(pos, radius, cube);
 }
 
 
@@ -830,32 +842,6 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 		}
 	}
 	return found;
-}
-
-
-bool circle_rect_intersect(float cx, float cy, float r, float x1, float y1, float x2, float y2) { // unused
-
-	if (cx-r > x2 || cx+r < x1 || cy-r > y2 || cy+r < y1) return 0;
-	
-	if (cx < x1) { // to the left
-		if (cy < y1) { // below
-			return (((x1-cx)*(x1-cx) + (y1-cy)*(y1-cy)) < r*r); // x1,y1 inside circle
-		}
-		else if (cy > y2) { // above
-			return (((x1-cx)*(x1-cx) + (y2-cy)*(y2-cy)) < r*r); // x1,y2 inside circle
-		}
-		return 1; // overlap
-	}
-	else if (cx > x2) { // to the right
-		if (cy < y1) { // below
-			return (((x2-cx)*(x2-cx) + (y1-cy)*(y1-cy)) < r*r); // x2,y1 inside circle
-		}
-		else if (cy > y2) { // above
-			return (((x2-cx)*(x2-cx) + (y2-cy)*(y2-cy)) < r*r); // x2,y2 inside circle
-		}
-		return 1; // overlap
-	}
-	return 1; // overlap
 }
 
 

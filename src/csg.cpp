@@ -988,6 +988,91 @@ bool coll_obj::subdiv_fixed_cube(vector<coll_obj> &cobjs) {
 }
 
 
+// 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
+// 15 total: 7 complete, 5 partial, 3 unwritten
+int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
+
+	if (c.type < type) return c.intersects_cobj(*this, toler); // swap arguments
+	if (!intersects(c, toler)) return 0; // cube-cube intersection
+
+	// c.type >= type
+	switch (type) {
+	case COLL_CUBE:
+		switch (c.type) {
+		case COLL_CUBE:
+			return 1; // as simple as that
+		case COLL_CYLINDER:
+			return circle_rect_intersect(c.points[0], c.radius, *this);
+		case COLL_SPHERE:
+			return sphere_cube_intersect(c.points[0], c.radius, *this);
+		case COLL_CYLINDER_ROT:
+			if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
+			return 2; // FIXME
+		case COLL_POLYGON:
+			for (int i = 0; i < c.npoints; ++i) {
+				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
+			}
+			// check cube edges for intersection with polygon
+			return 2; // FIXME
+		default: assert(0);
+		}
+		break;
+
+	case COLL_CYLINDER:
+		switch (c.type) {
+		case COLL_CYLINDER:
+			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius));
+		case COLL_SPHERE:
+			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius)); // FIXME: inexact (return 2?)
+		case COLL_CYLINDER_ROT:
+			if (line_line_dist(points[0], points[1], c.points[0], c.points[1]) > (radius + max(c.radius, c.radius2))) return 0;
+			return 2; // FIXME
+		case COLL_POLYGON:
+			// could use line_intersect_cylinder() for each polygon edge
+			return 2; // FIXME
+		default: assert(0);
+		}
+		break;
+
+	case COLL_SPHERE:
+		switch (c.type) {
+		case COLL_SPHERE:
+			return dist_less_than(points[0], c.points[0], (c.radius+radius));
+		case COLL_CYLINDER_ROT:
+			return sphere_intersect_cylinder(points[0], radius, c.points[0], c.points[1], c.radius, c.radius2);
+		case COLL_POLYGON:
+			return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK2);
+		default: assert(0);
+		}
+		break;
+
+	case COLL_CYLINDER_ROT:
+		switch (c.type) {
+		case COLL_CYLINDER_ROT:
+			if (line_line_dist(points[0], points[1], c.points[0], c.points[1]) > (max(radius, radius2) + max(c.radius, c.radius2))) return 0;
+			return 2; // FIXME
+		case COLL_POLYGON:
+			// could use line_intersect_cylinder() for each polygon edge
+			return 2; // FIXME
+		default: assert(0);
+		}
+		break;
+
+	case COLL_POLYGON:
+		switch (c.type) {
+		case COLL_POLYGON:
+			return 2; // FIXME - need to deal with thickness as well
+		default: assert(0);
+		}
+		break;
+
+	default:
+		assert(0);
+	}
+	return 0;
+}
+
+
 unsigned get_closest_val_index(float val, vector<double> const &sval) {
 
 	for (unsigned i = 0; i < sval.size(); ++i) { // inefficient, assumes sval is small
