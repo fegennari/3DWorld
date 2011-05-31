@@ -130,7 +130,7 @@ B -1.95 1.35 -2.15  2.95 0.7 0.75 # Ceiling + Gutter - Falling objects get stuck
 B  1.1  1.45 -0.55 -0.15 0.7 0.75 # Around the Chimney
 
 # Upstairs
-e 1 # can't disable the bottom side unless the ceiling downstairs is non-destroyable
+e 0 # can't disable the bottom side unless the ceiling downstairs is non-destroyable
 a 0 # non-destroyable
 y 9.0
 l 0.75 0.5 0.4 0.05 1.0 45 1 # Upstairs Carpet (Yellow)
@@ -213,10 +213,6 @@ B -0.2 0.7   0.3 1.5  -0.02 0.05
 B -0.2 0.1   1.5 1.8  -0.02 0.05
 B  0.1 1.08  1.5 2.68 -0.02 0.05
 
-l 0.6 1.0 1.0 1.0 1.0 26 1 # paneling
-B 0.8 1.08 0.3 0.4 -0.03 0.05
-B 0.7 0.8  0.3 1.5 -0.03 0.05
-
 y 8.0
 l 0.6 0.9 0.7 0.5 1.0 36 1 # wooden slats
 B -1.68 -0.2 -0.1 2.68 0.0 0.05
@@ -228,6 +224,11 @@ B -1.68 -0.4 -1.88 -0.1 -0.01 0.05 # Above Back Room
 e 0
 
 a 1 # destroyable
+
+y 4.0
+l 0.6 1.0 1.0 1.0 1.0 26 1 # paneling
+B 0.8 1.08 0.3 0.4 -0.03 0.05
+B 0.7 0.8  0.3 1.5 -0.03 0.05
 
 
 y 3.0
