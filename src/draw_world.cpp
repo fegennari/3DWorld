@@ -2121,8 +2121,10 @@ template<typename T> void get_draw_order(vector<T> const &objs, order_vect_t &or
 	point const camera(get_camera_pos());
 	
 	for (unsigned i = 0; i < objs.size(); ++i) {
-		if (objs[i].status && sphere_in_camera_view(objs[i].pos, objs[i].radius, 0)) {
-			order.push_back(make_pair(-p2p_dist_sq(objs[i].pos, camera), i));
+		point const pos(objs[i].get_pos());
+
+		if (objs[i].status && sphere_in_camera_view(pos, objs[i].radius, 0)) {
+			order.push_back(make_pair(-p2p_dist_sq(pos, camera), i));
 		}
 	}
 	sort(order.begin(), order.end()); // sort back to front
@@ -2236,7 +2238,8 @@ void scorch_mark::draw() const {
 	assert(status);
 	colorRGBA(rgb_val, rgb_val, rgb_val, get_alpha()).do_glColor();
 	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
-	draw_billboard(pos, (pos + orient), upv, radius, radius);
+	point const cur_pos(get_pos());
+	draw_billboard(cur_pos, (cur_pos + orient), upv, radius, radius);
 }
 
 

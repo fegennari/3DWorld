@@ -178,9 +178,10 @@ void fire::gen(point const &p, float size, int src) {
 void scorch_mark::gen(point const &p, float r, vector3d const &o, int cid_, float init_alpha, float rgb_val_) {
 
 	assert(r > 0.0 && init_alpha > 0.0);
+	cid    = cid_; // must be set first
 	ipos   = p;
-	init_gen_rand(p, 0.0, 0.0);
-	cid    = cid_;
+	ipos  -= get_platform_delta(); // make relative to the at-rest platform pos
+	init_gen_rand(ipos, 0.0, 0.0);
 	radius = r;
 	alpha  = init_alpha;
 	rgb_val= rgb_val_;

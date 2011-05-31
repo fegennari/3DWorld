@@ -17,6 +17,7 @@ struct spark_t {
 	colorRGBA c;
 	static int status;
 	static float radius;
+	point const &get_pos() const {return pos;}
 
 	spark_t() {}
 	spark_t(point const &p_, colorRGBA const &c_, float s_) : pos(p_), c(c_), s(s_) {}
@@ -50,6 +51,7 @@ struct basic_physics_obj { // size = 20
 
 	basic_physics_obj(point const &pos_=all_zeros, int status_=0) : pos(pos_), time(0), status(status_) {}
 	void init_gen_rand(point const &p2, float rxy, float rz);
+	point const &get_pos() const {return pos;}
 
 	bool operator<(basic_physics_obj const &o) const {
 		if (status == 0 && o.status != 0) return 0;
@@ -76,6 +78,7 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 		point pos;
 		float radius;
 		bool status;
+		point const &get_pos() const {return pos;}
 	};
 	bool acc_smoke;
 	int source;
@@ -121,6 +124,8 @@ struct scorch_mark : public basic_physics_obj { // size = 52
 	void check_cobj();
 	void apply_physics(unsigned i);
 	float get_alpha() const;
+	vector3d get_platform_delta() const;
+	point const get_pos() const {return (pos + get_platform_delta());}
 };
 
 

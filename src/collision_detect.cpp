@@ -51,7 +51,7 @@ bool scorch_mark::is_on_cobj(int cobj) const {
 	if (cobj < 0) return 0;
 	assert((unsigned)cobj < coll_objects.size()); // can this fail if the cobj was destroyed? coll_objects only increases in size
 	coll_obj const &c(coll_objects[cobj]);
-	return (c.status == COLL_STATIC && c.type == COLL_CUBE && sphere_cube_intersect(ipos, SMALL_NUMBER, c));
+	return (c.status == COLL_STATIC && c.type == COLL_CUBE && sphere_cube_intersect((ipos + get_platform_delta()), SMALL_NUMBER, c));
 }
 
 
@@ -80,16 +80,21 @@ void scorch_mark::check_cobj() {
 		status = 0; // remove it
 		return; // no longer on a cobj
 	}
-	int const pid(coll_objects[cid].platform_id);
+}
 
-	if (pid >= 0) {
-		assert((unsigned)pid < platforms.size());
-				
-		if (platforms[pid].is_moving()) { // moving platform
-			status = 0; // remove it
-			return;
+
+vector3d scorch_mark::get_platform_delta() const {
+
+	if (cid >= 0) {
+		assert((unsigned)cid < coll_objects.size());
+		int const pid(coll_objects[cid].platform_id);
+		
+		if (pid >= 0) {
+			assert((unsigned)pid < platforms.size());
+			return platforms[pid].get_delta();
 		}
 	}
+	return all_zeros;
 }
 
 
