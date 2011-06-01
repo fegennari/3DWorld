@@ -17,13 +17,8 @@ bool const CHECK_ADJACENCY    = 0; // doesn't seem to make any significant diffe
 int  const REMOVE_T_JUNCTIONS = 1; // fewer hole pixels and better ambient transitions but more cobjs and render time
 float const REL_DMAX          = 0.2;
 
-extern vector<portal> portals;
-
 
 // *** RECT IMPLEMENTATION ***
-
-
-int destroy_thresh(0);
 
 
 rect::rect(float const r[3][2], unsigned d0, unsigned d1) { // projection from 3D => 2D
@@ -836,122 +831,6 @@ void process_negative_shapes(vector<coll_obj> &cobjs) { // negtive shapes should
 }
 
 
-void add_portal(coll_obj const &c) {
-
-	if (c.type == COLL_POLYGON) {
-		assert(c.npoints == 3 || c.npoints == 4);
-		portal p;
-
-		for (int i = 0; i < c.npoints; ++i) {
-			p.pts[i] = c.points[i]; // ignore thickness - use base polygon only
-		}
-		if (c.npoints == 3) p.pts[3] = p.pts[2]; // duplicate the last point
-		portals.push_back(p);
-	}
-	else if (c.type == COLL_CUBE) {
-		portal p;
-		float max_area(0.0);
-		
-		for (unsigned i = 0; i < 6; ++i) { // choose enabled side with max area
-			unsigned const dim(i>>1), dir(i&1), d0((dim+1)%3), d1((dim+2)%3);
-			if (c.cp.surfs & EFLAGS[dim][dir]) continue; // disabled side
-			float const area(fabs(c.d[d0][1] - c.d[d0][0])*fabs(c.d[d1][1] - c.d[d1][0]));
-
-			if (area > max_area) {
-				max_area = area;
-				point pos;
-				pos[dim] = c.d[dim][dir];
-
-				for (unsigned n = 0; n < 4; ++n) {
-					pos[d0] = c.d[d0][n<2];
-					pos[d1] = c.d[d1][(n&1)^(n<2)];
-					p.pts[n] = pos;
-				}
-			}
-		}
-		if (max_area > 0.0) portals.push_back(p);
-	}
-	// else other types are not supported yet (cylinder, sphere)
-}
-
-
-unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir,
-					   float x1, float x2, float y1, float y2, float z1, float z2, int min_destroy)
-{
-	//RESET_TIME;
-	if (destroy_thresh >= EXPLODEABLE) return 0;
-	csg_cube const cube(x1, x2, y1, y2, z1, z2);
-	point center(cube.get_cube_center());
-	if (cube.is_zero_area()) return 0;
-	float const sub_volume(cube.get_volume());
-	vector<int> indices, to_remove;
-	vector<coll_obj> new_cobjs;
-	vector<int> cvals;
-	cdir = zero_vector;
-	unsigned const cobjs_size(cobjs.size());
-	float const maxlen(cube.max_len());
-	bool const is_small(maxlen < HALF_DXY);
-	unsigned ncobjs, last_cobj(0);
-
-	if (is_small) { // not much faster
-		int const xpos(get_xpos(center.x)), ypos(get_ypos(center.y));
-		if (point_outside_mesh(xpos, ypos)) return 0;
-		cvals  = v_collision_matrix[ypos][xpos].cvals; // make a copy because cvals can change during iteration
-		ncobjs = cvals.size(); // so as not to retest newly created subcubes
-	}
-	else {
-		ncobjs = cobjs_size; // so as not to retest newly created subcubes
-	}
-	for (unsigned k = 0; k < ncobjs; ++k) {
-		unsigned const i(is_small ? cvals[k] : k);
-		assert((size_t)i < cobjs_size);
-		if (cobjs[i].status != COLL_STATIC || !cobjs[i].fixed) continue;
-		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), csg_obj(is_cube || is_cylinder);
-		int const D(cobjs[i].destroy);
-		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
-		bool const shatter(D >= SHATTERABLE);
-		if (!shatter && !csg_obj)         continue;
-		csg_cube const cube2(cobjs[i], !csg_obj);
-		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
-		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
-		float volume(cobjs[i].volume);
-		bool no_new_cubes(shatter || volume < TOLERANCE);
-
-		if (!csg_obj || subtract_cobj(new_cobjs, cube, cobjs[i]) || (shatter && is_cylinder)) {
-			if (no_new_cubes) new_cobjs.clear(); // completely destroyed
-			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
-			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
-			indices.clear();
-
-			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
-				//test_for_falling_cobj(new_cobjs[j], i);
-				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
-				assert((size_t)index < cobjs.size());
-				indices.push_back(index);
-				volume -= cobjs[index].volume;
-			}
-			assert(volume >= -TOLERANCE); // usually > 0.0
-			cts.push_back(color_tid_vol(cobjs[i], volume));
-			cobjs[i].clear_internal_data(cobjs, indices, i);
-			to_remove.push_back(i);
-		}
-		new_cobjs.clear();
-	} // for k
-	if (!to_remove.empty()) {
-		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // *** FIXME: what about updating (removing) mesh shadows? ***
-
-		// FIXME: update cobj connectivity and make unconnected cobjs fall
-
-		for (unsigned i = 0; i < to_remove.size(); ++i) {
-			remove_coll_object(to_remove[i]); // remove old collision object
-		}
-		cdir.normalize();
-	}
-	//PRINT_TIME("Subtract Cube");
-	return to_remove.size();
-}
-
-
 bool coll_obj::subdiv_fixed_cube(vector<coll_obj> &cobjs) {
 
 	assert(type == COLL_CUBE);
@@ -983,91 +862,6 @@ bool coll_obj::subdiv_fixed_cube(vector<coll_obj> &cobjs) {
 			cp.surfs = surfs; // restore edge flags
 		}
 		return 1;
-	}
-	return 0;
-}
-
-
-// 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
-// 15 total: 7 complete, 5 partial, 3 unwritten
-int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
-
-	if (c.type < type) return c.intersects_cobj(*this, toler); // swap arguments
-	if (!intersects(c, toler)) return 0; // cube-cube intersection
-
-	// c.type >= type
-	switch (type) {
-	case COLL_CUBE:
-		switch (c.type) {
-		case COLL_CUBE:
-			return 1; // as simple as that
-		case COLL_CYLINDER:
-			return circle_rect_intersect(c.points[0], c.radius, *this);
-		case COLL_SPHERE:
-			return sphere_cube_intersect(c.points[0], c.radius, *this);
-		case COLL_CYLINDER_ROT:
-			if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
-			return 2; // FIXME
-		case COLL_POLYGON:
-			for (int i = 0; i < c.npoints; ++i) {
-				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
-			}
-			// check cube edges for intersection with polygon
-			return 2; // FIXME
-		default: assert(0);
-		}
-		break;
-
-	case COLL_CYLINDER:
-		switch (c.type) {
-		case COLL_CYLINDER:
-			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius));
-		case COLL_SPHERE:
-			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius)); // FIXME: inexact (return 2?)
-		case COLL_CYLINDER_ROT:
-			if (line_line_dist(points[0], points[1], c.points[0], c.points[1]) > (radius + max(c.radius, c.radius2))) return 0;
-			return 2; // FIXME
-		case COLL_POLYGON:
-			// could use line_intersect_cylinder() for each polygon edge
-			return 2; // FIXME
-		default: assert(0);
-		}
-		break;
-
-	case COLL_SPHERE:
-		switch (c.type) {
-		case COLL_SPHERE:
-			return dist_less_than(points[0], c.points[0], (c.radius+radius));
-		case COLL_CYLINDER_ROT:
-			return sphere_intersect_cylinder(points[0], radius, c.points[0], c.points[1], c.radius, c.radius2);
-		case COLL_POLYGON:
-			return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK2);
-		default: assert(0);
-		}
-		break;
-
-	case COLL_CYLINDER_ROT:
-		switch (c.type) {
-		case COLL_CYLINDER_ROT:
-			if (line_line_dist(points[0], points[1], c.points[0], c.points[1]) > (max(radius, radius2) + max(c.radius, c.radius2))) return 0;
-			return 2; // FIXME
-		case COLL_POLYGON:
-			// could use line_intersect_cylinder() for each polygon edge
-			return 2; // FIXME
-		default: assert(0);
-		}
-		break;
-
-	case COLL_POLYGON:
-		switch (c.type) {
-		case COLL_POLYGON:
-			return 2; // FIXME - need to deal with thickness as well
-		default: assert(0);
-		}
-		break;
-
-	default:
-		assert(0);
 	}
 	return 0;
 }

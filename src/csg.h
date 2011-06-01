@@ -99,6 +99,8 @@ public:
 };
 
 
+bool subtract_cobj(vector<coll_obj> &new_cobjs, csg_cube const &cube, coll_obj &cobj);
+
 
 #endif
 

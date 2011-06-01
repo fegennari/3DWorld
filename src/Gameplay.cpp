@@ -1025,63 +1025,6 @@ void dwobject::damage_object(float damage, point const &dpos, point const &shoot
 }
 
 
-void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
-
-	assert(damage >= 0.0);
-	if (damage < 100.0) return;
-	float const r((big ? 4.0 : 1.0)*sqrt(damage)/(rand_uniform(600.0, 750.0)));
-	vector3d cdir;
-	vector<color_tid_vol> cts;
-	int const dmin((damage > 800.0) ? DESTROYABLE : ((damage > 200.0) ? SHATTERABLE : EXPLODEABLE));
-	unsigned nrem(subtract_cube(coll_objects, cts, cdir, (pos.x-r),(pos.x+r),(pos.y-r),(pos.y+r),(pos.z-r),(pos.z+r), dmin));
-	if (nrem == 0 || cts.empty()) return;
-	float const cdir_mag(cdir.mag());
-	obj_group &objg(obj_groups[coll_id[FRAGMENT]]);
-
-	for (unsigned i = 0; i < cts.size(); ++i) {
-		if (cts[i].destroy == EXPLODEABLE) {
-			float const val(float(pow(double(cts[i].volume), 1.0/3.0))), exp_damage(25000.0*val + 0.25*damage + 500.0);
-			create_explosion(pos, shooter, 0, exp_damage, 10.0*val, BLAST_RADIUS, 0);
-			gen_fire(pos, min(4.0, 12.0*val), shooter);
-		}
-		if (!cts[i].draw) continue;
-		int const num(min(100, int((rand()%20 + 20)*(cts[i].volume/0.0007))));
-		bool const shattered(cts[i].destroy >= SHATTERABLE);
-		point fpos(pos);
-
-		for (int o = 0; o < num; ++o) {
-			vector3d velocity(cdir);
-
-			if (shattered) {
-				for (unsigned j = 0; j < 3; ++j) { // only accurate for COLL_CUBE
-					fpos[j] = rand_uniform(cts[i].d[j][0], cts[i].d[j][1]); // generate inside of the shattered cobj's volume
-				}
-				vector3d const vadd(fpos - pos); // average cdir and direction from collision point to fragment location
-
-				if (vadd.mag() > TOLERANCE) {
-					velocity += vadd.get_norm()*(cdir_mag/vadd.mag());
-					velocity *= 0.5;
-				}
-			}
-			int const ix(objg.choose_object());
-			objg.create_object_at(ix, fpos);
-			dwobject &obj(objg.get_obj(ix));
-			for (unsigned j = 0; j < 3; ++j) obj.init_dir[j] = cts[i].color[j];
-			obj.coll_id     = -(cts[i].tid + 2); // < 0
-			assert(obj.coll_id < 0);
-			obj.velocity    = (velocity + gen_rand_vector(rand_uniform(0.3, 0.7), 1.0, PI))*rand_uniform(10.0, 15.0);
-			obj.angle       = TWO_PI*rand_float();
-			obj.orientation = signed_rand_vector_norm();
-			obj.vdeform.x   = 0.6 + 1.0*rand_float(); // size
-			obj.vdeform.y   = cts[i].color.alpha;
-			obj.vdeform.z   = (float)cts[i].destroy;
-			obj.time        = int(0.5*rand_float()*object_types[FRAGMENT].lifetime);
-			obj.source      = shooter;
-		}
-	} // for i
-}
-
-
 void blast_radius(point const &pos, int type, int obj_index, int shooter, int chain_level) {
 
 	point const temp1(camera_origin);
