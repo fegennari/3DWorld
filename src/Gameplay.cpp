@@ -1493,18 +1493,20 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			return 1;
 		} // fallthrough to shotgun case
 	case W_SHOTGUN:
-		if ((wmode&1) == 1) { // shrapnel cannon (might be from shrapnel chaingun)
+		if ((wmode&1) == 1) { // shrapnel cannon/chaingun
 			create_shrapnel(pos, dir, firing_error, w.nshots, shooter, weapon_id);
 		}
-		else { // normal 12-gauge
+		else { // normal 12-gauge/M16
 			if (underwater) firing_error += UWATER_FERR_ADD;
 
 			for (int i = 0; i < int(w.nshots); ++i) { // can be slow if trees are involved
 				projectile_test(fpos, dir, firing_error, damage, shooter, range);
 			}
 		}
-		for (unsigned i = 0; i < 2; ++i) {
-			create_shell_casing(fpos, dir, shooter, radius, 1);
+		if (weapon_id == W_SHOTGUN) {
+			for (unsigned i = 0; i < 2; ++i) {
+				create_shell_casing(fpos, dir, shooter, radius, 1);
+			}
 		}
 		return 1;
 
