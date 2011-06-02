@@ -143,7 +143,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	for (unsigned k = 0; k < ncobjs; ++k) {
 		unsigned const i(is_small ? cvals[k] : k);
 		assert((size_t)i < cobjs_size);
-		if (cobjs[i].status != COLL_STATIC || !cobjs[i].fixed) continue;
+		if (cobjs[i].status != COLL_STATIC /*|| !cobjs[i].fixed*/) continue; // require fixed cobjs? exclude platforms (but they seem to work)?
 		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), csg_obj(is_cube || is_cylinder);
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;

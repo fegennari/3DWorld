@@ -450,7 +450,7 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 
 bool coll_obj::truly_static() const {
 
-	return (status == COLL_STATIC && (type != COLL_CUBE || destroy <= destroy_thresh) && platform_id < 0);
+	return (status == COLL_STATIC && (type != COLL_CUBE || destroy <= SHATTERABLE) && platform_id < 0); // destroy_thresh?
 }
 
 
