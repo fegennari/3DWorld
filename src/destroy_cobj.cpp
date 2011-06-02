@@ -181,8 +181,8 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		// FIXME: update cobj connectivity and make unconnected cobjs fall
 		// * Use intersects_cobj() to find connected groups of shapes starting at all cobjs to_remove in a queue (open set)
 		//     - Assert that all cobjs in cts are reached
-		// * If we reach the following it is connected (need to implement is_anchored()):
-		//     A. Static/fixed/non-destroyable cobj (status == COLL_STATIC && fixed && destroy <= destroy_thresh && platform_id < 0)
+		// * If we reach the following it is connected using is_anchored():
+		//     A. Static/fixed/non-destroyable cobj
 		//     B. Coll object that has one vertex below the mesh
 		//     C. COLL_CUBE that has at least one mesh_height in [xmin, xmax]x[ymin, ymax] >= d[2][0]
 		// * Otherwise, add all objects in the group (closed set) to a falling objects group
@@ -199,6 +199,54 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	}
 	//PRINT_TIME("Subtract Cube");
 	return to_remove.size();
+}
+
+
+bool is_pt_under_mesh(point const &p) {
+
+	int const xpos(get_xpos(p.x)), ypos(get_ypos(p.y));
+	if (point_outside_mesh(xpos, ypos)) return 0;
+	return (p.z < mesh_height[ypos][xpos]);
+}
+
+
+int coll_obj::is_anchored() const {
+
+	if (platform_id >= 0 || status != COLL_STATIC) return 0; // platforms and dynamic objects are never connecting
+	if (fixed && destroy <= destroy_thresh)        return 2; // can't be destroyed, so it never moves
+
+	switch (type) {
+	case COLL_CUBE:
+		{
+			int const x1(get_xpos(d[0][0])), x2(get_xpos(d[0][1]));
+			int const y1(get_ypos(d[1][0])), y2(get_ypos(d[1][1]));
+			
+			for (int y = y1; y <= y2; ++y) {
+				for (int x = x1; x <= x2; ++x) {
+					if (!point_outside_mesh(x, y) && d[2][0] < mesh_height[y][x]) return 1;
+				}
+			}
+			return 0;
+		}
+	case COLL_SPHERE:
+		return is_pt_under_mesh((points[0] - vector3d(0.0, 0.0, radius)));
+	case COLL_CYLINDER: // should really test the entire top/bottom surface
+	case COLL_CYLINDER_ROT:
+		return is_pt_under_mesh(points[0]) || is_pt_under_mesh(points[1]);
+	case COLL_POLYGON: // should really test the entire surface(s)
+		for (int i = 0; i < npoints; ++i) {
+			if (is_pt_under_mesh(points[i])) return 1;
+
+			if (thickness > MIN_POLY_THICK2) {
+				if (is_pt_under_mesh(points[i] + norm*(0.5*thickness))) return 1;
+				if (is_pt_under_mesh(points[i] - norm*(0.5*thickness))) return 1;
+			}
+		}
+		return 0;
+	default:
+		assert(0);
+	}
+	return 0;
 }
 
 

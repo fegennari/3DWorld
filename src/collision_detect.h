@@ -196,6 +196,7 @@ public:
 	void get_cvz_counts(int *zz, float zmin, float zmax, int x, int y) const;
 	bool subdiv_fixed_cube(vector<coll_obj> &cobjs);
 	int  intersects_cobj(coll_obj const &c, float toler=0.0) const;
+	int  is_anchored() const;
 	void shift_by(vector3d const &vd);
 	void add_to_platform() const;
 	bool dynamic_shadows_only() const;
