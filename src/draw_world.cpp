@@ -45,7 +45,8 @@ sky_pos_orient cur_spo(point(0,0,0),0,0,0);
 vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 vector<light_source> enabled_lights;
-pt_line_drawer obj_pld, snow_pld;
+pt_line_drawer obj_pld;
+pt_line_drawer_hdr snow_pld;
 
 
 extern GLUquadricObj* quadric;
@@ -77,8 +78,6 @@ extern int coll_id[];
 extern vector<light_source> dl_sources;
 extern vector<portal> portals;
 
-
-class pt_line_drawer; // forward declaration
 
 
 void draw_cloud_volumes();
@@ -288,7 +287,15 @@ inline bool get_cull_face(int type, colorRGBA const &color) {
 }
 
 
-void pt_line_drawer::add_textured_pt(point const &v, colorRGBA c, int tid) {
+int color_wrapper::gl_type       = GL_UNSIGNED_BYTE;
+int color_wrapper_float::gl_type = GL_FLOAT;
+
+
+template class pt_line_drawer_t<color_wrapper      >;
+template class pt_line_drawer_t<color_wrapper_float>;
+
+
+template<typename cwt> void pt_line_drawer_t<cwt>::add_textured_pt(point const &v, colorRGBA c, int tid) {
 
 	if (tid >= 0) c = c.modulate_with(texture_color(tid));
 	vector3d const view_dir(get_camera_pos(), v);
@@ -296,7 +303,7 @@ void pt_line_drawer::add_textured_pt(point const &v, colorRGBA c, int tid) {
 }
 
 
-void pt_line_drawer::add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid) {
+template<typename cwt> void pt_line_drawer_t<cwt>::add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid) {
 
 	if (tid >= 0) c = c.modulate_with(texture_color(tid));
 	vector3d view_dir(get_camera_pos(), (v1 + v2)*0.5);
@@ -305,17 +312,17 @@ void pt_line_drawer::add_textured_line(point const &v1, point const &v2, colorRG
 }
 
 
-void pt_line_drawer::vnc_cont::draw(int type) const {
+template<typename cwt> void pt_line_drawer_t<cwt>::vnc_cont::draw(int type) const {
 	
 	if (empty()) return; // nothing to do
-	glVertexPointer(3, GL_FLOAT,         sizeof(vnc), &(front().v));
-	glNormalPointer(   GL_FLOAT,         sizeof(vnc), &(front().n));
-	glColorPointer( 4, GL_UNSIGNED_BYTE, sizeof(vnc), &(front().c));
+	glVertexPointer(3, GL_FLOAT,     sizeof(vnc), &(front().v));
+	glNormalPointer(   GL_FLOAT,     sizeof(vnc), &(front().n));
+	glColorPointer( 4, cwt::gl_type, sizeof(vnc), &(front().c));
 	glDrawArrays(type, 0, size());
 }
 
 
-void pt_line_drawer::draw() const {
+template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 		
 	if (points.empty() && lines.empty()) return;
 	GLboolean const col_mat_en(glIsEnabled(GL_COLOR_MATERIAL));
@@ -843,7 +850,7 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 		get_shadowed_color(a, pos, is_shadowed, precip, 0);
 		bool const scatters(type == RAIN || type == SNOW);
 		vector3d const n(is_shadowed ? (pos - get_light_pos()) : ((scatters ? get_light_pos() : camera) - pos));
-		(draw_snowflake ? snow_pld : obj_pld).add_pt(pos, n, a);
+		if (draw_snowflake) snow_pld.add_pt(pos, n, a); else obj_pld.add_pt(pos, n, a);
 		return;
 	}
 	colorRGBA color_l(color);

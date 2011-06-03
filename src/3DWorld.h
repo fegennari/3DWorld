@@ -593,12 +593,24 @@ struct vert_norm_tc : public vert_norm { // size = 32
 
 
 struct color_wrapper { // size = 4
+	static int gl_type;
 	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
 
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
 	void set_c4(colorRGBA const &c_) {set_c3(c_); c[3] = (unsigned char)(255.0*CLIP_TO_01(c_[3]));}
 	colorRGB  get_c3() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	colorRGBA get_c4() const {return colorRGBA(get_c3(), c[3]/255.0);}
+};
+
+
+struct color_wrapper_float { // size = 16
+	static int gl_type;
+	colorRGBA c; // Note: c[3] (alpha component) is not used in all cases
+
+	template<typename T> void set_c3(T const &c_) {c = c_;}
+	void set_c4(colorRGBA const &c_) {c = c_;}
+	colorRGB  get_c3() const {return colorRGB(c.red, c.green, c.blue);}
+	colorRGBA get_c4() const {return c;}
 };
 
 
@@ -635,9 +647,9 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 };
 
 
-class pt_line_drawer {
+template<typename cwt> class pt_line_drawer_t {
 
-	struct vnc : public color_wrapper { // size = 28
+	struct vnc : public cwt { // size = 28
 		point v;
 		vector3d n;
 
@@ -674,6 +686,10 @@ public:
 	unsigned get_mem() const {return (points.capacity() + lines.capacity())*sizeof(vnc);}
 	bool empty() const {return (points.empty() && lines.empty());}
 };
+
+
+typedef pt_line_drawer_t<color_wrapper      > pt_line_drawer;
+typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
 
 
 class quad_batch_draw { // unused, but could possibly use for pine trees and plants
