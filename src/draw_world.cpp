@@ -19,7 +19,6 @@ bool const DEBUG_COLOR_COLLS    = 0;
 bool const DYNAMIC_OBJ_LIGHTS   = 1;
 bool const SHOW_DRAW_TIME       = 0;
 bool const NO_SHRAP_DLIGHT      = 1; // looks cool with dynamic lights, but very slow
-bool const FASTER_SHADOWS       = 0;
 bool const DYNAMIC_SMOKE_SHADOWS= 1; // slower, but looks nice
 unsigned const MAX_CFILTERS     = 10;
 unsigned const SHAD_NOBJ_THRESH = 200;
@@ -218,9 +217,9 @@ inline void scale_color_uw(colorRGBA &color) {
 
 
 // Note: incorrect if there is both a sun and a moon
-bool pt_is_shadowed(point const &pos, int light, int status, float radius, int cid, int fast) {
+bool pt_is_shadowed(point const &pos, int light, int status, float radius, int cid, int fast, bool use_mesh) {
 
-	if (fast && FASTER_SHADOWS) {
+	if (use_mesh) {
 		int const xpos(get_ypos(pos.x)), ypos(get_ypos(pos.y));
 		if (point_outside_mesh(xpos, ypos)) return 0;
 
@@ -503,7 +502,7 @@ void draw_group(obj_group &objg) {
 	check_drawing_flags(flags, 1, 0);
 	int const clip_level((type == SMILEY || type == LANDMINE || type == ROCKET || type == BALL) ? 2 : 0);
 	bool const calc_shadow(color != BLACK || (otype.flags & (SPECULAR | LOW_SPECULAR)));
-	unsigned num_drawn(0);
+	unsigned num_drawn(0), num_shadow_test(0);
 
 	if (type == LEAF) { // leaves
 		int last_tid(-1);
@@ -554,7 +553,7 @@ void draw_group(obj_group &objg) {
 			colorRGBA leaf_color(WHITE);
 			UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
 			if (leaf_color != BLACK) blend_color(leaf_color, dry_color, leaf_color, t, 0);
-			bool const shadowed(pt_is_shadowed(obj.pos, light, obj.status, radius, obj.coll_id, (fast+1)));
+			bool const shadowed(pt_is_shadowed(obj.pos, light, obj.status, radius, obj.coll_id, (fast+1), 0));
 			if (shadowed) set_specular(0.0, 1.0); else set_specular(0.1, 10.0); // FIXME: should leaves on trees be a matching specular again?
 			set_shadowed_color(leaf_color, obj.pos, shadowed, 0);
 			glBegin(GL_QUADS);
@@ -587,8 +586,12 @@ void draw_group(obj_group &objg) {
 			point const &pos(obj.pos);
 			if (!sphere_in_camera_view(pos, radius_ext, clip_level)) continue;
 			float const pt_size(cd_scale/distance_to_camera(pos));
-			bool const is_shadowed(calc_shadow && pt_is_shadowed(pos, light, obj.status, radius, obj.coll_id, (pt_size < 1.0)));
-			if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
+			bool is_shadowed((obj.flags & SHADOWED) != 0); // previous value
+			
+			if (calc_shadow) {
+				is_shadowed = pt_is_shadowed(pos, light, obj.status, radius, obj.coll_id, (pt_size < 1.0), (pt_size < 0.5));
+				if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
+			}
 			set_obj_specular(is_shadowed, flags, specular_brightness);
 
 			if (DEBUG_COLORCODE) {
@@ -651,11 +654,22 @@ void draw_group(obj_group &objg) {
 			point const &pos(obj.pos);
 			if (obj.disabled() || (obj.flags & CAMERA_VIEW))     continue;
 			if (!sphere_in_camera_view(pos, radius, clip_level)) continue;
-			bool const calc_shad(calc_shadow && (objg.end_id < SHAD_NOBJ_THRESH || cd_scale*cd_scale > distance_to_camera_sq(pos)));
-			bool const is_shadowed(calc_shad && pt_is_shadowed(pos, light, obj.status, radius, obj.coll_id, (fast+1)));
-			if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
 			++num_drawn;
+			bool is_shadowed((obj.flags & SHADOWED) != 0); // previous value
 
+			if (calc_shadow) {
+				float const val(cd_scale/distance_to_camera(pos)); // approx pixel size
+
+				if (val > 1.0) {
+					int const skipval(min(12, int(8.0/val)));
+
+					if (skipval <= 1 || (obj.time % skipval) == 0) {
+						is_shadowed = pt_is_shadowed(pos, light, obj.status, radius, obj.coll_id, (fast+(val < 5.0)), (val < 2.0));
+						if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
+						++num_shadow_test;
+					}
+				}
+			}
 			if ((int)is_shadowed != last_shadowed) {
 				set_obj_specular(is_shadowed, flags, specular_brightness); // slow?
 				last_shadowed = is_shadowed;
@@ -777,7 +791,7 @@ void draw_group(obj_group &objg) {
 	glDisable(GL_TEXTURE_2D);
 
 	if (SHOW_DRAW_TIME) {
-		cout << "type = " << objg.type << ", num = " << objg.end_id << ", drawn = " << num_drawn << endl;
+		cout << "type = " << objg.type << ", num = " << objg.end_id << ", drawn = " << num_drawn << ", shadow tests: " << num_shadow_test << " ";
 		PRINT_TIME("Group");
 	}
 }
@@ -1014,6 +1028,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	//uniform_scale(radius);
 	point pos2(-0.4*radius, 0.85*radius, 0.3*radius);
 
+	// draw eyes
 	for (unsigned i = 0; i < 2; ++i) {
 		if (health > 10.0) {
 			float const scale((powerup == PU_SPEED) ? 1.5 : 1.0);
@@ -1041,6 +1056,8 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		}
 		pos2.x *= -1.0;
 	}
+
+	// draw nose
 	if (powerup != PU_INVISIBILITY || same_team(id, -1)) { // show nose even if invisible if same team as player
 		point pos3(0.0, 1.1*radius, 0.0);
 		draw_smiley_part(pos3, pos, orient, SF_NOSE, 0, ndiv2, is_shadowed); // nose
@@ -1150,7 +1167,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	gluSphere(quadric, 0.65*radius, ndiv, ndiv2);
 	glPopMatrix();
 	
-	// mouth
+	// draw mouth
 	float const hval(0.004*(100.0 - min(160.0f, health)));
 	set_shadowed_color(mult_alpha(BLACK, alpha), pos, is_shadowed);
 	enable_blend();
@@ -1167,7 +1184,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	glLineWidth(1.0);
 	disable_blend();
 
-	// tongue
+	// draw tongue
 	if (sstates[id].kill_time < int(TICKS_PER_SECOND) || powerup == PU_DAMAGE) { // stick your tongue out at a dead enemy
 		point pos4(0.0, 0.8*radius, -0.4*radius);
 		draw_smiley_part(pos4, pos, orient, SF_TONGUE, 0, ndiv2, is_shadowed);
@@ -1418,13 +1435,13 @@ void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d cons
 	glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
 	set_shadowed_color((charred ? BLACK : YELLOW), pos, is_shadowed);
 	uniform_scale(radius);
-	//draw_sphere_dlist_raw(ndiv, 0);
-	gluSphere(quadric, 1.0, ndiv, ndiv);
+	draw_sphere_dlist_raw(ndiv, 0);
+	//gluSphere(quadric, 1.0, ndiv, ndiv);
 	set_shadowed_color((charred ? DK_GRAY : BLOOD_C), pos, is_shadowed);
 	glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
 	glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
-	//draw_sphere_dlist_raw(ndiv, 0);
-	gluSphere(quadric, 1.0, ndiv, ndiv);
+	draw_sphere_dlist_raw(ndiv, 0);
+	//gluSphere(quadric, 1.0, ndiv, ndiv);
 	glPopMatrix();
 }
 
