@@ -66,7 +66,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 			obj.orientation = signed_rand_vector_norm();
 			obj.vdeform.x   = 0.6 + 1.0*rand_float(); // size
 			obj.vdeform.y   = cts[i].color.alpha;
-			obj.vdeform.z   = (float)cts[i].destroy;
+			obj.vdeform.z   = fabs(cts[i].tscale)*(shattered ? 1.0 : -1.0);
 			obj.time        = int(0.5*rand_float()*object_types[FRAGMENT].lifetime);
 			obj.source      = shooter;
 		}

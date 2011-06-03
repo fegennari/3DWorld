@@ -301,7 +301,7 @@ void init_objects() {
 	object_types[FRAGMENT].elasticity      = 0.4;
 	object_types[FRAGMENT].health          = 800.0;
 	object_types[FRAGMENT].color           = WHITE;
-	object_types[FRAGMENT].flags           = BLEND;
+	object_types[FRAGMENT].flags           = BLEND; //| OBJ_IS_FLAT;
 
 	object_types[PARTICLE].air_factor      = 0.08;
 	object_types[PARTICLE].friction_factor = 0.2;

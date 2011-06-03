@@ -102,7 +102,7 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, bool is_shadowed, unsigned char type);
-void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle);
+void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale);
 void draw_shrapnel(dwobject const &obj, float radius, bool is_shadowed);
 void draw_particle(dwobject const &obj, float radius);
 
@@ -735,11 +735,11 @@ void draw_group(obj_group &objg) {
 				break;
 
 			case FRAGMENT: // draw_fragment()?
-				if (int(obj.vdeform.z) >= SHATTERABLE) { // triangle - *** texture? ***
+				if (obj.vdeform.z > 0.0) { // shatterable - use triangle
 					set_color_v2(color2, pos, obj.status, is_shadowed, 0);
 					set_lighted_sides(2);
 					glBegin(GL_TRIANGLES);
-					draw_rotated_triangle(pos, obj.orientation, radius*obj.vdeform.x, obj.angle);
+					draw_rotated_triangle(pos, obj.orientation, radius*obj.vdeform.x, obj.angle, (do_texture ? obj.vdeform.z : 0.0)); // obj.vdeform.z = tscale
 					glEnd();
 					set_lighted_sides(1);
 					break;
@@ -1565,7 +1565,10 @@ void set_glow_color(dwobject const &obj, bool shrapnel_cscale) {
 }
 
 
-void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle) {
+#define DO_TRI_VERTEX(val) {if (tscale != 0.0) glTexCoord2f(tscale*(pos[(dim+1)%3]val[(dim+1)%3]), tscale*(pos[(dim+2)%3]val[(dim+2)%3])); (pos val).do_glVertex();}
+
+
+void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale) {
 
 	/*
 	tXX  + c	tXY + sZ	tXZ - sY	0
@@ -1581,17 +1584,19 @@ void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, fl
 	float const c(cos(angle)), s(sin(angle)), t(1.0 - c);
 	point const p1(r*(t*o.x*o.x + c),     r*(t*o.x*o.y - s*o.z), r*(t*o.x*o.z - s*o.y));
 	point const p2(q*(t*o.x*o.z + s*o.y), q*(t*o.y*o.z - s*o.x), q*(t*o.z*o.z + c));
-	cross_product(p2, p1).do_glNormal();
-	(pos + p1).do_glVertex();
-	(pos - p1).do_glVertex();
-	(pos + p2).do_glVertex();
+	vector3d const norm(cross_product(p2, p1).get_norm());
+	norm.do_glNormal();
+	int const dim(get_max_dim(norm));
+	DO_TRI_VERTEX(+p1);
+	DO_TRI_VERTEX(-p1);
+	DO_TRI_VERTEX(+p2);
 }
 
 
 void draw_shrapnel(dwobject const &obj, float radius, bool is_shadowed) {
 
 	set_glow_color(obj, 1);
-	draw_rotated_triangle(obj.pos, obj.orientation, radius, obj.angle);
+	draw_rotated_triangle(obj.pos, obj.orientation, radius, obj.angle, 0.0);
 }
 
 

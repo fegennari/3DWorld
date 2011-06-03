@@ -271,7 +271,7 @@ struct color_tid_vol : public cube_t {
 
 	int tid, destroy;
 	bool draw;
-	float volume;
+	float volume, tscale;
 	colorRGBA color;
 	color_tid_vol(coll_obj const &cobj, float volume_);
 };

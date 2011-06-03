@@ -979,7 +979,7 @@ void sort_cobjs_for_rendering(vector<coll_obj> &cobjs) {
 
 
 color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_)
-	: tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), volume(volume_), color(cobj.cp.color)
+	: tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), volume(volume_), tscale(cobj.cp.tscale), color(cobj.cp.color)
 {
 	copy_from(cobj);
 }
