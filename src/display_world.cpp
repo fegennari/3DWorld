@@ -955,6 +955,7 @@ void display(void) {
 	swap_buffers_and_redraw();
 	check_gl_error(11);
 	if (TIMETEST) PRINT_TIME("G");
+	//if (TIMETEST && (display_mode & 0x10) && GET_DELTA_TIME > 70) exit(0); // testing
 }
 
 

@@ -783,7 +783,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	if (NO_SMILEY_ACTION || obj.disabled()) return 0;
 	float const speed(get_rspeed_scale()), radius(object_types[SMILEY].radius);
 	assert(radius >= 0.0);
-	float const step_dist(smiley_speed*fticks*GROUND_SPEED), step_height(S_SH_SCALE*C_STEP_HEIGHT*radius);
+	float const step_dist(speed*smiley_speed*fticks*GROUND_SPEED), step_height(S_SH_SCALE*C_STEP_HEIGHT*radius);
 	point const opos(obj.pos);
 	int xpos(get_xpos_clamp(opos.x)), ypos(get_ypos_clamp(opos.y));
 	bool const has_flight(powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT), underwater(is_underwater(opos));
