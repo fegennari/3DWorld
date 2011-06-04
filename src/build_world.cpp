@@ -498,7 +498,7 @@ void process_groups() {
 
 					for (unsigned o = 0; o < num; ++o) {
 						point const fpos(obj.pos + signed_rand_vector(radius));
-						gen_fragment(fpos, zero_vector, 0.5, 0.0, LT_GRAY, -1, 1.0, obj.source, 0);
+						gen_fragment(fpos, zero_vector, 0.5, 0.0, LT_GRAY, PLASTER_TEX, 1.0, obj.source, 0);
 					}
 				}
 				else if ((otype.flags & EXPL_ON_COLL) || (obj.status == 0 && (otype.flags & OBJ_EXPLODES))) {

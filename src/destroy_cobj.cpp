@@ -54,8 +54,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 					velocity *= 0.5;
 				}
 			}
-			int const tid(-(cts[i].tid + 2)); // < 0
-			gen_fragment(fpos, velocity, 1.0, 0.5*rand_float(), cts[i].color, tid, cts[i].tscale, shooter, shattered);
+			gen_fragment(fpos, velocity, 1.0, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, shattered);
 		}
 	} // for i
 }
