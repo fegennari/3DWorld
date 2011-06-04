@@ -800,7 +800,7 @@ void draw_group(obj_group &objg) {
 	gluQuadricTexture(quadric, GL_FALSE);
 	glDisable(GL_TEXTURE_2D);
 
-	if (SHOW_DRAW_TIME || type == SHRAPNEL) {
+	if (SHOW_DRAW_TIME) {
 		cout << "type = " << objg.type << ", num = " << objg.end_id << ", drawn = " << num_drawn << ", shadow tests: " << num_shadow_test << " ";
 		PRINT_TIME("Group");
 	}

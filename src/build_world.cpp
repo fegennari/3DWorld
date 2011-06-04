@@ -494,17 +494,11 @@ void process_groups() {
 					accumulate_object(pos, type);
 				}
 				else if (type == SKULL && obj.status == 0) { // create skull fragments
-					obj_group &objg(obj_groups[coll_id[FRAGMENT]]);
 					unsigned const num(rand()%8 + 5);
 
 					for (unsigned o = 0; o < num; ++o) {
-						int const ix(objg.choose_object());
-						objg.create_object_at(ix, (obj.pos + signed_rand_vector(radius)));
-						dwobject &obj(objg.get_obj(ix));
-						obj.vdeform.x   = 0.6 + 0.5*rand_float(); // size
-						obj.angle       = TWO_PI*rand_float();
-						obj.orientation = signed_rand_vector_norm();
-						for (unsigned j = 0; j < 3; ++j) obj.init_dir[j] = LT_GRAY[j];
+						point const fpos(obj.pos + signed_rand_vector(radius));
+						gen_fragment(fpos, zero_vector, 0.5, 0.0, LT_GRAY, -1, 1.0, obj.source, 0);
 					}
 				}
 				else if ((otype.flags & EXPL_ON_COLL) || (obj.status == 0 && (otype.flags & OBJ_EXPLODES))) {

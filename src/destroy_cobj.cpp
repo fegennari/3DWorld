@@ -28,7 +28,6 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 	unsigned nrem(subtract_cube(coll_objects, cts, cdir, (pos.x-r),(pos.x+r),(pos.y-r),(pos.y+r),(pos.z-r),(pos.z+r), dmin));
 	if (nrem == 0 || cts.empty()) return;
 	float const cdir_mag(cdir.mag());
-	obj_group &objg(obj_groups[coll_id[FRAGMENT]]);
 
 	for (unsigned i = 0; i < cts.size(); ++i) {
 		if (cts[i].destroy == EXPLODEABLE) {
@@ -55,20 +54,8 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 					velocity *= 0.5;
 				}
 			}
-			int const ix(objg.choose_object());
-			objg.create_object_at(ix, fpos);
-			dwobject &obj(objg.get_obj(ix));
-			for (unsigned j = 0; j < 3; ++j) obj.init_dir[j] = cts[i].color[j];
-			obj.coll_id     = -(cts[i].tid + 2); // < 0
-			assert(obj.coll_id < 0);
-			obj.velocity    = (velocity + gen_rand_vector(rand_uniform(0.3, 0.7), 1.0, PI))*rand_uniform(10.0, 15.0);
-			obj.angle       = TWO_PI*rand_float();
-			obj.orientation = signed_rand_vector_norm();
-			obj.vdeform.x   = 0.6 + 1.0*rand_float(); // size
-			obj.vdeform.y   = cts[i].color.alpha;
-			obj.vdeform.z   = fabs(cts[i].tscale)*(shattered ? 1.0 : -1.0);
-			obj.time        = int(0.5*rand_float()*object_types[FRAGMENT].lifetime);
-			obj.source      = shooter;
+			int const tid(-(cts[i].tid + 2)); // < 0
+			gen_fragment(fpos, velocity, 1.0, 0.5*rand_float(), cts[i].color, tid, cts[i].tscale, shooter, shattered);
 		}
 	} // for i
 }
