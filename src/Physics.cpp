@@ -1298,17 +1298,18 @@ void particle_cloud::apply_physics(unsigned i) {
 		obj.pos += (vel + init_vel)*(tstep/(double)num_smoke_advance);
 		vector3d cnorm;
 		
-		if (obj.check_vert_collision(0, 0, 0, &cnorm)) {
+		if (obj.check_vert_collision(0, 0, j, &cnorm, all_zeros, 1)) { // skip dynamic
 			// destroy the smoke if it's not damaging and hits the bottom of an object
 			if (cnorm.z < 0.5 && damage == 0.0) destroy();
 			break;
 		}
 	}
+	float const tstep_scale(TIMESTEP/DEF_TIMESTEP);
 	pos       = obj.pos;
 	time     += iticks;
-	density  *= 0.97;
-	darkness *= 0.98;
-	radius   *= 1.03;
+	density  *= pow(0.97f, tstep_scale);
+	darkness *= pow(0.98f, tstep_scale);
+	radius   *= pow(1.03f, tstep_scale);
 	if (density  < 0.0001) density  = 0.0;
 	if (darkness < 0.0001) darkness = 0.0;
 	if (damage   > 0.0)    do_area_effect_damage(pos, radius, damage, i, source, GASSED);

@@ -1274,7 +1274,6 @@ int vert_coll_detector::check_coll() {
 	if (point_outside_mesh(xpos, ypos)) return 0; // object along edge
 	coll_cell const &cell(v_collision_matrix[ypos][xpos]);
 	if (cell.cvals.empty()) return 0;
-	point const porig(pos);
 	pold -= obj.velocity*tstep;
 	assert(!is_nan(pold));
 	assert(type >= 0 && type < NUM_TOT_OBJS);
@@ -1282,7 +1281,8 @@ int vert_coll_detector::check_coll() {
 	c_zmax   = cell.zmax;
 	c_zmin   = cell.zmin;
 	init_reset_pos();
-
+	if (skip_dynamic && (z1 > c_zmax || z2 < c_zmin)) return 0;
+	
 	if (only_cobj >= 0) {
 		assert((unsigned)only_cobj < coll_objects.size());
 		check_cobj(only_cobj);
