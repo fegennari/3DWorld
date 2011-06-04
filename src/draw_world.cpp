@@ -21,7 +21,6 @@ bool const SHOW_DRAW_TIME       = 0;
 bool const NO_SHRAP_DLIGHT      = 1; // looks cool with dynamic lights, but very slow
 bool const DYNAMIC_SMOKE_SHADOWS= 1; // slower, but looks nice
 unsigned const MAX_CFILTERS     = 10;
-unsigned const SHAD_NOBJ_THRESH = 200;
 float const NDIV_SCALE          = 1.6;
 float const CLOUD_WIND_SPEED    = 0.00015;
 
@@ -216,7 +215,7 @@ inline void scale_color_uw(colorRGBA &color) {
 
 
 // Note: incorrect if there is both a sun and a moon
-bool pt_is_shadowed(point const &pos, int light, int status, float radius, int cid, int fast, bool use_mesh) {
+bool pt_is_shadowed(point const &pos, int light, int status, float radius, int cid, bool fast, bool use_mesh) {
 
 	if (use_mesh) {
 		int const xpos(get_ypos(pos.x)), ypos(get_ypos(pos.y));
@@ -226,7 +225,7 @@ bool pt_is_shadowed(point const &pos, int light, int status, float radius, int c
 			//if (is_mesh_disabled(xpos, ypos)) return 0; // assuming not drawing the mesh means it's underneath a cobj
 			return ((shadow_mask[light][ypos][xpos] & SHADOWED_ALL) != 0);
 		}
-		if (fast == 2) return (is_shadowed_lightmap(pos)); // use the precomputed lightmap value
+		if (fast) return (is_shadowed_lightmap(pos)); // use the precomputed lightmap value
 	}
 	return (!is_visible_to_light_cobj(pos, light, radius, cid, 0));
 }
@@ -487,6 +486,24 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 }
 
 
+bool is_object_shadowed(dwobject &obj, bool calc_shadow, float cd_scale, float radius, int light, unsigned &num_shadow_test) {
+
+	bool is_shadowed((obj.flags & SHADOWED) != 0); // previous value
+
+	if (calc_shadow) {
+		float const pt_size(cd_scale/distance_to_camera(obj.pos)); // approx pixel size
+		int const skipval(min(20, int(8.0/pt_size)));
+
+		if (skipval <= 1 || (obj.time % skipval) == 0) {
+			is_shadowed = pt_is_shadowed(obj.pos, light, obj.status, radius, obj.coll_id, 0, (pt_size < 2.0));
+			if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
+			++num_shadow_test;
+		}
+	}
+	return is_shadowed;
+}
+
+
 void draw_group(obj_group &objg) {
 
 	RESET_TIME;
@@ -498,11 +515,10 @@ void draw_group(obj_group &objg) {
 	glEnable(GL_NORMALIZE);
 	int const type(objg.get_ptype());
 	obj_type const &otype(object_types[type]);
-	int tid(otype.tid);
-	float const radius(otype.radius);
+	int tid(otype.tid), last_shadowed(-1);
+	float const radius(otype.radius), cd_scale(NDIV_SCALE*radius*window_width);
 	unsigned const flags(otype.flags);
 	bool do_texture(select_texture(tid));
-	bool const fast(objg.end_id > SHAD_NOBJ_THRESH); // not the greatest test
 	colorRGBA color(otype.color), tcolor(color);
 	set_color(color);
 	gluQuadricTexture(quadric, do_texture);
@@ -539,7 +555,7 @@ void draw_group(obj_group &objg) {
 		sort(ordering.begin(), ordering.end()); // sort by texture id
 
 		for (unsigned j = 0; j < ordering.size(); ++j) {
-			dwobject const &obj(objg.get_obj(ordering[j].second));
+			dwobject &obj(objg.get_obj(ordering[j].second));
 			float const scale(obj.init_dir.z), lsize(scale*leaf_size);
 			int const tid(ordering[j].first);
 			
@@ -560,7 +576,7 @@ void draw_group(obj_group &objg) {
 			colorRGBA leaf_color(WHITE);
 			UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
 			if (leaf_color != BLACK) blend_color(leaf_color, dry_color, leaf_color, t, 0);
-			bool const shadowed(pt_is_shadowed(obj.pos, light, obj.status, radius, obj.coll_id, (fast+1), 0));
+			bool const shadowed(is_object_shadowed(obj, calc_shadow, cd_scale, radius, light, num_shadow_test));
 			if (shadowed) set_specular(0.0, 1.0); else set_specular(0.1, 10.0); // FIXME: should leaves on trees be a matching specular again?
 			set_shadowed_color(leaf_color, obj.pos, shadowed, 0);
 			glBegin(GL_QUADS);
@@ -580,7 +596,6 @@ void draw_group(obj_group &objg) {
 		set_lighted_sides(1);
 	} // leaf
 	else if (objg.large_radius()) { // large objects
-		float const cd_scale(NDIV_SCALE*radius*window_width);
 		vector<wap_obj> wap_vis_objs[2];
 		bool const gm_smiley(game_mode && type == SMILEY);
 		float const radius_ext(gm_smiley ? 2.0*radius : radius); // double smiley radius to account for weapons
@@ -592,15 +607,12 @@ void draw_group(obj_group &objg) {
 			if (obj.disabled() || ((obj.flags & CAMERA_VIEW) && type != SMILEY)) continue;
 			point const &pos(obj.pos);
 			if (!sphere_in_camera_view(pos, radius_ext, clip_level)) continue;
-			float const pt_size(cd_scale/distance_to_camera(pos));
-			bool is_shadowed((obj.flags & SHADOWED) != 0); // previous value
-			
-			if (calc_shadow) {
-				is_shadowed = pt_is_shadowed(pos, light, obj.status, radius, obj.coll_id, (pt_size < 1.0), (pt_size < 0.5));
-				if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
-			}
-			set_obj_specular(is_shadowed, flags, specular_brightness);
+			bool const is_shadowed(is_object_shadowed(obj, calc_shadow, cd_scale, radius, light, num_shadow_test));
 
+			if ((int)is_shadowed != last_shadowed) {
+				set_obj_specular(is_shadowed, flags, specular_brightness); // slow?
+				last_shadowed = is_shadowed;
+			}
 			if (DEBUG_COLORCODE) {
 				set_color_by_status(obj.status, pos, is_shadowed);
 			}
@@ -610,6 +622,7 @@ void draw_group(obj_group &objg) {
 				if (!set_shadowed_color(color, pos, is_shadowed, 0)) obj.flags |= IN_DARKNESS;
 			}
 			++num_drawn;
+			float const pt_size(cd_scale/distance_to_camera(pos));
 			int const ndiv(min(N_SPHERE_DIV, max(3, int(min(pt_size, 3.0f*sqrt(pt_size))))));
 			draw_obj(objg, wap_vis_objs, type, radius, color, ndiv, j, is_shadowed, 0);
 		} // for j
@@ -637,9 +650,7 @@ void draw_group(obj_group &objg) {
 		}
 	} // large objects
 	else { // small objects
-		float const cd_scale(NDIV_SCALE*window_width*radius);
 		bool const precip((objg.flags & PRECIPITATION) != 0);
-		int last_shadowed(-1);
 
 		switch (type) { // pre-draw
 		case SHRAPNEL:
@@ -662,21 +673,8 @@ void draw_group(obj_group &objg) {
 			if (obj.disabled() || (obj.flags & CAMERA_VIEW))     continue;
 			if (!sphere_in_camera_view(pos, radius, clip_level)) continue;
 			++num_drawn;
-			bool is_shadowed((obj.flags & SHADOWED) != 0); // previous value
+			bool const is_shadowed(is_object_shadowed(obj, calc_shadow, cd_scale, radius, light, num_shadow_test));
 
-			if (calc_shadow) {
-				float const val(cd_scale/distance_to_camera(pos)); // approx pixel size
-
-				if (val > 1.0) {
-					int const skipval(min(12, int(8.0/val)));
-
-					if (skipval <= 1 || (obj.time % skipval) == 0) {
-						is_shadowed = pt_is_shadowed(pos, light, obj.status, radius, obj.coll_id, (fast+(val < 5.0)), (val < 2.0));
-						if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
-						++num_shadow_test;
-					}
-				}
-			}
 			if ((int)is_shadowed != last_shadowed) {
 				set_obj_specular(is_shadowed, flags, specular_brightness); // slow?
 				last_shadowed = is_shadowed;
