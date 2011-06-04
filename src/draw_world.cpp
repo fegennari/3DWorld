@@ -326,10 +326,12 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 	if (points.empty() && lines.empty()) return;
 	GLboolean const col_mat_en(glIsEnabled(GL_COLOR_MATERIAL));
 	assert(!(lines.size() & 1));
+	assert((triangles.size() % 3) == 0);
 	if (!col_mat_en) glEnable(GL_COLOR_MATERIAL);
 	set_array_client_state(1, 0, 1, 1);
 	points.draw(GL_POINTS);
 	lines.draw(GL_LINES);
+	triangles.draw(GL_TRIANGLES);
 	if (!col_mat_en) glDisable(GL_COLOR_MATERIAL);
 	last_a = last_d = BLACK;
 	//cout << "mem: " << get_mem() << endl;
@@ -390,6 +392,19 @@ void vert_color::set_state(unsigned vbo) const { // typically called on element 
 	set_array_client_state(1, 0, 0, 1);
 	glVertexPointer(3, GL_FLOAT,         stride, (vbo ? (void *)0             : &v));
 	glColorPointer (4, GL_UNSIGNED_BYTE, stride, (vbo ? (void *)sizeof(point) : &c));
+}
+
+
+void draw_unit_sphere(int ndiv, bool do_texture) {
+
+#if 0
+	assert(quadric);
+	if (do_texture) gluQuadricTexture(quadric, GL_TRUE);
+	gluSphere(quadric, 1.0, ndiv, ndiv);
+	if (do_texture) gluQuadricTexture(quadric, GL_FALSE);
+#else
+	draw_sphere_dlist_raw(ndiv, do_texture);
+#endif
 }
 
 
@@ -680,20 +695,10 @@ void draw_group(obj_group &objg) {
 				last_shadowed = is_shadowed;
 			}
 			if (type == FRAGMENT) {
-				tid = -obj.coll_id - 2;
-
-				if (select_texture(tid)) {
-					gluQuadricTexture(quadric, GL_TRUE);
-					do_texture = 1;
-				}
-				else {
-					glDisable(GL_TEXTURE_2D);
-					gluQuadricTexture(quadric, GL_FALSE);
-					do_texture = 0;
-				}
-				for (unsigned c = 0; c < 3; ++c) {
-					color2[c] = obj.init_dir[c];
-				}
+				tid = -obj.coll_id - 2; // should we sort fragments by texture id?
+				do_texture = select_texture(tid);
+				if (!do_texture) glDisable(GL_TEXTURE_2D);
+				UNROLL_3X(color2[i_] = obj.init_dir[i_];)
 				color2.alpha = obj.vdeform.y;
 			}
 			else if (do_texture && type != SNOW) {
@@ -709,7 +714,7 @@ void draw_group(obj_group &objg) {
 				if (do_texture) {
 					assert(tid >= 0);
 					tcolor = texture_color(tid);
-					for (unsigned c = 0; c < 3; ++c) tcolor[c] *= color2[c];
+					UNROLL_3X(tcolor[i_] *= color2[i_];)
 				}
 				else {
 					tcolor = color2;
@@ -795,7 +800,7 @@ void draw_group(obj_group &objg) {
 	gluQuadricTexture(quadric, GL_FALSE);
 	glDisable(GL_TEXTURE_2D);
 
-	if (SHOW_DRAW_TIME) {
+	if (SHOW_DRAW_TIME || type == SHRAPNEL) {
 		cout << "type = " << objg.type << ", num = " << objg.end_id << ", drawn = " << num_drawn << ", shadow tests: " << num_shadow_test << " ";
 		PRINT_TIME("Group");
 	}
@@ -864,18 +869,16 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	// draw as a sphere
 	if (is_chunky) {
 		assert(!tail);
-		if (do_texture) gluQuadricTexture(quadric, GL_TRUE);
 		vector3d const &v(obj.orientation);
 		int const ndiv(max(3, int(3 + 1.5*(v.x + v.y + v.z))));
 		translate_to(pos);
-		glScalef((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
+		vector3d const scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
+		scale_by(scale*radius);
 		glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
-		uniform_scale(radius);
-		gluSphere(quadric, 1.0, ndiv, ndiv);
+		draw_unit_sphere(ndiv, do_texture);
 		glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
 		glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
-		gluSphere(quadric, 1.0, ndiv, ndiv);
-		if (do_texture) gluQuadricTexture(quadric, GL_FALSE);
+		draw_unit_sphere(ndiv, do_texture);
 	}
 	else {
 		int ndiv(int(4.0*sqrt(point_dia)));
@@ -1300,9 +1303,7 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 	glEnd();
 	set_shadowed_color(object_types[ROCKET].color, pos, is_shadowed);
 	glScalef(1.0, 1.0, -2.0);
-	assert(ndiv <= N_SPHERE_DIV);
-	gluSphere(quadric, 1.0, ndiv, ndiv);
-	//draw_sphere_dlist_raw(ndiv, 0);
+	draw_unit_sphere(ndiv, 0);
 	gluCylinder(quadric, 1.0, 1.0, 1.1, ndiv, 1);
 	glPopMatrix();
 	if (type == ROCKET) gen_rocket_smoke(pos, orient, radius);
@@ -1329,8 +1330,7 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 	glRotatef(90.0,  0.0, 1.0, 0.0);
 	set_shadowed_color(WHITE, pos, is_shadowed); // since seekd is black, is_shadowed may always be 0
 	select_texture(SKULL_TEX);
-	draw_sphere_dlist(all_zeros, 1.0, ndiv, 1);
-	//gluSphere(quadric, 1.0, ndiv, ndiv);
+	draw_unit_sphere(ndiv, 1);
 	glDisable(GL_TEXTURE_2D);
 
 	glPopMatrix();
@@ -1429,24 +1429,22 @@ void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d cons
 	radius *= (0.5 + fabs(v.x));
 	glPushMatrix();
 	translate_to(pos);
-	glScalef((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
+	vector3d scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
+	scale *= radius;
 	
 	if (vdeform != all_ones) { // apply deformation
-		scale_by(vdeform);
 		float vdmin(1.0);
-		for (unsigned d = 0; d < 3; ++d) vdmin = min(vdmin, vdeform[d]);
-		if (vdmin < 1.0) uniform_scale(pow(1.0/vdmin, 1.0/3.0));
+		UNROLL_3X(scale[i_] *= vdeform[i_]; vdmin = min(vdmin, vdeform[i_]);)
+		if (vdmin < 1.0) scale *= pow(1.0/vdmin, 1.0/3.0);
 	}
+	scale_by(scale);
 	glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
 	set_shadowed_color((charred ? BLACK : YELLOW), pos, is_shadowed);
-	uniform_scale(radius);
-	draw_sphere_dlist_raw(ndiv, 0);
-	//gluSphere(quadric, 1.0, ndiv, ndiv);
+	draw_unit_sphere(ndiv, 0);
 	set_shadowed_color((charred ? DK_GRAY : BLOOD_C), pos, is_shadowed);
 	glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
 	glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
-	draw_sphere_dlist_raw(ndiv, 0);
-	//gluSphere(quadric, 1.0, ndiv, ndiv);
+	draw_unit_sphere(ndiv, 0);
 	glPopMatrix();
 }
 
@@ -1460,7 +1458,7 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	glPushMatrix();
 	if (!is_cgrenade) glScalef(0.8, 0.8, 1.2); // rotate also?
 	set_color(BLACK);
-	gluSphere(quadric, 1.0, ndiv, ndiv);
+	draw_unit_sphere(ndiv, 0);
 	glPopMatrix();
 
 	float const stime(1.0 - float(time)/float(object_types[is_cgrenade ? CGRENADE : GRENADE].lifetime)), sval(0.2 + 0.8*stime);
@@ -1514,8 +1512,8 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, bool is_shadowed, unsigned char type)
 {
-	assert(quadric);
-	int const ndiv(max(3, min(N_SPHERE_DIV/2, int(cd_scale/distance_to_camera(pos)))));
+	float const point_size(cd_scale/distance_to_camera(pos));
+	int const ndiv(max(3, min(N_SPHERE_DIV/2, int(point_size))));
 	//glDepthMask(1);
 	glPushMatrix();
 	translate_to(pos);
@@ -1527,7 +1525,7 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 
 	if (type == 0) { // M16 shell casing
 		gluCylinder(quadric, 1.0, 1.0, 4.0, ndiv, 1);
-		gluDisk(quadric, 0, 1.0, ndiv, 1);
+		if (point_size > 1.0) gluDisk(quadric, 0, 1.0, ndiv, 1);
 	}
 	else if (type == 1) { // shotgun shell casing
 		set_shadowed_color(RED, pos, is_shadowed);
@@ -1536,7 +1534,7 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 		set_shadowed_color(GOLD, pos, is_shadowed);
 		glTranslatef(0.0, 0.0, -0.8);
 		gluCylinder(quadric, 1.28, 1.28, 1.6, ndiv, 1);
-		gluDisk(quadric, 0, 1.28, ndiv, 1);
+		if (point_size > 1.0) gluDisk(quadric, 0, 1.28, ndiv, 1);
 	}
 	else {
 		assert(0);
@@ -1570,7 +1568,7 @@ void set_glow_color(dwobject const &obj, bool shrapnel_cscale) {
 }
 
 
-#define DO_TRI_VERTEX(val) {if (tscale != 0.0) glTexCoord2f(tscale*(pos[(dim+1)%3]val[(dim+1)%3]), tscale*(pos[(dim+2)%3]val[(dim+2)%3])); (pos val).do_glVertex();}
+#define DO_TRI_VERTEX(val) {if (tscale != 0.0) glTexCoord2f(tscale*(val[(dim+1)%3]), tscale*(val[(dim+2)%3])); (pos val).do_glVertex();}
 
 
 void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale) {

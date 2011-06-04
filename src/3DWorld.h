@@ -647,7 +647,7 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 };
 
 
-template<typename cwt> class pt_line_drawer_t {
+template<typename cwt> class pt_line_drawer_t { // and triangles too!
 
 	struct vnc : public cwt { // size = 28
 		point v;
@@ -661,16 +661,18 @@ template<typename cwt> class pt_line_drawer_t {
 		void draw(int type) const;
 	};
 
-	vnc_cont points, lines;
+	vnc_cont points, lines, triangles;
 
 public:
 	void clear() {
 		points.resize(0);
 		lines.resize(0);
+		triangles.resize(0);
 	}
 	void free_mem() {
 		points.swap(vnc_cont());
 		lines.swap(vnc_cont());
+		triangles.swap(vnc_cont());
 	}
 	void add_pt(point const &v, vector3d const &n, colorRGBA const &c) {
 		points.push_back(vnc(v, n, c));
@@ -679,12 +681,17 @@ public:
 		lines.push_back(vnc(v1, n1, c1));
 		lines.push_back(vnc(v2, n2, c2));
 	}
+	void add_triangle(point const &v1, point const &v2, point const &v3, vector3d const &n, colorRGBA const &c) {
+		points.push_back(vnc(v1, n, c));
+		points.push_back(vnc(v2, n, c));
+		points.push_back(vnc(v3, n, c));
+	}
 	void add_textured_pt(point const &v, colorRGBA c, int tid);
 	void add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid);
 	void draw() const;
 	void draw_and_clear() {draw(); clear();}
-	unsigned get_mem() const {return (points.capacity() + lines.capacity())*sizeof(vnc);}
-	bool empty() const {return (points.empty() && lines.empty());}
+	unsigned get_mem() const {return (points.capacity() + lines.capacity() + triangles.capacity())*sizeof(vnc);}
+	bool empty() const {return (points.empty() && lines.empty() && triangles.empty());}
 };
 
 
