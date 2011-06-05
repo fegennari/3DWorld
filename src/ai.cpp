@@ -175,8 +175,11 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	weapon_t const &w(weapons[weapon]);
 
 	// aim up to account for gravity
-	float const aim_up_val(CLIP_TO_01(0.1f + ((w.obj_id == UNDEF) ? 0.0f : object_types[w.obj_id].gravity)));
-	pos.z      += aim_up_val*radius; // shoot slightly higher than center
+	bool const using_shrapnel((wmode&1) && (weapon == W_SHOTGUN || weapon == W_M16));
+	float aim_up_val(0.0);
+	if      (using_shrapnel   ) aim_up_val = 0.5;
+	else if (w.obj_id != UNDEF) aim_up_val = object_types[w.obj_id].gravity;
+	pos.z      += CLIP_TO_01(0.1f + aim_up_val)*radius; // shoot slightly higher than center
 	vector3d orient(target_pos, pos);
 	target_dist = orient.mag();
 
@@ -196,6 +199,9 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	}
 	else if (smiley_acc < 1.0) { // add firing error (should this be before or after the range test?)
 		vadd_rand(orient, 0.1*((game_mode == 2) ? 0.5 : 1.0)*(1.0 - smiley_acc)/max(0.2f, min(1.0f, target_dist)));
+	}
+	if (target == CAMERA_ID && weapon == W_LASER) {
+		// less accurate when shooting at the player, to make it more fair?
 	}
 	orient.normalize();
 	
@@ -300,7 +306,7 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	assert(i < waypoints.size());
 	point const &wp(waypoints[i].pos);
 	float const dist_sq(p2p_dist_sq(pos, wp));
-	if (max_dist_sq > 0.0 && dist_sq > max_dist_sq)                            return; // too far away
+	if (max_dist_sq > 0.0 && dist_sq > max_dist_sq && i != curw)               return; // too far away
 	bool const can_see(next || (on_waypt_path && i == curw));
 	if (!is_over_mesh(wp) || is_underwater(wp))                                return; // invalid smiley location
 	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
@@ -783,12 +789,12 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	if (NO_SMILEY_ACTION || obj.disabled()) return 0;
 	float const speed(get_rspeed_scale()), radius(object_types[SMILEY].radius);
 	assert(radius >= 0.0);
-	float const step_dist(speed*smiley_speed*fticks*GROUND_SPEED), step_height(S_SH_SCALE*C_STEP_HEIGHT*radius);
+	float const step_dist(speed*smiley_speed*fticks*GROUND_SPEED), step_height(C_STEP_HEIGHT*radius);
 	point const opos(obj.pos);
 	int xpos(get_xpos_clamp(opos.x)), ypos(get_ypos_clamp(opos.y));
 	bool const has_flight(powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT), underwater(is_underwater(opos));
 	assert(!point_outside_mesh(xpos, ypos));
-	bool stuck(0), in_ice(0), no_up(0), no_down(0);
+	bool stuck(0), in_ice(0), no_up(0), no_down(0), using_dest_mark(0);
 	
 	// check for stuck underwater
 	if (is_water_temp && underwater && !on_waypt_path) { // ok if on a waypoint path
@@ -810,6 +816,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			target_visible = 1; // ???
 			target_type    = 2; // like an item
 			objective_pos  = target_pos = dest_mark.get_pos();
+			using_dest_mark= 1;
 		}
 		if (dest_mark.valid) assert(dest_mark.xpos > 0);
 	}
@@ -846,7 +853,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 
 			// check if movement was valid
 			pos_dir_up const pdu(get_smiley_pdu(obj.pos, obj.orientation));
-			float const start_cost(get_pos_cost(smiley_id, obj.pos, opos, pdu, radius, step_height, 0));
+			float const start_cost(using_dest_mark ? 0.0 : get_pos_cost(smiley_id, obj.pos, opos, pdu, radius, step_height, 0));
 		
 			if (start_cost > 0.0) {
 				//cout << "cost: " << start_cost << ", stepv: "; stepv.print(); cout << endl; // testing
@@ -893,12 +900,8 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		stopped_time = 0;
 	}
 	int ohval(set_true_obj_height(obj.pos, opos, C_STEP_HEIGHT, zvel, SMILEY, smiley_id, has_flight, 0));
-	float const zval(obj.pos.z);
 
-	if (recreated || mesh_scale_change || (zval - opos.z) < step_height || (has_flight && !no_down)) { // also gets them stuck in ice
-		obj.pos.z = min(zval, (opos.z + (has_flight ? 0.0f : 0.4f*radius)));
-	}
-	else if (!has_flight) {
+	if (!has_flight && !recreated && !mesh_scale_change && (obj.pos.z - opos.z) >= step_height) { // stuck, can't step that high
 		obj.pos = opos; // reset to old position
 		ohval   = 3;
 	}
@@ -1163,7 +1166,7 @@ void player_state::init_smiley_weapon(int smiley_id) {
 	}
 	fire_frame = 0;
 	weapon     = (choices.empty() ? W_UNARMED : min_element(choices.begin(), choices.end())->second);
-	//weapon     = W_GRENADE; // set to force this as weapon choice (if available)
+	//weapon     = W_LASER; // set to force this as weapon choice (if available)
 	if (weapon == W_PLASMA && wmode == 1 && (rand()%4) != 0) plasma_loaded = 1; // fire it up!
 }
 
@@ -1182,6 +1185,7 @@ bool player_state::target_in_range(point const &pos) const {
 		assert(wvel > 0.0);
 		if (rel_enemy_vel > wvel) return 0; // enemy is moving away faster than our projectile
 		if (range > 0.0) range *= (wvel - rel_enemy_vel)/wvel; // adjust range based on enemy velocity
+		// FIXME: what about enemies that are above or below us when shooting objects affected by gravity?
 	}
 	return (range == 0.0 || dist_less_than(target_pos, pos, range));
 }
@@ -1360,6 +1364,7 @@ void player_state::init(bool w_start) {
 		powerup       = -1;
 		powerup_time  = 0;
 	}
+	//powerup = PU_FLIGHT; powerup_time = 1000000; // testing
 	for (unsigned i = 0; i < 2; ++i) unreachable[i].clear();
 	reset_wpt_state();
 	waypts_used.clear();

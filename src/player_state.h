@@ -12,7 +12,6 @@ using std::string;
 int const NUM_WEAPONS = 15;
 
 unsigned const POWERUP_TIME = unsigned(40*TICKS_PER_SECOND);
-float const S_SH_SCALE      = 2.0;
 
 
 struct bbox { // size = 20
