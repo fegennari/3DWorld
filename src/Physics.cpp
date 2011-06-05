@@ -454,7 +454,7 @@ void init_objects() {
 	object_types[SKULL].elasticity         = 0.75;
 	object_types[SKULL].health             = 25.0;
 	object_types[SKULL].color              = LT_GRAY;
-	object_types[SKULL].flags              = SPECULAR | SELECTABLE | BLEND | SEMI_TRANSPARENT | NO_WATER_DAMAGE;
+	object_types[SKULL].flags              = SPECULAR | SELECTABLE | BLEND | NO_WATER_DAMAGE;
 	object_types[SKULL].tid                = SMILEY_SKULL_TEX;
 
 	object_types[HEALTH].color             = MAGENTA;

@@ -90,7 +90,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 				 float health, int id, bool is_shadowed, mesh2d const *const mesh);
 bool draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, bool is_shadowed);
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix);
-void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int tid);
+void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, bool is_shadowed);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, bool is_shadowed);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool is_shadowed);
@@ -440,7 +440,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_chunk(pos, radius, obj.init_dir, obj.vdeform, (obj.flags & TYPE_FLAG), ndiv, is_shadowed);
 		break;
 	case SKULL:
-		draw_skull(pos, obj.orientation, radius, obj.status, ndiv, object_types[SKULL].tid);
+		draw_skull(pos, obj.orientation, radius, obj.status, ndiv);
 		break;
 	case ROCKET:
 		draw_rocket(pos, obj.init_dir, radius, obj.type, ndiv, obj.time, is_shadowed);
@@ -1263,9 +1263,8 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 }
 
 
-void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int tid) {
+void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv) {
 
-	select_texture(tid);
 	glPushMatrix();
 	translate_to(pos);
 	rotate_from_v2v(orient, vector3d(0.0, -1.0, 0.0));

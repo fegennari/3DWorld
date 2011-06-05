@@ -439,7 +439,7 @@ void move_camera_pos(vector3d const &v, float dist) { // remember that dist is n
 		surface_pos += v*dist;
 	}
 	else { // normal ground movement - should speed depend on orientation or not?
-		float xy_scale(dist/(sqrt(v.x*v.x + v.y*v.y)/v.mag()));
+		float const xy_scale(dist*(v.mag()/v.xy_mag()));
 		surface_pos.x += xy_scale*v.x;
 		surface_pos.y += xy_scale*v.y;
 	}
