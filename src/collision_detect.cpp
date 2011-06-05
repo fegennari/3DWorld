@@ -994,14 +994,15 @@ void vert_coll_detector::check_cobj(int index) {
 	}
 	vector3d const mdir(motion_dir - pvel*fticks); // not sure if this helps
 
+	if (cobj.type == COLL_CUBE || cobj.type == COLL_CYLINDER) {
+		if (pos.x < (cobj.d[0][0]-o_radius) || pos.x > (cobj.d[0][1]+o_radius))          return;
+		if (pos.y < (cobj.d[1][0]-o_radius) || pos.y > (cobj.d[1][1]+o_radius))          return;
+		if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj)) return;
+	}
 	switch (cobj.type) { // within bounding box of collision object
 	case COLL_CUBE:
 		{
-			float const xmax(cobj.d[0][1]), xmin(cobj.d[0][0]), ymax(cobj.d[1][1]), ymin(cobj.d[1][0]);
-			if (pos.x < (xmin-o_radius) || pos.x > (xmax+o_radius)) break;
-			if (pos.y < (ymin-o_radius) || pos.y > (ymax+o_radius)) break;
-			if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj))        break;
-			if (!sphere_cube_intersect(pos, o_radius, cobj, (pold - mdir), obj.pos, norm, cdir, 0)) break; // shouldn't get here much
+			if (!sphere_cube_intersect(pos, o_radius, cobj, (pold - mdir), obj.pos, norm, cdir, 0)) break; // shouldn't get here much when this fails
 			coll_top = (cdir == 5);
 			coll_bot = (cdir == 4);
 			lcoll    = 1;
@@ -1014,7 +1015,8 @@ void vert_coll_detector::check_cobj(int index) {
 			}
 			if (coll_top) { // +z collision
 				if (cobj.contains_pt_xy(pos)) ++lcoll;
-				float const rdist(max(max(max((pos.x-(xmax+o_radius)), ((xmin-o_radius)-pos.x)), (pos.y-(ymax+o_radius))), ((ymin-o_radius)-pos.y)));
+				float const rdist(max(max(max((pos.x-(cobj.d[0][1]+o_radius)), ((cobj.d[0][0]-o_radius)-pos.x)),
+					(pos.y-(cobj.d[1][1]+o_radius))), ((cobj.d[1][0]-o_radius)-pos.y)));
 				
 				if (rdist > 0.0) {
 					obj.pos.z -= o_radius;
@@ -1080,7 +1082,7 @@ void vert_coll_detector::check_cobj(int index) {
 					coll_bot  = 1;
 				}
 				else { // collision with side
-					if (player_step && obj.pos.z > cobj.d[2][1]) {
+					if (player_step) {
 						norm = plus_z;
 						break; // OK, can step up onto cylinder
 					}
@@ -1154,124 +1156,122 @@ void vert_coll_detector::check_cobj(int index) {
 		} // end COLL_POLY scope
 		break;
 	} // switch
-	if (lcoll) {
-		assert(norm != zero_vector);
-		assert(!is_nan(norm));
-		bool is_moving(0);
+	if (!lcoll) return; // no collision
+	assert(norm != zero_vector);
+	assert(!is_nan(norm));
+	bool is_moving(0);
 
-		// collision with the top of a cube attached to a platform (on first iteration only)
-		if (cobj.platform_id >= 0) {
-			assert(cobj.platform_id < (int)platforms.size());
-			platform const &pf(platforms[cobj.platform_id]);
-			is_moving = (lcoll == 2);
+	// collision with the top of a cube attached to a platform (on first iteration only)
+	if (cobj.platform_id >= 0) {
+		assert(cobj.platform_id < (int)platforms.size());
+		platform const &pf(platforms[cobj.platform_id]);
+		is_moving = (lcoll == 2);
 
-			if (animate2 && do_coll_funcs && iter == 0) {
-				if (is_moving) { // move with the platform (clip v if large -z?)
-					obj.pos += pf.get_last_delta();
-				}
-				// the coll_top part isn't really right - we want to check for collsion with another object above
-				else if ((coll_bot && pf.get_last_delta().z < 0.0) /*|| (coll_top && pf.get_last_delta().z > 0.0)*/) {
-					if (player) {
-						int const ix((type == CAMERA) ? -1 : obj_index);
-						smiley_collision(ix, -2, vector3d(0.0, 0.0, -1.0), pos, 2000.0, CRUSHED); // lots of damage
-					} // other objects?
-				}
+		if (animate2 && do_coll_funcs && iter == 0) {
+			if (is_moving) { // move with the platform (clip v if large -z?)
+				obj.pos += pf.get_last_delta();
 			}
-			// reset last pos (init_dir) if object is only moving on a platform
-			bool const platform_moving(pf.is_moving());
-			//if (type == BALL && platform_moving) obj.init_dir = obj.pos;
-			if (platform_moving) obj.flags |= PLATFORM_COLL;
-		}
-		if (animate2 && !player && obj.health <= 0.1) obj.disable();
-		vector3d v_old(zero_vector), v0(obj.velocity);
-		obj_type const &otype(object_types[type]);
-		float const friction(otype.friction_factor);
-		bool const static_top_coll(lcoll == 2 && cobj.truly_static());
-
-		if (is_moving || friction < STICK_THRESHOLD) {
-			v_old = obj.velocity;
-
-			if (otype.elasticity == 0.0 || cobj.cp.elastic == 0.0 || !obj.object_bounce(3, norm, cobj.cp.elastic, pos.z, 0.0, pvel)) {
-				if (static_top_coll) {
-					obj.flags |= STATIC_COBJ_COLL; // collision with top
-					if (otype.flags & OBJ_IS_DROP) obj.velocity = zero_vector;
-				}
-				if (type != DYNAM_PART && obj.velocity != zero_vector) {
-					assert(TIMESTEP > 0.0);
-					if (friction > 0.0) obj.velocity *= (1.0 - min(1.0f, (tstep/TIMESTEP)*friction)); // apply kinetic friction
-					//for (unsigned i = 0; i < 3; ++i) obj.velocity[i] *= (1.0 - fabs(norm[i])); // norm must be normalized
-					orthogonalize_dir(obj.velocity, norm, obj.velocity, 0); // rolling friction model
-				}
-			}
-			else if (already_bounced) {
-				obj.velocity = v_old; // can only bounce once
-			}
-			else {
-				already_bounced = 1;
-				if (otype.flags & OBJ_IS_CYLIN) obj.init_dir.x += PI*signed_rand_float();
+			// the coll_top part isn't really right - we want to check for collsion with another object above
+			else if ((coll_bot && pf.get_last_delta().z < 0.0) /*|| (coll_top && pf.get_last_delta().z > 0.0)*/) {
+				if (player) {
+					int const ix((type == CAMERA) ? -1 : obj_index);
+					smiley_collision(ix, -2, vector3d(0.0, 0.0, -1.0), pos, 2000.0, CRUSHED); // lots of damage
+				} // other objects?
 			}
 		}
-		else { // sticks
-			if (cobj.status == COLL_STATIC) {
-				if (!proc_object_stuck(obj, static_top_coll) && static_top_coll) obj.flags |= STATIC_COBJ_COLL; // coll with top
-				obj.pos -= norm*(0.1*o_radius); // make sure it still intersects
+		// reset last pos (init_dir) if object is only moving on a platform
+		bool const platform_moving(pf.is_moving());
+		//if (type == BALL && platform_moving) obj.init_dir = obj.pos;
+		if (platform_moving) obj.flags |= PLATFORM_COLL;
+	}
+	if (animate2 && !player && obj.health <= 0.1) obj.disable();
+	vector3d v_old(zero_vector), v0(obj.velocity);
+	obj_type const &otype(object_types[type]);
+	float const friction(otype.friction_factor);
+	bool const static_top_coll(lcoll == 2 && cobj.truly_static());
+
+	if (is_moving || friction < STICK_THRESHOLD) {
+		v_old = obj.velocity;
+
+		if (otype.elasticity == 0.0 || cobj.cp.elastic == 0.0 || !obj.object_bounce(3, norm, cobj.cp.elastic, pos.z, 0.0, pvel)) {
+			if (static_top_coll) {
+				obj.flags |= STATIC_COBJ_COLL; // collision with top
+				if (otype.flags & OBJ_IS_DROP) obj.velocity = zero_vector;
 			}
-			obj.velocity = zero_vector; // I think this is correct
+			if (type != DYNAM_PART && obj.velocity != zero_vector) {
+				assert(TIMESTEP > 0.0);
+				if (friction > 0.0) obj.velocity *= (1.0 - min(1.0f, (tstep/TIMESTEP)*friction)); // apply kinetic friction
+				//for (unsigned i = 0; i < 3; ++i) obj.velocity[i] *= (1.0 - fabs(norm[i])); // norm must be normalized
+				orthogonalize_dir(obj.velocity, norm, obj.velocity, 0); // rolling friction model
+			}
 		}
-		// only use cubes for now, because leaves colliding with tree leaves and branches and resetting the normals is too unstable
-		if (cobj.type == COLL_CUBE && (otype.flags & OBJ_IS_FLAT)) obj.set_orient_for_coll(&norm);
+		else if (already_bounced) {
+			obj.velocity = v_old; // can only bounce once
+		}
+		else {
+			already_bounced = 1;
+			if (otype.flags & OBJ_IS_CYLIN) obj.init_dir.x += PI*signed_rand_float();
+		}
+	}
+	else { // sticks
+		if (cobj.status == COLL_STATIC) {
+			if (!proc_object_stuck(obj, static_top_coll) && static_top_coll) obj.flags |= STATIC_COBJ_COLL; // coll with top
+			obj.pos -= norm*(0.1*o_radius); // make sure it still intersects
+		}
+		obj.velocity = zero_vector; // I think this is correct
+	}
+	// only use cubes for now, because leaves colliding with tree leaves and branches and resetting the normals is too unstable
+	if (cobj.type == COLL_CUBE && (otype.flags & OBJ_IS_FLAT)) obj.set_orient_for_coll(&norm);
 		
-		if ((otype.flags & OBJ_IS_CYLIN) && !already_bounced) {
-			if (fabs(norm.z) == 1.0) { // z collision
-				obj.set_orient_for_coll(&norm);
-			}
-			else { // roll in the direction of the slope with axis along z
-				obj.orientation = vector3d(norm.x, norm.y, 0.0).get_norm();
-				obj.init_dir.x  = 0.0;
-				obj.angle       = 90.0;
-			}
+	if ((otype.flags & OBJ_IS_CYLIN) && !already_bounced) {
+		if (fabs(norm.z) == 1.0) { // z collision
+			obj.set_orient_for_coll(&norm);
 		}
-		if (do_coll_funcs && cobj.cp.coll_func != NULL) { // call collision function
-			invalid_collision = 0; // should already be 0
-			float energy_mult(1.0);
-			if (type == PLASMA) energy_mult *= obj.init_dir.x*obj.init_dir.x; // size squared
-			float const energy(get_coll_energy(v_old, obj.velocity, otype.mass));
-			cobj.cp.coll_func(cobj.cp.cf_index, obj_index, v_old, obj.pos, energy_mult*energy, type);
+		else { // roll in the direction of the slope with axis along z
+			obj.orientation = vector3d(norm.x, norm.y, 0.0).get_norm();
+			obj.init_dir.x  = 0.0;
+			obj.angle       = 90.0;
+		}
+	}
+	if (do_coll_funcs && cobj.cp.coll_func != NULL) { // call collision function
+		invalid_collision = 0; // should already be 0
+		float energy_mult(1.0);
+		if (type == PLASMA) energy_mult *= obj.init_dir.x*obj.init_dir.x; // size squared
+		float const energy(get_coll_energy(v_old, obj.velocity, otype.mass));
+		cobj.cp.coll_func(cobj.cp.cf_index, obj_index, v_old, obj.pos, energy_mult*energy, type);
 			
-			if (invalid_collision) { // reset local collision
-				invalid_collision = 0;
-				lcoll = 0;
-				obj   = temp;
-				return;
-			}
+		if (invalid_collision) { // reset local collision
+			invalid_collision = 0;
+			lcoll = 0;
+			obj   = temp;
+			return;
 		}
-		if (!(otype.flags & OBJ_IS_DROP) && type != LEAF && type != CHARRED && type != SHRAPNEL &&
-			type != BEAM && type != LASER && type != FIRE && type != SMOKE && type != PARTICLE && type != WAYPOINT)
-		{
-			coll_objects[index].register_coll(TICKS_PER_SECOND, IMPACT);
-		}
-		obj.verify_data();
+	}
+	if (!(otype.flags & OBJ_IS_DROP) && type != LEAF && type != CHARRED && type != SHRAPNEL &&
+		type != BEAM && type != LASER && type != FIRE && type != SMOKE && type != PARTICLE && type != WAYPOINT)
+	{
+		coll_objects[index].register_coll(TICKS_PER_SECOND, IMPACT);
+	}
+	obj.verify_data();
 		
-		if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
-			if (cobj.type == COLL_CUBE && cobj.can_be_scorched()) {
-				int const dir(cdir >> 1), ds((dir+1)%3), dt((dir+2)%3);
-				float const sz(5.0*otype.radius);
-				float const dmin(min(min((cobj.d[ds][1] - obj.pos[ds]), (obj.pos[ds] - cobj.d[ds][0])),
-					                 min((cobj.d[dt][1] - obj.pos[dt]), (obj.pos[dt] - cobj.d[dt][0]))));
+	if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
+		if (cobj.type == COLL_CUBE && cobj.can_be_scorched()) {
+			int const dir(cdir >> 1), ds((dir+1)%3), dt((dir+2)%3);
+			float const sz(5.0*otype.radius);
+			float const dmin(min(min((cobj.d[ds][1] - obj.pos[ds]), (obj.pos[ds] - cobj.d[ds][0])),
+					                min((cobj.d[dt][1] - obj.pos[dt]), (obj.pos[dt] - cobj.d[dt][0]))));
 
-				if (dmin > sz) gen_scorch_mark((obj.pos - norm*o_radius), sz, norm, index, 0.75, 0.0);
-			}
-			obj.disable();
+			if (dmin > sz) gen_scorch_mark((obj.pos - norm*o_radius), sz, norm, index, 0.75, 0.0);
 		}
-		deform_obj(obj, norm, v0);
-		if (cnorm != NULL) *cnorm = norm;
-		obj.flags |= OBJ_COLLIDED;
-		coll      |= lcoll; // if not an invalid collision
-		lcoll      = 0; // reset local collision
-		init_reset_pos(); // reset local state
-		if (friction < STICK_THRESHOLD) return;
-		if (obj.flags & Z_STOPPED) obj.pos.z = pos.z = z_old;
-	} // if lcoll
+		obj.disable();
+	}
+	deform_obj(obj, norm, v0);
+	if (cnorm != NULL) *cnorm = norm;
+	obj.flags |= OBJ_COLLIDED;
+	coll      |= lcoll; // if not an invalid collision
+	lcoll      = 0; // reset local collision
+	init_reset_pos(); // reset local state
+	if (friction >= STICK_THRESHOLD && (obj.flags & Z_STOPPED)) obj.pos.z = pos.z = z_old;
 }
 
 
