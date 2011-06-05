@@ -99,6 +99,28 @@ void add_portal(coll_obj const &c) {
 }
 
 
+void get_all_connected(int cobj, set<int> &connected) {
+
+	assert((unsigned)cobj < coll_objects.size());
+	coll_obj const &c(coll_objects[cobj]);
+	int const x1(get_xpos(c.d[0][0])), x2(get_xpos(c.d[0][1]));
+	int const y1(get_ypos(c.d[1][0])), y2(get_ypos(c.d[1][1]));
+			
+	for (int y = max(0, y1); y <= min(MESH_Y_SIZE-1, y2); ++y) {
+		for (int x = max(0, x1); x <= min(MESH_X_SIZE-1, x2); ++x) {
+			vector<int> const &cvals(v_collision_matrix[y][x].cvals);
+
+			for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
+				if (*i < 0 || *i == cobj)                  continue;
+				if (connected.find(*i) != connected.end()) continue; // already processed
+				assert((unsigned)*i < coll_objects.size());
+				if (c.intersects_cobj(coll_objects[*i], TOLERANCE)) connected.insert(*i);
+			}
+		}
+	}
+}
+
+
 unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir,
 					   float x1, float x2, float y1, float y2, float z1, float z2, int min_destroy)
 {
@@ -164,19 +186,49 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	if (!to_remove.empty()) {
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // *** FIXME: what about updating (removing) mesh shadows? ***
 
-		// FIXME: update cobj connectivity and make unconnected cobjs fall
-		// * Use intersects_cobj() to find connected groups of shapes starting at all cobjs to_remove in a queue (open set)
-		//     - Assert that all cobjs in cts are reached
-		// * If we reach the following it is connected using is_anchored():
-		//     A. Static/fixed/non-destroyable cobj
-		//     B. Coll object that has one vertex below the mesh
-		//     C. COLL_CUBE that has at least one mesh_height in [xmin, xmax]x[ymin, ymax] >= d[2][0]
-		// * Otherwise, add all objects in the group (closed set) to a falling objects group
-		// * Retest the objects in each falling objects group every frame:
-		//     If still unconnected, let them fall by time*grav_acc, each frame:
-		//       - Remove using remove_coll_object(), maybe call clear_internal_data()
-		//       - Re-add using add_coll_cobj()
-		//     If connected, remove from the group (or remove the group)
+		if (1) {
+			// ***** BEGIN TESTING *****
+			// FIXME: update cobj connectivity and make unconnected cobjs fall
+			// * Use intersects_cobj() to find connected groups of shapes starting at all cobjs to_remove in a queue (open set)
+			//     - Assert that all cobjs in indices are reached
+			// * If we reach the following it is connected using is_anchored():
+			// * Otherwise, add all objects in the group (closed set) to a falling objects group
+			// * Retest the objects in each falling objects group every frame:
+			//     If still unconnected, let them fall by time*grav_acc, each frame:
+			//       - Remove using remove_coll_object(), maybe call clear_internal_data()
+			//       - Re-add using add_coll_cobj()
+			//     If connected, remove from the group (or remove the group)
+
+			set<int> open, closed;
+			copy(to_remove.begin(), to_remove.end(), inserter(open, open.begin()));
+			bool anchored(0);
+
+			while (!open.empty()) {
+				int const cur(*open.begin());
+				assert((unsigned)cur < coll_objects.size());
+
+				if (coll_objects[cur].is_anchored()) {
+					anchored = 1;
+					break;
+				}
+				open.erase(cur);
+				closed.insert(cur);
+				set<int> connected;
+				get_all_connected(cur, connected);
+
+				for (set<int>::const_iterator i = connected.begin(); i != connected.end(); ++i) {
+					if (closed.find(*i) != closed.end()) continue; // already processed
+					open.insert(*i); // may already be there
+				}
+			}
+			if (!anchored) {
+				for (unsigned i = 0; i < indices.size(); ++i) {
+					assert(closed.find(indices[i]) != closed.end()); // must have gotten to them all
+				}
+			}
+			cout << "anchored: " << anchored << endl;
+		}
+		// ***** END TESTING *****
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) {
 			remove_coll_object(to_remove[i]); // remove old collision object
@@ -207,9 +259,9 @@ int coll_obj::is_anchored() const {
 			int const x1(get_xpos(d[0][0])), x2(get_xpos(d[0][1]));
 			int const y1(get_ypos(d[1][0])), y2(get_ypos(d[1][1]));
 			
-			for (int y = y1; y <= y2; ++y) {
-				for (int x = x1; x <= x2; ++x) {
-					if (!point_outside_mesh(x, y) && d[2][0] < mesh_height[y][x]) return 1;
+			for (int y = max(0, y1); y <= min(MESH_Y_SIZE-1, y2); ++y) {
+				for (int x = max(0, x1); x <= min(MESH_X_SIZE-1, x2); ++x) {
+					if (d[2][0] < mesh_height[y][x]) return 1;
 				}
 			}
 			return 0;

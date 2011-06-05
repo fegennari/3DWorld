@@ -132,10 +132,10 @@ void init_objects() {
 	object_types[HAIL].min_t               = SNOW_MAX_TEMP;
 	object_types[HAIL].max_t               = RAIN_MIN_TEMP;
 	object_types[HAIL].density             = 0.8;
-	object_types[HAIL].elasticity          = 0.2;
+	object_types[HAIL].elasticity          = 0.8;
 	object_types[HAIL].health              = 30.0;
 	object_types[HAIL].color               = TRANS;
-	object_types[HAIL].color.alpha         = ICE_ALPHA;
+	object_types[HAIL].color.alpha         = 0.9*ICE_ALPHA;
 	object_types[HAIL].flags               = SEMI_TRANSPARENT | BLEND | FALL_EVERYWHERE | IS_PRECIP;
 
 	object_types[LEAF].air_factor          = 0.5;
