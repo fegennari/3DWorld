@@ -353,10 +353,10 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		last_tid = tid;
 	}
 	if (start_group) {
-		float const tscale[2] = {cp.tscale, ar*cp.tscale};
+		float const tscale[2] = {cp.tscale, ar*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
 		vector3d tex_dir(0,0,0);
 		tex_dir[pri_dim] = 1.0;
-		setup_polygon_texgen(tex_dir, tscale, cp.swap_txy);
+		setup_polygon_texgen(tex_dir, tscale, xlate, cp.swap_txy);
 		unsigned char shadowed(255); // all shadowed
 		set_shadowed_state(shadowed);
 		glBegin(GL_TRIANGLES);

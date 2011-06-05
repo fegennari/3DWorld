@@ -1435,7 +1435,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			break;
 
-		case 'Y': // texture translate (cubes only), swap xy (cubes/polygons only): <tdx> <tdy> [<swap_xy>]
+		case 'Y': // texture translate (cubes, polygons, cylinder ends only), swap xy (cubes/polygons only): <tdx> <tdy> [<swap_xy>]
 			if (fscanf(fp, "%f%f", &cobj.cp.tdx, &cobj.cp.tdy) != 2) {
 				return read_error(fp, "texture translate", coll_obj_file);
 			}

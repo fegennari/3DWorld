@@ -65,7 +65,7 @@ texture(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
 texture(0, 0, 512,  512,  1, 3, 1, "camoflage.raw"),
 texture(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
 texture(0, 1, 512,  512,  1, 3, 1, "brick1.bmp"),
-texture(0, 1, 512,  512,  1, 3, 1, "manhole.bmp"),
+texture(0, 2, 512,  512,  1, 3, 1, "manhole.bmp"),
 texture(0, 0, 128,  128,  1, 4, 3, "palmtree.raw"),
 texture(1, 0, 256,  256,  1, 4, 1, "@smoke.raw"),  // not real file
 texture(1, 0, 64,   64,   1, 4, 1, "@plasma.raw"), // not real file
@@ -1490,7 +1490,7 @@ void disable_textures_texgen() {
 }
 
 
-void setup_polygon_texgen(vector3d const &norm, float const scale[2], bool swap_txy) {
+void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], bool swap_txy) {
 
 	int const d0(get_min_dim(norm));
 	vector3d v[2] = {all_zeros, all_zeros};
@@ -1502,7 +1502,7 @@ void setup_polygon_texgen(vector3d const &norm, float const scale[2], bool swap_
 	int const GL_X[2] = {GL_S, GL_T};
 
 	for (unsigned i = 0; i < 2; ++i) { // ignoring xoff2/yoff2
-		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, 0.0};
+		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, xlate[i]};
 		int const gl_x(GL_X[(i != 0) ^ swap_txy]);
 		glTexGeni(gl_x, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 		glTexGenfv(gl_x, GL_EYE_PLANE, tex_param);
