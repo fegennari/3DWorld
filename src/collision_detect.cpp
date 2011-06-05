@@ -1086,8 +1086,24 @@ void vert_coll_detector::check_cobj(int index) {
 					}
 					radius += o_radius;
 					if (!safe_norm_div(rad, radius, norm)) break;
+					float const objz(obj.pos.z);
 					norm.assign((pos.x - center.x)/rad, (pos.y - center.y)/rad, 0.0);
 					for (unsigned d = 0; d < 2; ++d) obj.pos[d] = center[d] + norm[d]*radius;
+
+					/*if (objz > (zmaxc - o_radius) && objz < zmaxc) { // hit on the top edge
+						obj.pos.x -= norm.x*o_radius;
+						obj.pos.y -= norm.y*o_radius;
+						norm.z += (objz - (zmaxc - o_radius))/o_radius; // denominator isn't exactly correct
+						norm.normalize();
+						obj.pos += norm*o_radius;
+					}
+					else if (objz < (zminc + o_radius) && objz > zminc) { // hit on the bottom edge
+						obj.pos.x -= norm.x*o_radius;
+						obj.pos.y -= norm.y*o_radius;
+						norm.z -= ((zminc + o_radius) - objz)/o_radius; // denominator isn't exactly correct
+						norm.normalize();
+						obj.pos += norm*o_radius;
+					}*/
 				}
 			}
 		}
