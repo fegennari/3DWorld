@@ -230,9 +230,11 @@ void object_line_coll(dwobject &obj, point const &old_pos, float radius, unsigne
 	if (check_coll_line_exact(old_pos, obj.pos, cpos, cnorm, cindex)) { // slower, but more correct
 		assert(cnorm != zero_vector);
 		obj.flags |= OBJ_COLLIDED;
-		obj.pos    = cpos + cnorm*(0.99*radius); // move so it only slightly collides
+		obj.pos    = cpos; // move it to collision point
+		bool coll(0);
+		if (cindex >= 0) coll     = (obj.check_vert_collision(obj_index, 1, 0, NULL, all_zeros, 0, cindex) != 0);
+		if (!coll)       obj.pos += cnorm*(0.99*radius); // move so it only slightly collides
 		assert(!is_nan(obj.pos));
-		if (cindex >= 0) obj.check_vert_collision(obj_index, 1, 0, NULL, all_zeros, 0, cindex);
 	}
 }
 
