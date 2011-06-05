@@ -1364,7 +1364,7 @@ void player_state::init(bool w_start) {
 		powerup       = -1;
 		powerup_time  = 0;
 	}
-	powerup = PU_FLIGHT; powerup_time = 1000000; // testing
+	//powerup = PU_FLIGHT; powerup_time = 1000000; // testing
 	for (unsigned i = 0; i < 2; ++i) unreachable[i].clear();
 	reset_wpt_state();
 	waypts_used.clear();

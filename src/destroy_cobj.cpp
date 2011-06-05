@@ -186,7 +186,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	if (!to_remove.empty()) {
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // *** FIXME: what about updating (removing) mesh shadows? ***
 
-		if (1) {
+		if (0) {
 			// ***** BEGIN TESTING *****
 			// FIXME: update cobj connectivity and make unconnected cobjs fall
 			// * Use intersects_cobj() to find connected groups of shapes starting at all cobjs to_remove in a queue (open set)
