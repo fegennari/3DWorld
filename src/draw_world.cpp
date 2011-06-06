@@ -1567,9 +1567,6 @@ void set_glow_color(dwobject const &obj, bool shrapnel_cscale) {
 }
 
 
-#define DO_TRI_VERTEX(val) {if (tscale != 0.0) glTexCoord2f(tscale*(val[(dim+1)%3]), tscale*(val[(dim+2)%3])); (pos val).do_glVertex();}
-
-
 void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale) {
 
 	/*
@@ -1588,10 +1585,13 @@ void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, fl
 	point const p2(q*(t*o.x*o.z + s*o.y), q*(t*o.y*o.z - s*o.x), q*(t*o.z*o.z + c));
 	vector3d const norm(cross_product(p2, p1).get_norm());
 	norm.do_glNormal();
-	int const dim(get_max_dim(norm));
-	DO_TRI_VERTEX(+p1);
-	DO_TRI_VERTEX(-p1);
-	DO_TRI_VERTEX(+p2);
+	float const ts(123.456*radius), tt(654.321*radius);
+	if (tscale != 0.0) glTexCoord2f(ts, tt);
+	(pos + p1).do_glVertex();
+	if (tscale != 0.0) glTexCoord2f(ts+2*tscale*radius, tt);
+	(pos - p1).do_glVertex();
+	if (tscale != 0.0) glTexCoord2f(ts, tt+2*tscale*radius);
+	(pos + p2).do_glVertex();
 }
 
 

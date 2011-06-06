@@ -443,7 +443,7 @@ void process_groups() {
 			if (!obj.disabled()) {
 				update_deformation(obj);
 				
-				if (type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF || (type == FRAGMENT && int(obj.vdeform.z) >= SHATTERABLE)) {
+				if (type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF || (type == FRAGMENT && obj.vdeform.z > 0.0)) { // shatterable fragments
 					float const vmag(fabs(obj.velocity.z)); // rotate
 					if (vmag > 0.5 && !(obj.flags & STATIC_COBJ_COLL)) obj.angle += fticks*ROTATE_RATE*sqrt(vmag);
 				}

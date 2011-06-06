@@ -36,7 +36,10 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 			gen_fire(pos, min(4.0, 12.0*val), shooter);
 		}
 		if (!cts[i].draw) continue;
-		int const num(min(100, int((rand()%20 + 20)*(cts[i].volume/0.0007))));
+		float const vol_scaled(cts[i].volume/0.0007);
+		float size_scale(1.0);
+		while (vol_scaled/size_scale < 0.5) size_scale *= 0.5;
+		int const num(min(100, int((rand()%20 + 20)*vol_scaled/size_scale)));
 		bool const shattered(cts[i].destroy >= SHATTERABLE);
 		point fpos(pos);
 
@@ -54,7 +57,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 					velocity *= 0.5;
 				}
 			}
-			gen_fragment(fpos, velocity, 1.0, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, shattered);
+			gen_fragment(fpos, velocity, size_scale, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, shattered);
 		}
 	} // for i
 }
