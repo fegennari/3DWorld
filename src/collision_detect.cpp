@@ -502,12 +502,15 @@ void coll_obj::get_cvz_counts(int *zz, float zmin, float zmax, int x, int y) con
 	if (type == COLL_POLYGON && thickness <= MIN_POLY_THICK && (zz[1] - zz[0]) > 2 && radius > HALF_DXY && norm.z != 0.0) {
 		float const D(-dot_product(norm, points[0]));
 		float zval[2];
+		bool first(1);
 
-		for (int yy = y; yy <= y+1; ++yy) {
-			for (int xx = x; xx <= x+1; ++xx) {
+		// polygon is monotonic, so sample once to each side of the center to get conservative bounds
+		for (int yy = y-1; yy <= y+1; yy += 2) {
+			for (int xx = x-1; xx <= x+1; xx += 2) {
 				float const z((-norm.x*get_xval(xx) - norm.y*get_yval(yy) - D)/norm.z);
-				zval[0] = ((xx == x && yy == y) ? z : min(zval[0], z));
-				zval[1] = ((xx == x && yy == y) ? z : max(zval[1], z));
+				zval[0] = (first ? z : min(zval[0], z));
+				zval[1] = (first ? z : max(zval[1], z));
+				first   = 0;
 			}
 		}
 		zv[0] = max(zv[0], zval[0]);
@@ -984,6 +987,8 @@ void vert_coll_detector::check_cobj(int index) {
 	if (skip_dynamic && cobj.status == COLL_DYNAMIC) return;
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
 	if (z1 > zmaxc || z2 < zminc)                    return;
+	if (pos.x < (cobj.d[0][0]-o_radius) || pos.x > (cobj.d[0][1]+o_radius)) return;
+	if (pos.y < (cobj.d[1][0]-o_radius) || pos.y > (cobj.d[1][1]+o_radius)) return;
 	vector3d norm(zero_vector), pvel(zero_vector);
 	bool const player_step(player && ((type == CAMERA && camera_change) || (cobj.d[2][1] - z1) <= o_radius*C_STEP_HEIGHT));
 	bool coll_top(0), coll_bot(0);
@@ -995,8 +1000,6 @@ void vert_coll_detector::check_cobj(int index) {
 	vector3d const mdir(motion_dir - pvel*fticks); // not sure if this helps
 
 	if (cobj.type == COLL_CUBE || cobj.type == COLL_CYLINDER) {
-		if (pos.x < (cobj.d[0][0]-o_radius) || pos.x > (cobj.d[0][1]+o_radius))          return;
-		if (pos.y < (cobj.d[1][0]-o_radius) || pos.y > (cobj.d[1][1]+o_radius))          return;
 		if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj)) return;
 	}
 	switch (cobj.type) { // within bounding box of collision object
