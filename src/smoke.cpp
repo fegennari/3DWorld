@@ -177,6 +177,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
 	// is it ok when texture z size is not a power of 2?
 	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(4);
+	if (sz == 0) return 0; // zsize was 0?
 	bool init_call(0);
 	vector<unsigned char> &data(smoke_tex_data);
 
