@@ -7,6 +7,8 @@
 #include "physics_objects.h"
 
 
+bool const LET_COBJS_FALL = 1;
+
 int destroy_thresh(0);
 vector<int> falling_cobjs;
 
@@ -117,9 +119,9 @@ void get_all_connected(int cobj, set<int> &connected, set<int> const &closed) {
 
 			for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
 				if (*i < 0 || *i == cobj)                   continue;
+				assert((unsigned)*i < coll_objects.size());
 				if (closed.find(*i)    != closed.end()   )  continue; // closed  - skip
 				if (connected.find(*i) != connected.end())  continue; // already processed - skip
-				assert((unsigned)*i < coll_objects.size());
 				if (coll_objects[*i].status != COLL_STATIC) continue; // not static
 				if (c.intersects_cobj(coll_objects[*i], TOLERANCE) == 1) connected.insert(*i);
 			}
@@ -227,20 +229,19 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		for (unsigned i = 0; i < to_remove.size(); ++i) {
 			remove_coll_object(to_remove[i]); // remove old collision object
 		}
-		if (1) {
-			// * Retest the objects in each falling objects group every frame:
-			//     If still unconnected, let them fall by time*grav_acc, each frame:
-			//       - Remove using remove_coll_object(), maybe call clear_internal_data()
-			//       - Re-add using add_coll_cobj()
-			//     If connected, remove from the group (or remove the group)
+		if (LET_COBJS_FALL) {
+			// 1. fix crash
+			// 2. shift house wall
+			// 3. fix shadows
+			// 4. add velocity/acceleration
+			// 5. fix texture offset
 			set<int> anchored[2]; // {unanchored, anchored}
 			//cout << "to_remove: " << to_remove.size() << endl;
 
 			for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
 				set<int> start_set;
 				get_all_connected(to_remove[i], start_set, set<int>());
-				vector<int> start;
-				copy(start_set.begin(), start_set.end(), back_inserter(start));
+				vector<int> const start(start_set.begin(), start_set.end());
 				//cout << "  start: " << start.size() << endl;
 				check_cobjs_anchored(start, anchored);
 			} // for i
@@ -269,16 +270,17 @@ void check_falling_cobjs() {
 	for (vector<int>::iterator i = falling_cobjs.begin(); i != falling_cobjs.end(); ++i) {
 		if (*i < 0) continue; // skip
 		assert((unsigned)(*i) < coll_objects.size());
-		coll_obj &cobj(coll_objects[*i]);
-		
-		if (cobj.status != COLL_STATIC) {
+	
+		if (coll_objects[*i].status != COLL_STATIC) {
 			*i = -1; // disable
 			continue;
 		}
 		// translate, add the new, then remove the old
+		coll_obj cobj(coll_objects[*i]); // make a copy
 		cobj.shift_by(point(0.0, 0.0, dz), 1);
 		int const index(cobj.add_coll_cobj());
 		remove_coll_object(*i);
+		assert(*i != index);
 		*i = index;
 	}
 	check_cobjs_anchored(falling_cobjs, anchored);
@@ -336,6 +338,26 @@ int coll_obj::is_anchored() const {
 }
 
 
+int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
+
+	if (line_line_dist(c2.points[0], c2.points[1], c1.points[0], c1.points[1]) > (max(c2.radius, c2.radius2) + max(c1.radius, c1.radius2))) return 0;
+	if (c1.line_intersect(c2.points[0], c2.points[1])) return 1;
+	if (c2.line_intersect(c1.points[0], c1.points[1])) return 1;
+	return 2; // FIXME: finish
+}
+
+
+int pretest_poly_cylin_int(coll_obj const &p, coll_obj const &c) {
+
+	if (p.line_intersect(c.points[0], c.points[1])) return 1;
+
+	for (int i = 0; i < p.npoints; ++i) {
+		if (c.line_intersect(p.points[i], p.points[(i+1)%p.npoints])) return 1; // definite intersection
+	}
+	return 2; // FIXME: finish
+}
+
+
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
 // 15 total: 7 complete, 5 partial, 3 unwritten
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
@@ -373,11 +395,9 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_SPHERE:
 			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius)); // FIXME: inexact (return 2?)
 		case COLL_CYLINDER_ROT:
-			if (line_line_dist(points[0], points[1], c.points[0], c.points[1]) > (radius + max(c.radius, c.radius2))) return 0;
-			return 2; // FIXME
+			return cylin_cylin_int(c, *this);
 		case COLL_POLYGON:
-			// could use line_intersect_cylinder() for each polygon edge
-			return 2; // FIXME
+			return pretest_poly_cylin_int(c, *this);
 		default: assert(0);
 		}
 		break;
@@ -397,21 +417,16 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 	case COLL_CYLINDER_ROT:
 		switch (c.type) {
 		case COLL_CYLINDER_ROT:
-			if (line_line_dist(points[0], points[1], c.points[0], c.points[1]) > (max(radius, radius2) + max(c.radius, c.radius2))) return 0;
-			return 2; // FIXME
+			return cylin_cylin_int(c, *this);
 		case COLL_POLYGON:
-			// could use line_intersect_cylinder() for each polygon edge
-			return 2; // FIXME
+			return pretest_poly_cylin_int(c, *this);
 		default: assert(0);
 		}
 		break;
 
 	case COLL_POLYGON:
-		switch (c.type) {
-		case COLL_POLYGON:
-			return 2; // FIXME - need to deal with thickness as well
-		default: assert(0);
-		}
+		assert(c.type == COLL_POLYGON);
+		return 2; // FIXME - need to deal with thickness as well
 		break;
 
 	default:
