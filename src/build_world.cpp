@@ -641,9 +641,9 @@ void shift_all_objs(vector3d const &vd) {
 }
 
 
-void coll_obj::shift_by(vector3d const &vd) {
+void coll_obj::shift_by(vector3d const &vd, bool force) {
 
-	if (!fixed) return;
+	if (!fixed && !force) return;
 
 	for (unsigned j = 0; j < unsigned(npoints); ++j) {
 		points[j] += vd;
@@ -651,6 +651,7 @@ void coll_obj::shift_by(vector3d const &vd) {
 	cube_t::translate(vd);
 	//clear_lightmap_if_lighted_eq(0, 0); // clear if unshadowed
 	clear_lightmap_if_lighted_eq(1, 1); // always clear
+	// FIXME: what about translating texture values in cp.tdx, cp.tdy
 }
 
 

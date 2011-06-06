@@ -1500,7 +1500,6 @@ void skull_collision(int index, int obj_index, vector3d const &velocity, point c
 bool lm_coll_invalid(dwobject const &obj);
 bool invalid_coll(dwobject const &obj, coll_obj const &cobj);
 int get_smiley_hit(vector3d &hdir, int index);
-void destroy_coll_objs(point const &pos, float damage, int shooter, bool big);
 void blast_radius(point const &pos, int type, int obj_index, int shooter, int chain_level);
 void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview);
 void do_area_effect_damage(point &pos, float effect_radius, float damage, int index, int source, int type);
@@ -1578,8 +1577,6 @@ void check_cubes(vector<coll_obj> &cobjs);
 void merge_cubes(vector<coll_obj> &cobjs);
 void process_negative_shapes(vector<coll_obj> &cobjs);
 void remove_overlapping_cubes(vector<coll_obj> &cobjs);
-unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir,
-					   float x1, float x2, float y1, float y2, float z1, float z2, int destroy_thresh);
 void subdiv_cubes(vector<coll_obj> &cobjs);
 void sort_cobjs_for_rendering(vector<coll_obj> &cobjs);
 
@@ -1652,6 +1649,12 @@ void unset_shader_prog();
 void create_waypoints(vector<user_waypt_t> const &user_waypoints);
 void shift_waypoints(vector3d const &vd);
 void draw_waypoints();
+
+// function prototypes - destroy_cobj
+void destroy_coll_objs(point const &pos, float damage, int shooter, bool big);
+unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir,
+					   float x1, float x2, float y1, float y2, float z1, float z2, int destroy_thresh);
+void check_falling_cobjs();
 
 // function prototypes - screenshot (these are C functions)
 #ifdef ENABLE_JPEG

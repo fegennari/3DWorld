@@ -117,7 +117,7 @@ s 0 1 # swap x and y
 T 2.8  -0.1  -0.29  i mapx/bench.txt
 T 4.2  -0.1  -0.29  i mapx/bench.txt
 T 6.0  -0.1  -0.29  i mapx/bench.txt
-T 5.0  -5.03 -0.29  i mapx/bench.txt
+T 5.0  -5.05 -0.29  i mapx/bench.txt
 M 0
 T 5.0  -3.36 -0.29  i mapx/bench.txt
 s 1 0 # restore transform

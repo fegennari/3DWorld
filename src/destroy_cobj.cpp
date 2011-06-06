@@ -8,7 +8,9 @@
 
 
 int destroy_thresh(0);
+vector<int> falling_cobjs;
 
+extern float fticks, zmin;
 extern int coll_id[];
 extern obj_type object_types[];
 extern obj_group obj_groups[];
@@ -102,7 +104,7 @@ void add_portal(coll_obj const &c) {
 }
 
 
-void get_all_connected(int cobj, set<int> &connected) {
+void get_all_connected(int cobj, set<int> &connected, set<int> const &closed) {
 
 	assert((unsigned)cobj < coll_objects.size());
 	coll_obj const &c(coll_objects[cobj]);
@@ -114,13 +116,46 @@ void get_all_connected(int cobj, set<int> &connected) {
 			vector<int> const &cvals(v_collision_matrix[y][x].cvals);
 
 			for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
-				if (*i < 0 || *i == cobj)                  continue;
-				if (connected.find(*i) != connected.end()) continue; // already processed
+				if (*i < 0 || *i == cobj)                   continue;
+				if (closed.find(*i)    != closed.end()   )  continue; // closed  - skip
+				if (connected.find(*i) != connected.end())  continue; // already processed - skip
 				assert((unsigned)*i < coll_objects.size());
-				if (c.intersects_cobj(coll_objects[*i], TOLERANCE)) connected.insert(*i);
+				if (coll_objects[*i].status != COLL_STATIC) continue; // not static
+				if (c.intersects_cobj(coll_objects[*i], TOLERANCE) == 1) connected.insert(*i);
 			}
 		}
 	}
+}
+
+
+void check_cobjs_anchored(vector<int> to_check, set<int> anchored[2]) {
+
+	for (vector<int>::const_iterator j = to_check.begin(); j != to_check.end(); ++j) {
+		if ((*j) < 0) continue; // skip
+		if (anchored[0].find(*j) != anchored[0].end()) continue; // already known to be unanchored
+		if (anchored[1].find(*j) != anchored[1].end()) continue; // already known to be anchored
+
+		// perform a graph search until we find an anchored cobj or we run out of cobjs
+		bool is_anchored(0);
+		set<int> open, closed;
+		open.insert(*j);
+
+		while (!open.empty()) {
+			int const cur(*open.begin());
+			closed.insert(cur);
+			assert(anchored[0].find(cur) == anchored[0].end()); // requires that intersects_cobj() be symmetric
+
+			if (anchored[1].find(cur) != anchored[1].end() || coll_objects[cur].is_anchored()) {
+				is_anchored = 1;
+				break;
+			}
+			open.erase(cur);
+			get_all_connected(cur, open, closed);
+		}
+		//cout << "    anchored[" << *j << "]: " << is_anchored << ", open: " << open.size() << ", closed: " << closed.size() << endl;
+		// everything in the closed set has the same is_anchored state and can be cached
+		copy(closed.begin(), closed.end(), inserter(anchored[is_anchored], anchored[is_anchored].begin()));
+	} // for j
 }
 
 
@@ -189,57 +224,66 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	if (!to_remove.empty()) {
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // *** FIXME: what about updating (removing) mesh shadows? ***
 
-		if (0) {
-			// ***** BEGIN TESTING *****
-			// FIXME: update cobj connectivity and make unconnected cobjs fall
-			// * Use intersects_cobj() to find connected groups of shapes starting at all cobjs to_remove in a queue (open set)
-			//     - Assert that all cobjs in indices are reached
-			// * If we reach the following it is connected using is_anchored():
-			// * Otherwise, add all objects in the group (closed set) to a falling objects group
+		for (unsigned i = 0; i < to_remove.size(); ++i) {
+			remove_coll_object(to_remove[i]); // remove old collision object
+		}
+		if (1) {
 			// * Retest the objects in each falling objects group every frame:
 			//     If still unconnected, let them fall by time*grav_acc, each frame:
 			//       - Remove using remove_coll_object(), maybe call clear_internal_data()
 			//       - Re-add using add_coll_cobj()
 			//     If connected, remove from the group (or remove the group)
+			set<int> anchored[2]; // {unanchored, anchored}
+			//cout << "to_remove: " << to_remove.size() << endl;
 
-			set<int> open, closed;
-			copy(to_remove.begin(), to_remove.end(), inserter(open, open.begin()));
-			bool anchored(0);
+			for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
+				set<int> start_set;
+				get_all_connected(to_remove[i], start_set, set<int>());
+				vector<int> start;
+				copy(start_set.begin(), start_set.end(), back_inserter(start));
+				//cout << "  start: " << start.size() << endl;
+				check_cobjs_anchored(start, anchored);
+			} // for i
+			//cout << "anchored: " << anchored[1].size() << ", unanchored: " << anchored[0].size() << endl;
 
-			while (!open.empty()) {
-				int const cur(*open.begin());
-				assert((unsigned)cur < coll_objects.size());
-
-				if (coll_objects[cur].is_anchored()) {
-					anchored = 1;
-					break;
-				}
-				open.erase(cur);
-				closed.insert(cur);
-				set<int> connected;
-				get_all_connected(cur, connected);
-
-				for (set<int>::const_iterator i = connected.begin(); i != connected.end(); ++i) {
-					if (closed.find(*i) != closed.end()) continue; // already processed
-					open.insert(*i); // may already be there
-				}
+			// check that each sub-cobj index is in exactly one of anchored[{0,1}]
+			for (unsigned i = 0; i < indices.size(); ++i) {
+				assert((anchored[0].find(indices[i]) == anchored[0].end()) != (anchored[1].find(indices[i]) == anchored[1].end()));
 			}
-			if (!anchored) {
-				for (unsigned i = 0; i < indices.size(); ++i) {
-					assert(closed.find(indices[i]) != closed.end()); // must have gotten to them all
-				}
-			}
-			cout << "anchored: " << anchored << endl;
-		}
-		// ***** END TESTING *****
-
-		for (unsigned i = 0; i < to_remove.size(); ++i) {
-			remove_coll_object(to_remove[i]); // remove old collision object
+			copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
 		}
 		cdir.normalize();
 	}
 	//PRINT_TIME("Subtract Cube");
 	return to_remove.size();
+}
+
+
+void check_falling_cobjs() {
+
+	if (falling_cobjs.empty()) return; // nothing to do
+	//cout << "falling_cobjs: " << falling_cobjs.size() << endl;
+	float const dz(-0.001*fticks); // FIXME: add velocity/acceleration due to gravity
+	set<int> anchored[2]; // {unanchored, anchored}
+
+	for (vector<int>::iterator i = falling_cobjs.begin(); i != falling_cobjs.end(); ++i) {
+		if (*i < 0) continue; // skip
+		assert((unsigned)(*i) < coll_objects.size());
+		coll_obj &cobj(coll_objects[*i]);
+		
+		if (cobj.status != COLL_STATIC) {
+			*i = -1; // disable
+			continue;
+		}
+		// translate, add the new, then remove the old
+		cobj.shift_by(point(0.0, 0.0, dz), 1);
+		int const index(cobj.add_coll_cobj());
+		remove_coll_object(*i);
+		*i = index;
+	}
+	check_cobjs_anchored(falling_cobjs, anchored);
+	falling_cobjs.resize(0);
+	copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
 }
 
 
@@ -255,6 +299,7 @@ int coll_obj::is_anchored() const {
 
 	if (platform_id >= 0 || status != COLL_STATIC) return 0; // platforms and dynamic objects are never connecting
 	if (fixed && destroy <= destroy_thresh)        return 2; // can't be destroyed, so it never moves
+	if (d[2][0] <= min(zmin, czmin))               return 1; // below the scene
 
 	switch (type) {
 	case COLL_CUBE:

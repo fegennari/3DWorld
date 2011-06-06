@@ -197,7 +197,7 @@ public:
 	bool subdiv_fixed_cube(vector<coll_obj> &cobjs);
 	int  intersects_cobj(coll_obj const &c, float toler=0.0) const;
 	int  is_anchored() const;
-	void shift_by(vector3d const &vd);
+	void shift_by(vector3d const &vd, bool force=0);
 	void add_to_platform() const;
 	bool dynamic_shadows_only() const;
 	void add_shadow(char light_sources, bool dynamic) const;
