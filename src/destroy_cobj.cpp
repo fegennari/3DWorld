@@ -7,7 +7,8 @@
 #include "physics_objects.h"
 
 
-bool const LET_COBJS_FALL = 1;
+bool const LET_COBJS_FALL    = 0;
+bool const REMOVE_UNANCHORED = 1;
 
 int destroy_thresh(0);
 vector<int> falling_cobjs;
@@ -50,7 +51,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 		for (int o = 0; o < num; ++o) {
 			vector3d velocity(cdir);
 
-			if (shattered) {
+			if (shattered || cts[i].unanchored) {
 				for (unsigned j = 0; j < 3; ++j) { // only accurate for COLL_CUBE
 					fpos[j] = rand_uniform(cts[i].d[j][0], cts[i].d[j][1]); // generate inside of the shattered cobj's volume
 				}
@@ -154,7 +155,6 @@ void check_cobjs_anchored(vector<int> to_check, set<int> anchored[2]) {
 			open.erase(cur);
 			get_all_connected(cur, open, closed);
 		}
-		//cout << "    anchored[" << *j << "]: " << is_anchored << ", open: " << open.size() << ", closed: " << closed.size() << endl;
 		// everything in the closed set has the same is_anchored state and can be cached
 		copy(closed.begin(), closed.end(), inserter(anchored[is_anchored], anchored[is_anchored].begin()));
 	} // for j
@@ -177,7 +177,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	unsigned const cobjs_size(cobjs.size());
 	float const maxlen(cube.max_len());
 	bool const is_small(maxlen < HALF_DXY);
-	unsigned ncobjs, last_cobj(0);
+	unsigned ncobjs, last_cobj(0), extra_removed(0);
 
 	if (is_small) { // not much faster
 		int const xpos(get_xpos(center.x)), ypos(get_ypos(center.y));
@@ -210,14 +210,13 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			indices.clear();
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
-				//test_for_falling_cobj(new_cobjs[j], i);
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
 				assert((size_t)index < cobjs.size());
 				indices.push_back(index);
 				volume -= cobjs[index].volume;
 			}
 			assert(volume >= -TOLERANCE); // usually > 0.0
-			cts.push_back(color_tid_vol(cobjs[i], volume));
+			cts.push_back(color_tid_vol(cobjs[i], volume, 0));
 			cobjs[i].clear_internal_data(cobjs, indices, i);
 			to_remove.push_back(i);
 		}
@@ -229,41 +228,48 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		for (unsigned i = 0; i < to_remove.size(); ++i) {
 			remove_coll_object(to_remove[i]); // remove old collision object
 		}
-		if (LET_COBJS_FALL) {
-			// 1. fix crash
-			// 2. shift house wall
-			// 3. fix shadows
-			// 4. add velocity/acceleration
-			// 5. fix texture offset
+		if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
 			set<int> anchored[2]; // {unanchored, anchored}
-			//cout << "to_remove: " << to_remove.size() << endl;
 
 			for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
 				set<int> start_set;
 				get_all_connected(to_remove[i], start_set, set<int>());
 				vector<int> const start(start_set.begin(), start_set.end());
-				//cout << "  start: " << start.size() << endl;
 				check_cobjs_anchored(start, anchored);
-			} // for i
-			//cout << "anchored: " << anchored[1].size() << ", unanchored: " << anchored[0].size() << endl;
+			}
 
 			// check that each sub-cobj index is in exactly one of anchored[{0,1}]
 			for (unsigned i = 0; i < indices.size(); ++i) {
 				assert((anchored[0].find(indices[i]) == anchored[0].end()) != (anchored[1].find(indices[i]) == anchored[1].end()));
 			}
-			copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
+			if (REMOVE_UNANCHORED) {
+				indices.clear();
+
+				for (set<int>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
+					if (cobjs[*i].destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
+					cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, 1));
+					cobjs[*i].clear_internal_data(cobjs, indices, *i);
+					remove_coll_object(*i);
+					++extra_removed;
+				}
+			}
+			else if (LET_COBJS_FALL) {
+				copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
+			}
 		}
 		cdir.normalize();
 	}
 	//PRINT_TIME("Subtract Cube");
-	return to_remove.size();
+	return (to_remove.size() + extra_removed);
 }
 
 
 void check_falling_cobjs() {
 
+	// FIXME: shadow update
+	// FIXME: add velocity/acceleration
+	// FIXME: fix texture offset
 	if (falling_cobjs.empty()) return; // nothing to do
-	//cout << "falling_cobjs: " << falling_cobjs.size() << endl;
 	float const dz(-0.001*fticks); // FIXME: add velocity/acceleration due to gravity
 	set<int> anchored[2]; // {unanchored, anchored}
 
@@ -276,9 +282,13 @@ void check_falling_cobjs() {
 			continue;
 		}
 		// translate, add the new, then remove the old
+		coll_objects[*i].clear_lightmap(0); // need to do this first, before the copy
 		coll_obj cobj(coll_objects[*i]); // make a copy
-		cobj.shift_by(point(0.0, 0.0, dz), 1);
+		cobj.shift_by(point(0.0, 0.0, dz), 1); // translate down
 		int const index(cobj.add_coll_cobj());
+		vector<int> indices;
+		indices.push_back(index);
+		coll_objects[*i].clear_internal_data(coll_objects, indices, *i);
 		remove_coll_object(*i);
 		assert(*i != index);
 		*i = index;

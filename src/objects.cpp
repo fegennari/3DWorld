@@ -140,6 +140,7 @@ void coll_obj::update_shadowed_cobjs(vector<coll_obj> &cobjs, vector<int> const 
 
 			for (unsigned m = 0; m < indices.size() && !shadowed; ++m) {
 				assert((size_t)indices[m] < cobjs.size());
+				assert(indices[m] != ix);
 				shadowed = 1;
 
 				for (unsigned j = 0; j < 8; ++j) {

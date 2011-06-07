@@ -450,6 +450,7 @@ int coll_obj::add_coll_cobj() {
 	default:
 		assert(0);
 	}
+	assert(coll_objects[cid].lightmap.empty());
 	assert(size_t(cid) < coll_objects.size());
 	coll_objects[cid].destroy  = destroy;
 	coll_objects[cid].fixed    = fixed;
