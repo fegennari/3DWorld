@@ -5,6 +5,7 @@ attribute float shadow_val; // sending as int doesn't work?
 
 varying vec3 eye, vpos, spos, dlpos, normal, lpos0, vposl; // world space
 varying vec3 eye_norm;
+varying vec4 epos;
 varying float light_scale[8];
 
 void main()
@@ -19,10 +20,10 @@ void main()
 	gl_FrontColor = gl_Color;
 	normal   = normalize(gl_Normal);
 	eye_norm = normalize(gl_NormalMatrix * gl_Normal);
-
+	epos     = gl_ModelViewMatrix * gl_Vertex;
 	dlpos    = gl_Vertex.xyz;
 	spos     = gl_Vertex.xyz + (0.25*step_delta)*normal; // move slightly away from the vertex
-	eye      = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0  )).xyz; // world space
+	eye      = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
 	int shadow_bits = int(round(shadow_val));
 
 	for (uint i = 0; i < 8; ++i) {

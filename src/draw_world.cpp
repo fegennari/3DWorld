@@ -1734,6 +1734,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	for (unsigned i = 0; i < 2; ++i) set_bool_shader_prefix("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, i); // VS/FS
 	set_dlights_booleans(dlights, 1); // FS
 	setup_enabled_lights(8);
+	set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 	unsigned const p(set_shader_prog("fog.part+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+textured_with_smoke"));
 	setup_scene_bounds(p);
 	setup_fog_scale(p); // fog scale for the case where smoke is disabled

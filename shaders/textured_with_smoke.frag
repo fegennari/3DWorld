@@ -6,6 +6,7 @@ uniform float min_alpha = 0.0;
 // clipped eye position, clipped vertex position, starting vertex position
 varying vec3 eye, vpos, spos, dlpos, normal, lpos0, vposl; // world space
 varying vec3 eye_norm;
+varying vec4 epos;
 varying float light_scale[8];
 
 const float SMOKE_SCALE = 0.25;
@@ -33,7 +34,7 @@ vec3 add_light(in int ix, in float lscale, in vec3 off, in vec3 scale, in vec3 n
 			step_weight = 1.0;
 		}
 	}
-	return lscale * add_light_comp(n, ix).rgb;
+	return lscale * add_light_comp_pos(n, epos, ix).rgb;
 }
 
 // Note: This may seem like it can go into the vertex shader as well,
