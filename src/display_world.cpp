@@ -872,6 +872,7 @@ void display(void) {
 				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.blue)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
 				glFogf(GL_FOG_END, fog_dist);
 			}
+			draw_camera_weapon(0);
 			check_gl_error(6);
 			if (TIMETEST) PRINT_TIME("4");
 			setup_object_render_data();
@@ -892,7 +893,6 @@ void display(void) {
 			check_gl_error(7);
 			if (TIMETEST) PRINT_TIME("5");
 			if (!use_stencil_shadows) draw_solid_object_groups();
-			draw_camera_weapon(0);
 			check_gl_error(8);
 			if (TIMETEST) PRINT_TIME("6");
 			draw_coll_surfaces(1, 0);
@@ -1180,6 +1180,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_inf_terrain_sun_flare();
 	//draw_sky(0);
 	//if (!camera_view) camera_shadow(camera);
+	draw_camera_weapon(0);
 	if (TIMETEST) PRINT_TIME("3.2");
 	setup_object_render_data();
 	if (TIMETEST) PRINT_TIME("3.25");
@@ -1188,7 +1189,6 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		zmin2 = display_mesh3(NULL, water_plane_z);
 		if (TIMETEST) PRINT_TIME("3.3");
 	}
-	draw_camera_weapon(0);
 	if (TERRAIN_SCENERY) draw_scenery(1, 1);
 	if (TIMETEST) PRINT_TIME("3.4");
 	draw_coll_surfaces(1, 1);
