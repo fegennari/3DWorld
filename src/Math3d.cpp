@@ -6,7 +6,7 @@
 #include "sinf.h"
 
 
-extern float orig_timestep;
+extern float orig_timestep, base_gravity;
 extern int display_mode; // for debugging
 
 
@@ -1186,6 +1186,39 @@ vector3d lead_target(point const &ps, point const &pt, vector3d const &vs, vecto
 }
 
 
+vector3d get_firing_dir(vector3d const &src, vector3d const &dest, float fvel, float gravity_scale) {
 
+	if (fvel <= 0.0) return zero_vector; // edge cases that we don't want to deal with
+	if (dest.x == src.x && dest.y == src.y) return vector3d(0.0, 0.0, (dest.z - src.z)/fabs(dest.z - src.z)); // straight up or down
+	if (gravity_scale == 0.0 || base_gravity == 0.0) return (dest - src).get_norm(); // no gravity, aim directly at target
+	float const gravity(gravity_scale*base_gravity*GRAVITY), a_2(-0.5*gravity); // in -z
+	float const dist(p2p_dist_xy(src, dest)), height(dest.z - src.z); // ok if height is negative
+	float const dsq(dist*dist), hsq(height*height), vsq(fvel*fvel), val(2*a_2*height*dsq);
+	float const a(-dsq - hsq), b(vsq*dsq + 2*vsq*hsq - val); // Note: a is always negative
+	float const c(-hsq*vsq*vsq + val*vsq - a_2*a_2*dsq*dsq);
+	float const in_sqrt(b*b - 4*a*c); // quadratic formula
+	assert(a < 0.0);
+	if (in_sqrt < 0.0) return zero_vector; // no solution
+	float const sqrt_part(sqrt(in_sqrt)), vz_sq1((-b - sqrt_part)/(2*a)), vz_sq2((-b + sqrt_part)/(2*a));
+	float vz_sq;
+
+	if (vz_sq1 >= 0.0 && vz_sq2 >= 0.0) { // two solutions
+		vz_sq = min(vz_sq1, vz_sq2); // choose the smaller value to minimize time
+	}
+	else if (vz_sq1 >= 0.0) { // one solution
+		vz_sq = vz_sq1;
+	}
+	else if (vz_sq2 >= 0.0) { // one solution
+		vz_sq = vz_sq2;
+	}
+	else {
+		return zero_vector; // no solution
+	}
+	assert(vz_sq >= 0.0 && vz_sq <= vsq+TOLERANCE);
+	float const vz(sqrt(vz_sq)), v_xy(sqrt(vsq - vz_sq));
+	//cout << "fvel: " << fvel << ", dist: " << dist << ", height: " << height << ", g: " << gravity << ", a: " << a << ", b: " << b << ", c: " << c << ", vz: " << vz << ", t: " << dist/v_xy << endl;
+	vector3d dir_xy(vector3d(dest.x-src.x, dest.y-src.y, 0.0).get_norm());
+	return (dir_xy*v_xy + vector3d(0.0, 0.0, vz)).get_norm();
+}
 
 

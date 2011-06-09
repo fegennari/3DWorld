@@ -188,7 +188,8 @@ struct player_state { // size = big
 	void advance(dwobject &obj, int smiley_id);
 	void shift(vector3d const &vd);
 	void init_smiley_weapon(int smiley_id);
-	bool target_in_range(point const &pos) const;
+	float get_rel_enemy_vel(point const &pos) const;
+	int target_in_range(point const &pos) const;
 	void smiley_action(int smiley_id);
 
 	// camera members

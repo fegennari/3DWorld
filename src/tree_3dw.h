@@ -153,6 +153,7 @@ public:
 	void change_leaf_color(colorRGBA &base_color, unsigned i);
 	void shift_tree(vector3d const &vd);
 	int delete_tree();
+	int get_type()       const {return type;}
 	point get_center()   const {return sphere_center;}
 	bool get_no_delete() const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}

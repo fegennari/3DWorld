@@ -1411,6 +1411,7 @@ vector3d gen_rand_vector_uniform(float mag);
 vector3d gen_rand_vector(float mag, float zscale=1.0, float phi_term=PI);
 vector3d gen_rand_vector2(float mag, float zscale=1.0, float phi_term=PI);
 vector3d lead_target(point const &ps, point const &pt, vector3d const &vs, vector3d const &vt, float vweap);
+vector3d get_firing_dir(vector3d const &src, vector3d const &dest, float fvel, float gravity_scale);
 
 // function prototypes - water
 bool get_water_enabled(int x, int y);

@@ -151,7 +151,6 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 
 	if (!game_mode) return;
 	int cid(coll_id[SMILEY]), status;
-	float target_dist;
 	dwobject const &smiley(obj_groups[cid].get_obj(smiley_id));
 	if (smiley.disabled()) return;
 	if (target_visible != 1 && (weapon != W_LANDMINE || (rand()&3) != 0)) return;
@@ -173,25 +172,37 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	if (temperature <= W_FREEZE_POINT && is_underwater(pos)) return; // under ice
 	float const radius(object_types[SMILEY].radius);
 	weapon_t const &w(weapons[weapon]);
+	float const vweap(w.get_fire_vel()), target_dist(p2p_dist(target_pos, pos));
+	vector3d orient;
 
 	// aim up to account for gravity
-	bool const using_shrapnel((wmode&1) && (weapon == W_SHOTGUN || weapon == W_M16));
-	float aim_up_val(0.0);
-	if      (using_shrapnel   ) aim_up_val = 0.5;
-	else if (w.obj_id != UNDEF) aim_up_val = object_types[w.obj_id].gravity;
-	pos.z      += CLIP_TO_01(0.1f + aim_up_val)*radius; // shoot slightly higher than center
-	vector3d orient(target_pos, pos);
-	target_dist = orient.mag();
+	if (vweap > TOLERANCE && weapon != W_LANDMINE && w.obj_id != UNDEF) { // shrapnel?
+		float const rel_enemy_vel(get_rel_enemy_vel(pos));
+		if (rel_enemy_vel > vweap) return; // should already have been tested
+		vector3d const tdir((target_pos - pos).get_norm());
+		float const radius2(radius + object_types[w.obj_id].radius);
+		point fpos(pos + tdir*(0.75*radius2));
+		orient = get_firing_dir(fpos, target_pos, (vweap - rel_enemy_vel), object_types[w.obj_id].gravity);
+		if (orient == all_zeros) return; // out of range
+		// test line of sight here before using orient to help exclude invalid trajectories
+		if (!proj_coll_test(pos, target_pos, tdir, target_dist, radius, weapon, smiley.coll_id)) return;
+	}
+	else {
+		bool const using_shrapnel((wmode&1) && (weapon == W_SHOTGUN || weapon == W_M16));
+		float aim_up_val(0.0);
+		if      (using_shrapnel   ) aim_up_val = 0.5;
+		else if (w.obj_id != UNDEF) aim_up_val = object_types[w.obj_id].gravity;
+		pos.z += CLIP_TO_01(0.1f + aim_up_val)*radius; // shoot slightly higher than center
+		orient = target_pos - pos;
 
-	if (LEAD_SHOTS && target_visible == 1 && smiley_acc > 0.0) { // should use smiley_acc, target_dist is not quite right
-		float const vweap(w.get_fire_vel());
-
-		if (vweap > TOLERANCE) { // not an instant hit weapon
-			assert(target >= CAMERA_ID && target < num_smileys);
-			float const oz(orient.z);
-			orient   = lead_target(pos, target_pos, velocity, sstates[target].velocity, vweap);
-			orient.z = oz; // ???
-			orient.normalize();
+		if (LEAD_SHOTS && target_visible == 1 && smiley_acc > 0.0) { // should use smiley_acc, target_dist is not quite right
+			if (vweap > TOLERANCE) { // not an instant hit weapon
+				assert(target >= CAMERA_ID && target < num_smileys);
+				float const oz(orient.z);
+				orient   = lead_target(pos, target_pos, velocity, sstates[target].velocity, vweap);
+				orient.z = oz; // keep up part???
+				orient.normalize();
+			}
 		}
 	}
 	if (smiley_acc <= 0.0) {
@@ -1159,7 +1170,7 @@ void player_state::init_smiley_weapon(int smiley_id) {
 		if (no_weap_or_ammo()) continue;
 		float weight(rand_float());
 		float const range(weapon_range(0));
-		if (range > 0.0)  weight += (target_in_range(pos) ? -0.2 : 0.8); // ranged weapon
+		if (range > 0.0)  weight += ((target_in_range(pos) != 0) ? -0.2 : 0.8); // ranged weapon
 		if (i == W_BBBAT) weight *= 1.5;
 		if (i == W_SBALL) weight *= 1.2;
 		choices.push_back(make_pair(weight, i));
@@ -1171,23 +1182,36 @@ void player_state::init_smiley_weapon(int smiley_id) {
 }
 
 
-bool player_state::target_in_range(point const &pos) const {
+float player_state::get_rel_enemy_vel(point const &pos) const {
 
-	if (!target_visible || target_type != 1 || target == NO_SOURCE) return 0;
+	if (target_type != 1 || target == NO_SOURCE) return 0.0;
+	vector3d const enemy_vel(sstates[target].velocity);
+	vector3d const enemy_dir((target_pos - pos).get_norm());
+	return dot_product(enemy_vel, enemy_dir);
+}
+
+
+int player_state::target_in_range(point const &pos) const {
+
+	if (!target_visible || target_type != 1 || target == NO_SOURCE) return 2;
 	float range(weapon_range(0));
 	
-	if (weapons[weapon].obj_id != LANDMINE && weapons[weapon].obj_id != UNDEF) {
-		assert(target >= CAMERA_ID && target < num_smileys);
-		vector3d const enemy_vel(sstates[target].velocity);
-		vector3d const enemy_dir((target_pos - pos).get_norm());
-		float const wvel(weapons[weapon].get_fire_vel()); // what about wmode==1?
-		float const rel_enemy_vel(dot_product(enemy_vel, enemy_dir));
-		assert(wvel > 0.0);
-		if (rel_enemy_vel > wvel) return 0; // enemy is moving away faster than our projectile
-		if (range > 0.0) range *= (wvel - rel_enemy_vel)/wvel; // adjust range based on enemy velocity
-		// FIXME: what about enemies that are above or below us when shooting objects affected by gravity?
+	if (weapons[weapon].obj_id == LANDMINE || weapons[weapon].obj_id == UNDEF) {
+		return (range == 0.0 || dist_less_than(target_pos, pos, range));
 	}
-	return (range == 0.0 || dist_less_than(target_pos, pos, range));
+	assert(target >= CAMERA_ID && target < num_smileys);
+	float const wvel(weapons[weapon].get_fire_vel()); // what about wmode==1?
+	float const rel_enemy_vel(get_rel_enemy_vel(pos));
+	assert(wvel > 0.0);
+	if (rel_enemy_vel > wvel) return 0; // enemy is moving away faster than our projectile
+	if (range == 0.0)         return 1;
+	range *= (wvel - rel_enemy_vel)/wvel; // adjust range based on enemy velocity
+	float const gravity(object_types[weapons[weapon].obj_id].gravity);
+	if (gravity == 0.0) return dist_less_than(target_pos, pos, range); // no gravity, use simple distance test
+	float const xy_dist_sq(p2p_dist_xy_sq(target_pos, pos)); // xy distance
+	if (target_pos.z <= pos.z) return (xy_dist_sq < range*range); // shooting down, ignore the z (height) distance
+	float const eff_dz((1.0 + gravity)*(target_pos.z - pos.z)); // increase the cost of the z distance due to gravity (approximate)
+	return ((xy_dist_sq + eff_dz*eff_dz) < range*range);
 }
 
 
@@ -1196,9 +1220,10 @@ void player_state::smiley_action(int smiley_id) {
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
 	float depth(0.0);
 	dwobject &smiley(obj_groups[coll_id[SMILEY]].get_obj(smiley_id));
-	if (target_in_range(smiley.pos)) smiley_fire_weapon(smiley_id);
-	if (powerup == PU_REGEN)         smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);
-	if ((rand()%500) == 0)           init_smiley_weapon(smiley_id); // change weapons
+	int const in_range(target_in_range(smiley.pos));
+	if (in_range == 1) smiley_fire_weapon(smiley_id);
+	if (powerup == PU_REGEN) smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);
+	if ((rand()%((in_range == 0) ? 50 : 500)) == 0) init_smiley_weapon(smiley_id); // change weapons
 	if (was_hit > 0) --was_hit;
 	++kill_time;
 	check_underwater(smiley_id, depth);
