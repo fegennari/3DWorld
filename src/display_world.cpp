@@ -1040,7 +1040,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	//RESET_TIME;
 	// setup viewport and projection matrix
 	glViewport(0, 0, xsize, ysize);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	set_perspective(PERSP_ANGLE, 1.0);
@@ -1079,7 +1079,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glViewport(0, 0, window_width, window_height);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	//PRINT_TIME("Create Reflection Texture");
 }
 
@@ -1160,7 +1160,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 
 		if (!combined_gu) {
 			glClearColor_rgba(fog_color);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		}
 	}
 	if (combined_gu) {
