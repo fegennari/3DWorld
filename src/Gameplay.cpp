@@ -55,7 +55,7 @@ extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, spectate, do_zoom;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_size;
-extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake;
+extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity;
 extern point ocean, surface_pos, camera_last_pos;
 extern int coll_id[];
 extern obj_type object_types[];
@@ -1616,8 +1616,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			plasma_size     = 1.0;
 			break;
 		case W_BALL:
-			obj.pos.z      += (0.2 + 0.2*(shooter >= 0))*radius2;
-			obj.velocity.z += 1.2;
+			obj.pos.z += 0.2*radius2;
 			break;
 		case W_STAR5:
 			obj.init_dir += gen_rand_vector(0.1, 1.0, PI);

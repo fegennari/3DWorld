@@ -99,7 +99,7 @@ float const CBLADE_EXT(0.5*CBLADE_EXT_PT*CBFD);
 weapon_t const weapons[NUM_WEAPONS+1] = {
 	weapon_t(0, 0, 0, 0,   0,   UNDEF,    0,   0,  0,   0.0,  0.0, 0.0,    0.0,  0.0,   0.0,  0.0,  "Unarmed"         ),
 	weapon_t(0, 0, 0, 0,   0,   UNDEF,    23,  1,  1,   0.0,  0.0, 500.0,  0.25, 0.0,   0.25, 0.25, "Baseball Bat"    ),
-	weapon_t(0, 0, 1, 1,   3,   BALL,     25,  1,  1,   1.5,  3.0, 0.0,    0.0,  0.05,  3.0,  3.0,  "Dodgeball"       ),
+	weapon_t(0, 0, 1, 1,   3,   BALL,     25,  1,  1,   1.5,  3.0, 0.0,    0.0,  0.0,  3.0,  3.0,  "Dodgeball"       ),
 	weapon_t(0, 0, 1, 30,  500, S_BALL,   18,  1,  1,   1.3,  3.3, 0.0,    0.0,  0.0,   1.5,  1.5,  "Bouncy Ball"     ),
 	weapon_t(1, 1, 1, 10,  100, ROCKET,   32,  1,  1,   0.7,  3.1, 1000.0, 0.42, 0.003, 0.0,  0.0,  "Rocket Launcher" ),
 	weapon_t(1, 0, 1, 5,   50,  LANDMINE, 30,  1,  1,   0.0,  2.0, 4000.0, 0.39, 0.0,   6.0,  2.0,  "Proximity Mine"  ),

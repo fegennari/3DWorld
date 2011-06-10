@@ -27,7 +27,7 @@ extern bool has_wpt_goal;
 extern int island, iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS;
-extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage;
+extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage, base_gravity;
 extern double camera_zh;
 extern point ocean, orig_camera, orig_cdir;
 extern int coll_id[];
@@ -175,15 +175,24 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	float const vweap(w.get_fire_vel()), target_dist(p2p_dist(target_pos, pos));
 	vector3d orient;
 
-	// aim up to account for gravity
-	if (vweap > TOLERANCE && weapon != W_LANDMINE && w.obj_id != UNDEF) { // shrapnel?
+	// maybe aim up to account for gravity
+	if (smiley_acc <= 0.0) {
+		orient = smiley.orientation;
+	}
+	else if (vweap > TOLERANCE && weapon != W_LANDMINE && w.obj_id != UNDEF) { // shrapnel?
 		float const rel_enemy_vel(get_rel_enemy_vel(pos));
 		if (rel_enemy_vel > vweap) return; // should already have been tested
 		vector3d const tdir((target_pos - pos).get_norm());
-		float const radius2(radius + object_types[w.obj_id].radius);
-		point fpos(pos + tdir*(0.75*radius2));
-		orient = get_firing_dir(fpos, target_pos, (vweap - rel_enemy_vel), object_types[w.obj_id].gravity);
+		float const wvel(vweap - rel_enemy_vel), radius2(radius + object_types[w.obj_id].radius), gscale(object_types[w.obj_id].gravity);
+		point const fpos(pos + tdir*(0.75*radius2));
+#if 1
+		float const dist(p2p_dist(fpos, target_pos));
+		float const len(gscale*base_gravity*GRAVITY * dist*dist / (2*wvel*wvel)); // simpler and more efficient
+		orient = (target_pos + point(0.0, 0.0, len) - pos).get_norm();
+#else
+		orient = get_firing_dir(fpos, target_pos, wvel, gscale); // more accurate
 		if (orient == all_zeros) return; // out of range
+#endif
 		// test line of sight here before using orient to help exclude invalid trajectories
 		if (!proj_coll_test(pos, target_pos, tdir, target_dist, radius, weapon, smiley.coll_id)) return;
 	}
@@ -205,10 +214,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 			}
 		}
 	}
-	if (smiley_acc <= 0.0) {
-		orient = smiley.orientation;
-	}
-	else if (smiley_acc < 1.0) { // add firing error (should this be before or after the range test?)
+	if (smiley_acc < 1.0 && smiley_acc > 0.0) { // add firing error (should this be before or after the range test?)
 		vadd_rand(orient, 0.1*((game_mode == 2) ? 0.5 : 1.0)*(1.0 - smiley_acc)/max(0.2f, min(1.0f, target_dist)));
 	}
 	if (target == CAMERA_ID && weapon == W_LASER) {
