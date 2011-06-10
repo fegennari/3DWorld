@@ -170,8 +170,9 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	if (weapon == W_BALL && (rand()&15) != 0) return; // wait to throw
 	point pos(smiley.pos);
 	if (temperature <= W_FREEZE_POINT && is_underwater(pos)) return; // under ice
-	float const radius(object_types[SMILEY].radius);
 	weapon_t const &w(weapons[weapon]);
+	if (!w.use_underwater && (is_underwater(pos) || is_underwater(target_pos))) return; // self or target underwater and not hittable
+	float const radius(object_types[SMILEY].radius);
 	float const vweap(w.get_fire_vel()), target_dist(p2p_dist(target_pos, pos));
 	vector3d orient;
 
