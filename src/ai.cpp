@@ -147,6 +147,20 @@ pos_dir_up get_smiley_pdu(point const &pos, vector3d const &orient) {
 }
 
 
+bool check_left_and_right(point const &pos, point const &target_pos, vector3d const &orient,
+	float check_dist, float check_radius, float radius, int weapon, int coll_id)
+{
+	vector3d const check_dir(cross_product(orient, plus_z).get_norm()*check_radius);
+
+	for (unsigned d = 0; d < 2; ++d) { // test left and right
+		point const pos1(pos        + check_dir*(d ? 1.0 : -1.0));
+		point const pos2(target_pos + check_dir*(d ? 1.0 : -1.0));
+		if (!proj_coll_test(pos1, pos2, orient, check_dist, radius, weapon, coll_id)) return 0;
+	}
+	return 1;
+}
+
+
 void player_state::smiley_fire_weapon(int smiley_id) {
 
 	if (!game_mode) return;
@@ -196,6 +210,8 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 #endif
 		// test line of sight here before using orient to help exclude invalid trajectories
 		if (!proj_coll_test(pos, target_pos, tdir, target_dist, radius, weapon, smiley.coll_id)) return;
+		float const proj_radius(object_types[w.obj_id].radius);
+		if (!check_left_and_right(pos, target_pos, tdir, target_dist, proj_radius, radius, weapon, smiley.coll_id)) return;
 	}
 	else {
 		bool const using_shrapnel((wmode&1) && (weapon == W_SHOTGUN || weapon == W_M16));
@@ -238,12 +254,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 				orient.z += min(proj_radius, 0.7f*radius); // shoot slightly upward
 				orient.normalize();
 			}
-			vector3d const check_dir(cross_product(orient, plus_z).get_norm()*proj_radius);
-
-			for (unsigned d = 0; d < 2; ++d) { // test left and right
-				point const pos3(pos + check_dir*(d ? 1.0 : -1.0));
-				if (!proj_coll_test(pos3, target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return;
-			}
+			if (!check_left_and_right(pos, target_pos, orient, target_dist, proj_radius, radius, weapon, smiley.coll_id)) return;
 		}
 	}
 	int &ammo(p_ammo[weapon]);
