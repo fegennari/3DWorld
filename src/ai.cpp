@@ -157,12 +157,12 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	int const last_weapon(weapon);
 	
 	if (weapon == W_UNARMED || (!UNLIMITED_WEAPONS && no_weap_or_ammo())) {
-		init_smiley_weapon(smiley_id); // out of ammo, switch weapons
+		check_switch_weapon(smiley_id); // out of ammo, switch weapons
 		if (weapon != last_weapon) fire_frame = 0;
 	}
 	if (target_visible && self_damage > 0.0 && powerup != PU_SHIELD && weapons[weapon].self_damage) { // can damage self
 		if (dist_less_than(target_pos, smiley.pos, (weapons[weapon].blast_radius + object_types[SMILEY].radius))) { // will damage self
-			init_smiley_weapon(smiley_id); // switch weapons to avoid suicide
+			check_switch_weapon(smiley_id); // switch weapons to avoid suicide
 			if (weapon != last_weapon) fire_frame = 0;
 		}
 	}
@@ -587,7 +587,7 @@ int player_state::drop_weapon(vector3d const &coll_dir, vector3d const &nfront, 
 			drop_pack(dpos);
 			p_weapons[weapon] = 0;
 			p_ammo[weapon]    = 0;
-			if (index == CAMERA_ID) switch_weapon(1, 0); else init_smiley_weapon(index);
+			if (index == CAMERA_ID) switch_weapon(1, 0); else check_switch_weapon(index);
 			return 1;
 		}
 	}
@@ -1143,7 +1143,7 @@ void init_smiley(int smiley_id) {
 	if (!objg.enabled) return;
 	init_smiley_texture(smiley_id);
 	init_sstate(smiley_id, (game_mode == 1));
-	sstates[smiley_id].init_smiley_weapon(smiley_id);
+	sstates[smiley_id].check_switch_weapon(smiley_id);
 	dwobject &obj(objg.get_obj(smiley_id));
 	obj.direction     = 0;
 	obj.orientation   = signed_rand_vector(); // this is likely reset later
@@ -1160,7 +1160,7 @@ void init_smiley(int smiley_id) {
 }
 
 
-void player_state::init_smiley_weapon(int smiley_id) {
+void player_state::check_switch_weapon(int smiley_id) {
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
 	int bbat_iter(0), bb_range(-1);
@@ -1174,19 +1174,26 @@ void player_state::init_smiley_weapon(int smiley_id) {
 	// we get here even when game_mode==0, but that's ok
 	vector<pair<float, unsigned> > choices;
 	point const &pos(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).pos);
+	float min_weight(0.0);
+	unsigned chosen_weap(W_UNARMED);
 
 	for (unsigned i = 1; i < NUM_WEAPONS-1; ++i) {
 		weapon = i;
 		if (no_weap_or_ammo()) continue;
 		float weight(rand_float());
+		if (!weapons[weapon].use_underwater && is_underwater(pos)) weight += 0.5;
 		float const range(weapon_range(0));
 		if (range > 0.0)  weight += ((target_in_range(pos) != 0) ? -0.2 : 0.8); // ranged weapon
 		if (i == W_BBBAT) weight *= 1.5;
 		if (i == W_SBALL) weight *= 1.2;
-		choices.push_back(make_pair(weight, i));
+		
+		if (chosen_weap == W_UNARMED || weight < min_weight) {
+			min_weight  = weight;
+			chosen_weap = weapon;
+		}
 	}
 	fire_frame = 0;
-	weapon     = (choices.empty() ? W_UNARMED : min_element(choices.begin(), choices.end())->second);
+	weapon     = chosen_weap;
 	//weapon     = W_LASER; // set to force this as weapon choice (if available)
 	if (weapon == W_PLASMA && wmode == 1 && (rand()%4) != 0) plasma_loaded = 1; // fire it up!
 }
@@ -1233,7 +1240,7 @@ void player_state::smiley_action(int smiley_id) {
 	int const in_range(target_in_range(smiley.pos));
 	if (in_range == 1) smiley_fire_weapon(smiley_id);
 	if (powerup == PU_REGEN) smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);
-	if ((rand()%((in_range == 0) ? 50 : 500)) == 0) init_smiley_weapon(smiley_id); // change weapons
+	if ((rand()%((in_range == 0) ? 50 : 500)) == 0) check_switch_weapon(smiley_id); // change weapons
 	if (was_hit > 0) --was_hit;
 	++kill_time;
 	check_underwater(smiley_id, depth);
