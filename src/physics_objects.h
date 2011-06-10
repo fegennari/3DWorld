@@ -344,7 +344,7 @@ template<typename T> void reset_status(vector<T> &objs) {
 
 // object flag bits
 #define XY_STOPPED       0x01
-#define IN_DARKNESS      0x02
+//      0x02
 #define Z_STOPPED        0x04
 #define FLOATING         0x08
 #define UNDERWATER       0x10

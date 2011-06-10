@@ -26,7 +26,7 @@ vector<point> app_spots;
 extern bool has_wpt_goal;
 extern int island, iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
-extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS;
+extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id;
 extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage, base_gravity;
 extern double camera_zh;
 extern point ocean, orig_camera, orig_cdir;
@@ -286,14 +286,16 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 
 		for (int i = obj_groups[cid].max_objects()-1; i >= 0; --i) {
 			dwobject const &obj(obj_groups[cid].get_obj(i));
-			if (obj.disabled() || i == smiley_id || (obj.flags & IN_DARKNESS)) continue;
-			if (sstates[i].powerup == PU_INVISIBILITY && last_hitter != i)     continue; // invisible
-			if (same_team(smiley_id, i)) continue; // don't shoot a teammate
+			if (obj.disabled() || i == smiley_id || same_team(smiley_id, i)) continue;
+			if (sstates[i].powerup == PU_INVISIBILITY && last_hitter != i)   continue; // invisible
+			if (is_in_darkness(obj.pos, radius, obj.coll_id))                continue;
 			add_target(oddatav, pdu, obj.pos, radius, i, last_hitter, killer);
 		}
 	}
 	if (camera_mode != 0 && !spectate && !same_team(smiley_id, CAMERA_ID) && (sstates[CAMERA_ID].powerup != PU_INVISIBILITY || last_hitter == CAMERA_ID)) {
-		add_target(oddatav, pdu, camera, radius, CAMERA_ID, last_hitter, killer); // camera IN_DARKNESS?
+		if (!is_in_darkness(camera, radius, camera_coll_id)) {
+			add_target(oddatav, pdu, camera, radius, CAMERA_ID, last_hitter, killer); // camera IN_DARKNESS?
+		}
 	}
 	sort(oddatav.begin(), oddatav.end());
 
@@ -426,10 +428,11 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 			for (unsigned i = 0; i < objg.end_id; ++i) {
 				dwobject const &obj(objg.get_obj(i));
 				bool const placed((obj.flags & USER_PLACED) != 0);
-				if (obj.disabled() || (obj.flags & IN_DARKNESS))                 continue;
+				if (obj.disabled())                                              continue;
 				if (!is_over_mesh(obj.pos) || (island && (obj.pos.z < ocean.z))) continue;
 				if (!placed && !sphere_in_view(pdu, obj.pos, radius, 0))         continue; // view culling (disabled for predef object locations)
 				if (avoid_dir != zero_vector && dot_product_ptv(obj.pos, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
+				if (is_in_darkness(obj.pos, radius, obj.coll_id))                continue;
 				float cost((target_pos == obj.pos) ? 0.75 : 1.0); // favor original targets
 
 				for (int j = 0; j < num_smileys; ++j) { // too slow?

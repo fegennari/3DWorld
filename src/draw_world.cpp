@@ -88,7 +88,7 @@ void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orien
 					  int use_orient, int ndiv, bool is_shadowed, float scale=1.0);
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
 				 float health, int id, bool is_shadowed, mesh2d const *const mesh);
-bool draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, bool is_shadowed);
+void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, bool is_shadowed);
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix);
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, bool is_shadowed);
@@ -195,12 +195,11 @@ bool get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed,
 }
 
 
-bool set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip, bool no_dynamic) {
+void set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip, bool no_dynamic) {
 
 	colorRGBA a(color);
-	bool const lit(get_shadowed_color(a, pos, is_shadowed, precip, no_dynamic));
+	get_shadowed_color(a, pos, is_shadowed, precip, no_dynamic);
 	set_ad_colors(a, (is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color));
-	return lit;
 }
 
 
@@ -468,7 +467,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	case POWERUP:
 	case HEALTH:
 	case SHIELD:
-		if (!draw_powerup(pos, radius, ndiv, ((type == POWERUP) ? (int)obj.direction : -1), color, is_shadowed)) obj.flags |= IN_DARKNESS;
+		draw_powerup(pos, radius, ndiv, ((type == POWERUP) ? (int)obj.direction : -1), color, is_shadowed);
 		break;
 	case WA_PACK:
 		if (wid_need_weapon((int)obj.direction)) {
@@ -617,7 +616,6 @@ void draw_group(obj_group &objg) {
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
-			obj.flags &= ~IN_DARKNESS;
 			if (type == LANDMINE && obj.status == 1 && !(obj.flags & STATIC_COBJ_COLL)) obj.time = 0; // don't start time until it lands
 			if (obj.disabled() || ((obj.flags & CAMERA_VIEW) && type != SMILEY)) continue;
 			point const &pos(obj.pos);
@@ -634,7 +632,7 @@ void draw_group(obj_group &objg) {
 			else if (type != SMILEY && type != SFPART && type != ROCKET && type != CHUNK &&
 				type != LANDMINE && type != PLASMA && type != POWERUP && type != HEALTH && type != SHIELD)
 			{
-				if (!set_shadowed_color(color, pos, is_shadowed, 0)) obj.flags |= IN_DARKNESS;
+				set_shadowed_color(color, pos, is_shadowed, 0);
 			}
 			++num_drawn;
 			float const pt_size(cd_scale/distance_to_camera(pos));
@@ -659,7 +657,7 @@ void draw_group(obj_group &objg) {
 				wap_obj const &wa(wap_vis_objs[j][k]);
 				set_obj_specular(wa.is_shadowed, flags, specular_brightness);
 				dwobject &obj(objg.get_obj(wa.id));
-				if (!set_shadowed_color(color, obj.pos, wa.is_shadowed, 0)) obj.flags |= IN_DARKNESS;
+				set_shadowed_color(color, obj.pos, wa.is_shadowed, 0);
 				draw_subdiv_sphere(obj.pos, radius, wa.ndiv, 0, 0);
 			}
 		}
@@ -926,7 +924,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 		int const tex(select_texture(object_types[atype].tid));
 		if (!tex) glDisable(GL_TEXTURE_2D);
 		gluQuadricTexture(quadric, tex);
-		if (!set_shadowed_color(object_types[atype].color, pos, is_shadowed)) obj.flags |= IN_DARKNESS;
+		set_shadowed_color(object_types[atype].color, pos, is_shadowed);
 		bool const cull_face(get_cull_face(atype, color));
 		if (cull_face) glEnable(GL_CULL_FACE);
 
@@ -1234,16 +1232,15 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 }
 
 
-bool draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, bool is_shadowed) {
+void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, bool is_shadowed) {
 
 	colorRGBA const color2((type == -1) ? color : get_powerup_color(type));
 	glDisable(GL_LIGHTING);
 	color2.do_glColor();
 	draw_subdiv_sphere(pos, 0.7*radius, ndiv, 0, 0); // draw flare/billboard?
 	glEnable(GL_LIGHTING);
-	bool const not_in_darkness(set_shadowed_color(color, pos, is_shadowed));
+	set_shadowed_color(color, pos, is_shadowed);
 	draw_subdiv_sphere(pos, radius, ndiv, 0, 0);
-	return not_in_darkness;
 }
 
 

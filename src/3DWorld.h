@@ -1082,7 +1082,7 @@ void set_colors_and_enable_light(int light, float const ambient[4], float const 
 int get_light();
 void draw_solid_object_groups();
 void draw_transparent_object_groups();
-bool set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
+void set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
 bool pt_is_shadowed(point const &pos, int light, int status, float radius, int cid, int fast);
 void draw_select_groups(int solid);
 void draw_group(obj_group &objg);
@@ -1614,6 +1614,7 @@ bool upload_smoke_3d_texture();
 void upload_dlights_textures();
 void setup_dlight_textures(unsigned p);
 bool is_shadowed_lightmap(point const &p);
+bool is_in_darkness(point const &pos, float radius, int cobj);
 bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec);

@@ -45,6 +45,7 @@ float const DLIGHT_AMBIENT   = 0.25; // in range [0.0, 1.0]
 float const DLIGHT_DIFFUSE   = 0.75; // in range [0.0, 1.0], DLIGHT_AMBIENT + DLIGHT_DIFFUSE should be close to 1.0
 float const LT_DIR_FALLOFF   = 0.005;
 float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
+float const DARKNESS_THRESH  = 0.1;
 
 
 bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), use_dense_voxels(0);
@@ -1236,6 +1237,19 @@ inline float add_specular(point const &p, vector3d ldir, vector3d const &norm, f
 	// Note: we assume exponent (spec[1]) is high, so we can skip if dp is small enough
 	dp *= InvSqrt(c2p.mag_sq());
 	return ((dp > 0.5) ? spec[0]*pow(dp, spec[1]) : 0.0);
+}
+
+
+bool is_in_darkness(point const &pos, float radius, int cobj) {
+
+	colorRGBA c(WHITE);
+	float const val(get_indir_light(c, WHITE, pos, 0, 1, NULL, NULL)); // this is faster so do it first
+	if ((c.red + c.green + c.blue) > DARKNESS_THRESH) return 0;
+
+	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+		if (is_visible_to_light_cobj(pos, l, radius, cobj, 1)) return 0;
+	}
+	return 1;
 }
 
 
