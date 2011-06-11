@@ -464,6 +464,7 @@ void init_objects() {
 	object_types[AMMO].color               = BLUE;
 	object_types[WA_PACK].color            = LT_BROWN;
 
+	object_types[GASSED].gravity           = 0.0;
 	object_types[GASSED].color             = OLIVE;
 	object_types[GASSED].tid               = YUCK_TEX;
 
