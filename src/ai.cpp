@@ -212,19 +212,21 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 		float const wvel(vweap - rel_enemy_vel), radius2(radius + object_types[w.obj_id].radius), gscale(object_types[w.obj_id].gravity);
 		point const fpos(pos + tdir*(0.75*radius2));
 
-		if (ACCURATE_GRAV_PREDICT) {
-			orient = get_firing_dir(fpos, tpos, wvel, gscale); // more accurate
-			if (orient == all_zeros) return; // out of range
+		if (gscale > 0.0 && wvel > 0.0) {
+			if (ACCURATE_GRAV_PREDICT) {
+				orient = get_firing_dir(fpos, tpos, wvel, gscale); // more accurate
+				if (orient == all_zeros) return; // out of range
+			}
+			else {
+				float const dist(p2p_dist(fpos, tpos));
+				float const len(gscale*base_gravity*GRAVITY * dist*dist / (2*wvel*wvel)); // simpler and more efficient
+				orient = (tpos + point(0.0, 0.0, len) - pos).get_norm();
+			}
+			// test line of sight here before using orient to help exclude invalid trajectories
+			if (!proj_coll_test(pos, tpos, tdir, radius, weapon, smiley.coll_id)) return;
+			float const proj_radius(object_types[w.obj_id].radius);
+			if (!check_left_and_right(pos, tpos, tdir, proj_radius, radius, weapon, smiley.coll_id)) return;
 		}
-		else {
-			float const dist(p2p_dist(fpos, tpos));
-			float const len(gscale*base_gravity*GRAVITY * dist*dist / (2*wvel*wvel)); // simpler and more efficient
-			orient = (tpos + point(0.0, 0.0, len) - pos).get_norm();
-		}
-		// test line of sight here before using orient to help exclude invalid trajectories
-		if (!proj_coll_test(pos, tpos, tdir, radius, weapon, smiley.coll_id)) return;
-		float const proj_radius(object_types[w.obj_id].radius);
-		if (!check_left_and_right(pos, tpos, tdir, proj_radius, radius, weapon, smiley.coll_id)) return;
 	}
 	else {
 		bool const using_shrapnel((wmode&1) && (weapon == W_SHOTGUN || weapon == W_M16));
