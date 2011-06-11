@@ -467,6 +467,11 @@ void init_objects() {
 	object_types[GASSED].gravity           = 0.0;
 	object_types[GASSED].color             = OLIVE;
 	object_types[GASSED].tid               = YUCK_TEX;
+	object_types[GASSED].radius            = 0.035; // 0.5*weapons[W_GASSER].blast_radius
+	object_types[GASSED].air_factor        = 0.5;
+	object_types[GASSED].min_t             = -1000;
+	object_types[GASSED].max_t             = 1000;
+	object_types[GASSED].density           = 0.01;
 
 	object_types[WAYPOINT].radius          = CAMERA_RADIUS;
 
@@ -478,13 +483,12 @@ void init_objects() {
 		object_types[i].density         = 0.05;
 		object_types[i].elasticity      = 0.4;
 		object_types[i].health          = 1600.0;
-		object_types[i].color.alpha     = 0.6;
+		object_types[i].color.alpha     = (i == WEAPON || i == AMMO || i == WA_PACK) ? 0.3 : 0.6;
 		object_types[i].flags           = SEMI_TRANSPARENT | BLEND | SPECULAR | SELECTABLE;
 	}
-	object_types[HEALTH].damage            = -500.0;
-	object_types[WA_PACK].density          = 0.5; // so a blast doesn't send it flying
-	object_types[WEAPON].color.alpha       = object_types[AMMO].color.alpha = object_types[WA_PACK].color.alpha = 0.3;
-	object_types[PRECIP].flags            |= IS_PRECIP;
+	object_types[HEALTH].damage   = -500.0;
+	object_types[WA_PACK].density = 0.5; // so a blast doesn't send it flying
+	object_types[PRECIP].flags   |= IS_PRECIP;
 
 	for (unsigned i = 0; i < NUM_TOT_OBJS; ++i) { // i <= CAMERA?
 		def_objects[i]        = obj;
