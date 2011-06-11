@@ -631,6 +631,7 @@ vector3d get_avoid_dir(point const &pos, int smiley_id, pos_dir_up const &pdu) {
 	
 		if (objg.is_enabled()) {
 			float min_dist(weapons[weap_ids[t]].blast_radius);
+			if (type == W_LANDMINE) min_dist *= 0.5; // trigger radius is only about half the blast radius
 
 			for (unsigned i = 0; i < objg.end_id; ++i) {
 				dwobject const &obj2(objg.get_obj(i));
