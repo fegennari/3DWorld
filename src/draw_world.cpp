@@ -1262,12 +1262,15 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv) {
 
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.9);
 	glPushMatrix();
 	translate_to(pos);
 	rotate_from_v2v(orient, vector3d(0.0, -1.0, 0.0));
 	glRotatef(180.0, 0.0, 1.0, 0.0);
 	draw_sphere_dlist_back_to_front(all_zeros, radius, 2*ndiv, 1);
 	glPopMatrix();
+	glDisable(GL_ALPHA_TEST);
 }
 
 
