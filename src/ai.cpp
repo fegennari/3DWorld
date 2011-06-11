@@ -11,7 +11,8 @@
 
 bool const NO_SMILEY_ACTION       = 0;
 bool const SMILEYS_LOOK_AT_TARGET = 1;
-bool const LEAD_SHOTS             = 0; // doesn't seem to make too much difference (or doesn't work correctly)
+bool const LEAD_SHOTS             = 1; // doesn't seem to make too much difference (or doesn't work correctly)
+bool const ACCURATE_GRAV_PREDICT  = 0;
 bool const SMILEY_BUTT            = 1;
 int const WAYPT_VIS_LEVEL[2]      = {1, 2}; // {unconnected, connected}: 0: visible in frustum, 1 = visible from the position, 2 = always visible
 unsigned const SMILEY_COLL_STEPS  = 10;
@@ -123,9 +124,8 @@ point destination_marker::get_pos() const {
 // ********** SMILEY AI CODE (player_state) **********
 
 
-bool proj_coll_test(point const &pos, point const &target_pos, vector3d const &orient,
-	float target_dist, float radius, int weapon, int coll_id)
-{
+bool proj_coll_test(point const &pos, point const &target_pos, vector3d const &orient, float radius, int weapon, int coll_id) {
+
 	int xpos(0), ypos(0), index(0);
 	point coll_pos;
 	int const test_alpha((weapon == W_LASER) ? 1 : 3);
@@ -133,7 +133,7 @@ bool proj_coll_test(point const &pos, point const &target_pos, vector3d const &o
 	if (!coll_pt_vis_test(pos, pos2, 1.2*radius, index, coll_id, 0, test_alpha)) return 0; // cobj collision
 		
 	if (get_range_to_mesh(pos, orient, coll_pos, xpos, ypos)) {
-		if (p2p_dist(pos, coll_pos) + 2.0*radius < target_dist) return 0; // mesh collision
+		if ((p2p_dist(pos, coll_pos) + 2.0*radius) < p2p_dist(pos, target_pos)) return 0; // mesh collision
 	}
 	return 1;
 }
@@ -147,15 +147,15 @@ pos_dir_up get_smiley_pdu(point const &pos, vector3d const &orient) {
 }
 
 
-bool check_left_and_right(point const &pos, point const &target_pos, vector3d const &orient,
-	float check_dist, float check_radius, float radius, int weapon, int coll_id)
+bool check_left_and_right(point const &pos, point const &tpos, vector3d const &orient,
+	float check_radius, float radius, int weapon, int coll_id)
 {
 	vector3d const check_dir(cross_product(orient, plus_z).get_norm()*check_radius);
 
 	for (unsigned d = 0; d < 2; ++d) { // test left and right
-		point const pos1(pos        + check_dir*(d ? 1.0 : -1.0));
-		point const pos2(target_pos + check_dir*(d ? 1.0 : -1.0));
-		if (!proj_coll_test(pos1, pos2, orient, check_dist, radius, weapon, coll_id)) return 0;
+		point const pos1(pos  + check_dir*(d ? 1.0 : -1.0));
+		point const pos2(tpos + check_dir*(d ? 1.0 : -1.0));
+		if (!proj_coll_test(pos1, pos2, orient, radius, weapon, coll_id)) return 0;
 	}
 	return 1;
 }
@@ -168,6 +168,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	dwobject const &smiley(obj_groups[cid].get_obj(smiley_id));
 	if (smiley.disabled()) return;
 	if (target_visible != 1 && (weapon != W_LANDMINE || (rand()&3) != 0)) return;
+	assert(target >= CAMERA_ID && target < num_smileys);
 	int const last_weapon(weapon);
 	
 	if (weapon == W_UNARMED || (!UNLIMITED_WEAPONS && no_weap_or_ammo())) {
@@ -183,55 +184,59 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	assert(!no_weap_or_ammo());
 	if (weapon == W_BALL && (rand()&15) != 0) return; // wait to throw
 	point pos(smiley.pos);
-	if (temperature <= W_FREEZE_POINT && is_underwater(pos)) return; // under ice
+	bool const underwater(is_underwater(pos));
+	if (temperature <= W_FREEZE_POINT && underwater) return; // under ice
 	weapon_t const &w(weapons[weapon]);
-	if (!w.use_underwater && (is_underwater(pos) || is_underwater(target_pos))) return; // self or target underwater and not hittable
-	float const radius(object_types[SMILEY].radius);
-	float const vweap(w.get_fire_vel()), target_dist(p2p_dist(target_pos, pos));
+	if (!w.use_underwater && (underwater || is_underwater(target_pos))) return; // self or target underwater and not hittable
+	float const radius(object_types[SMILEY].radius), vweap(w.get_fire_vel());
+	point tpos(target_pos);
 	vector3d orient;
+	bool target_lead(0);
+
+	if (LEAD_SHOTS && smiley_acc >= 0.9 && vweap > TOLERANCE) { // lead target shots
+		//orient = lead_target(pos, tpos, velocity, sstates[target].velocity, vweap);
+		float const dist(p2p_dist(pos, tpos)), hit_time(dist/vweap); // approximate because it ignores enemy vel
+		vector3d const enemy_vel(sstates[target].velocity);
+		tpos += enemy_vel*hit_time; // the predicted enemy location
+		target_lead = 1;
+	}
 
 	// maybe aim up to account for gravity
 	if (smiley_acc <= 0.0) {
 		orient = smiley.orientation;
 	}
-	else if (vweap > TOLERANCE && weapon != W_LANDMINE && w.obj_id != UNDEF) { // shrapnel?
-		float const rel_enemy_vel(get_rel_enemy_vel(pos));
+	else if (smiley_acc >= 0.5 && vweap > TOLERANCE && weapon != W_LANDMINE && w.obj_id != UNDEF) { // shrapnel?
+		float const rel_enemy_vel(target_lead ? 0.0 : get_rel_enemy_vel(pos));
 		if (rel_enemy_vel > vweap) return; // should already have been tested
-		vector3d const tdir((target_pos - pos).get_norm());
+		vector3d const tdir((tpos - pos).get_norm());
 		float const wvel(vweap - rel_enemy_vel), radius2(radius + object_types[w.obj_id].radius), gscale(object_types[w.obj_id].gravity);
 		point const fpos(pos + tdir*(0.75*radius2));
-#if 1
-		float const dist(p2p_dist(fpos, target_pos));
-		float const len(gscale*base_gravity*GRAVITY * dist*dist / (2*wvel*wvel)); // simpler and more efficient
-		orient = (target_pos + point(0.0, 0.0, len) - pos).get_norm();
-#else
-		orient = get_firing_dir(fpos, target_pos, wvel, gscale); // more accurate
-		if (orient == all_zeros) return; // out of range
-#endif
+
+		if (ACCURATE_GRAV_PREDICT) {
+			orient = get_firing_dir(fpos, tpos, wvel, gscale); // more accurate
+			if (orient == all_zeros) return; // out of range
+		}
+		else {
+			float const dist(p2p_dist(fpos, tpos));
+			float const len(gscale*base_gravity*GRAVITY * dist*dist / (2*wvel*wvel)); // simpler and more efficient
+			orient = (tpos + point(0.0, 0.0, len) - pos).get_norm();
+		}
 		// test line of sight here before using orient to help exclude invalid trajectories
-		if (!proj_coll_test(pos, target_pos, tdir, target_dist, radius, weapon, smiley.coll_id)) return;
+		if (!proj_coll_test(pos, tpos, tdir, radius, weapon, smiley.coll_id)) return;
 		float const proj_radius(object_types[w.obj_id].radius);
-		if (!check_left_and_right(pos, target_pos, tdir, target_dist, proj_radius, radius, weapon, smiley.coll_id)) return;
+		if (!check_left_and_right(pos, tpos, tdir, proj_radius, radius, weapon, smiley.coll_id)) return;
 	}
 	else {
 		bool const using_shrapnel((wmode&1) && (weapon == W_SHOTGUN || weapon == W_M16));
 		float aim_up_val(0.0);
 		if      (using_shrapnel   ) aim_up_val = 0.5;
 		else if (w.obj_id != UNDEF) aim_up_val = object_types[w.obj_id].gravity;
-		pos.z += CLIP_TO_01(0.1f + aim_up_val)*radius; // shoot slightly higher than center
-		orient = target_pos - pos;
-
-		if (LEAD_SHOTS && target_visible == 1 && smiley_acc > 0.0) { // should use smiley_acc, target_dist is not quite right
-			if (vweap > TOLERANCE) { // not an instant hit weapon
-				assert(target >= CAMERA_ID && target < num_smileys);
-				float const oz(orient.z);
-				orient   = lead_target(pos, target_pos, velocity, sstates[target].velocity, vweap);
-				orient.z = oz; // keep up part???
-				orient.normalize();
-			}
-		}
+		pos.z += CLIP_TO_01(0.1f +  aim_up_val)*radius; // shoot slightly higher than center
+		orient = tpos - pos;
 	}
-	if (smiley_acc < 1.0 && smiley_acc > 0.0) { // add firing error (should this be before or after the range test?)
+	float const target_dist(p2p_dist(tpos, pos));
+
+	if (smiley_acc > 0.0 && smiley_acc < 1.0) { // add firing error (should this be before or after the range test?)
 		vadd_rand(orient, 0.1*((game_mode == 2) ? 0.5 : 1.0)*(1.0 - smiley_acc)/max(0.2f, min(1.0f, target_dist)));
 	}
 	if (target == CAMERA_ID && weapon == W_LASER) {
@@ -241,20 +246,21 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	
 	if (weapon != W_LANDMINE && weapon != W_BBBAT && target_dist > 2.0*radius) {
 		// make sure it has a clear shot (excluding invisible smileys)
-		if (!proj_coll_test(pos, target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) return; // Note: inexact, fails to account for gravity
+		if (!proj_coll_test(pos, tpos, orient, radius, weapon, smiley.coll_id)) return; // Note: inexact, fails to account for gravity
 
 		// check if we need to fire above or to the side to avoid a projectile collision with an obstacle
 		if (weapon == W_ROCKET || weapon == W_SEEK_D || weapon == W_PLASMA) { // large projectile
 			assert(w.obj_id != UNDEF);
 			float const proj_radius(object_types[w.obj_id].radius);
-			point const pos2(pos + point(0.0, 0.0, -proj_radius)); // proj_radius up (+z)
+			point const pos1(pos  + point(0.0, 0.0, -proj_radius)); // proj_radius up (+z)
+			point const pos2(tpos + point(0.0, 0.0, -proj_radius));
 
-			if (!proj_coll_test(pos2, target_pos, orient, target_dist, radius, weapon, smiley.coll_id)) {
+			if (!proj_coll_test(pos1, pos2, orient, radius, weapon, smiley.coll_id)) {
 				orient   *= target_dist;
 				orient.z += min(proj_radius, 0.7f*radius); // shoot slightly upward
 				orient.normalize();
 			}
-			if (!check_left_and_right(pos, target_pos, orient, target_dist, proj_radius, radius, weapon, smiley.coll_id)) return;
+			if (!check_left_and_right(pos, tpos, orient, proj_radius, radius, weapon, smiley.coll_id)) return;
 		}
 	}
 	int &ammo(p_ammo[weapon]);
@@ -298,9 +304,9 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 
 		for (int i = obj_groups[cid].max_objects()-1; i >= 0; --i) {
 			dwobject const &obj(obj_groups[cid].get_obj(i));
-			if (obj.disabled() || i == smiley_id || same_team(smiley_id, i)) continue;
-			if (sstates[i].powerup == PU_INVISIBILITY && last_hitter != i)   continue; // invisible
-			if (is_in_darkness(obj.pos, radius, obj.coll_id))                continue;
+			if (obj.disabled() || i == smiley_id || same_team(smiley_id, i))      continue;
+			if (last_hitter != i && sstates[i].powerup == PU_INVISIBILITY)        continue; // invisible
+			if (last_hitter != i && is_in_darkness(obj.pos, radius, obj.coll_id)) continue; // too dark to be visible
 			add_target(oddatav, pdu, obj.pos, radius, i, last_hitter, killer);
 		}
 	}
