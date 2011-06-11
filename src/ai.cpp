@@ -508,7 +508,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 			bool skip_path_comp(target_pos == pos2 && (rand()&15) != 0); // infrequent updates if same target
 
 			if ((skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) &&
-				(powerup == PU_FLIGHT || skip_path_comp || is_valid_path(pos, pos2)))
+				(powerup == PU_FLIGHT || skip_path_comp || is_valid_path(pos, pos2, !is_wpt)))
 			{
 				// select this object as our target and return
 				if (is_wpt) {
@@ -768,8 +768,8 @@ float player_state::get_pos_cost(int smiley_id, point pos, point const &opos, po
 		}
 	}
 	vector3d const avoid_dir(get_avoid_dir(pos, smiley_id, pdu));
-	if (avoid_dir != zero_vector)                               return 5.0 + 0.1*dot_product(avoid_dir, (pos - opos).get_norm());
-	if (powerup != PU_FLIGHT && !can_make_progress(pos, opos))  return 4.0; // can't make progress in this direction
+	if (avoid_dir != zero_vector) return 5.0 + 0.1*dot_product(avoid_dir, (pos - opos).get_norm());
+	if (powerup != PU_FLIGHT && !can_make_progress(pos, opos, !on_waypt_path)) return 4.0; // can't make progress in this direction
 
 	if (target_type == 1 && target != NO_SOURCE) { // don't get too close to enemy with ranged weapons
 		assert(target >= CAMERA_ID && target < num_smileys && target != smiley_id);

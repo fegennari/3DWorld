@@ -208,8 +208,8 @@ struct player_state { // size = big
 bool check_step_dz(point &cur, point const &lpos, float radius);
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal);
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal);
-bool can_make_progress(point const &pos, point const &opos);
-bool is_valid_path(point const &start, point const &end);
+bool can_make_progress(point const &pos, point const &opos, bool check_uw);
+bool is_valid_path(point const &start, point const &end, bool check_uw);
 
 
 #endif // _PLAYER_STATE_H_

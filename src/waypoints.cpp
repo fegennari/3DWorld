@@ -144,7 +144,7 @@ class waypoint_builder {
 		player_clip_to_scene(pos); // make sure players can reach this waypoint
 		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 		if (pos.z - radius < mesh_zval) return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
-		return check_cobj_placement(point(pos), coll_id);
+		return check_cobj_placement(point(pos), coll_id, 1);
 	}
 
 	void add_if_valid(point const &pos, int coll_id) {
@@ -363,7 +363,7 @@ public:
 				}
 				if (redundant) continue;
 
-				if (is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT)) {
+				if (is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT, 1)) {
 					add_edge(i, k);
 					++num_edges;
 				}
@@ -385,7 +385,8 @@ public:
 	}
 
 
-	bool check_cobj_placement(point &pos, int coll_id) const {
+	bool check_cobj_placement(point &pos, int coll_id, bool check_uw) const {
+		if (check_uw && is_underwater(pos)) return 0;
 		dwobject obj(def_objects[WAYPOINT]); // create a fake temporary smiley object
 		obj.pos     = pos;
 		obj.coll_id = coll_id; // ignore collisions with the current object
@@ -394,7 +395,7 @@ public:
 		return ret;
 	}
 
-	bool is_point_reachable(point const &start, point const &end, unsigned &tot_steps, float step_size_mult) const {
+	bool is_point_reachable(point const &start, point const &end, unsigned &tot_steps, float step_size_mult, bool check_uw) const {
 		vector3d const dir(end - start);
 		float const step_size(step_size_mult*radius);
 		float const dmag_inv(1.0/dir.xy_mag());
@@ -405,7 +406,7 @@ public:
 			point lpos(cur);
 			cur += delta*step_size;
 			if (!check_step_dz(cur, lpos, radius))               return 0;
-			check_cobj_placement(cur, -1);
+			check_cobj_placement(cur, -1, check_uw);
 			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress (too strict? local drops in z?)
 			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv); // point-line dist
 			if (d > 2.0*radius)                                  return 0; // path deviation too long
@@ -655,7 +656,7 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 		int cindex(-1);
 		unsigned tot_steps(0);
 
-		if (!check_coll_line(pos, wpos, cindex, -1, 1, 0) && wb.is_point_reachable(pos, wpos, tot_steps, STEP_SIZE_MULT2)) {
+		if (!check_coll_line(pos, wpos, cindex, -1, 1, 0) && wb.is_point_reachable(pos, wpos, tot_steps, STEP_SIZE_MULT2, 0)) {
 			min_dist = (start.empty() ? dist : min(dist, min_dist));
 			start.push_back(make_pair(id, dist));
 		}
@@ -675,21 +676,21 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 
 
 // return true if coll_detect(pos) is closer to pos than opos
-bool can_make_progress(point const &pos, point const &opos) {
+bool can_make_progress(point const &pos, point const &opos, bool check_uw) {
 
 	waypoint_builder wb;
 	point test_pos(pos);
-	wb.check_cobj_placement(test_pos, -1);
+	wb.check_cobj_placement(test_pos, -1, check_uw);
 	return (p2p_dist_xy_sq(test_pos, pos) < p2p_dist_xy_sq(test_pos, opos)); // ignore z
 }
 
 
 // return true if the path from start to end is traversable by a smiley/player
-bool is_valid_path(point const &start, point const &end) {
+bool is_valid_path(point const &start, point const &end, bool check_uw) {
 
 	waypoint_builder wb;
 	unsigned tot_steps(0); // unused
-	return wb.is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT2);
+	return wb.is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT2, check_uw);
 }
 
 
