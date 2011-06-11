@@ -210,9 +210,10 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 		if (rel_enemy_vel > vweap) return; // should already have been tested
 		vector3d const tdir((tpos - pos).get_norm());
 		float const wvel(vweap - rel_enemy_vel), radius2(radius + object_types[w.obj_id].radius), gscale(object_types[w.obj_id].gravity);
-		point const fpos(pos + tdir*(0.75*radius2));
 
 		if (gscale > 0.0 && wvel > 0.0) {
+			point const fpos(pos + tdir*(0.75*radius2));
+
 			if (ACCURATE_GRAV_PREDICT) {
 				orient = get_firing_dir(fpos, tpos, wvel, gscale); // more accurate
 				if (orient == all_zeros) return; // out of range
@@ -226,6 +227,9 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 			if (!proj_coll_test(pos, tpos, tdir, radius, weapon, smiley.coll_id)) return;
 			float const proj_radius(object_types[w.obj_id].radius);
 			if (!check_left_and_right(pos, tpos, tdir, proj_radius, radius, weapon, smiley.coll_id)) return;
+		}
+		else {
+			orient = tpos - pos;
 		}
 	}
 	else {
