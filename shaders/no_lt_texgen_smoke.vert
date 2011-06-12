@@ -3,7 +3,7 @@ uniform float step_delta;
 
 attribute float shadow_val; // sending as int doesn't work?
 
-varying vec3 eye, vpos, spos, dlpos, normal, lpos0, vposl; // world space
+varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
 varying vec3 eye_norm;
 varying vec4 epos;
 varying float light_scale[8];
@@ -21,7 +21,7 @@ void main()
 	normal   = normalize(gl_Normal);
 	eye_norm = normalize(gl_NormalMatrix * gl_Normal);
 	epos     = gl_ModelViewMatrix * gl_Vertex;
-	dlpos    = gl_Vertex.xyz;
+	vpos     = gl_Vertex.xyz;
 	spos     = gl_Vertex.xyz + (0.25*step_delta)*normal; // move slightly away from the vertex
 	eye      = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
 	int shadow_bits = int(round(shadow_val));
@@ -30,14 +30,9 @@ void main()
 		light_scale[i] = (((shadow_bits & (1 << i)) == 0) ? 1.0 : 0.0);
 	}
 	if (!smoke_enabled) { // set t zero length vector
-		vpos = eye; // Note: eye is used for dynamic lights, but vpos is not
 		set_fog(); // set standard fog coord
 		return;
 	}
-	pt_pair res = clip_line(gl_Vertex.xyz, eye, smoke_bb);
-	eye  = res.v1;
-	vpos = res.v2;
-
 	if (dynamic_smoke_shadows) {
 		lpos0 = (gl_ModelViewMatrixInverse * gl_LightSource[0].position).xyz;
 		pt_pair res2 = clip_line(gl_Vertex.xyz, lpos0, smoke_bb);

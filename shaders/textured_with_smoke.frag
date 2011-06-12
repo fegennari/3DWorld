@@ -1,10 +1,11 @@
+uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta;
 uniform sampler2D tex0;
 uniform sampler3D smoke_tex;
 uniform float min_alpha = 0.0;
 
 // clipped eye position, clipped vertex position, starting vertex position
-varying vec3 eye, vpos, spos, dlpos, normal, lpos0, vposl; // world space
+varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
 varying vec3 eye_norm;
 varying vec4 epos;
 varying float light_scale[8];
@@ -62,12 +63,19 @@ void main()
 		if (enable_light6) ADD_LIGHT(6);
 		if (enable_light7) ADD_LIGHT(7);
 	}
-	if (enable_dlights) lit_color += add_dlights(dlpos, normalize(normal), eye); // dynamic lighting
+	if (enable_dlights) lit_color += add_dlights(vpos, normalize(normal), eye); // dynamic lighting
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * gl_Color.a));
 	if (keep_alpha && color.a <= min_alpha) discard;
-	
-	if (!smoke_enabled || eye == vpos) {
+	vec3 eye_c  = eye;
+	vec3 vpos_c = vpos;
+
+	if (smoke_enabled) {
+		pt_pair res = clip_line(vpos, eye, smoke_bb);
+		eye_c  = res.v1;
+		vpos_c = res.v2;
+	}
+	if (!smoke_enabled || eye_c == vpos_c) {
 		if (color.a <= min_alpha) discard;
 		if (!smoke_enabled) color = apply_fog(color); // apply standard fog
 		gl_FragColor = color;
@@ -75,8 +83,8 @@ void main()
 	}
 	
 	// smoke code
-	vec3 dir      = eye - vpos;
-	vec3 pos      = (vpos - off)/scale;
+	vec3 dir      = eye_c - vpos_c;
+	vec3 pos      = (vpos_c - off)/scale;
 	vec3 delta    = normalize(dir)*step_delta/scale;
 	float nsteps  = length(dir)/step_delta;
 	int num_steps = 1 + min(1000, int(nsteps)); // round up
