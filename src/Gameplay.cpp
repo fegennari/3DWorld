@@ -1562,15 +1562,17 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				}
 			}
 			else {
-				start_pos   += dir*(1.5*r);
+				start_pos   += dir*r;
 				start_pos.z -= 0.5*r;
 				vector3d dir2(dir);
 				if (firing_error != 0.0) vadd_rand(dir2, firing_error);
 				vector3d const gas_vel(dir2*vel + vector3d(0.0, 0.0, 0.2));
-				colorRGBA const color((wmode&1) ? colorRGBA(2.0, 1.0, 0.0) : DK_GREEN);
+				colorRGBA const color((wmode&1) ? ORANGE : DK_GREEN);
 				int const smoke_type ((wmode&1) ? FIRE : GASSED);
-				gen_arb_smoke(start_pos, color, gas_vel, w.blast_radius*rand_uniform(0.8, 1.2),
-					rand_uniform(0.25, 0.5), rand_uniform(0.4, 0.6), w.blast_damage, shooter, smoke_type, 0);
+				float const density(0.5*rand_uniform(0.5, 1.0));
+				float const darkness(0.6*rand_uniform(0.7, 1.0));
+				float const radius(w.blast_radius*rand_uniform(0.8, 1.2));
+				gen_arb_smoke(start_pos, color, gas_vel, radius, density, darkness, w.blast_damage, shooter, smoke_type, 0);
 			}
 		}
 		return 1;

@@ -1318,11 +1318,13 @@ void particle_cloud::apply_physics(unsigned i) {
 	radius   *= pow(1.03f, tstep_scale);
 	if (density  < 0.0001) density  = 0.0;
 	if (darkness < 0.0001) darkness = 0.0;
+	bool const is_fire(damage_type == BURNED || damage_type == FIRE);
 	
 	if (damage > 0.0) {
-		if (damage_type == BURNED || damage_type == FIRE) modify_grass_at(pos, radius, 0, 1, 0, 0, 0);
+		if (is_fire) modify_grass_at(pos, radius, 0, 1, 0, 0, 0);
 		do_area_effect_damage(pos, radius, damage, i, source, damage_type);
 	}
+	if (is_fire) add_dynamic_light(3*radius, pos, base_color);
 }
 
 
