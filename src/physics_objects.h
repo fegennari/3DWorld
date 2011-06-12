@@ -81,14 +81,14 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 		point const &get_pos() const {return pos;}
 	};
 	bool acc_smoke;
-	int source;
+	int source, damage_type;
 	float radius, density, darkness, damage;
 	vector3d init_vel;
 	colorRGBA base_color;
 	vector<part> parts;
 
 	void gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r,
-		float den, float dark, float dam, int src, bool as, bool use_parts=1);
+		float den, float dark, float dam, int src, int dt, bool as, bool use_parts=1);
 	void draw() const;
 	void draw_part(point const &p, float r, colorRGBA c) const;
 	void apply_physics(unsigned i);

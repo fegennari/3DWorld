@@ -32,8 +32,6 @@ unsigned const CAMERA_SPHERE_TIME = 4;
 float const PLASMA_SIZE_INCREASE  = 0.004;
 float const MAX_PLASMA_SIZE       = 3.5;
 float const PLASMA_LT_DAMAGE      = 18.0;
-float const BURN_DAMAGE           = 1200.0;
-float const PGAS_DAMAGE           = 1.0;
 
 unsigned const SMILEY_TEX_SIZE    = 256;
 

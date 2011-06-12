@@ -1293,19 +1293,18 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 
 	vector3d velocity(zero_vector);
 	float const radius(object_types[SMILEY].radius + effect_radius), radius_sq(radius*radius);
-	if (type == FIRE)   damage *= BURN_DAMAGE;
-	if (type == GASSED) damage *= PGAS_DAMAGE;
 	
 	if (p2p_dist_sq(pos, get_camera_pos()) < radius_sq) { // what if camera/player is a different size or height from smiley?
 		camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type);
 	}
 	obj_group const &objg(obj_groups[coll_id[SMILEY]]);
-	if (!objg.enabled) return;
-				
-	for (unsigned i = 0; i < objg.end_id; ++i) {
-		if (!objg.get_obj(i).disabled() && p2p_dist_sq(pos, objg.get_obj(i).pos) < radius_sq) {
-			// test for objects blocking the damage effects?
-			smiley_collision(i, ((source == NO_SOURCE) ? i : source), velocity, pos, damage, type);
+	
+	if (objg.enabled) {		
+		for (unsigned i = 0; i < objg.end_id; ++i) {
+			if (!objg.get_obj(i).disabled() && p2p_dist_sq(pos, objg.get_obj(i).pos) < radius_sq) {
+				// test for objects blocking the damage effects?
+				smiley_collision(i, ((source == NO_SOURCE) ? i : source), velocity, pos, damage, type);
+			}
 		}
 	}
 }
@@ -1568,8 +1567,10 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				vector3d dir2(dir);
 				if (firing_error != 0.0) vadd_rand(dir2, firing_error);
 				vector3d const gas_vel(dir2*vel + vector3d(0.0, 0.0, 0.2));
-				gen_arb_smoke(start_pos, DK_GREEN, gas_vel, w.blast_radius*rand_uniform(0.8, 1.2),
-					rand_uniform(0.25, 0.5), rand_uniform(0.4, 0.6), w.blast_damage, shooter, 0);
+				colorRGBA const color((wmode&1) ? colorRGBA(2.0, 1.0, 0.0) : DK_GREEN);
+				int const smoke_type ((wmode&1) ? FIRE : GASSED);
+				gen_arb_smoke(start_pos, color, gas_vel, w.blast_radius*rand_uniform(0.8, 1.2),
+					rand_uniform(0.25, 0.5), rand_uniform(0.4, 0.6), w.blast_damage, shooter, smoke_type, 0);
 			}
 		}
 		return 1;
@@ -2233,7 +2234,7 @@ void player_state::update_sstate_game_frame(int i) {
 	if (SMILEY_GAS && game_mode == 1 && obj_enabled && powerup == PU_SHIELD && powerup_time > INIT_PU_SH_TIME && !(rand()&31)) {
 		vector3d const dir(get_sstate_dir(i)), vel(velocity*0.5 - dir*1.2);
 		point const spos(pos - dir*get_sstate_radius(i)); // generate gas
-		gen_arb_smoke(spos, DK_GREEN, vel, rand_uniform(0.01, 0.05), rand_uniform(0.3, 0.7), rand_uniform(0.2, 0.6), 10.0, i, 0);
+		gen_arb_smoke(spos, DK_GREEN, vel, rand_uniform(0.01, 0.05), rand_uniform(0.3, 0.7), rand_uniform(0.2, 0.6), 10.0, i, GASSED, 0);
 	}
 }
 

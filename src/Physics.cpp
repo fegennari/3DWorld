@@ -22,6 +22,7 @@ float    const LAND_ELASTICITY     = 0.8;
 float    const SPILL_ELASTIC       = 0.8; // also multiplied by LAND_ELASTICITY
 float    const WATER_DAMPING       = 0.1;
 float    const CRITICAL_ANGLE      = 0.5; // in radians, for skipping objects on water
+float    const BURN_DAMAGE         = 1200.0;
 unsigned const MAX_FIRE_TIME       = 10000;
 unsigned const SCORCH_TIME         = 60*TICKS_PER_SECOND;
 bool     const ball_camera_view    = 0;
@@ -1317,7 +1318,11 @@ void particle_cloud::apply_physics(unsigned i) {
 	radius   *= pow(1.03f, tstep_scale);
 	if (density  < 0.0001) density  = 0.0;
 	if (darkness < 0.0001) darkness = 0.0;
-	if (damage   > 0.0)    do_area_effect_damage(pos, radius, damage, i, source, GASSED);
+	
+	if (damage > 0.0) {
+		if (damage_type == BURNED || damage_type == FIRE) modify_grass_at(pos, radius, 0, 1, 0, 0, 0);
+		do_area_effect_damage(pos, radius, damage, i, source, damage_type);
+	}
 }
 
 
@@ -1335,7 +1340,7 @@ void fire::apply_physics(unsigned i) {
 	float const damage(0.5*heat*radius);
 	colorRGBA const fcolor(gen_fire_color(cval, inten));
 	if (damage > 0.001) add_dynamic_light(32.0*damage, pos, fcolor);
-	do_area_effect_damage(pos, 2.0*radius, damage, i, source, FIRE);
+	do_area_effect_damage(pos, 2.0*radius, BURN_DAMAGE*damage, i, source, FIRE);
 	int const rn(max(1, int(8.0 + 0.02/(0.1 + sqrt(radius*sqrt(heat))))));
 	if (rand()%rn == 0) gen_smoke(pos);
 	time   += iticks;

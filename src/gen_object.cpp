@@ -136,11 +136,12 @@ void bubble::gen(point const &p, float r, colorRGBA const &c) {
 
 
 void particle_cloud::gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r,
-						 float den, float dark, float dam, int src, bool as, bool use_parts)
+						 float den, float dark, float dam, int src, int dt, bool as, bool use_parts)
 {
 	init_gen_rand(p, 0.005, 0.025);
 	acc_smoke  = as;
 	source     = src;
+	damage_type= dt;
 	base_color = bc;
 	init_vel   = iv;
 	radius     = r;
@@ -221,11 +222,11 @@ void gen_line_of_bubbles(point const &p1, point const &p2, float r, colorRGBA co
 
 
 bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
-				   float r, float den, float dark, float dam, int src, bool as)
+				   float r, float den, float dark, float dam, int src, int dt, bool as)
 {
 	if (!animate2 || is_underwater(pos)) return 0;
 	unsigned const chosen();
-	part_clouds[part_clouds.choose_element()].gen(pos, bc, iv, r, den, dark, dam, src, as);
+	part_clouds[part_clouds.choose_element()].gen(pos, bc, iv, r, den, dark, dam, src, dt, as);
 	return 1;
 }
 
@@ -233,7 +234,7 @@ bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 void gen_smoke(point const &pos) {
 
 	gen_arb_smoke(pos, WHITE, vector3d(0.0, 0.0, SMOKE_ZVEL),
-		rand_uniform(0.01, 0.025), rand_uniform(0.7, 0.9), rand_uniform(0.75, 0.95), 0.0, -2, 1);
+		rand_uniform(0.01, 0.025), rand_uniform(0.7, 0.9), rand_uniform(0.75, 0.95), 0.0, -2, SMOKE, 1);
 }
 
 
