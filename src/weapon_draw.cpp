@@ -640,6 +640,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				gluCylinder(quadric, radius, radius, 16.0*radius, 2*ndiv, ndiv);
 				draw_circle_normal_at_z(8.0*radius, 0.0, radius, ndiv, 1);
 				if (!shadowed) set_specular(0.0, 0.0);
+				
+				if (wmode & 1) { // add sparks?
+					add_dynamic_light(12.0*radius, (pos0 - dir*(2.5*radius)), ORANGE);
+				}
 			}
 			break;
 

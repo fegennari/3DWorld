@@ -1475,6 +1475,7 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	colorRGBA scolor;
 	blend_color(scolor, YELLOW, ORANGE, rand_uniform(0.3, 0.7), 1);
 	sparks.push_back(spark_t(spos, scolor, radius*rand_uniform(0.5, 0.7)));
+	if ((rand()&15) == 0) gen_particles(spos, 1, 0.5, 1);
 	glPopMatrix();
 }
 
@@ -2501,7 +2502,7 @@ void draw_camera_filters(vector<camera_filter> &cfs) {
 }
 
 
-int   spark_t::status = 0;
+int   spark_t::status = 1;
 float spark_t::radius = 0.0;
 
 
@@ -2529,6 +2530,7 @@ void draw_sparks() {
 	glEnable(GL_LIGHTING);
 	glDisable(GL_ALPHA_TEST);
 	disable_blend();
+	set_fill_mode();
 	sparks.clear();
 }
 
