@@ -1288,7 +1288,7 @@ void particle_cloud::apply_physics(unsigned i) {
 	unsigned const num_smoke_advance(5); // must be > 0
 	if (status == 0) return;
 
-	if (pos.z >= (CLOUD_CEILING + zmax_est) || radius > 0.25 || is_underwater(pos)) { // smoke dies
+	if (pos.z >= (CLOUD_CEILING + zmax_est) || radius > MAX_PART_CLOUD_RAD || is_underwater(pos)) { // smoke dies
 		destroy();
 		return;
 	}
@@ -1307,10 +1307,11 @@ void particle_cloud::apply_physics(unsigned i) {
 		if (obj.check_vert_collision(0, 0, j, &cnorm, all_zeros, 1)) { // skip dynamic
 			// destroy the smoke if it's not damaging and hits the bottom of an object
 			if (cnorm.z < 0.5 && damage == 0.0) destroy();
+			coll = 1;
 			break;
 		}
 	}
-	float const tstep_scale(TIMESTEP/DEF_TIMESTEP);
+	float const tstep_scale(TIMESTEP/DEF_TIMESTEP), rscale(get_rscale());
 	pos       = obj.pos;
 	time     += iticks;
 	density  *= pow(0.97f, tstep_scale);
@@ -1318,13 +1319,26 @@ void particle_cloud::apply_physics(unsigned i) {
 	radius   *= pow(1.03f, tstep_scale);
 	if (density  < 0.0001) density  = 0.0;
 	if (darkness < 0.0001) darkness = 0.0;
-	bool const is_fire(damage_type == BURNED || damage_type == FIRE);
 	
 	if (damage > 0.0) {
-		if (is_fire) modify_grass_at(pos, radius, 0, 1, 0, 0, 0);
-		do_area_effect_damage(pos, radius, damage, i, source, damage_type);
+		if (is_fire()) modify_grass_at(pos, radius, 0, 1, 0, 0, 0);
+		do_area_effect_damage(pos, radius, damage*rscale, i, source, damage_type);
 	}
-	if (is_fire) add_dynamic_light(3*radius, pos, base_color);
+	if (is_fire()) {
+		colorRGBA color(base_color);
+		color.green *= rscale;
+		add_dynamic_light(3*radius, pos, color);
+		if (coll && radius >= MAX_PART_CLOUD_RAD && (rand()&7) == 0) gen_fire(pos, 1.0, source); // will be destoyed next frame
+	}
+	if (damage_type == GASSED) { // check for gas ignition near fire
+		for (unsigned i = 0; i < fires.size(); ++i) {
+			if (fires[i].status != 0 && dist_less_than(fires[i].pos, pos, radius)) {
+				create_explosion(pos, source, 0, 10*damage*rscale, 4*radius, BLAST_RADIUS, 0);
+				destroy();
+				break;
+			}
+		}
+	}
 }
 
 

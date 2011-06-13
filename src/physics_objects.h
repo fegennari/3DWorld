@@ -9,6 +9,8 @@
 #include "3DWorld.h"
 #include "collision_detect.h"
 
+float const MAX_PART_CLOUD_RAD = 0.25;
+
 
 struct spark_t {
 
@@ -82,7 +84,7 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 	};
 	bool acc_smoke;
 	int source, damage_type;
-	float radius, density, darkness, damage;
+	float radius, init_radius, density, darkness, damage;
 	vector3d init_vel;
 	colorRGBA base_color;
 	vector<part> parts;
@@ -93,6 +95,8 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 	void draw_part(point const &p, float r, colorRGBA c) const;
 	void apply_physics(unsigned i);
 	void destroy();
+	float get_rscale() const {return CLIP_TO_01(1.0f - (radius - init_radius)/(MAX_PART_CLOUD_RAD - init_radius));}
+	bool is_fire()     const {return (damage_type == BURNED || damage_type == FIRE);}
 };
 
 

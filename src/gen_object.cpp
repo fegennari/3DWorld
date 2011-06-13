@@ -145,6 +145,7 @@ void particle_cloud::gen(point const &p, colorRGBA const &bc, vector3d const &iv
 	base_color = bc;
 	init_vel   = iv;
 	radius     = r;
+	init_radius= r;
 	darkness   = dark;
 	density    = den;
 	damage     = dam;

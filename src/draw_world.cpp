@@ -2179,16 +2179,14 @@ void particle_cloud::draw() const {
 	assert(status);
 	float const scale(get_zoom_scale()*0.016*window_width);
 	colorRGBA color(base_color);
-	color       *= (0.5*(1.0 - darkness));
-	color.alpha *= density;
 
-	if (0) { // diabled for now, or make a Boolean variable to enable
-		if (time < 4) {
-			color.red  = min(1.0f, (color.red + 0.5f*(4 - time)/4.0f));
-			color.blue = 0.0;
-		}
-		if (time < 3) color.green = min(1.0f, (color.green + 0.1f*(3 - time)/3.0f));
+	if (is_fire()) {
+		color.green *= get_rscale();
 	}
+	else {
+		color *= (0.5*(1.0 - darkness));
+	}
+	color.alpha *= density;
 	float const dist(distance_to_camera(pos));
 	int const ndiv(max(4, min(16, int(scale/dist))));
 
@@ -2218,23 +2216,25 @@ void particle_cloud::draw() const {
 
 void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 
-	int cindex;
-	float rad, dist, t;
-	point const lpos(get_light_pos());
+	if (!is_fire()) { // fire has its own emissive lighting
+		int cindex;
+		float rad, dist, t;
+		point const lpos(get_light_pos());
 	
-	if (!check_coll_line(p, lpos, cindex, -1, 1, 1)) { // not shadowed (slow, especially for lots of smoke near trees)
-		// Note: This can be moved into a shader, but the performance and quality improvement might not be significant
-		vector3d const dir((p - get_camera_pos()).get_norm());
-		float const dp(dot_product_ptv(dir, p, lpos));
-		blend_color(c, WHITE, c, 0.15, 0); // 15% ambient lighting (transmitted/scattered)
-		if (dp > 0.0) blend_color(c, WHITE, c, 0.1*dp/p2p_dist(p, lpos), 0); // 10% diffuse lighting (directional)
+		if (!check_coll_line(p, lpos, cindex, -1, 1, 1)) { // not shadowed (slow, especially for lots of smoke near trees)
+			// Note: This can be moved into a shader, but the performance and quality improvement might not be significant
+			vector3d const dir((p - get_camera_pos()).get_norm());
+			float const dp(dot_product_ptv(dir, p, lpos));
+			blend_color(c, WHITE, c, 0.15, 0); // 15% ambient lighting (transmitted/scattered)
+			if (dp > 0.0) blend_color(c, WHITE, c, 0.1*dp/p2p_dist(p, lpos), 0); // 10% diffuse lighting (directional)
 
-		if (dp < 0.0 && have_sun && line_intersect_sphere(p, dir, sun_pos, 6*sun_radius, rad, dist, t)) {
-			float const mult(1.0 - max(0.0f, (rad - sun_radius)/(5*sun_radius)));
-			blend_color(c, SUN_C, c, 0.75*mult, 0); // 75% direct sun lighting
+			if (dp < 0.0 && have_sun && line_intersect_sphere(p, dir, sun_pos, 6*sun_radius, rad, dist, t)) {
+				float const mult(1.0 - max(0.0f, (rad - sun_radius)/(5*sun_radius)));
+				blend_color(c, SUN_C, c, 0.75*mult, 0); // 75% direct sun lighting
+			}
 		}
+		get_indir_light(c, WHITE, p, 0, 1, NULL, NULL); // could move outside of the parts loop if too slow
 	}
-	get_indir_light(c, WHITE, p, 0, 1, NULL, NULL); // could move outside of the parts loop if too slow
 	c.do_glColor();
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
 	draw_billboard(p, get_camera_pos(), up_vector, 4.0*r, 4.0*r);

@@ -1566,9 +1566,10 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				start_pos.z -= 0.5*r;
 				vector3d dir2(dir);
 				if (firing_error != 0.0) vadd_rand(dir2, firing_error);
+				bool const is_fire(wmode & 1);
 				vector3d const gas_vel(dir2*vel + vector3d(0.0, 0.0, 0.2));
-				colorRGBA const color((wmode&1) ? ORANGE : DK_GREEN);
-				int const smoke_type ((wmode&1) ? FIRE : GASSED);
+				colorRGBA const color(is_fire ? colorRGBA(1.0, 0.75, 0.0) : DK_GREEN);
+				int const smoke_type (is_fire ? FIRE : GASSED);
 				float const density(0.5*rand_uniform(0.5, 1.0));
 				float const darkness(0.6*rand_uniform(0.7, 1.0));
 				float const radius(w.blast_radius*rand_uniform(0.8, 1.2));
