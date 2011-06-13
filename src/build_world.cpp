@@ -22,7 +22,7 @@ unsigned const SM_STEPS_PER_FRAME = 1;
 unsigned const NUM_DYNAM_PARTS    = 100;
 unsigned const SHRAP_DLT_IX_MOD   = 8;
 float const STAR_INNER_RAD        = 0.4;
-float const ROTATE_RATE           = 10.0;
+float const ROTATE_RATE           = 25.0;
 
 
 // object variables
@@ -445,7 +445,8 @@ void process_groups() {
 				
 				if (type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF || (type == FRAGMENT && obj.vdeform.z > 0.0)) { // shatterable fragments
 					float const vmag(fabs(obj.velocity.z)); // rotate
-					if (vmag > 0.5 && !(obj.flags & STATIC_COBJ_COLL)) obj.angle += fticks*ROTATE_RATE*sqrt(vmag);
+					float const rr((type == LEAF) ? 0.25 : 1.0);
+					if (vmag > 0.5 && !(obj.flags & STATIC_COBJ_COLL)) obj.angle += fticks*(TIMESTEP/DEF_TIMESTEP)*rr*ROTATE_RATE*sqrt(vmag);
 				}
 				if (large_radius) {
 					if (type != LANDMINE) {

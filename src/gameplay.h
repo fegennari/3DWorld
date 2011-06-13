@@ -109,7 +109,7 @@ weapon_t const weapons[NUM_WEAPONS+1] = {
 	weapon_t(0, 1, 1, 1, 200, 800, UNDEF,    1,   1,  1,   0.0,  0.0, 16.0,   0.0,  0.0,   0.0,  0.0,  "Laser"           ),
 	weapon_t(1, 0, 1, 1, 20,  200, PLASMA,   13,  1,  1,   1.4,  3.5, 200.0,  0.43, 0.0,   3.8,  4.5,  "Plasma Cannon"   ),
 	weapon_t(0, 1, 1, 0, 1,   10,  UNDEF,    CBFD,1,  1,   1.5,  4.0, 40.0,   0.2,  0.0, CBLADE_EXT, CBLADE_EXT, "Carnage Blade"),
-	weapon_t(0, 0, 1, 1, 50,  250, GASSED,   4,   1,  1,   1.2,  2.8, 100.0,  0.07, 0.1,   2.8,  2.8,  "Gasser"),
+	weapon_t(0, 0, 1, 1, 60,  250, GASSED,   4,   1,  1,   1.2,  2.8, 100.0,  0.07, 0.1,   2.8,  2.8,  "Gasser"),
 	/* non-selectable */
 	weapon_t(1, 0, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.6,  1.6,  "Cluster Grenade" )
 };
