@@ -93,10 +93,10 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, bool is_shadowed);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, bool is_shadowed);
-void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool is_shadowed);
+void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool is_shadowed, bool in_ammo);
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time);
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, bool is_shadowed);
-void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool is_shadowed, bool is_cgrenade);
+void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool is_shadowed, bool in_ammo, bool is_cgrenade);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, bool is_shadowed, unsigned char type);
@@ -448,16 +448,16 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_seekd(pos, obj.init_dir, radius, obj.type, ndiv, is_shadowed);
 		break;
 	case LANDMINE:
-		draw_landmine(pos, radius, ndiv, obj.time, obj.source, is_shadowed);
+		draw_landmine(pos, radius, ndiv, obj.time, obj.source, is_shadowed, in_ammo);
 		break;
 	case PLASMA:
 		draw_plasma(pos, pos, radius, obj.init_dir.x, ndiv, 1, !in_ammo, obj.time);
 		break;
 	case GRENADE:
-		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), is_shadowed, 0);
+		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), is_shadowed, in_ammo, 0);
 		break;
 	case CGRENADE:
-		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), is_shadowed, 1);
+		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), is_shadowed, in_ammo, 1);
 		break;
 	case BALL:
 		draw_rolling_obj(pos, obj.init_dir, radius, obj.status, ndiv, ((obj.flags & PLATFORM_COLL) != 0),
@@ -1349,15 +1349,18 @@ float get_landmine_sensor_height(float radius, int time) {
 }
 
 
-void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool is_shadowed) {
+void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool is_shadowed, bool in_ammo) {
 
 	assert(radius > 0.0 && ndiv > 0);
-	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
-	if (!point_outside_mesh(xpos, ypos) && !is_mesh_disabled(xpos, ypos) &&
-		pos.z < (interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) + 1.05*radius))
-	{
-		pos.z -= 0.8*radius; // appears to sink into the ground
+	if (!in_ammo) {
+		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+
+		if (!point_outside_mesh(xpos, ypos) && !is_mesh_disabled(xpos, ypos) &&
+			pos.z < (interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) + 1.05*radius))
+		{
+			pos.z -= 0.8*radius; // appears to sink into the ground
+		}
 	}
 	if (!DEBUG_COLORCODE) set_shadowed_color(WHITE, pos, is_shadowed);
 	draw_subdiv_sphere(pos, radius, ndiv, 1, 0); // man body
@@ -1448,7 +1451,7 @@ void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d cons
 }
 
 
-void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool is_shadowed, bool is_cgrenade) {
+void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool is_shadowed, bool in_ammo, bool is_cgrenade) {
 
 	assert(quadric);
 	glPushMatrix();
@@ -1471,12 +1474,13 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	set_color(is_shadowed ? DK_GRAY : GRAY);
 	glTranslatef(0.0, 0.0, 0.3);
 	gluCylinder(quadric, 0.05, 0.05, sval, max(3, ndiv/4), 1); // fuse
+	glPopMatrix();
 	point const spos(pos + vd*((1.0 + sval)*radius));
 	colorRGBA scolor;
 	blend_color(scolor, YELLOW, ORANGE, rand_uniform(0.3, 0.7), 1);
-	sparks.push_back(spark_t(spos, scolor, radius*rand_uniform(0.5, 0.7)));
-	if ((rand()&15) == 0) gen_particles(spos, 1, 0.5, 1);
-	glPopMatrix();
+	float const size(radius*rand_uniform(0.5, 0.7));
+	sparks.push_back(spark_t(spos, scolor, size));
+	if (!in_ammo && (rand()&15) == 0) gen_particles(spos, 1, 0.5, 1);
 }
 
 
