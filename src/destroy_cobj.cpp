@@ -357,7 +357,7 @@ int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 }
 
 
-int pretest_poly_cylin_int(coll_obj const &p, coll_obj const &c) {
+int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 
 	if (p.line_intersect(c.points[0], c.points[1])) return 1;
 
@@ -392,11 +392,21 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			for (int i = 0; i < c.npoints; ++i) {
 				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
 			}
-			// check cube edges for intersection with polygon
-			return 2; // FIXME
+			if (c.thickness > MIN_POLY_THICK2) { // test extruded (3D) polygon
+				static vector<point> pts[2];
+				gen_poly_planes(c.points, c.npoints, c.norm, c.thickness, pts);
+				
+				for (unsigned j = 0; j < 2; ++j) {
+					for (unsigned i = 0; i < pts[j].size(); ++i) {
+						if (check_line_clip(pts[j][i], pts[j][(i+1)%pts[j].size()], d)) return 1; // definite intersection
+					}
+				}
+				// call sphere_ext_poly_intersect?
+				return 0; // FIXME - close, but need to handle cube completely insde of a thick polygon
+			}
+			return 0;
 		default: assert(0);
 		}
-		break;
 
 	case COLL_CYLINDER:
 		switch (c.type) {
@@ -407,10 +417,9 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_CYLINDER_ROT:
 			return cylin_cylin_int(c, *this);
 		case COLL_POLYGON:
-			return pretest_poly_cylin_int(c, *this);
+			return poly_cylin_int(c, *this);
 		default: assert(0);
 		}
-		break;
 
 	case COLL_SPHERE:
 		switch (c.type) {
@@ -422,22 +431,26 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK2);
 		default: assert(0);
 		}
-		break;
 
 	case COLL_CYLINDER_ROT:
 		switch (c.type) {
 		case COLL_CYLINDER_ROT:
 			return cylin_cylin_int(c, *this);
 		case COLL_POLYGON:
-			return pretest_poly_cylin_int(c, *this);
+			return poly_cylin_int(c, *this);
 		default: assert(0);
 		}
-		break;
 
 	case COLL_POLYGON:
 		assert(c.type == COLL_POLYGON);
-		return 2; // FIXME - need to deal with thickness as well
-		break;
+		for (int i = 0; i < c.npoints; ++i) { // FIXME: use toler (for adjacent roof polygons)
+			if (line_intersect(c.points[i], c.points[(i+1)%c.npoints])) return 1;
+		}
+		for (int i = 0; i <   npoints; ++i) {
+			if (line_intersect(  points[i],   points[(i+1)%  npoints])) return 1;
+		}
+		// call sphere_ext_poly_intersect?
+		return 0; // FIXME - close, but need to handle one polygon completely insde of a thick polygon
 
 	default:
 		assert(0);
