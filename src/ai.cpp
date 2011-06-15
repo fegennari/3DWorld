@@ -903,20 +903,17 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			if (start_cost > 0.0) {
 				//cout << "cost: " << start_cost << ", stepv: "; stepv.print(); cout << endl; // testing
 				unsigned const ndirs(16);
-				vector<dir_cost_t> dcts(ndirs);
+				dir_cost_t best;
 
 				for (unsigned i = 0; i < ndirs; ++i) {
 					vector3d dir(stepv);
 					rotate_vector3d_norm(plus_z, TWO_PI*i/ndirs, dir);
 					float const cost(get_pos_cost(smiley_id, (opos + step_dist_scale(obj, dir)*step_dist), opos, pdu, radius, step_height, 1)); // FIXME: zval has not been set
-					dcts[i] = dir_cost_t(cost, dir, stepv);
+					dir_cost_t const cur(cost, dir, stepv);
+					if (i == 0 || cur < best) best = cur;
 				}
-				dir_cost_t const &best(*min_element(dcts.begin(), dcts.end()));
 				//if (best.dp < 1.0) {cout << "best: cost: " << best.cost << ", dp: " << best.dp << ", dir: "; best.dir.print(); cout << endl;}
-
-				if (best.cost > 0.0) {
-					// FIXME: still not good, what to do?
-				}
+				if (best.cost > 0.0) {} // FIXME: still not good, what to do?
 				obj.pos = opos + step_dist_scale(obj, best.dir)*step_dist;
 			}
 		}
