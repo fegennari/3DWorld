@@ -41,15 +41,30 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 			gen_fire(pos, min(4.0, 12.0*val), shooter);
 		}
 		if (!cts[i].draw) continue;
-		float const vol_scaled(cts[i].volume/0.0007);
-		float size_scale(1.0);
-		while (vol_scaled/size_scale < 0.5) size_scale *= 0.5;
-		int const num(min(100, int((rand()%20 + 20)*vol_scaled/size_scale)));
 		bool const shattered(cts[i].destroy >= SHATTERABLE);
-		point fpos(pos);
+		float size_scale(1.0), num_parts(0.0);
+		float const thickness(cts[i].thickness);
+		float const frag_radius(object_types[FRAGMENT].radius), avg_frag_dia(2.0*frag_radius), max_frag_dia(3.0*frag_radius);
+		if (cts[i].volume < frag_radius*frag_radius*frag_radius) continue;
 
-		for (int o = 0; o < num; ++o) {
+		if (shattered) {
+			float const sll(cts[i].second_largest_len());
+			if (sll < 1.2*max_frag_dia) size_scale *= sll/max_frag_dia;
+			float const dia(size_scale*avg_frag_dia);
+			num_parts = cts[i].volume/(thickness*dia*dia);
+		}
+		else {
+			if (thickness < 1.2*max_frag_dia) size_scale *= thickness/max_frag_dia;
+			float const dia(size_scale*avg_frag_dia);
+			num_parts = cts[i].volume/(dia*dia*dia);
+		}
+		if (size_scale < 0.1) continue;
+		unsigned const num(min(100U, max((shattered ? 6U : 1U), unsigned(num_parts)))); // no more than 200
+		//cout << "shattered: " << shattered << ", volume: " << cts[i].volume << ", num_parts: " << num_parts << ", num: " << num << ", ss: " << size_scale << endl;
+
+		for (unsigned o = 0; o < num; ++o) {
 			vector3d velocity(cdir);
+			point fpos(pos);
 
 			if (shattered || cts[i].unanchored) {
 				for (unsigned j = 0; j < 3; ++j) { // only accurate for COLL_CUBE
@@ -169,7 +184,6 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	csg_cube const cube(x1, x2, y1, y2, z1, z2);
 	point center(cube.get_cube_center());
 	if (cube.is_zero_area()) return 0;
-	float const sub_volume(cube.get_volume());
 	vector<int> indices, to_remove;
 	vector<coll_obj> new_cobjs;
 	vector<int> cvals;
@@ -216,7 +230,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 				volume -= cobjs[index].volume;
 			}
 			assert(volume >= -TOLERANCE); // usually > 0.0
-			cts.push_back(color_tid_vol(cobjs[i], volume, 0));
+			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
 			cobjs[i].clear_internal_data(cobjs, indices, i);
 			to_remove.push_back(i);
 		}
@@ -247,7 +261,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 
 				for (set<int>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 					if (cobjs[*i].destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
-					cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, 1));
+					cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, cobjs[*i].calc_min_dim(), 1));
 					cobjs[*i].clear_internal_data(cobjs, indices, *i);
 					remove_coll_object(*i);
 					++extra_removed;

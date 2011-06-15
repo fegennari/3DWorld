@@ -76,6 +76,15 @@ float get_coll_energy(vector3d const &v1, vector3d const &v2, float mass) {
 }
 
 
+float triangle_area(point const *const points) {
+
+	float const a(p2p_dist(points[0], points[1]));
+	float const b(p2p_dist(points[1], points[2]));
+	float const c(p2p_dist(points[2], points[0]));
+	return 0.25*sqrt((a+b+c)*(b+c-a)*(c+a-b)*(a+b-c));
+}
+
+
 // ************ SHAPE INTERSECTION ************
 
 

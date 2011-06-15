@@ -978,8 +978,9 @@ void sort_cobjs_for_rendering(vector<coll_obj> &cobjs) {
 }
 
 
-color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, bool ua)
-	: tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), unanchored(ua), volume(volume_), tscale(cobj.cp.tscale), color(cobj.cp.color)
+color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thickness_, bool ua)
+	: tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), unanchored(ua), volume(volume_),
+	thickness(thickness_), tscale(cobj.cp.tscale), color(cobj.cp.color)
 {
 	copy_from(cobj);
 }

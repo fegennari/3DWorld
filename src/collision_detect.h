@@ -183,6 +183,7 @@ public:
 	void clear_internal_data(vector<coll_obj> &cobjs, vector<int> const &indices, unsigned ix);
 	bool clear_lightmap_entry(lvmap::iterator it, int mode, unsigned keep, vector<pair<quad_div, lv_val> > *to_add=NULL);
 	void calc_size();
+	float calc_min_dim() const;
 	bool clip_in_2d(float const bb[2][2], float &ztop, int d1, int d2, int dir) const;
 	void set_npoints();
 	void print_bounds() const;
@@ -271,9 +272,9 @@ struct color_tid_vol : public cube_t {
 
 	int tid, destroy;
 	bool draw, unanchored;
-	float volume, tscale;
+	float volume, thickness, tscale;
 	colorRGBA color;
-	color_tid_vol(coll_obj const &cobj, float volume_, bool ua);
+	color_tid_vol(coll_obj const &cobj, float volume_, float thickness_, bool ua);
 };
 
 

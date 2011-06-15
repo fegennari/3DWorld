@@ -281,7 +281,7 @@ int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, fl
 	obj.velocity    = (velocity + gen_rand_vector(rand_uniform(0.3, 0.7), 1.0, PI))*rand_uniform(10.0, 15.0);
 	obj.angle       = TWO_PI*rand_float();
 	obj.orientation = signed_rand_vector_norm();
-	obj.vdeform.x   = 0.6 + size_mult*rand_float(); // size
+	obj.vdeform.x   = size_mult*(0.5 + rand_float()); // size
 	obj.vdeform.y   = color.alpha;
 	obj.vdeform.z   = fabs(tscale)*(shattered ? 1.0 : -1.0);
 	obj.time        = int(time_mult*object_types[FRAGMENT].lifetime);

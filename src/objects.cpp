@@ -195,8 +195,13 @@ void coll_obj::calc_size() {
 		volume = get_volume();
 		break;
 	case COLL_SPHERE:
-	case COLL_POLYGON:
 		volume = (4.0/3.0)*PI*radius*radius*radius;
+		break;
+	case COLL_POLYGON:
+		assert(npoints == 3 || npoints == 4);
+		volume = triangle_area(points);
+		if (npoints == 4) volume += triangle_area(points+1); // other triangle
+		volume *= thickness;
 		break;
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
@@ -204,6 +209,14 @@ void coll_obj::calc_size() {
 		break;
 	default: assert(0);
 	}
+}
+
+
+float coll_obj::calc_min_dim() const {
+
+	float min_dim(min_len());
+	if (type == COLL_POLYGON) min_dim = min(min_dim, thickness);
+	return min_dim;
 }
 
 
