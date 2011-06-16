@@ -106,8 +106,10 @@ void coll_obj::clear_lightmap_if_lighted_eq(int shadowed, int partial) {
 		unsigned char const tag(it->first.tag);
 		lvmap::iterator temp(it++);
 
-		if (tag == QD_TAG_GLOBAL || tag == QD_TAG_DLIST || tag == QD_TAG_TEXTURE ||
-			(lv == 1 && shadowed) || (lv == 2 && !shadowed) || (lv == 3 && partial))
+		if ((tag & (QD_TAG_GLOBAL | QD_TAG_DLIST | QD_TAG_TEXTURE)) ||
+			( shadowed && test_all_light_val(lv, 1)) ||
+			(!shadowed && test_all_light_val(lv, 2)) ||
+			( partial  && test_all_light_val(lv, 3)))
 		{
 			clear_lightmap_entry(temp, 0, 0);
 			lightmap.erase(temp);

@@ -228,11 +228,16 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 				assert((size_t)index < cobjs.size());
 				indices.push_back(index);
 				volume -= cobjs[index].volume;
+				// add waypoint for cobjs[index]
 			}
 			assert(volume >= -TOLERANCE); // usually > 0.0
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
 			cobjs[i].clear_internal_data(cobjs, indices, i);
 			to_remove.push_back(i);
+
+			if (cobjs[i].waypt_id >= 0) {
+				// update waypoints
+			}
 		}
 		new_cobjs.clear();
 	} // for k
@@ -280,7 +285,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 
 void check_falling_cobjs() {
 
-	// FIXME: shadow update
+	// FIXME: add shadows when a cobj begins to shadow a new target cobj
 	// FIXME: add velocity/acceleration
 	// FIXME: fix texture offset
 	if (falling_cobjs.empty()) return; // nothing to do
@@ -296,13 +301,13 @@ void check_falling_cobjs() {
 			continue;
 		}
 		// translate, add the new, then remove the old
+		vector<int> indices;
+		//indices.push_back(index); // if only we could do this first...
+		coll_objects[*i].clear_internal_data(coll_objects, indices, *i);
 		coll_objects[*i].clear_lightmap(0); // need to do this first, before the copy
 		coll_obj cobj(coll_objects[*i]); // make a copy
 		cobj.shift_by(point(0.0, 0.0, dz), 1); // translate down
 		int const index(cobj.add_coll_cobj());
-		vector<int> indices;
-		indices.push_back(index);
-		coll_objects[*i].clear_internal_data(coll_objects, indices, *i);
 		remove_coll_object(*i);
 		assert(*i != index);
 		*i = index;
