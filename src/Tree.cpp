@@ -311,7 +311,14 @@ void tree::change_leaf_color(colorRGBA &base_color, unsigned i) {
 void tree::remove_leaf(unsigned i, bool update_data) {
 
 	assert(i < leaves.size());
-	remove_coll_object(leaves[i].coll_index);
+	int const cix(leaves[i].coll_index);
+	
+	if (cix >= 0) {
+		assert((unsigned)cix < coll_objects.size());
+		vector<int> indices; // unused
+		coll_objects[cix].update_shadowed_cobjs(coll_objects, indices, cix);
+		remove_coll_object(cix);
+	}
 	leaves[i] = leaves.back();
 	leaves.pop_back();
 
