@@ -767,8 +767,9 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		float const z_old(pos.z);
 		vector3d cnorm;
 		bool const last_stat_coll((flags & STATIC_COBJ_COLL) != 0);
-		int coll(check_vert_collision(obj_index, 1, iter, &cnorm));
+		int const coll(check_vert_collision(obj_index, 1, iter, &cnorm));
 		if (disabled()) return;
+		if (!coll) flags &= ~Z_STOPPED; // fix for landmine no longer stuck to cobj
 		
 		if (wcoll) {
 			if (!frozen) status = 1;
@@ -835,7 +836,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if (status != 4) {
 				check_vert_collision(obj_index, 0, iter); // one last time before the object is "stopped"???
 				velocity = zero_vector;
-				status   = 4;
+				if (!disabled()) status = 4;
 			}
 		}
 		else {

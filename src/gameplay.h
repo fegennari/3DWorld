@@ -39,7 +39,7 @@ unsigned const MESSAGE_TIME       = unsigned(2 *TICKS_PER_SECOND);
 unsigned const DROWN_TIME         = unsigned(10*TICKS_PER_SECOND);
 unsigned const INIT_PU_SH_TIME    = unsigned(4 *TICKS_PER_SECOND);
 unsigned const LM_ACT_TIME        = unsigned(2 *TICKS_PER_SECOND);
-unsigned const SMILEY_LM_ACT_TIME = unsigned(8 *TICKS_PER_SECOND);
+unsigned const SMILEY_LM_ACT_TIME = unsigned(5 *TICKS_PER_SECOND);
 
 
 struct blood_spot { // size = 20

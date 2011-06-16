@@ -433,7 +433,7 @@ void process_groups() {
 						if (spf == 1) obj.advance_object(!recreated, 0, j);
 						obj.verify_data();
 						
-						if (cindex >= 0 && !large_radius && spf < LG_STEPS_PER_FRAME) { // test collision with this cobj
+						if (!obj.disabled() && cindex >= 0 && !large_radius && spf < LG_STEPS_PER_FRAME) { // test collision with this cobj
 							object_line_coll(obj, old_pos, radius, j, cindex);
 						}
 					} // not plasma

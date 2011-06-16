@@ -1264,7 +1264,6 @@ void vert_coll_detector::check_cobj(int index) {
 			float const sz(5.0*otype.radius);
 			float const dmin(min(min((cobj.d[ds][1] - obj.pos[ds]), (obj.pos[ds] - cobj.d[ds][0])),
 					                min((cobj.d[dt][1] - obj.pos[dt]), (obj.pos[dt] - cobj.d[dt][0]))));
-
 			if (dmin > sz) gen_scorch_mark((obj.pos - norm*o_radius), sz, norm, index, 0.75, 0.0);
 		}
 		obj.disable();

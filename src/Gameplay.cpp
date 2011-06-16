@@ -197,6 +197,10 @@ int self_coll_invalid(int type, int obj_index) {
 		invalid_collision = 1;
 		return 1;
 	}
+	if (type == LANDMINE && obj_groups[coll_id[type]].get_obj(obj_index).time < (int)SMILEY_LM_ACT_TIME) {
+		invalid_collision = 1;
+		return 1;
+	}
 	return 0;
 }
 
