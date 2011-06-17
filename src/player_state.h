@@ -44,14 +44,14 @@ typedef vector<wpt_ix_t> waypt_adj_vect;
 
 struct waypoint_t {
 
-	bool user_placed, placed_item, goal, temp, visited;
-	int came_from, item_group, item_ix;
+	bool user_placed, placed_item, goal, temp, visited, disabled;
+	int came_from, item_group, item_ix, coll_id;
 	float g_score, h_score, f_score;
 	point pos;
 	float last_smiley_time;
 	waypt_adj_vect next_wpts, prev_wpts, visible_wpts;
 
-	waypoint_t(point const &p=all_zeros, bool up=0, bool i=0, bool g=0, bool t=0);
+	waypoint_t(point const &p=all_zeros, int cid=-1, bool up=0, bool i=0, bool g=0, bool t=0);
 	void mark_visited_by_smiley(unsigned const smiley_id);
 	float get_time_since_last_visited(unsigned const smiley_id) const;
 	void clear();
@@ -210,6 +210,7 @@ int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal);
 void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal const &goal);
 bool can_make_progress(point const &pos, point const &opos, bool check_uw);
 bool is_valid_path(point const &start, point const &end, bool check_uw);
+void add_connect_waypoint_for_cobj(coll_obj &c);
 
 
 #endif // _PLAYER_STATE_H_

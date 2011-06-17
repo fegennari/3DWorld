@@ -67,9 +67,9 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 // ********** waypoint_t **********
 
 
-waypoint_t::waypoint_t(point const &p, bool up, bool i, bool g, bool t)
-	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0),
-	item_group(-1), item_ix(-1), came_from(-1), g_score(0), h_score(0), f_score(0), pos(p)
+waypoint_t::waypoint_t(point const &p, int cid, bool up, bool i, bool g, bool t)
+	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0), disabled(0),
+	came_from(-1), item_group(-1), item_ix(-1), coll_id(cid), g_score(0), h_score(0), f_score(0), pos(p)
 {
 	clear();
 }
@@ -138,6 +138,7 @@ bool check_step_dz(point &cur, point const &lpos, float radius) {
 class waypoint_builder {
 
 	float radius;
+	vector<coll_obj> *cur_cobjs;
 
 	bool is_waypoint_valid(point pos, int coll_id) const {
 		if (pos.z < zmin || !is_over_mesh(pos)) return 0;
@@ -147,80 +148,100 @@ class waypoint_builder {
 		return check_cobj_placement(point(pos), coll_id, 1);
 	}
 
-	void add_if_valid(point const &pos, int coll_id) {
-		if (is_waypoint_valid(pos, coll_id)) waypoints.push_back(waypoint_t(pos, 0));
+	bool add_if_valid(point const &pos, int coll_id, bool connect) {
+		if (!is_waypoint_valid(pos, coll_id)) return 0;
+
+		if (coll_id >= 0) {
+			assert((unsigned)coll_id < coll_objects.size());
+			coll_objects[coll_id].waypt_id = waypoints.size();
+		}
+		if (connect) {
+			add_new_waypoint(pos, coll_id, 1, 1, 0, 0);
+		}
+		else {
+			waypoints.push_back(waypoint_t(pos, coll_id, 0));
+		}
+		return 1;
 	}
 
-	void add_waypoint_rect(float x1, float y1, float x2, float y2, float z, int coll_id) {
+	void add_waypoint_rect(float x1, float y1, float x2, float y2, float z, int coll_id, bool connect) {
 		if (min(x2-x1, y2-y1) < radius) return; // too small to stand on
 		point const center(0.5*(x1+x2), 0.5*(y1+y2), z+radius);
-		add_if_valid(center, coll_id);
+		add_if_valid(center, coll_id, connect);
 		// FIXME: try more points?
 	}
 
-	void add_waypoint_circle(point const &p, float r, int coll_id) {
+	void add_waypoint_circle(point const &p, float r, int coll_id, bool connect) {
 		if (r < radius) return; // too small to stand on
-		add_if_valid(p + point(0.0, 0.0, radius), coll_id);
+		add_if_valid(p + point(0.0, 0.0, radius), coll_id, connect);
 	}
 
-	void add_waypoint_triangle(point const &p1, point const &p2, point const &p3, int coll_id) {
+	void add_waypoint_triangle(point const &p1, point const &p2, point const &p3, int coll_id, bool connect) {
 		if (dist_less_than(p1, p2, 2*radius) || dist_less_than(p2, p3, 2*radius) || dist_less_than(p3, p1, 2*radius)) return; // too small to stand on
 		point const center(((p1 + p2 + p3) / 3.0) + point(0.0, 0.0, radius));
-		add_if_valid(center, coll_id);
+		add_if_valid(center, coll_id, connect);
 		// could try more points (corners?)
 	}
 
-	void add_waypoint_poly(point const *const points, unsigned npoints, vector3d const &norm, int coll_id) {
+	void add_waypoint_poly(point const *const points, unsigned npoints, vector3d const &norm, int coll_id, bool connect) {
 		assert(npoints == 3 || npoints == 4);
 		if (fabs(norm.z) < 0.5) return; // need a mostly vertical polygon to stand on
-		add_waypoint_triangle(points[0], points[1], points[2], coll_id);
-		if (npoints == 4) add_waypoint_triangle(points[0], points[2], points[3], coll_id); // quad only
+		add_waypoint_triangle(points[0], points[1], points[2], coll_id, connect);
+		if (npoints == 4) add_waypoint_triangle(points[0], points[2], points[3], coll_id, connect); // quad only
 	}
 
 public:
-	waypoint_builder(void) : radius(object_types[WAYPOINT].radius) {}
+	waypoint_builder(void) : radius(object_types[WAYPOINT].radius), cur_cobjs(NULL) {}
+
+	void add_one_cobj_wpt(coll_obj &c, bool connect) {
+		if (c.status != COLL_STATIC || c.platform_id >= 0) return; // only static objects (not platforms) - use c.truly_static()?
+
+		switch (c.type) {
+		case COLL_CUBE: // can stand on the top
+			if (c.cp.surfs & 2) break; // top not drawn
+			add_waypoint_rect(c.d[0][0], c.d[1][0], c.d[0][1], c.d[1][1], c.d[2][1], c.id, connect); // top rect
+			break;
+
+		case COLL_CYLINDER: // can stand on the top
+			if (c.cp.surfs & 1) { // ends not drawn
+				// do nothing
+			}
+			else if (c.points[0].z > c.points[1].z) {
+				add_waypoint_circle(c.points[0], c.radius,  c.id, connect);
+			}
+			else {
+				add_waypoint_circle(c.points[1], c.radius2, c.id, connect);
+			}
+			break;
+
+		case COLL_POLYGON:
+			assert(c.npoints == 3 || c.npoints == 4); // triangle or quad
+				
+			if (c.thickness > MIN_POLY_THICK2) { // extruded polygon
+				vector<vector<point> > const &pts(thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness));
+
+				for (unsigned j = 0; j < pts.size(); ++j) {
+					add_waypoint_poly(&pts[j].front(), pts[j].size(), get_poly_norm(&pts[j].front()), c.id, connect);
+				}
+			}
+			else {
+				add_waypoint_poly(c.points, c.npoints, c.norm, c.id, connect);
+			}
+			break;
+
+		case COLL_SPHERE:       break; // not supported (can't stand on)
+		case COLL_CYLINDER_ROT: break; // not supported (can't stand on)
+		default: assert(0);
+		}
+	}
 	
-	void add_cobj_waypoints(vector<coll_obj> const &cobjs) {
+	void add_cobj_waypoints() {
 		int const cc(camera_change);
 		camera_change = 0; // messes up collision detection code
 		unsigned const num_waypoints(waypoints.size());
 
-		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-			if (i->status != COLL_STATIC || i->platform_id >= 0) continue; // only static objects (not platforms) - use i->truly_static()?
-
-			switch (i->type) {
-			case COLL_CUBE: // can stand on the top
-				add_waypoint_rect(i->d[0][0], i->d[1][0], i->d[0][1], i->d[1][1], i->d[2][1], i->id); // top rect
-				break;
-
-			case COLL_CYLINDER: // can stand on the top
-				if (i->points[0].z > i->points[1].z) {
-					add_waypoint_circle(i->points[0], i->radius,  i->id);
-				}
-				else {
-					add_waypoint_circle(i->points[1], i->radius2, i->id);
-				}
-				break;
-
-			case COLL_POLYGON:
-				assert(i->npoints == 3 || i->npoints == 4); // triangle or quad
-				
-				if (i->thickness > MIN_POLY_THICK2) { // extruded polygon
-					vector<vector<point> > const &pts(thick_poly_to_sides(i->points, i->npoints, i->norm, i->thickness));
-
-					for (unsigned j = 0; j < pts.size(); ++j) {
-						add_waypoint_poly(&pts[j].front(), pts[j].size(), get_poly_norm(&pts[j].front()), i->id);
-					}
-				}
-				else {
-					add_waypoint_poly(i->points, i->npoints, i->norm, i->id);
-				}
-				break;
-
-			case COLL_SPHERE:       break; // not supported (can't stand on)
-			case COLL_CYLINDER_ROT: break; // not supported (can't stand on)
-			default: assert(0);
-			}
+		for (vector<coll_obj>::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
+			add_one_cobj_wpt(*i, 0);
 		}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " cobj waypoints" << endl;
 		camera_change = cc;
@@ -246,7 +267,7 @@ public:
 				}
 				// *** WRITE - more filtering ***
 				point const pos(get_xval(x), get_yval(y), (zval + radius));
-				add_if_valid(pos, -1);
+				add_if_valid(pos, -1, 0);
 			}
 		}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " terrain waypoints" << endl;
@@ -259,7 +280,7 @@ public:
 			vector<predef_obj> const &objs(obj_groups[i].get_predef_objs());
 
 			for (unsigned j = 0; j < objs.size(); ++j) {
-				waypoint_t w(objs[j].pos, 0, 1);
+				waypoint_t w(objs[j].pos, -1, 0, 1);
 				w.item_group = i;
 				w.item_ix    = j;
 				waypoints.push_back(w);
@@ -269,9 +290,9 @@ public:
 		cout << "Added " << (waypoints.size() - num_waypoints) << " object placement waypoints" << endl;
 	}
 
-	unsigned add_temp_waypoint(point const &pos, bool connect_in, bool connect_out, bool goal) {
+	unsigned add_new_waypoint(point const &pos, int coll_id, bool connect_in, bool connect_out, bool goal, bool temp) {
 		unsigned const ix(waypoints.size());
-		waypoints.push_back(waypoint_t(pos, 0, 0, goal, 1));
+		waypoints.push_back(waypoint_t(pos, coll_id, 0, 0, goal, temp));
 		if (connect_in ) connect_waypoints(0,  ix,    ix, ix+1, 0); // from existing waypoints to new waypoint
 		if (connect_out) connect_waypoints(ix, ix+1,  0,  ix,   0); // from new waypoint to existing waypoints
 		return ix;
@@ -511,7 +532,7 @@ public:
 		if (goal.mode == 4) goal.pos = waypoints[goal.wpt].pos; // specific waypoint
 		if (goal.mode == 5) goal.wpt = wb.find_closest_waypoint(goal.pos, 0);
 		if (goal.mode == 6) goal.wpt = wb.find_closest_waypoint(goal.pos, 1);
-		if (goal.mode == 7) goal.wpt = wb.add_temp_waypoint(goal.pos, 1, 1, 1); // goal position - add temp waypoint
+		if (goal.mode == 7) goal.wpt = wb.add_new_waypoint(goal.pos, -1, 1, 1, 1, 1); // goal position - add temp waypoint
 		if (goal.mode == 7) has_wpt_goal = 1;
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: "; goal.pos.print(); cout << ", wpt: " << goal.wpt << endl;
 		
@@ -598,13 +619,13 @@ void create_waypoints(vector<user_waypt_t> const &user_waypoints) {
 	has_wpt_goal    = 0;
 	
 	for (vector<user_waypt_t>::const_iterator i = user_waypoints.begin(); i != user_waypoints.end(); ++i) {
-		waypoints.push_back(waypoint_t(i->pos, 1, 0, (i->type == 1))); // goal is type 1
+		waypoints.push_back(waypoint_t(i->pos, -1, 1, 0, (i->type == 1))); // goal is type 1
 		if (waypoints.back().goal) has_wpt_goal = 1;
 	}
 	waypoint_builder wb;
 
 	if (use_waypoints) {
-		wb.add_cobj_waypoints(coll_objects);
+		wb.add_cobj_waypoints();
 		wb.add_mesh_waypoints();
 		wb.add_object_waypoints();
 		PRINT_TIME("  Waypoint Generation");
@@ -691,6 +712,14 @@ bool is_valid_path(point const &start, point const &end, bool check_uw) {
 	waypoint_builder wb;
 	unsigned tot_steps(0); // unused
 	return wb.is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT2, check_uw);
+}
+
+
+void add_connect_waypoint_for_cobj(coll_obj &c) {
+
+	if (!use_waypoints) return;
+	waypoint_builder wb;
+	wb.add_one_cobj_wpt(c, 1);
 }
 
 

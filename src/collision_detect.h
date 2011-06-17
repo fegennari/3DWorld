@@ -154,14 +154,13 @@ public:
 };
 
 
-class coll_obj : public cube_t { // size = 240
+class coll_obj : public cube_t { // size = 244
 
 public:
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
 	char type, destroy, status, lighted;
-	int counter;
 	float radius, radius2, thickness, volume;
-	int id, platform_id, group_id;
+	int counter, id, platform_id, group_id, waypt_id;
 	short npoints;
 	unsigned char last_coll, coll_type;
 	bool fixed, is_billboard;
@@ -172,8 +171,8 @@ public:
 	set<int> shadow_depends;
 	lvmap lightmap;
 
-	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), counter(0), radius(0.0), radius2(0.0),
-		thickness(0.0), volume(0.0), id(-1), platform_id(-1), group_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0),
+	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), radius(0.0), radius2(0.0), thickness(0.0),
+		volume(0.0), counter(0), id(-1), platform_id(-1), group_id(-1), waypt_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0),
 		is_billboard(0), norm(all_zeros) {}
 	void init();
 	void clear_lightmap(int mode, unsigned keep=0, bool keep_depends=0);

@@ -21,6 +21,9 @@ extern vector<coll_obj> coll_objects;
 extern vector<portal> portals;
 
 
+void add_connect_waypoint_for_cobj(coll_obj &c);
+
+
 
 void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 
@@ -228,7 +231,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 				assert((size_t)index < cobjs.size());
 				indices.push_back(index);
 				volume -= cobjs[index].volume;
-				// add waypoint for cobjs[index]
+				add_connect_waypoint_for_cobj(cobjs[index]);
 			}
 			assert(volume >= -TOLERANCE); // usually > 0.0
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
