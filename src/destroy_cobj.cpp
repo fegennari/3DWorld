@@ -22,6 +22,7 @@ extern vector<portal> portals;
 
 
 void add_connect_waypoint_for_cobj(coll_obj &c);
+void remove_waypoint_for_cobj(coll_obj &c);
 
 
 
@@ -235,12 +236,9 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			}
 			assert(volume >= -TOLERANCE); // usually > 0.0
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
+			remove_waypoint_for_cobj(cobjs[i]);
 			cobjs[i].clear_internal_data(cobjs, indices, i);
 			to_remove.push_back(i);
-
-			if (cobjs[i].waypt_id >= 0) {
-				// update waypoints
-			}
 		}
 		new_cobjs.clear();
 	} // for k

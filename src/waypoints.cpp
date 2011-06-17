@@ -148,20 +148,15 @@ class waypoint_builder {
 		return check_cobj_placement(point(pos), coll_id, 1);
 	}
 
-	bool add_if_valid(point const &pos, int coll_id, bool connect) {
-		if (!is_waypoint_valid(pos, coll_id)) return 0;
+	int add_if_valid(point const &pos, int coll_id, bool connect) {
+		if (!is_waypoint_valid(pos, coll_id)) return -1;
+		unsigned const ix(add_new_waypoint(pos, coll_id, connect, connect, 0, 0));
 
 		if (coll_id >= 0) {
 			assert((unsigned)coll_id < coll_objects.size());
-			coll_objects[coll_id].waypt_id = waypoints.size();
+			coll_objects[coll_id].waypt_id = ix; // FIXME: what about polygons (quads) that have two waypoints?
 		}
-		if (connect) {
-			add_new_waypoint(pos, coll_id, 1, 1, 0, 0);
-		}
-		else {
-			waypoints.push_back(waypoint_t(pos, coll_id, 0));
-		}
-		return 1;
+		return ix;
 	}
 
 	void add_waypoint_rect(float x1, float y1, float x2, float y2, float z, int coll_id, bool connect) {
@@ -280,10 +275,13 @@ public:
 			vector<predef_obj> const &objs(obj_groups[i].get_predef_objs());
 
 			for (unsigned j = 0; j < objs.size(); ++j) {
-				waypoint_t w(objs[j].pos, -1, 0, 1);
-				w.item_group = i;
-				w.item_ix    = j;
-				waypoints.push_back(w);
+				int const ix(add_if_valid(objs[j].pos, -1, 0));
+				if (ix < 0) continue; // not valid
+				assert((unsigned)ix < waypoints.size());
+				waypoint_t &w(waypoints[ix]);
+				w.placed_item   = 1;
+				w.item_group    = i;
+				w.item_ix       = j;
 				has_item_placed = 1;
 			}
 		}
@@ -291,6 +289,7 @@ public:
 	}
 
 	unsigned add_new_waypoint(point const &pos, int coll_id, bool connect_in, bool connect_out, bool goal, bool temp) {
+		// FIXME: get from free list?
 		unsigned const ix(waypoints.size());
 		waypoints.push_back(waypoint_t(pos, coll_id, 0, 0, goal, temp));
 		if (connect_in ) connect_waypoints(0,  ix,    ix, ix+1, 0); // from existing waypoints to new waypoint
@@ -298,27 +297,50 @@ public:
 		return ix;
 	}
 
-	void disconnect_waypoint(unsigned ix) {
+	void remove_adj(waypt_adj_vect &adj, unsigned val, bool is_last) const { // must be found, may reorder adj
+		if (is_last) {
+			assert(!adj.empty() && adj.back() == val);
+		}
+		else {
+			bool found(0);
+
+			for (unsigned i = 0; i < adj.size(); ++i) {
+				if (adj[i] == val) {
+					adj[i] = adj.back();
+					found  = 1;
+					break;
+				}
+			}
+			assert(found);
+		}
+		adj.pop_back();
+	}
+
+	void disconnect_waypoint(unsigned ix, bool is_last) {
 		assert(ix < waypoints.size());
 		waypoint_t &w(waypoints[ix]);
 		
 		for (waypt_adj_vect::const_iterator i = w.prev_wpts.begin(); i != w.prev_wpts.end(); ++i) {
 			assert(*i < waypoints.size());
-			assert(!waypoints[*i].next_wpts.empty() && waypoints[*i].next_wpts.back() == ix);
-			waypoints[*i].next_wpts.pop_back();
+			remove_adj(waypoints[*i].next_wpts, ix, is_last);
 		}
 		for (waypt_adj_vect::const_iterator i = w.next_wpts.begin(); i != w.next_wpts.end(); ++i) {
 			assert(*i < waypoints.size());
-			assert(!waypoints[*i].prev_wpts.empty() && waypoints[*i].prev_wpts.back() == ix);
-			waypoints[*i].prev_wpts.pop_back();
+			remove_adj(waypoints[*i].prev_wpts, ix, is_last);
 		}
 		w.clear();
+	}
+
+	void remove_waypoint(unsigned const ix) {
+		disconnect_waypoint(ix, 0);
+		waypoints[ix].disabled = 1;
+		// FIXME: put ix on free list?
 	}
 
 	void remove_last_waypoint() {
 		assert(!waypoints.empty());
 		assert(waypoints.back().temp); // too strict?
-		disconnect_waypoint(waypoints.size() - 1);
+		disconnect_waypoint(waypoints.size()-1, 1);
 		waypoints.pop_back();
 	}
 
@@ -335,16 +357,17 @@ public:
 
 	void connect_waypoints(unsigned from_start, unsigned from_end, unsigned to_start, unsigned to_end, bool verbose) {
 		unsigned visible(0), cand_edges(0), num_edges(0), tot_steps(0);
-		unsigned const num_waypoints(waypoints.size());
 		int cindex(-1);
 		vector<pair<float, unsigned> > cands;
 		//sort(waypoints.begin(), waypoints.end());
 
 		for (unsigned i = from_start; i < from_end; ++i) {
+			if (waypoints[i].disabled) continue;
 			point const start(waypoints[i].pos);
 			cands.resize(0);
 
 			for (unsigned j = to_start; j < to_end; ++j) {
+				if (waypoints[j].disabled) continue;
 				point const end(waypoints[j].pos);
 
 				if (cindex >= 0) {
@@ -432,7 +455,7 @@ public:
 			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv); // point-line dist
 			if (d > 2.0*radius)                                  return 0; // path deviation too long
 			++tot_steps;
-			//waypoints.push_back(waypoint_t(cur, 1)); // testing
+			//waypoints.push_back(waypoint_t(cur)); // testing
 		}
 		return 1; // success
 	}
@@ -444,6 +467,7 @@ public:
 
 		// inefficient to iterate, might need acceleration structure
 		for (unsigned i = 0; i < waypoints.size(); ++i) {
+			if (waypoints[i].disabled) continue;
 			float const dist_sq(p2p_dist_sq(pos, waypoints[i].pos));
 
 			if (closest < 0 || dist_sq < closest_dsq) {
@@ -723,10 +747,20 @@ void add_connect_waypoint_for_cobj(coll_obj &c) {
 }
 
 
+void remove_waypoint_for_cobj(coll_obj &c) {
+
+	if (c.waypt_id < 0) return;
+	assert((unsigned)c.waypt_id < waypoints.size());
+	assert(waypoints[c.waypt_id].coll_id == c.id);
+	waypoint_builder wb;
+	wb.remove_waypoint(c.waypt_id);
+}
+
+
 void shift_waypoints(vector3d const &vd) {
 
 	for (unsigned i = 0; i < waypoints.size(); ++i) {
-		waypoints[i].pos += vd;
+		waypoints[i].pos += vd; // shifting disabled waypoints should be ok
 	}
 }
 
@@ -737,6 +771,7 @@ void draw_waypoints() {
 	pt_line_drawer pld;
 
 	for (vector<waypoint_t>::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
+		if (i->disabled) continue;
 		unsigned const wix(i - waypoints.begin());
 		if      (i->visited)     set_color(ORANGE);
 		else if (i->goal)        set_color(RED);

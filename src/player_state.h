@@ -211,6 +211,7 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 bool can_make_progress(point const &pos, point const &opos, bool check_uw);
 bool is_valid_path(point const &start, point const &end, bool check_uw);
 void add_connect_waypoint_for_cobj(coll_obj &c);
+void remove_waypoint_for_cobj(coll_obj &c);
 
 
 #endif // _PLAYER_STATE_H_

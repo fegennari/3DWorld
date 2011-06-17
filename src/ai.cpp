@@ -439,7 +439,8 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 			float const max_dist(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE)), max_dist_sq(max_dist*max_dist);
 
 			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
-				if (i != ignore_w) check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu, 0, max_dist_sq);
+				if (waypoints[i].disabled || i == ignore_w) continue;
+				check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu, 0, max_dist_sq);
 			}
 			if (curw < 0) find_optimal_waypoint(pos, oddatav, goal);
 		}
