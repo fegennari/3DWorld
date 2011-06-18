@@ -29,6 +29,7 @@ extern obj_type object_types[];
 
 
 
+// if cobj_ix is not NULL, it will be set if and only if the light is present and the result is false
 bool is_visible_to_light_cobj(point const &pos, int light, float radius, int cobj, int skip_dynamic, int *cobj_ix) { // slow...
 
 	int index;
@@ -41,7 +42,9 @@ bool is_visible_to_light_cobj(point const &pos, int light, float radius, int cob
 			return 0; // test collision objects
 		}
 	}
-	return is_visible_from_light(pos, lpos, 1+FAST_LIGHT_VIS); // test mesh
+	if (is_visible_from_light(pos, lpos, 1+FAST_LIGHT_VIS)) return 1; // test mesh
+	if (cobj_ix) *cobj_ix = -1;
+	return 0;
 }
 
 

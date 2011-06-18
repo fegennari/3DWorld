@@ -33,7 +33,7 @@ class grass_manager_t {
 		point p;
 		vector3d dir, n;
 		unsigned char c[3];
-		bool shadowed;
+		unsigned char shadowed;
 		float w;
 
 		grass_t() {} // optimization
@@ -147,7 +147,13 @@ public:
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
 	}
 
-	bool is_pt_shadowed(point const &pos, bool skip_dynamic) {
+	unsigned char get_shadow_bits(int cid) const {
+		if (cid < 0) return MESH_SHADOW;
+		assert((unsigned)cid < coll_objects.size());
+		return ((coll_objects[cid].status == COLL_DYNAMIC) ? DYNAMIC_SHADOW : OBJECT_SHADOW);
+	}
+
+	unsigned char is_pt_shadowed(point const &pos, bool skip_dynamic) {
 		int const light(get_light());
 
 		// determine if grass can be shadowed based on mesh shadow
@@ -164,11 +170,12 @@ public:
 		if (unshadowed) return 0; // no shadows on mesh, so no shadows on grass
 
 		if (last_cobj >= 0) { // check to see if last cobj still intersects
-			assert(last_cobj < (int)coll_objects.size());
+			assert((unsigned)last_cobj < coll_objects.size());
 			point lpos;
-			if (get_light_pos(lpos, light) && coll_objects[last_cobj].line_intersect(pos, lpos)) return 1;
+			if (get_light_pos(lpos, light) && coll_objects[last_cobj].line_intersect(pos, lpos)) return get_shadow_bits(last_cobj);
 		}
-		return !is_visible_to_light_cobj(pos, light, 0.0, -1, skip_dynamic, &last_cobj); // neither (off the mesh) or both (conflict)
+		if (is_visible_to_light_cobj(pos, light, 0.0, -1, skip_dynamic, &last_cobj)) return 0;
+		return get_shadow_bits(last_cobj);
 	}
 
 	void find_shadows() {
@@ -302,22 +309,24 @@ public:
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void update_shadows(int x, int y, bool skip_dynamic) {
+	void update_shadows(int x, int y, unsigned char check_shad_types) {
 		if (point_outside_mesh(x, y)) return;
 		unsigned start, end;
 		unsigned const ix(get_start_and_end(x, y, start, end));
 		if (start == end) return; // no grass at this location
 		//update_cobj_tree(); // ???
 		unsigned min_up(end), max_up(start);
+		bool const skip_dynamic((check_shad_types & DYNAMIC_SHADOW) == 0);
 
 		for (unsigned i = start; i < end; ++i) {
-			bool const shadowed(is_pt_shadowed(grass[i].p + grass[i].dir*0.5, skip_dynamic)); // per vertex shadows?
+			if (grass[i].shadowed & ~check_shad_types) continue; // already shadowed with a non-checked type
+			unsigned char const shadowed(is_pt_shadowed(grass[i].p + grass[i].dir*0.5, skip_dynamic)); // per vertex shadows?
 			
-			if (grass[i].shadowed != shadowed) {
-				grass[i].shadowed = shadowed;
+			if ((grass[i].shadowed != 0) != (shadowed != 0)) { // shadow nonzero-ness has changed, need to update
 				min_up = min(min_up, i);
 				max_up = max(max_up, i);
 			}
+			grass[i].shadowed = shadowed;
 		} // for i
 		if (min_up > max_up) return; // nothing updated
 		modified[ix] = 1;
@@ -434,10 +443,10 @@ public:
 			last_lpos  = lpos;
 		}
 #if 0
-		else { // check for dynamic shadows that need to be updated
+		else { // check for dynamic shadows that need to be updated - testing, not correct
 			for (int y = 0; y < MESH_Y_SIZE; ++y) {
 				for (int x = 0; x < MESH_X_SIZE; ++x) {
-					if (shadow_mask[light][y][x] & DYNAMIC_SHADOW) update_grass_shadows(x, y, 0);
+					if (shadow_mask[light][y][x] & DYNAMIC_SHADOW) update_grass_shadows(x, y, DYNAMIC_SHADOW); // not correct, need delta
 				}
 			}
 		}
@@ -545,8 +554,8 @@ void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool
 	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw);
 }
 
-void update_grass_shadows(int x, int y, bool skip_dynamic) {
-	if (!no_grass()) grass_manager.update_shadows(x, y, skip_dynamic);
+void update_grass_shadows(int x, int y, unsigned char check_shad_types) {
+	if (!no_grass()) grass_manager.update_shadows(x, y, check_shad_types);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {
