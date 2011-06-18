@@ -61,7 +61,7 @@ void ship_cube::draw(unsigned ndiv) const { // ndiv is unused
 void ship_sphere::draw(unsigned ndiv) const {
 
 	glEnable(GL_CULL_FACE);
-	draw_sphere_dlist(center, radius, ndiv, 0);
+	draw_sphere_dlist(pos, radius, ndiv, 0);
 	glDisable(GL_CULL_FACE);
 }
 
