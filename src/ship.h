@@ -386,15 +386,12 @@ public:
 	float get_s_area() const {return 2.0*(delta(0)*delta(1) + delta(0)*delta(2) + delta(1)*delta(2));}
 };
 
-class ship_sphere : public ship_coll_obj {
-
-	point center;
-	float radius;
+class ship_sphere : public sphere_t, public ship_coll_obj {
 
 public:
-	ship_sphere(point const &c=all_zeros, float r=0.0, float ds=1.0) : ship_coll_obj(ds), center(c), radius(r) {}
+	ship_sphere(point const &c=all_zeros, float r=0.0, float ds=1.0) : sphere_t(c, r), ship_coll_obj(ds) {}
 	ship_sphere* clone() const {return new ship_sphere(*this);}
-	void translate(point const &p) {center += p;}
+	void translate(point const &p) {pos += p;}
 	void draw(unsigned ndiv) const;
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
@@ -963,11 +960,9 @@ public:
 };
 
 
-class sobj_manager {
+class sobj_manager : public sphere_t {
 
 	int uobj_id, old_uobj_id, otype, owner;
-	float radius;
-	point pos;
 	string name;
 
 public:

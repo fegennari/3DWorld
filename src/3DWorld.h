@@ -326,6 +326,19 @@ struct triangle {
 };
 
 
+struct sphere_t {
+
+	point pos;
+	float radius;
+	
+	sphere_t(point const &p=all_zeros, float r=0.0) : pos(p), radius(r) {}
+	bool operator==(sphere_t const &s) const {return (pos == s.pos && radius == s.radius);}
+	bool operator!=(sphere_t const &s) const {return (pos != s.pos || radius != s.radius);}
+	point const &get_pos() const {return pos;}
+	float get_radius()     const {return radius;}
+};
+
+
 struct cube_t { // size = 24
 
 	float d[3][2]; // {x,y,z},{min,max}

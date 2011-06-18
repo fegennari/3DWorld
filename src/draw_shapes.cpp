@@ -57,18 +57,16 @@ extern obj_type object_types[];
 extern obj_group obj_groups[];
 
 
-class shadow_sphere {
+class shadow_sphere : public sphere_t {
 
 public:
 	char lighted, ctype;
 	int cid;
-	float radius;
-	point pos;
 
-	shadow_sphere() : lighted(0), ctype(COLL_CUBE), cid(-1), radius(0.0) {}
+	shadow_sphere() : lighted(0), ctype(COLL_CUBE), cid(-1) {}
 
 	shadow_sphere(point const &pos0, float radius0, int cid0, bool lighted0) :
-		lighted(lighted0), cid(cid0), radius(radius0), pos(pos0)
+		sphere_t(pos0, radius0), lighted(lighted0), cid(cid0)
 	{
 		if (cid < 0) {
 			ctype = COLL_SPHERE; // sphere is the default
@@ -1656,32 +1654,21 @@ void add_coll_shadow_objs() {
 }
 
 
-struct light_sphere {
-
-	point pos;
-	float radius;
-	
-	light_sphere(point const &p=all_zeros, float r=0.0) : pos(p), radius(r) {}
-	bool operator==(light_sphere const &ls) const {return (pos == ls.pos && radius == ls.radius);}
-	bool operator!=(light_sphere const &ls) const {return !operator==(ls);}
-};
-
-
 void init_subdiv_lighting() {
 
 	RESET_TIME;
-	static vector<light_sphere> last_lposes;
+	static vector<sphere_t> last_lposes;
 	static vector<colorRGBA> last_colors;
 	unsigned const nlights(enabled_lights.size()), nlights2(last_lposes.size());
 	max_lighted = (16ULL << (max(0U, (nlights-1))<<2));
 	assert(last_colors.size() == nlights2);
-	vector<light_sphere> lposes(nlights);
+	vector<sphere_t> lposes(nlights);
 	vector<colorRGBA> colors(nlights);
 	
 	for (unsigned L = 0; L < nlights; ++L) {
 		bool const dynamic(enabled_lights[L].is_dynamic()); // dynamic lights can move and change color
-		lposes[L] = (dynamic ? light_sphere() : light_sphere(enabled_lights[L].get_center(), enabled_lights[L].get_radius()));
-		colors[L] = (dynamic ? WHITE          : enabled_lights[L].get_color());
+		lposes[L] = (dynamic ? sphere_t() : sphere_t(enabled_lights[L].get_center(), enabled_lights[L].get_radius()));
+		colors[L] = (dynamic ? WHITE      : enabled_lights[L].get_color());
 	}
 	if (lposes != last_lposes || invalid_shadows == 1) { // clear the lightmap
 		unsigned keep_lights(0);

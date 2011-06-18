@@ -76,11 +76,8 @@ struct bubble : public basic_physics_obj { // size = 44
 
 struct particle_cloud : public basic_physics_obj { // size = 88
 
-	struct part {
-		point pos;
-		float radius;
+	struct part : public sphere_t {
 		bool status;
-		point const &get_pos() const {return pos;}
 	};
 	bool acc_smoke;
 	int source, damage_type;

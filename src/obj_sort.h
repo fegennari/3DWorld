@@ -10,12 +10,10 @@
 unsigned const LEFT_EDGE_BIT = 0x80000000U;
 
 
-struct cached_obj {
+struct cached_obj : public sphere_t {
 
 	free_obj *obj;
-	float radius;
 	unsigned flags;
-	point pos;
 
 	cached_obj() : obj(NULL) {}
 	cached_obj(free_obj *ptr) {set_obj(ptr);}

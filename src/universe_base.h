@@ -44,7 +44,7 @@ class uobject { // size = 44
 
 public:
 	float radius;
-	upos_point_type pos; // required for high precision universe coordinates
+	upos_point_type pos; // required for high precision universe coordinates (can't use a sphere_t)
 	char status;
 
 	virtual ~uobject() {}

@@ -142,7 +142,7 @@ bool ship_sphere::line_intersect(point const &lp1, point const &lp2, float &t, b
 
 	point ls_int;
 	vector3d const delta(lp2 - lp1);
-	if (!line_sphere_int(delta.get_norm(), lp1, center, radius, ls_int, 1)) return 0;
+	if (!line_sphere_int(delta.get_norm(), lp1, pos, radius, ls_int, 1)) return 0;
 		
 	if (calc_t) { // reverse engineer tmin from ls_int
 		float dmax(0.0);
@@ -159,25 +159,25 @@ bool ship_sphere::line_intersect(point const &lp1, point const &lp2, float &t, b
 
 bool ship_sphere::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
 
-	if (!dist_less_than(sc, center, (sr + radius))) return 0;
+	if (!dist_less_than(sc, pos, (sr + radius))) return 0;
 		
 	if (calc_int) {
-		norm  = (sc - center).get_norm();
-		p_int = center + norm*(sr + radius);
+		norm  = (sc - pos).get_norm();
+		p_int = pos + norm*(sr + radius);
 	}
 	return 1;
 }
 
 void ship_sphere::get_bounding_sphere(point &c, float &r) const {
 	
-	c = center;
+	c = pos;
 	r = radius;
 }
 
 void ship_sphere::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv,
 							bool player, bool test, free_obj const *const obj) const
 {
-	ushadow_sphere(center, radius, tpos, cur_radius, spos, ndiv, player, obj).draw_geom(tpos, test);
+	ushadow_sphere(pos, radius, tpos, cur_radius, spos, ndiv, player, obj).draw_geom(tpos, test);
 }
 
 
