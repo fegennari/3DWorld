@@ -147,7 +147,7 @@ public:
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
 	}
 
-	bool is_pt_shadowed(point const &pos) {
+	bool is_pt_shadowed(point const &pos, bool skip_dynamic) {
 		int const light(get_light());
 
 		// determine if grass can be shadowed based on mesh shadow
@@ -168,7 +168,7 @@ public:
 			point lpos;
 			if (get_light_pos(lpos, light) && coll_objects[last_cobj].line_intersect(pos, lpos)) return 1;
 		}
-		return !is_visible_to_light_cobj(pos, light, 0.0, -1, 1, &last_cobj); // neither (off the mesh) or both (conflict)
+		return !is_visible_to_light_cobj(pos, light, 0.0, -1, skip_dynamic, &last_cobj); // neither (off the mesh) or both (conflict)
 	}
 
 	void find_shadows() {
@@ -180,8 +180,7 @@ public:
 		update_cobj_tree();
 
 		for (unsigned i = 0; i < grass.size(); ++i) {
-			point const p1(grass[i].p), p2(p1 + grass[i].dir);
-			grass[i].shadowed = is_pt_shadowed((p1 + p2)*0.5); // per vertex shadows?
+			grass[i].shadowed = is_pt_shadowed(grass[i].p + grass[i].dir*0.5, 1); // per vertex shadows?
 		}
 		PRINT_TIME("Grass Find Shadows");
 	}
@@ -250,9 +249,9 @@ public:
 		assert(radius > 0.0);
 		float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
 		if ((pos.z - radius) > (mh + grass_length)) return 0.0; // above grass
-		if ((pos.z + radius) < mh) return 0.0; // below the mesh
+		if ((pos.z + radius) < mh)                  return 0.0; // below the mesh
 		float const height(pos.z - (mh + grass_length));
-		float const rad((height > 0.0) ? sqrt(radius*radius - height*height) : radius);
+		float const rad((height > 0.0) ? sqrt(max(1.0E-6f, (radius*radius - height*height))) : radius);
 		x1 = get_xpos(pos.x - rad);
 		x2 = get_xpos(pos.x + rad);
 		y1 = get_ypos(pos.y - rad);
@@ -301,6 +300,28 @@ public:
 		assert(ix+1 < mesh_to_grass_map.size());
 		unsigned const num_grass(mesh_to_grass_map[ix+1] - mesh_to_grass_map[ix]);
 		return ((float)num_grass)/((float)grass_density);
+	}
+
+	void update_shadows(int x, int y, bool skip_dynamic) {
+		if (point_outside_mesh(x, y)) return;
+		unsigned start, end;
+		unsigned const ix(get_start_and_end(x, y, start, end));
+		if (start == end) return; // no grass at this location
+		//update_cobj_tree(); // ???
+		unsigned min_up(end), max_up(start);
+
+		for (unsigned i = start; i < end; ++i) {
+			bool const shadowed(is_pt_shadowed(grass[i].p + grass[i].dir*0.5, skip_dynamic)); // per vertex shadows?
+			
+			if (grass[i].shadowed != shadowed) {
+				grass[i].shadowed = shadowed;
+				min_up = min(min_up, i);
+				max_up = max(max_up, i);
+			}
+		} // for i
+		if (min_up > max_up) return; // nothing updated
+		modified[ix] = 1;
+		if (vbo_valid) upload_data_to_vbo(min_up, max_up+1, 0);
 	}
 
 	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw) {
@@ -412,6 +433,15 @@ public:
 			last_light = light;
 			last_lpos  = lpos;
 		}
+#if 0
+		else { // check for dynamic shadows that need to be updated
+			for (int y = 0; y < MESH_Y_SIZE; ++y) {
+				for (int x = 0; x < MESH_X_SIZE; ++x) {
+					if (shadow_mask[light][y][x] & DYNAMIC_SHADOW) update_grass_shadows(x, y, 0);
+				}
+			}
+		}
+#endif
 		check_for_updates();
 
 		// check for dynamic light sources
@@ -513,6 +543,10 @@ void draw_grass() {
 
 void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw) {
 	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw);
+}
+
+void update_grass_shadows(int x, int y, bool skip_dynamic) {
+	if (!no_grass()) grass_manager.update_shadows(x, y, skip_dynamic);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {
