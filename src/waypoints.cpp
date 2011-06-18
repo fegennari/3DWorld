@@ -18,7 +18,7 @@ float const STEP_SIZE_MULT     = 0.25; // waypoint connectivity algorithm (relat
 float const STEP_SIZE_MULT2    = 0.50; // reachability tests (relative to smiley radius)
 
 bool has_user_placed(0), has_item_placed(0), has_wpt_goal(0);
-vector<waypoint_t> waypoints;
+waypoint_vector waypoints;
 
 extern bool use_waypoints;
 extern int DISABLE_WATER, camera_change, frame_counter, num_smileys, num_groups;
@@ -100,6 +100,48 @@ void waypoint_t::clear() {
 }
 
 
+wpt_ix_t waypoint_vector::add(waypoint_t const &w) {
+
+	wpt_ix_t ix(0);
+
+	if (!free_list.empty()) {
+		// Note on free list: Some cobjs (quad polygons) can have more than one waypoint;
+		// these should be allocated as adjacent indexes and always be removed together,
+		// thus ensuring they are put on the free list together.
+		// When the new waypoint(s) are allocated there should be the same number in a shift/move operation,
+		// and the free list should contain the recently removed sequential indices for adding.
+		// When a cobj is partially destroyed, a polygon will be split into triangles that have one waypoint each,
+		// and there is no requirement for multiple sequential indexes.
+		// The only case where this logic can fail is if a polygon that is missing a waypoint is moved,
+		// but that should be rare and the only problem will be a waypoint that never gets removed/reused.
+		ix = free_list.back();
+		free_list.pop_back();
+		assert(ix < size());
+		operator[](ix) = w;
+	}
+	else {
+		ix = waypoints.size();
+		push_back(w);
+	}
+	operator[](ix).disabled = 0;
+	return ix;
+}
+
+
+void waypoint_vector::remove(wpt_ix_t ix) {
+
+	assert(ix < size());
+	
+	if (ix+1 == size()) { // last element
+		pop_back();
+		return;
+	}
+	operator[](ix).disabled = 1;
+	operator[](ix).coll_id  = -1;
+	free_list.push_back(ix);
+}
+
+
 wpt_goal::wpt_goal(int m, unsigned w, point const &p) : mode(m), wpt(w), pos(p) {
 
 	switch (mode) {
@@ -154,7 +196,9 @@ class waypoint_builder {
 
 		if (coll_id >= 0) {
 			assert((unsigned)coll_id < coll_objects.size());
-			coll_objects[coll_id].waypt_id = ix; // FIXME: what about polygons (quads) that have two waypoints?
+			// must be the same or uninitialized - if a cobj has more than one waypoint then they should be sequential
+			assert(coll_objects[coll_id].waypt_id < 0 || coll_objects[coll_id].waypt_id+1 == ix);
+			coll_objects[coll_id].waypt_id = ix; // the last waypoint for this cobj
 		}
 		return ix;
 	}
@@ -289,15 +333,15 @@ public:
 	}
 
 	unsigned add_new_waypoint(point const &pos, int coll_id, bool connect_in, bool connect_out, bool goal, bool temp) {
-		// FIXME: get from free list?
-		unsigned const ix(waypoints.size());
-		waypoints.push_back(waypoint_t(pos, coll_id, 0, 0, goal, temp));
+		unsigned const ix(waypoints.add(waypoint_t(pos, coll_id, 0, 0, goal, temp)));
 		if (connect_in ) connect_waypoints(0,  ix,    ix, ix+1, 0); // from existing waypoints to new waypoint
 		if (connect_out) connect_waypoints(ix, ix+1,  0,  ix,   0); // from new waypoint to existing waypoints
 		return ix;
 	}
 
 	void remove_adj(waypt_adj_vect &adj, unsigned val, bool is_last) const { // must be found, may reorder adj
+		assert(val < waypoints.size());
+
 		if (is_last) {
 			assert(!adj.empty() && adj.back() == val);
 		}
@@ -332,9 +376,10 @@ public:
 	}
 
 	void remove_waypoint(unsigned const ix) {
+		assert(ix < waypoints.size());
+		assert(!waypoints[ix].disabled);
 		disconnect_waypoint(ix, 0);
-		waypoints[ix].disabled = 1;
-		// FIXME: put ix on free list?
+		waypoints.remove(ix);
 	}
 
 	void remove_last_waypoint() {
@@ -342,6 +387,19 @@ public:
 		assert(waypoints.back().temp); // too strict?
 		disconnect_waypoint(waypoints.size()-1, 1);
 		waypoints.pop_back();
+	}
+
+	void remove_cobj_waypoint(coll_obj const &c) {
+		int ix(c.waypt_id);
+		assert(ix >= 0 && (unsigned)ix < waypoints.size());
+		assert(waypoints[ix].coll_id == c.id);
+		remove_waypoint(ix);
+
+		// look for additional waypoints attached to this cobj
+		for (--ix; ix >= 0; --ix) {
+			if (waypoints[ix].coll_id != c.id) break;
+			remove_waypoint(ix);
+		}
 	}
 
 	void add_edge(unsigned from, unsigned to) {
@@ -749,11 +807,10 @@ void add_connect_waypoint_for_cobj(coll_obj &c) {
 
 void remove_waypoint_for_cobj(coll_obj &c) {
 
-	if (c.waypt_id < 0) return;
-	assert((unsigned)c.waypt_id < waypoints.size());
-	assert(waypoints[c.waypt_id].coll_id == c.id);
-	waypoint_builder wb;
-	wb.remove_waypoint(c.waypt_id);
+	if (c.waypt_id >= 0) {
+		waypoint_builder wb;
+		wb.remove_cobj_waypoint(c);
+	}
 }
 
 
@@ -770,7 +827,7 @@ void draw_waypoints() {
 	if (!SHOW_WAYPOINTS) return;
 	pt_line_drawer pld;
 
-	for (vector<waypoint_t>::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
+	for (waypoint_vector::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
 		if (i->disabled) continue;
 		unsigned const wix(i - waypoints.begin());
 		if      (i->visited)     set_color(ORANGE);

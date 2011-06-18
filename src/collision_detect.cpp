@@ -668,23 +668,24 @@ int remove_coll_object(int index, bool reset_draw) {
 
 	if (index < 0) return 0;
 	assert((size_t)index < coll_objects.size());
-	int const status(coll_objects[index].status);
+	coll_obj &c(coll_objects[index]);
 
-	if (status == COLL_UNUSED) {
+	if (c.status == COLL_UNUSED) {
 		assert(REMOVE_ALL_COLL);
 		return 0;
 	}
-	if (status == COLL_FREED) return 0;
-	if (reset_draw) coll_objects[index].cp.draw = 0;
-	coll_objects[index].status = COLL_FREED;
+	if (c.status == COLL_FREED) return 0;
+	if (reset_draw) c.cp.draw = 0;
+	c.status   = COLL_FREED;
+	c.waypt_id = -1; // is this necessary?
 	
-	if (status == COLL_STATIC) {
+	if (c.status == COLL_STATIC) {
 		//free_index(index); // can't do this here - object's collision id needs to be held until purge
 		++cobjs_removed;
 		return 0;
 	}
 	int x1, y1, x2, y2, cb;
-	get_params(x1, y1, x2, y2, cb, coll_objects[index].d, 0);
+	get_params(x1, y1, x2, y2, cb, c.d, 0);
 
 	for (int i = y1-cb; i <= y2+cb; ++i) {
 		for (int j = x1-cb; j <= x2+cb; ++j) {

@@ -37,7 +37,7 @@ extern obj_type object_types[];
 extern player_state *sstates;
 extern team_info *teaminfo;
 extern vector<string> avail_smiley_names;
-extern vector<waypoint_t> waypoints;
+extern waypoint_vector waypoints;
 
 
 

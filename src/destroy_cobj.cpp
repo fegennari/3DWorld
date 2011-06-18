@@ -225,6 +225,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			if (no_new_cubes) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
 			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
+			remove_waypoint_for_cobj(cobjs[i]);
 			indices.clear();
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
@@ -236,9 +237,9 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			}
 			assert(volume >= -TOLERANCE); // usually > 0.0
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
-			remove_waypoint_for_cobj(cobjs[i]);
 			cobjs[i].clear_internal_data(cobjs, indices, i);
 			to_remove.push_back(i);
+			// FIXME: adjust lightmap pflow value so that smoke can flow through the hole?
 		}
 		new_cobjs.clear();
 	} // for k

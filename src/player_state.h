@@ -60,6 +60,16 @@ struct waypoint_t {
 };
 
 
+class waypoint_vector : public vector<waypoint_t> {
+
+	vector<wpt_ix_t> free_list;
+
+public:
+	wpt_ix_t add(waypoint_t const &w);
+	void remove(wpt_ix_t ix);
+};
+
+
 struct wpt_goal {
 
 	int mode; // 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt index, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
