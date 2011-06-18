@@ -5,12 +5,11 @@
 #define _DYNAMIC_PARTICLE_H_
 
 
-class dynamic_particle { // size = 60
+class dynamic_particle : public sphere_t { // size = 60
 
 	bool moves, shadows, lighted, collides, chdir, gravity;
 	int tid, cid;
-	float radius, intensity, bwidth;
-	point pos;
+	float intensity, bwidth;
 	vector3d velocity;
 	colorRGBA color;
 
@@ -28,7 +27,6 @@ public:
 	void add_stencil_shadows(point const &lpos, int &inverts) const;
 	void add_cobj();
 	void remove_cobj();
-	point const &get_pos() const {return pos;}
 };
 
 

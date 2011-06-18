@@ -29,9 +29,9 @@ extern obj_type object_types[];
 // ************ dynamic_particle ************
 
 
-dynamic_particle::dynamic_particle() : moves(1), shadows(1), lighted(1), collides(1), chdir(0), gravity(0),
-		tid(-1), cid(-1), radius(rand_uniform(0.03, 0.07)), intensity(rand_uniform(0.6, 1.3)*0.2*XY_SCENE_SIZE),
-		bwidth(1.0), pos(all_zeros), velocity(signed_rand_vector(rand_uniform(0.6, 3.0)))
+dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(0.03, 0.07)), moves(1), shadows(1), lighted(1),
+	collides(1), chdir(0), gravity(0), tid(-1), cid(-1), intensity(rand_uniform(0.6, 1.3)*0.2*XY_SCENE_SIZE),
+	bwidth(1.0), velocity(signed_rand_vector(rand_uniform(0.6, 3.0)))
 {
 	//radius = 24.0*HALF_DXY*intensity*intensity;
 	colorRGBA const colors[] = {WHITE, RED, GREEN, BLUE, YELLOW};
@@ -42,8 +42,8 @@ dynamic_particle::dynamic_particle() : moves(1), shadows(1), lighted(1), collide
 
 dynamic_particle::dynamic_particle(point const &p, float r, vector3d const &v, colorRGBA const &c, float i,
 		float bw, int t, bool m, bool s, bool l, bool coll, bool cd, bool g)
-		: moves(m), shadows(s), lighted(l), collides(coll), chdir(cd), gravity(g), tid(t), cid(-1), radius(r),
-		intensity(i), bwidth(bw), pos(p), velocity(v), color(c)
+		: sphere_t(p, r), moves(m), shadows(s), lighted(l), collides(coll), chdir(cd), gravity(g),
+		tid(t), cid(-1), intensity(i), bwidth(bw), velocity(v), color(c)
 {
 	if (pos == all_zeros) gen_pos();
 }

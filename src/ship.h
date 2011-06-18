@@ -970,8 +970,6 @@ public:
 	void clear() {uobj_id = old_uobj_id = otype = -1; owner = NO_OWNER; radius = 0.0; pos = all_zeros;}
 	void move_by(point const &pos_) {if (is_valid()) pos += pos_;}
 	bool is_valid()    const {return (uobj_id != -1);}
-	point get_pos()    const {return pos;}
-	float get_radius() const {return radius;}
 	int get_owner()    const {return owner;}
 	bool is_cur_obj(int uid) const {return (uobj_id != -1 && uid == uobj_id);}
 	void set_object(uobject const *obj);
