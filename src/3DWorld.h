@@ -1060,6 +1060,9 @@ void update_sun_and_moon();
 // function prototypes - shadows
 void add_cobj_shadows(char light_sources);
 int  camera_shadow(point const &camera);
+int  get_shape_shadow_bb(const point *points, int npoints, int l, int quality, point const &lpos,
+	int &xmin, int &ymin, int &xmax, int &ymax, int &ret_val, unsigned char stype);
+void get_sphere_points(point const &pos, float radius, point pts[8]);
 int  enable_shadow_envelope(point const &pos, float radius, char light_sources, int is_dynamic);
 void disable_shadow_envelope(char light_sources);
 int  sphere_shadow2(point const &pos, float radius, char light_sources, int is_dynamic, int quality);

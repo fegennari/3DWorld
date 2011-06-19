@@ -10,6 +10,9 @@
 #include "gl_ext_arb.h"
 
 
+#define MOD_GEOM   0x01
+#define MOD_SHADOW 0x02
+
 bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
@@ -22,6 +25,7 @@ extern vector3d wind;
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
 extern vector<light_source> dl_sources;
+extern vector<shadow_sphere> shadow_objs;
 
 
 bool snow_enabled();
@@ -43,7 +47,8 @@ class grass_manager_t {
 
 	vector<grass_t> grass;
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
-	vector<unsigned char> modified; // set, but unused
+	vector<unsigned char> modified; // only used for shadows
+	vector<vector<unsigned> > sbins;
 	unsigned vbo;
 	bool vbo_valid, shadows_valid, data_valid;
 	int last_cobj;
@@ -309,27 +314,75 @@ public:
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void update_shadows(int x, int y, unsigned char check_shad_types) {
+	void proc_dynamic_shadows(int light) {
+		//RESET_TIME;
+		point lpos;
+		if (!get_light_pos(lpos, light)) return;
+		sbins.resize(XY_MULT_SIZE); // move into constructor?
+		
+		for (unsigned i = 0; i < shadow_objs.size(); ++i) {
+			if (shadow_objs[i].radius < 2*LARGE_OBJ_RAD) continue; // for efficiency
+			vector3d const dir((shadow_objs[i].pos - lpos).get_norm());
+			point pts[8];
+			get_sphere_points(shadow_objs[i].pos, shadow_objs[i].radius, pts);
+			int x1, y1, x2, y2, ret_val;
+			get_shape_shadow_bb(pts, 8, light, 1, lpos, x1, y1, x2, y2, ret_val, DYNAMIC_SHADOW);
+
+			for (int y = y1; y <= y2; ++y) {
+				for (int x = x1; x <= x2; ++x) {
+					assert(!point_outside_mesh(x, y));
+					sbins[y*MESH_X_SIZE + x].push_back(i);
+				}
+			}
+		}
+		for (int y = 0; y < MESH_Y_SIZE; ++y) { // check for dynamic shadows that need to be updated
+			for (int x = 0; x < MESH_X_SIZE; ++x) {
+				unsigned const ix(y*MESH_X_SIZE + x);
+				bool const mod((modified[ix] & MOD_SHADOW) != 0);
+				modified[ix] &= ~MOD_SHADOW;
+				// check camera view frustum?
+				if (mod || !sbins[ix].empty()) update_shadows(x, y, DYNAMIC_SHADOW, lpos, &sbins[ix]);
+				sbins[ix].resize(0); // clear
+			}
+		}
+		//PRINT_TIME("Grass Dynamic Shadows");
+	}
+
+	void update_shadows(int x, int y, unsigned char shad_types, point const &lpos, vector<unsigned> const *const sixs=0) {
 		if (point_outside_mesh(x, y)) return;
 		unsigned start, end;
 		unsigned const ix(get_start_and_end(x, y, start, end));
 		if (start == end) return; // no grass at this location
 		//update_cobj_tree(); // ???
 		unsigned min_up(end), max_up(start);
-		bool const skip_dynamic((check_shad_types & DYNAMIC_SHADOW) == 0);
+		bool const skip_dynamic((shad_types & DYNAMIC_SHADOW) == 0);
 
 		for (unsigned i = start; i < end; ++i) {
-			if (grass[i].shadowed & ~check_shad_types) continue; // already shadowed with a non-checked type
-			unsigned char const shadowed(is_pt_shadowed(grass[i].p + grass[i].dir*0.5, skip_dynamic)); // per vertex shadows?
+			grass_t &g(grass[i]);
+			unsigned char orig_shadowed(g.shadowed);
+			g.shadowed &= ~shad_types; // unset these bits since they are now invalid
+			if (g.shadowed) continue; // already shadowed with a non-checked type
+			point const pos(g.p + g.dir*0.5);
+
+			if (sixs) {
+				for (vector<unsigned>::const_iterator j = sixs->begin(); j != sixs->end(); ++j) {				
+					if (shadow_objs[*j].line_intersect(lpos, pos)) {
+						g.shadowed |= shad_types;
+						break;
+					}
+				}
+			}
+			else {
+				g.shadowed = is_pt_shadowed(pos, skip_dynamic); // per vertex shadows?
+			}
+			if (g.shadowed & shad_types) modified[ix] |= MOD_SHADOW;
 			
-			if ((grass[i].shadowed != 0) != (shadowed != 0)) { // shadow nonzero-ness has changed, need to update
+			if ((g.shadowed != 0) != (orig_shadowed != 0)) { // shadow nonzero-ness has changed, need to update
 				min_up = min(min_up, i);
 				max_up = max(max_up, i);
 			}
-			grass[i].shadowed = shadowed;
 		} // for i
 		if (min_up > max_up) return; // nothing updated
-		modified[ix] = 1;
 		if (vbo_valid) upload_data_to_vbo(min_up, max_up+1, 0);
 	}
 
@@ -404,7 +457,7 @@ public:
 					}
 				} // for i
 				if (min_up > max_up) continue; // nothing updated
-				modified[ix] = 1; // usually few duplicates each frame, except for cluster grenade explosions
+				modified[ix] |= MOD_GEOM; // usually few duplicates each frame, except for cluster grenade explosions
 				if (vbo_valid) upload_data_to_vbo(min_up, max_up+1, 0);
 				//data_valid = 0;
 			} // for x
@@ -442,15 +495,9 @@ public:
 			last_light = light;
 			last_lpos  = lpos;
 		}
-#if 0
-		else { // check for dynamic shadows that need to be updated - testing, not correct
-			for (int y = 0; y < MESH_Y_SIZE; ++y) {
-				for (int x = 0; x < MESH_X_SIZE; ++x) {
-					if (shadow_mask[light][y][x] & DYNAMIC_SHADOW) update_grass_shadows(x, y, DYNAMIC_SHADOW); // not correct, need delta
-				}
-			}
+		else if (!(display_mode & 0x10)) {
+			proc_dynamic_shadows(light);
 		}
-#endif
 		check_for_updates();
 
 		// check for dynamic light sources
@@ -555,7 +602,7 @@ void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool
 }
 
 void update_grass_shadows(int x, int y, unsigned char check_shad_types) {
-	if (!no_grass()) grass_manager.update_shadows(x, y, check_shad_types);
+	if (!no_grass()) grass_manager.update_shadows(x, y, check_shad_types, get_light_pos());
 }
 
 bool place_obj_on_grass(point &pos, float radius) {
