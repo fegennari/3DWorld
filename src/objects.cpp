@@ -15,6 +15,7 @@ float const NDIV_SCALE = 120.0;
 
 extern int draw_model, display_mode, destroy_thresh, do_zoom, xoff2, yoff2;
 extern float temperature, tfticks;
+extern unsigned ALL_LT[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
 extern texture textures[];
@@ -109,7 +110,8 @@ void coll_obj::clear_lightmap_if_lighted_eq(int shadowed, int partial) {
 		if ((tag & (QD_TAG_GLOBAL | QD_TAG_DLIST | QD_TAG_TEXTURE)) ||
 			( shadowed && test_all_light_val(lv, 1)) ||
 			(!shadowed && test_all_light_val(lv, 2)) ||
-			( partial  && test_all_light_val(lv, 3)))
+			( partial  && test_all_light_val(lv, 3)) ||
+			lv == ALL_LT[4])
 		{
 			clear_lightmap_entry(temp, 0, 0);
 			lightmap.erase(temp);
