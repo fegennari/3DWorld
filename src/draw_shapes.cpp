@@ -57,40 +57,35 @@ extern obj_type object_types[];
 extern obj_group obj_groups[];
 
 
-class shadow_sphere : public sphere_t {
-
-public:
-	char lighted, ctype;
-	int cid;
-
-	shadow_sphere() : lighted(0), ctype(COLL_CUBE), cid(-1) {}
-
-	shadow_sphere(point const &pos0, float radius0, int cid0, bool lighted0) :
-		sphere_t(pos0, radius0), lighted(lighted0), cid(cid0)
-	{
-		if (cid < 0) {
-			ctype = COLL_SPHERE; // sphere is the default
-		}
-		else {
-			assert(size_t(cid) < coll_objects.size());
-			ctype = coll_objects[cid].type;
-		}
-	}
-	inline bool line_intersect(point const &p1, point const &p2) const {
-		if (!line_sphere_intersect(p1, p2, pos, radius)) return 0;
-		if (ctype == COLL_SPHERE) return 1;
-		assert(cid >= 0 && cid < (int)coll_objects.size());
-		return coll_objects[cid].line_intersect(p1, p2);
-	}
-	inline bool test_volume(point const *const pts, unsigned npts, point const &lpos) const {
-		if (cid < 0) return 1;
-		coll_obj const &c(coll_objects[cid]);
-		if (ctype == COLL_SPHERE && (pos != c.points[0] || radius != c.radius)) return 1; // camera sphere != pos
-		return !c.cobj_plane_side_test(pts, npts, lpos);
-	}
-};
-
 vector<shadow_sphere> shadow_objs;
+
+
+shadow_sphere::shadow_sphere(point const &pos0, float radius0, int cid0, bool lighted0) :
+	sphere_t(pos0, radius0), lighted(lighted0), cid(cid0)
+{
+	if (cid < 0) {
+		ctype = COLL_SPHERE; // sphere is the default
+	}
+	else {
+		assert(size_t(cid) < coll_objects.size());
+		ctype = coll_objects[cid].type;
+	}
+}
+
+
+bool shadow_sphere::line_intersect_cobj(point const &p1, point const &p2) const {
+
+	assert(cid >= 0 && cid < (int)coll_objects.size());
+	return coll_objects[cid].line_intersect(p1, p2);
+}
+
+
+bool shadow_sphere::test_volume_cobj(point const *const pts, unsigned npts, point const &lpos) const {
+
+	coll_obj const &c(coll_objects[cid]);
+	if (ctype == COLL_SPHERE && (pos != c.points[0] || radius != c.radius)) return 1; // camera sphere != pos
+	return !c.cobj_plane_side_test(pts, npts, lpos);
+}
 
 
 void init_draw_stats() {
