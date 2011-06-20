@@ -322,16 +322,21 @@ public:
 		last_cobj = -1;
 		
 		for (unsigned i = 0; i < shadow_objs.size(); ++i) {
-			if (shadow_objs[i].radius < 2*LARGE_OBJ_RAD) continue; // for efficiency
-			vector3d const dir((shadow_objs[i].pos - lpos).get_norm());
+			float const radius(shadow_objs[i].radius);
+			if (radius < 2*LARGE_OBJ_RAD) continue; // for efficiency
+			point const &pos(shadow_objs[i].pos);
+			vector3d const dir((pos - lpos).get_norm());
 			point pts[8];
-			get_sphere_points(shadow_objs[i].pos, shadow_objs[i].radius, pts);
+			get_sphere_points(pos, radius, pts);
 			int x1, y1, x2, y2, ret_val;
 			get_shape_shadow_bb(pts, 8, light, 1, lpos, x1, y1, x2, y2, ret_val, DYNAMIC_SHADOW);
 
 			for (int y = y1; y <= y2; ++y) {
 				for (int x = x1; x <= x2; ++x) {
 					assert(!point_outside_mesh(x, y));
+					point const mesh_pos(point(get_xval(x), get_yval(y), mesh_height[y][x]));
+					if (!line_sphere_intersect(lpos, mesh_pos, pos, (radius + HALF_DXY))) continue; // only helps slightly
+					if (!camera_pdu.sphere_visible_test(mesh_pos, HALF_DXY))              continue; // only helps slightly
 					sbins[y*MESH_X_SIZE + x].push_back(i);
 				}
 			}
