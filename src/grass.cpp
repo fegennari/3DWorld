@@ -319,6 +319,7 @@ public:
 		point lpos;
 		if (!get_light_pos(lpos, light)) return;
 		sbins.resize(XY_MULT_SIZE); // move into constructor?
+		last_cobj = -1;
 		
 		for (unsigned i = 0; i < shadow_objs.size(); ++i) {
 			if (shadow_objs[i].radius < 2*LARGE_OBJ_RAD) continue; // for efficiency
@@ -345,6 +346,7 @@ public:
 				sbins[ix].resize(0); // clear
 			}
 		}
+		last_cobj = -1;
 		//PRINT_TIME("Grass Dynamic Shadows");
 	}
 
@@ -353,7 +355,8 @@ public:
 		unsigned start, end;
 		unsigned const ix(get_start_and_end(x, y, start, end));
 		if (start == end) return; // no grass at this location
-		//update_cobj_tree(); // ???
+		bool const REBUILD_TREE = 0;
+		if (REBUILD_TREE) update_cobj_tree();
 		unsigned min_up(end), max_up(start);
 		bool const skip_dynamic((shad_types & DYNAMIC_SHADOW) == 0);
 

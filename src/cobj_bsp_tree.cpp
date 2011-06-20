@@ -9,6 +9,8 @@
 bool const BUILD_COBJ_TREE = 1;
 
 
+bool cobj_tree_valid(0);
+
 extern int display_mode, frame_counter;
 extern vector<coll_obj> coll_objects;
 
@@ -268,7 +270,10 @@ cobj_tree_type &get_tree(bool dynamic) {
 }
 
 void build_cobj_tree(bool dynamic) {
-	if (BUILD_COBJ_TREE) get_tree(dynamic).add_cobjs(!dynamic);
+	if (BUILD_COBJ_TREE) {
+		get_tree(dynamic).add_cobjs(!dynamic);
+		cobj_tree_valid = 1;
+	}
 }
 
 void update_cobj_tree(bool dynamic) {
