@@ -334,7 +334,7 @@ int enable_shadow_envelope(point const &pos, float radius, char light_sources, i
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid(light_sources, l, lpos)) continue;
 		//if (!is_visible_from_light(pos, lpos, 1)) continue;
-		get_sphere_points(pos, radius, pts, 8, (pos - lpos).get_norm());
+		get_sphere_points(pos, radius, pts, 8, (pos - lpos));
 		shad_env &se(s_env[l]);
 		se.enabled = get_shape_shadow_bb(pts, 8, l, 1, lpos, se.x1, se.y1, se.x2, se.y2, ret_val, SHADOW_TYPE);
 
@@ -379,7 +379,7 @@ int sphere_shadow(point const &pos, float radius, char light_sources, int is_dyn
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid(light_sources, l, lpos)) continue;
 		if (!is_visible_from_light(pos, lpos, 1)) continue;
-		get_sphere_points(pos, radius, pts, 8, (pos - lpos).get_norm());
+		get_sphere_points(pos, radius, pts, 8, (pos - lpos));
 		if (!get_shape_shadow_bb(pts, 8, l, quality, lpos, xmin, ymin, xmax, ymax, ret_val, SHADOW_TYPE)) continue;
 		if (is_dynamic) dshadow_lights |= (1 << l);
 
