@@ -740,7 +740,7 @@ void draw_group(obj_group &objg) {
 			case ROCK:
 				color2 *= obj.orientation.y;
 				if (do_texture) tcolor *= obj.orientation.y;
-				draw_sized_point(obj, tradius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, is_shadowed);
+				draw_sized_point(obj, tradius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, is_shadowed, (type == DIRT || type == ROCK));
 				break;
 
 			case FRAGMENT: // draw_fragment()?
@@ -868,7 +868,7 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	// draw as a sphere
 	if (is_chunky) {
 		assert(!tail);
-		vector3d const &v(obj.orientation);
+		vector3d const v(obj.orientation.get_norm());
 		int const ndiv(max(3, int(3 + 1.5*(v.x + v.y + v.z))));
 		translate_to(pos);
 		vector3d const scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
