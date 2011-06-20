@@ -30,7 +30,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 
 	assert(damage >= 0.0);
 	if (damage < 100.0) return;
-	float const r((big ? 4.0 : 1.0)*sqrt(damage)/(rand_uniform(600.0, 750.0)));
+	float const r((big ? 4.0 : 1.0)*sqrt(damage)/650.0);
 	vector3d cdir;
 	vector<color_tid_vol> cts;
 	int const dmin((damage > 800.0) ? DESTROYABLE : ((damage > 200.0) ? SHATTERABLE : EXPLODEABLE));
@@ -188,6 +188,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	csg_cube const cube(x1, x2, y1, y2, z1, z2);
 	point center(cube.get_cube_center());
 	if (cube.is_zero_area()) return 0;
+	float const clip_cube_colume(cube.get_volume());
 	vector<int> indices, to_remove;
 	vector<coll_obj> new_cobjs;
 	vector<int> cvals;
@@ -219,9 +220,15 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
 		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
 		float volume(cobjs[i].volume);
+		float const min_volume(0.01*min(volume, clip_cube_colume));
+		float const int_volume(cube2.get_overlap_volume(cube));
 		bool no_new_cubes(shatter || volume < TOLERANCE);
 
-		if (!csg_obj || subtract_cobj(new_cobjs, cube, cobjs[i]) || (shatter && is_cylinder)) {
+		if (is_cube && !shatter && int_volume < min_volume) { // don't remove tiny bits from cobjs
+			cube.unset_intersecting_edge_flags(cobjs[i]);
+			continue;
+		}
+		if (!csg_obj || (shatter && is_cylinder) || subtract_cobj(new_cobjs, cube, cobjs[i])) {
 			if (no_new_cubes) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
 			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
@@ -231,20 +238,26 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
 				assert((size_t)index < cobjs.size());
+				
+				if (is_cube && cobjs[index].volume < min_volume) { // don't create tiny pieces of cobjs
+					cube.unset_intersecting_edge_flags(cobjs[i]);
+					continue;
+				}
 				indices.push_back(index);
 				volume -= cobjs[index].volume;
-				add_connect_waypoint_for_cobj(cobjs[index]);
+				add_connect_waypoint_for_cobj(cobjs[index]); // *** slow ***
 			}
 			assert(volume >= -TOLERANCE); // usually > 0.0
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
 			cobjs[i].clear_internal_data(cobjs, indices, i);
 			to_remove.push_back(i);
 			// FIXME: adjust lightmap pflow value so that smoke can flow through the hole?
+			// FIXME: use update_grass_shadows()
 		}
 		new_cobjs.clear();
 	} // for k
 	if (!to_remove.empty()) {
-		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // *** FIXME: what about updating (removing) mesh shadows? ***
+		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // FIXME: what about updating (removing) mesh shadows?
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) {
 			remove_coll_object(to_remove[i]); // remove old collision object

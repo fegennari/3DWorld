@@ -69,6 +69,7 @@ public:
 	bool subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cobj) const;
 	bool cube_merge(csg_cube &cube, bool proc_eflags); // const cube?
 	void unset_adjacent_edge_flags(coll_obj &cobj) const;
+	void unset_intersecting_edge_flags(coll_obj &cobj) const;
 	float get_d(unsigned dim, bool dir) const {assert(dim >= 0 && dim < 3); return d[dim][dir];}
 }; // class csg_cube
 

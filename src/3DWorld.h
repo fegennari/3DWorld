@@ -414,6 +414,7 @@ struct cube_t { // size = 24
 		return 0.5*sqrt((d[0][1]-d[0][0])*(d[0][1]-d[0][0]) + (d[1][1]-d[1][0])*(d[1][1]-d[1][0]) + (d[2][1]-d[2][0])*(d[2][1]-d[2][0]));
 	}
 	bool cube_intersection(const cube_t &cube, cube_t &res) const;
+	float get_overlap_volume(const cube_t &cube) const;
 	vector3d closest_side_dir(point const &pos) const;
 };
 

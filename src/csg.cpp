@@ -182,6 +182,19 @@ bool cube_t::cube_intersection(const cube_t &cube, cube_t &res) const { // flags
 }
 
 
+float cube_t::get_overlap_volume(const cube_t &cube) const {
+
+	float volume(1.0);
+
+	for (unsigned i = 0; i < 3; ++i) {
+		float const val(min(d[i][1], cube.d[i][1]) - max(d[i][0], cube.d[i][0]));
+		if (val <= 0.0) return 0.0; // no intersection
+		volume *= val;
+	}
+	return volume;
+}
+
+
 vector3d cube_t::closest_side_dir(point const &pos) const { // for fragment velocity
 
 	int dir(-1);
@@ -507,9 +520,11 @@ bool csg_cube::cube_merge(csg_cube &cube, bool proc_eflags) {
 
 void csg_cube::unset_adjacent_edge_flags(coll_obj &cobj) const {
 
+	assert(cobj.type == COLL_CUBE);
+
 	for (unsigned i = 0; i < 3; ++i) {
 		for (unsigned j = 0; j < 2; ++j) {
-			if (fabs(d[i][j] - cobj.d[i][!j]) < TOLER) {
+			if (fabs(d[i][j] - cobj.d[i][!j]) < TOLER) { // shared opposing edge
 				bool overlaps(1);
 
 				for (unsigned k = 0; k < 3 && !overlaps; ++k) {
@@ -519,6 +534,25 @@ void csg_cube::unset_adjacent_edge_flags(coll_obj &cobj) const {
 					cobj.cp.surfs &= ~EFLAGS[i][!j];
 					return;
 				}
+			}
+		}
+	}
+}
+
+
+void csg_cube::unset_intersecting_edge_flags(coll_obj &cobj) const {
+
+	assert(cobj.type == COLL_CUBE);
+
+	for (unsigned i = 0; i < 3; ++i) {
+		for (unsigned j = 0; j < 2; ++j) {
+			if (cobj.d[i][!j] >= d[i][0]-TOLER && cobj.d[i][!j] <= d[i][1]+TOLER) { // cobj edge contained in cube in this dim
+				bool overlaps(1);
+
+				for (unsigned k = 0; k < 3 && !overlaps; ++k) {
+					if (k != i && (d[k][0] >= cobj.d[k][1] || d[k][1] <= cobj.d[k][0])) overlaps = 0;
+				}
+				if (overlaps) cobj.cp.surfs &= ~EFLAGS[i][!j];
 			}
 		}
 	}

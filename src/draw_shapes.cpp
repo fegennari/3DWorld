@@ -586,7 +586,7 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 			}
 			else {
 				if (!tri && !c_obj.is_semi_trans() && check_face_containment(pts, npts, qd.dim, qd.dir, cobj)) {
-					lighted = ALL_LT[4];
+					lighted = ALL_LT[4]; // entire face contained
 				}
 				else {
 					lighted = determine_shadow_matrix(pts, norms);
