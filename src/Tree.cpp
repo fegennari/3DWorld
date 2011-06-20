@@ -318,6 +318,7 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 		vector<int> indices; // unused
 		coll_objects[cix].update_shadowed_cobjs(coll_objects, indices, cix);
 		remove_coll_object(cix);
+		//update_grass_shadows_for_cube(coll_objects[cix]); // should still be valid, correct but very slow
 	}
 	leaves[i] = leaves.back();
 	leaves.pop_back();
@@ -383,18 +384,21 @@ void tree::blast_damage(blastr const *const blast_radius) {
 	assert(blast_radius);
 	float const bradius(blast_radius->cur_size), bdamage(LEAF_DAM_SCALE*blast_radius->damage);
 	if (bdamage == 0.0) return;
-	point const &blast_pos(blast_radius->pos);
-	if (p2p_dist_sq(blast_pos, sphere_center) > (bradius + sphere_radius)*(bradius + sphere_radius)) return;
+	point const &bpos(blast_radius->pos);
+	if (p2p_dist_sq(bpos, sphere_center) > (bradius + sphere_radius)*(bradius + sphere_radius)) return;
 	float const bradius_sq(bradius*bradius);
 
 	for (unsigned i = 0; i < leaves.size(); i++) {
 		if (leaves[i].color < 0.0) continue;
-		float const dist(p2p_dist_sq(blast_pos, leaves[i].pts[0]));
+		float const dist(p2p_dist_sq(bpos, leaves[i].pts[0]));
 		if (dist < TOLERANCE || dist > bradius_sq) continue;
 		float const blast_damage(bdamage*InvSqrt(dist));
 		if (damage_leaf(i, blast_damage)) --i; // force reprocess of this leaf, wraparound to -1 is OK
 	} // for i
 	damage = min(1.0f, damage);
+	//cube_t cube(bpos.x, bpos.x, bpos.y, bpos.y, bpos.z, bpos.z);
+	//cube.expand_by(bradius);
+	//update_grass_shadows_for_cube(cube); // better than per-leaf, but still too slow
 }
 
 

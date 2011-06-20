@@ -413,6 +413,7 @@ struct cube_t { // size = 24
 	float get_bsphere_radius() const {
 		return 0.5*sqrt((d[0][1]-d[0][0])*(d[0][1]-d[0][0]) + (d[1][1]-d[1][0])*(d[1][1]-d[1][0]) + (d[2][1]-d[2][0])*(d[2][1]-d[2][0]));
 	}
+	void expand_by(float val) {UNROLL_3X(d[i_][0] -= val; d[i_][1] += val;)}
 	bool cube_intersection(const cube_t &cube, cube_t &res) const;
 	float get_overlap_volume(const cube_t &cube) const;
 	vector3d closest_side_dir(point const &pos) const;
@@ -1061,7 +1062,7 @@ void update_sun_and_moon();
 // function prototypes - shadows
 void add_cobj_shadows(char light_sources);
 int  camera_shadow(point const &camera);
-int  get_shape_shadow_bb(const point *points, int npoints, int l, int quality, point const &lpos,
+int  get_shape_shadow_bb(point const *points, int npoints, int l, int quality, point const &lpos,
 	int &xmin, int &ymin, int &xmax, int &ymax, int &ret_val, unsigned char stype);
 void get_sphere_points(point const &pos, float radius, point pts[8]);
 int  enable_shadow_envelope(point const &pos, float radius, char light_sources, int is_dynamic);
@@ -1582,6 +1583,7 @@ void update_grass_vbos();
 void draw_grass();
 void modify_grass_at(point const &pos, float radius, bool crush=0, bool burn=0, bool cut=0, bool update_mh=0, bool check_uw=0);
 void update_grass_shadows(int x, int y, unsigned char check_shad_types);
+void update_grass_shadows_for_cube(cube_t const &cube);
 bool place_obj_on_grass(point &pos, float radius);
 float get_grass_density(point const &pos);
 

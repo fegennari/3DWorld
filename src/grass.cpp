@@ -351,8 +351,31 @@ public:
 				sbins[ix].resize(0); // clear
 			}
 		}
-		last_cobj = -1;
 		//PRINT_TIME("Grass Dynamic Shadows");
+	}
+
+	void update_shadows_for_cube(cube_t const &cube) {
+		//RESET_TIME;
+		int const light(get_light());
+		point lpos;
+		if (!get_light_pos(lpos, light)) return;
+		point pts[8];
+		get_cube_points(cube.d, pts);
+		int x1, y1, x2, y2, ret_val;
+		get_shape_shadow_bb(pts, 8, light, 1, lpos, x1, y1, x2, y2, ret_val, OBJECT_SHADOW);
+		cube_t test_cube(cube);
+		test_cube.expand_by(HALF_DXY);
+		last_cobj = -1;
+
+		for (int y = y1; y <= y2; ++y) {
+			for (int x = x1; x <= x2; ++x) {
+				assert(!point_outside_mesh(x, y));
+				point const mesh_pos(point(get_xval(x), get_yval(y), mesh_height[y][x]));
+				if (!check_line_clip(lpos, mesh_pos, test_cube.d)) continue;
+				update_shadows(x, y, OBJECT_SHADOW, lpos);
+			}
+		}
+		//PRINT_TIME("Grass Shadow Update");
 	}
 
 	void update_shadows(int x, int y, unsigned char shad_types, point const &lpos, vector<unsigned> const *const sixs=0) {
@@ -611,6 +634,10 @@ void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool
 
 void update_grass_shadows(int x, int y, unsigned char check_shad_types) {
 	if (!no_grass()) grass_manager.update_shadows(x, y, check_shad_types, get_light_pos());
+}
+
+void update_grass_shadows_for_cube(cube_t const &cube) {
+	if (!no_grass()) grass_manager.update_shadows_for_cube(cube);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {

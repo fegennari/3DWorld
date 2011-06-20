@@ -189,14 +189,15 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	point center(cube.get_cube_center());
 	if (cube.is_zero_area()) return 0;
 	float const clip_cube_colume(cube.get_volume());
-	vector<int> indices, to_remove;
+	vector<int> indices, to_remove, cvals;
 	vector<coll_obj> new_cobjs;
-	vector<int> cvals;
 	cdir = zero_vector;
 	unsigned const cobjs_size(cobjs.size());
 	float const maxlen(cube.max_len());
 	bool const is_small(maxlen < HALF_DXY);
-	unsigned ncobjs, last_cobj(0), extra_removed(0);
+	unsigned ncobjs, last_cobj(0);
+	vector<cube_t> mod_cubes;
+	mod_cubes.push_back(cube);
 
 	if (is_small) { // not much faster
 		int const xpos(get_xpos(center.x)), ypos(get_ypos(center.y));
@@ -236,13 +237,12 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			indices.clear();
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
-				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
-				assert((size_t)index < cobjs.size());
-				
-				if (is_cube && cobjs[index].volume < min_volume) { // don't create tiny pieces of cobjs
+				/*if (is_cube && new_cobjs[j].get_volume() < min_volume) { // don't create tiny pieces of cobjs (correct but looks bad visually)
 					cube.unset_intersecting_edge_flags(cobjs[i]);
 					continue;
-				}
+				}*/
+				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
+				assert((size_t)index < cobjs.size());
 				indices.push_back(index);
 				volume -= cobjs[index].volume;
 				add_connect_waypoint_for_cobj(cobjs[index]); // *** slow ***
@@ -251,8 +251,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
 			cobjs[i].clear_internal_data(cobjs, indices, i);
 			to_remove.push_back(i);
-			// FIXME: adjust lightmap pflow value so that smoke can flow through the hole?
-			// FIXME: use update_grass_shadows()
+			if (shatter) mod_cubes.push_back(cobjs[i]);
 		}
 		new_cobjs.clear();
 	} // for k
@@ -283,18 +282,24 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 					if (cobjs[*i].destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
 					cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, cobjs[*i].calc_min_dim(), 1));
 					cobjs[*i].clear_internal_data(cobjs, indices, *i);
+					mod_cubes.push_back(cobjs[*i]);
 					remove_coll_object(*i);
-					++extra_removed;
+					to_remove.push_back(*i);
 				}
 			}
 			else if (LET_COBJS_FALL) {
 				copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
 			}
+		} // end anchored code
+		for (vector<cube_t>::const_iterator i = mod_cubes.begin(); i != mod_cubes.end(); ++i) {
+			// FIXME: test alpha?
+			update_grass_shadows_for_cube(*i); //the object should still be valid
+			// FIXME: adjust lightmap pflow value so that smoke can flow through the hole?
 		}
 		cdir.normalize();
 	}
 	//PRINT_TIME("Subtract Cube");
-	return (to_remove.size() + extra_removed);
+	return to_remove.size();
 }
 
 

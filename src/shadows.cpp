@@ -242,7 +242,7 @@ int sphere_shadow2(point const &pos, float radius, char light_sources, int is_dy
 	ymax = max(ymax, yp);
 
 
-int get_shape_shadow_bb(const point *points, int npoints, int l, int quality, point const &lpos,
+int get_shape_shadow_bb(point const *points, int npoints, int l, int quality, point const &lpos,
 						int &xmin, int &ymin, int &xmax, int &ymax, int &ret_val, unsigned char stype)
 {
 	assert(points != NULL);
@@ -577,10 +577,8 @@ int cube_shadow(cube_t const &cube, char light_sources, int is_dynamic, int qual
 
 int check_shadow_edge_clip(point const &pt, point const &lpos, int &xmin, int &xmax, int &ymin, int &ymax) {
 
-	//if (is_over_mesh(pt)) return 0; // not quite correct
-	vector3d const v(pt, lpos);
-	float const mag(10.0*FAR_CLIP/v.mag()); // extend pt off to infinity (well, very far)
-	point pts[2] = {lpos, (lpos + v*mag)};
+	vector3d const dir((pt - lpos).get_norm());
+	point pts[2] = {lpos, (lpos + dir*(10.0*FAR_CLIP))}; // extend pt off to infinity (well, very far)
 
 	if (do_line_clip_scene(pts[0], pts[1], zbottom, max(lpos.z, ztop))) {
 		for (unsigned i = 1; i < 2; ++i) { // iteration bounds have a significant effect on shadow time/quality
