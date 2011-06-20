@@ -327,7 +327,7 @@ public:
 			point const &pos(shadow_objs[i].pos);
 			vector3d const dir((pos - lpos).get_norm());
 			point pts[8];
-			get_sphere_points(pos, radius, pts);
+			get_sphere_points(pos, radius, pts, 8, dir);
 			int x1, y1, x2, y2, ret_val;
 			get_shape_shadow_bb(pts, 8, light, 1, lpos, x1, y1, x2, y2, ret_val, DYNAMIC_SHADOW);
 

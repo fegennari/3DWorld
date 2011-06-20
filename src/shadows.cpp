@@ -313,16 +313,15 @@ int get_shape_shadow_bb(point const *points, int npoints, int l, int quality, po
 }
 
 
-void get_sphere_points(point const &pos, float radius, point pts[8]) {
+void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir) {
 
-	float const radsq2(radius/SQRT2);
-	for (int i = 0; i < 8; ++i) pts[i] = pos;
-	pts[0].y += radius; pts[1].y -= radius;
-	pts[2].x += radius; pts[3].x -= radius;
-	pts[4].x += radsq2; pts[4].y += radsq2;
-	pts[5].x += radsq2; pts[5].y -= radsq2;
-	pts[6].x -= radsq2; pts[6].y += radsq2;
-	pts[7].x -= radsq2; pts[7].y -= radsq2;
+	vector3d const v1(cross_product(plus_z, dir).get_norm());
+	vector3d const v2(cross_product(v1,     dir).get_norm());
+
+	for (unsigned i = 0; i < npts; ++i) {
+		float const theta(TWO_PI*i/npts);
+		pts[i] = pos + v1*(sinf(theta)*radius) + v2*(cosf(theta)*radius);
+	}
 }
 
 
@@ -331,11 +330,11 @@ int enable_shadow_envelope(point const &pos, float radius, char light_sources, i
 	unsigned char const SHADOW_TYPE(is_dynamic ? DYNAMIC_SHADOW : OBJECT_SHADOW);
 	int shadowed(0), ret_val(0);
 	point lpos, pts[8];
-	get_sphere_points(pos, radius, pts);
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid(light_sources, l, lpos)) continue;
 		//if (!is_visible_from_light(pos, lpos, 1)) continue;
+		get_sphere_points(pos, radius, pts, 8, (pos - lpos).get_norm());
 		shad_env &se(s_env[l]);
 		se.enabled = get_shape_shadow_bb(pts, 8, l, 1, lpos, se.x1, se.y1, se.x2, se.y2, ret_val, SHADOW_TYPE);
 
@@ -376,11 +375,11 @@ int sphere_shadow(point const &pos, float radius, char light_sources, int is_dyn
 	float const rad2(radius*radius);
 	unsigned char const SHADOW_TYPE(is_dynamic ? DYNAMIC_SHADOW : OBJECT_SHADOW);
 	point pts[8], lpos;
-	get_sphere_points(pos, radius, pts);
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid(light_sources, l, lpos)) continue;
 		if (!is_visible_from_light(pos, lpos, 1)) continue;
+		get_sphere_points(pos, radius, pts, 8, (pos - lpos).get_norm());
 		if (!get_shape_shadow_bb(pts, 8, l, quality, lpos, xmin, ymin, xmax, ymax, ret_val, SHADOW_TYPE)) continue;
 		if (is_dynamic) dshadow_lights |= (1 << l);
 
