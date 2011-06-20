@@ -621,6 +621,21 @@ void dwobject::do_coll_damage() {
 }
 
 
+float dwobject::get_true_radius() const {
+
+	float const radius(object_types[type].radius);
+	
+	switch (type) {
+	case FRAGMENT: return radius*vdeform.x;
+	case SAND:     return radius*orientation.x;
+	case DIRT:     return radius*orientation.x;
+	case ROCK:     return radius*orientation.x;
+	case PLASMA:   return radius*init_dir.x;
+	}
+	return radius;
+}
+
+
 // 0 = out of range/expired, 1 = airborne, 2 = collision, 3 = moving on ground, 4 = motionless
 void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj_index) { // returns collision status
 
@@ -657,7 +672,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		}
 		flags &= ~XY_STOPPED;
 	}
-	float const radius(otype.radius), friction(otype.friction_factor);
+	float const radius(get_true_radius()), friction(otype.friction_factor);
 
 	if (status == 1 || type == LANDMINE) { // airborne
 		if (type == ROCKET && direction == 1) { // rapid fire rocket

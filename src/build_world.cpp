@@ -139,7 +139,7 @@ void dwobject::add_obj_dynamic_light(int index) const {
 
 	switch(type) {
 	case PLASMA:
-		add_dynamic_light(min(3.5, 45.0*init_dir.x*object_types[type].radius), pos, get_plasma_color(init_dir.x));
+		add_dynamic_light(min(3.5, 45.0*get_true_radius()), pos, get_plasma_color(init_dir.x));
 		break;
 	case ROCKET:
 		add_dynamic_light(0.5, pos, ORANGE);

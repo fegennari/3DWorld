@@ -1299,7 +1299,7 @@ int vert_coll_detector::check_coll() {
 	pold -= obj.velocity*tstep;
 	assert(!is_nan(pold));
 	assert(type >= 0 && type < NUM_TOT_OBJS);
-	o_radius = ((type == PLASMA) ? obj.init_dir.x : 1.0)*object_types[type].radius;
+	o_radius = obj.get_true_radius();
 	c_zmax   = cell.zmax;
 	c_zmin   = cell.zmin;
 	init_reset_pos();

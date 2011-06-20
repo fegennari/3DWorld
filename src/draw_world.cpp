@@ -683,10 +683,11 @@ void draw_group(obj_group &objg) {
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
 			point const &pos(obj.pos);
-			if (obj.disabled() || (obj.flags & CAMERA_VIEW))     continue;
-			if (!sphere_in_camera_view(pos, radius, clip_level)) continue;
+			if (obj.disabled() || (obj.flags & CAMERA_VIEW))      continue;
+			float const tradius(obj.get_true_radius()); // differs from radius for fragments
+			if (!sphere_in_camera_view(pos, tradius, clip_level)) continue;
 			++num_drawn;
-			bool const is_shadowed(is_object_shadowed(obj, calc_shadow, cd_scale, radius, light, num_shadow_test));
+			bool const is_shadowed(is_object_shadowed(obj, calc_shadow, cd_scale, tradius, light, num_shadow_test));
 
 			if ((int)is_shadowed != last_shadowed) {
 				set_obj_specular(is_shadowed, flags, specular_brightness); // slow?
@@ -721,17 +722,17 @@ void draw_group(obj_group &objg) {
 			switch (type) {
 			case SHELLC:
 				set_color_v2(color2, pos, obj.status, is_shadowed, precip);
-				draw_shell_casing(pos, obj.orientation, obj.init_dir, radius, obj.angle, cd_scale, is_shadowed, obj.direction);
+				draw_shell_casing(pos, obj.orientation, obj.init_dir, tradius, obj.angle, cd_scale, is_shadowed, obj.direction);
 				break;
 			case SHRAPNEL:
-				draw_shrapnel(obj, radius, is_shadowed);
+				draw_shrapnel(obj, tradius, is_shadowed);
 				break;
 			case STAR5:
 				set_color_v2(color2, pos, obj.status, is_shadowed, precip);
-				draw_star(pos, obj.orientation, obj.init_dir, radius, obj.angle, 1);
+				draw_star(pos, obj.orientation, obj.init_dir, tradius, obj.angle, 1);
 				break;
 			case PARTICLE:
-				draw_particle(obj, radius);
+				draw_particle(obj, tradius);
 				break;
 
 			case SAND:
@@ -739,7 +740,7 @@ void draw_group(obj_group &objg) {
 			case ROCK:
 				color2 *= obj.orientation.y;
 				if (do_texture) tcolor *= obj.orientation.y;
-				draw_sized_point(obj, obj.orientation.x*radius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, is_shadowed);
+				draw_sized_point(obj, tradius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, is_shadowed);
 				break;
 
 			case FRAGMENT: // draw_fragment()?
@@ -747,12 +748,12 @@ void draw_group(obj_group &objg) {
 					set_color_v2(color2, pos, obj.status, is_shadowed, 0);
 					set_lighted_sides(2);
 					glBegin(GL_TRIANGLES);
-					draw_rotated_triangle(pos, obj.orientation, radius*obj.vdeform.x, obj.angle, (do_texture ? obj.vdeform.z : 0.0)); // obj.vdeform.z = tscale
+					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0)); // obj.vdeform.z = tscale
 					glEnd();
 					set_lighted_sides(1);
 					break;
 				}
-				draw_sized_point(obj, radius*obj.vdeform.x, cd_scale, color2, tcolor, do_texture, is_shadowed, 1);
+				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, is_shadowed, 1);
 				break;
 
 			default:
@@ -763,7 +764,7 @@ void draw_group(obj_group &objg) {
 					set_color(check_coll_line(pos, pos2, cindex, -1, 0, 0) ? RED : GREEN);
 					draw_line(pos, pos2);
 				}
-				draw_sized_point(obj, radius, cd_scale, color2, tcolor, do_texture, is_shadowed);
+				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, is_shadowed);
 			} // switch (type)
 		} // for j
 		switch (type) { // post-draw

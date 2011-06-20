@@ -143,6 +143,7 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 		: basic_physics_obj(pos_, status_), coll_id(-1), type(type_), source(-2), flags(0), shadow(0),
 		direction(0), health(health_), angle(0.0), velocity(vel_), orientation(0.0, 0.0, -1.0),
 		init_dir(0.0, 0.0, -1.0), vdeform(all_zeros) {}
+	float get_true_radius() const;
 	void advance_object(bool disable_motionless_objects, int iter, int obj_index);
 	int surface_advance();
 	void set_orient_for_coll(vector3d const *const forced_norm);
