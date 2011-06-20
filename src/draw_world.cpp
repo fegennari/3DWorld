@@ -81,7 +81,7 @@ extern vector<portal> portals;
 
 void draw_cloud_volumes();
 void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, bool is_shadowed, bool is_chunky=0);
+					  bool do_texture, bool is_shadowed, int is_chunky=0);
 void draw_weapon2(dwobject const &obj, float radius);
 void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, bool is_shadowed);
 void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type,
@@ -753,7 +753,7 @@ void draw_group(obj_group &objg) {
 					set_lighted_sides(1);
 					break;
 				}
-				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, is_shadowed, 1);
+				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, is_shadowed, 2);
 				break;
 
 			default:
@@ -764,7 +764,7 @@ void draw_group(obj_group &objg) {
 					set_color(check_coll_line(pos, pos2, cindex, -1, 0, 0) ? RED : GREEN);
 					draw_line(pos, pos2);
 				}
-				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, is_shadowed);
+				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, is_shadowed, 0);
 			} // switch (type)
 		} // for j
 		switch (type) { // post-draw
@@ -807,7 +807,7 @@ void draw_group(obj_group &objg) {
 
 
 void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, bool is_shadowed, bool is_chunky)
+					  bool do_texture, bool is_shadowed, int is_chunky)
 {
 	point pos(obj.pos);
 	point const camera(get_camera_pos());
@@ -868,7 +868,7 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	// draw as a sphere
 	if (is_chunky) {
 		assert(!tail);
-		vector3d const v(obj.orientation.get_norm());
+		vector3d const v((is_chunky == 2) ? obj.orientation : obj.init_dir);
 		int const ndiv(max(3, int(3 + 1.5*(v.x + v.y + v.z))));
 		translate_to(pos);
 		vector3d const scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));

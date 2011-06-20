@@ -971,6 +971,7 @@ void gen_rubble(int type, int num, point const &pos, int shooter, float const p[
 		int const i(objg.choose_object());
 		objg.create_object_at(i, pos);
 		dwobject &obj(objg.get_obj(i));
+		obj.init_dir      = signed_rand_vector_norm();
 		obj.velocity      = gen_rand_vector(rand_uniform(p[0], p[1]), p[2], PI_TWO);
 		obj.orientation.x = p[3] + p[4]*rand_float(); // size
 		obj.orientation.y = p[5] + p[6]*rand_float(); // color
