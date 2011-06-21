@@ -164,7 +164,7 @@ void add_cobj_shadows(char light_sources) {
 	// three problems with this approach, though this is *much* simpler
 	// 1. tree shadows are only added if tree cobjs are created
 	// 2. requires cobj_tree to be efficient
-	// 3. the test line wil not hit very small cobjs, so shadows will be missed
+	// 3. the test line will not hit very small cobjs, so shadows will be missed
 	point lpos;
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
@@ -256,8 +256,9 @@ int get_shape_shadow_bb(point const *points, int npoints, int l, int quality, po
 
 	if (quality == 0) {
 		polygon_bounding_sphere(points, npoints, 0.0, points2[0], radius);
+		vector3d const delta(lpos - points2[0]);
 
-		if (radius < HALF_DXY) { // small polygon - use a single point at its center
+		if (radius*delta.mag() < HALF_DXY*fabs(delta.z)) { // small polygon - use a single point at its center
 			npoints = 1;
 			points  = points2;
 		}
