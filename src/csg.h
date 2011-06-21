@@ -60,9 +60,11 @@ class csg_cube : public cube_t {
 	bool subtract_from_internal(const csg_cube &cube, vector<csg_cube> &output) const;
 
 public:
+	csg_cube() : eflags(0) {}
 	csg_cube(float x1, float x2, float y1, float y2, float z1, float z2)
 		: cube_t(x1, x2, y1, y2, z1, z2), eflags(0) {} // float constructor
 	csg_cube(const coll_obj &cobj, bool use_bounding_cube=0);
+	csg_cube(cube_t const &cube, unsigned char eflags0=0) : cube_t(cube), eflags(eflags0) {}
 	void write_to_cobj(coll_obj &cobj) const;
 	bool cube_intersection(const csg_cube &cube, csg_cube &res) const;
 	bool subtract_from_cube(vector<coll_obj> &new_cobjs, coll_obj const &cobj) const;

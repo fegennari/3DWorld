@@ -22,6 +22,7 @@ extern vector<coll_obj> coll_objects;
 extern vector<portal> portals;
 
 
+unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int destroy_thresh);
 void add_connect_waypoint_for_cobj(coll_obj &c);
 void remove_waypoint_for_cobj(coll_obj &c);
 
@@ -32,11 +33,13 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 	//RESET_TIME;
 	assert(damage >= 0.0);
 	if (damage < 100.0) return;
-	float const r((big ? 4.0 : 1.0)*sqrt(damage)/650.0);
+	float const radius((big ? 4.0 : 1.0)*sqrt(damage)/650.0);
 	vector3d cdir;
 	vector<color_tid_vol> cts;
 	int const dmin((damage > 800.0) ? DESTROYABLE : ((damage > 200.0) ? SHATTERABLE : EXPLODEABLE));
-	unsigned nrem(subtract_cube(coll_objects, cts, cdir, (pos.x-r),(pos.x+r),(pos.y-r),(pos.y+r),(pos.z-r),(pos.z+r), dmin));
+	csg_cube cube(pos.x, pos.x, pos.y, pos.y, pos.z, pos.z);
+	cube.expand_by(radius);
+	unsigned nrem(subtract_cube(coll_objects, cts, cdir, cube, dmin));
 	if (nrem == 0 || cts.empty()) return;
 	float const cdir_mag(cdir.mag());
 
@@ -73,14 +76,19 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 			point fpos(pos);
 
 			if (shattered || cts[i].unanchored) {
-				for (unsigned j = 0; j < 3; ++j) { // only accurate for COLL_CUBE
-					fpos[j] = rand_uniform(cts[i].d[j][0], cts[i].d[j][1]); // generate inside of the shattered cobj's volume
-				}
+				fpos = cts[i].gen_rand_pt_in_cube(); // only accurate for COLL_CUBE
 				vector3d const vadd(fpos - pos); // average cdir and direction from collision point to fragment location
 
 				if (vadd.mag() > TOLERANCE) {
 					velocity += vadd.get_norm()*(cdir_mag/vadd.mag());
 					velocity *= 0.5;
+				}
+			}
+			else {
+				csg_cube int_cube;
+				
+				if (cube.cube_intersection(csg_cube(cts[i]), int_cube)) {
+					fpos = int_cube.gen_rand_pt_in_cube(); // only accurate for COLL_CUBE
 				}
 			}
 			gen_fragment(fpos, velocity, size_scale, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, shattered);
@@ -183,12 +191,10 @@ void check_cobjs_anchored(vector<int> to_check, set<int> anchored[2]) {
 }
 
 
-unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir,
-					   float x1, float x2, float y1, float y2, float z1, float z2, int min_destroy)
-{
+unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int min_destroy) {
+
 	//RESET_TIME;
 	if (destroy_thresh >= EXPLODEABLE) return 0;
-	csg_cube const cube(x1, x2, y1, y2, z1, z2);
 	point center(cube.get_cube_center());
 	if (cube.is_zero_area()) return 0;
 	float const clip_cube_colume(cube.get_volume());

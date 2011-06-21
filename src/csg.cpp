@@ -216,6 +216,17 @@ vector3d cube_t::closest_side_dir(point const &pos) const { // for fragment velo
 }
 
 
+point cube_t::gen_rand_pt_in_cube() const {
+
+	point pt;
+
+	for (unsigned j = 0; j < 3; ++j) {
+		pt[j] = rand_uniform(d[j][0], d[j][1]);
+	}
+	return pt;
+}
+
+
 // *** CSG_CUBE IMPLEMENTATION ***
 
 
@@ -1013,7 +1024,7 @@ void sort_cobjs_for_rendering(vector<coll_obj> &cobjs) {
 
 
 color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thickness_, bool ua)
-	: tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), unanchored(ua), volume(volume_),
+	: cid(cobj.id), tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), unanchored(ua), volume(volume_),
 	thickness(thickness_), tscale(cobj.cp.tscale), color(cobj.cp.color)
 {
 	copy_from(cobj);

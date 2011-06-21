@@ -269,7 +269,7 @@ struct coll_cell { // size = 40
 
 struct color_tid_vol : public cube_t {
 
-	int tid, destroy;
+	int cid, tid, destroy;
 	bool draw, unanchored;
 	float volume, thickness, tscale;
 	colorRGBA color;

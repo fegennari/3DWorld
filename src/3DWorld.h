@@ -417,6 +417,7 @@ struct cube_t { // size = 24
 	bool cube_intersection(const cube_t &cube, cube_t &res) const;
 	float get_overlap_volume(const cube_t &cube) const;
 	vector3d closest_side_dir(point const &pos) const;
+	point gen_rand_pt_in_cube() const;
 };
 
 
@@ -1681,8 +1682,6 @@ void draw_waypoints();
 
 // function prototypes - destroy_cobj
 void destroy_coll_objs(point const &pos, float damage, int shooter, bool big);
-unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir,
-					   float x1, float x2, float y1, float y2, float z1, float z2, int destroy_thresh);
 void check_falling_cobjs();
 
 // function prototypes - screenshot (these are C functions)
