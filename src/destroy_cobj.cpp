@@ -13,6 +13,7 @@ bool const REMOVE_UNANCHORED = 1;
 int destroy_thresh(0);
 vector<int> falling_cobjs;
 
+extern bool cobj_tree_valid;
 extern float fticks, zmin;
 extern int coll_id[];
 extern obj_type object_types[];
@@ -28,6 +29,7 @@ void remove_waypoint_for_cobj(coll_obj &c);
 
 void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 
+	//RESET_TIME;
 	assert(damage >= 0.0);
 	if (damage < 100.0) return;
 	float const r((big ? 4.0 : 1.0)*sqrt(damage)/650.0);
@@ -84,6 +86,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 			gen_fragment(fpos, velocity, size_scale, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, shattered);
 		}
 	} // for i
+	//PRINT_TIME("Destroy Cobjs");
 }
 
 
@@ -291,6 +294,8 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 				copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
 			}
 		} // end anchored code
+		if (!cobj_tree_valid) build_cobj_tree(0, 0);
+
 		for (vector<cube_t>::const_iterator i = mod_cubes.begin(); i != mod_cubes.end(); ++i) {
 			// FIXME: test alpha?
 			update_grass_shadows_for_cube(*i); //the object should still be valid
