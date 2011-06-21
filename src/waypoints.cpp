@@ -334,8 +334,8 @@ public:
 
 	unsigned add_new_waypoint(point const &pos, int coll_id, bool connect_in, bool connect_out, bool goal, bool temp) {
 		unsigned const ix(waypoints.add(waypoint_t(pos, coll_id, 0, 0, goal, temp)));
-		if (connect_in ) connect_waypoints(0,  ix,    ix, ix+1, 0); // from existing waypoints to new waypoint
-		if (connect_out) connect_waypoints(ix, ix+1,  0,  ix,   0); // from new waypoint to existing waypoints
+		if (connect_in ) connect_waypoints(0,  ix,    ix, ix+1, 0, 1); // from existing waypoints to new waypoint
+		if (connect_out) connect_waypoints(ix, ix+1,  0,  ix,   0, 1); // from new waypoint to existing waypoints
 		return ix;
 	}
 
@@ -410,14 +410,16 @@ public:
 	}
 
 	void connect_all_waypoints() {
-		connect_waypoints(0, waypoints.size(), 0, waypoints.size(), 1);
+		connect_waypoints(0, waypoints.size(), 0, waypoints.size(), 1, 0);
 	}
 
-	void connect_waypoints(unsigned from_start, unsigned from_end, unsigned to_start, unsigned to_end, bool verbose) {
+	void connect_waypoints(unsigned from_start, unsigned from_end, unsigned to_start,
+		unsigned to_end, bool verbose, bool fast)
+	{
 		unsigned visible(0), cand_edges(0), num_edges(0), tot_steps(0);
 		int cindex(-1);
 		vector<pair<float, unsigned> > cands;
-		//sort(waypoints.begin(), waypoints.end());
+		float const fast_dmax(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
 		for (unsigned i = from_start; i < from_end; ++i) {
 			if (waypoints[i].disabled) continue;
@@ -425,14 +427,15 @@ public:
 			cands.resize(0);
 
 			for (unsigned j = to_start; j < to_end; ++j) {
-				if (waypoints[j].disabled) continue;
+				if (i == j || waypoints[j].disabled) continue;
 				point const end(waypoints[j].pos);
 
 				if (cindex >= 0) {
 					assert((unsigned)cindex < coll_objects.size());
 					if (coll_objects[cindex].line_intersect(start, end)) continue; // hit last cobj
 				}
-				if (i == j || check_coll_line(start, end, cindex, -1, 1, 0)) continue;
+				if (fast && !dist_less_than(start, end, fast_dmax)) continue; // too far away
+				if (check_coll_line(start, end, cindex, -1, 1, 0))  continue; // no line of sight
 				waypoints[i].visible_wpts.push_back(j);
 				cands.push_back(make_pair(p2p_dist_sq(start, end), j));
 				++visible;
