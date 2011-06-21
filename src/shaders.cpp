@@ -342,7 +342,7 @@ void print_shader_info_log(unsigned shader) {
 
 unsigned get_shader(string const &name, unsigned type) {
 	
-	RESET_TIME;
+	//RESET_TIME;
 	int const shader_type_table   [3] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER_EXT};
 	string const shader_name_table[3] = {"vert", "frag", "geom"};
 	assert(type < 3);
@@ -412,7 +412,7 @@ unsigned set_shader_prog(string const &vs_name, string const &fs_name, string co
 {
 	if (disable_shaders) return 0;
 	// get the program
-	RESET_TIME;
+	//RESET_TIME;
 	string const pname(vs_name + "," + fs_name + "," + gs_name + "," + prog_name_suffix); // unique program identifier
 	string_prog_map::const_iterator it(loaded_programs.find(pname));
 	unsigned program(0);

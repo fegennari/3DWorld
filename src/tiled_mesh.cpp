@@ -123,7 +123,7 @@ public:
 	}
 
 	void create_zvals() {
-		RESET_TIME;
+		//RESET_TIME;
 		zvals.resize(zvsize*zvsize);
 		static vector<float> xv, yv; // move somewhere else?
 		xv.resize(zvsize);
@@ -188,7 +188,7 @@ public:
 	}
 
 	void create_data(vector<vert_norm> &data, vector<unsigned short> &indices) {
-		RESET_TIME;
+		//RESET_TIME;
 		assert(zvals.size() == zvsize*zvsize);
 		data.resize(stride*stride);
 		indices.resize(4*size*size);
@@ -233,7 +233,7 @@ public:
 		assert(tid == 0);
 		assert(!island);
 		assert(zvals.size() == zvsize*zvsize);
-		RESET_TIME;
+		//RESET_TIME;
 		unsigned const tsize(base_tsize >> tex_bs), scale(tsize/size);
 		float const dz_inv(1.0/(zmax - zmin)), fscale_inv(1.0/scale);
 		unsigned char *data(new unsigned char[3*tsize*tsize]); // RGB
