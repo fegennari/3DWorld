@@ -13,6 +13,7 @@
 #define MOD_GEOM   0x01
 #define MOD_SHADOW 0x02
 
+
 bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
@@ -383,8 +384,6 @@ public:
 		unsigned start, end;
 		unsigned const ix(get_start_and_end(x, y, start, end));
 		if (start == end) return; // no grass at this location
-		bool const REBUILD_TREE = 0;
-		if (REBUILD_TREE) update_cobj_tree();
 		unsigned min_up(end), max_up(start);
 		bool const skip_dynamic((shad_types & DYNAMIC_SHADOW) == 0);
 

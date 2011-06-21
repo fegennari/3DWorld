@@ -1341,8 +1341,8 @@ bool proc_object_stuck(dwobject &obj, bool static_top_coll);
 int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex);
 
 // function prototypes - coll_cell_search
-void build_cobj_tree(bool dynamic=0);
-void update_cobj_tree(bool dynamic=0);
+void build_cobj_tree( bool dynamic=0, bool verbose=1);
+void update_cobj_tree(bool dynamic=0, bool verbose=1);
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool dynamic=0);
 bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic=0);
 bool check_vert_collision_sphere(point const &pos, float radius, int skip_dynamic, bool trans_test, vector<int> *cobjs=NULL);

@@ -33,12 +33,12 @@ protected:
 	bool is_static, is_dynamic;
 
 	coll_obj const &get_cobj(unsigned ix) const {
-		assert(ix < cixs.size() && cixs[ix] < cobjs.size());
+		//assert(ix < cixs.size() && cixs[ix] < cobjs.size());
 		return cobjs[cixs[ix]];
 	}
-	void mark_as_bin(unsigned ix, unsigned bix) {cixs[ix] |= (bix << 29);}
-	void unmark_as_bin(unsigned ix)             {cixs[ix] &= 0x07FFFFFF;}
-	unsigned get_bin_ix(unsigned ix)            {return (cixs[ix] >> 29);}
+	inline void mark_as_bin(unsigned ix, unsigned bix) {cixs[ix] |= (bix << 29);}
+	inline void unmark_as_bin(unsigned ix)             {cixs[ix] &= 0x07FFFFFF;}
+	inline unsigned get_bin_ix(unsigned ix)            {return (cixs[ix] >> 29);}
 
 	// Note: start by adding all cobjs to [start, end], then calc bbox, then split into branches and leaves
 	void calc_node_bbox(tree_node &n) const {
@@ -46,9 +46,7 @@ protected:
 		n.copy_from(get_cobj(n.start));
 
 		for (unsigned i = n.start+1; i < n.end; ++i) { // bbox union
-			coll_obj const &cobj(get_cobj(i));
-			UNROLL_3X(n.d[i_][0] = min(n.d[i_][0], cobj.d[i_][0]);)
-			UNROLL_3X(n.d[i_][1] = max(n.d[i_][1], cobj.d[i_][1]);)
+			n.union_with_cube(get_cobj(i));
 		}
 	}
 
@@ -221,13 +219,9 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 
 	// split in this dimension: use upper 3 bits of cixs for storing bin index
 	for (unsigned i = n.start; i < n.end; ++i) {
-		coll_obj const &cobj(get_cobj(i));
-		point const center(cobj.get_cube_center());
+		point const center(get_cobj(i).get_cube_center());
 		unsigned bix(0);
-
-		for (unsigned d = 0; d < 3; ++d) {
-			if (center[d] > sval[d]) bix |= (1 << d);
-		}
+		UNROLL_3X(if (center[i_] > sval[i_]) bix |= (1 << i_);)
 		mark_as_bin(i, bix);
 	}
 	sort((cixs.begin() + n.start), (cixs.begin() + n.end)); // sort by bix then by ix
@@ -269,18 +263,18 @@ cobj_tree_type &get_tree(bool dynamic) {
 	return (dynamic ? cobj_tree_dynamic : cobj_tree_static);
 }
 
-void build_cobj_tree(bool dynamic) {
+void build_cobj_tree(bool dynamic, bool verbose) {
 	if (BUILD_COBJ_TREE) {
-		get_tree(dynamic).add_cobjs(!dynamic);
+		get_tree(dynamic).add_cobjs(verbose);
 		cobj_tree_valid = 1;
 	}
 }
 
-void update_cobj_tree(bool dynamic) {
+void update_cobj_tree(bool dynamic, bool verbose) {
 
 	if (last_update_frame[dynamic] < frame_counter) {
 		last_update_frame[dynamic] = frame_counter;
-		build_cobj_tree(dynamic);
+		build_cobj_tree(dynamic, verbose);
 	}
 }
 

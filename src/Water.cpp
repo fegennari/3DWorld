@@ -306,7 +306,7 @@ public:
 			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs0, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
 		}
 		if (begin_motion) { // find dynamic cobj intersection
-			update_cobj_tree(1);
+			update_cobj_tree(1, 0);
 			if (check_coll_line_exact_tree(vs0, ve0, cpos, cnorm, cindex, -1, 1)) get_object_color(cindex, rcolor);
 		}
 		if (rcolor.alpha > 0.0) {
