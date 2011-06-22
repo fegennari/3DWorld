@@ -41,6 +41,21 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 	cube.expand_by(radius);
 	unsigned nrem(subtract_cube(coll_objects, cts, cdir, cube, dmin));
 	if (nrem == 0 || cts.empty()) return;
+
+	// check for waypoints that can be added near this cube (at the center only)
+	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+
+	if (!point_outside_mesh(xpos, ypos)) {
+		vector<int> const &cvals(v_collision_matrix[ypos][xpos].cvals);
+
+		for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
+			if (*i < 0) continue;
+			assert((unsigned)*i < coll_objects.size());
+			if (coll_objects[*i].waypt_id < 0) add_connect_waypoint_for_cobj(coll_objects[*i]); // slow
+		}
+	}
+
+	// create fragments
 	float const cdir_mag(cdir.mag());
 
 	for (unsigned i = 0; i < cts.size(); ++i) {
@@ -70,25 +85,20 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 		if (size_scale < 0.1) continue;
 		unsigned const num(min(100U, max((shattered ? 6U : 1U), unsigned(num_parts)))); // no more than 200
 		//cout << "shattered: " << shattered << ", volume: " << cts[i].volume << ", num_parts: " << num_parts << ", num: " << num << ", ss: " << size_scale << endl;
+		bool const tri_fragments(shattered || cts[i].unanchored);
+		csg_cube frag_cube(cts[i]);
+		if (!tri_fragments && !cube.cube_intersection(frag_cube, frag_cube)) frag_cube = cts[i]; // intersect frag_cube with cube (should pass)
 
 		for (unsigned o = 0; o < num; ++o) {
 			vector3d velocity(cdir);
-			point fpos(pos);
+			point fpos(frag_cube.gen_rand_pt_in_cube()); // only accurate for COLL_CUBE
 
-			if (shattered || cts[i].unanchored) {
-				fpos = cts[i].gen_rand_pt_in_cube(); // only accurate for COLL_CUBE
+			if (tri_fragments) {
 				vector3d const vadd(fpos - pos); // average cdir and direction from collision point to fragment location
 
 				if (vadd.mag() > TOLERANCE) {
 					velocity += vadd.get_norm()*(cdir_mag/vadd.mag());
 					velocity *= 0.5;
-				}
-			}
-			else {
-				csg_cube int_cube;
-				
-				if (cube.cube_intersection(csg_cube(cts[i]), int_cube)) {
-					fpos = int_cube.gen_rand_pt_in_cube(); // only accurate for COLL_CUBE
 				}
 			}
 			gen_fragment(fpos, velocity, size_scale, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, shattered);
@@ -221,10 +231,10 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		unsigned const i(is_small ? cvals[k] : k);
 		assert((size_t)i < cobjs_size);
 		if (cobjs[i].status != COLL_STATIC /*|| !cobjs[i].fixed*/) continue; // require fixed cobjs? exclude platforms (but they seem to work)?
-		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), csg_obj(is_cube || is_cylinder);
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
 		bool const shatter(D >= SHATTERABLE);
+		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), csg_obj(is_cube || is_cylinder);
 		if (!shatter && !csg_obj)         continue;
 		csg_cube const cube2(cobjs[i], !csg_obj);
 		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
@@ -254,7 +264,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 				assert((size_t)index < cobjs.size());
 				indices.push_back(index);
 				volume -= cobjs[index].volume;
-				add_connect_waypoint_for_cobj(cobjs[index]); // *** slow ***
+				add_connect_waypoint_for_cobj(cobjs[index]); // slow
 			}
 			assert(volume >= -TOLERANCE); // usually > 0.0
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
@@ -292,6 +302,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 					cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, cobjs[*i].calc_min_dim(), 1));
 					cobjs[*i].clear_internal_data(cobjs, indices, *i);
 					mod_cubes.push_back(cobjs[*i]);
+					remove_waypoint_for_cobj(cobjs[*i]);
 					remove_coll_object(*i);
 					to_remove.push_back(*i);
 				}

@@ -234,6 +234,7 @@ public:
 
 	void add_one_cobj_wpt(coll_obj &c, bool connect) {
 		if (c.status != COLL_STATIC || c.platform_id >= 0) return; // only static objects (not platforms) - use c.truly_static()?
+		assert(c.waypt_id < 0); // must not already be set
 
 		switch (c.type) {
 		case COLL_CUBE: // can stand on the top
