@@ -675,6 +675,7 @@ bool check_xy_delta(point const &p1, point const &p2) {
 
 bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool no_tree) {
 
+	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
 	if (USE_COBJ_TREE && cobj_tree_valid && !no_tree && skip_dynamic && test_alpha != 2 && check_xy_delta(pos1, pos2)) {
 		return check_coll_line_tree(pos1, pos2, cindex, cobj);
 	}
@@ -689,6 +690,7 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dyn
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex, float splash_val,
 						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic, bool no_tree)
 {
+	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
 	if (USE_COBJ_TREE && cobj_tree_valid && !no_tree && splash_val == 0.0 && skip_dynamic && check_xy_delta(pos1, pos2)) {
 		return check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj);
 	}
