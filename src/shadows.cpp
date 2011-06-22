@@ -133,7 +133,7 @@ int light_valid(char light_sources, int l, point &lpos) {
 
 void coll_obj::add_shadow(char light_sources, bool dynamic) const {
 
-	if (status != COLL_STATIC || cp.color.alpha == 0.0 || !cp.shadow) return;
+	if (status != COLL_STATIC || cp.color.alpha < MIN_SHADOW_ALPHA || !cp.shadow) return;
 	if (dynamic != dynamic_shadows_only()) return;
 
 	switch (type) {
@@ -175,7 +175,7 @@ void add_cobj_shadows(char light_sources) {
 				if (shadow_mask[l][y][x] & OBJECT_SHADOW) continue;
 				point const pos(get_xval(x), get_yval(y), mesh_height[y][x]);
 				int cindex; // unused
-				if (!coll_pt_vis_test(pos, lpos, 0.0, cindex, -1, 1, 0)) shadow_mask[l][y][x] |= OBJECT_SHADOW;
+				if (!coll_pt_vis_test(pos, lpos, 0.0, cindex, -1, 1, 3)) shadow_mask[l][y][x] |= OBJECT_SHADOW;
 			}
 		}
 	}

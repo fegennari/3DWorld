@@ -365,8 +365,9 @@ public:
 		if (skip_dynamic && cobj.status == COLL_DYNAMIC)         return 2;
 		if (skip_dynamic >= 2 && !cobj.cp.draw)                  return 2;
 		if (test_alpha == 1 && cobj.is_semi_trans())             return 2; // semi-transparent, can see through
-		if (test_alpha == 2 && cobj.cp.color.alpha <= max_alpha) return 2;
-		if (test_alpha && cobj.is_invis_player())                return 2;
+		if (test_alpha == 2 && cobj.cp.color.alpha <= max_alpha) return 2; // lower alpha than an earlier object
+		if (test_alpha == 3 && cobj.cp.color.alpha < MIN_SHADOW_ALPHA) return 2; // less than min alpha
+		if (test_alpha && cobj.is_invis_player())                return 2; // invisible player
 		if (cobj.status == COLL_STATIC && (z1 > cell.zmax || z2 < cell.zmin)) return 0;
 		if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0])              return 2; // clip this shape
 		
@@ -674,7 +675,7 @@ bool check_xy_delta(point const &p1, point const &p2) {
 
 bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool no_tree) {
 
-	if (USE_COBJ_TREE && cobj_tree_valid && !no_tree && skip_dynamic && !test_alpha && check_xy_delta(pos1, pos2)) {
+	if (USE_COBJ_TREE && cobj_tree_valid && !no_tree && skip_dynamic && test_alpha != 2 && check_xy_delta(pos1, pos2)) {
 		return check_coll_line_tree(pos1, pos2, cindex, cobj);
 	}
 	cindex = -1;
@@ -688,7 +689,7 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dyn
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex, float splash_val,
 						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic, bool no_tree)
 {
-	if (USE_COBJ_TREE && cobj_tree_valid && !no_tree && splash_val == 0.0 && skip_dynamic && !test_alpha && check_xy_delta(pos1, pos2)) {
+	if (USE_COBJ_TREE && cobj_tree_valid && !no_tree && splash_val == 0.0 && skip_dynamic && check_xy_delta(pos1, pos2)) {
 		return check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj);
 	}
 	cindex = -1;
