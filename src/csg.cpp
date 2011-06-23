@@ -442,6 +442,35 @@ bool csg_cube::subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cob
 }
 
 
+// returns 1 if some work is done
+bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj &cobj) const { // subtract ourself from cobjs[index]
+
+	return 0; // incomplete
+	// start by assuming *this intersects cobj.d (should have been tested already)
+	assert(cobj.type == COLL_POLYGON);
+	assert(cobj.thickness <= MIN_POLY_THICK2); // can't handle this case yet
+	if (contains_cube(cobj)) return 1; // contained - remove the entire cobj
+	point cur[4];
+	unsigned cur_npts(cobj.npoints);
+	for (unsigned i = 0; i < cur_npts; ++i) cur[i] = cobj.points[i];
+	size_t const new_cobjs_sz(new_cobjs.size());
+
+	for (unsigned i = 0; i < 3; ++i) {
+		for (unsigned j = 0; j < 2; ++j) {
+			float const clip_val(d[i][j]); // clip cur polygon by this plane
+			// *** WRITE ***
+			// put the outside part (tri/quad) (if any) in new_cobjs
+			// put the inside part  (tri/quad) (if any) in cur
+		}
+	}
+	if (cur_npts > 0) return 1;
+	// else nothing removed
+	assert(new_cobjs.size() > new_cobjs_sz);
+	new_cobjs.erase(new_cobjs.begin()+new_cobjs_sz, new_cobjs.end()); // remove everything that was added
+	return 0;
+}
+
+
 float get_cube_dmax() {
 
 	return REL_DMAX*(X_SCENE_SIZE + Y_SCENE_SIZE);
@@ -827,6 +856,9 @@ bool subtract_cobj(vector<coll_obj> &new_cobjs, csg_cube const &cube, coll_obj &
 	}
 	else if (cobj.is_cylinder()) {
 		removed = cube.subtract_from_cylinder(new_cobjs, cobj);
+	}
+	else if (cobj.type == COLL_POLYGON && cobj.thickness <= MIN_POLY_THICK2) {
+		removed = cube.subtract_from_polygon(new_cobjs, cobj);
 	}
 	return removed;
 }

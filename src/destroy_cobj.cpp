@@ -40,12 +40,11 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 	csg_cube cube(pos.x, pos.x, pos.y, pos.y, pos.z, pos.z);
 	cube.expand_by(radius);
 	unsigned nrem(subtract_cube(coll_objects, cts, cdir, cube, dmin));
-	if (nrem == 0 || cts.empty()) return;
-
-	// check for waypoints that can be added near this cube (at the center only)
+	if (nrem == 0 || cts.empty()) return; // nothing removed
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
 	if (!point_outside_mesh(xpos, ypos)) {
+		// check for waypoints that can be added near this cube (at the center only)
 		vector<int> const &cvals(v_collision_matrix[ypos][xpos].cvals);
 
 		for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
