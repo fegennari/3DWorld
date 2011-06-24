@@ -503,6 +503,121 @@ void clear_lightmap() {
 }
 
 
+void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int j,
+	bool proc_cobjs, bool calc_lval, float zstep, float z_atten, float light_off)
+{
+	if (z_light_depth) z_light_depth[i][j] = MESH_SIZE[2];
+	lmcell *vldata(lmap_manager.vlmap[i][j]);
+	if (vldata == NULL) return;
+	float const bbz[2][2] = {{get_xval(j), get_xval(j+1)}, {get_yval(i), get_yval(i+1)}}; // X x Y
+	coll_cell const &cell(v_collision_matrix[i][j]);
+	unsigned const ncv(cell.cvals.size());
+	float val(1.0), vscale(Z_WT_SCALE);
+	r_profile prof(bbz);
+	vector<pair<float, unsigned> > cobj_z;
+	bool alpha1(1);
+
+	if (proc_cobjs) {
+		for (unsigned q = 0; q < ncv; ++q) {
+			unsigned const cid(cell.cvals[q]);
+			assert(cid < coll_objects.size());
+			coll_obj const &cobj(coll_objects[cid]);
+			if (cobj.status != COLL_STATIC) continue;
+			if (cobj.d[2][1] < zbottom)     continue; // below the mesh
+			rect const r_cobj(cobj.d, 0, 1);
+			if (!r_cobj.nonzero())          continue; // zero Z cross section (vertical polygon)
+			float cztop;
+					
+			if (r_cobj.overlaps(bbz) && add_cobj_ok(cobj) && cobj.clip_in_2d(bbz, cztop, 0, 1, 1)) {
+				cobj_z.push_back(make_pair(cztop, cid)); // still incorrect for coll polygon since x and y aren't clipped
+				if (cobj.cp.color.alpha < 1.0) alpha1 = 0;
+			}
+		}
+		sort(cobj_z.begin(), cobj_z.end(), std::greater<pair<float, unsigned> >()); // max to min z
+	}
+	unsigned const ncv2(cobj_z.size());
+	unsigned c(0);
+
+	for (int v = MESH_SIZE[2]-1; v >= 0; --v) { // top to bottom
+		float const old_val(val);
+		float zb(czmin0 + v*zstep), zt(zb + zstep); // cell Z bounds
+		float flow_val[2][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+				
+		if (Z_WT_SCALE == 0.0 || zt < mesh_height[i][j]) { // under mesh
+			val = 0.0;
+		}
+		else if (!proc_cobjs) {
+			for (unsigned d = 0; d < 3; ++d) {
+				flow_val[0][d] = flow_val[1][d] = 1.0;
+			}
+			val = 1.0;
+		}
+		else {
+			if (val > 0.0) {
+				for (; val > 0.0 && c < ncv2 && cobj_z[c].first >= zb; ++c) {
+					coll_obj const &cobj(coll_objects[cobj_z[c].second]);
+
+					if (cobj.cp.color.alpha > MIN_SHADOW_ALPHA && cobj_z[c].first < zt) { // test for ztop in current voxel //(v == MESH_SIZE[2]-1) ||
+						prof.add_rect(cobj.d, 0, 1, cobj.cp.color.alpha);
+						if (prof.is_filled()) val = 0.0;
+					}
+				}
+				float const new_val(prof.den_inv());
+				assert(new_val > -TOLER && new_val <= (val + TOLER));
+						
+				if (new_val == 1.0) {
+					if (z_light_depth) z_light_depth[i][j] = v;
+					vscale = Z_WT_SCALE;
+				}
+				val = new_val;
+			} // if val > 0.0
+			assert(zstep > 0.0);
+			float const bb[3][2]  = {{bbz[0][0], bbz[0][1]}, {bbz[1][0], bbz[1][1]}, {zb, zt}};
+			float const bbx[2][2] = {{bb[1][0], bb[1][1]}, {zb, zt}}; // YxZ
+			float const bby[2][2] = {{zb, zt}, {bb[0][0], bb[0][1]}}; // ZxX
+
+			for (unsigned d = 0; d < unsigned(1 + !alpha1); ++d) {
+				flow_prof[d][0].reset_bbox(bbx);
+				flow_prof[d][1].reset_bbox(bby);
+				flow_prof[d][2].reset_bbox(bbz);
+			}
+			for (unsigned c2 = 0; c2 < ncv2; ++c2) { // could make this more efficient
+				coll_obj &cobj(coll_objects[cobj_z[c2].second]);
+				if (cobj.d[0][0] >= bb[0][1] || cobj.d[0][1]     <= bb[0][0]) continue; // no intersection
+				if (cobj.d[1][0] >= bb[1][1] || cobj.d[1][1]     <= bb[1][0]) continue;
+				if (cobj.d[2][0] >= bb[2][1] || cobj_z[c2].first <= bb[2][0]) continue;
+				float const cztop(cobj.d[2][1]), alpha(cobj.cp.color.alpha);
+				cobj.d[2][1] = cobj_z[c2].first;
+						
+				for (unsigned d = 0; d < 3; ++d) { // critical path
+					if (alpha > MIN_SHADOW_ALPHA) flow_prof[0][d].add_rect(cobj.d, (d+1)%3, (d+2)%3, alpha);
+					if (!alpha1)                  flow_prof[1][d].add_rect(cobj.d, (d+1)%3, (d+2)%3, 1.0);
+				}
+				cobj.d[2][1] = cztop;
+			} // for c2
+			for (unsigned d = 0; d < unsigned(1 + !alpha1); ++d) {
+				for (unsigned e = 0; e < 3; ++e) {
+					flow_val[d][e] = flow_prof[d][e].den_inv();
+					assert(flow_val[d][e] > -TOLER);
+				}
+			}
+		} // if above mesh
+		for (unsigned d = 0; d < 3; ++d) {
+			vldata[v].lflow[d] = (unsigned char)(255.5*CLIP_TO_01(flow_val[0][d]));
+			vldata[v].pflow[d] = (unsigned char)(255.5*CLIP_TO_01(flow_val[!alpha1][d]));
+		}
+		if (calc_lval) {
+			vldata[v].v = 0.5*vscale*(val + old_val) + light_off; // what about colors?
+			vscale     *= z_atten;
+			UNROLL_3X(vldata[v].ac[i_] = 1.0;)
+		}
+	} // for v
+}
+
+
+float calc_czspan() {return max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER));}
+
+
 void build_lightmap(bool verbose) {
 
 	if (lm_alloc) return; // what about recreating the lightmap if the scene has changed?
@@ -547,7 +662,7 @@ void build_lightmap(bool verbose) {
 	SHIFT_DXYZ[1] = SHIFT_DY = SHIFT_VAL*DY_VAL;
 	czmin0        = czmin;//max(czmin, zbottom);
 	assert(lm_dz_adj >= 0.0);
-	float const czspan(max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER))), dz(DZ_VAL_INV2*czspan);
+	float const czspan(calc_czspan()), dz(DZ_VAL_INV2*czspan);
 	assert(dz >= 0.0);
 	assert(coll_objects.empty() || !has_fixed || dz > 0.0); // too strict (all cobjs can be shifted off the mesh)
 	unsigned const zsize(unsigned(dz + 1)), nbins(nonempty*zsize);
@@ -572,110 +687,8 @@ void build_lightmap(bool verbose) {
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			z_light_depth[i][j] = zsize;
-			lmcell *vldata(lmap_manager.vlmap[i][j]);
-			if (vldata == NULL) continue;
-			float const bbz[2][2] = {{get_xval(j), get_xval(j+1)}, {get_yval(i), get_yval(i+1)}}; // X x Y
-			coll_cell const &cell(v_collision_matrix[i][j]);
-			unsigned const ncv(cell.cvals.size());
-			float val(1.0), vscale(Z_WT_SCALE);
-			r_profile prof(bbz);
-			vector<pair<float, unsigned> > cobj_z;
-			bool alpha1(1);
-
-			if (need_lmcell[i][j] & 1) {
-				for (unsigned q = 0; q < ncv; ++q) {
-					unsigned const cid(cell.cvals[q]);
-					assert(cid < coll_objects.size());
-					coll_obj const &cobj(coll_objects[cid]);
-					if (cobj.d[2][1] < zbottom) continue; // below the mesh
-					rect const r_cobj(cobj.d, 0, 1);
-					if (!r_cobj.nonzero())      continue; // zero Z cross section (vertical polygon)
-					float cztop;
-					
-					if (r_cobj.overlaps(bbz) && add_cobj_ok(cobj) && cobj.clip_in_2d(bbz, cztop, 0, 1, 1)) {
-						cobj_z.push_back(make_pair(cztop, cid)); // still incorrect for coll polygon since x and y aren't clipped
-						if (cobj.cp.color.alpha < 1.0) alpha1 = 0;
-					}
-				}
-				sort(cobj_z.begin(), cobj_z.end(), std::greater<pair<float, unsigned> >()); // max to min z
-			}
-			unsigned const ncv2(cobj_z.size());
-			unsigned c(0);
-
-			for (int v = zsize-1; v >= 0; --v) { // top to bottom
-				float const old_val(val);
-				float zb(czmin0 + v*zstep), zt(zb + zstep); // cell Z bounds
-				float flow_val[2][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-				
-				if (Z_WT_SCALE == 0.0 || zt < mesh_height[i][j]) { // under mesh
-					val = 0.0;
-				}
-				else if (!(need_lmcell[i][j] & 1)) {
-					for (unsigned d = 0; d < 3; ++d) {
-						flow_val[0][d] = flow_val[1][d] = 1.0;
-					}
-					val = 1.0;
-				}
-				else {
-					if (val > 0.0) {
-						for (; val > 0.0 && c < ncv2 && cobj_z[c].first >= zb; ++c) {
-							coll_obj const &cobj(coll_objects[cobj_z[c].second]);
-
-							if (cobj.cp.color.alpha > 0.5 && cobj_z[c].first < zt) { // test for ztop in current voxel //(v == zsize-1) ||
-								prof.add_rect(cobj.d, 0, 1, cobj.cp.color.alpha);
-								if (prof.is_filled()) val = 0.0;
-							}
-						}
-						float const new_val(prof.den_inv());
-						assert(new_val > -TOLER && new_val <= (val + TOLER));
-						
-						if (new_val == 1.0) {
-							z_light_depth[i][j] = v;
-							vscale              = Z_WT_SCALE;
-						}
-						val = new_val;
-					} // if val > 0.0
-					assert(zstep > 0.0);
-					float const bb[3][2]  = {{bbz[0][0], bbz[0][1]}, {bbz[1][0], bbz[1][1]}, {zb, zt}};
-					float const bbx[2][2] = {{bb[1][0], bb[1][1]}, {zb, zt}}; // YxZ
-					float const bby[2][2] = {{zb, zt}, {bb[0][0], bb[0][1]}}; // ZxX
-
-					for (unsigned d = 0; d < unsigned(1 + !alpha1); ++d) {
-						flow_prof[d][0].reset_bbox(bbx);
-						flow_prof[d][1].reset_bbox(bby);
-						flow_prof[d][2].reset_bbox(bbz);
-					}
-					for (unsigned c2 = 0; c2 < ncv2; ++c2) { // could make this more efficient
-						coll_obj &cobj(coll_objects[cobj_z[c2].second]);
-						if (cobj.d[0][0] >= bb[0][1] || cobj.d[0][1]     <= bb[0][0]) continue; // no intersection
-						if (cobj.d[1][0] >= bb[1][1] || cobj.d[1][1]     <= bb[1][0]) continue;
-						if (cobj.d[2][0] >= bb[2][1] || cobj_z[c2].first <= bb[2][0]) continue;
-						float const cztop(cobj.d[2][1]), alpha(cobj.cp.color.alpha);
-						cobj.d[2][1] = cobj_z[c2].first;
-						
-						for (unsigned d = 0; d < 3; ++d) { // critical path
-							if (alpha > 0.5) flow_prof[0][d].add_rect(cobj.d, (d+1)%3, (d+2)%3, alpha);
-							if (!alpha1)     flow_prof[1][d].add_rect(cobj.d, (d+1)%3, (d+2)%3, 1.0);
-						}
-						cobj.d[2][1] = cztop;
-					} // for c2
-					for (unsigned d = 0; d < unsigned(1 + !alpha1); ++d) {
-						for (unsigned e = 0; e < 3; ++e) {
-							flow_val[d][e] = flow_prof[d][e].den_inv();
-							assert(flow_val[d][e] > -TOLER);
-						}
-					}
-				} // if above mesh
-				for (unsigned d = 0; d < 3; ++d) {
-					vldata[v].lflow[d] = (unsigned char)(255.5*CLIP_TO_01(flow_val[0][d]));
-					vldata[v].pflow[d] = (unsigned char)(255.5*CLIP_TO_01(flow_val[!alpha1][d]));
-				}
-				if (!raytrace_lights_g) {
-					vldata[v].v = 0.5*vscale*(val + old_val) + light_off; // what about colors?
-					vscale     *= z_atten;
-				}
-			} // for v
+			bool const proc_cobjs(need_lmcell[i][j] & 1);
+			calc_flow_for_xy(flow_prof, z_light_depth, i, j, proc_cobjs, !raytrace_lights_g, zstep, z_atten, light_off);
 		} // for j
 	} // for i
 	if (verbose) PRINT_TIME(" Lighting Z + Flow");
@@ -726,8 +739,9 @@ void build_lightmap(bool verbose) {
 							}
 							for (unsigned c = 0; c < ncv; ++c) { // skip entire column somehow?
 								coll_obj &cobj(coll_objects[cell.cvals[c]]);
+								if (cobj.status != COLL_STATIC) continue;
 								if (cobj.type == COLL_CUBE && cobj.counter == counter) continue; // already processed
-								if (cobj.d[2][1] < zbottom || cobj.cp.color.alpha <= 0.5 || !add_cobj_ok(cobj)) continue;
+								if (cobj.d[2][1] < zbottom || cobj.cp.color.alpha <= MIN_SHADOW_ALPHA || !add_cobj_ok(cobj)) continue;
 								float xyval(cobj.d[!dim][dir]);
 								//if (!cobj.clip_in_2d(bb, xyval, 2, dim, dir)) continue;
 								float const tv(min(tmax, max(-tmax, xyval))); // clip to scene
@@ -884,6 +898,25 @@ void build_lightmap(bool verbose) {
 	matrix_delete_2d(z_light_depth);
 	matrix_delete_2d(need_lmcell);
 	PRINT_TIME(" Lighting");
+}
+
+
+void update_flow_for_voxels(cube_t const &cube) {
+
+	if (!lm_alloc || !lmap_manager.vlmap) return;
+	int const cx1(max(0, get_xpos(cube.d[0][0]))), cx2(min(MESH_X_SIZE-1, get_xpos(cube.d[0][1])));
+	int const cy1(max(0, get_ypos(cube.d[1][0]))), cy2(min(MESH_Y_SIZE-1, get_ypos(cube.d[1][1])));
+	float const zstep(calc_czspan()/MESH_SIZE[2]);
+	r_profile flow_prof[2][3];
+
+	for (int y = cy1; y <= cy2; ++y) {
+		for (int x = cx1; x <= cx2; ++x) {
+			assert(!point_outside_mesh(x, y));
+			bool const fixed(!coll_objects.empty() && has_fixed_cobjs(x, y));
+			bool const proc_cobjs(use_dense_voxels || fixed);
+			calc_flow_for_xy(flow_prof, NULL, y, x, proc_cobjs, 0, zstep, 1.0, 0.0);
+		} // for x
+	} //for y
 }
 
 
@@ -1215,6 +1248,8 @@ bool is_shadowed_lightmap(point const &p) {
 void light_source::pack_to_floatv(float *data) const {
 
 	// store light_source as: {center.xyz, radius}, {color.rgba}, {dir, bwidth}
+	// Note: we don't really need to store the z-component of dir because we can calculate it from sqrt(1 - x*x - y*y),
+	//       but doing this won't save us any texture data so it's not worth the trouble
 	assert(data);
 	UNROLL_3X(*(data++) = center[i_];)
 	*(data++) = radius;

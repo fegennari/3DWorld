@@ -54,6 +54,13 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 		}
 	}
 
+	// update voxel pflow map for removal
+	update_flow_for_voxels(cube);
+
+	for (unsigned i = 0; i < cts.size(); ++i) {
+		if (cts[i].destroy >= SHATTERABLE || cts[i].unanchored) update_flow_for_voxels(cts[i]);
+	}
+
 	// create fragments
 	float const cdir_mag(cdir.mag());
 
@@ -84,15 +91,15 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 		if (size_scale < 0.1) continue;
 		unsigned const num(min(100U, max((shattered ? 6U : 1U), unsigned(num_parts)))); // no more than 200
 		//cout << "shattered: " << shattered << ", volume: " << cts[i].volume << ", num_parts: " << num_parts << ", num: " << num << ", ss: " << size_scale << endl;
-		bool const tri_fragments(shattered || cts[i].unanchored);
+		bool const non_csg(shattered || cts[i].unanchored);
 		csg_cube frag_cube(cts[i]);
-		if (!tri_fragments && !cube.cube_intersection(frag_cube, frag_cube)) frag_cube = cts[i]; // intersect frag_cube with cube (should pass)
+		if (!non_csg && !cube.cube_intersection(frag_cube, frag_cube)) frag_cube = cts[i]; // intersect frag_cube with cube (should pass)
 
 		for (unsigned o = 0; o < num; ++o) {
 			vector3d velocity(cdir);
 			point fpos(frag_cube.gen_rand_pt_in_cube()); // only accurate for COLL_CUBE
 
-			if (tri_fragments) {
+			if (non_csg) {
 				vector3d const vadd(fpos - pos); // average cdir and direction from collision point to fragment location
 
 				if (vadd.mag() > TOLERANCE) {

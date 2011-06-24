@@ -1626,6 +1626,7 @@ void draw_universe(bool static_only=0, bool skip_closest=0, bool no_distant=0);
 void draw_universe_stats();
 
 // function prototypes - lightmap
+void update_flow_for_voxels(cube_t const &cube);
 void shift_light_sources(vector3d const &vd);
 void shift_lightmap(vector3d const &vd);
 void regen_lightmap();
