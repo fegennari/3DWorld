@@ -221,6 +221,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 				if (full_update) {
 					bool const bad(get_zval(z+1) < zthresh); // adjust by one because GPU will interpolate the texel
 					UNROLL_3X(data[off2+i_] = bad ? 0 : (unsigned char)(255*CLIP_TO_01(lmc.v*lmc.ac[i_]*cur_ambient[i_] + lmc.c[i_]));)
+					//UNROLL_3X(data[off2+i_] = bad ? 0 : lmc.pflow[i_];)
 				}
 				data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // alpha: smoke
 			}
@@ -234,7 +235,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	else { // update region/sync texture
 		unsigned const off(ncomp*y_start*MESH_X_SIZE*zsize);
 		assert(off < data.size());
-		update_3d_texture(smoke_tid, 0, 0, y_start, zsize, MESH_X_SIZE, block_size, ncomp, &data[off]);
+		update_3d_texture(smoke_tid, 0, 0, y_start, zsize, MESH_X_SIZE, (full_update ? MESH_Y_SIZE : block_size), ncomp, &data[off]);
 	}
 	if (!full_update) cur_block = (cur_block+1) % SMOKE_SEND_SKIP;
 	//PRINT_TIME("Smoke Upload");
