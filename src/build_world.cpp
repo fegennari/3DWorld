@@ -736,14 +736,9 @@ int read_error(FILE *fp, const char *param, const char *filename) {
 }
 
 
-void set_cobj_params(coll_obj &cobj, float elastic, colorRGBA color, int tid, bool draw,
-					 int platform_id, bool has_layer, float refract_ix, int group_id=-1)
-{
+void check_layer(bool has_layer) {
+
 	if (!has_layer) cout << "* Warning: Shape found before a layer specification in config file. Using default layer." << endl;
-	assert(platform_id < (int)platforms.size());
-	cobj.platform_id = platform_id;
-	cobj.group_id    = group_id;
-	cobj.cp.set_params(elastic, color, tid, draw, refract_ix);
 }
 
 
@@ -940,8 +935,7 @@ void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius,
 
 
 int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool const mirror_[3], bool const swap_dim_[3][3],
-					   coll_obj cobj, int tid=-1, int platform_id=-1, bool draw=1, bool has_layer=0, float elastic=0.5,
-					   colorRGBA color=WHITE, colorRGBA lcolor=WHITE, float refract_ix=1.0)
+					   coll_obj cobj, bool has_layer, colorRGBA lcolor)
 {
 	assert(coll_obj_file != NULL);
 	bool mirror[3], swap_dim[3][3];
@@ -985,9 +979,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			if (fscanf(fp, "%s", str) != 1) {
 				return read_error(fp, "include file", coll_obj_file);
 			}
-			if (!read_coll_obj_file(str, tv, scale, mirror, swap_dim, cobj, tid,
-				platform_id, draw, has_layer, elastic, color, lcolor, refract_ix))
-			{
+			if (!read_coll_obj_file(str, tv, scale, mirror, swap_dim, cobj, has_layer, lcolor)) {
 				return read_error(fp, "include file", coll_obj_file);
 			}
 			break;
@@ -1004,8 +996,8 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					return read_error(fp, "object file data", coll_obj_file);
 				}
 				bool const group_cobjs(ivals[0] != 0);
-				int const cobj_group_id(group_cobjs ? next_cobj_group_id++ : -1);
-				set_cobj_params(cobj, elastic, color, tid, draw, platform_id, has_layer, refract_ix, cobj_group_id);
+				cobj.group_id = (group_cobjs ? next_cobj_group_id++ : -1);
+				check_layer(has_layer);
 				cobj.thickness *= scale;
 				split_polygons.clear();
 
@@ -1016,6 +1008,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					split_polygon_to_cobjs(cobj, split_polygons, ppts[i], 0);
 				}
 				add_polygons_to_cobj_vector(split_polygons);
+				cobj.group_id = -1; // reset
 				PRINT_TIME("Obj File Load/Process");
 				break;
 			}
@@ -1025,11 +1018,12 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			assert(ivals[0] == 0 || ivals[0] == 1); // boolean
 			
 			if (ivals[0] == 0) { // disable platforms
-				platform_id = -1;
+				cobj.platform_id = -1;
 			}
 			else {
-				platform_id = platforms.size();
+				cobj.platform_id = platforms.size();
 				if (!platforms.add_from_file(fp)) return read_error(fp, "platform", coll_obj_file);
+				assert(cobj.platform_id < (int)platforms.size());
 			}
 			break;
 
@@ -1187,7 +1181,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					}
 				}
 				for (unsigned i = 0; i < 2; ++i) xform_pos(pt[i], tv, scale, mirror, swap_dim);
-				set_cobj_params(cobj, elastic, color, tid, draw, platform_id, has_layer, refract_ix);
+				check_layer(has_layer);
 
 				for (unsigned d = 0; d < 3; ++d) {
 					for (unsigned e = 0; e < 2; ++e) cobj.d[d][e] = pt[e][d];
@@ -1203,7 +1197,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			if (fscanf(fp, "%f%f%f%f", &cobj.points[0].x, &cobj.points[0].y, &cobj.points[0].z, &cobj.radius) != 4) {
 				return read_error(fp, "collision sphere", coll_obj_file);
 			}
-			set_cobj_params(cobj, elastic, color, tid, draw, platform_id, has_layer, refract_ix);
+			check_layer(has_layer);
 			cobj.radius *= scale;
 			xform_pos(cobj.points[0], tv, scale, mirror, swap_dim);
 			cobj.add_to_vector(fixed_cobjs, COLL_SPHERE);
@@ -1215,7 +1209,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			assert(cobj.radius >  0.0 || cobj.radius2 >  0.0);
 			assert(cobj.radius >= 0.0 && cobj.radius2 >= 0.0);
-			set_cobj_params(cobj, elastic, color, tid, draw, platform_id, has_layer, refract_ix);
+			check_layer(has_layer);
 			cobj.radius  *= scale;
 			cobj.radius2 *= scale;
 			for (unsigned i = 0; i < 2; ++i) xform_pos(cobj.points[i], tv, scale, mirror, swap_dim);
@@ -1246,7 +1240,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			if (fscanf(fp, "%f", &cobj.thickness) != 1) {
 				return read_error(fp, "collision polygon", coll_obj_file);
 			}
-			set_cobj_params(cobj, elastic, color, tid, draw, platform_id, has_layer, refract_ix);
+			check_layer(has_layer);
 			cobj.thickness *= scale;
 			split_polygons.clear();
 			split_polygon_to_cobjs(cobj, split_polygons, poly_pts, 0);
@@ -1272,7 +1266,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				if (six >= eix || eix > npoints) {
 					return read_error(fp, "hollow cylinder start/end indices", coll_obj_file);
 				}
-				set_cobj_params(cobj, elastic, color, tid, draw, platform_id, has_layer, refract_ix);
+				check_layer(has_layer);
 
 				for (unsigned i = 0; i < 2; ++i) {
 					xform_pos(pt[i], tv, scale, mirror, swap_dim);
@@ -1366,21 +1360,25 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			fclose(fp);
 			return 0;
 
-		case 'l': // object layer/material: elasticity R G B A texture_id/texture_name draw [refract_ix]
-			if (fscanf(fp, "%f%f%f%f%f%s%i", &elastic, &color.red, &color.green, &color.blue, &color.alpha, str, &ivals[0]) != 7) {
+		case 'l': // object layer/material: elasticity R G B A texture_id/texture_name draw [refract_ix [light_atten]]
+			if (fscanf(fp, "%f%f%f%f%f%s%i", &cobj.cp.elastic, &cobj.cp.color.red, &cobj.cp.color.green,
+				&cobj.cp.color.blue, &cobj.cp.color.alpha, str, &ivals[0]) != 7)
+			{
 				return read_error(fp, "layer/material properties", coll_obj_file);
 			}
-			tid = get_texture_by_name(std::string(str));
+			cobj.cp.tid = get_texture_by_name(std::string(str));
 
-			if (tid >= NUM_TEXTURES) {
-				cout << "Illegal texture on line " << line_num << ": " << tid << ", max is " << NUM_TEXTURES-1 << endl;
+			if (cobj.cp.tid >= NUM_TEXTURES) {
+				cout << "Illegal texture on line " << line_num << ": " << cobj.cp.tid << ", max is " << NUM_TEXTURES-1 << endl;
 				fclose(fp);
 				return 0;
 			}
-			draw       = (ivals[0] != 0);
-			has_layer  = 1;
-			refract_ix = 1.0; // default
-			fscanf(fp, "%f", &refract_ix); // optional
+			has_layer           = 1;
+			cobj.cp.draw        = (ivals[0] != 0);
+			cobj.cp.refract_ix  = 1.0; // default
+			cobj.cp.light_atten = 0.0; // default
+			fscanf(fp, "%f", &cobj.cp.refract_ix ); // optional
+			fscanf(fp, "%f", &cobj.cp.light_atten); // optional
 			break;
 
 		case 'r': // set specular
@@ -1487,7 +1485,9 @@ int read_coll_objects(const char *coll_obj_file) {
 	bool mirror[3] = {0}, swap_dim[3][3] = {0};
 	coll_obj cobj;
 	cobj.init();
-	if (!read_coll_obj_file(coll_obj_file, tv, scale, mirror, swap_dim, cobj)) return 0;
+	cobj.cp.elastic = 0.5; // default
+	cobj.cp.draw    = 1;   // default
+	if (!read_coll_obj_file(coll_obj_file, tv, scale, mirror, swap_dim, cobj, 0, WHITE)) return 0;
 	if (tree_mode & 2) add_small_tree_coll_objs();
 	if (has_scenery2)  add_scenery_cobjs();
 	return 1;

@@ -114,23 +114,20 @@ typedef map<quad_div, lv_val> lvmap;
 #endif
 
 
-class obj_layer { // size = 56
+class obj_layer { // size = 60
 
 public:
 	bool draw, shadow, swap_txy;
-	float elastic, tscale, specular, shine, tdx, tdy, refract_ix;
+	float elastic, tscale, specular, shine, tdx, tdy, refract_ix, light_atten;
 	int tid;
 	collision_func coll_func;
 	colorRGBA color;
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1,
-		float ts=1.0, float spec=0.0, float shi=0.0, float tx=0.0, float ty=0.0, float ri=1.0) :
+		float ts=1.0, float spec=0.0, float shi=0.0, float tx=0.0, float ty=0.0, float ri=1.0, float la=0.0) :
 		draw(d), shadow(1), swap_txy(0), elastic(e), tscale(ts), specular(spec), shine(shi),
-		tdx(0.0), tdy(0.0), refract_ix(ri), tid(ti), coll_func(cf), color(c) {}
-	
-	void set_params(float elastic_, colorRGBA const &color_, int tid_, bool draw_, float ri) {
-		elastic = elastic_; color = color_; tid = tid_; draw = draw_; refract_ix = ri;
-	}
+		tdx(0.0), tdy(0.0), refract_ix(ri), light_atten(la), tid(ti), coll_func(cf), color(c) {}
+
 	bool equal_params(const obj_layer &cobj) const {
 		return (color == cobj.color && tid == cobj.tid && tscale == cobj.tscale && specular == cobj.specular &&
 			shine == cobj.shine && draw == cobj.draw && elastic == cobj.elastic && tdx == cobj.tdx &&
@@ -139,7 +136,7 @@ public:
 };
 
 
-class cobj_params : public obj_layer { // size = 64
+class cobj_params : public obj_layer { // size = 68
 
 public:
 	int cf_index;
@@ -154,7 +151,7 @@ public:
 };
 
 
-class coll_obj : public cube_t { // size = 244
+class coll_obj : public cube_t { // size = 248
 
 public:
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
