@@ -262,13 +262,12 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		obj.orientation = orient;
 		gen_blood_velocity(obj.velocity, velocity, coll_dir, part_v, 0.15, 0.1, damage_type, health);
 	}
-
-	// add blood
-	add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, min(4.0, double(sqrt(blood_v)))*radius, 0);
-
 	if (burned) {
 		gen_fire(pos, 1.0, source);
 		gen_smoke(pos);
+	}
+	else { // add blood
+		add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, min(4.0, double(sqrt(blood_v)))*radius, 0);
 	}
 	sstate.chunk_index = (sstate.chunk_index + 1) % NUM_CHUNK_BLOCKS;
 }
