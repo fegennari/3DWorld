@@ -19,6 +19,7 @@ extern unsigned ALL_LT[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
 extern texture textures[];
+extern platform_cont platforms;
 
 
 // ******************* COLL_OBJ MEMBERS ******************
@@ -468,7 +469,10 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 
 bool coll_obj::truly_static() const {
 
-	return (status == COLL_STATIC && (type != COLL_CUBE || destroy <= SHATTERABLE) && platform_id < 0); // destroy_thresh?
+	if (status != COLL_STATIC || destroy >= max((int)SHATTERABLE, destroy_thresh+1)) return 0; // destroy_thresh?
+	if (platform_id < 0) return 1;
+	assert((unsigned)platform_id < platforms.size());
+	return !platforms[platform_id].is_moving();
 }
 
 
