@@ -1191,7 +1191,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	}
 	if (TERRAIN_SCENERY) draw_scenery(1, 1);
 	if (TIMETEST) PRINT_TIME("3.4");
-	draw_coll_surfaces(1, 1);
+	draw_coll_surfaces(1, 1); // split into two calls?
 	if (TIMETEST) PRINT_TIME("3.5");
 	draw_solid_object_groups();
 	if (TIMETEST) PRINT_TIME("3.6");

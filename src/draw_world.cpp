@@ -1802,8 +1802,9 @@ void setup_object_render_data() {
 void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
 	RESET_TIME;
-	if (coll_objects.empty() || world_mode != WMODE_GROUND) return;
 	static vector<pair<float, int> > draw_last;
+	if (coll_objects.empty() || world_mode != WMODE_GROUND) return;
+	if (!draw_solid && draw_last.empty()) return; // nothing transparent to draw
 	set_lighted_sides(2);
 	set_fill_mode();
 	gluQuadricTexture(quadric, GL_FALSE);
@@ -1833,6 +1834,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	if (draw_trans) { // called second
 		if (smoke_exists) {
 			for (unsigned i = 0; i < portals.size(); ++i) {
+				if (!portals[i].is_visible()) continue;
 				float const neg_dist_sq(-distance_to_camera_sq(portals[i].get_center_pt()));
 				draw_last.push_back(make_pair(neg_dist_sq, -(int)(i+1)));
 			}
@@ -1867,6 +1869,15 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		//PRINT_TIME("Final Draw");
 		show_draw_stats();
 	}
+}
+
+
+bool portal::is_visible() const {
+
+	point center;
+	float rad;
+	polygon_bounding_sphere(pts, 4, 0.0, center, rad);
+	return sphere_in_camera_view(center, rad, 2);
 }
 
 
