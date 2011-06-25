@@ -982,7 +982,16 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		vector3d const new_orient((obj.pos - opos).get_norm()); // actual movement dir
 		obj.orientation.x = new_orient.x;
 		obj.orientation.y = new_orient.y;
-		obj.orientation.z = 0.95*obj.orientation.z + 0.05*new_orient.z; // smooth interpolation of zval
+		obj.orientation.z = 0.8*obj.orientation.z + 0.2*new_orient.z; // smooth z step
+		float const mh(int_mesh_zval_pt_off(obj.pos, 1, 1));
+		
+		if (obj.pos.z < (mh + 1.1*radius)) { // walking on the mesh (approx)
+			int const xpos(get_xpos(obj.pos.x)), ypos(get_ypos(obj.pos.y));
+
+			if (!point_outside_mesh(xpos, ypos)) { // determine orient.z from mesh normal
+				obj.orientation.z = -dot_product(vector3d(obj.orientation.x, obj.orientation.y, 0.0), surface_normals[ypos][xpos]);
+			}
+		}
 		obj.orientation.normalize();
 	}
 	if (obj.orientation == zero_vector) {
