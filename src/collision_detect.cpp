@@ -1167,12 +1167,14 @@ void vert_coll_detector::check_cobj(int index) {
 	assert(norm != zero_vector);
 	assert(!is_nan(norm));
 	bool is_moving(0);
+	obj_type const &otype(object_types[type]);
+	float const friction(otype.friction_factor);
 
 	// collision with the top of a cube attached to a platform (on first iteration only)
 	if (cobj.platform_id >= 0) {
 		assert(cobj.platform_id < (int)platforms.size());
 		platform const &pf(platforms[cobj.platform_id]);
-		is_moving = (lcoll == 2);
+		is_moving = (lcoll == 2 || friction >= STICK_THRESHOLD);
 
 		if (animate2 && do_coll_funcs && iter == 0) {
 			if (is_moving) { // move with the platform (clip v if large -z?)
@@ -1193,8 +1195,6 @@ void vert_coll_detector::check_cobj(int index) {
 	}
 	if (animate2 && !player && obj.health <= 0.1) obj.disable();
 	vector3d v_old(zero_vector), v0(obj.velocity);
-	obj_type const &otype(object_types[type]);
-	float const friction(otype.friction_factor);
 	bool const static_top_coll(lcoll == 2 && cobj.truly_static());
 
 	if (is_moving || friction < STICK_THRESHOLD) {
