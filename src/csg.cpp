@@ -911,6 +911,7 @@ void process_negative_shapes(vector<coll_obj> &cobjs) { // negtive shapes should
 bool coll_obj::subdiv_fixed_cube(vector<coll_obj> &cobjs) {
 
 	assert(type == COLL_CUBE);
+	if (platform_id >= 0 || destroy >= SHATTERABLE) return 0; // don't subdivide platforms or shatterable/explodeable cubes
 	float const abs_dmax(get_cube_dmax());
 	int maxdim(0);
 	float dmax(0.0);
@@ -1032,7 +1033,7 @@ void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cu
 	for (unsigned i = 0; i < size; ++i) {
 		if (cobjs[i].type == COLL_INVALID) continue; // skip = remove it
 
-		if (cobjs[i].type != COLL_CUBE || cobjs[i].platform_id >= 0 || !cobjs[i].subdiv_fixed_cube(cobjs2)) {
+		if (cobjs[i].type != COLL_CUBE || !cobjs[i].subdiv_fixed_cube(cobjs2)) {
 			cobjs2.push_back(cobjs[i]); // skip platforms
 		}
 	}
