@@ -4,6 +4,9 @@ uniform sampler2D tex0;
 uniform sampler3D smoke_tex;
 uniform float min_alpha = 0.0;
 
+uniform float light_atten = 0.0;
+uniform float cube_bb[6];
+
 // clipped eye position, clipped vertex position, starting vertex position
 varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
 varying vec3 eye_norm;
@@ -64,8 +67,18 @@ void main()
 		if (enable_light7) ADD_LIGHT(7);
 	}
 	if (enable_dlights) lit_color += add_dlights(vpos, normalize(normal), eye); // dynamic lighting
-	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
-	vec4 color = vec4((texel.rgb * lit_color), (texel.a * gl_Color.a));
+	vec4 texel  = texture2D(tex0, gl_TexCoord[0].st);
+	float alpha = gl_Color.a;
+
+	if (do_lt_atten /*&& light_atten > 0.0*/) { // account for light attenuating/reflecting semi-transparent materials
+		vec3 view_vec = vpos - eye;
+		vec3 far_pt   = vpos + 100.0*view_vec/length(view_vec); // move it far away
+		pt_pair res   = clip_line(vpos, far_pt, cube_bb);
+		float dist    = length(res.v1 - res.v2);
+		float atten   = exp(-light_atten*dist);
+		alpha += (1.0 - alpha)*(1.0 - atten);
+	}
+	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha ));
 	if (keep_alpha && color.a <= min_alpha) discard;
 	vec3 eye_c  = eye;
 	vec3 vpos_c = vpos;
