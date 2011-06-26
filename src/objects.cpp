@@ -511,6 +511,15 @@ float coll_obj::get_max_dim() const {
 	return md;
 }
 
+
+float coll_obj::get_light_transmit(point v1, point v2) const {
+
+	if (cp.light_atten == 0.0) return 1.0;
+	if (!do_line_clip(v1, v2, d)) return 1.0;
+	return exp(-cp.light_atten*p2p_dist(v1, v2));
+}
+
+
 bool coll_obj::has_poly_billboard_alpha() const {
 
 	if (!is_billboard || type != COLL_POLYGON || thickness > MIN_POLY_THICK2 || npoints != 4) return 0;

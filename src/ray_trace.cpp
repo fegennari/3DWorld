@@ -209,7 +209,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 			if (cobj.cp.refract_ix != 1.0) {
 				rweight = get_reflected_weight(get_fresnel_reflection(dir, cnorm*-1, 1.0, cobj.cp.refract_ix), alpha);
 			}
-			float const tweight((1.0 - rweight)*weight); // refracted weight
+			float tweight((1.0 - rweight)*weight); // refracted weight
 			
 			if (tweight > WEIGHT_THRESH*weight0) {
 				bool no_transmit(0);
@@ -218,6 +218,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 					vector3d v_refract, v_refract2;
 					
 					if (calc_refraction_angle(dir, v_refract, cnorm, 1.0, cobj.cp.refract_ix)) {
+						point const enter_pt(p2);
 						p_end = (p2 + v_refract*line_length);
 						vector3d cnorm2;
 
@@ -229,6 +230,8 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 							if (calc_refraction_angle(v_refract, v_refract2, cnorm2*-1, cobj.cp.refract_ix, 1.0)) {
 								p2    = p_int;
 								p_end = p2 + v_refract2*line_length;
+								tweight    *= cobj.get_light_transmit(enter_pt, p_int);
+								no_transmit = !(tweight > WEIGHT_THRESH*weight0);
 							}
 							else {
 								no_transmit = 1; // total internal reflection (could process an internal reflection)
@@ -276,6 +279,7 @@ struct rt_data {
 void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose) {
 
 	assert(num_threads > 0 && num_threads < 100);
+	assert(!keep_lasers || NUM_THREADS == 1); // could use a pthread_mutex_t instead to make this legal
 	vector<rt_data> data(num_threads);
 	bool const single_thread(num_threads == 1);
 

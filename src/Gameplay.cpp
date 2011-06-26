@@ -1736,8 +1736,8 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	if (is_laser && cindex >= 0) {
 		cobj_params const &cp(coll_objects[cindex].cp);
 		get_lum_alpha(cp.color, cp.tid, luminance, alpha);
-		specular   = cp.specular;
-		refract_ix = cp.refract_ix;
+		specular    = cp.specular;
+		refract_ix  = cp.refract_ix;
 	}
 	for (int g = 0; g < num_groups; ++g) { // collisions with dynamic group objects - this can be slow
 		obj_group const &objg(obj_groups[g]);
@@ -1825,17 +1825,22 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				else { // specular + diffuse reflections
 					reflect = CLIP_TO_01(alpha*(specular + (1.0f - specular)*luminance)); // could use red component
 				}
-				if (reflect > 0.0) { // reflected light
+				if (reflect > 0.01) { // reflected light
 					calc_reflection_angle(vcf, vref, coll_norm);
 					end_pos = projectile_test(coll_pos, vref, 0.0, reflect*damage, shooter, range0, reflect*intensity);
 				}
 			}
 			if (alpha < 1.0) {
-				float const refract(min(LASER_REFL_ATTEN, (1.0f - reflect)));
+				float refract(1.0 - reflect);
 
-				if (refract > 0.0) { // refracted light (index of refraction changes angle?)
-					point const cp(projectile_test(coll_pos, vcf, 0.0, refract*damage, shooter, range1, refract*intensity, cindex));
-					add_laser_beam_segment(coll_pos, cp, vcf, coll, (range1 > 0.9*MAX_RANGE), refract*intensity);
+				if (refract > 0.01) { // refracted light (index of refraction changes angle?)
+					if (coll && cindex >= 0) refract *= coll_objects[cindex].get_light_transmit(coll_pos, (coll_pos + vcf*FAR_CLIP));
+					refract = min(LASER_REFL_ATTEN, refract);
+
+					if (refract > 0.01) {
+						point const cp(projectile_test(coll_pos, vcf, 0.0, refract*damage, shooter, range1, refract*intensity, cindex));
+						add_laser_beam_segment(coll_pos, cp, vcf, coll, (range1 > 0.9*MAX_RANGE), refract*intensity);
+					}
 				}
 			}
 		}

@@ -216,6 +216,7 @@ public:
 	bool can_be_scorched()const;
 	point get_center_pt() const;
 	float get_max_dim()   const;
+	float get_light_transmit(point v1, point v2) const;
 	void bounding_sphere(point &center, float &brad) const;
 	bool has_poly_billboard_alpha() const;
 	bool check_poly_billboard_alpha(point const &p1, point const &p2, float t) const;
