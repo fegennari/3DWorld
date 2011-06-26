@@ -26,6 +26,7 @@ extern bool disable_shaders;
 
 int get_uniform_loc(unsigned program, char const *const name) {
 
+	if (disable_shaders) return 0;
 	if (program == 0) program = active_program;
 	assert(program && name);
 	int const loc(glGetUniformLocation(program, name));
@@ -35,43 +36,45 @@ int get_uniform_loc(unsigned program, char const *const name) {
 }
 
 
-void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num) {
-
-	if (disable_shaders) return;
-	int const loc(get_uniform_loc(program, name));
+void set_uniform_float_array(int loc, float const *const val, unsigned num) {
 	if (loc >= 0) glUniform1fv(loc, num, val);
 }
 
-
-void add_uniform_float(unsigned program, char const *const name, float val) {
-
-	if (disable_shaders) return;
-	int const loc(get_uniform_loc(program, name));
+void set_uniform_float(int loc, float val) {
 	if (loc >= 0) glUniform1f(loc, val);
 }
 
-
-void add_uniform_int(unsigned program, char const *const name, int val) {
-
-	if (disable_shaders) return;
-	int const loc(get_uniform_loc(program, name));
+void set_uniform_int(int loc, int val) {
 	if (loc >= 0) glUniform1i(loc, val);
 }
 
-
-void add_uniform_vector3d(unsigned program, char const *const name, vector3d const &val) {
-
-	if (disable_shaders) return;
-	int const loc(get_uniform_loc(program, name));
+void set_uniform_vector3d(int loc, vector3d const &val) {
 	if (loc >= 0) glUniform3fv(loc, 1, &val.x);
 }
 
+void set_uniform_color(int loc, colorRGBA const &val) {
+	if (loc >= 0) glUniform4fv(loc, 1, &val.red);
+}
+
+
+void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num) {
+	if (!disable_shaders) set_uniform_float_array(get_uniform_loc(program, name), val, num);
+}
+
+void add_uniform_float(unsigned program, char const *const name, float val) {
+	if (!disable_shaders) set_uniform_float(get_uniform_loc(program, name), val);
+}
+
+void add_uniform_int(unsigned program, char const *const name, int val) {
+	if (!disable_shaders) set_uniform_int(get_uniform_loc(program, name), val);
+}
+
+void add_uniform_vector3d(unsigned program, char const *const name, vector3d const &val) {
+	if (!disable_shaders) set_uniform_vector3d(get_uniform_loc(program, name), val);
+}
 
 void add_uniform_color(unsigned program, char const *const name, colorRGBA const &val) {
-
-	if (disable_shaders) return;
-	int const loc(get_uniform_loc(program, name));
-	if (loc >= 0) glUniform4fv(loc, 1, &val.red);
+	if (!disable_shaders) set_uniform_color(get_uniform_loc(program, name), val);
 }
 
 

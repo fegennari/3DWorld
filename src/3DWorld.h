@@ -1126,7 +1126,8 @@ colorRGBA get_plasma_color(float size);
 void get_enabled_lights();
 void set_shadowed_state(unsigned char shadowed);
 void set_dlights_booleans(bool enable, int shader_type);
-colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en);
+colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting,
+	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten=0);
 void end_smoke_shaders(colorRGBA const &orig_fog_color);
 void setup_object_render_data();
 void draw_coll_surfaces(bool draw_solid, bool draw_trans);
@@ -1658,6 +1659,12 @@ void split_polygon_to_tris(vector<triangle> &triangles_out, vector<point> const 
 bool split_polygon_to_cobjs(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pt, bool split_quads);
 
 // function prototypes - shaders
+void set_uniform_float_array(int loc, float const *const val, unsigned num);
+void set_uniform_float      (int loc, float val);
+void set_uniform_int        (int loc, int val);
+void set_uniform_vector3d   (int loc, vector3d const &val);
+void set_uniform_color      (int loc, colorRGBA const &val);
+int  get_uniform_loc        (unsigned program, char const *const name);
 void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num);
 void add_uniform_float      (unsigned program, char const *const name, float val);
 void add_uniform_int        (unsigned program, char const *const name, int   val);
