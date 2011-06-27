@@ -342,7 +342,7 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 
 csg_cube::csg_cube(const coll_obj &cobj, bool use_bounding_cube) : eflags(cobj.cp.surfs) { // coll_obj constructor
 
-	assert(use_bounding_cube || cobj.type == COLL_CUBE || cobj.is_cylinder());
+	assert(use_bounding_cube || cobj.type == COLL_CUBE);
 	copy_from(cobj);
 	normalize();
 }
@@ -404,7 +404,7 @@ bool csg_cube::subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cob
 		if (c[1][0] <  d[n][0] || c[1][1] >  d[n][1]) return 0; // no n-containment
 		if (p0[p]   >= d[p][1] || p1[p]   <= d[p][0]) return 0; // no p-intersection
 		if (p0[p]   >= d[p][0] && p1[p]   <= d[p][1]) return 1; // p-containment - remove
-		csg_cube const cube(cobj);
+		csg_cube const cube(cobj, 1);
 		if (cube.is_zero_area()) return 1; // if zero area then remove it entirely
 		cobj.points[0][m] = cobj.points[1][m]; // update cobj.d?
 		cobj.points[0][n] = cobj.points[1][n];
@@ -450,23 +450,63 @@ bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj &cobj
 	assert(cobj.type == COLL_POLYGON);
 	assert(cobj.thickness <= MIN_POLY_THICK2); // can't handle this case yet
 	if (contains_cube(cobj)) return 1; // contained - remove the entire cobj
-	point cur[4];
-	unsigned cur_npts(cobj.npoints);
-	for (unsigned i = 0; i < cur_npts; ++i) cur[i] = cobj.points[i];
-	size_t const new_cobjs_sz(new_cobjs.size());
+	static vector<point> cur, next, new_poly;
+	assert(cur.empty() && next.empty() && new_poly.empty());
+	for (int i = 0; i < cobj.npoints; ++i) cur.push_back(cobj.points[i]);
+	size_t const init_sz(new_cobjs.size());
+	//cout << "start polygon: " << cobj.id << endl; for (unsigned p = 0; p < cur.size(); ++p) {cur[p].print(); cout << endl;}
 
-	for (unsigned i = 0; i < 3; ++i) {
-		for (unsigned j = 0; j < 2; ++j) {
+	for (unsigned i = 0; i < 3 && !cur.empty(); ++i) {
+		for (unsigned j = 0; j < 2 && !cur.empty(); ++j) {
 			float const clip_val(d[i][j]); // clip cur polygon by this plane
-			// *** WRITE ***
+			bool prev_outside(0);
 			// put the outside part (tri/quad) (if any) in new_cobjs
 			// put the inside part  (tri/quad) (if any) in cur
+
+			for (unsigned p = 0; p <= cur.size(); ++p) {
+				point const &pos(cur[p%cur.size()]);
+				bool const cur_outside(((pos[i] < clip_val) ^ j) != 0);
+				bool write_int(0), write_cur(0);
+				
+				if (p == cur.size()) { // last point
+					if (cur_outside != prev_outside) write_int = 1; // edge crossing
+				}
+				else if (p == 0 || prev_outside == cur_outside) { // first point or no edge crossing
+					write_cur = 1;
+				}
+				else { // interior point, edge crossing
+					write_int = 1;
+					write_cur = 1;
+				}
+				if (write_int) {
+					vector3d const edge(pos - cur[p-1]);
+					float const t((clip_val - cur[p-1][i])/edge[i]);
+					point const p_int(cur[p-1] + edge*t);
+					new_poly.push_back(p_int);
+					next.push_back(p_int);
+				}
+				if (write_cur) (cur_outside ? new_poly : next).push_back(pos);
+				prev_outside = cur_outside;
+			}
+			if (!new_poly.empty()) {
+				//cout << "add polygon:" << endl; for (unsigned p = 0; p < new_poly.size(); ++p) {new_poly[p].print(); cout << endl;}
+				bool const split_quads(1); // FIXME: waypoint issues with split polygons
+				split_polygon_to_cobjs(cobj, new_cobjs, new_poly, split_quads);
+			}
+			cur.swap(next);
+			next.resize(0);
+			new_poly.resize(0);
 		}
 	}
-	if (cur_npts > 0) return 1;
+	//cout << "cur: " << cur.size() << ", new_cobjs: " << init_sz << " => " << new_cobjs.size() << endl;
+	
+	if (!cur.empty()) { // the remainder (cur) is the part to be removed
+		cur.resize(0);
+		return 1;
+	}
 	// else nothing removed
-	assert(new_cobjs.size() > new_cobjs_sz);
-	new_cobjs.erase(new_cobjs.begin()+new_cobjs_sz, new_cobjs.end()); // remove everything that was added
+	assert(new_cobjs.size() > init_sz);
+	new_cobjs.erase(new_cobjs.begin()+init_sz, new_cobjs.end()); // remove everything that was added
 	return 0;
 }
 

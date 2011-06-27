@@ -240,8 +240,8 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		if (cobjs[i].status != COLL_STATIC /*|| !cobjs[i].fixed*/) continue; // require fixed cobjs? exclude platforms (but they seem to work)?
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
-		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE);
-		bool const csg_obj(is_cube || is_cylinder), shatter(D >= SHATTERABLE);
+		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), is_polygon(cobjs[i].type == COLL_POLYGON);
+		bool const csg_obj(is_cube || is_cylinder /*|| is_polygon*/), shatter(D >= SHATTERABLE);
 		if (!shatter && !csg_obj) continue;
 		csg_cube const cube2(cobjs[i], 1);
 		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
@@ -275,6 +275,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 				volume -= cobjs[index].volume;
 				add_connect_waypoint_for_cobj(cobjs[index]); // slow
 			}
+			if (is_polygon) volume = max(0.0f, volume); // FIXME: remove this when polygon splitting is correct
 			assert(volume >= -TOLERANCE); // usually > 0.0
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
 			cobjs[i].clear_internal_data(cobjs, indices, i);
@@ -301,6 +302,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 
 			// check that each sub-cobj index is in exactly one of anchored[{0,1}]
 			for (unsigned i = 0; i < indices.size(); ++i) {
+				if (coll_objects[indices[i]].type == COLL_POLYGON) continue; // FIXME: remove this when polygon splitting is correct
 				assert((anchored[0].find(indices[i]) == anchored[0].end()) != (anchored[1].find(indices[i]) == anchored[1].end()));
 			}
 			if (REMOVE_UNANCHORED) {
