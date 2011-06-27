@@ -230,7 +230,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 							if (calc_refraction_angle(v_refract, v_refract2, cnorm2*-1, cobj.cp.refract_ix, 1.0)) {
 								p2    = p_int;
 								p_end = p2 + v_refract2*line_length;
-								tweight    *= cobj.get_light_transmit(enter_pt, p_int);
+								tweight    *= cobj.get_light_transmit(enter_pt, p_int); // can we use p2p_dist(enter_pt, p_int) directly?
 								no_transmit = !(tweight > WEIGHT_THRESH*weight0);
 							}
 							else {
