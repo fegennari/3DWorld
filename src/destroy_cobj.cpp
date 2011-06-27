@@ -223,6 +223,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	unsigned ncobjs, last_cobj(0);
 	vector<cube_t> mod_cubes;
 	mod_cubes.push_back(cube);
+	set<unsigned> just_added;
 
 	if (is_small) { // not much faster
 		int const xpos(get_xpos(center.x)), ypos(get_ypos(center.y));
@@ -239,11 +240,12 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		if (cobjs[i].status != COLL_STATIC /*|| !cobjs[i].fixed*/) continue; // require fixed cobjs? exclude platforms (but they seem to work)?
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
-		bool const shatter(D >= SHATTERABLE);
-		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), csg_obj(is_cube || is_cylinder);
-		if (!shatter && !csg_obj)         continue;
-		csg_cube const cube2(cobjs[i], !csg_obj);
+		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE);
+		bool const csg_obj(is_cube || is_cylinder), shatter(D >= SHATTERABLE);
+		if (!shatter && !csg_obj) continue;
+		csg_cube const cube2(cobjs[i], 1);
 		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
+		if (just_added.find(i) != just_added.end()) continue; // don't recheck a cobj that was added in a previous k iteration
 		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
 		float volume(cobjs[i].volume);
 		float const min_volume(0.01*min(volume, clip_cube_colume));
@@ -254,7 +256,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			cube.unset_intersecting_edge_flags(cobjs[i]);
 			continue;
 		}
-		if (!csg_obj || (shatter && is_cylinder) || subtract_cobj(new_cobjs, cube, cobjs[i])) {
+		if (shatter || subtract_cobj(new_cobjs, cube, cobjs[i])) {
 			if (no_new_cubes) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
 			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
@@ -269,6 +271,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
 				assert((size_t)index < cobjs.size());
 				indices.push_back(index);
+				just_added.insert(index);
 				volume -= cobjs[index].volume;
 				add_connect_waypoint_for_cobj(cobjs[index]); // slow
 			}
