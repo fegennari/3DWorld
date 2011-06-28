@@ -4,7 +4,7 @@ uniform sampler2D tex0;
 uniform sampler3D smoke_tex;
 uniform float min_alpha = 0.0;
 
-uniform float light_atten = 0.0;
+uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6];
 
 // clipped eye position, clipped vertex position, starting vertex position
@@ -78,7 +78,15 @@ void main()
 		float atten   = exp(-light_atten*dist);
 		alpha += (1.0 - alpha)*(1.0 - atten);
 	}
-	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha ));
+	if (do_lt_atten /*&& refract_ix != 1.0*/) {
+		vec3 v_inc = eye - vpos;
+		
+		if (dot(normal, v_inc) > 0.0) { // entering ray in front surface
+			float reflect_w = get_fresnel_reflection(normalize(v_inc), normalize(normal), 1.0, refract_ix);
+			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha
+		} // else exiting ray in back surface - ignore for now since we don't refract the ray
+	}
+	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	if (keep_alpha && color.a <= min_alpha) discard;
 	vec3 eye_c  = eye;
 	vec3 vpos_c = vpos;

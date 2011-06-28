@@ -1728,19 +1728,22 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
 	set_bool_shader_prefix("use_texgen",      use_texgen,      0); // VS
-	set_bool_shader_prefix("smoke_enabled",   smoke_enabled,   0); // VS
-	set_bool_shader_prefix("smoke_enabled",   smoke_enabled,   1); // FS
 	set_bool_shader_prefix("keep_alpha",      keep_alpha,      1); // FS
 	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
 	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
 	set_bool_shader_prefix("do_lt_atten",     has_lt_atten,    1); // FS
-	// Note: dynamic_smoke_shadows applies to light0 only
-	// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
-	for (unsigned i = 0; i < 2; ++i) set_bool_shader_prefix("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, i); // VS/FS
+	
+	for (unsigned i = 0; i < 2; ++i) {
+		// Note: dynamic_smoke_shadows applies to light0 only
+		// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
+		set_bool_shader_prefix("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, i); // VS/FS
+		set_bool_shader_prefix("smoke_enabled",         smoke_enabled,         i); // VS/FS
+	}
 	set_dlights_booleans(dlights, 1); // FS
 	setup_enabled_lights(8);
 	set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-	unsigned const p(set_shader_prog("fog.part+texture_gen.part+line_clip.part*+no_lt_texgen_smoke", "linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+line_clip.part*+textured_with_smoke"));
+	unsigned const p(set_shader_prog("fog.part+texture_gen.part+line_clip.part*+no_lt_texgen_smoke",
+		                             "fresnel.part*+linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+line_clip.part*+textured_with_smoke"));
 	setup_scene_bounds(p);
 	setup_fog_scale(p); // fog scale for the case where smoke is disabled
 	if (dlights && dl_tid > 0) setup_dlight_textures(p);
@@ -1842,12 +1845,13 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 		sort(draw_last.begin(), draw_last.end()); // sort back to front
 		enable_blend();
-		int ulocs[2] = {0};
-		float last_light_atten(0.0);
+		int ulocs[3] = {0};
+		float last_light_atten(-1.0), last_refract_ix(0.0); // set to invalid values to start
 
 		if (has_lt_atten) {
 			ulocs[0] = get_uniform_loc(0, "light_atten");
 			ulocs[1] = get_uniform_loc(0, "cube_bb"    );
+			ulocs[2] = get_uniform_loc(0, "refract_ix" );
 		}
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
 			int const ix(draw_last[i].second);
@@ -1856,6 +1860,10 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				if (has_lt_atten && last_light_atten != 0.0) {
 					set_uniform_float(ulocs[0], 0.0);
 					last_light_atten = 0.0;
+				}
+				if (has_lt_atten && last_refract_ix != 1.0) {
+					set_uniform_float(ulocs[2], 1.0);
+					last_refract_ix = 1.0;
 				}
 				unsigned const pix(-(ix+1));
 				assert(pix < portals.size());
@@ -1871,6 +1879,10 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					if (light_atten != last_light_atten) {
 						set_uniform_float(ulocs[0], light_atten);
 						last_light_atten = light_atten;
+					}
+					if (c.cp.refract_ix != last_refract_ix) {
+						set_uniform_float(ulocs[2], c.cp.refract_ix);
+						last_refract_ix = c.cp.refract_ix;
 					}
 					if (light_atten > 0.0) set_uniform_float_array(ulocs[1], (float const *)c.d, 6);
 				}
