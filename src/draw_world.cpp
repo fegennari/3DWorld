@@ -419,7 +419,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 			  int ndiv, int j, bool is_shadowed, bool in_ammo) {
 
 	float const cd_scale(NDIV_SCALE*window_width);
-	dwobject &obj(objg.get_obj(j));
+	dwobject const &obj(objg.get_obj(j));
 	point const &pos(obj.pos);
 	bool const cull_face(get_cull_face(type, color));
 	if (cull_face) glEnable(GL_CULL_FACE);
@@ -451,7 +451,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_landmine(pos, radius, ndiv, obj.time, obj.source, is_shadowed, in_ammo);
 		break;
 	case PLASMA:
-		draw_plasma(pos, pos, radius, obj.init_dir.x, ndiv, 1, !in_ammo, obj.time);
+		draw_plasma(pos, pos, radius, (in_ammo ? 1.0 : obj.init_dir.x), ndiv, 1, !in_ammo, obj.time);
 		break;
 	case GRENADE:
 		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), is_shadowed, in_ammo, 0);
@@ -460,9 +460,9 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), is_shadowed, in_ammo, 1);
 		break;
 	case BALL:
-		draw_rolling_obj(pos, obj.init_dir, radius, obj.status, ndiv, ((obj.flags & PLATFORM_COLL) != 0),
+		// FIXME: this is the only place where drawing an object modifies its physics state, but it's difficult to move the code
+		draw_rolling_obj(pos, objg.get_obj(j).init_dir, radius, obj.status, ndiv, ((obj.flags & PLATFORM_COLL) != 0),
 			dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0], (in_ammo ? NULL : &objg.get_td()->get_matrix(j)));
-		obj.flags &= ~PLATFORM_COLL;
 		break;
 	case POWERUP:
 	case HEALTH:
@@ -616,7 +616,6 @@ void draw_group(obj_group &objg) {
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
-			if (type == LANDMINE && obj.status == 1 && !(obj.flags & STATIC_COBJ_COLL)) obj.time = 0; // don't start time until it lands
 			if (obj.disabled() || ((obj.flags & CAMERA_VIEW) && type != SMILEY)) continue;
 			point const &pos(obj.pos);
 			if (!sphere_in_camera_view(pos, radius_ext, clip_level)) continue;
@@ -656,7 +655,7 @@ void draw_group(obj_group &objg) {
 			for (unsigned k = 0; k < wap_vis_objs[j].size(); ++k) {
 				wap_obj const &wa(wap_vis_objs[j][k]);
 				set_obj_specular(wa.is_shadowed, flags, specular_brightness);
-				dwobject &obj(objg.get_obj(wa.id));
+				dwobject const &obj(objg.get_obj(wa.id));
 				set_shadowed_color(color, obj.pos, wa.is_shadowed, 0);
 				draw_subdiv_sphere(obj.pos, radius, wa.ndiv, 0, 0);
 			}
@@ -915,7 +914,7 @@ void draw_weapon2(dwobject const &obj, float radius) {
 
 void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, bool is_shadowed) {
 
-	dwobject &obj(objg.get_obj(j));
+	dwobject const &obj(objg.get_obj(j));
 	point pos(obj.pos);
 	vector<wap_obj> wap_vis_objs[2]; // not actually used
 	int const atype(get_ammo_or_obj((int)obj.direction));
@@ -959,8 +958,6 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 		case GASSED:
 			draw_subdiv_sphere(pos, 0.6*radius, ndiv, 1, 0);
 			break;
-		case PLASMA:
-			obj.init_dir.x = 1.0; // fallthrough
 		default:
 			draw_obj(objg, wap_vis_objs, atype, 0.4*radius, color, ndiv, j, is_shadowed, 1);
 		}

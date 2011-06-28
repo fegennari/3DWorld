@@ -365,6 +365,7 @@ void process_groups() {
 			point const old_pos(pos);
 			unsigned char const obj_flags(obj.flags);
 			int const status(obj.status);
+			obj.flags &= ~PLATFORM_COLL;
 			++used_objs;
 			++num_objs;
 
@@ -512,6 +513,7 @@ void process_groups() {
 					gen_fire(pos, ((type == PLASMA) ? obj.init_dir.x : rand_uniform(0.4, 1.0)), obj.source);
 				}
 			}
+			if (type == LANDMINE && obj.status == 1 && !(obj.flags & (STATIC_COBJ_COLL | PLATFORM_COLL))) obj.time = 0; // don't start time until it lands
 		} // for jj
 		objg.flags |= WAS_ADVANCED;
 		if (SHOW_PROC_TIME /*|| type == SMILEY*/) {cout << "type = " << type << ", num = " << num_objs << " "; PRINT_TIME("Process");}

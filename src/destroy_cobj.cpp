@@ -474,6 +474,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 					}
 				}
 				// call sphere_ext_poly_intersect?
+				// call something like csg_cube::subtract_from_polygon()?
 				return 0; // FIXME - close, but need to handle cube completely insde of a thick polygon
 			}
 			return 0;
