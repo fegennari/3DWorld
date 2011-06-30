@@ -123,6 +123,7 @@ texture(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
 texture(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
 texture(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
+texture(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
 };
 
@@ -159,6 +160,7 @@ void gen_vstripe_texture();
 void gen_tree_end_texture();
 void gen_blur_cent_texture();
 void gen_gradient_texture();
+void gen_wind_texture();
 void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
 int get_bare_ls_tid(float zval);
@@ -333,7 +335,28 @@ GLenum texture::calc_internal_format() const {
 
 	static int has_comp(2); // starts unknown
 	if (has_comp == 2) has_comp = has_extension("GL_ARB_texture_compression"); // unknown, calculate it
-	return ((COMPRESS_TEXTURES && has_comp && type != 2) ? ((ncolors == 4) ? GL_COMPRESSED_RGBA : GL_COMPRESSED_RGB) : ncolors);
+
+	if (COMPRESS_TEXTURES && has_comp && type != 2) {
+		switch (ncolors) {
+		case 1: return GL_COMPRESSED_LUMINANCE;
+		case 3: return GL_COMPRESSED_RGB;
+		case 4: return GL_COMPRESSED_RGBA;
+		default: assert(0);
+		}
+	}
+	return ncolors;
+}
+
+
+GLenum texture::calc_format() const {
+	
+	switch (ncolors) {
+	case 1: return GL_LUMINANCE;
+	case 3: return GL_RGB;
+	case 4: return GL_RGBA; // GL_BGRA is supposedly faster, but do we want to swap things here?
+	default: assert(0);
+	}
+	return 0;
 }
 
 
@@ -348,10 +371,8 @@ void texture::do_gl_init() {
 	}
 	assert(width > 0 && height > 0 && data != NULL);
 	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap);
-	// GL_BGRA is supposedly faster, but do we want to swap things here?
-	GLenum const format((ncolors == 4) ? GL_RGBA : GL_RGB);
 	//if (use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, format, GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), GL_UNSIGNED_BYTE, data);
 	if (use_mipmaps == 1 || use_mipmaps == 2) gen_mipmaps();
 	if (use_mipmaps == 3) create_custom_mipmaps();
 	assert(glIsTexture(tid));
@@ -363,10 +384,11 @@ void texture::calc_color() {
 	float colors[4] = {0.0,0.0,0.0,0.0}, weight(0.0);
 	int const size(width*height);
 	if (data == NULL) {cout << "NULL texture: " << name << endl; assert(0);}
+	bool const has_alpha(ncolors == 4);
 
 	for(int i = 0; i < size; ++i) {
 		int const offset(i*ncolors);
-		float const cscale((ncolors == 4) ? data[offset+3]/255.0 : 1.0); // alpha scale
+		float const cscale(has_alpha ? data[offset+3]/255.0 : 1.0); // alpha scale
 		weight += cscale;
 
 		for (int j = 0; j < ncolors; ++j) {
@@ -376,7 +398,7 @@ void texture::calc_color() {
 	for (int j = 0; j < ncolors; ++j) {
 		color[j] = colors[j]/(255.0*weight);
 	}
-	if (ncolors == 3) color.alpha = 1.0;
+	if (!has_alpha) color.alpha = 1.0;
 }
 
 
@@ -384,7 +406,6 @@ void texture::build_mipmaps() {
 
 	if (use_mipmaps != 2) return; // not enabled
 	assert(width == height);
-	assert(ncolors == 3 || ncolors == 4);
 	if (!mm_offsets.empty()) {assert(mm_data); return;} // already built
 	assert(mm_data == NULL);
 	unsigned data_size(0);
@@ -394,7 +415,7 @@ void texture::build_mipmaps() {
 		data_size += ncolors*tsz*tsz;
 	}
 	mm_data = new unsigned char[data_size];
-	int const format((ncolors == 3) ? GL_RGB : GL_RGBA);
+	GLenum const format(calc_format());
 
 	for (unsigned level = 0; level < mm_offsets.size(); ++level) {
 		unsigned const tsz(width >> level);
@@ -419,7 +440,7 @@ unsigned char const *texture::get_mipmap_data(unsigned level) const {
 
 void texture::set_to_color(colorRGBA const &c) {
 
-	assert(ncolors == 3 || ncolors == 4 && data != NULL);
+	assert(data != NULL);
 	if (c == color) return; // already set
 	if (c == ALPHA0 && (orig_data == NULL || data == orig_data)) return; // color disabled (but never enabled)
 	color = c;
@@ -565,7 +586,7 @@ unsigned char *LoadTextureRAW(texture const &t, int index) {
 			tex_data[i4+3] = alpha;
 		}
 	}
-	else if (t.ncolors == 1) { // grayscale
+	else if (t.ncolors == 1) { // grayscale luminance
 		vector<unsigned char> td2(size);
 		size_t const nread(fread(&td2.front(), size, 1, file)); assert(nread == 1);
 
@@ -600,8 +621,7 @@ unsigned char *LoadTextureRAW(texture const &t, int index) {
 
 void texture::create_custom_mipmaps() {
 
-	assert(ncolors == 3 || ncolors == 4);
-	GLenum const format((ncolors == 4) ? GL_RGBA : GL_RGB);
+	GLenum const format(calc_format());
 	unsigned const tsize(ncolors*width*height);
 	vector<unsigned char> idata, odata;
 	idata.resize(tsize);
@@ -617,10 +637,14 @@ void texture::create_custom_mipmaps() {
 			for (unsigned x = 0; x < w2; ++x) {
 				unsigned const ix1(ncolors*(y*w2+x)), ix2(ncolors*((y<<1)*w1+(x<<1)));
 
-				if (ncolors == 3) {
+				if (ncolors == 1) {
+					odata[ix1] = (unsigned char)(((unsigned)idata[ix2] + idata[ix2+xinc] + idata[ix2+yinc] + idata[ix2+yinc+xinc]) >> 2);
+				}
+				else if (ncolors == 3) {
 					UNROLL_3X(odata[ix1+i_] = (unsigned char)(((unsigned)idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) >> 2);)
 				}
 				else { // custom alpha mipmaps
+					assert(ncolors == 4);
 					unsigned const a1(idata[ix2+3]), a2(idata[ix2+xinc+3]), a3(idata[ix2+yinc+3]), a4(idata[ix2+yinc+xinc+3]);
 					unsigned const a_sum(max(1U, (a1 + a2 + a3 + a4))); // no div by 0
 					UNROLL_3X(odata[ix1+i_] = (unsigned char)((a1*idata[ix2+i_] + a2*idata[ix2+xinc+i_] + a3*idata[ix2+yinc+i_] + a4*idata[ix2+yinc+xinc+i_]) / a_sum);)
@@ -881,6 +905,21 @@ void gen_gradient_texture() { // for horizon
 		tex_data[4*i+3] = (unsigned char)max(0, (255 * 2 * (size/2 - abs(i - (int)size/2)) / size)); // linear gradient
 	}
 	textures[GRADIENT_TEX].data = tex_data;
+}
+
+
+void gen_wind_texture() {
+
+	int const width(textures[WIND_TEX].width), height(textures[WIND_TEX].height), size(width*height);
+	unsigned char *tex_data2(textures[CLOUD_RAW_TEX].data);
+	assert(textures[WIND_TEX].ncolors == 1 && textures[CLOUD_RAW_TEX].ncolors == 4); // RGBA => grayscale luminance
+	assert(tex_data2 != NULL && width == textures[CLOUD_RAW_TEX].width && height == textures[CLOUD_RAW_TEX].height);
+	unsigned char *tex_data(new unsigned char[size]);
+
+	for (int i = 0; i < size; ++i) {
+		tex_data[i] = tex_data2[(i<<2)+3]; // put alpha in luminance
+	}
+	textures[WIND_TEX].data = tex_data;
 }
 
 
@@ -1423,10 +1462,9 @@ void update_lt_section(int x1, int y1, int x2, int y2) {
 			data = copy;
 		}
 	}
-	GLenum const format((nc == 4) ? GL_RGBA : GL_RGB);
 	check_init_texture(LANDSCAPE_TEX);
 	bind_2d_texture(t1.tid);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, x1, y1, (x2-x1), (y2-y1), format, GL_UNSIGNED_BYTE, data);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, x1, y1, (x2-x1), (y2-y1), t1.calc_format(), GL_UNSIGNED_BYTE, data);
 	delete [] copy;
 	//PRINT_TIME("LT Update");
 }

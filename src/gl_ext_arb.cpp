@@ -115,6 +115,11 @@ void bind_3d_texture(unsigned tid) {
 }
 
 
+GLenum get_format(unsigned ncomp) {
+	return ((ncomp == 1) ? GL_LUMINANCE : ((ncomp == 4) ? GL_RGBA : GL_RGB));
+}
+
+
 unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter) {
 
 	assert(data.size() == ncomp*xsz*ysz*zsz);
@@ -126,8 +131,7 @@ unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned nc
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	GLenum const format((ncomp == 4) ? GL_RGBA : GL_RGB);
-	glTexImage3D(GL_TEXTURE_3D, 0, ncomp, xsz, ysz, zsz, 0, format, GL_UNSIGNED_BYTE, &data.front());
+	glTexImage3D(GL_TEXTURE_3D, 0, ncomp, xsz, ysz, zsz, 0, get_format(ncomp), GL_UNSIGNED_BYTE, &data.front());
 	return tid;
 }
 
@@ -137,8 +141,7 @@ void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff
 {
 	assert(glIsTexture(tid));
 	bind_3d_texture(tid);
-	GLenum const format((ncomp == 4) ? GL_RGBA : GL_RGB);
-	glTexSubImage3D(GL_TEXTURE_3D, 0, xoff, yoff, zoff, xsz, ysz, zsz, format, GL_UNSIGNED_BYTE, data);
+	glTexSubImage3D(GL_TEXTURE_3D, 0, xoff, yoff, zoff, xsz, ysz, zsz, get_format(ncomp), GL_UNSIGNED_BYTE, data);
 }
 
 
