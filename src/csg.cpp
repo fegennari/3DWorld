@@ -443,6 +443,7 @@ bool csg_cube::subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cob
 
 
 // returns 1 if some work is done
+// see http://www.cs.fit.edu/~wds/classes/graphics/Clip/clip/clip.html
 bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj &cobj) const { // subtract ourself from cobjs[index]
 
 	return 0; // incomplete
@@ -492,10 +493,10 @@ bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj &cobj
 				//cout << "add polygon:" << endl; for (unsigned p = 0; p < new_poly.size(); ++p) {new_poly[p].print(); cout << endl;}
 				bool const split_quads(1); // FIXME: waypoint issues with split polygons
 				split_polygon_to_cobjs(cobj, new_cobjs, new_poly, split_quads);
+				new_poly.resize(0);
 			}
 			cur.swap(next);
 			next.resize(0);
-			new_poly.resize(0);
 		}
 	}
 	//cout << "cur: " << cur.size() << ", new_cobjs: " << init_sz << " => " << new_cobjs.size() << endl;
