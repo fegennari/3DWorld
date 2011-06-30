@@ -191,6 +191,7 @@ void load_textures() {
 		case VSTRIPE_TEX:   gen_vstripe_texture();      break;
 		case BLUR_CENT_TEX: gen_blur_cent_texture();    break;
 		case GRADIENT_TEX:  gen_gradient_texture();     break;
+		case WIND_TEX:      gen_wind_texture();         break;
 
 		default:
 			if (textures[i].type > 0) { // generated texture
@@ -1563,17 +1564,17 @@ void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, u
 }
 
 
-float get_texture_alpha(unsigned tid, float xval, float yval) {
+float get_texture_component(unsigned tid, float xval, float yval, int comp) {
 
 	assert(tid < NUM_TEXTURES);
 	texture const &tex(textures[tid]);
-	assert(tex.ncolors == 4);
+	assert(comp < tex.ncolors);
 	int tx(int(tex.width *xval) & (tex.width -1)); // width and height are a power of 2
 	int ty(int(tex.height*yval) & (tex.height-1));
 	if (tx < 0) tx += tex.width;
 	if (ty < 0) ty += tex.height;
 	assert(tx >= 0 && ty >= 0 && tx < tex.width && ty < tex.height);
-	return tex.data[4*(tex.width*ty + tx) + 3]/255.0;
+	return tex.data[tex.ncolors*(tex.width*ty + tx) + comp]/255.0;
 }
 
 
@@ -1590,7 +1591,7 @@ bool is_billboard_texture_transparent(point const *const points, point const &po
 	assert(d[1] + d[3] > 0.0);
 	float const tx(d[0]/((d[0] + d[2]))), ty(d[1]/(d[1] + d[3])); // y is upside down
 	assert(tx >= 0.0 && tx <= 1.0 && ty >= 0.0 && ty <= 1.0);
-	return (get_texture_alpha(tid, tx, ty) == 0.0);
+	return (get_texture_component(tid, tx, ty, 3) == 0.0);
 }
 
 

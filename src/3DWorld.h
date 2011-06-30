@@ -1495,7 +1495,7 @@ void disable_texgen();
 void disable_textures_texgen();
 void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], bool swap_txy=0);
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
-float get_texture_alpha(unsigned tid, float xval, float yval);
+float get_texture_component(unsigned tid, float xval, float yval, int comp);
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);
 void set_texture_specular(bool val);
 

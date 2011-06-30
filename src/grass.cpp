@@ -590,7 +590,7 @@ void setup_wind_for_shader(unsigned p) {
 	add_uniform_float(p, "wind_y", wind.y);
 	add_uniform_int(p, "tex0", 0);
 	add_uniform_int(p, "tex_noise", 1);
-	select_multitex(CLOUD_RAW_TEX, 1, 0);
+	select_multitex(WIND_TEX, 1, 0);
 	set_multitex(0);
 }
 

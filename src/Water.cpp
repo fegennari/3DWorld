@@ -900,7 +900,7 @@ void add_waves() { // add waves due to wind
 			float const lwmag(local_wind.mag());
 			float const tx(min(0.2f, fabs(local_wind.y))*wind_freq*(x + xoff2)/lwmag - wxoff);
 			float const ty(min(0.2f, fabs(local_wind.x))*wind_freq*(y + yoff2)/lwmag - wyoff);
-			float const val(get_texture_alpha(CLOUD_RAW_TEX, tx, ty));
+			float const val(get_texture_component(WIND_TEX, tx, ty, 0));
 			float wval(wind_amplitude*min(2.5f, sqrt(lwmag))*val*min(depth, 0.1f));
 			if (wminside[y][x] == 2) wval += wave_amplitude*fticks_clamped*sin(wave_freq*wave_time + depth_scale*depth); // outside water (oceans)
 			ripples[y][x].rval += wval;
