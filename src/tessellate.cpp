@@ -177,27 +177,26 @@ bool is_poly_convex(vector<point> const &points) { // untested
 }
 
 
-bool split_polygon_to_cobjs(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts, bool split_quads) {
+bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts, bool split_quads) {
 
 	unsigned const npts(poly_pts.size());
 	assert(npts >= 3);
 	
 	if (npts <= N_COLL_POLY_PTS && !(split_quads && npts > 3) && is_poly_convex(poly_pts)) { // triangle or convex quad
-		for (unsigned i = 0; i < npts; ++i) {
-			cobj.points[i] = poly_pts[i];
-		}
-		cobj.npoints = npts;
 		split_polygons.push_back(cobj);
+		split_polygons.back().npoints = npts;
+
+		for (unsigned i = 0; i < npts; ++i) {
+			split_polygons.back().points[i] = poly_pts[i];
+		}
 		return 0;
 	}
 	tessellate_polygon(poly_pts);
-	cobj.npoints = 3; // triangles
 	
 	for (unsigned i = 0; i < triangles.size(); ++i) {
-		for (unsigned j = 0; j < 3; ++j) {
-			cobj.points[j] = triangles[i].pts[j];
-		}
 		split_polygons.push_back(cobj);
+		split_polygons.back().npoints = 3; // triangles
+		UNROLL_3X(split_polygons.back().points[i_] = triangles[i].pts[i_];)
 	}
 	triangles.clear();
 	assert(!split_polygons.empty());

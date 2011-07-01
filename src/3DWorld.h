@@ -1657,7 +1657,7 @@ void disable_dynamic_lights(unsigned num_dlights);
 
 // function prototypes - tessellate
 void split_polygon_to_tris(vector<triangle> &triangles_out, vector<point> const &poly_pts);
-bool split_polygon_to_cobjs(coll_obj cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pt, bool split_quads);
+bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pt, bool split_quads);
 
 // function prototypes - shaders
 void set_uniform_float_array(int loc, float const *const val, unsigned num);
