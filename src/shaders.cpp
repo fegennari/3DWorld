@@ -242,6 +242,14 @@ void set_bool_shader_prefix(string const &name, bool val, unsigned shader_type) 
 }
 
 
+void set_int_shader_prefix(string const &name, int val, unsigned shader_type) {
+	
+	ostringstream oss;
+	oss << val;
+	set_shader_prefix((string("const int ") + name + " = " + oss.str()), shader_type);
+}
+
+
 // *** shader and program setup ***
 
 
