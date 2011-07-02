@@ -40,6 +40,8 @@ using std::max;
 #define PI 3.141592654
 #endif
 
+bool     const USE_ATTR_TEXGEN  = 1;
+
 int      const MIX_BLOOD_WATER  = 1;
 int      const CAMERA_ID        = -1;
 int      const NO_SOURCE        = -2;
@@ -1127,7 +1129,7 @@ colorRGBA get_plasma_color(float size);
 void get_enabled_lights();
 void set_shadowed_state(unsigned char shadowed);
 void set_dlights_booleans(bool enable, int shader_type);
-colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting,
+colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten=0);
 void end_smoke_shaders(colorRGBA const &orig_fog_color);
 void setup_object_render_data();
@@ -1490,11 +1492,12 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 void add_snow_to_landscape_texture(point const &pos, float acc);
 void update_landscape_texture();
 void gen_tex_height_tables();
-void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, int mode=GL_EYE_LINEAR);
+void set_texgen_vec4(float const v[4], bool s_or_t, bool as_attr, bool enable_and_set_mode);
+void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, int mode=GL_EYE_LINEAR, bool as_attr=0);
 void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off=0.0, int mode=GL_EYE_LINEAR);
 void disable_texgen();
 void disable_textures_texgen();
-void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], bool swap_txy=0);
+void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], bool swap_txy=0, bool as_attr=0);
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
 float get_texture_component(unsigned tid, float xval, float yval, int comp);
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);
@@ -1682,6 +1685,7 @@ void setup_scene_bounds(unsigned p);
 void setup_fog_scale(unsigned program);
 void set_shader_prefix(std::string const &prefix, unsigned shader_type);
 void set_bool_shader_prefix(std::string const &name, bool val, unsigned shader_type);
+void set_int_shader_prefix(std::string const &name, int val, unsigned shader_type);
 bool setup_shaders();
 void clear_shaders();
 unsigned set_shader_prog(std::string const &vs_name, std::string const &fs_name, std::string const &gs_name="",

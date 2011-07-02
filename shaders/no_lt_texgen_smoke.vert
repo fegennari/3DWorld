@@ -2,6 +2,7 @@ uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta;
 
 attribute float shadow_val; // sending as int doesn't work?
+attribute vec4 tex0_s, tex0_t;
 
 varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
 varying vec3 eye_norm;
@@ -10,8 +11,14 @@ varying float light_scale[8];
 
 void main()
 {
-	if (use_texgen) {
+	if (use_texgen == 1) {
 		setup_texgen(0);
+	}
+	else if (use_texgen == 2) {
+		gl_TexCoord[0].s = dot(gl_Vertex, tex0_s);
+		gl_TexCoord[0].t = dot(gl_Vertex, tex0_t);
+		gl_TexCoord[0].p = 0.0;
+		gl_TexCoord[0].q = 1.0;
 	}
 	else {
 		gl_TexCoord[0] = gl_MultiTexCoord0;

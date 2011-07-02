@@ -1723,11 +1723,11 @@ void set_dlights_booleans(bool enable, int shader_type) {
 }
 
 
-colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha, bool indir_lighting,
+colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten)
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
-	set_bool_shader_prefix("use_texgen",      use_texgen,      0); // VS
+	set_int_shader_prefix ("use_texgen",      use_texgen,      0); // VS
 	set_bool_shader_prefix("keep_alpha",      keep_alpha,      1); // FS
 	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
 	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
@@ -1751,6 +1751,11 @@ colorRGBA setup_smoke_shaders(float min_alpha, bool use_texgen, bool keep_alpha,
 	assert(ix == 0); // only one attribute
 	add_attrib_float(ix, 0.0); // default is all unshadowed
 
+	if (use_texgen == 2) {
+		unsigned const tex0_s_ix(register_attrib_name(p, "tex0_s"));
+		unsigned const tex0_t_ix(register_attrib_name(p, "tex0_t"));
+		assert(tex0_s_ix == 1 && tex0_t_ix == 2);
+	}
 	if (smoke_en && smoke_tid) {
 		set_multitex(1);
 		bind_3d_texture(smoke_tid);
@@ -1819,7 +1824,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
 	bool const has_lt_atten(draw_trans && !draw_solid);
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 1, 0, 1, 1, 1, 1, has_lt_atten)); // Note: enable direct_lighting if processing sun/moon shadows here
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten)); // Note: enable direct_lighting if processing sun/moon shadows here
 	int last_tid(-1), last_group_id(-1), last_pri_dim(-1);
 	
 	if (draw_solid && have_drawn_cobj) {

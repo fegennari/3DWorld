@@ -1200,6 +1200,10 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 		}
 		sort(faces, (faces+6));
 	}
+	if (FAST_SHAPE_DRAW) {
+		set_shadowed_state(0);
+		glBegin(GL_QUADS);
+	}
 	for (unsigned i = 0; i < 6; ++i) {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
 		if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir))) continue;
@@ -1211,15 +1215,13 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 			b[t1] = tscale[1];
 			a[3]  = tex_delta[t0]*tscale[0];
 			b[3]  = tex_delta[t1]*tscale[1];
-			glTexGenfv((cp.swap_txy ? GL_T : GL_S), GL_EYE_PLANE, a);
-			glTexGenfv((cp.swap_txy ? GL_S : GL_T), GL_EYE_PLANE, b);
+			set_texgen_vec4((cp.swap_txy ? b : a), 0, USE_ATTR_TEXGEN, 0);
+			set_texgen_vec4((cp.swap_txy ? a : b), 1, USE_ATTR_TEXGEN, 0);
 		}
 		if (FAST_SHAPE_DRAW) {
-			set_shadowed_state(0);
 			vector3d normal(zero_vector);
 			normal[dim] = (dir ? 1.0 : -1.0);
 			normal.do_glNormal();
-			glBegin(GL_QUADS);
 			point p;
 			p[d0 ] = d[d0][0];
 			p[d1 ] = d[d1][0];
@@ -1231,12 +1233,12 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 			p.do_glVertex();
 			p[d0 ] = d[d0][0];
 			p.do_glVertex();
-			glEnd();
 		}
 		else {
 			q.draw_quad(d[d0][0], d[d0][1], d[d1][0], d[d1][1], d[dim][dir], 2-dim, dir);
 		}
 	}
+	if (FAST_SHAPE_DRAW) glEnd();
 }
 
 
@@ -1345,7 +1347,7 @@ void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid) con
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
 	
 	if (/*FAST_SHAPE_DRAW ||*/ thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
-		if (textured) setup_polygon_texgen(norm, tscale, xlate, cp.swap_txy);
+		if (textured) setup_polygon_texgen(norm, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
 		q.draw_polygon(points, normals, npoints, norm, 0, 0);
 		return;
 	}
@@ -1404,7 +1406,7 @@ void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid) con
 				}
 				norm2.negate();
 			}
-			if (textured) setup_polygon_texgen(norm2, tscale, xlate, cp.swap_txy);
+			if (textured) setup_polygon_texgen(norm2, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
 			q.draw_polygon(&(pts[s].front()), ((normals && !s) ? n2 : NULL), npoints, norm2, s, 0); // draw bottom surface
 			if (!s) reverse(pts[s].begin(), pts[s].end());
 		}
@@ -1415,7 +1417,7 @@ void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid) con
 			bool const no_shadow(camera_behind_polygon(side_pts, 4, cbf2));
 
 			if (!bfc || !cbf2) {
-				if (textured) setup_polygon_texgen(get_poly_norm(side_pts), tscale, xlate, cp.swap_txy);
+				if (textured) setup_polygon_texgen(get_poly_norm(side_pts), tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
 				q.draw_quad_tri(side_pts, NULL, 4, no_shadow, 1, i+4, no_shadow); // back face cull?
 			}
 		}
@@ -1470,7 +1472,7 @@ void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, boo
 	if (draw_ends) { // not quite right due to long thin triangles
 		if (tid >= 0) { // textured
 			float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
-			setup_polygon_texgen(v12, tscale, xlate, 0);
+			setup_polygon_texgen(v12, tscale, xlate, 0, USE_ATTR_TEXGEN);
 		}
 		bool ends_bf[2];
 		unsigned const i_end(1 + (radius2 != 0.0));

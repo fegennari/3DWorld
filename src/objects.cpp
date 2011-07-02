@@ -315,7 +315,7 @@ void coll_obj::set_npoints() {
 }
 
 
-void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir) { // dir does not need to be normalized
+void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir, bool as_attr) { // dir does not need to be normalized
 
 	int const dim(get_max_dim(dir));
 	point p1, p2;
@@ -324,7 +324,7 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 		p1[i] = (i == dim) ? s_scale : 0.0;
 		p2[i] = (i == dim) ? 0.0     : t_scale;
 	}
-	setup_texgen_full(p1.x, p1.y, p1.z, 0.0, p2.x, p2.y, p2.z, 0.0, GL_EYE_LINEAR);
+	setup_texgen_full(p1.x, p1.y, p1.z, 0.0, p2.x, p2.y, p2.z, 0.0, GL_EYE_LINEAR, as_attr);
 }
 
 
@@ -375,7 +375,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		float const tscale[2] = {cp.tscale, ar*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
 		vector3d tex_dir(0,0,0);
 		tex_dir[pri_dim] = 1.0;
-		setup_polygon_texgen(tex_dir, tscale, xlate, cp.swap_txy);
+		setup_polygon_texgen(tex_dir, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
 		unsigned char shadowed(255); // all shadowed
 		set_shadowed_state(shadowed);
 		glBegin(GL_TRIANGLES);
@@ -404,7 +404,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(center),
 				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
 			int const nsides(min(N_CYL_SIDES, max(3, (int)size)));
-			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (points[1] - points[0]));
+			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (points[1] - points[0]), USE_ATTR_TEXGEN);
 			draw_subdiv_cylinder(nsides, 1, !(cp.surfs & 1), (cp.surfs == 1), no_lighting, tid);
 		}
 		break;
@@ -413,7 +413,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		{
 			float const scale(0.7*NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const nsides(min(N_SPHERE_DIV, max(5, (int)size)));
-			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z);
+			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z, USE_ATTR_TEXGEN);
 			draw_subdiv_sphere_at(nsides, no_lighting, tid);
 		}
 		break;

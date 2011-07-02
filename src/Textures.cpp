@@ -1494,16 +1494,27 @@ void gen_tex_height_tables() {
 }
 
 
-void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, int mode) {
+void set_texgen_vec4(float const v[4], bool s_or_t, bool as_attr, bool enable_and_set_mode) {
 
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
-	float const tex_param1[4] = {sx, sy, sz, sw};
-	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, mode);
-	glTexGenfv(GL_S, GL_EYE_PLANE, tex_param1);
-	float const tex_param2[4] = {tx, ty, tz, tw};
-	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, mode);
-	glTexGenfv(GL_T, GL_EYE_PLANE, tex_param2);
+	if (as_attr) {
+		add_attrib_float_array(1+s_or_t, v, 4);
+	}
+	else {
+		if (enable_and_set_mode) {
+			glEnable(s_or_t ? GL_TEXTURE_GEN_T : GL_TEXTURE_GEN_S);
+			glTexGeni((s_or_t ? GL_T : GL_S), GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+		}
+		glTexGenfv((s_or_t ? GL_T : GL_S), GL_EYE_PLANE, v);
+	}
+}
+
+
+void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, int mode, bool as_attr) {
+
+	float const tex_param_s[4] = {sx, sy, sz, sw};
+	float const tex_param_t[4] = {tx, ty, tz, tw};
+	set_texgen_vec4(tex_param_s, 0, as_attr, 1);
+	set_texgen_vec4(tex_param_t, 1, as_attr, 1);
 }
 
 
@@ -1529,22 +1540,17 @@ void disable_textures_texgen() {
 }
 
 
-void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], bool swap_txy) {
+void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], bool swap_txy, bool as_attr) {
 
 	int const d0(get_min_dim(norm));
 	vector3d v[2] = {all_zeros, all_zeros};
 	v[0][d0] = 1.0;
 	cross_product(norm, v[0], v[1]);
 	cross_product(norm, v[1], v[0]);
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
-	int const GL_X[2] = {GL_S, GL_T};
 
 	for (unsigned i = 0; i < 2; ++i) { // ignoring xoff2/yoff2
 		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, xlate[i]};
-		int const gl_x(GL_X[(i != 0) ^ swap_txy]);
-		glTexGeni(gl_x, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-		glTexGenfv(gl_x, GL_EYE_PLANE, tex_param);
+		set_texgen_vec4(tex_param, ((i != 0) ^ swap_txy), as_attr, 1);
 	}
 }
 
