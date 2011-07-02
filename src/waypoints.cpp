@@ -169,7 +169,7 @@ bool wpt_goal::is_reachable() const {
 bool check_step_dz(point &cur, point const &lpos, float radius) {
 
 	float zvel(0.0);
-	int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0, 1));
+	int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0, 1, 1));
 	if (ret == 3)                                      return 0; // stuck
 	if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)       return 0; // too high of a step
 	if ((cur.z - lpos.z) < -MAX_FALL_DIST_MULT*radius) return 0; // too far  of a drop

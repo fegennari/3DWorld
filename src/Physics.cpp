@@ -1413,7 +1413,7 @@ void fire::apply_physics(unsigned i) {
 		velocity += vel*(0.005*tstep);
 		pos.x    += fticks*velocity.x;
 		pos.y    += fticks*velocity.y;
-		set_true_obj_height(pos, lpos, FAR_CLIP, velocity.z, FIRE, 0, 0, 0);
+		set_true_obj_height(pos, lpos, FAR_CLIP, velocity.z, FIRE, 0, 0, 0, 1);
 		pos.z    -= radius;
 		pos.z     = 0.9*lpos.z + 0.1*pos.z; // slow movement
 		//pos.z     = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.6*radius;

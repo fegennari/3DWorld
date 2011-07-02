@@ -1488,8 +1488,9 @@ void force_onto_surface_mesh(point &pos) { // for camera
 
 
 // 0 = no change, 1 = moved up, 2 = falling, 3 = stuck
-int set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id, bool flight, bool on_snow, bool skip_dynamic) {
-
+int set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id,
+	bool flight, bool on_snow, bool skip_dynamic, bool test_only)
+{
 	int const xpos(get_xpos(pos.x) - xoff), ypos(get_ypos(pos.y) - yoff);
 	bool const is_camera(type == CAMERA), is_player(is_camera || (type == SMILEY && id >= 0));
 
@@ -1503,7 +1504,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	float const step(step_height*radius), mh(int_mesh_zval_pt_off(pos, 1, 0)); // *** step height determined by fticks? ***
 	pos.z = max(pos.z, (mh + radius));
 
-	if (display_mode & 0x10) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
+	if ((display_mode & 0x10) && !test_only) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
 		float zval;
 		vector3d norm;
 		if (get_snow_height(pos, radius, zval, norm, 1)) pos.z = zval + radius;
