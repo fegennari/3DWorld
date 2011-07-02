@@ -1616,7 +1616,7 @@ bool is_underwater(point const &pos, int check_bottom, float *depth) { // or und
 	//if (pos.z < min_water_height) return 1;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (!has_water(xpos, ypos)) return 0; // off the mesh or disabled
-	
+
 	if (pos.z <= water_matrix[ypos][xpos] && (!check_bottom || pos.z >= mesh_height[ypos][xpos])) {
 		if (depth) *depth = water_matrix[ypos][xpos] - pos.z;
 		return 1;

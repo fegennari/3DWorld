@@ -588,14 +588,13 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	calc_motion_direction();
 	PRINT_TIME("Motion matrix generation");
 
-	if (!inf_terrain && !scrolling) {
-		create_waypoints(user_waypoints);
-		PRINT_TIME("Waypoint Creation");
-	}
-
 	if (!inf_terrain && !rgt_only) {
 		calc_watershed();
 		PRINT_TIME("Water generation");
+	}
+	if (!inf_terrain && !scrolling) {
+		create_waypoints(user_waypoints);
+		PRINT_TIME("Waypoint Creation");
 	}
 	reanimate_objects(); // allow stationary/stuck objects to move about the new terrain
 	PRINT_TIME("Object reanimation");
