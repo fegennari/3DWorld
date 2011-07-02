@@ -11,7 +11,7 @@
 
 
 bool const DO_ROTATE         = 1;
-bool const VERTEX_LIGHTING   = 1;
+bool const ENABLE_SHADOWS    = 1;
 bool const VERBOSE_DYNAMIC   = 0;
 bool const TEST_DS_TIME      = 0;
 bool const MERGE_STRIPS      = 1; // makes display significantly faster but looks a little worse
@@ -21,7 +21,7 @@ bool const ENABLE_DL_LOD     = 0; // faster but lower visual quality
 bool const DO_CIRC_PROJ_CLIP = 1;
 bool const RENDER_PART_INT   = 1; // if 1, render only the visible portions of the surface using the slow algorithm, if 0 render all of the surface using the fast algorithm
 bool const LOD_QUAD_TRIS     = 0; // slightly faster but somewhat lower quality (better off when dlists are enabled)
-bool const FAST_SHAPE_DRAW   = 0; // disable lighting and subdivision of shapes
+bool const FAST_SHAPE_DRAW   = 0; // disable shadows and subdivision of shapes
 int  const USE_MESH_INT      = 1; // 0 = none, 1 = high res, 2 = low res
 int  const VERBOSE           = 0; // 0, 1, 2, 3
 
@@ -546,7 +546,7 @@ unsigned dqd_params::determine_shadow_matrix(point const *const pts, vector<unsi
 
 unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, bool &in_strip) {
 
-	if (!VERTEX_LIGHTING) return ALL_LT[2]; // all unshadowed
+	if (!ENABLE_SHADOWS) return ALL_LT[2]; // all unshadowed
 	++nquads;
 	point pts[4];
 	vector3d normals[4];
@@ -1109,7 +1109,7 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 	if (!no_subdiv && tri) glEnd();
 	if (use_dlist) glEndList();
 
-	if (FULL_MAP_LOOKUP && VERTEX_LIGHTING && !no_shadow_calc && all_lighted == ALL_LT[0] && !occluded) {
+	if (FULL_MAP_LOOKUP && ENABLE_SHADOWS && !no_shadow_calc && all_lighted == ALL_LT[0] && !occluded) {
 		if (!no_subdiv) {
 			if (params.all_int_surf) {
 				all_lighted = ALL_LT[4]; // free display list?
@@ -1215,7 +1215,10 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 			glTexGenfv((cp.swap_txy ? GL_S : GL_T), GL_EYE_PLANE, b);
 		}
 		if (FAST_SHAPE_DRAW) {
-			cp.color.do_glColor();
+			set_shadowed_state(0);
+			vector3d normal(zero_vector);
+			normal[dim] = (dir ? 1.0 : -1.0);
+			normal.do_glNormal();
 			glBegin(GL_QUADS);
 			point p;
 			p[d0 ] = d[d0][0];
@@ -1264,7 +1267,7 @@ void dqt_params::draw_polygon(point const *points, const vector3d *normals, int 
 	vector3d const &norm, int id, int subpoly) const
 {
 	if (FAST_SHAPE_DRAW || (npoints != 3 && npoints != 4)) {
-		color.do_glColor();
+		set_shadowed_state(0);
 		draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
 		return;
 	}
@@ -1425,7 +1428,7 @@ void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, boo
 	assert(radius > 0.0 || radius2 > 0.0);
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
-		cp.color.do_glColor();
+		set_shadowed_state(0);
 		draw_fast_cylinder(points[0], points[1], radius, radius2, nsides, (tid >= 0), draw_ends);
 		return;
 	}
@@ -1495,7 +1498,7 @@ void coll_obj::draw_subdiv_sphere_at(int ndiv, bool no_lighting, int tid) const 
 	assert(radius > 0.0);
 
 	if (FAST_SHAPE_DRAW || no_lighting) {
-		cp.color.do_glColor();
+		set_shadowed_state(0);
 		draw_subdiv_sphere(points[0], radius, ndiv, (tid >= 0), 1);
 		return;
 	}
