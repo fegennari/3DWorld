@@ -43,6 +43,7 @@ unsigned long long max_lighted(0);
 float L1_SUBDIV_SIZE(1.0);
 
 
+extern bool use_stencil_shadows;
 extern unsigned cobj_counter;
 extern int coll_border, begin_motion, num_groups, camera_coll_id, spectate;
 extern int display_mode, camera_mode, camera_view, do_zoom, xoff2, yoff2;
@@ -1544,57 +1545,60 @@ void add_coll_shadow_objs() {
 	RESET_TIME;
 	shadow_objs.resize(0);
 	unsigned const num_lights(enabled_lights.size());
-	point const camera(get_camera_pos());
-	bool light_in_front(1);
 
-	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID)) { // shadow the camera even when in the air (but not when dead)
-		point camera_pos(camera);
-		if (camera_mode == 1 && !spectate) camera_pos.z -= 0.5*camera_zh; // cancel out the z height that was previously added
-		shadow_objs.push_back(shadow_sphere(camera_pos, CAMERA_RADIUS, camera_coll_id, 0));
-	}
-	for (unsigned L = 0; L < num_lights && light_in_front; ++L) {
-		if (dot_product_ptv(cview_dir, enabled_lights[L].get_center(), camera) < 0.0) light_in_front = 0;
-	}
-	if (begin_motion) { // can ignore if behind camera and light in front of camera
-		for (int i = 0; i < num_groups; ++i) { // can we simply use the collision objects for this?
-			obj_group const &objg(obj_groups[i]);
-			if (!objg.enabled || !objg.large_radius()) continue;
-			float const radius(object_types[objg.type].radius);
+	if (!use_stencil_shadows) { // if stencil shadows are enabled we don't do them here
+		point const camera(get_camera_pos());
+		bool light_in_front(1);
+
+		if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID)) { // shadow the camera even when in the air (but not when dead)
+			point camera_pos(camera);
+			if (camera_mode == 1 && !spectate) camera_pos.z -= 0.5*camera_zh; // cancel out the z height that was previously added
+			shadow_objs.push_back(shadow_sphere(camera_pos, CAMERA_RADIUS, camera_coll_id, 0));
+		}
+		for (unsigned L = 0; L < num_lights && light_in_front; ++L) {
+			if (dot_product_ptv(cview_dir, enabled_lights[L].get_center(), camera) < 0.0) light_in_front = 0;
+		}
+		if (begin_motion) { // can ignore if behind camera and light in front of camera
+			for (int i = 0; i < num_groups; ++i) { // can we simply use the collision objects for this?
+				obj_group const &objg(obj_groups[i]);
+				if (!objg.enabled || !objg.large_radius()) continue;
+				float const radius(object_types[objg.type].radius);
 				
-			for (unsigned j = 0; j < objg.end_id; ++j) {
-				dwobject const &obj(objg.get_obj(j));
-				if (obj.disabled() || !objg.obj_has_shadow(j)) continue;
-				add_shadow_obj(obj.pos, radius, obj.coll_id, light_in_front);
+				for (unsigned j = 0; j < objg.end_id; ++j) {
+					dwobject const &obj(objg.get_obj(j));
+					if (obj.disabled() || !objg.obj_has_shadow(j)) continue;
+					add_shadow_obj(obj.pos, radius, obj.coll_id, light_in_front);
+				}
 			}
 		}
-	}
-	for (unsigned i = 0; i < weap_cobjs.size(); ++i) {
-		unsigned const cid(weap_cobjs[i]);
-		if (cid < 0) continue;
-		assert(cid < coll_objects.size());
-		float brad;
-		point center;
-		coll_objects[cid].bounding_sphere(center, brad);
-		add_shadow_obj(center, brad, cid, light_in_front);
-	}
-	if (!platforms.empty()) {
-		for (unsigned i = 0; i < coll_objects.size(); ++i) {
-			coll_obj const &c(coll_objects[i]);
-			if (c.disabled() || !c.dynamic_shadows_only()) continue;
+		for (unsigned i = 0; i < weap_cobjs.size(); ++i) {
+			unsigned const cid(weap_cobjs[i]);
+			if (cid < 0) continue;
+			assert(cid < coll_objects.size());
+			float brad;
 			point center;
-			float radius;
-			c.bounding_sphere(center, radius);
-			add_shadow_obj(center, radius, i, light_in_front);
+			coll_objects[cid].bounding_sphere(center, brad);
+			add_shadow_obj(center, brad, cid, light_in_front);
 		}
-	}
-	if (display_mode & 0x0200) d_part_sys.add_cobj_shadows(light_in_front);
+		if (!platforms.empty()) {
+			for (unsigned i = 0; i < coll_objects.size(); ++i) {
+				coll_obj const &c(coll_objects[i]);
+				if (c.disabled() || !c.dynamic_shadows_only()) continue;
+				point center;
+				float radius;
+				c.bounding_sphere(center, radius);
+				add_shadow_obj(center, radius, i, light_in_front);
+			}
+		}
+		if (display_mode & 0x0200) d_part_sys.add_cobj_shadows(light_in_front);
 
-	if (TEST_DS_TIME) {
-		for (unsigned q = 0; q < 10000; ++q) {
-			add_shadow_obj(gen_rand_scene_pos(), object_types[BALL].radius, -1, light_in_front);
+		if (TEST_DS_TIME) {
+			for (unsigned q = 0; q < 10000; ++q) {
+				add_shadow_obj(gen_rand_scene_pos(), object_types[BALL].radius, -1, light_in_front);
+			}
 		}
+		if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Shadow Object Creation");}
 	}
-	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Shadow Object Creation");}
 	static bool test_all(0);
 	static set<unsigned> shadowed;
 	unsigned const ncobjs(coll_objects.size());
