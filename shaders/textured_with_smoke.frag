@@ -78,10 +78,10 @@ void main()
 		float atten   = exp(-light_atten*dist);
 		alpha += (1.0 - alpha)*(1.0 - atten);
 	}
-	if (do_lt_atten /*&& refract_ix != 1.0*/) {
+	if (do_lt_atten) {
 		vec3 v_inc = eye - vpos;
 		
-		if (dot(normal, v_inc) > 0.0) { // entering ray in front surface
+		if (refract_ix != 1.0 && dot(normal, v_inc) > 0.0) { // entering ray in front surface
 			float reflect_w = get_fresnel_reflection(normalize(v_inc), normalize(normal), 1.0, refract_ix);
 			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha
 		} // else exiting ray in back surface - ignore for now since we don't refract the ray
