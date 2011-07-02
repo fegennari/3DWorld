@@ -231,6 +231,11 @@ inline float get_water_coll_angle(vector3d const &v) { // normal n = (0, 0, 1.0)
 	return safe_acosf(-v.z/v.mag());
 }
 
+inline bool pt_line_dist_less_than(point const &P, point const &L1, point const &L2, float dist) {
+	vector3d const L(L2 - L1), cp(cross_product(L, vector3d(L1 - P)));
+	return (cp.mag_sq() < dist*dist*L.mag_sq());
+}
+
 template<typename T, typename S> inline float p2p_dist_sq(const pointT<T> &pt1, const pointT<S> &pt2) {
 	return (pt1.x-pt2.x)*(pt1.x-pt2.x) + (pt1.y-pt2.y)*(pt1.y-pt2.y) + (pt1.z-pt2.z)*(pt1.z-pt2.z);
 }

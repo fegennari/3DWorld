@@ -237,11 +237,11 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 	for (unsigned k = 0; k < ncobjs; ++k) {
 		unsigned const i(is_small ? cvals[k] : k);
 		assert((size_t)i < cobjs_size);
-		if (cobjs[i].status != COLL_STATIC /*|| !cobjs[i].fixed*/) continue; // require fixed cobjs? exclude platforms (but they seem to work)?
+		if (cobjs[i].status != COLL_STATIC /*|| !cobjs[i].fixed*/) continue; // require fixed cobjs? platforms work now
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
 		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), is_polygon(cobjs[i].type == COLL_POLYGON);
-		bool const csg_obj(is_cube || is_cylinder /*|| is_polygon*/), shatter(D >= SHATTERABLE);
+		bool const csg_obj(is_cube || is_cylinder || is_polygon), shatter(D >= SHATTERABLE);
 		if (!shatter && !csg_obj) continue;
 		csg_cube const cube2(cobjs[i], 1);
 		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
@@ -250,24 +250,20 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		float volume(cobjs[i].volume);
 		float const min_volume(0.01*min(volume, clip_cube_colume));
 		float const int_volume(cube2.get_overlap_volume(cube));
-		bool no_new_cubes(shatter || volume < TOLERANCE);
+		bool no_new_cobjs(shatter || volume < TOLERANCE);
 
 		if (is_cube && !shatter && int_volume < min_volume) { // don't remove tiny bits from cobjs
 			cube.unset_intersecting_edge_flags(cobjs[i]);
 			continue;
 		}
-		if (shatter || subtract_cobj(new_cobjs, cube, cobjs[i])) {
-			if (no_new_cubes) new_cobjs.clear(); // completely destroyed
+		if (shatter || subtract_cobj(new_cobjs, cube, cobjs[i], 1)) {
+			if (no_new_cobjs) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
 			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
 			remove_waypoint_for_cobj(cobjs[i]);
 			indices.clear();
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
-				/*if (is_cube && new_cobjs[j].get_volume() < min_volume) { // don't create tiny pieces of cobjs (correct but looks bad visually)
-					cube.unset_intersecting_edge_flags(cobjs[i]);
-					continue;
-				}*/
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
 				assert((size_t)index < cobjs.size());
 				indices.push_back(index);
@@ -441,7 +437,7 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 
 
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
-// 15 total: 7 complete, 5 partial, 3 unwritten
+// 15 total: 7 complete, 8 partial
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	if (c.type < type) return c.intersects_cobj(*this, toler); // swap arguments
@@ -510,17 +506,26 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_CYLINDER_ROT:
 			return cylin_cylin_int(c, *this);
 		case COLL_POLYGON:
-			return poly_cylin_int(c, *this);
+			return poly_cylin_int (c, *this);
 		default: assert(0);
 		}
 
 	case COLL_POLYGON:
 		assert(c.type == COLL_POLYGON);
-		for (int i = 0; i < c.npoints; ++i) { // FIXME: use toler (for adjacent roof polygons)
+		for (int i = 0; i < c.npoints; ++i) {
 			if (line_intersect(c.points[i], c.points[(i+1)%c.npoints])) return 1;
 		}
 		for (int i = 0; i <   npoints; ++i) {
 			if (line_intersect(  points[i],   points[(i+1)%  npoints])) return 1;
+		}
+		if (toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons)
+			for (int i = 0; i < c.npoints; ++i) {
+				for (int j = 0; j < npoints; ++j) {
+					if (dist_less_than(points[j], c.points[i], toler)) return 1;
+					if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], toler)) return 1;
+					if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], toler)) return 1;
+				}
+			}
 		}
 		// call sphere_ext_poly_intersect?
 		return 0; // FIXME - close, but need to handle one polygon completely insde of a thick polygon

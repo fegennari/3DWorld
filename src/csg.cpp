@@ -18,6 +18,9 @@ int  const REMOVE_T_JUNCTIONS = 1; // fewer hole pixels and better ambient trans
 float const REL_DMAX          = 0.2;
 
 
+extern bool use_waypoints;
+
+
 // *** RECT IMPLEMENTATION ***
 
 
@@ -444,9 +447,8 @@ bool csg_cube::subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cob
 
 // returns 1 if some work is done
 // see http://www.cs.fit.edu/~wds/classes/graphics/Clip/clip/clip.html
-bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj &cobj) const { // subtract ourself from cobjs[index]
+bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
 
-	return 0; // incomplete
 	// start by assuming *this intersects cobj.d (should have been tested already)
 	assert(cobj.type == COLL_POLYGON);
 	assert(cobj.thickness <= MIN_POLY_THICK2); // can't handle this case yet
@@ -455,7 +457,6 @@ bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj &cobj
 	assert(cur.empty() && next.empty() && new_poly.empty());
 	for (int i = 0; i < cobj.npoints; ++i) cur.push_back(cobj.points[i]);
 	size_t const init_sz(new_cobjs.size());
-	//cout << "start polygon: " << cobj.id << endl; for (unsigned p = 0; p < cur.size(); ++p) {cur[p].print(); cout << endl;}
 
 	for (unsigned i = 0; i < 3 && !cur.empty(); ++i) {
 		for (unsigned j = 0; j < 2 && !cur.empty(); ++j) {
@@ -491,7 +492,7 @@ bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj &cobj
 			}
 			if (!new_poly.empty()) {
 				//cout << "add polygon:" << endl; for (unsigned p = 0; p < new_poly.size(); ++p) {new_poly[p].print(); cout << endl;}
-				bool const split_quads(1); // FIXME: waypoint issues with split polygons
+				bool const split_quads(use_waypoints); // FIXME: waypoint issues with split polygons
 				split_polygon_to_cobjs(cobj, new_cobjs, new_poly, split_quads);
 				new_poly.resize(0);
 			}
@@ -883,7 +884,7 @@ void remove_overlapping_cubes(vector<coll_obj> &cobjs) { // objects specified la
 // **********************************************
 
 
-bool subtract_cobj(vector<coll_obj> &new_cobjs, csg_cube const &cube, coll_obj &cobj) {
+bool subtract_cobj(vector<coll_obj> &new_cobjs, csg_cube const &cube, coll_obj &cobj, bool include_polys) {
 
 	bool removed(0);
 
@@ -898,7 +899,7 @@ bool subtract_cobj(vector<coll_obj> &new_cobjs, csg_cube const &cube, coll_obj &
 	else if (cobj.is_cylinder()) {
 		removed = cube.subtract_from_cylinder(new_cobjs, cobj);
 	}
-	else if (cobj.type == COLL_POLYGON && cobj.thickness <= MIN_POLY_THICK2) {
+	else if (include_polys && cobj.type == COLL_POLYGON && cobj.thickness <= MIN_POLY_THICK2) {
 		removed = cube.subtract_from_polygon(new_cobjs, cobj);
 	}
 	return removed;
@@ -927,7 +928,7 @@ void process_negative_shapes(vector<coll_obj> &cobjs) { // negtive shapes should
 			if (j != i && cobjs[j].status != COLL_NEGATIVE) {
 				if (ONLY_SUB_PREV_NEG && cobjs[i].id < cobjs[j].id) continue; // positive cobj after negative cobj
 
-				if (subtract_cobj(new_cobjs, cube, cobjs[j])) {
+				if (subtract_cobj(new_cobjs, cube, cobjs[j], 0)) {
 					if (!new_cobjs.empty()) { // coll cube can be reused
 						cobjs[j] = new_cobjs.back();
 						new_cobjs.pop_back();

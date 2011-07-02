@@ -311,6 +311,13 @@ bool sphere_intersect_poly_sides(vector<vector<point> > const &pts, point const 
 }
 
 
+bool pt_line_seg_dist_less_than(point const &P, point const &L1, point const &L2, float dist) {
+
+	if (dot_product(P-L1, P-L2) > 0.0) return 0; // pt not between s1 and s2
+	return pt_line_dist_less_than(P, L1, L2, dist);
+}
+
+
 bool sphere_poly_intersect(const point *points, unsigned npoints, point const &pos, vector3d const &norm, float rdist, float radius) {
 
 	// test the points (point to point distance)
@@ -320,11 +327,7 @@ bool sphere_poly_intersect(const point *points, unsigned npoints, point const &p
 
 	// test the edges (point to line distance)
 	for (unsigned i = 0; i < npoints; ++i) {
-		point const &p1(points[i]), p2(points[(i+1 == npoints) ? 0 : i+1]);
-		vector3d const v12(p2 - p1), vp1(pos - p1), vp2(pos - p2);
-		if (dot_product(v12, vp1) < 0.0 || dot_product(v12, vp2) > 0.0) continue; // pos is not between p1 and p2
-		float const dist(cross_product(vp1, vp2).mag()/v12.mag()); // p2-p1 should not be 0
-		if (dist < radius) return 1;
+		if (pt_line_seg_dist_less_than(pos, points[i], points[(i+1 == npoints) ? 0 : i+1], radius)) return 1;
 	}
 
 	// test for sphere center projected onto the polygon's plane

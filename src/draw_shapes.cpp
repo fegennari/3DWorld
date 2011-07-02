@@ -705,9 +705,8 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 						for (unsigned s1 = 0, end_loop1 = 0; !end_loop1; s1 += step[1]) {
 							if (s1 >= n1) {s1 = n1; end_loop1 = 1;}
 							point const pos(pts[0] + dirs[1]*s1), p_end(pos + dirs[0]*n0);
-							vector3d const vll(p_end, pos), cp(cross_product(vll, vector3d(pos - p_int)));
-							
-							if (cp.mag_sq() <= rsq*vll.mag_sq()) { // point-line distance => good scanline
+
+							if (pt_line_dist_less_than(p_int, pos, p_end, sr_adj)) { // point-line distance => good scanline
 								s1_s = min(s1, s1_s);
 								s1_e = max(s1, s1_e);
 							}
@@ -723,8 +722,7 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 					vector3d const vstep(dirs[1]*scale);
 
 					if (cp_clip && scale > 0.0) {
-						vector3d const vll((pos0 + vstep*n1), pos0), cp(cross_product(vll, vector3d(pos0 - p_int)));
-						if (cp.mag_sq() > rsq*vll.mag_sq()) continue; // point-line distance => bad scanline
+						if (!pt_line_dist_less_than(p_int, pos0, (pos0 + vstep*n1), sr_adj)) continue; // point-line distance => bad scanline
 					}
 					bool sskip(0), sval(0);
 					int const offset(s0*xstride);

@@ -1388,6 +1388,7 @@ bool thick_poly_intersect(vector3d const &v1, point const &p1, vector3d const &n
 vector3d get_poly_dir_norm(vector3d const &norm, point const &p1, vector3d const &v1, float t);
 bool sphere_intersect_poly_sides(vector<vector<point> > const &pts, point const &center,
 								 float radius, float &dist, vector3d &norm, bool strict);
+bool pt_line_seg_dist_less_than(point const &P, point const &L1, point const &L2, float dist);
 bool sphere_poly_intersect(const point *points, unsigned npoints, point const &pos, vector3d const &norm, float rdist, float radius);
 bool sphere_ext_poly_int_base(point const &pt, vector3d const &norm, point const &pos, float radius,
 							  float thickness, float &thick, float &rdist);
