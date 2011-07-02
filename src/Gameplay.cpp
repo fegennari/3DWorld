@@ -1245,7 +1245,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 
 	for (int g = 0; g < num_groups; ++g) {
 		obj_group &objg(obj_groups[g]);
-		if (!objg.enabled || !objg.large_radius()) continue;
+		if (!objg.enabled || (!objg.large_radius() && (objg.type != FRAGMENT || weapon != W_BLADE))) continue;
 		int const type(objg.type);
 		float const robj(object_types[type].radius), rad(0.75*radius + robj);
 		
@@ -1256,6 +1256,9 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 			if (type == SMILEY) {
 				++sstates[shooter].cb_hurt;
 				smiley_collision(i, shooter, velocity, pos, damage, IMPACT);
+			}
+			else if (type == FRAGMENT) {
+				objg.get_obj(i).status = 0; // just destroy the fragment
 			}
 			else if (type != CAMERA) {
 				objg.get_obj(i).damage_object(damage, pos, shoot_pos, weapon);
