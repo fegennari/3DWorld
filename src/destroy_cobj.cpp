@@ -520,20 +520,24 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	case COLL_POLYGON:
 		assert(c.type == COLL_POLYGON);
+		if (toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons)
+			for (int i = 0; i < c.npoints; ++i) {
+				for (int j = 0; j < npoints; ++j) {
+					if (dist_less_than(points[j], c.points[i], toler)) return 1;
+				}
+			}
+			for (int i = 0; i < c.npoints; ++i) {
+				for (int j = 0; j < npoints; ++j) {
+					if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], toler)) return 1;
+					if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], toler)) return 1;
+				}
+			}
+		}
 		for (int i = 0; i < c.npoints; ++i) {
 			if (line_intersect(c.points[i], c.points[(i+1)%c.npoints])) return 1;
 		}
 		for (int i = 0; i <   npoints; ++i) {
 			if (line_intersect(  points[i],   points[(i+1)%  npoints])) return 1;
-		}
-		if (toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons)
-			for (int i = 0; i < c.npoints; ++i) {
-				for (int j = 0; j < npoints; ++j) {
-					if (dist_less_than(points[j], c.points[i], toler)) return 1;
-					if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], toler)) return 1;
-					if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], toler)) return 1;
-				}
-			}
 		}
 		// call sphere_ext_poly_intersect?
 		return 0; // FIXME - close, but need to handle one polygon completely insde of a thick polygon
