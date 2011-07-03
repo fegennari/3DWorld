@@ -153,36 +153,37 @@ void add_portal(coll_obj const &c) {
 }
 
 
-void get_all_connected(int cobj, set<int> &connected, set<int> const &closed) {
+void get_all_connected(int cobj, set<int> const &open, set<int> const &closed, vector<int> &out, vector<unsigned> &cobjs) {
 
 	assert((unsigned)cobj < coll_objects.size());
 	coll_obj const &c(coll_objects[cobj]);
-	int const x1(get_xpos(c.d[0][0])), x2(get_xpos(c.d[0][1]));
-	int const y1(get_ypos(c.d[1][0])), y2(get_ypos(c.d[1][1]));
-			
-	for (int y = max(0, y1); y <= min(MESH_Y_SIZE-1, y2); ++y) {
-		for (int x = max(0, x1); x <= min(MESH_X_SIZE-1, x2); ++x) {
-			vector<int> const &cvals(v_collision_matrix[y][x].cvals);
+	assert(cobj_tree_valid);
+	cobjs.resize(0);
+	get_intersecting_cobjs_tree(c, cobjs, cobj, TOLERANCE, 0);
 
-			for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
-				if (*i < 0 || *i == cobj)                   continue;
-				assert((unsigned)*i < coll_objects.size());
-				if (closed.find(*i)    != closed.end()   )  continue; // closed  - skip
-				if (connected.find(*i) != connected.end())  continue; // already processed - skip
-				if (coll_objects[*i].status != COLL_STATIC) continue; // not static
-				if (c.intersects_cobj(coll_objects[*i], TOLERANCE) == 1) connected.insert(*i);
-			}
-		}
+	for (vector<unsigned>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
+		assert(*i != cobj && *i < coll_objects.size());
+		if (closed.find(*i) != closed.end() || open.find(*i) != open.end()) continue; // already processed - skip
+		assert(coll_objects[*i].status == COLL_STATIC);
+		if (c.intersects_cobj(coll_objects[*i], TOLERANCE) == 1) out.push_back(*i);
 	}
 }
 
 
 void check_cobjs_anchored(vector<int> to_check, set<int> anchored[2]) {
 
+	vector<unsigned> cobjs;
+	vector<int> out;
+
 	for (vector<int>::const_iterator j = to_check.begin(); j != to_check.end(); ++j) {
 		if ((*j) < 0) continue; // skip
 		if (anchored[0].find(*j) != anchored[0].end()) continue; // already known to be unanchored
 		if (anchored[1].find(*j) != anchored[1].end()) continue; // already known to be anchored
+
+		if (coll_objects[*j].is_anchored()) {
+			anchored[1].insert(*j);
+			continue;
+		}
 
 		// perform a graph search until we find an anchored cobj or we run out of cobjs
 		bool is_anchored(0);
@@ -191,15 +192,21 @@ void check_cobjs_anchored(vector<int> to_check, set<int> anchored[2]) {
 
 		while (!open.empty()) {
 			int const cur(*open.begin());
+			assert(closed.find(cur) == closed.end());
 			closed.insert(cur);
-			assert(anchored[0].find(cur) == anchored[0].end()); // requires that intersects_cobj() be symmetric
-
-			if (anchored[1].find(cur) != anchored[1].end() || coll_objects[cur].is_anchored()) {
-				is_anchored = 1;
-				break;
-			}
+			//assert(anchored[0].find(cur) == anchored[0].end()); // requires that intersects_cobj() be symmetric
 			open.erase(cur);
-			get_all_connected(cur, open, closed);
+			out.resize(0);
+			get_all_connected(cur, open, closed, out, cobjs);
+
+			for (vector<int>::const_iterator i = out.begin(); i != out.end(); ++i) {
+				if (anchored[1].find(cur) != anchored[1].end() || coll_objects[cur].is_anchored()) {
+					is_anchored = 1;
+					break;
+				}
+				open.insert(*i);
+			}
+			if (is_anchored) break;
 		}
 		// everything in the closed set has the same is_anchored state and can be cached
 		copy(closed.begin(), closed.end(), inserter(anchored[is_anchored], anchored[is_anchored].begin()));
@@ -281,18 +288,20 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		new_cobjs.clear();
 	} // for k
 	if (!to_remove.empty()) {
+		if (!cobj_tree_valid) build_cobj_tree(0, 0);
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // FIXME: what about updating (removing) mesh shadows?
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) {
 			remove_coll_object(to_remove[i]); // remove old collision object
 		}
 		if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
+			//RESET_TIME;
 			set<int> anchored[2]; // {unanchored, anchored}
 
 			for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
-				set<int> start_set;
-				get_all_connected(to_remove[i], start_set, set<int>());
-				vector<int> const start(start_set.begin(), start_set.end());
+				vector<int> start;
+				vector<unsigned> cobjs;
+				get_all_connected(to_remove[i], set<int>(), set<int>(), start, cobjs);
 				check_cobjs_anchored(start, anchored);
 			}
 
@@ -317,9 +326,8 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			else if (LET_COBJS_FALL) {
 				copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
 			}
+			//PRINT_TIME("Check Anchored");
 		} // end anchored code
-		if (!cobj_tree_valid) build_cobj_tree(0, 0);
-
 		for (vector<cube_t>::const_iterator i = mod_cubes.begin(); i != mod_cubes.end(); ++i) {
 			// FIXME: test alpha?
 			update_grass_shadows_for_cube(*i); //the object should still be valid
