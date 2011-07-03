@@ -1796,8 +1796,9 @@ void setup_object_render_data() {
 	upload_smoke_3d_texture();
 	if (TIMETEST) {PRINT_TIME("Distribute Smoke");}
 	add_dynamic_lights();
-	upload_dlights_textures();
 	if (TIMETEST) {PRINT_TIME("Add Dlights");}
+	upload_dlights_textures();
+	if (TIMETEST) {PRINT_TIME("Dlights Textures");}
 	add_coll_shadow_objs();
 	if (TIMETEST) {PRINT_TIME("Add Shadows");}
 	get_occluders();

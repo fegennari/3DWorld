@@ -962,6 +962,10 @@ void upload_dlights_textures() {
 	assert(lm_alloc && lmap_manager.vlmap);
 	if (disable_shaders) return;
 	static int supports_tex_int(2); // starts at unknown
+	static bool last_dlights_empty(0);
+	bool const cur_dlights_empty(dl_sources.empty());
+	if (cur_dlights_empty && last_dlights_empty && dl_tid != 0 && elem_tid != 0 && gb_tid != 0) return; // no updates
+	last_dlights_empty = cur_dlights_empty;
 	
 	if (supports_tex_int == 2) {
 		supports_tex_int = has_extension("GL_EXT_texture_integer");
@@ -1011,7 +1015,7 @@ void upload_dlights_textures() {
 		for (int x = 0; x < MESH_X_SIZE && elix < max_gb_entries; ++x) {
 			unsigned const gb_ix(x + y*MESH_X_SIZE); // {start, end, unused}
 			gb_data[gb_ix] = elix; // start_ix
-			vector<unsigned> const &ixs(ldynamic[y][x].get_src_ixs());
+			vector<unsigned short> const &ixs(ldynamic[y][x].get_src_ixs());
 			unsigned const num_ixs(min(ixs.size(), 256U)); // max of 256 lights per bin
 			
 			for (unsigned i = 0; i < num_ixs && elix < max_gb_entries; ++i) { // end if exceed max entries
@@ -1119,28 +1123,16 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 }
 
 
-void clear_dynamic_lights() { // slow for large lights
+inline void dls_cell::clear() {
 
-	//if (!animate2) return;
-	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
-	assert(ldynamic);
-	
-	for (int y = 0; y < MESH_Y_SIZE; ++y) {
-		for (int x = 0; x < MESH_X_SIZE; ++x) ldynamic[y][x].clear();
-	}
-	dl_sources.resize(0);
-}
-
-
-void dls_cell::clear() {
-
+	if (lsrc.empty()) return;
 	if (lsrc.capacity() > INIT_CCELL_SIZE) lsrc.clear(); else lsrc.resize(0);
 	z1 =  FAR_CLIP;
 	z2 = -FAR_CLIP;
 }
 
 
-void dls_cell::add_light(unsigned ix, float zmin, float zmax) {
+inline void dls_cell::add_light(unsigned ix, float zmin, float zmax) {
 	
 	if (lsrc.capacity() == 0) lsrc.reserve(INIT_CCELL_SIZE);
 	lsrc.push_back(ix);
@@ -1171,6 +1163,19 @@ bool dls_cell::check_add_light(unsigned ix) const {
 		return 0;
 	}
 	return 1;
+}
+
+
+void clear_dynamic_lights() { // slow for large lights
+
+	//if (!animate2) return;
+	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
+	assert(ldynamic);
+	
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) ldynamic[y][x].clear();
+	}
+	dl_sources.resize(0);
 }
 
 
