@@ -581,6 +581,7 @@ template<typename T> class coll_cell_line_iterator {
 			float const val(sz/(cell.zmax - cell.zmin));
 			unsigned zs(min(sz-1, (unsigned)max(0, (int)floor(val*(min(cp1.z, cp2.z) - cell.zmin)))));
 			unsigned ze(min(sz-1, (unsigned)max(0, (int)floor(val*(max(cp1.z, cp2.z) - cell.zmin)))));
+			assert(zs <= ze);
 			bool const dir(cp1.z < cp2.z);
 			int const di(dir ? 1 : -1);
 			if (dir == 0) swap(zs, ze);

@@ -49,7 +49,7 @@ float const DARKNESS_THRESH  = 0.1;
 
 
 bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), use_dense_voxels(0);
-unsigned cobj_counter(0), dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
+unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};

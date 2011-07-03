@@ -44,8 +44,7 @@ float L1_SUBDIV_SIZE(1.0);
 
 
 extern bool use_stencil_shadows;
-extern unsigned cobj_counter;
-extern int coll_border, begin_motion, num_groups, camera_coll_id, spectate;
+extern int cobj_counter, coll_border, begin_motion, num_groups, camera_coll_id, spectate;
 extern int display_mode, camera_mode, camera_view, do_zoom, xoff2, yoff2;
 extern float max_proj_rad, ztop, zbottom, zmax, zmin, DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
 extern double camera_zh;
