@@ -131,6 +131,27 @@ public:
 		}
 		return ret;
 	}
+
+	void get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler) const {
+		for (unsigned nix = 0; nix < nodes.size();) {
+			tree_node const &n(nodes[nix]);
+			assert(n.start <= n.end);
+
+			if (!cube.intersects(n, toler)) {
+				assert(n.next_node_id > nix);
+				nix = n.next_node_id; // failed the bbox test
+				assert(nix > 0);
+				continue;
+			}
+			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+				if ((int)cixs[i] == ignore_cobj) continue;
+				coll_obj const &cobj(get_cobj(i));
+				if (!obj_ok(cobj) || !cube.intersects(cobj, toler)) continue;
+				cobjs.push_back(cixs[i]);
+			}
+			++nix;
+		}
+	}
 }; // cobj_tree_t
 
 
@@ -293,6 +314,12 @@ bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ign
 	vector3d cnorm; // unused
 	point cpos; // unused
 	return get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha);
+}
+
+
+void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler, bool dynamic) {
+
+	get_tree(dynamic).get_intersecting_cobjs(cube, cobjs, ignore_cobj, toler);
 }
 
 
