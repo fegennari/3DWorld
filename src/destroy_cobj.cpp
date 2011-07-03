@@ -71,13 +71,14 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 			gen_fire(pos, min(4.0, 12.0*val), shooter);
 		}
 		if (!cts[i].draw) continue;
-		bool const shattered(cts[i].destroy >= SHATTERABLE);
 		float size_scale(1.0), num_parts(0.0);
 		float const thickness(cts[i].thickness);
+		bool const shattered(cts[i].destroy >= SHATTERABLE);
+		bool const tri_fragments(shattered || cts[i].is_2d); // thin polys shatter to triangle fragments
 		float const frag_radius(object_types[FRAGMENT].radius), avg_frag_dia(2.0*frag_radius), max_frag_dia(3.0*frag_radius);
-		if (cts[i].volume < frag_radius*frag_radius*frag_radius) continue;
+		if (cts[i].volume < (tri_fragments ? MIN_POLY_THICK : frag_radius)*frag_radius*frag_radius) continue;
 
-		if (shattered) {
+		if (tri_fragments) {
 			float const sll(cts[i].second_largest_len());
 			if (sll < 1.2*max_frag_dia) size_scale *= sll/max_frag_dia;
 			float const dia(size_scale*avg_frag_dia);
@@ -89,8 +90,8 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 			num_parts = cts[i].volume/(dia*dia*dia);
 		}
 		if (size_scale < 0.1) continue;
-		unsigned const num(min(100U, max((shattered ? 6U : 1U), unsigned(num_parts)))); // no more than 200
-		//cout << "shattered: " << shattered << ", volume: " << cts[i].volume << ", num_parts: " << num_parts << ", num: " << num << ", ss: " << size_scale << endl;
+		unsigned const num(min(100U, max((tri_fragments ? 6U : 1U), unsigned(num_parts)))); // no more than 200
+		//cout << "shattered: " << shattered << ", tri: " << tri_fragments << ", volume: " << cts[i].volume << ", num_parts: " << num_parts << ", num: " << num << ", ss: " << size_scale << endl;
 		bool const non_csg(shattered || cts[i].unanchored);
 		csg_cube frag_cube(cts[i]);
 		if (!non_csg && !cube.cube_intersection(frag_cube, frag_cube)) frag_cube = cts[i]; // intersect frag_cube with cube (should pass)
@@ -107,7 +108,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 					velocity *= 0.5;
 				}
 			}
-			gen_fragment(fpos, velocity, size_scale, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, shattered);
+			gen_fragment(fpos, velocity, size_scale, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments);
 		}
 	} // for i
 	//PRINT_TIME("Destroy Cobjs");

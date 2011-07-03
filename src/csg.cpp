@@ -1099,7 +1099,8 @@ void sort_cobjs_for_rendering(vector<coll_obj> &cobjs) {
 
 
 color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thickness_, bool ua)
-	: cid(cobj.id), tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), unanchored(ua), volume(volume_),
+	: cid(cobj.id), tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), unanchored(ua),
+	is_2d(cobj.type == COLL_POLYGON && cobj.thickness <= MIN_POLY_THICK), volume(volume_),
 	thickness(thickness_), tscale(cobj.cp.tscale), color(cobj.cp.color)
 {
 	if (cobj.type == COLL_CUBE && cobj.cp.light_atten > 0.0) {
