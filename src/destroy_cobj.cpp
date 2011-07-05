@@ -180,17 +180,17 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 
 		// perform a graph search until we find an anchored cobj or we run out of cobjs
 		bool is_anchored(0);
-		set<unsigned> open, closed;
-		open.insert(*j);
+		vector<unsigned> open, closed;
+		open.push_back(*j);
 		++cobj_counter;
 		assert(coll_objects[*j].counter != cobj_counter);
 		coll_objects[*j].counter = cobj_counter;
 
 		while (!open.empty()) {
-			unsigned const cur(*open.begin());
-			closed.insert(cur);
+			unsigned const cur(open.back());
+			open.pop_back();
+			closed.push_back(cur);
 			//assert(anchored[0].find(cur) == anchored[0].end()); // requires that intersects_cobj() be symmetric
-			open.erase(cur);
 			out.resize(0);
 			get_all_connected(cur, out);
 
@@ -201,7 +201,7 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 					is_anchored = 1;
 					break;
 				}
-				open.insert(*i);
+				open.push_back(*i);
 				assert(coll_objects[*i].counter != cobj_counter);
 				coll_objects[*i].counter = cobj_counter;
 			}
@@ -390,7 +390,8 @@ int coll_obj::is_anchored() const {
 
 	if (platform_id >= 0 || status != COLL_STATIC) return 0; // platforms and dynamic objects are never connecting
 	if (fixed && destroy <= destroy_thresh)        return 2; // can't be destroyed, so it never moves
-	if (d[2][0] <= min(zmin, czmin))               return 1; // below the scene
+	if (d[2][0] <= min(zbottom, czmin))            return 1; // below the scene
+	if (d[2][0] > ztop)                            return 0; // above the mesh
 
 	switch (type) {
 	case COLL_CUBE:
