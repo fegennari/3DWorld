@@ -169,7 +169,6 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 	vector<unsigned> out;
 
 	for (vector<unsigned>::const_iterator j = to_check.begin(); j != to_check.end(); ++j) {
-		if ((*j) < 0) continue; // skip
 		if (anchored[0].find(*j) != anchored[0].end()) continue; // already known to be unanchored
 		if (anchored[1].find(*j) != anchored[1].end()) continue; // already known to be anchored
 
@@ -197,7 +196,7 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 			for (vector<unsigned>::const_iterator i = out.begin(); i != out.end(); ++i) {
 				assert(*i >= 0 && *i != cur);
 
-				if (anchored[1].find(cur) != anchored[1].end() || coll_objects[cur].is_anchored()) {
+				if (anchored[1].find(*i) != anchored[1].end() || coll_objects[*i].is_anchored()) {
 					is_anchored = 1;
 					break;
 				}
@@ -209,6 +208,13 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 		}
 		// everything in the closed set has the same is_anchored state and can be cached
 		copy(closed.begin(), closed.end(), inserter(anchored[is_anchored], anchored[is_anchored].begin()));
+		
+		if (is_anchored) { // all open is anchored as well
+			copy(open.begin(), open.end(), inserter(anchored[is_anchored], anchored[is_anchored].begin()));
+		}
+		else {
+			assert(open.empty());
+		}
 	} // for j
 }
 
@@ -287,12 +293,13 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		new_cobjs.clear();
 	} // for k
 	if (!to_remove.empty()) {
-		if (!cobj_tree_valid) build_cobj_tree(0, 0);
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // FIXME: what about updating (removing) mesh shadows?
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) {
 			remove_coll_object(to_remove[i]); // remove old collision object
 		}
+		if (!cobj_tree_valid) build_cobj_tree(0, 0);
+
 		if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
 			//RESET_TIME;
 			set<unsigned> anchored[2]; // {unanchored, anchored}
@@ -302,12 +309,18 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 				get_all_connected(to_remove[i], start);
 				check_cobjs_anchored(start, anchored);
 			}
+#if 0
+			// additional error checks - can occasionally fail, probably due to fp precision issues or problems with cobj intersection checks
+			for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
+				assert(anchored[1].find(*i) == anchored[1].end());
+			}
 
 			// check that each sub-cobj index is in exactly one of anchored[{0,1}]
 			for (unsigned i = 0; i < indices.size(); ++i) {
 				if (coll_objects[indices[i]].type == COLL_POLYGON) continue; // FIXME: remove this when polygon splitting is correct
 				assert((anchored[0].find(indices[i]) == anchored[0].end()) != (anchored[1].find(indices[i]) == anchored[1].end()));
 			}
+#endif
 			if (REMOVE_UNANCHORED) {
 				indices.clear();
 

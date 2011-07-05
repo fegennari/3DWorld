@@ -148,7 +148,7 @@ public:
 				coll_obj const &cobj(get_cobj(i));
 				if (check_ccounter && cobj.counter == cobj_counter) continue;
 				if (!obj_ok(cobj) || !cube.intersects(cobj, toler)) continue;
-				if (id_for_cobj_int >= 0 && coll_objects[id_for_cobj_int].intersects_cobj(cobj, TOLERANCE) != 1) continue;
+				if (id_for_cobj_int >= 0 && coll_objects[id_for_cobj_int].intersects_cobj(cobj, toler) != 1) continue;
 				cobjs.push_back(cixs[i]);
 			}
 			++nix;
