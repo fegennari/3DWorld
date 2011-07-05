@@ -11,7 +11,7 @@ bool const LET_COBJS_FALL    = 0;
 bool const REMOVE_UNANCHORED = 1;
 
 int destroy_thresh(0);
-vector<int> falling_cobjs;
+vector<unsigned> falling_cobjs;
 
 extern bool cobj_tree_valid;
 extern float fticks, zmin;
@@ -154,9 +154,9 @@ void add_portal(coll_obj const &c) {
 }
 
 
-void get_all_connected(int cobj, set<int> const &open, set<int> const &closed, vector<int> &out, vector<unsigned> &cobjs) {
+void get_all_connected(unsigned cobj, set<unsigned> const &open, set<unsigned> const &closed, vector<unsigned> &out, vector<unsigned> &cobjs) {
 
-	assert((unsigned)cobj < coll_objects.size());
+	assert(cobj < coll_objects.size());
 	coll_obj const &c(coll_objects[cobj]);
 	assert(cobj_tree_valid);
 	cobjs.resize(0);
@@ -171,12 +171,11 @@ void get_all_connected(int cobj, set<int> const &open, set<int> const &closed, v
 }
 
 
-void check_cobjs_anchored(vector<int> to_check, set<int> anchored[2]) {
+void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) {
 
-	vector<unsigned> cobjs;
-	vector<int> out;
+	vector<unsigned> cobjs, out;
 
-	for (vector<int>::const_iterator j = to_check.begin(); j != to_check.end(); ++j) {
+	for (vector<unsigned>::const_iterator j = to_check.begin(); j != to_check.end(); ++j) {
 		if ((*j) < 0) continue; // skip
 		if (anchored[0].find(*j) != anchored[0].end()) continue; // already known to be unanchored
 		if (anchored[1].find(*j) != anchored[1].end()) continue; // already known to be anchored
@@ -188,11 +187,11 @@ void check_cobjs_anchored(vector<int> to_check, set<int> anchored[2]) {
 
 		// perform a graph search until we find an anchored cobj or we run out of cobjs
 		bool is_anchored(0);
-		set<int> open, closed;
+		set<unsigned> open, closed;
 		open.insert(*j);
 
 		while (!open.empty()) {
-			int const cur(*open.begin());
+			unsigned const cur(*open.begin());
 			assert(closed.find(cur) == closed.end());
 			closed.insert(cur);
 			//assert(anchored[0].find(cur) == anchored[0].end()); // requires that intersects_cobj() be symmetric
@@ -200,7 +199,9 @@ void check_cobjs_anchored(vector<int> to_check, set<int> anchored[2]) {
 			out.resize(0);
 			get_all_connected(cur, open, closed, out, cobjs);
 
-			for (vector<int>::const_iterator i = out.begin(); i != out.end(); ++i) {
+			for (vector<unsigned>::const_iterator i = out.begin(); i != out.end(); ++i) {
+				assert(*i >= 0 && *i != cur);
+
 				if (anchored[1].find(cur) != anchored[1].end() || coll_objects[cur].is_anchored()) {
 					is_anchored = 1;
 					break;
@@ -297,12 +298,11 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 		}
 		if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
 			//RESET_TIME;
-			set<int> anchored[2]; // {unanchored, anchored}
+			set<unsigned> anchored[2]; // {unanchored, anchored}
 
 			for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
-				vector<int> start;
-				vector<unsigned> cobjs;
-				get_all_connected(to_remove[i], set<int>(), set<int>(), start, cobjs);
+				vector<unsigned> start, cobjs;
+				get_all_connected(to_remove[i], set<unsigned>(), set<unsigned>(), start, cobjs);
 				check_cobjs_anchored(start, anchored);
 			}
 
@@ -314,7 +314,7 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			if (REMOVE_UNANCHORED) {
 				indices.clear();
 
-				for (set<int>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
+				for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 					if (cobjs[*i].destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
 					cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, cobjs[*i].calc_min_dim(), 1));
 					cobjs[*i].clear_internal_data(cobjs, indices, *i);
@@ -348,27 +348,29 @@ void check_falling_cobjs() {
 	// FIXME: fix texture offset
 	if (falling_cobjs.empty()) return; // nothing to do
 	float const dz(-0.001*fticks); // FIXME: add velocity/acceleration due to gravity
-	set<int> anchored[2]; // {unanchored, anchored}
+	set<unsigned> anchored[2]; // {unanchored, anchored}
 
-	for (vector<int>::iterator i = falling_cobjs.begin(); i != falling_cobjs.end(); ++i) {
-		if (*i < 0) continue; // skip
-		assert((unsigned)(*i) < coll_objects.size());
+	for (unsigned i = 0; i < falling_cobjs.size(); ++i) {
+		unsigned const ix(falling_cobjs[i]);
+		assert(ix < coll_objects.size());
 	
-		if (coll_objects[*i].status != COLL_STATIC) {
-			*i = -1; // disable
+		if (coll_objects[ix].status != COLL_STATIC) { // disable
+			falling_cobjs[i] = falling_cobjs.back();
+			falling_cobjs.pop_back();
+			--i; // wraparound is ok
 			continue;
 		}
 		// translate, add the new, then remove the old
 		vector<int> indices;
 		//indices.push_back(index); // if only we could do this first...
-		coll_objects[*i].clear_internal_data(coll_objects, indices, *i);
-		coll_objects[*i].clear_lightmap(0); // need to do this first, before the copy
-		coll_obj cobj(coll_objects[*i]); // make a copy
+		coll_objects[ix].clear_internal_data(coll_objects, indices, ix);
+		coll_objects[ix].clear_lightmap(0); // need to do this first, before the copy
+		coll_obj cobj(coll_objects[ix]); // make a copy
 		cobj.shift_by(point(0.0, 0.0, dz), 1); // translate down
 		int const index(cobj.add_coll_cobj());
-		remove_coll_object(*i);
-		assert(*i != index);
-		*i = index;
+		remove_coll_object(ix);
+		assert(ix != index);
+		falling_cobjs[i] = index;
 	}
 	check_cobjs_anchored(falling_cobjs, anchored);
 	falling_cobjs.resize(0);
@@ -521,16 +523,20 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	case COLL_POLYGON:
 		assert(c.type == COLL_POLYGON);
-		if (toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons)
-			for (int i = 0; i < c.npoints; ++i) {
-				for (int j = 0; j < npoints; ++j) {
-					if (dist_less_than(points[j], c.points[i], toler)) return 1;
+		{
+			float const poly_toler(max(toler, (thickness + c.thickness)*(1.0f - fabs(dot_product(norm, c.norm)))));
+
+			if (poly_toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons, sponza polygons, etc.)
+				for (int i = 0; i < c.npoints; ++i) {
+					for (int j = 0; j < npoints; ++j) {
+						if (dist_less_than(points[j], c.points[i], poly_toler)) return 1;
+					}
 				}
-			}
-			for (int i = 0; i < c.npoints; ++i) {
-				for (int j = 0; j < npoints; ++j) {
-					if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], toler)) return 1;
-					if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], toler)) return 1;
+				for (int i = 0; i < c.npoints; ++i) {
+					for (int j = 0; j < npoints; ++j) {
+						if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], poly_toler)) return 1;
+						if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], poly_toler)) return 1;
+					}
 				}
 			}
 		}
