@@ -824,7 +824,7 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 	cobj.platform_id = platform_id;
 	cobj.fixed       = 0;
 	cobj.counter     = 0;
-	cobj.destroy     = 1;
+	cobj.destroy     = 0;
 	cobj.calc_size();
 	cobj.set_npoints();
 	have_drawn_cobj    |= cparams.draw;
