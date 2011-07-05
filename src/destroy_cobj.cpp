@@ -15,7 +15,7 @@ vector<unsigned> falling_cobjs;
 
 extern bool cobj_tree_valid;
 extern float fticks, zmin;
-extern int coll_id[];
+extern int cobj_counter, coll_id[];
 extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern vector<coll_obj> coll_objects;
@@ -26,6 +26,8 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 void add_connect_waypoint_for_cobj(coll_obj &c);
 void remove_waypoint_for_cobj(coll_obj &c);
 
+
+// **************** Cobj Destroy Code ****************
 
 
 void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
@@ -154,26 +156,17 @@ void add_portal(coll_obj const &c) {
 }
 
 
-void get_all_connected(unsigned cobj, set<unsigned> const &open, set<unsigned> const &closed, vector<unsigned> &out, vector<unsigned> &cobjs) {
+void get_all_connected(unsigned cobj, vector<unsigned> &out) {
 
 	assert(cobj < coll_objects.size());
-	coll_obj const &c(coll_objects[cobj]);
 	assert(cobj_tree_valid);
-	cobjs.resize(0);
-	get_intersecting_cobjs_tree(c, cobjs, cobj, TOLERANCE, 0);
-
-	for (vector<unsigned>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-		assert(*i != cobj && *i < coll_objects.size());
-		if (closed.find(*i) != closed.end() || open.find(*i) != open.end()) continue; // already processed - skip
-		assert(coll_objects[*i].status == COLL_STATIC);
-		if (c.intersects_cobj(coll_objects[*i], TOLERANCE) == 1) out.push_back(*i);
-	}
+	get_intersecting_cobjs_tree(coll_objects[cobj], out, cobj, TOLERANCE, 0, 1, cobj);
 }
 
 
 void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) {
 
-	vector<unsigned> cobjs, out;
+	vector<unsigned> out;
 
 	for (vector<unsigned>::const_iterator j = to_check.begin(); j != to_check.end(); ++j) {
 		if ((*j) < 0) continue; // skip
@@ -189,15 +182,17 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 		bool is_anchored(0);
 		set<unsigned> open, closed;
 		open.insert(*j);
+		++cobj_counter;
+		assert(coll_objects[*j].counter != cobj_counter);
+		coll_objects[*j].counter = cobj_counter;
 
 		while (!open.empty()) {
 			unsigned const cur(*open.begin());
-			assert(closed.find(cur) == closed.end());
 			closed.insert(cur);
 			//assert(anchored[0].find(cur) == anchored[0].end()); // requires that intersects_cobj() be symmetric
 			open.erase(cur);
 			out.resize(0);
-			get_all_connected(cur, open, closed, out, cobjs);
+			get_all_connected(cur, out);
 
 			for (vector<unsigned>::const_iterator i = out.begin(); i != out.end(); ++i) {
 				assert(*i >= 0 && *i != cur);
@@ -207,6 +202,8 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 					break;
 				}
 				open.insert(*i);
+				assert(coll_objects[*i].counter != cobj_counter);
+				coll_objects[*i].counter = cobj_counter;
 			}
 			if (is_anchored) break;
 		}
@@ -301,8 +298,8 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 			set<unsigned> anchored[2]; // {unanchored, anchored}
 
 			for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
-				vector<unsigned> start, cobjs;
-				get_all_connected(to_remove[i], set<unsigned>(), set<unsigned>(), start, cobjs);
+				vector<unsigned> start;
+				get_all_connected(to_remove[i], start);
 				check_cobjs_anchored(start, anchored);
 			}
 
@@ -376,6 +373,9 @@ void check_falling_cobjs() {
 	falling_cobjs.resize(0);
 	copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
 }
+
+
+// **************** Cobj Connectivity Code ****************
 
 
 bool is_pt_under_mesh(point const &p) {

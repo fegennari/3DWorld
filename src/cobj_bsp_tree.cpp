@@ -11,7 +11,7 @@ bool const BUILD_COBJ_TREE = 1;
 
 bool cobj_tree_valid(0);
 
-extern int display_mode, frame_counter;
+extern int display_mode, frame_counter, cobj_counter;
 extern vector<coll_obj> coll_objects;
 
 
@@ -132,7 +132,7 @@ public:
 		return ret;
 	}
 
-	void get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler) const {
+	void get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const {
 		for (unsigned nix = 0; nix < nodes.size();) {
 			tree_node const &n(nodes[nix]);
 			assert(n.start <= n.end);
@@ -146,7 +146,9 @@ public:
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 				if ((int)cixs[i] == ignore_cobj) continue;
 				coll_obj const &cobj(get_cobj(i));
+				if (check_ccounter && cobj.counter == cobj_counter) continue;
 				if (!obj_ok(cobj) || !cube.intersects(cobj, toler)) continue;
+				if (id_for_cobj_int >= 0 && coll_objects[id_for_cobj_int].intersects_cobj(cobj, TOLERANCE) != 1) continue;
 				cobjs.push_back(cixs[i]);
 			}
 			++nix;
@@ -317,9 +319,10 @@ bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ign
 }
 
 
-void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler, bool dynamic) {
-
-	get_tree(dynamic).get_intersecting_cobjs(cube, cobjs, ignore_cobj, toler);
+void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler,
+	bool dynamic, bool check_ccounter, int id_for_cobj_int)
+{
+	get_tree(dynamic).get_intersecting_cobjs(cube, cobjs, ignore_cobj, toler, check_ccounter, id_for_cobj_int);
 }
 
 
