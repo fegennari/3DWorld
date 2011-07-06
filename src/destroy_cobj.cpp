@@ -22,7 +22,7 @@ extern vector<coll_obj> coll_objects;
 extern vector<portal> portals;
 
 
-unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int destroy_thresh);
+unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int destroy_thresh);
 void add_connect_waypoint_for_cobj(coll_obj &c);
 void remove_waypoint_for_cobj(coll_obj &c);
 
@@ -41,7 +41,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 	int const dmin((damage > 800.0) ? DESTROYABLE : ((damage > 200.0) ? SHATTERABLE : EXPLODEABLE));
 	csg_cube cube(pos.x, pos.x, pos.y, pos.y, pos.z, pos.z);
 	cube.expand_by(radius);
-	unsigned nrem(subtract_cube(coll_objects, cts, cdir, cube, dmin));
+	unsigned nrem(subtract_cube(cts, cdir, cube, dmin));
 	if (nrem == 0 || cts.empty()) return; // nothing removed
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
@@ -195,12 +195,12 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 
 			for (vector<unsigned>::const_iterator i = out.begin(); i != out.end(); ++i) {
 				assert(*i >= 0 && *i != cur);
+				open.push_back(*i); // need to do this first
 
 				if (anchored[1].find(*i) != anchored[1].end() || coll_objects[*i].is_anchored()) {
 					is_anchored = 1;
 					break;
 				}
-				open.push_back(*i);
 				assert(coll_objects[*i].counter != cobj_counter);
 				coll_objects[*i].counter = cobj_counter;
 			}
@@ -219,45 +219,35 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 }
 
 
-unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int min_destroy) {
+unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int min_destroy) {
 
-	//RESET_TIME;
 	if (destroy_thresh >= EXPLODEABLE) return 0;
+	if (cube.is_zero_area())           return 0;
+	//RESET_TIME;
+	vector<coll_obj> &cobjs(coll_objects); // so we don't have to rename everything and can keep the shorter code
 	point center(cube.get_cube_center());
-	if (cube.is_zero_area()) return 0;
 	float const clip_cube_colume(cube.get_volume());
-	vector<int> indices, to_remove, cvals;
+	vector<int> indices, to_remove;
 	vector<coll_obj> new_cobjs;
 	cdir = zero_vector;
-	unsigned const cobjs_size(cobjs.size());
-	float const maxlen(cube.max_len());
-	bool const is_small(maxlen < HALF_DXY);
-	unsigned ncobjs, last_cobj(0);
 	vector<cube_t> mod_cubes;
 	mod_cubes.push_back(cube);
-	set<unsigned> just_added;
+	vector<unsigned> int_cobjs;
+	assert(cobj_tree_valid);
+	get_intersecting_cobjs_tree(cube, int_cobjs, -1, 0.0, 0, 0, -1);
 
-	if (is_small) { // not much faster
-		int const xpos(get_xpos(center.x)), ypos(get_ypos(center.y));
-		if (point_outside_mesh(xpos, ypos)) return 0;
-		cvals  = v_collision_matrix[ypos][xpos].cvals; // make a copy because cvals can change during iteration
-		ncobjs = cvals.size(); // so as not to retest newly created subcubes
-	}
-	else {
-		ncobjs = cobjs_size; // so as not to retest newly created subcubes
-	}
-	for (unsigned k = 0; k < ncobjs; ++k) {
-		unsigned const i(is_small ? cvals[k] : k);
-		assert((size_t)i < cobjs_size);
-		if (cobjs[i].status != COLL_STATIC /*|| !cobjs[i].fixed*/) continue; // require fixed cobjs? platforms work now
+	for (unsigned k = 0; k < int_cobjs.size(); ++k) {
+		unsigned const i(int_cobjs[k]);
+		assert(i < cobjs.size());
+		assert(cobjs[i].status == COLL_STATIC);
+		// require fixed cobjs? platforms work now
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
 		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), is_polygon(cobjs[i].type == COLL_POLYGON);
 		bool const csg_obj(is_cube || is_cylinder || is_polygon), shatter(D >= SHATTERABLE);
-		if (!shatter && !csg_obj) continue;
+		if (!shatter && !csg_obj)            continue;
+		if (!cobjs[i].intersects(cube, 0.0)) continue; // no intersection
 		csg_cube const cube2(cobjs[i], 1);
-		if (!cube2.intersects(cube, 0.0)) continue; // no intersection
-		if (just_added.find(i) != just_added.end()) continue; // don't recheck a cobj that was added in a previous k iteration
 		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
 		float volume(cobjs[i].volume);
 		float const min_volume(0.01*min(volume, clip_cube_colume));
@@ -277,9 +267,8 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
-				assert((size_t)index < cobjs.size());
+				assert(index >= 0 && (size_t)index < cobjs.size());
 				indices.push_back(index);
-				just_added.insert(index);
 				volume -= cobjs[index].volume;
 				add_connect_waypoint_for_cobj(cobjs[index]); // slow
 			}
@@ -310,24 +299,18 @@ unsigned subtract_cube(vector<coll_obj> &cobjs, vector<color_tid_vol> &cts, vect
 				check_cobjs_anchored(start, anchored);
 			}
 #if 0
-			// additional error checks - can occasionally fail, probably due to fp precision issues or problems with cobj intersection checks
+			// additional optional error check that no cobj is both anchored and unanchored - can fail for polygons due to inexact intersection test
 			for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 				assert(anchored[1].find(*i) == anchored[1].end());
 			}
-
-			// check that each sub-cobj index is in exactly one of anchored[{0,1}]
-			for (unsigned i = 0; i < indices.size(); ++i) {
-				if (coll_objects[indices[i]].type == COLL_POLYGON) continue; // FIXME: remove this when polygon splitting is correct
-				assert((anchored[0].find(indices[i]) == anchored[0].end()) != (anchored[1].find(indices[i]) == anchored[1].end()));
-			}
 #endif
 			if (REMOVE_UNANCHORED) {
-				indices.clear();
+				vector<int> empty_indices; // always empty
 
 				for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 					if (cobjs[*i].destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
 					cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, cobjs[*i].calc_min_dim(), 1));
-					cobjs[*i].clear_internal_data(cobjs, indices, *i);
+					cobjs[*i].clear_internal_data(cobjs, empty_indices, *i);
 					mod_cubes.push_back(cobjs[*i]);
 					remove_waypoint_for_cobj(cobjs[*i]);
 					remove_coll_object(*i);
