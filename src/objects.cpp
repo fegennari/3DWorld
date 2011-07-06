@@ -205,7 +205,10 @@ void coll_obj::calc_size() {
 	case COLL_POLYGON:
 		assert(npoints == 3 || npoints == 4);
 		volume = triangle_area(points);
-		if (npoints == 4) volume += triangle_area(points+1); // other triangle
+		if (npoints == 4) {
+			point const points2[3] = {points[2], points[3], points[0]};
+			volume += triangle_area(points2); // other triangle
+		}
 		volume *= thickness;
 		break;
 	case COLL_CYLINDER:
