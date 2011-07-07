@@ -20,6 +20,7 @@ extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern vector<coll_obj> coll_objects;
 extern vector<portal> portals;
+extern coll_cell_opt_batcher cco_batcher;
 
 
 unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int destroy_thresh);
@@ -227,7 +228,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	vector<coll_obj> &cobjs(coll_objects); // so we don't have to rename everything and can keep the shorter code
 	point center(cube.get_cube_center());
 	float const clip_cube_colume(cube.get_volume());
-	vector<int> indices, to_remove;
+	vector<int> indices, just_added, to_remove;
 	vector<coll_obj> new_cobjs;
 	cdir = zero_vector;
 	vector<cube_t> mod_cubes;
@@ -235,7 +236,9 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	vector<unsigned> int_cobjs;
 	assert(cobj_tree_valid);
 	get_intersecting_cobjs_tree(cube, int_cobjs, -1, 0.0, 0, 0, -1);
+	cco_batcher.begin_batch();
 
+	// determine affected cobjs
 	for (unsigned k = 0; k < int_cobjs.size(); ++k) {
 		unsigned const i(int_cobjs[k]);
 		assert(i < cobjs.size());
@@ -262,15 +265,14 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 			if (no_new_cobjs) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
 			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
-			remove_waypoint_for_cobj(cobjs[i]);
 			indices.clear();
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
 				assert(index >= 0 && (size_t)index < cobjs.size());
 				indices.push_back(index);
+				just_added.push_back(index);
 				volume -= cobjs[index].volume;
-				add_connect_waypoint_for_cobj(cobjs[index]); // slow
 			}
 			if (is_polygon) volume = max(0.0f, volume); // FIXME: remove this when polygon splitting is correct
 			assert(volume >= -TOLERANCE); // usually > 0.0
@@ -281,52 +283,64 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		}
 		new_cobjs.clear();
 	} // for k
+	cco_batcher.end_batch();
+
+	// remove destroyed cobjs
+	for (unsigned i = 0; i < to_remove.size(); ++i) {
+		remove_waypoint_for_cobj(cobjs[to_remove[i]]);
+		remove_coll_object(to_remove[i]); // remove old collision object
+	}
+	if (!cobj_tree_valid) build_cobj_tree(0, 0); // after destroyed cobj removal
+
+	// add new waypoints (after build_cobj_tree and end_batch)
+	for (unsigned i = 0; i < just_added.size(); ++i) {
+		add_connect_waypoint_for_cobj(cobjs[just_added[i]]); // slow
+	}
+
+	// process unanchored cobjs
+	if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
+		//RESET_TIME;
+		set<unsigned> anchored[2]; // {unanchored, anchored}
+
+		for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
+			vector<unsigned> start;
+			get_all_connected(to_remove[i], start);
+			check_cobjs_anchored(start, anchored);
+		}
+#if 0
+		// additional optional error check that no cobj is both anchored and unanchored - can fail for polygons due to inexact intersection test
+		for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
+			assert(anchored[1].find(*i) == anchored[1].end());
+		}
+#endif
+		if (REMOVE_UNANCHORED) {
+			vector<int> empty_indices; // always empty
+
+			for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
+				if (cobjs[*i].destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
+				cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, cobjs[*i].calc_min_dim(), 1));
+				cobjs[*i].clear_internal_data(cobjs, empty_indices, *i);
+				mod_cubes.push_back(cobjs[*i]);
+				remove_waypoint_for_cobj(cobjs[*i]);
+				remove_coll_object(*i);
+				to_remove.push_back(*i);
+			}
+		}
+		else if (LET_COBJS_FALL) {
+			copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
+		}
+		//PRINT_TIME("Check Anchored");
+	}
+
+	// update grass shadows
+	for (vector<cube_t>::const_iterator i = mod_cubes.begin(); i != mod_cubes.end(); ++i) {
+		// FIXME: test alpha?
+		update_grass_shadows_for_cube(*i); //the object should still be valid
+		// FIXME: adjust lightmap pflow value so that smoke can flow through the hole?
+	}
+
 	if (!to_remove.empty()) {
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // FIXME: what about updating (removing) mesh shadows?
-
-		for (unsigned i = 0; i < to_remove.size(); ++i) {
-			remove_coll_object(to_remove[i]); // remove old collision object
-		}
-		if (!cobj_tree_valid) build_cobj_tree(0, 0);
-
-		if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
-			//RESET_TIME;
-			set<unsigned> anchored[2]; // {unanchored, anchored}
-
-			for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
-				vector<unsigned> start;
-				get_all_connected(to_remove[i], start);
-				check_cobjs_anchored(start, anchored);
-			}
-#if 0
-			// additional optional error check that no cobj is both anchored and unanchored - can fail for polygons due to inexact intersection test
-			for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
-				assert(anchored[1].find(*i) == anchored[1].end());
-			}
-#endif
-			if (REMOVE_UNANCHORED) {
-				vector<int> empty_indices; // always empty
-
-				for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
-					if (cobjs[*i].destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
-					cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, cobjs[*i].calc_min_dim(), 1));
-					cobjs[*i].clear_internal_data(cobjs, empty_indices, *i);
-					mod_cubes.push_back(cobjs[*i]);
-					remove_waypoint_for_cobj(cobjs[*i]);
-					remove_coll_object(*i);
-					to_remove.push_back(*i);
-				}
-			}
-			else if (LET_COBJS_FALL) {
-				copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
-			}
-			//PRINT_TIME("Check Anchored");
-		} // end anchored code
-		for (vector<cube_t>::const_iterator i = mod_cubes.begin(); i != mod_cubes.end(); ++i) {
-			// FIXME: test alpha?
-			update_grass_shadows_for_cube(*i); //the object should still be valid
-			// FIXME: adjust lightmap pflow value so that smoke can flow through the hole?
-		}
 		cdir.normalize();
 	}
 	//PRINT_TIME("Subtract Cube");
