@@ -190,7 +190,7 @@ public:
 	void add_as_fixed_cobj();
 	int  add_coll_cobj();
 	void re_add_coll_cobj(int index, int remove_old=1, int dhcm=0);
-	void get_cvz_counts(int *zz, float zmin, float zmax, int x, int y) const;
+	void get_cvz_range(int *zz, float zmin, float zmax, int x, int y) const;
 	bool subdiv_fixed_cube(vector<coll_obj> &cobjs);
 	int  intersects_cobj(coll_obj const &c, float toler=0.0) const;
 	int  is_anchored() const;
@@ -253,7 +253,6 @@ struct coll_cell { // size = 40
 	vector<vector<int> > cvz;
 
 	void clear(bool clear_vectors);
-	void clear_cvz();
 	void optimize(int x, int y);
 	void update_opt(int x, int y) {if (!cvz.empty()) optimize(x, y);}
 	void update_zmm(float zmin_, float zmax_, coll_obj const &cobj);

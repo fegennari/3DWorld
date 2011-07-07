@@ -492,7 +492,7 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old, int dhcm) {
 }
 
 
-void coll_obj::get_cvz_counts(int *zz, float zmin, float zmax, int x, int y) const {
+void coll_obj::get_cvz_range(int *zz, float zmin, float zmax, int x, int y) const {
 
 	if (status != COLL_STATIC) {
 		zz[0] = zz[1] = 0;
@@ -503,14 +503,14 @@ void coll_obj::get_cvz_counts(int *zz, float zmin, float zmax, int x, int y) con
 
 	// clip size to actual polygon bounds within this cell (could do this with COLL_CYLINDER_ROT as well)
 	if (type == COLL_POLYGON && thickness <= MIN_POLY_THICK && (zz[1] - zz[0]) > 2 && radius > HALF_DXY && norm.z != 0.0) {
-		float const D(-dot_product(norm, points[0]));
+		float const D(-dot_product(norm, points[0])), nz_inv(1.0/norm.z);
 		float zval[2];
 		bool first(1);
 
 		// polygon is monotonic, so sample once to each side of the center to get conservative bounds
 		for (int yy = y-1; yy <= y+1; yy += 2) {
 			for (int xx = x-1; xx <= x+1; xx += 2) {
-				float const z((-norm.x*get_xval(xx) - norm.y*get_yval(yy) - D)/norm.z);
+				float const z((-norm.x*get_xval(xx) - norm.y*get_yval(yy) - D)*nz_inv);
 				zval[0] = (first ? z : min(zval[0], z));
 				zval[1] = (first ? z : max(zval[1], z));
 				first   = 0;
@@ -525,17 +525,11 @@ void coll_obj::get_cvz_counts(int *zz, float zmin, float zmax, int x, int y) con
 }
 
 
-void coll_cell::clear_cvz() {
-
-	if (cvz.capacity() > INIT_CCELL_SIZE) cvz.clear(); else cvz.resize(0);
-}
-
-
 void coll_cell::clear(bool clear_vectors) {
 
 	if (clear_vectors) {
 		if (cvals.capacity() > INIT_CCELL_SIZE) cvals.clear(); else cvals.resize(0);
-		clear_cvz();
+		cvz.clear();
 	}
 	zmin = occ_zmin =  FAR_CLIP;
 	zmax = occ_zmax = -FAR_CLIP;
@@ -545,9 +539,8 @@ void coll_cell::clear(bool clear_vectors) {
 void coll_cell::optimize(int x, int y) {
 
 	if (scrolling) return; // optimize only at the end of a scrolling event
-	clear_cvz();
 	unsigned ncvals(cvals.size());
-	if (ncvals < CVZ_NDIV || zmax <= zmin) return;
+	if (ncvals < CVZ_NDIV || zmax <= zmin) {cvz.clear(); return;}
 	unsigned ncv(0);
 
 	for (unsigned i = 0; i < ncvals; ++i) {
@@ -555,20 +548,21 @@ void coll_cell::optimize(int x, int y) {
 		assert(size_t(ix) < coll_objects.size());
 		if (coll_objects[ix].status == COLL_STATIC) ++ncv;
 	}
-	if (ncv < CVZ_NDIV) return;
+	if (ncv < CVZ_NDIV) {cvz.clear(); return;}
+	cvz.resize(0);
 	cvz.resize(CVZ_NDIV);
 	unsigned cnt[CVZ_NDIV] = {0};
 	int zz[2];
 
 	for (unsigned i = 0; i < ncvals; ++i) { // determine counts
-		coll_objects[cvals[i]].get_cvz_counts(zz, zmin, zmax, x, y);
+		coll_objects[cvals[i]].get_cvz_range(zz, zmin, zmax, x, y);
 		for (int z = zz[0]; z <= zz[1]; ++z) ++cnt[z];
 	}
 	for (unsigned i = 0; i < CVZ_NDIV; ++i) {
 		cvz[i].reserve(cnt[i]);
 	}
 	for (unsigned i = 0; i < ncvals; ++i) { // create vector
-		coll_objects[cvals[i]].get_cvz_counts(zz, zmin, zmax, x, y);
+		coll_objects[cvals[i]].get_cvz_range(zz, zmin, zmax, x, y);
 
 		for (int z = zz[0]; z <= zz[1]; ++z) {
 			cvz[z].push_back(cvals[i]);
