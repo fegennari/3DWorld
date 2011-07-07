@@ -587,11 +587,11 @@ template<typename T> class coll_cell_line_iterator {
 			if (dir == 0) swap(zs, ze);
 			
 			for (unsigned i = zs; ; i += di) {
-				vector<int> const &cvz(cell.cvz[i]);
-
-				for (unsigned z = 0; z < cvz.size(); ++z) {
-					if (skip_this_index(cvz[z])) continue;
-					int const val(lint.proc_cobj(cell, cvz[z]));
+				for (unsigned ix = (i ? cell.cvz[i-1] : 0); ix < cell.cvz[i]; ++ix) {
+					assert(ix < cell.indices.size());
+					unsigned const index(cell.indices[ix]);
+					if (skip_this_index(index)) continue;
+					int const val(lint.proc_cobj(cell, index));
 					if (val == 0 || val == 1) return (val != 0);
 				}
 				if (lint.had_intersection() || i == ze) break; // had intersection at a closer zval, so we're done
