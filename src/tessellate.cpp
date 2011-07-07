@@ -183,6 +183,7 @@ bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 	assert(npts >= 3);
 	
 	if (npts <= N_COLL_POLY_PTS && !(split_quads && npts > 3) && is_poly_convex(poly_pts)) { // triangle or convex quad
+		if (!is_poly_valid(&poly_pts.front())) return 0; // invalid zero area polygon - skip
 		split_polygons.push_back(cobj);
 		split_polygons.back().npoints = npts;
 
@@ -194,6 +195,7 @@ bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 	tessellate_polygon(poly_pts);
 	
 	for (unsigned i = 0; i < triangles.size(); ++i) {
+		if (!is_poly_valid(triangles[i].pts)) continue; // invalid zero area triangle - skip
 		split_polygons.push_back(cobj);
 		split_polygons.back().npoints = 3; // triangles
 		UNROLL_3X(split_polygons.back().points[i_] = triangles[i].pts[i_];)

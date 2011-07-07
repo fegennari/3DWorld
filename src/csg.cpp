@@ -507,7 +507,7 @@ bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj const
 		return 1;
 	}
 	// else nothing removed
-	assert(new_cobjs.size() > init_sz);
+	assert(new_cobjs.size() >= init_sz); // can be equal if all pieces are tiny fragments that get removed
 	new_cobjs.erase(new_cobjs.begin()+init_sz, new_cobjs.end()); // remove everything that was added
 	return 0;
 }

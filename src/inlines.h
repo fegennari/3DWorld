@@ -311,12 +311,19 @@ inline void orthogonalize_dir(vector3d const &vin, vector3d const &dir, vector3d
 }
 
 
-inline vector3d get_poly_norm(point const *points) { // requires at least 3 points
+inline vector3d get_poly_norm(point const *const points) { // requires at least 3 points
 
 	assert(points != NULL);
 	vector3d norm;
 	get_normal(points[0], points[1], points[2], norm, 1);
 	return norm;
+}
+
+
+// only applies to the first 3 points (first triangle) since this corresponds to the points used in get_poly_norm()
+inline bool is_poly_valid(point const *const p) {
+
+	return (!dist_less_than(p[0], p[1], TOLERANCE) && !dist_less_than(p[1], p[2], TOLERANCE) && !dist_less_than(p[2], p[0], TOLERANCE));
 }
 
 
