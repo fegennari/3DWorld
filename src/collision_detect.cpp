@@ -26,7 +26,7 @@ float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0), occluder_zmin(FAR_CLIP)
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
 vector<int> index_stack;
 vector<coll_obj> coll_objects;
-extern platform_cont platforms;
+coll_cell_opt_batcher cco_batcher;
 
 extern bool cobj_tree_valid;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
@@ -36,6 +36,7 @@ extern double camera_zh;
 extern dwobject def_objects[];
 extern obj_type object_types[];
 extern player_state *sstates;
+extern platform_cont platforms;
 
 
 void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_to_hcm, int is_dynamic, int dhcm);
@@ -549,6 +550,7 @@ void coll_cell::optimize(int x, int y) {
 	if (scrolling) return; // optimize only at the end of a scrolling event
 	unsigned ncvals(cvals.size());
 	if (ncvals < CVZ_NDIV || zmax <= zmin) {clear_cvz(); return;}
+	if (cco_batcher.check_add_entry(x, y)) return; // add to batch but don't process here
 	unsigned ncv(0);
 
 	for (unsigned i = 0; i < ncvals; ++i) {
@@ -593,6 +595,36 @@ inline void coll_cell::update_zmm(float zmin_, float zmax_, coll_obj const &cobj
 	zmax = max(zmax_, zmax);
 	assert(zmin <= occ_zmin);
 	assert(zmax >= occ_zmax);
+}
+
+
+void coll_cell_opt_batcher::begin_batch() {
+
+	assert(!enabled);
+	assert(to_proc.empty());
+	enabled = 1;
+}
+
+
+void coll_cell_opt_batcher::end_batch() {
+
+	assert(enabled);
+	enabled = 0;
+	
+	for (set<pair<int, int> >::const_iterator i = to_proc.begin(); i != to_proc.end(); ++i) {
+		int const x(i->first), y(i->second);
+		assert(!point_outside_mesh(x, y));
+		v_collision_matrix[y][x].optimize(x, y);
+	}
+	to_proc.clear();
+}
+
+
+bool coll_cell_opt_batcher::check_add_entry(int x, int y) {
+
+	if (!enabled) return 0;
+	to_proc.insert(make_pair(x, y));
+	return 1;
 }
 
 

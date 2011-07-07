@@ -265,6 +265,18 @@ struct coll_cell { // size = 52
 };
 
 
+class coll_cell_opt_batcher {
+
+	bool enabled;
+	set<pair<int, int> > to_proc;
+
+public:
+	void begin_batch();
+	void end_batch();
+	bool check_add_entry(int x, int y);
+};
+
+
 struct color_tid_vol : public cube_t {
 
 	int cid, tid, destroy;
