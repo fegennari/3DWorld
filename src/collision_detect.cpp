@@ -1057,7 +1057,7 @@ void vert_coll_detector::check_cobj(int index) {
 				break;
 			}
 			if (coll_top) { // +z collision
-				if (cobj.contains_pt_xy(pos)) ++lcoll;
+				if (cobj.contains_pt_xy(pos)) lcoll = 2;
 				float const rdist(max(max(max((pos.x-(cobj.d[0][1]+o_radius)), ((cobj.d[0][0]-o_radius)-pos.x)),
 					(pos.y-(cobj.d[1][1]+o_radius))), ((cobj.d[1][0]-o_radius)-pos.y)));
 				
@@ -1108,7 +1108,7 @@ void vert_coll_detector::check_cobj(int index) {
 				float const pozm(pold.z - mdir.z);
 
 				if (!(cobj.cp.surfs & 1) && pozm > (zmaxc - SMALL_NUMBER) && pos.z <= zmaxc) { // collision with top
-					if (rad <= radius) ++lcoll;
+					if (rad <= radius) lcoll = 2;
 					norm.assign(0.0, 0.0, 1.0);
 					float const rdist(rad - radius);
 					obj.pos.z = zmaxc;
@@ -1193,7 +1193,7 @@ void vert_coll_detector::check_cobj(int index) {
 					}
 					assert(!is_nan(norm));
 					obj.pos += norm*val; // calculate intersection point
-					lcoll    = 1;
+					lcoll    = (norm.z > 0.99) ? 2 : 1; // top collision if normal is nearly vertical
 				} // end sphere poly int
 			} // rnf sphere int check
 		} // end COLL_POLY scope

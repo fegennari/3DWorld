@@ -444,10 +444,13 @@ void process_groups() {
 			if (!obj.disabled()) {
 				update_deformation(obj);
 				
-				if (type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF || (type == FRAGMENT && obj.vdeform.z > 0.0)) { // shatterable fragments
+				if ((otype.flags & OBJ_IS_FLAT) || type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF || (type == FRAGMENT && obj.vdeform.z > 0.0)) { // shatterable fragments
 					float const vmag(fabs(obj.velocity.z)); // rotate
-					float const rr((type == LEAF) ? 0.25 : 1.0);
-					if (vmag > 0.5 && !(obj.flags & STATIC_COBJ_COLL)) obj.angle += fticks*(TIMESTEP/DEF_TIMESTEP)*rr*ROTATE_RATE*sqrt(vmag);
+					
+					if (obj.status == 1 && vmag > 0.5 && !(obj.flags & (STATIC_COBJ_COLL | OBJ_COLLIDED))) {
+						float const rr((type == LEAF) ? 0.25 : 1.0);
+						obj.angle += fticks*(TIMESTEP/DEF_TIMESTEP)*rr*ROTATE_RATE*sqrt(vmag); // rotate while airborne
+					}
 				}
 				if (large_radius) {
 					if (type != LANDMINE) {
