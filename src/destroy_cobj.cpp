@@ -304,6 +304,9 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
 			vector<unsigned> start;
+			++cobj_counter;
+			assert(coll_objects[to_remove[i]].counter != cobj_counter);
+			coll_objects[to_remove[i]].counter = cobj_counter;
 			get_all_connected(to_remove[i], start);
 			check_cobjs_anchored(start, anchored);
 		}
