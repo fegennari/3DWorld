@@ -1569,8 +1569,8 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				}
 			}
 			else {
-				start_pos   += dir*r;
-				start_pos.z -= 0.5*r;
+				start_pos   += dir*(0.5*r);
+				start_pos.z -= 0.25*r;
 				vector3d dir2(dir);
 				if (firing_error != 0.0) vadd_rand(dir2, firing_error);
 				bool const is_fire(wmode & 1);
