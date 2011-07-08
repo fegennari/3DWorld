@@ -200,8 +200,8 @@ bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 		split_polygons.back().npoints = 3; // triangles
 		UNROLL_3X(split_polygons.back().points[i_] = triangles[i].pts[i_];)
 	}
+	// triangles and split_polygons can be empty here if they're all small fragments that get dropped
 	triangles.clear();
-	assert(!split_polygons.empty());
 	return 1;
 }
 

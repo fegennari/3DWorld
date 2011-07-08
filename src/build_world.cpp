@@ -1011,6 +1011,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					}
 					split_polygon_to_cobjs(cobj, split_polygons, ppts[i], 0);
 				}
+				assert(!split_polygons.empty()); // too strict?
 				add_polygons_to_cobj_vector(split_polygons);
 				cobj.group_id = -1; // reset
 				PRINT_TIME("Obj File Load/Process");
@@ -1248,6 +1249,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			cobj.thickness *= scale;
 			split_polygons.clear();
 			split_polygon_to_cobjs(cobj, split_polygons, poly_pts, 0);
+			assert(!split_polygons.empty()); // too strict?
 			add_polygons_to_cobj_vector(split_polygons);
 			break;
 
