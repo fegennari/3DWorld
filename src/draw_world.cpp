@@ -1189,7 +1189,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	disable_blend();
 
 	// draw tongue
-	if (sstates[id].kill_time < int(TICKS_PER_SECOND) || powerup == PU_DAMAGE) { // stick your tongue out at a dead enemy
+	if (sstates[id].kill_time < int(2*TICKS_PER_SECOND) || powerup == PU_DAMAGE) { // stick your tongue out at a dead enemy
 		point pos4(0.0, 0.8*radius, -0.4*radius);
 		draw_smiley_part(pos4, pos, orient, SF_TONGUE, 0, ndiv2, is_shadowed);
 	}

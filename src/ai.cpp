@@ -1273,7 +1273,7 @@ void player_state::smiley_action(int smiley_id) {
 	if (powerup == PU_REGEN) smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);
 	if ((rand()%((in_range == 0) ? 50 : 500)) == 0) check_switch_weapon(smiley_id); // change weapons
 	if (was_hit > 0) --was_hit;
-	++kill_time;
+	kill_time += max(1, iticks);
 	check_underwater(smiley_id, depth);
 }
 
@@ -1426,6 +1426,7 @@ void player_state::init(bool w_start) {
 	last_dz       = 0.0;
 	last_zvel     = 0.0;
 	velocity      = zero_vector;
+	kill_time     = 100*TICKS_PER_SECOND;
 
 	if (game_mode == 1) {
 		shields       = INIT_SHIELDS;
