@@ -399,6 +399,13 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 	coll_obj &cobj(coll_objects[index]);
 	if (thickness == 0.0) thickness = MIN_POLY_THICK;
 	cobj.norm = get_poly_norm(points);
+	
+	if (cobj.norm == zero_vector) {
+		cout << "degenerate polygon created: points:" << endl;
+		for (int i = 0; i < npoints; ++i) {points[i].print(); cout << endl;}
+		cout << "valid: " << is_poly_valid(points) << endl;
+		cobj.norm = plus_z; // FIXME: this shouldn't be possible, but FP accuracy/errors make this tough to prevent
+	}
 	assert(cobj.norm != zero_vector);
 	cobj.set_from_points(points, npoints); // set cube_t
 	cobj.translate(xlate);
@@ -452,8 +459,8 @@ int coll_obj::add_coll_cobj() {
 	default:
 		assert(0);
 	}
+	assert(cid >= 0 && size_t(cid) < coll_objects.size());
 	assert(coll_objects[cid].lightmap.empty());
-	assert(size_t(cid) < coll_objects.size());
 	coll_objects[cid].destroy  = destroy;
 	coll_objects[cid].fixed    = fixed;
 	coll_objects[cid].group_id = group_id;

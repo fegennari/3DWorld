@@ -93,7 +93,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 			num_parts = cts[i].volume/(dia*dia*dia);
 		}
 		if (size_scale < 0.1) continue;
-		unsigned const num(min(100U, max((tri_fragments ? 6U : 1U), unsigned(num_parts)))); // no more than 200
+		unsigned const num(min(100U, max(((tri_fragments && !cts[i].is_2d) ? 6U : 1U), unsigned(num_parts)))); // no more than 200
 		//cout << "shattered: " << shattered << ", tri: " << tri_fragments << ", volume: " << cts[i].volume << ", num_parts: " << num_parts << ", num: " << num << ", ss: " << size_scale << endl;
 		bool const non_csg(shattered || cts[i].unanchored);
 		csg_cube frag_cube(cts[i]);
