@@ -447,8 +447,9 @@ struct pos_dir_up { // defines a view frustum
 	vector3d dir, upv, upv_, cp;
 	float tterm, sterm, tterm_sq2_inv, near_, far_;
 	double A;
+	bool valid;
 
-	pos_dir_up(void) {}
+	pos_dir_up(void) : valid(0) {}
 	pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f);
 	bool sphere_visible_test(point const &pos_, float radius) const;
 	bool cube_visible(cube_t const &cube) const;

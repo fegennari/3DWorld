@@ -92,7 +92,7 @@ void set_camera_pdu() {
 
 pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f)
 		: pos(p), dir(d), upv(u), tterm(t), sterm(s), tterm_sq2_inv(2.0/(tterm*tterm)),
-		near_(n), far_(f), A(double(window_width)/double(window_height))
+		near_(n), far_(f), A(double(window_width)/double(window_height)), valid(1)
 {
 	assert(near_ >= 0.0 && far_ > 0.0 && far_ > near_);
 	assert(dir != zero_vector);
@@ -104,6 +104,7 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 // view frustum check: dir and upv must be normalized - checks view frustum
 bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 
+	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
 	vector3d const pv(pos_, pos);
 	if (dot_product(dir, pv) < 0.0) return (pv.mag_sq() < max(1.0, A*A)*radius*radius*tterm_sq2_inv); // optimization
 	float const dist(pv.mag()*sterm);
@@ -115,6 +116,7 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 
 bool pos_dir_up::cube_visible(cube_t const &cube) const {
 
+	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
 	point cube_pts[8];
 	get_cube_points(cube.d, cube_pts);
 	bool npass(0), fpass(0); // near, far
