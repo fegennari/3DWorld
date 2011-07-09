@@ -13,7 +13,7 @@
 float const NDIV_SCALE = 120.0;
 
 
-extern int draw_model, display_mode, destroy_thresh, do_zoom, xoff2, yoff2;
+extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
 extern float temperature, tfticks;
 extern unsigned ALL_LT[];
 extern obj_type object_types[];

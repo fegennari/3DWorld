@@ -11,7 +11,7 @@ set<int> scheduled_weapons;
 
 extern bool invalid_ccache, keep_lasers;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode;
-extern int num_smileys, left_handed, iticks, do_zoom, camera_view, fired, UNLIMITED_WEAPONS, animate2;
+extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPONS, animate2;
 extern float fticks, max_proj_rad;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
@@ -900,7 +900,7 @@ void add_weapon_lights(int shooter) {
 }
 
 
-void show_crosshair(int do_zoom) {
+void show_crosshair(int in_zoom) {
 
 	float const scale((world_mode == WMODE_UNIVERSE) ? 0.1 : 1.0); // closer near clip for planets
 	float const xy1(0.0006*scale), xy2(0.0002*scale), zval(-0.05*scale);
@@ -912,7 +912,7 @@ void show_crosshair(int do_zoom) {
 	glEnable(GL_LINE_SMOOTH);
 	glDisable(GL_LIGHTING);
 
-	if (do_zoom) {
+	if (in_zoom) {
 		glScalef(2.0, 2.0, 1.0);
 		glBegin(GL_LINES);
 

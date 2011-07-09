@@ -20,7 +20,7 @@ unsigned predef_dlists[NUM_RES_DLIST]   = {0};
 unsigned sphere_dlists[NUM_SPH_DLIST]   = {0};
 unsigned cylin_dlists [NUM_CYLIN_DLIST] = {0};
 
-extern int display_mode, do_zoom, draw_model;
+extern int display_mode, draw_model;
 extern GLUquadricObj* quadric;
 
 

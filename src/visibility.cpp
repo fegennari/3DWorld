@@ -16,7 +16,7 @@ int const FAST_LIGHT_VIS    = 1;
 float const NORM_VIS_EXTEND = 0.02;
 
 
-float tan_term(1.0), atan_tan_term(1.0), sin_term(1.0);
+float tan_term(1.0), sin_term(1.0);
 point ocean;
 pos_dir_up camera_pdu;
 
@@ -80,7 +80,6 @@ void calc_view_test_terms(float &tterm, float &sterm, bool is_zoomed) {
 void calc_viewing_cone() {
 
 	calc_view_test_terms(tan_term, sin_term, (do_zoom != 0));
-	atan_tan_term = atanf(tan_term);
 }
 
 
