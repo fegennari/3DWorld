@@ -1565,7 +1565,8 @@ void add_coll_shadow_objs() {
 		if (begin_motion) { // can ignore if behind camera and light in front of camera
 			for (int i = 0; i < num_groups; ++i) { // can we simply use the collision objects for this?
 				obj_group const &objg(obj_groups[i]);
-				if (!objg.enabled || !objg.large_radius()) continue;
+				if (!objg.enabled || !objg.large_radius())                      continue;
+				if (object_types[objg.type].color.alpha < 0.5*MIN_SHADOW_ALPHA) continue; // too low? nothing fails this yet
 				float const radius(object_types[objg.type].radius);
 				
 				for (unsigned j = 0; j < objg.end_id; ++j) {
