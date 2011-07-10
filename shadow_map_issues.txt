@@ -10,9 +10,6 @@ to remove lots of vertices and previous shadow setting code
 
 3. [COMPLEXITY/CORRECTNESS] What about partially transparent objects? => need alpha test during
 shadow pass, use normal shadowing alpha of 0.5
-* But then we need custom shaders for everything?
-* What about dynamic objects with no shaders?
-* What about objects that already set the alpha test value to something else?
 
 4. [COMPLEXITY] Every shader (and some fixed pipeline code) will need to use shadow
 maps => Update main shaders that already handle shadows (cobjs, grass)
@@ -48,9 +45,7 @@ See:
 http://www.paulsprojects.net/tutorials/smt/smt.html
 
 Notes:
-1. Disable do_zoom during shadow pass
-2. Disable occlusion culling and location update on shadow pass (don't call get_occluders())
-3. Override camera_pos/dir/up/pdu for light (projective or ortho?)
-4. Skip small objects (grass, particles), some transparent objects and billboards
-5. Better handling of object LOD for spheres, cylinders, etc.
-6. Use texture unit 7 for shadow map and its transforms
+1. Override camera_pos/dir/up/pdu for light (projective or ortho?)
+2. Skip small objects (grass, particles), some transparent objects and billboards
+3. Better handling of object LOD for spheres, cylinders, etc.
+

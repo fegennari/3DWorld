@@ -3,6 +3,7 @@
 // 1/21/11
 #include "GL/glew.h"
 #include "3DWorld.h"
+#include "collision_detect.h" // for shadow_sphere
 #include "gl_ext_arb.h"
 
 using namespace std;
@@ -11,19 +12,48 @@ unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
 
 unsigned fbo_id(0), depth_tid(0);
 
-extern int window_width, window_height;
+extern int window_width, window_height, animate2, display_mode;
+extern vector<shadow_sphere> shadow_objs;
 
 
 // ************ RENDER TO TEXTURE METHOD ************
 
 
-void create_shadow_map_for_light(int light, int tu_id) {
+unsigned create_shadow_map_for_light(int light, point const &lpos, unsigned tu_id, bool is_dynamic) { // return a tid
 
+	assert(tu_id < 8); // assuming we have 8 texture units
+	float const scene_z1(min(zbottom, czmin)), scene_z2(max(ztop, czmax));
+	float const scene_radius(max(max(X_SCENE_SIZE, Y_SCENE_SIZE), 0.5f*(scene_z2 - scene_z1)));
+	point const scene_center(0.0, 0.0, 0.5*(scene_z1 + scene_z2));
+	vector3d const light_dir(scene_center - lpos); // almost equal to lpos (point light)
+	float const dist(p2p_dist(lpos, scene_center));
 
+	float const angle(0.5*TO_RADIANS*PERSP_ANGLE); // FIXME: what is the angle
+	float const A((float)window_width/(float)window_height), diag(sqrt(1.0 + A*A)); // aspect ratio
+	camera_pdu = pos_dir_up(lpos, light_dir, plus_z, tanf(angle)*diag, sinf(angle), dist-scene_radius, dist+scene_radius);
+	camera_pdu.valid = 0; // FIXME: should anything ever be out of the light view frustum? the camera when not over the mesh?
+
+	// FIXME: WRITE: setup render state
+
+	if (is_dynamic) {
+		//if (shadow_objs.empty()) {} // is this check necessary?
+			
+		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
+			int const ndiv(N_SPHERE_DIV); // FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
+			draw_sphere_dlist(i->pos, i->radius, ndiv, 0);
+		}
+	}
+	else {
+		// FIXME: WRITE: render static objects (cobjs, etc)
+		draw_coll_surfaces(1, 0); // solid, no transparent?
+	}
+	unsigned tid(0);
+	// FIXME: WRITE: create textures
+	return tid;
 }
 
 
-void create_shadow_map() {
+void create_shadow_map(bool is_dynamic) {
 
 	// Note 1: We likely want both static and dynamic/per frame shadow maps
 	// Note 2: We probably want to support at least two light sources, sun and moon
@@ -37,12 +67,29 @@ void create_shadow_map() {
 	// 4. Add static light sources for a single light
 	// 5. Resolve the issues above for static + dynamic + multiple lights
 
+	// save state
+	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode);
+	pos_dir_up const camera_pdu_(camera_pdu);
+
+	// set to shadow map state
+	do_zoom       = 0;
+	animate2      = 0; // disable any animations or generated effects
+	display_mode &= ~0x08; // disable occlusion culling
+
+	// render shadow maps to textures
 	point lpos;
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid(0xFF, l, lpos)) continue;
-		//
+		unsigned const shadow_tid(create_shadow_map_for_light(l, lpos, 6+l, is_dynamic)); // FIXME: what about is_dynamic?
+		// FIXME: use shadow_tid
 	}
+
+	// restore old state
+	do_zoom      = do_zoom_;
+	animate2     = animate2_;
+	display_mode = display_mode_;
+	camera_pdu   = camera_pdu_;
 }
 
 

@@ -58,6 +58,7 @@ void draw_snow();
 void update_temperature(bool verbose);
 
 void render_to_shadow_fbo(point const &lpos);
+void create_shadow_map(bool is_dynamic);
 
 
 inline void glClearColor_rgba(const colorRGBA &color) {
@@ -816,6 +817,7 @@ void display(void) {
 		if (TIMETEST) PRINT_TIME("\n\n0");
 
 		//render_to_shadow_fbo(get_light_pos()); // TESTING
+		//create_shadow_map(1);
 		
 		if (combined_gu) { // light from current system's star
 			draw_universe_bkg(underwater, depth); // infinite universe as background

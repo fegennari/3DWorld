@@ -1835,16 +1835,20 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten)); // Note: enable direct_lighting if processing sun/moon shadows here
 	int last_tid(-1), last_group_id(-1), last_pri_dim(-1);
 	
-	if (draw_solid && have_drawn_cobj) {
-		for (unsigned i = 0; i < coll_objects.size(); ++i) {
-			if (coll_objects[i].no_draw()) continue;
+	if (draw_solid) {
+		draw_last.resize(0);
+		
+		if (have_drawn_cobj) {
+			for (unsigned i = 0; i < coll_objects.size(); ++i) {
+				if (coll_objects[i].no_draw()) continue;
 
-			if (coll_objects[i].is_semi_trans()) {
-				float const neg_dist_sq(-distance_to_camera_sq(coll_objects[i].get_center_pt()));
-				draw_last.push_back(make_pair(neg_dist_sq, i));
-			}
-			else {
-				coll_objects[i].draw_cobj(i, last_tid, last_group_id, last_pri_dim);
+				if (coll_objects[i].is_semi_trans()) {
+					float const neg_dist_sq(-distance_to_camera_sq(coll_objects[i].get_center_pt()));
+					draw_last.push_back(make_pair(neg_dist_sq, i));
+				}
+				else {
+					coll_objects[i].draw_cobj(i, last_tid, last_group_id, last_pri_dim);
+				}
 			}
 		}
 	}
