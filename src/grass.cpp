@@ -513,6 +513,7 @@ public:
 		if (!data_valid   ) upload_data();
 	}
 
+	// texture units used: 0: grass texture, 1: wind texture
 	void draw() {
 		if (empty()) return;
 

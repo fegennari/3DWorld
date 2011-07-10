@@ -349,6 +349,7 @@ void gen_uw_lighting() {
 }
 
 
+// texture units used: 0: terrain texture, 1: detail texture
 void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex) {
 
 	float const tx(tex_scale*(((float)xoffset)/((float)xsize) + 0.5));
@@ -756,6 +757,7 @@ void draw_water_edge(float zval) { // used for WM3 tiled terrain
 }
 
 
+// texture units used: 0: water texture, 1: reflection texture
 void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole_bounds) {
 
 	if (DISABLE_WATER) return;

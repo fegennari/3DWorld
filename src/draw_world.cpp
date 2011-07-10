@@ -1723,6 +1723,7 @@ void set_dlights_booleans(bool enable, int shader_type) {
 }
 
 
+// texture units used: 0: object texture, 1: smoke texture
 colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten)
 {

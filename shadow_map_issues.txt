@@ -1,27 +1,24 @@
-The biggest issues are 1, 4, 9, 12, 11.
+The biggest issues are 1, 3, 7, 8.
 
 1. [PERFORMANCE] Need to draw multiple passes (shadow/depth + normal render) =>
 slow, split into static and dynamic shadow map, update static
 shadows only when static cobjs change (init, destroy cobjs, leaf
 burn?), disable slow/small things like grass?
 
-2. [COMPLEXITY] Need to override the camera view frustum => special case the code
-or copy do_look_at(), use separate PDU for light source(s)
-* Ortho projection, or disable view frustum culling?
+2. [PERFORMANCE] More work and memory access for the fragment shader => but we get
+to remove lots of vertices and previous shadow setting code
 
-3. [COMPLEXITY] Interferes with spatial frame coherence (occlusion culling, what else?):
-Disable on shadow pass only => misses potential occluders, might be ok
-
-4. [COMPLEXITY/CORRECTNESS] What about partially transparent objects? => need alpha test during
+3. [COMPLEXITY/CORRECTNESS] What about partially transparent objects? => need alpha test during
 shadow pass, use normal shadowing alpha of 0.5
 * But then we need custom shaders for everything?
 * What about dynamic objects with no shaders?
+* What about objects that already set the alpha test value to something else?
 
-5. [COMPLEXITY] Every shader (and some fixed pipeline code) will need to use shadow
+4. [COMPLEXITY] Every shader (and some fixed pipeline code) will need to use shadow
 maps => Update main shaders that already handle shadows (cobjs, grass)
 and let the rest use the old/inefficient methods
 
-6. [COMPLEXITY/ACCURACY] Dynamic object LOD will be incorrect for distant objects whose
+5. [COMPLEXITY/ACCURACY] Dynamic object LOD will be incorrect for distant objects whose
 shadows fall close to the camera:
  a) Use high ndiv for shadow objects => too slow?
  b) LOD based on closest point from shadow ray to camera => too
@@ -30,23 +27,13 @@ complex/special cases everywhere?
 render the others with some min ndiv => might be ok but again special
 cases for shadow pass
 
-7. [ACCURACY] Shadow map needs to be very high res => maybe ok, maybe not - if
+6. [ACCURACY] Shadow map needs to be very high res => maybe ok, maybe not - if
 not then either use lower res or split into multiple smaller shadow
 maps, cascaded, shadow maps, perspective shadow maps, trapezoidal shadow maps
 
-8. [COMPLEXITY] Zoom function will mess up shadows when used on light(s) => need
-to disable zoom for shadow map pass
+7. [COMPLEXITY] Need to use custom shadow map writing shader for shadow pass with depth textures?
 
-9. [COMPLEXITY] Need to use custom shadow map writing shader for shadow pass with depth textures?
-
-10. [PERFORMANCE] More work and memory access for the fragment shader => but we get
-to remove lots of vertices and previous shadow setting code
-
-11. [CORRECTNESS] Normal rendering uses transforms and changes the texture matrix
-that we would normally be using for shadow mapping, and uses different
-texture units => may not be an issue, use a special texture unit (7) for shadow maps
-
-12. [ACCURACY] What about depth buffer accuracy issues at shadow casting edges?
+8. [ACCURACY] What about depth buffer accuracy issues at shadow casting edges?
 Normally would cull front faces and draw shadowing back faces, but:
  a) Not all objects are closed (for example non-thick double sided
 polygons and open ended hollow cylinders)
@@ -59,3 +46,11 @@ depth buffer precision
 
 See:
 http://www.paulsprojects.net/tutorials/smt/smt.html
+
+Notes:
+1. Disable do_zoom during shadow pass
+2. Disable occlusion culling and location update on shadow pass (don't call get_occluders())
+3. Override camera_pos/dir/up/pdu for light (projective or ortho?)
+4. Skip small objects (grass, particles), some transparent objects and billboards
+5. Better handling of object LOD for spheres, cylinders, etc.
+6. Use texture unit 7 for shadow map and its transforms
