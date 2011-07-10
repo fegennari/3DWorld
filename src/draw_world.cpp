@@ -1412,14 +1412,20 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 
 	int const tmode(shpere_tex ? GL_SPHERE_MAP : GL_EYE_LINEAR);
 	colorRGBA const color(get_plasma_color(size + 0.5*(0.5 + 0.16*abs((time % 12) - 6))));
-	setup_texgen(0.2*rand_uniform(0.95, 1.05)/radius, 0.2*rand_uniform(0.95, 1.05)/radius, rand_float(), rand_float(), 0.0, tmode);
+
+	if (animate2) {
+		setup_texgen(0.2*rand_uniform(0.95, 1.05)/radius, 0.2*rand_uniform(0.95, 1.05)/radius, rand_float(), rand_float(), 0.0, tmode);
+	}
+	else {
+		setup_texgen(0.2/radius, 0.2/radius, 0.0, 0.0, 0.0, tmode);
+	}
 	glDisable(GL_LIGHTING);
 	color.do_glColor();
-	radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));
+	if (animate2) radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));
 	draw_sphere_dlist(pos, size*radius, ndiv, 1);
 	glEnable(GL_LIGHTING);
 	disable_texgen();
-	if (gen_parts && !is_underwater(part_pos, 1) && (rand()&15) == 0) gen_particles(part_pos, 1);
+	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) gen_particles(part_pos, 1);
 }
 
 
