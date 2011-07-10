@@ -125,7 +125,7 @@ bool tree::is_over_mesh() const {
 }
 
 
-void tree::gen_tree_shadows(char light_sources, int index) {
+void tree::gen_tree_shadows(unsigned light_sources, int index) {
 
 	if (shadow_detail < 2 || !(tree_mode & 1) || !created) return;
 	// Note: not entirely correct since an off mesh tree can still cast a shadow on the mesh

@@ -120,7 +120,7 @@ public:
 	bool is_over_mesh() const;
 	void gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs, int ix);
 	void regen_tree(point &pos, int recalc_shadows, int index);
-	void gen_tree_shadows(char light_sources, int index);
+	void gen_tree_shadows(unsigned light_sources, int index);
 	void add_tree_collision_objects(int ix);
 	void remove_collision_objects();
 	void remove_leaf(unsigned i, bool update_data);

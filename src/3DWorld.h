@@ -1052,7 +1052,7 @@ bool has_extension(std::string const &ext);
 // function prototypes - visibility
 void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, unsigned char *smask, int xsize, int ysize,
 					   float const *sh_in_x=NULL, float const *sh_in_y=NULL, float *sh_out_x=NULL, float *sh_out_y=NULL);
-void calc_visibility(char light_sources);
+void calc_visibility(unsigned light_sources);
 bool is_visible_to_light_cobj(point const &pos, int light, float radius, int cobj, int skip_dynamic, int *cobj_ix=NULL);
 bool coll_pt_vis_test(point pos, point pos2, float dist, int &index, int cobj, int skip_dynamic, int test_alpha);
 bool coll_pt_vis_test_large(point pos, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic,
@@ -1066,21 +1066,22 @@ int  get_light_pos(point &lpos, int light);
 void update_sun_shadows();
 void create_shadows();
 void update_sun_and_moon();
+int light_valid(unsigned light_sources, int l, point &lpos);
 
 // function prototypes - shadows
-void add_cobj_shadows(char light_sources);
+void add_cobj_shadows(unsigned light_sources);
 int  camera_shadow(point const &camera);
 int  get_shape_shadow_bb(point const *points, int npoints, int l, int quality, point const &lpos,
 	int &xmin, int &ymin, int &xmax, int &ymax, int &ret_val, unsigned char stype);
 void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir);
-int  enable_shadow_envelope(point const &pos, float radius, char light_sources, int is_dynamic);
-void disable_shadow_envelope(char light_sources);
-int  sphere_shadow2(point const &pos, float radius, char light_sources, int is_dynamic, int quality);
-int  sphere_shadow(point const &pos, float radius, char light_sources, int is_dynamic, int quality);
-int  cylinder_shadow(point p1, point p2, float radius1, float radius2, char light_sources, int shadow_ends, int is_dynamic, int quality);
-int  polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, char light_sources,
+int  enable_shadow_envelope(point const &pos, float radius, unsigned light_sources, int is_dynamic);
+void disable_shadow_envelope(unsigned light_sources);
+int  sphere_shadow2(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality);
+int  sphere_shadow(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality);
+int  cylinder_shadow(point p1, point p2, float radius1, float radius2, unsigned light_sources, int shadow_ends, int is_dynamic, int quality);
+int  polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, unsigned light_sources,
 					int is_dynamic, int quality, int is_cube, int tid=-1);
-int  cube_shadow(cube_t const &cube, char light_sources, int is_dynamic, int quality);
+int  cube_shadow(cube_t const &cube, unsigned light_sources, int is_dynamic, int quality);
 void reset_shadows(unsigned char type);
 
 // function prototypes - mesh_intersect

@@ -7,14 +7,49 @@
 
 using namespace std;
 
-unsigned const SHADOW_MAP_SZ = 1024; // width/height
+unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
 
 unsigned fbo_id(0), depth_tid(0);
 
 extern int window_width, window_height;
 
 
-// Note: Reflections can be done with something similar
+// ************ RENDER TO TEXTURE METHOD ************
+
+
+void create_shadow_map_for_light(int light, int tu_id) {
+
+
+}
+
+
+void create_shadow_map() {
+
+	// Note 1: We likely want both static and dynamic/per frame shadow maps
+	// Note 2: We probably want to support at least two light sources, sun and moon
+	// Note 3: There are 2-3 texture units available: 6, 7, and maybe 5 if the lflow texture is unused
+	// We can't really support 4 shadow maps with 3 TUs, so something has to be done here
+
+	// The plan:
+	// 1. Start with dynamic shadows for grass with one light source
+	// 2. Add cobj dynamic shadows
+	// 3. Add other light sources (Sun + Moon)
+	// 4. Add static light sources for a single light
+	// 5. Resolve the issues above for static + dynamic + multiple lights
+
+	point lpos;
+
+	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
+		if (!light_valid(0xFF, l, lpos)) continue;
+		//
+	}
+}
+
+
+// ************ FBO METHOD ************
+
+
+// Note: Can be done similar to inf terrain mode water reflections
 void create_shadow_fbo() {
 	
 	// Try to use a texture depth component

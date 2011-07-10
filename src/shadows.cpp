@@ -122,7 +122,7 @@ void update_sun_and_moon() {
 }
 
 
-int light_valid(char light_sources, int l, point &lpos) {
+int light_valid(unsigned light_sources, int l, point &lpos) {
 
 	if (!(light_sources & (1 << l))) return 0;
 	if ((l == LIGHT_SUN && light_factor < 0.4) || (l == LIGHT_MOON && light_factor > 0.6)) return 0;
@@ -131,7 +131,7 @@ int light_valid(char light_sources, int l, point &lpos) {
 }
 
 
-void coll_obj::add_shadow(char light_sources, bool dynamic) const {
+void coll_obj::add_shadow(unsigned light_sources, bool dynamic) const {
 
 	if (status != COLL_STATIC || cp.color.alpha < MIN_SHADOW_ALPHA || !cp.shadow) return;
 	if (dynamic != dynamic_shadows_only()) return;
@@ -156,7 +156,7 @@ void coll_obj::add_shadow(char light_sources, bool dynamic) const {
 }
 
 
-void add_cobj_shadows(char light_sources) {
+void add_cobj_shadows(unsigned light_sources) {
 
 	if (ground_effects_level == 0) return; // disabled
 	//RESET_TIME;
@@ -224,7 +224,7 @@ int camera_shadow(point const &camera) {
 }
 
 
-int sphere_shadow2(point const &pos, float radius, char light_sources, int is_dynamic, int quality) {
+int sphere_shadow2(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality) {
 
 	if (!is_dynamic || !use_stencil_shadows) {
 		sphere_shadow(pos, radius, light_sources, is_dynamic, quality);
@@ -326,7 +326,7 @@ void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts
 }
 
 
-int enable_shadow_envelope(point const &pos, float radius, char light_sources, int is_dynamic) {
+int enable_shadow_envelope(point const &pos, float radius, unsigned light_sources, int is_dynamic) {
 
 	unsigned char const SHADOW_TYPE(is_dynamic ? DYNAMIC_SHADOW : OBJECT_SHADOW);
 	int shadowed(0), ret_val(0);
@@ -362,7 +362,7 @@ int enable_shadow_envelope(point const &pos, float radius, char light_sources, i
 }
 
 
-void disable_shadow_envelope(char light_sources) {
+void disable_shadow_envelope(unsigned light_sources) {
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (light_sources & (1 << l)) s_env[l].enabled = 0;
@@ -370,7 +370,7 @@ void disable_shadow_envelope(char light_sources) {
 }
 
 
-int sphere_shadow(point const &pos, float radius, char light_sources, int is_dynamic, int quality) {
+int sphere_shadow(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality) {
 
 	int xmin, xmax, ymin, ymax, ret_val(0);
 	float const rad2(radius*radius);
@@ -397,7 +397,7 @@ int sphere_shadow(point const &pos, float radius, char light_sources, int is_dyn
 
 
 // used for tree branches, etc.
-int cylinder_shadow(point p1, point p2, float radius1, float radius2, char light_sources, int shadow_ends, int is_dynamic, int quality) {
+int cylinder_shadow(point p1, point p2, float radius1, float radius2, unsigned light_sources, int shadow_ends, int is_dynamic, int quality) {
 
 	if (radius1 == 0.0 && radius2 == 0.0) return 0;
 	int xmin, xmax, ymin, ymax, ret_val(0);
@@ -467,7 +467,7 @@ int cylinder_shadow(point p1, point p2, float radius1, float radius2, char light
 
 
 // used for cubes, leaves, etc.
-int polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, char light_sources,
+int polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, unsigned light_sources,
 				   int is_dynamic, int quality, int is_cube, int tid)
 {
 	assert(points && npoints >= 3);
@@ -538,7 +538,7 @@ int polygon_shadow(point const *points, vector3d const &norm, int npoints, float
 }
 
 
-int cube_shadow(cube_t const &cube, char light_sources, int is_dynamic, int quality) {
+int cube_shadow(cube_t const &cube, unsigned light_sources, int is_dynamic, int quality) {
 
 	cube_t c(cube);
 
