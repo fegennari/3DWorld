@@ -833,11 +833,44 @@ void draw_animated_billboard(point const &pos, float size, float timescale) { //
 }
 
 
+void draw_simple_cube(cube_t const &c, bool texture, float texture_scale, vector3d const *const view_dir) {
+
+	glBegin(GL_QUADS);
+
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
+			vector3d norm(zero_vector);
+			point pt;
+			norm[n] = (2.0*j - 1.0); // -1 or 1
+			pt[n]   = c.d[n][j];
+			norm.do_glNormal();
+
+			for (unsigned s = 0; s < 2; ++s) {
+				pt[d[1]] = c.d[d[1]][s];
+
+				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+					pt[d[0]] = c.d[d[0]][k^j]; // need to orient the vertices differently for each side
+						
+					if (texture) {
+						float const s[2] = {texture_scale*pt[d[1]], texture_scale*pt[d[0]]};
+						glTexCoord2fv(s);
+					}
+					pt.do_glVertex();
+				}
+			}
+		}
+	}
+	glEnd();
+}
+
+
 // need to do something with tex coords for scale
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv,
 			   float texture_scale, bool proportional_texture, vector3d const *const view_dir)
 {
-	point pt;
 	glPushMatrix();
 	translate_to(pos);
 	glScalef(sx, sy, sz);
@@ -862,7 +895,8 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 			if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
-			vector3d norm(0.0, 0.0, 0.0);
+			vector3d norm(zero_vector);
+			point pt;
 			norm[n] = (2.0*j - 1.0); // -1 or 1
 			pt[n]   = (float)j;
 			norm.do_glNormal();
@@ -912,18 +946,15 @@ void draw_simple_polygon(point const *const points, int npoints, vector3d const 
 }
 
 
-// unused
 void draw_simple_extruded_polygon(float thick, point const *const points, int npoints) {
 
-	assert(points != NULL && npoints == 4);
+	assert(points != NULL && (npoints == 3 || npoints == 4));
 	thick = fabs(thick);
 	vector3d const norm(get_poly_norm(points));
 	static vector<point> pts[2];
 	gen_poly_planes(points, npoints, norm, thick, pts);
 	reverse(pts[0].begin(), pts[0].end());
-	vector3d norm2(norm);
-	norm2.negate();
-	draw_simple_polygon(&(pts[0].front()), npoints, norm2); // draw bottom surface
+	draw_simple_polygon(&(pts[0].front()), npoints, norm*-1); // draw bottom surface
 	reverse(pts[0].begin(), pts[0].end());
 	draw_simple_polygon(&(pts[1].front()), npoints, norm); // draw top surface
 	

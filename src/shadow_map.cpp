@@ -14,6 +14,7 @@ unsigned fbo_id(0), depth_tid(0);
 
 extern int window_width, window_height, animate2, display_mode;
 extern vector<shadow_sphere> shadow_objs;
+extern vector<coll_obj> coll_objects;
 
 
 // ************ RENDER TO TEXTURE METHOD ************
@@ -40,7 +41,15 @@ unsigned create_shadow_map_for_light(int light, point const &lpos, unsigned tu_i
 			
 		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			int const ndiv(N_SPHERE_DIV); // FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
-			draw_sphere_dlist(i->pos, i->radius, ndiv, 0);
+
+			if (i->ctype != COLL_SPHERE) {
+				assert((unsigned)i->cid < coll_objects.size());
+				coll_objects[i->cid].simple_draw(ndiv);
+			}
+			else {
+				// FIXME: use circle texture billboards
+				draw_sphere_dlist(i->pos, i->radius, ndiv, 0);
+			}
 		}
 	}
 	else {

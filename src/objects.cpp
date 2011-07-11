@@ -428,6 +428,31 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 }
 
 
+void coll_obj::simple_draw(int ndiv) const {
+
+	switch (type) {
+	case COLL_CUBE:
+		draw_simple_cube(*this, 0);
+		break;
+	case COLL_CYLINDER:
+	case COLL_CYLINDER_ROT:
+		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, !(cp.surfs & 1));
+		break;
+	case COLL_SPHERE:
+		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1);
+		break;
+	case COLL_POLYGON:
+		if (thickness <= MIN_POLY_THICK2) {
+			draw_simple_polygon(points, npoints, norm);
+		}
+		else {
+			draw_simple_extruded_polygon(thickness, points, npoints); // pass in norm?
+		}
+		break;
+	}
+}
+
+
 bool coll_obj::is_semi_trans() const {
 
 	return (cp.color.alpha < 1.0 || (cp.tid >= 0 && textures[cp.tid].ncolors == 4));

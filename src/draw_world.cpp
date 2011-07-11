@@ -1479,6 +1479,8 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	glTranslatef(0.0, 0.0, 0.3);
 	gluCylinder(quadric, 0.05, 0.05, sval, max(3, ndiv/4), 1); // fuse
 	glPopMatrix();
+
+	if (!animate2) return;
 	point const spos(pos + vd*((1.0 + sval)*radius));
 	colorRGBA scolor;
 	blend_color(scolor, YELLOW, ORANGE, rand_uniform(0.3, 0.7), 1);
