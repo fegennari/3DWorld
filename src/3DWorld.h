@@ -1708,6 +1708,10 @@ void draw_waypoints();
 void destroy_coll_objs(point const &pos, float damage, int shooter, bool big);
 void check_falling_cobjs();
 
+// function prototypes - shadow_map
+void create_shadow_map(bool is_dynamic);
+void free_shadow_map_textures();
+
 // function prototypes - screenshot (these are C functions)
 #ifdef ENABLE_JPEG
 extern "C" int screenshot(unsigned window_width, unsigned window_height, char *file_path);

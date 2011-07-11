@@ -11,6 +11,7 @@ using namespace std;
 unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
 
 unsigned fbo_id(0), depth_tid(0);
+unsigned smap_textures[2][NUM_LIGHT_SRC] = {0}; // {static, dynamic} x {lights}
 
 extern int window_width, window_height, animate2, display_mode;
 extern vector<shadow_sphere> shadow_objs;
@@ -20,7 +21,7 @@ extern vector<coll_obj> coll_objects;
 // ************ RENDER TO TEXTURE METHOD ************
 
 
-unsigned create_shadow_map_for_light(int light, point const &lpos, unsigned tu_id, bool is_dynamic) { // return a tid
+void create_shadow_map_for_light(int light, point const &lpos, unsigned &tid, unsigned tu_id, bool is_dynamic) { // return a tid
 
 	assert(tu_id < 8); // assuming we have 8 texture units
 	float const scene_z1(min(zbottom, czmin)), scene_z2(max(ztop, czmax));
@@ -34,6 +35,13 @@ unsigned create_shadow_map_for_light(int light, point const &lpos, unsigned tu_i
 	camera_pdu = pos_dir_up(lpos, light_dir, plus_z, tanf(angle)*diag, sinf(angle), dist-scene_radius, dist+scene_radius);
 	camera_pdu.valid = 0; // FIXME: should anything ever be out of the light view frustum? the camera when not over the mesh?
 
+	if (!tid) {
+		setup_texture(tid, GL_MODULATE, 0, 0, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SZ, SHADOW_MAP_SZ, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	}
+	else {
+		bind_2d_texture(tid);
+	}
 	// FIXME: WRITE: setup render state
 
 	if (is_dynamic) {
@@ -56,13 +64,12 @@ unsigned create_shadow_map_for_light(int light, point const &lpos, unsigned tu_i
 		// FIXME: WRITE: render static objects (cobjs, etc)
 		draw_coll_surfaces(1, 0); // solid, no transparent?
 	}
-	unsigned tid(0);
-	// FIXME: WRITE: create textures
-	return tid;
 }
 
 
 void create_shadow_map(bool is_dynamic) {
+
+	return; // not yet enabled
 
 	// Note 1: We likely want both static and dynamic/per frame shadow maps
 	// Note 2: We probably want to support at least two light sources, sun and moon
@@ -90,8 +97,10 @@ void create_shadow_map(bool is_dynamic) {
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid(0xFF, l, lpos)) continue;
-		unsigned const shadow_tid(create_shadow_map_for_light(l, lpos, 6+l, is_dynamic)); // FIXME: what about is_dynamic?
-		// FIXME: use shadow_tid
+		//render_to_shadow_fbo(lpos);
+		unsigned &tid(smap_textures[is_dynamic][l]);
+		create_shadow_map_for_light(l, lpos, tid, 6+l, is_dynamic); // FIXME: what about is_dynamic for texture unit?
+		// FIXME: use results
 	}
 
 	// restore old state
@@ -99,6 +108,16 @@ void create_shadow_map(bool is_dynamic) {
 	animate2     = animate2_;
 	display_mode = display_mode_;
 	camera_pdu   = camera_pdu_;
+}
+
+
+void free_shadow_map_textures() {
+
+	for (unsigned d = 0; d < 2; ++d) {
+		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+			free_texture(smap_textures[d][l]);
+		}
+	}
 }
 
 
