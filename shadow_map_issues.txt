@@ -1,4 +1,4 @@
-The biggest issues are 1, 3, 7, 8.
+The biggest issues are 1, 7, 8.
 
 1. [PERFORMANCE] Need to draw multiple passes (shadow/depth + normal render) =>
 slow, split into static and dynamic shadow map, update static
@@ -7,9 +7,6 @@ burn?), disable slow/small things like grass?
 
 2. [PERFORMANCE] More work and memory access for the fragment shader => but we get
 to remove lots of vertices and previous shadow setting code
-
-3. [COMPLEXITY/CORRECTNESS] What about partially transparent objects? => need alpha test during
-shadow pass, use normal shadowing alpha of 0.5
 
 4. [COMPLEXITY] Every shader (and some fixed pipeline code) will need to use shadow
 maps => Update main shaders that already handle shadows (cobjs, grass)
