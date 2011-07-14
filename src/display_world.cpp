@@ -812,7 +812,7 @@ void display(void) {
 		auto_advance_time();
 		check_gl_error(3);
 		if (TIMETEST) PRINT_TIME("\n\n0");
-		create_shadow_map(1);
+		create_shadow_map(1, 0); // dynamic only
 		
 		if (combined_gu) { // light from current system's star
 			draw_universe_bkg(underwater, depth); // infinite universe as background

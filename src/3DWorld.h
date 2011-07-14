@@ -1709,7 +1709,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big);
 void check_falling_cobjs();
 
 // function prototypes - shadow_map
-void create_shadow_map(bool is_dynamic);
+void create_shadow_map(bool create_dynamic, bool create_static);
 void free_shadow_map_textures();
 
 // function prototypes - screenshot (these are C functions)

@@ -38,10 +38,10 @@ void create_shadow_map_for_light(int light, point const &lpos, unsigned &tid, bo
 	point const scene_center(0.0, 0.0, 0.5*(scene_z1 + scene_z2));
 	vector3d const light_dir(scene_center - lpos); // almost equal to lpos (point light)
 	float const dist(p2p_dist(lpos, scene_center));
-
+	vector3d up_dir(zero_vector);
+	up_dir[get_min_dim(light_dir)] = 1.0;
 	float const angle(0.5*TO_RADIANS*PERSP_ANGLE); // FIXME: what is the angle
-	float const A((float)window_width/(float)window_height), diag(sqrt(1.0 + A*A)); // aspect ratio
-	camera_pdu = pos_dir_up(lpos, light_dir, plus_z, tanf(angle)*diag, sinf(angle), dist-scene_radius, dist+scene_radius);
+	camera_pdu = pos_dir_up(lpos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), dist-scene_radius, dist+scene_radius);
 	camera_pdu.valid = 0; // FIXME: should anything ever be out of the light view frustum? the camera when not over the mesh?
 
 	// setup render state
@@ -49,10 +49,12 @@ void create_shadow_map_for_light(int light, point const &lpos, unsigned &tid, bo
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
 	// FIXME: perspective transform
 	set_perspective(PERSP_ANGLE, 1.0);
 	do_look_at();
-	glMatrixMode(GL_MODELVIEW);
+	check_gl_error(201);
 
 	// render shadow geometry
 	set_color(WHITE);
@@ -88,24 +90,30 @@ void create_shadow_map_for_light(int light, point const &lpos, unsigned &tid, bo
 	}
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+	check_gl_error(202);
 
 	// setup textures
 	if (!tid) {
 		setup_texture(tid, GL_MODULATE, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SZ, SHADOW_MAP_SZ, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, size, size, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 	}
 	else {
 		bind_2d_texture(tid);
 	}
-	select_multitex(tid, get_tu_id(light, is_dynamic), 1); // enable?
+	//select_multitex(tid, get_tu_id(light, is_dynamic), 1); // enable?
 	glReadBuffer(GL_BACK);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, size, size);
+	check_gl_error(203);
 }
 
 
-void create_shadow_map(bool is_dynamic) {
+void create_shadow_map(bool create_dynamic, bool create_static) {
 
 	return; // not yet enabled
+	if (!create_dynamic && !create_static) return; // nothing to do - should this be illegal?
+	RESET_TIME;
 
 	// Note 1: We likely want both static and dynamic/per frame shadow maps
 	// Note 2: We probably want to support at least two light sources, sun and moon
@@ -130,27 +138,32 @@ void create_shadow_map(bool is_dynamic) {
 	point lpos;
 	bool smap_used(0);
 
-	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
-		if (!light_valid(0xFF, l, lpos)) continue;
-		//render_to_shadow_fbo(lpos);
-		unsigned &tid(smap_textures[is_dynamic][l]);
-		create_shadow_map_for_light(l, lpos, tid, is_dynamic, SHADOW_MAP_SZ);
-		smap_used = 1;
-		// FIXME: use results
+	for (unsigned is_dynamic = 0; is_dynamic < 2; ++is_dynamic) { // {static, dynamic}
+		if ((is_dynamic && !create_dynamic) || (!is_dynamic && !create_static)) continue;
+
+		for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
+			if (!light_valid(0xFF, l, lpos)) continue;
+			//render_to_shadow_fbo(lpos);
+			unsigned &tid(smap_textures[is_dynamic][l]);
+			create_shadow_map_for_light(l, lpos, tid, (is_dynamic != 0), SHADOW_MAP_SZ);
+			smap_used = 1;
+			// FIXME: use results
+		}
 	}
 
 	// restore old state
 	if (smap_used) {
 		glDisable(GL_TEXTURE_2D);
-		disable_multitex_a();
-		glMatrixMode(GL_MODELVIEW);
+		//disable_multitex_a();
 		glViewport(0, 0, window_width, window_height);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
+	check_gl_error(200);
 	do_zoom      = do_zoom_;
 	animate2     = animate2_;
 	display_mode = display_mode_;
 	camera_pdu   = camera_pdu_;
+	PRINT_TIME("Shadow Map Creation");
 }
 
 
