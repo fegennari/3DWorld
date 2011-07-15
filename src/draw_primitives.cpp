@@ -833,6 +833,39 @@ void draw_animated_billboard(point const &pos, float size, float timescale) { //
 }
 
 
+void pos_dir_up::draw_frustum() const {
+
+	float const nf_val[2] = {near_, far_};
+	point pts[2][4]; // {near, far} x {ll, lr, ur, ul}
+
+	for (unsigned d = 0; d < 2; ++d) {
+		point const center(pos + dir*nf_val[d]); // plane center
+		float const dy(nf_val[d]*tterm/sqrt(1.0 + A*A)), dx(A*dy); // d*sin(theta)
+		pts[d][0] = center - cp*dx - upv_*dy;
+		pts[d][1] = center + cp*dx - upv_*dy;
+		pts[d][2] = center + cp*dx + upv_*dy;
+		pts[d][3] = center - cp*dx + upv_*dy;
+	}
+	glBegin(GL_QUADS);
+	
+	// near and far
+	for (unsigned d = 0; d < 2; ++d) {
+		for (unsigned i = 0; i < 4; ++i) {
+			pts[d][i].do_glVertex();
+		}
+	}
+
+	// sides
+	for (unsigned i = 0; i < 4; ++i) {
+		pts[0][(i+0)&3].do_glVertex();
+		pts[0][(i+1)&3].do_glVertex();
+		pts[1][(i+1)&3].do_glVertex();
+		pts[1][(i+0)&3].do_glVertex();
+	}
+	glEnd();
+}
+
+
 void draw_simple_cube(cube_t const &c, bool texture, float texture_scale, vector3d const *const view_dir) {
 
 	glBegin(GL_QUADS);
@@ -848,11 +881,11 @@ void draw_simple_cube(cube_t const &c, bool texture, float texture_scale, vector
 			pt[n]   = c.d[n][j];
 			norm.do_glNormal();
 
-			for (unsigned s = 0; s < 2; ++s) {
+			for (unsigned s = 0; s < 2; ++s) { // d[1] dim
 				pt[d[1]] = c.d[d[1]][s];
 
-				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-					pt[d[0]] = c.d[d[0]][k^j]; // need to orient the vertices differently for each side
+				for (unsigned k = 0; k < 2; ++k) { // d[0] dim
+					pt[d[0]] = c.d[d[0]][k^j^s]; // need to orient the vertices differently for each side
 						
 					if (texture) {
 						float const s[2] = {texture_scale*pt[d[1]], texture_scale*pt[d[0]]};

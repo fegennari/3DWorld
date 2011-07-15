@@ -89,9 +89,9 @@ void set_camera_pdu() {
 }
 
 
-pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f)
+pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f, float a)
 		: pos(p), dir(d), upv(u), tterm(t), sterm(s), tterm_sq2_inv(2.0/(tterm*tterm)),
-		near_(n), far_(f), A(double(window_width)/double(window_height)), valid(1)
+		near_(n), far_(f), A((a == 0.0) ? double(window_width)/double(window_height) : a), valid(1)
 {
 	assert(near_ >= 0.0 && far_ > 0.0 && far_ > near_);
 	assert(dir != zero_vector);

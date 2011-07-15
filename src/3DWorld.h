@@ -450,9 +450,10 @@ struct pos_dir_up { // defines a view frustum
 	bool valid;
 
 	pos_dir_up(void) : valid(0) {}
-	pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f);
+	pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f, float a=0.0);
 	bool sphere_visible_test(point const &pos_, float radius) const;
 	bool cube_visible(cube_t const &cube) const;
+	void draw_frustum() const;
 };
 
 
@@ -1709,6 +1710,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big);
 void check_falling_cobjs();
 
 // function prototypes - shadow_map
+void draw_scene_bounds_and_light_frustum(point const &lpos);
 void create_shadow_map(bool create_dynamic, bool create_static);
 void free_shadow_map_textures();
 
