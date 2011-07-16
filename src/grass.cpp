@@ -13,6 +13,8 @@
 #define MOD_GEOM   0x01
 #define MOD_SHADOW 0x02
 
+bool const USE_SHADOW_MAP = 1;
+
 
 bool grass_enabled(1);
 unsigned grass_density(0);
@@ -526,7 +528,7 @@ public:
 			last_light = light;
 			last_lpos  = lpos;
 		}
-		else if (!(display_mode & 0x10)) {
+		else if (!USE_SHADOW_MAP && !(display_mode & 0x10)) {
 			proc_dynamic_shadows(light);
 		}
 		check_for_updates();
@@ -546,7 +548,9 @@ public:
 			setup_dlight_textures(p);
 #else // per-vertex dynamic lighting, limited to 6 lights - faster
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
-			unsigned const p(set_shader_prog("ads_lighting.part*+wind.part*+grass", "linear_fog.part+simple_texture"));
+			set_bool_shader_prefix("use_shadow_map", USE_SHADOW_MAP, 0); // VS
+			unsigned const p(set_shader_prog("shadow_map.part*+ads_lighting.part*+wind.part*+grass", "linear_fog.part+simple_texture"));
+			if (USE_SHADOW_MAP) upload_pdu_for_smap_shader_by_light(p, get_light(), 1); // dynamic + single light only
 #endif
 			setup_wind_for_shader(p);
 			setup_fog_scale(p);
