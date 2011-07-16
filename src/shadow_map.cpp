@@ -83,6 +83,7 @@ void set_smap_shader_for_light(unsigned p, int light, bool is_dynamic) {
 	add_uniform_int(p, append_array_ix(string("sm_tex"),   light), data.tu_id);
 	set_multitex(data.tu_id);
 	bind_2d_texture(data.tid);
+	set_multitex(0);
 }
 
 

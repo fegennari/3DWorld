@@ -1733,7 +1733,7 @@ void set_dlights_booleans(bool enable, int shader_type) {
 
 // texture units used: 0: object texture, 1: smoke texture
 colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
-	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten)
+	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap)
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
 	set_int_shader_prefix ("use_texgen",      use_texgen,      0); // VS
@@ -1741,6 +1741,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, 
 	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
 	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
 	set_bool_shader_prefix("do_lt_atten",     has_lt_atten,    1); // FS
+	set_bool_shader_prefix("use_shadow_map",  use_smap,        1); // FS
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		// Note: dynamic_smoke_shadows applies to light0 only
@@ -1752,7 +1753,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, 
 	setup_enabled_lights(8);
 	set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 	unsigned const p(set_shader_prog("fog.part+texture_gen.part+line_clip.part*+no_lt_texgen_smoke",
-		                             "fresnel.part*+linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+line_clip.part*+textured_with_smoke"));
+		                             "fresnel.part*+linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+textured_with_smoke"));
 	setup_scene_bounds(p);
 	setup_fog_scale(p); // fog scale for the case where smoke is disabled
 	if (dlights && dl_tid > 0) setup_dlight_textures(p);
@@ -1775,6 +1776,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, 
 	add_uniform_float(p, "min_alpha", min_alpha);
 	add_uniform_float_array(p, "smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	add_uniform_float(p, "step_delta", HALF_DXY);
+	if (use_smap) set_smap_shader_for_all_lights(p, 1); // dynamic only
 	//return change_fog_color(GRAY);
 
 	// setup fog
@@ -1834,7 +1836,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
 	bool const has_lt_atten(draw_trans && !draw_solid);
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten)); // Note: enable direct_lighting if processing sun/moon shadows here
+	// Note: enable direct_lighting if processing sun/moon shadows here
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten, 1));
 	int last_tid(-1), last_group_id(-1), last_pri_dim(-1);
 	
 	if (draw_solid) {

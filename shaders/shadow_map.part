@@ -8,7 +8,8 @@ float get_shadow_map_weight(in vec4 pos, in int light) {
 	shadow_coord /= shadow_coord.w;
 	//shadow_coord.z += 0.0005; // Used to lower moiré pattern and self-shadowing
 	float dist = texture2D(sm_tex[light], shadow_coord.st).z;
-	return ((dist < shadow_coord.z) ? 0.0 : 1.0);
+	//return ((dist < shadow_coord.z) ? 0.0 : 1.0);
+	return clamp(10.0*(dist - shadow_coord.z), 0.0, 1.0); // smoothing
 }
 
 vec4 add_light_comp_pos_smap(in vec3 normal, in vec4 epos, in vec4 vertex, in int i) {

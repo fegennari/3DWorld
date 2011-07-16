@@ -1133,7 +1133,7 @@ void get_enabled_lights();
 void set_shadowed_state(unsigned char shadowed);
 void set_dlights_booleans(bool enable, int shader_type);
 colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
-	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten=0);
+	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten=0, bool use_smap=0);
 void end_smoke_shaders(colorRGBA const &orig_fog_color);
 void setup_object_render_data();
 void draw_coll_surfaces(bool draw_solid, bool draw_trans);

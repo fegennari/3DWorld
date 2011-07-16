@@ -1625,6 +1625,7 @@ void add_coll_shadow_objs() {
 	vector<int> cobjs;
 	unsigned nadded(0);
 
+	if (0)
 	for (unsigned L = 0; L < num_lights; ++L) {
 		point const &lpos(enabled_lights[L].get_center());
 		float const lrad(enabled_lights[L].get_radius());
