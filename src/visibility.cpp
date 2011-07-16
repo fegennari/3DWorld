@@ -106,9 +106,9 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
 	vector3d const pv(pos_, pos);
 	if (dot_product(dir, pv) < 0.0) return (pv.mag_sq() < max(1.0, A*A)*radius*radius*tterm_sq2_inv); // optimization
-	float const dist(pv.mag()*sterm);
-	if (fabs(dot_product(upv_, pv)) > (  dist + radius)) return 0; // y-direction (up)
-	if (fabs(dot_product(cp,   pv)) > (A*dist + radius)) return 0; // x-direction
+	float const dist(pv.mag());
+	if (fabs(dot_product(upv_, pv)) > (  dist*sterm + radius)) return 0; // y-direction (up)
+	if (fabs(dot_product(cp,   pv)) > (A*dist*sterm + radius)) return 0; // x-direction
 	return ((dist + radius) > near_ && (dist - radius) < far_);
 }
 
