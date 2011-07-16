@@ -91,7 +91,11 @@ pos_dir_up get_light_pdu(point const &lpos, bool set_pers, bool do_look_at) {
 	pos_dir_up const pdu(lpos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), dist-scene_radius, dist+scene_radius, 1.0);
 
 	if (set_pers) {
-		set_perspective(2.0*angle/TO_RADIANS, 1.0);
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(2.0*angle/TO_RADIANS, 1.0, pdu.near_, pdu.far_);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
 	}
 	if (do_look_at) {
 		gluLookAt(lpos.x, lpos.y, lpos.z, scene_center.x, scene_center.y, scene_center.z, up_dir.x, up_dir.y, up_dir.z);
@@ -137,11 +141,10 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
 void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, unsigned size) {
 
-	bool const is_empty(is_dynamic ? shadow_objs.empty() : coll_objects.empty());
+	bool is_empty(is_dynamic ? shadow_objs.empty() : !have_drawn_cobj);
 	smap_data_t &data(smap_data[is_dynamic][light]);
-	//if (tid > 0 && is_empty && data.last_empty) return; // was empty, still empty - no update
-	data.last_empty = is_empty;
-	data.tu_id      = (6 + 2*light + is_dynamic);
+	if (data.tid > 0 && is_empty && data.last_empty) return; // was empty, still empty - no update
+	data.tu_id = (6 + 2*light + is_dynamic);
 
 	// setup render state
 	glViewport(0, 0, size, size);
@@ -154,11 +157,13 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, 
 	check_gl_error(201);
 
 	// render shadow geometry
+	is_empty = 1;
 	glDisable(GL_LIGHTING);
 	WHITE.do_glColor();
 
-	if (is_dynamic) {	
+	if (is_dynamic) {
 		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
+			if (!data.pdu.sphere_visible_test(i->pos, i->radius)) continue;
 			int const ndiv(N_SPHERE_DIV); // FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
 
 			if (i->ctype != COLL_SPHERE) {
@@ -169,15 +174,22 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, 
 				// FIXME: use circle texture billboards
 				draw_sphere_dlist(i->pos, i->radius, ndiv, 0);
 			}
+			is_empty = 0;
 		}
 	}
 	else {
 		if (have_drawn_cobj) {
+			point center;
+			float radius;
+
 			for (unsigned i = 0; i < coll_objects.size(); ++i) {
 				if (coll_objects[i].no_draw()) continue;
 				if (coll_objects[i].cp.color.alpha < MIN_SHADOW_ALPHA) continue;
+				coll_objects[i].bounding_sphere(center, radius);
+				if (!data.pdu.sphere_visible_test(center, radius)) continue;
 				int const ndiv(N_SPHERE_DIV); // is this enough/too many?
 				coll_objects[i].simple_draw(ndiv);
+				is_empty = 0;
 			}
 		}
 		// FIXME: WRITE: render other static objects (trees, scenery, mesh)
@@ -191,18 +203,18 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, 
 	check_gl_error(202);
 
 	// setup textures
-	unsigned &tid(smap_data[is_dynamic][light].tid);
-
-	if (!tid) {
-		setup_texture(tid, GL_MODULATE, 0, 0, 0);
+	if (!data.tid) {
+		setup_texture(data.tid, GL_MODULATE, 0, 0, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, size, size, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 	}
 	else {
-		bind_2d_texture(tid);
+		if (is_empty && data.last_empty) return; // was empty, still empty - no update
+		bind_2d_texture(data.tid);
 	}
 	glReadBuffer(GL_BACK);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, size, size);
 	check_gl_error(203);
+	data.last_empty = is_empty;
 }
 
 
@@ -237,17 +249,14 @@ void create_shadow_map(bool create_dynamic, bool create_static) {
 
 		for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
 			if (!light_valid(0xFF, l, lpos)) continue;
-			//render_to_shadow_fbo(lpos);
 			create_shadow_map_for_light(l, lpos, (is_dynamic != 0), SHADOW_MAP_SZ);
 			smap_used = 1;
-			// FIXME: use results
 		}
 	}
 
 	// restore old state
 	if (smap_used) {
 		glDisable(GL_TEXTURE_2D);
-		//disable_multitex_a();
 		glViewport(0, 0, window_width, window_height);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}

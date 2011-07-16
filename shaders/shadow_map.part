@@ -1,15 +1,15 @@
 // Note: Only one light source (for now)
 uniform vec3 sm_pos, sm_dir, sm_up, sm_cp;
 uniform float sm_A, sm_sterm, sm_near, sm_far;
-uniform sampler2d sm_tex;
+uniform sampler2D sm_tex;
 
-float get_light_weight(in vec3 world_pos) {
+float get_shadow_map_weight(in vec3 world_pos) {
 	vec3 pv = world_pos - sm_pos;
 	float view_dist = dot(pv, sm_dir);
 	pv = normalize(pv);
 	float depth = (view_dist - sm_near) / (sm_far - sm_near); // 0.0 to 1.0
-	float yval  = 0.5*dot(sm_upv, pv)/(sm_sterm     ) + 0.5;
-	float xval  = 0.5*dot(sm_cp,  pv)/(sm_sterm*sm_A) + 0.5;
-	float sm_depth = texture2D(sm_tex, vec2(xval, yval));
+	float yval  = 0.5*dot(sm_up, pv)/(sm_sterm     ) + 0.5;
+	float xval  = 0.5*dot(sm_cp, pv)/(sm_sterm*sm_A) + 0.5;
+	float sm_depth = texture2D(sm_tex, vec2(xval, yval)).z;
 	return ((depth < sm_depth) ? 1.0 : 0.0);
 }
