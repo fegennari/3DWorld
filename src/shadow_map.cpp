@@ -43,29 +43,45 @@ unsigned get_shadow_map_tid(int light, bool is_dynamic) {
 }
 
 
-void upload_pdu_for_smap_shader(unsigned p, pos_dir_up const &pdu, unsigned tid, unsigned tu_id) {
+void set_texture_matrix() {
 
-	add_uniform_vector3d(p, "sm_pos"  , pdu.pos  );
-	add_uniform_vector3d(p, "sm_dir"  , pdu.dir  );
-	add_uniform_vector3d(p, "sm_up"   , pdu.upv_ );
-	add_uniform_vector3d(p, "sm_cp"   , pdu.cp   );
-	add_uniform_float   (p, "sm_A"    , pdu.A    );
-	add_uniform_float   (p, "sm_sterm", pdu.sterm);
-	add_uniform_float   (p, "sm_near" , pdu.near_);
-	add_uniform_float   (p, "sm_far"  , pdu.far_ );
-
-	if (tid > 0) {
-		add_uniform_int(p, "sm_tex", tu_id);
-		set_multitex(tu_id);
-		bind_2d_texture(tid);
-	}
+	double modelView[16], projection[16];
+	
+	// This matrix transforms every coordinate x,y,z
+	// x = x* 0.5 + 0.5 
+	// y = y* 0.5 + 0.5 
+	// z = z* 0.5 + 0.5 
+	// Moving from unit cube [-1,1] to [0,1]  
+	const double bias[16] = {	
+		0.5, 0.0, 0.0, 0.0, 
+		0.0, 0.5, 0.0, 0.0,
+		0.0, 0.0, 0.5, 0.0,
+		0.5, 0.5, 0.5, 1.0};
+	
+	// Grab modelview and projection matrices
+	glGetDoublev(GL_MODELVIEW_MATRIX,  modelView);
+	glGetDoublev(GL_PROJECTION_MATRIX, projection);
+	glMatrixMode(GL_TEXTURE);
+	glLoadIdentity();
+	glLoadMatrixd(bias);
+	
+	// Concatating all matrice into one
+	glMultMatrixd(projection);
+	glMultMatrixd(modelView);
+	
+	// Go back to normal matrix mode
+	glMatrixMode(GL_MODELVIEW);
 }
 
 
-void upload_pdu_for_smap_shader_by_light(unsigned p, int light, bool is_dynamic) {
+void set_smap_shader_for_light(unsigned p, int light, bool is_dynamic) {
 
 	smap_data_t const &data(smap_data[is_dynamic][light]);
-	upload_pdu_for_smap_shader(p, data.pdu, data.tid, data.tu_id);
+	assert(data.tid > 0);
+	add_uniform_int(p, "sm_tu_id", data.tu_id);
+	add_uniform_int(p, "sm_tex",   data.tu_id);
+	set_multitex(data.tu_id);
+	bind_2d_texture(data.tid);
 }
 
 
@@ -100,22 +116,6 @@ pos_dir_up get_light_pdu(point const &lpos, bool set_pers, bool do_look_at) {
 	if (do_look_at) {
 		gluLookAt(lpos.x, lpos.y, lpos.z, scene_center.x, scene_center.y, scene_center.z, up_dir.x, up_dir.y, up_dir.z);
 	}
-#if 0
-	point const camera(get_camera_pos());
-		
-	if (pdu.sphere_visible_test(camera, 0.0)) { // camera in frustum
-		vector3d pv(camera, pdu.pos);
-		float const view_dist(dot_product(pv, pdu.dir));
-		pv.normalize();
-
-		if (view_dist > pdu.near_ && view_dist < pdu.far_) {
-			float const depth((view_dist - pdu.near_)/(pdu.far_ - pdu.near_)); // 0.0 to 1.0
-			float const yval(0.5*dot_product(pdu.upv_, pv)/(pdu.sterm      ) + 0.5);
-			float const xval(0.5*dot_product(pdu.cp,   pv)/(pdu.sterm*pdu.A) + 0.5);
-			cout << "depth: " << depth << ", xval: " << xval << ", yval: " << yval << endl;
-		}
-	}
-#endif
 	return pdu;
 }
 
@@ -152,9 +152,15 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, 
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
+	glMatrixMode(GL_MODELVIEW);
 	data.pdu = camera_pdu = get_light_pdu(lpos, 1, 1);
 	camera_pdu.valid = 0; // FIXME: should anything ever be out of the light view frustum? the camera when not over the mesh?
 	check_gl_error(201);
+
+	// setup texture matrix
+	set_multitex(data.tu_id);
+	set_texture_matrix();
+	disable_multitex_a();
 
 	// render shadow geometry
 	is_empty = 1;
@@ -195,10 +201,10 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, 
 		// FIXME: WRITE: render other static objects (trees, scenery, mesh)
 		// FIXME: remember to handle trasparency
 	}
-	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
 	glEnable(GL_LIGHTING);
 	check_gl_error(202);
 
@@ -337,40 +343,6 @@ void setup_shadow_fbo() {
 }
 
 
-void set_texture_matrix() {
-
-	// FIXME: GL transforms will invalidate the texture matrix
-	static double modelView[16];
-	static double projection[16];
-	
-	// This is matrix transform every coordinate x,y,z
-	// x = x* 0.5 + 0.5 
-	// y = y* 0.5 + 0.5 
-	// z = z* 0.5 + 0.5 
-	// Moving from unit cube [-1,1] to [0,1]  
-	const GLdouble bias[16] = {	
-		0.5, 0.0, 0.0, 0.0, 
-		0.0, 0.5, 0.0, 0.0,
-		0.0, 0.0, 0.5, 0.0,
-		0.5, 0.5, 0.5, 1.0};
-	
-	// Grab modelview and transformation matrices
-	glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
-	glGetDoublev(GL_PROJECTION_MATRIX, projection);
-	glMatrixMode(GL_TEXTURE);
-	set_multitex(7);
-	glLoadIdentity();
-	glLoadMatrixd(bias);
-	
-	// Concatating all matrice into one
-	glMultMatrixd(projection);
-	glMultMatrixd(modelView);
-	
-	// Go back to normal matrix mode
-	glMatrixMode(GL_MODELVIEW);
-}
-
-
 void setup_matrices(point const &pos, point const &look_at) {
 
 	set_perspective(PERSP_ANGLE, 1.0);
@@ -409,8 +381,8 @@ void render_to_shadow_fbo(point const &lpos) {
 	draw_scene();
 	
 	// Save modelview/projection matrice into texture7, also add a biais
+	set_multitex(7);
 	set_texture_matrix();
-	
 	
 	// Now rendering from the camera POV, using the FBO to generate shadows
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

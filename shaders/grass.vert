@@ -18,7 +18,7 @@ void main()
 	gl_Position = gl_ProjectionMatrix * epos;
 
 	vec3 n = normalize(normal);
-	if (use_shadow_map) normal *= get_shadow_map_weight(vertex.xyz);
+	if (use_shadow_map) normal *= get_shadow_map_weight(vertex, 0);
 	
 	// calculate lighting: L0-L1 is directional, L2-L7 is point
 	vec4 color = gl_Color * gl_LightModel.ambient;

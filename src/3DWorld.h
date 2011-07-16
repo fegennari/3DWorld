@@ -1712,7 +1712,7 @@ void check_falling_cobjs();
 // function prototypes - shadow_map
 unsigned get_shadow_map_tu_id(int light, bool is_dynamic);
 unsigned get_shadow_map_tid(int light, bool is_dynamic);
-void upload_pdu_for_smap_shader_by_light(unsigned p, int light, bool is_dynamic);
+void set_smap_shader_for_light(unsigned p, int light, bool is_dynamic);
 void draw_scene_bounds_and_light_frustum(point const &lpos);
 void create_shadow_map(bool create_dynamic, bool create_static);
 void free_shadow_map_textures();

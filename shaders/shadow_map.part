@@ -1,15 +1,11 @@
 // Note: Only one light source (for now)
-uniform vec3 sm_pos, sm_dir, sm_up, sm_cp;
-uniform float sm_A, sm_sterm, sm_near, sm_far;
+uniform int sm_tu_id;
 uniform sampler2D sm_tex;
 
-float get_shadow_map_weight(in vec3 world_pos) {
-	vec3 pv = world_pos - sm_pos;
-	float view_dist = dot(pv, sm_dir);
-	pv = normalize(pv);
-	float depth = (view_dist - sm_near) / (sm_far - sm_near); // 0.0 to 1.0
-	float yval  = 0.5*dot(sm_up, pv)/(sm_sterm     ) + 0.5;
-	float xval  = 0.5*dot(sm_cp, pv)/(sm_sterm*sm_A) + 0.5;
-	float sm_depth = texture2D(sm_tex, vec2(xval, yval)).z;
-	return ((depth < sm_depth) ? 1.0 : 0.0);
+float get_shadow_map_weight(in vec4 pos, in int light) {
+	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id] * pos;
+	shadow_coord /= shadow_coord.w;
+	//shadow_coord.z += 0.0005; // Used to lower moiré pattern and self-shadowing
+	float dist = texture2D(sm_tex, shadow_coord.st).z;
+	return ((dist < shadow_coord.z) ? 0.0 : 1.0);
 }
