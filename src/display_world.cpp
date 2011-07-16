@@ -812,6 +812,7 @@ void display(void) {
 		auto_advance_time();
 		check_gl_error(3);
 		if (TIMETEST) PRINT_TIME("\n\n0");
+		
 		create_shadow_map(1, 0); // dynamic only
 		
 		if (combined_gu) { // light from current system's star
@@ -925,6 +926,7 @@ void display(void) {
 			setup_basic_fog();
 			draw_sky(1);
 			check_gl_error(10);
+			//draw_scene_bounds_and_light_frustum(get_light_pos()); // TESTING
 		} // WMODE_GROUND
 		check_gl_error(13);
 		check_zoom();

@@ -109,7 +109,7 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 	float const dist(pv.mag());
 	if (fabs(dot_product(upv_, pv)) > (  dist*sterm + radius)) return 0; // y-direction (up)
 	if (fabs(dot_product(cp,   pv)) > (A*dist*sterm + radius)) return 0; // x-direction
-	return ((dist + radius) > near_ && (dist - radius) < far_);
+	return ((dist + radius) > near_ && (dist - radius) < far_); // Note: approximate/conservative but fast
 }
 
 
