@@ -549,8 +549,8 @@ public:
 #else // per-vertex dynamic lighting, limited to 6 lights - faster
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
 			set_bool_shader_prefix("use_shadow_map", USE_SHADOW_MAP, 0); // VS
-			unsigned const p(set_shader_prog("shadow_map.part*+ads_lighting.part*+wind.part*+grass", "linear_fog.part+simple_texture"));
-			if (USE_SHADOW_MAP) set_smap_shader_for_light(p, get_light(), 1); // dynamic + single light only
+			unsigned const p(set_shader_prog("ads_lighting.part*+shadow_map.part*+wind.part*+grass", "linear_fog.part+simple_texture"));
+			if (USE_SHADOW_MAP) set_smap_shader_for_all_lights(p, 1); // dynamic only
 #endif
 			setup_wind_for_shader(p);
 			setup_fog_scale(p);

@@ -76,12 +76,24 @@ void set_texture_matrix() {
 
 void set_smap_shader_for_light(unsigned p, int light, bool is_dynamic) {
 
+	assert(light >= 0 && light < NUM_LIGHT_SRC);
 	smap_data_t const &data(smap_data[is_dynamic][light]);
 	assert(data.tid > 0);
-	add_uniform_int(p, "sm_tu_id", data.tu_id);
-	add_uniform_int(p, "sm_tex",   data.tu_id);
+	add_uniform_int(p, append_array_ix(string("sm_tu_id"), light), data.tu_id);
+	add_uniform_int(p, append_array_ix(string("sm_tex"),   light), data.tu_id);
 	set_multitex(data.tu_id);
 	bind_2d_texture(data.tid);
+}
+
+
+void set_smap_shader_for_all_lights(unsigned p, bool is_dynamic) {
+
+	point lpos; // unused
+
+	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
+		if (!light_valid(0xFF, l, lpos)) continue;
+		set_smap_shader_for_light(p, l, is_dynamic);
+	}
 }
 
 
@@ -144,7 +156,7 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, 
 	bool is_empty(is_dynamic ? shadow_objs.empty() : !have_drawn_cobj);
 	smap_data_t &data(smap_data[is_dynamic][light]);
 	if (data.tid > 0 && is_empty && data.last_empty) return; // was empty, still empty - no update
-	data.tu_id = (6 + 2*light + is_dynamic);
+	data.tu_id = (6 + light + (!is_dynamic)*NUM_LIGHT_SRC); // Note: only 8 TUs guaranteed
 
 	// setup render state
 	glViewport(0, 0, size, size);
@@ -231,11 +243,10 @@ void create_shadow_map(bool create_dynamic, bool create_static) {
 	//RESET_TIME;
 
 	// The plan:
-	// 1. Start with dynamic shadows for grass with one light source
+	// 1. Start with dynamic shadows for grass
 	// 2. Add cobj dynamic shadows
-	// 3. Add other light sources (Sun + Moon)
-	// 4. Add static light sources for a single light
-	// 5. Resolve the issues above for static + dynamic + multiple lights
+	// 3. Add static light sources for a single light
+	// 4. Resolve TU count issues for static + dynamic + multiple lights
 
 	// save state
 	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode);

@@ -24,6 +24,15 @@ extern bool disable_shaders;
 // *** uniform variables setup ***
 
 
+char const *append_array_ix(string &s, unsigned i) {
+	assert(i <= 9);
+	s.push_back('[');
+	s.push_back('0'+i);
+	s.push_back(']');
+	return s.c_str();
+}
+
+
 int get_uniform_loc(unsigned program, char const *const name) {
 
 	if (disable_shaders) return 0;

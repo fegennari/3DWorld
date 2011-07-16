@@ -1,11 +1,17 @@
 // Note: Only one light source (for now)
-uniform int sm_tu_id;
-uniform sampler2D sm_tex;
+const int NUM_LIGHT_SRC = 2;
+uniform int sm_tu_id[NUM_LIGHT_SRC];
+uniform sampler2D sm_tex[NUM_LIGHT_SRC];
 
 float get_shadow_map_weight(in vec4 pos, in int light) {
-	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id] * pos;
+	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id[light]] * pos;
 	shadow_coord /= shadow_coord.w;
 	//shadow_coord.z += 0.0005; // Used to lower moiré pattern and self-shadowing
-	float dist = texture2D(sm_tex, shadow_coord.st).z;
+	float dist = texture2D(sm_tex[light], shadow_coord.st).z;
 	return ((dist < shadow_coord.z) ? 0.0 : 1.0);
+}
+
+vec4 add_light_comp_pos_smap(in vec3 normal, in vec4 epos, in vec4 vertex, in int i) {
+	if (use_shadow_map) normal *= get_shadow_map_weight(vertex, i);
+	return add_light_comp_pos(normal, epos, i);
 }
