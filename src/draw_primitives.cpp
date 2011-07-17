@@ -329,10 +329,11 @@ void draw_rotated_cylinder(point const &p1, point const &p2, float radius1, floa
 }
 
 
+// draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
-						bool draw_ends, float const *const perturb_map, bool const *const render_map,
+						int draw_sides_ends, float const *const perturb_map, bool const *const render_map,
 						float const *const exp_map, point const *const pt_shift, float expand, float s_beg, float s_end)
-{ // no draw_ends
+{
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
 	point const ce[2] = {p1, p2};
@@ -342,7 +343,10 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 	if (expand != 0.0) expand *= 0.5; // 1/2, for normalization
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end));
 
-	if (use_quads) { // divide into stacks for 2D?
+	if (draw_sides_ends == 2) {
+		// draw ends only - nothing to do here
+	}
+	else if (use_quads) { // divide into stacks for 2D?
 		glBegin(GL_QUADS);
 		
 		for (unsigned S = s0; S < s1; ++S) { // ndiv can change
@@ -376,7 +380,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		}
 		glEnd();
 	}
-	if (draw_ends) {
+	if (draw_sides_ends != 0) {
 		assert(!render_map && !exp_map && !pt_shift && expand == 0.0 && s0 == 0 && s1 == ndiv); // not yet supported
 		float const r[2] = {radius1, radius2};
 

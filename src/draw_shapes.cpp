@@ -1431,7 +1431,14 @@ void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, boo
 
 	if (FAST_SHAPE_DRAW || enable_shadow_maps == 2 || no_lighting) {
 		set_shadowed_state(0);
-		draw_fast_cylinder(points[0], points[1], radius, radius2, nsides, (tid >= 0), draw_ends);
+		draw_fast_cylinder(points[0], points[1], radius, radius2, nsides, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
+
+		if (draw_ends && tid >= 0) { // draw ends with different texture matrix
+			float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
+			setup_polygon_texgen((points[1] - points[0]).get_norm(), tscale, xlate, 0, USE_ATTR_TEXGEN);
+			// FIXME: Not exactly correct, we're redrawing the sides here as well but there are texgen issues if we don't
+			draw_fast_cylinder(points[0], points[1], radius, radius2, nsides, 0, 1); // Note: using texgen, not textured
+		}
 		return;
 	}
 	bool const no_clip(no_bfc || is_semi_trans());
@@ -1501,7 +1508,7 @@ void coll_obj::draw_subdiv_sphere_at(int ndiv, bool no_lighting, int tid) const 
 
 	if (FAST_SHAPE_DRAW || enable_shadow_maps == 2 || no_lighting) {
 		set_shadowed_state(0);
-		draw_subdiv_sphere(points[0], radius, ndiv, (tid >= 0), 1);
+		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
 		return;
 	}
 	bool const bfc(!is_semi_trans());
