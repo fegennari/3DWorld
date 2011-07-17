@@ -18,8 +18,8 @@ bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
-extern bool has_dir_lights, has_snow, disable_shaders, enable_shadow_maps;
-extern int island, default_ground_tex, read_landscape, display_mode, animate2;
+extern bool has_dir_lights, has_snow, disable_shaders;
+extern int island, default_ground_tex, read_landscape, display_mode, animate2, enable_shadow_maps;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
 extern colorRGBA leaf_base_color;
 extern vector3d wind;
@@ -508,9 +508,9 @@ public:
 	}
 
 	void check_for_updates() {
-		if (!shadows_valid) find_shadows();
-		if (!vbo_valid    ) create_new_vbo();
-		if (!data_valid   ) upload_data();
+		if (!shadows_valid && enable_shadow_maps != 2) find_shadows();
+		if (!vbo_valid ) create_new_vbo();
+		if (!data_valid) upload_data();
 	}
 
 	// texture units used: 0: grass texture, 1: wind texture
@@ -546,9 +546,9 @@ public:
 			setup_dlight_textures(p);
 #else // per-vertex dynamic lighting, limited to 6 lights - faster
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
-			set_bool_shader_prefix("use_shadow_map", enable_shadow_maps, 0); // VS
+			set_bool_shader_prefix("use_shadow_map", (enable_shadow_maps != 0), 0); // VS
 			unsigned const p(set_shader_prog("ads_lighting.part*+shadow_map.part*+wind.part*+grass", "linear_fog.part+simple_texture"));
-			if (enable_shadow_maps) set_smap_shader_for_all_lights(p, 1); // dynamic only
+			if (enable_shadow_maps) set_smap_shader_for_all_lights(p);
 #endif
 			setup_wind_for_shader(p);
 			setup_fog_scale(p);
@@ -635,11 +635,11 @@ void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool
 }
 
 void update_grass_shadows(int x, int y, unsigned char check_shad_types) {
-	if (!no_grass()) grass_manager.update_shadows(x, y, check_shad_types, get_light_pos());
+	if (!no_grass() && enable_shadow_maps != 2) grass_manager.update_shadows(x, y, check_shad_types, get_light_pos());
 }
 
 void update_grass_shadows_for_cube(cube_t const &cube) {
-	if (!no_grass()) grass_manager.update_shadows_for_cube(cube);
+	if (!no_grass() && enable_shadow_maps != 2) grass_manager.update_shadows_for_cube(cube);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {

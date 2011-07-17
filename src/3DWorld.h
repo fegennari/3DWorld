@@ -1711,12 +1711,12 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big);
 void check_falling_cobjs();
 
 // function prototypes - shadow_map
-unsigned get_shadow_map_tu_id(int light, bool is_dynamic);
-unsigned get_shadow_map_tid(int light, bool is_dynamic);
-void set_smap_shader_for_light(unsigned p, int light, bool is_dynamic);
-void set_smap_shader_for_all_lights(unsigned p, bool is_dynamic);
+unsigned get_shadow_map_tu_id(int light);
+unsigned get_shadow_map_tid(int light);
+void set_smap_shader_for_light(unsigned p, int light);
+void set_smap_shader_for_all_lights(unsigned p);
 void draw_scene_bounds_and_light_frustum(point const &lpos);
-void create_shadow_map(bool create_dynamic, bool create_static);
+void create_shadow_map();
 void free_shadow_map_textures();
 
 // function prototypes - screenshot (these are C functions)

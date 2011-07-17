@@ -10,7 +10,7 @@ using namespace std;
 
 unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
 
-bool enable_shadow_maps(1);
+int enable_shadow_maps(1); // 1 = dynamic shadows, 2 = dynamic + static shadows
 unsigned fbo_id(0), depth_tid(0);
 
 extern bool have_drawn_cobj;
@@ -20,27 +20,27 @@ extern vector<coll_obj> coll_objects;
 
 
 struct smap_data_t {
-	bool last_empty;
+	bool last_no_dynamic;
 	unsigned tid, tu_id, smap_sz;
 	pos_dir_up pdu;
 
-	smap_data_t() : last_empty(0), tid(0), tu_id(0), smap_sz(SHADOW_MAP_SZ) {}
+	smap_data_t() : last_no_dynamic(0), tid(0), tu_id(0), smap_sz(SHADOW_MAP_SZ) {}
 };
 
-smap_data_t smap_data[2][NUM_LIGHT_SRC]; // {static, dynamic} x {lights}
+smap_data_t smap_data[NUM_LIGHT_SRC];
 
 
 // ************ RENDER TO TEXTURE METHOD ************
 
 
-unsigned get_shadow_map_tu_id(int light, bool is_dynamic) {
+unsigned get_shadow_map_tu_id(int light) {
 
-	return smap_data[is_dynamic][light].tu_id;
+	return smap_data[light].tu_id;
 }
 
-unsigned get_shadow_map_tid(int light, bool is_dynamic) {
+unsigned get_shadow_map_tid(int light) {
 
-	return smap_data[is_dynamic][light].tid;
+	return smap_data[light].tid;
 }
 
 
@@ -75,10 +75,10 @@ void set_texture_matrix() {
 }
 
 
-void set_smap_shader_for_light(unsigned p, int light, bool is_dynamic) {
+void set_smap_shader_for_light(unsigned p, int light) {
 
 	assert(light >= 0 && light < NUM_LIGHT_SRC);
-	smap_data_t const &data(smap_data[is_dynamic][light]);
+	smap_data_t const &data(smap_data[light]);
 	assert(data.tid > 0);
 	add_uniform_int(p, append_array_ix(string("sm_tu_id"), light), data.tu_id);
 	add_uniform_int(p, append_array_ix(string("sm_tex"),   light), data.tu_id);
@@ -88,13 +88,13 @@ void set_smap_shader_for_light(unsigned p, int light, bool is_dynamic) {
 }
 
 
-void set_smap_shader_for_all_lights(unsigned p, bool is_dynamic) {
+void set_smap_shader_for_all_lights(unsigned p) {
 
 	point lpos; // unused
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
 		if (!light_valid(0xFF, l, lpos)) continue;
-		set_smap_shader_for_light(p, l, is_dynamic);
+		set_smap_shader_for_light(p, l);
 	}
 }
 
@@ -153,12 +153,13 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 }
 
 
-void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic) {
+void create_shadow_map_for_light(int light, point const &lpos) {
 
-	bool is_empty(is_dynamic ? shadow_objs.empty() : !have_drawn_cobj);
-	smap_data_t &data(smap_data[is_dynamic][light]);
-	if (data.tid > 0 && is_empty && data.last_empty) return; // was empty, still empty - no update
-	data.tu_id = (6 + light + (!is_dynamic)*NUM_LIGHT_SRC); // Note: only 8 TUs guaranteed
+	bool no_dynamic(shadow_objs.empty());
+	smap_data_t &data(smap_data[light]);
+	// FIXME: need to invalidate when static cobjs change
+	if (data.tid > 0 && no_dynamic && data.last_no_dynamic) return; // no change to shadow map
+	data.tu_id = (6 + light); // Note: only 8 TUs guaranteed so we can have 2 lights
 
 	// determine shadow map size
 	if (!data.tid) {
@@ -188,11 +189,11 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic) 
 	disable_multitex_a();
 
 	// render shadow geometry
-	is_empty = 1;
+	no_dynamic = 1;
 	glDisable(GL_LIGHTING);
 	WHITE.do_glColor();
 
-	if (is_dynamic) {
+	if (enable_shadow_maps) { // add dynamic objects
 		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!data.pdu.sphere_visible_test(i->pos, i->radius)) continue;
 			int const ndiv(N_SPHERE_DIV); // FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
@@ -205,10 +206,10 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic) 
 				// FIXME: use circle texture billboards
 				draw_sphere_dlist(i->pos, i->radius, ndiv, 0);
 			}
-			is_empty = 0;
+			no_dynamic = 0;
 		}
 	}
-	else {
+	if (enable_shadow_maps == 2) { // add static objects
 		if (have_drawn_cobj) {
 			point center;
 			float radius;
@@ -220,10 +221,9 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic) 
 				if (!data.pdu.sphere_visible_test(center, radius)) continue;
 				int const ndiv(N_SPHERE_DIV); // is this enough/too many?
 				coll_objects[i].simple_draw(ndiv);
-				is_empty = 0;
 			}
 		}
-		// FIXME: WRITE: render other static objects (trees, scenery, mesh)
+		// FIXME: WRITE: render other static objects such as mesh
 		// FIXME: remember to handle trasparency
 	}
 	glMatrixMode(GL_PROJECTION);
@@ -239,22 +239,19 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic) 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, data.smap_sz, data.smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 	}
 	else {
-		if (is_empty && data.last_empty) return; // was empty, still empty - no update
+		if (no_dynamic && data.last_no_dynamic) return; // no change
 		bind_2d_texture(data.tid);
 	}
 	glReadBuffer(GL_BACK);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, data.smap_sz, data.smap_sz);
 	check_gl_error(203);
-	data.last_empty = is_empty;
+	data.last_no_dynamic = no_dynamic;
 }
 
 
-// FIXME: need static shadow map
-// FIXME: too many TUs used (max is 8)
-void create_shadow_map(bool create_dynamic, bool create_static) {
+void create_shadow_map() {
 
 	if (!enable_shadow_maps) return; // disabled
-	if (!create_dynamic && !create_static) return; // nothing to do - should this be illegal?
 	//RESET_TIME;
 
 	// save state
@@ -271,11 +268,9 @@ void create_shadow_map(bool create_dynamic, bool create_static) {
 	bool smap_used(0);
 	
 	for (unsigned is_dynamic = 0; is_dynamic < 2; ++is_dynamic) { // {static, dynamic}
-		if ((is_dynamic && !create_dynamic) || (!is_dynamic && !create_static)) continue;
-
 		for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
 			if (!light_valid(0xFF, l, lpos)) continue;
-			create_shadow_map_for_light(l, lpos, (is_dynamic != 0));
+			create_shadow_map_for_light(l, lpos);
 			smap_used = 1;
 		}
 	}
@@ -297,10 +292,8 @@ void create_shadow_map(bool create_dynamic, bool create_static) {
 
 void free_shadow_map_textures() {
 
-	for (unsigned d = 0; d < 2; ++d) {
-		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
-			free_texture(smap_data[d][l].tid);
-		}
+	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+		free_texture(smap_data[l].tid);
 	}
 }
 
