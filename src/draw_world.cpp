@@ -50,6 +50,7 @@ pt_line_drawer_hdr snow_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
+extern bool enable_shadow_maps;
 extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
@@ -1837,7 +1838,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_specular(0.0, 1.0);
 	bool const has_lt_atten(draw_trans && !draw_solid);
 	// Note: enable direct_lighting if processing sun/moon shadows here
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten, 1));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten, enable_shadow_maps));
 	int last_tid(-1), last_group_id(-1), last_pri_dim(-1);
 	
 	if (draw_solid) {

@@ -10,6 +10,7 @@ using namespace std;
 
 unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
 
+bool enable_shadow_maps(0);
 unsigned fbo_id(0), depth_tid(0);
 
 extern bool have_drawn_cobj;
@@ -237,17 +238,13 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, 
 }
 
 
+// FIXME: need static shadow map
+// FIXME: too many TUs used (max is 8)
 void create_shadow_map(bool create_dynamic, bool create_static) {
 
-	//return; // not yet enabled
+	if (!enable_shadow_maps) return; // disabled
 	if (!create_dynamic && !create_static) return; // nothing to do - should this be illegal?
 	//RESET_TIME;
-
-	// The plan:
-	// 1. Start with dynamic shadows for grass
-	// 2. Add cobj dynamic shadows
-	// 3. Add static light sources for a single light
-	// 4. Resolve TU count issues for static + dynamic + multiple lights
 
 	// save state
 	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode);
@@ -297,7 +294,7 @@ void free_shadow_map_textures() {
 }
 
 
-// ************ FBO METHOD ************
+// ************ FBO METHOD - INCOMPLETE ************
 
 
 // Note: Can be done similar to inf terrain mode water reflections
@@ -362,12 +359,6 @@ void setup_matrices(point const &pos, point const &look_at) {
 }
 
 
-void draw_scene() {
-
-	// placeholder for actual scene drawing
-}
-
-
 void render_to_shadow_fbo(point const &lpos) {
 
 	setup_shadow_fbo();
@@ -376,7 +367,6 @@ void render_to_shadow_fbo(point const &lpos) {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
 	
 	// Use the fixed pipeline to render to the depthbuffer
-	
 	// In the case we render the shadowmap to a higher resolution, the viewport must be modified accordingly.
 	glViewport(0, 0, SHADOW_MAP_SZ, SHADOW_MAP_SZ);
 	
@@ -390,7 +380,7 @@ void render_to_shadow_fbo(point const &lpos) {
 	
 	// Culling switching, rendering only backface, this is done to avoid self-shadowing
 	glCullFace(GL_FRONT);
-	draw_scene();
+	//draw_scene();
 	
 	// Save modelview/projection matrice into texture7, also add a biais
 	set_multitex(7);

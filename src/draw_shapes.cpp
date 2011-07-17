@@ -43,7 +43,7 @@ unsigned long long max_lighted(0);
 float L1_SUBDIV_SIZE(1.0);
 
 
-extern bool use_stencil_shadows;
+extern bool use_stencil_shadows, enable_shadow_maps;
 extern int cobj_counter, coll_border, begin_motion, num_groups, camera_coll_id, spectate;
 extern int display_mode, camera_mode, camera_view, xoff2, yoff2;
 extern float max_proj_rad, ztop, zbottom, zmax, zmin, DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
@@ -1622,10 +1622,10 @@ void add_coll_shadow_objs() {
 	test_all = 0;
 	shadowed.clear();
 	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Sobjs Reset");}
+	if (enable_shadow_maps) return; // skip the rest
 	vector<int> cobjs;
 	unsigned nadded(0);
 
-	if (0)
 	for (unsigned L = 0; L < num_lights; ++L) {
 		point const &lpos(enabled_lights[L].get_center());
 		float const lrad(enabled_lights[L].get_radius());

@@ -13,14 +13,12 @@
 #define MOD_GEOM   0x01
 #define MOD_SHADOW 0x02
 
-bool const USE_SHADOW_MAP = 1;
-
 
 bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
-extern bool has_dir_lights, has_snow, disable_shaders;
+extern bool has_dir_lights, has_snow, disable_shaders, enable_shadow_maps;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
 extern colorRGBA leaf_base_color;
@@ -528,7 +526,7 @@ public:
 			last_light = light;
 			last_lpos  = lpos;
 		}
-		else if (!USE_SHADOW_MAP && !(display_mode & 0x10)) {
+		else if (!enable_shadow_maps && !(display_mode & 0x10)) {
 			proc_dynamic_shadows(light);
 		}
 		check_for_updates();
@@ -548,9 +546,9 @@ public:
 			setup_dlight_textures(p);
 #else // per-vertex dynamic lighting, limited to 6 lights - faster
 			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
-			set_bool_shader_prefix("use_shadow_map", USE_SHADOW_MAP, 0); // VS
+			set_bool_shader_prefix("use_shadow_map", enable_shadow_maps, 0); // VS
 			unsigned const p(set_shader_prog("ads_lighting.part*+shadow_map.part*+wind.part*+grass", "linear_fog.part+simple_texture"));
-			if (USE_SHADOW_MAP) set_smap_shader_for_all_lights(p, 1); // dynamic only
+			if (enable_shadow_maps) set_smap_shader_for_all_lights(p, 1); // dynamic only
 #endif
 			setup_wind_for_shader(p);
 			setup_fog_scale(p);
