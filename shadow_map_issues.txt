@@ -1,48 +1,29 @@
-The biggest issues are 1, 7, 8.
+The biggest issues are 1, 2, 6.
 
 1. [PERFORMANCE] Need to draw multiple passes (shadow/depth + normal render) =>
-slow, split into static and dynamic shadow map, update static
-shadows only when static cobjs change (init, destroy cobjs, leaf
-burn?), disable slow/small things like grass?
+a) How to handle things like trees efficiently?
+b) What about textures with alpha test?
+c) Skip small objects?
 
 2. [PERFORMANCE] More work and memory access for the fragment shader => but we get
 to remove lots of vertices and previous shadow setting code
 
 4. [COMPLEXITY] Every shader (and some fixed pipeline code) will need to use shadow
 maps => Update main shaders that already handle shadows (cobjs, grass)
-and let the rest use the old/inefficient methods
+and let the rest use the old/inefficient methods (or no shadows)
 
 5. [COMPLEXITY/ACCURACY] Dynamic object LOD will be incorrect for distant objects whose
 shadows fall close to the camera:
  a) Use high ndiv for shadow objects => too slow?
- b) LOD based on closest point from shadow ray to camera => too
-complex/special cases everywhere?
+ b) LOD based on closest point from shadow ray to camera => too complex?
  c) Just skip small objects less than one shadow pixel in size and
-render the others with some min ndiv => might be ok but again special
-cases for shadow pass
+render the others with some min ndiv
 
 6. [ACCURACY] Shadow map needs to be very high res => maybe ok, maybe not - if
 not then either use lower res or split into multiple smaller shadow
 maps, cascaded, shadow maps, perspective shadow maps, trapezoidal shadow maps
 
-7. [COMPLEXITY] Need to use custom shadow map writing shader for shadow pass with depth textures?
-
-8. [ACCURACY] What about depth buffer accuracy issues at shadow casting edges?
-Normally would cull front faces and draw shadowing back faces, but:
- a) Not all objects are closed (for example non-thick double sided
-polygons and open ended hollow cylinders)
- b) Current optimizations cull some back faces already and this may
-be difficult/error prone to disable everywhere
- c) Back faces may not even be generated for some objects (based on
-occlusion culling, etc - see 3. above)
- => need alternate method involving tolerances/offsets, or very high
-depth buffer precision
-
 See:
 http://www.paulsprojects.net/tutorials/smt/smt.html
 
-Notes:
-1. Override camera_pos/dir/up/pdu for light (projective or ortho?)
-2. Skip small objects (grass, particles), some transparent objects and billboards
-3. Better handling of object LOD for spheres, cylinders, etc.
 
