@@ -10,7 +10,7 @@ using namespace std;
 
 unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
 
-bool enable_shadow_maps(0);
+bool enable_shadow_maps(1);
 unsigned fbo_id(0), depth_tid(0);
 
 extern bool have_drawn_cobj;
@@ -21,10 +21,10 @@ extern vector<coll_obj> coll_objects;
 
 struct smap_data_t {
 	bool last_empty;
-	unsigned tid, tu_id;
+	unsigned tid, tu_id, smap_sz;
 	pos_dir_up pdu;
 
-	smap_data_t() : last_empty(0), tid(0), tu_id(0) {}
+	smap_data_t() : last_empty(0), tid(0), tu_id(0), smap_sz(SHADOW_MAP_SZ) {}
 };
 
 smap_data_t smap_data[2][NUM_LIGHT_SRC]; // {static, dynamic} x {lights}
@@ -153,15 +153,26 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 }
 
 
-void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, unsigned size) {
+void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic) {
 
 	bool is_empty(is_dynamic ? shadow_objs.empty() : !have_drawn_cobj);
 	smap_data_t &data(smap_data[is_dynamic][light]);
 	if (data.tid > 0 && is_empty && data.last_empty) return; // was empty, still empty - no update
 	data.tu_id = (6 + light + (!is_dynamic)*NUM_LIGHT_SRC); // Note: only 8 TUs guaranteed
 
+	// determine shadow map size
+	if (!data.tid) {
+		unsigned const max_viewport(min(window_width, window_height));
+		data.smap_sz = SHADOW_MAP_SZ;
+
+		if (data.smap_sz > max_viewport) {
+			cout << "Warning: Using smaller shadow map size of " << max_viewport << " due to small render window" << endl;
+			data.smap_sz = max_viewport;
+		}
+	}
+
 	// setup render state
-	glViewport(0, 0, size, size);
+	glViewport(0, 0, data.smap_sz, data.smap_sz);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
@@ -225,14 +236,14 @@ void create_shadow_map_for_light(int light, point const &lpos, bool is_dynamic, 
 	// setup textures
 	if (!data.tid) {
 		setup_texture(data.tid, GL_MODULATE, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, size, size, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, data.smap_sz, data.smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 	}
 	else {
 		if (is_empty && data.last_empty) return; // was empty, still empty - no update
 		bind_2d_texture(data.tid);
 	}
 	glReadBuffer(GL_BACK);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, size, size);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, data.smap_sz, data.smap_sz);
 	check_gl_error(203);
 	data.last_empty = is_empty;
 }
@@ -258,13 +269,13 @@ void create_shadow_map(bool create_dynamic, bool create_static) {
 	// render shadow maps to textures
 	point lpos;
 	bool smap_used(0);
-
+	
 	for (unsigned is_dynamic = 0; is_dynamic < 2; ++is_dynamic) { // {static, dynamic}
 		if ((is_dynamic && !create_dynamic) || (!is_dynamic && !create_static)) continue;
 
 		for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
 			if (!light_valid(0xFF, l, lpos)) continue;
-			create_shadow_map_for_light(l, lpos, (is_dynamic != 0), SHADOW_MAP_SZ);
+			create_shadow_map_for_light(l, lpos, (is_dynamic != 0));
 			smap_used = 1;
 		}
 	}
