@@ -297,7 +297,7 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 
 void update_cobj_tree(bool dynamic, bool verbose) {
 
-	if (last_update_frame[dynamic] < frame_counter) {
+	if (last_update_frame[dynamic] < frame_counter && (dynamic || !cobj_tree_valid)) {
 		last_update_frame[dynamic] = frame_counter;
 		build_cobj_tree(dynamic, verbose);
 	}
