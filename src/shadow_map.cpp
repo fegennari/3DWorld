@@ -8,10 +8,10 @@
 
 using namespace std;
 
-unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
+bool     const USE_FRAMEBUFFER = 1;
+unsigned const SHADOW_MAP_SZ   = 1024; // width/height - might need to be larger
 
 int enable_shadow_maps(2); // 1 = dynamic shadows, 2 = dynamic + static shadows
-unsigned fbo_id(0), depth_tid(0);
 
 extern bool have_drawn_cobj;
 extern int window_width, window_height, animate2, display_mode;
@@ -21,11 +21,11 @@ extern vector<coll_obj> coll_objects;
 
 struct smap_data_t {
 	bool last_no_dynamic;
-	unsigned tid, tu_id, smap_sz;
+	unsigned tid, tu_id, fbo_id, smap_sz;
 	float approx_pixel_width;
 	pos_dir_up pdu;
 
-	smap_data_t() : last_no_dynamic(0), tid(0), tu_id(0), smap_sz(SHADOW_MAP_SZ), approx_pixel_width(0.0) {}
+	smap_data_t() : last_no_dynamic(0), tid(0), tu_id(0), fbo_id(0), smap_sz(SHADOW_MAP_SZ), approx_pixel_width(0.0) {}
 
 	int get_ndiv(float radius) {
 		// FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
@@ -160,6 +160,28 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 }
 
 
+void create_shadow_fbo(unsigned &fbo_id, unsigned depth_tid) {
+	
+	// Create a framebuffer object
+	glGenFramebuffers(1, &fbo_id);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+	
+	// Instruct openGL that we won't bind a color texture with the currently binded FBO
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	
+	// Attach the texture to FBO depth attachment point
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tid, 0);
+	
+	// Check FBO status
+	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
+	assert(status == GL_FRAMEBUFFER_COMPLETE);
+	
+	// Switch back to window-system-provided framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+
 void create_shadow_map_for_light(int light, point const &lpos) {
 
 	bool no_dynamic(shadow_objs.empty());
@@ -173,15 +195,31 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 		unsigned const max_viewport(min(window_width, window_height));
 		data.smap_sz = SHADOW_MAP_SZ;
 
-		if (data.smap_sz > max_viewport) {
+		if (!USE_FRAMEBUFFER && data.smap_sz > max_viewport) {
 			cout << "Warning: Using smaller shadow map size of " << max_viewport << " due to small render window" << endl;
 			data.smap_sz = max_viewport;
 		}
 	}
 
+	// setup textures and framebuffer
+	bool tex_created(0);
+
+	if (!data.tid) {
+		setup_texture(data.tid, GL_MODULATE, 0, 0, 0, 0, 0, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, data.smap_sz, data.smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+		glDisable(GL_TEXTURE_2D);
+		tex_created = 1;
+	}
+	if (USE_FRAMEBUFFER) {
+		if (!data.fbo_id) create_shadow_fbo(data.fbo_id, data.tid);
+		assert(data.fbo_id > 0);
+		// Render from the light POV to a FBO, store depth values only
+		glBindFramebuffer(GL_FRAMEBUFFER, data.fbo_id); // Rendering offscreen
+	}
+
 	// setup render state
 	glViewport(0, 0, data.smap_sz, data.smap_sz);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -201,6 +239,9 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	// render shadow geometry
 	no_dynamic = 1;
 	glDisable(GL_LIGHTING);
+	// Disable color rendering, we only want to write to the Z-Buffer
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	//glEnable(GL_CULL_FACE); glCullFace(GL_FRONT);
 	WHITE.do_glColor();
 
 	if (enable_shadow_maps) { // add dynamic objects
@@ -250,20 +291,22 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
+	//glDisable(GL_CULL_FACE); glCullFace(GL_BACK);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glEnable(GL_LIGHTING);
 	check_gl_error(202);
 
-	// setup textures
-	if (!data.tid) {
-		setup_texture(data.tid, GL_MODULATE, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, data.smap_sz, data.smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	if (USE_FRAMEBUFFER) {
+		// Now rendering from the camera POV, using the FBO to generate shadows
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 	else {
-		if (no_dynamic && data.last_no_dynamic) return; // no change
+		// copy framebuffer into texture
+		if (!tex_created && no_dynamic && data.last_no_dynamic) return; // no change - FIXME: incorrect for light source changes
 		bind_2d_texture(data.tid);
+		glReadBuffer(GL_BACK);
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, data.smap_sz, data.smap_sz);
 	}
-	glReadBuffer(GL_BACK);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, data.smap_sz, data.smap_sz);
 	check_gl_error(203);
 	data.last_no_dynamic = no_dynamic;
 }
@@ -300,7 +343,7 @@ void create_shadow_map() {
 	if (smap_used) {
 		glDisable(GL_TEXTURE_2D);
 		glViewport(0, 0, window_width, window_height);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 	check_gl_error(200);
 	do_zoom      = do_zoom_;
@@ -316,145 +359,14 @@ void free_shadow_map_textures() {
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		free_texture(smap_data[l].tid);
+		
+		if (smap_data[l].fbo_id > 0) {
+			glDeleteFramebuffers(1, &smap_data[l].fbo_id);
+			smap_data[l].fbo_id = 0;
+		}
 	}
 }
 
-
-// ************ FBO METHOD - INCOMPLETE ************
-
-
-// Note: Can be done similar to inf terrain mode water reflections
-void create_shadow_fbo() {
-	
-	// Try to use a texture depth component
-	assert(depth_tid == 0);
-	glGenTextures(1, &depth_tid);
-	glBindTexture(GL_TEXTURE_2D, depth_tid);
-	
-	// GL_LINEAR does not make sense for the depth texture.
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	
-	// Remove artifact on the edges of the shadowmap
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	//glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
-	
-	// No need to force GL_DEPTH_COMPONENT24, drivers usually give you the max precision if available 
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SZ, SHADOW_MAP_SZ, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	
-	// Create a framebuffer object
-	glGenFramebuffers(1, &fbo_id);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
-	
-	// Instruct openGL that we won't bind a color texture with the currently binded FBO
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-	
-	// Attach the texture to FBO depth attachment point
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tid, 0);
-	
-	// Check FBO status
-	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
-	assert(status == GL_FRAMEBUFFER_COMPLETE);
-	
-	// Switch back to window-system-provided framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-
-void setup_shadow_fbo() {
-
-	// FIXME: need to reset fbo_id and depth_tid on minimize/maximize
-	if (fbo_id == 0) create_shadow_fbo();
-	assert(fbo_id    > 0);
-	assert(depth_tid > 0);
-
-	// This is important, if not here, the FBO's depthbuffer won't be populated.
-	glEnable(GL_DEPTH_TEST);
-	glClearColor(0,0,0,1.0f);
-	glEnable(GL_CULL_FACE);
-}
-
-
-void setup_matrices(point const &pos, point const &look_at) {
-
-	set_perspective(PERSP_ANGLE, 1.0);
-	gluLookAt(pos.x, pos.y, pos.z, look_at.x, look_at.y, look_at.z, 0, 1, 0);
-}
-
-
-void render_to_shadow_fbo(point const &lpos) {
-
-	setup_shadow_fbo();
-	
-	// First step: Render from the light POV to a FBO, store depth values only
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
-	
-	// Use the fixed pipeline to render to the depthbuffer
-	// In the case we render the shadowmap to a higher resolution, the viewport must be modified accordingly.
-	glViewport(0, 0, SHADOW_MAP_SZ, SHADOW_MAP_SZ);
-	
-	// Clear previous frame values
-	glClear(GL_DEPTH_BUFFER_BIT);
-	
-	// Disable color rendering, we only want to write to the Z-Buffer
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); 
-	
-	setup_matrices(lpos, camera_origin);
-	
-	// Culling switching, rendering only backface, this is done to avoid self-shadowing
-	glCullFace(GL_FRONT);
-	//draw_scene();
-	
-	// Save modelview/projection matrice into texture7, also add a biais
-	set_multitex(7);
-	set_texture_matrix();
-	
-	// Now rendering from the camera POV, using the FBO to generate shadows
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	
-	glViewport(0, 0, window_width, window_height);
-	
-	// Enable color write (previously disabled for light POV z-buffer rendering)
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); 
-	
-	// Clear previous frame values
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// Use the shadow shader
-	//set_shader_prog("", ""); // FIXME
-	set_multitex(7); // using depth texture 7
-	glBindTexture(GL_TEXTURE_2D, depth_tid);
-	glCullFace(GL_BACK);
-	set_multitex(0);
-	//unset_shader_prog();
-
-	// Back to camera space
-	
-	// DEBUG only. this piece of code draws the depth buffer onscreen
-#if 1
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(-window_width/2, window_width/2, -window_height/2, window_height/2, 1, 20);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glColor4f(1,1,1,1);
-	set_multitex(0);
-	glBindTexture(GL_TEXTURE_2D, depth_tid);
-	glEnable(GL_TEXTURE_2D);
-	draw_tquad(window_width/2, window_height/2, -1, 1);
-	glDisable(GL_TEXTURE_2D);
-#endif
-
-	glMatrixMode(GL_TEXTURE);
-	glLoadIdentity();
-	glMatrixMode(GL_MODELVIEW);
-	check_zoom();
-	glDisable(GL_CULL_FACE);
-	// draw the rest of the scene
-}
 
 
 
