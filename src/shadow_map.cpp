@@ -10,7 +10,7 @@ using namespace std;
 
 unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
 
-int enable_shadow_maps(1); // 1 = dynamic shadows, 2 = dynamic + static shadows
+int enable_shadow_maps(2); // 1 = dynamic shadows, 2 = dynamic + static shadows
 unsigned fbo_id(0), depth_tid(0);
 
 extern bool have_drawn_cobj;
@@ -22,9 +22,15 @@ extern vector<coll_obj> coll_objects;
 struct smap_data_t {
 	bool last_no_dynamic;
 	unsigned tid, tu_id, smap_sz;
+	float approx_pixel_width;
 	pos_dir_up pdu;
 
-	smap_data_t() : last_no_dynamic(0), tid(0), tu_id(0), smap_sz(SHADOW_MAP_SZ) {}
+	smap_data_t() : last_no_dynamic(0), tid(0), tu_id(0), smap_sz(SHADOW_MAP_SZ), approx_pixel_width(0.0) {}
+
+	int get_ndiv(float radius) {
+		// FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
+		return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width)));
+	}
 };
 
 smap_data_t smap_data[NUM_LIGHT_SRC];
@@ -99,7 +105,7 @@ void set_smap_shader_for_all_lights(unsigned p) {
 }
 
 
-pos_dir_up get_light_pdu(point const &lpos, bool set_pers, bool do_look_at) {
+pos_dir_up get_light_pdu(point const &lpos, bool set_pers, bool do_look_at, float *sradius=NULL) {
 
 	float const scene_z1(min(zbottom, czmin)), scene_z2(max(ztop, czmax)), scene_dz(scene_z2 - scene_z1);
 	point const scene_center(0.0, 0.0, 0.5*(scene_z1 + scene_z2));
@@ -113,6 +119,7 @@ pos_dir_up get_light_pdu(point const &lpos, bool set_pers, bool do_look_at) {
 		scene_radius2 = max(scene_radius2, pt_line_dist(corners[i], lpos, scene_center));
 	}
 	assert(scene_radius2 <= scene_radius);
+	if (sradius) *sradius = scene_radius2;
 	vector3d const light_dir((scene_center - lpos).get_norm()); // almost equal to lpos (point light)
 	float const dist(p2p_dist(lpos, scene_center));
 	vector3d up_dir(zero_vector);
@@ -179,8 +186,11 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glMatrixMode(GL_MODELVIEW);
-	data.pdu = camera_pdu = get_light_pdu(lpos, 1, 1);
+	float sradius(0.0);
+	camera_pos = lpos;
+	data.pdu   = camera_pdu = get_light_pdu(lpos, 1, 1, &sradius);
 	camera_pdu.valid = 0; // FIXME: should anything ever be out of the light view frustum? the camera when not over the mesh?
+	data.approx_pixel_width = sradius / data.smap_sz;
 	check_gl_error(201);
 
 	// setup texture matrix
@@ -196,7 +206,7 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	if (enable_shadow_maps) { // add dynamic objects
 		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!data.pdu.sphere_visible_test(i->pos, i->radius)) continue;
-			int const ndiv(N_SPHERE_DIV); // FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
+			int const ndiv(data.get_ndiv(i->radius));
 
 			if (i->ctype != COLL_SPHERE) {
 				assert((unsigned)i->cid < coll_objects.size());
@@ -211,17 +221,27 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	}
 	if (enable_shadow_maps == 2) { // add static objects
 		if (have_drawn_cobj) {
+			int in_cur_prim(PRIM_UNSET);
 			point center;
 			float radius;
 
-			for (unsigned i = 0; i < coll_objects.size(); ++i) {
-				if (coll_objects[i].no_draw()) continue;
-				if (coll_objects[i].cp.color.alpha < MIN_SHADOW_ALPHA) continue;
-				coll_objects[i].bounding_sphere(center, radius);
+			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
+				if (i->status != COLL_STATIC) continue;
+				//if (i->no_draw()) continue;
+				if (i->cp.color.alpha < MIN_SHADOW_ALPHA) continue;
+				i->bounding_sphere(center, radius);
 				if (!data.pdu.sphere_visible_test(center, radius)) continue;
-				int const ndiv(N_SPHERE_DIV); // is this enough/too many?
-				coll_objects[i].simple_draw(ndiv);
+				int ndiv(1);
+
+				if (i->type == COLL_SPHERE) {
+					ndiv = data.get_ndiv(radius);
+				}
+				else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
+					ndiv = data.get_ndiv(max(i->radius, i->radius2));
+				}
+				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1);
 			}
+			if (in_cur_prim >= 0) glEnd();
 		}
 		// FIXME: WRITE: render other static objects such as mesh
 		// FIXME: remember to handle trasparency
@@ -256,6 +276,7 @@ void create_shadow_map() {
 
 	// save state
 	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode);
+	point const camera_pos_(camera_pos);
 	pos_dir_up const camera_pdu_(camera_pdu);
 
 	// set to shadow map state
@@ -285,6 +306,7 @@ void create_shadow_map() {
 	do_zoom      = do_zoom_;
 	animate2     = animate2_;
 	display_mode = display_mode_;
+	camera_pos   = camera_pos_;
 	camera_pdu   = camera_pdu_;
 	//PRINT_TIME("Shadow Map Creation");
 }

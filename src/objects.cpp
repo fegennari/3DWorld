@@ -13,7 +13,7 @@
 float const NDIV_SCALE = 120.0;
 
 
-extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
+extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2, enable_shadow_maps;
 extern float temperature, tfticks;
 extern unsigned ALL_LT[];
 extern obj_type object_types[];
@@ -379,7 +379,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		vector3d tex_dir(0,0,0);
 		tex_dir[pri_dim] = 1.0;
 		setup_polygon_texgen(tex_dir, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-		unsigned char shadowed(255); // all shadowed
+		unsigned char const shadowed(enable_shadow_maps ? 0 : 255); // all shadowed unless using shadow maps
 		set_shadowed_state(shadowed);
 		glBegin(GL_TRIANGLES);
 	}
@@ -428,28 +428,55 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 }
 
 
-void coll_obj::simple_draw(int ndiv) const {
+int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals) const {
 
 	switch (type) {
 	case COLL_CUBE:
-		draw_simple_cube(*this, 0);
+		in_cur_prim = draw_simple_cube(*this, 0, in_cur_prim, no_normals);
 		break;
+
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, !(cp.surfs & 1));
+		{
+			bool const draw_ends(!(cp.surfs & 1));
+
+			if (no_normals && ndiv == 3 && !draw_ends) { // special case draw as quad
+				point pts[4];
+				int npts(0);
+				vector3d v2; // unused
+				cylinder_quad_projection(pts, cylinder_3dw(points[0], points[1], radius, radius2),
+					((points[0] + points[1])*0.5 - get_camera_pos()), v2, npts);
+				in_cur_prim = draw_simple_polygon(pts, npts, zero_vector, in_cur_prim, 1);
+			}
+			else {
+				if (in_cur_prim != PRIM_DISABLED) {
+					if (in_cur_prim >= 0) glEnd();
+					in_cur_prim = PRIM_UNSET;
+				}
+				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, draw_ends);
+			}
+		}
 		break;
+
 	case COLL_SPHERE:
-		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1);
+		if (in_cur_prim != PRIM_DISABLED) {
+			if (in_cur_prim >= 0) glEnd();
+			in_cur_prim = PRIM_UNSET;
+		}
+		//if (no_normals && ndiv == 3) {} // draw as circle/texture?
+		draw_sphere_dlist(points[0], radius, ndiv, 0);
 		break;
+
 	case COLL_POLYGON:
 		if (thickness <= MIN_POLY_THICK2) {
-			draw_simple_polygon(points, npoints, norm);
+			in_cur_prim = draw_simple_polygon(points, npoints, norm, in_cur_prim, no_normals);
 		}
 		else {
-			draw_simple_extruded_polygon(thickness, points, npoints); // pass in norm?
+			in_cur_prim = draw_simple_extruded_polygon(thickness, points, npoints, in_cur_prim, no_normals); // pass in norm?
 		}
 		break;
 	}
+	return in_cur_prim;
 }
 
 

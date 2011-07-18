@@ -1017,6 +1017,9 @@ enum {LIGHT_SUN = 0, LIGHT_MOON, NUM_LIGHT_SRC};
 
 unsigned char const EFLAGS[3][2] = {{EF_X1, EF_X2}, {EF_Y1, EF_Y2}, {EF_Z1, EF_Z2}};
 
+#define PRIM_DISABLED -1
+#define PRIM_UNSET    -2
+
 // forward references
 class  sd_sphere_d;
 struct dwobject;
@@ -1217,11 +1220,12 @@ void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, color
 void begin_line_tquad_draw();
 void end_line_tquad_draw();
 void draw_animated_billboard(point const &pos, float size, float timescale);
-void draw_simple_cube(cube_t const &c, bool texture, float texture_scale=1.0, vector3d const *const view_dir=NULL);
+int  draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim=PRIM_DISABLED, bool no_normals=0,
+	float texture_scale=1.0, vector3d const *const view_dir=NULL);
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv=0,
 			   float texture_scale=1.0, bool proportional_texture=0, vector3d const *const view_dir=NULL);
-void draw_simple_polygon(point const *const points, int npoints, vector3d const &norm);
-void draw_simple_extruded_polygon(float thick, point const *const points, int npoints);
+int  draw_simple_polygon(point const *const points, int npoints, vector3d const &norm, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
+int  draw_simple_extruded_polygon(float thick, point const *const points, int npoints, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
 void draw_quads_from_pts(vector<vert_norm> const &points, unsigned draw_num=0);

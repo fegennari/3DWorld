@@ -870,21 +870,25 @@ void pos_dir_up::draw_frustum() const {
 }
 
 
-void draw_simple_cube(cube_t const &c, bool texture, float texture_scale, vector3d const *const view_dir) {
+int draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim, bool no_normals, float texture_scale, vector3d const *const view_dir) {
 
-	glBegin(GL_QUADS);
-
+	if (in_cur_prim != GL_QUADS) {
+		if (in_cur_prim >= 0) glEnd();
+		glBegin(GL_QUADS);
+	}
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 			if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
-			vector3d norm(zero_vector);
 			point pt;
-			norm[n] = (2.0*j - 1.0); // -1 or 1
 			pt[n]   = c.d[n][j];
-			norm.do_glNormal();
 
+			if (!no_normals) {
+				vector3d norm(zero_vector);
+				norm[n] = (2.0*j - 1.0); // -1 or 1
+				norm.do_glNormal();
+			}
 			for (unsigned s = 0; s < 2; ++s) { // d[1] dim
 				pt[d[1]] = c.d[d[1]][s];
 
@@ -900,7 +904,11 @@ void draw_simple_cube(cube_t const &c, bool texture, float texture_scale, vector
 			}
 		}
 	}
-	glEnd();
+	if (in_cur_prim == PRIM_DISABLED) {
+		glEnd();
+		return in_cur_prim;
+	}
+	return GL_QUADS;
 }
 
 
@@ -964,26 +972,36 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 }
 
 
-void draw_simple_polygon(point const *const points, int npoints, vector3d const &norm) {
+int draw_simple_polygon(point const *const points, int npoints, vector3d const &norm, int in_cur_prim, bool no_normals) {
 
-	norm.do_glNormal();
+	int prim_type(-1);
 
 	switch (npoints) {
-		case 0: return;
-		case 1:  glBegin(GL_POINTS);    break;
-		case 2:  glBegin(GL_LINE_LOOP); break;
-		case 3:  glBegin(GL_TRIANGLES); break;
-		case 4:  glBegin(GL_QUADS);     break;
+		case 0: return in_cur_prim;
+		case 1:  prim_type = GL_POINTS;    break;
+		case 2:  prim_type = GL_LINES;     break;
+		case 3:  prim_type = GL_TRIANGLES; break;
+		case 4:  prim_type = GL_QUADS;     break;
 		default: glBegin(GL_POLYGON);
 	}
+	if (in_cur_prim != prim_type) {
+		if (in_cur_prim >= 0) glEnd();
+		glBegin(prim_type);
+	}
+	if (!no_normals) norm.do_glNormal();
+
 	for (int i = 0; i < npoints; ++i) {
 		points[i].do_glVertex();
 	}
-	glEnd();
+	if (in_cur_prim == PRIM_DISABLED) {
+		glEnd();
+		return in_cur_prim;
+	}
+	return prim_type;
 }
 
 
-void draw_simple_extruded_polygon(float thick, point const *const points, int npoints) {
+int draw_simple_extruded_polygon(float thick, point const *const points, int npoints, int in_cur_prim, bool no_normals) {
 
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	thick = fabs(thick);
@@ -991,15 +1009,16 @@ void draw_simple_extruded_polygon(float thick, point const *const points, int np
 	static vector<point> pts[2];
 	gen_poly_planes(points, npoints, norm, thick, pts);
 	reverse(pts[0].begin(), pts[0].end());
-	draw_simple_polygon(&(pts[0].front()), npoints, norm*-1); // draw bottom surface
+	in_cur_prim = draw_simple_polygon(&(pts[0].front()), npoints, norm*-1, in_cur_prim, no_normals); // draw bottom surface
 	reverse(pts[0].begin(), pts[0].end());
-	draw_simple_polygon(&(pts[1].front()), npoints, norm); // draw top surface
+	in_cur_prim = draw_simple_polygon(&(pts[1].front()), npoints, norm,    in_cur_prim, no_normals); // draw top surface
 	
 	for (int i = 0; i < npoints; ++i) { // draw sides
 		int const ii((i+1)%npoints);
 		point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
-		draw_simple_polygon(side_pts, 4, get_poly_norm(side_pts));
+		in_cur_prim = draw_simple_polygon(side_pts, 4, get_poly_norm(side_pts), in_cur_prim, no_normals);
 	}
+	return in_cur_prim;
 }
 
 
