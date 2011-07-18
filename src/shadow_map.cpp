@@ -8,8 +8,7 @@
 
 using namespace std;
 
-bool     const USE_FRAMEBUFFER = 1;
-unsigned const SHADOW_MAP_SZ   = 1024; // width/height - might need to be larger
+unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
 
 int enable_shadow_maps(2); // 1 = dynamic shadows, 2 = dynamic + static shadows
 
@@ -20,12 +19,11 @@ extern vector<coll_obj> coll_objects;
 
 
 struct smap_data_t {
-	bool last_no_dynamic;
-	unsigned tid, tu_id, fbo_id, smap_sz;
+	unsigned tid, tu_id, fbo_id;
 	float approx_pixel_width;
 	pos_dir_up pdu;
 
-	smap_data_t() : last_no_dynamic(0), tid(0), tu_id(0), fbo_id(0), smap_sz(SHADOW_MAP_SZ), approx_pixel_width(0.0) {}
+	smap_data_t() : tid(0), tu_id(0), fbo_id(0), approx_pixel_width(0.0) {}
 
 	int get_ndiv(float radius) {
 		// FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
@@ -184,41 +182,22 @@ void create_shadow_fbo(unsigned &fbo_id, unsigned depth_tid) {
 
 void create_shadow_map_for_light(int light, point const &lpos) {
 
-	bool no_dynamic(shadow_objs.empty());
 	smap_data_t &data(smap_data[light]);
-	// FIXME: need to invalidate when static cobjs change
-	if (data.tid > 0 && no_dynamic && data.last_no_dynamic) return; // no change to shadow map
 	data.tu_id = (6 + light); // Note: only 8 TUs guaranteed so we can have 2 lights
 
-	// determine shadow map size
-	if (!data.tid) {
-		unsigned const max_viewport(min(window_width, window_height));
-		data.smap_sz = SHADOW_MAP_SZ;
-
-		if (!USE_FRAMEBUFFER && data.smap_sz > max_viewport) {
-			cout << "Warning: Using smaller shadow map size of " << max_viewport << " due to small render window" << endl;
-			data.smap_sz = max_viewport;
-		}
-	}
-
 	// setup textures and framebuffer
-	bool tex_created(0);
-
 	if (!data.tid) {
 		setup_texture(data.tid, GL_MODULATE, 0, 0, 0, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, data.smap_sz, data.smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SZ, SHADOW_MAP_SZ, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 		glDisable(GL_TEXTURE_2D);
-		tex_created = 1;
 	}
-	if (USE_FRAMEBUFFER) {
-		if (!data.fbo_id) create_shadow_fbo(data.fbo_id, data.tid);
-		assert(data.fbo_id > 0);
-		// Render from the light POV to a FBO, store depth values only
-		glBindFramebuffer(GL_FRAMEBUFFER, data.fbo_id); // Rendering offscreen
-	}
+	if (!data.fbo_id) create_shadow_fbo(data.fbo_id, data.tid);
+	assert(data.fbo_id > 0);
+	// Render from the light POV to a FBO, store depth values only
+	glBindFramebuffer(GL_FRAMEBUFFER, data.fbo_id); // Rendering offscreen
 
 	// setup render state
-	glViewport(0, 0, data.smap_sz, data.smap_sz);
+	glViewport(0, 0, SHADOW_MAP_SZ, SHADOW_MAP_SZ);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
@@ -228,7 +207,7 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	camera_pos = lpos;
 	data.pdu   = camera_pdu = get_light_pdu(lpos, 1, 1, &sradius);
 	camera_pdu.valid = 0; // FIXME: should anything ever be out of the light view frustum? the camera when not over the mesh?
-	data.approx_pixel_width = sradius / data.smap_sz;
+	data.approx_pixel_width = sradius / SHADOW_MAP_SZ;
 	check_gl_error(201);
 
 	// setup texture matrix
@@ -237,12 +216,11 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	disable_multitex_a();
 
 	// render shadow geometry
-	no_dynamic = 1;
 	glDisable(GL_LIGHTING);
-	// Disable color rendering, we only want to write to the Z-Buffer
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 	//glEnable(GL_CULL_FACE); glCullFace(GL_FRONT);
 	WHITE.do_glColor();
+	check_gl_error(202);
 
 	if (enable_shadow_maps) { // add dynamic objects
 		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
@@ -257,7 +235,6 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 				// FIXME: use circle texture billboards
 				draw_sphere_dlist(i->pos, i->radius, ndiv, 0);
 			}
-			no_dynamic = 0;
 		}
 	}
 	if (enable_shadow_maps == 2) { // add static objects
@@ -294,21 +271,10 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	//glDisable(GL_CULL_FACE); glCullFace(GL_BACK);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glEnable(GL_LIGHTING);
-	check_gl_error(202);
 
-	if (USE_FRAMEBUFFER) {
-		// Now rendering from the camera POV, using the FBO to generate shadows
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
-	else {
-		// copy framebuffer into texture
-		if (!tex_created && no_dynamic && data.last_no_dynamic) return; // no change - FIXME: incorrect for light source changes
-		bind_2d_texture(data.tid);
-		glReadBuffer(GL_BACK);
-		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, data.smap_sz, data.smap_sz);
-	}
+	// Now rendering from the camera POV, using the FBO to generate shadows
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	check_gl_error(203);
-	data.last_no_dynamic = no_dynamic;
 }
 
 
