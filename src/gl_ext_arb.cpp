@@ -170,7 +170,7 @@ void disable_fog_coord() {
 }
 
 
-// ***************** glGenBuffers *****************
+// ***************** VBOs *****************
 
 
 bool setup_gen_buffers() {
@@ -213,6 +213,55 @@ void upload_vbo_data(void const *const data, size_t size, bool is_index) {
 
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index) {
 	glBufferSubData(get_buffer_target(is_index), offset, size, data);
+}
+
+
+// ***************** FBOs *****************
+
+
+void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
+	
+	// Create a framebuffer object
+	glGenFramebuffers(1, &fbo_id);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+	
+	if (is_depth_fbo) {
+		// Instruct openGL that we won't bind a color texture with the currently binded FBO
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+	}
+	
+	// Attach the texture to FBO depth attachment point
+	glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), GL_TEXTURE_2D, tid, 0);
+	
+	// Check FBO status
+	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
+	assert(status == GL_FRAMEBUFFER_COMPLETE);
+	
+	// Switch back to window-system-provided framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+
+void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
+
+	assert(glIsTexture(tid));
+	if (!fbo_id) create_fbo(fbo_id, tid, is_depth_fbo);
+	assert(fbo_id > 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
+}
+
+
+void disable_fbo() {
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+
+void free_fbo(unsigned &fbo_id) {
+
+	if (fbo_id > 0) glDeleteFramebuffers(1, &fbo_id);
+	fbo_id = 0;
 }
 
 

@@ -158,28 +158,6 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 }
 
 
-void create_shadow_fbo(unsigned &fbo_id, unsigned depth_tid) {
-	
-	// Create a framebuffer object
-	glGenFramebuffers(1, &fbo_id);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
-	
-	// Instruct openGL that we won't bind a color texture with the currently binded FBO
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-	
-	// Attach the texture to FBO depth attachment point
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tid, 0);
-	
-	// Check FBO status
-	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
-	assert(status == GL_FRAMEBUFFER_COMPLETE);
-	
-	// Switch back to window-system-provided framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-
 void create_shadow_map_for_light(int light, point const &lpos) {
 
 	smap_data_t &data(smap_data[light]);
@@ -191,10 +169,9 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SZ, SHADOW_MAP_SZ, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 		glDisable(GL_TEXTURE_2D);
 	}
-	if (!data.fbo_id) create_shadow_fbo(data.fbo_id, data.tid);
-	assert(data.fbo_id > 0);
+
 	// Render from the light POV to a FBO, store depth values only
-	glBindFramebuffer(GL_FRAMEBUFFER, data.fbo_id); // Rendering offscreen
+	enable_fbo(data.fbo_id, data.tid, 1);
 
 	// setup render state
 	glViewport(0, 0, SHADOW_MAP_SZ, SHADOW_MAP_SZ);
@@ -273,7 +250,7 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	glEnable(GL_LIGHTING);
 
 	// Now rendering from the camera POV, using the FBO to generate shadows
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	disable_fbo();
 	check_gl_error(203);
 }
 
@@ -325,11 +302,7 @@ void free_shadow_map_textures() {
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		free_texture(smap_data[l].tid);
-		
-		if (smap_data[l].fbo_id > 0) {
-			glDeleteFramebuffers(1, &smap_data[l].fbo_id);
-			smap_data[l].fbo_id = 0;
-		}
+		free_fbo(smap_data[l].fbo_id);
 	}
 }
 
