@@ -674,9 +674,10 @@ void bind_2d_texture(unsigned tid) {
 }
 
 
-void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t) {
+void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest) {
 
 	assert(tid == 0);
+	assert(!nearest || !mipmap);
 	glGenTextures(1, &tid);
 
 	// select our current texture
@@ -686,10 +687,10 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, type);
 
 	// when texture area is small, use linear filter (bilinear filter the closest mipmap)
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR)); // GL_LINEAR_MIPMAP_NEAREST?
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
 
 	// when texture area is large, bilinear filter the first mipmap
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
 
 	// if wrap is true,  the texture wraps over at the edges (repeat) or is mirrored
 	// if wrap is false, the texture ends at the edges (clamp)

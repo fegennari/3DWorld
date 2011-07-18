@@ -1486,7 +1486,7 @@ bool select_texture(int id, bool enable=1);
 float get_tex_ar(int id);
 void bind_1d_texture(unsigned tid);
 void bind_2d_texture(unsigned tid);
-void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s=0, bool mirror_t=0);
+void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s=0, bool mirror_t=0, bool nearest=0);
 void free_textures();
 void reset_textures();
 void free_texture(unsigned &tid);
