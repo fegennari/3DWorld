@@ -8,7 +8,7 @@
 
 using namespace std;
 
-unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
+unsigned const SHADOW_MAP_SZ = 2048; // width/height
 
 bool scene_dlist_invalid(0);
 int enable_shadow_maps(2); // 1 = dynamic shadows, 2 = dynamic + static shadows
@@ -170,7 +170,8 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 
 	// setup textures and framebuffer
 	if (!data.tid) {
-		setup_texture(data.tid, GL_MODULATE, 0, 0, 0, 0, 0, 0);
+		bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
+		setup_texture(data.tid, GL_MODULATE, 0, 0, 0, 0, 0, nearest);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SZ, SHADOW_MAP_SZ, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 		glDisable(GL_TEXTURE_2D);
 	}
@@ -287,7 +288,8 @@ void create_shadow_map() {
 	
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
 		if (scene_dlist_invalid) smap_data[l].free_dlist();
-		if (light_valid(0xFF, l, lpos)) create_shadow_map_for_light(l, lpos);
+		if (!glIsEnabled(GL_LIGHT0 + l) || !get_light_pos(lpos, l)) continue;
+		create_shadow_map_for_light(l, lpos);
 	}
 
 	// restore old state
