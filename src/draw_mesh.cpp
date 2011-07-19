@@ -377,7 +377,7 @@ void display_mesh() { // fast array version
 	if (!island && (display_mode & 0x10) && (xoff2 != 0 || yoff2 != 0)) return;
 	RESET_TIME;
 
-	if ((display_mode & 0x80) && !DISABLE_WATER && !ocean_set && zmin < max_water_height) {
+	if ((display_mode & 0x80) && !DISABLE_WATER && !ocean_set && zmin < max_water_height && ground_effects_level != 0) {
 		gen_uw_lighting();
 		if (SHOW_MESH_TIME) PRINT_TIME("Underwater Lighting");
 	}

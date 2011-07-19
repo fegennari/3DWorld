@@ -14,7 +14,7 @@ bool scene_dlist_invalid(0);
 int enable_shadow_maps(2); // 1 = dynamic shadows, 2 = dynamic + static shadows
 
 extern bool have_drawn_cobj;
-extern int window_width, window_height, animate2, display_mode;
+extern int window_width, window_height, animate2, display_mode, ground_effects_level;
 extern vector<shadow_sphere> shadow_objs;
 extern vector<coll_obj> coll_objects;
 
@@ -249,10 +249,10 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1);
 			}
 			if (in_cur_prim >= 0) glEnd();
-			// FIXME: WRITE: render other static objects such as mesh
-			// FIXME: remember to handle trasparency
+			// FIXME: render trees and scenery so that alpha test works?
 			glEndList();
 		}
+		display_mesh();
 	}
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
@@ -274,13 +274,14 @@ void create_shadow_map() {
 	//RESET_TIME;
 
 	// save state
-	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode);
+	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode), ground_effects_level_(ground_effects_level);
 	point const camera_pos_(camera_pos);
 	pos_dir_up const camera_pdu_(camera_pdu);
 
 	// set to shadow map state
-	do_zoom       = 0;
-	animate2      = 0; // disable any animations or generated effects
+	do_zoom  = 0;
+	animate2 = 0; // disable any animations or generated effects
+	ground_effects_level = 0;
 	display_mode &= ~0x08; // disable occlusion culling
 
 	// render shadow maps to textures
@@ -297,6 +298,7 @@ void create_shadow_map() {
 	check_gl_error(200);
 	do_zoom      = do_zoom_;
 	animate2     = animate2_;
+	ground_effects_level = ground_effects_level_;
 	display_mode = display_mode_;
 	camera_pos   = camera_pos_;
 	camera_pdu   = camera_pdu_;
