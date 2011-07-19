@@ -17,7 +17,7 @@ point vox_delta;
 map<int, unsigned> x_strip_map;
 
 extern bool disable_shaders;
-extern int display_mode, read_snow_file, write_snow_file;
+extern int display_mode, read_snow_file, write_snow_file, enable_shadow_maps;
 extern unsigned num_snowflakes;
 extern float ztop, zbottom, temperature, snow_depth, snow_random;
 extern vector3d cview_dir;
@@ -749,7 +749,7 @@ void draw_snow() {
 	static point last_lpos(all_zeros);
 	point const lpos(get_light_pos());
 
-	if (lpos != last_lpos) {
+	if (enable_shadow_maps != 2 && lpos != last_lpos) {
 		RESET_TIME;
 		update_cobj_tree();
 		snow_draw.update_shadows();
@@ -759,12 +759,15 @@ void draw_snow() {
 	//RESET_TIME;
 
 	if (!disable_shaders) {
+		bool const use_smap(enable_shadow_maps == 2);
 		setup_enabled_lights();
-		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", 1, d); // VS/FS
+		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", !use_smap, d); // VS/FS
 		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_texgen", "linear_fog.part+ads_lighting.part*+per_pixel_lighting_textured"));
+		set_bool_shader_prefix("use_shadow_map", use_smap, 1); // FS
+		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_texgen", "linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured"));
 		setup_fog_scale(p);
 		add_uniform_int(p, "tex0", 0);
+		if (use_smap) set_smap_shader_for_all_lights(p);
 	}
 	set_specular(0.5, 50.0);
 	set_color(SNOW_COLOR);
