@@ -13,7 +13,7 @@ bool const REMOVE_UNANCHORED = 1;
 int destroy_thresh(0);
 vector<unsigned> falling_cobjs;
 
-extern bool cobj_tree_valid;
+extern bool cobj_tree_valid, scene_dlist_invalid;
 extern float fticks, zmin;
 extern int cobj_counter, coll_id[];
 extern obj_type object_types[];
@@ -345,6 +345,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	if (!to_remove.empty()) {
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // FIXME: what about updating (removing) mesh shadows?
 		cdir.normalize();
+		scene_dlist_invalid = 1;
 	}
 	//PRINT_TIME("Subtract Cube");
 	return to_remove.size();

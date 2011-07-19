@@ -231,7 +231,7 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
 		glReadBuffer(GL_NONE);
 	}
 	
-	// Attach the texture to FBO depth attachment point
+	// Attach the texture to FBO depth or color attachment point
 	glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), GL_TEXTURE_2D, tid, 0);
 	
 	// Check FBO status

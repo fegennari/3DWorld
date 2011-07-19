@@ -464,7 +464,8 @@ int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals) const {
 			in_cur_prim = PRIM_UNSET;
 		}
 		//if (no_normals && ndiv == 3) {} // draw as circle/texture?
-		draw_sphere_dlist(points[0], radius, ndiv, 0);
+		//draw_sphere_dlist(points[0], radius, ndiv, 0); // faster, but doesn't work when in dlist
+		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1);
 		break;
 
 	case COLL_POLYGON:

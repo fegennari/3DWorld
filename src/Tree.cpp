@@ -57,7 +57,7 @@ colorRGBA leaf_base_color(BLACK);
 point leaf_points[4]; // z = 0.0 -> -0.05
 
 
-extern bool has_snow;
+extern bool has_snow, scene_dlist_invalid;
 extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll;
 extern long rseed1, rseed2;
@@ -332,6 +332,7 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 		}
 		mark_leaf_changed(i);
 	}
+	scene_dlist_invalid = 1;
 }
 
 

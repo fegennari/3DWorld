@@ -10,6 +10,7 @@ using namespace std;
 
 unsigned const SHADOW_MAP_SZ = 1024; // width/height - might need to be larger
 
+bool scene_dlist_invalid(0);
 int enable_shadow_maps(2); // 1 = dynamic shadows, 2 = dynamic + static shadows
 
 extern bool have_drawn_cobj;
@@ -19,32 +20,35 @@ extern vector<coll_obj> coll_objects;
 
 
 struct smap_data_t {
-	unsigned tid, tu_id, fbo_id;
+	unsigned tid, tu_id, fbo_id, dlist;
 	float approx_pixel_width;
 	pos_dir_up pdu;
 
-	smap_data_t() : tid(0), tu_id(0), fbo_id(0), approx_pixel_width(0.0) {}
+	smap_data_t() : tid(0), tu_id(0), fbo_id(0), dlist(0), approx_pixel_width(0.0) {}
 
 	int get_ndiv(float radius) {
 		// FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
 		return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width)));
+	}
+	void free_dlist() {
+		if (glIsList(dlist)) glDeleteLists(dlist, 1);
+		dlist = 0;
 	}
 };
 
 smap_data_t smap_data[NUM_LIGHT_SRC];
 
 
-// ************ RENDER TO TEXTURE METHOD ************
-
-
 unsigned get_shadow_map_tu_id(int light) {
-
 	return smap_data[light].tu_id;
 }
 
 unsigned get_shadow_map_tid(int light) {
-
 	return smap_data[light].tid;
+}
+
+bool smap_disabled() {
+	return (!enable_shadow_maps || (!have_drawn_cobj && no_grass()));
 }
 
 
@@ -81,6 +85,7 @@ void set_texture_matrix() {
 
 void set_smap_shader_for_light(unsigned p, int light) {
 
+	if (smap_disabled()) return;
 	assert(light >= 0 && light < NUM_LIGHT_SRC);
 	smap_data_t const &data(smap_data[light]);
 	assert(data.tid > 0);
@@ -175,7 +180,7 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 
 	// setup render state
 	glViewport(0, 0, SHADOW_MAP_SZ, SHADOW_MAP_SZ);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -191,6 +196,7 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	set_multitex(data.tu_id);
 	set_texture_matrix();
 	disable_multitex_a();
+	glDisable(GL_TEXTURE_2D);
 
 	// render shadow geometry
 	glDisable(GL_LIGHTING);
@@ -215,15 +221,20 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 		}
 	}
 	if (enable_shadow_maps == 2) { // add static objects
-		if (have_drawn_cobj) {
+		if (data.dlist) {
+			assert(glIsList(data.dlist));
+			glCallList(data.dlist);
+		}
+		else {
+			data.dlist = glGenLists(1);
+			glNewList(data.dlist, GL_COMPILE_AND_EXECUTE);
 			int in_cur_prim(PRIM_UNSET);
 			point center;
 			float radius;
 
 			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
-				if (i->status != COLL_STATIC) continue;
 				//if (i->no_draw()) continue;
-				if (i->cp.color.alpha < MIN_SHADOW_ALPHA) continue;
+				if (i->status != COLL_STATIC || i->cp.color.alpha < MIN_SHADOW_ALPHA) continue;
 				i->bounding_sphere(center, radius);
 				if (!data.pdu.sphere_visible_test(center, radius)) continue;
 				int ndiv(1);
@@ -237,9 +248,10 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1);
 			}
 			if (in_cur_prim >= 0) glEnd();
+			// FIXME: WRITE: render other static objects such as mesh
+			// FIXME: remember to handle trasparency
+			glEndList();
 		}
-		// FIXME: WRITE: render other static objects such as mesh
-		// FIXME: remember to handle trasparency
 	}
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
@@ -257,7 +269,7 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 
 void create_shadow_map() {
 
-	if (!enable_shadow_maps) return; // disabled
+	if (smap_disabled()) return; // disabled
 	//RESET_TIME;
 
 	// save state
@@ -272,28 +284,21 @@ void create_shadow_map() {
 
 	// render shadow maps to textures
 	point lpos;
-	bool smap_used(0);
 	
-	for (unsigned is_dynamic = 0; is_dynamic < 2; ++is_dynamic) { // {static, dynamic}
-		for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-			if (!light_valid(0xFF, l, lpos)) continue;
-			create_shadow_map_for_light(l, lpos);
-			smap_used = 1;
-		}
+	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
+		if (scene_dlist_invalid) smap_data[l].free_dlist();
+		if (light_valid(0xFF, l, lpos)) create_shadow_map_for_light(l, lpos);
 	}
 
 	// restore old state
-	if (smap_used) {
-		glDisable(GL_TEXTURE_2D);
-		glViewport(0, 0, window_width, window_height);
-		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	}
+	glViewport(0, 0, window_width, window_height);
 	check_gl_error(200);
 	do_zoom      = do_zoom_;
 	animate2     = animate2_;
 	display_mode = display_mode_;
 	camera_pos   = camera_pos_;
 	camera_pdu   = camera_pdu_;
+	scene_dlist_invalid = 0;
 	//PRINT_TIME("Shadow Map Creation");
 }
 
@@ -303,6 +308,7 @@ void free_shadow_map_textures() {
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		free_texture(smap_data[l].tid);
 		free_fbo(smap_data[l].fbo_id);
+		smap_data[l].free_dlist();
 	}
 }
 

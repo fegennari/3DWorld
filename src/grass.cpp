@@ -535,7 +535,7 @@ public:
 		bool const grass_wind(!disable_shaders && !has_snow && (display_mode & 0x0100) != 0);
 		unsigned const num_dlights(enable_dynamic_lights());
 
-		if (grass_wind) {
+		if (grass_wind) { // enables lighting and shadows as well
 			set_shader_prefix("#define USE_LIGHT_COLORS",  0); // VS
 			set_shader_prefix("#define USE_GOOD_SPECULAR", 0); // VS
 #if 0 // per-pixel dynamic lighting - looks better, but slow
