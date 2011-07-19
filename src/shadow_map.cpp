@@ -235,9 +235,9 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 
 			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
 				//if (i->no_draw()) continue;
-				if (i->status != COLL_STATIC || i->cp.color.alpha < MIN_SHADOW_ALPHA) continue;
+				if (i->status != COLL_STATIC || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0) continue;
 				i->bounding_sphere(center, radius);
-				if (!data.pdu.sphere_visible_test(center, radius)) continue;
+				//if (!data.pdu.sphere_visible_test(center, radius)) continue; // shouldn't fail
 				int ndiv(1);
 
 				if (i->type == COLL_SPHERE) {
