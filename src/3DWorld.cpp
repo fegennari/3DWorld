@@ -1179,7 +1179,7 @@ void keyboard2(int key, int x, int y) {
 		break;
 
 	case GLUT_KEY_F5: // toggle large/small trees
-		if (world_mode != WMODE_GROUND) break;
+		if (world_mode != WMODE_GROUND || (num_trees == 0 && t_trees.empty())) break;
 		tree_mode = (tree_mode+1)%4; // 0=none, 1=large, 2=small, 3=large+small
 		gen_scene(0, 1, 1, 0, 1);
 		break;
@@ -1443,8 +1443,8 @@ int load_config(string const &config_file) {
 		else if (str == "scene_size") {
 			if (fscanf(fp, "%f%f%f", &X_SCENE_SIZE, &Y_SCENE_SIZE, &Z_SCENE_SIZE) != 3) cfg_err("scene size command", error);
 		}
-		else if (str == "shadow_map_sz") {
-			if (!read_uint(fp, shadow_map_sz) || shadow_map_sz <= 0) cfg_err("shadow_map_sz command", error);
+		else if (str == "shadow_map_sz") { // 0 disables
+			if (!read_uint(fp, shadow_map_sz)) cfg_err("shadow_map_sz command", error);
 		}
 		else if (str == "color_bit_depth") {
 			if (!read_int(fp, color_bit_depth)) cfg_err("color_bit_depth command", error);
