@@ -47,12 +47,12 @@ extern unsigned init_item_counts[];
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
 extern platform_cont platforms;
-extern tree_cont_t t_trees;
 extern lightning l_strike;
 extern vector<int> hmv_coll_obj;
 extern char *coll_obj_file;
 extern vector<point> app_spots;
 extern vector<light_source> light_sources;
+extern tree_cont_t t_trees;
 
 
 int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
@@ -571,11 +571,11 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	
 	if (num_trees > 0) {
 		if (gen_trees) {
-			regen_trees(t_trees, (gen_trees == 2), 1);
+			regen_trees((gen_trees == 2), 1);
 			PRINT_TIME("Tree generation");
 		}
 		else {
-			delete_trees(t_trees);
+			delete_trees();
 		}
 	}
 	if (!inf_terrain || gen_trees) {
@@ -624,7 +624,7 @@ void shift_all_objs(vector3d const &vd) {
 
 	shift_fixed_cobjs(vd);
 	shift_hmv(vd);
-	shift_trees(t_trees, vd);
+	shift_trees(vd);
 	shift_small_trees(vd);
 	shift_scenery(vd);
 	shift_water_springs(vd);
@@ -672,7 +672,7 @@ void free_all_coll_objects() {
 
 	free_scenery();
 	remove_small_tree_cobjs();
-	remove_tree_cobjs(t_trees);
+	remove_tree_cobjs();
 	
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {
 		if (coll_objects[i].fixed) remove_reset_coll_obj(coll_objects[i].id);
@@ -722,7 +722,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 	
 	if (re_add) {
 		if (num_trees == 0) {
-			if (tree_mode & 1) add_tree_cobjs(t_trees); // multiple adds?
+			if (tree_mode & 1) add_tree_cobjs(); // multiple adds?
 			if (tree_mode & 2) add_small_tree_coll_objs();
 		}
 		if (has_scenery2) add_scenery_cobjs();

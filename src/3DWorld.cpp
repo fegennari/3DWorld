@@ -84,7 +84,6 @@ point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
 GLUquadricObj* quadric(0);
 lightning l_strike;
-tree_cont_t t_trees;
 colorRGBA bkg_color;
 set<unsigned char> keys, keyset;
 char game_mode_string[256] = {"640x480:32@85"};
@@ -111,6 +110,7 @@ extern int coll_id[];
 extern vector<bbox> team_starts;
 extern player_state *sstates;
 extern pt_line_drawer obj_pld;
+extern tree_cont_t t_trees;
 
 
 void init_keyset();
@@ -153,7 +153,7 @@ void clear_context() {
 	clear_shaders();
 	reset_snow_vbos();
 	update_grass_vbos();
-	clear_tree_vbos(t_trees);
+	clear_tree_vbos();
 	reset_tiled_terrain_state();
 	clear_landscape_vbo = 1;
 }
@@ -483,7 +483,7 @@ void change_terrain_zoom(float val) {
 		mesh_scale     = 1.0;
 		mesh_scale2   /= val;
 		rand_gen_index = rand();
-		regen_trees(t_trees, 1, 1);
+		regen_trees(1, 1);
 		compute_volume_matrix(); // make lightning strike the new tree(s)
 		return;
 	}
@@ -493,7 +493,7 @@ void change_terrain_zoom(float val) {
 	mesh_scale_change = 1;
 	update_mesh(val, 2);
 	clear_tiled_terrain();
-	if (world_mode == WMODE_INF_TERRAIN) regen_trees(t_trees, 1, 1);
+	if (world_mode == WMODE_INF_TERRAIN) regen_trees(1, 1);
 	compute_volume_matrix(); // make lightning strike the new tree(s)
 	calc_watershed();
 }
@@ -544,7 +544,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 	else if (world_mode == WMODE_GROUND) {
 		mesh_type  = mt2;
 		swap(resolution, res_old);
-		if (combined_gu) regen_trees(t_trees, 1, 0);
+		if (combined_gu) regen_trees(1, 0);
 	}
 }
 
@@ -908,7 +908,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		else {
 			rand_gen_index = rand();
 			//gen_scenery();
-			//regen_trees(t_trees, 1, 0);
+			//regen_trees(1, 0);
 			//compute_volume_matrix(); // make lightning strike the new tree(s)
 			gen_scene(0, 1, 1, 0, 1);
 		}
@@ -929,7 +929,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (world_mode != WMODE_UNIVERSE) { // toggle universe background mode
 			combined_gu = !combined_gu;
 			if (combined_gu) setup_current_system(); else reset_planet_defaults(); // have to do this so that regen_trees gets correct vegetation
-			regen_trees(t_trees, 1, 0);
+			regen_trees(1, 0);
 			clear_all_lightmaps(1);
 			reset_tiled_terrain_state();
 			

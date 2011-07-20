@@ -55,6 +55,7 @@ float tree_temp_matrix[3], i_matrix[9], re_matrix[3];
 float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), leaf_size(0.0);
 colorRGBA leaf_base_color(BLACK);
 point leaf_points[4]; // z = 0.0 -> -0.05
+tree_cont_t t_trees;
 
 
 extern bool has_snow, scene_dlist_invalid;
@@ -201,7 +202,7 @@ void tree::remove_collision_objects() {
 }
 
 
-void remove_tree_cobjs(tree_cont_t &t_trees) {
+void remove_tree_cobjs() {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
 		t_trees[i].remove_collision_objects();
@@ -209,10 +210,10 @@ void remove_tree_cobjs(tree_cont_t &t_trees) {
 }
 
 
-void draw_trees_bl(tree_cont_t &ts, bool lpos_change, bool draw_branches, bool near_draw_leaves, bool draw_far_leaves) {
+void draw_trees_bl(bool lpos_change, bool draw_branches, bool near_draw_leaves, bool draw_far_leaves) {
 
-	for (unsigned i = 0; i < ts.size(); ++i) {
-		ts[i].draw_tree(lpos_change, draw_branches, near_draw_leaves, draw_far_leaves);
+	for (unsigned i = 0; i < t_trees.size(); ++i) {
+		t_trees[i].draw_tree(lpos_change, draw_branches, near_draw_leaves, draw_far_leaves);
 	}
 }
 
@@ -238,7 +239,7 @@ void set_leaf_shader(float min_alpha, bool use_wind) {
 }
 
 
-void draw_trees(tree_cont_t &ts) {
+void draw_trees() {
 
 	//glFinish(); // testing
 	//RESET_TIME;
@@ -255,13 +256,13 @@ void draw_trees(tree_cont_t &ts) {
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
 		colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 0, 0, 0, 1, 1, 0)); // dynamic lights, but no smoke (yet)
-		draw_trees_bl(ts, lpos_change, 1, 0, 0); // branches
+		draw_trees_bl(lpos_change, 1, 0, 0); // branches
 		end_smoke_shaders(orig_fog_color);
 		set_leaf_shader(0.75, 0);
-		draw_trees_bl(ts, lpos_change, 0, 0, 1); // far  leaves
+		draw_trees_bl(lpos_change, 0, 0, 1); // far  leaves
 		//unset_shader_prog();
 		//set_leaf_shader(0.75, 1);
-		draw_trees_bl(ts, lpos_change, 0, 1, 0); // near leaves
+		draw_trees_bl(lpos_change, 0, 1, 0); // near leaves
 		unset_shader_prog();
 		last_lpos = lpos;
 		//glFinish(); // testing
@@ -793,14 +794,14 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 }
 
 
-void delete_trees(tree_cont_t &ts) {
+void delete_trees() {
 
 	unsigned deleted(0);
 
-	for (unsigned i = ts.size(); i > 0; --i) { // delete backwards (pop collision stack)
-		if (ts[i-1].delete_tree()) ++deleted;
+	for (unsigned i = t_trees.size(); i > 0; --i) { // delete backwards (pop collision stack)
+		if (t_trees[i-1].delete_tree()) ++deleted;
 	}
-	if (tree_coll_level && !ts.empty()) purge_coll_freed(1); // MUST do this for collision detection to work
+	if (tree_coll_level && !t_trees.empty()) purge_coll_freed(1); // MUST do this for collision detection to work
 }
 
 
@@ -1540,7 +1541,7 @@ int generate_next_cylin(int cylin_num, float branch_curveness, int ncib, bool br
 }
 
 
-void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
+void regen_trees(bool recalc_shadows, bool keep_old) {
 
 	cout << "vegetation: " << vegetation << endl;
 	RESET_TIME;
@@ -1562,7 +1563,7 @@ void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
 			last_ms == mesh_scale && last_ms2 == mesh_scale2)
 		{ // keep old trees
 			if (recalc_shadows) calc_visibility(SUN_SHADOW | MOON_SHADOW | TREE_ONLY);
-			add_tree_cobjs(t_trees);
+			add_tree_cobjs();
 			PRINT_TIME(" gen tree fast");
 			return;
 		}
@@ -1583,7 +1584,7 @@ void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old) {
 				}
 			}
 		}
-		delete_trees(t_trees);
+		delete_trees();
 
 		if (nkeep > 0) {
 			for (unsigned i = 0; i < t_trees.size(); ++i) {
@@ -1673,7 +1674,7 @@ void tree::shift_tree(vector3d const &vd) { // tree has no single pos, have to t
 }
 
 
-void shift_trees(tree_cont_t &t_trees, vector3d const &vd) {
+void shift_trees(vector3d const &vd) {
 
 	if (num_trees > 0) return; // dynamically created, not placed
 
@@ -1683,7 +1684,7 @@ void shift_trees(tree_cont_t &t_trees, vector3d const &vd) {
 }
 
 
-void add_tree_cobjs(tree_cont_t &t_trees) {
+void add_tree_cobjs() {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
 		t_trees[i].add_tree_collision_objects(i);
@@ -1691,7 +1692,7 @@ void add_tree_cobjs(tree_cont_t &t_trees) {
 }
 
 
-void clear_tree_vbos(tree_cont_t &t_trees) {
+void clear_tree_vbos() {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
 		t_trees[i].clear_vbo();

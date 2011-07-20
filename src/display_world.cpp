@@ -49,7 +49,6 @@ extern double camera_zh;
 extern point mesh_origin, flow_source, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern colorRGBA sun_color, bkg_color;
 extern vector<camera_filter> cfilters;
-extern tree_cont_t t_trees;
 
 void display_universe();
 void display_inf_terrain();
@@ -209,7 +208,8 @@ void draw_stuff(int draw_uw, int timer1) {
 	}
 	else {
 		draw_snow();
-		if (display_mode & 0x02) draw_trees(t_trees);
+		if (display_mode & 0x02) draw_trees(
+);
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("9");
 		draw_hmv();
@@ -1014,7 +1014,7 @@ void display_universe() { // infinite universe
 void draw_transparent(bool above_water) {
 
 	if (above_water) {
-		if ((display_mode & 0x02) && TERRAIN_SCENERY) draw_trees(t_trees);
+		if ((display_mode & 0x02) && TERRAIN_SCENERY) draw_trees();
 		draw_transparent_object_groups();
 	}
 	else {
@@ -1137,7 +1137,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 			recreated = 1;
 		}
 		else if (TERRAIN_SCENERY) {
-			regen_trees(t_trees, 0, 1);
+			regen_trees(0, 1);
 			gen_scenery();
 		}
 	}

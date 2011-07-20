@@ -193,13 +193,13 @@ typedef vector<tree> tree_cont_t;
 
 // function prototypes - tree
 float get_tree_z_bottom(float z, point const &pos);
-void remove_tree_cobjs(tree_cont_t &t_trees);
-void draw_trees(tree_cont_t &ts);
-void delete_trees(tree_cont_t &ts);
-void regen_trees(tree_cont_t &t_trees, bool recalc_shadows, bool keep_old);
-void shift_trees(tree_cont_t &t_trees, vector3d const &vd);
-void add_tree_cobjs(tree_cont_t &t_trees);
-void clear_tree_vbos(tree_cont_t &t_trees);
+void remove_tree_cobjs();
+void draw_trees();
+void delete_trees();
+void regen_trees(bool recalc_shadows, bool keep_old);
+void shift_trees(vector3d const &vd);
+void add_tree_cobjs();
+void clear_tree_vbos();
 
 // function prototypes - small trees
 int add_small_tree(point const &pos, float height, float width, int tree_type, bool calc_z);
