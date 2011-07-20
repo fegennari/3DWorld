@@ -12,7 +12,7 @@ bool     const ENABLE_DLIST      = 1;
 unsigned const DEF_SHADOW_MAP_SZ = 2048; // width/height
 
 bool scene_dlist_invalid(0);
-unsigned shadow_map_sz(DEF_SHADOW_MAP_SZ);
+unsigned shadow_map_sz(DEF_SHADOW_MAP_SZ), smap_dlist(0);
 int enable_shadow_maps(2); // 1 = dynamic shadows, 2 = dynamic + static shadows
 
 extern bool have_drawn_cobj;
@@ -22,24 +22,19 @@ extern vector<coll_obj> coll_objects;
 
 
 struct smap_data_t {
-	unsigned tid, tu_id, fbo_id, dlist;
+	unsigned tid, tu_id, fbo_id;
 	float approx_pixel_width;
 	pos_dir_up pdu;
 
-	smap_data_t() : tid(0), tu_id(0), fbo_id(0), dlist(0), approx_pixel_width(0.0) {}
+	smap_data_t() : tid(0), tu_id(0), fbo_id(0), approx_pixel_width(0.0) {}
 
 	int get_ndiv(float radius) {
 		// FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
 		return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width)));
 	}
-	void free_dlist() {
-		if (glIsList(dlist)) glDeleteLists(dlist, 1);
-		dlist = 0;
-	}
 	void free_gl_state() {
 		free_texture(tid);
 		free_fbo(fbo_id);
-		free_dlist();
 	}
 	void create_shadow_map_for_light(int light, point const &lpos);
 };
@@ -57,6 +52,13 @@ unsigned get_shadow_map_tid(int light) {
 
 bool smap_disabled() {
 	return (!enable_shadow_maps || (!have_drawn_cobj && no_grass() && !snow_enabled()));
+}
+
+
+void free_smap_dlist() {
+
+	if (glIsList(smap_dlist)) glDeleteLists(smap_dlist, 1);
+	smap_dlist = 0;
 }
 
 
@@ -229,14 +231,14 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		}
 	}
 	if (enable_shadow_maps == 2) { // add static objects
-		if (dlist) {
-			assert(glIsList(dlist));
-			glCallList(dlist);
+		if (smap_dlist) {
+			assert(glIsList(smap_dlist));
+			glCallList(smap_dlist);
 		}
 		else {
 			if (ENABLE_DLIST) {
-				dlist = glGenLists(1);
-				glNewList(dlist, GL_COMPILE_AND_EXECUTE);
+				smap_dlist = glGenLists(1);
+				glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
 			}
 			int in_cur_prim(PRIM_UNSET);
 
@@ -289,11 +291,16 @@ void create_shadow_map() {
 	ground_effects_level = 0;
 	display_mode &= ~0x08; // disable occlusion culling
 
+	// check dlist
+	if (scene_dlist_invalid) {
+		free_smap_dlist();
+		scene_dlist_invalid = 0;
+	}
+
 	// render shadow maps to textures
 	point lpos;
 	
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		if (scene_dlist_invalid) smap_data[l].free_dlist();
 		if (!glIsEnabled(GL_LIGHT0 + l) || !get_light_pos(lpos, l)) continue;
 		smap_data[l].create_shadow_map_for_light(l, lpos);
 	}
@@ -307,7 +314,6 @@ void create_shadow_map() {
 	display_mode = display_mode_;
 	camera_pos   = camera_pos_;
 	camera_pdu   = camera_pdu_;
-	scene_dlist_invalid = 0;
 	//PRINT_TIME("Shadow Map Creation");
 }
 
@@ -317,6 +323,7 @@ void free_shadow_map_textures() {
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		smap_data[l].free_gl_state();
 	}
+	free_smap_dlist();
 }
 
 
