@@ -2,7 +2,7 @@
 e 3
 l 0.8 0.0 0.0 0.0 1.0 -1 1 # shiny black metal
 y 1.0
-#r 0.9 90.0 # set specularity
+r 0.9 90.0 # set specularity
 
 # pole
 C 0.0 0.0 0.00  0.0 0.0 1.01  0.025 0.015
