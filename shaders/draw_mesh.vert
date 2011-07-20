@@ -1,17 +1,15 @@
-varying vec3 eye, dlpos, normal;
+varying vec3 eye, dlpos, normal; // world space
+varying vec3 eye_norm;
 
 void main()
 {
 	setup_texgen(0);
 	setup_texgen(1);
 	gl_Position = ftransform();
-	vec3 norm = gl_NormalMatrix * gl_Normal; // eye space, not normalized
+	eye_norm = normalize(gl_NormalMatrix * gl_Normal); // eye space
 	normal = normalize(gl_Normal);
 	dlpos  = gl_Vertex.xyz;
 	eye    = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
-	vec4 color  = gl_Color * gl_LightModel.ambient;
-	if (enable_light0) color += add_light_comp(norm, 0);
-	if (enable_light1) color += add_light_comp(norm, 1);
-	gl_FrontColor = clamp(color, 0.0, 1.0);
+	gl_FrontColor = gl_Color;
 	set_fog();
 } 

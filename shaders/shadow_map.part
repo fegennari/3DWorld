@@ -6,7 +6,7 @@ uniform sampler2D sm_tex[NUM_LIGHT_SRC];
 float get_shadow_map_weight(in vec4 pos, in int light) {
 	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id[light]] * pos;
 	shadow_coord /= shadow_coord.w;
-	shadow_coord.z -= 0.0005; // Used to lower moiré pattern and self-shadowing
+	shadow_coord.z -= 0.001; // Used to lower moiré pattern and self-shadowing
 	float dist = texture2D(sm_tex[light], shadow_coord.st).z;
 	return ((dist < shadow_coord.z) ? 0.0 : 1.0);
 }
