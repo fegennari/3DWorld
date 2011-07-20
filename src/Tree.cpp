@@ -58,7 +58,7 @@ point leaf_points[4]; // z = 0.0 -> -0.05
 tree_cont_t t_trees;
 
 
-extern bool has_snow, scene_dlist_invalid;
+extern bool has_snow;
 extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll;
 extern long rseed1, rseed2;
@@ -271,6 +271,16 @@ void draw_trees() {
 }
 
 
+void draw_trees_shadow() {
+
+	if (!(tree_mode & 1)) return;
+	
+	for (unsigned i = 0; i < t_trees.size(); ++i) {
+		t_trees[i].draw_tree_shadow();
+	}
+}
+
+
 void tree::mark_leaf_changed(unsigned i) {
 
 	// Note: could keep track of the min/max changed leaf index and update a sub-range,
@@ -333,7 +343,6 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 		}
 		mark_leaf_changed(i);
 	}
-	scene_dlist_invalid = 1;
 }
 
 
@@ -481,6 +490,36 @@ void tree::clear_vbo() {
 }
 
 
+void tree::draw_tree_shadow() {
+
+	if (!created) return;
+	assert(USE_VBOS);
+	
+	if (branch_vbo > 0 && branch_ivbo > 0) { // draw branches
+		size_t const branch_stride(sizeof(vert_norm_tc));
+		bind_vbo(branch_vbo,  0); // use vbo for rendering
+		bind_vbo(branch_ivbo, 1);
+		set_array_client_state(1, 0, 0, 0);
+		glVertexPointer(3, GL_FLOAT, branch_stride, 0);
+		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num_branch_quads, GL_UNSIGNED_SHORT, 0);
+		bind_vbo(0, 0);
+		bind_vbo(0, 1);
+	}
+	if (leaf_vbo > 0 && !leaves.empty()) { // draw leaves
+		assert(leaf_data.size() >= 4*leaves.size());
+		bind_vbo(leaf_vbo);
+		vert_norm_tc_color::set_vbo_arrays(1);
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.75);
+		select_texture(tree_types[type].leaf_tex);
+		glDrawArrays(GL_QUADS, 0, 4*leaves.size());
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_ALPHA_TEST);
+		bind_vbo(0);
+	}
+}
+
+
 void tree::draw_tree(bool invalidate_norms, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves) {
 
 	if (!created) return;
@@ -518,7 +557,6 @@ void tree::draw_tree(bool invalidate_norms, bool draw_branches, bool draw_near_l
 void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool use_vbos) {
 
 	point const camera(get_camera_pos());
-	assert(quadric);
 	set_fill_mode();
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
@@ -599,6 +637,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs, bool us
 		bind_vbo(0, 1);
 	}
 	else { // draw branches
+		assert(quadric);
 		float const bs_scale(350.0*mscale/dist_c);
 		gluQuadricTexture(quadric, GL_TRUE);
 
@@ -749,7 +788,6 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 		leaves_changed = 1;
 	}
 	assert(leaf_data.size() >= 4*leaves.size());
-	bool const draw_as_points(0); // testing
 
 	if (use_vbos) {
 		if (leaf_vbo == 0) {
@@ -762,10 +800,10 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 			bind_vbo(leaf_vbo);
 			if (leaves_changed) upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride);
 		}
-		vert_norm_tc_color::set_vbo_arrays(draw_as_points ? 4 : 1);
+		vert_norm_tc_color::set_vbo_arrays(1);
 	}
 	else {
-		leaf_data.front().set_state(draw_as_points ? 4 : 1);
+		leaf_data.front().set_state(1);
 	}
 	if (draw_model == 0) { // solid fill
 		enable_blend();
@@ -777,10 +815,10 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 	set_lighted_sides(2);
 	set_specular(0.1, 10.0);
 	set_fill_mode();
-	if (!draw_as_points) select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
+	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
 	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
-	glDrawArrays((draw_as_points ? GL_POINTS : GL_QUADS), 0, (draw_as_points ? 1 : 4)*nl);
+	glDrawArrays(GL_QUADS, 0, 4*nl);
 	glDisable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
 	glDisable(GL_TEXTURE_2D);

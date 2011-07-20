@@ -20,6 +20,8 @@ extern int window_width, window_height, animate2, display_mode, ground_effects_l
 extern vector<shadow_sphere> shadow_objs;
 extern vector<coll_obj> coll_objects;
 
+void draw_trees_shadow();
+
 
 struct smap_data_t {
 	unsigned tid, tu_id, fbo_id;
@@ -243,8 +245,8 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			int in_cur_prim(PRIM_UNSET);
 
 			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
-				//if (i->no_draw()) continue;
-				if (i->status != COLL_STATIC || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0) continue;
+				//if (i->no_draw()) continue; // FIXME
+				if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0) continue;
 				int ndiv(1);
 
 				if (i->type == COLL_SPHERE) {
@@ -259,6 +261,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			// FIXME: render trees and scenery so that alpha test works?
 			if (ENABLE_DLIST) glEndList();
 		}
+		draw_trees_shadow();
 		display_mesh();
 	}
 	glMatrixMode(GL_PROJECTION);
@@ -289,7 +292,7 @@ void create_shadow_map() {
 	do_zoom  = 0;
 	animate2 = 0; // disable any animations or generated effects
 	ground_effects_level = 0;
-	display_mode &= ~0x08; // disable occlusion culling
+	display_mode &= ~(0x08 | 0x0100); // disable occlusion culling and leaf wind
 
 	// check dlist
 	if (scene_dlist_invalid) {
