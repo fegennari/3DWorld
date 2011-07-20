@@ -208,8 +208,7 @@ void draw_stuff(int draw_uw, int timer1) {
 	}
 	else {
 		draw_snow();
-		if (display_mode & 0x02) draw_trees(
-);
+		if (display_mode & 0x02) draw_trees();
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("9");
 		draw_hmv();

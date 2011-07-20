@@ -20,6 +20,7 @@ extern int window_width, window_height, animate2, display_mode, ground_effects_l
 extern vector<shadow_sphere> shadow_objs;
 extern vector<coll_obj> coll_objects;
 
+void draw_small_trees();
 void draw_trees_shadow();
 
 
@@ -245,7 +246,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			int in_cur_prim(PRIM_UNSET);
 
 			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
-				//if (i->no_draw()) continue; // FIXME
+				if (i->no_draw()) continue; // only valid if drawing trees, small trees, and scenery separately
 				if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0) continue;
 				int ndiv(1);
 
@@ -258,9 +259,10 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
 			}
 			if (in_cur_prim >= 0) glEnd();
-			// FIXME: render trees and scenery so that alpha test works?
 			if (ENABLE_DLIST) glEndList();
 		}
+		draw_small_trees(); // too slow?
+		draw_scenery(1, 1);
 		draw_trees_shadow();
 		display_mesh();
 	}
