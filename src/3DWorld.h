@@ -67,8 +67,6 @@ float    const MIN_POLY_THICK   = 0.001;
 float    const LARGE_DIST       = 200.0;
 unsigned const MAX_CHARS        = 256;
 
-float    const SUN_THETA        = 1.2;
-float    const MOON_THETA       = 0.3;
 float    const LIGHT_ROT_AMT    = 0.05;
 float    const WIND_ADJUST      = 0.2;
 

@@ -11,6 +11,9 @@
 int const SHADOW_BORDER     = 1;
 int const CLIP_SHADOW_CUBES = 1;
 
+float const SUN_THETA       = 1.2;
+float const MOON_THETA      = 0.3;
+
 
 struct shad_env { // shadow envelope
 
