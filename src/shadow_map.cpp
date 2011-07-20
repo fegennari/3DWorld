@@ -8,9 +8,10 @@
 
 using namespace std;
 
-unsigned const SHADOW_MAP_SZ = 2048; // width/height
+unsigned const DEF_SHADOW_MAP_SZ = 2048; // width/height
 
 bool scene_dlist_invalid(0);
+unsigned shadow_map_sz(DEF_SHADOW_MAP_SZ);
 int enable_shadow_maps(2); // 1 = dynamic shadows, 2 = dynamic + static shadows
 
 extern bool have_drawn_cobj;
@@ -34,6 +35,12 @@ struct smap_data_t {
 		if (glIsList(dlist)) glDeleteLists(dlist, 1);
 		dlist = 0;
 	}
+	void free_gl_state() {
+		free_texture(tid);
+		free_fbo(fbo_id);
+		free_dlist();
+	}
+	void create_shadow_map_for_light(int light, point const &lpos);
 };
 
 smap_data_t smap_data[NUM_LIGHT_SRC];
@@ -163,24 +170,23 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 }
 
 
-void create_shadow_map_for_light(int light, point const &lpos) {
+void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
-	smap_data_t &data(smap_data[light]);
-	data.tu_id = (6 + light); // Note: only 8 TUs guaranteed so we can have 2 lights
+	tu_id = (6 + light); // Note: only 8 TUs guaranteed so we can have 2 lights
 
 	// setup textures and framebuffer
-	if (!data.tid) {
+	if (!tid) {
 		bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
-		setup_texture(data.tid, GL_MODULATE, 0, 0, 0, 0, 0, nearest);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SZ, SHADOW_MAP_SZ, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+		setup_texture(tid, GL_MODULATE, 0, 0, 0, 0, 0, nearest);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadow_map_sz, shadow_map_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 		glDisable(GL_TEXTURE_2D);
 	}
 
 	// Render from the light POV to a FBO, store depth values only
-	enable_fbo(data.fbo_id, data.tid, 1);
+	enable_fbo(fbo_id, tid, 1);
 
 	// setup render state
-	glViewport(0, 0, SHADOW_MAP_SZ, SHADOW_MAP_SZ);
+	glViewport(0, 0, shadow_map_sz, shadow_map_sz);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
@@ -188,13 +194,13 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 	glMatrixMode(GL_MODELVIEW);
 	float sradius(0.0);
 	camera_pos = lpos;
-	data.pdu   = camera_pdu = get_light_pdu(lpos, 1, 1, &sradius);
-	camera_pdu.valid = 0; // FIXME: should anything ever be out of the light view frustum? the camera when not over the mesh?
-	data.approx_pixel_width = sradius / SHADOW_MAP_SZ;
+	pdu        = camera_pdu = get_light_pdu(lpos, 1, 1, &sradius);
+	camera_pdu.valid   = 0; // FIXME: should anything ever be out of the light view frustum? the camera when not over the mesh?
+	approx_pixel_width = sradius / shadow_map_sz;
 	check_gl_error(201);
 
 	// setup texture matrix
-	set_multitex(data.tu_id);
+	set_multitex(tu_id);
 	set_texture_matrix();
 	disable_multitex_a();
 	glDisable(GL_TEXTURE_2D);
@@ -208,8 +214,8 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 
 	if (enable_shadow_maps) { // add dynamic objects
 		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
-			if (!data.pdu.sphere_visible_test(i->pos, i->radius)) continue;
-			int const ndiv(data.get_ndiv(i->radius));
+			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
+			int const ndiv(get_ndiv(i->radius));
 
 			if (i->ctype != COLL_SPHERE) {
 				assert((unsigned)i->cid < coll_objects.size());
@@ -222,29 +228,25 @@ void create_shadow_map_for_light(int light, point const &lpos) {
 		}
 	}
 	if (enable_shadow_maps == 2) { // add static objects
-		if (data.dlist) {
-			assert(glIsList(data.dlist));
-			glCallList(data.dlist);
+		if (dlist) {
+			assert(glIsList(dlist));
+			glCallList(dlist);
 		}
 		else {
-			data.dlist = glGenLists(1);
-			glNewList(data.dlist, GL_COMPILE_AND_EXECUTE);
+			dlist = glGenLists(1);
+			glNewList(dlist, GL_COMPILE_AND_EXECUTE);
 			int in_cur_prim(PRIM_UNSET);
-			point center;
-			float radius;
 
 			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
 				//if (i->no_draw()) continue;
 				if (i->status != COLL_STATIC || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0) continue;
-				i->bounding_sphere(center, radius);
-				//if (!data.pdu.sphere_visible_test(center, radius)) continue; // shouldn't fail
 				int ndiv(1);
 
 				if (i->type == COLL_SPHERE) {
-					ndiv = data.get_ndiv(radius);
+					ndiv = get_ndiv(i->radius);
 				}
 				else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
-					ndiv = data.get_ndiv(max(i->radius, i->radius2));
+					ndiv = get_ndiv(max(i->radius, i->radius2));
 				}
 				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1);
 			}
@@ -290,7 +292,7 @@ void create_shadow_map() {
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
 		if (scene_dlist_invalid) smap_data[l].free_dlist();
 		if (!glIsEnabled(GL_LIGHT0 + l) || !get_light_pos(lpos, l)) continue;
-		create_shadow_map_for_light(l, lpos);
+		smap_data[l].create_shadow_map_for_light(l, lpos);
 	}
 
 	// restore old state
@@ -310,9 +312,7 @@ void create_shadow_map() {
 void free_shadow_map_textures() {
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
-		free_texture(smap_data[l].tid);
-		free_fbo(smap_data[l].fbo_id);
-		smap_data[l].free_dlist();
+		smap_data[l].free_gl_state();
 	}
 }
 

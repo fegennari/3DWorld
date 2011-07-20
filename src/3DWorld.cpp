@@ -103,7 +103,7 @@ char player_name[MAX_CHARS] = "Player";
 extern bool clear_landscape_vbo, use_dense_voxels;
 extern int flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS, NUM_THREADS, grass_density, max_unique_trees;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, NUM_THREADS, grass_density, max_unique_trees, shadow_map_sz;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
 extern float mesh_scale, mesh_scale2, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width;
 extern point hmv_pos;
@@ -1442,6 +1442,9 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "scene_size") {
 			if (fscanf(fp, "%f%f%f", &X_SCENE_SIZE, &Y_SCENE_SIZE, &Z_SCENE_SIZE) != 3) cfg_err("scene size command", error);
+		}
+		else if (str == "shadow_map_sz") {
+			if (!read_uint(fp, shadow_map_sz) || shadow_map_sz <= 0) cfg_err("shadow_map_sz command", error);
 		}
 		else if (str == "color_bit_depth") {
 			if (!read_int(fp, color_bit_depth)) cfg_err("color_bit_depth command", error);
