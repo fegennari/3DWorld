@@ -29,9 +29,6 @@ extern vector<light_source> dl_sources;
 extern vector<shadow_sphere> shadow_objs;
 
 
-bool snow_enabled();
-
-
 class grass_manager_t {
 	
 	struct grass_t { // size = 48

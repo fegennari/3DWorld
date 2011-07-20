@@ -54,7 +54,6 @@ extern tree_cont_t t_trees;
 void display_universe();
 void display_inf_terrain();
 bool universe_intersection_test(point const &pos, vector3d const &dir, float range);
-void draw_snow();
 void update_temperature(bool verbose);
 
 

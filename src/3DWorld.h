@@ -1705,6 +1705,13 @@ unsigned set_shader_prog(std::string const &vs_name, std::string const &fs_name,
 						 int in_prim=0, int out_prim=0, int verts_out=0);
 void unset_shader_prog();
 
+// function prototypes - snow
+bool snow_enabled();
+void gen_snow_coverage();
+void reset_snow_vbos();
+void draw_snow();
+bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, bool crush_snow);
+
 // function prototypes - waypoints
 void create_waypoints(vector<user_waypt_t> const &user_waypoints);
 void shift_waypoints(vector3d const &vd);

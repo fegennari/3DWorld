@@ -28,8 +28,6 @@ extern vector<laser_beam> lasers;
 extern lmap_manager_t lmap_manager;
 
 
-bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, bool crush_snow);
-
 float get_scene_radius() {return sqrt(2.0*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
 float get_step_size()    {return 0.3*(DX_VAL + DY_VAL + DZ_VAL);}
 

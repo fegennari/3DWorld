@@ -44,8 +44,6 @@ int  get_next_avail_index();
 void free_index(int index);
 void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams);
 
-bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, bool crush_snow);
-
 
 
 bool scorch_mark::is_on_cobj(int cobj) const {

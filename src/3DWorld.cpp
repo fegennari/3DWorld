@@ -122,9 +122,6 @@ void reset_planet_defaults();
 
 void verify_wmode(player_state &sstate);
 
-void gen_snow_coverage();
-void reset_snow_vbos();
-
 void create_sin_table();
 
 

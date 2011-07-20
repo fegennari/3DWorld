@@ -48,7 +48,7 @@ unsigned get_shadow_map_tid(int light) {
 }
 
 bool smap_disabled() {
-	return (!enable_shadow_maps || (!have_drawn_cobj && no_grass()));
+	return (!enable_shadow_maps || (!have_drawn_cobj && no_grass() && !snow_enabled()));
 }
 
 
