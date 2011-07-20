@@ -676,6 +676,7 @@ void free_all_coll_objects() {
 	
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {
 		if (coll_objects[i].fixed) remove_reset_coll_obj(coll_objects[i].id);
+		coll_objects[i].waypt_id = -1;
 	}
 	for (unsigned i = 0; i < hmv_coll_obj.size(); ++i) {
 		remove_reset_coll_obj(hmv_coll_obj[i]);
