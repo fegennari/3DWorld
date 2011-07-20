@@ -8,6 +8,7 @@
 
 using namespace std;
 
+bool     const ENABLE_DLIST      = 1;
 unsigned const DEF_SHADOW_MAP_SZ = 2048; // width/height
 
 bool scene_dlist_invalid(0);
@@ -219,7 +220,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
 			if (i->ctype != COLL_SPHERE) {
 				assert((unsigned)i->cid < coll_objects.size());
-				coll_objects[i->cid].simple_draw(ndiv);
+				coll_objects[i->cid].simple_draw(ndiv, PRIM_DISABLED, 1, 0);
 			}
 			else {
 				// FIXME: use circle texture billboards
@@ -233,8 +234,10 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			glCallList(dlist);
 		}
 		else {
-			dlist = glGenLists(1);
-			glNewList(dlist, GL_COMPILE_AND_EXECUTE);
+			if (ENABLE_DLIST) {
+				dlist = glGenLists(1);
+				glNewList(dlist, GL_COMPILE_AND_EXECUTE);
+			}
 			int in_cur_prim(PRIM_UNSET);
 
 			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
@@ -248,11 +251,11 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 				else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
 					ndiv = get_ndiv(max(i->radius, i->radius2));
 				}
-				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1);
+				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
 			}
 			if (in_cur_prim >= 0) glEnd();
 			// FIXME: render trees and scenery so that alpha test works?
-			glEndList();
+			if (ENABLE_DLIST) glEndList();
 		}
 		display_mesh();
 	}

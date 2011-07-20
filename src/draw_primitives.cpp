@@ -1194,7 +1194,10 @@ void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, bool r
 void draw_sphere_dlist_raw(int ndiv, bool textured, bool half) {
 
 	assert(ndiv <= N_SPHERE_DIV);
-	glCallList(sphere_dlists[((ndiv-1) << 2) + (half << 1) + textured]);
+	unsigned const dlist_id(sphere_dlists[((ndiv-1) << 2) + (half << 1) + textured]);
+	assert(dlist_id > 0);
+	//assert(glIsList(dlist_id));
+	glCallList(dlist_id);
 }
 
 

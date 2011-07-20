@@ -428,7 +428,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 }
 
 
-int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals) const {
+int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals, bool in_dlist) const {
 
 	switch (type) {
 	case COLL_CUBE:
@@ -440,7 +440,7 @@ int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals) const {
 		{
 			bool const draw_ends(!(cp.surfs & 1));
 
-			if (no_normals && ndiv == 3 && !draw_ends) { // special case draw as quad
+			if (no_normals && !in_dlist && ndiv == 3 && !draw_ends) { // special case draw as quad
 				point pts[4];
 				int npts(0);
 				vector3d v2; // unused
@@ -464,8 +464,12 @@ int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals) const {
 			in_cur_prim = PRIM_UNSET;
 		}
 		//if (no_normals && ndiv == 3) {} // draw as circle/texture?
-		//draw_sphere_dlist(points[0], radius, ndiv, 0); // faster, but doesn't work when in dlist
-		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1);
+		if (in_dlist) {
+			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1);
+		}
+		else {
+			draw_sphere_dlist(points[0], radius, ndiv, 0); // faster, but doesn't work when in dlist
+		}
 		break;
 
 	case COLL_POLYGON:
