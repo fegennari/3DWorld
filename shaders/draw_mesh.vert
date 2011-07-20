@@ -6,7 +6,7 @@ void main()
 	setup_texgen(0);
 	setup_texgen(1);
 	gl_Position = ftransform();
-	eye_norm = normalize(gl_NormalMatrix * gl_Normal); // eye space
+	eye_norm = gl_NormalMatrix * gl_Normal; // eye space
 	normal = normalize(gl_Normal);
 	dlpos  = gl_Vertex.xyz;
 	eye    = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
