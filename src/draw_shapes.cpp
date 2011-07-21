@@ -21,7 +21,6 @@ bool const ENABLE_DL_LOD     = 0; // faster but lower visual quality
 bool const DO_CIRC_PROJ_CLIP = 1;
 bool const RENDER_PART_INT   = 1; // if 1, render only the visible portions of the surface using the slow algorithm, if 0 render all of the surface using the fast algorithm
 bool const LOD_QUAD_TRIS     = 0; // slightly faster but somewhat lower quality (better off when dlists are enabled)
-bool const FAST_SHAPE_DRAW   = 0; // disable shadows and subdivision of shapes
 int  const USE_MESH_INT      = 1; // 0 = none, 1 = high res, 2 = low res
 int  const VERBOSE           = 0; // 0, 1, 2, 3
 
@@ -178,7 +177,7 @@ struct dqt_params {
 		: double_sided(db), is_quadric(iq), cobj(cob), color(coll_objects[cobj].cp.color), stest(coll_objects[cobj].sobjs) {}
 	void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int dim, int dir, unsigned face, bool no_shadow_edge) const;
 	void draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, int dir) const;
-	void draw_polygon(point const *points, const vector3d *normals, int npoints, vector3d const &norm, int id, int subpoly) const;
+	void draw_polygon(point const *points, const vector3d *normals, int npoints, vector3d const &norm, int id, int subpoly, bool no_subdiv) const;
 };
 
 
@@ -1159,7 +1158,7 @@ void dqt_params::draw_quad(float d1a, float d1b, float d2a, float d2b, float d0,
 }
 
 
-void coll_obj::draw_coll_cube(int do_fill, int tid) const {
+void coll_obj::draw_coll_cube(int do_fill, int tid, bool no_subdiv) const {
 
 	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
@@ -1183,7 +1182,6 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 	pair<float, unsigned> faces[6];
 	for (unsigned i = 0; i < 6; ++i) faces[i].second = i;
 	vector3d tex_delta(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
-	bool const no_subdiv(FAST_SHAPE_DRAW || shadow_map_enabled());
 
 	if (platform_id >= 0) { // make texture scroll with platform
 		assert(platform_id < (int)platforms.size());
@@ -1266,9 +1264,9 @@ bool camera_behind_polygon(point const *const points, int npoints, bool &cbf) {
 
 
 void dqt_params::draw_polygon(point const *points, const vector3d *normals, int npoints,
-	vector3d const &norm, int id, int subpoly) const
+	vector3d const &norm, int id, int subpoly, bool no_subdiv) const
 {
-	if (FAST_SHAPE_DRAW || shadow_map_enabled() || (npoints != 3 && npoints != 4)) {
+	if (no_subdiv || (npoints != 3 && npoints != 4)) {
 		set_shadowed_state(0);
 		draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
 		return;
@@ -1339,16 +1337,16 @@ void dqt_params::draw_polygon(point const *points, const vector3d *normals, int 
 }
 
 
-void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid) const {
+void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid, bool no_subdiv) const {
 
 	float const thick(fabs(thickness));
 	dqt_params q(1, id, 0); // just set double_sided
 	bool const textured(tid >= 0);
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
 	
-	if (/*FAST_SHAPE_DRAW ||*/ thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
+	if (thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
 		if (textured) setup_polygon_texgen(norm, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-		q.draw_polygon(points, normals, npoints, norm, 0, 0);
+		q.draw_polygon(points, normals, npoints, norm, 0, 0, no_subdiv);
 		return;
 	}
 	assert(points != NULL && (npoints == 3 || npoints == 4));
@@ -1407,7 +1405,7 @@ void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid) con
 				norm2.negate();
 			}
 			if (textured) setup_polygon_texgen(norm2, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-			q.draw_polygon(&(pts[s].front()), ((normals && !s) ? n2 : NULL), npoints, norm2, s, 0); // draw bottom surface
+			q.draw_polygon(&(pts[s].front()), ((normals && !s) ? n2 : NULL), npoints, norm2, s, 0, no_subdiv); // draw bottom surface
 			if (!s) reverse(pts[s].begin(), pts[s].end());
 		}
 		else { // draw sides
@@ -1416,7 +1414,7 @@ void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid) con
 			bool cbf2;
 			bool const no_shadow(camera_behind_polygon(side_pts, 4, cbf2));
 
-			if (!bfc || !cbf2) {
+			if (!bfc || !cbf2) { // FIXME: no_subdiv
 				if (textured) setup_polygon_texgen(get_poly_norm(side_pts), tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
 				q.draw_quad_tri(side_pts, NULL, 4, no_shadow, 1, i+4, no_shadow); // back face cull?
 			}
@@ -1425,22 +1423,9 @@ void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid) con
 }
 
 
-void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, bool no_bfc, bool no_lighting, int tid) const {
+void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, bool no_bfc, int tid) const {
 
 	assert(radius > 0.0 || radius2 > 0.0);
-
-	if (FAST_SHAPE_DRAW || shadow_map_enabled() || no_lighting) {
-		set_shadowed_state(0);
-		draw_fast_cylinder(points[0], points[1], radius, radius2, nsides, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
-
-		if (draw_ends && tid >= 0) { // draw ends with different texture matrix
-			float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
-			setup_polygon_texgen((points[1] - points[0]).get_norm(), tscale, xlate, 0, USE_ATTR_TEXGEN);
-			// FIXME: Not exactly correct, we're redrawing the sides here as well but there are texgen issues if we don't
-			draw_fast_cylinder(points[0], points[1], radius, radius2, nsides, 0, 1); // Note: using texgen, not textured
-		}
-		return;
-	}
 	bool const no_clip(no_bfc || is_semi_trans());
 	point camera(get_camera_pos());
 	fix_nsides(nsides);
@@ -1472,7 +1457,7 @@ void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, boo
 				q.draw_quad_tri(pts, normals, 3, 0, 0, index, 0); // triangle
 			}
 			else {
-				q.draw_polygon(pts, normals, 4, up_vector, index, 1); // polygon
+				q.draw_polygon(pts, normals, 4, up_vector, index, 1, 0); // polygon
 			}
 		}
 	} // for S
@@ -1502,15 +1487,9 @@ void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, boo
 }
 
 
-void coll_obj::draw_subdiv_sphere_at(int ndiv, bool no_lighting, int tid) const {
+void coll_obj::draw_subdiv_sphere_at(int ndiv, int tid) const {
 
 	assert(radius > 0.0);
-
-	if (FAST_SHAPE_DRAW || shadow_map_enabled() || no_lighting) {
-		set_shadowed_state(0);
-		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
-		return;
-	}
 	bool const bfc(!is_semi_trans());
 	fix_nsides(ndiv);
 	point camera(get_camera_pos());
@@ -1530,7 +1509,7 @@ void coll_obj::draw_subdiv_sphere_at(int ndiv, bool no_lighting, int tid) const 
 
 			if (!bfc || dot_product_ptv(get_center(normals, 4), camera, get_center(pts, 4)) > 0.0) { // back face culling
 				int const index(s + (t<<8) + (ndiv<<16) + 1);
-				q.draw_polygon(pts, normals, 4, up_vector, index, 1); // polygon segment
+				q.draw_polygon(pts, normals, 4, up_vector, index, 1, 0); // polygon segment
 			}
 		}
 	}

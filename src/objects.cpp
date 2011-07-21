@@ -346,11 +346,9 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		unsigned const ncorners(get_cube_corners(d, pts, camera, 0)); // 8 corners allocated, but only 6 used
 		if (is_occluded(occluders, pts, ncorners, camera)) return;
 	}
-	//if (brad/distance_to_camera(center) < 0.01) return; // too far/small
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
-	bool const no_lighting(cp.color == BLACK && cp.specular == 0.0);
-	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX); //(no_lighting ? BLACK_TEX : WHITE_TEX)
+	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
 	float const ar(get_tex_ar(tid));
 	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 
@@ -394,9 +392,11 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		}
 		return;
 	}
+	bool const no_subdiv(shadow_map_enabled() || (cp.color == BLACK && cp.specular == 0.0));
+
 	switch (type) {
 	case COLL_CUBE:
-		draw_coll_cube((draw_model == 0), tid);
+		draw_coll_cube((draw_model == 0), tid, no_subdiv);
 		break;
 
 	case COLL_CYLINDER:
@@ -405,23 +405,47 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 			float const scale(NDIV_SCALE*get_zoom_scale());
 			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(center),
 				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
-			int const nsides(min(N_CYL_SIDES, max(3, (int)size)));
+			int const ndiv(min(N_CYL_SIDES, max(3, (int)size)));
+			bool const draw_ends(!(cp.surfs & 1));
 			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (points[1] - points[0]), USE_ATTR_TEXGEN);
-			draw_subdiv_cylinder(nsides, 1, !(cp.surfs & 1), (cp.surfs == 1), no_lighting, tid);
+
+			if (no_subdiv) {
+				set_shadowed_state(0);
+				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
+
+				if (draw_ends && tid >= 0) { // draw ends with different texture matrix
+					float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
+					setup_polygon_texgen((points[1] - points[0]).get_norm(), tscale, xlate, 0, USE_ATTR_TEXGEN);
+					// FIXME: Not exactly correct, we're redrawing the sides here as well but there are texgen issues if we don't
+					draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 1); // Note: using texgen, not textured
+				}
+				return;
+			}
+			else {
+				draw_subdiv_cylinder(ndiv, 1, draw_ends, (cp.surfs == 1), tid);
+			}
 		}
 		break;
 
 	case COLL_SPHERE:
 		{
 			float const scale(0.7*NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
-			int const nsides(min(N_SPHERE_DIV, max(5, (int)size)));
+			int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
 			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z, USE_ATTR_TEXGEN);
-			draw_subdiv_sphere_at(nsides, no_lighting, tid);
+
+			if (no_subdiv) {
+				set_shadowed_state(0);
+				draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
+				return;
+			}
+			else {
+				draw_subdiv_sphere_at(ndiv, tid);
+			}
 		}
 		break;
 
 	case COLL_POLYGON:
-		draw_extruded_polygon(NULL, tid);
+		draw_extruded_polygon(NULL, tid, no_subdiv);
 		break;
 	}
 }

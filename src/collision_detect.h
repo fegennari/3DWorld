@@ -226,10 +226,10 @@ public:
 	void register_coll(unsigned char coll_time, unsigned char coll_type_) {last_coll = coll_time; coll_type = coll_type_;}
 
 	// drawing code
-	void draw_coll_cube(int do_fill, int tid) const;
-	void draw_extruded_polygon(vector3d const *const normals, int tid) const;
-	void draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, bool no_bfc, bool no_lighting, int tid) const;
-	void draw_subdiv_sphere_at(int ndiv, bool no_lighting, int tid) const;
+	void draw_coll_cube(int do_fill, int tid, bool no_subdiv) const;
+	void draw_extruded_polygon(vector3d const *const normals, int tid, bool no_subdiv) const;
+	void draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, bool no_bfc, int tid) const;
+	void draw_subdiv_sphere_at(int ndiv, int tid) const;
 };
 
 
