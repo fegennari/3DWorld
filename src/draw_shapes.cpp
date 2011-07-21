@@ -41,7 +41,6 @@ unsigned long long max_lighted(0);
 float L1_SUBDIV_SIZE(1.0);
 
 
-extern bool use_stencil_shadows;
 extern int cobj_counter, coll_border, begin_motion, num_groups, camera_coll_id, spectate;
 extern int display_mode, camera_mode, camera_view, xoff2, yoff2;
 extern float max_proj_rad, ztop, zbottom, zmax, zmin, DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
@@ -1367,7 +1366,6 @@ void add_shadow_obj(point const &pos, float radius, int coll_id) {
 
 void add_coll_shadow_objs() {
 	
-	if (use_stencil_shadows) return; // if stencil shadows are enabled we don't do them here
 	RESET_TIME;
 	shadow_objs.resize(0);
 	point const camera(get_camera_pos());

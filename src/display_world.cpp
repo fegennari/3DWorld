@@ -825,13 +825,13 @@ void display(void) {
 		check_gl_error(4);
 		if (TIMETEST) PRINT_TIME("1");
 
-		create_shadow_map();
-		if (TIMETEST) PRINT_TIME("1.5");
-
 		if (world_mode == WMODE_INF_TERRAIN) { // infinite terrain mode
 			display_inf_terrain();
 		}
 		else { // finite terrain mode
+			create_shadow_map();
+			if (TIMETEST) PRINT_TIME("1.5");
+
 			if (mesh_invalidated) {
 				gen_mesh_bsp_tree();
 				mesh_invalidated = 0;

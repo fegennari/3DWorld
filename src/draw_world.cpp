@@ -1811,8 +1811,6 @@ void setup_object_render_data() {
 	if (TIMETEST) {PRINT_TIME("Add Dlights");}
 	upload_dlights_textures();
 	if (TIMETEST) {PRINT_TIME("Dlights Textures");}
-	add_coll_shadow_objs();
-	if (TIMETEST) {PRINT_TIME("Add Shadows");}
 	get_occluders();
 	if (TIMETEST) {PRINT_TIME("Get Occluders");}
 }
