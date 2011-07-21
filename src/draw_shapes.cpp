@@ -45,7 +45,7 @@ float L1_SUBDIV_SIZE(1.0);
 
 extern bool use_stencil_shadows;
 extern int cobj_counter, coll_border, begin_motion, num_groups, camera_coll_id, spectate;
-extern int display_mode, camera_mode, camera_view, xoff2, yoff2, enable_shadow_maps;
+extern int display_mode, camera_mode, camera_view, xoff2, yoff2;
 extern float max_proj_rad, ztop, zbottom, zmax, zmin, DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
 extern double camera_zh;
 extern point up_vector;
@@ -1183,7 +1183,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 	pair<float, unsigned> faces[6];
 	for (unsigned i = 0; i < 6; ++i) faces[i].second = i;
 	vector3d tex_delta(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
-	bool const no_subdiv(FAST_SHAPE_DRAW || enable_shadow_maps == 2);
+	bool const no_subdiv(FAST_SHAPE_DRAW || shadow_map_enabled());
 
 	if (platform_id >= 0) { // make texture scroll with platform
 		assert(platform_id < (int)platforms.size());
@@ -1268,7 +1268,7 @@ bool camera_behind_polygon(point const *const points, int npoints, bool &cbf) {
 void dqt_params::draw_polygon(point const *points, const vector3d *normals, int npoints,
 	vector3d const &norm, int id, int subpoly) const
 {
-	if (FAST_SHAPE_DRAW || enable_shadow_maps == 2 || (npoints != 3 && npoints != 4)) {
+	if (FAST_SHAPE_DRAW || shadow_map_enabled() || (npoints != 3 && npoints != 4)) {
 		set_shadowed_state(0);
 		draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
 		return;
@@ -1429,7 +1429,7 @@ void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, boo
 
 	assert(radius > 0.0 || radius2 > 0.0);
 
-	if (FAST_SHAPE_DRAW || enable_shadow_maps == 2 || no_lighting) {
+	if (FAST_SHAPE_DRAW || shadow_map_enabled() || no_lighting) {
 		set_shadowed_state(0);
 		draw_fast_cylinder(points[0], points[1], radius, radius2, nsides, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
 
@@ -1506,7 +1506,7 @@ void coll_obj::draw_subdiv_sphere_at(int ndiv, bool no_lighting, int tid) const 
 
 	assert(radius > 0.0);
 
-	if (FAST_SHAPE_DRAW || enable_shadow_maps == 2 || no_lighting) {
+	if (FAST_SHAPE_DRAW || shadow_map_enabled() || no_lighting) {
 		set_shadowed_state(0);
 		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
 		return;
@@ -1630,7 +1630,7 @@ void add_coll_shadow_objs() {
 	test_all = 0;
 	shadowed.clear();
 	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Sobjs Reset");}
-	if (enable_shadow_maps) return; // skip the rest
+	if (shadow_map_enabled()) return; // skip the rest
 	vector<int> cobjs;
 	unsigned nadded(0);
 

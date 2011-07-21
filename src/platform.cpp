@@ -7,7 +7,7 @@
 
 platform_cont platforms;
 
-extern int animate2, enable_shadow_maps;
+extern int animate2;
 extern float fticks;
 extern vector<coll_obj> coll_objects;
 
@@ -244,7 +244,7 @@ bool coll_obj::dynamic_shadows_only() const {
 	if (cp.color.alpha < 0.5) return 0; // semi-transparent
 	if (platform_id    < 0)   return 0;
 	assert(platform_id < (int)platforms.size());
-	return (enable_shadow_maps == 2 || platforms[platform_id].has_dynamic_shadows());
+	return (shadow_map_enabled() || platforms[platform_id].has_dynamic_shadows());
 }
 
 

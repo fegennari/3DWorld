@@ -8,12 +8,10 @@
 
 using namespace std;
 
-bool     const ENABLE_DLIST      = 1;
-unsigned const DEF_SHADOW_MAP_SZ = 2048; // width/height
+bool const ENABLE_DLIST = 1;
 
 bool scene_dlist_invalid(0);
-unsigned shadow_map_sz(DEF_SHADOW_MAP_SZ), smap_dlist(0);
-int enable_shadow_maps(2); // 1 = dynamic shadows, 2 = dynamic + static shadows
+unsigned shadow_map_sz(0), smap_dlist(0);
 
 extern bool have_drawn_cobj;
 extern int window_width, window_height, animate2, display_mode, ground_effects_level;
@@ -45,16 +43,16 @@ struct smap_data_t {
 smap_data_t smap_data[NUM_LIGHT_SRC];
 
 
+bool shadow_map_enabled() {
+	return (shadow_map_sz > 0);
+}
+
 unsigned get_shadow_map_tu_id(int light) {
 	return smap_data[light].tu_id;
 }
 
 unsigned get_shadow_map_tid(int light) {
 	return smap_data[light].tid;
-}
-
-bool smap_disabled() {
-	return (!enable_shadow_maps || (!have_drawn_cobj && no_grass() && !snow_enabled()));
 }
 
 
@@ -98,7 +96,7 @@ void set_texture_matrix() {
 
 void set_smap_shader_for_light(unsigned p, int light) {
 
-	if (smap_disabled()) return;
+	if (!shadow_map_enabled()) return;
 	assert(light >= 0 && light < NUM_LIGHT_SRC);
 	smap_data_t const &data(smap_data[light]);
 	assert(data.tid > 0);
@@ -121,7 +119,7 @@ void set_smap_shader_for_all_lights(unsigned p) {
 }
 
 
-pos_dir_up get_light_pdu(point const &lpos, bool set_pers, bool do_look_at, float *sradius=NULL) {
+pos_dir_up get_light_pdu(point const &lpos, bool set_matrix, float *sradius=NULL) {
 
 	float const scene_z1(min(zbottom, czmin)), scene_z2(max(ztop, czmax)), scene_dz(scene_z2 - scene_z1);
 	point const scene_center(0.0, 0.0, 0.5*(scene_z1 + scene_z2));
@@ -143,14 +141,12 @@ pos_dir_up get_light_pdu(point const &lpos, bool set_pers, bool do_look_at, floa
 	float const angle(atan2(scene_radius2, dist));
 	pos_dir_up const pdu(lpos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), dist-scene_radius, dist+scene_radius, 1.0);
 
-	if (set_pers) {
+	if (set_matrix) {
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		gluPerspective(2.0*angle/TO_RADIANS, 1.0, pdu.near_, pdu.far_);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-	}
-	if (do_look_at) {
 		gluLookAt(lpos.x, lpos.y, lpos.z, scene_center.x, scene_center.y, scene_center.z, up_dir.x, up_dir.y, up_dir.z);
 	}
 	return pdu;
@@ -170,7 +166,7 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
 	// draw light frustum
 	glColor4f(1.0, 1.0, 0.0, 0.25);
-	get_light_pdu(lpos, 0, 0).draw_frustum();
+	get_light_pdu(lpos, 0).draw_frustum();
 	disable_blend();
 	glEnable(GL_LIGHTING);
 }
@@ -200,8 +196,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	glMatrixMode(GL_MODELVIEW);
 	float sradius(0.0);
 	camera_pos = lpos;
-	pdu        = camera_pdu = get_light_pdu(lpos, 1, 1, &sradius);
-	camera_pdu.valid   = 0; // FIXME: should anything ever be out of the light view frustum? the camera when not over the mesh?
+	pdu        = camera_pdu = get_light_pdu(lpos, 1, &sradius);
 	approx_pixel_width = sradius / shadow_map_sz;
 	check_gl_error(201);
 
@@ -218,54 +213,52 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	WHITE.do_glColor();
 	check_gl_error(202);
 
-	if (enable_shadow_maps) { // add dynamic objects
-		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
-			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
-			int const ndiv(get_ndiv(i->radius));
+	// add dynamic objects
+	for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
+		if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
+		int const ndiv(get_ndiv(i->radius));
 
-			if (i->ctype != COLL_SPHERE) {
-				assert((unsigned)i->cid < coll_objects.size());
-				coll_objects[i->cid].simple_draw(ndiv, PRIM_DISABLED, 1, 0);
-			}
-			else {
-				// FIXME: use circle texture billboards
-				draw_sphere_dlist(i->pos, i->radius, ndiv, 0);
-			}
-		}
-	}
-	if (enable_shadow_maps == 2) { // add static objects
-		if (smap_dlist) {
-			assert(glIsList(smap_dlist));
-			glCallList(smap_dlist);
+		if (i->ctype != COLL_SPHERE) {
+			assert((unsigned)i->cid < coll_objects.size());
+			coll_objects[i->cid].simple_draw(ndiv, PRIM_DISABLED, 1, 0);
 		}
 		else {
-			if (ENABLE_DLIST) {
-				smap_dlist = glGenLists(1);
-				glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
-			}
-			int in_cur_prim(PRIM_UNSET);
-
-			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
-				if (i->no_draw()) continue; // only valid if drawing trees, small trees, and scenery separately
-				if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0) continue;
-				int ndiv(1);
-
-				if (i->type == COLL_SPHERE) {
-					ndiv = get_ndiv(i->radius);
-				}
-				else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
-					ndiv = get_ndiv(max(i->radius, i->radius2));
-				}
-				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
-			}
-			if (in_cur_prim >= 0) glEnd();
-			if (ENABLE_DLIST) glEndList();
+			draw_sphere_dlist(i->pos, i->radius, ndiv, 0); // use circle texture billboards?
 		}
-		draw_small_trees(); // too slow?
-		draw_scenery(1, 1);
-		draw_trees_shadow();
-		display_mesh();
 	}
+	if (smap_dlist) {
+		assert(glIsList(smap_dlist));
+		glCallList(smap_dlist);
+	}
+	else {
+		if (ENABLE_DLIST) {
+			smap_dlist = glGenLists(1);
+			glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
+		}
+		int in_cur_prim(PRIM_UNSET);
+
+		for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) { // test have_drawn_cobj?
+			if (i->no_draw()) continue; // only valid if drawing trees, small trees, and scenery separately
+			if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0) continue;
+			int ndiv(1);
+
+			if (i->type == COLL_SPHERE) {
+				ndiv = get_ndiv(i->radius);
+			}
+			else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
+				ndiv = get_ndiv(max(i->radius, i->radius2));
+			}
+			in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
+		}
+		if (in_cur_prim >= 0) glEnd();
+		if (ENABLE_DLIST) glEndList();
+	}
+	draw_small_trees(); // too slow?
+	draw_scenery(1, 1);
+	draw_trees_shadow();
+	display_mesh();
+	
+	// reset state
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
@@ -282,7 +275,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
 void create_shadow_map() {
 
-	if (smap_disabled()) return; // disabled
+	if (!shadow_map_enabled()) return; // disabled
 	//RESET_TIME;
 
 	// save state

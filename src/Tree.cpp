@@ -255,7 +255,7 @@ void draw_trees() {
 		if (lpos_change) update_cobj_tree();
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
-		bool const branch_smap = 0; // looks better, but slower
+		bool const branch_smap = 1; // looks better, but slower
 		colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 0, 0, 0, 1, 1, 0, 0, branch_smap)); // dynamic lights, but no smoke (yet)
 		draw_trees_bl(lpos_change, 1, 0, 0); // branches
 		end_smoke_shaders(orig_fog_color);

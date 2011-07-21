@@ -50,7 +50,7 @@ pt_line_drawer_hdr snow_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
-extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog, enable_shadow_maps;
+extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
 extern unsigned smoke_tid, dl_tid, num_stars;
@@ -1736,12 +1736,13 @@ colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, 
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap)
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
+	bool const use_shadow_map(use_smap && shadow_map_enabled());
 	set_int_shader_prefix ("use_texgen",      use_texgen,      0); // VS
 	set_bool_shader_prefix("keep_alpha",      keep_alpha,      1); // FS
 	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
 	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
 	set_bool_shader_prefix("do_lt_atten",     has_lt_atten,    1); // FS
-	set_bool_shader_prefix("use_shadow_map",  use_smap,        1); // FS
+	set_bool_shader_prefix("use_shadow_map",  use_shadow_map,  1); // FS
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		// Note: dynamic_smoke_shadows applies to light0 only
@@ -1776,7 +1777,7 @@ colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, 
 	add_uniform_float(p, "min_alpha", min_alpha);
 	add_uniform_float_array(p, "smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	add_uniform_float(p, "step_delta", HALF_DXY);
-	if (use_smap) set_smap_shader_for_all_lights(p);
+	if (use_shadow_map) set_smap_shader_for_all_lights(p);
 	//return change_fog_color(GRAY);
 
 	// setup fog
@@ -1837,7 +1838,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_specular(0.0, 1.0);
 	bool const has_lt_atten(draw_trans && !draw_solid);
 	// Note: enable direct_lighting if processing sun/moon shadows here
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten, (enable_shadow_maps != 0)));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
 	int last_tid(-1), last_group_id(-1), last_pri_dim(-1);
 	
 	if (draw_solid) {

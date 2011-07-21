@@ -41,7 +41,6 @@ extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, draw_mesh_sha
 extern unsigned num_jterms;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
-extern int enable_shadow_maps;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
@@ -189,7 +188,7 @@ class mesh_vertex_draw {
 
 		float light_scale(1.0);
 
-		if (enable_shadow_maps && draw_mesh_shader) {
+		if (shadow_map_enabled() && draw_mesh_shader) {
 			// nothing to do here
 		}
 		else if (sml) { // sun or moon shadows
@@ -473,9 +472,9 @@ void display_mesh() { // fast array version
 			set_shader_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			setup_enabled_lights();
 			set_dlights_booleans(1, 1); // FS
-			set_bool_shader_prefix("use_shadow_map", (enable_shadow_maps != 0), 1); // FS
+			set_bool_shader_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 			unsigned const p(set_shader_prog("fog.part+texture_gen.part+draw_mesh", "ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh"));
-			if (enable_shadow_maps) set_smap_shader_for_all_lights(p);
+			if (shadow_map_enabled()) set_smap_shader_for_all_lights(p);
 			setup_fog_scale(p);
 			add_uniform_int(p, "tex0", 0);
 			add_uniform_int(p, "tex1", 1);

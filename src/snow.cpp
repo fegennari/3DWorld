@@ -17,7 +17,7 @@ point vox_delta;
 map<int, unsigned> x_strip_map;
 
 extern bool disable_shaders;
-extern int display_mode, read_snow_file, write_snow_file, enable_shadow_maps;
+extern int display_mode, read_snow_file, write_snow_file;
 extern unsigned num_snowflakes;
 extern float ztop, zbottom, temperature, snow_depth, snow_random;
 extern vector3d cview_dir;
@@ -749,7 +749,7 @@ void draw_snow() {
 	static point last_lpos(all_zeros);
 	point const lpos(get_light_pos());
 
-	if (enable_shadow_maps != 2 && lpos != last_lpos) {
+	if (!shadow_map_enabled() && lpos != last_lpos) {
 		RESET_TIME;
 		update_cobj_tree();
 		snow_draw.update_shadows();
@@ -759,7 +759,7 @@ void draw_snow() {
 	//RESET_TIME;
 
 	if (!disable_shaders) {
-		bool const use_smap(enable_shadow_maps == 2);
+		bool const use_smap(shadow_map_enabled());
 		setup_enabled_lights();
 		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", !use_smap, d); // VS/FS
 		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS

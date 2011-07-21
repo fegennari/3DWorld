@@ -13,7 +13,7 @@
 float const NDIV_SCALE = 120.0;
 
 
-extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2, enable_shadow_maps;
+extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
 extern float temperature, tfticks;
 extern unsigned ALL_LT[];
 extern obj_type object_types[];
@@ -379,8 +379,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		vector3d tex_dir(0,0,0);
 		tex_dir[pri_dim] = 1.0;
 		setup_polygon_texgen(tex_dir, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-		unsigned char const shadowed(enable_shadow_maps ? 0 : 255); // all shadowed unless using shadow maps
-		set_shadowed_state(shadowed);
+		set_shadowed_state(0); // all unshadowed
 		glBegin(GL_TRIANGLES);
 	}
 	if (in_group) { // FIXME: color bug when using dynamic lighting

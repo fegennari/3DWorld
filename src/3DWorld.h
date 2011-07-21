@@ -1720,6 +1720,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big);
 void check_falling_cobjs();
 
 // function prototypes - shadow_map
+bool shadow_map_enabled();
 unsigned get_shadow_map_tu_id(int light);
 unsigned get_shadow_map_tid(int light);
 void set_smap_shader_for_light(unsigned p, int light);
