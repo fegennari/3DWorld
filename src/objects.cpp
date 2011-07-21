@@ -169,7 +169,6 @@ void coll_obj::clear_internal_data(vector<coll_obj> &cobjs, vector<int> const &i
 	shadow_depends.clear();
 	clear_lightmap(0);
 	occluders.clear();
-	sobjs.clear();
 }
 
 

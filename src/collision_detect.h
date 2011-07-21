@@ -163,7 +163,6 @@ public:
 	bool fixed, is_billboard;
 	point points[N_COLL_POLY_PTS];
 	vector3d norm;
-	vector<vector<int> > sobjs;
 	vector<int> occluders;
 	set<int> shadow_depends;
 	lvmap lightmap;
@@ -208,7 +207,6 @@ public:
 	bool disabled()       const {return (status != COLL_DYNAMIC && status != COLL_STATIC);}
 	bool no_collision()   const {return (disabled() || cp.no_coll);}
 	bool freed_unused()   const {return (status == COLL_FREED   || status == COLL_UNUSED);}
-	bool all_shadowed()   const {return 0;} // *** WRITE - check lightmap for all 1s (cache result) ***
 	bool is_occluder()    const {return (status == COLL_STATIC && type == COLL_CUBE && cp.draw && !is_semi_trans());}
 	bool is_player()      const;
 	bool is_invis_player()const;
@@ -342,11 +340,11 @@ struct platform_cont : public deque<platform> {
 class shadow_sphere : public sphere_t {
 
 public:
-	char lighted, ctype;
+	char ctype;
 	int cid;
 
-	shadow_sphere() : lighted(0), ctype(COLL_NULL), cid(-1) {}
-	shadow_sphere(point const &pos0, float radius0, int cid0, bool lighted0);
+	shadow_sphere() : ctype(COLL_NULL), cid(-1) {}
+	shadow_sphere(point const &pos0, float radius0, int cid0);
 	
 	inline bool line_intersect(point const &p1, point const &p2) const {
 		return (line_sphere_intersect(p1, p2, pos, radius) && (ctype == COLL_SPHERE || line_intersect_cobj(p1, p2)));

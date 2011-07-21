@@ -13,7 +13,6 @@
 bool const DO_ROTATE         = 1;
 bool const ENABLE_SHADOWS    = 1;
 bool const VERBOSE_DYNAMIC   = 0;
-bool const TEST_DS_TIME      = 0;
 bool const MERGE_STRIPS      = 1; // makes display significantly faster but looks a little worse
 bool const FULL_MAP_LOOKUP   = 1;
 bool const USE_DLIST         = 1;
@@ -59,9 +58,8 @@ extern obj_group obj_groups[];
 vector<shadow_sphere> shadow_objs;
 
 
-shadow_sphere::shadow_sphere(point const &pos0, float radius0, int cid0, bool lighted0) :
-	sphere_t(pos0, radius0), lighted(lighted0), cid(cid0)
-{
+shadow_sphere::shadow_sphere(point const &pos0, float radius0, int cid0) : sphere_t(pos0, radius0), cid(cid0) {
+
 	if (cid < 0) {
 		ctype = COLL_SPHERE; // sphere is the default
 	}
@@ -171,10 +169,9 @@ struct dqt_params {
 	bool double_sided, is_quadric;
 	int cobj;
 	colorRGBA const &color;
-	vector<vector<int> > const &stest;
 	
 	dqt_params(bool db, int cob, bool iq)
-		: double_sided(db), is_quadric(iq), cobj(cob), color(coll_objects[cobj].cp.color), stest(coll_objects[cobj].sobjs) {}
+		: double_sided(db), is_quadric(iq), cobj(cob), color(coll_objects[cobj].cp.color) {}
 	void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int dim, int dir, unsigned face, bool no_shadow_edge) const;
 	void draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, int dir) const;
 	void draw_polygon(point const *points, const vector3d *normals, int npoints, vector3d const &norm, int id, int subpoly, bool no_subdiv) const;
@@ -186,7 +183,6 @@ struct dqd_params {
 	int cobj, tri;
 	vector3d normal;
 	quad_div const &qd;
-	vector<vector<int> > const &stest;
 	unsigned n[2], num_internal, num_subdiv, all_lighted;
 	float spec[2], len[2], ninv[2];
 	vector3d dirs[2];
@@ -194,8 +190,8 @@ struct dqd_params {
 	bool in_dlist, all_int_surf, no_shadow_calc, use_n;
 
 	dqd_params(int cobj_, int tr, int sub_tri, vector3d const &norm, unsigned char elb, quad_div const &qd_,
-		vector<vector<int> > const &s, bool idl, float const sp[2], unsigned ns, unsigned al, bool nsc, bool usen) :
-	    cobj(cobj_), tri(tr), normal(norm), qd(qd_), stest(s), num_internal(0), num_subdiv(ns), all_lighted(al),
+		bool idl, float const sp[2], unsigned ns, unsigned al, bool nsc, bool usen) :
+	    cobj(cobj_), tri(tr), normal(norm), qd(qd_), num_internal(0), num_subdiv(ns), all_lighted(al),
 		all_shad(0xFF), all_unshad(0xFF), en_lt_bits(elb), in_dlist(idl), all_int_surf(1), no_shadow_calc(nsc), use_n(usen)
 	{
 		spec[0] = sp[0]; spec[1] = sp[1];
@@ -289,22 +285,6 @@ bool check_face_containment(point const *const pts, unsigned npts, int dim, int 
 		}
 	}
 	return 0;
-}
-
-
-inline unsigned total_size(vector<vector<int> > const &s) {
-
-	unsigned num(0);
-	unsigned const sz(s.size());
-	for (unsigned i = 0; i < sz; ++i) num += s[i].size();
-	return num;
-}
-
-
-inline void clear_vectors(vector<vector<int> > &s) {
-
-	unsigned const sz(s.size());
-	for (unsigned i = 0; i < sz; ++i) s[i].resize(0);
 }
 
 
@@ -622,20 +602,14 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 		}
 	} // !lighting_known
 	assert(lighted < max_lighted);
-	bool has_dynamic(0), can_return(1);
+	// Note: could check if object is completely shadowed, but that rarely happens so it's probably not worth the trouble
+	if (!is_partial_shadow(lighted)) return lighted; // all shadowed or none shadowed
+	bool can_return(1);
 
 	for (unsigned L = 0; L < num_lights; ++L) {
 		unsigned const val(get_light_val(lighted, L));
 		assert(val != 0);
-
-		if ((val == 2 || val == 3) && L < stest.size() && !stest[L].empty()) { // dynamic lights
-			has_dynamic = 1;
-			can_return  = 0;
-			break;
-		}
-		else if (val == 3) {
-			can_return  = 0; // partial shadow
-		}
+		if (val == 3) can_return  = 0; // partial shadow
 	}
 	if (can_return) return lighted;
 	int step[2] = {1, 1};
@@ -644,112 +618,6 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 		gen_stepsize(get_camera_pos(), pts[0], step, n, len);
 		if (USE_DLIST) {for (unsigned i = 0; i < 2; ++i) step[i] = min(3, step[i]);}
 	}
-
-	// check for dynamic shadows
-	if (has_dynamic && num_lights > 0) {
-		point center;
-		float rsize, t; // t unused
-		polygon_bounding_sphere(pts, npts, 0.0, center, rsize);
-		bool const cp_clip(DO_CIRC_PROJ_CLIP && n0 > 1 && n1 > 0);
-		unsigned char const* const old_nvals(nvals);
-		nvals = &norms[0]; // use a static array to avoid memory allocation issues
-		for (unsigned i = 0; i < numverts; ++i) norms[i] = 0;
-
-		for (unsigned L = 0; L < num_lights; ++L) {
-			unsigned const L_mask(1 << L);
-			unsigned cur_lighted(get_light_val(lighted, L));
-
-			if (cur_lighted == 1) {
-				for (unsigned i = 0; i < numverts; ++i) {
-					norms[i] |= L_mask;
-				}
-			}
-			else if (cur_lighted == 3) {
-				for (unsigned i = 0; i < numverts; ++i) {
-					norms[i] |= (old_nvals[i] & L_mask);
-				}
-			}
-			assert(L < stest.size());
-			unsigned const num_spheres(stest[L].size());
-			if (num_spheres == 0 || cur_lighted == 1 || cur_lighted == 4) continue; // no spheres, already shadowed, or hidden
-			if (!(en_lt_bits & (1 << L)) || !enabled_lights[L].lights_polygon(center, rsize)) continue;
-			point const &lpos(enabled_lights[L].get_center());
-			vector3d const v1(center, lpos);
-
-			for (unsigned i = 0; i < num_spheres; ++i) { // find all potential sphere intersections
-				shadow_sphere const &ss(shadow_objs[stest[L][i]]);
-				point const &spos(ss.pos);
-				float const sz(rsize + ss.radius);
-				if (!sphere_test_comp(center, spos, v1, sz*sz)) continue;
-				if (!ss.test_volume(pts, npts, lpos))           continue;
-
-				// project bounding sphere into polygon plane and use projected circle as a clipping volume
-				bool ssval(0);
-				point p_int;
-				vector3d const v2(lpos, spos);
-				float const s2l_dist(v2.mag()), dist_to_light(v1.mag() + ss.radius);
-				float const dp(fabs(dot_product(normal, v1)/dist_to_light));
-				float const expand(max(1.0f, dist_to_light/max(1.0E-6f, (s2l_dist - sz)))/dp);
-				float const sr_adj(expand*ss.radius + max(len[0]/n0, len[1]/n1));
-				float const rsq(sr_adj*sr_adj), rtot(expand*rsize + sr_adj);
-				unsigned s1_s(0), s1_e(n1);
-				
-				if (cp_clip) {
-					if (!line_int_plane(spos, lpos, pts[0], normal, p_int, t, 1)) continue; // this call is required to calculate p_int
-					if (!dist_less_than(p_int, center, rtot)) continue;
-
-					if (!tri) { // minor performance improvement
-						swap(s1_s, s1_e);
-
-						for (unsigned s1 = 0, end_loop1 = 0; !end_loop1; s1 += step[1]) {
-							if (s1 >= n1) {s1 = n1; end_loop1 = 1;}
-							point const pos(pts[0] + dirs[1]*s1), p_end(pos + dirs[0]*n0);
-
-							if (pt_line_dist_less_than(p_int, pos, p_end, sr_adj)) { // point-line distance => good scanline
-								s1_s = min(s1, s1_s);
-								s1_e = max(s1, s1_e);
-							}
-						}
-						if (s1_s > s1_e) continue; // skip this light source
-						s1_e = min(n1, s1_e+1);
-					}
-				}
-				for (unsigned s0 = 0, end_loop0 = 0; !end_loop0; s0 += step[0]) { // fill in mesh values
-					if (s0 >= n0) {s0 = n0; end_loop0 = 1;}
-					float const scale(DO_SCALE(tri, s0, n0));
-					point const pos0(pts[0] + dirs[0]*s0);
-					vector3d const vstep(dirs[1]*scale);
-
-					if (cp_clip && scale > 0.0) {
-						if (!pt_line_dist_less_than(p_int, pos0, (pos0 + vstep*n1), sr_adj)) continue; // point-line distance => bad scanline
-					}
-					bool sskip(0), sval(0);
-					int const offset(s0*xstride);
-
-					for (unsigned s1 = s1_s, end_loop1 = 0; !end_loop1; s1 += step[1]) {
-						if (s1 >= s1_e) {s1 = s1_e; end_loop1 = 1;}
-						if (norms[offset+s1] & L_mask) {sskip = 1; continue;} // already shadowed
-						point const pos(pos0 + vstep*s1);
-						if (cp_clip && p2p_dist_sq(pos, p_int) > rsq) continue;
-
-						if (ss.line_intersect(pos, lpos)) { // lpos is constant - optimize?
-							norms[offset+s1] |= L_mask;
-							cur_lighted      |= 1;
-							sval              = 1;
-						}
-						else if (sval) break; // reached the end of the sphere in s0 (convex)
-					} // for s1
-					if (!sval &&  ssval && !sskip) break; // reached the end of the sphere in s1 (convex)
-					if ( sval && !ssval) ssval = 1;
-				} // for s0
-			} // for i
-			assert(cur_lighted <= 4);
-			set_light_val(lighted, cur_lighted, L);
-		} // for L
-		assert(lighted < max_lighted);
-	} // end dynamic shadows
-	// Note: could check if object is completely shadowed, but that rarely happens so it's probably not worth the trouble
-	if (!is_partial_shadow(lighted)) return lighted; // all shadowed or none shadowed
 	assert(nvals);
 	if (in_strip) {glEnd(); in_strip = 0;}
 	//if (in_dlist) {} // create some textures instead of drawing - QD_TAG_TEXTURE
@@ -840,7 +708,7 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 		for (unsigned i = 0; i < num_lights; ++i) {
 			unsigned const lval(get_light_val(all_lighted, i));
 
-			if ((lval == 0 && !first_render) || (lval == 2 && i < stest.size() && !stest[i].empty())) {
+			if (lval == 0 && !first_render) {
 				set_light_val(all_lighted, 3, i); // unknown or no static shadow, dynamic shadows still possible
 			}
 		}
@@ -925,38 +793,6 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 		}
 	}
 	if (back_facing) no_shadow_edge = 1; // back facing to all light sources
-	static vector<vector<int> > filt_stest;
-	filt_stest.resize(num_lights);
-	
-	if (!no_shadow_edge) { // if not facing away from the light (already shadowed)
-		if (stest.size() == num_lights) { // nonempty dynamic shadow objects
-			for (unsigned L = 0; L < num_lights; ++L) {
-				if (stest[L].empty() || !(en_lt_bits & (1 << L))) continue;
-				point const &lpos(enabled_lights[L].get_center());
-
-				for (unsigned s = 0; s < stest[L].size(); ++s) { // find all potential sphere intersections
-					unsigned const sts(stest[L][s]);
-					assert(sts < shadow_objs.size());
-					point const &spos(shadow_objs[sts].pos);
-					float const radius(rsize + shadow_objs[sts].radius);
-
-					if ((double_sided || (dot_product_ptv(norm, spos, pos) > 0.0)) &&
-						line_sphere_int_cont(pos, lpos, spos, radius))
-					{ // in front of quad
-						filt_stest[L].push_back(sts); // point inside test might not be necessary
-						has_d_shad = 1;
-					}
-				}
-			}
-		}
-		else {
-			unsigned const tot(total_size(stest));
-			if (tot > 0) {
-				cout << "num_lights = " << num_lights << ", stest.size() = " << stest.size() << ", tot_sz = " << tot << endl;
-				assert(0);
-			}
-		}
-	}
 	// Requirements for using a display list:
 	// 1. Must have no dynamic shadows
 	// 2. Must not be part of a quadric (too many LODs)
@@ -994,7 +830,7 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 	bool in_strip(0), occluded(0);
 	unsigned const num_subdiv(n[0]*n[1]);
 	quad_div qd(dim, dir, QD_TAG_QUAD, face, shift_bits);
-	dqd_params params(cobj, tri, 0, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
+	dqd_params params(cobj, tri, 0, normal, en_lt_bits, qd, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
 	unsigned const nv0(n[0]+1), nv1(n[1]+1);
 	static vector<vertex_t> verts;
 	verts.resize(nv0*nv1);
@@ -1051,7 +887,7 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 				if (s0 < n[0]-1) { // not a single triangle at the top
 					qd.tag |=  QD_TAG_TRIANGLE;
 					unsigned const ixs2[4] = {ixs[0], ixs[2], ixs[3], ixs[3]};
-					dqd_params params_tri(cobj, tri, 1, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
+					dqd_params params_tri(cobj, tri, 1, normal, en_lt_bits, qd, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
 					lighted = params_tri.draw_quad_div(verts, ixs2, tri_begin);
 					params.inherit_flags_from(params_tri);
 					qd.tag &= ~QD_TAG_TRIANGLE;
@@ -1065,7 +901,7 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 					}
 				}
 				ixs[3] = ixs[2]; // have to recompute since dir is not constant due to scale
-				dqd_params params2(cobj, tri, 0, normal, en_lt_bits, qd, filt_stest, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
+				dqd_params params2(cobj, tri, 0, normal, en_lt_bits, qd, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
 				lighted = params2.draw_quad_div(verts, ixs, tri_begin);
 				if (!tri_begin) {glBegin(GL_TRIANGLES); tri_begin = 1;}
 				params.inherit_flags_from(params2);
@@ -1124,7 +960,6 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 		}
 		c_obj.lightmap[qd2] = lv_val(all_lighted);
 	}
-	clear_vectors(filt_stest);
 }
 
 
@@ -1524,123 +1359,59 @@ void clear_all_lightmaps(int mode, unsigned keep) {
 }
 
 
-void add_shadow_obj(point const &pos, float radius, int coll_id, bool light_in_front, bool lighted) {
+void add_shadow_obj(point const &pos, float radius, int coll_id) {
 
-	if (light_in_front && dot_product_ptv(cview_dir, pos, get_camera_pos()) < 0.0) return;
-	shadow_objs.push_back(shadow_sphere(pos, radius, coll_id, lighted));
+	shadow_objs.push_back(shadow_sphere(pos, radius, coll_id));
 }
 
 
 void add_coll_shadow_objs() {
 	
+	if (use_stencil_shadows) return; // if stencil shadows are enabled we don't do them here
 	RESET_TIME;
 	shadow_objs.resize(0);
-	unsigned const num_lights(enabled_lights.size());
+	point const camera(get_camera_pos());
 
-	if (!use_stencil_shadows) { // if stencil shadows are enabled we don't do them here
-		point const camera(get_camera_pos());
-		bool light_in_front(1);
-
-		if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID)) { // shadow the camera even when in the air (but not when dead)
-			point camera_pos(camera);
-			if (camera_mode == 1 && !spectate) camera_pos.z -= 0.5*camera_zh; // cancel out the z height that was previously added
-			shadow_objs.push_back(shadow_sphere(camera_pos, CAMERA_RADIUS, camera_coll_id, 0));
-		}
-		for (unsigned L = 0; L < num_lights && light_in_front; ++L) {
-			if (dot_product_ptv(cview_dir, enabled_lights[L].get_center(), camera) < 0.0) light_in_front = 0;
-		}
-		if (begin_motion) { // can ignore if behind camera and light in front of camera
-			for (int i = 0; i < num_groups; ++i) { // can we simply use the collision objects for this?
-				obj_group const &objg(obj_groups[i]);
-				if (!objg.enabled || !objg.large_radius())                      continue;
-				if (object_types[objg.type].color.alpha < 0.5*MIN_SHADOW_ALPHA) continue; // too low? nothing fails this yet
-				float const radius(object_types[objg.type].radius);
+	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID)) { // shadow the camera even when in the air (but not when dead)
+		point camera_pos(camera);
+		if (camera_mode == 1 && !spectate) camera_pos.z -= 0.5*camera_zh; // cancel out the z height that was previously added
+		add_shadow_obj(camera_pos, CAMERA_RADIUS, camera_coll_id);
+	}
+	if (begin_motion) { // can ignore if behind camera and light in front of camera
+		for (int i = 0; i < num_groups; ++i) { // can we simply use the collision objects for this?
+			obj_group const &objg(obj_groups[i]);
+			if (!objg.enabled || !objg.large_radius())                      continue;
+			if (object_types[objg.type].color.alpha < 0.5*MIN_SHADOW_ALPHA) continue; // too low? nothing fails this yet
+			float const radius(object_types[objg.type].radius);
 				
-				for (unsigned j = 0; j < objg.end_id; ++j) {
-					dwobject const &obj(objg.get_obj(j));
-					if (obj.disabled() || !objg.obj_has_shadow(j)) continue;
-					add_shadow_obj(obj.pos, radius, obj.coll_id, light_in_front);
-				}
+			for (unsigned j = 0; j < objg.end_id; ++j) {
+				dwobject const &obj(objg.get_obj(j));
+				if (obj.disabled() || !objg.obj_has_shadow(j)) continue;
+				add_shadow_obj(obj.pos, radius, obj.coll_id);
 			}
 		}
-		for (unsigned i = 0; i < weap_cobjs.size(); ++i) {
-			unsigned const cid(weap_cobjs[i]);
-			if (cid < 0) continue;
-			assert(cid < coll_objects.size());
-			float brad;
+	}
+	for (unsigned i = 0; i < weap_cobjs.size(); ++i) {
+		unsigned const cid(weap_cobjs[i]);
+		if (cid < 0) continue;
+		assert(cid < coll_objects.size());
+		float brad;
+		point center;
+		coll_objects[cid].bounding_sphere(center, brad);
+		add_shadow_obj(center, brad, cid);
+	}
+	if (!platforms.empty()) {
+		for (unsigned i = 0; i < coll_objects.size(); ++i) {
+			coll_obj const &c(coll_objects[i]);
+			if (c.disabled() || c.cp.color.alpha < MIN_SHADOW_ALPHA || c.platform_id == 0) continue;
 			point center;
-			coll_objects[cid].bounding_sphere(center, brad);
-			add_shadow_obj(center, brad, cid, light_in_front);
-		}
-		if (!platforms.empty()) {
-			for (unsigned i = 0; i < coll_objects.size(); ++i) {
-				coll_obj const &c(coll_objects[i]);
-				if (c.disabled() || !c.dynamic_shadows_only()) continue;
-				point center;
-				float radius;
-				c.bounding_sphere(center, radius);
-				add_shadow_obj(center, radius, i, light_in_front);
-			}
-		}
-		if (display_mode & 0x0200) d_part_sys.add_cobj_shadows(light_in_front);
-
-		if (TEST_DS_TIME) {
-			for (unsigned q = 0; q < 10000; ++q) {
-				add_shadow_obj(gen_rand_scene_pos(), object_types[BALL].radius, -1, light_in_front);
-			}
-		}
-		if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Shadow Object Creation");}
-	}
-	static bool test_all(0);
-	static set<unsigned> shadowed;
-	unsigned const ncobjs(coll_objects.size());
-
-	if (test_all) {
-		for (unsigned i = 0; i < ncobjs; ++i) {
-			if (coll_objects[i].status == COLL_STATIC) clear_vectors(coll_objects[i].sobjs);
+			float radius;
+			c.bounding_sphere(center, radius);
+			add_shadow_obj(center, radius, i);
 		}
 	}
-	else {
-		for (set<unsigned>::const_iterator it = shadowed.begin(); it != shadowed.end(); ++it) {
-			assert(*it < ncobjs);
-			clear_vectors(coll_objects[*it].sobjs);
-		}
-	}
-	test_all = 0;
-	shadowed.clear();
-	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Sobjs Reset");}
-	if (shadow_map_enabled()) return; // skip the rest
-	vector<int> cobjs;
-	unsigned nadded(0);
-
-	for (unsigned L = 0; L < num_lights; ++L) {
-		point const &lpos(enabled_lights[L].get_center());
-		float const lrad(enabled_lights[L].get_radius());
-		float const light_dist((lrad > 0.0) ? lrad : FAR_CLIP);
-
-		for (unsigned s = 0; s < shadow_objs.size(); ++s) {
-			point start_pos(shadow_objs[s].pos), end_pos(start_pos);
-			vector3d const vl(start_pos, lpos); // object to light vector
-			float const v1_mag(vl.mag());
-			if (v1_mag > TOLERANCE) end_pos += vl*(light_dist/v1_mag); // extend the end point
-			coll_pt_vis_test_large2(start_pos, end_pos, cobjs, shadow_objs[s].cid, shadow_objs[s].radius, 2, 1); // skip dynamic objects and non-drawn objects
-			unsigned const ncobjs(cobjs.size());
-
-			for (unsigned i = 0; i < ncobjs; ++i) {
-				coll_obj &cobj(coll_objects[cobjs[i]]);
-				if (cobj.all_shadowed()) continue; // check for distance from light?
-				cobj.sobjs.resize(num_lights);
-				cobj.sobjs[L].push_back((int)s);
-				
-				if (!test_all) {
-					shadowed.insert(cobjs[i]);
-					if (++nadded > ncobjs) test_all = 1;
-				}
-			}
-			//if (s > 0) draw_sphere_at(shadow_objs[s].pos, shadow_objs[s].radius, 16); // debugging
-		}
-	}
-	if (VERBOSE_DYNAMIC || TEST_DS_TIME) {PRINT_TIME(" Shadow Object Addition");}
+	if (display_mode & 0x0200) d_part_sys.add_cobj_shadows();
+	if (VERBOSE_DYNAMIC) {PRINT_TIME(" Shadow Object Creation");}
 }
 
 

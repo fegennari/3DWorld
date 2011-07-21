@@ -1170,7 +1170,7 @@ void init_draw_stats();
 void show_draw_stats();
 bool is_above_mesh(point const &pos);
 void clear_all_lightmaps(int mode, unsigned keep=0);
-void add_shadow_obj(point const &pos, float radius, int coll_id, bool light_in_front, bool lighted=0);
+void add_shadow_obj(point const &pos, float radius, int coll_id);
 void add_coll_shadow_objs();
 void init_subdiv_lighting();
 void get_occluders();

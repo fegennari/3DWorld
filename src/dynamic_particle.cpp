@@ -132,8 +132,8 @@ void dynamic_particle::add_light() const { // dynamic lights
 	if (lighted) add_dynamic_light(intensity, pos, color, velocity, bwidth); // beam in direction of velocity
 }
 
-void dynamic_particle::add_cobj_shadows(bool light_in_front) const { // cobjs, dynamic objects
-	if (shadows) add_shadow_obj(pos, radius, -1, light_in_front);
+void dynamic_particle::add_cobj_shadows() const { // cobjs, dynamic objects
+	if (shadows) add_shadow_obj(pos, radius, -1);
 }
 
 void dynamic_particle::add_mesh_shadows() const {
@@ -208,11 +208,11 @@ void dynamic_particle_system::add_light() const {
 }
 
 
-void dynamic_particle_system::add_cobj_shadows(bool light_in_front) const {
+void dynamic_particle_system::add_cobj_shadows() const {
 	
 	RESET_TIME;
 	for (unsigned i = 0; i < size(); ++i) {
-		particles[i].add_cobj_shadows(light_in_front);
+		particles[i].add_cobj_shadows();
 	}
 	if (DEBUG_TIME && size() > 0) PRINT_TIME("DPS Cobj Shadows");
 }
