@@ -131,9 +131,6 @@ public:
 		//vector3d const base_dir(interpolate_mesh_normal(pos));
 		vector3d const dir((base_dir + signed_rand_vector(0.3) + wind*0.3).get_norm()); // make dynamic based on local wind?
 		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
-
-		//(0.1, 0.35), (0.5, 0.75), (0.0, 0.1) // untextured white triangle
-		//unsigned char color[3] = {75+rand()%50, 150+rand()%50, 25+rand()%20}; // (0.3,0.5), (0.6,0.8), (0.1,0.18)
 		float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
 		float const base_color[3] = {0.3,  0.6, 0.08};
 		float const mod_color [3] = {0.2,  0.2, 0.08};
@@ -510,6 +507,11 @@ public:
 		if (!data_valid) upload_data();
 	}
 
+	void draw_range(unsigned beg_ix, unsigned end_ix) const {
+		assert(beg_ix <= end_ix && end_ix <= grass.size());
+		if (beg_ix < end_ix) glDrawArrays(GL_TRIANGLES, 3*beg_ix, 3*(end_ix - beg_ix)); // nonempty segment
+	}
+
 	// texture units used: 0: grass texture, 1: wind texture
 	void draw() {
 		if (empty()) return;
@@ -552,7 +554,7 @@ public:
 			add_uniform_float(p, "height", grass_length);
 		}
 
-		// draw the grass
+		// setup drawing state
 		set_array_client_state(1, 1, 1, 1);
 		assert(vbo_valid && vbo > 0);
 		bind_vbo(vbo);
@@ -564,7 +566,39 @@ public:
 		glAlphaFunc(GL_GREATER, 0.75);
 		glEnable(GL_COLOR_MATERIAL);
 		glDisable(GL_NORMALIZE);
-		glDrawArrays(GL_TRIANGLES, 0, 3*grass.size());
+
+		// draw the grass
+		unsigned const BLOCK_SIZE = 4;
+		assert(BLOCK_SIZE <= MESH_X_SIZE && (MESH_X_SIZE%BLOCK_SIZE) == 0);
+		bool last_visible(0);
+		unsigned beg_ix(0);
+
+		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			for (int x = 0; x < MESH_X_SIZE; x += BLOCK_SIZE) {
+				unsigned const ix(y*MESH_X_SIZE + x);
+				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+BLOCK_SIZE]) continue; // empty section
+				float mzmin(z_min_matrix[y][x]), mzmax(mesh_height[y][x]);
+
+				for (int xx = x+1; xx < x+BLOCK_SIZE; ++xx) {
+					mzmin = min(mzmin, z_min_matrix[y][xx]);
+					mzmax = max(mzmax, mesh_height[y][xx]);
+				}
+				cube_t const cube(get_xval(x)-grass_length, get_xval(x+BLOCK_SIZE)+grass_length,
+						            get_yval(y)-grass_length, get_yval(y+1)+grass_length, mzmin, mzmax+grass_length);
+				bool const visible(camera_pdu.cube_visible(cube));
+
+				if (visible && !last_visible) { // start a segment
+					beg_ix = mesh_to_grass_map[ix];
+				}
+				else if (!visible && last_visible) { // end a segment
+					draw_range(beg_ix, mesh_to_grass_map[ix]);
+				}
+				last_visible = visible;
+			}
+		}
+		if (last_visible) draw_range(beg_ix, grass.size());
+
+		// cleanup drawing state
 		glDisable(GL_COLOR_MATERIAL);
 		glEnable(GL_NORMALIZE);
 		set_specular(0.0, 1.0);
@@ -629,10 +663,6 @@ void draw_grass() {
 
 void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw) {
 	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw);
-}
-
-void update_grass_shadows(int x, int y, unsigned char check_shad_types) {
-	if (!no_grass() && !shadow_map_enabled()) grass_manager.update_shadows(x, y, check_shad_types, get_light_pos());
 }
 
 void update_grass_shadows_for_cube(cube_t const &cube) {

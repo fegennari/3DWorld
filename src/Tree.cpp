@@ -330,7 +330,6 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 		vector<int> indices; // unused
 		coll_objects[cix].update_shadowed_cobjs(coll_objects, indices, cix);
 		remove_coll_object(cix);
-		//update_grass_shadows_for_cube(coll_objects[cix]); // should still be valid, correct but very slow
 	}
 	leaves[i] = leaves.back();
 	leaves.pop_back();
@@ -408,9 +407,6 @@ void tree::blast_damage(blastr const *const blast_radius) {
 		if (damage_leaf(i, blast_damage)) --i; // force reprocess of this leaf, wraparound to -1 is OK
 	} // for i
 	damage = min(1.0f, damage);
-	//cube_t cube(bpos.x, bpos.x, bpos.y, bpos.y, bpos.z, bpos.z);
-	//cube.expand_by(bradius);
-	//update_grass_shadows_for_cube(cube); // better than per-leaf, but still too slow
 }
 
 
