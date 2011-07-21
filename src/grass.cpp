@@ -25,8 +25,6 @@ extern colorRGBA leaf_base_color;
 extern vector3d wind;
 extern obj_type object_types[];
 extern vector<coll_obj> coll_objects;
-extern vector<light_source> dl_sources;
-extern vector<shadow_sphere> shadow_objs;
 
 
 class grass_manager_t {
@@ -46,7 +44,6 @@ class grass_manager_t {
 	vector<grass_t> grass;
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
 	vector<unsigned char> modified; // only used for shadows
-	vector<vector<unsigned> > sbins;
 	unsigned vbo;
 	bool vbo_valid, shadows_valid, data_valid;
 	int last_cobj;
@@ -309,46 +306,6 @@ public:
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void proc_dynamic_shadows(int light) {
-		//RESET_TIME;
-		point lpos;
-		if (!get_light_pos(lpos, light)) return;
-		sbins.resize(XY_MULT_SIZE); // move into constructor?
-		last_cobj = -1;
-		
-		for (unsigned i = 0; i < shadow_objs.size(); ++i) {
-			float const radius(shadow_objs[i].radius);
-			if (radius < 2*LARGE_OBJ_RAD) continue; // for efficiency
-			point const &pos(shadow_objs[i].pos);
-			vector3d const dir((pos - lpos).get_norm());
-			point pts[8];
-			get_sphere_points(pos, radius, pts, 8, dir);
-			int x1, y1, x2, y2, ret_val;
-			get_shape_shadow_bb(pts, 8, light, 1, lpos, x1, y1, x2, y2, ret_val, DYNAMIC_SHADOW);
-
-			for (int y = y1; y <= y2; ++y) {
-				for (int x = x1; x <= x2; ++x) {
-					assert(!point_outside_mesh(x, y));
-					point const mesh_pos(point(get_xval(x), get_yval(y), mesh_height[y][x]));
-					if (!line_sphere_intersect(lpos, mesh_pos, pos, (radius + HALF_DXY))) continue; // only helps slightly
-					if (!camera_pdu.sphere_visible_test(mesh_pos, HALF_DXY))              continue; // only helps slightly
-					sbins[y*MESH_X_SIZE + x].push_back(i);
-				}
-			}
-		}
-		for (int y = 0; y < MESH_Y_SIZE; ++y) { // check for dynamic shadows that need to be updated
-			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				unsigned const ix(y*MESH_X_SIZE + x);
-				bool const mod((modified[ix] & MOD_SHADOW) != 0);
-				modified[ix] &= ~MOD_SHADOW;
-				// check camera view frustum?
-				if (mod || !sbins[ix].empty()) update_shadows(x, y, DYNAMIC_SHADOW, lpos, &sbins[ix]);
-				sbins[ix].resize(0); // clear
-			}
-		}
-		//PRINT_TIME("Grass Dynamic Shadows");
-	}
-
 	void update_shadows_for_cube(cube_t const &cube) {
 		//RESET_TIME;
 		int const light(get_light());
@@ -373,7 +330,7 @@ public:
 		//PRINT_TIME("Grass Shadow Update");
 	}
 
-	void update_shadows(int x, int y, unsigned char shad_types, point const &lpos, vector<unsigned> const *const sixs=0) {
+	void update_shadows(int x, int y, unsigned char shad_types, point const &lpos) {
 		if (point_outside_mesh(x, y)) return;
 		unsigned start, end;
 		unsigned const ix(get_start_and_end(x, y, start, end));
@@ -387,18 +344,7 @@ public:
 			g.shadowed &= ~shad_types; // unset these bits since they are now invalid
 			if (g.shadowed) continue; // already shadowed with a non-checked type
 			point const pos(g.p + g.dir*0.5);
-
-			if (sixs) {
-				for (vector<unsigned>::const_iterator j = sixs->begin(); j != sixs->end(); ++j) {				
-					if (shadow_objs[*j].line_intersect(lpos, pos)) {
-						g.shadowed |= shad_types;
-						break;
-					}
-				}
-			}
-			else {
-				g.shadowed = is_pt_shadowed(pos, skip_dynamic); // per vertex shadows?
-			}
+			g.shadowed = is_pt_shadowed(pos, skip_dynamic); // per vertex shadows?
 			if (g.shadowed & shad_types) modified[ix] |= MOD_SHADOW;
 			
 			if ((g.shadowed != 0) != (orig_shadowed != 0)) { // shadow nonzero-ness has changed, need to update
@@ -488,10 +434,6 @@ public:
 		} // for y
 	}
 
-	void heal_grass() {
-		// WRITE: fix dir, length, and color for grass that has been crushed or burned using modified
-	}
-
 	void upload_data() {
 		if (empty()) return;
 		RESET_TIME;
@@ -524,9 +466,6 @@ public:
 			invalidate_shadows();
 			last_light = light;
 			last_lpos  = lpos;
-		}
-		else if (!shadow_map_enabled() && !(display_mode & 0x10)) {
-			proc_dynamic_shadows(light);
 		}
 		check_for_updates();
 
@@ -579,7 +518,7 @@ public:
 				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+BLOCK_SIZE]) continue; // empty section
 				float mzmin(z_min_matrix[y][x]), mzmax(mesh_height[y][x]);
 
-				for (int xx = x+1; xx < x+BLOCK_SIZE; ++xx) {
+				for (int xx = x+1; xx < x+(int)BLOCK_SIZE; ++xx) {
 					mzmin = min(mzmin, z_min_matrix[y][xx]);
 					mzmax = max(mzmax, mesh_height[y][xx]);
 				}
