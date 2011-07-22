@@ -338,10 +338,8 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	// update grass shadows
 	for (vector<cube_t>::const_iterator i = mod_cubes.begin(); i != mod_cubes.end(); ++i) {
 		// FIXME: test alpha?
-		update_grass_shadows_for_cube(*i); //the object should still be valid
-		// FIXME: adjust lightmap pflow value so that smoke can flow through the hole?
+		update_grass_shadows_for_cube(*i); // the object should still be valid
 	}
-
 	if (!to_remove.empty()) {
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // FIXME: what about updating (removing) mesh shadows?
 		cdir.normalize();
@@ -354,7 +352,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 void check_falling_cobjs() {
 
-	// FIXME: add shadows when a cobj begins to shadow a new target cobj
 	// FIXME: add velocity/acceleration
 	// FIXME: fix texture offset
 	if (falling_cobjs.empty()) return; // nothing to do
@@ -373,7 +370,6 @@ void check_falling_cobjs() {
 		}
 		// translate, add the new, then remove the old
 		vector<int> indices;
-		//indices.push_back(index); // if only we could do this first...
 		coll_objects[ix].clear_internal_data(coll_objects, indices, ix);
 		coll_objects[ix].clear_lightmap(0); // need to do this first, before the copy
 		coll_obj cobj(coll_objects[ix]); // make a copy
@@ -386,6 +382,7 @@ void check_falling_cobjs() {
 	check_cobjs_anchored(falling_cobjs, anchored);
 	falling_cobjs.resize(0);
 	copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
+	scene_dlist_invalid = 1;
 }
 
 
