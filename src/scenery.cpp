@@ -307,12 +307,11 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 }
 
 
-void rock_shape3d::draw() const {
+void rock_shape3d::draw(bool shadow_only) const {
 
-	if (in_camera_view()) {
-		set_color(get_atten_color(color*get_shadowed_color(pos, 0.5*radius)));
-		shape3d::draw(1);
-	}
+	if (!shadow_only || !in_camera_view()) return;
+	set_color(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius)));
+	shape3d::draw(1);
 }
 
 
@@ -394,23 +393,23 @@ public:
 		coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 	}
 
-	void draw(float sscale) const {
+	void draw(float sscale, bool shadow_only) const {
 		assert(surface);
-		if (!in_camera_view(0.0)) return;
-		colorRGBA const color(get_atten_color(WHITE)*get_shadowed_color(pos, radius));
+		if (!shadow_only && !in_camera_view(0.0)) return;
+		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, radius));
 		float const dist(distance_to_camera(pos));
 
-		if (2*get_pt_line_thresh()*radius < dist) { // draw as point
+		if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
 			tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
 			return;
 		}
 		set_color(color);
-		select_texture(ROCK_SPHERE_TEX);
+		if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
 		glPushMatrix();
 		translate_to(pos);
 		uniform_scale(scale);
 		rotate_into_plus_z(dir);
-		surface->sd.draw_ndiv_pow2(sscale*radius/dist);
+		surface->sd.draw_ndiv_pow2(shadow_only ? get_smap_ndiv(radius) : sscale*radius/dist);
 		glPopMatrix();
 	}
 
@@ -446,19 +445,19 @@ public:
 		coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 	}
 
-	void draw(float sscale) const {
+	void draw(float sscale, bool shadow_only) const {
 		float const rmax(1.3*radius);
-		if (!in_camera_view(rmax)) return;
-		colorRGBA const color(get_atten_color(WHITE)*get_shadowed_color(pos, rmax));
+		if (!shadow_only && !in_camera_view(rmax)) return;
+		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, rmax));
 		float const dist(distance_to_camera(pos));
 
-		if (2*get_pt_line_thresh()*radius < dist) { // draw as point
+		if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
 			tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
 			return;
 		}
 		set_color(color);
-		int const ndiv(max(4, min(N_SPHERE_DIV, int(sscale*radius/dist))));
-		select_texture(ROCK_SPHERE_TEX);
+		int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(radius) : int(sscale*radius/dist)))));
+		if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
 		glPushMatrix();
 		translate_to(pos);
 		rotate_about(angle, dir);
@@ -512,24 +511,24 @@ public:
 		coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, WOOD_TEX));
 	}
 
-	void draw(float sscale) const {
+	void draw(float sscale, bool shadow_only) const {
 		float const sz(max(length, max(radius, radius2)));
 		if (type == 0 || !in_camera_view(sz)) return;
-		colorRGBA const color(log_colors[type]*get_shadowed_color((pos + pt2)*0.5, sz));
+		colorRGBA const color(shadow_only ? WHITE : log_colors[type]*get_shadowed_color((pos + pt2)*0.5, sz));
 		float const dist(distance_to_camera(pos));
 
-		if (get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
+		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
 			tree_scenery_pld.add_textured_line(pos, pt2, color, WOOD_TEX);
 			return;
 		}
 		set_color(color);
-		int const ndiv(max(3, min(N_CYL_SIDES, int(2.0*sscale*radius/dist))));
-		select_texture(WOOD_TEX);
+		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
+		if (!shadow_only) select_texture(WOOD_TEX);
 		glPushMatrix();
 		translate_to(pos);
 		rotate_by_vector(dir, 0.0);
 		gluCylinder(quadric, radius, radius2, length, ndiv, 1);
-		select_texture(TREE_END_TEX);
+		if (!shadow_only) select_texture(TREE_END_TEX);
 		draw_circle_normal(0.0, radius, ndiv, 1);
 		glTranslatef(0.0, 0.0, length);
 		draw_circle_normal(0.0, radius2, ndiv, 0);
@@ -572,23 +571,23 @@ public:
 			cobj_params(0.8, BROWN, 0, 0, NULL, 0, WOOD_TEX));
 	}
 
-	void draw(float sscale) const {
+	void draw(float sscale, bool shadow_only) const {
 		float const sz(max(height, max(radius, radius2)));
-		if (type == 0 || !in_camera_view(sz)) return;
-		colorRGBA const color(log_colors[type]*get_shadowed_color(point(pos.x, pos.y, (pos.z + 0.5*height)), sz));
+		if (type == 0 || (!shadow_only && !in_camera_view(sz))) return;
+		colorRGBA const color(shadow_only ? WHITE : log_colors[type]*get_shadowed_color(point(pos.x, pos.y, (pos.z + 0.5*height)), sz));
 		float const dist(distance_to_camera(pos));
 
-		if (get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
+		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
 			tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, height)), color, WOOD_TEX);
 			return;
 		}
 		set_color(color);
-		int const ndiv(max(3, min(N_CYL_SIDES, int(2.2*sscale*radius/dist))));
-		select_texture(WOOD_TEX);
+		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
+		if (!shadow_only) select_texture(WOOD_TEX);
 		glPushMatrix();
 		translate_to(pos);
 		gluCylinder(quadric, radius, radius2, height, ndiv, 1);
-		select_texture(TREE_END_TEX);
+		if (!shadow_only) select_texture(TREE_END_TEX);
 		glTranslatef(0.0, 0.0, height);
 		gluDisk(quadric, 0.0, radius2, ndiv, 1);
 		glPopMatrix();
@@ -657,30 +656,32 @@ public:
 		}
 	}
 
-	void draw(float sscale, int mode) { // modifies points, so non-const
-		if (!sphere_in_camera_view(pos, (height + radius), 2)) return;
+	void draw(float sscale, int mode, bool shadow_only) { // modifies points, so non-const
+		if (!shadow_only && !sphere_in_camera_view(pos, (height + radius), 2)) return;
 		int const light(get_light());
 		float color_scale(SHADOW_VAL);
 
-		for (unsigned i = 0; i < 3; ++i) {
-			point p(pos);
-			p.z += 0.5*i*height;
+		if (!shadow_only) {
+			for (unsigned i = 0; i < 3; ++i) {
+				point p(pos);
+				p.z += 0.5*i*height;
 
-			if (is_visible_to_light_cobj(p, light, (radius + height), coll_id, 0)) {
-				color_scale = 1.0;
-				break;
+				if (is_visible_to_light_cobj(p, light, (radius + height), coll_id, 0)) {
+					color_scale = 1.0;
+					break;
+				}
 			}
 		}
 		if (mode & 1) {
 			colorRGBA color(pltype[type].stemc*color_scale);
 			float const dist(distance_to_camera(pos));
 
-			if (2*get_pt_line_thresh()*radius < dist) { // draw as line
+			if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
 				tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
 			}
 			else {
-				int const ndiv(max(3, min(N_CYL_SIDES, int(2.0*sscale*radius/dist))));
-				select_texture(WOOD_TEX);
+				int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
+				if (!shadow_only) select_texture(WOOD_TEX);
 				set_color(color);
 				draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
 			}
@@ -695,6 +696,7 @@ public:
 			draw_quads_from_pts(points);
 			glDisable(GL_ALPHA_TEST);
 			set_lighted_sides(1);
+			if (shadow_only) glDisable(GL_TEXTURE_2D);
 		}
 	}
 
@@ -803,8 +805,8 @@ void gen_scenery_deterministic() {
 }
 
 
-template<typename T> void draw_scenery_vector(vector<T> &v, float sscale) {
-	for (unsigned i = 0; i < v.size(); ++i) v[i].draw(sscale);
+template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only) {
+	for (unsigned i = 0; i < v.size(); ++i) v[i].draw(sscale, shadow_only);
 }
 
 template<typename T> void add_scenery_vector_cobjs(vector<T> &v) {
@@ -832,7 +834,7 @@ template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int 
 }
 
 
-void draw_scenery(bool draw_opaque, bool draw_transparent) {
+void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 
 	if (!has_scenery && !has_scenery2) return;
 	set_fill_mode();
@@ -843,15 +845,15 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 		for (unsigned i = 0; i < rock_shapes.size(); ++i) { // draw rock shapes
 			rock_shapes[i].draw();
 		}
-		draw_scenery_vector(surface_rocks, sscale);
-		draw_scenery_vector(rocks,  sscale); // can unset gluQuadricTexture
+		draw_scenery_vector(surface_rocks, sscale, shadow_only);
+		draw_scenery_vector(rocks,  sscale, shadow_only); // can unset gluQuadricTexture
 		gluQuadricTexture(quadric, GL_TRUE);
-		draw_scenery_vector(logs,   sscale);
-		draw_scenery_vector(stumps, sscale);
+		draw_scenery_vector(logs,   sscale, shadow_only);
+		draw_scenery_vector(stumps, sscale, shadow_only);
 		gluQuadricTexture(quadric, GL_FALSE);
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
-			plants[i].draw(sscale, 1); // draw stem
+			plants[i].draw(sscale, 1, shadow_only); // draw stem
 		}
 		glDisable(GL_TEXTURE_2D);
 		tree_scenery_pld.draw_and_clear();
@@ -862,7 +864,7 @@ void draw_scenery(bool draw_opaque, bool draw_transparent) {
 		set_leaf_shader(0.9);
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
-			plants[i].draw(sscale, 2); // draw leaves
+			plants[i].draw(sscale, 2, shadow_only); // draw leaves
 		}
 		unset_shader_prog();
 		disable_blend();

@@ -180,7 +180,7 @@ public:
 	void calc_points();
 	void pre_leaf_draw() const;
 	void post_leaf_draw() const;
-	void draw(int mode) const;
+	void draw(int mode, bool shadow_only) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}
@@ -217,7 +217,7 @@ void gen_small_tree(small_tree &st, point const &pos, float height, float width,
 void add_small_tree_coll_objs();
 void remove_small_tree_cobjs();
 void gen_small_trees();
-void draw_small_trees();
+void draw_small_trees(bool shadow_only);
 void shift_small_trees(vector3d const &vd);
 
 

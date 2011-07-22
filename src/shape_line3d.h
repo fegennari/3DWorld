@@ -84,7 +84,7 @@ public:
 	void gen_rock(unsigned nverts, float size, int &rand_seed, int type);
 	void add_cobjs();
 	bool do_impact_damage(point const &pos_, float radius_);
-	void draw() const;
+	void draw(bool shadow_only=0) const;
 };
 
 

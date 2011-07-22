@@ -245,7 +245,7 @@ void draw_trees() {
 	//RESET_TIME;
 
 	if (tree_mode & 2) {
-		draw_small_trees();
+		draw_small_trees(0);
 		//PRINT_TIME("Small Trees");
 	}
 	if (tree_mode & 1) {

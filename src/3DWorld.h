@@ -1588,7 +1588,7 @@ void draw_blasts();
 
 // function prototypes - scenery
 void gen_scenery();
-void draw_scenery(bool draw_opaque, bool draw_transparent);
+void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only=0);
 void update_scenery_zvals(int x1, int y1, int x2, int y2);
 void free_scenery();
 void add_scenery_cobjs();
@@ -1722,6 +1722,7 @@ void check_falling_cobjs();
 bool shadow_map_enabled();
 unsigned get_shadow_map_tu_id(int light);
 unsigned get_shadow_map_tid(int light);
+int get_smap_ndiv(float radius);
 void set_smap_shader_for_light(unsigned p, int light);
 void set_smap_shader_for_all_lights(unsigned p);
 void draw_scene_bounds_and_light_frustum(point const &lpos);

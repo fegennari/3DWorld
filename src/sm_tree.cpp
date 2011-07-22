@@ -168,7 +168,7 @@ void remove_small_tree_cobjs() {
 }
 
 
-void draw_small_trees() {
+void draw_small_trees(bool shadow_only) {
 
 	//RESET_TIME;
 	if (small_trees.empty() || !(tree_mode & 2)) return;
@@ -187,15 +187,15 @@ void draw_small_trees() {
 			if (pass == 1 && (i == 0 || small_trees[i-1].get_type() != t.get_type())) {
 				small_trees[i].pre_leaf_draw(); // first of this type
 			}
-			t.draw(1 << pass);
+			t.draw((1 << pass), shadow_only);
 			
 			if (pass == 1 && (i+1 == small_trees.size() || small_trees[i+1].get_type() != t.get_type())) {
 				t.post_leaf_draw(); // last of this type
 			}
 		}
+		glDisable(GL_TEXTURE_2D);
 	}
 	gluQuadricTexture(quadric, GL_FALSE);
-	glDisable(GL_TEXTURE_2D);
 	tree_scenery_pld.draw_and_clear();
 	//PRINT_TIME("small tree draw");
 }
@@ -384,7 +384,7 @@ void small_tree::post_leaf_draw() const {
 }
 
 
-void small_tree::draw(int mode) const {
+void small_tree::draw(int mode, bool shadow_only) const {
 
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
@@ -392,8 +392,8 @@ void small_tree::draw(int mode) const {
 	float const radius(max(1.5*width, 0.5*height));
 	point const pos2(pos + point(0.0, 0.0, 0.5*height));
 	bool const pine_tree(type == T_PINE || type == T_SH_PINE);
-	bool const cobj_coll(pine_tree && (mode & 2) && small_trees.size() < 100); // only cull pine tree leaves if there aren't too many
-	if (!sphere_in_camera_view(pos2, radius, (cobj_coll ? 2 : 0))) return;
+	bool const cobj_cull(pine_tree && (mode & 2) && small_trees.size() < 100); // only cull pine tree leaves if there aren't too many
+	if (!shadow_only && !sphere_in_camera_view(pos2, radius, (cobj_cull ? 2 : 0))) return;
 	float const dist(distance_to_camera(pos));
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size(zoom_f*SM_TREE_QUALITY*stt[type].ss*width*window_width/dist);
 	int const max_sides(N_CYL_SIDES/2);
@@ -404,7 +404,7 @@ void small_tree::draw(int mode) const {
 	if ((mode & 1) && size > 1.0 && type != T_BUSH) {
 		colorRGBA tcolor(stt[type].c);
 		float const hval(pine_tree ? 1.0 : 0.75), cz(camera_origin.z - cview_radius*cview_dir.z);
-		float const w1(stt[type].ws*width), w2(width*stt[type].w2);
+		float const w1(stt[type].ws*width), w2(stt[type].w2*width);
 		float const vxy(1.0 - (cz - pos.z)/dist);
 
 		if (type == T_SH_PINE || type == T_PINE || dist < 0.2 || vxy >= 0.2*width/stt[type].h) { // if trunk not obscured by leaves
@@ -413,18 +413,18 @@ void small_tree::draw(int mode) const {
 			}
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 
-			if (LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
+			if (!shadow_only && LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
 				vector3d const dir(get_rot_dir());
 				tree_scenery_pld.add_textured_line((pos + dir*(zbot - pos.z)), (pos + dir*(zbot - pos.z + len)), tcolor, WOOD_TEX);
 			}
 			else { // draw as cylinder
 				set_color(tcolor);
-				select_texture(WOOD_TEX);
+				if (!shadow_only) select_texture(WOOD_TEX);
 				glPushMatrix();
 				translate_to(pos);
 				if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
 				glTranslatef(0.0, 0.0, (zbot - pos.z));
-				int const nsides2(max(3, min(max_sides/2, int(0.25*size))));
+				int const nsides2(max(3, min(max_sides/2, (shadow_only ? get_smap_ndiv(max(w1, w2)) : int(0.25*size)))));
 				draw_cylin_fast(w1, w2, len, nsides2, 1, 0, 1); // trunk (draw quad if small?)
 				glPopMatrix();
 			}
@@ -440,7 +440,7 @@ void small_tree::draw(int mode) const {
 			glPushMatrix();
 			translate_to(pos);
 			if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
-			int const nsides(max(6, min(max_sides, (int)size)));
+			int const nsides(max(6, min(max_sides, (shadow_only ? get_smap_ndiv(width) : (int)size))));
 
 			switch (type) { // draw leaves
 			case T_DECID: // decidious tree

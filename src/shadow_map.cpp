@@ -18,21 +18,17 @@ extern int window_width, window_height, animate2, display_mode, ground_effects_l
 extern vector<shadow_sphere> shadow_objs;
 extern vector<coll_obj> coll_objects;
 
-void draw_small_trees();
+void draw_small_trees(bool shadow_only);
 void draw_trees_shadow();
 
 
 struct smap_data_t {
 	unsigned tid, tu_id, fbo_id;
-	float approx_pixel_width;
 	pos_dir_up pdu;
 
-	smap_data_t() : tid(0), tu_id(0), fbo_id(0), approx_pixel_width(0.0) {}
+	smap_data_t() : tid(0), tu_id(0), fbo_id(0) {}
 
-	int get_ndiv(float radius) {
-		// FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
-		return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width)));
-	}
+	
 	void free_gl_state() {
 		free_texture(tid);
 		free_fbo(fbo_id);
@@ -53,6 +49,12 @@ unsigned get_shadow_map_tu_id(int light) {
 
 unsigned get_shadow_map_tid(int light) {
 	return smap_data[light].tid;
+}
+
+int get_smap_ndiv(float radius) {
+	// FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
+	float const approx_pixel_width(0.5*sqrt(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE) / shadow_map_sz);
+	return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width)));
 }
 
 
@@ -119,7 +121,7 @@ void set_smap_shader_for_all_lights(unsigned p) {
 }
 
 
-pos_dir_up get_light_pdu(point const &lpos, bool set_matrix, float *sradius=NULL) {
+pos_dir_up get_light_pdu(point const &lpos, bool set_matrix) {
 
 	float const scene_z1(min(zbottom, czmin)), scene_z2(max(ztop, czmax)), scene_dz(scene_z2 - scene_z1);
 	point const scene_center(0.0, 0.0, 0.5*(scene_z1 + scene_z2));
@@ -133,7 +135,6 @@ pos_dir_up get_light_pdu(point const &lpos, bool set_matrix, float *sradius=NULL
 		scene_radius2 = max(scene_radius2, pt_line_dist(corners[i], lpos, scene_center));
 	}
 	assert(scene_radius2 <= scene_radius);
-	if (sradius) *sradius = scene_radius2;
 	vector3d const light_dir((scene_center - lpos).get_norm()); // almost equal to lpos (point light)
 	float const dist(p2p_dist(lpos, scene_center));
 	vector3d up_dir(zero_vector);
@@ -196,8 +197,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	glMatrixMode(GL_MODELVIEW);
 	float sradius(0.0);
 	camera_pos = lpos;
-	pdu        = camera_pdu = get_light_pdu(lpos, 1, &sradius);
-	approx_pixel_width = sradius / shadow_map_sz;
+	pdu        = camera_pdu = get_light_pdu(lpos, 1);
 	check_gl_error(201);
 
 	// setup texture matrix
@@ -216,7 +216,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	// add dynamic objects
 	for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 		if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
-		int const ndiv(get_ndiv(i->radius));
+		int const ndiv(get_smap_ndiv(i->radius));
 
 		if (i->ctype != COLL_SPHERE) {
 			assert((unsigned)i->cid < coll_objects.size());
@@ -243,18 +243,18 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			int ndiv(1);
 
 			if (i->type == COLL_SPHERE) {
-				ndiv = get_ndiv(i->radius);
+				ndiv = get_smap_ndiv(i->radius);
 			}
 			else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
-				ndiv = get_ndiv(max(i->radius, i->radius2));
+				ndiv = get_smap_ndiv(max(i->radius, i->radius2));
 			}
 			in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
 		}
 		if (in_cur_prim >= 0) glEnd();
 		if (ENABLE_DLIST) glEndList();
 	}
-	draw_small_trees(); // too slow?
-	draw_scenery(1, 1);
+	draw_small_trees(1); // too slow?
+	draw_scenery(1, 1, 1);
 	draw_trees_shadow();
 	display_mesh();
 	
