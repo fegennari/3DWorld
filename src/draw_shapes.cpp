@@ -1401,7 +1401,7 @@ void add_coll_shadow_objs() {
 	if (!platforms.empty()) {
 		for (unsigned i = 0; i < coll_objects.size(); ++i) {
 			coll_obj const &c(coll_objects[i]);
-			if (c.disabled() || c.cp.color.alpha < MIN_SHADOW_ALPHA || c.platform_id == 0) continue;
+			if (c.disabled() || c.cp.color.alpha < MIN_SHADOW_ALPHA || c.platform_id < 0) continue;
 			point center;
 			float radius;
 			c.bounding_sphere(center, radius);
