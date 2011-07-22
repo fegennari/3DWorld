@@ -72,7 +72,7 @@ extern vector<coll_obj> coll_objects;
 
 void calc_leaf_points() {
 
-	leaf_size = REL_LEAF_SIZE*TREE_SIZE/sqrt(nleaves_scale);
+	leaf_size = REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*mesh_scale*mesh_scale2);
 	leaf_points[0].assign(-2.0*leaf_size, 0.0, 0.0);
 	leaf_points[1].assign(-2.0*leaf_size, 0.0, 4.0*leaf_size);
 	leaf_points[2].assign( 2.0*leaf_size, 0.0, 4.0*leaf_size);
