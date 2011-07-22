@@ -13,7 +13,7 @@ bool const ENABLE_DLIST = 1;
 bool scene_dlist_invalid(0);
 unsigned shadow_map_sz(0), smap_dlist(0);
 
-extern bool have_drawn_cobj, use_stencil_shadows;
+extern bool have_drawn_cobj;
 extern int window_width, window_height, animate2, display_mode, ground_effects_level;
 extern vector<shadow_sphere> shadow_objs;
 extern vector<coll_obj> coll_objects;
@@ -296,7 +296,7 @@ void create_shadow_map() {
 	}
 
 	// render shadow maps to textures
-	if (!use_stencil_shadows) add_coll_shadow_objs(); // if stencil shadows are enabled we don't do them here
+	add_coll_shadow_objs();
 	point lpos;
 	
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
