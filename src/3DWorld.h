@@ -1602,7 +1602,6 @@ void gen_grass(bool full_regen);
 void update_grass_vbos();
 void draw_grass();
 void modify_grass_at(point const &pos, float radius, bool crush=0, bool burn=0, bool cut=0, bool update_mh=0, bool check_uw=0);
-void update_grass_shadows_for_cube(cube_t const &cube);
 bool place_obj_on_grass(point &pos, float radius);
 float get_grass_density(point const &pos);
 

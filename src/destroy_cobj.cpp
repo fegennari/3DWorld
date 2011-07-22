@@ -334,12 +334,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		}
 		//PRINT_TIME("Check Anchored");
 	}
-
-	// update grass shadows
-	for (vector<cube_t>::const_iterator i = mod_cubes.begin(); i != mod_cubes.end(); ++i) {
-		// FIXME: test alpha?
-		update_grass_shadows_for_cube(*i); // the object should still be valid
-	}
 	if (!to_remove.empty()) {
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // FIXME: what about updating (removing) mesh shadows?
 		cdir.normalize();

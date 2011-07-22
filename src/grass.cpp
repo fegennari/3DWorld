@@ -10,8 +10,7 @@
 #include "gl_ext_arb.h"
 
 
-#define MOD_GEOM   0x01
-#define MOD_SHADOW 0x02
+#define MOD_GEOM 0x01
 
 
 bool grass_enabled(1);
@@ -306,56 +305,6 @@ public:
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void update_shadows_for_cube(cube_t const &cube) {
-		//RESET_TIME;
-		int const light(get_light());
-		point lpos;
-		if (!get_light_pos(lpos, light)) return;
-		point pts[8];
-		get_cube_points(cube.d, pts);
-		int x1, y1, x2, y2, ret_val;
-		get_shape_shadow_bb(pts, 8, light, 1, lpos, x1, y1, x2, y2, ret_val, OBJECT_SHADOW);
-		cube_t test_cube(cube);
-		test_cube.expand_by(HALF_DXY);
-		last_cobj = -1;
-
-		for (int y = y1; y <= y2; ++y) {
-			for (int x = x1; x <= x2; ++x) {
-				assert(!point_outside_mesh(x, y));
-				point const mesh_pos(point(get_xval(x), get_yval(y), mesh_height[y][x]));
-				if (!check_line_clip(lpos, mesh_pos, test_cube.d)) continue;
-				update_shadows(x, y, OBJECT_SHADOW, lpos);
-			}
-		}
-		//PRINT_TIME("Grass Shadow Update");
-	}
-
-	void update_shadows(int x, int y, unsigned char shad_types, point const &lpos) {
-		if (point_outside_mesh(x, y)) return;
-		unsigned start, end;
-		unsigned const ix(get_start_and_end(x, y, start, end));
-		if (start == end) return; // no grass at this location
-		unsigned min_up(end), max_up(start);
-		bool const skip_dynamic((shad_types & DYNAMIC_SHADOW) == 0);
-
-		for (unsigned i = start; i < end; ++i) {
-			grass_t &g(grass[i]);
-			unsigned char orig_shadowed(g.shadowed);
-			g.shadowed &= ~shad_types; // unset these bits since they are now invalid
-			if (g.shadowed) continue; // already shadowed with a non-checked type
-			point const pos(g.p + g.dir*0.5);
-			g.shadowed = is_pt_shadowed(pos, skip_dynamic); // per vertex shadows?
-			if (g.shadowed & shad_types) modified[ix] |= MOD_SHADOW;
-			
-			if ((g.shadowed != 0) != (orig_shadowed != 0)) { // shadow nonzero-ness has changed, need to update
-				min_up = min(min_up, i);
-				max_up = max(max_up, i);
-			}
-		} // for i
-		if (min_up > max_up) return; // nothing updated
-		if (vbo_valid) upload_data_to_vbo(min_up, max_up+1, 0);
-	}
-
 	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw) {
 		if (burn && is_underwater(pos)) burn = 0;
 		if (!burn && !crush && !cut && !update_mh && !check_uw) return; // nothing left to do
@@ -602,10 +551,6 @@ void draw_grass() {
 
 void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw) {
 	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw);
-}
-
-void update_grass_shadows_for_cube(cube_t const &cube) {
-	if (!no_grass() && !shadow_map_enabled()) grass_manager.update_shadows_for_cube(cube);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {
