@@ -185,6 +185,15 @@ public:
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}
 	int get_type()  const {return type;}
+
+	struct comp_by_type_dist {
+		point pos;
+		comp_by_type_dist(point const &pos_) : pos(pos_) {}
+
+		bool operator()(small_tree const &a, small_tree const &b) const {
+			return ((a.type != b.type) ? (a.type < b.type) : (p2p_dist_sq(a.pos, pos) < p2p_dist_sq(b.pos, pos)));
+		}
+	};
 };
 
 

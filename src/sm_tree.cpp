@@ -175,6 +175,10 @@ void draw_small_trees() {
 	set_fill_mode();
 	gluQuadricTexture(quadric, GL_TRUE);
 
+	if (small_trees.size() < 100) {
+		sort(small_trees.begin(), small_trees.end(), small_tree::comp_by_type_dist(get_camera_pos()));
+	}
+
 	// two pass draw is more efficient because it avoids texture thrashing
 	for (unsigned pass = 0; pass < 2; ++pass) { // first pass: draw trunk, second pass: draw leaves
 		for (unsigned i = 0; i < small_trees.size(); ++i) {
