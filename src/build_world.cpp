@@ -37,7 +37,7 @@ vector<user_waypt_t> user_waypoints;
 vector<coll_obj> fixed_cobjs;
 vector<portal> portals;
 
-extern bool have_platform_cobj;
+extern bool have_platform_cobj, clear_landscape_vbo;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, invalid_shadows, has_scenery2, UNLIMITED_WEAPONS;
@@ -556,6 +556,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		  PRINT_TIME("Surface generation");
 		}
 		gen_tex_height_tables();
+		clear_landscape_vbo = 1;
 	}
 	compute_matrices();
 	PRINT_TIME("Matrix generation");

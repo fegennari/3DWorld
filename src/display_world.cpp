@@ -829,7 +829,7 @@ void display(void) {
 			display_inf_terrain();
 		}
 		else { // finite terrain mode
-			create_shadow_map();
+			create_shadow_map(); // move down?
 			if (TIMETEST) PRINT_TIME("1.5");
 
 			if (mesh_invalidated) {

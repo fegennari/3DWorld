@@ -441,6 +441,7 @@ void display_mesh() { // fast array version
 		}
 		if (mesh_vbo == 0) {
 			vector<point> data; // vertex and normals
+			data.reserve(4*MESH_X_SIZE*(MESH_Y_SIZE-1));
 
 			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 				for (int j = 0; j < MESH_X_SIZE; ++j) {
