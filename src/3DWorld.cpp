@@ -1076,7 +1076,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case '1': // toggle mesh draw
 		display_mode ^= 0x01;   break;
-	case '2': // toggle tree draw
+	case '2': // toggle grass draw
 		display_mode ^= 0x02;   break;
 	case '3': // toggle water/ice
 		display_mode ^= 0x04;   break;

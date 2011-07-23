@@ -208,7 +208,7 @@ void draw_stuff(int draw_uw, int timer1) {
 	}
 	else {
 		draw_snow();
-		if (display_mode & 0x02) draw_trees();
+		draw_trees();
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("9");
 		draw_hmv();
@@ -1013,7 +1013,7 @@ void display_universe() { // infinite universe
 void draw_transparent(bool above_water) {
 
 	if (above_water) {
-		if ((display_mode & 0x02) && TERRAIN_SCENERY) draw_trees();
+		if (TERRAIN_SCENERY) draw_trees();
 		draw_transparent_object_groups();
 	}
 	else {
