@@ -287,7 +287,6 @@ class platform { // animated (player controlled) scene object
 
 	// constants
 	bool const cont; // continuous - always in motion
-	int shadow_mode;
 	float const fspeed, rspeed; // velocity of forward/reverse motion in units per tick (can be negative)
 	float const sdelay, rdelay; // start delay / reverse delay in ticks
 	float const ext_dist, act_dist; // distance traveled, activation distance
@@ -306,8 +305,8 @@ class platform { // animated (player controlled) scene object
 	
 public:
 	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0,
-		point const &o=all_zeros, vector3d const &dir_=plus_z, int sm=1, bool c=0);
-	bool has_dynamic_shadows() const {return (shadow_mode >= 2 && (cont || state >= ST_FWD));}
+		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0);
+	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}
 	vector3d get_delta()       const {return (pos - origin);}
 	vector3d get_range()       const {return dir*ext_dist;}
 	vector3d get_last_delta()  const {return delta;}

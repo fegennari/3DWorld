@@ -12,14 +12,11 @@ extern float fticks;
 extern vector<coll_obj> coll_objects;
 
 
-
-// shadow_mode: 0 = no dynamic shadows, 1 = only on object, 2 = on object and targets
 platform::platform(float fs, float rs, float sd, float rd, float dst, float ad,
-				   point const &o, vector3d const &dir_, int sm, bool c)
-				   : cont(c), shadow_mode(sm), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst),
+				   point const &o, vector3d const &dir_, bool c)
+				   : cont(c), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst),
 				   act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros)
 {
-	assert(shadow_mode <= 2);
 	assert(dir_ != all_zeros);
 	assert(fspeed > 0.0 && rspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
 	reset();
@@ -133,7 +130,7 @@ void platform::advance_timestep() {
 			coll_obj &cobj(coll_objects[*i]);
 			// need to update collision structure when there is an x/y delta by removing/adding to coll_cells (except for cubes)
 			bool const update_colls(cobj.type != COLL_CUBE && (delta.x != 0.0 || delta.y != 0.0));
-			if (shadow_mode > 0) cobj.clear_lightmap(0, 0);
+			cobj.clear_lightmap(0, 0);
 			if (update_colls) remove_coll_object(*i, 0);
 			cobj.shift_by(delta); // move object
 			if (update_colls) cobj.re_add_coll_cobj(*i, 0);
@@ -176,15 +173,15 @@ bool platform_cont::add_from_file(FILE *fp) {
 	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist;
 	point origin;
 	vector3d dir;
-	int cont, shadow_mode;
+	int cont;
 	
-	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%f%f%i%i", &fspeed, &rspeed, &sdelay, &rdelay, &ext_dist,
-		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &shadow_mode, &cont) != 14)
+	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%f%f%i", &fspeed, &rspeed, &sdelay, &rdelay, &ext_dist,
+		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &cont) != 13)
 	{
 		return 0;
 	}
 	if (cont != 0 && cont != 1) return 0; // not a bool
-	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, shadow_mode, (cont != 0)));
+	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0)));
 	return 1;
 }
 

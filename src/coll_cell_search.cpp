@@ -743,7 +743,7 @@ bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 	return (!cobjs.empty());
 }
 
-
+// unused
 bool coll_pt_vis_test_large2(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic, bool tl) {
 
 	assert(radius > 0.0);

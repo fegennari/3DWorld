@@ -1020,7 +1020,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				break;
 			}
 
-		case 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> shadow_mode cont]
+		case 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
 			if (fscanf(fp, "%i", &ivals[0]) != 1) return read_error(fp, "platform", coll_obj_file);
 			assert(ivals[0] == 0 || ivals[0] == 1); // boolean
 			
