@@ -1919,11 +1919,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	disable_textures_texgen();
 	set_lighted_sides(1);
 	set_specular(0.0, 1.0);
-
-	if (draw_solid) {
-		//PRINT_TIME("Final Draw");
-		show_draw_stats();
-	}
+	//if (draw_solid) PRINT_TIME("Final Draw");
 }
 
 

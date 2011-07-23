@@ -16,12 +16,8 @@ bool const VERBOSE_DYNAMIC   = 0;
 bool const MERGE_STRIPS      = 1; // makes display significantly faster but looks a little worse
 bool const FULL_MAP_LOOKUP   = 1;
 bool const USE_DLIST         = 1;
-bool const ENABLE_DL_LOD     = 0; // faster but lower visual quality
-bool const DO_CIRC_PROJ_CLIP = 1;
 bool const RENDER_PART_INT   = 1; // if 1, render only the visible portions of the surface using the slow algorithm, if 0 render all of the surface using the fast algorithm
-bool const LOD_QUAD_TRIS     = 0; // slightly faster but somewhat lower quality (better off when dlists are enabled)
 int  const USE_MESH_INT      = 1; // 0 = none, 1 = high res, 2 = low res
-int  const VERBOSE           = 0; // 0, 1, 2, 3
 
 unsigned const MAX_CALC_PER_FRAME = 1000;
 
@@ -34,9 +30,8 @@ float const SHAPE_SPLIT_FACT = 0.0125; // smaller = more top level splitting
 float const subdiv_size_inv(1.0/MAX_QUAD_LT_SIZE);
 
 
-int cube_time(0), invalid_shadows(0);
-unsigned ncubes(0), npolys(0), dlists(0), nverts(0), nquads(0), nsurfaces(0), nvlight(0), ntested(0);
-unsigned ALL_LT[5] = {0};
+int invalid_shadows(0);
+unsigned nvlight(0), ALL_LT[5] = {0};
 unsigned long long max_lighted(0);
 float L1_SUBDIV_SIZE(1.0);
 
@@ -88,45 +83,11 @@ bool shadow_sphere::test_volume_cobj(point const *const pts, unsigned npts, poin
 void init_draw_stats() {
 
 	L1_SUBDIV_SIZE = min(SHAPE_SPLIT_FACT*(X_SCENE_SIZE + Y_SCENE_SIZE), 2.0f*HALF_DXY);
+	nvlight = 0;
 
 	if (L1_SUBDIV_SIZE > max_proj_rad) {
 		cout << "***** Changing max_proj_rad from " << max_proj_rad << " to " << L1_SUBDIV_SIZE << endl;
 		set_coll_rmax(L1_SUBDIV_SIZE - min(DX_VAL, DY_VAL)); // may be too late
-	}
-	cube_time = glutGet(GLUT_ELAPSED_TIME);
-	ncubes    = npolys = dlists = nverts = nquads = nsurfaces = nvlight = ntested = 0;
-}
-
-
-void show_draw_stats() {
-
-	if (VERBOSE && (VERBOSE >= 2 || nvlight > 0 || ncubes > 0 || npolys > 0 || nquads > 0)) {
-		cout << "Time = " << (glutGet(GLUT_ELAPSED_TIME) - cube_time) << endl;
-
-		if (VERBOSE >= 2 || nvlight > 0) {
-			cout << "cubes= " << ncubes << ", polys= " << npolys << ", ndl = " << dlists << ", nverts = " << nverts
-				 << ", quads= " << nquads << ", surfs= " << nsurfaces << ", vcalls= " << nvlight << endl
-				 << "cobjs = " << coll_objects.size() << ", dynamic spheres = " << shadow_objs.size() << ", tested= " << ntested << endl;
-		}
-		if (VERBOSE >= 3) {
-			// status: COLL_UNUSED COLL_FREED COLL_PENDING  COLL_STATIC COLL_DYNAMIC      COLL_NEGATIVE
-			// type  : COLL_NULL   COLL_CUBE  COLL_CYLINDER COLL_SPHERE COLL_CYLINDER_ROT COLL_POLYGON COLL_INVALID
-			unsigned tcounts[7] = {0}, scounts[6] = {0};
-
-			for (unsigned i = 0; i < coll_objects.size(); ++i) {
-				++scounts[unsigned(coll_objects[i].status)];
-				if (coll_objects[i].status == COLL_STATIC) ++tcounts[unsigned(coll_objects[i].type)];
-			}
-			cout << "scounts = ";
-			for (unsigned i = 0; i < 6; ++i) {
-				cout << scounts[i] << "  ";
-			}
-			cout << endl << "tcounts = ";
-			for (unsigned i = 0; i < 7; ++i) {
-				cout << tcounts[i] << "  ";
-			}
-			cout << endl;
-		}
 	}
 }
 
@@ -222,8 +183,6 @@ void draw_verts(vector<vertex_t> const &verts, unsigned const *ix, int npts, uns
 		set_shadowed_state(shadowed);
 		verts[ix[i]].draw();
 	}
-	nverts += npts;
-	++nsurfaces;
 }
 
 
@@ -358,8 +317,8 @@ unsigned dqd_params::determine_shadow_matrix(point const *const pts, vector<unsi
 	if (under_mesh)   return ALL_LT[1]; // always shadowed
 
 	// find shadowing collision objects
-	bool do_mesh_intersect(!above_mesh);
 	++nvlight;
+	bool do_mesh_intersect(!above_mesh);
 	unsigned const n0(n[0]), n1(n[1]), xstride(n1+1), ystride(n0+1), numverts(xstride*ystride);
 	unsigned const num_lights(enabled_lights.size());
 	unsigned lighted(0);
@@ -410,7 +369,6 @@ unsigned dqd_params::determine_shadow_matrix(point const *const pts, vector<unsi
 			if (cur_lighted == 0 || do_mesh_intersect) { // block is at least partially shadowed
 				unsigned const ncobjs(cobjs.size());
 				unsigned const step(min(n1, 6U));
-				ntested += ncobjs;
 				vector<pt_pair> bounds(ncobjs);
 
 				for (unsigned j = 0; j < ncobjs; ++j) { // line-plane int check optimization
@@ -517,7 +475,6 @@ unsigned dqd_params::determine_shadow_matrix(point const *const pts, vector<unsi
 unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, bool &in_strip) {
 
 	if (!ENABLE_SHADOWS) return ALL_LT[2]; // all unshadowed
-	++nquads;
 	point pts[4];
 	vector3d normals[4];
 
@@ -606,7 +563,7 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 	if (can_return) return lighted;
 	int step[2] = {1, 1};
 	
-	if (!USE_DLIST || (ENABLE_DL_LOD && !in_dlist)) { // could use multiple display lists for LOD
+	if (!USE_DLIST) { // could use multiple display lists for LOD
 		gen_stepsize(get_camera_pos(), pts[0], step, n, len);
 		if (USE_DLIST) {for (unsigned i = 0; i < 2; ++i) step[i] = min(3, step[i]);}
 	}
@@ -644,7 +601,6 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 				nvals[o1+s1] != nvals[o1+s1n] || nvals[o1+s1] != nvals[o1+s1p])
 			{
 				float const t_(s1*ninv[1]);
-				nverts += 2;
 
 				for (int i = 1; i >= 0; --i) {
 					vector3d const n(use_n ? interpolate_3d(normals, npts, s_[i], t_) : normal);
@@ -654,7 +610,6 @@ unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const
 					n.do_glNormal();
 					v.do_glVertex();
 				}
-				++nsurfaces;
 			} // else continue strip
 		}
 		s0 = s_end - step[0]; // advance past merged strips
@@ -706,7 +661,6 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 		}
 		no_shadow_edge = require_either_lightval(all_lighted, 1, 2); // all or none shadowed
 	}
-	++npolys;
 	point pos;
 	float rsize;
 	polygon_bounding_sphere(pts0, npts, 0.0, pos, rsize);
@@ -806,15 +760,8 @@ void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int 
 			glNewList(dlist, GL_COMPILE_AND_EXECUTE); // mapx has 4067 dlists, 88.5K verts
 		}
 		else {
-			++dlists;
 			glCallList(it->second.status);
 			return;
-		}
-	}
-	else if (no_subdiv) {
-		// use dot_product((camera - pos), norm)/p2p_dist(camera, pos)?
-		if (LOD_QUAD_TRIS && (n[0] > 1 || n[1] > 1) && scaled_view_dist(camera, pos) > 2.4*DIST_CUTOFF) {
-			calc_params(pts, dirs, len, ninv, n, 0.5*subdiv_size_inv2); // smaller n (half the resolution)
 		}
 	}
 	++cobj_counter;
@@ -1004,7 +951,6 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, bool no_subdiv) const {
 			if (camera[i] <= d[i][0]-dist || camera[i] >= d[i][1]+dist) inside = 0;
 		}
 	}
-	++ncubes;
 	dqt_params const q(0, id, 0);
 	pair<float, unsigned> faces[6];
 	for (unsigned i = 0; i < 6; ++i) faces[i].second = i;

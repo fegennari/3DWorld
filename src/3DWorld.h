@@ -1167,7 +1167,6 @@ void exec_universe_text(std::string const &text);
 
 // function prototypes - draw shapes
 void init_draw_stats();
-void show_draw_stats();
 bool is_above_mesh(point const &pos);
 void clear_all_lightmaps(int mode, unsigned keep=0);
 void add_shadow_obj(point const &pos, float radius, int coll_id);
