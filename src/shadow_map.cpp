@@ -253,7 +253,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		if (in_cur_prim >= 0) glEnd();
 		if (ENABLE_DLIST) glEndList();
 	}
-	draw_small_trees(1); // too slow?
+	draw_small_trees(1);
 	draw_scenery(1, 1, 1);
 	draw_trees_shadow();
 	display_mesh();

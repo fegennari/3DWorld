@@ -56,6 +56,7 @@ window_width 1920
 window_height 1200
 color_bit_depth 32
 refresh_rate 75
+#shadow_map_sz 2048
 
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0

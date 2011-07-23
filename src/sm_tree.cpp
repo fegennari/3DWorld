@@ -401,19 +401,16 @@ void small_tree::draw(int mode, bool shadow_only) const {
 	// slow because of:
 	// glBegin()/glEnd() overhead of lots of low ndiv spheres
 	// dlist thrashing
-	if ((mode & 1) && size > 1.0 && type != T_BUSH) {
-		colorRGBA tcolor(stt[type].c);
-		float const hval(pine_tree ? 1.0 : 0.75), cz(camera_origin.z - cview_radius*cview_dir.z);
-		float const w1(stt[type].ws*width), w2(stt[type].w2*width);
-		float const vxy(1.0 - (cz - pos.z)/dist);
+	if ((mode & 1) && (shadow_only || size > 1.0) && type != T_BUSH) {
+		float const cz(camera_origin.z - cview_radius*cview_dir.z), vxy(1.0 - (cz - pos.z)/dist);
 
 		if (type == T_SH_PINE || type == T_PINE || dist < 0.2 || vxy >= 0.2*width/stt[type].h) { // if trunk not obscured by leaves
-			for (unsigned i = 0; i < 3; ++i) {
-				tcolor[i] = min(1.0f, tcolor[i]*(0.85f + 0.3f*rv[i]));
-			}
+			colorRGBA tcolor(stt[type].c);
+			UNROLL_3X(tcolor[i_] = min(1.0f, tcolor[i_]*(0.85f + 0.3f*rv[i_]));)
+			float const hval(pine_tree ? 1.0 : 0.75), w1(stt[type].ws*width), w2(stt[type].w2*width);
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 
-			if (!shadow_only && LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
+			if ((!shadow_only || size <= 1.0) && LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
 				vector3d const dir(get_rot_dir());
 				tree_scenery_pld.add_textured_line((pos + dir*(zbot - pos.z)), (pos + dir*(zbot - pos.z + len)), tcolor, WOOD_TEX);
 			}
@@ -431,12 +428,12 @@ void small_tree::draw(int mode, bool shadow_only) const {
 		}
 	}
 	if (mode & 2) {
+		set_color(color);
+
 		if (pine_tree) { // 30 quads per tree
-			set_color(color);
 			draw_quads_from_pts(points); // draw textured quad if far away?
 		}
 		else { // palm or decidious
-			set_color(color);
 			glPushMatrix();
 			translate_to(pos);
 			if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
@@ -446,24 +443,21 @@ void small_tree::draw(int mode, bool shadow_only) const {
 			case T_DECID: // decidious tree
 				glTranslatef(0.0, 0.0, 0.75*height);
 				glScalef(1.2, 1.2, 0.8);
-				draw_sphere_dlist(all_zeros, width, nsides, 1);
 				break;
 			case T_TDECID: // tall decidious tree
 				glTranslatef(0.0, 0.0, 1.0*height);
 				glScalef(0.7, 0.7, 1.6);
-				draw_sphere_dlist(all_zeros, width, nsides, 1);
 				break;
 			case T_BUSH: // bush
 				glScalef((0.1*height+0.8*width)/width, (0.1*height+0.8*width)/width, 1.0);
-				draw_sphere_dlist(all_zeros, width, nsides, 1);
 				//draw_cube_map_sphere(all_zeros, width, nsides, 1, 1); // slower, but looks better
 				break;
 			case T_PALM: // palm tree
 				glTranslatef(0.0, 0.0, 0.71*height-0.5*width);
 				glScalef(1.2, 1.2, 0.5);
-				draw_sphere_dlist(all_zeros, width, nsides, 1, 1);
 				break;
 			}
+			draw_sphere_dlist(all_zeros, width, nsides, 1, (type == T_PALM));
 			glPopMatrix();
 		} // end pine else
 	} // end mode
