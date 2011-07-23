@@ -183,7 +183,6 @@ bool coll_pt_vis_test_large(point pos, point pos2, vector<int> &cobjs, int cobj,
 						if (!c.line_intersect(pts[i], lpos)) vshadowed = 0;
 					}
 					if (vshadowed) { // completely contained in the shadow of this object
-						c.shadow_depends.insert(cobj);
 						return 1; // could continue to find other completely shadowing objects, but > 1 is unlikely
 					}
 				}

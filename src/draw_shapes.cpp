@@ -111,12 +111,11 @@ void show_draw_stats() {
 		if (VERBOSE >= 3) {
 			// status: COLL_UNUSED COLL_FREED COLL_PENDING  COLL_STATIC COLL_DYNAMIC      COLL_NEGATIVE
 			// type  : COLL_NULL   COLL_CUBE  COLL_CYLINDER COLL_SPHERE COLL_CYLINDER_ROT COLL_POLYGON COLL_INVALID
-			unsigned tcounts[7] = {0}, scounts[6] = {0}, nsdep(0);
+			unsigned tcounts[7] = {0}, scounts[6] = {0};
 
 			for (unsigned i = 0; i < coll_objects.size(); ++i) {
 				++scounts[unsigned(coll_objects[i].status)];
 				if (coll_objects[i].status == COLL_STATIC) ++tcounts[unsigned(coll_objects[i].type)];
-				nsdep += coll_objects[i].shadow_depends.size();
 			}
 			cout << "scounts = ";
 			for (unsigned i = 0; i < 6; ++i) {
@@ -126,7 +125,7 @@ void show_draw_stats() {
 			for (unsigned i = 0; i < 7; ++i) {
 				cout << tcounts[i] << "  ";
 			}
-			cout << endl << "nsdep = " << nsdep << endl;
+			cout << endl;
 		}
 	}
 }
@@ -278,11 +277,7 @@ bool check_face_containment(point const *const pts, unsigned npts, int dim, int 
 				if (pts[j][dk] < (c.d[dk][0]-TOLER_) || pts[j][dk] > (c.d[dk][1]+TOLER_)) contained = 0;
 			}
 		}
-		if (contained) {
-			// force shadow (and face containment) recomputation when this object is removed
-			coll_objects[cid].shadow_depends.insert(cobj);
-			return 1;
-		}
+		if (contained) return 1;
 	}
 	return 0;
 }
@@ -413,7 +408,6 @@ unsigned dqd_params::determine_shadow_matrix(point const *const pts, vector<unsi
 			if (above_mesh && cobjs.empty() && (!USE_MESH_INT || qzmin >= mesh_ztop)) cur_lighted = 2; // block is completely unshadowed
 
 			if (cur_lighted == 0 || do_mesh_intersect) { // block is at least partially shadowed
-				int lci(-1);
 				unsigned const ncobjs(cobjs.size());
 				unsigned const step(min(n1, 6U));
 				ntested += ncobjs;
@@ -487,8 +481,6 @@ unsigned dqd_params::determine_shadow_matrix(point const *const pts, vector<unsi
 								if (c.line_intersect(pos, lpos)) { // intersection
 									if (j > 0) swap(cobjs[0], cobjs[j]); // move this cobj to the beginning to increase its priority
 									if (j > 0) swap(bounds[0], bounds[j]);
-									if (cindex != lci) c.shadow_depends.insert(cobj);
-									lci  = cindex;
 									coll = 1;
 
 									for (s1 += step, pos += vstep2; s1 <= n1; s1 += step, pos += vstep2) { // 25% speedup

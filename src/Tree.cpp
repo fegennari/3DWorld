@@ -327,8 +327,6 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 	
 	if (cix >= 0) {
 		assert((unsigned)cix < coll_objects.size());
-		vector<int> indices; // unused
-		coll_objects[cix].update_shadowed_cobjs(coll_objects, indices, cix);
 		remove_coll_object(cix);
 	}
 	leaves[i] = leaves.back();

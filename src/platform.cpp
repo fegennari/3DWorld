@@ -17,7 +17,7 @@ extern vector<coll_obj> coll_objects;
 platform::platform(float fs, float rs, float sd, float rd, float dst, float ad,
 				   point const &o, vector3d const &dir_, int sm, bool c)
 				   : cont(c), shadow_mode(sm), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst),
-				   act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros), s_d_chg(0)
+				   act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros)
 {
 	assert(shadow_mode <= 2);
 	assert(dir_ != all_zeros);
@@ -31,7 +31,6 @@ void platform::reset() {
 	state   = ST_NOACT;
 	ns_time = 0.0;
 	pos     = origin;
-	s_d_chg = !cont;
 }
 
 
@@ -42,7 +41,6 @@ void platform::activate() {
 	assert(ns_time == 0.0);
 	state   = ST_WAIT; // activated
 	ns_time = sdelay;
-	s_d_chg = !cont;
 }
 
 
@@ -135,20 +133,13 @@ void platform::advance_timestep() {
 			coll_obj &cobj(coll_objects[*i]);
 			// need to update collision structure when there is an x/y delta by removing/adding to coll_cells (except for cubes)
 			bool const update_colls(cobj.type != COLL_CUBE && (delta.x != 0.0 || delta.y != 0.0));
-
-			if (shadow_mode > 0) {
-				if (shadow_mode > 1 && s_d_chg) { // static/dynamic state change
-					cobj.clear_dependent_cobjs_lightmaps(coll_objects, *i);
-				}
-				cobj.clear_lightmap(0, 0, 1);
-			}
+			if (shadow_mode > 0) cobj.clear_lightmap(0, 0);
 			if (update_colls) remove_coll_object(*i, 0);
 			cobj.shift_by(delta); // move object
 			if (update_colls) cobj.re_add_coll_cobj(*i, 0);
 			// squish player or stop when hit player?
 			// what about coll_cell::cvz?
 		}
-		s_d_chg = 0;
 	} // pos != last_pos
 }
 

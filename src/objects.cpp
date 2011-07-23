@@ -80,7 +80,7 @@ bool coll_obj::clear_lightmap_entry(lvmap::iterator it, int mode, unsigned keep,
 
 
 // mode: 0 = clear all, 1 = clear dlists only, 2 = update shadows (keep is only used in mode 0)
-void coll_obj::clear_lightmap(int mode, unsigned keep, bool keep_depends) {
+void coll_obj::clear_lightmap(int mode, unsigned keep) {
 
 	vector<pair<quad_div, lv_val> > to_add;
 
@@ -91,7 +91,6 @@ void coll_obj::clear_lightmap(int mode, unsigned keep, bool keep_depends) {
 	}
 	if (mode == 0 && keep == 0) {
 		assert(to_add.empty());
-		if (!keep_depends) shadow_depends.clear();
 		lightmap.clear();
 		lighted = COBJ_LIT_UNKNOWN;
 	}
@@ -121,52 +120,11 @@ void coll_obj::clear_lightmap_if_lighted_eq(int shadowed, int partial) {
 }
 
 
-void coll_obj::clear_dependent_cobjs_lightmaps(vector<coll_obj> &cobjs, unsigned ix) const {
-
-	for (set<int>::const_iterator it = shadow_depends.begin(); it != shadow_depends.end(); ++it) {
-		assert((size_t)*it < cobjs.size() && *it != (int)ix); // check for circular reference
-		cobjs[*it].clear_lightmap(0, 0, 0);
-	}
-}
-
-
-void coll_obj::update_shadowed_cobjs(vector<coll_obj> &cobjs, vector<int> const &indices, unsigned ix) const {
-
-	for (set<int>::const_iterator it = shadow_depends.begin(); it != shadow_depends.end(); ++it) {
-		assert((size_t)*it < cobjs.size() && *it != (int)ix); // check for circular reference
-		coll_obj &cobj(cobjs[*it]);
-
-		// optimization: check if target object is still shadowed by a fragment of the original source object
-		if (cobj.type == COLL_CUBE && !indices.empty()) {
-			bool shadowed(0);
-			point pts[8];
-			get_cube_points(cobj.d, pts);
-			point const lpos(get_light_pos());
-
-			for (unsigned m = 0; m < indices.size() && !shadowed; ++m) {
-				assert((size_t)indices[m] < cobjs.size());
-				assert(indices[m] != ix);
-				shadowed = 1;
-
-				for (unsigned j = 0; j < 8; ++j) {
-					if (!cobjs[indices[m]].line_intersect(pts[j], lpos)) shadowed = 0;
-				}
-				if (shadowed) cobjs[indices[m]].shadow_depends.insert(*it);
-			}
-			if (shadowed) continue; // got into the above if (shadowed) {} statement
-		}
-		cobj.clear_lightmap_if_lighted_eq(1, 1); // clear if shadowed or partially shadowed
-	}
-}
-
-
 void coll_obj::clear_internal_data(vector<coll_obj> &cobjs, vector<int> const &indices, unsigned ix) {
 
-	update_shadowed_cobjs(cobjs, indices, ix);
 	fixed    = 0; // unfix it so that it's actually removed
 	lighted  = 0;
 	cp.surfs = 0;
-	shadow_depends.clear();
 	clear_lightmap(0);
 	occluders.clear();
 }

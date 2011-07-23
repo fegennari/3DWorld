@@ -164,17 +164,14 @@ public:
 	point points[N_COLL_POLY_PTS];
 	vector3d norm;
 	vector<int> occluders;
-	set<int> shadow_depends;
 	lvmap lightmap;
 
 	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), radius(0.0), radius2(0.0), thickness(0.0),
 		volume(0.0), counter(0), id(-1), platform_id(-1), group_id(-1), waypt_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0),
 		is_billboard(0), norm(all_zeros) {}
 	void init();
-	void clear_lightmap(int mode, unsigned keep=0, bool keep_depends=0);
+	void clear_lightmap(int mode, unsigned keep=0);
 	void clear_lightmap_if_lighted_eq(int shadowed, int partial);
-	void clear_dependent_cobjs_lightmaps(vector<coll_obj> &cobjs, unsigned ix) const;
-	void update_shadowed_cobjs(vector<coll_obj> &cobjs, vector<int> const &indices, unsigned ix) const;
 	void clear_internal_data(vector<coll_obj> &cobjs, vector<int> const &indices, unsigned ix);
 	bool clear_lightmap_entry(lvmap::iterator it, int mode, unsigned keep, vector<pair<quad_div, lv_val> > *to_add=NULL);
 	void calc_size();
@@ -303,7 +300,6 @@ class platform { // animated (player controlled) scene object
 	float ns_time; // time to next state in ticks (can be negative if frame time is larger than a delay/travel time)
 	point pos; // current position - dist is calculated from this point (delta = pos-origin)
 	vector3d delta; // last change in position
-	bool s_d_chg;
 
 	// other data
 	vector<unsigned> cobjs; // collision object(s) bound to this platform

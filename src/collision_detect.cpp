@@ -845,7 +845,6 @@ void free_index(int index) {
 	coll_objects[index].status = COLL_UNUSED;
 
 	if (!coll_objects[index].fixed) {
-		coll_objects[index].shadow_depends.clear(); // ???
 		assert(index_top > 0);
 		index_stack[--index_top] = index;
 	}
