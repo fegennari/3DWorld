@@ -972,6 +972,16 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 }
 
 
+int draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir, int in_cur_prim, bool no_normals) {
+
+	point pts[4];
+	int npts(0);
+	vector3d v2; // unused
+	cylinder_quad_projection(pts, cylin, view_dir, v2, npts);
+	return draw_simple_polygon(pts, npts, view_dir, in_cur_prim, no_normals);
+}
+
+
 int draw_simple_polygon(point const *const points, int npoints, vector3d const &norm, int in_cur_prim, bool no_normals) {
 
 	int prim_type(-1);

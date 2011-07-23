@@ -175,7 +175,7 @@ void draw_small_trees(bool shadow_only) {
 	set_fill_mode();
 	gluQuadricTexture(quadric, GL_TRUE);
 
-	if (small_trees.size() < 100) {
+	if (small_trees.size() < 100) { // shadow_only?
 		sort(small_trees.begin(), small_trees.end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
 
@@ -393,7 +393,7 @@ void small_tree::draw(int mode, bool shadow_only) const {
 	point const pos2(pos + point(0.0, 0.0, 0.5*height));
 	bool const pine_tree(type == T_PINE || type == T_SH_PINE);
 	bool const cobj_cull(pine_tree && (mode & 2) && small_trees.size() < 100); // only cull pine tree leaves if there aren't too many
-	if (!shadow_only && !sphere_in_camera_view(pos2, radius, (cobj_cull ? 2 : 0))) return;
+	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, radius, (cobj_cull ? 2 : 0))) return;
 	float const dist(distance_to_camera(pos));
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size(zoom_f*SM_TREE_QUALITY*stt[type].ss*width*window_width/dist);
 	int const max_sides(N_CYL_SIDES/2);
@@ -410,18 +410,23 @@ void small_tree::draw(int mode, bool shadow_only) const {
 			float const hval(pine_tree ? 1.0 : 0.75), w1(stt[type].ws*width), w2(stt[type].w2*width);
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 
-			if ((!shadow_only || size <= 1.0) && LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
+			if (shadow_only) {
+				vector3d const dir(get_rot_dir());
+				cylinder_3dw const cylin((pos + dir*(zbot - pos.z)), (pos + dir*(zbot - pos.z + len)), w1, w2);
+				draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()));
+			}
+			else if (LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
 				vector3d const dir(get_rot_dir());
 				tree_scenery_pld.add_textured_line((pos + dir*(zbot - pos.z)), (pos + dir*(zbot - pos.z + len)), tcolor, WOOD_TEX);
 			}
 			else { // draw as cylinder
 				set_color(tcolor);
-				if (!shadow_only) select_texture(WOOD_TEX);
+				select_texture(WOOD_TEX);
 				glPushMatrix();
 				translate_to(pos);
 				if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
 				glTranslatef(0.0, 0.0, (zbot - pos.z));
-				int const nsides2(max(3, min(max_sides/2, (shadow_only ? get_smap_ndiv(max(w1, w2)) : int(0.25*size)))));
+				int const nsides2(max(3, min(max_sides/2, int(0.25*size))));
 				draw_cylin_fast(w1, w2, len, nsides2, 1, 0, 1); // trunk (draw quad if small?)
 				glPopMatrix();
 			}

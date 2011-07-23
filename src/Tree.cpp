@@ -487,7 +487,7 @@ void tree::clear_vbo() {
 
 void tree::draw_tree_shadow() {
 
-	if (!created) return;
+	if (!created || !is_over_mesh()) return;
 	assert(USE_VBOS);
 	
 	if (branch_vbo > 0 && branch_ivbo > 0) { // draw branches

@@ -318,7 +318,7 @@ public:
 
 	void draw_water_vertex(int i, int j, point const &v, colorRGBA color) { // i=y, j=x
 
-		if (!sphere_in_camera_view(v, (DX_VAL + DY_VAL), 0)) return; // helps with reflections (is this correct?)
+		if (!sphere_in_camera_view(v, (DX_VAL + DY_VAL), 0)) return; // helps with reflections
 		vector3d const &n(wat_vert_normals[i][j]);
 		assert(unsigned(j) < last_row_colors.size());
 		

@@ -309,7 +309,7 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 
 void rock_shape3d::draw(bool shadow_only) const {
 
-	if (!shadow_only || !in_camera_view()) return;
+	if (shadow_only ? !is_over_mesh(pos) : !in_camera_view()) return;
 	set_color(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius)));
 	shape3d::draw(1);
 }
@@ -395,7 +395,7 @@ public:
 
 	void draw(float sscale, bool shadow_only) const {
 		assert(surface);
-		if (!shadow_only && !in_camera_view(0.0)) return;
+		if (shadow_only ? !is_over_mesh(pos) : in_camera_view(0.0)) return;
 		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, radius));
 		float const dist(distance_to_camera(pos));
 
@@ -447,7 +447,7 @@ public:
 
 	void draw(float sscale, bool shadow_only) const {
 		float const rmax(1.3*radius);
-		if (!shadow_only && !in_camera_view(rmax)) return;
+		if (shadow_only ? !is_over_mesh(pos) : !in_camera_view(rmax)) return;
 		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, rmax));
 		float const dist(distance_to_camera(pos));
 
@@ -513,8 +513,9 @@ public:
 
 	void draw(float sscale, bool shadow_only) const {
 		float const sz(max(length, max(radius, radius2)));
-		if (type == 0 || !in_camera_view(sz)) return;
-		colorRGBA const color(shadow_only ? WHITE : log_colors[type]*get_shadowed_color((pos + pt2)*0.5, sz));
+		point const center((pos + pt2)*0.5);
+		if (type == 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
+		colorRGBA const color(shadow_only ? WHITE : log_colors[type]*get_shadowed_color(center, sz));
 		float const dist(distance_to_camera(pos));
 
 		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
@@ -573,8 +574,9 @@ public:
 
 	void draw(float sscale, bool shadow_only) const {
 		float const sz(max(height, max(radius, radius2)));
-		if (type == 0 || (!shadow_only && !in_camera_view(sz))) return;
-		colorRGBA const color(shadow_only ? WHITE : log_colors[type]*get_shadowed_color(point(pos.x, pos.y, (pos.z + 0.5*height)), sz));
+		point const center(pos.x, pos.y, (pos.z + 0.5*height));
+		if (type == 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
+		colorRGBA const color(shadow_only ? WHITE : log_colors[type]*get_shadowed_color(center, sz));
 		float const dist(distance_to_camera(pos));
 
 		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
@@ -657,11 +659,12 @@ public:
 	}
 
 	void draw(float sscale, int mode, bool shadow_only) { // modifies points, so non-const
-		if (!shadow_only && !sphere_in_camera_view(pos, (height + radius), 2)) return;
-		int const light(get_light());
+		if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 2)) return;
 		float color_scale(SHADOW_VAL);
 
 		if (!shadow_only) {
+			int const light(get_light());
+
 			for (unsigned i = 0; i < 3; ++i) {
 				point p(pos);
 				p.z += 0.5*i*height;

@@ -421,12 +421,8 @@ int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals, bool in_dl
 			bool const draw_ends(!(cp.surfs & 1));
 
 			if (no_normals && !in_dlist && ndiv == 3 && !draw_ends) { // special case draw as quad
-				point pts[4];
-				int npts(0);
-				vector3d v2; // unused
-				cylinder_quad_projection(pts, cylinder_3dw(points[0], points[1], radius, radius2),
-					((points[0] + points[1])*0.5 - get_camera_pos()), v2, npts);
-				in_cur_prim = draw_simple_polygon(pts, npts, zero_vector, in_cur_prim, 1);
+				in_cur_prim = draw_cylin_quad_proj(cylinder_3dw(points[0], points[1], radius, radius2),
+					((points[0] + points[1])*0.5 - get_camera_pos()), in_cur_prim, 1);
 			}
 			else {
 				if (in_cur_prim != PRIM_DISABLED) {
