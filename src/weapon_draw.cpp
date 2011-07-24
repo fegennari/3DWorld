@@ -12,7 +12,7 @@ set<int> scheduled_weapons;
 extern bool invalid_ccache, keep_lasers;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode;
 extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPONS, animate2;
-extern float fticks, max_proj_rad;
+extern float fticks;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern GLUquadricObj* quadric;
@@ -155,18 +155,8 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 		{
 			radius = 0.032;
 			float const dist(max(dpos-radius, radius)); // close enough
-			point pos1(pos0 - dir*cradius), pos2(pos0 - dir*(cradius-dist));
-			pos1.z += 0.01;
-			pos2.z += 0.01;
-			point p1(pos1), p2(p1);
-			unsigned const ndiv(max(1U, min(16U, unsigned(fabs(dist)/max_proj_rad + 0.5))));
-			vector3d vd((pos2 - pos1)/float(ndiv));
-
-			for (unsigned i = 0; i < ndiv; ++i) { // large and slow, split into smaller cylinders
-				p1  = p2;
-				p2 += vd;
-				weap_cobjs.push_back(add_coll_cylinder(p1, p2, 0.0025, 0.0025, cp));
-			}
+			point const pos1(pos0 - dir*cradius + point(0.0, 0.0, 0.01)), pos2(pos0 - dir*(cradius-dist) + point(0.0, 0.0, 0.01));
+			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, 0.0025, 0.0025, cp));
 			vector3d vrot(dir);
 			if (has_xy_comp) rotate_vector3d(cross_product(dir, plus_z), PI_TWO, vrot);
 			if (fire_val > 0.0) rotate_vector3d(dir, -540.0*fire_val/TO_DEG, vrot);

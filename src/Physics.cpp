@@ -31,7 +31,7 @@ bool     const PRINT_TIME_OF_DAY   = 1;
 
 // Global Variables
 int TIMESCALE2(TIMESCALE), I_TIMESCALE2(0);
-float temperature(DEF_TEMPERATURE), max_obj_radius(0.0), max_proj_rad(0.0);
+float temperature(DEF_TEMPERATURE), max_obj_radius(0.0);
 float TIMESTEP(DEF_TIMESTEP), orig_timestep(DEF_TIMESTEP); // temp in degrees C
 float cloud_cover(0.0);
 vector3d wind(0.4, 0.2, 0.0), total_wind(0.0, 0.0, 0.0);
@@ -530,10 +530,9 @@ void init_objects() {
 
 void set_coll_rmax(float rmax) {
 
-	max_obj_radius = rmax;
-	max_proj_rad   = max_obj_radius + min(DX_VAL, DY_VAL);
-	set_coll_border();
-	//cout << "rmax = " << max_obj_radius << ", pmax = " << max_proj_rad << ", cb = " << coll_border << ", DXY = " << max(DX_VAL, DY_VAL) << endl;
+	max_obj_radius = rmax; // only used to cache the init value of rmax for use in later calls
+	coll_border    = int((max_obj_radius/max(DX_VAL, DY_VAL)) + 1); // + 0.5?
+	//cout << "rmax = " << max_obj_radius << ", cb = " << coll_border << ", DXY = " << max(DX_VAL, DY_VAL) << endl;
 }
 
 

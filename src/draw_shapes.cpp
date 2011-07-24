@@ -10,8 +10,7 @@
 #include "gl_ext_arb.h"
 
 
-bool const VERBOSE_DYNAMIC   = 0;
-float const TOLER_           = 1.0E-6;
+float const TOLER_ = 1.0E-6;
 
 
 extern bool use_stencil_shadows;
@@ -55,39 +54,10 @@ bool shadow_sphere::test_volume_cobj(point const *const pts, unsigned npts, poin
 }
 
 
-struct pt_pair { // size = 28
-
-	bool used;
-	point p[2];
-	pt_pair() : used(0) {}
-};
-
-
-struct vertex_t { // size = 24
-
-	point p;
-	vector3d n;
-
-	void draw() const {
-		n.do_glNormal();
-		p.do_glVertex();
-	}
-};
-
-
 inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d const* const norm) const {
 	
 	if (norm && dot_product_ptv(*norm, center, pc) <= 0.0) return 0;
 	return (radius == 0.0 || dist_less_than(pc, center, (radius + rsize)));
-}
-
-
-#define INTERP_1D(v, s, t, n, i) t*(s*v[2]i + (1.0-s)*v[n-1]i) + (1.0-t)*(s*v[1]i + (1.0-s)*v[0]i)
-
-// s => n1 - n0, t => n3 - n0
-template<typename T> inline T interpolate_3d(T const *v, unsigned npts, float s, float t) {
-
-	return T(INTERP_1D(v, s, t, npts, [0]), INTERP_1D(v, s, t, npts, [1]), INTERP_1D(v, s, t, npts, [2]));
 }
 
 
@@ -103,9 +73,6 @@ bool is_above_mesh(point const &pos) {
 	}
 	return (pos.z > interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
 }
-
-
-#define DO_SCALE(tri, s, n) ((tri) ? 1.0-(s)/(float(n)) : 1.0)
 
 
 bool check_face_containment(point const *const pts, unsigned npts, int dim, int dir, int cobj) { // what about under mesh?
@@ -194,7 +161,6 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 		}
 		sort(faces, (faces+6));
 	}
-	set_shadowed_state(0);
 	glBegin(GL_QUADS);
 	
 	for (unsigned i = 0; i < 6; ++i) {
@@ -247,7 +213,6 @@ bool camera_behind_polygon(point const *const points, int npoints) {
 
 void draw_polygon(point const *points, int npoints, vector3d const &norm) {
 
-	set_shadowed_state(0);
 	draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
 }
 
@@ -338,9 +303,21 @@ void add_shadow_obj(point const &pos, float radius, int coll_id) {
 }
 
 
+void add_shadow_cobj(int cid) {
+
+	if (cid < 0) return;
+	assert((unsigned)cid < coll_objects.size());
+	if (coll_objects[cid].disabled() || coll_objects[cid].cp.color.alpha < MIN_SHADOW_ALPHA) return;
+	point center;
+	float radius;
+	coll_objects[cid].bounding_sphere(center, radius);
+	add_shadow_obj(center, radius, cid);
+}
+
+
 void add_coll_shadow_objs() {
 	
-	RESET_TIME;
+	//RESET_TIME;
 	shadow_objs.resize(0);
 	if (use_stencil_shadows) return; // if stencil shadows are enabled we don't do them here
 	point const camera(get_camera_pos());
@@ -365,26 +342,15 @@ void add_coll_shadow_objs() {
 		}
 	}
 	for (unsigned i = 0; i < weap_cobjs.size(); ++i) {
-		unsigned const cid(weap_cobjs[i]);
-		if (cid < 0) continue;
-		assert(cid < coll_objects.size());
-		float brad;
-		point center;
-		coll_objects[cid].bounding_sphere(center, brad);
-		add_shadow_obj(center, brad, cid);
+		add_shadow_cobj(weap_cobjs[i]);
 	}
-	if (!platforms.empty()) {
-		for (unsigned i = 0; i < coll_objects.size(); ++i) {
-			coll_obj const &c(coll_objects[i]);
-			if (c.disabled() || c.cp.color.alpha < MIN_SHADOW_ALPHA || c.platform_id < 0) continue;
-			point center;
-			float radius;
-			c.bounding_sphere(center, radius);
-			add_shadow_obj(center, radius, i);
+	for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
+		for (vector<unsigned>::const_iterator j = i->cobjs.begin(); j != i->cobjs.end(); ++j) {
+			add_shadow_cobj(*j);
 		}
 	}
 	if (display_mode & 0x0200) d_part_sys.add_cobj_shadows();
-	if (VERBOSE_DYNAMIC) {PRINT_TIME(" Shadow Object Creation");}
+	//PRINT_TIME(" Shadow Object Creation");
 }
 
 

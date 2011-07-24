@@ -185,10 +185,10 @@ class platform { // animated (player controlled) scene object
 	point pos; // current position - dist is calculated from this point (delta = pos-origin)
 	vector3d delta; // last change in position
 
+public:
 	// other data
 	vector<unsigned> cobjs; // collision object(s) bound to this platform
 	
-public:
 	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0,
 		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0);
 	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}

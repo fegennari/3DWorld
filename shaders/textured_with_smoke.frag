@@ -11,17 +11,18 @@ uniform float cube_bb[6];
 varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
 varying vec3 eye_norm;
 varying vec4 epos;
-varying float light_scale[8];
 
 const float SMOKE_SCALE = 0.25;
 
 // Note: dynamic point lights use reflection vector for specular, and specular doesn't move when the eye rotates
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
-#define ADD_LIGHT(i) lit_color += light_scale[i] * add_light_comp(n, i).rgb
+#define ADD_LIGHT(i) lit_color += add_light_comp(n, i).rgb
 
-vec3 add_light(in int ix, in float lscale, in vec3 off, in vec3 scale, in vec3 n, in vec3 source, in vec3 dest) {
+vec3 add_light(in int ix, in vec3 off, in vec3 scale, in vec3 n, in vec3 source, in vec3 dest) {
 
-	if (smoke_enabled && dynamic_smoke_shadows && lscale > 0.0 && source != dest) {
+	float lscale = 1.0;
+
+	if (smoke_enabled && dynamic_smoke_shadows && source != dest) {
 		vec3 dir      = dest - source;
 		vec3 pos      = (source - off)/scale;
 		vec3 delta    = normalize(dir)*step_delta/scale;
@@ -56,8 +57,8 @@ void main()
 	}
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(eye_norm);
-		if (enable_light0) lit_color += add_light(0, light_scale[0], off, scale, n, lpos0, vposl);
-		if (enable_light1) lit_color += light_scale[1] * add_light_comp_pos_smap(n, epos, vec4(vpos, 1.0), 1).rgb;
+		if (enable_light0) lit_color += add_light(0, off, scale, n, lpos0, vposl);
+		if (enable_light1) lit_color += add_light_comp_pos_smap(n, epos, vec4(vpos, 1.0), 1).rgb;
 		//if (enable_light0) ADD_LIGHT(0);
 		//if (enable_light1) ADD_LIGHT(1);
 		if (enable_light2) ADD_LIGHT(2);

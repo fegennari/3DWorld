@@ -48,6 +48,14 @@ inline float InvSqrt(float x) {
 }
 
 
+#define INTERP_1D(v, s, t, n, i) t*(s*v[2]i + (1.0-s)*v[n-1]i) + (1.0-t)*(s*v[1]i + (1.0-s)*v[0]i)
+
+// s => n1 - n0, t => n3 - n0
+template<typename T> inline T interpolate_3d(T const *v, unsigned npts, float s, float t) {
+	return T(INTERP_1D(v, s, t, npts, [0]), INTERP_1D(v, s, t, npts, [1]), INTERP_1D(v, s, t, npts, [2]));
+}
+
+
 
 // ***************** RANDOM NUMBER GENERATION ********************
 

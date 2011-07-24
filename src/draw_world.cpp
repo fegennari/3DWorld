@@ -1713,17 +1713,6 @@ void get_enabled_lights() {
 }
 
 
-void set_shadowed_state(unsigned char shadowed) {
-
-	int sval(0);
-	
-	for (unsigned i = 0; i < enabled_lights.size(); ++i) {
-		if (shadowed & (1 << i)) sval |= (1 << enabled_lights[i].get_light_id());
-	}
-	add_attrib_float(0, float(sval));
-}
-
-
 void set_dlights_booleans(bool enable, int shader_type) {
 
 	set_bool_shader_prefix("has_dir_lights",  has_dir_lights, shader_type);
@@ -1758,14 +1747,11 @@ colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, 
 	setup_scene_bounds(p);
 	setup_fog_scale(p); // fog scale for the case where smoke is disabled
 	if (dlights && dl_tid > 0) setup_dlight_textures(p);
-	unsigned const ix(register_attrib_name(p, "shadow_val"));
-	assert(ix == 0); // only one attribute
-	add_attrib_float(ix, 0.0); // default is all unshadowed
 
 	if (use_texgen == 2) {
 		unsigned const tex0_s_ix(register_attrib_name(p, "tex0_s"));
 		unsigned const tex0_t_ix(register_attrib_name(p, "tex0_t"));
-		assert(tex0_s_ix == 1 && tex0_t_ix == 2);
+		assert(tex0_s_ix == 0 && tex0_t_ix == 1);
 	}
 	if (smoke_en && smoke_tid) {
 		set_multitex(1);

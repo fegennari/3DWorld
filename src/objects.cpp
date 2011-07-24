@@ -255,7 +255,6 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		vector3d tex_dir(0,0,0);
 		tex_dir[pri_dim] = 1.0;
 		setup_polygon_texgen(tex_dir, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-		set_shadowed_state(0); // all unshadowed
 		glBegin(GL_TRIANGLES);
 	}
 	if (in_group) { // FIXME: color bug when using dynamic lighting
@@ -284,7 +283,6 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 			int const ndiv(min(N_CYL_SIDES, max(3, (int)size)));
 			bool const draw_ends(!(cp.surfs & 1));
 			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (points[1] - points[0]), USE_ATTR_TEXGEN);
-			set_shadowed_state(0);
 			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
 
 			if (draw_ends && tid >= 0) { // draw ends with different texture matrix
@@ -301,7 +299,6 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 			float const scale(0.7*NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
 			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z, USE_ATTR_TEXGEN);
-			set_shadowed_state(0);
 			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
 		}
 		break;

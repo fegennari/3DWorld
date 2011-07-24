@@ -1499,7 +1499,7 @@ void gen_tex_height_tables() {
 void set_texgen_vec4(float const v[4], bool s_or_t, bool as_attr, bool enable_and_set_mode) {
 
 	if (as_attr) {
-		add_attrib_float_array(1+s_or_t, v, 4);
+		add_attrib_float_array((s_or_t ? 1 : 0), v, 4);
 	}
 	else {
 		if (enable_and_set_mode) {

@@ -1131,7 +1131,6 @@ colorRGBA const &get_landmine_light_color(int time);
 float get_landmine_sensor_height(float radius, int time);
 colorRGBA get_plasma_color(float size);
 void get_enabled_lights();
-void set_shadowed_state(unsigned char shadowed);
 void set_dlights_booleans(bool enable, int shader_type);
 colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten=0, bool use_smap=0);
@@ -1167,6 +1166,8 @@ void exec_universe_text(std::string const &text);
 
 // function prototypes - draw shapes
 bool is_above_mesh(point const &pos);
+bool check_face_containment(point const *const pts, unsigned npts, int dim, int dir, int cobj);
+float get_mesh_zmax(point const *const pts, unsigned npts);
 void add_shadow_obj(point const &pos, float radius, int coll_id);
 void add_coll_shadow_objs();
 void get_occluders();
@@ -1335,7 +1336,6 @@ float lowest_mesh_point(point const &pt, float radius);
 float highest_mesh_point(point const &pt, float radius);
 
 // function prototypes - collision detection
-void set_coll_border();
 int  add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
 int  add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2,
 					   float radius, float radius2, cobj_params const &cparams, int platform_id=-1, int dhcm=0);

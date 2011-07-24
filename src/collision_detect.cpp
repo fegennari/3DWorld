@@ -11,7 +11,6 @@
 
 bool const REMOVE_ALL_COLL   = 1;
 bool const ALWAYS_ADD_TO_HCM = 0;
-bool const USE_COLL_BORDER   = 1;
 unsigned const CAMERA_STEPS  = 10;
 unsigned const PURGE_THRESH  = 20;
 unsigned const CVZ_NDIV      = 32;
@@ -31,7 +30,7 @@ coll_cell_opt_batcher cco_batcher;
 extern bool cobj_tree_valid;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, invalid_collision, mesh_scale_change, camera_invincible, flight, do_run, cobj_counter;
-extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks, max_obj_radius;
+extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
 extern double camera_zh;
 extern dwobject def_objects[];
 extern obj_type object_types[];
@@ -100,18 +99,11 @@ vector3d scorch_mark::get_platform_delta() const {
 
 inline void get_params(int &x1, int &y1, int &x2, int &y2, int &cb, const float d[3][2], int dhcm, int min_cb=0) {
 
-	float const rmax(USE_COLL_BORDER ? 0.0 : max_obj_radius);
 	cb = max(min_cb, ((dhcm == 2) ? 0 : coll_border));
-	x1 = max(cb, (get_xpos(d[0][0] - rmax)));
-	y1 = max(cb, (get_ypos(d[1][0] - rmax)));
-	x2 = min((MESH_X_SIZE-cb-1), (get_xpos(d[0][1] + rmax)));
-	y2 = min((MESH_Y_SIZE-cb-1), (get_ypos(d[1][1] + rmax)));
-}
-
-
-void set_coll_border() {
-
-	coll_border = (USE_COLL_BORDER ? int((max_obj_radius/max(DX_VAL, DY_VAL)) + 1) : 0); // + 0.5?
+	x1 = max(cb, get_xpos(d[0][0]));
+	y1 = max(cb, get_ypos(d[1][0]));
+	x2 = min((MESH_X_SIZE-cb-1), get_xpos(d[0][1]));
+	y2 = min((MESH_Y_SIZE-cb-1), get_ypos(d[1][1]));
 }
 
 
