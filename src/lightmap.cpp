@@ -127,6 +127,13 @@ float light_source::get_intensity_at(point const &pos) const {
 }
 
 
+bool light_source::lights_polygon(point const &pc, float rsize, vector3d const* const norm) const {
+	
+	if (norm && dot_product_ptv(*norm, center, pc) <= 0.0) return 0;
+	return (radius == 0.0 || dist_less_than(pc, center, (radius + rsize)));
+}
+
+
 float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 
 	if (bwidth == 1.0) return 1.0;

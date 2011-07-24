@@ -3,11 +3,8 @@
 // 4/10/05
 #include "3DWorld.h"
 #include "mesh.h"
-#include "subdiv.h"
-#include "lightmap.h"
 #include "dynamic_particle.h"
 #include "physics_objects.h"
-#include "gl_ext_arb.h"
 
 
 float const TOLER_ = 1.0E-6;
@@ -51,13 +48,6 @@ bool shadow_sphere::test_volume_cobj(point const *const pts, unsigned npts, poin
 	coll_obj const &c(coll_objects[cid]);
 	if (ctype == COLL_SPHERE && (pos != c.points[0] || radius != c.radius)) return 1; // camera sphere != pos
 	return !c.cobj_plane_side_test(pts, npts, lpos);
-}
-
-
-inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d const* const norm) const {
-	
-	if (norm && dot_product_ptv(*norm, center, pc) <= 0.0) return 0;
-	return (radius == 0.0 || dist_less_than(pc, center, (radius + rsize)));
 }
 
 
