@@ -134,68 +134,6 @@ bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const
 }
 
 
-// Note: used _only_ for static cobj shadows
-bool coll_pt_vis_test_large(point pos, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic,
-							bool trans_test, point const *pts, unsigned npts, point const &lpos)
-{
-	assert(radius > 0.0);
-	cobjs.resize(0);
-	if (!do_line_clip_scene(pos, pos2, max(zbottom, czmin)-radius, czmax+radius)) return 0; // assumes pos is in the simulation region
-	radius *= (2.0/SQRT3); // account for sphere projection step-by-step instead of true cylinder projection
-	radius  = max(0.25f*HALF_DXY, radius); // lower bound so that nsteps isn't excessive
-	vector3d vcf(pos2, pos);
-	float const mag(1.1*vcf.mag()/radius); // stepsize == radius, multiply by 1.1 for larger overlap
-	unsigned const nsteps(unsigned(mag + 0.5) + 1); // ceil? - should really subtract radius from pos
-	assert(nsteps > 0);
-	if (mag > TOLERANCE) vcf /= mag; // normalize
-	++cobj_counter;
-	assert(cobj < 0 || size_t(cobj) < coll_objects.size());
-	if (cobj >= 0) coll_objects[cobj].counter = cobj_counter;
-	
-	for (unsigned i = 0; i < nsteps; ++i) {
-		static vector<int> cand_cobjs;
-		cand_cobjs.resize(0);
-		check_vert_collision_sphere(pos, radius, skip_dynamic, trans_test, ((pts == NULL) ? &cobjs : &cand_cobjs));
-
-		if (pts != NULL) {
-			for (unsigned j = 0; j < cand_cobjs.size(); ++j) { // check candidate cobjs
-				int const cindex(cand_cobjs[j]);
-				assert(cindex >= 0 && cindex < (int)coll_objects.size() && cindex != cobj);
-				coll_obj &c(coll_objects[cindex]);
-				if (c.dynamic_shadows_only()) continue; // cobj has dynamic shadows only
-				int region(~0);
-				point center;
-				float brad;
-				c.bounding_sphere(center, brad);
-
-				for (unsigned i = 0; i < npts && region != 0; ++i) {
-					float const dist(p2p_dist(pts[i], center) + brad);
-					vector3d const ldir((pts[i] - lpos).get_norm());
-					region &= get_region( pts[i],              c.d);
-					region &= get_region((pts[i] - ldir*dist), c.d);
-				}
-				if (region != 0 || c.cobj_plane_side_test(pts, npts, lpos)) continue; // all outside a plane of the view volume
-				
-				if (c.radius > radius) { // check for complete shadowing
-					int vshadowed(1);
-
-					for (unsigned i = 0; i < npts && vshadowed; ++i) {
-						if (!c.line_intersect(pts[i], lpos)) vshadowed = 0;
-					}
-					if (vshadowed) { // completely contained in the shadow of this object
-						return 1; // could continue to find other completely shadowing objects, but > 1 is unlikely
-					}
-				}
-				cobjs.push_back(cindex);
-			} // for j
-		} // pts != NULL
-		if (mag <= TOLERANCE) return 0;
-		pos += vcf;
-	} // for i
-	return 0;
-}
-
-
 // false negatives are OK except when called from check_coll_line()
 bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 
@@ -744,7 +682,7 @@ bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 }
 
 // unused
-bool coll_pt_vis_test_large2(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic, bool tl) {
+bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic, bool tl) {
 
 	assert(radius > 0.0);
 	cobjs.resize(0);

@@ -1057,8 +1057,6 @@ void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, uns
 void calc_visibility(unsigned light_sources);
 bool is_visible_to_light_cobj(point const &pos, int light, float radius, int cobj, int skip_dynamic, int *cobj_ix=NULL);
 bool coll_pt_vis_test(point pos, point pos2, float dist, int &index, int cobj, int skip_dynamic, int test_alpha);
-bool coll_pt_vis_test_large(point pos, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic,
-							bool trans_test, point const *pts, unsigned npts, point const &lpos);
 void calc_view_test_terms(float &tterm, float &sterm, bool is_zoomed);
 void calc_viewing_cone();
 void set_camera_pdu();
@@ -1365,7 +1363,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_n
 						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0, bool no_tree=0);
 bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj);
 bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs);
-bool coll_pt_vis_test_large2(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic, bool tl);
+bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic, bool tl);
 bool is_occluded(vector<int> const &occluders, point const *const pts0, int npts, point const &camera);
 void add_camera_cobj(point const &pos);
 void force_onto_surface_mesh(point &pos);
