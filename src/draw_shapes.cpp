@@ -10,42 +10,17 @@
 #include "gl_ext_arb.h"
 
 
-bool const DO_ROTATE         = 1;
-bool const ENABLE_SHADOWS    = 1;
 bool const VERBOSE_DYNAMIC   = 0;
-bool const MERGE_STRIPS      = 1; // makes display significantly faster but looks a little worse
-bool const FULL_MAP_LOOKUP   = 1;
-bool const USE_DLIST         = 1;
-bool const RENDER_PART_INT   = 1; // if 1, render only the visible portions of the surface using the slow algorithm, if 0 render all of the surface using the fast algorithm
-int  const USE_MESH_INT      = 1; // 0 = none, 1 = high res, 2 = low res
-
-unsigned const MAX_CALC_PER_FRAME = 1000;
-
-float const MAX_QUAD_LT_SIZE = 0.005;
-float const DIST_CUTOFF      = 2.0;
-float const DIV_VAL          = 5.0; // larger = larger polygons (less subdivision)
 float const TOLER_           = 1.0E-6;
-float const SHAPE_SPLIT_FACT = 0.0125; // smaller = more top level splitting
-
-float const subdiv_size_inv(1.0/MAX_QUAD_LT_SIZE);
-
-
-int invalid_shadows(0);
-unsigned nvlight(0), ALL_LT[5] = {0};
-unsigned long long max_lighted(0);
-float L1_SUBDIV_SIZE(1.0);
 
 
 extern bool use_stencil_shadows;
-extern int cobj_counter, coll_border, begin_motion, num_groups, camera_coll_id, spectate;
-extern int display_mode, camera_mode, camera_view, xoff2, yoff2;
-extern float max_proj_rad, ztop, zbottom, zmax, zmin, DX_VAL, DY_VAL, XY_SCENE_SIZE, czmin, czmax, SHIFT_DX, SHIFT_DY;
+extern int begin_motion, num_groups, camera_coll_id, spectate, display_mode, camera_mode, camera_view;
+extern float zmin;
 extern double camera_zh;
-extern point up_vector;
 extern vector<int> weap_cobjs;
 extern vector<coll_obj> coll_objects;
 extern platform_cont platforms; // only needed for empty test
-extern vector<light_source> enabled_lights;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
 
@@ -80,30 +55,6 @@ bool shadow_sphere::test_volume_cobj(point const *const pts, unsigned npts, poin
 }
 
 
-void init_draw_stats() {
-
-	L1_SUBDIV_SIZE = min(SHAPE_SPLIT_FACT*(X_SCENE_SIZE + Y_SCENE_SIZE), 2.0f*HALF_DXY);
-	nvlight = 0;
-
-	if (L1_SUBDIV_SIZE > max_proj_rad) {
-		cout << "***** Changing max_proj_rad from " << max_proj_rad << " to " << L1_SUBDIV_SIZE << endl;
-		set_coll_rmax(L1_SUBDIV_SIZE - min(DX_VAL, DY_VAL)); // may be too late
-	}
-}
-
-
-void calc_params(point const *const pts, vector3d *dirs, float *len, float *ninv, unsigned *n, float ss_inv) {
-
-	for (unsigned d = 0; d < 2; ++d) {
-		dirs[d]  = pts[1+(d<<1)] - pts[0];
-		len[d]   = dirs[d].mag(); // can have zero len when drawing sphere ends
-		n[d]     = max(1U, unsigned(len[d]*ss_inv + 0.5));
-		ninv[d]  = 1.0/n[d];
-		dirs[d] *= ninv[d];
-	}
-}
-
-
 struct pt_pair { // size = 28
 
 	bool used;
@@ -124,65 +75,10 @@ struct vertex_t { // size = 24
 };
 
 
-struct dqt_params {
-
-	bool double_sided, is_quadric;
-	int cobj;
-	colorRGBA const &color;
-	
-	dqt_params(bool db, int cob, bool iq)
-		: double_sided(db), is_quadric(iq), cobj(cob), color(coll_objects[cobj].cp.color) {}
-	void draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int dim, int dir, unsigned face, bool no_shadow_edge) const;
-	void draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, int dir) const;
-	void draw_polygon(point const *points, const vector3d *normals, int npoints, vector3d const &norm, int id, int subpoly, bool no_subdiv) const;
-};
-
-
-struct dqd_params {
-
-	int cobj, tri;
-	vector3d normal;
-	quad_div const &qd;
-	unsigned n[2], num_internal, num_subdiv, all_lighted;
-	float spec[2], len[2], ninv[2];
-	vector3d dirs[2];
-	unsigned char all_shad, all_unshad, en_lt_bits;
-	bool in_dlist, all_int_surf, no_shadow_calc, use_n;
-
-	dqd_params(int cobj_, int tr, int sub_tri, vector3d const &norm, unsigned char elb, quad_div const &qd_,
-		bool idl, float const sp[2], unsigned ns, unsigned al, bool nsc, bool usen) :
-	    cobj(cobj_), tri(tr), normal(norm), qd(qd_), num_internal(0), num_subdiv(ns), all_lighted(al),
-		all_shad(0xFF), all_unshad(0xFF), en_lt_bits(elb), in_dlist(idl), all_int_surf(1), no_shadow_calc(nsc), use_n(usen)
-	{
-		spec[0] = sp[0]; spec[1] = sp[1];
-	}
-	void do_calc_params(point const *const pts) {
-		calc_params(pts, dirs, len, ninv, n, subdiv_size_inv);
-	}
-	void inherit_flags_from(dqd_params const &p) {
-		all_shad     &= p.all_shad;
-		all_unshad   &= p.all_unshad;
-		all_int_surf &= p.all_int_surf;
-	}
-	unsigned determine_shadow_matrix(point const *const pts, vector<unsigned char> &norms) const;
-	unsigned draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, bool &in_strip);
-};
-
-
 inline bool light_source::lights_polygon(point const &pc, float rsize, vector3d const* const norm) const {
 	
 	if (norm && dot_product_ptv(*norm, center, pc) <= 0.0) return 0;
 	return (radius == 0.0 || dist_less_than(pc, center, (radius + rsize)));
-}
-
-
-void draw_verts(vector<vertex_t> const &verts, unsigned const *ix, int npts, unsigned char shadowed) {
-
-	for (int i = 0; i < npts; ++i) { // much of the frame time is spent here
-		assert(ix[i] < verts.size());
-		set_shadowed_state(shadowed);
-		verts[ix[i]].draw();
-	}
 }
 
 
@@ -242,48 +138,6 @@ bool check_face_containment(point const *const pts, unsigned npts, int dim, int 
 }
 
 
-inline float scaled_view_dist(point const &camera, point const &center) {
-
-	return p2p_dist(camera, center)/get_zoom_scale();
-}
-
-
-inline void gen_stepsize(point const &camera, point const &center, int step[2], unsigned n[2], float len[2]) {
-
-	float const dist(scaled_view_dist(camera, center));
-	if (dist <= DIST_CUTOFF) return;
-
-	for (unsigned d = 0; d < 2; ++d) {
-		step[d] = max(int(len[d]*dist*subdiv_size_inv/(n[d]*DIST_CUTOFF) + 0.5), 1);
-	}
-}
-
-
-unsigned char test_all_light_val(unsigned lighted, unsigned val) {
-
-	unsigned const num_lights(enabled_lights.size());
-	unsigned char res(0);
-	assert((val & ~0xF) == 0);
-
-	for (unsigned i = 0; i < num_lights; ++i) {
-		if (get_light_val(lighted, i) == val) res |= (1 << i);
-	}
-	return res;
-}
-
-
-bool check_lv_req(unsigned lighted, unsigned val1, unsigned val2, bool inv) {
-
-	unsigned const num_lights(enabled_lights.size());
-
-	for (unsigned i = 0; i < num_lights; ++i) {
-		unsigned const lval(get_light_val(lighted, i));
-		if ((lval != val1 && lval != val2) ^ inv) return inv;
-	}
-	return !inv;
-}
-
-
 float get_mesh_zmax(point const *const pts, unsigned npts) {
 
 	float mesh_ztop(zmin);
@@ -302,637 +156,7 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 }
 
 
-unsigned dqd_params::determine_shadow_matrix(point const *const pts, vector<unsigned char> &norms) const {
-
-	unsigned const npts(3 + !tri);
-	bool under_mesh(1), above_mesh(1), outside_mesh(1), calced_mesh_z(0);
-	float mesh_ztop(zmin), qzmin(mesh_ztop + Z_SCENE_SIZE), rsize;
-
-	for (unsigned i = 0; i < npts; ++i) {
-		if (is_over_mesh(pts[i]))  outside_mesh = 0;
-		if (is_above_mesh(pts[i])) under_mesh   = 0; else above_mesh = 0; // check if vertex is above mesh
-		qzmin = min(qzmin, pts[i].z);
-	}
-	if (outside_mesh) return ALL_LT[2]; // not overlapping mesh - default is unshadowed
-	if (under_mesh)   return ALL_LT[1]; // always shadowed
-
-	// find shadowing collision objects
-	++nvlight;
-	bool do_mesh_intersect(!above_mesh);
-	unsigned const n0(n[0]), n1(n[1]), xstride(n1+1), ystride(n0+1), numverts(xstride*ystride);
-	unsigned const num_lights(enabled_lights.size());
-	unsigned lighted(0);
-	point center;
-	polygon_bounding_sphere(pts, npts, 0.0, center, rsize);
-	for (unsigned i = 0; i < numverts; ++i) norms[i] = 0; // initialize to 0 (unshadowed)
-	assert(num_lights > 0);
-	lv_val old_val(0, NULL);
-	quad_div qd_old(qd);
-	qd_old.tag |= QD_TAG_OLD;
-	lvmap::iterator const it(coll_objects[cobj].lightmap.find(qd_old));
-	
-	if (it != coll_objects[cobj].lightmap.end()) {
-		old_val = it->second; // computation can be skipped if light source has not changed since last time
-		assert(old_val.status > 0 && old_val.status < max_lighted);
-		assert(old_val.n0 == n0 && old_val.n1 == n1);
-		coll_objects[cobj].lightmap.erase(it);
-	}
-	for (unsigned L = 0; L < num_lights; ++L) {
-		point const &lpos(enabled_lights[L].get_center());
-		unsigned const L_mask(1 << L);
-		unsigned cur_lighted(get_light_val(old_val.status, L));
-		static vector<int> cobjs;
-		cobjs.resize(0);
-		bool const visible((en_lt_bits & (1 << L)) && enabled_lights[L].lights_polygon(center, rsize));
-
-		if (cur_lighted == 3) { // partially shadowed cached old value
-			assert(old_val.nvals);
-			for (unsigned i = 0; i < numverts; ++i) norms[i] |= (old_val.nvals[i] & L_mask);
-		}
-		else if (cur_lighted == 0 && visible && enabled_lights[L].is_dynamic()) {
-			cur_lighted = 2; // all lighted
-		}
-		else if (cur_lighted == 1 || !visible || coll_pt_vis_test_large(lpos, center, cobjs, cobj, rsize, 1, 1, pts, npts, lpos)) {
-			cur_lighted = 1; // completely shadowed
-			for (unsigned i = 0; i < numverts; ++i) norms[i] |= L_mask;
-		}
-		else { // calculate variables for mesh shadow tests
-			for (unsigned i = 0; i < npts && USE_MESH_INT && !do_mesh_intersect; ++i) { // not always correct
-				if (!is_visible_from_light(pts[i], lpos, USE_MESH_INT)) do_mesh_intersect = 1; // test mesh
-			}
-			if (!calced_mesh_z) {
-				mesh_ztop     = get_mesh_zmax(pts, npts);
-				calced_mesh_z = 1;
-			}
-			if (above_mesh && cobjs.empty() && (!USE_MESH_INT || qzmin >= mesh_ztop)) cur_lighted = 2; // block is completely unshadowed
-
-			if (cur_lighted == 0 || do_mesh_intersect) { // block is at least partially shadowed
-				unsigned const ncobjs(cobjs.size());
-				unsigned const step(min(n1, 6U));
-				vector<pt_pair> bounds(ncobjs);
-
-				for (unsigned j = 0; j < ncobjs; ++j) { // line-plane int check optimization
-					coll_obj &c(coll_objects[cobjs[j]]);
-					point cube_pts[8], *c_pts(NULL);
-					unsigned c_npts(0);
-					
-					if (c.type == COLL_POLYGON && c.thickness <= MIN_POLY_THICK2) {
-						c_pts  = c.points;
-						c_npts = c.npoints;
-					}
-					else if (c.type == COLL_CUBE) {
-						get_cube_points(c.d, cube_pts);
-						c_pts  = cube_pts;
-						c_npts = 8;
-					}
-					if (c_npts == 0) continue;
-
-					for (unsigned k = 0; k < c_npts; ++k) {
-						point p_int;
-						float t; // unused
-
-						if (line_int_plane(c_pts[k], lpos, pts[0], normal, p_int, t, 1)) {
-							if (!bounds[j].used) {
-								bounds[j].p[0] = bounds[j].p[1] = p_int;
-								bounds[j].used = 1;
-							}
-							else {
-								for (unsigned d = 0; d < 3; ++d) {
-									bounds[j].p[0][d] = min(bounds[j].p[0][d], p_int[d]);
-									bounds[j].p[1][d] = max(bounds[j].p[1][d], p_int[d]);
-								}
-							}
-						}
-					} // for k
-					for (unsigned d = 0; d < 3; ++d) { // slight adjustment to account for fp errors in intersection math
-						bounds[j].p[0][d] -= 0.01*rsize;
-						bounds[j].p[1][d] += 0.01*rsize;
-					}
-				} // for j
-				for (unsigned s0 = 0; s0 <= n0; ++s0) {
-					int const offset(s0*xstride);
-					float const scale(DO_SCALE(tri, s0, n0));
-					// shift test points by this amount from edges to make polygon meshes not shadow each other's corners
-					float const toler(0.001);
-					vector3d const vstep(dirs[1]*scale*(1.0 - toler)), vstep2(vstep*step);
-					point const pos0(pts[0] + dirs[0]*(s0*(1.0 - toler) + toler));
-					point pos(pos0 + vstep*toler);
-
-					for (unsigned s1 = 0; s1 <= n1; ++s1, pos += vstep) {
-						bool coll(0);
-
-						if ((!above_mesh || qzmin < mesh_ztop) && !is_above_mesh(pos)) {
-							coll = 1; // under mesh
-						}
-						else {
-							for (unsigned j = 0; j < ncobjs; ++j) { // like playing Battleships
-								if (bounds[j].used) { // line-plane int check optimization
-									if (pos.x < bounds[j].p[0].x || pos.x > bounds[j].p[1].x) continue;
-									if (pos.y < bounds[j].p[0].y || pos.y > bounds[j].p[1].y) continue;
-									if (pos.z < bounds[j].p[0].z || pos.z > bounds[j].p[1].z) continue;
-								}
-								int const cindex(cobjs[j]);
-								assert(cindex != cobj);
-								coll_obj &c(coll_objects[cindex]);
-
-								// test for adjacent shapes from the same plane (different subdivided polygon triangles)?
-								if (c.line_intersect(pos, lpos)) { // intersection
-									if (j > 0) swap(cobjs[0], cobjs[j]); // move this cobj to the beginning to increase its priority
-									if (j > 0) swap(bounds[0], bounds[j]);
-									coll = 1;
-
-									for (s1 += step, pos += vstep2; s1 <= n1; s1 += step, pos += vstep2) { // 25% speedup
-										if (!c.line_intersect(pos, lpos)) break;
-										for (unsigned q = s1-step; q < s1; ++q) norms[offset+q] |= L_mask;
-									}
-									pos -= vstep2;
-									s1  -= step;
-									break;
-								}
-							}
-						} // above mesh
-						if (do_mesh_intersect && !coll) { // test mesh
-							if (!is_visible_from_light(pos, lpos, USE_MESH_INT)) coll = 1; // doesn't work quite right if under mesh
-						}
-						if (coll) {
-							cur_lighted      |= 1;
-							norms[offset+s1] |= L_mask;
-						}
-						else {
-							cur_lighted      |= 2;
-						}
-					} // for s1
-				} // for s0
-			} // lighted == 0
-		} // not completely shadowed
-		set_light_val(lighted, cur_lighted, L);
-	} // for L
-	assert(lighted != 0);
-	return lighted;
-}
-
-
-unsigned dqd_params::draw_quad_div(vector<vertex_t> const &verts, unsigned const *ix, bool &in_strip) {
-
-	if (!ENABLE_SHADOWS) return ALL_LT[2]; // all unshadowed
-	point pts[4];
-	vector3d normals[4];
-
-	for (unsigned i = 0; i < 4; ++i) {
-		pts[i]     = verts[ix[i]].p;
-		normals[i] = verts[ix[i]].n;
-	}
-	do_calc_params(pts);
-	unsigned char *nvals(NULL);
-	unsigned lighted(0);
-	unsigned const npts(3 + !tri), n0(n[0]), n1(n[1]);
-	unsigned const xstride(n1+1), ystride(n0+1), numverts(xstride*ystride), num_lights(enabled_lights.size());
-	static vector<unsigned char> norms, nval_buffer;
-	if (numverts > norms.size()) norms.resize(numverts);
-	bool const lighting_known(require_either_lightval(all_lighted, 1, 2));
-
-	if (lighting_known) { // minor optimization
-		lighted = all_lighted;
-	}
-	else {
-		assert(size_t(cobj) < coll_objects.size());
-		coll_obj &c_obj(coll_objects[cobj]);
-		lvmap::const_iterator const it(c_obj.lightmap.find(qd));
-		bool const cached(it != c_obj.lightmap.end());
-
-		// lighted: 0 = unknown, 1 = shadowed, 2 = unshadowed, 3 = partially shadowed, 4 = hidden
-		if (cached) {
-			lighted = it->second.status;
-			nvals   = it->second.nvals; // NULL if no lights are 0 and no lights are 3
-			if (lighting_known) assert(!nvals);
-			assert(lighted > 0 && lighted < max_lighted);
-			assert(it->second.n0 == n0 && it->second.n1 == n1);
-		} // cached
-		else { // new quad
-			if (no_shadow_calc) {
-				lighted = ALL_LT[2]; // mark as unshadowed for now
-			}
-			else {
-				if (!tri && !c_obj.is_semi_trans() && check_face_containment(pts, npts, qd.dim, qd.dir, cobj)) {
-					lighted = ALL_LT[4]; // entire face contained
-				}
-				else {
-					lighted = determine_shadow_matrix(pts, norms);
-					//if (get_light_val(lighted, 0) == 2 || get_light_val(lighted, 0) == 3) {} // add light to this cell
-
-					if (is_partial_shadow(lighted)) {
-						if (c_obj.status == COLL_STATIC) {
-							nvals = new unsigned char[numverts];
-						}
-						else { // can we ever get here?
-							nval_buffer.resize(numverts);
-							nvals = &nval_buffer[0];
-						}
-						for (unsigned i = 0; i < numverts; ++i) nvals[i] = norms[i];
-					}
-				} // face not contained
-				if (c_obj.status == COLL_STATIC) {
-					c_obj.lightmap[qd] = lv_val(lighted, n0, n1, nvals);
-					if (require_any_lightval(lighted, 2, 3)) c_obj.lighted = COBJ_LIT_TRUE; // some part of the surface is lit
-				}
-			}
-		} // !cached
-		if (FULL_MAP_LOOKUP && !no_shadow_calc) {
-			bool const all_hidden(lighted == ALL_LT[4]);
-
-			if (!all_hidden || (RENDER_PART_INT && 2*num_internal++ > num_subdiv)) {
-				for (unsigned i = 0; i < num_lights; ++i) {
-					unsigned const light_val(get_light_val(lighted, i));
-					if (light_val != 1) all_shad   &= ~(1 << i);
-					if (light_val != 2) all_unshad &= ~(1 << i);
-				}
-			}
-			if (!all_hidden) all_int_surf = 0;
-		}
-	} // !lighting_known
-	assert(lighted < max_lighted);
-	// Note: could check if object is completely shadowed, but that rarely happens so it's probably not worth the trouble
-	if (!is_partial_shadow(lighted)) return lighted; // all shadowed or none shadowed
-	bool can_return(1);
-
-	for (unsigned L = 0; L < num_lights; ++L) {
-		unsigned const val(get_light_val(lighted, L));
-		assert(val != 0);
-		if (val == 3) can_return  = 0; // partial shadow
-	}
-	if (can_return) return lighted;
-	int step[2] = {1, 1};
-	
-	if (!USE_DLIST) { // could use multiple display lists for LOD
-		gen_stepsize(get_camera_pos(), pts[0], step, n, len);
-		if (USE_DLIST) {for (unsigned i = 0; i < 2; ++i) step[i] = min(3, step[i]);}
-	}
-	assert(nvals);
-	if (in_strip) {glEnd(); in_strip = 0;}
-	//if (in_dlist) {} // create some textures instead of drawing - QD_TAG_TEXTURE
-
-	// render the quads - is there a way to render these using a single textured quad?
-	for (unsigned s0 = 0; s0 < n0; s0 += step[0]) {
-		unsigned const off1(min(n0, s0+step[0])), o0(off1*xstride), o1(s0*xstride);
-		unsigned s_end(off1);
-
-		if (MERGE_STRIPS) { // find the next set of strips that are identical to this one and merge them
-			for (bool end_loop = 0; s_end < n0 && !end_loop; s_end += step[0]) {
-				int const o2(s_end*xstride);
-
-				for (unsigned s1 = 0; s1 <= n1; s1 += step[1]) {
-					if (nvals[o1+s1] != nvals[o2+s1]) {end_loop = 1; break;} // differing element, stop
-					if ((s1+step[1]) > n1 && s1 < n1) s1 = n1 - step[1]; // force the last s1 == n1
-				}
-			}
-			s_end = min(s_end, n0);
-		}
-		glBegin(GL_QUAD_STRIP);
-		float const scale[2] = {DO_SCALE(tri, s_end, n0), DO_SCALE(tri, s0, n0)};
-		float const s_[2]    = {s_end*ninv[0], s0*ninv[0]};
-		point pos[2] = {(pts[0] + dirs[0]*s_end), (pts[0] + dirs[0]*s0)}; // s0max, s0min, dirs[0] => p[1] - p[0]
-
-		for (unsigned s1 = 0, end_loop = 0; !end_loop; s1 += step[1]) {
-			if (s1 >= n1) {s1 = n1; end_loop = 1;}
-			unsigned const s1n(s1-step[1]), s1p(min(n1, s1+step[1]));
-
-			if (s1 == 0 || s1 == n1 || n1 < 3 ||
-				nvals[o0+s1] != nvals[o0+s1n] || nvals[o0+s1] != nvals[o0+s1p] ||
-				nvals[o1+s1] != nvals[o1+s1n] || nvals[o1+s1] != nvals[o1+s1p])
-			{
-				float const t_(s1*ninv[1]);
-
-				for (int i = 1; i >= 0; --i) {
-					vector3d const n(use_n ? interpolate_3d(normals, npts, s_[i], t_) : normal);
-					point const v(pos[i] + dirs[1]*(s1*scale[i])); // dirs[1] => p[3] - p[0]
-					unsigned char const shadowed(nvals[(i ? o1 : o0)+s1]);
-					set_shadowed_state(shadowed);
-					n.do_glNormal();
-					v.do_glVertex();
-				}
-			} // else continue strip
-		}
-		s0 = s_end - step[0]; // advance past merged strips
-		glEnd();
-	}
-	return lighted;
-}
-
-
-// currently only handles parallelograms and triangles
-// lighted: 0 = unknown, 1 = shad, 2 = unshad, 3 = partially shad, 4 = hidden int surf
-//          values per light source (per nibble of unsigned), so max light sources is 32/4 = 8
-void dqt_params::draw_quad_tri(point const *pts0, vector3d const *normals0, int npts, int dim, int dir, unsigned face, bool no_shadow_edge) const {
-
-	if (color.alpha == 0.0) return; // transparent
-	assert(size_t(cobj) < coll_objects.size());
-	assert(npts == 3 || npts == 4);
-	coll_obj &c_obj(coll_objects[cobj]);
-	point const camera(get_camera_pos());
-	if ((display_mode & 0x08) && is_occluded(c_obj.occluders, pts0, npts, camera)) return; // cull the entire face
-	unsigned const num_lights(enabled_lights.size());
-	quad_div qd2(dim, dir, QD_TAG_GLOBAL, face, 0); // set face to some magic value
-	bool first_render(0);
-	unsigned all_lighted(0), orig_all(0);
-	bool const no_shadow_calc(c_obj.platform_id < 0 && nvlight > MAX_CALC_PER_FRAME);
-
-	if (FULL_MAP_LOOKUP && !no_shadow_calc) {
-		lvmap::const_iterator const it(c_obj.lightmap.find(qd2));
-
-		if (it != c_obj.lightmap.end()) { // cached
-			all_lighted = orig_all = it->second.status;
-			assert(all_lighted < max_lighted);
-			if (all_lighted == ALL_LT[4]) return; // entire surface is hidden
-		}
-		else if (check_face_containment(pts0, npts, dim, dir, cobj)) { // back facing and hidden
-			c_obj.lightmap[qd2] = lv_val(ALL_LT[4]);
-			return;
-		}
-		else { // placeholder - tells us nothing but avoids duplicate face containment check
-			c_obj.lightmap[qd2] = lv_val(ALL_LT[0]);
-			first_render = 1;
-		}
-		for (unsigned i = 0; i < num_lights; ++i) {
-			unsigned const lval(get_light_val(all_lighted, i));
-
-			if (lval == 0 && !first_render) {
-				set_light_val(all_lighted, 3, i); // unknown or no static shadow, dynamic shadows still possible
-			}
-		}
-		no_shadow_edge = require_either_lightval(all_lighted, 1, 2); // all or none shadowed
-	}
-	point pos;
-	float rsize;
-	polygon_bounding_sphere(pts0, npts, 0.0, pos, rsize);
-	assert(rsize > 0.0);
-	bool const tri(npts == 3);
-	float const subdiv_size_inv2(1.0/L1_SUBDIV_SIZE); // do LOD here???
-	bool const use_norms(normals0 != NULL); // for quadrics: spheres and cylinders
-	unsigned shifti(0);
-	point pts[4];
-	vector3d normals[4];
-
-	if (DO_ROTATE && npts == 3) { // rotate points on triangles to improve subdivision direction
-		float minlen(0.0);
-
-		for (int i = 0; i < npts; ++i) {
-			float const len(p2p_dist_sq(pts0[i], pts0[(i+1+(dir ? npts-2 : 0))%npts]));
-			if (i == 0 || len < minlen) {minlen = len; shifti = i;}
-		}
-		shifti = ((shifti+1)%npts);
-	}
-	for (int i = 0; i < npts; ++i) {
-		unsigned const ix((i+npts-shifti)%npts);
-		pts[i] = pts0[ix];
-		if (use_norms) normals[i] = normals0[ix];
-	}
-	if (use_norms) { // rotate and mirror the polygon points and normals appropriately
-		swap(pts[0], pts[1]);
-		swap(normals[0], normals[1]);
-		if (!tri) swap(pts[2], pts[3]);
-		if (!tri) swap(normals[2], normals[3]);
-		swap(normals[1], normals[npts-1]);
-		if ( tri) normals[3] = normals[2];
-	}
-	else if (!dir) {
-		swap(pts[1], pts[npts-1]); // acount for reversed point traversal
-	}
-	if (tri) pts[3] = pts[2];
-	unsigned lighted(ALL_LT[0]), n[2];
-	float len[2], ninv[2];
-	assert(dir == 0 || dir == 1);
-	vector3d dirs[2]; // edge step lengths/directions
-	calc_params(pts, dirs, len, ninv, n, subdiv_size_inv2);
-	vector3d normal(cross_product(dirs[1], dirs[0]).get_norm());
-
-	unsigned shift_bits(1);
-	for (unsigned val = n[0]*n[1]+1; val > 0; val >>= 1, ++shift_bits) {}
-	assert(face < (1U<<(32-shift_bits)));
-	face <<= shift_bits;
-	
-	if (double_sided && dot_product_ptv(normal, camera, pos) < 0.0) { // viewing the back side
-		if (use_norms) {
-			for (int i = 0; i < npts; ++i) {
-				normals[i].negate(); // use get_norm_camera_orient()?
-			}
-		}
-		normal.negate();
-	}
-	vector3d const norm(use_norms ? get_center(normals, npts) : normal);
-	bool const bf_test(!no_shadow_edge && !double_sided);
-	bool back_facing(bf_test), has_d_shad(0);
-	unsigned char shad(0), en_lt_bits(0);
-
-	for (unsigned L = 0; L < num_lights; ++L) {
-		assert(!enabled_lights[L].is_dynamic());
-		if (!enabled_lights[L].lights_polygon(pos, rsize)) continue;
-		vector3d const dir(enabled_lights[L].get_center() - pos);
-		float const dp(use_norms ? max(max(dot_product(normals[0], dir), dot_product(normals[1], dir)),
-			max(dot_product(normals[2], dir), dot_product(normals[3], dir))) : dot_product(norm, dir));
-
-		if (!double_sided && dp <= 0.0) { // back facing
-			shad |= (1 << L);
-		}
-		else {
-			en_lt_bits |= (1 << L); // only this needs to be computed when bf_test == 1
-			back_facing = 0;
-		}
-	}
-	if (back_facing) no_shadow_edge = 1; // back facing to all light sources
-	// Requirements for using a display list:
-	// 1. Must have no dynamic shadows
-	// 2. Must not be part of a quadric (too many LODs)
-	float const spec[2] = {c_obj.cp.specular, c_obj.cp.shine};
-	bool const use_dlist(USE_DLIST && !first_render && !no_shadow_calc && !is_quadric && !has_d_shad);
-	bool const is_black(c_obj.cp.specular == 0.0 && color.red == 0.0 && color.green == 0.0 && color.blue == 0.0);
-	bool const no_subdiv(no_shadow_edge || is_black);
-
-	if (use_dlist) {
-		quad_div const qddl(dim, dir, QD_TAG_DLIST, (face + 1), shift_bits);
-		lvmap::const_iterator const it(c_obj.lightmap.find(qddl));
-		bool const found(it != c_obj.lightmap.end());
-
-		if (!found || it->second.status == 0) {
-			if (found) c_obj.lightmap.erase(qddl);
-			unsigned const dlist(glGenLists(1)); // shouldn't return 0
-			assert(glIsList(dlist));
-			c_obj.lightmap[qddl] = lv_val(dlist);
-			glNewList(dlist, GL_COMPILE_AND_EXECUTE); // mapx has 4067 dlists, 88.5K verts
-		}
-		else {
-			glCallList(it->second.status);
-			return;
-		}
-	}
-	++cobj_counter;
-	bool const occlusion_test(!use_dlist && (display_mode & 0x08) && !c_obj.occluders.empty());
-	bool in_strip(0), occluded(0);
-	unsigned const num_subdiv(n[0]*n[1]);
-	quad_div qd(dim, dir, QD_TAG_QUAD, face, shift_bits);
-	dqd_params params(cobj, tri, 0, normal, en_lt_bits, qd, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
-	unsigned const nv0(n[0]+1), nv1(n[1]+1);
-	static vector<vertex_t> verts;
-	verts.resize(nv0*nv1);
-
-	for (unsigned s0 = 0; s0 < nv0; ++s0) {
-		point const pt(pts[0] + dirs[0]*s0); // pts[1]
-		vector3d_d const vs(dirs[1]*DO_SCALE(tri, s0, n[0])); // pts[3]
-
-		for (unsigned s1 = 0; s1 < nv1; ++s1) {
-			unsigned const ix(s0*nv1 + s1);
-			verts[ix].p = pt + vs*s1;
-			verts[ix].n = (use_norms ? interpolate_3d(normals, npts, s1*ninv[1], s0*ninv[0]) : normal);
-		}
-	}
-	if (no_subdiv) {
-		for (unsigned i = 0; i < num_lights; ++i) {
-			if (get_light_val(all_lighted, i) == 1) shad |= (1 << i);
-		}
-	}
-	else if (tri) {
-		glBegin(GL_TRIANGLES);
-	}
-	for (unsigned s0 = 0; s0 < n[0]; ++s0) { // pre-subdivide large quads
-		unsigned const ix0(s0*nv1);
-
-		if (occlusion_test && n[0] > 1) { // test this row for occlusion
-			point const pts2[4] = {verts[ix0].p, verts[ix0+nv1-1].p, verts[ix0+nv1].p, verts[ix0+nv1+nv1-1].p};
-
-			if (is_occluded(c_obj.occluders, pts2, 4, camera)) {
-				occluded = 1;
-				continue; // cull a full strip
-			}
-		}
-		if (no_subdiv) {
-			glBegin(GL_QUAD_STRIP); // is there any way to safely skip vertices for LOD draw?
-
-			for (unsigned s1 = 0; s1 <= n[1]; ++s1) {
-				unsigned const ix(s0*nv1 + s1), ixs[2] = {ix, ix+nv1};
-				draw_verts(verts, ixs, 2, shad);
-			}
-			glEnd();
-			continue;
-		}
-		unsigned last_lighted(0), last_ixs[2];
-
-		for (unsigned s1 = 0; s1 < n[1]; ++s1) {
-			unsigned const ix(ix0 + s1);
-			unsigned ixs[4] = {ix, ix+1, ix+nv1+1, ix+nv1};
-			qd.face = face + ix;
-
-			if (tri) {
-				bool tri_begin(1);
-
-				if (s0 < n[0]-1) { // not a single triangle at the top
-					qd.tag |=  QD_TAG_TRIANGLE;
-					unsigned const ixs2[4] = {ixs[0], ixs[2], ixs[3], ixs[3]};
-					dqd_params params_tri(cobj, tri, 1, normal, en_lt_bits, qd, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
-					lighted = params_tri.draw_quad_div(verts, ixs2, tri_begin);
-					params.inherit_flags_from(params_tri);
-					qd.tag &= ~QD_TAG_TRIANGLE;
-
-					if (!tri_begin) {
-						glBegin(GL_TRIANGLES);
-						tri_begin = 1;
-					}
-					else if (lighted != ALL_LT[4]) {
-						draw_verts(verts, ixs2, npts, test_all_light_val(lighted, 1));
-					}
-				}
-				ixs[3] = ixs[2]; // have to recompute since dir is not constant due to scale
-				dqd_params params2(cobj, tri, 0, normal, en_lt_bits, qd, use_dlist, spec, num_subdiv, orig_all, no_shadow_calc, use_norms);
-				lighted = params2.draw_quad_div(verts, ixs, tri_begin);
-				if (!tri_begin) {glBegin(GL_TRIANGLES); tri_begin = 1;}
-				params.inherit_flags_from(params2);
-			}
-			else { // quad
-				lighted = params.draw_quad_div(verts, ixs, in_strip);
-			}
-			assert(lighted != 0);
-
-			if (lighted != ALL_LT[4] && !is_partial_shadow(lighted)) {
-				unsigned char const cur_shadowed(test_all_light_val(lighted, 1));
-
-				if (tri) {
-					draw_verts(verts, ixs, npts, cur_shadowed);
-				}
-				else { // technically, should never be able to directly transition between 1 and 0 unless the shadow falls exactly at the boundary
-					unsigned const ixs2[4] = {ixs[3], ixs[0], ixs[2], ixs[1]};
-
-					if (in_strip) {
-						if (lighted != last_lighted) { // stutter the last point at the new lighting value so that there's no transition
-							draw_verts(verts, last_ixs, 2, cur_shadowed);
-						}
-						draw_verts(verts, ixs2+2, 2, cur_shadowed);
-					}
-					else {
-						glBegin(GL_QUAD_STRIP);
-						in_strip = 1;
-						draw_verts(verts, ixs2, npts, cur_shadowed);
-					}
-					last_lighted = lighted;
-					last_ixs[0]  = ixs[2];
-					last_ixs[1]  = ixs[1];
-				}
-			} // not partial shadow && lighted != ALL_LT[4]
-		} // for s1
-		if (in_strip) {glEnd(); in_strip = 0;}
-	} // for s0
-	assert(!tri || !in_strip);
-	if (!no_subdiv && tri) glEnd();
-	if (use_dlist) glEndList();
-
-	if (FULL_MAP_LOOKUP && ENABLE_SHADOWS && !no_shadow_calc && all_lighted == ALL_LT[0] && !occluded) {
-		if (!no_subdiv) {
-			if (params.all_int_surf) {
-				all_lighted = ALL_LT[4]; // free display list?
-			}
-			else {
-				for (unsigned i = 0; i < num_lights; ++i) {
-					bool const all_shad((params.all_shad   & (1 << i)) != 0);
-					bool const all_unsh((params.all_unshad & (1 << i)) != 0);
-					assert(!all_shad || !all_unsh);
-					if (all_shad) set_light_val(all_lighted, 1, i);
-					if (all_unsh) set_light_val(all_lighted, 2, i);
-				}
-			}
-		}
-		c_obj.lightmap[qd2] = lv_val(all_lighted);
-	}
-}
-
-
-void dqt_params::draw_quad(float d1a, float d1b, float d2a, float d2b, float d0, int dim, int dir) const {
-
-	double const dv(DIV_VAL*L1_SUBDIV_SIZE);
-	unsigned const n1(max((unsigned)1, unsigned(fabs(d1b - d1a)/dv)));
-	unsigned const n2(max((unsigned)1, unsigned(fabs(d2b - d2a)/dv)));
-	double const d1((d1b - d1a)/n1), d2((d2b - d2a)/n2);
-	int const dim1((dim+1)%3), dim2((dim+2)%3);
-	point pts[4];
-	assert(d1 > 0.0 && d2 > 0.0);
-
-	for (unsigned s1 = 0; s1 < n1; ++s1) {
-		double const s1d1(d1a + s1*d1);
-
-		for (unsigned s2 = 0; s2 < n2; ++s2) {
-			double const s2d2(d2a + s2*d2);
-
-			double v[4][3] = {
-				{s1d1,    s2d2,    d0},
-				{s1d1,    s2d2+d2, d0},
-				{s1d1+d1, s2d2+d2, d0},
-				{s1d1+d1, s2d2,    d0}};
-			for (unsigned i = 0; i < 4; ++i) {
-				pts[i].assign(v[i][dim], v[i][dim1], v[i][dim2]);
-			}
-			draw_quad_tri(pts, NULL, 4, dim, dir, (s1*n2 + s2), 0);
-		}
-	}
-}
-
-
-void coll_obj::draw_coll_cube(int do_fill, int tid, bool no_subdiv) const {
+void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 
 	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
@@ -951,7 +175,6 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, bool no_subdiv) const {
 			if (camera[i] <= d[i][0]-dist || camera[i] >= d[i][1]+dist) inside = 0;
 		}
 	}
-	dqt_params const q(0, id, 0);
 	pair<float, unsigned> faces[6];
 	for (unsigned i = 0; i < 6; ++i) faces[i].second = i;
 	vector3d tex_delta(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
@@ -971,10 +194,9 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, bool no_subdiv) const {
 		}
 		sort(faces, (faces+6));
 	}
-	if (no_subdiv) {
-		set_shadowed_state(0);
-		glBegin(GL_QUADS);
-	}
+	set_shadowed_state(0);
+	glBegin(GL_QUADS);
+	
 	for (unsigned i = 0; i < 6; ++i) {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
 		if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir))) continue;
@@ -989,27 +211,22 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, bool no_subdiv) const {
 			set_texgen_vec4((cp.swap_txy ? b : a), 0, USE_ATTR_TEXGEN, 0);
 			set_texgen_vec4((cp.swap_txy ? a : b), 1, USE_ATTR_TEXGEN, 0);
 		}
-		if (no_subdiv) {
-			vector3d normal(zero_vector);
-			normal[dim] = (dir ? 1.0 : -1.0);
-			normal.do_glNormal();
-			point p;
-			p[d0 ] = d[d0][0];
-			p[d1 ] = d[d1][0];
-			p[dim] = d[dim][dir];
-			p.do_glVertex();
-			p[d0 ] = d[d0][1];
-			p.do_glVertex();
-			p[d1 ] = d[d1][1];
-			p.do_glVertex();
-			p[d0 ] = d[d0][0];
-			p.do_glVertex();
-		}
-		else {
-			q.draw_quad(d[d0][0], d[d0][1], d[d1][0], d[d1][1], d[dim][dir], 2-dim, dir);
-		}
+		vector3d normal(zero_vector);
+		normal[dim] = (dir ? 1.0 : -1.0);
+		normal.do_glNormal();
+		point p;
+		p[d0 ] = d[d0][0];
+		p[d1 ] = d[d1][0];
+		p[dim] = d[dim][dir];
+		p.do_glVertex();
+		p[d0 ] = d[d0][1];
+		p.do_glVertex();
+		p[d1 ] = d[d1][1];
+		p.do_glVertex();
+		p[d0 ] = d[d0][0];
+		p.do_glVertex();
 	}
-	if (no_subdiv) glEnd();
+	glEnd();
 }
 
 
@@ -1019,107 +236,31 @@ bool camera_back_facing(point const *const points, int npoints, vector3d const &
 }
 
 
-bool camera_behind_polygon(point const *const points, int npoints, bool &cbf) {
+bool camera_behind_polygon(point const *const points, int npoints) {
 
 	point const center(get_center(points, npoints)), camera(get_camera_pos());
 	vector3d const dirs[2] = {vector3d(points[1], points[0]), vector3d(points[npoints-1], points[0])};
 	vector3d const normal(cross_product(dirs[0], dirs[1]));
-	float const rsize(max(dirs[0].mag(), dirs[1].mag()));
-	cbf = (dot_product_ptv(normal, camera, center) >= 0.0);
-
-	for (unsigned L = 0; L < enabled_lights.size(); ++L) {
-		if (!enabled_lights[L].lights_polygon(center, rsize)) continue;
-		bool const lbf(dot_product_ptv(normal, enabled_lights[L].get_center(), center) >= 0.0);
-		if (!(lbf ^ cbf)) return 0; // camera is on the opposite side of the polygon as all lights
-	}
-	return 1;
+	return (dot_product_ptv(normal, camera, center) >= 0.0);
 }
 
 
-void dqt_params::draw_polygon(point const *points, const vector3d *normals, int npoints,
-	vector3d const &norm, int id, int subpoly, bool no_subdiv) const
-{
-	if (no_subdiv || (npoints != 3 && npoints != 4)) {
-		set_shadowed_state(0);
-		draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
-		return;
-	}
-	bool cbf(0);
-	unsigned npts(3);
-	bool const no_shadow(subpoly ? 0 : camera_behind_polygon(points, npoints, cbf));
+void draw_polygon(point const *points, int npoints, vector3d const &norm) {
 
-	if (npoints == 4) { // minimize cut length	
-		vector3d v01(points[0] - points[1]), v32(points[3] - points[2]);
-		vector3d v12(points[1] - points[2]), v03(points[0] - points[3]);
-
-		// test for parallelograms - can be inaccurate for small shapes
-		if (!normals &&
-			fabs(v01.mag_sq() - v32.mag_sq()) < 1.0E-5*(v01.mag_sq() + v32.mag_sq()) &&
-			fabs(v12.mag_sq() - v03.mag_sq()) < 1.0E-5*(v12.mag_sq() + v03.mag_sq()))
-		{
-			npts = 4;
-		}
-		else {
-			if (!normals) { // is all this complexity worth the trouble?
-				v01.normalize(); v32.normalize(); v12.normalize(); v03.normalize();
-				bool const p_01_32(p2p_dist_sq(v01, v32) < TOLERANCE), p_12_03(p2p_dist_sq(v12, v03) < TOLERANCE);
-
-				if (p_01_32 || p_12_03) { // trapezoid
-					assert(!(p_01_32 && p_12_03)); // should have gotten into the first if conditional in this case?
-					point pts[5];
-
-					if (p_01_32) { // rotate points by 1 so that p1p2 | p0p3
-						for (unsigned i = 0; i < 4; ++i) pts[i] = points[(i+1)&3];
-					}
-					else {
-						for (unsigned i = 0; i < 4; ++i) pts[i] = points[i];
-					}
-					if (p2p_dist_sq(pts[0], pts[3]) < p2p_dist_sq(pts[1], pts[2])) { // rotate pts by 2 so that p0p3 > p1p2
-						swap(pts[0], pts[2]);
-						swap(pts[1], pts[3]);
-					}
-					pts[4] = pts[1] + (pts[3] - pts[2]);
-					draw_quad_tri((pts+1), normals, 4, 2+cbf, !subpoly, id, no_shadow); // parallelogram
-					pts[2] = pts[4];
-					draw_quad_tri( pts,    normals, 3, 0+cbf, !subpoly, id, no_shadow); // triangle
-					return;
-				}
-			} // normals test
-			float const len[2] = {p2p_dist_sq(points[0], points[2]), p2p_dist_sq(points[1], points[3])}; // diagonals
-			point points2[3]   = {points[0], points[1], points[3]};
-			point normals3[3], *normals2(NULL);
-
-			if (normals != NULL) {
-				normals2    = normals3; // set to actual data
-				normals2[0] = normals[0];
-				normals2[1] = normals[1];
-				normals2[2] = normals[3];
-			}
-			if (len[0] < len[1]) { // 0-2 cut
-				if (normals != NULL) normals2[1] = normals[2];
-				points2[1] = points[2];
-			}
-			else { // 1-3 cut
-				if (normals != NULL) ++normals;
-				++points; // move pointer
-			}
-			draw_quad_tri(points2, normals2, 3, 0+cbf, !subpoly, id, no_shadow);
-		} // parallelogram test
-	}
-	draw_quad_tri(points, normals, npts, 2+cbf, !subpoly, id, no_shadow);
+	set_shadowed_state(0);
+	draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
 }
 
 
-void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid, bool no_subdiv) const {
+void coll_obj::draw_extruded_polygon(int tid) const {
 
 	float const thick(fabs(thickness));
-	dqt_params q(1, id, 0); // just set double_sided
 	bool const textured(tid >= 0);
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
 	
 	if (thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
 		if (textured) setup_polygon_texgen(norm, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-		q.draw_polygon(points, normals, npoints, norm, 0, 0, no_subdiv);
+		draw_polygon(points, npoints, norm);
 		return;
 	}
 	assert(points != NULL && (npoints == 3 || npoints == 4));
@@ -1167,132 +308,26 @@ void coll_obj::draw_extruded_polygon(vector3d const *const normals, int tid, boo
 
 		if (s < 2) { // draw front and back
 			if (bfc && (back_facing ^ (s == 0))) continue;
-			vector3d norm2(norm), n2[4];
+			vector3d norm2(norm);
 
 			if (!s) {
 				reverse(pts[s].begin(), pts[s].end());
-
-				if (normals != NULL) {
-					for (int i = 0; i < npoints; ++i) n2[i] = normals[npoints-i-1]; // reverse
-				}
 				norm2.negate();
 			}
 			if (textured) setup_polygon_texgen(norm2, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-			q.draw_polygon(&(pts[s].front()), ((normals && !s) ? n2 : NULL), npoints, norm2, s, 0, no_subdiv); // draw bottom surface
+			draw_polygon(&(pts[s].front()), npoints, norm2); // draw bottom surface
 			if (!s) reverse(pts[s].begin(), pts[s].end());
 		}
 		else { // draw sides
 			unsigned const i(s-2), ii((i+1)%npoints);
 			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
-			bool cbf2;
-			bool const no_shadow(camera_behind_polygon(side_pts, 4, cbf2));
 
-			if (!bfc || !cbf2) { // FIXME: no_subdiv
-				if (textured) setup_polygon_texgen(get_poly_norm(side_pts), tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-				q.draw_quad_tri(side_pts, NULL, 4, no_shadow, 1, i+4, no_shadow); // back face cull?
+			if (!bfc || !camera_behind_polygon(side_pts, 4)) {
+				vector3d const norm2(get_poly_norm(side_pts));
+				if (textured) setup_polygon_texgen(norm2, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
+				draw_polygon(side_pts, npoints, norm2);
 			}
 		}
-	}
-}
-
-
-void coll_obj::draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, bool no_bfc, int tid) const {
-
-	assert(radius > 0.0 || radius2 > 0.0);
-	bool const no_clip(no_bfc || is_semi_trans());
-	point camera(get_camera_pos());
-	fix_nsides(nsides);
-	vector3d v12;
-	vector_point_norm const &vpn(gen_cylinder_data(points, radius, radius2, nsides, v12));
-	dqt_params q(no_bfc, id, 1); // no_bfc == double sided
-
-	for (int S = 0; S < nsides; ++S) { // nsides can change
-		int const index(S + (nsides<<8) + 1);
-		int const prevS((S-1+nsides)%nsides), nextS((S+1)%nsides);
-		point pts[4] = {vpn.p[S<<1], vpn.p[(S<<1)+1], vpn.p[(nextS<<1)+1], vpn.p[nextS<<1]};
-
-		if (no_clip || dot_product_ptv(vpn.n[S], camera, get_center(pts, 4)) > 0.0) { // cull the sides facing away from the camera
-			vector3d normals[4], pn_norms[2] = {vpn.n[prevS], vpn.n[nextS]};
-
-			for (unsigned i = 0; i < 2; ++i) {
-				normals[(i<<1)]   = vpn.n[S] + pn_norms[i]; // average of two normals
-				normals[(i<<1)].normalize(); // is this necessary?
-				normals[(i<<1)+1] = normals[(i<<1)];
-			}
-			if (radius == radius2) {
-				q.draw_quad_tri(pts, normals, 4, 0, 0, index, 0); // quad
-			}
-			else if (radius == 0.0) {
-				q.draw_quad_tri(pts, normals, 3, 0, 0, index, 0); // triangle
-			}
-			else if (radius2 == 0.0) {
-				pts[2] = pts[3]; // duplicate the last point
-				q.draw_quad_tri(pts, normals, 3, 0, 0, index, 0); // triangle
-			}
-			else {
-				q.draw_polygon(pts, normals, 4, up_vector, index, 1, 0); // polygon
-			}
-		}
-	} // for S
-	if (draw_ends) { // not quite right due to long thin triangles
-		if (tid >= 0) { // textured
-			float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
-			setup_polygon_texgen(v12, tscale, xlate, 0, USE_ATTR_TEXGEN);
-		}
-		bool ends_bf[2];
-		unsigned const i_end(1 + (radius2 != 0.0));
-		q.double_sided = 0;
-
-		for (unsigned i = (radius == 0.0); i < i_end; ++i) {
-			ends_bf[i] = ((i != 0) ^ (dot_product_ptv(v12, camera, points[i]) > 0.0));
-		}
-		for (int S = 0; S < nsides; ++S) { // nsides can change
-			int const index(S + (nsides<<8) + 1), nextS((S+1)%nsides); // prevS?
-
-			for (unsigned i = (radius == 0.0); i < i_end; ++i) {
-				if (!ends_bf[i]) { // facing towards the camera
-					point const pts2[4] = {vpn.p[(S<<1)+i], vpn.p[(nextS<<1)+i], points[i], points[i]};
-					q.draw_quad_tri(pts2, NULL, 3, 4, i, index, 0);
-				}
-			}
-		}
-	} // if draw_ends
-}
-
-
-void coll_obj::draw_subdiv_sphere_at(int ndiv, int tid) const {
-
-	assert(radius > 0.0);
-	bool const bfc(!is_semi_trans());
-	fix_nsides(ndiv);
-	point camera(get_camera_pos());
-	sd_sphere_d sd(points[0], radius, ndiv, NULL);
-	sd.gen_points_norms();
-	point **points   = sd.get_points();
-	vector3d **norms = sd.get_norms();
-	dqt_params q(0, id, 1);
-
-	for (int s = 0; s < ndiv; ++s) {
-		int const sn((s+1)%ndiv);
-
-		for (int t = 0; t < ndiv; ++t) {
-			int const tn(t+1);
-			point    const pts[4]     = {points[s][t], points[sn][t], points[sn][tn], points[s][tn]};
-			vector3d const normals[4] = {norms[s][t],  norms[sn][t],  norms[sn][tn],  norms[s][tn]};
-
-			if (!bfc || dot_product_ptv(get_center(normals, 4), camera, get_center(pts, 4)) > 0.0) { // back face culling
-				int const index(s + (t<<8) + (ndiv<<16) + 1);
-				q.draw_polygon(pts, normals, 4, up_vector, index, 1, 0); // polygon segment
-			}
-		}
-	}
-}
-
-
-void clear_all_lightmaps(int mode, unsigned keep) {
-
-	for (unsigned i = 0; i < coll_objects.size(); ++i) {
-		coll_objects[i].clear_lightmap(mode, keep);
 	}
 }
 
@@ -1353,53 +388,5 @@ void add_coll_shadow_objs() {
 }
 
 
-void init_subdiv_lighting() {
-
-	RESET_TIME;
-	static vector<sphere_t> last_lposes;
-	static vector<colorRGBA> last_colors;
-	unsigned const nlights(enabled_lights.size()), nlights2(last_lposes.size());
-	max_lighted = (16ULL << (max(0U, (nlights-1))<<2));
-	assert(last_colors.size() == nlights2);
-	vector<sphere_t> lposes(nlights);
-	vector<colorRGBA> colors(nlights);
-	
-	for (unsigned L = 0; L < nlights; ++L) {
-		bool const dynamic(enabled_lights[L].is_dynamic()); // dynamic lights can move and change color
-		lposes[L] = (dynamic ? sphere_t() : sphere_t(enabled_lights[L].get_center(), enabled_lights[L].get_radius()));
-		colors[L] = (dynamic ? WHITE      : enabled_lights[L].get_color());
-	}
-	if (lposes != last_lposes || invalid_shadows == 1) { // clear the lightmap
-		unsigned keep_lights(0);
-		
-		if (!invalid_shadows) {
-			for (unsigned L = 0; L < min(nlights, nlights2); ++L) { // can be different sizes (can also use max and test L)
-				if (lposes[L] == last_lposes[L]) keep_lights |= (1 << L);
-			}
-		}
-		invalid_shadows = 0;
-		clear_all_lightmaps(0, keep_lights); // clear all
-		if (VERBOSE_DYNAMIC) {PRINT_TIME(" Lighting Clear");}
-	}
-	else if (invalid_shadows == 2) {
-		invalid_shadows = 0;
-		clear_all_lightmaps(2); // update shadows
-		PRINT_TIME(" Lighting Bitset and Dlist Clear");
-	}
-	else if (colors != last_colors) {
-		clear_all_lightmaps(1); // clear only dlists/textures
-		if (VERBOSE_DYNAMIC) {PRINT_TIME(" Lighting Dlist Clear");}
-	}
-	last_lposes = lposes;
-	last_colors = colors;
-
-	for (unsigned n = 0; n < sizeof(ALL_LT)/sizeof(unsigned); ++n) {
-		ALL_LT[n] = 0;
-
-		for (unsigned i = 0; i < nlights; ++i) {
-			set_light_val(ALL_LT[n], n, i);
-		}
-	}
-}
 
 

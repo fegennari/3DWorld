@@ -42,90 +42,11 @@ void coll_obj::init() {
 }
 
 
-bool coll_obj::clear_lightmap_entry(lvmap::iterator it, int mode, unsigned keep, vector<pair<quad_div, lv_val> > *to_add) {
-
-	unsigned char const tag(it->first.tag);
-	unsigned &status(it->second.status);
-
-	if (mode == 2) { // update shadows - can only add shadows
-		if (require_either_lightval(status, 1, 4)) return 0; // all hidden or all shadowed
-	}
-	if (tag == QD_TAG_DLIST && status != 0) { // display list
-		if (glIsList(status)) glDeleteLists(status, 1);
-		status = 0; // erase?
-	}
-	if (tag == QD_TAG_TEXTURE && status != 0) { // texture
-		free_texture(status); // erase?
-	}
-	if (mode != 1) {
-		if (keep > 0 && (tag == QD_TAG_QUAD || tag == QD_TAG_TRIANGLE)) { // backup precomputed lighting values
-			assert(to_add);
-			assert(keep < (1 << 8)); // only support up to 8 light sources for now
-			quad_div qd(it->first);
-			lv_val lv(it->second);
-
-			for (unsigned L = 0; L < 8; ++L) {
-				if (!(keep & (1 << L))) set_light_val(lv.status, 0, L); // mark as reset
-			}
-			qd.tag |= QD_TAG_OLD;
-			to_add->push_back(make_pair(qd, lv));
-			return 1;
-		}
-		delete [] it->second.nvals; // clear all
-		it->second.nvals = NULL; // just in case
-		if (keep > 0) return 1;
-	}
-	return (mode == 2);
-}
-
-
-// mode: 0 = clear all, 1 = clear dlists only, 2 = update shadows (keep is only used in mode 0)
-void coll_obj::clear_lightmap(int mode, unsigned keep) {
-
-	vector<pair<quad_div, lv_val> > to_add;
-
-	for (lvmap::iterator it = lightmap.begin(); it != lightmap.end();) {
-		bool const deleted(clear_lightmap_entry(it, mode, keep, &to_add));
-		lvmap::iterator to_del(it++);
-		if (deleted) lightmap.erase(to_del);
-	}
-	if (mode == 0 && keep == 0) {
-		assert(to_add.empty());
-		lightmap.clear();
-		lighted = COBJ_LIT_UNKNOWN;
-	}
-	for (unsigned i = 0; i < to_add.size(); ++i) { // add back in old values
-		lightmap.insert(to_add[i]);
-	}
-}
-
-
-void coll_obj::clear_lightmap_if_lighted_eq(int shadowed, int partial) {
-
-	for (lvmap::iterator it = lightmap.begin(); it != lightmap.end();) {
-		int const lv(it->second.status); // lighted: 1 = shadowed, 2 = unshadowed, 3 = partially shadowed
-		unsigned char const tag(it->first.tag);
-		lvmap::iterator temp(it++);
-
-		if ((tag & (QD_TAG_GLOBAL | QD_TAG_DLIST | QD_TAG_TEXTURE)) ||
-			( shadowed && test_all_light_val(lv, 1)) ||
-			(!shadowed && test_all_light_val(lv, 2)) ||
-			( partial  && test_all_light_val(lv, 3)) ||
-			lv == ALL_LT[4])
-		{
-			clear_lightmap_entry(temp, 0, 0);
-			lightmap.erase(temp);
-		}
-	}
-}
-
-
-void coll_obj::clear_internal_data(vector<coll_obj> &cobjs, vector<int> const &indices, unsigned ix) {
+void coll_obj::clear_internal_data() {
 
 	fixed    = 0; // unfix it so that it's actually removed
 	lighted  = 0;
 	cp.surfs = 0;
-	clear_lightmap(0);
 	occluders.clear();
 }
 
@@ -349,11 +270,9 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		}
 		return;
 	}
-	bool const no_subdiv(shadow_map_enabled() || (cp.color == BLACK && cp.specular == 0.0));
-
 	switch (type) {
 	case COLL_CUBE:
-		draw_coll_cube((draw_model == 0), tid, no_subdiv);
+		draw_coll_cube((draw_model == 0), tid);
 		break;
 
 	case COLL_CYLINDER:
@@ -365,21 +284,14 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 			int const ndiv(min(N_CYL_SIDES, max(3, (int)size)));
 			bool const draw_ends(!(cp.surfs & 1));
 			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (points[1] - points[0]), USE_ATTR_TEXGEN);
+			set_shadowed_state(0);
+			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
 
-			if (no_subdiv) {
-				set_shadowed_state(0);
-				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
-
-				if (draw_ends && tid >= 0) { // draw ends with different texture matrix
-					float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
-					setup_polygon_texgen((points[1] - points[0]).get_norm(), tscale, xlate, 0, USE_ATTR_TEXGEN);
-					// FIXME: Not exactly correct, we're redrawing the sides here as well but there are texgen issues if we don't
-					draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 1); // Note: using texgen, not textured
-				}
-				return;
-			}
-			else {
-				draw_subdiv_cylinder(ndiv, 1, draw_ends, (cp.surfs == 1), tid);
+			if (draw_ends && tid >= 0) { // draw ends with different texture matrix
+				float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
+				setup_polygon_texgen((points[1] - points[0]).get_norm(), tscale, xlate, 0, USE_ATTR_TEXGEN);
+				// FIXME: Not exactly correct, we're redrawing the sides here as well but there are texgen issues if we don't
+				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 1); // Note: using texgen, not textured
 			}
 		}
 		break;
@@ -389,20 +301,13 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 			float const scale(0.7*NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
 			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z, USE_ATTR_TEXGEN);
-
-			if (no_subdiv) {
-				set_shadowed_state(0);
-				draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
-				return;
-			}
-			else {
-				draw_subdiv_sphere_at(ndiv, tid);
-			}
+			set_shadowed_state(0);
+			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
 		}
 		break;
 
 	case COLL_POLYGON:
-		draw_extruded_polygon(NULL, tid, no_subdiv);
+		draw_extruded_polygon(tid);
 		break;
 	}
 }

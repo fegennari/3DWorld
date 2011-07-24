@@ -1801,8 +1801,6 @@ void setup_object_render_data() {
 	RESET_TIME;
 	bool const TIMETEST(0);
 	get_enabled_lights(); // don't call twice per frame - can have problems with lightning
-	init_subdiv_lighting();
-	init_draw_stats();
 	if (TIMETEST) {PRINT_TIME("Init");}
 	distribute_smoke();
 	upload_smoke_3d_texture();

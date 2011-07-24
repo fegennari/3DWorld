@@ -18,101 +18,6 @@ enum {COBJ_LIT_FALSE = 0, COBJ_LIT_TRUE, COBJ_LIT_UNKNOWN};
 
 unsigned const OBJ_CNT_REM_TJ = 1;
 
-unsigned char const QD_TAG_QUAD     = 0x00;
-unsigned char const QD_TAG_GLOBAL   = 0x01;
-unsigned char const QD_TAG_TRIANGLE = 0x02;
-unsigned char const QD_TAG_DLIST    = 0x03;
-unsigned char const QD_TAG_TEXTURE  = 0x04;
-unsigned char const QD_TAG_OLD      = 0x08;
-
-
-struct quad_div {
-
-	unsigned char dim, dir, tag, sbs;
-	unsigned face;
-	quad_div(unsigned dim_, unsigned dir_, unsigned char tag_, unsigned face_, unsigned sbs_) :
-		dim(dim_), dir(dir_), tag(tag_), face(face_), sbs(sbs_)
-	{
-		assert(dim < 256 && dir < 256 && sbs < 256);
-	}
-	bool operator<(const quad_div &A) const {
-		if (A.dim < dim ) return 0;
-		if (A.dim > dim ) return 1;
-		if (A.dir < dir ) return 0;
-		if (A.dir > dir ) return 1;
-		if (A.tag < tag ) return 0;
-		if (A.tag > tag ) return 1;
-		if (A.sbs < sbs ) return 0;
-		if (A.sbs > sbs ) return 1;
-		return (A.face < face);
-	}
-};
-
-
-struct lv_val {
-
-	unsigned status;
-	unsigned short n0, n1;
-	unsigned char *nvals;
-	lv_val(unsigned status_=0, unsigned short n0_=0, unsigned short n1_=0, unsigned char *nvals_=NULL)
-		: status(status_), n0(n0_), n1(n1_), nvals(nvals_) {}
-};
-
-
-unsigned char test_all_light_val(unsigned lighted, unsigned val);
-bool check_lv_req(unsigned lighted, unsigned val1, unsigned val2, bool inv);
-
-
-
-inline unsigned get_light_val(unsigned lighted, unsigned i) {
-
-	return ((lighted & (0xF << (i<<2))) >> (i<<2));
-}
-
-
-inline void set_light_val(unsigned &lighted, unsigned val, unsigned i) {
-
-	lighted &= ~(0xF << (i<<2)); // clear old bits
-	lighted |=  (val << (i<<2)); // set new bits
-}
-
-
-inline bool is_partial_shadow(unsigned lighted) { // some lighted == 3
-
-	return (test_all_light_val(lighted, 3) != 0);
-}
-
-
-inline bool require_either_lightval(unsigned lighted, unsigned val1, unsigned val2) {
-
-	return check_lv_req(lighted, val1, val2, 0);
-}
-
-
-inline bool require_any_lightval(unsigned lighted, unsigned val1, unsigned val2) {
-
-	return check_lv_req(lighted, val1, val2, 1);
-}
-
-
-//#define USE_HASHMAP // seems slower
-
-
-#ifdef USE_HASHMAP
-#include <hash_map>
-
-struct quad_div_hash : public stdext::hash_compare<quad_div> {
-	size_t operator()(quad_div const &qd) const {
-		return (20011*size_t(qd.dim) + 9887*size_t(qd.dir) + 6121*size_t(qd.tag) + 14401*size_t(qd.face));
-	}
-	bool operator()(quad_div const &qd1, quad_div const &qd2) const {return (qd1 < qd2);}
-};
-
-typedef stdext::hash_map<quad_div, lv_val, quad_div_hash> lvmap; // doesn't seem to be significantly better
-#else
-typedef map<quad_div, lv_val> lvmap;
-#endif
-
 
 class obj_layer { // size = 60
 
@@ -164,16 +69,12 @@ public:
 	point points[N_COLL_POLY_PTS];
 	vector3d norm;
 	vector<int> occluders;
-	lvmap lightmap;
 
 	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), radius(0.0), radius2(0.0), thickness(0.0),
 		volume(0.0), counter(0), id(-1), platform_id(-1), group_id(-1), waypt_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0),
 		is_billboard(0), norm(all_zeros) {}
 	void init();
-	void clear_lightmap(int mode, unsigned keep=0);
-	void clear_lightmap_if_lighted_eq(int shadowed, int partial);
-	void clear_internal_data(vector<coll_obj> &cobjs, vector<int> const &indices, unsigned ix);
-	bool clear_lightmap_entry(lvmap::iterator it, int mode, unsigned keep, vector<pair<quad_div, lv_val> > *to_add=NULL);
+	void clear_internal_data();
 	void calc_size();
 	float calc_min_dim() const;
 	bool clip_in_2d(float const bb[2][2], float &ztop, int d1, int d2, int dir) const;
@@ -221,25 +122,9 @@ public:
 	void register_coll(unsigned char coll_time, unsigned char coll_type_) {last_coll = coll_time; coll_type = coll_type_;}
 
 	// drawing code
-	void draw_coll_cube(int do_fill, int tid, bool no_subdiv) const;
-	void draw_extruded_polygon(vector3d const *const normals, int tid, bool no_subdiv) const;
-	void draw_subdiv_cylinder(int nsides, int nstacks, bool draw_ends, bool no_bfc, int tid) const;
-	void draw_subdiv_sphere_at(int ndiv, int tid) const;
+	void draw_coll_cube(int do_fill, int tid) const;
+	void draw_extruded_polygon(int tid) const;
 };
-
-
-unsigned const CLITE_FLAGS_DRAW = 0x0001; // draw
-unsigned const CLITE_FLAGS_CUBE = 0x0002; // type cube
-unsigned const CLITE_FLAGS_FIXD = 0x0004; // fixed
-unsigned const CLITE_FLAGS_STAT = 0x0008; // static
-unsigned const CLITE_FLAGS_DYNA = 0x0010; // dynamic
-unsigned const CLITE_FLAGS_TRAN = 0x0020; // semi-transparent
-unsigned const CLITE_FLAGS_CLER = 0x0040; // transparent (clear)
-unsigned const CLITE_FLAGS_SMAL = 0x0080; // small volume
-unsigned const CLITE_FLAGS_VSMA = 0x0100; // very small volume (< 0.0001)
-unsigned const CLITE_FLAGS_DEST = 0x0200; // destroyable
-unsigned const CLITE_FLAGS_VALD = 0x0400; // valid
-unsigned const CLITE_FLAGS_NCOL = 0x0800; // no collisions
 
 
 struct coll_cell { // size = 52

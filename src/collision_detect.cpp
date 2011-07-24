@@ -458,7 +458,6 @@ int coll_obj::add_coll_cobj() {
 		assert(0);
 	}
 	assert(cid >= 0 && size_t(cid) < coll_objects.size());
-	assert(coll_objects[cid].lightmap.empty());
 	coll_objects[cid].destroy  = destroy;
 	coll_objects[cid].fixed    = fixed;
 	coll_objects[cid].group_id = group_id;
@@ -832,7 +831,6 @@ int get_next_avail_index() {
 	int const index(index_stack[index_top]);
 	assert(size_t(index) < coll_objects.size());
 	assert(coll_objects[index].status == COLL_UNUSED);
-	coll_objects[index].clear_lightmap(0); // invalidate cached objects for reused coll_obj
 	coll_objects[index].status = COLL_PENDING;
 	index_stack[index_top++]   = -1;
 	return index;

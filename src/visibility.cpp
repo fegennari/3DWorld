@@ -375,7 +375,6 @@ void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, uns
 void calc_visibility(unsigned light_sources) {
 
 	if (world_mode == WMODE_UNIVERSE) return;
-	if (!(light_sources & TREE_ONLY)) clear_all_lightmaps(1);
 	int const sst(SHOW_SHADOW_TIME && l_strike.enabled != 1);
 	RESET_TIME;
 

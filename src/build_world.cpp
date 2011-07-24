@@ -40,7 +40,7 @@ vector<portal> portals;
 extern bool have_platform_cobj, clear_landscape_vbo;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items;
-extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, invalid_shadows, has_scenery2, UNLIMITED_WEAPONS;
+extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin;
 extern point cpos2, orig_camera, orig_cdir;
 extern unsigned init_item_counts[];
@@ -546,7 +546,6 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		keep_sin_table = 0;
 		st_valid = 1;
 	}
-	invalid_shadows = (scrolling ? 2 : 1);
 	l_strike.time = LITNING_TIME; // reset lightning
 	if (!keep_sin_table) clear_tiled_terrain();
 
@@ -655,8 +654,6 @@ void coll_obj::shift_by(vector3d const &vd, bool force) {
 		points[j] += vd;
 	}
 	cube_t::translate(vd);
-	//clear_lightmap_if_lighted_eq(0, 0); // clear if unshadowed
-	clear_lightmap_if_lighted_eq(1, 1); // always clear
 	// FIXME: what about translating texture values in cp.tdx, cp.tdy
 }
 

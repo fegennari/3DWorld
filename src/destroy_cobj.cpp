@@ -228,7 +228,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	vector<coll_obj> &cobjs(coll_objects); // so we don't have to rename everything and can keep the shorter code
 	point center(cube.get_cube_center());
 	float const clip_cube_colume(cube.get_volume());
-	vector<int> indices, just_added, to_remove;
+	vector<int> just_added, to_remove;
 	vector<coll_obj> new_cobjs;
 	cdir = zero_vector;
 	vector<cube_t> mod_cubes;
@@ -265,19 +265,17 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 			if (no_new_cobjs) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
 			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
-			indices.clear();
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
 				assert(index >= 0 && (size_t)index < cobjs.size());
-				indices.push_back(index);
 				just_added.push_back(index);
 				volume -= cobjs[index].volume;
 			}
 			if (is_polygon) volume = max(0.0f, volume); // FIXME: remove this when polygon splitting is correct
 			assert(volume >= -TOLERANCE); // usually > 0.0
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
-			cobjs[i].clear_internal_data(cobjs, indices, i);
+			cobjs[i].clear_internal_data();
 			to_remove.push_back(i);
 			if (shatter) mod_cubes.push_back(cobjs[i]);
 		}
@@ -317,12 +315,10 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		}
 #endif
 		if (REMOVE_UNANCHORED) {
-			vector<int> empty_indices; // always empty
-
 			for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 				if (cobjs[*i].destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
 				cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, cobjs[*i].calc_min_dim(), 1));
-				cobjs[*i].clear_internal_data(cobjs, empty_indices, *i);
+				cobjs[*i].clear_internal_data();
 				mod_cubes.push_back(cobjs[*i]);
 				remove_waypoint_for_cobj(cobjs[*i]);
 				remove_coll_object(*i);
@@ -363,9 +359,7 @@ void check_falling_cobjs() {
 			continue;
 		}
 		// translate, add the new, then remove the old
-		vector<int> indices;
-		coll_objects[ix].clear_internal_data(coll_objects, indices, ix);
-		coll_objects[ix].clear_lightmap(0); // need to do this first, before the copy
+		coll_objects[ix].clear_internal_data();
 		coll_obj cobj(coll_objects[ix]); // make a copy
 		cobj.shift_by(point(0.0, 0.0, dz), 1); // translate down
 		int const index(cobj.add_coll_cobj());

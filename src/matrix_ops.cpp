@@ -100,7 +100,6 @@ void alloc_matrices() { // called at the beginning of main()
 	// reset parameters in case size has changed
 	set_scene_constants();
 	set_coll_rmax(max_obj_radius); // recompute
-	init_draw_stats();
 
 	matrix_gen_2d(num_obj_on_mesh);
 	matrix_gen_2d(watershed_matrix);
