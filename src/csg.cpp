@@ -1074,12 +1074,10 @@ void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cu
 	// split large cubes
 	for (unsigned i = 0; i < size; ++i) {
 		if (cobjs[i].type == COLL_INVALID) continue; // skip = remove it
-
-		if (cobjs[i].type != COLL_CUBE || !cobjs[i].subdiv_fixed_cube(cobjs2)) {
-			cobjs2.push_back(cobjs[i]); // skip platforms
-		}
+		//if (cobjs[i].type == COLL_CUBE && cobjs[i].subdiv_fixed_cube(cobjs2)) continue; // no need to split now
+		cobjs2.push_back(cobjs[i]); // skip platforms
 	}
-	swap(cobjs, cobjs2);
+	cobjs.swap(cobjs2);
 	cout << (size - num_remove) << " => " << cobjs.size() << endl;
 	PRINT_TIME("Subdiv Cubes");
 }
