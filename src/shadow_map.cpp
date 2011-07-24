@@ -51,10 +51,13 @@ unsigned get_shadow_map_tid(int light) {
 	return smap_data[light].tid;
 }
 
+float approx_pixel_width() {
+	return 0.5*sqrt(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE) / shadow_map_sz;
+}
+
 int get_smap_ndiv(float radius) {
-	// FIXME: dynamic based on distance(camera, line(lpos, scene_center))?
-	float const approx_pixel_width(0.5*sqrt(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE) / shadow_map_sz);
-	return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width)));
+	// dynamic based on distance(camera, line(lpos, scene_center))?
+	return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width())));
 }
 
 
@@ -134,6 +137,7 @@ pos_dir_up get_light_pdu(point const &lpos, bool set_matrix) {
 	for (unsigned i = 0; i < 8; ++i) {
 		scene_radius2 = max(scene_radius2, pt_line_dist(corners[i], lpos, scene_center));
 	}
+	//cout << "sr: " << scene_radius << ", sr2: " << scene_radius2 << endl; // TESTING
 	assert(scene_radius2 <= scene_radius);
 	vector3d const light_dir((scene_center - lpos).get_norm()); // almost equal to lpos (point light)
 	float const dist(p2p_dist(lpos, scene_center));
@@ -256,7 +260,13 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	draw_small_trees(1);
 	draw_scenery(1, 1, 1);
 	draw_trees_shadow();
+
+	// draw mesh
+	glPushMatrix();
+	float const val(1.0/dot_product(lpos.get_norm(), plus_z));
+	glTranslatef(0.0, 0.0, -val*approx_pixel_width()); // translate down slightly to reduce shadow aliasing problems
 	display_mesh();
+	glPopMatrix();
 	
 	// reset state
 	glMatrixMode(GL_PROJECTION);
