@@ -460,6 +460,7 @@ public:
 		assert(BLOCK_SIZE <= MESH_X_SIZE && (MESH_X_SIZE%BLOCK_SIZE) == 0);
 		bool last_visible(0);
 		unsigned beg_ix(0);
+		point const camera(get_camera_pos());
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; x += BLOCK_SIZE) {
@@ -467,14 +468,31 @@ public:
 				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+BLOCK_SIZE]) continue; // empty section
 				float mzmin(z_min_matrix[y][x]), mzmax(mesh_height[y][x]);
 
-				for (int xx = x+1; xx < x+(int)BLOCK_SIZE; ++xx) {
-					mzmin = min(mzmin, z_min_matrix[y][xx]);
-					mzmax = max(mzmax, mesh_height[y][xx]);
-				}
-				cube_t const cube(get_xval(x)-grass_length, get_xval(x+BLOCK_SIZE)+grass_length,
-						            get_yval(y)-grass_length, get_yval(y+1)+grass_length, mzmin, mzmax+grass_length);
-				bool const visible(camera_pdu.cube_visible(cube));
+				bool visible(1), back_facing(1);
 
+				for (int xx = x; xx <= min(x+(int)BLOCK_SIZE, MESH_X_SIZE-1) && back_facing; ++xx) {
+					for (int yy = y; yy <= min(y+1, MESH_Y_SIZE-1); ++yy) {
+						back_facing &= (dot_product(surface_normals[yy][xx], (camera - point(get_xval(xx), get_yval(yy), mesh_height[yy][xx]))) < 0.0);
+					}
+				}
+				if (back_facing) {
+					visible = 0;
+				}
+				else {
+					for (int xx = x+1; xx < x+(int)BLOCK_SIZE; ++xx) {
+						mzmin = min(mzmin, z_min_matrix[y][xx]);
+						mzmax = max(mzmax, mesh_height[y][xx]);
+					}
+					cube_t const cube(get_xval(x)-grass_length, get_xval(x+BLOCK_SIZE)+grass_length,
+									  get_yval(y)-grass_length, get_yval(y+1)+grass_length, mzmin, mzmax+grass_length);
+					visible = camera_pdu.cube_visible(cube);
+				
+					if (visible && (display_mode & 0x10)) {
+						point pts[8];
+						get_cube_points(cube.d, pts);
+						visible &= !cobj_contained(camera, cube.get_cube_center(), pts, 8, -1);
+					}
+				}
 				if (visible && !last_visible) { // start a segment
 					beg_ix = mesh_to_grass_map[ix];
 				}
