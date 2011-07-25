@@ -882,7 +882,7 @@ int draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim, bool no_nor
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 			if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
 			point pt;
-			pt[n]   = c.d[n][j];
+			pt[n] = c.d[n][j];
 
 			if (!no_normals) {
 				vector3d norm(zero_vector);
@@ -893,7 +893,7 @@ int draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim, bool no_nor
 				pt[d[1]] = c.d[d[1]][s];
 
 				for (unsigned k = 0; k < 2; ++k) { // d[0] dim
-					pt[d[0]] = c.d[d[0]][k^j^s]; // need to orient the vertices differently for each side
+					pt[d[0]] = c.d[d[0]][k^j^s^1]; // need to orient the vertices differently for each side
 						
 					if (texture) {
 						float const s[2] = {texture_scale*pt[d[1]], texture_scale*pt[d[0]]};
