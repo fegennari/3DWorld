@@ -213,7 +213,6 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	// render shadow geometry
 	glDisable(GL_LIGHTING);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
-	//glEnable(GL_CULL_FACE); glCullFace(GL_FRONT);
 	WHITE.do_glColor();
 	check_gl_error(202);
 
@@ -239,22 +238,28 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			smap_dlist = glGenLists(1);
 			glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
 		}
-		int in_cur_prim(PRIM_UNSET);
+		//glEnable(GL_CULL_FACE); glCullFace(GL_FRONT);
 
-		for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) { // test have_drawn_cobj?
-			if (i->no_draw()) continue; // only valid if drawing trees, small trees, and scenery separately
-			if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0) continue;
-			int ndiv(1);
+		//for (unsigned n = 0; n < 2; ++n) { // {cubes+culling, others+no culling}
+			int in_cur_prim(PRIM_UNSET);
 
-			if (i->type == COLL_SPHERE) {
-				ndiv = get_smap_ndiv(i->radius);
+			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) { // test have_drawn_cobj?
+				//if ((i->type == COLL_CUBE) == n) continue;
+				if (i->no_draw()) continue; // only valid if drawing trees, small trees, and scenery separately
+				if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0) continue;
+				int ndiv(1);
+
+				if (i->type == COLL_SPHERE) {
+					ndiv = get_smap_ndiv(i->radius);
+				}
+				else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
+					ndiv = get_smap_ndiv(max(i->radius, i->radius2));
+				}
+				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
 			}
-			else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
-				ndiv = get_smap_ndiv(max(i->radius, i->radius2));
-			}
-			in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
-		}
-		if (in_cur_prim >= 0) glEnd();
+			if (in_cur_prim >= 0) glEnd();
+			//glDisable(GL_CULL_FACE); glCullFace(GL_BACK);
+		//} // for n
 		if (ENABLE_DLIST) glEndList();
 	}
 	draw_small_trees(1);
@@ -273,7 +278,6 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
-	//glDisable(GL_CULL_FACE); glCullFace(GL_BACK);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glEnable(GL_LIGHTING);
 
