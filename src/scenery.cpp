@@ -395,7 +395,7 @@ public:
 
 	void draw(float sscale, bool shadow_only) const {
 		assert(surface);
-		if (shadow_only ? !is_over_mesh(pos) : in_camera_view(0.0)) return;
+		if (shadow_only ? !is_over_mesh(pos) : !in_camera_view(0.0)) return;
 		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, radius));
 		float const dist(distance_to_camera(pos));
 
