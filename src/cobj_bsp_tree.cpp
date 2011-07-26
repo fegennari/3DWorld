@@ -30,7 +30,7 @@ protected:
 	vector<coll_obj> const &cobjs;
 	vector<unsigned> cixs;
 	vector<tree_node> nodes;
-	bool is_static, is_dynamic, cubes_only;
+	bool is_static, is_dynamic, occluders_only;
 
 	coll_obj const &get_cobj(unsigned ix) const {
 		//assert(ix < cixs.size() && cixs[ix] < cobjs.size());
@@ -51,7 +51,7 @@ protected:
 	}
 
 	bool create_cixs() {
-		if (is_static && !cubes_only) cixs.reserve(cobjs.size());
+		if (is_static && !occluders_only) cixs.reserve(cobjs.size());
 
 		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
 			if (obj_ok(*i)) cixs.push_back(i - cobjs.begin());
@@ -63,12 +63,12 @@ protected:
 	void build_tree(unsigned nix, unsigned skip_dims) {assert(0);}
 
 	bool obj_ok(coll_obj const &c) const {
-		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC)) && (!cubes_only || c.type == COLL_CUBE));
+		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC)) && (!occluders_only || c.is_occluder()));
 	}
 
 
 public:
-	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool c) : cobjs(cobjs_), is_static(s), is_dynamic(d), cubes_only(c) {}
+	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool o) : cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o) {}
 
 	void clear() {
 		nodes.resize(0);
@@ -330,7 +330,7 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 typedef cobj_tree_t<8> cobj_tree_type;
 cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0);
 cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0);
-cobj_tree_type cobj_tree_cubes  (coll_objects, 1, 0, 1);
+cobj_tree_type cobj_tree_occlude(coll_objects, 1, 0, 1);
 int last_update_frame[2] = {1, 1}; // first drawn frame is 1
 
 
@@ -341,7 +341,7 @@ cobj_tree_type &get_tree(bool dynamic) {
 void build_cobj_tree(bool dynamic, bool verbose) {
 	if (BUILD_COBJ_TREE) {
 		get_tree(dynamic).add_cobjs(verbose);
-		if (!dynamic) cobj_tree_cubes.add_cobjs(verbose);
+		if (!dynamic) cobj_tree_occlude.add_cobjs(verbose);
 		cobj_tree_valid = 1;
 	}
 }
@@ -380,13 +380,13 @@ void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, in
 bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, point const *const pts,
 	unsigned npts, int ignore_cobj, int &cobj)
 {
-	return cobj_tree_cubes.is_cobj_contained(p1, p2, viewer, pts, npts, ignore_cobj, cobj);
+	return cobj_tree_occlude.is_cobj_contained(p1, p2, viewer, pts, npts, ignore_cobj, cobj);
 }
 
 
 void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs) {
 
-	cobj_tree_cubes.get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs);
+	cobj_tree_occlude.get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs);
 }
 
 
