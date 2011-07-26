@@ -1,7 +1,7 @@
 // Note: Only one light source (for now)
 const int NUM_LIGHT_SRC = 2;
 uniform int sm_tu_id[NUM_LIGHT_SRC];
-uniform sampler2D sm_tex[NUM_LIGHT_SRC];
+uniform sampler2D sm_tex[NUM_LIGHT_SRC]; // use sampler2DShadow?
 
 float get_shadow_map_weight(in vec4 pos, in int light) {
 	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id[light]] * pos;
@@ -22,6 +22,7 @@ float get_shadow_map_weight(in vec4 pos, in int light) {
 #else
 	float dist = texture2D(sm_tex[light], shadow_coord.st).z;
 	return ((dist < shadow_coord.z) ? 0.0 : 1.0);
+	//return shadow2DProj(sm_tex[light], shadow_coord).w;
 #endif
 }
 
