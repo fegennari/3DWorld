@@ -30,7 +30,7 @@ protected:
 	vector<coll_obj> const &cobjs;
 	vector<unsigned> cixs;
 	vector<tree_node> nodes;
-	bool is_static, is_dynamic;
+	bool is_static, is_dynamic, cubes_only;
 
 	coll_obj const &get_cobj(unsigned ix) const {
 		//assert(ix < cixs.size() && cixs[ix] < cobjs.size());
@@ -51,7 +51,7 @@ protected:
 	}
 
 	bool create_cixs() {
-		if (is_static) cixs.reserve(cobjs.size());
+		if (is_static && !cubes_only) cixs.reserve(cobjs.size());
 
 		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
 			if (obj_ok(*i)) cixs.push_back(i - cobjs.begin());
@@ -62,13 +62,13 @@ protected:
 
 	void build_tree(unsigned nix, unsigned skip_dims) {assert(0);}
 
-	bool obj_ok(coll_obj const &cobj) const {
-		return ((is_static && cobj.status == COLL_STATIC) || (is_dynamic && cobj.status == COLL_DYNAMIC));
+	bool obj_ok(coll_obj const &c) const {
+		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC)) && (!cubes_only || c.type == COLL_CUBE));
 	}
 
 
 public:
-	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d) : cobjs(cobjs_), is_static(s), is_dynamic(d) {}
+	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool c) : cobjs(cobjs_), is_static(s), is_dynamic(d), cubes_only(c) {}
 
 	void clear() {
 		nodes.resize(0);
@@ -91,43 +91,57 @@ public:
 		}
 	}
 
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact, int test_alpha) const {
-		cindex = -1;
-		if (nodes.empty()) return 0;
-		bool ret(0);
-		float t(0.0), tmin(0.0), tmax(1.0);
-		vector3d dinv(p2 - p1);
-		dinv.invert(0, 1);
-		assert(test_alpha != 2); // don't support this mode
-		
-		for (unsigned nix = 0; nix < nodes.size();) {
+	struct node_ix_mgr {
+		point const p1;
+		vector3d dinv;
+		vector<tree_node> const &nodes;
+
+		node_ix_mgr(vector<tree_node> const &nodes_, point const &p1_, point const &p2_)
+			: nodes(nodes_), p1(p1_), dinv(p2_ - p1_) {dinv.invert(0, 1);}
+
+		bool check_node(unsigned &nix) const {
 			tree_node const &n(nodes[nix]);
-			assert(n.start <= n.end);
 
 			if (!get_line_clip2(p1, dinv, n.d)) {
 				assert(n.next_node_id > nix);
 				nix = n.next_node_id; // failed the bbox test
 				assert(nix > 0);
-				continue;
+				return 0;
 			}
+			++nix;
+			return 1;
+		}
+	};
+
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact, int test_alpha) const {
+		cindex = -1;
+		if (nodes.empty()) return 0;
+		assert(test_alpha != 2); // don't support this mode
+		bool ret(0);
+		float t(0.0), tmin(0.0), tmax(1.0);
+		node_ix_mgr nixm(nodes, p1, p2);
+
+		for (unsigned nix = 0; nix < nodes.size();) {
+			tree_node const &n(nodes[nix]);
+			if (!nixm.check_node(nix)) continue;
+
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 				// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 				// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
 				if ((int)cixs[i] == ignore_cobj) continue;
-				coll_obj const &cobj(get_cobj(i));
-				if (!obj_ok(cobj))               continue;
-				if (test_alpha == 1 && cobj.is_semi_trans())                   continue; // semi-transparent, can see through
-				if (test_alpha == 3 && cobj.cp.color.alpha < MIN_SHADOW_ALPHA) continue; // less than min alpha
-				if (!cobj.line_int_exact(p1, p2, t, cnorm, tmin, tmax))        continue;
+				coll_obj const &c(get_cobj(i));
+				if (!obj_ok(c))                  continue;
+				if (test_alpha == 1 && c.is_semi_trans())                   continue; // semi-transparent, can see through
+				if (test_alpha == 3 && c.cp.color.alpha < MIN_SHADOW_ALPHA) continue; // less than min alpha
+				if (!c.line_int_exact(p1, p2, t, cnorm, tmin, tmax))        continue;
 				cindex = cixs[i];
 				cpos   = p1 + (p2 - p1)*t;
 				if (!exact) return 1; // return first hit
-				dinv   = vector3d(cpos - p1);
-				dinv.invert(0, 1);
-				tmax   = t;
-				ret    = 1;
+				nixm.dinv = vector3d(cpos - p1);
+				nixm.dinv.invert(0, 1);
+				tmax = t;
+				ret  = 1;
 			}
-			++nix;
 		}
 		return ret;
 	}
@@ -145,13 +159,48 @@ public:
 			}
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 				if ((int)cixs[i] == ignore_cobj) continue;
-				coll_obj const &cobj(get_cobj(i));
-				if (check_ccounter && cobj.counter == cobj_counter) continue;
-				if (!obj_ok(cobj) || !cube.intersects(cobj, toler)) continue;
-				if (id_for_cobj_int >= 0 && coll_objects[id_for_cobj_int].intersects_cobj(cobj, toler) != 1) continue;
+				coll_obj const &c(get_cobj(i));
+				if (check_ccounter && c.counter == cobj_counter) continue;
+				if (!obj_ok(c) || !cube.intersects(c, toler))    continue;
+				if (id_for_cobj_int >= 0 && coll_objects[id_for_cobj_int].intersects_cobj(c, toler) != 1) continue;
 				cobjs.push_back(cixs[i]);
 			}
 			++nix;
+		}
+	}
+
+	bool is_cobj_contained(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const {
+		node_ix_mgr nixm(nodes, p1, p2);
+
+		for (unsigned nix = 0; nix < nodes.size();) {
+			tree_node const &n(nodes[nix]);
+			if (!nixm.check_node(nix)) continue;
+
+			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+				if ((int)cixs[i] == ignore_cobj) continue;
+				coll_obj const &c(get_cobj(i));
+				
+				if (c.is_occluder() && is_contained(viewer, pts, npts, c.d)) {
+					cobj = cixs[i];
+					return 1;
+				}
+			}
+		}
+		return 0;
+	}
+
+	void get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs) const {
+		node_ix_mgr nixm(nodes, pos1, pos2);
+
+		for (unsigned nix = 0; nix < nodes.size();) {
+			tree_node const &n(nodes[nix]);
+			if (!nixm.check_node(nix)) continue;
+			
+			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+				if ((int)cixs[i] == ignore_cobj) continue;
+				coll_obj const &c(get_cobj(i));
+				if (c.is_big_occluder() && check_line_clip_expand(pos1, pos2, c.d, GET_OCC_EXPAND)) cobjs.push_back(cixs[i]);
+			}
 		}
 	}
 }; // cobj_tree_t
@@ -279,8 +328,9 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 
 // 3: BSP Tree, 8: Octtree
 typedef cobj_tree_t<8> cobj_tree_type;
-cobj_tree_type cobj_tree_static (coll_objects, 1, 0);
-cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1);
+cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0);
+cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0);
+cobj_tree_type cobj_tree_cubes  (coll_objects, 1, 0, 1);
 int last_update_frame[2] = {1, 1}; // first drawn frame is 1
 
 
@@ -291,6 +341,7 @@ cobj_tree_type &get_tree(bool dynamic) {
 void build_cobj_tree(bool dynamic, bool verbose) {
 	if (BUILD_COBJ_TREE) {
 		get_tree(dynamic).add_cobjs(verbose);
+		if (!dynamic) cobj_tree_cubes.add_cobjs(verbose);
 		cobj_tree_valid = 1;
 	}
 }
@@ -323,6 +374,19 @@ void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, in
 	bool dynamic, bool check_ccounter, int id_for_cobj_int)
 {
 	get_tree(dynamic).get_intersecting_cobjs(cube, cobjs, ignore_cobj, toler, check_ccounter, id_for_cobj_int);
+}
+
+
+bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, point const *const pts,
+	unsigned npts, int ignore_cobj, int &cobj)
+{
+	return cobj_tree_cubes.is_cobj_contained(p1, p2, viewer, pts, npts, ignore_cobj, cobj);
+}
+
+
+void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs) {
+
+	cobj_tree_cubes.get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs);
 }
 
 

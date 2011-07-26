@@ -8,10 +8,8 @@
 
 
 bool const CACHE_COBJ_LITES   = 0;
-bool const CACHE_OCCLUDER     = 1;
 bool const USE_COBJ_TREE      = 1;
 unsigned const QLP_CACHE_SIZE = 10000;
-float const GET_OCC_EXPAND    = 0.02;
 
 
 int cobj_counter(0);
@@ -438,8 +436,8 @@ public:
 	int proc_cobj(coll_cell const &cell, int const index) {
 		coll_obj &cobj(coll_objects[index]);
 		cobj.counter = cobj_counter;
-		if (!cobj.is_occluder() || !cobj.fixed || cobj.volume < 0.001) return 2; // not an occluder
-		if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0])                    return 2; // clipped
+		if (!cobj.is_big_occluder()) return 2; // not an occluder
+		if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0]) return 2; // clipped
 		if (check_line_clip_expand(pos1, pos2, cobj.d, GET_OCC_EXPAND)) cobjs.push_back(index);
 		return 2;
 	}
@@ -610,11 +608,15 @@ bool check_xy_delta(point const &p1, point const &p2) {
 	return (fabs(p2.x - p1.x) > DX_VAL || fabs(p2.y - p1.y) > DY_VAL); // faster to use grid bag instead of tree
 }
 
+bool use_cobj_tree(point const &p1, point const &p2) {
+	return (USE_COBJ_TREE && cobj_tree_valid && check_xy_delta(p1, p2));
+}
+
 
 bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool no_tree) {
 
 	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
-	if (USE_COBJ_TREE && cobj_tree_valid && !no_tree && skip_dynamic && test_alpha != 2 && check_xy_delta(pos1, pos2)) {
+	if (!no_tree && skip_dynamic && test_alpha != 2 && use_cobj_tree(pos1, pos2)) {
 		return check_coll_line_tree(pos1, pos2, cindex, cobj);
 	}
 	cindex = -1;
@@ -629,7 +631,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic, bool no_tree)
 {
 	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
-	if (USE_COBJ_TREE && cobj_tree_valid && !no_tree && splash_val == 0.0 && skip_dynamic && check_xy_delta(pos1, pos2)) {
+	if (!no_tree && splash_val == 0.0 && skip_dynamic && use_cobj_tree(pos1, pos2)) {
 		return check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj);
 	}
 	cindex = -1;
@@ -650,14 +652,18 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 
 bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj) {
 
-	static int last_cobj(-1);
-
-	if (CACHE_OCCLUDER && last_cobj >= 0 && last_cobj != cobj && !coll_objects[last_cobj].disabled()) {
-		if (is_contained(pos1, pts, npts, coll_objects[last_cobj].d)) return 1;
-	}
 	if (occluder_zmin >= occluder_zmax) return 0;
 	assert(npts > 0);
+	static int last_cobj(-1);
+
+	if (last_cobj >= 0 && last_cobj != cobj && !coll_objects[last_cobj].disabled()) {
+		if (is_contained(pos1, pts, npts, coll_objects[last_cobj].d)) return 1;
+	}
 	point const viewer(pos1);
+
+	if (use_cobj_tree(pos1, center)) {
+		return cobj_contained_tree(pos1, center, viewer, pts, npts, cobj, last_cobj);
+	}
 	if (!do_line_clip_scene(pos1, center, occluder_zmin, occluder_zmax)) return 0;
 	line_intersector_occlusion_cobjs lint(pos1, center, viewer, pts, npts);
 	coll_cell_line_iterator<line_intersector_occlusion_cobjs> ccli(lint, 1, 1, cobj);
@@ -674,6 +680,11 @@ bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, i
 bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 
 	cobjs.resize(0);
+
+	if (use_cobj_tree(pos1, pos2)) {
+		get_coll_line_cobjs_tree(pos1, pos2, cobj, cobjs);
+		return (!cobjs.empty());
+	}
 	if (!do_line_clip_scene(pos1, pos2, occluder_zmin, occluder_zmax)) return 0;
 	line_intersector_get_cobjs lint(pos1, pos2, cobjs);
 	coll_cell_line_iterator<line_intersector_get_cobjs> ccli(lint, 1, 1, cobj);

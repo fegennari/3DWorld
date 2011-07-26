@@ -133,6 +133,7 @@ float    const STEP_SIZE        = 1.0;
 float    const PROJ_MAX_DSTEPS  = 2000.0;
 
 float    const MIN_SHADOW_ALPHA = 0.5;
+float    const GET_OCC_EXPAND   = 0.02;
 
 unsigned const CELL_Z_DIVS      = 8;
 unsigned const SMALL_NDIV       = 8;
@@ -1355,9 +1356,13 @@ void update_cobj_tree(bool dynamic=0, bool verbose=1);
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm,
 	int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0);
 bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0);
+bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts,
+	int ignore_cobj, int &cobj);
+void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs);
 void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler,
 	bool dynamic, bool check_ccounter, int id_for_cobj_int);
 bool check_vert_collision_sphere(point const &pos, float radius, int skip_dynamic, bool trans_test, vector<int> *cobjs=NULL);
+bool is_contained(point const &pos, point const *const pts, unsigned npts, float const d[3][2]);
 bool check_coll_line(point pos1, point pos2, int &cindex, int c_obj, int skip_dynamic, int test_alpha, bool no_tree=0);
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_norm, int &cindex, float splash_val=0.0,
 						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0, bool no_tree=0);
@@ -1420,7 +1425,6 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 bool do_line_clip(point &v1, point &v2, float const d[3][2]);
 bool get_line_clip(point const &v1, point const &v2, float const d[3][2], float &tmin, float &tmax);
 bool get_line_clip2(point const &v1, vector3d const &dinv, float const d[3][2]);
-void expand_cube(float const d[3][2], float de[3][2], float expand);
 bool check_line_clip_expand(point const &v1, point const &v2, float const d[3][2], float expand);
 float line_line_dist(point const &p1a, point const &p1b, point const &p2a, point const &p2b);
 float get_cylinder_params(point const &cp1, point const &cp2, point const &pos, vector3d &v1, vector3d &v2);

@@ -487,7 +487,7 @@ public:
 									  get_yval(y)-grass_length, get_yval(y+1)+grass_length, mzmin, mzmax+grass_length);
 					visible = camera_pdu.cube_visible(cube);
 				
-					if (visible && (display_mode & 0x10)) {
+					if (visible && (display_mode & 0x08)) {
 						point pts[8];
 						get_cube_points(cube.d, pts);
 						visible &= !cobj_contained(camera, cube.get_cube_center(), pts, 8, -1);
