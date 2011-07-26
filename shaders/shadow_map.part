@@ -1,30 +1,25 @@
 // Note: Only one light source (for now)
 const int NUM_LIGHT_SRC = 2;
 uniform int sm_tu_id[NUM_LIGHT_SRC];
-uniform sampler2D sm_tex[NUM_LIGHT_SRC]; // use sampler2DShadow?
+
+#if 1
+uniform sampler2D sm_tex[NUM_LIGHT_SRC];
 
 float get_shadow_map_weight(in vec4 pos, in int light) {
 	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id[light]] * pos;
 	shadow_coord /= shadow_coord.w;
 	shadow_coord.z -= 0.0005; // Used to lower moiré pattern and self-shadowing
-#if 0
-	int smap_sz = 2048; // FIXME: make a uniform
-	vec2 pxy = shadow_coord.st * smap_sz;
-	vec2 plo = floor(pxy) / smap_sz;
-	vec2 phi = ceil(pxy) / smap_sz;
-	float v00 = ((texture2D(sm_tex[light], plo.st).z             < shadow_coord.z) ? 0.0 : 1.0);
-	float v01 = ((texture2D(sm_tex[light], vec2(plo.s, phi.t)).z < shadow_coord.z) ? 0.0 : 1.0);
-	float v10 = ((texture2D(sm_tex[light], vec2(phi.s, plo.t)).z < shadow_coord.z) ? 0.0 : 1.0);
-	float v11 = ((texture2D(sm_tex[light], phi.st).z             < shadow_coord.z) ? 0.0 : 1.0);
-	float xpi = pxy.s - floor(pxy.s);
-	float ypi = pxy.t - floor(pxy.t);
-	return ((1.0 - xpi)*((1.0 - ypi)*v00 + ypi*v01) + xpi*((1.0 - ypi)*v10 + ypi*v11));
-#else
 	float dist = texture2D(sm_tex[light], shadow_coord.st).z;
 	return ((dist < shadow_coord.z) ? 0.0 : 1.0);
-	//return shadow2DProj(sm_tex[light], shadow_coord).w;
-#endif
 }
+#else
+uniform sampler2DShadow sm_tex[NUM_LIGHT_SRC];
+
+float get_shadow_map_weight(in vec4 pos, in int light) {
+	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id[light]] * pos;
+	return shadow2DProj(sm_tex[0], shadow_coord + vec4(0,0,-0.0005*shadow_coord.w,0)).r; // using light is bad?
+}
+#endif
 
 vec4 add_light_comp_pos_smap(in vec3 normal, in vec4 epos, in vec4 vertex, in int i) {
 	if (use_shadow_map) normal *= get_shadow_map_weight(vertex, i);
