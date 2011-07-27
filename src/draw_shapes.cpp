@@ -157,6 +157,15 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
 		if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir))) continue;
 		unsigned const d0((dim+1)%3), d1((dim+2)%3), t0((2-dim)>>1), t1(1+((2-dim)>0));
+		point pts[4];
+		point p;
+		p[dim] = d[dim][dir];
+		p[d0 ] = d[d0][0];
+		p[d1 ] = d[d1][0]; pts[0] = p;
+		p[d0 ] = d[d0][1]; pts[1] = p;
+		p[d1 ] = d[d1][1]; pts[2] = p;
+		p[d0 ] = d[d0][0]; pts[3] = p;
+		if ((display_mode & 0x08) && !occluders.empty() && is_occluded(occluders, pts, 4, camera)) continue; // makes little difference
 
 		if (textured) {
 			float a[4] = {0.0}, b[4] = {0.0};
@@ -170,17 +179,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? 1.0 : -1.0);
 		normal.do_glNormal();
-		point p;
-		p[d0 ] = d[d0][0];
-		p[d1 ] = d[d1][0];
-		p[dim] = d[dim][dir];
-		p.do_glVertex();
-		p[d0 ] = d[d0][1];
-		p.do_glVertex();
-		p[d1 ] = d[d1][1];
-		p.do_glVertex();
-		p[d0 ] = d[d0][0];
-		p.do_glVertex();
+		for (unsigned j = 0; j < 4; ++j) pts[j].do_glVertex();
 	}
 	glEnd();
 }
@@ -201,7 +200,7 @@ bool camera_behind_polygon(point const *const points, int npoints) {
 }
 
 
-void draw_polygon(point const *points, int npoints, vector3d const &norm) {
+void draw_polygon(point const *points, int npoints, vector3d const &norm) { // occlusion culling?
 
 	draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
 }
