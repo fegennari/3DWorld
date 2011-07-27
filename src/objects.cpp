@@ -314,7 +314,7 @@ int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals, bool in_dl
 
 	switch (type) {
 	case COLL_CUBE:
-		in_cur_prim = draw_simple_cube(*this, 0, in_cur_prim, no_normals);
+		in_cur_prim = draw_simple_cube(*this, 0, in_cur_prim, no_normals, cp.surfs);
 		break;
 
 	case COLL_CYLINDER:

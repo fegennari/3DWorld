@@ -870,7 +870,7 @@ void pos_dir_up::draw_frustum() const {
 }
 
 
-int draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim, bool no_normals, float texture_scale, vector3d const *const view_dir) {
+int draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim, bool no_normals, int eflags, float texture_scale, vector3d const *const view_dir) {
 
 	if (in_cur_prim != GL_QUADS) {
 		if (in_cur_prim >= 0) glEnd();
@@ -880,7 +880,7 @@ int draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim, bool no_nor
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
+			if ((eflags & EFLAGS[n][j]) || (view_dir && (((*view_dir)[n] < 0.0) ^ j))) continue; // back facing or disabled
 			point pt;
 			pt[n] = c.d[n][j];
 
