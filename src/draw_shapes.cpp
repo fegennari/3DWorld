@@ -67,7 +67,6 @@ bool is_above_mesh(point const &pos) {
 
 bool check_face_containment(point const *const pts, unsigned npts, int dim, int dir, int cobj) { // what about under mesh?
 
-	if (coll_objects[cobj].type != COLL_CUBE) return 0;
 	assert((dim >= 0 && dim <= 2) && (dir == 0 || dir == 1));
 	point const cent(get_center(pts, npts));
 	int const x(get_xpos(cent.x)), y(get_ypos(cent.y));
@@ -79,8 +78,7 @@ bool check_face_containment(point const *const pts, unsigned npts, int dim, int 
 		unsigned const cid(cell.cvals[i]);
 		coll_obj const &c(coll_objects[cid]);
 		if (c.type != COLL_CUBE || !c.fixed || c.status != COLL_STATIC || c.platform_id >= 0) continue;
-		if ((int)cid == cobj || c.is_semi_trans()) continue;
-		if (fabs(c.d[d][!dir] - cent[d]) > TOLER_) continue;
+		if ((int)cid == cobj || c.is_semi_trans() || fabs(c.d[d][!dir] - cent[d]) > TOLER_)   continue;
 		bool contained(1);
 
 		for (unsigned j = 0; j < npts && contained; ++j) {
@@ -166,6 +164,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 		p[d1 ] = d[d1][1]; pts[2] = p;
 		p[d0 ] = d[d0][0]; pts[3] = p;
 		if ((display_mode & 0x08) && !occluders.empty() && is_occluded(occluders, pts, 4, camera)) continue; // makes little difference
+		//if ((display_mode & 0x10) && check_face_containment(pts, 4, dim, dir, id)) continue; // makes little difference and is slow-ish
 
 		if (textured) {
 			float a[4] = {0.0}, b[4] = {0.0};
