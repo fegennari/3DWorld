@@ -286,10 +286,10 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
 
 			if (draw_ends && tid >= 0) { // draw ends with different texture matrix
-				float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
+				select_texture(tid); // reset texture to fix a texgen bug
+				float const tscale[2] = {cp.tscale, ar*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
 				setup_polygon_texgen((points[1] - points[0]).get_norm(), tscale, xlate, 0, USE_ATTR_TEXGEN);
-				// FIXME: Not exactly correct, we're redrawing the sides here as well but there are texgen issues if we don't
-				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 1); // Note: using texgen, not textured
+				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 2); // Note: using texgen, not textured
 			}
 		}
 		break;

@@ -15,10 +15,11 @@ bool const USE_CYLIN_DLIST  = 1;
 
 unsigned const NUM_SPH_DLIST(4*N_SPHERE_DIV), NUM_CYLIN_DLIST(N_CYL_SIDES);
 
-
 unsigned predef_dlists[NUM_RES_DLIST]   = {0};
 unsigned sphere_dlists[NUM_SPH_DLIST]   = {0};
 unsigned cylin_dlists [NUM_CYLIN_DLIST] = {0};
+vector_point_norm cylinder_vpn;
+
 
 extern int display_mode, draw_model;
 extern GLUquadricObj* quadric;
@@ -61,7 +62,7 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 	float const cs_scale(TWO_PI/(float)ndiv);
 	vector3d vab[2];
 	get_ortho_vectors(v12, vab, force_dim);
-	static vector_point_norm vpn;
+	vector_point_norm &vpn(cylinder_vpn);
 	unsigned s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end));
 	if (s1 == ndiv) s0 = 0; // make wraparound correct
 	s1 = min(ndiv, s1+1);   // allow for sn
@@ -386,8 +387,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 
 		for (unsigned i = 0; i < 2; ++i) {
 			if (r[i] == 0.0) continue;
-			vector3d const norm(v12*(i ? 1.0 : -1.0));
-			norm.do_glNormal();
+			(v12*(i ? 1.0 : -1.0)).do_glNormal();
 			glBegin(GL_TRIANGLE_FAN);
 			if (texture) glTexCoord2f(0.5, 0.5);
 			ce[i].do_glVertex();
