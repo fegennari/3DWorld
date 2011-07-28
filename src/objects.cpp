@@ -216,7 +216,8 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	point center;
 	float brad;
 	bounding_sphere(center, brad);
-	if ((type == COLL_CUBE) ? !camera_pdu.cube_visible(*this) : !sphere_in_camera_view(center, brad, 0)) return;
+	if (!sphere_in_camera_view(center, brad, 0))              return;
+	if (type == COLL_CUBE && !camera_pdu.cube_visible(*this)) return;
 	
 	if ((display_mode & 0x08) && !occluders.empty()) {
 		point pts[8];
