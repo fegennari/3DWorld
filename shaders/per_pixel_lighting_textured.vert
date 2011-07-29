@@ -3,7 +3,12 @@ varying vec4 epos, vertex;
 
 void main()
 {
-	gl_TexCoord[0] = gl_MultiTexCoord0;
+	if (use_texgen) {
+		setup_texgen(0);
+	}
+	else {
+		gl_TexCoord[0] = gl_MultiTexCoord0;
+	}
 	vec3 n = gl_NormalMatrix * gl_Normal;
 	normal = (no_normalize ? n : normalize(n));
 	vertex = gl_Vertex;

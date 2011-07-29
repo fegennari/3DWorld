@@ -757,13 +757,16 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
 
 	if (draw_pass == 0) {
+		bool const use_smap(0);//shadow_map_enabled()); // FIXME: not correct for transforms
 		setup_enabled_lights();
 		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", 0, d); // VS/FS
-		set_bool_shader_prefix("use_shadow_map", 0, 1); // FS
-		unsigned const p(set_shader_prog("fog.part+per_pixel_lighting_textured", "linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured"));
+		set_bool_shader_prefix("use_texgen", 0, 0); // VS
+		set_bool_shader_prefix("use_shadow_map", use_smap, 1); // FS
+		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_textured", "linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured"));
 		setup_fog_scale(p);
 		add_uniform_float(p, "min_alpha", 0.9*alpha);
 		add_uniform_int(p, "tex0", 0);
+		if (use_smap) set_smap_shader_for_all_lights(p);
 		select_texture(WHITE_TEX, 0); // always textured
 	}
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],

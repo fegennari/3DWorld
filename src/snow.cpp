@@ -764,7 +764,8 @@ void draw_snow() {
 		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", !use_smap, d); // VS/FS
 		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		set_bool_shader_prefix("use_shadow_map", use_smap, 1); // FS
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_texgen", "linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured"));
+		set_bool_shader_prefix("use_texgen", 1, 0); // VS
+		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_textured", "linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured"));
 		setup_fog_scale(p);
 		add_uniform_int(p, "tex0", 0);
 		if (use_smap) set_smap_shader_for_all_lights(p);
