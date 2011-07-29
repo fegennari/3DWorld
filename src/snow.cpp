@@ -693,7 +693,7 @@ void create_snow_strips(voxel_map &vmap) {
 
 bool snow_enabled() {
 
-	return (temperature < W_FREEZE_POINT && !snow_draw.empty());
+	return (temperature < W_FREEZE_POINT && !snow_draw.empty() && (display_mode & 0x02));
 }
 
 

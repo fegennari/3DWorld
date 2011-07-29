@@ -67,7 +67,7 @@ window_width 1920
 window_height 1200
 color_bit_depth 32
 refresh_rate 60
-shadow_map_sz 2048
+shadow_map_sz 3072
 
 state_file house/state.txt
 coll_obj_file house/COLL_OBJS_House.TXT

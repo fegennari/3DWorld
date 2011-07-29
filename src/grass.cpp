@@ -419,7 +419,7 @@ public:
 		check_for_updates();
 
 		// check for dynamic light sources
-		bool const grass_wind(!disable_shaders && !has_snow && (display_mode & 0x0100) != 0);
+		bool const grass_wind(!disable_shaders && !has_snow && (display_mode & 0x0100));
 		unsigned const num_dlights(enable_dynamic_lights());
 
 		if (grass_wind) { // enables lighting and shadows as well
