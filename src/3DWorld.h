@@ -1165,7 +1165,7 @@ void exec_universe_text(std::string const &text);
 
 // function prototypes - draw shapes
 bool is_above_mesh(point const &pos);
-bool check_face_containment(point const *const pts, unsigned npts, int dim, int dir, int cobj);
+bool check_face_containment(cube_t const &cube, int dim, int dir, int cobj);
 float get_mesh_zmax(point const *const pts, unsigned npts);
 void add_shadow_obj(point const &pos, float radius, int coll_id);
 void add_coll_shadow_objs();

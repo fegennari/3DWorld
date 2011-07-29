@@ -65,27 +65,24 @@ bool is_above_mesh(point const &pos) {
 }
 
 
-bool check_face_containment(point const *const pts, unsigned npts, int dim, int dir, int cobj) { // what about under mesh?
+bool check_face_containment(cube_t const &cube, int dim, int dir, int cobj) {
 
 	assert((dim >= 0 && dim <= 2) && (dir == 0 || dir == 1));
-	point const cent(get_center(pts, npts));
+	point const cent(cube.get_cube_center());
 	int const x(get_xpos(cent.x)), y(get_ypos(cent.y));
 	if (point_outside_mesh(x, y)) return 0;
 	coll_cell const &cell(v_collision_matrix[y][x]);
-	unsigned const ncv(cell.cvals.size()), d(2-dim);
+	unsigned const ncv(cell.cvals.size());
 
 	for (unsigned i = 0; i < ncv; ++i) { // test for internal faces to be removed
-		unsigned const cid(cell.cvals[i]);
-		coll_obj const &c(coll_objects[cid]);
-		if (c.type != COLL_CUBE || !c.fixed || c.status != COLL_STATIC || c.platform_id >= 0) continue;
-		if ((int)cid == cobj || c.is_semi_trans() || fabs(c.d[d][!dir] - cent[d]) > TOLER_)   continue;
+		coll_obj const &c(coll_objects[cell.cvals[i]]);
+		if (c.type != COLL_CUBE || !c.fixed || c.status != COLL_STATIC || c.platform_id >= 0)                    continue;
+		if ((int)cell.cvals[i] == cobj || c.is_semi_trans() || fabs(c.d[dim][!dir] - cube.d[dim][dir]) > TOLER_) continue;
 		bool contained(1);
 
-		for (unsigned j = 0; j < npts && contained; ++j) {
-			for (unsigned k = 0; k < 2; ++k) {
-				unsigned const dk((d+k+1)%3);
-				if (pts[j][dk] < (c.d[dk][0]-TOLER_) || pts[j][dk] > (c.d[dk][1]+TOLER_)) contained = 0;
-			}
+		for (unsigned k = 0; k < 2 && contained; ++k) {
+			unsigned const dk((dim+k+1)%3);
+			if (cube.d[dk][0] < (c.d[dk][0]-TOLER_) || cube.d[dk][1] > (c.d[dk][1]+TOLER_)) contained = 0;
 		}
 		if (contained) return 1;
 	}
@@ -155,8 +152,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
 		if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir))) continue;
 		unsigned const d0((dim+1)%3), d1((dim+2)%3), t0((2-dim)>>1), t1(1+((2-dim)>0));
-		point pts[4];
-		point p;
+		point pts[4], p;
 		p[dim] = d[dim][dir];
 		p[d0 ] = d[d0][0];
 		p[d1 ] = d[d1][0]; pts[0] = p;
@@ -164,7 +160,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 		p[d1 ] = d[d1][1]; pts[2] = p;
 		p[d0 ] = d[d0][0]; pts[3] = p;
 		if ((display_mode & 0x08) && !occluders.empty() && is_occluded(occluders, pts, 4, camera)) continue; // makes little difference
-		//if ((display_mode & 0x10) && check_face_containment(pts, 4, dim, dir, id)) continue; // makes little difference and is slow-ish
+		//if ((display_mode & 0x10) && check_face_containment(*this, dim, dir, id)) continue; // makes little difference, could do in add_all_coll_objects() instead
 
 		if (textured) {
 			float a[4] = {0.0}, b[4] = {0.0};

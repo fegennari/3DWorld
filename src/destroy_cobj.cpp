@@ -344,8 +344,9 @@ void check_falling_cobjs() {
 
 	// FIXME: add velocity/acceleration
 	// FIXME: fix texture offset
+	// FIXME: don't set scene_dlist_invalid - treat moving cobjs as dynamic (with IS_FALLING bit)
 	if (falling_cobjs.empty()) return; // nothing to do
-	float const dz(-0.001*fticks); // FIXME: add velocity/acceleration due to gravity
+	float const dz(-0.001*fticks);
 	set<unsigned> anchored[2]; // {unanchored, anchored}
 
 	for (unsigned i = 0; i < falling_cobjs.size(); ++i) {
