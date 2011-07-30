@@ -196,13 +196,13 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 
 			for (vector<unsigned>::const_iterator i = out.begin(); i != out.end(); ++i) {
 				assert(*i >= 0 && *i != cur);
+				assert(coll_objects[*i].counter != cobj_counter); // may be too strong - we might want to allow duplicates and just continue here
 				open.push_back(*i); // need to do this first
 
 				if (anchored[1].find(*i) != anchored[1].end() || coll_objects[*i].is_anchored()) {
 					is_anchored = 1;
 					break;
 				}
-				assert(coll_objects[*i].counter != cobj_counter);
 				coll_objects[*i].counter = cobj_counter;
 			}
 			if (is_anchored) break;
@@ -243,6 +243,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	cdir = zero_vector;
 	vector<cube_t> mod_cubes;
 	mod_cubes.push_back(cube);
+	build_moving_cobj_tree();
 	vector<unsigned> int_cobjs;
 	assert(cobj_tree_valid);
 	get_intersecting_cobjs_tree(cube, int_cobjs, -1, 0.0, 0, 0, -1);
@@ -309,6 +310,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
 		//RESET_TIME;
 		set<unsigned> anchored[2]; // {unanchored, anchored}
+		build_moving_cobj_tree();
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
 			vector<unsigned> start;
@@ -350,6 +352,13 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 }
 
 
+void invalidate_static_cobjs() {
+
+	build_cobj_tree(0, 0);
+	scene_dlist_invalid = 1;
+}
+
+
 void check_falling_cobjs() {
 
 	// FIXME: add velocity/acceleration
@@ -379,11 +388,11 @@ void check_falling_cobjs() {
 		falling_cobjs[i] = index;
 	}
 	vector<unsigned> const last_falling(falling_cobjs);
+	build_moving_cobj_tree();
 	check_cobjs_anchored(falling_cobjs, anchored);
 	falling_cobjs.resize(0);
 	add_to_falling_cobjs(anchored[0]);
-	build_cobj_tree(0, 0);
-	if (falling_cobjs != last_falling) scene_dlist_invalid = 1;
+	if (falling_cobjs != last_falling) invalidate_static_cobjs();
 }
 
 

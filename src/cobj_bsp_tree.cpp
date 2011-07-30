@@ -13,6 +13,8 @@ bool cobj_tree_valid(0);
 
 extern int display_mode, frame_counter, cobj_counter;
 extern vector<coll_obj> coll_objects;
+extern vector<unsigned> falling_cobjs;
+extern platform_cont platforms;
 
 
 // 3: BSP Tree, 8: OctTree
@@ -30,7 +32,7 @@ protected:
 	vector<coll_obj> const &cobjs;
 	vector<unsigned> cixs;
 	vector<tree_node> nodes;
-	bool is_static, is_dynamic, occluders_only;
+	bool is_static, is_dynamic, occluders_only, moving_only;
 
 	coll_obj const &get_cobj(unsigned ix) const {
 		//assert(ix < cixs.size() && cixs[ix] < cobjs.size());
@@ -50,11 +52,27 @@ protected:
 		}
 	}
 
-	bool create_cixs() {
-		if (is_static && !occluders_only) cixs.reserve(cobjs.size());
+	void add_to_cixs(unsigned ix) {
+		if (obj_ok(cobjs[ix])) cixs.push_back(ix);
+	}
 
-		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-			if (obj_ok(*i)) cixs.push_back(i - cobjs.begin());
+	bool create_cixs() {
+		if (moving_only) {
+			for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
+				for (vector<unsigned>::const_iterator j = i->cobjs.begin(); j != i->cobjs.end(); ++j) {
+					add_to_cixs(*j);
+				}
+			}
+			for (unsigned i = 0; i < falling_cobjs.size(); ++i) {
+				add_to_cixs(falling_cobjs[i]);
+			}
+		}
+		else {
+			if (is_static && !occluders_only) cixs.reserve(cobjs.size());
+
+			for (unsigned i = 0; i < cobjs.size(); ++i) {
+				add_to_cixs(i);
+			}
 		}
 		assert(cixs.size() < (1 << 29));
 		return !cixs.empty();
@@ -63,12 +81,14 @@ protected:
 	void build_tree(unsigned nix, unsigned skip_dims) {assert(0);}
 
 	bool obj_ok(coll_obj const &c) const {
-		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC)) && (!occluders_only || c.is_occluder()));
+		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC)) &&
+			(!occluders_only || c.is_occluder()) && (!moving_only || c.maybe_is_moving()));
 	}
 
 
 public:
-	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool o) : cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o) {}
+	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool o, bool m) :
+	  cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), moving_only(m) {}
 
 	void clear() {
 		nodes.resize(0);
@@ -161,6 +181,8 @@ public:
 				if ((int)cixs[i] == ignore_cobj) continue;
 				coll_obj const &c(get_cobj(i));
 				if (check_ccounter && c.counter == cobj_counter) continue;
+				// get_intersecting_cobjs_tree() calls this on both static and moving cobj_trees, so we want to check to make sure we don't double include it
+				if (!moving_only && c.maybe_is_moving())         continue;
 				if (!obj_ok(c) || !cube.intersects(c, toler))    continue;
 				if (id_for_cobj_int >= 0 && coll_objects[id_for_cobj_int].intersects_cobj(c, toler) != 1) continue;
 				cobjs.push_back(cixs[i]);
@@ -170,6 +192,7 @@ public:
 	}
 
 	bool is_cobj_contained(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const {
+		if (nodes.empty()) return 0;
 		node_ix_mgr nixm(nodes, p1, p2);
 
 		for (unsigned nix = 0; nix < nodes.size();) {
@@ -180,7 +203,7 @@ public:
 				if ((int)cixs[i] == ignore_cobj) continue;
 				coll_obj const &c(get_cobj(i));
 				
-				if (c.is_occluder() && is_contained(viewer, pts, npts, c.d)) {
+				if (obj_ok(c) && c.is_occluder() && is_contained(viewer, pts, npts, c.d)) {
 					cobj = cixs[i];
 					return 1;
 				}
@@ -190,6 +213,7 @@ public:
 	}
 
 	void get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs) const {
+		if (nodes.empty()) return;
 		node_ix_mgr nixm(nodes, pos1, pos2);
 
 		for (unsigned nix = 0; nix < nodes.size();) {
@@ -199,7 +223,7 @@ public:
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 				if ((int)cixs[i] == ignore_cobj) continue;
 				coll_obj const &c(get_cobj(i));
-				if (c.is_big_occluder() && check_line_clip_expand(pos1, pos2, c.d, GET_OCC_EXPAND)) cobjs.push_back(cixs[i]);
+				if (obj_ok(c) && c.is_big_occluder() && check_line_clip_expand(pos1, pos2, c.d, GET_OCC_EXPAND)) cobjs.push_back(cixs[i]);
 			}
 		}
 	}
@@ -328,9 +352,10 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 
 // 3: BSP Tree, 8: Octtree
 typedef cobj_tree_t<8> cobj_tree_type;
-cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0);
-cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0);
-cobj_tree_type cobj_tree_occlude(coll_objects, 1, 0, 1);
+cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0, 0);
+cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
+cobj_tree_type cobj_tree_occlude(coll_objects, 1, 0, 1, 0);
+cobj_tree_type cobj_tree_moving (coll_objects, 1, 0, 0, 1);
 int last_update_frame[2] = {1, 1}; // first drawn frame is 1
 
 
@@ -354,6 +379,10 @@ void update_cobj_tree(bool dynamic, bool verbose) {
 	}
 }
 
+void build_moving_cobj_tree() {
+	cobj_tree_moving.add_cobjs(0);
+}
+
 // can use with ray trace lighting, snow collision?, maybe water reflections
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos,
 								vector3d &cnorm, int &cindex, int ignore_cobj, bool dynamic, int test_alpha)
@@ -374,6 +403,7 @@ void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, in
 	bool dynamic, bool check_ccounter, int id_for_cobj_int)
 {
 	get_tree(dynamic).get_intersecting_cobjs(cube, cobjs, ignore_cobj, toler, check_ccounter, id_for_cobj_int);
+	cobj_tree_moving.get_intersecting_cobjs (cube, cobjs, ignore_cobj, toler, check_ccounter, id_for_cobj_int);
 }
 
 

@@ -452,6 +452,7 @@ e 0
 B -3.35 -2.65  5.0   5.8   2.2   2.43 # Top Top
 
 a 0 # non-destroyable
+#a 1 # destroyable
 l 0.7 0.58 0.42 0.3 1.0 49 1 # carpet
 y 7.5
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]

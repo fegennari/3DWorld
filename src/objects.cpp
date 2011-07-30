@@ -406,11 +406,7 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 
 bool coll_obj::truly_static() const {
 
-	if (status != COLL_STATIC || destroy >= max((int)SHATTERABLE, destroy_thresh+1)) return 0;
-	if (platform_id < 0) return 1;
-	return 0;
-	//assert((unsigned)platform_id < platforms.size());
-	//return !platforms[platform_id].is_moving();
+	return (status == COLL_STATIC && destroy < max((int)SHATTERABLE, destroy_thresh+1) && !maybe_is_moving());
 }
 
 

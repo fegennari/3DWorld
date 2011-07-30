@@ -93,6 +93,7 @@ void set_texture_matrix() {
 	// Concatating all matrice into one
 	glMultMatrixd(projection);
 	glMultMatrixd(modelView);
+	// FIXME: multiply by the inverse of the camera modelview matrix
 	
 	// Go back to normal matrix mode
 	glMatrixMode(GL_MODELVIEW);
@@ -256,7 +257,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) { // test have_drawn_cobj?
 				//if ((i->type == COLL_CUBE) == n) continue;
 				if (i->no_draw()) continue; // only valid if drawing trees, small trees, and scenery separately
-				if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->platform_id >= 0 || i->falling) continue;
+				if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->maybe_is_moving()) continue;
 				int ndiv(1);
 
 				if (i->type == COLL_SPHERE) {

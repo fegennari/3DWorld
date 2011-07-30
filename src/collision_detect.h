@@ -106,6 +106,7 @@ public:
 	bool freed_unused()   const {return (status == COLL_FREED   || status == COLL_UNUSED);}
 	bool is_occluder()    const {return (status == COLL_STATIC && type == COLL_CUBE && cp.draw && !is_semi_trans());}
 	bool is_big_occluder()const {return (is_occluder() && fixed && volume > 0.001);}
+	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
 	bool is_player()      const;
 	bool is_invis_player()const;
 	bool truly_static()   const;
