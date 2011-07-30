@@ -852,7 +852,6 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 	cobj.radius2     = radius2;
 	cobj.type        = type;
 	cobj.platform_id = platform_id;
-	cobj.lighted     = COBJ_LIT_UNKNOWN;
 	cobj.group_id    = -1;
 	cobj.fixed       = 0;
 	cobj.counter     = 0;

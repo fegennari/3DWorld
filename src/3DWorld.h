@@ -1368,7 +1368,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_n
 						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0, bool no_tree=0);
 bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj);
 bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs);
-bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic, bool tl);
+bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic);
 bool is_occluded(vector<int> const &occluders, point const *const pts0, int npts, point const &camera);
 void add_camera_cobj(point const &pos);
 void force_onto_surface_mesh(point &pos);

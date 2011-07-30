@@ -449,11 +449,10 @@ class line_intersector_cylinder : public base_intersector { // cylinder intersec
 	vector<int> &cobjs;
 	float radius;
 	int skip_dynamic, c_obj;
-	bool test_lighted;
 
 public:
-	line_intersector_cylinder(point const &pos1_, point const &pos2_, vector<int> &cobjs_, int c_obj_, float r, int sd, bool tl)
-		: base_intersector(pos1_, pos2_), cobjs(cobjs_), radius(r), skip_dynamic(sd), c_obj(c_obj_), test_lighted(tl)
+	line_intersector_cylinder(point const &pos1_, point const &pos2_, vector<int> &cobjs_, int c_obj_, float r, int sd)
+		: base_intersector(pos1_, pos2_), cobjs(cobjs_), radius(r), skip_dynamic(sd), c_obj(c_obj_)
 	{
 		assert(radius >= 0.0);
 	}
@@ -463,8 +462,6 @@ public:
 	int proc_cobj(coll_cell const &cell, int const index) {
 		coll_obj &cobj(coll_objects[index]);
 		cobj.counter = cobj_counter;
-		// *** careful, this is untested and may be incorrect for uses other than shadow filtering ***
-		if (test_lighted  && cobj.status == COLL_STATIC && cobj.lighted == COBJ_LIT_FALSE)         return 2;
 		if ((skip_dynamic && cobj.status == COLL_DYNAMIC) || (skip_dynamic >= 2 && !cobj.cp.draw)) return 2;
 		if (cobj.cp.surfs == EF_ALL || (z1-radius) > cobj.d[2][1] || (z2+radius) < cobj.d[2][0])   return 2; // clip this shape
 
@@ -693,12 +690,12 @@ bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 }
 
 // unused
-bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic, bool tl) {
+bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic) {
 
 	assert(radius > 0.0);
 	cobjs.resize(0);
 	if (!do_line_clip_scene(pos1, pos2, max(zbottom, czmin), czmax)) return 0;
-	line_intersector_cylinder lint(pos1, pos2, cobjs, cobj, radius, skip_dynamic, tl);
+	line_intersector_cylinder lint(pos1, pos2, cobjs, cobj, radius, skip_dynamic);
 	coll_cell_line_iterator<line_intersector_cylinder> ccli(lint, 1, (skip_dynamic != 0), cobj);
 	return ccli.do_iter(radius);
 }

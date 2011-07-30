@@ -45,7 +45,6 @@ void coll_obj::init() {
 void coll_obj::clear_internal_data() {
 
 	fixed    = 0; // unfix it so that it's actually removed
-	lighted  = COBJ_LIT_FALSE;
 	cp.surfs = 0;
 	occluders.clear();
 }
@@ -229,7 +228,6 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	// so if there is no texture specified just use a plain white texture
 	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
 	float const ar(get_tex_ar(tid));
-	if (lighted == COBJ_LIT_UNKNOWN) lighted = COBJ_LIT_FALSE;
 
 	// process groups
 	int const pri_dim(::get_max_dim(norm));

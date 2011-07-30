@@ -14,7 +14,6 @@ typedef void (*collision_func)(int, int, vector3d const &, point const &, float,
 enum {COLL_NULL      = 0, COLL_CUBE,     COLL_CYLINDER, COLL_SPHERE,  COLL_CYLINDER_ROT, COLL_POLYGON, COLL_INVALID};
 enum {COLL_UNUSED    = 0, COLL_FREED,    COLL_PENDING,  COLL_STATIC,  COLL_DYNAMIC,      COLL_NEGATIVE};
 enum {OBJ_STAT_BAD   = 0, OBJ_STAT_AIR,  OBJ_STAT_COLL, OBJ_STAT_GND, OBJ_STAT_STOP,     OBJ_STAT_RES};
-enum {COBJ_LIT_FALSE = 0, COBJ_LIT_TRUE, COBJ_LIT_UNKNOWN};
 
 unsigned const OBJ_CNT_REM_TJ = 1;
 
@@ -60,7 +59,7 @@ class coll_obj : public cube_t { // size = 248
 
 public:
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
-	char type, destroy, status, lighted;
+	char type, destroy, status;
 	float radius, radius2, thickness, volume;
 	int counter, id, platform_id, group_id, waypt_id;
 	short npoints;
@@ -70,7 +69,7 @@ public:
 	vector3d norm;
 	vector<int> occluders;
 
-	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), radius(0.0), radius2(0.0), thickness(0.0),
+	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), radius(0.0), radius2(0.0), thickness(0.0),
 		volume(0.0), counter(0), id(-1), platform_id(-1), group_id(-1), waypt_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0),
 		is_billboard(0), falling(0), norm(all_zeros) {}
 	void init();
