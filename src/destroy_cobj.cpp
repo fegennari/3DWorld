@@ -13,7 +13,7 @@ bool const REMOVE_UNANCHORED = 1;
 int destroy_thresh(0);
 vector<unsigned> falling_cobjs;
 
-extern bool cobj_tree_valid, scene_dlist_invalid;
+extern bool scene_dlist_invalid;
 extern float fticks, zmin;
 extern int cobj_counter, coll_id[];
 extern obj_type object_types[];
@@ -160,7 +160,6 @@ void add_portal(coll_obj const &c) {
 void get_all_connected(unsigned cobj, vector<unsigned> &out) {
 
 	assert(cobj < coll_objects.size());
-	assert(cobj_tree_valid);
 	get_intersecting_cobjs_tree(coll_objects[cobj], out, cobj, TOLERANCE, 0, 1, cobj);
 }
 
@@ -230,6 +229,13 @@ void add_to_falling_cobjs(set<unsigned> const &ids) {
 }
 
 
+void invalidate_static_cobjs() {
+
+	build_cobj_tree(0, 0);
+	scene_dlist_invalid = 1;
+}
+
+
 unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int min_destroy) {
 
 	if (destroy_thresh >= EXPLODEABLE) return 0;
@@ -245,7 +251,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	mod_cubes.push_back(cube);
 	build_moving_cobj_tree();
 	vector<unsigned> int_cobjs;
-	assert(cobj_tree_valid);
 	get_intersecting_cobjs_tree(cube, int_cobjs, -1, 0.0, 0, 0, -1);
 	cco_batcher.begin_batch();
 
@@ -299,7 +304,10 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		remove_waypoint_for_cobj(cobjs[to_remove[i]]);
 		remove_coll_object(to_remove[i]); // remove old collision object
 	}
-	if (!cobj_tree_valid) build_cobj_tree(0, 0); // after destroyed cobj removal
+	if (!to_remove.empty()) {
+		invalidate_static_cobjs(); // after destroyed cobj removal
+		build_moving_cobj_tree();
+	}
 
 	// add new waypoints (after build_cobj_tree and end_batch)
 	for (unsigned i = 0; i < just_added.size(); ++i) {
@@ -310,7 +318,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
 		//RESET_TIME;
 		set<unsigned> anchored[2]; // {unanchored, anchored}
-		build_moving_cobj_tree();
 
 		for (unsigned i = 0; i < to_remove.size(); ++i) { // cobjs in to_remove are freed but still valid
 			vector<unsigned> start;
@@ -345,17 +352,9 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	if (!to_remove.empty()) {
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // FIXME: what about updating (removing) mesh shadows?
 		cdir.normalize();
-		scene_dlist_invalid = 1;
 	}
 	//PRINT_TIME("Subtract Cube");
 	return to_remove.size();
-}
-
-
-void invalidate_static_cobjs() {
-
-	build_cobj_tree(0, 0);
-	scene_dlist_invalid = 1;
 }
 
 
@@ -363,8 +362,8 @@ void check_falling_cobjs() {
 
 	// FIXME: add velocity/acceleration
 	// FIXME: fix texture offset
-	// FIXME: incorrect (falling broken and not in cobj_tree) if a falling cobj is partially destroyed
 	if (falling_cobjs.empty()) return; // nothing to do
+	//RESET_TIME;
 	float const dz(-0.001*fticks);
 	set<unsigned> anchored[2]; // {unanchored, anchored}
 
@@ -387,12 +386,14 @@ void check_falling_cobjs() {
 		assert(ix != index);
 		falling_cobjs[i] = index;
 	}
-	vector<unsigned> const last_falling(falling_cobjs);
+	vector<unsigned> last_falling(falling_cobjs);
+	sort(last_falling.begin(), last_falling.end());
 	build_moving_cobj_tree();
 	check_cobjs_anchored(falling_cobjs, anchored);
 	falling_cobjs.resize(0);
 	add_to_falling_cobjs(anchored[0]);
 	if (falling_cobjs != last_falling) invalidate_static_cobjs();
+	//PRINT_TIME("Check Falling Cobjs");
 }
 
 
@@ -410,7 +411,7 @@ bool is_pt_under_mesh(point const &p) {
 int coll_obj::is_anchored() const {
 
 	if (platform_id >= 0 || status != COLL_STATIC) return 0; // platforms and dynamic objects are never connecting
-	if (fixed && destroy <= destroy_thresh)        return 2; // can't be destroyed, so it never moves
+	if (destroy <= destroy_thresh)                 return 2; // can't be destroyed, so it never moves
 	if (d[2][0] <= min(zbottom, czmin))            return 1; // below the scene
 	if (d[2][0] > ztop)                            return 0; // above the mesh
 

@@ -14,7 +14,6 @@ unsigned const QLP_CACHE_SIZE = 10000;
 
 int cobj_counter(0);
 
-extern bool cobj_tree_valid;
 extern int coll_border, display_mode;
 extern float occluder_zmin, occluder_zmax, zmin, zbottom, water_plane_z;
 extern vector<coll_obj> coll_objects;
@@ -606,7 +605,7 @@ bool check_xy_delta(point const &p1, point const &p2) {
 }
 
 bool use_cobj_tree(point const &p1, point const &p2) {
-	return (USE_COBJ_TREE && cobj_tree_valid && check_xy_delta(p1, p2));
+	return (USE_COBJ_TREE && check_xy_delta(p1, p2));
 }
 
 

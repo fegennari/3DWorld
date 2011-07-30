@@ -27,7 +27,6 @@ vector<int> index_stack;
 vector<coll_obj> coll_objects;
 coll_cell_opt_batcher cco_batcher;
 
-extern bool cobj_tree_valid;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, invalid_collision, mesh_scale_change, camera_invincible, flight, do_run, cobj_counter;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
@@ -453,7 +452,6 @@ int coll_obj::add_coll_cobj() {
 	coll_objects[cid].destroy  = destroy;
 	coll_objects[cid].fixed    = fixed;
 	coll_objects[cid].group_id = group_id;
-	if (fixed && status == COLL_STATIC) cobj_tree_valid = 0; // invalidates the cobj tree
 	return cid;
 }
 

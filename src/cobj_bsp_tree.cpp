@@ -9,8 +9,6 @@
 bool const BUILD_COBJ_TREE = 1;
 
 
-bool cobj_tree_valid(0);
-
 extern int display_mode, frame_counter, cobj_counter;
 extern vector<coll_obj> coll_objects;
 extern vector<unsigned> falling_cobjs;
@@ -367,13 +365,12 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 	if (BUILD_COBJ_TREE) {
 		get_tree(dynamic).add_cobjs(verbose);
 		if (!dynamic) cobj_tree_occlude.add_cobjs(verbose);
-		cobj_tree_valid = 1;
 	}
 }
 
 void update_cobj_tree(bool dynamic, bool verbose) {
 
-	if (last_update_frame[dynamic] < frame_counter && (dynamic || !cobj_tree_valid)) {
+	if (dynamic && last_update_frame[dynamic] < frame_counter) {
 		last_update_frame[dynamic] = frame_counter;
 		build_cobj_tree(dynamic, verbose);
 	}
