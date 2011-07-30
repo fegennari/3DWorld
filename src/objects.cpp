@@ -10,7 +10,7 @@
 #include "collision_detect.h"
 
 
-float const NDIV_SCALE = 120.0;
+float const NDIV_SCALE = 200.0;
 
 
 extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
@@ -281,7 +281,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 			float const scale(NDIV_SCALE*get_zoom_scale());
 			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(center),
 				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
-			int const ndiv(min(N_CYL_SIDES, max(3, (int)size)));
+			int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 			bool const draw_ends(!(cp.surfs & 1));
 			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, (points[1] - points[0]), USE_ATTR_TEXGEN);
 			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
@@ -297,7 +297,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 
 	case COLL_SPHERE:
 		{
-			float const scale(0.7*NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
+			float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
 			setup_sphere_cylin_texgen(cp.tscale, ar*cp.tscale, plus_z, USE_ATTR_TEXGEN);
 			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
