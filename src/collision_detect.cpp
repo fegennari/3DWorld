@@ -852,9 +852,15 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 	cobj.radius2     = radius2;
 	cobj.type        = type;
 	cobj.platform_id = platform_id;
+	cobj.lighted     = COBJ_LIT_UNKNOWN;
+	cobj.group_id    = -1;
 	cobj.fixed       = 0;
 	cobj.counter     = 0;
 	cobj.destroy     = 0;
+	cobj.coll_type   = 0;
+	cobj.last_coll   = 0;
+	cobj.is_billboard= 0;
+	cobj.falling     = 0;
 	cobj.calc_size();
 	cobj.set_npoints();
 	have_drawn_cobj    |= cparams.draw;

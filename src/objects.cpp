@@ -45,7 +45,7 @@ void coll_obj::init() {
 void coll_obj::clear_internal_data() {
 
 	fixed    = 0; // unfix it so that it's actually removed
-	lighted  = 0;
+	lighted  = COBJ_LIT_FALSE;
 	cp.surfs = 0;
 	occluders.clear();
 }
