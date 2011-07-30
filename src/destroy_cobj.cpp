@@ -220,6 +220,16 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 }
 
 
+void add_to_falling_cobjs(set<unsigned> const &ids) {
+
+	for (set<unsigned>::const_iterator i = ids.begin(); i != ids.end(); ++i) {
+		assert(*i < coll_objects.size());
+		coll_objects[*i].falling = 1;
+		falling_cobjs.push_back(*i);
+	}
+}
+
+
 unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int min_destroy) {
 
 	if (destroy_thresh >= EXPLODEABLE) return 0;
@@ -326,7 +336,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 			}
 		}
 		else if (LET_COBJS_FALL) {
-			copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
+			add_to_falling_cobjs(anchored[0]);
 		}
 		//PRINT_TIME("Check Anchored");
 	}
@@ -344,7 +354,7 @@ void check_falling_cobjs() {
 
 	// FIXME: add velocity/acceleration
 	// FIXME: fix texture offset
-	// FIXME: don't set scene_dlist_invalid - treat moving cobjs as dynamic (with IS_FALLING bit)
+	// FIXME: incorrect (falling broken and not in cobj_tree) if a falling cobj is partially destroyed
 	if (falling_cobjs.empty()) return; // nothing to do
 	float const dz(-0.001*fticks);
 	set<unsigned> anchored[2]; // {unanchored, anchored}
@@ -368,10 +378,12 @@ void check_falling_cobjs() {
 		assert(ix != index);
 		falling_cobjs[i] = index;
 	}
+	vector<unsigned> const last_falling(falling_cobjs);
 	check_cobjs_anchored(falling_cobjs, anchored);
 	falling_cobjs.resize(0);
-	copy(anchored[0].begin(), anchored[0].end(), back_inserter(falling_cobjs));
-	scene_dlist_invalid = 1;
+	add_to_falling_cobjs(anchored[0]);
+	build_cobj_tree(0, 0);
+	if (falling_cobjs != last_falling) scene_dlist_invalid = 1;
 }
 
 

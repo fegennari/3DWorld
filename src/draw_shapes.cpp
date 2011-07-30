@@ -15,6 +15,7 @@ extern int begin_motion, num_groups, camera_coll_id, spectate, display_mode, cam
 extern float zmin;
 extern double camera_zh;
 extern vector<int> weap_cobjs;
+extern vector<unsigned> falling_cobjs;
 extern vector<coll_obj> coll_objects;
 extern platform_cont platforms; // only needed for empty test
 extern obj_type object_types[];
@@ -344,6 +345,9 @@ void add_coll_shadow_objs() {
 		for (vector<unsigned>::const_iterator j = i->cobjs.begin(); j != i->cobjs.end(); ++j) {
 			add_shadow_cobj(*j);
 		}
+	}
+	for (unsigned i = 0; i < falling_cobjs.size(); ++i) {
+		add_shadow_cobj(falling_cobjs[i]);
 	}
 	if (display_mode & 0x0200) d_part_sys.add_cobj_shadows();
 	//PRINT_TIME(" Shadow Object Creation");

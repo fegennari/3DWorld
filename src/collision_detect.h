@@ -65,14 +65,14 @@ public:
 	int counter, id, platform_id, group_id, waypt_id;
 	short npoints;
 	unsigned char last_coll, coll_type;
-	bool fixed, is_billboard;
+	bool fixed, is_billboard, falling;
 	point points[N_COLL_POLY_PTS];
 	vector3d norm;
 	vector<int> occluders;
 
 	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), lighted(COBJ_LIT_UNKNOWN), radius(0.0), radius2(0.0), thickness(0.0),
 		volume(0.0), counter(0), id(-1), platform_id(-1), group_id(-1), waypt_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0),
-		is_billboard(0), norm(all_zeros) {}
+		is_billboard(0), falling(0), norm(all_zeros) {}
 	void init();
 	void clear_internal_data();
 	void calc_size();
