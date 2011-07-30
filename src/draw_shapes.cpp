@@ -17,7 +17,7 @@ extern double camera_zh;
 extern vector<int> weap_cobjs;
 extern vector<unsigned> falling_cobjs;
 extern vector<coll_obj> coll_objects;
-extern platform_cont platforms; // only needed for empty test
+extern platform_cont platforms;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
 
@@ -316,7 +316,7 @@ void add_coll_shadow_objs() {
 	
 	//RESET_TIME;
 	shadow_objs.resize(0);
-	if (use_stencil_shadows) return; // if stencil shadows are enabled we don't do them here
+	if (use_stencil_shadows || !shadow_map_enabled()) return; // if stencil shadows are enabled we don't do them here
 	point const camera(get_camera_pos());
 
 	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID)) { // shadow the camera even when in the air (but not when dead)
