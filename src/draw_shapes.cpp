@@ -68,6 +68,19 @@ bool is_above_mesh(point const &pos) {
 bool check_face_containment(cube_t const &cube, int dim, int dir, int cobj) {
 
 	assert((dim >= 0 && dim <= 2) && (dir == 0 || dir == 1));
+
+	if (dim == 2 && dir == 0) { // z bottom
+		int const x1(get_xpos(cube.d[0][0])), x2(get_xpos(cube.d[0][1]));
+		int const y1(get_ypos(cube.d[1][0])), y2(get_ypos(cube.d[1][1]));
+		bool under_mesh(1);
+			
+		for (int y = max(0, y1); y <= min(MESH_Y_SIZE-1, y2) && under_mesh; ++y) {
+			for (int x = max(0, x1); x <= min(MESH_X_SIZE-1, x2) && under_mesh; ++x) {
+				under_mesh &= (cube.d[2][0] < mesh_height[y][x]);
+			}
+		}
+		if (under_mesh) return 1;
+	}
 	point const cent(cube.get_cube_center());
 	int const x(get_xpos(cent.x)), y(get_ypos(cent.y));
 	if (point_outside_mesh(x, y)) return 0;
@@ -160,7 +173,6 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 		p[d1 ] = d[d1][1]; pts[2] = p;
 		p[d0 ] = d[d0][0]; pts[3] = p;
 		if ((display_mode & 0x08) && !occluders.empty() && is_occluded(occluders, pts, 4, camera)) continue; // makes little difference
-		//if ((display_mode & 0x10) && check_face_containment(*this, dim, dir, id)) continue; // makes little difference, could do in add_all_coll_objects() instead
 
 		if (textured) {
 			float a[4] = {0.0}, b[4] = {0.0};

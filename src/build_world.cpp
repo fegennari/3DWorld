@@ -688,6 +688,21 @@ void free_all_coll_objects() {
 }
 
 
+void check_contained_cube_sides() {
+
+	for (vector<coll_obj>::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
+		if (i->status != COLL_STATIC || !i->fixed || i->platform_id >= 0 || i->type != COLL_CUBE || i->is_semi_trans()) continue;
+
+		for (unsigned dim = 0; dim < 3; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (i->cp.surfs & EFLAGS[dim][dir]) continue;
+				if (check_face_containment(*i, dim, dir, (i - coll_objects.begin()))) i->cp.surfs |= EFLAGS[dim][dir]; // unset this flag bit
+			}
+		}
+	}
+}
+
+
 void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 
 	static int init(0);
@@ -728,6 +743,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 	}
 	cobj_optimize();
 	build_cobj_tree();
+	check_contained_cube_sides();
 }
 
 
