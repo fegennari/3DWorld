@@ -12,6 +12,7 @@ bool const ENABLE_DLIST = 1;
 
 bool scene_dlist_invalid(0);
 unsigned shadow_map_sz(0), smap_dlist(0);
+pos_dir_up orig_camera_pdu;
 
 extern bool have_drawn_cobj;
 extern int window_width, window_height, animate2, display_mode, ground_effects_level;
@@ -178,9 +179,9 @@ void set_smap_shader_for_all_lights(unsigned p, float z_bias) {
 pos_dir_up get_light_pdu(point const &lpos, bool set_matrix) {
 
 	float const scene_z1(min(zbottom, czmin)), scene_z2(max(ztop, czmax)), scene_dz(scene_z2 - scene_z1);
-	point const scene_center(0.0, 0.0, 0.5*(scene_z1 + scene_z2));
 	float const scene_radius(sqrt(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + scene_dz*scene_dz));
 	cube_t const scene_bounds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, scene_z1, scene_z2);
+	point const scene_center(scene_bounds.get_cube_center());
 	point corners[8];
 	get_cube_corners(scene_bounds.d, corners);
 	float scene_radius2(0.0);
@@ -358,7 +359,7 @@ void create_shadow_map() {
 	// save state
 	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode), ground_effects_level_(ground_effects_level);
 	point const camera_pos_(camera_pos);
-	pos_dir_up const camera_pdu_(camera_pdu);
+	orig_camera_pdu = camera_pdu;
 
 	// set to shadow map state
 	do_zoom  = 0;
@@ -389,7 +390,7 @@ void create_shadow_map() {
 	ground_effects_level = ground_effects_level_;
 	display_mode = display_mode_;
 	camera_pos   = camera_pos_;
-	camera_pdu   = camera_pdu_;
+	camera_pdu   = orig_camera_pdu;
 	//PRINT_TIME("Shadow Map Creation");
 }
 
