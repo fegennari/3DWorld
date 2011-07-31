@@ -42,7 +42,7 @@ void xform_matrix::rotate(float angle, vector3d const &rot) {
 	glLoadIdentity();
 	rotate_about(angle, rot);
 	apply();
-	assign_from_gl(); // uses GL rotation, should it use a custom rotation function?
+	assign_mv_from_gl(); // uses GL rotation, should it use a custom rotation function?
 	glPopMatrix();
 }
 
@@ -230,7 +230,6 @@ void transform_data::set_perturb_size(unsigned i, unsigned sz) {
 void transform_data::add_rand_perturb(unsigned i, float mag, float min_mag, float max_mag) {
 	
 	assert(i < perturb_maps.size());
-	//perturb_maps[i].set_size(DEFAULT_MESH2D_SIZE);
 	set_perturb_size(i, DEFAULT_MESH2D_SIZE);
 	perturb_maps[i].add_random(mag, min_mag, max_mag);
 }

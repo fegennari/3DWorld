@@ -1,4 +1,5 @@
-varying vec3 eye, dlpos, normal; // world space
+varying vec4 epos, dlpos;
+varying vec3 normal; // world space
 varying vec3 eye_norm;
 
 void main()
@@ -8,8 +9,8 @@ void main()
 	gl_Position = ftransform();
 	eye_norm = gl_NormalMatrix * gl_Normal; // eye space
 	normal = normalize(gl_Normal);
-	dlpos  = gl_Vertex.xyz;
-	eye    = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
+	dlpos  = gl_Vertex;
+	epos   = gl_ModelViewMatrix * gl_Vertex;
 	gl_FrontColor = gl_Color;
 	set_fog();
 } 

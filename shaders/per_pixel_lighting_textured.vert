@@ -1,5 +1,5 @@
 varying vec3 normal;
-varying vec4 epos, vertex;
+varying vec4 epos;
 
 void main()
 {
@@ -11,8 +11,7 @@ void main()
 	}
 	vec3 n = gl_NormalMatrix * gl_Normal;
 	normal = (no_normalize ? n : normalize(n));
-	vertex = gl_Vertex;
-	epos   = gl_ModelViewMatrix * vertex;
+	epos   = gl_ModelViewMatrix * gl_Vertex;
 	gl_Position = ftransform();
 	set_fog();
 }

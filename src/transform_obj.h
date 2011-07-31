@@ -10,13 +10,15 @@
 
 class xform_matrix {
 
+protected:
 	double m[16];
 
 public:
 	xform_matrix();
 	void normalize();
 	void apply() const {glMultMatrixd(m);}
-	void assign_from_gl() {glGetDoublev(GL_MODELVIEW_MATRIX, m);}
+	void assign_mv_from_gl() {glGetDoublev(GL_MODELVIEW_MATRIX,  m);}
+	void assign_pj_from_gl() {glGetDoublev(GL_PROJECTION_MATRIX, m);}
 	void rotate(float angle, vector3d const &rot);
 };
 

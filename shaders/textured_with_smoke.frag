@@ -39,7 +39,7 @@ vec3 add_light(in int ix, in vec3 off, in vec3 scale, in vec3 n, in vec3 source,
 			step_weight = 1.0;
 		}
 	}
-	return lscale * add_light_comp_pos_smap(n, epos, vec4(vpos, 1.0), ix).rgb;
+	return lscale * add_light_comp_pos_smap(n, epos, ix).rgb;
 }
 
 // Note: This may seem like it can go into the vertex shader as well,
@@ -58,7 +58,7 @@ void main()
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(eye_norm);
 		if (enable_light0) lit_color += add_light(0, off, scale, n, lpos0, vposl);
-		if (enable_light1) lit_color += add_light_comp_pos_smap(n, epos, vec4(vpos, 1.0), 1).rgb;
+		if (enable_light1) lit_color += add_light_comp_pos_smap(n, epos, 1).rgb;
 		//if (enable_light0) ADD_LIGHT(0);
 		//if (enable_light1) ADD_LIGHT(1);
 		if (enable_light2) ADD_LIGHT(2);
