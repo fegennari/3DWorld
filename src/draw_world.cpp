@@ -1920,7 +1920,7 @@ void portal::draw() const {
 
 	float const scale[2] = {0.0, 0.0}, xlate[2] = {0.0, 0.0};
 	select_texture(WHITE_TEX, 0);
-	setup_polygon_texgen(plus_z, scale, xlate); // doesn't matter as long as it's set to something
+	setup_polygon_texgen(plus_z, scale, xlate, zero_vector); // doesn't matter as long as it's set to something
 	ALPHA0.do_glColor();
 	//WHITE.do_glColor();
 	glBegin(GL_QUADS);

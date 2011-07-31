@@ -361,7 +361,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 void check_falling_cobjs() {
 
 	// FIXME: add velocity/acceleration
-	// FIXME: fix texture offset
 	if (falling_cobjs.empty()) return; // nothing to do
 	//RESET_TIME;
 	float const dz(-0.001*fticks);

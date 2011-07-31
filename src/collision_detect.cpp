@@ -452,6 +452,7 @@ int coll_obj::add_coll_cobj() {
 	coll_objects[cid].destroy  = destroy;
 	coll_objects[cid].fixed    = fixed;
 	coll_objects[cid].group_id = group_id;
+	coll_objects[cid].texture_offset = texture_offset;
 	return cid;
 }
 
@@ -844,6 +845,7 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 	assert(size_t(index) < coll_objects.size());
 	coll_obj &cobj(coll_objects[index]);
 	cobj.status      = (cparams.is_dynamic ? COLL_DYNAMIC : COLL_STATIC);
+	cobj.texture_offset = zero_vector;
 	cobj.cp          = cparams;
 	cobj.id          = index;
 	cobj.radius      = radius;

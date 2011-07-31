@@ -1507,7 +1507,7 @@ void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float t
 void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off=0.0, int mode=GL_EYE_LINEAR);
 void disable_texgen();
 void disable_textures_texgen();
-void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], bool swap_txy=0, bool as_attr=0);
+void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], vector3d const &offset, bool swap_txy=0, bool as_attr=0);
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
 float get_texture_component(unsigned tid, float xval, float yval, int comp);
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);

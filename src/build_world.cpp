@@ -636,7 +636,7 @@ void shift_all_objs(vector3d const &vd) {
 	for (vector<user_waypt_t>::iterator i = user_waypoints.begin(); i != user_waypoints.end(); ++i) {
 		i->pos += vd;
 	}
-	//shift_point_vector(app_spots,      vd); // what if an appearance spot shifts off the map?
+	//shift_point_vector(app_spots, vd); // what if an appearance spot shifts off the map?
 
 	if (begin_motion) {
 		for (int i = 0; i < num_groups; ++i) {
@@ -654,7 +654,7 @@ void coll_obj::shift_by(vector3d const &vd, bool force) {
 		points[j] += vd;
 	}
 	cube_t::translate(vd);
-	// FIXME: what about translating texture values in cp.tdx, cp.tdy
+	texture_offset -= vd;
 }
 
 

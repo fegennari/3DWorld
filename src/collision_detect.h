@@ -66,12 +66,12 @@ public:
 	unsigned char last_coll, coll_type;
 	bool fixed, is_billboard, falling;
 	point points[N_COLL_POLY_PTS];
-	vector3d norm;
+	vector3d norm, texture_offset;
 	vector<int> occluders;
 
 	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), radius(0.0), radius2(0.0), thickness(0.0),
 		volume(0.0), counter(0), id(-1), platform_id(-1), group_id(-1), waypt_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0),
-		is_billboard(0), falling(0), norm(all_zeros) {}
+		is_billboard(0), falling(0), norm(zero_vector), texture_offset(zero_vector) {}
 	void init();
 	void clear_internal_data();
 	void calc_size();
@@ -124,6 +124,8 @@ public:
 
 	// drawing code
 	void draw_coll_cube(int do_fill, int tid) const;
+	void set_poly_texgen(int tid, vector3d const &normal) const;
+	void draw_polygon(int tid, point const *points, int npoints, vector3d const &normal) const;
 	void draw_extruded_polygon(int tid) const;
 };
 

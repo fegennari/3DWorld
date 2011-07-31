@@ -1542,7 +1542,7 @@ void disable_textures_texgen() {
 }
 
 
-void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], bool swap_txy, bool as_attr) {
+void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], vector3d const &offset, bool swap_txy, bool as_attr) {
 
 	int const d0(get_min_dim(norm));
 	vector3d v[2] = {all_zeros, all_zeros};
@@ -1550,8 +1550,8 @@ void setup_polygon_texgen(vector3d const &norm, float const scale[2], float cons
 	cross_product(norm, v[0], v[1]);
 	cross_product(norm, v[1], v[0]);
 
-	for (unsigned i = 0; i < 2; ++i) { // ignoring xoff2/yoff2
-		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, xlate[i]};
+	for (unsigned i = 0; i < 2; ++i) {
+		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(offset, v[i]))};
 		set_texgen_vec4(tex_param, ((i != 0) ^ swap_txy), as_attr, 1);
 	}
 }

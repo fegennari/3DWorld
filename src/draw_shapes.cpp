@@ -143,12 +143,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 	}
 	pair<float, unsigned> faces[6];
 	for (unsigned i = 0; i < 6; ++i) faces[i].second = i;
-	vector3d tex_delta(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
 
-	if (platform_id >= 0) { // make texture scroll with platform
-		assert(platform_id < (int)platforms.size());
-		tex_delta -= platforms[platform_id].get_delta();
-	}
 	if (!back_face_cull) { // semi-transparent
 		for (unsigned i = 0; i < 6; ++i) {
 			unsigned const dim(i>>1), dir(i&1), d0((dim+1)%3), d1((dim+2)%3);
@@ -179,8 +174,8 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 			float a[4] = {0.0}, b[4] = {0.0};
 			a[t0] = tscale[0];
 			b[t1] = tscale[1];
-			a[3]  = tex_delta[t0]*tscale[0];
-			b[3]  = tex_delta[t1]*tscale[1];
+			a[3]  = texture_offset[t0]*tscale[0];
+			b[3]  = texture_offset[t1]*tscale[1];
 			set_texgen_vec4((cp.swap_txy ? b : a), 0, USE_ATTR_TEXGEN, 0);
 			set_texgen_vec4((cp.swap_txy ? a : b), 1, USE_ATTR_TEXGEN, 0);
 		}
@@ -208,21 +203,27 @@ bool camera_behind_polygon(point const *const points, int npoints) {
 }
 
 
-void draw_polygon(point const *points, int npoints, vector3d const &norm) { // occlusion culling?
+void coll_obj::set_poly_texgen(int tid, vector3d const &normal) const {
 
-	draw_simple_polygon(points, npoints, get_norm_camera_orient(norm, get_center(points, npoints)));
+	if (tid < 0) return; // texturing disabled
+	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
+	setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy, USE_ATTR_TEXGEN);
+}
+
+
+void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d const &normal) const { // occlusion culling?
+
+	set_poly_texgen(tid, normal);
+	draw_simple_polygon(points, npoints, get_norm_camera_orient(normal, get_center(points, npoints)));
 }
 
 
 void coll_obj::draw_extruded_polygon(int tid) const {
 
 	float const thick(fabs(thickness));
-	bool const textured(tid >= 0);
-	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
 	
 	if (thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
-		if (textured) setup_polygon_texgen(norm, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-		draw_polygon(points, npoints, norm);
+		draw_polygon(tid, points, npoints, norm);
 		return;
 	}
 	assert(points != NULL && (npoints == 3 || npoints == 4));
@@ -276,8 +277,7 @@ void coll_obj::draw_extruded_polygon(int tid) const {
 				reverse(pts[s].begin(), pts[s].end());
 				norm2.negate();
 			}
-			if (textured) setup_polygon_texgen(norm2, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-			draw_polygon(&(pts[s].front()), npoints, norm2); // draw bottom surface
+			draw_polygon(tid, &(pts[s].front()), npoints, norm2); // draw bottom surface
 			if (!s) reverse(pts[s].begin(), pts[s].end());
 		}
 		else { // draw sides
@@ -286,8 +286,7 @@ void coll_obj::draw_extruded_polygon(int tid) const {
 
 			if (!bfc || !camera_behind_polygon(side_pts, 4)) {
 				vector3d const norm2(get_poly_norm(side_pts));
-				if (textured) setup_polygon_texgen(norm2, tscale, xlate, cp.swap_txy, USE_ATTR_TEXGEN);
-				draw_polygon(side_pts, npoints, norm2);
+				draw_polygon(tid, side_pts, npoints, norm2);
 			}
 		}
 	}
