@@ -60,7 +60,7 @@ class coll_obj : public cube_t { // size = 248
 public:
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
 	char type, destroy, status;
-	float radius, radius2, thickness, volume;
+	float radius, radius2, thickness, volume, v_fall;
 	int counter, id, platform_id, group_id, waypt_id;
 	short npoints;
 	unsigned char last_coll, coll_type;
@@ -70,8 +70,8 @@ public:
 	vector<int> occluders;
 
 	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), radius(0.0), radius2(0.0), thickness(0.0),
-		volume(0.0), counter(0), id(-1), platform_id(-1), group_id(-1), waypt_id(-1), npoints(0), last_coll(0), coll_type(0), fixed(0),
-		is_billboard(0), falling(0), norm(zero_vector), texture_offset(zero_vector) {}
+		volume(0.0), v_fall(0.0), counter(0), id(-1), platform_id(-1), group_id(-1), waypt_id(-1), npoints(0), last_coll(0),
+		coll_type(0), fixed(0), is_billboard(0), falling(0), norm(zero_vector), texture_offset(zero_vector) {}
 	void init();
 	void clear_internal_data();
 	void calc_size();
@@ -91,7 +91,7 @@ public:
 	bool subdiv_fixed_cube(vector<coll_obj> &cobjs);
 	int  intersects_cobj(coll_obj const &c, float toler=0.0) const;
 	int  is_anchored() const;
-	void shift_by(vector3d const &vd, bool force=0);
+	void shift_by(vector3d const &vd, bool force=0, bool no_texture_offset=0);
 	void add_to_platform() const;
 	bool dynamic_shadows_only() const;
 	void add_shadow(unsigned light_sources, bool dynamic) const;

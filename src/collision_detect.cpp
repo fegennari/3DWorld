@@ -452,6 +452,7 @@ int coll_obj::add_coll_cobj() {
 	coll_objects[cid].destroy  = destroy;
 	coll_objects[cid].fixed    = fixed;
 	coll_objects[cid].group_id = group_id;
+	coll_objects[cid].v_fall   = v_fall;
 	coll_objects[cid].texture_offset = texture_offset;
 	return cid;
 }
@@ -850,6 +851,7 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 	cobj.id          = index;
 	cobj.radius      = radius;
 	cobj.radius2     = radius2;
+	cobj.v_fall      = 0.0;
 	cobj.type        = type;
 	cobj.platform_id = platform_id;
 	cobj.group_id    = -1;

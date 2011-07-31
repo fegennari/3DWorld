@@ -646,7 +646,7 @@ void shift_all_objs(vector3d const &vd) {
 }
 
 
-void coll_obj::shift_by(vector3d const &vd, bool force) {
+void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) {
 
 	if (!fixed && !force) return;
 
@@ -654,7 +654,7 @@ void coll_obj::shift_by(vector3d const &vd, bool force) {
 		points[j] += vd;
 	}
 	cube_t::translate(vd);
-	texture_offset -= vd;
+	if (!no_texture_offset) texture_offset -= vd;
 }
 
 
@@ -1371,7 +1371,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 						assert(0);
 					}
 				}
-				cobj.shift_by(pos);
+				cobj.shift_by(pos, 1, 1);
 				cobj.add_to_vector(fixed_cobjs, cobj.type);
 			}
 			break;

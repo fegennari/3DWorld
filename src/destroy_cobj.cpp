@@ -14,7 +14,7 @@ int destroy_thresh(0);
 vector<unsigned> falling_cobjs;
 
 extern bool scene_dlist_invalid;
-extern float fticks, zmin;
+extern float tstep, zmin, base_gravity;
 extern int cobj_counter, coll_id[];
 extern obj_type object_types[];
 extern obj_group obj_groups[];
@@ -360,10 +360,9 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 void check_falling_cobjs() {
 
-	// FIXME: add velocity/acceleration
 	if (falling_cobjs.empty()) return; // nothing to do
 	//RESET_TIME;
-	float const dz(-0.001*fticks);
+	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
 	set<unsigned> anchored[2]; // {unanchored, anchored}
 
 	for (unsigned i = 0; i < falling_cobjs.size(); ++i) {
@@ -379,7 +378,8 @@ void check_falling_cobjs() {
 		// translate, add the new, then remove the old
 		coll_objects[ix].clear_internal_data();
 		coll_obj cobj(coll_objects[ix]); // make a copy
-		cobj.shift_by(point(0.0, 0.0, dz), 1); // translate down
+		cobj.v_fall += accel; // terminal velocity?
+		cobj.shift_by(point(0.0, 0.0, tstep*cobj.v_fall), 1); // translate down
 		int const index(cobj.add_coll_cobj());
 		remove_coll_object(ix);
 		assert(ix != index);
