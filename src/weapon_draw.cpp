@@ -5,6 +5,8 @@
 #include "gameplay.h"
 #include "physics_objects.h"
 
+bool const USE_SMAP = 0;
+
 
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
@@ -22,6 +24,11 @@ extern int coll_id[];
 extern blood_spot blood_spots[];
 extern player_state *sstates;
 
+
+
+bool use_smap_here() {
+	return (USE_SMAP && shadow_map_enabled());
+}
 
 
 void laser_beam::draw() const {
@@ -383,7 +390,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			do_texture = (object_types[oid].tid >= 0);
 		}
 		int const cobj(weapons[wid].need_weapon ? cid : -1);
-		bool const shadowed(!is_visible_to_light_cobj(pos0, light, cradius, cobj, 0));
+		bool const shadowed(!use_smap_here() && !is_visible_to_light_cobj(pos0, light, cradius, cobj, 0));
 
 		switch (wid) {
 		case W_UNARMED:
@@ -431,7 +438,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 				for (float val=0.0; val < len; val += dv) { // draw extendor - large, split into smaller cylinders
 					point const cpos(pos0 + dir*(len - val - 0.5*dv)); // center of the segment
-					bool const shadowed2(!is_visible_to_light_cobj(cpos, light, cradius, cobj, 0));
+					bool const shadowed2(!use_smap_here() && !is_visible_to_light_cobj(cpos, light, cradius, cobj, 0));
 					set_color_alpha(colorRGBA(0.49, 0.51, 0.53, 1.0), cpos, alpha, shadowed2);
 					draw_fast_cylinder(point(0.0, 0.0, len-val), point(0.0, 0.0, max(0.0f, len-val-dv)), 0.0025, 0.0025, ndiv2, 0, 0);
 				}
@@ -757,7 +764,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
 
 	if (draw_pass == 0) {
-		bool const use_smap(0);//shadow_map_enabled()); // FIXME: not correct for transforms
+		bool const use_smap(use_smap_here()); // FIXME: not correct for transforms
 		setup_enabled_lights();
 		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", 0, d); // VS/FS
 		set_bool_shader_prefix("use_texgen", 0, 0); // VS
