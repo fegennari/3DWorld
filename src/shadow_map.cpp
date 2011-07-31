@@ -145,7 +145,7 @@ pos_dir_up get_light_pdu(point const &lpos, bool set_matrix) {
 	vector3d up_dir(zero_vector);
 	up_dir[get_min_dim(light_dir)] = 1.0;
 	float const angle(atan2(scene_radius2, dist));
-	pos_dir_up const pdu(lpos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), dist-scene_radius, dist+scene_radius, 1.0);
+	pos_dir_up const pdu(lpos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), max(NEAR_CLIP, dist-scene_radius), dist+scene_radius, 1.0);
 
 	if (set_matrix) {
 		glMatrixMode(GL_PROJECTION);
