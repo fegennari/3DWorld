@@ -1,4 +1,5 @@
 const int NUM_LIGHT_SRC = 2;
+uniform float z_bias = 0.0;
 uniform int sm_tu_id[NUM_LIGHT_SRC];
 
 #if 1
@@ -7,7 +8,7 @@ uniform sampler2D sm_tex[NUM_LIGHT_SRC];
 float get_shadow_map_weight(in vec4 pos, in int light) {
 	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id[light]] * pos;
 	shadow_coord /= shadow_coord.w;
-	shadow_coord.z -= 0.0005; // Used to lower moiré pattern and self-shadowing
+	shadow_coord.z -= z_bias; // Used to lower moiré pattern and self-shadowing
 	float dist = texture2D(sm_tex[light], shadow_coord.st).z;
 	return ((dist < shadow_coord.z) ? 0.0 : 1.0);
 }
@@ -17,7 +18,7 @@ uniform sampler2DShadow sm_tex[NUM_LIGHT_SRC];
 float get_shadow_map_weight(in vec4 pos, in int light) {
 	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id[light]] * pos;
 	// FIXME: using more than one sampler2DShadow, or having a non-const sampler choice results in a GL error
-	return shadow2DProj(sm_tex[0], shadow_coord + vec4(0,0,-0.0005*shadow_coord.w,0)).r;
+	return shadow2DProj(sm_tex[0], shadow_coord + vec4(0, 0, -z_bias*shadow_coord.w, 0)).r;
 }
 #endif
 

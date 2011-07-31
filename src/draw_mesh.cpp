@@ -475,7 +475,7 @@ void display_mesh() { // fast array version
 			set_dlights_booleans(1, 1); // FS
 			set_bool_shader_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 			unsigned const p(set_shader_prog("fog.part+texture_gen.part+draw_mesh", "ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh"));
-			if (shadow_map_enabled()) set_smap_shader_for_all_lights(p);
+			if (shadow_map_enabled()) set_smap_shader_for_all_lights(p, 0.001);
 			setup_fog_scale(p);
 			add_uniform_int(p, "tex0", 0);
 			add_uniform_int(p, "tex1", 1);

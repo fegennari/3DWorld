@@ -5,7 +5,7 @@
 #include "gameplay.h"
 #include "physics_objects.h"
 
-bool const USE_SMAP = 0;
+bool const USE_SMAP = 1;
 
 
 vector<int> weap_cobjs;
@@ -773,7 +773,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 		setup_fog_scale(p);
 		add_uniform_float(p, "min_alpha", 0.9*alpha);
 		add_uniform_int(p, "tex0", 0);
-		if (use_smap) set_smap_shader_for_all_lights(p);
+		if (use_smap) set_smap_shader_for_all_lights(p, 0.005); // larger bias to reduce self-shadowing artifacts when the player moves across the shadow map/scene
 		select_texture(WHITE_TEX, 0); // always textured
 	}
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
