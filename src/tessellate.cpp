@@ -193,9 +193,18 @@ bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 		return 0;
 	}
 	tessellate_polygon(poly_pts);
+
+	// calculate polygon normal (assuming planar polygon)
+	vector3d n(get_poly_norm(&poly_pts[0])), cp_sum(zero_vector);
+
+	for (unsigned i = 0; i < npts; ++i) {
+		cp_sum += cross_product(poly_pts[i], poly_pts[(i+1)%npts]);
+	}
+	if (dot_product(n, cp_sum) < 0.0) n *= -1.0;
 	
 	for (unsigned i = 0; i < triangles.size(); ++i) {
 		if (!is_poly_valid(triangles[i].pts)) continue; // invalid zero area triangle - skip
+		if (dot_product(get_poly_norm(triangles[i].pts), n) < 0.0) swap(triangles[i].pts[0], triangles[i].pts[2]); // invert draw order
 		split_polygons.push_back(cobj);
 		split_polygons.back().npoints = 3; // triangles
 		UNROLL_3X(split_polygons.back().points[i_] = triangles[i].pts[i_];)

@@ -13,6 +13,7 @@
 float const NDIV_SCALE = 200.0;
 
 
+extern bool group_back_face_cull;
 extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
 extern float temperature, tfticks;
 extern unsigned ALL_LT[];
@@ -216,6 +217,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	point center;
 	float brad;
 	bounding_sphere(center, brad);
+	if (group_back_face_cull && group_id >= 0 && dot_product_ptv(norm, get_camera_pos(), center) < 0.0) return;
 	if (!sphere_in_camera_view(center, brad, 0))              return;
 	if (type == COLL_CUBE && !camera_pdu.cube_visible(*this)) return;
 	
