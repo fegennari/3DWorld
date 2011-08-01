@@ -250,6 +250,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		last_tid = tid;
 	}
 	if (start_group) {
+		// Note: this can be done between the begin/end of a group and is more efficient in some cases, but less efficient in others
 		vector3d tex_dir(0,0,0);
 		tex_dir[pri_dim] = 1.0;
 		set_poly_texgen(tid, tex_dir);

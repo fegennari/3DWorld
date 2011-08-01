@@ -1890,7 +1890,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				assert((unsigned)ix < coll_objects.size());
 				coll_obj &c(coll_objects[ix]);
 				
-				if (has_lt_atten) { // we only support cubes for now
+				if (has_lt_atten) { // we only support cubes for now (Note: may not be compatible with groups)
 					float const light_atten((c.type == COLL_CUBE) ? c.cp.light_atten : 0.0);
 
 					if (light_atten != last_light_atten) {
@@ -2280,6 +2280,9 @@ void particle_cloud::draw() const {
 
 void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 
+	point const camera(get_camera_pos());
+	if (dist_less_than(camera, p, max(NEAR_CLIP, 4.0f*r))) return; // too close to the camera
+
 	if (!is_fire()) { // fire has its own emissive lighting
 		int cindex;
 		float rad, dist, t;
@@ -2301,7 +2304,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 	}
 	c.do_glColor();
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
-	draw_billboard(p, get_camera_pos(), up_vector, 4.0*r, 4.0*r);
+	draw_billboard(p, camera, up_vector, 4.0*r, 4.0*r);
 }
 
 
