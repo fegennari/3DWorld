@@ -1800,6 +1800,15 @@ void setup_object_render_data() {
 }
 
 
+void end_group(int &last_group_id) {
+
+	if (last_group_id >= 0) {
+		glEnd();
+		last_group_id = -1;
+	}
+}
+
+
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
@@ -1839,6 +1848,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				}
 			}
 		}
+		end_group(last_group_id);
 	}
 	if (draw_trans) { // called second
 		if (smoke_exists) {
@@ -1862,6 +1872,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			int const ix(draw_last[i].second);
 
 			if (ix < 0) { // portal
+				end_group(last_group_id);
+
 				if (has_lt_atten && last_light_atten != 0.0) {
 					set_uniform_float(ulocs[0], 0.0);
 					last_light_atten = 0.0;
@@ -1894,10 +1906,10 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				c.draw_cobj(ix, last_tid, last_group_id, last_pri_dim);
 			}
 		}
+		end_group(last_group_id);
 		disable_blend();
 		draw_last.resize(0);
 	}
-	if (last_group_id >= 0) glEnd(); // end group
 	end_smoke_shaders(orig_fog_color);
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();
