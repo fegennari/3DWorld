@@ -182,7 +182,7 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 		}
 	}
 	assert(!no_weap_or_ammo());
-	if (weapon == W_BALL && (rand()&15) != 0) return; // wait to throw
+	if (weapon == W_BALL && !UNLIMITED_WEAPONS && (rand()&15) != 0) return; // wait to throw
 	point pos(smiley.pos);
 	bool const underwater(is_underwater(pos));
 	if (temperature <= W_FREEZE_POINT && underwater) return; // under ice
