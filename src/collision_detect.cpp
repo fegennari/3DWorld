@@ -28,7 +28,7 @@ vector<coll_obj> coll_objects;
 coll_cell_opt_batcher cco_batcher;
 
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
-extern int camera_in_air, invalid_collision, mesh_scale_change, camera_invincible, flight, do_run, cobj_counter;
+extern int camera_in_air, invalid_collision, mesh_scale_change, camera_invincible, flight, do_run, cobj_counter, num_smileys;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
 extern double camera_zh;
 extern dwobject def_objects[];
@@ -1220,7 +1220,7 @@ void vert_coll_detector::check_cobj(int index) {
 			// the coll_top part isn't really right - we want to check for collsion with another object above
 			else if ((coll_bot && pf.get_last_delta().z < 0.0) /*|| (coll_top && pf.get_last_delta().z > 0.0)*/) {
 				if (player) {
-					int const ix((type == CAMERA) ? -1 : obj_index);
+					int const ix((type == CAMERA) ? CAMERA_ID : obj_index);
 					smiley_collision(ix, -2, vector3d(0.0, 0.0, -1.0), pos, 2000.0, CRUSHED); // lots of damage
 				} // other objects?
 			}
@@ -1528,6 +1528,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 {
 	int const xpos(get_xpos(pos.x) - xoff), ypos(get_ypos(pos.y) - yoff);
 	bool const is_camera(type == CAMERA), is_player(is_camera || (type == SMILEY && id >= 0));
+	if (is_player) assert(id >= CAMERA_ID && id < num_smileys);
 
 	if (point_outside_mesh(xpos, ypos)) {
 		if (is_player) sstates[id].fall_counter = 0;

@@ -169,7 +169,7 @@ bool wpt_goal::is_reachable() const {
 bool check_step_dz(point &cur, point const &lpos, float radius) {
 
 	float zvel(0.0);
-	int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, -2, 0, 0, 1, 1));
+	int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, 0, 0, 0, 1, 1));
 	if (ret == 3)                                      return 0; // stuck
 	if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)       return 0; // too high of a step
 	if ((cur.z - lpos.z) < -MAX_FALL_DIST_MULT*radius) return 0; // too far  of a drop
@@ -179,8 +179,7 @@ bool check_step_dz(point &cur, point const &lpos, float radius) {
 
 class waypoint_builder {
 
-	float radius;
-	vector<coll_obj> *cur_cobjs;
+	float const radius;
 
 	bool is_waypoint_valid(point pos, int coll_id) const {
 		if (pos.z < zmin || !is_over_mesh(pos)) return 0;
@@ -230,7 +229,7 @@ class waypoint_builder {
 	}
 
 public:
-	waypoint_builder(void) : radius(object_types[WAYPOINT].radius), cur_cobjs(NULL) {}
+	waypoint_builder(void) : radius(object_types[WAYPOINT].radius) {assert(radius > 0.0);}
 
 	void add_one_cobj_wpt(coll_obj &c, bool connect) {
 		if (c.status != COLL_STATIC || c.platform_id >= 0) return; // only static objects (not platforms) - use c.truly_static()?
@@ -506,17 +505,22 @@ public:
 		float const step_size(step_size_mult*radius);
 		float const dmag_inv(1.0/dir.xy_mag());
 		point cur(start);
+		assert(radius    > 0.0);
+		assert(step_size > 0.0);
 
 		while (!dist_less_than(cur, end, 0.8*radius)) {
+			assert(radius    > 0.0);
+			assert(step_size > 0.0);
 			vector3d const delta((end - cur).get_norm());
 			point lpos(cur);
 			cur += delta*step_size;
-			if (!check_step_dz(cur, lpos, radius))               return 0;
+			if (!check_step_dz(cur, lpos, radius)) return 0;
 			check_cobj_placement(cur, -1, check_uw);
 			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress (too strict? local drops in z?)
 			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv); // point-line dist
-			if (d > 2.0*radius)                                  return 0; // path deviation too long
+			if (d > 2.0*radius)    return 0; // path deviation too long
 			++tot_steps;
+			if (tot_steps > 10000) return 0; // too many steps
 			//waypoints.push_back(waypoint_t(cur)); // testing
 		}
 		return 1; // success
@@ -751,13 +755,14 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 	float min_dist(0.0);
 
 	for (unsigned i = 0; i < oddatav.size(); ++i) {
+		assert((unsigned)oddatav[i].id < waypoints.size());
 		cands[i] = make_pair(p2p_dist(pos, waypoints[oddatav[i].id].pos), oddatav[i].id);
 	}
 	sort(cands.begin(), cands.end());
 
 	for (unsigned i = 0; i < cands.size(); ++i) {
 		unsigned const id(cands[i].second);
-		point const &wpos(waypoints[id].pos);
+		point const wpos(waypoints[id].pos);
 		float const dist(cands[i].first);
 		if (min_dist > 0.0 && dist > 2.0*min_dist) break; // we're done
 		int cindex(-1);
