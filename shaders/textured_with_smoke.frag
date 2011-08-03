@@ -114,9 +114,11 @@ void main()
 		vec4 tex_val  = texture3D(smoke_tex, pos.zxy); // rgba = {color.rgb, smoke}
 		float smoke   = SMOKE_SCALE*tex_val.a*step_weight;
 		vec3 rgb_comp = (tex_val.rgb * gl_Fog.color.rgb);
-		color = ((!keep_alpha && color.a == 0.0) ? vec4(rgb_comp, smoke) : mix(color, vec4(rgb_comp, (keep_alpha ? color.a : 1.0)), smoke));
-		pos  += delta*step_weight; // should be in [0.0, 1.0] range
-		step_weight = 1.0;
+		float alpha   = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
+		float mval    = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
+		color         = mix(color, vec4(rgb_comp, alpha), mval);
+		pos          += delta*step_weight; // should be in [0.0, 1.0] range
+		step_weight   = 1.0;
 	}
 	if (color.a <= min_alpha) discard;
 	gl_FragColor = color;
