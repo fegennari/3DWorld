@@ -815,6 +815,12 @@ void update_mesh(float dms, bool do_regen_trees) { // called when mesh_scale cha
 }
 
 
+bool is_under_mesh(point const &p) {
+
+	return (p.z < zbottom || p.z < /*mesh_height[y][x]*/interpolate_mesh_zval(p.x, p.y, 0.0, 0, 1));
+}
+
+
 bool read_mesh(const char *filename, float zmm) {
 
 	if (filename == NULL) {

@@ -134,7 +134,6 @@ struct flow_cache_e { // size = 16
 };
 
 
-bool is_under_mesh(point const &p);
 void compute_ray_trace_lighting_global();
 void compute_ray_trace_lighting_local();
 

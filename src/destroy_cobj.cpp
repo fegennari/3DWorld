@@ -401,6 +401,7 @@ void check_falling_cobjs() {
 
 bool is_pt_under_mesh(point const &p) {
 
+	//return is_under_mesh(p); // too slow?
 	int const xpos(get_xpos(p.x)), ypos(get_ypos(p.y));
 	if (point_outside_mesh(xpos, ypos)) return 0;
 	return (p.z < mesh_height[ypos][xpos]);

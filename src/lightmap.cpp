@@ -82,12 +82,6 @@ inline void reset_lighting(float &mesh_light, float &vals, float &vscale) {
 }
 
 
-bool is_under_mesh(point const &p) {
-
-	return (p.z < zbottom || p.z < /*mesh_height[y][x]*/interpolate_mesh_zval(p.x, p.y, 0.0, 0, 1));
-}
-
-
 // *** LIGHT_SOURCE IMPLEMENTATION ***
 
 

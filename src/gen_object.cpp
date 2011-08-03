@@ -225,7 +225,7 @@ void gen_line_of_bubbles(point const &p1, point const &p2, float r, colorRGBA co
 bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 				   float r, float den, float dark, float dam, int src, int dt, bool as)
 {
-	if (!animate2 || is_underwater(pos)) return 0;
+	if (!animate2 || is_underwater(pos) || is_under_mesh(pos)) return 0;
 	unsigned const chosen();
 	part_clouds[part_clouds.choose_element()].gen(pos, bc, iv, r, den, dark, dam, src, dt, as);
 	return 1;

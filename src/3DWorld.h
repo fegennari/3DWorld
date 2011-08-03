@@ -1291,6 +1291,7 @@ void reset_offsets();
 bool is_mesh_disabled(int xpos, int ypos);
 float get_water_z_height();
 void update_mesh(float dms, bool do_regen_trees);
+bool is_under_mesh(point const &p);
 bool read_mesh(const char *filename, float zmm=0.0);
 bool write_mesh(const char *filename);
 bool load_state(const char *filename);
