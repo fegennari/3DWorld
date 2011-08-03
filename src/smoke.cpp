@@ -85,7 +85,7 @@ void add_smoke(point const &pos, float val) {
 	lmcell *const lmc(lmap_manager.get_lmcell(pos));
 	if (!lmc) return;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-	if (point_outside_mesh(xpos, ypos) || pos.z >= v_collision_matrix[ypos][xpos].zmax) return; // above all cobjs/outside
+	if (point_outside_mesh(xpos, ypos) || pos.z >= v_collision_matrix[ypos][xpos].zmax || pos.z < mesh_height[ypos][xpos]) return; // above all cobjs/outside
 	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return;
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
 	if (smoke_man.is_smoke_visible(pos)) smoke_exists = 1;
@@ -146,7 +146,7 @@ void distribute_smoke() { // called at most once per frame
 		smoke_man.adj_bbox();
 		smoke_visible = smoke_man.smoke_vis;
 		smoke_exists  = smoke_man.enabled;
-		cur_smoke_bb  = smoke_man.bbox;
+		cur_smoke_bb  = smoke_man.bbox; // cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax))
 		next_smoke_man.reset();
 	}
 	for (int y = cur_skip; y < MESH_Y_SIZE; y += SMOKE_SKIPVAL) { // split the computation across several frames

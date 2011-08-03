@@ -985,7 +985,7 @@ class vert_coll_detector {
 
 	dwobject &obj;
 	int type, iter;
-	bool player, already_bounced, skip_dynamic;
+	bool player, already_bounced, skip_dynamic, only_drawn;
 	int coll, obj_index, do_coll_funcs, only_cobj;
 	unsigned cdir, lcoll;
 	float z_old, o_radius, z1, z2, c_zmax, c_zmin;
@@ -999,10 +999,11 @@ class vert_coll_detector {
 	void init_reset_pos();
 public:
 	vert_coll_detector(dwobject &obj_, int obj_index_, int do_coll_funcs_, int iter_,
-		vector3d *cnorm_, vector3d const &mdir=zero_vector, bool skip_dynamic_=0, int only_cobj_=-1) :
+		vector3d *cnorm_, vector3d const &mdir=zero_vector, bool skip_dynamic_=0, bool only_drawn_=0, int only_cobj_=-1) :
 	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY || type == WAYPOINT), already_bounced(0),
-	skip_dynamic(skip_dynamic_), coll(0), obj_index(obj_index_), do_coll_funcs(do_coll_funcs_), only_cobj(only_cobj_), cdir(0),
-	lcoll(0), z_old(obj.pos.z), cnorm(cnorm_), pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity) {}
+	skip_dynamic(skip_dynamic_), only_drawn(only_drawn_), coll(0), obj_index(obj_index_), do_coll_funcs(do_coll_funcs_),
+	only_cobj(only_cobj_), cdir(0), lcoll(0), z_old(obj.pos.z), cnorm(cnorm_), pos(obj.pos), pold(obj.pos), motion_dir(mdir),
+	obj_vel(obj.velocity) {}
 	int check_coll();
 };
 
@@ -1026,6 +1027,7 @@ void vert_coll_detector::check_cobj(int index) {
 	if (player           && obj.coll_id == cobj.id)  return; // can't collide with yourself
 	if (type == LANDMINE && invalid_coll(obj, cobj)) return;
 	if (skip_dynamic && cobj.status == COLL_DYNAMIC) return;
+	if (only_drawn   && !cobj.cp.draw)               return;
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
 	if (z1 > zmaxc || z2 < zminc)                    return;
 	if (pos.x < (cobj.d[0][0]-o_radius) || pos.x > (cobj.d[0][1]+o_radius)) return;
@@ -1396,9 +1398,9 @@ int vert_coll_detector::check_coll() {
 
 // 0 = non vert coll, 1 = X coll, 2 = Y coll, 3 = X + Y coll
 int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm,
-	vector3d const &mdir, bool skip_dynamic, int only_cobj)
+	vector3d const &mdir, bool skip_dynamic, bool only_drawn, int only_cobj)
 {
-	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic, only_cobj);
+	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic, only_drawn, only_cobj);
 	return vcd.check_coll();
 }
 

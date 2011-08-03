@@ -1304,7 +1304,7 @@ void particle_cloud::apply_physics(unsigned i) {
 	if (status == 0) return;
 
 	if (pos.z >= (CLOUD_CEILING + zmax_est) || radius > MAX_PART_CLOUD_RAD || is_underwater(pos)) { // smoke dies
-		destroy();
+		status = 0;
 		return;
 	}
 	vector3d v_flow(get_flow_velocity(pos));
@@ -1319,9 +1319,13 @@ void particle_cloud::apply_physics(unsigned i) {
 		obj.pos += (vel + init_vel)*(tstep/(double)num_smoke_advance);
 		vector3d cnorm;
 		
-		if (obj.check_vert_collision(0, 0, j, &cnorm, all_zeros, 1)) { // skip dynamic
-			// destroy the smoke if it's not damaging and hits the bottom of an object
-			if (cnorm.z < 0.5 && damage == 0.0) destroy();
+		if (obj.check_vert_collision(0, 0, j, &cnorm, all_zeros, 1, 1)) { // skip dynamic, only_drawn
+			// destroy the smoke if it's not damaging and hits the bottom of a static drawn object (excludes trees and scenery)
+			if (cnorm.z < 0.5 && damage == 0.0) {
+				if (acc_smoke && time > 0) add_smoke(pos, 1.0);
+				status = 0;
+				return;
+			}
 			coll = 1;
 			break;
 		}
@@ -1349,18 +1353,11 @@ void particle_cloud::apply_physics(unsigned i) {
 		for (unsigned i = 0; i < fires.size(); ++i) {
 			if (fires[i].status != 0 && dist_less_than(fires[i].pos, pos, radius)) {
 				create_explosion(pos, source, 0, 10*damage*rscale, 4*radius, BLAST_RADIUS, 0);
-				destroy();
-				break;
+				status = 0;
+				return;
 			}
 		}
 	}
-}
-
-
-void particle_cloud::destroy() {
-
-	if (acc_smoke && time > 0) add_smoke(pos, 1.0);
-	status = 0;
 }
 
 
