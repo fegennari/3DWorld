@@ -20,9 +20,9 @@ const float SMOKE_SCALE = 0.25;
 
 vec3 add_light(in int ix, in vec3 off, in vec3 scale, in vec3 n, in vec3 source, in vec3 dest) {
 
-	float lscale = 1.0;
+	float nscale = (use_shadow_map ? get_shadow_map_weight(epos, ix) : 1.0);
 
-	if (smoke_enabled && dynamic_smoke_shadows && source != dest) {
+	if (smoke_enabled && dynamic_smoke_shadows && source != dest && nscale > 0.0) {
 		vec3 dir      = dest - source;
 		vec3 pos      = (source - off)/scale;
 		vec3 delta    = normalize(dir)*step_delta/scale;
@@ -34,12 +34,12 @@ vec3 add_light(in int ix, in vec3 off, in vec3 scale, in vec3 n, in vec3 source,
 		for (int i = 0; i < num_steps; ++i) {
 			vec3 p = clamp(pos, 0.0, 1.0); // should be in [0.0, 1.0] range
 			float smoke = SMOKE_SCALE*texture3D(smoke_tex, p.zxy).a*step_weight;
-			lscale = mix(lscale, 0.0, smoke);
+			nscale = mix(nscale, 0.0, smoke);
 			pos   += delta*step_weight;
 			step_weight = 1.0;
 		}
 	}
-	return lscale * add_light_comp_pos_smap(n, epos, ix).rgb;
+	return add_light_comp_pos(nscale*n, epos, ix).rgb;
 }
 
 // Note: This may seem like it can go into the vertex shader as well,
@@ -72,17 +72,16 @@ void main()
 	vec4 texel  = texture2D(tex0, gl_TexCoord[0].st);
 	float alpha = gl_Color.a;
 
-	if (do_lt_atten /*&& light_atten > 0.0*/) { // account for light attenuating/reflecting semi-transparent materials
-		vec3 view_vec = vpos - eye;
-		vec3 far_pt   = vpos + 100.0*view_vec/length(view_vec); // move it far away
-		pt_pair res   = clip_line(vpos, far_pt, cube_bb);
-		float dist    = length(res.v1 - res.v2);
-		float atten   = exp(-light_atten*dist);
-		alpha += (1.0 - alpha)*(1.0 - atten);
-	}
 	if (do_lt_atten) {
 		vec3 v_inc = eye - vpos;
-		
+
+		//if (light_atten > 0.0) { // account for light attenuating/reflecting semi-transparent materials
+			vec3 far_pt   = vpos - 100.0*v_inc/length(v_inc); // move it far away
+			pt_pair res   = clip_line(vpos, far_pt, cube_bb);
+			float dist    = length(res.v1 - res.v2);
+			float atten   = exp(-light_atten*dist);
+			alpha += (1.0 - alpha)*(1.0 - atten);
+		//}
 		if (refract_ix != 1.0 && dot(normal, v_inc) > 0.0) { // entering ray in front surface
 			float reflect_w = get_fresnel_reflection(normalize(v_inc), normalize(normal), 1.0, refract_ix);
 			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha
