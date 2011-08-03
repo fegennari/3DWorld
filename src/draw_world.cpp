@@ -1888,7 +1888,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			}
 			else { // cobj
 				assert((unsigned)ix < coll_objects.size());
-				coll_obj &c(coll_objects[ix]);
+				coll_obj const &c(coll_objects[ix]);
 				
 				if (has_lt_atten) { // we only support cubes for now (Note: may not be compatible with groups)
 					float const light_atten((c.type == COLL_CUBE) ? c.cp.light_atten : 0.0);

@@ -80,7 +80,7 @@ public:
 	void set_npoints();
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim);
+	void draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim) const;
 	int  simple_draw(int ndiv, int in_cur_prim=PRIM_DISABLED, bool no_normals=0, bool in_dlist=0) const;
 	void add_to_vector(vector<coll_obj> &cobjs, int type_);
 	void check_if_cube();

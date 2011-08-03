@@ -210,7 +210,7 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 }
 
 
-void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim) { // non-const: modifies shadow state
+void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim) const {
 
 	if (no_draw()) return;
 	assert(status != COLL_FREED && !disabled());
