@@ -32,10 +32,9 @@ vec3 add_light(in int ix, in vec3 off, in vec3 scale, in vec3 n, in vec3 source,
 	
 		// smoke volume iteration using 3D texture, light0 to vposl
 		for (int i = 0; i < num_steps; ++i) {
-			vec3 p = clamp(pos, 0.0, 1.0); // should be in [0.0, 1.0] range
-			float smoke = SMOKE_SCALE*texture3D(smoke_tex, p.zxy).a*step_weight;
+			float smoke = SMOKE_SCALE*texture3D(smoke_tex, pos.zxy).a*step_weight;
 			nscale = mix(nscale, 0.0, smoke);
-			pos   += delta*step_weight;
+			pos   += delta*step_weight; // should be in [0.0, 1.0] range
 			step_weight = 1.0;
 		}
 	}
@@ -59,8 +58,6 @@ void main()
 		vec3 n = normalize(eye_norm);
 		if (enable_light0) lit_color += add_light(0, off, scale, n, lpos0, vposl);
 		if (enable_light1) lit_color += add_light_comp_pos_smap(n, epos, 1).rgb;
-		//if (enable_light0) ADD_LIGHT(0);
-		//if (enable_light1) ADD_LIGHT(1);
 		if (enable_light2) ADD_LIGHT(2);
 		if (enable_light3) ADD_LIGHT(3);
 		if (enable_light4) ADD_LIGHT(4);
@@ -107,20 +104,18 @@ void main()
 	// smoke code
 	vec3 dir      = eye_c - vpos_c;
 	vec3 pos      = (vpos_c - off)/scale;
-	vec3 delta    = normalize(dir)*step_delta/scale;
 	float nsteps  = length(dir)/step_delta;
+	vec3 delta    = dir/(nsteps*scale);
 	int num_steps = 1 + min(1000, int(nsteps)); // round up
 	float step_weight = fract(nsteps);
 	
 	// smoke volume iteration using 3D texture, pos to eye
 	for (int i = 0; i < num_steps; ++i) {
-		vec3 p        = clamp(pos, 0.0, 1.0); // should be in [0.0, 1.0] range
-		vec4 tex_val  = texture3D(smoke_tex, p.zxy); // rgba = {color.rgb, smoke}
+		vec4 tex_val  = texture3D(smoke_tex, pos.zxy); // rgba = {color.rgb, smoke}
 		float smoke   = SMOKE_SCALE*tex_val.a*step_weight;
 		vec3 rgb_comp = (tex_val.rgb * gl_Fog.color.rgb);
-		color = ((!keep_alpha && color.a == 0.0) ? vec4(rgb_comp, smoke) :
-					mix(color, vec4(rgb_comp, (keep_alpha ? color.a : 1.0)), smoke));
-		pos  += delta*step_weight;
+		color = ((!keep_alpha && color.a == 0.0) ? vec4(rgb_comp, smoke) : mix(color, vec4(rgb_comp, (keep_alpha ? color.a : 1.0)), smoke));
+		pos  += delta*step_weight; // should be in [0.0, 1.0] range
 		step_weight = 1.0;
 	}
 	if (color.a <= min_alpha) discard;
