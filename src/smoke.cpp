@@ -26,6 +26,7 @@ vector<unsigned char> smoke_tex_data; // several MB
 
 extern bool disable_shaders;
 extern int animate2, display_mode;
+extern float czmin0;
 extern colorRGBA cur_ambient;
 extern lmap_manager_t lmap_manager;
 
@@ -146,7 +147,7 @@ void distribute_smoke() { // called at most once per frame
 		smoke_man.adj_bbox();
 		smoke_visible = smoke_man.smoke_vis;
 		smoke_exists  = smoke_man.enabled;
-		cur_smoke_bb  = smoke_man.bbox; // cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax))
+		cur_smoke_bb  = smoke_man.bbox; //cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
 		next_smoke_man.reset();
 	}
 	for (int y = cur_skip; y < MESH_Y_SIZE; y += SMOKE_SKIPVAL) { // split the computation across several frames
@@ -161,6 +162,17 @@ void distribute_smoke() { // called at most once per frame
 	}
 	cur_skip = (cur_skip+1) % SMOKE_SKIPVAL;
 	//PRINT_TIME("Distribute Smoke");
+}
+
+
+float get_smoke_at_pos(point const &pos) {
+
+	if (!DYNAMIC_SMOKE  || !smoke_exists)  return 0.0;
+	if (pos.z <= czmin0 || pos.z >= czmax) return 0.0;
+	int const x(get_xpos(pos.x)), y(get_ypos(pos.y)), z(get_zpos(pos.z));
+	if (point_outside_mesh(x, y) || z < 0 || z >= MESH_SIZE[2]) return 0.0;
+	lmcell const *const vldata(lmap_manager.vlmap[y][x]);
+	return ((vldata == NULL) ? 0.0 : vldata[z].smoke);
 }
 
 
