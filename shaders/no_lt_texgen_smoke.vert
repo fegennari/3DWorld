@@ -1,5 +1,5 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
-uniform float step_delta;
+uniform float half_dxy;
 
 attribute vec4 tex0_s, tex0_t;
 
@@ -27,7 +27,7 @@ void main()
 	eye_norm = normalize(gl_NormalMatrix * gl_Normal);
 	epos     = gl_ModelViewMatrix * gl_Vertex;
 	vpos     = gl_Vertex.xyz;
-	spos     = gl_Vertex.xyz + (0.25*step_delta)*normal; // move slightly away from the vertex
+	spos     = gl_Vertex.xyz + (0.25*half_dxy)*normal; // move slightly away from the vertex
 	eye      = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
 
 	if (!smoke_enabled) { // set t zero length vector

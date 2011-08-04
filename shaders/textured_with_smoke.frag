@@ -1,5 +1,5 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
-uniform float step_delta;
+uniform float step_delta, half_dxy;
 uniform sampler2D tex0;
 uniform sampler3D smoke_tex;
 uniform float min_alpha = 0.0;
@@ -28,11 +28,12 @@ vec3 add_light(in int ix, in vec3 off, in vec3 scale, in vec3 n, in vec3 source,
 		vec3 delta    = normalize(dir)*step_delta/scale;
 		float nsteps  = length(dir)/step_delta;
 		int num_steps = 1 + min(100, int(nsteps)); // round up
-		float step_weight = fract(nsteps);
+		float step_weight  = fract(nsteps);
+		float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
 	
 		// smoke volume iteration using 3D texture, light0 to vposl
 		for (int i = 0; i < num_steps; ++i) {
-			float smoke = SMOKE_SCALE*texture3D(smoke_tex, pos.zxy).a*step_weight;
+			float smoke = smoke_sscale*texture3D(smoke_tex, pos.zxy).a*step_weight;
 			nscale = mix(nscale, 0.0, smoke);
 			pos   += delta*step_weight; // should be in [0.0, 1.0] range
 			step_weight = 1.0;
@@ -107,12 +108,13 @@ void main()
 	float nsteps  = length(dir)/step_delta;
 	vec3 delta    = dir/(nsteps*scale);
 	int num_steps = 1 + min(1000, int(nsteps)); // round up
-	float step_weight = fract(nsteps);
+	float step_weight  = fract(nsteps);
+	float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
 	
 	// smoke volume iteration using 3D texture, pos to eye
 	for (int i = 0; i < num_steps; ++i) {
 		vec4 tex_val  = texture3D(smoke_tex, pos.zxy); // rgba = {color.rgb, smoke}
-		float smoke   = SMOKE_SCALE*tex_val.a*step_weight;
+		float smoke   = smoke_sscale*tex_val.a*step_weight;
 		vec3 rgb_comp = (tex_val.rgb * gl_Fog.color.rgb);
 		float alpha   = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
 		float mval    = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);

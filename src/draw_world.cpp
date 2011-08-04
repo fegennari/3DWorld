@@ -1757,12 +1757,14 @@ colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, 
 		set_multitex(1);
 		bind_3d_texture(smoke_tid);
 	}
+	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	add_uniform_int(p, "smoke_tex", 1);
 	set_multitex(0);
 	add_uniform_int(p, "tex0", 0);
 	add_uniform_float(p, "min_alpha", min_alpha);
 	add_uniform_float_array(p, "smoke_bb", &cur_smoke_bb.d[0][0], 6);
-	add_uniform_float(p, "step_delta", HALF_DXY);
+	add_uniform_float(p, "step_delta", step_delta_scale*HALF_DXY);
+	add_uniform_float(p, "half_dxy",   HALF_DXY);
 	if (use_shadow_map) set_smap_shader_for_all_lights(p);
 	//return change_fog_color(GRAY);
 
