@@ -336,17 +336,17 @@ void shader_t::filename_split(string const &fname, vector<string> &fns, char sep
 
 	stringstream ss(fname);
     string fn;
-    while(getline(ss, fn, sep)) fns.push_back(fn);
+    while (getline(ss, fn, sep)) fns.push_back(fn);
 }
 
 
 unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	
 	//RESET_TIME;
+	if (name.empty()) return 0; // none selected
 	int const shader_type_table   [3] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER_EXT};
 	string const shader_name_table[3] = {"vert", "frag", "geom"};
 	assert(type < 3);
-	if (name.empty()) return 0; // none selected
 	string const lookup_name(name + prepend_string[type]);
 	string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
 	if (it != loaded_shaders[type].end()) return it->second; // already loaded
