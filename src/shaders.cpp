@@ -2,7 +2,7 @@
 // by Frank Gennari
 // 11/1/10
 #include "GL/glew.h"
-#include "3DWorld.h"
+#include "shaders.h"
 #include "mesh.h" // for scene bounds
 #include <fstream>
 
@@ -12,11 +12,7 @@ bool const PRINT_SHADER = 0;
 bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
-
-unsigned active_program(0);
-string prepend_string[3]; // vertex=0, fragment=1, geometry=3
-string prog_name_suffix;
-vector<int> attrib_locs;
+shader_t *cur_shader = NULL;
 
 extern bool disable_shaders;
 
@@ -25,6 +21,7 @@ extern bool disable_shaders;
 
 
 char const *append_array_ix(string &s, unsigned i) {
+
 	assert(i <= 9);
 	s.push_back('[');
 	s.push_back('0'+i);
@@ -33,10 +30,9 @@ char const *append_array_ix(string &s, unsigned i) {
 }
 
 
-int get_uniform_loc(unsigned program, char const *const name) {
+int shader_t::get_uniform_loc(char const *const name) const {
 
 	if (disable_shaders) return 0;
-	if (program == 0) program = active_program;
 	assert(program && name);
 	int const loc(glGetUniformLocation(program, name));
 	//cout << "name: " << name << ", loc: " << loc << endl;
@@ -45,53 +41,52 @@ int get_uniform_loc(unsigned program, char const *const name) {
 }
 
 
-void set_uniform_float_array(int loc, float const *const val, unsigned num) {
+void shader_t::set_uniform_float_array(int loc, float const *const val, unsigned num) const {
 	if (loc >= 0) glUniform1fv(loc, num, val);
 }
 
-void set_uniform_float(int loc, float val) {
+void shader_t::set_uniform_float(int loc, float val) const {
 	if (loc >= 0) glUniform1f(loc, val);
 }
 
-void set_uniform_int(int loc, int val) {
+void shader_t::set_uniform_int(int loc, int val) const {
 	if (loc >= 0) glUniform1i(loc, val);
 }
 
-void set_uniform_vector3d(int loc, vector3d const &val) {
+void shader_t::set_uniform_vector3d(int loc, vector3d const &val) const {
 	if (loc >= 0) glUniform3fv(loc, 1, &val.x);
 }
 
-void set_uniform_color(int loc, colorRGBA const &val) {
+void shader_t::set_uniform_color(int loc, colorRGBA const &val) const {
 	if (loc >= 0) glUniform4fv(loc, 1, &val.red);
 }
 
 
-void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num) {
-	if (!disable_shaders) set_uniform_float_array(get_uniform_loc(program, name), val, num);
+void shader_t::add_uniform_float_array(char const *const name, float const *const val, unsigned num) const {
+	if (!disable_shaders) set_uniform_float_array(get_uniform_loc(name), val, num);
 }
 
-void add_uniform_float(unsigned program, char const *const name, float val) {
-	if (!disable_shaders) set_uniform_float(get_uniform_loc(program, name), val);
+void shader_t::add_uniform_float(char const *const name, float val) const {
+	if (!disable_shaders) set_uniform_float(get_uniform_loc(name), val);
 }
 
-void add_uniform_int(unsigned program, char const *const name, int val) {
-	if (!disable_shaders) set_uniform_int(get_uniform_loc(program, name), val);
+void shader_t::add_uniform_int(char const *const name, int val) const {
+	if (!disable_shaders) set_uniform_int(get_uniform_loc(name), val);
 }
 
-void add_uniform_vector3d(unsigned program, char const *const name, vector3d const &val) {
-	if (!disable_shaders) set_uniform_vector3d(get_uniform_loc(program, name), val);
+void shader_t::add_uniform_vector3d(char const *const name, vector3d const &val) const {
+	if (!disable_shaders) set_uniform_vector3d(get_uniform_loc(name), val);
 }
 
-void add_uniform_color(unsigned program, char const *const name, colorRGBA const &val) {
-	if (!disable_shaders) set_uniform_color(get_uniform_loc(program, name), val);
+void shader_t::add_uniform_color(char const *const name, colorRGBA const &val) const {
+	if (!disable_shaders) set_uniform_color(get_uniform_loc(name), val);
 }
 
 
 // unused, unfinished
-bool set_uniform_buffer_data(unsigned program, char const *name, float const *data, unsigned size) {
+bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsigned size) const {
 
 	if (disable_shaders) return 0;
-	if (program == 0) program = active_program;
 	assert(program && name);
 	assert(data && size);
 
@@ -143,9 +138,8 @@ bool set_uniform_buffer_data(unsigned program, char const *name, float const *da
 // *** attrib variables setup ***
 
 
-int get_attrib_loc(unsigned program, char const *const name) {
+int shader_t::get_attrib_loc(char const *const name) const {
 
-	if (program == 0) program = active_program;
 	assert(program && name);
 	int const loc(glGetAttribLocation(program, name));
 	assert(loc >= 0); // Note: if variable is unused, loc will be -1
@@ -153,24 +147,24 @@ int get_attrib_loc(unsigned program, char const *const name) {
 }
 
 
-unsigned register_attrib_name(unsigned program, char const *name) {
+void shader_t::register_attrib_name(char const *name, unsigned bind_ix) {
 
-	if (disable_shaders) return 0;
-	int const loc(get_attrib_loc(program, name));
-	unsigned const ix(attrib_locs.size());
-	attrib_locs.push_back(loc);
-	return ix;
+	if (disable_shaders) return;
+	assert(bind_ix < 100); // sanity check
+	int const loc(get_attrib_loc(name));
+	if (bind_ix >= attrib_locs.size()) attrib_locs.resize(bind_ix+1);
+	attrib_locs[bind_ix] = loc;
 }
 
 
-int attrib_loc_by_ix(unsigned ix) {
+int shader_t::attrib_loc_by_ix(unsigned ix) const {
 
 	assert(ix < attrib_locs.size());
 	return attrib_locs[ix]; // is it legal for this to return -1?
 }
 
 
-void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) {
+void shader_t::add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const {
 
 	if (disable_shaders) return;
 	int const loc(attrib_loc_by_ix(ix));
@@ -186,7 +180,7 @@ void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) {
 }
 
 
-void add_attrib_float(unsigned ix, float val) {
+void shader_t::add_attrib_float(unsigned ix, float val) const {
 
 	if (disable_shaders) return;
 	int const loc(attrib_loc_by_ix(ix));
@@ -194,7 +188,7 @@ void add_attrib_float(unsigned ix, float val) {
 }
 
 
-void add_attrib_int(unsigned ix, int val) {
+void shader_t::add_attrib_int(unsigned ix, int val) const {
 
 	if (disable_shaders) return;
 	int const loc(attrib_loc_by_ix(ix));
@@ -205,7 +199,7 @@ void add_attrib_int(unsigned ix, int val) {
 // *** other variables setup ***
 
 
-void setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
+void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
 	prog_name_suffix += ",el";
 
@@ -215,29 +209,29 @@ void setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
 		for (unsigned s = 0; s < 3; ++s) { // put into correct shader(s): V, F, G
 			if (shaders_enabled & (1<<s)) {
-				set_bool_shader_prefix((string("enable_light") + char('0'+i)), (enabled != 0), s);
+				set_bool_prefix((string("enable_light") + char('0'+i)), (enabled != 0), s);
 			}
 		}
 	}
 }
 
 
-void setup_scene_bounds(unsigned p) {
+void shader_t::setup_scene_bounds() const {
 
-	add_uniform_float(p, "x_scene_size", X_SCENE_SIZE);
-	add_uniform_float(p, "y_scene_size", Y_SCENE_SIZE);
-	add_uniform_float(p, "czmin", get_zval(0));
-	add_uniform_float(p, "czmax", get_zval(MESH_SIZE[2]));
+	add_uniform_float("x_scene_size", X_SCENE_SIZE);
+	add_uniform_float("y_scene_size", Y_SCENE_SIZE);
+	add_uniform_float("czmin", get_zval(0));
+	add_uniform_float("czmax", get_zval(MESH_SIZE[2]));
 }
 
 
-void setup_fog_scale(unsigned program) {
+void shader_t::setup_fog_scale() const {
 
-	add_uniform_float(program, "fog_scale", (glIsEnabled(GL_FOG) ? 1.0 : 0.0));
+	add_uniform_float("fog_scale", (glIsEnabled(GL_FOG) ? 1.0 : 0.0));
 }
 
 
-void set_shader_prefix(string const &prefix, unsigned shader_type) {
+void shader_t::set_prefix(string const &prefix, unsigned shader_type) {
 
 	assert(shader_type < 3);
 	prog_name_suffix += ",s" + ('0'+shader_type) + prefix;
@@ -245,17 +239,17 @@ void set_shader_prefix(string const &prefix, unsigned shader_type) {
 }
 
 
-void set_bool_shader_prefix(string const &name, bool val, unsigned shader_type) {
+void shader_t::set_bool_prefix(string const &name, bool val, unsigned shader_type) {
 	
-	set_shader_prefix((string("const bool ") + name + " = " + (val ? "true;" : "false;")), shader_type);
+	set_prefix((string("const bool ") + name + " = " + (val ? "true;" : "false;")), shader_type);
 }
 
 
-void set_int_shader_prefix(string const &name, int val, unsigned shader_type) {
+void shader_t::set_int_prefix(string const &name, int val, unsigned shader_type) {
 	
 	ostringstream oss;
 	oss << val;
-	set_shader_prefix((string("const int ") + name + " = " + oss.str() + ";"), shader_type);
+	set_prefix((string("const int ") + name + " = " + oss.str() + ";"), shader_type);
 }
 
 
@@ -298,26 +292,6 @@ string_shad_map loaded_shaders[3]; // vertex=0, fragment=1, geometry=3
 map<string, string> loaded_files;
 
 
-bool load_shader_file(string const &fname, string &data) {
-
-	if (fname.empty()) return 0;
-	map<string, string>::const_iterator i(loaded_files.find(fname));
-	
-	if (i != loaded_files.end()) {
-		data += i->second;
-		return 1;
-	}
-	ifstream in(fname.c_str());
-	if (!in.good()) return 0;
-	string line, file_contents;
-	while (std::getline(in, line)) file_contents += line + '\n';
-	loaded_files[fname] = file_contents;
-	if (PRINT_SHADER) cout << "shader data:" << endl << file_contents << endl;
-	data += file_contents;
-	return 1;
-}
-
-
 bool setup_shaders() {
 
 	cout << "OpenGL Version: " << glGetString(GL_VERSION) << endl;
@@ -338,7 +312,27 @@ void clear_shaders() {
 }
 
 
-void filename_split(string const &fname, vector<string> &fns, char sep) {
+bool shader_t::load_shader_file(string const &fname, string &data) const {
+
+	if (fname.empty()) return 0;
+	map<string, string>::const_iterator i(loaded_files.find(fname));
+	
+	if (i != loaded_files.end()) {
+		data += i->second;
+		return 1;
+	}
+	ifstream in(fname.c_str());
+	if (!in.good()) return 0;
+	string line, file_contents;
+	while (std::getline(in, line)) file_contents += line + '\n';
+	loaded_files[fname] = file_contents;
+	if (PRINT_SHADER) cout << "shader data:" << endl << file_contents << endl;
+	data += file_contents;
+	return 1;
+}
+
+
+void shader_t::filename_split(string const &fname, vector<string> &fns, char sep) const {
 
 	stringstream ss(fname);
     string fn;
@@ -346,21 +340,7 @@ void filename_split(string const &fname, vector<string> &fns, char sep) {
 }
 
 
-void print_shader_info_log(unsigned shader) {
-
-	int len(0), len2(0);
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
-
-	if (len > 0) {
-		vector<char> info_log_msg(len);
-		glGetShaderInfoLog(shader, len, &len2, &info_log_msg.front()); 
-		assert(len2 <= len);
-		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
-	}
-}
-
-
-unsigned get_shader(string const &name, unsigned type) {
+unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	
 	//RESET_TIME;
 	int const shader_type_table   [3] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER_EXT};
@@ -413,29 +393,14 @@ unsigned get_shader(string const &name, unsigned type) {
 }
 
 
-void print_program_info_log(unsigned program) {
+bool shader_t::begin_shader() {
 
-	int len(0), len2(0);
-	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
-
-	if (len > 0) {
-		vector<char> info_log_msg(len);
-		glGetProgramInfoLog(program, len, &len2, &info_log_msg.front()); 
-		assert(len2 <= len);
-		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
-	}
-}
-
-
-unsigned set_shader_prog(string const &vs_name, string const &fs_name, string const &gs_name,
-						 int in_prim, int out_prim, int verts_out)
-{
 	if (disable_shaders) return 0;
 	// get the program
 	//RESET_TIME;
 	string const pname(vs_name + "," + fs_name + "," + gs_name + "," + prog_name_suffix); // unique program identifier
 	string_prog_map::const_iterator it(loaded_programs.find(pname));
-	unsigned program(0);
+	program = 0;
 
 	if (it != loaded_programs.end()) { // program already exists
 		program = it->second.p;
@@ -465,25 +430,52 @@ unsigned set_shader_prog(string const &vs_name, string const &fs_name, string co
 
 		if (status != GL_TRUE) {
 			cerr << "Linking of program " << pname << " failed with status " << status << endl;
-			print_program_info_log(program);
+			print_program_info_log();
 			cout << endl;
 			exit(1);
 		}
-		if (PRINT_LOG) print_program_info_log(program);
+		if (PRINT_LOG) print_program_info_log();
 		loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
 		//PRINT_TIME("Create Program"); // 90ms
 	}
 	assert(program);
 	glUseProgram(program);
-	active_program = program;
-	return program;
+	return 1;
 }
 
 
-void unset_shader_prog() {
+void shader_t::print_shader_info_log(unsigned shader) const {
+
+	int len(0), len2(0);
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+
+	if (len > 0) {
+		vector<char> info_log_msg(len);
+		glGetShaderInfoLog(shader, len, &len2, &info_log_msg.front()); 
+		assert(len2 <= len);
+		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
+	}
+}
+
+
+void shader_t::print_program_info_log() const {
+
+	int len(0), len2(0);
+	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
+
+	if (len > 0) {
+		vector<char> info_log_msg(len);
+		glGetProgramInfoLog(program, len, &len2, &info_log_msg.front()); 
+		assert(len2 <= len);
+		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
+	}
+}
+
+
+void shader_t::end_shader() { // ok to call if not in a shader
 
 	glUseProgram(0);
-	active_program = 0;
+	program = 0;
 	
 	for (unsigned i = 0; i < 3; ++i) {
 		prepend_string[i].clear();

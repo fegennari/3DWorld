@@ -8,6 +8,7 @@
 #include "textures_3dw.h"
 #include "lightmap.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 #define MOD_GEOM 0x01
@@ -421,25 +422,30 @@ public:
 		// check for dynamic light sources
 		bool const grass_wind(!disable_shaders && !has_snow && (display_mode & 0x0100));
 		unsigned const num_dlights(enable_dynamic_lights());
+		shader_t s;
 
 		if (grass_wind) { // enables lighting and shadows as well
-			set_shader_prefix("#define USE_LIGHT_COLORS",  0); // VS
-			set_shader_prefix("#define USE_GOOD_SPECULAR", 0); // VS
+			s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
+			s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
 #if 0 // per-pixel dynamic lighting - looks better, but slow
-			setup_enabled_lights(2); // L0-L1: static directional
-			set_dlights_booleans(1, 1); // FS
-			unsigned const p(set_shader_prog("ads_lighting.part*+wind.part*+grass_pp_dl", "linear_fog.part+dynamic_lighting.part*+grass_with_dlights"));
-			setup_scene_bounds(p);
-			setup_dlight_textures(p);
+			s.setup_enabled_lights(2); // L0-L1: static directional
+			set_dlights_booleans(s, 1, 1); // FS
+			s.set_vert_shader("ads_lighting.part*+wind.part*+grass_pp_dl");
+			s.set_frag_shader("linear_fog.part+dynamic_lighting.part*+grass_with_dlights");
+			s.begin_shader();
+			s.setup_scene_bounds();
+			setup_dlight_textures(s);
 #else // per-vertex dynamic lighting, limited to 6 lights - faster
-			setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
-			set_bool_shader_prefix("use_shadow_map", shadow_map_enabled(), 0); // VS
-			unsigned const p(set_shader_prog("ads_lighting.part*+shadow_map.part*+wind.part*+grass", "linear_fog.part+simple_texture"));
-			if (shadow_map_enabled()) set_smap_shader_for_all_lights(p);
+			s.setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
+			s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 0); // VS
+			s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass");
+			s.set_frag_shader("linear_fog.part+simple_texture");
+			s.begin_shader();
+			if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);
 #endif
-			setup_wind_for_shader(p);
-			setup_fog_scale(p);
-			add_uniform_float(p, "height", grass_length);
+			setup_wind_for_shader(s);
+			s.setup_fog_scale();
+			s.add_uniform_float("height", grass_length);
 		}
 
 		// setup drawing state
@@ -510,7 +516,7 @@ public:
 		set_specular(0.0, 1.0);
 		disable_blend();
 		glDisable(GL_ALPHA_TEST);
-		if (grass_wind) unset_shader_prog();
+		s.end_shader();
 		disable_multitex_a();
 		disable_dynamic_lights(num_dlights);
 		bind_vbo(0);
@@ -521,15 +527,15 @@ public:
 grass_manager_t grass_manager;
 
 
-void setup_wind_for_shader(unsigned p) {
+void setup_wind_for_shader(shader_t &s) {
 
 	static float time(0.0);
 	if (animate2) time = tfticks;
-	add_uniform_float(p, "time", 0.5*time/TICKS_PER_SECOND);
-	add_uniform_float(p, "wind_x", wind.x);
-	add_uniform_float(p, "wind_y", wind.y);
-	add_uniform_int(p, "tex0", 0);
-	add_uniform_int(p, "tex_noise", 1);
+	s.add_uniform_float("time", 0.5*time/TICKS_PER_SECOND);
+	s.add_uniform_float("wind_x", wind.x);
+	s.add_uniform_float("wind_y", wind.y);
+	s.add_uniform_int("tex0", 0);
+	s.add_uniform_int("tex_noise", 1);
 	select_multitex(WIND_TEX, 1, 0);
 	set_multitex(0);
 }

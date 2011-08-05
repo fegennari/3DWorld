@@ -4,6 +4,7 @@
 
 #include "gameplay.h"
 #include "physics_objects.h"
+#include "shaders.h"
 
 bool const USE_SMAP = 1;
 
@@ -762,24 +763,27 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	unsigned const delay(max(1u, weapons[wid].fire_delay));
 	float const fire_val((float)sstate.fire_frame/(float)delay);
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
+	shader_t s;
 
 	if (draw_pass == 0) {
 		bool const use_smap(use_smap_here()); // FIXME: not correct for transforms
-		setup_enabled_lights();
-		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", 0, d); // VS/FS
-		set_bool_shader_prefix("use_texgen", 0, 0); // VS
-		set_bool_shader_prefix("use_shadow_map", use_smap, 1); // FS
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_textured", "linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured"));
-		setup_fog_scale(p);
-		add_uniform_float(p, "min_alpha", 0.9*alpha);
-		add_uniform_int(p, "tex0", 0);
-		if (use_smap) set_smap_shader_for_all_lights(p, 0.005); // larger bias to reduce self-shadowing artifacts when the player moves across the shadow map/scene
+		s.setup_enabled_lights();
+		for (unsigned d = 0; d < 2; ++d) s.set_bool_prefix("no_normalize", 0, d); // VS/FS
+		s.set_bool_prefix("use_texgen", 0, 0); // VS
+		s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
+		s.set_vert_shader("fog.part+texture_gen.part+per_pixel_lighting_textured");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured");
+		s.begin_shader();
+		s.setup_fog_scale();
+		s.add_uniform_float("min_alpha", 0.9*alpha);
+		s.add_uniform_int("tex0", 0);
+		if (use_smap) set_smap_shader_for_all_lights(s, 0.005); // larger bias to reduce self-shadowing artifacts when the player moves across the shadow map/scene
 		select_texture(WHITE_TEX, 0); // always textured
 	}
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass);
 
-	if (draw_pass == 0) unset_shader_prog();
+	if (draw_pass == 0) s.end_shader();
 	if (shooter == CAMERA_ID) fired = 0;
 	if (cull_face) glDisable(GL_CULL_FACE);
 }

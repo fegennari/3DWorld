@@ -7,6 +7,7 @@
 #include "mesh.h"
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 bool const DEBUG_TILES       = 0;
@@ -468,14 +469,16 @@ public:
 		//PRINT_TIME("Tiled Terrain Update");
 	}
 
-	static void setup_mesh_draw_shaders(float wpz) {
-		setup_enabled_lights();
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+tiled_mesh", "linear_fog.part+multitex_2"));
-		setup_fog_scale(p);
-		add_uniform_int(p, "tex0", 0);
-		add_uniform_int(p, "tex1", 1);
-		add_uniform_float(p, "water_plane_z", (has_water() ? wpz : zmin));
-		add_uniform_float(p, "water_atten", WATER_COL_ATTEN*mesh_scale);
+	static void setup_mesh_draw_shaders(shader_t &s, float wpz) {
+		s.setup_enabled_lights();
+		s.set_vert_shader("fog.part+texture_gen.part+tiled_mesh");
+		s.set_frag_shader("linear_fog.part+multitex_2");
+		s.begin_shader();
+		s.setup_fog_scale();
+		s.add_uniform_int("tex0", 0);
+		s.add_uniform_int("tex1", 1);
+		s.add_uniform_float("water_plane_z", (has_water() ? wpz : zmin));
+		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 	}
 
 	float draw(bool add_hole, float wpz) {
@@ -493,7 +496,8 @@ public:
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}
-		setup_mesh_draw_shaders(wpz);
+		shader_t s;
+		setup_mesh_draw_shaders(s, wpz);
 		if (world_mode == WMODE_INF_TERRAIN && show_fog) draw_water_edge(wpz); // Note: doesn't take into account waves
 		setup_mesh_lighting();
 		vector<pair<float, tile_t *> > to_draw;
@@ -512,7 +516,7 @@ public:
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			num_drawn += to_draw[i].second->draw(data, indices);
 		}
-		unset_shader_prog();
+		s.end_shader();
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
 		return zmin;
@@ -566,7 +570,8 @@ void fill_gap(float wpz) {
 	for (int i = 0; i <= MESH_Y_SIZE; ++i) {
 		yv[i] = (ystart + (i + 0.5)*DY_VAL);
 	}
-	terrain_tile_draw.setup_mesh_draw_shaders(wpz);
+	shader_t s;
+	terrain_tile_draw.setup_mesh_draw_shaders(s, wpz);
 
 	// draw +x
 	build_xy_mesh_arrays(&xv.front(), &yv[MESH_Y_SIZE], MESH_X_SIZE, 1);
@@ -595,7 +600,7 @@ void fill_gap(float wpz) {
 	draw_vert_color(color, X_SCENE_SIZE       , Y_SCENE_SIZE, fast_eval_from_index(0, MESH_Y_SIZE, 0, 1));
 	glEnd();
 
-	unset_shader_prog();
+	s.end_shader();
 	disable_textures_texgen();
 	glDisable(GL_COLOR_MATERIAL);
 	run_post_mesh_draw();

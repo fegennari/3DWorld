@@ -5,6 +5,7 @@
 #include "3DWorld.h"
 #include "mesh.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 unsigned const VOXELS_PER_DIV = 8; // 1024 for 128 vertex mesh
@@ -757,18 +758,21 @@ void draw_snow() {
 		PRINT_TIME("Snow Shadow Calculation");
 	}
 	//RESET_TIME;
+	shader_t s;
 
 	if (!disable_shaders) {
 		bool const use_smap(shadow_map_enabled());
-		setup_enabled_lights();
-		for (unsigned d = 0; d < 2; ++d) set_bool_shader_prefix("no_normalize", !use_smap, d); // VS/FS
-		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-		set_bool_shader_prefix("use_shadow_map", use_smap, 1); // FS
-		set_bool_shader_prefix("use_texgen", 1, 0); // VS
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+per_pixel_lighting_textured", "linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured"));
-		setup_fog_scale(p);
-		add_uniform_int(p, "tex0", 0);
-		if (use_smap) set_smap_shader_for_all_lights(p);
+		s.setup_enabled_lights();
+		for (unsigned d = 0; d < 2; ++d) s.set_bool_prefix("no_normalize", !use_smap, d); // VS/FS
+		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
+		s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
+		s.set_bool_prefix("use_texgen", 1, 0); // VS
+		s.set_vert_shader("fog.part+texture_gen.part+per_pixel_lighting_textured");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured");
+		s.begin_shader();
+		s.setup_fog_scale();
+		s.add_uniform_int("tex0", 0);
+		if (use_smap) set_smap_shader_for_all_lights(s);
 	}
 	set_specular(0.5, 50.0);
 	set_color(SNOW_COLOR);
@@ -785,7 +789,7 @@ void draw_snow() {
 	glEnable(GL_NORMALIZE);
 	disable_blend();
 	set_specular(0.0, 1.0);
-	if (!disable_shaders) unset_shader_prog();
+	s.end_shader();
 	//PRINT_TIME("Snow Draw");
 }
 

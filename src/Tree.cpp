@@ -10,6 +10,7 @@
 #include "explosion.h"
 #include "physics_objects.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 float const BURN_RADIUS      = 0.2;
@@ -209,32 +210,31 @@ void remove_tree_cobjs() {
 }
 
 
-void draw_trees_bl(bool lpos_change, bool draw_branches, bool near_draw_leaves, bool draw_far_leaves) {
+void draw_trees_bl(shader_t const &s, bool lpos_change, bool draw_branches, bool near_draw_leaves, bool draw_far_leaves) {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].draw_tree(lpos_change, draw_branches, near_draw_leaves, draw_far_leaves);
+		t_trees[i].draw_tree(s, lpos_change, draw_branches, near_draw_leaves, draw_far_leaves);
 	}
 }
 
 
-void set_leaf_shader(float min_alpha, bool use_wind) {
+void set_leaf_shader(shader_t &s, float min_alpha, bool use_wind) {
 
-	set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
-	setup_enabled_lights(2);
-	unsigned p(0);
+	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+	s.setup_enabled_lights(2);
+	s.set_vert_shader("ads_lighting.part*+tree_leaves");
+	s.set_frag_shader("linear_fog.part+simple_texture");
 	
 	if (use_wind) { // wind on leaves
 		// FIXME: leaves are drawn as quads, not triangles
-		p = set_shader_prog("ads_lighting.part*+tree_leaves", "linear_fog.part+simple_texture", "wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
-		setup_wind_for_shader(p);
+		s.set_geom_shader("wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
 	}
-	else {
-		p = set_shader_prog("ads_lighting.part*+tree_leaves", "linear_fog.part+simple_texture");
-	}
-	setup_fog_scale(p);
-	add_uniform_float(p, "min_alpha", min_alpha);
+	s.begin_shader();
+	if (use_wind) setup_wind_for_shader(s);
+	s.setup_fog_scale();
+	s.add_uniform_float("min_alpha", min_alpha);
 	set_multitex(0);
-	add_uniform_int(p, "tex0", 0);
+	s.add_uniform_int("tex0", 0);
 }
 
 
@@ -255,15 +255,16 @@ void draw_trees() {
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
 		bool const branch_smap = 1; // looks better, but slower
-		colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, 0, 0, 0, 1, 1, 0, 0, branch_smap)); // dynamic lights, but no smoke (yet)
-		draw_trees_bl(lpos_change, 1, 0, 0); // branches
-		end_smoke_shaders(orig_fog_color);
-		set_leaf_shader(0.75, 0);
-		draw_trees_bl(lpos_change, 0, 0, 1); // far  leaves
-		//unset_shader_prog();
-		//set_leaf_shader(0.75, 1);
-		draw_trees_bl(lpos_change, 0, 1, 0); // near leaves
-		unset_shader_prog();
+		shader_t s;
+		colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, branch_smap)); // dynamic lights, but no smoke (yet)
+		draw_trees_bl(s, lpos_change, 1, 0, 0); // branches
+		end_smoke_shaders(s, orig_fog_color);
+		set_leaf_shader(s, 0.75, 0);
+		draw_trees_bl(s, lpos_change, 0, 0, 1); // far  leaves
+		//s.end_shader();
+		//set_leaf_shader(s, 0.75, 1);
+		draw_trees_bl(s, lpos_change, 0, 1, 0); // near leaves
+		s.end_shader();
 		last_lpos = lpos;
 		//glFinish(); // testing
 		//PRINT_TIME(((tree_mode & 2) ? "Large + Small Trees" : "Large Trees"));
@@ -513,7 +514,7 @@ void tree::draw_tree_shadow() {
 }
 
 
-void tree::draw_tree(bool invalidate_norms, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves) {
+void tree::draw_tree(shader_t const &s, bool invalidate_norms, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves) {
 
 	if (!created) return;
 	rseed1 = trseed1;
@@ -544,7 +545,7 @@ void tree::draw_tree(bool invalidate_norms, bool draw_branches, bool draw_near_l
 	assert(use_vbos);
 	if (draw_branches) draw_tree_branches(mscale, dist_c, dist_cs);
 	if (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0) return;
-	if (draw_leaves  ) draw_tree_leaves(invalidate_norms, mscale, dist_cs, (leaf_dynamic + leaf_dynamic_en));
+	if (draw_leaves  ) draw_tree_leaves(s, invalidate_norms, mscale, dist_cs, (leaf_dynamic + leaf_dynamic_en));
 }
 
 
@@ -633,7 +634,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs) {
 }
 
 
-void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, int leaf_dynamic) {
+void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float mscale, float dist_cs, int leaf_dynamic) {
 
 	unsigned nleaves(leaves.size());
 	assert(nleaves <= max_leaves);
@@ -767,7 +768,7 @@ void tree::draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, 
 		glAlphaFunc(GL_GREATER, 0.75);
 	}
 	unsigned const num_dlights(enable_dynamic_lights(sphere_center, sphere_radius));
-	add_uniform_int(0, "num_dlights", num_dlights);
+	s.add_uniform_int("num_dlights", num_dlights);
 	set_lighted_sides(2);
 	set_specular(0.1, 10.0);
 	set_fill_mode();

@@ -6,6 +6,7 @@
 #include "mesh.h"
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 float const W_TEX_SCALE0     = 1.0;
@@ -469,18 +470,22 @@ void display_mesh() { // fast array version
 		bind_vbo(0);
 	}
 	else { // slower mesh draw with more features
+		shader_t s;
+
 		if (draw_mesh_shader) {
-			set_shader_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			setup_enabled_lights();
-			set_dlights_booleans(1, 1); // FS
-			set_bool_shader_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
-			unsigned const p(set_shader_prog("fog.part+texture_gen.part+draw_mesh", "ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh"));
-			if (shadow_map_enabled()) set_smap_shader_for_all_lights(p, 0.001);
-			setup_fog_scale(p);
-			add_uniform_int(p, "tex0", 0);
-			add_uniform_int(p, "tex1", 1);
-			setup_scene_bounds(p);
-			setup_dlight_textures(p);
+			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+			s.setup_enabled_lights();
+			set_dlights_booleans(s, 1, 1); // FS
+			s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
+			s.set_vert_shader("fog.part+texture_gen.part+draw_mesh");
+			s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh");
+			s.begin_shader();
+			if (shadow_map_enabled()) set_smap_shader_for_all_lights(s, 0.001);
+			s.setup_fog_scale();
+			s.add_uniform_int("tex0", 0);
+			s.add_uniform_int("tex1", 1);
+			s.setup_scene_bounds();
+			setup_dlight_textures(s);
 		}
 		float y(-Y_SCENE_SIZE);
 		mesh_vertex_draw mvd;
@@ -500,7 +505,7 @@ void display_mesh() { // fast array version
 			if (mvd.c > 1) glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
 			y += DY_VAL;
 		} // for i
-		if (draw_mesh_shader) unset_shader_prog();
+		s.end_shader();
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	disable_textures_texgen();
@@ -784,6 +789,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 	set_fill_mode();
 	enable_blend();
 	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + water_xoff), (tscale*(yoff2 - yoff)*DY_VAL + water_yoff));
+	shader_t s;
 
 	if (!disable_shaders) {
 		set_multitex(1);
@@ -806,16 +812,18 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 			blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 		}
 		rcolor.alpha = 0.5*(0.5 + color.alpha);
-		setup_enabled_lights();
-		set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-		set_bool_shader_prefix("reflections", reflections, 1); // FS
-		set_bool_shader_prefix("add_waves", ((display_mode & 0x0100) != 0), 1); // FS
-		unsigned const p(set_shader_prog("fog.part+texture_gen.part+water_plane", "linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane"));
-		setup_fog_scale(p);
-		add_uniform_int(p, "water_tex",      0);
-		add_uniform_int(p, "reflection_tex", 1);
-		add_uniform_color(p, "water_color",   color);
-		add_uniform_color(p, "reflect_color", rcolor);
+		s.setup_enabled_lights();
+		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
+		s.set_bool_prefix("reflections", reflections, 1); // FS
+		s.set_bool_prefix("add_waves", ((display_mode & 0x0100) != 0), 1); // FS
+		s.set_vert_shader("fog.part+texture_gen.part+water_plane");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
+		s.begin_shader();
+		s.setup_fog_scale();
+		s.add_uniform_int("water_tex",      0);
+		s.add_uniform_int("reflection_tex", 1);
+		s.add_uniform_color("water_color",   color);
+		s.add_uniform_color("reflect_color", rcolor);
 		set_color(WHITE);
 	}
 	else {
@@ -866,11 +874,8 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 	}
 	glEnd();
 	glPopMatrix();
-	
-	if (!disable_shaders) {
-		disable_multitex_a();
-		unset_shader_prog();
-	}
+	disable_multitex_a();
+	s.end_shader();
 	disable_blend();
 	set_specular(0.0, 1.0);
 	disable_textures_texgen();

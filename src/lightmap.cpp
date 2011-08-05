@@ -7,6 +7,7 @@
 #include "csg.h"
 #include "lightmap.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 bool const CAMERA_CANDLE_LT  = 0;
@@ -1070,19 +1071,19 @@ void upload_dlights_textures() {
 }
 
 
-void set_one_texture(unsigned p, unsigned tid, unsigned tu_id, const char *const name) {
+void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name) {
 
 	set_multitex(tu_id); // texture unit
 	bind_2d_texture(tid);
-	add_uniform_int(p, name, tu_id);
+	s.add_uniform_int(name, tu_id);
 }
 
 
-void setup_dlight_textures(unsigned p) {
+void setup_dlight_textures(shader_t &s) {
 
-	set_one_texture(p, dl_tid,   2, "dlight_tex");
-	set_one_texture(p, elem_tid, 3, "dlelm_tex");
-	set_one_texture(p, gb_tid,   4, "dlgb_tex");
+	set_one_texture(s, dl_tid,   2, "dlight_tex");
+	set_one_texture(s, elem_tid, 3, "dlelm_tex");
+	set_one_texture(s, gb_tid,   4, "dlgb_tex");
 	//set_one_texture(p, flow_tid, 5, "flow_tex");
 }
 

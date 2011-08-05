@@ -6,6 +6,7 @@
 #include "mesh.h"
 #include "shape_line3d.h"
 #include "upsurface.h"
+#include "shaders.h"
 
 
 bool     const NO_ISLAND_SCENERY = 1;
@@ -864,12 +865,13 @@ void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 	if (draw_transparent) {
 		enable_blend();
 		glEnable(GL_COLOR_MATERIAL);
-		set_leaf_shader(0.9);
+		shader_t s;
+		set_leaf_shader(s, 0.9);
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw(sscale, 2, shadow_only); // draw leaves
 		}
-		unset_shader_prog();
+		s.end_shader();
 		disable_blend();
 		glDisable(GL_COLOR_MATERIAL);
 		glDisable(GL_TEXTURE_2D);

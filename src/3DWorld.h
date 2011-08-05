@@ -1029,6 +1029,7 @@ class  coll_obj;
 class  shape3d;
 struct lightning;
 struct color_tid_vol;
+class shader_t;
 
 
 // function prototypes - main (3DWorld.cpp, etc.)
@@ -1130,10 +1131,10 @@ colorRGBA const &get_landmine_light_color(int time);
 float get_landmine_sensor_height(float radius, int time);
 colorRGBA get_plasma_color(float size);
 void get_enabled_lights();
-void set_dlights_booleans(bool enable, int shader_type);
-colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
+void set_dlights_booleans(shader_t &s, bool enable, int shader_type);
+colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten=0, bool use_smap=0);
-void end_smoke_shaders(colorRGBA const &orig_fog_color);
+void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color);
 void setup_object_render_data();
 void draw_coll_surfaces(bool draw_solid, bool draw_trans);
 void draw_stars(float alpha);
@@ -1597,7 +1598,7 @@ void shift_scenery(vector3d const &vd);
 void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 
 // function prototypes - grass
-void setup_wind_for_shader(unsigned p);
+void setup_wind_for_shader(shader_t &s);
 bool no_grass();
 void gen_grass(bool full_regen);
 void update_grass_vbos();
@@ -1616,7 +1617,7 @@ void shift_hmv(vector3d const &vd);
 // function prototypes - tree + sm_tree (see also tree_3dw.h)
 void mult_leaf_points_by(float val);
 int get_tree_type_from_height(float zpos);
-void set_leaf_shader(float min_alpha, bool use_wind=0);
+void set_leaf_shader(shader_t &s, float min_alpha, bool use_wind=0);
 
 // function prototypes - csg
 void get_cube_points(const float d[3][2], point pts[8]);
@@ -1660,7 +1661,7 @@ void get_xyz(point const &p, int v[3]);
 void get_xyz_v2(point &p, int const v[3]);
 bool upload_smoke_3d_texture();
 void upload_dlights_textures();
-void setup_dlight_textures(unsigned p);
+void setup_dlight_textures(shader_t &s);
 bool is_shadowed_lightmap(point const &p);
 bool is_in_darkness(point const &pos, float radius, int cobj);
 bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
@@ -1675,33 +1676,8 @@ bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 
 // function prototypes - shaders
 char const *append_array_ix(std::string &s, unsigned i);
-void set_uniform_float_array(int loc, float const *const val, unsigned num);
-void set_uniform_float      (int loc, float val);
-void set_uniform_int        (int loc, int val);
-void set_uniform_vector3d   (int loc, vector3d const &val);
-void set_uniform_color      (int loc, colorRGBA const &val);
-int  get_uniform_loc        (unsigned program, char const *const name);
-void add_uniform_float_array(unsigned program, char const *const name, float const *const val, unsigned num);
-void add_uniform_float      (unsigned program, char const *const name, float val);
-void add_uniform_int        (unsigned program, char const *const name, int   val);
-void add_uniform_vector3d   (unsigned program, char const *const name, vector3d  const &val);
-void add_uniform_color      (unsigned program, char const *const name, colorRGBA const &val);
-bool set_uniform_buffer_data(unsigned program, char const *name, float const *data, unsigned size);
-unsigned register_attrib_name(unsigned program, char const *name);
-void add_attrib_float_array(unsigned ix, float const *const val, unsigned num);
-void add_attrib_float (unsigned ix, float val);
-void add_attrib_int   (unsigned ix, int   val);
-void setup_enabled_lights(unsigned num=2, unsigned shaders_enabled=3);
-void setup_scene_bounds(unsigned p);
-void setup_fog_scale(unsigned program);
-void set_shader_prefix(std::string const &prefix, unsigned shader_type);
-void set_bool_shader_prefix(std::string const &name, bool val, unsigned shader_type);
-void set_int_shader_prefix(std::string const &name, int val, unsigned shader_type);
 bool setup_shaders();
 void clear_shaders();
-unsigned set_shader_prog(std::string const &vs_name, std::string const &fs_name, std::string const &gs_name="",
-						 int in_prim=0, int out_prim=0, int verts_out=0);
-void unset_shader_prog();
 
 // function prototypes - snow
 bool snow_enabled();
@@ -1724,8 +1700,8 @@ bool shadow_map_enabled();
 unsigned get_shadow_map_tu_id(int light);
 unsigned get_shadow_map_tid(int light);
 int get_smap_ndiv(float radius);
-void set_smap_shader_for_light(unsigned p, int light, float z_bias);
-void set_smap_shader_for_all_lights(unsigned p, float z_bias=0.0005);
+void set_smap_shader_for_light(shader_t &s, int light, float z_bias);
+void set_smap_shader_for_all_lights(shader_t &s, float z_bias=0.0005);
 void draw_scene_bounds_and_light_frustum(point const &lpos);
 void create_shadow_map();
 void free_shadow_map_textures();

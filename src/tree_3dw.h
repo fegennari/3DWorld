@@ -133,9 +133,9 @@ public:
 	colorRGB get_leaf_color(unsigned i) const;
 	void clear_vbo();
 	void draw_tree_shadow();
-	void draw_tree(bool invalidate_norms, bool draw_branches=1, bool draw_near_leaves=1, bool draw_far_leaves=1);
+	void draw_tree(shader_t const &s, bool invalidate_norms, bool draw_branches=1, bool draw_near_leaves=1, bool draw_far_leaves=1);
 	void draw_tree_branches(float mscale, float dist_c, float dist_cs);
-	void draw_tree_leaves(bool invalidate_norms, float mscale, float dist_cs, int leaf_dynamic);
+	void draw_tree_leaves(shader_t const &s, bool invalidate_norms, float mscale, float dist_cs, int leaf_dynamic);
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);
 	void gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test);

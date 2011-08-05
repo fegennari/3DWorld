@@ -12,6 +12,7 @@
 #include "physics_objects.h"
 #include "explosion.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 bool const DEBUG_COLORCODE      = 0;
@@ -76,7 +77,7 @@ extern player_state *sstates;
 extern int coll_id[];
 extern vector<light_source> dl_sources;
 extern vector<portal> portals;
-
+extern shader_t *cur_shader;
 
 
 void draw_cloud_volumes();
@@ -548,7 +549,8 @@ void draw_group(obj_group &objg) {
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 		glNormal3f(0.0, 1.0, 0.0);
-		//set_leaf_shader(0.75); // Note: needs colors, but we set a/d lighting for shadows
+		//shader_t s;
+		//set_leaf_shader(s, 0.75); // Note: needs colors, but we set a/d lighting for shadows
 		static vector<pair<unsigned, unsigned> > ordering;
 		ordering.resize(0);
 		ordering.reserve(objg.end_id);
@@ -602,7 +604,7 @@ void draw_group(obj_group &objg) {
 			glEnd();
 			glPopMatrix();
 		} // for j
-		//unset_shader_prog();
+		//s.end_shader();
 		//glDisable(GL_TEXTURE_2D);
 		disable_blend();
 		set_specular(0.0, 1.0);
@@ -779,14 +781,18 @@ void draw_group(obj_group &objg) {
 			break;
 		case SNOW:
 			if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
-				setup_enabled_lights();
-				set_shader_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
-				set_shader_prefix("#define USE_LIGHT_COLORS", 0); // VS
-				unsigned const p(set_shader_prog("ads_lighting.part*+two_lights_no_xform", "simple_texture", "pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3));
-				add_uniform_float(p, "size", 2.0*radius); // Note: size no longer depends on angle
-				add_uniform_int(p, "tex0", 0);
+				shader_t s;
+				s.setup_enabled_lights();
+				s.set_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
+				s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+				s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
+				s.set_frag_shader("simple_texture");
+				s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
+				s.begin_shader();
+				s.add_uniform_float("size", 2.0*radius); // Note: size no longer depends on angle
+				s.add_uniform_int("tex0", 0);
 				snow_pld.draw_and_clear();
-				unset_shader_prog();
+				s.end_shader();
 			}
 			glDepthMask(GL_TRUE);
 			break;
@@ -1713,59 +1719,59 @@ void get_enabled_lights() {
 }
 
 
-void set_dlights_booleans(bool enable, int shader_type) {
+void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
-	set_bool_shader_prefix("has_dir_lights",  has_dir_lights, shader_type);
-	set_bool_shader_prefix("enable_dlights",  (enable && dl_tid > 0 && !dl_sources.empty()), shader_type);
+	s.set_bool_prefix("has_dir_lights",  has_dir_lights, shader_type);
+	s.set_bool_prefix("enable_dlights",  (enable && dl_tid > 0 && !dl_sources.empty()), shader_type);
 }
 
 
 // texture units used: 0: object texture, 1: smoke texture
-colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
+colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap)
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
-	set_int_shader_prefix ("use_texgen",      use_texgen,      0); // VS
-	set_bool_shader_prefix("keep_alpha",      keep_alpha,      1); // FS
-	set_bool_shader_prefix("indir_lighting",  indir_lighting,  1); // FS
-	set_bool_shader_prefix("direct_lighting", direct_lighting, 1); // FS
-	set_bool_shader_prefix("do_lt_atten",     has_lt_atten,    1); // FS
-	set_bool_shader_prefix("use_shadow_map",  use_shadow_map,  1); // FS
+	s.set_int_prefix ("use_texgen",      use_texgen,      0); // VS
+	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
+	s.set_bool_prefix("indir_lighting",  indir_lighting,  1); // FS
+	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
+	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
+	s.set_bool_prefix("use_shadow_map",  use_shadow_map,  1); // FS
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		// Note: dynamic_smoke_shadows applies to light0 only
 		// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
-		set_bool_shader_prefix("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, i); // VS/FS
-		set_bool_shader_prefix("smoke_enabled",         smoke_enabled,         i); // VS/FS
+		s.set_bool_prefix("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, i); // VS/FS
+		s.set_bool_prefix("smoke_enabled",         smoke_enabled,         i); // VS/FS
 	}
-	set_dlights_booleans(dlights, 1); // FS
-	setup_enabled_lights(8);
-	set_shader_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-	unsigned const p(set_shader_prog("fog.part+texture_gen.part+line_clip.part*+no_lt_texgen_smoke",
-		                             "fresnel.part*+linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+textured_with_smoke"));
-	setup_scene_bounds(p);
-	setup_fog_scale(p); // fog scale for the case where smoke is disabled
-	if (dlights && dl_tid > 0) setup_dlight_textures(p);
+	set_dlights_booleans(s, dlights, 1); // FS
+	s.setup_enabled_lights(8);
+	s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
+	s.set_vert_shader("fog.part+texture_gen.part+line_clip.part*+no_lt_texgen_smoke");
+	s.set_frag_shader("fresnel.part*+linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+textured_with_smoke");
+	s.begin_shader();
+	s.setup_scene_bounds();
+	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
+	if (dlights && dl_tid > 0) setup_dlight_textures(s);
 
 	if (use_texgen == 2) {
-		unsigned const tex0_s_ix(register_attrib_name(p, "tex0_s"));
-		unsigned const tex0_t_ix(register_attrib_name(p, "tex0_t"));
-		assert(tex0_s_ix == 0 && tex0_t_ix == 1);
+		s.register_attrib_name("tex0_s", TEX0_S_ATTR);
+		s.register_attrib_name("tex0_t", TEX0_T_ATTR);
 	}
 	if (smoke_en && smoke_tid) {
 		set_multitex(1);
 		bind_3d_texture(smoke_tid);
 	}
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
-	add_uniform_int(p, "smoke_tex", 1);
+	s.add_uniform_int("smoke_tex", 1);
 	set_multitex(0);
-	add_uniform_int(p, "tex0", 0);
-	add_uniform_float(p, "min_alpha", min_alpha);
-	add_uniform_float_array(p, "smoke_bb", &cur_smoke_bb.d[0][0], 6);
-	add_uniform_float(p, "step_delta", step_delta_scale*HALF_DXY);
-	add_uniform_float(p, "half_dxy",   HALF_DXY);
-	if (use_shadow_map) set_smap_shader_for_all_lights(p);
+	s.add_uniform_int("tex0", 0);
+	s.add_uniform_float("min_alpha", min_alpha);
+	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
+	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
+	s.add_uniform_float("half_dxy",   HALF_DXY);
+	if (use_shadow_map) set_smap_shader_for_all_lights(s);
 	//return change_fog_color(GRAY);
 
 	// setup fog
@@ -1776,9 +1782,9 @@ colorRGBA setup_smoke_shaders(float min_alpha, int use_texgen, bool keep_alpha, 
 }
 
 
-void end_smoke_shaders(colorRGBA const &orig_fog_color) {
+void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color) {
 
-	unset_shader_prog();
+	s.end_shader();
 	disable_multitex_a();
 	glFogfv(GL_FOG_COLOR, (float *)&orig_fog_color); // reset to original value
 }
@@ -1831,7 +1837,9 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_specular(0.0, 1.0);
 	bool const has_lt_atten(draw_trans && !draw_solid);
 	// Note: enable direct_lighting if processing sun/moon shadows here
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
+	shader_t s;
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
+	cur_shader = &s; // hack to avoid passing the shader down to all texgen calls
 	int last_tid(-1), last_group_id(-1), last_pri_dim(-1);
 	
 	if (draw_solid) {
@@ -1866,9 +1874,9 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		float last_light_atten(-1.0), last_refract_ix(0.0); // set to invalid values to start
 
 		if (has_lt_atten) {
-			ulocs[0] = get_uniform_loc(0, "light_atten");
-			ulocs[1] = get_uniform_loc(0, "cube_bb"    );
-			ulocs[2] = get_uniform_loc(0, "refract_ix" );
+			ulocs[0] = s.get_uniform_loc("light_atten");
+			ulocs[1] = s.get_uniform_loc("cube_bb"    );
+			ulocs[2] = s.get_uniform_loc("refract_ix" );
 		}
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
 			int const ix(draw_last[i].second);
@@ -1877,11 +1885,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				end_group(last_group_id);
 
 				if (has_lt_atten && last_light_atten != 0.0) {
-					set_uniform_float(ulocs[0], 0.0);
+					s.set_uniform_float(ulocs[0], 0.0);
 					last_light_atten = 0.0;
 				}
 				if (has_lt_atten && last_refract_ix != 1.0) {
-					set_uniform_float(ulocs[2], 1.0);
+					s.set_uniform_float(ulocs[2], 1.0);
 					last_refract_ix = 1.0;
 				}
 				unsigned const pix(-(ix+1));
@@ -1896,14 +1904,14 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					float const light_atten((c.type == COLL_CUBE) ? c.cp.light_atten : 0.0);
 
 					if (light_atten != last_light_atten) {
-						set_uniform_float(ulocs[0], light_atten);
+						s.set_uniform_float(ulocs[0], light_atten);
 						last_light_atten = light_atten;
 					}
 					if (c.cp.refract_ix != last_refract_ix) {
-						set_uniform_float(ulocs[2], c.cp.refract_ix);
+						s.set_uniform_float(ulocs[2], c.cp.refract_ix);
 						last_refract_ix = c.cp.refract_ix;
 					}
-					if (light_atten > 0.0) set_uniform_float_array(ulocs[1], (float const *)c.d, 6);
+					if (light_atten > 0.0) s.set_uniform_float_array(ulocs[1], (float const *)c.d, 6);
 				}
 				c.draw_cobj(ix, last_tid, last_group_id, last_pri_dim);
 			}
@@ -1912,7 +1920,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		disable_blend();
 		draw_last.resize(0);
 	}
-	end_smoke_shaders(orig_fog_color);
+	cur_shader = NULL;
+	end_smoke_shaders(s, orig_fog_color);
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();
 	set_lighted_sides(1);
@@ -2383,9 +2392,10 @@ void draw_smoke() {
 
 	if (part_clouds.empty()) return; // Note: just because part_clouds is empty doesn't mean there is any enabled smoke
 	set_color(BLACK);
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.01, 0, 1, 0, 0, 0, 1)); // slow when a lot of smoke is up close
+	shader_t s;
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1)); // slow when a lot of smoke is up close
 	draw_part_cloud(part_clouds, WHITE, 0);
-	end_smoke_shaders(orig_fog_color);
+	end_smoke_shaders(s, orig_fog_color);
 }
 
 
@@ -2491,7 +2501,8 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	order_vect_t order;
 	get_draw_order(objs, order);
 	if (order.empty()) return;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(0.04, 0, 1, 0, 0, 0, 1));
+	shader_t s;
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.04, 0, 1, 0, 0, 0, 1));
 	enable_blend();
 	set_color(BLACK);
 	glDisable(GL_LIGHTING);
@@ -2506,7 +2517,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 		objs[i].draw();
 	}
 	glEnd();
-	end_smoke_shaders(orig_fog_color);
+	end_smoke_shaders(s, orig_fog_color);
 	glDisable(GL_ALPHA_TEST);
 	disable_blend();
 	glDisable(GL_TEXTURE_2D);

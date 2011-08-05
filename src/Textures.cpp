@@ -7,6 +7,7 @@
 #include "sinf.h"
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 using std::string;
 
@@ -143,6 +144,7 @@ extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, flow_tid, reflection_tid;
 extern int world_mode, island, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode;
 extern float zmax, zmin, zmax_est, glaciate_exp, relh_adj_tex, vegetation;
+extern shader_t *cur_shader;
 
 
 unsigned char *LoadTextureRAW(texture const &t, int index);
@@ -1499,7 +1501,8 @@ void gen_tex_height_tables() {
 void set_texgen_vec4(float const v[4], bool s_or_t, bool as_attr, bool enable_and_set_mode) {
 
 	if (as_attr) {
-		add_attrib_float_array((s_or_t ? 1 : 0), v, 4);
+		assert(cur_shader);
+		cur_shader->add_attrib_float_array((s_or_t ? TEX0_T_ATTR : TEX0_S_ATTR), v, 4);
 	}
 	else {
 		if (enable_and_set_mode) {
