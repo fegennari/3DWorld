@@ -122,7 +122,7 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 }
 
 
-void coll_obj::draw_coll_cube(int do_fill, int tid) const {
+void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 
 	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
@@ -176,8 +176,8 @@ void coll_obj::draw_coll_cube(int do_fill, int tid) const {
 			b[t1] = tscale[1];
 			a[3]  = texture_offset[t0]*tscale[0];
 			b[3]  = texture_offset[t1]*tscale[1];
-			set_texgen_vec4((cp.swap_txy ? b : a), 0, USE_ATTR_TEXGEN, 0);
-			set_texgen_vec4((cp.swap_txy ? a : b), 1, USE_ATTR_TEXGEN, 0);
+			set_texgen_vec4((cp.swap_txy ? b : a), 0, 0, shader);
+			set_texgen_vec4((cp.swap_txy ? a : b), 1, 0, shader);
 		}
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? 1.0 : -1.0);
@@ -203,27 +203,27 @@ bool camera_behind_polygon(point const *const points, int npoints) {
 }
 
 
-void coll_obj::set_poly_texgen(int tid, vector3d const &normal) const {
+void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t *shader) const {
 
 	if (tid < 0) return; // texturing disabled
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
-	setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy, USE_ATTR_TEXGEN);
+	setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy, shader);
 }
 
 
-void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d const &normal) const { // occlusion culling?
+void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d const &normal, shader_t *shader) const { // occlusion culling?
 
-	set_poly_texgen(tid, normal);
+	set_poly_texgen(tid, normal, shader);
 	draw_simple_polygon(points, npoints, get_norm_camera_orient(normal, get_center(points, npoints)));
 }
 
 
-void coll_obj::draw_extruded_polygon(int tid) const {
+void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 
 	float const thick(fabs(thickness));
 	
 	if (thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
-		draw_polygon(tid, points, npoints, norm);
+		draw_polygon(tid, points, npoints, norm, shader);
 		return;
 	}
 	assert(points != NULL && (npoints == 3 || npoints == 4));
@@ -277,7 +277,7 @@ void coll_obj::draw_extruded_polygon(int tid) const {
 				reverse(pts[s].begin(), pts[s].end());
 				norm2.negate();
 			}
-			draw_polygon(tid, &(pts[s].front()), npoints, norm2); // draw bottom surface
+			draw_polygon(tid, &(pts[s].front()), npoints, norm2, shader); // draw bottom surface
 			if (!s) reverse(pts[s].begin(), pts[s].end());
 		}
 		else { // draw sides
@@ -286,7 +286,7 @@ void coll_obj::draw_extruded_polygon(int tid) const {
 
 			if (!bfc || !camera_behind_polygon(side_pts, 4)) {
 				vector3d const norm2(get_poly_norm(side_pts));
-				draw_polygon(tid, side_pts, npoints, norm2);
+				draw_polygon(tid, side_pts, npoints, norm2, shader);
 			}
 		}
 	}

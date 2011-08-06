@@ -144,7 +144,6 @@ extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, flow_tid, reflection_tid;
 extern int world_mode, island, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode;
 extern float zmax, zmin, zmax_est, glaciate_exp, relh_adj_tex, vegetation;
-extern shader_t *cur_shader;
 
 
 unsigned char *LoadTextureRAW(texture const &t, int index);
@@ -1498,11 +1497,10 @@ void gen_tex_height_tables() {
 }
 
 
-void set_texgen_vec4(float const v[4], bool s_or_t, bool as_attr, bool enable_and_set_mode) {
+void set_texgen_vec4(float const v[4], bool s_or_t, bool enable_and_set_mode, shader_t *shader) {
 
-	if (as_attr) {
-		assert(cur_shader);
-		cur_shader->add_attrib_float_array((s_or_t ? TEX0_T_ATTR : TEX0_S_ATTR), v, 4);
+	if (shader) {
+		shader->add_attrib_float_array((s_or_t ? TEX0_T_ATTR : TEX0_S_ATTR), v, 4);
 	}
 	else {
 		if (enable_and_set_mode) {
@@ -1514,12 +1512,12 @@ void set_texgen_vec4(float const v[4], bool s_or_t, bool as_attr, bool enable_an
 }
 
 
-void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, int mode, bool as_attr) {
+void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, int mode, shader_t *shader) {
 
 	float const tex_param_s[4] = {sx, sy, sz, sw};
 	float const tex_param_t[4] = {tx, ty, tz, tw};
-	set_texgen_vec4(tex_param_s, 0, as_attr, 1);
-	set_texgen_vec4(tex_param_t, 1, as_attr, 1);
+	set_texgen_vec4(tex_param_s, 0, 1, shader);
+	set_texgen_vec4(tex_param_t, 1, 1, shader);
 }
 
 
@@ -1545,8 +1543,9 @@ void disable_textures_texgen() {
 }
 
 
-void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], vector3d const &offset, bool swap_txy, bool as_attr) {
-
+void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2],
+	vector3d const &offset, bool swap_txy, shader_t *shader)
+{
 	int const d0(get_min_dim(norm));
 	vector3d v[2] = {all_zeros, all_zeros};
 	v[0][d0] = 1.0;
@@ -1555,7 +1554,7 @@ void setup_polygon_texgen(vector3d const &norm, float const scale[2], float cons
 
 	for (unsigned i = 0; i < 2; ++i) {
 		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(offset, v[i]))};
-		set_texgen_vec4(tex_param, ((i != 0) ^ swap_txy), as_attr, 1);
+		set_texgen_vec4(tex_param, ((i != 0) ^ swap_txy), 1, shader);
 	}
 }
 

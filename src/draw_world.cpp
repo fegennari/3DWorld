@@ -77,7 +77,6 @@ extern player_state *sstates;
 extern int coll_id[];
 extern vector<light_source> dl_sources;
 extern vector<portal> portals;
-extern shader_t *cur_shader;
 
 
 void draw_cloud_volumes();
@@ -1838,8 +1837,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	bool const has_lt_atten(draw_trans && !draw_solid);
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, (USE_ATTR_TEXGEN ? 2 : 1), 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
-	cur_shader = &s; // hack to avoid passing the shader down to all texgen calls
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
 	int last_tid(-1), last_group_id(-1), last_pri_dim(-1);
 	
 	if (draw_solid) {
@@ -1854,7 +1852,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					draw_last.push_back(make_pair(neg_dist_sq, i));
 				}
 				else {
-					coll_objects[i].draw_cobj(i, last_tid, last_group_id, last_pri_dim);
+					coll_objects[i].draw_cobj(i, last_tid, last_group_id, last_pri_dim, &s);
 				}
 			}
 		}
@@ -1913,14 +1911,13 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					}
 					if (light_atten > 0.0) s.set_uniform_float_array(ulocs[1], (float const *)c.d, 6);
 				}
-				c.draw_cobj(ix, last_tid, last_group_id, last_pri_dim);
+				c.draw_cobj(ix, last_tid, last_group_id, last_pri_dim, &s);
 			}
 		}
 		end_group(last_group_id);
 		disable_blend();
 		draw_last.resize(0);
 	}
-	cur_shader = NULL;
 	end_smoke_shaders(s, orig_fog_color);
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();

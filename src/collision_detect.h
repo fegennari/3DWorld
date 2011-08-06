@@ -80,7 +80,7 @@ public:
 	void set_npoints();
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim) const;
+	void draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim, shader_t *shader) const;
 	int  simple_draw(int ndiv, int in_cur_prim=PRIM_DISABLED, bool no_normals=0, bool in_dlist=0) const;
 	void add_to_vector(vector<coll_obj> &cobjs, int type_);
 	void check_if_cube();
@@ -123,10 +123,10 @@ public:
 	void register_coll(unsigned char coll_time, unsigned char coll_type_) {last_coll = coll_time; coll_type = coll_type_;}
 
 	// drawing code
-	void draw_coll_cube(int do_fill, int tid) const;
-	void set_poly_texgen(int tid, vector3d const &normal) const;
-	void draw_polygon(int tid, point const *points, int npoints, vector3d const &normal) const;
-	void draw_extruded_polygon(int tid) const;
+	void draw_coll_cube(int do_fill, int tid, shader_t *shader) const;
+	void set_poly_texgen(int tid, vector3d const &normal, shader_t *shader) const;
+	void draw_polygon(int tid, point const *points, int npoints, vector3d const &normal, shader_t *shader) const;
+	void draw_extruded_polygon(int tid, shader_t *shader) const;
 };
 
 

@@ -12,7 +12,6 @@ bool const PRINT_SHADER = 0;
 bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
-shader_t *cur_shader = NULL;
 
 extern bool disable_shaders;
 
