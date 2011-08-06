@@ -19,74 +19,6 @@ extern float occluder_zmin, occluder_zmax, zmin, zbottom, water_plane_z;
 extern vector<coll_obj> coll_objects;
 
 
-
-// false intersections are OK, used only for shadow calculations and such things
-// cobjs == NULL runs in a special mode
-bool check_vert_collision_sphere(point const &pos, float radius, int skip_dynamic, bool trans_test, vector<int> *cobjs) {
-
-	assert(radius >= 0.0); // is radius == 0 OK?
-	bool any_coll(0);
-	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-	if (point_outside_mesh(xpos, ypos)) return 0; // object along edge
-	coll_cell const &cell(v_collision_matrix[ypos][xpos]);
-	if (cell.cvals.empty()) return 0;
-	float const z1(pos.z-radius), z2(pos.z+radius); // Note that the comparison below adds in an addition radius to account for zmin/zmax inaccuracy
-	//if (skip_dynamic && radius < HALF_DXY && (z1 > cell.zmax+radius || z2 < cell.zmin-radius)) return 0;
-	float const x1(pos.x-radius), x2(pos.x+radius), y1(pos.y-radius), y2(pos.y+radius);
-
-	for (int k = (int)cell.cvals.size()-1; k >= 0; --k) { // iterate backwards
-		int const index(cell.cvals[k]);
-		if (index < 0) continue;
-		assert(unsigned(index) < coll_objects.size());
-		coll_obj const &cobj(coll_objects[index]);
-		if (cobjs != NULL && cobj.counter == cobj_counter) continue; // already seen
-
-		if ((skip_dynamic && cobj.status == COLL_DYNAMIC) || cobj.no_collision() || (skip_dynamic >= 2 && !cobj.cp.draw) ||
-			(skip_dynamic >= 3 && !cobj.fixed) || (trans_test && cobj.cp.color.alpha < 0.5))
-		{
-			coll_objects[index].counter = cobj_counter;
-			continue;
-		}
-		if (z2 < cobj.d[2][0] || z1 > cobj.d[2][1]) continue;
-		if (x2 < cobj.d[0][0] || x1 > cobj.d[0][1] || y2 < cobj.d[1][0] || y1 > cobj.d[1][1]) continue;
-		int coll(0);
-
-		switch (cobj.type) { // within bounding box of collision object
-		case COLL_CUBE:
-			if (skip_dynamic >= 2 && cobj.cp.surfs == EF_ALL) break; // all sides hidden
-			if (!sphere_cube_intersect(pos, radius, cobj))  break;
-			coll = 1;
-			break;
-		case COLL_CYLINDER:
-			coll = dist_xy_less_than(pos, cobj.points[0], (cobj.radius+radius));
-			break;
-		case COLL_SPHERE:
-			coll = dist_less_than(pos, cobj.points[0], (cobj.radius+radius));
-			break;
-		case COLL_CYLINDER_ROT:
-			coll = sphere_intersect_cylinder(pos, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2);
-			//if (coll && z1 > cell.zmax+radius) {} // soemthing bad happened
-			break;
-		case COLL_POLYGON: // must be coplanar
-			coll = sphere_ext_poly_intersect(cobj.points, cobj.npoints, cobj.norm, pos, radius, cobj.thickness, MIN_POLY_THICK2);
-			break;
-		} // switch
-		if (coll) {
-			any_coll = 1;
-			
-			if (cobjs != NULL) {
-				coll_objects[index].counter = cobj_counter;
-				cobjs->push_back(index);
-			}
-			else {
-				return 1;
-			}
-		}
-	} // for cl
-	return any_coll;
-}
-
-
 // returns 1 if there is no intersection
 bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const {
 
@@ -706,7 +638,7 @@ bool is_occluded(vector<int> const &occluders, point const *const pts, int npts,
 
 	for (unsigned i = 0; i < nocc; ++i) { // cache last occluder?, promote to the front if occluded?
 		coll_obj const &cobj(coll_objects[occluders[i]]);
-		if (cobj.status == COLL_STATIC && is_contained(camera, pts, npts, cobj.d)) return 1;
+		if (cobj.status == COLL_STATIC && is_contained(camera, pts, npts, cobj.d)) return 1; // line_poly_intersect() for polygon?
 	}
 	return 0;
 }
@@ -736,7 +668,7 @@ void get_occluders() { // 18M total, 380K unique
 
 	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {
 		coll_obj &cobj(coll_objects[i]);
-		if (!cobj.fixed || cobj.status != COLL_STATIC || cobj.cp.surfs == EF_ALL) continue;
+		if (!cobj.fixed || cobj.status != COLL_STATIC || !cobj.cp.draw || cobj.cp.surfs == EF_ALL) continue;
 		get_coll_line_cobjs(camera, cobj.get_cube_center(), i, coll_objects[i].occluders);
 	}
 	if (skipval <= 1) {PRINT_TIME("Occlusion Preprocessing");}

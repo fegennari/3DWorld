@@ -30,16 +30,15 @@ inline bool univ_sphere_vis_dist(point const &pos, float radius) {
 
 
 
-class usw_ray {
+class usw_ray : public line_3dw {
 
 	float w1, w2;
-	point p1, p2;
 	colorRGBA color1, color2;
 
 public:
 	usw_ray() {}
 	usw_ray(float w1_, float w2_, point const &p1_, point const &p2_, colorRGBA const &c1, colorRGBA const &c2)
-		: w1(w1_), w2(w2_), p1(p1_), p2(p2_), color1(c1), color2(c2)
+		: line_3dw(p1_, p2_), w1(w1_), w2(w2_), color1(c1), color2(c2)
 	{
 		assert(w1 > 0.0 && w2 > 0.0);
 	}
