@@ -129,6 +129,7 @@ void coll_obj::create_portal() const {
 			}
 			if (npoints == 3) p.pts[3] = p.pts[2]; // duplicate the last point
 			portals.push_back(p);
+			break;
 		}
 	case COLL_CUBE:
 		{
@@ -153,6 +154,7 @@ void coll_obj::create_portal() const {
 				}
 			}
 			if (max_area > 0.0) portals.push_back(p);
+			break;
 		}
 	default:
 		assert(0); // other types are not supported yet (cylinder, sphere)
