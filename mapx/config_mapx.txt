@@ -47,9 +47,9 @@ self_damage 0.5
 team_damage 0.1
 smiley_damage 1.0
 player_damage 1.0
-player_speed 2.0
+player_speed 1.8
+smiley_speed 1.8
 smiley_accuracy 0.96
-smiley_speed 1.5
 free_for_all 1
 teams 2
 player_name Deathtool
