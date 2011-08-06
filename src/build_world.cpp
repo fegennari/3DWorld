@@ -457,7 +457,7 @@ void process_groups() {
 						float const r2((otype.flags & COLL_DESTROYS) ? 0.25*radius : radius);
 						collision_detect_large_sphere(pos, r2, obj_flags);
 					}
-					if (type != CHUNK && (type != LANDMINE || !lm_coll_invalid(obj))) {
+					if (type != CHUNK && (type != LANDMINE || !obj.lm_coll_invalid())) {
 						cp.cf_index = j;
 						obj.coll_id = add_coll_sphere(pos, radius, cp);
 					}

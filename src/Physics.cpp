@@ -1149,18 +1149,17 @@ void dwobject::surf_collide_obj() const {
 }
 
 
-void elastic_collision(dwobject &obj, point const &pos, float energy, int type) {
+void dwobject::elastic_collision(point const &obj_pos, float energy, int obj_type) {
 
-	int const otype(obj.type);
-	if (obj.disabled() || (object_types[otype].flags & COLL_DESTROYS)) return; // self-propelled
-	if (temperature <= W_FREEZE_POINT && (obj.flags & IN_WATER))       return; // stuck in ice
-	vector3d const vdir(obj.pos, pos);
-	//float const elastic(object_types[otype].elasticity*object_types[type].elasticity);
-	float const elastic(object_types[otype].elasticity), vdir_mag(vdir.mag());
-	float const vmag(sqrt(2.0*elastic*energy/object_types[otype].mass)); // E = 0.5*M*dV^2 => dV = sqrt(2*E/M)
-	if (vdir_mag > TOLERANCE) obj.velocity += vdir*(vmag/vdir_mag);
-	obj.status = 1; // re-animate
-	obj.flags &= ~ALL_COLL_STOPPED;
+	if (disabled() || (object_types[type].flags & COLL_DESTROYS)) return; // self-propelled
+	if (temperature <= W_FREEZE_POINT && (flags & IN_WATER))      return; // stuck in ice
+	vector3d const vdir(pos, obj_pos);
+	//float const elastic(object_types[otype].elasticity*object_types[obj_type].elasticity);
+	float const elastic(object_types[type].elasticity), vdir_mag(vdir.mag());
+	float const vmag(sqrt(2.0*elastic*energy/object_types[type].mass)); // E = 0.5*M*dV^2 => dV = sqrt(2*E/M)
+	if (vdir_mag > TOLERANCE) velocity += vdir*(vmag/vdir_mag);
+	status = 1; // re-animate
+	flags &= ~ALL_COLL_STOPPED;
 }
 
 

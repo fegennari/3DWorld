@@ -1302,7 +1302,6 @@ void init_objects();
 void set_coll_rmax(float rmax);
 void change_timestep(float mult_factor);
 vector3d get_local_wind(point const &pt);
-void elastic_collision(dwobject &obj, point const &pos, float energy, int type);
 void reanimate_objects();
 void accumulate_object(point const &pos, int type);
 void shift_other_objs(vector3d const &vd);
@@ -1311,7 +1310,6 @@ void reset_other_objects_status();
 void auto_advance_time();
 
 // function prototypes - ai
-int smiley_motion(dwobject &obj, int smiley_id);
 void advance_smiley(dwobject &obj, int smiley_id);
 void shift_player_state(vector3d const &vd, int smiley_id);
 void smiley_action(int smiley_id);
@@ -1347,7 +1345,6 @@ void purge_coll_freed(bool force);
 void remove_all_coll_obj();
 void cobj_optimize();
 int  collision_detect_large_sphere(point &pos, float radius, unsigned flags);
-bool proc_object_stuck(dwobject &obj, bool static_top_coll);
 int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex);
 
 // function prototypes - coll_cell_search
@@ -1543,8 +1540,6 @@ void rock_collision(int index, int obj_index, vector3d const &velocity, point co
 void sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 void dodgeball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 void skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-bool lm_coll_invalid(dwobject const &obj);
-bool invalid_coll(dwobject const &obj, coll_obj const &cobj);
 int get_smiley_hit(vector3d &hdir, int index);
 void blast_radius(point const &pos, int type, int obj_index, int shooter, int chain_level);
 void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview);

@@ -784,15 +784,9 @@ string get_weapon_qualifier(int type, int index, int source) {
 }
 
 
-bool lm_coll_invalid(dwobject const &obj) {
+bool dwobject::lm_coll_invalid() const {
 
-	return (obj.time < LM_ACT_TIME);
-}
-
-
-bool invalid_coll(dwobject const &obj, coll_obj const &cobj) {
-
-	return (obj.type == LANDMINE && lm_coll_invalid(obj) && cobj.is_player());
+	return (time < LM_ACT_TIME);
 }
 
 
@@ -805,7 +799,7 @@ int damage_done(int type, int index) {
 		if ((obj.flags & (WAS_PUSHED | FLOATING)) && (type != BALL || game_mode != 2)) return 0; // floating on the water or pushed after stopping, can no longer do damage
 
 		if (type == LANDMINE) {
-			if (obj.status == 1 || lm_coll_invalid(obj)) return 0; // not activated
+			if (obj.status == 1 || obj.lm_coll_invalid()) return 0; // not activated
 			obj.status = 0;
 			return 1;
 		}
@@ -839,7 +833,7 @@ void default_obj_coll(int index, int obj_index, vector3d const &velocity, point 
 		smiley_collision(((type == CAMERA) ? CAMERA_ID : obj_index), index, velocity, position, energy, cobj_type);
 		if (!invalid_collision) obj.disable(); // return?
 	}
-	elastic_collision(obj, position, energy, type); // partially elastic collision
+	obj.elastic_collision(position, energy, type); // partially elastic collision
 }
 
 
@@ -873,7 +867,7 @@ bool pushable_collision(int index, point const &position, float force, int type,
 		if (obj.status != 1 && obj.status != 2) { // only if on ground or stopped
 			// Note: an object resting on a destroyable static object will still have status 1 and will not be pushable
 			if (obj.status == 4) obj.flags |= WAS_PUSHED;
-			elastic_collision(obj, position, force, type); // add some extra energy so that we can push the skull
+			obj.elastic_collision(position, force, type); // add some extra energy so that we can push the skull
 			return 1;
 		}
 	}
@@ -1126,7 +1120,7 @@ void exp_damage_groups(point const &pos, int shooter, int chain_level, float dam
 					}
 				}
 				if (obj.health < 0.0) {
-					if ((object_types[type2].flags & OBJ_EXPLODES) && (type2 != LANDMINE || !lm_coll_invalid(obj))) {
+					if ((object_types[type2].flags & OBJ_EXPLODES) && (type2 != LANDMINE || !obj.lm_coll_invalid())) {
 						if (BLAST_CHAIN_DELAY == 0) {
 							obj.status = 0;
 							blast_radius(obj.pos, type2, i, obj.source, chain_level+1);

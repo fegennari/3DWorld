@@ -806,19 +806,19 @@ bool is_valid_path(point const &start, point const &end, bool check_uw) {
 }
 
 
-void add_connect_waypoint_for_cobj(coll_obj &c) {
+void coll_obj::add_connect_waypoint() {
 
 	if (!use_waypoints) return;
 	waypoint_builder wb;
-	wb.add_one_cobj_wpt(c, 1);
+	wb.add_one_cobj_wpt(*this, 1);
 }
 
 
-void remove_waypoint_for_cobj(coll_obj &c) {
+void coll_obj::remove_waypoint() {
 
-	if (c.waypt_id >= 0) {
+	if (waypt_id >= 0) {
 		waypoint_builder wb;
-		wb.remove_cobj_waypoint(c);
+		wb.remove_cobj_waypoint(*this);
 	}
 }
 

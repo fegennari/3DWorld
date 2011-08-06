@@ -637,7 +637,7 @@ vector3d get_avoid_dir(point const &pos, int smiley_id, pos_dir_up const &pdu) {
 			for (unsigned i = 0; i < objg.end_id; ++i) {
 				dwobject const &obj2(objg.get_obj(i));
 			
-				if (!obj2.disabled() && obj2.source == smiley_id && (type != LANDMINE || !lm_coll_invalid(obj2)) &&
+				if (!obj2.disabled() && obj2.source == smiley_id && (type != LANDMINE || !obj2.lm_coll_invalid()) &&
 					dist_less_than(pos, obj2.pos, min_dist) && sphere_in_view(pdu, pos, object_types[type].radius, 0))
 				{
 					avoid_dir  = (obj2.pos - pos);
@@ -821,7 +821,7 @@ struct dir_cost_t {
 };
 
 
-vector3d step_dist_scale(dwobject const &obj, vector3d dir) {
+vector3d step_dist_scale(dwobject const &obj, vector3d const &dir) {
 
 	float const dp(dot_product(obj.orientation, dir));
 	if (dp >  0.5) return dir;

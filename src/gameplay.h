@@ -163,7 +163,6 @@ void draw_plasmaball(point const &pos0, int shooter);
 void init_smiley(int smiley_id);
 int  get_damage_source(int type, int index, int questioner);
 void gen_rubble(int type, int num, point const &pos, int shooter, float const p[7]);
-bool lm_coll_invalid(dwobject const &obj);
 
 void add_damage_to_smiley(vector3d const &dir, float size, int smiley_id, int type);
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time);

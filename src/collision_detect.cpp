@@ -971,12 +971,12 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 // ************ begin vert_coll_detector ************
 
 
-bool proc_object_stuck(dwobject &obj, bool static_top_coll) {
+bool dwobject::proc_stuck(bool static_top_coll) {
 
-	float const friction(object_types[obj.type].friction_factor);
+	float const friction(object_types[type].friction_factor);
 	if (friction < 2.0*STICK_THRESHOLD || friction < rand_uniform(2.0, 3.0)*STICK_THRESHOLD) return 0;
-	obj.flags |= (static_top_coll ? ALL_COLL_STOPPED : XYZ_STOPPED); // stuck in coll object
-	obj.status = 4;
+	flags |= (static_top_coll ? ALL_COLL_STOPPED : XYZ_STOPPED); // stuck in coll object
+	status = 4;
 	return 1;
 }
 
@@ -1025,7 +1025,7 @@ void vert_coll_detector::check_cobj(int index) {
 	if (cobj.no_collision())                         return; // collisions are disabled for this cobj
 	if (type == PROJC    && obj.source  == cobj.id)  return; // can't shoot yourself with a projectile
 	if (player           && obj.coll_id == cobj.id)  return; // can't collide with yourself
-	if (type == LANDMINE && invalid_coll(obj, cobj)) return;
+	if (type == LANDMINE && obj.invalid_coll(cobj))  return;
 	if (skip_dynamic && cobj.status == COLL_DYNAMIC) return;
 	if (only_drawn   && !cobj.cp.draw)               return;
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
@@ -1261,7 +1261,7 @@ void vert_coll_detector::check_cobj(int index) {
 	}
 	else { // sticks
 		if (cobj.status == COLL_STATIC) {
-			if (!proc_object_stuck(obj, static_top_coll) && static_top_coll) obj.flags |= STATIC_COBJ_COLL; // coll with top
+			if (!obj.proc_stuck(static_top_coll) && static_top_coll) obj.flags |= STATIC_COBJ_COLL; // coll with top
 			obj.pos -= norm*(0.1*o_radius); // make sure it still intersects
 		}
 		obj.velocity = zero_vector; // I think this is correct

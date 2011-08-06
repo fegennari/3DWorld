@@ -24,8 +24,6 @@ extern coll_cell_opt_batcher cco_batcher;
 
 
 unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int destroy_thresh);
-void add_connect_waypoint_for_cobj(coll_obj &c);
-void remove_waypoint_for_cobj(coll_obj &c);
 
 
 // **************** Cobj Destroy Code ****************
@@ -53,7 +51,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 		for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
 			if (*i < 0) continue;
 			assert((unsigned)*i < coll_objects.size());
-			if (coll_objects[*i].waypt_id < 0) add_connect_waypoint_for_cobj(coll_objects[*i]); // slow
+			if (coll_objects[*i].waypt_id < 0) coll_objects[*i].add_connect_waypoint(); // slow
 		}
 	}
 
@@ -118,42 +116,47 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 }
 
 
-void add_portal(coll_obj const &c) {
+void coll_obj::create_portal() const {
 
-	if (c.type == COLL_POLYGON) {
-		assert(c.npoints == 3 || c.npoints == 4);
-		portal p;
+	switch (type) {
+	case COLL_POLYGON:
+		{
+			assert(npoints == 3 || npoints == 4);
+			portal p;
 
-		for (int i = 0; i < c.npoints; ++i) {
-			p.pts[i] = c.points[i]; // ignore thickness - use base polygon only
+			for (int i = 0; i < npoints; ++i) {
+				p.pts[i] = points[i]; // ignore thickness - use base polygon only
+			}
+			if (npoints == 3) p.pts[3] = p.pts[2]; // duplicate the last point
+			portals.push_back(p);
 		}
-		if (c.npoints == 3) p.pts[3] = p.pts[2]; // duplicate the last point
-		portals.push_back(p);
-	}
-	else if (c.type == COLL_CUBE) {
-		portal p;
-		float max_area(0.0);
+	case COLL_CUBE:
+		{
+			portal p;
+			float max_area(0.0);
 		
-		for (unsigned i = 0; i < 6; ++i) { // choose enabled side with max area
-			unsigned const dim(i>>1), dir(i&1), d0((dim+1)%3), d1((dim+2)%3);
-			if (c.cp.surfs & EFLAGS[dim][dir]) continue; // disabled side
-			float const area(fabs(c.d[d0][1] - c.d[d0][0])*fabs(c.d[d1][1] - c.d[d1][0]));
+			for (unsigned i = 0; i < 6; ++i) { // choose enabled side with max area
+				unsigned const dim(i>>1), dir(i&1), d0((dim+1)%3), d1((dim+2)%3);
+				if (cp.surfs & EFLAGS[dim][dir]) continue; // disabled side
+				float const area(fabs(d[d0][1] - d[d0][0])*fabs(d[d1][1] - d[d1][0]));
 
-			if (area > max_area) {
-				max_area = area;
-				point pos;
-				pos[dim] = c.d[dim][dir];
+				if (area > max_area) {
+					max_area = area;
+					point pos;
+					pos[dim] = d[dim][dir];
 
-				for (unsigned n = 0; n < 4; ++n) {
-					pos[d0] = c.d[d0][n<2];
-					pos[d1] = c.d[d1][(n&1)^(n<2)];
-					p.pts[n] = pos;
+					for (unsigned n = 0; n < 4; ++n) {
+						pos[d0] = d[d0][n<2];
+						pos[d1] = d[d1][(n&1)^(n<2)];
+						p.pts[n] = pos;
+					}
 				}
 			}
+			if (max_area > 0.0) portals.push_back(p);
 		}
-		if (max_area > 0.0) portals.push_back(p);
+	default:
+		assert(0); // other types are not supported yet (cylinder, sphere)
 	}
-	// else other types are not supported yet (cylinder, sphere)
 }
 
 
@@ -280,7 +283,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		if (shatter || subtract_cobj(new_cobjs, cube, cobjs[i], 1)) {
 			if (no_new_cobjs) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
-			if (D == SHATTER_TO_PORTAL) add_portal(cobjs[i]);
+			if (D == SHATTER_TO_PORTAL) cobjs[i].create_portal();
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
@@ -301,7 +304,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 	// remove destroyed cobjs
 	for (unsigned i = 0; i < to_remove.size(); ++i) {
-		remove_waypoint_for_cobj(cobjs[to_remove[i]]);
+		cobjs[to_remove[i]].remove_waypoint();
 		remove_coll_object(to_remove[i]); // remove old collision object
 	}
 	if (!to_remove.empty()) {
@@ -311,7 +314,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 	// add new waypoints (after build_cobj_tree and end_batch)
 	for (unsigned i = 0; i < just_added.size(); ++i) {
-		add_connect_waypoint_for_cobj(cobjs[just_added[i]]); // slow
+		cobjs[just_added[i]].add_connect_waypoint(); // slow
 	}
 
 	// process unanchored cobjs
@@ -339,7 +342,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 				cts.push_back(color_tid_vol(cobjs[*i], cobjs[*i].volume, cobjs[*i].calc_min_dim(), 1));
 				cobjs[*i].clear_internal_data();
 				mod_cubes.push_back(cobjs[*i]);
-				remove_waypoint_for_cobj(cobjs[*i]);
+				cobjs[*i].remove_waypoint();
 				remove_coll_object(*i);
 				to_remove.push_back(*i);
 			}

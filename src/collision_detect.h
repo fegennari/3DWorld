@@ -121,6 +121,9 @@ public:
 	bool line_intersect(point const &p1, point const &p2) const;
 	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const;
 	void register_coll(unsigned char coll_time, unsigned char coll_type_) {last_coll = coll_time; coll_type = coll_type_;}
+	void create_portal() const; // destroy_cobj.cpp
+	void add_connect_waypoint(); // waypoints.cpp
+	void remove_waypoint();
 
 	// drawing code
 	void draw_coll_cube(int do_fill, int tid, shader_t *shader) const;

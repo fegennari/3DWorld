@@ -148,6 +148,7 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 	void set_orient_for_coll(vector3d const *const forced_norm);
 	int check_water_collision(float vz_old);
 	void surf_collide_obj() const;
+	void elastic_collision(point const &obj_pos, float energy, int obj_type);
 	int object_bounce(int coll_type, vector3d &norm, float elasticity2, float zval, float z_offset, vector3d const &obj_vel=zero_vector);
 	int object_still_stopped(int obj_index);
 	void do_coll_damage();
@@ -162,6 +163,9 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 	void disable() {status = 0; time = 0; health = 0.0;} // set all three just in case
 	void verify_data() const {if (is_nan(pos) || is_nan(velocity)) print_and_terminate();}
 	void print_and_terminate() const;
+	bool lm_coll_invalid() const;
+	bool invalid_coll(coll_obj const &cobj) const {return (type == LANDMINE && lm_coll_invalid() && cobj.is_player());}
+	bool proc_stuck(bool static_top_coll);
 };
 
 
