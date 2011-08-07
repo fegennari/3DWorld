@@ -234,9 +234,9 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 	assert(nsides <= 6);
 	pair<int, unsigned> faces[6];
 	for (unsigned i = 0; i < nsides; ++i) faces[i] = make_pair(0, i);
+	point const camera(get_camera_pos());
 
 	if (!bfc) { // sort by the number of centerlines crossing the surfaces
-		point const camera(get_camera_pos());
 		point centers[6];
 
 		for (unsigned i = 0; i < 2; ++i) { // front and back
@@ -277,7 +277,9 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 				reverse(pts[s].begin(), pts[s].end());
 				norm2.negate();
 			}
-			draw_polygon(tid, &(pts[s].front()), npoints, norm2, shader); // draw bottom surface
+			if (!(display_mode & 0x08) || occluders.empty() || !is_occluded(occluders, &(pts[s].front()), npoints, camera)) {
+				draw_polygon(tid, &(pts[s].front()), npoints, norm2, shader); // draw bottom surface
+			}
 			if (!s) reverse(pts[s].begin(), pts[s].end());
 		}
 		else { // draw sides
@@ -285,6 +287,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
 
 			if (!bfc || !camera_behind_polygon(side_pts, 4)) {
+				if ((display_mode & 0x08) && !occluders.empty() && is_occluded(occluders, side_pts, npoints, camera)) continue;
 				vector3d const norm2(get_poly_norm(side_pts));
 				draw_polygon(tid, side_pts, npoints, norm2, shader);
 			}
