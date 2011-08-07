@@ -1993,14 +1993,14 @@ void draw_sun() {
 	point const pos(get_sun_pos());
 
 	if (sphere_in_camera_view(pos, sun_radius, 1)) {
-		select_texture(SUN_TEX);
+		//select_texture(SUN_TEX);
 		glDisable(GL_LIGHTING);
 		colorRGBA color(SUN_C);
 		apply_red_sky(color);
 		color.do_glColor();
 		draw_subdiv_sphere(pos, sun_radius, N_SPHERE_DIV, 1, 0);
 		glEnable(GL_LIGHTING);
-		glDisable(GL_TEXTURE_2D);
+		//glDisable(GL_TEXTURE_2D);
 	}
 }
 

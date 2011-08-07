@@ -195,12 +195,6 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
 }
 
 
-void sun_flare() {
-
-	DoFlares(get_camera_pos(), camera_origin, get_sun_pos(), 1.0, (combined_gu ? 12.0*univ_sun_rad : 1.0));
-}
-
-
 void draw_stuff(int draw_uw, int timer1) {
 
 	if (draw_uw) {
@@ -349,12 +343,6 @@ void auto_advance_camera() {
 
 	if (run_forward && !advanced) advance_camera(MOVE_FRONT);
 	advanced = 0;
-}
-
-
-bool sun_in_view() { // universe sun radius?
-
-	return (have_sun && light_factor >= 0.4 && sphere_in_camera_view(get_sun_pos(), 5.0*sun_radius, 2)); // ok for universe sun?
 }
 
 
@@ -660,6 +648,21 @@ float get_ocean_wave_height() {
 }
 
 
+void draw_sun_flare() {
+
+	point const sun_pos(get_sun_pos());
+
+	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, sun_radius, 6)) {
+		int const fog_enbaled(glIsEnabled(GL_FOG));
+		glDisable(GL_FOG);
+		glDisable(GL_DEPTH_TEST);
+		DoFlares(get_camera_pos(), camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0));
+		glEnable(GL_DEPTH_TEST);
+		if (fog_enbaled) glEnable(GL_FOG);
+	}
+}
+
+
 // The display function. It is called whenever the window needs
 // redrawing (ie: overlapping window moves, resize, maximize)
 // display() is also called every so many milliseconds to provide a decent framerate
@@ -838,11 +841,7 @@ void display(void) {
 			}
 			// drawing code
 			if (!combined_gu) draw_sun_moon_stars();
-			
-			if (sun_in_view()) { // do sun flare
-				glDisable(GL_FOG);
-				sun_flare();
-			}
+
 			// Is this correct? Camera smoke is a different kind of fog
 			if (show_fog || underwater) glEnable(GL_FOG);
 			if (!show_lightning) l_strike.enabled = 0;
@@ -924,6 +923,7 @@ void display(void) {
 			if (!use_stencil_shadows && shadows) create_shadows();
 			setup_basic_fog();
 			draw_sky(1);
+			draw_sun_flare();
 			check_gl_error(10);
 			//draw_scene_bounds_and_light_frustum(get_light_pos()); // TESTING
 		} // WMODE_GROUND
@@ -1022,16 +1022,6 @@ void draw_transparent(bool above_water) {
 }
 
 
-void draw_inf_terrain_sun_flare() {
-
-	if (sun_in_view()) { // do sun flare
-		glDisable(GL_FOG);
-		sun_flare();
-		if (show_fog) glEnable(GL_FOG);
-	}
-}
-
-
 // render scene reflection to texture
 void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float water_z) {
 
@@ -1053,7 +1043,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 
 	// draw partial scene
 	draw_sun_moon_stars();
-	draw_inf_terrain_sun_flare();
+	draw_sun_flare();
 
 	if (display_mode & 0x01) { // draw mesh
 		// setup above-water clip plane
@@ -1175,7 +1165,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		if (draw_water && !underwater) reflection_tid = create_reflection();
 		draw_sun_moon_stars();
 	}
-	draw_inf_terrain_sun_flare();
+	draw_sun_flare();
 	//draw_sky(0);
 	//if (!camera_view) camera_shadow(camera);
 	draw_camera_weapon(0);
