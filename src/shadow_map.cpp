@@ -151,27 +151,28 @@ void set_texture_matrix(matrix4x4d &camera_mv_matrix) {
 }
 
 
-void set_smap_shader_for_light(shader_t &s, int light, float z_bias) {
+bool set_smap_shader_for_light(shader_t &s, int light, float z_bias) {
 
-	if (!shadow_map_enabled()) return;
+	if (!shadow_map_enabled()) return 0;
 	assert(light >= 0 && light < NUM_LIGHT_SRC);
+	if (!glIsEnabled(GL_LIGHT0 + light)) return 0;
+	point lpos; // unused
 	smap_data_t const &data(smap_data[light]);
 	assert(data.tid > 0);
 	s.add_uniform_float("z_bias", z_bias);
-	s.add_uniform_int(append_array_ix(std::string("sm_tu_id"), light), data.tu_id);
-	s.add_uniform_int(append_array_ix(std::string("sm_tex"),   light), data.tu_id);
+	s.add_uniform_int  (append_array_ix(std::string("sm_tu_id"), light), data.tu_id);
+	s.add_uniform_int  (append_array_ix(std::string("sm_tex"),   light), data.tu_id);
+	s.add_uniform_float(append_array_ix(std::string("sm_scale"), light), (light_valid(0xFF, light, lpos) ? 1.0 : 0.0));
 	set_multitex(data.tu_id);
 	bind_2d_texture(data.tid);
 	set_multitex(0);
+	return 1;
 }
 
 
 void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 
-	point lpos; // unused
-
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		if (!light_valid(0xFF, l, lpos)) continue;
 		set_smap_shader_for_light(s, l, z_bias);
 	}
 }
@@ -379,7 +380,7 @@ void create_shadow_map() {
 	point lpos;
 	
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		if (!glIsEnabled(GL_LIGHT0 + l) || !get_light_pos(lpos, l)) continue;
+		if (!light_valid(0xFF, l, lpos) || !glIsEnabled(GL_LIGHT0 + l)) continue;
 		smap_data[l].create_shadow_map_for_light(l, lpos);
 	}
 
