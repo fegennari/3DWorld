@@ -31,7 +31,7 @@ bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const
 		point pt;
 
 		if (type == COLL_POLYGON) {
-			if (thickness > MIN_POLY_THICK2) { // thick polygon
+			if (thickness > MIN_POLY_THICK) { // thick polygon
 				if (!ppts) ppts = &thick_poly_to_sides(points, npoints, norm, thickness);
 
 				for (unsigned i = 0; i < ppts->size(); ++i) {
@@ -81,7 +81,7 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 				assert(npoints >= 3);
 				vector3d const v1(p2, p1);
 
-				if (thickness > MIN_POLY_THICK2) { // test extruded (3D) polygon
+				if (thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
 					static vector<point> pts[2];
 					gen_poly_planes(points, npoints, norm, thickness, pts);
 					bool const test_side(dot_product(v1, norm) > 0.0);
@@ -165,7 +165,7 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 			{
 				assert(npoints >= 3);
 
-				if (thickness > MIN_POLY_THICK2) { // test extruded (3D) polygon
+				if (thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
 					t = 2.0; // start at a bad value
 					float tval;
 					static vector<point> pts[2];

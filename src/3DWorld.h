@@ -147,7 +147,6 @@ float const TWO_SQRT2       = 2.0*SQRT2;
 float const SQRTOFTWOINV    = 1.0/SQRT2;
 float const TO_DEG          = 180.0/PI;
 float const TO_RADIANS      = PI/180.0;
-float const MIN_POLY_THICK2 = 2.0*MIN_POLY_THICK;
 float const SQRT_ZOOMF      = sqrt(ZOOM_FACTOR);
 float const SQRT_ZOOMF_INV  = 1.0/SQRT_ZOOMF;
 

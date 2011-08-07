@@ -331,7 +331,7 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 	float const dzx(norm.z == 0.0 ? 0.0 : DX_VAL*norm.x/norm.z), dzy(norm.z == 0.0 ? 0.0 : DY_VAL*norm.y/norm.z);
 	float const delta_z(sqrt(dzx*dzx + dzy*dzy));
 	vector<vector<point> > const *pts(NULL);
-	if (cobj.thickness > MIN_POLY_THICK2) pts = &thick_poly_to_sides(cobj.points, cobj.npoints, norm, cobj.thickness);
+	if (cobj.thickness > MIN_POLY_THICK) pts = &thick_poly_to_sides(cobj.points, cobj.npoints, norm, cobj.thickness);
 	cube_t cube;
 	cube.d[2][0] = zminc - SMALL_NUMBER;
 	cube.d[2][1] = zmaxc + SMALL_NUMBER;
@@ -351,7 +351,7 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 			if (add_to_hcm) {
 				swap(z1, z2);
 
-				if (cobj.thickness > MIN_POLY_THICK2) { // thick polygon	
+				if (cobj.thickness > MIN_POLY_THICK) { // thick polygon	
 					assert(pts);
 					bool inside(0);
 
@@ -500,7 +500,7 @@ void coll_obj::get_cvz_range(unsigned *zz, float zmin, float zmax, int x, int y)
 	float zv[2] = {d[2][0], d[2][1]};
 
 	// clip size to actual polygon bounds within this cell (could do this with COLL_CYLINDER_ROT as well)
-	if (type == COLL_POLYGON && thickness <= MIN_POLY_THICK && radius > HALF_DXY && norm.z != 0.0 && (zv[1] - zv[0])*dz_inv > 2.0) {
+	if (is_thin_poly() && radius > HALF_DXY && norm.z != 0.0 && (zv[1] - zv[0])*dz_inv > 2.0) {
 		float const D(-dot_product(norm, points[0])), nz_inv(1.0/norm.z);
 		float zval[2];
 		bool first(1);
@@ -1173,8 +1173,8 @@ void vert_coll_detector::check_cobj(int index) {
 			if (sphere_ext_poly_int_base(cobj.points[0], norm, pos, o_radius, cobj.thickness, thick, rdist)) {
 				//if (rdist < 0) {rdist = -rdist; norm.negate();}
 
-				if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, max(0.0f, (thick - MIN_POLY_THICK2)))) {
-					if (cobj.thickness > MIN_POLY_THICK2) { // compute norm based on extruded sides
+				if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, max(0.0f, (thick - MIN_POLY_THICK)))) {
+					if (cobj.thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
 						vector<vector<point> > const &pts(thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness));
 						if (!sphere_intersect_poly_sides(pts, pos, o_radius, val, norm, 1)) break; // no collision
 						bool intersects(0), inside(1);
@@ -1618,7 +1618,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				float const thick(0.5*cobj.thickness);
 				bool const poly_z(fabs(cobj.norm.z) > 0.5); // hack to fix bouncy polygons and such - should fix better eventually
 
-				if (cobj.thickness > MIN_POLY_THICK2 && !poly_z) {
+				if (cobj.thickness > MIN_POLY_THICK && !poly_z) {
 					float val;
 					vector3d norm;
 					vector<vector<point> > const &pts(thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness));

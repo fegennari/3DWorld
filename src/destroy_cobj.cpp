@@ -442,7 +442,7 @@ int coll_obj::is_anchored() const {
 		for (int i = 0; i < npoints; ++i) {
 			if (is_pt_under_mesh(points[i])) return 1;
 
-			if (thickness > MIN_POLY_THICK2) {
+			if (thickness > MIN_POLY_THICK) {
 				if (is_pt_under_mesh(points[i] + norm*(0.5*thickness))) return 1;
 				if (is_pt_under_mesh(points[i] - norm*(0.5*thickness))) return 1;
 			}
@@ -499,7 +499,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			for (int i = 0; i < c.npoints; ++i) {
 				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
 			}
-			if (c.thickness > MIN_POLY_THICK2) { // test extruded (3D) polygon
+			if (c.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
 				static vector<point> pts[2];
 				gen_poly_planes(c.points, c.npoints, c.norm, c.thickness, pts);
 				
@@ -536,7 +536,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_CYLINDER_ROT:
 			return sphere_intersect_cylinder(points[0], radius, c.points[0], c.points[1], c.radius, c.radius2);
 		case COLL_POLYGON:
-			return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK2);
+			return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK);
 		default: assert(0);
 		}
 

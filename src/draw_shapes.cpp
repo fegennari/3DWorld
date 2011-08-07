@@ -222,7 +222,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 
 	float const thick(fabs(thickness));
 	
-	if (thick <= MIN_POLY_THICK2) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
+	if (thick <= MIN_POLY_THICK) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
 		draw_polygon(tid, points, npoints, norm, shader);
 		return;
 	}

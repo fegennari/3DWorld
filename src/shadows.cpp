@@ -480,7 +480,7 @@ int polygon_shadow(point const *points, vector3d const &norm, int npoints, float
 	bool test_side(0);
 	point lpos;
 	static vector<point> pts[2];
-	bool const thick_test(thick > MIN_POLY_THICK2);
+	bool const thick_test(thick > MIN_POLY_THICK);
 	point const center(get_center(points, npoints));
 	if (thick_test) gen_poly_planes(points, npoints, norm, thick, pts); // generate top and bottom surfaces
 	

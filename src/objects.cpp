@@ -166,7 +166,7 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 			if (!in_poly) return 0;
 			val = d[d3][dir];
 			
-			if (fabs(norm[d3]) > 0.01 && thickness <= MIN_POLY_THICK2) { // doesn't work on thick or vertical polygons
+			if (fabs(norm[d3]) > 0.01 && thickness <= MIN_POLY_THICK) { // doesn't work on thick or vertical polygons
 				float const dval(-dot_product(norm, points[0]));
 				float const cent[2] = {0.5*(bb[0][0] + bb[0][1]), 0.5*(bb[1][0] + bb[1][1])};
 				val = -(cent[0]*norm[d1] + cent[1]*norm[d2] + dval)/norm[d3] + (dir ? 1.0 : -1.0)*0.5*fabs(norm[d3]*thickness);
@@ -224,8 +224,8 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	if ((display_mode & 0x08) && !occluders.empty()) {
 		point pts[8];
 		point const camera(get_camera_pos());
-		unsigned const ncorners(get_cube_corners(d, pts, camera, 0)); // 8 corners allocated, but only 6 used
-		if (is_occluded(occluders, pts, ncorners, camera)) return;
+		unsigned const ncorners(is_thin_poly() ? npoints : get_cube_corners(d, pts, camera, 0)); // 8 corners allocated, but only 6 used
+		if (is_occluded(occluders, (is_thin_poly() ? points : pts), ncorners, camera)) return;
 	}
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
@@ -259,7 +259,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		glBegin(GL_TRIANGLES);
 	}
 	if (in_group) { // FIXME: color bug when using dynamic lighting
-		assert(type == COLL_POLYGON && thickness <= MIN_POLY_THICK2); // thin triangle/quad
+		assert(is_thin_poly()); // thin triangle/quad
 		vector3d const normal(get_norm_camera_orient(norm, center));
 		unsigned const ixs[6] = {0,1,2,0,2,3};
 		unsigned const nix((npoints == 3) ? 3 : 6); // triangle or quad (2 tris)
@@ -351,7 +351,7 @@ int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals, bool in_dl
 		break;
 
 	case COLL_POLYGON:
-		if (thickness <= MIN_POLY_THICK2) {
+		if (thickness <= MIN_POLY_THICK) {
 			in_cur_prim = draw_simple_polygon(points, npoints, norm, in_cur_prim, no_normals);
 		}
 		else {
@@ -458,8 +458,8 @@ float coll_obj::get_light_transmit(point v1, point v2) const {
 
 bool coll_obj::has_poly_billboard_alpha() const {
 
-	if (!is_billboard || type != COLL_POLYGON || thickness > MIN_POLY_THICK2 || npoints != 4) return 0;
-	if (cp.tid < 0 || textures[cp.tid].ncolors != 4) return 0; // no alpha channel texture
+	if (!is_billboard || !is_thin_poly() || npoints != 4) return 0;
+	if (cp.tid < 0    || textures[cp.tid].ncolors   != 4) return 0; // no alpha channel texture
 	return 1;
 }
 

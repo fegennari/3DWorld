@@ -450,8 +450,7 @@ bool csg_cube::subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cob
 bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
 
 	// start by assuming *this intersects cobj.d (should have been tested already)
-	assert(cobj.type == COLL_POLYGON);
-	assert(cobj.thickness <= MIN_POLY_THICK2); // can't handle this case yet
+	assert(cobj.is_thin_poly()); // can't handle other cases yet
 	if (contains_cube(cobj)) return 1; // contained - remove the entire cobj
 	static vector<point> cur, next, new_poly;
 	assert(cur.empty() && next.empty() && new_poly.empty());
@@ -899,7 +898,7 @@ bool subtract_cobj(vector<coll_obj> &new_cobjs, csg_cube const &cube, coll_obj &
 	else if (cobj.is_cylinder()) {
 		removed = cube.subtract_from_cylinder(new_cobjs, cobj);
 	}
-	else if (include_polys && cobj.type == COLL_POLYGON && cobj.thickness <= MIN_POLY_THICK2) {
+	else if (include_polys && cobj.is_thin_poly()) {
 		removed = cube.subtract_from_polygon(new_cobjs, cobj);
 	}
 	return removed;
@@ -1097,9 +1096,8 @@ void sort_cobjs_for_rendering(vector<coll_obj> &cobjs) {
 
 
 color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thickness_, bool ua)
-	: cid(cobj.id), tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), unanchored(ua),
-	is_2d(cobj.type == COLL_POLYGON && cobj.thickness <= MIN_POLY_THICK), volume(volume_),
-	thickness(thickness_), tscale(cobj.cp.tscale), color(cobj.cp.color)
+	: cid(cobj.id), tid(cobj.cp.tid), destroy(cobj.destroy), draw(cobj.cp.draw), unanchored(ua), is_2d(cobj.is_thin_poly()),
+	volume(volume_), thickness(thickness_), tscale(cobj.cp.tscale), color(cobj.cp.color)
 {
 	if (cobj.type == COLL_CUBE && cobj.cp.light_atten > 0.0) {
 		color.alpha += (1.0 - color.alpha)*(1.0 - exp(-cobj.cp.light_atten*thickness));
