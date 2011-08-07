@@ -1355,6 +1355,7 @@ bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ign
 bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts,
 	int ignore_cobj, int &cobj);
 void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs);
+bool have_occluders();
 void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler,
 	bool dynamic, bool check_ccounter, int id_for_cobj_int);
 bool is_contained(point const &pos, point const *const pts, unsigned npts, float const d[3][2]);

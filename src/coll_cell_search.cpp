@@ -15,7 +15,7 @@ unsigned const QLP_CACHE_SIZE = 10000;
 int cobj_counter(0);
 
 extern int coll_border, display_mode;
-extern float occluder_zmin, occluder_zmax, zmin, zbottom, water_plane_z;
+extern float zmin, zbottom, water_plane_z;
 extern vector<coll_obj> coll_objects;
 
 
@@ -580,7 +580,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 
 bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj) {
 
-	if (occluder_zmin >= occluder_zmax) return 0;
+	if (!have_occluders()) return 0;
 	assert(npts > 0);
 	static int last_cobj(-1);
 
@@ -592,7 +592,7 @@ bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, i
 	if (use_cobj_tree(pos1, center)) {
 		return cobj_contained_tree(pos1, center, viewer, pts, npts, cobj, last_cobj);
 	}
-	if (!do_line_clip_scene(pos1, center, occluder_zmin, occluder_zmax)) return 0;
+	if (!do_line_clip_scene(pos1, center, czmin, czmax)) return 0;
 	line_intersector_occlusion_cobjs lint(pos1, center, viewer, pts, npts);
 	coll_cell_line_iterator<line_intersector_occlusion_cobjs> ccli(lint, 1, 1, cobj);
 	
@@ -613,7 +613,7 @@ bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 		get_coll_line_cobjs_tree(pos1, pos2, cobj, cobjs);
 		return (!cobjs.empty());
 	}
-	if (!do_line_clip_scene(pos1, pos2, occluder_zmin, occluder_zmax)) return 0;
+	if (!do_line_clip_scene(pos1, pos2, czmin, czmax)) return 0;
 	line_intersector_get_cobjs lint(pos1, pos2, cobjs);
 	coll_cell_line_iterator<line_intersector_get_cobjs> ccli(lint, 1, 1, cobj);
 	ccli.do_iter();
@@ -647,7 +647,7 @@ bool is_occluded(vector<int> const &occluders, point const *const pts, int npts,
 void get_occluders() { // 18M total, 380K unique
 
 	RESET_TIME;
-	if (!(display_mode & 0x08) || occluder_zmin >= occluder_zmax) return;
+	if (!(display_mode & 0x08) || !have_occluders()) return;
 	static unsigned startval(0), stopped_count(0);
 	static bool first_run(1);
 	unsigned const skipval(first_run ? 0 : 12); // spread update across many frames

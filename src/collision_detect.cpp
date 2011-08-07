@@ -21,7 +21,7 @@ float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 bool have_drawn_cobj, have_platform_cobj, camera_on_snow(0);
 int coll_border(0), camera_coll_id(-1);
 unsigned cobjs_removed(0), index_top(0);
-float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0), occluder_zmin(FAR_CLIP), occluder_zmax(-FAR_CLIP);
+float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
 vector<int> index_stack;
 vector<coll_obj> coll_objects;
@@ -687,11 +687,6 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 		vcm.update_opt(j, i);
 		czmin = min(zminv, czmin);
 		czmax = max(zmaxv, czmax);
-
-		if (cobj.is_occluder()) {
-			occluder_zmin = min(zminv, occluder_zmin);
-			occluder_zmax = max(zmaxv, occluder_zmax);
-		}
 	}
 }
 

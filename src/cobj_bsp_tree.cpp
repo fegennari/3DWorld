@@ -85,8 +85,10 @@ protected:
 
 
 public:
-	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool o, bool m) :
-	  cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), moving_only(m) {}
+	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool o, bool m)
+		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), moving_only(m) {}
+
+	bool is_empty() const {return nodes.empty();}
 
 	void clear() {
 		nodes.resize(0);
@@ -415,6 +417,13 @@ void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_c
 
 	cobj_tree_occlude.get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs);
 }
+
+
+bool have_occluders() {
+
+	return (BUILD_COBJ_TREE ? !cobj_tree_occlude.is_empty() : 1);
+}
+
 
 
 
