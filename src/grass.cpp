@@ -489,9 +489,10 @@ public:
 						mzmin = min(mzmin, z_min_matrix[y][xx]);
 						mzmax = max(mzmax, mesh_height[y][xx]);
 					}
-					cube_t const cube(get_xval(x)-grass_length, get_xval(x+BLOCK_SIZE)+grass_length,
-									  get_yval(y)-grass_length, get_yval(y+1)+grass_length, mzmin, mzmax+grass_length);
-					visible = camera_pdu.cube_visible(cube);
+					float const xval(get_xval(x)), yval(get_yval(y));
+					cube_t const cube(xval-grass_length, xval+BLOCK_SIZE*DX_VAL+grass_length,
+									  yval-grass_length, yval+DY_VAL+grass_length, mzmin, mzmax+grass_length);
+					visible = camera_pdu.cube_visible(cube); // could use camera_pdu.sphere_and_cube_visible_test()
 				
 					if (visible && (display_mode & 0x08)) {
 						point pts[8];

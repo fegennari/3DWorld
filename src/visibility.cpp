@@ -103,9 +103,9 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 // view frustum check: dir and upv must be normalized - checks view frustum
 bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 
-	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
+	if (!valid) return (radius >= 0.0); // invalid - the only reasonable thing to do is return true for safety
 	vector3d const pv(pos_, pos);
-	if (dot_product(dir, pv) < 0.0) return (pv.mag_sq() < max(1.0, A*A)*radius*radius*tterm_sq2_inv); // optimization
+	if (dot_product(dir, pv) < 0.0) return (radius > 0.0 && pv.mag_sq() < max(1.0, A*A)*radius*radius*tterm_sq2_inv); // sphere behind - optimization
 	float const dist(pv.mag());
 	if (fabs(dot_product(upv_, pv)) > (  dist*sterm + radius)) return 0; // y-direction (up)
 	if (fabs(dot_product(cp,   pv)) > (A*dist*sterm + radius)) return 0; // x-direction
@@ -145,6 +145,14 @@ bool pos_dir_up::cube_visible(cube_t const &cube) const {
 		}
 	}
 	return 1;
+}
+
+
+bool pos_dir_up::sphere_and_cube_visible_test(point const &pos_, float radius, cube_t const &cube) const {
+
+	if (!sphere_visible_test(pos_,  radius)) return 0; // none of the sphere is visible
+	if ( sphere_visible_test(pos_, -radius)) return 1; // all  of the sphere is visible
+	return cube_visible(cube);
 }
 
 

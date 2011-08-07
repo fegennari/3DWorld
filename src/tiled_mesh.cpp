@@ -362,7 +362,7 @@ public:
 	}
 
 	bool is_visible() const {
-		return (camera_pdu.sphere_visible_test(get_center(), radius) && camera_pdu.cube_visible(get_cube())); // chain them together
+		return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());
 	}
 
 	void bind_vbos() {
