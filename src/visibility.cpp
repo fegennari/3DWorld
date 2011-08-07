@@ -21,7 +21,7 @@ point ocean;
 pos_dir_up camera_pdu;
 
 extern bool combined_gu;
-extern int window_width, window_height, do_zoom, ocean_set, display_mode, shadow_detail, ground_effects_level;
+extern int window_width, window_height, do_zoom, ocean_set, display_mode, shadow_detail, ground_effects_level, camera_coll_id;
 extern float zmin, zmax, czmin, czmax, zbottom, ztop, sun_rot, moon_rot;
 extern point sun_pos, moon_pos, litning_pos;
 extern lightning l_strike;
@@ -229,9 +229,10 @@ bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int m
 	unsigned const nrays((radius == 0.0 || max_level == 3) ? 1 : ((max_level == 4) ? 2 : 5));
 	bool const skip_dynamic(max_level < 6);
 	get_sphere_border_pts(qp, pos, viewer, radius, nrays);
+	int const cid((pdu.pos == get_camera_pos()) ? camera_coll_id : -1); // what about smiley coll_ids?
 
 	for (unsigned i = 0; i < nrays; ++i) { // can see through transparent objects
-		if (coll_pt_vis_test(qp[i], viewer, ext_dist, index, -1, skip_dynamic, 1)) return 1;
+		if (coll_pt_vis_test(qp[i], viewer, ext_dist, index, cid, skip_dynamic, 1)) return 1;
 	}
 	return 0; // case 7
 }

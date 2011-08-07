@@ -354,7 +354,7 @@ void auto_advance_camera() {
 
 bool sun_in_view() { // universe sun radius?
 
-	return (have_sun && light_factor >= 0.4 && sphere_in_camera_view(get_sun_pos(), 5.0, 0));
+	return (have_sun && light_factor >= 0.4 && sphere_in_camera_view(get_sun_pos(), 5.0*sun_radius, 2)); // ok for universe sun?
 }
 
 
