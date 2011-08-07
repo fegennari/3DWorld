@@ -319,15 +319,6 @@ public:
 };
 
 
-bool is_contained(point const &pos, point const *const pts, unsigned npts, float const d[3][2]) {
-
-	for (unsigned i = 0; i < npts; ++i) { // can almost skip two corners on a quad
-		if (!check_line_clip(pos, pts[i], d)) return 0;
-	}
-	return 1;
-}
-
-
 class line_intersector_occlusion_cobjs : public base_intersector { // tests for polygon occlusion
 
 	point const *const pts;
@@ -346,7 +337,7 @@ public:
 		cobj.counter = cobj_counter;
 		if (!cobj.is_occluder() || z1 > cobj.d[2][1] || z2 < cobj.d[2][0]) return 2; // clip this shape
 		
-		if (is_contained(viewer, pts, npts, cobj.d))  {
+		if (cobj.intersects_all_pts(viewer, pts, npts))  {
 			coll_cobj = index;
 			return 1;
 		}
@@ -585,7 +576,7 @@ bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, i
 	static int last_cobj(-1);
 
 	if (last_cobj >= 0 && last_cobj != cobj && !coll_objects[last_cobj].disabled()) {
-		if (is_contained(pos1, pts, npts, coll_objects[last_cobj].d)) return 1;
+		if (coll_objects[last_cobj].intersects_all_pts(pos1, pts, npts)) return 1;
 	}
 	point const viewer(pos1);
 
@@ -632,13 +623,45 @@ bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj
 }
 
 
+bool coll_obj::is_occluder() const {
+	
+	if (status != COLL_STATIC || !cp.draw || is_semi_trans()) return 0;
+	if (type == COLL_CUBE)    return 1;
+	if (type != COLL_POLYGON) return 0;
+	unsigned big_dims(0);
+	UNROLL_3X(if ((d[i_][1] - d[i_][0]) > 0.2*SCENE_SIZE[i_]) ++big_dims;)
+	return (big_dims >= 2);
+}
+
+
+bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsigned npts) const {
+
+	switch (type) {
+	case COLL_CUBE:
+		for (unsigned i = 0; i < npts; ++i) { // can almost skip two corners on a quad
+			if (!check_line_clip(pos, pts[i], d)) return 0;
+		}
+		break;
+	case COLL_POLYGON:
+		for (unsigned i = 0; i < npts; ++i) {
+			float t; // unused
+			if (!line_poly_intersect(pos, pts[i], points, npoints, norm, t)) return 0;
+		}
+		break;
+	default:
+		assert(0); // not supported
+	}
+	return 1;
+}
+
+
 bool is_occluded(vector<int> const &occluders, point const *const pts, int npts, point const &camera) {
 
 	unsigned const nocc(occluders.size());
 
 	for (unsigned i = 0; i < nocc; ++i) { // cache last occluder?, promote to the front if occluded?
 		coll_obj const &cobj(coll_objects[occluders[i]]);
-		if (cobj.status == COLL_STATIC && is_contained(camera, pts, npts, cobj.d)) return 1; // line_poly_intersect() for polygon?
+		if (cobj.status == COLL_STATIC && cobj.intersects_all_pts(camera, pts, npts)) return 1;
 	}
 	return 0;
 }
@@ -650,7 +673,7 @@ void get_occluders() { // 18M total, 380K unique
 	if (!(display_mode & 0x08) || !have_occluders()) return;
 	static unsigned startval(0), stopped_count(0);
 	static bool first_run(1);
-	unsigned const skipval(first_run ? 0 : 12); // spread update across many frames
+	unsigned const skipval(first_run ? 0 : 8); // spread update across many frames
 	first_run = 0;
 	if (++startval >= skipval) startval = 0;
 	static point last_camera(FAR_CLIP, FAR_CLIP, FAR_CLIP);
@@ -668,10 +691,10 @@ void get_occluders() { // 18M total, 380K unique
 
 	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {
 		coll_obj &cobj(coll_objects[i]);
-		if (!cobj.fixed || cobj.status != COLL_STATIC || !cobj.cp.draw || cobj.cp.surfs == EF_ALL) continue;
+		if (!cobj.fixed || cobj.group_id >= 0 || cobj.status != COLL_STATIC || !cobj.cp.draw || cobj.cp.surfs == EF_ALL) continue;
 		get_coll_line_cobjs(camera, cobj.get_cube_center(), i, coll_objects[i].occluders);
 	}
-	if (skipval <= 1) {PRINT_TIME("Occlusion Preprocessing");}
+	if (skipval == 0) {PRINT_TIME("Occlusion Preprocessing");}
 }
 
 

@@ -203,7 +203,7 @@ public:
 				if ((int)cixs[i] == ignore_cobj) continue;
 				coll_obj const &c(get_cobj(i));
 				
-				if (obj_ok(c) && c.is_occluder() && is_contained(viewer, pts, npts, c.d)) {
+				if (obj_ok(c) && c.is_occluder() && c.intersects_all_pts(viewer, pts, npts)) {
 					cobj = cixs[i];
 					return 1;
 				}

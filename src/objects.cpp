@@ -213,11 +213,12 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim, shader_t *shader) const {
 
 	if (no_draw()) return;
-	assert(status != COLL_FREED && !disabled());
+	assert(!disabled());
 	point center;
 	float brad;
 	bounding_sphere(center, brad);
-	if (group_back_face_cull && group_id >= 0 && dot_product_ptv(norm, get_camera_pos(), center) < 0.0) return;
+	bool const in_group(group_id >= 0);
+	if (group_back_face_cull && in_group && dot_product_ptv(norm, get_camera_pos(), center) < 0.0) return;
 	if (!sphere_in_camera_view(center, brad, 0))              return;
 	if (type == COLL_CUBE && !camera_pdu.cube_visible(*this)) return;
 	
@@ -233,7 +234,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 
 	// process groups
 	int const pri_dim(::get_max_dim(norm));
-	bool const in_group(group_id >= 0), same_group(group_id == last_group_id && tid == last_tid && pri_dim == last_pri_dim);
+	bool const same_group(group_id == last_group_id && tid == last_tid && pri_dim == last_pri_dim);
 	bool const start_group(in_group && !same_group), end_group(last_group_id >= 0 && !same_group);
 	last_group_id = group_id;
 	last_pri_dim  = pri_dim;
