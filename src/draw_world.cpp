@@ -195,11 +195,18 @@ bool get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed,
 }
 
 
+void set_shadowed_color_custom_ad(colorRGBA const &ac, colorRGBA const &dc, point const &pos, bool is_shadowed, bool precip, bool no_dynamic) {
+
+	colorRGBA a(ac);
+	get_shadowed_color(a, pos, is_shadowed, precip, no_dynamic);
+	set_ad_colors(a, dc);
+}
+
+
 void set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip, bool no_dynamic) {
 
-	colorRGBA a(color);
-	get_shadowed_color(a, pos, is_shadowed, precip, no_dynamic);
-	set_ad_colors(a, (is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color));
+	colorRGBA const dcolor(is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
+	set_shadowed_color_custom_ad(color, dcolor, pos, is_shadowed, precip, no_dynamic);
 }
 
 
