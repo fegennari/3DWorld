@@ -1263,7 +1263,7 @@ void gen_line_of_bubbles(point const &p1, point const &p2, float r=0.0, colorRGB
 bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 				   float r, float den, float dark, float dam, int src, int dt, bool as);
 void gen_smoke(point const &pos);
-bool gen_fire(point const &pos, float size, int source);
+bool gen_fire(point const &pos, float size, int source, bool allow_close=0);
 void gen_scorch_mark(point const &pos, float radius, vector3d const &orient, int cid=-1, float init_alpha=1.0, float rgb_val=0.0);
 void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade=0);
 int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,

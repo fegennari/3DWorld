@@ -1434,7 +1434,7 @@ void fire::apply_physics(unsigned i) {
 		else {
 			pos2.z = pos.z + rand_uniform(-0.05, 0.05);
 		}
-		gen_fire(pos2, 1.0, source);
+		gen_fire(pos2, 1.0, source, 1);
 		radius -= 0.017;
 	}
 	if (damage > 0.005 && (rand()%int(0.8/damage)) == 0) gen_particles(pos, 1);

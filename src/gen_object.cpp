@@ -239,10 +239,19 @@ void gen_smoke(point const &pos) {
 }
 
 
-bool gen_fire(point const &pos, float size, int source) {
+bool gen_fire(point const &pos, float size, int source, bool allow_close) {
 
 	assert(size > 0.0);
 	if (!is_over_mesh(pos) || is_underwater(pos)) return 0; // off the mesh or under water/ice
+
+	if (!allow_close) { // check if there are any existing fires near this location and if so, skip this one
+		for (unsigned i = 0; i < fires.size(); ++i) {
+			if (fires[i].status != 0 && dist_less_than(pos, fires[i].pos, 2.0*fires[i].radius)) {
+				fires[i].radius = max(fires[i].radius, size*rand_uniform(0.02, 0.05)); // make it larger
+				return 0;
+			}
+		}
+	}
 	fires[fires.choose_element()].gen(pos, size, source);
 	return 1;
 }
