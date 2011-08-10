@@ -1320,7 +1320,7 @@ void particle_cloud::apply_physics(unsigned i) {
 		
 		if (obj.check_vert_collision(0, 0, j, &cnorm, all_zeros, 1, 1)) { // skip dynamic, only_drawn
 			// destroy the smoke if it's not damaging and hits the bottom of a static drawn object (excludes trees and scenery)
-			if (cnorm.z < 0.5 && damage == 0.0) {
+			if (cnorm.z < 0.0 && damage == 0.0) { // <= 0.0?
 				if (acc_smoke && time > 0) add_smoke(pos, 1.0);
 				status = 0;
 				return;

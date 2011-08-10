@@ -1023,6 +1023,17 @@ void vert_coll_detector::check_cobj(int index) {
 	if (type == LANDMINE && obj.invalid_coll(cobj))  return;
 	if (skip_dynamic && cobj.status == COLL_DYNAMIC) return;
 	if (only_drawn   && !cobj.cp.draw)               return;
+	
+	if (type == SMOKE) { // special case to allow smoke to pass through small spheres and cylinders
+		switch (cobj.type) { // Note: cubes and polygons could be split into many small pieces, so we don't check their sizes
+		case COLL_CYLINDER:
+		case COLL_CYLINDER_ROT:
+			if (cobj.radius2 < 0.25*object_types[type].radius) return;
+		case COLL_SPHERE: // fallthrough from above
+			if (cobj.radius  < 0.25*object_types[type].radius) return;
+			break;
+		}
+	}
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
 	if (z1 > zmaxc || z2 < zminc)                    return;
 	if (pos.x < (cobj.d[0][0]-o_radius) || pos.x > (cobj.d[0][1]+o_radius)) return;
