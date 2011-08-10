@@ -7,6 +7,7 @@ load_hmv 1 2.0 -3.9 0.357 1.0
 load_coll_objs 1
 glaciate 1
 dynamic_mesh_scroll 0
+no_smoke_over_mesh 1
 disable_universe 1
 disable_inf_terrain 1
 disable_water 0

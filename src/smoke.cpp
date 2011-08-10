@@ -24,7 +24,7 @@ unsigned smoke_tid(0);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
-extern bool disable_shaders;
+extern bool disable_shaders, no_smoke_over_mesh;
 extern int animate2, display_mode;
 extern float czmin0;
 extern colorRGBA cur_ambient;
@@ -87,6 +87,7 @@ void add_smoke(point const &pos, float val) {
 	if (!lmc) return;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos) || pos.z >= v_collision_matrix[ypos][xpos].zmax || pos.z < mesh_height[ypos][xpos]) return; // above all cobjs/outside
+	if (no_smoke_over_mesh && !is_mesh_disabled(xpos, ypos)) return;
 	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return;
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
 	if (smoke_man.is_smoke_visible(pos)) smoke_exists = 1;
