@@ -446,6 +446,14 @@ template<typename T> inline pointT<T> get_center(const pointT<T> *pts, int npts)
 }
 
 
+inline bool line_is_axis_aligned(point const &p1, point const &p2) {
+
+	unsigned eq_dims(0);
+	UNROLL_3X(if(fabs(p1[i_] - p2[i_]) < TOLERANCE) ++eq_dims;)
+	return (eq_dims >= 2);
+}
+
+
 // *********************** CAMERA STUFF ************************
 
 

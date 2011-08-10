@@ -525,6 +525,7 @@ void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int
 			assert(cid < coll_objects.size());
 			coll_obj const &cobj(coll_objects[cid]);
 			if (cobj.status != COLL_STATIC) continue;
+			if (cobj.type == COLL_CYLINDER_ROT && !line_is_axis_aligned(cobj.points[0], cobj.points[1])) continue; // bounding cube is too conservative, skip
 			if (cobj.d[2][1] < zbottom)     continue; // below the mesh
 			rect const r_cobj(cobj.d, 0, 1);
 			if (!r_cobj.nonzero())          continue; // zero Z cross section (vertical polygon)
