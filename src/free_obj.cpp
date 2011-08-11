@@ -44,11 +44,6 @@ extern exp_type_params et_params[];
 extern pt_line_drawer particle_pld, emissive_pld;
 
 
-unsigned u_ship::max_type(NUM_US_CLASS);
-unsigned us_projectile::max_type(NUM_UWEAP);
-unsigned uparticle::max_type(NUM_PTYPES);
-
-
 // ************ FREE_OBJ ************
 
 

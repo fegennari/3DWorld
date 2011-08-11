@@ -151,7 +151,6 @@ float get_cloud_shadow_atten(int x, int y) {
 
 class mesh_vertex_draw {
 
-	static int fcount;
 	float const healr;
 	unsigned char **sml;
 	vector<point>    varr;
@@ -267,8 +266,6 @@ public:
 		return 1;
 	}
 };
-
-int mesh_vertex_draw::fcount(0);
 
 
 void gen_uw_lighting() {

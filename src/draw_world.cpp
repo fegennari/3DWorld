@@ -292,10 +292,6 @@ inline bool get_cull_face(int type, colorRGBA const &color) {
 }
 
 
-int color_wrapper::gl_type       = GL_UNSIGNED_BYTE;
-int color_wrapper_float::gl_type = GL_FLOAT;
-
-
 template class pt_line_drawer_t<color_wrapper      >;
 template class pt_line_drawer_t<color_wrapper_float>;
 
@@ -2585,8 +2581,7 @@ void draw_camera_filters(vector<camera_filter> &cfs) {
 }
 
 
-int   spark_t::status = 1;
-float spark_t::radius = 0.0;
+float const spark_t::radius = 0.0;
 
 
 void spark_t::draw() const {

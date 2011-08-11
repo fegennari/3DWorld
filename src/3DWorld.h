@@ -618,7 +618,7 @@ struct vert_norm_tc : public vert_norm { // size = 32
 
 
 struct color_wrapper { // size = 4
-	static int gl_type;
+	static int const gl_type = GL_UNSIGNED_BYTE;
 	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
 
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
@@ -629,7 +629,7 @@ struct color_wrapper { // size = 4
 
 
 struct color_wrapper_float { // size = 16
-	static int gl_type;
+	static int const gl_type = GL_FLOAT;
 	colorRGBA c; // Note: c[3] (alpha component) is not used in all cases
 
 	template<typename T> void set_c3(T const &c_) {c = c_;}

@@ -17,8 +17,8 @@ struct spark_t {
 	float s;
 	point pos;
 	colorRGBA c;
-	static int status;
-	static float radius;
+	static int  const status = 1;
+	static float const radius;
 	point const &get_pos() const {return pos;}
 
 	spark_t() {}

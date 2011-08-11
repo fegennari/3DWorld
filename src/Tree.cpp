@@ -651,7 +651,7 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 			}
 		}
 		leaf_data.resize(4*nleaves);
-		gen_quad_tex_coords(&(leaf_data.front().t[0]), nleaves, leaf_stride/sizeof(float));
+		gen_quad_tex_coords(leaf_data.front().t, nleaves, leaf_stride/sizeof(float));
 	}
 	unsigned nl(nleaves);
 	if (ENABLE_CLIP_LEAVES) nl = min(nl, max((nl/8), unsigned(4.0*nl*mscale/dist_cs))); // leaf LOD

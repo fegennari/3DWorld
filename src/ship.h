@@ -810,7 +810,7 @@ class uparticle : public free_obj {
 
 public:
 	friend class free_obj_allocator<uparticle>;
-	static unsigned max_type;
+	static unsigned const max_type = NUM_PTYPES;
 
 	uparticle() : alloc_block(NULL) {}
 	uparticle(unsigned ptype_, point const &pos_, vector3d const &vel, vector3d const &d, float radius_, colorRGBA const &c1,
@@ -847,7 +847,7 @@ private:
 
 public:
 	friend class free_obj_allocator<us_projectile>;
-	static unsigned max_type;
+	static unsigned const max_type = NUM_UWEAP;
 
 	us_projectile(unsigned type=UWEAP_NONE);
 	void reset() {alloc_block = NULL; free_obj::reset();}
@@ -1010,7 +1010,7 @@ protected:
 	vector3d const &get_last_hit_dir() const {return ((last_hit > 0) ? hit_dir : zero_vector);}
 
 public:
-	static unsigned max_type;
+	static unsigned const max_type = NUM_US_CLASS;
 	u_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient);
 	virtual ~u_ship(); // virtual?
 	void reset();
