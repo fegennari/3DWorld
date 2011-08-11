@@ -46,6 +46,25 @@ vec3 add_light(in int ix, in vec3 off, in vec3 scale, in vec3 n, in vec3 source,
 //       but we don't have the tex0 value there and can't determine the full init color
 void main()
 {
+	vec4 texel  = texture2D(tex0, gl_TexCoord[0].st);
+	float alpha = gl_Color.a;
+
+	if (do_lt_atten) {
+		vec3 v_inc = eye - vpos;
+
+		//if (light_atten > 0.0) { // account for light attenuating/reflecting semi-transparent materials
+			vec3 far_pt   = vpos - 100.0*v_inc/length(v_inc); // move it far away
+			pt_pair res   = clip_line(vpos, far_pt, cube_bb);
+			float dist    = length(res.v1 - res.v2);
+			float atten   = exp(-light_atten*dist);
+			alpha += (1.0 - alpha)*(1.0 - atten);
+		//}
+		if (refract_ix != 1.0 && dot(normal, v_inc) > 0.0) { // entering ray in front surface
+			float reflect_w = get_fresnel_reflection(normalize(v_inc), normalize(normal), 1.0, refract_ix);
+			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha
+		} // else exiting ray in back surface - ignore for now since we don't refract the ray
+	}
+	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
 	vec3 off   = vec3(-x_scene_size, -y_scene_size, czmin);
 	vec3 scale = vec3(2.0*x_scene_size, 2.0*y_scene_size, (czmax - czmin));
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
@@ -67,26 +86,7 @@ void main()
 		if (enable_light7) ADD_LIGHT(7);
 	}
 	if (enable_dlights) lit_color += add_dlights(vpos, normalize(normal), eye); // dynamic lighting
-	vec4 texel  = texture2D(tex0, gl_TexCoord[0].st);
-	float alpha = gl_Color.a;
-
-	if (do_lt_atten) {
-		vec3 v_inc = eye - vpos;
-
-		//if (light_atten > 0.0) { // account for light attenuating/reflecting semi-transparent materials
-			vec3 far_pt   = vpos - 100.0*v_inc/length(v_inc); // move it far away
-			pt_pair res   = clip_line(vpos, far_pt, cube_bb);
-			float dist    = length(res.v1 - res.v2);
-			float atten   = exp(-light_atten*dist);
-			alpha += (1.0 - alpha)*(1.0 - atten);
-		//}
-		if (refract_ix != 1.0 && dot(normal, v_inc) > 0.0) { // entering ray in front surface
-			float reflect_w = get_fresnel_reflection(normalize(v_inc), normalize(normal), 1.0, refract_ix);
-			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha
-		} // else exiting ray in back surface - ignore for now since we don't refract the ray
-	}
-	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
-	if (keep_alpha && color.a <= min_alpha) discard;
+	vec4 color  = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	vec3 eye_c  = eye;
 	vec3 vpos_c = vpos;
 
