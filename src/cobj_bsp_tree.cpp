@@ -133,7 +133,9 @@ public:
 		}
 	};
 
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact, int test_alpha) const {
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj,
+		bool exact, int test_alpha, bool skip_non_drawn) const
+	{
 		cindex = -1;
 		if (nodes.empty()) return 0;
 		assert(test_alpha != 2); // don't support this mode
@@ -148,9 +150,10 @@ public:
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 				// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 				// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
-				if ((int)cixs[i] == ignore_cobj) continue;
+				if ((int)cixs[i] == ignore_cobj)  continue;
 				coll_obj const &c(get_cobj(i));
-				if (!obj_ok(c))                  continue;
+				if (!obj_ok(c))                   continue;
+				if (skip_non_drawn && !c.cp.draw) continue;
 				if (test_alpha == 1 && c.is_semi_trans())                   continue; // semi-transparent, can see through
 				if (test_alpha == 3 && c.cp.color.alpha < MIN_SHADOW_ALPHA) continue; // less than min alpha
 				if (!c.line_int_exact(p1, p2, t, cnorm, tmin, tmax))        continue;
@@ -384,17 +387,17 @@ void build_moving_cobj_tree() {
 
 // can use with ray trace lighting, snow collision?, maybe water reflections
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos,
-								vector3d &cnorm, int &cindex, int ignore_cobj, bool dynamic, int test_alpha)
+								vector3d &cnorm, int &cindex, int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn)
 {
-	return get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha);
+	return get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn);
 }
 
 // can use with snow shadows, grass shadows, tree leaf shadows
-bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic, int test_alpha) {
+bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn) {
 
 	vector3d cnorm; // unused
 	point cpos; // unused
-	return get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha);
+	return get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn);
 }
 
 

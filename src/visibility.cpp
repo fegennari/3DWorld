@@ -235,7 +235,7 @@ bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int m
 	int index;
 	point qp[5];
 	unsigned const nrays((radius == 0.0 || max_level == 3) ? 1 : ((max_level == 4) ? 2 : 5));
-	bool const skip_dynamic(max_level < 6);
+	int const skip_dynamic((max_level < 6) ? 1 : 0); // skip dynamic (what about non-drawn?)
 	get_sphere_border_pts(qp, pos, viewer, radius, nrays);
 	int const cid((pdu.pos == get_camera_pos()) ? camera_coll_id : -1); // what about smiley coll_ids?
 

@@ -536,7 +536,7 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dyn
 
 	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
 	if (!no_tree && skip_dynamic && test_alpha != 2 && use_cobj_tree(pos1, pos2)) {
-		return check_coll_line_tree(pos1, pos2, cindex, cobj);
+		return check_coll_line_tree(pos1, pos2, cindex, cobj, 0, 0, (skip_dynamic >= 2));
 	}
 	cindex = -1;
 	if (!do_line_clip_scene(pos1, pos2, czmin, czmax)) return 0;

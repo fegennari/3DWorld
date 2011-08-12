@@ -1353,8 +1353,8 @@ void build_cobj_tree( bool dynamic=0, bool verbose=1);
 void update_cobj_tree(bool dynamic=0, bool verbose=1);
 void build_moving_cobj_tree();
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm,
-	int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0);
-bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0);
+	int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0, bool skip_non_drawn=0);
+bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0, bool skip_non_drawn=0);
 bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts,
 	int ignore_cobj, int &cobj);
 void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs);

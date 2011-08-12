@@ -1431,10 +1431,10 @@ int load_config(string const &config_file) {
 			gms_set = 1;
 		}
 		else if (str == "window_width") {
-			if (!read_int(fp, gmww) || gmww < 1) cfg_err("gmww command", error);
+			if (!read_int(fp, gmww) || gmww < 1) cfg_err("window_width command", error);
 		}
 		else if (str == "window_height") {
-			if (!read_int(fp, gmwh) || gmwh < 1) cfg_err("gmwh command", error);
+			if (!read_int(fp, gmwh) || gmwh < 1) cfg_err("window_height command", error);
 		}
 		else if (str == "mesh_size") {
 			if (fscanf(fp, "%i%i%i", &MESH_X_SIZE, &MESH_Y_SIZE, &MESH_Z_SIZE) != 3) cfg_err("mesh size command", error);
