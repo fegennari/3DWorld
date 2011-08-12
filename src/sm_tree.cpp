@@ -262,20 +262,19 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params const &cp_trunk) {
 
 	if (type == T_PINE || type == T_SH_PINE) calc_points();
 	if (!is_over_mesh(pos)) return; // not sure why, but this makes drawing slower
-	float zoff(0.0);
 	vector3d const dir(get_rot_dir());
 	cp.tid = stt[type].tid;
 
 	if (type != T_BUSH && type != T_SH_PINE) {
-		point const p1(pos + dir*(get_tree_z_bottom(pos.z - 0.2f*width, pos) - pos.z)), p2(pos + dir*(0.65*height));
-		coll_id.push_back(add_coll_cylinder(p1, p2, stt[type].ws*width, stt[type].w2*width, cp_trunk, -1, 1));
+		float const hval((type == T_PINE) ? 1.0 : 0.75), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
+		point const p1((pos + dir*(zbot - pos.z)));
+		coll_id.push_back(add_coll_cylinder(p1, (p1 + dir*len), stt[type].ws*width, stt[type].w2*width, cp_trunk, -1, 1));
 	}
 	switch (type) {
 	case T_PINE: // pine tree
-		zoff = 0.35*height;
 	case T_SH_PINE: // short pine tree
 		// Note: smaller than the actual pine tree render at the base so that it's easier for the player to walk under pine trees
-		coll_id.push_back(add_coll_cylinder((pos + dir*zoff), (pos + dir*height), 1.25*width*height, 0.0, cp, -1, 1));
+		coll_id.push_back(add_coll_cylinder((pos + (T_PINE ? dir*(0.35*height) : all_zeros)), (pos + dir*height), 1.25*width*height, 0.0, cp, -1, 1));
 		break;
 	case T_DECID: // decidious tree
 		coll_id.push_back(add_coll_sphere((pos + dir*(0.75*height)), 1.3*width, cp, -1, 1));
@@ -409,15 +408,15 @@ void small_tree::draw(int mode, bool shadow_only) const {
 			UNROLL_3X(tcolor[i_] = min(1.0f, tcolor[i_]*(0.85f + 0.3f*rv[i_]));)
 			float const hval(pine_tree ? 1.0 : 0.75), w1(stt[type].ws*width), w2(stt[type].w2*width);
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
+			vector3d const dir(get_rot_dir());
+			point const p1((pos + dir*(zbot - pos.z)));
 
 			if (shadow_only) {
-				vector3d const dir(get_rot_dir());
-				cylinder_3dw const cylin((pos + dir*(zbot - pos.z)), (pos + dir*(zbot - pos.z + len)), w1, w2);
+				cylinder_3dw const cylin(p1, (p1 + dir*len), w1, w2);
 				draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()));
 			}
 			else if (LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
-				vector3d const dir(get_rot_dir());
-				tree_scenery_pld.add_textured_line((pos + dir*(zbot - pos.z)), (pos + dir*(zbot - pos.z + len)), tcolor, WOOD_TEX);
+				tree_scenery_pld.add_textured_line(p1, (p1 + dir*len), tcolor, WOOD_TEX);
 			}
 			else { // draw as cylinder
 				set_color(tcolor);
