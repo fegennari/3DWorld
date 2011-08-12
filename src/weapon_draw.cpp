@@ -468,7 +468,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 		case W_ROCKET:
 			radius = 0.95*object_types[ROCKET].radius;
-			set_shadowed_color(colorRGBA(0.15, 0.15, 0.15, alpha), pos0, shadowed);
+			set_color_alpha(colorRGBA(0.15, 0.15, 0.15), pos0, alpha, shadowed);
 			if (!no_specular) set_specular(0.9, 50.0);
 			rot_angle = max(0.0f, 10.0f*(fire_val - 0.7f)); // recoil
 			if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0); // could probably use rotate_into_plus_z()
@@ -479,14 +479,14 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			// draw the sight
 			glTranslatef(0.8*radius, 0.0, 6.5*radius);
 			glRotatef(90.0, 0.0, 1.0, 0.0);
-			set_shadowed_color((wmode&1) ? BLACK : colorRGBA(0.9, 0.65, 0.05, alpha), pos0, shadowed); // black/gold
+			set_color_alpha((wmode&1) ? BLACK : colorRGBA(0.9, 0.65, 0.05), pos0, alpha, shadowed); // black/gold
 			gluCylinder(quadric, 0.15*radius, 0.0, 0.4*radius, ndiv/2, 1);
 			if (!no_specular) set_specular(0.0, 0.0);
 			break;
 
 		case W_SEEK_D: // similar to rocket
 			radius = 0.95*object_types[SEEK_D].radius;
-			set_shadowed_color(colorRGBA(0.05, 0.05, 0.05, alpha), pos0, shadowed);
+			set_color_alpha(colorRGBA(0.05, 0.05, 0.05), pos0, alpha, shadowed);
 			if (!no_specular) set_specular(0.7, 30.0);
 			rot_angle = max(0.0f, 15.0f*(fire_val - 0.8f));
 			if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
@@ -525,8 +525,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			gluCylinder(quadric, 0.005, 0.0, 0.07, 2*ndiv, ndiv);
 			//gluCylinder(quadric, radius, radius, 0.18, 2*ndiv, ndiv);
 			{
-				colorRGBA const color(0.8, 0.6, 1.0, 0.5*alpha);
-				set_shadowed_color(color, pos0, shadowed);
+				colorRGBA const color(0.8, 0.6, 1.0);
+				set_color_alpha(color, pos0, 0.5*alpha, shadowed);
 				if (p_loaded) set_color_e(color);
 				glScalef(1.0, 1.0, 0.2);
 				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.25), 0.01, ndiv, 0, 0);
@@ -541,7 +541,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_M16:
 			if ((wmode&1) == 0) { // normal
 				radius = 0.0025;
-				set_shadowed_color(colorRGBA(0.04, 0.04, 0.04, alpha), pos0, shadowed);
+				set_color_alpha(colorRGBA(0.04, 0.04, 0.04), pos0, alpha, shadowed);
 				if (!no_specular) set_specular(0.8, 50.0);
 				rot_angle = max(0.0, 1.0*fire_val);
 				if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
@@ -553,7 +553,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			else { // shrapnel chaingun
 				radius = 0.004;
 				float const rdx(1.4*radius*dir.x/rxy), rdy(1.4*radius*dir.y/rxy);
-				set_shadowed_color(colorRGBA(0.12, 0.12, 0.12, alpha), pos0, shadowed);
+				set_color_alpha(colorRGBA(0.12, 0.12, 0.12), pos0, alpha, shadowed);
 				if (!no_specular) set_specular(0.6, 30.0);
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glPushMatrix();
@@ -565,7 +565,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				draw_chaingun_section(rdx, rdy, radius, ndiv);
 				draw_chaingun_section(-2.0*rdx, -2.0*rdy, radius, ndiv);
 				glTranslatef(rdx, rdy, 0.08);
-				set_shadowed_color(colorRGBA(0.3, 0.3, 0.3, alpha), pos0, shadowed);
+				set_color_alpha(colorRGBA(0.3, 0.3, 0.3), pos0, alpha, shadowed);
 				draw_cylinder(0.004, 2.45*radius, 2.45*radius, 2*ndiv, 1, 1); // outer band
 				glPopMatrix();
 			}
@@ -576,7 +576,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			{
 				radius = 0.0045;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
-				set_shadowed_color(colorRGBA(0.2, 0.2, 0.2, alpha), pos0, shadowed);
+				set_color_alpha(colorRGBA(0.2, 0.2, 0.2), pos0, alpha, shadowed);
 				if (!no_specular) set_specular(0.6, 30.0);
 				rot_angle = max(0.0, 8.0*fire_val);
 				if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
@@ -609,7 +609,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_LASER:
-			set_shadowed_color(colorRGBA(0.45, 0.45, 0.45, alpha), pos0, shadowed);
+			set_color_alpha(colorRGBA(0.45, 0.45, 0.45), pos0, alpha, shadowed);
 			if (!no_specular) set_specular(0.8, 50.0);
 			glTranslatef(tx, ty, 0.04);
 			gluCylinder(quadric, 0.006, 0.0015, 0.16, 2*ndiv, ndiv);
@@ -632,9 +632,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_GASSER:
 			{
 				radius = 0.14*weapons[W_GASSER].blast_radius;
-				colorRGBA color(OLIVE*0.7);
-				color.alpha = alpha;
-				set_shadowed_color(color, pos0, shadowed);
+				set_color_alpha(OLIVE*0.7, pos0, alpha, shadowed);
 				if (!no_specular) set_specular(0.7, 30.0);
 				glTranslatef(tx, ty, 0.0);
 				gluCylinder(quadric, radius, radius, 16.0*radius, 2*ndiv, ndiv);
