@@ -1368,7 +1368,7 @@ void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float li
 
 	assert(lm_alloc && lmap_manager.vlmap);
 
-	if (using_lightmap && lmap_manager.is_valid_cell(x, y, z)) {
+	if (using_lightmap && !light_sources.empty() && lmap_manager.is_valid_cell(x, y, z)) {
 		float const *const color(lmap_manager.vlmap[y][x][z].c);
 		ADD_LIGHT_CONTRIB(color, ls);
 	}
