@@ -332,12 +332,16 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	draw_scenery(1, 1, 1);
 	draw_trees_shadow();
 
-	// draw mesh
-	glPushMatrix();
-	float const val(1.0/dot_product(lpos.get_norm(), plus_z));
-	glTranslatef(0.0, 0.0, -val*approx_pixel_width()); // translate down slightly to reduce shadow aliasing problems
-	display_mesh();
-	glPopMatrix();
+	if (ground_effects_level != 0) { // draw mesh
+		int const gel(ground_effects_level);
+		ground_effects_level = 0;
+		glPushMatrix();
+		float const val(1.0/dot_product(lpos.get_norm(), plus_z));
+		glTranslatef(0.0, 0.0, -val*approx_pixel_width()); // translate down slightly to reduce shadow aliasing problems
+		display_mesh();
+		glPopMatrix();
+		ground_effects_level = gel;
+	}
 	
 	// reset state
 	glMatrixMode(GL_PROJECTION);
@@ -359,14 +363,13 @@ void create_shadow_map() {
 	//RESET_TIME;
 
 	// save state
-	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode), ground_effects_level_(ground_effects_level);
+	int const do_zoom_(do_zoom), animate2_(animate2), display_mode_(display_mode);
 	point const camera_pos_(camera_pos);
 	orig_camera_pdu = camera_pdu;
 
 	// set to shadow map state
 	do_zoom  = 0;
 	animate2 = 0; // disable any animations or generated effects
-	ground_effects_level = 0;
 	display_mode &= ~(0x08 | 0x0100); // disable occlusion culling and leaf wind
 
 	// check dlist
@@ -389,7 +392,6 @@ void create_shadow_map() {
 	check_gl_error(200);
 	do_zoom      = do_zoom_;
 	animate2     = animate2_;
-	ground_effects_level = ground_effects_level_;
 	display_mode = display_mode_;
 	camera_pos   = camera_pos_;
 	camera_pdu   = orig_camera_pdu;
