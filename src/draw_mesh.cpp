@@ -168,7 +168,6 @@ class mesh_vertex_draw {
 	vector<norm_color_ix> last_rows;
 
 	void update_color(int i, int j) {
-
 		float color_scale(DEF_DIFFUSE);
 		float &sd(surface_damage[i][j]);
 
@@ -185,7 +184,6 @@ class mesh_vertex_draw {
 	}
 
 	void set_normal_array(int i, int j) {
-
 		float light_scale(1.0);
 
 		if (shadow_map_enabled() && draw_mesh_shader) {
@@ -244,7 +242,6 @@ public:
 	}
 
 	bool draw_mesh_vertex_pair(int i, int j, float x, float y) {
-
 		if (!test_draw_vertex(i, j, c)) return 0;
 		
 		for (unsigned p = 0; p < 2; ++p, ++c) {

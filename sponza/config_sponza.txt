@@ -10,11 +10,12 @@ glaciate 1
 dynamic_mesh_scroll 0
 disable_universe 0
 disable_inf_terrain 0
-disable_water 0
+disable_water 1
 disable_scenery 1
 read_landscape 0
 read_heightmap 0
 scenery_extent 0
+ground_effects_level 1
 
 grass_density 0
 grass_size 0.02 0.002
