@@ -1,4 +1,4 @@
-// 3D World - OpenGL CS184 Computer Graphics Project - collision detection BSP Tree
+// 3D World - OpenGL CS184 Computer Graphics Project - collision detection BSP/KD/Oct Tree
 // by Frank Gennari
 // 10/16/10
 
@@ -15,7 +15,7 @@ extern vector<unsigned> falling_cobjs;
 extern platform_cont platforms;
 
 
-// 3: BSP Tree, 8: OctTree
+// 3: BSP Tree/KD-Tree, 8: OctTree
 template<unsigned NUM> class cobj_tree_t {
 protected:
 	struct tree_node : public cube_t { // size = 36
@@ -32,10 +32,8 @@ protected:
 	vector<tree_node> nodes;
 	bool is_static, is_dynamic, occluders_only, moving_only;
 
-	coll_obj const &get_cobj(unsigned ix) const {
-		//assert(ix < cixs.size() && cixs[ix] < cobjs.size());
-		return cobjs[cixs[ix]];
-	}
+	void add_cobj(unsigned ix)                         {if (obj_ok(cobjs[ix])) cixs.push_back(ix);}
+	inline coll_obj const &get_cobj(unsigned ix) const {return cobjs[cixs[ix]];}
 	inline void mark_as_bin(unsigned ix, unsigned bix) {cixs[ix] |= (bix << 29);}
 	inline void unmark_as_bin(unsigned ix)             {cixs[ix] &= 0x07FFFFFF;}
 	inline unsigned get_bin_ix(unsigned ix)            {return (cixs[ix] >> 29);}
@@ -50,26 +48,22 @@ protected:
 		}
 	}
 
-	void add_to_cixs(unsigned ix) {
-		if (obj_ok(cobjs[ix])) cixs.push_back(ix);
-	}
-
 	bool create_cixs() {
 		if (moving_only) {
 			for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
 				for (vector<unsigned>::const_iterator j = i->cobjs.begin(); j != i->cobjs.end(); ++j) {
-					add_to_cixs(*j);
+					add_cobj(*j);
 				}
 			}
 			for (unsigned i = 0; i < falling_cobjs.size(); ++i) {
-				add_to_cixs(falling_cobjs[i]);
+				add_cobj(falling_cobjs[i]);
 			}
 		}
 		else {
 			if (is_static && !occluders_only) cixs.reserve(cobjs.size());
 
 			for (unsigned i = 0; i < cobjs.size(); ++i) {
-				add_to_cixs(i);
+				add_cobj(i);
 			}
 		}
 		assert(cixs.size() < (1 << 29));
@@ -233,7 +227,7 @@ public:
 }; // cobj_tree_t
 
 
-// BSP Tree (left, right, mid) kids
+// BSP Tree/KD-Tree (left, right, mid) kids
 template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims) {
 	
 	assert(nix < nodes.size());
@@ -353,7 +347,7 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 }
 
 
-// 3: BSP Tree, 8: Octtree
+// 3: BSP Tree/KD-Tree, 8: Octtree
 typedef cobj_tree_t<8> cobj_tree_type;
 cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0, 0);
 cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
