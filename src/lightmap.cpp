@@ -961,12 +961,13 @@ unsigned upload_voxel_flow_texture() {
 
 // texture units used:
 // 0: reserved for object textures
-// 1: reserved for smoke (if enabled)
+// 1: reserved for indirect sky lighting and smoke (if enabled)
 // 2: dynamic light data
 // 3: dynamic light element array
 // 4: dynamic light grid bag
-// 5: voxel flow (not yet enabled)
-// others: shadow map?
+// 5: voxel flow (not yet enabled) / bump maps?
+// 6: reserved for shadow map sun
+// 7: reserved for shadow map moon
 void upload_dlights_textures() {
 
 	RESET_TIME;

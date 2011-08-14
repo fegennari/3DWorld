@@ -172,7 +172,6 @@ void free_universe_textures();
 
 void load_textures() {
 
-	static int init(0);
 	cout << "loading textures";
 	glEnable(GL_TEXTURE_2D);
 
@@ -214,7 +213,12 @@ void load_textures() {
 	gen_tree_end_texture();
 	glDisable(GL_TEXTURE_2D);
 	setup_multitexture();
-	if (!init) init = 1;
+
+	int max_tc(0), max_tu(0), max_tiu(0);
+	glGetIntegerv(GL_MAX_TEXTURE_COORDS,      &max_tc);
+	glGetIntegerv(GL_MAX_TEXTURE_UNITS,       &max_tu);
+	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_tiu);
+	cout << "max tex coords: " << max_tc << ", max tex units: " << max_tu << ", max tex img units: " << max_tiu << endl;
 }
 
 
