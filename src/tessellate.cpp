@@ -140,7 +140,14 @@ void tessellate_polygon(vector<point> const &poly_pts) {
 	else {
 		assert(!mode_valid);
 	}
-	if (self_int) cout << "* Warning: Self-intersecting polygon." << endl;
+	if (self_int) {
+		static bool had_self_int_warning(0);
+
+		if (!had_self_int_warning) {
+			cout << "* Warning: Self-intersecting polygon." << endl;
+			had_self_int_warning = 1;
+		}
+	}
 }
 
 
