@@ -21,7 +21,6 @@ grass_density 0
 grass_size 0.02 0.002
 
 gravity 1.0
-mesh_height 0.2
 mesh_scale 1.0
 camera_height 0.0
 tree_size 1.0
