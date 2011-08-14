@@ -214,11 +214,11 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 
 	if (no_draw()) return;
 	assert(!disabled());
+	bool const in_group(group_id >= 0);
+	if (group_back_face_cull && in_group && dot_product_ptv(norm, get_camera_pos(), points[0]) < 0.0) return;
 	point center;
 	float brad;
 	bounding_sphere(center, brad);
-	bool const in_group(group_id >= 0);
-	if (group_back_face_cull && in_group && dot_product_ptv(norm, get_camera_pos(), center) < 0.0) return;
 	if (!camera_pdu.sphere_and_cube_visible_test(center, brad, *this)) return;
 	
 	if ((display_mode & 0x08) && !occluders.empty()) {
@@ -258,7 +258,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		set_poly_texgen(tid, tex_dir, shader);
 		glBegin(GL_TRIANGLES);
 	}
-	if (in_group) { // FIXME: color bug when using dynamic lighting
+	if (in_group) {
 		assert(is_thin_poly()); // thin triangle/quad
 		vector3d const normal(get_norm_camera_orient(norm, center));
 		unsigned const ixs[6] = {0,1,2,0,2,3};

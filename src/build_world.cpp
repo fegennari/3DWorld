@@ -811,7 +811,12 @@ void add_polygons_to_cobj_vector(vector<coll_obj> &polygons) {
 
 	for (unsigned i = 0; i < polygons.size(); ++i) {
 		if (get_poly_norm(polygons[i].points) == zero_vector) {
-			cout << "* Warning: Ignoring zero area polygon." << endl;
+			static bool had_zero_area_warning(0);
+
+			if (!had_zero_area_warning) {
+				cout << "* Warning: Ignoring zero area polygon." << endl;
+				had_zero_area_warning = 1;
+			}
 		}
 		else {
 			polygons[i].add_to_vector(fixed_cobjs, COLL_POLYGON); // 3 or 4 point convex polygons only
@@ -838,9 +843,7 @@ void xform_pos(point &pos, vector3d const &tv, float scale, bool const mirror[3]
 
 void read_to_newline(std::ifstream &in) {
 
-	while (in.good()) {
-		if (in.get() == '\n') break; // read to newline
-	}
+	in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 
@@ -874,7 +877,7 @@ bool read_object_file(char *filename, vector<vector<point> > &ppts, bool verbose
 			++nv;
 		}
 		else if (s == "f") { // face
-			vector<point> pts;
+			ppts.push_back(vector<point>());
 			int ix;
 
 			while (in >> ix) { // read vertex index
@@ -888,7 +891,7 @@ bool read_object_file(char *filename, vector<vector<point> > &ppts, bool verbose
 					--ix; // specified starting from 1, but we want starting from 0
 					assert((unsigned)ix < v.size());
 				}
-				pts.push_back(v[ix]);
+				ppts.back().push_back(v[ix]);
 
 				if (in.get() == '/') {
 					if (in >> ix) { // read text coord index
@@ -907,7 +910,6 @@ bool read_object_file(char *filename, vector<vector<point> > &ppts, bool verbose
 				else in.unget();
 			}
 			in.clear();
-			ppts.push_back(pts);
 			++nf;
 		}
 		else if (s == "vt") { // tex coord
