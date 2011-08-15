@@ -837,6 +837,10 @@ struct texture { // size = 78 (80)
 	void free_mm_data();
 	void free();
 	void gl_delete();
+	void load(int index);
+	void load_raw_bmp(int index);
+	void load_targa();
+	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 };
 
 
@@ -979,7 +983,7 @@ enum {GROUND_TEX = 0, DARK_ROCK_TEX, WATER_TEX, WATER2_TEX, CLOUD_TEX, SUN_TEX, 
 	SAW_TEX, SAW_B_TEX, BLUR_TEX, SBLUR_TEX, PINE_TEX, NOISE_TEX, WOOD2_TEX, HBBRICK_TEX, PARTB_TEX, PLASTER_TEX,
 	TILE_TEX, LOGO_TEX, DISINT_TEX, BLUR_TEX_INV, HSTRIPE_TEX, VSTRIPE_TEX, BCUBE_TEX, EXPLOSION_TEX, SHIP_HULL_TEX, BCUBE2_TEX,
 	BCUBE_T_TEX, ROCK_SPHERE_TEX, PAPAYA_TEX, COFFEE_TEX, SMILEY_SKULL_TEX, ICE_TEX, ROCK_TEX, BLACK_TEX, WHITE_TEX, FIRE_TEX,
-	CLOUD_RAW_TEX, SNOWFLAKE_TEX, BLUR_CENT_TEX, GRADIENT_TEX, GRASS_BLADE_TEX, WIND_TEX
+	CLOUD_RAW_TEX, SNOWFLAKE_TEX, BLUR_CENT_TEX, GRADIENT_TEX, GRASS_BLADE_TEX, WIND_TEX, BRICK_TGA
 };
 
 // collision object destroyability

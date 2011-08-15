@@ -2,12 +2,14 @@
 // by Frank Gennari
 // 4/25/02
 #include "GL/glew.h" // must be included first
+#include "targa.h"
 #include "3DWorld.h"
 #include "mesh.h"
 #include "sinf.h"
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+
 
 using std::string;
 
@@ -45,7 +47,7 @@ struct lspot {
 
 texture textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
-// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel)
+// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga)
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
 //texture(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
@@ -125,6 +127,7 @@ texture(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
 texture(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
 texture(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
+texture(0, 4, 1024, 1024, 1, 3, 1, "../Sponza2/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
 };
 
@@ -146,7 +149,6 @@ extern int scrolling, dx_scroll, dy_scroll, display_mode;
 extern float zmax, zmin, zmax_est, glaciate_exp, relh_adj_tex, vegetation;
 
 
-unsigned char *LoadTextureRAW(texture const &t, int index);
 void gen_smoke_texture();
 void gen_plasma_texture();
 void gen_disintegrate_texture();
@@ -165,7 +167,6 @@ void gen_wind_texture();
 void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
 int get_bare_ls_tid(float zval);
-void alloc_texture(int id);
 
 void free_universe_textures();
 
@@ -194,20 +195,14 @@ void load_textures() {
 		case WIND_TEX:      gen_wind_texture();         break;
 
 		default:
-			if (textures[i].type > 0) { // generated texture
-				alloc_texture(i);
-			}
-			else {
-				textures[i].data = LoadTextureRAW(textures[i], i);
-			}
+			textures[i].load(i);
 		} // switch
 		textures[i].init();
 		//assert(texture_name_map.find(textures[i].name) == texture_name_map.end());
 		texture_name_map[textures[i].name] = i; // multiply used textures such as sky.raw will be overwritten
 	}
 	if (read_landscape) {
-		int const i(LANDSCAPE_TEX);
-		textures[i].data = LoadTextureRAW(textures[i], i);
+		textures[LANDSCAPE_TEX].load(LANDSCAPE_TEX);
 	}
 	cout << endl;
 	gen_tree_end_texture();
@@ -526,42 +521,56 @@ FILE *open_texture_file(string filename) {
 }
 
 
+void texture::load(int index) {
+
+	if (type > 0) { // generated texture
+		alloc();
+	}
+	else if (format == 4) {
+		load_targa();
+	}
+	else {
+		load_raw_bmp(index);
+	}
+}
+
 
 // load an .RAW or .BMP file as a texture
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel)
-unsigned char *LoadTextureRAW(texture const &t, int index) {
+void texture::load_raw_bmp(int index) {
 
-	assert(t.ncolors == 1 || t.ncolors == 3 || t.ncolors == 4);
-	if (t.format == 3) assert(t.ncolors == 4);
-	int alpha_white(0);
-	unsigned char buf[4], alpha;
-	unsigned const size(t.width*t.height);
-	FILE *file = open_texture_file(t.name); // open texture data
+	assert(ncolors == 1 || ncolors == 3 || ncolors == 4);
+	if (format == 3) assert(ncolors == 4);
+	FILE *file = open_texture_file(name); // open texture data
 	assert(file != NULL);
-	if (t.format == 1 && !verify_bmp_header(file, 0)) exit(1);
+	if (format == 1 && !verify_bmp_header(file, 0)) exit(1);
 
 	// allocate buffer
-	unsigned char *tex_data(new unsigned char[size*t.ncolors]);
+	unsigned const size(width*height);
+	assert(data == NULL);
+	data = new unsigned char[size*ncolors];
 	float const ssp_inv_sq((SMOOTH_SKY_POLES > 0.0) ? 1.0/(SMOOTH_SKY_POLES*SMOOTH_SKY_POLES) : 0.0);
+	int alpha_white(0);
+	unsigned char buf[4], alpha;
 
 	// read texture data
-	if (t.ncolors == 4 && t.format != 3) { // add alpha
+	if (ncolors == 4 && format != 3) { // add alpha
 		for(unsigned i = 0; i < size; ++i) {
 			int const i4(i << 2);
 			size_t const nread(fread(buf, 3, 1, file)); assert(nread == 1);
 
 			if (index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX) { // could use grayscale texture
-				RGBA_BLOCK_ASSIGN((tex_data+i4), 255, 255, 255, buf[0]); // alpha - assumes buf[0] = buf[1] = buf[2]
+				RGBA_BLOCK_ASSIGN((data+i4), 255, 255, 255, buf[0]); // alpha - assumes buf[0] = buf[1] = buf[2]
 				continue;
 			}
 			if (i == 0) { // key off of first (llc) pixel
 				alpha_white = (index == SMILEY_SKULL_TEX) ? 0 : ((int)buf[0] + (int)buf[1] + (int)buf[2] > 400);
 			}
-			if (t.format == 1) { // BGR => RGB
-				RGB_BLOCK_ASSIGN((tex_data+i4), buf[2], buf[1], buf[0]);
+			if (format == 1) { // BGR => RGB
+				RGB_BLOCK_ASSIGN((data+i4), buf[2], buf[1], buf[0]);
 			}
 			else {
-				RGB_BLOCK_COPY((tex_data+i4), buf);
+				RGB_BLOCK_COPY((data+i4), buf);
 			}
 			if (index == CLOUD_TEX || index == CLOUD_RAW_TEX) {
 				// white -> alpha = 255
@@ -571,8 +580,8 @@ unsigned char *LoadTextureRAW(texture const &t, int index) {
 				alpha = ((val <= 340.0) ? 0 : ((unsigned char)1.0*(val - 340.0)));
 
 				if (SMOOTH_SKY_POLES > 0.0 && index == CLOUD_TEX) {
-					unsigned const y(i/t.width);
-					float const dist(float(y)/float(t.height)), d2(min(dist, (1.0f - dist)));
+					unsigned const y(i/width);
+					float const dist(float(y)/float(height)), d2(min(dist, (1.0f - dist)));
 					if (d2 < SMOOTH_SKY_POLES) alpha = (unsigned char)(d2*d2*ssp_inv_sq*float(alpha));
 				}
 			}
@@ -590,39 +599,67 @@ unsigned char *LoadTextureRAW(texture const &t, int index) {
 					alpha = ((val < ((index == PINE_TEX) ? 65 : 32)) ? 0 : 255);
 				}
 			}
-			tex_data[i4+3] = alpha;
+			data[i4+3] = alpha;
 		}
 	}
-	else if (t.ncolors == 1) { // grayscale luminance
+	else if (ncolors == 1) { // grayscale luminance
 		vector<unsigned char> td2(size);
 		size_t const nread(fread(&td2.front(), size, 1, file)); assert(nread == 1);
 
 		for(unsigned i = 0; i < size; ++i) {
-			RGB_BLOCK_COPY((tex_data+3*i), td2);
+			RGB_BLOCK_COPY((data+3*i), td2);
 		}
 	}
 	else {
-		size_t const nread(fread(tex_data, t.ncolors*size, 1, file)); assert(nread == 1);
+		size_t const nread(fread(data, ncolors*size, 1, file)); assert(nread == 1);
 
-		if (t.format == 1) {
+		if (format == 1) {
 			for(unsigned i = 0; i < size; ++i) {
-				swap(tex_data[3*i+0], tex_data[3*i+2]); // BGR => RGB
+				swap(data[3*i+0], data[3*i+2]); // BGR => RGB
 			}
 		}
 	}
-	if (t.format == 2) { // upside down
-		unsigned const h2(t.height >> 1), wc(t.ncolors*t.width);
+	if (format == 2) { // upside down
+		unsigned const h2(height >> 1), wc(ncolors*width);
 		
 		for(unsigned i = 0; i < h2; ++i) {
-			unsigned const off1(i*wc), off2((t.height-i-1)*wc);
+			unsigned const off1(i*wc), off2((height-i-1)*wc);
 			
 			for(unsigned j = 0; j < wc; ++j) {
-				swap(tex_data[off1+j], tex_data[off2+j]); // invert y
+				swap(data[off1+j], data[off2+j]); // invert y
 			}
 		}
 	}
 	fclose(file);
-	return tex_data;
+}
+
+
+void texture::load_targa() {
+
+	assert(format == 4);
+	assert(data == NULL);
+	unsigned const size(width*height);
+	data = new unsigned char[size*ncolors];
+	tga_image img;
+	tga_result const ret(tga_read(&img, name.c_str()));
+
+	if (ret != TGA_NOERR) {
+		cout << "Error reading targa file " << name << ": " << tga_error(ret) << endl;
+		exit(1);
+	}
+	assert(img.width == width && img.height == height);
+	//if (!tga_is_top_to_bottom(&img)) tga_flip_vert(&img);
+	//if (tga_is_right_to_left(&img)) tga_flip_horiz(&img);
+
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			unsigned char const *const pixel(tga_find_pixel(&img, x, y));
+			assert(pixel);
+			unsigned char *d(data + ncolors*(x + y*width));
+			tga_result const ret2(tga_unpack_pixel(pixel, img.pixel_depth, (ncolors>2 ? d+2 : 0), (ncolors>1 ? d+1 : 0), d, (ncolors>3 ? d+3 : 0)));
+			assert(ret2 == TGA_NOERR);
+		}
+	}
 }
 
 
@@ -713,40 +750,37 @@ void init_texture(int id) {
 }
 
 
-void gen_rand_texture(int tid, unsigned char val, unsigned char a_add=0, unsigned a_rand=256) {
+void texture::gen_rand_texture(unsigned char val, unsigned char a_add, unsigned a_rand) {
 
-	assert(textures[tid].ncolors == 4);
-	int const width(textures[tid].width);
-	int const height(textures[tid].height);
-	unsigned char *tex_data(new unsigned char[width*height*4]);
+	assert(ncolors == 4);
+	data = new unsigned char[width*height*4];
 
 	for (int i = 0; i < height; ++i) {
 		int const iw(i*width);
 		for (int j = 0; j < width; ++j) {
 			int const offset((iw + j) << 2);
-			RGBA_BLOCK_ASSIGN((tex_data+offset), val, val, val, (a_add + (unsigned char)(rand() % a_rand)));
+			RGBA_BLOCK_ASSIGN((data+offset), val, val, val, (a_add + (unsigned char)(rand() % a_rand)));
 		}
 	}
-	textures[tid].data = tex_data;
 }
 
 
 void gen_smoke_texture() {
 
 	unsigned char const smoke_color(255);
-	gen_rand_texture(SMOKE_TEX, smoke_color, 0, 256); // same as PLASMA_TEX but larger
+	textures[SMOKE_TEX].gen_rand_texture(smoke_color, 0, 256); // same as PLASMA_TEX but larger
 }
 
 
 void gen_plasma_texture() {
 
-	gen_rand_texture(PLASMA_TEX, 255, 0, 256);
+	textures[PLASMA_TEX].gen_rand_texture(255, 0, 256);
 }
 
 
 void gen_disintegrate_texture() {
 
-	gen_rand_texture(DISINT_TEX, 255, 230, 26);
+	textures[DISINT_TEX].gen_rand_texture(255, 230, 26);
 }
 
 
@@ -928,13 +962,6 @@ void gen_wind_texture() {
 		tex_data[i] = tex_data2[(i<<2)+3]; // put alpha in luminance
 	}
 	textures[WIND_TEX].data = tex_data;
-}
-
-
-void alloc_texture(int id) {
-
-	assert(id < NUM_TEXTURES);
-	textures[id].alloc();
 }
 
 
