@@ -946,7 +946,7 @@ tga_result tga_desaturate(tga_image *img, const int cr, const int cg,
     }
 
     /* shrink */
-    tmp = realloc(img->image_data, img->width * img->height);
+    tmp = (uint8_t *)realloc(img->image_data, img->width * img->height);
     if (tmp == NULL) return TGAERR_NO_MEM;
     img->image_data = tmp;
 
@@ -1024,7 +1024,7 @@ tga_result tga_convert_depth(tga_image *img, const uint8_t bits)
         /* shrink */
         tmp = realloc(img->image_data, img->width * img->height * dest_bpp);
         if (tmp == NULL) return TGAERR_NO_MEM;
-        img->image_data = tmp;
+        img->image_data = (uint8_t *)tmp;
     }
     else
     {
