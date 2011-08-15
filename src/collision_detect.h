@@ -257,6 +257,7 @@ public:
 	void free_dlist();
 	void begin_render(unsigned &cix);
 	void end_render(unsigned cix);
+	void set_dlist_enable(bool en) {assert(dlist == 0); use_dlist = en;} // can't call while the dlist is valid
 	bool in_dlist   () const {return creating_new_dlist;}
 	bool skip_render() const {return (in_dlist() && !creating_new_dlist);}
 };

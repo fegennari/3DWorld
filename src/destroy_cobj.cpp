@@ -304,7 +304,9 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 			if (gid >= 0) { // we only check in the remove case because we can't add without removing
 				assert((unsigned)gid < obj_draw_groups.size());
+				// free dlist and disable dlists for this group permanently because it's too difficult to keep cobjs sorted by group
 				obj_draw_groups[gid].free_dlist();
+				obj_draw_groups[gid].set_dlist_enable(0);
 			}
 		}
 		new_cobjs.clear();
