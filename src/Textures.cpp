@@ -127,7 +127,7 @@ texture(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
 texture(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
 texture(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
-texture(0, 4, 1024, 1024, 1, 3, 1, "../Sponza2/spnza_bricks_a_diff.tga")
+texture(0, 4, 0,    0,    1, 3, 1, "../Sponza2/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
 };
 
@@ -638,8 +638,6 @@ void texture::load_targa() {
 
 	assert(format == 4);
 	assert(data == NULL);
-	unsigned const size(width*height);
-	data = new unsigned char[size*ncolors];
 	tga_image img;
 	tga_result const ret(tga_read(&img, name.c_str()));
 
@@ -647,7 +645,13 @@ void texture::load_targa() {
 		cout << "Error reading targa file " << name << ": " << tga_error(ret) << endl;
 		exit(1);
 	}
+	if (width == 0 && height == 0) {
+		width  = img.width;
+		height = img.height;
+		assert(width > 0 && height > 0);
+	}
 	assert(img.width == width && img.height == height);
+	data = new unsigned char[width*height*ncolors];
 	//if (!tga_is_top_to_bottom(&img)) tga_flip_vert(&img);
 	//if (tga_is_right_to_left(&img)) tga_flip_horiz(&img);
 
