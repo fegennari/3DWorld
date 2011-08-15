@@ -21,6 +21,7 @@ extern obj_group obj_groups[];
 extern vector<coll_obj> coll_objects;
 extern vector<portal> portals;
 extern coll_cell_opt_batcher cco_batcher;
+extern vector<obj_draw_group> obj_draw_groups;
 
 
 unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int destroy_thresh);
@@ -299,6 +300,12 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 			cobjs[i].clear_internal_data();
 			to_remove.push_back(i);
 			if (shatter) mod_cubes.push_back(cobjs[i]);
+			int const gid(cobjs[i].group_id);
+
+			if (gid >= 0) { // we only check in the remove case because we can't add without removing
+				assert((unsigned)gid < obj_draw_groups.size());
+				obj_draw_groups[gid].free_dlist();
+			}
 		}
 		new_cobjs.clear();
 	} // for k

@@ -1135,6 +1135,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten=0, bool use_smap=0);
 void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color);
 void setup_object_render_data();
+void end_group(int &last_group_id, unsigned i);
 void draw_coll_surfaces(bool draw_solid, bool draw_trans);
 void draw_stars(float alpha);
 void draw_sun();
@@ -1347,6 +1348,9 @@ void remove_all_coll_obj();
 void cobj_optimize();
 int  collision_detect_large_sphere(point &pos, float radius, unsigned flags);
 int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex);
+
+// function prototypes - objects
+void free_cobj_draw_group_dlists();
 
 // function prototypes - coll_cell_search
 void build_cobj_tree( bool dynamic=0, bool verbose=1);

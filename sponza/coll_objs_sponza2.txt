@@ -7,6 +7,6 @@ s 1 2 # swap Y and Z
 M 2 # mirror in Z
 Y 1.0 1.0 1
 
-O ..\Sponza2\sponza.obj 1
+O ..\Sponza2\sponza.obj 2
 
 

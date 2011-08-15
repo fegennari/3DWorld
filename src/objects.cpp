@@ -21,6 +21,7 @@ extern obj_type object_types[];
 extern dwobject def_objects[];
 extern texture textures[];
 extern platform_cont platforms;
+extern vector<obj_draw_group> obj_draw_groups;
 
 
 // ******************* COLL_OBJ MEMBERS ******************
@@ -210,36 +211,22 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 }
 
 
-void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim, shader_t *shader) const {
+void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t *shader) const {
 
 	if (no_draw()) return;
 	assert(!disabled());
-	bool const in_group(group_id >= 0);
-	if (group_back_face_cull && in_group && dot_product_ptv(norm, get_camera_pos(), points[0]) < 0.0) return;
-	point center;
-	float brad;
-	bounding_sphere(center, brad);
-	if (!camera_pdu.sphere_and_cube_visible_test(center, brad, *this)) return;
-	
-	if ((display_mode & 0x08) && !occluders.empty()) {
-		point pts[8];
-		point const camera(get_camera_pos());
-		unsigned const ncorners(is_thin_poly() ? npoints : get_cube_corners(d, pts, camera, 0)); // 8 corners allocated, but only 6 used
-		if (is_occluded(occluders, (is_thin_poly() ? points : pts), ncorners, camera)) return;
-	}
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
 	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
 
 	// process groups
-	int const pri_dim(::get_max_dim(norm));
-	bool const same_group(group_id == last_group_id && tid == last_tid && pri_dim == last_pri_dim);
-	bool const start_group(in_group && !same_group), end_group(last_group_id >= 0 && !same_group);
-	last_group_id = group_id;
-	last_pri_dim  = pri_dim;
-	
-	if (end_group) {
-		glEnd();
+	bool const in_group(group_id >= 0), same_group(group_id == last_group_id), start_group(in_group && !same_group);
+
+	if (same_group) {
+		assert(!in_group || tid == last_tid); // FIXME: each texture must be in its own group
+	}
+	else { // group changed
+		end_group(last_group_id, cix);
 	}
 	if (!in_group || start_group) { // should be the same across groups
 		set_specular(cp.specular, cp.shine);
@@ -251,21 +238,41 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 		assert(textured);
 		last_tid = tid;
 	}
-	if (start_group) {
+	last_group_id = group_id;
+
+	if (start_group) { // start rendering a new group
 		// Note: this can be done between the begin/end of a group and is more efficient in some cases, but less efficient in others
+		if (group_back_face_cull) glEnable(GL_CULL_FACE);
 		vector3d tex_dir(0,0,0);
-		tex_dir[pri_dim] = 1.0;
+		tex_dir[::get_max_dim(norm)] = 1.0;
 		set_poly_texgen(tid, tex_dir, shader);
+		assert((unsigned)group_id < obj_draw_groups.size());
+		obj_draw_groups[group_id].begin_render(cix); // cix may change here
+		if (obj_draw_groups[group_id].skip_render()) return; // already rendered with a dlist
 		glBegin(GL_TRIANGLES);
+	}
+	if (!in_group || !obj_draw_groups[group_id].in_dlist()) {
+		if (group_back_face_cull && in_group && dot_product_ptv(norm, get_camera_pos(), points[0]) < 0.0) return;
+		point center;
+		float brad;
+		bounding_sphere(center, brad);
+		if (!camera_pdu.sphere_and_cube_visible_test(center, brad, *this)) return;
+	
+		if ((display_mode & 0x08) && !occluders.empty()) {
+			point pts[8];
+			point const camera(get_camera_pos());
+			unsigned const ncorners(is_thin_poly() ? npoints : get_cube_corners(d, pts, camera, 0)); // 8 corners allocated, but only 6 used
+			if (is_occluded(occluders, (is_thin_poly() ? points : pts), ncorners, camera)) return;
+		}
 	}
 	if (in_group) {
 		assert(is_thin_poly()); // thin triangle/quad
-		vector3d const normal(get_norm_camera_orient(norm, center));
+		//vector3d const normal(get_norm_camera_orient(norm, points[0]));
 		unsigned const ixs[6] = {0,1,2,0,2,3};
 		unsigned const nix((npoints == 3) ? 3 : 6); // triangle or quad (2 tris)
 		
 		for (unsigned i = 0; i < nix; ++i) {
-			normal.do_glNormal(); // FIXME: smooth?
+			norm.do_glNormal(); // FIXME: smooth?
 			points[ixs[i]].do_glVertex();
 		}
 		return;
@@ -279,7 +286,7 @@ void coll_obj::draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &las
 	case COLL_CYLINDER_ROT:
 		{
 			float const scale(NDIV_SCALE*get_zoom_scale());
-			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(center),
+			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera((points[0] + points[1])*0.5),
 				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
 			int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 			bool const draw_ends(!(cp.surfs & 1));
@@ -732,6 +739,73 @@ bool obj_group::obj_has_shadow(unsigned obj_id) const {
 	if (type != SMILEY) return 1;
 	assert(obj_id < objects.size());
 	return (!has_invisibility(obj_id));
+}
+
+
+void obj_draw_group::create_dlist() {
+
+	if (!use_dlist) return;
+	assert(!inside_beg_end);
+	dlist = glGenLists(1);
+	assert(glIsList(dlist));
+}
+
+
+void obj_draw_group::free_dlist() {
+
+	if (!use_dlist) return;
+	assert(!inside_beg_end);
+	if (dlist > 0) glDeleteLists(dlist, 1);
+	start_cix = end_cix = dlist = 0;
+}
+
+
+void obj_draw_group::begin_render(unsigned &cix) {
+
+	if (!use_dlist) return;
+	assert(!inside_beg_end); // can't call begin() twice
+		
+	if (dlist == 0) { // no dlist exists, so create it
+		create_dlist();
+		glNewList(dlist, GL_COMPILE_AND_EXECUTE);
+		creating_new_dlist = 1;
+		start_cix = cix;
+	}
+	assert(glIsList(dlist));
+
+	if (!creating_new_dlist) { // already created the dlist
+		assert(start_cix == cix); // must start at the same location as last time
+		assert(start_cix < end_cix); // can't have an empty range
+		cix = end_cix-1; // move the current index to the one before the end
+		glCallList(dlist);
+	}
+	inside_beg_end = 1;
+}
+
+
+void obj_draw_group::end_render(unsigned cix) {
+
+	if (!use_dlist) return;
+	assert(inside_beg_end); // can't call end() without begin()
+	inside_beg_end = 0;
+
+	if (creating_new_dlist) {
+		glEndList();
+		creating_new_dlist = 0;
+		assert(start_cix < cix); // can't have an empty range
+		end_cix = cix;
+	}
+	else {
+		assert(end_cix == cix); // must end at the same place as when the dlist was created
+	}
+}
+
+
+void free_cobj_draw_group_dlists() {
+
+	for (vector<obj_draw_group>::iterator i = obj_draw_groups.begin(); i != obj_draw_groups.end(); ++i) {
+		i->free_dlist();
+	}
 }
 
 

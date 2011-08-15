@@ -36,6 +36,7 @@ point star_pts[2*N_STAR_POINTS];
 vector<user_waypt_t> user_waypoints;
 vector<coll_obj> fixed_cobjs;
 vector<portal> portals;
+vector<obj_draw_group> obj_draw_groups;
 
 extern bool have_platform_cobj, clear_landscape_vbo;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
@@ -1005,19 +1006,27 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			break;
 
-		case 'O': // load *.obj file: <filename> <group_cobjs>
+		case 'O': // load *.obj file: <filename> <group_cobjs_level>
 			if (fscanf(fp, "%s%i", str, &ivals[0]) != 2) {
 				return read_error(fp, "load object file command", coll_obj_file);
 			}
 			{
 				RESET_TIME;
 				vector<vector<point> > ppts;
-
-				if (!read_object_file(str, ppts, 1)) {
-					return read_error(fp, "object file data", coll_obj_file);
-				}
+				if (!read_object_file(str, ppts, 1)) return read_error(fp, "object file data", coll_obj_file);
+				
+				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping
 				bool const group_cobjs(ivals[0] != 0);
-				cobj.group_id = (group_cobjs ? next_cobj_group_id++ : -1);
+				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: one for each texture?)
+
+				if (group_cobjs) {
+					bool const use_dlist(ivals[0] == 2);
+
+					for (unsigned i = 0; i < 3; ++i) {
+						group_ids[i] = obj_draw_groups.size();
+						obj_draw_groups.push_back(obj_draw_group(use_dlist));
+					}
+				}
 				check_layer(has_layer);
 				cobj.thickness *= scale;
 				split_polygons.clear();
@@ -1027,6 +1036,9 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 						xform_pos(ppts[i][j], tv, scale, mirror, swap_dim);
 					}
 					split_polygon_to_cobjs(cobj, split_polygons, ppts[i], 0);
+				}
+				for (unsigned i = 0; i < split_polygons.size(); ++i) {
+					split_polygons[i].group_id = group_ids[get_max_dim(get_poly_norm(split_polygons[i].points))];
 				}
 				assert(!split_polygons.empty()); // too strict?
 				add_polygons_to_cobj_vector(split_polygons);

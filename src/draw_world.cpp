@@ -51,6 +51,7 @@ pt_line_drawer_hdr snow_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
+extern bool group_back_face_cull;
 extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
@@ -77,6 +78,7 @@ extern player_state *sstates;
 extern int coll_id[];
 extern vector<light_source> dl_sources;
 extern vector<portal> portals;
+extern vector<obj_draw_group> obj_draw_groups;
 
 
 void draw_cloud_volumes();
@@ -1810,12 +1812,14 @@ void setup_object_render_data() {
 }
 
 
-void end_group(int &last_group_id) {
+void end_group(int &last_group_id, unsigned i) {
 
-	if (last_group_id >= 0) {
-		glEnd();
-		last_group_id = -1;
-	}
+	if (last_group_id < 0) return;
+	assert((unsigned)last_group_id < obj_draw_groups.size());
+	if (!obj_draw_groups[last_group_id].skip_render()) glEnd();
+	obj_draw_groups[last_group_id].end_render(i);
+	if (group_back_face_cull) glDisable(GL_CULL_FACE);
+	last_group_id = -1;
 }
 
 
@@ -1841,25 +1845,26 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
 	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
-	int last_tid(-1), last_group_id(-1), last_pri_dim(-1);
+	int last_tid(-1), last_group_id(-1);
 	
 	if (draw_solid) {
 		draw_last.resize(0);
 		
 		if (have_drawn_cobj) {
 			for (unsigned i = 0; i < coll_objects.size(); ++i) {
-				if (coll_objects[i].no_draw()) continue;
-
-				if (coll_objects[i].is_semi_trans()) {
-					float const neg_dist_sq(-distance_to_camera_sq(coll_objects[i].get_center_pt()));
+				coll_obj const &c(coll_objects[i]);
+				if (c.no_draw()) continue;
+				
+				if (c.is_semi_trans()) { // FIXME: dlists containing semi-transparent grouped polygons?
+					float const neg_dist_sq(-distance_to_camera_sq(c.get_center_pt()));
 					draw_last.push_back(make_pair(neg_dist_sq, i));
 				}
 				else {
-					coll_objects[i].draw_cobj(i, last_tid, last_group_id, last_pri_dim, &s);
+					c.draw_cobj(i, last_tid, last_group_id, &s); // i may not be valid after this call
 				}
 			}
 		}
-		end_group(last_group_id);
+		end_group(last_group_id, coll_objects.size());
 	}
 	if (draw_trans) { // called second
 		if (smoke_exists) {
@@ -1883,7 +1888,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			int const ix(draw_last[i].second);
 
 			if (ix < 0) { // portal
-				end_group(last_group_id);
+				end_group(last_group_id, i);
 
 				if (has_lt_atten && last_light_atten != 0.0) {
 					s.set_uniform_float(ulocs[0], 0.0);
@@ -1898,8 +1903,9 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				portals[pix].draw();
 			}
 			else { // cobj
-				assert((unsigned)ix < coll_objects.size());
-				coll_obj const &c(coll_objects[ix]);
+				unsigned cix(ix);
+				assert(cix < coll_objects.size());
+				coll_obj const &c(coll_objects[cix]);
 				
 				if (has_lt_atten) { // we only support cubes for now (Note: may not be compatible with groups)
 					float const light_atten((c.type == COLL_CUBE) ? c.cp.light_atten : 0.0);
@@ -1914,10 +1920,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					}
 					if (light_atten > 0.0) s.set_uniform_float_array(ulocs[1], (float const *)c.d, 6);
 				}
-				c.draw_cobj(ix, last_tid, last_group_id, last_pri_dim, &s);
+				c.draw_cobj(cix, last_tid, last_group_id, &s);
+				assert(cix == ix); // should not have changed
 			}
 		}
-		end_group(last_group_id);
+		end_group(last_group_id, coll_objects.size());
 		disable_blend();
 		draw_last.resize(0);
 	}

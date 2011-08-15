@@ -1087,9 +1087,6 @@ bool comp_cobjs_by_draw_params(coll_obj const &a, coll_obj const &b) {
 	if (b.cp.tid   < a.cp.tid)   return 0;
 	if (a.group_id < b.group_id) return 1;
 	if (b.group_id < a.group_id) return 0;
-	int const mda(get_max_dim(a.norm)), mdb(get_max_dim(b.norm));
-	if (mda < mdb) return 1;
-	if (mdb < mda) return 0;
 	return (a.points[0] < b.points[0]);
 }
 

@@ -155,6 +155,7 @@ void clear_context() {
 	update_grass_vbos();
 	clear_tree_vbos();
 	reset_tiled_terrain_state();
+	free_cobj_draw_group_dlists();
 	clear_landscape_vbo = 1;
 }
 

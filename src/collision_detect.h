@@ -80,7 +80,7 @@ public:
 	void set_npoints();
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned i, int &last_tid, int &last_group_id, int &last_pri_dim, shader_t *shader) const;
+	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t *shader) const;
 	int  simple_draw(int ndiv, int in_cur_prim=PRIM_DISABLED, bool no_normals=0, bool in_dlist=0) const;
 	void add_to_vector(vector<coll_obj> &cobjs, int type_);
 	void check_if_cube();
@@ -243,6 +243,22 @@ public:
 		return (cid < 0 || test_volume_cobj(pts, npts, lpos));
 	}
 	bool test_volume_cobj(point const *const pts, unsigned npts, point const &lpos) const;
+};
+
+
+class obj_draw_group {
+
+	unsigned start_cix, end_cix, dlist;
+	bool use_dlist, inside_beg_end, creating_new_dlist;
+
+public:
+	obj_draw_group(bool use_dlist_=0) : start_cix(0), end_cix(0), dlist(0), use_dlist(use_dlist_), inside_beg_end(0), creating_new_dlist(0) {}
+	void create_dlist();
+	void free_dlist();
+	void begin_render(unsigned &cix);
+	void end_render(unsigned cix);
+	bool in_dlist   () const {return creating_new_dlist;}
+	bool skip_render() const {return (in_dlist() && !creating_new_dlist);}
 };
 
 
