@@ -20,7 +20,7 @@ extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
 extern float zmax, zmin, water_plane_z, mesh_scale, vegetation, relh_adj_tex;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
-extern texture textures[];
+extern texture_t textures[];
 
 void draw_water_edge(float zval);
 

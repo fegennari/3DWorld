@@ -66,7 +66,7 @@ extern float zmin, zmax_est, zbottom, water_plane_z, mesh_scale, mesh_scale2, te
 extern point ocean;
 extern lightning l_strike;
 extern blastr latest_blastr;
-extern texture textures[];
+extern texture_t textures[];
 extern vector<coll_obj> coll_objects;
 
 

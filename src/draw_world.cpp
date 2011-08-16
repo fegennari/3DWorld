@@ -73,7 +73,7 @@ extern obj_vector_t<fire> fires;
 extern obj_vector_t<scorch_mark> scorches;
 extern float diffuse[], gauss_rand_arr[];
 extern cube_t cur_smoke_bb;
-extern texture textures[];
+extern texture_t textures[];
 extern player_state *sstates;
 extern int coll_id[];
 extern vector<light_source> dl_sources;

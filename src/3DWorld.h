@@ -809,21 +809,21 @@ struct lightning { // size = 40
 colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black
 
 
-struct texture { // size = 78 (80)
+struct texture_t { // size = 128
 
 	char type, format, use_mipmaps;
 	bool wrap;
 	int width, height, ncolors;
-	unsigned char *data, *orig_data, *colored_data, *mm_data;
-	std::string name;
+	unsigned char *data, *orig_data, *colored_data, *mm_data, *bump_map;
+	std::string name, bump_name;
 	GLuint tid;
 	colorRGBA color;
 	vector<unsigned> mm_offsets;
 
-	texture(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n,
-		GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR) : type(t), format(f), use_mipmaps(um), wrap(wra),
-		width(w), height(h), ncolors(nc), data(NULL), orig_data(NULL), colored_data(NULL), mm_data(0),
-		name(n), tid(tex), color(c) {}
+	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n,
+		std::string const &bump_n=std::string(), GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR)
+		: type(t), format(f), use_mipmaps(um), wrap(wra), width(w), height(h), ncolors(nc),
+		data(0), orig_data(0), colored_data(0), mm_data(0), bump_map(0), name(n), bump_name(bump_n), tid(tex), color(c) {}
 	void init();
 	void do_gl_init();
 	GLenum calc_internal_format() const;

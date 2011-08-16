@@ -45,89 +45,89 @@ struct lspot {
 //GROUND ROCK WATER WATER2 SKY SUN MOON EARTH ICE SNOW LEAF WOOD SAND ROCK2 CAMOFLAGE GRASS PALM SMOKE PLASMA GEN LANDSCAPE TREE_END TREE_SNOW TREE_HEMI ...
 //0      1    2     3      4   5   6    7     8   9    10   11   12   13    14        15    16   17    18     19  20        21       22        23        ...
 
-texture textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
+texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga)
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
-//texture(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
-texture(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
-texture(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
-texture(0, 0, 512,  512,  1, 3, 1, "water.raw"),
-texture(0, 0, 64,   64,   1, 3, 1, "water_sm.raw"), // WATER2_TEX is unused
-texture(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
-texture(0, 0, 64,   64,   1, 3, 1, "sun.raw"),
-texture(0, 0, 128,  128,  1, 3, 1, "moon.raw"),
-texture(0, 0, 256,  256,  0, 3, 1, "earth.raw"),
-texture(0, 0, 64,   64,   1, 3, 1, "ice.raw"), // marble?
-texture(0, 0, 256,  256,  1, 3, 2, "snow.raw"),
-texture(0, 0, 128,  128,  0, 4, 3, "leaf.raw"),
-texture(0, 0, 128,  128,  1, 3, 0, "bark.raw"),
-texture(0, 0, 512,  512,  1, 3, 2, "desert_sand.raw"),
-texture(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
-texture(0, 0, 512,  512,  1, 3, 1, "camoflage.raw"),
-texture(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
-texture(0, 1, 512,  512,  1, 3, 1, "brick1.bmp"),
-texture(0, 2, 512,  512,  1, 3, 1, "manhole.bmp"),
-texture(0, 0, 128,  128,  1, 4, 3, "palmtree.raw"),
-texture(1, 0, 256,  256,  1, 4, 1, "@smoke.raw"),  // not real file
-texture(1, 0, 64,   64,   1, 4, 1, "@plasma.raw"), // not real file
-texture(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
-texture(2, 0, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
-texture(1, 0, 128,  128,  0, 3, 0, "@tree_end.raw"),  // not real file
-texture(1, 0, 128,  128,  1, 4, 1, "@tree_hemi.raw"), // not real file, mipmap for trees?
-texture(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp"),   // not real file
-texture(0, 0, 256,  256,  1, 3, 1, "paneling.raw"),
-texture(0, 0, 256,  256,  1, 3, 1, "cblock.raw"),
-texture(0, 0, 128,  128,  0, 4, 3, "mj_leaf.raw"),
-texture(0, 0, 128,  128,  0, 4, 3, "live_oak.raw"),
-texture(0, 0, 256,  256,  0, 4, 3, "leaf2.raw"),
-texture(0, 0, 256,  256,  0, 4, 3, "leaf3c.raw"),
-texture(0, 0, 256,  256,  0, 4, 3, "plant1.raw"),
-texture(0, 0, 256,  256,  0, 4, 3, "plant2.raw"),
-texture(0, 0, 256,  256,  0, 4, 3, "plant3.raw"),
-texture(0, 0, 64,   64,   0, 4, 3, "hibiscus.raw"),
-texture(0, 0, 256,  256,  1, 3, 1, "@fence.raw"), // not real file, light paneling
-texture(0, 2, 128,  128,  1, 3, 1, "skull.raw"),
-texture(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
-texture(0, 2, 128,  128,  1, 3, 1, "yuck.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "sawblade.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "sawblade_b.raw"),
-texture(0, 0, 256,  256,  0, 4, 1, "blur.raw"),
-texture(0, 0, 256,  256,  1, 4, 1, "blur_s.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "pine.raw"),
-texture(0, 0, 128,  128,  1, 3, 1, "noise.raw"),
-texture(0, 0, 128,  128,  1, 3, 1, "wood.raw"),
-texture(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw"),
-texture(0, 0, 128,  128,  1, 3, 1, "particleb.raw"),
-texture(0, 0, 128,  128,  1, 3, 1, "plaster.raw"),
-texture(0, 0, 256,  256,  1, 3, 1, "tile.raw"),
-texture(0, 2, 256,  32,   1, 3, 1, "CommandCAD.raw"),
-texture(1, 0, 32,   32,   1, 4, 1, "@disint.raw"),   // not real file
-texture(1, 0, 256,  256,  1, 4, 1, "@blur_inv.raw"), // not real file
-texture(1, 0, 32,   32,   1, 3, 0, "@hstripe.raw"),  // not real file
-texture(1, 0, 32,   32,   1, 3, 0, "@vstripe.raw"),  // not real file
-texture(0, 0, 512,  512,  1, 3, 1, "bcube.raw"),
-texture(0, 0, 512,  512,  0, 4, 1, "explosion.raw"),
-texture(0, 0, 512,  512,  1, 3, 1, "shiphull.raw"),
-texture(0, 0, 512,  512,  1, 3, 1, "bcube2.raw"),
-texture(0, 0, 512,  512,  1, 3, 1, "bcube_tactical.raw"),
-texture(0, 0, 512,  256,  1, 3, 1, "rock_sphere.raw"),
-texture(0, 3, 256,  256,  0, 4, 3, "papaya_leaf.raw"),
-texture(0, 3, 256,  256,  0, 4, 3, "coffee_leaf.raw"), // half the texture is wasted, but leaves must be square (for now)
-texture(0, 0, 256,  256,  1, 4, 0, "smiley_skull.raw"),
-texture(0, 0, 512,  512,  1, 3, 1, "ice.2.raw"),
-texture(0, 0, 256,  256,  1, 3, 2, "rock.03.raw"),
-texture(0, 0, 16,   16,   1, 3, 0, "black.raw"),
-texture(0, 0, 16,   16,   1, 3, 0, "white.raw"),
-texture(0, 2, 512,  512,  0, 4, 0, "fire.raw"),
-texture(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
-texture(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
-texture(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
-texture(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
-texture(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
-texture(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
-texture(0, 4, 0,    0,    1, 3, 1, "../Sponza2/spnza_bricks_a_diff.tga")
+//texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
+texture_t(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
+texture_t(0, 0, 512,  512,  1, 3, 1, "water.raw"),
+texture_t(0, 0, 64,   64,   1, 3, 1, "water_sm.raw"), // WATER2_TEX is unused
+texture_t(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
+texture_t(0, 0, 64,   64,   1, 3, 1, "sun.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 1, "moon.raw"),
+texture_t(0, 0, 256,  256,  0, 3, 1, "earth.raw"),
+texture_t(0, 0, 64,   64,   1, 3, 1, "ice.raw"), // marble?
+texture_t(0, 0, 256,  256,  1, 3, 2, "snow.raw"),
+texture_t(0, 0, 128,  128,  0, 4, 3, "leaf.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 0, "bark.raw"),
+texture_t(0, 0, 512,  512,  1, 3, 2, "desert_sand.raw"),
+texture_t(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
+texture_t(0, 0, 512,  512,  1, 3, 1, "camoflage.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
+texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp"),
+texture_t(0, 2, 512,  512,  1, 3, 1, "manhole.bmp"),
+texture_t(0, 0, 128,  128,  1, 4, 3, "palmtree.raw"),
+texture_t(1, 0, 256,  256,  1, 4, 1, "@smoke.raw"),  // not real file
+texture_t(1, 0, 64,   64,   1, 4, 1, "@plasma.raw"), // not real file
+texture_t(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
+texture_t(2, 0, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
+texture_t(1, 0, 128,  128,  0, 3, 0, "@tree_end.raw"),  // not real file
+texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi.raw"), // not real file, mipmap for trees?
+texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp"),   // not real file
+texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw"),
+texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw"),
+texture_t(0, 0, 128,  128,  0, 4, 3, "mj_leaf.raw"),
+texture_t(0, 0, 128,  128,  0, 4, 3, "live_oak.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 3, "leaf2.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 3, "leaf3c.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 3, "plant1.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 3, "plant2.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 3, "plant3.raw"),
+texture_t(0, 0, 64,   64,   0, 4, 3, "hibiscus.raw"),
+texture_t(0, 0, 256,  256,  1, 3, 1, "@fence.raw"), // not real file, light paneling
+texture_t(0, 2, 128,  128,  1, 3, 1, "skull.raw"),
+texture_t(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
+texture_t(0, 2, 128,  128,  1, 3, 1, "yuck.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade_b.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 1, "blur.raw"),
+texture_t(0, 0, 256,  256,  1, 4, 1, "blur_s.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 0, "pine.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 1, "noise.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 1, "wood.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 1, "particleb.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 1, "plaster.raw"),
+texture_t(0, 0, 256,  256,  1, 3, 1, "tile.raw"),
+texture_t(0, 2, 256,  32,   1, 3, 1, "CommandCAD.raw"),
+texture_t(1, 0, 32,   32,   1, 4, 1, "@disint.raw"),   // not real file
+texture_t(1, 0, 256,  256,  1, 4, 1, "@blur_inv.raw"), // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe.raw"),  // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe.raw"),  // not real file
+texture_t(0, 0, 512,  512,  1, 3, 1, "bcube.raw"),
+texture_t(0, 0, 512,  512,  0, 4, 1, "explosion.raw"),
+texture_t(0, 0, 512,  512,  1, 3, 1, "shiphull.raw"),
+texture_t(0, 0, 512,  512,  1, 3, 1, "bcube2.raw"),
+texture_t(0, 0, 512,  512,  1, 3, 1, "bcube_tactical.raw"),
+texture_t(0, 0, 512,  256,  1, 3, 1, "rock_sphere.raw"),
+texture_t(0, 3, 256,  256,  0, 4, 3, "papaya_leaf.raw"),
+texture_t(0, 3, 256,  256,  0, 4, 3, "coffee_leaf.raw"), // half the texture is wasted, but leaves must be square (for now)
+texture_t(0, 0, 256,  256,  1, 4, 0, "smiley_skull.raw"),
+texture_t(0, 0, 512,  512,  1, 3, 1, "ice.2.raw"),
+texture_t(0, 0, 256,  256,  1, 3, 2, "rock.03.raw"),
+texture_t(0, 0, 16,   16,   1, 3, 0, "black.raw"),
+texture_t(0, 0, 16,   16,   1, 3, 0, "white.raw"),
+texture_t(0, 2, 512,  512,  0, 4, 0, "fire.raw"),
+texture_t(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
+texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
+texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
+texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
+texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
+texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
 };
 
@@ -298,20 +298,20 @@ void free_texture(unsigned &tid) {
 }
 
 
-void texture::alloc() {
+void texture_t::alloc() {
 
 	free();
 	data = new unsigned char[width*height*ncolors];
 }
 
-void texture::free_mm_data() {
+void texture_t::free_mm_data() {
 
 	delete [] mm_data;
 	mm_data = NULL;
 	mm_offsets.clear();
 }
 
-void texture::free() {
+void texture_t::free() {
 
 	if (orig_data    != data) delete [] orig_data;
 	if (colored_data != data) delete [] colored_data;
@@ -320,20 +320,20 @@ void texture::free() {
 	free_mm_data();
 }
 
-void texture::gl_delete() {
+void texture_t::gl_delete() {
 
 	free_texture(tid);
 }
 
 
-void texture::init() {
+void texture_t::init() {
 
 	calc_color();
 	build_mipmaps();
 }
 
 
-GLenum texture::calc_internal_format() const {
+GLenum texture_t::calc_internal_format() const {
 
 	static int has_comp(2); // starts unknown
 	if (has_comp == 2) has_comp = has_extension("GL_ARB_texture_compression"); // unknown, calculate it
@@ -350,7 +350,7 @@ GLenum texture::calc_internal_format() const {
 }
 
 
-GLenum texture::calc_format() const {
+GLenum texture_t::calc_format() const {
 	
 	switch (ncolors) {
 	case 1: return GL_LUMINANCE;
@@ -362,7 +362,7 @@ GLenum texture::calc_format() const {
 }
 
 
-void texture::do_gl_init() {
+void texture_t::do_gl_init() {
 
 	if (SHOW_TEXTURE_MEMORY) {
 		static unsigned tmem(0);
@@ -381,7 +381,7 @@ void texture::do_gl_init() {
 }
 
 
-void texture::calc_color() {
+void texture_t::calc_color() {
 
 	float colors[4] = {0.0,0.0,0.0,0.0}, weight(0.0);
 	int const size(width*height);
@@ -404,7 +404,7 @@ void texture::calc_color() {
 }
 
 
-void texture::build_mipmaps() {
+void texture_t::build_mipmaps() {
 
 	if (use_mipmaps != 2) return; // not enabled
 	assert(width == height);
@@ -428,7 +428,7 @@ void texture::build_mipmaps() {
 }
 
 
-unsigned char const *texture::get_mipmap_data(unsigned level) const {
+unsigned char const *texture_t::get_mipmap_data(unsigned level) const {
 
 	if (level == 0) { // base texture
 		assert(data != NULL);
@@ -440,7 +440,7 @@ unsigned char const *texture::get_mipmap_data(unsigned level) const {
 }
 
 
-void texture::set_to_color(colorRGBA const &c) {
+void texture_t::set_to_color(colorRGBA const &c) {
 
 	assert(data != NULL);
 	if (c == color) return; // already set
@@ -521,7 +521,7 @@ FILE *open_texture_file(string filename) {
 }
 
 
-void texture::load(int index) {
+void texture_t::load(int index) {
 
 	if (type > 0) { // generated texture
 		alloc();
@@ -537,7 +537,7 @@ void texture::load(int index) {
 
 // load an .RAW or .BMP file as a texture
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel)
-void texture::load_raw_bmp(int index) {
+void texture_t::load_raw_bmp(int index) {
 
 	assert(ncolors == 1 || ncolors == 3 || ncolors == 4);
 	if (format == 3) assert(ncolors == 4);
@@ -634,7 +634,7 @@ void texture::load_raw_bmp(int index) {
 }
 
 
-void texture::load_targa() {
+void texture_t::load_targa() {
 
 	assert(format == 4);
 	assert(data == NULL);
@@ -667,7 +667,7 @@ void texture::load_targa() {
 }
 
 
-void texture::create_custom_mipmaps() {
+void texture_t::create_custom_mipmaps() {
 
 	GLenum const format(calc_format());
 	unsigned const tsize(ncolors*width*height);
@@ -754,7 +754,7 @@ void init_texture(int id) {
 }
 
 
-void texture::gen_rand_texture(unsigned char val, unsigned char a_add, unsigned a_rand) {
+void texture_t::gen_rand_texture(unsigned char val, unsigned char a_add, unsigned a_rand) {
 
 	assert(ncolors == 4);
 	data = new unsigned char[width*height*4];
@@ -1132,14 +1132,14 @@ void create_landscape_texture() {
 				id  = lttex[k1].id;
 				id2 = lttex[k2].id;
 			}
-			texture const &t1(textures[id]);
+			texture_t const &t1(textures[id]);
 			int const tof(t1.ncolors*(((i+toy)&(t1.height-1))*t1.width + ((j+tox)&(t1.width-1))));
 
 			if (k1 == k2) { // single texture
 				RGB_BLOCK_COPY((tex_data + o2), (t1.data + tof));
 			}
 			else { // blend two textures - performance critical
-				texture const &t2(textures[id2]);
+				texture_t const &t2(textures[id2]);
 				int const tof2(t2.ncolors*(((i+toy)&(t2.height-1))*t2.width + ((j+tox)&(t2.width-1))));
 				BLEND_COLOR((tex_data + o2), (t2.data + tof2), (t1.data + tof), t);
 			}
@@ -1154,12 +1154,12 @@ void create_landscape_texture() {
 				float const vnz((1.0 - xpi)*((1.0 - ypi)*vnz00 + ypi*vnz10) + xpi*((1.0 - ypi)*vnz01 + ypi*vnz11));
 
 				if ((id == GROUND_TEX || id2 == GROUND_TEX) && vnz < sti[1]) { // ground/grass
-					texture const &ta(textures[DIRT_TEX]);
+					texture_t const &ta(textures[DIRT_TEX]);
 					int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
 					unsigned char temp[3];
 
 					if (id == GROUND_TEX || id2 == ROCK_TEX) {
-						texture const &tb(textures[ROCK_TEX]);
+						texture_t const &tb(textures[ROCK_TEX]);
 						int const tofb(tb.ncolors*(((i+toy)&(tb.height-1))*tb.width + ((j+tox)&(tb.width-1))));
 						BLEND_COLOR(temp, (tb.data+tofb), (ta.data+tofa), t);
 					}
@@ -1170,7 +1170,7 @@ void create_landscape_texture() {
 					BLEND_COLOR((tex_data+o2), (tex_data+o2), temp, val);
 				}
 				else if (id2 == SNOW_TEX && vnz < sti[1]) { // snow
-					texture const &ta(textures[ROCK_TEX]);
+					texture_t const &ta(textures[ROCK_TEX]);
 					int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
 					float const val(CLIP_TO_01(2.0f*(vnz - sti[0])/(sti[1] - sti[0])));
 					BLEND_COLOR((tex_data+o2), (tex_data+o2), (ta.data+tofa), val);
@@ -1251,7 +1251,7 @@ float add_crater_to_landscape_texture(float xval, float yval, float radius) { //
 
 	int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
 	if (point_outside_mesh(xpos, ypos)) return 0.0; // off the terrain area
-	texture const &t1(textures[get_bare_ls_tid(mesh_height[ypos][xpos])]);
+	texture_t const &t1(textures[get_bare_ls_tid(mesh_height[ypos][xpos])]);
 	int const tidw(t1.width), tidh(t1.height), ncol(t1.ncolors);
 	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
 	unsigned char *data(t1.data), *tex_data(textures[LANDSCAPE_TEX].data);
@@ -1284,7 +1284,7 @@ void add_hole_in_landscape_texture(int xpos, int ypos, float blend) { // for wat
 
 	if (blend <= 0.0 || point_outside_mesh(xpos, ypos)) return; // off the terrain area
 	blend = max(0.01f, min(1.0f, blend));
-	texture const &t1(textures[get_bare_ls_tid(mesh_height[ypos][xpos])]);
+	texture_t const &t1(textures[get_bare_ls_tid(mesh_height[ypos][xpos])]);
 	int const tidw(t1.width), tidh(t1.height), ncol(t1.ncolors);
 	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
 	unsigned char *data(t1.data), *tex_data(textures[LANDSCAPE_TEX].data);
@@ -1330,7 +1330,7 @@ void add_cutout_to_landscape_texture(int x1, int y1, int x2, int y2) { // unused
 		for (int j = x1; j < x2; ++j) {
 			int const xv((j*MESH_X_SIZE)/width);
 			assert(xv < MESH_X_SIZE && yv < MESH_Y_SIZE);
-			texture const &t1(textures[get_bare_ls_tid(mesh_height[yv][xv])]);
+			texture_t const &t1(textures[get_bare_ls_tid(mesh_height[yv][xv])]);
 			int const o2(3*(offset + j)), tof(t1.ncolors*((i&(t1.height-1))*t1.width + (j&(t1.width-1))));
 			RGB_BLOCK_COPY((tex_data+o2), (t1.data+tof));
 		}
@@ -1464,7 +1464,7 @@ void update_lt_section(int x1, int y1, int x2, int y2) {
 
 	//RESET_TIME;
 	if (x1 == x2 || y1 == y2) return;
-	texture const &t1(textures[LANDSCAPE_TEX]);
+	texture_t const &t1(textures[LANDSCAPE_TEX]);
 	unsigned const nc(t1.ncolors);
 	assert(nc == 3);
 	assert(t1.width > 0 && t1.height > 0 && t1.data != NULL);
@@ -1612,7 +1612,7 @@ void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, u
 float get_texture_component(unsigned tid, float xval, float yval, int comp) {
 
 	assert(tid < NUM_TEXTURES);
-	texture const &tex(textures[tid]);
+	texture_t const &tex(textures[tid]);
 	assert(comp < tex.ncolors);
 	int tx(int(tex.width *xval) & (tex.width -1)); // width and height are a power of 2
 	int ty(int(tex.height*yval) & (tex.height-1));

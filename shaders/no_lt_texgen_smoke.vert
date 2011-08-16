@@ -30,7 +30,7 @@ void main()
 	spos     = gl_Vertex.xyz + (0.25*half_dxy)*normal; // move slightly away from the vertex
 	eye      = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
 
-	if (!smoke_enabled) { // set t zero length vector
+	if (!smoke_enabled) {
 		set_fog(); // set standard fog coord
 		return;
 	}

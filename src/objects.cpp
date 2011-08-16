@@ -19,7 +19,7 @@ extern float temperature, tfticks;
 extern unsigned ALL_LT[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
-extern texture textures[];
+extern texture_t textures[];
 extern platform_cont platforms;
 extern vector<obj_draw_group> obj_draw_groups;
 
