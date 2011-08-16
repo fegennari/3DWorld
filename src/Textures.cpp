@@ -49,7 +49,7 @@ texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a ba
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga)
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
-// type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
+// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
 //texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
 texture_t(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
@@ -127,8 +127,8 @@ texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
 texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
 texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
-texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/spnza_bricks_a_diff.tga")
-// type format width height wrap ncolors use_mipmaps ([data] name [id] [color])
+texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
+// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
 };
 
 
@@ -316,7 +316,8 @@ void texture_t::free() {
 	if (orig_data    != data) delete [] orig_data;
 	if (colored_data != data) delete [] colored_data;
 	delete [] data;
-	data = orig_data = colored_data = NULL;
+	delete [] bump_map;
+	data = orig_data = colored_data = bump_map = NULL;
 	free_mm_data();
 }
 

@@ -820,6 +820,9 @@ struct texture_t { // size = 128
 	colorRGBA color;
 	vector<unsigned> mm_offsets;
 
+	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), width(0), height(0), ncolors(0),
+		data(0), orig_data(0), colored_data(0), mm_data(0), bump_map(0), tid(0) {}
+
 	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n,
 		std::string const &bump_n=std::string(), GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR)
 		: type(t), format(f), use_mipmaps(um), wrap(wra), width(w), height(h), ncolors(nc),
