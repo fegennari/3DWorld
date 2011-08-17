@@ -233,9 +233,8 @@ int get_texture_by_name(string const &name) {
 
 void check_init_texture(int id) {
 
-	// glIsTexture is slow on some machines???
-	if (textures[id].tid == 0) textures[id].do_gl_init();
-	//assert(glIsTexture(textures[id].tid));
+	textures[id].check_init();
+	//assert(glIsTexture(textures[id].tid)); // glIsTexture is slow on some machines???
 }
 
 
@@ -313,6 +312,7 @@ void texture_t::free_mm_data() {
 
 void texture_t::free() {
 
+	gl_delete(); // ???
 	if (orig_data    != data) delete [] orig_data;
 	if (colored_data != data) delete [] colored_data;
 	delete [] data;

@@ -844,6 +844,7 @@ struct texture_t { // size = 128
 	void load_raw_bmp(int index);
 	void load_targa();
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
+	void check_init() {if (tid == 0) do_gl_init();}
 };
 
 

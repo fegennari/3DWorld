@@ -1,6 +1,7 @@
 // 3D World - WaveFront Object File Reader
 // by Frank Gennari
 // 8/15/11
+// Reference: http://en.wikipedia.org/wiki/Wavefront_.obj_file
 
 #include "3DWorld.h"
 #include <fstream>
@@ -100,26 +101,79 @@ public:
 colorRGB const def_color(0.0, 0.0, 0.0);
 
 typedef map<string, unsigned> string_map_t;
-typedef vector<vert_norm_tc> polygon_t;
+
+
+struct polygon_t : public vector<vert_norm_tc> {
+
+	void render(bool textured) const {
+		assert(size() >= 3);
+
+		for (const_iterator v = begin(); v != end(); ++v) {
+			if (textured) glTexCoord2fv(v->t);
+			v->n.do_glNormal();
+			v->v.do_glVertex();
+		}
+	}
+};
 
 
 struct poly_group {
+
 	vector<polygon_t> polygons;
+
+	void add_poly(polygon_t const &poly) {polygons.push_back(poly);}
+	void clear() {polygons.clear();}
+	bool empty() const {return polygons.empty();}
+
+	void render(bool textured) const {
+		// FIXME: very inefficient - use glDrawArrays() or vbo with polygons split into triangles
+		for (vector<polygon_t>::const_iterator p = polygons.begin(); p != polygons.end(); ++p) {
+			glBegin(GL_POLYGON);
+			p->render(textured);
+			glEnd();
+		}
+	}
 };
 
 
 struct material_t {
 
 	colorRGB ka, kd, ks, ke, tf;
-	float ns, ni, d, tr;
+	float ns, ni, alpha, tr;
 	unsigned illum;
-	int a_tid, d_tid, s_tid, e_tid, alpha_tid, bump_tid, mbump_tid;
+	int a_tid, d_tid, s_tid, alpha_tid, bump_tid;
 
 	// geometry - does this go here or somewhere else?
 	poly_group geom;
 
-	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), d(0.0), tr(0.0),
-		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), e_tid(-1), alpha_tid(-1), bump_tid(-1), mbump_tid(-1) {}
+	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
+		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1) {}
+	int get_render_texture() const {return d_tid;}
+
+	void render(vector<texture_t> const &textures) const {
+		if (geom.empty()) return; // nothing to do
+		int const tex_id(get_render_texture());
+		bool const textured(tex_id >= 0);
+
+		if (textured) {
+			assert((unsigned)tex_id < textures.size());
+			assert(textures[tex_id].tid > 0);
+			glEnable(GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, textures[tex_id].tid);
+		}
+		if (alpha < 1.0 && ni != 1.0) {
+			// set index of refraction (and reset it at the end)
+		}
+		float const spec_val((ks.R + ks.G + ks.B)/3.0);
+		set_specular(spec_val, ns);
+		set_color_a(colorRGBA(ka, alpha));
+		set_color_d(colorRGBA(kd, alpha));
+		set_color_e(colorRGBA(kd, alpha));
+		geom.render(textured);
+		set_color_e(BLACK);
+		set_specular(0.0, 1.0);
+		if (textured) glDisable(GL_TEXTURE_2D);
+	}
 };
 
 
@@ -145,15 +199,16 @@ public:
 		return materials[mat_id];
 	}
 
+	// creation and query
 	void add_polygon(polygon_t const &poly, int mat_id) {
 		//assert(mat_id >= 0); // must be set/valid - FIXME: too strict?
 
 		if (mat_id < 0) {
-			unbound_geom.polygons.push_back(poly);
+			unbound_geom.add_poly(poly);
 		}
 		else {
 			assert((unsigned)mat_id < materials.size());
-			materials[mat_id].geom.polygons.push_back(poly);
+			materials[mat_id].geom.add_poly(poly);
 		}
 	}
 
@@ -188,7 +243,7 @@ public:
 		return it->second;
 	}
 
-	unsigned load_texture(string const &fn, bool verbose) {
+	unsigned create_texture(string const &fn, bool verbose) {
 		string_map_t::const_iterator it(tex_map.find(fn));
 
 		if (it != tex_map.end()) { // found (already loaded)
@@ -196,11 +251,80 @@ public:
 			return it->second;
 		}
 		unsigned const tid(textures.size());
+		tex_map[fn] = tid;
 		if (verbose) cout << "loading texture " << fn << endl;
 		// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
 		textures.push_back(texture_t(0, 4, 0, 0, 1, 3, 1, fn)); // always RGB targa wrapped+mipmap
-		textures.back().load(-1);
 		return tid; // can't fail
+	}
+
+	// clear/free
+	void clear() {
+		unbound_geom.clear();
+		materials.clear();
+		undef_materials.clear();
+		mat_map.clear();
+		free_textures();
+		textures.clear();
+		tex_map.clear();
+	}
+
+	void free_tids() {
+		for (vector<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {
+			t->gl_delete();
+		}
+	}
+
+	void free_textures() {
+		for (vector<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {
+			t->free();
+		}
+	}
+
+	// texture loading
+	void ensure_texture_loaded(texture_t &t) const {
+		if (!t.data) t.load(-1);
+		assert(t.data);
+	}
+
+	void ensure_tid_loaded(int tid) {
+		if (tid < 0) return; // not allocated
+		assert((unsigned)tid < textures.size());
+		ensure_texture_loaded(textures[tid]);
+	}
+
+	void ensure_tid_bound(int tid) {
+		if (tid < 0) return; // not allocated
+		assert((unsigned)tid < textures.size());
+		textures[tid].check_init();
+	}
+
+	void load_all_used_tids() {
+		for (vector<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+			if (m->geom.empty()) continue;
+			ensure_tid_loaded(m->get_render_texture()); // only one tid for now
+			ensure_tid_loaded(m->alpha_tid);
+			// FIXME: use alpha_tid
+		}
+	}
+
+	void bind_all_used_tids() {
+		load_all_used_tids();
+		
+		for (vector<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+			if (m->geom.empty()) continue;
+			ensure_tid_bound(m->get_render_texture()); // only one tid for now
+		}
+	}
+
+	// rendering
+	void render() { // const?
+		bind_all_used_tids();
+		unbound_geom.render(0);
+		
+		for (vector<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+			m->render(textures);
+		}
 	}
 };
 
@@ -239,7 +363,7 @@ class object_file_reader_model : public object_file_reader {
 		string const fn_used(open_include_file(fn, "texture", tex_in));
 		if (fn_used.empty()) return -1;
 		tex_in.close();
-		return model.load_texture(fn_used, 1);
+		return model.create_texture(fn_used, 1);
 	}
 
 	void check_and_bind(int &tid, string const &tfn) {
@@ -293,34 +417,29 @@ public:
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->ke.R >> cur_mat->ke.G >> cur_mat->ke.B)) {cerr << "Error reading material Ke" << endl; return 0;}
 			}
-			else if (s == "Ns") {
+			else if (s == "Ns") { // specular exponent
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->ns)) {cerr << "Error reading material Ns" << endl; return 0;}
 			}
-			else if (s == "Ni") {
+			else if (s == "Ni") { // index of refraction
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->ni)) {cerr << "Error reading material Ni" << endl; return 0;}
 			}
-			else if (s == "d") {
+			else if (s == "d") { // alpha
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->d)) {cerr << "Error reading material d" << endl; return 0;}
+				if (!(mat_in >> cur_mat->alpha)) {cerr << "Error reading material d" << endl; return 0;}
 			}
-			else if (s == "Tr") {
+			else if (s == "Tr") { // transmittance
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->tr)) {cerr << "Error reading material Tr" << endl; return 0;}
 			}
-			else if (s == "Tf") {
+			else if (s == "Tf") { // transmittion filter
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->tf.R >> cur_mat->tf.G >> cur_mat->tf.B)) {cerr << "Error reading material Tf" << endl; return 0;}
 			}
-			else if (s == "illum") {
+			else if (s == "illum") { // 0 - 10
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->illum)) {cerr << "Error reading material Tr" << endl; return 0;}
-				
-				if (cur_mat->illum > 2) {
-					cerr << "Error reading material illum: Unrecognized value: " << cur_mat->illum << " (should be 0, 1, or 2)" << endl;
-					return 0;
-				}
 			}
 			else if (s == "map_Ka") {
 				assert(cur_mat);
@@ -337,25 +456,15 @@ public:
 				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
 				check_and_bind(cur_mat->s_tid, tfn);
 			}
-			else if (s == "map_Ke") {
-				assert(cur_mat);
-				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Ke" << endl; return 0;}
-				check_and_bind(cur_mat->e_tid, tfn);
-			}
 			else if (s == "map_d") {
 				assert(cur_mat);
 				if (!(mat_in >> tfn)) {cerr << "Error reading material map_d" << endl; return 0;}
 				check_and_bind(cur_mat->alpha_tid, tfn);
 			}
-			else if (s == "map_bump") {
+			else if (s == "map_bump" || s == "bump") { // should be ok if both are set
 				assert(cur_mat);
-				if (!(mat_in >> tfn)) {cerr << "Error reading material map_bump" << endl; return 0;}
-				check_and_bind(cur_mat->mbump_tid, tfn);
-			}
-			else if (s == "bump") {
-				assert(cur_mat);
-				if (!(mat_in >> tfn)) {cerr << "Error reading material bump" << endl; return 0;}
-				check_and_bind(cur_mat->bump_tid, tfn);
+				if (!(mat_in >> tfn)) {cerr << "Error reading material " << s << endl; return 0;}
+				cur_mat->bump_tid = get_texture(tfn);
 			}
 			else {
 				cerr << "Error: Undefined entry '" << s << "' in material library" << endl;
@@ -373,7 +482,7 @@ public:
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
 		vector<vector3d> tc; // texture coords
-		string s, group_name, material_name, mat_lib, last_mat_lib;
+		string s, group_name, object_name, material_name, mat_lib, last_mat_lib;
 
 		while (in.good() && (in >> s)) {
 			assert(!s.empty());
@@ -385,6 +494,7 @@ public:
 				if (ppts) ppts->push_back(vector<point>());
 				polygon_t poly;
 				int vix(0), tix(0), nix(0);
+				bool has_norm(0);
 
 				while (in >> vix) { // read vertex index
 					normalize_index(vix, v.size());
@@ -405,10 +515,11 @@ public:
 							if (in >> nix) { // read normal index
 								normalize_index(nix, n.size());
 								normal = n[nix];
+								has_norm = 1;
 							}
 							else {
 								in.clear();
-								// calc normal
+								normal = zero_vector; // will be recalculated later
 							}
 						}
 						else {
@@ -420,6 +531,11 @@ public:
 					}
 					poly.push_back(vert_norm_tc(v[vix], normal, tex_coord.x, tex_coord.y));
 				} // end while vertex
+				if (!has_norm) { // calculate and set normal
+					assert(poly.size() >= 3);
+					vector3d const normal(cross_product((poly[1].v - poly[0].v), (poly[2].v - poly[0].v)).get_norm()); // backwards?
+					for (unsigned i = 0; i < poly.size(); ++i) poly[i].n = normal;
+				}
 				in.clear();
 				model.add_polygon(poly, cur_mat_id);
 			}
@@ -452,7 +568,10 @@ public:
 				read_to_newline(in); // ignore
 			}
 			else if (s == "o") { // object definition
-				read_to_newline(in); // ignore
+				if (!(in >> object_name)) {
+					cerr << "Error reading object name from object file " << filename << endl;
+					return 0;
+				}
 			}
 			else if (s == "g") { // group
 				if (!(in >> group_name)) {
@@ -460,7 +579,7 @@ public:
 					return 0;
 				}
 			}
-			else if (s == "s") { // smoothing
+			else if (s == "s") { // smoothing/shading (off/on or 0/1)
 				read_to_newline(in); // ignore
 			}
 			else if (s == "usemtl") { // use material
