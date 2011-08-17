@@ -97,6 +97,9 @@ public:
 // ************************************************
 
 
+colorRGB const def_color(0.0, 0.0, 0.0);
+
+typedef map<string, unsigned> string_map_t;
 typedef vector<vert_norm_tc> polygon_t;
 
 
@@ -107,21 +110,32 @@ struct poly_group {
 
 struct material_t {
 
-	texture_t texture;
-	// FIXME: write
+	colorRGB ka, kd, ks, ke, tf;
+	float ns, ni, d, tr;
+	unsigned illum;
+	int a_tid, d_tid, s_tid, e_tid, alpha_tid, bump_tid, mbump_tid;
 
 	// geometry - does this go here or somewhere else?
 	poly_group geom;
+
+	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), d(0.0), tr(0.0),
+		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), e_tid(-1), alpha_tid(-1), bump_tid(-1), mbump_tid(-1) {}
 };
 
 
 class model3d {
 
+	// geometry
 	poly_group unbound_geom;
+
+	// materials
 	vector<material_t> materials;
-	typedef map<string, unsigned> mat_map_t;
-	mat_map_t mat_map; // maps material names to materials
+	string_map_t mat_map; // maps material names to materials indexes
 	set<string> undef_materials; // to reduce warning messages
+
+	// textures
+	vector<texture_t> textures;
+	string_map_t tex_map; // maps texture filenames to texture indexes
 
 public:
 	unsigned num_materials(void) const {return materials.size();}
@@ -145,7 +159,7 @@ public:
 
 	int get_material_ix(string const &material_name, string const &fn) {
 		unsigned mat_id(0);
-		mat_map_t::const_iterator it(mat_map.find(material_name));
+		string_map_t::const_iterator it(mat_map.find(material_name));
 
 		if (it == mat_map.end()) {
 			mat_id = materials.size();
@@ -161,7 +175,7 @@ public:
 	}
 
 	int find_material(string const &material_name) {
-		mat_map_t::const_iterator it(mat_map.find(material_name));
+		string_map_t::const_iterator it(mat_map.find(material_name));
 
 		if (it == mat_map.end()) {
 			if (undef_materials.find(material_name) == undef_materials.end()) {
@@ -174,15 +188,19 @@ public:
 		return it->second;
 	}
 
-	bool load_texture(string const &fn, unsigned mat_id) {
-		assert(mat_id < materials.size());
-		material_t &mat(materials[mat_id]);
-		assert(!mat.texture.data); // should not yet be loaded - FIXME: too strict?
-		mat.texture.free();
+	unsigned load_texture(string const &fn, bool verbose) {
+		string_map_t::const_iterator it(tex_map.find(fn));
+
+		if (it != tex_map.end()) { // found (already loaded)
+			assert(it->second < textures.size());
+			return it->second;
+		}
+		unsigned const tid(textures.size());
+		if (verbose) cout << "loading texture " << fn << endl;
 		// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
-		mat.texture = texture_t(0, 4, 0, 0, 1, 3, 1, fn); // always RGB targa wrapped+mipmap
-		mat.texture.load(-1);
-		return 1; // can't fail
+		textures.push_back(texture_t(0, 4, 0, 0, 1, 3, 1, fn)); // always RGB targa wrapped+mipmap
+		textures.back().load(-1);
+		return tid; // can't fail
 	}
 };
 
@@ -216,13 +234,22 @@ class object_file_reader_model : public object_file_reader {
 		return string();
 	}
 
-	bool load_texture(string const &fn, unsigned mat_id) {
+	int get_texture(string const &fn) {
 		ifstream tex_in; // used only for determining file location
 		string const fn_used(open_include_file(fn, "texture", tex_in));
-		if (fn_used.empty()) return 0;
-		in.close();
-		cout << "loading texture " << fn_used << endl; // FIXME: too verbose?
-		return model.load_texture(fn_used, mat_id);
+		if (fn_used.empty()) return -1;
+		tex_in.close();
+		return model.load_texture(fn_used, 1);
+	}
+
+	void check_and_bind(int &tid, string const &tfn) {
+		assert(tid < 0);
+		tid = get_texture(tfn);
+	}
+
+public:
+	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model(model_) {
+		rel_path = get_path(fn);
 	}
 
 	bool load_mat_lib(string const &fn) { // FIXME: cache these files or reload every time?
@@ -230,7 +257,8 @@ class object_file_reader_model : public object_file_reader {
 		if (open_include_file(fn, "material library", mat_in).empty()) return 0;
 		cout << "loading material library " << fn << endl;
 		int cur_mat_id(-1); // not set
-		string s;
+		material_t *cur_mat(0);
+		string s, tfn;
 
 		while (mat_in.good() && (mat_in >> s)) {
 			assert(!s.empty());
@@ -246,65 +274,96 @@ class object_file_reader_model : public object_file_reader {
 					return 0;
 				}
 				cout << "Material " << material_name << endl; // FIXME: too verbose?
-				cur_mat_id = model.get_material_ix(material_name, fn);
+				cur_mat_id =  model.get_material_ix(material_name, fn);
+				cur_mat    = &model.get_material(cur_mat_id);
 			}
-			/*else if (s == "Ka") {
-
+			else if (s == "Ka") {
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->ka.R >> cur_mat->ka.G >> cur_mat->ka.B)) {cerr << "Error reading material Ka" << endl; return 0;}
 			}
 			else if (s == "Kd") {
-
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->kd.R >> cur_mat->kd.G >> cur_mat->kd.B)) {cerr << "Error reading material Kd" << endl; return 0;}
 			}
 			else if (s == "Ks") {
-
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->ks.R >> cur_mat->ks.G >> cur_mat->ks.B)) {cerr << "Error reading material Ks" << endl; return 0;}
 			}
 			else if (s == "Ke") {
-
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->ke.R >> cur_mat->ke.G >> cur_mat->ke.B)) {cerr << "Error reading material Ke" << endl; return 0;}
 			}
 			else if (s == "Ns") {
-
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->ns)) {cerr << "Error reading material Ns" << endl; return 0;}
 			}
 			else if (s == "Ni") {
-
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->ni)) {cerr << "Error reading material Ni" << endl; return 0;}
 			}
 			else if (s == "d") {
-
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->d)) {cerr << "Error reading material d" << endl; return 0;}
 			}
 			else if (s == "Tr") {
-
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->tr)) {cerr << "Error reading material Tr" << endl; return 0;}
 			}
 			else if (s == "Tf") {
-
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->tf.R >> cur_mat->tf.G >> cur_mat->tf.B)) {cerr << "Error reading material Tf" << endl; return 0;}
 			}
 			else if (s == "illum") {
-
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->illum)) {cerr << "Error reading material Tr" << endl; return 0;}
+				
+				if (cur_mat->illum > 2) {
+					cerr << "Error reading material illum: Unrecognized value: " << cur_mat->illum << " (should be 0, 1, or 2)" << endl;
+					return 0;
+				}
 			}
 			else if (s == "map_Ka") {
-
+				assert(cur_mat);
+				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Ka" << endl; return 0;}
+				check_and_bind(cur_mat->a_tid, tfn);
 			}
 			else if (s == "map_Kd") {
-
+				assert(cur_mat);
+				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Kd" << endl; return 0;}
+				check_and_bind(cur_mat->d_tid, tfn);
+			}
+			else if (s == "map_Ks") {
+				assert(cur_mat);
+				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
+				check_and_bind(cur_mat->s_tid, tfn);
+			}
+			else if (s == "map_Ke") {
+				assert(cur_mat);
+				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Ke" << endl; return 0;}
+				check_and_bind(cur_mat->e_tid, tfn);
 			}
 			else if (s == "map_d") {
-
+				assert(cur_mat);
+				if (!(mat_in >> tfn)) {cerr << "Error reading material map_d" << endl; return 0;}
+				check_and_bind(cur_mat->alpha_tid, tfn);
 			}
 			else if (s == "map_bump") {
-
+				assert(cur_mat);
+				if (!(mat_in >> tfn)) {cerr << "Error reading material map_bump" << endl; return 0;}
+				check_and_bind(cur_mat->mbump_tid, tfn);
 			}
 			else if (s == "bump") {
-
-			}*/
+				assert(cur_mat);
+				if (!(mat_in >> tfn)) {cerr << "Error reading material bump" << endl; return 0;}
+				check_and_bind(cur_mat->bump_tid, tfn);
+			}
 			else {
-				//cerr << "Error: Undefined entry '" << s << "' in material library" << endl;
-				//return 0;
-				read_to_newline(mat_in); // ignore
+				cerr << "Error: Undefined entry '" << s << "' in material library" << endl;
+				return 0;
+				//read_to_newline(mat_in); // ignore
 			}
 		}
 		return 1;
-	}
-
-public:
-	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model(model_) {
-		rel_path = get_path(fn);
 	}
 
 	bool read(vector<vector<point> > *ppts, bool verbose) {
