@@ -4,9 +4,11 @@
 // Reference: http://en.wikipedia.org/wiki/Wavefront_.obj_file
 
 #include "3DWorld.h"
+#include "model3d.h"
 #include <fstream>
 
-using namespace std;
+
+extern model3ds all_models;
 
 
 class object_file_reader {
@@ -44,7 +46,7 @@ protected:
 public:
 	object_file_reader(string const &fn) : filename(fn) {assert(!fn.empty());}
 
-	bool read(vector<vector<point> > *ppts, bool verbose) {
+	bool read(vector<vector<point> > *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
 		vector<point> v; // vertices
@@ -63,6 +65,7 @@ public:
 					cerr << "Error reading vertex from object file " << filename << endl;
 					return 0;
 				}
+				xf.xform_pos(v.back());
 			}
 			else if (s == "f") { // face
 				if (ppts) ppts->push_back(vector<point>());
@@ -91,240 +94,6 @@ public:
 		PRINT_TIME("Polygons Load");
 		if (verbose) cout << "v: " << v.size() << ", f: " << (ppts ? ppts->size() : 0) << endl;
 		return 1;
-	}
-};
-
-
-// ************************************************
-
-
-colorRGB const def_color(0.0, 0.0, 0.0);
-
-typedef map<string, unsigned> string_map_t;
-
-
-struct polygon_t : public vector<vert_norm_tc> {
-
-	void render(bool textured) const {
-		assert(size() >= 3);
-
-		for (const_iterator v = begin(); v != end(); ++v) {
-			if (textured) glTexCoord2fv(v->t);
-			v->n.do_glNormal();
-			v->v.do_glVertex();
-		}
-	}
-};
-
-
-struct poly_group {
-
-	vector<polygon_t> polygons;
-
-	void add_poly(polygon_t const &poly) {polygons.push_back(poly);}
-	void clear() {polygons.clear();}
-	bool empty() const {return polygons.empty();}
-
-	void render(bool textured) const {
-		// FIXME: very inefficient - use glDrawArrays() or vbo with polygons split into triangles
-		for (vector<polygon_t>::const_iterator p = polygons.begin(); p != polygons.end(); ++p) {
-			glBegin(GL_POLYGON);
-			p->render(textured);
-			glEnd();
-		}
-	}
-};
-
-
-struct material_t {
-
-	colorRGB ka, kd, ks, ke, tf;
-	float ns, ni, alpha, tr;
-	unsigned illum;
-	int a_tid, d_tid, s_tid, alpha_tid, bump_tid;
-
-	// geometry - does this go here or somewhere else?
-	poly_group geom;
-
-	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
-		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1) {}
-	int get_render_texture() const {return d_tid;}
-
-	void render(vector<texture_t> const &textures) const {
-		if (geom.empty()) return; // nothing to do
-		int const tex_id(get_render_texture());
-		bool const textured(tex_id >= 0);
-
-		if (textured) {
-			assert((unsigned)tex_id < textures.size());
-			assert(textures[tex_id].tid > 0);
-			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, textures[tex_id].tid);
-		}
-		if (alpha < 1.0 && ni != 1.0) {
-			// set index of refraction (and reset it at the end)
-		}
-		float const spec_val((ks.R + ks.G + ks.B)/3.0);
-		set_specular(spec_val, ns);
-		set_color_a(colorRGBA(ka, alpha));
-		set_color_d(colorRGBA(kd, alpha));
-		set_color_e(colorRGBA(kd, alpha));
-		geom.render(textured);
-		set_color_e(BLACK);
-		set_specular(0.0, 1.0);
-		if (textured) glDisable(GL_TEXTURE_2D);
-	}
-};
-
-
-class model3d {
-
-	// geometry
-	poly_group unbound_geom;
-
-	// materials
-	vector<material_t> materials;
-	string_map_t mat_map; // maps material names to materials indexes
-	set<string> undef_materials; // to reduce warning messages
-
-	// textures
-	vector<texture_t> textures;
-	string_map_t tex_map; // maps texture filenames to texture indexes
-
-public:
-	unsigned num_materials(void) const {return materials.size();}
-
-	material_t &get_material(int mat_id) {
-		assert(mat_id >= 0 && (unsigned)mat_id < materials.size());
-		return materials[mat_id];
-	}
-
-	// creation and query
-	void add_polygon(polygon_t const &poly, int mat_id) {
-		//assert(mat_id >= 0); // must be set/valid - FIXME: too strict?
-
-		if (mat_id < 0) {
-			unbound_geom.add_poly(poly);
-		}
-		else {
-			assert((unsigned)mat_id < materials.size());
-			materials[mat_id].geom.add_poly(poly);
-		}
-	}
-
-	int get_material_ix(string const &material_name, string const &fn) {
-		unsigned mat_id(0);
-		string_map_t::const_iterator it(mat_map.find(material_name));
-
-		if (it == mat_map.end()) {
-			mat_id = materials.size();
-			mat_map[material_name] = mat_id;
-			materials.push_back(material_t());
-		}
-		else {
-			cerr << "Warning: Redefinition of material " << material_name << " in file " << fn << endl;
-			mat_id = it->second;
-		}
-		assert(mat_id < materials.size());
-		return mat_id;
-	}
-
-	int find_material(string const &material_name) {
-		string_map_t::const_iterator it(mat_map.find(material_name));
-
-		if (it == mat_map.end()) {
-			if (undef_materials.find(material_name) == undef_materials.end()) {
-				cerr << "Error: Material " << material_name << " not found in any included material libraries" << endl;
-				undef_materials.insert(material_name);
-			}
-			return -1; // return -1 on failure
-		}
-		assert(it->second < materials.size());
-		return it->second;
-	}
-
-	unsigned create_texture(string const &fn, bool verbose) {
-		string_map_t::const_iterator it(tex_map.find(fn));
-
-		if (it != tex_map.end()) { // found (already loaded)
-			assert(it->second < textures.size());
-			return it->second;
-		}
-		unsigned const tid(textures.size());
-		tex_map[fn] = tid;
-		if (verbose) cout << "loading texture " << fn << endl;
-		// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
-		textures.push_back(texture_t(0, 4, 0, 0, 1, 3, 1, fn)); // always RGB targa wrapped+mipmap
-		return tid; // can't fail
-	}
-
-	// clear/free
-	void clear() {
-		unbound_geom.clear();
-		materials.clear();
-		undef_materials.clear();
-		mat_map.clear();
-		free_textures();
-		textures.clear();
-		tex_map.clear();
-	}
-
-	void free_tids() {
-		for (vector<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {
-			t->gl_delete();
-		}
-	}
-
-	void free_textures() {
-		for (vector<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {
-			t->free();
-		}
-	}
-
-	// texture loading
-	void ensure_texture_loaded(texture_t &t) const {
-		if (!t.data) t.load(-1);
-		assert(t.data);
-	}
-
-	void ensure_tid_loaded(int tid) {
-		if (tid < 0) return; // not allocated
-		assert((unsigned)tid < textures.size());
-		ensure_texture_loaded(textures[tid]);
-	}
-
-	void ensure_tid_bound(int tid) {
-		if (tid < 0) return; // not allocated
-		assert((unsigned)tid < textures.size());
-		textures[tid].check_init();
-	}
-
-	void load_all_used_tids() {
-		for (vector<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-			if (m->geom.empty()) continue;
-			ensure_tid_loaded(m->get_render_texture()); // only one tid for now
-			ensure_tid_loaded(m->alpha_tid);
-			// FIXME: use alpha_tid
-		}
-	}
-
-	void bind_all_used_tids() {
-		load_all_used_tids();
-		
-		for (vector<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-			if (m->geom.empty()) continue;
-			ensure_tid_bound(m->get_render_texture()); // only one tid for now
-		}
-	}
-
-	// rendering
-	void render() { // const?
-		bind_all_used_tids();
-		unbound_geom.render(0);
-		
-		for (vector<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-			m->render(textures);
-		}
 	}
 };
 
@@ -475,7 +244,7 @@ public:
 		return 1;
 	}
 
-	bool read(vector<vector<point> > *ppts, bool verbose) {
+	bool read(vector<vector<point> > *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
 		int cur_mat_id(-1);
@@ -546,6 +315,7 @@ public:
 					cerr << "Error reading vertex from object file " << filename << endl;
 					return 0;
 				}
+				xf.xform_pos(v.back());
 			}
 			else if (s == "vt") { // tex coord
 				tc.push_back(vector3d());
@@ -615,16 +385,16 @@ public:
 };
 
 
-bool read_object_file(char *filename, vector<vector<point> > &ppts, bool verbose) {
+bool read_object_file(char *filename, vector<vector<point> > &ppts, geom_xform_t const &xf, bool load_models, bool verbose) {
 
-	if (1) {
-		model3d model;
-		object_file_reader_model reader(filename, model);
-		return reader.read(&ppts, verbose);
+	if (load_models) {
+		all_models.push_back(model3d());
+		object_file_reader_model reader(filename, all_models.back());
+		return reader.read(&ppts, xf, verbose);
 	}
 	else {
 		object_file_reader reader(filename);
-		return reader.read(&ppts, verbose);
+		return reader.read(&ppts, xf, verbose);
 	}
 }
 

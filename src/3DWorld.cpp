@@ -11,6 +11,7 @@
 #include "dynamic_particle.h"
 #include "physics_objects.h"
 #include "gl_ext_arb.h"
+#include "model3d.h"
 #include <set>
 
 using namespace std;
@@ -149,6 +150,7 @@ void doRedraw(int arg) {
 void clear_context() {
 
 	reset_textures();
+	free_model_textures();
 	free_dlists();
 	clear_shaders();
 	reset_snow_vbos();

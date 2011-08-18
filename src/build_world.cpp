@@ -10,6 +10,7 @@
 #include "transform_obj.h"
 #include "dynamic_particle.h"
 #include "physics_objects.h"
+#include "model3d.h"
 #include <fstream>
 
 
@@ -826,40 +827,18 @@ void add_polygons_to_cobj_vector(vector<coll_obj> &polygons) {
 }
 
 
-// mirror, swap, scale, translate
-void xform_pos(point &pos, vector3d const &tv, float scale, bool const mirror[3], bool const swap_dim[3][3]) {
+void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius, geom_xform_t const &xf) {
 
-	for (unsigned i = 0; i < 3; ++i) {
-		if (mirror[i]) pos[i] = -pos[i];
-	}
-	for (unsigned i = 0; i < 3; ++i) {
-		for (unsigned j = 0; j < 3; ++j) {
-			if (swap_dim[i][j]) swap(pos[i], pos[j]);
-		}
-	}
-	pos *= scale;
-	pos += tv;
-}
-
-
-bool read_object_file(char *filename, vector<vector<point> > &ppts, bool verbose); // FIXME: move to header
-
-
-void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius,
-	vector3d const &tv, float scale, bool const mirror[3], bool const swap_dim[3][3])
-{
 	pos.z = 0.0;
 	bool const interpolate(fscanf(fp, "%f", &pos.z) != 1);
-	xform_pos(pos, tv, scale, mirror, swap_dim); // better not try to rotate z when interpolating
+	xf.xform_pos(pos); // better not try to rotate z when interpolating
 	if (interpolate) pos.z = interpolate_mesh_zval(pos.x, pos.y, interp_rad, 0, 0) + radius;
 }
 
 
-int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool const mirror_[3], bool const swap_dim_[3][3],
-					   coll_obj cobj, bool has_layer, colorRGBA lcolor)
-{
+int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
+
 	assert(coll_obj_file != NULL);
-	bool mirror[3], swap_dim[3][3];
 	char letter, str[MAX_CHARS];
 	unsigned line_num(1), npoints;
 	int end(0), use_z(0), use_vel(0), ivals[3];
@@ -872,10 +851,6 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 	FILE *fp;
 	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
 	
-	for (unsigned i = 0; i < 3; ++i) {
-		for (unsigned j = 0; j < 3; ++j) swap_dim[i][j] = swap_dim_[i][j];
-		mirror[i] = mirror_[i];
-	}
 	while (!end) { // available: b Y ...
 		assert(fp != NULL);
 		letter = (char)getc(fp);
@@ -900,7 +875,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			if (fscanf(fp, "%s", str) != 1) {
 				return read_error(fp, "include file", coll_obj_file);
 			}
-			if (!read_coll_obj_file(str, tv, scale, mirror, swap_dim, cobj, has_layer, lcolor)) {
+			if (!read_coll_obj_file(str, xf, cobj, has_layer, lcolor)) {
 				return read_error(fp, "include file", coll_obj_file);
 			}
 			break;
@@ -912,7 +887,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			{
 				RESET_TIME;
 				vector<vector<point> > ppts;
-				if (!read_object_file(str, ppts, 1)) return read_error(fp, "object file data", coll_obj_file);
+				if (!read_object_file(str, ppts, xf, 0, 1)) return read_error(fp, "object file data", coll_obj_file);
 				
 				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping
 				bool const group_cobjs(ivals[0] != 0);
@@ -927,13 +902,10 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					}
 				}
 				check_layer(has_layer);
-				cobj.thickness *= scale;
+				cobj.thickness *= xf.scale;
 				split_polygons.clear();
 
 				for (unsigned i = 0; i < ppts.size(); ++i) {
-					for (unsigned j = 0; j < ppts[i].size(); ++j) {
-						xform_pos(ppts[i][j], tv, scale, mirror, swap_dim);
-					}
 					split_polygon_to_cobjs(cobj, split_polygons, ppts[i], 0);
 				}
 				for (unsigned i = 0; i < split_polygons.size(); ++i) {
@@ -973,8 +945,8 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			else {
 				tree t;
 				t_trees.push_back(t);
-				xform_pos(pos, tv, scale, mirror, swap_dim);
-				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*scale)), ivals[0], !use_z, 0, t_trees.size()-1);
+				xf.xform_pos(pos);
+				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, t_trees.size()-1);
 				tree_mode |= 1; // enable trees
 			}
 			break;
@@ -985,9 +957,9 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			assert(fvals[0] > 0.0 && fvals[1] > 0.0);
 			use_z = (fscanf(fp, "%f", &pos.z) == 1);
-			xform_pos(pos, tv, scale, mirror, swap_dim);
+			xf.xform_pos(pos);
 
-			if (add_small_tree(pos, scale*fvals[0], scale*fvals[1], ivals[0], !use_z)) {
+			if (add_small_tree(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z)) {
 				tree_mode |= 2; // enable small trees
 			}
 			else {
@@ -1001,8 +973,8 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			assert(fvals[0] > 0.0 && fvals[1] > 0.0);
 			use_z = (fscanf(fp, "%f", &pos.z) == 1);
-			xform_pos(pos, tv, scale, mirror, swap_dim);
-			add_plant(pos, scale*fvals[0], scale*fvals[1], ivals[0], !use_z);
+			xf.xform_pos(pos);
+			add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
 			break;
 
 		case 'h': // place srock: xpos ypos size
@@ -1024,7 +996,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			}
 			{
 				float const smiley_radius(object_types[SMILEY].radius);
-				read_or_calc_zval(fp, pos, smiley_radius, smiley_radius, tv, scale, mirror, swap_dim);
+				read_or_calc_zval(fp, pos, smiley_radius, smiley_radius, xf);
 				app_spots.push_back(pos);
 			}
 			break;
@@ -1034,12 +1006,12 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				return read_error(fp, "light source", coll_obj_file);
 			}
 			{
-				xform_pos(pos, tv, scale, mirror, swap_dim);
+				xf.xform_pos(pos);
 				float beamwidth(1.0), r_inner(0.0);
 				vel = plus_z;
 
 				if (fscanf(fp, "%f%f%f%f", &vel.x, &vel.y, &vel.z, &beamwidth) == 4) { // direction and beamwidth
-					xform_pos(vel, zero_vector, 1.0, mirror, swap_dim);
+					xf.xform_pos_rm(vel);
 					fscanf(fp, "%f", &r_inner);
 				}
 				light_sources.push_back(light_source(fvals[0], pos, lcolor, 0, vel, beamwidth, r_inner));
@@ -1051,7 +1023,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				return read_error(fp, "waypoint", coll_obj_file);
 			}
 			{
-				read_or_calc_zval(fp, pos, SMALL_NUMBER, object_types[WAYPOINT].radius, tv, scale, mirror, swap_dim);
+				read_or_calc_zval(fp, pos, SMALL_NUMBER, object_types[WAYPOINT].radius, xf);
 				user_waypoints.push_back(user_waypt_t(ivals[0], pos));
 			}
 			break;
@@ -1064,7 +1036,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			{
 				assert(ivals[0] >= 0 && ivals[0] < NUM_TOT_OBJS);
 				float const radius(object_types[ivals[0]].radius);
-				read_or_calc_zval(fp, pos, radius, radius, tv, scale, mirror, swap_dim);
+				read_or_calc_zval(fp, pos, radius, radius, xf);
 				init_objects();
 				create_object_groups();
 				int const cid(coll_id[ivals[0]]);
@@ -1081,8 +1053,8 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			fvals[1] = 0.1;
 			use_z    = (fscanf(fp, "%f", &pos.z) == 1);
 			use_vel  = (fscanf(fp, "%f%f%f%f", &vel.x, &vel.y, &vel.z, &fvals[1]) == 4);
-			if (use_vel) xform_pos(vel, zero_vector, scale, mirror, swap_dim); // scale?
-			xform_pos(pos, tv, scale, mirror, swap_dim);
+			if (use_vel) xf.xform_pos_rms(vel); // scale?
+			xf.xform_pos(pos);
 			add_water_spring(pos, vel, fvals[0], fvals[1], !use_z, !use_vel);
 			break;
 
@@ -1093,7 +1065,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				if (fscanf(fp, "%f%f%f%f%f%f", &x1, &x2, &y1, &y2, &zval, &wvol) != 6) {
 					return read_error(fp, "water section", coll_obj_file);
 				}
-				add_water_section((scale*x1+tv[0]), (scale*y1+tv[1]), (scale*x2+tv[0]), (scale*y2+tv[1]), (scale*zval+tv[2]), wvol);
+				add_water_section((xf.scale*x1+xf.tv[0]), (xf.scale*y1+xf.tv[1]), (xf.scale*x2+xf.tv[0]), (xf.scale*y2+xf.tv[1]), (xf.scale*zval+xf.tv[2]), wvol);
 			}
 			break;
 
@@ -1113,7 +1085,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 						return read_error(fp, "collision cube", coll_obj_file);
 					}
 				}
-				for (unsigned i = 0; i < 2; ++i) xform_pos(pt[i], tv, scale, mirror, swap_dim);
+				for (unsigned i = 0; i < 2; ++i) xf.xform_pos(pt[i]);
 				check_layer(has_layer);
 
 				for (unsigned d = 0; d < 3; ++d) {
@@ -1131,8 +1103,8 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 				return read_error(fp, "collision sphere", coll_obj_file);
 			}
 			check_layer(has_layer);
-			cobj.radius *= scale;
-			xform_pos(cobj.points[0], tv, scale, mirror, swap_dim);
+			cobj.radius *= xf.scale;
+			xf.xform_pos(cobj.points[0]);
 			cobj.add_to_vector(fixed_cobjs, COLL_SPHERE);
 			break;
 
@@ -1143,9 +1115,9 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			assert(cobj.radius >  0.0 || cobj.radius2 >  0.0);
 			assert(cobj.radius >= 0.0 && cobj.radius2 >= 0.0);
 			check_layer(has_layer);
-			cobj.radius  *= scale;
-			cobj.radius2 *= scale;
-			for (unsigned i = 0; i < 2; ++i) xform_pos(cobj.points[i], tv, scale, mirror, swap_dim);
+			cobj.radius  *= xf.scale;
+			cobj.radius2 *= xf.scale;
+			for (unsigned i = 0; i < 2; ++i) xf.xform_pos(cobj.points[i]);
 			// surfs: 0 = draw ends + bfc (solid), 1 = no draw ends + no bfc (hollow), 3 = no draw ends + bfc (ends are hidden)
 			cobj.add_to_vector(fixed_cobjs, COLL_CYLINDER);
 			break;
@@ -1168,13 +1140,13 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					fclose(fp);
 					return 0;
 				}
-				xform_pos(poly_pts[i], tv, scale, mirror, swap_dim);
+				xf.xform_pos(poly_pts[i]);
 			}
 			if (fscanf(fp, "%f", &cobj.thickness) != 1) {
 				return read_error(fp, "collision polygon", coll_obj_file);
 			}
 			check_layer(has_layer);
-			cobj.thickness *= scale;
+			cobj.thickness *= xf.scale;
 			split_polygons.clear();
 			split_polygon_to_cobjs(cobj, split_polygons, poly_pts, 0);
 			assert(!split_polygons.empty()); // too strict?
@@ -1201,12 +1173,9 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					return read_error(fp, "hollow cylinder start/end indices", coll_obj_file);
 				}
 				check_layer(has_layer);
-
-				for (unsigned i = 0; i < 2; ++i) {
-					xform_pos(pt[i], tv, scale, mirror, swap_dim);
-				}
-				cobj.thickness = scale*(ro - ri);
-				float const r(0.5*scale*(ro + ri)), step(TWO_PI/float(npoints)), edist(0.5*cobj.thickness*tanf(0.5*step));
+				for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(pt[i]);}
+				cobj.thickness = xf.scale*(ro - ri);
+				float const r(0.5*xf.scale*(ro + ri)), step(TWO_PI/float(npoints)), edist(0.5*cobj.thickness*tanf(0.5*step));
 				vector3d const vc((pt[1] - pt[0]).get_norm());
 				unsigned const dmin((vc.x < vc.y) ? ((vc.x < vc.z) ? 0 : 2) : ((vc.y < vc.z) ? 1 : 2));
 				vector3d vn(zero_vector), dirs[2];
@@ -1243,7 +1212,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 					if (fscanf(fp, "%f%f%f", &p.pts[i].x, &p.pts[i].y, &p.pts[i].z) != 3) {
 						return read_error(fp, "portal", coll_obj_file);
 					}
-					xform_pos(p.pts[i], tv, scale, mirror, swap_dim);
+					xf.xform_pos(p.pts[i]);
 				}
 				portals.push_back(p);
 			}
@@ -1262,8 +1231,8 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			if (pos == all_zeros && vel == zero_vector) {
 				return read_error(fp, "step delta must have nonzero delta", coll_obj_file);
 			}
-			xform_pos(pos, zero_vector, scale, mirror, swap_dim); // no translate
-			xform_pos(vel, zero_vector, scale, mirror, swap_dim); // no translate
+			xf.xform_pos_rms(pos); // no translate
+			xf.xform_pos_rms(vel); // no translate
 
 			for (unsigned i = 0; i < npoints; ++i) {
 				if (vel != zero_vector) {
@@ -1325,19 +1294,19 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			if (fscanf(fp, "%f%f%f", &tv0.x, &tv0.y, &tv0.z) != 3) {
 				return read_error(fp, "translate", coll_obj_file);
 			}
-			tv += tv0;
+			xf.tv += tv0;
 			break;
 		case 'T': // absolute translate
-			if (fscanf(fp, "%f%f%f", &tv.x, &tv.y, &tv.z) != 3) {
+			if (fscanf(fp, "%f%f%f", &xf.tv.x, &xf.tv.y, &xf.tv.z) != 3) {
 				return read_error(fp, "translate", coll_obj_file);
 			}
 			break;
 
 		case 'm': // scale/magnitude
-			if (fscanf(fp, "%f", &scale) != 1) {
+			if (fscanf(fp, "%f", &xf.scale) != 1) {
 				return read_error(fp, "scale", coll_obj_file);
 			}
-			assert(scale > 0.0);
+			assert(xf.scale > 0.0);
 			break;
 
 		case 'M': // mirror <dim>, dim = [0,1,2] => [x,y,z]
@@ -1347,7 +1316,7 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			if (ivals[0] < 0 || ivals[0] > 2) {
 				return read_error(fp, "mirror: dim must be in [0,2]", coll_obj_file);
 			}
-			mirror[ivals[0]] ^= 1;
+			xf.mirror[ivals[0]] ^= 1;
 			break;
 		case 's': // swap dimensions <dim1> <dim2>
 			if (fscanf(fp, "%i%i", &ivals[0], &ivals[1]) != 2) {
@@ -1356,12 +1325,12 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 			if (ivals[0] == ivals[1] || ivals[0] < 0 || ivals[0] > 2 || ivals[1] < 0 || ivals[1] > 2) {
 				return read_error(fp, "swap dimensions: dims must be different and in [0,2]", coll_obj_file);
 			}
-			swap_dim[ivals[0]][ivals[1]] ^= 1;
+			xf.swap_dim[ivals[0]][ivals[1]] ^= 1;
 			break;
 		case 'R': // restore mirrors and swaps to default
 			for (unsigned i = 0; i < 3; ++i) {
-				for (unsigned j = 0; j < 3; ++j) swap_dim[i][j] = 0;
-				mirror[i] = 0;
+				UNROLL_3X(xf.swap_dim[i][i_] = 0;)
+				xf.mirror[i] = 0;
 			}
 			break;
 
@@ -1414,14 +1383,12 @@ int read_coll_obj_file(const char *coll_obj_file, vector3d tv, float scale, bool
 
 int read_coll_objects(const char *coll_obj_file) {
 
-	float scale(1.0);
-	vector3d tv(0.0, 0.0, 0.0);
-	bool mirror[3] = {0}, swap_dim[3][3] = {0};
+	geom_xform_t xf;
 	coll_obj cobj;
 	cobj.init();
 	cobj.cp.elastic = 0.5; // default
 	cobj.cp.draw    = 1;   // default
-	if (!read_coll_obj_file(coll_obj_file, tv, scale, mirror, swap_dim, cobj, 0, WHITE)) return 0;
+	if (!read_coll_obj_file(coll_obj_file, xf, cobj, 0, WHITE)) return 0;
 	if (tree_mode & 2) add_small_tree_coll_objs();
 	if (has_scenery2)  add_scenery_cobjs();
 	return 1;

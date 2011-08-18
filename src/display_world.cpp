@@ -6,6 +6,7 @@
 #include "main.h"
 #include "timetest.h"
 #include "physics_objects.h"
+#include "model3d.h"
 #include <fstream>
 
 
@@ -211,9 +212,11 @@ void draw_stuff(int draw_uw, int timer1) {
 		if (TIMETEST) PRINT_TIME("0");
 		draw_coll_surfaces(0, 1);
 		check_gl_error(22);
+		render_models(0);
+		check_gl_error(23);
 		if (TIMETEST) PRINT_TIME("X");
 		draw_transparent_object_groups();
-		check_gl_error(23);
+		check_gl_error(24);
 	}
 }
 
