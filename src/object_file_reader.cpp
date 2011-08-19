@@ -244,14 +244,29 @@ public:
 		return 1;
 	}
 
+
+	struct vert_norm_tc_ix : public vert_norm_tc {
+		unsigned ix;
+		vert_norm_tc_ix(point const &v_, vector3d const &n_, float ts, float tt, unsigned ix_) : vert_norm_tc(v_, n_, ts, tt), ix(ix_) {}
+	};
+
+	struct poly_vix : public vector<vert_norm_tc_ix> {
+		int mat_id;
+		vector3d n;
+		poly_vix(int mat_id_) : mat_id(mat_id_), n(zero_vector) {}
+	};
+
+
 	bool read(vector<vector<point> > *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
-		bool const recalc_norm = 1; // FIXME
+		bool const recalc_normals = 1;
 		int cur_mat_id(-1);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
+		vector<vector3d> vn; // vertex normals
 		vector<vector3d> tc; // texture coords
+		deque<poly_vix> polys;
 		string s, group_name, object_name, material_name, mat_lib, last_mat_lib;
 
 		while (in.good() && (in >> s)) {
@@ -261,14 +276,12 @@ public:
 				read_to_newline(in); // ignore
 			}
 			else if (s == "f") { // face
-				if (ppts) ppts->push_back(vector<point>());
-				vntc_vect_t poly;
+				polys.push_back(poly_vix(cur_mat_id));
+				poly_vix &pv(polys.back());
 				int vix(0), tix(0), nix(0);
-				bool has_norm(0);
 
 				while (in >> vix) { // read vertex index
 					normalize_index(vix, v.size());
-					if (ppts) ppts->back().push_back(v[vix]);
 					vector3d normal;
 					vector3d tex_coord;
 
@@ -285,7 +298,6 @@ public:
 							if (in >> nix) { // read normal index
 								normalize_index(nix, n.size());
 								normal = n[nix];
-								has_norm = 1;
 							}
 							else {
 								in.clear();
@@ -299,18 +311,21 @@ public:
 					else {
 						in.unget();
 					}
-					poly.push_back(vert_norm_tc(v[vix], normal, tex_coord.x, tex_coord.y));
+					pv.push_back(vert_norm_tc_ix(v[vix], normal, tex_coord.x, tex_coord.y, vix));
 				} // end while vertex
-				if (recalc_norm || !has_norm) { // calculate and set normal
-					assert(poly.size() >= 3);
-					vector3d const normal(cross_product((poly[1].v - poly[0].v), (poly[2].v - poly[0].v)).get_norm()); // backwards?
-					for (unsigned i = 0; i < poly.size(); ++i) poly[i].n = normal;
-				}
 				in.clear();
-				model.add_polygon(poly, cur_mat_id);
+				assert(pv.size() >= 3);
+				vector3d const normal(cross_product((pv[1].v - pv[0].v), (pv[2].v - pv[0].v)).get_norm()); // backwards?
+				pv.n = normal;
+
+				for (unsigned i = 0; i < pv.size(); ++i) {
+					assert((unsigned)pv[i].ix < vn.size());
+					vn[pv[i].ix] += normal;
+				}
 			}
 			else if (s == "v") { // vertex
 				v.push_back(point());
+				vn.push_back(zero_vector); // vertex normal
 			
 				if (!(in >> v.back().x >> v.back().y >> v.back().z)) {
 					cerr << "Error reading vertex from object file " << filename << endl;
@@ -375,8 +390,26 @@ public:
 				return 0;
 			}
 		}
-		PRINT_TIME("CXX Object Load");
-		
+		PRINT_TIME("Object File Load");
+		vntc_vect_t poly;
+
+		for (vector<vector3d>::iterator i = vn.begin(); i != vn.end(); ++i) {
+			i->normalize(); // average the normals
+		}
+		for (deque<poly_vix>::const_iterator i = polys.begin(); i != polys.end(); ++i) {
+			poly.resize(i->size());
+
+			for (unsigned j = 0; j < i->size(); ++j) {
+				poly[j] = (*i)[j];
+				if (!recalc_normals && poly[j].n != zero_vector) continue;
+				assert((*i)[j].ix < vn.size());
+				vector3d const &vert_norm(vn[(*i)[j].ix]);
+				poly[j].n = ((fabs(dot_product(vert_norm, i->n)) < 0.75) ? i->n : vert_norm);
+			}
+			model.add_polygon(poly, i->mat_id, ppts);
+		}
+		PRINT_TIME("Model3d Build");
+
 		if (verbose) {
 			cout << "v: " << v.size() << ", n: " << n.size() << ", tc: " << tc.size()
 				 << ", f: " << (ppts ? ppts->size() : 0) << ", mat: " << model.num_materials() << endl;

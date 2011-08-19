@@ -136,7 +136,7 @@ public:
 	}
 
 	// creation and query
-	void add_polygon(vntc_vect_t const &poly, int mat_id);
+	void add_polygon(vntc_vect_t const &poly, int mat_id, vector<vector<point> > *ppts=NULL);
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
 	void clear();

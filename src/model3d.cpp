@@ -125,7 +125,7 @@ void material_t::render(texture_manager const &tm, int default_tid, bool is_shad
 
 
 // creation and query
-void model3d::add_polygon(vntc_vect_t const &poly, int mat_id) {
+void model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<vector<point> > *ppts) {
 
 	//assert(mat_id >= 0); // must be set/valid - FIXME: too strict?
 
@@ -135,6 +135,13 @@ void model3d::add_polygon(vntc_vect_t const &poly, int mat_id) {
 	else {
 		assert((unsigned)mat_id < materials.size());
 		materials[mat_id].geom.add_poly(poly);
+	}
+	if (ppts) { // FIXME: split polyg if needed
+		ppts->push_back(vector<point>());
+
+		for (vntc_vect_t::const_iterator i = poly.begin(); i != poly.end(); ++i) {
+			ppts->back().push_back(i->v);
+		}
 	}
 }
 
