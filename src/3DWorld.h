@@ -812,7 +812,7 @@ colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black
 struct texture_t { // size = 128
 
 	char type, format, use_mipmaps;
-	bool wrap;
+	bool wrap, do_compress;
 	int width, height, ncolors;
 	unsigned char *data, *orig_data, *colored_data, *mm_data, *bump_map;
 	std::string name, bump_name;
@@ -825,7 +825,7 @@ struct texture_t { // size = 128
 
 	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n,
 		std::string const &bump_n=std::string(), GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR)
-		: type(t), format(f), use_mipmaps(um), wrap(wra), width(w), height(h), ncolors(nc),
+		: type(t), format(f), use_mipmaps(um), wrap(wra), do_compress(1), width(w), height(h), ncolors(nc),
 		data(0), orig_data(0), colored_data(0), mm_data(0), bump_map(0), name(n), bump_name(bump_n), tid(tex), color(c) {}
 	void init();
 	void do_gl_init();
@@ -987,7 +987,7 @@ enum {GROUND_TEX = 0, DARK_ROCK_TEX, WATER_TEX, WATER2_TEX, CLOUD_TEX, SUN_TEX, 
 	SAW_TEX, SAW_B_TEX, BLUR_TEX, SBLUR_TEX, PINE_TEX, NOISE_TEX, WOOD2_TEX, HBBRICK_TEX, PARTB_TEX, PLASTER_TEX,
 	TILE_TEX, LOGO_TEX, DISINT_TEX, BLUR_TEX_INV, HSTRIPE_TEX, VSTRIPE_TEX, BCUBE_TEX, EXPLOSION_TEX, SHIP_HULL_TEX, BCUBE2_TEX,
 	BCUBE_T_TEX, ROCK_SPHERE_TEX, PAPAYA_TEX, COFFEE_TEX, SMILEY_SKULL_TEX, ICE_TEX, ROCK_TEX, BLACK_TEX, WHITE_TEX, FIRE_TEX,
-	CLOUD_RAW_TEX, SNOWFLAKE_TEX, BLUR_CENT_TEX, GRADIENT_TEX, GRASS_BLADE_TEX, WIND_TEX, BRICK_TGA
+	CLOUD_RAW_TEX, SNOWFLAKE_TEX, BLUR_CENT_TEX, GRADIENT_TEX, GRASS_BLADE_TEX, WIND_TEX
 };
 
 // collision object destroyability

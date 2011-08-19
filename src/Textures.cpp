@@ -126,8 +126,8 @@ texture_t(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
 texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
 texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
-texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
-texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
+texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw")  // not real file
+//texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
 };
 
@@ -339,7 +339,7 @@ GLenum texture_t::calc_internal_format() const {
 	static int has_comp(2); // starts unknown
 	if (has_comp == 2) has_comp = has_extension("GL_ARB_texture_compression"); // unknown, calculate it
 
-	if (COMPRESS_TEXTURES && has_comp && type != 2) {
+	if (COMPRESS_TEXTURES && has_comp && do_compress && type != 2) {
 		switch (ncolors) {
 		case 1: return GL_COMPRESSED_LUMINANCE;
 		case 3: return GL_COMPRESSED_RGB;
@@ -372,6 +372,7 @@ void texture_t::do_gl_init() {
 		tmem += tsize;
 		cout << "tmem = " << tmem << endl;
 	}
+	//cout << "bind texture" << name << endl;
 	assert(width > 0 && height > 0 && data != NULL);
 	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap);
 	//if (use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
@@ -641,6 +642,7 @@ void texture_t::load_targa() {
 	assert(data == NULL);
 	tga_image img;
 	tga_result const ret(tga_read(&img, name.c_str()));
+	//cout << "load texture" << name << endl;
 
 	if (ret != TGA_NOERR) {
 		cout << "Error reading targa file " << name << ": " << tga_error(ret) << endl;
@@ -658,7 +660,7 @@ void texture_t::load_targa() {
 
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
-			unsigned char const *const pixel(tga_find_pixel(&img, x, y));
+			unsigned char const *const pixel(tga_find_pixel(&img, x, height-y-1)); // flip vert
 			assert(pixel);
 			unsigned char *d(data + ncolors*(x + y*width));
 			tga_result const ret2(tga_unpack_pixel(pixel, img.pixel_depth, (ncolors>2 ? d+2 : 0), (ncolors>1 ? d+1 : 0), d, (ncolors>3 ? d+3 : 0)));
