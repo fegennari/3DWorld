@@ -92,7 +92,7 @@ void geom_data_t::render_polygons(bool is_shadow_pass) const {
 }
 
 
-void material_t::render(deque<texture_t> const &textures, int default_tid, bool is_shadow_pass) {
+void material_t::render(texture_manager const &tm, int default_tid, bool is_shadow_pass) {
 
 	if (geom.empty() || alpha == 0.0) return; // empty or transparent
 
@@ -100,9 +100,7 @@ void material_t::render(deque<texture_t> const &textures, int default_tid, bool 
 		int const tex_id(get_render_texture());
 		
 		if (tex_id >= 0) {
-			assert((unsigned)tex_id < textures.size());
-			assert(textures[tex_id].tid > 0);
-			glBindTexture(GL_TEXTURE_2D, textures[tex_id].tid);
+			tm.bind_texture(tex_id);
 		}
 		else {
 			select_texture(((default_tid >= 0) ? default_tid : WHITE_TEX), 0); // no texture specified - use white texture
@@ -202,7 +200,6 @@ void model3d::clear() {
 	materials.clear();
 	undef_materials.clear();
 	mat_map.clear();
-	texture_manager::clear();
 }
 
 
@@ -212,7 +209,6 @@ void model3d::free_context() {
 		m->geom.free_context();
 	}
 	unbound_geom.free_context();
-	free_tids();
 }
 
 
@@ -261,12 +257,20 @@ void texture_manager::ensure_tid_bound(int tid) {
 }
 
 
+void texture_manager::bind_texture(int tid) const {
+
+	assert((unsigned)tid < textures.size());
+	assert(textures[tid].tid > 0);
+	glBindTexture(GL_TEXTURE_2D, textures[tid].tid);
+}
+
+
 void model3d::load_all_used_tids() {
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (m->geom.empty()) continue;
-		ensure_tid_loaded(m->get_render_texture()); // only one tid for now
-		ensure_tid_loaded(m->alpha_tid);
+		tm.ensure_tid_loaded(m->get_render_texture()); // only one tid for now
+		tm.ensure_tid_loaded(m->alpha_tid);
 		// FIXME: use alpha_tid
 	}
 }
@@ -278,7 +282,7 @@ void model3d::bind_all_used_tids() {
 		
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (m->geom.empty()) continue;
-		ensure_tid_bound(m->get_render_texture()); // only one tid for now
+		tm.ensure_tid_bound(m->get_render_texture()); // only one tid for now
 	}
 }
 
@@ -301,7 +305,7 @@ void model3d::render(bool is_shadow_pass) { // const?
 	// render all materials (opaque then transparen)
 	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
 		for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-			if ((unsigned)m->is_partial_transparent() == pass) m->render(textures, unbound_tid, is_shadow_pass);
+			if ((unsigned)m->is_partial_transparent() == pass) m->render(tm, unbound_tid, is_shadow_pass);
 		}
 	}
 	if (do_cull) glDisable(GL_CULL_FACE);
@@ -313,6 +317,8 @@ void model3ds::clear() {
 	for (iterator m = begin(); m != end(); ++m) {
 		m->clear();
 	}
+	deque<model3d>::clear();
+	tm.clear();
 }
 
 
@@ -321,6 +327,7 @@ void model3ds::free_context() {
 	for (iterator m = begin(); m != end(); ++m) {
 		m->free_context();
 	}
+	tm.free_tids();
 }
 
 

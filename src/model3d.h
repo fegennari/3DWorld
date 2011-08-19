@@ -74,24 +74,6 @@ struct geom_data_t {
 };
 
 
-struct material_t {
-
-	colorRGB ka, kd, ks, ke, tf;
-	float ns, ni, alpha, tr;
-	unsigned illum;
-	int a_tid, d_tid, s_tid, alpha_tid, bump_tid;
-
-	// geometry - does this go here or somewhere else?
-	geom_data_t geom;
-
-	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
-		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1) {}
-	int get_render_texture() const {return d_tid;}
-	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
-	void render(deque<texture_t> const &textures, int default_tid, bool is_shadow_pass);
-};
-
-
 class texture_manager {
 
 protected:
@@ -106,10 +88,29 @@ public:
 	void ensure_texture_loaded(texture_t &t) const;
 	void ensure_tid_loaded(int tid);
 	void ensure_tid_bound(int tid);
+	void bind_texture(int tid) const;
 };
 
 
-class model3d : public texture_manager {
+struct material_t {
+
+	colorRGB ka, kd, ks, ke, tf;
+	float ns, ni, alpha, tr;
+	unsigned illum;
+	int a_tid, d_tid, s_tid, alpha_tid, bump_tid;
+
+	// geometry - does this go here or somewhere else?
+	geom_data_t geom;
+
+	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
+		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1) {}
+	int get_render_texture() const {return d_tid;}
+	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
+	void render(texture_manager const &tm, int default_tid, bool is_shadow_pass);
+};
+
+
+class model3d {
 
 	// geometry
 	geom_data_t unbound_geom;
@@ -122,7 +123,11 @@ class model3d : public texture_manager {
 	set<string> undef_materials; // to reduce warning messages
 
 public:
-	model3d(int def_tid=-1, colorRGBA const &def_c=WHITE) : unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c) {}
+	// textures
+	texture_manager &tm;
+
+	model3d(texture_manager &tm_, int def_tid=-1, colorRGBA const &def_c=WHITE)
+		: tm(tm_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c) {}
 	unsigned num_materials(void) const {return materials.size();}
 
 	material_t &get_material(int mat_id) {
@@ -143,6 +148,8 @@ public:
 
 
 struct model3ds : public deque<model3d> {
+
+	texture_manager tm;
 
 	void clear();
 	void free_context();

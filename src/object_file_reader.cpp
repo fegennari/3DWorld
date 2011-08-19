@@ -132,7 +132,7 @@ class object_file_reader_model : public object_file_reader {
 		string const fn_used(open_include_file(fn, "texture", tex_in));
 		if (fn_used.empty()) return -1;
 		tex_in.close();
-		return model.create_texture(fn_used, 1);
+		return model.tm.create_texture(fn_used, 1);
 	}
 
 	void check_and_bind(int &tid, string const &tfn) {
@@ -390,7 +390,7 @@ bool read_object_file(char *filename, vector<vector<point> > &ppts, geom_xform_t
 	int def_tid, colorRGBA const &def_c, bool load_models, bool verbose)
 {
 	if (load_models) {
-		all_models.push_back(model3d(def_tid, def_c));
+		all_models.push_back(model3d(all_models.tm, def_tid, def_c));
 		object_file_reader_model reader(filename, all_models.back());
 		return reader.read(&ppts, xf, verbose);
 	}
