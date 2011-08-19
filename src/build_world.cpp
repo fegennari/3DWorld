@@ -886,16 +886,15 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			{
 				RESET_TIME;
-				vector<vector<point> > ppts;
-				if (!read_object_file(str, ppts, xf, 0, 1)) return read_error(fp, "object file data", coll_obj_file);
-				
-				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping
+				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping, 3=full 3d model
 				bool const group_cobjs(ivals[0] != 0);
+				bool const use_dlist  (ivals[0] == 2);
+				bool const use_model3d(ivals[0] == 3);
 				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: one for each texture?)
+				vector<vector<point> > ppts;
+				if (!read_object_file(str, ppts, xf, cobj.cp.tid, cobj.cp.color, use_model3d, 1)) return read_error(fp, "object file data", coll_obj_file);
 
 				if (group_cobjs) {
-					bool const use_dlist(ivals[0] == 2);
-
 					for (unsigned i = 0; i < 3; ++i) {
 						group_ids[i] = obj_draw_groups.size();
 						obj_draw_groups.push_back(obj_draw_group(use_dlist));
@@ -910,6 +909,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				for (unsigned i = 0; i < split_polygons.size(); ++i) {
 					split_polygons[i].group_id = group_ids[get_max_dim(get_poly_norm(split_polygons[i].points))];
+					if (use_model3d) split_polygons[i].cp.draw = 0;
 				}
 				assert(!split_polygons.empty()); // too strict?
 				add_polygons_to_cobj_vector(split_polygons);

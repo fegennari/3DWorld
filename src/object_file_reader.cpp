@@ -247,6 +247,7 @@ public:
 	bool read(vector<vector<point> > *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
+		bool const recalc_norm = 1; // FIXME
 		int cur_mat_id(-1);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
@@ -261,7 +262,7 @@ public:
 			}
 			else if (s == "f") { // face
 				if (ppts) ppts->push_back(vector<point>());
-				polygon_t poly;
+				vntc_vect_t poly;
 				int vix(0), tix(0), nix(0);
 				bool has_norm(0);
 
@@ -300,7 +301,7 @@ public:
 					}
 					poly.push_back(vert_norm_tc(v[vix], normal, tex_coord.x, tex_coord.y));
 				} // end while vertex
-				if (!has_norm) { // calculate and set normal
+				if (recalc_norm || !has_norm) { // calculate and set normal
 					assert(poly.size() >= 3);
 					vector3d const normal(cross_product((poly[1].v - poly[0].v), (poly[2].v - poly[0].v)).get_norm()); // backwards?
 					for (unsigned i = 0; i < poly.size(); ++i) poly[i].n = normal;
@@ -385,10 +386,11 @@ public:
 };
 
 
-bool read_object_file(char *filename, vector<vector<point> > &ppts, geom_xform_t const &xf, bool load_models, bool verbose) {
-
+bool read_object_file(char *filename, vector<vector<point> > &ppts, geom_xform_t const &xf,
+	int def_tid, colorRGBA const &def_c, bool load_models, bool verbose)
+{
 	if (load_models) {
-		all_models.push_back(model3d());
+		all_models.push_back(model3d(def_tid, def_c));
 		object_file_reader_model reader(filename, all_models.back());
 		return reader.read(&ppts, xf, verbose);
 	}

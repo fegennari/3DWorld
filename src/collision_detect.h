@@ -78,6 +78,7 @@ public:
 	float calc_min_dim() const;
 	bool clip_in_2d(float const bb[2][2], float &ztop, int d1, int d2, int dir) const;
 	void set_npoints();
+	void set_from_pts(point const *const pts, unsigned npts);
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
 	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t *shader) const;

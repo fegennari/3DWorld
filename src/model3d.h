@@ -48,20 +48,29 @@ struct geom_xform_t {
 };
 
 
-struct polygon_t : public vector<vert_norm_tc> {
+class vntc_vect_t : public vector<vert_norm_tc> {
 
-	void render(bool textured) const;
+	unsigned render_vbo, shadow_vbo;
+
+public:
+	vntc_vect_t() : render_vbo(0), shadow_vbo(0) {}
+	void render(bool is_shadow_pass) const;
+	void render_array(bool is_shadow_pass);
+	void free_vbos();
 };
 
 
-struct poly_group {
+struct geom_data_t {
 
-	vector<polygon_t> polygons;
+	vector<vntc_vect_t> polygons;
+	vntc_vect_t triangles;
 
-	void add_poly(polygon_t const &poly) {polygons.push_back(poly);}
+	void add_poly(vntc_vect_t const &poly);
 	void clear() {polygons.clear();}
+	void free_context() {triangles.free_vbos();}
 	bool empty() const {return polygons.empty();}
-	void render(bool textured) const;
+	void render_array(bool is_shadow_pass) {triangles.render_array(is_shadow_pass);}
+	void render_polygons(bool is_shadow_pass) const;
 };
 
 
@@ -73,31 +82,47 @@ struct material_t {
 	int a_tid, d_tid, s_tid, alpha_tid, bump_tid;
 
 	// geometry - does this go here or somewhere else?
-	poly_group geom;
+	geom_data_t geom;
 
 	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
 		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1) {}
 	int get_render_texture() const {return d_tid;}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
-	void render(deque<texture_t> const &textures, bool is_shadow_pass) const;
+	void render(deque<texture_t> const &textures, int default_tid, bool is_shadow_pass);
 };
 
 
-class model3d {
+class texture_manager {
+
+protected:
+	deque<texture_t> textures;
+	string_map_t tex_map; // maps texture filenames to texture indexes
+
+public:
+	unsigned create_texture(string const &fn, bool verbose);
+	void clear();
+	void free_tids();
+	void free_textures();
+	void ensure_texture_loaded(texture_t &t) const;
+	void ensure_tid_loaded(int tid);
+	void ensure_tid_bound(int tid);
+};
+
+
+class model3d : public texture_manager {
 
 	// geometry
-	poly_group unbound_geom;
+	geom_data_t unbound_geom;
+	int unbound_tid;
+	colorRGBA unbound_color;
 
 	// materials
 	deque<material_t> materials;
 	string_map_t mat_map; // maps material names to materials indexes
 	set<string> undef_materials; // to reduce warning messages
 
-	// textures
-	deque<texture_t> textures;
-	string_map_t tex_map; // maps texture filenames to texture indexes
-
 public:
+	model3d(int def_tid=-1, colorRGBA const &def_c=WHITE) : unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c) {}
 	unsigned num_materials(void) const {return materials.size();}
 
 	material_t &get_material(int mat_id) {
@@ -106,16 +131,11 @@ public:
 	}
 
 	// creation and query
-	void add_polygon(polygon_t const &poly, int mat_id);
+	void add_polygon(vntc_vect_t const &poly, int mat_id);
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
-	unsigned create_texture(string const &fn, bool verbose);
 	void clear();
-	void free_tids();
-	void free_textures();
-	void ensure_texture_loaded(texture_t &t) const;
-	void ensure_tid_loaded(int tid);
-	void ensure_tid_bound(int tid);
+	void free_context();
 	void load_all_used_tids();
 	void bind_all_used_tids();
 	void render(bool is_shadow_pass); // const?
@@ -125,15 +145,18 @@ public:
 struct model3ds : public deque<model3d> {
 
 	void clear();
-	void free_tids();
+	void free_context();
 	void render(bool is_shadow_pass); // const?
 };
 
 
-void free_model_textures();
+bool is_poly_convex(vector<point> const &points);
+
+void free_model_context();
 void render_models(bool shadow_pass);
 
-bool read_object_file(char *filename, vector<vector<point> > &ppts, geom_xform_t const &xf, bool load_model_file, bool verbose);
+bool read_object_file(char *filename, vector<vector<point> > &ppts, geom_xform_t const &xf,
+	int def_tid, colorRGBA const &def_c, bool load_model_file, bool verbose);
 
 
 #endif // _MODEL3D_H_

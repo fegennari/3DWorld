@@ -192,11 +192,7 @@ bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 	if (npts <= N_COLL_POLY_PTS && !(split_quads && npts > 3) && is_poly_convex(poly_pts)) { // triangle or convex quad
 		if (!is_poly_valid(&poly_pts.front())) return 0; // invalid zero area polygon - skip
 		split_polygons.push_back(cobj);
-		split_polygons.back().npoints = npts;
-
-		for (unsigned i = 0; i < npts; ++i) {
-			split_polygons.back().points[i] = poly_pts[i];
-		}
+		split_polygons.back().set_from_pts(&poly_pts.front(), npts);
 		return 0;
 	}
 	tessellate_polygon(poly_pts);
@@ -213,8 +209,7 @@ bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 		if (!is_poly_valid(triangles[i].pts)) continue; // invalid zero area triangle - skip
 		if (dot_product(get_poly_norm(triangles[i].pts), n) < 0.0) swap(triangles[i].pts[0], triangles[i].pts[2]); // invert draw order
 		split_polygons.push_back(cobj);
-		split_polygons.back().npoints = 3; // triangles
-		UNROLL_3X(split_polygons.back().points[i_] = triangles[i].pts[i_];)
+		split_polygons.back().set_from_pts(triangles[i].pts, 3); // add triangles
 	}
 	// triangles and split_polygons can be empty here if they're all small fragments that get dropped
 	triangles.clear();

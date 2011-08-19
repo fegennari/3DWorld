@@ -197,6 +197,15 @@ void coll_obj::set_npoints() {
 }
 
 
+void coll_obj::set_from_pts(point const *const pts, unsigned npts) {
+
+	//assert(type == COLL_POLYGON); // check the type?
+	//type = COLL_POLYGON; // set the type?
+	npoints = npts;
+	for (unsigned i = 0; i < npts; ++i) {points[i] = pts[i];}
+}
+
+
 void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir, vector3d const &offset, shader_t *shader) { // dir does not need to be normalized
 
 	int const dim(get_max_dim(dir));
