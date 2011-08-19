@@ -30,7 +30,6 @@ void vntc_vect_t::render_array(bool is_shadow_pass) {
 
 	if (empty()) return;
 	set_array_client_state(1, !is_shadow_pass, !is_shadow_pass, 0);
-	unsigned &vbo(is_shadow_pass ? shadow_vbo : render_vbo);
 
 	if (vbo == 0) {
 		vbo = create_vbo();
@@ -41,11 +40,9 @@ void vntc_vect_t::render_array(bool is_shadow_pass) {
 	else {
 		bind_vbo(vbo);
 	}
-	if (!is_shadow_pass) {
-		glNormalPointer(     GL_FLOAT, sizeof(vert_norm_tc), (void *)sizeof(point));
-		glTexCoordPointer(2, GL_FLOAT, sizeof(vert_norm_tc), (void *)sizeof(vert_norm));
-	}
-	glVertexPointer(3, GL_FLOAT, sizeof(vert_norm_tc), 0);
+	glVertexPointer(  3, GL_FLOAT, sizeof(vert_norm_tc), 0);
+	glNormalPointer(     GL_FLOAT, sizeof(vert_norm_tc), (void *)sizeof(point));
+	glTexCoordPointer(2, GL_FLOAT, sizeof(vert_norm_tc), (void *)sizeof(vert_norm));
 	glDrawArrays(GL_TRIANGLES, 0, size());
 	bind_vbo(0);
 }
@@ -53,9 +50,8 @@ void vntc_vect_t::render_array(bool is_shadow_pass) {
 
 void vntc_vect_t::free_vbos() {
 
-	delete_vbo(render_vbo);
-	delete_vbo(shadow_vbo);
-	render_vbo = shadow_vbo = 0;
+	delete_vbo(vbo);
+	vbo = 0;
 }
 
 

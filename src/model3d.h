@@ -50,10 +50,10 @@ struct geom_xform_t {
 
 class vntc_vect_t : public vector<vert_norm_tc> {
 
-	unsigned render_vbo, shadow_vbo;
+	unsigned vbo;
 
 public:
-	vntc_vect_t() : render_vbo(0), shadow_vbo(0) {}
+	vntc_vect_t() : vbo(0) {}
 	void render(bool is_shadow_pass) const;
 	void render_array(bool is_shadow_pass);
 	void free_vbos();
