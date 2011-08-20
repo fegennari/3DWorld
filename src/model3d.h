@@ -56,7 +56,7 @@ public:
 	vntc_vect_t() : vbo(0) {}
 	void render(bool is_shadow_pass) const;
 	void render_array(bool is_shadow_pass);
-	void free_vbos();
+	void free_vbo();
 };
 
 
@@ -67,7 +67,7 @@ struct geom_data_t {
 
 	void add_poly(vntc_vect_t const &poly);
 	void clear() {polygons.clear();}
-	void free_context() {triangles.free_vbos();}
+	void free_context() {triangles.free_vbo();}
 	bool empty() const {return polygons.empty();}
 	void render_array(bool is_shadow_pass) {triangles.render_array(is_shadow_pass);}
 	void render_polygons(bool is_shadow_pass) const;
@@ -98,12 +98,14 @@ struct material_t {
 	float ns, ni, alpha, tr;
 	unsigned illum;
 	int a_tid, d_tid, s_tid, alpha_tid, bump_tid;
+	bool skip;
 
 	// geometry - does this go here or somewhere else?
 	geom_data_t geom;
 
 	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
-		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1) {}
+		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), skip(0) {}
+	bool add_poly(vntc_vect_t const &poly);
 	int get_render_texture() const {return d_tid;}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
 	void render(texture_manager const &tm, int default_tid, bool is_shadow_pass);

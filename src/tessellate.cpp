@@ -168,7 +168,7 @@ void split_polygon_to_tris(vector<triangle> &triangles_out, vector<point> const 
 }
 
 
-bool is_poly_convex(vector<point> const &points) { // untested
+bool is_poly_convex(vector<point> const &points) {
 
 	unsigned const npts(points.size());
 	assert(npts >= 3);

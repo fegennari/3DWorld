@@ -8,6 +8,7 @@
 #include <fstream>
 
 
+extern bool recalc_model3d_normals;
 extern model3ds all_models;
 
 
@@ -235,6 +236,10 @@ public:
 				if (!(mat_in >> tfn)) {cerr << "Error reading material " << s << endl; return 0;}
 				cur_mat->bump_tid = get_texture(tfn);
 			}
+			else if (s == "skip") { // skip this material
+				assert(cur_mat);
+				if (!(mat_in >> cur_mat->skip)) {cerr << "Error reading material skip" << endl; return 0;}
+			}
 			else {
 				cerr << "Error: Undefined entry '" << s << "' in material library" << endl;
 				return 0;
@@ -260,7 +265,6 @@ public:
 	bool read(vector<vector<point> > *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
-		bool const recalc_normals = 1;
 		int cur_mat_id(-1);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
@@ -401,7 +405,7 @@ public:
 
 			for (unsigned j = 0; j < i->size(); ++j) {
 				poly[j] = (*i)[j];
-				if (!recalc_normals && poly[j].n != zero_vector) continue;
+				if (!recalc_model3d_normals && poly[j].n != zero_vector) continue;
 				assert((*i)[j].ix < vn.size());
 				vector3d const &vert_norm(vn[(*i)[j].ix]);
 				poly[j].n = ((fabs(dot_product(vert_norm, i->n)) < 0.75) ? i->n : vert_norm);

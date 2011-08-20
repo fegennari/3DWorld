@@ -48,7 +48,7 @@ void vntc_vect_t::render_array(bool is_shadow_pass) {
 }
 
 
-void vntc_vect_t::free_vbos() {
+void vntc_vect_t::free_vbo() {
 
 	delete_vbo(vbo);
 	vbo = 0;
@@ -90,7 +90,7 @@ void geom_data_t::render_polygons(bool is_shadow_pass) const {
 
 void material_t::render(texture_manager const &tm, int default_tid, bool is_shadow_pass) {
 
-	if (geom.empty() || alpha == 0.0) return; // empty or transparent
+	if (geom.empty() || skip || alpha == 0.0) return; // empty or transparent
 
 	if (!is_shadow_pass) {
 		int const tex_id(get_render_texture());
@@ -121,18 +121,27 @@ void material_t::render(texture_manager const &tm, int default_tid, bool is_shad
 
 
 // creation and query
+bool material_t::add_poly(vntc_vect_t const &poly) {
+	
+	if (skip) return 0;
+	geom.add_poly(poly);
+	return 1;
+}
+
+
 void model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<vector<point> > *ppts) {
 
 	//assert(mat_id >= 0); // must be set/valid - FIXME: too strict?
+	bool added(1);
 
 	if (mat_id < 0) {
 		unbound_geom.add_poly(poly);
 	}
 	else {
 		assert((unsigned)mat_id < materials.size());
-		materials[mat_id].geom.add_poly(poly);
+		added = materials[mat_id].add_poly(poly);
 	}
-	if (ppts) { // FIXME: split polyg if needed
+	if (added && ppts) {
 		ppts->push_back(vector<point>());
 
 		for (vntc_vect_t::const_iterator i = poly.begin(); i != poly.end(); ++i) {
