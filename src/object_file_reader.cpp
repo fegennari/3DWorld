@@ -47,11 +47,12 @@ protected:
 public:
 	object_file_reader(string const &fn) : filename(fn) {assert(!fn.empty());}
 
-	bool read(vector<vector<point> > *ppts, geom_xform_t const &xf, bool verbose) {
+	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
 		vector<point> v; // vertices
 		string s;
+		polygon_t poly;
 
 		while (in.good() && (in >> s)) {
 			assert(!s.empty());
@@ -69,12 +70,13 @@ public:
 				xf.xform_pos(v.back());
 			}
 			else if (s == "f") { // face
-				if (ppts) ppts->push_back(vector<point>());
+				poly.resize(0);
 				int ix(0);
 
 				while (in >> ix) { // read vertex index
 					normalize_index(ix, v.size());
-					if (ppts) ppts->back().push_back(v[ix]);
+					// only fill in the vertex (norm and tc will be unused)
+					if (ppts) poly.push_back(vert_norm_tc(v[ix], zero_vector, 0.0, 0.0));
 
 					if (in.get() == '/') {
 						if (in >> ix) {} else in.clear(); // text coord index
@@ -87,6 +89,7 @@ public:
 					else in.unget();
 				}
 				in.clear();
+				if (ppts) split_polygon(poly, *ppts);
 			}
 			else {
 				read_to_newline(in); // ignore everything else
@@ -133,7 +136,7 @@ class object_file_reader_model : public object_file_reader {
 		string const fn_used(open_include_file(fn, "texture", tex_in));
 		if (fn_used.empty()) return -1;
 		tex_in.close();
-		return model.tm.create_texture(fn_used, 1);
+		return model.tmgr.create_texture(fn_used, 1);
 	}
 
 	void check_and_bind(int &tid, string const &tfn) {
@@ -262,7 +265,7 @@ public:
 	};
 
 
-	bool read(vector<vector<point> > *ppts, geom_xform_t const &xf, bool verbose) {
+	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
 		int cur_mat_id(-1);
@@ -280,6 +283,7 @@ public:
 				read_to_newline(in); // ignore
 			}
 			else if (s == "f") { // face
+				model.mark_mat_as_used(cur_mat_id);
 				polys.push_back(poly_vix(cur_mat_id));
 				poly_vix &pv(polys.back());
 				int vix(0), tix(0), nix(0);
@@ -395,6 +399,8 @@ public:
 			}
 		}
 		PRINT_TIME("Object File Load");
+		model.load_all_used_tids(); // need to load the textures to get the colors
+		PRINT_TIME("Model Texture Load");
 		vntc_vect_t poly;
 
 		for (vector<vector3d>::iterator i = vn.begin(); i != vn.end(); ++i) {
@@ -423,11 +429,11 @@ public:
 };
 
 
-bool read_object_file(char *filename, vector<vector<point> > &ppts, geom_xform_t const &xf,
+bool read_object_file(char *filename, vector<polygon_t> &ppts, geom_xform_t const &xf,
 	int def_tid, colorRGBA const &def_c, bool load_models, bool verbose)
 {
 	if (load_models) {
-		all_models.push_back(model3d(all_models.tm, def_tid, def_c));
+		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c));
 		object_file_reader_model reader(filename, all_models.back());
 		return reader.read(&ppts, xf, verbose);
 	}

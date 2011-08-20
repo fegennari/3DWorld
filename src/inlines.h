@@ -333,10 +333,13 @@ inline vector3d get_poly_norm(point const *const points) { // requires at least 
 }
 
 
+inline bool is_triangle_valid(point const &p1, point const &p2, point const &p3) {
+	return (!dist_less_than(p1, p2, TOLERANCE) && !dist_less_than(p2, p3, TOLERANCE) && !dist_less_than(p3, p1, TOLERANCE));
+}
+
 // only applies to the first 3 points (first triangle) since this corresponds to the points used in get_poly_norm()
 inline bool is_poly_valid(point const *const p) {
-
-	return (!dist_less_than(p[0], p[1], TOLERANCE) && !dist_less_than(p[1], p[2], TOLERANCE) && !dist_less_than(p[2], p[0], TOLERANCE));
+	return is_triangle_valid(p[0], p[1], p[2]);
 }
 
 

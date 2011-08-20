@@ -809,20 +809,40 @@ void coll_obj::check_if_cube() {
 }
 
 
-void add_polygons_to_cobj_vector(vector<coll_obj> &polygons) {
+void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj) {
 
-	for (unsigned i = 0; i < polygons.size(); ++i) {
-		if (get_poly_norm(polygons[i].points) == zero_vector) {
+	cobj.npoints = poly.size();
+	for (int j = 0; j < cobj.npoints; ++j) {cobj.points[j] = poly[j].v;}
+}
+
+
+void add_polygons_to_cobj_vector(vector<polygon_t> const &ppts, coll_obj const &cobj, int *group_ids, bool use_model3d) {
+
+	coll_obj poly(cobj);
+	if (use_model3d) poly.cp.draw = 0;
+
+	for (vector<polygon_t>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
+		unsigned const npts(i->size());
+		assert(npts >= 3 && npts <= 4);
+		if (!i->is_valid()) continue; // invalid zero area polygon - skip
+		copy_polygon_to_cobj(*i, poly);
+		vector3d const norm(get_poly_norm(poly.points));
+
+		if (get_poly_norm(poly.points) == zero_vector) {
 			static bool had_zero_area_warning(0);
 
 			if (!had_zero_area_warning) {
 				cout << "* Warning: Ignoring zero area polygon." << endl;
 				had_zero_area_warning = 1;
 			}
+			continue;
 		}
-		else {
-			polygons[i].add_to_vector(fixed_cobjs, COLL_POLYGON); // 3 or 4 point convex polygons only
+		if (i->color.alpha > 0.0) { // we have a valid override color, so set the color to this and reset the texture id
+			poly.cp.color = i->color;
+			poly.cp.tid   = -1;
 		}
+		if (group_ids) poly.group_id = group_ids[get_max_dim(norm)];
+		poly.add_to_vector(fixed_cobjs, COLL_POLYGON); // 3 or 4 point convex polygons only
 	}
 }
 
@@ -845,9 +865,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	float fvals[2];
 	point pos(0.0, 0.0, 0.0);
 	vector3d tv0, vel;
-	vector<point> poly_pts;
-	vector<coll_obj> split_polygons;
 	vector<dwobject> starting_objs; // make this global?
+	polygon_t poly;
+	vector<polygon_t> ppts;
 	FILE *fp;
 	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
 	
@@ -891,7 +911,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				bool const use_dlist  (ivals[0] == 2);
 				bool const use_model3d(ivals[0] == 3);
 				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: one for each texture?)
-				vector<vector<point> > ppts;
+				ppts.resize(0);
 				if (!read_object_file(str, ppts, xf, cobj.cp.tid, cobj.cp.color, use_model3d, 1)) return read_error(fp, "object file data", coll_obj_file);
 
 				if (group_cobjs) {
@@ -902,18 +922,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				check_layer(has_layer);
 				cobj.thickness *= xf.scale;
-				split_polygons.clear();
-
-				for (unsigned i = 0; i < ppts.size(); ++i) {
-					split_polygon_to_cobjs(cobj, split_polygons, ppts[i], 0);
-				}
-				for (unsigned i = 0; i < split_polygons.size(); ++i) {
-					split_polygons[i].group_id = group_ids[get_max_dim(get_poly_norm(split_polygons[i].points))];
-					if (use_model3d) split_polygons[i].cp.draw = 0;
-				}
-				assert(!split_polygons.empty()); // too strict?
-				add_polygons_to_cobj_vector(split_polygons);
-				cobj.group_id = -1; // reset
+				add_polygons_to_cobj_vector(ppts, cobj, group_ids, use_model3d);
+				cobj.group_id   = -1; // reset
 				PRINT_TIME("Obj File Load/Process");
 				break;
 			}
@@ -1132,25 +1142,24 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				return 0;
 			}
 			cobj.npoints = npoints;
-			poly_pts.resize(npoints);
+			poly.resize(npoints);
 
 			for (unsigned i = 0; i < npoints; ++i) {
-				if (fscanf(fp, "%f%f%f", &poly_pts[i].x, &poly_pts[i].y, &poly_pts[i].z) != 3) {
+				if (fscanf(fp, "%f%f%f", &poly[i].v.x, &poly[i].v.y, &poly[i].v.z) != 3) {
 					cout << "Error reading collision polygon point " << i << " from file '" << coll_obj_file << "'." << endl;
 					fclose(fp);
 					return 0;
 				}
-				xf.xform_pos(poly_pts[i]);
+				xf.xform_pos(poly[i].v);
 			}
 			if (fscanf(fp, "%f", &cobj.thickness) != 1) {
 				return read_error(fp, "collision polygon", coll_obj_file);
 			}
 			check_layer(has_layer);
 			cobj.thickness *= xf.scale;
-			split_polygons.clear();
-			split_polygon_to_cobjs(cobj, split_polygons, poly_pts, 0);
-			assert(!split_polygons.empty()); // too strict?
-			add_polygons_to_cobj_vector(split_polygons);
+			ppts.resize(0);
+			split_polygon(poly, ppts);
+			add_polygons_to_cobj_vector(ppts, cobj, NULL, 0);
 			break;
 
 		case 'c': // hollow cylinder (multisided): x1 y1 z1  x2 y2 z2  ro ri  nsides [start_ix [end_ix]]

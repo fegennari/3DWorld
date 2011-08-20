@@ -317,15 +317,6 @@ template<typename T> struct plane_t : public pointT<T> { // unused
 };
 
 
-struct triangle {
-
-	point pts[3];
-
-	triangle() {}
-	triangle(point const &p1, point const &p2, point const &p3) {pts[0] = p1; pts[1] = p2; pts[2] = p3;}
-};
-
-
 struct sphere_t {
 
 	point pos;
@@ -614,6 +605,7 @@ struct vert_norm_tc : public vert_norm { // size = 32
 
 	vert_norm_tc() {}
 	vert_norm_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm(v_, n_) {t[0] = ts; t[1] = tt;}
+	vert_norm_tc(point const &v_, vector3d const &n_, float const t_[2])  : vert_norm(v_, n_) {t[0] = t_[0]; t[1] = t_[1];}
 };
 
 
@@ -670,6 +662,19 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 	static void set_vbo_arrays(unsigned stride_mult=1);
 	void set_state(unsigned stride_mult=1) const;
 };
+
+
+template<typename T> struct triangle_t {
+
+	T pts[3];
+
+	triangle_t() {}
+	triangle_t(T const &p1, T const &p2, T const &p3) {pts[0] = p1; pts[1] = p2; pts[2] = p3;}
+};
+
+typedef triangle_t<float>        triangle;
+typedef triangle_t<double>       triangle_d;
+typedef triangle_t<vert_norm_tc> triangle_vntc;
 
 
 template<typename cwt> class pt_line_drawer_t { // and triangles too!
@@ -1676,8 +1681,7 @@ unsigned enable_dynamic_lights(point const center=all_zeros, float radius=0.0);
 void disable_dynamic_lights(unsigned num_dlights);
 
 // function prototypes - tessellate
-void split_polygon_to_tris(vector<triangle> &triangles_out, vector<point> const &poly_pts);
-bool split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pt, bool split_quads);
+void split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pt, bool split_quads);
 
 // function prototypes - shaders
 char const *append_array_ix(std::string &s, unsigned i);
