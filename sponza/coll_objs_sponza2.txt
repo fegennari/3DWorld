@@ -9,4 +9,6 @@ Y 1.0 1.0 1
 
 O ..\Sponza2\sponza.obj 3
 
+# L 1.0  0.0 0.0 1.0  1.0 1.0 1.0 1.0 # experimental light source
+
 
