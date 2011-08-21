@@ -92,6 +92,7 @@ void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 	assert(!t.data); // must not yet be loaded
 	t.alpha_tid = alpha_tid;
 	t.ncolors   = 4; // add alpha channel
+	if (t.use_mipmaps) t.use_mipmaps = 3; // generate custom alpha mipmaps
 }
 
 
@@ -236,6 +237,7 @@ void material_t::render(texture_manager const &tmgr, int default_tid, bool is_sh
 		if (alpha < 1.0 && ni != 1.0) {
 			// set index of refraction (and reset it at the end)
 		}
+		if (alpha_tid >= 0) enable_blend();
 		float const spec_val((ks.R + ks.G + ks.B)/3.0);
 		set_specular(spec_val, ns);
 		//set_color_a(colorRGBA(ka, alpha));
@@ -248,6 +250,7 @@ void material_t::render(texture_manager const &tmgr, int default_tid, bool is_sh
 	if (!is_shadow_pass) {
 		set_color_e(BLACK);
 		set_specular(0.0, 1.0);
+		if (alpha_tid >= 0) disable_blend();
 	}
 }
 
@@ -450,7 +453,8 @@ void model3ds::render(bool is_shadow_pass) {
 	set_specular(0.0, 1.0);
 	shader_t s;
 	colorRGBA orig_fog_color;
-	if (!is_shadow_pass) orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled());
+	float const min_alpha(0.5); // since we're using alpha masks we must set min_alpha > 0.0
+	if (!is_shadow_pass) orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled());
 
 	for (iterator m = begin(); m != end(); ++m) {
 		m->render(is_shadow_pass);
