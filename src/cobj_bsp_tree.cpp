@@ -147,7 +147,7 @@ public:
 				if ((int)cixs[i] == ignore_cobj)  continue;
 				coll_obj const &c(get_cobj(i));
 				if (!obj_ok(c))                   continue;
-				if (skip_non_drawn && !c.cp.draw) continue;
+				if (skip_non_drawn && !c.might_be_drawn())                  continue;
 				if (test_alpha == 1 && c.is_semi_trans())                   continue; // semi-transparent, can see through
 				if (test_alpha == 3 && c.cp.color.alpha < MIN_SHADOW_ALPHA) continue; // less than min alpha
 				if (!c.line_int_exact(p1, p2, t, cnorm, tmin, tmax))        continue;

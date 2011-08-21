@@ -229,7 +229,7 @@ public:
 		coll_obj &cobj(coll_objects[index]);
 		cobj.counter = cobj_counter;
 		if (skip_dynamic && cobj.status == COLL_DYNAMIC)         return 2;
-		if (skip_dynamic >= 2 && !cobj.cp.draw)                  return 2;
+		if (skip_dynamic >= 2 && !cobj.might_be_drawn())         return 2;
 		if (test_alpha == 1 && cobj.is_semi_trans())             return 2; // semi-transparent, can see through
 		if (test_alpha == 2 && cobj.cp.color.alpha <= max_alpha) return 2; // lower alpha than an earlier object
 		if (test_alpha == 3 && cobj.cp.color.alpha < MIN_SHADOW_ALPHA) return 2; // less than min alpha
@@ -384,8 +384,8 @@ public:
 	int proc_cobj(coll_cell const &cell, int const index) {
 		coll_obj &cobj(coll_objects[index]);
 		cobj.counter = cobj_counter;
-		if ((skip_dynamic && cobj.status == COLL_DYNAMIC) || (skip_dynamic >= 2 && !cobj.cp.draw)) return 2;
-		if (cobj.cp.surfs == EF_ALL || (z1-radius) > cobj.d[2][1] || (z2+radius) < cobj.d[2][0])   return 2; // clip this shape
+		if ((skip_dynamic && cobj.status == COLL_DYNAMIC) || (skip_dynamic >= 2 && !cobj.might_be_drawn())) return 2;
+		if (cobj.cp.surfs == EF_ALL || (z1-radius) > cobj.d[2][1] || (z2+radius) < cobj.d[2][0])            return 2; // clip this shape
 
 		if (check_line_clip_expand(pos1, pos2, cobj.d, radius)) { // line intersects expanded cube => cylinder intersects cube (conservative)
 			cobjs.push_back(index);
@@ -625,7 +625,7 @@ bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj
 
 bool coll_obj::is_occluder() const {
 	
-	if (status != COLL_STATIC || !cp.draw || is_semi_trans()) return 0;
+	if (status != COLL_STATIC || !cp.draw || is_semi_trans()) return 0; // cp.might_be_drawn()?
 	if (type == COLL_CUBE)    return 1;
 	if (type != COLL_POLYGON) return 0;
 	unsigned big_dims(0);

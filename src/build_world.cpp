@@ -819,8 +819,11 @@ void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj) {
 void add_polygons_to_cobj_vector(vector<polygon_t> const &ppts, coll_obj const &cobj, int *group_ids, bool use_model3d) {
 
 	coll_obj poly(cobj);
-	if (use_model3d) poly.cp.draw = 0;
 
+	if (use_model3d) {
+		poly.cp.draw       = 0;
+		poly.cp.is_model3d = 1;
+	}
 	for (vector<polygon_t>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
 		unsigned const npts(i->size());
 		assert(npts >= 3 && npts <= 4);

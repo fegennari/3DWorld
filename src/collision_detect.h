@@ -21,7 +21,7 @@ unsigned const OBJ_CNT_REM_TJ = 1;
 class obj_layer { // size = 60
 
 public:
-	bool draw, shadow, swap_txy;
+	bool draw, is_model3d, shadow, swap_txy;
 	float elastic, tscale, specular, shine, tdx, tdy, refract_ix, light_atten;
 	int tid;
 	collision_func coll_func;
@@ -29,7 +29,7 @@ public:
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1,
 		float ts=1.0, float spec=0.0, float shi=0.0, float tx=0.0, float ty=0.0, float ri=1.0, float la=0.0) :
-		draw(d), shadow(1), swap_txy(0), elastic(e), tscale(ts), specular(spec), shine(shi),
+		draw(d), is_model3d(0), shadow(1), swap_txy(0), elastic(e), tscale(ts), specular(spec), shine(shi),
 		tdx(0.0), tdy(0.0), refract_ix(ri), light_atten(la), tid(ti), coll_func(cf), color(c) {}
 
 	bool equal_params(const obj_layer &cobj) const {
@@ -113,6 +113,7 @@ public:
 	bool truly_static()   const;
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
+	bool might_be_drawn() const {return (cp.draw || cp.is_model3d);}
 	bool can_be_scorched()const;
 	point get_center_pt() const;
 	float get_max_dim()   const;
