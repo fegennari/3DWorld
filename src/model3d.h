@@ -82,11 +82,12 @@ protected:
 	string_map_t tex_map; // maps texture filenames to texture indexes
 
 public:
-	unsigned create_texture(string const &fn, bool verbose);
+	unsigned create_texture(string const &fn, bool is_alpha_mask, bool verbose);
 	void clear();
 	void free_tids();
 	void free_textures();
-	void ensure_texture_loaded(texture_t &t) const;
+	void ensure_texture_loaded(texture_t &t);
+	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
 	void ensure_tid_loaded(int tid);
 	void ensure_tid_bound(int tid);
 	void bind_texture(int tid) const;

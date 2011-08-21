@@ -814,24 +814,24 @@ struct lightning { // size = 40
 colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black
 
 
-struct texture_t { // size = 128
+struct texture_t { // size = 116
 
 	char type, format, use_mipmaps;
 	bool wrap, do_compress;
-	int width, height, ncolors;
-	unsigned char *data, *orig_data, *colored_data, *mm_data, *bump_map;
-	std::string name, bump_name;
+	int width, height, ncolors, bump_tid, alpha_tid;
+	unsigned char *data, *orig_data, *colored_data, *mm_data;
+	std::string name;
 	GLuint tid;
 	colorRGBA color;
 	vector<unsigned> mm_offsets;
 
 	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), width(0), height(0), ncolors(0),
-		data(0), orig_data(0), colored_data(0), mm_data(0), bump_map(0), tid(0) {}
+		bump_tid(-1), alpha_tid(-1), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0) {}
 
 	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n,
-		std::string const &bump_n=std::string(), GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR)
+		GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR)
 		: type(t), format(f), use_mipmaps(um), wrap(wra), do_compress(1), width(w), height(h), ncolors(nc),
-		data(0), orig_data(0), colored_data(0), mm_data(0), bump_map(0), name(n), bump_name(bump_n), tid(tex), color(c) {}
+		bump_tid(-1), alpha_tid(-1), data(0), orig_data(0), colored_data(0), mm_data(0), name(n), tid(tex), color(c) {}
 	void init();
 	void do_gl_init();
 	GLenum calc_internal_format() const;
@@ -850,6 +850,7 @@ struct texture_t { // size = 128
 	void load_targa();
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 	void check_init() {if (tid == 0) do_gl_init();}
+	size_t num_pixels() const {return width*height;}
 };
 
 

@@ -131,17 +131,17 @@ class object_file_reader_model : public object_file_reader {
 		return string();
 	}
 
-	int get_texture(string const &fn) {
+	int get_texture(string const &fn, bool is_alpha_mask) {
 		ifstream tex_in; // used only for determining file location
 		string const fn_used(open_include_file(fn, "texture", tex_in));
 		if (fn_used.empty()) return -1;
 		tex_in.close();
-		return model.tmgr.create_texture(fn_used, 1);
+		return model.tmgr.create_texture(fn_used, is_alpha_mask, 1);
 	}
 
-	void check_and_bind(int &tid, string const &tfn) {
+	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask) {
 		assert(tid < 0);
-		tid = get_texture(tfn);
+		tid = get_texture(tfn, is_alpha_mask);
 	}
 
 public:
@@ -217,27 +217,27 @@ public:
 			else if (s == "map_Ka") {
 				assert(cur_mat);
 				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Ka" << endl; return 0;}
-				check_and_bind(cur_mat->a_tid, tfn);
+				check_and_bind(cur_mat->a_tid, tfn, 0);
 			}
 			else if (s == "map_Kd") {
 				assert(cur_mat);
 				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Kd" << endl; return 0;}
-				check_and_bind(cur_mat->d_tid, tfn);
+				check_and_bind(cur_mat->d_tid, tfn, 0);
 			}
 			else if (s == "map_Ks") {
 				assert(cur_mat);
 				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
-				check_and_bind(cur_mat->s_tid, tfn);
+				check_and_bind(cur_mat->s_tid, tfn, 0);
 			}
 			else if (s == "map_d") {
 				assert(cur_mat);
 				if (!(mat_in >> tfn)) {cerr << "Error reading material map_d" << endl; return 0;}
-				check_and_bind(cur_mat->alpha_tid, tfn);
+				check_and_bind(cur_mat->alpha_tid, tfn, 1);
 			}
 			else if (s == "map_bump" || s == "bump") { // should be ok if both are set
 				assert(cur_mat);
 				if (!(mat_in >> tfn)) {cerr << "Error reading material " << s << endl; return 0;}
-				cur_mat->bump_tid = get_texture(tfn);
+				cur_mat->bump_tid = get_texture(tfn, 0);
 			}
 			else if (s == "skip") { // skip this material
 				assert(cur_mat);

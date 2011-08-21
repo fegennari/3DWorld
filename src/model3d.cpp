@@ -14,7 +14,7 @@ model3ds all_models;
 
 // ************ texture_manager ************
 
-unsigned texture_manager::create_texture(string const &fn, bool verbose) {
+unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, bool verbose) {
 
 	string_map_t::const_iterator it(tex_map.find(fn));
 
@@ -26,8 +26,8 @@ unsigned texture_manager::create_texture(string const &fn, bool verbose) {
 	tex_map[fn] = tid;
 	if (verbose) cout << "loading texture " << fn << endl;
 	// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
-	textures.push_back(texture_t(0, 4, 0, 0, 1, 3, 1, fn)); // always RGB targa wrapped+mipmap
-	textures.back().do_compress = enable_model3d_tex_comp;
+	textures.push_back(texture_t(0, 4, 0, 0, 1, (is_alpha_mask ? 1 : 3), !is_alpha_mask, fn)); // always RGB targa wrapped+mipmap
+	textures.back().do_compress = (!is_alpha_mask && enable_model3d_tex_comp);
 	return tid; // can't fail
 }
 
@@ -55,13 +55,43 @@ void texture_manager::free_textures() {
 }
 
 
-void texture_manager::ensure_texture_loaded(texture_t &t) const {
+void texture_manager::ensure_texture_loaded(texture_t &t) {
 
 	if (!t.data) {
 		t.load(-1);
-		t.init();
+		
+		if (t.alpha_tid >= 0) {
+			ensure_tid_loaded(t.alpha_tid);
+			assert((unsigned)t.alpha_tid < textures.size());
+			texture_t &at(textures[t.alpha_tid]);
+			assert(at.data && t.data); // check that data is allocated in both textures
+			assert(at.width == t.width && at.height == t.height); // check for matching sizes
+			assert(t.ncolors == 4); // check for alpha channel
+			assert(t.tid == 0); // check that texture isn't already bound
+			assert(at.ncolors == 1);
+			unsigned const npixels(t.num_pixels());
+
+			for (unsigned i = 0; i < npixels; ++i) {
+				t.data[4*i+3] = at.data[i]; // copy alpha values
+			}
+		}
+		t.init(); // must be after alpha copy
 	}
 	assert(t.data);
+}
+
+
+void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
+
+	if (tid < 0 || alpha_tid < 0) return; // no texture
+	assert((unsigned)tid < textures.size() && (unsigned)alpha_tid < textures.size());
+	texture_t &t(textures[tid]);
+	assert(t.ncolors == 3 || t.ncolors == 4);
+	if (t.alpha_tid == alpha_tid) return; // already bound
+	assert(t.alpha_tid < 0); // can't rebind to a different value
+	assert(!t.data); // must not yet be loaded
+	t.alpha_tid = alpha_tid;
+	t.ncolors   = 4; // add alpha channel
 }
 
 
@@ -258,7 +288,7 @@ bool material_t::add_poly(vntc_vect_t const &poly) {
 
 void model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t> *ppts) {
 
-	//assert(mat_id >= 0); // must be set/valid - FIXME: too strict?
+	//assert(mat_id >= 0); // must be set/valid - too strict?
 	split_polygons_buffer.resize(0);
 	split_polygon(poly, split_polygons_buffer);
 
@@ -347,9 +377,9 @@ void model3d::load_all_used_tids() {
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (!m->mat_is_used()) continue;
-		tmgr.ensure_tid_loaded(m->get_render_texture()); // only one tid for now
-		tmgr.ensure_tid_loaded(m->alpha_tid);
-		// FIXME: use alpha_tid
+		int const tid(m->get_render_texture());
+		tmgr.bind_alpha_channel_to_texture(tid, m->alpha_tid);
+		tmgr.ensure_tid_loaded(tid); // only one tid for now
 	}
 }
 

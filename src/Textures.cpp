@@ -316,8 +316,7 @@ void texture_t::free() {
 	if (orig_data    != data) delete [] orig_data;
 	if (colored_data != data) delete [] colored_data;
 	delete [] data;
-	delete [] bump_map;
-	data = orig_data = colored_data = bump_map = NULL;
+	data = orig_data = colored_data = NULL;
 	free_mm_data();
 }
 
