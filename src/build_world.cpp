@@ -720,12 +720,17 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 			subdiv_cubes(fixed_cobjs);
 			sort_cobjs_for_rendering(fixed_cobjs);
 			check_cubes(fixed_cobjs); // sanity check, should be last
-
+			RESET_TIME;
+			
+			if (fixed_cobjs.size() > 2*coll_objects.size()) {
+				reserve_coll_objects(coll_objects.size() + 1.1*fixed_cobjs.size()); // reserve with 10% buffer
+			}
 			for (unsigned i = 0; i < fixed_cobjs.size(); ++i) {
 				fixed_cobjs[i].add_as_fixed_cobj(); // don't need to remove it
 			}
 			fixed_cobjs.clear();
 			remove_excess_cap(fixed_cobjs); // free the memory
+			PRINT_TIME("Add Fixed Cobjs");
 		}
 	}
 	else {

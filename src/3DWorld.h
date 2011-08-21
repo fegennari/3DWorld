@@ -1349,6 +1349,7 @@ float lowest_mesh_point(point const &pt, float radius);
 float highest_mesh_point(point const &pt, float radius);
 
 // function prototypes - collision detection
+void reserve_coll_objects(unsigned size);
 int  add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
 int  add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2,
 					   float radius, float radius2, cobj_params const &cparams, int platform_id=-1, int dhcm=0);

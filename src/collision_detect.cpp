@@ -23,7 +23,6 @@ int coll_border(0), camera_coll_id(-1);
 unsigned cobjs_removed(0), index_top(0);
 float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
-vector<int> index_stack;
 vector<coll_obj> coll_objects;
 coll_cell_opt_batcher cco_batcher;
 
@@ -38,8 +37,6 @@ extern platform_cont platforms;
 
 
 void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_to_hcm, int is_dynamic, int dhcm);
-int  get_next_avail_index();
-void free_index(int index);
 void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams);
 
 
@@ -96,6 +93,57 @@ vector3d scorch_mark::get_platform_delta() const {
 }
 
 
+class cobj_manager_t {
+
+	vector<int> index_stack;
+	vector<coll_obj> &cobjs;
+
+public:
+	cobj_manager_t(vector<coll_obj> &cobjs_) : cobjs(cobjs_) {}
+
+	void reserve_cobjs(unsigned size) {
+		unsigned const old_size(cobjs.size());
+		if (old_size >= size) return; // already large enough
+		unsigned const new_size(max(size, 2*old_size)); // prevent small incremental reserves
+		cobjs.resize(new_size);
+		index_stack.resize(new_size);
+
+		for (unsigned i = old_size; i < new_size; ++i) { // initialize
+			index_stack[i] = (int)i; // put on the free list
+		}
+	}
+
+	int get_next_avail_index() {
+		unsigned const old_size(cobjs.size());
+		assert(index_stack.size() == old_size);
+		if (index_top >= old_size) reserve_cobjs(2*index_top + 4); // approx double in size
+		int const index(index_stack[index_top]);
+		assert(size_t(index) < cobjs.size());
+		assert(cobjs[index].status == COLL_UNUSED);
+		cobjs[index].status = COLL_PENDING;
+		index_stack[index_top++] = -1;
+		return index;
+	}
+
+	void free_index(int index) {
+		assert(cobjs[index].status != COLL_UNUSED);
+		cobjs[index].status = COLL_UNUSED;
+
+		if (!cobjs[index].fixed) {
+			assert(index_top > 0);
+			index_stack[--index_top] = index;
+		}
+	}
+};
+
+cobj_manager_t cobj_manager(coll_objects);
+
+
+void reserve_coll_objects(unsigned size) {
+	cobj_manager.reserve_cobjs(size);
+}
+
+
 inline void get_params(int &x1, int &y1, int &x2, int &y2, int &cb, const float d[3][2], int dhcm, int min_cb=0) {
 
 	cb = max(min_cb, ((dhcm == 2) ? 0 : coll_border));
@@ -137,7 +185,7 @@ void add_coll_cube_to_matrix(int index, int dhcm) {
 
 int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int dhcm) {
 
-	int const index(get_next_avail_index());
+	int const index(cobj_manager.get_next_avail_index());
 	coll_obj &cobj(coll_objects[index]);
 	cube.normalize();
 	cobj.copy_from(cube);
@@ -231,7 +279,7 @@ int add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2
 					  cobj_params const &cparams, int platform_id, int dhcm)
 {
 	int type;
-	int const index(get_next_avail_index());
+	int const index(cobj_manager.get_next_avail_index());
 	coll_obj &cobj(coll_objects[index]);
 	radius  = fabs(radius);
 	radius2 = fabs(radius2);
@@ -303,7 +351,7 @@ void add_coll_sphere_to_matrix(int index, int dhcm) {
 int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id, int dhcm) {
 
 	radius = fabs(radius);
-	int const index(get_next_avail_index());
+	int const index(cobj_manager.get_next_avail_index());
 	coll_obj &cobj(coll_objects[index]);
 
 	for (unsigned i = 0; i < 3; ++i) {
@@ -384,7 +432,7 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 {
 	assert(npoints >= 3 && points != NULL); // too strict?
 	assert(npoints <= N_COLL_POLY_PTS);
-	int const index(get_next_avail_index());
+	int const index(cobj_manager.get_next_avail_index());
 	coll_obj &cobj(coll_objects[index]);
 	if (thickness == 0.0) thickness = MIN_POLY_THICK;
 	cobj.norm = get_poly_norm(points);
@@ -728,7 +776,7 @@ int remove_coll_object(int index, bool reset_draw) {
 			}
 		}
 	}
-	free_index(index);
+	cobj_manager.free_index(index);
 	return 1;
 }
 
@@ -778,7 +826,7 @@ void purge_coll_freed(bool force) {
 	unsigned const ncobjs(coll_objects.size());
 
 	for (unsigned i = 0; i < ncobjs; ++i) {
-		if (coll_objects[i].status == COLL_FREED) free_index(i);
+		if (coll_objects[i].status == COLL_FREED) cobj_manager.free_index(i);
 	}
 	cobjs_removed = 0;
 	//PRINT_TIME("Purge");
@@ -796,42 +844,7 @@ void remove_all_coll_obj() {
 		}
 	}
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {
-		if (coll_objects[i].status != COLL_UNUSED) free_index(i);
-	}
-}
-
-
-int get_next_avail_index() {
-
-	unsigned const old_size(coll_objects.size());
-	assert(index_stack.size() == old_size);
-
-	if (index_top >= old_size) {
-		unsigned const new_size(2*index_top + 4); // double in size
-		coll_objects.resize(new_size);
-		index_stack.resize(new_size);
-
-		for (unsigned i = old_size; i < new_size; ++i) { // initialize
-			index_stack[i] = (int)i;
-		}
-	}
-	int const index(index_stack[index_top]);
-	assert(size_t(index) < coll_objects.size());
-	assert(coll_objects[index].status == COLL_UNUSED);
-	coll_objects[index].status = COLL_PENDING;
-	index_stack[index_top++]   = -1;
-	return index;
-}
-
-
-void free_index(int index) {
-
-	assert(coll_objects[index].status != COLL_UNUSED);
-	coll_objects[index].status = COLL_UNUSED;
-
-	if (!coll_objects[index].fixed) {
-		assert(index_top > 0);
-		index_stack[--index_top] = index;
+		if (coll_objects[i].status != COLL_UNUSED) cobj_manager.free_index(i);
 	}
 }
 
