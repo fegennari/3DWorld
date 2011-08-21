@@ -23,7 +23,7 @@ grass_size 0.02 0.002
 
 gravity 1.0
 mesh_scale 1.0
-camera_height 0.0
+camera_height 0.18
 tree_size 1.0
 sun_rot 0.4
 shadow_detail 7
@@ -51,6 +51,8 @@ player_name Deathtool
 
 unlimited_weapons 1
 group_back_face_cull 1
+enable_model3d_tex_comp 0
+recalc_model3d_normals 1
 
 mesh_height 0.05
 mesh_size  256 128 64

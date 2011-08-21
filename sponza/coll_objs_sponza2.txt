@@ -1,5 +1,5 @@
 t 0.0 0.0 -0.25 # translate -Z
-l 0.8 1.0 1.0 1.0 1.0 27 1 # elasticity R G B A texture_id draw
+l 0.8 1.0 1.0 1.0 1.0 49 1 # elasticity R G B A texture_id draw
 y 4.0
 
 m 1.6E-3 # scale
@@ -7,6 +7,6 @@ s 1 2 # swap Y and Z
 M 2 # mirror in Z
 Y 1.0 1.0 1
 
-O ..\Sponza2\sponza.obj 2
+O ..\Sponza2\sponza.obj 3
 
 
