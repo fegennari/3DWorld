@@ -173,32 +173,18 @@ void vntc_vect_t::from_points(vector<point> const &pts) {
 }
 
 
-// ************ geom_data_t ************
-
-void geom_data_t::add_poly(vntc_vect_t const &poly) {
+void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
 	
-	polygons.push_back(poly);
-
 	if (poly.size() == 3) { // triangle
-		for (unsigned i = 0; i < 3; ++i) {triangles.push_back(poly[i]);}
+		for (unsigned i = 0; i < 3; ++i) {push_back(poly[i]);}
 		return;
 	}
 	if (poly.size() == 4) {
 		unsigned const ixs[6] = {0,1,2,0,2,3};
-		for (unsigned i = 0; i < 6; ++i) {triangles.push_back(poly[ixs[i]]);}
+		for (unsigned i = 0; i < 6; ++i) {push_back(poly[ixs[i]]);}
 		return;
 	}
 	assert(0); // shouldn't get here
-}
-
-
-void geom_data_t::render_polygons(bool is_shadow_pass) const {
-
-	for (vector<vntc_vect_t>::const_iterator p = polygons.begin(); p != polygons.end(); ++p) {
-		glBegin(GL_POLYGON);
-		p->render(is_shadow_pass);
-		glEnd();
-	}
 }
 
 
@@ -206,7 +192,7 @@ void geom_data_t::render_polygons(bool is_shadow_pass) const {
 
 void material_t::render(texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
 
-	if (geom.empty() || skip || alpha == 0.0) return; // empty or transparent
+	if (triangles.empty() || skip || alpha == 0.0) return; // empty or transparent
 
 	if (!is_shadow_pass) {
 		int const tex_id(get_render_texture());
@@ -227,7 +213,7 @@ void material_t::render(texture_manager const &tmgr, int default_tid, bool is_sh
 		set_color_d(get_ad_color());
 		set_color_e(colorRGBA(ke, alpha));
 	}
-	geom.render_array(is_shadow_pass);
+	triangles.render_array(is_shadow_pass);
 
 	if (!is_shadow_pass) {
 		set_color_e(BLACK);
@@ -262,7 +248,7 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 bool material_t::add_poly(vntc_vect_t const &poly) {
 	
 	if (skip) return 0;
-	geom.add_poly(poly);
+	triangles.add_poly(poly);
 	mark_as_used();
 	return 1;
 }
@@ -278,7 +264,7 @@ void model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t>
 
 	for (vector<polygon_t>::const_iterator i = split_polygons_buffer.begin(); i != split_polygons_buffer.end(); ++i) {
 		if (mat_id < 0) {
-			unbound_geom.add_poly(*i);
+			unbound_triangles.add_poly(*i);
 			if (ppts) ppts->push_back(*i);
 		}
 		else {
@@ -341,7 +327,7 @@ void model3d::mark_mat_as_used(int mat_id) {
 void model3d::clear() {
 
 	free_context();
-	unbound_geom.clear();
+	unbound_triangles.clear();
 	materials.clear();
 	undef_materials.clear();
 	mat_map.clear();
@@ -351,9 +337,9 @@ void model3d::clear() {
 void model3d::free_context() {
 
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		m->geom.free_context();
+		m->triangles.free_vbo();
 	}
-	unbound_geom.free_context();
+	unbound_triangles.free_vbo();
 }
 
 
@@ -390,7 +376,7 @@ void model3d::render(bool is_shadow_pass) { // const?
 		assert(unbound_tid >= 0);
 		select_texture(unbound_tid, 0);
 		set_color_d(unbound_color);
-		unbound_geom.render_array(is_shadow_pass);
+		unbound_triangles.render_array(is_shadow_pass);
 	}
 	
 	// render all materials (opaque then transparen)

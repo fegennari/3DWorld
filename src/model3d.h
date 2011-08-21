@@ -61,6 +61,7 @@ public:
 	vector3d get_planar_normal() const;
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);
+	void add_poly(vntc_vect_t const &poly);
 };
 
 
@@ -71,20 +72,6 @@ public:
 
 	polygon_t(colorRGBA const &c=ALPHA0) : color(c) {}
 	polygon_t(vntc_vect_t const &vv, colorRGBA const &c=ALPHA0) : vntc_vect_t(vv), color(c) {}
-};
-
-
-struct geom_data_t {
-
-	vector<vntc_vect_t> polygons;
-	vntc_vect_t triangles;
-
-	void add_poly(vntc_vect_t const &poly);
-	void clear() {polygons.clear();}
-	void free_context() {triangles.free_vbo();}
-	bool empty() const {return polygons.empty();}
-	void render_array(bool is_shadow_pass) {triangles.render_array(is_shadow_pass);}
-	void render_polygons(bool is_shadow_pass) const;
 };
 
 
@@ -116,7 +103,7 @@ struct material_t {
 	bool skip, is_used;
 
 	// geometry - does this go here or somewhere else?
-	geom_data_t geom;
+	vntc_vect_t triangles;
 
 	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
 		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), skip(0), is_used(0) {}
@@ -134,7 +121,7 @@ struct material_t {
 class model3d {
 
 	// geometry
-	geom_data_t unbound_geom;
+	vntc_vect_t unbound_triangles;
 	int unbound_tid;
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
