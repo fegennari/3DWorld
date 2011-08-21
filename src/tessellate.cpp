@@ -185,6 +185,7 @@ bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts) {
 	if (dot_product(n, cp_sum) < 0.0) n *= -1.0;
 	static polygon_t new_poly;
 	new_poly.resize(3);
+	new_poly.color = poly.color;
 
 	// triangles can be empty if they're all small fragments that get dropped
 	for (unsigned i = 0; i < triangles.size(); ++i) {
@@ -214,7 +215,7 @@ void split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 
 	for (vector<polygon_t>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
 		split_polygons.push_back(cobj);
-		copy_polygon_to_cobj(*i, split_polygons.back());
+		copy_polygon_to_cobj(*i, split_polygons.back()); // Note: poly color is ignored
 	}
 }
 

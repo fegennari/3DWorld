@@ -35,13 +35,12 @@ protected:
 		assert(ix != 0);
 
 		if (ix < 0) { // negative (relative) index
-			assert(vect_sz >= (unsigned)(-ix));
-			ix = vect_sz - ix;
+			ix += vect_sz;
 		}
 		else { // positive (absolute) index
 			--ix; // specified starting from 1, but we want starting from 0
-			assert((unsigned)ix < vect_sz);
 		}
+		assert((unsigned)ix < vect_sz);
 	}
 
 public:
@@ -290,8 +289,7 @@ public:
 
 				while (in >> vix) { // read vertex index
 					normalize_index(vix, v.size());
-					vector3d normal;
-					vector3d tex_coord;
+					vector3d normal(zero_vector), tex_coord(zero_vector); // normal will be recalculated later if zero
 
 					if (in.get() == '/') {
 						if (in >> tix) { // read text coord index
@@ -300,7 +298,6 @@ public:
 						}
 						else {
 							in.clear();
-							tex_coord.x = tex_coord.y = 0.0; // better not be used
 						}
 						if (in.get() == '/') {
 							if (in >> nix) { // read normal index
@@ -309,7 +306,6 @@ public:
 							}
 							else {
 								in.clear();
-								normal = zero_vector; // will be recalculated later
 							}
 						}
 						else {
@@ -323,7 +319,12 @@ public:
 				} // end while vertex
 				in.clear();
 				assert(pv.size() >= 3);
-				vector3d const normal(cross_product((pv[1].v - pv[0].v), (pv[2].v - pv[0].v)).get_norm()); // backwards?
+				vector3d normal;
+				
+				for (unsigned i = 0; i < pv.size()-2; ++i) { // find a nonzero normal
+					normal = cross_product((pv[i+1].v - pv[i].v), (pv[i+2].v - pv[i].v)).get_norm(); // backwards?
+					if (normal != zero_vector) break; // got a good normal
+				}
 				pv.n = normal;
 
 				for (unsigned i = 0; i < pv.size(); ++i) {
@@ -414,7 +415,7 @@ public:
 				if (!recalc_model3d_normals && poly[j].n != zero_vector) continue;
 				assert((*i)[j].ix < vn.size());
 				vector3d const &vert_norm(vn[(*i)[j].ix]);
-				poly[j].n = ((fabs(dot_product(vert_norm, i->n)) < 0.75) ? i->n : vert_norm);
+				poly[j].n = (i->n != zero_vector && (fabs(dot_product(vert_norm, i->n)) < 0.75) ? i->n : vert_norm);
 			}
 			model.add_polygon(poly, i->mat_id, ppts);
 		}
