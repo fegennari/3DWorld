@@ -141,7 +141,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	}
 	point p_end(p2);
 	if ( coll) p2 = cpos;
-	if (keep_lasers) lasers.push_back(laser_beam(!coll, 1, p1, p2, color, 0.1*weight)); // testing
+	if (keep_lasers && p1 != p2) lasers.push_back(laser_beam(!coll, 1, p1, p2, color, 0.1*weight)); // testing
 	if (!coll) return; // more efficient to do this up here and let a reverse ray from the sky light this path
 
 	// walk from p1 to p2, adding light to all lightmap cells encountered

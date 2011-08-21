@@ -223,7 +223,8 @@ void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
 
 void material_t::render(texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
 
-	if (triangles.empty() || skip || alpha == 0.0) return; // empty or transparent
+	if (triangles.empty() || skip || alpha == 0.0)  return; // empty or transparent
+	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
 
 	if (!is_shadow_pass) {
 		int const tex_id(get_render_texture());
