@@ -16,19 +16,28 @@ class object_file_reader {
 
 protected:
 	string filename;
-	ifstream in;
+	FILE *fp; // Note: we use a FILE* here instead of an ifstream because it's ~2.2x faster in MSVS
+	static unsigned const MAX_CHARS = 1024;
+	char buffer[MAX_CHARS];
 
 	bool open_file() { // FIXME: what about multiple opens/reads?
 		assert(!filename.empty());
-		in.open(filename);
-		if (in.good()) return 1;
-		cerr << "Error: Could not open object file " << filename << endl;
-		return 0;
+		fp = fopen(filename.c_str(), "r");
+		if (!fp) cerr << "Error: Could not open object file " << filename << endl;
+		return (fp != 0);
 	}
 
-	void read_to_newline(ifstream &in_) const {
+	void read_to_newline(ifstream &in) const {
 		// FIXME: what about '\' line wraps?
-		in_.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	}
+
+	void read_to_newline(FILE *fp) const {
+		while (1) {
+			int const c(getc(fp));
+			if (c == '\n' || c == '\0' || c == EOF) return;
+		}
+		assert(0); // never gets here
 	}
 
 	void normalize_index(int &ix, unsigned vect_sz) const {
@@ -43,55 +52,59 @@ protected:
 		assert((unsigned)ix < vect_sz);
 	}
 
+	bool read_point(point &p, int req_num=3) {
+		return (fscanf(fp, "%f%f%f", &p.x, &p.y, &p.z) >= req_num);
+	}
+
 public:
-	object_file_reader(string const &fn) : filename(fn) {assert(!fn.empty());}
+	object_file_reader(string const &fn) : filename(fn), fp(NULL) {assert(!fn.empty());}
+	~object_file_reader() {if (fp) fclose(fp);}
 
 	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
 		vector<point> v; // vertices
-		string s;
+		char s[MAX_CHARS];
 		polygon_t poly;
 
-		while (in.good() && (in >> s)) {
-			assert(!s.empty());
-
+		while (fscanf(fp, "%s", s) == 1) {
 			if (s[0] == '#') { // comment
-				read_to_newline(in); // ignore
+				read_to_newline(fp); // ignore
 			}
-			else if (s == "v") { // vertex
+			else if (strcmp(s, "v") == 0) { // vertex
 				v.push_back(point());
 			
-				if (!(in >> v.back().x >> v.back().y >> v.back().z)) {
+				if (!read_point(v.back())) {
 					cerr << "Error reading vertex from object file " << filename << endl;
 					return 0;
 				}
 				xf.xform_pos(v.back());
 			}
-			else if (s == "f") { // face
+			else if (strcmp(s, "f") == 0) { // face
 				poly.resize(0);
 				int ix(0);
 
-				while (in >> ix) { // read vertex index
+				while (fscanf(fp, "%i", &ix) == 1) { // read vertex index
 					normalize_index(ix, v.size());
 					// only fill in the vertex (norm and tc will be unused)
 					if (ppts) poly.push_back(vert_norm_tc(v[ix], zero_vector, 0.0, 0.0));
+					int const c(getc(fp));
 
-					if (in.get() == '/') {
-						if (in >> ix) {} else in.clear(); // text coord index
+					if (c == '/') {
+						fscanf(fp, "%i", &ix); // text coord index, ok to fail
+						int const c2(getc(fp));
 
-						if (in.get() == '/') {
-							if (in >> ix) {} else in.clear(); // normal index
+						if (c2 == '/') {
+							fscanf(fp, "%i", &ix); // normal index, ok to fail
 						}
-						else in.unget();
+						else ungetc(c2, fp);
 					}
-					else in.unget();
+					else ungetc(c, fp);
 				}
-				in.clear();
 				if (ppts) split_polygon(poly, *ppts);
 			}
 			else {
-				read_to_newline(in); // ignore everything else
+				read_to_newline(fp); // ignore everything else
 			}
 		}
 		PRINT_TIME("Polygons Load");
@@ -273,51 +286,41 @@ public:
 		vector<vector3d> vn; // vertex normals
 		vector<vector3d> tc; // texture coords
 		deque<poly_vix> polys;
-		string s, group_name, object_name, material_name, mat_lib, last_mat_lib;
+		char s[MAX_CHARS], group_name[MAX_CHARS], object_name[MAX_CHARS], material_name[MAX_CHARS], mat_lib[MAX_CHARS];
 
-		while (in.good() && (in >> s)) {
-			assert(!s.empty());
-
+		while (fscanf(fp, "%s", s) == 1) {
 			if (s[0] == '#') { // comment
-				read_to_newline(in); // ignore
+				read_to_newline(fp); // ignore
 			}
-			else if (s == "f") { // face
+			else if (strcmp(s, "f") == 0) { // face
 				model.mark_mat_as_used(cur_mat_id);
 				polys.push_back(poly_vix(cur_mat_id));
 				poly_vix &pv(polys.back());
 				int vix(0), tix(0), nix(0);
 
-				while (in >> vix) { // read vertex index
+				while (fscanf(fp, "%i", &vix) == 1) { // read vertex index
 					normalize_index(vix, v.size());
 					vector3d normal(zero_vector), tex_coord(zero_vector); // normal will be recalculated later if zero
+					int const c(getc(fp));
 
-					if (in.get() == '/') {
-						if (in >> tix) { // read text coord index
+					if (c == '/') {
+						if (fscanf(fp, "%i", &tix) == 1) { // read text coord index
 							normalize_index(tix, tc.size());
 							tex_coord = tc[tix];
 						}
-						else {
-							in.clear();
-						}
-						if (in.get() == '/') {
-							if (in >> nix) { // read normal index
+						int const c2(getc(fp));
+
+						if (c2 == '/') {
+							if (fscanf(fp, "%i", &nix) == 1) { // read normal index
 								normalize_index(nix, n.size());
 								normal = n[nix];
 							}
-							else {
-								in.clear();
-							}
 						}
-						else {
-							in.unget();
-						}
+						else ungetc(c2, fp);
 					}
-					else {
-						in.unget();
-					}
+					else ungetc(c, fp);
 					pv.push_back(vert_norm_tc_ix(v[vix], normal, tex_coord.x, tex_coord.y, vix));
 				} // end while vertex
-				in.clear();
 				assert(pv.size() >= 3);
 				vector3d normal;
 				
@@ -325,71 +328,69 @@ public:
 					normal = cross_product((pv[i+1].v - pv[i].v), (pv[i+2].v - pv[i].v)).get_norm(); // backwards?
 					if (normal != zero_vector) break; // got a good normal
 				}
-				pv.n = normal;
-
 				for (unsigned i = 0; i < pv.size(); ++i) {
 					assert((unsigned)pv[i].ix < vn.size());
 					vn[pv[i].ix] += normal;
 				}
+				pv.n = normal;
 			}
-			else if (s == "v") { // vertex
+			else if (strcmp(s, "v") == 0) { // vertex
 				v.push_back(point());
 				vn.push_back(zero_vector); // vertex normal
 			
-				if (!(in >> v.back().x >> v.back().y >> v.back().z)) {
+				if (!read_point(v.back())) {
 					cerr << "Error reading vertex from object file " << filename << endl;
 					return 0;
 				}
 				xf.xform_pos(v.back());
 			}
-			else if (s == "vt") { // tex coord
+			else if (strcmp(s, "vt") == 0) { // tex coord
 				tc.push_back(vector3d());
 			
-				if (!(in >> tc.back().x >> tc.back().y)) {
+				if (!read_point(tc.back(), 2)) {
 					cerr << "Error reading texture coord from object file " << filename << endl;
 					return 0;
 				}
-				if (!(in >> tc.back().z)) in.clear(); // optionally read a third tex coord
 			}
-			else if (s == "vn") { // normal
+			else if (strcmp(s, "vn") == 0) { // normal
 				n.push_back(vector3d());
 			
-				if (!(in >> n.back().x >> n.back().y >> n.back().z)) {
+				if (!read_point(n.back())) {
 					cerr << "Error reading normal from object file " << filename << endl;
 					return 0;
 				}
 			}
-			else if (s == "l") { // line
-				read_to_newline(in); // ignore
+			else if (strcmp(s, "l") == 0) { // line
+				read_to_newline(fp); // ignore
 			}
-			else if (s == "o") { // object definition
-				if (!(in >> object_name)) {
+			else if (strcmp(s, "o") == 0) { // object definition
+				if (fscanf(fp, "%s", object_name) != 1) {
 					cerr << "Error reading object name from object file " << filename << endl;
 					return 0;
 				}
 			}
-			else if (s == "g") { // group
-				if (!(in >> group_name)) {
+			else if (strcmp(s, "g") == 0) { // group
+				if (fscanf(fp, "%s", group_name) != 1) {
 					cerr << "Error reading group name from object file " << filename << endl;
 					return 0;
 				}
 			}
-			else if (s == "s") { // smoothing/shading (off/on or 0/1)
-				read_to_newline(in); // ignore
+			else if (strcmp(s, "s") == 0) { // smoothing/shading (off/on or 0/1)
+				read_to_newline(fp); // ignore
 			}
-			else if (s == "usemtl") { // use material
-				if (!(in >> material_name)) {
+			else if (strcmp(s, "usemtl") == 0) { // use material
+				if (fscanf(fp, "%s", material_name) != 1) {
 					cerr << "Error reading material from object file " << filename << endl;
 					return 0;
 				}
-				cur_mat_id = model.find_material(material_name);
+				cur_mat_id = model.find_material(string(material_name));
 			}
-			else if (s == "mtllib") { // material library
-				if (!(in >> mat_lib)) {
+			else if (strcmp(s, "mtllib") == 0) { // material library
+				if (fscanf(fp, "%s", mat_lib) != 1) {
 					cerr << "Error reading material library from object file " << filename << endl;
 					return 0;
 				}
-				if (mat_lib != last_mat_lib && !load_mat_lib(mat_lib)) {
+				if (!load_mat_lib(string(mat_lib))) { // could cache loaded files, but they tend to not be reloaded and loading is fast anyway (since textures are cached)
 					cerr << "Error reading material library file " << mat_lib << endl;
 					return 0;
 				}
