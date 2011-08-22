@@ -281,6 +281,7 @@ public:
 		RESET_TIME;
 		if (!open_file()) return 0;
 		int cur_mat_id(-1);
+		unsigned smoothing_group(0);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
 		vector<vector3d> vn; // vertex normals
@@ -314,7 +315,7 @@ public:
 							if (fscanf(fp, "%i", &nix) == 1) { // read normal index
 								normalize_index(nix, n.size());
 								normal = n[nix];
-							}
+							} // else the normal will be recalculated later
 						}
 						else ungetc(c2, fp);
 					}
@@ -329,6 +330,7 @@ public:
 					if (normal != zero_vector) break; // got a good normal
 				}
 				for (unsigned i = 0; i < pv.size(); ++i) {
+					//if (!smoothing_group) pv[i].n = normal;
 					assert((unsigned)pv[i].ix < vn.size());
 					vn[pv[i].ix] += normal;
 				}
@@ -374,9 +376,16 @@ public:
 					cerr << "Error reading group name from object file " << filename << endl;
 					return 0;
 				}
+				//cout << "group " << group_name << endl;
 			}
 			else if (strcmp(s, "s") == 0) { // smoothing/shading (off/on or 0/1)
-				read_to_newline(fp); // ignore
+				if (fscanf(fp, "%u", &smoothing_group) != 1) {
+					if (fscanf(fp, "%s", s) != 1 || strcmp(s, "off") != 0) {
+						cerr << "Error reading smoothing group from object file " << filename << endl;
+						return 0;
+					}
+					smoothing_group = 0;
+				}
 			}
 			else if (strcmp(s, "usemtl") == 0) { // use material
 				if (fscanf(fp, "%s", material_name) != 1) {
