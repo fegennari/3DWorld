@@ -1544,6 +1544,9 @@ int load_config(string const &config_file) {
 		else if (str == "disable_inf_terrain") {
 			if (!read_int(fp, disable_inf_terrain)) cfg_err("disable inf terrain command", error);
 		}
+		else if (str == "toggle_mesh_enabled") {
+			display_mode ^= 0x01;
+		}
 		else if (str == "player_name") {
 			if (!read_str(fp, player_name)) cfg_err("player name", error);
 		}

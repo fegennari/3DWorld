@@ -296,7 +296,10 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			draw_sphere_dlist(i->pos, i->radius, ndiv, 0); // use circle texture billboards?
 		}
 	}
-	if (smap_dlist) {
+	if (!have_drawn_cobj) {
+		// do nothing
+	}
+	else if (smap_dlist) {
 		assert(glIsList(smap_dlist));
 		glCallList(smap_dlist);
 	}
@@ -310,7 +313,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		//for (unsigned n = 0; n < 2; ++n) { // {cubes+culling, others+no culling}
 			int in_cur_prim(PRIM_UNSET);
 
-			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) { // test have_drawn_cobj?
+			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
 				//if ((i->type == COLL_CUBE) == n) continue;
 				if (i->no_draw()) continue; // only valid if drawing trees, small trees, and scenery separately
 				if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->maybe_is_moving()) continue;
@@ -334,7 +337,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	draw_trees_shadow();
 	render_models(1);
 
-	if (ground_effects_level != 0) { // draw mesh
+	if ((display_mode & 0x01) && ground_effects_level != 0) { // draw mesh
 		int const gel(ground_effects_level);
 		ground_effects_level = 0;
 		glPushMatrix();
