@@ -696,7 +696,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (flags & Z_STOPPED) {
 			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
-			if (!point_outside_mesh(xpos, ypos) && (pos.z - radius) > water_matrix[xpos][ypos] &&
+			if (!point_outside_mesh(xpos, ypos) && (pos.z - radius) > water_matrix[ypos][xpos] &&
 				((friction < 2.0*STICK_THRESHOLD) || (friction < rand_uniform(2.0, 2.5)*STICK_THRESHOLD)))
 			{
 				flags &= ~Z_STOPPED;
