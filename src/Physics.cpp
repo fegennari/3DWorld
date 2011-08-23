@@ -39,7 +39,7 @@ point flow_source(0.0, 0.0, -2.0);
 obj_type object_types[NUM_TOT_OBJS];
 
 extern int num_groups, display_mode, frame_counter, game_mode, island, coll_border, camera_coll_id, ocean_set;
-extern int s_ball_id, world_mode, w_acc, is_snow, iticks, auto_time_adv, DISABLE_WATER, enable_fsource;
+extern int s_ball_id, world_mode, w_acc, is_snow, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2;
 extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks;
 extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, grass_length;
 extern point ocean;
@@ -1365,12 +1365,15 @@ void fire::apply_physics(unsigned i) {
 	if (status == 0) return;
 	assert(radius > 0.0);
 	float const damage(0.5*heat*radius);
-	colorRGBA const fcolor(gen_fire_color(cval, inten));
-	if (damage > 0.001) add_dynamic_light(32.0*damage, pos, fcolor);
 	do_area_effect_damage(pos, 2.0*radius, BURN_DAMAGE*damage, i, source, FIRE);
-	int const rn(max(1, int(8.0 + 0.02/(0.1 + sqrt(radius*sqrt(heat))))));
-	if (rand()%rn == 0) gen_smoke(pos);
-	time   += iticks;
+	colorRGBA const fcolor(gen_fire_color(cval, inten));
+	if (damage > 0.001) add_dynamic_light(32.0*inten*damage, pos, fcolor);
+
+	if (!is_static) {
+		int const rn(max(1, int(8.0 + 0.02/(0.1 + sqrt(radius*sqrt(heat))))));
+		if (rand()%rn == 0) gen_smoke(pos);
+	}
+	if (animate2) time += iticks;
 	point pos2(pos);
 	pos2.z -= radius;
 	bool underwater(is_underwater(pos2));
@@ -1379,65 +1382,67 @@ void fire::apply_physics(unsigned i) {
 		radius    *= pow(0.95f, fticks); // slowly die out
 		underwater = 0;
 	}
-	if (time > (int)MAX_FIRE_TIME || radius < TOLERANCE || underwater) {
+	if ((!is_static && time > (int)MAX_FIRE_TIME) || radius < TOLERANCE || underwater) {
 		extinguish();
 		return;
 	}
-	object_types[FIRE].radius = 1.75*radius;
-	//destroy_coll_objs(pos, 100000.0*damage, source, 0); // very, very slow
+	if (!is_static) {
+		object_types[FIRE].radius = 1.75*radius;
+		//destroy_coll_objs(pos, 100000.0*damage, source, 0); // very, very slow
 
-	if (status == 2) {
-		velocity = zero_vector; // above ground - no movement
-		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0/*radius*/, 0, 0));
+		if (status == 2) {
+			velocity = zero_vector; // above ground - no movement
+			float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0/*radius*/, 0, 0));
 
-		if (pos.z - zval > 1.5*radius) {
-			dwobject obj(FIRE, pos, zero_vector, 1, 10000.0); // make a FIRE object for collision detection
-			obj.source = source;
+			if (pos.z - zval > 1.5*radius) {
+				dwobject obj(FIRE, pos, zero_vector, 1, 10000.0); // make a FIRE object for collision detection
+				obj.source = source;
 
-			if (!obj.check_vert_collision(i, 1, 0)) {
-				pos.z -= radius;
-				status = 1; // re-animate
+				if (!obj.check_vert_collision(i, 1, 0)) {
+					pos.z -= radius;
+					status = 1; // re-animate
+				}
 			}
 		}
-	}
-	else {
-		point const lpos(pos);
-		vector3d const local_wind(get_local_wind(pos));
-		vector3d const vel((local_wind.x + rand_uniform(-1.5, 1.5)), (local_wind.y + rand_uniform(-1.5, 1.5)), rand_uniform(-0.05, 0.0585));
-		velocity *= pow(0.95f, fticks);
-		velocity += vel*(0.005*tstep);
-		pos.x    += fticks*velocity.x;
-		pos.y    += fticks*velocity.y;
-		set_true_obj_height(pos, lpos, FAR_CLIP, velocity.z, FIRE, 0, 0, 0, 1);
-		pos.z    -= radius;
-		pos.z     = 0.9*lpos.z + 0.1*pos.z; // slow movement
-		//pos.z     = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.6*radius;
-	}
-	radius += (0.02 + radius)*(rand_uniform(-0.02, 0.02) + 250.0*velocity.z);
-	heat    = 0.8*heat + 0.2*rand_uniform(0.25, 1.2)/(0.9 + 2.0*radius);
-	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-
-	if (radius <= 0.0001 || !point_interior_to_mesh(xpos, ypos)) {
-		extinguish();
-		return;
-	}
-	if (status != 2) { // near mesh
-		surface_damage[ypos][xpos] += 20.0*radius*heat;
-	}
-	if (radius > 0.04) { // split into smaller fires
-		for (unsigned i = 0; i < 2; ++i) {
-			pos2[i] = pos[i] + rand_uniform(-0.05, 0.05);
-		}
-		if (rand()&1) {
-			pos2.z = pos.z = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.3*radius;
-		}
 		else {
-			pos2.z = pos.z + rand_uniform(-0.05, 0.05);
+			point const lpos(pos);
+			vector3d const local_wind(get_local_wind(pos));
+			vector3d const vel((local_wind.x + rand_uniform(-1.5, 1.5)), (local_wind.y + rand_uniform(-1.5, 1.5)), rand_uniform(-0.05, 0.0585));
+			velocity *= pow(0.95f, fticks);
+			velocity += vel*(0.005*tstep);
+			pos.x    += fticks*velocity.x;
+			pos.y    += fticks*velocity.y;
+			set_true_obj_height(pos, lpos, FAR_CLIP, velocity.z, FIRE, 0, 0, 0, 1);
+			pos.z    -= radius;
+			pos.z     = 0.9*lpos.z + 0.1*pos.z; // slow movement
+			//pos.z     = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.6*radius;
 		}
-		gen_fire(pos2, 1.0, source, 1);
-		radius -= 0.017;
-	}
-	if (damage > 0.005 && (rand()%int(0.8/damage)) == 0) gen_particles(pos, 1);
+		radius += (0.02 + radius)*(rand_uniform(-0.02, 0.02) + 250.0*velocity.z);
+		heat    = 0.8*heat + 0.2*rand_uniform(0.25, 1.2)/(0.9 + 2.0*radius);
+		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+
+		if (radius <= 0.0001 || !point_interior_to_mesh(xpos, ypos)) {
+			extinguish();
+			return;
+		}
+		if (status != 2) { // near mesh
+			surface_damage[ypos][xpos] += 20.0*radius*heat;
+		}
+		if (radius > 0.04) { // split into smaller fires
+			for (unsigned i = 0; i < 2; ++i) {
+				pos2[i] = pos[i] + rand_uniform(-0.05, 0.05);
+			}
+			if (rand()&1) {
+				pos2.z = pos.z = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.3*radius;
+			}
+			else {
+				pos2.z = pos.z + rand_uniform(-0.05, 0.05);
+			}
+			gen_fire(pos2, 1.0, source, 1);
+			radius -= 0.017;
+		}
+	} // !is_static
+	if (animate2 && damage > 0.005 && (rand()%int(0.8/damage)) == 0) gen_particles(pos, 1);
 }
 
 

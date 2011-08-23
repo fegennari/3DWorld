@@ -9,6 +9,8 @@ Y 1.0 1.0 1
 
 O ..\Sponza2\sponza.obj 3
 
+# could set transform back to the identity here...
+
 # L 1.0  0.0 0.0 1.0  1.0 1.0 1.0 1.0 # experimental light source
 
 # add lights for fires
@@ -16,5 +18,11 @@ L 0.5   1120  140  400  1.0 0.5 0.2 1.0
 L 0.5  -1200  140  400  1.0 0.5 0.2 1.0
 L 0.5  -1200  140 -450  1.0 0.5 0.2 1.0
 L 0.5   1120  140 -450  1.0 0.5 0.2 1.0
+
+# add fires
+f 0.8  4.0   1120  150  400
+f 0.8  4.0  -1200  150  400
+f 0.8  4.0  -1200  150 -450
+f 0.8  4.0   1120  150 -450
 
 

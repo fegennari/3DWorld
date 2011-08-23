@@ -1278,7 +1278,7 @@ void gen_line_of_bubbles(point const &p1, point const &p2, float r=0.0, colorRGB
 bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 				   float r, float den, float dark, float dam, int src, int dt, bool as);
 void gen_smoke(point const &pos);
-bool gen_fire(point const &pos, float size, int source, bool allow_close=0);
+bool gen_fire(point const &pos, float size, int source, bool allow_close=0, bool is_static=0, float intensity=1.0);
 void gen_scorch_mark(point const &pos, float radius, vector3d const &orient, int cid=-1, float init_alpha=1.0, float rgb_val=0.0);
 void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade=0);
 int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,
@@ -1666,7 +1666,7 @@ void distribute_smoke();
 float get_smoke_at_pos(point const &pos);
 void add_line_light(point const &p1, point const &p2, colorRGBA const &color, float size, float intensity=1.0);
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c=WHITE, vector3d const &d=plus_z, float bw=1.0);
-colorRGBA gen_fire_color(float &cval, float &inten);
+colorRGBA gen_fire_color(float &cval, float &inten, float rate=1.0);
 void clear_dynamic_lights();
 void add_dynamic_lights();
 void get_xyz(point const &p, int v[3]);

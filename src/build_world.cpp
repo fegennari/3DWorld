@@ -1019,7 +1019,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'L': // light: size pos color [direction beamwidth [inner_radius]]
+		case 'L': // light: size xpos ypos zpos color [direction beamwidth [inner_radius]]
 			if (fscanf(fp, "%f%f%f%f%f%f%f%f", &fvals[0], &pos.x, &pos.y, &pos.z, &lcolor.red, &lcolor.green, &lcolor.blue, &lcolor.alpha) != 8) {
 				return read_error(fp, "light source", coll_obj_file);
 			}
@@ -1034,6 +1034,14 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				light_sources.push_back(light_source(fvals[0], pos, lcolor, 0, vel, beamwidth, r_inner));
 			}
+			break;
+
+		case 'f': // place fire: size intensity xpos ypos zpos
+			if (fscanf(fp, "%f%f%f%f%f", &fvals[0], &fvals[1], &pos.x, &pos.y, &pos.z) != 5) {
+				return read_error(fp, "place fire", coll_obj_file);
+			}
+			xf.xform_pos(pos);
+			gen_fire(pos, fvals[0], -2, 1, 1, fvals[1]);
 			break;
 
 		case 'p': // smiley path waypoint: type xpos ypos [zpos]

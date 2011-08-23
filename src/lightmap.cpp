@@ -1090,10 +1090,10 @@ void setup_dlight_textures(shader_t &s) {
 }
 
 
-colorRGBA gen_fire_color(float &cval, float &inten) {
+colorRGBA gen_fire_color(float &cval, float &inten, float rate) {
 
-	inten = max(0.6f, min(1.0f, (inten + 0.04f*fticks*signed_rand_float())));
-	cval  = max(0.0f, min(1.0f, (cval  + 0.02f*fticks*signed_rand_float())));
+	inten = max(0.6f, min(1.0f, (inten + 0.04f*rate*fticks*signed_rand_float())));
+	cval  = max(0.0f, min(1.0f, (cval  + 0.02f*rate*fticks*signed_rand_float())));
 	colorRGBA color(1.0, 0.9, 0.7);
 	blend_color(color, color, colorRGBA(1.0, 0.6, 0.2), cval, 0);
 	return color;

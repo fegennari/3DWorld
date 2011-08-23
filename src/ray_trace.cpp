@@ -328,6 +328,7 @@ void *trace_ray_block(void *ptr) {
 	vector<point> pts(block_npts);
 	vector<vector3d> dirs(NRAYS);
 
+	// WRITE: set custom ray bounding cube here
 	for (unsigned p = 0; p < block_npts; ++p) {
 		pts[p] = signed_rand_vector_spherical(1.0, 0).get_norm()*scene_radius; // start the ray here
 	}

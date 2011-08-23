@@ -107,12 +107,18 @@ void gen_object_pos(point &position, unsigned flags) {
 }
 
 
-void basic_physics_obj::init_gen_rand(point const &p2, float rxy, float rz) {
+void basic_physics_obj::init(point const &p) {
 
 	status = 1;
 	time   = 0;
-	pos.assign(rand_uniform(-rxy, rxy), rand_uniform(-rxy, rxy), rand_uniform(-rz, rz));
-	pos   += p2;
+	pos    = p;
+}
+
+
+void basic_physics_obj::init_gen_rand(point const &p, float rxy, float rz) {
+
+	init(p);
+	pos += point(rand_uniform(-rxy, rxy), rand_uniform(-rxy, rxy), rand_uniform(-rz, rz));
 }
 
 
@@ -163,15 +169,25 @@ void particle_cloud::gen(point const &p, colorRGBA const &bc, vector3d const &iv
 }
 
 
-void fire::gen(point const &p, float size, int src) {
+void fire::gen(point const &p, float size, float intensity, int src, bool is_static_) {
 
-	init_gen_rand(p, 0.07, 0.01);
-	radius   = size*rand_uniform(0.02, 0.05);
-	heat     = rand_uniform(0.5, 0.8);
-	velocity = zero_vector;
-	source   = src;
-	cval     = rand_uniform(0.3, 0.7);
-	inten    = rand_uniform(0.3, 0.7);
+	if (is_static_) {
+		init(p);
+		radius = 0.04*size;
+		heat   = intensity;
+		cval   = 0.5;
+		inten  = 0.5;
+	}
+	else {
+		init_gen_rand(p, 0.07, 0.01);
+		radius = size*rand_uniform(0.02, 0.05);
+		heat   = intensity*rand_uniform(0.5, 0.8);
+		cval   = rand_uniform(0.3, 0.7);
+		inten  = rand_uniform(0.3, 0.7);
+	}
+	is_static = is_static_;
+	velocity  = zero_vector;
+	source    = src;
 	float const zval(interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0));
 	if (fabs(pos.z - zval) > 2.0*radius) status = 2; // above the ground
 }
@@ -239,7 +255,7 @@ void gen_smoke(point const &pos) {
 }
 
 
-bool gen_fire(point const &pos, float size, int source, bool allow_close) {
+bool gen_fire(point const &pos, float size, int source, bool allow_close, bool is_static, float intensity) {
 
 	assert(size > 0.0);
 	if (!is_over_mesh(pos) || is_underwater(pos)) return 0; // off the mesh or under water/ice
@@ -252,7 +268,7 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close) {
 			}
 		}
 	}
-	fires[fires.choose_element()].gen(pos, size, source);
+	fires[fires.choose_element()].gen(pos, size, intensity, source, is_static);
 	return 1;
 }
 

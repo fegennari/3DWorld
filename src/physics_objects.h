@@ -52,7 +52,8 @@ struct basic_physics_obj { // size = 20
 	char status;
 
 	basic_physics_obj(point const &pos_=all_zeros, int status_=0) : pos(pos_), time(0), status(status_) {}
-	void init_gen_rand(point const &p2, float rxy, float rz);
+	void init(point const &p);
+	void init_gen_rand(point const &p, float rxy, float rz);
 	point const &get_pos() const {return pos;}
 
 	bool operator<(basic_physics_obj const &o) const {
@@ -96,13 +97,14 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 };
 
 
-struct fire : public basic_physics_obj { // size = 52
+struct fire : public basic_physics_obj { // size = 56
 
 	int source;
+	bool is_static;
 	float radius, heat, cval, inten;
 	vector3d velocity;
 
-	void gen(point const &p, float size, int src);
+	void gen(point const &p, float size, float intensity, int src, bool is_static_);
 	void set_fire_color() const;
 	void draw() const;
 	void apply_physics(unsigned i);
