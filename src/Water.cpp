@@ -98,7 +98,7 @@ spillover spill;
 extern bool mesh_invalidated, using_lightmap, has_dl_sources, has_snow;
 extern int display_mode, frame_counter, game_mode, TIMESCALE2, I_TIMESCALE2, ocean_set;
 extern int world_mode, island, rand_gen_index, begin_motion, animate, animate2, blood_spilled;
-extern int landscape_changed, xoff2, yoff2, scrolling, dx_scroll, dy_scroll;
+extern int landscape_changed, xoff2, yoff2, scrolling, dx_scroll, dy_scroll, INIT_DISABLE_WATER;
 extern float temperature, zmax, zmin, zbottom, ztop, light_factor, water_plane_z, fticks, mesh_scale;
 extern float TIMESTEP, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
 extern point ocean;
@@ -1540,7 +1540,7 @@ void init_water_springs(int nws) {
 
 void process_water_springs() {
 
-	//if (DISABLE_WATER) return;
+	if (DISABLE_WATER && INIT_DISABLE_WATER) return;
 	int const cid(coll_id[WDROPLET]);
 	if (world_mode != WMODE_GROUND || !begin_motion || !animate || !animate2 || temperature <= W_FREEZE_POINT) return;
 	if (ztop < water_plane_z)  return; // all water
