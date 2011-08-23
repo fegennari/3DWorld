@@ -265,6 +265,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		unsigned const i(int_cobjs[k]);
 		assert(i < cobjs.size());
 		assert(cobjs[i].status == COLL_STATIC);
+		if (cobjs[i].cp.is_model3d) continue; // can't destroy a model3d because the geometry is also stored in a vbo and won't get updated here
 		// require fixed cobjs? platforms work now
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
