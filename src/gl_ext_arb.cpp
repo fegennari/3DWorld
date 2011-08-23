@@ -8,12 +8,17 @@
 
 void init_glew() {
 
+// MacOSX check here, placeholder for eventual cross-platform porting
+#if ( (defined(__MACH__)) && (defined(__APPLE__)) )
+	// nothing
+#else
 	GLenum const err(glewInit());
 
 	if (GLEW_OK != err) {
 	  fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
 	  assert(0);
 	}
+#endif
 	glEnable(GL_MULTISAMPLE); // only works when using a multisampling graphics context
 }
 

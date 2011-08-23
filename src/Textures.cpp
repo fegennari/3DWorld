@@ -240,7 +240,10 @@ void check_init_texture(int id) {
 
 bool select_texture(int id, bool enable) {
 
-	if (id < 0) return 0;
+	if (id < 0) {
+		glBindTexture(GL_TEXTURE_2D, 0); // bind to none
+		return 0;
+	}
 	assert(id < NUM_TEXTURES);
 	check_init_texture(id);
 	if (enable) glEnable(GL_TEXTURE_2D);
@@ -1577,6 +1580,7 @@ void disable_textures_texgen() {
 	disable_multitex_a();
 	disable_texgen();
 	glDisable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0); // bind to none
 }
 
 
