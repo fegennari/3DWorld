@@ -649,7 +649,7 @@ bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsi
 		}
 		break;
 	default:
-		assert(0); // not supported
+		return 0; // not supported
 	}
 	return 1;
 }
