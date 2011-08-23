@@ -1812,12 +1812,12 @@ void setup_object_render_data() {
 }
 
 
-void end_group(int &last_group_id, unsigned i) {
+void end_group(int &last_group_id) {
 
 	if (last_group_id < 0) return;
 	assert((unsigned)last_group_id < obj_draw_groups.size());
 	if (!obj_draw_groups[last_group_id].skip_render()) glEnd();
-	obj_draw_groups[last_group_id].end_render(i);
+	obj_draw_groups[last_group_id].end_render();
 	if (group_back_face_cull) glDisable(GL_CULL_FACE);
 	last_group_id = -1;
 }
@@ -1864,7 +1864,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				}
 			}
 		}
-		end_group(last_group_id, coll_objects.size());
+		end_group(last_group_id);
 	}
 	if (draw_trans) { // called second
 		if (smoke_exists) {
@@ -1888,7 +1888,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			int const ix(draw_last[i].second);
 
 			if (ix < 0) { // portal
-				end_group(last_group_id, i);
+				end_group(last_group_id);
 
 				if (has_lt_atten && last_light_atten != 0.0) {
 					s.set_uniform_float(ulocs[0], 0.0);
@@ -1924,7 +1924,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				assert(cix == ix); // should not have changed
 			}
 		}
-		end_group(last_group_id, coll_objects.size());
+		end_group(last_group_id);
 		disable_blend();
 		draw_last.resize(0);
 	}

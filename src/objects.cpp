@@ -223,6 +223,7 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t *shader) const {
 
 	if (no_draw()) return;
+	assert(id == cix); // always equal, but cix may be increased in this call
 	assert(!disabled());
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
@@ -235,7 +236,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		assert(!in_group || tid == last_tid); // FIXME: each texture must be in its own group
 	}
 	else { // group changed
-		end_group(last_group_id, cix);
+		end_group(last_group_id);
 	}
 	if (!in_group || start_group) { // should be the same across groups
 		set_specular(cp.specular, cp.shine);
@@ -284,6 +285,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			norm.do_glNormal(); // FIXME: smooth?
 			points[ixs[i]].do_glVertex();
 		}
+		obj_draw_groups[group_id].mark_as_drawn(cix);
 		return;
 	}
 	switch (type) {
@@ -792,7 +794,7 @@ void obj_draw_group::begin_render(unsigned &cix) {
 }
 
 
-void obj_draw_group::end_render(unsigned cix) {
+void obj_draw_group::end_render() {
 
 	if (!use_dlist) return;
 	assert(inside_beg_end); // can't call end() without begin()
@@ -801,11 +803,21 @@ void obj_draw_group::end_render(unsigned cix) {
 	if (creating_new_dlist) {
 		glEndList();
 		creating_new_dlist = 0;
-		assert(start_cix < cix); // can't have an empty range
-		end_cix = cix;
+		assert(start_cix < end_cix); // can't have an empty range
+	}
+}
+
+
+void obj_draw_group::mark_as_drawn(unsigned cix) {
+
+	if (!use_dlist) return;
+	assert(inside_beg_end);
+
+	if (creating_new_dlist) {
+		end_cix = cix+1;
 	}
 	else {
-		assert(end_cix == cix); // must end at the same place as when the dlist was created
+		assert(end_cix >= cix); // must end at the same place as when the dlist was created
 	}
 }
 
