@@ -16,7 +16,7 @@ float const ICE_ALBEDO    = 0.8;
 
 bool keep_lasers(0); // debugging mode
 unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), NUM_THREADS(1);
-unsigned long long start_rays(0), tot_rays(0), num_hits(0), cells_touched(0);
+unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 
 extern bool has_snow;
 extern int read_light_file, write_light_file, read_light_file_l, write_light_file_l;
@@ -26,6 +26,7 @@ extern vector<light_source> light_sources;
 extern vector<coll_obj> coll_objects;
 extern vector<laser_beam> lasers;
 extern lmap_manager_t lmap_manager;
+extern vector<cube_light_source> global_cube_lights;
 
 
 float get_scene_radius() {return sqrt(2.0*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
@@ -322,38 +323,65 @@ void *trace_ray_block(void *ptr) {
 	cout << "Starting on thread " << data->ix << endl;
 	assert(data->num > 0);
 	if (data->is_thread) srand(data->rseed);
-	unsigned const block_npts(max(1U, NPTS/data->num));
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
-	float const ray_wt(RAY_WEIGHT/(((float)NPTS)*NRAYS));
-	vector<point> pts(block_npts);
-	vector<vector3d> dirs(NRAYS);
+	unsigned long long start_rays(0), cube_start_rays(0);
 
-	// WRITE: set custom ray bounding cube here
-	for (unsigned p = 0; p < block_npts; ++p) {
-		pts[p] = signed_rand_vector_spherical(1.0, 0).get_norm()*scene_radius; // start the ray here
-	}
-	sort(pts.begin(), pts.end());
-	if (data->verbose) cout << "Global light source points: " << block_npts << ", progress: 0";
+	if (NPTS > 0 && NRAYS > 0) {
+		float const ray_wt(RAY_WEIGHT/(((float)NPTS)*NRAYS));
+		unsigned const block_npts(max(1U, NPTS/data->num));
+		vector<point> pts(block_npts);
+		vector<vector3d> dirs(NRAYS);
 
-	for (unsigned p = 0; p < block_npts; ++p) {
-		if (data->verbose) increment_printed_number(p);
-		point const &pt(pts[p]);
-
-		for (unsigned r = 0; r < NRAYS; ++r) {
-			point const target_pt(X_SCENE_SIZE*signed_rand_float(), Y_SCENE_SIZE*signed_rand_float(), rand_uniform(czmin, czmax));
-			dirs[r] = (target_pt - pt).get_norm();
+		for (unsigned p = 0; p < block_npts; ++p) {
+			pts[p] = signed_rand_vector_spherical(1.0, 0).get_norm()*scene_radius; // start the ray here
 		}
-		sort(dirs.begin(), dirs.end());
+		sort(pts.begin(), pts.end());
+		if (data->verbose) cout << "Global light source points: " << block_npts << ", progress: 0";
 
-		for (unsigned r = 0; r < NRAYS; ++r) {
-			if (dot_product(dirs[r], pt) >= 0.0) continue; // can get here when (-Z_SCENE_SIZE, Z_SCENE_SIZE) does not contain (czmin, czmax)
-			point const end_pt(pt + dirs[r]*line_length);
-			cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, 0, 1);
-			++start_rays;
+		for (unsigned p = 0; p < block_npts; ++p) {
+			if (data->verbose) increment_printed_number(p);
+			point const &pt(pts[p]);
+
+			for (unsigned r = 0; r < NRAYS; ++r) {
+				point const target_pt(X_SCENE_SIZE*signed_rand_float(), Y_SCENE_SIZE*signed_rand_float(), rand_uniform(czmin, czmax));
+				dirs[r] = (target_pt - pt).get_norm();
+			}
+			sort(dirs.begin(), dirs.end());
+
+			for (unsigned r = 0; r < NRAYS; ++r) {
+				if (dot_product(dirs[r], pt) >= 0.0) continue; // can get here when (-Z_SCENE_SIZE, Z_SCENE_SIZE) does not contain (czmin, czmax)
+				point const end_pt(pt + dirs[r]*line_length);
+				bool skip_this_line(0);
+
+				// skip any lines that cross a global cube light because otherwise we would doubly add the contribution from that pos/dir
+				for (vector<cube_light_source>::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
+					if (check_line_clip(pt, end_pt, i->bounds.d)) {skip_this_line = 1; break;}
+				}
+				if (skip_this_line) continue;
+				cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, 0, 1);
+				++start_rays;
+			}
+		}
+	}
+	for (vector<cube_light_source>::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
+		if (data->num == 0) continue; // disabled
+		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
+		unsigned const num_rays(i->num_rays/data->num);
+		point pt;
+
+		for (unsigned p = 0; p < num_rays; ++p) {
+			for (unsigned d = 0; d < 3; ++d) {
+				pt[d] = rand_uniform(i->bounds.d[d][0], i->bounds.d[d][1]);
+			}
+			vector3d dir(signed_rand_vector_norm());
+			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
+			point const end_pt(pt + dir*line_length);
+			cast_light_ray(pt, end_pt, i->intensity, i->intensity, i->color, line_length, -1, 0, 1);
+			++cube_start_rays;
 		}
 	}
 	if (data->verbose) {
-		cout << endl << "start rays: " << start_rays << ", total rays: " << tot_rays
+		cout << endl << "start rays: " << start_rays << "cube start rays: " << cube_start_rays << ", total rays: " << tot_rays
 			 << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
 	}
 	return 0;

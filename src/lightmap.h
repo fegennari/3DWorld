@@ -134,6 +134,15 @@ struct flow_cache_e { // size = 16
 };
 
 
+struct cube_light_source {
+
+	cube_t bounds;
+	colorRGB color;
+	float intensity;
+	unsigned num_rays;
+};
+
+
 void compute_ray_trace_lighting_global();
 void compute_ray_trace_lighting_local();
 
