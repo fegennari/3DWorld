@@ -169,7 +169,7 @@ void particle_cloud::gen(point const &p, colorRGBA const &bc, vector3d const &iv
 }
 
 
-void fire::gen(point const &p, float size, float intensity, int src, bool is_static_) {
+void fire::gen(point const &p, float size, float intensity, int src, bool is_static_, float light_bw) {
 
 	if (is_static_) {
 		init(p);
@@ -185,9 +185,10 @@ void fire::gen(point const &p, float size, float intensity, int src, bool is_sta
 		cval   = rand_uniform(0.3, 0.7);
 		inten  = rand_uniform(0.3, 0.7);
 	}
-	is_static = is_static_;
-	velocity  = zero_vector;
-	source    = src;
+	is_static    = is_static_;
+	light_bwidth = light_bw;
+	velocity     = zero_vector;
+	source       = src;
 	float const zval(interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0));
 	if (fabs(pos.z - zval) > 2.0*radius) status = 2; // above the ground
 }
@@ -255,7 +256,7 @@ void gen_smoke(point const &pos) {
 }
 
 
-bool gen_fire(point const &pos, float size, int source, bool allow_close, bool is_static, float intensity) {
+bool gen_fire(point const &pos, float size, int source, bool allow_close, bool is_static, float light_bwidth, float intensity) {
 
 	assert(size > 0.0);
 	if (!is_over_mesh(pos) || is_underwater(pos)) return 0; // off the mesh or under water/ice
@@ -268,7 +269,7 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close, bool i
 			}
 		}
 	}
-	fires[fires.choose_element()].gen(pos, size, intensity, source, is_static);
+	fires[fires.choose_element()].gen(pos, size, intensity, source, is_static, light_bwidth);
 	return 1;
 }
 

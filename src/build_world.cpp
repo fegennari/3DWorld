@@ -870,7 +870,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	char letter, str[MAX_CHARS];
 	unsigned line_num(1), npoints;
 	int end(0), use_z(0), use_vel(0), ivals[3];
-	float fvals[2];
+	float fvals[3];
 	point pos(0.0, 0.0, 0.0);
 	vector3d tv0, vel;
 	vector<dwobject> starting_objs; // make this global?
@@ -1036,12 +1036,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'f': // place fire: size intensity xpos ypos zpos
-			if (fscanf(fp, "%f%f%f%f%f", &fvals[0], &fvals[1], &pos.x, &pos.y, &pos.z) != 5) {
+		case 'f': // place fire: size light_beamwidth intensity xpos ypos zpos
+			if (fscanf(fp, "%f%f%f%f%f%f", &fvals[0], &fvals[1], &fvals[2], &pos.x, &pos.y, &pos.z) != 6) {
 				return read_error(fp, "place fire", coll_obj_file);
 			}
 			xf.xform_pos(pos);
-			gen_fire(pos, fvals[0], -2, 1, 1, fvals[1]);
+			gen_fire(pos, fvals[0], -2, 1, 1, fvals[1], fvals[2]);
 			break;
 
 		case 'p': // smiley path waypoint: type xpos ypos [zpos]

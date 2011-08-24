@@ -97,14 +97,14 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 };
 
 
-struct fire : public basic_physics_obj { // size = 56
+struct fire : public basic_physics_obj { // size = 60
 
 	int source;
 	bool is_static;
-	float radius, heat, cval, inten;
+	float radius, heat, cval, inten, light_bwidth;
 	vector3d velocity;
 
-	void gen(point const &p, float size, float intensity, int src, bool is_static_);
+	void gen(point const &p, float size, float intensity, int src, bool is_static_, float light_bw);
 	void set_fire_color() const;
 	void draw() const;
 	void apply_physics(unsigned i);

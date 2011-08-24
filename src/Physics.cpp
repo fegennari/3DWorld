@@ -1367,7 +1367,7 @@ void fire::apply_physics(unsigned i) {
 	float const damage(0.5*heat*radius);
 	do_area_effect_damage(pos, 2.0*radius, BURN_DAMAGE*damage, i, source, FIRE);
 	colorRGBA const fcolor(gen_fire_color(cval, inten));
-	if (damage > 0.001) add_dynamic_light(64.0*inten*damage, pos, fcolor);
+	if (damage > 0.001) add_dynamic_light(64.0*inten*damage, pos, fcolor, plus_z, light_bwidth);
 
 	if (!is_static) {
 		int const rn(max(1, int(8.0 + 0.02/(0.1 + sqrt(radius*sqrt(heat))))));
