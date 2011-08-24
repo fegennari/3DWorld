@@ -251,7 +251,6 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		setup_texture(tid, GL_MODULATE, 0, 0, 0, 0, 0, nearest);
 		//set_shadow_tex_params();
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadow_map_sz, shadow_map_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
-		glDisable(GL_TEXTURE_2D);
 	}
 
 	// Render from the light POV to a FBO, store depth values only
@@ -275,7 +274,6 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	set_multitex(tu_id);
 	set_texture_matrix(camera_mv_matrix);
 	disable_multitex_a();
-	glDisable(GL_TEXTURE_2D);
 
 	// render shadow geometry
 	glDisable(GL_LIGHTING);
