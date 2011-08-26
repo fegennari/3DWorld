@@ -54,15 +54,6 @@ void draw_sides_and_bottom();
 
 
 
-inline int test_draw_vertex(int i, int j, unsigned c) {
-
-	if (c == 1) return 1;
-	if (mesh_draw != NULL && (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1))) return 0;
-	if (mesh_z_cutoff <= -FAR_CLIP) return 1;
-	return (mesh_z_cutoff < max(mesh_height[i][j], mesh_height[i+1][j]));
-}
-
-
 float camera_min_dist_to_surface() { // min dist of four corners and center
 
 	point pos;
@@ -241,8 +232,15 @@ public:
 		setup_arrays(&varr.front(), &narr.front(), &carr.front());
 	}
 
+	bool test_draw_vertex(int i, int j) const {
+		if (c == 1) return 1;
+		if (mesh_draw != NULL && (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1))) return 0;
+		if (mesh_z_cutoff <= -FAR_CLIP) return 1;
+		return (mesh_z_cutoff < max(mesh_height[i][j], mesh_height[i+1][j]));
+	}
+
 	bool draw_mesh_vertex_pair(int i, int j, float x, float y) {
-		if (!test_draw_vertex(i, j, c)) return 0;
+		if (!test_draw_vertex(i, j)) return 0;
 		
 		for (unsigned p = 0; p < 2; ++p, ++c) {
 			int const iinc(min((MESH_Y_SIZE-1), int(i+p)));

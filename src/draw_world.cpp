@@ -29,8 +29,9 @@ float const CLOUD_WIND_SPEED    = 0.00015;
 struct sky_pos_orient {
 
 	point center;
-	float radius, dx, dy;
-	sky_pos_orient(point const &c, float r, float dx_, float dy_) : center(c), radius(r), dx(dx_), dy(dy_) {}
+	float radius, radius_inv, dx, dy;
+	sky_pos_orient(point const &c, float r, float dx_, float dy_)
+		: center(c), radius(r), radius_inv(1.0/radius), dx(dx_), dy(dy_) {assert(radius > 0.0);}
 };
 
 
@@ -41,7 +42,7 @@ colorRGBA cur_ambient(0.0, 0.0, 0.0, 1.0), last_a(BLACK), last_d(BLACK);
 point sun_pos, moon_pos;
 point gl_light_positions[8] = {all_zeros};
 point const earth_pos(-15.0, -8.0, 21.0);
-sky_pos_orient cur_spo(point(0,0,0),0,0,0);
+sky_pos_orient cur_spo(point(0,0,0),1,0,0);
 vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 vector<light_source> enabled_lights;
@@ -2109,7 +2110,7 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 	point lsint;
 	if (!line_sphere_int(dir*-1.0, pt, cur_spo.center, cur_spo.radius, lsint, 0)) return 0.0; // shouldn't get here?
 	vector3d const vdir(lsint - cur_spo.center);
-	return atmosphere*get_texture_component(CLOUD_TEX, (vdir.x/cur_spo.radius + cur_spo.dx), (vdir.y/cur_spo.radius + cur_spo.dy), 3); // cloud alpha
+	return atmosphere*get_texture_component(CLOUD_TEX, (vdir.x*cur_spo.radius_inv + cur_spo.dx), (vdir.y*cur_spo.radius_inv + cur_spo.dy), 3); // cloud alpha
 }
 
 

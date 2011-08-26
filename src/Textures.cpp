@@ -1591,17 +1591,22 @@ void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, u
 }
 
 
+float texture_t::get_component(float xval, float yval, int comp) const {
+
+	assert(comp < ncolors);
+	int tx(int(width *xval) & (width -1)); // width and height are a power of 2
+	int ty(int(height*yval) & (height-1));
+	if (tx < 0) tx += width;
+	if (ty < 0) ty += height;
+	assert(tx >= 0 && ty >= 0 && tx < width && ty < height);
+	return data[ncolors*(width*ty + tx) + comp]/255.0;
+}
+
+
 float get_texture_component(unsigned tid, float xval, float yval, int comp) {
 
 	assert(tid < NUM_TEXTURES);
-	texture_t const &tex(textures[tid]);
-	assert(comp < tex.ncolors);
-	int tx(int(tex.width *xval) & (tex.width -1)); // width and height are a power of 2
-	int ty(int(tex.height*yval) & (tex.height-1));
-	if (tx < 0) tx += tex.width;
-	if (ty < 0) ty += tex.height;
-	assert(tx >= 0 && ty >= 0 && tx < tex.width && ty < tex.height);
-	return tex.data[tex.ncolors*(tex.width*ty + tx) + comp]/255.0;
+	return textures[tid].get_component(xval, yval, comp);
 }
 
 
