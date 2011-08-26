@@ -176,7 +176,7 @@ bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts);
 void free_model_context();
 void render_models(bool shadow_pass);
 
-bool read_object_file(char *filename, vector<polygon_t> &ppts, geom_xform_t const &xf,
+bool read_object_file(char *filename, vector<polygon_t> *ppts, geom_xform_t const &xf,
 	int def_tid, colorRGBA const &def_c, bool load_model_file, bool verbose);
 
 

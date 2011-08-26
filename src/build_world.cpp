@@ -918,21 +918,26 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping, 3=full 3d model
 				bool const group_cobjs(ivals[0] != 0);
 				bool const use_dlist  (ivals[0] == 2);
-				bool const use_model3d(ivals[0] == 3);
+				bool const use_model3d(ivals[0] >= 3);
+				bool const no_cobjs   (ivals[0] == 4);
 				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: one for each texture?)
 				ppts.resize(0);
-				if (!read_object_file(str, ppts, xf, cobj.cp.tid, cobj.cp.color, use_model3d, 1)) return read_error(fp, "object file data", coll_obj_file);
-
-				if (group_cobjs) {
-					for (unsigned i = 0; i < 3; ++i) {
-						group_ids[i] = obj_draw_groups.size();
-						obj_draw_groups.push_back(obj_draw_group(use_dlist));
-					}
+				
+				if (!read_object_file(str, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d, 1)) {
+					return read_error(fp, "object file data", coll_obj_file);
 				}
-				check_layer(has_layer);
-				cobj.thickness *= xf.scale;
-				add_polygons_to_cobj_vector(ppts, cobj, group_ids, use_model3d);
-				cobj.group_id   = -1; // reset
+				if (!no_cobjs) {
+					if (group_cobjs) {
+						for (unsigned i = 0; i < 3; ++i) {
+							group_ids[i] = obj_draw_groups.size();
+							obj_draw_groups.push_back(obj_draw_group(use_dlist));
+						}
+					}
+					check_layer(has_layer);
+					cobj.thickness *= xf.scale;
+					add_polygons_to_cobj_vector(ppts, cobj, group_ids, use_model3d);
+					cobj.group_id   = -1; // reset
+				}
 				PRINT_TIME("Obj File Load/Process");
 				break;
 			}

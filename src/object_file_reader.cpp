@@ -440,17 +440,17 @@ public:
 };
 
 
-bool read_object_file(char *filename, vector<polygon_t> &ppts, geom_xform_t const &xf,
+bool read_object_file(char *filename, vector<polygon_t> *ppts, geom_xform_t const &xf,
 	int def_tid, colorRGBA const &def_c, bool load_models, bool verbose)
 {
 	if (load_models) {
 		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c));
 		object_file_reader_model reader(filename, all_models.back());
-		return reader.read(&ppts, xf, verbose);
+		return reader.read(ppts, xf, verbose);
 	}
 	else {
 		object_file_reader reader(filename);
-		return reader.read(&ppts, xf, verbose);
+		return reader.read(ppts, xf, verbose);
 	}
 }
 
