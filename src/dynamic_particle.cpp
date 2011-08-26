@@ -250,18 +250,3 @@ void dynamic_particle_system::build_lookup_matrix() {
 	}
 }
 
-
-// unused
-// assumes particles are small, less than DX_VAL/DY_VAL
-bool dynamic_particle_system::ray_intersect(point const &p1, point const &p2, float &t, colorRGBA &color) {
-
-	if (valid_frame != frame_counter) { // lazy update
-		build_lookup_matrix();
-		valid_frame = frame_counter;
-	}
-	// *** WRITE - DDA algorithm again? ***
-	return 0;
-}
-
-
-

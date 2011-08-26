@@ -135,15 +135,6 @@ struct upring { // size = 24
 };
 
 
-struct trade_item { // unused
-
-	//string name;
-	unsigned type; // names are in a trade goods table
-	unsigned price; // changes over time?
-	unsigned amount;
-};
-
-
 class named_obj { // size = 16
 
 	string name;
@@ -287,8 +278,8 @@ public:
 	vector3d rscale;
 	vector<umoon> moons;
 	vector<upring> rings;
-	//vector<trade_item> trade_items;
 	ussystem *system;
+	// trade items?
 
 	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), system(NULL) {}
 	void create(bool phase);

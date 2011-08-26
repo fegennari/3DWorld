@@ -1319,30 +1319,6 @@ void add_hole_in_landscape_texture(int xpos, int ypos, float blend) { // for wat
 }
 
 
-void add_cutout_to_landscape_texture(int x1, int y1, int x2, int y2) { // unused
-
-	if (read_landscape) return;
-	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
-	unsigned char *tex_data(textures[LANDSCAPE_TEX].data);
-	x1 = (width*max(x1, 0))/MESH_X_SIZE;
-	x2 = (width*min(x2, MESH_X_SIZE))/MESH_X_SIZE;
-	y1 = (height*max(y1, 0))/MESH_Y_SIZE;
-	y2 = (height*min(y2, MESH_Y_SIZE))/MESH_Y_SIZE;
-
-	for (int i = y1; i < y2; ++i) {
-		int const offset(i*width), yv((i*MESH_Y_SIZE)/height);
-
-		for (int j = x1; j < x2; ++j) {
-			int const xv((j*MESH_X_SIZE)/width);
-			assert(xv < MESH_X_SIZE && yv < MESH_Y_SIZE);
-			texture_t const &t1(textures[get_bare_ls_tid(mesh_height[yv][xv])]);
-			int const o2(3*(offset + j)), tof(t1.ncolors*((i&(t1.height-1))*t1.width + (j&(t1.width-1))));
-			RGB_BLOCK_COPY((tex_data+o2), (t1.data+tof));
-		}
-	}
-}
-
-
 void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yval, float radius, int check_unique) {
 
 	int const xpos0(get_xpos(xval)), ypos0(get_ypos(yval));

@@ -313,7 +313,6 @@ template<typename T> struct plane_t : public pointT<T> { // unused
 	void print() const {cout << x << ", " << y << ", " << z << ", " << d;}
 	bool operator==(const plane_t &p) const {return (p.x == x && p.y == y && p.z == z && p.d == d);}
 	bool operator!=(const plane_t &p) const {return !operator==(p);}
-	void assign(T x_, T y_, T z_) {x = x_; y = y_; z = z_;}
 };
 
 
@@ -1388,7 +1387,6 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_n
 						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0, bool no_tree=0);
 bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj);
 bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs);
-bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic);
 bool is_occluded(vector<int> const &occluders, point const *const pts0, int npts, point const &camera);
 void add_camera_cobj(point const &pos);
 void force_onto_surface_mesh(point &pos);
@@ -1516,7 +1514,6 @@ void update_lttex_ix(int &ix);
 void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2, float &t);
 void create_landscape_texture();
 float add_crater_to_landscape_texture(float xval, float yval, float radius);
-void add_cutout_to_landscape_texture(int x1, int y1, int x2, int y2);
 void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yval, float radius, int check_unique);
 void add_snow_to_landscape_texture(point const &pos, float acc);
 void update_landscape_texture();

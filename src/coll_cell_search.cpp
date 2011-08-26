@@ -611,17 +611,6 @@ bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 	return (!cobjs.empty());
 }
 
-// unused
-bool coll_pt_vis_test_large(point pos1, point pos2, vector<int> &cobjs, int cobj, float radius, int skip_dynamic) {
-
-	assert(radius > 0.0);
-	cobjs.resize(0);
-	if (!do_line_clip_scene(pos1, pos2, max(zbottom, czmin), czmax)) return 0;
-	line_intersector_cylinder lint(pos1, pos2, cobjs, cobj, radius, skip_dynamic);
-	coll_cell_line_iterator<line_intersector_cylinder> ccli(lint, 1, (skip_dynamic != 0), cobj);
-	return ccli.do_iter(radius);
-}
-
 
 bool coll_obj::is_occluder() const {
 	
@@ -667,7 +656,7 @@ bool is_occluded(vector<int> const &occluders, point const *const pts, int npts,
 }
 
 
-void get_occluders() { // 18M total, 380K unique
+void get_occluders() {
 
 	RESET_TIME;
 	if (!(display_mode & 0x08) || !have_occluders()) return;

@@ -1,7 +1,6 @@
 uniform float x_scene_size, y_scene_size, czmin, czmax; // scene bounds (world space)
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
-//uniform sampler3D flow_tex; // unused
 
 const float LT_DIR_FALLOFF = 0.005;
 

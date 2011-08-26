@@ -83,7 +83,7 @@ void shader_t::add_uniform_color(char const *const name, colorRGBA const &val) c
 
 
 // unused, unfinished
-bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsigned size) const {
+bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsigned size, unsigned &buffer_id) const {
 
 	if (disable_shaders) return 0;
 	assert(program && name);
@@ -112,13 +112,12 @@ bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsi
 
 	// Use the index to query offset and size
 	glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_OFFSET, &offset);
-	glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_SIZE, &buf_size);
+	glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_SIZE,   &buf_size);
 	//cout << "index: " << index << ", offset: " << offset << ", size: " << buf_size << endl;
 	assert(size <= (unsigned)buf_size);
 	size = min(size, (unsigned)buf_size);
 
 	// Create UBO
-	static unsigned buffer_id(0); // FIXME: need to delete this later
 	if (buffer_id == 0 || !glIsBuffer(buffer_id)) glGenBuffers(1, &buffer_id);
 	assert(buffer_id > 0);
 	glBindBuffer(GL_UNIFORM_BUFFER, buffer_id);

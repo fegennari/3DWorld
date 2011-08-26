@@ -53,7 +53,7 @@ public:
 	void add_uniform_int         (char const *const name, int val) const;
 	void add_uniform_vector3d    (char const *const name, vector3d const &val) const;
 	void add_uniform_color       (char const *const name, colorRGBA const &val) const;
-	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size) const;
+	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
 	void register_attrib_name(char const *name, unsigned bind_ix);
 	void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const;

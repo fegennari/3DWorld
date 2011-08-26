@@ -49,7 +49,6 @@ public:
 	void add_mesh_shadows() const;
 	void add_stencil_shadows(point const &lpos, int &inverts) const;
 	void build_lookup_matrix();
-	bool ray_intersect(point const &p1, point const &p2, float &t, colorRGBA &color);
 };
 
 
