@@ -24,7 +24,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	}
 	unsigned const tid(textures.size());
 	tex_map[fn] = tid;
-	if (verbose) cout << "loading texture " << fn << endl;
+	if (verbose) cout << "creating texture " << fn << endl;
 	// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
 	textures.push_back(texture_t(0, 4, 0, 0, 1, (is_alpha_mask ? 1 : 3), !is_alpha_mask, fn)); // always RGB targa wrapped+mipmap
 	textures.back().do_compress = (!is_alpha_mask && enable_model3d_tex_comp);

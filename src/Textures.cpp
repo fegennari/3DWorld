@@ -669,6 +669,7 @@ void texture_t::load_targa() {
 			assert(ret2 == TGA_NOERR);
 		}
 	}
+	tga_free_buffers(&img);
 }
 
 
