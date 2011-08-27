@@ -26,6 +26,7 @@ mesh_scale 1.0
 camera_height 0.18
 tree_size 1.0
 sun_rot 0.4
+cobj_z_bias 0.001
 shadow_detail 7
 tree_coll_level 4
 default_ground_tex -1

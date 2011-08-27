@@ -57,7 +57,7 @@ extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, s
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
 extern unsigned smoke_tid, dl_tid, num_stars;
-extern float zmin, light_factor, water_plane_z, fticks, perspective_fovy, perspective_nclip;
+extern float zmin, light_factor, water_plane_z, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, TIMESTEP, base_gravity, tan_term, zbottom, sun_rot, leaf_size;
 extern point light_pos, ocean, mesh_origin, flow_source, surface_pos, litning_pos, leaf_points[], star_pts[];
 extern vector3d wind;
@@ -1776,7 +1776,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
 	s.add_uniform_float("half_dxy",   HALF_DXY);
-	if (use_shadow_map) set_smap_shader_for_all_lights(s);
+	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
 	//return change_fog_color(GRAY);
 
 	// setup fog
