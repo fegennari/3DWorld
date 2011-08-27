@@ -429,6 +429,7 @@ public:
 			}
 			model.add_polygon(poly, i->mat_id, ppts);
 		}
+		model.remove_excess_cap();
 		PRINT_TIME("Model3d Build");
 
 		if (verbose) {

@@ -61,6 +61,7 @@ public:
 	vector3d get_planar_normal() const;
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);
+	void remove_excess_cap() {if (size() < capacity()) vector<vert_norm_tc>(*this).swap(*this);}
 };
 
 
@@ -81,6 +82,7 @@ struct geometry_t {
 	void render(bool is_shadow_pass);
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly(vntc_vect_t const &poly);
+	void remove_excess_cap();
 	void free_vbos();
 	void clear();
 };
@@ -161,6 +163,7 @@ public:
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
+	void remove_excess_cap();
 	void clear();
 	void free_context();
 	void load_all_used_tids();

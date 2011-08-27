@@ -228,6 +228,13 @@ void geometry_t::add_poly(vntc_vect_t const &poly) {
 }
 
 
+void geometry_t::remove_excess_cap() {
+
+	triangles.remove_excess_cap();
+	quads.remove_excess_cap();
+}
+
+
 void geometry_t::free_vbos() {
 
 	triangles.free_vbo();
@@ -379,6 +386,15 @@ void model3d::mark_mat_as_used(int mat_id) {
 	if (mat_id < 0) return;
 	assert((unsigned)mat_id < materials.size());
 	materials[mat_id].mark_as_used();
+}
+
+
+void model3d::remove_excess_cap() {
+
+	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
+		m->geom.remove_excess_cap();
+	}
+	unbound_geom.remove_excess_cap();
 }
 
 
