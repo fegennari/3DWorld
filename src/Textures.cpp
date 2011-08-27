@@ -144,8 +144,8 @@ unsigned char *landscape0 = NULL;
 
 extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, flow_tid, reflection_tid;
 extern int world_mode, island, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
-extern int scrolling, dx_scroll, dy_scroll, display_mode;
-extern float zmax, zmin, zmax_est, glaciate_exp, relh_adj_tex, vegetation;
+extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks;
+extern float zmax, zmin, zmax_est, glaciate_exp, relh_adj_tex, vegetation, fticks;
 
 
 void gen_smoke_texture();
@@ -157,8 +157,7 @@ void gen_shingle_texture();
 void gen_plant_texture();
 void gen_fence_texture();
 void gen_blur_inv_texture();
-void gen_hstripe_texture();
-void gen_vstripe_texture();
+void gen_stripe_texture(int tid, bool horiz);
 void gen_tree_end_texture();
 void gen_blur_cent_texture();
 void gen_gradient_texture();
@@ -187,8 +186,8 @@ void load_textures() {
 		case SHINGLE_TEX:   gen_shingle_texture();      break;
 		case FENCE_TEX:     gen_fence_texture();        break;
 		case BLUR_TEX_INV:  gen_blur_inv_texture();     break; // must be after BLUR_TEX
-		case HSTRIPE_TEX:   gen_hstripe_texture();      break;
-		case VSTRIPE_TEX:   gen_vstripe_texture();      break;
+		case HSTRIPE_TEX:   gen_stripe_texture(i, 1);   break;
+		case VSTRIPE_TEX:   gen_stripe_texture(i, 0);   break;
 		case BLUR_CENT_TEX: gen_blur_cent_texture();    break;
 		case GRADIENT_TEX:  gen_gradient_texture();     break;
 		case WIND_TEX:      gen_wind_texture();         break;
@@ -898,23 +897,10 @@ void gen_stripe_texture(int tid, bool horiz) {
 
 	for (int i = 0; i < tex.height; ++i) {
 		for (int j = 0; j < tex.width; ++j) {
-			for (unsigned k = 0; k < 3; ++k) {
-				tex_data[3*(i*tex.width+j)+k] = 255*(((horiz ? i : j)&3) != 0);
-			}
+			unsigned char const val(255*(((horiz ? i : j)&3) != 0));
+			UNROLL_3X(tex_data[3*(i*tex.width+j)+i_] = val;)
 		}
 	}
-}
-
-
-void gen_hstripe_texture() {
-
-	gen_stripe_texture(HSTRIPE_TEX, 1);
-}
-
-
-void gen_vstripe_texture() {
-
-	gen_stripe_texture(VSTRIPE_TEX, 0);
 }
 
 
@@ -930,10 +916,7 @@ void gen_tree_end_texture() {
 			float const rsin(sin(sqrt(float((j - w2)*(j - w2) + (i - h2)*(i - h2)))));
 			float const darkness(0.9 + 0.1*rsin);
 			int const offset(3*(i*tex.width + j));
-
-			for (unsigned k = 0; k < 3; ++k) {
-				tex_data[offset+k] = (unsigned char)(scale_vals[k]*darkness + 20.0*signed_rand_float());
-			}
+			UNROLL_3X(tex_data[offset+i_] = (unsigned char)(scale_vals[i_]*darkness + 20.0*signed_rand_float());)
 		}
 	}
 }
@@ -952,7 +935,7 @@ void gen_blur_cent_texture() {
 		for (int j = 0; j < tex.width; ++j) {
 			float const radius(sqrt(float((j - w2)*(j - w2) + (i - h2)*(i - h2)))*scale);
 			int const offset(4*(i*tex.width + j));
-			for (unsigned k = 0; k < 3; ++k) tex_data[offset+k] = 255;
+			UNROLL_3X(tex_data[offset+i_] = 255;)
 			tex_data[offset+3] = (unsigned char)(255.0*(1.0 - CLIP_TO_01(radius))); // linear scaling for alpha
 		}
 	}
@@ -1245,11 +1228,11 @@ void regrow_landscape_texture_amt0() {
 
 	//RESET_TIME;
 	static int counter(0);
-	if (read_landscape) return;
+	if (read_landscape || iticks == 0) return; // is it too strong to use both iticks and fticks?
 	if (ls0_invalid) create_landscape_texture();
 	texture_t &tex(textures[LANDSCAPE_TEX]);
 	assert(tex.is_allocated() && landscape0 != NULL);
-	int const regen_bshift(max(1, min(7, int(log(1.0/max(0.0001f, LANDSCAPE_REGEN_AMT))/log(2.0)))));
+	int const regen_bshift(max(1, min(7, int(log(1.0/max(0.0001f, fticks*LANDSCAPE_REGEN_AMT))/log(2.0)))));
 	unsigned char *tex_data(tex.get_data());
 	int const y1((counter%LANDSCAPE_REGEN_MOD)*(tex.height/LANDSCAPE_REGEN_MOD));
 	int const y2(y1 + (tex.height/LANDSCAPE_REGEN_MOD));
