@@ -8,10 +8,8 @@
 #include "globals.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <GL/glut.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
 #include <math.h>
+#include "gl_includes.h"
 
  // STL include
 #include <vector>

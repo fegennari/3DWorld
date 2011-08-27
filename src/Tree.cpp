@@ -2,7 +2,6 @@
 // by Hiral Patel and Frank Gennari
 // 3/15/02
 
-#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
 #include "tree_3dw.h"

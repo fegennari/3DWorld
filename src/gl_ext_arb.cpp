@@ -1,7 +1,6 @@
 // 3D World - GL EXT/ARB extension interface code
 // by Frank Gennari
 // 4/25/02
-#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "gl_ext_arb.h"
 
@@ -9,7 +8,7 @@
 void init_glew() {
 
 // MacOSX check here, placeholder for eventual cross-platform porting
-#if ( (defined(__MACH__)) && (defined(__APPLE__)) )
+#if ((defined(__MACH__))&&(defined(__APPLE__)))
 	// nothing
 #else
 	GLenum const err(glewInit());

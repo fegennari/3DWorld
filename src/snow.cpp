@@ -1,7 +1,6 @@
 // 3D World - Snow Accumulation and Renderign code
 // by Frank Gennari
 // 5/5/10
-#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
 #include "gl_ext_arb.h"

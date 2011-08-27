@@ -6,10 +6,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <GL/glut.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
 #include <math.h>
+#include "gl_includes.h"
 
 
 extern int MESH_X_SIZE, MESH_Y_SIZE, world_mode, do_zoom, xoff2, yoff2;

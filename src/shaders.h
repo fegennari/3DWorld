@@ -1,6 +1,10 @@
 // 3D World - Shader Class Declaration
 // by Frank Gennari
 // 8/4/10
+
+#ifndef _SHADERS_H_
+#define _SHADERS_H_
+
 #include "3DWorld.h"
 
 using std::string;
@@ -67,4 +71,7 @@ public:
 	void set_bool_prefix(string const &name, bool val, unsigned shader_type);
 	void set_int_prefix(string const &name, int val, unsigned shader_type);
 };
+
+#endif // _SHADERS_H_
+
 

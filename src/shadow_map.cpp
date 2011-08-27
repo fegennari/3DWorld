@@ -1,7 +1,6 @@
 // 3D World - Shadow Mapping using Shaders
 // by Frank Gennari
 // 1/21/11
-#include "GL/glew.h"
 #include "3DWorld.h"
 #include "collision_detect.h"
 #include "gl_ext_arb.h"

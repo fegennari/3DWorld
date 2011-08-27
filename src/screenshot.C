@@ -2,15 +2,11 @@
 // Must be compiled as C, not C++, to enable JPEG support
 // by Frank Gennari 6/10/02
 
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <GL/glut.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
 #include <math.h>
 #include <string.h>
-
+#include "gl_includes.h"
 
 
 FILE *open_screenshot_file(char *file_path, char *basename) {

@@ -2,7 +2,6 @@
 // by Frank Gennari
 // 9/26/10
 
-#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
 #include "textures_3dw.h"

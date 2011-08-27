@@ -1,7 +1,6 @@
 // 3D World - Vertex and Fragment GLSL Shader Framework
 // by Frank Gennari
 // 11/1/10
-#include "GL/glew.h"
 #include "shaders.h"
 #include "mesh.h" // for scene bounds
 #include <fstream>

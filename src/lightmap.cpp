@@ -1,7 +1,6 @@
 // 3D World - lighting code, incuding static and dynamic lights, profile generation, and flow calculation
 // by Frank Gennari
 // 1/16/06
-#include "GL/glew.h" // must be included first
 #include "3DWorld.h"
 #include "mesh.h"
 #include "csg.h"
