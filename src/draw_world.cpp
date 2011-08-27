@@ -2218,7 +2218,7 @@ void compute_brightness() {
 		float const moon_bright(moon_pos.z/moon_pos.mag());
 		brightness *= 0.15 + 0.85*5.0*((light_factor - 0.4)*sun_bright + (0.6 - light_factor)*moon_bright);
 	}
-	brightness = CLIP_TO_01(brightness);
+	brightness = max(0.99f, min(0.0f, brightness));
 }
 
 
