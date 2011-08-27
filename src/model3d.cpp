@@ -114,6 +114,7 @@ void texture_manager::ensure_tid_bound(int tid) {
 
 void texture_manager::bind_texture(int tid) const {
 
+	//select_texture(WHITE_TEX, 0); return; // TESTING
 	assert((unsigned)tid < textures.size());
 	assert(textures[tid].tid > 0);
 	glBindTexture(GL_TEXTURE_2D, textures[tid].tid);
@@ -143,7 +144,7 @@ void vntc_vect_t::render(bool is_shadow_pass) const {
 }
 
 
-void vntc_vect_t::render_array(bool is_shadow_pass) {
+void vntc_vect_t::render_array(bool is_shadow_pass, int prim_type) {
 
 	if (empty()) return;
 	set_array_client_state(1, !is_shadow_pass, !is_shadow_pass, 0);
@@ -160,7 +161,7 @@ void vntc_vect_t::render_array(bool is_shadow_pass) {
 	glVertexPointer(  3, GL_FLOAT, sizeof(vert_norm_tc), 0);
 	glNormalPointer(     GL_FLOAT, sizeof(vert_norm_tc), (void *)sizeof(point));
 	glTexCoordPointer(2, GL_FLOAT, sizeof(vert_norm_tc), (void *)sizeof(vert_norm));
-	glDrawArrays(GL_TRIANGLES, 0, size());
+	glDrawArrays(prim_type, 0, size());
 	bind_vbo(0);
 }
 
@@ -204,18 +205,41 @@ void vntc_vect_t::from_points(vector<point> const &pts) {
 }
 
 
-void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
+// ************ geometry_t ************
+
+void geometry_t::render(bool is_shadow_pass) {
+
+	triangles.render_array(is_shadow_pass, GL_TRIANGLES);
+	quads.render_array    (is_shadow_pass, GL_QUADS);
+}
+
+
+void geometry_t::add_poly(vntc_vect_t const &poly) {
 	
 	if (poly.size() == 3) { // triangle
-		for (unsigned i = 0; i < 3; ++i) {push_back(poly[i]);}
+		for (unsigned i = 0; i < 3; ++i) {triangles.push_back(poly[i]);}
 		return;
 	}
 	if (poly.size() == 4) {
-		unsigned const ixs[6] = {0,1,2,0,2,3};
-		for (unsigned i = 0; i < 6; ++i) {push_back(poly[ixs[i]]);}
+		for (unsigned i = 0; i < 4; ++i) {quads.push_back(poly[i]);}
 		return;
 	}
 	assert(0); // shouldn't get here
+}
+
+
+void geometry_t::free_vbos() {
+
+	triangles.free_vbo();
+	quads.free_vbo();
+}
+
+
+void geometry_t::clear() {
+
+	free_vbos();
+	triangles.clear();
+	quads.clear();
 }
 
 
@@ -223,7 +247,7 @@ void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
 
 void material_t::render(texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
 
-	if (triangles.empty() || skip || alpha == 0.0)  return; // empty or transparent
+	if (geom.empty() || skip || alpha == 0.0)       return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
 
 	if (!is_shadow_pass) {
@@ -246,7 +270,7 @@ void material_t::render(texture_manager const &tmgr, int default_tid, bool is_sh
 		set_color_d(get_ad_color());
 		set_color_e(colorRGBA(ke, alpha));
 	}
-	triangles.render_array(is_shadow_pass);
+	geom.render(is_shadow_pass);
 
 	if (!is_shadow_pass) {
 		set_color_e(BLACK);
@@ -282,7 +306,7 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 bool material_t::add_poly(vntc_vect_t const &poly) {
 	
 	if (skip) return 0;
-	triangles.add_poly(poly);
+	geom.add_poly(poly);
 	mark_as_used();
 	return 1;
 }
@@ -298,7 +322,7 @@ void model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t>
 
 	for (vector<polygon_t>::const_iterator i = split_polygons_buffer.begin(); i != split_polygons_buffer.end(); ++i) {
 		if (mat_id < 0) {
-			unbound_triangles.add_poly(*i);
+			unbound_geom.add_poly(*i);
 			if (ppts) ppts->push_back(*i);
 		}
 		else {
@@ -361,7 +385,7 @@ void model3d::mark_mat_as_used(int mat_id) {
 void model3d::clear() {
 
 	free_context();
-	unbound_triangles.clear();
+	unbound_geom.clear();
 	materials.clear();
 	undef_materials.clear();
 	mat_map.clear();
@@ -371,9 +395,9 @@ void model3d::clear() {
 void model3d::free_context() {
 
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		m->triangles.free_vbo();
+		m->geom.free_vbos();
 	}
-	unbound_triangles.free_vbo();
+	unbound_geom.free_vbos();
 }
 
 
@@ -410,7 +434,7 @@ void model3d::render(bool is_shadow_pass) { // const?
 		assert(unbound_tid >= 0);
 		select_texture(unbound_tid, 0);
 		set_color_d(unbound_color);
-		unbound_triangles.render_array(is_shadow_pass);
+		unbound_geom.render(is_shadow_pass);
 	}
 	
 	// render all materials (opaque then transparen)

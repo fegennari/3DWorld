@@ -55,13 +55,12 @@ class vntc_vect_t : public vector<vert_norm_tc> {
 public:
 	vntc_vect_t() : vbo(0) {}
 	void render(bool is_shadow_pass) const;
-	void render_array(bool is_shadow_pass);
+	void render_array(bool is_shadow_pass, int prim_type);
 	void free_vbo();
 	bool is_convex() const;
 	vector3d get_planar_normal() const;
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);
-	void add_poly(vntc_vect_t const &poly);
 };
 
 
@@ -72,6 +71,18 @@ public:
 
 	polygon_t(colorRGBA const &c=ALPHA0) : color(c) {}
 	polygon_t(vntc_vect_t const &vv, colorRGBA const &c=ALPHA0) : vntc_vect_t(vv), color(c) {}
+};
+
+
+struct geometry_t {
+
+	vntc_vect_t triangles, quads;
+
+	void render(bool is_shadow_pass);
+	bool empty() const {return (triangles.empty() && quads.empty());}
+	void add_poly(vntc_vect_t const &poly);
+	void free_vbos();
+	void clear();
 };
 
 
@@ -104,7 +115,7 @@ struct material_t {
 	bool skip, is_used;
 
 	// geometry - does this go here or somewhere else?
-	vntc_vect_t triangles;
+	geometry_t geom;
 
 	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
 		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), skip(0), is_used(0) {}
@@ -122,7 +133,7 @@ struct material_t {
 class model3d {
 
 	// geometry
-	vntc_vect_t unbound_triangles;
+	geometry_t unbound_geom;
 	int unbound_tid;
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
