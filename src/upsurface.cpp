@@ -234,7 +234,7 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 	float const delta(TWO_PI/size), sin_ds(sin(delta)), cos_ds(cos(delta));
 	bool const blend_atm(atmos > 0.0 && size <= PLANET_ATM_TEX_SZ);
 	unsigned const sx(textures[CLOUD_TEX].width), sy(textures[CLOUD_TEX].height), pole_thresh(size>>5);
-	unsigned char const *const sky(textures[CLOUD_TEX].data);
+	unsigned char const *const sky(textures[CLOUD_TEX].get_data());
 	assert(sky && textures[CLOUD_TEX].ncolors == 4); // RGBA
 	wr_scale = 1.0/(1.0 - water);
 

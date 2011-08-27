@@ -48,7 +48,7 @@ texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a ba
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga)
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
-// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
+// type format width height wrap ncolors use_mipmaps name [do_compress]
 //texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
 texture_t(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
@@ -127,7 +127,7 @@ texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
 texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw")  // not real file
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
-// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
+// type format width height wrap ncolors use_mipmaps name [do_compress]
 };
 
 
@@ -246,7 +246,7 @@ bool select_texture(int id, bool enable) {
 	assert(id < NUM_TEXTURES);
 	check_init_texture(id);
 	if (enable) glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, textures[id].tid);
+	textures[id].bind_gl();
 	return 1;
 }
 
@@ -302,8 +302,16 @@ void free_texture(unsigned &tid) {
 void texture_t::alloc() {
 
 	free();
-	data = new unsigned char[width*height*ncolors];
+	data = new unsigned char[num_bytes()];
 }
+
+
+void texture_t::bind_gl() const {
+	
+	assert(tid > 0);
+	glBindTexture(GL_TEXTURE_2D, tid);
+}
+
 
 void texture_t::free_mm_data() {
 
@@ -368,13 +376,13 @@ void texture_t::do_gl_init() {
 
 	if (SHOW_TEXTURE_MEMORY) {
 		static unsigned tmem(0);
-		unsigned tsize(width*height*ncolors);
+		unsigned tsize(num_bytes());
 		if (use_mipmaps) tsize = 4*tsize/3;
 		tmem += tsize;
 		cout << "tmem = " << tmem << endl;
 	}
 	//cout << "bind texture" << name << endl;
-	assert(width > 0 && height > 0 && data != NULL);
+	assert(is_allocated() && width > 0 && height > 0);
 	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap);
 	//if (use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
 	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), GL_UNSIGNED_BYTE, data);
@@ -386,14 +394,14 @@ void texture_t::do_gl_init() {
 
 void texture_t::calc_color() {
 
+	assert(is_allocated());
 	float colors[4] = {0.0,0.0,0.0,0.0}, weight(0.0);
-	int const size(width*height);
-	if (data == NULL) {cout << "NULL texture: " << name << endl; assert(0);}
-	bool const has_alpha(ncolors == 4);
+	unsigned const size(num_pixels());
+	bool const has_alpha_comp(has_alpha());
 
-	for(int i = 0; i < size; ++i) {
+	for(unsigned i = 0; i < size; ++i) {
 		int const offset(i*ncolors);
-		float const cscale(has_alpha ? data[offset+3]/255.0 : 1.0); // alpha scale
+		float const cscale(has_alpha_comp ? data[offset+3]/255.0 : 1.0); // alpha scale
 		weight += cscale;
 
 		for (int j = 0; j < ncolors; ++j) {
@@ -403,7 +411,22 @@ void texture_t::calc_color() {
 	for (int j = 0; j < ncolors; ++j) {
 		color[j] = colors[j]/(255.0*weight);
 	}
-	if (!has_alpha) color.alpha = 1.0;
+	if (!has_alpha_comp) color.alpha = 1.0;
+}
+
+
+void texture_t::copy_alpha_from_texture(texture_t const &at) {
+
+	assert(at.is_allocated() && is_allocated()); // check that data is allocated in both textures
+	assert(at.width == width && at.height == height); // check for matching sizes
+	assert(ncolors == 4); // check for alpha channel
+	assert(!is_bound()); // check that texture isn't already bound
+	assert(at.ncolors == 1);
+	unsigned const npixels(num_pixels());
+
+	for (unsigned i = 0; i < npixels; ++i) {
+		data[4*i+3] = at.data[i]; // copy alpha values
+	}
 }
 
 
@@ -433,10 +456,7 @@ void texture_t::build_mipmaps() {
 
 unsigned char const *texture_t::get_mipmap_data(unsigned level) const {
 
-	if (level == 0) { // base texture
-		assert(data != NULL);
-		return data;
-	}
+	if (level == 0) return get_data(); // base texture
 	assert(level-1 < mm_offsets.size());
 	assert(mm_data != NULL);
 	return (mm_data + mm_offsets[level-1]);
@@ -445,7 +465,7 @@ unsigned char const *texture_t::get_mipmap_data(unsigned level) const {
 
 void texture_t::set_to_color(colorRGBA const &c) {
 
-	assert(data != NULL);
+	assert(is_allocated());
 	if (c == color) return; // already set
 	if (c == ALPHA0 && (orig_data == NULL || data == orig_data)) return; // color disabled (but never enabled)
 	color = c;
@@ -459,14 +479,14 @@ void texture_t::set_to_color(colorRGBA const &c) {
 	}
 	color_wrapper c4;
 	c4.set_c4(c);
-	unsigned const sz(unsigned(width*height));
+	unsigned const size(num_pixels());
 	float const cw_scale(1.0/(float(c4.c[0]) + float(c4.c[1]) + float(c4.c[2])));
-	if (colored_data == NULL) colored_data = new unsigned char[sz*ncolors];
-	if (orig_data == NULL) orig_data = data; // make a copy
+	if (colored_data == NULL) colored_data = new unsigned char[num_bytes()];
+	if (orig_data    == NULL) orig_data    = data; // make a copy
 	data = colored_data;
 	assert(data != NULL);
 
-	for (unsigned i = 0; i < sz; ++i) {
+	for (unsigned i = 0; i < size; ++i) {
 		unsigned const pos(i*ncolors);
 		unsigned char *d(data + pos);
 		float const cscale(min(1.0f, (unsigned(d[0]) + unsigned(d[1]) + unsigned(d[2]))*cw_scale));
@@ -483,7 +503,7 @@ void texture_t::set_to_color(colorRGBA const &c) {
 colorRGBA texture_color(int tid) {
 
 	assert(tid >= 0 && tid < NUM_TEXTURES);
-	return textures[tid].color;
+	return textures[tid].get_avg_color();
 }
 
 
@@ -549,9 +569,9 @@ void texture_t::load_raw_bmp(int index) {
 	if (format == 1 && !verify_bmp_header(file, 0)) exit(1);
 
 	// allocate buffer
-	unsigned const size(width*height);
-	assert(data == NULL);
-	data = new unsigned char[size*ncolors];
+	unsigned const size(num_pixels());
+	assert(!is_allocated());
+	alloc();
 	float const ssp_inv_sq((SMOOTH_SKY_POLES > 0.0) ? 1.0/(SMOOTH_SKY_POLES*SMOOTH_SKY_POLES) : 0.0);
 	int alpha_white(0);
 	unsigned char buf[4], alpha;
@@ -640,7 +660,7 @@ void texture_t::load_raw_bmp(int index) {
 void texture_t::load_targa() {
 
 	assert(format == 4);
-	assert(data == NULL);
+	assert(!is_allocated());
 	tga_image img;
 	tga_result const ret(tga_read(&img, name.c_str()));
 	//cout << "load texture" << name << endl;
@@ -655,7 +675,7 @@ void texture_t::load_targa() {
 		assert(width > 0 && height > 0);
 	}
 	assert(img.width == width && img.height == height);
-	data = new unsigned char[width*height*ncolors];
+	alloc();
 	//if (!tga_is_top_to_bottom(&img)) tga_flip_vert(&img);
 	//if (tga_is_right_to_left(&img)) tga_flip_horiz(&img);
 
@@ -675,7 +695,7 @@ void texture_t::load_targa() {
 void texture_t::create_custom_mipmaps() {
 
 	GLenum const format(calc_format());
-	unsigned const tsize(ncolors*width*height);
+	unsigned const tsize(num_bytes());
 	vector<unsigned char> idata, odata;
 	idata.resize(tsize);
 	memcpy(&idata.front(), data, tsize);
@@ -762,14 +782,11 @@ void init_texture(int id) {
 void texture_t::gen_rand_texture(unsigned char val, unsigned char a_add, unsigned a_rand) {
 
 	assert(ncolors == 4);
-	data = new unsigned char[width*height*4];
+	alloc();
+	unsigned const size(num_pixels());
 
-	for (int i = 0; i < height; ++i) {
-		int const iw(i*width);
-		for (int j = 0; j < width; ++j) {
-			int const offset((iw + j) << 2);
-			RGBA_BLOCK_ASSIGN((data+offset), val, val, val, (a_add + (unsigned char)(rand() % a_rand)));
-		}
+	for (unsigned i = 0; i < size; ++i) {
+		RGBA_BLOCK_ASSIGN((data+(i<<2)), val, val, val, (a_add + (unsigned char)(rand() % a_rand)));
 	}
 }
 
@@ -795,99 +812,97 @@ void gen_disintegrate_texture() {
 
 void gen_tree_hemi_texture() {
 
-	unsigned char *grass_tex_data(textures[GRASS_TEX].data);
 	assert(SPHERE_SECTION >= 0.0 && SPHERE_SECTION <= 1.0);
-	assert(grass_tex_data != NULL);
-	int const width(textures[TREE_HEMI_TEX].width), height(textures[TREE_HEMI_TEX].height);
-	int const sphere_h(int((1.0 - SPHERE_SECTION)*height));
-	unsigned char *tex_data(new unsigned char[width*height*4]);
+	unsigned char const *grass_tex_data(textures[GRASS_TEX].get_data());
+	texture_t &tex(textures[TREE_HEMI_TEX]);
+	tex.alloc();
+	unsigned char *tex_data(tex.get_data());
+	int const sphere_h(int((1.0 - SPHERE_SECTION)*tex.height));
 
 	for (int i = 0; i < sphere_h; ++i) { // green
-		int const iw(i*width);
-		for (int j = 0; j < width; ++j) {
+		int const iw(i*tex.width);
+		for (int j = 0; j < tex.width; ++j) {
 			int const offset((iw + j) << 2);
 			RGBA_BLOCK_ASSIGN((tex_data+offset), 0, 0, 0, 0);
 		}
 	}
-	for (int i = sphere_h; i < height; ++i) { // alpha = 0.0 - transparent
-		int const iw(i*width);
-		for (int j = 0; j < width; ++j) {
+	for (int i = sphere_h; i < tex.height; ++i) { // alpha = 0.0 - transparent
+		int const iw(i*tex.width);
+		for (int j = 0; j < tex.width; ++j) {
 			int const offset((iw + j) << 2), offset2(3*(iw + j));
 			RGB_BLOCK_COPY((tex_data+offset), (grass_tex_data+offset2));
 			tex_data[offset+3] = 255; // A
 		}
 	}
-	textures[TREE_HEMI_TEX].data = tex_data;
 }
 
 
 void gen_shingle_texture() {
 
-	int const width(textures[SHINGLE_TEX].width), height(textures[SHINGLE_TEX].height);
-	unsigned char *tex_data2(textures[BRICK_TEX].data);
-	assert(tex_data2 != NULL && width == textures[BRICK_TEX].width && height == textures[BRICK_TEX].height);
-	assert(textures[SHINGLE_TEX].ncolors == 3 && textures[BRICK_TEX].ncolors == 3);
-	unsigned char *tex_data(new unsigned char[3*width*height]);
+	texture_t &tex(textures[SHINGLE_TEX]);
+	unsigned char const *tex_data2(textures[BRICK_TEX].get_data());
+	assert(tex_data2 != NULL && tex.width == textures[BRICK_TEX].width && tex.height == textures[BRICK_TEX].height);
+	assert(tex.ncolors == 3 && textures[BRICK_TEX].ncolors == 3);
+	tex.alloc();
+	unsigned char *tex_data(tex.get_data());
+	unsigned const size(tex.num_pixels());
 
-	for (int i = 0; i < height; ++i) { // convert brick texture to grayscale
-		int const iw(i*width);
-		for (int j = 0; j < width; ++j) {
-			int const offset(3*(iw + j));
-			unsigned char const val((unsigned char)(((unsigned)tex_data2[offset+0] + (unsigned)tex_data2[offset+1] + (unsigned)tex_data2[offset+2])/3));
-			RGB_BLOCK_ASSIGN((tex_data+offset), val, val, val);
-		}
+	for (unsigned i = 0; i < size; ++i) { // convert brick texture to grayscale
+		unsigned const offset(3*i);
+		unsigned char const val((unsigned char)(((unsigned)tex_data2[offset+0] + (unsigned)tex_data2[offset+1] + (unsigned)tex_data2[offset+2])/3));
+		RGB_BLOCK_ASSIGN((tex_data+offset), val, val, val);
 	}
-	textures[SHINGLE_TEX].data = tex_data;
 }
 
 
 void gen_fence_texture() {
 
-	int const width(textures[FENCE_TEX].width), height(textures[FENCE_TEX].height), size(3*width*height);
-	unsigned char *tex_data2(textures[PANELING_TEX].data);
-	assert(tex_data2 != NULL && width == textures[PANELING_TEX].width && height == textures[PANELING_TEX].height);
-	assert(textures[FENCE_TEX].ncolors == 3 && textures[PANELING_TEX].ncolors == 3);
-	unsigned char *tex_data(new unsigned char[size]);
+	texture_t &tex(textures[FENCE_TEX]);
+	unsigned char const *tex_data2(textures[PANELING_TEX].get_data());
+	assert(tex_data2 != NULL && tex.width == textures[PANELING_TEX].width && tex.height == textures[PANELING_TEX].height);
+	assert(tex.ncolors == 3 && textures[PANELING_TEX].ncolors == 3);
+	tex.alloc();
+	unsigned char *tex_data(tex.get_data());
+	unsigned const size(tex.num_bytes());
 
-	for (int i = 0; i < size; ++i) { // convert to lighter color
+	for (unsigned i = 0; i < size; ++i) { // convert to lighter color
 		tex_data[i] = (unsigned char)min((unsigned)255, ((unsigned)tex_data2[i]) << 2);
 	}
-	textures[FENCE_TEX].data = tex_data;
 }
 
 
 void gen_blur_inv_texture() {
 
-	int const width(textures[BLUR_TEX_INV].width), height(textures[BLUR_TEX_INV].height), size(4*width*height);
-	assert(textures[BLUR_TEX_INV].ncolors == 4);
-	unsigned char *tex_data(new unsigned char[size]);
-	memset(tex_data, 255, size*sizeof(char));
+	texture_t &tex(textures[BLUR_TEX_INV]);
+	assert(tex.ncolors == 4);
+	tex.alloc();
+	unsigned char *tex_data(tex.get_data());
+	memset(tex_data, 255, 4*tex.num_pixels()*sizeof(char));
 
-	for (int i = 0; i < height; ++i) {
-		unsigned char val(max(64, min(255, (2*255*(height-i-1))/height)));
+	for (int i = 0; i < tex.height; ++i) {
+		unsigned char val(max(64, min(255, (2*255*(tex.height-i-1))/tex.height)));
 		
-		for (int j = 0; j < width; ++j) {
-			tex_data[((i*width+j)<<2)+3] = val;
+		for (int j = 0; j < tex.width; ++j) {
+			tex_data[((i*tex.width+j)<<2)+3] = val;
 		}
 	}
-	textures[BLUR_TEX_INV].data = tex_data;
 }
 
 
 void gen_stripe_texture(int tid, bool horiz) {
 
-	int const width(textures[tid].width), height(textures[tid].height), size(3*width*height);
-	assert(textures[tid].ncolors == 3);
-	unsigned char *tex_data(new unsigned char[size]);
+	texture_t &tex(textures[tid]);
+	assert(tex.ncolors == 3);
+	tex.alloc();
+	unsigned char *tex_data(tex.get_data());
 
-	for (int i = 0; i < height; ++i) {
-		for (int j = 0; j < width; ++j) {
+	for (int i = 0; i < tex.height; ++i) {
+		for (int j = 0; j < tex.width; ++j) {
 			for (unsigned k = 0; k < 3; ++k) {
-				tex_data[3*(i*width+j)+k] = 255*(((horiz ? i : j)&3) != 0);
+				tex_data[3*(i*tex.width+j)+k] = 255*(((horiz ? i : j)&3) != 0);
 			}
 		}
 	}
-	textures[tid].data = tex_data;
 }
 
 
@@ -905,16 +920,16 @@ void gen_vstripe_texture() {
 
 void gen_tree_end_texture() {
 
-	int const width(textures[TREE_END_TEX].width), height(textures[TREE_END_TEX].height);
-	unsigned char *tex_data(textures[TREE_END_TEX].data);
-	int const w2(width >> 1), h2(height >> 1);
+	texture_t &tex(textures[TREE_END_TEX]);
+	unsigned char *tex_data(tex.get_data());
+	int const w2(tex.width >> 1), h2(tex.height >> 1);
 	float const scale_vals[3] = {160.0, 130.0, 80.0};
 
-	for (int i = 0; i < height; ++i) {
-		for (int j = 0; j < width; ++j) {
+	for (int i = 0; i < tex.height; ++i) {
+		for (int j = 0; j < tex.width; ++j) {
 			float const rsin(sin(sqrt(float((j - w2)*(j - w2) + (i - h2)*(i - h2)))));
 			float const darkness(0.9 + 0.1*rsin);
-			int const offset(3*(i*width + j));
+			int const offset(3*(i*tex.width + j));
 
 			for (unsigned k = 0; k < 3; ++k) {
 				tex_data[offset+k] = (unsigned char)(scale_vals[k]*darkness + 20.0*signed_rand_float());
@@ -926,51 +941,52 @@ void gen_tree_end_texture() {
 
 void gen_blur_cent_texture() {
 
-	int const width(textures[BLUR_CENT_TEX].width), height(textures[BLUR_CENT_TEX].height);
+	texture_t &tex(textures[BLUR_CENT_TEX]);
 	assert(textures[BLUR_CENT_TEX].ncolors == 4);
-	unsigned char *tex_data(new unsigned char[4*width*height]);
-	int const w2(width >> 1), h2(height >> 1);
-	float const scale(2.0/min(width, height));
+	tex.alloc();
+	unsigned char *tex_data(tex.get_data());
+	int const w2(tex.width >> 1), h2(tex.height >> 1);
+	float const scale(2.0/min(tex.width, tex.height));
 
-	for (int i = 0; i < height; ++i) {
-		for (int j = 0; j < width; ++j) {
+	for (int i = 0; i < tex.height; ++i) {
+		for (int j = 0; j < tex.width; ++j) {
 			float const radius(sqrt(float((j - w2)*(j - w2) + (i - h2)*(i - h2)))*scale);
-			int const offset(4*(i*width + j));
+			int const offset(4*(i*tex.width + j));
 			for (unsigned k = 0; k < 3; ++k) tex_data[offset+k] = 255;
 			tex_data[offset+3] = (unsigned char)(255.0*(1.0 - CLIP_TO_01(radius))); // linear scaling for alpha
 		}
 	}
-	textures[BLUR_CENT_TEX].data = tex_data;
 }
 
 
 void gen_gradient_texture() { // for horizon
 
-	assert(textures[GRADIENT_TEX].width == 1); // 1D
-	int const size(textures[GRADIENT_TEX].height);
-	assert(textures[GRADIENT_TEX].ncolors == 4);
-	unsigned char *tex_data(new unsigned char[4*size]);
+	texture_t &tex(textures[GRADIENT_TEX]); // 1D
+	assert(tex.width == 1 && tex.ncolors == 4);
+	tex.alloc();
+	unsigned char *tex_data(tex.get_data());
+	int const size(tex.num_pixels()); // Note: int, not unsigned
 
 	for (int i = 0; i < size; ++i) {
-		for (unsigned k = 0; k < 3; ++k) tex_data[4*i+k] = 255;
+		UNROLL_3X(tex_data[4*i+i_] = 255;)
 		tex_data[4*i+3] = (unsigned char)max(0, (255 * 2 * (size/2 - abs(i - (int)size/2)) / size)); // linear gradient
 	}
-	textures[GRADIENT_TEX].data = tex_data;
 }
 
 
 void gen_wind_texture() {
 
-	int const width(textures[WIND_TEX].width), height(textures[WIND_TEX].height), size(width*height);
-	unsigned char *tex_data2(textures[CLOUD_RAW_TEX].data);
-	assert(textures[WIND_TEX].ncolors == 1 && textures[CLOUD_RAW_TEX].ncolors == 4); // RGBA => grayscale luminance
-	assert(tex_data2 != NULL && width == textures[CLOUD_RAW_TEX].width && height == textures[CLOUD_RAW_TEX].height);
-	unsigned char *tex_data(new unsigned char[size]);
+	texture_t &tex(textures[WIND_TEX]);
+	unsigned char const *tex_data2(textures[CLOUD_RAW_TEX].get_data());
+	assert(tex.ncolors == 1 && textures[CLOUD_RAW_TEX].ncolors == 4); // RGBA => grayscale luminance
+	assert(tex_data2 != NULL && tex.width == textures[CLOUD_RAW_TEX].width && tex.height == textures[CLOUD_RAW_TEX].height);
+	tex.alloc();
+	unsigned char *tex_data(tex.get_data());
+	unsigned const size(tex.num_pixels());
 
-	for (int i = 0; i < size; ++i) {
+	for (unsigned i = 0; i < size; ++i) {
 		tex_data[i] = tex_data2[(i<<2)+3]; // put alpha in luminance
 	}
-	textures[WIND_TEX].data = tex_data;
 }
 
 
@@ -981,16 +997,16 @@ colorRGBA get_landscape_texture_color(int xpos, int ypos) {
 	assert(ix < cached_ls_colors.size());
 	if (cached_ls_colors[ix].alpha != 0.0) return cached_ls_colors[ix];
 	assert(!point_outside_mesh(xpos, ypos));
-	assert(textures[LANDSCAPE_TEX].ncolors == 3);
-	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
-	unsigned char *tex_data(textures[LANDSCAPE_TEX].data);
-	unsigned const xstep(width/MESH_X_SIZE), ystep(height/MESH_Y_SIZE);
+	texture_t &tex(textures[LANDSCAPE_TEX]);
+	assert(tex.ncolors == 3);
+	unsigned char const *tex_data(tex.get_data());
+	unsigned const xstep(tex.width/MESH_X_SIZE), ystep(tex.height/MESH_Y_SIZE);
 	unsigned const x0(xpos*xstep), y0(ypos*ystep), x1(x0 + xstep), y1(y0 + ystep);
 	colorRGBA color(BLACK);
 
 	for (unsigned y = y0; y < y1; ++y) { // like creating a mipmap
 		for (unsigned x = x0; x < x1; ++x) {
-			UNROLL_3X(color[i_] += tex_data[3*(width*y + x) + i_];)
+			UNROLL_3X(color[i_] += tex_data[3*(tex.width*y + x) + i_];)
 		}
 	}
 	color *= 1.0/(255.0*xstep*ystep);
@@ -1050,9 +1066,10 @@ void create_landscape_texture() {
 	if (read_landscape || world_mode == WMODE_INF_TERRAIN) return;
 	cached_ls_colors.clear();
 	int tox0(0), toy0(0), scroll(0);
-	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
-	unsigned char *tex_data(textures[LANDSCAPE_TEX].data);
-	assert(textures[LANDSCAPE_TEX].ncolors == 3);
+	texture_t &tex(textures[LANDSCAPE_TEX]);
+	int const width(tex.width), height(tex.height);
+	unsigned char *tex_data(tex.get_data());
+	assert(tex.ncolors == 3);
 	int x1(0), y1(0), x2(width), y2(height);
 	static int tox(0), toy(0);
 	if (!scrolling) cout << "Generating landscape terrain texture." << endl;
@@ -1074,7 +1091,7 @@ void create_landscape_texture() {
 	int   const   NTEX(island ? NTEX_SAND  : NTEX_DIRT);
 	int const mxszm1(MESH_X_SIZE-1), myszm1(MESH_Y_SIZE-1), dxv(width/MESH_X_SIZE), dyv(height/MESH_Y_SIZE);
 	int const NTEXm1(NTEX-1), def_id((default_ground_tex >= 0) ? default_ground_tex : GROUND_TEX);
-	int const suc3(3*sizeof(unsigned char)), id0(lttex[NTEXm1].id);
+	int const id0(lttex[NTEXm1].id);
 	float const xscale(((float)MESH_X_SIZE)/((float)width)), yscale(((float)MESH_Y_SIZE)/((float)height));
 	static char **tids = NULL;
 	if (tids == NULL) matrix_gen_2d(tids);
@@ -1109,7 +1126,7 @@ void create_landscape_texture() {
 		float const ypi(yp - (float)ypos);
 
 		if (scroll && lly >= 0 && lly < hy) {
-			memmove((tex_data+offset+3*j00), (tex_data+3*((j00+tox0)+lly*width)), (j01-j00)*suc3); // range could be overlapping
+			memmove((tex_data+offset+3*j00), (tex_data+3*((j00+tox0)+lly*width)), 3*(j01-j00)); // range could be overlapping
 			j10 = ((tox0 < 0) ? min(j0, -tox0-1) : max(j0, wx-tox0));
 		}
 		for (int j = j10; j != j1; j += dj) {
@@ -1138,15 +1155,17 @@ void create_landscape_texture() {
 				id2 = lttex[k2].id;
 			}
 			texture_t const &t1(textures[id]);
+			unsigned char const *t1_data(t1.get_data());
 			int const tof(t1.ncolors*(((i+toy)&(t1.height-1))*t1.width + ((j+tox)&(t1.width-1))));
 
 			if (k1 == k2) { // single texture
-				RGB_BLOCK_COPY((tex_data + o2), (t1.data + tof));
+				RGB_BLOCK_COPY((tex_data + o2), (t1_data + tof));
 			}
 			else { // blend two textures - performance critical
 				texture_t const &t2(textures[id2]);
+				unsigned char const *t2_data(t2.get_data());
 				int const tof2(t2.ncolors*(((i+toy)&(t2.height-1))*t2.width + ((j+tox)&(t2.width-1))));
-				BLEND_COLOR((tex_data + o2), (t2.data + tof2), (t1.data + tof), t);
+				BLEND_COLOR((tex_data + o2), (t2_data + tof2), (t1_data + tof), t);
 			}
 
 			// handle steep slopes (dirt/rock texture replaces grass texture)
@@ -1160,25 +1179,28 @@ void create_landscape_texture() {
 
 				if ((id == GROUND_TEX || id2 == GROUND_TEX) && vnz < sti[1]) { // ground/grass
 					texture_t const &ta(textures[DIRT_TEX]);
+					unsigned char const *ta_data(ta.get_data());
 					int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
 					unsigned char temp[3];
 
 					if (id == GROUND_TEX || id2 == ROCK_TEX) {
 						texture_t const &tb(textures[ROCK_TEX]);
+						unsigned char const *tb_data(tb.get_data());
 						int const tofb(tb.ncolors*(((i+toy)&(tb.height-1))*tb.width + ((j+tox)&(tb.width-1))));
-						BLEND_COLOR(temp, (tb.data+tofb), (ta.data+tofa), t);
+						BLEND_COLOR(temp, (tb_data+tofb), (ta_data+tofa), t);
 					}
 					else {
-						RGB_BLOCK_COPY(temp, (ta.data+tofa));
+						RGB_BLOCK_COPY(temp, (ta_data+tofa));
 					}
 					float const val(CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0])));
 					BLEND_COLOR((tex_data+o2), (tex_data+o2), temp, val);
 				}
 				else if (id2 == SNOW_TEX && vnz < sti[1]) { // snow
 					texture_t const &ta(textures[ROCK_TEX]);
+					unsigned char const *ta_data(ta.get_data());
 					int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
 					float const val(CLIP_TO_01(2.0f*(vnz - sti[0])/(sti[1] - sti[0])));
-					BLEND_COLOR((tex_data+o2), (tex_data+o2), (ta.data+tofa), val);
+					BLEND_COLOR((tex_data+o2), (tex_data+o2), (ta_data+tofa), val);
 				}
 			}
 		} // for j
@@ -1187,7 +1209,7 @@ void create_landscape_texture() {
 
 	if (!read_landscape) {
 		if (landscape0 == NULL || !scroll) { // initialize/copy entire texture
-			int const totsize(3*width*height);
+			int const totsize(tex.num_bytes());
 			if (landscape0 == NULL) landscape0 = new unsigned char[totsize];
 			memcpy(landscape0, tex_data, totsize*sizeof(unsigned char));
 			ls0_invalid = 0;
@@ -1198,12 +1220,12 @@ void create_landscape_texture() {
 				int const lly(i + toy0), off(3*i*width);
 
 				if (lly >= 0 && lly < hy) { // copy part of this row from old landscape0
-					memmove(landscape0+off+3*j00, landscape0+3*((j00+tox0)+lly*width), (j01-j00)*suc3); // range could be overlapping
-					if (-tox0 > 0)      memcpy(landscape0+off, tex_data+off, -tox0*suc3); // copy from beginning
-					if (width-wxtx > 0) memcpy(landscape0+off+wxtx3, tex_data+off+wxtx3, (width-wxtx)*suc3); // copy to end
+					memmove(landscape0+off+3*j00, landscape0+3*((j00+tox0)+lly*width), 3*(j01-j00)); // range could be overlapping
+					if (-tox0 > 0)      memcpy(landscape0+off, tex_data+off, -3*tox0); // copy from beginning
+					if (width-wxtx > 0) memcpy(landscape0+off+wxtx3, tex_data+off+wxtx3, 3*(width-wxtx)); // copy to end
 				}
 				else { // new section - copy entire row from tex_data
-					memcpy(landscape0+off, tex_data+off, width*suc3);
+					memcpy(landscape0+off, tex_data+off, 3*width);
 				}
 			}
 			ls0_invalid = 0;
@@ -1213,7 +1235,7 @@ void create_landscape_texture() {
 			ls0_invalid = 1;
 		}
 	}
-	textures[LANDSCAPE_TEX].gl_delete(); // should we try to update rather than recreating from scratch?
+	tex.gl_delete(); // should we try to update rather than recreating from scratch?
 	init_texture(LANDSCAPE_TEX); // performance bottleneck
 	PRINT_TIME(" Final");
 }
@@ -1225,19 +1247,19 @@ void regrow_landscape_texture_amt0() {
 	static int counter(0);
 	if (read_landscape) return;
 	if (ls0_invalid) create_landscape_texture();
-	assert(textures[LANDSCAPE_TEX].data != NULL && landscape0 != NULL);
+	texture_t &tex(textures[LANDSCAPE_TEX]);
+	assert(tex.is_allocated() && landscape0 != NULL);
 	int const regen_bshift(max(1, min(7, int(log(1.0/max(0.0001f, LANDSCAPE_REGEN_AMT))/log(2.0)))));
-	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
-	unsigned char *tex_data(textures[LANDSCAPE_TEX].data);
-	int const y1((counter%LANDSCAPE_REGEN_MOD)*(height/LANDSCAPE_REGEN_MOD));
-	int const y2(y1 + (height/LANDSCAPE_REGEN_MOD));
-	assert(y2 <= height);
+	unsigned char *tex_data(tex.get_data());
+	int const y1((counter%LANDSCAPE_REGEN_MOD)*(tex.height/LANDSCAPE_REGEN_MOD));
+	int const y2(y1 + (tex.height/LANDSCAPE_REGEN_MOD));
+	assert(y2 <= tex.height);
 
 	if (LANDSCAPE_REGEN_AMT > 0.0 || skip_regrow) {
 		for (int i = y1; i < y2; ++i) {
-			int const i_step(i*width);
+			int const i_step(i*tex.width);
 
-			for (int j = 0; j < width; ++j) { // performance critical
+			for (int j = 0; j < tex.width; ++j) { // performance critical
 				int const offset(3*(i_step + j));
 				UNROLL_3X(tex_data[offset+i_] += (unsigned char)(((int)landscape0[offset+i_] - (int)tex_data[offset+i_]) >> regen_bshift);)
 			}
@@ -1246,34 +1268,34 @@ void regrow_landscape_texture_amt0() {
 	++counter;
 	skip_regrow = 0;
 	check_init_texture(LANDSCAPE_TEX);
-	glBindTexture(GL_TEXTURE_2D, textures[LANDSCAPE_TEX].tid);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, y1, width, (y2-y1), GL_RGB, GL_UNSIGNED_BYTE, (tex_data + 3*width*y1));
+	tex.bind_gl();
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, y1, tex.width, (y2-y1), GL_RGB, GL_UNSIGNED_BYTE, (tex_data + 3*tex.width*y1));
 	//PRINT_TIME("Regrow");
 }
 
 
-float add_crater_to_landscape_texture(float xval, float yval, float radius) { // no grass underwater so don't check
+float add_crater_to_landscape_texture(float xval, float yval, float radius) {
 
 	int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
 	if (point_outside_mesh(xpos, ypos)) return 0.0; // off the terrain area
 	texture_t const &t1(textures[get_bare_ls_tid(mesh_height[ypos][xpos])]);
-	int const tidw(t1.width), tidh(t1.height), ncol(t1.ncolors);
-	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
-	unsigned char *data(t1.data), *tex_data(textures[LANDSCAPE_TEX].data);
-	float const xscale(((float)MESH_X_SIZE)/((float)width)), yscale(((float)MESH_Y_SIZE)/((float)height));
+	texture_t &tex(textures[LANDSCAPE_TEX]);
+	unsigned char const *data(t1.get_data());
+	unsigned char *tex_data(tex.get_data());
+	float const xscale(((float)MESH_X_SIZE)/((float)tex.width)), yscale(((float)MESH_Y_SIZE)/((float)tex.height));
 	int const xpos2(int((xval + X_SCENE_SIZE)/(xscale*DX_VAL) + 0.5));
 	int const ypos2(int((yval + Y_SCENE_SIZE)/(yscale*DY_VAL) + 0.5));
-	if (xpos2 < 0 || ypos2 < 0 || xpos2 >= width || ypos2 >= height) return 0.0;
+	if (xpos2 < 0 || ypos2 < 0 || xpos2 >= tex.width || ypos2 >= tex.height) return 0.0;
 	int const rad(max(0, int(radius/((xscale + yscale)*(DX_VAL + DY_VAL))) - 1)), radsq(rad*rad); // size in texture space
 	int const x1(max(0, xpos2-rad)), y1(max(0, ypos2-rad));
-	int const x2(min(width-1,  xpos2+rad)), y2(min(height-1, ypos2+rad));
+	int const x2(min(tex.width-1,  xpos2+rad)), y2(min(tex.height-1, ypos2+rad));
 
 	for (int i = y1; i <= y2; ++i) {
-		int const offset(i*width), yterm((i - ypos2)*(i - ypos2));
+		int const offset(i*tex.width), yterm((i - ypos2)*(i - ypos2));
 
 		for (int j = x1; j <= x2; ++j) {
 			if ((yterm + (j - xpos2)*(j - xpos2)) < radsq) {
-				int const o2(3*(offset + j)), tof(ncol*((i&(tidh-1))*tidw + (j&(tidw-1))));
+				int const o2(3*(offset + j)), tof(t1.ncolors*((i&(t1.height-1))*t1.width + (j&(t1.width-1))));
 				RGB_BLOCK_COPY((tex_data+o2), (data+tof));
 			}
 		}
@@ -1290,20 +1312,20 @@ void add_hole_in_landscape_texture(int xpos, int ypos, float blend) { // for wat
 	if (blend <= 0.0 || point_outside_mesh(xpos, ypos)) return; // off the terrain area
 	blend = max(0.01f, min(1.0f, blend));
 	texture_t const &t1(textures[get_bare_ls_tid(mesh_height[ypos][xpos])]);
-	int const tidw(t1.width), tidh(t1.height), ncol(t1.ncolors);
-	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
-	unsigned char *data(t1.data), *tex_data(textures[LANDSCAPE_TEX].data);
-	float const xdiv(((((float)MESH_X_SIZE)/((float)width))*DX_VAL)), ydiv(((((float)MESH_Y_SIZE)/((float)height))*DY_VAL));
-	int const xpos1(max(0,      int((get_xval(xpos)   + X_SCENE_SIZE)/xdiv + 0.5)));
-	int const ypos1(max(0,      int((get_yval(ypos)   + Y_SCENE_SIZE)/ydiv + 0.5)));
-	int const xpos2(min(width,  int((get_xval(xpos+1) + X_SCENE_SIZE)/xdiv + 0.5)));
-	int const ypos2(min(height, int((get_yval(ypos+1) + Y_SCENE_SIZE)/ydiv + 0.5)));
+	texture_t &tex(textures[LANDSCAPE_TEX]);
+	unsigned char const *data(t1.get_data());
+	unsigned char *tex_data(tex.get_data());
+	float const xdiv(((((float)MESH_X_SIZE)/((float)tex.width))*DX_VAL)), ydiv(((((float)MESH_Y_SIZE)/((float)tex.height))*DY_VAL));
+	int const xpos1(max(0,          int((get_xval(xpos)   + X_SCENE_SIZE)/xdiv + 0.5)));
+	int const ypos1(max(0,          int((get_yval(ypos)   + Y_SCENE_SIZE)/ydiv + 0.5)));
+	int const xpos2(min(tex.width,  int((get_xval(xpos+1) + X_SCENE_SIZE)/xdiv + 0.5)));
+	int const ypos2(min(tex.height, int((get_yval(ypos+1) + Y_SCENE_SIZE)/ydiv + 0.5)));
 
 	for (int i = ypos1; i < ypos2; ++i) {
-		unsigned const iw(i*width), ival((i&(tidh-1))*tidw);
+		unsigned const iw(i*tex.width), ival((i&(t1.height-1))*t1.width);
 
 		for (int j = xpos1; j < xpos2; ++j) {
-			int const o2(3*(iw + j)), tof(ncol*(ival + (j&(tidw-1))));
+			int const o2(3*(iw + j)), tof(t1.ncolors*(ival + (j&(t1.width-1))));
 			BLEND_COLOR((tex_data + o2), (data + tof), (tex_data + o2), blend);
 		}
 	}
@@ -1327,26 +1349,26 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 	int const index(xpos0 + MESH_X_SIZE*ypos0);
 	if (ls_color_texels.find(index) != ls_color_texels.end()) return;
 	ls_color_texels.insert(index);
-	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
-	unsigned char *tex_data(textures[LANDSCAPE_TEX].data);
-	float const xscale(((float)MESH_X_SIZE)/((float)width)), yscale(((float)MESH_Y_SIZE)/((float)height));
-	int const maxsize(3*width*height);
+	texture_t &tex(textures[LANDSCAPE_TEX]);
+	unsigned char *tex_data(tex.get_data());
+	float const xscale(((float)MESH_X_SIZE)/((float)tex.width)), yscale(((float)MESH_Y_SIZE)/((float)tex.height));
+	int const maxsize(tex.num_bytes()), tsize(tex.num_pixels()); // used only for assertions
 	int const xpos(int((xval + X_SCENE_SIZE)/(((float)xscale)*DX_VAL) + 0.5));
 	int const ypos(int((yval + Y_SCENE_SIZE)/(((float)yscale)*DY_VAL) + 0.5));
-	if (xpos < 0 || ypos < 0 || xpos >= width || ypos >= height) return;
+	if (xpos < 0 || ypos < 0 || xpos >= tex.width || ypos >= tex.height) return;
 	int const rad(max(0, int(5.0*radius/((xscale + yscale)*(DX_VAL + DY_VAL))) - 1)), radsq(max(1, rad*rad)); // size in texture space
-	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad)), x2(min(width-1, xpos+rad)), y2(min(height-1, ypos+rad));
+	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad)), x2(min(tex.width-1, xpos+rad)), y2(min(tex.height-1, ypos+rad));
 	unsigned char color_i[3];
 	unpack_color(color_i, color);
 
 	for (int i = y1; i <= y2; ++i) {
-		int const offset(i*width), yterm((i - ypos)*(i - ypos));
+		int const offset(i*tex.width), yterm((i - ypos)*(i - ypos));
 
 		for (int j = x1; j <= x2; ++j) {
 			int const dist_sq((yterm + (j - xpos)*(j - xpos)));
 
 			if (dist_sq < radsq) {
-				assert(offset + j <= width*height);
+				assert(offset + j <= tsize);
 				float const blend((dist_sq == 0.0) ? 0.8 : min(0.8, 10.0/dist_sq));
 				int const o2(3*(offset + j));
 				assert(o2 + 3 <= maxsize);
@@ -1369,21 +1391,21 @@ void add_snow_to_landscape_texture(point const &pos, float acc) {
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return; // off the terrain area
 	if (wminside[ypos][xpos] && water_matrix[ypos][xpos] > mesh_height[ypos][xpos]) return; // underwater
-	int const width(textures[LANDSCAPE_TEX].width), height(textures[LANDSCAPE_TEX].height);
-	int const tx(int(((float)width /(float)MESH_X_SIZE)*(pos.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5));
-	int const ty(int(((float)height/(float)MESH_Y_SIZE)*(pos.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5));
-	if (tx < 0 || tx >= width || ty < 0 || ty >= height) return;
+	texture_t &tex(textures[LANDSCAPE_TEX]);
+	int const tx(int(((float)tex.width /(float)MESH_X_SIZE)*(pos.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5));
+	int const ty(int(((float)tex.height/(float)MESH_Y_SIZE)*(pos.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5));
+	if (tx < 0 || tx >= tex.width || ty < 0 || ty >= tex.height) return;
 	skip_regrow = 1;
-	unsigned char *tex_data(textures[LANDSCAPE_TEX].data);
+	unsigned char *tex_data(tex.get_data());
 	acc *= TEXTURE_SNOW_ACC_RATE;
 	float const acc255(255.0*acc);
 	int const rsq(SNOW_ACC_RADIUS*SNOW_ACC_RADIUS);
 	float const frad((float)rsq), inv_frad(1.0/frad);
-	int const x1(max(0, tx-SNOW_ACC_RADIUS)), x2(min(width -1, tx+SNOW_ACC_RADIUS));
-	int const y1(max(0, ty-SNOW_ACC_RADIUS)), y2(min(height-1, ty+SNOW_ACC_RADIUS));
+	int const x1(max(0, tx-SNOW_ACC_RADIUS)), x2(min(tex.width -1, tx+SNOW_ACC_RADIUS));
+	int const y1(max(0, ty-SNOW_ACC_RADIUS)), y2(min(tex.height-1, ty+SNOW_ACC_RADIUS));
 
 	for (int i = y1; i <= y2; ++i) {
-		int const dy(i*width), ysq((ty - i)*(ty - i));
+		int const dy(i*tex.width), ysq((ty - i)*(ty - i));
 		if (ysq > rsq) continue; // can never satisfy condition below
 
 		for (int j = x1; j <= x2; ++j) {
@@ -1447,9 +1469,8 @@ void update_lt_section(int x1, int y1, int x2, int y2) {
 	if (x1 == x2 || y1 == y2) return;
 	texture_t const &t1(textures[LANDSCAPE_TEX]);
 	unsigned const nc(t1.ncolors);
-	assert(nc == 3);
-	assert(t1.width > 0 && t1.height > 0 && t1.data != NULL);
 	int const width(t1.width), height(t1.height);
+	assert(nc == 3 && width > 0 && height > 0 && t1.is_allocated());
 
 	if (!(x1 < x2 && y1 < y2 && x1 >= 0 && y1 >= 0 && x2 <= width && y2 <= height)) {
 		cout << "x1 = " << x1 << ", y1 = " << y1 << ", x2 = " << x2 << ", y2 = " << y2 << endl;
@@ -1465,7 +1486,8 @@ void update_lt_section(int x1, int y1, int x2, int y2) {
 		assert(((x2 - x1) & am) == 0);
 	}
 	int const offset(nc*(x1 + y1*width));
-	unsigned char *copy(NULL), *data(t1.data + offset);
+	unsigned char const *data(t1.get_data() + offset);
+	unsigned char *copy(NULL);
 
 	if ((x1 > 0 || x2 < width) && (y2 - y1) > 1) { // copy data if more than one row
 		if ((x2 - x1) > width/2) { // just copy the entire strip
@@ -1483,7 +1505,7 @@ void update_lt_section(int x1, int y1, int x2, int y2) {
 		}
 	}
 	check_init_texture(LANDSCAPE_TEX);
-	bind_2d_texture(t1.tid);
+	t1.bind_gl();
 	glTexSubImage2D(GL_TEXTURE_2D, 0, x1, y1, (x2-x1), (y2-y1), t1.calc_format(), GL_UNSIGNED_BYTE, data);
 	delete [] copy;
 	//PRINT_TIME("LT Update");

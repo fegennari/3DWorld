@@ -812,37 +812,42 @@ struct lightning { // size = 40
 };
 
 
-colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black
+colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black with alpha of 0.0
 
 
-struct texture_t { // size = 116
+class texture_t { // size = 116
 
+public:
+	std::string name;
 	char type, format, use_mipmaps;
 	bool wrap, do_compress;
 	int width, height, ncolors, bump_tid, alpha_tid;
+
+private:
 	unsigned char *data, *orig_data, *colored_data, *mm_data;
-	std::string name;
 	GLuint tid;
 	colorRGBA color;
 	vector<unsigned> mm_offsets;
 
+public:
 	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), width(0), height(0), ncolors(0),
 		bump_tid(-1), alpha_tid(-1), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0) {}
 
-	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n,
-		GLuint tex=0, colorRGBA const &c=DEF_TEX_COLOR)
-		: type(t), format(f), use_mipmaps(um), wrap(wra), do_compress(1), width(w), height(h), ncolors(nc),
-		bump_tid(-1), alpha_tid(-1), data(0), orig_data(0), colored_data(0), mm_data(0), name(n), tid(tex), color(c) {}
+	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool do_comp=1)
+		: name(n), type(t), format(f), use_mipmaps(um), wrap(wra), do_compress(do_comp), width(w), height(h), ncolors(nc),
+		bump_tid(-1), alpha_tid(-1), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	void init();
 	void do_gl_init();
 	GLenum calc_internal_format() const;
 	GLenum calc_format() const;
 	void calc_color();
+	void copy_alpha_from_texture(texture_t const &at);
 	void build_mipmaps();
 	void create_custom_mipmaps();
 	unsigned char const *get_mipmap_data(unsigned level) const;
 	void set_to_color(colorRGBA const &c);
 	void alloc();
+	void bind_gl() const;
 	void free_mm_data();
 	void free();
 	void gl_delete();
@@ -852,7 +857,14 @@ struct texture_t { // size = 116
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 	float get_component(float xval, float yval, int comp) const;
 	void check_init() {if (tid == 0) do_gl_init();}
-	size_t num_pixels() const {return width*height;}
+	unsigned num_pixels() const {return width*height;}
+	unsigned num_bytes()  const {return ncolors*num_pixels();}
+	bool has_alpha()    const {return (ncolors == 4 || alpha_tid >= 0);}
+	bool is_bound()     const {return (tid > 0);}
+	bool is_allocated() const {return (data != 0);}
+	colorRGBA get_avg_color() const {return color;}
+	unsigned char *get_data() {assert(data); return data;}
+	unsigned char const *get_data() const {assert(data); return data;}
 };
 
 

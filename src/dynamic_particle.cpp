@@ -68,7 +68,7 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 		set_shadowed_color(color, pos, !is_visible_to_light_cobj(pos, get_light(), radius, -1, 0), 0, 0);
 	}
 	int const ndiv(min(N_SPHERE_DIV, max(3, int(3.0f*sqrt(radius*window_width/distance_to_camera(pos))))));
-	bool const bfc(!texture || textures[tid].ncolors == 3);
+	bool const bfc(!texture || !textures[tid].has_alpha());
 	draw_subdiv_sphere(pos, radius, ndiv, texture, bfc); // point if far away?
 	if (lighted) set_color_e(BLACK);
 	if (texture) glDisable(GL_TEXTURE_2D);

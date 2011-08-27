@@ -25,9 +25,9 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	unsigned const tid(textures.size());
 	tex_map[fn] = tid;
 	if (verbose) cout << "creating texture " << fn << endl;
-	// type format width height wrap ncolors use_mipmaps name [bump_name [id [color]]]
-	textures.push_back(texture_t(0, 4, 0, 0, 1, (is_alpha_mask ? 1 : 3), !is_alpha_mask, fn)); // always RGB targa wrapped+mipmap
-	textures.back().do_compress = (!is_alpha_mask && enable_model3d_tex_comp);
+	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
+	// type format width height wrap ncolors use_mipmaps name [do_compress]
+	textures.push_back(texture_t(0, 4, 0, 0, 1, (is_alpha_mask ? 1 : 3), !is_alpha_mask, fn, compress)); // always RGB targa wrapped+mipmap
 	return tid; // can't fail
 }
 
@@ -57,27 +57,17 @@ void texture_manager::free_textures() {
 
 void texture_manager::ensure_texture_loaded(texture_t &t) {
 
-	if (!t.data) {
+	if (!t.is_allocated()) {
 		t.load(-1);
 		
 		if (t.alpha_tid >= 0) {
 			ensure_tid_loaded(t.alpha_tid);
 			assert((unsigned)t.alpha_tid < textures.size());
-			texture_t &at(textures[t.alpha_tid]);
-			assert(at.data && t.data); // check that data is allocated in both textures
-			assert(at.width == t.width && at.height == t.height); // check for matching sizes
-			assert(t.ncolors == 4); // check for alpha channel
-			assert(t.tid == 0); // check that texture isn't already bound
-			assert(at.ncolors == 1);
-			unsigned const npixels(t.num_pixels());
-
-			for (unsigned i = 0; i < npixels; ++i) {
-				t.data[4*i+3] = at.data[i]; // copy alpha values
-			}
+			t.copy_alpha_from_texture(textures[t.alpha_tid]);
 		}
 		t.init(); // must be after alpha copy
 	}
-	assert(t.data);
+	assert(t.is_allocated());
 }
 
 
@@ -89,7 +79,7 @@ void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 	assert(t.ncolors == 3 || t.ncolors == 4);
 	if (t.alpha_tid == alpha_tid) return; // already bound
 	assert(t.alpha_tid < 0); // can't rebind to a different value
-	assert(!t.data); // must not yet be loaded
+	assert(!t.is_allocated()); // must not yet be loaded
 	t.alpha_tid = alpha_tid;
 	t.ncolors   = 4; // add alpha channel
 	if (t.use_mipmaps) t.use_mipmaps = 3; // generate custom alpha mipmaps
@@ -116,15 +106,14 @@ void texture_manager::bind_texture(int tid) const {
 
 	//select_texture(WHITE_TEX, 0); return; // TESTING
 	assert((unsigned)tid < textures.size());
-	assert(textures[tid].tid > 0);
-	glBindTexture(GL_TEXTURE_2D, textures[tid].tid);
+	textures[tid].bind_gl();
 }
 
 
 colorRGBA texture_manager::get_tex_avg_color(int tid) const {
 
 	assert((unsigned)tid < textures.size());
-	return textures[tid].color;
+	return textures[tid].get_avg_color();
 }
 
 

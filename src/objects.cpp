@@ -383,7 +383,7 @@ int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals, bool in_dl
 
 bool coll_obj::is_semi_trans() const {
 
-	return (cp.color.alpha < 1.0 || (cp.tid >= 0 && textures[cp.tid].ncolors == 4));
+	return (cp.color.alpha < 1.0 || (cp.tid >= 0 && textures[cp.tid].has_alpha()));
 }
 
 
@@ -431,7 +431,7 @@ bool coll_obj::truly_static() const {
 
 bool coll_obj::can_be_scorched() const {
 
-	return (status == COLL_STATIC && !(cp.tid >= 0 && textures[cp.tid].ncolors == 4) && !no_draw()); // allow destroyable and transparent objects
+	return (status == COLL_STATIC && !(cp.tid >= 0 && textures[cp.tid].has_alpha()) && !no_draw()); // allow destroyable and transparent objects
 }
 
 
@@ -477,7 +477,7 @@ float coll_obj::get_light_transmit(point v1, point v2) const {
 bool coll_obj::has_poly_billboard_alpha() const {
 
 	if (!is_billboard || !is_thin_poly() || npoints != 4) return 0;
-	if (cp.tid < 0    || textures[cp.tid].ncolors   != 4) return 0; // no alpha channel texture
+	if (cp.tid < 0    || !textures[cp.tid].has_alpha())   return 0; // no alpha channel texture
 	return 1;
 }
 
