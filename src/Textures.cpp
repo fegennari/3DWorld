@@ -86,7 +86,7 @@ texture_t(0, 0, 256,  256,  0, 4, 3, "plant1.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant2.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant3.raw"),
 texture_t(0, 0, 64,   64,   0, 4, 3, "hibiscus.raw"),
-texture_t(0, 0, 256,  256,  1, 3, 1, "@fence.raw"), // not real file, light paneling
+texture_t(1, 0, 256,  256,  1, 3, 1, "@fence.raw"), // not real file, light paneling
 texture_t(0, 2, 128,  128,  1, 3, 1, "skull.raw"),
 texture_t(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
 texture_t(0, 2, 128,  128,  1, 3, 1, "yuck.raw"),
@@ -144,7 +144,7 @@ unsigned char *landscape0 = NULL;
 
 extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, flow_tid, reflection_tid;
 extern int world_mode, island, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
-extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks;
+extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only;
 extern float zmax, zmin, zmax_est, glaciate_exp, relh_adj_tex, vegetation, fticks;
 
 
@@ -169,42 +169,46 @@ int get_bare_ls_tid(float zval);
 void free_universe_textures();
 
 
+bool is_tex_disabled(int i) {
+
+	return (universe_only && (i == CLOUD_RAW_TEX || i == WIND_TEX || i == LANDSCAPE_TEX));
+}
+
+
 void load_textures() {
 
 	cout << "loading textures";
-	glEnable(GL_TEXTURE_2D);
+	if (read_landscape) textures[LANDSCAPE_TEX].type = 0; // loaded from file
 
 	for (int i = 0; i < NUM_TEXTURES; ++i) {
 		cout.flush();
 		cout << ".";
-		
-		switch (i) {
-		case SMOKE_TEX:     gen_smoke_texture();        break;
-		case PLASMA_TEX:    gen_plasma_texture();       break;
-		case DISINT_TEX:    gen_disintegrate_texture(); break;
-		case TREE_HEMI_TEX: gen_tree_hemi_texture();    break;
-		case SHINGLE_TEX:   gen_shingle_texture();      break;
-		case FENCE_TEX:     gen_fence_texture();        break;
-		case BLUR_TEX_INV:  gen_blur_inv_texture();     break; // must be after BLUR_TEX
-		case HSTRIPE_TEX:   gen_stripe_texture(i, 1);   break;
-		case VSTRIPE_TEX:   gen_stripe_texture(i, 0);   break;
-		case BLUR_CENT_TEX: gen_blur_cent_texture();    break;
-		case GRADIENT_TEX:  gen_gradient_texture();     break;
-		case WIND_TEX:      gen_wind_texture();         break;
-
-		default:
-			textures[i].load(i);
-		} // switch
-		textures[i].init();
+		if (is_tex_disabled(i)) continue; // skip
 		//assert(texture_name_map.find(textures[i].name) == texture_name_map.end());
 		texture_name_map[textures[i].name] = i; // multiply used textures such as sky.raw will be overwritten
-	}
-	if (read_landscape) {
-		textures[LANDSCAPE_TEX].load(LANDSCAPE_TEX);
+		textures[i].load(i);
 	}
 	cout << endl;
-	gen_tree_end_texture();
-	glDisable(GL_TEXTURE_2D);
+	gen_smoke_texture();
+	gen_plasma_texture();
+	gen_disintegrate_texture();
+	gen_shingle_texture();
+	gen_fence_texture();
+	gen_blur_inv_texture(); // must be after BLUR_TEX
+	gen_stripe_texture(HSTRIPE_TEX, 1);
+	gen_stripe_texture(VSTRIPE_TEX, 0);
+	gen_blur_cent_texture();
+	gen_gradient_texture();
+
+	if (!universe_only) {
+		gen_wind_texture();
+		gen_tree_hemi_texture();
+		gen_tree_end_texture();
+	}
+	for (int i = 0; i < NUM_TEXTURES; ++i) {
+		if (is_tex_disabled(i)) continue; // skip
+		textures[i].init();
+	}
 	setup_multitexture();
 
 	int max_tc(0), max_tu(0), max_tiu(0);
@@ -787,7 +791,6 @@ void init_texture(int id) {
 void texture_t::gen_rand_texture(unsigned char val, unsigned char a_add, unsigned a_rand) {
 
 	assert(ncolors == 4);
-	alloc();
 	unsigned const size(num_pixels());
 
 	for (unsigned i = 0; i < size; ++i) {
@@ -820,7 +823,6 @@ void gen_tree_hemi_texture() {
 	assert(SPHERE_SECTION >= 0.0 && SPHERE_SECTION <= 1.0);
 	unsigned char const *grass_tex_data(textures[GRASS_TEX].get_data());
 	texture_t &tex(textures[TREE_HEMI_TEX]);
-	tex.alloc();
 	unsigned char *tex_data(tex.get_data());
 	int const sphere_h(int((1.0 - SPHERE_SECTION)*tex.height));
 
@@ -848,7 +850,6 @@ void gen_shingle_texture() {
 	unsigned char const *tex_data2(textures[BRICK_TEX].get_data());
 	assert(tex_data2 != NULL && tex.width == textures[BRICK_TEX].width && tex.height == textures[BRICK_TEX].height);
 	assert(tex.ncolors == 3 && textures[BRICK_TEX].ncolors == 3);
-	tex.alloc();
 	unsigned char *tex_data(tex.get_data());
 	unsigned const size(tex.num_pixels());
 
@@ -866,7 +867,6 @@ void gen_fence_texture() {
 	unsigned char const *tex_data2(textures[PANELING_TEX].get_data());
 	assert(tex_data2 != NULL && tex.width == textures[PANELING_TEX].width && tex.height == textures[PANELING_TEX].height);
 	assert(tex.ncolors == 3 && textures[PANELING_TEX].ncolors == 3);
-	tex.alloc();
 	unsigned char *tex_data(tex.get_data());
 	unsigned const size(tex.num_bytes());
 
@@ -880,7 +880,6 @@ void gen_blur_inv_texture() {
 
 	texture_t &tex(textures[BLUR_TEX_INV]);
 	assert(tex.ncolors == 4);
-	tex.alloc();
 	unsigned char *tex_data(tex.get_data());
 	memset(tex_data, 255, 4*tex.num_pixels()*sizeof(char));
 
@@ -898,7 +897,6 @@ void gen_stripe_texture(int tid, bool horiz) {
 
 	texture_t &tex(textures[tid]);
 	assert(tex.ncolors == 3);
-	tex.alloc();
 	unsigned char *tex_data(tex.get_data());
 
 	for (int i = 0; i < tex.height; ++i) {
@@ -932,7 +930,6 @@ void gen_blur_cent_texture() {
 
 	texture_t &tex(textures[BLUR_CENT_TEX]);
 	assert(textures[BLUR_CENT_TEX].ncolors == 4);
-	tex.alloc();
 	unsigned char *tex_data(tex.get_data());
 	int const w2(tex.width >> 1), h2(tex.height >> 1);
 	float const scale(2.0/min(tex.width, tex.height));
@@ -952,7 +949,6 @@ void gen_gradient_texture() { // for horizon
 
 	texture_t &tex(textures[GRADIENT_TEX]); // 1D
 	assert(tex.width == 1 && tex.ncolors == 4);
-	tex.alloc();
 	unsigned char *tex_data(tex.get_data());
 	int const size(tex.num_pixels()); // Note: int, not unsigned
 
@@ -969,7 +965,6 @@ void gen_wind_texture() {
 	unsigned char const *tex_data2(textures[CLOUD_RAW_TEX].get_data());
 	assert(tex.ncolors == 1 && textures[CLOUD_RAW_TEX].ncolors == 4); // RGBA => grayscale luminance
 	assert(tex_data2 != NULL && tex.width == textures[CLOUD_RAW_TEX].width && tex.height == textures[CLOUD_RAW_TEX].height);
-	tex.alloc();
 	unsigned char *tex_data(tex.get_data());
 	unsigned const size(tex.num_pixels());
 
