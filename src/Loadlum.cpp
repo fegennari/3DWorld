@@ -1,6 +1,5 @@
-
+// http://www.opengl.org/resources/features/KilgardTechniques/LensFlare/
 /* texture.c - by David Blythe, SGI */
-
 /* load_luminace is a simplistic routine for reading an SGI .bw image file. */
 
 #include "globals.h"
