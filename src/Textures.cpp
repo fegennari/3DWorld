@@ -302,6 +302,12 @@ void texture_t::alloc() {
 
 	free();
 	data = new unsigned char[num_bytes()];
+
+	if (SHOW_TEXTURE_MEMORY) {
+		static unsigned tmem(0);
+		tmem += num_bytes();
+		cout << "tex mem = " << tmem << endl;
+	}
 }
 
 
@@ -378,7 +384,7 @@ void texture_t::do_gl_init() {
 		unsigned tsize(num_bytes());
 		if (use_mipmaps) tsize = 4*tsize/3;
 		tmem += tsize;
-		cout << "tmem = " << tmem << endl;
+		cout << "tex vmem = " << tmem << endl;
 	}
 	//cout << "bind texture" << name << endl;
 	assert(is_allocated() && width > 0 && height > 0);
