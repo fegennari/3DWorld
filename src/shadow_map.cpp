@@ -346,6 +346,8 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	}
 	
 	// reset state
+	glMatrixMode(GL_TEXTURE);
+	glLoadIdentity();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
