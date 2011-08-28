@@ -80,7 +80,7 @@ float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), tree_size(1.0), d
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0);
 float water_h_off(0.0), perspective_fovy(0.0), perspective_nclip(0.0), atmosphere(1.0), read_mesh_zmm(0.0);
 float light_int_scale(1.0), light_int_scale_l(1.0), snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS);
-float init_temperature(DEF_TEMPERATURE);
+float init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
@@ -1537,6 +1537,9 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "cobj_z_bias") {
 			if (!read_float(fp, cobj_z_bias)) cfg_err("cobj_z_bias command", error);
+		}
+		else if (str == "indir_vert_offset") {
+			if (!read_float(fp, indir_vert_offset)) cfg_err("indir_vert_offset command", error);
 		}
 		else if (str == "universe_only") {
 			if (!read_int(fp, universe_only)) cfg_err("universe only command", error);
