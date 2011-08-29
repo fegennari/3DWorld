@@ -171,7 +171,7 @@ void free_universe_textures();
 
 bool is_tex_disabled(int i) {
 
-	return (universe_only && (i == CLOUD_RAW_TEX || i == WIND_TEX || i == LANDSCAPE_TEX));
+	return (universe_only && (i == CLOUD_RAW_TEX || i == WIND_TEX || i == LANDSCAPE_TEX || i == TREE_END_TEX || i == TREE_HEMI_TEX));
 }
 
 
