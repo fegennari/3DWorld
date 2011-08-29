@@ -507,6 +507,7 @@ void clear_lightmap() {
 void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int j,
 	bool proc_cobjs, bool calc_lval, float zstep, float z_atten, float light_off)
 {
+	assert(zstep > 0.0);
 	if (z_light_depth) z_light_depth[i][j] = MESH_SIZE[2];
 	lmcell *vldata(lmap_manager.vlmap[i][j]);
 	if (vldata == NULL) return;
@@ -573,7 +574,6 @@ void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int
 				}
 				val = new_val;
 			} // if val > 0.0
-			assert(zstep > 0.0);
 			float const bb[3][2]  = {{bbz[0][0], bbz[0][1]}, {bbz[1][0], bbz[1][1]}, {zb, zt}};
 			float const bbx[2][2] = {{bb[1][0], bb[1][1]}, {zb, zt}}; // YxZ
 			float const bby[2][2] = {{zb, zt}, {bb[0][0], bb[0][1]}}; // ZxX
@@ -656,6 +656,16 @@ void build_lightmap(bool verbose) {
 		}
 	}
 
+	// prevent the z range from being empty/denormalized when there are no cobjs
+	if (use_dense_voxels) {
+		czmin = min(czmin, zbottom);
+		czmax = max(czmax, (czmin + Z_SCENE_SIZE - 0.5f*DZ_VAL));
+	}
+	else if (czmin >= czmax) {
+		czmin = min(czmin, zbottom);
+		czmax = max(czmax, ztop);
+	}
+
 	// determine allocation and voxel grid sizes
 	reset_cobj_counters();
 	assert(DZ_VAL > 0.0 && Z_LT_ATTEN > 0.0 && Z_LT_ATTEN <= 1.0 && XY_LT_ATTEN > 0.0 && XY_LT_ATTEN <= 1.0);
@@ -670,6 +680,7 @@ void build_lightmap(bool verbose) {
 	unsigned const zsize(unsigned(dz + 1)), nbins(nonempty*zsize);
 	MESH_SIZE[2] = zsize; // override MESH_SIZE[2]
 	float const zstep(czspan/zsize), scene_scale(MESH_X_SIZE/128.0);
+	assert(zstep > 0.0);
 	float const z_atten(1.0 - (1.0 - Z_LT_ATTEN)/scene_scale), xy_atten(1.0 - (1.0 - XY_LT_ATTEN)/scene_scale);
 	if (!ldynamic) matrix_gen_2d(ldynamic, MESH_X_SIZE, MESH_Y_SIZE);
 	lmap_manager.alloc(nbins, zsize, need_lmcell);
