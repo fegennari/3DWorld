@@ -126,6 +126,8 @@ void verify_wmode(player_state &sstate);
 
 void create_sin_table();
 
+void init_openal(int &argc, char** argv);
+
 
 
 bool check_gl_error(unsigned loc_id) {
@@ -1808,6 +1810,8 @@ int main(int argc, char** argv) {
 	cout << "."; cout.flush();
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;
+	cout << "."; cout.flush();
+	init_openal(argc, argv);
 	cout << "."; cout.flush();
 	init_glew();
 	cout << "."; cout.flush();
