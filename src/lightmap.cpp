@@ -61,9 +61,11 @@ lmap_manager_t lmap_manager;
 
 extern bool disable_shaders;
 extern int animate2, display_mode, frame_counter, read_light_file, write_light_file, read_light_file_l, write_light_file_l;
+extern unsigned num_vpls;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE;
 extern vector<coll_obj> coll_objects;
 extern vector<light_source> enabled_lights;
+extern vector<cube_light_source> global_cube_lights;
 
 
 // *** USEFUL INLINES ***
@@ -1188,6 +1190,57 @@ bool dls_cell::check_add_light(unsigned ix) const {
 }
 
 
+void add_vpls() {
+
+	if (num_vpls == 0 || (display_mode & 0x08)) return;
+	float const scene_radius(get_scene_radius());
+
+	for (vector<cube_light_source>::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
+		// use the ztop plane of the cube for vpls - FIXME: make more dynamic
+		cube_t const &c(i->bounds);
+		float const zval(c.d[2][1]), dx(c.d[0][1] - c.d[0][0]), dy(c.d[1][1] - c.d[1][0]), ar(dy/dx);
+		unsigned const nx(max(1U, (unsigned)(sqrt(num_vpls/ar) + 0.5))), ny(max(1U, (unsigned)(num_vpls/nx)));
+		float const dx_step(dx/nx), dy_step(dy/ny);
+		float const light_size(2.0*(dx_step + dy_step));
+		//float const light_size(12.0*HALF_DXY);
+		point lpos;
+	
+		for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
+			unsigned const gl_light(GL_LIGHT0 + l);
+			if (!light_valid(0xFF, l, lpos) || !glIsEnabled(gl_light)) continue;
+			colorRGBA ambient, diffuse;
+			glGetLightfv(gl_light, GL_AMBIENT, &ambient.red);
+			glGetLightfv(gl_light, GL_DIFFUSE, &diffuse.red);
+			colorRGBA base_color(ambient + diffuse);
+			base_color.set_valid_color();
+			
+			for (unsigned y = 0; y < ny; ++y) {
+				for (unsigned x = 0; x < nx; ++x) {
+					point const pt((c.d[0][0] + (x + 0.5)*dx_step), (c.d[1][0] + (y + 0.5)*dy_step), zval);
+					vector3d const dir((pt - lpos).get_norm());
+					point const target(pt + dir*scene_radius);
+					point cpos;
+					vector3d cnorm;
+					int cindex;
+					
+					if (check_coll_line_exact(lpos, target, cpos, cnorm, cindex, 0.0, -1, 1, 1, 1)) { // fast=1
+						float const dp(-dot_product(cnorm, dir));
+						if (dp < 0.0) continue; // can this happen?
+						assert(cindex >= 0);
+						coll_obj const &cobj(coll_objects[cindex]);
+						colorRGBA color(base_color);
+						color = color.modulate_with(cobj.cp.color);
+						if (cobj.cp.tid >= 0) color = color.modulate_with(texture_color(cobj.cp.tid));
+						add_dynamic_light(dp*light_size, cpos, color, cnorm, 0.5); // 180 degree point spotlight
+						//set_color(color); draw_sphere_at(cpos, dp*light_size, N_SPHERE_DIV);
+					}
+				}
+			}
+		}
+	}
+}
+
+
 void clear_dynamic_lights() { // slow for large lights
 
 	//if (!animate2) return;
@@ -1207,9 +1260,10 @@ void add_dynamic_lights() {
 	if (!animate2) return;
 	assert(ldynamic);
 	clear_dynamic_lights();
-	dl_sources.swap(dl_sources2);
 	if (CAMERA_CANDLE_LT) add_camera_candlelight();
 	if (CAMERA_FLASH_LT)  add_camera_flashlight();
+	add_vpls();
+	dl_sources.swap(dl_sources2);
 
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
 		dl_sources.push_back(light_source(0.94, gen_rand_scene_pos(), BLUE, 1));
