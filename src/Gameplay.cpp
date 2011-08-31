@@ -1339,6 +1339,11 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 	static int fire_frame(0);
 	if (frame_counter == fire_frame) return; // to prevent two fires in the same frame
 	fire_frame = frame_counter;
+
+	if (!game_mode) { // flashlight/candlelight mode only
+		if (wmode & 1) add_camera_candlelight(); else add_camera_flashlight();
+		return;
+	}
 	if (!camera_reset) return;
 	point const camera(get_camera_pos());
 	if (temperature <= W_FREEZE_POINT && is_underwater(camera)) return; // under ice

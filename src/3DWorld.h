@@ -1680,6 +1680,8 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c=WHITE, vector3d const &d=plus_z, float bw=1.0);
 colorRGBA gen_fire_color(float &cval, float &inten, float rate=1.0);
 void clear_dynamic_lights();
+void add_camera_flashlight();
+void add_camera_candlelight();
 void add_dynamic_lights();
 void get_xyz(point const &p, int v[3]);
 void get_xyz_v2(point &p, int const v[3]);
