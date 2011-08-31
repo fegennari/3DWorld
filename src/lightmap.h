@@ -87,6 +87,7 @@ public:
 	void combine_with(light_source const &l);
 	void draw(int ndiv) const;
 	void pack_to_floatv(float *data) const;
+	bool try_merge_into(light_source &ls) const;
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
 };

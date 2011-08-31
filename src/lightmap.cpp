@@ -1170,22 +1170,27 @@ bool dls_cell::check_add_light(unsigned ix) const {
 	if (empty()) return 1;
 	assert(ix < dl_sources.size());
 	light_source const &ls(dl_sources[ix]);
-	float const radius(ls.get_radius());
 
 	for (unsigned i = 0; i < lsrc.size(); ++i) {
 		unsigned const ix2(lsrc[i]);
 		assert(ix2 < dl_sources.size());
 		assert(ix2 != ix);
-		light_source &ls2(dl_sources[ix2]);
-		float const radius2(ls2.get_radius());
-		if (radius2 < radius) continue; // shouldn't get here because of radius sort
-		if (!dist_less_than(ls.get_center(), ls2.get_center(), 0.2*max(HALF_DXY, radius))) continue;
-		colorRGBA color(ls.get_color());
-		float const rr(radius/radius2);
-		color.alpha *= rr*rr; // scale by radius ratio squared
-		ls2.add_color(color);
-		return 0;
+		if (ls.try_merge_into(dl_sources[ix2])) return 0;
 	}
+	return 1;
+}
+
+
+bool light_source::try_merge_into(light_source &ls) const {
+
+	if (ls.radius < radius) return 0; // shouldn't get here because of radius sort
+	if (!dist_less_than(center, ls.center, 0.2*max(HALF_DXY, radius)))         return 0;
+	if (ls.bwidth != bwidth || ls.r_inner != r_inner || ls.dynamic != dynamic) return 0;
+	if (bwidth < 1.0 && dot_product(dir, ls.dir) < 0.95)                       return 0;
+	colorRGBA lcolor(color);
+	float const rr(radius/ls.radius);
+	lcolor.alpha *= rr*rr; // scale by radius ratio squared
+	ls.add_color(lcolor);
 	return 1;
 }
 
