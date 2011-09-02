@@ -1,6 +1,7 @@
 // 3D World - OpenAL Interface Code
 // by Frank Gennari
 // 8/28/11
+// Sounds from http://www.findsounds.com
 #include "openal_wrap.h"
 #include <iostream>
 #include <assert.h>
@@ -11,7 +12,18 @@
 using namespace std;
 
 
-buffer_manager_t buffer_manager;
+unsigned const NUM_CHANNELS = 8;
+string const sounds_path("sounds/");
+
+buffer_manager_t sounds;
+source_manager_t sources;
+
+
+void setup_sounds() {
+
+	sources.create_channels(NUM_CHANNELS);
+	sounds.add_file_buffer("explosion1.au"); // SOUND_EXPLODE
+}
 
 
 void alut_sleep(float seconds) {
@@ -61,8 +73,14 @@ bool openal_buffer::load_check() {
 }
 
 bool openal_buffer::load_from_file(string const &fn) {
+	assert(!fn.empty());
 	buffer = alutCreateBufferFromFile(fn.c_str());
 	return load_check();
+}
+
+bool openal_buffer::load_from_file_std_path(std::string const &fn) {
+	assert(!fn.empty());
+	return load_from_file(sounds_path + fn);
 }
 
 bool openal_buffer::load_from_memory(void const *data, size_t length) {
@@ -77,6 +95,19 @@ bool openal_buffer::load_from_waveform(int waveshape, float frequency, float pha
 	buffer = alutCreateBufferWaveform(waveshape, frequency, phase, duration);
 	time   = duration;
 	return load_check();
+}
+
+
+unsigned buffer_manager_t::add_file_buffer(std::string const &fn) {
+
+	unsigned const ix(buffers.size());
+	buffers.push_back(openal_buffer());
+	
+	if (!buffers.back().load_from_file_std_path(fn)) {
+		cerr << "Failed to load sound file: " << fn << endl;
+		exit(1);
+	}
+	return ix;
 }
 
 
@@ -135,26 +166,15 @@ void set_openal_listener_as_player() {
 }
 
 
-// test and init
-void run_openal_test() {
+void gen_sound(unsigned id, point const &pos, vector3d const &vel, float pitch, float gain, bool looping) { // non-blocking
 
-	point    const listen_pos(0.0, 0.0, 4.0);
-	vector3d const listen_vel(0.0, 0.0, 0.0);
-	openal_orient const listen_orient(vector3d(0.0, 0.0, 1.0), vector3d(0.0, 1.0, 0.0));
-	point    const source_pos(-2.0, 0.0, 0.0);
-	vector3d const source_vel(0.0, 0.0, 0.0);
-	setup_openal_listener(listen_pos, listen_vel, listen_orient);
-	openal_buffer buffer;
-	openal_source source;
-	source.alloc();
-	
-	if (buffer.load_from_file("test.wav")) {
-		source.setup(buffer, source_pos, source_vel, 1.0, 1.0, 0);
-		source.play();
-		alut_sleep(2.0);
-	}
-	source.free();
-	buffer.free();
+	//RESET_TIME;
+	openal_buffer &buffer(sounds.get_buffer(id));
+	openal_source &source(sources.get_source());
+	set_openal_listener_as_player();
+	source.setup(buffer, pos, vel, pitch, gain, looping);
+	source.play();
+	//PRINT_TIME("Play Sound");
 }
 
 
@@ -173,7 +193,7 @@ void openal_hello_world() {
 
 void init_openal(int &argc, char** argv) {
 
-	return; // not yet ready
+	//return; // not yet ready
 
 	if (!alutInit(&argc, argv)) {
 		check_and_print_alut_error();
@@ -181,9 +201,9 @@ void init_openal(int &argc, char** argv) {
 		exit(1);
 	}
 	alGetError(); // ignore any previous errors
+	setup_sounds();
 	//cout << "Supported OpenAL types: " << alutGetMIMETypes(ALUT_LOADER_BUFFER) << endl;
-	openal_hello_world();
-	run_openal_test();
+	//openal_hello_world();
 }
 
 

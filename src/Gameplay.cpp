@@ -8,6 +8,7 @@
 #include "player_state.h"
 #include "physics_objects.h"
 #include "shape_line3d.h"
+#include "openal_wrap.h"
 
 
 bool const SELF_LASER_DAMAGE = 1;
@@ -1148,6 +1149,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	assert(type != SMILEY);
 	if (!game_mode || damage < TOLERANCE || size < TOLERANCE) return;
 	//RESET_TIME;
+	gen_sound(SOUND_EXPLODE, pos);
 
 	if (type == GRENADE || type == CGRENADE) {
 		add_blastr(pos, (pos - get_camera_pos()), 0.9*size, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB);

@@ -4,6 +4,9 @@
 #include "3DWorld.h"
 
 
+enum {SOUND_EXPLODE=0, NUM_SOUNDS};
+
+
 struct openal_orient {
 
 	vector3d at, up;
@@ -22,6 +25,7 @@ public:
 	//~openal_buffer() {free();}
 	bool load_check();
 	bool load_from_file(std::string const &fn);
+	bool load_from_file_std_path(std::string const &fn);
 	bool load_from_memory(void const *data, size_t length);
 	bool load_from_waveform(int waveshape, float frequency, float phase, float duration);
 	bool is_valid() const {return (buffer > 0);}
@@ -36,11 +40,16 @@ class buffer_manager_t {
 	vector<openal_buffer> buffers;
 
 public:
-	openal_buffer &new_buffer(bool alloc) {
+	openal_buffer &get_buffer(unsigned id) {assert(id < buffers.size()); return buffers[id];}
+
+	unsigned add_buffer(bool alloc) {
+		unsigned const ix(buffers.size());
 		buffers.push_back(openal_buffer());
 		if (alloc) buffers.back().alloc();
-		return buffers.back();
+		return ix;
 	}
+	unsigned add_file_buffer(std::string const &fn);
+
 	void clear() {
 		for (unsigned i = 0; i < buffers.size(); ++i) buffers[i].free();
 		buffers.clear();
@@ -69,8 +78,40 @@ public:
 };
 
 
+class source_manager_t {
+
+	vector<openal_source> sources;
+	unsigned next_source;
+
+public:
+	source_manager_t() : next_source(0) {}
+
+	void create_channels(unsigned num_channels) {
+		clear();
+		for (unsigned i = 0; i < num_channels; ++i) new_source();
+	}
+	unsigned new_source() {
+		unsigned const ix(sources.size());
+		sources.push_back(openal_source());
+		sources.back().alloc();
+		return ix;
+	}
+	openal_source &get_source() { // round robin
+		assert(!sources.empty());
+		if (next_source >= sources.size()) next_source = 0; // wraparound
+		return sources[next_source++];
+	}
+	void clear() {
+		for (unsigned i = 0; i < sources.size(); ++i) sources[i].free();
+		sources.clear();
+		next_source = 0;
+	}
+};
+
+
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
+void gen_sound(unsigned id, point const &pos, vector3d const &vel=zero_vector, float pitch=1.0, float gain=1.0, bool looping=0);
 void init_openal(int &argc, char** argv);
 
 
