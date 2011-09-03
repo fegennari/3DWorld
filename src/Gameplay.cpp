@@ -208,7 +208,7 @@ int self_coll_invalid(int type, int obj_index) {
 
 // smileys and camera
 void gen_dead_smiley(int source, int target, float energy, point const &pos, vector3d const &velocity, vector3d const &coll_dir,
-					 int damage_type, float health, float radius, float blood_v, bool burned)
+					 int damage_type, float health, float radius, float blood_v, bool burned, int type)
 {
 	// eyes, nose, and tongue
 	int const pcid(coll_id[SFPART]), offset(4*(target+1));
@@ -271,6 +271,16 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, min(4.0, double(sqrt(blood_v)))*radius, 0);
 	}
 	sstate.chunk_index = (sstate.chunk_index + 1) % NUM_CHUNK_BLOCKS;
+	
+	if (type == DROWNED) {
+		gen_sound(SOUND_DROWN, pos);
+	}
+	else if (burned) {
+		gen_sound(SOUND_SCREAM2, pos);
+	}
+	else {
+		gen_sound(SOUND_SCREAM1, pos);
+	}
 }
 
 
@@ -386,16 +396,19 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		sstate.powerup_time = POWERUP_TIME;
 		cam_filter_color    = WHITE;
 		print_text_onscreen(powerup_names[wa_id], GREEN, 1.0, 2*MESSAGE_TIME/3, 1);
+		gen_sound(SOUND_POWERUP, position);
 		break;
 
 	case HEALTH:
 		cam_filter_color = GREEN;
 		print_text_onscreen("+50 Health", GREEN, 1.0, 2*MESSAGE_TIME/3, 1);
+		gen_sound(SOUND_ITEM, position);
 		break;
 
 	case SHIELD:
 		cam_filter_color = YELLOW;
 		print_text_onscreen("+100 Shields", GREEN, 1.0, 2*MESSAGE_TIME/3, 1);
+		gen_sound(SOUND_ITEM, position);
 		break;
 
 	case WEAPON:
@@ -403,12 +416,14 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		sstate.p_ammo[wa_id]    = min(weapons[wa_id].max_ammo, sstate.p_ammo[wa_id]+weapons[wa_id].def_ammo);
 		print_text_onscreen(weapons[wa_id].name, GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
 		cam_filter_color = BLUE;
+		gen_sound(SOUND_ITEM, position);
 		break;
 
 	case AMMO:
 		sstate.p_ammo[wa_id] = min(weapons[wa_id].max_ammo, sstate.p_ammo[wa_id]+weapons[wa_id].def_ammo);
 		print_text_onscreen((make_string(weapons[wa_id].def_ammo) + " " + weapons[wa_id].name + " ammo"), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
 		cam_filter_color = BLUE;
+		gen_sound(SOUND_ITEM, position);
 		break;
 
 	case WA_PACK:
@@ -418,12 +433,14 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 			sstate.p_ammo[wa_id]    = min((int)weapons[wa_id].max_ammo, (sstate.p_ammo[wa_id] + pickup_ammo));
 			print_text_onscreen((weapons[wa_id].name + " pack with ammo " + make_string(pickup_ammo)), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
 			cam_filter_color = BLUE;
+			gen_sound(SOUND_ITEM, position);
 		}
 		break;
 
 	case BALL:
 		if (energy < 10.0 && sstate.pickup_ball(obj_index)) {
 			print_text_onscreen("You have the ball", GREEN, 1.2, 2*MESSAGE_TIME/3, 1);
+			gen_sound(SOUND_POWERUP, position);
 		}
 		else cam_filter_color = RED;
 		break;
@@ -484,7 +501,7 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		camera_health          = 100.0;
 		cam_filter_color.alpha = 1.0;
 		remove_reset_coll_obj(camera_coll_id);
-		gen_dead_smiley(source, CAMERA_ID, energy, camera, velocity, coll_dir, damage_type, camera_health, CAMERA_RADIUS, blood_v, burned);
+		gen_dead_smiley(source, CAMERA_ID, energy, camera, velocity, coll_dir, damage_type, camera_health, CAMERA_RADIUS, blood_v, burned, type);
 		assert(obj_groups[coll_id[SFPART]].max_objects() > 0);
 		obj_groups[coll_id[SFPART]].get_obj(0).flags |= CAMERA_VIEW; // camera follows the eye
 		orig_cdir = cview_dir;
@@ -684,7 +701,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	// dead
 	sstate.powerup      = -1;
 	sstate.powerup_time = 0;
-	gen_dead_smiley(source, index, energy, obj_pos, velocity, coll_dir, damage_type, obji.health, radius, blood_v, burned);
+	gen_dead_smiley(source, index, energy, obj_pos, velocity, coll_dir, damage_type, obji.health, radius, blood_v, burned, type);
 	player_state &ssource(sstates[source]);
 
 	if (source == CAMERA_ID) { // camera/player
@@ -1149,7 +1166,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	assert(type != SMILEY);
 	if (!game_mode || damage < TOLERANCE || size < TOLERANCE) return;
 	//RESET_TIME;
-	gen_sound(SOUND_EXPLODE, pos);
+	if (damage > 500.0) gen_sound(SOUND_EXPLODE, pos); // everything except for plasma
 
 	if (type == GRENADE || type == CGRENADE) {
 		add_blastr(pos, (pos - get_camera_pos()), 0.9*size, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB);
@@ -1501,6 +1518,8 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	}
 	switch (weapon_id) {
 	case W_M16: // line of sight damage
+		gen_sound(SOUND_GUNSHOT, fpos);
+
 		if ((wmode&1) != 1) { // not firing shrapnel
 			if (dtime > 10) firing_error *= 0.1;
 			if (underwater) firing_error += UWATER_FERR_ADD;
@@ -1523,6 +1542,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			for (unsigned i = 0; i < 2; ++i) {
 				create_shell_casing(fpos, dir, shooter, radius, 1);
 			}
+			gen_sound(SOUND_SHOTGUN, fpos);
 		}
 		return 1;
 
@@ -1541,6 +1561,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			}
 		}
 		else plasma_loaded = 0;
+		gen_sound(SOUND_FIREBALL, fpos);
 		break;
 
 	case W_LASER: // line of sight damage
@@ -1553,6 +1574,8 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 	case W_SEEK_D:
 		fpos += dir*radius; // fire from in front of shooter, but then there is no recoil
+	case W_ROCKET: // fallthrough from above
+		gen_sound(SOUND_ROCKET, fpos);
 		break;
 
 	case W_GASSER:
@@ -1582,9 +1605,14 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				float const darkness(0.6*rand_uniform(0.7, 1.0));
 				float const radius(w.blast_radius*rand_uniform(0.8, 1.2));
 				gen_arb_smoke(start_pos, color, gas_vel, radius, density, darkness, w.blast_damage, shooter, smoke_type, 0);
+				if (is_fire) gen_sound(SOUND_FIREBALL, start_pos);
 			}
 		}
 		return 1;
+
+	case W_BLADE:
+		gen_sound(SOUND_DRILL, fpos);
+		break;
 	}
 	int type(w.obj_id);
 	if (type < 0) return 3;

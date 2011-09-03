@@ -5,6 +5,7 @@
 #include "mesh.h"
 #include "csg.h"
 #include "physics_objects.h"
+#include "openal_wrap.h"
 
 
 bool const LET_COBJS_FALL    = 0;
@@ -65,6 +66,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 
 	// create fragments
 	float const cdir_mag(cdir.mag());
+	bool maybe_is_glass(0);
 
 	for (unsigned i = 0; i < cts.size(); ++i) {
 		if (cts[i].destroy == EXPLODEABLE) {
@@ -112,7 +114,9 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
 			}
 			gen_fragment(fpos, velocity, size_scale, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments);
 		}
+		if (shattered && tri_fragments && cts[i].color.alpha < 0.5) maybe_is_glass = 1;
 	} // for i
+	if (maybe_is_glass) gen_sound(SOUND_GLASS, pos);
 	//PRINT_TIME("Destroy Cobjs");
 }
 

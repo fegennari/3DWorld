@@ -19,10 +19,24 @@ buffer_manager_t sounds;
 source_manager_t sources;
 
 
+// supported: au, wav
+// not supported: mp3, aif
 void setup_sounds() {
 
 	sources.create_channels(NUM_CHANNELS);
-	sounds.add_file_buffer("explosion1.au"); // SOUND_EXPLODE
+	sounds.add_file_buffer("explosion1.au"  ); // SOUND_EXPLODE
+	sounds.add_file_buffer("gunshot.wav"    ); // SOUND_GUNSHOT
+	sounds.add_file_buffer("shotgun.wav"    ); // SOUND_SHOTGUN
+	sounds.add_file_buffer("fireball.wav"   ); // SOUND_FIREBALL
+	sounds.add_file_buffer("burning.wav"    ); // SOUND_BURNING
+	sounds.add_file_buffer("drown.wav"      ); // SOUND_DROWN
+	sounds.add_file_buffer("scream1.wav"    ); // SOUND_SCREAM1
+	sounds.add_file_buffer("scream2.wav"    ); // SOUND_SCREAM2
+	sounds.add_file_buffer("glass_break.wav"); // SOUND_GLASS
+	sounds.add_file_buffer("drill.wav"      ); // SOUND_DRILL
+	sounds.add_file_buffer("rocket.au"      ); // SOUND_ROCKET
+	sounds.add_file_buffer("item.wav"       ); // SOUND_ITEM
+	sounds.add_file_buffer("powerup.wav"    ); // SOUND_POWERUP
 }
 
 
@@ -107,6 +121,7 @@ unsigned buffer_manager_t::add_file_buffer(std::string const &fn) {
 		cerr << "Failed to load sound file: " << fn << endl;
 		exit(1);
 	}
+	cout << "."; cout.flush();
 	return ix;
 }
 
