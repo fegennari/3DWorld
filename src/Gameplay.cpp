@@ -2239,6 +2239,7 @@ void init_game_mode() {
 		sstates[i].killer = NO_SOURCE; // no one
 		if (game_mode == 1) init_sstate(i, 1); // ???
 	}
+	gen_sound(SOUND_ALERT, get_camera_pos());
 }
 
 
@@ -2374,7 +2375,12 @@ void change_game_mode() {
 		assert(coll_id[BALL] >= 0 && coll_id[BALL] < NUM_TOT_OBJS);
 		obj_groups[coll_id[BALL]].free();
 	}
-	if (game_mode) init_game_mode(); else free_dodgeballs(1, 1);
+	if (game_mode) {
+		init_game_mode();
+	}
+	else {
+		free_dodgeballs(1, 1);
+	}
 }
 
 
