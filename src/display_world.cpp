@@ -55,6 +55,7 @@ void display_universe();
 void display_inf_terrain();
 bool universe_intersection_test(point const &pos, vector3d const &dir, float range);
 void update_temperature(bool verbose);
+void update_sound_loops();
 
 
 inline void glClearColor_rgba(const colorRGBA &color) {
@@ -816,6 +817,7 @@ void display(void) {
 		auto_advance_time();
 		check_gl_error(3);
 		if (TIMETEST) PRINT_TIME("\n\n0");
+		update_sound_loops();
 		
 		if (combined_gu) { // light from current system's star
 			draw_universe_bkg(underwater, depth); // infinite universe as background

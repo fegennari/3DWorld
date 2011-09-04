@@ -555,6 +555,23 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 }
 
 
+void update_sound_loops() {
+
+	if (begin_motion && temperature > W_FREEZE_POINT && obj_groups[coll_id[PRECIP]].is_enabled()) {
+		start_sound_loop(SOUND_LOOP_RAIN);
+	}
+	else {
+		stop_sound_loop(SOUND_LOOP_RAIN);
+	}
+	if (wind.mag() >= 1.0) {
+		start_sound_loop(SOUND_LOOP_WIND);
+	}
+	else {
+		stop_sound_loop(SOUND_LOOP_WIND);
+	}
+}
+
+
 // This function is called whenever the window is resized. 
 // Parameters are the new dimentions of the window
 void resize(int x, int y) {
@@ -1013,13 +1030,6 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			break;
 		}
 		obj_groups[coll_id[PRECIP]].toggle_enable();
-
-		if (begin_motion && temperature > W_FREEZE_POINT && obj_groups[coll_id[PRECIP]].is_enabled()) {
-			start_sound_loop(SOUND_LOOP_RAIN);
-		}
-		else {
-			stop_sound_loop(SOUND_LOOP_RAIN);
-		}
 		break;
 
 	case 'N': // decrease precipitation rate by 1.5X

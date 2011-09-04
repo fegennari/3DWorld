@@ -70,8 +70,9 @@ class openal_source {
 public:
 	openal_source(unsigned source_=0) : source(source_) {}
 	//~openal_source() {free();}
-	bool is_valid () const {return (source > 0);}
-	bool is_active() const;
+	bool is_valid  () const {return (source > 0);}
+	bool is_playing() const;
+	bool is_active () const;
 	
 	void alloc();
 	void free();
@@ -93,6 +94,8 @@ class source_manager_t {
 	unsigned next_source;
 
 public:
+	std::set<unsigned> used_this_frame;
+
 	source_manager_t() : next_source(0) {}
 	void create_channels(unsigned num_channels);
 	unsigned new_source();

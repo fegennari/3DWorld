@@ -18,6 +18,8 @@ string const sounds_path("sounds/");
 buffer_manager_t sounds;
 source_manager_t sources, looping_sources;
 
+extern int frame_counter;
+
 
 // supported: au, wav
 // not supported: mp3, aif
@@ -190,7 +192,7 @@ void openal_source::setup(openal_buffer const &buffer, point const &pos, float g
 
 void openal_source::set_buffer_ix(unsigned buffer_ix) {alSourcei(source, AL_BUFFER, buffer_ix);}
 
-void openal_source::play()   const {alSourcePlay  (source);}
+void openal_source::play()   const {if (!is_playing()) alSourcePlay(source);}
 void openal_source::stop()   const {alSourceStop  (source);}
 void openal_source::pause()  const {alSourcePause (source);}
 void openal_source::rewind() const {alSourceRewind(source);}
@@ -204,11 +206,22 @@ void openal_source::blocking_play() const {
 	} while (is_active());
 }
 
+int get_source_state(unsigned source) {
+	int state;
+	alGetSourcei(source, AL_SOURCE_STATE, &state);
+	return state;
+}
+
 bool openal_source::is_active() const {
 	if (!is_valid()) return 0;
-	ALint state;
-	alGetSourcei(source, AL_SOURCE_STATE, &state);
+	int const state(get_source_state(source));
 	return (state == AL_PLAYING || state == AL_PAUSED);
+}
+
+bool openal_source::is_playing() const {
+	if (!is_valid()) return 0;
+	int const state(get_source_state(source));
+	return (state == AL_PLAYING);
 }
 
 
@@ -277,6 +290,14 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch,
 	bool looping, bool rel_to_listener, vector3d const &vel)
 {
 	//RESET_TIME;
+	static int last_frame(0);
+
+	if (frame_counter != last_frame) { // start new frame
+		sources.used_this_frame.clear();
+		last_frame = frame_counter;
+	}
+	if (sources.used_this_frame.find(id) != sources.used_this_frame.end()) return; // duplicate sound this frame
+	sources.used_this_frame.insert(id);
 	point const listener(get_camera_pos());
 
 	if (!dist_less_than(pos, listener, CAMERA_RADIUS)) {
