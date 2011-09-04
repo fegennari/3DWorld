@@ -59,7 +59,7 @@ char *lighting_file(NULL), *lighting_file_l(NULL), *snow_file(NULL);
 // Global Variables
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), use_stencil_shadows(0), univ_stencil_shadows(1);
 bool univ_planet_lod(0), draw_mesh_shader(1), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
-bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), recalc_model3d_normals(0);
+bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), recalc_model3d_normals(0), player_near_fire(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
@@ -557,18 +557,11 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 
 void update_sound_loops() {
 
-	if (begin_motion && temperature > W_FREEZE_POINT && obj_groups[coll_id[PRECIP]].is_enabled()) {
-		start_sound_loop(SOUND_LOOP_RAIN);
-	}
-	else {
-		stop_sound_loop(SOUND_LOOP_RAIN);
-	}
-	if (wind.mag() >= 1.0) {
-		start_sound_loop(SOUND_LOOP_WIND);
-	}
-	else {
-		stop_sound_loop(SOUND_LOOP_WIND);
-	}
+	bool const rain_enabled(begin_motion && temperature > W_FREEZE_POINT && obj_groups[coll_id[PRECIP]].is_enabled());
+	set_sound_loop_state(SOUND_LOOP_FIRE, player_near_fire);
+	set_sound_loop_state(SOUND_LOOP_RAIN, rain_enabled);
+	set_sound_loop_state(SOUND_LOOP_WIND, (wind.mag() >= 1.0));
+	player_near_fire = 0;
 }
 
 

@@ -51,12 +51,14 @@ team_info *teaminfo = NULL;
 vector<bbox> team_starts;
 
 
+extern bool player_near_fire;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, spectate;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_size;
 extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity;
+extern double camera_zh;
 extern point ocean, surface_pos, camera_last_pos;
 extern int coll_id[];
 extern obj_type object_types[];
@@ -1340,16 +1342,21 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 void do_area_effect_damage(point &pos, float effect_radius, float damage, int index, int source, int type) {
 
 	vector3d velocity(zero_vector);
-	float const radius(object_types[SMILEY].radius + effect_radius), radius_sq(radius*radius);
+	float const radius(object_types[SMILEY].radius + effect_radius);
+	point camera_pos(get_camera_pos());
+	camera_pos.z -= 0.5*camera_zh; // average/center of camera
 	
-	if (p2p_dist_sq(pos, get_camera_pos()) < radius_sq) { // what if camera/player is a different size or height from smiley?
-		camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type);
+	if (dist_less_than(pos, camera_pos, 4.0*radius)) {
+		if (dist_less_than(pos, camera_pos, radius)) {
+			camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type);
+		}
+		player_near_fire = 1;
 	}
 	obj_group const &objg(obj_groups[coll_id[SMILEY]]);
 	
 	if (objg.enabled) {		
 		for (unsigned i = 0; i < objg.end_id; ++i) {
-			if (!objg.get_obj(i).disabled() && p2p_dist_sq(pos, objg.get_obj(i).pos) < radius_sq) {
+			if (!objg.get_obj(i).disabled() && dist_less_than(pos, objg.get_obj(i).pos, radius)) {
 				// test for objects blocking the damage effects?
 				smiley_collision(i, ((source == NO_SOURCE) ? i : source), velocity, pos, damage, type);
 			}

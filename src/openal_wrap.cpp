@@ -48,6 +48,7 @@ void setup_sounds() {
 	sounds.add_file_buffer("splash1.wav"    ); // SOUND_SPLASH1
 	sounds.add_file_buffer("splash2.wav"    ); // SOUND_SPLASH2
 	sounds.add_file_buffer("water.wav"      ); // SOUND_WATER
+	sounds.add_file_buffer("thunder.wav"    ); // SOUND_THUNDER
 	sounds.add_file_buffer("boing.wav"      ); // SOUND_BOING
 	cout << endl;
 
@@ -61,15 +62,15 @@ void setup_sounds() {
 	}
 }
 
+void set_sound_loop_state(unsigned id, bool play) {
+	bool const playing(looping_sources.is_playing(id));
 
-void start_sound_loop(unsigned id) {
-	setup_openal_listener(all_zeros, zero_vector, openal_orient(plus_x, plus_z));
-	//looping_sources.rewind_source(id);
-	looping_sources.play_source(id);
-}
-
-void stop_sound_loop(unsigned id) {
-	looping_sources.stop_source(id);
+	if (play && !playing) { // start
+		looping_sources.play_source(id);
+	}
+	else if (!play && playing) { // stop
+		looping_sources.stop_source(id);
+	}
 }
 
 void alut_sleep(float seconds) {
@@ -192,7 +193,8 @@ void openal_source::setup(openal_buffer const &buffer, point const &pos, float g
 
 void openal_source::set_buffer_ix(unsigned buffer_ix) {alSourcei(source, AL_BUFFER, buffer_ix);}
 
-void openal_source::play()   const {if (!is_playing()) alSourcePlay(source);}
+void openal_source::play_if_not_playing() const {if (!is_playing()) alSourcePlay(source);}
+void openal_source::play()   const {alSourcePlay(source);}
 void openal_source::stop()   const {alSourceStop  (source);}
 void openal_source::pause()  const {alSourcePause (source);}
 void openal_source::rewind() const {alSourceRewind(source);}

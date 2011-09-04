@@ -2,9 +2,9 @@
 // by Frank Gennari
 // 4/13/02
 
-
 #include "3DWorld.h"
 #include "mesh.h"
+#include "openal_wrap.h"
 
 
 int    const FORK_PROB            = 50;
@@ -169,6 +169,7 @@ void lightning::gen() {
 	litning_pos.z += 0.01;
 	draw();
 	++l_frame_counter;
+	gen_sound(SOUND_THUNDER, litning_pos, 4.0);
 }
 
 

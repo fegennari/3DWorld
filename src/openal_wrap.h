@@ -7,7 +7,7 @@
 // static sounds
 enum {SOUND_BURNING=0, SOUND_RAIN1, SOUND_WIND1, SOUND_EXPLODE, SOUND_GUNSHOT, SOUND_SHOTGUN, SOUND_FIREBALL, SOUND_DROWN, SOUND_SCREAM1, SOUND_SCREAM2,
 	SOUND_GLASS, SOUND_DRILL, SOUND_ROCKET, SOUND_ITEM, SOUND_POWERUP, SOUND_ALERT, SOUND_SQUISH, SOUND_SQUISH2, SOUND_SPLAT1, SOUND_SPLASH1,
-	SOUND_SPLASH2, SOUND_WATER, SOUND_BOING, NUM_SOUNDS};
+	SOUND_SPLASH2, SOUND_WATER, SOUND_THUNDER, SOUND_BOING, NUM_SOUNDS};
 
 // looping sounds
 enum {SOUND_LOOP_FIRE, SOUND_LOOP_RAIN, SOUND_LOOP_WIND, NUM_LOOP_SOUNDS};
@@ -81,6 +81,7 @@ public:
 	void set_buffer(openal_buffer const &buffer) {set_buffer_ix(buffer.get_buffer_ix());}
 	void set_buffer_ix(unsigned buffer_ix);
 	void blocking_play() const;
+	void play_if_not_playing() const;
 	void play()   const;
 	void stop()   const;
 	void pause()  const;
@@ -103,6 +104,7 @@ public:
 	openal_source &get_inactive_source();
 	openal_source &get_source(unsigned id) {assert(id < sources.size()); return sources[id];}
 	void clear();
+	bool is_playing   (unsigned id) const {assert(id < sources.size()); return sources[id].is_playing();}
 	void play_source  (unsigned id) const {assert(id < sources.size()); sources[id].play  ();}
 	void stop_source  (unsigned id) const {assert(id < sources.size()); sources[id].stop  ();}
 	void pause_source (unsigned id) const {assert(id < sources.size()); sources[id].pause ();}
@@ -110,8 +112,7 @@ public:
 };
 
 
-void start_sound_loop(unsigned id);
-void stop_sound_loop(unsigned id);
+void set_sound_loop_state(unsigned id, bool play);
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
 void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0,
