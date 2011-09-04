@@ -13,7 +13,7 @@ vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
 extern bool invalid_ccache, keep_lasers;
-extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode;
+extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, begin_motion;
 extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPONS, animate2;
 extern float fticks;
 extern obj_type object_types[];
@@ -116,6 +116,7 @@ float const get_bbbat_angle(float fire_val) {
 void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float dpos, float fire_val, int wid, int wmode) {
 
 	if (wid == W_UNARMED) return;
+	assert(dir.mag() > TOLERANCE);
 	bool const DRAW_WEAP_COBJ(0); // for debugging
 	int const surfs((wid == W_BLADE || wid == W_M16 || wid == W_SHOTGUN || wid == W_LASER) ? 1 : 0); // no cylinder ends
 	cobj_params cp(0.8, BLACK, DRAW_WEAP_COBJ, 1, NULL, weap_cobjs.size(), -1, 1.0, surfs, 0.0, 0.0, 1); // special mode - shadow but no coll
@@ -147,11 +148,13 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 		{
 			radius = 0.032;
 			float const dist(max(dpos-radius, radius)); // close enough
-			point const pos1(pos0 - dir*cradius + point(0.0, 0.0, 0.01)), pos2(pos0 - dir*(cradius-dist) + point(0.0, 0.0, 0.01));
+			assert(dist > TOLERANCE);
+			point const pos1(pos0 - dir*cradius + point(0.0, 0.0, 0.01)), pos2(pos1 + dir*dist);
 			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, 0.0025, 0.0025, cp));
 			vector3d vrot(dir);
 			if (has_xy_comp) rotate_vector3d(cross_product(dir, plus_z), PI_TWO, vrot);
 			if (fire_val > 0.0) rotate_vector3d(dir, -540.0*fire_val/TO_DEG, vrot);
+			assert(vrot.mag() > TOLERANCE);
 			cp.surfs = 0;
 			weap_cobjs.push_back(add_coll_cylinder(pos2, (pos2 + vrot*(0.01*radius)), radius, radius, cp));
 		}
@@ -184,8 +187,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 
 	case W_M16:
 		{
-			point pos1(pos + vector3d(pos0, pos)*0.6);
-			point pos2(pos1);
+			point pos1(pos + vector3d(pos0, pos)*0.6), pos2(pos1);
 			pos1 -= dir*0.072;
 
 			if ((wmode&1) == 0) { // normal
@@ -219,6 +221,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 			rotate_vector3d(vector3d(0.0, 0.0, -1.0), atan2(dir.y, dir.x), vr);
 			rotate_vector3d_by_vr(plus_z, dir2, vr);
 			rotate_vector3d(vr, get_bbbat_angle(fire_val)/TO_DEG, dir2);
+			assert(dir2.mag() > TOLERANCE);
 			point const pos2(pos1 + dir2*(16.0*radius));
 			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, radius, 1.2*radius, cp));
 			weap_cobjs.push_back(add_coll_sphere(pos2, 1.2*radius, cp));
@@ -287,7 +290,7 @@ void update_weapon_cobjs() { // and update cblade and lighting
 	clear_weap_cobjs();
 	if (!game_mode) return;
 	assert(sstates != NULL);
-	bool const smileys_enabled(obj_groups[coll_id[SMILEY]].enabled);
+	bool const smileys_enabled(begin_motion && obj_groups[coll_id[SMILEY]].enabled);
 
 	for (int i = CAMERA_ID; i < num_smileys; ++i) { // if invisible, don't draw the weapon
 		if ((i != CAMERA_ID && !smileys_enabled) || (i == CAMERA_ID && camera_view)) continue;
