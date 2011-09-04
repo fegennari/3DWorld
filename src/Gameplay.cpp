@@ -1546,7 +1546,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	}
 	switch (weapon_id) {
 	case W_M16: // line of sight damage
-		gen_sound(SOUND_GUNSHOT, fpos);
+		gen_sound(SOUND_GUNSHOT, fpos, 0.5);
 
 		if ((wmode&1) != 1) { // not firing shrapnel
 			if (dtime > 10) firing_error *= 0.1;

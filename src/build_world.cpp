@@ -174,6 +174,12 @@ void dwobject::add_obj_dynamic_light(int index) const {
 			add_dynamic_light(0.8, pos, color);
 		}
 		break;
+	case CHUNK:
+		if (flags & TYPE_FLAG) { // charred
+			float stime;
+			colorRGBA const scolor(get_glowing_obj_color(pos, time, object_types[type].lifetime, stime, 1, 0));
+			if (stime < 1.0) add_dynamic_light(0.5, pos, scolor);
+		}
 	}
 }
 
