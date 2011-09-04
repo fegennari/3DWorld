@@ -16,19 +16,20 @@ unsigned const NUM_CHANNELS = 8;
 string const sounds_path("sounds/");
 
 buffer_manager_t sounds;
-source_manager_t sources;
+source_manager_t sources, looping_sources;
 
 
 // supported: au, wav
 // not supported: mp3, aif
 void setup_sounds() {
 
-	sources.create_channels(NUM_CHANNELS);
+	cout << endl << "Loading Sounds"; cout.flush();
+	sounds.add_file_buffer("burning.wav"    ); // SOUND_BURNING
+	sounds.add_file_buffer("rain1.wav"      ); // SOUND_RAIN1
 	sounds.add_file_buffer("explosion1.au"  ); // SOUND_EXPLODE
 	sounds.add_file_buffer("gunshot.wav"    ); // SOUND_GUNSHOT
 	sounds.add_file_buffer("shotgun.wav"    ); // SOUND_SHOTGUN
 	sounds.add_file_buffer("fireball.wav"   ); // SOUND_FIREBALL
-	sounds.add_file_buffer("burning.wav"    ); // SOUND_BURNING
 	sounds.add_file_buffer("drown.wav"      ); // SOUND_DROWN
 	sounds.add_file_buffer("scream1.wav"    ); // SOUND_SCREAM1
 	sounds.add_file_buffer("scream2.wav"    ); // SOUND_SCREAM2
@@ -37,8 +38,34 @@ void setup_sounds() {
 	sounds.add_file_buffer("rocket.au"      ); // SOUND_ROCKET
 	sounds.add_file_buffer("item.wav"       ); // SOUND_ITEM
 	sounds.add_file_buffer("powerup.wav"    ); // SOUND_POWERUP
+	sounds.add_file_buffer("alert.wav"      ); // SOUND_ALERT
+	sounds.add_file_buffer("squish.wav"     ); // SOUND_SQUISH
+	sounds.add_file_buffer("squish2.wav"    ); // SOUND_SQUISH2
+	sounds.add_file_buffer("splat1.wav"     ); // SOUND_SPLAT1
+	sounds.add_file_buffer("splash1.wav"    ); // SOUND_SPLASH1
+	sounds.add_file_buffer("splash2.wav"    ); // SOUND_SPLASH2
+	sounds.add_file_buffer("water.wav"      ); // SOUND_WATER
+	sounds.add_file_buffer("boing.wav"      ); // SOUND_BOING
+	cout << endl;
+
+	// create sources
+	sources.create_channels(NUM_CHANNELS);
+	looping_sources.create_channels(NUM_LOOP_SOUNDS);
+
+	for (unsigned i = 0; i < NUM_LOOP_SOUNDS; ++i) {
+		// FIXME: load from sounds[i]
+	}
 }
 
+
+void start_sound_loop(unsigned id) {
+	//looping_sources.rewind_source(id);
+	looping_sources.play_source(id);
+}
+
+void stop_sound_loop(unsigned id) {
+	looping_sources.stop_source(id);
+}
 
 void alut_sleep(float seconds) {
 	alutSleep(seconds);
@@ -145,7 +172,7 @@ void openal_source::free() {
 	}
 }
 
-void openal_source::setup(openal_buffer const &buffer, point const &pos, vector3d const &vel, float pitch, float gain, bool looping) {
+void openal_source::setup(openal_buffer const &buffer, point const &pos, float gain, float pitch, bool looping, vector3d const &vel) {
 	assert(is_valid() && buffer.is_valid());
 	alSourcef (source, AL_PITCH,    pitch);
 	alSourcef (source, AL_GAIN,     gain);
@@ -181,13 +208,19 @@ void set_openal_listener_as_player() {
 }
 
 
-void gen_sound(unsigned id, point const &pos, vector3d const &vel, float pitch, float gain, bool looping) { // non-blocking
+void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool looping, vector3d const &vel) { // non-blocking
 
 	//RESET_TIME;
+	if (0 && !dist_less_than(pos, get_camera_pos(), CAMERA_RADIUS)) {
+		int cindex;
+		bool const line_of_sight(check_coll_line(pos, get_camera_pos(), cindex, -1, 1, 0));
+		cout << line_of_sight << endl;
+	}
 	openal_buffer &buffer(sounds.get_buffer(id));
 	openal_source &source(sources.get_source());
+	source.stop(); // stop in case this source was already playing
 	set_openal_listener_as_player();
-	source.setup(buffer, pos, vel, pitch, gain, looping);
+	source.setup(buffer, pos, gain, pitch, looping, vel);
 	source.play();
 	//PRINT_TIME("Play Sound");
 }

@@ -5,6 +5,7 @@
 #include "mesh.h"
 #include "spillover.h"
 #include "physics_objects.h"
+#include "openal_wrap.h"
 
 
 float    const RIPPLE_DAMP1        = 0.95;
@@ -859,6 +860,7 @@ void add_splash(int xpos, int ypos, float energy, float radius) {
 						objg.get_obj(i).velocity = gen_rand_vector(vz*rand_uniform(0.05, 0.1), 20.0, PI_TWO);
 						vadd_rand(objg.get_obj(i).pos, 1.0*radius);
 					}
+					gen_sound(SOUND_SPLASH1, pos, min(1.0, 0.1*sqrt_energy));
 				}
 			}
 		}

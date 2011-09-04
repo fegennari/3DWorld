@@ -55,22 +55,6 @@ void draw_lasers() {
 }
 
 
-void blood_on_camera(unsigned num_spots) {
-
-	num_spots = min(num_spots, NUM_BS/4);
-	float const xrand(0.012*((float)window_width/(float)window_height));
-
-	for (unsigned i = 0, n = 0; i < NUM_BS && n < num_spots; ++i) {
-		if (blood_spots[i].time <= 0 || (NUM_BS - i <= num_spots - n)) {
-			blood_spots[i].pos.assign(rand_uniform(-xrand, xrand), rand_uniform(-0.012, 0.012), -0.02);
-			blood_spots[i].size = rand_uniform(3.0, 50.0);
-			blood_spots[i].time = int(10 + 3*blood_spots[i].size);
-			++n;
-		}
-	}
-}
-
-
 void show_blood_on_camera() {
 
 	glColor3f(0.7, 0.0, 0.0);

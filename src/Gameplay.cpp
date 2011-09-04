@@ -136,6 +136,22 @@ int same_team(int source, int target) {
 }
 
 
+void blood_on_camera(unsigned num_spots) {
+
+	num_spots = min(num_spots, NUM_BS/4);
+	float const xrand(0.012*((float)window_width/(float)window_height));
+
+	for (unsigned i = 0, n = 0; i < NUM_BS && n < num_spots; ++i) {
+		if (blood_spots[i].time <= 0 || ((NUM_BS - i) <= (num_spots - n))) {
+			blood_spots[i].pos.assign(rand_uniform(-xrand, xrand), rand_uniform(-0.012, 0.012), -0.02);
+			blood_spots[i].size = rand_uniform(3.0, 50.0);
+			blood_spots[i].time = int(10 + 3*blood_spots[i].size);
+			++n;
+		}
+	}
+}
+
+
 int compute_damage(float &energy, int type, int obj_index, int source, int target) {
 
 	energy = max(energy, 0.0f);
@@ -275,11 +291,14 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 	if (type == DROWNED) {
 		gen_sound(SOUND_DROWN, pos);
 	}
+	else if (type == CRUSHED || type == FELL) {
+		gen_sound(SOUND_SQUISH, pos);
+	}
 	else if (burned) {
-		gen_sound(SOUND_SCREAM2, pos);
+		gen_sound(SOUND_SCREAM2, pos, 1.0, rand_uniform(0.7, 1.3));
 	}
 	else {
-		gen_sound(SOUND_SCREAM1, pos);
+		gen_sound(SOUND_SCREAM1, pos, 1.0, rand_uniform(0.7, 1.3));
 	}
 }
 
@@ -402,13 +421,13 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	case HEALTH:
 		cam_filter_color = GREEN;
 		print_text_onscreen("+50 Health", GREEN, 1.0, 2*MESSAGE_TIME/3, 1);
-		gen_sound(SOUND_ITEM, position);
+		gen_sound(SOUND_ITEM, position, 0.5);
 		break;
 
 	case SHIELD:
 		cam_filter_color = YELLOW;
 		print_text_onscreen("+100 Shields", GREEN, 1.0, 2*MESSAGE_TIME/3, 1);
-		gen_sound(SOUND_ITEM, position);
+		gen_sound(SOUND_ITEM, position, 0.5);
 		break;
 
 	case WEAPON:
@@ -416,14 +435,14 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		sstate.p_ammo[wa_id]    = min(weapons[wa_id].max_ammo, sstate.p_ammo[wa_id]+weapons[wa_id].def_ammo);
 		print_text_onscreen(weapons[wa_id].name, GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
 		cam_filter_color = BLUE;
-		gen_sound(SOUND_ITEM, position);
+		gen_sound(SOUND_ITEM, position, 0.25);
 		break;
 
 	case AMMO:
 		sstate.p_ammo[wa_id] = min(weapons[wa_id].max_ammo, sstate.p_ammo[wa_id]+weapons[wa_id].def_ammo);
 		print_text_onscreen((make_string(weapons[wa_id].def_ammo) + " " + weapons[wa_id].name + " ammo"), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
 		cam_filter_color = BLUE;
-		gen_sound(SOUND_ITEM, position);
+		gen_sound(SOUND_ITEM, position, 0.25);
 		break;
 
 	case WA_PACK:
@@ -433,14 +452,14 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 			sstate.p_ammo[wa_id]    = min((int)weapons[wa_id].max_ammo, (sstate.p_ammo[wa_id] + pickup_ammo));
 			print_text_onscreen((weapons[wa_id].name + " pack with ammo " + make_string(pickup_ammo)), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
 			cam_filter_color = BLUE;
-			gen_sound(SOUND_ITEM, position);
+			gen_sound(SOUND_ITEM, position, 0.25);
 		}
 		break;
 
 	case BALL:
 		if (energy < 10.0 && sstate.pickup_ball(obj_index)) {
 			print_text_onscreen("You have the ball", GREEN, 1.2, 2*MESSAGE_TIME/3, 1);
-			gen_sound(SOUND_POWERUP, position);
+			gen_sound(SOUND_POWERUP, position, 0.5);
 		}
 		else cam_filter_color = RED;
 		break;
@@ -490,6 +509,7 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		else {
 			cam_filter_color.alpha = 0.0;
 		}
+		if (type == FELL) gen_sound(SOUND_SQUISH, camera, 0.3);
 	}
 	else { // dead
 		if (!spectate) {
@@ -685,15 +705,17 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		sstate.drop_weapon(coll_dir, vector3d(sstate.target_pos, obj_pos), obj_pos, index, energy, type);
 		blood_v  *= 0.5;
 		coll_dir *= -4.0;
+		if (type == FELL) gen_sound(SOUND_SQUISH, obj_pos, 0.2);
 	}
-	if (!is_area_damage(type)) {
+	if (!burned && !is_area_damage(type)) {
 		unsigned const blood_amt(create_blood(index+1, (alive ? 30 : 1), obj_pos, radius,
 			velocity, coll_dir, blood_v, damage_type, obji.health, burned));
 		float const cdist(distance_to_camera(obj_pos));
 
 		if (cdist < 4.0*radius && sphere_in_camera_view(obj_pos, radius, 2)) {
 			int const nblood(max(1, int(((cdist + 0.1)/radius)*blood_amt*max(0.5f, min(1.0f, (-obji.health/50.0f + 0.2f)))/2.0f)));
-			if (!burned) blood_on_camera(rand()%(nblood+1));
+			blood_on_camera(rand()%(nblood+1));
+			gen_sound(SOUND_SPLAT1, get_camera_pos());
 		}
 	}
 	if (alive) return;
@@ -1166,8 +1188,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	assert(type != SMILEY);
 	if (!game_mode || damage < TOLERANCE || size < TOLERANCE) return;
 	//RESET_TIME;
-	if (damage > 500.0) gen_sound(SOUND_EXPLODE, pos); // everything except for plasma
-
+	
 	if (type == GRENADE || type == CGRENADE) {
 		add_blastr(pos, (pos - get_camera_pos()), 0.9*size, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB);
 	}
@@ -1183,11 +1204,15 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	float depth(0.0);
 	point pos_zr(pos);
 	pos_zr.z -= 0.5*size;
+	bool const underwater(is_underwater(pos_zr, 0, &depth));
 
-	if (is_underwater(pos_zr, 0, &depth)) {
+	if (underwater) {
 		depth = min(0.25f, max(depth, 0.01f));
 		assert(damage >= 0.0);
 		add_splash(xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size);
+	}
+	if (damage > 500.0) { // everything except for plasma
+		gen_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos);
 	}
 	if (type == GRENADE) { // shrapnel fragments
 		unsigned const num(weapons[W_GRENADE].nfragments + rand()%(weapons[W_GRENADE].nfragments/4));
@@ -1255,12 +1280,13 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 		damage *= sqrt((double)ammo + 1.0)/SQRT2;
 	}
 	point pos(fpos + dir*(1.25*radius));
+	float const coll_radius(0.75*radius);
 
 	for (int g = 0; g < num_groups; ++g) {
 		obj_group &objg(obj_groups[g]);
 		if (!objg.enabled || (!objg.large_radius() && (objg.type != FRAGMENT || weapon != W_BLADE))) continue;
 		int const type(objg.type);
-		float const robj(object_types[type].radius), rad(0.75*radius + robj);
+		float const robj(object_types[type].radius), rad(coll_radius + robj);
 		
 		for (unsigned i = 0; i < objg.end_id; ++i) {
 			if (type == SMILEY && (int)i == shooter) continue; // this is the shooter
@@ -1269,6 +1295,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 			if (type == SMILEY) {
 				++sstates[shooter].cb_hurt;
 				smiley_collision(i, shooter, velocity, pos, damage, IMPACT);
+				gen_sound(SOUND_SQUISH2, pos, 0.5);
 			}
 			else if (type == FRAGMENT) {
 				objg.get_obj(i).status = 0; // just destroy the fragment
@@ -1281,8 +1308,9 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 	if (shooter >= 0) {
 		point const camera(get_camera_pos());
 
-		if (p2p_dist(pos, camera) < (0.6*radius + CAMERA_RADIUS)) {
+		if (dist_less_than(pos, camera, (coll_radius + CAMERA_RADIUS))) {
 			camera_collision(weapon, shooter, velocity, pos, damage, IMPACT);
+			gen_sound(SOUND_SQUISH2, pos, 1.0);
 		}
 	}
 	damage *= sstates[shooter].get_damage_scale();
@@ -1611,7 +1639,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		return 1;
 
 	case W_BLADE:
-		gen_sound(SOUND_DRILL, fpos);
+		gen_sound(SOUND_DRILL, fpos, 0.3);
 		break;
 	}
 	int type(w.obj_id);

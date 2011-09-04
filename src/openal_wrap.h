@@ -4,8 +4,13 @@
 #include "3DWorld.h"
 
 
-enum {SOUND_EXPLODE=0, SOUND_GUNSHOT, SOUND_SHOTGUN, SOUND_FIREBALL, SOUND_BURNING, SOUND_DROWN, SOUND_SCREAM1, SOUND_SCREAM2, SOUND_GLASS,
-	SOUND_DRILL, SOUND_ROCKET, SOUND_ITEM, SOUND_POWERUP, NUM_SOUNDS};
+// static sounds
+enum {SOUND_BURNING=0, SOUND_RAIN1, SOUND_EXPLODE, SOUND_GUNSHOT, SOUND_SHOTGUN, SOUND_FIREBALL, SOUND_DROWN, SOUND_SCREAM1, SOUND_SCREAM2, SOUND_GLASS,
+	SOUND_DRILL, SOUND_ROCKET, SOUND_ITEM, SOUND_POWERUP, SOUND_ALERT, SOUND_SQUISH, SOUND_SQUISH2, SOUND_SPLAT1, SOUND_SPLASH1, SOUND_SPLASH2,
+	SOUND_WATER, SOUND_BOING, NUM_SOUNDS};
+
+// looping sounds
+enum {SOUND_LOOP_FIRE, SOUND_LOOP_RAIN, /*SOUND_LOOP_WIND,*/ NUM_LOOP_SOUNDS};
 
 
 struct openal_orient {
@@ -69,7 +74,7 @@ public:
 	
 	void alloc();
 	void free();
-	void setup(openal_buffer const &buffer, point const &pos, vector3d const &vel, float pitch=1.0, float gain=1.0, bool looping=0);
+	void setup(openal_buffer const &buffer, point const &pos, float gain=1.0, float pitch=1.0, bool looping=0, vector3d const &vel=zero_vector);
 	void set_buffer(openal_buffer const &buffer) {set_buffer_ix(buffer.get_buffer_ix());}
 	void set_buffer_ix(unsigned buffer_ix);
 	void play()   const;
@@ -107,12 +112,18 @@ public:
 		sources.clear();
 		next_source = 0;
 	}
+	void play_source  (unsigned id) const {assert(id < sources.size()); sources[id].play  ();}
+	void stop_source  (unsigned id) const {assert(id < sources.size()); sources[id].stop  ();}
+	void pause_source (unsigned id) const {assert(id < sources.size()); sources[id].pause ();}
+	void rewind_source(unsigned id) const {assert(id < sources.size()); sources[id].rewind();}
 };
 
 
+void start_sound_loop(unsigned id);
+void stop_sound_loop(unsigned id);
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
-void gen_sound(unsigned id, point const &pos, vector3d const &vel=zero_vector, float pitch=1.0, float gain=1.0, bool looping=0);
+void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool looping=0, vector3d const &vel=zero_vector);
 void init_openal(int &argc, char** argv);
 
 

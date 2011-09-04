@@ -6,6 +6,7 @@
 #include "ship.h"
 #include "ship_util.h"
 #include "timetest.h"
+#include "openal_wrap.h"
 
 
 bool const TIMETEST           = (GLOBAL_TIMETEST || 0);
@@ -23,7 +24,7 @@ float resource_counts[NUM_ALIGNMENT] = {0.0};
 
 
 extern bool univ_planet_lod; // smaller near_clip if true?
-extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER;
+extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
 extern float def_water_level, water_plane_z, tan_term, sin_term, init_temperature, camera_shake;
 extern unsigned team_credits[];
@@ -412,6 +413,9 @@ bool universe_intersection_test(point const &pos, vector3d const &dir, float ran
 void send_warning_message(string const &msg) {
 
 	print_text_onscreen(msg.c_str(), RED, 1.0, 3*TICKS_PER_SECOND/2, 1);
+	static int last_warning_frame(0);
+	if ((frame_counter - last_warning_frame) > 5.0*TICKS_PER_SECOND) gen_sound(SOUND_ALERT, get_player_pos2());
+	last_warning_frame = frame_counter;
 }
 
 
@@ -429,6 +433,7 @@ void destroy_player_ship(bool captured) {
 	do_run = 0;
 	print_text_onscreen((captured ? "Ship Captured" : "Ship Destroyed"), RED, 1.2, 2*TICKS_PER_SECOND, 2);
 	add_camera_filter(colorRGBA(1.0, 0.0, 0.0, 0.6), 8, -1, CAM_FILT_DAMAGE);
+	if (!captured) gen_sound(SOUND_EXPLODE, get_player_pos2());
 	player_ship().reset_after(TICKS_PER_SECOND);
 }
 
@@ -761,6 +766,7 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 				if (homeworld) claim_world(clobj.object);
 				string const str(string("You have claimed ") + clobj.object->get_name() + (homeworld ? " as your homeworld" : ""));
 				print_text_onscreen(str, CYAN, 1.2, 2*TICKS_PER_SECOND);
+				gen_sound((homeworld ? SOUND_POWERUP : SOUND_ITEM), get_player_pos2());
 			}
 		}
 	}

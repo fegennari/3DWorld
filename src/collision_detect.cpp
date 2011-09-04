@@ -7,6 +7,7 @@
 #include "transform_obj.h"
 #include "player_state.h"
 #include "physics_objects.h"
+#include "openal_wrap.h"
 
 
 bool const REMOVE_ALL_COLL   = 1;
@@ -1276,6 +1277,11 @@ void vert_coll_detector::check_cobj(int index) {
 		else {
 			already_bounced = 1;
 			if (otype.flags & OBJ_IS_CYLIN) obj.init_dir.x += PI*signed_rand_float();
+			
+			if (type == BALL && cobj.status == COLL_STATIC) { // only static collisions to avoid camera/smiley bounce sounds
+				float const vmag(obj.velocity.mag());
+				if (vmag > 1.0) gen_sound(SOUND_BOING, obj.pos, min(1.0, 0.1*vmag));
+			}
 		}
 	}
 	else { // sticks
