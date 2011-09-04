@@ -14,6 +14,7 @@ using namespace std;
 
 unsigned const NUM_CHANNELS = 8;
 string const sounds_path("sounds/");
+point const looping_sound_ref_pt(0.0, 0.0, 0.0); // arbitrary
 
 buffer_manager_t sounds;
 source_manager_t sources, looping_sources;
@@ -52,13 +53,15 @@ void setup_sounds() {
 	sources.create_channels(NUM_CHANNELS);
 	looping_sources.create_channels(NUM_LOOP_SOUNDS);
 
-	for (unsigned i = 0; i < NUM_LOOP_SOUNDS; ++i) {
-		// FIXME: load from sounds[i]
+	for (unsigned i = 0; i < NUM_LOOP_SOUNDS; ++i) { // looping_source i is bound to sounds buffer i
+		openal_source &source(looping_sources.get_source(i));
+		source.setup(sounds.get_buffer(i), looping_sound_ref_pt, 1.0, 1.0, 1);
 	}
 }
 
 
 void start_sound_loop(unsigned id) {
+	setup_openal_listener(looping_sound_ref_pt, zero_vector, openal_orient(plus_x, plus_z));
 	//looping_sources.rewind_source(id);
 	looping_sources.play_source(id);
 }
@@ -189,6 +192,64 @@ void openal_source::stop()   const {alSourceStop  (source);}
 void openal_source::pause()  const {alSourcePause (source);}
 void openal_source::rewind() const {alSourceRewind(source);}
 
+void openal_source::blocking_play() const {
+	play();
+	//if (buffer.time > 0.0) {alut_sleep(buffer.time); return;}
+
+	do {
+		alut_sleep(0.01); // sleep 10ms
+	} while (is_active());
+}
+
+bool openal_source::is_active() const {
+	if (!is_valid()) return 0;
+	ALint state;
+	alGetSourcei(source, AL_SOURCE_STATE, &state);
+	return (state == AL_PLAYING || state == AL_PAUSED);
+}
+
+
+// source_manager_t
+
+void source_manager_t::create_channels(unsigned num_channels) {
+	clear();
+	
+	for (unsigned i = 0; i < num_channels; ++i) {
+		new_source();
+	}
+}
+
+unsigned source_manager_t::new_source() {
+	unsigned const ix(sources.size());
+	sources.push_back(openal_source());
+	sources.back().alloc();
+	return ix;
+}
+
+openal_source &source_manager_t::get_oldest_source() { // round robin
+	assert(!sources.empty());
+	if (next_source >= sources.size()) next_source = 0; // wraparound
+	return sources[next_source++];
+}
+
+openal_source &source_manager_t::get_inactive_source() {
+	for (unsigned i = 0; i < sources.size(); ++i) {
+		if (!sources[i].is_active()) {
+			if (next_source == i) next_source++; // move past this source
+			return sources[i];
+		}
+	}
+	return get_oldest_source(); // all were active
+}
+
+void source_manager_t::clear() {
+	for (unsigned i = 0; i < sources.size(); ++i) {
+		sources[i].free();
+	}
+	sources.clear();
+	next_source = 0;
+}
+
 
 // listner code
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient) {
@@ -211,16 +272,17 @@ void set_openal_listener_as_player() {
 void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool looping, vector3d const &vel) { // non-blocking
 
 	//RESET_TIME;
-	if (0 && !dist_less_than(pos, get_camera_pos(), CAMERA_RADIUS)) {
+	point const listener(get_camera_pos());
+
+	if (!dist_less_than(pos, listener, CAMERA_RADIUS)) {
 		int cindex;
-		bool const line_of_sight(check_coll_line(pos, get_camera_pos(), cindex, -1, 1, 0));
-		cout << line_of_sight << endl;
+		bool const line_of_sight(!check_coll_line(pos, listener, cindex, -1, 1, 0));
+		if (!line_of_sight) gain *= 0.25; // attenuate by 4x if there is no line of sight between source and listener
 	}
-	openal_buffer &buffer(sounds.get_buffer(id));
-	openal_source &source(sources.get_source());
-	source.stop(); // stop in case this source was already playing
+	openal_source &source(sources.get_inactive_source());
+	if (source.is_active()) source.stop(); // stop if already playing
 	set_openal_listener_as_player();
-	source.setup(buffer, pos, gain, pitch, looping, vel);
+	source.setup(sounds.get_buffer(id), pos, gain, pitch, looping, vel);
 	source.play();
 	//PRINT_TIME("Play Sound");
 }
@@ -232,8 +294,7 @@ void openal_hello_world() {
 	openal_source source;
 	source.alloc();
 	source.set_buffer(buffer);
-	source.play();
-	alut_sleep(1.0);
+	source.blocking_play();
 	source.free();
 	buffer.free();
 }

@@ -298,6 +298,8 @@ typedef point_d        upos_point_type;
 
 // fixed settings
 point    const all_zeros(0, 0, 0);
+vector3d const plus_x(1, 0, 0);
+vector3d const plus_y(0, 1, 0);
 vector3d const plus_z(0, 0, 1);
 vector3d const zero_vector(0, 0, 0);
 vector3d const all_ones(1, 1, 1);

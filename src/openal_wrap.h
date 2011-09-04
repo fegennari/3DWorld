@@ -70,13 +70,15 @@ class openal_source {
 public:
 	openal_source(unsigned source_=0) : source(source_) {}
 	//~openal_source() {free();}
-	bool is_valid() const {return (source > 0);}
+	bool is_valid () const {return (source > 0);}
+	bool is_active() const;
 	
 	void alloc();
 	void free();
 	void setup(openal_buffer const &buffer, point const &pos, float gain=1.0, float pitch=1.0, bool looping=0, vector3d const &vel=zero_vector);
 	void set_buffer(openal_buffer const &buffer) {set_buffer_ix(buffer.get_buffer_ix());}
 	void set_buffer_ix(unsigned buffer_ix);
+	void blocking_play() const;
 	void play()   const;
 	void stop()   const;
 	void pause()  const;
@@ -91,27 +93,12 @@ class source_manager_t {
 
 public:
 	source_manager_t() : next_source(0) {}
-
-	void create_channels(unsigned num_channels) {
-		clear();
-		for (unsigned i = 0; i < num_channels; ++i) new_source();
-	}
-	unsigned new_source() {
-		unsigned const ix(sources.size());
-		sources.push_back(openal_source());
-		sources.back().alloc();
-		return ix;
-	}
-	openal_source &get_source() { // round robin
-		assert(!sources.empty());
-		if (next_source >= sources.size()) next_source = 0; // wraparound
-		return sources[next_source++];
-	}
-	void clear() {
-		for (unsigned i = 0; i < sources.size(); ++i) sources[i].free();
-		sources.clear();
-		next_source = 0;
-	}
+	void create_channels(unsigned num_channels);
+	unsigned new_source();
+	openal_source &get_oldest_source();
+	openal_source &get_inactive_source();
+	openal_source &get_source(unsigned id) {assert(id < sources.size()); return sources[id];}
+	void clear();
 	void play_source  (unsigned id) const {assert(id < sources.size()); sources[id].play  ();}
 	void stop_source  (unsigned id) const {assert(id < sources.size()); sources[id].stop  ();}
 	void pause_source (unsigned id) const {assert(id < sources.size()); sources[id].pause ();}
