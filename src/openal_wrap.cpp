@@ -27,6 +27,7 @@ void setup_sounds() {
 	cout << endl << "Loading Sounds"; cout.flush();
 	sounds.add_file_buffer("burning.wav"    ); // SOUND_BURNING
 	sounds.add_file_buffer("rain1.wav"      ); // SOUND_RAIN1
+	sounds.add_file_buffer("wind1.wav"      ); // SOUND_WIND1
 	sounds.add_file_buffer("explosion1.au"  ); // SOUND_EXPLODE
 	sounds.add_file_buffer("gunshot.wav"    ); // SOUND_GUNSHOT
 	sounds.add_file_buffer("shotgun.wav"    ); // SOUND_SHOTGUN

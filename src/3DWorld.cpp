@@ -12,6 +12,7 @@
 #include "physics_objects.h"
 #include "gl_ext_arb.h"
 #include "model3d.h"
+#include "openal_wrap.h"
 #include <set>
 
 using namespace std;
@@ -1012,6 +1013,13 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			break;
 		}
 		obj_groups[coll_id[PRECIP]].toggle_enable();
+
+		if (begin_motion && temperature > W_FREEZE_POINT && obj_groups[coll_id[PRECIP]].is_enabled()) {
+			start_sound_loop(SOUND_LOOP_RAIN);
+		}
+		else {
+			stop_sound_loop(SOUND_LOOP_RAIN);
+		}
 		break;
 
 	case 'N': // decrease precipitation rate by 1.5X
