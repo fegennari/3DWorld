@@ -14,7 +14,6 @@ using namespace std;
 
 unsigned const NUM_CHANNELS = 8;
 string const sounds_path("sounds/");
-point const looping_sound_ref_pt(0.0, 0.0, 0.0); // arbitrary
 
 buffer_manager_t sounds;
 source_manager_t sources, looping_sources;
@@ -56,13 +55,13 @@ void setup_sounds() {
 
 	for (unsigned i = 0; i < NUM_LOOP_SOUNDS; ++i) { // looping_source i is bound to sounds buffer i
 		openal_source &source(looping_sources.get_source(i));
-		source.setup(sounds.get_buffer(i), looping_sound_ref_pt, 1.0, 1.0, 1);
+		source.setup(sounds.get_buffer(i), all_zeros, 1.0, 1.0, 1, 1);
 	}
 }
 
 
 void start_sound_loop(unsigned id) {
-	setup_openal_listener(looping_sound_ref_pt, zero_vector, openal_orient(plus_x, plus_z));
+	setup_openal_listener(all_zeros, zero_vector, openal_orient(plus_x, plus_z));
 	//looping_sources.rewind_source(id);
 	looping_sources.play_source(id);
 }
@@ -176,13 +175,16 @@ void openal_source::free() {
 	}
 }
 
-void openal_source::setup(openal_buffer const &buffer, point const &pos, float gain, float pitch, bool looping, vector3d const &vel) {
+void openal_source::setup(openal_buffer const &buffer, point const &pos, float gain, float pitch,
+	bool looping, bool rel_to_listener, vector3d const &vel)
+{
 	assert(is_valid() && buffer.is_valid());
 	alSourcef (source, AL_PITCH,    pitch);
 	alSourcef (source, AL_GAIN,     gain);
 	alSourcefv(source, AL_POSITION, &pos.x);
 	alSourcefv(source, AL_VELOCITY, &vel.x);
 	alSourcei (source, AL_LOOPING,  looping);
+	alSourcei (source, AL_SOURCE_RELATIVE, rel_to_listener);
 	set_buffer_ix(buffer.get_buffer_ix());
 }
 
@@ -270,8 +272,10 @@ void set_openal_listener_as_player() {
 }
 
 
-void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool looping, vector3d const &vel) { // non-blocking
-
+// non-blocking
+void gen_sound(unsigned id, point const &pos, float gain, float pitch,
+	bool looping, bool rel_to_listener, vector3d const &vel)
+{
 	//RESET_TIME;
 	point const listener(get_camera_pos());
 
@@ -283,7 +287,7 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool loop
 	openal_source &source(sources.get_inactive_source());
 	if (source.is_active()) source.stop(); // stop if already playing
 	set_openal_listener_as_player();
-	source.setup(sounds.get_buffer(id), pos, gain, pitch, looping, vel);
+	source.setup(sounds.get_buffer(id), pos, gain, pitch, looping, rel_to_listener, vel);
 	source.play();
 	//PRINT_TIME("Play Sound");
 }

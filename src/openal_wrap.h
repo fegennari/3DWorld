@@ -75,7 +75,8 @@ public:
 	
 	void alloc();
 	void free();
-	void setup(openal_buffer const &buffer, point const &pos, float gain=1.0, float pitch=1.0, bool looping=0, vector3d const &vel=zero_vector);
+	void setup(openal_buffer const &buffer, point const &pos, float gain=1.0, float pitch=1.0,
+		bool looping=0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
 	void set_buffer(openal_buffer const &buffer) {set_buffer_ix(buffer.get_buffer_ix());}
 	void set_buffer_ix(unsigned buffer_ix);
 	void blocking_play() const;
@@ -110,7 +111,8 @@ void start_sound_loop(unsigned id);
 void stop_sound_loop(unsigned id);
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
-void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool looping=0, vector3d const &vel=zero_vector);
+void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0,
+	bool looping=0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
 void init_openal(int &argc, char** argv);
 
 
