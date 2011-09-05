@@ -1494,7 +1494,7 @@ bool has_water(int x, int y);
 bool mesh_is_underwater(int x, int y);
 void select_water_ice_texture(colorRGBA &color, float *use_this_temp=NULL);
 void draw_water();
-void add_splash(int xpos, int ypos, float energy, float radius);
+void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound);
 bool add_water_section(float x1, float y1, float x2, float y2, float zval, float wvol);
 void float_downstream(point &pos, float radius);
 void calc_watershed();

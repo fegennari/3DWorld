@@ -1105,7 +1105,7 @@ int dwobject::check_water_collision(float vz_old) {
 						if (rand()%10 < 6) energy = 0.0;
 						energy *= 0.2;
 					}
-					if (energy > 0.0) add_splash(xpos, ypos, energy, radius);
+					if (energy > 0.0) add_splash(xpos, ypos, energy, radius, (radius >= LARGE_OBJ_RAD));
 				}
 			}
 		}

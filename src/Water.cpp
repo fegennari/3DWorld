@@ -807,7 +807,7 @@ void compute_ripples() {
 }
 
 
-void add_splash(int xpos, int ypos, float energy, float radius) {
+void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound) {
 
 	//energy *= 10.0;
 	if (DISABLE_WATER || !(display_mode & 0x04))  return;
@@ -860,7 +860,7 @@ void add_splash(int xpos, int ypos, float energy, float radius) {
 						objg.get_obj(i).velocity = gen_rand_vector(vz*rand_uniform(0.05, 0.1), 20.0, PI_TWO);
 						vadd_rand(objg.get_obj(i).pos, 1.0*radius);
 					}
-					gen_sound(SOUND_SPLASH1, pos, min(1.0, 0.1*sqrt_energy));
+					if (add_sound) gen_sound(SOUND_SPLASH1, pos, min(1.0, 0.1*sqrt_energy));
 				}
 			}
 		}
@@ -1222,7 +1222,7 @@ void draw_spillover(int i, int j, int si, int sj, int index, int vol_over, float
 		assert(!point_outside_mesh(x2, y2));
 		float const z2(mesh_height[y2][x2]);
 		int const draw_res(draw_spill_section(x1, y1, x2, y2, z1, z2, width, vol_over, index, blood_mix, mud_mix));
-		if (last_iteration || draw_res == 0) add_splash(x1, y1, 1.5*v_splash, 0.002*v_splash); // hit fixed ocean/lake
+		if (last_iteration || draw_res == 0) add_splash(x1, y1, 1.5*v_splash, 0.002*v_splash, 0); // hit fixed ocean/lake
 		if (last_iteration || draw_res != 1 || (x2 == x1 && y2 == y1)) break; // edge, disabled, or valley
 		last_iteration = (zval >= z2);
 		z1 = (last_iteration ? zval : z2);
