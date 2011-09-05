@@ -842,7 +842,7 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 	if (!precip && point_dia < 0.4) return; // clip it
 
 	if (is_drop && obj.status == 4 && (obj.flags & STATIC_COBJ_COLL)) { // draw as puddle
-		if (!draw_large) return; // skip
+		if (!draw_large || is_underwater(pos)) return; // don't draw
 		assert(!do_texture);
 		colorRGBA color2(color);
 		if (type == RAIN) color2.alpha *= 0.5; // rain is mostly transparent when small
