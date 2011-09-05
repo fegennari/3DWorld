@@ -557,10 +557,10 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 
 void update_sound_loops() {
 
-	bool const rain_enabled(begin_motion && temperature > W_FREEZE_POINT && obj_groups[coll_id[PRECIP]].is_enabled());
-	set_sound_loop_state(SOUND_LOOP_FIRE, player_near_fire);
-	set_sound_loop_state(SOUND_LOOP_RAIN, rain_enabled);
-	set_sound_loop_state(SOUND_LOOP_WIND, (wind.mag() >= 1.0));
+	bool const universe(world_mode == WMODE_UNIVERSE);
+	set_sound_loop_state(SOUND_LOOP_FIRE, (!universe && player_near_fire));
+	set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && begin_motion && temperature > W_FREEZE_POINT && obj_groups[coll_id[PRECIP]].is_enabled()));
+	set_sound_loop_state(SOUND_LOOP_WIND, (!universe && wind.mag() >= 1.0));
 	player_near_fire = 0;
 }
 

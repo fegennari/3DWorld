@@ -740,6 +740,7 @@ void display(void) {
 	up_vector.assign(0.0, sinf(up_theta), camera_y*cosf(up_theta));
 	setup_dlists();
 	check_gl_error(2);
+	update_sound_loops();
 
 	if (world_mode == WMODE_UNIVERSE) {
 		display_universe(); // infinite universe
@@ -817,7 +818,6 @@ void display(void) {
 		auto_advance_time();
 		check_gl_error(3);
 		if (TIMETEST) PRINT_TIME("\n\n0");
-		update_sound_loops();
 		
 		if (combined_gu) { // light from current system's star
 			draw_universe_bkg(underwater, depth); // infinite universe as background
