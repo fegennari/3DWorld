@@ -679,9 +679,16 @@ void build_lightmap(bool verbose) {
 	float const czspan(calc_czspan()), dz(DZ_VAL_INV2*czspan);
 	assert(dz >= 0.0);
 	assert(coll_objects.empty() || !has_fixed || dz > 0.0); // too strict (all cobjs can be shifted off the mesh)
-	unsigned const zsize(unsigned(dz + 1)), nbins(nonempty*zsize);
+	unsigned zsize(unsigned(dz + 1));
+	
+	if (zsize > MESH_Z_SIZE) {
+		cout << "* Warning: Scene height extends beyond the specified z range. Clamping zsize of " << zsize << " to " << MESH_Z_SIZE << "." << endl;
+		zsize = MESH_Z_SIZE;
+	}
+	unsigned const nbins(nonempty*zsize);
 	MESH_SIZE[2] = zsize; // override MESH_SIZE[2]
 	float const zstep(czspan/zsize), scene_scale(MESH_X_SIZE/128.0);
+	if (verbose) cout << "zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;
 	assert(zstep > 0.0);
 	float const z_atten(1.0 - (1.0 - Z_LT_ATTEN)/scene_scale), xy_atten(1.0 - (1.0 - XY_LT_ATTEN)/scene_scale);
 	if (!ldynamic) matrix_gen_2d(ldynamic, MESH_X_SIZE, MESH_Y_SIZE);
@@ -689,7 +696,6 @@ void build_lightmap(bool verbose) {
 	using_lightmap = (nonempty > 0);
 	lm_alloc       = 1;
 	assert(ldynamic && lmap_manager.vlmap);
-	if (verbose) cout << "zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;
 	int **z_light_depth = NULL;
 	matrix_gen_2d(z_light_depth);
 	if (verbose) PRINT_TIME(" Lighting Setup");
