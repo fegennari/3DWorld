@@ -1214,7 +1214,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		add_splash(xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size, 1);
 	}
 	if (damage > 500.0) { // everything except for plasma
-		gen_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos);
+		gen_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
 	}
 	if (type == GRENADE) { // shrapnel fragments
 		unsigned const num(weapons[W_GRENADE].nfragments + rand()%(weapons[W_GRENADE].nfragments/4));
@@ -1350,7 +1350,7 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 		if (dist_less_than(pos, camera_pos, radius)) {
 			camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type);
 		}
-		player_near_fire = 1;
+		if (type == FIRE) player_near_fire = 1;
 	}
 	obj_group const &objg(obj_groups[coll_id[SMILEY]]);
 	
@@ -1583,6 +1583,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 	case W_BBBAT: // baseball bat
 		do_impact_damage(fpos, dir, velocity, fpos, radius, shooter, weapon_id, 1.0);
+		gen_sound(SOUND_SWING, fpos);
 		//cobj.register_coll() ???
 		return 1;
 
@@ -1609,8 +1610,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 	case W_SEEK_D:
 		fpos += dir*radius; // fire from in front of shooter, but then there is no recoil
-	case W_ROCKET: // fallthrough from above
-		gen_sound(SOUND_ROCKET, fpos);
+		gen_sound(SOUND_ROCKET, fpos, 1.5, 1.0);
 		break;
 
 	case W_GASSER:
@@ -1640,14 +1640,19 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				float const darkness(0.6*rand_uniform(0.7, 1.0));
 				float const radius(w.blast_radius*rand_uniform(0.8, 1.2));
 				gen_arb_smoke(start_pos, color, gas_vel, radius, density, darkness, w.blast_damage, shooter, smoke_type, 0);
-				if (is_fire) gen_sound(SOUND_FIREBALL, start_pos);
+				gen_sound((is_fire ? SOUND_FIREBALL : SOUND_HISS), start_pos, 0.7, 1.2);
 			}
 		}
 		return 1;
 
-	case W_BLADE:
-		gen_sound(SOUND_DRILL, fpos, 0.3);
-		break;
+	case W_BLADE:    gen_sound(SOUND_DRILL,  fpos, 0.5, 0.8); break;
+	case W_ROCKET:   gen_sound(SOUND_ROCKET, fpos, 1.0, 1.2); break;
+	case W_BALL:     gen_sound(SOUND_SWING,  fpos, 0.7, 1.4); break;
+	case W_SBALL:    gen_sound(SOUND_SWING,  fpos, 0.4, 1.5); break;
+	case W_GRENADE:  gen_sound(SOUND_SWING,  fpos, 0.5, 1.3); break;
+	case W_CGRENADE: gen_sound(SOUND_SWING,  fpos, 0.6, 1.2); break;
+	case W_STAR5:    gen_sound(SOUND_SWING,  fpos, 0.3, 2.0); break;
+	case W_LANDMINE: gen_sound(SOUND_ALERT,  fpos, 0.3, 2.5); break;
 	}
 	int type(w.obj_id);
 	if (type < 0) return 3;
