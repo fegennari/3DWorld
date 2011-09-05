@@ -294,6 +294,9 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch,
 	bool looping, bool rel_to_listener, vector3d const &vel)
 {
 	//RESET_TIME;
+	point const listener(get_camera_pos());
+	bool const close(dist_less_than(pos, listener, CAMERA_RADIUS));
+	if (!close && id != SOUND_DROWN && id != SOUND_SPLASH1 && id != SOUND_SPLASH2 && id != SOUND_WATER && (is_underwater(pos) || is_underwater(listener))) return;
 	static int last_frame(0);
 
 	if (frame_counter != last_frame) { // start new frame
@@ -302,9 +305,8 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch,
 	}
 	if (sources.used_this_frame.find(id) != sources.used_this_frame.end()) return; // duplicate sound this frame
 	sources.used_this_frame.insert(id);
-	point const listener(get_camera_pos());
 
-	if (!dist_less_than(pos, listener, CAMERA_RADIUS)) {
+	if (!close) {
 		int cindex;
 		bool const line_of_sight(!check_coll_line(pos, listener, cindex, -1, 1, 0));
 		if (!line_of_sight) gain *= 0.25; // attenuate by 4x if there is no line of sight between source and listener
