@@ -602,10 +602,10 @@ int player_state::drop_weapon(vector3d const &coll_dir, vector3d const &nfront, 
 	if (game_mode != 1) return 0;
 	if (type == BEAM || type == BLAST_RADIUS || (type >= DROWNED && type <= CRUSHED)) return 0;
 
-	if ((rand()%20 == 0) && energy > 25.0 && (weapons[weapon].need_weapon || (weapons[weapon].need_ammo && p_ammo[weapon] > 0))) {
+	if (((rand()%31) == 0) && energy > 25.0 && (weapons[weapon].need_weapon || (weapons[weapon].need_ammo && p_ammo[weapon] > 0))) {
 		float const frontv(dot_product(coll_dir, nfront)/(coll_dir.mag()*nfront.mag()));
 
-		if (frontv > 0.95) {
+		if (frontv > 0.97) {
 			vector3d rv(signed_rand_float(), signed_rand_float(), 1.2*rand_float());
 			point const dpos(pos + rv*(2.0*object_types[SMILEY].radius));
 			drop_pack(dpos);
