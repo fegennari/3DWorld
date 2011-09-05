@@ -287,7 +287,7 @@ public:
 		vector<vector3d> vn; // vertex normals
 		vector<vector3d> tc; // texture coords
 		deque<poly_vix> polys;
-		char s[MAX_CHARS], group_name[MAX_CHARS], object_name[MAX_CHARS], material_name[MAX_CHARS], mat_lib[MAX_CHARS];
+		char s[MAX_CHARS], material_name[MAX_CHARS], mat_lib[MAX_CHARS];
 
 		while (fscanf(fp, "%s", s) == 1) {
 			if (s[0] == '#') { // comment
@@ -366,17 +366,18 @@ public:
 				read_to_newline(fp); // ignore
 			}
 			else if (strcmp(s, "o") == 0) { // object definition
-				if (fscanf(fp, "%s", object_name) != 1) {
+				/*if (fscanf(fp, "%s", object_name) != 1) {
 					cerr << "Error reading object name from object file " << filename << endl;
 					return 0;
-				}
+				}*/
+				read_to_newline(fp); // ignore - for now
 			}
 			else if (strcmp(s, "g") == 0) { // group
-				if (fscanf(fp, "%s", group_name) != 1) {
+				/*if (fscanf(fp, "%s", group_name) != 1) {
 					cerr << "Error reading group name from object file " << filename << endl;
 					return 0;
-				}
-				//cout << "group " << group_name << endl;
+				}*/
+				read_to_newline(fp); // ignore - for now
 			}
 			else if (strcmp(s, "s") == 0) { // smoothing/shading (off/on or 0/1)
 				if (fscanf(fp, "%u", &smoothing_group) != 1) {
