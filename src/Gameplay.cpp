@@ -528,57 +528,47 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		obj_groups[coll_id[SFPART]].get_obj(0).flags |= CAMERA_VIEW; // camera follows the eye
 		orig_cdir = cview_dir;
 		
-		if (type == SMILEY) {
-			string const str(string("Fragged by ") + sstates[source].name);
+		if (source == CAMERA_ID) { // camera/player suicide
+			cam_filter_color = BLACK;
+			string str;
 
+			switch (type) {
+				case FELL:       str = "FELL";             break;
+				case DROWNED:    str = "DROWNED";          break;
+				case FIRE:       str = "SUICIDE by FIRE";  break;
+				case BURNED:     str = "BURNED to DEATH";  break;
+				case FROZEN:     str = "FROZE to DEATH";   break;
+				case SUFFOCATED: str = "SUFFOCATED";       break;
+				case CRUSHED:    str = "CRUSHED to DEATH"; break;
+				case GASSED:     str = "Gassed to Death";  break;
+				default:         str = string("SUICIDE with ") + obj_type_names[type];
+			}
+			print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 3);
+			--sstates[CAMERA_ID].kills;
+			--frags; // suicide
+		}
+		else {
+			string str;
+
+			if (type == SMILEY) {
+				string const str(string("Fragged by ") + sstates[source].name);
+			}
+			else if (type == FIRE || type == BURNED) {
+				str = string("BURNED to DEATH by ") + sstates[source].name;
+			}
+			else {
+				str = string("Fragged by ") + sstates[source].name + "'s " +
+					get_weapon_qualifier(type, index, source) + " " + obj_type_names[type];
+			}
 			if (same_team(source, CAMERA_ID)) {
 				--sstates[source].kills;
 				print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 3); // killed by your teammate
+				gen_delayed_sound(1.0, SOUND_DOH, get_sstate_pos(source));
 			}
 			else {
 				++sstates[source].kills;
 				sstates[source].kill_time = 0;
 				print_text_onscreen(str, ORANGE, 1.0, MESSAGE_TIME, 3); // killed by an enemy
-			}
-		}
-		else {
-			string str;
-
-			if (source == CAMERA_ID) { // camera/player
-				cam_filter_color = BLACK;
-
-				switch (type) {
-					case FELL:       str = "FELL";             break;
-					case DROWNED:    str = "DROWNED";          break;
-					case FIRE:       str = "SUICIDE by FIRE";  break;
-					case BURNED:     str = "BURNED to DEATH";  break;
-					case FROZEN:     str = "FROZE to DEATH";   break;
-					case SUFFOCATED: str = "SUFFOCATED";       break;
-					case CRUSHED:    str = "CRUSHED to DEATH"; break;
-					case GASSED:     str = "Gassed to Death";  break;
-					default:         str = string("SUICIDE with ") + obj_type_names[type];
-				}
-				print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 3);
-				--sstates[CAMERA_ID].kills;
-				--frags; // suicide
-			}
-			else {
-				if (type == FIRE || type == BURNED) {
-					str = string("BURNED to DEATH by ") + sstates[source].name;
-				}
-				else {
-					str = string("Fragged by ") + sstates[source].name + "'s " +
-						get_weapon_qualifier(type, index, source) + " " + obj_type_names[type];
-				}
-				if (same_team(source, CAMERA_ID)) {
-					--sstates[source].kills;
-					print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 3); // killed by your teammate
-				}
-				else {
-					++sstates[source].kills;
-					sstates[source].kill_time = 0;
-					print_text_onscreen(str, ORANGE, 1.0, MESSAGE_TIME, 3); // killed by an enemy
-				}
 			}
 		}
 		if (!same_team(CAMERA_ID, source) && obj_groups[coll_id[SMILEY]].is_enabled()) {
@@ -734,7 +724,6 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 			int const weapon((type == BLAST_RADIUS ? br_source : ssource.weapon));
 			bool const head_shot(type != BLAST_RADIUS && type != FIRE && type != LANDMINE && !is_area_damage(type));
 			if (game_mode == 2 && type == CAMERA) type2 = BALL; // dodgeball
-			if (!same_team(index, source)) update_kill_health(camera_health);
 			string const str(string("You fragged ") + sstates[index].name + " with " + get_weapon_qualifier(type, weapon, source) +
 				" " + obj_type_names[type2] + (head_shot ? "\nHead Shot" : ""));
 
@@ -743,6 +732,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 				--frags;
 				--sstates[CAMERA_ID].kills;
 				--tot_frags;
+				gen_delayed_sound(1.0, SOUND_DOH, get_camera_pos());
 			}
 			else { // player killed an enemy
 				print_text_onscreen(str, MAGENTA, 1.0, MESSAGE_TIME, 2);
@@ -750,6 +740,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 				++sstates[CAMERA_ID].kills;
 				++tot_frags;
 				if (frags > best_frags) best_frags = frags; // not sure this is correct with suicides and team kills
+				update_kill_health(camera_health);
 			}
 		}
 	}
@@ -779,9 +770,11 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		if (same_team(source, index)) { // killed a teammate
 			print_text_onscreen(str, PINK, 1.0, MESSAGE_TIME/2, 0);
 			--ssource.kills;
+			gen_delayed_sound(1.0, SOUND_DOH, get_sstate_pos(source), 0.7);
 		}
 		else { // killed an enemy
 			print_text_onscreen(str, YELLOW, 1.0, MESSAGE_TIME/2, 0);
+			
 			if (free_for_all) {
 				++ssource.kills;
 				ssource.kill_time = 0;

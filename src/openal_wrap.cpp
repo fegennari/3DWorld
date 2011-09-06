@@ -17,8 +17,9 @@ string const sounds_path("sounds/");
 
 buffer_manager_t sounds;
 source_manager_t sources, looping_sources;
+vector<delayed_sound_t> delayed_sounds;
 
-extern int frame_counter;
+extern int frame_counter, iticks;
 
 
 // supported: au, wav
@@ -52,6 +53,7 @@ void setup_sounds() {
 	sounds.add_file_buffer("boing.wav"      ); // SOUND_BOING
 	sounds.add_file_buffer("swing.wav"      ); // SOUND_SWING
 	sounds.add_file_buffer("hiss.wav"       ); // SOUND_HISS
+	sounds.add_file_buffer("doh.wav"        ); // SOUND_DOH
 	cout << endl;
 
 	// create sources
@@ -290,9 +292,8 @@ void set_openal_listener_as_player() {
 
 
 // non-blocking
-void gen_sound(unsigned id, point const &pos, float gain, float pitch,
-	bool looping, bool rel_to_listener, vector3d const &vel)
-{
+void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener, vector3d const &vel) {
+
 	//RESET_TIME;
 	point const listener(get_camera_pos());
 	bool const close(dist_less_than(pos, listener, CAMERA_RADIUS));
@@ -314,9 +315,36 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch,
 	openal_source &source(sources.get_inactive_source());
 	if (source.is_active()) source.stop(); // stop if already playing
 	set_openal_listener_as_player();
-	source.setup(sounds.get_buffer(id), pos, gain, pitch, looping, rel_to_listener, vel);
+	source.setup(sounds.get_buffer(id), pos, gain, pitch, 0, rel_to_listener, vel); // not looping
 	source.play();
 	//PRINT_TIME("Play Sound");
+}
+
+
+void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener) {
+
+	if (delay == 0.0) {
+		gen_sound(id, pos, gain, pitch, rel_to_listener);
+	}
+	else {
+		assert(delay > 0.0);
+		int const delay_time(int(delay*TICKS_PER_SECOND + 0.5)); // round to the nearest tick
+		delayed_sounds.push_back(delayed_sound_t(delay_time, id, pos, gain, pitch, rel_to_listener));
+	}
+}
+
+
+void proc_delayed_sounds() {
+
+	for (unsigned i = 0; i < delayed_sounds.size(); ++i) {
+		delayed_sound_t &ds(delayed_sounds[i]);
+		ds.time -= iticks;
+		if (ds.time > 0) continue; // continue to delay
+		gen_sound(ds.id, ds.pos, ds.gain, ds.pitch, ds.rel_to_listener);
+		swap(delayed_sounds[i], delayed_sounds.back());
+		delayed_sounds.pop_back();
+		--i; // wraparound ok
+	}
 }
 
 

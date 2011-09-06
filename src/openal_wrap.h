@@ -7,7 +7,7 @@
 // static sounds
 enum {SOUND_BURNING=0, SOUND_RAIN1, SOUND_WIND1, SOUND_EXPLODE, SOUND_GUNSHOT, SOUND_SHOTGUN, SOUND_FIREBALL, SOUND_DROWN, SOUND_SCREAM1, SOUND_SCREAM2,
 	SOUND_GLASS, SOUND_DRILL, SOUND_ROCKET, SOUND_ITEM, SOUND_POWERUP, SOUND_ALERT, SOUND_SQUISH, SOUND_SQUISH2, SOUND_SPLAT1, SOUND_SPLASH1,
-	SOUND_SPLASH2, SOUND_WATER, SOUND_THUNDER, SOUND_BOING, SOUND_SWING, SOUND_HISS, NUM_SOUNDS};
+	SOUND_SPLASH2, SOUND_WATER, SOUND_THUNDER, SOUND_BOING, SOUND_SWING, SOUND_HISS, SOUND_DOH, NUM_SOUNDS};
 
 // looping sounds
 enum {SOUND_LOOP_FIRE, SOUND_LOOP_RAIN, SOUND_LOOP_WIND, NUM_LOOP_SOUNDS};
@@ -112,11 +112,24 @@ public:
 };
 
 
+struct delayed_sound_t {
+
+	int time, id;
+	point pos;
+	float gain, pitch;
+	bool rel_to_listener;
+
+	delayed_sound_t(int t=0, unsigned i=0, point const &P=all_zeros, float g=1.0, float p=1.0, bool r=0)
+		: time(t), id(i), pos(P), gain(g), pitch(p), rel_to_listener(r) {}
+};
+
+
 void set_sound_loop_state(unsigned id, bool play);
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
-void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0,
-	bool looping=0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
+void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
+void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0); // no vel
+void proc_delayed_sounds();
 void init_openal(int &argc, char** argv);
 
 
