@@ -2,11 +2,6 @@ t 0.0 0.0 -0.2 # translate -Z
 l 0.8 1.0 1.0 1.0 1.0 49 1 # elasticity R G B A texture_id draw
 y 4.0
 
-#m 0.05
-#O Samples/Generator2_TS/generator_small_high.obj 3
-#O Samples/Head/head_high.obj 3
-#q
-
 #B -1.55 1.353  -0.244 0.365  2.05 2.15
 b -1.55 1.353  -0.244 0.365  2.05 2.15  1.0 1.0 1.0  0.004  50000000
 
