@@ -2,10 +2,9 @@ t 0.0 0.0 0.0
 l 0.8 1.0 1.0 1.0 1.0 49 1 # elasticity R G B A texture_id draw
 y 4.0
 
-
 m 0.05  O Samples/Generator2_TS/generator_small_high.obj 3
 #m 0.05  O Samples/Head/head_high.obj 3
-#s 1 2  m 0.0001  O Samples/tower_bridge/tower_bridge.obj 3
+#s 1 2  m 0.0001  O "Samples/tower_bridge/tower bridge.obj" 3
 #s 0 2  m 0.1  O Samples/ak47.obj 3
 
 

@@ -871,6 +871,38 @@ void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius, geo
 }
 
 
+string read_filename(FILE *fp) {
+
+	assert(fp);
+	string str;
+	bool in_quote(0);
+
+	while (1) {
+		int const c(getc(fp));
+
+		if (c == '\0' || c == EOF) { // end of file
+			return str;
+		}
+		else if (c == '"') { // quote
+			in_quote ^= 1;
+		}
+		else if (isspace(c)) { // whitespace character
+			if (in_quote) {
+				str.push_back(c); // part of quoted string
+			}
+			else if (!str.empty()) { // not leading whitespace
+				return str;
+			}
+		}
+		else {
+			str.push_back(c);
+		}
+	}
+	assert(0); // never gets here
+	return str;
+}
+
+
 int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
 
 	assert(coll_obj_file != NULL);
@@ -907,19 +939,23 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'i': // include file (only translation and scale are saved state)
-			if (fscanf(fp, "%s", str) != 1) {
-				return read_error(fp, "include file", coll_obj_file);
-			}
-			if (!read_coll_obj_file(str, xf, cobj, has_layer, lcolor)) {
-				return read_error(fp, "include file", coll_obj_file);
+			{
+				string const fn(read_filename(fp));
+				if (fn.empty()) return read_error(fp, "include file", coll_obj_file);
+				
+				if (!read_coll_obj_file(fn.c_str(), xf, cobj, has_layer, lcolor)) {
+					return read_error(fp, "include file", coll_obj_file);
+				}
 			}
 			break;
 
 		case 'O': // load *.obj file: <filename> <group_cobjs_level>
-			if (fscanf(fp, "%s%i", str, &ivals[0]) != 2) {
-				return read_error(fp, "load object file command", coll_obj_file);
-			}
 			{
+				string const fn(read_filename(fp));
+
+				if (fn.empty() || fscanf(fp, "%i", &ivals[0]) != 1) {
+					return read_error(fp, "load object file command", coll_obj_file);
+				}
 				RESET_TIME;
 				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping, 3=full 3d model
 				bool const group_cobjs(ivals[0] != 0);
@@ -929,7 +965,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: one for each texture?)
 				ppts.resize(0);
 				
-				if (!read_object_file(str, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d, 1)) {
+				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d, 1)) {
 					return read_error(fp, "object file data", coll_obj_file);
 				}
 				if (!no_cobjs) {

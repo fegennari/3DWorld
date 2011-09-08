@@ -32,12 +32,24 @@ protected:
 		in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
 
-	void read_to_newline(FILE *fp) const {
+	void read_to_newline(FILE *fp_) const {
 		while (1) {
-			int const c(getc(fp));
+			int const c(getc(fp_));
 			if (c == '\n' || c == '\0' || c == EOF) return;
 		}
 		assert(0); // never gets here
+	}
+
+	void read_str_to_newline(FILE *fp_, string &str) const {
+		assert(fp_);
+		str.resize(0);
+
+		while (1) {
+			int const c(getc(fp_));
+			if (c == '\n' || c == '\0' || c == EOF) break; // end of file or line
+			if (!isspace(c) || !str.empty()) str.push_back(c);
+		}
+		return;
 	}
 
 	void normalize_index(int &ix, unsigned vect_sz) const {
@@ -287,7 +299,8 @@ public:
 		vector<vector3d> vn; // vertex normals
 		vector<vector3d> tc; // texture coords
 		deque<poly_vix> polys;
-		char s[MAX_CHARS], material_name[MAX_CHARS], mat_lib[MAX_CHARS];
+		char s[MAX_CHARS];
+		string material_name, mat_lib, group_name, object_name;
 
 		while (fscanf(fp, "%s", s) == 1) {
 			if (s[0] == '#') { // comment
@@ -366,18 +379,10 @@ public:
 				read_to_newline(fp); // ignore
 			}
 			else if (strcmp(s, "o") == 0) { // object definition
-				/*if (fscanf(fp, "%s", object_name) != 1) {
-					cerr << "Error reading object name from object file " << filename << endl;
-					return 0;
-				}*/
-				read_to_newline(fp); // ignore - for now
+				read_str_to_newline(fp, object_name); // can be empty?
 			}
 			else if (strcmp(s, "g") == 0) { // group
-				/*if (fscanf(fp, "%s", group_name) != 1) {
-					cerr << "Error reading group name from object file " << filename << endl;
-					return 0;
-				}*/
-				read_to_newline(fp); // ignore - for now
+				read_str_to_newline(fp, group_name); // can be empty
 			}
 			else if (strcmp(s, "s") == 0) { // smoothing/shading (off/on or 0/1)
 				if (fscanf(fp, "%u", &smoothing_group) != 1) {
@@ -389,18 +394,22 @@ public:
 				}
 			}
 			else if (strcmp(s, "usemtl") == 0) { // use material
-				if (fscanf(fp, "%s", material_name) != 1) {
+				read_str_to_newline(fp, material_name);
+
+				if (material_name.empty()) {
 					cerr << "Error reading material from object file " << filename << endl;
 					return 0;
 				}
-				cur_mat_id = model.find_material(string(material_name));
+				cur_mat_id = model.find_material(material_name);
 			}
 			else if (strcmp(s, "mtllib") == 0) { // material library
-				if (fscanf(fp, "%s", mat_lib) != 1) {
+				read_str_to_newline(fp, mat_lib);
+
+				if (mat_lib.empty()) {
 					cerr << "Error reading material library from object file " << filename << endl;
 					return 0;
 				}
-				if (!load_mat_lib(string(mat_lib))) { // could cache loaded files, but they tend to not be reloaded and loading is fast anyway (since textures are cached)
+				if (!load_mat_lib(mat_lib)) { // could cache loaded files, but they tend to not be reloaded and loading is fast anyway (since textures are cached)
 					cerr << "Error reading material library file " << mat_lib << endl;
 					return 0;
 				}
@@ -442,7 +451,7 @@ public:
 };
 
 
-bool read_object_file(char *filename, vector<polygon_t> *ppts, geom_xform_t const &xf,
+bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xform_t const &xf,
 	int def_tid, colorRGBA const &def_c, bool load_models, bool verbose)
 {
 	if (load_models) {
