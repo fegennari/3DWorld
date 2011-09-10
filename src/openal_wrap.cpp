@@ -298,6 +298,8 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 	point const listener(get_camera_pos());
 	bool const close(dist_less_than(pos, listener, CAMERA_RADIUS));
 	if (!close && id != SOUND_DROWN && id != SOUND_SPLASH1 && id != SOUND_SPLASH2 && id != SOUND_WATER && (is_underwater(pos) || is_underwater(listener))) return;
+	openal_source &source(sources.get_inactive_source());
+	if (!close && source.is_playing()) return; // already playing - don't stop it
 	static int last_frame(0);
 
 	if (frame_counter != last_frame) { // start new frame
@@ -312,7 +314,6 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 		bool const line_of_sight(!check_coll_line(pos, listener, cindex, -1, 1, 0));
 		if (!line_of_sight) gain *= 0.25; // attenuate by 4x if there is no line of sight between source and listener
 	}
-	openal_source &source(sources.get_inactive_source());
 	if (source.is_active()) source.stop(); // stop if already playing
 	set_openal_listener_as_player();
 	source.setup(sounds.get_buffer(id), pos, gain, pitch, 0, rel_to_listener, vel); // not looping
