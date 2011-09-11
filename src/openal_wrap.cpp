@@ -54,6 +54,13 @@ void setup_sounds() {
 	sounds.add_file_buffer("swing.wav"      ); // SOUND_SWING
 	sounds.add_file_buffer("hiss.wav"       ); // SOUND_HISS
 	sounds.add_file_buffer("doh.wav"        ); // SOUND_DOH
+	sounds.add_file_buffer("hurt.wav"       ); // SOUND_HURT
+	sounds.add_file_buffer("death.wav"      ); // SOUND_DEATH
+	sounds.add_file_buffer("agony.au"       ); // SOUND_AGONY
+	sounds.add_file_buffer("scared.wav"     ); // SOUND_SCARED
+	sounds.add_file_buffer("gasp.wav"       ); // SOUND_GASP
+	sounds.add_file_buffer("scream3.wav"    ); // SOUND_SCREAM3
+	sounds.add_file_buffer("squeal.wav"     ); // SOUND_SQUEAL
 	cout << endl;
 
 	// create sources

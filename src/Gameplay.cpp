@@ -296,11 +296,18 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 	else if (type == CRUSHED || type == FELL) {
 		gen_sound(SOUND_SQUISH, pos);
 	}
+	else if (type == GASSED) {
+		gen_sound(SOUND_SCREAM3, pos, 1.0, rand_uniform(0.8, 1.2));
+	}
+	else if (type == FROZEN || type == SUFFOCATED || type == PLASMA_LT_D) { // these are rare ones
+		gen_sound(SOUND_SQUEAL, pos);
+	}
 	else if (burned) {
 		gen_sound(SOUND_SCREAM2, pos, 1.0, rand_uniform(0.7, 1.3));
 	}
 	else {
-		gen_sound(SOUND_SCREAM1, pos, 1.0, rand_uniform(0.7, 1.3));
+		int const sound(((rand()&1) ? SOUND_SCREAM1 : SOUND_DEATH));
+		gen_sound(sound, pos, 1.0, rand_uniform(0.7, 1.3));
 	}
 }
 
@@ -487,6 +494,7 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	}
 	if (!compute_damage(energy, type, obj_index, source, CAMERA_ID)) return;
 	if (energy > 0.0 && camera_invincible) return;
+	float const last_health(camera_health);
 	camera_health -= HEALTH_PER_DAMAGE*energy;
 	camera_health = min(camera_health, ((sstate.powerup == PU_REGEN) ? MAX_REGEN_HEALTH : max(last_h, MAX_HEALTH)));
 	bool const is_blood(energy > 0.0 && !is_area_damage(type));
@@ -512,6 +520,7 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 			cam_filter_color.alpha = 0.0;
 		}
 		if (type == FELL) gen_sound(SOUND_SQUISH, camera, 0.3);
+		if (camera_health <= 20.0 && last_health > 20.0) gen_sound(SOUND_SCARED, camera); // almost dead
 	}
 	else { // dead
 		if (!spectate) {
@@ -671,7 +680,8 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	}
 	if (!compute_damage(energy, type, obj_index, source, index)) return;
 	dwobject &obji(obj_groups[cid].get_obj(index));
-	obji.health = min((obji.health - HEALTH_PER_DAMAGE*energy), (sstate.powerup == PU_REGEN) ? MAX_REGEN_HEALTH : MAX_HEALTH);
+	float const last_health(obji.health), health_drop(HEALTH_PER_DAMAGE*energy);
+	obji.health = min((obji.health - health_drop), (sstate.powerup == PU_REGEN) ? MAX_REGEN_HEALTH : MAX_HEALTH);
 	int const alive(obji.health >= 0.0);
 	if (energy <= 0.0 && alive) return;
 	bool const burned(is_burned(type, br_source));
@@ -698,6 +708,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		blood_v  *= 0.5;
 		coll_dir *= -4.0;
 		if (type == FELL) gen_sound(SOUND_SQUISH, obj_pos, 0.2);
+		if (obji.health <= 10.0 && last_health > 10.0 && health_drop > 10.0) gen_sound(SOUND_SCARED, obj_pos, 0.5); // almost dead
 	}
 	if (!burned && !is_area_damage(type)) {
 		unsigned const blood_amt(create_blood(index+1, (alive ? 30 : 1), obj_pos, radius,
@@ -1268,7 +1279,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 
 void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &velocity, point const &shoot_pos, float radius, int shooter, int weapon, float mag) {
 
-	float damage(mag*weapons[weapon].blast_damage);
+	float damage(mag*weapons[weapon].blast_damage), sound_gain(0.0);
 	bool create_sound(1);
 
 	if (weapon == W_BLADE) {
@@ -1292,7 +1303,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 			if (type == SMILEY) {
 				++sstates[shooter].cb_hurt;
 				smiley_collision(i, shooter, velocity, pos, damage, IMPACT);
-				if (create_sound) gen_sound(SOUND_SQUISH2, pos, 0.5);
+				sound_gain = 0.7;
 			}
 			else if (type == FRAGMENT) {
 				objg.get_obj(i).status = 0; // just destroy the fragment
@@ -1307,8 +1318,11 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 
 		if (dist_less_than(pos, camera, (coll_radius + CAMERA_RADIUS))) {
 			camera_collision(weapon, shooter, velocity, pos, damage, IMPACT);
-			if (create_sound) gen_sound(SOUND_SQUISH2, pos, 1.0);
+			sound_gain = 1.0;
 		}
+	}
+	if (create_sound && sound_gain > 0.0) {
+		gen_sound(((weapon == W_BBBAT) ? SOUND_HURT : SOUND_SQUISH2), pos, sound_gain);
 	}
 	damage *= sstates[shooter].get_damage_scale();
 
@@ -1342,8 +1356,9 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 	camera_pos.z -= 0.5*camera_zh; // average/center of camera
 	
 	if (dist_less_than(pos, camera_pos, 4.0*radius)) {
-		if (dist_less_than(pos, camera_pos, radius)) {
+		if (camera_mode == 1 && dist_less_than(pos, camera_pos, radius)) {
 			camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type);
+			if (((rand()&63) == 0) && camera_health > 0.0) gen_sound(SOUND_AGONY, pos);
 		}
 		if (type == FIRE) player_near_fire = 1;
 	}
@@ -2195,20 +2210,18 @@ bool check_underwater(int who, float &depth) { // check if player is drowning
 	point const pos(get_sstate_pos(who));
 	bool const underwater(is_underwater(pos, 1, &depth));
 	if (sstates == NULL) return underwater; // assert(0)?
+	int const dtime(game_mode ? int(sstates[who].uw_time - int((float)DROWN_TIME)/fticks) : 0);
 
 	if (underwater) {
 		++sstates[who].uw_time;
 
-		if (game_mode) {
-			int dtime(int(sstates[who].uw_time - int((float)DROWN_TIME)/fticks));
-
-			if (dtime > 0 && (sstates[who].uw_time%TICKS_PER_SECOND) == 0) {
-				float const damage(2.0*fticks*dtime);
-				smiley_collision(who, who, zero_vector, pos, damage, DROWNED);
-			}
+		if (dtime > 0 && (sstates[who].uw_time%TICKS_PER_SECOND) == 0) {
+			float const damage(2.0*fticks*dtime);
+			smiley_collision(who, who, zero_vector, pos, damage, DROWNED);
 		}
 	}
 	else {
+		if (dtime > 0) gen_sound(SOUND_GASP, pos);
 		sstates[who].uw_time = 0;
 	}
 	return underwater;
