@@ -1269,10 +1269,12 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &velocity, point const &shoot_pos, float radius, int shooter, int weapon, float mag) {
 
 	float damage(mag*weapons[weapon].blast_damage);
+	bool create_sound(1);
 
 	if (weapon == W_BLADE) {
 		int const ammo(UNLIMITED_WEAPONS ? 1 : sstates[shooter].p_ammo[weapon]);
 		damage *= sqrt((double)ammo + 1.0)/SQRT2;
+		create_sound = ((rand()&7) == 0);
 	}
 	point pos(fpos + dir*(1.25*radius));
 	float const coll_radius(0.75*radius);
@@ -1290,7 +1292,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 			if (type == SMILEY) {
 				++sstates[shooter].cb_hurt;
 				smiley_collision(i, shooter, velocity, pos, damage, IMPACT);
-				gen_sound(SOUND_SQUISH2, pos, 0.5);
+				if (create_sound) gen_sound(SOUND_SQUISH2, pos, 0.5);
 			}
 			else if (type == FRAGMENT) {
 				objg.get_obj(i).status = 0; // just destroy the fragment
@@ -1305,7 +1307,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 
 		if (dist_less_than(pos, camera, (coll_radius + CAMERA_RADIUS))) {
 			camera_collision(weapon, shooter, velocity, pos, damage, IMPACT);
-			gen_sound(SOUND_SQUISH2, pos, 1.0);
+			if (create_sound) gen_sound(SOUND_SQUISH2, pos, 1.0);
 		}
 	}
 	damage *= sstates[shooter].get_damage_scale();

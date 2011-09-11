@@ -193,6 +193,7 @@ void openal_source::setup(openal_buffer const &buffer, point const &pos, float g
 	alSourcei (source, AL_LOOPING,  looping);
 	alSourcei (source, AL_SOURCE_RELATIVE, rel_to_listener);
 	set_buffer_ix(buffer.get_buffer_ix());
+	params = sound_params_t(pos, gain, pitch, rel_to_listener);
 }
 
 void openal_source::set_buffer_ix(unsigned buffer_ix) {alSourcei(source, AL_BUFFER, buffer_ix);}
@@ -248,6 +249,23 @@ unsigned source_manager_t::new_source() {
 	return ix;
 }
 
+openal_source &source_manager_t::get_least_loud_source() {
+	assert(!sources.empty());
+	float least_loud(0.0);
+	unsigned least_loud_source(0);
+
+	for (unsigned i = 0; i < sources.size(); ++i) {
+		float const loudness(sources[i].get_loudness());
+		if (loudness == 0.0) return sources[i]; // not active
+
+		if (least_loud == 0.0 || loudness < least_loud) {
+			least_loud = loudness;
+			least_loud_source = i;
+		}
+	}
+	return sources[least_loud_source];
+}
+
 openal_source &source_manager_t::get_oldest_source() { // round robin
 	assert(!sources.empty());
 	if (next_source >= sources.size()) next_source = 0; // wraparound
@@ -296,10 +314,18 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 
 	//RESET_TIME;
 	point const listener(get_camera_pos());
-	bool const close(dist_less_than(pos, listener, CAMERA_RADIUS));
+	float const dist(distance_to_camera(pos));
+	bool const close(dist < CAMERA_RADIUS);
 	if (!close && id != SOUND_DROWN && id != SOUND_SPLASH1 && id != SOUND_SPLASH2 && id != SOUND_WATER && (is_underwater(pos) || is_underwater(listener))) return;
+#if 0
 	openal_source &source(sources.get_inactive_source());
 	if (!close && source.is_playing()) return; // already playing - don't stop it
+#else
+	openal_source &source(sources.get_least_loud_source());
+	float const loudness(gain/max(SMALL_NUMBER, dist));
+	//cout << "f: " << frame_counter << " id: " << id << " loud: " << loudness << " s loud: " << source.get_loudness() << " keep: " << !(loudness < max(0.01f, source.get_loudness())) << endl; // testing
+	if (loudness < max(0.01f, source.get_loudness())) return; // too soft
+#endif
 	static int last_frame(0);
 
 	if (frame_counter != last_frame) { // start new frame
@@ -330,7 +356,8 @@ void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, f
 	else {
 		assert(delay > 0.0);
 		int const delay_time(int(delay*TICKS_PER_SECOND + 0.5)); // round to the nearest tick
-		delayed_sounds.push_back(delayed_sound_t(delay_time, id, pos, gain, pitch, rel_to_listener));
+		sound_params_t params(pos, gain, pitch, rel_to_listener);
+		delayed_sounds.push_back(delayed_sound_t(params, id, delay_time));
 	}
 }
 

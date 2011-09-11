@@ -21,6 +21,27 @@ struct openal_orient {
 };
 
 
+struct sound_params_t {
+
+	point pos;
+	float gain, pitch;
+	bool rel_to_listener;
+
+	sound_params_t(point const &P=all_zeros, float g=1.0, float p=1.0, bool r=0)
+		: pos(P), gain(g), pitch(p), rel_to_listener(r) {}
+	float get_loudness() const {return gain/max(SMALL_NUMBER, distance_to_camera(pos));}
+};
+
+
+struct delayed_sound_t : public sound_params_t {
+
+	int id, time;
+
+	delayed_sound_t() : time(0) {}
+	delayed_sound_t(sound_params_t const &p, int i, int t) : sound_params_t(p), id(i), time(t) {}
+};
+
+
 class openal_buffer {
 
 	unsigned buffer;
@@ -66,6 +87,7 @@ public:
 class openal_source {
 
 	unsigned source;
+	sound_params_t params;
 
 public:
 	openal_source(unsigned source_=0) : source(source_) {}
@@ -73,6 +95,7 @@ public:
 	bool is_valid  () const {return (source > 0);}
 	bool is_playing() const;
 	bool is_active () const;
+	float get_loudness() const {return (is_active() ? params.get_loudness() : 0.0);}
 	
 	void alloc();
 	void free();
@@ -100,6 +123,7 @@ public:
 	source_manager_t() : next_source(0) {}
 	void create_channels(unsigned num_channels);
 	unsigned new_source();
+	openal_source &get_least_loud_source();
 	openal_source &get_oldest_source();
 	openal_source &get_inactive_source();
 	openal_source &get_source(unsigned id) {assert(id < sources.size()); return sources[id];}
@@ -109,18 +133,6 @@ public:
 	void stop_source  (unsigned id) const {assert(id < sources.size()); sources[id].stop  ();}
 	void pause_source (unsigned id) const {assert(id < sources.size()); sources[id].pause ();}
 	void rewind_source(unsigned id) const {assert(id < sources.size()); sources[id].rewind();}
-};
-
-
-struct delayed_sound_t {
-
-	int time, id;
-	point pos;
-	float gain, pitch;
-	bool rel_to_listener;
-
-	delayed_sound_t(int t=0, unsigned i=0, point const &P=all_zeros, float g=1.0, float p=1.0, bool r=0)
-		: time(t), id(i), pos(P), gain(g), pitch(p), rel_to_listener(r) {}
 };
 
 
