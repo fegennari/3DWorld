@@ -1733,7 +1733,7 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
 // texture units used: 0: object texture, 1: smoke texture
 colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
-	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap)
+	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap)
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
@@ -1778,6 +1778,10 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.add_uniform_float("half_dxy",   HALF_DXY);
 	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
+
+	if (use_bmap) { // use bump map
+		// *** WRITE ***
+	}
 	//return change_fog_color(GRAY);
 
 	// setup fog

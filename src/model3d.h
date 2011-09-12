@@ -51,17 +51,20 @@ struct geom_xform_t {
 class vntc_vect_t : public vector<vert_norm_tc> {
 
 	unsigned vbo;
+	vector<vector3d> tangent_vectors;
 
 public:
 	vntc_vect_t() : vbo(0) {}
+	void calc_tangents(unsigned npts);
 	void render(bool is_shadow_pass) const;
-	void render_array(bool is_shadow_pass, int prim_type);
+	void render_array(shader_t &shader, bool is_shadow_pass, int prim_type);
 	void free_vbo();
 	bool is_convex() const;
 	vector3d get_planar_normal() const;
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);
 	void remove_excess_cap() {if (size() < capacity()) vector<vert_norm_tc>(*this).swap(*this);}
+	void clear() {vector<vert_norm_tc>::clear(); tangent_vectors.clear();}
 };
 
 
@@ -78,8 +81,11 @@ public:
 struct geometry_t {
 
 	vntc_vect_t triangles, quads;
+	bool has_tangents;
 
-	void render(bool is_shadow_pass);
+	geometry_t() : has_tangents(0) {}
+	void calc_tangents();
+	void render(shader_t &shader, bool is_shadow_pass);
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly(vntc_vect_t const &poly);
 	void remove_excess_cap();
@@ -123,10 +129,12 @@ struct material_t {
 		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), skip(0), is_used(0) {}
 	bool add_poly(vntc_vect_t const &poly);
 	void mark_as_used() {is_used = 1;}
-	bool mat_is_used() const {return is_used;}
+	bool mat_is_used () const {return is_used;}
+	bool has_bump_map() const {return (bump_tid >= 0 && geom.has_tangents);}
 	int get_render_texture() const {return d_tid;}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
-	void render(texture_manager const &tmgr, int default_tid, bool is_shadow_pass);
+	void calc_tangents() {geom.calc_tangents();}
+	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
 };
@@ -168,7 +176,7 @@ public:
 	void free_context();
 	void load_all_used_tids();
 	void bind_all_used_tids();
-	void render(bool is_shadow_pass); // const?
+	void render(shader_t &shader, bool is_shadow_pass, bool bmap_pass); // const?
 };
 
 

@@ -119,6 +119,31 @@ colorRGBA texture_manager::get_tex_avg_color(int tid) const {
 
 // ************ vntc_vect_t ************
 
+void vntc_vect_t::calc_tangents(unsigned npts) {
+
+	assert(npts >= 3); // at least triangles
+	assert((size()%npts) == 0);
+	tangent_vectors.resize(size());
+
+	for (unsigned i = 0; i < size(); i += npts) {
+		vert_norm_tc const &A((*this)[i]), &B((*this)[i+1]), &C((*this)[i+2]);
+		vector3d const v1((B.v - A.v).get_norm()), v2((C.v - A.v).get_norm());
+		float const st1u(B.t[0] - A.t[0]), st2u(C.t[0] - A.t[0]);
+		float const st1v(B.t[1] - A.t[1]), st2v(C.t[1] - A.t[1]);
+		// could use v[i].n, which is more accurate but not orthogonal
+		vector3d const normal(cross_product(v1, v2).get_norm());
+		float const coef(1.0/(st1u * st2v - st2u * st1v));
+		vector3d tangent;
+		tangent.x = coef * ((v1.x * st2v) + (v2.x * -st1v));
+		tangent.y = coef * ((v1.y * st2v) + (v2.y * -st1v));
+		tangent.z = coef * ((v1.z * st2v) + (v2.z * -st1v));
+		tangent.normalize();
+		//vector3d binormal = cross_product(normal, tangent); // calculate in vertex shader
+		for (unsigned j = i; j < i+npts; ++j) tangent_vectors[j] = tangent;
+	}
+}
+
+
 void vntc_vect_t::render(bool is_shadow_pass) const {
 
 	assert(size() >= 3);
@@ -133,23 +158,38 @@ void vntc_vect_t::render(bool is_shadow_pass) const {
 }
 
 
-void vntc_vect_t::render_array(bool is_shadow_pass, int prim_type) {
+void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_type) {
 
 	if (empty()) return;
 	set_array_client_state(1, !is_shadow_pass, !is_shadow_pass, 0);
+	unsigned const stride(sizeof(vert_norm_tc)), vntc_data_sz(size()*stride);
 
 	if (vbo == 0) {
 		vbo = create_vbo();
 		assert(vbo > 0);
 		bind_vbo(vbo);
-		upload_vbo_data(&front(), size()*sizeof(vert_norm_tc));
+
+		if (!tangent_vectors.empty()) {
+			unsigned const tsz(tangent_vectors.size()*sizeof(vector3d));
+			upload_vbo_data(NULL, vntc_data_sz+tsz);
+			upload_vbo_sub_data(&front(), 0, vntc_data_sz);
+			upload_vbo_sub_data(&tangent_vectors.front(), vntc_data_sz, tsz); // stuff in at the end
+		}
+		else {
+			upload_vbo_data(&front(), vntc_data_sz);
+		}
 	}
 	else {
 		bind_vbo(vbo);
 	}
-	glVertexPointer(  3, GL_FLOAT, sizeof(vert_norm_tc), 0);
-	glNormalPointer(     GL_FLOAT, sizeof(vert_norm_tc), (void *)sizeof(point));
-	glTexCoordPointer(2, GL_FLOAT, sizeof(vert_norm_tc), (void *)sizeof(vert_norm));
+	if (!is_shadow_pass && !tangent_vectors.empty()) {
+		assert(tangent_vectors.size() == size());
+		unsigned const loc(shader.get_attrib_loc("tangent"));
+		glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (void *)vntc_data_sz); // stuff in at the end
+	}
+	glVertexPointer(  3, GL_FLOAT, stride, 0);
+	glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));
+	glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));
 	glDrawArrays(prim_type, 0, size());
 	bind_vbo(0);
 }
@@ -196,10 +236,19 @@ void vntc_vect_t::from_points(vector<point> const &pts) {
 
 // ************ geometry_t ************
 
-void geometry_t::render(bool is_shadow_pass) {
+void geometry_t::calc_tangents() {
 
-	triangles.render_array(is_shadow_pass, GL_TRIANGLES);
-	quads.render_array    (is_shadow_pass, GL_QUADS);
+	if (has_tangents) return; // already calculated
+	triangles.calc_tangents(3);
+	quads.calc_tangents(4);
+	has_tangents = 1;
+}
+
+
+void geometry_t::render(shader_t &shader, bool is_shadow_pass) {
+
+	triangles.render_array(shader, is_shadow_pass, GL_TRIANGLES);
+	quads.render_array    (shader, is_shadow_pass, GL_QUADS);
 }
 
 
@@ -236,12 +285,14 @@ void geometry_t::clear() {
 	free_vbos();
 	triangles.clear();
 	quads.clear();
+	has_tangents = 0;
 }
 
 
 // ************ material_t ************
 
-void material_t::render(texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
+
+void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
 
 	if (geom.empty() || skip || alpha == 0.0)       return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
@@ -266,7 +317,7 @@ void material_t::render(texture_manager const &tmgr, int default_tid, bool is_sh
 		set_color_d(get_ad_color());
 		set_color_e(colorRGBA(ke, alpha));
 	}
-	geom.render(is_shadow_pass);
+	geom.render(shader, is_shadow_pass);
 
 	if (!is_shadow_pass) {
 		set_color_e(BLACK);
@@ -428,24 +479,26 @@ void model3d::bind_all_used_tids() {
 }
 
 
-void model3d::render(bool is_shadow_pass) { // const?
+void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { // const?
 
 	if (!is_shadow_pass) bind_all_used_tids();
 	bool const do_cull(group_back_face_cull && !is_shadow_pass);
 	if (do_cull) glEnable(GL_CULL_FACE);
 
 	// render geom that was not bound to a material
-	if (unbound_color.alpha > 0.0) { // enabled
+	if (!bmap_pass && unbound_color.alpha > 0.0) { // enabled, not in bump map pass
 		assert(unbound_tid >= 0);
 		select_texture(unbound_tid, 0);
 		set_color_d(unbound_color);
-		unbound_geom.render(is_shadow_pass);
+		unbound_geom.render(shader, is_shadow_pass);
 	}
 	
 	// render all materials (opaque then transparen)
 	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
 		for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-			if ((unsigned)m->is_partial_transparent() == pass) m->render(tmgr, unbound_tid, is_shadow_pass);
+			if (m->is_partial_transparent() == (pass != 0) && m->has_bump_map() == bmap_pass) {
+				m->render(shader, tmgr, unbound_tid, is_shadow_pass);
+			}
 		}
 	}
 	if (do_cull) glDisable(GL_CULL_FACE);
@@ -481,15 +534,19 @@ void model3ds::render(bool is_shadow_pass) {
 	BLACK.do_glColor();
 	set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 	set_specular(0.0, 1.0);
-	shader_t s;
-	colorRGBA orig_fog_color;
 	float const min_alpha(0.5); // since we're using alpha masks we must set min_alpha > 0.0
-	if (!is_shadow_pass) orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled());
 
-	for (iterator m = begin(); m != end(); ++m) {
-		m->render(is_shadow_pass);
+	for (unsigned bmap_pass = 0; bmap_pass < 2; ++bmap_pass) {
+		shader_t s;
+		colorRGBA orig_fog_color;
+		if (!is_shadow_pass) orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled(), (bmap_pass != 0));
+		bool const render_if_bmap(0); // set this later when bump maps are supported
+
+		for (iterator m = begin(); m != end(); ++m) {
+			m->render(s, is_shadow_pass, (bmap_pass != 0));
+		}
+		if (!is_shadow_pass) end_smoke_shaders(s, orig_fog_color);
 	}
-	if (!is_shadow_pass) end_smoke_shaders(s, orig_fog_color);
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
 	set_lighted_sides(1);
