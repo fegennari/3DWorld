@@ -24,9 +24,7 @@ class shader_t {
 	string vs_name, fs_name, gs_name;
 	int in_prim, out_prim, verts_out;
 
-	int get_attrib_loc(char const *const name) const;
 	int attrib_loc_by_ix(unsigned ix) const;
-
 	void filename_split(string const &fname, vector<string> &fns, char sep) const;
 	bool load_shader_file(string const &fname, string &data) const;
 	unsigned get_shader(string const &name, unsigned type) const;
@@ -59,6 +57,7 @@ public:
 	void add_uniform_color       (char const *const name, colorRGBA const &val) const;
 	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
+	int get_attrib_loc(char const *const name) const;
 	void register_attrib_name(char const *name, unsigned bind_ix);
 	void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const;
 	void add_attrib_float      (unsigned ix, float val) const;

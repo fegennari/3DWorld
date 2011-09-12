@@ -681,7 +681,7 @@ void build_lightmap(bool verbose) {
 	assert(coll_objects.empty() || !has_fixed || dz > 0.0); // too strict (all cobjs can be shifted off the mesh)
 	unsigned zsize(unsigned(dz + 1));
 	
-	if (zsize > MESH_Z_SIZE) {
+	if ((int)zsize > MESH_Z_SIZE) {
 		cout << "* Warning: Scene height extends beyond the specified z range. Clamping zsize of " << zsize << " to " << MESH_Z_SIZE << "." << endl;
 		zsize = MESH_Z_SIZE;
 	}

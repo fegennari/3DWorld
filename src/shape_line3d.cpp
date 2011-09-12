@@ -27,6 +27,7 @@ bool shape3d::alloc_shape(unsigned npoints, unsigned nfaces, unsigned ncolors) {
 }
 
 
+// similar to the object file reader
 bool shape3d::read_from_file(char *filename) {
 
 	float x, y, z;
@@ -90,7 +91,7 @@ bool shape3d::read_from_file(char *filename) {
 		colors[i].c = color;
 	}
 
-	// Read the veritces
+	// Read the vertices
 	for(unsigned i = 0; i < nverts; i++) {
 		if (fscanf(fp, "%c%f%f%f\n", &letter, &points[i].x, &points[i].y, &points[i].z) != 4) {
 			cout << "Error reading vertex from file '" << filename << "'." << endl;
