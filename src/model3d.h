@@ -130,7 +130,8 @@ struct material_t {
 	bool add_poly(vntc_vect_t const &poly);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
-	bool has_bump_map() const {return (bump_tid >= 0 && geom.has_tangents);}
+	bool use_bump_map() const;
+	bool has_bump_map() const {return (use_bump_map() && geom.has_tangents);}
 	int get_render_texture() const {return d_tid;}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
 	void calc_tangents() {geom.calc_tangents();}

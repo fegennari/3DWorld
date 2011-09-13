@@ -6,6 +6,8 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 
+bool const ENABLE_BUMP_MAPS = 0;
+
 extern bool group_back_face_cull, enable_model3d_tex_comp;
 
 
@@ -306,6 +308,10 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		else {
 			select_texture(((default_tid >= 0) ? default_tid : WHITE_TEX), 0); // no texture specified - use white texture
 		}
+		if (has_bump_map()) {
+			set_multitex(5);
+			tmgr.bind_texture(bump_tid);
+		}
 		if (alpha < 1.0 && ni != 1.0) {
 			// set index of refraction (and reset it at the end)
 		}
@@ -320,10 +326,17 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 	geom.render(shader, is_shadow_pass);
 
 	if (!is_shadow_pass) {
+		if (has_bump_map()) disable_multitex(5, 1);
 		set_color_e(BLACK);
 		set_specular(0.0, 1.0);
 		if (alpha_tid >= 0) disable_blend();
 	}
+}
+
+
+bool material_t::use_bump_map() const {
+
+	return (ENABLE_BUMP_MAPS && bump_tid >= 0);
 }
 
 
@@ -464,6 +477,7 @@ void model3d::load_all_used_tids() {
 		int const tid(m->get_render_texture());
 		tmgr.bind_alpha_channel_to_texture(tid, m->alpha_tid);
 		tmgr.ensure_tid_loaded(tid); // only one tid for now
+		if (m->use_bump_map()) tmgr.ensure_tid_loaded(m->bump_tid);
 	}
 }
 
@@ -472,9 +486,14 @@ void model3d::bind_all_used_tids() {
 
 	load_all_used_tids();
 		
-	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (!m->mat_is_used()) continue;
 		tmgr.ensure_tid_bound(m->get_render_texture()); // only one tid for now
+		
+		if (m->use_bump_map()) {
+			tmgr.ensure_tid_bound(m->bump_tid);
+			m->calc_tangents();
+		}
 	}
 }
 

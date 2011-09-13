@@ -57,7 +57,7 @@ public:
 	void add_uniform_color       (char const *const name, colorRGBA const &val) const;
 	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
-	int get_attrib_loc(char const *const name) const;
+	int get_attrib_loc(char const *const name, bool allow_fail=0) const;
 	void register_attrib_name(char const *name, unsigned bind_ix);
 	void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const;
 	void add_attrib_float      (unsigned ix, float val) const;

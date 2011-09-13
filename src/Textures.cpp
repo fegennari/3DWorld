@@ -318,6 +318,7 @@ void texture_t::alloc() {
 void texture_t::bind_gl() const {
 	
 	assert(tid > 0);
+	//assert(glIsTexture(tid));
 	glBindTexture(GL_TEXTURE_2D, tid);
 }
 

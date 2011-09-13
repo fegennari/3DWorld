@@ -1743,6 +1743,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
 	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
 	s.set_bool_prefix("use_shadow_map",  use_shadow_map,  1); // FS
+	s.set_bool_prefix("use_bump_map",    use_bmap,        1); // FS
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		// Note: dynamic_smoke_shadows applies to light0 only
@@ -1778,10 +1779,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.add_uniform_float("half_dxy",   HALF_DXY);
 	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
-
-	if (use_bmap) { // use bump map
-		// *** WRITE ***
-	}
+	if (use_bmap) s.add_uniform_int("bump_map", 5);
 	//return change_fog_color(GRAY);
 
 	// setup fog

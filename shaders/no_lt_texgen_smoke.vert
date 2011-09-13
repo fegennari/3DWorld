@@ -3,6 +3,7 @@ uniform float half_dxy;
 uniform float indir_vert_offset = 0.25;
 
 attribute vec4 tex0_s, tex0_t;
+attribute vec3 tangent;
 
 varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
 varying vec3 eye_norm;

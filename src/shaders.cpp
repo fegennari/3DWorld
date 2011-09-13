@@ -135,11 +135,11 @@ bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsi
 // *** attrib variables setup ***
 
 
-int shader_t::get_attrib_loc(char const *const name) const {
+int shader_t::get_attrib_loc(char const *const name, bool allow_fail) const {
 
 	assert(program && name);
 	int const loc(glGetAttribLocation(program, name));
-	assert(loc >= 0); // Note: if variable is unused, loc will be -1
+	assert(allow_fail || loc >= 0); // Note: if variable is unused, loc will be -1
 	return loc;
 }
 

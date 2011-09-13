@@ -983,7 +983,7 @@ unsigned upload_voxel_flow_texture() {
 // 2: dynamic light data
 // 3: dynamic light element array
 // 4: dynamic light grid bag
-// 5: voxel flow (not yet enabled) / bump maps?
+// 5: voxel flow (not yet enabled) / reserved for bump maps
 // 6: reserved for shadow map sun
 // 7: reserved for shadow map moon
 void upload_dlights_textures() {
