@@ -46,9 +46,16 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye) {
 			intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
 		}
 		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
-		vec3 half_vect = normalize(normalize(eye - dlpos) + light_dir); // Eye + L
-		float diff_mag = max(0.0, dot(normal, light_dir)); // diffuse
-		float spec_mag = pow(max(dot(normal, half_vect), 0.0), gl_FrontMaterial.shininess);
+#ifdef USE_BUMP_MAP
+		vec3 lnorm   = apply_bump_map(normal, light_dir);
+		vec3 eye_pos = ts_pos; // convert to tangent space
+#else
+		vec3 lnorm   = normal;
+		vec3 eye_pos = eye - dlpos;
+#endif
+		vec3 half_vect = normalize(normalize(eye_pos) + light_dir); // Eye + L
+		float diff_mag = max(0.0, dot(lnorm, light_dir)); // diffuse
+		float spec_mag = pow(max(dot(lnorm, half_vect), 0.0), gl_FrontMaterial.shininess);
 		color += lcolor.rgb * (gl_FrontMaterial.specular.rgb*spec_mag + vec3(1,1,1)*diff_mag) * (lcolor.a * intensity);
 	}
 	return min(color, 1.0);

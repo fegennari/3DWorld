@@ -6,7 +6,7 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 
-bool const ENABLE_BUMP_MAPS = 0;
+bool const ENABLE_BUMP_MAPS = 1;
 
 extern bool group_back_face_cull, enable_model3d_tex_comp;
 

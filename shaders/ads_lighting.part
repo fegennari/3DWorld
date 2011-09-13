@@ -3,8 +3,8 @@ vec4 add_light_specular_fast(in vec3 normal, in int i) {
 	return gl_FrontLightProduct[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
 }
 
-vec4 add_light_specular(in vec3 normal, in vec3 lightDir, in vec4 epos, in int i) {
-	vec3 half_vect = normalize(lightDir - normalize(epos.xyz)); // Eye + L = -eye_space_pos + L
+vec4 add_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in int i) {
+	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
 	float NdotHV = max(dot(normal, half_vect), 0.0);
 	return gl_FrontLightProduct[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
 }
@@ -13,7 +13,14 @@ vec4 add_light_specular(in vec3 normal, in vec3 lightDir, in vec4 epos, in int i
 vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i)
 {
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
-	vec3 lightDir = normalize(gl_LightSource[i].position.xyz - epos.xyz);
+	vec3 eye_pos   = epos.xyz;
+	vec3 light_dir = normalize(gl_LightSource[i].position.xyz - eye_pos);
+
+#ifdef USE_BUMP_MAP
+	normal  = apply_bump_map(normal, light_dir);
+	eye_pos = -ts_pos; // convert to tangent space
+#endif
+
 #ifdef USE_LIGHT_COLORS
 #ifdef USE_COLOR_IN0
 	vec4 color = gl_FrontColorIn[0];
@@ -27,11 +34,11 @@ vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i)
 	vec4 ambient = gl_FrontLightProduct[i].ambient;
 #endif
 #ifdef USE_GOOD_SPECULAR
-	vec4 specular = add_light_specular(normal, lightDir, epos, i);
+	vec4 specular = add_light_specular(normal, light_dir, eye_pos, i);
 #else
 	vec4 specular = add_light_specular_fast(normal, i);
 #endif
-	return (ambient + max(dot(normal, lightDir), 0.0)*diffuse + specular);
+	return (ambient + max(dot(normal, light_dir), 0.0)*diffuse + specular);
 }
 
 vec4 add_light_comp(in vec3 normal, in int i) {

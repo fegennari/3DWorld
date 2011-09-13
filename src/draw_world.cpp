@@ -1743,19 +1743,19 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
 	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
 	s.set_bool_prefix("use_shadow_map",  use_shadow_map,  1); // FS
-	s.set_bool_prefix("use_bump_map",    use_bmap,        1); // FS
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		// Note: dynamic_smoke_shadows applies to light0 only
 		// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
 		s.set_bool_prefix("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, i); // VS/FS
 		s.set_bool_prefix("smoke_enabled",         smoke_enabled,         i); // VS/FS
+		if (use_bmap) s.set_prefix("#define USE_BUMP_MAP",                i); // VS/FS
 	}
 	set_dlights_booleans(s, dlights, 1); // FS
 	s.setup_enabled_lights(8);
 	s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-	s.set_vert_shader("fog.part+texture_gen.part+line_clip.part*+no_lt_texgen_smoke");
-	s.set_frag_shader("fresnel.part*+linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+textured_with_smoke");
+	s.set_vert_shader("fog.part+texture_gen.part+line_clip.part*+bump_map+no_lt_texgen_smoke");
+	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+textured_with_smoke");
 	s.begin_shader();
 	s.setup_scene_bounds();
 	s.setup_fog_scale(); // fog scale for the case where smoke is disabled

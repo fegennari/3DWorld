@@ -3,7 +3,6 @@ uniform float half_dxy;
 uniform float indir_vert_offset = 0.25;
 
 attribute vec4 tex0_s, tex0_t;
-attribute vec3 tangent;
 
 varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
 varying vec3 eye_norm;
@@ -22,7 +21,7 @@ void main()
 	}
 	else {
 		gl_TexCoord[0] = gl_MultiTexCoord0;
-	}	
+	}
 	gl_Position   = ftransform();
 	gl_FrontColor = gl_Color;
 	normal   = normalize(gl_Normal);
@@ -31,6 +30,10 @@ void main()
 	vpos     = gl_Vertex.xyz;
 	spos     = gl_Vertex.xyz + (indir_vert_offset*half_dxy)*normal; // move slightly away from the vertex
 	eye      = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
+
+#ifdef USE_BUMP_MAP
+	setup_tbn(eye_norm, epos.xyz);
+#endif
 
 	if (!smoke_enabled) {
 		set_fog(); // set standard fog coord

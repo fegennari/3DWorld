@@ -1,6 +1,6 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta, half_dxy;
-uniform sampler2D tex0, bump_map;
+uniform sampler2D tex0;
 uniform sampler3D smoke_tex;
 uniform float min_alpha = 0.0;
 
