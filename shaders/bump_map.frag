@@ -13,6 +13,6 @@ vec3 apply_bump_map(inout vec3 eye_norm, inout vec3 light_dir)
 	new_ldir.z = dot(light_dir, eye_norm);
 	light_dir  = new_ldir;
 	vec3 bump  = normalize(texture2D(bump_map, gl_TexCoord[0].st).xyz * 2.0 - 1.0);
-	return bump;
+	return length(eye_norm)*bump; // multiply by length of eye norm to account for shadow map attenuation
 }
 #endif

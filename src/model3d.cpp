@@ -9,9 +9,13 @@
 bool const ENABLE_BUMP_MAPS = 1;
 
 extern bool group_back_face_cull, enable_model3d_tex_comp;
+extern int display_mode;
 
 
 model3ds all_models;
+
+
+bool enable_bump_map() {return ((display_mode & 0x0100) != 0);} // enabled by default
 
 
 // ************ texture_manager ************
@@ -165,6 +169,7 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 	if (empty()) return;
 	set_array_client_state(1, !is_shadow_pass, !is_shadow_pass, 0);
 	unsigned const stride(sizeof(vert_norm_tc)), vntc_data_sz(size()*stride);
+	int loc(-1);
 
 	if (vbo == 0) {
 		vbo = create_vbo();
@@ -184,9 +189,11 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 	else {
 		bind_vbo(vbo);
 	}
-	if (!is_shadow_pass && !tangent_vectors.empty()) {
+	if (enable_bump_map() && !is_shadow_pass && !tangent_vectors.empty()) {
 		assert(tangent_vectors.size() == size());
-		unsigned const loc(shader.get_attrib_loc("tangent"));
+		int const loc(shader.get_attrib_loc("tangent"));
+		assert(loc >= 0);
+		glEnableVertexAttribArray(loc);
 		glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (void *)vntc_data_sz); // stuff in at the end
 	}
 	glVertexPointer(  3, GL_FLOAT, stride, 0);
@@ -194,6 +201,7 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 	glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));
 	glDrawArrays(prim_type, 0, size());
 	bind_vbo(0);
+	if (loc >= 0) glDisableVertexAttribArray(loc);
 }
 
 
@@ -336,7 +344,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 
 bool material_t::use_bump_map() const {
 
-	return (ENABLE_BUMP_MAPS && bump_tid >= 0);
+	return (ENABLE_BUMP_MAPS && enable_bump_map() && bump_tid >= 0);
 }
 
 
