@@ -134,11 +134,9 @@ void vntc_vect_t::calc_tangents(unsigned npts) {
 	for (unsigned i = 0; i < size(); i += npts) {
 		vert_norm_tc const &A((*this)[i]), &B((*this)[i+1]), &C((*this)[i+2]);
 		vector3d const v1(A.v - B.v), v2(C.v - B.v);
-		//vector3d const normal(cross_product(v1, v2));
-		vector3d tangent  ((v1 * (C.t[1] - B.t[1])) - (v2 * (A.t[1] - B.t[1])));
-		//vector3d bitangent((v2 * (A.t[0] - B.t[0])) - (v1 * (C.t[0] - B.t[0])));
-		//if (dot_product(cross_product(tangent, bitangent), normal) < 0.0) tangent *= -1.0; // canculate handedness
-		tangent.normalize();
+		float const t1(A.t[1] - B.t[1]), t2(C.t[1] - B.t[1]), s1(A.t[0] - B.t[0]), s2(C.t[0] - B.t[0]);
+		float const val(s1*t2 - s2*t1), w((val < 0.0) ? -1.0 : 1.0);
+		vector4d const tangent((v1*t2 - v2*t1).get_norm()*w, w);
 		for (unsigned j = i; j < i+npts; ++j) tangent_vectors[j] = tangent;
 	}
 }
@@ -171,7 +169,7 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 		bind_vbo(vbo);
 
 		if (!tangent_vectors.empty()) {
-			unsigned const tsz(tangent_vectors.size()*sizeof(vector3d));
+			unsigned const tsz(tangent_vectors.size()*sizeof(vector4d));
 			upload_vbo_data(NULL, vntc_data_sz+tsz);
 			upload_vbo_sub_data(&front(), 0, vntc_data_sz);
 			upload_vbo_sub_data(&tangent_vectors.front(), vntc_data_sz, tsz); // stuff in at the end
@@ -188,7 +186,7 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 		int const loc(shader.get_attrib_loc("tangent"));
 		assert(loc >= 0);
 		glEnableVertexAttribArray(loc);
-		glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, 0, (void *)vntc_data_sz); // stuff in at the end
+		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, (void *)vntc_data_sz); // stuff in at the end
 	}
 	glVertexPointer(  3, GL_FLOAT, stride, 0);
 	glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));

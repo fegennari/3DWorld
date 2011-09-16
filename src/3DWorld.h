@@ -305,15 +305,15 @@ vector3d const zero_vector(0, 0, 0);
 vector3d const all_ones(1, 1, 1);
 
 
-template<typename T> struct plane_t : public pointT<T> { // unused
-	T d;
+struct vector4d : public vector3d {
+	float w;
 
-	plane_t() {}
-	plane_t(T x_, T y_, T z_, T d_) : pointT(x_, y_, z_), d(d_) {}
-	plane_t(pointT<T> const &p, T d_) : pointT(p), d(d_) {}
-	void print() const {cout << x << ", " << y << ", " << z << ", " << d;}
-	bool operator==(const plane_t &p) const {return (p.x == x && p.y == y && p.z == z && p.d == d);}
-	bool operator!=(const plane_t &p) const {return !operator==(p);}
+	vector4d() {}
+	vector4d(float x_, float y_, float z_, float w_) : vector3d(x_, y_, z_), w(w_) {}
+	vector4d(vector3d const &v, float w_) : vector3d(v), w(w_) {}
+	void print() const {cout << x << ", " << y << ", " << z << ", " << w;}
+	bool operator==(const vector4d &v) const {return (v.x == x && v.y == y && v.z == z && v.w == w);}
+	bool operator!=(const vector4d &v) const {return !operator==(v);}
 };
 
 

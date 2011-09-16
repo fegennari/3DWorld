@@ -51,7 +51,7 @@ struct geom_xform_t {
 class vntc_vect_t : public vector<vert_norm_tc> {
 
 	unsigned vbo;
-	vector<vector3d> tangent_vectors;
+	vector<vector4d> tangent_vectors;
 
 public:
 	vntc_vect_t() : vbo(0) {}
