@@ -9,7 +9,7 @@ vec4 add_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in i
 	return gl_FrontLightProduct[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
 }
 
-// Note: point light computation with no attenuation, or use vec3(0,0,0) for directional
+// Note: eye space point light computation with no attenuation, or use vec3(0,0,0) for directional
 vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i)
 {
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
@@ -17,8 +17,9 @@ vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i)
 	vec3 light_dir = normalize(gl_LightSource[i].position.xyz - eye_pos);
 
 #ifdef USE_BUMP_MAP
-	normal  = apply_bump_map(normal, light_dir);
-	eye_pos = -ts_pos; // convert to tangent space
+	float atten = length(normal); // multiply by length of eye norm to account for shadow map attenuation
+	normal  = atten*apply_bump_map(light_dir);
+	eye_pos = ts_pos; // convert to tangent space
 #endif
 
 #ifdef USE_LIGHT_COLORS

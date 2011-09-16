@@ -45,15 +45,17 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye) {
 			vec4 dir_w = texelFetch(dlight_tex, ivec2(2, dl_ix), 0); // light direction, beamwidth
 			intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
 		}
-		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
 #ifdef USE_BUMP_MAP
-		vec3 lnorm   = apply_bump_map(normal, light_dir);
-		vec3 eye_pos = ts_pos; // convert to tangent space
+		vec3 lpos_eye  = (gl_ModelViewMatrix * vec4(lpos_r.xyz, 1.0)).xyz; // convert from world to eye to tangent space
+		vec3 light_dir = normalize(lpos_eye - epos.xyz);
+		vec3 lnorm     = apply_bump_map(light_dir);
+		vec3 eye_pos   = normalize(-ts_pos);
 #else
-		vec3 lnorm   = normal;
-		vec3 eye_pos = eye - dlpos;
+		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
+		vec3 eye_pos   = normalize(eye - dlpos);
+		vec3 lnorm     = normal;
 #endif
-		vec3 half_vect = normalize(normalize(eye_pos) + light_dir); // Eye + L
+		vec3 half_vect = normalize(eye_pos + light_dir); // Eye + L (in world space)
 		float diff_mag = max(0.0, dot(lnorm, light_dir)); // diffuse
 		float spec_mag = pow(max(dot(lnorm, half_vect), 0.0), gl_FrontMaterial.shininess);
 		color += lcolor.rgb * (gl_FrontMaterial.specular.rgb*spec_mag + vec3(1,1,1)*diff_mag) * (lcolor.a * intensity);

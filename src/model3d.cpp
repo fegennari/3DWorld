@@ -15,7 +15,7 @@ extern int display_mode;
 model3ds all_models;
 
 
-bool enable_bump_map() {return ((display_mode & 0x0100) != 0);} // enabled by default
+bool enable_bump_map() {return ((display_mode & 0x20) == 0);} // enabled by default
 
 
 // ************ texture_manager ************
@@ -133,18 +133,12 @@ void vntc_vect_t::calc_tangents(unsigned npts) {
 
 	for (unsigned i = 0; i < size(); i += npts) {
 		vert_norm_tc const &A((*this)[i]), &B((*this)[i+1]), &C((*this)[i+2]);
-		vector3d const v1((B.v - A.v).get_norm()), v2((C.v - A.v).get_norm());
-		float const st1u(B.t[0] - A.t[0]), st2u(C.t[0] - A.t[0]);
-		float const st1v(B.t[1] - A.t[1]), st2v(C.t[1] - A.t[1]);
-		// could use v[i].n, which is more accurate but not orthogonal
-		vector3d const normal(cross_product(v1, v2).get_norm());
-		float const coef(1.0/(st1u * st2v - st2u * st1v));
-		vector3d tangent;
-		tangent.x = coef * ((v1.x * st2v) + (v2.x * -st1v));
-		tangent.y = coef * ((v1.y * st2v) + (v2.y * -st1v));
-		tangent.z = coef * ((v1.z * st2v) + (v2.z * -st1v));
+		vector3d const v1(A.v - B.v), v2(C.v - B.v);
+		//vector3d const normal(cross_product(v1, v2));
+		vector3d tangent  ((v1 * (C.t[1] - B.t[1])) - (v2 * (A.t[1] - B.t[1])));
+		//vector3d bitangent((v2 * (A.t[0] - B.t[0])) - (v1 * (C.t[0] - B.t[0])));
+		//if (dot_product(cross_product(tangent, bitangent), normal) < 0.0) tangent *= -1.0; // canculate handedness
 		tangent.normalize();
-		//vector3d binormal = cross_product(normal, tangent); // calculate in vertex shader
 		for (unsigned j = i; j < i+npts; ++j) tangent_vectors[j] = tangent;
 	}
 }
@@ -508,7 +502,9 @@ void model3d::bind_all_used_tids() {
 
 void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { // const?
 
-	if (!is_shadow_pass) bind_all_used_tids();
+	// we need the vbo to be created here even in the shadow pass,
+	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
+	bind_all_used_tids();
 	bool const do_cull(group_back_face_cull && !is_shadow_pass);
 	if (do_cull) glEnable(GL_CULL_FACE);
 

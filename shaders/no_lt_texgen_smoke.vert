@@ -5,8 +5,7 @@ uniform float indir_vert_offset = 0.25;
 attribute vec4 tex0_s, tex0_t;
 
 varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
-varying vec3 eye_norm;
-varying vec4 epos;
+// epos and eye_norm come from bump_map.vert
 
 void main()
 {
@@ -25,14 +24,14 @@ void main()
 	gl_Position   = ftransform();
 	gl_FrontColor = gl_Color;
 	normal   = normalize(gl_Normal);
-	eye_norm = normalize(gl_NormalMatrix * gl_Normal);
+	eye_norm = normalize(gl_NormalMatrix * normal);
 	epos     = gl_ModelViewMatrix * gl_Vertex;
 	vpos     = gl_Vertex.xyz;
 	spos     = gl_Vertex.xyz + (indir_vert_offset*half_dxy)*normal; // move slightly away from the vertex
 	eye      = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
 
 #ifdef USE_BUMP_MAP
-	setup_tbn(eye_norm, epos.xyz);
+	setup_tbn();
 #endif
 
 	if (!smoke_enabled) {

@@ -1100,7 +1100,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x08;   break;
 	case '5': // toggle extended/tiled mesh draw (was debugging)
 		display_mode ^= 0x10;   break;
-	case '6': // toggle water reflections
+	case '6': // toggle water reflections and bump maps
 		display_mode ^= 0x20;   break;
 	case '7': // toggle snow accumulation and clouds
 		display_mode ^= 0x40;   break;
