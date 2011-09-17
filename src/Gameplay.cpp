@@ -305,9 +305,11 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 	else if (burned) {
 		gen_sound(SOUND_SCREAM2, pos, 1.0, rand_uniform(0.7, 1.3));
 	}
+	else if (type == ROCKET) {
+		gen_sound(SOUND_DEATH,   pos, 1.0, rand_uniform(0.7, 1.3));
+	}
 	else {
-		int const sound(((rand()&1) ? SOUND_SCREAM1 : SOUND_DEATH));
-		gen_sound(sound, pos, 1.0, rand_uniform(0.7, 1.3));
+		gen_sound(SOUND_SCREAM1, pos, 1.0, rand_uniform(0.7, 1.3));
 	}
 }
 
@@ -680,8 +682,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	}
 	if (!compute_damage(energy, type, obj_index, source, index)) return;
 	dwobject &obji(obj_groups[cid].get_obj(index));
-	float const last_health(obji.health), health_drop(HEALTH_PER_DAMAGE*energy);
-	obji.health = min((obji.health - health_drop), (sstate.powerup == PU_REGEN) ? MAX_REGEN_HEALTH : MAX_HEALTH);
+	obji.health = min((obji.health - HEALTH_PER_DAMAGE*energy), (sstate.powerup == PU_REGEN) ? MAX_REGEN_HEALTH : MAX_HEALTH);
 	int const alive(obji.health >= 0.0);
 	if (energy <= 0.0 && alive) return;
 	bool const burned(is_burned(type, br_source));
@@ -708,7 +709,6 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		blood_v  *= 0.5;
 		coll_dir *= -4.0;
 		if (type == FELL) gen_sound(SOUND_SQUISH, obj_pos, 0.2);
-		if (obji.health <= 10.0 && last_health > 10.0 && health_drop > 10.0) gen_sound(SOUND_SCARED, obj_pos, 0.5); // almost dead
 	}
 	if (!burned && !is_area_damage(type)) {
 		unsigned const blood_amt(create_blood(index+1, (alive ? 30 : 1), obj_pos, radius,
