@@ -8,8 +8,8 @@ load_hmv 0 0 0 -3.0 1.0
 load_coll_objs 1
 glaciate 1
 dynamic_mesh_scroll 0
-disable_universe 0
-disable_inf_terrain 0
+disable_universe 1
+disable_inf_terrain 1
 disable_water 1
 disable_scenery 1
 read_landscape 0
