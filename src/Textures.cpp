@@ -29,6 +29,7 @@ bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update doesn't 
 bool const SHOW_TEXTURE_MEMORY = 0;
 bool const INSTANT_LTEX_COL    = 1;
 bool const COMPRESS_TEXTURES   = 1;
+bool const CHECK_FOR_LUM_TGA   = 1;
 float const SMOOTH_SKY_POLES   = 0.2;
 
 std::string const texture_dir("textures");
@@ -685,6 +686,20 @@ void texture_t::load_targa() {
 		assert(width > 0 && height > 0);
 	}
 	assert(img.width == width && img.height == height);
+
+	if (CHECK_FOR_LUM_TGA && ncolors == 3) { // determine if it's really a luminance texture
+		bool is_lum(1);
+
+		for (int y = 0; y < height && is_lum; ++y) {
+			for (int x = 0; x < width && is_lum; ++x) {
+				unsigned char const *const pixel(tga_find_pixel(&img, x, y));
+				assert(pixel);
+				is_lum = (pixel[1] == pixel[0] && pixel[2] == pixel[0]); // all the same values
+			}
+		}
+		if (is_lum) ncolors = 1; // RGB equal, make it a single color (luminance) channel
+	}
+
 	alloc();
 	//if (!tga_is_top_to_bottom(&img)) tga_flip_vert(&img);
 	//if (tga_is_right_to_left(&img)) tga_flip_horiz(&img);
