@@ -7,6 +7,7 @@
 #include "gl_ext_arb.h"
 
 bool const ENABLE_BUMP_MAPS = 1;
+bool const ENABLE_SPEC_MAPS = 1;
 
 extern bool group_back_face_cull, enable_model3d_tex_comp;
 extern int display_mode;
@@ -15,7 +16,8 @@ extern int display_mode;
 model3ds all_models;
 
 
-bool enable_bump_map() {return ((display_mode & 0x20) == 0);} // enabled by default
+bool enable_bump_map() {return (ENABLE_BUMP_MAPS && (display_mode & 0x20) == 0);} // enabled by default
+bool enable_spec_map() {return (ENABLE_SPEC_MAPS);}
 
 
 // ************ texture_manager ************
@@ -312,6 +314,10 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			set_multitex(5);
 			tmgr.bind_texture(bump_tid);
 		}
+		if (enable_spec_map()) { // all white/specular if no specular map texture
+			set_multitex(8);
+			if (s_tid >= 0) tmgr.bind_texture(s_tid); else select_texture(WHITE_TEX);
+		}
 		if (alpha < 1.0 && ni != 1.0) {
 			// set index of refraction (and reset it at the end)
 		}
@@ -323,7 +329,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		set_color_d(get_ad_color());
 		set_color_e(colorRGBA(ke, alpha));
 		geom.render(shader, 0);
-		if (use_bump_map()) disable_multitex(5, 1);
+		if (use_bump_map())    disable_multitex(5, 1);
+		if (enable_spec_map()) disable_multitex(8, 1);
 		set_color_e(BLACK);
 		set_specular(0.0, 1.0);
 		if (alpha_tid >= 0) disable_blend();
@@ -333,7 +340,13 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 
 bool material_t::use_bump_map() const {
 
-	return (ENABLE_BUMP_MAPS && enable_bump_map() && bump_tid >= 0);
+	return (enable_bump_map() && bump_tid >= 0);
+}
+
+
+bool material_t::use_spec_map() const {
+
+	return (enable_spec_map() && s_tid >= 0);
 }
 
 
@@ -475,6 +488,7 @@ void model3d::load_all_used_tids() {
 		tmgr.bind_alpha_channel_to_texture(tid, m->alpha_tid);
 		tmgr.ensure_tid_loaded(tid); // only one tid for now
 		if (m->use_bump_map()) tmgr.ensure_tid_loaded(m->bump_tid);
+		if (m->use_spec_map()) tmgr.ensure_tid_loaded(m->s_tid);
 	}
 }
 
@@ -491,6 +505,7 @@ void model3d::bind_all_used_tids() {
 			tmgr.ensure_tid_bound(m->bump_tid);
 			m->geom.calc_tangents();
 		}
+		if (m->use_spec_map()) tmgr.ensure_tid_bound(m->s_tid);
 	}
 }
 
@@ -557,7 +572,10 @@ void model3ds::render(bool is_shadow_pass) {
 	for (unsigned bmap_pass = 0; bmap_pass < 2; ++bmap_pass) {
 		shader_t s;
 		colorRGBA orig_fog_color;
-		if (!is_shadow_pass) orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled(), (bmap_pass != 0));
+		
+		if (!is_shadow_pass) {
+			orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled(), (bmap_pass != 0), enable_spec_map());
+		}
 		bool const render_if_bmap(0); // set this later when bump maps are supported
 
 		for (iterator m = begin(); m != end(); ++m) {

@@ -1,12 +1,19 @@
-vec4 add_light_specular_fast(in vec3 normal, in int i) {
-	float NdotHV = max(dot(normal, normalize(gl_LightSource[i].halfVector.xyz)), 0.0);
-	return gl_FrontLightProduct[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
+vec4 calc_spec_term(in float NdotHV, in int i) {
+	vec4 spec_color = gl_FrontLightProduct[i].specular;
+#ifdef USE_SPEC_MAP
+	spec_color.rgb *= get_spec_color();
+#endif
+	return spec_color * pow(NdotHV, gl_FrontMaterial.shininess);
 }
 
-vec4 add_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in int i) {
+vec4 get_light_specular_fast(in vec3 normal, in int i) {
+	float NdotHV = max(dot(normal, normalize(gl_LightSource[i].halfVector.xyz)), 0.0);
+	return calc_spec_term(NdotHV, i);
+}
+
+vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in int i) {
 	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
-	float NdotHV = max(dot(normal, half_vect), 0.0);
-	return gl_FrontLightProduct[i].specular * pow(NdotHV, gl_FrontMaterial.shininess);
+	return calc_spec_term(max(dot(normal, half_vect), 0.0), i);
 }
 
 // Note: eye space point light computation with no attenuation, or use vec3(0,0,0) for directional
@@ -35,9 +42,9 @@ vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i)
 	vec4 ambient = gl_FrontLightProduct[i].ambient;
 #endif
 #ifdef USE_GOOD_SPECULAR
-	vec4 specular = add_light_specular(normal, light_dir, eye_pos, i);
+	vec4 specular = get_light_specular(normal, light_dir, eye_pos, i);
 #else
-	vec4 specular = add_light_specular_fast(normal, i);
+	vec4 specular = get_light_specular_fast(normal, i);
 #endif
 	return (ambient + max(dot(normal, light_dir), 0.0)*diffuse + specular);
 }

@@ -986,6 +986,7 @@ unsigned upload_voxel_flow_texture() {
 // 5: voxel flow (not yet enabled) / reserved for bump maps
 // 6: reserved for shadow map sun
 // 7: reserved for shadow map moon
+// 8: reserved for specular maps
 void upload_dlights_textures() {
 
 	RESET_TIME;

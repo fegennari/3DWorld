@@ -1733,7 +1733,7 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
 // texture units used: 0: object texture, 1: smoke texture
 colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
-	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap)
+	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map)
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
@@ -1743,6 +1743,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
 	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
 	s.set_bool_prefix("use_shadow_map",  use_shadow_map,  1); // FS
+	if (use_spec_map) s.set_prefix("#define USE_SPEC_MAP", 1); // FS
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		// Note: dynamic_smoke_shadows applies to light0 only
@@ -1754,8 +1755,8 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	set_dlights_booleans(s, dlights, 1); // FS
 	s.setup_enabled_lights(8);
 	s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-	s.set_vert_shader("fog.part+texture_gen.part+line_clip.part*+bump_map+no_lt_texgen_smoke");
-	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+textured_with_smoke");
+	s.set_vert_shader("fog.part+texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
+	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+textured_with_smoke");
 	s.begin_shader();
 	s.setup_scene_bounds();
 	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
@@ -1779,7 +1780,8 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.add_uniform_float("half_dxy",   HALF_DXY);
 	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
-	if (use_bmap) s.add_uniform_int("bump_map", 5);
+	if (use_bmap)     s.add_uniform_int("bump_map", 5);
+	if (use_spec_map) s.add_uniform_int("spec_map", 8);
 	//return change_fog_color(GRAY);
 
 	// setup fog

@@ -58,7 +58,11 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye) {
 		vec3 half_vect = normalize(eye_pos + light_dir); // Eye + L (in world space)
 		float diff_mag = max(0.0, dot(lnorm, light_dir)); // diffuse
 		float spec_mag = pow(max(dot(lnorm, half_vect), 0.0), gl_FrontMaterial.shininess);
-		color += lcolor.rgb * (gl_FrontMaterial.specular.rgb*spec_mag + vec3(1,1,1)*diff_mag) * (lcolor.a * intensity);
+		vec3 spec_color= gl_FrontMaterial.specular.rgb;
+#ifdef USE_SPEC_MAP
+		spec_color    *= get_spec_color();
+#endif
+		color += lcolor.rgb * (spec_color*spec_mag + vec3(1,1,1)*diff_mag) * (lcolor.a * intensity);
 	}
 	return min(color, 1.0);
 }
