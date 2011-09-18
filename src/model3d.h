@@ -81,9 +81,7 @@ public:
 struct geometry_t {
 
 	vntc_vect_t triangles, quads;
-	bool has_tangents;
 
-	geometry_t() : has_tangents(0) {}
 	void calc_tangents();
 	void render(shader_t &shader, bool is_shadow_pass);
 	bool empty() const {return (triangles.empty() && quads.empty());}
@@ -131,10 +129,8 @@ struct material_t {
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
 	bool use_bump_map() const;
-	bool has_bump_map() const {return (use_bump_map() && geom.has_tangents);}
 	int get_render_texture() const {return d_tid;}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
-	void calc_tangents() {geom.calc_tangents();}
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;

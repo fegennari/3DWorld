@@ -110,7 +110,6 @@ void texture_manager::ensure_tid_bound(int tid) {
 
 void texture_manager::bind_texture(int tid) const {
 
-	//select_texture(WHITE_TEX, 0); return; // TESTING
 	assert((unsigned)tid < textures.size());
 	textures[tid].bind_gl();
 }
@@ -127,8 +126,10 @@ colorRGBA texture_manager::get_tex_avg_color(int tid) const {
 
 void vntc_vect_t::calc_tangents(unsigned npts) {
 
+	if (tangent_vectors.size() == size()) return; // already computed
 	assert(npts >= 3); // at least triangles
 	assert((size()%npts) == 0);
+	assert(tangent_vectors.empty());
 	tangent_vectors.resize(size());
 
 	for (unsigned i = 0; i < size(); i += npts) {
@@ -136,7 +137,7 @@ void vntc_vect_t::calc_tangents(unsigned npts) {
 		vector3d const v1(A.v - B.v), v2(C.v - B.v);
 		float const t1(A.t[1] - B.t[1]), t2(C.t[1] - B.t[1]), s1(A.t[0] - B.t[0]), s2(C.t[0] - B.t[0]);
 		float const val(s1*t2 - s2*t1), w((val < 0.0) ? -1.0 : 1.0);
-		vector4d const tangent((v1*t2 - v2*t1).get_norm()*w, w);
+		vector4d const tangent((v1*t2 - v2*t1).get_norm(), w);
 		for (unsigned j = i; j < i+npts; ++j) tangent_vectors[j] = tangent;
 	}
 }
@@ -184,7 +185,6 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 	if (enable_bump_map() && !is_shadow_pass && !tangent_vectors.empty()) {
 		assert(tangent_vectors.size() == size());
 		int const loc(shader.get_attrib_loc("tangent"));
-		assert(loc >= 0);
 		glEnableVertexAttribArray(loc);
 		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, (void *)vntc_data_sz); // stuff in at the end
 	}
@@ -240,10 +240,8 @@ void vntc_vect_t::from_points(vector<point> const &pts) {
 
 void geometry_t::calc_tangents() {
 
-	if (has_tangents) return; // already calculated
 	triangles.calc_tangents(3);
 	quads.calc_tangents(4);
-	has_tangents = 1;
 }
 
 
@@ -287,7 +285,6 @@ void geometry_t::clear() {
 	free_vbos();
 	triangles.clear();
 	quads.clear();
-	has_tangents = 0;
 }
 
 
@@ -299,7 +296,10 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 	if (geom.empty() || skip || alpha == 0.0)       return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
 
-	if (!is_shadow_pass) {
+	if (is_shadow_pass) {
+		geom.render(shader, 1);
+	}
+	else {
 		int const tex_id(get_render_texture());
 		
 		if (tex_id >= 0) {
@@ -308,7 +308,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		else {
 			select_texture(((default_tid >= 0) ? default_tid : WHITE_TEX), 0); // no texture specified - use white texture
 		}
-		if (has_bump_map()) {
+		if (use_bump_map()) {
 			set_multitex(5);
 			tmgr.bind_texture(bump_tid);
 		}
@@ -322,11 +322,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		//set_color_d(colorRGBA(kd, alpha));
 		set_color_d(get_ad_color());
 		set_color_e(colorRGBA(ke, alpha));
-	}
-	geom.render(shader, is_shadow_pass);
-
-	if (!is_shadow_pass) {
-		if (has_bump_map()) disable_multitex(5, 1);
+		geom.render(shader, 0);
+		if (use_bump_map()) disable_multitex(5, 1);
 		set_color_e(BLACK);
 		set_specular(0.0, 1.0);
 		if (alpha_tid >= 0) disable_blend();
@@ -492,7 +489,7 @@ void model3d::bind_all_used_tids() {
 		
 		if (m->use_bump_map()) {
 			tmgr.ensure_tid_bound(m->bump_tid);
-			m->calc_tangents();
+			m->geom.calc_tangents();
 		}
 	}
 }
@@ -517,7 +514,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 	// render all materials (opaque then transparen)
 	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
 		for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-			if (m->is_partial_transparent() == (pass != 0) && m->has_bump_map() == bmap_pass) {
+			if (m->is_partial_transparent() == (pass != 0) && m->use_bump_map() == bmap_pass) {
 				m->render(shader, tmgr, unbound_tid, is_shadow_pass);
 			}
 		}

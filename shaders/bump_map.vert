@@ -9,8 +9,9 @@ varying vec3 ts_pos; // tangent space pos
 
 void setup_tbn() {
 	// Building the matrix Eye Space -> Tangent Space
-	tangent_v = normalize(gl_NormalMatrix * tangent.xyz);
-	binorm_v  = cross(eye_norm, tangent_v) * tangent.w;
+	tangent_v  = normalize(gl_NormalMatrix * tangent.xyz);
+	binorm_v   = cross(eye_norm, tangent_v);
+	tangent_v *= tangent.w;
 
 	ts_pos.x  = dot(epos.xyz, tangent_v);
 	ts_pos.y  = dot(epos.xyz, binorm_v);
