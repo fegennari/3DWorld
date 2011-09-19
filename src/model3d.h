@@ -62,6 +62,16 @@ struct poly_vix : public vector<vert_norm_tc_ix> {
 };
 
 
+struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
+	vector4d tangent;
+
+	vert_norm_tc_tan() {}
+	vert_norm_tc_tan(vert_norm_tc const &vntc, vector4d const &tangent_) : vert_norm_tc(vntc), tangent(tangent_) {}
+	vert_norm_tc_tan(point const &v_, vector3d const &n_, float ts, float tt, vector4d const &tangent_=vector4d(0,0,0,0))
+		: vert_norm_tc(v_, n_, ts, tt), tangent(tangent_) {}
+};
+
+
 class vntc_vect_t : public vector<vert_norm_tc> {
 
 	unsigned vbo;
