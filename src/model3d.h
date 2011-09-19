@@ -66,7 +66,8 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 	vector4d tangent;
 
 	vert_norm_tc_tan() {}
-	vert_norm_tc_tan(vert_norm_tc const &vntc, vector4d const &tangent_) : vert_norm_tc(vntc), tangent(tangent_) {}
+	vert_norm_tc_tan(vert_norm_tc const &vntc, vector4d const &tangent_=vector4d(0,0,0,0))
+		: vert_norm_tc(vntc), tangent(tangent_) {}
 	vert_norm_tc_tan(point const &v_, vector3d const &n_, float ts, float tt, vector4d const &tangent_=vector4d(0,0,0,0))
 		: vert_norm_tc(v_, n_, ts, tt), tangent(tangent_) {}
 };
@@ -87,8 +88,8 @@ public:
 	vector3d get_planar_normal() const;
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);
-	void remove_excess_cap() {if (size() < capacity()) vector<vert_norm_tc>(*this).swap(*this);}
-	void clear() {vector<vert_norm_tc>::clear(); tangent_vectors.clear();}
+	void remove_excess_cap() {if (size() < capacity()) vector<value_type>(*this).swap(*this);}
+	void clear() {vector<value_type>::clear(); tangent_vectors.clear();}
 };
 
 
