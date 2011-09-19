@@ -277,18 +277,6 @@ public:
 	}
 
 
-	struct vert_norm_tc_ix : public vert_norm_tc {
-		unsigned ix;
-		vert_norm_tc_ix(point const &v_, vector3d const &n_, float ts, float tt, unsigned ix_) : vert_norm_tc(v_, n_, ts, tt), ix(ix_) {}
-	};
-
-	struct poly_vix : public vector<vert_norm_tc_ix> {
-		int mat_id;
-		vector3d n;
-		poly_vix(int mat_id_) : mat_id(mat_id_), n(zero_vector) {}
-	};
-
-
 	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
@@ -296,7 +284,7 @@ public:
 		unsigned smoothing_group(0);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
-		vector<vector3d> vn; // vertex normals
+		vector<counted_normal> vn; // vertex normals
 		vector<vector3d> tc; // texture coords
 		deque<poly_vix> polys;
 		char s[MAX_CHARS];
@@ -345,13 +333,13 @@ public:
 				for (unsigned i = 0; i < pv.size(); ++i) {
 					//if (!smoothing_group) pv[i].n = normal;
 					assert((unsigned)pv[i].ix < vn.size());
-					vn[pv[i].ix] += normal;
+					vn[pv[i].ix].add_normal(normal);
 				}
 				pv.n = normal;
 			}
 			else if (strcmp(s, "v") == 0) { // vertex
 				v.push_back(point());
-				vn.push_back(zero_vector); // vertex normal
+				vn.push_back(counted_normal()); // vertex normal
 			
 				if (!read_point(v.back())) {
 					cerr << "Error reading vertex from object file " << filename << endl;
@@ -424,8 +412,14 @@ public:
 		PRINT_TIME("Model Texture Load");
 		vntc_vect_t poly;
 
-		for (vector<vector3d>::iterator i = vn.begin(); i != vn.end(); ++i) {
-			i->normalize(); // average the normals
+		for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) {
+			if (!i->is_valid()) continue; // invalid, remains invalid
+			*i /= (float)i->count;
+			float const mag(i->mag());
+			if (mag < 1E-6) {i->count = 0; continue;} // invalid
+			assert(mag < 1.001);
+			*i /= mag; // normalize
+			i->count = (mag > 0.7); // stores the 'valid' state of the normal
 		}
 		for (deque<poly_vix>::const_iterator i = polys.begin(); i != polys.end(); ++i) {
 			poly.resize(i->size());
@@ -434,8 +428,8 @@ public:
 				poly[j] = (*i)[j];
 				if (!recalc_model3d_normals && poly[j].n != zero_vector) continue;
 				assert((*i)[j].ix < vn.size());
-				vector3d const &vert_norm(vn[(*i)[j].ix]);
-				poly[j].n = (i->n != zero_vector && (fabs(dot_product(vert_norm, i->n)) < 0.75) ? i->n : vert_norm);
+				counted_normal const &vert_norm(vn[(*i)[j].ix]);
+				poly[j].n = ((i->n != zero_vector && !vert_norm.is_valid()) ? i->n : vert_norm);
 			}
 			model.add_polygon(poly, i->mat_id, ppts);
 		}

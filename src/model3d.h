@@ -48,6 +48,20 @@ struct geom_xform_t {
 };
 
 
+struct vert_norm_tc_ix : public vert_norm_tc {
+	unsigned ix;
+	vert_norm_tc_ix(point const &v_, vector3d const &n_, float ts, float tt, unsigned ix_)
+		: vert_norm_tc(v_, n_, ts, tt), ix(ix_) {}
+};
+
+
+struct poly_vix : public vector<vert_norm_tc_ix> {
+	int mat_id;
+	vector3d n;
+	poly_vix(int mat_id_) : mat_id(mat_id_), n(zero_vector) {}
+};
+
+
 class vntc_vect_t : public vector<vert_norm_tc> {
 
 	unsigned vbo;

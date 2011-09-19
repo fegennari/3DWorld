@@ -305,7 +305,7 @@ vector3d const zero_vector(0, 0, 0);
 vector3d const all_ones(1, 1, 1);
 
 
-struct vector4d : public vector3d {
+struct vector4d : public vector3d { // size = 16
 	float w;
 
 	vector4d() {}
@@ -314,6 +314,17 @@ struct vector4d : public vector3d {
 	void print() const {cout << x << ", " << y << ", " << z << ", " << w;}
 	bool operator==(const vector4d &v) const {return (v.x == x && v.y == y && v.z == z && v.w == w);}
 	bool operator!=(const vector4d &v) const {return !operator==(v);}
+};
+
+
+// for computing vertex normals from face normals
+struct counted_normal : public vector3d { // size = 16
+	unsigned count;
+
+	counted_normal() : vector3d(zero_vector), count(0) {}
+	counted_normal(vector3d const &n) : vector3d(n), count(1) {}
+	void add_normal(vector3d const &n) {*this += n; ++count;}
+	bool is_valid() const {return (count > 0);}
 };
 
 
