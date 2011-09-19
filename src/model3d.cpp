@@ -238,6 +238,14 @@ void vntc_vect_t::from_points(vector<point> const &pts) {
 }
 
 
+void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
+
+	for (unsigned i = 0; i < poly.size(); ++i) {push_back(poly[i]);}
+	for (unsigned i = 0; i < poly.tangent_vectors.size(); ++i) {tangent_vectors.push_back(poly.tangent_vectors[i]);}
+	assert(tangent_vectors.empty() || tangent_vectors.size() == size());
+}
+
+
 // ************ geometry_t ************
 
 void geometry_t::calc_tangents() {
@@ -257,14 +265,14 @@ void geometry_t::render(shader_t &shader, bool is_shadow_pass) {
 void geometry_t::add_poly(vntc_vect_t const &poly) {
 	
 	if (poly.size() == 3) { // triangle
-		for (unsigned i = 0; i < 3; ++i) {triangles.push_back(poly[i]);}
-		return;
+		triangles.add_poly(poly);
 	}
-	if (poly.size() == 4) {
-		for (unsigned i = 0; i < 4; ++i) {quads.push_back(poly[i]);}
-		return;
+	else if (poly.size() == 4) {
+		quads.add_poly(poly);
 	}
-	assert(0); // shouldn't get here
+	else {
+		assert(0); // shouldn't get here
+	}
 }
 
 

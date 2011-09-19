@@ -88,6 +88,7 @@ public:
 	vector3d get_planar_normal() const;
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);
+	void add_poly(vntc_vect_t const &poly);
 	void remove_excess_cap() {if (size() < capacity()) vector<value_type>(*this).swap(*this);}
 	void clear() {vector<value_type>::clear(); tangent_vectors.clear();}
 };
