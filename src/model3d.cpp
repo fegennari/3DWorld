@@ -250,25 +250,41 @@ void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
 
 void geometry_t::calc_tangents() {
 
-	triangles.calc_tangents(3);
-	quads.calc_tangents(4);
+	for (deque<vntc_vect_t>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		i->calc_tangents(3);
+	}
+	for (deque<vntc_vect_t>::iterator i = quads.begin(); i != quads.end(); ++i) {
+		i->calc_tangents(4);
+	}
 }
 
 
 void geometry_t::render(shader_t &shader, bool is_shadow_pass) {
 
-	triangles.render_array(shader, is_shadow_pass, GL_TRIANGLES);
-	quads.render_array    (shader, is_shadow_pass, GL_QUADS);
+	for (deque<vntc_vect_t>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		i->render_array(shader, is_shadow_pass, GL_TRIANGLES);
+	}
+	for (deque<vntc_vect_t>::iterator i = quads.begin(); i != quads.end(); ++i) {
+		i->render_array(shader, is_shadow_pass, GL_QUADS);
+	}
+}
+
+
+void add_poly_to_polys(vntc_vect_t const &poly, deque<vntc_vect_t> &v) {
+
+	unsigned const max_entries(1 << 18); // 256K
+	if (v.empty() || v.back().size() > max_entries) v.push_back(vntc_vect_t());
+	v.back().add_poly(poly);
 }
 
 
 void geometry_t::add_poly(vntc_vect_t const &poly) {
 	
 	if (poly.size() == 3) { // triangle
-		triangles.add_poly(poly);
+		add_poly_to_polys(poly, triangles);
 	}
 	else if (poly.size() == 4) {
-		quads.add_poly(poly);
+		add_poly_to_polys(poly, quads);
 	}
 	else {
 		assert(0); // shouldn't get here
@@ -278,15 +294,23 @@ void geometry_t::add_poly(vntc_vect_t const &poly) {
 
 void geometry_t::remove_excess_cap() {
 
-	triangles.remove_excess_cap();
-	quads.remove_excess_cap();
+	for (deque<vntc_vect_t>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		i->remove_excess_cap();
+	}
+	for (deque<vntc_vect_t>::iterator i = quads.begin(); i != quads.end(); ++i) {
+		i->remove_excess_cap();
+	}
 }
 
 
 void geometry_t::free_vbos() {
 
-	triangles.free_vbo();
-	quads.free_vbo();
+	for (deque<vntc_vect_t>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		i->free_vbo();
+	}
+	for (deque<vntc_vect_t>::iterator i = quads.begin(); i != quads.end(); ++i) {
+		i->free_vbo();
+	}
 }
 
 

@@ -109,7 +109,7 @@ public:
 
 struct geometry_t {
 
-	vntc_vect_t triangles, quads;
+	deque<vntc_vect_t> triangles, quads;
 
 	void calc_tangents();
 	void render(shader_t &shader, bool is_shadow_pass);
