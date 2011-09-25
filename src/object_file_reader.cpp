@@ -261,7 +261,12 @@ public:
 			else if (s == "map_bump" || s == "bump") { // should be ok if both are set
 				assert(cur_mat);
 				if (!(mat_in >> tfn)) {cerr << "Error reading material " << s << endl; return 0;}
-				cur_mat->bump_tid = get_texture(tfn, 0);
+				cur_mat->bump_tid = get_texture(tfn, 0); // can be set from both map_bump and bump
+			}
+			else if (s == "map_refl") {
+				assert(cur_mat);
+				if (!(mat_in >> tfn)) {cerr << "Error reading material map_refl" << endl; return 0;}
+				check_and_bind(cur_mat->refl_tid, tfn, 0);
 			}
 			else if (s == "skip") { // skip this material
 				assert(cur_mat);

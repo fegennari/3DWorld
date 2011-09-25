@@ -146,14 +146,13 @@ struct material_t {
 	colorRGB ka, kd, ks, ke, tf;
 	float ns, ni, alpha, tr;
 	unsigned illum;
-	int a_tid, d_tid, s_tid, alpha_tid, bump_tid;
+	int a_tid, d_tid, s_tid, alpha_tid, bump_tid, refl_tid;
 	bool skip, is_used;
 
-	// geometry - does this go here or somewhere else?
 	geometry_t geom;
 
 	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
-		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), skip(0), is_used(0) {}
+		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), skip(0), is_used(0) {}
 	bool add_poly(vntc_vect_t const &poly);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
