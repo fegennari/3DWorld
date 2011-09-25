@@ -867,6 +867,8 @@ public:
 	void load(int index);
 	void load_raw_bmp(int index);
 	void load_targa();
+	void load_jpeg();
+	void load_png();
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 	float get_component(float xval, float yval, int comp) const;
 	void check_init() {if (tid == 0) do_gl_init();}

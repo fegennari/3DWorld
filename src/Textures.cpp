@@ -11,6 +11,7 @@
 
 
 using std::string;
+using std::cerr;
 
 
 float const TEXTURE_SMOOTH        = 0.01;
@@ -47,7 +48,7 @@ struct lspot {
 
 texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
-// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga)
+// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
 // type format width height wrap ncolors use_mipmaps name [do_compress]
 //texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
@@ -555,16 +556,73 @@ FILE *open_texture_file(string filename) {
 }
 
 
+string get_file_extension(string const &filename, unsigned level, bool make_lower) {
+
+	size_t const epos(filename.find_last_of('.'));
+	size_t const spos[2] = {filename.find_last_of('\\'), filename.find_last_of('/')};
+	size_t smax(0);
+	string ext;
+
+	for (unsigned i = 0; i < 2; ++i) {
+		if (spos[i] != string::npos) smax = max(smax, spos[i]);
+	}
+	if (epos != string::npos && epos > smax) { // make sure the dot is after the last slash (part of the filename, not part of the path)
+		ext = string(filename, epos+1, filename.length()-1);
+
+		if (level > 0 && !ext.empty()) {
+			string const fn2(string(filename, 0, epos));
+			ext = get_file_extension(fn2, level-1, make_lower); // recursively strip off extensions
+		}
+	}
+	unsigned const len(ext.length());
+
+	for (unsigned i = 0; i < len; ++i) { // convert upper case ext letters to lower case
+		ext[i] = tolower(ext[i]);
+	}
+	return ext;
+}
+
+
 void texture_t::load(int index) {
 
 	if (type > 0) { // generated texture
 		alloc();
 	}
-	else if (format == 4) {
-		load_targa();
-	}
 	else {
-		load_raw_bmp(index);
+		if (format == 7) { // auto
+			// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto
+			string const ext(get_file_extension(name, 0, 1));
+		
+			if (0) {}
+			else if (ext == "raw") {
+				format = ((ncolors == 4) ? 3 : 0);
+			}
+			else if (ext == "bmp") {
+				format = 1;
+			}
+			else if (ext == "tga" || ext == "targa") {
+				format = 4;
+			}
+			else if (ext == "jpg" || ext == "jpeg") {
+				format = 5;
+			}
+			else if (ext == "png") {
+				format = 6;
+			}
+			else {
+				cerr << "Error: Unidentified image file format for autodetect: " << ext << " in filename " << name << endl;
+				exit(1);
+			}
+		}
+		switch (format) {
+		case 0: load_raw_bmp(index); break; // raw
+		case 1: load_raw_bmp(index); break; // bmp
+		case 2: load_raw_bmp(index); break; // raw
+		case 3: load_raw_bmp(index); break; // raw
+		case 4: load_targa(); break;
+		case 5: load_jpeg(); break;
+		case 6: load_png(); break;
+		}
 	}
 }
 
@@ -670,14 +728,13 @@ void texture_t::load_raw_bmp(int index) {
 
 void texture_t::load_targa() {
 
-	assert(format == 4);
 	assert(!is_allocated());
 	tga_image img;
 	tga_result const ret(tga_read(&img, name.c_str()));
 	//cout << "load texture" << name << endl;
 
 	if (ret != TGA_NOERR) {
-		cout << "Error reading targa file " << name << ": " << tga_error(ret) << endl;
+		cerr << "Error reading targa file " << name << ": " << tga_error(ret) << endl;
 		exit(1);
 	}
 	if (width == 0 && height == 0) {
@@ -714,6 +771,27 @@ void texture_t::load_targa() {
 		}
 	}
 	tga_free_buffers(&img);
+}
+
+
+void texture_t::load_jpeg() {
+
+#ifdef ENABLE_JPEG
+	cerr << "Error loading texture image file " << name << ": jpeg support has not been implemented." << endl;
+	exit(1);
+	// FIXME - write
+#else
+	cerr << "Error loading texture image file " << name << ": jpeg support has not been enabled." << endl;
+	exit(1);
+#endif
+}
+
+
+void texture_t::load_png() {
+
+	cerr << "Error loading texture image file " << name << ": png support has not been implemented." << endl;
+	exit(1);
+	// FIXME - write
 }
 
 
