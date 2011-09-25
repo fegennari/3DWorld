@@ -6,10 +6,11 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 
+bool const USE_SHADERS      = 1;
 bool const ENABLE_BUMP_MAPS = 1;
 bool const ENABLE_SPEC_MAPS = 1;
 
-extern bool group_back_face_cull, enable_model3d_tex_comp;
+extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders;
 extern int display_mode;
 
 
@@ -18,6 +19,7 @@ model3ds all_models;
 
 bool enable_bump_map() {return (ENABLE_BUMP_MAPS && (display_mode & 0x20) == 0);} // enabled by default
 bool enable_spec_map() {return (ENABLE_SPEC_MAPS);}
+bool get_use_shaders() {return (USE_SHADERS && !disable_shaders);}
 
 
 // ************ texture_manager ************
@@ -184,9 +186,10 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 	else {
 		bind_vbo(vbo);
 	}
-	if (enable_bump_map() && !is_shadow_pass && !tangent_vectors.empty()) {
+	if (enable_bump_map() && get_use_shaders() && !is_shadow_pass && !tangent_vectors.empty()) {
 		assert(tangent_vectors.size() == size());
 		int const loc(shader.get_attrib_loc("tangent"));
+		assert(loc > 0);
 		glEnableVertexAttribArray(loc);
 		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, (void *)vntc_data_sz); // stuff in at the end
 	}
@@ -594,11 +597,12 @@ void model3ds::free_context() {
 
 void model3ds::render(bool is_shadow_pass) {
 
+	bool const use_shaders(get_use_shaders() && !is_shadow_pass);
 	set_lighted_sides(2);
 	set_fill_mode();
-	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
+	if (use_shaders) glDisable(GL_LIGHTING); // custom lighting calculations from this point on
+	set_color_a(use_shaders ? BLACK : WHITE); // ambient will be set by indirect lighting in the shader
 	BLACK.do_glColor();
-	set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 	set_specular(0.0, 1.0);
 	float const min_alpha(0.5); // since we're using alpha masks we must set min_alpha > 0.0
 
@@ -606,7 +610,7 @@ void model3ds::render(bool is_shadow_pass) {
 		shader_t s;
 		colorRGBA orig_fog_color;
 		
-		if (!is_shadow_pass) {
+		if (use_shaders) {
 			orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled(), (bmap_pass != 0), enable_spec_map());
 		}
 		bool const render_if_bmap(0); // set this later when bump maps are supported
@@ -614,7 +618,7 @@ void model3ds::render(bool is_shadow_pass) {
 		for (iterator m = begin(); m != end(); ++m) {
 			m->render(s, is_shadow_pass, (bmap_pass != 0));
 		}
-		if (!is_shadow_pass) end_smoke_shaders(s, orig_fog_color);
+		if (use_shaders) end_smoke_shaders(s, orig_fog_color);
 	}
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);

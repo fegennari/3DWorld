@@ -415,6 +415,7 @@ public:
 				return 0;
 			}
 		}
+		unsigned const nv(v.size()), nn(n.size()), ntc(tc.size());
 		clear_cont(v);
 		clear_cont(n);
 		clear_cont(tc);
@@ -451,11 +452,7 @@ public:
 		}
 		model.remove_excess_cap();
 		PRINT_TIME("Model3d Build");
-
-		if (verbose) {
-			cout << "v: " << v.size() << ", n: " << n.size() << ", tc: " << tc.size()
-				 << ", f: " << num_faces << ", mat: " << model.num_materials() << endl;
-		}
+		if (verbose) cout << "v: " << nv << ", n: " << nn << ", tc: " << ntc << ", f: " << num_faces << ", mat: " << model.num_materials() << endl;
 		return 1;
 	}
 };
