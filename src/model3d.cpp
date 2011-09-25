@@ -34,7 +34,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	tex_map[fn] = tid;
 	if (verbose) cout << "creating texture " << fn << endl;
 	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
-	// type format width height wrap ncolors use_mipmaps name [do_compress]
+	// type=read_from_file format=targa width height wrap ncolors use_mipmaps name [do_compress]
 	textures.push_back(texture_t(0, 4, 0, 0, 1, (is_alpha_mask ? 1 : 3), !is_alpha_mask, fn, compress)); // always RGB targa wrapped+mipmap
 	return tid; // can't fail
 }
@@ -392,7 +392,7 @@ bool material_t::add_poly(vntc_vect_t const &poly) {
 
 // ************ model3d ************
 
-void model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t> *ppts) {
+unsigned model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t> *ppts) {
 
 	//assert(mat_id >= 0); // must be set/valid - too strict?
 	split_polygons_buffer.resize(0);
@@ -414,6 +414,7 @@ void model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t>
 			}
 		}
 	}
+	return split_polygons_buffer.size();
 }
 
 

@@ -73,6 +73,9 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 };
 
 
+template<typename T> void clear_cont(T &cont) {T().swap(cont);}
+
+
 class vntc_vect_t : public vector<vert_norm_tc> {
 
 	unsigned vbo;
@@ -89,7 +92,7 @@ public:
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);
 	void add_poly(vntc_vect_t const &poly);
-	void remove_excess_cap() {if (size() < capacity()) vector<value_type>(*this).swap(*this);}
+	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
 	void clear() {vector<value_type>::clear(); tangent_vectors.clear();}
 };
 
@@ -191,7 +194,7 @@ public:
 	}
 
 	// creation and query
-	void add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t> *ppts=NULL);
+	unsigned add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t> *ppts=NULL);
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
