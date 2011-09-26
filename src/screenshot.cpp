@@ -15,10 +15,10 @@ FILE *open_screenshot_file(char *file_path, char *basename) {
 	if (basename == NULL) return NULL;
 
 	if (file_path != NULL) {
-		char *filename = (char *)malloc((strlen(file_path)+20)*sizeof(char));
+		char *filename = new char[strlen(file_path)+20];
 		sprintf(filename, "%s%s", file_path, basename);
 		fp = fopen(filename, "wb");
-		free(filename);
+		delete [] filename;
 	}
 	else {
 		fp = fopen(basename, "wb");
@@ -33,22 +33,21 @@ FILE *open_screenshot_file(char *file_path, char *basename) {
 
 int screenshot(unsigned window_width, unsigned window_height, char *file_path) {
 
-	unsigned i, j, offset, bufSize;
-	unsigned char *buf;
 	FILE *fp = open_screenshot_file(file_path, "screenshot.raw");
 	if (fp == NULL) return 0;
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	bufSize = ((window_width)*(window_height)*3*sizeof(unsigned char));
-	buf     = (unsigned char *)malloc(bufSize);
+	unsigned const bufSize(((window_width)*(window_height)*3));
+	unsigned char *buf(new unsigned char[bufSize]);
 	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, buf);
 
-	for (i = 0; i < window_height; ++i) {
-		offset = (window_height-i-1)*window_width;
-		for (j = 0; j < window_width; ++j) {
+	for (unsigned i = 0; i < window_height; ++i) {
+		unsigned const offset((window_height-i-1)*window_width);
+
+		for (unsigned j = 0; j < window_width; ++j) {
 			fprintf(fp, "%c%c%c", buf[3*(j+offset)], buf[3*(j+offset)+1], buf[3*(j+offset)+2]);
 		}
 	}
-	free(buf);
+	delete [] buf;
 	fclose(fp);
 	return 1;
 }
@@ -62,18 +61,15 @@ int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
 
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
-	unsigned step_size;
-	unsigned char *buf;
 	JSAMPROW row_pointer[1];
-	JSAMPLE *rgb_row;
 	FILE *fp = open_screenshot_file(file_path, "screenshot.jpg");
 	if (fp == NULL) return 0;
-	buf = (unsigned char *)malloc((window_width+1)*(window_height+1)*3*sizeof(unsigned char));
+	unsigned char *buf(new unsigned char[(window_width+1)*(window_height+1)*3]);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, buf);
 
-	step_size = 3*window_width;
-	rgb_row   = (JSAMPLE *)malloc(sizeof(JSAMPLE)*step_size);
+	unsigned const step_size(3*window_width);
+	JSAMPLE *rgb_row(new JSAMPLE[step_size]);
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_compress(&cinfo);
 	jpeg_stdio_dest(&cinfo, fp);
@@ -90,8 +86,8 @@ int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
 	}
 	jpeg_finish_compress(&cinfo);
 	jpeg_destroy_compress(&cinfo);
-	free(rgb_row);
-	free(buf);
+	delete [] rgb_row;
+	delete [] buf;
 	fclose(fp);
 	return 1;
 }

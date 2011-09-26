@@ -1748,8 +1748,8 @@ void free_shadow_map_textures();
 
 // function prototypes - screenshot (these are C functions)
 #ifdef ENABLE_JPEG
-extern "C" int screenshot(unsigned window_width, unsigned window_height, char *file_path);
-extern "C" int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
+int screenshot(unsigned window_width, unsigned window_height, char *file_path);
+int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
 #else // why compile as C when libjpeg isn't needed?
 int screenshot(unsigned window_width, unsigned window_height, char *file_path);
 int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
