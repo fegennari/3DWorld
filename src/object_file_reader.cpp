@@ -420,8 +420,6 @@ public:
 		clear_cont(n);
 		clear_cont(tc);
 		PRINT_TIME("Object File Load");
-		model.load_all_used_tids(); // need to load the textures to get the colors
-		PRINT_TIME("Model Texture Load");
 		vntc_vect_t poly;
 
 		for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) {
@@ -452,6 +450,8 @@ public:
 		}
 		model.remove_excess_cap();
 		PRINT_TIME("Model3d Build");
+		model.load_all_used_tids(); // need to load the textures to get the colors
+		PRINT_TIME("Model Texture Load");
 		if (verbose) cout << "v: " << nv << ", n: " << nn << ", tc: " << ntc << ", f: " << num_faces << ", mat: " << model.num_materials() << endl;
 		return 1;
 	}
