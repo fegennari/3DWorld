@@ -33,7 +33,7 @@ bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update doesn't 
 bool const SHOW_TEXTURE_MEMORY = 0;
 bool const INSTANT_LTEX_COL    = 1;
 bool const COMPRESS_TEXTURES   = 1;
-bool const CHECK_FOR_LUM_TGA   = 1;
+bool const CHECK_FOR_LUM       = 1;
 float const SMOOTH_SKY_POLES   = 0.2;
 
 std::string const texture_dir("textures");
@@ -433,14 +433,20 @@ void texture_t::calc_color() {
 void texture_t::copy_alpha_from_texture(texture_t const &at) {
 
 	assert(at.is_allocated() && is_allocated()); // check that data is allocated in both textures
-	assert(at.width == width && at.height == height); // check for matching sizes
 	assert(ncolors == 4); // check for alpha channel
-	assert(!is_bound()); // check that texture isn't already bound
-	assert(at.ncolors == 1);
+	assert(!is_bound());  // check that texture isn't already bound
 	unsigned const npixels(num_pixels());
+	
+	if (at.width != width || at.height != height) {
+		cerr << "Error: Size mismatch in alpha component copy of texture " << at.name << " (" << at.width << "x" << at.height
+			 << ") to texture " << name << " (" << width << "x" << height << ")." << endl;
+		exit(1);
+	}
+	assert(at.ncolors == 1 || at.ncolors == 4);
+	bool const is_lum(at.ncolors == 1);
 
 	for (unsigned i = 0; i < npixels; ++i) {
-		data[4*i+3] = at.data[i]; // copy alpha values
+		data[4*i+3] = (is_lum ? at.data[i] : at.data[4*i+3]); // copy alpha values
 	}
 }
 
@@ -626,6 +632,7 @@ void texture_t::load(int index) {
 		case 5: load_jpeg(); break;
 		case 6: load_png(); break;
 		}
+		try_compact_to_lum();
 		apply_alignment_hack();
 	}
 }
@@ -747,19 +754,6 @@ void texture_t::load_targa() {
 		assert(width > 0 && height > 0);
 	}
 	assert(img.width == width && img.height == height);
-
-	if (CHECK_FOR_LUM_TGA && ncolors == 3) { // determine if it's really a luminance texture
-		bool is_lum(1);
-
-		for (int y = 0; y < height && is_lum; ++y) {
-			for (int x = 0; x < width && is_lum; ++x) {
-				unsigned char const *const pixel(tga_find_pixel(&img, x, y));
-				assert(pixel);
-				is_lum = (pixel[1] == pixel[0] && pixel[2] == pixel[0]); // all the same values
-			}
-		}
-		if (is_lum) ncolors = 1; // RGB equal, make it a single color (luminance) channel
-	}
 	alloc();
 	//if (!tga_is_top_to_bottom(&img)) tga_flip_vert(&img);
 	//if (tga_is_right_to_left(&img)) tga_flip_horiz(&img);
@@ -829,8 +823,7 @@ void texture_t::load_png() {
 void texture_t::apply_alignment_hack() {
 
 	// FIXME: Better way to do this? Rescale image? Add padding bits? Error?
-	unsigned const scanline_size(ncolors*width);
-	if ((scanline_size & 3) == 0) return; // nothing to do
+	if ((ncolors*width & 3) == 0) return; // nothing to do
 	// ensure word alignment
 	assert(ncolors == 1 || ncolors == 3); // only supported for RGB => RGBA for now
 	bool const luminance(ncolors == 1);
@@ -841,6 +834,29 @@ void texture_t::apply_alignment_hack() {
 	for (unsigned i = 0; i < npixels; ++i) {
 		UNROLL_3X(new_data[4*i+i_] = (luminance ? data[i] : data[3*i+i_]););
 		new_data[4*i+3] = 255; // alpha of 255
+	}
+	free();
+	data = new_data;
+}
+
+
+void texture_t::try_compact_to_lum() {
+
+	if (!CHECK_FOR_LUM || ncolors != 3 || (width & 3) != 0) return; // make sure to check alignment
+	// determine if it's really a luminance texture
+	unsigned const npixels(num_pixels());
+	bool is_lum(1);
+
+	for (unsigned i = 0; i < npixels && is_lum; ++i) {
+		is_lum &= (data[3*i+1] == data[3*i] && data[3*i+2] == data[3*i]);
+	}
+	if (!is_lum) return;
+	// RGB equal, make it a single color (luminance) channel
+	ncolors = 1; // add alpha channel
+	unsigned char *new_data(new unsigned char[num_bytes()]);
+
+	for (unsigned i = 0; i < npixels; ++i) {
+		new_data[i] = data[3*i];
 	}
 	free();
 	data = new_data;
