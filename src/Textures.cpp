@@ -8,6 +8,9 @@
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#ifdef ENABLE_JPEG
+#include "../jpeg-6b/jpeglib.h"
+#endif
 
 
 using std::string;
@@ -623,6 +626,7 @@ void texture_t::load(int index) {
 		case 5: load_jpeg(); break;
 		case 6: load_png(); break;
 		}
+		apply_alignment_hack();
 	}
 }
 
@@ -756,7 +760,6 @@ void texture_t::load_targa() {
 		}
 		if (is_lum) ncolors = 1; // RGB equal, make it a single color (luminance) channel
 	}
-
 	alloc();
 	//if (!tga_is_top_to_bottom(&img)) tga_flip_vert(&img);
 	//if (tga_is_right_to_left(&img)) tga_flip_horiz(&img);
@@ -777,9 +780,37 @@ void texture_t::load_targa() {
 void texture_t::load_jpeg() {
 
 #ifdef ENABLE_JPEG
-	cerr << "Error loading texture image file " << name << ": jpeg support has not been implemented." << endl;
-	exit(1);
-	// FIXME - write
+	jpeg_decompress_struct cinfo;
+	jpeg_error_mgr jerr;
+	cinfo.err = jpeg_std_error(&jerr);
+	jpeg_create_decompress(&cinfo);
+	FILE *fp(fopen(name.c_str(), "rb"));
+
+	if (fp == NULL) {
+		cerr << "Error opening jpeg file " << name << " for read." << endl;
+		exit(1);
+	}
+	jpeg_stdio_src(&cinfo, fp);
+	jpeg_read_header(&cinfo, TRUE);
+	jpeg_start_decompress(&cinfo);
+
+	if (width == 0 && height == 0) {
+		width  = cinfo.output_width;
+		height = cinfo.output_height;
+		assert(width > 0 && height > 0);
+	}
+	assert(cinfo.output_width == width && cinfo.output_height == height);
+	ncolors = cinfo.output_components;
+	unsigned const scanline_size(ncolors*width);
+	alloc();
+
+	while (cinfo.output_scanline < cinfo.output_height) {
+		JSAMPROW row_pointer[1] = {data + scanline_size*(cinfo.output_height - cinfo.output_scanline - 1)};
+		jpeg_read_scanlines(&cinfo, row_pointer, 1);
+	}
+	jpeg_finish_decompress(&cinfo);
+	jpeg_destroy_decompress(&cinfo);
+	fclose(fp);
 #else
 	cerr << "Error loading texture image file " << name << ": jpeg support has not been enabled." << endl;
 	exit(1);
@@ -792,6 +823,27 @@ void texture_t::load_png() {
 	cerr << "Error loading texture image file " << name << ": png support has not been implemented." << endl;
 	exit(1);
 	// FIXME - write
+}
+
+
+void texture_t::apply_alignment_hack() {
+
+	// FIXME: Better way to do this? Rescale image? Add padding bits? Error?
+	unsigned const scanline_size(ncolors*width);
+	if ((scanline_size & 3) == 0) return; // nothing to do
+	// ensure word alignment
+	assert(ncolors == 1 || ncolors == 3); // only supported for RGB => RGBA for now
+	bool const luminance(ncolors == 1);
+	ncolors = 4; // add alpha channel
+	unsigned char *new_data(new unsigned char[num_bytes()]);
+	unsigned const npixels(num_pixels());
+
+	for (unsigned i = 0; i < npixels; ++i) {
+		UNROLL_3X(new_data[4*i+i_] = (luminance ? data[i] : data[3*i+i_]););
+		new_data[4*i+3] = 255; // alpha of 255
+	}
+	free();
+	data = new_data;
 }
 
 
