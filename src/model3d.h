@@ -55,10 +55,18 @@ struct vert_norm_tc_ix : public vert_norm_tc {
 };
 
 
-struct poly_vix : public vector<vert_norm_tc_ix> {
+struct poly_header_t {
+	unsigned npts;
 	int mat_id;
 	vector3d n;
-	poly_vix(int mat_id_) : mat_id(mat_id_), n(zero_vector) {}
+
+	poly_header_t(int mat_id_=-1) : npts(0), mat_id(mat_id_), n(zero_vector) {}
+};
+
+
+struct poly_data_block {
+	vector<poly_header_t> polys;
+	vector<vert_norm_tc_ix> pts;
 };
 
 

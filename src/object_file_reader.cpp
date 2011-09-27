@@ -285,13 +285,14 @@ public:
 	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
+		unsigned const block_size = (1 << 18); // 256K
 		int cur_mat_id(-1);
-		unsigned smoothing_group(0), num_faces(0), last_poly_sz(3);
+		unsigned smoothing_group(0), num_faces(0);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
 		vector<counted_normal> vn; // vertex normals
 		vector<vector3d> tc; // texture coords
-		deque<poly_vix> polys;
+		deque<poly_data_block> pblocks;
 		char s[MAX_CHARS];
 		string material_name, mat_lib, group_name, object_name;
 
@@ -301,9 +302,14 @@ public:
 			}
 			else if (strcmp(s, "f") == 0) { // face
 				model.mark_mat_as_used(cur_mat_id);
-				polys.push_back(poly_vix(cur_mat_id));
-				poly_vix &pv(polys.back());
-				if (last_poly_sz == 3 || last_poly_sz == 4) pv.reserve(last_poly_sz);
+
+				if (pblocks.empty() || pblocks.back().pts.size() >= block_size) {
+					pblocks.push_back(poly_data_block());
+				}
+				poly_data_block &pb(pblocks.back());
+				pb.polys.push_back(poly_header_t(cur_mat_id));
+				unsigned &npts(pb.polys.back().npts);
+				unsigned const pix(pb.pts.size());
 				int vix(0), tix(0), nix(0);
 
 				while (fscanf(fp, "%i", &vix) == 1) { // read vertex index
@@ -327,27 +333,26 @@ public:
 						else ungetc(c2, fp);
 					}
 					else ungetc(c, fp);
-					pv.push_back(vert_norm_tc_ix(v[vix], normal, tex_coord.x, tex_coord.y, vix));
+					pb.pts.push_back(vert_norm_tc_ix(v[vix], normal, tex_coord.x, tex_coord.y, vix));
+					++npts;
 				} // end while vertex
-				assert(pv.size() >= 3);
-				last_poly_sz = pv.size();
-				vector3d normal;
+				assert(npts >= 3);
+				vector3d &normal(pb.polys.back().n);
 				
-				for (unsigned i = 0; i < pv.size()-2; ++i) { // find a nonzero normal
-					normal = cross_product((pv[i+1].v - pv[i].v), (pv[i+2].v - pv[i].v)).get_norm(); // backwards?
+				for (unsigned i = pix; i < pix+npts-2; ++i) { // find a nonzero normal
+					normal = cross_product((pb.pts[i+1].v - pb.pts[i].v), (pb.pts[i+2].v - pb.pts[i].v)).get_norm(); // backwards?
 					if (normal != zero_vector) break; // got a good normal
 				}
-				for (unsigned i = 0; i < pv.size(); ++i) {
+				for (unsigned i = pix; i < pix+npts; ++i) {
 					if (recalc_model3d_normals) {
-						assert((unsigned)pv[i].ix < vn.size());
-						vn[pv[i].ix].add_normal(normal);
+						assert((unsigned)pb.pts[i].ix < vn.size());
+						vn[pb.pts[i].ix].add_normal(normal);
 					}
-					else if (pv[i].n == zero_vector) {
-						pv[i].n = normal;
+					else if (pb.pts[i].n == zero_vector) {
+						pb.pts[i].n = normal;
 					}
 					//if (!smoothing_group) pv[i].n = normal;
 				}
-				pv.n = normal;
 			}
 			else if (strcmp(s, "v") == 0) { // vertex
 				v.push_back(point());
@@ -423,10 +428,7 @@ public:
 				return 0;
 			}
 		}
-		//int foo;
-		//cout << "a"; cin >> foo;
 		PRINT_TIME("Object File Load");
-		vntc_vect_t poly;
 
 		if (recalc_model3d_normals) {
 			for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) {
@@ -438,11 +440,17 @@ public:
 				*i /= mag; // normalize
 				i->count = (mag > 0.7); // stores the 'valid' state of the normal
 			}
-			for (deque<poly_vix>::iterator i = polys.begin(); i != polys.end(); ++i) {
-				for (poly_vix::iterator j = i->begin(); j != i->end(); ++j) {
-					assert(j->ix < vn.size());
-					counted_normal const &vert_norm(vn[j->ix]);
-					j->n = ((i->n != zero_vector && !vert_norm.is_valid()) ? i->n : vert_norm);
+			for (deque<poly_data_block>::iterator i = pblocks.begin(); i != pblocks.end(); ++i) {
+				unsigned pix(0);
+
+				for (vector<poly_header_t>::iterator j = i->polys.begin(); j != i->polys.end(); ++j) {
+					for (unsigned p = 0; p < j->npts; ++p) {
+						vert_norm_tc_ix &V(i->pts[pix+p]);
+						assert(V.ix < vn.size());
+						counted_normal const &vert_norm(vn[V.ix]);
+						V.n = ((j->n != zero_vector && !vert_norm.is_valid()) ? j->n : vert_norm);
+					}
+					pix += j->npts;
 				}
 			}
 		}
@@ -451,25 +459,25 @@ public:
 		clear_cont(n);
 		clear_cont(tc);
 		clear_cont(vn);
-		//cout << "b"; cin >> foo;
 
-		while (!polys.empty()) {
-			poly_vix const &p(polys.back());
-			poly.resize(p.size());
-			for (unsigned j = 0; j < p.size(); ++j) {poly[j] = p[j];}
-			num_faces += model.add_polygon(poly, p.mat_id, ppts);
-			polys.pop_back();
+		while (!pblocks.empty()) {
+			poly_data_block const &pd(pblocks.back());
+			unsigned pix(0);
+			vntc_vect_t poly;
+
+			for (vector<poly_header_t>::const_iterator j = pd.polys.begin(); j != pd.polys.end(); ++j) {
+				poly.resize(j->npts);
+				for (unsigned p = 0; p < j->npts; ++p) {poly[p] = pd.pts[pix+p];}
+				num_faces += model.add_polygon(poly, j->mat_id, ppts);
+				pix += j->npts;
+			}
+			pblocks.pop_back();
 		}
-		//cout << "c"; cin >> foo;
-		clear_cont(polys);
-		//cout << "d"; cin >> foo;
 		model.remove_excess_cap();
-		//cout << "e"; cin >> foo;
 		PRINT_TIME("Model3d Build");
 		model.load_all_used_tids(); // need to load the textures to get the colors
 		PRINT_TIME("Model Texture Load");
-		//cout << "f"; cin >> foo;
-		if (verbose) cout << "v: " << nv << ", n: " << nn << ", tc: " << ntc << ", f: " << num_faces << ", mat: " << model.num_materials() << endl;
+		if (verbose) cout << "v: " << nv << ", n: " << nn << ", tc: " << ntc << ", f: " << num_faces << ", blocks: " << pblocks.size() << ", mat: " << model.num_materials() << endl;
 		return 1;
 	}
 };
