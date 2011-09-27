@@ -319,7 +319,7 @@ public:
 						int const c2(getc(fp));
 
 						if (c2 == '/') {
-							if (fscanf(fp, "%i", &nix) == 1) { // read normal index
+							if (fscanf(fp, "%i", &nix) == 1 && !recalc_model3d_normals) { // read normal index
 								normalize_index(nix, n.size());
 								normal = n[nix];
 							} // else the normal will be recalculated later
@@ -338,15 +338,20 @@ public:
 					if (normal != zero_vector) break; // got a good normal
 				}
 				for (unsigned i = 0; i < pv.size(); ++i) {
+					if (recalc_model3d_normals) {
+						assert((unsigned)pv[i].ix < vn.size());
+						vn[pv[i].ix].add_normal(normal);
+					}
+					else if (pv[i].n == zero_vector) {
+						pv[i].n = normal;
+					}
 					//if (!smoothing_group) pv[i].n = normal;
-					assert((unsigned)pv[i].ix < vn.size());
-					vn[pv[i].ix].add_normal(normal);
 				}
 				pv.n = normal;
 			}
 			else if (strcmp(s, "v") == 0) { // vertex
 				v.push_back(point());
-				vn.push_back(counted_normal()); // vertex normal
+				if (recalc_model3d_normals) vn.push_back(counted_normal()); // vertex normal
 			
 				if (!read_point(v.back())) {
 					cerr << "Error reading vertex from object file " << filename << endl;
@@ -363,13 +368,16 @@ public:
 				}
 			}
 			else if (strcmp(s, "vn") == 0) { // normal
-				n.push_back(vector3d());
+				vector3d normal;
 			
-				if (!read_point(n.back())) {
+				if (!read_point(normal)) {
 					cerr << "Error reading normal from object file " << filename << endl;
 					return 0;
 				}
-				xf.xform_pos_rm(n.back());
+				if (!recalc_model3d_normals) {
+					xf.xform_pos_rm(normal);
+					n.push_back(normal);
+				}
 			}
 			else if (strcmp(s, "l") == 0) { // line
 				read_to_newline(fp); // ignore
@@ -415,43 +423,52 @@ public:
 				return 0;
 			}
 		}
-		unsigned const nv(v.size()), nn(n.size()), ntc(tc.size());
-		clear_cont(v);
-		clear_cont(n);
-		clear_cont(tc);
+		//int foo;
+		//cout << "a"; cin >> foo;
 		PRINT_TIME("Object File Load");
 		vntc_vect_t poly;
 
-		for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) {
-			if (!i->is_valid()) continue; // invalid, remains invalid
-			*i /= (float)i->count;
-			float const mag(i->mag());
-			if (mag < 1E-6) {i->count = 0; continue;} // invalid
-			assert(mag < 1.001);
-			*i /= mag; // normalize
-			i->count = (mag > 0.7); // stores the 'valid' state of the normal
-		}
-		for (deque<poly_vix>::iterator i = polys.begin(); i != polys.end(); ++i) {
-			for (poly_vix::iterator j = i->begin(); j != i->end(); ++j) {
-				if (!recalc_model3d_normals && j->n != zero_vector) continue;
-				assert(j->ix < vn.size());
-				counted_normal const &vert_norm(vn[j->ix]);
-				j->n = ((i->n != zero_vector && !vert_norm.is_valid()) ? i->n : vert_norm);
+		if (recalc_model3d_normals) {
+			for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) {
+				if (!i->is_valid()) continue; // invalid, remains invalid
+				*i /= (float)i->count;
+				float const mag(i->mag());
+				if (mag < 1E-6) {i->count = 0; continue;} // invalid
+				assert(mag < 1.001);
+				*i /= mag; // normalize
+				i->count = (mag > 0.7); // stores the 'valid' state of the normal
+			}
+			for (deque<poly_vix>::iterator i = polys.begin(); i != polys.end(); ++i) {
+				for (poly_vix::iterator j = i->begin(); j != i->end(); ++j) {
+					assert(j->ix < vn.size());
+					counted_normal const &vert_norm(vn[j->ix]);
+					j->n = ((i->n != zero_vector && !vert_norm.is_valid()) ? i->n : vert_norm);
+				}
 			}
 		}
+		unsigned const nv(v.size()), nn(recalc_model3d_normals ? vn.size() : n.size()), ntc(tc.size());
+		clear_cont(v);
+		clear_cont(n);
+		clear_cont(tc);
 		clear_cont(vn);
+		//cout << "b"; cin >> foo;
 
 		while (!polys.empty()) {
-			poly_vix const &p(polys.front());
+			poly_vix const &p(polys.back());
 			poly.resize(p.size());
 			for (unsigned j = 0; j < p.size(); ++j) {poly[j] = p[j];}
 			num_faces += model.add_polygon(poly, p.mat_id, ppts);
-			polys.pop_front();
+			polys.pop_back();
 		}
+		//cout << "c"; cin >> foo;
+		clear_cont(polys);
+		//cout << "d"; cin >> foo;
 		model.remove_excess_cap();
+		//cout << "e"; cin >> foo;
 		PRINT_TIME("Model3d Build");
 		model.load_all_used_tids(); // need to load the textures to get the colors
 		PRINT_TIME("Model Texture Load");
+		//cout << "f"; cin >> foo;
 		if (verbose) cout << "v: " << nv << ", n: " << nn << ", tc: " << ntc << ", f: " << num_faces << ", mat: " << model.num_materials() << endl;
 		return 1;
 	}
