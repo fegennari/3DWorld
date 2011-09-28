@@ -51,7 +51,7 @@ enable_model3d_tex_comp 0
 recalc_model3d_normals 1
 
 mesh_height 0.05
-mesh_size  256 128 64
+mesh_size  128 128 64
 scene_size 4.0 4.0 4.0
 
 window_width 1920
