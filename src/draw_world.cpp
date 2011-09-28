@@ -1685,7 +1685,7 @@ void set_specular(float specularity, float shininess) {
 		last_spec = specularity;
 	}
 	if (shininess != last_shiny) {
-		float mat_shininess[] = {shininess};
+		float mat_shininess[] = {max(0.0f, min(128.0f, shininess))};
 		glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mat_shininess);
 		last_shiny = shininess;
     }
