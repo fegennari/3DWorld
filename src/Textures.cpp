@@ -8,13 +8,21 @@
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
-#ifdef ENABLE_JPEG
-#include "../jpeg-6b/jpeglib.h"
-#endif
-
 
 using std::string;
 using std::cerr;
+
+#ifdef ENABLE_JPEG
+#include "jpeglib.h"
+#endif
+
+#ifdef ENABLE_PNG
+#include "png.h"
+
+void wrap_png_error(png_structp, png_const_charp) {	
+	cerr << "Error reading PNG image file." << endl;
+}
+#endif
 
 
 float const TEXTURE_SMOOTH        = 0.01;
@@ -440,7 +448,8 @@ void texture_t::copy_alpha_from_texture(texture_t const &at) {
 	if (at.width != width || at.height != height) {
 		cerr << "Error: Size mismatch in alpha component copy of texture " << at.name << " (" << at.width << "x" << at.height
 			 << ") to texture " << name << " (" << width << "x" << height << ")." << endl;
-		exit(1);
+		//exit(1);
+		return;
 	}
 	assert(at.ncolors == 1 || at.ncolors == 4);
 	bool const is_lum(at.ncolors == 1);
@@ -623,6 +632,8 @@ void texture_t::load(int index) {
 				exit(1);
 			}
 		}
+		unsigned want_alpha_channel(ncolors == 4);
+
 		switch (format) {
 		case 0: load_raw_bmp(index); break; // raw
 		case 1: load_raw_bmp(index); break; // bmp
@@ -632,8 +643,13 @@ void texture_t::load(int index) {
 		case 5: load_jpeg(); break;
 		case 6: load_png(); break;
 		}
-		try_compact_to_lum();
-		apply_alignment_hack();
+		if (want_alpha_channel && ncolors < 4) {
+			add_alpha_channel();
+		}
+		else {
+			try_compact_to_lum();
+			apply_alignment_hack();
+		}
 	}
 }
 
@@ -814,9 +830,49 @@ void texture_t::load_jpeg() {
 
 void texture_t::load_png() {
 
-	cerr << "Error loading texture image file " << name << ": png support has not been implemented." << endl;
+#ifdef ENABLE_PNG
+	FILE *fp(fopen(name.c_str(), "rb"));
+
+	if (fp == NULL) {
+		cerr << "Error opening png file " << name << " for read." << endl;
+		exit(1);
+	}
+	png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, (png_voidp)wrap_png_error, 0, 0);
+	assert(png_ptr);
+	png_infop info_ptr = png_create_info_struct(png_ptr);
+	assert(info_ptr);
+	png_infop end_info = png_create_info_struct(png_ptr);
+	assert(end_info);
+	png_init_io(png_ptr, fp);
+	png_read_info(png_ptr, info_ptr);
+	unsigned const w(png_get_image_width(png_ptr, info_ptr));
+	unsigned const h(png_get_image_height(png_ptr, info_ptr));
+	int const bit_depth(png_get_bit_depth(png_ptr, info_ptr));
+
+	if (width == 0 && height == 0) {
+		width  = w;
+		height = h;
+		assert(width > 0 && height > 0);
+	}
+	assert(w == width && h == height);
+	ncolors = png_get_channels(png_ptr, info_ptr);
+	if (bit_depth == 16) png_set_strip_16(png_ptr);
+	if (bit_depth < 8)   png_set_packing(png_ptr);
+	vector<unsigned char *> rows(height);
+	unsigned const scanline_size(ncolors*width);
+	alloc();
+	
+	for (int i = 0; i < height; ++i) {
+		rows[i] = data + i*scanline_size;
+	}
+	png_read_image(png_ptr, &rows.front());
+	png_read_end(png_ptr, end_info);
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+	fclose(fp);
+#else
+	cerr << "Error loading texture image file " << name << ": png support has not been enabled." << endl;
 	exit(1);
-	// FIXME - write
+#endif
 }
 
 
@@ -824,7 +880,14 @@ void texture_t::apply_alignment_hack() {
 
 	// FIXME: Better way to do this? Rescale image? Add padding bits? Error?
 	if ((ncolors*width & 3) == 0) return; // nothing to do
-	// ensure word alignment
+	add_alpha_channel(); // ensure word alignment by making RGBA
+	assert(ncolors == 4);
+}
+
+
+void texture_t::add_alpha_channel() {
+
+	if (ncolors == 4) return; // alread has an alpha channel
 	assert(ncolors == 1 || ncolors == 3); // only supported for RGB => RGBA for now
 	bool const luminance(ncolors == 1);
 	ncolors = 4; // add alpha channel

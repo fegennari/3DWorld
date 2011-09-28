@@ -454,7 +454,7 @@ public:
 				}
 			}
 		}
-		unsigned const nv(v.size()), nn(recalc_model3d_normals ? vn.size() : n.size()), ntc(tc.size());
+		unsigned const nv(v.size()), nn(recalc_model3d_normals ? vn.size() : n.size()), ntc(tc.size()), num_blocks(pblocks.size());
 		clear_cont(v);
 		clear_cont(n);
 		clear_cont(tc);
@@ -477,7 +477,7 @@ public:
 		PRINT_TIME("Model3d Build");
 		model.load_all_used_tids(); // need to load the textures to get the colors
 		PRINT_TIME("Model Texture Load");
-		if (verbose) cout << "v: " << nv << ", n: " << nn << ", tc: " << ntc << ", f: " << num_faces << ", blocks: " << pblocks.size() << ", mat: " << model.num_materials() << endl;
+		if (verbose) cout << "v: " << nv << ", n: " << nn << ", tc: " << ntc << ", f: " << num_faces << ", blocks: " << num_blocks << ", mat: " << model.num_materials() << endl;
 		return 1;
 	}
 };
