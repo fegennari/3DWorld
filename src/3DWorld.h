@@ -870,6 +870,7 @@ public:
 	void load_jpeg();
 	void load_png();
 	void apply_alignment_hack();
+	void add_alpha_channel();
 	void try_compact_to_lum();
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 	float get_component(float xval, float yval, int comp) const;
