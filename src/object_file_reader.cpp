@@ -19,6 +19,7 @@ protected:
 	FILE *fp; // Note: we use a FILE* here instead of an ifstream because it's ~2.2x faster in MSVS
 	static unsigned const MAX_CHARS = 1024;
 	char buffer[MAX_CHARS];
+	bool verbose;
 
 	bool open_file() { // FIXME: what about multiple opens/reads?
 		assert(!filename.empty());
@@ -69,7 +70,7 @@ protected:
 	}
 
 public:
-	object_file_reader(string const &fn) : filename(fn), fp(NULL) {assert(!fn.empty());}
+	object_file_reader(string const &fn) : filename(fn), fp(NULL), verbose(0) {assert(!fn.empty());}
 	~object_file_reader() {if (fp) fclose(fp);}
 
 	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
@@ -160,7 +161,7 @@ class object_file_reader_model : public object_file_reader {
 		string const fn_used(open_include_file(fn, "texture", tex_in));
 		if (fn_used.empty()) return -1;
 		tex_in.close();
-		return model.tmgr.create_texture(fn_used, is_alpha_mask, 1);
+		return model.tmgr.create_texture(fn_used, is_alpha_mask, verbose);
 	}
 
 	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask) {
@@ -194,7 +195,7 @@ public:
 					cerr << "Error reading material name" << endl;
 					return 0;
 				}
-				cout << "Material " << material_name << endl; // FIXME: too verbose?
+				if (verbose) cout << "Material " << material_name << endl; // FIXME: too verbose?
 				cur_mat_id =  model.get_material_ix(material_name, fn);
 				cur_mat    = &model.get_material(cur_mat_id);
 			}
@@ -287,7 +288,7 @@ public:
 		if (!open_file()) return 0;
 		unsigned const block_size = (1 << 18); // 256K
 		int cur_mat_id(-1);
-		unsigned smoothing_group(0), num_faces(0);
+		unsigned smoothing_group(0), num_faces(0), num_objects(0), num_groups(0);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
 		vector<counted_normal> vn; // vertex normals
@@ -389,9 +390,11 @@ public:
 			}
 			else if (strcmp(s, "o") == 0) { // object definition
 				read_str_to_newline(fp, object_name); // can be empty?
+				++num_objects;
 			}
 			else if (strcmp(s, "g") == 0) { // group
 				read_str_to_newline(fp, group_name); // can be empty
+				++num_groups;
 			}
 			else if (strcmp(s, "s") == 0) { // smoothing/shading (off/on or 0/1)
 				if (fscanf(fp, "%u", &smoothing_group) != 1) {
@@ -477,7 +480,11 @@ public:
 		PRINT_TIME("Model3d Build");
 		model.load_all_used_tids(); // need to load the textures to get the colors
 		PRINT_TIME("Model Texture Load");
-		if (verbose) cout << "v: " << nv << ", n: " << nn << ", tc: " << ntc << ", f: " << num_faces << ", blocks: " << num_blocks << ", mat: " << model.num_materials() << endl;
+		
+		if (verbose) {
+			cout << "verts: " << nv << ", normals: " << nn << ", tcs: " << ntc << ", faces: " << num_faces << ", objects: " << num_objects
+				 << ", groups: " << num_groups << ", blocks: " << num_blocks << ", mat: " << model.num_materials() << endl;
+		}
 		return 1;
 	}
 };
