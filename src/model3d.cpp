@@ -65,12 +65,12 @@ void texture_manager::free_textures() {
 }
 
 
-void texture_manager::ensure_texture_loaded(texture_t &t, bool is_bump) {
+void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump) {
 
 	if (!t.is_allocated()) {
 		t.load(-1);
 		
-		if (t.alpha_tid >= 0) {
+		if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
 			ensure_tid_loaded(t.alpha_tid, 0);
 			assert((unsigned)t.alpha_tid < textures.size());
 			t.copy_alpha_from_texture(textures[t.alpha_tid]);
@@ -101,7 +101,7 @@ void texture_manager::ensure_tid_loaded(int tid, bool is_bump) {
 
 	if (tid < 0) return; // not allocated
 	assert((unsigned)tid < textures.size());
-	ensure_texture_loaded(textures[tid], is_bump);
+	ensure_texture_loaded(textures[tid], tid, is_bump);
 }
 
 

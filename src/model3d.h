@@ -143,7 +143,7 @@ public:
 	void clear();
 	void free_tids();
 	void free_textures();
-	void ensure_texture_loaded(texture_t &t, bool is_bump);
+	void ensure_texture_loaded(texture_t &t, int tid, bool is_bump);
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
 	void ensure_tid_loaded(int tid, bool is_bump);
 	void ensure_tid_bound(int tid);
