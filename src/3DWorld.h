@@ -872,6 +872,7 @@ public:
 	void apply_alignment_hack();
 	void add_alpha_channel();
 	void try_compact_to_lum();
+	void make_normal_map();
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 	float get_component(float xval, float yval, int comp) const;
 	void check_init() {if (tid == 0) do_gl_init();}

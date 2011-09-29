@@ -863,7 +863,7 @@ void texture_t::load_png() {
 	alloc();
 	
 	for (int i = 0; i < height; ++i) {
-		rows[i] = data + i*scanline_size;
+		rows[i] = data + (height - i - 1)*scanline_size;
 	}
 	png_read_image(png_ptr, &rows.front());
 	png_read_end(png_ptr, end_info);
@@ -920,6 +920,42 @@ void texture_t::try_compact_to_lum() {
 
 	for (unsigned i = 0; i < npixels; ++i) {
 		new_data[i] = data[3*i];
+	}
+	free();
+	data = new_data;
+}
+
+
+void texture_t::make_normal_map() {
+
+	if (ncolors == 3) return; // already a normal map
+	if (ncolors == 4) return; // better not have an alpha component, but it might have been added to get correct word alignment
+	assert(ncolors == 1); // grayscale heightmap
+	ncolors = 3; // convert to RGB
+	unsigned char *new_data(new unsigned char[num_bytes()]);
+	int max_delta(1);
+
+	for (int y = 0; y < height; ++y) { // assume texture wraps
+		int const ym1((y-1+height) % height), yp1((y+1) % height);
+
+		for (int x = 0; x < width; ++x) {
+			int const xm1((x-1+width) % width), xp1((x+1) % width), off(3*(x + y*width));
+			max_delta = max(max_delta, abs((int)data[xp1+y*width] - (int)data[xm1+y*width]));
+			max_delta = max(max_delta, abs((int)data[x+yp1*width] - (int)data[x+ym1*width]));
+		}
+	}
+	float max_delta_f(max_delta);
+
+	for (int y = 0; y < height; ++y) { // assume texture wraps
+		int const ym1((y-1+height) % height), yp1((y+1) % height);
+
+		for (int x = 0; x < width; ++x) {
+			int const xm1((x-1+width) % width), xp1((x+1) % width), off(3*(x + y*width));
+			vector3d n(-((int)data[xp1+y*width] - (int)data[xm1+y*width])/max_delta_f,
+				        ((int)data[x+yp1*width] - (int)data[x+ym1*width])/max_delta_f, 1.0);
+			n.normalize();
+			UNROLL_3X(new_data[off+i_] = unsigned char(127.5*(n[i_]+1.0)););
+		}
 	}
 	free();
 	data = new_data;

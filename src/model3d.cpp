@@ -65,16 +65,17 @@ void texture_manager::free_textures() {
 }
 
 
-void texture_manager::ensure_texture_loaded(texture_t &t) {
+void texture_manager::ensure_texture_loaded(texture_t &t, bool is_bump) {
 
 	if (!t.is_allocated()) {
 		t.load(-1);
 		
 		if (t.alpha_tid >= 0) {
-			ensure_tid_loaded(t.alpha_tid);
+			ensure_tid_loaded(t.alpha_tid, 0);
 			assert((unsigned)t.alpha_tid < textures.size());
 			t.copy_alpha_from_texture(textures[t.alpha_tid]);
 		}
+		if (is_bump) t.make_normal_map();
 		t.init(); // must be after alpha copy
 	}
 	assert(t.is_allocated());
@@ -96,11 +97,11 @@ void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 }
 
 
-void texture_manager::ensure_tid_loaded(int tid) {
+void texture_manager::ensure_tid_loaded(int tid, bool is_bump) {
 
 	if (tid < 0) return; // not allocated
 	assert((unsigned)tid < textures.size());
-	ensure_texture_loaded(textures[tid]);
+	ensure_texture_loaded(textures[tid], is_bump);
 }
 
 
@@ -522,9 +523,9 @@ void model3d::load_all_used_tids() {
 		if (!m->mat_is_used()) continue;
 		int const tid(m->get_render_texture());
 		tmgr.bind_alpha_channel_to_texture(tid, m->alpha_tid);
-		tmgr.ensure_tid_loaded(tid); // only one tid for now
-		if (m->use_bump_map()) tmgr.ensure_tid_loaded(m->bump_tid);
-		if (m->use_spec_map()) tmgr.ensure_tid_loaded(m->s_tid);
+		tmgr.ensure_tid_loaded(tid, 0); // only one tid for now
+		if (m->use_bump_map()) tmgr.ensure_tid_loaded(m->bump_tid, 1);
+		if (m->use_spec_map()) tmgr.ensure_tid_loaded(m->s_tid, 0);
 	}
 }
 

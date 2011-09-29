@@ -140,9 +140,9 @@ public:
 	void clear();
 	void free_tids();
 	void free_textures();
-	void ensure_texture_loaded(texture_t &t);
+	void ensure_texture_loaded(texture_t &t, bool is_bump);
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
-	void ensure_tid_loaded(int tid);
+	void ensure_tid_loaded(int tid, bool is_bump);
 	void ensure_tid_bound(int tid);
 	void bind_texture(int tid) const;
 	colorRGBA get_tex_avg_color(int tid) const;
@@ -166,7 +166,7 @@ struct material_t {
 	bool mat_is_used () const {return is_used;}
 	bool use_bump_map() const;
 	bool use_spec_map() const;
-	int get_render_texture() const {return d_tid;}
+	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass);
 	colorRGBA get_ad_color() const;
