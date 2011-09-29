@@ -929,7 +929,11 @@ void texture_t::try_compact_to_lum() {
 void texture_t::make_normal_map() {
 
 	if (ncolors == 3) return; // already a normal map
-	if (ncolors == 4) return; // better not have an alpha component, but it might have been added to get correct word alignment
+	
+	if (ncolors == 4) { // better not have an alpha component, but it might have been added to get correct word alignment
+		cout << "Warning: Bump/Normal map " << name << " is RGBA." << endl;
+		return;
+	}
 	assert(ncolors == 1); // grayscale heightmap
 	ncolors = 3; // convert to RGB
 	unsigned char *new_data(new unsigned char[num_bytes()]);
