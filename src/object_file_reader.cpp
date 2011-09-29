@@ -288,7 +288,7 @@ public:
 		if (!open_file()) return 0;
 		unsigned const block_size = (1 << 18); // 256K
 		int cur_mat_id(-1);
-		unsigned smoothing_group(0), num_faces(0), num_objects(0), num_groups(0);
+		unsigned smoothing_group(0), num_faces(0), num_objects(0), num_groups(0), obj_group_id(0);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
 		vector<counted_normal> vn; // vertex normals
@@ -308,7 +308,7 @@ public:
 					pblocks.push_back(poly_data_block());
 				}
 				poly_data_block &pb(pblocks.back());
-				pb.polys.push_back(poly_header_t(cur_mat_id));
+				pb.polys.push_back(poly_header_t(cur_mat_id, obj_group_id));
 				unsigned &npts(pb.polys.back().npts);
 				unsigned const pix(pb.pts.size());
 				int vix(0), tix(0), nix(0);
@@ -391,10 +391,12 @@ public:
 			else if (strcmp(s, "o") == 0) { // object definition
 				read_str_to_newline(fp, object_name); // can be empty?
 				++num_objects;
+				++obj_group_id;
 			}
 			else if (strcmp(s, "g") == 0) { // group
 				read_str_to_newline(fp, group_name); // can be empty
 				++num_groups;
+				++obj_group_id;
 			}
 			else if (strcmp(s, "s") == 0) { // smoothing/shading (off/on or 0/1)
 				if (fscanf(fp, "%u", &smoothing_group) != 1) {
@@ -471,7 +473,7 @@ public:
 			for (vector<poly_header_t>::const_iterator j = pd.polys.begin(); j != pd.polys.end(); ++j) {
 				poly.resize(j->npts);
 				for (unsigned p = 0; p < j->npts; ++p) {poly[p] = pd.pts[pix+p];}
-				num_faces += model.add_polygon(poly, j->mat_id, ppts);
+				num_faces += model.add_polygon(poly, j->mat_id, j->obj_id, ppts);
 				pix += j->npts;
 			}
 			pblocks.pop_back();

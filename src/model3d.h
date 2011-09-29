@@ -56,11 +56,11 @@ struct vert_norm_tc_ix : public vert_norm_tc {
 
 
 struct poly_header_t {
-	unsigned npts;
+	unsigned npts, obj_id;
 	int mat_id;
 	vector3d n;
 
-	poly_header_t(int mat_id_=-1) : npts(0), mat_id(mat_id_), n(zero_vector) {}
+	poly_header_t(int mat_id_=-1, unsigned obj_id_=0) : npts(0), mat_id(mat_id_), obj_id(obj_id_), n(zero_vector) {}
 };
 
 
@@ -84,13 +84,15 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 template<typename T> void clear_cont(T &cont) {T().swap(cont);}
 
 
-class vntc_vect_t : public vector<vert_norm_tc> {
+class vntc_vect_t : public vector<vert_norm_tc>, public sphere_t {
 
 	unsigned vbo;
 	vector<vector4d> tangent_vectors;
 
 public:
-	vntc_vect_t() : vbo(0) {}
+	unsigned obj_id;
+
+	vntc_vect_t(unsigned obj_id_=0) : vbo(0), obj_id(obj_id_) {}
 	void calc_tangents(unsigned npts);
 	void render(bool is_shadow_pass) const;
 	void render_array(shader_t &shader, bool is_shadow_pass, int prim_type);
@@ -100,6 +102,7 @@ public:
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);
 	void add_poly(vntc_vect_t const &poly);
+	void calc_bounding_sphere();
 	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
 	void clear() {vector<value_type>::clear(); tangent_vectors.clear();}
 };
@@ -122,7 +125,7 @@ struct geometry_t {
 	void calc_tangents();
 	void render(shader_t &shader, bool is_shadow_pass);
 	bool empty() const {return (triangles.empty() && quads.empty());}
-	void add_poly(vntc_vect_t const &poly);
+	void add_poly(vntc_vect_t const &poly, unsigned obj_id=0);
 	void remove_excess_cap();
 	void free_vbos();
 	void clear();
@@ -161,7 +164,7 @@ struct material_t {
 
 	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
 		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), skip(0), is_used(0) {}
-	bool add_poly(vntc_vect_t const &poly);
+	bool add_poly(vntc_vect_t const &poly, unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
 	bool use_bump_map() const;
@@ -201,7 +204,7 @@ public:
 	}
 
 	// creation and query
-	unsigned add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t> *ppts=NULL);
+	unsigned add_polygon(vntc_vect_t const &poly, int mat_id, unsigned obj_id=0, vector<polygon_t> *ppts=NULL);
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);

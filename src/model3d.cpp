@@ -165,6 +165,8 @@ void vntc_vect_t::render(bool is_shadow_pass) const {
 void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_type) {
 
 	if (empty()) return;
+	if (radius == 0.0) calc_bounding_sphere();
+	if (!camera_pdu.sphere_visible_test(pos, radius)) return; // view frustum culling
 	set_array_client_state(1, !is_shadow_pass, !is_shadow_pass, 0);
 	unsigned const stride(sizeof(vntc_vect_t::value_type)), vntc_data_sz(size()*stride);
 	int loc(-1);
@@ -250,6 +252,17 @@ void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
 }
 
 
+void vntc_vect_t::calc_bounding_sphere() {
+
+	pos = zero_vector;
+	for (unsigned i = 0; i < size(); ++i) pos += (*this)[i].v;
+	pos /= size();
+	radius = 0.0;
+	for (unsigned i = 0; i < size(); ++i) radius = max(radius, p2p_dist_sq(pos, (*this)[i].v));
+	radius = sqrt(radius);
+}
+
+
 // ************ geometry_t ************
 
 void geometry_t::calc_tangents() {
@@ -274,21 +287,24 @@ void geometry_t::render(shader_t &shader, bool is_shadow_pass) {
 }
 
 
-void add_poly_to_polys(vntc_vect_t const &poly, deque<vntc_vect_t> &v) {
+void add_poly_to_polys(vntc_vect_t const &poly, deque<vntc_vect_t> &v, unsigned obj_id) {
 
 	unsigned const max_entries(1 << 18); // 256K
-	if (v.empty() || v.back().size() > max_entries) v.push_back(vntc_vect_t());
+
+	if (v.empty() || v.back().size() > max_entries || obj_id > v.back().obj_id) {
+		v.push_back(vntc_vect_t(obj_id));
+	}
 	v.back().add_poly(poly);
 }
 
 
-void geometry_t::add_poly(vntc_vect_t const &poly) {
+void geometry_t::add_poly(vntc_vect_t const &poly, unsigned obj_id) {
 	
 	if (poly.size() == 3) { // triangle
-		add_poly_to_polys(poly, triangles);
+		add_poly_to_polys(poly, triangles, obj_id);
 	}
 	else if (poly.size() == 4) {
-		add_poly_to_polys(poly, quads);
+		add_poly_to_polys(poly, quads, obj_id);
 	}
 	else {
 		assert(0); // shouldn't get here
@@ -409,10 +425,10 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 }
 
 
-bool material_t::add_poly(vntc_vect_t const &poly) {
+bool material_t::add_poly(vntc_vect_t const &poly, unsigned obj_id) {
 	
 	if (skip) return 0;
-	geom.add_poly(poly);
+	geom.add_poly(poly, obj_id);
 	mark_as_used();
 	return 1;
 }
@@ -420,7 +436,7 @@ bool material_t::add_poly(vntc_vect_t const &poly) {
 
 // ************ model3d ************
 
-unsigned model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygon_t> *ppts) {
+unsigned model3d::add_polygon(vntc_vect_t const &poly, int mat_id, unsigned obj_id, vector<polygon_t> *ppts) {
 
 	//assert(mat_id >= 0); // must be set/valid - too strict?
 	split_polygons_buffer.resize(0);
@@ -428,13 +444,13 @@ unsigned model3d::add_polygon(vntc_vect_t const &poly, int mat_id, vector<polygo
 
 	for (vector<polygon_t>::const_iterator i = split_polygons_buffer.begin(); i != split_polygons_buffer.end(); ++i) {
 		if (mat_id < 0) {
-			unbound_geom.add_poly(*i);
+			unbound_geom.add_poly(*i, obj_id);
 			if (ppts) ppts->push_back(*i);
 		}
 		else {
 			assert((unsigned)mat_id < materials.size());
 		
-			if (materials[mat_id].add_poly(*i)) {
+			if (materials[mat_id].add_poly(*i, obj_id)) {
 				if (ppts) {
 					ppts->push_back(*i);
 					ppts->back().color = materials[mat_id].get_avg_color(tmgr, unbound_tid);
