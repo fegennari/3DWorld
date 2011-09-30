@@ -346,8 +346,15 @@ public:
 				}
 				for (unsigned i = pix; i < pix+npts; ++i) {
 					if (recalc_model3d_normals) {
-						assert((unsigned)pb.pts[i].ix < vn.size());
-						vn[pb.pts[i].ix].add_normal(normal);
+						unsigned const ix(pb.pts[i].ix);
+						assert((unsigned)ix < vn.size());
+
+						if (vn[ix].is_valid() && dot_product(normal, vn[ix].get_norm()) < 0.25) { // normals in disagreement
+							vn[ix] = zero_vector; // zero it out so that it becomes invalid later
+						}
+						else {
+							vn[ix].add_normal(normal);
+						}
 					}
 					else if (pb.pts[i].n == zero_vector) {
 						pb.pts[i].n = normal;
