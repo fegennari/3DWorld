@@ -502,6 +502,9 @@ public:
 bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xform_t const &xf,
 	int def_tid, colorRGBA const &def_c, bool load_models, bool verbose)
 {
+	std::locale::global(std::locale("C"));
+	setlocale(LC_ALL, "C");
+
 	if (load_models) {
 		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c));
 		object_file_reader_model reader(filename, all_models.back());
