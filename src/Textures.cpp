@@ -443,15 +443,21 @@ void texture_t::copy_alpha_from_texture(texture_t const &at) {
 	assert(at.is_allocated() && is_allocated()); // check that data is allocated in both textures
 	assert(ncolors == 4); // check for alpha channel
 	assert(!is_bound());  // check that texture isn't already bound
+	assert(at.ncolors == 1 || at.ncolors == 4);
 	unsigned const npixels(num_pixels());
 	
 	if (at.width != width || at.height != height) {
-		cerr << "Error: Size mismatch in alpha component copy of texture " << at.name << " (" << at.width << "x" << at.height
-			 << ") to texture " << name << " (" << width << "x" << height << ")." << endl;
-		//exit(1);
-		return;
+		if (at.width >= width && at.height >= height) {
+			resize(at.width, at.height);
+			assert(at.width == width && at.height == height);
+		}
+		else {
+			cerr << "Error: Size mismatch in alpha component copy of texture " << at.name << " (" << at.width << "x" << at.height
+				 << ") to texture " << name << " (" << width << "x" << height << ")." << endl;
+			//exit(1);
+			return;
+		}
 	}
-	assert(at.ncolors == 1 || at.ncolors == 4);
 	bool const is_lum(at.ncolors == 1);
 
 	for (unsigned i = 0; i < npixels; ++i) {
@@ -648,8 +654,8 @@ void texture_t::load(int index) {
 		}
 		else {
 			try_compact_to_lum();
-			apply_alignment_hack();
 		}
+		fix_word_alignment();
 	}
 }
 
@@ -876,17 +882,26 @@ void texture_t::load_png() {
 }
 
 
-void texture_t::apply_alignment_hack() {
+void texture_t::fix_word_alignment() {
 
-	// FIXME: Better way to do this? Rescale image? Add padding bits? Error?
-	if ((ncolors*width & 3) == 0) return; // nothing to do
-	add_alpha_channel(); // ensure word alignment by making RGBA
+	assert(is_allocated());
+	unsigned const byte_align = 4;
+	if ((ncolors*width & (byte_align-1)) == 0) return; // nothing to do
+#if 0
+	add_alpha_channel(); // hack: ensure word alignment by making RGBA
 	assert(ncolors == 4);
+#else
+	float const ar(float(width)/float(height));
+	int const new_w(width - (width&(byte_align-1)) + byte_align); // round up to next highest multiple of byte_align
+	int const new_h(int(new_w/ar + 0.5)); // preserve aspect ratio
+	resize(new_w, new_h);
+#endif
 }
 
 
 void texture_t::add_alpha_channel() {
 
+	assert(is_allocated());
 	if (ncolors == 4) return; // alread has an alpha channel
 	assert(ncolors == 1 || ncolors == 3); // only supported for RGB => RGBA for now
 	bool const luminance(ncolors == 1);
@@ -903,9 +918,47 @@ void texture_t::add_alpha_channel() {
 }
 
 
+void texture_t::resize(int new_w, int new_h) {
+
+	assert(is_allocated());
+	if (new_w == width && new_h == height) return; // already correct size
+	assert(new_w >= width && new_h >= height); // only upsample for now
+	unsigned char *new_data(new unsigned char[new_w*new_h*ncolors]);
+	float const hinv(1.0/new_h), winv(1.0/new_w);
+
+	for (int y = 0; y < new_h; ++y) {
+		float const yv(y*hinv), yold(yv*height);
+		int const yol((int)floor(yold)), you(min(yol+1, height-1));
+		assert(yol < height);
+		float const ypi(yold - (float)yol);
+
+		for (int x = 0; x < new_w; ++x) {
+			float const xv(x*winv), xold(xv*width);
+			int const xol((int)floor(xold)), xou(min(xol+1, width-1));
+			assert(xol < width);
+			float const xpi(xold - (float)xol);
+			int const nix(ncolors*(x + new_w*y));
+			int const oix00(ncolors*(xol + width*yol)), oix10(ncolors*(xol + width*you));
+			int const oix01(ncolors*(xou + width*yol)), oix11(ncolors*(xou + width*you));
+			assert(unsigned(oix11+ncolors) <= num_bytes());
+
+			for (int c = 0; c < ncolors; ++c) {
+				float const val((1.0 - xpi)*((1.0 - ypi)*data[oix00+c] + ypi*data[oix10+c]) + xpi*((1.0 - ypi)*data[oix01+c] + ypi*data[oix11+c]));
+				new_data[nix+c] = (unsigned char)min(255, max(0, int(val)));
+			}
+		}
+	}
+	free();
+	data   = new_data;
+	width  = new_w;
+	height = new_h;
+}
+
+
 void texture_t::try_compact_to_lum() {
 
-	if (!CHECK_FOR_LUM || ncolors != 3 || (width & 3) != 0) return; // make sure to check alignment
+	assert(is_allocated());
+	if (!CHECK_FOR_LUM || ncolors != 3) return;
 	// determine if it's really a luminance texture
 	unsigned const npixels(num_pixels());
 	bool is_lum(1);
@@ -928,10 +981,11 @@ void texture_t::try_compact_to_lum() {
 
 void texture_t::make_normal_map() {
 
+	assert(is_allocated());
 	if (ncolors == 3) return; // already a normal map
 	
-	if (ncolors == 4) { // better not have an alpha component, but it might have been added to get correct word alignment
-		cout << "Warning: Bump/Normal map " << name << " is RGBA." << endl;
+	if (ncolors == 4) { // better not have an alpha component
+		cout << "Error: Skipping RGBA Bump/Normal map " << name << "." << endl;
 		return;
 	}
 	assert(ncolors == 1); // grayscale heightmap
@@ -968,6 +1022,7 @@ void texture_t::make_normal_map() {
 
 void texture_t::create_custom_mipmaps() {
 
+	assert(is_allocated());
 	GLenum const format(calc_format());
 	unsigned const tsize(num_bytes());
 	vector<unsigned char> idata, odata;
