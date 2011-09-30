@@ -17,9 +17,9 @@ extern int display_mode;
 model3ds all_models;
 
 
-bool enable_bump_map() {return (ENABLE_BUMP_MAPS && (display_mode & 0x20) == 0);} // enabled by default
-bool enable_spec_map() {return (ENABLE_SPEC_MAPS);}
 bool get_use_shaders() {return (USE_SHADERS && !disable_shaders);}
+bool enable_bump_map() {return (ENABLE_BUMP_MAPS && get_use_shaders() && (display_mode & 0x20) == 0);} // enabled by default
+bool enable_spec_map() {return (ENABLE_SPEC_MAPS && get_use_shaders());}
 
 
 // ************ texture_manager ************
@@ -189,7 +189,7 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 	else {
 		bind_vbo(vbo);
 	}
-	if (enable_bump_map() && get_use_shaders() && !is_shadow_pass && !tangent_vectors.empty()) {
+	if (enable_bump_map() && !is_shadow_pass && !tangent_vectors.empty()) {
 		assert(tangent_vectors.size() == size());
 		int const loc(shader.get_attrib_loc("tangent"));
 		assert(loc > 0);
@@ -617,8 +617,17 @@ void model3ds::render(bool is_shadow_pass) {
 	bool const use_shaders(get_use_shaders() && !is_shadow_pass);
 	set_lighted_sides(2);
 	set_fill_mode();
-	if (use_shaders) glDisable(GL_LIGHTING); // custom lighting calculations from this point on
-	set_color_a(use_shaders ? BLACK : WHITE); // ambient will be set by indirect lighting in the shader
+	
+	if (use_shaders) {
+		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
+		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
+	}
+	else {
+		set_color_a(WHITE); // ambient will be set by indirect lighting in the shader
+		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.5);
+	}
 	BLACK.do_glColor();
 	set_specular(0.0, 1.0);
 	float const min_alpha(0.5); // since we're using alpha masks we must set min_alpha > 0.0
@@ -637,6 +646,7 @@ void model3ds::render(bool is_shadow_pass) {
 		}
 		if (use_shaders) end_smoke_shaders(s, orig_fog_color);
 	}
+	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
 	set_lighted_sides(1);
