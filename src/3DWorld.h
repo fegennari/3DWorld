@@ -1337,7 +1337,6 @@ void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny);
 float fast_eval_from_index(int x, int y, bool use_cache=1, bool glaciate=1);
 float eval_one_surface_point(float xval, float yval);
 void reset_offsets();
-bool is_mesh_disabled(int xpos, int ypos);
 float get_water_z_height();
 void update_mesh(float dms, bool do_regen_trees);
 bool is_under_mesh(point const &p);

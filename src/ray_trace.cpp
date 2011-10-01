@@ -19,7 +19,7 @@ unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), NUM_THREADS(1);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 
 extern bool has_snow;
-extern int read_light_file, write_light_file, read_light_file_l, write_light_file_l;
+extern int read_light_file, write_light_file, read_light_file_l, write_light_file_l, display_mode;
 extern float light_int_scale, light_int_scale_l, ztop, water_plane_z, temperature, snow_depth;
 extern char *lighting_file, *lighting_file_l;
 extern vector<light_source> light_sources;
@@ -96,7 +96,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	}
 
 	// find intersection point with mesh (approximate)
-	if (!coll && p1.z != p2.z && line_intersect_mesh(p1, p2, xpos, ypos, zval, 0, 0)) {
+	if ((display_mode & 0x01) && !coll && p1.z != p2.z && line_intersect_mesh(p1, p2, xpos, ypos, zval, 0, 0)) {
 		assert(!point_outside_mesh(xpos, ypos));
 		
 		if (!is_mesh_disabled(xpos, ypos)) {

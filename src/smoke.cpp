@@ -225,7 +225,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 			lmcell const *const vlm(lmap_manager.vlmap[y][x]);
 			if (vlm == NULL && !full_update) continue; // x/y pairs that get into here should also be constant
 			unsigned const off(zsize*(y*MESH_X_SIZE + x));
-			float const zthresh(is_mesh_disabled(x, y) ? czmin : mesh_height[y][x]);
+			float const zthresh((!(display_mode & 0x01) || is_mesh_disabled(x, y)) ? czmin : mesh_height[y][x]);
 
 			for (unsigned z = 0; z < zsize; ++z) {
 				unsigned const off2(ncomp*(off + z));
