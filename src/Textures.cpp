@@ -427,14 +427,16 @@ void texture_t::calc_color() {
 		float const cscale(has_alpha_comp ? data[offset+3]/255.0 : 1.0); // alpha scale
 		weight += cscale;
 
-		for (int j = 0; j < ncolors; ++j) {
-			colors[j] += ((j < 3) ? cscale : 1.0)*data[offset+j];
+		if (ncolors == 1) { // grayscale luminance
+			UNROLL_3X(colors[i_] += cscale*data[offset];)
+		}
+		else {
+			UNROLL_3X(colors[i_] += cscale*data[offset+i_];)
+			if (has_alpha_comp) {colors[3] += data[offset+3];}
 		}
 	}
-	for (int j = 0; j < ncolors; ++j) {
-		color[j] = colors[j]/(255.0*weight);
-	}
-	if (!has_alpha_comp) color.alpha = 1.0;
+	UNROLL_3X(color[i_] = colors[i_]/(255.0*weight);)
+	color.alpha = (has_alpha_comp ? colors[3]/(255.0*weight) : 1.0);
 }
 
 

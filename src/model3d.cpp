@@ -447,7 +447,6 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 
 	colorRGBA avg_color(get_ad_color());
 	int tex_id(get_render_texture());
-	cout << "default_tid: " << default_tid << endl; // TESTING
 	
 	if (tex_id >= 0) {
 		return avg_color.modulate_with(tmgr.get_tex_avg_color(tex_id));

@@ -298,6 +298,7 @@ public:
 		string material_name, mat_lib, group_name, object_name;
 
 		while (fscanf(fp, "%s", s) == 1) {
+			if (s[0] == 0) {cout << "empty/unparseable line?" << endl; continue;}
 			if (s[0] == '#') { // comment
 				read_to_newline(fp); // ignore
 			}
