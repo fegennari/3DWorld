@@ -471,6 +471,8 @@ public:
 		clear_cont(n);
 		clear_cont(tc);
 		clear_cont(vn);
+		model.load_all_used_tids(); // need to load the textures here to get the colors
+		PRINT_TIME("Model Texture Load");
 
 		while (!pblocks.empty()) {
 			poly_data_block const &pd(pblocks.back());
@@ -487,8 +489,6 @@ public:
 		}
 		model.remove_excess_cap();
 		PRINT_TIME("Model3d Build");
-		model.load_all_used_tids(); // need to load the textures to get the colors
-		PRINT_TIME("Model Texture Load");
 		
 		if (verbose) {
 			cout << "verts: " << nv << ", normals: " << nn << ", tcs: " << ntc << ", faces: " << num_faces << ", objects: " << num_objects

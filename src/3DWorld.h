@@ -851,7 +851,7 @@ private:
 
 public:
 	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), width(0), height(0), ncolors(0),
-		bump_tid(-1), alpha_tid(-1), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0) {}
+		bump_tid(-1), alpha_tid(-1), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
 	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool do_comp=1)
 		: name(n), type(t), format(f), use_mipmaps(um), wrap(wra), do_compress(do_comp), width(w), height(h), ncolors(nc),
