@@ -444,7 +444,6 @@ void texture_t::copy_alpha_from_texture(texture_t const &at) {
 	assert(ncolors == 4); // check for alpha channel
 	assert(!is_bound());  // check that texture isn't already bound
 	assert(at.ncolors == 1 || at.ncolors == 4);
-	unsigned const npixels(num_pixels());
 	
 	if (at.width != width || at.height != height) {
 		if (at.width >= width && at.height >= height) {
@@ -458,6 +457,7 @@ void texture_t::copy_alpha_from_texture(texture_t const &at) {
 			return;
 		}
 	}
+	unsigned const npixels(num_pixels());
 	bool const is_lum(at.ncolors == 1);
 
 	for (unsigned i = 0; i < npixels; ++i) {
