@@ -1522,6 +1522,9 @@ int load_config(string const &config_file) {
 		else if (str == "lm_dz_adj") {
 			if (!read_float(fp, lm_dz_adj) || lm_dz_adj < 0.0) cfg_err("lm_dz_adj command", error);
 		}
+		else if (str == "set_czmax") {
+			if (!read_float(fp, czmax)) cfg_err("set_czmax command", error);
+		}
 		else if (str == "wind_velocity") {
 			if (fscanf(fp, "%f%f%f", &wind.x, &wind.y, &wind.z) != 3) cfg_err("wind_velocity command", error);
 		}

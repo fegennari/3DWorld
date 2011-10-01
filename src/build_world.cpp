@@ -980,6 +980,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					add_polygons_to_cobj_vector(ppts, cobj, group_ids, use_model3d);
 					cobj.group_id   = -1; // reset
 				}
+				// FIXME: else {czmax = max(czmax, model.zmax)}
 				PRINT_TIME("Obj File Load/Process");
 				break;
 			}
