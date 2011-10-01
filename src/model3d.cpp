@@ -240,7 +240,7 @@ vector3d vntc_vect_t::get_planar_normal() const {
 void vntc_vect_t::from_points(vector<point> const &pts) {
 
 	resize(pts.size());
-	for (unsigned i = 0; i < size(); ++i) (*this)[i].v = pts[i];
+	for (unsigned i = 0; i < size(); ++i) {(*this)[i].v = pts[i];}
 }
 
 
@@ -255,7 +255,7 @@ void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
 void vntc_vect_t::calc_bounding_sphere() {
 
 	pos = zero_vector;
-	for (unsigned i = 0; i < size(); ++i) pos += (*this)[i].v;
+	for (unsigned i = 0; i < size(); ++i) {pos += (*this)[i].v;}
 	pos /= size();
 	radius = 0.0;
 	for (unsigned i = 0; i < size(); ++i) radius = max(radius, p2p_dist_sq(pos, (*this)[i].v));
@@ -263,14 +263,32 @@ void vntc_vect_t::calc_bounding_sphere() {
 }
 
 
+cube_t vntc_vect_t::get_bbox() const {
+
+	if (empty()) return all_zeros_cube;
+	cube_t bbox(front().v, front().v);
+	for (unsigned i = 1; i < size(); ++i) {bbox.union_with_pt((*this)[i].v);}
+	return bbox;
+}
+
+
+cube_t vntc_vect_block_t::get_bbox() const {
+
+	if (empty()) return all_zeros_cube;
+	cube_t bbox(front().get_bbox());
+	for (const_iterator i = begin()+1; i != end(); ++i) {bbox.union_with_cube(i->get_bbox());}
+	return bbox;
+}
+
+
 // ************ geometry_t ************
 
 void geometry_t::calc_tangents() {
 
-	for (deque<vntc_vect_t>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+	for (vntc_vect_block_t::iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		i->calc_tangents(3);
 	}
-	for (deque<vntc_vect_t>::iterator i = quads.begin(); i != quads.end(); ++i) {
+	for (vntc_vect_block_t::iterator i = quads.begin(); i != quads.end(); ++i) {
 		i->calc_tangents(4);
 	}
 }
@@ -278,16 +296,16 @@ void geometry_t::calc_tangents() {
 
 void geometry_t::render(shader_t &shader, bool is_shadow_pass) {
 
-	for (deque<vntc_vect_t>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+	for (vntc_vect_block_t::iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		i->render_array(shader, is_shadow_pass, GL_TRIANGLES);
 	}
-	for (deque<vntc_vect_t>::iterator i = quads.begin(); i != quads.end(); ++i) {
+	for (vntc_vect_block_t::iterator i = quads.begin(); i != quads.end(); ++i) {
 		i->render_array(shader, is_shadow_pass, GL_QUADS);
 	}
 }
 
 
-void add_poly_to_polys(vntc_vect_t const &poly, deque<vntc_vect_t> &v, unsigned obj_id) {
+void add_poly_to_polys(vntc_vect_t const &poly, vntc_vect_block_t &v, unsigned obj_id) {
 
 	unsigned const max_entries(1 << 18); // 256K
 
@@ -312,12 +330,27 @@ void geometry_t::add_poly(vntc_vect_t const &poly, unsigned obj_id) {
 }
 
 
+cube_t geometry_t::get_bbox() const {
+
+	cube_t bbox(all_zeros_cube); // will return this if empty
+
+	if (!triangles.empty()) {
+		bbox = triangles.get_bbox();
+		if (!quads.empty()) bbox.union_with_cube(quads.get_bbox());
+	}
+	else if (!quads.empty()) {
+		bbox = quads.get_bbox();
+	}
+	return bbox;
+}
+
+
 void geometry_t::remove_excess_cap() {
 
-	for (deque<vntc_vect_t>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+	for (vntc_vect_block_t::iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		i->remove_excess_cap();
 	}
-	for (deque<vntc_vect_t>::iterator i = quads.begin(); i != quads.end(); ++i) {
+	for (vntc_vect_block_t::iterator i = quads.begin(); i != quads.end(); ++i) {
 		i->remove_excess_cap();
 	}
 }
@@ -325,10 +358,10 @@ void geometry_t::remove_excess_cap() {
 
 void geometry_t::free_vbos() {
 
-	for (deque<vntc_vect_t>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+	for (vntc_vect_block_t::iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		i->free_vbo();
 	}
-	for (deque<vntc_vect_t>::iterator i = quads.begin(); i != quads.end(); ++i) {
+	for (vntc_vect_block_t::iterator i = quads.begin(); i != quads.end(); ++i) {
 		i->free_vbo();
 	}
 }
@@ -458,6 +491,8 @@ unsigned model3d::add_polygon(vntc_vect_t const &poly, int mat_id, unsigned obj_
 			}
 		}
 	}
+	cube_t const bb(poly.get_bbox());
+	if (bbox == all_zeros_cube) {bbox = bb;} else {bbox.union_with_cube(bb);}
 	return split_polygons_buffer.size();
 }
 
@@ -651,6 +686,18 @@ void model3ds::render(bool is_shadow_pass) {
 	glEnable(GL_LIGHTING);
 	set_lighted_sides(1);
 	set_specular(0.0, 1.0);
+}
+
+
+cube_t model3ds::get_bbox() const {
+
+	cube_t bbox(all_zeros_cube); // will return this if empty()
+
+	for (const_iterator m = begin(); m != end(); ++m) {
+		cube_t const &bb(m->get_bbox());
+		if (m == begin()) {bbox = bb;} else {bbox.union_with_cube(bb);}
+	}
+	return bbox;
 }
 
 

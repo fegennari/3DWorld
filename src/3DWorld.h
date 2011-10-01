@@ -359,6 +359,11 @@ struct cube_t { // size = 24
 		UNROLL_3X(d[i_][0] = c.d[i_][0];)
 		UNROLL_3X(d[i_][1] = c.d[i_][1];)
 	}
+	bool operator==(cube_t const &c) const {
+		UNROLL_3X(if (d[i_][0] != c.d[i_][0]) return 0;)
+		UNROLL_3X(if (d[i_][1] != c.d[i_][1]) return 0;)
+		return 1;
+	}
 	void translate(point const &p) {
 		UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)
 	}
@@ -424,6 +429,8 @@ struct cube_t { // size = 24
 	vector3d closest_side_dir(point const &pos) const;
 	point gen_rand_pt_in_cube() const;
 };
+
+cube_t const all_zeros_cube(0,0,0,0,0,0);
 
 
 struct line_3dw {

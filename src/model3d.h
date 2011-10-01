@@ -103,6 +103,7 @@ public:
 	void from_points(vector<point> const &pts);
 	void add_poly(vntc_vect_t const &poly);
 	void calc_bounding_sphere();
+	cube_t get_bbox() const;
 	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
 	void clear() {vector<value_type>::clear(); tangent_vectors.clear();}
 };
@@ -118,14 +119,21 @@ public:
 };
 
 
+struct vntc_vect_block_t : public deque<vntc_vect_t> {
+
+	cube_t get_bbox() const;
+};
+
+
 struct geometry_t {
 
-	deque<vntc_vect_t> triangles, quads;
+	vntc_vect_block_t triangles, quads;
 
 	void calc_tangents();
 	void render(shader_t &shader, bool is_shadow_pass);
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly(vntc_vect_t const &poly, unsigned obj_id=0);
+	cube_t get_bbox() const;
 	void remove_excess_cap();
 	void free_vbos();
 	void clear();
@@ -184,6 +192,7 @@ class model3d {
 	int unbound_tid;
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
+	cube_t bbox;
 
 	// materials
 	deque<material_t> materials;
@@ -195,7 +204,7 @@ public:
 	texture_manager &tmgr;
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE)
-		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c) {}
+		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube) {}
 	unsigned num_materials(void) const {return materials.size();}
 
 	material_t &get_material(int mat_id) {
@@ -214,6 +223,7 @@ public:
 	void load_all_used_tids();
 	void bind_all_used_tids();
 	void render(shader_t &shader, bool is_shadow_pass, bool bmap_pass); // const?
+	cube_t const &get_bbox() const {return bbox;}
 };
 
 
@@ -224,6 +234,7 @@ struct model3ds : public deque<model3d> {
 	void clear();
 	void free_context();
 	void render(bool is_shadow_pass); // const?
+	cube_t get_bbox() const;
 };
 
 
