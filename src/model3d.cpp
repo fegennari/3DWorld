@@ -653,7 +653,10 @@ void model3ds::render(bool is_shadow_pass) {
 	set_lighted_sides(2);
 	set_fill_mode();
 	
-	if (use_shaders) {
+	if (is_shadow_pass) {
+		glDisable(GL_LIGHTING);
+	}
+	else if (use_shaders) {
 		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 	}
