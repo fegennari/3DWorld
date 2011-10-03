@@ -1238,6 +1238,8 @@ void add_vpls() {
 					if (check_coll_line_exact(lpos, target, cpos, cnorm, cindex, 0.0, -1, 1, 1, 1)) { // fast=1
 						float const dp(-dot_product(cnorm, dir));
 						if (dp < 0.0) continue; // can this happen?
+						// add small bias to prevent fp errors in the fragment shader when the light source is on top of a fragment
+						cpos += cnorm*(light_size*0.01);
 						assert(cindex >= 0);
 						coll_obj const &cobj(coll_objects[cindex]);
 						colorRGBA color(base_color);
