@@ -90,6 +90,7 @@ lighting_file mapx/lighting.data 0 1.5
 lighting_file_local mapx/lighting.local.data 0 0.2
 #lighting_file_local mapx/lighting.local.test.data 1 0.2
 #lighting_file_local mapx/lighting.sun.data 1 10.0
+indir_light_exp 1.0
 
 end
 

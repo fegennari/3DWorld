@@ -20,7 +20,7 @@ unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 
 extern bool has_snow;
 extern int read_light_file, write_light_file, read_light_file_l, write_light_file_l, display_mode;
-extern float light_int_scale, light_int_scale_l, ztop, water_plane_z, temperature, snow_depth;
+extern float light_int_scale, light_int_scale_l, ztop, water_plane_z, temperature, snow_depth, indir_light_exp;
 extern char *lighting_file, *lighting_file_l;
 extern vector<light_source> light_sources;
 extern vector<coll_obj> coll_objects;
@@ -538,13 +538,9 @@ void lmap_manager_t::global_light_scale(float scale) {
 	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
 		if (i->v == 0.0) continue;
 		i->v *= scale;
+		if (indir_light_exp != 0.0) {i->v = pow(i->v, indir_light_exp);} // gamma correction
 		float const max_color(max(i->ac[0], max(i->ac[1], i->ac[2])));
-
-		if (max_color > 0.0) {
-			for (unsigned d = 0; d < 3; ++d) {
-				i->ac[d] /= max_color; // normalize color
-			}
-		}
+		if (max_color > 0.0) {UNROLL_3X(i->ac[i_] /= max_color;)} // normalize color
 	}
 }
 
@@ -553,8 +549,7 @@ void lmap_manager_t::local_light_scale(float scale) {
 
 	// apply local light scaling and clamping
 	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-		for (unsigned d = 0; d < 3; ++d) {
-			i->c[d] = min(1.0f, (i->c[d]*scale));
-		}
+		UNROLL_3X(i->c[i_] = min(1.0f, (i->c[i_]*scale)););
+		if (indir_light_exp != 0.0) {UNROLL_3X(i->c[i_] = pow(i->c[i_], indir_light_exp););} // gamma correction
 	}
 }
