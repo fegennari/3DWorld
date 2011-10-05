@@ -1568,7 +1568,7 @@ bool is_billboard_texture_transparent(point const *const points, point const &po
 void set_texture_specular(bool val);
 
 // function prototypes - sun flares
-void DoFlares(point const &from, point const &at, point const &light, float near_clip, float size);
+void DoFlares(point const &from, point const &at, point const &light, float near_clip, float size, float intensity);
 void load_flare_textures();
 void free_flare_textures();
 

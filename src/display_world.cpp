@@ -654,16 +654,33 @@ float get_ocean_wave_height() {
 
 void draw_sun_flare() {
 
+	//RESET_TIME;
 	point const sun_pos(get_sun_pos());
 
-	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, sun_radius, 6)) {
+	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, sun_radius, 2)) {
+		point const viewer(get_camera_pos());
+		unsigned const npts = 16;
+		static vector<point> pts;
+		unsigned nvis(0);
+
+		if (pts.empty()) {
+			pts.resize(npts);
+			for (unsigned i = 0; i < npts; ++i) {pts[i] = signed_rand_vector_norm();}
+		}
+		for (unsigned i = 0; i < npts; ++i) {
+			int index; // unused
+			if (coll_pt_vis_test(sun_pos+pts[i]*sun_radius, viewer, 0.0, index, camera_coll_id, 0, 1)) ++nvis;
+		}
+		if (nvis == 0) return;
+		float const intensity(0.1 + 0.9*float(nvis)/float(npts));
 		int const fog_enbaled(glIsEnabled(GL_FOG));
 		glDisable(GL_FOG);
 		glDisable(GL_DEPTH_TEST);
-		DoFlares(get_camera_pos(), camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0));
+		DoFlares(get_camera_pos(), camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0), intensity);
 		glEnable(GL_DEPTH_TEST);
 		if (fog_enbaled) glEnable(GL_FOG);
 	}
+	//PRINT_TIME("Query + Flare");
 }
 
 
