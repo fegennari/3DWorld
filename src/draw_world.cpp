@@ -2014,9 +2014,21 @@ void draw_sun() {
 		colorRGBA color(SUN_C);
 		apply_red_sky(color);
 		color.do_glColor();
+#if 0
+		unsigned occ_query(0);
+		glGenQueries(1, &occ_query);
+		glBeginQuery(GL_SAMPLES_PASSED, occ_query);
+#endif
 		draw_subdiv_sphere(pos, sun_radius, N_SPHERE_DIV, 1, 0);
 		glEnable(GL_LIGHTING);
 		//glDisable(GL_TEXTURE_2D);
+#if 0
+		glEndQuery(GL_SAMPLES_PASSED);
+		unsigned pixel_count(0);
+		glGetQueryObjectuiv(occ_query, GL_QUERY_RESULT, &pixel_count);
+		glDeleteQueries(1, &occ_query);
+		cout << "pixel count: " << pixel_count << endl;
+#endif
 	}
 }
 
