@@ -107,7 +107,7 @@ char player_name[MAX_CHARS] = "Player";
 extern bool clear_landscape_vbo, use_dense_voxels;
 extern int flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS, NUM_THREADS, grass_density, max_unique_trees, shadow_map_sz;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, grass_density, max_unique_trees, shadow_map_sz;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
 extern float mesh_scale, mesh_scale2, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width;
 extern point hmv_pos;
@@ -1721,8 +1721,8 @@ int load_config(string const &config_file) {
 		else if (str == "lighting_file_local") {
 			read_write_lighting_setup(fp, LIGHTING_LOCAL, error);
 		}
-		else if (str == "num_light_rays") {
-			if (fscanf(fp, "%u%u%u", &NPTS, &NRAYS, &LOCAL_RAYS) != 3) cfg_err("num_light_rays command", error);
+		else if (str == "num_light_rays") { // GLOBAL_RAYS is optional
+			if (fscanf(fp, "%u%u%u%u", &NPTS, &NRAYS, &LOCAL_RAYS, &GLOBAL_RAYS) < 3) cfg_err("num_light_rays command", error);
 		}
 		else if (str == "num_threads") {
 			if (!read_uint(fp, NUM_THREADS) || NUM_THREADS == 0 || NUM_THREADS > 100) cfg_err("num_threads", error);

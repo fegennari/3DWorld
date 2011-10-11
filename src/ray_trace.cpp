@@ -15,13 +15,14 @@ float const SNOW_ALBEDO   = 0.9;
 float const ICE_ALBEDO    = 0.8;
 
 bool keep_lasers(0); // debugging mode
-unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), NUM_THREADS(1);
+unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 
 extern bool has_snow;
 extern int read_light_files[], write_light_files[], display_mode;
 extern float light_int_scale[], ztop, water_plane_z, temperature, snow_depth, indir_light_exp;
 extern char *lighting_file[];
+extern point sun_pos, moon_pos;
 extern vector<light_source> light_sources;
 extern vector<coll_obj> coll_objects;
 extern vector<laser_beam> lasers;
@@ -316,6 +317,52 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 }
 
 
+void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &color, float weight) {
+
+	if (pos.z < 0.0) return; // below the horizon, skip it
+	assert(ptr);
+	rt_data *data((rt_data *)ptr);
+	cout << "Starting on thread " << data->ix << endl;
+	assert(data->num > 0);
+	if (data->is_thread) srand(data->rseed);
+	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
+	float const ray_wt(1E5*weight*color.alpha/GLOBAL_RAYS);
+	if (ray_wt == 0.0) return; // error?
+	float const z0(min(zbottom, czmin)), z1(max(ztop, czmax));
+	
+	for (unsigned i = 0; i < GLOBAL_RAYS; ++i) {
+		point const pt(rand_uniform(-X_SCENE_SIZE, X_SCENE_SIZE), rand_uniform(-Y_SCENE_SIZE, Y_SCENE_SIZE), rand_uniform(z0, z1));
+		vector3d const dir((pt - pos).get_norm());
+		point const end_pt(pt + dir*line_length);
+		cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, 0, 1);
+	}
+}
+
+
+void *trace_ray_block_global(void *ptr) {
+
+	if (GLOBAL_RAYS == 0) return 0; // nothing to do
+	// FIXME: set correct colors
+	// FIXME: what about universe mode/combined_gu?
+	colorRGBA const sun_color(WHITE), moon_color(WHITE);
+
+	if (light_factor <= 0.4) { // moon
+		trace_ray_block_global_light(ptr, moon_pos, moon_color, 1.0);
+	}
+	else if (light_factor >= 0.6) { // sun
+		trace_ray_block_global_light(ptr, sun_pos,  sun_color,  1.0);
+	}
+	else { // sun and moon
+		float const lfn(1.0 - 5.0*(light_factor - 0.4));
+		trace_ray_block_global_light(ptr, sun_pos,  sun_color,  1.0-lfn);
+		trace_ray_block_global_light(ptr, moon_pos, moon_color, lfn);
+	}
+	//point const sun_pos(get_sun_pos());
+	//ray_trace_local_light_source(light_source(100.0, sun_pos, SUN_C, 0), 2.0*sun_pos.mag(), GLOBAL_RAYS);
+	return 0;
+}
+
+
 void *trace_ray_block_sky(void *ptr) {
 
 	assert(ptr);
@@ -393,7 +440,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 	point const &lpos(ls.get_center());
 	colorRGBA lcolor(ls.get_color());
 	float const ray_wt(1000.0*lcolor.alpha*ls.get_radius()/LOCAL_RAYS), r_inner(ls.get_r_inner());
-	if (lcolor.alpha == 0.0 || ray_wt == 0.0) return; // error?
+	if (ray_wt == 0.0) return; // error?
 	int init_cobj(-1);
 	check_coll_line(lpos, lpos, init_cobj, -1, 1, 2); // find most opaque (max alpha) containing object
 	assert(init_cobj < (int)coll_objects.size());
@@ -444,15 +491,6 @@ void *trace_ray_block_local(void *ptr) {
 		ray_trace_local_light_source(light_sources[i], line_length, num_rays);
 	}
 	if (data->verbose) cout << endl;
-	return 0;
-}
-
-
-void *trace_ray_block_global(void *ptr) {
-
-	// TESTING - sun as local light source (not multithreaded)
-	//point const sun_pos(get_sun_pos());
-	//ray_trace_local_light_source(light_source(100.0, sun_pos, SUN_C, 0), 2.0*sun_pos.mag(), LOCAL_RAYS);
 	return 0;
 }
 
