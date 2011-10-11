@@ -907,17 +907,14 @@ void build_lightmap(bool verbose) {
 	} // if LIGHT_SPREAD
 
 	if (nbins > 0) {
-		if (raytrace_lights[LIGHTING_SKY]) {
-			compute_ray_trace_lighting_sky();
-			if (verbose) PRINT_TIME(" Sky Lightmap Ray Trace");
-		}
-		if (raytrace_lights[LIGHTING_GLOBAL]) {
-			compute_ray_trace_lighting_global();
-			if (verbose) PRINT_TIME(" Global Lightmap Ray Trace");
-		}
-		if (raytrace_lights[LIGHTING_LOCAL]) {
-			compute_ray_trace_lighting_local();
-			if (verbose) PRINT_TIME(" Local Lightmap Ray Trace");
+		// Note: sky and global lighting use the same data structure for reading/writing, so they should have the same filename if used together
+		string const type_names[NUM_LIGHTING_TYPES] = {" Sky", " Global", " Local"};
+
+		for (unsigned type = 0; type < NUM_LIGHTING_TYPES; ++type) {
+			if (raytrace_lights[type]) {
+				compute_ray_trace_lighting(type);
+				if (verbose) PRINT_TIME(type_names[type] + " Lightmap Ray Trace");
+			}
 		}
 	}
 	// normalize final light value to [MIN_LIGHT, MAX_LIGHT]

@@ -316,7 +316,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 }
 
 
-void *trace_ray_block(void *ptr) {
+void *trace_ray_block_sky(void *ptr) {
 
 	assert(ptr);
 	rt_data *data((rt_data *)ptr);
@@ -336,7 +336,7 @@ void *trace_ray_block(void *ptr) {
 			pts[p] = signed_rand_vector_spherical(1.0, 0).get_norm()*scene_radius; // start the ray here
 		}
 		sort(pts.begin(), pts.end());
-		if (data->verbose) cout << "Global light source points: " << block_npts << ", progress: 0";
+		if (data->verbose) cout << "Sky light source points: " << block_npts << ", progress: 0";
 
 		for (unsigned p = 0; p < block_npts; ++p) {
 			if (data->verbose) increment_printed_number(p);
@@ -385,38 +385,6 @@ void *trace_ray_block(void *ptr) {
 			 << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
 	}
 	return 0;
-}
-
-
-void compute_ray_trace_lighting_sky() {
-
-	if (read_light_files[LIGHTING_SKY]) {
-		lmap_manager.read_data_from_file(lighting_file[LIGHTING_SKY], 0);
-	}
-	else {
-		cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
-		launch_threaded_job(NUM_THREADS, trace_ray_block, 1);
-	}
-	if (write_light_files[LIGHTING_SKY]) {
-		lmap_manager.write_data_to_file(lighting_file[LIGHTING_SKY], 0);
-	}
-	lmap_manager.global_light_scale(light_int_scale[LIGHTING_SKY]);
-}
-
-
-void compute_ray_trace_lighting_global() {
-
-	/*if (read_light_files[LIGHTING_GLOBAL]) {
-		lmap_manager.read_data_from_file(lighting_file[LIGHTING_GLOBAL], 0);
-	}
-	else {
-		cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
-		launch_threaded_job(NUM_THREADS, trace_ray_block, 1);
-	}
-	if (write_light_files[LIGHTING_GLOBAL]) {
-		lmap_manager.write_data_to_file(lighting_file[LIGHTING_GLOBAL], 0);
-	}
-	lmap_manager.global_light_scale(light_int_scale[LIGHTING_GLOBAL]);*/
 }
 
 
@@ -480,22 +448,40 @@ void *trace_ray_block_local(void *ptr) {
 }
 
 
-void compute_ray_trace_lighting_local() {
+void *trace_ray_block_global(void *ptr) {
 
-	if (read_light_files[LIGHTING_LOCAL]) {
-		lmap_manager.read_data_from_file(lighting_file[LIGHTING_LOCAL], 1);
-	}
-	else if (0) { // TESTING - sun as local light source (not multithreaded)
-		point const sun_pos(get_sun_pos());
-		ray_trace_local_light_source(light_source(100.0, sun_pos, SUN_C, 0), 2.0*sun_pos.mag(), LOCAL_RAYS);
+	// TESTING - sun as local light source (not multithreaded)
+	//point const sun_pos(get_sun_pos());
+	//ray_trace_local_light_source(light_source(100.0, sun_pos, SUN_C, 0), 2.0*sun_pos.mag(), LOCAL_RAYS);
+	return 0;
+}
+
+
+typedef void *(*ray_trace_func)(void *);
+ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local};
+
+
+void compute_ray_trace_lighting(unsigned type) {
+
+	assert(type < NUM_LIGHTING_TYPES);
+	bool const is_local(type == LIGHTING_LOCAL);
+
+	if (read_light_files[type]) {
+		lmap_manager.read_data_from_file(lighting_file[type], is_local);
 	}
 	else {
-		launch_threaded_job(NUM_THREADS, trace_ray_block_local, 1);
+		if (!is_local) cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
+		launch_threaded_job(NUM_THREADS, rt_funcs[type], 1);
 	}
-	if (write_light_files[LIGHTING_LOCAL]) {
-		lmap_manager.write_data_to_file(lighting_file[LIGHTING_LOCAL], 1);
+	if (write_light_files[type]) {
+		lmap_manager.write_data_to_file(lighting_file[type], is_local);
 	}
-	lmap_manager.local_light_scale(light_int_scale[LIGHTING_LOCAL]);
+	if (is_local) {
+		lmap_manager.local_light_scale(light_int_scale[type]);
+	}
+	else {
+		lmap_manager.global_light_scale(light_int_scale[type]);
+	}
 }
 
 
