@@ -413,7 +413,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		//set_color_d(colorRGBA(kd, alpha));
 		set_color_d(get_ad_color());
 		set_color_e(colorRGBA(ke, alpha));
-		shader.add_uniform_float("min_alpha", ((alpha_tid >= 0) ? 0.9 : 0.0)); // FIXME: check has_binary_alpha?
+		if (shader.is_setup()) shader.add_uniform_float("min_alpha", ((alpha_tid >= 0) ? 0.9 : 0.0)); // FIXME: check has_binary_alpha?
 		geom.render(shader, 0);
 		if (use_bump_map())    disable_multitex(5, 1);
 		if (enable_spec_map()) disable_multitex(8, 1);
@@ -613,7 +613,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 			assert(unbound_tid >= 0);
 			select_texture(unbound_tid, 0);
 			set_color_d(unbound_color);
-			shader.add_uniform_float("min_alpha", 0.0);
+			if (shader.is_setup()) shader.add_uniform_float("min_alpha", 0.0);
 		}
 		unbound_geom.render(shader, is_shadow_pass);
 	}
