@@ -145,6 +145,7 @@ struct cube_light_source {
 
 
 float get_scene_radius();
+void compute_ray_trace_lighting_sky();
 void compute_ray_trace_lighting_global();
 void compute_ray_trace_lighting_local();
 

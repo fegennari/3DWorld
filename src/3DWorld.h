@@ -1040,6 +1040,9 @@ enum {GROUND_TEX = 0, DARK_ROCK_TEX, WATER_TEX, WATER2_TEX, CLOUD_TEX, SUN_TEX, 
 // collision object destroyability
 enum {NON_DEST=0, DESTROYABLE, SHATTERABLE, SHATTER_TO_PORTAL, EXPLODEABLE};
 
+// lighting files/types
+enum {LIGHTING_SKY=0, LIGHTING_GLOBAL, LIGHTING_LOCAL, NUM_LIGHTING_TYPES};
+
 int const dodgeball_tids[] = {SKULL_TEX, RADIATION_TEX, YUCK_TEX};
 unsigned const NUM_DB_TIDS(sizeof(dodgeball_tids)/sizeof(int));
 

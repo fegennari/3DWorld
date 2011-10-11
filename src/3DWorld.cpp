@@ -52,8 +52,8 @@ char *ddem_raw_out     = "dem/bot_dem2.raw";
 char *dship_def_file   = "ship_defs.txt";
 char *state_file(dstate_file), *mesh_file(dmesh_file), *coll_obj_file(dcoll_obj_file);
 char *mh_filename_raw(dmh_filename_raw), *mh_filename_bmp(dmh_filename_bmp), *dem_filename(ddem_filename);
-char *dem_raw_out(ddem_raw_out), *ship_def_file(dship_def_file);
-char *lighting_file(NULL), *lighting_file_l(NULL), *snow_file(NULL);
+char *dem_raw_out(ddem_raw_out), *ship_def_file(dship_def_file), *snow_file(NULL);
+char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
 // Global Variables
@@ -75,12 +75,14 @@ int num_trees(0), num_smileys(1), gmww = 640, gmwh = 480, srand_param(3), left_h
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
 int enable_fsource(0), run_forward(0), advanced(0), passive_motion(P_MOTION_DEF), dynamic_mesh_scroll(0);
-int read_light_file(0), write_light_file(0), read_light_file_l(0), write_light_file_l(0), read_snow_file(0), write_snow_file(0);
+int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
+int read_snow_file(0), write_snow_file(0);
 unsigned num_snowflakes(0), scenery_extent(0), num_vpls(0);
 float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), tree_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0);
 float water_h_off(0.0), perspective_fovy(0.0), perspective_nclip(0.0), atmosphere(1.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
-float light_int_scale(1.0), light_int_scale_l(1.0), snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS);
+float light_int_scale[NUM_LIGHTING_TYPES] = {0.0};
+float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS);
 float init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
@@ -1392,6 +1394,16 @@ void cfg_err(string const &str, int &error) {
 }
 
 
+void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) {
+
+	assert(ltype < NUM_LIGHTING_TYPES);
+	alloc_if_req(lighting_file[ltype], NULL);
+	int write_mode(0);
+	if (fscanf(fp, "%s%i%f", lighting_file[ltype], &write_mode, &light_int_scale[ltype]) != 3) cfg_err("lighting_file command", error);
+	(write_mode ? write_light_files[ltype] : read_light_files[ltype]) = 1;
+}
+
+
 // should be moved to another file eventually...
 // should use a hashtable here
 int load_config(string const &config_file) {
@@ -1700,17 +1712,14 @@ int load_config(string const &config_file) {
 		}
 
 		// lighting
-		else if (str == "lighting_file") {
-			alloc_if_req(lighting_file, NULL);
-			int write_mode(0);
-			if (fscanf(fp, "%s%i%f", lighting_file, &write_mode, &light_int_scale) != 3) cfg_err("lighting_file command", error);
-			(write_mode ? write_light_file : read_light_file) = 1;
+		else if (str == "lighting_file_sky") {
+			read_write_lighting_setup(fp, LIGHTING_SKY, error);
+		}
+		else if (str == "lighting_file_global") {
+			read_write_lighting_setup(fp, LIGHTING_GLOBAL, error);
 		}
 		else if (str == "lighting_file_local") {
-			alloc_if_req(lighting_file_l, NULL);
-			int write_mode(0);
-			if (fscanf(fp, "%s%i%f", lighting_file_l, &write_mode, &light_int_scale_l) != 3) cfg_err("lighting_file_local command", error);
-			(write_mode ? write_light_file_l : read_light_file_l) = 1;
+			read_write_lighting_setup(fp, LIGHTING_LOCAL, error);
 		}
 		else if (str == "num_light_rays") {
 			if (fscanf(fp, "%u%u%u", &NPTS, &NRAYS, &LOCAL_RAYS) != 3) cfg_err("num_light_rays command", error);

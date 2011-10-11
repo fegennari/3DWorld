@@ -60,7 +60,7 @@ lmap_manager_t lmap_manager;
 
 
 extern bool disable_shaders;
-extern int animate2, display_mode, frame_counter, read_light_file, write_light_file, read_light_file_l, write_light_file_l;
+extern int animate2, display_mode, frame_counter, read_light_files[], write_light_files[];
 extern unsigned num_vpls;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE;
 extern vector<coll_obj> coll_objects;
@@ -699,9 +699,10 @@ void build_lightmap(bool verbose) {
 	int **z_light_depth = NULL;
 	matrix_gen_2d(z_light_depth);
 	if (verbose) PRINT_TIME(" Lighting Setup");
-	bool const raytrace_lights_g(read_light_file   || write_light_file  );
-	bool const raytrace_lights_l(read_light_file_l || write_light_file_l);
-	float const light_off(raytrace_lights_g ? 0.0f : LIGHT_OFFSET);
+	bool raytrace_lights[3];
+	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
+	bool const no_comp_light(raytrace_lights[LIGHTING_SKY]);
+	float const light_off(no_comp_light ? 0.0f : LIGHT_OFFSET);
 
 	// process vertical (Z) light projections
 	r_profile flow_prof[2][3]; // {light, particle} x {x, y, z}
@@ -709,7 +710,7 @@ void build_lightmap(bool verbose) {
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			bool const proc_cobjs(need_lmcell[i][j] & 1);
-			calc_flow_for_xy(flow_prof, z_light_depth, i, j, proc_cobjs, !raytrace_lights_g, zstep, z_atten, light_off);
+			calc_flow_for_xy(flow_prof, z_light_depth, i, j, proc_cobjs, !no_comp_light, zstep, z_atten, light_off);
 		} // for j
 	} // for i
 	if (verbose) PRINT_TIME(" Lighting Z + Flow");
@@ -720,7 +721,7 @@ void build_lightmap(bool verbose) {
 
 	// process lateral (X and Y) light projections
 	for (unsigned pass = 0; pass < NUM_XY_PASSES; ++pass) {
-		if (XY_WT_SCALE == 0.0 || nbins == 0 || dz == 0.0 || raytrace_lights_g) continue;
+		if (XY_WT_SCALE == 0.0 || nbins == 0 || dz == 0.0 || no_comp_light) continue;
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // x/y
 			for (unsigned dir = 0; dir < 2; ++dir) { // +/-
@@ -816,7 +817,7 @@ void build_lightmap(bool verbose) {
 	if (verbose) PRINT_TIME(" Lighting XY");
 
 	// add in static light sources
-	if (!raytrace_lights_l) {
+	if (!raytrace_lights[LIGHTING_LOCAL]) {
 		for (unsigned i = 0; i < light_sources.size(); ++i) {
 			light_source &ls(light_sources[i]);
 			point const &lpos(ls.get_center());
@@ -866,8 +867,8 @@ void build_lightmap(bool verbose) {
 	float const lscales[4] = {1.0/SQRT3, 1.0/SQRT2, 1.0, 0.0};
 
 	// smoothing passes
-	if (LIGHT_SPREAD > 0.0 && (!raytrace_lights_g || !raytrace_lights_l)) { // low pass filter light, bleed to adjacent cells
-		for (unsigned n = 0; n < NUM_LT_SMOOTH; ++n) {
+	if (LIGHT_SPREAD > 0.0 && (!raytrace_lights[LIGHTING_SKY] || !raytrace_lights[LIGHTING_LOCAL])) {
+		for (unsigned n = 0; n < NUM_LT_SMOOTH; ++n) { // low pass filter light, bleed to adjacent cells
 			for (int i = 0; i < MESH_Y_SIZE; ++i) {
 				for (int j = 0; j < MESH_X_SIZE; ++j) {
 					lmcell *vlm(lmap_manager.vlmap[i][j]);
@@ -905,13 +906,19 @@ void build_lightmap(bool verbose) {
 		if (verbose) PRINT_TIME(" Lighting Smooth");
 	} // if LIGHT_SPREAD
 
-	if (raytrace_lights_g && nbins > 0) {
-		compute_ray_trace_lighting_global();
-		if (verbose) PRINT_TIME(" Global Lightmap Ray Trace");
-	}
-	if (raytrace_lights_l && nbins > 0) {
-		compute_ray_trace_lighting_local();
-		if (verbose) PRINT_TIME(" Local Lightmap Ray Trace");
+	if (nbins > 0) {
+		if (raytrace_lights[LIGHTING_SKY]) {
+			compute_ray_trace_lighting_sky();
+			if (verbose) PRINT_TIME(" Sky Lightmap Ray Trace");
+		}
+		if (raytrace_lights[LIGHTING_GLOBAL]) {
+			compute_ray_trace_lighting_global();
+			if (verbose) PRINT_TIME(" Global Lightmap Ray Trace");
+		}
+		if (raytrace_lights[LIGHTING_LOCAL]) {
+			compute_ray_trace_lighting_local();
+			if (verbose) PRINT_TIME(" Local Lightmap Ray Trace");
+		}
 	}
 	// normalize final light value to [MIN_LIGHT, MAX_LIGHT]
 	lmap_manager.normalize_light_val(MIN_LIGHT, MAX_LIGHT, LIGHT_SCALE, light_off);
@@ -1459,7 +1466,7 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 
 	//UNROLL_3X(a[i_] *= cscale[i_];) return 1.0;
 	assert(lm_alloc && lmap_manager.vlmap);
-	bool const global_lighting(read_light_file || write_light_file);
+	bool const global_lighting(read_light_files[LIGHTING_SKY] || write_light_files[LIGHTING_SKY]);
 	float val(MAX_LIGHT);
 	bool outside_mesh(0);
 	colorRGBA ls(BLACK);
