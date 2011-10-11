@@ -453,16 +453,8 @@ void texture_t::copy_alpha_from_texture(texture_t const &at) {
 	assert(at.ncolors == 1 || at.ncolors == 4);
 	
 	if (at.width != width || at.height != height) {
-		if (at.width >= width && at.height >= height) {
-			resize(at.width, at.height);
-			assert(at.width == width && at.height == height);
-		}
-		else {
-			cerr << "Error: Size mismatch in alpha component copy of texture " << at.name << " (" << at.width << "x" << at.height
-				 << ") to texture " << name << " (" << width << "x" << height << ")." << endl;
-			//exit(1);
-			return;
-		}
+		resize(at.width, at.height);
+		assert(at.width == width && at.height == height);
 	}
 	unsigned const npixels(num_pixels());
 	bool const is_lum(at.ncolors == 1);
@@ -491,8 +483,9 @@ void texture_t::build_mipmaps() {
 	for (unsigned level = 0; level < mm_offsets.size(); ++level) {
 		unsigned const tsz(width >> level);
 		assert(tsz > 1);
-		gluScaleImage(format, tsz,   tsz,   GL_UNSIGNED_BYTE, get_mipmap_data(level),
-			                  tsz/2, tsz/2, GL_UNSIGNED_BYTE, (mm_data + mm_offsets[level]));
+		int const ret(gluScaleImage(format, tsz,   tsz,   GL_UNSIGNED_BYTE, get_mipmap_data(level),
+			                                tsz/2, tsz/2, GL_UNSIGNED_BYTE, (mm_data + mm_offsets[level])));
+		if (ret) cout << "GLU error during mipmap image scale: " << gluErrorString(ret) << "." << endl;
 	}
 }
 
@@ -894,15 +887,10 @@ void texture_t::fix_word_alignment() {
 	assert(is_allocated());
 	unsigned const byte_align = 4;
 	if ((ncolors*width & (byte_align-1)) == 0) return; // nothing to do
-#if 0
-	add_alpha_channel(); // hack: ensure word alignment by making RGBA
-	assert(ncolors == 4);
-#else
 	float const ar(float(width)/float(height));
 	int const new_w(width - (width&(byte_align-1)) + byte_align); // round up to next highest multiple of byte_align
 	int const new_h(int(new_w/ar + 0.5)); // preserve aspect ratio
 	resize(new_w, new_h);
-#endif
 }
 
 
@@ -929,32 +917,10 @@ void texture_t::resize(int new_w, int new_h) {
 
 	assert(is_allocated());
 	if (new_w == width && new_h == height) return; // already correct size
-	assert(new_w >= width && new_h >= height); // only upsample for now
+	assert(data != NULL && width > 0 && height > 0 && new_w > 0 && new_h > 0);
 	unsigned char *new_data(new unsigned char[new_w*new_h*ncolors]);
-	float const hinv(1.0/new_h), winv(1.0/new_w);
-
-	for (int y = 0; y < new_h; ++y) {
-		float const yv(y*hinv), yold(yv*height);
-		int const yol((int)floor(yold)), you(min(yol+1, height-1));
-		assert(yol < height);
-		float const ypi(yold - (float)yol);
-
-		for (int x = 0; x < new_w; ++x) {
-			float const xv(x*winv), xold(xv*width);
-			int const xol((int)floor(xold)), xou(min(xol+1, width-1));
-			assert(xol < width);
-			float const xpi(xold - (float)xol);
-			int const nix(ncolors*(x + new_w*y));
-			int const oix00(ncolors*(xol + width*yol)), oix10(ncolors*(xol + width*you));
-			int const oix01(ncolors*(xou + width*yol)), oix11(ncolors*(xou + width*you));
-			assert(unsigned(oix11+ncolors) <= num_bytes());
-
-			for (int c = 0; c < ncolors; ++c) {
-				float const val((1.0 - xpi)*((1.0 - ypi)*data[oix00+c] + ypi*data[oix10+c]) + xpi*((1.0 - ypi)*data[oix01+c] + ypi*data[oix11+c]));
-				new_data[nix+c] = (unsigned char)min(255, max(0, int(val)));
-			}
-		}
-	}
+	int const ret(gluScaleImage(calc_format(), width, height, GL_UNSIGNED_BYTE, data, new_w, new_h, GL_UNSIGNED_BYTE, new_data));
+	if (ret) cout << "GLU error during image scale: " << gluErrorString(ret) << "." << endl;
 	free();
 	data   = new_data;
 	width  = new_w;
