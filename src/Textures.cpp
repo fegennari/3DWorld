@@ -418,9 +418,10 @@ void texture_t::do_gl_init() {
 void texture_t::calc_color() {
 
 	assert(is_allocated());
-	float colors[4] = {0.0,0.0,0.0,0.0}, weight(0.0);
+	float colors[4] = {0.0}, weight(0.0);
 	unsigned const size(num_pixels());
 	bool const has_alpha_comp(has_alpha());
+	has_binary_alpha = 1;
 
 	for(unsigned i = 0; i < size; ++i) {
 		int const offset(i*ncolors);
@@ -428,11 +429,15 @@ void texture_t::calc_color() {
 		weight += cscale;
 
 		if (ncolors == 1) { // grayscale luminance
-			UNROLL_3X(colors[i_] += cscale*data[offset];)
+			UNROLL_3X(colors[i_] += cscale*data[offset];);
 		}
 		else {
-			UNROLL_3X(colors[i_] += cscale*data[offset+i_];)
-			if (has_alpha_comp) {colors[3] += data[offset+3];}
+			UNROLL_3X(colors[i_] += cscale*data[offset+i_];);
+			
+			if (has_alpha_comp) {
+				colors[3] += data[offset+3];
+				if (data[offset+3] > 0 && data[offset+3] < 255) has_binary_alpha = 0;
+			}
 		}
 	}
 	UNROLL_3X(color[i_] = colors[i_]/(255.0*weight);)

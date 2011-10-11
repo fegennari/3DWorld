@@ -413,6 +413,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		//set_color_d(colorRGBA(kd, alpha));
 		set_color_d(get_ad_color());
 		set_color_e(colorRGBA(ke, alpha));
+		shader.add_uniform_float("min_alpha", ((alpha_tid >= 0) ? 0.9 : 0.0)); // FIXME: check has_binary_alpha?
 		geom.render(shader, 0);
 		if (use_bump_map())    disable_multitex(5, 1);
 		if (enable_spec_map()) disable_multitex(8, 1);
@@ -608,9 +609,12 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 
 	// render geom that was not bound to a material
 	if (!bmap_pass && unbound_color.alpha > 0.0) { // enabled, not in bump map pass
-		assert(unbound_tid >= 0);
-		select_texture(unbound_tid, 0);
-		set_color_d(unbound_color);
+		if (!is_shadow_pass) {
+			assert(unbound_tid >= 0);
+			select_texture(unbound_tid, 0);
+			set_color_d(unbound_color);
+			shader.add_uniform_float("min_alpha", 0.0);
+		}
 		unbound_geom.render(shader, is_shadow_pass);
 	}
 	
@@ -668,7 +672,7 @@ void model3ds::render(bool is_shadow_pass) {
 	}
 	BLACK.do_glColor();
 	set_specular(0.0, 1.0);
-	float const min_alpha(0.5); // since we're using alpha masks we must set min_alpha > 0.0
+	float const min_alpha(0.5); // will be reset per-material
 
 	for (unsigned bmap_pass = 0; bmap_pass < 2; ++bmap_pass) {
 		shader_t s;
