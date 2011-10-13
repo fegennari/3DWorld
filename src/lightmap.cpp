@@ -48,7 +48,7 @@ float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
 float const DARKNESS_THRESH  = 0.1;
 
 
-bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), use_dense_voxels(0);
+bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), use_dense_voxels(0), has_indir_lighting(0);
 unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0);
@@ -701,8 +701,8 @@ void build_lightmap(bool verbose) {
 	if (verbose) PRINT_TIME(" Lighting Setup");
 	bool raytrace_lights[3];
 	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
-	bool const no_comp_light(raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL]);
-	float const light_off(no_comp_light ? 0.0f : LIGHT_OFFSET);
+	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL]);
+	float const light_off(has_indir_lighting ? 0.0f : LIGHT_OFFSET);
 
 	// process vertical (Z) light projections
 	r_profile flow_prof[2][3]; // {light, particle} x {x, y, z}
@@ -710,7 +710,7 @@ void build_lightmap(bool verbose) {
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			bool const proc_cobjs(need_lmcell[i][j] & 1);
-			calc_flow_for_xy(flow_prof, z_light_depth, i, j, proc_cobjs, !no_comp_light, zstep, z_atten, light_off);
+			calc_flow_for_xy(flow_prof, z_light_depth, i, j, proc_cobjs, !has_indir_lighting, zstep, z_atten, light_off);
 		} // for j
 	} // for i
 	if (verbose) PRINT_TIME(" Lighting Z + Flow");
@@ -721,7 +721,7 @@ void build_lightmap(bool verbose) {
 
 	// process lateral (X and Y) light projections
 	for (unsigned pass = 0; pass < NUM_XY_PASSES; ++pass) {
-		if (XY_WT_SCALE == 0.0 || nbins == 0 || dz == 0.0 || no_comp_light) continue;
+		if (XY_WT_SCALE == 0.0 || nbins == 0 || dz == 0.0 || has_indir_lighting) continue;
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // x/y
 			for (unsigned dir = 0; dir < 2; ++dir) { // +/-
@@ -1463,11 +1463,10 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 
 	//UNROLL_3X(a[i_] *= cscale[i_];) return 1.0;
 	assert(lm_alloc && lmap_manager.vlmap);
-	bool const global_lighting(read_light_files[LIGHTING_SKY] || write_light_files[LIGHTING_SKY]);
 	float val(MAX_LIGHT);
 	bool outside_mesh(0);
 	colorRGBA ls(BLACK);
-	point const p_adj((norm && !global_lighting) ? (p + (*norm)*(0.25*HALF_DXY)) : p);
+	point const p_adj((norm && !has_indir_lighting) ? (p + (*norm)*(0.25*HALF_DXY)) : p);
 	int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY)), z(get_zpos(p_adj.z));
 	
 	if (point_outside_mesh(x, y)) {
@@ -1479,11 +1478,8 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 	}
 	else if (using_lightmap && p.z < czmax && lmap_manager.vlmap[y][x] != NULL) { // not above all collision objects and not empty cell
 		lmcell const &lmc(lmap_manager.vlmap[y][x][z]);
-		
-		if (shadowed) { // Note: this test is optional
-			val = lmc.v; // Note: could interpolate between voxels here, but it's slow and doesn't look any better
-			if (val > 0.0 && global_lighting) {UNROLL_3X(cscale[i_] *= lmc.ac[i_];)} // add indirect color
-		}
+		val = lmc.v; // Note: could interpolate between voxels here, but it's slow and doesn't look any better
+		UNROLL_3X(cscale[i_] *= lmc.ac[i_];) // add indirect color
 		ADD_LIGHT_CONTRIB(lmc.c, ls);
 	}
 	if (!no_dynamic && !outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
