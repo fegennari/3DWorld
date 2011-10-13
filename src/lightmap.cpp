@@ -701,7 +701,7 @@ void build_lightmap(bool verbose) {
 	if (verbose) PRINT_TIME(" Lighting Setup");
 	bool raytrace_lights[3];
 	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
-	bool const no_comp_light(raytrace_lights[LIGHTING_SKY]);
+	bool const no_comp_light(raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL]);
 	float const light_off(no_comp_light ? 0.0f : LIGHT_OFFSET);
 
 	// process vertical (Z) light projections
@@ -910,10 +910,10 @@ void build_lightmap(bool verbose) {
 		// Note: sky and global lighting use the same data structure for reading/writing, so they should have the same filename if used together
 		string const type_names[NUM_LIGHTING_TYPES] = {" Sky", " Global", " Local"};
 
-		for (unsigned type = 0; type < NUM_LIGHTING_TYPES; ++type) {
-			if (raytrace_lights[type]) {
-				compute_ray_trace_lighting(type);
-				if (verbose) PRINT_TIME(type_names[type] + " Lightmap Ray Trace");
+		for (unsigned ltype = 0; ltype < NUM_LIGHTING_TYPES; ++ltype) {
+			if (raytrace_lights[ltype]) {
+				compute_ray_trace_lighting(ltype);
+				if (verbose) PRINT_TIME(type_names[ltype] + " Lightmap Ray Trace");
 			}
 		}
 	}

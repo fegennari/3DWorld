@@ -42,7 +42,7 @@ void increment_printed_number(unsigned num) {
 }
 
 
-void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, bool local, bool first_pt) {
+void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
 
 	colorRGBA const cw(color*weight);
 	float const dist(p2p_dist(p1, p2)); // dist can be 0
@@ -54,13 +54,9 @@ void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, 
 		lmcell *lmc(lmap_manager.get_lmcell(p1));
 		
 		if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
-			if (local) {
-				ADD_LIGHT_CONTRIB(cw, lmc->c);
-			}
-			else {
-				lmc->v += weight;
-				ADD_LIGHT_CONTRIB(cw, lmc->ac);
-			}
+			float *offset(lmc->get_offset(ltype));
+			ADD_LIGHT_CONTRIB(cw, offset);
+			if (ltype != LIGHTING_LOCAL) lmc->v += weight;
 		}
 		p1 += step;
 	}
@@ -70,7 +66,7 @@ void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, 
 
 
 void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA color,
-					float line_length, int ignore_cobj, bool local, bool first_pt)
+					float line_length, int ignore_cobj, int ltype, bool first_pt)
 {
 	assert(!is_nan(p1) && !is_nan(p2));
 	++tot_rays;
@@ -91,7 +87,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	if (first_pt && coll && cpos == orig_p1) {
 		if (coll_objects[cindex].line_int_exact(p2, p1, t, cnorm, 0.0, 1.0)) {
 			cpos = (p2 + (p1 - p2)*t);
-			cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, local, 0);
+			cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, 0);
 			return;
 		}
 	}
@@ -147,7 +143,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	if (!coll) return; // more efficient to do this up here and let a reverse ray from the sky light this path
 
 	// walk from p1 to p2, adding light to all lightmap cells encountered
-	add_path_to_lmcs(p1, p2, weight, color, local, first_pt);
+	add_path_to_lmcs(p1, p2, weight, color, ltype, first_pt);
 	//if (!coll)    return;
 	if (p1 == p2) return; // line must have started inside a cobj - this is bad, but what can we do?
 
@@ -225,7 +221,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 						// test for collision with reversed ray to get the other intersection point
 						if (cobj.line_int_exact(p_end, p2, t, cnorm2, 0.0, 1.0)) { // not sure what to do if fails or tmax >= 1.0
 							point const p_int(p_end + (p2 - p_end)*t);
-							if (!dist_less_than(p2, p_int, get_step_size())) add_path_to_lmcs(p2, p_int, weight, color, local, first_pt);
+							if (!dist_less_than(p2, p_int, get_step_size())) add_path_to_lmcs(p2, p_int, weight, color, ltype, first_pt);
 							
 							if (calc_refraction_angle(v_refract, v_refract2, cnorm2*-1, cobj.cp.refract_ix, 1.0)) {
 								p2    = p_int;
@@ -242,7 +238,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 						no_transmit = 1; // total internal reflection (could process an internal reflection)
 					}
 				}
-				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, local, first_pt); // transmitted
+				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, ltype, first_pt); // transmitted
 			}
 			weight *= rweight; // reflected weight
 		}
@@ -262,7 +258,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 		v_ref.normalize();
 	}
 	p2 = p1 + v_ref*line_length; // ending point: effectively at infinity
-	cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, local, first_pt);
+	cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, first_pt);
 }
 
 
@@ -326,15 +322,34 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	assert(data->num > 0);
 	if (data->is_thread) srand(data->rseed);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
-	float const ray_wt(1E5*weight*color.alpha/GLOBAL_RAYS);
+	float const ray_wt(1E6*weight*color.alpha/GLOBAL_RAYS);
 	if (ray_wt == 0.0) return; // error?
-	float const z0(min(zbottom, czmin)), z1(max(ztop, czmax));
-	
-	for (unsigned i = 0; i < GLOBAL_RAYS; ++i) {
-		point const pt(rand_uniform(-X_SCENE_SIZE, X_SCENE_SIZE), rand_uniform(-Y_SCENE_SIZE, Y_SCENE_SIZE), rand_uniform(z0, z1));
-		vector3d const dir((pt - pos).get_norm());
-		point const end_pt(pt + dir*line_length);
-		cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, 0, 1);
+	unsigned const num_tot_rays(max(1U, GLOBAL_RAYS/data->num));
+	cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
+	vector3d const ldir((bnds.get_cube_center() - pos).get_norm());
+	float proj_area[3], tot_area(0.0);
+
+	for (unsigned i = 0; i < 3; ++i) {
+		unsigned const d0((i+1)%3), d1((i+2)%3);
+		vector3d norm(0.0, 0.0, 0.0);
+		norm[i] = 1.0;
+		proj_area[i] = fabs((bnds.d[d0][1] - bnds.d[d0][0])*(bnds.d[d1][1] - bnds.d[d1][0])*dot_product(ldir, norm));
+		tot_area    += proj_area[i];
+	}
+	for (unsigned i = 0; i < 3; ++i) {
+		unsigned const d0((i+1)%3), d1((i+2)%3);
+		unsigned const num_rays(unsigned(num_tot_rays*proj_area[i]/tot_area));
+		bool const dir(ldir[i] < 0.0);
+
+		for (unsigned n = 0; n < num_rays; ++n) {
+			point pt;
+			pt[i]  = bnds.d[i][dir];
+			pt[d0] = rand_uniform(bnds.d[d0][0], bnds.d[d0][1]);
+			pt[d1] = rand_uniform(bnds.d[d1][0], bnds.d[d1][1]);
+			vector3d const dir((pt - pos).get_norm());
+			point const end_pt(pt + dir*line_length);
+			cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, 0, 1);
+		}
 	}
 }
 
@@ -342,23 +357,12 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 void *trace_ray_block_global(void *ptr) {
 
 	if (GLOBAL_RAYS == 0) return 0; // nothing to do
-	// FIXME: set correct colors
 	// FIXME: what about universe mode/combined_gu?
-	colorRGBA const sun_color(WHITE), moon_color(WHITE);
-
-	if (light_factor <= 0.4) { // moon
-		trace_ray_block_global_light(ptr, moon_pos, moon_color, 1.0);
-	}
-	else if (light_factor >= 0.6) { // sun
-		trace_ray_block_global_light(ptr, sun_pos,  sun_color,  1.0);
-	}
-	else { // sun and moon
-		float const lfn(1.0 - 5.0*(light_factor - 0.4));
-		trace_ray_block_global_light(ptr, sun_pos,  sun_color,  1.0-lfn);
-		trace_ray_block_global_light(ptr, moon_pos, moon_color, lfn);
-	}
-	//point const sun_pos(get_sun_pos());
-	//ray_trace_local_light_source(light_source(100.0, sun_pos, SUN_C, 0), 2.0*sun_pos.mag(), GLOBAL_RAYS);
+	// Note1: The light color here is white because it will be multiplied by the ambient color later,
+	//        and the moon color is generally similar to the sun color so they can be approximated as equal
+	float const lfn(CLIP_TO_01(1.0f - 5.0f*(light_factor - 0.4f)));
+	if (light_factor >= 0.4) trace_ray_block_global_light(ptr, sun_pos,  WHITE, 1.0-lfn);
+	if (light_factor <= 0.6) trace_ray_block_global_light(ptr, moon_pos, WHITE, lfn);
 	return 0;
 }
 
@@ -499,26 +503,25 @@ typedef void *(*ray_trace_func)(void *);
 ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local};
 
 
-void compute_ray_trace_lighting(unsigned type) {
+void compute_ray_trace_lighting(unsigned ltype) {
 
-	assert(type < NUM_LIGHTING_TYPES);
-	bool const is_local(type == LIGHTING_LOCAL);
+	assert(ltype < NUM_LIGHTING_TYPES);
 
-	if (read_light_files[type]) {
-		lmap_manager.read_data_from_file(lighting_file[type], is_local);
+	if (read_light_files[ltype]) {
+		lmap_manager.read_data_from_file(lighting_file[ltype], ltype);
 	}
 	else {
-		if (!is_local) cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
-		launch_threaded_job(NUM_THREADS, rt_funcs[type], 1);
+		if (ltype != LIGHTING_LOCAL) cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
+		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1);
 	}
-	if (write_light_files[type]) {
-		lmap_manager.write_data_to_file(lighting_file[type], is_local);
+	if (write_light_files[ltype]) {
+		lmap_manager.write_data_to_file(lighting_file[ltype], ltype);
 	}
-	if (is_local) {
-		lmap_manager.local_light_scale(light_int_scale[type]);
+	if (ltype == LIGHTING_LOCAL) {
+		lmap_manager.local_light_scale(light_int_scale[ltype]);
 	}
 	else {
-		lmap_manager.global_light_scale(light_int_scale[type]);
+		lmap_manager.global_light_scale(light_int_scale[ltype]);
 	}
 }
 
@@ -526,7 +529,7 @@ void compute_ray_trace_lighting(unsigned type) {
 // lmap_manager_t
 
 
-bool lmap_manager_t::read_data_from_file(char const *const fn, bool local) {
+bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 
 	FILE *fp;
 	assert(fn != NULL);
@@ -541,9 +544,10 @@ bool lmap_manager_t::read_data_from_file(char const *const fn, bool local) {
 			 << " does not equal the expected size of " << vldata_alloc.size() << ". Ignoring file." << endl;
 	}
 	else {
+		unsigned const sz(lmcell::get_dsz(ltype));
+
 		for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-			unsigned const sz(i->get_dsz(local));
-			size_t const nread(fread(i->get_offset(local), sizeof(float), sz, fp));
+			size_t const nread(fread(i->get_offset(ltype), sizeof(float), sz, fp));
 			assert(nread == sz);
 		}
 	}
@@ -552,7 +556,7 @@ bool lmap_manager_t::read_data_from_file(char const *const fn, bool local) {
 }
 
 
-bool lmap_manager_t::write_data_to_file(char const *const fn, bool local) const {
+bool lmap_manager_t::write_data_to_file(char const *const fn, int ltype) const {
 
 	FILE *fp;
 	assert(fn != NULL);
@@ -561,10 +565,10 @@ bool lmap_manager_t::write_data_to_file(char const *const fn, bool local) const 
 	unsigned const data_size(vldata_alloc.size());
 	size_t const sz_write(fwrite(&data_size, sizeof(unsigned), 1, fp));
 	assert(sz_write == 1);
+	unsigned const sz(lmcell::get_dsz(ltype));
 
 	for (vector<lmcell>::const_iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) { // const_iterator?
-		unsigned const sz(i->get_dsz(local));
-		size_t const nwrite(fwrite(i->get_offset(local), sizeof(float), sz, fp));
+		size_t const nwrite(fwrite(i->get_offset(ltype), sizeof(float), sz, fp));
 		assert(nwrite == sz);
 	}
 	fclose(fp);

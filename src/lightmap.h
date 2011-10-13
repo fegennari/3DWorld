@@ -12,7 +12,7 @@ typedef short CELL_LOC_T;
 point const init_point(FAR_CLIP, FAR_CLIP, FAR_CLIP);
 extern int MESH_SIZE[3];
 
-#define ADD_LIGHT_CONTRIB(c, C) C[0] += c[0]; C[1] += c[1]; C[2] += c[2];
+#define ADD_LIGHT_CONTRIB(c, C) {C[0] += c[0]; C[1] += c[1]; C[2] += c[2];}
 
 
 struct lmcell { // size = 40
@@ -24,9 +24,9 @@ struct lmcell { // size = 40
 		UNROLL_3X(c[i_] = ac[i_] = 0.0; lflow[i_] = pflow[i_] = 255;)
 	}
 	// c[0],c[1],c[2] : ac[0],ac[1],ac[2],v
-	float       *get_offset(bool local)       {return (local ? c : ac);}
-	float const *get_offset(bool local) const {return (local ? c : ac);}
-	unsigned     get_dsz   (bool local) const {return (local ? 3 : 4 );}
+	float       *get_offset(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? c : ac);}
+	float const *get_offset(int ltype) const {return ((ltype == LIGHTING_LOCAL) ? c : ac);}
+	static unsigned get_dsz(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? 3 : 4 );}
 };
 
 
@@ -41,8 +41,8 @@ public:
 	lmap_manager_t() : lm_zsize(0), vlmap(NULL) {}
 	void clear() {vldata_alloc.clear();} // reset vlmap to NULL?
 	size_t size() const {return vldata_alloc.size();}
-	bool read_data_from_file(char const *const fn, bool local);
-	bool write_data_to_file(char const *const fn, bool local) const;
+	bool read_data_from_file(char const *const fn, int ltype);
+	bool write_data_to_file(char const *const fn, int ltype) const;
 	void global_light_scale(float scale);
 	void local_light_scale(float scale);
 
@@ -145,7 +145,7 @@ struct cube_light_source {
 
 
 float get_scene_radius();
-void compute_ray_trace_lighting(unsigned type);
+void compute_ray_trace_lighting(unsigned ltype);
 
 
 #endif
