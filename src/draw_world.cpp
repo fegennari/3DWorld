@@ -45,7 +45,6 @@ point const earth_pos(-15.0, -8.0, 21.0);
 sky_pos_orient cur_spo(point(0,0,0),1,0,0);
 vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
-vector<light_source> enabled_lights;
 pt_line_drawer obj_pld;
 pt_line_drawer_hdr snow_pld;
 
@@ -1692,12 +1691,11 @@ void set_specular(float specularity, float shininess) {
 }
 
 
-void get_enabled_lights() {
+void calc_cur_ambient() {
 
 	float a[4], d[4], lval[4];
-	for (unsigned j = 0; j < 4; ++j) cur_ambient[j] = ((j == 3) ? 1.0 : 0.0); // reset value
 	unsigned ncomp(0);
-	enabled_lights.clear();
+	cur_ambient = BLACK;
 
 	for (unsigned i = 0; i < 8; ++i) { // max of 8 lights (GL_LIGHT0 - GL_LIGHT7): sun, moon, lightning
 		int const light(GL_LIGHT0 + i); // should be sequential
@@ -1709,12 +1707,10 @@ void get_enabled_lights() {
 			glGetLightfv(light, GL_POSITION, lval);
 			if (lval[3] != 0.0) glGetLightfv(light, GL_CONSTANT_ATTENUATION, &atten); // point light source only
 			assert(atten > 0.0);
-			colorRGBA const lcolor(colorRGBA(d[0]/atten, d[1]/atten, d[2]/atten, d[3]));
-			enabled_lights.push_back(light_source(0.0, gl_light_positions[i], lcolor, 0, plus_z, 1.0, 0.0, i));
 			UNROLL_3X(cur_ambient[i_] += a[i_]/atten;)
 			++ncomp;
 			//cout << "A: "; cur_ambient.print(); cout << endl;
-			//cout << "D: "; lcolor.print(); cout << endl;
+			//cout << "D: "; colorRGBA(d[0]/atten, d[1]/atten, d[2]/atten, d[3]).print(); cout << endl;
 		}
 	}
 	if (ncomp > 0) {
@@ -1804,7 +1800,7 @@ void setup_object_render_data() {
 
 	RESET_TIME;
 	bool const TIMETEST(0);
-	get_enabled_lights(); // don't call twice per frame - can have problems with lightning
+	calc_cur_ambient();
 	if (TIMETEST) {PRINT_TIME("Init");}
 	distribute_smoke();
 	upload_smoke_3d_texture();
