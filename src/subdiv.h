@@ -58,5 +58,27 @@ public:
 };
 
 
+class cobj_triangle_visitor {
+
+protected:
+	bool skip_dynamic;
+	unsigned tris_visited;
+
+	virtual void proc_tri(point const &p1, point const &p2, point const &p3) {++tris_visited;}
+	void proc_tri(point const *const p) {proc_tri(p[0], p[1], p[2]);}
+
+	void proc_quad(point const *const p) {
+		proc_tri(p[0], p[1], p[2]);
+		proc_tri(p[0], p[2], p[3]);
+	}
+	void proc_poly(point const *p, unsigned npts);
+	void proc_cobj(coll_obj const &c);
+
+public:
+	cobj_triangle_visitor(bool skip_dynamic_) : skip_dynamic(skip_dynamic_), tris_visited(0) {}
+	void proc_cobjs(vector<coll_obj> const &cobjs);
+};
+
+
 #endif
 

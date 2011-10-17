@@ -11,6 +11,7 @@
 #include "dynamic_particle.h"
 #include "physics_objects.h"
 #include "model3d.h"
+#include "subdiv.h"
 #include <fstream>
 
 
@@ -544,7 +545,7 @@ void process_groups() {
 
 
 void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only, bool cobjs_re_add) {
-
+	
 	cout << "Generating scene..." << endl;
 	RESET_TIME;
 	static int st_valid(0);
@@ -620,6 +621,9 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 
 	if (!inf_terrain) gen_grass(generate_mesh != 0);
 	if (generate_mesh || gen_trees) reset_smoke_tex_data();
+
+	//cobj_triangle_visitor tv(1);
+	//tv.proc_cobjs(coll_objects);
 }
 
 
