@@ -166,7 +166,7 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 
 	if (empty()) return;
 	if (radius == 0.0) calc_bounding_sphere();
-	if (!camera_pdu.sphere_visible_test(pos, radius)) return; // view frustum culling
+	if (!is_shadow_pass && !camera_pdu.sphere_visible_test(pos, radius)) return; // view frustum culling
 	set_array_client_state(1, !is_shadow_pass, !is_shadow_pass, 0);
 	unsigned const stride(sizeof(vntc_vect_t::value_type)), vntc_data_sz(size()*stride);
 	int loc(-1);
