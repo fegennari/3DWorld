@@ -693,8 +693,8 @@ template<typename T> struct triangle_t {
 	triangle_t(T const &p1, T const &p2, T const &p3) {pts[0] = p1; pts[1] = p2; pts[2] = p3;}
 };
 
-typedef triangle_t<float>        triangle;
-typedef triangle_t<double>       triangle_d;
+typedef triangle_t<point>        triangle;
+typedef triangle_t<point_d>      triangle_d;
 typedef triangle_t<vert_norm_tc> triangle_vntc;
 
 

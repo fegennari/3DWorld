@@ -339,14 +339,20 @@ void cobj_triangle_visitor::proc_cobj(coll_obj const &c) {
 
 void cobj_triangle_visitor::proc_cobjs(vector<coll_obj> const &cobjs) {
 
-	RESET_TIME;
-	tris_visited = 0;
-
 	for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
 		proc_cobj(*i);
 	}
+}
+
+
+unsigned triangle_counter::proc_cobjs(vector<coll_obj> const &cobjs) {
+
+	RESET_TIME;
+	tris_visited = 0;
+	cobj_triangle_visitor::proc_cobjs(cobjs);
 	PRINT_TIME("Visit Cobj Triangles");
 	cout << "triangles visited: " << tris_visited << endl;
+	return tris_visited;
 }
 
 
