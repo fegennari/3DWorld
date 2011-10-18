@@ -15,8 +15,9 @@ float const SNOW_ALBEDO   = 0.9;
 float const ICE_ALBEDO    = 0.8;
 
 bool keep_lasers(0); // debugging mode
-unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1), NUM_RAY_SPLITS(2);
+unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
+unsigned const NUM_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 2, 1}; // sky, global, local
 
 extern bool has_snow;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
@@ -246,18 +247,18 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	}
 	if (weight < WEIGHT_THRESH*weight0) return;
 
-	// create reflected ray and do recursive call
+	// create reflected ray and make recursive call(s)
 	vector3d v_ref;
 	calc_reflection_angle(dir, v_ref, cnorm);
 	v_ref.normalize();
 	
-	// add random diffuse scatter
-	vector3d new_v(signed_rand_vector().get_norm());
-	if (dot_product(new_v, cnorm) < 0.0) new_v.negate(); // make in same direction as normal
-	vector3d const v_new((v_ref*specular + new_v*(1.0 - specular)).get_norm());
-	
-	p2 = p1 + v_new*line_length; // ending point: effectively at infinity
-	cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, 0);
+	for (unsigned n = 0; n < NUM_RAY_SPLITS[ltype]; ++n) {
+		vector3d new_v(signed_rand_vector().get_norm()); // add random diffuse scatter
+		if (dot_product(new_v, cnorm) < 0.0) new_v.negate(); // make in same direction as normal
+		vector3d const v_new((v_ref*specular + new_v*(1.0 - specular)).get_norm());
+		p2 = p1 + v_new*line_length; // ending point: effectively at infinity
+		cast_light_ray(cpos, p2, weight/NUM_RAY_SPLITS[ltype], weight0, color, line_length, cindex, ltype, 0);
+	}
 }
 
 
