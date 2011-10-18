@@ -15,11 +15,11 @@ float const SNOW_ALBEDO   = 0.9;
 float const ICE_ALBEDO    = 0.8;
 
 bool keep_lasers(0); // debugging mode
-unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1);
+unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1), NUM_RAY_SPLITS(2);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 
 extern bool has_snow;
-extern int read_light_files[], write_light_files[], display_mode;
+extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
 extern float light_int_scale[], ztop, water_plane_z, temperature, snow_depth, indir_light_exp;
 extern char *lighting_file[];
 extern point sun_pos, moon_pos;
@@ -106,7 +106,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	}
 
 	// intersection with water/ice
-	if (coll && p1.z >= water_plane_z && cpos.z < water_plane_z) { // what if p1.z < water_plane_z?
+	if (!DISABLE_WATER && coll && p1.z >= water_plane_z && cpos.z < water_plane_z) { // what if p1.z < water_plane_z?
 		if (temperature <= W_FREEZE_POINT) { // ice
 			float const t((water_plane_z - cpos.z)/(p1.z - cpos.z));
 			cpos    += (p1 - cpos)*t;
@@ -238,7 +238,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 						no_transmit = 1; // total internal reflection (could process an internal reflection)
 					}
 				}
-				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, ltype, first_pt); // transmitted
+				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, ltype, 0); // transmitted
 			}
 			weight *= rweight; // reflected weight
 		}
@@ -251,14 +251,13 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	calc_reflection_angle(dir, v_ref, cnorm);
 	v_ref.normalize();
 	
-	if (specular < 1.0) { // add random diffuse scatter
-		vector3d new_v(signed_rand_vector().get_norm());
-		if (dot_product(new_v, cnorm) < 0.0) new_v.negate(); // make in same direction as normal
-		v_ref = v_ref*specular + new_v*(1.0 - specular);
-		v_ref.normalize();
-	}
-	p2 = p1 + v_ref*line_length; // ending point: effectively at infinity
-	cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, first_pt);
+	// add random diffuse scatter
+	vector3d new_v(signed_rand_vector().get_norm());
+	if (dot_product(new_v, cnorm) < 0.0) new_v.negate(); // make in same direction as normal
+	vector3d const v_new((v_ref*specular + new_v*(1.0 - specular)).get_norm());
+	
+	p2 = p1 + v_new*line_length; // ending point: effectively at infinity
+	cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, 0);
 }
 
 
@@ -348,7 +347,7 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 			pt[d1] = rand_uniform(bnds.d[d1][0], bnds.d[d1][1]);
 			vector3d const dir((pt - pos).get_norm());
 			point const end_pt(pt + dir*line_length);
-			cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, 0, 1);
+			cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, LIGHTING_GLOBAL, 1);
 		}
 	}
 }
@@ -409,7 +408,7 @@ void *trace_ray_block_sky(void *ptr) {
 					if (check_line_clip(pt, end_pt, i->bounds.d)) {skip_this_line = 1; break;}
 				}
 				if (skip_this_line) continue;
-				cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, 0, 1);
+				cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 1);
 				++start_rays;
 			}
 		}
@@ -427,7 +426,7 @@ void *trace_ray_block_sky(void *ptr) {
 			vector3d dir(signed_rand_vector_norm());
 			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
 			point const end_pt(pt + dir*line_length);
-			cast_light_ray(pt, end_pt, i->intensity, i->intensity, i->color, line_length, -1, 0, 1);
+			cast_light_ray(pt, end_pt, i->intensity, i->intensity, i->color, line_length, -1, LIGHTING_SKY, 1);
 			++cube_start_rays;
 		}
 	}
@@ -471,7 +470,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 			start_pt = lpos + dir*r_inner;
 		}
 		point const end_pt(start_pt + dir*line_length);
-		cast_light_ray(start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, 1, 1);
+		cast_light_ray(start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, LIGHTING_LOCAL, 1);
 	}
 }
 
