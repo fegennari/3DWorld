@@ -165,8 +165,9 @@ void vntc_vect_t::render(bool is_shadow_pass) const {
 void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_type) {
 
 	if (empty()) return;
-	if (radius == 0.0) calc_bounding_sphere();
-	if (!is_shadow_pass && !camera_pdu.sphere_visible_test(pos, radius)) return; // view frustum culling
+	if (bsphere.radius == 0.0) calc_bounding_volumes();
+	if (!is_shadow_pass && !camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius)) return; // view frustum culling
+	if (!is_shadow_pass && !camera_pdu.cube_visible(bcube)) return; // test the bounding cube as well
 	set_array_client_state(1, !is_shadow_pass, !is_shadow_pass, 0);
 	unsigned const stride(sizeof(vntc_vect_t::value_type)), vntc_data_sz(size()*stride);
 	int loc(-1);
@@ -252,14 +253,20 @@ void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
 }
 
 
-void vntc_vect_t::calc_bounding_sphere() {
+void vntc_vect_t::calc_bounding_volumes() {
 
-	pos = zero_vector;
-	for (unsigned i = 0; i < size(); ++i) {pos += (*this)[i].v;}
-	pos /= size();
-	radius = 0.0;
-	for (unsigned i = 0; i < size(); ++i) radius = max(radius, p2p_dist_sq(pos, (*this)[i].v));
-	radius = sqrt(radius);
+	assert(!empty());
+	bsphere.pos = zero_vector;
+	for (unsigned i = 0; i < size(); ++i) {bsphere.pos += (*this)[i].v;}
+	bsphere.pos /= size();
+	bsphere.radius = 0.0;
+	bcube = cube_t(bsphere.pos, bsphere.pos);
+	
+	for (unsigned i = 0; i < size(); ++i) {
+		bsphere.radius = max(bsphere.radius, p2p_dist_sq(bsphere.pos, (*this)[i].v));
+		bcube.union_with_pt((*this)[i].v);
+	}
+	bsphere.radius = sqrt(bsphere.radius);
 }
 
 

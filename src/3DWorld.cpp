@@ -1098,7 +1098,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x02;   break;
 	case '3': // toggle water/ice
 		display_mode ^= 0x04;   break;
-	case '4': // toggle occlusion culling
+	case '4': // toggle occlusion culling and VPLs
 		display_mode ^= 0x08;   break;
 	case '5': // toggle extended/tiled mesh draw (was debugging)
 		display_mode ^= 0x10;   break;

@@ -84,10 +84,12 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 template<typename T> void clear_cont(T &cont) {T().swap(cont);}
 
 
-class vntc_vect_t : public vector<vert_norm_tc>, public sphere_t {
+class vntc_vect_t : public vector<vert_norm_tc> {
 
 	unsigned vbo;
 	vector<vector4d> tangent_vectors;
+	sphere_t bsphere;
+	cube_t bcube;
 
 public:
 	unsigned obj_id;
@@ -102,7 +104,7 @@ public:
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);
 	void add_poly(vntc_vect_t const &poly);
-	void calc_bounding_sphere();
+	void calc_bounding_volumes();
 	cube_t get_bbox() const;
 	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
 	void clear() {vector<value_type>::clear(); tangent_vectors.clear();}
