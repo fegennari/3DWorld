@@ -99,23 +99,6 @@ inline bool test_0_1(float v) {
 // from Graphics Gems V - actually could use quadrangle version but it seems to have problems
 bool planar_contour_intersect(point const *points, unsigned npoints, point const &pos, vector3d const &norm) {
 
-#if 0
-	vector3d const u(points[1] - points[0]), v(points[2] - points[0]), w(pos - points[0]);
-	float const uu(dot_product(u,u)), vv(dot_product(v,v));
-	float const uv(dot_product(u,v)), wv(dot_product(w,v)), wu(dot_product(w,u));
-	float const denom(uv*uv - uu*vv);
-	float const s((uv*wv - vv*wu)/denom);
-
-	if (s >= 0.0 && s <= 1.0) {
-		float const t((uv*wu - uu*wv)/denom);
-		if (t >= 0.0 && s+t <= 1.0) return 1;
-	}
-	if (npoints == 4) {
-		point const points2[3] = {points[0], points[2], points[3]};
-		if (planar_contour_intersect(points2, 3, pos, norm)) return 1;
-	}
-	return 0;
-#else
 	if (npoints < 3) return 0;
 	assert(npoints <= 4); // use get_max_dim()?
 	unsigned const dx((fabs(norm.x) > max(fabs(norm.y), fabs(norm.z))) ? 1 : 0); // x is largest
@@ -147,7 +130,6 @@ bool planar_contour_intersect(point const *points, unsigned npoints, point const
 		}
 	}
 	return 0;
-#endif
 }
 
 
