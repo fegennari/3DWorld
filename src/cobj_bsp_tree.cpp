@@ -348,7 +348,7 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 
 
 // 3: BSP Tree/KD-Tree, 8: Octtree
-typedef cobj_tree_t<8> cobj_tree_type;
+typedef cobj_tree_t<3> cobj_tree_type;
 cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0, 0);
 cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
 cobj_tree_type cobj_tree_occlude(coll_objects, 1, 0, 1, 0);

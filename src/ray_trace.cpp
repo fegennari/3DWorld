@@ -17,7 +17,8 @@ float const ICE_ALBEDO    = 0.8;
 bool keep_lasers(0); // debugging mode
 unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
-unsigned const NUM_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 2, 1}; // sky, global, local
+unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1}; // sky, global, local
+unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1}; // sky, global, local
 
 extern bool has_snow;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
@@ -251,13 +252,14 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	vector3d v_ref;
 	calc_reflection_angle(dir, v_ref, cnorm);
 	v_ref.normalize();
+	unsigned const num_splits(first_pt ? INIT_RAY_SPLITS[ltype] : NUM_RAY_SPLITS[ltype]);
 	
-	for (unsigned n = 0; n < NUM_RAY_SPLITS[ltype]; ++n) {
+	for (unsigned n = 0; n < num_splits; ++n) {
 		vector3d new_v(signed_rand_vector().get_norm()); // add random diffuse scatter
 		if (dot_product(new_v, cnorm) < 0.0) new_v.negate(); // make in same direction as normal
 		vector3d const v_new((v_ref*specular + new_v*(1.0 - specular)).get_norm());
 		p2 = p1 + v_new*line_length; // ending point: effectively at infinity
-		cast_light_ray(cpos, p2, weight/NUM_RAY_SPLITS[ltype], weight0, color, line_length, cindex, ltype, 0);
+		cast_light_ray(cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, 0);
 	}
 }
 
@@ -338,18 +340,27 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	}
 	for (unsigned i = 0; i < 3; ++i) {
 		unsigned const d0((i+1)%3), d1((i+2)%3);
-		unsigned const num_rays(unsigned(num_tot_rays*proj_area[i]/tot_area));
+		unsigned const num_rays(unsigned(num_tot_rays*proj_area[i]/tot_area + 0.5));
 		bool const dir(ldir[i] < 0.0);
+		float const len0(bnds.d[d0][1] - bnds.d[d0][0]), len1(bnds.d[d1][1] - bnds.d[d1][0]);
+		unsigned const n0(max(1U, unsigned(sqrt((float)num_rays)*len0/len1)));
+		unsigned const n1(max(1U, unsigned(sqrt((float)num_rays)*len1/len0)));
+		point pt;
+		pt[i] = bnds.d[i][dir];
+		if (data->verbose) cout << "Dim " << i+1 << " of 3" << endl;
 
-		for (unsigned n = 0; n < num_rays; ++n) {
-			point pt;
-			pt[i]  = bnds.d[i][dir];
-			pt[d0] = rand_uniform(bnds.d[d0][0], bnds.d[d0][1]);
-			pt[d1] = rand_uniform(bnds.d[d1][0], bnds.d[d1][1]);
-			vector3d const dir((pt - pos).get_norm());
-			point const end_pt(pt + dir*line_length);
-			cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, LIGHTING_GLOBAL, 1);
+		for (unsigned s0 = 0; s0 < n0; ++s0) {
+			pt[d0] = bnds.d[d0][0] + s0*len0/n0;
+
+			for (unsigned s1 = 0; s1 < n1; ++s1) {
+				pt[d1] = bnds.d[d1][0] + s1*len1/n1;
+				point const end_pt(pt + (pt - pos).get_norm()*line_length);
+				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, LIGHTING_GLOBAL, 1);
+			}
 		}
+	}
+	if (data->verbose) {
+		cout << "start rays: " << GLOBAL_RAYS << ", total rays: " << tot_rays << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
 	}
 }
 
