@@ -15,10 +15,41 @@ extern int MESH_SIZE[3];
 #define ADD_LIGHT_CONTRIB(c, C) {C[0] += c[0]; C[1] += c[1]; C[2] += c[2];}
 
 
+struct normal_cell { // size = 24, unused
+
+	vector3d n[2]; // {negative, positive}
+
+	normal_cell() {UNROLL_3X(n[0][i_] = n[1][i_] = 0.0;)}
+
+	void add_normal(vector3d const &N, float weight=1.0) { // normal should be normalized
+		UNROLL_3X(n[N[i_] > 0.0][i_] += weight*N[i_];)
+	}
+	void normalize() {
+		float const mag(sqrt(n[0].mag_sq() + n[1].mag_sq()));
+		n[0] /= mag; n[1] /= mag;
+	}
+	float dot_product(vector3d const &v) const {
+		float dp(0.0);
+		UNROLL_3X(dp += n[v[i_] > 0.0][i_]*v[i_];)
+		assert(dp >= 0.0);
+		return dp;
+	}
+	void pack(unsigned char *data, unsigned &pos) const {
+		assert(data);
+		float const sign[2] = {-1.0, 1.0};
+		for (unsigned d = 0; d < 2; ++d) {
+			UNROLL_3X(data[pos++] = (unsigned char)(255.0*CLIP_TO_01(sign[d]*n[d][i_]));)
+		}
+	}
+};
+
+
 struct lmcell { // size = 40
 
 	float c[3], ac[3], v, smoke; // c: RGB, ac: indirect lighting color RGB
 	unsigned char lflow[3], pflow[3]; // flow: x, y, z
+	//float gc[3], gv;
+	//normal_cell n;
 	
 	lmcell() : v(0.0), smoke(0.0) {
 		UNROLL_3X(c[i_] = ac[i_] = 0.0; lflow[i_] = pflow[i_] = 255;)
