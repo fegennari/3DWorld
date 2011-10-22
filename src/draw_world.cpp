@@ -17,7 +17,6 @@
 
 bool const DEBUG_COLORCODE      = 0;
 bool const DEBUG_COLOR_COLLS    = 0;
-bool const DYNAMIC_OBJ_LIGHTS   = 1;
 bool const SHOW_DRAW_TIME       = 0;
 bool const NO_SHRAP_DLIGHT      = 1; // looks cool with dynamic lights, but very slow
 bool const DYNAMIC_SMOKE_SHADOWS= 1; // slower, but looks nice
@@ -38,7 +37,7 @@ struct sky_pos_orient {
 // Global Variables
 bool invalid_ccache(1);
 float sun_radius, moon_radius, earth_radius, brightness(1.0);
-colorRGBA cur_ambient(0.0, 0.0, 0.0, 1.0), last_a(BLACK), last_d(BLACK);
+colorRGBA cur_ambient(BLACK), cur_diffuse(BLACK), last_a(BLACK), last_d(BLACK);
 point sun_pos, moon_pos;
 point gl_light_positions[8] = {all_zeros};
 point const earth_pos(-15.0, -8.0, 21.0);
@@ -186,14 +185,12 @@ inline void set_ad_colors(colorRGBA const &a, colorRGBA const &d) {
 }
 
 
-bool get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed, bool precip, bool no_dynamic) {
+void get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed, bool precip, bool no_dynamic) {
 
-	if (DYNAMIC_OBJ_LIGHTS && (using_lightmap || (!no_dynamic && has_dl_sources)) && color_a != BLACK) { // somewhat slow
-		float const val(get_indir_light(color_a, WHITE, (pos + vector3d(0.0, 0.0, 0.01)), no_dynamic, (is_shadowed || precip), NULL, NULL)); // get above mesh
+	if ((using_lightmap || (!no_dynamic && has_dl_sources)) && color_a != BLACK) { // somewhat slow
+		float const val(get_indir_light(color_a, (pos + vector3d(0.0, 0.0, 0.01)), no_dynamic, (is_shadowed || precip), NULL, NULL)); // get above mesh
 		if (precip && val < 1.0) is_shadowed = 1; // if precip, imply shadow status from indirect light value
-		if (val < 0.1 && is_shadowed) return 0;
 	}
-	return 1;
 }
 
 
@@ -1691,11 +1688,11 @@ void set_specular(float specularity, float shininess) {
 }
 
 
-void calc_cur_ambient() {
+void calc_cur_ambient_diffuse() {
 
 	float a[4], d[4], lval[4];
 	unsigned ncomp(0);
-	cur_ambient = BLACK;
+	cur_ambient = cur_diffuse = BLACK;
 
 	for (unsigned i = 0; i < 8; ++i) { // max of 8 lights (GL_LIGHT0 - GL_LIGHT7): sun, moon, lightning
 		int const light(GL_LIGHT0 + i); // should be sequential
@@ -1707,15 +1704,17 @@ void calc_cur_ambient() {
 			glGetLightfv(light, GL_POSITION, lval);
 			if (lval[3] != 0.0) glGetLightfv(light, GL_CONSTANT_ATTENUATION, &atten); // point light source only
 			assert(atten > 0.0);
-			UNROLL_3X(cur_ambient[i_] += a[i_]/atten;)
+			UNROLL_3X(cur_ambient[i_] += a[i_]/atten; cur_diffuse[i_] += d[i_]/atten;)
+			//cout << "A: "; cur_ambient.print(); cout << "  D: "; cur_diffuse.print(); cout << endl;
 			++ncomp;
-			//cout << "A: "; cur_ambient.print(); cout << endl;
-			//cout << "D: "; colorRGBA(d[0]/atten, d[1]/atten, d[2]/atten, d[3]).print(); cout << endl;
 		}
 	}
 	if (ncomp > 0) {
-		cur_ambient      *= (0.5 + 0.5/ncomp); // only really valid for sun and moon
+		float const cscale(0.5 + 0.5/ncomp);
+		cur_ambient      *= cscale; // only really valid for sun and moon
+		cur_diffuse      *= cscale;
 		cur_ambient.alpha = 1.0;
+		cur_diffuse.alpha = 1.0;
 	}
 }
 
@@ -1800,7 +1799,7 @@ void setup_object_render_data() {
 
 	RESET_TIME;
 	bool const TIMETEST(0);
-	calc_cur_ambient();
+	calc_cur_ambient_diffuse();
 	if (TIMETEST) {PRINT_TIME("Init");}
 	distribute_smoke();
 	upload_smoke_3d_texture();
@@ -2333,7 +2332,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 				blend_color(c, SUN_C, c, 0.75*mult, 0); // 75% direct sun lighting
 			}
 		}
-		get_indir_light(c, WHITE, p, 0, 1, NULL, NULL); // could move outside of the parts loop if too slow
+		get_indir_light(c, p, 0, 1, NULL, NULL); // could move outside of the parts loop if too slow
 	}
 	c.do_glColor();
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent

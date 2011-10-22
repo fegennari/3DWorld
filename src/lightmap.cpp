@@ -63,6 +63,7 @@ extern bool disable_shaders;
 extern int animate2, display_mode, frame_counter, read_light_files[], write_light_files[];
 extern unsigned num_vpls;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE;
+extern colorRGBA cur_ambient, cur_diffuse;
 extern vector<coll_obj> coll_objects;
 extern vector<light_source> enabled_lights;
 extern vector<cube_light_source> global_cube_lights;
@@ -366,6 +367,19 @@ void reset_flow_cache() {
 }
 
 
+void lmcell::get_final_color(colorRGB &color) const {
+
+	UNROLL_3X(color[i_] = (sv*sc[i_]*cur_ambient[i_] + gv*gc[i_]*cur_diffuse[i_] + lc[i_]);)
+}
+
+
+void lmcell::set_outside_colors() {
+
+	sv = gv = 1.0;
+	UNROLL_3X(sc[i_] = gc[i_] = 1.0;)
+}
+
+
 lmcell *lmap_manager_t::get_lmcell(point const &p) {
 
 	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
@@ -405,7 +419,8 @@ void lmap_manager_t::normalize_light_val(float min_light, float max_light, float
 			if (vlm == NULL) continue;
 
 			for (unsigned v = 0; v < lm_zsize; ++v) {
-				vlm[v].v = max(min_light, min(max_light, (light_scale*vlm[v].v + light_off)));
+				vlm[v].sv = max(min_light, min(max_light, (light_scale*vlm[v].sv + light_off)));
+				vlm[v].gv = max(min_light, min(max_light, (light_scale*vlm[v].gv + light_off)));
 			}
 		}
 	}
@@ -611,9 +626,9 @@ void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int
 			vldata[v].pflow[d] = (unsigned char)(255.5*CLIP_TO_01(flow_val[!alpha1][d]));
 		}
 		if (calc_lval) {
-			vldata[v].v = 0.5*vscale*(val + old_val) + light_off; // what about colors?
-			vscale     *= z_atten;
-			UNROLL_3X(vldata[v].ac[i_] = 1.0;)
+			vldata[v].sv = 0.5*vscale*(val + old_val) + light_off; // what about colors?
+			vscale *= z_atten;
+			UNROLL_3X(vldata[v].sc[i_] = 1.0;)
 		}
 	} // for v
 }
@@ -804,7 +819,7 @@ void build_lightmap(bool verbose) {
 									mesh_light[v] = 0.0; // reset mesh light
 									vals[v]       = 0.0; // can't get lit if under mesh
 								}
-								vlm[v].v = min(1.0f, (vlm[v].v + vscale[v]*0.5f*(vals[v] + old_val))); // merge XY and Z values
+								vlm[v].sv = min(1.0f, (vlm[v].sv + vscale[v]*0.5f*(vals[v] + old_val))); // merge XY and Z values
 							}
 							vscale[v] *= xy_atten;
 						} // for v
@@ -857,7 +872,7 @@ void build_lightmap(bool verbose) {
 						cscale *= SLT_LINE_TEST_WT*flow[0] + SLT_FLOW_TEST_WT*flow[1];
 						if (cscale < CTHRESH) continue;
 						lmcell &lmc(lmap_manager.vlmap[y][x][z]);
-						UNROLL_3X(lmc.c[i_] = min(1.0f, (lmc.c[i_] + cscale*lcolor[i_]));) // what about diffuse/normals?
+						UNROLL_3X(lmc.lc[i_] = min(1.0f, (lmc.lc[i_] + cscale*lcolor[i_]));) // what about diffuse/normals?
 					} // for z
 				} // for x
 			} // for y
@@ -875,8 +890,8 @@ void build_lightmap(bool verbose) {
 					if (vlm == NULL) continue;
 
 					for (int v = 0; v < (int)zsize; ++v) {
-						float vlmv(vlm[v].v);
-						float const *const color(vlm[v].c);
+						float vlmv(vlm[v].sv);
+						float const *const color(vlm[v].lc);
 						if (vlmv == 0.0 && color[0] == 0.0 && color[1] == 0.0 && color[2] == 0.0) continue;
 						vlmv *= LIGHT_SPREAD*scene_scale;
 
@@ -893,9 +908,9 @@ void build_lightmap(bool verbose) {
 									float flow(oob ? 1.0 : lmap_manager.vlmap[iy][ix][iz].lflow[dim]/255.0);
 									if (flow <= 0.0) continue;
 									lmcell &lm(lmap_manager.vlmap[k][l][m]);
-									flow *= lscales[nsame];
-									lm.v += flow*vlmv;
-									UNROLL_3X(lm.c[i_] = min(1.0f, (lm.c[i_] + flow*color[i_]));) // assumes color.alpha is always either 0.0 or 1.0
+									flow  *= lscales[nsame];
+									lm.sv += flow*vlmv;
+									UNROLL_3X(lm.lc[i_] = min(1.0f, (lm.lc[i_] + flow*color[i_]));) // assumes color.alpha is always either 0.0 or 1.0
 								} // for m
 							} // for l
 						} // for k
@@ -1338,9 +1353,9 @@ void add_dynamic_lights() {
 
 bool is_shadowed_lightmap(point const &p) {
 
-	if (p.z <= czmin0)  return is_under_mesh(p);
+	if (p.z <= czmin0) return is_under_mesh(p);
 	lmcell const *const lmc(lmap_manager.get_lmcell(p));
-	return (lmc ? (lmc->v < 1.0) : 0);
+	return (lmc ? (lmc->sv < 1.0) : 0);
 }
 
 
@@ -1354,7 +1369,7 @@ void light_source::pack_to_floatv(float *data) const {
 	*(data++) = radius;
 	UNROLL_3X(*(data++) = 0.5*(1.0 + color[i_]);) // map [-1,1] => [0,1] for negative light support
 	*(data++) = color[3];
-	UNROLL_3X(*(data++) = 0.5*(1.0 + dir[i_]);) // map [-1,1] to [0,1]
+	UNROLL_3X(*(data++) = 0.5*(1.0 + dir  [i_]);) // map [-1,1] to [0,1]
 	*(data++) = bwidth; // [0,1]
 }
 
@@ -1377,7 +1392,7 @@ inline float add_specular(point const &p, vector3d ldir, vector3d const &norm, f
 bool is_in_darkness(point const &pos, float radius, int cobj) {
 
 	colorRGBA c(WHITE);
-	float const val(get_indir_light(c, WHITE, pos, 0, 1, NULL, NULL)); // this is faster so do it first
+	get_indir_light(c, pos, 0, 1, NULL, NULL); // this is faster so do it first
 	if ((c.red + c.green + c.blue) > DARKNESS_THRESH) return 0;
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
@@ -1452,20 +1467,19 @@ void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float li
 	assert(lm_alloc && lmap_manager.vlmap);
 
 	if (using_lightmap && !light_sources.empty() && lmap_manager.is_valid_cell(x, y, z)) {
-		float const *const color(lmap_manager.vlmap[y][x][z].c);
-		ADD_LIGHT_CONTRIB(color, ls);
+		float const *const lcolor(lmap_manager.vlmap[y][x][z].lc);
+		ADD_LIGHT_CONTRIB(lcolor, ls);
 	}
 	if (!no_dynamic && !dl_sources.empty()) get_dynamic_light(x, y, z, p, lightscale, ls, norm, spec);
 }
 
 
-float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
+float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
 
-	//UNROLL_3X(a[i_] *= cscale[i_];) return 1.0;
 	assert(lm_alloc && lmap_manager.vlmap);
 	float val(MAX_LIGHT);
 	bool outside_mesh(0);
-	colorRGBA ls(BLACK);
+	colorRGB cscale(1.0, 1.0, 1.0);
 	point const p_adj((norm && !has_indir_lighting) ? (p + (*norm)*(0.25*HALF_DXY)) : p);
 	int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY)), z(get_zpos(p_adj.z));
 	
@@ -1478,14 +1492,15 @@ float get_indir_light(colorRGBA &a, colorRGBA cscale, point const &p, bool no_dy
 	}
 	else if (using_lightmap && p.z < czmax && lmap_manager.vlmap[y][x] != NULL) { // not above all collision objects and not empty cell
 		lmcell const &lmc(lmap_manager.vlmap[y][x][z]);
-		val = lmc.v; // Note: could interpolate between voxels here, but it's slow and doesn't look any better
-		UNROLL_3X(cscale[i_] *= lmc.ac[i_];) // add indirect color
-		ADD_LIGHT_CONTRIB(lmc.c, ls);
+		val = lmc.sv + lmc.gv;
+		lmc.get_final_color(cscale);
+		//UNROLL_3X(cscale[i_] = lmc.v*lmc.ac[i_];) // add indirect color
+		//ADD_LIGHT_CONTRIB(lmc.lc, ls);
 	}
 	if (!no_dynamic && !outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
-		get_dynamic_light(x, y, z, p, 1.0, (float *)&ls, norm, spec);
+		get_dynamic_light(x, y, z, p, 1.0, (float *)&cscale, norm, spec);
 	}
-	UNROLL_3X(a[i_] *= (cscale[i_]*val + ls[i_]);) // unroll the loop
+	UNROLL_3X(a[i_] *= cscale[i_];) // unroll the loop
 	return val;
 }
 

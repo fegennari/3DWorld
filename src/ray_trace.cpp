@@ -46,6 +46,7 @@ void increment_printed_number(unsigned num) {
 
 void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
 
+	if (first_pt && ltype == LIGHTING_GLOBAL) weight *= 0.5; // lower weight - handled by direct illumination
 	colorRGBA const cw(color*weight);
 	float const dist(p2p_dist(p1, p2)); // dist can be 0
 	unsigned const nsteps(1 + unsigned(dist/get_step_size())); // round up
@@ -56,9 +57,9 @@ void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, 
 		lmcell *lmc(lmap_manager.get_lmcell(p1));
 		
 		if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
-			float *offset(lmc->get_offset(ltype));
-			ADD_LIGHT_CONTRIB(cw, offset);
-			if (ltype != LIGHTING_LOCAL) lmc->v += weight;
+			float *color(lmc->get_offset(ltype));
+			ADD_LIGHT_CONTRIB(cw, color);
+			if (ltype != LIGHTING_LOCAL) color[3] += weight;
 		}
 		p1 += step;
 	}
@@ -324,7 +325,7 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	assert(data->num > 0);
 	if (data->is_thread) srand(data->rseed);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
-	float const ray_wt(1E6*weight*color.alpha/GLOBAL_RAYS);
+	float const ray_wt(2.0E5*weight*color.alpha/GLOBAL_RAYS);
 	if (ray_wt == 0.0) return; // error?
 	unsigned const num_tot_rays(max(1U, GLOBAL_RAYS/data->num));
 	cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
@@ -528,12 +529,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	if (write_light_files[ltype]) {
 		lmap_manager.write_data_to_file(lighting_file[ltype], ltype);
 	}
-	if (ltype == LIGHTING_LOCAL) {
-		lmap_manager.local_light_scale(light_int_scale[ltype]);
-	}
-	else {
-		lmap_manager.global_light_scale(light_int_scale[ltype]);
-	}
+	lmap_manager.apply_light_scale(light_int_scale[ltype], ltype);
 }
 
 
@@ -587,24 +583,25 @@ bool lmap_manager_t::write_data_to_file(char const *const fn, int ltype) const {
 }
 
 
-void lmap_manager_t::global_light_scale(float scale) {
+void lmap_manager_t::apply_light_scale(float scale, int ltype) {
+
+	assert(ltype < NUM_LIGHTING_TYPES);
 
 	// apply global light scaling and normalize colors
 	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-		if (i->v == 0.0) continue;
-		i->v *= scale;
-		if (indir_light_exp != 0.0) {i->v = pow(i->v, indir_light_exp);} // gamma correction
-		float const max_color(max(i->ac[0], max(i->ac[1], i->ac[2])));
-		if (max_color > 0.0) {UNROLL_3X(i->ac[i_] /= max_color;)} // normalize color
+		float *color(i->get_offset(ltype));
+
+		if (ltype == LIGHTING_LOCAL) {
+			UNROLL_3X(color[i_] = min(1.0f, (color[i_]*scale)););
+			if (indir_light_exp != 0.0) {UNROLL_3X(color[i_] = pow(color[i_], indir_light_exp););} // gamma correction
+		}
+		else {
+			if (color[3] == 0.0) continue;
+			color[3] = CLIP_TO_01(color[3]*scale);
+			if (indir_light_exp != 0.0) {color[3] = pow(color[3], indir_light_exp);} // gamma correction
+			float const max_color(max(color[0], max(color[1], color[2])));
+			if (max_color > 0.0) {UNROLL_3X(color[i_] /= max_color;)} // normalize color
+		}
 	}
 }
 
-
-void lmap_manager_t::local_light_scale(float scale) {
-
-	// apply local light scaling and clamping
-	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-		UNROLL_3X(i->c[i_] = min(1.0f, (i->c[i_]*scale)););
-		if (indir_light_exp != 0.0) {UNROLL_3X(i->c[i_] = pow(i->c[i_], indir_light_exp););} // gamma correction
-	}
-}

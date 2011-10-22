@@ -27,7 +27,7 @@ vector<unsigned char> smoke_tex_data; // several MB
 extern bool disable_shaders, no_smoke_over_mesh;
 extern int animate2, display_mode;
 extern float czmin0;
-extern colorRGBA cur_ambient;
+extern colorRGBA cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
 
 
@@ -203,9 +203,10 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 		assert(data.size() == ncomp*sz); // sz should be constant (per config file/3DWorld session)
 		init_call = (smoke_tid == 0); // will recreate the texture
 	}
-	static colorRGBA last_cur_ambient(ALPHA0);
-	bool const full_update(init_call || cur_ambient != last_cur_ambient);
+	static colorRGBA last_cur_ambient(ALPHA0), last_cur_diffuse(ALPHA0);
+	bool const full_update(init_call || cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
 	last_cur_ambient = cur_ambient;
+	last_cur_diffuse = cur_diffuse;
 
 	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
 	if (!full_update && !smoke_exists) return 0; // return 1?
@@ -217,8 +218,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
 	lmcell default_lmc;
-	default_lmc.v = 1.0;
-	UNROLL_3X(default_lmc.ac[i_] = 1.0;)
+	default_lmc.set_outside_colors();
 	
 	for (unsigned y = y_start; y < y_end; ++y) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -232,9 +232,14 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 				lmcell const &lmc((vlm == NULL) ? default_lmc : vlm[z]);
 
 				if (full_update) {
-					bool const bad(get_zval(z+1) < zthresh); // adjust by one because GPU will interpolate the texel
-					UNROLL_3X(data[off2+i_] = bad ? 0 : (unsigned char)(255*CLIP_TO_01(lmc.v*lmc.ac[i_]*cur_ambient[i_] + lmc.c[i_]));)
-					//UNROLL_3X(data[off2+i_] = bad ? 0 : lmc.pflow[i_];)
+					if (get_zval(z+1) < zthresh) { // adjust by one because GPU will interpolate the texel
+						UNROLL_3X(data[off2+i_] = 0;)
+					}
+					else {
+						colorRGB color;
+						lmc.get_final_color(color);
+						UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
+					}
 				}
 				data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // alpha: smoke
 			}

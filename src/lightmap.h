@@ -36,28 +36,33 @@ struct normal_cell { // size = 24, unused
 	}
 	void pack(unsigned char *data, unsigned &pos) const {
 		assert(data);
-		float const sign[2] = {-1.0, 1.0};
 		for (unsigned d = 0; d < 2; ++d) {
-			UNROLL_3X(data[pos++] = (unsigned char)(255.0*CLIP_TO_01(sign[d]*n[d][i_]));)
+			UNROLL_3X(data[pos++] = (unsigned char)(255.0*CLIP_TO_01((d ? 1.0f : -1.0f)*n[d][i_]));)
+		}
+	}
+	void unpack(unsigned char const *data, unsigned &pos) {
+		assert(data);
+		for (unsigned d = 0; d < 2; ++d) {
+			UNROLL_3X(n[d][i_] = (d ? 1.0 : -1.0)*data[pos++]/255.0;)
 		}
 	}
 };
 
 
-struct lmcell { // size = 40
+struct lmcell { // size = 56
 
-	float c[3], ac[3], v, smoke; // c: RGB, ac: indirect lighting color RGB
+	float sc[3], sv, gc[3], gv, lc[3], smoke; // *c[3]: RGB sky, global, local colors
 	unsigned char lflow[3], pflow[3]; // flow: x, y, z
-	//float gc[3], gv;
 	//normal_cell n;
 	
-	lmcell() : v(0.0), smoke(0.0) {
-		UNROLL_3X(c[i_] = ac[i_] = 0.0; lflow[i_] = pflow[i_] = 255;)
+	lmcell() : sv(0.0), gv(0.0), smoke(0.0) {
+		UNROLL_3X(sc[i_] = gc[i_] = lc[i_] = 0.0; lflow[i_] = pflow[i_] = 255;)
 	}
-	// c[0],c[1],c[2] : ac[0],ac[1],ac[2],v
-	float       *get_offset(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? c : ac);}
-	float const *get_offset(int ltype) const {return ((ltype == LIGHTING_LOCAL) ? c : ac);}
-	static unsigned get_dsz(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? 3 : 4 );}
+	float       *get_offset(int ltype)       {return (sc + 4*ltype);}
+	float const *get_offset(int ltype) const {return (sc + 4*ltype);}
+	static unsigned get_dsz(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? 3 : 4);}
+	void get_final_color(colorRGB &color) const;
+	void set_outside_colors();
 };
 
 
@@ -74,8 +79,7 @@ public:
 	size_t size() const {return vldata_alloc.size();}
 	bool read_data_from_file(char const *const fn, int ltype);
 	bool write_data_to_file(char const *const fn, int ltype) const;
-	void global_light_scale(float scale);
-	void local_light_scale(float scale);
+	void apply_light_scale(float scale, int ltype);
 
 	inline bool is_valid_cell(int x, int y, int z) const {
 		return (z >= 0 && z < MESH_SIZE[2] && !point_outside_mesh(x, y) && vlmap[y][x] != NULL);
