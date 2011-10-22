@@ -81,7 +81,7 @@ unsigned num_snowflakes(0), scenery_extent(0), num_vpls(0);
 float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), tree_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0);
 float water_h_off(0.0), perspective_fovy(0.0), perspective_nclip(0.0), atmosphere(1.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
-float light_int_scale[NUM_LIGHTING_TYPES] = {0.0};
+float light_int_scale[NUM_LIGHTING_TYPES] = {0.0}, first_ray_weight(1.0);
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS);
 float init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
 double camera_zh(0.0);
@@ -1400,6 +1400,7 @@ void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) {
 	alloc_if_req(lighting_file[ltype], NULL);
 	int write_mode(0);
 	if (fscanf(fp, "%s%i%f", lighting_file[ltype], &write_mode, &light_int_scale[ltype]) != 3) cfg_err("lighting_file command", error);
+	if (ltype == LIGHTING_GLOBAL) fscanf(fp, "%f", &first_ray_weight); // ok if fails
 	(write_mode ? write_light_files[ltype] : read_light_files[ltype]) = 1;
 }
 
