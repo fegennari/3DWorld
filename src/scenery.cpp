@@ -119,7 +119,7 @@ colorRGBA scenery_obj::get_atten_color(colorRGBA c) const {
 		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
 		
 		if (!point_outside_mesh(x, y) && (pos.z + radius) < water_matrix[y][x]) {
-			water_color_atten(((float *)&(c.red)), x, y, (pos + point(0.0, 0.0, radius)));
+			water_color_atten(((float *)&(c.R)), x, y, (pos + point(0.0, 0.0, radius)));
 		}
 	}
 	return c;

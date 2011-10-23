@@ -212,9 +212,9 @@ void set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadow
 inline void scale_color_uw(colorRGBA &color) {
 
 	if (underwater) {
-		color.red   *= 0.45;
-		color.green *= 0.45;
-		color.blue  *= 0.85;
+		color.R *= 0.45;
+		color.G *= 0.45;
+		color.B *= 0.85;
 	}
 }
 
@@ -1023,7 +1023,7 @@ void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orien
 
 
 colorRGBA mult_alpha(colorRGBA const &c, float alpha) {
-	return colorRGBA(c.red, c.green, c.blue, c.alpha*alpha);
+	return colorRGBA(c.R, c.G, c.B, c.A*alpha);
 }
 
 
@@ -2101,9 +2101,9 @@ void apply_red_sky(colorRGBA &color) {
 
 	if (light_factor > 0.45 && light_factor < 0.55) { // red sky at night/morning
 		float const redness(1.0 - 20.0*fabs(light_factor - 0.5));
-		color.red   = min(1.0f, (1.0f + 0.8f*redness)*color.red);
-		color.green = max(0.0f, (1.0f - 0.2f*redness)*color.green);
-		color.blue  = max(0.0f, (1.0f - 0.5f*redness)*color.blue);
+		color.R = min(1.0f, (1.0f + 0.8f*redness)*color.R);
+		color.G = max(0.0f, (1.0f - 0.2f*redness)*color.G);
+		color.B = max(0.0f, (1.0f - 0.5f*redness)*color.B);
 	}
 }
 
@@ -2277,12 +2277,12 @@ void particle_cloud::draw() const {
 	colorRGBA color(base_color);
 
 	if (is_fire()) {
-		color.green *= get_rscale();
+		color.G *= get_rscale();
 	}
 	else {
 		color *= (0.5*(1.0 - darkness));
 	}
-	color.alpha *= density;
+	color.A *= density;
 	float const dist(distance_to_camera(pos));
 	int const ndiv(max(4, min(16, int(scale/dist))));
 

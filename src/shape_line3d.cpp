@@ -78,7 +78,7 @@ bool shape3d::read_from_file(char *filename) {
 
 	// Read the colors
 	for(unsigned i = 0; i < ncolors; i++) {
-		if (fscanf(fp, "%c%f%f%f%f%f%f%i\n", &letter, &color.red, &color.green, &color.blue, &color.alpha, &colors[i].spec1, &colors[i].spec2, &colors[i].tid) != 8) {
+		if (fscanf(fp, "%c%f%f%f%f%f%f%i\n", &letter, &color.R, &color.G, &color.B, &color.A, &colors[i].spec1, &colors[i].spec2, &colors[i].tid) != 8) {
 			cout << "Error reading color from file '" << filename << "'." << endl;
 			fclose(fp);
 			return 0;

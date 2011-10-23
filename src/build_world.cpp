@@ -1072,7 +1072,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'L': // light: size xpos ypos zpos color [direction beamwidth [inner_radius]]
-			if (fscanf(fp, "%f%f%f%f%f%f%f%f", &fvals[0], &pos.x, &pos.y, &pos.z, &lcolor.red, &lcolor.green, &lcolor.blue, &lcolor.alpha) != 8) {
+			if (fscanf(fp, "%f%f%f%f%f%f%f%f", &fvals[0], &pos.x, &pos.y, &pos.z, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 8) {
 				return read_error(fp, "light source", coll_obj_file);
 			}
 			{
@@ -1358,8 +1358,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			return 0;
 
 		case 'l': // object layer/material: elasticity R G B A texture_id/texture_name draw [refract_ix [light_atten]]
-			if (fscanf(fp, "%f%f%f%f%f%s%i", &cobj.cp.elastic, &cobj.cp.color.red, &cobj.cp.color.green,
-				&cobj.cp.color.blue, &cobj.cp.color.alpha, str, &ivals[0]) != 7)
+			if (fscanf(fp, "%f%f%f%f%f%s%i", &cobj.cp.elastic, &cobj.cp.color.R, &cobj.cp.color.G,
+				&cobj.cp.color.B, &cobj.cp.color.A, str, &ivals[0]) != 7)
 			{
 				return read_error(fp, "layer/material properties", coll_obj_file);
 			}

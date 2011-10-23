@@ -1344,7 +1344,7 @@ void particle_cloud::apply_physics(unsigned i) {
 	}
 	if (is_fire()) {
 		colorRGBA color(base_color);
-		color.green *= rscale;
+		color.G *= rscale;
 		add_dynamic_light(3*radius, pos, color);
 		if (coll && radius >= MAX_PART_CLOUD_RAD && (rand()&7) == 0) gen_fire(pos, 1.0, source); // will be destoyed next frame
 	}

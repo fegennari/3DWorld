@@ -1240,8 +1240,8 @@ void add_vpls() {
 			unsigned const gl_light(GL_LIGHT0 + l);
 			if (!light_valid(0xFF, l, lpos) || !glIsEnabled(gl_light)) continue;
 			colorRGBA ambient, diffuse;
-			glGetLightfv(gl_light, GL_AMBIENT, &ambient.red);
-			glGetLightfv(gl_light, GL_DIFFUSE, &diffuse.red);
+			glGetLightfv(gl_light, GL_AMBIENT, &ambient.R);
+			glGetLightfv(gl_light, GL_DIFFUSE, &diffuse.R);
 			colorRGBA base_color(ambient + diffuse);
 			base_color.set_valid_color();
 			
@@ -1393,7 +1393,7 @@ bool is_in_darkness(point const &pos, float radius, int cobj) {
 
 	colorRGBA c(WHITE);
 	get_indir_light(c, pos, 0, 1, NULL, NULL); // this is faster so do it first
-	if ((c.red + c.green + c.blue) > DARKNESS_THRESH) return 0;
+	if ((c.R + c.G + c.B) > DARKNESS_THRESH) return 0;
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (is_visible_to_light_cobj(pos, l, radius, cobj, 1)) return 0;
@@ -1479,7 +1479,7 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadow
 	assert(lm_alloc && lmap_manager.vlmap);
 	float val(MAX_LIGHT);
 	bool outside_mesh(0);
-	colorRGB cscale(cur_ambient.red, cur_ambient.green, cur_ambient.blue);
+	colorRGB cscale(cur_ambient);
 	point const p_adj((norm && !has_indir_lighting) ? (p + (*norm)*(0.25*HALF_DXY)) : p);
 	int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY)), z(get_zpos(p_adj.z));
 	

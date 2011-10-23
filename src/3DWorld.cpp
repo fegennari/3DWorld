@@ -971,34 +971,34 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		leaf_color_changed    = 1;
 		break;
 	case 'A':
-		leaf_base_color.red  -= 0.1;
-		leaf_color_changed    = 1;
+		leaf_base_color.R  -= 0.1;
+		leaf_color_changed  = 1;
 		break;
 	case 'S':
 		if (world_mode == WMODE_UNIVERSE) {toggle_player_ship_stop(); break;}
-		leaf_base_color.red  += 0.1;
-		leaf_color_changed    = 1;
+		leaf_base_color.R  += 0.1;
+		leaf_color_changed  = 1;
 		break;
 	case 'Z':
 		if (map_mode) {
 			map_zoom *= MAP_ZOOM;
 		}
 		else {
-			leaf_base_color.green -= 0.1;
+			leaf_base_color.G -= 0.1;
 		}
 		break;
 	case 'X':
-		leaf_base_color.green += 0.1; break;
+		leaf_base_color.G += 0.1; break;
 	case 'O':
-		tree_color_coherence  -= 0.1; break;
+		tree_color_coherence -= 0.1; break;
 	case 'P':
-		tree_color_coherence  += 0.1; break;
+		tree_color_coherence += 0.1; break;
 	case 'E':
-		leaf_color_coherence  = 0.5;
-		tree_color_coherence  = 0.2;
-		leaf_base_color.red   = 0.2;
-		leaf_base_color.green = 1.0;
-		leaf_color_changed    = 1;
+		leaf_color_coherence = 0.5;
+		tree_color_coherence = 0.2;
+		leaf_base_color.R    = 0.2;
+		leaf_base_color.G    = 1.0;
+		leaf_color_changed   = 1;
 		break;
 
 	case 'L': // increase terrain zoom
@@ -1555,7 +1555,7 @@ int load_config(string const &config_file) {
 			if (!read_float(fp, tree_deadness)) cfg_err("tree deadness command", error);
 		}
 		else if (str == "leaf_color") {
-			if (fscanf(fp, "%f%f%f%f%f", &leaf_base_color.red, &leaf_base_color.green, &leaf_base_color.blue, &leaf_color_coherence, &tree_color_coherence) != 5) {
+			if (fscanf(fp, "%f%f%f%f%f", &leaf_base_color.R, &leaf_base_color.G, &leaf_base_color.B, &leaf_color_coherence, &tree_color_coherence) != 5) {
 				cfg_err("leaf color command", error);
 			}
 		}

@@ -707,7 +707,7 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 
 bool read_color(ifstream &in, colorRGBA &color) {
 
-	return ((in >> color.red >> color.green >> color.blue >> color.alpha) != 0);
+	return ((in >> color.R >> color.G >> color.B >> color.A) != 0);
 }
 
 

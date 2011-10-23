@@ -462,9 +462,7 @@ colorRGB tree::get_leaf_color(unsigned i) const {
 inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const {
 
 	float const ilch(1.0 - leaf_color_coherence);
-	return colorRGB(color*(leaf_color.red   + ilch*lred)   + base_color.red,
-		            color*(leaf_color.green + ilch*lgreen) + base_color.green,
-					0.0);
+	return colorRGB(color*(leaf_color.R + ilch*lred) + base_color.R, color*(leaf_color.G + ilch*lgreen) + base_color.G, 0.0);
 }
 
 

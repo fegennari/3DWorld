@@ -171,9 +171,9 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 		float const dist(-2*depth*delta.mag()/delta.z); // multiply by 2 to account for both directions
 		assert(dist >= 0.0);
 		colorRGBA water_color(WATER_C);
-		water_color.alpha = 1.0;  // make solid for volume attenuation (not surface)
-		water_color      *= 0.95; // refracted component
-		atten_by_water_depth(&(water_color.red), 0.8*dist); // assumes dist scaling for outside water
+		water_color.A = 1.0;  // make solid for volume attenuation (not surface)
+		water_color  *= 0.95; // refracted component
+		atten_by_water_depth(&(water_color.R), 0.8*dist); // assumes dist scaling for outside water
 		weight *= water_color.get_luminance();
 		color   = color.modulate_with(water_color);
 	} // Note: no else

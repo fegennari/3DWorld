@@ -287,7 +287,7 @@ public:
 			if (dir.z < 0.0 && is_underwater(ve0)) {
 				// if mesh int point is underwater, attenuate along light path and blend like we do when drawing the mesh
 				// could calculate approx water intersection and call recursively, but there are too many problems with that approach
-				water_color_atten_pt(&rcolor.red, xpos, ypos, ve0, v, get_light_pos());
+				water_color_atten_pt(&rcolor.R, xpos, ypos, ve0, v, get_light_pos());
 				float const t2((water_matrix[ypos][xpos] - ve0.z)/(v.z - ve0.z));
 				ve0 = (ve0 + (v - ve0)*t2); // updated approx water collision point
 				blend_color(rcolor, color, rcolor, 0.5, 1); // add in a watery color
@@ -1170,9 +1170,9 @@ int draw_spill_section(int x1, int y1, int x2, int y2, float z1, float z2, float
 		}
 		else {
 			assert(slope != 0.0);
-			color.blue  = min(1.0f, max(0.6f, (0.3f + 0.6f/slope)));
-			color.alpha = min(0.6f, max(0.2f, (0.2f + 0.2f*slope)));
-			color.red   = color.green = min(0.7*color.blue, max(0.3, (0.2 + 0.4*slope)));
+			color.B = min(1.0f, max(0.6f, (0.3f + 0.6f/slope)));
+			color.A = min(0.6f, max(0.2f, (0.2f + 0.2f*slope)));
+			color.R = color.G = min(0.7*color.B, max(0.3, (0.2 + 0.4*slope)));
 		}
 		if (mud_mix   > 0.01) blend_color(color, MUD_C,   color, mud_mix,   1);
 		if (blood_mix > 0.01) blend_color(color, BLOOD_C, color, blood_mix, 1);

@@ -1336,14 +1336,13 @@ void ustar::gen_color() {
 	}
 	color.set_valid_color();
 	gen_colorAB(0.4*MP_COLOR_VAR);
-	if (temp < 30.0) colorA.green = colorA.blue = colorB.green = colorB.blue = 0.0; // make sure it's just red
+	if (temp < 30.0) colorA.G = colorA.B = colorB.G = colorB.B = 0.0; // make sure it's just red
 }
 
 
 inline colorRGBA ustar::get_ambient_color_val() const {
 
-	return (is_ok() ? colorRGBA(color.red*STAR_MAX_SIZE_INV, color.green*STAR_MAX_SIZE_INV,
-		color.blue*STAR_MAX_SIZE_INV, color.alpha) : BLACK);
+	return (is_ok() ? colorRGBA(color.R*STAR_MAX_SIZE_INV, color.G*STAR_MAX_SIZE_INV, color.B*STAR_MAX_SIZE_INV, color.A) : BLACK);
 }
 
 
@@ -1926,7 +1925,7 @@ void ustar::solar_flare::gen(colorRGBA const &color) {
 	time     = 0;
 	lifetime = unsigned(rand_uniform(0.5, 2.0)*TICKS_PER_SECOND);
 	dir      = signed_rand_vector().get_norm();
-	color1   = colorRGBA((color.red + 0.25), color.green, (color.blue - 0.1), 0.75*color.alpha);
+	color1   = colorRGBA((color.R + 0.25), color.G, (color.B - 0.1), 0.75*color.A);
 	color1.set_valid_color();
 	color2   = ALPHA0;
 }

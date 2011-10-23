@@ -60,7 +60,7 @@ void update_sound_loops();
 
 inline void glClearColor_rgba(const colorRGBA &color) {
 
-	glClearColor(color.red, color.green, color.blue, color.alpha);
+	glClearColor(color.R, color.G, color.B, color.A);
 }
 
 
@@ -580,10 +580,10 @@ void atten_uw_fog_color(colorRGBA &color, float depth) {
 	if (lf < 1.0) add_uw_light_color_comp(GL_LIGHT1, moon_pos, 0.5*(1.0-lf), light_color);
 	if (is_cloudy) light_color *= 0.5;
 	color  = color.modulate_with(light_color);
-	atten_by_water_depth(&color.red, depth);
+	atten_by_water_depth(&color.R, depth);
 	color *= FOG_COLOR_ATTEN;
 	colorRGBA filt_color(color);
-	filt_color.alpha = 0.25;
+	filt_color.A = 0.25;
 	add_camera_filter(filt_color, 1, -1, CAM_FILT_UWATER);
 }
 
@@ -887,7 +887,7 @@ void display(void) {
 				select_liquid_color(fog_color, camera);
 				atten_uw_fog_color(fog_color, depth);
 				set_lighted_fog_color(fog_color);
-				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.blue)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
+				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.B)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
 				glFogf(GL_FOG_END, fog_dist);
 			}
 			draw_camera_weapon(0);

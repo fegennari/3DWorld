@@ -56,7 +56,7 @@ void shader_t::set_uniform_vector3d(int loc, vector3d const &val) const {
 }
 
 void shader_t::set_uniform_color(int loc, colorRGBA const &val) const {
-	if (loc >= 0) glUniform4fv(loc, 1, &val.red);
+	if (loc >= 0) glUniform4fv(loc, 1, &val.R);
 }
 
 

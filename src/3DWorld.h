@@ -482,7 +482,9 @@ struct colorRGB { // size = 12
 	float R, G, B;
 	colorRGB() {}
 	colorRGB(float r, float g, float b) : R(r), G(g), B(b) {}
-	void set_to_val (float val) {R = G = B = val;}
+	void set_to_val(float val) {R = G = B = val;}
+	bool operator==(const colorRGB &c) const {return (c.R == R && c.G == G && c.B == B);}
+	bool operator!=(const colorRGB &c) const {return !operator==(c);}
 
 	const float &operator[](unsigned i) const {
 		switch(i) {
@@ -502,9 +504,8 @@ struct colorRGB { // size = 12
 		}
 		return R; // never gets here
 	}
-	void operator*=(float val) {
-		R *= val; G *= val; B *= val;
-	}
+	void operator*=(float val) {R *= val; G *= val; B *= val;}
+
 	void set_valid_color() {
 		R = CLIP_TO_01(R);
 		G = CLIP_TO_01(G);
@@ -525,88 +526,69 @@ struct colorRGB { // size = 12
 };
 
 
-struct colorRGBA { // size = 16
+struct colorRGBA : public colorRGB { // size = 16
 
-	float red, green, blue, alpha;
+	union {float A; float alpha;}; // A and alpha are both valid components
 
 	colorRGBA() {}
-	colorRGBA(float r, float g, float b, float a=1.0) : red(r), green(g), blue(b), alpha(a) {}
-	colorRGBA(colorRGB const &color, float a=1.0) : red(color.R), green(color.G), blue(color.B), alpha(a) {}
+	colorRGBA(float r, float g, float b, float a=1.0) : colorRGB(r, g, b), A(a) {}
+	colorRGBA(colorRGB const &color, float a=1.0) : colorRGB(color), A(a) {}
+	void assign(float R, float G, float B, float A=1.0) {R = R; G = G; B = B; A = A;}
+	bool operator==(const colorRGBA &c) const {return (c.R == R && c.G == G && c.B == B && c.A == A);}
+	bool operator!=(const colorRGBA &c) const {return !operator==(c);}
 
-	bool operator==(const colorRGBA &c) const {
-		return (c.red == red && c.green == green && c.blue == blue && c.alpha == alpha);
-	}
-	bool operator!=(const colorRGBA &c) const {
-		return !operator==(c);
-	}
 	const float &operator[](unsigned i) const {
 		switch(i) {
-			case 0: return red;
-			case 1: return green;
-			case 2: return blue;
-			case 3: return alpha;
+			case 0: return R;
+			case 1: return G;
+			case 2: return B;
+			case 3: return A;
 			default: assert(0);
 		}
-		return red; // never gets here
+		return R; // never gets here
 	}
 	float &operator[](unsigned i) {
 		switch(i) {
-			case 0: return red;
-			case 1: return green;
-			case 2: return blue;
-			case 3: return alpha;
+			case 0: return R;
+			case 1: return G;
+			case 2: return B;
+			case 3: return A;
 			default: assert(0);
 		}
-		return red; // never gets here
-	}
-	void assign(float R, float G, float B, float A=1.0) {
-		red = R; green = G; blue = B; alpha = A;
+		return R; // never gets here
 	}
 	bool operator<(const colorRGBA &c) const { // greater than operation?
-		if (alpha > c.alpha) return 1; // note: alpha less than so that low alpha colors are last
-		if (alpha < c.alpha) return 0;
-		if (red   < c.red)   return 1;
-		if (red   > c.red)   return 0;
-		if (green < c.green) return 1;
-		if (green > c.green) return 0;
-		return (blue < c.blue);
+		if (A > c.A) return 1; // note: alpha less than so that low alpha colors are last
+		if (A < c.A) return 0;
+		if (R < c.R) return 1;
+		if (R > c.R) return 0;
+		if (G < c.G) return 1;
+		if (G > c.G) return 0;
+		return (B < c.B);
 	}
-	colorRGBA operator*(float val) const {
-		return colorRGBA(red*val, green*val, blue*val, alpha);
-	}
-	void operator*=(float val) {
-		red *= val; green *= val; blue *= val;
-	}
-	colorRGBA operator+(colorRGBA const &c) const {
-		return colorRGBA(red+c.red, green+c.green, blue+c.blue, alpha+c.alpha);
-	}
-	void operator+=(colorRGBA const &c) {
-		red += c.red; green += c.green; blue += c.blue; alpha += c.alpha;
-	}
-	colorRGBA modulate_with(colorRGBA const &c) const {
-		return colorRGBA(red*c.red, green*c.green, blue*c.blue, alpha*c.alpha);
-	}
+	colorRGBA operator* (float val) const             {return colorRGBA(R*val, G*val, B*val, A);}
+	colorRGBA operator+ (colorRGBA const &c) const    {return colorRGBA(R+c.R, G+c.G, B+c.B, A+c.A);}
+	void      operator+=(colorRGBA const &c)          {R += c.R; G += c.G; B += c.B; A += c.A;}
+	colorRGBA modulate_with(colorRGBA const &c) const {return colorRGBA(R*c.R, G*c.G, B*c.B, A*c.A);}
+
 	void set_valid_color() {
-		red   = CLIP_TO_01(red);
-		green = CLIP_TO_01(green);
-		blue  = CLIP_TO_01(blue);
-		alpha = CLIP_TO_01(alpha);
+		colorRGB::set_valid_color();
+		A = CLIP_TO_01(A);
 	}
 	void normalize_to_alpha_1() {
-		if (alpha == 1.0) return;
-		red  *= alpha; green *= alpha; blue *= alpha;
-		alpha = 1.0;
+		if (A == 1.0) return;
+		R *= A; G *= A; B *= A;
+		A = 1.0;
 	}
 	bool within_thresh_of_rgb(float thresh, colorRGBA const &c) const { // no alpha check
-		return ((fabs(red-c.red) + fabs(green-c.green) + fabs(blue-c.blue)) < thresh);
+		return ((fabs(R-c.R) + fabs(G-c.G) + fabs(B-c.B)) < thresh);
 	}
 	bool within_thresh_of_rgba(float thresh, colorRGBA const &c) const { // no alpha check
-		return ((fabs(red-c.red) + fabs(green-c.green) + fabs(blue-c.blue) + fabs(alpha-c.alpha)) < thresh);
+		return ((fabs(R-c.R) + fabs(G-c.G) + fabs(B-c.B) + fabs(A-c.A)) < thresh);
 	}
-	float get_luminance() const {return (red + green + blue)/3.0;}
-	colorRGB rgb()  const {return colorRGB(red, green, blue);}
-	bool is_valid() const {return (red >= 0 && green >= 0 && blue >= 0 && alpha >= 0 && red <= 1 && green <= 1 && blue <= 1 && alpha <= 1);}
-	void print() const {cout << "R: " << red << ", G: " << green << ", B: " << blue << ", A: " << alpha;}
+	float get_luminance() const {return (R + G + B)/3.0;}
+	bool is_valid() const {return (R >= 0 && G >= 0 && B >= 0 && A >= 0 && R <= 1 && G <= 1 && B <= 1 && A <= 1);}
+	void print()    const {cout << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A;}
 	void do_glColor() const {glColor4fv((float *)this);}
 	void do_glColor4ubv() const;
 };
@@ -648,7 +630,7 @@ struct color_wrapper_float { // size = 16
 
 	template<typename T> void set_c3(T const &c_) {c = c_;}
 	void set_c4(colorRGBA const &c_) {c = c_;}
-	colorRGB  get_c3() const {return colorRGB(c.red, c.green, c.blue);}
+	colorRGB  get_c3() const {return colorRGB(c.R, c.G, c.B);}
 	colorRGBA get_c4() const {return c;}
 };
 

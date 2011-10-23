@@ -332,7 +332,7 @@ void draw_sand(colorRGBA &color, float cscale, int mode) {
 	if (!DISABLE_WATER) { // draw ocean barrier as well (upwards normal)
 		glPushMatrix();
 		glTranslatef(0.0, 0.0, oz3);
-		glColor3f(0.3*color.red, color.green, color.blue);
+		glColor3f(0.3*color.R, color.G, color.B);
 		gluCylinder(quadric, 0.25*FAR_CLIP, 0.25*FAR_CLIP, SAND_DEPTH-MWAVE_HEIGHT, N_CYL_SIDES, 1);
 		glPopMatrix();
 	}
@@ -402,7 +402,7 @@ void draw_ocean() {
 	update_incs();
 	float last_alpha(1.0);
 	colorRGBA color(0.1, 0.25, 0.7, 1.0); // ocean color
-	if (display_mode & 0x0100) color.green += 0.1;
+	if (display_mode & 0x0100) color.G += 0.1;
 	point camera(get_camera_pos()), pt(all_zeros);
 	float const cscale(scale_color(color));
 

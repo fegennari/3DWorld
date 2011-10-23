@@ -75,8 +75,8 @@ colorRGBA setup_mesh_lighting() {
 
 	colorRGBA ambient_color(DEF_AMBIENT, DEF_AMBIENT, DEF_AMBIENT, 1.0);
 	colorRGBA diffuse_color(DEF_DIFFUSE, DEF_DIFFUSE, DEF_DIFFUSE, 1.0);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, &diffuse_color.red);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, &ambient_color.red);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, &diffuse_color.R);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, &ambient_color.R);
 	glEnable(GL_COLOR_MATERIAL);
 	diffuse_color.do_glColor();
 	set_fill_mode();
@@ -635,8 +635,8 @@ void water_renderer::draw_vert(float x, float y, float z, bool in_y, bool neg_ed
 	if ((v[!in_y] - p[!in_y] < 0.0) ^ neg_edge) { // camera viewing the inside face of the water side
 		do_line_clip_scene(p, v, zbottom, z);
 		float const atten(WATER_COL_ATTEN*p2p_dist(p, v));
-		atten_by_water_depth(&c.red, atten);
-		c.alpha = CLIP_TO_01(atten);
+		atten_by_water_depth(&c.R, atten);
+		c.A = CLIP_TO_01(atten);
 	}
 	set_color(c);
 	draw_vertex(x, y, z, in_y, tex_scale);
