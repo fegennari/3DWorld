@@ -316,19 +316,9 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 }
 
 
-void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &color, float weight) {
+void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA const &color, float ray_wt, unsigned nrays, int ltype, bool verbose) {
 
-	if (pos.z < 0.0) return; // below the horizon, skip it
-	assert(ptr);
-	rt_data *data((rt_data *)ptr);
-	cout << "Starting on thread " << data->ix << endl;
-	assert(data->num > 0);
-	if (data->is_thread) srand(data->rseed);
-	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
-	float const ray_wt(2.0E5*weight*color.alpha/GLOBAL_RAYS);
-	if (ray_wt == 0.0) return; // error?
-	unsigned const num_tot_rays(max(1U, GLOBAL_RAYS/data->num));
-	cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
+	float const line_length(2.0*get_scene_radius());
 	vector3d const ldir((bnds.get_cube_center() - pos).get_norm());
 	float proj_area[3], tot_area(0.0);
 
@@ -341,24 +331,46 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	}
 	for (unsigned i = 0; i < 3; ++i) {
 		unsigned const d0((i+1)%3), d1((i+2)%3);
-		unsigned const num_rays(unsigned(num_tot_rays*proj_area[i]/tot_area + 0.5));
+		unsigned const num_rays(unsigned(nrays*proj_area[i]/tot_area + 0.5));
 		bool const dir(ldir[i] < 0.0);
 		float const len0(bnds.d[d0][1] - bnds.d[d0][0]), len1(bnds.d[d1][1] - bnds.d[d1][0]);
 		unsigned const n0(max(1U, unsigned(sqrt((float)num_rays)*len0/len1)));
 		unsigned const n1(max(1U, unsigned(sqrt((float)num_rays)*len1/len0)));
 		point pt;
 		pt[i] = bnds.d[i][dir];
-		if (data->verbose) cout << "Dim " << i+1 << " of 3" << endl;
+		if (verbose) cout << "Dim " << i+1 << " of 3" << endl;
 
 		for (unsigned s0 = 0; s0 < n0; ++s0) {
-			pt[d0] = bnds.d[d0][0] + s0*len0/n0;
+			pt[d0] = bnds.d[d0][0] + (s0+0.5)*len0/n0;
 
 			for (unsigned s1 = 0; s1 < n1; ++s1) {
-				pt[d1] = bnds.d[d1][0] + s1*len1/n1;
+				pt[d1] = bnds.d[d1][0] + (s1+0.5)*len1/n1;
 				point const end_pt(pt + (pt - pos).get_norm()*line_length);
-				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, LIGHTING_GLOBAL, 1);
+				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 1);
 			}
 		}
+	}
+}
+
+
+void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &color, float weight) {
+
+	if (pos.z < 0.0) return; // below the horizon, skip it
+	assert(ptr);
+	rt_data *data((rt_data *)ptr);
+	cout << "Starting on thread " << data->ix << endl;
+	assert(data->num > 0);
+	if (data->is_thread) srand(data->rseed);
+	float const ray_wt(2.0E5*weight*color.alpha/GLOBAL_RAYS);
+	if (ray_wt == 0.0) return; // error?
+	cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
+	trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, data->verbose);
+	
+	for (vector<cube_light_source>::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
+		if (data->num == 0) continue; // disabled
+		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
+		//unsigned const num_rays(i->num_rays/data->num);
+		//trace_ray_block_global_cube(i->bounds, pos, color, ray_wt|i->intensity, num_rays, LIGHTING_GLOBAL, data->verbose);
 	}
 	if (data->verbose) {
 		cout << "start rays: " << GLOBAL_RAYS << ", total rays: " << tot_rays << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
@@ -597,7 +609,7 @@ void lmap_manager_t::apply_light_scale(float scale, int ltype) {
 		}
 		else {
 			if (color[3] == 0.0) continue;
-			color[3] = CLIP_TO_01(color[3]*scale);
+			color[3] = min(1.0f, color[3]*scale);
 			if (indir_light_exp != 0.0) {color[3] = pow(color[3], indir_light_exp);} // gamma correction
 			float const max_color(max(color[0], max(color[1], color[2])));
 			if (max_color > 0.0) {UNROLL_3X(color[i_] /= max_color;)} // normalize color
