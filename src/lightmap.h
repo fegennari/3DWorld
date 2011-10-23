@@ -61,7 +61,7 @@ struct lmcell { // size = 56
 	float       *get_offset(int ltype)       {return (sc + 4*ltype);}
 	float const *get_offset(int ltype) const {return (sc + 4*ltype);}
 	static unsigned get_dsz(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? 3 : 4);}
-	void get_final_color(colorRGB &color) const;
+	void get_final_color(colorRGB &color, float max_indir) const;
 	void set_outside_colors();
 };
 

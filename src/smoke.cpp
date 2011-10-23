@@ -237,7 +237,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 					}
 					else {
 						colorRGB color;
-						lmc.get_final_color(color);
+						lmc.get_final_color(color, 1.0);
 						UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
 					}
 				}

@@ -367,9 +367,9 @@ void reset_flow_cache() {
 }
 
 
-void lmcell::get_final_color(colorRGB &color) const {
+void lmcell::get_final_color(colorRGB &color, float max_indir) const {
 
-	UNROLL_3X(color[i_] = (sv*sc[i_]*cur_ambient[i_] + gv*gc[i_]*cur_diffuse[i_] + lc[i_]);)
+	UNROLL_3X(color[i_] = (min(max_indir, sv*sc[i_]*cur_ambient[i_] + gv*gc[i_]*cur_diffuse[i_]) + lc[i_]);)
 }
 
 
@@ -1479,7 +1479,7 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadow
 	assert(lm_alloc && lmap_manager.vlmap);
 	float val(MAX_LIGHT);
 	bool outside_mesh(0);
-	colorRGB cscale(1.0, 1.0, 1.0);
+	colorRGB cscale(cur_ambient.red, cur_ambient.green, cur_ambient.blue);
 	point const p_adj((norm && !has_indir_lighting) ? (p + (*norm)*(0.25*HALF_DXY)) : p);
 	int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY)), z(get_zpos(p_adj.z));
 	
@@ -1493,14 +1493,14 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadow
 	else if (using_lightmap && p.z < czmax && lmap_manager.vlmap[y][x] != NULL) { // not above all collision objects and not empty cell
 		lmcell const &lmc(lmap_manager.vlmap[y][x][z]);
 		val = lmc.sv + lmc.gv;
-		lmc.get_final_color(cscale);
-		//UNROLL_3X(cscale[i_] = lmc.v*lmc.ac[i_];) // add indirect color
-		//ADD_LIGHT_CONTRIB(lmc.lc, ls);
+		lmc.get_final_color(cscale, 0.5);
 	}
 	if (!no_dynamic && !outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
 		get_dynamic_light(x, y, z, p, 1.0, (float *)&cscale, norm, spec);
 	}
-	UNROLL_3X(a[i_] *= cscale[i_];) // unroll the loop
+	// FIXME: Need to divide by ambient term here because we will be multiplying by it in the lighting computation later
+	// Should this set the emissive term? What about materials that are already emissive? Just use a shader everywhere?
+	UNROLL_3X(a[i_] *= min(1.0f, cscale[i_])/max(0.01f, cur_ambient[i_]);)
 	return val;
 }
 

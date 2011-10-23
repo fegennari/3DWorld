@@ -520,6 +520,7 @@ struct colorRGB { // size = 12
 		n.y = 2.0*G - 1.0;
 		n.z = 2.0*B - 1.0;
 	}
+	void print() const {cout << "R: " << R << ", G: " << G << ", B: " << B;}
 	void do_glColor() const {glColor3fv((float *)this);}
 };
 
