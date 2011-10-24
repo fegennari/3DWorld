@@ -39,7 +39,7 @@ vector<user_waypt_t> user_waypoints;
 vector<coll_obj> fixed_cobjs;
 vector<portal> portals;
 vector<obj_draw_group> obj_draw_groups;
-vector<cube_light_source> global_cube_lights;
+cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 extern bool have_platform_cobj, clear_landscape_vbo;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
@@ -1088,20 +1088,25 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'b': // cube volume global light (for sky indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays
+		case 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype
 			{
 				point p1, p2;
-				cube_light_source cls;
+				cube_light_src cls;
 				
-				if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%u", &p1.x, &p2.x, &p1.y, &p2.y, &p1.z, &p2.z,
-					&cls.color.R, &cls.color.G, &cls.color.B, &cls.intensity, &cls.num_rays) != 11)
+				if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%u%i", &p1.x, &p2.x, &p1.y, &p2.y, &p1.z, &p2.z,
+					&cls.color.R, &cls.color.G, &cls.color.B, &cls.intensity, &cls.num_rays, &ivals[0]) != 12)
 				{
 					return read_error(fp, "cube volume global light", coll_obj_file);
 				}
 				xf.xform_pos(p1);
 				xf.xform_pos(p2);
 				cls.bounds = cube_t(p1, p2);
-				global_cube_lights.push_back(cls);
+
+				switch (ivals[0]) {
+				case LIGHTING_SKY:    sky_cube_lights.push_back   (cls); break;
+				case LIGHTING_GLOBAL: global_cube_lights.push_back(cls); break;
+				default: return read_error(fp, "cube volume global light ltype param", coll_obj_file);
+				}
 			}
 			break;
 

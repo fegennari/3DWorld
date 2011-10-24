@@ -66,7 +66,7 @@ extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE;
 extern colorRGBA cur_ambient, cur_diffuse;
 extern vector<coll_obj> coll_objects;
 extern vector<light_source> enabled_lights;
-extern vector<cube_light_source> global_cube_lights;
+extern cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 
 // *** USEFUL INLINES ***
@@ -1226,7 +1226,7 @@ void add_vpls() {
 	if (num_vpls == 0 || (display_mode & 0x08)) return;
 	float const scene_radius(get_scene_radius());
 
-	for (vector<cube_light_source>::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
+	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		// use the ztop plane of the cube for vpls - FIXME: make more dynamic
 		cube_t const &c(i->bounds);
 		float const zval(c.d[2][1]), dx(c.d[0][1] - c.d[0][0]), dy(c.d[1][1] - c.d[1][0]), ar(dy/dx);

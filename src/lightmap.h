@@ -170,12 +170,18 @@ struct flow_cache_e { // size = 16
 };
 
 
-struct cube_light_source {
+struct cube_light_src {
 
 	cube_t bounds;
 	colorRGB color;
 	float intensity;
 	unsigned num_rays;
+};
+
+
+class cube_light_src_vect : public vector<cube_light_src> {
+public:
+	bool ray_intersects_any(point const &start_pt, point const &end_pt) const;
 };
 
 

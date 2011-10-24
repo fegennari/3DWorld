@@ -29,7 +29,7 @@ extern vector<light_source> light_sources;
 extern vector<coll_obj> coll_objects;
 extern vector<laser_beam> lasers;
 extern lmap_manager_t lmap_manager;
-extern vector<cube_light_source> global_cube_lights;
+extern cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 
 float get_scene_radius() {return sqrt(2.0*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
@@ -47,6 +47,7 @@ void increment_printed_number(unsigned num) {
 void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
 
 	if (first_pt && ltype == LIGHTING_GLOBAL) weight *= first_ray_weight; // lower weight - handled by direct illumination
+	if (weight < TOLERANCE) return;
 	colorRGBA const cw(color*weight);
 	float const dist(p2p_dist(p1, p2)); // dist can be 0
 	unsigned const nsteps(1 + unsigned(dist/get_step_size())); // round up
@@ -316,8 +317,19 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 }
 
 
-void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA const &color, float ray_wt, unsigned nrays, int ltype, bool verbose) {
+bool cube_light_src_vect::ray_intersects_any(point const &start_pt, point const &end_pt) const {
 
+	// skip any lines that cross a cube light because otherwise we would doubly add the contribution from that pos/dir
+	for (const_iterator i = begin(); i != end(); ++i) {
+		if (i->intensity != 0.0 && check_line_clip(start_pt, end_pt, i->bounds.d)) return 1;
+	}
+	return 0;
+}
+
+
+void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA const &color,
+	float ray_wt, unsigned nrays, int ltype, bool is_scene_cube, bool verbose)
+{
 	float const line_length(2.0*get_scene_radius());
 	vector3d const ldir((bnds.get_cube_center() - pos).get_norm());
 	float proj_area[3], tot_area(0.0);
@@ -346,6 +358,7 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 			for (unsigned s1 = 0; s1 < n1; ++s1) {
 				pt[d1] = bnds.d[d1][0] + (s1+0.5)*len1/n1;
 				point const end_pt(pt + (pt - pos).get_norm()*line_length);
+				if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
 				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 1);
 			}
 		}
@@ -364,13 +377,13 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	float const ray_wt(2.0E5*weight*color.alpha/GLOBAL_RAYS);
 	if (ray_wt == 0.0) return; // error?
 	cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
-	trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, data->verbose);
+	trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 1, data->verbose);
 	
-	for (vector<cube_light_source>::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
+	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		if (data->num == 0) continue; // disabled
 		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
-		//unsigned const num_rays(i->num_rays/data->num);
-		//trace_ray_block_global_cube(i->bounds, pos, color, ray_wt|i->intensity, num_rays, LIGHTING_GLOBAL, data->verbose);
+		unsigned const num_rays(i->num_rays/data->num);
+		trace_ray_block_global_cube(i->bounds, pos, color, weight*i->intensity, num_rays, LIGHTING_GLOBAL, 0, data->verbose);
 	}
 	if (data->verbose) {
 		cout << "start rays: " << GLOBAL_RAYS << ", total rays: " << tot_rays << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
@@ -426,21 +439,15 @@ void *trace_ray_block_sky(void *ptr) {
 			for (unsigned r = 0; r < NRAYS; ++r) {
 				if (dot_product(dirs[r], pt) >= 0.0) continue; // can get here when (-Z_SCENE_SIZE, Z_SCENE_SIZE) does not contain (czmin, czmax)
 				point const end_pt(pt + dirs[r]*line_length);
-				bool skip_this_line(0);
-
-				// skip any lines that cross a global cube light because otherwise we would doubly add the contribution from that pos/dir
-				for (vector<cube_light_source>::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
-					if (check_line_clip(pt, end_pt, i->bounds.d)) {skip_this_line = 1; break;}
-				}
-				if (skip_this_line) continue;
+				if (sky_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
 				cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 1);
 				++start_rays;
 			}
 		}
 	}
-	for (vector<cube_light_source>::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
+	for (cube_light_src_vect::const_iterator i = sky_cube_lights.begin(); i != sky_cube_lights.end(); ++i) {
 		if (data->num == 0) continue; // disabled
-		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
+		if (data->verbose) cout << "Cube volume light source " << (i - sky_cube_lights.begin()) << " of " << sky_cube_lights.size() << endl;
 		unsigned const num_rays(i->num_rays/data->num);
 		point pt;
 
