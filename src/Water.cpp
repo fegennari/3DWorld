@@ -183,11 +183,8 @@ void get_object_color(int cindex, colorRGBA &color) {
 
 	assert(unsigned(cindex) < coll_objects.size());
 	coll_obj const &cobj(coll_objects[cindex]);
-
-	// invisible simleys don't have a reflection
-	if (cobj.cp.coll_func == smiley_collision && has_invisibility(cobj.cp.cf_index)) return;
-	color = cobj.cp.color;
-	if (cobj.cp.tid >= 0) color = color.modulate_with(texture_color(cobj.cp.tid));
+	if (cobj.cp.coll_func == smiley_collision && has_invisibility(cobj.cp.cf_index)) return; // invisible simleys don't have a reflection
+	color = cobj.get_avg_color();
 }
 
 

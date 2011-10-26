@@ -474,6 +474,14 @@ float coll_obj::get_light_transmit(point v1, point v2) const {
 }
 
 
+colorRGBA coll_obj::get_avg_color() const {
+
+	colorRGBA color(cp.color);
+	if (cp.tid >= 0) color = color.modulate_with(texture_color(cp.tid));
+	return color;
+}
+
+
 bool coll_obj::has_poly_billboard_alpha() const {
 
 	if (!is_billboard || !is_thin_poly() || npoints != 4) return 0;

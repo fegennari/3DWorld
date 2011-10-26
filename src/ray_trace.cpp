@@ -199,8 +199,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 		get_lum_alpha(cobj.cp.color, cobj.cp.tid, luminance, alpha); // use alpha?
 		specular = cobj.cp.specular;
 		weight  *= luminance;
-		color    = color.modulate_with(cobj.cp.color);
-		if (cobj.cp.tid >= 0) color = color.modulate_with(texture_color(cobj.cp.tid));
+		color    = color.modulate_with(cobj.get_avg_color());
 
 		// calculate refracted ray
 		if (alpha < 1.0) { // semi-transparent

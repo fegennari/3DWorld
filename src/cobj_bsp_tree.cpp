@@ -6,13 +6,29 @@
 #include "physics_objects.h"
 
 
-bool const BUILD_COBJ_TREE = 1;
+bool const BUILD_COBJ_TREE   = 1;
+unsigned const MAX_LEAF_SIZE = 2;
 
 
 extern int display_mode, frame_counter, cobj_counter;
 extern vector<coll_obj> coll_objects;
 extern vector<unsigned> falling_cobjs;
 extern platform_cont platforms;
+
+
+struct coll_triangle : public triangle { // size = 64
+	vector3d normal;
+	colorRGBA color;
+
+	coll_triangle() {}
+
+	coll_triangle(coll_obj const &c) : triangle(c.points), normal(c.norm), color(c.get_avg_color()) {
+		assert(c.status == COLL_STATIC || c.status == COLL_DYNAMIC);
+		assert(c.type == COLL_POLYGON);
+		assert(c.npoints == 3);
+		assert(c.thickness <= MIN_POLY_THICK);
+	}
+};
 
 
 // 3: BSP Tree/KD-Tree, 8: OctTree
@@ -235,7 +251,7 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims) {
 	assert(n.start < n.end);
 	calc_node_bbox(n);
 	unsigned const num(n.end - n.start);
-	if (num <= 2 || skip_dims == 7) return; // base case
+	if (num <= MAX_LEAF_SIZE || skip_dims == 7) return; // base case
 	
 	// determine split dimension and value
 	unsigned dim(0);
@@ -307,7 +323,7 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims) {
 	assert(n.start < n.end);
 	calc_node_bbox(n);
 	unsigned const num(n.end - n.start);
-	if (num <= 2 || skip_dims) return; // base case
+	if (num <= MAX_LEAF_SIZE || skip_dims) return; // base case
 	
 	// determine split values
 	point const sval(n.get_cube_center()); // center point

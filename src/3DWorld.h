@@ -674,6 +674,7 @@ template<typename T> struct triangle_t {
 
 	triangle_t() {}
 	triangle_t(T const &p1, T const &p2, T const &p3) {pts[0] = p1; pts[1] = p2; pts[2] = p3;}
+	triangle_t(T const *const p) {pts[0] = p[0]; pts[1] = p[1]; pts[2] = p[2];}
 };
 
 typedef triangle_t<point>        triangle;

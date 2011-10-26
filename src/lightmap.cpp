@@ -1261,9 +1261,7 @@ void add_vpls() {
 						cpos += cnorm*(light_size*0.01);
 						assert(cindex >= 0);
 						coll_obj const &cobj(coll_objects[cindex]);
-						colorRGBA color(base_color);
-						color = color.modulate_with(cobj.cp.color);
-						if (cobj.cp.tid >= 0) color = color.modulate_with(texture_color(cobj.cp.tid));
+						colorRGBA const color(base_color.modulate_with(cobj.get_avg_color()));
 						add_dynamic_light(dp*light_size, cpos, color, cnorm, 0.5); // 180 degree point spotlight
 						//set_color(color); draw_sphere_at(cpos, dp*light_size, N_SPHERE_DIV);
 					}
