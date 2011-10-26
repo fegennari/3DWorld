@@ -77,21 +77,19 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 		case COLL_CYLINDER_ROT:
 			return line_intersect_cylinder(p1, p2, cylinder_3dw(points[0], points[1], radius, radius2), !(cp.surfs & 1));
 		case COLL_POLYGON: // must be coplanar
-			{
-				assert(npoints >= 3);
-				vector3d const v1(p2, p1);
+			assert(npoints >= 3);
 
-				if (thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
-					static vector<point> pts[2];
-					gen_poly_planes(points, npoints, norm, thickness, pts);
-					bool const test_side(dot_product(v1, norm) > 0.0);
-					if (thick_poly_intersect(v1, p1, norm, pts, test_side, npoints)) return 1;
-				}
-				else { // test planar (2D) polygon
-					float t;
-					if (!line_poly_intersect(p1, p2, points, npoints, norm, t)) return 0;
-					return check_poly_billboard_alpha(p1, p2, t);
-				}
+			if (thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
+				static vector<point> pts[2];
+				gen_poly_planes(points, npoints, norm, thickness, pts);
+				vector3d const v1(p2, p1);
+				bool const test_side(dot_product(v1, norm) > 0.0);
+				if (thick_poly_intersect(v1, p1, norm, pts, test_side, npoints)) return 1;
+			}
+			else { // test planar (2D) polygon
+				float t;
+				if (!line_poly_intersect(p1, p2, points, npoints, norm, t)) return 0;
+				return check_poly_billboard_alpha(p1, p2, t);
 			}
 			break;
 	}
@@ -191,8 +189,7 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 					}
 					return (t <= tmax && t >= tmin);
 				}
-				if (!line_poly_intersect(p1, p2, points, npoints, norm, t)) return 0;
-				if (t > tmax || t < tmin) return 0;
+				if (!line_poly_intersect(p1, p2, points, npoints, norm, t) || t > tmax || t < tmin) return 0;
 				if (!check_poly_billboard_alpha(p1, p2, t)) return 0;
 				cnorm = get_poly_dir_norm(norm, p1, (p2 - p1), t);
 				return 1;

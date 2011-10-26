@@ -28,6 +28,21 @@ struct coll_triangle : public triangle { // size = 64
 		assert(c.npoints == 3);
 		assert(c.thickness <= MIN_POLY_THICK);
 	}
+	cube_t get_bounding_cube() const {
+		return cube_t(min(pts[0].x, min(pts[1].x, pts[2].x)), max(pts[0].x, max(pts[1].x, pts[2].x)),
+			          min(pts[0].y, min(pts[1].y, pts[2].y)), max(pts[0].y, max(pts[1].y, pts[2].y)),
+			          min(pts[0].z, min(pts[1].z, pts[2].z)), max(pts[0].z, max(pts[1].z, pts[2].z)));
+	}
+	bool line_intersect(point const &p1, point const &p2) const {
+		//if (!check_line_clip(p1, p2, get_bounding_cube().d)) return 0;
+		float t;
+		return line_poly_intersect(p1, p2, pts, 3, normal, t);
+	}
+	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const {
+		if (!line_poly_intersect(p1, p2, pts, 3, normal, t) || t > tmax || t < tmin) return 0;
+		cnorm = get_poly_dir_norm(normal, p1, (p2 - p1), t);
+		return 1;
+	}
 };
 
 

@@ -285,12 +285,6 @@ bool thick_poly_intersect(vector3d const &v1, point const &p1, vector3d const &n
 }
 
 
-vector3d get_poly_dir_norm(vector3d const &norm, point const &p1, vector3d const &v1, float t) {
-
-	return ((dot_product_ptv(norm, p1, (p1 + v1*t)) < 0.0) ? norm*-1.0 : norm);
-}
-
-
 bool sphere_intersect_poly_sides(vector<vector<point> > const &pts, point const &center,
 								 float radius, float &dist, vector3d &norm, bool strict)
 {

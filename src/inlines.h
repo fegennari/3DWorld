@@ -295,6 +295,12 @@ template<typename T> inline void matrix_mult(pointT<T> const &vin, pointT<T> &vo
 	vout[2] = T(vin[0]*m[2][0] + vin[1]*m[2][1] + vin[2]*m[2][2]);
 }
 
+
+inline vector3d get_poly_dir_norm(vector3d const &norm, point const &p1, vector3d const &v1, float t) {
+	return ((dot_product_ptv(norm, p1, (p1 + v1*t)) < 0.0) ? norm*-1.0 : norm);
+}
+
+
 inline point get_center_n2(point const *const pts) {
 	return ((pts[0] + pts[1])*0.5);
 }

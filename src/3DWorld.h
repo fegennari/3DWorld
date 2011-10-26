@@ -1440,7 +1440,6 @@ bool line_int_plane(point const &p1, point const &p2, point const &pp0, vector3d
 					point &p_int, float &t, bool ignore_t);
 bool thick_poly_intersect(vector3d const &v1, point const &p1, vector3d const &norm,
 						  vector<point> const pts[2], bool test_side, unsigned npoints);
-vector3d get_poly_dir_norm(vector3d const &norm, point const &p1, vector3d const &v1, float t);
 bool sphere_intersect_poly_sides(vector<vector<point> > const &pts, point const &center,
 								 float radius, float &dist, vector3d &norm, bool strict);
 bool pt_line_seg_dist_less_than(point const &P, point const &L1, point const &L2, float dist);
