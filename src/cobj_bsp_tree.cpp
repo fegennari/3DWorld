@@ -8,6 +8,7 @@
 
 bool const BUILD_COBJ_TREE   = 1;
 unsigned const MAX_LEAF_SIZE = 2;
+float const POLY_TOLER       = 1.0E-6;
 
 
 extern int display_mode, frame_counter, cobj_counter;
@@ -16,40 +17,48 @@ extern vector<unsigned> falling_cobjs;
 extern platform_cont platforms;
 
 
-struct coll_triangle : public triangle { // size = 52
+struct coll_tquad { // size = 60
 
+	point pts[4];
 	vector3d normal;
-	unsigned cid;
+	unsigned cid, npts;
 
-	coll_triangle() {}
-	coll_triangle(coll_obj const &c) : triangle(c.points), normal(c.norm), cid(c.id) {assert(is_cobj_valid(c));}
+	coll_tquad() {}
 
+	coll_tquad(coll_obj const &c) : normal(c.norm), cid(c.id), npts(c.npoints) {
+		assert(is_cobj_valid(c));
+		for (unsigned i = 0; i < npts; ++i) {pts[i] = c.points[i];}
+	}
 	static bool is_cobj_valid(coll_obj const &c) {
-		return (!c.disabled() && c.type == COLL_POLYGON && c.npoints == 3 && c.thickness <= MIN_POLY_THICK);
+		return (!c.disabled() && c.type == COLL_POLYGON && (c.npoints == 3 || c.npoints == 4) && c.thickness <= MIN_POLY_THICK);
 	}
 	cube_t get_bounding_cube() const {
-		return cube_t(min(pts[0].x, min(pts[1].x, pts[2].x)), max(pts[0].x, max(pts[1].x, pts[2].x)),
-			          min(pts[0].y, min(pts[1].y, pts[2].y)), max(pts[0].y, max(pts[1].y, pts[2].y)),
-			          min(pts[0].z, min(pts[1].z, pts[2].z)), max(pts[0].z, max(pts[1].z, pts[2].z)));
+		cube_t cube(pts[0].x, pts[0].x, pts[0].y, pts[0].y, pts[0].z, pts[0].z);
+
+		for (unsigned i = 1; i < npts; ++i) {
+			UNROLL_3X(cube.d[i_][0] = min(cube.d[i_][0], pts[i][i_]); cube.d[i_][1] = max(cube.d[i_][1], pts[i][i_]););
+		}
+		UNROLL_3X(cube.d[i_][0] -= POLY_TOLER; cube.d[i_][1] += POLY_TOLER;);
+		return cube;
 	}
 	bool line_intersect(point const &p1, point const &p2) const {
 		//if (!check_line_clip(p1, p2, get_bounding_cube().d)) return 0;
 		float t;
-		return line_poly_intersect(p1, p2, pts, 3, normal, t);
+		return line_poly_intersect(p1, p2, pts, npts, normal, t);
 	}
 	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const {
-		if (!line_poly_intersect(p1, p2, pts, 3, normal, t) || t > tmax || t < tmin) return 0;
+		if (!line_poly_intersect(p1, p2, pts, npts, normal, t) || t > tmax || t < tmin) return 0;
 		cnorm = get_poly_dir_norm(normal, p1, (p2 - p1), t);
 		return 1;
 	}
 };
 
 
-struct tree_coll_triangle : public coll_triangle { // size = 56
+struct tree_coll_tquad : public coll_tquad { // size = 64
 	unsigned char bix;
-	tree_coll_triangle() {}
-	tree_coll_triangle(coll_obj const &c) : coll_triangle(c) {}
-	bool operator<(tree_coll_triangle const &t) const {return (bix < t.bix);} // sort by bix
+	tree_coll_tquad() {}
+	tree_coll_tquad(coll_obj const &c) : coll_tquad(c) {}
+	bool operator<(tree_coll_tquad const &t) const {return (bix < t.bix);} // sort by bix
 };
 
 
@@ -59,7 +68,6 @@ protected:
 	struct tree_node : public cube_t { // size = 36
 		unsigned start, end; // index into cixs for leaves
 		unsigned next_node_id;
-		//unsigned char split_dim;
 
 		tree_node(unsigned s=0, unsigned e=0) : start(s), end(e), next_node_id(0) {
 			UNROLL_3X(d[i_][0] = d[i_][1] = 0.0;)
@@ -69,12 +77,12 @@ protected:
 	vector<tree_node> nodes;
 
 	struct node_ix_mgr {
-		point const p1;
+		point const p1, p2;
 		vector3d dinv;
 		vector<tree_node> const &nodes;
 
 		node_ix_mgr(vector<tree_node> const &nodes_, point const &p1_, point const &p2_)
-			: nodes(nodes_), p1(p1_), dinv(p2_ - p1_) {dinv.invert(0, 1);}
+			: nodes(nodes_), p1(p1_), p2(p2_), dinv(p2 - p1) {dinv.invert(0, 1);}
 
 		bool check_node(unsigned &nix) const {
 			tree_node const &n(nodes[nix]);
@@ -96,16 +104,16 @@ public:
 };
 
 
-class cobj_tree_triangles_t : public cobj_tree_base {
+class cobj_tree_triangles_t : public cobj_tree_base { // unused
 
-	vector<tree_coll_triangle> tris;
+	vector<tree_coll_tquad> tquads;
 
 	void calc_node_bbox(tree_node &n) const {
-		assert(n.start < n.end && n.end <= tris.size());
-		n.copy_from(tris[n.start].get_bounding_cube());
+		assert(n.start < n.end && n.end <= tquads.size());
+		n.copy_from(tquads[n.start].get_bounding_cube());
 
 		for (unsigned i = n.start+1; i < n.end; ++i) { // bbox union
-			n.union_with_cube(tris[i].get_bounding_cube());
+			n.union_with_cube(tquads[i].get_bounding_cube());
 		}
 	}
 
@@ -137,18 +145,18 @@ class cobj_tree_triangles_t : public cobj_tree_base {
 
 		// split in this dimension
 		for (unsigned i = n.start; i < n.end; ++i) {
-			tris[i].bix = 2;
-			cube_t const cube(tris[i].get_bounding_cube());
+			tquads[i].bix = 2;
+			cube_t const cube(tquads[i].get_bounding_cube());
 			assert(cube.d[dim][0] <= cube.d[dim][1]);
-			if (cube.d[dim][1] <= sval) tris[i].bix = 0; // ends   before the split, put in bin 0
-			if (cube.d[dim][0] >= sval) tris[i].bix = 1; // starts after  the split, put in bin 1
+			if (cube.d[dim][1] <= sval) tquads[i].bix = 0; // ends   before the split, put in bin 0
+			if (cube.d[dim][0] >= sval) tquads[i].bix = 1; // starts after  the split, put in bin 1
 		}
-		sort((tris.begin() + n.start), (tris.begin() + n.end)); // sort by bix then by ix
+		sort((tquads.begin() + n.start), (tquads.begin() + n.end)); // sort by bix then by ix
 		unsigned bin_count[3] = {0};
 
 		for (unsigned i = n.start; i < n.end; ++i) {
-			assert(tris[i].bix < 3);
-			++bin_count[tris[i].bix];
+			assert(tquads[i].bix < 3);
+			++bin_count[tquads[i].bix];
 		}
 
 		// check that dataset has been subdivided (not all in one bin)
@@ -174,44 +182,31 @@ class cobj_tree_triangles_t : public cobj_tree_base {
 		n2.start = n2.end = 0; // branch node has no leaves
 	}
 
-
 public:
 	void clear() {
 		cobj_tree_base::clear();
-		tris.clear(); // reserve(0)?
+		tquads.clear(); // reserve(0)?
 	}
 
 	void add_cobjs(vector<coll_obj> const &cobjs, bool verbose) {
 		RESET_TIME;
 		clear();
-		tris.reserve(cobjs.size()); // is this a good idea?
+		tquads.reserve(cobjs.size()); // is this a good idea?
 		
 		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-			//if (i->disabled()) continue;
 			if (i->status != COLL_STATIC) continue;
 			assert(i->type == COLL_POLYGON && i->thickness <= MIN_POLY_THICK);
-
-			if (i->npoints == 4) { // quad => 2 triangles
-				coll_obj cobj(*i);
-				cobj.npoints = 3;
-				tris.push_back(tree_coll_triangle(cobj));
-				cobj.points[1] = cobj.points[2];
-				cobj.points[2] = cobj.points[3];
-				tris.push_back(tree_coll_triangle(cobj));
-			}
-			else {
-				tris.push_back(tree_coll_triangle(*i));
-			}
+			tquads.push_back(tree_coll_tquad(*i));
 		}
-		nodes.reserve(6*tris.size()/5); // conservative
-		nodes.push_back(tree_node(0, tris.size()));
+		nodes.reserve(6*tquads.size()/5); // conservative
+		nodes.push_back(tree_node(0, tquads.size()));
 		assert(nodes.size() == 1);
 		build_tree(0, 0);
 		nodes[0].next_node_id = nodes.size();
 
 		if (verbose) {
 			PRINT_TIME(" Cobj Tree Triangles Create");
-			cout << "cobjs: " << cobjs.size() << ", leaves: " << tris.size() << ", nodes: " << nodes.size() << endl;
+			cout << "cobjs: " << cobjs.size() << ", leaves: " << tquads.size() << ", nodes: " << nodes.size() << endl;
 		}
 	}
 
@@ -221,17 +216,18 @@ public:
 		bool ret(0);
 		float t(0.0), tmin(0.0), tmax(1.0);
 		node_ix_mgr nixm(nodes, p1, p2);
+		unsigned const num_nodes(nodes.size());
 
-		for (unsigned nix = 0; nix < nodes.size();) {
+		for (unsigned nix = 0; nix < num_nodes;) {
 			tree_node const &n(nodes[nix]);
 			if (!nixm.check_node(nix)) continue;
 
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 				// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 				// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
-				if ((int)tris[i].cid == ignore_cobj) continue;
-				if (!tris[i].line_int_exact(p1, p2, t, cnorm, tmin, tmax)) continue;
-				cindex = tris[i].cid;
+				if ((int)tquads[i].cid == ignore_cobj) continue;
+				if (!tquads[i].line_int_exact(p1, p2, t, cnorm, tmin, tmax)) continue;
+				cindex = tquads[i].cid;
 				cpos   = p1 + (p2 - p1)*t;
 				if (!exact) return 1; // return first hit
 				nixm.dinv = vector3d(cpos - p1);
@@ -332,8 +328,9 @@ public:
 		bool ret(0);
 		float t(0.0), tmin(0.0), tmax(1.0);
 		node_ix_mgr nixm(nodes, p1, p2);
+		unsigned const num_nodes(nodes.size());
 
-		for (unsigned nix = 0; nix < nodes.size();) {
+		for (unsigned nix = 0; nix < num_nodes;) {
 			tree_node const &n(nodes[nix]);
 			if (!nixm.check_node(nix)) continue;
 
@@ -360,7 +357,9 @@ public:
 	}
 
 	void get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const {
-		for (unsigned nix = 0; nix < nodes.size();) {
+		unsigned const num_nodes(nodes.size());
+
+		for (unsigned nix = 0; nix < num_nodes;) {
 			tree_node const &n(nodes[nix]);
 			assert(n.start <= n.end);
 
@@ -387,8 +386,9 @@ public:
 	bool is_cobj_contained(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const {
 		if (nodes.empty()) return 0;
 		node_ix_mgr nixm(nodes, p1, p2);
+		unsigned const num_nodes(nodes.size());
 
-		for (unsigned nix = 0; nix < nodes.size();) {
+		for (unsigned nix = 0; nix < num_nodes;) {
 			tree_node const &n(nodes[nix]);
 			if (!nixm.check_node(nix)) continue;
 
@@ -408,8 +408,9 @@ public:
 	void get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs) const {
 		if (nodes.empty()) return;
 		node_ix_mgr nixm(nodes, pos1, pos2);
+		unsigned const num_nodes(nodes.size());
 
-		for (unsigned nix = 0; nix < nodes.size();) {
+		for (unsigned nix = 0; nix < num_nodes;) {
 			tree_node const &n(nodes[nix]);
 			if (!nixm.check_node(nix)) continue;
 			
@@ -548,7 +549,6 @@ cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0, 0);
 cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
 cobj_tree_type cobj_tree_occlude(coll_objects, 1, 0, 1, 0);
 cobj_tree_type cobj_tree_moving (coll_objects, 1, 0, 0, 1);
-cobj_tree_triangles_t cobj_tree_static_triangles;
 int last_update_frame[2] = {1, 1}; // first drawn frame is 1
 
 
