@@ -612,12 +612,10 @@ void lmap_manager_t::apply_light_scale(float scale, int ltype) {
 
 		if (ltype == LIGHTING_LOCAL) {
 			UNROLL_3X(color[i_] = min(1.0f, (color[i_]*scale)););
-			if (indir_light_exp != 0.0) {UNROLL_3X(color[i_] = pow(color[i_], indir_light_exp););} // gamma correction
 		}
 		else {
 			if (color[3] == 0.0) continue;
 			color[3] = min(1.0f, color[3]*scale);
-			if (indir_light_exp != 0.0) {color[3] = pow(color[3], indir_light_exp);} // gamma correction
 			float const max_color(max(color[0], max(color[1], color[2])));
 			if (max_color > 0.0) {UNROLL_3X(color[i_] /= max_color;)} // normalize color
 		}

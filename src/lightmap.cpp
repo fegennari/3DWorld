@@ -62,7 +62,7 @@ lmap_manager_t lmap_manager;
 extern bool disable_shaders;
 extern int animate2, display_mode, frame_counter, read_light_files[], write_light_files[];
 extern unsigned num_vpls;
-extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE;
+extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp;
 extern colorRGBA cur_ambient, cur_diffuse;
 extern vector<coll_obj> coll_objects;
 extern vector<light_source> enabled_lights;
@@ -369,7 +369,9 @@ void reset_flow_cache() {
 
 void lmcell::get_final_color(colorRGB &color, float max_indir) const {
 
-	UNROLL_3X(color[i_] = (min(max_indir, sv*sc[i_]*cur_ambient[i_] + gv*gc[i_]*cur_diffuse[i_]) + lc[i_]);)
+	UNROLL_3X(float indir_term(sv*sc[i_]*cur_ambient[i_] + gv*gc[i_]*cur_diffuse[i_]); \
+		if (indir_light_exp != 1.0) indir_term = pow(indir_term, indir_light_exp); \
+		color[i_] = (min(max_indir, indir_term) + lc[i_]);)
 }
 
 

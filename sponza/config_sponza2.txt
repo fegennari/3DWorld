@@ -75,10 +75,12 @@ ship_def_file universe/ship_defs.txt
 
 num_vpls 256
 num_threads 8
+max_ray_bounces 4
 num_light_rays 10000 10000 1000000 10000000
 lighting_file_sky    sponza/lighting2.data 0 0.4
 lighting_file_global sponza/lighting2.sun.data 0 0.6 0.25
 lighting_file_local  sponza/lighting_local2.data 0 1.0
+indir_light_exp 1.0
 
 end
 
