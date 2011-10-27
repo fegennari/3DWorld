@@ -78,7 +78,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 
 	// find intersection point with scene cobjs
 	point orig_p1(p1);
-	if (!do_line_clip_scene(p1, p2, min(zbottom, czmin), max(ztop, czmax)) || is_under_mesh(p1)) return;
+	if (!do_line_clip_scene(p1, p2, min(zbottom, czmin), max(ztop, czmax)) || ((display_mode & 0x01) && is_under_mesh(p1))) return;
 	int cindex(-1), xpos, ypos;
 	point cpos(p2);
 	vector3d cnorm;
