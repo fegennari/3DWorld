@@ -15,7 +15,7 @@ float const SNOW_ALBEDO   = 0.9;
 float const ICE_ALBEDO    = 0.8;
 
 bool keep_lasers(0); // debugging mode
-unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1);
+unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1}; // sky, global, local
 unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1}; // sky, global, local
@@ -70,8 +70,9 @@ void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, 
 
 
 void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA color,
-					float line_length, int ignore_cobj, int ltype, bool first_pt)
+					float line_length, int ignore_cobj, int ltype, unsigned depth)
 {
+	if (depth > MAX_RAY_BOUNCES) return;
 	assert(!is_nan(p1) && !is_nan(p2));
 	++tot_rays;
 
@@ -88,10 +89,10 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	assert(coll ? (cindex >= 0 && cindex < (int)coll_objects.size()) : (cindex == -1));
 
 	// p1 starts inside a cobj, so find the intersection point with a reverse ray
-	if (first_pt && coll && cpos == orig_p1) {
+	if (depth == 0 && coll && cpos == orig_p1) {
 		if (coll_objects[cindex].line_int_exact(p2, p1, t, cnorm, 0.0, 1.0)) {
 			cpos = (p2 + (p1 - p2)*t);
-			cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, 0);
+			cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, depth+1);
 			return;
 		}
 	}
@@ -147,7 +148,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	if (!coll) return; // more efficient to do this up here and let a reverse ray from the sky light this path
 
 	// walk from p1 to p2, adding light to all lightmap cells encountered
-	add_path_to_lmcs(p1, p2, weight, color, ltype, first_pt);
+	add_path_to_lmcs(p1, p2, weight, color, ltype, (depth == 0));
 	//if (!coll)    return;
 	if (p1 == p2) return; // line must have started inside a cobj - this is bad, but what can we do?
 
@@ -224,7 +225,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 						// test for collision with reversed ray to get the other intersection point
 						if (cobj.line_int_exact(p_end, p2, t, cnorm2, 0.0, 1.0)) { // not sure what to do if fails or tmax >= 1.0
 							point const p_int(p_end + (p2 - p_end)*t);
-							if (!dist_less_than(p2, p_int, get_step_size())) add_path_to_lmcs(p2, p_int, weight, color, ltype, first_pt);
+							if (!dist_less_than(p2, p_int, get_step_size())) add_path_to_lmcs(p2, p_int, weight, color, ltype, (depth == 0));
 							
 							if (calc_refraction_angle(v_refract, v_refract2, cnorm2*-1, cobj.cp.refract_ix, 1.0)) {
 								p2    = p_int;
@@ -241,7 +242,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 						no_transmit = 1; // total internal reflection (could process an internal reflection)
 					}
 				}
-				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, ltype, 0); // transmitted
+				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, ltype, depth+1); // transmitted
 			}
 			weight *= rweight; // reflected weight
 		}
@@ -253,14 +254,14 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	vector3d v_ref;
 	calc_reflection_angle(dir, v_ref, cnorm);
 	v_ref.normalize();
-	unsigned const num_splits(first_pt ? INIT_RAY_SPLITS[ltype] : NUM_RAY_SPLITS[ltype]);
+	unsigned const num_splits((depth == 0) ? INIT_RAY_SPLITS[ltype] : NUM_RAY_SPLITS[ltype]);
 	
 	for (unsigned n = 0; n < num_splits; ++n) {
 		vector3d new_v(signed_rand_vector().get_norm()); // add random diffuse scatter
 		if (dot_product(new_v, cnorm) < 0.0) new_v.negate(); // make in same direction as normal
 		vector3d const v_new((v_ref*specular + new_v*(1.0 - specular)).get_norm());
 		p2 = p1 + v_new*line_length; // ending point: effectively at infinity
-		cast_light_ray(cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, 0);
+		cast_light_ray(cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, depth+1);
 	}
 }
 
@@ -358,7 +359,7 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 				pt[d1] = bnds.d[d1][0] + (s1+0.5)*len1/n1;
 				point const end_pt(pt + (pt - pos).get_norm()*line_length);
 				if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
-				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 1);
+				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0);
 			}
 		}
 	}
@@ -439,7 +440,7 @@ void *trace_ray_block_sky(void *ptr) {
 				if (dot_product(dirs[r], pt) >= 0.0) continue; // can get here when (-Z_SCENE_SIZE, Z_SCENE_SIZE) does not contain (czmin, czmax)
 				point const end_pt(pt + dirs[r]*line_length);
 				if (sky_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
-				cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 1);
+				cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 0);
 				++start_rays;
 			}
 		}
@@ -457,7 +458,7 @@ void *trace_ray_block_sky(void *ptr) {
 			vector3d dir(signed_rand_vector_norm());
 			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
 			point const end_pt(pt + dir*line_length);
-			cast_light_ray(pt, end_pt, i->intensity, i->intensity, i->color, line_length, -1, LIGHTING_SKY, 1);
+			cast_light_ray(pt, end_pt, i->intensity, i->intensity, i->color, line_length, -1, LIGHTING_SKY, 0);
 			++cube_start_rays;
 		}
 	}
@@ -501,7 +502,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 			start_pt = lpos + dir*r_inner;
 		}
 		point const end_pt(start_pt + dir*line_length);
-		cast_light_ray(start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, LIGHTING_LOCAL, 1);
+		cast_light_ray(start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, LIGHTING_LOCAL, 0);
 	}
 }
 
