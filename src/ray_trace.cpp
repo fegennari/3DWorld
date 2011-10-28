@@ -368,17 +368,19 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 
 void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &color, float weight) {
 
-	if (pos.z < 0.0) return; // below the horizon, skip it
+	if (pos.z < 0.0 || weight == 0.0 || color.alpha == 0.0) return; // below the horizon or zero weight, skip it
 	assert(ptr);
 	rt_data *data((rt_data *)ptr);
 	cout << "Starting on thread " << data->ix << endl;
 	assert(data->num > 0);
 	if (data->is_thread) srand(data->rseed);
-	float const ray_wt(2.0E5*weight*color.alpha/GLOBAL_RAYS);
-	if (ray_wt == 0.0) return; // error?
-	cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
-	trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 1, data->verbose);
-	
+
+	if (GLOBAL_RAYS > 0) {
+		float const ray_wt(2.0E5*weight*color.alpha/GLOBAL_RAYS);
+		assert(ray_wt > 0.0);
+		cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
+		trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 1, data->verbose);
+	}
 	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		if (data->num == 0) continue; // disabled
 		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
@@ -393,7 +395,7 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 
 void *trace_ray_block_global(void *ptr) {
 
-	if (GLOBAL_RAYS == 0) return 0; // nothing to do
+	if (GLOBAL_RAYS == 0 && global_cube_lights.empty()) return 0; // nothing to do
 	// FIXME: what about universe mode/combined_gu?
 	// Note1: The light color here is white because it will be multiplied by the ambient color later,
 	//        and the moon color is generally similar to the sun color so they can be approximated as equal
@@ -474,8 +476,9 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 
 	point const &lpos(ls.get_center());
 	colorRGBA lcolor(ls.get_color());
+	if (LOCAL_RAYS == 0 || lcolor.alpha == 0.0) return; // nothing to do
 	float const ray_wt(1000.0*lcolor.alpha*ls.get_radius()/LOCAL_RAYS), r_inner(ls.get_r_inner());
-	if (ray_wt == 0.0) return; // error?
+	assert(ray_wt > 0.0);
 	int init_cobj(-1);
 	check_coll_line(lpos, lpos, init_cobj, -1, 1, 2); // find most opaque (max alpha) containing object
 	assert(init_cobj < (int)coll_objects.size());
@@ -510,6 +513,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 void *trace_ray_block_local(void *ptr) {
 
 	assert(ptr);
+	if (LOCAL_RAYS == 0) return 0; // nothing to do
 	rt_data *data((rt_data *)ptr);
 	cout << "Starting on thread " << data->ix << endl;
 	assert(data->num > 0);
