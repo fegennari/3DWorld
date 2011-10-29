@@ -406,6 +406,11 @@ struct cube_t { // size = 24
 	float get_volume() const {
 		return fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]);
 	}
+	float get_area() const {
+		return 2.0*(fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0]) +
+			        fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]) +
+			        fabs(d[2][1] - d[2][0])*fabs(d[0][1] - d[0][0]));
+	}
 	float max_len() const {
 		return max((d[0][1] - d[0][0]), max((d[1][1] - d[1][0]), (d[2][1] - d[2][0])));
 	}
@@ -1428,6 +1433,7 @@ float get_fresnel_reflection(vector3d const &v_inc, vector3d const &norm, float 
 float get_reflected_weight(float fresnel_ref, float alpha);
 float get_coll_energy(vector3d const &v1, vector3d const &v2, float mass);
 float triangle_area(point const *const points);
+float polygon_area(point const *const points, unsigned npoints);
 bool planar_contour_intersect(const point *points, unsigned npoints, point const &pos, vector3d const &norm);
 bool point_in_polygon_2d(float xval, float yval, const point *points, int npts, int dx, int dy);
 bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &norm, float dval,

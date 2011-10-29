@@ -85,6 +85,19 @@ float triangle_area(point const *const points) {
 }
 
 
+float polygon_area(point const *const points, unsigned npoints) {
+
+	assert(npoints == 3 || npoints == 4);
+	float area(triangle_area(points));
+
+	if (npoints == 4) {
+		point const points2[3] = {points[2], points[3], points[0]};
+		area += triangle_area(points2); // other triangle
+	}
+	return area;
+}
+
+
 // ************ SHAPE INTERSECTION ************
 
 
