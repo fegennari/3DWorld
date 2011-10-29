@@ -374,6 +374,7 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	cout << "Starting on thread " << data->ix << endl;
 	assert(data->num > 0);
 	if (data->is_thread) srand(data->rseed);
+	unsigned long long cube_start_rays(0);
 
 	if (GLOBAL_RAYS > 0) {
 		float const ray_wt(2.0E5*weight*color.alpha/GLOBAL_RAYS);
@@ -386,9 +387,11 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
 		unsigned const num_rays(i->num_rays/data->num);
 		trace_ray_block_global_cube(i->bounds, pos, color, weight*i->intensity, num_rays, LIGHTING_GLOBAL, 0, data->verbose);
+		cube_start_rays += num_rays;
 	}
 	if (data->verbose) {
-		cout << "start rays: " << GLOBAL_RAYS << ", total rays: " << tot_rays << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
+		cout << "start rays: " << GLOBAL_RAYS << ", cube_start_rays: " << cube_start_rays << ", total rays: "
+			<< tot_rays << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
 	}
 }
 
