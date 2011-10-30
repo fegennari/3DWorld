@@ -207,8 +207,8 @@ class cobj_tree_triangles_t : public cobj_tree_base { // unused
 			tquads[i].bix = 2;
 			cube_t const cube(tquads[i].get_bounding_cube());
 			assert(cube.d[dim][0] <= cube.d[dim][1]);
-			if (cube.d[dim][1] <= sval+OVERLAP_AMT*max_sz) tquads[i].bix = 0; // ends   before the split, put in bin 0
-			if (cube.d[dim][0] >= sval-OVERLAP_AMT*max_sz) tquads[i].bix = 1; // starts after  the split, put in bin 1
+			if (cube.d[dim][1] <= sval+OVERLAP_AMT*max_sz) tquads[i].bix =  (depth&1); // ends   before the split, put in bin 0
+			if (cube.d[dim][0] >= sval-OVERLAP_AMT*max_sz) tquads[i].bix = !(depth&1); // starts after  the split, put in bin 1
 		}
 		sort((tquads.begin() + n.start), (tquads.begin() + n.end)); // sort by bix then by ix
 		unsigned bin_count[3] = {0};
@@ -540,8 +540,8 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 		unsigned bix(2);
 		coll_obj const &cobj(get_cobj(i));
 		assert(cobj.d[dim][0] <= cobj.d[dim][1]);
-		if (cobj.d[dim][1] <= sval+OVERLAP_AMT*max_sz) bix = 0; // ends   before the split, put in bin 0
-		if (cobj.d[dim][0] >= sval-OVERLAP_AMT*max_sz) bix = 1; // starts after  the split, put in bin 1
+		if (cobj.d[dim][1] <= sval+OVERLAP_AMT*max_sz) bix =  (depth&1); // ends   before the split, put in bin 0
+		if (cobj.d[dim][0] >= sval-OVERLAP_AMT*max_sz) bix = !(depth&1); // starts after  the split, put in bin 1
 		mark_as_bin(i, bix);
 	}
 	sort((cixs.begin() + n.start), (cixs.begin() + n.end)); // sort by bix then by ix
