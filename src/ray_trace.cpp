@@ -44,7 +44,7 @@ void increment_printed_number(unsigned num) {
 }
 
 
-void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
+void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
 
 	if (first_pt && ltype == LIGHTING_GLOBAL) weight *= first_ray_weight; // lower weight - handled by direct illumination
 	if (weight < TOLERANCE) return;

@@ -240,9 +240,8 @@ class cobj_tree_triangles_t : public cobj_tree_base { // unused
 			nodes[kid].next_node_id = nodes.size();
 			cur += count;
 		}
-		tree_node &n2(nodes[nix]); // create a new reference
-		assert(cur == n2.end);
-		n2.start = n2.end = 0; // branch node has no leaves
+		assert(cur == nodes[nix].end);
+		nodes[nix].start = nodes[nix].end = 0; // branch node has no leaves
 	}
 
 public:
@@ -572,9 +571,8 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 		nodes[kid].next_node_id = nodes.size();
 		cur += count;
 	}
-	tree_node &n2(nodes[nix]); // create a new reference
-	assert(cur == n2.end);
-	n2.start = n2.end = 0; // branch node has no leaves
+	assert(cur == nodes[nix].end);
+	nodes[nix].start = nodes[nix].end = 0; // branch node has no leaves
 }
 
 
@@ -626,9 +624,8 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, un
 		nodes[kid].next_node_id = nodes.size();
 		cur += count;
 	}
-	tree_node &n2(nodes[nix]); // create a new reference
-	assert(cur == n2.end);
-	n2.start = n2.end = 0; // branch node has no leaves
+	assert(cur == nodes[nix].end);
+	nodes[nix].start = nodes[nix].end = 0; // branch node has no leaves
 }
 
 
