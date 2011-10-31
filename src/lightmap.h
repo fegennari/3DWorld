@@ -175,7 +175,9 @@ struct cube_light_src {
 	cube_t bounds;
 	colorRGB color;
 	float intensity;
-	unsigned num_rays;
+	unsigned num_rays, disabled_edges;
+
+	cube_light_src() : color(BLACK), intensity(0.0), num_rays(0), disabled_edges(0) {}
 };
 
 

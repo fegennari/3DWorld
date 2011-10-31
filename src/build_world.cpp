@@ -1088,13 +1088,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype
+		case 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]
 			{
 				point p1, p2;
 				cube_light_src cls;
 				
-				if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%u%i", &p1.x, &p2.x, &p1.y, &p2.y, &p1.z, &p2.z,
-					&cls.color.R, &cls.color.G, &cls.color.B, &cls.intensity, &cls.num_rays, &ivals[0]) != 12)
+				if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%u%i%i", &p1.x, &p2.x, &p1.y, &p2.y, &p1.z, &p2.z,
+					&cls.color.R, &cls.color.G, &cls.color.B, &cls.intensity, &cls.num_rays, &ivals[0], &cls.disabled_edges) < 12)
 				{
 					return read_error(fp, "cube volume global light", coll_obj_file);
 				}

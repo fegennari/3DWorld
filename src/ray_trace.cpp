@@ -328,23 +328,26 @@ bool cube_light_src_vect::ray_intersects_any(point const &start_pt, point const 
 
 
 void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA const &color,
-	float ray_wt, unsigned nrays, int ltype, bool is_scene_cube, bool verbose)
+	float ray_wt, unsigned nrays, int ltype, unsigned disabled_edges, bool is_scene_cube, bool verbose)
 {
 	float const line_length(2.0*get_scene_radius());
 	vector3d const ldir((bnds.get_cube_center() - pos).get_norm());
-	float proj_area[3], tot_area(0.0);
+	float proj_area[3] = {0}, tot_area(0.0);
 
-	for (unsigned i = 0; i < 3; ++i) {
+	for (unsigned i = 0; i < 3; ++i) { // FIXME: adjust the number or weight of rays based on sun/moon position?
+		if (disabled_edges & EFLAGS[i][ldir[i] < 0.0]) continue; // should this be here, or should we just skip them later
 		unsigned const d0((i+1)%3), d1((i+2)%3);
 		vector3d norm(0.0, 0.0, 0.0);
-		norm[i] = 1.0;
+		norm[i]      = 1.0;
 		proj_area[i] = fabs((bnds.d[d0][1] - bnds.d[d0][0])*(bnds.d[d1][1] - bnds.d[d1][0])*dot_product(ldir, norm));
 		tot_area    += proj_area[i];
 	}
 	for (unsigned i = 0; i < 3; ++i) {
+		if (proj_area[i] == 0.0) continue;
+		assert(tot_area > 0.0);
+		bool const dir(ldir[i] < 0.0);
 		unsigned const d0((i+1)%3), d1((i+2)%3);
 		unsigned const num_rays(unsigned(nrays*proj_area[i]/tot_area + 0.5));
-		bool const dir(ldir[i] < 0.0);
 		float const len0(bnds.d[d0][1] - bnds.d[d0][0]), len1(bnds.d[d1][1] - bnds.d[d1][0]);
 		unsigned const n0(max(1U, unsigned(sqrt((float)num_rays)*len0/len1)));
 		unsigned const n1(max(1U, unsigned(sqrt((float)num_rays)*len1/len0)));
@@ -380,13 +383,13 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 		float const ray_wt(2.0E5*weight*color.alpha/GLOBAL_RAYS);
 		assert(ray_wt > 0.0);
 		cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
-		trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 1, data->verbose);
+		trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose);
 	}
 	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		if (data->num == 0) continue; // disabled
 		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
 		unsigned const num_rays(i->num_rays/data->num);
-		trace_ray_block_global_cube(i->bounds, pos, color, weight*i->intensity, num_rays, LIGHTING_GLOBAL, 0, data->verbose);
+		trace_ray_block_global_cube(i->bounds, pos, color, weight*i->intensity, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose);
 		cube_start_rays += num_rays;
 	}
 	if (data->verbose) {
