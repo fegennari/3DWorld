@@ -265,6 +265,8 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 		T const val_inv(1.0/val);
 		return pointT(x*val_inv, y*val_inv, z*val_inv);
 	}
+	float  dot  (pointT const &v) const {return (x*v.x + y*v.y + z*v.z);}
+	pointT cross(pointT const &v) const {return pointT((y*v.z - z*v.y), (z*v.x - x*v.z), (x*v.y - y*v.x));}
 	T mag_sq()    const {return (x*x + y*y + z*z);}
 	T mag()       const {return sqrt(mag_sq());}
 	T xy_mag_sq() const {return (x*x + y*y);}
@@ -281,6 +283,9 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 		return (x < p.x);
 	}
 };
+
+// premultiply a pointT by a scalar
+template<typename S, typename T> pointT<T> inline operator*(S const v, pointT<T> const &p) {return pointT<T>(v*p.x, v*p.y, v*p.z);}
 
 template<> inline void pointT<float >::do_glVertex() const {glVertex3fv((float *)this);}
 template<> inline void pointT<float >::do_glNormal() const {glNormal3fv((float *)this);}
