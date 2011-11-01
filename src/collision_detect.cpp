@@ -549,7 +549,7 @@ void coll_obj::get_cvz_range(unsigned *zz, float zmin, float zmax, int x, int y)
 	float zv[2] = {d[2][0], d[2][1]};
 
 	// clip size to actual polygon bounds within this cell (could do this with COLL_CYLINDER_ROT as well)
-	if (is_thin_poly() && radius > HALF_DXY && norm.z != 0.0 && (zv[1] - zv[0])*dz_inv > 2.0) {
+	if (is_thin_poly() && radius > HALF_DXY && norm.z != 0.0 && (norm.x != 0.0 || norm.y != 0.0) && (zv[1] - zv[0])*dz_inv > 2.0) {
 		float const D(-dot_product(norm, points[0])), nz_inv(1.0/norm.z);
 		float zval[2];
 		bool first(1);
@@ -566,9 +566,9 @@ void coll_obj::get_cvz_range(unsigned *zz, float zmin, float zmax, int x, int y)
 		zv[0] = max(zv[0], zval[0]);
 		zv[1] = min(zv[1], zval[1]);
 	}
-	for (unsigned i = 0; i < 2; ++i) {
-		zz[i] = max(0, min(int(CVZ_NDIV)-1, int((zv[i] - zmin)*dz_inv + 0.5)));
-	}
+	zz[0] = max(0, min(int(CVZ_NDIV)-1, int(floor((zv[0] - zmin)*dz_inv))));
+	//zz[1] = max(0, min(int(CVZ_NDIV)-1, int(floor((zv[1] - zmin)*dz_inv)))); // FIXME: more efficient but incorrect in rare cases
+	zz[1] = max(0, min(int(CVZ_NDIV)-1, int(ceil ((zv[1] - zmin)*dz_inv))));
 }
 
 
@@ -1398,7 +1398,7 @@ int vert_coll_detector::check_coll() {
 	if (subdiv) {
 		++cobj_counter;
 		unsigned const sz(cell.cvz.size());
-		float const val(sz/(c_zmax - c_zmin));
+		float const val((sz-1)/(c_zmax - c_zmin));
 		unsigned const zs(min(sz-1, (unsigned)max(0, (int)floor(val*(z1 - c_zmin)))));
 		unsigned const ze(min(sz-1, (unsigned)max(0, (int)floor(val*(z2 - c_zmin)))));
 

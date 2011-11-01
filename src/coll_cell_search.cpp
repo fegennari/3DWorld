@@ -429,7 +429,7 @@ template<typename T> class coll_cell_line_iterator {
 			float const d[3][2] = {{(xv-DX_VAL), (xv+DX_VAL)}, {(yv-DY_VAL), (yv+DY_VAL)}, {cell.zmin, cell.zmax}};
 			if (!do_line_clip(cp1, cp2, d)) return 0;
 			unsigned const sz(cell.cvz.size());
-			float const val(sz/(cell.zmax - cell.zmin));
+			float const val((sz-1)/(cell.zmax - cell.zmin));
 			unsigned zs(min(sz-1, (unsigned)max(0, (int)floor(val*(min(cp1.z, cp2.z) - cell.zmin)))));
 			unsigned ze(min(sz-1, (unsigned)max(0, (int)floor(val*(max(cp1.z, cp2.z) - cell.zmin)))));
 			assert(zs <= ze);
