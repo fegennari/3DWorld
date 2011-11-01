@@ -100,6 +100,7 @@ public:
 	void render_array(shader_t &shader, bool is_shadow_pass, int prim_type);
 	void free_vbo();
 	bool is_convex() const;
+	bool is_coplanar(float thresh) const;
 	vector3d get_planar_normal() const;
 	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
 	void from_points(vector<point> const &pts);

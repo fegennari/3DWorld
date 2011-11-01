@@ -229,6 +229,17 @@ bool vntc_vect_t::is_convex() const {
 }
 
 
+bool vntc_vect_t::is_coplanar(float thresh) const {
+
+	assert(size() >= 3);
+	if (size() == 3) return 1;
+	unsigned counts[2] = {0};
+	vector3d n2;
+	get_normal((*this)[0].v, (*this)[2].v, (*this)[3].v, n2, 1);
+	return (dot_product(get_planar_normal(), n2) > thresh);
+}
+
+
 vector3d vntc_vect_t::get_planar_normal() const {
 
 	assert(size() >= 3);

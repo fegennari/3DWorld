@@ -170,7 +170,7 @@ bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts) {
 	unsigned const npts(poly.size());
 	assert(npts >= 3);
 	
-	if (npts <= 4 && (npts == 3 || poly.is_convex())) { // triangle or convex quad
+	if (npts <= 4 && (npts == 3 || (poly.is_convex() && poly.is_coplanar(0.98)))) { // triangle or convex/coplanar quad
 		if (!poly.is_valid()) return 0; // invalid zero area polygon - skip
 		ppts.push_back(poly);
 		return 1;
