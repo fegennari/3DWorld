@@ -427,11 +427,16 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (alpha_tid >= 0) enable_blend();
 		float const spec_val((ks.R + ks.G + ks.B)/3.0);
 		set_specular(spec_val, ns);
-		//set_color_a(colorRGBA(ka, alpha));
-		//set_color_d(colorRGBA(kd, alpha));
-		set_color_d(get_ad_color());
 		set_color_e(colorRGBA(ke, alpha));
-		if (shader.is_setup()) shader.add_uniform_float("min_alpha", ((alpha_tid >= 0) ? 0.9 : 0.0)); // FIXME: check has_binary_alpha?
+
+		if (shader.is_setup()) {
+			set_color_d(get_ad_color());
+			shader.add_uniform_float("min_alpha", ((alpha_tid >= 0) ? 0.9 : 0.0)); // FIXME: check has_binary_alpha?
+		}
+		else {
+			set_color_a(colorRGBA(ka, alpha));
+			set_color_d(colorRGBA(kd, alpha));
+		}
 		geom.render(shader, 0);
 		if (use_bump_map())    disable_multitex(5, 1);
 		if (enable_spec_map()) disable_multitex(8, 1);
