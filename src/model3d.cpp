@@ -232,7 +232,7 @@ bool vntc_vect_t::is_convex() const {
 bool vntc_vect_t::is_coplanar(float thresh) const {
 
 	assert(size() >= 3);
-	if (size() == 3) return 1;
+	if (size() == 3 || thresh == 0.0) return 1;
 	unsigned counts[2] = {0};
 	vector3d n2;
 	get_normal((*this)[0].v, (*this)[2].v, (*this)[3].v, n2, 1);
@@ -492,20 +492,20 @@ unsigned model3d::add_polygon(vntc_vect_t const &poly, int mat_id, unsigned obj_
 
 	//assert(mat_id >= 0); // must be set/valid - too strict?
 	split_polygons_buffer.resize(0);
-	split_polygon(poly, split_polygons_buffer);
+	split_polygon(poly, split_polygons_buffer, 0.0);
 
-	for (vector<polygon_t>::const_iterator i = split_polygons_buffer.begin(); i != split_polygons_buffer.end(); ++i) {
+	for (vector<polygon_t>::iterator i = split_polygons_buffer.begin(); i != split_polygons_buffer.end(); ++i) {
 		if (mat_id < 0) {
 			unbound_geom.add_poly(*i, obj_id);
-			if (ppts) ppts->push_back(*i);
+			if (ppts) split_polygon(*i, *ppts, POLY_COPLANAR_THRESH);
 		}
 		else {
 			assert((unsigned)mat_id < materials.size());
 		
 			if (materials[mat_id].add_poly(*i, obj_id)) {
 				if (ppts) {
-					ppts->push_back(*i);
-					ppts->back().color = materials[mat_id].get_avg_color(tmgr, unbound_tid);
+					i->color = materials[mat_id].get_avg_color(tmgr, unbound_tid);
+					split_polygon(*i, *ppts, POLY_COPLANAR_THRESH);
 				}
 			}
 		}

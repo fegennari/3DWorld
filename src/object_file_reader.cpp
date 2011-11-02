@@ -114,7 +114,7 @@ public:
 					}
 					else ungetc(c, fp);
 				}
-				if (ppts) split_polygon(poly, *ppts);
+				if (ppts) split_polygon(poly, *ppts, POLY_COPLANAR_THRESH);
 			}
 			else {
 				read_to_newline(fp); // ignore everything else

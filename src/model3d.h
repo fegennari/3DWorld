@@ -11,6 +11,7 @@ using namespace std;
 
 typedef map<string, unsigned> string_map_t;
 
+float const POLY_COPLANAR_THRESH = 0.98;
 colorRGB const def_color(0.0, 0.0, 0.0);
 
 
@@ -244,7 +245,7 @@ struct model3ds : public deque<model3d> {
 class coll_obj; // forward declaration
 void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj);
 
-bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts);
+bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts, float coplanar_thresh);
 
 void free_model_context();
 void render_models(bool shadow_pass);

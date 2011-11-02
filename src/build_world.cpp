@@ -1248,7 +1248,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			check_layer(has_layer);
 			cobj.thickness *= xf.scale;
 			ppts.resize(0);
-			split_polygon(poly, ppts);
+			split_polygon(poly, ppts, 0.99);
 			add_polygons_to_cobj_vector(ppts, cobj, NULL, 0);
 			break;
 

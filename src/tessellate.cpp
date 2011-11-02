@@ -165,12 +165,12 @@ void tessellate_polygon(polygon_t const &poly) {
 }
 
 
-bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts) {
+bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts, float coplanar_thresh) {
 
 	unsigned const npts(poly.size());
 	assert(npts >= 3);
 	
-	if (npts <= 4 && (npts == 3 || (poly.is_convex() && poly.is_coplanar(0.98)))) { // triangle or convex/coplanar quad
+	if (npts <= 4 && (npts == 3 || (poly.is_convex() && poly.is_coplanar(coplanar_thresh)))) { // triangle or convex/coplanar quad
 		if (!poly.is_valid()) return 0; // invalid zero area polygon - skip
 		ppts.push_back(poly);
 		return 1;
@@ -212,7 +212,7 @@ void split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 	static vector<polygon_t> ppts;
 	ppts.resize(0);
 	poly.from_points(poly_pts);
-	split_polygon(poly, ppts);
+	split_polygon(poly, ppts, 0.0);
 
 	for (vector<polygon_t>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
 		split_polygons.push_back(cobj);
