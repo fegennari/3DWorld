@@ -980,6 +980,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					}
 					check_layer(has_layer);
 					cobj.thickness *= xf.scale;
+					if (cobj.thickness == 0.0) cobj.thickness = MIN_POLY_THICK; // optional - will be set to this value later anyway
 					add_polygons_to_cobj_vector(ppts, cobj, group_ids, use_model3d);
 					cobj.group_id   = -1; // reset
 				}

@@ -52,15 +52,6 @@ struct coll_tquad { // size = 60
 		cnorm = get_poly_dir_norm(normal, p1, (p2 - p1), t);
 		return 1;
 	}
-	float get_area() const {return polygon_area(pts, npts);}
-};
-
-
-struct tree_coll_tquad : public coll_tquad { // size = 64
-	unsigned char bix;
-	tree_coll_tquad() {}
-	tree_coll_tquad(coll_obj const &c) : coll_tquad(c) {}
-	bool operator<(tree_coll_tquad const &t) const {return (bix < t.bix);} // sort by bix
 };
 
 
@@ -78,6 +69,11 @@ protected:
 
 	vector<tree_node> nodes;
 	unsigned max_depth, max_leaf_count, num_leaf_nodes;
+
+	inline void register_leaf(unsigned num) {
+		++num_leaf_nodes;
+		max_leaf_count = max(max_leaf_count, num);
+	}
 
 	struct node_ix_mgr {
 		point const p1, p2;
@@ -109,7 +105,7 @@ public:
 
 class cobj_tree_triangles_t : public cobj_tree_base { // unused
 
-	vector<tree_coll_tquad> tquads;
+	vector<coll_tquad> tquads, temp_bins[3];
 
 	void calc_node_bbox(tree_node &n) const {
 		assert(n.start < n.end && n.end <= tquads.size());
@@ -129,8 +125,7 @@ class cobj_tree_triangles_t : public cobj_tree_base { // unused
 		max_depth = max(max_depth, depth);
 		
 		if (num <= MAX_LEAF_SIZE || skip_dims == 7) { // base case
-			++num_leaf_nodes;
-			max_leaf_count = max(max_leaf_count, num);
+			register_leaf(num);
 			return;
 		}
 
@@ -161,7 +156,7 @@ class cobj_tree_triangles_t : public cobj_tree_base { // unused
 				int const w(vals[d][i].second);
 				in_both += w;
 				((w > 0) ? in_left : in_right) += w;
-				if (i+1 < vals[d].size() && val == vals[d][i+1].first) continue; // duplicate value
+				if (i+1 < vals[d].size() && val == vals[d][i+1].first)   continue; // duplicate value
 				if (in_left == num || in_right == num || in_both == num) continue; // don't want to consider this
 				left_cube.d[d][1]  = val;
 				right_cube.d[d][0] = val;
@@ -186,34 +181,37 @@ class cobj_tree_triangles_t : public cobj_tree_base { // unused
 			assert(dim_sz >= 0.0);
 		
 			if (dim_sz > max_sz) {
-				/*unsigned num_split(0);
-
-				for (unsigned i = n.start; i < n.end; ++i) {
-					cube_t const cube(tquads[i].get_bounding_cube());
-					if (cube.d[d][1] > center[d] && cube.d[d][0] < center[d]) ++num_split;
-				}
-				if (num_split == num) continue;*/
 				max_sz = dim_sz;
 				dim    = d;
 			}
 		}
 		float const sval(center[dim]); // center point (mean seems to work better than median)
 #endif
-		if (max_sz == 0) return; // can't split
+		if (max_sz == 0) { // can't split
+			register_leaf(num);
+			return;
+		}
 		assert(!(skip_dims & (1 << dim)));
 		float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
-		unsigned bin_count[3] = {0};
+		unsigned pos(n.start), bin_count[3] = {0};
 
 		// split in this dimension
 		for (unsigned i = n.start; i < n.end; ++i) {
-			tquads[i].bix = 2;
+			unsigned bix(2);
 			cube_t const cube(tquads[i].get_bounding_cube());
 			assert(cube.d[dim][0] <= cube.d[dim][1]);
-			if (cube.d[dim][1] <= sval_lo) tquads[i].bix =  (depth&1); // ends   before the split, put in bin 0
-			if (cube.d[dim][0] >= sval_hi) tquads[i].bix = !(depth&1); // starts after  the split, put in bin 1
-			++bin_count[tquads[i].bix];
+			if (cube.d[dim][1] <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
+			if (cube.d[dim][0] >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
+			++bin_count[bix];
+			temp_bins[bix].push_back(tquads[i]);
 		}
-		sort((tquads.begin() + n.start), (tquads.begin() + n.end)); // sort by bix then by ix
+		for (unsigned d = 0; d < 3; ++d) {
+			for (unsigned i = 0; i < temp_bins[d].size(); ++i) {
+				tquads[pos++] = temp_bins[d][i];
+			}
+			temp_bins[d].resize(0);
+		}
+		assert(pos == n.end);
 
 		if (depth < 3) {
 			cout << "d: " << depth << ", dim: " << dim << ", sval: " << sval << ", n: " << num << ", bc: " << bin_count[0] << " " << bin_count[1] << " " << bin_count[2] << endl;
@@ -256,7 +254,7 @@ public:
 		for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
 			if (i->status != COLL_STATIC) continue;
 			assert(i->type == COLL_POLYGON && i->thickness <= MIN_POLY_THICK);
-			tquads.push_back(tree_coll_tquad(*i));
+			tquads.push_back(coll_tquad(*i));
 		}
 		nodes.reserve(6*tquads.size()/5); // conservative
 		nodes.push_back(tree_node(0, tquads.size()));
@@ -275,8 +273,8 @@ public:
 
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
 
-		static unsigned num_checks(0), num_node(0), num_tests(0), num_hits(0), num_success(0);
-		++num_checks;
+		//static unsigned num_checks(0), num_node(0), num_tests(0), num_hits(0), num_success(0);
+		//++num_checks;
 		cindex = -1;
 		if (nodes.empty()) return 0;
 		bool ret(0);
@@ -285,17 +283,17 @@ public:
 		unsigned const num_nodes(nodes.size());
 
 		for (unsigned nix = 0; nix < num_nodes;) {
-			++num_node;
+			//++num_node;
 			tree_node const &n(nodes[nix]);
 			if (!nixm.check_node(nix)) continue;
 
 			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 				// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 				// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
-				++num_tests;
+				//++num_tests;
 				if ((int)tquads[i].cid == ignore_cobj) continue;
 				if (!tquads[i].line_int_exact(p1, p2, t, cnorm, tmin, tmax)) continue;
-				++num_hits;
+				//++num_hits;
 				cindex = tquads[i].cid;
 				cpos   = p1 + (p2 - p1)*t;
 				if (!exact) return 1; // return first hit
@@ -305,8 +303,8 @@ public:
 				ret  = 1;
 			}
 		}
-		if (ret) ++num_success;
-		if ((num_checks % 10000) == 0) {cout << "nc: " << num_checks << ", nn: " << num_node << ", nt: " << num_tests << ", nh: " << num_hits << ", ns: " << num_success << endl;}
+		//if (ret) ++num_success;
+		//if ((num_checks % 10000) == 0) {cout << "nc: " << num_checks << ", nn: " << num_node << ", nt: " << num_tests << ", nh: " << num_hits << ", ns: " << num_success << endl;}
 		return ret;
 	}
 }; // cobj_tree_triangles_t
@@ -316,14 +314,11 @@ public:
 template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 
 	vector<coll_obj> const &cobjs;
-	vector<unsigned> cixs;
+	vector<unsigned> cixs, temp_bins[NUM];
 	bool is_static, is_dynamic, occluders_only, moving_only;
 
-	void add_cobj(unsigned ix)                         {if (obj_ok(cobjs[ix])) cixs.push_back(ix);}
+	void add_cobj(unsigned ix) {if (obj_ok(cobjs[ix])) cixs.push_back(ix);}
 	inline coll_obj const &get_cobj(unsigned ix) const {return cobjs[cixs[ix]];}
-	inline void mark_as_bin(unsigned ix, unsigned bix) {cixs[ix] |= (bix << 29);}
-	inline void unmark_as_bin(unsigned ix)             {cixs[ix] &= 0x07FFFFFF;}
-	inline unsigned get_bin_ix(unsigned ix)            {return (cixs[ix] >> 29);}
 
 	// Note: start by adding all cobjs to [start, end], then calc bbox, then split into branches and leaves
 	void calc_node_bbox(tree_node &n) const {
@@ -508,8 +503,7 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 	max_depth = max(max_depth, depth);
 	
 	if (num <= MAX_LEAF_SIZE || skip_dims == 7) { // base case
-		++num_leaf_nodes;
-		max_leaf_count = max(max_leaf_count, num);
+		register_leaf(num);
 		return;
 	}
 	
@@ -528,11 +522,14 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 			dim    = d;
 		}
 	}
-	if (max_sz == 0) return; // can't split
+	if (max_sz == 0) { // can't split
+		register_leaf(num);
+		return;
+	}
 	assert(!(skip_dims & (1 << dim)));
 	float const sval(center[dim]); // center point (mean seems to work better than median)
 	float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
-	unsigned bin_count[3] = {0};
+	unsigned pos(n.start), bin_count[3] = {0};
 
 	// split in this dimension: use upper 2 bits of cixs for storing bin index
 	for (unsigned i = n.start; i < n.end; ++i) {
@@ -541,11 +538,16 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 		assert(cobj.d[dim][0] <= cobj.d[dim][1]);
 		if (cobj.d[dim][1] <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
 		if (cobj.d[dim][0] >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
-		mark_as_bin(i, bix);
 		++bin_count[bix];
+		temp_bins[bix].push_back(cixs[i]);
 	}
-	sort((cixs.begin() + n.start), (cixs.begin() + n.end)); // sort by bix then by ix
-	for (unsigned i = n.start; i < n.end; ++i) {unmark_as_bin(i);}
+	for (unsigned d = 0; d < 3; ++d) {
+		for (unsigned i = 0; i < temp_bins[d].size(); ++i) {
+			cixs[pos++] = temp_bins[d][i];
+		}
+		temp_bins[d].resize(0);
+	}
+	assert(pos == n.end);
 
 	// check that dataset has been subdivided (not all in one bin)
 	if (bin_count[0] == num || bin_count[1] == num || bin_count[2] == num) {
@@ -581,25 +583,29 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, un
 	max_depth = max(max_depth, depth);
 
 	if (num <= MAX_LEAF_SIZE || skip_dims) { // base case
-		++num_leaf_nodes;
-		max_leaf_count = max(max_leaf_count, num);
+		register_leaf(num);
 		return;
 	}
 	
 	// determine split values
 	point const sval(n.get_cube_center()); // center point
-	unsigned bin_count[8] = {0};
+	unsigned pos(n.start), bin_count[8] = {0};
 
 	// split in this dimension: use upper 3 bits of cixs for storing bin index
 	for (unsigned i = n.start; i < n.end; ++i) {
 		point const center(get_cobj(i).get_cube_center());
 		unsigned bix(0);
 		UNROLL_3X(if (center[i_] > sval[i_]) bix |= (1 << i_);)
-		mark_as_bin(i, bix);
 		++bin_count[bix];
+		temp_bins[bix].push_back(cixs[i]);
 	}
-	sort((cixs.begin() + n.start), (cixs.begin() + n.end)); // sort by bix then by ix
-	for (unsigned i = n.start; i < n.end; ++i) {unmark_as_bin(i);}
+	for (unsigned d = 0; d < 8; ++d) {
+		for (unsigned i = 0; i < temp_bins[d].size(); ++i) {
+			cixs[pos++] = temp_bins[d][i];
+		}
+		temp_bins[d].resize(0);
+	}
+	assert(pos == n.end);
 
 	// create child nodes and call recursively
 	unsigned cur(n.start);
