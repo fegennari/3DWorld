@@ -282,10 +282,11 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 	assert(!keep_lasers || NUM_THREADS == 1); // could use a pthread_mutex_t instead to make this legal
 	vector<rt_data> data(num_threads);
 	bool const single_thread(num_threads == 1);
+	if (verbose) cout << "Computing lighting on " << num_threads << " threads." << endl;
 
 	for (unsigned t = 0; t < data.size(); ++t) {
 		// create a custom lmap_manager_t for each thread then merge them together?
-		data[t] = rt_data(t, num_threads, 234323*t, !single_thread, (verbose && single_thread));
+		data[t] = rt_data(t, num_threads, 234323*t, !single_thread, (verbose && t == 0));
 	}
 	if (single_thread) { // pthreads disabled
 		start_func((void *)(&data[0]));
@@ -353,18 +354,20 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 		unsigned const n1(max(1U, unsigned(sqrt((float)num_rays)*len1/len0)));
 		point pt;
 		pt[i] = bnds.d[i][dir];
-		if (verbose) cout << "Dim " << i+1 << " of 3" << endl;
+		if (verbose) cout << "Dim " << i+1 << " of 3, num (this thread): " << num_rays << ", progress (of " << 1+n0/10 << "): 0";
 
 		for (unsigned s0 = 0; s0 < n0; ++s0) {
-			pt[d0] = bnds.d[d0][0] + (s0+0.5)*len0/n0;
+			pt[d0] = bnds.d[d0][0] + (s0 + rand_uniform(0.0, 1.0))*len0/n0;
+			if (verbose && ((s0%10) == 0)) increment_printed_number(s0/10);
 
 			for (unsigned s1 = 0; s1 < n1; ++s1) {
-				pt[d1] = bnds.d[d1][0] + (s1+0.5)*len1/n1;
+				pt[d1] = bnds.d[d1][0] + (s1 + rand_uniform(0.0, 1.0))*len1/n1;
 				point const end_pt(pt + (pt - pos).get_norm()*line_length);
 				if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
 				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0);
 			}
 		}
+		if (verbose) cout << endl;
 	}
 }
 
@@ -374,22 +377,22 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	if (pos.z < 0.0 || weight == 0.0 || color.alpha == 0.0) return; // below the horizon or zero weight, skip it
 	assert(ptr);
 	rt_data *data((rt_data *)ptr);
-	cout << "Starting on thread " << data->ix << endl;
 	assert(data->num > 0);
 	if (data->is_thread) srand(data->rseed);
 	unsigned long long cube_start_rays(0);
 
 	if (GLOBAL_RAYS > 0) {
-		float const ray_wt(2.0E5*weight*color.alpha/GLOBAL_RAYS);
+		float const ray_wt(RAY_WEIGHT*weight*color.alpha/GLOBAL_RAYS);
 		assert(ray_wt > 0.0);
 		cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
 		trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose);
 	}
 	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
-		if (data->num == 0) continue; // disabled
+		if (data->num == 0 || i->num_rays == 0) continue; // disabled
 		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
 		unsigned const num_rays(i->num_rays/data->num);
-		trace_ray_block_global_cube(i->bounds, pos, color, weight*i->intensity, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose);
+		float const cube_weight(RAY_WEIGHT*weight*i->intensity/i->num_rays);
+		trace_ray_block_global_cube(i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose);
 		cube_start_rays += num_rays;
 	}
 	if (data->verbose) {
@@ -416,7 +419,6 @@ void *trace_ray_block_sky(void *ptr) {
 
 	assert(ptr);
 	rt_data *data((rt_data *)ptr);
-	cout << "Starting on thread " << data->ix << endl;
 	assert(data->num > 0);
 	if (data->is_thread) srand(data->rseed);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
@@ -432,7 +434,7 @@ void *trace_ray_block_sky(void *ptr) {
 			pts[p] = signed_rand_vector_spherical(1.0, 0).get_norm()*scene_radius; // start the ray here
 		}
 		sort(pts.begin(), pts.end());
-		if (data->verbose) cout << "Sky light source points: " << block_npts << ", progress: 0";
+		if (data->verbose) cout << "Sky light source progress (of " << block_npts << "): 0";
 
 		for (unsigned p = 0; p < block_npts; ++p) {
 			if (data->verbose) increment_printed_number(p);
@@ -452,26 +454,31 @@ void *trace_ray_block_sky(void *ptr) {
 				++start_rays;
 			}
 		}
+		if (data->verbose) cout << endl;
 	}
 	for (cube_light_src_vect::const_iterator i = sky_cube_lights.begin(); i != sky_cube_lights.end(); ++i) {
-		if (data->num == 0) continue; // disabled
-		if (data->verbose) cout << "Cube volume light source " << (i - sky_cube_lights.begin()) << " of " << sky_cube_lights.size() << endl;
+		if (data->num == 0 || i->num_rays == 0) continue; // disabled
 		unsigned const num_rays(i->num_rays/data->num);
+		float const cube_weight(RAY_WEIGHT*i->intensity/i->num_rays);
+		if (data->verbose) cout << "Cube volume light source " << (i - sky_cube_lights.begin()) << " of " << sky_cube_lights.size() << ", progress (of " << 1+num_rays/1000 << "): 0";
+		cube_start_rays += num_rays;
 		point pt;
 
 		for (unsigned p = 0; p < num_rays; ++p) {
+			if (data->verbose && ((p%1000) == 0)) increment_printed_number(p/1000);
+
 			for (unsigned d = 0; d < 3; ++d) {
 				pt[d] = rand_uniform(i->bounds.d[d][0], i->bounds.d[d][1]);
 			}
 			vector3d dir(signed_rand_vector_norm());
 			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
 			point const end_pt(pt + dir*line_length);
-			cast_light_ray(pt, end_pt, i->intensity, i->intensity, i->color, line_length, -1, LIGHTING_SKY, 0);
-			++cube_start_rays;
+			cast_light_ray(pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0);
 		}
+		if (data->verbose) cout << endl;
 	}
 	if (data->verbose) {
-		cout << endl << "start rays: " << start_rays << "cube start rays: " << cube_start_rays << ", total rays: " << tot_rays
+		cout << "start rays: " << start_rays << ", cube start rays: " << cube_start_rays << ", total rays: " << tot_rays
 			 << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
 	}
 	return 0;
@@ -521,14 +528,13 @@ void *trace_ray_block_local(void *ptr) {
 	assert(ptr);
 	if (LOCAL_RAYS == 0) return 0; // nothing to do
 	rt_data *data((rt_data *)ptr);
-	cout << "Starting on thread " << data->ix << endl;
 	assert(data->num > 0);
 	if (data->is_thread) srand(data->rseed);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
 	unsigned const num_rays(max(1U, LOCAL_RAYS/data->num));
 	
 	if (data->verbose) {
-		cout << "Local light sources: " << light_sources.size() << ", progress: 0";
+		cout << "Local light sources progress (of " << light_sources.size() << "): 0";
 		cout.flush();
 	}
 	for (unsigned i = 0; i < light_sources.size(); ++i) {
