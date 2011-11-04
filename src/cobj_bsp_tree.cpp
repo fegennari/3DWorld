@@ -262,6 +262,7 @@ public:
 		max_depth = max_leaf_count = num_leaf_nodes = 0;
 		build_tree(0, 0, 0);
 		nodes[0].next_node_id = nodes.size();
+		for (unsigned i = 0; i < 3; ++i) {vector<coll_tquad>().swap(temp_bins[i]);}
 
 		if (verbose) {
 			PRINT_TIME(" Cobj Tree Triangles Create");
@@ -379,6 +380,7 @@ public:
 		max_depth = max_leaf_count = num_leaf_nodes = 0;
 		build_tree(0, 0, 0);
 		nodes[0].next_node_id = nodes.size();
+		for (unsigned i = 0; i < NUM; ++i) {vector<unsigned>().swap(temp_bins[i]);}
 
 		if (verbose) {
 			PRINT_TIME(" Cobj Tree Create");
