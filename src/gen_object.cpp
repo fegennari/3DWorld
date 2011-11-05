@@ -17,7 +17,6 @@ unsigned const MAX_SCORCHES    = 1000;
 
 // Global Variables
 unsigned num_stars(0);
-long rseed1(1), rseed2(1);
 vector<star> stars(NUM_STARS);
 obj_vector_t<bubble> bubbles(MAX_BUBBLES);
 obj_vector_t<particle_cloud> part_clouds(MAX_PART_CLOUDS);
@@ -25,6 +24,7 @@ obj_vector_t<particle_cloud> cloud_volumes;
 obj_vector_t<fire> fires(MAX_FIRES);
 obj_vector_t<scorch_mark> scorches(MAX_SCORCHES);
 float gauss_rand_arr[N_RAND_DIST+2];
+rand_gen_t global_rand_gen;
 
 
 extern int star_init, begin_motion, animate2, show_fog;
@@ -361,7 +361,7 @@ void gen_cloud_volumes() { // 3D cloud puffs
 		cloud_volumes.resize(ix + nparts);
 
 		for (unsigned p = 0; p < nparts; ++p) {
-			point pos(signed_rand_vector_spherical(1.0, 0));
+			point pos(signed_rand_vector_spherical(1.0));
 
 			for (unsigned i = 0; i < 3; ++i) {
 				pos[i] *= size[i];

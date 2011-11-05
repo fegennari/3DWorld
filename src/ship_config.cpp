@@ -89,7 +89,7 @@ u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, po
 	// check for collisions (invalid starting locations)
 	for (unsigned i = 0; i < MAXITER; ++i) { // Note: This only works for non-new objects so won't work with init objects
 		spos    = pos;
-		if (spread > 0.0) spos += signed_rand_vector_spherical(spread, 0);
+		if (spread > 0.0) spos += signed_rand_vector_spherical(spread);
 		coll_ix = check_for_obj_coll(spos, sclasses[sclass].calc_cradius()); // what about planet collisions?
 		if (coll_ix == 0) break;
 	}
@@ -547,7 +547,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 				assert(num == 1 || !pos_set);
 
 				for (unsigned i = 0; i < num; ++i) { // could check for collisions
-					point const pos(ustart_pos + (pos_set ? pos : signed_rand_vector_spherical(spawn_dist, 0)));
+					point const pos(ustart_pos + (pos_set ? pos : signed_rand_vector_spherical(spawn_dist)));
 					add_uobj(new uobj_asteroid(pos, rand_uniform(r1, r2), model));
 				}
 			}

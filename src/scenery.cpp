@@ -46,10 +46,10 @@ float msms2(1.0);
 
 
 extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, DISABLE_WATER, draw_model;
-extern long rseed1, rseed2;
 extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, max_water_height, fticks;
 extern GLUquadricObj* quadric;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
+extern rand_gen_t global_rand_gen;
 
 
 void gen_scenery_deterministic();
@@ -173,8 +173,7 @@ public:
 
 void rock_shape3d::gen_rock(unsigned nverts, float size, int &rand_seed, int type) {
 
-	rseed1    = rand_seed;
-	rseed2    = 10423232; // whatever
+	set_rand2_state(rand_seed, 10423232);
 	nverts    = max(nverts, 4U);
 	color     = LT_BROWN;
 	tex_scale = 5.0;
@@ -323,7 +322,7 @@ struct surface_cache {
 	surface_map scache;
 
 	upsurface *get_surface() {
-		seed_pair const sp(rseed1, rseed2);
+		seed_pair const sp(global_rand_gen.rseed1, global_rand_gen.rseed2);
 		surface_map::const_iterator it(scache.find(sp));
 		
 		if (it != scache.end()) {
@@ -770,12 +769,12 @@ void gen_scenery_deterministic() {
 
 	for (int i = get_ext_y1(); i < get_ext_y2(); ++i) {
 		for (int j = get_ext_x1(); j < get_ext_x2(); ++j) {
-			rseed1 = 786433* (i + yoff2) + 196613 *rand_gen_index;
-			rseed2 = 6291469*(j + xoff2) + 1572869*rand_gen_index;
+			global_rand_gen.rseed1 = 786433* (i + yoff2) + 196613 *rand_gen_index;
+			global_rand_gen.rseed2 = 6291469*(j + xoff2) + 1572869*rand_gen_index;
 			int const val(rand2_seed_mix()%smod);
 			if (val > 100) continue;
 			rand2_mix();
-			bool const veg((rseed1&127)/128.0 < vegetation);
+			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation);
 			
 			if (veg && rand2()%100 < 30) {
 				plants.push_back(s_plant());

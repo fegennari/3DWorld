@@ -1526,8 +1526,7 @@ void init_water_springs(int nws) {
 
 	for (int i = 1; i < MESH_Y_SIZE-1; ++i) {
 		for (int j = 1; j < MESH_X_SIZE-1; ++j) {
-			rseed1 = 54563  *(i + yoff2) + 23423  *rand_gen_index; // not prime
-			rseed2 = 4365435*(j + xoff2) + 6456541*rand_gen_index; // not prime
+			set_rand2_state((54563  *(i + yoff2) + 23423  *rand_gen_index), (4365435*(j + xoff2) + 6456541*rand_gen_index)); // not prime
 			if ((rand2()%smod) != 0)   continue;
 			point const pos(get_xval(j), get_yval(i), (interpolate_mesh_zval(get_xval(j), get_yval(i), 0.0, 0, 1) + 0.02));
 			if (pos.z < water_plane_z) continue;

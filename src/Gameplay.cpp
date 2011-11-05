@@ -1795,7 +1795,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	vcf  /= vcf_mag;
 
 	if (firing_error != 0.0) {
-		vcf += signed_rand_vector_spherical(firing_error, 0);
+		vcf += signed_rand_vector_spherical(firing_error);
 		vcf.normalize();
 	}
 	vector3d const vcf0(vcf*vcf_mag);

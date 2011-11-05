@@ -11,7 +11,6 @@
 
 
 extern int MESH_X_SIZE, MESH_Y_SIZE, world_mode, do_zoom, xoff2, yoff2;
-extern long rseed1, rseed2;
 extern float X_SCENE_SIZE, Y_SCENE_SIZE, Z_SCENE_SIZE, DX_VAL, DY_VAL;
 extern float light_factor, relh_adj_tex, glaciate_exp_inv, cview_radius, czmin, czmax, zbottom, ztop;
 extern point cview_dir, camera_origin, camera_pos;
@@ -20,6 +19,7 @@ extern vector3d up_vector;
 extern pos_dir_up camera_pdu, player_pdu;
 extern char **mesh_draw;
 extern float gauss_rand_arr[], SCENE_SIZE[];
+extern rand_gen_t global_rand_gen;
 
 
 // ***************** MATH FUNCTIONS ********************
@@ -61,92 +61,29 @@ template<typename T> inline T interpolate_3d(T const *v, unsigned npts, float s,
 typedef float (*rand_func)(float, float);
 
 
-// this is a good random number generator written by Stephen E. Derenzo
-template<typename T> inline void randome_int(long &s1ptr, long &s2ptr, T &ranptr) {
-
-	if ((s1ptr = 40014*(s1ptr%53668) - 12211*(s1ptr/53668)) < 0) s1ptr += 2147483563;
-	if ((s2ptr = 40692*(s2ptr%52774) - 3791 *(s2ptr/52774)) < 0) s2ptr += 2147483399;
-	if ((ranptr = s1ptr - s2ptr) < 1) ranptr += 2147483562;
-}
-
-
-inline void randome(long &s1ptr, long &s2ptr, double &ranptr) {
-
-	randome_int(s1ptr, s2ptr, ranptr);
-	ranptr = ranptr/2147483563.;
-}
+inline int rand2()                {return global_rand_gen.rand2();}
+inline int rand2_seed_mix()       {return global_rand_gen.rand2_seed_mix();}
+inline void rand2_mix()           {return global_rand_gen.rand2_mix();}
+inline double rand2d()            {return global_rand_gen.rand2d();}
+inline float rand_float2()        {return global_rand_gen.rand_float2();} // uniform 0 to 1
+inline float signed_rand_float2() {return global_rand_gen.signed_rand_float2();}
+inline float rand_uniform2(float val1, float val2) {return global_rand_gen.rand_uniform2(val1, val2);}
+inline void set_rand2_state(long rs1, long rs2)    {global_rand_gen.set_state(rs1, rs2);}
+inline vector3d signed_rand_vector2(float scale=1.0)           {return global_rand_gen.signed_rand_vector2(scale);}
+inline vector3d signed_rand_vector2_norm(float scale=1.0)      {return global_rand_gen.signed_rand_vector2_norm(scale);}
+inline vector3d signed_rand_vector2_spherical(float scale=1.0) {return global_rand_gen.signed_rand_vector2_spherical(scale);}
 
 
-inline int rand2() {
-
-	int rand_num;
-	randome_int(rseed1, rseed2, rand_num);
-	return rand_num;
-}
-
-
-inline int rand2_seed_mix() {
-	//int val1(rand2()); swap(rseed1, rseed2); return (val1 + rand2()); // more random
-	return (rseed1 ^ (rseed2 >> 8)); // faster (should call rand2_mix() after)
-}
-
-
-inline void rand2_mix() {
-	rand2(); swap(rseed1, rseed2);
-}
-
-
-inline double rand2d() {
-
-	double rand_num;
-	randome(rseed1, rseed2, rand_num);
-	return rand_num;
-}
-
-
-inline float rand_float() { // uniform 0 to 1
-	return 0.0001*(rand()%10000); // only 16-bit random numbers
-}
-
-inline float rand_float2() { // uniform 0 to 1
-	return 0.000001*(rand2()%1000000);
-}
-
-inline float signed_rand_float() {
-	return 2.0*rand_float() - 1.0;
-}
-
-inline float signed_rand_float2() {
-	return 2.0*rand2d() - 1.0;
-}
-
-inline float rand_uniform(float val1, float val2) {
-	return 0.5*((val1 + val2) + fabs(val2 - val1)*signed_rand_float());
-}
-
-inline float rand_uniform2(float val1, float val2) {
-	return 0.5*((val1 + val2) + fabs(val2 - val1)*signed_rand_float2());
-}
-
-inline float rgauss() { // mean = 0.0, std_dev = 1.0
-	return gauss_rand_arr[rand()%N_RAND_DIST];
-}
-
-inline float rgauss2() { // mean = 0.0, std_dev = 1.0
-	return gauss_rand_arr[rand2()%N_RAND_DIST];
-}
-
-inline float rand_gaussian(float mean, float std_dev) {
-	return mean + std_dev*rgauss();
-}
-
-inline float rand_gaussian2(float mean, float std_dev) {
-	return mean + std_dev*rgauss2();
-}
+inline float rand_float()        {return 0.0001*(rand()%10000);} // uniform 0 to 1 (only 16-bit random numbers)
+inline float signed_rand_float() {return 2.0*rand_float() - 1.0;}
+inline float rand_uniform(float val1, float val2) {return 0.5*((val1 + val2) + fabs(val2 - val1)*signed_rand_float());}
+inline float rgauss()  {return gauss_rand_arr[rand()%N_RAND_DIST];} // mean = 0.0, std_dev = 1.0
+inline float rgauss2() {return gauss_rand_arr[rand2()%N_RAND_DIST];} // mean = 0.0, std_dev = 1.0
+inline float rand_gaussian (float mean, float std_dev) {return mean + std_dev*rgauss();}
+inline float rand_gaussian2(float mean, float std_dev) {return mean + std_dev*rgauss2();}
 
 
 inline point gen_rand_scene_pos() {
-
 	return point(X_SCENE_SIZE*signed_rand_float(),
 		         Y_SCENE_SIZE*signed_rand_float(), 
 				 rand_uniform(min(zbottom, czmin), max(ztop, czmax)));
@@ -154,67 +91,45 @@ inline point gen_rand_scene_pos() {
 
 
 template <rand_func rfunc> float gen_rand_phi() {
-
 	return safe_acosf(2.0*rfunc(0.0, 1.0) - 1.0);
 }
 
 
-// ***************** VECTOR MATH ********************
-
-
-inline vector3d signed_rand_vector(float scale = 1.0) {
-
-	assert(scale != 0.0);
+inline vector3d signed_rand_vector(float scale=1.0) {
+	assert(scale > 0.0);
 	return vector3d(scale*signed_rand_float(), scale*signed_rand_float(), scale*signed_rand_float());
 }
 
 
-inline vector3d signed_rand_vector2(float scale = 1.0) {
-
-	assert(scale != 0.0);
-	return vector3d(scale*signed_rand_float2(), scale*signed_rand_float2(), scale*signed_rand_float2());
-}
-
-
-inline vector3d signed_rand_vector_cond_norm(float scale, bool srv2) {
-
-	assert(scale != 0.0);
+inline vector3d signed_rand_vector_norm(float scale=1.0) {
+	assert(scale > 0.0);
 
 	while (1) {
-		vector3d const v(srv2 ? signed_rand_vector2(scale) : signed_rand_vector(scale));
+		vector3d const v(signed_rand_vector(scale));
 		if (v.mag_sq() > scale*TOLERANCE) return v.get_norm();
 	}
 	return zero_vector; // never gets here
 }
 
 
-inline vector3d signed_rand_vector_spherical(float scale, bool srv2) {
-
-	assert(scale != 0.0);
+inline vector3d signed_rand_vector_spherical(float scale=1.0) {
+	assert(scale > 0.0);
 
 	while (1) {
-		vector3d const v(srv2 ? signed_rand_vector2(scale) : signed_rand_vector(scale));
-		if (v.mag() < scale) return v;
+		vector3d const v(signed_rand_vector(scale));
+		if (v.mag_sq() < scale*scale) return v;
 	}
 	return zero_vector; // never gets here
 }
 
 
-inline vector3d signed_rand_vector_norm(float scale=1.0) {
-	return signed_rand_vector_cond_norm(scale, 0);
-}
+inline void vadd_rand(vector3d &v, float rval) {v += signed_rand_vector(rval);}
 
-inline vector3d signed_rand_vector2_norm(float scale=1.0) {
-	return signed_rand_vector_cond_norm(scale, 1);
-}
 
-inline void vadd_rand(vector3d &v, float rval) {
-	v += signed_rand_vector(rval);
-}
+// ***************** VECTOR MATH ********************
 
 
 template<typename T> inline void cross_product(pointT<T> const &v1, pointT<T> const &v2, pointT<T> &v3) {
-
 	v3.x = v1.y*v2.z - v1.z*v2.y;
 	v3.y = v1.z*v2.x - v1.x*v2.z;
 	v3.z = v1.x*v2.y - v1.y*v2.x;
@@ -222,7 +137,6 @@ template<typename T> inline void cross_product(pointT<T> const &v1, pointT<T> co
 
 
 template<typename T> inline pointT<T> cross_product(pointT<T> const &v1, pointT<T> const &v2) {
-
 	pointT<T> cp;
 	cross_product(v1, v2, cp);
 	return cp;

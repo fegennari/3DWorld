@@ -83,7 +83,7 @@ void do_univ_init() {
 	if (univ_inited) return;
 	setup_ships(); // just in case
 	univ_inited     = 1;
-	rseed1 = rseed2 = 1;
+	set_rand2_state(1,1);
 	universe.init();
 	check_asserts();
 	import_default_modmap();

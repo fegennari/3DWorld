@@ -57,6 +57,7 @@ extern float tan_term, sin_term, fticks, tfticks;
 extern colorRGBA bkg_color;
 extern exp_type_params et_params[];
 extern GLUquadricObj* quadric;
+extern rand_gen_t global_rand_gen;
 
 
 void draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, s_object const &clobj, unsigned pass, bool no_move);
@@ -623,10 +624,9 @@ void ucell::gen_cell(int const ii[3]) {
 	for (unsigned d = 0; d < 3; ++d) {
 		rel_center[d] = CELL_SIZE*(float(ii[d] - (int)U_BLOCKSo2));
 	}
-	pos      = rel_center + get_scaled_upt();
-	rseed1   = gen_rand_seed1(pos);
-	rseed2   = gen_rand_seed2(pos);
-	radius   = 0.5*CELL_SIZE;
+	pos    = rel_center + get_scaled_upt();
+	radius = 0.5*CELL_SIZE;
+	set_rand2_state(gen_rand_seed1(pos), gen_rand_seed2(pos));
 	get_rseeds();
 	gen      = 0;
 	galaxies = new vector<ugalaxy>;
@@ -2648,14 +2648,14 @@ void uobj_rgen::gen_rseeds() { // is this really OS/machine independent (even 32
 
 void uobj_rgen::get_rseeds() {
 
-	urseed1 = rseed1;
-	urseed2 = rseed2;
+	urseed1 = global_rand_gen.rseed1;
+	urseed2 = global_rand_gen.rseed2;
 }
 
 void uobj_rgen::set_rseeds() const {
 
-	rseed1 = urseed1;
-	rseed2 = urseed2;
+	global_rand_gen.rseed1 = urseed1;
+	global_rand_gen.rseed2 = urseed2;
 }
 
 

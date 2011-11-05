@@ -361,7 +361,7 @@ public:
 	ugalaxy *galaxy;
 	colorRGBA galaxy_color;
 	
-	ussystem() : cluster_id(0), galaxy(NULL) {}
+	ussystem() : cluster_id(0), galaxy(NULL), galaxy_color(ALPHA0) {}
 	void create(point const &pos_);
 	void calc_color();
 	void process();

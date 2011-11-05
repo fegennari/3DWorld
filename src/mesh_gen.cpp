@@ -87,6 +87,7 @@ extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEI
 extern float water_h_off, disabled_mesh_z, read_mesh_zmm, init_temperature;
 extern point mesh_origin, surface_pos;
 extern char *mh_filename_raw, *mh_filename_bmp, *dem_filename, *dem_raw_out, *mesh_file;
+extern rand_gen_t global_rand_gen;
 
 
 void glaciate();
@@ -368,11 +369,7 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 		if (Y_SCENE_SIZE > X_SCENE_SIZE) xf_scale *= (float)X_SCENE_SIZE/(float)Y_SCENE_SIZE;
 		
 		if (!keep_sin_table || !init) {
-			if (mesh_seed != 0) {
-				//srand((unsigned)mesh_seed); // not cross-platform
-				rseed1 = mesh_seed;
-				rseed2 = 12345;
-			}
+			if (mesh_seed != 0) set_rand2_state(mesh_seed, 12345);
 			surface_generated = 1;
 			zmm_calc = 0.0;
 
@@ -905,9 +902,10 @@ bool load_state(const char *filename) {
 	int v1, v2, v3, v4;
 	++cache_counter;
 
-	if (fscanf(fp, "%lf%lf%lf%f%f%f%f%f%f%i%i%i%i%i%li%li%u%u%u%u", &c_radius, &c_phi, &c_theta,
-		&camera_origin.x, &camera_origin.y, &camera_origin.z, &surface_pos.x, &surface_pos.y, &surface_pos.z,
-		&xoff, &yoff, &xoff2, &yoff2, &rand_gen_index, &rseed1, &rseed2, &v1, &v2, &v3, &v4) != 20) {
+	if (fscanf(fp, "%lf%lf%lf%f%f%f%f%f%f%i%i%i%i%i%li%li%u%u%u%u", &c_radius, &c_phi, &c_theta, &camera_origin.x,
+		&camera_origin.y, &camera_origin.z, &surface_pos.x, &surface_pos.y, &surface_pos.z, &xoff, &yoff, &xoff2, &yoff2,
+		&rand_gen_index, &global_rand_gen.rseed1, &global_rand_gen.rseed2, &v1, &v2, &v3, &v4) != 20)
+	{
 		cout << "Error reading state header." << endl;
 		fclose(fp);
 		return 0;
@@ -944,9 +942,9 @@ bool save_state(const char *filename) {
 	if (!open_file(fp, filename, "output state", "w")) return 0;
 
 	if (!fprintf(fp, "%lf %lf %lf %f %f %f %f %f %f %i %i %i %i %i %li %li\n%u %u %u %u\n",
-		c_radius, c_phi, c_theta, camera_origin.x, camera_origin.y, camera_origin.z,
-		surface_pos.x, surface_pos.y, surface_pos.z, xoff, yoff, xoff2, yoff2, rand_gen_index, rseed1, rseed2,
-		MESH_X_SIZE, MESH_Y_SIZE, NUM_FREQ_COMP, N_RAND_SIN2)) {
+		c_radius, c_phi, c_theta, camera_origin.x, camera_origin.y, camera_origin.z, surface_pos.x, surface_pos.y, surface_pos.z,
+		xoff, yoff, xoff2, yoff2, rand_gen_index, global_rand_gen.rseed1, global_rand_gen.rseed2, MESH_X_SIZE, MESH_Y_SIZE, NUM_FREQ_COMP, N_RAND_SIN2))
+	{
 		cout << "Error writing state header." << endl;
 		fclose(fp);
 		return 0;

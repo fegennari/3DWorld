@@ -475,7 +475,7 @@ void *trace_ray_block_sky(void *ptr) {
 		vector<vector3d> dirs(NRAYS);
 
 		for (unsigned p = 0; p < block_npts; ++p) {
-			pts[p] = signed_rand_vector_spherical(1.0, 0).get_norm()*scene_radius; // start the ray here
+			pts[p] = signed_rand_vector_spherical(1.0).get_norm()*scene_radius; // start the ray here
 		}
 		sort(pts.begin(), pts.end());
 		if (data->verbose) cout << "Sky light source progress (of " << block_npts << "): 0";
@@ -546,7 +546,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 	
 	for (unsigned n = 0; n < num_rays; ++n) {
 		if (kill_raytrace) break;
-		vector3d const dir(signed_rand_vector_spherical(1.0, 0).get_norm());
+		vector3d const dir(signed_rand_vector_spherical(1.0).get_norm());
 		float const weight(ray_wt*ls.get_dir_intensity(dir*-1));
 		if (weight == 0.0) continue;
 		point start_pt;

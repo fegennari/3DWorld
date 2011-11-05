@@ -812,8 +812,7 @@ uobj_asteroid::uobj_asteroid(point const &pos_, float radius_, unsigned model_, 
 			model3d.set_texture(MOON_TEX, 0.2);
 			break;
 		case AS_MODEL_HMAP: // heightmap model
-			rseed1 = obj_id;
-			rseed2 = 1;
+			set_rand2_state(obj_id, 1);
 			surface.gen(0.15, 2.0, 10, 1.0);
 			surface.setup(ASTEROID_NDIV, 0.0, 0);
 			surface.setup_draw_sphere(all_zeros, 1.0, 0.0, ASTEROID_NDIV, NULL);

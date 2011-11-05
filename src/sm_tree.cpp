@@ -108,8 +108,8 @@ void gen_small_trees() {
 	
 	for (int i = get_ext_y1(); i < get_ext_y2(); i += skip_val) {
 		for (int j = get_ext_x1(); j < get_ext_x2(); j += skip_val) {
-			rseed1 = 657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index;
-			rseed2 = 845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index;
+			set_rand2_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
+				            (845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
 			if ((rand2_seed_mix()%tree_prob) != 0) continue; // not selected
 			rand2_mix();
 			float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*signed_rand_float2());

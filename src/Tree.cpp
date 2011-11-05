@@ -60,13 +60,13 @@ tree_cont_t t_trees;
 extern bool has_snow;
 extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll;
-extern long rseed1, rseed2;
 extern float zmin, zmax_est, zbottom, water_plane_z, mesh_scale, mesh_scale2, temperature, fticks, tree_size, vegetation;
 extern point ocean;
 extern lightning l_strike;
 extern blastr latest_blastr;
 extern texture_t textures[];
 extern vector<coll_obj> coll_objects;
+extern rand_gen_t global_rand_gen;
 
 
 void calc_leaf_points() {
@@ -514,8 +514,7 @@ void tree::draw_tree_shadow() {
 void tree::draw_tree(shader_t const &s, bool invalidate_norms, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves) {
 
 	if (!created) return;
-	rseed1 = trseed1;
-	rseed2 = trseed2;
+	set_rand2_state(trseed1, trseed2);
 	gen_leaf_color();
 
 	float const mscale(mesh_scale*mesh_scale2);
@@ -1605,13 +1604,13 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 					int const ox(j + dx_scroll), oy(i + dy_scroll); // positions in original coordinate system
 					if (ox >= ext_x1 && ox <= ext_x2 && oy >= ext_y1 && oy <= ext_y2) continue; // use orignal tree from last position
 				}
-				rseed1 = 805306457*(i + yoff2) + 12582917*(j + xoff2) + 100663319*rand_gen_index;
-				rseed2 = 6291469  *(j + xoff2) + 3145739 *(i + yoff2) + 1572869  *rand_gen_index;
+				global_rand_gen.rseed1 = 805306457*(i + yoff2) + 12582917*(j + xoff2) + 100663319*rand_gen_index;
+				global_rand_gen.rseed2 = 6291469  *(j + xoff2) + 3145739 *(i + yoff2) + 1572869  *rand_gen_index;
 				rand2_mix();
 				unsigned const val(((unsigned)rand2_seed_mix())%smod);
 				if (val <= 100)         continue; // scenery
 				if (val%tree_prob != 0) continue; // not selected
-				if ((rseed1&127)/128.0 >= vegetation) continue;
+				if ((global_rand_gen.rseed1&127)/128.0 >= vegetation) continue;
 				point pos((get_xval(j) + 0.5*DX_VAL*rand2d()), (get_yval(i) + 0.5*DY_VAL*rand2d()), 0.0);
 				// Note: pos.z will be slightly different when calculated within vs. outside the mesh bounds
 				pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
@@ -1619,8 +1618,8 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 				if (tree_mode == 3 && get_tree_type_from_height(pos.z) != 2) continue; // use a small (simple) tree here
 				
 				if (max_unique_trees > 0) {
-					rseed1 = rseed1 % max_unique_trees;
-					rseed2 = 12345;
+					global_rand_gen.rseed1 = global_rand_gen.rseed1 % max_unique_trees;
+					global_rand_gen.rseed2 = 12345;
 					// *** unique the trees so they can be reused? ***
 				}
 				t_trees.push_back(tree());

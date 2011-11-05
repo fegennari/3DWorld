@@ -922,6 +922,64 @@ struct user_waypt_t {
 };
 
 
+class rand_gen_t {
+	// this is a good random number generator written by Stephen E. Derenzo
+	template<typename T> inline void randome_int(T &ranptr) {
+		if ((rseed1 = 40014*(rseed1%53668) - 12211*(rseed1/53668)) < 0) rseed1 += 2147483563;
+		if ((rseed2 = 40692*(rseed2%52774) - 3791 *(rseed2/52774)) < 0) rseed2 += 2147483399;
+		if ((ranptr = rseed1 - rseed2) < 1) ranptr += 2147483562;
+	}
+
+public:
+	long rseed1, rseed2;
+
+	rand_gen_t() {set_state(1,1);}
+	void set_state(long rs1, long rs2) {rseed1 = rs1; rseed2 = rs2;}
+
+	int rand2() {
+		int rand_num;
+		randome_int(rand_num);
+		return rand_num;
+	}
+	double rand2d() {
+		double rand_num;
+		randome_int(rand_num);
+		return rand_num/2147483563.;
+	}
+	int rand2_seed_mix() {
+		//int val1(rand2()); swap(rseed1, rseed2); return (val1 + rand2()); // more random
+		return (rseed1 ^ (rseed2 >> 8)); // faster (should call rand2_mix() after)
+	}
+	void rand2_mix() {rand2(); swap(rseed1, rseed2);}
+	float rand_float2() {return 0.000001*(rand2()%1000000);} // uniform 0 to 1
+	float signed_rand_float2() {return 2.0*rand2d() - 1.0;}
+	float rand_uniform2(float val1, float val2) {return 0.5*((val1 + val2) + fabs(val2 - val1)*signed_rand_float2());}
+
+	vector3d signed_rand_vector2(float scale=1.0) {
+		assert(scale > 0.0);
+		return vector3d(scale*signed_rand_float2(), scale*signed_rand_float2(), scale*signed_rand_float2());
+	}
+	vector3d signed_rand_vector2_norm(float scale=1.0) {
+		assert(scale > 0.0);
+
+		while (1) {
+			vector3d const v(signed_rand_vector2(scale));
+			if (v.mag_sq() > scale*TOLERANCE) return v.get_norm();
+		}
+		return zero_vector; // never gets here
+	}
+	vector3d signed_rand_vector2_spherical(float scale=1.0) {
+		assert(scale > 0.0);
+
+		while (1) {
+			vector3d const v(signed_rand_vector2(scale));
+			if (v.mag_sq() < scale*scale) return v;
+		}
+		return zero_vector; // never gets here
+	}
+};
+
+
 // colors
 colorRGBA const RED      (1.0,  0.0,  0.0,  1.0);
 colorRGBA const GREEN    (0.0,  1.0,  0.0,  1.0);
