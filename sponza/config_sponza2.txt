@@ -19,6 +19,7 @@ ground_effects_level 0
 toggle_mesh_enabled # disable mesh draw by default
 destroy_thresh 1
 use_dense_voxels 0
+global_lighting_update 1
 
 grass_density 0
 grass_size 0.02 0.002

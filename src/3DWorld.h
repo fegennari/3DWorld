@@ -1757,6 +1757,9 @@ void draw_scene_bounds_and_light_frustum(point const &lpos);
 void create_shadow_map();
 void free_shadow_map_textures();
 
+// function prototypes - raytrace
+void check_update_global_lighting(unsigned lights);
+
 // function prototypes - screenshot (these are C functions)
 #ifdef ENABLE_JPEG
 int screenshot(unsigned window_width, unsigned window_height, char *file_path);

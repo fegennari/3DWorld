@@ -15,12 +15,13 @@ float const SNOW_ALBEDO   = 0.9;
 float const ICE_ALBEDO    = 0.8;
 
 bool keep_lasers(0); // debugging mode
+bool kill_raytrace(0), indir_lighting_updated(0);
 unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1}; // sky, global, local
 unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1}; // sky, global, local
 
-extern bool has_snow;
+extern bool has_snow, global_lighting_update;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
 extern float light_int_scale[], ztop, water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight;
 extern char *lighting_file[];
@@ -64,6 +65,7 @@ void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &
 		}
 		p1 += step;
 	}
+	indir_lighting_updated = 1;
 	cells_touched += nsteps;
 	++num_hits;
 }
@@ -275,46 +277,86 @@ struct rt_data {
 };
 
 
-// see https://computing.llnl.gov/tutorials/pthreads/
-void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose) {
+template<typename T> class thread_manager_t {
 
+	vector<pthread_t> threads;
+
+public:
+	vector<T> data; // to be filled in by the caller
+
+	bool is_active() const {return (!threads.empty());}
+
+	void clear() {
+		data.clear();
+		threads.clear();
+	}
+
+	void create(unsigned num_threads) {
+		assert(!is_active());
+		data.resize(num_threads);
+		threads.resize(num_threads);
+	}
+
+	void run(void *(*func)(void *)) {
+		assert(threads.size() == data.size());
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+		for (unsigned t = 0; t < threads.size(); ++t) {
+			int const rc(pthread_create(&threads[t], &attr, func, (void *)(&data[t]))); 
+		
+			if (rc) {
+				cout << "Error: Return code from pthread_create() is " << rc << endl;
+				assert(0);
+			}
+		}
+		pthread_attr_destroy(&attr);
+	}
+
+	void join() {
+		for (unsigned t = 0; t < threads.size(); ++t) {
+			int const rc(pthread_join(threads[t], NULL));
+		
+			if (rc) {
+				cout << "Error: return code from pthread_join() is " << rc << endl;
+				assert(0);
+			}
+		}
+		clear();
+	}
+};
+
+thread_manager_t<rt_data> thread_manager;
+
+
+// see https://computing.llnl.gov/tutorials/pthreads/
+void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking) {
+
+	if (thread_manager.is_active()) { // can't have two running at once, so kill the existing one
+		kill_raytrace = 1;
+		thread_manager.join(); // FIXME: wait for threads to finish
+		assert(!thread_manager.is_active());
+		kill_raytrace = 0;
+	}
 	assert(num_threads > 0 && num_threads < 100);
-	assert(!keep_lasers || NUM_THREADS == 1); // could use a pthread_mutex_t instead to make this legal
-	vector<rt_data> data(num_threads);
+	assert(!keep_lasers || num_threads == 1); // could use a pthread_mutex_t instead to make this legal
 	bool const single_thread(num_threads == 1);
 	if (verbose) cout << "Computing lighting on " << num_threads << " threads." << endl;
+	thread_manager.create(num_threads);
+	vector<rt_data> &data(thread_manager.data);
 
 	for (unsigned t = 0; t < data.size(); ++t) {
 		// create a custom lmap_manager_t for each thread then merge them together?
 		data[t] = rt_data(t, num_threads, 234323*t, !single_thread, (verbose && t == 0));
 	}
-	if (single_thread) { // pthreads disabled
+	if (single_thread && blocking) { // pthreads disabled
 		start_func((void *)(&data[0]));
+		thread_manager.clear();
 		return;
 	}
-	vector<pthread_t> threads(num_threads);
-	pthread_attr_t attr;
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-	for (unsigned t = 0; t < num_threads; ++t) {
-		int const rc(pthread_create(&threads[t], &attr, start_func, (void *)(&data[t]))); 
-		
-		if (rc) {
-			cout << "Error: Return code from pthread_create() is " << rc << endl;
-			assert(0);
-		}
-	}
-	pthread_attr_destroy(&attr);
-
-	for (unsigned t = 0; t < num_threads; ++t) {
-		int const rc(pthread_join(threads[t], NULL));
-		
-		if (rc) {
-			cout << "Error: return code from pthread_join() is " << rc << endl;
-			assert(0);
-		}
-	}
+	thread_manager.run(start_func);
+	if (blocking) thread_manager.join();
 }
 
 
@@ -357,10 +399,12 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 		if (verbose) cout << "Dim " << i+1 << " of 3, num (this thread): " << num_rays << ", progress (of " << 1+n0/10 << "): 0";
 
 		for (unsigned s0 = 0; s0 < n0; ++s0) {
+			if (kill_raytrace) break;
 			pt[d0] = bnds.d[d0][0] + (s0 + rand_uniform(0.0, 1.0))*len0/n0;
 			if (verbose && ((s0%10) == 0)) increment_printed_number(s0/10);
 
 			for (unsigned s1 = 0; s1 < n1; ++s1) {
+				if (kill_raytrace) break;
 				pt[d1] = bnds.d[d1][0] + (s1 + rand_uniform(0.0, 1.0))*len1/n1;
 				point const end_pt(pt + (pt - pos).get_norm()*line_length);
 				if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
@@ -437,6 +481,7 @@ void *trace_ray_block_sky(void *ptr) {
 		if (data->verbose) cout << "Sky light source progress (of " << block_npts << "): 0";
 
 		for (unsigned p = 0; p < block_npts; ++p) {
+			if (kill_raytrace) break;
 			if (data->verbose) increment_printed_number(p);
 			point const &pt(pts[p]);
 
@@ -447,6 +492,7 @@ void *trace_ray_block_sky(void *ptr) {
 			sort(dirs.begin(), dirs.end());
 
 			for (unsigned r = 0; r < NRAYS; ++r) {
+				if (kill_raytrace) break;
 				if (dot_product(dirs[r], pt) >= 0.0) continue; // can get here when (-Z_SCENE_SIZE, Z_SCENE_SIZE) does not contain (czmin, czmax)
 				point const end_pt(pt + dirs[r]*line_length);
 				if (sky_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
@@ -457,6 +503,7 @@ void *trace_ray_block_sky(void *ptr) {
 		if (data->verbose) cout << endl;
 	}
 	for (cube_light_src_vect::const_iterator i = sky_cube_lights.begin(); i != sky_cube_lights.end(); ++i) {
+		if (kill_raytrace) break;
 		if (data->num == 0 || i->num_rays == 0) continue; // disabled
 		unsigned const num_rays(i->num_rays/data->num);
 		float const cube_weight(RAY_WEIGHT*i->intensity/i->num_rays);
@@ -465,6 +512,7 @@ void *trace_ray_block_sky(void *ptr) {
 		point pt;
 
 		for (unsigned p = 0; p < num_rays; ++p) {
+			if (kill_raytrace) break;
 			if (data->verbose && ((p%1000) == 0)) increment_printed_number(p/1000);
 
 			for (unsigned d = 0; d < 3; ++d) {
@@ -497,6 +545,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 	assert(init_cobj < (int)coll_objects.size());
 	
 	for (unsigned n = 0; n < num_rays; ++n) {
+		if (kill_raytrace) break;
 		vector3d const dir(signed_rand_vector_spherical(1.0, 0).get_norm());
 		float const weight(ray_wt*ls.get_dir_intensity(dir*-1));
 		if (weight == 0.0) continue;
@@ -559,12 +608,26 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	}
 	else {
 		if (ltype != LIGHTING_LOCAL) cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
-		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1);
+		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1, 1);
 	}
 	if (write_light_files[ltype]) {
 		lmap_manager.write_data_to_file(lighting_file[ltype], ltype);
 	}
 	lmap_manager.apply_light_scale(light_int_scale[ltype], ltype);
+}
+
+
+void check_update_global_lighting(unsigned lights) {
+
+	if (!global_lighting_update) return;
+	if (!(lights & (SUN_SHADOW | MOON_SHADOW))) return;
+	if (GLOBAL_RAYS == 0 && global_cube_lights.empty()) return; // nothing to do
+	if (!lmap_manager.is_allocated()) return; // too early
+	// Note: we could check if the sun/moon is visible, but it might have been visible previously and now is not,
+	//       and in that case we still need to update lighting
+	tot_rays = num_hits = cells_touched = 0;
+	lmap_manager.clear_lighting_values(LIGHTING_GLOBAL);
+	launch_threaded_job(max(1U, NUM_THREADS-1), rt_funcs[LIGHTING_GLOBAL], 1, 0); // reserve a thread for rendering
 }
 
 
@@ -635,6 +698,19 @@ void lmap_manager_t::apply_light_scale(float scale, int ltype) {
 			float const max_color(max(color[0], max(color[1], color[2])));
 			if (max_color > 0.0) {UNROLL_3X(color[i_] /= max_color;)} // normalize color
 		}
+	}
+}
+
+
+void lmap_manager_t::clear_lighting_values(int ltype) {
+
+	assert(ltype < NUM_LIGHTING_TYPES);
+	unsigned const num(lmcell::get_dsz(ltype));
+
+	// apply global light scaling and normalize colors
+	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
+		float *color(i->get_offset(ltype));
+		for (unsigned j = 0; j < num; ++j) color[j] = 0.0;
 	}
 }
 

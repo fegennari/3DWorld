@@ -76,10 +76,12 @@ public:
 
 	lmap_manager_t() : lm_zsize(0), vlmap(NULL) {}
 	void clear() {vldata_alloc.clear();} // reset vlmap to NULL?
+	bool is_allocated() const {return (vlmap != NULL);}
 	size_t size() const {return vldata_alloc.size();}
 	bool read_data_from_file(char const *const fn, int ltype);
 	bool write_data_to_file(char const *const fn, int ltype) const;
 	void apply_light_scale(float scale, int ltype);
+	void clear_lighting_values(int ltype);
 
 	inline bool is_valid_cell(int x, int y, int z) const {
 		return (z >= 0 && z < MESH_SIZE[2] && !point_outside_mesh(x, y) && vlmap[y][x] != NULL);

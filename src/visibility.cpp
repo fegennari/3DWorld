@@ -391,6 +391,7 @@ void calc_visibility(unsigned light_sources) {
 		add_cobj_shadows(light_sources);
 		return;
 	}
+	check_update_global_lighting(light_sources);
 	update_sun_and_moon();
 	if (world_mode == WMODE_INF_TERRAIN || DISABLE_SHADOWS || ground_effects_level == 0) return;
 	point lpos[NUM_LIGHT_SRC];

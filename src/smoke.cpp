@@ -24,7 +24,7 @@ unsigned smoke_tid(0);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
-extern bool disable_shaders, no_smoke_over_mesh;
+extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated;
 extern int animate2, display_mode;
 extern float czmin0;
 extern colorRGBA cur_ambient, cur_diffuse;
@@ -209,7 +209,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	last_cur_diffuse = cur_diffuse;
 
 	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
-	if (!full_update && !smoke_exists) return 0; // return 1?
+	if (!full_update && !smoke_exists && !indir_lighting_updated) return 0; // return 1?
 
 	static int cur_block(0);
 	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
@@ -231,7 +231,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 				unsigned const off2(ncomp*(off + z));
 				lmcell const &lmc((vlm == NULL) ? default_lmc : vlm[z]);
 
-				if (full_update) {
+				if (full_update || indir_lighting_updated) {
 					if (get_zval(z+1) < zthresh) { // adjust by one because GPU will interpolate the texel
 						UNROLL_3X(data[off2+i_] = 0;)
 					}
@@ -256,6 +256,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 		update_3d_texture(smoke_tid, 0, 0, y_start, zsize, MESH_X_SIZE, (full_update ? MESH_Y_SIZE : block_size), ncomp, &data[off]);
 	}
 	if (!full_update) cur_block = (cur_block+1) % SMOKE_SEND_SKIP;
+	indir_lighting_updated = 0;
 	//PRINT_TIME("Smoke Upload");
 	return 1;
 }
