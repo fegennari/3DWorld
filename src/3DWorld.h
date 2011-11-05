@@ -937,46 +937,51 @@ public:
 	rand_gen_t() {set_state(1,1);}
 	void set_state(long rs1, long rs2) {rseed1 = rs1; rseed2 = rs2;}
 
-	int rand2() {
+	int rand() {
 		int rand_num;
 		randome_int(rand_num);
 		return rand_num;
 	}
-	double rand2d() {
+	double randd() {
 		double rand_num;
 		randome_int(rand_num);
 		return rand_num/2147483563.;
 	}
-	int rand2_seed_mix() {
-		//int val1(rand2()); swap(rseed1, rseed2); return (val1 + rand2()); // more random
+	int rand_seed_mix() {
+		//int val1(rand()); swap(rseed1, rseed2); return (val1 + rand()); // more random
 		return (rseed1 ^ (rseed2 >> 8)); // faster (should call rand2_mix() after)
 	}
-	void rand2_mix() {rand2(); swap(rseed1, rseed2);}
-	float rand_float2() {return 0.000001*(rand2()%1000000);} // uniform 0 to 1
-	float signed_rand_float2() {return 2.0*rand2d() - 1.0;}
-	float rand_uniform2(float val1, float val2) {return 0.5*((val1 + val2) + fabs(val2 - val1)*signed_rand_float2());}
+	void rand_mix() {rand(); swap(rseed1, rseed2);}
+	float rand_float() {return 0.000001*(rand()%1000000);} // uniform 0 to 1
+	float signed_rand_float() {return 2.0*randd() - 1.0;}
+	float rand_uniform(float val1, float val2) {return 0.5*((val1 + val2) + fabs(val2 - val1)*signed_rand_float());}
 
-	vector3d signed_rand_vector2(float scale=1.0) {
+	vector3d signed_rand_vector(float scale=1.0) {
 		assert(scale > 0.0);
-		return vector3d(scale*signed_rand_float2(), scale*signed_rand_float2(), scale*signed_rand_float2());
+		return vector3d(scale*signed_rand_float(), scale*signed_rand_float(), scale*signed_rand_float());
 	}
-	vector3d signed_rand_vector2_norm(float scale=1.0) {
+	vector3d signed_rand_vector_norm(float scale=1.0) {
 		assert(scale > 0.0);
 
 		while (1) {
-			vector3d const v(signed_rand_vector2(scale));
+			vector3d const v(signed_rand_vector(scale));
 			if (v.mag_sq() > scale*TOLERANCE) return v.get_norm();
 		}
 		return zero_vector; // never gets here
 	}
-	vector3d signed_rand_vector2_spherical(float scale=1.0) {
+	vector3d signed_rand_vector_spherical(float scale=1.0) {
 		assert(scale > 0.0);
 
 		while (1) {
-			vector3d const v(signed_rand_vector2(scale));
+			vector3d const v(signed_rand_vector(scale));
 			if (v.mag_sq() < scale*scale) return v;
 		}
 		return zero_vector; // never gets here
+	}
+	point gen_rand_cube_point(cube_t const &c) {
+		point pt;
+		UNROLL_3X(pt[i_] = rand_uniform(c.d[i_][0], c.d[i_][1]););
+		return pt;
 	}
 };
 

@@ -61,23 +61,23 @@ template<typename T> inline T interpolate_3d(T const *v, unsigned npts, float s,
 typedef float (*rand_func)(float, float);
 
 
-inline int rand2()                {return global_rand_gen.rand2();}
-inline int rand2_seed_mix()       {return global_rand_gen.rand2_seed_mix();}
-inline void rand2_mix()           {return global_rand_gen.rand2_mix();}
-inline double rand2d()            {return global_rand_gen.rand2d();}
-inline float rand_float2()        {return global_rand_gen.rand_float2();} // uniform 0 to 1
-inline float signed_rand_float2() {return global_rand_gen.signed_rand_float2();}
-inline float rand_uniform2(float val1, float val2) {return global_rand_gen.rand_uniform2(val1, val2);}
+inline int rand2()                {return global_rand_gen.rand();}
+inline int rand2_seed_mix()       {return global_rand_gen.rand_seed_mix();}
+inline void rand2_mix()           {return global_rand_gen.rand_mix();}
+inline double rand2d()            {return global_rand_gen.randd();}
+inline float rand_float2()        {return global_rand_gen.rand_float();} // uniform 0 to 1
+inline float signed_rand_float2() {return global_rand_gen.signed_rand_float();}
+inline float rand_uniform2(float val1, float val2) {return global_rand_gen.rand_uniform(val1, val2);}
 inline void set_rand2_state(long rs1, long rs2)    {global_rand_gen.set_state(rs1, rs2);}
-inline vector3d signed_rand_vector2(float scale=1.0)           {return global_rand_gen.signed_rand_vector2(scale);}
-inline vector3d signed_rand_vector2_norm(float scale=1.0)      {return global_rand_gen.signed_rand_vector2_norm(scale);}
-inline vector3d signed_rand_vector2_spherical(float scale=1.0) {return global_rand_gen.signed_rand_vector2_spherical(scale);}
+inline vector3d signed_rand_vector2(float scale=1.0)           {return global_rand_gen.signed_rand_vector(scale);}
+inline vector3d signed_rand_vector2_norm(float scale=1.0)      {return global_rand_gen.signed_rand_vector_norm(scale);}
+inline vector3d signed_rand_vector2_spherical(float scale=1.0) {return global_rand_gen.signed_rand_vector_spherical(scale);}
 
 
 inline float rand_float()        {return 0.0001*(rand()%10000);} // uniform 0 to 1 (only 16-bit random numbers)
 inline float signed_rand_float() {return 2.0*rand_float() - 1.0;}
 inline float rand_uniform(float val1, float val2) {return 0.5*((val1 + val2) + fabs(val2 - val1)*signed_rand_float());}
-inline float rgauss()  {return gauss_rand_arr[rand()%N_RAND_DIST];} // mean = 0.0, std_dev = 1.0
+inline float rgauss()  {return gauss_rand_arr[rand ()%N_RAND_DIST];} // mean = 0.0, std_dev = 1.0
 inline float rgauss2() {return gauss_rand_arr[rand2()%N_RAND_DIST];} // mean = 0.0, std_dev = 1.0
 inline float rand_gaussian (float mean, float std_dev) {return mean + std_dev*rgauss();}
 inline float rand_gaussian2(float mean, float std_dev) {return mean + std_dev*rgauss2();}

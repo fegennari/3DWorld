@@ -72,7 +72,7 @@ void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &
 
 
 void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA color,
-					float line_length, int ignore_cobj, int ltype, unsigned depth)
+					float line_length, int ignore_cobj, int ltype, unsigned depth, rand_gen_t &rgen)
 {
 	if (depth > MAX_RAY_BOUNCES) return;
 	assert(!is_nan(p1) && !is_nan(p2));
@@ -94,7 +94,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	if (depth == 0 && coll && cpos == orig_p1) {
 		if (coll_objects[cindex].line_int_exact(p2, p1, t, cnorm, 0.0, 1.0)) {
 			cpos = (p2 + (p1 - p2)*t);
-			cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, depth+1);
+			cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, depth+1, rgen);
 			return;
 		}
 	}
@@ -244,7 +244,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 						no_transmit = 1; // total internal reflection (could process an internal reflection)
 					}
 				}
-				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, ltype, depth+1); // transmitted
+				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, ltype, depth+1, rgen); // transmitted
 			}
 			weight *= rweight; // reflected weight
 		}
@@ -259,11 +259,11 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	unsigned const num_splits((depth == 0) ? INIT_RAY_SPLITS[ltype] : NUM_RAY_SPLITS[ltype]);
 	
 	for (unsigned n = 0; n < num_splits; ++n) {
-		vector3d new_v(signed_rand_vector().get_norm()); // add random diffuse scatter
+		vector3d new_v(rgen.signed_rand_vector().get_norm()); // add random diffuse scatter
 		if (dot_product(new_v, cnorm) < 0.0) new_v.negate(); // make in same direction as normal
 		vector3d const v_new((v_ref*specular + new_v*(1.0 - specular)).get_norm());
 		p2 = p1 + v_new*line_length; // ending point: effectively at infinity
-		cast_light_ray(cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, depth+1);
+		cast_light_ray(cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, depth+1, rgen);
 	}
 }
 
@@ -273,7 +273,7 @@ struct rt_data {
 	int rseed;
 	bool is_thread, verbose;
 
-	rt_data(unsigned i=0, unsigned n=0, int s=0, bool t=0, bool v=0) : ix(i), num(n), rseed(s), is_thread(t), verbose(v) {}
+	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0) : ix(i), num(n), rseed(s), is_thread(t), verbose(v) {}
 };
 
 
@@ -348,7 +348,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 
 	for (unsigned t = 0; t < data.size(); ++t) {
 		// create a custom lmap_manager_t for each thread then merge them together?
-		data[t] = rt_data(t, num_threads, 234323*t, !single_thread, (verbose && t == 0));
+		data[t] = rt_data(t, num_threads, 234323*(t+1), !single_thread, (verbose && t == 0));
 	}
 	if (single_thread && blocking) { // pthreads disabled
 		start_func((void *)(&data[0]));
@@ -371,7 +371,7 @@ bool cube_light_src_vect::ray_intersects_any(point const &start_pt, point const 
 
 
 void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA const &color,
-	float ray_wt, unsigned nrays, int ltype, unsigned disabled_edges, bool is_scene_cube, bool verbose)
+	float ray_wt, unsigned nrays, int ltype, unsigned disabled_edges, bool is_scene_cube, bool verbose, rand_gen_t &rgen)
 {
 	float const line_length(2.0*get_scene_radius());
 	vector3d const ldir((bnds.get_cube_center() - pos).get_norm());
@@ -400,15 +400,15 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 
 		for (unsigned s0 = 0; s0 < n0; ++s0) {
 			if (kill_raytrace) break;
-			pt[d0] = bnds.d[d0][0] + (s0 + rand_uniform(0.0, 1.0))*len0/n0;
+			pt[d0] = bnds.d[d0][0] + (s0 + rgen.rand_uniform(0.0, 1.0))*len0/n0;
 			if (verbose && ((s0%10) == 0)) increment_printed_number(s0/10);
 
 			for (unsigned s1 = 0; s1 < n1; ++s1) {
 				if (kill_raytrace) break;
-				pt[d1] = bnds.d[d1][0] + (s1 + rand_uniform(0.0, 1.0))*len1/n1;
+				pt[d1] = bnds.d[d1][0] + (s1 + rgen.rand_uniform(0.0, 1.0))*len1/n1;
 				point const end_pt(pt + (pt - pos).get_norm()*line_length);
 				if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
-				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0);
+				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0, rgen);
 			}
 		}
 		if (verbose) cout << endl;
@@ -422,21 +422,22 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	assert(ptr);
 	rt_data *data((rt_data *)ptr);
 	assert(data->num > 0);
-	if (data->is_thread) srand(data->rseed);
+	rand_gen_t rgen;
+	rgen.set_state(data->rseed, 1);
 	unsigned long long cube_start_rays(0);
 
 	if (GLOBAL_RAYS > 0) {
 		float const ray_wt(RAY_WEIGHT*weight*color.alpha/GLOBAL_RAYS);
 		assert(ray_wt > 0.0);
 		cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
-		trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose);
+		trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose, rgen);
 	}
 	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		if (data->num == 0 || i->num_rays == 0) continue; // disabled
 		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
 		unsigned const num_rays(i->num_rays/data->num);
 		float const cube_weight(RAY_WEIGHT*weight*i->intensity/i->num_rays);
-		trace_ray_block_global_cube(i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose);
+		trace_ray_block_global_cube(i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose, rgen);
 		cube_start_rays += num_rays;
 	}
 	if (data->verbose) {
@@ -464,7 +465,8 @@ void *trace_ray_block_sky(void *ptr) {
 	assert(ptr);
 	rt_data *data((rt_data *)ptr);
 	assert(data->num > 0);
-	if (data->is_thread) srand(data->rseed);
+	rand_gen_t rgen;
+	rgen.set_state(data->rseed, 1);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
 	unsigned long long start_rays(0), cube_start_rays(0);
 
@@ -475,7 +477,7 @@ void *trace_ray_block_sky(void *ptr) {
 		vector<vector3d> dirs(NRAYS);
 
 		for (unsigned p = 0; p < block_npts; ++p) {
-			pts[p] = signed_rand_vector_spherical(1.0).get_norm()*scene_radius; // start the ray here
+			pts[p] = rgen.signed_rand_vector_spherical(1.0).get_norm()*scene_radius; // start the ray here
 		}
 		sort(pts.begin(), pts.end());
 		if (data->verbose) cout << "Sky light source progress (of " << block_npts << "): 0";
@@ -486,7 +488,7 @@ void *trace_ray_block_sky(void *ptr) {
 			point const &pt(pts[p]);
 
 			for (unsigned r = 0; r < NRAYS; ++r) {
-				point const target_pt(X_SCENE_SIZE*signed_rand_float(), Y_SCENE_SIZE*signed_rand_float(), rand_uniform(czmin, czmax));
+				point const target_pt(X_SCENE_SIZE*rgen.signed_rand_float(), Y_SCENE_SIZE*rgen.signed_rand_float(), rgen.rand_uniform(czmin, czmax));
 				dirs[r] = (target_pt - pt).get_norm();
 			}
 			sort(dirs.begin(), dirs.end());
@@ -496,7 +498,7 @@ void *trace_ray_block_sky(void *ptr) {
 				if (dot_product(dirs[r], pt) >= 0.0) continue; // can get here when (-Z_SCENE_SIZE, Z_SCENE_SIZE) does not contain (czmin, czmax)
 				point const end_pt(pt + dirs[r]*line_length);
 				if (sky_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
-				cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 0);
+				cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 0, rgen);
 				++start_rays;
 			}
 		}
@@ -509,19 +511,15 @@ void *trace_ray_block_sky(void *ptr) {
 		float const cube_weight(RAY_WEIGHT*i->intensity/i->num_rays);
 		if (data->verbose) cout << "Cube volume light source " << (i - sky_cube_lights.begin()) << " of " << sky_cube_lights.size() << ", progress (of " << 1+num_rays/1000 << "): 0";
 		cube_start_rays += num_rays;
-		point pt;
 
 		for (unsigned p = 0; p < num_rays; ++p) {
 			if (kill_raytrace) break;
 			if (data->verbose && ((p%1000) == 0)) increment_printed_number(p/1000);
-
-			for (unsigned d = 0; d < 3; ++d) {
-				pt[d] = rand_uniform(i->bounds.d[d][0], i->bounds.d[d][1]);
-			}
+			point const pt(rgen.gen_rand_cube_point(i->bounds));
 			vector3d dir(signed_rand_vector_norm());
 			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
 			point const end_pt(pt + dir*line_length);
-			cast_light_ray(pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0);
+			cast_light_ray(pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0, rgen);
 		}
 		if (data->verbose) cout << endl;
 	}
@@ -533,7 +531,7 @@ void *trace_ray_block_sky(void *ptr) {
 }
 
 
-void ray_trace_local_light_source(light_source const &ls, float line_length, unsigned num_rays) {
+void ray_trace_local_light_source(light_source const &ls, float line_length, unsigned num_rays, rand_gen_t &rgen) {
 
 	point const &lpos(ls.get_center());
 	colorRGBA lcolor(ls.get_color());
@@ -546,7 +544,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 	
 	for (unsigned n = 0; n < num_rays; ++n) {
 		if (kill_raytrace) break;
-		vector3d const dir(signed_rand_vector_spherical(1.0).get_norm());
+		vector3d const dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
 		float const weight(ray_wt*ls.get_dir_intensity(dir*-1));
 		if (weight == 0.0) continue;
 		point start_pt;
@@ -554,10 +552,8 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 		if (init_cobj >= 0 && r_inner == 0.0) { // use a volume light source
 			coll_obj cobj(coll_objects[init_cobj]);
 			
-			while (1) {
-				for (unsigned d = 0; d < 3; ++d) { // generate a radom point within cobj's bounding cube
-					start_pt[d] = rand_uniform(cobj.d[d][0], cobj.d[d][1]);
-				}
+			while (1) { // generate a radom point within cobj's bounding cube
+				start_pt = rgen.gen_rand_cube_point(cobj);
 				if (cobj.line_intersect(start_pt, start_pt)) break; // intersection (point contained)
 			}
 		}
@@ -567,7 +563,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 			start_pt = lpos + dir*r_inner;
 		}
 		point const end_pt(start_pt + dir*line_length);
-		cast_light_ray(start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, LIGHTING_LOCAL, 0);
+		cast_light_ray(start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, LIGHTING_LOCAL, 0, rgen);
 	}
 }
 
@@ -578,7 +574,8 @@ void *trace_ray_block_local(void *ptr) {
 	if (LOCAL_RAYS == 0) return 0; // nothing to do
 	rt_data *data((rt_data *)ptr);
 	assert(data->num > 0);
-	if (data->is_thread) srand(data->rseed);
+	rand_gen_t rgen;
+	rgen.set_state(data->rseed, 1);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
 	unsigned const num_rays(max(1U, LOCAL_RAYS/data->num));
 	
@@ -588,7 +585,7 @@ void *trace_ray_block_local(void *ptr) {
 	}
 	for (unsigned i = 0; i < light_sources.size(); ++i) {
 		if (data->verbose) increment_printed_number(i);
-		ray_trace_local_light_source(light_sources[i], line_length, num_rays);
+		ray_trace_local_light_source(light_sources[i], line_length, num_rays, rgen);
 	}
 	if (data->verbose) cout << endl;
 	return 0;
