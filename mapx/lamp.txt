@@ -13,12 +13,14 @@ C 0.0 0.0 0.01  0.0 0.0 0.02  0.090 0.020
 
 # top
 C 0.0 0.0 1.01  0.0 0.0 1.03  0.060 0.060
-e 0
 C 0.0 0.0 1.09  0.0 0.0 1.11  0.100 0.100
-e 3
 C 0.0 0.0 1.00  0.0 0.0 1.01  0.010 0.060
 C 0.0 0.0 1.11  0.0 0.0 1.20  0.100 0.000
 S 0.0 0.0 1.20  0.008
+
+# reflector
+l 0.8 0.9 0.9 0.8 1.0 -1 1 # shiny off-white metal
+C 0.0 0.0 1.08  0.0 0.0 1.09 0.000 0.100
 
 # light
 e 0 # enable ends because lighting test wants a filled cylinder instead of a hollow cylinder
