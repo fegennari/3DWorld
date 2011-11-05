@@ -495,6 +495,7 @@ struct colorRGB { // size = 12
 	float R, G, B;
 	colorRGB() {}
 	colorRGB(float r, float g, float b) : R(r), G(g), B(b) {}
+	void assign(float r, float g, float b) {R = r; G = g; B = b;}
 	void set_to_val(float val) {R = G = B = val;}
 	bool operator==(const colorRGB &c) const {return (c.R == R && c.G == G && c.B == B);}
 	bool operator!=(const colorRGB &c) const {return !operator==(c);}
@@ -546,7 +547,7 @@ struct colorRGBA : public colorRGB { // size = 16
 	colorRGBA() {}
 	colorRGBA(float r, float g, float b, float a=1.0) : colorRGB(r, g, b), A(a) {}
 	colorRGBA(colorRGB const &color, float a=1.0) : colorRGB(color), A(a) {}
-	void assign(float R, float G, float B, float A=1.0) {R = R; G = G; B = B; A = A;}
+	void assign(float r, float g, float b, float a=1.0) {R = r; G = g; B = b; A = a;}
 	bool operator==(const colorRGBA &c) const {return (c.R == R && c.G == G && c.B == B && c.A == A);}
 	bool operator!=(const colorRGBA &c) const {return !operator==(c);}
 
