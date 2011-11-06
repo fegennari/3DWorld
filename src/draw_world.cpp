@@ -1857,8 +1857,15 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				if (c.no_draw()) continue;
 				
 				if (c.is_semi_trans()) { // FIXME: dlists containing semi-transparent grouped polygons?
-					float const neg_dist_sq(-distance_to_camera_sq(c.get_center_pt()));
-					draw_last.push_back(make_pair(neg_dist_sq, i));
+					float dist(distance_to_camera(c.get_center_pt()));
+
+					if (c.type == COLL_SPHERE) { // distance to surface closest to the camera
+						dist -= c.radius;
+					}
+					else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) { // approx distance to surface closest to the camera
+						dist -= min(0.5*(c.radius + c.radius2), 0.5*p2p_dist(c.points[0], c.points[1]));
+					}
+					draw_last.push_back(make_pair(-dist, i)); // negative distance
 				}
 				else {
 					c.draw_cobj(i, last_tid, last_group_id, &s); // i may not be valid after this call
