@@ -271,9 +271,9 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 struct rt_data {
 	unsigned ix, num;
 	int rseed;
-	bool is_thread, verbose;
+	bool is_thread, verbose, randomized;
 
-	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0) : ix(i), num(n), rseed(s), is_thread(t), verbose(v) {}
+	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0) : ix(i), num(n), rseed(s), is_thread(t), verbose(v), randomized(r) {}
 };
 
 
@@ -331,7 +331,7 @@ thread_manager_t<rt_data> thread_manager;
 
 
 // see https://computing.llnl.gov/tutorials/pthreads/
-void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking) {
+void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool randomized) {
 
 	if (thread_manager.is_active()) { // can't have two running at once, so kill the existing one
 		kill_raytrace = 1;
@@ -348,7 +348,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 
 	for (unsigned t = 0; t < data.size(); ++t) {
 		// create a custom lmap_manager_t for each thread then merge them together?
-		data[t] = rt_data(t, num_threads, 234323*(t+1), !single_thread, (verbose && t == 0));
+		data[t] = rt_data(t, num_threads, 234323*(t+1), !single_thread, (verbose && t == 0), randomized);
 	}
 	if (single_thread && blocking) { // pthreads disabled
 		start_func((void *)(&data[0]));
@@ -370,8 +370,17 @@ bool cube_light_src_vect::ray_intersects_any(point const &start_pt, point const 
 }
 
 
-void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA const &color,
-	float ray_wt, unsigned nrays, int ltype, unsigned disabled_edges, bool is_scene_cube, bool verbose, rand_gen_t &rgen)
+void trace_one_global_ray(point const &pos, point const &pt, colorRGBA const &color, float ray_wt,
+	int ltype, bool is_scene_cube, rand_gen_t &rgen, float line_length)
+{
+	point const end_pt(pt + (pt - pos).get_norm()*line_length);
+	if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) return; // don't double count
+	cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0, rgen);
+}
+
+
+void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA const &color, float ray_wt,
+	unsigned nrays, int ltype, unsigned disabled_edges, bool is_scene_cube, bool verbose, bool randomized, rand_gen_t &rgen)
 {
 	float const line_length(2.0*get_scene_radius());
 	vector3d const ldir((bnds.get_cube_center() - pos).get_norm());
@@ -391,24 +400,35 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 		bool const dir(ldir[i] < 0.0);
 		unsigned const d0((i+1)%3), d1((i+2)%3);
 		unsigned const num_rays(unsigned(nrays*proj_area[i]/tot_area + 0.5));
-		float const len0(bnds.d[d0][1] - bnds.d[d0][0]), len1(bnds.d[d1][1] - bnds.d[d1][0]);
-		unsigned const n0(max(1U, unsigned(sqrt((float)num_rays)*len0/len1)));
-		unsigned const n1(max(1U, unsigned(sqrt((float)num_rays)*len1/len0)));
 		point pt;
 		pt[i] = bnds.d[i][dir];
-		if (verbose) cout << "Dim " << i+1 << " of 3, num (this thread): " << num_rays << ", progress (of " << 1+n0/10 << "): 0";
+		if (verbose) cout << "Dim " << i+1 << " of 3, num (this thread): " << num_rays << ", progress (of " << 1+num_rays/1000 << "): 0";
+		unsigned num(0);
 
-		for (unsigned s0 = 0; s0 < n0; ++s0) {
-			if (kill_raytrace) break;
-			pt[d0] = bnds.d[d0][0] + (s0 + rgen.rand_uniform(0.0, 1.0))*len0/n0;
-			if (verbose && ((s0%10) == 0)) increment_printed_number(s0/10);
-
-			for (unsigned s1 = 0; s1 < n1; ++s1) {
+		if (randomized) {
+			for (unsigned s = 0; s < num_rays; ++s) {
 				if (kill_raytrace) break;
-				pt[d1] = bnds.d[d1][0] + (s1 + rgen.rand_uniform(0.0, 1.0))*len1/n1;
-				point const end_pt(pt + (pt - pos).get_norm()*line_length);
-				if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
-				cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0, rgen);
+				if (verbose && ((s%1000) == 0)) increment_printed_number(s/1000);
+				pt[d0] = rgen.rand_uniform(bnds.d[d0][0], bnds.d[d0][1]);
+				pt[d1] = rgen.rand_uniform(bnds.d[d1][0], bnds.d[d1][1]);
+				trace_one_global_ray(pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, line_length);
+			}
+		}
+		else {
+			float const len0(bnds.d[d0][1] - bnds.d[d0][0]), len1(bnds.d[d1][1] - bnds.d[d1][0]);
+			unsigned const n0(max(1U, unsigned(sqrt((float)num_rays)*len0/len1)));
+			unsigned const n1(max(1U, unsigned(sqrt((float)num_rays)*len1/len0)));
+
+			for (unsigned s0 = 0; s0 < n0; ++s0) {
+				if (kill_raytrace) break;
+				pt[d0] = bnds.d[d0][0] + (s0 + rgen.rand_uniform(0.0, 1.0))*len0/n0;
+
+				for (unsigned s1 = 0; s1 < n1; ++s1, ++num) {
+					if (kill_raytrace) break;
+					if (verbose && ((num%1000) == 0)) increment_printed_number(num/1000);
+					pt[d1] = bnds.d[d1][0] + (s1 + rgen.rand_uniform(0.0, 1.0))*len1/n1;
+					trace_one_global_ray(pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, line_length);
+				}
 			}
 		}
 		if (verbose) cout << endl;
@@ -430,14 +450,14 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 		float const ray_wt(RAY_WEIGHT*weight*color.alpha/GLOBAL_RAYS);
 		assert(ray_wt > 0.0);
 		cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
-		trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose, rgen);
+		trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose, data->randomized, rgen);
 	}
 	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		if (data->num == 0 || i->num_rays == 0) continue; // disabled
 		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
 		unsigned const num_rays(i->num_rays/data->num);
 		float const cube_weight(RAY_WEIGHT*weight*i->intensity/i->num_rays);
-		trace_ray_block_global_cube(i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose, rgen);
+		trace_ray_block_global_cube(i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose, data->randomized, rgen);
 		cube_start_rays += num_rays;
 	}
 	if (data->verbose) {
@@ -605,7 +625,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	}
 	else {
 		if (ltype != LIGHTING_LOCAL) cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
-		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1, 1);
+		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1, 1, 0);
 	}
 	if (write_light_files[ltype]) {
 		lmap_manager.write_data_to_file(lighting_file[ltype], ltype);
@@ -624,7 +644,7 @@ void check_update_global_lighting(unsigned lights) {
 	//       and in that case we still need to update lighting
 	tot_rays = num_hits = cells_touched = 0;
 	lmap_manager.clear_lighting_values(LIGHTING_GLOBAL);
-	launch_threaded_job(max(1U, NUM_THREADS-1), rt_funcs[LIGHTING_GLOBAL], 1, 0); // reserve a thread for rendering
+	launch_threaded_job(max(1U, NUM_THREADS-1), rt_funcs[LIGHTING_GLOBAL], 1, 0, 0); // reserve a thread for rendering
 }
 
 
