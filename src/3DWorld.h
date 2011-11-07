@@ -259,6 +259,8 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	pointT operator+(pointT const &p)  const {return pointT((x+p.x), (y+p.y), (z+p.z));}
 	pointT operator-(pointT const &p)  const {return pointT((x-p.x), (y-p.y), (z-p.z));}
 	pointT operator*(T      const val) const {return pointT(x*val, y*val, z*val);}
+	pointT operator*(pointT const &p)  const {return pointT(x*p.x, y*p.y, z*p.z);} // pairwise multiply
+	pointT operator-()                 const {return pointT(-x, -y, -z);}
 	
 	pointT operator/(T      const val) const {
 		assert(val != 0.0);
