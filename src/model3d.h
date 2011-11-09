@@ -94,29 +94,34 @@ template<typename T> void clear_cont(T &cont) {T().swap(cont);}
 
 class vntc_vect_t : public vector<vert_norm_tc_tan> {
 
+protected:
 	bool has_tangents;
 	unsigned vbo, ivbo;
 	sphere_t bsphere;
 	cube_t bcube;
-	vector<unsigned> indices;
 
 public:
 	unsigned obj_id;
 
 	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), vbo(0), ivbo(0), obj_id(obj_id_) {}
-	void calc_tangents(unsigned npts);
-	void render(bool is_shadow_pass) const;
-	void render_array(shader_t &shader, bool is_shadow_pass, int prim_type);
+	void render(shader_t &shader, bool is_shadow_pass, int prim_type);
 	void free_vbos();
-	bool is_convex() const;
-	bool is_coplanar(float thresh) const;
-	vector3d get_planar_normal() const;
-	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
-	void from_points(vector<point> const &pts);
 	void add_poly(vntc_vect_t const &poly);
 	void calc_bounding_volumes();
 	cube_t get_bbox() const;
 	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
+};
+
+
+class indexed_vntc_vect_t : public vntc_vect_t {
+
+	vector<unsigned> indices;
+
+public:
+	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_) {}
+	void calc_tangents(unsigned npts);
+	void render(shader_t &shader, bool is_shadow_pass, int prim_type);
+	void add_poly(vntc_vect_t const &poly);
 	void clear() {vector<vert_norm_tc_tan>::clear(); indices.clear();}
 	unsigned num_verts() const {return (indices.empty() ? size() : indices.size());}
 };
@@ -129,10 +134,15 @@ public:
 
 	polygon_t(colorRGBA const &c=ALPHA0) : color(c) {}
 	polygon_t(vntc_vect_t const &vv, colorRGBA const &c=ALPHA0) : vntc_vect_t(vv), color(c) {}
+	bool is_convex() const;
+	bool is_coplanar(float thresh) const;
+	vector3d get_planar_normal() const;
+	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
+	void from_points(vector<point> const &pts);
 };
 
 
-struct vntc_vect_block_t : public deque<vntc_vect_t> {
+struct vntc_vect_block_t : public deque<indexed_vntc_vect_t> {
 
 	void remove_excess_cap();
 	void free_vbos();

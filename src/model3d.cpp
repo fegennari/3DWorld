@@ -129,9 +129,43 @@ colorRGBA texture_manager::get_tex_avg_color(int tid) const {
 }
 
 
-// ************ vntc_vect_t ************
+// ************ vntc_vect_t/indexed_vntc_vect_t ************
 
-void vntc_vect_t::calc_tangents(unsigned npts) {
+void vntc_vect_t::free_vbos() {
+
+	delete_vbo(vbo);
+	delete_vbo(ivbo);
+	vbo = ivbo = 0;
+}
+
+
+void vntc_vect_t::calc_bounding_volumes() {
+
+	assert(!empty());
+	bsphere.pos = zero_vector;
+	for (unsigned i = 0; i < size(); ++i) {bsphere.pos += (*this)[i].v;}
+	bsphere.pos /= size();
+	bsphere.radius = 0.0;
+	bcube = cube_t(bsphere.pos, bsphere.pos);
+	
+	for (unsigned i = 0; i < size(); ++i) {
+		bsphere.radius = max(bsphere.radius, p2p_dist_sq(bsphere.pos, (*this)[i].v));
+		bcube.union_with_pt((*this)[i].v);
+	}
+	bsphere.radius = sqrt(bsphere.radius);
+}
+
+
+cube_t vntc_vect_t::get_bbox() const {
+
+	if (empty()) return all_zeros_cube;
+	cube_t bbox(front().v, front().v);
+	for (unsigned i = 1; i < size(); ++i) {bbox.union_with_pt((*this)[i].v);}
+	return bbox;
+}
+
+
+void indexed_vntc_vect_t::calc_tangents(unsigned npts) {
 
 	if (has_tangents) return; // already computed
 	has_tangents = 1;
@@ -149,21 +183,7 @@ void vntc_vect_t::calc_tangents(unsigned npts) {
 }
 
 
-void vntc_vect_t::render(bool is_shadow_pass) const {
-
-	assert(size() >= 3);
-
-	for (const_iterator v = begin(); v != end(); ++v) {
-		if (!is_shadow_pass) {
-			glTexCoord2fv(v->t);
-			v->n.do_glNormal();
-		}
-		v->v.do_glVertex();
-	}
-}
-
-
-void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_type) {
+void indexed_vntc_vect_t::render(shader_t &shader, bool is_shadow_pass, int prim_type) {
 
 	if (empty()) return;
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
@@ -213,15 +233,15 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 }
 
 
-void vntc_vect_t::free_vbos() {
+void indexed_vntc_vect_t::add_poly(vntc_vect_t const &poly) {
 
-	delete_vbo(vbo);
-	delete_vbo(ivbo);
-	vbo = ivbo = 0;
+	for (unsigned i = 0; i < poly.size(); ++i) {push_back(poly[i]);}
 }
 
 
-bool vntc_vect_t::is_convex() const {
+// ************ polygon_t ************
+
+bool polygon_t::is_convex() const {
 
 	unsigned const npts(size());
 	assert(npts >= 3);
@@ -237,7 +257,7 @@ bool vntc_vect_t::is_convex() const {
 }
 
 
-bool vntc_vect_t::is_coplanar(float thresh) const {
+bool polygon_t::is_coplanar(float thresh) const {
 
 	assert(size() >= 3);
 	if (size() == 3 || thresh == 0.0) return 1;
@@ -248,7 +268,7 @@ bool vntc_vect_t::is_coplanar(float thresh) const {
 }
 
 
-vector3d vntc_vect_t::get_planar_normal() const {
+vector3d polygon_t::get_planar_normal() const {
 
 	assert(size() >= 3);
 	vector3d norm;
@@ -257,47 +277,14 @@ vector3d vntc_vect_t::get_planar_normal() const {
 }
 
 
-void vntc_vect_t::from_points(vector<point> const &pts) {
+void polygon_t::from_points(vector<point> const &pts) {
 
 	resize(pts.size());
 	for (unsigned i = 0; i < size(); ++i) {(*this)[i].v = pts[i];}
 }
 
 
-void vntc_vect_t::add_poly(vntc_vect_t const &poly) {
-
-	for (unsigned i = 0; i < poly.size(); ++i) {push_back(poly[i]);}
-}
-
-
-void vntc_vect_t::calc_bounding_volumes() {
-
-	assert(!empty());
-	bsphere.pos = zero_vector;
-	for (unsigned i = 0; i < size(); ++i) {bsphere.pos += (*this)[i].v;}
-	bsphere.pos /= size();
-	bsphere.radius = 0.0;
-	bcube = cube_t(bsphere.pos, bsphere.pos);
-	
-	for (unsigned i = 0; i < size(); ++i) {
-		bsphere.radius = max(bsphere.radius, p2p_dist_sq(bsphere.pos, (*this)[i].v));
-		bcube.union_with_pt((*this)[i].v);
-	}
-	bsphere.radius = sqrt(bsphere.radius);
-}
-
-
-cube_t vntc_vect_t::get_bbox() const {
-
-	if (empty()) return all_zeros_cube;
-	cube_t bbox(front().v, front().v);
-	for (unsigned i = 1; i < size(); ++i) {bbox.union_with_pt((*this)[i].v);}
-	return bbox;
-}
-
-
 // ************ vntc_vect_block_t ************
-
 
 void vntc_vect_block_t::remove_excess_cap() {
 
@@ -366,10 +353,10 @@ void geometry_t::calc_tangents() {
 void geometry_t::render(shader_t &shader, bool is_shadow_pass) {
 
 	for (vntc_vect_block_t::iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		i->render_array(shader, is_shadow_pass, GL_TRIANGLES);
+		i->render(shader, is_shadow_pass, GL_TRIANGLES);
 	}
 	for (vntc_vect_block_t::iterator i = quads.begin(); i != quads.end(); ++i) {
-		i->render_array(shader, is_shadow_pass, GL_QUADS);
+		i->render(shader, is_shadow_pass, GL_QUADS);
 	}
 }
 
@@ -379,7 +366,7 @@ void add_poly_to_polys(vntc_vect_t const &poly, vntc_vect_block_t &v, unsigned o
 	unsigned const max_entries(1 << 18); // 256K
 
 	if (v.empty() || v.back().size() > max_entries || obj_id > v.back().obj_id) {
-		v.push_back(vntc_vect_t(obj_id));
+		v.push_back(indexed_vntc_vect_t(obj_id));
 	}
 	v.back().add_poly(poly);
 }
