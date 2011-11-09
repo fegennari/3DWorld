@@ -292,12 +292,49 @@ cube_t vntc_vect_t::get_bbox() const {
 }
 
 
+// ************ vntc_vect_block_t ************
+
+
+void vntc_vect_block_t::remove_excess_cap() {
+
+	for (iterator i = begin(); i != end(); ++i) {i->remove_excess_cap();}
+}
+
+
+void vntc_vect_block_t::free_vbos() {
+
+	for (iterator i = begin(); i != end(); ++i) {i->free_vbo();}
+}
+
+
 cube_t vntc_vect_block_t::get_bbox() const {
 
 	if (empty()) return all_zeros_cube;
 	cube_t bbox(front().get_bbox());
 	for (const_iterator i = begin()+1; i != end(); ++i) {bbox.union_with_cube(i->get_bbox());}
 	return bbox;
+}
+
+
+unsigned vntc_vect_block_t::tot_size() const {
+
+	unsigned s(0);
+	for (const_iterator i = begin(); i != end(); ++i) {s += i->size();}
+	return s;
+}
+
+
+bool vntc_vect_block_t::write(ostream &out) const {
+
+	// WRITE
+	return 0;
+}
+
+
+bool vntc_vect_block_t::read(istream &in) {
+
+	// WRITE
+	return 0;
 }
 
 
@@ -365,33 +402,20 @@ cube_t geometry_t::get_bbox() const {
 }
 
 
-void geometry_t::remove_excess_cap() {
-
-	for (vntc_vect_block_t::iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		i->remove_excess_cap();
-	}
-	for (vntc_vect_block_t::iterator i = quads.begin(); i != quads.end(); ++i) {
-		i->remove_excess_cap();
-	}
-}
-
-
-void geometry_t::free_vbos() {
-
-	for (vntc_vect_block_t::iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		i->free_vbo();
-	}
-	for (vntc_vect_block_t::iterator i = quads.begin(); i != quads.end(); ++i) {
-		i->free_vbo();
-	}
-}
-
-
 void geometry_t::clear() {
 
 	free_vbos();
 	triangles.clear();
 	quads.clear();
+}
+
+
+void geometry_t::get_stats(model3d_stats_t &stats) const {
+	
+	stats.tris  += triangles.tot_size()/3;
+	stats.quads += quads.tot_size()/4;
+	triangles.get_stats(stats);
+	quads.get_stats(stats);
 }
 
 
@@ -496,14 +520,14 @@ bool material_t::add_poly(vntc_vect_t const &poly, unsigned obj_id) {
 bool material_t::write(ostream &out) const {
 
 	// WRITE
-	return 1;
+	return geom.write(out);
 }
 
 
 bool material_t::read(istream &in) {
 
 	// WRITE
-	return 1;
+	return geom.read(in);
 }
 
 
@@ -669,6 +693,19 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 }
 
 
+void model3d::show_stats() const {
+
+	model3d_stats_t stats;
+	unbound_geom.get_stats(stats);
+	
+	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+		m->geom.get_stats(stats);
+		++stats.mats;
+	}
+	stats.print();
+}
+
+
 bool model3d::write_to_disk(string const &fn) const {
 
 	ofstream out(fn, ios::out | ios::binary);
@@ -678,6 +715,7 @@ bool model3d::write_to_disk(string const &fn) const {
 		return 0;
 	}
 	out.write((char const *)MAGIC_NUMBER, sizeof(MAGIC_NUMBER));
+	if (!unbound_geom.write(out)) return 0;
 	unsigned const num_materials(materials.size());
 	out.write((char const *)&num_materials, sizeof(unsigned));
 	
@@ -707,6 +745,7 @@ bool model3d::read_from_disk(string const &fn) {
 		cerr << "Error reading model3d file " << fn << ": Invalid file format (magic number check failed)." << endl;
 		return 0;
 	}
+	if (!unbound_geom.read(in)) return 0;
 	unsigned num_materials(0);
 	in.read((char *)&num_materials, sizeof(unsigned));
 	materials.resize(num_materials);

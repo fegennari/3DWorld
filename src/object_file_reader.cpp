@@ -493,8 +493,9 @@ public:
 		
 		if (verbose) {
 			cout << "verts: " << nv << ", normals: " << nn << ", tcs: " << ntc << ", faces: " << num_faces << ", objects: " << num_objects
-				 << ", groups: " << num_groups << ", blocks: " << num_blocks << ", mat: " << model.num_materials() << endl;
+				 << ", groups: " << num_groups << ", blocks: " << num_blocks << endl;
 			cout << "bbox: "; model.get_bbox().print(); cout << endl;
+			cout << "model stats: "; model.show_stats();
 		}
 		return 1;
 	}

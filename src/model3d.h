@@ -71,6 +71,13 @@ struct poly_data_block {
 };
 
 
+struct model3d_stats_t {
+	unsigned verts, quads, tris, blocks, mats;
+	model3d_stats_t() : verts(0), quads(0), tris(0), blocks(0), mats(0) {}
+	void print() const {cout << "verts: " << verts << ", quads: " << quads << ", tris: " << tris << ", blocks: " << blocks << ", mats: " << mats << endl;}
+};
+
+
 struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 	vector4d tangent;
 
@@ -125,7 +132,13 @@ public:
 
 struct vntc_vect_block_t : public deque<vntc_vect_t> {
 
+	void remove_excess_cap();
+	void free_vbos();
 	cube_t get_bbox() const;
+	unsigned tot_size() const;
+	void get_stats(model3d_stats_t &stats) const {stats.blocks += size(); stats.verts += tot_size();}
+	bool write(ostream &out) const;
+	bool read(istream &in);
 };
 
 
@@ -138,9 +151,12 @@ struct geometry_t {
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly(vntc_vect_t const &poly, unsigned obj_id=0);
 	cube_t get_bbox() const;
-	void remove_excess_cap();
-	void free_vbos();
+	void remove_excess_cap() {triangles.remove_excess_cap(); quads.remove_excess_cap();}
+	void free_vbos()         {triangles.free_vbos(); quads.free_vbos();}
 	void clear();
+	void get_stats(model3d_stats_t &stats) const;
+	bool write(ostream &out) const {return (triangles.write(out) && quads.write(out));}
+	bool read(istream &in)         {return (triangles.read (in ) && quads.read (in ));}
 };
 
 
@@ -232,6 +248,7 @@ public:
 	void bind_all_used_tids();
 	void render(shader_t &shader, bool is_shadow_pass, bool bmap_pass); // const?
 	cube_t const &get_bbox() const {return bbox;}
+	void show_stats() const;
 	bool write_to_disk (string const &fn) const;
 	bool read_from_disk(string const &fn);
 };
