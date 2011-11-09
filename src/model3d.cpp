@@ -191,16 +191,33 @@ void vntc_vect_t::render_array(shader_t &shader, bool is_shadow_pass, int prim_t
 	glVertexPointer(  3, GL_FLOAT, stride, 0);
 	glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));
 	glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));
-	glDrawArrays(prim_type, 0, size());
+
+	if (indices.empty()) { // draw regular arrays
+		glDrawArrays(prim_type, 0, size());
+	}
+	else { // draw indexed arrays
+		if (ivbo == 0) {
+			ivbo = create_vbo();
+			assert(ivbo > 0);
+			bind_vbo(ivbo, 1);
+			upload_vbo_data(&indices.front(), indices.size()*sizeof(unsigned), 1);
+		}
+		else {
+			bind_vbo(ivbo, 1);
+		}
+		glDrawRangeElements(prim_type, 0, size(), indices.size(), GL_UNSIGNED_INT, 0);
+		bind_vbo(0, 1);
+	}
 	bind_vbo(0);
 	if (loc >= 0) glDisableVertexAttribArray(loc);
 }
 
 
-void vntc_vect_t::free_vbo() {
+void vntc_vect_t::free_vbos() {
 
 	delete_vbo(vbo);
-	vbo = 0;
+	delete_vbo(ivbo);
+	vbo = ivbo = 0;
 }
 
 
@@ -290,7 +307,7 @@ void vntc_vect_block_t::remove_excess_cap() {
 
 void vntc_vect_block_t::free_vbos() {
 
-	for (iterator i = begin(); i != end(); ++i) {i->free_vbo();}
+	for (iterator i = begin(); i != end(); ++i) {i->free_vbos();}
 }
 
 
@@ -303,7 +320,15 @@ cube_t vntc_vect_block_t::get_bbox() const {
 }
 
 
-unsigned vntc_vect_block_t::tot_size() const {
+unsigned vntc_vect_block_t::num_verts() const {
+
+	unsigned s(0);
+	for (const_iterator i = begin(); i != end(); ++i) {s += i->num_verts();}
+	return s;
+}
+
+
+unsigned vntc_vect_block_t::unique_verts() const {
 
 	unsigned s(0);
 	for (const_iterator i = begin(); i != end(); ++i) {s += i->size();}
@@ -399,8 +424,8 @@ void geometry_t::clear() {
 
 void geometry_t::get_stats(model3d_stats_t &stats) const {
 	
-	stats.tris  += triangles.tot_size()/3;
-	stats.quads += quads.tot_size()/4;
+	stats.tris  += triangles.num_verts()/3;
+	stats.quads += quads.num_verts()/4;
 	triangles.get_stats(stats);
 	quads.get_stats(stats);
 }

@@ -95,18 +95,19 @@ template<typename T> void clear_cont(T &cont) {T().swap(cont);}
 class vntc_vect_t : public vector<vert_norm_tc_tan> {
 
 	bool has_tangents;
-	unsigned vbo;
+	unsigned vbo, ivbo;
 	sphere_t bsphere;
 	cube_t bcube;
+	vector<unsigned> indices;
 
 public:
 	unsigned obj_id;
 
-	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), vbo(0), obj_id(obj_id_) {}
+	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), vbo(0), ivbo(0), obj_id(obj_id_) {}
 	void calc_tangents(unsigned npts);
 	void render(bool is_shadow_pass) const;
 	void render_array(shader_t &shader, bool is_shadow_pass, int prim_type);
-	void free_vbo();
+	void free_vbos();
 	bool is_convex() const;
 	bool is_coplanar(float thresh) const;
 	vector3d get_planar_normal() const;
@@ -116,6 +117,8 @@ public:
 	void calc_bounding_volumes();
 	cube_t get_bbox() const;
 	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
+	void clear() {vector<vert_norm_tc_tan>::clear(); indices.clear();}
+	unsigned num_verts() const {return (indices.empty() ? size() : indices.size());}
 };
 
 
@@ -134,8 +137,9 @@ struct vntc_vect_block_t : public deque<vntc_vect_t> {
 	void remove_excess_cap();
 	void free_vbos();
 	cube_t get_bbox() const;
-	unsigned tot_size() const;
-	void get_stats(model3d_stats_t &stats) const {stats.blocks += size(); stats.verts += tot_size();}
+	unsigned num_verts() const;
+	unsigned unique_verts() const;
+	void get_stats(model3d_stats_t &stats) const {stats.blocks += size(); stats.verts += unique_verts();}
 	bool write(ostream &out) const;
 	bool read(istream &in);
 };
