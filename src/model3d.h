@@ -171,11 +171,13 @@ struct material_t {
 	unsigned illum;
 	int a_tid, d_tid, s_tid, alpha_tid, bump_tid, refl_tid;
 	bool skip, is_used;
+	string name, filename;
 
 	geometry_t geom;
 
-	material_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0),
-		illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), skip(0), is_used(0) {}
+	material_t(string const &name_=string(), string const &fn=string()) : ka(def_color), kd(def_color), ks(def_color), ke(def_color),
+		tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0), illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1),
+		bump_tid(-1), refl_tid(-1), skip(0), is_used(0), name(name_), filename(fn) {}
 	bool add_poly(vntc_vect_t const &poly, unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
@@ -186,6 +188,8 @@ struct material_t {
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
+	bool write(ostream &out) const;
+	bool read(istream &in);
 };
 
 
@@ -228,6 +232,8 @@ public:
 	void bind_all_used_tids();
 	void render(shader_t &shader, bool is_shadow_pass, bool bmap_pass); // const?
 	cube_t const &get_bbox() const {return bbox;}
+	bool write_to_disk (string const &fn) const;
+	bool read_from_disk(string const &fn);
 };
 
 

@@ -5,10 +5,12 @@
 #include "model3d.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
+#include <fstream>
 
 bool const USE_SHADERS      = 1;
 bool const ENABLE_BUMP_MAPS = 1;
 bool const ENABLE_SPEC_MAPS = 1;
+unsigned const MAGIC_NUMBER = 42987143; // arbitrary file signature
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders;
 extern int display_mode;
@@ -491,6 +493,20 @@ bool material_t::add_poly(vntc_vect_t const &poly, unsigned obj_id) {
 }
 
 
+bool material_t::write(ostream &out) const {
+
+	// WRITE
+	return 1;
+}
+
+
+bool material_t::read(istream &in) {
+
+	// WRITE
+	return 1;
+}
+
+
 // ************ model3d ************
 
 unsigned model3d::add_polygon(vntc_vect_t const &poly, int mat_id, unsigned obj_id, vector<polygon_t> *ppts) {
@@ -529,7 +545,7 @@ int model3d::get_material_ix(string const &material_name, string const &fn) {
 	if (it == mat_map.end()) {
 		mat_id = materials.size();
 		mat_map[material_name] = mat_id;
-		materials.push_back(material_t());
+		materials.push_back(material_t(material_name, fn));
 	}
 	else {
 		cerr << "Warning: Redefinition of material " << material_name << " in file " << fn << endl;
@@ -650,6 +666,58 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 		}
 	}
 	if (do_cull) glDisable(GL_CULL_FACE);
+}
+
+
+bool model3d::write_to_disk(string const &fn) const {
+
+	ofstream out(fn, ios::out | ios::binary);
+	
+	if (!out.good()) {
+		cerr << "Error opening model3d file for write: " << fn << endl;
+		return 0;
+	}
+	out.write((char const *)MAGIC_NUMBER, sizeof(MAGIC_NUMBER));
+	unsigned const num_materials(materials.size());
+	out.write((char const *)&num_materials, sizeof(unsigned));
+	
+	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+		if (!m->write(out)) {
+			cerr << "Error writing material" << endl;
+			return 0;
+		}
+	}
+	return 1;
+}
+
+
+bool model3d::read_from_disk(string const &fn) {
+
+	ifstream in(fn, ios::in | ios::binary);
+	
+	if (!in.good()) {
+		cerr << "Error opening model3d file for read: " << fn << endl;
+		return 0;
+	}
+	clear(); // ???
+	unsigned magic_number_comp(0);
+	in.read((char *)magic_number_comp, sizeof(magic_number_comp));
+
+	if (magic_number_comp != MAGIC_NUMBER) {
+		cerr << "Error reading model3d file " << fn << ": Invalid file format (magic number check failed)." << endl;
+		return 0;
+	}
+	unsigned num_materials(0);
+	in.read((char *)&num_materials, sizeof(unsigned));
+	materials.resize(num_materials);
+	
+	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
+		if (!m->read(in)) {
+			cerr << "Error reading material" << endl;
+			return 0;
+		}
+	}
+	return 1;
 }
 
 
