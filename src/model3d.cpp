@@ -7,10 +7,12 @@
 #include "gl_ext_arb.h"
 #include <fstream>
 
-bool const USE_SHADERS      = 1;
-bool const ENABLE_BUMP_MAPS = 1;
-bool const ENABLE_SPEC_MAPS = 1;
-unsigned const MAGIC_NUMBER = 42987143; // arbitrary file signature
+bool const USE_SHADERS       = 1;
+bool const ENABLE_BUMP_MAPS  = 1;
+bool const ENABLE_SPEC_MAPS  = 1;
+bool const USE_INDEXED_VERTS = 1;
+unsigned const MAX_VMAP_SIZE = 65536;
+unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders;
 extern int display_mode;
@@ -156,29 +158,27 @@ void vntc_vect_t::calc_bounding_volumes() {
 }
 
 
-cube_t vntc_vect_t::get_bbox() const {
-
-	if (empty()) return all_zeros_cube;
-	cube_t bbox(front().v, front().v);
-	for (unsigned i = 1; i < size(); ++i) {bbox.union_with_pt((*this)[i].v);}
-	return bbox;
-}
-
-
 void indexed_vntc_vect_t::calc_tangents(unsigned npts) {
 
 	if (has_tangents) return; // already computed
 	has_tangents = 1;
 	assert(npts >= 3); // at least triangles
-	assert((size()%npts) == 0);
+	unsigned const nverts(num_verts());
+	assert((nverts%npts) == 0);
 
-	for (unsigned i = 0; i < size(); i += npts) {
-		vert_norm_tc const &A((*this)[i]), &B((*this)[i+1]), &C((*this)[i+2]);
+	for (unsigned i = 0; i < nverts; i += npts) {
+		vert_norm_tc const &A(get_vert(i)), &B(get_vert(i+1)), &C(get_vert(i+2));
 		vector3d const v1(A.v - B.v), v2(C.v - B.v);
 		float const t1(A.t[1] - B.t[1]), t2(C.t[1] - B.t[1]), s1(A.t[0] - B.t[0]), s2(C.t[0] - B.t[0]);
 		float const val(s1*t2 - s2*t1), w((val < 0.0) ? -1.0 : 1.0);
 		vector4d const tangent((v1*t2 - v2*t1).get_norm(), w);
-		for (unsigned j = i; j < i+npts; ++j) (*this)[j].tangent = tangent;
+		for (unsigned j = i; j < i+npts; ++j) get_vert(j).tangent += tangent;
+	}
+	if (!indices.empty()) { // using index array, need to renormalilze tangents
+		for (iterator i = begin(); i != end(); ++i) {
+			i->tangent.normalize();
+			i->tangent.w = ((i->tangent.w < 0.0) ? -1.0 : 1.0); // FIXME: what if 0.0?
+		}
 	}
 }
 
@@ -233,9 +233,33 @@ void indexed_vntc_vect_t::render(shader_t &shader, bool is_shadow_pass, int prim
 }
 
 
-void indexed_vntc_vect_t::add_poly(vntc_vect_t const &poly) {
+void indexed_vntc_vect_t::add_poly(polygon_t const &poly, vertex_map_t &vmap) {
 
-	for (unsigned i = 0; i < poly.size(); ++i) {push_back(poly[i]);}
+	for (unsigned i = 0; i < poly.size(); ++i) {add_vertex(poly[i], vmap);}
+}
+
+
+void indexed_vntc_vect_t::add_vertex(vert_norm_tc_tan const &v, vertex_map_t &vmap) {
+
+	if (USE_INDEXED_VERTS) {
+		vertex_map_t::const_iterator it(vmap.find(v));
+		unsigned ix;
+
+		if (it == vmap.end()) { // not found
+			ix = size();
+			push_back(v);
+			vmap[v] = ix;
+		}
+		else { // found
+			ix = it->second;
+		}
+		assert(ix < size());
+		indices.push_back(ix);
+	}
+	else {
+		assert(vmap.empty());
+		push_back(v);
+	}
 }
 
 
@@ -361,24 +385,25 @@ void geometry_t::render(shader_t &shader, bool is_shadow_pass) {
 }
 
 
-void add_poly_to_polys(vntc_vect_t const &poly, vntc_vect_block_t &v, unsigned obj_id) {
+void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t &v, vertex_map_t &vmap, unsigned obj_id=0) {
 
 	unsigned const max_entries(1 << 18); // 256K
 
 	if (v.empty() || v.back().size() > max_entries || obj_id > v.back().obj_id) {
+		vmap.clear();
 		v.push_back(indexed_vntc_vect_t(obj_id));
 	}
-	v.back().add_poly(poly);
+	v.back().add_poly(poly, vmap);
 }
 
 
-void geometry_t::add_poly(vntc_vect_t const &poly, unsigned obj_id) {
+void geometry_t::add_poly(polygon_t const &poly, vertex_map_t vmap[2], unsigned obj_id) {
 	
 	if (poly.size() == 3) { // triangle
-		add_poly_to_polys(poly, triangles, obj_id);
+		add_poly_to_polys(poly, triangles, vmap[0], obj_id);
 	}
 	else if (poly.size() == 4) {
-		add_poly_to_polys(poly, quads, obj_id);
+		add_poly_to_polys(poly, quads, vmap[1], obj_id);
 	}
 	else {
 		assert(0); // shouldn't get here
@@ -507,10 +532,10 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 }
 
 
-bool material_t::add_poly(vntc_vect_t const &poly, unsigned obj_id) {
+bool material_t::add_poly(polygon_t const &poly, vertex_map_t vmap[2], unsigned obj_id) {
 	
 	if (skip) return 0;
-	geom.add_poly(poly, obj_id);
+	geom.add_poly(poly, vmap, obj_id);
 	mark_as_used();
 	return 1;
 }
@@ -532,21 +557,32 @@ bool material_t::read(istream &in) {
 
 // ************ model3d ************
 
-unsigned model3d::add_polygon(vntc_vect_t const &poly, int mat_id, unsigned obj_id, vector<polygon_t> *ppts) {
+
+void vertex_map_t::check_for_clear(int mat_id) {
+
+	if (mat_id != last_mat_id || size() >= MAX_VMAP_SIZE) {
+		last_mat_id = mat_id;
+		clear();
+	}
+}
+
+
+unsigned model3d::add_polygon(polygon_t const &poly, vertex_map_t vmap[2], int mat_id, unsigned obj_id, vector<polygon_t> *ppts) {
 
 	//assert(mat_id >= 0); // must be set/valid - too strict?
+	for (unsigned d = 0; d < 2; ++d) {vmap[d].check_for_clear(mat_id);}
 	split_polygons_buffer.resize(0);
 	split_polygon(poly, split_polygons_buffer, 0.0);
 
 	for (vector<polygon_t>::iterator i = split_polygons_buffer.begin(); i != split_polygons_buffer.end(); ++i) {
 		if (mat_id < 0) {
-			unbound_geom.add_poly(*i, obj_id);
+			unbound_geom.add_poly(*i, vmap, obj_id);
 			if (ppts) split_polygon(*i, *ppts, POLY_COPLANAR_THRESH);
 		}
 		else {
 			assert((unsigned)mat_id < materials.size());
 		
-			if (materials[mat_id].add_poly(*i, obj_id)) {
+			if (materials[mat_id].add_poly(*i, vmap, obj_id)) {
 				if (ppts) {
 					i->color = materials[mat_id].get_avg_color(tmgr, unbound_tid);
 					split_polygon(*i, *ppts, POLY_COPLANAR_THRESH);
@@ -554,7 +590,7 @@ unsigned model3d::add_polygon(vntc_vect_t const &poly, int mat_id, unsigned obj_
 			}
 		}
 	}
-	cube_t const bb(poly.get_bbox());
+	cube_t const bb(get_polygon_bbox(poly));
 	if (bbox == all_zeros_cube) {bbox = bb;} else {bbox.union_with_cube(bb);}
 	return split_polygons_buffer.size();
 }
