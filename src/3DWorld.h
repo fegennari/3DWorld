@@ -319,8 +319,12 @@ struct vector4d : public vector3d { // size = 16
 	vector4d(float x_, float y_, float z_, float w_) : vector3d(x_, y_, z_), w(w_) {}
 	vector4d(vector3d const &v, float w_) : vector3d(v), w(w_) {}
 	void print() const {cout << x << ", " << y << ", " << z << ", " << w;}
-	bool operator==(const vector4d &v) const {return (v.x == x && v.y == y && v.z == z && v.w == w);}
-	bool operator!=(const vector4d &v) const {return !operator==(v);}
+	vector4d operator+(vector4d const &p)  const {return vector4d((x+p.x), (y+p.y), (z+p.z), (w+p.w));}
+	vector4d operator-(vector4d const &p)  const {return vector4d((x-p.x), (y-p.y), (z-p.z), (w-p.w));}
+	vector4d operator-()                   const {return vector4d(-x, -y, -z, -w);}
+	bool operator==(vector4d const &v)     const {return (v.x == x && v.y == y && v.z == z && v.w == w);}
+	bool operator!=(vector4d const &v)     const {return !operator==(v);}
+	bool operator< (vector4d const &p)     const {return ((w == p.w) ? vector3d::operator<(p) : (w < p.w));}
 };
 
 
@@ -446,6 +450,15 @@ struct cube_t { // size = 24
 };
 
 cube_t const all_zeros_cube(0,0,0,0,0,0);
+
+
+template<typename T> cube_t get_polygon_bbox(vector<T> const &p) {
+
+	if (p.empty()) return all_zeros_cube;
+	cube_t bbox(p.front().v, p.front().v);
+	for (unsigned i = 1; i < p.size(); ++i) {bbox.union_with_pt(p[i].v);}
+	return bbox;
+}
 
 
 struct line_3dw {
