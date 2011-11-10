@@ -11,7 +11,6 @@ bool const USE_SHADERS       = 1;
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
 bool const USE_INDEXED_VERTS = 1;
-unsigned const MAX_VMAP_SIZE = 65536;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders;
@@ -133,7 +132,7 @@ colorRGBA texture_manager::get_tex_avg_color(int tid) const {
 
 // ************ vntc_vect_t/indexed_vntc_vect_t ************
 
-void vntc_vect_t::free_vbos() {
+template<typename T> void vntc_vect_t<T>::free_vbos() {
 
 	delete_vbo(vbo);
 	delete_vbo(ivbo);
@@ -141,7 +140,7 @@ void vntc_vect_t::free_vbos() {
 }
 
 
-void vntc_vect_t::calc_bounding_volumes() {
+template<typename T> void vntc_vect_t<T>::calc_bounding_volumes() {
 
 	assert(!empty());
 	bsphere.pos = zero_vector;
@@ -158,7 +157,7 @@ void vntc_vect_t::calc_bounding_volumes() {
 }
 
 
-void indexed_vntc_vect_t::calc_tangents(unsigned npts) {
+template<> void indexed_vntc_vect_t<vert_norm_tc_tan>::calc_tangents(unsigned npts) {
 
 	if (has_tangents) return; // already computed
 	has_tangents = 1;
@@ -183,26 +182,27 @@ void indexed_vntc_vect_t::calc_tangents(unsigned npts) {
 }
 
 
-void indexed_vntc_vect_t::render(shader_t &shader, bool is_shadow_pass, int prim_type) {
+template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, int prim_type) {
 
 	if (empty()) return;
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
 	if (!is_shadow_pass && !camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius)) return; // view frustum culling
 	if (!is_shadow_pass && !camera_pdu.cube_visible(bcube)) return; // test the bounding cube as well
 	set_array_client_state(1, !is_shadow_pass, !is_shadow_pass, 0);
-	unsigned const stride(sizeof(vntc_vect_t::value_type)), vntc_data_sz(size()*stride);
+	unsigned const stride(sizeof(T));
 	int loc(-1);
 
 	if (vbo == 0) {
 		vbo = create_vbo();
 		assert(vbo > 0);
 		bind_vbo(vbo);
-		upload_vbo_data(&front(), vntc_data_sz);
+		upload_vbo_data(&front(), size()*stride);
 	}
 	else {
 		bind_vbo(vbo);
 	}
-	if (enable_bump_map() && !is_shadow_pass && has_tangents) {
+	if (enable_bump_map() && !is_shadow_pass && has_tangents) { // Note: if we get here, T must be a vert_norm_tc_tan
+		assert(stride == sizeof(vert_norm_tc_tan));
 		int const loc(shader.get_attrib_loc("tangent"));
 		assert(loc > 0);
 		glEnableVertexAttribArray(loc);
@@ -233,16 +233,16 @@ void indexed_vntc_vect_t::render(shader_t &shader, bool is_shadow_pass, int prim
 }
 
 
-void indexed_vntc_vect_t::add_poly(polygon_t const &poly, vertex_map_t &vmap) {
+template<typename T> void indexed_vntc_vect_t<T>::add_poly(polygon_t const &poly, vertex_map_t<T> &vmap) {
 
 	for (unsigned i = 0; i < poly.size(); ++i) {add_vertex(poly[i], vmap);}
 }
 
 
-void indexed_vntc_vect_t::add_vertex(vert_norm_tc_tan const &v, vertex_map_t &vmap) {
+template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_map_t<T> &vmap) {
 
 	if (USE_INDEXED_VERTS) {
-		vertex_map_t::const_iterator it(vmap.find(v));
+		vertex_map_t<T>::const_iterator it(vmap.find(v));
 		unsigned ix;
 
 		if (it == vmap.end()) { // not found
@@ -310,19 +310,19 @@ void polygon_t::from_points(vector<point> const &pts) {
 
 // ************ vntc_vect_block_t ************
 
-void vntc_vect_block_t::remove_excess_cap() {
+template<typename T> void vntc_vect_block_t<T>::remove_excess_cap() {
 
 	for (iterator i = begin(); i != end(); ++i) {i->remove_excess_cap();}
 }
 
 
-void vntc_vect_block_t::free_vbos() {
+template<typename T> void vntc_vect_block_t<T>::free_vbos() {
 
 	for (iterator i = begin(); i != end(); ++i) {i->free_vbos();}
 }
 
 
-cube_t vntc_vect_block_t::get_bbox() const {
+template<typename T> cube_t vntc_vect_block_t<T>::get_bbox() const {
 
 	if (empty()) return all_zeros_cube;
 	cube_t bbox(front().get_bbox());
@@ -331,7 +331,7 @@ cube_t vntc_vect_block_t::get_bbox() const {
 }
 
 
-unsigned vntc_vect_block_t::num_verts() const {
+template<typename T> unsigned vntc_vect_block_t<T>::num_verts() const {
 
 	unsigned s(0);
 	for (const_iterator i = begin(); i != end(); ++i) {s += i->num_verts();}
@@ -339,7 +339,7 @@ unsigned vntc_vect_block_t::num_verts() const {
 }
 
 
-unsigned vntc_vect_block_t::unique_verts() const {
+template<typename T> unsigned vntc_vect_block_t<T>::unique_verts() const {
 
 	unsigned s(0);
 	for (const_iterator i = begin(); i != end(); ++i) {s += i->size();}
@@ -347,14 +347,14 @@ unsigned vntc_vect_block_t::unique_verts() const {
 }
 
 
-bool vntc_vect_block_t::write(ostream &out) const {
+template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 
 	// WRITE
 	return 0;
 }
 
 
-bool vntc_vect_block_t::read(istream &in) {
+template<typename T> bool vntc_vect_block_t<T>::read(istream &in) {
 
 	// WRITE
 	return 0;
@@ -363,41 +363,41 @@ bool vntc_vect_block_t::read(istream &in) {
 
 // ************ geometry_t ************
 
-void geometry_t::calc_tangents() {
+template<> void geometry_t<vert_norm_tc_tan>::calc_tangents() {
 
-	for (vntc_vect_block_t::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+	for (vntc_vect_block_t<vert_norm_tc_tan>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		i->calc_tangents(3);
 	}
-	for (vntc_vect_block_t::iterator i = quads.begin(); i != quads.end(); ++i) {
+	for (vntc_vect_block_t<vert_norm_tc_tan>::iterator i = quads.begin(); i != quads.end(); ++i) {
 		i->calc_tangents(4);
 	}
 }
 
 
-void geometry_t::render(shader_t &shader, bool is_shadow_pass) {
+template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow_pass) {
 
-	for (vntc_vect_block_t::iterator i = triangles.begin(); i != triangles.end(); ++i) {
+	for (vntc_vect_block_t<T>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		i->render(shader, is_shadow_pass, GL_TRIANGLES);
 	}
-	for (vntc_vect_block_t::iterator i = quads.begin(); i != quads.end(); ++i) {
+	for (vntc_vect_block_t<T>::iterator i = quads.begin(); i != quads.end(); ++i) {
 		i->render(shader, is_shadow_pass, GL_QUADS);
 	}
 }
 
 
-void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t &v, vertex_map_t &vmap, unsigned obj_id=0) {
+template<typename T> void geometry_t<T>::add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id) const {
 
 	unsigned const max_entries(1 << 18); // 256K
 
 	if (v.empty() || v.back().size() > max_entries || obj_id > v.back().obj_id) {
 		vmap.clear();
-		v.push_back(indexed_vntc_vect_t(obj_id));
+		v.push_back(indexed_vntc_vect_t<T>(obj_id));
 	}
 	v.back().add_poly(poly, vmap);
 }
 
 
-void geometry_t::add_poly(polygon_t const &poly, vertex_map_t vmap[2], unsigned obj_id) {
+template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id) {
 	
 	if (poly.size() == 3) { // triangle
 		add_poly_to_polys(poly, triangles, vmap[0], obj_id);
@@ -411,7 +411,7 @@ void geometry_t::add_poly(polygon_t const &poly, vertex_map_t vmap[2], unsigned 
 }
 
 
-cube_t geometry_t::get_bbox() const {
+template<typename T> cube_t geometry_t<T>::get_bbox() const {
 
 	cube_t bbox(all_zeros_cube); // will return this if empty
 
@@ -426,7 +426,7 @@ cube_t geometry_t::get_bbox() const {
 }
 
 
-void geometry_t::clear() {
+template<typename T> void geometry_t<T>::clear() {
 
 	free_vbos();
 	triangles.clear();
@@ -434,7 +434,7 @@ void geometry_t::clear() {
 }
 
 
-void geometry_t::get_stats(model3d_stats_t &stats) const {
+template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const {
 	
 	stats.tris  += triangles.num_verts()/3;
 	stats.quads += quads.num_verts()/4;
@@ -448,11 +448,12 @@ void geometry_t::get_stats(model3d_stats_t &stats) const {
 
 void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
 
-	if (geom.empty() || skip || alpha == 0.0)       return; // empty or transparent
+	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
 
 	if (is_shadow_pass) {
 		geom.render(shader, 1);
+		geom_tan.render(shader, 1);
 	}
 	else {
 		int const tex_id(get_render_texture());
@@ -488,6 +489,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			set_color_d(colorRGBA(kd, alpha));
 		}
 		geom.render(shader, 0);
+		geom_tan.render(shader, 0);
 		if (use_bump_map())    disable_multitex(5, 1);
 		if (enable_spec_map()) disable_multitex(8, 1);
 		set_color_e(BLACK);
@@ -532,10 +534,16 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 }
 
 
-bool material_t::add_poly(polygon_t const &poly, vertex_map_t vmap[2], unsigned obj_id) {
+bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id) {
 	
 	if (skip) return 0;
-	geom.add_poly(poly, vmap, obj_id);
+
+	if (use_bump_map()) {
+		geom_tan.add_poly(poly, vmap_tan, obj_id);
+	}
+	else {
+		geom.add_poly(poly, vmap, obj_id);
+	}
 	mark_as_used();
 	return 1;
 }
@@ -544,33 +552,27 @@ bool material_t::add_poly(polygon_t const &poly, vertex_map_t vmap[2], unsigned 
 bool material_t::write(ostream &out) const {
 
 	// WRITE
-	return geom.write(out);
+	return (geom.write(out) && geom_tan.write(out));
 }
 
 
 bool material_t::read(istream &in) {
 
 	// WRITE
-	return geom.read(in);
+	return (geom.read(in) && geom_tan.read(in));
 }
 
 
 // ************ model3d ************
 
 
-void vertex_map_t::check_for_clear(int mat_id) {
-
-	if (mat_id != last_mat_id || size() >= MAX_VMAP_SIZE) {
-		last_mat_id = mat_id;
-		clear();
+unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id, vector<polygon_t> *ppts) {
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		vmap[d].check_for_clear(mat_id);
+		vmap_tan[d].check_for_clear(mat_id);
 	}
-}
-
-
-unsigned model3d::add_polygon(polygon_t const &poly, vertex_map_t vmap[2], int mat_id, unsigned obj_id, vector<polygon_t> *ppts) {
-
 	//assert(mat_id >= 0); // must be set/valid - too strict?
-	for (unsigned d = 0; d < 2; ++d) {vmap[d].check_for_clear(mat_id);}
 	split_polygons_buffer.resize(0);
 	split_polygon(poly, split_polygons_buffer, 0.0);
 
@@ -582,7 +584,7 @@ unsigned model3d::add_polygon(polygon_t const &poly, vertex_map_t vmap[2], int m
 		else {
 			assert((unsigned)mat_id < materials.size());
 		
-			if (materials[mat_id].add_poly(*i, vmap, obj_id)) {
+			if (materials[mat_id].add_poly(*i, vmap, vmap_tan, obj_id)) {
 				if (ppts) {
 					i->color = materials[mat_id].get_avg_color(tmgr, unbound_tid);
 					split_polygon(*i, *ppts, POLY_COPLANAR_THRESH);
@@ -643,6 +645,7 @@ void model3d::remove_excess_cap() {
 
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
 		m->geom.remove_excess_cap();
+		m->geom_tan.remove_excess_cap();
 	}
 	unbound_geom.remove_excess_cap();
 }
@@ -662,6 +665,7 @@ void model3d::free_context() {
 
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
 		m->geom.free_vbos();
+		m->geom_tan.free_vbos();
 	}
 	unbound_geom.free_vbos();
 }
@@ -690,7 +694,8 @@ void model3d::bind_all_used_tids() {
 		
 		if (m->use_bump_map()) {
 			tmgr.ensure_tid_bound(m->bump_tid);
-			m->geom.calc_tangents();
+			assert(m->geom.empty());
+			m->geom_tan.calc_tangents();
 		}
 		if (m->use_spec_map()) tmgr.ensure_tid_bound(m->s_tid);
 	}
@@ -735,6 +740,7 @@ void model3d::show_stats() const {
 	
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		m->geom.get_stats(stats);
+		m->geom_tan.get_stats(stats);
 		++stats.mats;
 	}
 	stats.print();

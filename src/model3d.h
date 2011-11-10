@@ -11,6 +11,7 @@ using namespace std;
 
 typedef map<string, unsigned> string_map_t;
 
+unsigned const MAX_VMAP_SIZE     = 65536;
 float const POLY_COPLANAR_THRESH = 0.98;
 colorRGB const def_color(0.0, 0.0, 0.0);
 
@@ -101,15 +102,24 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 };
 
 
-class vertex_map_t : public map<vert_norm_tc_tan, unsigned> {
+template<typename T> class vertex_map_t : public map<T, unsigned> {
 
 	int last_mat_id;
 	unsigned last_obj_id;
 
 public:
 	vertex_map_t() : last_mat_id(-1), last_obj_id(0) {}
-	void check_for_clear(int mat_id);
+	
+	void check_for_clear(int mat_id) {
+		if (mat_id != last_mat_id || size() >= MAX_VMAP_SIZE) {
+		last_mat_id = mat_id;
+		clear();
+		}
+	}
 };
+
+typedef vertex_map_t<vert_norm_tc> vntc_map_t;
+typedef vertex_map_t<vert_norm_tc_tan> vntct_map_t;
 
 
 template<typename T> void clear_cont(T &cont) {T().swap(cont);}
@@ -130,7 +140,7 @@ public:
 };
 
 
-class vntc_vect_t : public vector<vert_norm_tc_tan> {
+template<typename T> class vntc_vect_t : public vector<T> {
 
 protected:
 	bool has_tangents;
@@ -151,23 +161,23 @@ public:
 };
 
 
-class indexed_vntc_vect_t : public vntc_vect_t {
+template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
 	vector<unsigned> indices;
 
 public:
 	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_) {}
-	void calc_tangents(unsigned npts);
+	void calc_tangents(unsigned npts) {assert(0);}
 	void render(shader_t &shader, bool is_shadow_pass, int prim_type);
-	void add_poly(polygon_t const &poly, vertex_map_t &vmap);
-	void add_vertex(vert_norm_tc_tan const &v, vertex_map_t &vmap);
-	void clear() {vector<vert_norm_tc_tan>::clear(); indices.clear();}
+	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
+	void add_vertex(T const &v, vertex_map_t<T> &vmap);
+	void clear() {vntc_vect_t<T>::clear(); indices.clear();}
 	unsigned num_verts() const {return (indices.empty() ? size() : indices.size());}
-	vert_norm_tc_tan &get_vert(unsigned i) {return (*this)[indices.empty() ? i : indices[i]];}
+	T &get_vert(unsigned i) {return (*this)[indices.empty() ? i : indices[i]];}
 };
 
 
-struct vntc_vect_block_t : public deque<indexed_vntc_vect_t> {
+template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t<T> > {
 
 	void remove_excess_cap();
 	void free_vbos();
@@ -180,14 +190,15 @@ struct vntc_vect_block_t : public deque<indexed_vntc_vect_t> {
 };
 
 
-struct geometry_t {
+template<typename T> struct geometry_t {
 
-	vntc_vect_block_t triangles, quads;
+	vntc_vect_block_t<T> triangles, quads;
 
-	void calc_tangents();
+	void calc_tangents() {assert(0);}
 	void render(shader_t &shader, bool is_shadow_pass);
 	bool empty() const {return (triangles.empty() && quads.empty());}
-	void add_poly(polygon_t const &poly, vertex_map_t vmap[2], unsigned obj_id=0);
+	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
+	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
 	cube_t get_bbox() const;
 	void remove_excess_cap() {triangles.remove_excess_cap(); quads.remove_excess_cap();}
 	void free_vbos()         {triangles.free_vbos(); quads.free_vbos();}
@@ -227,12 +238,13 @@ struct material_t {
 	bool skip, is_used;
 	string name, filename;
 
-	geometry_t geom;
+	geometry_t<vert_norm_tc> geom;
+	geometry_t<vert_norm_tc_tan> geom_tan;
 
 	material_t(string const &name_=string(), string const &fn=string()) : ka(def_color), kd(def_color), ks(def_color), ke(def_color),
 		tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0), illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1),
 		bump_tid(-1), refl_tid(-1), skip(0), is_used(0), name(name_), filename(fn) {}
-	bool add_poly(polygon_t const &poly, vertex_map_t vmap[2], unsigned obj_id=0);
+	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
 	bool use_bump_map() const;
@@ -250,7 +262,7 @@ struct material_t {
 class model3d {
 
 	// geometry
-	geometry_t unbound_geom;
+	geometry_t<vert_norm_tc> unbound_geom;
 	int unbound_tid;
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
@@ -275,7 +287,7 @@ public:
 	}
 
 	// creation and query
-	unsigned add_polygon(polygon_t const &poly, vertex_map_t vmap[2], int mat_id, unsigned obj_id=0, vector<polygon_t> *ppts=NULL);
+	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id=0, vector<polygon_t> *ppts=NULL);
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);

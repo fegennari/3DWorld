@@ -10,7 +10,7 @@
 #config_river.txt
 #config_gym.txt
 #config_landscape.txt
-sponza/config_sponza2.txt
-#config_samples.txt
+#sponza/config_sponza2.txt
+config_samples.txt
 #laptop_overrides.txt
 

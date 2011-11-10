@@ -479,12 +479,13 @@ public:
 			poly_data_block const &pd(pblocks.back());
 			unsigned pix(0);
 			polygon_t poly;
-			vertex_map_t vmap[2]; // {triangles, quads} move out of the loop?
+			vntc_map_t vmap[2]; // {triangles, quads}
+			vntct_map_t vmap_tan[2]; // {triangles, quads}
 
 			for (vector<poly_header_t>::const_iterator j = pd.polys.begin(); j != pd.polys.end(); ++j) {
 				poly.resize(j->npts);
 				for (unsigned p = 0; p < j->npts; ++p) {poly[p] = pd.pts[pix+p];}
-				num_faces += model.add_polygon(poly, vmap, j->mat_id, j->obj_id, ppts);
+				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id, ppts);
 				pix += j->npts;
 			}
 			pblocks.pop_back();
