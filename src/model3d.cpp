@@ -130,6 +130,30 @@ colorRGBA texture_manager::get_tex_avg_color(int tid) const {
 }
 
 
+// ************ read/write code ************
+
+void write_uint(ostream &out, unsigned val) {
+	out.write((const char *)&val, sizeof(unsigned));
+}
+
+unsigned read_uint(istream &in) {
+	unsigned val;
+	in.read((char *)&val, sizeof(unsigned));
+	return val;
+}
+
+template<typename V> void write_vector(ostream &out, V const &v) {
+	write_uint(out, v.size());
+	out.write((const char *)&v.front(), v.size()*sizeof(V::value_type));
+}
+
+template<typename V> void read_vector(istream &in, V &v) {
+	v.clear();
+	v.resize(read_uint(in));
+	in.read((char *)&v.front(), v.size()*sizeof(V::value_type));
+}
+
+
 // ************ vntc_vect_t/indexed_vntc_vect_t ************
 
 template<typename T> void vntc_vect_t<T>::free_vbos() {
@@ -179,6 +203,20 @@ template<> void indexed_vntc_vect_t<vert_norm_tc_tan>::calc_tangents(unsigned np
 			i->tangent.w = ((i->tangent.w < 0.0) ? -1.0 : 1.0); // FIXME: what if 0.0?
 		}
 	}
+}
+
+
+template<typename T> void vntc_vect_t<T>::write(ostream &out) const {
+
+	write_vector(out, *this);
+}
+
+
+template<typename T> void vntc_vect_t<T>::read(istream &in) {
+
+	read_vector(in, *this);
+	has_tangents = (sizeof(T) == sizeof(vert_norm_tc_tan)); // HACK to get the type
+	calc_bounding_volumes();
 }
 
 
@@ -260,6 +298,20 @@ template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_
 		assert(vmap.empty());
 		push_back(v);
 	}
+}
+
+
+template<typename T> void indexed_vntc_vect_t<T>::write(ostream &out) const {
+
+	vntc_vect_t<T>::write(out);
+	write_vector(out, indices);
+}
+
+
+template<typename T> void indexed_vntc_vect_t<T>::read(istream &in) {
+
+	vntc_vect_t<T>::read(in);
+	read_vector(in, indices);
 }
 
 
@@ -349,14 +401,17 @@ template<typename T> unsigned vntc_vect_block_t<T>::unique_verts() const {
 
 template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 
-	// WRITE
+	write_uint(out, size());
+	for (const_iterator i = begin(); i != end(); ++i) {i->write(out);}
 	return 0;
 }
 
 
 template<typename T> bool vntc_vect_block_t<T>::read(istream &in) {
 
-	// WRITE
+	clear();
+	resize(read_uint(in));
+	for (iterator i = begin(); i != end(); ++i) {i->read(in);}
 	return 0;
 }
 
@@ -551,14 +606,18 @@ bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t
 
 bool material_t::write(ostream &out) const {
 
-	// WRITE
+	out.write((char const *)this, sizeof(material_params_t)); // FIXME: can write garbage bytes
+	write_vector(out, name);
+	write_vector(out, filename);
 	return (geom.write(out) && geom_tan.write(out));
 }
 
 
 bool material_t::read(istream &in) {
 
-	// WRITE
+	in.read((char *)this, sizeof(material_params_t)); // FIXME: can read garbage bytes
+	read_vector(in, name);
+	read_vector(in, filename);
 	return (geom.read(in) && geom_tan.read(in));
 }
 
@@ -755,10 +814,10 @@ bool model3d::write_to_disk(string const &fn) const {
 		cerr << "Error opening model3d file for write: " << fn << endl;
 		return 0;
 	}
-	out.write((char const *)MAGIC_NUMBER, sizeof(MAGIC_NUMBER));
+	write_uint(out, MAGIC_NUMBER);
 	if (!unbound_geom.write(out)) return 0;
 	unsigned const num_materials(materials.size());
-	out.write((char const *)&num_materials, sizeof(unsigned));
+	write_uint(out, num_materials);
 	
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (!m->write(out)) {

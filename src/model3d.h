@@ -158,6 +158,8 @@ public:
 	void calc_bounding_volumes();
 	cube_t get_bbox() const {return get_polygon_bbox(*this);}
 	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
+	void write(ostream &out) const;
+	void read(istream &in);
 };
 
 
@@ -174,6 +176,8 @@ public:
 	void clear() {vntc_vect_t<T>::clear(); indices.clear();}
 	unsigned num_verts() const {return (indices.empty() ? size() : indices.size());}
 	T &get_vert(unsigned i) {return (*this)[indices.empty() ? i : indices[i]];}
+	void write(ostream &out) const;
+	void read(istream &in);
 };
 
 
@@ -229,21 +233,27 @@ public:
 };
 
 
-struct material_t {
+struct material_params_t {
 
 	colorRGB ka, kd, ks, ke, tf;
 	float ns, ni, alpha, tr;
 	unsigned illum;
 	int a_tid, d_tid, s_tid, alpha_tid, bump_tid, refl_tid;
 	bool skip, is_used;
+
+	material_params_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color), ns(1.0), ni(1.0),
+		alpha(1.0), tr(0.0), illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), skip(0), is_used(0) {}
+};
+
+
+struct material_t : public material_params_t {
+
 	string name, filename;
 
 	geometry_t<vert_norm_tc> geom;
 	geometry_t<vert_norm_tc_tan> geom_tan;
 
-	material_t(string const &name_=string(), string const &fn=string()) : ka(def_color), kd(def_color), ks(def_color), ke(def_color),
-		tf(def_color), ns(1.0), ni(1.0), alpha(1.0), tr(0.0), illum(2), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1),
-		bump_tid(-1), refl_tid(-1), skip(0), is_used(0), name(name_), filename(fn) {}
+	material_t(string const &name_=string(), string const &fn=string()) : name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
