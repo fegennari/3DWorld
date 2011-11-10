@@ -630,6 +630,7 @@ struct vert_norm { // size = 24
 	vert_norm() {}
 	vert_norm(point const &v_, vector3d const &n_) : v(v_), n(n_) {}
 	void assign(point const &v_, vector3d const &n_) {v = v_; n = n_;}
+	bool operator<(vert_norm const &p) const {return ((v == p.v) ? (n < p.n) : (v < p.v));}
 };
 
 
@@ -639,6 +640,16 @@ struct vert_norm_tc : public vert_norm { // size = 32
 	vert_norm_tc() {}
 	vert_norm_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm(v_, n_) {t[0] = ts; t[1] = tt;}
 	vert_norm_tc(point const &v_, vector3d const &n_, float const t_[2])  : vert_norm(v_, n_) {t[0] = t_[0]; t[1] = t_[1];}
+
+	bool operator<(vert_norm_tc const &p) const {
+		if (v < p.v) return 1;
+		if (p.v < v) return 0;
+		if (n < p.n) return 1;
+		if (p.n < n) return 0;
+		if (t[0] < p.t[0]) return 1;
+		if (p.t[0] < t[0]) return 0;
+		return (t[1] < p.t[1]);
+	}
 };
 
 
