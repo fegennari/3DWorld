@@ -292,20 +292,29 @@ public:
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
 		vector<counted_normal> vn; // vertex normals
-		vector<vector3d> tc; // texture coords
+		vector<point2d<float> > tc; // texture coords
 		deque<poly_data_block> pblocks;
 		char s[MAX_CHARS];
 		string material_name, mat_lib, group_name, object_name;
+		tc.push_back(point2d<float>(0.0, 0.0)); // default tex coords
+		n.push_back(zero_vector); // default normal
 
 		while (fscanf(fp, "%s", s) == 1) {
-			if (s[0] == 0) {cout << "empty/unparseable line?" << endl; continue;}
-			if (s[0] == '#') { // comment
+			if (s[0] == 0) {
+				cout << "empty/unparseable line?" << endl;
+				continue;
+			}
+			else if (s[0] == '#') { // comment
 				read_to_newline(fp); // ignore
 			}
 			else if (strcmp(s, "f") == 0) { // face
 				model.mark_mat_as_used(cur_mat_id);
 
 				if (pblocks.empty() || pblocks.back().pts.size() >= block_size) {
+					if (!pblocks.empty()) {
+						remove_excess_cap(pblocks.back().polys);
+						remove_excess_cap(pblocks.back().pts);
+					}
 					pblocks.push_back(poly_data_block());
 				}
 				poly_data_block &pb(pblocks.back());
@@ -316,49 +325,46 @@ public:
 
 				while (fscanf(fp, "%i", &vix) == 1) { // read vertex index
 					normalize_index(vix, v.size());
-					vector3d normal(zero_vector), tex_coord(zero_vector); // normal will be recalculated later if zero
+					vntc_ix_t vntc_ix(vix, 0, 0);
 					int const c(getc(fp));
 
 					if (c == '/') {
 						if (fscanf(fp, "%i", &tix) == 1) { // read text coord index
 							normalize_index(tix, tc.size());
-							tex_coord = tc[tix];
+							vntc_ix.tix = tix+1; // account for tc[0]
 						}
 						int const c2(getc(fp));
 
 						if (c2 == '/') {
 							if (fscanf(fp, "%i", &nix) == 1 && !recalc_model3d_normals) { // read normal index
 								normalize_index(nix, n.size());
-								normal = n[nix];
+								vntc_ix.nix = nix+1; // account for n[0]
 							} // else the normal will be recalculated later
 						}
 						else ungetc(c2, fp);
 					}
 					else ungetc(c, fp);
-					pb.pts.push_back(vert_norm_tc_ix(v[vix], normal, tex_coord.x, tex_coord.y, vix));
+					pb.pts.push_back(vntc_ix);
 					++npts;
 				} // end while vertex
 				assert(npts >= 3);
 				vector3d &normal(pb.polys.back().n);
 				
 				for (unsigned i = pix; i < pix+npts-2; ++i) { // find a nonzero normal
-					normal = cross_product((pb.pts[i+1].v - pb.pts[i].v), (pb.pts[i+2].v - pb.pts[i].v)).get_norm(); // backwards?
+					normal = cross_product((v[pb.pts[i+1].vix] - v[pb.pts[i].vix]), (v[pb.pts[i+2].vix] - v[pb.pts[i].vix])).get_norm(); // backwards?
 					if (normal != zero_vector) break; // got a good normal
 				}
-				for (unsigned i = pix; i < pix+npts; ++i) {
-					if (recalc_model3d_normals) {
-						unsigned const ix(pb.pts[i].ix);
-						assert((unsigned)ix < vn.size());
+				if (recalc_model3d_normals) {
+					for (unsigned i = pix; i < pix+npts; ++i) {
+						unsigned const vix(pb.pts[i].vix);
+						assert((unsigned)vix < vn.size());
 
-						if (vn[ix].is_valid() && dot_product(normal, vn[ix].get_norm()) < 0.25) { // normals in disagreement
-							vn[ix] = zero_vector; // zero it out so that it becomes invalid later
+						if (vn[vix].is_valid() && dot_product(normal, vn[vix].get_norm()) < 0.25) { // normals in disagreement
+							vn[vix] = zero_vector; // zero it out so that it becomes invalid later
 						}
 						else {
-							vn[ix].add_normal(normal);
+							vn[vix].add_normal(normal);
 						}
-					}
-					else if (pb.pts[i].n == zero_vector) {
-						pb.pts[i].n = normal;
 					}
 					//if (!smoothing_group) pv[i].n = normal;
 				}
@@ -374,12 +380,13 @@ public:
 				xf.xform_pos(v.back());
 			}
 			else if (strcmp(s, "vt") == 0) { // tex coord
-				tc.push_back(vector3d());
+				point tc3d;
 			
-				if (!read_point(tc.back(), 2)) {
+				if (!read_point(tc3d, 2)) {
 					cerr << "Error reading texture coord from object file " << filename << endl;
 					return 0;
 				}
+				tc.push_back(point2d<float>(tc3d.x, tc3d.y)); // discard tc3d.z
 			}
 			else if (strcmp(s, "vn") == 0) { // normal
 				vector3d normal;
@@ -441,40 +448,24 @@ public:
 				return 0;
 			}
 		}
+		remove_excess_cap(v);
+		remove_excess_cap(n);
+		remove_excess_cap(tc);
+		remove_excess_cap(vn);
 		PRINT_TIME("Object File Load");
-
-		if (recalc_model3d_normals) {
-			for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) {
-				if (!i->is_valid()) continue; // invalid, remains invalid
-				*i /= (float)i->count;
-				float const mag(i->mag());
-				if (mag < 1E-6) {i->count = 0; continue;} // invalid
-				assert(mag < 1.001);
-				*i /= mag; // normalize
-				i->count = (mag > 0.7); // stores the 'valid' state of the normal
-			}
-			for (deque<poly_data_block>::iterator i = pblocks.begin(); i != pblocks.end(); ++i) {
-				unsigned pix(0);
-
-				for (vector<poly_header_t>::iterator j = i->polys.begin(); j != i->polys.end(); ++j) {
-					for (unsigned p = 0; p < j->npts; ++p) {
-						vert_norm_tc_ix &V(i->pts[pix+p]);
-						assert(V.ix < vn.size());
-						counted_normal const &vert_norm(vn[V.ix]);
-						V.n = ((j->n != zero_vector && !vert_norm.is_valid()) ? j->n : vert_norm);
-					}
-					pix += j->npts;
-				}
-			}
-		}
-		unsigned const nv(v.size()), nn(recalc_model3d_normals ? vn.size() : n.size()), ntc(tc.size()), num_blocks(pblocks.size());
-		clear_cont(v);
-		clear_cont(n);
-		clear_cont(tc);
-		clear_cont(vn);
 		model.load_all_used_tids(); // need to load the textures here to get the colors
 		PRINT_TIME("Model Texture Load");
+		unsigned const num_blocks(pblocks.size());
 
+		for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) { // if recalc_model3d_normals
+			if (!i->is_valid()) continue; // invalid, remains invalid
+			*i /= (float)i->count;
+			float const mag(i->mag());
+			if (mag < 1E-6) {i->count = 0; continue;} // invalid
+			assert(mag < 1.001);
+			*i /= mag; // normalize
+			i->count = (mag > 0.7); // stores the 'valid' state of the normal
+		}
 		while (!pblocks.empty()) {
 			poly_data_block const &pd(pblocks.back());
 			unsigned pix(0);
@@ -484,7 +475,23 @@ public:
 
 			for (vector<poly_header_t>::const_iterator j = pd.polys.begin(); j != pd.polys.end(); ++j) {
 				poly.resize(j->npts);
-				for (unsigned p = 0; p < j->npts; ++p) {poly[p] = pd.pts[pix+p];}
+				
+				for (unsigned p = 0; p < j->npts; ++p) {
+					vntc_ix_t const &V(pd.pts[pix+p]);
+					vector3d normal;
+
+					if (recalc_model3d_normals) {
+						assert(V.vix < vn.size());
+						normal = ((j->n != zero_vector && !vn[V.vix].is_valid()) ? j->n : vn[V.vix]);
+					}
+					else {
+						assert(V.nix < n.size());
+						normal = n[V.nix];
+						if (normal == zero_vector) normal = j->n;
+					}
+					assert(V.vix < v.size() && V.tix < tc.size());
+					poly[p] = vert_norm_tc(v[V.vix], normal, tc[V.tix].x, tc[V.tix].y);
+				}
 				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id, ppts);
 				pix += j->npts;
 			}
@@ -494,7 +501,8 @@ public:
 		PRINT_TIME("Model3d Build");
 		
 		if (verbose) {
-			cout << "verts: " << nv << ", normals: " << nn << ", tcs: " << ntc << ", faces: " << num_faces << ", objects: " << num_objects
+			unsigned const nn(recalc_model3d_normals ? vn.size() : n.size());
+			cout << "verts: " << v.size() << ", normals: " << nn << ", tcs: " << tc.size() << ", faces: " << num_faces << ", objects: " << num_objects
 				 << ", groups: " << num_groups << ", blocks: " << num_blocks << endl;
 			cout << "bbox: "; model.get_bbox().print(); cout << endl;
 			cout << "model stats: "; model.show_stats();

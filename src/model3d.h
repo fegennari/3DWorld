@@ -50,10 +50,9 @@ struct geom_xform_t {
 };
 
 
-struct vert_norm_tc_ix : public vert_norm_tc {
-	unsigned ix;
-	vert_norm_tc_ix(point const &v_, vector3d const &n_, float ts, float tt, unsigned ix_)
-		: vert_norm_tc(v_, n_, ts, tt), ix(ix_) {}
+struct vntc_ix_t {
+	unsigned vix, nix, tix;
+	vntc_ix_t(unsigned vix_=0, unsigned nix_=0, unsigned tix_=0) : vix(vix_), nix(nix_), tix(tix_) {}
 };
 
 
@@ -68,7 +67,7 @@ struct poly_header_t {
 
 struct poly_data_block {
 	vector<poly_header_t> polys;
-	vector<vert_norm_tc_ix> pts;
+	vector<vntc_ix_t> pts;
 };
 
 
