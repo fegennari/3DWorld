@@ -261,7 +261,7 @@ struct material_t : public material_params_t {
 	bool use_spec_map() const;
 	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
-	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass);
+	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool ignore_ambient, bool is_shadow_pass);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
 	bool write(ostream &out) const;
@@ -277,7 +277,7 @@ class model3d {
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bbox;
-	bool from_model3d_file;
+	bool from_model3d_file, ignore_ambient;
 
 	// materials
 	deque<material_t> materials;
@@ -288,8 +288,8 @@ public:
 	// textures
 	texture_manager &tmgr;
 
-	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE)
-		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube), from_model3d_file(0) {}
+	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0) : tmgr(tmgr_),
+		unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube), from_model3d_file(0), ignore_ambient(ignore_a) {}
 	unsigned num_materials(void) const {return materials.size();}
 
 	material_t &get_material(int mat_id) {
@@ -335,8 +335,8 @@ bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts, float coplana
 void free_model_context();
 void render_models(bool shadow_pass);
 
-bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xform_t const &xf,
-	int def_tid, colorRGBA const &def_c, bool load_model_file, bool verbose);
+bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xform_t const &xf, int def_tid,
+	colorRGBA const &def_c, bool load_model_file, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose);
 
 
 #endif // _MODEL3D_H_

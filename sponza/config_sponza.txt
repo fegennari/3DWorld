@@ -54,7 +54,6 @@ player_name Deathtool
 unlimited_weapons 1
 group_back_face_cull 1
 enable_model3d_tex_comp 1
-recalc_model3d_normals 1
 
 mesh_height 0.1
 mesh_size  128 128 64

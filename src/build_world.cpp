@@ -952,11 +952,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'O': // load *.obj file: <filename> <group_cobjs_level>
+		case 'O': // load *.obj file: <filename> <group_cobjs_level> <recalc_normals> <write_file> <ignore_ambient>
 			{
 				string const fn(read_filename(fp));
+				int recalc_normals(0), write_file(0), ignore_ambient(0);
 
-				if (fn.empty() || fscanf(fp, "%i", &ivals[0]) != 1) {
+				if (fn.empty() || fscanf(fp, "%i%i%i%i", &ivals[0], &recalc_normals, &write_file, &ignore_ambient) != 4) {
 					return read_error(fp, "load object file command", coll_obj_file);
 				}
 				RESET_TIME;
@@ -968,7 +969,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: one for each texture?)
 				ppts.resize(0);
 				
-				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d, 1)) {
+				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d,
+					(recalc_normals != 0), (write_file != 0), (ignore_ambient != 0), 1))
+				{
 					return read_error(fp, "object file data", coll_obj_file);
 				}
 				if (!no_cobjs) {

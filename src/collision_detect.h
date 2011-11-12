@@ -55,7 +55,7 @@ public:
 };
 
 
-class coll_obj : public cube_t { // size = 232
+class coll_obj : public cube_t { // size = 268
 
 public:
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly

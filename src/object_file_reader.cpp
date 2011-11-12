@@ -8,7 +8,6 @@
 #include <fstream>
 
 
-extern bool recalc_model3d_normals, write_model3d_file;
 extern model3ds all_models;
 
 
@@ -312,7 +311,7 @@ public:
 	}
 
 
-	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
+	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool recalc_normals, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
 		cout << "Reading object file " << filename << endl;
@@ -366,7 +365,7 @@ public:
 						int const c2(getc(fp));
 
 						if (c2 == '/') {
-							if (fscanf(fp, "%i", &nix) == 1 && !recalc_model3d_normals) { // read normal index
+							if (fscanf(fp, "%i", &nix) == 1 && !recalc_normals) { // read normal index
 								normalize_index(nix, n.size());
 								vntc_ix.nix = nix+1; // account for n[0]
 							} // else the normal will be recalculated later
@@ -384,7 +383,7 @@ public:
 					normal = cross_product((v[pb.pts[i+1].vix] - v[pb.pts[i].vix]), (v[pb.pts[i+2].vix] - v[pb.pts[i].vix])).get_norm(); // backwards?
 					if (normal != zero_vector) break; // got a good normal
 				}
-				if (recalc_model3d_normals) {
+				if (recalc_normals) {
 					for (unsigned i = pix; i < pix+npts; ++i) {
 						unsigned const vix(pb.pts[i].vix);
 						assert((unsigned)vix < vn.size());
@@ -401,7 +400,7 @@ public:
 			}
 			else if (strcmp(s, "v") == 0) { // vertex
 				v.push_back(point());
-				if (recalc_model3d_normals) vn.push_back(counted_normal()); // vertex normal
+				if (recalc_normals) vn.push_back(counted_normal()); // vertex normal
 			
 				if (!read_point(v.back())) {
 					cerr << "Error reading vertex from object file " << filename << endl;
@@ -425,7 +424,7 @@ public:
 					cerr << "Error reading normal from object file " << filename << endl;
 					return 0;
 				}
-				if (!recalc_model3d_normals) {
+				if (!recalc_normals) {
 					xf.xform_pos_rm(normal);
 					n.push_back(normal);
 				}
@@ -487,7 +486,7 @@ public:
 		PRINT_TIME("Model Texture Load");
 		unsigned const num_blocks(pblocks.size());
 
-		for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) { // if recalc_model3d_normals
+		for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) { // if recalc_normals
 			if (!i->is_valid()) continue; // invalid, remains invalid
 			*i /= (float)i->count;
 			float const mag(i->mag());
@@ -510,7 +509,7 @@ public:
 					vntc_ix_t const &V(pd.pts[pix+p]);
 					vector3d normal;
 
-					if (recalc_model3d_normals) {
+					if (recalc_normals) {
 						assert(V.vix < vn.size());
 						normal = ((j->n != zero_vector && !vn[V.vix].is_valid()) ? j->n : vn[V.vix]);
 					}
@@ -531,7 +530,7 @@ public:
 		PRINT_TIME("Model3d Build");
 		
 		if (verbose) {
-			unsigned const nn(recalc_model3d_normals ? vn.size() : n.size());
+			unsigned const nn(recalc_normals ? vn.size() : n.size());
 			cout << "verts: " << v.size() << ", normals: " << nn << ", tcs: " << tc.size() << ", faces: " << num_faces << ", objects: " << num_objects
 				 << ", groups: " << num_groups << ", blocks: " << num_blocks << endl;
 			cout << "bbox: "; model.get_bbox().print(); cout << endl;
@@ -542,15 +541,15 @@ public:
 };
 
 
-bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xform_t const &xf,
-	int def_tid, colorRGBA const &def_c, bool load_models, bool verbose)
+bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xform_t const &xf, int def_tid,
+	colorRGBA const &def_c, bool load_models, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
 	setlocale(LC_ALL, "C");
 
 	if (load_models) {
-		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c));
+		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c, ignore_ambient));
 		object_file_reader_model reader(filename, all_models.back());
 
 		if (ext == "model3d") {
@@ -559,9 +558,9 @@ bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xfor
 		}
 		else {
 			assert(ext == "obj"); // FIXME: too strong?
-			if (!reader.read(ppts, xf, verbose)) return 0;
+			if (!reader.read(ppts, xf, recalc_normals, verbose)) return 0;
 			
-			if (write_model3d_file) {
+			if (write_file) {
 				RESET_TIME;
 				assert(filename.size() > 4);
 				string out_fn(filename.begin(), filename.end()-4); // strip off the '.obj'

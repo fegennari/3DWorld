@@ -59,8 +59,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 // Global Variables
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), use_stencil_shadows(0), univ_stencil_shadows(1);
 bool univ_planet_lod(0), draw_mesh_shader(1), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
-bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), recalc_model3d_normals(0), write_model3d_file(0), player_near_fire(0);
-bool global_lighting_update(0);
+bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), player_near_fire(0), global_lighting_update(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
@@ -1637,12 +1636,6 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "enable_model3d_tex_comp") {
 			if (!read_bool(fp, enable_model3d_tex_comp)) cfg_err("enable_model3d_tex_comp command", error);
-		}
-		else if (str == "recalc_model3d_normals") {
-			if (!read_bool(fp, recalc_model3d_normals)) cfg_err("recalc_model3d_normals command", error);
-		}
-		else if (str == "write_model3d_file") {
-			if (!read_bool(fp, write_model3d_file)) cfg_err("write_model3d_file command", error);
 		}
 		else if (str == "use_dense_voxels") {
 			if (!read_bool(fp, use_dense_voxels)) cfg_err("use_dense_voxels command", error);

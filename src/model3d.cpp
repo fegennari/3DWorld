@@ -501,7 +501,7 @@ template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const
 // ************ material_t ************
 
 
-void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
+void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool ignore_ambient, bool is_shadow_pass) {
 
 	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
@@ -540,7 +540,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			shader.add_uniform_float("min_alpha", ((alpha_tid >= 0) ? 0.9 : 0.0)); // FIXME: check has_binary_alpha?
 		}
 		else {
-			set_color_a(colorRGBA(ka, alpha));
+			set_color_a(colorRGBA((ignore_ambient ? kd : ka), alpha));
 			set_color_d(colorRGBA(kd, alpha));
 		}
 		geom.render(shader, 0);
@@ -784,7 +784,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
 		for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
 			if (m->is_partial_transparent() == (pass != 0) && m->use_bump_map() == bmap_pass) {
-				m->render(shader, tmgr, unbound_tid, is_shadow_pass);
+				m->render(shader, tmgr, unbound_tid, ignore_ambient, is_shadow_pass);
 			}
 		}
 	}
