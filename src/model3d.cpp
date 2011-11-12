@@ -668,7 +668,7 @@ int model3d::get_material_ix(string const &material_name, string const &fn) {
 		materials.push_back(material_t(material_name, fn));
 	}
 	else {
-		cerr << "Warning: Redefinition of material " << material_name << " in file " << fn << endl;
+		if (!from_model3d_file) cerr << "Warning: Redefinition of material " << material_name << " in file " << fn << endl;
 		mat_id = it->second;
 	}
 	assert(mat_id < materials.size());
@@ -856,6 +856,7 @@ bool model3d::read_from_disk(string const &fn) {
 		return 0;
 	}
 	cout << "Reading model3d file " << fn << endl;
+	from_model3d_file = 1;
 	in.read((char *)&bbox, sizeof(cube_t));
 	if (!unbound_geom.read(in)) return 0;
 	materials.resize(read_uint(in));
@@ -865,6 +866,7 @@ bool model3d::read_from_disk(string const &fn) {
 			cerr << "Error reading material" << endl;
 			return 0;
 		}
+		mat_map[m->name] = (m - materials.begin());
 	}
 	return in.good();
 }
