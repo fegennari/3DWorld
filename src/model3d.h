@@ -11,7 +11,7 @@ using namespace std;
 
 typedef map<string, unsigned> string_map_t;
 
-unsigned const MAX_VMAP_SIZE     = 65536;
+unsigned const MAX_VMAP_SIZE     = (1 << 18); // 256K
 float const POLY_COPLANAR_THRESH = 0.98;
 colorRGB const def_color(0.0, 0.0, 0.0);
 
