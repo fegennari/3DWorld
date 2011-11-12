@@ -308,6 +308,7 @@ public:
 	void render(shader_t &shader, bool is_shadow_pass, bool bmap_pass); // const?
 	cube_t const &get_bbox() const {return bbox;}
 	void show_stats() const;
+	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
 	bool write_to_disk (string const &fn) const;
 	bool read_from_disk(string const &fn);
 };

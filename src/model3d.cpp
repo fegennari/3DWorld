@@ -403,7 +403,7 @@ template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 
 	write_uint(out, size());
 	for (const_iterator i = begin(); i != end(); ++i) {i->write(out);}
-	return 0;
+	return 1;
 }
 
 
@@ -412,7 +412,7 @@ template<typename T> bool vntc_vect_block_t<T>::read(istream &in) {
 	clear();
 	resize(read_uint(in));
 	for (iterator i = begin(); i != end(); ++i) {i->read(in);}
-	return 0;
+	return 1;
 }
 
 
@@ -792,6 +792,14 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 }
 
 
+void model3d::get_all_mat_lib_fns(set<string> &mat_lib_fns) const {
+
+	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+		mat_lib_fns.insert(m->filename);
+	}
+}
+
+
 void model3d::show_stats() const {
 
 	model3d_stats_t stats;
@@ -814,10 +822,11 @@ bool model3d::write_to_disk(string const &fn) const {
 		cerr << "Error opening model3d file for write: " << fn << endl;
 		return 0;
 	}
+	cout << "Writing model3d file " << fn << endl;
 	write_uint(out, MAGIC_NUMBER);
+	out.write((char const *)&bbox, sizeof(cube_t));
 	if (!unbound_geom.write(out)) return 0;
-	unsigned const num_materials(materials.size());
-	write_uint(out, num_materials);
+	write_uint(out, materials.size());
 	
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (!m->write(out)) {
@@ -825,12 +834,13 @@ bool model3d::write_to_disk(string const &fn) const {
 			return 0;
 		}
 	}
-	return 1;
+	return out.good();
 }
 
 
 bool model3d::read_from_disk(string const &fn) {
 
+	cout << "fn: " << fn << endl;
 	ifstream in(fn, ios::in | ios::binary);
 	
 	if (!in.good()) {
@@ -838,17 +848,17 @@ bool model3d::read_from_disk(string const &fn) {
 		return 0;
 	}
 	clear(); // ???
-	unsigned magic_number_comp(0);
-	in.read((char *)magic_number_comp, sizeof(magic_number_comp));
+	unsigned const magic_number_comp(read_uint(in));
+	cout << "number: " << magic_number_comp << endl;
 
 	if (magic_number_comp != MAGIC_NUMBER) {
 		cerr << "Error reading model3d file " << fn << ": Invalid file format (magic number check failed)." << endl;
 		return 0;
 	}
+	cout << "Reading model3d file " << fn << endl;
+	in.read((char *)&bbox, sizeof(cube_t));
 	if (!unbound_geom.read(in)) return 0;
-	unsigned num_materials(0);
-	in.read((char *)&num_materials, sizeof(unsigned));
-	materials.resize(num_materials);
+	materials.resize(read_uint(in));
 	
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (!m->read(in)) {
@@ -856,7 +866,7 @@ bool model3d::read_from_disk(string const &fn) {
 			return 0;
 		}
 	}
-	return 1;
+	return in.good();
 }
 
 

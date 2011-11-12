@@ -1637,6 +1637,7 @@ void setup_landscape_tex_colors(colorRGBA const &c1, colorRGBA const &c2);
 colorRGBA texture_color(int tid);
 unsigned get_texture_size(int tid, bool dim);
 void get_lum_alpha(colorRGBA const &color, int tid, float &luminance, float &alpha);
+std::string get_file_extension(std::string const &filename, unsigned level, bool make_lower);
 colorRGBA get_landscape_texture_color(int xpos, int ypos);
 void update_lttex_ix(int &ix);
 void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2, float &t);

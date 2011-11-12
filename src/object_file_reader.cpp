@@ -8,7 +8,7 @@
 #include <fstream>
 
 
-extern bool recalc_model3d_normals;
+extern bool recalc_model3d_normals, write_model3d_file;
 extern model3ds all_models;
 
 
@@ -76,6 +76,7 @@ public:
 	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
+		cout << "Reading object file " << filename << endl;
 		vector<point> v; // vertices
 		char s[MAX_CHARS];
 		polygon_t poly;
@@ -283,9 +284,38 @@ public:
 	}
 
 
+	bool load_from_model3d_file(bool verbose) {
+		RESET_TIME;
+
+		if (!model.read_from_disk(filename)) {
+			cerr << "Error reading model3d file " << filename << endl;
+			return 0;
+		}
+		PRINT_TIME("Model3d File Load");
+		set<string> mat_lib_fns;
+		model.get_all_mat_lib_fns(mat_lib_fns);
+		
+		for (set<string>::const_iterator i = mat_lib_fns.begin(); i != mat_lib_fns.end(); ++i) {
+			if (!load_mat_lib(*i)) {
+				cerr << "Error reading material library file " << *i << endl;
+				return 0;
+			}
+		}
+		model.load_all_used_tids();
+
+		if (verbose) {
+			cout << "bbox: "; model.get_bbox().print(); cout << endl;
+			cout << "model stats: "; model.show_stats();
+		}
+		PRINT_TIME("Model3d Load");
+		return 1;
+	}
+
+
 	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
+		cout << "Reading object file " << filename << endl;
 		unsigned const block_size = (1 << 18); // 256K
 		int cur_mat_id(-1);
 		unsigned smoothing_group(0), num_faces(0), num_objects(0), num_groups(0), obj_group_id(0);
@@ -515,15 +545,39 @@ public:
 bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xform_t const &xf,
 	int def_tid, colorRGBA const &def_c, bool load_models, bool verbose)
 {
+	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
 	setlocale(LC_ALL, "C");
 
 	if (load_models) {
 		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c));
 		object_file_reader_model reader(filename, all_models.back());
-		return reader.read(ppts, xf, verbose);
+
+		if (ext == "model3d") {
+			assert(ppts == NULL); // not supported
+			return reader.load_from_model3d_file(verbose); // FIXME: xf is ignored, assumed to be already applied
+		}
+		else {
+			assert(ext == "obj"); // FIXME: too strong?
+			if (!reader.read(ppts, xf, verbose)) return 0;
+			
+			if (write_model3d_file) {
+				RESET_TIME;
+				assert(filename.size() > 4);
+				string out_fn(filename.begin(), filename.end()-4); // strip off the '.obj'
+				out_fn += ".model3d";
+				
+				if (!all_models.back().write_to_disk(out_fn)) {
+					cerr << "Error writing model3d file " << out_fn << endl;
+					return 0;
+				}
+				PRINT_TIME("Model3d Write");
+			}
+			return 1;
+		}
 	}
 	else {
+		assert(ext == "obj"); // FIXME: too strong?
 		object_file_reader reader(filename);
 		return reader.read(ppts, xf, verbose);
 	}
