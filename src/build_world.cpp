@@ -839,6 +839,9 @@ void add_polygons_to_cobj_vector(vector<polygon_t> const &ppts, coll_obj const &
 		poly.cp.draw       = 0;
 		poly.cp.is_model3d = 1;
 	}
+	if (ppts.size() > 2*fixed_cobjs.size()) {
+		fixed_cobjs.reserve(ppts.size() + fixed_cobjs.size()); // reserve to the correct size
+	}
 	for (vector<polygon_t>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
 		unsigned const npts(i->size());
 		assert(npts >= 3 && npts <= 4);
