@@ -301,6 +301,20 @@ template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_
 }
 
 
+template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<polygon_t> &polygons, colorRGBA const &color, unsigned npts) const {
+
+	unsigned const nv(num_verts());
+	assert((nv % npts) == 0);
+
+	for (unsigned i = 0; i < nv; i += npts) {
+		polygon_t poly(color);
+		poly.resize(npts);
+		for (unsigned p = 0; p < npts; ++p) {poly[p] = get_vert(i+p);}
+		split_polygon(poly, polygons, POLY_COPLANAR_THRESH);
+	}
+}
+
+
 template<typename T> void indexed_vntc_vect_t<T>::write(ostream &out) const {
 
 	vntc_vect_t<T>::write(out);
@@ -391,11 +405,19 @@ template<typename T> unsigned vntc_vect_block_t<T>::num_verts() const {
 }
 
 
-template<typename T> unsigned vntc_vect_block_t<T>::unique_verts() const {
+template<typename T> unsigned vntc_vect_block_t<T>::num_unique_verts() const {
 
 	unsigned s(0);
 	for (const_iterator i = begin(); i != end(); ++i) {s += i->size();}
 	return s;
+}
+
+
+template<typename T> void vntc_vect_block_t<T>::get_polygons(vector<polygon_t> &polygons, colorRGBA const &color, unsigned npts) const {
+
+	for (const_iterator i = begin(); i != end(); ++i) {
+		i->get_polygons(polygons, color, npts);
+	}
 }
 
 
@@ -463,6 +485,13 @@ template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_
 	else {
 		assert(0); // shouldn't get here
 	}
+}
+
+
+template<typename T> void geometry_t<T>::get_polygons(vector<polygon_t> &polygons, colorRGBA const &color) const {
+
+	triangles.get_polygons(polygons, color, 3);
+	quads.get_polygons    (polygons, color, 4);
 }
 
 
@@ -625,7 +654,7 @@ bool material_t::read(istream &in) {
 // ************ model3d ************
 
 
-unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id, vector<polygon_t> *ppts) {
+unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id) {
 	
 	for (unsigned d = 0; d < 2; ++d) {
 		vmap[d].check_for_clear(mat_id);
@@ -638,22 +667,28 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 	for (vector<polygon_t>::iterator i = split_polygons_buffer.begin(); i != split_polygons_buffer.end(); ++i) {
 		if (mat_id < 0) {
 			unbound_geom.add_poly(*i, vmap, obj_id);
-			if (ppts) split_polygon(*i, *ppts, POLY_COPLANAR_THRESH);
 		}
 		else {
 			assert((unsigned)mat_id < materials.size());
-		
-			if (materials[mat_id].add_poly(*i, vmap, vmap_tan, obj_id)) {
-				if (ppts) {
-					i->color = materials[mat_id].get_avg_color(tmgr, unbound_tid);
-					split_polygon(*i, *ppts, POLY_COPLANAR_THRESH);
-				}
-			}
+			materials[mat_id].add_poly(*i, vmap, vmap_tan, obj_id);
 		}
 	}
 	cube_t const bb(get_polygon_bbox(poly));
 	if (bbox == all_zeros_cube) {bbox = bb;} else {bbox.union_with_cube(bb);}
 	return split_polygons_buffer.size();
+}
+
+
+void model3d::get_polygons(vector<polygon_t> &polygons) const {
+
+	unbound_geom.get_polygons(polygons, def_color);
+
+	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+		colorRGBA const color(m->get_avg_color(tmgr, unbound_tid));
+		m->geom.get_polygons(polygons, color);
+		m->geom_tan.get_polygons(polygons, color);
+		//split_polygon(*i, *ppts, POLY_COPLANAR_THRESH);
+	}
 }
 
 

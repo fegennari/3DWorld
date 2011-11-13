@@ -311,7 +311,7 @@ public:
 	}
 
 
-	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool recalc_normals, bool verbose) {
+	bool read(geom_xform_t const &xf, bool recalc_normals, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
 		cout << "Reading object file " << filename << endl;
@@ -521,7 +521,7 @@ public:
 					assert(V.vix < v.size() && V.tix < tc.size());
 					poly[p] = vert_norm_tc(v[V.vix], normal, tc[V.tix].x, tc[V.tix].y);
 				}
-				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id, ppts);
+				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id);
 				pix += j->npts;
 			}
 			pblocks.pop_back();
@@ -553,12 +553,11 @@ bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xfor
 		object_file_reader_model reader(filename, all_models.back());
 
 		if (ext == "model3d") {
-			assert(ppts == NULL); // not supported
-			return reader.load_from_model3d_file(verbose); // FIXME: xf is ignored, assumed to be already applied
+			if (!reader.load_from_model3d_file(verbose)) return 0; // FIXME: xf is ignored, assumed to be already applied
 		}
 		else {
 			assert(ext == "obj"); // FIXME: too strong?
-			if (!reader.read(ppts, xf, recalc_normals, verbose)) return 0;
+			if (!reader.read(xf, recalc_normals, verbose)) return 0;
 			
 			if (write_file) {
 				RESET_TIME;
@@ -572,8 +571,13 @@ bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xfor
 				}
 				PRINT_TIME("Model3d Write");
 			}
-			return 1;
 		}
+		if (ppts) {
+			RESET_TIME;
+			all_models.back().get_polygons(*ppts);
+			PRINT_TIME("Cobj Create");
+		}
+		return 1;
 	}
 	else {
 		assert(ext == "obj"); // FIXME: too strong?

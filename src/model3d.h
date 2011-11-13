@@ -174,7 +174,9 @@ public:
 	void add_vertex(T const &v, vertex_map_t<T> &vmap);
 	void clear() {vntc_vect_t<T>::clear(); indices.clear();}
 	unsigned num_verts() const {return (indices.empty() ? size() : indices.size());}
-	T &get_vert(unsigned i) {return (*this)[indices.empty() ? i : indices[i]];}
+	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
+	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
+	void get_polygons(vector<polygon_t> &polygons, colorRGBA const &color, unsigned npts) const;
 	void write(ostream &out) const;
 	void read(istream &in);
 };
@@ -186,8 +188,9 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void free_vbos();
 	cube_t get_bbox() const;
 	unsigned num_verts() const;
-	unsigned unique_verts() const;
-	void get_stats(model3d_stats_t &stats) const {stats.blocks += size(); stats.verts += unique_verts();}
+	unsigned num_unique_verts() const;
+	void get_stats(model3d_stats_t &stats) const {stats.blocks += size(); stats.verts += num_unique_verts();}
+	void get_polygons(vector<polygon_t> &polygons, colorRGBA const &color, unsigned npts) const;
 	bool write(ostream &out) const;
 	bool read(istream &in);
 };
@@ -202,6 +205,7 @@ template<typename T> struct geometry_t {
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
+	void get_polygons(vector<polygon_t> &polygons, colorRGBA const &color) const;
 	cube_t get_bbox() const;
 	void remove_excess_cap() {triangles.remove_excess_cap(); quads.remove_excess_cap();}
 	void free_vbos()         {triangles.free_vbos(); quads.free_vbos();}
@@ -298,7 +302,8 @@ public:
 	}
 
 	// creation and query
-	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id=0, vector<polygon_t> *ppts=NULL);
+	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id=0);
+	void get_polygons(vector<polygon_t> &polygons) const;
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
