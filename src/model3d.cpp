@@ -660,7 +660,6 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 		vmap[d].check_for_clear(mat_id);
 		vmap_tan[d].check_for_clear(mat_id);
 	}
-	//assert(mat_id >= 0); // must be set/valid - too strict?
 	split_polygons_buffer.resize(0);
 	split_polygon(poly, split_polygons_buffer, 0.0);
 
@@ -681,14 +680,16 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 
 void model3d::get_polygons(vector<polygon_t> &polygons) const {
 
-	unbound_geom.get_polygons(polygons, def_color);
+	colorRGBA unbound_color(def_color);
+	if (unbound_tid >= 0) unbound_color.modulate_with(texture_color(unbound_tid));
+	unbound_geom.get_polygons(polygons, unbound_color);
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		colorRGBA const color(m->get_avg_color(tmgr, unbound_tid));
 		m->geom.get_polygons(polygons, color);
 		m->geom_tan.get_polygons(polygons, color);
-		//split_polygon(*i, *ppts, POLY_COPLANAR_THRESH);
 	}
+	::remove_excess_cap(polygons); // probably a good idea
 }
 
 

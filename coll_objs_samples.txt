@@ -10,7 +10,7 @@ y 4.0
 #t 0 0 1.0  s 1 2  M 0  m 4.0  O ../models/dragon.model3d 4 0 0 0
 #t 0 0 1.5  s 1 2  M 0  m 4.0  O ../models/buddha.model3d 4 0 0 0
 #t 0 0 2.0  M 0  m 0.5  O ../models/hairball.model3d 4 0 0 0
-#t 0 0 0  s 1 2  M 0  m 0.002  O ../models/conference/conference.obj 3 1 0 1
+#t 0 0 0  s 1 2  M 0  m 0.002  O ../models/conference/conference.model3d 3 1 0 1
 #t 0 0 0  s 1 2  M 0  m 0.2  O ../models/sponza/sponza.obj 4 1 0 1
 #t 0 0 0.0  s 1 2  M 0  m 0.002  O ../models/sponza2/sponza.model3d 4 0 0 0
 #t 0 0 2.4  s 1 2  M 0  m 0.18  O ../models/sibenik/sibenik.model3d 4 1 0 1
