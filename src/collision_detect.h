@@ -32,11 +32,8 @@ public:
 		draw(d), is_model3d(0), shadow(1), swap_txy(0), elastic(e), tscale(ts), specular(spec), shine(shi),
 		tdx(0.0), tdy(0.0), refract_ix(ri), light_atten(la), tid(ti), coll_func(cf), color(c) {}
 
-	bool equal_params(const obj_layer &cobj) const {
-		return (color == cobj.color && tid == cobj.tid && tscale == cobj.tscale && specular == cobj.specular &&
-			shine == cobj.shine && draw == cobj.draw && elastic == cobj.elastic && tdx == cobj.tdx &&
-			tdy == cobj.tdy && swap_txy == cobj.swap_txy && refract_ix == cobj.refract_ix && coll_func == cobj.coll_func);
-	}
+	// assumes obj_layer contained classes are POD with no padding
+	bool equal_params(const obj_layer &cobj) const {return (memcmp(this, &cobj, sizeof(obj_layer)) == 0);}
 };
 
 
@@ -55,23 +52,23 @@ public:
 };
 
 
-class coll_obj : public cube_t { // size = 268
+class coll_obj : public cube_t { // size = 224
 
 public:
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
 	char type, destroy, status;
-	float radius, radius2, thickness, volume, v_fall;
-	int counter, id, platform_id, group_id, waypt_id;
-	short npoints;
 	unsigned char last_coll, coll_type;
 	bool fixed, is_billboard, falling;
+	float radius, radius2, thickness, volume, v_fall;
+	int counter, id;
+	short platform_id, group_id, waypt_id, npoints;
 	point points[N_COLL_POLY_PTS];
 	vector3d norm, texture_offset;
 	vector<int> occluders;
 
-	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), radius(0.0), radius2(0.0), thickness(0.0),
-		volume(0.0), v_fall(0.0), counter(0), id(-1), platform_id(-1), group_id(-1), waypt_id(-1), npoints(0), last_coll(0),
-		coll_type(0), fixed(0), is_billboard(0), falling(0), norm(zero_vector), texture_offset(zero_vector) {}
+	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), last_coll(0), coll_type(0), fixed(0), is_billboard(0),
+		falling(0), radius(0.0), radius2(0.0), thickness(0.0), volume(0.0), v_fall(0.0), counter(0), id(-1), platform_id(-1),
+		group_id(-1), waypt_id(-1), npoints(0), norm(zero_vector), texture_offset(zero_vector) {}
 	void init();
 	void clear_internal_data();
 	void calc_size();
