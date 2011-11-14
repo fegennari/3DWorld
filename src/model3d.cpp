@@ -758,6 +758,7 @@ void model3d::clear() {
 	materials.clear();
 	undef_materials.clear();
 	mat_map.clear();
+	free_cobj_tree();
 }
 
 
@@ -994,6 +995,29 @@ cube_t model3ds::get_bbox() const {
 		if (m == begin()) {bbox = bb;} else {bbox.union_with_cube(bb);}
 	}
 	return bbox;
+}
+
+
+void model3ds::build_cobj_trees(bool verbose) {
+
+	for (iterator m = begin(); m != end(); ++m) {
+		m->build_cobj_tree(verbose);
+	}
+}
+
+
+bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
+
+	bool ret(0);
+	point end_pos(p2);
+
+	for (const_iterator m = begin(); m != end(); ++m) {
+		if (m->check_coll_line(p1, end_pos, cpos, cnorm, color, exact)) {
+			end_pos = cpos; // advance so that we get the closest intersection point to p1
+			ret = 1;
+		}
+	}
+	return ret;
 }
 
 

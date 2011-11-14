@@ -550,7 +550,8 @@ bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xfor
 
 	if (load_models) {
 		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c, ignore_ambient));
-		object_file_reader_model reader(filename, all_models.back());
+		model3d &cur_model(all_models.back());
+		object_file_reader_model reader(filename, cur_model);
 
 		if (ext == "model3d") {
 			if (!reader.load_from_model3d_file(verbose)) return 0; // FIXME: xf is ignored, assumed to be already applied
@@ -565,7 +566,7 @@ bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xfor
 				string out_fn(filename.begin(), filename.end()-4); // strip off the '.obj'
 				out_fn += ".model3d";
 				
-				if (!all_models.back().write_to_disk(out_fn)) {
+				if (!cur_model.write_to_disk(out_fn)) {
 					cerr << "Error writing model3d file " << out_fn << endl;
 					return 0;
 				}
@@ -574,7 +575,8 @@ bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xfor
 		}
 		if (ppts) {
 			RESET_TIME;
-			all_models.back().get_polygons(*ppts);
+			cur_model.get_polygons(*ppts);
+			cur_model.set_has_cobjs();
 			PRINT_TIME("Cobj Create");
 		}
 		return 1;

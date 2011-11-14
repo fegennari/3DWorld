@@ -6,6 +6,7 @@
 #define _MODEL3D_H_
 
 #include "3DWorld.h"
+#include "collision_detect.h" // for polygon_t
 
 using namespace std;
 
@@ -122,21 +123,6 @@ typedef vertex_map_t<vert_norm_tc_tan> vntct_map_t;
 
 
 template<typename T> void clear_cont(T &cont) {T().swap(cont);}
-
-
-class polygon_t : public vector<vert_norm_tc> {
-
-public:
-	colorRGBA color;
-
-	polygon_t(colorRGBA const &c=ALPHA0) : color(c) {}
-	polygon_t(vector<vert_norm_tc> const &vv, colorRGBA const &c=ALPHA0) : vector<vert_norm_tc>(vv), color(c) {}
-	bool is_convex() const;
-	bool is_coplanar(float thresh) const;
-	vector3d get_planar_normal() const;
-	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
-	void from_points(vector<point> const &pts);
-};
 
 
 template<typename T> class vntc_vect_t : public vector<T> {
@@ -273,6 +259,9 @@ struct material_t : public material_params_t {
 };
 
 
+class cobj_tree_tquads_t;
+
+
 class model3d {
 
 	// geometry
@@ -281,19 +270,22 @@ class model3d {
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bbox;
-	bool from_model3d_file, ignore_ambient;
+	bool from_model3d_file, ignore_ambient, has_cobjs;
 
 	// materials
 	deque<material_t> materials;
 	string_map_t mat_map; // maps material names to materials indexes
 	set<string> undef_materials; // to reduce warning messages
+	cobj_tree_tquads_t *coll_tree;
 
 public:
 	// textures
 	texture_manager &tmgr;
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0) : tmgr(tmgr_),
-		unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube), from_model3d_file(0), ignore_ambient(ignore_a) {}
+		unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube),
+		from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0), coll_tree(NULL) {}
+	~model3d() {clear();}
 	unsigned num_materials(void) const {return materials.size();}
 
 	material_t &get_material(int mat_id) {
@@ -302,6 +294,7 @@ public:
 	}
 
 	// creation and query
+	void set_has_cobjs() {has_cobjs = 1;}
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id=0);
 	void get_polygons(vector<polygon_t> &polygons) const;
 	int get_material_ix(string const &material_name, string const &fn);
@@ -314,6 +307,9 @@ public:
 	void bind_all_used_tids();
 	void render(shader_t &shader, bool is_shadow_pass, bool bmap_pass); // const?
 	cube_t const &get_bbox() const {return bbox;}
+	void build_cobj_tree(bool verbose);
+	void free_cobj_tree();
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 	void get_stats(model3d_stats_t &stats) const;
 	void show_stats() const;
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
@@ -330,11 +326,10 @@ struct model3ds : public deque<model3d> {
 	void free_context();
 	void render(bool is_shadow_pass); // const?
 	cube_t get_bbox() const;
+	void build_cobj_trees(bool verbose);
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 };
 
-
-class coll_obj; // forward declaration
-void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj);
 
 bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts, float coplanar_thresh);
 

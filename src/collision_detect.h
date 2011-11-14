@@ -135,6 +135,24 @@ public:
 };
 
 
+class polygon_t : public vector<vert_norm_tc> {
+
+public:
+	colorRGBA color;
+
+	polygon_t(colorRGBA const &c=ALPHA0) : color(c) {}
+	polygon_t(vector<vert_norm_tc> const &vv, colorRGBA const &c=ALPHA0) : vector<vert_norm_tc>(vv), color(c) {}
+	bool is_convex() const;
+	bool is_coplanar(float thresh) const;
+	vector3d get_planar_normal() const;
+	bool is_valid() const {return (size() >= 3 && is_triangle_valid((*this)[0].v, (*this)[1].v, (*this)[2].v));}
+	void from_points(vector<point> const &pts);
+};
+
+
+void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj);
+
+
 struct coll_tquad { // size = 60
 
 	point pts[4];
@@ -143,14 +161,12 @@ struct coll_tquad { // size = 60
 	
 	union {
 		unsigned cid;
-		unsigned char color[4]; // RGBA
+		color_wrapper color;
 	};
 	coll_tquad() {}
+	coll_tquad(coll_obj const &c);
+	coll_tquad(polygon_t const &p);
 
-	coll_tquad(coll_obj const &c) : normal(c.norm), cid(c.id), npts(c.npoints) {
-		assert(is_cobj_valid(c));
-		for (unsigned i = 0; i < npts; ++i) {pts[i] = c.points[i];}
-	}
 	static bool is_cobj_valid(coll_obj const &c) {
 		return (!c.disabled() && c.type == COLL_POLYGON && (c.npoints == 3 || c.npoints == 4) && c.thickness <= MIN_POLY_THICK);
 	}

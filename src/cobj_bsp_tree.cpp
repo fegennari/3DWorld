@@ -4,6 +4,7 @@
 
 #include "3DWorld.h"
 #include "physics_objects.h"
+#include "model3d.h"
 
 
 bool const BUILD_COBJ_TREE   = 1;
@@ -18,6 +19,25 @@ extern vector<unsigned> falling_cobjs;
 extern platform_cont platforms;
 
 
+coll_tquad::coll_tquad(coll_obj const &c) : normal(c.norm), cid(c.id), npts(c.npoints) {
+
+	assert(is_cobj_valid(c));
+	for (unsigned i = 0; i < npts; ++i) {pts[i] = c.points[i];}
+}
+
+
+coll_tquad::coll_tquad(polygon_t const &p) : npts(p.size()) {
+
+	color.set_c4(p.color);
+	
+	for (unsigned i = 0; i < npts; ++i) {
+		pts[i]  = p[i].v;
+		//normal += p[i].n; // average the normals
+	}
+	get_normal(p[0].v, p[1].v, p[2].v, normal, 1);
+}
+
+	
 cube_t coll_tquad::get_bounding_cube() const {
 
 	cube_t cube(pts[0].x, pts[0].x, pts[0].y, pts[0].y, pts[0].z, pts[0].z);
@@ -106,7 +126,7 @@ public:
 };
 
 
-class cobj_tree_triangles_t : public cobj_tree_base { // unused
+class cobj_tree_tquads_t : public cobj_tree_base { // unused
 
 	vector<coll_tquad> tquads, temp_bins[3];
 
@@ -254,15 +274,27 @@ public:
 			tquads.push_back(coll_tquad(*i));
 		}
 		build_tree_top(verbose);
-		PRINT_TIME(" Cobj Tree Triangles Create");
+		PRINT_TIME(" Cobj Tree Triangles Create (from Cobjs)");
 		//exit(0); // TESTING
 	}
 
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
+	void add_polygons(vector<polygon_t> const &polygons, bool verbose) {
+		RESET_TIME;
+		clear();
+		tquads.reserve(polygons.size());
+		
+		for (vector<polygon_t>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
+			tquads.push_back(coll_tquad(*i));
+		}
+		build_tree_top(verbose);
+		PRINT_TIME(" Cobj Tree Triangles Create (from Polygons)");
+		//exit(0); // TESTING
+	}
+
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA *color, int *cindex, int *ignore_cobj, bool exact) const {
 
 		//static unsigned num_checks(0), num_node(0), num_tests(0), num_hits(0), num_success(0);
 		//++num_checks;
-		cindex = -1;
 		if (nodes.empty()) return 0;
 		bool ret(0);
 		float t(0.0), tmin(0.0), tmax(1.0);
@@ -278,11 +310,12 @@ public:
 				// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 				// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
 				//++num_tests;
-				if ((int)tquads[i].cid == ignore_cobj) continue;
+				if (ignore_cobj && (int)tquads[i].cid == *ignore_cobj)       continue;
 				if (!tquads[i].line_int_exact(p1, p2, t, cnorm, tmin, tmax)) continue;
 				//++num_hits;
-				cindex = tquads[i].cid;
-				cpos   = p1 + (p2 - p1)*t;
+				if (cindex) *cindex = tquads[i].cid;
+				if (color ) *color  = tquads[i].color.get_c4();
+				cpos = p1 + (p2 - p1)*t;
 				if (!exact) return 1; // return first hit
 				nixm.dinv = vector3d(cpos - p1);
 				nixm.dinv.invert(0, 1);
@@ -294,7 +327,15 @@ public:
 		//if ((num_checks % 10000) == 0) {cout << "nc: " << num_checks << ", nn: " << num_node << ", nt: " << num_tests << ", nh: " << num_hits << ", ns: " << num_success << endl;}
 		return ret;
 	}
-}; // cobj_tree_triangles_t
+
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
+		cindex = -1;
+		return check_coll_line(p1, p2, cpos, cnorm, NULL, &cindex, &ignore_cobj, exact);
+	}
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
+		return check_coll_line(p1, p2, cpos, cnorm, &color, NULL, NULL, exact);
+	}
+}; // cobj_tree_tquads_t
 
 
 // 3: BSP Tree/KD-Tree, 8: OctTree
@@ -595,7 +636,7 @@ cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0, 0);
 cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
 cobj_tree_type cobj_tree_occlude(coll_objects, 1, 0, 1, 0);
 cobj_tree_type cobj_tree_moving (coll_objects, 1, 0, 0, 1);
-cobj_tree_triangles_t cobj_tree_triangles;
+cobj_tree_tquads_t cobj_tree_triangles;
 int last_update_frame[2] = {1, 1}; // first drawn frame is 1
 
 
@@ -664,6 +705,32 @@ void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_c
 bool have_occluders() {
 
 	return (BUILD_COBJ_TREE ? !cobj_tree_occlude.is_empty() : 1);
+}
+
+
+// ************ model3d ************
+
+
+void model3d::build_cobj_tree(bool verbose) {
+
+	if (coll_tree || has_cobjs) return; // already built or not needed because cobjs will be used instead
+	coll_tree = new cobj_tree_tquads_t;
+	vector<polygon_t> polygons;
+	get_polygons(polygons);
+	coll_tree->add_polygons(polygons, verbose);
+}
+
+
+void model3d::free_cobj_tree() {
+
+	delete coll_tree;
+	coll_tree = NULL;
+}
+
+
+bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
+
+	return (coll_tree && coll_tree->check_coll_line(p1, p2, cpos, cnorm, color, exact));
 }
 
 

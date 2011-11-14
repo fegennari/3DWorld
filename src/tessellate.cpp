@@ -4,7 +4,6 @@
 
 #include "3DWorld.h"
 #include "collision_detect.h"
-#include "model3d.h"
 #include "subdiv.h"
 
 
