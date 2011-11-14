@@ -135,6 +135,39 @@ public:
 };
 
 
+struct coll_tquad { // size = 60
+
+	point pts[4];
+	vector3d normal;
+	unsigned npts;
+	
+	union {
+		unsigned cid;
+		unsigned char color[4]; // RGBA
+	};
+	coll_tquad() {}
+
+	coll_tquad(coll_obj const &c) : normal(c.norm), cid(c.id), npts(c.npoints) {
+		assert(is_cobj_valid(c));
+		for (unsigned i = 0; i < npts; ++i) {pts[i] = c.points[i];}
+	}
+	static bool is_cobj_valid(coll_obj const &c) {
+		return (!c.disabled() && c.type == COLL_POLYGON && (c.npoints == 3 || c.npoints == 4) && c.thickness <= MIN_POLY_THICK);
+	}
+	cube_t get_bounding_cube() const;
+
+	bool line_intersect(point const &p1, point const &p2) const {
+		float t;
+		return line_poly_intersect(p1, p2, pts, npts, normal, t);
+	}
+	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const {
+		if (!line_poly_intersect(p1, p2, pts, npts, normal, t) || t > tmax || t < tmin) return 0;
+		cnorm = get_poly_dir_norm(normal, p1, (p2 - p1), t);
+		return 1;
+	}
+};
+
+
 struct coll_cell { // size = 52
 
 	float zmin, zmax, occ_zmin, occ_zmax;

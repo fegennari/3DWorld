@@ -18,41 +18,16 @@ extern vector<unsigned> falling_cobjs;
 extern platform_cont platforms;
 
 
-struct coll_tquad { // size = 60
+cube_t coll_tquad::get_bounding_cube() const {
 
-	point pts[4];
-	vector3d normal;
-	unsigned cid, npts;
+	cube_t cube(pts[0].x, pts[0].x, pts[0].y, pts[0].y, pts[0].z, pts[0].z);
 
-	coll_tquad() {}
-
-	coll_tquad(coll_obj const &c) : normal(c.norm), cid(c.id), npts(c.npoints) {
-		assert(is_cobj_valid(c));
-		for (unsigned i = 0; i < npts; ++i) {pts[i] = c.points[i];}
+	for (unsigned i = 1; i < npts; ++i) {
+		UNROLL_3X(cube.d[i_][0] = min(cube.d[i_][0], pts[i][i_]); cube.d[i_][1] = max(cube.d[i_][1], pts[i][i_]););
 	}
-	static bool is_cobj_valid(coll_obj const &c) {
-		return (!c.disabled() && c.type == COLL_POLYGON && (c.npoints == 3 || c.npoints == 4) && c.thickness <= MIN_POLY_THICK);
-	}
-	cube_t get_bounding_cube() const {
-		cube_t cube(pts[0].x, pts[0].x, pts[0].y, pts[0].y, pts[0].z, pts[0].z);
-
-		for (unsigned i = 1; i < npts; ++i) {
-			UNROLL_3X(cube.d[i_][0] = min(cube.d[i_][0], pts[i][i_]); cube.d[i_][1] = max(cube.d[i_][1], pts[i][i_]););
-		}
-		UNROLL_3X(cube.d[i_][0] -= POLY_TOLER; cube.d[i_][1] += POLY_TOLER;);
-		return cube;
-	}
-	bool line_intersect(point const &p1, point const &p2) const {
-		//if (!check_line_clip(p1, p2, get_bounding_cube().d)) return 0;
-		float t;
-		return line_poly_intersect(p1, p2, pts, npts, normal, t);
-	}
-	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const {
-		if (!line_poly_intersect(p1, p2, pts, npts, normal, t) || t > tmax || t < tmin) return 0;
-		cnorm = get_poly_dir_norm(normal, p1, (p2 - p1), t);
-		return 1;
-	}
-};
+	UNROLL_3X(cube.d[i_][0] -= POLY_TOLER; cube.d[i_][1] += POLY_TOLER;);
+	return cube;
+}
 
 
 class cobj_tree_base {
@@ -65,6 +40,26 @@ protected:
 		tree_node(unsigned s=0, unsigned e=0) : start(s), end(e), next_node_id(0) {
 			UNROLL_3X(d[i_][0] = d[i_][1] = 0.0;)
 		}
+		unsigned get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const {
+			unsigned dim(0);
+			max_sz = 0;
+
+			for (unsigned i = 0; i < 3; ++i) {
+				if (skip_dims & (1 << i)) continue;
+				float const dim_sz(d[i][1] - d[i][0]);
+				assert(dim_sz >= 0.0);
+		
+				if (dim_sz > max_sz) {
+					max_sz = dim_sz;
+					dim    = i;
+				}
+			}
+			if (max_sz > 0.0) {
+				sval = get_cube_center()[dim]; // center point (mean seems to work better than median)
+				assert(!(skip_dims & (1 << dim)));
+			}
+			return dim;
+		}
 	};
 
 	vector<tree_node> nodes;
@@ -73,6 +68,14 @@ protected:
 	inline void register_leaf(unsigned num) {
 		++num_leaf_nodes;
 		max_leaf_count = max(max_leaf_count, num);
+	}
+
+	inline bool check_for_leaf(unsigned num, unsigned skip_dims) {
+		if (num <= MAX_LEAF_SIZE || skip_dims) { // base case
+			register_leaf(num);
+			return 1;
+		}
+		return 0;
 	}
 
 	struct node_ix_mgr {
@@ -107,39 +110,36 @@ class cobj_tree_triangles_t : public cobj_tree_base { // unused
 
 	vector<coll_tquad> tquads, temp_bins[3];
 
+	cube_t const get_bounding_cube(unsigned i) const {return tquads[i].get_bounding_cube();}
+
 	void calc_node_bbox(tree_node &n) const {
 		assert(n.start < n.end && n.end <= tquads.size());
-		n.copy_from(tquads[n.start].get_bounding_cube());
+		n.copy_from(get_bounding_cube(n.start));
 
 		for (unsigned i = n.start+1; i < n.end; ++i) { // bbox union
-			n.union_with_cube(tquads[i].get_bounding_cube());
+			n.union_with_cube(get_bounding_cube(i));
 		}
 	}
 
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
 		assert(nix < nodes.size());
 		tree_node &n(nodes[nix]);
-		assert(n.start < n.end);
 		calc_node_bbox(n);
 		unsigned const num(n.end - n.start);
 		max_depth = max(max_depth, depth);
-		
-		if (num <= MAX_LEAF_SIZE || skip_dims == 7) { // base case
-			register_leaf(num);
-			return;
-		}
+		if (check_for_leaf(num, skip_dims)) return; // base case
 
 		// determine split dimension and value
-		unsigned dim(0);
-		float max_sz(0);
+		float max_sz(0), sval(0);
 #if 0
-		float best_w(0), sval(0), slen(0);
+		unsigned dim(0);
+		float best_w(0), slen(0);
 		vector<pair<float, char> > vals[3]; // position, area
 		vector3d dim_sizes;
 		UNROLL_3X(dim_sizes[i_] = (n.d[i_][1] - n.d[i_][0]);)
 
 		for (unsigned i = n.start; i < n.end; ++i) {
-			cube_t const cube(tquads[i].get_bounding_cube());
+			cube_t const cube(get_bounding_cube(i));
 
 			for (unsigned d = 0; d < 2; ++d) {
 				UNROLL_3X(if (!(skip_dims & (1 << i_))) {vals[i_].push_back(make_pair(cube.d[i_][d], (d ? -1 : 1)));})
@@ -173,32 +173,19 @@ class cobj_tree_triangles_t : public cobj_tree_base { // unused
 			assert(in_left == num && in_right == 0 && in_both == 0);
 		}
 #else
-		point const center(n.get_cube_center());
-
-		for (unsigned d = 0; d < 3; ++d) {
-			if (skip_dims & (1 << d)) continue;
-			float const dim_sz(n.d[d][1] - n.d[d][0]);
-			assert(dim_sz >= 0.0);
-		
-			if (dim_sz > max_sz) {
-				max_sz = dim_sz;
-				dim    = d;
-			}
-		}
-		float const sval(center[dim]); // center point (mean seems to work better than median)
+		unsigned const dim(n.get_split_dim(max_sz, sval, skip_dims));
 #endif
 		if (max_sz == 0) { // can't split
 			register_leaf(num);
 			return;
 		}
-		assert(!(skip_dims & (1 << dim)));
 		float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
 		unsigned pos(n.start), bin_count[3] = {0};
 
 		// split in this dimension
 		for (unsigned i = n.start; i < n.end; ++i) {
 			unsigned bix(2);
-			cube_t const cube(tquads[i].get_bounding_cube());
+			cube_t const &cube(get_bounding_cube(i));
 			assert(cube.d[dim][0] <= cube.d[dim][1]);
 			if (cube.d[dim][1] <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
 			if (cube.d[dim][0] >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
@@ -212,11 +199,6 @@ class cobj_tree_triangles_t : public cobj_tree_base { // unused
 			temp_bins[d].resize(0);
 		}
 		assert(pos == n.end);
-
-		if (depth < 3) {
-			cout << "d: " << depth << ", dim: " << dim << ", sval: " << sval << ", n: " << num << ", bc: " << bin_count[0] << " " << bin_count[1] << " " << bin_count[2] << endl;
-			//cout << "slen: " << slen << ", max_sz: " << max_sz << ", bw: " << best_w << endl;
-		}
 
 		// check that dataset has been subdivided (not all in one bin)
 		if (bin_count[0] == num || bin_count[1] == num || bin_count[2] == num) {
@@ -246,6 +228,21 @@ public:
 		tquads.clear(); // reserve(0)?
 	}
 
+	void build_tree_top(bool verbose) {
+		nodes.reserve(6*tquads.size()/5); // conservative
+		nodes.push_back(tree_node(0, tquads.size()));
+		assert(nodes.size() == 1);
+		max_depth = max_leaf_count = num_leaf_nodes = 0;
+		build_tree(0, 0, 0);
+		nodes[0].next_node_id = nodes.size();
+		for (unsigned i = 0; i < 3; ++i) {vector<coll_tquad>().swap(temp_bins[i]);}
+
+		if (verbose) {
+			cout << "tquads: " << tquads.size() << ", nodes: " << nodes.size()  << ", depth: "
+				 << max_depth << ", max_leaf: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
+		}
+	}
+
 	void add_cobjs(vector<coll_obj> const &cobjs, bool verbose) {
 		RESET_TIME;
 		clear();
@@ -256,19 +253,8 @@ public:
 			assert(i->type == COLL_POLYGON && i->thickness <= MIN_POLY_THICK);
 			tquads.push_back(coll_tquad(*i));
 		}
-		nodes.reserve(6*tquads.size()/5); // conservative
-		nodes.push_back(tree_node(0, tquads.size()));
-		assert(nodes.size() == 1);
-		max_depth = max_leaf_count = num_leaf_nodes = 0;
-		build_tree(0, 0, 0);
-		nodes[0].next_node_id = nodes.size();
-		for (unsigned i = 0; i < 3; ++i) {vector<coll_tquad>().swap(temp_bins[i]);}
-
-		if (verbose) {
-			PRINT_TIME(" Cobj Tree Triangles Create");
-			cout << "cobjs: " << cobjs.size() << ", leaves: " << tquads.size() << ", nodes: " << nodes.size() 
-				 << ", depth: " << max_depth << ", max_leaf: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
-		}
+		build_tree_top(verbose);
+		PRINT_TIME(" Cobj Tree Triangles Create");
 		//exit(0); // TESTING
 	}
 
@@ -499,37 +485,19 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 	
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
-	assert(n.start < n.end);
 	calc_node_bbox(n);
 	unsigned const num(n.end - n.start);
 	max_depth = max(max_depth, depth);
-	
-	if (num <= MAX_LEAF_SIZE || skip_dims == 7) { // base case
-		register_leaf(num);
-		return;
-	}
+	if (check_for_leaf(num, skip_dims)) return; // base case
 	
 	// determine split dimension and value
-	point const center(n.get_cube_center());
-	unsigned dim(0);
-	float max_sz(0);
+	float max_sz(0), sval(0);
+	unsigned const dim(n.get_split_dim(max_sz, sval, skip_dims));
 
-	for (unsigned d = 0; d < 3; ++d) {
-		if (skip_dims & (1 << d)) continue;
-		float const dim_sz(n.d[d][1] - n.d[d][0]);
-		assert(dim_sz >= 0.0);
-		
-		if (dim_sz > max_sz) {
-			max_sz = dim_sz;
-			dim    = d;
-		}
-	}
 	if (max_sz == 0) { // can't split
 		register_leaf(num);
 		return;
 	}
-	assert(!(skip_dims & (1 << dim)));
-	float const sval(center[dim]); // center point (mean seems to work better than median)
 	float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
 	unsigned pos(n.start), bin_count[3] = {0};
 
@@ -579,15 +547,10 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, un
 
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
-	assert(n.start < n.end);
 	calc_node_bbox(n);
 	unsigned const num(n.end - n.start);
 	max_depth = max(max_depth, depth);
-
-	if (num <= MAX_LEAF_SIZE || skip_dims) { // base case
-		register_leaf(num);
-		return;
-	}
+	if (check_for_leaf(num, skip_dims)) return; // base case
 	
 	// determine split values
 	point const sval(n.get_cube_center()); // center point
@@ -617,7 +580,7 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, un
 		if (count == 0) continue; // empty bin
 		unsigned const kid(nodes.size());
 		nodes.push_back(tree_node(cur, cur+count));
-		build_tree(kid, (count == num), depth+1); // if all in one bin, make that bin a leaf
+		build_tree(kid, ((count == num) ? 7 : 0), depth+1); // if all in one bin, make that bin a leaf
 		nodes[kid].next_node_id = nodes.size();
 		cur += count;
 	}
