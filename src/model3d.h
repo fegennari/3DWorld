@@ -314,6 +314,7 @@ public:
 	void bind_all_used_tids();
 	void render(shader_t &shader, bool is_shadow_pass, bool bmap_pass); // const?
 	cube_t const &get_bbox() const {return bbox;}
+	void get_stats(model3d_stats_t &stats) const;
 	void show_stats() const;
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
 	bool write_to_disk (string const &fn) const;

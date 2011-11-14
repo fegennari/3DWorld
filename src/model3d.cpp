@@ -680,6 +680,11 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 
 void model3d::get_polygons(vector<polygon_t> &polygons) const {
 
+	if (polygons.empty()) {
+		model3d_stats_t stats;
+		get_stats(stats);
+		polygons.reserve(stats.tris + 1.5*stats.quads); // Note: we count quads as 1.5 polygons because some of them may be split into triangles
+	}
 	colorRGBA unbound_color(def_color);
 	if (unbound_tid >= 0) unbound_color.modulate_with(texture_color(unbound_tid));
 	unbound_geom.get_polygons(polygons, unbound_color);
@@ -836,9 +841,8 @@ void model3d::get_all_mat_lib_fns(set<string> &mat_lib_fns) const {
 }
 
 
-void model3d::show_stats() const {
+void model3d::get_stats(model3d_stats_t &stats) const {
 
-	model3d_stats_t stats;
 	unbound_geom.get_stats(stats);
 	
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
@@ -846,6 +850,13 @@ void model3d::show_stats() const {
 		m->geom_tan.get_stats(stats);
 		++stats.mats;
 	}
+}
+
+
+void model3d::show_stats() const {
+
+	model3d_stats_t stats;
+	get_stats(stats);
 	stats.print();
 }
 
