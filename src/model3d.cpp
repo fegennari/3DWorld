@@ -530,7 +530,7 @@ template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const
 // ************ material_t ************
 
 
-void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool ignore_ambient, bool is_shadow_pass) {
+void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
 
 	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
@@ -597,7 +597,8 @@ bool material_t::use_spec_map() const {
 
 colorRGBA material_t::get_ad_color() const {
 
-	colorRGBA c(colorRGBA(kd, alpha) + colorRGBA(ka, 0.0));
+	colorRGBA c(kd, alpha);
+	if (!ignore_ambient) c += colorRGBA(ka, 0.0);
 	c.set_valid_color();
 	return c;
 }
@@ -706,7 +707,7 @@ int model3d::get_material_ix(string const &material_name, string const &fn) {
 	if (it == mat_map.end()) {
 		mat_id = materials.size();
 		mat_map[material_name] = mat_id;
-		materials.push_back(material_t(material_name, fn));
+		materials.push_back(material_t(material_name, fn, ignore_ambient));
 	}
 	else {
 		if (!from_model3d_file) cerr << "Warning: Redefinition of material " << material_name << " in file " << fn << endl;
@@ -794,9 +795,14 @@ void model3d::bind_all_used_tids() {
 		tmgr.ensure_tid_bound(m->get_render_texture()); // only one tid for now
 		
 		if (m->use_bump_map()) {
-			tmgr.ensure_tid_bound(m->bump_tid);
-			assert(m->geom.empty());
-			m->geom_tan.calc_tangents();
+			if (!m->geom.empty()) {
+				cerr << "Error loading model3d material " << m->name << ": Geometry is missing tangent vectors, so bump map cannot be enabled." << endl;
+				m->bump_tid = -1; // disable bump map
+			}
+			else {
+				tmgr.ensure_tid_bound(m->bump_tid);
+				m->geom_tan.calc_tangents();
+			}
 		}
 		if (m->use_spec_map()) tmgr.ensure_tid_bound(m->s_tid);
 	}
@@ -826,7 +832,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
 		for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
 			if (m->is_partial_transparent() == (pass != 0) && m->use_bump_map() == bmap_pass) {
-				m->render(shader, tmgr, unbound_tid, ignore_ambient, is_shadow_pass);
+				m->render(shader, tmgr, unbound_tid, is_shadow_pass);
 			}
 		}
 	}
@@ -914,7 +920,8 @@ bool model3d::read_from_disk(string const &fn) {
 			cerr << "Error reading material" << endl;
 			return 0;
 		}
-		mat_map[m->name] = (m - materials.begin());
+		mat_map[m->name]  = (m - materials.begin());
+		m->ignore_ambient = ignore_ambient;
 	}
 	return in.good();
 }

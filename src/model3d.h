@@ -236,14 +236,15 @@ struct material_params_t {
 
 struct material_t : public material_params_t {
 
+	bool ignore_ambient;
 	int a_tid, d_tid, s_tid, alpha_tid, bump_tid, refl_tid;
 	string name, filename;
 
 	geometry_t<vert_norm_tc> geom;
 	geometry_t<vert_norm_tc_tan> geom_tan;
 
-	material_t(string const &name_=string(), string const &fn=string())
-		: a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), name(name_), filename(fn) {}
+	material_t(string const &name_=string(), string const &fn=string(), bool ia=0)
+		: ignore_ambient(ia), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
@@ -251,7 +252,7 @@ struct material_t : public material_params_t {
 	bool use_spec_map() const;
 	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
-	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool ignore_ambient, bool is_shadow_pass);
+	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
 	bool write(ostream &out) const;
