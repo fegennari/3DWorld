@@ -291,7 +291,7 @@ public:
 		//exit(0); // TESTING
 	}
 
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA *color, int *cindex, int *ignore_cobj, bool exact) const {
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA *color, int *cindex, int ignore_cobj, bool exact) const {
 
 		//static unsigned num_checks(0), num_node(0), num_tests(0), num_hits(0), num_success(0);
 		//++num_checks;
@@ -310,7 +310,7 @@ public:
 				// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 				// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
 				//++num_tests;
-				if (ignore_cobj && (int)tquads[i].cid == *ignore_cobj)       continue;
+				if (cindex && (int)tquads[i].cid == ignore_cobj)             continue;
 				if (!tquads[i].line_int_exact(p1, p2, t, cnorm, tmin, tmax)) continue;
 				//++num_hits;
 				if (cindex) *cindex = tquads[i].cid;
@@ -330,10 +330,10 @@ public:
 
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
 		cindex = -1;
-		return check_coll_line(p1, p2, cpos, cnorm, NULL, &cindex, &ignore_cobj, exact);
+		return check_coll_line(p1, p2, cpos, cnorm, NULL, &cindex, ignore_cobj, exact);
 	}
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
-		return check_coll_line(p1, p2, cpos, cnorm, &color, NULL, NULL, exact);
+		return check_coll_line(p1, p2, cpos, cnorm, &color, NULL, 0, exact);
 	}
 }; // cobj_tree_tquads_t
 
