@@ -565,6 +565,7 @@ bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xfor
 				assert(filename.size() > 4);
 				string out_fn(filename.begin(), filename.end()-4); // strip off the '.obj'
 				out_fn += ".model3d";
+				cur_model.bind_all_used_tids(); // need to force tangent vector calculation
 				
 				if (!cur_model.write_to_disk(out_fn)) {
 					cerr << "Error writing model3d file " << out_fn << endl;
