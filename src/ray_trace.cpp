@@ -5,6 +5,7 @@
 #include "3DWorld.h"
 #include "lightmap.h"
 #include "gameplay.h"
+#include "model3d.h"
 
 
 float const RAY_WEIGHT    = 4.0E5;
@@ -32,6 +33,7 @@ extern vector<coll_obj> coll_objects;
 extern vector<laser_beam> lasers;
 extern lmap_manager_t lmap_manager;
 extern cube_light_src_vect sky_cube_lights, global_cube_lights;
+extern model3ds all_models;
 
 
 float get_scene_radius() {return sqrt(2.0*(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + Z_SCENE_SIZE*Z_SCENE_SIZE));}
@@ -101,6 +103,11 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 			return;
 		}
 	}
+
+	// find the intersection point with the model3ds
+	colorRGBA model_color;
+	bool const model_coll(all_models.check_coll_line(p1, cpos, cpos, cnorm, model_color, 1));
+	coll |= model_coll;
 
 	// find intersection point with mesh (approximate)
 	if ((display_mode & 0x01) && !coll && p1.z != p2.z && line_intersect_mesh(p1, p2, xpos, ypos, zval, 0, 0)) {
@@ -197,6 +204,11 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 		colorRGBA const lc(get_landscape_texture_color(xpos, ypos));
 		weight *= DIFFUSE_REFL*lc.get_luminance(); // 90% diffuse reflectivity
 		color   = color.modulate_with(lc);
+	}
+	else if (model_coll) {
+		weight  *= model_color.get_luminance();
+		color    = color.modulate_with(model_color);
+		specular = 0.0; // FIXME - get this from the model?
 	}
 	else { // collision with cobj
 		assert(cindex >= 0);
@@ -628,6 +640,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	}
 	else {
 		if (ltype != LIGHTING_LOCAL) cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
+		all_models.build_cobj_trees(1);
 		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1, 1, 0);
 	}
 	if (write_light_files[ltype]) {
@@ -647,6 +660,7 @@ void check_update_global_lighting(unsigned lights) {
 	//       and in that case we still need to update lighting
 	tot_rays = num_hits = cells_touched = 0;
 	lmap_manager.clear_lighting_values(LIGHTING_GLOBAL);
+	all_models.build_cobj_trees(0);
 	launch_threaded_job(max(1U, NUM_THREADS-1), rt_funcs[LIGHTING_GLOBAL], 0, 0, 0); // reserve a thread for rendering
 }
 
