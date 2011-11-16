@@ -1,0 +1,114 @@
+// 3D World Collision Object BSP/KD/Oct Tree
+// by Frank Gennari
+// 11/15/11
+#ifndef _COBJ_BSP_TREE_H_
+#define _COBJ_BSP_TREE_H_
+
+#include "physics_objects.h"
+
+
+class cobj_tree_base {
+
+protected:
+	struct tree_node : public cube_t { // size = 36
+		unsigned start, end; // index into cixs for leaves
+		unsigned next_node_id;
+
+		tree_node(unsigned s=0, unsigned e=0) : start(s), end(e), next_node_id(0) {
+			UNROLL_3X(d[i_][0] = d[i_][1] = 0.0;)
+		}
+		unsigned get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const;
+	};
+
+	vector<tree_node> nodes;
+	unsigned max_depth, max_leaf_count, num_leaf_nodes;
+
+	inline void register_leaf(unsigned num) {
+		++num_leaf_nodes;
+		max_leaf_count = max(max_leaf_count, num);
+	}
+	bool check_for_leaf(unsigned num, unsigned skip_dims);
+
+	struct node_ix_mgr {
+		point const p1, p2;
+		vector3d dinv;
+		vector<tree_node> const &nodes;
+
+		node_ix_mgr(vector<tree_node> const &nodes_, point const &p1_, point const &p2_)
+			: nodes(nodes_), p1(p1_), p2(p2_), dinv(p2 - p1) {dinv.invert(0, 1);}
+		bool check_node(unsigned &nix) const;
+	};
+
+public:
+	bool is_empty() const {return nodes.empty();}
+	void clear() {nodes.resize(0);}
+};
+
+
+class cobj_tree_tquads_t : public cobj_tree_base { // unused
+
+	vector<coll_tquad> tquads, temp_bins[3];
+
+	cube_t const get_bounding_cube(unsigned i) const {return tquads[i].get_bounding_cube();}
+	void calc_node_bbox(tree_node &n) const;
+	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth);
+
+public:
+	void clear() {
+		cobj_tree_base::clear();
+		tquads.clear(); // reserve(0)?
+	}
+	void build_tree_top(bool verbose);
+	void add_cobjs(vector<coll_obj> const &cobjs, bool verbose);
+	void add_polygons(vector<polygon_t> const &polygons, bool verbose);
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA *color, int *cindex, int ignore_cobj, bool exact) const;
+
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
+		cindex = -1;
+		return check_coll_line(p1, p2, cpos, cnorm, NULL, &cindex, ignore_cobj, exact);
+	}
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
+		return check_coll_line(p1, p2, cpos, cnorm, &color, NULL, 0, exact);
+	}
+};
+
+
+// 3: BSP Tree/KD-Tree, 8: OctTree
+template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
+
+	vector<coll_obj> const &cobjs;
+	vector<unsigned> cixs, temp_bins[NUM];
+	bool is_static, is_dynamic, occluders_only, moving_only;
+
+	void add_cobj(unsigned ix) {if (obj_ok(cobjs[ix])) cixs.push_back(ix);}
+	inline coll_obj const &get_cobj(unsigned ix) const {return cobjs[cixs[ix]];}
+	void calc_node_bbox(tree_node &n) const;
+	bool create_cixs();
+	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {assert(0);}
+
+	bool obj_ok(coll_obj const &c) const {
+		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC)) &&
+			(!occluders_only || c.is_occluder()) && (!moving_only || c.maybe_is_moving()));
+	}
+
+public:
+	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool o, bool m)
+		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), moving_only(m) {}
+
+	void clear() {
+		cobj_tree_base::clear();
+		cixs.resize(0);
+	}
+
+	void add_cobjs(bool verbose);
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj,
+		bool exact, int test_alpha, bool skip_non_drawn) const;
+	void get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const;
+	bool is_cobj_contained(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const;
+	void get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs) const;
+};
+
+
+#endif // _COBJ_BSP_TREE_H_
+
+
