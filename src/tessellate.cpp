@@ -164,7 +164,7 @@ void tessellate_polygon(polygon_t const &poly) {
 }
 
 
-bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts, float coplanar_thresh) {
+template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh) {
 
 	unsigned const npts(poly.size());
 	assert(npts >= 3);
@@ -199,6 +199,9 @@ bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts, float coplana
 	return 1;
 }
 
+template bool split_polygon<polygon_t >(polygon_t const &poly, vector<polygon_t > &ppts, float coplanar_thresh);
+template bool split_polygon<coll_tquad>(polygon_t const &poly, vector<coll_tquad> &ppts, float coplanar_thresh);
+
 
 void split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts, bool split_quads) {
 
@@ -208,14 +211,14 @@ void split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygo
 		return;
 	}
 	static polygon_t poly;
-	static vector<polygon_t> ppts;
+	static vector<coll_tquad> ppts;
 	ppts.resize(0);
 	poly.from_points(poly_pts);
 	split_polygon(poly, ppts, 0.0);
 
-	for (vector<polygon_t>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
+	for (vector<coll_tquad>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
 		split_polygons.push_back(cobj);
-		copy_polygon_to_cobj(*i, split_polygons.back()); // Note: poly color is ignored
+		copy_tquad_to_cobj(*i, split_polygons.back()); // Note: poly color is ignored
 	}
 }
 

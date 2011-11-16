@@ -72,7 +72,7 @@ public:
 	object_file_reader(string const &fn) : filename(fn), fp(NULL), verbose(0) {assert(!fn.empty());}
 	~object_file_reader() {if (fp) fclose(fp);}
 
-	bool read(vector<polygon_t> *ppts, geom_xform_t const &xf, bool verbose) {
+	bool read(vector<coll_tquad> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
 		if (!open_file()) return 0;
 		cout << "Reading object file " << filename << endl;
@@ -541,7 +541,7 @@ public:
 };
 
 
-bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xform_t const &xf, int def_tid,
+bool read_object_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
 	colorRGBA const &def_c, bool load_models, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));

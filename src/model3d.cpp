@@ -301,14 +301,14 @@ template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_
 }
 
 
-template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<polygon_t> &polygons, colorRGBA const &color, unsigned npts) const {
+template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts) const {
 
 	unsigned const nv(num_verts());
 	assert((nv % npts) == 0);
+	polygon_t poly(color);
+	poly.resize(npts);
 
 	for (unsigned i = 0; i < nv; i += npts) {
-		polygon_t poly(color);
-		poly.resize(npts);
 		for (unsigned p = 0; p < npts; ++p) {poly[p] = get_vert(i+p);}
 		split_polygon(poly, polygons, POLY_COPLANAR_THRESH);
 	}
@@ -413,7 +413,7 @@ template<typename T> unsigned vntc_vect_block_t<T>::num_unique_verts() const {
 }
 
 
-template<typename T> void vntc_vect_block_t<T>::get_polygons(vector<polygon_t> &polygons, colorRGBA const &color, unsigned npts) const {
+template<typename T> void vntc_vect_block_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts) const {
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		i->get_polygons(polygons, color, npts);
@@ -488,7 +488,7 @@ template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_
 }
 
 
-template<typename T> void geometry_t<T>::get_polygons(vector<polygon_t> &polygons, colorRGBA const &color) const {
+template<typename T> void geometry_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color) const {
 
 	triangles.get_polygons(polygons, color, 3);
 	quads.get_polygons    (polygons, color, 4);
@@ -679,7 +679,7 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 }
 
 
-void model3d::get_polygons(vector<polygon_t> &polygons) const {
+void model3d::get_polygons(vector<coll_tquad> &polygons) const {
 
 	if (polygons.empty()) {
 		model3d_stats_t stats;
@@ -843,9 +843,10 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 void model3d::build_cobj_tree(bool verbose) {
 
 	if (!coll_tree.is_empty() || has_cobjs) return; // already built or not needed because cobjs will be used instead
-	vector<polygon_t> polygons;
-	get_polygons(polygons);
-	coll_tree.add_polygons(polygons, verbose);
+	RESET_TIME;
+	get_polygons(coll_tree.get_tquads_ref());
+	coll_tree.build_tree_top(verbose);
+	PRINT_TIME(" Cobj Tree Create (from model3d)");
 }
 
 

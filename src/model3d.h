@@ -163,7 +163,7 @@ public:
 	unsigned num_verts() const {return (indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
-	void get_polygons(vector<polygon_t> &polygons, colorRGBA const &color, unsigned npts) const;
+	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts) const;
 	void write(ostream &out) const;
 	void read(istream &in);
 };
@@ -177,7 +177,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
 	void get_stats(model3d_stats_t &stats) const {stats.blocks += size(); stats.verts += num_unique_verts();}
-	void get_polygons(vector<polygon_t> &polygons, colorRGBA const &color, unsigned npts) const;
+	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts) const;
 	bool write(ostream &out) const;
 	bool read(istream &in);
 };
@@ -192,7 +192,7 @@ template<typename T> struct geometry_t {
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
-	void get_polygons(vector<polygon_t> &polygons, colorRGBA const &color) const;
+	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color) const;
 	cube_t get_bbox() const;
 	void remove_excess_cap() {triangles.remove_excess_cap(); quads.remove_excess_cap();}
 	void free_vbos()         {triangles.free_vbos(); quads.free_vbos();}
@@ -295,7 +295,7 @@ public:
 	// creation and query
 	void set_has_cobjs() {has_cobjs = 1;}
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id=0);
-	void get_polygons(vector<polygon_t> &polygons) const;
+	void get_polygons(vector<coll_tquad> &polygons) const;
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
@@ -332,12 +332,12 @@ struct model3ds : public deque<model3d> {
 };
 
 
-bool split_polygon(polygon_t const &poly, vector<polygon_t> &ppts, float coplanar_thresh);
+template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh);
 
 void free_model_context();
 void render_models(bool shadow_pass);
 
-bool read_object_file(string const &filename, vector<polygon_t> *ppts, geom_xform_t const &xf, int def_tid,
+bool read_object_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
 	colorRGBA const &def_c, bool load_model_file, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose);
 
 

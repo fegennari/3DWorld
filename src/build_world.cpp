@@ -831,7 +831,14 @@ void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj) {
 }
 
 
-void add_polygons_to_cobj_vector(vector<polygon_t> const &ppts, coll_obj const &cobj, int *group_ids, bool use_model3d) {
+void copy_tquad_to_cobj(coll_tquad const &tquad, coll_obj &cobj) {
+
+	cobj.npoints = tquad.npts;
+	for (int j = 0; j < cobj.npoints; ++j) {cobj.points[j] = tquad.pts[j];}
+}
+
+
+void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const &cobj, int *group_ids, bool use_model3d) {
 
 	coll_obj poly(cobj);
 
@@ -842,11 +849,11 @@ void add_polygons_to_cobj_vector(vector<polygon_t> const &ppts, coll_obj const &
 	if (ppts.size() > 2*fixed_cobjs.size()) {
 		fixed_cobjs.reserve(ppts.size() + fixed_cobjs.size()); // reserve to the correct size
 	}
-	for (vector<polygon_t>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
-		unsigned const npts(i->size());
-		assert(npts >= 3 && npts <= 4);
+	for (vector<coll_tquad>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
+		unsigned const npts(i->npts);
+		assert(npts == 3 || npts == 4);
 		if (!i->is_valid()) continue; // invalid zero area polygon - skip
-		copy_polygon_to_cobj(*i, poly);
+		copy_tquad_to_cobj(*i, poly);
 		vector3d const norm(get_poly_norm(poly.points));
 
 		if (get_poly_norm(poly.points) == zero_vector) {
@@ -858,8 +865,8 @@ void add_polygons_to_cobj_vector(vector<polygon_t> const &ppts, coll_obj const &
 			}
 			continue;
 		}
-		if (i->color.alpha > 0.0) { // we have a valid override color, so set the color to this and reset the texture id
-			poly.cp.color = i->color;
+		if (i->color.c[3] > 0) { // we have a valid override color, so set the color to this and reset the texture id
+			poly.cp.color = i->color.get_c4();
 			poly.cp.tid   = -1;
 		}
 		if (group_ids) poly.group_id = group_ids[get_max_dim(norm)];
@@ -920,7 +927,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	vector3d tv0, vel;
 	vector<dwobject> starting_objs; // make this global?
 	polygon_t poly;
-	vector<polygon_t> ppts;
+	vector<coll_tquad> ppts;
 	FILE *fp;
 	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
 	

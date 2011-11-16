@@ -58,6 +58,7 @@ public:
 		cobj_tree_base::clear();
 		tquads.clear(); // reserve(0)?
 	}
+	vector<coll_tquad> &get_tquads_ref() {return tquads;}
 	void build_tree_top(bool verbose);
 	void add_cobjs(vector<coll_obj> const &cobjs, bool verbose);
 	void add_polygons(vector<polygon_t> const &polygons, bool verbose);

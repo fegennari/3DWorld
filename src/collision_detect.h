@@ -150,9 +150,6 @@ public:
 };
 
 
-void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj);
-
-
 struct coll_tquad { // size = 60
 
 	point pts[4];
@@ -183,6 +180,10 @@ struct coll_tquad { // size = 60
 		return 1;
 	}
 };
+
+
+void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj);
+void copy_tquad_to_cobj(coll_tquad const &tquad, coll_obj &cobj);
 
 
 struct coll_cell { // size = 52
