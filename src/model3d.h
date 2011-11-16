@@ -7,6 +7,7 @@
 
 #include "3DWorld.h"
 #include "collision_detect.h" // for polygon_t
+#include "cobj_bsp_tree.h" // for cobj_tree_tquads_t
 
 using namespace std;
 
@@ -260,9 +261,6 @@ struct material_t : public material_params_t {
 };
 
 
-class cobj_tree_tquads_t;
-
-
 class model3d {
 
 	// geometry
@@ -277,7 +275,7 @@ class model3d {
 	deque<material_t> materials;
 	string_map_t mat_map; // maps material names to materials indexes
 	set<string> undef_materials; // to reduce warning messages
-	cobj_tree_tquads_t *coll_tree;
+	cobj_tree_tquads_t coll_tree;
 
 public:
 	// textures
@@ -285,7 +283,7 @@ public:
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0) : tmgr(tmgr_),
 		unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube),
-		from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0), coll_tree(NULL) {}
+		from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0) {}
 	~model3d() {clear();}
 	unsigned num_materials(void) const {return materials.size();}
 
@@ -309,8 +307,10 @@ public:
 	void render(shader_t &shader, bool is_shadow_pass, bool bmap_pass); // const?
 	cube_t const &get_bbox() const {return bbox;}
 	void build_cobj_tree(bool verbose);
-	void free_cobj_tree();
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
+	
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
+		return coll_tree.check_coll_line(p1, p2, cpos, cnorm, color, exact);
+	}
 	void get_stats(model3d_stats_t &stats) const;
 	void show_stats() const;
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;

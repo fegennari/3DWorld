@@ -5,7 +5,6 @@
 #include "model3d.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
-#include "cobj_bsp_tree.h"
 #include <fstream>
 
 bool const USE_SHADERS       = 1;
@@ -760,7 +759,7 @@ void model3d::clear() {
 	materials.clear();
 	undef_materials.clear();
 	mat_map.clear();
-	free_cobj_tree();
+	coll_tree.clear();
 }
 
 
@@ -843,24 +842,10 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 
 void model3d::build_cobj_tree(bool verbose) {
 
-	if (coll_tree || has_cobjs) return; // already built or not needed because cobjs will be used instead
-	coll_tree = new cobj_tree_tquads_t;
+	if (!coll_tree.is_empty() || has_cobjs) return; // already built or not needed because cobjs will be used instead
 	vector<polygon_t> polygons;
 	get_polygons(polygons);
-	coll_tree->add_polygons(polygons, verbose);
-}
-
-
-void model3d::free_cobj_tree() {
-
-	delete coll_tree;
-	coll_tree = NULL;
-}
-
-
-bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
-
-	return (coll_tree && coll_tree->check_coll_line(p1, p2, cpos, cnorm, color, exact));
+	coll_tree.add_polygons(polygons, verbose);
 }
 
 
