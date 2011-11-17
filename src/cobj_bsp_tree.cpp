@@ -72,6 +72,17 @@ unsigned cobj_tree_base::tree_node::get_split_dim(float &max_sz, float &sval, un
 }
 
 
+template<typename T> void cobj_tree_base::tree_node::calc_bbox(T const &tree) {
+
+	assert(start < end);
+	copy_from(tree.get_bounding_cube(start));
+
+	for (unsigned i = start+1; i < end; ++i) { // bbox union
+		union_with_cube(tree.get_bounding_cube(i));
+	}
+}
+
+
 bool cobj_tree_base::check_for_leaf(unsigned num, unsigned skip_dims) {
 
 	if (num <= MAX_LEAF_SIZE || skip_dims) { // base case
@@ -97,21 +108,10 @@ bool cobj_tree_base::node_ix_mgr::check_node(unsigned &nix) const {
 }
 
 
-void cobj_tree_tquads_t::calc_node_bbox(tree_node &n) const {
-
-	assert(n.start < n.end && n.end <= tquads.size());
-	n.copy_from(get_bounding_cube(n.start));
-
-	for (unsigned i = n.start+1; i < n.end; ++i) { // bbox union
-		n.union_with_cube(get_bounding_cube(i));
-	}
-}
-
-
 void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
-	calc_node_bbox(n);
+	n.calc_bbox(*this);
 	unsigned const num(n.end - n.start);
 	max_depth = max(max_depth, depth);
 	if (check_for_leaf(num, skip_dims)) return; // base case
@@ -297,17 +297,6 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 }
 
 
-template<unsigned NUM> void cobj_tree_t<NUM>::calc_node_bbox(tree_node &n) const {
-
-	assert(n.start < n.end);
-	n.copy_from(get_cobj(n.start));
-
-	for (unsigned i = n.start+1; i < n.end; ++i) { // bbox union
-		n.union_with_cube(get_cobj(i));
-	}
-}
-
-
 template<unsigned NUM> bool cobj_tree_t<NUM>::create_cixs() {
 
 	if (moving_only) {
@@ -470,7 +459,7 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 	
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
-	calc_node_bbox(n);
+	n.calc_bbox(*this);
 	unsigned const num(n.end - n.start);
 	max_depth = max(max_depth, depth);
 	if (check_for_leaf(num, skip_dims)) return; // base case

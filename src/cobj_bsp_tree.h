@@ -18,6 +18,7 @@ protected:
 			UNROLL_3X(d[i_][0] = d[i_][1] = 0.0;)
 		}
 		unsigned get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const;
+		template<typename T> void calc_bbox(T const &tree);
 	};
 
 	vector<tree_node> nodes;
@@ -49,8 +50,6 @@ class cobj_tree_tquads_t : public cobj_tree_base { // unused
 
 	vector<coll_tquad> tquads, temp_bins[3];
 
-	cube_t const get_bounding_cube(unsigned i) const {return tquads[i].get_bounding_cube();}
-	void calc_node_bbox(tree_node &n) const;
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth);
 
 public:
@@ -58,6 +57,7 @@ public:
 		cobj_tree_base::clear();
 		tquads.clear(); // reserve(0)?
 	}
+	cube_t const get_bounding_cube(unsigned i) const {return tquads[i].get_bounding_cube();}
 	vector<coll_tquad> &get_tquads_ref() {return tquads;}
 	void build_tree_top(bool verbose);
 	void add_cobjs(vector<coll_obj> const &cobjs, bool verbose);
@@ -82,8 +82,7 @@ template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 	bool is_static, is_dynamic, occluders_only, moving_only;
 
 	void add_cobj(unsigned ix) {if (obj_ok(cobjs[ix])) cixs.push_back(ix);}
-	inline coll_obj const &get_cobj(unsigned ix) const {return cobjs[cixs[ix]];}
-	void calc_node_bbox(tree_node &n) const;
+	coll_obj const &get_cobj(unsigned ix) const {return cobjs[cixs[ix]];}
 	bool create_cixs();
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {assert(0);}
 
@@ -100,7 +99,7 @@ public:
 		cobj_tree_base::clear();
 		cixs.resize(0);
 	}
-
+	cube_t const get_bounding_cube(unsigned ix) const {return get_cobj(ix);}
 	void add_cobjs(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj,
 		bool exact, int test_alpha, bool skip_non_drawn) const;
