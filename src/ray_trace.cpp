@@ -435,6 +435,7 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 			unsigned const n0(max(1U, unsigned(sqrt((float)num_rays)*len0/len1)));
 			unsigned const n1(max(1U, unsigned(sqrt((float)num_rays)*len1/len0)));
 
+			//#pragma omp parallel for schedule(static,1)
 			for (unsigned s0 = 0; s0 < n0; ++s0) {
 				if (kill_raytrace) break;
 				pt[d0] = bnds.d[d0][0] + (s0 + rgen.rand_uniform(0.0, 1.0))*len0/n0;

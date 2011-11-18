@@ -675,6 +675,7 @@ void get_occluders() {
 	}
 	unsigned const ncobjs(coll_objects.size());
 
+	//#pragma omp parallel for schedule(static,1) // helps in some cases and hurts in others
 	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {
 		coll_obj &cobj(coll_objects[i]);
 		if (!cobj.fixed || cobj.group_id >= 0 || cobj.status != COLL_STATIC || !cobj.cp.draw || cobj.cp.surfs == EF_ALL) continue;
