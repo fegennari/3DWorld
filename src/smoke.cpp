@@ -183,6 +183,37 @@ void reset_smoke_tex_data() {
 }
 
 
+void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, unsigned y, bool full_update) {
+
+	unsigned const zsize(MESH_SIZE[2]), ncomp(4);
+	float const smoke_scale(1.0/SMOKE_MAX_CELL);
+
+	for (int x = 0; x < MESH_X_SIZE; ++x) {
+		lmcell const *const vlm(lmap_manager.vlmap[y][x]);
+		if (vlm == NULL && !full_update) continue; // x/y pairs that get into here should also be constant
+		unsigned const off(zsize*(y*MESH_X_SIZE + x));
+		float const zthresh((!(display_mode & 0x01) || is_mesh_disabled(x, y)) ? czmin : mesh_height[y][x]);
+
+		for (unsigned z = 0; z < zsize; ++z) {
+			unsigned const off2(ncomp*(off + z));
+			lmcell const &lmc((vlm == NULL) ? default_lmc : vlm[z]);
+
+			if (full_update || indir_lighting_updated) {
+				if (get_zval(z+1) < zthresh) { // adjust by one because GPU will interpolate the texel
+					UNROLL_3X(data[off2+i_] = 0;)
+				}
+				else {
+					colorRGB color;
+					lmc.get_final_color(color, 1.0);
+					UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
+				}
+			}
+			data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // alpha: smoke
+		}
+	}
+}
+
+
 bool upload_smoke_3d_texture() { // and indirect lighting information
 
 	//RESET_TIME;
@@ -216,33 +247,18 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
 	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
-	float const smoke_scale(1.0/SMOKE_MAX_CELL);
 	lmcell default_lmc;
 	default_lmc.set_outside_colors();
 	
-	for (unsigned y = y_start; y < y_end; ++y) { // split the computation across several frames
-		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			lmcell const *const vlm(lmap_manager.vlmap[y][x]);
-			if (vlm == NULL && !full_update) continue; // x/y pairs that get into here should also be constant
-			unsigned const off(zsize*(y*MESH_X_SIZE + x));
-			float const zthresh((!(display_mode & 0x01) || is_mesh_disabled(x, y)) ? czmin : mesh_height[y][x]);
-
-			for (unsigned z = 0; z < zsize; ++z) {
-				unsigned const off2(ncomp*(off + z));
-				lmcell const &lmc((vlm == NULL) ? default_lmc : vlm[z]);
-
-				if (full_update || indir_lighting_updated) {
-					if (get_zval(z+1) < zthresh) { // adjust by one because GPU will interpolate the texel
-						UNROLL_3X(data[off2+i_] = 0;)
-					}
-					else {
-						colorRGB color;
-						lmc.get_final_color(color, 1.0);
-						UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
-					}
-				}
-				data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // alpha: smoke
-			}
+	if (indir_lighting_updated) { // running with multiple threads, don't use openmp
+		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
+			update_smoke_row(data, default_lmc, y, full_update);
+		}
+	}
+	else { // use openmp here
+		#pragma omp parallel for schedule(static,1)
+		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
+			update_smoke_row(data, default_lmc, y, full_update);
 		}
 	}
 	if (init_call) { // create texture
