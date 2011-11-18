@@ -86,7 +86,7 @@ void cobj_tree_tquads_t::calc_node_bbox(tree_node &n) const {
 
 bool cobj_tree_base::check_for_leaf(unsigned num, unsigned skip_dims) {
 
-	if (num <= MAX_LEAF_SIZE || skip_dims) { // base case
+	if (num <= MAX_LEAF_SIZE || skip_dims == 7) { // base case
 		register_leaf(num);
 		return 1;
 	}
