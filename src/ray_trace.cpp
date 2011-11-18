@@ -265,6 +265,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 		}
 		weight *= (DIFFUSE_REFL*(1.0 - specular) + SPEC_REFL*specular);
 	}
+	//if (rgen.rand_float() < weight/last_weight) return; weight = last_weight; // end the ray
 	if (weight < WEIGHT_THRESH*weight0) return;
 
 	// create reflected ray and make recursive call(s)
