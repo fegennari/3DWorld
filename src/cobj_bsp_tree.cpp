@@ -22,30 +22,29 @@ coll_tquad::coll_tquad(coll_obj const &c) : normal(c.norm), cid(c.id), npts(c.np
 
 	assert(is_cobj_valid(c));
 	for (unsigned i = 0; i < npts; ++i) {pts[i] = c.points[i];}
+	if (npts == 3) pts[3] = pts[2]; // duplicate the last point so that it's valid
 }
 
 
 coll_tquad::coll_tquad(polygon_t const &p) : npts(p.size()) {
 
+	assert(npts == 3 || npts == 4);
 	color.set_c4(p.color);
-	
-	for (unsigned i = 0; i < npts; ++i) {
-		pts[i]  = p[i].v;
-		//normal += p[i].n; // average the normals
-	}
+	for (unsigned i = 0; i < npts; ++i) {pts[i]  = p[i].v;}
+	if (npts == 3) pts[3] = pts[2]; // duplicate the last point so that it's valid
 	get_normal(p[0].v, p[1].v, p[2].v, normal, 1);
 }
 
-	
-cube_t coll_tquad::get_bounding_cube() const {
 
-	cube_t cube(pts[0].x, pts[0].x, pts[0].y, pts[0].y, pts[0].z, pts[0].z);
+#define UPDATE_CUBE(i) {if (pts[i][i_] < c.d[i_][0]) c.d[i_][0] = pts[i][i_]; if (pts[i][i_] > c.d[i_][1]) c.d[i_][1] = pts[i][i_];}
 
-	for (unsigned i = 1; i < npts; ++i) {
-		UNROLL_3X(cube.d[i_][0] = min(cube.d[i_][0], pts[i][i_]); cube.d[i_][1] = max(cube.d[i_][1], pts[i][i_]););
-	}
-	UNROLL_3X(cube.d[i_][0] -= POLY_TOLER; cube.d[i_][1] += POLY_TOLER;);
-	return cube;
+
+void coll_tquad::update_bcube(cube_t &c) const {
+
+	UNROLL_3X(UPDATE_CUBE(0));
+	UNROLL_3X(UPDATE_CUBE(1));
+	UNROLL_3X(UPDATE_CUBE(2));
+	if (npts == 4) UNROLL_3X(UPDATE_CUBE(3));
 }
 
 
@@ -72,14 +71,16 @@ unsigned cobj_tree_base::tree_node::get_split_dim(float &max_sz, float &sval, un
 }
 
 
-template<typename T> void cobj_tree_base::tree_node::calc_bbox(T const &tree) {
+void cobj_tree_tquads_t::calc_node_bbox(tree_node &n) const {
 
-	assert(start < end);
-	copy_from(tree.get_bounding_cube(start));
+	assert(n.start < n.end);
+	cube_t &c(n);
+	c = cube_t(X_SCENE_SIZE, -X_SCENE_SIZE, Y_SCENE_SIZE, -Y_SCENE_SIZE, czmax, czmin);
 
-	for (unsigned i = start+1; i < end; ++i) { // bbox union
-		union_with_cube(tree.get_bounding_cube(i));
+	for (unsigned i = n.start; i < n.end; ++i) { // bbox union
+		tquads[i].update_bcube(c);
 	}
+	c.expand_by(POLY_TOLER);
 }
 
 
@@ -111,57 +112,15 @@ bool cobj_tree_base::node_ix_mgr::check_node(unsigned &nix) const {
 void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
-	n.calc_bbox(*this);
+	calc_node_bbox(n);
 	unsigned const num(n.end - n.start);
 	max_depth = max(max_depth, depth);
 	if (check_for_leaf(num, skip_dims)) return; // base case
 
 	// determine split dimension and value
 	float max_sz(0), sval(0);
-#if 0
-	unsigned dim(0);
-	float best_w(0), slen(0);
-	vector<pair<float, char> > vals[3]; // position, area
-	vector3d dim_sizes;
-	UNROLL_3X(dim_sizes[i_] = (n.d[i_][1] - n.d[i_][0]);)
-
-	for (unsigned i = n.start; i < n.end; ++i) {
-		cube_t const cube(get_bounding_cube(i));
-
-		for (unsigned d = 0; d < 2; ++d) {
-			UNROLL_3X(if (!(skip_dims & (1 << i_))) {vals[i_].push_back(make_pair(cube.d[i_][d], (d ? -1 : 1)));})
-		}
-	}
-	for (unsigned d = 0; d < 3; ++d) {
-		if (dim_sizes[d] == 0 || (skip_dims & (1 << d))) continue;
-		sort(vals[d].begin(), vals[d].end());
-		int in_both(0), in_left(0), in_right(num);
-		cube_t left_cube(n), right_cube(n);
-
-		for (unsigned i = 0; i < vals[d].size(); ++i) {
-			float const val(vals[d][i].first);
-			int const w(vals[d][i].second);
-			in_both += w;
-			((w > 0) ? in_left : in_right) += w;
-			if (i+1 < vals[d].size() && val == vals[d][i+1].first)   continue; // duplicate value
-			if (in_left == num || in_right == num || in_both == num) continue; // don't want to consider this
-			left_cube.d[d][1]  = val;
-			right_cube.d[d][0] = val;
-			float const weight(left_cube.get_area()*(in_left + in_both) + right_cube.get_area()*(in_right + in_both));
-
-			if (best_w == 0 || weight < best_w) {
-				best_w = weight;
-				max_sz = dim_sizes[d];
-				sval   = val;
-				slen   = (val - n.d[d][0])/max_sz;
-				dim    = d;
-			}
-		}
-		assert(in_left == num && in_right == 0 && in_both == 0);
-	}
-#else
 	unsigned const dim(n.get_split_dim(max_sz, sval, skip_dims));
-#endif
+
 	if (max_sz == 0) { // can't split
 		register_leaf(num);
 		return;
@@ -172,10 +131,11 @@ void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned d
 	// split in this dimension
 	for (unsigned i = n.start; i < n.end; ++i) {
 		unsigned bix(2);
-		cube_t const &cube(get_bounding_cube(i));
-		assert(cube.d[dim][0] <= cube.d[dim][1]);
-		if (cube.d[dim][1] <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
-		if (cube.d[dim][0] >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
+		coll_tquad const &t(tquads[i]);
+		float vlo(min(min(t.pts[0][dim], t.pts[1][dim]), t.pts[2][dim])), vhi(max(max(t.pts[0][dim], t.pts[1][dim]), t.pts[2][dim]));
+		if (t.npts == 4) {vlo = min(vlo, t.pts[3][dim]); vhi = max(vhi, t.pts[3][dim]);}
+		if (vhi <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
+		if (vlo >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
 		++bin_count[bix];
 		temp_bins[bix].push_back(tquads[i]);
 	}
@@ -321,6 +281,17 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::create_cixs() {
 }
 
 
+template<unsigned NUM> void cobj_tree_t<NUM>::calc_node_bbox(tree_node &n) const {
+
+	assert(n.start < n.end);
+	n.copy_from(get_cobj(n.start));
+
+	for (unsigned i = n.start+1; i < n.end; ++i) { // bbox union
+		n.union_with_cube(get_cobj(i));
+	}
+}
+
+
 template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
 
 	RESET_TIME;
@@ -459,7 +430,7 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 	
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
-	n.calc_bbox(*this);
+	calc_node_bbox(n);
 	unsigned const num(n.end - n.start);
 	max_depth = max(max_depth, depth);
 	if (check_for_leaf(num, skip_dims)) return; // base case
@@ -478,10 +449,10 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 	// split in this dimension: use upper 2 bits of cixs for storing bin index
 	for (unsigned i = n.start; i < n.end; ++i) {
 		unsigned bix(2);
-		coll_obj const &cobj(get_cobj(i));
-		assert(cobj.d[dim][0] <= cobj.d[dim][1]);
-		if (cobj.d[dim][1] <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
-		if (cobj.d[dim][0] >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
+		float const *vals(get_cobj(i).d[dim]);
+		assert(vals[0] <= vals[1]);
+		if (vals[1] <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
+		if (vals[0] >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
 		++bin_count[bix];
 		temp_bins[bix].push_back(cixs[i]);
 	}
