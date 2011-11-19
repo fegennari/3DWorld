@@ -214,6 +214,10 @@ template<typename T> void vntc_vect_t<T>::write(ostream &out) const {
 
 template<typename T> void vntc_vect_t<T>::read(istream &in) {
 
+	// Note: it would be nice to write/read without the tangent vectors and recalculate them later,
+	// but knowing which materials require tangents requires loading the material file first, but that requires the model,
+	// so we would have to read the model3d material headers, then read the material file, then read the polygon data into the correct geometry type,
+	// which would also require writing out the model3d file in two passes and smaller blocks of data at a time
 	read_vector(in, *this);
 	has_tangents = (sizeof(T) == sizeof(vert_norm_tc_tan)); // HACK to get the type
 	calc_bounding_volumes();
