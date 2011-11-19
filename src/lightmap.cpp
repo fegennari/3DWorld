@@ -26,11 +26,8 @@ int      const END_LIGHT     = GL_LIGHT7 + 1;
 unsigned const MAX_LIGHTS    = unsigned(END_LIGHT - START_LIGHT);
 
 float const CTHRESH          = 0.025;
-float const MIN_LIGHT        = 0.0;
-float const MAX_LIGHT        = 1.0;
 float const Z_WT_SCALE       = 1.0;
 float const XY_WT_SCALE      = 1.0;
-float const LIGHT_SCALE      = 1.0;
 float const LIGHT_OFFSET     = 0.02;
 float const LIGHT_SPREAD     = 0.4;
 float const PASS_WEIGHT_ATT  = 0.4;
@@ -415,22 +412,6 @@ void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, unsigned char **need_
 		}
 	}
 	assert(cur_v == vldata_alloc.size());
-}
-
-
-void lmap_manager_t::normalize_light_val(float min_light, float max_light, float light_scale, float light_off) {
-
-	for (int i = 0; i < MESH_Y_SIZE; ++i) {
-		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			lmcell *vlm(vlmap[i][j]);
-			if (vlm == NULL) continue;
-
-			for (unsigned v = 0; v < lm_zsize; ++v) {
-				vlm[v].sv = max(min_light, min(max_light, (light_scale*vlm[v].sv + light_off)));
-				vlm[v].gv = max(min_light, min(max_light, (light_scale*vlm[v].gv + light_off)));
-			}
-		}
-	}
 }
 
 
@@ -939,8 +920,6 @@ void build_lightmap(bool verbose) {
 			}
 		}
 	}
-	// normalize final light value to [MIN_LIGHT, MAX_LIGHT]
-	if (!has_indir_lighting) lmap_manager.normalize_light_val(MIN_LIGHT, MAX_LIGHT, LIGHT_SCALE, light_off);
 	reset_cobj_counters();
 	matrix_delete_2d(z_light_depth);
 	matrix_delete_2d(need_lmcell);
@@ -1482,7 +1461,7 @@ void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float li
 float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
 
 	assert(lm_alloc && lmap_manager.vlmap);
-	float val(MAX_LIGHT);
+	float val(1.0);
 	bool outside_mesh(0);
 	colorRGB cscale(cur_ambient);
 	point const p_adj((norm && !has_indir_lighting) ? (p + (*norm)*(0.25*HALF_DXY)) : p);

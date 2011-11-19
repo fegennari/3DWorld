@@ -87,7 +87,6 @@ public:
 	}
 	lmcell *get_lmcell(point const &p);
 	void alloc(unsigned nbins, unsigned zsize, unsigned char **need_lmcell);
-	void normalize_light_val(float min_light, float max_light, float light_scale, float light_off);
 };
 
 
