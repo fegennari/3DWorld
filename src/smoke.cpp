@@ -151,6 +151,8 @@ void distribute_smoke() { // called at most once per frame
 		cur_smoke_bb  = smoke_man.bbox; //cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
 		next_smoke_man.reset();
 	}
+	
+	//#pragma omp parallel for schedule(static,1) // only helps when skipval is small
 	for (int y = cur_skip; y < MESH_Y_SIZE; y += SMOKE_SKIPVAL) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			lmcell *vldata(lmap_manager.vlmap[y][x]);
