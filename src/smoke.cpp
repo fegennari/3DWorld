@@ -10,6 +10,7 @@
 bool const DYNAMIC_SMOKE     = 1; // looks cool
 int const SMOKE_SKIPVAL      = 6;
 int const SMOKE_SEND_SKIP    = 8;
+int const INDIR_LT_SEND_SKIP = 12;
 
 float const SMOKE_DENSITY    = 1.0;
 float const SMOKE_MAX_CELL   = 0.125;
@@ -245,7 +246,8 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	if (!full_update && !smoke_exists && !indir_lighting_updated) return 0; // return 1?
 
 	static int cur_block(0);
-	unsigned const block_size(MESH_Y_SIZE/SMOKE_SEND_SKIP);
+	unsigned const skipval(smoke_exists ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP);
+	unsigned const block_size(MESH_Y_SIZE/skipval);
 	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
 	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
@@ -273,7 +275,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 		assert(off < data.size());
 		update_3d_texture(smoke_tid, 0, 0, y_start, zsize, MESH_X_SIZE, (full_update ? MESH_Y_SIZE : block_size), ncomp, &data[off]);
 	}
-	cur_block = (full_update ? 0 : (cur_block+1) % SMOKE_SEND_SKIP);
+	cur_block = (full_update ? 0 : (cur_block+1) % skipval);
 	if (cur_block == 0) indir_lighting_updated = 0; // only stop updating after we wrap around to the beginning again
 	//PRINT_TIME("Smoke Upload");
 	return 1;
