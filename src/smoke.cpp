@@ -273,8 +273,8 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 		assert(off < data.size());
 		update_3d_texture(smoke_tid, 0, 0, y_start, zsize, MESH_X_SIZE, (full_update ? MESH_Y_SIZE : block_size), ncomp, &data[off]);
 	}
-	if (!full_update) cur_block = (cur_block+1) % SMOKE_SEND_SKIP;
-	indir_lighting_updated = 0;
+	cur_block = (full_update ? 0 : (cur_block+1) % SMOKE_SEND_SKIP);
+	if (cur_block == 0) indir_lighting_updated = 0; // only stop updating after we wrap around to the beginning again
 	//PRINT_TIME("Smoke Upload");
 	return 1;
 }

@@ -21,7 +21,6 @@ unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), N
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1}; // sky, global, local
 unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1}; // sky, global, local
-float ray_light_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
 
 extern bool has_snow, global_lighting_update;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
@@ -52,8 +51,6 @@ void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &
 
 	if (first_pt && ltype == LIGHTING_GLOBAL) weight *= first_ray_weight; // lower weight - handled by direct illumination
 	if (weight < TOLERANCE) return;
-	float val_weight(weight);
-	((ltype == LIGHTING_LOCAL) ? weight : val_weight) *= ray_light_scale[ltype];
 	colorRGBA const cw(color*weight);
 	float const dist(p2p_dist(p1, p2)); // dist can be 0
 	unsigned const nsteps(1 + unsigned(dist/get_step_size())); // round up
@@ -66,7 +63,7 @@ void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &
 		if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
 			float *color(lmc->get_offset(ltype));
 			ADD_LIGHT_CONTRIB(cw, color);
-			if (ltype != LIGHTING_LOCAL) color[3] += val_weight;
+			if (ltype != LIGHTING_LOCAL) color[3] += weight;
 		}
 		p1 += step;
 	}
@@ -648,7 +645,6 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	if (write_light_files[ltype]) {
 		lmap_manager.write_data_to_file(lighting_file[ltype], ltype);
 	}
-	lmap_manager.apply_light_scale(light_int_scale[ltype], ltype);
 }
 
 
@@ -717,34 +713,11 @@ bool lmap_manager_t::write_data_to_file(char const *const fn, int ltype) const {
 }
 
 
-void lmap_manager_t::apply_light_scale(float scale, int ltype) {
-
-	assert(ltype < NUM_LIGHTING_TYPES);
-	ray_light_scale[ltype] *= scale; // not exactly correct since it doesn't account for max_color
-
-	// apply global light scaling and normalize colors
-	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
-		float *color(i->get_offset(ltype));
-
-		if (ltype == LIGHTING_LOCAL) {
-			UNROLL_3X(color[i_] = min(1.0f, (color[i_]*scale)););
-		}
-		else {
-			if (color[3] == 0.0) continue;
-			color[3] = min(1.0f, color[3]*scale);
-			float const max_color(max(color[0], max(color[1], color[2])));
-			if (max_color > 0.0) {UNROLL_3X(color[i_] /= max_color;)} // normalize color
-		}
-	}
-}
-
-
 void lmap_manager_t::clear_lighting_values(int ltype) {
 
 	assert(ltype < NUM_LIGHTING_TYPES);
 	unsigned const num(lmcell::get_dsz(ltype));
 
-	// apply global light scaling and normalize colors
 	for (vector<lmcell>::iterator i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {
 		float *color(i->get_offset(ltype));
 		for (unsigned j = 0; j < num; ++j) color[j] = 0.0;
