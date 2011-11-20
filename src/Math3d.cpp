@@ -209,17 +209,6 @@ bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &nor
 }
 
 
-void grow_poly_about_center(point *pts, unsigned npts, float scale) {
-
-	assert(pts != NULL && npts > 1);
-	point const center(get_center(pts, 4));
-
-	for (unsigned j = 0; j < 4; ++j) {
-		pts[j] = center + (pts[j] - center)*scale;
-	}
-}
-
-
 bool get_poly_zvals(vector<tquad_t> const &pts, float xv, float yv, float &z1, float &z2) {
 
 	bool coll(0);

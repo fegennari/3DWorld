@@ -1552,7 +1552,6 @@ bool planar_contour_intersect(const point *points, unsigned npoints, point const
 bool point_in_polygon_2d(float xval, float yval, const point *points, int npts, int dx, int dy);
 bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &norm, float dval,
 					  cube_t const &cube, float &z1, float &z2);
-void grow_poly_about_center(point *pts, unsigned npts, float scale);
 bool get_poly_zvals(vector<tquad_t> const &pts, float xv, float yv, float &z1, float &z2);
 void gen_poly_planes(point const *const points, unsigned npoints, vector3d const &norm, float thick, point pts[2][4]);
 vector<tquad_t> thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick);
