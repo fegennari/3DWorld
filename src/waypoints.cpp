@@ -402,13 +402,6 @@ public:
 		}
 	}
 
-	void add_edge(unsigned from, unsigned to) {
-		assert(from < waypoints.size());
-		assert(to   < waypoints.size());
-		waypoints[from].next_wpts.push_back(to  );
-		waypoints[to  ].prev_wpts.push_back(from);
-	}
-
 	void connect_all_waypoints() {
 		connect_waypoints(0, waypoints.size(), 0, waypoints.size(), 1, 0);
 	}
@@ -417,15 +410,15 @@ public:
 		unsigned to_end, bool verbose, bool fast)
 	{
 		unsigned visible(0), cand_edges(0), num_edges(0), tot_steps(0);
-		int cindex(-1);
-		vector<pair<float, unsigned> > cands;
 		float const fast_dmax(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
-		//#pragma omp parallel for schedule(static,1) // crashes due to memory allocation issues
-		for (unsigned i = from_start; i < from_end; ++i) {
+		#pragma omp parallel for schedule(static,1) // not entirely thread safe
+		for (int i = from_start; i < (int)from_end; ++i) {
+			assert(i < (int)waypoints.size());
 			if (waypoints[i].disabled) continue;
 			point const start(waypoints[i].pos);
-			cands.resize(0);
+			vector<pair<float, unsigned> > cands;
+			int cindex(-1);
 
 			for (unsigned j = to_start; j < to_end; ++j) {
 				if (i == j || waypoints[j].disabled) continue;
@@ -442,10 +435,11 @@ public:
 				++visible;
 			}
 			sort(cands.begin(), cands.end()); // closest to furthest
-			waypt_adj_vect const &next(waypoints[i].next_wpts);
+			waypt_adj_vect &next(waypoints[i].next_wpts);
 
 			for (unsigned j = 0; j < cands.size(); ++j) {
 				unsigned const k(cands[j].second);
+				assert(k < waypoints.size());
 				point const end(waypoints[k].pos);
 				vector3d const dir(end - start), dir_xy(vector3d(dir.x, dir.y, 0.0).get_norm());
 				bool colinear(0), redundant(0);
@@ -470,10 +464,19 @@ public:
 				if (redundant) continue;
 
 				if (is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT, 1)) {
-					add_edge(i, k);
+					next.push_back(k);
 					++num_edges;
 				}
 				++cand_edges;
+			}
+		}
+		for (unsigned i = from_start; i < from_end; ++i) {
+			if (waypoints[i].disabled) continue;
+			waypt_adj_vect const &next(waypoints[i].next_wpts);
+
+			for (unsigned j = 0; j < next.size(); ++j) {
+				assert(next[j] < waypoints.size());
+				waypoints[next[j]].prev_wpts.push_back(i);
 			}
 		}
 		if (verbose) cout << "vis edges: " << visible << ", cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
@@ -505,6 +508,7 @@ public:
 		vector3d const dir(end - start);
 		float const step_size(step_size_mult*radius);
 		float const dmag_inv(1.0/dir.xy_mag());
+		unsigned init_steps(tot_steps);
 		point cur(start);
 		assert(radius    > 0.0);
 		assert(step_size > 0.0);
@@ -519,9 +523,9 @@ public:
 			check_cobj_placement(cur, -1, check_uw);
 			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress (too strict? local drops in z?)
 			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv); // point-line dist
-			if (d > 2.0*radius)    return 0; // path deviation too long
+			if (d > 2.0*radius) return 0; // path deviation too long
 			++tot_steps;
-			if (tot_steps > 10000) return 0; // too many steps
+			if (tot_steps > init_steps + 10000) return 0; // too many steps
 			//waypoints.push_back(waypoint_t(cur)); // testing
 		}
 		return 1; // success
