@@ -1806,6 +1806,14 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, float rscale) {
 }
 
 
+vector<float> &get_empty_perturb_map(int ndiv) {
+
+	static vector<float> perturb_map;
+	perturb_map.resize(ndiv*(ndiv+1));
+	return perturb_map;
+}
+
+
 void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int ndiv) {
 
 	RESET_TIME;
@@ -1833,8 +1841,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 			if (SHOW_SPHERE_TIME) PRINT_TIME("Draw VCS");
 			return;
 		}
-		static vector<float> perturb_map;
-		perturb_map.resize(ndiv*(ndiv+1));
+		vector<float> &perturb_map(get_empty_perturb_map(ndiv));
 		pmap = &perturb_map.front();
 
 		if (!CACHE_SPHERE_DATA || !surface->sd.equal(all_zeros, radius0, ndiv)) {
@@ -1887,8 +1894,7 @@ void ustar::draw_surface(point_d const &pos_, float radius0, float size, int ndi
 	float *pmap(NULL);
 
 	if (USE_HEIGHTMAP) { // sphere heightmap
-		static vector<float> perturb_map;
-		perturb_map.resize(ndiv*(ndiv+1));
+		vector<float> &perturb_map(get_empty_perturb_map(ndiv));
 		pmap = &perturb_map.front();
 		
 		for (unsigned i = 0; i < perturb_map.size(); ++i) {

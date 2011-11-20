@@ -2762,7 +2762,7 @@ void draw_compass_and_alt() { // and temperature
 
 	char text[64];
 	float const aspect_ratio((float)window_width/(float)window_height);
-	static std::string dirs[8] = {"N", "NW", "W", "SW", "S", "SE", "E", "NE"};
+	string const dirs[8] = {"N", "NW", "W", "SW", "S", "SE", "E", "NE"};
 	YELLOW.do_glColor();
 	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", (camera_origin.x+xoff2*DX_VAL), (camera_origin.y+yoff2*DY_VAL), camera_origin.z);
 	draw_text(-0.005*aspect_ratio, -0.01, -0.02, text);
