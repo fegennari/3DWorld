@@ -476,7 +476,7 @@ public:
 
 			for (unsigned j = 0; j < next.size(); ++j) {
 				assert(next[j] < waypoints.size());
-				waypoints[next[j]].prev_wpts.push_back(i);
+				if (next[j] >= to_start && next[j] < to_end) waypoints[next[j]].prev_wpts.push_back(i);
 			}
 		}
 		if (verbose) cout << "vis edges: " << visible << ", cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
