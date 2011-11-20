@@ -318,9 +318,9 @@ void cobj_triangle_visitor::proc_cobj(coll_obj const &c) {
 	case COLL_POLYGON:
 		if (c.thickness > MIN_POLY_THICK) { // thick polygon
 			vector3d const norm(get_poly_norm(c.points));
-			vector<point> pts[2];
+			point pts[2][4];
 			gen_poly_planes(c.points, c.npoints, norm, fabs(c.thickness), pts);
-			for (unsigned d = 0; d < 2; ++d) proc_poly(&pts[d].front(), c.npoints); // top/bottom
+			for (unsigned d = 0; d < 2; ++d) proc_poly(pts[d], c.npoints); // top/bottom
 	
 			for (int i = 0; i < c.npoints; ++i) { // sides
 				int const ii((i+1)%c.npoints);

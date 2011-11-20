@@ -660,17 +660,16 @@ void draw_sun_flare() {
 	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, sun_radius, 2)) {
 		point const viewer(get_camera_pos());
 		unsigned const npts = 16;
-		static vector<point> pts;
+		static point pts[npts];
+		static bool pts_valid(0);
 		unsigned nvis(0);
-
-		if (pts.empty()) {
-			pts.resize(npts);
-			for (unsigned i = 0; i < npts; ++i) {pts[i] = signed_rand_vector_norm();}
-		}
+		
 		for (unsigned i = 0; i < npts; ++i) {
 			int index; // unused
+			if (!pts_valid) pts[i] = signed_rand_vector_norm();
 			if (coll_pt_vis_test(sun_pos+pts[i]*sun_radius, viewer, 0.0, index, camera_coll_id, 0, 1)) ++nvis;
 		}
+		pts_valid = 1;
 		if (nvis == 0) return;
 		float const intensity(0.1 + 0.9*float(nvis)/float(npts));
 		int const fog_enbaled(glIsEnabled(GL_FOG));

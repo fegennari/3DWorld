@@ -514,12 +514,12 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
 			}
 			if (c.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
-				static vector<point> pts[2];
+				point pts[2][4];
 				gen_poly_planes(c.points, c.npoints, c.norm, c.thickness, pts);
 				
 				for (unsigned j = 0; j < 2; ++j) {
-					for (unsigned i = 0; i < pts[j].size(); ++i) {
-						if (check_line_clip(pts[j][i], pts[j][(i+1)%pts[j].size()], d)) return 1; // definite intersection
+					for (int i = 0; i < c.npoints; ++i) {
+						if (check_line_clip(pts[j][i], pts[j][(i+1)%c.npoints], d)) return 1; // definite intersection
 					}
 				}
 				// call sphere_ext_poly_intersect?

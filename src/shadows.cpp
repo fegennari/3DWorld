@@ -479,7 +479,7 @@ int polygon_shadow(point const *points, vector3d const &norm, int npoints, float
 	unsigned char const SHADOW_TYPE(is_dynamic ? DYNAMIC_SHADOW : OBJECT_SHADOW);
 	bool test_side(0);
 	point lpos;
-	static vector<point> pts[2];
+	point pts[2][4];
 	bool const thick_test(thick > MIN_POLY_THICK);
 	point const center(get_center(points, npoints));
 	if (thick_test) gen_poly_planes(points, npoints, norm, thick, pts); // generate top and bottom surfaces
@@ -497,7 +497,7 @@ int polygon_shadow(point const *points, vector3d const &norm, int npoints, float
 			bool got_bb(0);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				if (get_shape_shadow_bb(&(pts[i].front()), npoints, l, quality, lpos, x1, y1, x2, y2, ret_val, SHADOW_TYPE)) {
+				if (get_shape_shadow_bb(pts[i], npoints, l, quality, lpos, x1, y1, x2, y2, ret_val, SHADOW_TYPE)) {
 					got_bb = 1;
 					xmin   = min(xmin, x1);
 					ymin   = min(ymin, y1);

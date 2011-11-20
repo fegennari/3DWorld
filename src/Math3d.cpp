@@ -220,13 +220,13 @@ void grow_poly_about_center(point *pts, unsigned npts, float scale) {
 }
 
 
-bool get_poly_zvals(vector<vector<point> > const &pts, float xv, float yv, float &z1, float &z2) {
+bool get_poly_zvals(vector<tquad_t> const &pts, float xv, float yv, float &z1, float &z2) {
 
 	bool coll(0);
 
 	for (unsigned p = 0; p < pts.size(); ++p) {
-		if (point_in_polygon_2d(xv, yv, &pts[p].front(), pts[p].size(), 0, 1)) coll = 1;
-		vector3d const norm2(get_poly_norm(&pts[p].front()));
+		if (point_in_polygon_2d(xv, yv, pts[p].pts, pts[p].npts, 0, 1)) coll = 1;
+		vector3d const norm2(pts[p].get_norm());
 
 		if (fabs(norm2.z) > TOLERANCE) {
 			float const zv(-(xv*norm2.x + yv*norm2.y - dot_product(norm2, pts[p][0]))/norm2.z);
@@ -238,11 +238,12 @@ bool get_poly_zvals(vector<vector<point> > const &pts, float xv, float yv, float
 }
 
 
-void gen_poly_planes(point const *const points, unsigned npoints, vector3d const &norm, float thick, vector<point> pts[2]) {
+void gen_poly_planes(point const *const points, unsigned npoints, vector3d const &norm, float thick, point pts[2][4]) {
+
+	assert(npoints == 3 || npoints == 4);
 
 	for (unsigned i = 0; i < 2; ++i) { // back face cull?
 		float const tv(0.5*(i ? -thick : thick));
-		pts[i].resize(npoints);
 		
 		for (unsigned j = 0; j < npoints; ++j) {
 			pts[i][j] = points[j] + norm*tv;
@@ -251,23 +252,29 @@ void gen_poly_planes(point const *const points, unsigned npoints, vector3d const
 }
 
 
-vector<vector<point> > const &thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick) {
+vector<tquad_t> thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick) {
 
-	static vector<vector<point> > pts;
+	vector<tquad_t> pts;
 	assert(npoints >= 3);
 	pts.resize(npoints + 2);
-	gen_poly_planes(points, npoints, norm, thick, &pts.front()); // generate top and bottom surfaces
+	point plane_pts[2][4];
+	gen_poly_planes(points, npoints, norm, thick, plane_pts); // generate top and bottom surfaces
+
+	for (unsigned d = 0; d < 2; ++d) { // FIXME: can this copy be removed?
+		pts[d].npts = npoints;
+		for (unsigned i = 0; i < npoints; ++i) {pts[d][i] = plane_pts[d][i];}
+	}
 
 	for (unsigned i = 0; i < npoints; ++i) { // test the <npoints> sides
 		unsigned const inext((i+1)%npoints);
-		pts[i+2].resize(4);
+		pts[i+2].npts = 4;
 		pts[i+2][0] = pts[0][i];
 		pts[i+2][1] = pts[1][i];
 		pts[i+2][2] = pts[1][inext];
 		pts[i+2][3] = pts[0][inext];
 	}
-	reverse(pts[1].begin(), pts[1].end()); // reverse point order of bottom side
-	return pts;
+	std::reverse(pts[1].pts, pts[1].pts+pts[1].npts); // reverse point order of bottom side
+	return pts; // FIXME: remove copy/malloc on return?
 }
 
 
@@ -285,9 +292,10 @@ bool line_int_plane(point const &p1, point const &p2, point const &pp0, vector3d
 
 
 bool thick_poly_intersect(vector3d const &v1, point const &p1, vector3d const &norm,
-						  vector<point> const pts[2], bool test_side, unsigned npoints)
+						  point const pts[2][4], bool test_side, unsigned npoints)
 { // test extruded (3D) polygon
-	if (line_poly_intersect(v1, p1, &(pts[test_side].front()), npoints, norm)) return 1;
+	assert(npoints == 3 || npoints == 4);
+	if (line_poly_intersect(v1, p1, pts[test_side], npoints, norm)) return 1;
 
 	for (unsigned j = 0; j < npoints; ++j) { // now test the <npoints> sides
 		unsigned const jnext((j+1)%npoints);
@@ -298,14 +306,12 @@ bool thick_poly_intersect(vector3d const &v1, point const &p1, vector3d const &n
 }
 
 
-bool sphere_intersect_poly_sides(vector<vector<point> > const &pts, point const &center,
-								 float radius, float &dist, vector3d &norm, bool strict)
-{
+bool sphere_intersect_poly_sides(vector<tquad_t> const &pts, point const &center, float radius, float &dist, vector3d &norm, bool strict) {
+
 	dist = FAR_CLIP;
 
 	for (unsigned i = 0; i < pts.size(); ++i) { // test the <npoints> sides
-		assert(pts[i].size() >= 3);
-		vector3d side_norm(get_poly_norm(&pts[i].front()));
+		vector3d const side_norm(pts[i].get_norm());
 		float tdist(radius - dot_product_ptv(side_norm, center, pts[i][0]));
 		if (strict && tdist < 0.0) return 0; // outside of the shape
 		
@@ -358,11 +364,10 @@ bool sphere_ext_poly_intersect(point const * const points, unsigned npoints, vec
 	float thick, rdist;
 	if (!sphere_ext_poly_int_base(points[0], norm, pos, radius, thickness, thick, rdist)) return 0;
 	if (thickness <= MIN_POLY_THICK) return (sphere_poly_intersect(points, npoints, pos, norm, rdist, (thick - t_adj)));
-	vector<vector<point> > const &pts(thick_poly_to_sides(points, npoints, norm, thickness)); // slow
+	vector<tquad_t> const pts(thick_poly_to_sides(points, npoints, norm, thickness)); // slow
 
 	for (unsigned i = 0; i < pts.size(); ++i) { // adapted from sphere_intersect_poly_sides()
-		assert(pts[i].size() >= 3);
-		if ((radius - dot_product_ptv(get_poly_norm(&pts[i].front()), pos, pts[i][0])) < 0.0) return 0;
+		if ((radius - dot_product_ptv(pts[i].get_norm(), pos, pts[i][0])) < 0.0) return 0;
 	}
 	return 1;
 }

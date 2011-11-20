@@ -257,10 +257,10 @@ public:
 			assert(c.npoints == 3 || c.npoints == 4); // triangle or quad
 				
 			if (c.thickness > MIN_POLY_THICK) { // extruded polygon
-				vector<vector<point> > const &pts(thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness));
+				vector<tquad_t> const pts(thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness));
 
 				for (unsigned j = 0; j < pts.size(); ++j) {
-					add_waypoint_poly(&pts[j].front(), pts[j].size(), get_poly_norm(&pts[j].front()), c.id, connect);
+					add_waypoint_poly(pts[j].pts, pts[j].npts, pts[j].get_norm(), c.id, connect);
 				}
 			}
 			else {
@@ -421,6 +421,7 @@ public:
 		vector<pair<float, unsigned> > cands;
 		float const fast_dmax(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
+		//#pragma omp parallel for schedule(static,1) // crashes due to memory allocation issues
 		for (unsigned i = from_start; i < from_end; ++i) {
 			if (waypoints[i].disabled) continue;
 			point const start(waypoints[i].pos);

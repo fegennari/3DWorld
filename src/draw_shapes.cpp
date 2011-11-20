@@ -227,9 +227,9 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 		return;
 	}
 	assert(points != NULL && (npoints == 3 || npoints == 4));
-	static vector<point> pts[2];
+	point pts[2][4];
 	gen_poly_planes(points, npoints, norm, thick, pts);
-	bool const bfc(!is_semi_trans()), cbf(camera_back_facing(&(pts[1].front()), npoints, norm)), back_facing(bfc && cbf);
+	bool const bfc(!is_semi_trans()), cbf(camera_back_facing(pts[1], npoints, norm)), back_facing(bfc && cbf);
 	unsigned const nsides(unsigned(npoints)+2);
 	assert(nsides <= 6);
 	pair<int, unsigned> faces[6];
@@ -240,7 +240,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 		point centers[6];
 
 		for (unsigned i = 0; i < 2; ++i) { // front and back
-			centers[i] = get_center(&(pts[i].front()), npoints);
+			centers[i] = get_center(pts[i], npoints);
 		}
 		for (int i = 0; i < npoints; ++i) { // sides
 			unsigned const ii((i+1)%npoints);
@@ -249,7 +249,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 		}
 		for (unsigned f = 0; f < nsides; ++f) {
 			for (unsigned i = 0; i < 2; ++i) { // front and back
-				if (i != f && line_poly_intersect((centers[f] - camera), camera, &(pts[i].front()), npoints)) {
+				if (i != f && line_poly_intersect((centers[f] - camera), camera, pts[i], npoints)) {
 					--faces[f].first;
 					++faces[i].first;
 				}
@@ -274,13 +274,13 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 			vector3d norm2(norm);
 
 			if (!s) {
-				reverse(pts[s].begin(), pts[s].end());
+				std::reverse(pts[s], pts[s]+npoints);
 				norm2.negate();
 			}
-			if (!(display_mode & 0x08) || occluders.empty() || !is_occluded(occluders, &(pts[s].front()), npoints, camera)) {
-				draw_polygon(tid, &(pts[s].front()), npoints, norm2, shader); // draw bottom surface
+			if (!(display_mode & 0x08) || occluders.empty() || !is_occluded(occluders, pts[s], npoints, camera)) {
+				draw_polygon(tid, pts[s], npoints, norm2, shader); // draw bottom surface
 			}
-			if (!s) reverse(pts[s].begin(), pts[s].end());
+			if (!s) std::reverse(pts[s], pts[s]+npoints);
 		}
 		else { // draw sides
 			unsigned const i(s-2), ii((i+1)%npoints);

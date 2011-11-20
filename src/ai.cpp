@@ -22,6 +22,7 @@ float const UNREACHABLE_TIME      = 0.75; // in seconds
 
 float smiley_speed(1.0), smiley_acc(0);
 vector<point> app_spots;
+vector<od_data> oddatav; // used as a temporary
 
 
 extern bool has_wpt_goal;
@@ -302,7 +303,6 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 	float const radius(object_types[SMILEY].radius);
 	int const cid(coll_id[SMILEY]);
 	point const camera(get_camera_pos());
-	static vector<od_data> oddatav;
 	min_dist = 0.0;
 
 	if (free_for_all) { // smileys attack each other, not only the player
@@ -378,7 +378,6 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 	assert(smiley_id < num_smileys);
 	int min_ic(-1);
 	float sradius(object_types[SMILEY].radius), ra_smiley(C_STEP_HEIGHT*sradius);
-	static vector<od_data> oddatav;
 	min_dist = 0.0;
 
 	// process dynamic pickup objects and waypoints

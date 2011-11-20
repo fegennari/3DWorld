@@ -22,7 +22,7 @@ extern vector<coll_obj> coll_objects;
 // returns 1 if there is no intersection
 bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const {
 
-	vector<vector<point> > const *ppts(NULL); // used as pointer to static variable
+	vector<tquad_t> ppts;
 
 	for (unsigned i = 0; i < npts; ++i) {
 		point const spts[3] = {pts[i], pts[(i+1)%npts], lpos};
@@ -32,11 +32,11 @@ bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const
 
 		if (type == COLL_POLYGON) {
 			if (thickness > MIN_POLY_THICK) { // thick polygon
-				if (!ppts) ppts = &thick_poly_to_sides(points, npoints, norm, thickness);
+				if (ppts.empty()) ppts = thick_poly_to_sides(points, npoints, norm, thickness);
 
-				for (unsigned i = 0; i < ppts->size(); ++i) {
-					for (unsigned j = 0; j < (*ppts)[i].size(); ++j) {
-						if (dot_product_ptv(pts_norm, center, (*ppts)[i][j]) > 0.0) return 0;
+				for (unsigned i = 0; i < ppts.size(); ++i) {
+					for (unsigned j = 0; j < ppts[i].npts; ++j) {
+						if (dot_product_ptv(pts_norm, center, ppts[i][j]) > 0.0) return 0;
 					}
 				}
 			}
@@ -80,7 +80,7 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 			assert(npoints >= 3);
 
 			if (thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
-				static vector<point> pts[2];
+				point pts[2][4];
 				gen_poly_planes(points, npoints, norm, thickness, pts);
 				vector3d const v1(p2, p1);
 				bool const test_side(dot_product(v1, norm) > 0.0);
@@ -166,10 +166,10 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 				if (thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
 					t = 2.0; // start at a bad value
 					float tval;
-					static vector<point> pts[2];
+					point pts[2][4];
 					gen_poly_planes(points, npoints, norm, thickness, pts);
-					unsigned const test_side(dot_product((p2 - p1), norm) > 0.0);
-					point const *const points2(&(pts[test_side].front()));
+					bool const test_side(dot_product((p2 - p1), norm) > 0.0);
+					point const *const points2(pts[test_side]);
 					
 					if (line_poly_intersect(p1, p2, points2, npoints, norm, tval) && (tval <= tmax && tval >= tmin)) {
 						t     = tval;

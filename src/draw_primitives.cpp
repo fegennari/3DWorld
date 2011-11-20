@@ -1016,12 +1016,12 @@ int draw_simple_extruded_polygon(float thick, point const *const points, int npo
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	thick = fabs(thick);
 	vector3d const norm(get_poly_norm(points));
-	static vector<point> pts[2];
+	point pts[2][4];
 	gen_poly_planes(points, npoints, norm, thick, pts);
-	reverse(pts[0].begin(), pts[0].end());
-	in_cur_prim = draw_simple_polygon(&(pts[0].front()), npoints, norm*-1, in_cur_prim, no_normals); // draw bottom surface
-	reverse(pts[0].begin(), pts[0].end());
-	in_cur_prim = draw_simple_polygon(&(pts[1].front()), npoints, norm,    in_cur_prim, no_normals); // draw top surface
+	std::reverse(pts[0], pts[0]+npoints);
+	in_cur_prim = draw_simple_polygon(pts[0], npoints, norm*-1, in_cur_prim, no_normals); // draw bottom surface
+	std::reverse(pts[0], pts[0]+npoints);
+	in_cur_prim = draw_simple_polygon(pts[1], npoints, norm,    in_cur_prim, no_normals); // draw top surface
 	
 	for (int i = 0; i < npoints; ++i) { // draw sides
 		int const ii((i+1)%npoints);
