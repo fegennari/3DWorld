@@ -461,6 +461,22 @@ template<typename T> cube_t get_polygon_bbox(vector<T> const &p) {
 }
 
 
+vector3d get_poly_norm(point const *const points);
+
+struct tquad_t { // size = 52
+
+	point pts[4];
+	unsigned npts;
+	
+	tquad_t(unsigned npts_=0) : npts(npts_) {}
+	bool is_valid() const;
+	void update_bcube(cube_t &c) const;
+	vector3d get_norm() const {return get_poly_norm(pts);}
+	point const &operator[](unsigned i) const {return pts[i];}
+	point       &operator[](unsigned i)       {return pts[i];}
+};
+
+
 struct line_3dw {
 
 	point p1, p2;
@@ -1537,15 +1553,14 @@ bool point_in_polygon_2d(float xval, float yval, const point *points, int npts, 
 bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &norm, float dval,
 					  cube_t const &cube, float &z1, float &z2);
 void grow_poly_about_center(point *pts, unsigned npts, float scale);
-bool get_poly_zvals(vector<vector<point> > const &pts, float xv, float yv, float &z1, float &z2);
-void gen_poly_planes(point const *const points, unsigned npoints, vector3d const &norm, float thick, vector<point> pts[2]);
-vector<vector<point> > const &thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick);
+bool get_poly_zvals(vector<tquad_t> const &pts, float xv, float yv, float &z1, float &z2);
+void gen_poly_planes(point const *const points, unsigned npoints, vector3d const &norm, float thick, point pts[2][4]);
+vector<tquad_t> thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick);
 bool line_int_plane(point const &p1, point const &p2, point const &pp0, vector3d const &norm,
 					point &p_int, float &t, bool ignore_t);
 bool thick_poly_intersect(vector3d const &v1, point const &p1, vector3d const &norm,
-						  vector<point> const pts[2], bool test_side, unsigned npoints);
-bool sphere_intersect_poly_sides(vector<vector<point> > const &pts, point const &center,
-								 float radius, float &dist, vector3d &norm, bool strict);
+						  point const pts[2][4], bool test_side, unsigned npoints);
+bool sphere_intersect_poly_sides(vector<tquad_t> const &pts, point const &center, float radius, float &dist, vector3d &norm, bool strict);
 bool pt_line_seg_dist_less_than(point const &P, point const &L1, point const &L2, float dist);
 bool sphere_poly_intersect(const point *points, unsigned npoints, point const &pos, vector3d const &norm, float rdist, float radius);
 bool sphere_ext_poly_int_base(point const &pt, vector3d const &norm, point const &pos, float radius,

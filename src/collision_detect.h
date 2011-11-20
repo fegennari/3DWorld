@@ -150,11 +150,9 @@ public:
 };
 
 
-struct coll_tquad { // size = 60
+struct coll_tquad : public tquad_t { // size = 60
 
-	point pts[4];
 	vector3d normal;
-	unsigned npts;
 	
 	union {
 		unsigned cid;
@@ -167,9 +165,6 @@ struct coll_tquad { // size = 60
 	static bool is_cobj_valid(coll_obj const &c) {
 		return (!c.disabled() && c.type == COLL_POLYGON && (c.npoints == 3 || c.npoints == 4) && c.thickness <= MIN_POLY_THICK);
 	}
-	bool is_valid() const {return (npts >= 3 && is_triangle_valid(pts[0], pts[1], pts[2]));}
-	void update_bcube(cube_t &c) const;
-
 	bool line_intersect(point const &p1, point const &p2) const {
 		float t;
 		return line_poly_intersect(p1, p2, pts, npts, normal, t);

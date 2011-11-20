@@ -18,7 +18,7 @@ extern vector<unsigned> falling_cobjs;
 extern platform_cont platforms;
 
 
-coll_tquad::coll_tquad(coll_obj const &c) : normal(c.norm), cid(c.id), npts(c.npoints) {
+coll_tquad::coll_tquad(coll_obj const &c) : tquad_t(c.npoints), normal(c.norm), cid(c.id) {
 
 	assert(is_cobj_valid(c));
 	for (unsigned i = 0; i < npts; ++i) {pts[i] = c.points[i];}
@@ -26,7 +26,7 @@ coll_tquad::coll_tquad(coll_obj const &c) : normal(c.norm), cid(c.id), npts(c.np
 }
 
 
-coll_tquad::coll_tquad(polygon_t const &p) : npts(p.size()) {
+coll_tquad::coll_tquad(polygon_t const &p) : tquad_t(p.size()) {
 
 	assert(npts == 3 || npts == 4);
 	color.set_c4(p.color);
@@ -36,10 +36,13 @@ coll_tquad::coll_tquad(polygon_t const &p) : npts(p.size()) {
 }
 
 
+bool tquad_t::is_valid() const {return (npts >= 3 && is_triangle_valid(pts[0], pts[1], pts[2]));}
+
+
 #define UPDATE_CUBE(i) {if (pts[i][i_] < c.d[i_][0]) c.d[i_][0] = pts[i][i_]; if (pts[i][i_] > c.d[i_][1]) c.d[i_][1] = pts[i][i_];}
 
 
-void coll_tquad::update_bcube(cube_t &c) const {
+void tquad_t::update_bcube(cube_t &c) const {
 
 	UNROLL_3X(UPDATE_CUBE(0));
 	UNROLL_3X(UPDATE_CUBE(1));
