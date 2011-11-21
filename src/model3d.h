@@ -100,6 +100,7 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 		if (p.t[1] < t[1]) return 0;
 		return (tangent < p.tangent);
 	}
+	//bool operator==(vert_norm_tc_tan const &p) const {}
 };
 
 
