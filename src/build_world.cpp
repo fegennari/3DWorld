@@ -725,9 +725,16 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 		if (load_coll_objs) {
 			if (!read_coll_objects(coll_obj_file)) exit(1);
 			process_negative_shapes(fixed_cobjs); // must be first because requires an unmodified ordering of shapes
-			remove_overlapping_cubes(fixed_cobjs);
-			merge_cubes(fixed_cobjs); // and alpha sort
-			subdiv_cubes(fixed_cobjs);
+			bool has_cubes(0);
+
+			for (vector<coll_obj>::const_iterator i = fixed_cobjs.begin(); i != fixed_cobjs.end() && !has_cubes; ++i) {
+				has_cubes |= (i->type == COLL_CUBE);
+			}
+			if (has_cubes) { // Note: important to do this test on large polygon-only models
+				remove_overlapping_cubes(fixed_cobjs);
+				merge_cubes(fixed_cobjs); // and alpha sort
+				subdiv_cubes(fixed_cobjs);
+			}
 			sort_cobjs_for_rendering(fixed_cobjs);
 			check_cubes(fixed_cobjs); // sanity check, should be last
 			RESET_TIME;

@@ -1000,7 +1000,6 @@ void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cu
 
 	RESET_TIME;
 	unsigned size(cobjs.size()), num_remove(0);
-	vector<coll_obj> cobjs2;
 
 	// split T-junctions of cubes in the same group
 	if (REMOVE_T_JUNCTIONS) {
@@ -1069,14 +1068,7 @@ void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cu
 		cout << size << " => " << (cobjs.size() - num_remove) << endl;
 		size = cobjs.size();
 	}
-
-	// split large cubes
-	for (unsigned i = 0; i < size; ++i) {
-		if (cobjs[i].type == COLL_INVALID) continue; // skip = remove it
-		//if (cobjs[i].type == COLL_CUBE && cobjs[i].subdiv_fixed_cube(cobjs2)) continue; // no need to split now
-		cobjs2.push_back(cobjs[i]); // skip platforms
-	}
-	cobjs.swap(cobjs2);
+	if (num_remove > 0) remove_invalid_cobjs(cobjs);
 	cout << (size - num_remove) << " => " << cobjs.size() << endl;
 	PRINT_TIME("Subdiv Cubes");
 }
