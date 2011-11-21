@@ -440,7 +440,8 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 
 	if (npoints == 4) { // average the norm from both triangles in case they're not coplanar
 		point const p2[3] = {points[0], points[2], points[3]};
-		cobj.norm += get_poly_norm(p2);
+		vector3d const norm2(get_poly_norm(p2));
+		cobj.norm += ((dot_product(cobj.norm, norm2) < 0.0) ? -norm2 : norm2);
 		cobj.norm.normalize();
 	}
 	if (cobj.norm == zero_vector) {
