@@ -305,6 +305,14 @@ template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_
 }
 
 
+struct shared_vertex_t {
+	unsigned ai, bi;
+	bool shared;
+	shared_vertex_t() : shared(0) {}
+	shared_vertex_t(unsigned ai_, unsigned bi_) : ai(ai_), bi(bi_), shared(1) {}
+};
+
+
 template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts) const {
 
 	unsigned const nv(num_verts());
@@ -313,6 +321,38 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 	poly.resize(npts);
 
 	for (unsigned i = 0; i < nv; i += npts) {
+		if (npts == 3 && (i+npts) < nv) { // attempt to merge two adjacent triangles into quads
+			shared_vertex_t shared1, shared2;
+
+			for (unsigned a = 0; a < 3 && !shared2.shared; ++a) {
+				for (unsigned b = 0; b < 3; ++b) {
+					if (get_vert(i+a) == get_vert(i+b+3)) {
+						(shared1.shared ? shared2 : shared1) = shared_vertex_t(a, b);
+						break;
+					}
+				}
+			}
+			if (shared2.shared) { // merge two triangles into a single quad
+				unsigned nsa(3), nsb(3); // non-sshared
+
+				for (unsigned j = 0; j < 3; ++j) {
+					if (shared1.ai != j && shared2.ai != j) nsa = j;
+					if (shared1.bi != j && shared2.bi != j) nsb = j;
+				}
+				assert(nsa < 3 && nsb < 3);
+				coll_tquad quad;
+				quad.color.set_c4(color);
+				quad.npts   = 4;
+				quad.pts[0] = get_vert(i+shared1.ai).v;
+				quad.pts[1] = get_vert(i+nsa).v;
+				quad.pts[2] = get_vert(i+shared2.ai).v;
+				quad.pts[3] = get_vert(i+nsb+3).v;
+				get_normal(quad.pts[0], quad.pts[1], quad.pts[2], quad.normal, 1);
+				polygons.push_back(quad);
+				i += npts;
+				continue;
+			}
+		}
 		for (unsigned p = 0; p < npts; ++p) {poly[p] = get_vert(i+p);}
 		split_polygon(poly, polygons, POLY_COPLANAR_THRESH);
 	}
