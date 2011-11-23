@@ -732,11 +732,11 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 			}
 			if (has_cubes) { // Note: important to do this test on large polygon-only models
 				remove_overlapping_cubes(fixed_cobjs);
-				merge_cubes(fixed_cobjs); // and alpha sort
+				merge_cubes (fixed_cobjs); // and alpha sort
 				subdiv_cubes(fixed_cobjs);
+				check_cubes (fixed_cobjs); // sanity check, should be last
 			}
 			sort_cobjs_for_rendering(fixed_cobjs);
-			check_cubes(fixed_cobjs); // sanity check, should be last
 			RESET_TIME;
 			
 			if (fixed_cobjs.size() > 2*coll_objects.size()) {
