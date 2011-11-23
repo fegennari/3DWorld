@@ -725,10 +725,11 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 		if (load_coll_objs) {
 			if (!read_coll_objects(coll_obj_file)) exit(1);
 			process_negative_shapes(fixed_cobjs); // must be first because requires an unmodified ordering of shapes
-			bool has_cubes(0);
+			bool has_cubes(0), any_drawn(0);
 
-			for (vector<coll_obj>::const_iterator i = fixed_cobjs.begin(); i != fixed_cobjs.end() && !has_cubes; ++i) {
+			for (vector<coll_obj>::const_iterator i = fixed_cobjs.begin(); i != fixed_cobjs.end(); ++i) {
 				has_cubes |= (i->type == COLL_CUBE);
+				any_drawn |= i->cp.draw;
 			}
 			if (has_cubes) { // Note: important to do this test on large polygon-only models
 				remove_overlapping_cubes(fixed_cobjs);
@@ -736,7 +737,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 				subdiv_cubes(fixed_cobjs);
 				check_cubes (fixed_cobjs); // sanity check, should be last
 			}
-			sort_cobjs_for_rendering(fixed_cobjs);
+			if (any_drawn) sort_cobjs_for_rendering(fixed_cobjs);
 			RESET_TIME;
 			
 			if (fixed_cobjs.size() > 2*coll_objects.size()) {
@@ -747,7 +748,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 			}
 			fixed_cobjs.clear();
 			remove_excess_cap(fixed_cobjs); // free the memory
-			PRINT_TIME("Add Fixed Cobjs");
+			PRINT_TIME(" Add Fixed Cobjs");
 		}
 	}
 	else {
