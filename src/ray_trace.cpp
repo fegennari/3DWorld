@@ -348,7 +348,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 
 	if (thread_manager.is_active()) { // can't have two running at once, so kill the existing one
 		kill_raytrace = 1;
-		thread_manager.join(); // FIXME: wait for threads to finish
+		thread_manager.join();
 		assert(!thread_manager.is_active());
 		kill_raytrace = 0;
 	}

@@ -535,14 +535,17 @@ vector3d get_rand_snow_vect(float amount) {
 void create_snow_map(voxel_map &vmap) {
 
 	// distribute snowflakes over the scene and build the voxel map of hits
-	unsigned const num_per_dim(1024*(unsigned)sqrt((float)num_snowflakes)); // in M, so sqrt div by 1024
+	int const num_per_dim(1024*(unsigned)sqrt((float)num_snowflakes)); // in M, so sqrt div by 1024
 	float const zval(max(ztop, czmax));
+	unsigned progress(0);
 	cout << "Snow accumulation progress (out of " << num_per_dim << "): 0";
 
-	for (unsigned y = 0; y < num_per_dim; ++y) {
-		increment_printed_number(y);
+	#pragma omp parallel for schedule(static,1)
+	for (int y = 0; y < num_per_dim; ++y) {
+		#pragma omp critical(snow_prog_update)
+		increment_printed_number(progress++);
 
-		for (unsigned x = 0; x < num_per_dim; ++x) {
+		for (int x = 0; x < num_per_dim; ++x) {
 			point pos1(-X_SCENE_SIZE + 2.0*X_SCENE_SIZE*x/num_per_dim,
 				       -Y_SCENE_SIZE + 2.0*Y_SCENE_SIZE*y/num_per_dim, zval);
 
@@ -576,6 +579,7 @@ void create_snow_map(voxel_map &vmap) {
 				pos1   += delta; // push a random amount away from the object
 				pos1.z -= SMALL_NUMBER; // ensure progress is made
 			}
+			#pragma omp critical(snow_map_update)
 			vmap[voxel_t(pos2)].update(pos2.z);
 		}
 	}
