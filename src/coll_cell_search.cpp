@@ -520,19 +520,10 @@ public:
 };
 
 
-bool check_xy_delta(point const &p1, point const &p2) {
-	return (fabs(p2.x - p1.x) > DX_VAL || fabs(p2.y - p1.y) > DY_VAL); // faster to use grid bag instead of tree
-}
-
-bool use_cobj_tree(point const &p1, point const &p2) {
-	return (USE_COBJ_TREE && check_xy_delta(p1, p2));
-}
-
-
-bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool no_tree) {
+bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha) {
 
 	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
-	if (!no_tree && skip_dynamic && test_alpha != 2 && use_cobj_tree(pos1, pos2)) {
+	if (USE_COBJ_TREE && skip_dynamic && test_alpha != 2) {
 		return check_coll_line_tree(pos1, pos2, cindex, cobj, 0, 0, (skip_dynamic >= 2));
 	}
 	cindex = -1;
@@ -544,10 +535,10 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dyn
 
 
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex, float splash_val,
-						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic, bool no_tree)
+						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic)
 {
 	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
-	if (!no_tree && splash_val == 0.0 && skip_dynamic && use_cobj_tree(pos1, pos2)) {
+	if (USE_COBJ_TREE && splash_val == 0.0 && skip_dynamic) {
 		return check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj);
 	}
 	cindex = -1;
@@ -576,10 +567,7 @@ bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, i
 		if (coll_objects[last_cobj].intersects_all_pts(pos1, pts, npts)) return 1;
 	}
 	point const viewer(pos1);
-
-	if (use_cobj_tree(pos1, center)) {
-		return cobj_contained_tree(pos1, center, viewer, pts, npts, cobj, last_cobj);
-	}
+	if (USE_COBJ_TREE) return cobj_contained_tree(pos1, center, viewer, pts, npts, cobj, last_cobj);
 	if (!do_line_clip_scene(pos1, center, czmin, czmax)) return 0;
 	line_intersector_occlusion_cobjs lint(pos1, center, viewer, pts, npts);
 	coll_cell_line_iterator<line_intersector_occlusion_cobjs> ccli(lint, 1, 1, cobj);
@@ -597,7 +585,7 @@ bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 
 	cobjs.resize(0);
 
-	if (use_cobj_tree(pos1, pos2)) {
+	if (USE_COBJ_TREE) {
 		get_coll_line_cobjs_tree(pos1, pos2, cobj, cobjs);
 		return (!cobjs.empty());
 	}

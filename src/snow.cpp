@@ -561,7 +561,7 @@ void create_snow_map(voxel_map &vmap) {
 			vector3d cnorm;
 			int cindex;
 			
-			while (check_coll_line_exact(pos1, pos2, cpos, cnorm, cindex, 0.0, -1, 0, 0, 1, 1)) {
+			while (check_coll_line_exact(pos1, pos2, cpos, cnorm, cindex, 0.0, -1, 0, 0, 1)) {
 				if (cnorm.z > 0.0) { // collision with a surface that points up
 					pos2 = cpos;
 					break;
