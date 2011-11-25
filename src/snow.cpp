@@ -560,27 +560,26 @@ void create_snow_map(voxel_map &vmap) {
 			point cpos;
 			vector3d cnorm;
 			int cindex;
+			bool invalid(0);
 			
 			while (check_coll_line_exact(pos1, pos2, cpos, cnorm, cindex, 0.0, -1, 0, 0, 1)) {
-				if (cnorm.z > 0.0) { // collision with a surface that points up
+				if (cnorm.z > 0.0) { // collision with a surface that points up - we're done
 					pos2 = cpos;
 					break;
 				}
 				// collision with vertical or bottom surface
-				pos1 = cpos;
+				float const val(CLIP_TO_01((pos1.z - zbottom)/(zval - zbottom)));
+				pos1    = cpos + cnorm*SMALL_NUMBER; // push a small amount away from the object
+				pos1.z -= SMALL_NUMBER; // ensure progress is made
+				pos2    = pos1 + get_rand_snow_vect(val);
 				
-				if (!get_mesh_ice_pt(pos1, pos2)) { // invalid point
-					pos2 = cpos;
+				if (!get_mesh_ice_pt(pos2, pos2)) { // invalid point
+					invalid = 1;
 					break;
 				}
-				float const val(CLIP_TO_01((pos1.z - zbottom)/(zval - zbottom)));
-				vector3d delta(get_rand_snow_vect(val));
-				if (dot_product(delta, cnorm) < 0.0) delta.negate();
-				pos1   += delta; // push a random amount away from the object
-				pos1.z -= SMALL_NUMBER; // ensure progress is made
 			}
 			#pragma omp critical(snow_map_update)
-			vmap[voxel_t(pos2)].update(pos2.z);
+			if (!invalid) vmap[voxel_t(pos2)].update(pos2.z);
 		}
 	}
 	cout << endl;
