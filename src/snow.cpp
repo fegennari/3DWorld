@@ -528,7 +528,7 @@ bool get_mesh_ice_pt(point const &p1, point &p2) {
 
 vector3d get_rand_snow_vect(float amount) {
 
-	return vector3d(amount*snow_random*rgauss(), amount*snow_random*rgauss(), 0.0);
+	return (snow_random == 0.0 ? zero_vector : vector3d(amount*snow_random*rgauss(), amount*snow_random*rgauss(), 0.0));
 }
 
 
@@ -561,22 +561,28 @@ void create_snow_map(voxel_map &vmap) {
 			vector3d cnorm;
 			int cindex;
 			bool invalid(0);
+			unsigned iter(0);
 			
 			while (check_coll_line_exact(pos1, pos2, cpos, cnorm, cindex, 0.0, -1, 0, 0, 1)) {
 				if (cnorm.z > 0.0) { // collision with a surface that points up - we're done
 					pos2 = cpos;
 					break;
 				}
+				if (snow_random == 0.0 || iter > 100) { // something odd happened
+					invalid = 1;
+					break;
+				}
 				// collision with vertical or bottom surface
 				float const val(CLIP_TO_01((pos1.z - zbottom)/(zval - zbottom)));
-				pos1    = cpos + cnorm*SMALL_NUMBER; // push a small amount away from the object
-				pos1.z -= SMALL_NUMBER; // ensure progress is made
-				pos2    = pos1 + get_rand_snow_vect(val);
+				vector3d const delta(get_rand_snow_vect(0.1*val));
+				pos1 = cpos - (pos2 - pos1).get_norm()*SMALL_NUMBER; // push a small amount back from the object
+				pos2 = pos1 + ((dot_product(delta, cnorm) < 0.0) ? -delta : delta);
 				
 				if (!get_mesh_ice_pt(pos2, pos2)) { // invalid point
 					invalid = 1;
 					break;
 				}
+				++iter;
 			}
 			#pragma omp critical(snow_map_update)
 			if (!invalid) vmap[voxel_t(pos2)].update(pos2.z);
