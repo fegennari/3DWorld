@@ -24,7 +24,7 @@ unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1}; // sky, global, 
 
 extern bool has_snow, global_lighting_update;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
-extern float ztop, water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight;
+extern float water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight;
 extern char *lighting_file[];
 extern point sun_pos, moon_pos;
 extern vector<light_source> light_sources;
@@ -511,7 +511,9 @@ void *trace_ray_block_sky(void *ptr) {
 		vector<vector3d> dirs(NRAYS);
 
 		for (unsigned p = 0; p < block_npts; ++p) {
-			pts[p] = rgen.signed_rand_vector_spherical(1.0).get_norm()*scene_radius; // start the ray here
+			do {
+				pts[p] = rgen.signed_rand_vector_spherical(1.0).get_norm()*scene_radius; // start the ray here
+			} while (pts[p].z < zbottom); // force above zbottom
 		}
 		sort(pts.begin(), pts.end());
 		if (data->verbose) cout << "Sky light source progress (of " << block_npts << "): 0";
@@ -524,6 +526,7 @@ void *trace_ray_block_sky(void *ptr) {
 			for (unsigned r = 0; r < NRAYS; ++r) {
 				point const target_pt(X_SCENE_SIZE*rgen.signed_rand_float(), Y_SCENE_SIZE*rgen.signed_rand_float(), rgen.rand_uniform(czmin, czmax));
 				dirs[r] = (target_pt - pt).get_norm();
+				//dirs[r].z = -fabs(dirs[r].z); // pointing down
 			}
 			sort(dirs.begin(), dirs.end());
 
