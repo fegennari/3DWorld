@@ -44,11 +44,13 @@ int      const NO_SOURCE        = -2;
 unsigned const INIT_CCELL_SIZE  = 16;
 float    const LARGE_OBJ_RAD    = 0.01;
 float    const TOLERANCE        = 1.0E-12;
-float    const CAMERA_RADIUS    = 0.06;
 float    const ABSOLUTE_ZERO    = -273; // in degrees C
 float    const MAX_SPLASH_DEPTH = 0.1;
 float    const WATER_INDEX_REFRACT = 1.333;
 float    const WATER_COL_ATTEN  = 0.6;
+
+float    const DEF_CAMERA_RADIUS= 0.06;
+float    const DEF_STEP_HEIGHT  = 0.6;
 
 unsigned const TICKS_PER_SECOND = 40;
 
@@ -118,7 +120,6 @@ int      const NUM_CHUNK_BLOCKS = 4;
 float    const GROUND_SPEED     = 0.0175;
 float    const SIDESTEP_SPEED   = 0.8;
 float    const BACKWARD_SPEED   = 0.85;
-float    const C_STEP_HEIGHT    = 0.6;
 float    const NEAR_CLIP        = 0.01;
 float    const FAR_CLIP         = 100.0;
 float    const PERSP_ANGLE      = 60.0;
@@ -1192,6 +1193,9 @@ class  shape3d;
 struct lightning;
 struct color_tid_vol;
 class shader_t;
+
+
+extern float CAMERA_RADIUS, C_STEP_HEIGHT;
 
 
 // function prototypes - main (3DWorld.cpp, etc.)

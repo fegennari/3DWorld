@@ -83,6 +83,7 @@ float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-F
 float water_h_off(0.0), perspective_fovy(0.0), perspective_nclip(0.0), atmosphere(1.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
+float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(DEF_STEP_HEIGHT);
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
@@ -118,7 +119,6 @@ extern tree_cont_t t_trees;
 
 
 void init_keyset();
-int read_coll_objects(const char *coll_obj_file);
 int load_config(string const &config_file);
 
 bool export_modmap(string const &filename);
@@ -1542,7 +1542,13 @@ int load_config(string const &config_file) {
 			if (fscanf(fp, "%f%f%f", &wind.x, &wind.y, &wind.z) != 3) cfg_err("wind_velocity command", error);
 		}
 		else if (str == "camera_height") {
-			if (fscanf(fp, "%lf", &camera_zh) != 1) cfg_err("camera extra height command", error);
+			if (fscanf(fp, "%lf", &camera_zh) != 1) cfg_err("camera_height command", error);
+		}
+		else if (str == "camera_radius") {
+			if (fscanf(fp, "%f", &CAMERA_RADIUS) != 1) cfg_err("camera_radius command", error);
+		}
+		else if (str == "camera_step_height") {
+			if (fscanf(fp, "%f", &C_STEP_HEIGHT) != 1) cfg_err("camera_step_height command", error);
 		}
 		else if (str == "player_start") {
 			if (fscanf(fp, "%f%f%f", &surface_pos.x, &surface_pos.y, &surface_pos.z) != 3) cfg_err("player_start command", error);

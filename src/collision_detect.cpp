@@ -1220,6 +1220,10 @@ void vert_coll_detector::check_cobj(int index) {
 					else {
 						val = 1.01*(thick - rdist); // non-thick polygon
 					}
+					if (C_STEP_HEIGHT > DEF_STEP_HEIGHT && player_step) { // hack to allow stepping on polygons when the step height has been increased
+						norm = zero_vector;
+						break; // can step up onto the object
+					}
 					assert(!is_nan(norm));
 					obj.pos += norm*val; // calculate intersection point
 					lcoll    = (norm.z > 0.99) ? 2 : 1; // top collision if normal is nearly vertical
@@ -1471,7 +1475,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 
 	bool const cflight(game_mode && flight);
 	int coll(0);
-	float radius(CAMERA_RADIUS);
+	float const radius(CAMERA_RADIUS);
 	dwobject camera_obj(def_objects[CAMERA]); // make a fresh copy
 
 	if (!cflight) { // make sure camera is over simulation region
