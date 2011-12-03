@@ -91,7 +91,7 @@ void main()
 		if (enable_light6) ADD_LIGHT(6);
 		if (enable_light7) ADD_LIGHT(7);
 	}
-	if (enable_dlights) lit_color += add_dlights(vpos, normalize(normal), eye); // dynamic lighting
+	if (enable_dlights) lit_color += gl_FrontMaterial.diffuse.rgb * add_dlights(vpos, normalize(normal), eye); // dynamic lighting
 	vec4 color  = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	vec3 eye_c  = eye;
 	vec3 vpos_c = vpos;
