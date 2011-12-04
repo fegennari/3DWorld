@@ -531,8 +531,8 @@ void init_objects() {
 void set_coll_rmax(float rmax) {
 
 	max_obj_radius = rmax; // only used to cache the init value of rmax for use in later calls
-	coll_border    = int((max_obj_radius/max(DX_VAL, DY_VAL)) + 1); // + 0.5?
-	//cout << "rmax = " << max_obj_radius << ", cb = " << coll_border << ", DXY = " << max(DX_VAL, DY_VAL) << endl;
+	coll_border    = int(max_obj_radius/max(DX_VAL, DY_VAL) + 1); // + 0.5?
+	//cout << "rmax = " << max_obj_radius << ", cb = " << coll_border << ", DXY = " << max(DX_VAL, DY_VAL) << ", ratio: " << max_obj_radius/max(DX_VAL, DY_VAL) << endl;
 }
 
 

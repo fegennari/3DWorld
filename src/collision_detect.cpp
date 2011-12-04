@@ -145,9 +145,9 @@ void reserve_coll_objects(unsigned size) {
 }
 
 
-inline void get_params(int &x1, int &y1, int &x2, int &y2, int &cb, const float d[3][2], int dhcm, int min_cb=0) {
+inline void get_params(int &x1, int &y1, int &x2, int &y2, int &cb, const float d[3][2], int dhcm) {
 
-	cb = max(min_cb, ((dhcm == 2) ? 0 : coll_border));
+	cb = ((dhcm == 2) ? min(coll_border, 1) : coll_border);
 	x1 = max(cb, get_xpos(d[0][0]));
 	y1 = max(cb, get_ypos(d[1][0]));
 	x2 = min((MESH_X_SIZE-cb-1), get_xpos(d[0][1]));
@@ -370,7 +370,7 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 
 	int x1, x2, y1, y2, cb;
 	coll_obj &cobj(coll_objects[index]);
-	get_params(x1, y1, x2, y2, cb, cobj.d, dhcm, 1); // ensure at least a cb of 1 for best tree leaf shadows
+	get_params(x1, y1, x2, y2, cb, cobj.d, dhcm);
 	//if (cobj.cp.is_model3d) cb = 0;
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
 	vector3d const norm(cobj.norm);
@@ -625,6 +625,7 @@ void coll_cell::optimize(int x, int y) {
 		cvz[z]   = cur_tot; // end ix
 		cnt[z]   = start_ix;
 	}
+	if (4*cur_tot > CVZ_NDIV*ncv) {clear_cvz(); return;} // too dense to subdivide - z-range of cobjs is large
 	indices.clear();
 	indices.resize(cur_tot);
 

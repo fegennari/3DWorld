@@ -465,12 +465,12 @@ public:
 			if (point_outside_mesh(xa, ya)) return 0;
 			return cobj_test(xa, ya);
 		}
-		int const dx(xb - xa), dy(yb - ya), steps(max(1, ((abs(dx) > abs(dy)) ? abs(dx): abs(dy))/max(1, coll_border)));
+		int const cb(max(1, coll_border));
+		int const dx(xb - xa), dy(yb - ya), steps(max(1, ((abs(dx) > abs(dy)) ? abs(dx): abs(dy))/cb));
 		double const xinc(dx/(double)steps), yinc(dy/(double)steps);
 		double x(xa), y(ya);
 		int last_x(-1), last_y(-1), skipval(1);
 		bool first(1);
-		int const cb(max(1, coll_border)); // not sure if this is correct
 		int bnds[2][2] = {{MESH_X_SIZE,0}, {MESH_Y_SIZE,0}}; // {x,y}{min,max}
 
 		for (int k = 0; k <= steps; ++k) { // DDA algorithm
@@ -478,7 +478,7 @@ public:
 			x += xinc;
 			y += yinc;
 			// might skip some coll cells during diag strides but having at least one cell border around cobjs should fix it
-			if (skip && cb > 0) { // can miss some collisions with tree leaves, which have no coll_border
+			if (skip && cb > 0) { // can miss some collisions with tree leaves, which can have a lower coll_border
 				if (--skipval) continue; // skip this cell
 				skipval = (cb << 1);
 			}
