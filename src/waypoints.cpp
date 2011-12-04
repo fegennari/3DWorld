@@ -413,7 +413,7 @@ public:
 		unsigned visible(0), cand_edges(0), num_edges(0), tot_steps(0);
 		float const fast_dmax(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
-		#pragma omp parallel for schedule(dynamic,1) // not entirely thread safe
+		#pragma omp parallel for schedule(dynamic,1) // is this fully thread safe?
 		for (int i = from_start; i < (int)from_end; ++i) {
 			assert(i < (int)waypoints.size());
 			if (waypoints[i].disabled) continue;

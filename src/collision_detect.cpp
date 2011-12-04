@@ -1406,21 +1406,25 @@ int vert_coll_detector::check_coll() {
 		check_cobj(index);
 	}
 	if (subdiv) {
-		++cobj_counter;
 		unsigned const sz(cell.cvz.size());
 		float const val((sz-1)/(c_zmax - c_zmin));
 		unsigned const zs(min(sz-1, (unsigned)max(0, (int)floor(val*(z1 - c_zmin)))));
 		unsigned const ze(min(sz-1, (unsigned)max(0, (int)floor(val*(z2 - c_zmin)))));
 
-		// calculate loop bounds
-		for (unsigned i = zs; i <= ze; ++i) {
-			for (unsigned ix = (i ? cell.cvz[i-1] : 0); ix < cell.cvz[i]; ++ix) {
-				assert(ix < cell.indices.size());
-				unsigned const index(cell.indices[ix]);
-				assert(index < coll_objects.size());
-				if (coll_objects[index].counter == cobj_counter) continue; // prevent duplicate testing of cobjs
-				coll_objects[index].counter = cobj_counter;
-				check_cobj(index);
+		#pragma omp critical(cobj_counter_update)
+		{
+			++cobj_counter;
+
+			// calculate loop bounds
+			for (unsigned i = zs; i <= ze; ++i) {
+				for (unsigned ix = (i ? cell.cvz[i-1] : 0); ix < cell.cvz[i]; ++ix) {
+					assert(ix < cell.indices.size());
+					unsigned const index(cell.indices[ix]);
+					assert(index < coll_objects.size());
+					if (coll_objects[index].counter == cobj_counter) continue; // prevent duplicate testing of cobjs
+					coll_objects[index].counter = cobj_counter;
+					check_cobj(index);
+				}
 			}
 		}
 	}
