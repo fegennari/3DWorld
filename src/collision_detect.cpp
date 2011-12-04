@@ -371,6 +371,7 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 	int x1, x2, y1, y2, cb;
 	coll_obj &cobj(coll_objects[index]);
 	get_params(x1, y1, x2, y2, cb, cobj.d, dhcm, 1); // ensure at least a cb of 1 for best tree leaf shadows
+	//if (cobj.cp.is_model3d) cb = 0;
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
 	vector3d const norm(cobj.norm);
 	float const dval(-dot_product(norm, cobj.points[0]));
@@ -1598,8 +1599,9 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (index < 0) continue;
 		assert(unsigned(index) < coll_objects.size());
 		coll_obj const &cobj(coll_objects[index]);
+		if (cobj.d[2][0] > z2)         continue; // above the top of the object - can't affect it
 		if (!cobj.contains_pt_xy(pos)) continue; // test bounding cube
-		if (cobj.no_collision()) continue;
+		if (cobj.no_collision())       continue;
 		if (skip_dynamic && cobj.status == COLL_DYNAMIC) continue;
 		
 		switch (cobj.type) {
@@ -1671,7 +1673,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 						coll = (zb < zt);
 					}
 				}
-				else if (point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints, 0, 1)) {
+				else if (cobj.norm.z != 0.0 && point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints, 0, 1)) {
 					float const rdist(dot_product_ptv(cobj.norm, pos, cobj.points[0]));
 					// works best if the polygon has a face oriented in +z or close
 					// note that we don't care if the polygon is intersected in z
