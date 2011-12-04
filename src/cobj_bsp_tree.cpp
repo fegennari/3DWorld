@@ -104,7 +104,6 @@ bool cobj_tree_base::node_ix_mgr::check_node(unsigned &nix) const {
 	if (!get_line_clip2(p1, dinv, n.d)) {
 		assert(n.next_node_id > nix);
 		nix = n.next_node_id; // failed the bbox test
-		assert(nix > 0);
 		return 0;
 	}
 	++nix;
@@ -366,7 +365,6 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_intersecting_cobjs(cube_t cons
 		if (!cube.intersects(n, toler)) {
 			assert(n.next_node_id > nix);
 			nix = n.next_node_id; // failed the bbox test
-			assert(nix > 0);
 			continue;
 		}
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
@@ -423,6 +421,30 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_line_cobjs(point const &p
 			if ((int)cixs[i] == ignore_cobj) continue;
 			coll_obj const &c(get_cobj(i));
 			if (obj_ok(c) && c.is_big_occluder() && check_line_clip_expand(pos1, pos2, c.d, GET_OCC_EXPAND)) cobjs.push_back(cixs[i]);
+		}
+	}
+}
+
+
+// Note: actually, this only returns sphere intersection candidates
+template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vector<int> &cobjs) const {
+
+	if (nodes.empty()) return;
+	unsigned const num_nodes(nodes.size());
+
+	for (unsigned nix = 0; nix < num_nodes;) {
+		tree_node const &n(nodes[nix]);
+
+		if (!sphere_cube_intersect(center, radius, n)) {
+			assert(n.next_node_id > nix);
+			nix = n.next_node_id; // failed the bbox test
+			continue;
+		}
+		++nix;
+		
+		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+			if ((int)cixs[i] == ignore_cobj) continue;
+			cobjs.push_back(cixs[i]);
 		}
 	}
 }
@@ -606,6 +628,15 @@ bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, 
 void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs) {
 
 	cobj_tree_occlude.get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs);
+}
+
+
+bool get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, vector<int> &cobjs, bool dynamic) {
+
+	if (!BUILD_COBJ_TREE) return 0;
+	cobjs.resize(0);
+	get_tree(dynamic).get_coll_sphere_cobjs(center, radius, cobj, cobjs);
+	return 1;
 }
 
 
