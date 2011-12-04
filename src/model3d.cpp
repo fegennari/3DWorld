@@ -948,7 +948,6 @@ bool model3d::write_to_disk(string const &fn) const {
 
 bool model3d::read_from_disk(string const &fn) {
 
-	cout << "fn: " << fn << endl;
 	ifstream in(fn, ios::in | ios::binary);
 	
 	if (!in.good()) {
@@ -957,7 +956,6 @@ bool model3d::read_from_disk(string const &fn) {
 	}
 	clear(); // ???
 	unsigned const magic_number_comp(read_uint(in));
-	cout << "number: " << magic_number_comp << endl;
 
 	if (magic_number_comp != MAGIC_NUMBER) {
 		cerr << "Error reading model3d file " << fn << ": Invalid file format (magic number check failed)." << endl;
