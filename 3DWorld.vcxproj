@@ -502,6 +502,8 @@
     <None Include="house\config_house.txt" />
     <None Include="house\config_house_winter.txt" />
     <None Include="house\placements.TXT" />
+    <None Include="model_data\coll_objs_soda.txt" />
+    <None Include="model_data\config_soda.txt" />
     <None Include="shaders\bump_map.part.frag" />
     <None Include="shaders\bump_map.part.vert" />
     <None Include="shaders\draw_mesh.frag" />

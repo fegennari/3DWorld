@@ -21,9 +21,7 @@ use_dense_voxels 1
 
 gravity 1.0
 mesh_scale 1.0
-camera_height 0.1
-camera_radius 0.02
-camera_step_height 1.2
+camera_height 0.0
 tree_size 1.0
 sun_rot 0.4
 cobj_z_bias 0.001
@@ -54,11 +52,11 @@ disable_shaders 1
 
 mesh_height 0.05
 mesh_size  128 128 4
-scene_size 4.0 4.0 5.2
+scene_size 4.0 4.0 4.0
 set_czmax 4.0
 
 window_width 1920
-window_height 1200
+window_height 1080
 color_bit_depth 32
 refresh_rate 75
 #shadow_map_sz 4096
@@ -68,8 +66,8 @@ mesh_file mesh.txt 1.0 1.0 0
 coll_obj_file coll_objs_samples.txt
 
 num_threads 8
-num_light_rays 100000 10000 0 0
-#lighting_file_sky    model_data/lighting.soda.data 1 1.0
+num_light_rays 1000 1000 0 0
+#lighting_file_sky    lighting.sample.data 1 1.0
 
 end
 
