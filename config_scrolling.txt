@@ -53,7 +53,7 @@ scene_size 4.0 4.0 4.0
 # scene_size 6.0 6.0 6.0
 
 window_width 1920
-window_height 1200
+window_height 1080
 color_bit_depth 32
 refresh_rate 75
 #shadow_map_sz 2048
