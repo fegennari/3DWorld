@@ -21,7 +21,7 @@ bool has_user_placed(0), has_item_placed(0), has_wpt_goal(0);
 waypoint_vector waypoints;
 
 extern bool use_waypoints;
-extern int DISABLE_WATER, camera_change, frame_counter, num_smileys, num_groups;
+extern int DISABLE_WATER, camera_change, frame_counter, num_smileys, num_groups, display_mode;
 extern float temperature, zmin, tfticks, water_plane_z;
 extern int coll_id[];
 extern obj_group obj_groups[];
@@ -287,6 +287,7 @@ public:
 	}
 
 	void add_mesh_waypoints() {
+		if (!(display_mode & 0x01)) return; // mesh disabled
 		unsigned const mesh_skip_dist(16);
 		unsigned const num_waypoints(waypoints.size());
 

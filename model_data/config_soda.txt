@@ -18,12 +18,13 @@ ground_effects_level 0
 toggle_mesh_enabled # disable mesh draw by default
 destroy_thresh 1
 use_dense_voxels 0
+use_waypoints 0
 
 gravity 1.0
 mesh_scale 1.0
 camera_height 0.1
-camera_radius 0.02
-camera_step_height 1.2
+camera_radius 0.03
+camera_step_height 1.0
 tree_size 1.0
 sun_rot 0.4
 cobj_z_bias 0.001
