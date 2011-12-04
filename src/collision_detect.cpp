@@ -1513,13 +1513,18 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		pos.z = min((camera_last_pos.z + float(C_STEP_HEIGHT*radius)), pos.z); // don't fall and don't rise too quickly
 		if (pos.z + radius > zbottom) pos.z = max(pos.z, (mesh_z + radius)); // if not under the mesh
 	}
-	if (camera_zh > 0.0) { // prevent head collisions with the ceiling
-		vector3d const dpos(pos, camera_last_pos);
-		camera_obj.pos    = pos;
-		camera_obj.pos.z += camera_zh;
-		camera_obj.check_vert_collision(0, 0, 0, NULL, dpos, 1);
-		camera_obj.pos.z -= camera_zh;
-		pos               = camera_obj.pos;
+	if (camera_zh > 0.0) { // prevent head collisions with the ceiling and objects in between the head and feet
+		unsigned const nsteps((unsigned)ceil(camera_zh/radius));
+		float const step_sz(camera_zh/nsteps);
+
+		for (unsigned i = 1; i <= nsteps; ++i) {
+			vector3d const dpos(pos, camera_last_pos);
+			camera_obj.pos    = pos;
+			camera_obj.pos.z += i*step_sz;
+			camera_obj.check_vert_collision(0, 0, 0, NULL, dpos, 1);
+			camera_obj.pos.z -= i*step_sz;
+			pos               = camera_obj.pos;
+		}
 	}
 	if (!cflight) {
 		if (point_outside_mesh((get_xpos(pos.x) - xoff), (get_ypos(pos.y) - yoff))) {
