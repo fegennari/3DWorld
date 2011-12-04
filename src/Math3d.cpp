@@ -797,28 +797,27 @@ bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri
 }
 
 
-template<unsigned N> bool sphere_circle_cube_intersect(point const &pos, float radius, cube_t const &cube) { // slow but exact
-
-	float dmin(0.0);
-	float const r2(radius*radius);
-
-	for (unsigned i = 0; i < N && dmin <= r2; ++i) {
-		if      (pos[i] < cube.d[i][0]) dmin += (pos[i] - cube.d[i][0])*(pos[i] - cube.d[i][0]);
-		else if (pos[i] > cube.d[i][1]) dmin += (pos[i] - cube.d[i][1])*(pos[i] - cube.d[i][1]);
-	}
-	return (dmin <= r2);
-}
+#define DMIN_CHECK(i) {if      (pos[i] < cube.d[i][0]) {float const dist(pos[i] - cube.d[i][0]); dmin += dist*dist;} \
+					   else if (pos[i] > cube.d[i][1]) {float const dist(pos[i] - cube.d[i][1]); dmin += dist*dist;} \
+					   if (dmin > r2) return 0;}
 
 
 bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube) {
 
-	return sphere_circle_cube_intersect<2>(pos, radius, cube);
+	float dmin(0.0);
+	float const r2(radius*radius);
+	DMIN_CHECK(0);
+	DMIN_CHECK(1);
+	return 1;
 }
 
 
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube) {
 
-	return sphere_circle_cube_intersect<3>(pos, radius, cube);
+	float dmin(0.0);
+	float const r2(radius*radius);
+	UNROLL_3X(DMIN_CHECK(i_));
+	return 1;
 }
 
 
