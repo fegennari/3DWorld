@@ -1055,7 +1055,7 @@ void vert_coll_detector::check_cobj(int index) {
 		}
 	}
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
-	if (z1 > zmaxc || z2 < zminc)                    return;
+	if (z1 > zmaxc || z2 < zminc) return;
 	if (pos.x < (cobj.d[0][0]-o_radius) || pos.x > (cobj.d[0][1]+o_radius)) return;
 	if (pos.y < (cobj.d[1][0]-o_radius) || pos.y > (cobj.d[1][1]+o_radius)) return;
 	vector3d norm(zero_vector), pvel(zero_vector);
@@ -1594,16 +1594,15 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (index < 0) continue;
 		assert(unsigned(index) < coll_objects.size());
 		coll_obj const &cobj(coll_objects[index]);
+		if (!cobj.contains_pt_xy(pos)) continue; // test bounding cube
 		if (cobj.no_collision()) continue;
 		if (skip_dynamic && cobj.status == COLL_DYNAMIC) continue;
 		
 		switch (cobj.type) {
 		case COLL_CUBE:
-			if (cobj.contains_pt_xy(pos)) {
-				zt   = cobj.d[2][1];
-				zb   = cobj.d[2][0];
-				coll = 1;
-			}
+			zt   = cobj.d[2][1];
+			zb   = cobj.d[2][0];
+			coll = 1;
 			break;
 
 		case COLL_CYLINDER:
@@ -1651,7 +1650,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 			{
 				coll = 0;
 				float const thick(0.5*cobj.thickness);
-				bool const poly_z(fabs(cobj.norm.z) > 0.5); // hack to fix bouncy polygons and such - should fix better eventually
+				bool const poly_z(fabs(cobj.norm.z) > 0.5); // hack to fix bouncy polygons and such - should use a better fix eventually
 
 				if (cobj.thickness > MIN_POLY_THICK && !poly_z) {
 					float val;
@@ -1700,7 +1699,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				zceil  = zt;
 				zfloor = zb;
 			}
-			if (z2 > zb && z1 < zt) { // top of object above bottom of surface and bottom of object below top of surface
+			if (z2 > zb && z1 < zt) { // overlap: top of object above bottom of surface and bottom of object below top of surface
 				if ((zt - z1) <= step) { // step up onto surface
 					pos.z = max(pos.z, zt + radius);
 					zmu   = max(zmu, zt);
