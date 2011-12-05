@@ -586,7 +586,7 @@ bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 	cobjs.resize(0);
 
 	if (USE_COBJ_TREE) {
-		get_coll_line_cobjs_tree(pos1, pos2, cobj, cobjs);
+		get_coll_line_cobjs_tree(pos1, pos2, cobj, cobjs, 0, 1);
 		return (!cobjs.empty());
 	}
 	if (!do_line_clip_scene(pos1, pos2, czmin, czmax)) return 0;

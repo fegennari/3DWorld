@@ -1528,7 +1528,7 @@ bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, v
 bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0, bool skip_non_drawn=0);
 bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts,
 	int ignore_cobj, int &cobj);
-void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs);
+void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs, bool dynamic, bool occlude);
 bool get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, vector<int> &cobjs, bool dynamic);
 bool have_occluders();
 void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler,
