@@ -625,7 +625,7 @@ void coll_cell::optimize(int x, int y) {
 		cvz[z]   = cur_tot; // end ix
 		cnt[z]   = start_ix;
 	}
-	if (4*cur_tot > CVZ_NDIV*ncv) {clear_cvz(); return;} // too dense to subdivide - z-range of cobjs is large
+	if (3*cur_tot > CVZ_NDIV*ncv) {clear_cvz(); return;} // too dense to subdivide - z-range of cobjs is large
 	indices.clear();
 	indices.resize(cur_tot);
 
@@ -1222,7 +1222,7 @@ void vert_coll_detector::check_cobj(int index) {
 					else {
 						val = 1.01*(thick - rdist); // non-thick polygon
 					}
-					if (C_STEP_HEIGHT > DEF_STEP_HEIGHT && player_step) { // hack to allow stepping on polygons when the step height has been increased
+					if (fabs(norm.z) < 0.5 && player_step) { // more horizontal than vertical edge
 						norm = zero_vector;
 						break; // can step up onto the object
 					}
@@ -1594,7 +1594,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (get_snow_height(pos, radius, zval, norm, 1)) pos.z = zval + radius;
 	}
 	float zmu(mh), z1(pos.z - radius), z2(pos.z + radius);
-	if (is_camera) z2 += camera_zh; // add camera height
+	if (is_camera /*|| type == WAYPOINT*/) z2 += camera_zh; // add camera height
 	coll_cell const &cell(v_collision_matrix[ypos][xpos]);
 	int coll(0), any_coll(0), moved(0);
 	float zceil, zfloor, zt, zb;
@@ -1679,7 +1679,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 						coll = (zb < zt);
 					}
 				}
-				else if (cobj.norm.z != 0.0 && point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints, 0, 1)) {
+				else if (point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints, 0, 1)) {
 					float const rdist(dot_product_ptv(cobj.norm, pos, cobj.points[0]));
 					// works best if the polygon has a face oriented in +z or close
 					// note that we don't care if the polygon is intersected in z
