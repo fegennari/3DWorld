@@ -18,7 +18,7 @@ ground_effects_level 0
 toggle_mesh_enabled # disable mesh draw by default
 destroy_thresh 1
 use_dense_voxels 0
-use_waypoints 0
+use_waypoints 1
 
 gravity 1.0
 mesh_scale 1.0

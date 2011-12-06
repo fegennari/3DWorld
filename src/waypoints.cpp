@@ -186,7 +186,7 @@ class waypoint_builder {
 		player_clip_to_scene(pos); // make sure players can reach this waypoint
 		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 		if (pos.z - radius < mesh_zval) return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
-		return check_cobj_placement(point(pos), coll_id, 1);
+		return check_cobj_placement(point(pos), coll_id, 1, 0);
 	}
 
 	int add_if_valid(point const &pos, int coll_id, bool connect) {
@@ -495,12 +495,12 @@ public:
 	}
 
 
-	bool check_cobj_placement(point &pos, int coll_id, bool check_uw) const {
+	bool check_cobj_placement(point &pos, int coll_id, bool check_uw, bool thread_safe) const {
 		if (check_uw && is_underwater(pos)) return 0;
 		dwobject obj(def_objects[WAYPOINT]); // create a fake temporary smiley object
 		obj.pos     = pos;
 		obj.coll_id = coll_id; // ignore collisions with the current object
-		bool const ret(!obj.check_vert_collision(0, 0, 0, NULL, all_zeros, 1)); // return true if no collision (skip dynamic objects)
+		bool const ret(!obj.check_vert_collision(0, 0, 0, NULL, all_zeros, 1, 0, -1, thread_safe)); // return true if no collision (skip dynamic objects)
 		pos = obj.pos;
 		return ret;
 	}
@@ -521,7 +521,7 @@ public:
 			point lpos(cur);
 			cur += delta*step_size;
 			if (!check_step_dz(cur, lpos, radius)) return 0;
-			check_cobj_placement(cur, -1, check_uw);
+			check_cobj_placement(cur, -1, check_uw, 1);
 			if (dot_product_ptv(delta, cur, lpos) < 0.01*radius) return 0; // not making progress (too strict? local drops in z?)
 			float const d(fabs((end.x - start.x)*(start.y - cur.y) - (end.y - start.y)*(start.x - cur.x))*dmag_inv); // point-line dist
 			if (d > 2.0*radius) return 0; // path deviation too long
@@ -798,7 +798,7 @@ bool can_make_progress(point const &pos, point const &opos, bool check_uw) {
 
 	waypoint_builder wb;
 	point test_pos(pos);
-	wb.check_cobj_placement(test_pos, -1, check_uw);
+	wb.check_cobj_placement(test_pos, -1, check_uw, 0);
 	return (p2p_dist_xy_sq(test_pos, pos) < p2p_dist_xy_sq(test_pos, opos)); // ignore z
 }
 

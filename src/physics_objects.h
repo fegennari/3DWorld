@@ -155,7 +155,7 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 	int object_still_stopped(int obj_index);
 	void do_coll_damage();
 	int check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm=NULL,
-		vector3d const &mdir=all_zeros, bool skip_dynamic=0, bool only_drawn=0, int only_cobj=-1);
+		vector3d const &mdir=all_zeros, bool skip_dynamic=0, bool only_drawn=0, int only_cobj=-1, bool thread_safe=0);
 	int multistep_coll(point const &last_pos, int obj_index, unsigned nsteps);
 	void update_vel_from_damage(vector3d const &dv);
 	void damage_object(float damage, point const &dpos, point const &shoot_pos, int weapon);
