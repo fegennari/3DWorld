@@ -17,9 +17,9 @@ const float SMOKE_SCALE = 0.25;
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_light_comp(n, i).rgb
 
-vec3 add_light(in int ix, in vec3 off, in vec3 scale, in vec3 n, in vec3 source, in vec3 dest) {
+vec3 add_light0(in vec3 off, in vec3 scale, in vec3 n, in vec3 source, in vec3 dest) {
 
-	float nscale = (use_shadow_map ? get_shadow_map_weight(epos, ix) : 1.0);
+	float nscale = (use_shadow_map ? get_shadow_map_weight(epos, 0) : 1.0);
 
 	if (smoke_enabled && dynamic_smoke_shadows && source != dest && nscale > 0.0) {
 		vec3 dir      = dest - source;
@@ -38,7 +38,20 @@ vec3 add_light(in int ix, in vec3 off, in vec3 scale, in vec3 n, in vec3 source,
 			step_weight = 1.0;
 		}
 	}
-	return add_light_comp_pos(nscale*n, epos, ix).rgb;
+	//return add_light_comp_pos(nscale*n, epos, 0).rgb;
+	// special cased add_light_comp_pos - FIXME: find a better way to make the index constant for optimization
+	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz);
+#ifdef USE_BUMP_MAP
+	vec3 normal  = nscale*apply_bump_map(light_dir);
+	vec3 eye_pos = ts_pos; // convert to tangent space
+#else
+	vec3 normal  = nscale*n;
+	vec3 eye_pos = epos.xyz;
+#endif
+	vec3 diffuse  = gl_FrontLightProduct[0].diffuse.rgb;
+	vec3 ambient  = gl_FrontLightProduct[0].ambient.rgb;
+	vec3 specular = get_light_specular(normal, light_dir, eye_pos, 0).rgb;
+	return (ambient + max(dot(normal, light_dir), 0.0)*diffuse + specular);
 }
 
 void add_il_term(in vec3 sp, in vec3 normal, inout vec3 indir_light, inout float sum, in vec3 offset) { // unused
@@ -82,7 +95,7 @@ void main()
 	}
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(eye_norm);
-		if (enable_light0) lit_color += add_light(0, off, scale, n, lpos0, vposl);
+		if (enable_light0) lit_color += add_light0(off, scale, n, lpos0, vposl);
 		if (enable_light1) lit_color += add_light_comp_pos_smap(n, epos, 1).rgb;
 		if (enable_light2) ADD_LIGHT(2);
 		if (enable_light3) ADD_LIGHT(3);
