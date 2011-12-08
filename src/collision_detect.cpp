@@ -1496,8 +1496,14 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	if (world_mode == WMODE_GROUND) {
 		unsigned const nsteps(CAMERA_STEPS); // *** make the number of steps determined by fticks? ***
 		coll  = camera_obj.multistep_coll(camera_last_pos, 0, nsteps);
-		pos.x = camera_obj.pos.x;
-		pos.y = camera_obj.pos.y;
+
+		if (dot_product((pos - camera_last_pos), (camera_obj.pos - camera_last_pos)) < 0.0) { // negative progress, revert
+			pos = camera_last_pos;
+		}
+		else { // forward progress
+			pos.x = camera_obj.pos.x;
+			pos.y = camera_obj.pos.y;
+		}
 		if (!cflight) player_clip_to_scene(pos);
 	}
 	else if (!cflight) {
