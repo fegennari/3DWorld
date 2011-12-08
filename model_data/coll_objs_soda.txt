@@ -1,7 +1,6 @@
 l 0.8 1.0 1.0 1.0 1.0 -1 1 # elasticity R G B A texture_id draw
 y 4.0
-t 5 -5 -1
-M 0
+t -5 -5 -1
 m 0.003
 O ../models/soda/soda.model3d 3 0 0 1
 
