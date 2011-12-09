@@ -1194,9 +1194,7 @@ void vert_coll_detector::check_cobj(int index) {
 		{
 			float thick, rdist, val;
 			norm = cobj.norm;
-			//float const dp(dot_product_ptv(norm, (pold - mdir), pos);
-			float const dp(-dot_product_ptv(norm, (pold - mdir), cobj.points[0]));
-			if (dp > 0.0) norm.negate();
+			if (dot_product_ptv(norm, (pold - mdir), cobj.points[0]) < 0.0) norm.negate(); // pos or cobj.points[0]?
 
 			if (sphere_ext_poly_int_base(cobj.points[0], norm, pos, o_radius, cobj.thickness, thick, rdist)) {
 				//if (rdist < 0) {rdist = -rdist; norm.negate();}
@@ -1230,7 +1228,7 @@ void vert_coll_detector::check_cobj(int index) {
 					obj.pos += norm*val; // calculate intersection point
 					lcoll    = (norm.z > 0.99) ? 2 : 1; // top collision if normal is nearly vertical
 				} // end sphere poly int
-			} // rnf sphere int check
+			} // end sphere int check
 		} // end COLL_POLY scope
 		break;
 	} // switch
@@ -1456,13 +1454,16 @@ int dwobject::multistep_coll(point const &last_pos, int obj_index, unsigned nste
 	}
 	else {
 		float const step(dist/(float)nsteps);
-		vector3d const dpos(pos, last_pos);
+		vector3d const dpos(cmove);
 		cmove /= dist;
 		pos    = last_pos; // Note: can get stuck in this position if forced off the mesh by a collision
 
 		for (unsigned i = 0; i < nsteps && !disabled(); ++i) {
+			point const lpos(pos);
 			pos      += cmove*step;
+			point const pos2(pos);
 			any_coll |= check_vert_collision(obj_index, (i==nsteps-1), 0, NULL, dpos); // collision detection
+			if (type == CAMERA && dot_product(dpos, (pos - lpos)) < 0.0) pos = lpos; // negative progress, revert
 		}
 	}
 	return any_coll;
@@ -1496,14 +1497,8 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	if (world_mode == WMODE_GROUND) {
 		unsigned const nsteps(CAMERA_STEPS); // *** make the number of steps determined by fticks? ***
 		coll  = camera_obj.multistep_coll(camera_last_pos, 0, nsteps);
-
-		if (dot_product((pos - camera_last_pos), (camera_obj.pos - camera_last_pos)) < 0.0) { // negative progress, revert
-			pos = camera_last_pos;
-		}
-		else { // forward progress
-			pos.x = camera_obj.pos.x;
-			pos.y = camera_obj.pos.y;
-		}
+		pos.x = camera_obj.pos.x;
+		pos.y = camera_obj.pos.y;
 		if (!cflight) player_clip_to_scene(pos);
 	}
 	else if (!cflight) {
