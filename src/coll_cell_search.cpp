@@ -224,6 +224,7 @@ public:
 
 	int proc_cobj(coll_cell const &cell, int const index) {
 		coll_obj &cobj(coll_objects[index]);
+		if (cobj.status == COLL_STATIC && (z1 > cell.zmax || z2 < cell.zmin)) return 0;
 		cobj.counter = cobj_counter;
 		if (skip_dynamic && cobj.status == COLL_DYNAMIC)         return 2;
 		if (skip_dynamic >= 2 && !cobj.might_be_drawn())         return 2;
@@ -231,7 +232,6 @@ public:
 		if (test_alpha == 2 && cobj.cp.color.alpha <= max_alpha) return 2; // lower alpha than an earlier object
 		if (test_alpha == 3 && cobj.cp.color.alpha < MIN_SHADOW_ALPHA) return 2; // less than min alpha
 		if (test_alpha && cobj.is_invis_player())                return 2; // invisible player
-		if (cobj.status == COLL_STATIC && (z1 > cell.zmax || z2 < cell.zmin)) return 0;
 		if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0])              return 2; // clip this shape
 		
 		if (cobj.line_intersect(pos1, pos2)) {
