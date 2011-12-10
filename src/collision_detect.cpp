@@ -1084,6 +1084,10 @@ void vert_coll_detector::check_cobj(int index) {
 void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool player_step) {
 
 	coll_obj const &cobj(coll_objects[index]);
+	
+	if (cobj.type == COLL_CUBE || cobj.type == COLL_CYLINDER) {
+		if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj)) return;
+	}
 	vector3d norm(zero_vector), pvel(zero_vector);
 	bool coll_top(0), coll_bot(0);
 	
@@ -1092,10 +1096,6 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		pvel = platforms[cobj.platform_id].get_velocity();
 	}
 	vector3d const mdir(motion_dir - pvel*fticks); // not sure if this helps
-
-	if (cobj.type == COLL_CUBE || cobj.type == COLL_CYLINDER) {
-		if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj)) return;
-	}
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
 
 	switch (cobj.type) { // within bounding box of collision object
@@ -1224,7 +1224,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			if (sphere_ext_poly_int_base(cobj.points[0], norm, pos, o_radius, cobj.thickness, thick, rdist)) {
 				//if (rdist < 0) {rdist = -rdist; norm.negate();}
 
-				if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, max(0.0f, (thick - MIN_POLY_THICK)))) {
+				if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, (o_radius + max(0.0f, (thick - MIN_POLY_THICK))))) {
 					if (cobj.thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
 						vector<tquad_t> const pts(thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness));
 						if (!sphere_intersect_poly_sides(pts, pos, o_radius, val, norm, 1)) break; // no collision
