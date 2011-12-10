@@ -1065,18 +1065,19 @@ void vert_coll_detector::check_cobj(int index) {
 
 	if (type == CAMERA && camera_zh > 0.0) {
 		unsigned const nsteps((unsigned)ceil(camera_zh/o_radius));
-		float const step_sz(camera_zh/nsteps);
+		float const step_sz(camera_zh/nsteps), pz(pos.z), opz(obj.pos.z), poz(pold.z);
 
 		for (unsigned i = 1; i <= nsteps; ++i) {
 			float const step(i*step_sz);
-			pos.z  += step;
-			pold.z += step;
-			z_old  += step;
-			if (pos.z-o_radius <= cobj.d[2][1] && pos.z+o_radius >= cobj.d[2][0]) check_cobj_intersect(index, 0, 0);
-			pos.z  -= step;
-			pold.z -= step;
-			z_old  -= step;
+			pos.z     = pz  + step;
+			obj.pos.z = opz + step;
+			pold.z    = poz + step;
+			if (pos.z-o_radius > cobj.d[2][1] || pos.z+o_radius < cobj.d[2][0]) continue;
+			check_cobj_intersect(index, 0, 0);
 		}
+		pos.z     = pz;
+		obj.pos.z = opz;
+		pold.z    = poz;
 	}
 }
 
@@ -1224,7 +1225,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			if (sphere_ext_poly_int_base(cobj.points[0], norm, pos, o_radius, cobj.thickness, thick, rdist)) {
 				//if (rdist < 0) {rdist = -rdist; norm.negate();}
 
-				if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, (o_radius + max(0.0f, (thick - MIN_POLY_THICK))))) {
+				if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, max(0.0f, (thick - MIN_POLY_THICK)))) {
 					if (cobj.thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
 						vector<tquad_t> const pts(thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness));
 						if (!sphere_intersect_poly_sides(pts, pos, o_radius, val, norm, 1)) break; // no collision

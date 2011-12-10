@@ -352,7 +352,7 @@ bool sphere_ext_poly_intersect(point const * const points, unsigned npoints, vec
 {
 	float thick, rdist;
 	if (!sphere_ext_poly_int_base(points[0], norm, pos, radius, thickness, thick, rdist)) return 0;
-	if (thickness <= MIN_POLY_THICK) return (sphere_poly_intersect(points, npoints, pos, norm, rdist, (radius + max(0.0f, (thick - t_adj)))));
+	if (thickness <= MIN_POLY_THICK) return (sphere_poly_intersect(points, npoints, pos, norm, rdist, max(0.0f, (thick - t_adj))));
 	vector<tquad_t> const pts(thick_poly_to_sides(points, npoints, norm, thickness)); // slow
 
 	for (unsigned i = 0; i < pts.size(); ++i) { // adapted from sphere_intersect_poly_sides()
