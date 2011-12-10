@@ -1013,6 +1013,7 @@ class vert_coll_detector {
 
 	bool safe_norm_div(float rad, float radius, vector3d &norm);
 	void check_cobj(int index);
+	void check_cobj_intersect(int index, bool enable_cfs, bool player_step);
 	void init_reset_pos();
 public:
 	vert_coll_detector(dwobject &obj_, int obj_index_, int do_coll_funcs_, int iter_, vector3d *cnorm_,
@@ -1056,12 +1057,34 @@ void vert_coll_detector::check_cobj(int index) {
 			break;
 		}
 	}
-	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
-	if (z1 > zmaxc || z2 < zminc) return;
+	if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0]) return;
 	if (pos.x < (cobj.d[0][0]-o_radius) || pos.x > (cobj.d[0][1]+o_radius)) return;
 	if (pos.y < (cobj.d[1][0]-o_radius) || pos.y > (cobj.d[1][1]+o_radius)) return;
-	vector3d norm(zero_vector), pvel(zero_vector);
 	bool const player_step(player && ((type == CAMERA && camera_change) || (cobj.d[2][1] - z1) <= o_radius*C_STEP_HEIGHT));
+	check_cobj_intersect(index, 1, player_step);
+
+	if (type == CAMERA && camera_zh > 0.0) {
+		unsigned const nsteps((unsigned)ceil(camera_zh/o_radius));
+		float const step_sz(camera_zh/nsteps);
+
+		for (unsigned i = 1; i <= nsteps; ++i) {
+			float const step(i*step_sz);
+			pos.z  += step;
+			pold.z += step;
+			z_old  += step;
+			if (pos.z-o_radius <= cobj.d[2][1] && pos.z+o_radius >= cobj.d[2][0]) check_cobj_intersect(index, 0, 0);
+			pos.z  -= step;
+			pold.z -= step;
+			z_old  -= step;
+		}
+	}
+}
+
+
+void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool player_step) {
+
+	coll_obj const &cobj(coll_objects[index]);
+	vector3d norm(zero_vector), pvel(zero_vector);
 	bool coll_top(0), coll_bot(0);
 	
 	if (cobj.platform_id >= 0) { // calculate platform velocity
@@ -1073,6 +1096,8 @@ void vert_coll_detector::check_cobj(int index) {
 	if (cobj.type == COLL_CUBE || cobj.type == COLL_CYLINDER) {
 		if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj)) return;
 	}
+	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
+
 	switch (cobj.type) { // within bounding box of collision object
 	case COLL_CUBE:
 		{
@@ -1245,7 +1270,7 @@ void vert_coll_detector::check_cobj(int index) {
 		platform const &pf(platforms[cobj.platform_id]);
 		is_moving = (lcoll == 2 || friction >= STICK_THRESHOLD);
 
-		if (animate2 && do_coll_funcs && iter == 0) {
+		if (animate2 && do_coll_funcs && enable_cfs && iter == 0) {
 			if (is_moving) { // move with the platform (clip v if large -z?)
 				obj.pos += pf.get_last_delta();
 			}
@@ -1314,7 +1339,7 @@ void vert_coll_detector::check_cobj(int index) {
 			obj.angle       = 90.0;
 		}
 	}
-	if (do_coll_funcs && cobj.cp.coll_func != NULL) { // call collision function
+	if (do_coll_funcs && enable_cfs && cobj.cp.coll_func != NULL) { // call collision function
 		invalid_collision = 0; // should already be 0
 		float energy_mult(1.0);
 		if (type == PLASMA) energy_mult *= obj.init_dir.x*obj.init_dir.x; // size squared
@@ -1357,10 +1382,11 @@ void vert_coll_detector::check_cobj(int index) {
 
 void vert_coll_detector::init_reset_pos() {
 
-	temp  = obj; // backup copy
-	pos   = obj.pos; // reset local state
-	z1    = pos.z - o_radius;
-	z2    = pos.z + o_radius;
+	temp = obj; // backup copy
+	pos  = obj.pos; // reset local state
+	z1   = pos.z - o_radius;
+	z2   = pos.z + o_radius;
+	if (type == CAMERA) z2 += camera_zh;
 }
 
 
@@ -1512,19 +1538,6 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		float const mesh_z(int_mesh_zval_pt_off(pos, 1, 0));
 		pos.z = min((camera_last_pos.z + float(C_STEP_HEIGHT*radius)), pos.z); // don't fall and don't rise too quickly
 		if (pos.z + radius > zbottom) pos.z = max(pos.z, (mesh_z + radius)); // if not under the mesh
-	}
-	if (camera_zh > 0.0) { // prevent head collisions with the ceiling and objects in between the head and feet
-		unsigned const nsteps((unsigned)ceil(camera_zh/radius));
-		float const step_sz(camera_zh/nsteps);
-
-		for (unsigned i = 1; i <= nsteps; ++i) {
-			vector3d const dpos(pos, camera_last_pos);
-			camera_obj.pos    = pos;
-			camera_obj.pos.z += i*step_sz;
-			camera_obj.check_vert_collision(0, 0, 0, NULL, dpos, 1);
-			camera_obj.pos.z -= i*step_sz;
-			pos               = camera_obj.pos;
-		}
 	}
 	if (!cflight) {
 		if (point_outside_mesh((get_xpos(pos.x) - xoff), (get_ypos(pos.y) - yoff))) {
