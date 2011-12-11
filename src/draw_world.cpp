@@ -1846,7 +1846,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
 	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
-	int last_tid(-1), last_group_id(-1);
+	int last_tid(-1), last_group_id(-1), last_type(-1);
 	
 	if (draw_solid) {
 		draw_last.resize(0);
@@ -1868,6 +1868,10 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					draw_last.push_back(make_pair(-dist, i)); // negative distance
 				}
 				else {
+					if (c.type != last_type && c.type == COLL_SPHERE) {
+						glFlush(); // HACK: need a flush before texture matrix updates for spheres - FIXME: better way to do this?
+					}
+					last_type = c.type;
 					c.draw_cobj(i, last_tid, last_group_id, &s); // i may not be valid after this call
 				}
 			}
