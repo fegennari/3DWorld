@@ -1488,9 +1488,14 @@ int dwobject::multistep_coll(point const &last_pos, int obj_index, unsigned nste
 		for (unsigned i = 0; i < nsteps && !disabled(); ++i) {
 			point const lpos(pos);
 			pos      += cmove*step;
-			point const pos2(pos);
 			any_coll |= check_vert_collision(obj_index, (i==nsteps-1), 0, NULL, dpos); // collision detection
-			if (type == CAMERA && dot_product(dpos, (pos - lpos)) < 0.0) pos = lpos; // negative progress, revert
+
+			if (type == CAMERA) {
+				for (unsigned d = 0; d < 2; ++d) { // x,y
+					if (dpos[d]*(pos[d] - lpos[d]) < 0.0) pos[d] = lpos[d]; // negative progress in this dimension, revert
+				}
+				//if (dot_product(dpos, (pos - lpos)) < 0.0) pos = lpos; // negative progress, revert
+			}
 		}
 	}
 	return any_coll;
