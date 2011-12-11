@@ -14,7 +14,7 @@ unsigned const QLP_CACHE_SIZE = 10000;
 
 int cobj_counter(0);
 
-extern int coll_border, display_mode;
+extern int coll_border, display_mode, begin_motion;
 extern float zmin, zbottom, water_plane_z;
 extern vector<coll_obj> coll_objects;
 
@@ -524,7 +524,7 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dyn
 
 	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
 	if (USE_COBJ_TREE && skip_dynamic && test_alpha != 2) {
-		return check_coll_line_tree(pos1, pos2, cindex, cobj, 0, 0, (skip_dynamic >= 2));
+		return check_coll_line_tree(pos1, pos2, cindex, cobj, 0, test_alpha, (skip_dynamic >= 2));
 	}
 	cindex = -1;
 	if (!do_line_clip_scene(pos1, pos2, czmin, czmax)) return 0;
@@ -539,7 +539,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 {
 	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
 	if (USE_COBJ_TREE && splash_val == 0.0 && skip_dynamic) {
-		return check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj);
+		return check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha);
 	}
 	cindex = -1;
 	float z_lb(czmin), z_ub(czmax);
@@ -553,6 +553,21 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 	coll_cell_line_iterator<line_intersector_exact> ccli(lint, 0, skip_dynamic, -1, fast);
 	ccli.do_iter();
 	lint.finish();
+	return (cindex >= 0);
+}
+
+
+bool check_coll_line_exact_tree_sd(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex,
+	int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic)
+{
+	if (check_coll_line_exact(pos1, pos2, cpos, cnorm, cindex, 0.0, ignore_cobj, fast, test_alpha, 1)) pos2 = cpos;
+	
+	if (!skip_dynamic && begin_motion) { // find dynamic cobj intersection
+		update_cobj_tree(1, 0);
+		int cindex2;
+			
+		if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex2, ignore_cobj, 1, test_alpha)) cindex = cindex2;
+	}
 	return (cindex >= 0);
 }
 

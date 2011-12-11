@@ -290,22 +290,17 @@ public:
 				blend_color(rcolor, color, rcolor, 0.5, 1); // add in a watery color
 			}
 		}
-		int cindex;
+		int cindex, cindex2;
 		point cpos; // unused
 		vector3d cnorm; // unused
-		
-		if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, 1)) { // skip_dynamic if !begin_motion?, !skip_mesh?
+
+		if (check_coll_line_exact_tree_sd(vs0, ve0, cpos, cnorm, cindex, -1, 1, 0, 0)) {
 			get_object_color(cindex, rcolor);
-			ve0 = cpos;
 		}
 		else if (!mesh_int) { // no mesh intersect and no cobj intersect
 			vector3d const vdir((ve0 - vs0).get_norm());
 			float const cloud_density(get_cloud_density(vs0, vdir)); // cloud_color vs. bkg_color
 			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs0, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
-		}
-		if (begin_motion) { // find dynamic cobj intersection
-			update_cobj_tree(1, 0);
-			if (check_coll_line_exact_tree(vs0, ve0, cpos, cnorm, cindex, -1, 1)) get_object_color(cindex, rcolor);
 		}
 		if (rcolor.alpha > 0.0) {
 			float const r(get_fresnel_reflection(view_dir*-1, n, 1.0, WATER_INDEX_REFRACT));

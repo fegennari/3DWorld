@@ -712,7 +712,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		vector3d const local_wind(get_local_wind(pos));
 		
 		if (iter == 0) {
-			for (unsigned i = (collided ? 2 : 0); i < 3; ++i) vtot[i] += local_wind[i];
+			if (collided) vtot.z += local_wind.z; else vtot += local_wind;
 		}
 		if (!(flags & Z_STOPPED)) {
 			double gscale((type == PLASMA && init_dir.x != 0.0) ? 1.0/sqrt(init_dir.x) : 1.0);
