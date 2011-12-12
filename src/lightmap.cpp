@@ -854,7 +854,7 @@ void build_lightmap(bool verbose) {
 
 						if (SLT_LINE_TEST_WT > 0.0) { // slow
 							if ((last_cobj >= 0 && coll_objects[last_cobj].line_intersect(lpos, p)) ||
-								check_coll_line(p, lpos, last_cobj, cobj, 1, 2)) flow[0] = 0.0;
+								check_coll_line(p, lpos, last_cobj, cobj, 1, 3)) flow[0] = 0.0;
 						}
 						if (SLT_FLOW_TEST_WT > 0.0) flow[1] = get_flow_val(cent, cur_loc, 0); // determine flow value to this lmcell
 						cscale *= SLT_LINE_TEST_WT*flow[0] + SLT_FLOW_TEST_WT*flow[1];

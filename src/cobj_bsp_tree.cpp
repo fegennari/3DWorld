@@ -315,13 +315,12 @@ template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
 }
 
 
-// test_alpha: 0 = allow any alpha value, 1 = require alpha = 1.0, 2 = get intersected cobj with max alpha, 3 = test for invisible smileys
+// test_alpha: 0 = allow any alpha value, 1 = require alpha = 1.0, 2 = get intersected cobj with max alpha, 3 = require alpha >= MIN_SHADOW_ALPHA
 template<unsigned NUM> bool cobj_tree_t<NUM>::check_coll_line(point const &p1, point const &p2, point &cpos,
 	vector3d &cnorm, int &cindex, int ignore_cobj, bool exact, int test_alpha, bool skip_non_drawn) const
 {
 	cindex = -1;
 	if (nodes.empty()) return 0;
-	assert(test_alpha != 2); // don't support this mode
 	bool ret(0);
 	float t(0.0), tmin(0.0), tmax(1.0), max_alpha(0.0);
 	node_ix_mgr nixm(nodes, p1, p2);
