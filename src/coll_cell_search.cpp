@@ -8,7 +8,6 @@
 
 
 bool const CACHE_COBJ_LITES   = 0;
-bool const USE_COBJ_TREE      = 1;
 unsigned const QLP_CACHE_SIZE = 10000;
 
 
@@ -199,67 +198,26 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 }
 
 
-struct base_intersector {
-
-	point const &pos1, &pos2;
-	float z1, z2;
-
-	base_intersector(point const &pos1_, point const &pos2_)
-		: pos1(pos1_), pos2(pos2_), z1(min(pos1.z, pos2.z)), z2(max(pos1.z, pos2.z)) {}
-	bool test_cell_end(int xpos, int ypos) const {return 0;}
-	bool had_intersection() const {return 0;}
-};
-
-
-// test_alpha: 0 = allow any alpha value, 1 = require alpha = 1.0, 2 = get intersected cobj with max alpha, 3 = test for invisible smileys
-class line_intersector : public base_intersector {
-
-	int &cindex, skip_dynamic, test_alpha;
-	float max_alpha;
+class line_intersector_exact {
 
 public:
-	line_intersector(point const &pos1_, point const &pos2_, int &cindex_, int skip_dynamic_, int test_alpha_)
-		: base_intersector(pos1_, pos2_), cindex(cindex_), skip_dynamic(skip_dynamic_), test_alpha(test_alpha_), max_alpha(0.0) {}
-	bool test_cell(coll_cell const &cell, int xpos, int ypos) const {return (!skip_dynamic || (z1 <= cell.zmax && z2 >= cell.zmin));}
+	point const &pos1, &pos2;
 
-	int proc_cobj(coll_cell const &cell, int const index) {
-		coll_obj &cobj(coll_objects[index]);
-		if (cobj.status == COLL_STATIC && (z1 > cell.zmax || z2 < cell.zmin)) return 0;
-		cobj.counter = cobj_counter;
-		if (skip_dynamic && cobj.status == COLL_DYNAMIC)         return 2;
-		if (skip_dynamic >= 2 && !cobj.might_be_drawn())         return 2;
-		if (test_alpha == 1 && cobj.is_semi_trans())             return 2; // semi-transparent, can see through
-		if (test_alpha == 2 && cobj.cp.color.alpha <= max_alpha) return 2; // lower alpha than an earlier object
-		if (test_alpha == 3 && cobj.cp.color.alpha < MIN_SHADOW_ALPHA) return 2; // less than min alpha
-		if (test_alpha && cobj.is_invis_player())                return 2; // invisible player
-		if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0])              return 2; // clip this shape
-		
-		if (cobj.line_intersect(pos1, pos2)) {
-			cindex    = index;
-			if (test_alpha != 2) return 1;
-			max_alpha = cobj.cp.color.alpha; // we need all intersections to find the max alpha
-		}
-		return 2;
-	}
-};
-
-
-class line_intersector_exact : public base_intersector {
-
+private:
 	point &cpos;
 	vector3d &cnorm;
 	int &cindex;
 	bool test_alpha;
 	int ignore_cobj;
-	float splash_val, t, tmin;
+	float z1, z2, splash_val, t, tmin;
 	bool splash;
 	point splash_pos;
 
 public:
 	line_intersector_exact(point const &pos1_, point const &pos2_, point &cpos_, vector3d &cnorm_,
 		int &cindex_, float splash_val_, int ignore_cobj_, bool test_alpha_)
-		: base_intersector(pos1_, pos2_), cpos(cpos_), cnorm(cnorm_), cindex(cindex_), test_alpha(test_alpha_),
-		ignore_cobj(ignore_cobj_), splash_val(splash_val_), tmin(1.0), splash(0) {cindex = -1;}
+		: pos1(pos1_), pos2(pos2_), cpos(cpos_), cnorm(cnorm_), cindex(cindex_), test_alpha(test_alpha_), ignore_cobj(ignore_cobj_),
+		z1(min(pos1.z, pos2.z)), z2(max(pos1.z, pos2.z)), splash_val(splash_val_), tmin(1.0), splash(0) {cindex = -1;}
 
 	bool test_cell(coll_cell const &cell, int xpos, int ypos) { // always returns 1
 		if (splash_val == 0.0 || splash) return 1;//(z1 <= cell.zmax && z2 >= cell.zmin);
@@ -316,89 +274,13 @@ public:
 };
 
 
-class line_intersector_occlusion_cobjs : public base_intersector { // tests for polygon occlusion
-
-	point const *const pts;
-	point viewer;
-	unsigned npts;
-	int coll_cobj;
-
-public:
-	line_intersector_occlusion_cobjs(point const &pos1_, point const &pos2_, point const &viewer_, const point *pts_, unsigned npts_)
-		: base_intersector(pos1_, pos2_), pts(pts_), viewer(viewer_), npts(npts_), coll_cobj(-1) {}
-	bool test_cell(coll_cell const &cell, int xpos, int ypos) const {return (z1 <= cell.occ_zmax && z2 >= cell.occ_zmin);}
-	int get_coll_cobj() const {return coll_cobj;}
-
-	int proc_cobj(coll_cell const &cell, int const index) {
-		coll_obj &cobj(coll_objects[index]);
-		cobj.counter = cobj_counter;
-		if (!cobj.is_occluder() || z1 > cobj.d[2][1] || z2 < cobj.d[2][0]) return 2; // clip this shape
-		
-		if (cobj.intersects_all_pts(viewer, pts, npts))  {
-			coll_cobj = index;
-			return 1;
-		}
-		return 2;
-	}
-};
-
-
-class line_intersector_get_cobjs : public base_intersector { // gets potential occluders
-
-	vector<int> &cobjs;
-
-public:
-	line_intersector_get_cobjs(point const &pos1_, point const &pos2_, vector<int> &cobjs_)
-		: base_intersector(pos1_, pos2_), cobjs(cobjs_) {}
-	bool test_cell(coll_cell const &cell, int xpos, int ypos) const {return (z1 <= cell.occ_zmax && z2 >= cell.occ_zmin);}
-
-	int proc_cobj(coll_cell const &cell, int const index) {
-		coll_obj &cobj(coll_objects[index]);
-		cobj.counter = cobj_counter;
-		if (!cobj.is_big_occluder()) return 2; // not an occluder
-		if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0]) return 2; // clipped
-		if (check_line_clip_expand(pos1, pos2, cobj.d, GET_OCC_EXPAND)) cobjs.push_back(index);
-		return 2;
-	}
-};
-
-
-class line_intersector_cylinder : public base_intersector { // cylinder intersect cobj bbox - actually uses line intersects grown bbox, approximate
-
-	vector<int> &cobjs;
-	float radius;
-	int skip_dynamic, c_obj;
-
-public:
-	line_intersector_cylinder(point const &pos1_, point const &pos2_, vector<int> &cobjs_, int c_obj_, float r, int sd)
-		: base_intersector(pos1_, pos2_), cobjs(cobjs_), radius(r), skip_dynamic(sd), c_obj(c_obj_)
-	{
-		assert(radius >= 0.0);
-	}
-	bool test_cell(coll_cell const &cell, int xpos, int ypos) const { // what about 2*radius hack?
-		return ((z1-radius) <= cell.zmax && (z2+radius) >= cell.zmin);
-	}
-	int proc_cobj(coll_cell const &cell, int const index) {
-		coll_obj &cobj(coll_objects[index]);
-		cobj.counter = cobj_counter;
-		if ((skip_dynamic && cobj.status == COLL_DYNAMIC) || (skip_dynamic >= 2 && !cobj.might_be_drawn())) return 2;
-		if (cobj.cp.surfs == EF_ALL || (z1-radius) > cobj.d[2][1] || (z2+radius) < cobj.d[2][0])            return 2; // clip this shape
-
-		if (check_line_clip_expand(pos1, pos2, cobj.d, radius)) { // line intersects expanded cube => cylinder intersects cube (conservative)
-			cobjs.push_back(index);
-		}
-		return 2;
-	}
-};
-
 template<typename T> class coll_cell_line_iterator {
 
 	T &lint;
-	bool skip, fast, skip_dynamic;
+	bool fast, skip_dynamic;
 	int c_obj;
 
 	bool skip_this_index(int index) const {
-
 		if (index < 0 || index == c_obj)                 return 1; // bad or skipped index
 		assert(unsigned(index) < coll_objects.size());
 		if (coll_objects[index].counter == cobj_counter) return 1; // already seen
@@ -407,7 +289,6 @@ template<typename T> class coll_cell_line_iterator {
 	}
 
 	bool cobj_test(int xpos, int ypos) const {
-
 		// we occasionally get here with duplicate x/y values when the line is short, but that should be ok
 		coll_cell const &cell(v_collision_matrix[ypos][xpos]);
 		if (!lint.test_cell(cell, xpos, ypos) || cell.cvals.empty()) return 0; // clip entire coll cell
@@ -452,8 +333,8 @@ template<typename T> class coll_cell_line_iterator {
 	}
 
 public:
-	coll_cell_line_iterator(T &lint_, bool s, bool sd, int cobj, bool f=0) :
-	  lint(lint_), skip(s), fast(s || f), skip_dynamic(sd), c_obj(cobj) {}
+	coll_cell_line_iterator(T &lint_, bool sd, int cobj, bool f=0) :
+	  lint(lint_), fast(f), skip_dynamic(sd), c_obj(cobj) {}
 
 	bool do_iter(float radius=0.0) const {
 
@@ -477,11 +358,6 @@ public:
 			int const xpos(int(x + 0.5)), ypos(int(y + 0.5));
 			x += xinc;
 			y += yinc;
-			// might skip some coll cells during diag strides but having at least one cell border around cobjs should fix it
-			if (skip && cb > 0) { // can miss some collisions with tree leaves, which can have a lower coll_border
-				if (--skipval) continue; // skip this cell
-				skipval = (cb << 1);
-			}
 			unsigned num(1);
 			int xv[2] = {xpos, xpos}, yv[2] = {ypos, ypos};
 
@@ -522,21 +398,13 @@ public:
 
 bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha) {
 
-	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
-	if (USE_COBJ_TREE && test_alpha != 2) {
-		if (check_coll_line_tree(pos1, pos2, cindex, cobj, 0, test_alpha, (skip_dynamic >= 2))) return 1;
+	if (check_coll_line_tree(pos1, pos2, cindex, cobj, 0, test_alpha, (skip_dynamic >= 2))) return 1;
 
-		if (!skip_dynamic && begin_motion) { // find dynamic cobj intersection
-			update_cobj_tree(1, 0);
-			if (check_coll_line_tree(pos1, pos2, cindex, cobj, 1, test_alpha)) return 1;
-		}
-		return 0;
+	if (!skip_dynamic && begin_motion) { // find dynamic cobj intersection
+		update_cobj_tree(1, 0);
+		if (check_coll_line_tree(pos1, pos2, cindex, cobj, 1, test_alpha)) return 1;
 	}
-	cindex = -1;
-	if (!do_line_clip_scene(pos1, pos2, czmin, czmax)) return 0;
-	line_intersector lint(pos1, pos2, cindex, skip_dynamic, test_alpha);
-	coll_cell_line_iterator<line_intersector> ccli(lint, 0, (skip_dynamic != 0), cobj);
-	return ccli.do_iter();
+	return 0;
 }
 
 
@@ -544,7 +412,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic)
 {
 	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
-	if (USE_COBJ_TREE && splash_val == 0.0) {
+	if (splash_val == 0.0) {
 		if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha)) pos2 = cpos;
 
 		if (!skip_dynamic && begin_motion) { // find dynamic cobj intersection
@@ -563,7 +431,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 	}
 	if (!do_line_clip_scene(pos1, pos2, z_lb, z_ub)) return 0;
 	line_intersector_exact lint(pos1, pos2, cpos, cnorm, cindex, splash_val, ignore_cobj, test_alpha);
-	coll_cell_line_iterator<line_intersector_exact> ccli(lint, 0, skip_dynamic, -1, fast);
+	coll_cell_line_iterator<line_intersector_exact> ccli(lint, skip_dynamic, -1, fast);
 	ccli.do_iter();
 	lint.finish();
 	return (cindex >= 0);
@@ -579,33 +447,14 @@ bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, i
 	if (last_cobj >= 0 && last_cobj != cobj && !coll_objects[last_cobj].disabled()) {
 		if (coll_objects[last_cobj].intersects_all_pts(pos1, pts, npts)) return 1;
 	}
-	point const viewer(pos1);
-	if (USE_COBJ_TREE) return cobj_contained_tree(pos1, center, viewer, pts, npts, cobj, last_cobj);
-	if (!do_line_clip_scene(pos1, center, czmin, czmax)) return 0;
-	line_intersector_occlusion_cobjs lint(pos1, center, viewer, pts, npts);
-	coll_cell_line_iterator<line_intersector_occlusion_cobjs> ccli(lint, 1, 1, cobj);
-	
-	if (ccli.do_iter()) {
-		last_cobj = lint.get_coll_cobj();
-		assert(last_cobj >= 0);
-		return 1;
-	}
-	return 0;
+	return cobj_contained_tree(pos1, center, pos1, pts, npts, cobj, last_cobj);
 }
 
 
 bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
 
 	cobjs.resize(0);
-
-	if (USE_COBJ_TREE) {
-		get_coll_line_cobjs_tree(pos1, pos2, cobj, cobjs, 0, 1);
-		return (!cobjs.empty());
-	}
-	if (!do_line_clip_scene(pos1, pos2, czmin, czmax)) return 0;
-	line_intersector_get_cobjs lint(pos1, pos2, cobjs);
-	coll_cell_line_iterator<line_intersector_get_cobjs> ccli(lint, 1, 1, cobj);
-	ccli.do_iter();
+	get_coll_line_cobjs_tree(pos1, pos2, cobj, cobjs, 0, 1);
 	return (!cobjs.empty());
 }
 
