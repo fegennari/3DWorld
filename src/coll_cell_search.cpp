@@ -523,7 +523,7 @@ public:
 bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha) {
 
 	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
-	if ((display_mode & 0x04) && USE_COBJ_TREE && test_alpha != 2) {
+	if (USE_COBJ_TREE && test_alpha != 2) {
 		if (check_coll_line_tree(pos1, pos2, cindex, cobj, 0, test_alpha, (skip_dynamic >= 2))) return 1;
 
 		if (!skip_dynamic && begin_motion) { // find dynamic cobj intersection
