@@ -315,6 +315,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
 }
 
 
+// test_alpha: 0 = allow any alpha value, 1 = require alpha = 1.0, 2 = get intersected cobj with max alpha, 3 = test for invisible smileys
 template<unsigned NUM> bool cobj_tree_t<NUM>::check_coll_line(point const &p1, point const &p2, point &cpos,
 	vector3d &cnorm, int &cindex, int ignore_cobj, bool exact, int test_alpha, bool skip_non_drawn) const
 {
@@ -322,7 +323,7 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::check_coll_line(point const &p1, p
 	if (nodes.empty()) return 0;
 	assert(test_alpha != 2); // don't support this mode
 	bool ret(0);
-	float t(0.0), tmin(0.0), tmax(1.0);
+	float t(0.0), tmin(0.0), tmax(1.0), max_alpha(0.0);
 	node_ix_mgr nixm(nodes, p1, p2);
 	unsigned const num_nodes(nodes.size());
 
@@ -338,11 +339,13 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::check_coll_line(point const &p1, p
 			if (!obj_ok(c))                   continue;
 			if (skip_non_drawn && !c.might_be_drawn())                  continue;
 			if (test_alpha == 1 && c.is_semi_trans())                   continue; // semi-transparent, can see through
+			if (test_alpha == 2 && c.cp.color.alpha <= max_alpha)       continue; // lower alpha than an earlier object
 			if (test_alpha == 3 && c.cp.color.alpha < MIN_SHADOW_ALPHA) continue; // less than min alpha
 			if (!c.line_int_exact(p1, p2, t, cnorm, tmin, tmax))        continue;
 			cindex = cixs[i];
 			cpos   = p1 + (p2 - p1)*t;
-			if (!exact) return 1; // return first hit
+			if (!exact && test_alpha != 2) return 1; // return first hit
+			max_alpha = c.cp.color.alpha; // we need all intersections to find the max alpha
 			nixm.dinv = vector3d(cpos - p1);
 			nixm.dinv.invert(0, 1);
 			tmax = t;
