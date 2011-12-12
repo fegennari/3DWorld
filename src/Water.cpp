@@ -290,11 +290,11 @@ public:
 				blend_color(rcolor, color, rcolor, 0.5, 1); // add in a watery color
 			}
 		}
-		int cindex, cindex2;
+		int cindex;
 		point cpos; // unused
 		vector3d cnorm; // unused
 
-		if (check_coll_line_exact_tree_sd(vs0, ve0, cpos, cnorm, cindex, -1, 1, 0, 0)) {
+		if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, 0)) {
 			get_object_color(cindex, rcolor);
 		}
 		else if (!mesh_int) { // no mesh intersect and no cobj intersect
