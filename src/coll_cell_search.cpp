@@ -198,199 +198,41 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 }
 
 
-class line_intersector_exact {
+class water_spalsh_search {
 
-public:
 	point const &pos1, &pos2;
-
-private:
-	point &cpos;
-	vector3d &cnorm;
-	int &cindex;
-	bool test_alpha;
-	int ignore_cobj;
-	float z1, z2, splash_val, t, tmin;
-	bool splash;
-	point splash_pos;
+	float splash_val;
 
 public:
-	line_intersector_exact(point const &pos1_, point const &pos2_, point &cpos_, vector3d &cnorm_,
-		int &cindex_, float splash_val_, int ignore_cobj_, bool test_alpha_)
-		: pos1(pos1_), pos2(pos2_), cpos(cpos_), cnorm(cnorm_), cindex(cindex_), test_alpha(test_alpha_), ignore_cobj(ignore_cobj_),
-		z1(min(pos1.z, pos2.z)), z2(max(pos1.z, pos2.z)), splash_val(splash_val_), tmin(1.0), splash(0) {cindex = -1;}
+	water_spalsh_search(point const &pos1_, point const &pos2_, float splash_val_) :
+	   pos1(pos1_), pos2(pos2_), splash_val(splash_val_) {}
 
-	bool test_cell(coll_cell const &cell, int xpos, int ypos) { // always returns 1
-		if (splash_val == 0.0 || splash) return 1;//(z1 <= cell.zmax && z2 >= cell.zmin);
-		return test_cell_splash(xpos, ypos);
-	}
-
-	bool test_cell_splash(int xpos, int ypos) {
-		if (!mesh_is_underwater(xpos, ypos)) return 1;
-		float const wmz(water_matrix[ypos][xpos]);
-		if ((pos1.z < wmz) ^ (pos2.z > wmz)) return 1;
-		float const tz((wmz - pos1.z)/(pos2.z - pos1.z));
-		splash_pos = pos1 + (pos2 - pos1)*tz;
-		float const mx(get_xval(xpos)), my(get_yval(ypos));
-		
-		if (splash_pos.x > (mx-DX_VAL) && splash_pos.x < (mx+DX_VAL) && splash_pos.y > (my-DY_VAL) && splash_pos.y < (my+DY_VAL)) {
-			add_splash(xpos, ypos, 25.0, 0.01, 1); // dynamic water
-			draw_splash(splash_pos.x, splash_pos.y, (wmz + 0.0001), splash_val);
-			splash = 1;
-		}
-		return 1;
-	}
-
-	void finish() {
-		if (splash) gen_line_of_bubbles(splash_pos, (had_intersection() ? cpos : pos2));
-	}
-	bool test_cell_end(int xpos, int ypos) const {return (cindex >= 0 && get_xpos(cpos.x) == xpos && get_ypos(cpos.y) == ypos);}
-	bool had_intersection() const {return (cindex >= 0);}
-
-	int proc_cobj(coll_cell const &cell, int const index) {
-		if (index == ignore_cobj) return 2;
-		coll_obj &cobj(coll_objects[index]);
-		if (cobj.status == COLL_STATIC && (z1 > cell.zmax || z2 < cell.zmin)) return 0;
-		cobj.counter = cobj_counter;
-		if (z1 > cobj.d[2][1] || z2 < cobj.d[2][0]) return 2; // clip this shape
-		if (test_alpha && cobj.is_semi_trans())     return 2; // semi-transparent, can see through
-		if (test_alpha && cobj.is_invis_player())   return 2; // should this be here?
-		if (cobj.cp.color.alpha == 0.0)             return 2; // transparent - what objects are these?
-		vector3d temp_norm;
-
-		if (had_intersection()) { // minor optimization (if z1/z2 have been updated, then don't need to check z)
-			if (max(pos1.x, cpos.x) < cobj.d[0][0] || min(pos1.x, cpos.x) > cobj.d[0][1]) return 2;
-			if (max(pos1.y, cpos.y) < cobj.d[1][0] || min(pos1.y, cpos.y) > cobj.d[1][1]) return 2;
-		}
-		if (cobj.line_int_exact(pos1, pos2, t, temp_norm, 0.0, tmin)) {
-			cindex = index;
-			cnorm  = temp_norm;
-			tmin   = t;
-			cpos   = pos1 + (pos2 - pos1)*tmin;
-			z1     = min(pos1.z, cpos.z); // update z1/z2: minor optimization
-			z2     = max(pos1.z, cpos.z);
-		}
-		return 2;
-	}
-};
-
-
-template<typename T> class coll_cell_line_iterator {
-
-	T &lint;
-	bool fast, skip_dynamic;
-	int c_obj;
-
-	bool skip_this_index(int index) const {
-		if (index < 0 || index == c_obj)                 return 1; // bad or skipped index
-		assert(unsigned(index) < coll_objects.size());
-		if (coll_objects[index].counter == cobj_counter) return 1; // already seen
-		if (coll_objects[index].no_collision())          return 1; // disabled
-		return 0;
-	}
-
-	bool cobj_test(int xpos, int ypos) const {
-		// we occasionally get here with duplicate x/y values when the line is short, but that should be ok
-		coll_cell const &cell(v_collision_matrix[ypos][xpos]);
-		if (!lint.test_cell(cell, xpos, ypos) || cell.cvals.empty()) return 0; // clip entire coll cell
-		bool const subdiv(!cell.cvz.empty());
-
-		if (!subdiv || !skip_dynamic) {
-			for (int k = int(cell.cvals.size()-1); k >= 0; --k) { // iterate backwards
-				int const index(cell.cvals[k]);
-				assert(unsigned(index) < coll_objects.size());
-				if (skip_this_index(index)) continue;
-				if (subdiv && coll_objects[index].status == COLL_STATIC) break; // done with dynamic objects, move on to static
-				int const val(lint.proc_cobj(cell, index));
-				if (val == 0 || val == 1) return (val != 0);
-			}
-		}
-		if (subdiv) {
-			point cp1(lint.pos1), cp2(lint.pos2);
-			float const xv(get_xval(xpos)), yv(get_yval(ypos));
-			float const d[3][2] = {{(xv-DX_VAL), (xv+DX_VAL)}, {(yv-DY_VAL), (yv+DY_VAL)}, {cell.zmin, cell.zmax}};
-			if (!do_line_clip(cp1, cp2, d)) return 0;
-			unsigned const sz(cell.cvz.size());
-			float const val((sz-1)/(cell.zmax - cell.zmin));
-			unsigned zs(min(sz-1, (unsigned)max(0, (int)floor(val*(min(cp1.z, cp2.z) - cell.zmin)))));
-			unsigned ze(min(sz-1, (unsigned)max(0, (int)floor(val*(max(cp1.z, cp2.z) - cell.zmin)))));
-			assert(zs <= ze);
-			bool const dir(cp1.z < cp2.z);
-			int const di(dir ? 1 : -1);
-			if (dir == 0) swap(zs, ze);
-			
-			for (unsigned i = zs; ; i += di) {
-				for (unsigned ix = (i ? cell.cvz[i-1] : 0); ix < cell.cvz[i]; ++ix) {
-					assert(ix < cell.indices.size());
-					unsigned const index(cell.indices[ix]);
-					if (skip_this_index(index)) continue;
-					int const val(lint.proc_cobj(cell, index));
-					if (val == 0 || val == 1) return (val != 0);
-				}
-				if (lint.had_intersection() || i == ze) break; // had intersection at a closer zval, so we're done
-			}
-		}
-		return lint.test_cell_end(xpos, ypos);
-	}
-
-public:
-	coll_cell_line_iterator(T &lint_, bool sd, int cobj, bool f=0) :
-	  lint(lint_), fast(f), skip_dynamic(sd), c_obj(cobj) {}
-
-	bool do_iter(float radius=0.0) const {
-
-		bool const do_bnd_test(radius > 2.0*HALF_DXY); // very large object
-		int const xa(get_xpos(lint.pos1.x)), ya(get_ypos(lint.pos1.y)), xb(get_xpos(lint.pos2.x)), yb(get_ypos(lint.pos2.y));
-		++cobj_counter;
-
-		if (!do_bnd_test && xa == xb && ya == yb) {
-			if (point_outside_mesh(xa, ya)) return 0;
-			return cobj_test(xa, ya);
-		}
-		int const cb(max(1, coll_border));
-		int const dx(xb - xa), dy(yb - ya), steps(max(1, ((abs(dx) > abs(dy)) ? abs(dx): abs(dy))/cb));
+	bool do_iter() const {
+		if (splash_val == 0.0) return 0;
+		int const xa(get_xpos(pos1.x)), ya(get_ypos(pos1.y)), xb(get_xpos(pos2.x)), yb(get_ypos(pos2.y));
+		int const dx(xb - xa), dy(yb - ya), steps(max(1, ((abs(dx) > abs(dy)) ? abs(dx): abs(dy))));
 		double const xinc(dx/(double)steps), yinc(dy/(double)steps);
 		double x(xa), y(ya);
-		int last_x(-1), last_y(-1), skipval(1);
-		bool first(1);
 		int bnds[2][2] = {{MESH_X_SIZE,0}, {MESH_Y_SIZE,0}}; // {x,y}{min,max}
 
 		for (int k = 0; k <= steps; ++k) { // DDA algorithm
 			int const xpos(int(x + 0.5)), ypos(int(y + 0.5));
 			x += xinc;
 			y += yinc;
-			unsigned num(1);
-			int xv[2] = {xpos, xpos}, yv[2] = {ypos, ypos};
-
-			if (!fast && !first && xpos != last_x && ypos != last_y) {
-				bool const x_stays((fabs(last_x - x) + fabs(ypos - y)) < (fabs(xpos - x) + fabs(last_y - y)));
-				if (x_stays) xv[1] = last_x; else yv[1] = last_y;
-				++num;
+			if (point_outside_mesh(xpos, ypos) || !mesh_is_underwater(xpos, ypos)) continue;
+			float const wmz(water_matrix[ypos][xpos]);
+			if ((pos1.z < wmz) ^ (pos2.z > wmz)) continue;
+			float const tz((wmz - pos1.z)/(pos2.z - pos1.z));
+			point const splash_pos(pos1 + (pos2 - pos1)*tz);
+			float const mx(get_xval(xpos)), my(get_yval(ypos));
+		
+			if (splash_pos.x > (mx-DX_VAL) && splash_pos.x < (mx+DX_VAL) && splash_pos.y > (my-DY_VAL) && splash_pos.y < (my+DY_VAL)) {
+				add_splash(xpos, ypos, 25.0, 0.01, 1); // dynamic water
+				draw_splash(splash_pos.x, splash_pos.y, (wmz + 0.0001), splash_val);
+				gen_line_of_bubbles(splash_pos, pos2);
+				return 1;
 			}
-			for (unsigned n = 0; n < num; ++n) {
-				if (do_bnd_test) {
-					bnds[0][0] = min(bnds[0][0], xv[n]);
-					bnds[0][1] = max(bnds[0][1], xv[n]);
-					bnds[1][0] = min(bnds[1][0], yv[n]);
-					bnds[1][1] = max(bnds[1][1], yv[n]);
-				}
-				else if (!point_outside_mesh(xv[n], yv[n]) && cobj_test(xv[n], yv[n])) return 1;
-			}
-			first  = 0;
-			last_x = xpos;
-			last_y = ypos;
 		} // for k
-		if (do_bnd_test) { // inefficient, but what can we do? take bounds of all cube corner points?
-			int const x1(max(0,           (bnds[0][0] - int(radius*DX_VAL_INV))));
-			int const y1(max(0,           (bnds[1][0] - int(radius*DY_VAL_INV))));
-			int const x2(min(MESH_X_SIZE, (bnds[0][1] + int(radius*DX_VAL_INV))));
-			int const y2(min(MESH_Y_SIZE, (bnds[1][1] + int(radius*DY_VAL_INV))));
-
-			for (int y = y1; y <= y2; ++y) {
-				for (int x = x1; x <= x2; ++x) {
-					if (!point_outside_mesh(x, y)) cobj_test(x, y);
-				}
-			}
-		}
 		return 0;
 	}
 };
@@ -411,29 +253,21 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dyn
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex, float splash_val,
 						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic)
 {
-	// Note: we could build the dynamic tree as well and test against both of them if skip_dynamic==1: update_cobj_tree(1, 0);
-	if (splash_val == 0.0) {
-		if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha)) pos2 = cpos;
+	if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha)) pos2 = cpos;
 
-		if (!skip_dynamic && begin_motion) { // find dynamic cobj intersection
-			update_cobj_tree(1, 0);
-			int cindex2;
-			if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex2, ignore_cobj, 1, test_alpha)) cindex = cindex2;
-		}
-		return (cindex >= 0);
+	if (!skip_dynamic && begin_motion) { // find dynamic cobj intersection
+		update_cobj_tree(1, 0);
+		int cindex2;
+		if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex2, ignore_cobj, 1, test_alpha)) cindex = cindex2;
 	}
-	cindex = -1;
-	float z_lb(czmin), z_ub(czmax);
-	
 	if (splash_val > 0.0) { // handle water splashes
-		z_lb = min(z_lb, zbottom);
-		z_ub = max(z_ub, max(ztop, water_plane_z)); // max of dynamic and static water
+		if (cindex >= 0) pos2 = cpos;
+		
+		if (do_line_clip_scene(pos1, pos2, min(czmin, zbottom), max(czmax, max(ztop, water_plane_z)))) { // max of dynamic and static water
+			water_spalsh_search wss(pos1, pos2, splash_val);
+			wss.do_iter();
+		}
 	}
-	if (!do_line_clip_scene(pos1, pos2, z_lb, z_ub)) return 0;
-	line_intersector_exact lint(pos1, pos2, cpos, cnorm, cindex, splash_val, ignore_cobj, test_alpha);
-	coll_cell_line_iterator<line_intersector_exact> ccli(lint, skip_dynamic, -1, fast);
-	ccli.do_iter();
-	lint.finish();
 	return (cindex >= 0);
 }
 
