@@ -263,7 +263,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 	if (splash_val > 0.0) { // handle water splashes
 		if (cindex >= 0) pos2 = cpos;
 		
-		if (do_line_clip_scene(pos1, pos2, min(czmin, zbottom), max(czmax, max(ztop, water_plane_z)))) { // max of dynamic and static water
+		if (do_line_clip_scene(pos1, pos2, zbottom, max(ztop, water_plane_z))) { // max of dynamic and static water
 			water_spalsh_search wss(pos1, pos2, splash_val);
 			wss.do_iter();
 		}
