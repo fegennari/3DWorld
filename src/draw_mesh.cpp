@@ -361,7 +361,7 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 
 void draw_coll_vert(int i, int j) {
 
-	(v_collision_matrix[i][j].cvz.empty() ? BLUE : RED).do_glColor();
+	BLUE.do_glColor();
 	glVertex3f(get_xval(j), get_yval(i), max(czmin, v_collision_matrix[i][j].zmax));
 }
 

@@ -1517,7 +1517,7 @@ int  remove_coll_object(int index, bool reset_draw=1);
 int  remove_reset_coll_obj(int &index);
 void purge_coll_freed(bool force);
 void remove_all_coll_obj();
-void cobj_optimize();
+void cobj_stats();
 int  collision_detect_large_sphere(point &pos, float radius, unsigned flags);
 int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex);
 

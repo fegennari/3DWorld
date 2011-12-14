@@ -766,7 +766,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 		}
 		if (has_scenery2) add_scenery_cobjs();
 	}
-	cobj_optimize();
+	cobj_stats();
 	build_cobj_tree();
 	check_contained_cube_sides();
 }

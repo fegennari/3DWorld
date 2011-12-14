@@ -21,7 +21,6 @@ extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern vector<coll_obj> coll_objects;
 extern vector<portal> portals;
-extern coll_cell_opt_batcher cco_batcher;
 extern vector<obj_draw_group> obj_draw_groups;
 
 
@@ -262,7 +261,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	build_moving_cobj_tree();
 	vector<unsigned> int_cobjs;
 	get_intersecting_cobjs_tree(cube, int_cobjs, -1, 0.0, 0, 0, -1);
-	cco_batcher.begin_batch();
 
 	// determine affected cobjs
 	for (unsigned k = 0; k < int_cobjs.size(); ++k) {
@@ -316,7 +314,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		}
 		new_cobjs.clear();
 	} // for k
-	cco_batcher.end_batch();
 
 	// remove destroyed cobjs
 	for (unsigned i = 0; i < to_remove.size(); ++i) {

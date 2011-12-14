@@ -134,7 +134,6 @@ void platform::advance_timestep() {
 			cobj.shift_by(delta); // move object
 			if (update_colls) cobj.re_add_coll_cobj(*i, 0);
 			// squish player or stop when hit player?
-			// what about coll_cell::cvz?
 		}
 	} // pos != last_pos
 }

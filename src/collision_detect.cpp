@@ -14,7 +14,6 @@ bool const REMOVE_ALL_COLL   = 1;
 bool const ALWAYS_ADD_TO_HCM = 0;
 unsigned const CAMERA_STEPS  = 10;
 unsigned const PURGE_THRESH  = 20;
-unsigned const CVZ_NDIV      = 32;
 float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 
 
@@ -25,7 +24,6 @@ unsigned cobjs_removed(0), index_top(0);
 float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
 vector<coll_obj> coll_objects;
-coll_cell_opt_batcher cco_batcher;
 
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, invalid_collision, mesh_scale_change, camera_invincible, flight, do_run, cobj_counter, num_smileys;
@@ -544,95 +542,13 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old, int dhcm) {
 	id            = index;
 }
 
-
-void coll_obj::get_cvz_range(unsigned *zz, float zmin, float zmax, int x, int y) const {
-
-	if (status != COLL_STATIC) {
-		zz[0] = zz[1] = 0;
-		return;
-	}
-	assert(zmin < zmax);
-	float const dz_inv((CVZ_NDIV-1)/(zmax-zmin));
-	float zv[2] = {d[2][0], d[2][1]};
-
-	// clip size to actual polygon bounds within this cell (could do this with COLL_CYLINDER_ROT as well)
-	if (is_thin_poly() && radius > HALF_DXY && norm.z != 0.0 && (norm.x != 0.0 || norm.y != 0.0) && (zv[1] - zv[0])*dz_inv > 2.0) {
-		float const D(-dot_product(norm, points[0])), nz_inv(1.0/norm.z);
-		float zval[2];
-		bool first(1);
-
-		// polygon is monotonic, so sample once to each side of the center to get conservative bounds
-		for (int yy = y-1; yy <= y+1; yy += 2) {
-			for (int xx = x-1; xx <= x+1; xx += 2) {
-				float const z((-norm.x*get_xval(xx) - norm.y*get_yval(yy) - D)*nz_inv);
-				zval[0] = (first ? z : min(zval[0], z));
-				zval[1] = (first ? z : max(zval[1], z));
-				first   = 0;
-			}
-		}
-		zv[0] = max(zv[0], zval[0]);
-		zv[1] = min(zv[1], zval[1]);
-	}
-	zz[0] = max(0, min(int(CVZ_NDIV)-1, int(floor((zv[0] - zmin)*dz_inv))));
-	//zz[1] = max(0, min(int(CVZ_NDIV)-1, int(floor((zv[1] - zmin)*dz_inv)))); // FIXME: more efficient but incorrect in rare cases
-	zz[1] = max(0, min(int(CVZ_NDIV)-1, int(ceil ((zv[1] - zmin)*dz_inv))));
-}
-
-
 void coll_cell::clear(bool clear_vectors) {
 
 	if (clear_vectors) {
 		if (cvals.capacity() > INIT_CCELL_SIZE) cvals.clear(); else cvals.resize(0);
-		clear_cvz();
 	}
 	zmin = occ_zmin =  FAR_CLIP;
 	zmax = occ_zmax = -FAR_CLIP;
-}
-
-
-void coll_cell::clear_cvz() {
-
-	cvz.clear();
-	indices.clear();
-}
-
-
-void coll_cell::optimize(int x, int y) {
-
-	if (scrolling) return; // optimize only at the end of a scrolling event
-	unsigned ncvals(cvals.size());
-	if (ncvals < CVZ_NDIV || zmax <= zmin) {clear_cvz(); return;}
-	if (cco_batcher.check_add_entry(x, y)) return; // add to batch but don't process here
-	unsigned ncv(0);
-
-	for (unsigned i = 0; i < ncvals; ++i) {
-		assert(cvals[i] >= 0);
-		assert((size_t)cvals[i] < coll_objects.size());
-		if (coll_objects[cvals[i]].status == COLL_STATIC) ++ncv;
-	}
-	if (ncv < CVZ_NDIV) {clear_cvz(); return;}
-	cvz.resize(CVZ_NDIV);
-	unsigned cnt[CVZ_NDIV] = {0};
-	unsigned zz[2], cur_tot(0);
-
-	for (unsigned i = 0; i < ncvals; ++i) { // determine counts
-		coll_objects[cvals[i]].get_cvz_range(zz, zmin, zmax, x, y);
-		for (unsigned z = zz[0]; z <= zz[1]; ++z) ++cnt[z];
-	}
-	for (unsigned z = 0; z < CVZ_NDIV; ++z) { // fill in cvz
-		unsigned const start_ix(cur_tot);
-		cur_tot += cnt[z];
-		cvz[z]   = cur_tot; // end ix
-		cnt[z]   = start_ix;
-	}
-	if (3*cur_tot > CVZ_NDIV*ncv) {clear_cvz(); return;} // too dense to subdivide - z-range of cobjs is large
-	indices.clear();
-	indices.resize(cur_tot);
-
-	for (unsigned i = 0; i < ncvals; ++i) { // fill in indices
-		coll_objects[cvals[i]].get_cvz_range(zz, zmin, zmax, x, y);
-		for (unsigned z = zz[0]; z <= zz[1]; ++z) indices[cnt[z]++] = cvals[i];
-	}
 }
 
 
@@ -651,56 +567,22 @@ inline void coll_cell::update_zmm(float zmin_, float zmax_, coll_obj const &cobj
 }
 
 
-void coll_cell_opt_batcher::begin_batch() {
-
-	assert(!enabled);
-	assert(to_proc.empty());
-	enabled = 1;
-}
-
-
-void coll_cell_opt_batcher::end_batch() {
-
-	assert(enabled);
-	enabled = 0;
-	
-	for (set<pair<int, int> >::const_iterator i = to_proc.begin(); i != to_proc.end(); ++i) {
-		int const x(i->first), y(i->second);
-		assert(!point_outside_mesh(x, y));
-		v_collision_matrix[y][x].optimize(x, y);
-	}
-	to_proc.clear();
-}
-
-
-bool coll_cell_opt_batcher::check_add_entry(int x, int y) {
-
-	if (!enabled) return 0;
-	to_proc.insert(make_pair(x, y));
-	return 1;
-}
-
-
-void cobj_optimize() { // currently used for both statistical reporting and optimization
+void cobj_stats() {
 
 	unsigned ncv(0), nonempty(0), ncobj(0);
-	RESET_TIME;
+	unsigned const csize(coll_objects.size());
 
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			coll_cell &vcm(v_collision_matrix[y][x]);
-			vcm.optimize(x, y);
-			ncv += vcm.cvals.size();
-			if (!vcm.cvals.empty()) ++nonempty;
+			unsigned const sz(v_collision_matrix[y][x].cvals.size());
+			ncv += sz;
+			if (sz > 0) ++nonempty;
 		}
 	}
-	unsigned const csize(coll_objects.size());
-
 	for (unsigned i = 0; i < csize; ++i) {
 		if (coll_objects[i].status == COLL_STATIC) ++ncobj;
 	}
 	if (ncobj > 0) {
-		PRINT_TIME(" Optimize");
 		cout << "bins = " << XY_MULT_SIZE << ", ne = " << nonempty << ", cobjs = " << ncobj
 			 << ", ent = " << ncv << ", per c = " << ncv/ncobj << ", per bin = " << ncv/XY_MULT_SIZE << endl;
 	}
@@ -741,7 +623,6 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 	}
 	if (add_to_hcm || ALWAYS_ADD_TO_HCM) {
 		vcm.update_zmm(zminv, zmaxv, cobj);
-		vcm.update_opt(j, i);
 		czmin = min(zminv, czmin);
 		czmax = max(zmaxv, czmax);
 	}
@@ -775,7 +656,7 @@ int remove_coll_object(int index, bool reset_draw) {
 
 	for (int i = y1-cb; i <= y2+cb; ++i) {
 		for (int j = x1-cb; j <= x2+cb; ++j) {
-			vector<int> &cvals(v_collision_matrix[i][j].cvals); // what about cvz?
+			vector<int> &cvals(v_collision_matrix[i][j].cvals);
 			
 			for (unsigned k = 0; k < cvals.size() ; ++k) {
 				if (cvals[k] == index) {
@@ -829,7 +710,6 @@ void purge_coll_freed(bool force) {
 			}
 			vcm.cvals.erase(o, vcm.cvals.end()); // excess capacity?
 			h_collision_matrix[i][j] = vcm.zmax; // need to think about add_to_hcm...
-			vcm.update_opt(j, i);
 		}
 	}
 	unsigned const ncobjs(coll_objects.size());
