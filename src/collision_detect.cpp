@@ -145,17 +145,16 @@ void reserve_coll_objects(unsigned size) {
 
 inline void get_params(int &x1, int &y1, int &x2, int &y2, const float d[3][2]) {
 
-	int const cb(1);
-	x1 = max(cb, get_xpos(d[0][0]));
-	y1 = max(cb, get_ypos(d[1][0]));
-	x2 = min((MESH_X_SIZE-cb-1), get_xpos(d[0][1]));
-	y2 = min((MESH_Y_SIZE-cb-1), get_ypos(d[1][1]));
+	x1 = max(0, get_xpos(d[0][0]));
+	y1 = max(0, get_ypos(d[1][0]));
+	x2 = min((MESH_X_SIZE-1), get_xpos(d[0][1]));
+	y2 = min((MESH_Y_SIZE-1), get_ypos(d[1][1]));
 }
 
 
 void add_coll_cube_to_matrix(int index, int dhcm) {
 
-	int x1, x2, y1, y2, cb(1);
+	int x1, x2, y1, y2;
 	coll_obj &cobj(coll_objects[index]);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
 	float ds[3][2];
@@ -173,8 +172,8 @@ void add_coll_cube_to_matrix(int index, int dhcm) {
 	}
 	get_params(x1, y1, x2, y2, ds);
 
-	for (int i = y1-cb; i <= y2+cb; ++i) {
-		for (int j = x1-cb; j <= x2+cb; ++j) {
+	for (int i = y1; i <= y2; ++i) {
+		for (int j = x1; j <= x2; ++j) {
 			int add_to_hcm(i >= y1-1 && i <= y2+1 && j >= x1-1 && j <= x2+1);
 			add_coll_point(i, j, index, ds[2][0], ds[2][1], add_to_hcm, is_dynamic, dhcm);
 		}
@@ -198,7 +197,7 @@ int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int
 
 void add_coll_cylinder_to_matrix(int index, int dhcm) {
 
-	int xx1, xx2, yy1, yy2, cb(1);
+	int xx1, xx2, yy1, yy2;
 	coll_obj &cobj(coll_objects[index]);
 	float zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]), zmin0(zminc), zmax0(zmaxc);
 	point const p1(cobj.points[0]), p2(cobj.points[1]);
@@ -216,10 +215,10 @@ void add_coll_cylinder_to_matrix(int index, int dhcm) {
 		bool const vertical(x1 == x2 && y1 == y2), horizontal(fabs(z1 - z2) < TOLERANCE);
 		bool const vert_trunc_cone(z1 != z2 && radius != radius2 && rmax > HALF_DXY);
 
-		for (int i = yy1-cb; i <= yy2+cb; ++i) {
+		for (int i = yy1; i <= yy2; ++i) {
 			float const yv(get_yval(i)), v2y(y1 - yv);
 
-			for (int j = xx1-cb; j <= xx2+cb; ++j) {
+			for (int j = xx1; j <= xx2; ++j) {
 				float xv(get_xval(j));
 
 				if (vertical) { // vertical
@@ -262,10 +261,10 @@ void add_coll_cylinder_to_matrix(int index, int dhcm) {
 	}
 	else { // standard vertical constant-radius cylinder
 		assert(cobj.type == COLL_CYLINDER);
-		int const crsq((radx + cb)*(rady + cb));
+		int const crsq(radx*rady);
 
-		for (int i = yy1-cb; i <= yy2+cb; ++i) {
-			for (int j = xx1-cb; j <= xx2+cb; ++j) {
+		for (int i = yy1; i <= yy2; ++i) {
+			for (int j = xx1; j <= xx2; ++j) {
 				int const distsq((i - ypos)*(i - ypos) + (j - xpos)*(j - xpos));
 				if (distsq <= crsq) add_coll_point(i, j, index, z1, z2, (distsq <= rxry), is_dynamic, dhcm);
 			}
@@ -323,7 +322,7 @@ int add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2
 
 void add_coll_sphere_to_matrix(int index, int dhcm) {
 
-	int x1, x2, y1, y2, cb(1);
+	int x1, x2, y1, y2;
 	coll_obj &cobj(coll_objects[index]);
 	point const pt(cobj.points[0]);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
@@ -331,10 +330,10 @@ void add_coll_sphere_to_matrix(int index, int dhcm) {
 	int const radx(int(radius*DX_VAL_INV) + 1), rady(int(radius*DY_VAL_INV) + 1);
 	int const xpos(get_xpos(pt.x)), ypos(get_ypos(pt.y));
 	get_params(x1, y1, x2, y2, cobj.d);
-	int const rxry(radx*rady), crsq((radx + cb)*(rady + cb));
+	int const rxry(radx*rady), crsq(radx*rady);
 
-	for (int i = y1-cb; i <= y2+cb; ++i) {
-		for (int j = x1-cb; j <= x2+cb; ++j) {
+	for (int i = y1; i <= y2; ++i) {
+		for (int j = x1; j <= x2; ++j) {
 			int const distsq((i - ypos)*(i - ypos) + (j - xpos)*(j - xpos));
 
 			if (distsq <= crsq) { // nasty offset by HALF_DXY to account for discretization error
@@ -366,7 +365,7 @@ int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, i
 
 void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member function?
 
-	int x1, x2, y1, y2, cb(1);
+	int x1, x2, y1, y2;
 	coll_obj &cobj(coll_objects[index]);
 	get_params(x1, y1, x2, y2, cobj.d);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
@@ -374,7 +373,7 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 	float const dval(-dot_product(norm, cobj.points[0]));
 	float const zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]); // thickness has already been added/subtracted
 	float const height(0.5*fabs(norm.z*cobj.thickness)), expand(DX_VAL + DY_VAL);
-	float const thick(0.5*cobj.thickness), dx((cb+0.5)*DX_VAL), dy((cb+0.5)*DY_VAL);
+	float const thick(0.5*cobj.thickness), dx(0.5*DX_VAL), dy(0.5*DY_VAL);
 	float const dzx(norm.z == 0.0 ? 0.0 : DX_VAL*norm.x/norm.z), dzy(norm.z == 0.0 ? 0.0 : DY_VAL*norm.y/norm.z);
 	float const delta_z(sqrt(dzx*dzx + dzy*dzy));
 	vector<tquad_t> pts;
@@ -383,12 +382,12 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 	cube.d[2][0] = zminc - SMALL_NUMBER;
 	cube.d[2][1] = zmaxc + SMALL_NUMBER;
 
-	for (int i = y1-cb; i <= y2+cb; ++i) {
+	for (int i = y1; i <= y2; ++i) {
 		float const yv(get_yval(i));
 		cube.d[1][0] = yv - dy - (i<=y1)*thick;
 		cube.d[1][1] = yv + dy + (i>=y2)*thick;
 
-		for (int j = x1-cb; j <= x2+cb; ++j) {
+		for (int j = x1; j <= x2; ++j) {
 			float const xv(get_xval(j));
 			float z1(zminc), z2(zmaxc);
 			bool const add_to_hcm(i >= y1-1 && i <= y2+1 && j >= x1-1 && j <= x2+1);
@@ -650,11 +649,11 @@ int remove_coll_object(int index, bool reset_draw) {
 		++cobjs_removed;
 		return 0;
 	}
-	int x1, y1, x2, y2, cb(1);
+	int x1, y1, x2, y2;
 	get_params(x1, y1, x2, y2, c.d);
 
-	for (int i = y1-cb; i <= y2+cb; ++i) {
-		for (int j = x1-cb; j <= x2+cb; ++j) {
+	for (int i = y1; i <= y2; ++i) {
+		for (int j = x1; j <= x2; ++j) {
 			vector<int> &cvals(v_collision_matrix[i][j].cvals);
 			
 			for (unsigned k = 0; k < cvals.size() ; ++k) {
