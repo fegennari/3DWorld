@@ -38,7 +38,7 @@ vector3d wind(0.4, 0.2, 0.0), total_wind(0.0, 0.0, 0.0);
 point flow_source(0.0, 0.0, -2.0);
 obj_type object_types[NUM_TOT_OBJS];
 
-extern int num_groups, display_mode, frame_counter, game_mode, island, coll_border, camera_coll_id, ocean_set;
+extern int num_groups, display_mode, frame_counter, game_mode, island, camera_coll_id, ocean_set;
 extern int s_ball_id, world_mode, w_acc, is_snow, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2;
 extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks;
 extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, grass_length;
@@ -531,8 +531,7 @@ void init_objects() {
 void set_coll_rmax(float rmax) {
 
 	max_obj_radius = rmax; // only used to cache the init value of rmax for use in later calls
-	coll_border    = int(max_obj_radius/max(DX_VAL, DY_VAL) + 1); // + 0.5?
-	//cout << "rmax = " << max_obj_radius << ", cb = " << coll_border << ", DXY = " << max(DX_VAL, DY_VAL) << ", ratio: " << max_obj_radius/max(DX_VAL, DY_VAL) << endl;
+	//cout << "rmax = " << max_obj_radius << ", DXY = " << max(DX_VAL, DY_VAL) << ", ratio: " << max_obj_radius/max(DX_VAL, DY_VAL) << endl;
 }
 
 

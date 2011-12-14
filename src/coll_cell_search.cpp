@@ -13,7 +13,7 @@ unsigned const QLP_CACHE_SIZE = 10000;
 
 int cobj_counter(0);
 
-extern int coll_border, display_mode, begin_motion;
+extern int display_mode, begin_motion;
 extern float zmin, zbottom, water_plane_z;
 extern vector<coll_obj> coll_objects;
 

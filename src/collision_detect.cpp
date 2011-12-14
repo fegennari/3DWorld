@@ -19,7 +19,7 @@ float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 
 // Global Variables
 bool have_drawn_cobj, have_platform_cobj, camera_on_snow(0);
-int coll_border(0), camera_coll_id(-1);
+int camera_coll_id(-1);
 unsigned cobjs_removed(0), index_top(0);
 float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
@@ -143,9 +143,9 @@ void reserve_coll_objects(unsigned size) {
 }
 
 
-inline void get_params(int &x1, int &y1, int &x2, int &y2, int &cb, const float d[3][2], int dhcm) {
+inline void get_params(int &x1, int &y1, int &x2, int &y2, const float d[3][2]) {
 
-	cb = ((dhcm == 2) ? min(coll_border, 1) : coll_border);
+	int const cb(1);
 	x1 = max(cb, get_xpos(d[0][0]));
 	y1 = max(cb, get_ypos(d[1][0]));
 	x2 = min((MESH_X_SIZE-cb-1), get_xpos(d[0][1]));
@@ -155,7 +155,7 @@ inline void get_params(int &x1, int &y1, int &x2, int &y2, int &cb, const float 
 
 void add_coll_cube_to_matrix(int index, int dhcm) {
 
-	int x1, x2, y1, y2, cb;
+	int x1, x2, y1, y2, cb(1);
 	coll_obj &cobj(coll_objects[index]);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
 	float ds[3][2];
@@ -171,7 +171,7 @@ void add_coll_cube_to_matrix(int index, int dhcm) {
 		ds[j][0] = cobj.d[j][0] + min(delta[j], 0.0f);
 		ds[j][1] = cobj.d[j][1] + max(delta[j], 0.0f);
 	}
-	get_params(x1, y1, x2, y2, cb, ds, dhcm);
+	get_params(x1, y1, x2, y2, ds);
 
 	for (int i = y1-cb; i <= y2+cb; ++i) {
 		for (int j = x1-cb; j <= x2+cb; ++j) {
@@ -198,7 +198,7 @@ int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int
 
 void add_coll_cylinder_to_matrix(int index, int dhcm) {
 
-	int xx1, xx2, yy1, yy2, cb;
+	int xx1, xx2, yy1, yy2, cb(1);
 	coll_obj &cobj(coll_objects[index]);
 	float zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]), zmin0(zminc), zmax0(zmaxc);
 	point const p1(cobj.points[0]), p2(cobj.points[1]);
@@ -208,7 +208,7 @@ void add_coll_cylinder_to_matrix(int index, int dhcm) {
 	int const radx(int(ceil(radius*DX_VAL_INV))+1), rady(int(ceil(radius*DY_VAL_INV))+1), rxry(radx*rady);
 	int const xpos(get_xpos(x1)), ypos(get_ypos(y1));
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
-	get_params(xx1, yy1, xx2, yy2, cb, cobj.d, dhcm);
+	get_params(xx1, yy1, xx2, yy2, cobj.d);
 
 	if (cobj.type == COLL_CYLINDER_ROT) {
 		float xylen(sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)));
@@ -323,14 +323,14 @@ int add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2
 
 void add_coll_sphere_to_matrix(int index, int dhcm) {
 
-	int x1, x2, y1, y2, cb;
+	int x1, x2, y1, y2, cb(1);
 	coll_obj &cobj(coll_objects[index]);
 	point const pt(cobj.points[0]);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
 	float const radius(cobj.radius);
 	int const radx(int(radius*DX_VAL_INV) + 1), rady(int(radius*DY_VAL_INV) + 1);
 	int const xpos(get_xpos(pt.x)), ypos(get_ypos(pt.y));
-	get_params(x1, y1, x2, y2, cb, cobj.d, dhcm);
+	get_params(x1, y1, x2, y2, cobj.d);
 	int const rxry(radx*rady), crsq((radx + cb)*(rady + cb));
 
 	for (int i = y1-cb; i <= y2+cb; ++i) {
@@ -366,10 +366,9 @@ int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, i
 
 void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member function?
 
-	int x1, x2, y1, y2, cb;
+	int x1, x2, y1, y2, cb(1);
 	coll_obj &cobj(coll_objects[index]);
-	get_params(x1, y1, x2, y2, cb, cobj.d, dhcm);
-	//if (cobj.cp.is_model3d) cb = 0;
+	get_params(x1, y1, x2, y2, cobj.d);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
 	vector3d const norm(cobj.norm);
 	float const dval(-dot_product(norm, cobj.points[0]));
@@ -651,8 +650,8 @@ int remove_coll_object(int index, bool reset_draw) {
 		++cobjs_removed;
 		return 0;
 	}
-	int x1, y1, x2, y2, cb;
-	get_params(x1, y1, x2, y2, cb, c.d, 0);
+	int x1, y1, x2, y2, cb(1);
+	get_params(x1, y1, x2, y2, c.d);
 
 	for (int i = y1-cb; i <= y2+cb; ++i) {
 		for (int j = x1-cb; j <= x2+cb; ++j) {
