@@ -6,7 +6,6 @@
 #include "cobj_bsp_tree.h"
 
 
-bool const BUILD_COBJ_TREE   = 1;
 unsigned const MAX_LEAF_SIZE = 2;
 float const POLY_TOLER       = 1.0E-6;
 float const OVERLAP_AMT      = 0.02;
@@ -431,7 +430,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_line_cobjs(point const &p
 
 
 // Note: actually, this only returns sphere intersection candidates
-template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vector<int> &cobjs) const {
+template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const {
 
 	if (nodes.empty()) return;
 	unsigned const num_nodes(nodes.size());
@@ -447,8 +446,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const 
 		++nix;
 		
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
-			if ((int)cixs[i] == ignore_cobj) continue;
-			cobjs.push_back(cixs[i]);
+			if ((int)cixs[i] != ignore_cobj) vcd.check_cobj(cixs[i]);
 		}
 	}
 }
@@ -578,11 +576,10 @@ cobj_tree_type &get_tree(bool dynamic) {
 }
 
 void build_cobj_tree(bool dynamic, bool verbose) {
-	if (BUILD_COBJ_TREE) {
-		get_tree(dynamic).add_cobjs(verbose);
-		if (!dynamic) cobj_tree_occlude.add_cobjs(verbose);
-		//if (!dynamic) cobj_tree_triangles.add_cobjs(coll_objects, verbose);
-	}
+
+	get_tree(dynamic).add_cobjs(verbose);
+	if (!dynamic) cobj_tree_occlude.add_cobjs(verbose);
+	//if (!dynamic) cobj_tree_triangles.add_cobjs(coll_objects, verbose);
 }
 
 void update_cobj_tree(bool dynamic, bool verbose) {
@@ -630,23 +627,17 @@ bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, 
 
 
 void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs, bool dynamic, bool occlude) {
-
 	(occlude ? cobj_tree_occlude : get_tree(dynamic)).get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, occlude);
 }
 
 
-bool get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, vector<int> &cobjs, bool dynamic) {
-
-	if (!BUILD_COBJ_TREE) return 0;
-	cobjs.resize(0);
-	get_tree(dynamic).get_coll_sphere_cobjs(center, radius, cobj, cobjs);
-	return 1;
+void get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, vert_coll_detector &vcd, bool dynamic) {
+	get_tree(dynamic).get_coll_sphere_cobjs(center, radius, cobj, vcd);
 }
 
 
 bool have_occluders() {
-
-	return (BUILD_COBJ_TREE ? !cobj_tree_occlude.is_empty() : 1);
+	return !cobj_tree_occlude.is_empty();
 }
 
 

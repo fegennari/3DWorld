@@ -171,6 +171,35 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 };
 
 
+class vert_coll_detector {
+
+	dwobject &obj;
+	int type, iter;
+	bool player, already_bounced, skip_dynamic, only_drawn, thread_safe;
+	int coll, obj_index, do_coll_funcs, only_cobj;
+	unsigned cdir, lcoll;
+	float z_old, o_radius, z1, z2;
+	point pos, pold;
+	vector3d motion_dir, obj_vel;
+	vector3d *cnorm;
+	dwobject temp;
+
+	bool safe_norm_div(float rad, float radius, vector3d &norm);
+	void check_cobj_intersect(int index, bool enable_cfs, bool player_step);
+	void init_reset_pos();
+public:
+	vert_coll_detector(dwobject &obj_, int obj_index_, int do_coll_funcs_, int iter_, vector3d *cnorm_,
+		vector3d const &mdir=zero_vector, bool skip_dynamic_=0, bool only_drawn_=0, int only_cobj_=-1, bool const ts=0) :
+	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY || type == WAYPOINT), already_bounced(0),
+	skip_dynamic(skip_dynamic_), only_drawn(only_drawn_), thread_safe(ts), coll(0), obj_index(obj_index_),
+	do_coll_funcs(do_coll_funcs_), only_cobj(only_cobj_), cdir(0), lcoll(0), z_old(obj.pos.z), cnorm(cnorm_), pos(obj.pos),
+	pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity) {}
+
+	void check_cobj(int index);
+	int check_coll();
+};
+
+
 struct enabled_pos {
 
 	point pos;
