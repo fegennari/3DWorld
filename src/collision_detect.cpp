@@ -1376,66 +1376,8 @@ int vert_coll_detector::check_coll() {
 		check_cobj(only_cobj);
 		return coll;
 	}
-	if (1) {
-		for (int d = 0; d < 1+!skip_dynamic; ++d) {
-			get_coll_sphere_cobjs_tree(obj.pos, o_radius, -1, *this, (d != 0));
-		}
-		return coll;
-	}
-	int const x1(get_xpos(obj.pos.x - o_radius)), y1(get_ypos(obj.pos.y - o_radius));
-	int const x2(get_xpos(obj.pos.x + o_radius)), y2(get_ypos(obj.pos.y + o_radius));
-	if (!thread_safe) ++cobj_counter;
-
-	for (int ypos = y1; ypos <= y2; ++ypos) {
-		for (int xpos = x1; xpos <= x2; ++xpos) {
-			//int const xpos(get_xpos(obj.pos.x)), ypos(get_ypos(obj.pos.y));
-			if (point_outside_mesh(xpos, ypos)) continue; // object along edge
-			coll_cell const &cell(v_collision_matrix[ypos][xpos]);
-			if (cell.cvals.empty()) continue;
-			if (skip_dynamic && (z1 > cell.zmax || z2 < cell.zmin)) continue;
-			bool subdiv(!cell.cvz.empty());
-
-			for (int k = int(cell.cvals.size())-1; k >= 0; --k) { // iterate backwards
-				// Can get here when check_cobj() causes more than one object to be removed and cell.cvals is reduced by more than 1
-				if (unsigned(k) >= cell.cvals.size()) continue;
-				unsigned const index(cell.cvals[k]);
-				if (index < 0) continue;
-				assert(index < coll_objects.size());
-
-				if (coll_objects[index].status == COLL_STATIC) {
-					if (ALWAYS_ADD_TO_HCM) assert(cell.zmax >= cell.zmin);
-
-					// This is a big performance optimization, but isn't quite right in all cases,
-					// so don't use it if something important like a smiley or the player is involved
-					if (!player) {
-						if (o_radius < HALF_DXY && (z1 > cell.zmax || z2 < cell.zmin)) {subdiv = 0; break;}
-					}
-					if (subdiv) break;
-				}
-				check_cobj(index);
-			}
-			if (subdiv) {
-				unsigned const sz(cell.cvz.size());
-				float const val((sz-1)/(cell.zmax - cell.zmin));
-				unsigned const zs(min(sz-1, (unsigned)max(0, (int)floor(val*(z1 - cell.zmin)))));
-				unsigned const ze(min(sz-1, (unsigned)max(0, (int)floor(val*(z2 - cell.zmin)))));
-
-				// calculate loop bounds
-				for (unsigned i = zs; i <= ze; ++i) {
-					for (unsigned ix = (i ? cell.cvz[i-1] : 0); ix < cell.cvz[i]; ++ix) {
-						assert(ix < cell.indices.size());
-						unsigned const index(cell.indices[ix]);
-						assert(index < coll_objects.size());
-
-						if (!thread_safe) {
-							if (coll_objects[index].counter == cobj_counter) continue; // prevent duplicate testing of cobjs
-							coll_objects[index].counter = cobj_counter;
-						}
-						check_cobj(index);
-					}
-				}
-			}
-		}
+	for (int d = 0; d < 1+!skip_dynamic; ++d) {
+		get_coll_sphere_cobjs_tree(obj.pos, o_radius, -1, *this, (d != 0));
 	}
 	return coll;
 }
@@ -1446,9 +1388,9 @@ int vert_coll_detector::check_coll() {
 
 // 0 = non vert coll, 1 = X coll, 2 = Y coll, 3 = X + Y coll
 int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm,
-	vector3d const &mdir, bool skip_dynamic, bool only_drawn, int only_cobj, bool thread_safe)
+	vector3d const &mdir, bool skip_dynamic, bool only_drawn, int only_cobj)
 {
-	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic, only_drawn, only_cobj, thread_safe);
+	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic, only_drawn, only_cobj);
 	return vcd.check_coll();
 }
 
