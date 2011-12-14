@@ -45,7 +45,7 @@ public:
 };
 
 
-class cobj_tree_tquads_t : public cobj_tree_base { // unused
+class cobj_tree_tquads_t : public cobj_tree_base {
 
 	vector<coll_tquad> tquads, temp_bins[3];
 

@@ -44,7 +44,7 @@ typedef vector<wpt_ix_t> waypt_adj_vect;
 
 struct waypoint_t {
 
-	bool user_placed, placed_item, goal, temp, visited, disabled;
+	bool user_placed, placed_item, goal, temp, visited, disabled, next_valid;
 	int came_from, item_group, item_ix, coll_id;
 	float g_score, h_score, f_score;
 	point pos;

@@ -68,7 +68,7 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 
 
 waypoint_t::waypoint_t(point const &p, int cid, bool up, bool i, bool g, bool t)
-	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0), disabled(0),
+	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0), disabled(0), next_valid(0),
 	came_from(-1), item_group(-1), item_ix(-1), coll_id(cid), g_score(0), h_score(0), f_score(0), pos(p)
 {
 	clear();
@@ -413,6 +413,9 @@ public:
 		unsigned visible(0), cand_edges(0), num_edges(0), tot_steps(0);
 		float const fast_dmax(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
+		for (int i = from_start; i < (int)from_end; ++i) {
+			waypoints[i].next_valid = 0;
+		}
 		#pragma omp parallel for schedule(dynamic,1) // is this fully thread safe?
 		for (int i = from_start; i < (int)from_end; ++i) {
 			assert(i < (int)waypoints.size());
@@ -454,10 +457,13 @@ public:
 				if (colinear) continue;
 
 				for (unsigned l = 0; l < next.size() && !redundant; ++l) {
+					assert(next[l] < waypoints.size());
+					if (!waypoints[next[l]].next_valid) continue; // another thread is working on this waypoint, so don't use it
 					waypt_adj_vect const &next_next(waypoints[next[l]].next_wpts);
 					point const &wl(waypoints[next[l]].pos);
 
 					for (unsigned m = 0; m < next_next.size() && !redundant; ++m) {
+						assert(next_next[m] < waypoints.size());
 						point const &wm(waypoints[next_next[m]].pos);
 						redundant = (next_next[m] == k && (p2p_dist(start, wl) + p2p_dist(wl, wm) < 1.02*p2p_dist(start, wm)));
 					}
@@ -469,7 +475,8 @@ public:
 					++num_edges;
 				}
 				++cand_edges;
-			}
+			} // for j
+			waypoints[i].next_valid = 1;
 		}
 		for (unsigned i = from_start; i < from_end; ++i) {
 			if (waypoints[i].disabled) continue;
