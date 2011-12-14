@@ -399,6 +399,10 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (d[i_][0] == d[i_][1]) return 1;)
 		return 0;
 	}
+	bool intersects(const cube_t &cube) const {
+		UNROLL_3X(if (cube.d[i_][1] < d[i_][0] || cube.d[i_][0] > d[i_][1]) return 0;)
+		return 1;
+	}
 	bool intersects(const cube_t &cube, float toler) const {
 		UNROLL_3X(if (cube.d[i_][1] < (d[i_][0] + toler) || cube.d[i_][0] > (d[i_][1] - toler)) return 0;)
 		return 1;

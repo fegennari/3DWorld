@@ -434,11 +434,13 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const 
 
 	if (nodes.empty()) return;
 	unsigned const num_nodes(nodes.size());
+	cube_t bcube(center, center);
+	bcube.expand_by(radius);
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
 
-		if (!sphere_cube_intersect(center, radius, n)) {
+		if (!n.intersects(bcube)/* && !sphere_cube_intersect(center, radius, n)*/) {
 			assert(n.next_node_id > nix);
 			nix = n.next_node_id; // failed the bbox test
 			continue;
@@ -446,7 +448,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const 
 		++nix;
 		
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
-			if ((int)cixs[i] != ignore_cobj) vcd.check_cobj(cixs[i]);
+			if ((int)cixs[i] != ignore_cobj && get_cobj(i).intersects(bcube)) vcd.check_cobj(cixs[i]);
 		}
 	}
 }
