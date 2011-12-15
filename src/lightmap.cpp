@@ -379,8 +379,9 @@ void lmcell::get_final_color(colorRGB &color, float max_indir) const {
 
 void lmcell::set_outside_colors() {
 
-	sv = gv = 1.0;
-	UNROLL_3X(sc[i_] = gc[i_] = 1.0;)
+	sv = 1.0;
+	gv = 0.0;
+	UNROLL_3X(sc[i_] = gc[i_] = 1.0; lc[i_] = 0.0;)
 }
 
 
