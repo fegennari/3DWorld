@@ -26,7 +26,7 @@ point camera_last_pos(all_zeros); // not sure about this, need to reset sometime
 vector<coll_obj> coll_objects;
 
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
-extern int camera_in_air, invalid_collision, mesh_scale_change, camera_invincible, flight, do_run, cobj_counter, num_smileys;
+extern int camera_in_air, mesh_scale_change, camera_invincible, flight, do_run, cobj_counter, num_smileys;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
 extern double camera_zh;
 extern dwobject def_objects[];
@@ -1191,14 +1191,11 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		}
 	}
 	if (do_coll_funcs && enable_cfs && cobj.cp.coll_func != NULL) { // call collision function
-		invalid_collision = 0; // should already be 0
 		float energy_mult(1.0);
 		if (type == PLASMA) energy_mult *= obj.init_dir.x*obj.init_dir.x; // size squared
 		float const energy(get_coll_energy(v_old, obj.velocity, otype.mass));
-		cobj.cp.coll_func(cobj.cp.cf_index, obj_index, v_old, obj.pos, energy_mult*energy, type);
 			
-		if (invalid_collision) { // reset local collision
-			invalid_collision = 0;
+		if (!cobj.cp.coll_func(cobj.cp.cf_index, obj_index, v_old, obj.pos, energy_mult*energy, type)) { // invalid collision - reset local collision
 			lcoll = 0;
 			obj   = temp;
 			return;

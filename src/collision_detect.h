@@ -8,7 +8,7 @@
 
 #include "3DWorld.h"
 
-typedef void (*collision_func)(int, int, vector3d const &, point const &, float, int);
+typedef bool (*collision_func)(int, int, vector3d const &, point const &, float, int);
 
 // object/collision object types/status
 enum {COLL_NULL      = 0, COLL_CUBE,     COLL_CYLINDER, COLL_SPHERE,  COLL_CYLINDER_ROT, COLL_POLYGON, COLL_INVALID};

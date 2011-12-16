@@ -1701,19 +1701,20 @@ void InitWater();
 void calc_ocean_normals();
 
 // function prototypes - gameplay/ai
-void camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void smiley_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void landmine_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void health_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void shield_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void powerup_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void weapon_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void ammo_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void pack_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void rock_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void dodgeball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
-void skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool smiley_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool landmine_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool health_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool shield_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool powerup_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool weapon_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool ammo_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool pack_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool rock_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+
 int get_smiley_hit(vector3d &hdir, int index);
 void blast_radius(point const &pos, int type, int obj_index, int shooter, int chain_level);
 void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview);

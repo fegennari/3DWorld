@@ -35,9 +35,7 @@ struct text_message_params {
 };
 
 
-int frags(0), tot_frags(0), best_frags(-1);
-int following(0), invalid_collision(0);
-int flight(0), blood_spilled(0);
+int frags(0), tot_frags(0), best_frags(-1), following(0), flight(0), blood_spilled(0);
 int fired(0), camera_invincible(0), br_source(0), UNLIMITED_WEAPONS(0);
 float camera_health(100.0), team_damage(1.0), self_damage(1.0), player_damage(1.0), smiley_damage(1.0);
 point orig_camera(all_zeros), orig_cdir(plus_z);
@@ -198,26 +196,22 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 }
 
 
-int self_coll_invalid(int type, int obj_index) {
+bool self_coll_invalid(int type, int obj_index) {
 
 	if (type == ROCKET || type == SEEK_D || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED) {
-		if (type == ROCKET || type == SEEK_D || type == STAR5) invalid_collision = 1;
 		return 1;
 	}
 	if ((type == GRENADE || type == CGRENADE || type == S_BALL || type == BALL || type == PLASMA || type == SHRAPNEL) &&
 		obj_groups[coll_id[type]].get_obj(obj_index).time < 10)
 	{
-		invalid_collision = 1;
 		return 1;
 	}
 	if ((type == STAR5 || (type == SHRAPNEL && obj_groups[coll_id[type]].get_obj(obj_index).angle == 0.0)) &&
 		obj_groups[coll_id[type]].get_obj(obj_index).velocity.mag_sq() > 1.0)
 	{
-		invalid_collision = 1;
 		return 1;
 	}
 	if (type == LANDMINE && obj_groups[coll_id[type]].get_obj(obj_index).time < (int)SMILEY_LM_ACT_TIME) {
-		invalid_collision = 1;
 		return 1;
 	}
 	return 0;
@@ -403,17 +397,17 @@ int proc_coll_types(int type, int obj_index, float &energy) {
 }
 
 
-void camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	if (type == CAMERA || type == SMILEY || invalid_collision || !camera_mode || !game_mode || spectate ||
+	if (type == CAMERA || type == SMILEY || !camera_mode || !game_mode || spectate ||
 		(type != SMILEY && !damage_done(type, obj_index)))
 	{
-		return;
+		return 1;
 	}
-	if (camera_health < 0.0) return; // already dead
+	if (camera_health < 0.0) return 1; // already dead
 	int const source(get_damage_source(type, obj_index, CAMERA_ID));
 	assert(source >= CAMERA_ID);
-	if (source == CAMERA_ID && self_coll_invalid(type, obj_index)) return; // hit yourself
+	if (source == CAMERA_ID && self_coll_invalid(type, obj_index)) return 0; // hit yourself
 	int damage_type(0);
 	player_state &sstate(sstates[CAMERA_ID]);
 	colorRGBA cam_filter_color(RED);
@@ -494,8 +488,8 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	default:
 		cam_filter_color = RED;
 	}
-	if (!compute_damage(energy, type, obj_index, source, CAMERA_ID)) return;
-	if (energy > 0.0 && camera_invincible) return;
+	if (!compute_damage(energy, type, obj_index, source, CAMERA_ID)) return 1;
+	if (energy > 0.0 && camera_invincible) return 1;
 	float const last_health(camera_health);
 	camera_health -= HEALTH_PER_DAMAGE*energy;
 	camera_health = min(camera_health, ((sstate.powerup == PU_REGEN) ? MAX_REGEN_HEALTH : max(last_h, MAX_HEALTH)));
@@ -599,29 +593,28 @@ void camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		++sstates[CAMERA_ID].deaths;
 	}
 	if (cam_filter_color.alpha > 0.0) add_camera_filter(cam_filter_color, CAMERA_SPHERE_TIME, -1, CAM_FILT_DAMAGE);
+	return 1;
 }
 
 
-void smiley_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool smiley_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
 	if (index == CAMERA_ID) {
-		camera_collision(type, obj_index, velocity, position, energy, type);
-		return;
+		return camera_collision(type, obj_index, velocity, position, energy, type);
 	}
 	if (type == CAMERA) {
-		camera_collision(type, index, velocity, position, energy, SMILEY);
-		return;
+		return camera_collision(type, index, velocity, position, energy, SMILEY);
 	}
 	int damage_type(0), cid(coll_id[SMILEY]);
 	assert(cid >= 0);
 	assert(obj_groups[cid].enabled);
 	assert(index >= 0 && index < num_smileys);
-	if (invalid_collision || (!game_mode || type == SMILEY)) return;
-	if (obj_groups[cid].get_obj(index).disabled() || obj_groups[cid].get_obj(index).health < 0.0) return;
-	if (!damage_done(type, obj_index)) return;
+	if (!game_mode || type == SMILEY)  return 1;
+	if (obj_groups[cid].get_obj(index).disabled() || obj_groups[cid].get_obj(index).health < 0.0) return 1;
+	if (!damage_done(type, obj_index)) return 1;
 	int const source(get_damage_source(type, obj_index, index));
 	assert(source >= CAMERA_ID);
-	if (source == index && self_coll_invalid(type, obj_index)) return; // hit itself
+	if (source == index && self_coll_invalid(type, obj_index)) return 0; // hit itself
 	player_coll(type, obj_index);
 	int const wa_id(proc_coll_types(type, obj_index, energy));
 	player_state &sstate(sstates[index]);
@@ -680,11 +673,11 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		if (br_source == LANDMINE) damage_type = 1;
 		break;
 	}
-	if (!compute_damage(energy, type, obj_index, source, index)) return;
+	if (!compute_damage(energy, type, obj_index, source, index)) return 1;
 	dwobject &obji(obj_groups[cid].get_obj(index));
 	obji.health = min((obji.health - HEALTH_PER_DAMAGE*energy), (sstate.powerup == PU_REGEN) ? MAX_REGEN_HEALTH : MAX_HEALTH);
 	int const alive(obji.health >= 0.0);
-	if (energy <= 0.0 && alive) return;
+	if (energy <= 0.0 && alive) return 1;
 	bool const burned(is_burned(type, br_source));
 	float const radius(object_types[SMILEY].radius);
 	point const obj_pos(obji.pos);
@@ -721,7 +714,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 			gen_sound(SOUND_SPLAT1, get_camera_pos());
 		}
 	}
-	if (alive) return;
+	if (alive) return 1;
 
 	// dead
 	sstate.powerup      = -1;
@@ -799,6 +792,7 @@ void smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	sstate.killer = source;
 	obji.status   = 0;
 	if (game_mode != 2) gen_smoke(position);
+	return 1;
 }
 
 
@@ -869,43 +863,44 @@ void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const
 }
 
 
-void default_obj_coll(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type, int cobj_type) {
+bool default_obj_coll(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type, int cobj_type) {
 
 	dwobject &obj(obj_groups[coll_id[cobj_type]].get_obj(index));
+	bool valid_coll(1);
 
 	if (type == CAMERA || type == SMILEY) {
-		if (cobj_type == S_BALL) return;
+		if (cobj_type == S_BALL) return 1;
 		energy = get_coll_energy(zero_vector, obj.velocity, object_types[obj.type].mass);
-		smiley_collision(((type == CAMERA) ? CAMERA_ID : obj_index), index, velocity, position, energy, cobj_type);
-		if (!invalid_collision) obj.disable(); // return?
+		valid_coll = smiley_collision(((type == CAMERA) ? CAMERA_ID : obj_index), index, velocity, position, energy, cobj_type);
+		if (valid_coll) obj.disable(); // return?
 	}
 	obj.elastic_collision(position, energy, type); // partially elastic collision
+	return valid_coll;
 }
 
 
-void landmine_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool landmine_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	if (type != CAMERA && type != SMILEY) return;
+	if (type != CAMERA && type != SMILEY) return 1;
 	if (type == CAMERA) obj_index = CAMERA_ID; else assert(obj_index < num_smileys);
 	dwobject &obj(obj_groups[coll_id[LANDMINE]].get_obj(index));
 	point const pos(get_sstate_pos(obj_index));
 
 	if (sstates[obj_index].powerup == PU_FLIGHT && pos.z > object_types[SMILEY].radius + int_mesh_zval_pt_off(pos, 1, 0)) {
-		invalid_collision = 1;
-		return; // don't run into landmine when flying above it
+		return 0; // don't run into landmine when flying above it
 	}
 	if (obj_index == get_damage_source(LANDMINE, index, obj_index) && obj.time < (int)SMILEY_LM_ACT_TIME) {
-		invalid_collision = 1;
-		return; // camera/smiley ran into his own landmine
+		return 0; // camera/smiley ran into his own landmine
 	}
-	//smiley_collision(obj_index, index, velocity, obj.pos, energy, LANDMINE);
+	//if (!smiley_collision(obj_index, index, velocity, obj.pos, energy, LANDMINE)) return 0;
 	blast_radius(obj.pos, LANDMINE, index, obj.source, 0);
 	gen_smoke(obj.pos);
 	obj.status = 0;
+	return 1;
 }
 
 
-bool pushable_collision(int index, point const &position, float force, int type, int obj_type) {
+bool pushable_collision(int index, point const &position, float force, int type, int obj_type) { // Note: return value is *not* valid_coll
 
 	if (type == CAMERA || type == SMILEY) {
 		dwobject &obj(obj_groups[coll_id[obj_type]].get_obj(index));
@@ -921,72 +916,72 @@ bool pushable_collision(int index, point const &position, float force, int type,
 }
 
 // something runs into a dodgeball
-void dodgeball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
 	if (type == CAMERA || type == SMILEY) {
 		if (pushable_collision(index, position, 100.0, type, BALL)) {
-			if (game_mode != 2) return; // doesn't seem to help
+			if (game_mode != 2) return 1; // doesn't seem to help
 			energy = 0.0;
 		}
-		smiley_collision(((type == CAMERA) ? CAMERA_ID : obj_index), index, velocity, position, energy, BALL);
+		return smiley_collision(((type == CAMERA) ? CAMERA_ID : obj_index), index, velocity, position, energy, BALL);
 	}
-	else {
-		default_obj_coll(index, obj_index, velocity, position, energy, type, BALL);
-	}
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, BALL);
 }
 
 
-void skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
 	pushable_collision(index, position, 2000.0, type, SKULL);
+	return 1;
 }
 
 
-void health_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool health_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	default_obj_coll(index, obj_index, velocity, position, energy, type, HEALTH);
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, HEALTH);
 }
 
-void shield_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool shield_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	default_obj_coll(index, obj_index, velocity, position, energy, type, SHIELD);
-}
-
-
-void powerup_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-
-	default_obj_coll(index, obj_index, velocity, position, energy, type, POWERUP);
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, SHIELD);
 }
 
 
-void weapon_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool powerup_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	default_obj_coll(index, obj_index, velocity, position, energy, type, WEAPON);
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, POWERUP);
 }
 
 
-void ammo_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool weapon_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	default_obj_coll(index, obj_index, velocity, position, energy, type, AMMO);
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, WEAPON);
 }
 
 
-void pack_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool ammo_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	default_obj_coll(index, obj_index, velocity, position, energy, type, WA_PACK);
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, AMMO);
 }
 
 
-void sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool pack_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	default_obj_coll(index, obj_index, velocity, position, energy, type, S_BALL);
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, WA_PACK);
+}
+
+
+bool sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+
+	if (!default_obj_coll(index, obj_index, velocity, position, energy, type, S_BALL)) return 0;
 	pushable_collision(index, position, 20.0, type, S_BALL);
+	return 1;
 }
 
 
-void rock_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+bool rock_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	if (type != SEEK_D && type != ROCKET && type != IMPACT) return;
+	if (type != SEEK_D && type != ROCKET && type != IMPACT) return 1;
 	float num(rand_uniform(0.0, 6.0));
 	if (index == 0)          num *= 2.0; // large rock
 	if      (type == SEEK_D) num *= 2.0;
@@ -994,6 +989,7 @@ void rock_collision(int index, int obj_index, vector3d const &velocity, point co
 	int const shooter(get_damage_source(type, obj_index, index));
 	float const p[7] = {2.5, 5.0, 4.0, 0.2, 1.0, 0.5, 0.5};
 	gen_rubble(ROCK, int(num), position, shooter, p);
+	return 1;
 }
 
 
