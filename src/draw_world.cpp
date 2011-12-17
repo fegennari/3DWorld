@@ -220,7 +220,7 @@ inline void scale_color_uw(colorRGBA &color) {
 
 
 // Note: incorrect if there is both a sun and a moon
-bool pt_is_shadowed(point const &pos, int light, int status, float radius, int cid, bool fast, bool use_mesh) {
+bool pt_is_shadowed(point const &pos, int light, float radius, int cid, bool fast, bool use_mesh) {
 
 	if (use_mesh) {
 		int const xpos(get_ypos(pos.x)), ypos(get_ypos(pos.y));
@@ -511,7 +511,7 @@ bool is_object_shadowed(dwobject &obj, bool calc_shadow, float cd_scale, float r
 		int const skipval(min(20, int(8.0/pt_size)));
 
 		if (skipval <= 1 || (obj.time % skipval) == 0) {
-			is_shadowed = pt_is_shadowed(obj.pos, light, obj.status, radius, obj.coll_id, 0, (pt_size < 2.0));
+			is_shadowed = pt_is_shadowed(obj.pos, light, radius, obj.coll_id, 0, (pt_size < 2.0));
 			if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
 			++num_shadow_test;
 		}
@@ -2371,9 +2371,19 @@ void fire::draw() const {
 void scorch_mark::draw() const {
 
 	assert(status);
-	colorRGBA(rgb_val, rgb_val, rgb_val, get_alpha()).do_glColor();
-	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
+	colorRGBA color(rgb_val, rgb_val, rgb_val, get_alpha());
 	point const cur_pos(get_pos());
+
+	if (rgb_val > 0.0) {
+		bool is_shadowed(pt_is_shadowed(cur_pos, get_light(), radius, -1, 0, 0));
+		colorRGBA const d(is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
+		colorRGBA a(color);
+		get_shadowed_color(a, cur_pos, is_shadowed, 0, 0);
+		blend_color(color, a, d, 0.5, 0);
+		color.set_valid_color();
+	}
+	color.do_glColor();
+	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	draw_billboard(cur_pos, (cur_pos + orient), upv, radius, radius);
 }
 

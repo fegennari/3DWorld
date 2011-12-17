@@ -1290,7 +1290,7 @@ void draw_solid_object_groups();
 void draw_transparent_object_groups();
 void set_shadowed_color_custom_ad(colorRGBA const &ac, colorRGBA const &dc, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
 void set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
-bool pt_is_shadowed(point const &pos, int light, int status, float radius, int cid, int fast);
+bool pt_is_shadowed(point const &pos, int light, float radius, int cid, int fast);
 void draw_select_groups(int solid);
 void draw_group(obj_group &objg);
 colorRGBA get_powerup_color(int powerup);
