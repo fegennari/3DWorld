@@ -302,8 +302,9 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 	int const last_hitter(was_hit ? hitter : NO_SOURCE);
 	float const radius(object_types[SMILEY].radius);
 	int const cid(coll_id[SMILEY]);
-	point const camera(get_camera_pos());
-	min_dist = 0.0;
+	point camera(get_camera_pos());
+	camera.z += 0.5*camera_zh;
+	min_dist  = 0.0;
 
 	if (free_for_all) { // smileys attack each other, not only the player
 		assert((int)obj_groups[cid].max_objects() == num_smileys);
