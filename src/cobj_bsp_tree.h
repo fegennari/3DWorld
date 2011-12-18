@@ -88,7 +88,7 @@ template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 
 	bool obj_ok(coll_obj const &c) const {
 		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC)) &&
-			(!occluders_only || c.is_occluder()) && (!moving_only || c.maybe_is_moving()));
+			(!occluders_only || c.is_occluder()) && (!moving_only || c.maybe_is_moving()) && !c.no_collision());
 	}
 
 public:
