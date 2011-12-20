@@ -1520,6 +1520,7 @@ void remove_all_coll_obj();
 void cobj_stats();
 int  collision_detect_large_sphere(point &pos, float radius, unsigned flags);
 int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex);
+bool is_point_interior(point const &pos, float radius);
 
 // function prototypes - objects
 void free_cobj_draw_group_dlists();
@@ -1876,6 +1877,7 @@ void create_shadow_map();
 void free_shadow_map_textures();
 
 // function prototypes - raytrace
+float get_scene_radius();
 void check_update_global_lighting(unsigned lights);
 
 // function prototypes - screenshot (these are C functions)

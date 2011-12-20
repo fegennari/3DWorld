@@ -187,7 +187,6 @@ public:
 };
 
 
-float get_scene_radius();
 void compute_ray_trace_lighting(unsigned ltype);
 
 

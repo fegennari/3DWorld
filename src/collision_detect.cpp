@@ -863,6 +863,51 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 }
 
 
+bool is_point_interior(point const &pos, float radius) { // is query point interior to mesh or cobjs
+
+	if (!is_over_mesh(pos)) return 0; // off scene bounds, outside
+	if (is_under_mesh(pos)) return 1; // under mesh, inside
+	if (pos.z >= czmax) return 0; // above all cobjs (and mesh), outside
+	int inside_count(0);
+	float const scene_radius(get_scene_radius());
+
+	for (int z = -1; z <= 1; ++z) {
+		for (int y = -1; y <= 1; ++y) {
+			for (int x = -1; x <= 1; ++x) {
+				if (x == 0 && y == 0 && z == 0) continue;
+				vector3d const dir(x, y, z);
+				point const pos2(pos + dir*scene_radius);
+				point cpos;
+				vector3d cnorm;
+				int cindex;
+
+				if (check_coll_line_exact(pos, pos2, cpos, cnorm, cindex, 0.0, -1, 0, 0, 1)) {
+					assert((unsigned)cindex < coll_objects.size());
+					coll_obj const &cobj(coll_objects[cindex]);
+					if (radius > 0.0 && cobj.line_intersect(pos, (pos + dir*radius))) return 1; // intersects a short line, so inside/close to a cobj
+
+					if (cobj.type == COLL_CUBE) { // cube
+						unsigned const dim(get_max_dim(cnorm)); // cube intersection dim
+						bool const dir(cnorm[dim] > 0); // cube intersection dir
+						inside_count += ((cobj.cp.surfs & EFLAGS[dim][dir]) ? 1 : -1); // inside if cube side is disabled
+					}
+					else if (cobj.type == COLL_POLYGON && cobj.thickness <= MIN_POLY_THICK) { // planar/thin polygon
+						inside_count += ((dot_product(cnorm, cobj.norm) > 0.0) ? 1 : -1); // inside if hit the polygon back face
+					}
+					else {
+						--inside_count; // sphere, cylinder, cone, or extruded polygon: assume outside
+					}
+				}
+				else {
+					--inside_count; // no collision, assume outside
+				}
+			}
+		}
+	}
+	return (inside_count > 0);
+}
+
+
 // ************ begin vert_coll_detector ************
 
 

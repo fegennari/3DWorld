@@ -182,11 +182,13 @@ class waypoint_builder {
 	float const radius;
 
 	bool is_waypoint_valid(point pos, int coll_id) const {
-		if (pos.z < zmin || !is_over_mesh(pos)) return 0;
+		if (pos.z < zmin || !is_over_mesh(pos))            return 0;
 		player_clip_to_scene(pos); // make sure players can reach this waypoint
 		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
-		if (pos.z - radius < mesh_zval) return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
-		return check_cobj_placement(point(pos), coll_id, 1);
+		if (pos.z - radius < mesh_zval)                    return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
+		if (!check_cobj_placement(point(pos), coll_id, 1)) return 0;
+		if (is_point_interior(pos, 0.5*radius))            return 0;
+		return 1;
 	}
 
 	int add_if_valid(point const &pos, int coll_id, bool connect) {
