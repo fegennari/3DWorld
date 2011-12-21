@@ -25,7 +25,7 @@ vector<point> app_spots;
 vector<od_data> oddatav; // used as a temporary
 
 
-extern bool has_wpt_goal;
+extern bool has_wpt_goal, use_waypoint_app_spots;
 extern int island, iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id;
@@ -1286,29 +1286,39 @@ colorRGBA get_smiley_team_color(int smiley_id) {
 }
 
 
+bool is_good_app_spot(point const &pos, float dmin) {
+
+	//if (!is_good_smiley_pos(get_xpos(pos.x), get_ypos(pos.y))) return 0; // bad starting pos
+	if (camera_mode == 1 && !spectate && dist_less_than(pos, get_camera_pos(), dmin)) return 0;
+	obj_group const &objg(obj_groups[coll_id[SMILEY]]);
+
+	if (objg.is_enabled()) {
+		for (unsigned i = 0; i < objg.end_id; ++i) {
+			if (!objg.get_obj(i).disabled() && dist_less_than(pos, objg.get_obj(i).pos, dmin)) return 0;
+		}
+	}
+	return 1;
+}
+
+
 int gen_smiley_or_player_pos(point &pos, int index) {
 
-	float const radius(object_types[SMILEY].radius);
+	float const radius(object_types[SMILEY].radius), dmin(2.0*radius);
 
 	if (!app_spots.empty()) {
-		float const dmin(2.0*radius);
-		point pos0(pos);
-
 		for (unsigned i = 0; i < SMILEY_MAX_TRIES; ++i) {
-			pos0 = app_spots[rand()%app_spots.size()];
-			//if (!is_good_smiley_pos(get_xpos(pos0.z), get_ypos(pos0.y))) continue; // bad starting pos
-			if (camera_mode == 1 && !spectate && dist_less_than(pos0, get_camera_pos(), dmin)) continue;
-			obj_group const &objg(obj_groups[coll_id[SMILEY]]);
-			bool too_close(0);
-
-			if (objg.is_enabled()) {
-				for (unsigned i = 0; i < objg.end_id && !too_close; ++i) {
-					if (!objg.get_obj(i).disabled() && dist_less_than(pos0, objg.get_obj(i).pos, dmin)) too_close = 1;
-				}
-			}
-			if (!too_close) break;
+			pos = app_spots[rand()%app_spots.size()];
+			if (is_good_app_spot(pos, dmin)) return 1;
 		}
-		pos = pos0;
+		//return 0;
+		return 1; // bad app spot, but return it anyway
+	}
+	if (use_waypoint_app_spots && !waypoints.empty()) {
+		for (unsigned i = 0; i < SMILEY_MAX_TRIES; ++i) {
+			waypoint_t const &wpt(waypoints[rand()%waypoints.size()]);
+			pos = wpt.pos;
+			if (!wpt.next_wpts.empty() && is_good_app_spot(pos, dmin)) return 1;
+		}
 		//return 0;
 		return 1; // bad app spot, but return it anyway
 	}
