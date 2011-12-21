@@ -23,8 +23,8 @@ use_waypoint_app_spots 1
 
 gravity 1.0
 mesh_scale 1.0
-camera_height 0.1
-camera_radius 0.03
+camera_height 0.2
+camera_radius 0.06
 camera_step_height 0.9
 wapypoint_sz_thresh 1.0
 tree_size 1.0
@@ -39,6 +39,8 @@ default_ground_tex -1
 left_handed 0
 self_damage 0.5
 team_damage 0.2
+player_speed 1.8
+smiley_speed 1.8
 smiley_damage 1.0
 player_damage 1.0
 smiley_accuracy 0.96
@@ -57,7 +59,7 @@ disable_shaders 0
 
 mesh_height 0.05
 mesh_size  128 128 128
-scene_size 4.0 4.0 5.2
+scene_size 8.0 8.0 10.4
 set_czmax 4.0
 
 window_width 1920
