@@ -11,7 +11,9 @@ float const POLY_TOLER       = 1.0E-6;
 float const OVERLAP_AMT      = 0.02;
 
 
-extern int display_mode, frame_counter, cobj_counter;
+unsigned start_dynamic_range(0);
+
+extern int display_mode, frame_counter, cobj_counter, begin_motion;
 extern vector<coll_obj> coll_objects;
 extern vector<unsigned> falling_cobjs;
 extern platform_cont platforms;
@@ -272,8 +274,10 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::create_cixs() {
 	}
 	else {
 		if (is_static && !occluders_only) cixs.reserve(cobjs.size());
+		if (is_static) start_dynamic_range = 0; // recompute
 
-		for (unsigned i = 0; i < cobjs.size(); ++i) {
+		for (unsigned i = ((is_dynamic && !is_static) ? start_dynamic_range : 0); i < cobjs.size(); ++i) {
+			if (is_static && i == start_dynamic_range && cobjs[i].truly_static()) ++start_dynamic_range;
 			add_cobj(i);
 		}
 	}
@@ -586,7 +590,7 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 
 void update_cobj_tree(bool dynamic, bool verbose) {
 
-	if (dynamic && last_update_frame[dynamic] < frame_counter) {
+	if (dynamic && last_update_frame[dynamic] < frame_counter && (begin_motion || !get_tree(dynamic).is_empty())) {
 		last_update_frame[dynamic] = frame_counter;
 		build_cobj_tree(dynamic, verbose);
 	}
