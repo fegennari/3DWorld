@@ -22,7 +22,7 @@ waypoint_vector waypoints;
 
 extern bool use_waypoints;
 extern int DISABLE_WATER, camera_change, frame_counter, num_smileys, num_groups, display_mode;
-extern float temperature, zmin, tfticks, water_plane_z;
+extern float temperature, zmin, tfticks, water_plane_z, wapypoint_sz_thresh;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
@@ -179,7 +179,7 @@ bool check_step_dz(point &cur, point const &lpos, float radius) {
 
 class waypoint_builder {
 
-	float const radius;
+	float const radius, size_thresh;
 
 	bool is_waypoint_valid(point pos, int coll_id) const {
 		if (pos.z < zmin || !is_over_mesh(pos))            return 0;
@@ -205,19 +205,19 @@ class waypoint_builder {
 	}
 
 	void add_waypoint_rect(float x1, float y1, float x2, float y2, float z, int coll_id, bool connect) {
-		if (min(x2-x1, y2-y1) < radius) return; // too small to stand on
+		if (min(x2-x1, y2-y1) < size_thresh) return; // too small to stand on
 		point const center(0.5*(x1+x2), 0.5*(y1+y2), z+radius);
 		add_if_valid(center, coll_id, connect);
 		// FIXME: try more points?
 	}
 
 	void add_waypoint_circle(point const &p, float r, int coll_id, bool connect) {
-		if (r < radius) return; // too small to stand on
+		if (r < size_thresh) return; // too small to stand on
 		add_if_valid(p + point(0.0, 0.0, radius), coll_id, connect);
 	}
 
 	void add_waypoint_triangle(point const &p1, point const &p2, point const &p3, int coll_id, bool connect) {
-		if (dist_less_than(p1, p2, 2*radius) || dist_less_than(p2, p3, 2*radius) || dist_less_than(p3, p1, 2*radius)) return; // too small to stand on
+		if (dist_less_than(p1, p2, 2*size_thresh) || dist_less_than(p2, p3, 2*size_thresh) || dist_less_than(p3, p1, 2*size_thresh)) return; // too small to stand on
 		point const center(((p1 + p2 + p3) / 3.0) + point(0.0, 0.0, radius));
 		add_if_valid(center, coll_id, connect);
 		// could try more points (corners?)
@@ -231,7 +231,7 @@ class waypoint_builder {
 	}
 
 public:
-	waypoint_builder(void) : radius(object_types[WAYPOINT].radius) {assert(radius > 0.0);}
+	waypoint_builder(void) : radius(object_types[WAYPOINT].radius), size_thresh(wapypoint_sz_thresh*radius) {assert(radius > 0.0);}
 
 	void add_one_cobj_wpt(coll_obj &c, bool connect) {
 		if (c.status != COLL_STATIC || c.platform_id >= 0) return; // only static objects (not platforms) - use c.truly_static()?
