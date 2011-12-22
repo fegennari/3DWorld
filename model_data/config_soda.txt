@@ -1,7 +1,7 @@
 ntrees 0
 max_unique_trees 0
 nleaves_scale 2.0
-nsmileys 6
+nsmileys 20
 verbose 0
 rand_seed 0
 load_coll_objs 1

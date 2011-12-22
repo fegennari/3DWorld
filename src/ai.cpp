@@ -1315,9 +1315,19 @@ int gen_smiley_or_player_pos(point &pos, int index) {
 	}
 	if (use_waypoint_app_spots && !waypoints.empty()) {
 		for (unsigned i = 0; i < SMILEY_MAX_TRIES; ++i) {
-			waypoint_t const &wpt(waypoints[rand()%waypoints.size()]);
+			unsigned const ix(rand()%waypoints.size());
+			waypoint_t const &wpt(waypoints[ix]);
 			pos = wpt.pos;
-			if (!wpt.next_wpts.empty() && is_good_app_spot(pos, dmin)) return 1;
+			bool has_next_next(0); // look for a group of at least 3 connected waypoints
+
+			for (unsigned j = 0; j < wpt.next_wpts.size() && !has_next_next; ++j) {
+				waypoint_t const &next_wpt(waypoints[wpt.next_wpts[j]]);
+				
+				for (unsigned k = 0; k < next_wpt.next_wpts.size() && !has_next_next; ++k) {
+					has_next_next |= (next_wpt.next_wpts[k] != ix && next_wpt.next_wpts[k] != wpt.next_wpts[j]);
+				}
+			}
+			if (has_next_next && is_good_app_spot(pos, dmin)) return 1;
 		}
 		//return 0;
 		return 1; // bad app spot, but return it anyway
