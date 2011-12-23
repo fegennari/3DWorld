@@ -1875,11 +1875,15 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		res_pos = cpos;
 	}
 	if (coll && cindex >= 0 && closest < 0) { // hit cobjs (like tree leaves)
-		coll_objects[cindex].register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), (is_laser ? BEAM : PROJECTILE));
+		coll_obj &cobj(coll_objects[cindex]);
+		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), (is_laser ? BEAM : PROJECTILE));
 
-		if (!is_laser && coll_objects[cindex].can_be_scorched()) {
-			bool const is_glass(coll_objects[cindex].cp.color.alpha <= 0.5);
-			gen_scorch_mark(coll_pos, 0.005, coll_norm, cindex, 1.0, (is_glass ? 1.0 : 0.0));
+		if (!is_laser && cobj.can_be_scorched()) {
+			bool const is_glass(cobj.is_glass());
+			gen_decal(coll_pos, 0.005, coll_norm, cindex, 1.0, (is_glass ? WHITE : BLACK));
+		}
+		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((rand()%50) == 0)) || (cobj.destroy >= EXPLODEABLE && ((rand()%10) == 0))) {
+			destroy_coll_objs(coll_pos, 500.0, shooter, 0, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)
 		}
 	}
 	

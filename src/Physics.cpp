@@ -51,7 +51,7 @@ extern obj_group obj_groups[];
 extern obj_vector_t<bubble> bubbles;
 extern obj_vector_t<particle_cloud> part_clouds;
 extern obj_vector_t<fire> fires;
-extern obj_vector_t<scorch_mark> scorches;
+extern obj_vector_t<decal_obj> decals;
 
 
 int get_obj_zval(point &pt, float &dz, float z_offset);
@@ -1452,7 +1452,7 @@ void fire::extinguish() {
 }
 
 
-void scorch_mark::apply_physics(unsigned i) {
+void decal_obj::apply_physics(unsigned i) {
 
 	if (!status) return;
 	time  += iticks;
@@ -1460,7 +1460,7 @@ void scorch_mark::apply_physics(unsigned i) {
 }
 
 
-float scorch_mark::get_alpha() const {
+float decal_obj::get_alpha() const {
 
 	return alpha*CLIP_TO_01(1.0f - float(time)/float(SCORCH_TIME));
 }
@@ -1486,7 +1486,7 @@ void shift_other_objs(vector3d const &vd) {
 	shift_objs(bubbles,     vd);
 	shift_objs(part_clouds, vd);
 	shift_objs(fires,       vd);
-	shift_objs(scorches,    vd);
+	shift_objs(decals,      vd);
 }
 
 
@@ -1495,10 +1495,10 @@ void advance_physics_objects() {
 	apply_obj_physics(bubbles);
 	apply_obj_physics(part_clouds);
 	apply_obj_physics(fires);
-	apply_obj_physics(scorches);
+	apply_obj_physics(decals);
 
-	for (unsigned i = 0; i < scorches.size(); ++i) {
-		scorches[i].check_cobj();
+	for (unsigned i = 0; i < decals.size(); ++i) {
+		decals[i].check_cobj();
 	}
 	total_wind += wind*fticks; // only when objects are enabled?
 	check_falling_cobjs();
@@ -1510,7 +1510,7 @@ void reset_other_objects_status() {
 	reset_status(bubbles);
 	reset_status(part_clouds);
 	reset_status(fires);
-	reset_status(scorches);
+	reset_status(decals);
 }
 
 

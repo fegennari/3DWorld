@@ -110,6 +110,7 @@ public:
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
 	bool might_be_drawn() const {return (cp.draw || cp.is_model3d);}
+	bool is_glass()       const {return (cp.tid < 0 && cp.color.alpha <= 0.5);}
 	bool can_be_scorched()const;
 	point get_center_pt() const;
 	float get_max_dim()   const;

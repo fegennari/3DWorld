@@ -30,12 +30,12 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 // **************** Cobj Destroy Code ****************
 
 
-void destroy_coll_objs(point const &pos, float damage, int shooter, bool big) {
+void destroy_coll_objs(point const &pos, float damage, int shooter, bool big, float force_radius) {
 
 	//RESET_TIME;
 	assert(damage >= 0.0);
 	if (damage < 100.0) return;
-	float const radius((big ? 4.0 : 1.0)*sqrt(damage)/650.0);
+	float const radius((force_radius > 0.0) ? force_radius : (big ? 4.0 : 1.0)*sqrt(damage)/650.0);
 	vector3d cdir;
 	vector<color_tid_vol> cts;
 	int const dmin((damage > 800.0) ? DESTROYABLE : ((damage > 200.0) ? SHATTERABLE : EXPLODEABLE));
@@ -252,7 +252,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	//RESET_TIME;
 	vector<coll_obj> &cobjs(coll_objects); // so we don't have to rename everything and can keep the shorter code
 	point center(cube.get_cube_center());
-	float const clip_cube_colume(cube.get_volume());
+	float const clip_cube_volume(cube.get_volume());
 	vector<int> just_added, to_remove;
 	vector<coll_obj> new_cobjs;
 	cdir = zero_vector;
@@ -278,7 +278,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		csg_cube const cube2(cobjs[i], 1);
 		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
 		float volume(cobjs[i].volume);
-		float const min_volume(0.01*min(volume, clip_cube_colume));
+		float const min_volume(0.01*min(volume, clip_cube_volume));
 		float const int_volume(cube2.get_overlap_volume(cube));
 		bool no_new_cobjs(shatter || volume < TOLERANCE);
 

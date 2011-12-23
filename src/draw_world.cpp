@@ -69,7 +69,7 @@ extern obj_type object_types[];
 extern obj_vector_t<bubble> bubbles;
 extern obj_vector_t<particle_cloud> part_clouds, cloud_volumes;
 extern obj_vector_t<fire> fires;
-extern obj_vector_t<scorch_mark> scorches;
+extern obj_vector_t<decal_obj> decals;
 extern float diffuse[], gauss_rand_arr[];
 extern cube_t cur_smoke_bb;
 extern texture_t textures[];
@@ -2368,21 +2368,22 @@ void fire::draw() const {
 }
 
 
-void scorch_mark::draw() const {
+void decal_obj::draw() const {
 
 	assert(status);
-	colorRGBA color(rgb_val, rgb_val, rgb_val, get_alpha());
+	colorRGBA draw_color(color);
+	draw_color.alpha = get_alpha();
 	point const cur_pos(get_pos());
 
-	if (rgb_val > 0.0) {
+	if (color != BLACK) {
 		bool is_shadowed(pt_is_shadowed(cur_pos, get_light(), radius, -1, 0, 0));
-		colorRGBA const d(is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
-		colorRGBA a(color);
+		colorRGBA const d(is_shadowed ? colorRGBA(0.0, 0.0, 0.0, draw_color.alpha) : draw_color);
+		colorRGBA a(draw_color);
 		get_shadowed_color(a, cur_pos, is_shadowed, 0, 0);
-		blend_color(color, a, d, 0.5, 0);
-		color.set_valid_color();
+		blend_color(draw_color, a, d, 0.5, 0);
+		draw_color.set_valid_color();
 	}
-	color.do_glColor();
+	draw_color.do_glColor();
 	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	draw_billboard(cur_pos, (cur_pos + orient), upv, radius, radius);
 }
@@ -2575,9 +2576,9 @@ void draw_fires() {
 }
 
 
-void draw_scorches() {
+void draw_decals() {
 
-	draw_billboarded_objs(scorches, BLUR_CENT_TEX);
+	draw_billboarded_objs(decals, BLUR_CENT_TEX);
 }
 
 

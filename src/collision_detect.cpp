@@ -40,7 +40,7 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 
 
 
-bool scorch_mark::is_on_cobj(int cobj) const {
+bool decal_obj::is_on_cobj(int cobj) const {
 
 	if (cobj < 0) return 0;
 	assert((unsigned)cobj < coll_objects.size()); // can this fail if the cobj was destroyed? coll_objects only increases in size
@@ -49,7 +49,7 @@ bool scorch_mark::is_on_cobj(int cobj) const {
 }
 
 
-void scorch_mark::check_cobj() {
+void decal_obj::check_cobj() {
 
 	if (!status || cid < 0) return; // already disabled, or no bound cobj
 	
@@ -77,7 +77,7 @@ void scorch_mark::check_cobj() {
 }
 
 
-vector3d scorch_mark::get_platform_delta() const {
+vector3d decal_obj::get_platform_delta() const {
 
 	if (cid >= 0) {
 		assert((unsigned)cid < coll_objects.size());
@@ -1259,7 +1259,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			float const sz(5.0*otype.radius);
 			float const dmin(min(min((cobj.d[ds][1] - obj.pos[ds]), (obj.pos[ds] - cobj.d[ds][0])),
 					                min((cobj.d[dt][1] - obj.pos[dt]), (obj.pos[dt] - cobj.d[dt][0]))));
-			if (dmin > sz) gen_scorch_mark((obj.pos - norm*o_radius), sz, norm, index, 0.75, 0.0);
+			if (dmin > sz) gen_decal((obj.pos - norm*o_radius), sz, norm, index, 0.75, BLACK);
 		}
 		obj.disable();
 	}

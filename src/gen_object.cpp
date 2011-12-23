@@ -12,7 +12,7 @@ unsigned const NUM_STARS       = 4000;
 unsigned const MAX_BUBBLES     = 2000;
 unsigned const MAX_PART_CLOUDS = 200;
 unsigned const MAX_FIRES       = 50;
-unsigned const MAX_SCORCHES    = 1000;
+unsigned const MAX_DECALS      = 2000;
 
 
 // Global Variables
@@ -22,7 +22,7 @@ obj_vector_t<bubble> bubbles(MAX_BUBBLES);
 obj_vector_t<particle_cloud> part_clouds(MAX_PART_CLOUDS);
 obj_vector_t<particle_cloud> cloud_volumes;
 obj_vector_t<fire> fires(MAX_FIRES);
-obj_vector_t<scorch_mark> scorches(MAX_SCORCHES);
+obj_vector_t<decal_obj> decals(MAX_DECALS);
 float gauss_rand_arr[N_RAND_DIST+2];
 rand_gen_t global_rand_gen;
 
@@ -194,7 +194,7 @@ void fire::gen(point const &p, float size, float intensity, int src, bool is_sta
 }
 
 
-void scorch_mark::gen(point const &p, float r, vector3d const &o, int cid_, float init_alpha, float rgb_val_) {
+void decal_obj::gen(point const &p, float r, vector3d const &o, int cid_, float init_alpha, colorRGBA const &color_) {
 
 	assert(r > 0.0 && init_alpha > 0.0);
 	cid    = cid_; // must be set first
@@ -203,7 +203,7 @@ void scorch_mark::gen(point const &p, float r, vector3d const &o, int cid_, floa
 	init_gen_rand(ipos, 0.0, 0.0);
 	radius = r;
 	alpha  = init_alpha;
-	rgb_val= rgb_val_;
+	color  = color_;
 	orient = o; // normal of attached surface at collision/anchor point
 	orient.normalize();
 	pos   += orient*rand_uniform(0.001, 0.002); // move away from the object it's attached to
@@ -274,9 +274,9 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close, bool i
 }
 
 
-void gen_scorch_mark(point const &pos, float radius, vector3d const &orient, int cid, float init_alpha, float rgb_val) {
+void gen_decal(point const &pos, float radius, vector3d const &orient, int cid, float init_alpha, colorRGBA const &color) {
 
-	scorches[scorches.choose_element()].gen(pos, radius, orient, cid, init_alpha, rgb_val);
+	decals[decals.choose_element()].gen(pos, radius, orient, cid, init_alpha, color);
 }
 
 

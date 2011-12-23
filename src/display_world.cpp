@@ -547,7 +547,7 @@ void draw_game_elements(int timer1) {
 	draw_camera_weapon(1);
 	draw_projectile_effects();
 	if (TIMETEST) PRINT_TIME("C");
-	draw_scorches();
+	draw_decals();
 	draw_smoke();
 	draw_fires();
 	if (TIMETEST) PRINT_TIME("D");
