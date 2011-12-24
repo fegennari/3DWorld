@@ -423,9 +423,9 @@ bool coll_obj::truly_static() const {
 }
 
 
-bool coll_obj::can_be_scorched() const {
+bool coll_obj::can_be_scorched() const { // allow destroyable and transparent objects, drawn or opaque model3d shapes
 
-	return (status == COLL_STATIC && !(cp.tid >= 0 && textures[cp.tid].has_alpha()) && !no_draw()); // allow destroyable and transparent objects
+	return (status == COLL_STATIC && !(cp.tid >= 0 && textures[cp.tid].has_alpha()) && (!no_draw() || (cp.is_model3d && cp.color.A == 1.0)));
 }
 
 

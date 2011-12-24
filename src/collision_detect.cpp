@@ -45,7 +45,14 @@ bool decal_obj::is_on_cobj(int cobj) const {
 	if (cobj < 0) return 0;
 	assert((unsigned)cobj < coll_objects.size()); // can this fail if the cobj was destroyed? coll_objects only increases in size
 	coll_obj const &c(coll_objects[cobj]);
-	return (c.status == COLL_STATIC && c.type == COLL_CUBE && sphere_cube_intersect((ipos + get_platform_delta()), SMALL_NUMBER, c));
+	// spheres and cylinders not supported - decals look bad on rounded objects
+	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON)) return 0;
+	point const center(ipos + get_platform_delta());
+	if (!sphere_cube_intersect(center, SMALL_NUMBER, c)) return 0;
+	if (c.type == COLL_CUBE) return 1;
+	float t; // polygon case
+	point const p1(center - orient*MIN_POLY_THICK), p2(center + orient*MIN_POLY_THICK);
+	return line_poly_intersect(p1, p2, c.points, c.npoints, c.norm, t); // doesn't really work on extruded polygons
 }
 
 

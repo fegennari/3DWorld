@@ -146,8 +146,8 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 						if (len > TOLERANCE) {
 							float const dr(radius2 - radius), denom(sqrt(len*len + dr*dr));
 							assert(denom > TOLERANCE);
+							cnorm += cv*dr;
 							cnorm *= len/denom;
-							cnorm += cv*(dr*len/denom);
 						}
 					}
 				}

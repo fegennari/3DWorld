@@ -276,7 +276,9 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close, bool i
 
 void gen_decal(point const &pos, float radius, vector3d const &orient, int cid, float init_alpha, colorRGBA const &color) {
 
-	decals[decals.choose_element()].gen(pos, radius, orient, cid, init_alpha, color);
+	decal_obj decal;
+	decal.gen(pos, radius, orient, cid, init_alpha, color);
+	if (decal.is_on_cobj(cid)) decals[decals.choose_element()] = decal;
 }
 
 
