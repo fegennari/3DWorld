@@ -40,7 +40,7 @@ int fired(0), camera_invincible(0), br_source(0), UNLIMITED_WEAPONS(0);
 float camera_health(100.0), team_damage(1.0), self_damage(1.0), player_damage(1.0), smiley_damage(1.0);
 point orig_camera(all_zeros), orig_cdir(plus_z);
 vector<spark_t> sparks;
-vector<laser_beam> lasers;
+vector<beam3d> beams;
 text_message_params msg_params;
 string message;
 blood_spot blood_spots[NUM_BS];
@@ -1465,10 +1465,10 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 }
 
 
-void add_laser_beam(laser_beam const &laser) {
+void add_laser_beam(beam3d const &beam) {
 
-	lasers.push_back(laser);
-	if (LASER_PATH_LIGHT) add_line_light(laser.pts[0], laser.pts[1], RED, 0.4, min(1.0f, sqrt(laser.intensity)));
+	beams.push_back(beam);
+	if (LASER_PATH_LIGHT) add_line_light(beam.pts[0], beam.pts[1], RED, 0.4, min(1.0f, sqrt(beam.intensity)));
 }
 
 
@@ -1609,8 +1609,8 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_LASER: // line of sight damage
 		{
 			projectile_test(fpos, dir, firing_error, damage, shooter, range);
-			laser_beam const laser((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
-			add_laser_beam(laser); // might not need to actually add laser itself for camera/player
+			beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
+			add_laser_beam(beam); // might not need to actually add laser itself for camera/player
 		}
 		break;
 
@@ -1769,7 +1769,7 @@ void add_laser_beam_segment(point const &start_pos, point coll_pos, vector3d con
 	else if (start_pos == coll_pos) {
 		return;
 	}
-	add_laser_beam(laser_beam(distant, NO_SOURCE, start_pos, coll_pos, RED, intensity));
+	add_laser_beam(beam3d(distant, NO_SOURCE, start_pos, coll_pos, RED, intensity));
 }
 
 

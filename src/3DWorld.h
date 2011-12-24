@@ -848,6 +848,18 @@ struct surf_adv { // size = 4
 };
 
 
+struct ray3d { // size = 40
+
+	point pts[2];
+	colorRGBA color;
+	
+	ray3d(point const &pt0, point const &pt1, colorRGBA const &c) : color(c) {
+		pts[0] = pt0;
+		pts[1] = pt1;
+	}
+};
+
+
 class line3d { // size = 28
 
 public:
@@ -1721,7 +1733,7 @@ void blast_radius(point const &pos, int type, int obj_index, int shooter, int ch
 void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview);
 void do_area_effect_damage(point &pos, float effect_radius, float damage, int index, int source, int type);
 void switch_player_weapon(int val);
-void draw_lasers();
+void draw_beams();
 void show_blood_on_camera();
 void update_weapon_cobjs();
 int select_dodgeball_texture(int shooter);

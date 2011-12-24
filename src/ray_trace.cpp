@@ -15,7 +15,7 @@ float const SPEC_REFL     = 1.0; // 100% specular reflectivity
 float const SNOW_ALBEDO   = 0.9;
 float const ICE_ALBEDO    = 0.8;
 
-bool keep_lasers(0); // debugging mode
+bool keep_beams(0); // debugging mode
 bool kill_raytrace(0), indir_lighting_updated(0);
 unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
@@ -29,7 +29,7 @@ extern char *lighting_file[];
 extern point sun_pos, moon_pos;
 extern vector<light_source> light_sources;
 extern vector<coll_obj> coll_objects;
-extern vector<laser_beam> lasers;
+extern vector<beam3d> beams;
 extern lmap_manager_t lmap_manager;
 extern cube_light_src_vect sky_cube_lights, global_cube_lights;
 extern model3ds all_models;
@@ -153,7 +153,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	}
 	point p_end(p2);
 	if ( coll) p2 = cpos;
-	if (keep_lasers && p1 != p2) lasers.push_back(laser_beam(!coll, 1, p1, p2, color, 0.1*weight)); // testing
+	if (keep_beams && p1 != p2) beams.push_back(beam3d(!coll, 1, p1, p2, color, 0.1*weight)); // testing
 	if (!coll) return; // more efficient to do this up here and let a reverse ray from the sky light this path
 
 	// walk from p1 to p2, adding light to all lightmap cells encountered
@@ -353,7 +353,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 		kill_raytrace = 0;
 	}
 	assert(num_threads > 0 && num_threads < 100);
-	assert(!keep_lasers || num_threads == 1); // could use a pthread_mutex_t instead to make this legal
+	assert(!keep_beams || num_threads == 1); // could use a pthread_mutex_t instead to make this legal
 	bool const single_thread(num_threads == 1);
 	if (verbose) cout << "Computing lighting on " << num_threads << " threads." << endl;
 	thread_manager.create(num_threads);

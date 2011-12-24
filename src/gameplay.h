@@ -70,19 +70,13 @@ struct weapon_t { // size = 64
 };
 
 
-struct laser_beam { // size = 32
+struct beam3d : public ray3d { // size = 52
 
 	int distant, shooter;
 	float intensity;
-	point pts[2];
-	colorRGBA color;
 	
-	laser_beam(int dist, int shoot, point const &pt0, point const &pt1, colorRGBA const &c, float int_=1.0)
-		: distant(dist), shooter(shoot), intensity(int_), color(c)
-	{
-		pts[0] = pt0;
-		pts[1] = pt1;
-	}
+	beam3d(int dist, int shoot, point const &pt0, point const &pt1, colorRGBA const &c, float int_=1.0)
+		: ray3d(pt0, pt1, c), distant(dist), shooter(shoot), intensity(int_) {}
 	void draw() const;
 };
 

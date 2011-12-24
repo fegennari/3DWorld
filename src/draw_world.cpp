@@ -2660,7 +2660,7 @@ void draw_projectile_effects() {
 
 	update_blasts(); // not really an update, but needed for draw_blasts
 	draw_blasts();
-	draw_lasers();
+	draw_beams();
 	draw_sparks();
 }
 

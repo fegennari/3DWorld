@@ -12,7 +12,7 @@ bool const USE_SMAP = 1;
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
-extern bool invalid_ccache, keep_lasers;
+extern bool invalid_ccache, keep_beams;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, begin_motion;
 extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPONS, animate2;
 extern float fticks;
@@ -20,7 +20,7 @@ extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern GLUquadricObj* quadric;
 extern vector<spark_t> sparks;
-extern vector<laser_beam> lasers;
+extern vector<beam3d> beams;
 extern int coll_id[];
 extern blood_spot blood_spots[];
 extern player_state *sstates;
@@ -32,7 +32,7 @@ bool use_smap_here() {
 }
 
 
-void laser_beam::draw() const {
+void beam3d::draw() const {
 
 	if (shooter == CAMERA_ID) return; // camera (skip for now)
 	float const mag(sqrt(intensity));
@@ -42,15 +42,15 @@ void laser_beam::draw() const {
 }
 
 
-void draw_lasers() {
+void draw_beams() {
 
-	if (lasers.empty()) return;
+	if (beams.empty()) return;
 	begin_line_tquad_draw();
 
-	for (unsigned i = 0; i < lasers.size(); ++i) {
-		lasers[i].draw();
+	for (unsigned i = 0; i < beams.size(); ++i) {
+		beams[i].draw();
 	}
-	if (!keep_lasers) lasers.clear();
+	if (!keep_beams) beams.clear();
 	end_line_tquad_draw();
 }
 
@@ -605,7 +605,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (!no_specular) set_specular(0.0, 0.0);
 
 			if (shooter == CAMERA_ID && fired) {
-				//lasers.push_back(laser_beam(0, shooter, p1, p2)); // should probably use this instead
+				//beams.push_back(beam3d(0, shooter, p1, p2)); // should probably use this instead
 				set_color(RED);
 				set_color_e(RED);
 				glTranslatef(-tx, -ty, 0.148);
