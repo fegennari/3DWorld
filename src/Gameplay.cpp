@@ -1881,6 +1881,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		if (!is_laser && cobj.can_be_scorched()) {
 			bool const is_glass(cobj.is_glass());
 			gen_decal(coll_pos, 0.005, coll_norm, cindex, 1.0, (is_glass ? WHITE : BLACK));
+
+			if (wtype == W_M16 && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
+				gen_sound(SOUND_RICOCHET, coll_pos); // ricochet near player
+			}
 		}
 		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((rand()%50) == 0)) || (cobj.destroy >= EXPLODEABLE && ((rand()%10) == 0))) {
 			destroy_coll_objs(coll_pos, 500.0, shooter, 0, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)

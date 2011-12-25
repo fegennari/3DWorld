@@ -61,6 +61,7 @@ void setup_sounds() {
 	sounds.add_file_buffer("gasp.wav"       ); // SOUND_GASP
 	sounds.add_file_buffer("scream3.wav"    ); // SOUND_SCREAM3
 	sounds.add_file_buffer("squeal.wav"     ); // SOUND_SQUEAL
+	sounds.add_file_buffer("ricochet.wav"   ); // SOUND_RICOCHET
 	cout << endl;
 
 	// create sources
