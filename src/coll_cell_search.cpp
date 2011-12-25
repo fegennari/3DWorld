@@ -136,19 +136,13 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 				
 				if (int_type == 1) { // side intersection
 					vector3d const cv(points[0] - points[1]);
-					orthogonalize_dir((p1 - points[0]), cv, cnorm, 0);
-					if (cnorm == zero_vector) orthogonalize_dir((p2 - points[0]), cv, cnorm, 0); // p1 is bad, so try p2
+					point const cpos(p1 + (p2 - p1)*t);
+					orthogonalize_dir((cpos - points[0]), cv, cnorm, 0);
 
 					if (radius != radius2) {
 						if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
 						float const len(cv.mag());
-
-						if (len > TOLERANCE) {
-							float const dr(radius2 - radius), denom(sqrt(len*len + dr*dr));
-							assert(denom > TOLERANCE);
-							cnorm += cv*dr;
-							cnorm *= len/denom;
-						}
+						if (len > TOLERANCE) cnorm = cnorm*len + cv*((radius2 - radius)/len); // will be normalized later
 					}
 				}
 				else { // top/bottom intersection
