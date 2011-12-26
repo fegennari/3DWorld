@@ -27,7 +27,7 @@ float gauss_rand_arr[N_RAND_DIST+2];
 rand_gen_t global_rand_gen;
 
 
-extern int star_init, begin_motion, animate2, show_fog;
+extern int star_init, begin_motion, animate2, show_fog, frame_counter;
 extern float zmax_est, zmax, ztop;
 extern int coll_id[];
 extern point leaf_points[];
@@ -194,7 +194,7 @@ void fire::gen(point const &p, float size, float intensity, int src, bool is_sta
 }
 
 
-void decal_obj::gen(point const &p, float r, vector3d const &o, int cid_, float init_alpha, colorRGBA const &color_) {
+void decal_obj::gen(point const &p, float r, vector3d const &o, int cid_, float init_alpha, colorRGBA const &color_, bool is_glass_) {
 
 	assert(r > 0.0 && init_alpha > 0.0);
 	cid    = cid_; // must be set first
@@ -207,6 +207,8 @@ void decal_obj::gen(point const &p, float r, vector3d const &o, int cid_, float 
 	orient = o; // normal of attached surface at collision/anchor point
 	orient.normalize();
 	pos   += orient*rand_uniform(0.001, 0.002); // move away from the object it's attached to
+	time   = frame_counter;
+	is_glass = is_glass_;
 }
 
 
@@ -274,10 +276,10 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close, bool i
 }
 
 
-void gen_decal(point const &pos, float radius, vector3d const &orient, int cid, float init_alpha, colorRGBA const &color) {
+void gen_decal(point const &pos, float radius, vector3d const &orient, int cid, float init_alpha, colorRGBA const &color, bool is_glass_) {
 
 	decal_obj decal;
-	decal.gen(pos, radius, orient, cid, init_alpha, color);
+	decal.gen(pos, radius, orient, cid, init_alpha, color, is_glass_);
 	if (decal.is_on_cobj(cid)) decals[decals.choose_element()] = decal;
 }
 

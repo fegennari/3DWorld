@@ -1880,7 +1880,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 		if (!is_laser && cobj.can_be_scorched()) {
 			bool const is_glass(cobj.is_glass());
-			gen_decal(coll_pos, 0.005, coll_norm, cindex, 1.0, (is_glass ? WHITE : BLACK));
+			gen_decal(coll_pos, 0.005, coll_norm, cindex, 1.0, (is_glass ? WHITE : BLACK), is_glass);
 
 			if (wtype == W_M16 && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
 				gen_sound(SOUND_RICOCHET, coll_pos); // ricochet near player

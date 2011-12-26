@@ -1460,7 +1460,7 @@ bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 				   float r, float den, float dark, float dam, int src, int dt, bool as);
 void gen_smoke(point const &pos);
 bool gen_fire(point const &pos, float size, int source, bool allow_close=0, bool is_static=0, float light_bwidth=1.0, float intensity=1.0);
-void gen_decal(point const &pos, float radius, vector3d const &orient, int cid=-1, float init_alpha=1.0, colorRGBA const &color=BLACK);
+void gen_decal(point const &pos, float radius, vector3d const &orient, int cid=-1, float init_alpha=1.0, colorRGBA const &color=BLACK, bool is_glass_=0);
 void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade=0);
 int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,
 	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment);
