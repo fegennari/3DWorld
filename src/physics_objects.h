@@ -112,16 +112,16 @@ struct fire : public basic_physics_obj { // size = 60
 };
 
 
-struct decal_obj : public basic_physics_obj { // size = 80
+struct decal_obj : public basic_physics_obj { // size = 76
 
 	bool is_glass;
-	int cid, timestamp;
+	int cid;
 	float radius, alpha;
 	colorRGBA color;
 	point ipos;
 	vector3d orient;
 
-	decal_obj() : is_glass(0), cid(-1), timestamp(0), radius(0.0), alpha(1.0), color(BLACK) {}
+	decal_obj() : is_glass(0), cid(-1), radius(0.0), alpha(1.0), color(BLACK) {}
 	void gen(point const &p, float r, vector3d const &o, int cid_=-1, float init_alpha=1.0, colorRGBA const &color_=BLACK, bool is_glass_=0);
 	void draw() const;
 	bool is_on_cobj(int cobj) const;

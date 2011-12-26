@@ -27,7 +27,7 @@ float gauss_rand_arr[N_RAND_DIST+2];
 rand_gen_t global_rand_gen;
 
 
-extern int star_init, begin_motion, animate2, show_fog, frame_counter;
+extern int star_init, begin_motion, animate2, show_fog;
 extern float zmax_est, zmax, ztop;
 extern int coll_id[];
 extern point leaf_points[];
@@ -207,8 +207,7 @@ void decal_obj::gen(point const &p, float r, vector3d const &o, int cid_, float 
 	orient = o; // normal of attached surface at collision/anchor point
 	orient.normalize();
 	pos   += orient*rand_uniform(0.001, 0.002); // move away from the object it's attached to
-	timestamp = frame_counter;
-	is_glass  = is_glass_;
+	is_glass = is_glass_;
 }
 
 
