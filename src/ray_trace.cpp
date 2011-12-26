@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include "3DWorld.h"
 #include "lightmap.h"
-#include "gameplay.h"
+#include "mesh.h"
 #include "model3d.h"
 
 

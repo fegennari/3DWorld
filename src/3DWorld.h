@@ -860,6 +860,17 @@ struct ray3d { // size = 40
 };
 
 
+struct beam3d : public ray3d { // size = 52
+
+	int distant, shooter;
+	float intensity;
+	
+	beam3d(int dist, int shoot, point const &pt0, point const &pt1, colorRGBA const &c, float int_=1.0)
+		: ray3d(pt0, pt1, c), distant(dist), shooter(shoot), intensity(int_) {}
+	void draw() const;
+};
+
+
 class line3d { // size = 28
 
 public:
