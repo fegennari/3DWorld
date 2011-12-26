@@ -230,6 +230,25 @@ point cube_t::gen_rand_pt_in_cube() const {
 }
 
 
+int cube_t::closest_face(point const &pos) const {
+
+	int face(0);
+	float min_dist(0.0);
+
+	for (unsigned dim = 0; dim < 3; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			float const dist(fabs(pos[dim] - d[dim][dir]));
+				
+			if (min_dist == 0 || dist < min_dist) {
+				min_dist = dist;
+				face     = (dim<<1) + dir;
+			}
+		}
+	}
+	return face;
+}
+
+
 // *** CSG_CUBE IMPLEMENTATION ***
 
 

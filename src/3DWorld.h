@@ -452,6 +452,7 @@ struct cube_t { // size = 24
 	float get_overlap_volume(const cube_t &cube) const;
 	vector3d closest_side_dir(point const &pos) const;
 	point gen_rand_pt_in_cube() const;
+	int closest_face(point const &pos) const;
 };
 
 cube_t const all_zeros_cube(0,0,0,0,0,0);
@@ -857,6 +858,7 @@ struct ray3d { // size = 40
 		pts[0] = pt0;
 		pts[1] = pt1;
 	}
+	ray3d() {}
 };
 
 
@@ -864,9 +866,10 @@ struct beam3d : public ray3d { // size = 52
 
 	int distant, shooter;
 	float intensity;
-	
+
 	beam3d(int dist, int shoot, point const &pt0, point const &pt1, colorRGBA const &c, float int_=1.0)
 		: ray3d(pt0, pt1, c), distant(dist), shooter(shoot), intensity(int_) {}
+	beam3d() {}
 	void draw() const;
 };
 
