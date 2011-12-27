@@ -63,6 +63,7 @@ extern colorRGBA bkg_color, sun_color;
 extern lightning l_strike;
 extern vector<spark_t> sparks;
 extern vector<star> stars;
+extern vector<beam3d> beams;
 extern obj_group obj_groups[];
 extern vector<coll_obj> coll_objects;
 extern obj_type object_types[];
@@ -2576,8 +2577,108 @@ void draw_fires() {
 }
 
 
+struct crack_point {
+
+	point pos;
+	int cid, face, time;
+	float alpha;
+	colorRGBA color;
+	
+	crack_point() {}
+	crack_point(point const &pos_, int cid_, int face_, int time_, float alpha_, colorRGBA const &color_)
+		: pos(pos_), cid(cid_), face(face_), time(time_), alpha(alpha_), color(color_) {}
+	
+	bool operator<(crack_point const &c) const {
+		if (cid  != c.cid ) return (cid  < c.cid );
+		if (face != c.face) return (face < c.face);
+		return (c.time < time); // max time first
+	}
+};
+
+
 void draw_decals() {
 
+	//RESET_TIME;
+	vector<crack_point> cpts; // static?
+	vector<ray3d> crack_lines; // static?
+	int last_cobj(-1);
+	bool skip_cobj(0);
+
+	for (vector<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
+		if (i->status == 0 || !i->is_glass || i->cid < 0) continue;
+		if (i->cid == last_cobj && skip_cobj) continue;
+		assert((unsigned)i->cid < coll_objects.size());
+		coll_obj const &cobj(coll_objects[i->cid]);
+		skip_cobj = (cobj.status != COLL_STATIC || cobj.type != COLL_CUBE || !camera_pdu.cube_visible(cobj));
+		last_cobj = i->cid;
+		if (skip_cobj) continue;
+		point const pos(i->get_pos());
+		cpts.push_back(crack_point(pos, i->cid, cobj.closest_face(pos), i->time, i->get_alpha(), i->color));
+	}
+	stable_sort(cpts.begin(), cpts.end());
+
+	for (unsigned i = 0; i < cpts.size();) {
+		unsigned const s(i);
+		for (++i; i < cpts.size() && cpts[i].cid == cpts[s].cid && cpts[i].face == cpts[s].face; ++i) {}
+		// all cpts in [s,i) have the same {cid, face}
+		crack_lines.resize(0);
+		cube_t const &cube(coll_objects[cpts[s].cid]);
+		float const diameter(cube.get_bsphere_radius());
+		
+		for (unsigned j = s; j < i; ++j) {
+			crack_point const &cpt1(cpts[j]);
+			int const dim(cpt1.face >> 1), d1((dim+1)%3), d2((dim+2)%3);
+
+			// generated cracks to the edge of the glass cube
+			unsigned const ncracks(4); // one for each quadrant
+			float const center(0.5*(cube.d[dim][0] + cube.d[dim][1]));
+			rand_gen_t rgen;
+			rgen.set_state(*(int *)&cpt1.pos[d1], *(int *)&cpt1.pos[d2]); // hash floats as ints	
+			point epts[ncracks];
+
+			for (unsigned n = 0; n < ncracks; ++n) {
+				point epos;
+				float min_dist_sq(0.0);
+
+				for (unsigned attempt = 0; attempt < 4; ++attempt) {
+					vector3d dir;
+					dir[dim] = 0.0;
+					dir[d1]  = rgen.rand_float()*((n&1) ? -1.0 : 1.0);
+					dir[d2]  = rgen.rand_float()*((n&2) ? -1.0 : 1.0);
+					point p1(cpt1.pos);
+					p1[dim]  = center;
+					point p2(p1 + dir.get_norm()*diameter);
+					if (!do_line_clip(p1, p2, cube.d)) continue; // should never fail, and p1 should never change
+					p2[dim]  = cpt1.pos[dim];
+					float const x1(cpt1.pos[d1]), y1(cpt1.pos[d2]);
+
+					for (vector<ray3d>::const_iterator c = crack_lines.begin(); c != crack_lines.end(); ++c) {
+						float const x2(p2[d1]), y2(p2[d2]), x3(c->pts[0][d1]), y3(c->pts[0][d2]), x4(c->pts[1][d1]), y4(c->pts[1][d2]);
+						float const denom((y4 - y3)*(x2 - x1) - (x4 - x3)*(y2 - y1));
+						if (fabs(denom) < TOLERANCE) continue;
+						float const ub(((x2 - x1)*(y1 - y3) - (y2 - y1)*(x1 - x3))/denom);
+						if (ub < 0.0 || ub > 1.0)    continue;
+						float const ua(((x4 - x3)*(y1 - y3) - (y4 - y3)*(x1 - x3))/denom);
+						if (ua < 0.0 || ua > 1.0)    continue;
+						p2 = cpt1.pos + (p2 - cpt1.pos)*ua; // update intersection point
+						if (attempt > 0 && p2p_dist_sq(cpt1.pos, p2) >= min_dist_sq) break;
+					}
+					float const dist_sq(p2p_dist_sq(cpt1.pos, p2));
+
+					if (attempt == 0 || dist_sq < min_dist_sq) {
+						epos = p2;
+						min_dist_sq = dist_sq;
+					}
+				} // for attempt
+				beams.push_back(beam3d(0, NO_SOURCE, cpt1.pos, epos, cpt1.color, 0.05*cpt1.alpha));
+				epts[n] = epos;
+			} // for n
+			for (unsigned n = 0; n < ncracks; ++n) {
+				crack_lines.push_back(ray3d(cpt1.pos, epts[n], cpt1.color));
+			}
+		} // for j
+	} // for i
+	//PRINT_TIME("Draw Cracks");
 	draw_billboarded_objs(decals, BLUR_CENT_TEX);
 }
 
