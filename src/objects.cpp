@@ -214,6 +214,16 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 }
 
 
+bool coll_obj::is_occluded_from_camera() const {
+
+	if (!(display_mode & 0x08) || occluders.empty()) return 0;
+	point pts[8];
+	point const camera(get_camera_pos());
+	unsigned const ncorners(is_thin_poly() ? npoints : get_cube_corners(d, pts, camera, 0)); // 8 corners allocated, but only 6 used
+	return is_occluded(occluders, (is_thin_poly() ? points : pts), ncorners, camera);
+}
+
+
 void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t *shader) const {
 
 	if (no_draw()) return;
@@ -261,13 +271,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		float brad;
 		bounding_sphere(center, brad);
 		if (!camera_pdu.sphere_and_cube_visible_test(center, brad, *this)) return;
-	
-		if ((display_mode & 0x08) && !occluders.empty()) {
-			point pts[8];
-			point const camera(get_camera_pos());
-			unsigned const ncorners(is_thin_poly() ? npoints : get_cube_corners(d, pts, camera, 0)); // 8 corners allocated, but only 6 used
-			if (is_occluded(occluders, (is_thin_poly() ? points : pts), ncorners, camera)) return;
-		}
+		if (is_occluded_from_camera()) return;
 	}
 	if (in_group) {
 		assert(is_thin_poly()); // thin triangle/quad

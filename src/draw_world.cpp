@@ -2596,24 +2596,36 @@ struct crack_point {
 };
 
 
-void draw_decals() {
+struct ray2d {
 
-	//RESET_TIME;
-	vector<crack_point> cpts; // static?
-	vector<ray3d> crack_lines; // static?
+	point2d<float> pts[2];
+
+	ray2d() {}
+	ray2d(float x1, float y1, float x2, float y2) {pts[0].x = x1; pts[0].y = y1; pts[1].x = x2; pts[1].y = y2;}
+};
+
+
+void create_and_draw_cracks() {
+
+	vector<crack_point> cpts;  // static?
+	vector<ray2d> crack_lines; // static?
 	int last_cobj(-1);
 	bool skip_cobj(0);
+	point const camera(get_camera_pos());
 
 	for (vector<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
 		if (i->status == 0 || !i->is_glass || i->cid < 0) continue;
-		if (i->cid == last_cobj && skip_cobj) continue;
+		if (i->cid == last_cobj && skip_cobj)             continue;
+		point const pos(i->get_pos());
+		if (!dist_less_than(camera, pos, 1000*i->radius)) continue; // too far away
 		assert((unsigned)i->cid < coll_objects.size());
 		coll_obj const &cobj(coll_objects[i->cid]);
-		skip_cobj = (cobj.status != COLL_STATIC || cobj.type != COLL_CUBE || !camera_pdu.cube_visible(cobj));
+		skip_cobj = (cobj.status != COLL_STATIC || cobj.type != COLL_CUBE || !camera_pdu.cube_visible(cobj) || cobj.is_occluded_from_camera());
 		last_cobj = i->cid;
 		if (skip_cobj) continue;
-		point const pos(i->get_pos());
-		cpts.push_back(crack_point(pos, i->cid, cobj.closest_face(pos), i->time, i->get_alpha(), i->color));
+		int const face(cobj.closest_face(pos)), dim(face >> 1), dir(face & 1);
+		if ((pos[dim] - camera[dim] < 0) ^ dir) continue; // back facing
+		cpts.push_back(crack_point(pos, i->cid, face, i->time, i->get_alpha(), i->color));
 	}
 	stable_sort(cpts.begin(), cpts.end());
 
@@ -2625,15 +2637,14 @@ void draw_decals() {
 		cube_t const &cube(coll_objects[cpts[s].cid]);
 		float const diameter(cube.get_bsphere_radius());
 		
-		for (unsigned j = s; j < i; ++j) {
+		for (unsigned j = s; j < i; ++j) { // generated cracks to the edge of the glass cube
 			crack_point const &cpt1(cpts[j]);
 			int const dim(cpt1.face >> 1), d1((dim+1)%3), d2((dim+2)%3);
-
-			// generated cracks to the edge of the glass cube
 			unsigned const ncracks(4); // one for each quadrant
 			float const center(0.5*(cube.d[dim][0] + cube.d[dim][1]));
+			float const x1(cpt1.pos[d1]), y1(cpt1.pos[d2]);
 			rand_gen_t rgen;
-			rgen.set_state(*(int *)&cpt1.pos[d1], *(int *)&cpt1.pos[d2]); // hash floats as ints	
+			rgen.set_state(*(int *)&x1, *(int *)&y1); // hash floats as ints	
 			point epts[ncracks];
 
 			for (unsigned n = 0; n < ncracks; ++n) {
@@ -2650,10 +2661,12 @@ void draw_decals() {
 					point p2(p1 + dir.get_norm()*diameter);
 					if (!do_line_clip(p1, p2, cube.d)) continue; // should never fail, and p1 should never change
 					p2[dim]  = cpt1.pos[dim];
-					float const x1(cpt1.pos[d1]), y1(cpt1.pos[d2]);
 
-					for (vector<ray3d>::const_iterator c = crack_lines.begin(); c != crack_lines.end(); ++c) {
-						float const x2(p2[d1]), y2(p2[d2]), x3(c->pts[0][d1]), y3(c->pts[0][d2]), x4(c->pts[1][d1]), y4(c->pts[1][d2]);
+					for (vector<ray2d>::const_iterator c = crack_lines.begin(); c != crack_lines.end(); ++c) {
+						float const x2(p2[d1]), x3(c->pts[0].x), x4(c->pts[1].x);
+						if (max(x3, x4) < min(x1, x2) || max(x1, x2) < min(x3, x4)) continue;
+						float const y2(p2[d2]), y3(c->pts[0].y), y4(c->pts[1].y);
+						if (max(y3, y4) < min(y1, y2) || max(y1, y2) < min(y3, y4)) continue;
 						float const denom((y4 - y3)*(x2 - x1) - (x4 - x3)*(y2 - y1));
 						if (fabs(denom) < TOLERANCE) continue;
 						float const ub(((x2 - x1)*(y1 - y3) - (y2 - y1)*(x1 - x3))/denom);
@@ -2674,11 +2687,18 @@ void draw_decals() {
 				epts[n] = epos;
 			} // for n
 			for (unsigned n = 0; n < ncracks; ++n) {
-				crack_lines.push_back(ray3d(cpt1.pos, epts[n], cpt1.color));
+				crack_lines.push_back(ray2d(x1, y1, epts[n][d1], epts[n][d2]));
 			}
 		} // for j
 	} // for i
-	//PRINT_TIME("Draw Cracks");
+}
+
+
+void draw_decals() {
+
+	RESET_TIME;
+	create_and_draw_cracks();
+	PRINT_TIME("Draw Cracks");
 	draw_billboarded_objs(decals, BLUR_CENT_TEX);
 }
 
