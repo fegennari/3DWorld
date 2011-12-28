@@ -2696,9 +2696,9 @@ void create_and_draw_cracks() {
 
 void draw_decals() {
 
-	RESET_TIME;
+	//RESET_TIME;
 	create_and_draw_cracks();
-	PRINT_TIME("Draw Cracks");
+	//PRINT_TIME("Draw Cracks");
 	draw_billboarded_objs(decals, BLUR_CENT_TEX);
 }
 
