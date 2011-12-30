@@ -1006,11 +1006,24 @@ class rand_gen_t {
 		if ((ranptr = rseed1 - rseed2) < 1) ranptr += 2147483562;
 	}
 
+	vector<double> pregen_rand_reals;
+	unsigned cur_pos;
+
 public:
 	long rseed1, rseed2;
 
 	rand_gen_t() {set_state(1,1);}
 	void set_state(long rs1, long rs2) {rseed1 = rs1; rseed2 = rs2;}
+
+	void pregen_floats(unsigned num) {
+		pregen_rand_reals.resize(num);
+
+		for (unsigned i = 0; i < num; ++i) {
+			randome_int(pregen_rand_reals[i]);
+			pregen_rand_reals[i] /= 2147483563.;
+		}
+		cur_pos = 0;
+	}
 
 	int rand() {
 		int rand_num;
@@ -1018,6 +1031,11 @@ public:
 		return rand_num;
 	}
 	double randd() {
+		if (!pregen_rand_reals.empty()) {
+			float const val(pregen_rand_reals[cur_pos++]);
+			if (cur_pos == pregen_rand_reals.size()) cur_pos = 0;
+			return val;
+		}
 		double rand_num;
 		randome_int(rand_num);
 		return rand_num/2147483563.;

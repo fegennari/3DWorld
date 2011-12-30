@@ -49,6 +49,7 @@ class grass_manager_t {
 	int last_cobj;
 	int last_light;
 	point last_lpos;
+	rand_gen_t rgen;
 
 	bool hcm_chk(int x, int y) const {
 		return (!point_outside_mesh(x, y) && (mesh_height[y][x] + SMALL_NUMBER < h_collision_matrix[y][x]));
@@ -79,25 +80,27 @@ public:
 		float const dz_inv(1.0/(zmax - zmin));
 		mesh_to_grass_map.resize(XY_MULT_SIZE+1, 0);
 		modified.resize(XY_MULT_SIZE, 0);
+		object_types[GRASS].radius = 0.0;
+		rgen.pregen_floats(10000);
 		
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue; // no grass
+
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				mesh_to_grass_map[y*MESH_X_SIZE+x] = grass.size();
 				if (x == MESH_X_SIZE-1 || y == MESH_Y_SIZE-1) continue; // mesh not drawn
 				if (is_mesh_disabled(x, y) || is_mesh_disabled(x+1, y) || is_mesh_disabled(x, y+1) || is_mesh_disabled(x+1, y+1)) continue; // mesh disabled
-				if (mesh_height[y][x] < water_matrix[y][x]) continue; // underwater (make this dynamically update?)
+				if (mesh_height[y][x] < water_matrix[y][x])   continue; // underwater (make this dynamically update?)
 				float const xval(get_xval(x)), yval(get_yval(y));
+				bool const do_cobj_check(hcm_chk(x, y) || hcm_chk(x+1, y) || hcm_chk(x, y+1) || hcm_chk(x+1, y+1));
 
 				for (unsigned n = 0; n < grass_density; ++n) {
-					float const xv(rand_uniform2(xval, xval + DX_VAL));
-					float const yv(rand_uniform2(yval, yval + DY_VAL));
+					float const xv(rgen.rand_uniform(xval, xval + DX_VAL));
+					float const yv(rgen.rand_uniform(yval, yval + DY_VAL));
 					float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
 					point const pos(xv, yv, mh);
 
-					if (default_ground_tex >= 0 || zmax == zmin) {
-						if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue;
-					}
-					else {
+					if (default_ground_tex < 0 && zmin < zmax) {
 						float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
 						int k1, k2;
 						float t;
@@ -107,13 +110,10 @@ public:
 						float density(1.0);
 						if (id1 != GROUND_TEX) density = t;
 						if (id2 != GROUND_TEX) density = 1.0 - t;
-						if (rand_float() >= density) continue; // skip - density too low
+						if (rgen.rand_float() >= density) continue; // skip - density too low
 					}
-					if (hcm_chk(x, y) || hcm_chk(x+1, y) || hcm_chk(x, y+1) || hcm_chk(x+1, y+1)) { // skip grass intersecting cobjs
-						dwobject obj(GRASS, pos); // make a GRASS object for collision detection
-						object_types[GRASS].radius = 0.0;
-						if (obj.check_vert_collision(0, 0, 0)) continue;
-					}
+					// skip grass intersecting cobjs
+					if (do_cobj_check && dwobject(GRASS, pos).check_vert_collision(0, 0, 0)) continue; // make a GRASS object for collision detection
 					add_grass(pos);
 				}
 			}
@@ -126,8 +126,8 @@ public:
 	void add_grass(point const &pos) {
 		vector3d const base_dir(plus_z);
 		//vector3d const base_dir(interpolate_mesh_normal(pos));
-		vector3d const dir((base_dir + signed_rand_vector(0.3) + wind*0.3).get_norm()); // make dynamic based on local wind?
-		vector3d const norm(cross_product(dir, signed_rand_vector()).get_norm());
+		vector3d const dir((base_dir + rgen.signed_rand_vector(0.3)).get_norm());
+		vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
 		float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
 		float const base_color[3] = {0.3,  0.6, 0.08};
 		float const mod_color [3] = {0.2,  0.2, 0.08};
@@ -136,11 +136,11 @@ public:
 		unsigned char color[3];
 
 		for (unsigned i = 0; i < 3; ++i) {
-			float const ccomp(CLIP_TO_01(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rand_float()));
+			float const ccomp(CLIP_TO_01(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float()));
 			color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
 		}
-		float const length(grass_length*rand_uniform2(0.7, 1.3));
-		float const width( grass_width *rand_uniform2(0.7, 1.3));
+		float const length(grass_length*rgen.rand_uniform(0.7, 1.3));
+		float const width( grass_width *rgen.rand_uniform(0.7, 1.3));
 		grass.push_back(grass_t(pos, dir*length, norm, color, width));
 	}
 
@@ -184,7 +184,7 @@ public:
 		update_cobj_tree();
 
 		for (unsigned i = 0; i < grass.size(); ++i) {
-			grass[i].shadowed = is_pt_shadowed(grass[i].p + grass[i].dir*0.5, 1); // per vertex shadows?
+			grass[i].shadowed = is_pt_shadowed((grass[i].p + grass[i].dir*0.5), 1); // per vertex shadows?
 		}
 		PRINT_TIME("Grass Find Shadows");
 	}
