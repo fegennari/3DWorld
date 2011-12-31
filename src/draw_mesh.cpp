@@ -179,7 +179,7 @@ class mesh_vertex_draw {
 		if (shadow_map_enabled() && draw_mesh_shader) {
 			// nothing to do here
 		}
-		if (light_factor >= 0.6) { // sun shadows
+		else if (light_factor >= 0.6) { // sun shadows
 			light_scale = ((shadow_mask[LIGHT_SUN ][i][j] & SHADOWED_ALL) ? 0.0 : 1.0);
 		}
 		else if (light_factor <= 0.4) { // moon shadows
