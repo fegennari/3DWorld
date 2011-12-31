@@ -9,9 +9,7 @@
 
 // better when moving the sun/moon, with very large number of trees
 // worse with sparse cobjs, and requires tree cobjs for tree shadows
-bool const RAYCAST_OBJ_SHAD = 0;
 bool const DISABLE_SHADOWS  = 0;
-bool const SHOW_SHADOW_TIME = 0;
 int const FAST_LIGHT_VIS    = 1;
 float const NORM_VIS_EXTEND = 0.02;
 
@@ -384,7 +382,6 @@ void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, uns
 void calc_visibility(unsigned light_sources) {
 
 	if (world_mode == WMODE_UNIVERSE) return;
-	int const sst(SHOW_SHADOW_TIME && l_strike.enabled != 1);
 	RESET_TIME;
 
 	if (light_sources & TREE_ONLY) {
@@ -394,6 +391,7 @@ void calc_visibility(unsigned light_sources) {
 	check_update_global_lighting(light_sources);
 	update_sun_and_moon();
 	if (world_mode == WMODE_INF_TERRAIN || DISABLE_SHADOWS || ground_effects_level == 0) return;
+	//if (shadow_map_enabled()) return; // almost correct, but shadow_mask is still needed for water shadows and mesh shadow reflections
 	point lpos[NUM_LIGHT_SRC];
 	lpos[LIGHT_SUN]  = sun_pos;
 	lpos[LIGHT_MOON] = moon_pos;
@@ -402,10 +400,8 @@ void calc_visibility(unsigned light_sources) {
 		if (!(light_sources & (1 << l))) continue;
 		// we use the first element of mesh_height and shadow_mask assuming they are allocated as one large array
 		calc_mesh_shadows(l, lpos[l], mesh_height[0], shadow_mask[l][0], MESH_X_SIZE, MESH_Y_SIZE);
-	} // for l
-	if (sst) PRINT_TIME(" Landscape shadow");
-	if (!RAYCAST_OBJ_SHAD) add_cobj_shadows(light_sources);
-	if (sst) PRINT_TIME(" Tree shadow");
+	}
+	add_cobj_shadows(light_sources);
 	PRINT_TIME(" Shadow");
 }
 

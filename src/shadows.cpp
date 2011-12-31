@@ -164,10 +164,9 @@ void add_cobj_shadows(unsigned light_sources) {
 	if (ground_effects_level == 0) return; // disabled
 	//RESET_TIME;
 #if 0
-	// three problems with this approach, though this is *much* simpler
+	// two problems with this approach, though this is *much* simpler
 	// 1. tree shadows are only added if tree cobjs are created
-	// 2. requires cobj_tree to be efficient
-	// 3. the test line will not hit very small cobjs, so shadows will be missed
+	// 2. the test line will not hit very small cobjs, so shadows will be missed
 	point lpos;
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
@@ -510,10 +509,6 @@ int polygon_shadow(point const *points, vector3d const &norm, int npoints, float
 		else {
 			if (!get_shape_shadow_bb(points, npoints, l, quality, lpos, xmin, ymin, xmax, ymax, ret_val, SHADOW_TYPE)) continue;
 		}
-		/*if (quality == 0 && xmin == xmax && ymin == ymax) {
-			shadow_mask[l][ymin][xmin] |= SHADOW_TYPE;
-			continue;
-		}*/
 		if (is_dynamic) dshadow_lights |= (1 << l);
 		if (thick_test) test_side = (dot_product(vector3d(lpos, center), norm) > 0.0); // inexact but probably OK
 		

@@ -143,7 +143,6 @@ float get_cloud_shadow_atten(int x, int y) {
 class mesh_vertex_draw {
 
 	float const healr;
-	unsigned char **sml;
 	vector<point>    varr;
 	vector<vector3d> narr;
 	vector<colorRGB> carr;
@@ -180,8 +179,11 @@ class mesh_vertex_draw {
 		if (shadow_map_enabled() && draw_mesh_shader) {
 			// nothing to do here
 		}
-		else if (sml) { // sun or moon shadows
-			light_scale = ((sml[i][j] & SHADOWED_ALL) ? 0.0 : 1.0);
+		if (light_factor >= 0.6) { // sun shadows
+			light_scale = ((shadow_mask[LIGHT_SUN ][i][j] & SHADOWED_ALL) ? 0.0 : 1.0);
+		}
+		else if (light_factor <= 0.4) { // moon shadows
+			light_scale = ((shadow_mask[LIGHT_MOON][i][j] & SHADOWED_ALL) ? 0.0 : 1.0);
 		}
 		else { // combined sun and moon shadows
 			bool const no_sun ((shadow_mask[LIGHT_SUN ][i][j] & SHADOWED_ALL) != 0);
@@ -217,17 +219,10 @@ class mesh_vertex_draw {
 public:
 	unsigned c;
 
-	mesh_vertex_draw() : healr(fticks*SURF_HEAL_RATE), sml(NULL),
+	mesh_vertex_draw() : healr(fticks*SURF_HEAL_RATE),
 		varr(2*(MAX_XY_SIZE+1)), narr(varr.size()), carr(varr.size()), c(0)
 	{
 		assert(shadow_mask != NULL);
-		
-		if (light_factor >= 0.6) { // sun shadows
-			sml = shadow_mask[LIGHT_SUN];
-		}
-		else if (light_factor <= 0.4) { // moon shadows
-			sml = shadow_mask[LIGHT_MOON];
-		}
 		last_rows.resize(MESH_X_SIZE+1);
 		setup_arrays(&varr.front(), &narr.front(), &carr.front());
 	}
