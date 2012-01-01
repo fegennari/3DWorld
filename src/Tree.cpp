@@ -57,7 +57,7 @@ point leaf_points[4]; // z = 0.0 -> -0.05
 tree_cont_t t_trees;
 
 
-extern bool has_snow;
+extern bool has_snow, no_sun_lpos_update;
 extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll;
 extern float zmin, zmax_est, zbottom, water_plane_z, mesh_scale, mesh_scale2, temperature, fticks, tree_size, vegetation;
@@ -249,7 +249,7 @@ void draw_trees() {
 	if (tree_mode & 1) {
 		static point last_lpos(all_zeros);
 		point const lpos(get_light_pos());
-		bool const lpos_change(lpos != last_lpos);
+		bool const lpos_change(!no_sun_lpos_update && lpos != last_lpos);
 		if (lpos_change) update_cobj_tree();
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees

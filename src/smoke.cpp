@@ -25,7 +25,7 @@ unsigned smoke_tid(0);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
-extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated;
+extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update;
 extern int animate2, display_mode;
 extern float czmin0;
 extern colorRGBA cur_ambient, cur_diffuse;
@@ -238,7 +238,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 		init_call = (smoke_tid == 0); // will recreate the texture
 	}
 	static colorRGBA last_cur_ambient(ALPHA0), last_cur_diffuse(ALPHA0);
-	bool const full_update(init_call || cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
+	bool const full_update(init_call || (!no_sun_lpos_update && (cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse)));
 	last_cur_ambient = cur_ambient;
 	last_cur_diffuse = cur_diffuse;
 

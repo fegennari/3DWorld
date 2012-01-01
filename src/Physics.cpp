@@ -30,6 +30,7 @@ bool     const PRINT_TIME_OF_DAY   = 1;
 
 
 // Global Variables
+bool no_sun_lpos_update(0);
 int TIMESCALE2(TIMESCALE), I_TIMESCALE2(0);
 float temperature(DEF_TEMPERATURE), max_obj_radius(0.0);
 float TIMESTEP(DEF_TIMESTEP), orig_timestep(DEF_TIMESTEP); // temp in degrees C
@@ -1517,31 +1518,34 @@ void reset_other_objects_status() {
 // Note: In combined mode, times should be configured for planet/moon rotation and revolution periods
 void auto_advance_time() { // T = 1 hour
 
+	no_sun_lpos_update = 0;
 	if (!auto_time_adv) return;
-	int vis_recalc(0), itime(0), hrtime(0), hrtime24, date;
 	static int last_itime(0), precip_inited(0);
 	static float ftime, precip(0.0), precip_app_rate(0.0), prate(0.0), ccover(0.0);
+	static rand_gen_t rgen;
+	if (last_itime == 0) rgen.set_state(rand(), rand()); // random seed at the start
 
 	// auto_time_adv = 0 => no change
 	// auto_time_adv = 1 => 1 hour = 60 min = 1 hour
 	// auto_time_adv = 2 => 1 hour = 6 min
 	// auto_time_adv = 3 => 1 hour = 36 sec
 	// auto_time_adv = 4 => 1 hour = 3.6 sec
-	ftime     += fticks;
-	itime      = int(ftime*pow(10.0, auto_time_adv-1)/56000.0);
-	if (itime == last_itime) return;
-	last_itime = itime;
-	hrtime     = itime/2 + 12;
-	hrtime24   = hrtime%24;
-	date       = hrtime/24;
+	ftime += fticks*pow(10.0, auto_time_adv-1)/56000.0;
+	int const itime((int)ftime); // half hours
+	int const hrtime(itime/2 + 12), hrtime24(hrtime%24); // hours
+	int const date(hrtime/24); // days
+	int vis_recalc(0);
 
 	// move sun (daily: dt=24, every t)
-	if (hrtime24%1 == 0) { // currently always true
-		sun_rot += PI/24.0;
-		if (sun_rot > TWO_PI) sun_rot -= TWO_PI;
-		update_sun_and_moon();
-		if (light_factor >= 0.4) vis_recalc |= SUN_SHADOW;
+	sun_rot = (PI/24)*((itime%48) + (ftime - itime)); // 0 at 12:00 noon
+	update_sun_and_moon();
+	if (light_factor >= 0.4) vis_recalc |= SUN_SHADOW;
+	
+	if (itime == last_itime) {
+		no_sun_lpos_update = 1;
+		return;
 	}
+	last_itime = itime;
 
 	// move moon (28 days: dt = 24*28 = 672, every 24t)
 	if (hrtime24 == 12) {
@@ -1552,20 +1556,20 @@ void auto_advance_time() { // T = 1 hour
 	}
 
 	// change cloudiness (7 days: dt = 24*7 = 168, every t)
-	ccover = ccover + 0.1*signed_rand_float();
+	ccover = ccover + 0.1*rgen.signed_rand_float();
 	if (ccover < -0.2) ccover = 0.2 - ccover;
 	cloud_cover = CLIP_TO_01(0.5f*max(-0.1f, precip) + 0.5f*min(1.0f, ccover));
 
 	// change wind
 	for (unsigned d = 0; d < 3; ++d) {
-		wind[d] += 0.2*signed_rand_float();
+		wind[d] += 0.2*rgen.signed_rand_float();
 		wind[d]  = CLIP_TO_pm1(wind[d]);
 	}
 	wind.z *= 0.1;
 
 	// change temperature (daily: dt = 24, seasonal, dt = 24*365.25 = 8766, every t)
 	float const delta_t(MAX_TEMP - MIN_TEMP);
-	float const random_temp(max(MIN_TEMP, min(MAX_TEMP, (temperature + 0.05f*delta_t*signed_rand_float()))));
+	float const random_temp(max(MIN_TEMP, min(MAX_TEMP, (temperature + 0.05f*delta_t*rgen.signed_rand_float()))));
 	float const cloud_temp(MIN_TEMP + delta_t*(1.0 - cloud_cover));
 	float const seasonal_temp(MIN_TEMP + delta_t*2.0*(0.5 - (float((hrtime24 + 4383)%8766))/8766.0));
 	float const time_of_day_temp(MIN_TEMP + delta_t*(fabs(PI - sun_rot)/PI));
@@ -1579,7 +1583,7 @@ void auto_advance_time() { // T = 1 hour
 		precip_app_rate = (float)obj_groups[cid].app_rate;
 		precip_inited   = 1;
 	}
-	prate += 0.2*signed_rand_float();
+	prate += 0.2*rgen.signed_rand_float();
 	
 	if (prate < -0.5) {
 		prate = -1.0 - prate;
@@ -1599,13 +1603,17 @@ void auto_advance_time() { // T = 1 hour
 	}
 
 	// change leaf color (seasonal, dt = 24*365.25 = 8766, every 168t)
-	if (hrtime%168 == 0) {}// *** WRITE ***
+	if (hrtime%168 == 0) {} // *** WRITE ***
 	
 	if (vis_recalc) {
-		if (light_factor >= 0.4) vis_recalc |= SUN_SHADOW;
-		if (light_factor <= 0.6) vis_recalc |= MOON_SHADOW;
-		calc_visibility(vis_recalc);
+		if (shadow_map_enabled()) {
+			check_update_global_lighting(vis_recalc);
+		}
+		else {
+			calc_visibility(vis_recalc);
+		}
 	}
+	
 	if (PRINT_TIME_OF_DAY) {
 		if (hrtime24 < 12) {
 			cout << "Time = " << (hrtime24==0  ? 12 : hrtime24   ) << ":" << (((itime&1) == 0) ? "00" : "30") << " AM";
