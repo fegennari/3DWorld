@@ -574,7 +574,6 @@ cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
 cobj_tree_type cobj_tree_occlude(coll_objects, 1, 0, 1, 0);
 cobj_tree_type cobj_tree_moving (coll_objects, 1, 0, 0, 1);
 cobj_tree_tquads_t cobj_tree_triangles;
-int last_update_frame[2] = {1, 1}; // first drawn frame is 1
 
 
 cobj_tree_type &get_tree(bool dynamic) {
@@ -586,14 +585,6 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 	get_tree(dynamic).add_cobjs(verbose);
 	if (!dynamic) cobj_tree_occlude.add_cobjs(verbose);
 	//if (!dynamic) cobj_tree_triangles.add_cobjs(coll_objects, verbose);
-}
-
-void update_cobj_tree(bool dynamic, bool verbose) {
-
-	if (dynamic && last_update_frame[dynamic] < frame_counter && (begin_motion || !get_tree(dynamic).is_empty())) {
-		last_update_frame[dynamic] = frame_counter;
-		build_cobj_tree(dynamic, verbose);
-	}
 }
 
 void build_moving_cobj_tree() {

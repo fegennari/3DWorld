@@ -181,7 +181,6 @@ public:
 		last_cobj     = -1;
 		shadows_valid = 1;
 		data_valid    = 0;
-		update_cobj_tree();
 
 		for (unsigned i = 0; i < grass.size(); ++i) {
 			grass[i].shadowed = is_pt_shadowed((grass[i].p + grass[i].dir*0.5), 1); // per vertex shadows?

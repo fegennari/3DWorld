@@ -250,7 +250,6 @@ void draw_trees() {
 		static point last_lpos(all_zeros);
 		point const lpos(get_light_pos());
 		bool const lpos_change(!no_sun_lpos_update && lpos != last_lpos);
-		if (lpos_change) update_cobj_tree();
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
 		bool const branch_smap = 1; // looks better, but slower

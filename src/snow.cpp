@@ -760,7 +760,6 @@ void draw_snow() {
 
 	if (!shadow_map_enabled() && (!no_sun_lpos_update && lpos != last_lpos)) {
 		RESET_TIME;
-		update_cobj_tree();
 		snow_draw.update_shadows();
 		last_lpos = lpos;
 		PRINT_TIME("Snow Shadow Calculation");
