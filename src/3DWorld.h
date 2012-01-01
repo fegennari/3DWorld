@@ -1315,7 +1315,7 @@ void create_object_groups();
 void shift_all_objs(vector3d const &vd);
 void process_platforms();
 void process_groups();
-void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only, bool cobjs_re_add=0);
+void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only);
 void init_models();
 void free_models();
 

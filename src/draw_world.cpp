@@ -50,7 +50,7 @@ pt_line_drawer_hdr snow_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
-extern bool group_back_face_cull;
+extern bool group_back_face_cull, no_sun_lpos_update;
 extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
@@ -2466,7 +2466,7 @@ void draw_cloud_volumes() {
 	static bool had_sun(0);
 	static float last_sun_rot(0.0);
 
-	if (sun_rot != last_sun_rot || have_sun != had_sun) { // update lighting
+	if (!no_sun_lpos_update && (sun_rot != last_sun_rot || have_sun != had_sun)) { // update lighting
 		last_sun_rot = sun_rot;
 		had_sun      = have_sun;
 		point const sun_pos(get_sun_pos());

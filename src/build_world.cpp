@@ -545,7 +545,7 @@ void process_groups() {
 }
 
 
-void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only, bool cobjs_re_add) {
+void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only) {
 	
 	cout << "Generating scene..." << endl;
 	RESET_TIME;
@@ -593,7 +593,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		gen_scenery();
 		PRINT_TIME("Scenery generation");
 	}
-	add_all_coll_objects(coll_obj_file, (num_trees == 0 || cobjs_re_add));
+	add_all_coll_objects(coll_obj_file, (num_trees == 0));
 	PRINT_TIME("Collision object addition");
 
 	compute_volume_matrix();
