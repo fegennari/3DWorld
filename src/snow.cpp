@@ -16,7 +16,7 @@ bool has_snow(0);
 point vox_delta;
 map<int, unsigned> x_strip_map;
 
-extern bool disable_shaders;
+extern bool disable_shaders, no_sun_lpos_update;
 extern int display_mode, read_snow_file, write_snow_file;
 extern unsigned num_snowflakes;
 extern float ztop, zbottom, temperature, snow_depth, snow_random;
@@ -758,7 +758,7 @@ void draw_snow() {
 	static point last_lpos(all_zeros);
 	point const lpos(get_light_pos());
 
-	if (!shadow_map_enabled() && lpos != last_lpos) {
+	if (!shadow_map_enabled() && (!no_sun_lpos_update && lpos != last_lpos)) {
 		RESET_TIME;
 		update_cobj_tree();
 		snow_draw.update_shadows();
