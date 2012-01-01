@@ -423,7 +423,7 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 
 bool coll_obj::truly_static() const {
 
-	return (status == COLL_STATIC && destroy < max((int)SHATTERABLE, destroy_thresh+1) && !maybe_is_moving());
+	return (status == COLL_STATIC && !cp.is_destroyable && destroy < max((int)SHATTERABLE, destroy_thresh+1) && !maybe_is_moving());
 }
 
 

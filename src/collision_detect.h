@@ -42,13 +42,13 @@ class cobj_params : public obj_layer { // size = 68
 public:
 	int cf_index;
 	unsigned char surfs;
-	bool is_dynamic, no_coll;
+	bool is_dynamic, is_destroyable, no_coll;
 	//obj_layer *layer;
 
-	cobj_params() : cf_index(-1), is_dynamic(0), no_coll(0), surfs(0) {}
+	cobj_params() : cf_index(-1), is_dynamic(0), is_destroyable(0), no_coll(0), surfs(0) {}
 	cobj_params(float e, colorRGBA const &c, bool d, bool id, const collision_func cf, int ci,
 		int ti=-1, float ts=1.0, int s=0, float spec=0.0, float shi=0.0, bool nc=0, float tx=0.0, float ty=0.0) :
-		obj_layer(e, c, d, cf, ti, ts, spec, shi, tx, ty), cf_index(ci), surfs(s), is_dynamic(id), no_coll(nc) {}
+		obj_layer(e, c, d, cf, ti, ts, spec, shi, tx, ty), cf_index(ci), surfs(s), is_dynamic(id), is_destroyable(0), no_coll(nc) {}
 };
 
 

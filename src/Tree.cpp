@@ -173,7 +173,8 @@ void tree::add_tree_collision_objects(int ix) {
 		colorRGBA lcolor(get_leaf_base_color(type).modulate_with(texture_color(ltid)));
 		lcolor.alpha = 1.0;
 		cobj_params cpl(0.3, lcolor, TEST_RTREE_COBJS, 0, NULL, ix, (TEST_RTREE_COBJS ? -1 : ltid), 1.0, 0, 0);
-		cpl.shadow = 0;
+		cpl.shadow         = 0;
+		cpl.is_destroyable = 1; // so that truly_static() returns false
 		point const xlate(all_zeros); // for now
 
 		for (unsigned i = 0; i < leaves.size(); i++) { // loop through leaves

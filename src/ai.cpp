@@ -458,6 +458,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 				if (!placed && !sphere_in_view(pdu, obj.pos, radius, 0))         continue; // view culling (disabled for predef object locations)
 				if (avoid_dir != zero_vector && dot_product_ptv(obj.pos, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
 				if (is_in_darkness(obj.pos, radius, obj.coll_id))                continue;
+				if (dist_less_than(obj.pos, pos, sradius)) {cout << "bad cobj: " << obj.coll_id << endl; continue;} // for error checking, should not fail
 				float cost((target_pos == obj.pos) ? 0.75 : 1.0); // favor original targets
 
 				for (int j = 0; j < num_smileys; ++j) { // too slow?
