@@ -115,7 +115,8 @@ float scenery_obj::get_shadowed_color(point const &p, float eff_radius) const { 
 
 colorRGBA scenery_obj::get_atten_color(colorRGBA c) const {
 
-	if (!DISABLE_WATER && (pos.z + radius) < max_water_height) {
+	// Note: could make this work in inf terrain mode if water_matrix[][] is always equal to water_plane_z
+	if (!DISABLE_WATER && world_mode == WMODE_GROUND && (pos.z + radius) < max_water_height) {
 		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
 		
 		if (!point_outside_mesh(x, y) && (pos.z + radius) < water_matrix[y][x]) {

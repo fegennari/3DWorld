@@ -25,7 +25,7 @@ float const DSCALE             = 0.45;
 float const ASCALE             = 0.35;
 bool  const TIMETEST           = (GLOBAL_TIMETEST || 0);
 bool  const DETERMINISTIC_TIME = 0;
-int   const TERRAIN_SCENERY    = 0; // trees, small trees, plants, etc.
+int   const TERRAIN_SCENERY    = 0; // trees, small trees, plants, etc. - not entirely correct during scrolling
 int   const KEEP_MESH          = 1;
 float const REL_SCROLL_DIST    = 0.4;
 float const LIGHT_W_VAL        = 0.0; // 0 = directional/light at infinity, 1 = point source
@@ -1209,7 +1209,15 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_transparent(!underwater);
 	draw_game_elements(timer1);
 	if (shadows_enabled()) create_shadows();
+	point last_spos(surface_pos);
 	check_xy_offsets();
+
+	if (TERRAIN_SCENERY && surface_pos != last_spos) { // camera moves
+		xoff2 -= xoff; yoff2 -= yoff;
+		regen_trees(0, 1);
+		gen_scenery();
+		xoff2 += xoff; yoff2 += yoff;
+	}
 	init_x = 0;
 	if (TIMETEST) PRINT_TIME("3.9");
 }
