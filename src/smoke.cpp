@@ -238,12 +238,15 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 		init_call = (smoke_tid == 0); // will recreate the texture
 	}
 	static colorRGBA last_cur_ambient(ALPHA0), last_cur_diffuse(ALPHA0);
-	bool const full_update(init_call || (!no_sun_lpos_update && (cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse)));
-	last_cur_ambient = cur_ambient;
-	last_cur_diffuse = cur_diffuse;
+	bool const lighting_changed(cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
+	bool const full_update(init_call || (!no_sun_lpos_update && lighting_changed));
 
+	if (full_update) {
+		last_cur_ambient = cur_ambient;
+		last_cur_diffuse = cur_diffuse;
+	}
 	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
-	if (!full_update && !smoke_exists && !indir_lighting_updated) return 0; // return 1?
+	if (!full_update && !smoke_exists && !indir_lighting_updated && !lighting_changed) return 0; // return 1?
 
 	static int cur_block(0);
 	unsigned const skipval(smoke_exists ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP);
