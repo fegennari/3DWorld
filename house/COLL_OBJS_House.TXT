@@ -95,6 +95,9 @@ F 5.48  5.32 0.85 0.219 0
 F 6.38  6.26 1.18 0.216 0
 F 5.93  5.84 0.69 0.226 0
 
+# Christmas Tree - but the indirect lighting is wrong
+#F 0.8 -1.1 0.5 0.2 0 -0.6
+
 
 # Plants
 G 4.00 5.00 0.50 0.0080 1
