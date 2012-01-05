@@ -287,6 +287,22 @@ public:
 };
 
 
+class cloud_manager_t : public obj_vector_t<particle_cloud> {
+
+	unsigned cloud_tid, txsize, tysize;
+
+public:
+	cloud_manager_t() : cloud_tid(0), txsize(0), tysize(0) {}
+	~cloud_manager_t() {free_textures();}
+	void create_clouds();
+	void update_lighting();
+	cube_t get_bcube() const;
+	bool create_texture(bool force_recreate);
+	void free_textures();
+	void draw();
+};
+
+
 struct transform_data; // forward reference
 
 

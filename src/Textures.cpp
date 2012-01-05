@@ -291,6 +291,7 @@ void reset_textures() {
 	free_universe_textures();
 	free_flare_textures();
 	free_shadow_map_textures();
+	free_cloud_textures();
 	free_texture(smoke_tid);
 	free_texture(dl_tid);
 	free_texture(elem_tid);

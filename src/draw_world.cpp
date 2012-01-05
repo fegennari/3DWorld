@@ -20,7 +20,9 @@ bool const DEBUG_COLOR_COLLS    = 0;
 bool const SHOW_DRAW_TIME       = 0;
 bool const NO_SHRAP_DLIGHT      = 1; // looks cool with dynamic lights, but very slow
 bool const DYNAMIC_SMOKE_SHADOWS= 1; // slower, but looks nice
+bool const FAST_CLOUDS          = 0; // use faster static billboards
 unsigned const MAX_CFILTERS     = 10;
+unsigned const CLOUD_GEN_TEX_SZ = 1024;
 float const NDIV_SCALE          = 1.6;
 float const CLOUD_WIND_SPEED    = 0.00015;
 
@@ -68,7 +70,8 @@ extern obj_group obj_groups[];
 extern vector<coll_obj> coll_objects;
 extern obj_type object_types[];
 extern obj_vector_t<bubble> bubbles;
-extern obj_vector_t<particle_cloud> part_clouds, cloud_volumes;
+extern obj_vector_t<particle_cloud> part_clouds;
+extern cloud_manager_t cloud_manager;
 extern obj_vector_t<fire> fires;
 extern obj_vector_t<decal_obj> decals;
 extern float diffuse[], gauss_rand_arr[];
@@ -81,7 +84,6 @@ extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
 
 
-void draw_cloud_volumes();
 void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
 					  bool do_texture, bool is_shadowed, int is_chunky=0);
 void draw_weapon2(dwobject const &obj, float radius);
@@ -2141,7 +2143,7 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 void draw_sky(int order) {
 
 	if (atmosphere < 0.01) {
-		cloud_volumes.clear();
+		cloud_manager.clear();
 		return; // no atmosphere
 	}
 	set_specular(0.0, 1.0);
@@ -2204,8 +2206,8 @@ void draw_sky(int order) {
 	disable_blend();
 
 	if (display_mode & 0x40) {
-		if (cloud_volumes.empty()) gen_cloud_volumes();
-		draw_cloud_volumes(); // detailed clouds
+		if (cloud_manager.empty()) cloud_manager.create_clouds();
+		cloud_manager.draw(); // detailed clouds
 	}
 	glDisable(light);
 }
@@ -2421,11 +2423,9 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 	//select_multitex(CLOUD_TEX, 1);
 	glAlphaFunc(GL_GREATER, 0.01);
 	glEnable(GL_ALPHA_TEST); // makes it faster
-	enable_blend();
 	glBegin(GL_QUADS);
 	draw_objects(pc);
 	glEnd();
-	disable_blend();
 	glDisable(GL_ALPHA_TEST);
 	disable_flares();
 	//disable_multitex_a();
@@ -2452,88 +2452,197 @@ struct cloud_t {
 };
 
 
-//http://www.gamedev.net/reference/articles/article2273.asp
-void draw_cloud_volumes() {
+void cloud_manager_t::update_lighting() {
 
-	if (cloud_volumes.empty()) return;
-	if (atmosphere < 0.01)     return; // no atmosphere
+	RESET_TIME;
+	point const sun_pos(get_sun_pos());
+	bool const calc_sun_light(have_sun && light_factor > 0.4);
+	unsigned const num_clouds(size());
+	int last_src(0);
+	vector<cloud_t> clouds;
+
+	if (calc_sun_light) {
+		for (unsigned i = 0; i < num_clouds; ++i) {
+			particle_cloud &c((*this)[i]);
+
+			if (i == 0 || c.source != last_src) {
+				last_src = c.source;
+				if (i > 0) clouds.back().e = i; // end the last cloud
+				clouds.push_back(cloud_t(i));   // begin a new cloud
+			}
+		}
+		clouds.back().e = num_clouds; // end the last cloud
+
+		for (unsigned i = 0; i < clouds.size(); ++i) {
+			cloud_t &c(clouds[i]);
+			for (unsigned j = c.b; j < c.e; ++j) c.p += (*this)[j].pos;
+			c.p /= (c.e - c.b);
+			for (unsigned j = c.b; j < c.e; ++j) c.r = max(c.r, (p2p_dist(c.p, (*this)[j].pos) + (*this)[j].radius));
+		}
+	}
+	for (unsigned i = 0; i < num_clouds; ++i) {
+		particle_cloud &pc((*this)[i]);
+		float light(0.25); // night time sky
+
+		if (calc_sun_light) {
+			vector3d const v1(sun_pos - pc.pos);
+			float const dist_sq(v1.mag_sq());
+			vector3d const v1n(v1/dist_sq);
+			light = 1.0; // start off fully lit
+
+			for (unsigned p = 0; p < clouds.size(); ++p) {
+				cloud_t &c(clouds[p]);
+				float t; // unused
+
+				if (sphere_test_comp(sun_pos, c.p, v1, c.r*c.r, t)) {
+					for (unsigned j = c.b; j < c.e; ++j) {
+						particle_cloud const &c2((*this)[j]);
+						vector3d const v2(sun_pos, c2.pos);
+						if (v2.mag_sq() > dist_sq) continue; // further from the sun
+						float const dotp(dot_product(v1, v2));
+						float const dsq((dotp > dist_sq) ? p2p_dist_sq(v1, v2) : (v2 - v1n*dotp).mag_sq());
+						if (dsq > c2.radius*c2.radius) continue; // no intersection
+						float const alpha(2.0*c2.base_color.alpha*c2.density*((c2.radius - sqrt(dsq))/c2.radius));
+						light *= 1.0 - CLIP_TO_01(alpha);
+					}
+				}
+			}
+			if (light_factor < 0.6) {
+				float const blend(5.0*(light_factor - 0.4));
+				light = light*blend + 0.25*(1.0 - blend);
+			}
+		}
+		pc.darkness   = 1.0 - 2.0*light;
+		pc.base_color = WHITE;
+		apply_red_sky(pc.base_color);
+	}
+	PRINT_TIME("Cloud Lighting");
+}
+
+
+cube_t cloud_manager_t::get_bcube() const {
+
+	cube_t bcube;
+
+	for (unsigned i = 0; i < size(); ++i) {
+		point const &pos((*this)[i].pos);
+		float const radius((*this)[i].radius);
+
+		if (i == 0) {
+			bcube = cube_t(pos, pos);
+			bcube.expand_by(radius);
+		}
+		else {
+			bcube.union_with_sphere(pos, radius);
+		}
+	}
+	return bcube;
+}
+
+
+bool cloud_manager_t::create_texture(bool force_recreate) {
+
+	RESET_TIME;
+	unsigned const xsize(min(CLOUD_GEN_TEX_SZ, (unsigned)window_width)), ysize(min(CLOUD_GEN_TEX_SZ, (unsigned)window_height));
+
+	if (txsize != xsize || tysize != ysize) {
+		free_textures();
+		txsize = xsize;
+		tysize = ysize;
+	}
+	if (cloud_tid && !force_recreate) return 0; // nothing to do
+	
+	if (!cloud_tid) {
+		setup_texture(cloud_tid, GL_MODULATE, 0, 0, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, CLOUD_GEN_TEX_SZ, CLOUD_GEN_TEX_SZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	}
+	assert(glIsTexture(cloud_tid));
+	check_gl_error(800);
+
+	glViewport(0, 0, xsize, ysize);
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+
+	cube_t const bcube(get_bcube());
+	// FIXME: setup projection matrix
+
+	glMatrixMode(GL_MODELVIEW);
+	//glPushMatrix();
+	draw_part_cloud(*this, get_cloud_color(), 1);
+	//glPopMatrix();
+
+	// render reflection to texture
+	glBindTexture(GL_TEXTURE_2D, cloud_tid);
+	glReadBuffer(GL_BACK);
+	// glCopyTexSubImage2D copies the frame buffer to the bound texture
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize);
+
+	// reset state
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glViewport(0, 0, window_width, window_height);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+	check_gl_error(801);
+	PRINT_TIME("Cloud Texture Gen");
+	return 1;
+}
+
+
+void free_cloud_textures() {
+
+	cloud_manager.free_textures();
+}
+
+
+void cloud_manager_t::free_textures() {
+
+	free_texture(cloud_tid);
+}
+
+
+//http://www.gamedev.net/reference/articles/article2273.asp
+void cloud_manager_t::draw() {
+
+	if (empty() || atmosphere < 0.01) return; // no atmosphere
 	//glFinish(); // testing
 	RESET_TIME;
+	glDisable(GL_DEPTH_TEST);
 
 	// WRITE: wind moves clouds
 
 	// light source code
 	static bool had_sun(0);
 	static float last_sun_rot(0.0);
+	bool const need_update(!no_sun_lpos_update && (sun_rot != last_sun_rot || have_sun != had_sun));
 
-	if (!no_sun_lpos_update && (sun_rot != last_sun_rot || have_sun != had_sun)) { // update lighting
+	if (need_update) {
 		last_sun_rot = sun_rot;
 		had_sun      = have_sun;
-		point const sun_pos(get_sun_pos());
-		bool const calc_sun_light(have_sun && light_factor > 0.4);
-		unsigned const num_clouds(cloud_volumes.size());
-		int last_src(0);
-		vector<cloud_t> clouds;
-
-		if (calc_sun_light) {
-			for (unsigned i = 0; i < num_clouds; ++i) {
-				particle_cloud &c(cloud_volumes[i]);
-
-				if (i == 0 || c.source != last_src) {
-					last_src = c.source;
-					if (i > 0) clouds.back().e = i; // end the last cloud
-					clouds.push_back(cloud_t(i));   // begin a new cloud
-				}
-			}
-			clouds.back().e = num_clouds; // end the last cloud
-
-			for (unsigned i = 0; i < clouds.size(); ++i) {
-				cloud_t &c(clouds[i]);
-				for (unsigned j = c.b; j < c.e; ++j) c.p += cloud_volumes[j].pos;
-				c.p /= (c.e - c.b);
-				for (unsigned j = c.b; j < c.e; ++j) c.r = max(c.r, (p2p_dist(c.p, cloud_volumes[j].pos) + cloud_volumes[j].radius));
-			}
-		}
-		for (unsigned i = 0; i < num_clouds; ++i) {
-			particle_cloud &pc(cloud_volumes[i]);
-			float light(0.25); // night time sky
-
-			if (calc_sun_light) {
-				vector3d const v1(sun_pos - pc.pos);
-				float const dist_sq(v1.mag_sq());
-				vector3d const v1n(v1/dist_sq);
-				light = 1.0; // start off fully lit
-
-				for (unsigned p = 0; p < clouds.size(); ++p) {
-					cloud_t &c(clouds[p]);
-					float t; // unused
-
-					if (sphere_test_comp(sun_pos, c.p, v1, c.r*c.r, t)) {
-						for (unsigned j = c.b; j < c.e; ++j) {
-							particle_cloud const &c2(cloud_volumes[j]);
-							vector3d const v2(sun_pos, c2.pos);
-							if (v2.mag_sq() > dist_sq) continue; // further from the sun
-							float const dotp(dot_product(v1, v2));
-							float const dsq((dotp > dist_sq) ? p2p_dist_sq(v1, v2) : (v2 - v1n*dotp).mag_sq());
-							if (dsq > c2.radius*c2.radius) continue; // no intersection
-							float const alpha(2.0*c2.base_color.alpha*c2.density*((c2.radius - sqrt(dsq))/c2.radius));
-							light *= 1.0 - CLIP_TO_01(alpha);
-						}
-					}
-				}
-				if (light_factor < 0.6) {
-					float const blend(5.0*(light_factor - 0.4));
-					light = light*blend + 0.25*(1.0 - blend);
-				}
-			}
-			pc.darkness   = 1.0 - 2.0*light;
-			pc.base_color = WHITE;
-			apply_red_sky(pc.base_color);
-		}
-		PRINT_TIME("Cloud Lighting");
+		update_lighting();
 	}
-	glDisable(GL_DEPTH_TEST);
-	draw_part_cloud(cloud_volumes, get_cloud_color(), 1);
+	if (FAST_CLOUDS) {
+		create_texture(need_update);
+		enable_flares(WHITE, 1); // texture will be overriden
+		assert(cloud_tid);
+		bind_2d_texture(cloud_tid);
+		glBegin(GL_QUADS);
+		cube_t const bcube(get_bcube());
+		
+		for (unsigned d = 0; d < 2; ++d) { // render the bottom face of bcube
+			for (unsigned e = 0; e < 2; ++e) {
+				point(bcube.d[0][d^e], bcube.d[1][d], bcube.d[2][0]).do_glVertex();
+			}
+		}
+		glEnd();
+		disable_flares();
+	}
+	else {
+		draw_part_cloud(*this, get_cloud_color(), 1);
+	}
 	glEnable(GL_DEPTH_TEST);
 	//glFinish(); // testing
 	//PRINT_TIME("Clouds");

@@ -386,6 +386,9 @@ struct cube_t { // size = 24
 	void union_with_pt(point const &pt) {
 		UNROLL_3X(d[i_][0] = min(d[i_][0], pt[i_]); d[i_][1] = max(d[i_][1], pt[i_]);)
 	}
+	void union_with_sphere(point const &pt, float radius) {
+		UNROLL_3X(d[i_][0] = min(d[i_][0], pt[i_]-radius); d[i_][1] = max(d[i_][1], pt[i_]+radius);)
+	}
 	void union_with_cube(cube_t const &c) {
 		UNROLL_3X(d[i_][0] = min(d[i_][0], c.d[i_][0]); d[i_][1] = max(d[i_][1], c.d[i_][1]);)
 	}
@@ -1361,6 +1364,7 @@ void draw_stationary_earth(float radius);
 void apply_red_sky(colorRGBA &color);
 colorRGBA get_cloud_color();
 float get_cloud_density(point const &pt, vector3d const &dir);
+void free_cloud_textures();
 void draw_sky(int order);
 void draw_stationary_sky(float radius, float density);
 void compute_brightness();
@@ -1486,7 +1490,6 @@ void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade
 int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,
 	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment);
 void gen_leaf_at(point const *const points, vector3d const &normal, int type, colorRGB const &color);
-void gen_cloud_volumes();
 float rgauss();
 void gen_gauss_rand_arr();
 int  rand2();
