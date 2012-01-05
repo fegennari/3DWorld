@@ -20,7 +20,6 @@ unsigned num_stars(0);
 vector<star> stars(NUM_STARS);
 obj_vector_t<bubble> bubbles(MAX_BUBBLES);
 obj_vector_t<particle_cloud> part_clouds(MAX_PART_CLOUDS);
-cloud_manager_t cloud_manager;
 obj_vector_t<fire> fires(MAX_FIRES);
 obj_vector_t<decal_obj> decals(MAX_DECALS);
 float gauss_rand_arr[N_RAND_DIST+2];
@@ -342,40 +341,6 @@ void gen_leaf_at(point const *const points, vector3d const &normal, int type, co
 		obj.vdeform[i] = color[i]; // stuff color into vdeform
 	}
 	obj.set_orient_for_coll(&normal);
-}
-
-
-void cloud_manager_t::create_clouds() { // 3D cloud puffs
-
-	unsigned const NCLOUDS = 10;
-	unsigned const NPARTS  = 1000;
-	clear();
-	srand(123);
-
-	for (unsigned c = 0; c < NCLOUDS; ++c) {
-		point const center(4.0*X_SCENE_SIZE*signed_rand_float(),
-			               4.0*Y_SCENE_SIZE*signed_rand_float(),
-						   (ztop + CLOUD_CEILING + Z_SCENE_SIZE*rand_uniform(0.25, 0.75)));
-		point const bounds(X_SCENE_SIZE*rand_uniform(1.0, 2.0),
-			               Y_SCENE_SIZE*rand_uniform(1.0, 2.0),
-						   Z_SCENE_SIZE*rand_uniform(0.4, 0.8));
-		unsigned const nparts(rand()%(NPARTS/2) + NPARTS/2);
-		unsigned const ix(size());
-		resize(ix + nparts);
-
-		for (unsigned p = 0; p < nparts; ++p) {
-			point pos(signed_rand_vector_spherical(1.0));
-
-			for (unsigned i = 0; i < 3; ++i) {
-				pos[i] *= bounds[i];
-			}
-			if (pos.z < 0.0) pos.z *= 0.5; // compressed on the bottom
-			pos += center;
-			float const radius(0.045*(X_SCENE_SIZE + Y_SCENE_SIZE)*rand_uniform(0.5, 1.0));
-			float const density(rand_uniform(0.05, 0.12));
-			(*this)[ix + p].gen(pos, WHITE, zero_vector, radius, density, 0.0, 0.0, -((int)c+2), 0, 0);
-		}
-	}
 }
 
 
