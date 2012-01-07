@@ -141,7 +141,7 @@ void bubble::gen(point const &p, float r, colorRGBA const &c) {
 
 
 void particle_cloud::gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r,
-						 float den, float dark, float dam, int src, int dt, bool as, bool use_parts)
+						 float den, float dark, float dam, int src, int dt, bool as, bool use_parts, bool nl)
 {
 	init_gen_rand(p, 0.005, 0.025);
 	acc_smoke  = as;
@@ -154,6 +154,8 @@ void particle_cloud::gen(point const &p, colorRGBA const &bc, vector3d const &iv
 	darkness   = dark;
 	density    = den;
 	damage     = dam;
+	no_lighting= nl;
+	red_only   = 0;
 
 	if (use_parts) {
 		parts.resize((rand()&3) + 2); // 2-5 parts

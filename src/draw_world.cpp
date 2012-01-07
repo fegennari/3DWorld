@@ -2323,7 +2323,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 	point const camera(get_camera_pos());
 	if (dist_less_than(camera, p, max(NEAR_CLIP, 4.0f*r))) return; // too close to the camera
 
-	if (!is_fire()) { // fire has its own emissive lighting
+	if (!no_lighting && !is_fire()) { // fire has its own emissive lighting
 		int cindex;
 		float rad, dist, t;
 		point const lpos(get_light_pos());
@@ -2342,6 +2342,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 		}
 		get_indir_light(c, p, 0, 1, NULL, NULL); // could move outside of the parts loop if too slow
 	}
+	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
 	c.do_glColor();
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
 	draw_billboard(p, camera, up_vector, 4.0*r, 4.0*r);

@@ -3,9 +3,10 @@
 // 3/10/02
 #include "3DWorld.h"
 #include "physics_objects.h"
+#include "shaders.h"
 
 
-bool const FAST_CLOUDS          = 0; // use faster static billboards
+bool const FAST_CLOUDS          = 1; // use faster static billboards
 unsigned const CLOUD_GEN_TEX_SZ = 1024;
 
 
@@ -56,7 +57,7 @@ void cloud_manager_t::create_clouds() { // 3D cloud puffs
 			pos += center;
 			float const radius(0.045*(X_SCENE_SIZE + Y_SCENE_SIZE)*rand_uniform(0.5, 1.0));
 			float const density(rand_uniform(0.05, 0.12));
-			(*this)[ix + p].gen(pos, WHITE, zero_vector, radius, density, 0.0, 0.0, -((int)c+2), 0, 0);
+			(*this)[ix + p].gen(pos, WHITE, zero_vector, radius, density, 0.0, 0.0, -((int)c+2), 0, 0, 1, 1); // no lighting
 		}
 	}
 }
@@ -164,28 +165,42 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	
 	if (!cloud_tid) {
 		setup_texture(cloud_tid, GL_MODULATE, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, CLOUD_GEN_TEX_SZ, CLOUD_GEN_TEX_SZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, 3, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	assert(glIsTexture(cloud_tid));
 	check_gl_error(800);
 
 	glViewport(0, 0, xsize, ysize);
-	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClearColor(1.0, 1.0, 1.0, 1.0); // white
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
+	glLoadIdentity();
 
+	// setup projection matrix
 	cube_t const bcube(get_bcube());
-	// FIXME: setup projection matrix
-
+	float const dx(max(fabs(bcube.d[0][0]), fabs(bcube.d[0][1]))), dy(max(fabs(bcube.d[1][0]), fabs(bcube.d[1][1])));
+	float const angle(atan2(max(dx, dy), bcube.d[2][0]));
+	//pos_dir_up const pdu(get_pt_cube_frustum_pdu(get_camera_pos(), bcube, 1));
+	//pos_dir_up const pdu(all_zeros, plus_z, plus_x, tanf(angle)*SQRT2, sinf(angle), NEAR_CLIP, FAR_CLIP, 1.0);
+	gluPerspective(2.0*angle/TO_RADIANS, 1.0, bcube.d[2][0], bcube.d[2][1]); // NEAR_CLIP, FAR_CLIP?
 	glMatrixMode(GL_MODELVIEW);
-	draw_part_cloud(*this, get_cloud_color(), 1);
+	glLoadIdentity();
+	vector3d const up_dir(plus_y);
+	point const origin(all_zeros), center(0.0, 0.0, bcube.d[2][0]);
+	gluLookAt(origin.x, origin.y, origin.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
+
+	set_red_only(1);
+	bool const was_valid(camera_pdu.valid);
+	camera_pdu.valid = 0; // disable view frustum culling
+	draw_part_cloud(*this, WHITE, 1); // draw clouds
+	camera_pdu.valid = was_valid;
+	set_red_only(0);
 
 	// render clouds to texture
 	glBindTexture(GL_TEXTURE_2D, cloud_tid);
 	glReadBuffer(GL_BACK);
-	// glCopyTexSubImage2D copies the frame buffer to the bound texture
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize); // copy the frame buffer to the bound texture
 
 	// reset state
 	glMatrixMode(GL_PROJECTION);
@@ -236,18 +251,26 @@ void cloud_manager_t::draw() {
 	}
 	if (FAST_CLOUDS) {
 		create_texture(need_update);
-		enable_flares(WHITE, 1); // texture will be overriden
+		enable_flares(get_cloud_color(), 1); // texture will be overriden
 		assert(cloud_tid);
 		bind_2d_texture(cloud_tid);
+
+		shader_t s;
+		s.set_vert_shader("no_lighting_tex_coord");
+		s.set_frag_shader("cloud_billboard");
+		s.begin_shader();
+		s.add_uniform_int("tex0", 0);
 		glBegin(GL_QUADS);
 		cube_t const bcube(get_bcube());
 		
 		for (unsigned d = 0; d < 2; ++d) { // render the bottom face of bcube
 			for (unsigned e = 0; e < 2; ++e) {
+				glTexCoord2f(float(d^e), float(d));
 				point(bcube.d[0][d^e], bcube.d[1][d], bcube.d[2][0]).do_glVertex();
 			}
 		}
 		glEnd();
+		s.end_shader();
 		disable_flares();
 	}
 	else {

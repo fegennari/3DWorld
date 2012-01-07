@@ -80,7 +80,7 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 	struct part : public sphere_t {
 		bool status;
 	};
-	bool acc_smoke;
+	bool acc_smoke, no_lighting, red_only;
 	int source, damage_type;
 	float radius, init_radius, density, darkness, damage;
 	vector3d init_vel;
@@ -88,7 +88,7 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 	vector<part> parts;
 
 	void gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r,
-		float den, float dark, float dam, int src, int dt, bool as, bool use_parts=1);
+		float den, float dark, float dam, int src, int dt, bool as, bool use_parts=1, bool nl=0);
 	void draw() const;
 	void draw_part(point const &p, float r, colorRGBA c) const;
 	void apply_physics(unsigned i);
@@ -290,6 +290,7 @@ public:
 class cloud_manager_t : public obj_vector_t<particle_cloud> {
 
 	unsigned cloud_tid, txsize, tysize;
+	void set_red_only(bool val) {for (iterator i = begin(); i != end(); ++i) i->red_only = val;}
 
 public:
 	cloud_manager_t() : cloud_tid(0), txsize(0), tysize(0) {}

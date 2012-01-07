@@ -160,6 +160,7 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
     </ClCompile>
+    <ClCompile Include="src\clouds.cpp" />
     <ClCompile Include="src\cobj_bsp_tree.cpp" />
     <ClCompile Include="src\coll_cell_search.cpp" />
     <ClCompile Include="src\collision_detect.cpp">
@@ -506,6 +507,7 @@
     <None Include="model_data\config_soda.txt" />
     <None Include="shaders\bump_map.part.frag" />
     <None Include="shaders\bump_map.part.vert" />
+    <None Include="shaders\cloud_billboard.frag" />
     <None Include="shaders\draw_mesh.frag" />
     <None Include="shaders\draw_mesh.vert" />
     <None Include="shaders\dynamic_lighting.part" />
@@ -513,6 +515,7 @@
     <None Include="shaders\fresnel.part" />
     <None Include="shaders\grass_pp_dl.vert" />
     <None Include="shaders\grass_with_dlights.frag" />
+    <None Include="shaders\no_lighting_tex_coord.vert" />
     <None Include="shaders\shadow_map.part" />
     <None Include="shaders\spec_map.part.frag" />
     <None Include="shaders\vert_xform_only.vert" />
