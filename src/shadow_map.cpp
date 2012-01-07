@@ -178,27 +178,24 @@ void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 }
 
 
-pos_dir_up get_light_pdu(point const &lpos, bool set_matrix) {
+pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds, bool set_matrix) {
 
-	float const scene_z1(min(zbottom, czmin)), scene_z2(max(ztop, czmax)), scene_dz(scene_z2 - scene_z1);
-	float const scene_radius(sqrt(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE + scene_dz*scene_dz));
-	cube_t const scene_bounds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, scene_z1, scene_z2);
-	point const scene_center(scene_bounds.get_cube_center());
+	point const center(bounds.get_cube_center());
 	point corners[8];
-	get_cube_corners(scene_bounds.d, corners);
-	float scene_radius2(0.0);
+	get_cube_corners(bounds.d, corners);
+	float const radius(bounds.get_bsphere_radius());
+	float radius2(0.0);
 
 	for (unsigned i = 0; i < 8; ++i) {
-		scene_radius2 = max(scene_radius2, pt_line_dist(corners[i], lpos, scene_center));
+		radius2 = max(radius2, pt_line_dist(corners[i], pos, center));
 	}
-	//cout << "sr: " << scene_radius << ", sr2: " << scene_radius2 << endl; // TESTING
-	assert(scene_radius2 <= scene_radius);
-	vector3d const light_dir((scene_center - lpos).get_norm()); // almost equal to lpos (point light)
-	float const dist(p2p_dist(lpos, scene_center));
+	assert(radius2 <= radius); // can fail for cloud frustum?
+	vector3d const light_dir((center - pos).get_norm()); // almost equal to lpos (point light)
+	float const dist(p2p_dist(pos, center));
 	vector3d up_dir(zero_vector);
 	up_dir[get_min_dim(light_dir)] = 1.0;
-	float const angle(atan2(scene_radius2, dist));
-	pos_dir_up const pdu(lpos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), max(NEAR_CLIP, dist-scene_radius), dist+scene_radius, 1.0);
+	float const angle(atan2(radius2, dist));
+	pos_dir_up const pdu(pos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), max(NEAR_CLIP, dist-radius), dist+radius, 1.0);
 
 	if (set_matrix) {
 		glMatrixMode(GL_PROJECTION);
@@ -206,9 +203,15 @@ pos_dir_up get_light_pdu(point const &lpos, bool set_matrix) {
 		gluPerspective(2.0*angle/TO_RADIANS, 1.0, pdu.near_, pdu.far_);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		gluLookAt(lpos.x, lpos.y, lpos.z, scene_center.x, scene_center.y, scene_center.z, up_dir.x, up_dir.y, up_dir.z);
+		gluLookAt(pos.x, pos.y, pos.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
 	}
 	return pdu;
+}
+
+
+cube_t get_scene_bounds() {
+
+	return cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
 }
 
 
@@ -220,12 +223,11 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
 	// draw scene bounds
 	glColor4f(1.0, 1.0, 1.0, 0.25);
-	float const scene_z1(min(zbottom, czmin)), scene_z2(max(ztop, czmax));
-	draw_simple_cube(cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, scene_z1, scene_z2), 0);
+	draw_simple_cube(get_scene_bounds(), 0);
 
 	// draw light frustum
 	glColor4f(1.0, 1.0, 0.0, 0.25);
-	get_light_pdu(lpos, 0).draw_frustum();
+	get_pt_cube_frustum_pdu(lpos, get_scene_bounds(), 0).draw_frustum();
 	disable_blend();
 	glEnable(GL_LIGHTING);
 }
@@ -266,7 +268,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	glMatrixMode(GL_MODELVIEW);
 	float sradius(0.0);
 	camera_pos = lpos;
-	pdu        = camera_pdu = get_light_pdu(lpos, 1);
+	pdu        = camera_pdu = get_pt_cube_frustum_pdu(lpos, get_scene_bounds(), 1);
 	check_gl_error(201);
 
 	// setup texture matrix
