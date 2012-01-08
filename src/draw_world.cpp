@@ -2242,17 +2242,15 @@ void compute_brightness() {
 }
 
 
-typedef vector<pair<float, unsigned> > order_vect_t;
-
-
 template<typename T> void get_draw_order(vector<T> const &objs, order_vect_t &order) {
 
 	point const camera(get_camera_pos());
 	
 	for (unsigned i = 0; i < objs.size(); ++i) {
+		if (!objs[i].status) continue;
 		point const pos(objs[i].get_pos());
 
-		if (objs[i].status && sphere_in_camera_view(pos, objs[i].radius, 0)) {
+		if (sphere_in_camera_view(pos, objs[i].radius, 0)) {
 			order.push_back(make_pair(-p2p_dist_sq(pos, camera), i));
 		}
 	}
@@ -2278,6 +2276,9 @@ void bubble::draw() const {
 }
 
 
+order_vect_t particle_cloud::order;
+
+
 void particle_cloud::draw() const {
 
 	assert(status);
@@ -2300,7 +2301,7 @@ void particle_cloud::draw() const {
 		}
 	}
 	else {
-		order_vect_t order;
+		order.resize(0);
 		vector<part> cur_parts(parts);
 
 		for (unsigned i = 0; i < cur_parts.size(); ++i) {

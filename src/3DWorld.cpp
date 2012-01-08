@@ -64,7 +64,7 @@ int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), c
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
 int display_framerate(1), init_resize(1), temp_change(0), mesh_type(INIT_MESH_TYPE), mt2(0), is_cloudy(0);
-int star_init(0), recreated(1), stencil_shadow(0);
+int star_init(0), recreated(1), stencil_shadow(0), cloud_model(0);
 int displayed(0), min_time(0), resolution(1+(START_MODE==3)), res_old(1+(START_MODE!=3)), show_framerate(0);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0);
 int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
@@ -1220,6 +1220,15 @@ void keyboard2(int key, int x, int y) {
 
 	case GLUT_KEY_F9: // switch to fullscreen mode
 		glutFullScreen();
+		break;
+
+	case GLUT_KEY_F10: // switch cloud model
+		cloud_model = !cloud_model;
+		break;
+
+	case GLUT_KEY_F11: // unused
+		break;
+	case GLUT_KEY_F12: // unused
 		break;
 	}
 	glutPostWindowRedisplay(curr_window); // Schedule a new display event

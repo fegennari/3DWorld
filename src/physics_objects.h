@@ -75,6 +75,9 @@ struct bubble : public basic_physics_obj { // size = 44
 };
 
 
+typedef vector<pair<float, unsigned> > order_vect_t;
+
+
 struct particle_cloud : public basic_physics_obj { // size = 88
 
 	struct part : public sphere_t {
@@ -86,6 +89,7 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 	vector3d init_vel;
 	colorRGBA base_color;
 	vector<part> parts;
+	static order_vect_t order;
 
 	void gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r,
 		float den, float dark, float dam, int src, int dt, bool as, bool use_parts=1, bool nl=0);
@@ -289,11 +293,11 @@ public:
 
 class cloud_manager_t : public obj_vector_t<particle_cloud> {
 
-	unsigned cloud_tid, txsize, tysize;
+	unsigned cloud_tid, fbo_id, txsize, tysize;
 	void set_red_only(bool val) {for (iterator i = begin(); i != end(); ++i) i->red_only = val;}
 
 public:
-	cloud_manager_t() : cloud_tid(0), txsize(0), tysize(0) {}
+	cloud_manager_t() : cloud_tid(0), fbo_id(0), txsize(0), tysize(0) {}
 	~cloud_manager_t() {free_textures();}
 	void create_clouds();
 	void update_lighting();

@@ -4,16 +4,16 @@
 #include "3DWorld.h"
 #include "physics_objects.h"
 #include "shaders.h"
+#include "gl_ext_arb.h"
 
 
-bool const FAST_CLOUDS          = 1; // use faster static billboards
 unsigned const CLOUD_GEN_TEX_SZ = 1024;
 
 
 cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
-extern int window_width, window_height;
+extern int window_width, window_height, cloud_model;
 extern float CLOUD_CEILING, atmosphere, sun_rot;
 
 
@@ -170,6 +170,8 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	assert(glIsTexture(cloud_tid));
 	check_gl_error(800);
 
+	//enable_fbo(fbo_id, cloud_tid, 0);
+
 	glViewport(0, 0, xsize, ysize);
 	glClearColor(1.0, 1.0, 1.0, 1.0); // white
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -180,14 +182,18 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	// setup projection matrix
 	cube_t const bcube(get_bcube());
 	float const dx(max(fabs(bcube.d[0][0]), fabs(bcube.d[0][1]))), dy(max(fabs(bcube.d[1][0]), fabs(bcube.d[1][1])));
-	float const angle(atan2(max(dx, dy), bcube.d[2][0]));
+	float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]);
+	float const cloud_xy(max(dx, dy)), scene_xy(max(X_SCENE_SIZE, Y_SCENE_SIZE)), angle(atan2(cloud_xy, cloud_bot));
+	float const z1(min(zbottom, czmin)), frustum_z(z1 - scene_xy*(cloud_bot - z1)/(cloud_xy - scene_xy));
 	//pos_dir_up const pdu(get_pt_cube_frustum_pdu(get_camera_pos(), bcube, 1));
 	//pos_dir_up const pdu(all_zeros, plus_z, plus_x, tanf(angle)*SQRT2, sinf(angle), NEAR_CLIP, FAR_CLIP, 1.0);
-	gluPerspective(2.0*angle/TO_RADIANS, 1.0, bcube.d[2][0], bcube.d[2][1]); // NEAR_CLIP, FAR_CLIP?
+	//gluPerspective(2.0*angle/TO_RADIANS, 1.0, cloud_bot-frustum_z, cloud_top+(cloud_top - cloud_bot)-frustum_z);
+	gluPerspective(2.0*angle/TO_RADIANS, 1.0, NEAR_CLIP, FAR_CLIP);
 	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
 	glLoadIdentity();
 	vector3d const up_dir(plus_y);
-	point const origin(all_zeros), center(0.0, 0.0, bcube.d[2][0]);
+	point const origin(0.0, 0.0, frustum_z), center(0.0, 0.0, cloud_bot);
 	gluLookAt(origin.x, origin.y, origin.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
 
 	set_red_only(1);
@@ -206,6 +212,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
 	glViewport(0, 0, window_width, window_height);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -224,6 +231,7 @@ void free_cloud_textures() {
 void cloud_manager_t::free_textures() {
 
 	free_texture(cloud_tid);
+	free_fbo(fbo_id);
 }
 
 
@@ -249,7 +257,7 @@ void cloud_manager_t::draw() {
 		had_sun      = have_sun;
 		update_lighting();
 	}
-	if (FAST_CLOUDS) {
+	if (cloud_model == 1) {
 		create_texture(need_update);
 		enable_flares(get_cloud_color(), 1); // texture will be overriden
 		assert(cloud_tid);
@@ -265,7 +273,7 @@ void cloud_manager_t::draw() {
 		
 		for (unsigned d = 0; d < 2; ++d) { // render the bottom face of bcube
 			for (unsigned e = 0; e < 2; ++e) {
-				glTexCoord2f(float(d^e), float(d));
+				glTexCoord2f(float(d^e^1), float(d));
 				point(bcube.d[0][d^e], bcube.d[1][d], bcube.d[2][0]).do_glVertex();
 			}
 		}
@@ -280,4 +288,5 @@ void cloud_manager_t::draw() {
 	//glFinish(); // testing
 	//PRINT_TIME("Clouds");
 }
+
 
