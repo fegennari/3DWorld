@@ -7,6 +7,7 @@
 #include "gl_ext_arb.h"
 
 
+bool     const USE_CLOUD_FBO    = 1;
 unsigned const CLOUD_GEN_TEX_SZ = 1024;
 
 
@@ -154,7 +155,8 @@ cube_t cloud_manager_t::get_bcube() const {
 bool cloud_manager_t::create_texture(bool force_recreate) {
 
 	RESET_TIME;
-	unsigned const xsize(min(CLOUD_GEN_TEX_SZ, (unsigned)window_width)), ysize(min(CLOUD_GEN_TEX_SZ, (unsigned)window_height));
+	unsigned const xsize(USE_CLOUD_FBO ? CLOUD_GEN_TEX_SZ : min(CLOUD_GEN_TEX_SZ, (unsigned)window_width));
+	unsigned const ysize(USE_CLOUD_FBO ? CLOUD_GEN_TEX_SZ : min(CLOUD_GEN_TEX_SZ, (unsigned)window_height));
 
 	if (txsize != xsize || tysize != ysize) {
 		free_textures();
@@ -169,8 +171,8 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	}
 	assert(glIsTexture(cloud_tid));
 	check_gl_error(800);
-
-	//enable_fbo(fbo_id, cloud_tid, 0);
+	if (USE_CLOUD_FBO) enable_fbo(fbo_id, cloud_tid, 0);
+	check_gl_error(801);
 
 	glViewport(0, 0, xsize, ysize);
 	glClearColor(1.0, 1.0, 1.0, 1.0); // white
@@ -197,26 +199,31 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	gluLookAt(origin.x, origin.y, origin.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
 
 	set_red_only(1);
+	point const orig_cpos(camera_pos);
 	bool const was_valid(camera_pdu.valid);
 	camera_pdu.valid = 0; // disable view frustum culling
+	camera_pos = origin;
 	draw_part_cloud(*this, WHITE, 1); // draw clouds
+	camera_pos = orig_cpos;
 	camera_pdu.valid = was_valid;
 	set_red_only(0);
 
-	// render clouds to texture
-	glBindTexture(GL_TEXTURE_2D, cloud_tid);
-	glReadBuffer(GL_BACK);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize); // copy the frame buffer to the bound texture
+	if (!USE_CLOUD_FBO) { // render clouds to texture
+		glBindTexture(GL_TEXTURE_2D, cloud_tid);
+		glReadBuffer(GL_BACK);
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize); // copy the frame buffer to the bound texture
+	}
 
 	// reset state
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
+	if (USE_CLOUD_FBO) disable_fbo();
 	glViewport(0, 0, window_width, window_height);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	if (!USE_CLOUD_FBO) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	check_gl_error(801);
+	check_gl_error(802);
 	PRINT_TIME("Cloud Texture Gen");
 	return 1;
 }
