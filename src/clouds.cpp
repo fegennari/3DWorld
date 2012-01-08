@@ -152,6 +152,13 @@ cube_t cloud_manager_t::get_bcube() const {
 }
 
 
+float cloud_manager_t::get_max_xy_extent() const {
+
+	cube_t const bcube(get_bcube());
+	return(max(max(-bcube.d[0][0], bcube.d[0][1]), max(-bcube.d[1][0], bcube.d[1][1])));
+}
+
+
 bool cloud_manager_t::create_texture(bool force_recreate) {
 
 	RESET_TIME;
@@ -183,10 +190,9 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 
 	// setup projection matrix
 	cube_t const bcube(get_bcube());
-	float const dx(max(fabs(bcube.d[0][0]), fabs(bcube.d[0][1]))), dy(max(fabs(bcube.d[1][0]), fabs(bcube.d[1][1])));
-	float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]);
-	float const cloud_xy(max(dx, dy)), scene_xy(max(X_SCENE_SIZE, Y_SCENE_SIZE)), angle(atan2(cloud_xy, cloud_bot));
-	float const z1(min(zbottom, czmin)), frustum_z(z1 - scene_xy*(cloud_bot - z1)/(cloud_xy - scene_xy));
+	float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
+	float const scene_xy(max(X_SCENE_SIZE, Y_SCENE_SIZE)), angle(atan2(cloud_xy, cloud_bot)), z1(min(zbottom, czmin));
+	frustum_z = z1 - scene_xy*(cloud_bot - z1)/(cloud_xy - scene_xy);
 	//pos_dir_up const pdu(get_pt_cube_frustum_pdu(get_camera_pos(), bcube, 1));
 	//pos_dir_up const pdu(all_zeros, plus_z, plus_x, tanf(angle)*SQRT2, sinf(angle), NEAR_CLIP, FAR_CLIP, 1.0);
 	//gluPerspective(2.0*angle/TO_RADIANS, 1.0, cloud_bot-frustum_z, cloud_top+(cloud_top - cloud_bot)-frustum_z);
@@ -264,7 +270,7 @@ void cloud_manager_t::draw() {
 		had_sun      = have_sun;
 		update_lighting();
 	}
-	if (cloud_model == 1) {
+	if (cloud_model == 0) { // faster billboard texture mode
 		create_texture(need_update);
 		enable_flares(get_cloud_color(), 1); // texture will be overriden
 		assert(cloud_tid);
@@ -275,13 +281,16 @@ void cloud_manager_t::draw() {
 		s.set_frag_shader("cloud_billboard");
 		s.begin_shader();
 		s.add_uniform_int("tex0", 0);
+
 		glBegin(GL_QUADS);
 		cube_t const bcube(get_bcube());
+		float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
+		float const xy_exp((cloud_top - frustum_z)/(cloud_bot - frustum_z));
 		
 		for (unsigned d = 0; d < 2; ++d) { // render the bottom face of bcube
 			for (unsigned e = 0; e < 2; ++e) {
 				glTexCoord2f(float(d^e^1), float(d));
-				point(bcube.d[0][d^e], bcube.d[1][d], bcube.d[2][0]).do_glVertex();
+				point(xy_exp*((d^e) ? cloud_xy : -cloud_xy), xy_exp*(d ? cloud_xy : -cloud_xy), cloud_top).do_glVertex();
 			}
 		}
 		glEnd();
