@@ -487,7 +487,7 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 
 
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
-// 15 total: 7 complete, 8 partial
+// 15 total: 9 complete, 6 partial
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	if (c.type < type) return c.intersects_cobj(*this, toler); // swap arguments
@@ -519,9 +519,9 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 						if (check_line_clip(pts[j][i], pts[j][(i+1)%c.npoints], d)) return 1; // definite intersection
 					}
 				}
-				// call sphere_ext_poly_intersect?
-				// call something like csg_cube::subtract_from_polygon()?
-				return 0; // FIXME - close, but need to handle cube completely insde of a thick polygon
+				// need to handle cube completely insde of a thick polygon
+				if (sphere_ext_poly_intersect(c.points, c.npoints, c.norm, get_cube_center(), 0.0, c.thickness, MIN_POLY_THICK)) return 1;
+				return 0;
 			}
 			return 0;
 		default: assert(0);
@@ -585,8 +585,12 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		for (int i = 0; i <   npoints; ++i) {
 			if (line_intersect(  points[i],   points[(i+1)%  npoints])) return 1;
 		}
-		// call sphere_ext_poly_intersect?
-		return 0; // FIXME - close, but need to handle one polygon completely insde of a thick polygon
+		// need to handle one polygon completely insde of a thick polygon
+		if (c.thickness > MIN_POLY_THICK &&
+			sphere_ext_poly_intersect(c.points, c.npoints, c.norm,   points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
+		if (  thickness > MIN_POLY_THICK &&
+			sphere_ext_poly_intersect(  points,   npoints,   norm, c.points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
+		return 0;
 
 	default:
 		assert(0);
