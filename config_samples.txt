@@ -19,6 +19,10 @@ toggle_mesh_enabled # disable mesh draw by default
 destroy_thresh 1
 use_dense_voxels 1
 
+# needed for minecraft models
+texture_alpha_in_red_comp 1 
+model3d_alpha_thresh 0.01
+
 gravity 1.0
 mesh_scale 1.0
 camera_height 0.0

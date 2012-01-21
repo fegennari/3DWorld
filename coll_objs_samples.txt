@@ -2,6 +2,8 @@ t 0.0 0.0 0.0
 l 0.8 1.0 1.0 1.0 1.0 -1 1 # elasticity R G B A texture_id draw
 y 4.0
 
+# O <filename> <group_cobjs_level> <recalc_normals> <write_file> <ignore_ambient>
+
 #m 0.05  O Samples/Generator2_TS/generator_small_high.obj 3 0 0 0
 #m 0.05  O Samples/Head/head_high.obj 3 0 0 0
 #s 1 2  m 0.0001  O "Samples/tower_bridge/tower bridge.obj" 3 0 0 0
@@ -14,8 +16,11 @@ y 4.0
 #t 0 0 0  s 1 2  M 0  m 0.2  O ../models/sponza/sponza.obj 4 1 0 1
 #t 0 0 0.0  s 1 2  M 0  m 0.002  O ../models/sponza2/sponza.model3d 4 0 0 0
 #t 0 0 2.4  s 1 2  M 0  m 0.18  O ../models/sibenik/sibenik.model3d 4 1 0 1
-t 0 0 0  s 1 2  M 0  m 0.12  l 0.8 1.0 1.0 1.0 1.0 27 1  O ../models/san-miguel/san-miguel.model3d 4 1 0 0
+#t 0 0 0  s 1 2  M 0  m 0.12  l 0.8 1.0 1.0 1.0 1.0 27 1  O ../models/san-miguel/san-miguel.model3d 4 1 0 0
 #t 5 -5 -1  M 0  m 0.003  O ../models/soda/soda.model3d 3 0 0 1
+#t 0 0 0  s 1 2  M 0  m 0.04  O ../models/lost-empire/lost_empire.model3d 3 0 0 1
+#t 0 0 0  s 1 2  M 0  m 0.1  O ../models/rungholt/house.model3d 3 0 0 1
+t 0 0 0  s 1 2  M 0  m 0.01  O ../models/rungholt/rungholt.model3d 4 0 0 1
 
 
 
