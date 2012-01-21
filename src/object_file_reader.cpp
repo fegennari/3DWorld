@@ -359,14 +359,14 @@ public:
 
 					if (c == '/') {
 						if (fscanf(fp, "%i", &tix) == 1) { // read text coord index
-							normalize_index(tix, tc.size());
+							normalize_index(tix, tc.size()-1); // account for tc[0]
 							vntc_ix.tix = tix+1; // account for tc[0]
 						}
 						int const c2(getc(fp));
 
 						if (c2 == '/') {
 							if (fscanf(fp, "%i", &nix) == 1 && !recalc_normals) { // read normal index
-								normalize_index(nix, n.size());
+								normalize_index(nix, n.size()-1); // account for n[0]
 								vntc_ix.nix = nix+1; // account for n[0]
 							} // else the normal will be recalculated later
 						}
