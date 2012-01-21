@@ -271,7 +271,7 @@ void process_groups() {
 	is_cloudy     = 0;
 	used_objs     = 0;
 	if (num_obj_on_mesh != NULL) matrix_clear_2d(num_obj_on_mesh); // should be < 1ms
-	build_cobj_tree(1, 0); // FIXME: before or after group processing?
+	build_cobj_tree(1, 0); // could also do after group processing
 	
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);

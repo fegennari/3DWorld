@@ -267,6 +267,9 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		else {
 			bind_vbo(ivbo, 1);
 		}
+		// possible optimization:
+		// sort triangles/quads by size, largest to smallest
+		// render a subset of the indices based on size threshold and distance to camera
 		glDrawRangeElements(prim_type, 0, size(), indices.size(), GL_UNSIGNED_INT, 0);
 		bind_vbo(0, 1);
 	}

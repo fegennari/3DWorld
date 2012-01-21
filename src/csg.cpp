@@ -509,7 +509,6 @@ bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj const
 				prev_outside = cur_outside;
 			}
 			if (!new_poly.empty()) {
-				//cout << "add polygon:" << endl; for (unsigned p = 0; p < new_poly.size(); ++p) {new_poly[p].print(); cout << endl;}
 				bool const split_quads(use_waypoints); // FIXME: waypoint issues with split polygons
 				split_polygon_to_cobjs(cobj, new_cobjs, new_poly, split_quads);
 				new_poly.resize(0);
@@ -517,9 +516,7 @@ bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj const
 			cur.swap(next);
 			next.resize(0);
 		}
-	}
-	//cout << "cur: " << cur.size() << ", new_cobjs: " << init_sz << " => " << new_cobjs.size() << endl;
-	
+	}	
 	if (!cur.empty()) { // the remainder (cur) is the part to be removed
 		cur.resize(0);
 		return 1;
