@@ -13,8 +13,9 @@ bool const ENABLE_SPEC_MAPS  = 1;
 bool const USE_INDEXED_VERTS = 1;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 
-extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders;
+extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp;
 extern int display_mode;
+extern float model3d_alpha_thresh;
 
 
 model3ds all_models;
@@ -40,7 +41,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	if (verbose) cout << "creating texture " << fn << endl;
 	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
 	// type=read_from_file format=auto width height wrap ncolors use_mipmaps name [do_compress]
-	textures.push_back(texture_t(0, 7, 0, 0, 1, (is_alpha_mask ? 1 : 3), !is_alpha_mask, fn, compress)); // always RGB targa wrapped+mipmap
+	textures.push_back(texture_t(0, 7, 0, 0, 1, (is_alpha_mask ? 1 : 3), !is_alpha_mask, fn, compress)); // always RGB wrapped+mipmap
 	return tid; // can't fail
 }
 
@@ -76,7 +77,7 @@ void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump)
 		if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
 			ensure_tid_loaded(t.alpha_tid, 0);
 			assert((unsigned)t.alpha_tid < textures.size());
-			t.copy_alpha_from_texture(textures[t.alpha_tid]);
+			t.copy_alpha_from_texture(textures[t.alpha_tid], texture_alpha_in_red_comp);
 		}
 		if (is_bump) t.make_normal_map();
 		t.init(); // must be after alpha copy
@@ -1020,7 +1021,7 @@ void model3ds::render(bool is_shadow_pass) {
 		set_color_a(WHITE); // ambient will be set by indirect lighting in the shader
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.5);
+		glAlphaFunc(GL_GREATER, model3d_alpha_thresh);
 	}
 	BLACK.do_glColor();
 	set_specular(0.0, 1.0);

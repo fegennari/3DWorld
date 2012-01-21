@@ -938,7 +938,7 @@ public:
 	GLenum calc_internal_format() const;
 	GLenum calc_format() const;
 	void calc_color();
-	void copy_alpha_from_texture(texture_t const &at);
+	void copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_comp);
 	void build_mipmaps();
 	void create_custom_mipmaps();
 	unsigned char const *get_mipmap_data(unsigned level) const;

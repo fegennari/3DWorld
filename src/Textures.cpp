@@ -446,7 +446,7 @@ void texture_t::calc_color() {
 }
 
 
-void texture_t::copy_alpha_from_texture(texture_t const &at) {
+void texture_t::copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_comp) {
 
 	assert(at.is_allocated() && is_allocated()); // check that data is allocated in both textures
 	assert(ncolors == 4); // check for alpha channel
@@ -457,11 +457,11 @@ void texture_t::copy_alpha_from_texture(texture_t const &at) {
 		resize(at.width, at.height);
 		assert(at.width == width && at.height == height);
 	}
-	unsigned const npixels(num_pixels());
+	unsigned const npixels(num_pixels()), alpha_offset(alpha_in_red_comp ? 0 : 3);
 	bool const is_lum(at.ncolors == 1);
 
 	for (unsigned i = 0; i < npixels; ++i) {
-		data[4*i+3] = (is_lum ? at.data[i] : at.data[4*i+3]); // copy alpha values
+		data[4*i+3] = (is_lum ? at.data[i] : at.data[4*i+alpha_offset]); // copy alpha values
 	}
 }
 
