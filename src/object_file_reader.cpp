@@ -297,7 +297,7 @@ public:
 		for (set<string>::const_iterator i = mat_lib_fns.begin(); i != mat_lib_fns.end(); ++i) {
 			if (!load_mat_lib(*i)) {
 				cerr << "Error reading material library file " << *i << endl;
-				return 0;
+				//return 0;
 			}
 		}
 		model.load_all_used_tids();
@@ -469,7 +469,7 @@ public:
 				}
 				if (!load_mat_lib(mat_lib)) { // could cache loaded files, but they tend to not be reloaded and loading is fast anyway (since textures are cached)
 					cerr << "Error reading material library file " << mat_lib << endl;
-					return 0;
+					//return 0;
 				}
 			}
 			else {
