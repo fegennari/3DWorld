@@ -189,15 +189,14 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 #if 0
 	unsigned const npts((prim_type == GL_TRIANGLES) ? 3 : 4), nverts(num_verts()); // triangles or quads
 	assert((nverts % npts) == 0);
-
-	// sort by triangle/quad size, largest to smallest
-	vector<pair<float, unsigned> > area_ix_pairs;
+	vector<pair<unsigned, unsigned> > area_ix_pairs;
 	area_ix_pairs.resize(nverts/npts);
 	point pts[4];
 
 	for (unsigned i = 0, ix = 0; i < nverts; i += npts, ++ix) {
 		for (unsigned j = 0; j < npts; ++j) {pts[j] = get_vert(i+j).v;}
-		area_ix_pairs[ix] = make_pair(-polygon_area(pts, npts), i); // negate area to reverse sort order
+		//area_ix_pairs[ix] = make_pair(-polygon_area(pts, npts), i); // sort by triangle/quad size, largest to smallest
+		area_ix_pairs[ix] = make_pair(indices[i], i); // sort by first vertex index
 	}
 	sort(area_ix_pairs.begin(), area_ix_pairs.end());
 	vector<unsigned> new_indices;
