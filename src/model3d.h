@@ -130,7 +130,7 @@ template<typename T> void clear_cont(T &cont) {T().swap(cont);}
 template<typename T> class vntc_vect_t : public vector<T> {
 
 protected:
-	bool has_tangents;
+	bool has_tangents, finalized;
 	unsigned vbo, ivbo;
 	sphere_t bsphere;
 	cube_t bcube;
@@ -138,7 +138,7 @@ protected:
 public:
 	unsigned obj_id;
 
-	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), vbo(0), ivbo(0), obj_id(obj_id_) {}
+	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), vbo(0), ivbo(0), obj_id(obj_id_) {}
 	void render(shader_t &shader, bool is_shadow_pass, int prim_type);
 	void free_vbos();
 	void add_poly(vntc_vect_t const &poly);
@@ -160,6 +160,7 @@ public:
 	void render(shader_t &shader, bool is_shadow_pass, int prim_type);
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
 	void add_vertex(T const &v, vertex_map_t<T> &vmap);
+	void finalize(int prim_type);
 	void clear() {vntc_vect_t<T>::clear(); indices.clear();}
 	unsigned num_verts() const {return (indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}

@@ -182,6 +182,37 @@ template<typename T> void vntc_vect_t<T>::calc_bounding_volumes() {
 }
 
 
+template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
+
+	if (indices.empty() || finalized) return; // nothing to do
+	finalized = 1;
+#if 0
+	unsigned const npts((prim_type == GL_TRIANGLES) ? 3 : 4), nverts(num_verts()); // triangles or quads
+	assert((nverts % npts) == 0);
+
+	// sort by triangle/quad size, largest to smallest
+	vector<pair<float, unsigned> > area_ix_pairs;
+	area_ix_pairs.resize(nverts/npts);
+	point pts[4];
+
+	for (unsigned i = 0, ix = 0; i < nverts; i += npts, ++ix) {
+		for (unsigned j = 0; j < npts; ++j) {pts[j] = get_vert(i+j).v;}
+		area_ix_pairs[ix] = make_pair(-polygon_area(pts, npts), i); // negate area to reverse sort order
+	}
+	sort(area_ix_pairs.begin(), area_ix_pairs.end());
+	vector<unsigned> new_indices;
+	new_indices.resize(nverts);
+	
+	for (unsigned i = 0, ix = 0; i < nverts; i += npts, ++ix) {
+		unsigned const vix(area_ix_pairs[ix].second);
+		assert(vix+npts <= indices.size());
+		for (unsigned j = 0; j < npts; ++j) {new_indices[i+j] = indices[vix+j];}
+	}
+	indices.swap(new_indices);
+#endif
+}
+
+
 template<> void indexed_vntc_vect_t<vert_norm_tc_tan>::calc_tangents(unsigned npts) {
 
 	if (has_tangents) return; // already computed
@@ -228,6 +259,7 @@ template<typename T> void vntc_vect_t<T>::read(istream &in) {
 template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, int prim_type) {
 
 	if (empty()) return;
+	finalize(prim_type);
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
 	if (!is_shadow_pass && !camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius)) return; // view frustum culling
 	if (!is_shadow_pass && !camera_pdu.cube_visible(bcube)) return; // test the bounding cube as well
