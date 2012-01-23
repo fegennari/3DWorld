@@ -1,0 +1,17 @@
+#nsmileys 6
+num_items 2 2 2 6 6
+left_handed 0
+self_damage 0.5
+team_damage 0.2
+smiley_damage 1.0
+player_damage 1.0
+player_speed 1.0
+smiley_accuracy 0.96
+smiley_speed 1.0
+speed_mult 1.0
+free_for_all 1
+teams 2
+crater_size 0.1
+player_name Deathtool
+num_dodgeballs 3
+

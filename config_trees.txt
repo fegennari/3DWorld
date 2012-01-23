@@ -37,32 +37,16 @@ default_ground_tex -1
 snow_random 0.0
 num_test_snowflakes 100 # in M
 
-left_handed 0
-self_damage 0.5
-team_damage 0.2
-smiley_damage 1.0
-player_damage 1.0
-smiley_accuracy 0.96
-smiley_speed 0.95
-speed_mult 1.0
-free_for_all 1
-teams 2
-num_dodgeballs 3
-crater_size 0.1
-player_name Deathtool
+include config_gameplay.txt
+unlimited_weapons 0
 
 #grass_density 150
 #grass_size 0.02 0.002
 
-unlimited_weapons 0
-
 mesh_size  128 128 64
 scene_size 4.0 4.0 4.0
 
-window_width 1920
-window_height 1080
-color_bit_depth 32
-refresh_rate 75
+include config_resolution.txt
 
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0

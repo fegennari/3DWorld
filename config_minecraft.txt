@@ -1,73 +1,14 @@
-ntrees 0
-nsmileys 6
-verbose 0
-rand_seed 0
-load_coll_objs 1
-glaciate 1
-dynamic_mesh_scroll 0
-disable_universe 1
-disable_inf_terrain 1
-disable_water 1
-disable_scenery 1
-read_landscape 0
-read_heightmap 0
-scenery_extent 0
-ground_effects_level 0
-toggle_mesh_enabled # disable mesh draw by default
-destroy_thresh 1
-use_dense_voxels 1
+include config_samples.txt
 
 # needed for minecraft models
 texture_alpha_in_red_comp 1 
 model3d_alpha_thresh 0.01
 use_model2d_tex_mipmaps 1
 
-gravity 1.0
-mesh_scale 1.0
-camera_height 0.0
-tree_size 1.0
-sun_rot 0.4
-cobj_z_bias 0.001
-indir_vert_offset 0.8
-shadow_detail 7
-tree_coll_level 4
-default_ground_tex -1
-# mesh_seed 1
-
-left_handed 0
-self_damage 0.5
-team_damage 0.2
-smiley_damage 1.0
-player_damage 1.0
-smiley_accuracy 0.96
-smiley_speed 0.95
-speed_mult 1.0
-free_for_all 1
-teams 2
-num_dodgeballs 3
-crater_size 0.1
-player_name Deathtool
-
-unlimited_weapons 1
 group_back_face_cull 1
-enable_model3d_tex_comp 0
 disable_shaders 1
-
-mesh_height 0.05
-mesh_size  128 128 4
-scene_size 4.0 4.0 4.0
-set_czmax 4.0
-
-window_width 1920
-window_height 1080
-color_bit_depth 32
-refresh_rate 75
 #shadow_map_sz 4096
-
-state_file state.txt
-mesh_file mesh.txt 1.0 1.0 0
 coll_obj_file coll_objs_minecraft.txt
-
 
 end
 
