@@ -1,5 +1,11 @@
 include config_samples.txt
 
+camera_height 0.0
+camera_radius 0.02
+camera_step_height 2.5
+player_speed 0.4
+smiley_speed 0.4
+
 # needed for minecraft models
 texture_alpha_in_red_comp 1 
 model3d_alpha_thresh 0.01
