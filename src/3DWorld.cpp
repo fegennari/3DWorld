@@ -1340,6 +1340,7 @@ inline bool read_uint (FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) 
 inline bool read_float(FILE *fp, float    &val) {return (fscanf(fp, "%f", &val) == 1);}
 inline bool read_str  (FILE *fp, char     *val) {return (fscanf(fp, "%s",  val) == 1);}
 
+
 inline bool read_bool (FILE *fp, bool     &val) {
 	int tmp;
 	if (fscanf(fp, "%i", &tmp) != 1) return 0;
@@ -1420,7 +1421,7 @@ void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) {
 int load_config(string const &config_file) {
 
 	int gms_set(0), color_bit_depth(32), refresh_rate(75), error(0);
-	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0};
+	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
 	gmww          = 640;
 	gmwh          = 480;
 	mesh_draw     = NULL;
@@ -1434,6 +1435,10 @@ int load_config(string const &config_file) {
 		if (str[0] == '#') { // comment
 			char letter(getc(fp));
 			while (letter != '\n' && letter != EOF && letter != 0) letter = getc(fp);
+		}
+		else if (str == "include") {
+			if (!read_str(fp, include_fname)) cfg_err("include", error);
+			if (!load_config(include_fname )) cfg_err("nested include file", error);
 		}
 		else if (str == "grass_density") {
 			if (!read_uint(fp, grass_density)) cfg_err("grass density", error);
