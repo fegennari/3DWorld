@@ -160,7 +160,8 @@ void cube_t::print() const {
 
 	for (unsigned i = 0; i < 3; ++i) {
 		for (unsigned j = 0; j < 2; ++j) {
-			cout << d[i][j] << ",";
+			cout << d[i][j];
+			if (i < 2 || j < 1) cout << ",";
 		}
 		cout << " ";
 	}
@@ -784,7 +785,6 @@ class overlap_remover {
 	vector<coll_obj> &cobjs;
 
 	unsigned get_bin(float const d, float const b[2]) {
-
 		assert(d >= b[0] && d <= b[1]);
 		return min(NDIV-1, unsigned(NDIV*((d - b[0])/(b[1] - b[0])))); // handle edge case
 	}
@@ -798,9 +798,9 @@ class overlap_remover {
 		}
 	}
 
-	void add_to_bins(coll_obj const &cobj, vector<unsigned> bins[NDIV][NDIV][NDIV], float const bb[3][2], unsigned index) {
+	void add_to_bins(coll_obj const &cobj, vector<unsigned> bins[NDIV][NDIV][NDIV], cube_t const &bb, unsigned index) {
 
-		get_bin_range(cobj.d, bb);
+		get_bin_range(cobj.d, bb.d);
 
 		for (unsigned b0 = inbin[0][0]; b0 <= inbin[0][1]; ++b0) {
 			for (unsigned b1 = inbin[1][0]; b1 <= inbin[1][1]; ++b1) {
@@ -821,14 +821,18 @@ public:
 		vector<unsigned> bins[NDIV][NDIV][NDIV];
 		set<unsigned> cids; // for uniquing
 		unsigned const nc(cobjs.size());
-		float bb[3][2];
+		cube_t bb;
+		bool first(1);
 
 		for (unsigned i = 0; i < nc; ++i) { // calculate bbox
 			if (cobjs[i].type != COLL_CUBE) continue;
-
-			for (unsigned d = 0; d < 3; ++d) {
-				bb[d][0] = ((i == 0) ? cobjs[i].d[d][0] : min(bb[d][0], cobjs[i].d[d][0]));
-				bb[d][1] = ((i == 0) ? cobjs[i].d[d][1] : max(bb[d][1], cobjs[i].d[d][1]));
+			
+			if (first) {
+				bb = cobjs[i];
+				first = 0;
+			}
+			else {
+				bb.union_with_cube(cobjs[i]);
 			}
 		}
 		for (unsigned i = 0; i < nc; ++i) { // fill the bins
@@ -840,7 +844,7 @@ public:
 			csg_cube cube(cobjs[i]);
 			if (cube.is_zero_area()) continue;
 			bool const neg(cobjs[i].status == COLL_NEGATIVE);
-			get_bin_range(cobjs[i].d, bb);
+			get_bin_range(cobjs[i].d, bb.d);
 			cids.clear();
 
 			for (unsigned b0 = inbin[0][0]; b0 <= inbin[0][1]; ++b0) {

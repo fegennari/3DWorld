@@ -52,6 +52,15 @@ void tquad_t::update_bcube(cube_t &c) const {
 }
 
 
+cube_t tquad_t::get_bcube() const {
+
+	cube_t c(pts[0], pts[1]);
+	UNROLL_3X(UPDATE_CUBE(2));
+	if (npts == 4) UNROLL_3X(UPDATE_CUBE(3));
+	return c;
+}
+
+
 unsigned cobj_tree_base::tree_node::get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const {
 
 	unsigned dim(0);

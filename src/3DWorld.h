@@ -480,6 +480,7 @@ struct tquad_t { // size = 52
 	tquad_t(unsigned npts_=0) : npts(npts_) {}
 	bool is_valid() const;
 	void update_bcube(cube_t &c) const;
+	cube_t get_bcube() const;
 	vector3d get_norm() const {return get_poly_norm(pts);}
 	point const &operator[](unsigned i) const {return pts[i];}
 	point       &operator[](unsigned i)       {return pts[i];}
