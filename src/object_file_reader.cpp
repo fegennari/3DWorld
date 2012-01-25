@@ -541,7 +541,7 @@ public:
 };
 
 
-bool read_object_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
+bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, geom_xform_t const &xf, int def_tid,
 	colorRGBA const &def_c, bool load_models, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
@@ -578,7 +578,13 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, geom_xfo
 			RESET_TIME;
 			cur_model.get_polygons(*ppts);
 			cur_model.set_has_cobjs();
-			PRINT_TIME("Cobj Create");
+			PRINT_TIME("Create Model3d Polygons");
+		}
+		if (cubes) {
+			RESET_TIME;
+			cur_model.get_cubes(*cubes, xf.scale);
+			cur_model.set_has_cobjs(); // ???
+			PRINT_TIME("Create Model3d Cubes");
 		}
 		return 1;
 	}

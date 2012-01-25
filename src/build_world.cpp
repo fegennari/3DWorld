@@ -847,6 +847,12 @@ void copy_tquad_to_cobj(coll_tquad const &tquad, coll_obj &cobj) {
 }
 
 
+void maybe_reserve_fixed_cobjs(unsigned size) {
+
+	if (size > 2*fixed_cobjs.size()) {fixed_cobjs.reserve(size + fixed_cobjs.size());} // reserve to the correct size
+}
+
+
 void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const &cobj, int *group_ids, bool use_model3d) {
 
 	coll_obj poly(cobj);
@@ -855,9 +861,8 @@ void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const 
 		poly.cp.draw       = 0;
 		poly.cp.is_model3d = 1;
 	}
-	if (ppts.size() > 2*fixed_cobjs.size()) {
-		fixed_cobjs.reserve(ppts.size() + fixed_cobjs.size()); // reserve to the correct size
-	}
+	maybe_reserve_fixed_cobjs(ppts.size());
+	
 	for (vector<coll_tquad>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
 		unsigned const npts(i->npts);
 		assert(npts == 3 || npts == 4);
@@ -980,16 +985,18 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					return read_error(fp, "load object file command", coll_obj_file);
 				}
 				RESET_TIME;
-				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping, 3=full 3d model
+				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping, 3=full 3d model, 4=no cobjs, 5=cubes from voxels
 				bool const group_cobjs(ivals[0] != 0);
 				bool const use_dlist  (ivals[0] == 2);
 				bool const use_model3d(ivals[0] >= 3);
-				bool const no_cobjs   (ivals[0] == 4);
+				bool const no_cobjs   (ivals[0] >= 4);
+				bool const use_cubes  (ivals[0] == 5);
 				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: one for each texture?)
 				ppts.resize(0);
+				vector<cube_t> cubes;
 				
-				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d,
-					(recalc_normals != 0), (write_file != 0), (ignore_ambient != 0), 1))
+				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), xf, cobj.cp.tid, cobj.cp.color,
+					use_model3d, (recalc_normals != 0), (write_file != 0), (ignore_ambient != 0), 1))
 				{
 					return read_error(fp, "object file data", coll_obj_file);
 				}
@@ -1005,6 +1012,23 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					if (cobj.thickness == 0.0) cobj.thickness = MIN_POLY_THICK; // optional - will be set to this value later anyway
 					add_polygons_to_cobj_vector(ppts, cobj, group_ids, use_model3d);
 					cobj.group_id   = -1; // reset
+				}
+				else if (use_cubes) {
+					check_layer(has_layer);
+					coll_obj cur_cube(cobj); // color and tid left as-is for now
+					cur_cube.type = COLL_CUBE;
+
+					if (use_model3d) {
+						cur_cube.cp.draw       = 0;
+						cur_cube.cp.is_model3d = 1;
+					}
+					maybe_reserve_fixed_cobjs(cubes.size());
+
+					for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
+						cur_cube.copy_from(*i);
+						cur_cube.id = fixed_cobjs.size();
+						fixed_cobjs.push_back(cur_cube);
+					}
 				}
 				// FIXME: else {czmax = max(czmax, model.zmax)}
 				PRINT_TIME("Obj File Load/Process");

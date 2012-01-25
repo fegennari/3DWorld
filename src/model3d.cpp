@@ -15,7 +15,7 @@ unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
 extern int display_mode;
-extern float model3d_alpha_thresh;
+extern float model3d_alpha_thresh, voxel_xy_spacing;
 
 
 model3ds all_models;
@@ -775,6 +775,117 @@ void model3d::get_polygons(vector<coll_tquad> &polygons) const {
 		m->geom_tan.get_polygons(polygons, color);
 	}
 	::remove_excess_cap(polygons); // probably a good idea
+}
+
+
+void calc_bounds(cube_t const &c, int bounds[2][2], float spacing) {
+
+	for (unsigned d = 0; d < 2; ++d) {
+		for (unsigned e = 0; e < 2; ++e) {
+			bounds[d][e] = round_fp(c.d[d][e]/spacing);
+		}
+	}
+}
+
+
+struct float_plus_dir {
+	float f;
+	bool d;
+	float_plus_dir() {}
+	float_plus_dir(float f_, bool d_) : f(f_), d(d_) {}
+	bool operator<(float_plus_dir const &fd) const {return ((f == fd.f) ? (d < fd.d) : (f < fd.f));}
+};
+
+
+void model3d::get_cubes(vector<cube_t> &cubes, float spacing_scale) const {
+
+	// calculate xy voxel spacing
+	assert(voxel_xy_spacing > 0.0);
+	assert(spacing_scale    > 0.0);
+	float const spacing(voxel_xy_spacing*spacing_scale);
+
+	// calculate scene voxel bounds
+	int bounds[2][2], num_xy[2]; // {x,y}x{lo,hi}
+	calc_bounds(bbox, bounds, spacing);
+	//cout << "bbox: "; bbox.print(); cout << ", voxel_xys: " << voxel_xy_spacing << ", ss: " << spacing_scale << ", spacing: " << spacing << endl;
+	cout << "bounds: ";
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cout << bounds[d][0] << " " << bounds[d][1] << " ";
+		num_xy[d] = (bounds[d][1] - bounds[d][0]);
+	}
+	unsigned const num_tot(num_xy[0]*num_xy[1]);
+	vector<vector<float_plus_dir> > zvals(num_tot);
+	cout << ", size: " << num_xy[0] << "x" << num_xy[1] << " = " << num_tot << endl;
+
+	// create z ranges for each xy voxel column from polygons
+	// FIXME: filter out only quads, and only those with normals in +/- z
+	vector<coll_tquad> polygons;
+	get_polygons(polygons);
+	unsigned num_horiz_quads(0);
+
+	for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
+		if (i->npts != 4) continue; // only keep quads
+		if (fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
+		cube_t const bcube(i->get_bcube());
+		if ((bcube.d[2][1] - bcube.d[2][0]) > 0.5*spacing) continue; // can this happen?
+		int cbounds[2][2];
+		calc_bounds(bcube, cbounds, spacing);
+		bool const is_top(i->normal.z > 0.0);
+		++num_horiz_quads;
+		
+		for (int y = cbounds[1][0]; y < cbounds[1][1]; ++y) {
+			for (int x = cbounds[0][0]; x < cbounds[0][1]; ++x) {
+				int const xv(x - bounds[0][0]), yv(y - bounds[1][0]);
+				assert(xv >= 0 && yv >= 0 && xv < num_xy[0] && yv < num_xy[1]);
+				zvals[xv + num_xy[0]*yv].push_back(float_plus_dir(bcube.d[2][0], is_top));
+			}
+		}
+	}
+
+	// convert voxel columns to cubes
+	cubes.reserve(cubes.size() + num_horiz_quads/2);
+
+	for (int y = bounds[1][0]; y < bounds[1][1]; ++y) {
+		for (int x = bounds[0][0]; x < bounds[0][1]; ++x) {
+			int const xv(x - bounds[0][0]), yv(y - bounds[1][0]);
+			assert(xv >= 0 && yv >= 0 && xv < num_xy[0] && yv < num_xy[1]);
+			vector<float_plus_dir> &zv(zvals[xv + num_xy[0]*yv]);
+			sort(zv.begin(), zv.end());
+			cube_t cube(x*spacing, (x+1)*spacing, y*spacing, (y+1)*spacing, 0.0, 0.0);
+			bool in_cube(0);
+
+			for (unsigned j = 0; j < zv.size(); ++j) {
+				float const val(zv[j].f);
+
+				if (j+1 < zv.size() && fabs(zv[j+1].f - val) < TOLERANCE) {
+					assert(zv[j].d != zv[j+1].d);
+					++j;
+					continue; // a canceling pair forming a zero length segment - skip both
+				}
+				if (!zv[j].d) { // bottom
+					//assert(!in_cube);
+					cube.d[2][0] = val;
+				}
+				else { // top
+					//assert(in_cube);
+					assert(j > 0); // bottom must be set
+					cube.d[2][1] = val;
+					assert(cube.d[2][0] < cube.d[2][1]); // no zero height cubes - FIXME: too strict?
+					cubes.push_back(cube);
+					cube.d[2][0] = val; // next segment starts here in case we get two top edges in a row
+				}
+				in_cube ^= 1;
+			}
+			/*if (in_cube) {
+				cout << "zvals: " << zv.size() << ": ";
+				for (unsigned j = 0; j < zv.size(); ++j) cout << zv[j].f << ":" << zv[j].d << " ";
+				cout << endl;
+			}*/
+			//assert(!in_cube);
+		}
+	}
+	cout << "polygons: " << polygons.size() << ", hquads: " << num_horiz_quads << ", cubes: " << cubes.size() << endl;
 }
 
 
