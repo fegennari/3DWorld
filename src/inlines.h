@@ -54,6 +54,8 @@ template<typename T> inline T interpolate_3d(T const *v, unsigned npts, float s,
 }
 
 
+inline int round_fp(double val) {return ((val > 0.0) ? int(val + 0.5) : int(val - 0.5));}
+
 
 // ***************** RANDOM NUMBER GENERATION ********************
 
