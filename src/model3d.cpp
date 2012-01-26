@@ -567,10 +567,10 @@ template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_
 }
 
 
-template<typename T> void geometry_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color) const {
+template<typename T> void geometry_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, bool quads_only) const {
 
-	triangles.get_polygons(polygons, color, 3);
-	quads.get_polygons    (polygons, color, 4);
+	if (!quads_only) triangles.get_polygons(polygons, color, 3);
+	quads.get_polygons(polygons, color, 4);
 }
 
 
@@ -758,21 +758,21 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 }
 
 
-void model3d::get_polygons(vector<coll_tquad> &polygons) const {
+void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only) const {
 
-	if (polygons.empty()) {
+	if (polygons.empty()) { // Note: we count quads as 1.5 polygons because some of them may be split into triangles
 		model3d_stats_t stats;
 		get_stats(stats);
-		polygons.reserve(stats.tris + 1.5*stats.quads); // Note: we count quads as 1.5 polygons because some of them may be split into triangles
+		polygons.reserve((quads_only ? stats.quads : (stats.tris + 1.5*stats.quads)));
 	}
 	colorRGBA unbound_color(def_color);
 	if (unbound_tid >= 0) unbound_color.modulate_with(texture_color(unbound_tid));
-	unbound_geom.get_polygons(polygons, unbound_color);
+	unbound_geom.get_polygons(polygons, unbound_color, quads_only);
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		colorRGBA const color(m->get_avg_color(tmgr, unbound_tid));
-		m->geom.get_polygons(polygons, color);
-		m->geom_tan.get_polygons(polygons, color);
+		m->geom.get_polygons    (polygons, color, quads_only);
+		m->geom_tan.get_polygons(polygons, color, quads_only);
 	}
 	::remove_excess_cap(polygons); // probably a good idea
 }
@@ -807,7 +807,6 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing_scale) const {
 	// calculate scene voxel bounds
 	int bounds[2][2], num_xy[2]; // {x,y}x{lo,hi}
 	calc_bounds(bbox, bounds, spacing);
-	//cout << "bbox: "; bbox.print(); cout << ", voxel_xys: " << voxel_xy_spacing << ", ss: " << spacing_scale << ", spacing: " << spacing << endl;
 	cout << "bounds: ";
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -815,30 +814,32 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing_scale) const {
 		num_xy[d] = (bounds[d][1] - bounds[d][0]);
 	}
 	unsigned const num_tot(num_xy[0]*num_xy[1]);
-	vector<vector<float_plus_dir> > zvals(num_tot);
+	vector<vector<float_plus_dir> > zvals;
+	unsigned num_horiz_quads(0), num_polys(0);
 	cout << ", size: " << num_xy[0] << "x" << num_xy[1] << " = " << num_tot << endl;
 
 	// create z ranges for each xy voxel column from polygons
-	// FIXME: filter out only quads, and only those with normals in +/- z
-	vector<coll_tquad> polygons;
-	get_polygons(polygons);
-	unsigned num_horiz_quads(0);
+	{
+		vector<coll_tquad> polygons;
+		get_polygons(polygons, 1); // we technically only want the horizontal quads, but it's difficult to filter them out earlier
+		num_polys = polygons.size();
+		zvals.resize(num_tot);
 
-	for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
-		if (i->npts != 4) continue; // only keep quads
-		if (fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
-		cube_t const bcube(i->get_bcube());
-		if ((bcube.d[2][1] - bcube.d[2][0]) > 0.5*spacing) continue; // can this happen?
-		int cbounds[2][2];
-		calc_bounds(bcube, cbounds, spacing);
-		bool const is_top(i->normal.z > 0.0);
-		++num_horiz_quads;
+		for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
+			if (i->npts != 4 || fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
+			cube_t const bcube(i->get_bcube());
+			if ((bcube.d[2][1] - bcube.d[2][0]) > 0.5*spacing) continue; // can this happen?
+			int cbounds[2][2];
+			calc_bounds(bcube, cbounds, spacing);
+			bool const is_top(i->normal.z > 0.0);
+			++num_horiz_quads;
 		
-		for (int y = cbounds[1][0]; y < cbounds[1][1]; ++y) {
-			for (int x = cbounds[0][0]; x < cbounds[0][1]; ++x) {
-				int const xv(x - bounds[0][0]), yv(y - bounds[1][0]);
-				assert(xv >= 0 && yv >= 0 && xv < num_xy[0] && yv < num_xy[1]);
-				zvals[xv + num_xy[0]*yv].push_back(float_plus_dir(bcube.d[2][0], is_top));
+			for (int y = cbounds[1][0]; y < cbounds[1][1]; ++y) {
+				for (int x = cbounds[0][0]; x < cbounds[0][1]; ++x) {
+					int const xv(x - bounds[0][0]), yv(y - bounds[1][0]);
+					assert(xv >= 0 && yv >= 0 && xv < num_xy[0] && yv < num_xy[1]);
+					zvals[xv + num_xy[0]*yv].push_back(float_plus_dir(bcube.d[2][0], is_top));
+				}
 			}
 		}
 	}
@@ -885,7 +886,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing_scale) const {
 			//assert(!in_cube);
 		}
 	}
-	cout << "polygons: " << polygons.size() << ", hquads: " << num_horiz_quads << ", cubes: " << cubes.size() << endl;
+	cout << "polygons: " << num_polys << ", hquads: " << num_horiz_quads << ", cubes: " << cubes.size() << endl;
 }
 
 

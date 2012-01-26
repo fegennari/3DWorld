@@ -194,7 +194,7 @@ template<typename T> struct geometry_t {
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
-	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color) const;
+	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, bool quads_only) const;
 	cube_t get_bbox() const;
 	void remove_excess_cap() {triangles.remove_excess_cap(); quads.remove_excess_cap();}
 	void free_vbos()         {triangles.free_vbos(); quads.free_vbos();}
@@ -297,7 +297,7 @@ public:
 	// creation and query
 	void set_has_cobjs() {has_cobjs = 1;}
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id=0);
-	void get_polygons(vector<coll_tquad> &polygons) const;
+	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
 	void get_cubes(vector<cube_t> &cubes, float spacing_scale) const;
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
