@@ -282,11 +282,14 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::create_cixs() {
 		}
 	}
 	else {
-		if (is_static && !occluders_only) cixs.reserve(cobjs.size());
-		if (is_static) start_dynamic_range = 0; // recompute
+		bool const normal_static_mode(is_static && !occluders_only && !cubes_only);
 
+		if (normal_static_mode) {
+			cixs.reserve(cobjs.size());
+			start_dynamic_range = 0; // recompute
+		}
 		for (unsigned i = ((is_dynamic && !is_static) ? start_dynamic_range : 0); i < cobjs.size(); ++i) {
-			if (is_static && i == start_dynamic_range && cobjs[i].truly_static()) ++start_dynamic_range;
+			if (normal_static_mode && i == start_dynamic_range && cobjs[i].truly_static()) ++start_dynamic_range;
 			add_cobj(i);
 		}
 	}

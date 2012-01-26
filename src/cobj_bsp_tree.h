@@ -78,7 +78,7 @@ template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 
 	vector<coll_obj> const &cobjs;
 	vector<unsigned> cixs, temp_bins[NUM];
-	bool is_static, is_dynamic, occluders_only, moving_only;
+	bool is_static, is_dynamic, occluders_only, moving_only, cubes_only;
 
 	void add_cobj(unsigned ix) {if (obj_ok(cobjs[ix])) cixs.push_back(ix);}
 	coll_obj const &get_cobj(unsigned ix) const {return cobjs[cixs[ix]];}
@@ -87,13 +87,13 @@ template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {assert(0);}
 
 	bool obj_ok(coll_obj const &c) const {
-		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC)) &&
-			(!occluders_only || c.is_occluder()) && (!moving_only || c.maybe_is_moving()) && !c.no_collision());
+		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC) || (!is_static && !is_dynamic)) &&
+			(!occluders_only || c.is_occluder()) && (!moving_only || c.maybe_is_moving()) && !c.cp.no_coll && (!cubes_only || c.type == COLL_CUBE));
 	}
 
 public:
-	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool o, bool m)
-		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), moving_only(m) {}
+	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool o, bool m, bool c=0)
+		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), moving_only(m), cubes_only(c) {}
 
 	void clear() {
 		cobj_tree_base::clear();
