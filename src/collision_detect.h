@@ -11,8 +11,8 @@
 typedef bool (*collision_func)(int, int, vector3d const &, point const &, float, int);
 
 // object/collision object types/status
-enum {COLL_NULL      = 0, COLL_CUBE,     COLL_CYLINDER, COLL_SPHERE,  COLL_CYLINDER_ROT, COLL_POLYGON, COLL_INVALID};
-enum {COLL_UNUSED    = 0, COLL_FREED,    COLL_PENDING,  COLL_STATIC,  COLL_DYNAMIC,      COLL_NEGATIVE};
+enum {COLL_NULL      = 0, COLL_CUBE,     COLL_CYLINDER, COLL_SPHERE,  COLL_CYLINDER_ROT, COLL_POLYGON,  COLL_INVALID};
+enum {COLL_UNUSED    = 0, COLL_FREED,    COLL_PENDING,  COLL_STATIC,  COLL_DYNAMIC,      COLL_NEGATIVE, COLL_TO_REMOVE};
 enum {OBJ_STAT_BAD   = 0, OBJ_STAT_AIR,  OBJ_STAT_COLL, OBJ_STAT_GND, OBJ_STAT_STOP,     OBJ_STAT_RES};
 
 unsigned const OBJ_CNT_REM_TJ = 1;

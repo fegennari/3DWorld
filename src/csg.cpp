@@ -4,6 +4,7 @@
 #include "3DWorld.h"
 #include "mesh.h"
 #include "csg.h"
+#include "cobj_bsp_tree.h"
 
 
 bool const VOXEL_MERGE        = 0;
@@ -729,10 +730,12 @@ void merge_cubes(vector<coll_obj> &cobjs) { // only merge compatible cubes
 	RESET_TIME;
 	unsigned const ncobjs(cobjs.size());
 	unsigned merged(0);
-	vector<unsigned> type_blocks;
 
 	// sorting can permute cobjs so that their id's are not monotonically increasing
 	sort(cobjs.begin(), cobjs.end(), comp_by_params); // how does ordering affect drawing?
+#if 0
+
+	vector<unsigned> type_blocks;
 
 	for (unsigned i = 0; i < ncobjs; ++i) {
 		if (i == 0 || !cobjs[i].equal_params(cobjs[i-1])) {
@@ -750,11 +753,50 @@ void merge_cubes(vector<coll_obj> &cobjs) { // only merge compatible cubes
 		csg_cube cube(cobjs[i]);
 		if (cube.is_zero_area()) continue;
 		unsigned mi(0);
-		unsigned const j1(type_blocks[curr_tb]), j2(type_blocks[curr_tb+1]);
 
-		for (unsigned j = j1; j < j2; ++j) {
-			if (j == i || cobjs[j].type != COLL_CUBE) continue;
-			//assert(cobjs[i].equal_params(cobjs[j]));
+		if (cobjs[i].cp.is_model3d) {
+			// FIXME: use cobj_tree_t<3>
+		}
+		else {
+			unsigned const j1(type_blocks[curr_tb]), j2(type_blocks[curr_tb+1]);
+
+			for (unsigned j = j1; j < j2; ++j) {
+				if (j == i || cobjs[j].type != COLL_CUBE) continue;
+				//assert(cobjs[i].equal_params(cobjs[j]));
+				csg_cube cube2(cobjs[j]);
+
+				if (cube.cube_merge(cube2, 1)) {
+					cobjs[j].type = COLL_INVALID; // remove old coll obj
+					++mi;
+				}
+			}
+		}
+		if (mi > 0) { // cube has changed
+			cube.write_to_cobj(cobjs[i]);
+			merged += mi;
+		}
+	}
+
+#else
+
+	cobj_tree_t<3> cube_tree(cobjs, 0, 0, 0, 0, 1); // cubes only
+	cube_tree.add_cobjs(0);
+	vector<unsigned> cids;
+
+	for (unsigned i = 0; i < cobjs.size(); ++i) { // choose merge candidates
+		if (cobjs[i].type != COLL_CUBE) continue;
+		csg_cube cube(cobjs[i]); // remove all other cobjs from cobjs[i] with lower id
+		if (cube.is_zero_area()) continue;
+		cids.clear();
+		cube_tree.get_intersecting_cobjs(cube, cids, i, -SMALL_NUMBER, 0, -1); // small negative tolerance so adjacent cubes are returned
+		unsigned mi(0);
+
+		for (vector<unsigned>::const_iterator it = cids.begin(); it != cids.end(); ++it) {
+			unsigned const j(*it);
+			assert(j < cobjs.size());
+			assert(j != i);
+			assert(cobjs[j].type == COLL_CUBE);
+			if (!cobjs[i].equal_params(cobjs[j])) continue; // not compatible
 			csg_cube cube2(cobjs[j]);
 
 			if (cube.cube_merge(cube2, 1)) {
@@ -767,6 +809,8 @@ void merge_cubes(vector<coll_obj> &cobjs) { // only merge compatible cubes
 			merged += mi;
 		}
 	}
+
+#endif
 	if (merged > 0) remove_invalid_cobjs(cobjs);
 	cout << ncobjs << " => " << cobjs.size() << endl;
 	PRINT_TIME("Cube Merge");
@@ -811,6 +855,9 @@ class overlap_remover {
 		}
 	}
 
+	// we assume that model3d cubes (from voxels) can't overlap
+	bool check_overlap(coll_obj const &c) const {return (c.type == COLL_CUBE && !c.cp.is_model3d);}
+
 public:
 	overlap_remover(vector<coll_obj> &cobjs_) : cobjs(cobjs_) {}
 
@@ -825,7 +872,7 @@ public:
 		bool first(1);
 
 		for (unsigned i = 0; i < nc; ++i) { // calculate bbox
-			if (cobjs[i].type != COLL_CUBE) continue;
+			if (!check_overlap(cobjs[i])) continue;
 			
 			if (first) {
 				bb = cobjs[i];
@@ -836,12 +883,12 @@ public:
 			}
 		}
 		for (unsigned i = 0; i < nc; ++i) { // fill the bins
-			if (cobjs[i].type != COLL_CUBE) continue;
+			if (!check_overlap(cobjs[i])) continue;
 			add_to_bins(cobjs[i], bins, bb, i);
 		}
-		for (unsigned i = 0; i < cobjs.size(); ++i) {
-			if (cobjs[i].type != COLL_CUBE) continue;
-			csg_cube cube(cobjs[i]);
+		for (unsigned i = 0; i < cobjs.size(); ++i) { // remove cobjs[i] from all other cobjs with higher id
+			if (!check_overlap(cobjs[i])) continue;
+			csg_cube const cube(cobjs[i]);
 			if (cube.is_zero_area()) continue;
 			bool const neg(cobjs[i].status == COLL_NEGATIVE);
 			get_bin_range(cobjs[i].d, bb.d);
@@ -893,8 +940,63 @@ void remove_overlapping_cubes(vector<coll_obj> &cobjs) { // objects specified la
 	if (!UNOVERLAP_COBJS || cobjs.empty()) return;
 	unsigned const ncobjs(cobjs.size());
 	RESET_TIME;
+#if 0
 	overlap_remover or(cobjs);
 	or.remove_overlaps();
+#else
+	cobj_tree_t<3> cube_tree(cobjs, 0, 0, 0, 0, 1); // cubes only
+	cube_tree.add_cobjs(0);
+	vector<pair<unsigned, unsigned> > proc_order;
+		
+	for (unsigned i = 0; i < cobjs.size(); ++i) {
+		if (cobjs[i].type == COLL_CUBE) proc_order.push_back(make_pair(cobjs[i].id, i));
+	}
+	sort(proc_order.begin(), proc_order.end());
+	bool overlaps(0);
+	vector<coll_obj> cur_cobjs, next_cobjs;
+	vector<unsigned> cids;
+
+	for (vector<pair<unsigned, unsigned> >::const_reverse_iterator it = proc_order.rbegin(); it != proc_order.rend(); ++it) {
+		unsigned const i(it->second);
+		csg_cube const cube(cobjs[i]); // remove all other cobjs from cobjs[i] with lower id
+		if (cube.is_zero_area()) continue;
+		bool const neg(cobjs[i].status == COLL_NEGATIVE);
+		cids.clear();
+		cube_tree.get_intersecting_cobjs(cube, cids, i, 0.0, 0, -1);
+		if (cids.empty()) continue;
+		cur_cobjs.clear();
+		cur_cobjs.push_back(cobjs[i]); // start with the current cobj
+		bool was_removed(0);
+
+		for (vector<unsigned>::const_iterator it = cids.begin(); it != cids.end(); ++it) {
+			unsigned const j(*it);
+			assert(j < cobjs.size());
+			assert(cobjs[j].type == COLL_CUBE);
+			if (j == i || cobjs[i].id < cobjs[j].id)      continue; // enforce ordering
+			if (neg ^ (cobjs[j].status == COLL_NEGATIVE)) continue; // sign must be the same
+			csg_cube sub_cube(cobjs[j]);
+
+			for (vector<coll_obj>::const_iterator c = cur_cobjs.begin(); c != cur_cobjs.end(); ++c) {
+				if (sub_cube.subtract_from_cube(next_cobjs, *c)) {
+					was_removed = overlaps = 1;
+				}
+				else { // didn't overlap
+					next_cobjs.push_back(*c);
+				}
+			}
+			cur_cobjs.clear();
+			cur_cobjs.swap(next_cobjs);
+		} // for it
+		if (was_removed) {
+			copy(cur_cobjs.begin(), cur_cobjs.end(), back_inserter(cobjs));
+			cobjs[i].type = COLL_INVALID; // remove old coll obj
+		}
+		else {
+			assert(cur_cobjs.size() == 1); // the original cobjs[i]
+		}
+	} // for i
+	if (overlaps) remove_invalid_cobjs(cobjs);
+#endif
 	cout << ncobjs << " => " << cobjs.size() << endl;
 	PRINT_TIME("Cube Overlap Removal");
 }
