@@ -251,6 +251,31 @@ int cube_t::closest_face(point const &pos) const {
 }
 
 
+bool cube_t::cube_merge(cube_t const &cube) { // simplified version of csg_cube::cube_merge() without the edge_flags
+
+	unsigned compat[3], nc(0), ci(0);
+
+	for (unsigned i = 0; i < 3; ++i) { // check compatability
+		compat[i] = 1;
+		for (unsigned j = 0; j < 2; ++j) {
+			if (cube.d[i][j] != d[i][j]) compat[i] = 0;
+		}
+		if (compat[i]) ++nc; else ci = i;
+	}
+	if (nc >= 2) { // compatible
+		if (nc == 3) return 1; // same cube, remove it
+
+		for (unsigned i = 0; i < 2; ++i) { // only one iteration will merge something
+			if (cube.d[ci][1-i] == d[ci][i]) { // adjacent
+				d[ci][i] = cube.d[ci][i];
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+
 // *** CSG_CUBE IMPLEMENTATION ***
 
 

@@ -815,13 +815,14 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing_scale) const {
 	}
 	unsigned const num_tot(num_xy[0]*num_xy[1]);
 	vector<vector<float_plus_dir> > zvals;
-	unsigned num_horiz_quads(0), num_polys(0);
+	unsigned num_horiz_quads(0), num_polys(0), num_pre_merged_cubes(0);
 	cout << ", size: " << num_xy[0] << "x" << num_xy[1] << " = " << num_tot << endl;
 
 	// create z ranges for each xy voxel column from polygons
 	{
+		// we technically only want the horizontal quads, but it's difficult to filter them out earlier
 		vector<coll_tquad> polygons;
-		get_polygons(polygons, 1); // we technically only want the horizontal quads, but it's difficult to filter them out earlier
+		get_polygons(polygons, 1); // split into blocks?
 		num_polys = polygons.size();
 		zvals.resize(num_tot);
 
@@ -854,7 +855,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing_scale) const {
 			vector<float_plus_dir> &zv(zvals[xv + num_xy[0]*yv]);
 			sort(zv.begin(), zv.end());
 			cube_t cube(x*spacing, (x+1)*spacing, y*spacing, (y+1)*spacing, 0.0, 0.0);
-			bool in_cube(0);
+			//bool in_cube(0);
 
 			for (unsigned j = 0; j < zv.size(); ++j) {
 				float const val(zv[j].f);
@@ -873,20 +874,16 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing_scale) const {
 					assert(j > 0); // bottom must be set
 					cube.d[2][1] = val;
 					assert(cube.d[2][0] < cube.d[2][1]); // no zero height cubes - FIXME: too strict?
-					cubes.push_back(cube);
+					if (cubes.empty() || !cubes.back().cube_merge(cube)) cubes.push_back(cube);
 					cube.d[2][0] = val; // next segment starts here in case we get two top edges in a row
+					++num_pre_merged_cubes;
 				}
-				in_cube ^= 1;
+				//in_cube ^= 1;
 			}
-			/*if (in_cube) {
-				cout << "zvals: " << zv.size() << ": ";
-				for (unsigned j = 0; j < zv.size(); ++j) cout << zv[j].f << ":" << zv[j].d << " ";
-				cout << endl;
-			}*/
 			//assert(!in_cube);
 		}
 	}
-	cout << "polygons: " << num_polys << ", hquads: " << num_horiz_quads << ", cubes: " << cubes.size() << endl;
+	cout << "polygons: " << num_polys << ", hquads: " << num_horiz_quads << ", pre_merged_cubes: " << num_pre_merged_cubes << ", cubes: " << cubes.size() << endl;
 }
 
 

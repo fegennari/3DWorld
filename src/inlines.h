@@ -738,7 +738,9 @@ template<typename T> void matrix_clear_2d(T **data) {
 }
 
 
-template<typename T> void remove_excess_cap(vector<T> &v) {vector<T>(v).swap(v);}
+template<typename T> void remove_excess_cap(vector<T> &v) {
+	if (v.size() < v.capacity()) {vector<T>(v).swap(v);}
+}
 
 
 // string converters

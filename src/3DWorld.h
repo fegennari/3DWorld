@@ -456,6 +456,7 @@ struct cube_t { // size = 24
 	vector3d closest_side_dir(point const &pos) const;
 	point gen_rand_pt_in_cube() const;
 	int closest_face(point const &pos) const;
+	bool cube_merge(cube_t const &cube);
 };
 
 cube_t const all_zeros_cube(0,0,0,0,0,0);
