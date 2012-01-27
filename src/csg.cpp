@@ -733,52 +733,6 @@ void merge_cubes(vector<coll_obj> &cobjs) { // only merge compatible cubes
 
 	// sorting can permute cobjs so that their id's are not monotonically increasing
 	sort(cobjs.begin(), cobjs.end(), comp_by_params); // how does ordering affect drawing?
-#if 0
-
-	vector<unsigned> type_blocks;
-
-	for (unsigned i = 0; i < ncobjs; ++i) {
-		if (i == 0 || !cobjs[i].equal_params(cobjs[i-1])) {
-			type_blocks.push_back(i); // first cobj of a new param type
-		}
-	}
-	type_blocks.push_back(ncobjs);
-
-	for (unsigned i = 0, curr_tb = 0; i < ncobjs; ++i) {
-		if (i == type_blocks[curr_tb+1]) {
-			++curr_tb;
-			assert(curr_tb+1 < type_blocks.size());
-		}
-		if (cobjs[i].type != COLL_CUBE) continue;
-		csg_cube cube(cobjs[i]);
-		if (cube.is_zero_area()) continue;
-		unsigned mi(0);
-
-		if (cobjs[i].cp.is_model3d) {
-			// FIXME: use cobj_tree_t<3>
-		}
-		else {
-			unsigned const j1(type_blocks[curr_tb]), j2(type_blocks[curr_tb+1]);
-
-			for (unsigned j = j1; j < j2; ++j) {
-				if (j == i || cobjs[j].type != COLL_CUBE) continue;
-				//assert(cobjs[i].equal_params(cobjs[j]));
-				csg_cube cube2(cobjs[j]);
-
-				if (cube.cube_merge(cube2, 1)) {
-					cobjs[j].type = COLL_INVALID; // remove old coll obj
-					++mi;
-				}
-			}
-		}
-		if (mi > 0) { // cube has changed
-			cube.write_to_cobj(cobjs[i]);
-			merged += mi;
-		}
-	}
-
-#else
-
 	cobj_tree_t<3> cube_tree(cobjs, 0, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
 	vector<unsigned> cids;
@@ -809,8 +763,6 @@ void merge_cubes(vector<coll_obj> &cobjs) { // only merge compatible cubes
 			merged += mi;
 		}
 	}
-
-#endif
 	if (merged > 0) remove_invalid_cobjs(cobjs);
 	cout << ncobjs << " => " << cobjs.size() << endl;
 	PRINT_TIME("Cube Merge");
@@ -820,130 +772,11 @@ void merge_cubes(vector<coll_obj> &cobjs) { // only merge compatible cubes
 // ***************** OVERLAP REMOVAL ****************
 
 
-unsigned const NDIV(16);
-
-
-class overlap_remover {
-
-	unsigned inbin[3][2];
-	vector<coll_obj> &cobjs;
-
-	unsigned get_bin(float const d, float const b[2]) {
-		assert(d >= b[0] && d <= b[1]);
-		return min(NDIV-1, unsigned(NDIV*((d - b[0])/(b[1] - b[0])))); // handle edge case
-	}
-
-	void get_bin_range(float const d[3][2], float const bb[3][2]) {
-
-		for (unsigned i = 0; i < 3; ++i) {
-			for (unsigned j = 0; j < 2; ++j) {
-				inbin[i][j] = get_bin(d[i][j], bb[i]);
-			}
-		}
-	}
-
-	void add_to_bins(coll_obj const &cobj, vector<unsigned> bins[NDIV][NDIV][NDIV], cube_t const &bb, unsigned index) {
-
-		get_bin_range(cobj.d, bb.d);
-
-		for (unsigned b0 = inbin[0][0]; b0 <= inbin[0][1]; ++b0) {
-			for (unsigned b1 = inbin[1][0]; b1 <= inbin[1][1]; ++b1) {
-				for (unsigned b2 = inbin[2][0]; b2 <= inbin[2][1]; ++b2) {
-					bins[b0][b1][b2].push_back(index);
-				}
-			}
-		}
-	}
-
-	// we assume that model3d cubes (from voxels) can't overlap
-	bool check_overlap(coll_obj const &c) const {return (c.type == COLL_CUBE && !c.cp.is_model3d);}
-
-public:
-	overlap_remover(vector<coll_obj> &cobjs_) : cobjs(cobjs_) {}
-
-	void remove_overlaps() {
-
-		unsigned overlaps(0);
-		vector<coll_obj> new_cobjs;
-		vector<unsigned> bins[NDIV][NDIV][NDIV];
-		set<unsigned> cids; // for uniquing
-		unsigned const nc(cobjs.size());
-		cube_t bb;
-		bool first(1);
-
-		for (unsigned i = 0; i < nc; ++i) { // calculate bbox
-			if (!check_overlap(cobjs[i])) continue;
-			
-			if (first) {
-				bb = cobjs[i];
-				first = 0;
-			}
-			else {
-				bb.union_with_cube(cobjs[i]);
-			}
-		}
-		for (unsigned i = 0; i < nc; ++i) { // fill the bins
-			if (!check_overlap(cobjs[i])) continue;
-			add_to_bins(cobjs[i], bins, bb, i);
-		}
-		for (unsigned i = 0; i < cobjs.size(); ++i) { // remove cobjs[i] from all other cobjs with higher id
-			if (!check_overlap(cobjs[i])) continue;
-			csg_cube const cube(cobjs[i]);
-			if (cube.is_zero_area()) continue;
-			bool const neg(cobjs[i].status == COLL_NEGATIVE);
-			get_bin_range(cobjs[i].d, bb.d);
-			cids.clear();
-
-			for (unsigned b0 = inbin[0][0]; b0 <= inbin[0][1]; ++b0) {
-				for (unsigned b1 = inbin[1][0]; b1 <= inbin[1][1]; ++b1) {
-					for (unsigned b2 = inbin[2][0]; b2 <= inbin[2][1]; ++b2) {
-						vector<unsigned> const &v(bins[b0][b1][b2]);
-
-						for (vector<unsigned>::const_iterator it = v.begin(); it != v.end(); ++it) {
-							unsigned const j(*it);
-							if (cobjs[j].type != COLL_CUBE)               continue; // skip invalid cubes
-							if (j == i || cobjs[j].id < cobjs[i].id)      continue; // enforce ordering
-							if (neg ^ (cobjs[j].status == COLL_NEGATIVE)) continue; // sign must be the same
-							cids.insert(j);
-						}
-					}
-				}
-			}
-			for (set<unsigned>::const_iterator it = cids.begin(); it != cids.end(); ++it) {
-				unsigned const j(*it);
-				assert(j < cobjs.size());
-
-				if (cube.subtract_from_cube(new_cobjs, cobjs[j])) {
-					if (!new_cobjs.empty()) {
-						cobjs[j] = new_cobjs.back();
-						new_cobjs.pop_back();
-					}
-					else {
-						cobjs[j].type = COLL_INVALID; // remove old coll obj
-						++overlaps;
-					}
-				}
-				for (unsigned i = 0; i < new_cobjs.size(); ++i) { // add in new fragments
-					add_to_bins(new_cobjs[i], bins, bb, cobjs.size());
-					cobjs.push_back(new_cobjs[i]);
-				}
-				new_cobjs.clear();
-			}
-		} // for i
-		if (overlaps > 0) remove_invalid_cobjs(cobjs);
-	} // remove_overlaps()
-};
-
-
 void remove_overlapping_cubes(vector<coll_obj> &cobjs) { // objects specified later are the ones that are split/removed
 
 	if (!UNOVERLAP_COBJS || cobjs.empty()) return;
-	unsigned const ncobjs(cobjs.size());
 	RESET_TIME;
-#if 0
-	overlap_remover or(cobjs);
-	or.remove_overlaps();
-#else
+	unsigned const ncobjs(cobjs.size());
 	cobj_tree_t<3> cube_tree(cobjs, 0, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
 	vector<pair<unsigned, unsigned> > proc_order;
@@ -996,7 +829,6 @@ void remove_overlapping_cubes(vector<coll_obj> &cobjs) { // objects specified la
 		}
 	} // for i
 	if (overlaps) remove_invalid_cobjs(cobjs);
-#endif
 	cout << ncobjs << " => " << cobjs.size() << endl;
 	PRINT_TIME("Cube Overlap Removal");
 }
