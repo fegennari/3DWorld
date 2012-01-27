@@ -976,12 +976,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'O': // load *.obj file: <filename> <group_cobjs_level> <recalc_normals> <write_file> <ignore_ambient>
+		case 'O': // load *.obj file: <filename> <group_cobjs_level> <recalc_normals> <write_file> <ignore_ambient> [<voxel_xy_spacing>]
 			{
 				string const fn(read_filename(fp));
 				int recalc_normals(0), write_file(0), ignore_ambient(0);
+				float voxel_xy_spacing(0.0);
 
-				if (fn.empty() || fscanf(fp, "%i%i%i%i", &ivals[0], &recalc_normals, &write_file, &ignore_ambient) != 4) {
+				if (fn.empty() || fscanf(fp, "%i%i%i%i%f", &ivals[0], &recalc_normals, &write_file, &ignore_ambient, &voxel_xy_spacing) < 4) {
 					return read_error(fp, "load object file command", coll_obj_file);
 				}
 				RESET_TIME;
@@ -996,7 +997,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				vector<cube_t> cubes;
 				
 				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), xf, cobj.cp.tid, cobj.cp.color,
-					use_model3d, (recalc_normals != 0), (write_file != 0), (ignore_ambient != 0), 1))
+					voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), (ignore_ambient != 0), 1))
 				{
 					return read_error(fp, "object file data", coll_obj_file);
 				}
@@ -1014,6 +1015,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					cobj.group_id   = -1; // reset
 				}
 				else if (use_cubes) {
+					assert(voxel_xy_spacing > 0.0);
 					check_layer(has_layer);
 					coll_obj cur_cube(cobj); // color and tid left as-is for now
 					cur_cube.type = COLL_CUBE;

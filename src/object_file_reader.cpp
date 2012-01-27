@@ -542,7 +542,7 @@ public:
 
 
 bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, bool load_models, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose)
+	colorRGBA const &def_c, float voxel_xy_spacing, bool load_models, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
@@ -582,7 +582,7 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 		}
 		if (cubes) {
 			RESET_TIME;
-			cur_model.get_cubes(*cubes, xf.scale);
+			cur_model.get_cubes(*cubes, xf.scale*voxel_xy_spacing);
 			cur_model.set_has_cobjs(); // ???
 			PRINT_TIME("Create Model3d Cubes");
 		}

@@ -15,7 +15,7 @@ unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
 extern int display_mode;
-extern float model3d_alpha_thresh, voxel_xy_spacing;
+extern float model3d_alpha_thresh;
 
 
 model3ds all_models;
@@ -797,12 +797,9 @@ struct float_plus_dir {
 };
 
 
-void model3d::get_cubes(vector<cube_t> &cubes, float spacing_scale) const {
+void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
 
-	// calculate xy voxel spacing
-	assert(voxel_xy_spacing > 0.0);
-	assert(spacing_scale    > 0.0);
-	float const spacing(voxel_xy_spacing*spacing_scale);
+	assert(spacing > 0.0);
 
 	// calculate scene voxel bounds
 	int bounds[2][2], num_xy[2]; // {x,y}x{lo,hi}

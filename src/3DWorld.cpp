@@ -85,7 +85,6 @@ float water_h_off(0.0), perspective_fovy(0.0), perspective_nclip(0.0), atmospher
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
 float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(DEF_STEP_HEIGHT), wapypoint_sz_thresh(1.0), model3d_alpha_thresh(0.5);
-float voxel_xy_spacing(0.0);
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
@@ -1673,9 +1672,6 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "use_model2d_tex_mipmaps") {
 			if (!read_bool(fp, use_model2d_tex_mipmaps)) cfg_err("use_model2d_tex_mipmaps command", error);
-		}
-		else if (str == "voxel_xy_spacing") {
-			if (!read_float(fp, voxel_xy_spacing) || voxel_xy_spacing < 0.0) cfg_err("voxel_xy_spacing command", error);
 		}
 		else if (str == "use_dense_voxels") {
 			if (!read_bool(fp, use_dense_voxels)) cfg_err("use_dense_voxels command", error);

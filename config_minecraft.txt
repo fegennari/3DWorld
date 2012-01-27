@@ -10,8 +10,6 @@ smiley_speed 0.4
 texture_alpha_in_red_comp 1
 model3d_alpha_thresh 0.01
 use_model2d_tex_mipmaps 1
-voxel_xy_spacing 1.0
-#voxel_xy_spacing 0.01 # voxelia
 
 group_back_face_cull 1
 disable_shaders 1

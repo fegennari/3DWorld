@@ -298,7 +298,7 @@ public:
 	void set_has_cobjs() {has_cobjs = 1;}
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
-	void get_cubes(vector<cube_t> &cubes, float spacing_scale) const;
+	void get_cubes(vector<cube_t> &cubes, float spacing) const;
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
@@ -341,7 +341,7 @@ void free_model_context();
 void render_models(bool shadow_pass);
 
 bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, bool load_model_file, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose);
+	colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose);
 
 
 #endif // _MODEL3D_H_
