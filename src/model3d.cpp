@@ -843,6 +843,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
 	}
 
 	// convert voxel columns to cubes
+	unsigned const MERGE_LENGTH = 16;
 	cubes.reserve(cubes.size() + num_horiz_quads/2);
 
 	for (int y = bounds[1][0]; y < bounds[1][1]; ++y) {
@@ -871,7 +872,13 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
 					assert(j > 0); // bottom must be set
 					cube.d[2][1] = val;
 					assert(cube.d[2][0] < cube.d[2][1]); // no zero height cubes - FIXME: too strict?
-					if (cubes.empty() || !cubes.back().cube_merge(cube)) cubes.push_back(cube);
+					bool merged(0);
+					unsigned num(0);
+
+					for (vector<cube_t>::reverse_iterator i = cubes.rbegin(); i != cubes.rend() && !merged && num < MERGE_LENGTH; ++i, ++num) {
+						merged = i->cube_merge(cube);
+					}
+					if (!merged) cubes.push_back(cube);
 					cube.d[2][0] = val; // next segment starts here in case we get two top edges in a row
 					++num_pre_merged_cubes;
 				}
