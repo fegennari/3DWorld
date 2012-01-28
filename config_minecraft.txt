@@ -11,6 +11,8 @@ texture_alpha_in_red_comp 1
 model3d_alpha_thresh 0.01
 use_model2d_tex_mipmaps 1
 
+scene_size 4.0 4.0 5.0
+
 group_back_face_cull 1
 disable_shaders 1
 #shadow_map_sz 4096
