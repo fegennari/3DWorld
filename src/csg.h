@@ -67,9 +67,9 @@ public:
 	csg_cube(cube_t const &cube, unsigned char eflags0=0) : cube_t(cube), eflags(eflags0) {}
 	void write_to_cobj(coll_obj &cobj) const;
 	bool cube_intersection(const csg_cube &cube, csg_cube &res) const;
-	bool subtract_from_cube(vector<coll_obj> &new_cobjs, coll_obj const &cobj) const;
-	bool subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cobj) const;
-	bool subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj const &cobj) const;
+	bool subtract_from_cube(coll_obj_group &new_cobjs, coll_obj const &cobj) const;
+	bool subtract_from_cylinder(coll_obj_group &new_cobjs, coll_obj &cobj) const;
+	bool subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &cobj) const;
 	bool cube_merge(csg_cube &cube, bool proc_eflags); // const cube?
 	void unset_adjacent_edge_flags(coll_obj &cobj) const;
 	void unset_intersecting_edge_flags(coll_obj &cobj) const;
@@ -101,9 +101,6 @@ public:
 	void clear();
 	void clear_within(float const c[2]);
 };
-
-
-bool subtract_cobj(vector<coll_obj> &new_cobjs, csg_cube const &cube, coll_obj &cobj, bool include_polys);
 
 
 #endif

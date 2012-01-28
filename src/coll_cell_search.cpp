@@ -15,7 +15,7 @@ int cobj_counter(0);
 
 extern int display_mode, begin_motion;
 extern float zmin, zbottom, water_plane_z;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 
 
 // returns 1 if there is no intersection

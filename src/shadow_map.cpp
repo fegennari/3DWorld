@@ -18,7 +18,7 @@ pos_dir_up orig_camera_pdu;
 extern bool have_drawn_cobj;
 extern int window_width, window_height, animate2, display_mode, ground_effects_level;
 extern vector<shadow_sphere> shadow_objs;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 
 void draw_small_trees(bool shadow_only);
 void draw_trees_shadow();
@@ -312,7 +312,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		//for (unsigned n = 0; n < 2; ++n) { // {cubes+culling, others+no culling}
 			int in_cur_prim(PRIM_UNSET);
 
-			for (vector<coll_obj>::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
+			for (coll_obj_group::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
 				//if ((i->type == COLL_CUBE) == n) continue;
 				if (i->no_draw()) continue; // only valid if drawing trees, small trees, and scenery separately
 				if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->maybe_is_moving()) continue;

@@ -59,7 +59,7 @@ public:
 	}
 	vector<coll_tquad> &get_tquads_ref() {return tquads;}
 	void build_tree_top(bool verbose);
-	void add_cobjs(vector<coll_obj> const &cobjs, bool verbose);
+	void add_cobjs(coll_obj_group const &cobjs, bool verbose);
 	void add_polygons(vector<polygon_t> const &polygons, bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA *color, int *cindex, int ignore_cobj, bool exact) const;
 
@@ -76,7 +76,7 @@ public:
 // 3: BSP Tree/KD-Tree, 8: OctTree
 template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 
-	vector<coll_obj> const &cobjs;
+	coll_obj_group const &cobjs;
 	vector<unsigned> cixs, temp_bins[NUM];
 	bool is_static, is_dynamic, occluders_only, moving_only, cubes_only;
 
@@ -92,7 +92,7 @@ template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 	}
 
 public:
-	cobj_tree_t(vector<coll_obj> const &cobjs_, bool s, bool d, bool o, bool m, bool c=0)
+	cobj_tree_t(coll_obj_group const &cobjs_, bool s, bool d, bool o, bool m, bool c=0)
 		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), moving_only(m), cubes_only(c) {}
 
 	void clear() {

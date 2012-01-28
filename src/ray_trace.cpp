@@ -28,7 +28,7 @@ extern float water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_
 extern char *lighting_file[];
 extern point sun_pos, moon_pos;
 extern vector<light_source> light_sources;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 extern vector<beam3d> beams;
 extern lmap_manager_t lmap_manager;
 extern cube_light_src_vect sky_cube_lights, global_cube_lights;

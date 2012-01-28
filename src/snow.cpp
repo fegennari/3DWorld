@@ -22,7 +22,7 @@ extern unsigned num_snowflakes;
 extern float ztop, zbottom, temperature, snow_depth, snow_random;
 extern vector3d cview_dir;
 extern char *snow_file;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 
 
 typedef short coord_type;

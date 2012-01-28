@@ -1242,6 +1242,7 @@ class  obj_group;
 struct star;
 class  cobj_params;
 class  coll_obj;
+class  coll_obj_group;
 class  shape3d;
 struct lightning;
 struct color_tid_vol;
@@ -1838,12 +1839,6 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool use_wind=0);
 
 // function prototypes - csg
 void get_cube_points(const float d[3][2], point pts[8]);
-void check_cubes(vector<coll_obj> &cobjs);
-void merge_cubes(vector<coll_obj> &cobjs);
-void process_negative_shapes(vector<coll_obj> &cobjs);
-void remove_overlapping_cubes(vector<coll_obj> &cobjs);
-void subdiv_cubes(vector<coll_obj> &cobjs);
-void sort_cobjs_for_rendering(vector<coll_obj> &cobjs);
 
 // function prototypes - ship
 upos_point_type const &get_player_pos();
@@ -1890,7 +1885,7 @@ unsigned enable_dynamic_lights(point const center=all_zeros, float radius=0.0);
 void disable_dynamic_lights(unsigned num_dlights);
 
 // function prototypes - tessellate
-void split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pt, bool split_quads);
+void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pt, bool split_quads);
 
 // function prototypes - shaders
 char const *append_array_ix(std::string &s, unsigned i);

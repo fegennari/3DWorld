@@ -14,7 +14,7 @@ float const OVERLAP_AMT      = 0.02;
 unsigned start_dynamic_range(0);
 
 extern int display_mode, frame_counter, cobj_counter, begin_motion;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 extern vector<unsigned> falling_cobjs;
 extern platform_cont platforms;
 
@@ -199,13 +199,13 @@ void cobj_tree_tquads_t::build_tree_top(bool verbose) {
 }
 
 
-void cobj_tree_tquads_t::add_cobjs(vector<coll_obj> const &cobjs, bool verbose) {
+void cobj_tree_tquads_t::add_cobjs(coll_obj_group const &cobjs, bool verbose) {
 
 	RESET_TIME;
 	clear();
 	tquads.reserve(cobjs.size()); // is this a good idea?
 		
-	for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
+	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
 		if (i->status != COLL_STATIC) continue;
 		assert(i->type == COLL_POLYGON && i->thickness <= MIN_POLY_THICK);
 		tquads.push_back(coll_tquad(*i));

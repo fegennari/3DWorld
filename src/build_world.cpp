@@ -36,7 +36,7 @@ dwobject def_objects[NUM_TOT_OBJS];
 int coll_id[NUM_TOT_OBJS] = {0};
 point star_pts[2*N_STAR_POINTS];
 vector<user_waypt_t> user_waypoints;
-vector<coll_obj> fixed_cobjs;
+coll_obj_group fixed_cobjs;
 vector<portal> portals;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
@@ -49,7 +49,7 @@ extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, t
 extern point cpos2, orig_camera, orig_cdir;
 extern unsigned init_item_counts[];
 extern obj_type object_types[];
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 extern platform_cont platforms;
 extern lightning l_strike;
 extern vector<int> hmv_coll_obj;
@@ -703,7 +703,7 @@ void free_all_coll_objects() {
 
 void check_contained_cube_sides() {
 
-	for (vector<coll_obj>::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
+	for (coll_obj_group::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
 		if (i->status != COLL_STATIC || !i->fixed || i->platform_id >= 0 || i->type != COLL_CUBE || i->is_semi_trans()) continue;
 
 		for (unsigned dim = 0; dim < 3; ++dim) {
@@ -716,6 +716,25 @@ void check_contained_cube_sides() {
 }
 
 
+void coll_obj_group::finalize() {
+
+	fixed_cobjs.process_negative_shapes(); // must be first because requires an unmodified ordering of shapes
+	bool has_cubes(0), any_drawn(0);
+
+	for (coll_obj_group::const_iterator i = fixed_cobjs.begin(); i != fixed_cobjs.end(); ++i) {
+		has_cubes |= (i->type == COLL_CUBE);
+		any_drawn |= i->cp.draw;
+	}
+	if (has_cubes) { // Note: important to do this test on large polygon-only models
+		fixed_cobjs.remove_overlapping_cubes();
+		fixed_cobjs.merge_cubes (); // and alpha sort
+		fixed_cobjs.subdiv_cubes();
+		fixed_cobjs.check_cubes (); // sanity check, should be last
+	}
+	if (any_drawn) fixed_cobjs.sort_cobjs_for_rendering();
+}
+
+
 void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 
 	static int init(0);
@@ -725,20 +744,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 
 		if (load_coll_objs) {
 			if (!read_coll_objects(coll_obj_file)) exit(1);
-			process_negative_shapes(fixed_cobjs); // must be first because requires an unmodified ordering of shapes
-			bool has_cubes(0), any_drawn(0);
-
-			for (vector<coll_obj>::const_iterator i = fixed_cobjs.begin(); i != fixed_cobjs.end(); ++i) {
-				has_cubes |= (i->type == COLL_CUBE);
-				any_drawn |= i->cp.draw;
-			}
-			if (has_cubes) { // Note: important to do this test on large polygon-only models
-				remove_overlapping_cubes(fixed_cobjs);
-				merge_cubes (fixed_cobjs); // and alpha sort
-				subdiv_cubes(fixed_cobjs);
-				check_cubes (fixed_cobjs); // sanity check, should be last
-			}
-			if (any_drawn) sort_cobjs_for_rendering(fixed_cobjs);
+			fixed_cobjs.finalize();
 			RESET_TIME;
 			
 			if (fixed_cobjs.size() > 2*coll_objects.size()) {
@@ -787,7 +793,7 @@ void check_layer(bool has_layer) {
 }
 
 
-void coll_obj::add_to_vector(vector<coll_obj> &cobjs, int type_) {
+void coll_obj::add_to_vector(coll_obj_group &cobjs, int type_) {
 
 	type = type_;
 	id   = cobjs.size();

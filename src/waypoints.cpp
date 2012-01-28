@@ -27,7 +27,7 @@ extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 
 
 // ********** waypt_used_set **********
@@ -281,7 +281,7 @@ public:
 		camera_change = 0; // messes up collision detection code
 		unsigned const num_waypoints(waypoints.size());
 
-		for (vector<coll_obj>::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
+		for (coll_obj_group::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
 			add_one_cobj_wpt(*i, 0);
 		}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " cobj waypoints" << endl;

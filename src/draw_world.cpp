@@ -65,7 +65,7 @@ extern vector<spark_t> sparks;
 extern vector<star> stars;
 extern vector<beam3d> beams;
 extern obj_group obj_groups[];
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 extern obj_type object_types[];
 extern obj_vector_t<bubble> bubbles;
 extern obj_vector_t<particle_cloud> part_clouds;

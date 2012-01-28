@@ -61,7 +61,7 @@ extern int animate2, display_mode, frame_counter, read_light_files[], write_ligh
 extern unsigned num_vpls;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[];
 extern colorRGBA cur_ambient, cur_diffuse;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 extern vector<light_source> enabled_lights;
 extern cube_light_src_vect sky_cube_lights, global_cube_lights;
 

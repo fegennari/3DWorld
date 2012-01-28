@@ -64,7 +64,7 @@ extern obj_group obj_groups[];
 extern char player_name[];
 extern texture_t textures[];
 extern vector<rock_shape3d> rock_shapes;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 extern GLUquadricObj* quadric;
 
 

@@ -9,7 +9,7 @@ platform_cont platforms;
 
 extern int animate2;
 extern float fticks;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 
 
 platform::platform(float fs, float rs, float sd, float rd, float dst, float ad,

@@ -65,7 +65,7 @@ extern point ocean;
 extern lightning l_strike;
 extern blastr latest_blastr;
 extern texture_t textures[];
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 extern rand_gen_t global_rand_gen;
 
 

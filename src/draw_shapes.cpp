@@ -16,7 +16,7 @@ extern float zmin;
 extern double camera_zh;
 extern vector<int> weap_cobjs;
 extern vector<unsigned> falling_cobjs;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 extern platform_cont platforms;
 extern obj_type object_types[];
 extern obj_group obj_groups[];

@@ -203,7 +203,7 @@ template bool split_polygon<polygon_t >(polygon_t const &poly, vector<polygon_t 
 template bool split_polygon<coll_tquad>(polygon_t const &poly, vector<coll_tquad> &ppts, float coplanar_thresh);
 
 
-void split_polygon_to_cobjs(coll_obj const &cobj, vector<coll_obj> &split_polygons, vector<point> const &poly_pts, bool split_quads) {
+void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pts, bool split_quads) {
 
 	if (poly_pts.size() == 3 && is_poly_valid(&poly_pts.front())) { // optimization
 		split_polygons.push_back(cobj);
@@ -339,15 +339,15 @@ void cobj_triangle_visitor::proc_cobj(coll_obj const &c) {
 }
 
 
-void cobj_triangle_visitor::proc_cobjs(vector<coll_obj> const &cobjs) {
+void cobj_triangle_visitor::proc_cobjs(coll_obj_group const &cobjs) {
 
-	for (vector<coll_obj>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
+	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
 		proc_cobj(*i);
 	}
 }
 
 
-unsigned triangle_counter::proc_cobjs(vector<coll_obj> const &cobjs) {
+unsigned triangle_counter::proc_cobjs(coll_obj_group const &cobjs) {
 
 	RESET_TIME;
 	tris_visited = 0;

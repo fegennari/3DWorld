@@ -106,7 +106,7 @@ extern point ocean;
 extern vector3d up_norm, wind, total_wind;
 extern int coll_id[];
 extern obj_group obj_groups[];
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 
 
 void calc_water_normals();

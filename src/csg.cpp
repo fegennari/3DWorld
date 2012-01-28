@@ -413,7 +413,7 @@ bool csg_cube::cube_intersection(const csg_cube &cube, csg_cube &res) const { //
 
 
 // returns 1 if some work is done
-bool csg_cube::subtract_from_cube(vector<coll_obj> &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
+bool csg_cube::subtract_from_cube(coll_obj_group &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
 
 	assert(cobj.type == COLL_CUBE);
 	if (!quick_intersect_test(cobj)) return 0; // no intersection
@@ -433,7 +433,7 @@ bool csg_cube::subtract_from_cube(vector<coll_obj> &new_cobjs, coll_obj const &c
 
 
 // returns 1 if some work is done
-bool csg_cube::subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cobj) const { // subtract ourself from cobjs[index]
+bool csg_cube::subtract_from_cylinder(coll_obj_group &new_cobjs, coll_obj &cobj) const { // subtract ourself from cobjs[index]
 
 	assert(cobj.is_cylinder());
 	float const radius(max(cobj.radius, cobj.radius2)); // containment/intersection tests are conservative
@@ -493,7 +493,7 @@ bool csg_cube::subtract_from_cylinder(vector<coll_obj> &new_cobjs, coll_obj &cob
 
 // returns 1 if some work is done
 // see http://www.cs.fit.edu/~wds/classes/graphics/Clip/clip/clip.html
-bool csg_cube::subtract_from_polygon(vector<coll_obj> &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
+bool csg_cube::subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
 
 	// start by assuming *this intersects cobj.d (should have been tested already)
 	assert(cobj.is_thin_poly()); // can't handle other cases yet
@@ -700,26 +700,26 @@ void get_cube_points(const float d[3][2], point pts[8]) {
 }
 
 
-void remove_invalid_cobjs(vector<coll_obj> &cobjs) {
+void coll_obj_group::remove_invalid_cobjs() {
 
-	vector<coll_obj> cobjs2;
-	unsigned const ncobjs(cobjs.size());
+	coll_obj_group cobjs2;
+	unsigned const ncobjs(size());
 
 	for (unsigned i = 0; i < ncobjs; ++i) { // create new shapes vector with bad shapes removed
-		if (cobjs[i].type != COLL_INVALID) cobjs2.push_back(cobjs[i]);
+		if ((*this)[i].type != COLL_INVALID) cobjs2.push_back((*this)[i]);
 	}
-	cobjs.swap(cobjs2);
+	this->swap(cobjs2);
 }
 
 
-void check_cubes(vector<coll_obj> &cobjs) {
+void coll_obj_group::check_cubes() {
 
 	if (!CHECK_COBJS) return;
-	unsigned const ncobjs(cobjs.size());
+	unsigned const ncobjs(size());
 
 	for (unsigned i = 0; i < ncobjs; ++i) {
-		if (cobjs[i].type != COLL_CUBE) continue;
-		csg_cube const cube(cobjs[i]);
+		if ((*this)[i].type != COLL_CUBE) continue;
+		csg_cube const cube((*this)[i]);
 		
 		if (cube.is_zero_area()) {
 		  cout << "Zero area cube: "; cube.print(); cout << endl;
@@ -749,22 +749,22 @@ bool comp_by_params(const coll_obj &A, const coll_obj &B) {
 
 
 // Note: also sorts by alpha so that transparency works correctly
-void merge_cubes(vector<coll_obj> &cobjs) { // only merge compatible cubes
+void coll_obj_group::merge_cubes() { // only merge compatible cubes
 
 	if (!MERGE_COBJS) return;
 	RESET_TIME;
-	unsigned const ncobjs(cobjs.size());
+	unsigned const ncobjs(size());
 	unsigned merged(0);
 
 	// sorting can permute cobjs so that their id's are not monotonically increasing
-	sort(cobjs.begin(), cobjs.end(), comp_by_params); // how does ordering affect drawing?
-	cobj_tree_t<3> cube_tree(cobjs, 0, 0, 0, 0, 1); // cubes only
+	sort(begin(), end(), comp_by_params); // how does ordering affect drawing?
+	cobj_tree_t<3> cube_tree(*this, 0, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
 	vector<unsigned> cids;
 
-	for (unsigned i = 0; i < cobjs.size(); ++i) { // choose merge candidates
-		if (cobjs[i].type != COLL_CUBE) continue;
-		csg_cube cube(cobjs[i]); // remove all other cobjs from cobjs[i] with lower id
+	for (unsigned i = 0; i < ncobjs; ++i) { // choose merge candidates
+		if ((*this)[i].type != COLL_CUBE) continue;
+		csg_cube cube((*this)[i]); // remove all other cobjs from cobjs[i] with lower id
 		if (cube.is_zero_area()) continue;
 		cids.clear();
 		cube_tree.get_intersecting_cobjs(cube, cids, i, -SMALL_NUMBER, 0, -1); // small negative tolerance so adjacent cubes are returned
@@ -772,69 +772,66 @@ void merge_cubes(vector<coll_obj> &cobjs) { // only merge compatible cubes
 
 		for (vector<unsigned>::const_iterator it = cids.begin(); it != cids.end(); ++it) {
 			unsigned const j(*it);
-			assert(j < cobjs.size());
+			assert(j < ncobjs);
 			assert(j != i);
-			assert(cobjs[j].type == COLL_CUBE);
-			if (!cobjs[i].equal_params(cobjs[j])) continue; // not compatible
-			csg_cube cube2(cobjs[j]);
+			assert((*this)[j].type == COLL_CUBE);
+			if (!(*this)[i].equal_params((*this)[j])) continue; // not compatible
+			csg_cube cube2((*this)[j]);
 
 			if (cube.cube_merge(cube2, 1)) {
-				cobjs[j].type = COLL_INVALID; // remove old coll obj
+				(*this)[j].type = COLL_INVALID; // remove old coll obj
 				++mi;
 			}
 		}
 		if (mi > 0) { // cube has changed
-			cube.write_to_cobj(cobjs[i]);
+			cube.write_to_cobj((*this)[i]);
 			merged += mi;
 		}
 	}
-	if (merged > 0) remove_invalid_cobjs(cobjs);
-	cout << ncobjs << " => " << cobjs.size() << endl;
+	if (merged > 0) remove_invalid_cobjs();
+	cout << ncobjs << " => " << size() << endl;
 	PRINT_TIME("Cube Merge");
 }
 
 
-// ***************** OVERLAP REMOVAL ****************
+void coll_obj_group::remove_overlapping_cubes() { // objects specified later are the ones that are split/removed
 
-
-void remove_overlapping_cubes(vector<coll_obj> &cobjs) { // objects specified later are the ones that are split/removed
-
-	if (!UNOVERLAP_COBJS || cobjs.empty()) return;
+	if (!UNOVERLAP_COBJS || empty()) return;
 	RESET_TIME;
-	unsigned const ncobjs(cobjs.size());
-	cobj_tree_t<3> cube_tree(cobjs, 0, 0, 0, 0, 1); // cubes only
+	unsigned const ncobjs(size());
+	cobj_tree_t<3> cube_tree(*this, 0, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
 	vector<pair<unsigned, unsigned> > proc_order;
 		
-	for (unsigned i = 0; i < cobjs.size(); ++i) {
-		if (cobjs[i].type == COLL_CUBE) proc_order.push_back(make_pair(cobjs[i].id, i));
+	for (unsigned i = 0; i < ncobjs; ++i) {
+		if ((*this)[i].type == COLL_CUBE) proc_order.push_back(make_pair((*this)[i].id, i));
 	}
 	sort(proc_order.begin(), proc_order.end());
 	bool overlaps(0);
-	vector<coll_obj> cur_cobjs, next_cobjs;
+	coll_obj_group cur_cobjs, next_cobjs;
 	vector<unsigned> cids;
 
 	for (vector<pair<unsigned, unsigned> >::const_reverse_iterator it = proc_order.rbegin(); it != proc_order.rend(); ++it) {
 		unsigned const i(it->second);
-		csg_cube const cube(cobjs[i]); // remove all other cobjs from cobjs[i] with lower id
+		csg_cube const cube((*this)[i]); // remove all other cobjs from cobjs[i] with lower id
 		if (cube.is_zero_area()) continue;
-		bool const neg(cobjs[i].status == COLL_NEGATIVE);
+		bool const neg((*this)[i].status == COLL_NEGATIVE);
 		cids.clear();
 		cube_tree.get_intersecting_cobjs(cube, cids, i, 0.0, 0, -1);
 		if (cids.empty()) continue;
 		cur_cobjs.clear();
-		cur_cobjs.push_back(cobjs[i]); // start with the current cobj
+		cur_cobjs.push_back((*this)[i]); // start with the current cobj
 		bool was_removed(0);
 
 		for (vector<unsigned>::const_iterator it = cids.begin(); it != cids.end(); ++it) {
 			unsigned const j(*it);
-			assert(j < cobjs.size());
-			assert(cobjs[j].type == COLL_CUBE);
-			if (j == i || cobjs[i].id < cobjs[j].id)      continue; // enforce ordering
-			if (neg ^ (cobjs[j].status == COLL_NEGATIVE)) continue; // sign must be the same
-			csg_cube sub_cube(cobjs[j]);
+			assert(j < size());
+			assert((*this)[j].type == COLL_CUBE);
+			if (j == i || (*this)[i].id < (*this)[j].id)    continue; // enforce ordering
+			if (neg ^ ((*this)[j].status == COLL_NEGATIVE)) continue; // sign must be the same
+			csg_cube sub_cube((*this)[j]);
 
-			for (vector<coll_obj>::const_iterator c = cur_cobjs.begin(); c != cur_cobjs.end(); ++c) {
+			for (coll_obj_group::const_iterator c = cur_cobjs.begin(); c != cur_cobjs.end(); ++c) {
 				if (sub_cube.subtract_from_cube(next_cobjs, *c)) {
 					was_removed = overlaps = 1;
 				}
@@ -846,15 +843,15 @@ void remove_overlapping_cubes(vector<coll_obj> &cobjs) { // objects specified la
 			cur_cobjs.swap(next_cobjs);
 		} // for it
 		if (was_removed) {
-			copy(cur_cobjs.begin(), cur_cobjs.end(), back_inserter(cobjs));
-			cobjs[i].type = COLL_INVALID; // remove old coll obj
+			copy(cur_cobjs.begin(), cur_cobjs.end(), back_inserter(*this));
+			(*this)[i].type = COLL_INVALID; // remove old coll obj
 		}
 		else {
 			assert(cur_cobjs.size() == 1); // the original cobjs[i]
 		}
 	} // for i
-	if (overlaps) remove_invalid_cobjs(cobjs);
-	cout << ncobjs << " => " << cobjs.size() << endl;
+	if (overlaps) remove_invalid_cobjs();
+	cout << ncobjs << " => " << size() << endl;
 	PRINT_TIME("Cube Overlap Removal");
 }
 
@@ -862,73 +859,73 @@ void remove_overlapping_cubes(vector<coll_obj> &cobjs) { // objects specified la
 // **********************************************
 
 
-bool subtract_cobj(vector<coll_obj> &new_cobjs, csg_cube const &cube, coll_obj &cobj, bool include_polys) {
+bool coll_obj::subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cube, bool include_polys) {
 
 	bool removed(0);
 
-	if (cobj.type == COLL_CUBE) {
-		removed = cube.subtract_from_cube(new_cobjs, cobj);
-		if (!removed) cube.unset_adjacent_edge_flags(cobj); // check adjacency and possibly remove some edge flags
+	if (type == COLL_CUBE) {
+		removed = cube.subtract_from_cube(new_cobjs, *this);
+		if (!removed) cube.unset_adjacent_edge_flags(*this); // check adjacency and possibly remove some edge flags
 
 		for (unsigned i = 0; i < new_cobjs.size(); ++i) {
 			cube.unset_adjacent_edge_flags(new_cobjs[i]); // is this necessary?
 		}
 	}
-	else if (cobj.is_cylinder()) {
-		removed = cube.subtract_from_cylinder(new_cobjs, cobj);
+	else if (is_cylinder()) {
+		removed = cube.subtract_from_cylinder(new_cobjs, *this);
 	}
-	else if (include_polys && cobj.is_thin_poly()) {
-		removed = cube.subtract_from_polygon(new_cobjs, cobj);
+	else if (include_polys && is_thin_poly()) {
+		removed = cube.subtract_from_polygon(new_cobjs, *this);
 	}
 	return removed;
 }
 
 
-void process_negative_shapes(vector<coll_obj> &cobjs) { // negtive shapes should be non-overlapping
+void coll_obj_group::process_negative_shapes() { // negtive shapes should be non-overlapping
 
 	RESET_TIME;
-	unsigned const ncobj(cobjs.size());
+	unsigned const ncobj(size());
 	unsigned neg(0);
-	vector<coll_obj> new_cobjs;
+	coll_obj_group new_cobjs;
 
 	for (unsigned i = 0; i < ncobj; ++i) { // find a negative cobj
-		if (cobjs[i].status != COLL_NEGATIVE) continue;
+		if ((*this)[i].status != COLL_NEGATIVE) continue;
 
-		if (cobjs[i].type != COLL_CUBE) {
+		if ((*this)[i].type != COLL_CUBE) {
 			cout << "Only negative cubes are supported." << endl;
 			exit(1);
 		}
-		unsigned ncobjs(cobjs.size()); // so as not to retest newly created subcubes
-		csg_cube cube(cobjs[i]); // the negative cube
+		unsigned ncobjs(size()); // so as not to retest newly created subcubes
+		csg_cube cube((*this)[i]); // the negative cube
 		if (cube.is_zero_area()) continue;
 
 		for (unsigned j = 0; j < ncobjs; ++j) { // find a positive cobj
-			if (j != i && cobjs[j].status != COLL_NEGATIVE) {
-				if (ONLY_SUB_PREV_NEG && cobjs[i].id < cobjs[j].id) continue; // positive cobj after negative cobj
+			if (j != i && (*this)[j].status != COLL_NEGATIVE) {
+				if (ONLY_SUB_PREV_NEG && (*this)[i].id < (*this)[j].id) continue; // positive cobj after negative cobj
 
-				if (subtract_cobj(new_cobjs, cube, cobjs[j], 0)) {
+				if ((*this)[j].subtract_from_cobj(new_cobjs, cube, 0)) {
 					if (!new_cobjs.empty()) { // coll cube can be reused
-						cobjs[j] = new_cobjs.back();
+						(*this)[j] = new_cobjs.back();
 						new_cobjs.pop_back();
 					}
 					else {
-						cobjs[j].type = COLL_INVALID; // remove old coll obj
+						(*this)[j].type = COLL_INVALID; // remove old coll obj
 					}
-					copy(new_cobjs.begin(), new_cobjs.end(), back_inserter(cobjs)); // add in new fragments
+					copy(new_cobjs.begin(), new_cobjs.end(), back_inserter(*this)); // add in new fragments
 					new_cobjs.clear();
 				}
 			}
 		}
-		cobjs[i].type = COLL_INVALID; // remove the negative cube since it is no longer needed
+		(*this)[i].type = COLL_INVALID; // remove the negative cube since it is no longer needed
 		++neg;
 	}
-	if (neg > 0) remove_invalid_cobjs(cobjs);
-	cout << ncobj << " => " << cobjs.size() << endl;
+	if (neg > 0) remove_invalid_cobjs();
+	cout << ncobj << " => " << size() << endl;
 	PRINT_TIME("Negative Shape Processing");
 }
 
 
-bool coll_obj::subdiv_fixed_cube(vector<coll_obj> &cobjs) {
+bool coll_obj::subdiv_fixed_cube(coll_obj_group &cobjs) {
 
 	assert(type == COLL_CUBE);
 	if (platform_id >= 0 || destroy >= SHATTERABLE) return 0; // don't subdivide platforms or shatterable/explodeable cubes
@@ -975,19 +972,19 @@ unsigned get_closest_val_index(float val, vector<double> const &sval) {
 }
 
 
-void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cubes into smaller cubes
+void coll_obj_group::subdiv_cubes() { // split large/high aspect ratio cubes into smaller cubes
 
 	RESET_TIME;
-	unsigned size(cobjs.size()), num_remove(0);
+	unsigned ncobjs(size()), num_remove(0);
 
 	// split T-junctions of cubes in the same group
 	if (REMOVE_T_JUNCTIONS) {
 		map<int, vector<unsigned> > id_map; // id to cobj indices map
 
-		for (unsigned i = 0; i < size; ++i) {
-			if (cobjs[i].type == COLL_INVALID || cobjs[i].type != COLL_CUBE)   continue;
-			if (REMOVE_T_JUNCTIONS == 1 && cobjs[i].counter != OBJ_CNT_REM_TJ) continue;
-			id_map[cobjs[i].id].push_back(i);
+		for (unsigned i = 0; i < ncobjs; ++i) {
+			if ((*this)[i].type == COLL_INVALID || (*this)[i].type != COLL_CUBE) continue;
+			if (REMOVE_T_JUNCTIONS == 1 && (*this)[i].counter != OBJ_CNT_REM_TJ) continue;
+			id_map[(*this)[i].id].push_back(i);
 		}
 		for (map<int, vector<unsigned> >::const_iterator i = id_map.begin(); i != id_map.end(); ++i) {
 			vector<unsigned> const &v(i->second);
@@ -996,7 +993,7 @@ void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cu
 			vector<double> svals [3]; // x, y, z
 
 			for (unsigned j = 0; j < v.size(); ++j) {
-				coll_obj const &c(cobjs[v[j]]);
+				coll_obj const &c((*this)[v[j]]);
 
 				for (unsigned d = 0; d < 3; ++d) {
 					for (unsigned e = 0; e < 2; ++e) {
@@ -1011,7 +1008,7 @@ void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cu
 				assert(svals[d].size() > 1);
 			}
 			for (unsigned j = 0; j < v.size(); ++j) {
-				coll_obj const &c(cobjs[v[j]]);
+				coll_obj const &c((*this)[v[j]]);
 				unsigned bounds[3][2], tot_parts(1);
 
 				for (unsigned d = 0; d < 3; ++d) {
@@ -1028,27 +1025,27 @@ void subdiv_cubes(vector<coll_obj> &cobjs) { // split large/high aspect ratio cu
 					for (unsigned y = bounds[1][0]; y < bounds[1][1]; ++y) {
 						for (unsigned z = bounds[2][0]; z < bounds[2][1]; ++z) {
 							unsigned const xyz[3] = {x, y, z};
-							cobjs.push_back(cobjs[v[j]]);
+							push_back((*this)[v[j]]);
 
 							for (unsigned d = 0; d < 3; ++d) {
 								assert(xyz[d]+1 < svals[d].size());
 
 								for (unsigned e = 0; e < 2; ++e) {
-									cobjs.back().d[d][e] = svals[d][xyz[d]+e];
+									back().d[d][e] = svals[d][xyz[d]+e];
 								}
 							}
 						}
 					}
 				}
-				cobjs[v[j]].type = COLL_INVALID;
+				(*this)[v[j]].type = COLL_INVALID;
 				++num_remove;
 			} // for j
 		} // for i
-		cout << size << " => " << (cobjs.size() - num_remove) << endl;
-		size = cobjs.size();
+		cout << ncobjs << " => " << (size() - num_remove) << endl;
+		ncobjs = size();
 	}
-	if (num_remove > 0) remove_invalid_cobjs(cobjs);
-	cout << (size - num_remove) << " => " << cobjs.size() << endl;
+	if (num_remove > 0) remove_invalid_cobjs();
+	cout << (ncobjs - num_remove) << " => " << size() << endl;
 	PRINT_TIME("Subdiv Cubes");
 }
 
@@ -1063,8 +1060,8 @@ bool comp_cobjs_by_draw_params(coll_obj const &a, coll_obj const &b) {
 	return (a.points[0] < b.points[0]);
 }
 
-void sort_cobjs_for_rendering(vector<coll_obj> &cobjs) {
-	sort(cobjs.begin(), cobjs.end(), comp_cobjs_by_draw_params);
+void coll_obj_group::sort_cobjs_for_rendering() {
+	std::sort(begin(), end(), comp_cobjs_by_draw_params);
 }
 
 

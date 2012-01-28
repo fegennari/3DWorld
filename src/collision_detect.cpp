@@ -23,7 +23,7 @@ int camera_coll_id(-1);
 unsigned cobjs_removed(0), index_top(0);
 float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
-vector<coll_obj> coll_objects;
+coll_obj_group coll_objects;
 
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, flight, do_run, cobj_counter, num_smileys;
@@ -102,10 +102,10 @@ vector3d decal_obj::get_platform_delta() const {
 class cobj_manager_t {
 
 	vector<int> index_stack;
-	vector<coll_obj> &cobjs;
+	coll_obj_group &cobjs;
 
 public:
-	cobj_manager_t(vector<coll_obj> &cobjs_) : cobjs(cobjs_) {}
+	cobj_manager_t(coll_obj_group &cobjs_) : cobjs(cobjs_) {}
 
 	void reserve_cobjs(unsigned size) {
 		unsigned const old_size(cobjs.size());

@@ -35,7 +35,7 @@ extern point sun_pos, moon_pos, mesh_origin;
 extern vector3d up_norm;
 extern lightning l_strike;
 extern tree_cont_t t_trees;
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 
 
 int check_shadow_edge_clip(point const &pt, point const &lpos, int &xmin, int &xmax, int &ymin, int &ymax);

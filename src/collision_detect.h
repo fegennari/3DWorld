@@ -52,6 +52,10 @@ public:
 };
 
 
+class coll_obj_group;
+class csg_cube;
+
+
 class coll_obj : public cube_t { // size = 224
 
 public:
@@ -80,12 +84,13 @@ public:
 	void bb_union(float bb[3][2], int init);
 	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t *shader) const;
 	int  simple_draw(int ndiv, int in_cur_prim=PRIM_DISABLED, bool no_normals=0, bool in_dlist=0) const;
-	void add_to_vector(vector<coll_obj> &cobjs, int type_);
+	void add_to_vector(coll_obj_group &cobjs, int type_);
 	void check_if_cube();
 	void add_as_fixed_cobj();
 	int  add_coll_cobj();
 	void re_add_coll_cobj(int index, int remove_old=1, int dhcm=0);
-	bool subdiv_fixed_cube(vector<coll_obj> &cobjs);
+	bool subdiv_fixed_cube(coll_obj_group &cobjs);
+	bool subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cube, bool include_polys);
 	int  intersects_cobj(coll_obj const &c, float toler=0.0) const;
 	int  is_anchored() const;
 	void shift_by(vector3d const &vd, bool force=0, bool no_texture_offset=0);
@@ -133,6 +138,20 @@ public:
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t *shader) const;
 	void draw_polygon(int tid, point const *points, int npoints, vector3d const &normal, shader_t *shader) const;
 	void draw_extruded_polygon(int tid, shader_t *shader) const;
+};
+
+
+class coll_obj_group : public vector<coll_obj> {
+
+public:
+	void finalize();
+	void remove_invalid_cobjs();
+	void check_cubes();
+	void merge_cubes();
+	void process_negative_shapes();
+	void remove_overlapping_cubes();
+	void subdiv_cubes();
+	void sort_cobjs_for_rendering();
 };
 
 

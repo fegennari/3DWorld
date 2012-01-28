@@ -9,6 +9,7 @@
 
 class sd_sphere_d; // forward reference
 class upsurface;
+class coll_obj_group;
 
 
 class sphere_point_norm { // size = 12
@@ -75,7 +76,7 @@ protected:
 
 public:
 	cobj_triangle_visitor(bool skip_dynamic_) : skip_dynamic(skip_dynamic_) {}
-	void proc_cobjs(vector<coll_obj> const &cobjs);
+	void proc_cobjs(coll_obj_group const &cobjs);
 };
 
 
@@ -86,7 +87,7 @@ class triangle_counter : public cobj_triangle_visitor {
 	virtual void proc_tri(point const &p1, point const &p2, point const &p3) {++tris_visited;}
 public:
 	triangle_counter(bool skip_dynamic_) : cobj_triangle_visitor(skip_dynamic_), tris_visited(0) {}
-	unsigned proc_cobjs(vector<coll_obj> const &cobjs);
+	unsigned proc_cobjs(coll_obj_group const &cobjs);
 };
 
 

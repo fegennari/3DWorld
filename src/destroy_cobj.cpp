@@ -19,7 +19,7 @@ extern float tstep, zmin, base_gravity;
 extern int cobj_counter, coll_id[];
 extern obj_type object_types[];
 extern obj_group obj_groups[];
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
 
@@ -250,11 +250,11 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	if (destroy_thresh >= EXPLODEABLE) return 0;
 	if (cube.is_zero_area())           return 0;
 	//RESET_TIME;
-	vector<coll_obj> &cobjs(coll_objects); // so we don't have to rename everything and can keep the shorter code
+	coll_obj_group &cobjs(coll_objects); // so we don't have to rename everything and can keep the shorter code
 	point center(cube.get_cube_center());
 	float const clip_cube_volume(cube.get_volume());
 	vector<int> just_added, to_remove;
-	vector<coll_obj> new_cobjs;
+	coll_obj_group new_cobjs;
 	cdir = zero_vector;
 	vector<cube_t> mod_cubes;
 	mod_cubes.push_back(cube);
@@ -286,7 +286,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 			cube.unset_intersecting_edge_flags(cobjs[i]);
 			continue;
 		}
-		if (shatter || subtract_cobj(new_cobjs, cube, cobjs[i], 1)) {
+		if (shatter || cobjs[i].subtract_from_cobj(new_cobjs, cube, 1)) {
 			if (no_new_cobjs) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
 			if (D == SHATTER_TO_PORTAL) cobjs[i].create_portal();

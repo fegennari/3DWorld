@@ -24,7 +24,7 @@ extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_c
 extern colorRGBA leaf_base_color;
 extern vector3d wind;
 extern obj_type object_types[];
-extern vector<coll_obj> coll_objects;
+extern coll_obj_group coll_objects;
 
 
 class grass_manager_t {
