@@ -165,7 +165,7 @@ public:
 	unsigned num_verts() const {return (indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
-	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts) const;
+	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts, bool quads_only) const;
 	void write(ostream &out) const;
 	void read(istream &in);
 };
@@ -179,7 +179,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
 	void get_stats(model3d_stats_t &stats) const {stats.blocks += size(); stats.verts += num_unique_verts();}
-	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts) const;
+	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts, bool quads_only) const;
 	bool write(ostream &out) const;
 	bool read(istream &in);
 };

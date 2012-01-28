@@ -348,8 +348,9 @@ struct shared_vertex_t {
 };
 
 
-template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts) const {
-
+template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad> &polygons,
+	colorRGBA const &color, unsigned npts, bool quads_only) const
+{
 	unsigned const nv(num_verts());
 	assert((nv % npts) == 0);
 	polygon_t poly(color);
@@ -389,7 +390,14 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 			}
 		}
 		for (unsigned p = 0; p < npts; ++p) {poly[p] = get_vert(i+p);}
-		split_polygon(poly, polygons, POLY_COPLANAR_THRESH);
+
+		if (quads_only) {
+			assert(npts == 4);
+			polygons.push_back(poly);
+		}
+		else {
+			split_polygon(poly, polygons, POLY_COPLANAR_THRESH);
+		}
 	}
 }
 
@@ -492,10 +500,11 @@ template<typename T> unsigned vntc_vect_block_t<T>::num_unique_verts() const {
 }
 
 
-template<typename T> void vntc_vect_block_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts) const {
-
+template<typename T> void vntc_vect_block_t<T>::get_polygons(vector<coll_tquad> &polygons,
+	colorRGBA const &color, unsigned npts, bool quads_only) const
+{
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->get_polygons(polygons, color, npts);
+		i->get_polygons(polygons, color, npts, quads_only);
 	}
 }
 
@@ -569,8 +578,8 @@ template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_
 
 template<typename T> void geometry_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, bool quads_only) const {
 
-	if (!quads_only) triangles.get_polygons(polygons, color, 3);
-	quads.get_polygons(polygons, color, 4);
+	if (!quads_only) triangles.get_polygons(polygons, color, 3, 0);
+	quads.get_polygons(polygons, color, 4, quads_only);
 }
 
 
@@ -824,7 +833,8 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
 		zvals.resize(num_tot);
 
 		for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
-			if (i->npts != 4 || fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
+			assert(i->npts == 4);
+			if (fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
 			cube_t const bcube(i->get_bcube());
 			if ((bcube.d[2][1] - bcube.d[2][0]) > 0.5*spacing) continue; // can this happen?
 			int cbounds[2][2];
