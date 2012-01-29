@@ -274,9 +274,9 @@ public:
 				if (!(mat_in >> cur_mat->skip)) {cerr << "Error reading material skip" << endl; return 0;}
 			}
 			else {
-				cerr << "Error: Undefined entry '" << s << "' in material library" << endl;
-				return 0;
-				//read_to_newline(mat_in); // ignore
+				cerr << "Error: Undefined entry '" << s << "' in material library. Skipping line." << endl;
+				read_to_newline(mat_in); // ignore
+				//return 0;
 			}
 		}
 		return 1;

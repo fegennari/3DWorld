@@ -8,7 +8,8 @@ s 1 2  M 0
 #m 0.04  O ../models/lost-empire/lost_empire.model3d 5 0 0 1 1.0
 #m 0.1  O ../models/rungholt/house.model3d 5 0 0 1 1.0
 m 0.01  O ../models/rungholt/rungholt.model3d 5 0 0 1 1.0
-#m 1.0  O ../models/voxelia/voxelia.model3d 5 0 0 1 0.01
+#m 0.1  O ../models/voxelia/voxelia1.model3d 5 0 0 1 0.1
+
 
 
 
