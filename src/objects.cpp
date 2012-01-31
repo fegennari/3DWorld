@@ -379,9 +379,9 @@ int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals, bool in_dl
 }
 
 
-bool coll_obj::is_semi_trans() const {
+bool obj_layer::has_alpha_texture() const {
 
-	return (cp.color.alpha < 1.0 || (cp.tid >= 0 && textures[cp.tid].has_alpha()));
+	return (tid >= 0 && textures[tid].has_alpha());
 }
 
 
@@ -424,12 +424,6 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 bool coll_obj::truly_static() const {
 
 	return (status == COLL_STATIC && !cp.is_destroyable && destroy < max((int)SHATTERABLE, destroy_thresh+1) && !maybe_is_moving());
-}
-
-
-bool coll_obj::can_be_scorched() const { // allow destroyable and transparent objects, drawn or opaque model3d shapes
-
-	return (status == COLL_STATIC && !(cp.tid >= 0 && textures[cp.tid].has_alpha()) && (!no_draw() || (cp.is_model3d && cp.color.A == 1.0)));
 }
 
 
@@ -477,14 +471,6 @@ colorRGBA coll_obj::get_avg_color() const {
 	colorRGBA color(cp.color);
 	if (cp.tid >= 0) color = color.modulate_with(texture_color(cp.tid));
 	return color;
-}
-
-
-bool coll_obj::has_poly_billboard_alpha() const {
-
-	if (!is_billboard || !is_thin_poly() || npoints != 4) return 0;
-	if (cp.tid < 0    || !textures[cp.tid].has_alpha())   return 0; // no alpha channel texture
-	return 1;
 }
 
 

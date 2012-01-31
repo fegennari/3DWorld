@@ -729,25 +729,6 @@ void coll_obj_group::check_cubes() {
 }
 
 
-bool comp_by_params(const coll_obj &A, const coll_obj &B) {
-
-	bool const sta(A.is_semi_trans()), stb(B.is_semi_trans()); // compare transparency first so that alpha blending works
-	if (sta        < stb       ) return 1;
-	if (stb        < sta       ) return 0;
-	if (A.cp.color < B.cp.color) return 1;
-	if (B.cp.color < A.cp.color) return 0;
-	if (A.cp.tid   < B.cp.tid)   return 1;
-	if (B.cp.tid   < A.cp.tid)   return 0;
-	if (A.type     < B.type)     return 1;
-	if (B.type     < A.type)     return 0;
-	if (A.cp.draw  < B.cp.draw)  return 1;
-	if (B.cp.draw  < A.cp.draw)  return 0;
-	if (A.status   < B.status)   return 1;
-	if (B.status   < A.status)   return 0;
-	return (A.cp.elastic < B.cp.elastic);
-}
-
-
 // Note: also sorts by alpha so that transparency works correctly
 void coll_obj_group::merge_cubes() { // only merge compatible cubes
 
@@ -755,9 +736,6 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 	RESET_TIME;
 	unsigned const ncobjs(size());
 	unsigned merged(0);
-
-	// sorting can permute cobjs so that their id's are not monotonically increasing
-	sort(begin(), end(), comp_by_params); // how does ordering affect drawing?
 	cobj_tree_t<3> cube_tree(*this, 0, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
 	vector<unsigned> cids;
@@ -772,8 +750,7 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 
 		for (vector<unsigned>::const_iterator it = cids.begin(); it != cids.end(); ++it) {
 			unsigned const j(*it);
-			assert(j < ncobjs);
-			assert(j != i);
+			assert(j < ncobjs && j != i);
 			assert((*this)[j].type == COLL_CUBE);
 			if (!(*this)[i].equal_params((*this)[j])) continue; // not compatible
 			csg_cube cube2((*this)[j]);

@@ -947,7 +947,7 @@ void vert_coll_detector::check_cobj(int index) {
 	if (player           && obj.coll_id == cobj.id)  return; // can't collide with yourself
 	if (type == LANDMINE && obj.invalid_coll(cobj))  return;
 	if (skip_dynamic && cobj.status == COLL_DYNAMIC) return;
-	if (only_drawn   && !cobj.might_be_drawn())      return;
+	if (only_drawn   && !cobj.cp.might_be_drawn())   return;
 	
 	if (type == SMOKE) { // special case to allow smoke to pass through small spheres and cylinders
 		switch (cobj.type) { // Note: cubes and polygons could be split into many small pieces, so we don't check their sizes

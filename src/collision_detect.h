@@ -33,7 +33,13 @@ public:
 		tdx(0.0), tdy(0.0), refract_ix(ri), light_atten(la), tid(ti), coll_func(cf), color(c) {}
 
 	// assumes obj_layer contained classes are POD with no padding
-	bool equal_params(const obj_layer &cobj) const {return (memcmp(this, &cobj, sizeof(obj_layer)) == 0);}
+	bool operator==(obj_layer const &cobj) const {return (memcmp(this, &cobj, sizeof(obj_layer)) == 0);}
+	bool operator< (obj_layer const &cobj) const {return (memcmp(this, &cobj, sizeof(obj_layer)) <  0);}
+	bool no_draw()        const {return (!draw || color.alpha == 0.0);}
+	bool has_alpha_texture() const;
+	bool is_semi_trans()  const {return (color.alpha < 1.0 || has_alpha_texture());}
+	bool might_be_drawn() const {return (draw || is_model3d);}
+	bool is_glass()       const {return (tid < 0 && color.alpha <= 0.5);}
 };
 
 
@@ -100,12 +106,12 @@ public:
 	bool cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const;
 	bool operator<(const coll_obj &cobj) const {return (volume < cobj.volume);} // sort by size
 	bool equal_params(const coll_obj &c) const {return (type == c.type && status == c.status &&
-		platform_id == c.platform_id && group_id == c.group_id && cp.equal_params(c.cp));}
-	bool is_semi_trans()  const;
-	bool no_draw()        const {return (!cp.draw || status == COLL_UNUSED || status == COLL_FREED || cp.color.alpha == 0.0);}
+		platform_id == c.platform_id && group_id == c.group_id && cp == c.cp);}
+	bool no_draw()        const {return (status == COLL_UNUSED || status == COLL_FREED || cp.no_draw());}
 	bool disabled()       const {return (status != COLL_DYNAMIC && status != COLL_STATIC);}
 	bool no_collision()   const {return (disabled() || cp.no_coll);}
-	bool freed_unused()   const {return (status == COLL_FREED   || status == COLL_UNUSED);}
+	bool is_semi_trans()  const {return cp.is_semi_trans();}
+	bool freed_unused()   const {return (status == COLL_FREED || status == COLL_UNUSED);}
 	bool is_occluder()    const;// {return (status == COLL_STATIC && type == COLL_CUBE && cp.draw && !is_semi_trans());}
 	bool is_big_occluder()const {return (is_occluder() && fixed && volume > 0.001);}
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
@@ -114,15 +120,14 @@ public:
 	bool truly_static()   const;
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
-	bool might_be_drawn() const {return (cp.draw || cp.is_model3d);}
-	bool is_glass()       const {return (cp.tid < 0 && cp.color.alpha <= 0.5);}
-	bool can_be_scorched()const;
+	// allow destroyable and transparent objects, drawn or opaque model3d shapes
+	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.is_model3d && cp.color.A == 1.0)));}
 	point get_center_pt() const;
 	float get_max_dim()   const;
 	float get_light_transmit(point v1, point v2) const;
 	colorRGBA get_avg_color() const;
 	void bounding_sphere(point &center, float &brad) const;
-	bool has_poly_billboard_alpha() const;
+	bool has_poly_billboard_alpha() const {return (is_billboard && is_thin_poly() && npoints == 4 && cp.has_alpha_texture());}
 	bool check_poly_billboard_alpha(point const &p1, point const &p2, float t) const;
 	bool line_intersect(point const &p1, point const &p2) const;
 	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const;
