@@ -314,8 +314,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
 			for (coll_obj_group::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
 				//if ((i->type == COLL_CUBE) == n) continue;
-				if (i->no_draw()) continue; // only valid if drawing trees, small trees, and scenery separately
-				if (i->status != COLL_STATIC || !i->cp.shadow || i->cp.color.alpha < MIN_SHADOW_ALPHA || i->maybe_is_moving()) continue;
+				if (i->no_draw() || i->no_shadow()) continue; // only valid if drawing trees, small trees, and scenery separately
 				int ndiv(1);
 
 				if (i->type == COLL_SPHERE) {

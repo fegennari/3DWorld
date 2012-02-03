@@ -28,9 +28,9 @@ public:
 	colorRGBA color;
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1,
-		float ts=1.0, float spec=0.0, float shi=0.0, float tx=0.0, float ty=0.0, float ri=1.0, float la=0.0) :
+		float ts=1.0, float spec=0.0, float shi=0.0) :
 		draw(d), is_model3d(0), shadow(1), swap_txy(0), elastic(e), tscale(ts), specular(spec), shine(shi),
-		tdx(0.0), tdy(0.0), refract_ix(ri), light_atten(la), tid(ti), coll_func(cf), color(c) {}
+		tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), tid(ti), coll_func(cf), color(c) {}
 
 	// assumes obj_layer contained classes are POD with no padding
 	bool operator==(obj_layer const &cobj) const {return (memcmp(this, &cobj, sizeof(obj_layer)) == 0);}
@@ -51,10 +51,10 @@ public:
 	bool is_dynamic, is_destroyable, no_coll;
 	//obj_layer *layer;
 
-	cobj_params() : cf_index(-1), is_dynamic(0), is_destroyable(0), no_coll(0), surfs(0) {}
-	cobj_params(float e, colorRGBA const &c, bool d, bool id, const collision_func cf, int ci,
-		int ti=-1, float ts=1.0, int s=0, float spec=0.0, float shi=0.0, bool nc=0, float tx=0.0, float ty=0.0) :
-		obj_layer(e, c, d, cf, ti, ts, spec, shi, tx, ty), cf_index(ci), surfs(s), is_dynamic(id), is_destroyable(0), no_coll(nc) {}
+	cobj_params() : cf_index(-1), surfs(0), is_dynamic(0), is_destroyable(0), no_coll(0) {}
+	cobj_params(float e, colorRGBA const &c, bool d, bool id, const collision_func cf=NULL, int ci=0,
+		int ti=-1, float ts=1.0, int s=0, float spec=0.0, float shi=0.0, bool nc=0) :
+		obj_layer(e, c, d, cf, ti, ts, spec, shi), cf_index(ci), surfs(s), is_dynamic(id), is_destroyable(0), no_coll(nc) {}
 };
 
 
@@ -118,6 +118,7 @@ public:
 	bool is_player()      const;
 	bool is_invis_player()const;
 	bool truly_static()   const;
+	bool no_shadow()      const {return (status != COLL_STATIC || !cp.shadow || cp.color.alpha < MIN_SHADOW_ALPHA || maybe_is_moving());}
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes

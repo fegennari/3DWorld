@@ -149,12 +149,12 @@ void gen_small_trees() {
 void add_small_tree_coll_objs() { // doesn't handle rotation angle
 
 	if (small_trees.empty() || !SMALL_TREE_COLL) return;
-	cobj_params cp      (0.65, GREEN, DRAW_COBJS, 0, NULL, 0, -1,       1.0, 0, (shadow_detail >= 5));
-	cobj_params cp_trunk(0.9, TREE_C, DRAW_COBJS, 0, NULL, 0, WOOD_TEX, 1.0, 0, (shadow_detail >= 6));
+	cobj_params cp      (0.65, GREEN, DRAW_COBJS, 0, NULL, 0, -1);
+	cobj_params cp_trunk(0.9, TREE_C, DRAW_COBJS, 0, NULL, 0, WOOD_TEX);
+	cp.shadow       = (shadow_detail >= 5);
+	cp_trunk.shadow = (shadow_detail >= 6);
 
 	for (unsigned i = 0; i < small_trees.size(); ++i) {
-		cp.cf_index       = i;
-		cp_trunk.cf_index = i;
 		small_trees[i].add_cobjs(cp, cp_trunk);
 	}
 }

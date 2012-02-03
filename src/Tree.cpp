@@ -125,7 +125,7 @@ bool tree::is_over_mesh() const {
 }
 
 
-void tree::gen_tree_shadows(unsigned light_sources, int index) {
+void tree::gen_tree_shadows(unsigned light_sources) {
 
 	if (shadow_detail < 2 || !(tree_mode & 1) || !created) return;
 	// Note: not entirely correct since an off mesh tree can still cast a shadow on the mesh
@@ -147,7 +147,7 @@ void tree::gen_tree_shadows(unsigned light_sources, int index) {
 }
 
 
-void tree::add_tree_collision_objects(int ix) {
+void tree::add_tree_collision_objects() {
 
 	//RESET_TIME;
 	if (!(tree_mode & 1) || !tree_coll_level || !created) return;
@@ -155,7 +155,7 @@ void tree::add_tree_collision_objects(int ix) {
 	if (!is_over_mesh()) return; // optimization
 	int const btid(tree_types[type].bark_tex);
 	colorRGBA const bcolor(tree_types[type].barkc);
-	cobj_params cp(0.8, bcolor, TEST_RTREE_COBJS, 0, NULL, ix, btid, 4.0, 1, 0);
+	cobj_params cp(0.8, bcolor, TEST_RTREE_COBJS, 0, NULL, 0, btid, 4.0, 1, 0);
 	cp.shadow = 0; // will be handled by gen_tree_shadows()
 
 	for (unsigned i = 0; i < all_cylins.size(); i++) {
@@ -172,7 +172,7 @@ void tree::add_tree_collision_objects(int ix) {
 		int const ltid(tree_types[type].leaf_tex);
 		colorRGBA lcolor(get_leaf_base_color(type).modulate_with(texture_color(ltid)));
 		lcolor.alpha = 1.0;
-		cobj_params cpl(0.3, lcolor, TEST_RTREE_COBJS, 0, NULL, ix, (TEST_RTREE_COBJS ? -1 : ltid), 1.0, 0, 0);
+		cobj_params cpl(0.3, lcolor, TEST_RTREE_COBJS, 0, NULL, 0, (TEST_RTREE_COBJS ? -1 : ltid), 1.0, 0, 0);
 		cpl.shadow         = 0;
 		cpl.is_destroyable = 1; // so that truly_static() returns false
 		point const xlate(all_zeros); // for now
@@ -1012,7 +1012,7 @@ void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 
 
 
-void tree::gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs, int ix) {
+void tree::gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs) {
 
 	sphere_center = pos; // z value will be reset later
 	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
@@ -1168,7 +1168,7 @@ void tree::gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs,
 		++base_num_cylins;
 	}
 	create_leaves_and_one_branch_array();
-	if (add_cobjs) add_tree_collision_objects(ix);
+	if (add_cobjs) add_tree_collision_objects();
 }
 
 
@@ -1580,7 +1580,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 		if (nkeep > 0) {
 			for (unsigned i = 0; i < t_trees.size(); ++i) {
 				if (t_trees[i].get_no_delete()) {
-					t_trees[i].add_tree_collision_objects(i);
+					t_trees[i].add_tree_collision_objects();
 					t_trees[i].set_no_delete(0);
 				}
 				else { // remove this tree from the vector
@@ -1623,7 +1623,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 					// *** unique the trees so they can be reused? ***
 				}
 				t_trees.push_back(tree());
-				t_trees.back().regen_tree(pos, 0, t_trees.size()-1); // use random function #2 for trees
+				t_trees.back().regen_tree(pos, 0); // use random function #2 for trees
 			}
 		}
 		if (!scrolling) cout << "Num trees = " << t_trees.size() << endl;
@@ -1639,10 +1639,10 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 }
 
 
-void tree::regen_tree(point &pos, int recalc_shadows, int index) {
+void tree::regen_tree(point &pos, int recalc_shadows) {
 
-	gen_tree(pos, 0, -1, 1, 1, index);
-	if (recalc_shadows) gen_tree_shadows((SUN_SHADOW | MOON_SHADOW), index);
+	gen_tree(pos, 0, -1, 1, 1);
+	if (recalc_shadows) gen_tree_shadows((SUN_SHADOW | MOON_SHADOW));
 }
 
 
@@ -1678,7 +1678,7 @@ void shift_trees(vector3d const &vd) {
 void add_tree_cobjs() {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].add_tree_collision_objects(i);
+		t_trees[i].add_tree_collision_objects();
 	}
 }
 

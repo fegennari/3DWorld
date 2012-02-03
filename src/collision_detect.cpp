@@ -26,7 +26,7 @@ point camera_last_pos(all_zeros); // not sure about this, need to reset sometime
 coll_obj_group coll_objects;
 
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
-extern int camera_in_air, mesh_scale_change, camera_invincible, flight, do_run, cobj_counter, num_smileys;
+extern int camera_in_air, mesh_scale_change, camera_invincible, flight, do_run, num_smileys;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
 extern double camera_zh;
 extern dwobject def_objects[];

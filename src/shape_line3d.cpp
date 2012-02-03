@@ -282,7 +282,7 @@ void shape3d::add_cobjs(vector<int> &cids, bool draw) {
 			points2[j] = points[faces[i].v[j]]*scale + pos;
 		}
 		scolor const &sc(colors[faces[i].color_id]);
-		cids.push_back(add_coll_polygon(points2, 3, cobj_params(0.7, sc.c, draw, 0, NULL, i, sc.tid), 0.0));
+		cids.push_back(add_coll_polygon(points2, 3, cobj_params(0.7, sc.c, draw, 0, NULL, 0, sc.tid), 0.0));
 	}
 }
 

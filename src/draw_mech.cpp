@@ -98,16 +98,12 @@ void add_hmv_coll_objs(point &pos, float scale) {
 		}
 		purge_coll_freed(1);
 	}
-
 	// wheels
-	hmv_coll_obj.push_back(add_coll_cylinder(x+0.19*scale, y+0.08*scale, z, x+0.19*scale, y,            z,
-		wheelr, wheelr, cobj_params(0.9, BKGRAY, DRAW_HMV_COBJS, 0, NULL, 0)));
-	hmv_coll_obj.push_back(add_coll_cylinder(x+0.19*scale, y+0.5*scale,  z, x+0.19*scale, y+0.42*scale, z,
-		wheelr, wheelr, cobj_params(0.9, BKGRAY, DRAW_HMV_COBJS, 0, NULL, 1)));
-	hmv_coll_obj.push_back(add_coll_cylinder(x+0.81*scale, y+0.08*scale, z, x+0.81*scale, y,            z,
-		wheelr, wheelr, cobj_params(0.9, BKGRAY, DRAW_HMV_COBJS, 0, NULL, 2)));
-	hmv_coll_obj.push_back(add_coll_cylinder(x+0.81*scale, y+0.5*scale,  z, x+0.81*scale, y+0.42*scale, z,
-		wheelr, wheelr, cobj_params(0.9, BKGRAY, DRAW_HMV_COBJS, 0, NULL, 3)));
+	cobj_params const cp(0.9, BKGRAY, DRAW_HMV_COBJS, 0);
+	hmv_coll_obj.push_back(add_coll_cylinder(x+0.19*scale, y+0.08*scale, z, x+0.19*scale, y,            z, wheelr, wheelr, cp));
+	hmv_coll_obj.push_back(add_coll_cylinder(x+0.19*scale, y+0.5*scale,  z, x+0.19*scale, y+0.42*scale, z, wheelr, wheelr, cp));
+	hmv_coll_obj.push_back(add_coll_cylinder(x+0.81*scale, y+0.08*scale, z, x+0.81*scale, y,            z, wheelr, wheelr, cp));
+	hmv_coll_obj.push_back(add_coll_cylinder(x+0.81*scale, y+0.5*scale,  z, x+0.81*scale, y+0.42*scale, z, wheelr, wheelr, cp));
 
 	// body
 	hmv_shape.add_cobjs(hmv_coll_obj, DRAW_HMV_COBJS);

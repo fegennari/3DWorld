@@ -1070,7 +1070,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				tree t;
 				t_trees.push_back(t);
 				xf.xform_pos(pos);
-				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, t_trees.size()-1);
+				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0);
 				tree_mode |= 1; // enable trees
 			}
 			break;

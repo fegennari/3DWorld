@@ -136,8 +136,7 @@ int light_valid(unsigned light_sources, int l, point &lpos) {
 
 void coll_obj::add_shadow(unsigned light_sources, bool dynamic) const {
 
-	if (status != COLL_STATIC || cp.color.alpha < MIN_SHADOW_ALPHA || !cp.shadow) return;
-	if (dynamic != dynamic_shadows_only()) return;
+	if (no_shadow() || dynamic != dynamic_shadows_only()) return;
 
 	switch (type) {
 	case COLL_CUBE:
@@ -183,7 +182,7 @@ void add_cobj_shadows(unsigned light_sources) {
 	}
 #else
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].gen_tree_shadows(light_sources, i);
+		t_trees[i].gen_tree_shadows(light_sources);
 	}
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {
 		coll_objects[i].add_shadow(light_sources, 0);

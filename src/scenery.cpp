@@ -633,8 +633,8 @@ public:
 		float const r2(radius+0.07*wscale*(height+0.03));
 		cpos.z  += height;
 		cpos2.z += 3.0*height/(36.0*height + 4.0);
-		coll_id  = add_coll_cylinder(pos,   cpos, radius, 0.0,    cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX,         1.0, 0, 1)); // trunk
-		coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid, 1.0, 0, 1)); // leaves
+		coll_id  = add_coll_cylinder(pos,   cpos, radius, 0.0,    cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX        )); // trunk
+		coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
 	}
 
 	void gen_points() {

@@ -145,7 +145,7 @@ void dynamic_particle::add_stencil_shadows(point const &lpos, int &inverts) cons
 }
 
 void dynamic_particle::add_cobj() {
-	if (ADD_DP_COBJS) cid = add_coll_sphere(pos, radius, cobj_params(0.7, color, 0, 1, NULL, 0));
+	if (ADD_DP_COBJS) cid = add_coll_sphere(pos, radius, cobj_params(0.7, color, 0, 1));
 }
 
 void dynamic_particle::remove_cobj() {
