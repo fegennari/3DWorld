@@ -61,7 +61,6 @@ extern tree_cont_t t_trees;
 
 int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
 				 unsigned app_rate, bool init_enabled, bool reorderable, bool auot_max);
-void shift_fixed_cobjs(vector3d const &vd);
 void free_all_coll_objects();
 void add_all_coll_objects(const char *coll_obj_file, bool re_add);
 int read_coll_objects(const char *coll_obj_file);
@@ -633,9 +632,17 @@ void shift_point_vector(vector<point> &pts, vector3d const &vd) {
 }
 
 
+void shift_all_cobjs(vector3d const &vd) {
+
+	for (unsigned i = 0; i < coll_objects.size(); ++i) {
+		coll_objects[i].shift_by(vd);
+	}
+}
+
+
 void shift_all_objs(vector3d const &vd) {
 
-	shift_fixed_cobjs(vd);
+	shift_all_cobjs(vd);
 	shift_hmv(vd);
 	shift_trees(vd);
 	shift_small_trees(vd);
@@ -668,14 +675,6 @@ void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) 
 	}
 	cube_t::translate(vd);
 	if (!no_texture_offset) texture_offset -= vd;
-}
-
-
-void shift_fixed_cobjs(vector3d const &vd) {
-
-	for (unsigned i = 0; i < coll_objects.size(); ++i) {
-		coll_objects[i].shift_by(vd);
-	}
 }
 
 
@@ -718,20 +717,20 @@ void check_contained_cube_sides() {
 
 void coll_obj_group::finalize() {
 
-	fixed_cobjs.process_negative_shapes(); // must be first because requires an unmodified ordering of shapes
+	process_negative_shapes(); // must be first because requires an unmodified ordering of shapes
 	bool has_cubes(0), any_drawn(0);
 
-	for (coll_obj_group::const_iterator i = fixed_cobjs.begin(); i != fixed_cobjs.end(); ++i) {
+	for (coll_obj_group::const_iterator i = begin(); i != end(); ++i) {
 		has_cubes |= (i->type == COLL_CUBE);
 		any_drawn |= i->cp.draw;
 	}
 	if (has_cubes) { // Note: important to do this test on large polygon-only models
-		fixed_cobjs.remove_overlapping_cubes();
-		fixed_cobjs.merge_cubes (); // and alpha sort
-		fixed_cobjs.subdiv_cubes();
-		fixed_cobjs.check_cubes (); // sanity check, should be last
+		remove_overlapping_cubes();
+		merge_cubes (); // and alpha sort
+		subdiv_cubes();
+		check_cubes (); // sanity check, should be last
 	}
-	if (any_drawn) fixed_cobjs.sort_cobjs_for_rendering();
+	if (any_drawn) sort_cobjs_for_rendering();
 }
 
 
