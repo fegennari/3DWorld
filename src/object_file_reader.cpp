@@ -583,7 +583,7 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 		if (cubes) {
 			RESET_TIME;
 			cur_model.get_cubes(*cubes, xf.scale*voxel_xy_spacing);
-			cur_model.set_has_cobjs(); // ???
+			//cur_model.set_has_cobjs(); // billboard cobjs are not added, and the colors/textures are missing
 			PRINT_TIME("Create Model3d Cubes");
 		}
 		return 1;
