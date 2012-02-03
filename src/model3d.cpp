@@ -807,6 +807,37 @@ struct float_plus_dir {
 };
 
 
+template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &polygons, T const &cont,
+	vector<vector<float_plus_dir> > &zvals, int bounds[2][2], int num_xy[2], float spacing, unsigned &nhq)
+{
+	model3d_stats_t stats;
+	cont.get_stats(stats);
+	polygons.resize(0);
+	polygons.reserve(stats.quads);
+	cont.get_polygons(polygons, WHITE, 1);
+	
+	for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
+		assert(i->npts == 4);
+		if (fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
+		cube_t const bcube(i->get_bcube());
+		if ((bcube.d[2][1] - bcube.d[2][0]) > 0.5*spacing) continue; // can this happen?
+		int cbounds[2][2];
+		calc_bounds(bcube, cbounds, spacing);
+		bool const is_top(i->normal.z > 0.0);
+		++nhq;
+		
+		for (int y = cbounds[1][0]; y < cbounds[1][1]; ++y) {
+			for (int x = cbounds[0][0]; x < cbounds[0][1]; ++x) {
+				int const xv(x - bounds[0][0]), yv(y - bounds[1][0]);
+				assert(xv >= 0 && yv >= 0 && xv < num_xy[0] && yv < num_xy[1]);
+				zvals[xv + num_xy[0]*yv].push_back(float_plus_dir(bcube.d[2][0], is_top));
+			}
+		}
+	}
+	return polygons.size();
+}
+
+
 void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
 
 	assert(spacing > 0.0);
@@ -821,7 +852,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
 		num_xy[d] = (bounds[d][1] - bounds[d][0]);
 	}
 	unsigned const num_tot(num_xy[0]*num_xy[1]);
-	vector<vector<float_plus_dir> > zvals;
+	vector<vector<float_plus_dir> > zvals(num_tot);
 	unsigned num_horiz_quads(0), num_polys(0), num_pre_merged_cubes(0);
 	cout << ", size: " << num_xy[0] << "x" << num_xy[1] << " = " << num_tot << endl;
 
@@ -829,27 +860,11 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
 	{
 		// we technically only want the horizontal quads, but it's difficult to filter them out earlier
 		vector<coll_tquad> polygons;
-		get_polygons(polygons, 1); // split into blocks?
-		num_polys = polygons.size();
-		zvals.resize(num_tot);
+		num_polys += add_polygons_to_voxel_grid(polygons, unbound_geom, zvals, bounds, num_xy, spacing, num_horiz_quads);
 
-		for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
-			assert(i->npts == 4);
-			if (fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
-			cube_t const bcube(i->get_bcube());
-			if ((bcube.d[2][1] - bcube.d[2][0]) > 0.5*spacing) continue; // can this happen?
-			int cbounds[2][2];
-			calc_bounds(bcube, cbounds, spacing);
-			bool const is_top(i->normal.z > 0.0);
-			++num_horiz_quads;
-		
-			for (int y = cbounds[1][0]; y < cbounds[1][1]; ++y) {
-				for (int x = cbounds[0][0]; x < cbounds[0][1]; ++x) {
-					int const xv(x - bounds[0][0]), yv(y - bounds[1][0]);
-					assert(xv >= 0 && yv >= 0 && xv < num_xy[0] && yv < num_xy[1]);
-					zvals[xv + num_xy[0]*yv].push_back(float_plus_dir(bcube.d[2][0], is_top));
-				}
-			}
+		for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+			num_polys += add_polygons_to_voxel_grid(polygons, m->geom,     zvals, bounds, num_xy, spacing, num_horiz_quads);
+			num_polys += add_polygons_to_voxel_grid(polygons, m->geom_tan, zvals, bounds, num_xy, spacing, num_horiz_quads);
 		}
 	}
 
