@@ -377,7 +377,7 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 				if (SUB_CUBE_MERGE) {
 					bool merged(0);
 					for (unsigned c = 0; c < output.size() && !merged; ++c) {
-						if (output[c].cube_merge(ncube, 1)) merged = 1;
+						if (output[c].cube_merge(ncube)) merged = 1;
 					}
 					if (merged) continue;
 				}
@@ -562,7 +562,7 @@ float get_cube_dmax() {
 
 
 // could do this dynamically as cubes are split
-bool csg_cube::cube_merge(csg_cube &cube, bool proc_eflags) {
+bool csg_cube::cube_merge(csg_cube &cube) {
 
 	unsigned compat[3], nc(0), ci(0);
 
@@ -570,17 +570,15 @@ bool csg_cube::cube_merge(csg_cube &cube, bool proc_eflags) {
 		compat[i] = 1;
 		for (unsigned j = 0; j < 2; ++j) {
 			if (cube.d[i][j] != d[i][j]) compat[i] = 0;
-			else if (EFLAGS_STRICT && proc_eflags && ((cube.eflags ^ eflags) & EFLAGS[i][j])) compat[i] = 0;
+			else if (EFLAGS_STRICT && ((cube.eflags ^ eflags) & EFLAGS[i][j])) compat[i] = 0;
 		}
 		if (compat[i]) ++nc; else ci = i;
 	}
 	if (nc >= 2) { // compatible
 		if (nc == 3) { // same cube, remove it
-			if (proc_eflags) {
-				for (unsigned i = 0; i < 3; ++i) { // merge edge flags
-					for (unsigned j = 0; j < 2; ++j) {
-						if (!(cube.eflags & EFLAGS[i][j])) eflags &= ~EFLAGS[i][j];
-					}
+			for (unsigned i = 0; i < 3; ++i) { // merge edge flags
+				for (unsigned j = 0; j < 2; ++j) {
+					if (!(cube.eflags & EFLAGS[i][j])) eflags &= ~EFLAGS[i][j];
 				}
 			}
 			return 1;
@@ -589,21 +587,17 @@ bool csg_cube::cube_merge(csg_cube &cube, bool proc_eflags) {
 
 		for (unsigned i = 0; i < 2; ++i) { // only one iteration will merge something
 			if (cube.d[ci][1-i] == d[ci][i]) { // adjacent
-				if (proc_eflags) { // only size test for real eflags cubes
-					float const dval(fabs(cube.d[ci][i] - d[ci][1-i]));
-					if (dval > dmax) return 0; // resulting cube will be too large
-				}
+				// only size test for real eflags cubes
+				float const dval(fabs(cube.d[ci][i] - d[ci][1-i]));
+				if (dval > dmax) return 0; // resulting cube will be too large
 				d[ci][i] = cube.d[ci][i];
+				eflags  &= ~EFLAGS[ci][i];
+				eflags  |= (cube.eflags & EFLAGS[ci][i]);
 
-				if (proc_eflags) {
-					eflags  &= ~EFLAGS[ci][i];
-					eflags  |= (cube.eflags & EFLAGS[ci][i]);
-
-					for (unsigned j = 0; j < 3; ++j) { // set shared edge flags
-						if (j != ci) {
-							for (unsigned k = 0; k < 2; ++k) {
-								if (!(cube.eflags & EFLAGS[j][k])) eflags &= ~EFLAGS[j][k];
-							}
+				for (unsigned j = 0; j < 3; ++j) { // set shared edge flags
+					if (j != ci) {
+						for (unsigned k = 0; k < 2; ++k) {
+							if (!(cube.eflags & EFLAGS[j][k])) eflags &= ~EFLAGS[j][k];
 						}
 					}
 				}
@@ -611,7 +605,7 @@ bool csg_cube::cube_merge(csg_cube &cube, bool proc_eflags) {
 			}
 		}
 	}
-	if (CHECK_ADJACENCY && proc_eflags /*&& nc == 1*/) { // no merge, determine contained faces (does gridbag need overlap to catch all of these cases?)
+	if (CHECK_ADJACENCY /*&& nc == 1*/) { // no merge, determine contained faces (does gridbag need overlap to catch all of these cases?)
 		bool adjacent(0);
 
 		for (unsigned i = 0; i < 3 && !adjacent; ++i) { // could we use ci or something?
@@ -755,7 +749,7 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 			if (!(*this)[i].equal_params((*this)[j])) continue; // not compatible
 			csg_cube cube2((*this)[j]);
 
-			if (cube.cube_merge(cube2, 1)) {
+			if (cube.cube_merge(cube2)) {
 				(*this)[j].type = COLL_INVALID; // remove old coll obj
 				++mi;
 			}

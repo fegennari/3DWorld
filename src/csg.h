@@ -70,7 +70,7 @@ public:
 	bool subtract_from_cube(coll_obj_group &new_cobjs, coll_obj const &cobj) const;
 	bool subtract_from_cylinder(coll_obj_group &new_cobjs, coll_obj &cobj) const;
 	bool subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &cobj) const;
-	bool cube_merge(csg_cube &cube, bool proc_eflags); // const cube?
+	bool cube_merge(csg_cube &cube); // const cube?
 	void unset_adjacent_edge_flags(coll_obj &cobj) const;
 	void unset_intersecting_edge_flags(coll_obj &cobj) const;
 	float get_d(unsigned dim, bool dir) const {assert(dim >= 0 && dim < 3); return d[dim][dir];}
