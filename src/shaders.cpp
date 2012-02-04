@@ -59,6 +59,10 @@ void shader_t::set_uniform_color(int loc, colorRGBA const &val) const {
 	if (loc >= 0) glUniform4fv(loc, 1, &val.R);
 }
 
+void shader_t::set_uniform_color(int loc, colorRGB  const &val) const {
+	if (loc >= 0) glUniform3fv(loc, 1, &val.R);
+}
+
 
 void shader_t::add_uniform_float_array(char const *const name, float const *const val, unsigned num) const {
 	if (!disable_shaders) set_uniform_float_array(get_uniform_loc(name), val, num);
@@ -77,6 +81,10 @@ void shader_t::add_uniform_vector3d(char const *const name, vector3d const &val)
 }
 
 void shader_t::add_uniform_color(char const *const name, colorRGBA const &val) const {
+	if (!disable_shaders) set_uniform_color(get_uniform_loc(name), val);
+}
+
+void shader_t::add_uniform_color(char const *const name, colorRGB  const &val) const {
 	if (!disable_shaders) set_uniform_color(get_uniform_loc(name), val);
 }
 
