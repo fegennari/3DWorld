@@ -21,7 +21,7 @@ void main()
 
 	normal = normalize(gl_Normal);
 	dlpos  = vertex.xyz;
-	eye    = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
+	eye    = gl_ModelViewMatrixInverse[3].xyz; // world space
 	
 	// calculate lighting: L0-L1 is directional
 	vec4 color = gl_Color * gl_LightModel.ambient;

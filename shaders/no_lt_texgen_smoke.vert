@@ -28,7 +28,7 @@ void main()
 	epos     = gl_ModelViewMatrix * gl_Vertex;
 	vpos     = gl_Vertex.xyz;
 	spos     = gl_Vertex.xyz + (indir_vert_offset*half_dxy)*normal; // move slightly away from the vertex
-	eye      = (gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; // world space
+	eye      = gl_ModelViewMatrixInverse[3].xyz; // world space
 
 #ifdef USE_BUMP_MAP
 	setup_tbn();

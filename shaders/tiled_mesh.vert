@@ -25,7 +25,7 @@ vec4 add_light_comp(in vec3 normal, in int i) {
 	
 	// apply underwater attenuation
 	// Note: ok if vertex is above the water, dist will come out as 0
-	vec4 eye   = gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0); // world space
+	vec4 eye   = gl_ModelViewMatrixInverse[3]; // world space
 	vec4 light = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 	float dist = integrate_water_dist(gl_Vertex.xyz, eye.xyz, water_plane_z) + integrate_water_dist(gl_Vertex.xyz, light.xyz, water_plane_z);
 	atten_color(color, dist*water_atten);
@@ -51,7 +51,7 @@ void main()
 #else
 	// clip the line to the water plane if the eye is above the water
 	// could use different terms/fog scaling/color for inside/outside water?
-	vec4 eye = gl_ModelViewMatrixInverse * vec4(0.0, 0.0, 0.0, 1.0); // world space
+	vec4 eye = gl_ModelViewMatrixInverse[3]; // world space
 	float t = min(1.0, (eye.z - water_plane_z)/max(0.0, (eye.z - gl_Vertex.z)));
 	vec4 clipped_vert = mix(eye, gl_Vertex, ((t < 0.0) ? 1.0 : t));
 	gl_FogFragCoord = length((gl_ModelViewMatrix * clipped_vert).xyz);
