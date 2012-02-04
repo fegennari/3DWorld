@@ -18,9 +18,8 @@ float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 
 
 // Global Variables
-bool have_drawn_cobj, have_platform_cobj, camera_on_snow(0);
+bool camera_on_snow(0);
 int camera_coll_id(-1);
-unsigned cobjs_removed(0), index_top(0);
 float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
 coll_obj_group coll_objects;
@@ -103,9 +102,11 @@ class cobj_manager_t {
 
 	vector<int> index_stack;
 	coll_obj_group &cobjs;
+	unsigned index_top;
 
 public:
-	cobj_manager_t(coll_obj_group &cobjs_) : cobjs(cobjs_) {}
+	unsigned cobjs_removed;
+	cobj_manager_t(coll_obj_group &cobjs_) : cobjs(cobjs_), index_top(0), cobjs_removed(0) {}
 
 	void reserve_cobjs(unsigned size) {
 		unsigned const old_size(cobjs.size());
@@ -653,7 +654,7 @@ int remove_coll_object(int index, bool reset_draw) {
 	
 	if (c.status == COLL_STATIC) {
 		//free_index(index); // can't do this here - object's collision id needs to be held until purge
-		++cobjs_removed;
+		++cobj_manager.cobjs_removed;
 		return 0;
 	}
 	int x1, y1, x2, y2;
@@ -686,7 +687,7 @@ int remove_reset_coll_obj(int &index) {
 
 void purge_coll_freed(bool force) {
 
-	if (!force && cobjs_removed < PURGE_THRESH) return;
+	if (!force && cobj_manager.cobjs_removed < PURGE_THRESH) return;
 	//RESET_TIME;
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -722,7 +723,7 @@ void purge_coll_freed(bool force) {
 	for (unsigned i = 0; i < ncobjs; ++i) {
 		if (coll_objects[i].status == COLL_FREED) cobj_manager.free_index(i);
 	}
-	cobjs_removed = 0;
+	cobj_manager.cobjs_removed = 0;
 	//PRINT_TIME("Purge");
 }
 
@@ -766,8 +767,8 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 	cobj.falling     = 0;
 	cobj.calc_size();
 	cobj.set_npoints();
-	have_drawn_cobj    |= cparams.draw;
-	have_platform_cobj |= (platform_id >= 0);
+	coll_objects.have_drawn_cobj    |= cparams.draw;
+	coll_objects.have_platform_cobj |= (platform_id >= 0);
 }
 
 

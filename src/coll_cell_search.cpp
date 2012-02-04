@@ -351,7 +351,7 @@ void get_occluders() {
 	//#pragma omp parallel for schedule(static,1) // helps in some cases and hurts in others
 	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {
 		coll_obj &cobj(coll_objects[i]);
-		if (!cobj.fixed || cobj.group_id >= 0 || cobj.status != COLL_STATIC || !cobj.cp.draw || cobj.cp.surfs == EF_ALL) continue;
+		if (!cobj.fixed || cobj.group_id >= 0 || cobj.status != COLL_STATIC || cobj.cp.no_draw() || cobj.cp.surfs == EF_ALL) continue;
 		get_coll_line_cobjs(camera, cobj.get_cube_center(), i, coll_objects[i].occluders);
 	}
 	if (skipval == 0) {PRINT_TIME("Occlusion Preprocessing");}

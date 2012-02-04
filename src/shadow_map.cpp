@@ -15,7 +15,6 @@ bool scene_dlist_invalid(0);
 unsigned shadow_map_sz(0), smap_dlist(0);
 pos_dir_up orig_camera_pdu;
 
-extern bool have_drawn_cobj;
 extern int window_width, window_height, animate2, display_mode, ground_effects_level;
 extern vector<shadow_sphere> shadow_objs;
 extern coll_obj_group coll_objects;
@@ -295,7 +294,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			draw_sphere_dlist(i->pos, i->radius, ndiv, 0); // use circle texture billboards?
 		}
 	}
-	if (!have_drawn_cobj) {
+	if (!coll_objects.have_drawn_cobj) {
 		// do nothing
 	}
 	else if (smap_dlist) {

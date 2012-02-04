@@ -41,10 +41,10 @@ vector<portal> portals;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool have_platform_cobj, clear_landscape_vbo;
+extern bool clear_landscape_vbo;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items;
-extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS;
+extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin;
 extern point cpos2, orig_camera, orig_cdir;
 extern unsigned init_item_counts[];
@@ -212,7 +212,7 @@ void dwobject::update_precip_type() {
 
 void process_platforms() {
 
-	if (animate2 && have_platform_cobj) {
+	if (animate2 && coll_objects.have_platform_cobj) {
 		int const max_i(obj_groups[coll_id[SMILEY]].is_enabled() ? num_smileys : 0);
 
 		for (int i = ((camera_mode == 1) ? CAMERA_ID : 0); i < max_i; ++i) {
@@ -220,7 +220,7 @@ void process_platforms() {
 		}
 		platforms.advance_timestep();
 	}
-	if (!platforms.empty()) { // add mesh shadows for dynamic platforms
+	if (!platforms.empty() && ground_effects_level > 0 && !shadow_map_enabled()) { // add mesh shadows for dynamic platforms
 		for (unsigned i = 0; i < coll_objects.size(); ++i) {
 			if (coll_objects[i].dynamic_shadows_only()) {
 				coll_objects[i].add_shadow((SUN_SHADOW | MOON_SHADOW), 1);

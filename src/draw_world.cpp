@@ -49,7 +49,7 @@ pt_line_drawer_hdr snow_pld;
 
 
 extern GLUquadricObj* quadric;
-extern bool have_sun, underwater, have_drawn_cobj, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
+extern bool have_sun, underwater, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
 extern bool group_back_face_cull, no_sun_lpos_update;
 extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
@@ -1852,7 +1852,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	if (draw_solid) {
 		draw_last.resize(0);
 		
-		if (have_drawn_cobj) {
+		if (coll_objects.have_drawn_cobj) {
 			for (unsigned i = 0; i < coll_objects.size(); ++i) {
 				coll_obj const &c(coll_objects[i]);
 				if (c.no_draw()) continue;
