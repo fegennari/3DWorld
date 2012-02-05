@@ -50,7 +50,7 @@ pt_line_drawer_hdr snow_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
-extern bool group_back_face_cull, no_sun_lpos_update;
+extern bool group_back_face_cull, no_sun_lpos_update, have_indir_smoke_tex;
 extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
@@ -59,6 +59,7 @@ extern float zmin, light_factor, water_plane_z, fticks, perspective_fovy, perspe
 extern float temperature, atmosphere, TIMESTEP, base_gravity, tan_term, zbottom, sun_rot, leaf_size, indir_vert_offset;
 extern point light_pos, ocean, mesh_origin, flow_source, surface_pos, litning_pos, leaf_points[], star_pts[];
 extern vector3d wind;
+extern colorRGB const_indir_color;
 extern colorRGBA bkg_color, sun_color;
 extern lightning l_strike;
 extern vector<spark_t> sparks;
@@ -1733,6 +1734,8 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
+	indir_lighting &= have_indir_smoke_tex;
+	smoke_en       &= have_indir_smoke_tex;
 	s.set_int_prefix ("use_texgen",      use_texgen,      0); // VS
 	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
 	s.set_bool_prefix("indir_lighting",  indir_lighting,  1); // FS
@@ -1778,6 +1781,9 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
 	if (use_bmap)     s.add_uniform_int("bump_map", 5);
 	if (use_spec_map) s.add_uniform_int("spec_map", 8);
+	colorRGB const black_color(0.0, 0.0, 0.0);
+	s.add_uniform_color("const_indir_color", (have_indir_smoke_tex ? black_color : const_indir_color));
+
 	//return change_fog_color(GRAY);
 
 	// setup fog

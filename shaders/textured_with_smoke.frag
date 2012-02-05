@@ -7,6 +7,8 @@ uniform float min_alpha = 0.0;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6];
 
+uniform vec3 const_indir_color = vec3(0,0,0);
+
 // clipped eye position, clipped vertex position, starting vertex position
 varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
 // epos and eye_norm come from bump_map.frag
@@ -87,6 +89,7 @@ void main()
 	vec3 off   = vec3(-x_scene_size, -y_scene_size, czmin);
 	vec3 scale = vec3(2.0*x_scene_size, 2.0*y_scene_size, (czmax - czmin));
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
+	lit_color += gl_FrontMaterial.diffuse.rgb * const_indir_color; // add constant indir
 	
 	if (indir_lighting) {
 		vec3 sp    = clamp((spos  - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range

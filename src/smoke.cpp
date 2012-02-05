@@ -20,8 +20,9 @@ float const SMOKE_DIS_ZU     = 0.08;
 float const SMOKE_DIS_ZD     = 0.03;
 
 
-bool smoke_visible(0), smoke_exists(0);
+bool smoke_visible(0), smoke_exists(0), have_indir_smoke_tex(0);
 unsigned smoke_tid(0);
+colorRGB const_indir_color(BLACK);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
@@ -220,11 +221,17 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 bool upload_smoke_3d_texture() { // and indirect lighting information
 
 	//RESET_TIME;
-	if (disable_shaders || lmap_manager.vlmap == NULL) return 0;
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
 	// is it ok when texture z size is not a power of 2?
 	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(4);
-	if (sz == 0) return 0; // zsize was 0?
+	lmcell default_lmc;
+	default_lmc.set_outside_colors();
+	default_lmc.get_final_color(const_indir_color, 1.0);
+
+	if (disable_shaders || lmap_manager.vlmap == NULL || sz == 0) {
+		have_indir_smoke_tex = 0;
+		return 0;
+	}
 	bool init_call(0);
 	vector<unsigned char> &data(smoke_tex_data);
 
@@ -254,8 +261,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
 	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
-	lmcell default_lmc;
-	default_lmc.set_outside_colors();
+	have_indir_smoke_tex = 1;
 	
 	if (indir_lighting_updated) { // running with multiple threads, don't use openmp
 		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
