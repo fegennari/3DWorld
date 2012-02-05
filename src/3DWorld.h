@@ -1248,6 +1248,7 @@ struct lightning;
 struct color_tid_vol;
 class  shader_t;
 class  vert_coll_detector;
+struct cobj_query_callback;
 
 
 extern float CAMERA_RADIUS, C_STEP_HEIGHT;
@@ -1583,7 +1584,8 @@ bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, v
 bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0, bool skip_non_drawn=0);
 bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts,
 	int ignore_cobj, int &cobj);
-void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs, bool dynamic, bool occlude);
+void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj,
+	vector<int> *cobjs, cobj_query_callback *cqc, bool dynamic, bool occlude);
 void get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, vert_coll_detector &vcd, bool dynamic);
 bool have_occluders();
 void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler,
@@ -1592,7 +1594,6 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int c_obj, int skip_dy
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_norm, int &cindex, float splash_val=0.0,
 						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0);
 bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj);
-bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs);
 bool is_occluded(vector<int> const &occluders, point const *const pts0, int npts, point const &camera);
 void add_camera_cobj(point const &pos);
 void force_onto_surface_mesh(point &pos);

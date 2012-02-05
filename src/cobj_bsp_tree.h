@@ -104,7 +104,7 @@ public:
 		bool exact, int test_alpha, bool skip_non_drawn) const;
 	void get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const;
 	bool is_cobj_contained(point const &p1, point const &p2, point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const;
-	void get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs, bool occlude) const;
+	void get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> *cobjs, cobj_query_callback *cqc, bool occlude) const;
 	void get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const;
 };
 

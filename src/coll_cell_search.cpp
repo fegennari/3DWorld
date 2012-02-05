@@ -274,14 +274,6 @@ bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, i
 }
 
 
-bool get_coll_line_cobjs(point pos1, point pos2, int cobj, vector<int> &cobjs) {
-
-	cobjs.resize(0);
-	get_coll_line_cobjs_tree(pos1, pos2, cobj, cobjs, 0, 1);
-	return (!cobjs.empty());
-}
-
-
 bool coll_obj::is_occluder() const {
 	
 	if (status != COLL_STATIC || !cp.draw || is_semi_trans()) return 0; // cp.might_be_drawn()?
@@ -352,7 +344,8 @@ void get_occluders() {
 	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {
 		coll_obj &cobj(coll_objects[i]);
 		if (!cobj.fixed || cobj.group_id >= 0 || cobj.status != COLL_STATIC || cobj.cp.no_draw() || cobj.cp.surfs == EF_ALL) continue;
-		get_coll_line_cobjs(camera, cobj.get_cube_center(), i, coll_objects[i].occluders);
+		cobj.occluders.resize(0);
+		get_coll_line_cobjs_tree(camera, cobj.get_cube_center(), i, &cobj.occluders, NULL, 0, 1);
 	}
 	if (skipval == 0) {PRINT_TIME("Occlusion Preprocessing");}
 }

@@ -164,6 +164,11 @@ public:
 };
 
 
+struct cobj_query_callback {
+	virtual void register_cobj(coll_obj const &cobj) = 0;
+};
+
+
 class polygon_t : public vector<vert_norm_tc> {
 
 public:

@@ -424,8 +424,10 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::is_cobj_contained(point const &p1,
 }
 
 
-template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs, bool occlude) const {
-
+template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_line_cobjs(point const &pos1, point const &pos2,
+	int ignore_cobj, vector<int> *cobjs, cobj_query_callback *cqc, bool occlude) const
+{
+	assert(cobjs || cqc);
 	if (nodes.empty()) return;
 	node_ix_mgr nixm(nodes, pos1, pos2);
 	unsigned const num_nodes(nodes.size());
@@ -439,7 +441,8 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_line_cobjs(point const &p
 			coll_obj const &c(get_cobj(i));
 			if (!obj_ok(c)) continue;
 			if (occlude && !(c.is_big_occluder() && check_line_clip_expand(pos1, pos2, c.d, GET_OCC_EXPAND))) continue;
-			cobjs.push_back(cixs[i]);
+			if (cobjs) cobjs->push_back(cixs[i]);
+			if (cqc  ) cqc->register_cobj(c);
 		}
 	}
 }
@@ -635,8 +638,10 @@ bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, 
 }
 
 
-void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj, vector<int> &cobjs, bool dynamic, bool occlude) {
-	(occlude ? cobj_tree_occlude : get_tree(dynamic)).get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, occlude);
+void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj,
+	vector<int> *cobjs, cobj_query_callback *cqc, bool dynamic, bool occlude)
+{
+	(occlude ? cobj_tree_occlude : get_tree(dynamic)).get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, cqc, occlude);
 }
 
 
