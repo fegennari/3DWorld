@@ -1020,7 +1020,7 @@ void upload_dlights_textures() {
 	unsigned const max_dlights      = 1024; // must agree with value in shader
 	unsigned const floats_per_light = 12;
 	float dl_data[max_dlights*floats_per_light] = {0.0};
-	unsigned const ndl(min(max_dlights, dl_sources.size()));
+	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
 	unsigned const ysz(floats_per_light/4);
 	float const radius_scale(1.0/X_SCENE_SIZE);
 	vector3d const poff(-X_SCENE_SIZE, -Y_SCENE_SIZE, get_zval_min());
@@ -1056,7 +1056,7 @@ void upload_dlights_textures() {
 			unsigned const gb_ix(x + y*MESH_X_SIZE); // {start, end, unused}
 			gb_data[gb_ix] = elix; // start_ix
 			vector<unsigned short> const &ixs(ldynamic[y][x].get_src_ixs());
-			unsigned const num_ixs(min(ixs.size(), 256U)); // max of 256 lights per bin
+			unsigned const num_ixs(min((unsigned)ixs.size(), 256U)); // max of 256 lights per bin
 			
 			for (unsigned i = 0; i < num_ixs && elix < max_gb_entries; ++i) { // end if exceed max entries
 				if (ixs[i] >= ndl) continue; // dlight index is too high, skip
@@ -1511,7 +1511,7 @@ unsigned enable_dynamic_lights(point const center, float radius) {
 		vis_lights.push_back(make_pair(weight/ls_radius, i));
 	}
 	sort(vis_lights.begin(), vis_lights.end());
-	unsigned const num_dlights(min(vis_lights.size(), MAX_LIGHTS));
+	unsigned const num_dlights(min((unsigned)vis_lights.size(), MAX_LIGHTS));
 
 	for (unsigned i = 0; i < num_dlights; ++i) {
 		int const gl_light(START_LIGHT+i);

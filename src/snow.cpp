@@ -221,7 +221,7 @@ public:
 			if (nt[i].z < 0.0) nt[i].negate(); // normal is always +z
 		}
 		for (unsigned i = 0; i < size; ++i) { // average triangle normals to get vertex normals
-			unsigned const k1((i > 2) ? i-2 : 0), k2(min(nt.size()-1, i));
+			unsigned const k1((i > 2) ? i-2 : 0), k2(min((unsigned)nt.size()-1, i));
 			assert(k2 >= k1);
 			vector3d &n(strips[i].n);
 			n = zero_vector;

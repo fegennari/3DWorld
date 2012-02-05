@@ -345,7 +345,7 @@ public:
 	void init_group();
 	void preproc_this_frame();
 	void remove_reset_cobjs();
-	unsigned max_objects() const {return objects.size();}
+	size_t max_objects() const {return objects.size();}
 	int choose_object(bool peek=0);
 	void create_object_at(unsigned i, point const &pos);
 	void enable();

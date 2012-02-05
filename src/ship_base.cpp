@@ -390,7 +390,7 @@ bool u_ship_base::check_fire_delay(unsigned wix) const {
 
 	if (usw.parallel_fire || specs().parallel_fire) {
 		if (w.weap_pts.size() > 1) {
-			wcount = max(1U, wcount/w.weap_pts.size());
+			wcount = max(1U, wcount/(unsigned)w.weap_pts.size());
 		}
 		else if (specs().weap_spread > 1) {
 			wcount = max(1U, wcount/specs().weap_spread);
