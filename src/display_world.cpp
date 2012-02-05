@@ -42,7 +42,7 @@ upos_point_type cur_origin(all_zeros);
 
 
 extern bool nop_frame, combined_gu, have_sun, use_stencil_shadows, clear_landscape_vbo, show_lightning;
-extern int auto_time_adv, flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
+extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, brightness;
 extern float water_h_off;
@@ -952,7 +952,7 @@ void display(void) {
 		check_zoom();
 		final_draw(framerate);
 		purge_coll_freed(0); // optional
-		flight = 0;
+		camera_flight = 0;
 
 		if (game_mode) {
 			update_game_frame();

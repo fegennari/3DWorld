@@ -35,7 +35,7 @@ struct text_message_params {
 };
 
 
-int frags(0), tot_frags(0), best_frags(-1), following(0), flight(0), blood_spilled(0);
+int frags(0), tot_frags(0), best_frags(-1), following(0), camera_flight(0), blood_spilled(0);
 int fired(0), camera_invincible(0), br_source(0), UNLIMITED_WEAPONS(0);
 float camera_health(100.0), team_damage(1.0), self_damage(1.0), player_damage(1.0), smiley_damage(1.0);
 point orig_camera(all_zeros), orig_cdir(plus_z);
@@ -2282,7 +2282,7 @@ void player_state::update_camera_frame() {
 
 	if (powerup_time < 0.0)   print_text_onscreen("Powerup Expired", WHITE, 1.0, MESSAGE_TIME/2, 1);
 	if (powerup == PU_REGEN ) camera_health = min(MAX_REGEN_HEALTH, camera_health + 0.1f*fticks);
-	if (powerup == PU_FLIGHT) flight = 1;
+	if (powerup == PU_FLIGHT) camera_flight = 1;
 	kill_time += max(1, iticks);
 }
 

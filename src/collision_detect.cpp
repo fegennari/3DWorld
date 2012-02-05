@@ -25,7 +25,7 @@ point camera_last_pos(all_zeros); // not sure about this, need to reset sometime
 coll_obj_group coll_objects;
 
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
-extern int camera_in_air, mesh_scale_change, camera_invincible, flight, do_run, num_smileys;
+extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, do_run, num_smileys;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
 extern double camera_zh;
 extern dwobject def_objects[];
@@ -1368,7 +1368,7 @@ void add_camera_cobj(point const &pos) {
 
 void force_onto_surface_mesh(point &pos) { // for camera
 
-	bool const cflight(game_mode && flight);
+	bool const cflight(game_mode && camera_flight);
 	int coll(0);
 	float const radius(CAMERA_RADIUS);
 	dwobject camera_obj(def_objects[CAMERA]); // make a fresh copy
@@ -1459,9 +1459,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		zvel = 0.0;
 		return 0;
 	}
-	float const g_acc(base_gravity*GRAVITY*tstep*object_types[type].gravity);
-	float const terminal_v(object_types[type].terminal_vel), radius(object_types[type].radius);
-	float const step(step_height*radius), mh(int_mesh_zval_pt_off(pos, 1, 0)); // *** step height determined by fticks? ***
+	float const radius(object_types[type].radius), step(step_height*radius), mh(int_mesh_zval_pt_off(pos, 1, 0)); // *** step height determined by fticks? ***
 	pos.z = max(pos.z, (mh + radius));
 
 	if ((display_mode & 0x10) && !test_only) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
@@ -1474,7 +1472,6 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	coll_cell const &cell(v_collision_matrix[ypos][xpos]);
 	int coll(0), any_coll(0), moved(0);
 	float zceil, zfloor, zt, zb;
-	bool falling(0);
 
 	for (int k = (int)cell.cvals.size()-1; k >= 0; --k) { // iterate backwards
 		int const index(cell.cvals[k]);
@@ -1612,6 +1609,9 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 			any_coll = 1;
 		} // if coll
 	} // for k
+	float const g_acc(base_gravity*GRAVITY*tstep*object_types[type].gravity), terminal_v(object_types[type].terminal_vel);
+	bool falling(0);
+
 	if (!any_coll || z2 < zfloor) {
 		pos.z = mh;
 		bool const on_ice(is_camera && (camera_coll_smooth || game_mode) && temperature <= W_FREEZE_POINT && is_underwater(pos));

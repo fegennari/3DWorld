@@ -106,7 +106,7 @@ char player_name[MAX_CHARS] = "Player";
 
 
 extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace;
-extern int flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
+extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
@@ -440,7 +440,7 @@ void update_cpos() {
 
 void move_camera_pos(vector3d const &v, float dist) { // remember that dist is negative
 
-	if (!camera_surf_collide || flight) {
+	if (!camera_surf_collide || camera_flight) {
 		surface_pos += v*dist;
 	}
 	else { // normal ground movement - should speed depend on orientation or not?
