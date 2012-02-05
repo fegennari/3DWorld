@@ -39,7 +39,7 @@ enable_model3d_tex_comp 0
 disable_shaders 1
 
 mesh_height 0.05
-mesh_size  128 128 4
+mesh_size  128 128 0
 scene_size 4.0 4.0 4.0
 set_czmax 4.0
 

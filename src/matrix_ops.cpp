@@ -81,7 +81,7 @@ void set_scene_constants() {
 	HALF_DXY      = 0.5*(DX_VAL + DY_VAL);
 	DX_VAL_INV    = 1.0/DX_VAL;
 	DY_VAL_INV    = 1.0/DY_VAL;
-	DZ_VAL        = float(2.0*Z_SCENE_SIZE)/(float)MESH_Z_SIZE;
+	DZ_VAL        = float(2.0*Z_SCENE_SIZE)/(float)max(MESH_Z_SIZE, 1);
 	dxdy          = DX_VAL*DY_VAL;
 	MAX_RUN_DIST  = min(MESH_X_SIZE, MESH_Y_SIZE)/2;
 	CLOUD_CEILING = CLOUD_CEILING0*Z_SCENE_SIZE;

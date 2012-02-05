@@ -225,8 +225,8 @@ void shader_t::setup_scene_bounds() const {
 
 	add_uniform_float("x_scene_size", X_SCENE_SIZE);
 	add_uniform_float("y_scene_size", Y_SCENE_SIZE);
-	add_uniform_float("czmin", get_zval(0));
-	add_uniform_float("czmax", get_zval(MESH_SIZE[2]));
+	add_uniform_float("czmin", get_zval_min());
+	add_uniform_float("czmax", get_zval_max());
 }
 
 

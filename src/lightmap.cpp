@@ -629,6 +629,27 @@ float calc_czspan() {return max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER));}
 void build_lightmap(bool verbose) {
 
 	if (lm_alloc) return; // what about recreating the lightmap if the scene has changed?
+
+	// prevent the z range from being empty/denormalized when there are no cobjs
+	if (use_dense_voxels) {
+		czmin = min(czmin, zbottom);
+		czmax = max(czmax, (czmin + Z_SCENE_SIZE - 0.5f*DZ_VAL));
+	}
+	else if (czmin >= czmax) {
+		czmin = min(czmin, zbottom);
+		czmax = max(czmax, ztop);
+	}
+
+	// calculate and allocate some data we need even if the lmap is not used
+	assert(DZ_VAL > 0.0 && Z_LT_ATTEN > 0.0 && Z_LT_ATTEN <= 1.0 && XY_LT_ATTEN > 0.0 && XY_LT_ATTEN <= 1.0);
+	DZ_VAL_INV2   = DZ_VAL_SCALE/DZ_VAL;
+	SHIFT_DXYZ[0] = SHIFT_DX = SHIFT_VAL*DX_VAL;
+	SHIFT_DXYZ[1] = SHIFT_DY = SHIFT_VAL*DY_VAL;
+	czmin0        = czmin;//max(czmin, zbottom);
+	assert(lm_dz_adj >= 0.0);
+	if (!ldynamic) matrix_gen_2d(ldynamic, MESH_X_SIZE, MESH_Y_SIZE);
+	if (MESH_Z_SIZE == 0) return;
+
 	if (verbose) cout << "Building lightmap" << endl;
 	RESET_TIME;
 	unsigned nonempty(0);
@@ -662,24 +683,8 @@ void build_lightmap(bool verbose) {
 		}
 	}
 
-	// prevent the z range from being empty/denormalized when there are no cobjs
-	if (use_dense_voxels) {
-		czmin = min(czmin, zbottom);
-		czmax = max(czmax, (czmin + Z_SCENE_SIZE - 0.5f*DZ_VAL));
-	}
-	else if (czmin >= czmax) {
-		czmin = min(czmin, zbottom);
-		czmax = max(czmax, ztop);
-	}
-
 	// determine allocation and voxel grid sizes
 	reset_cobj_counters();
-	assert(DZ_VAL > 0.0 && Z_LT_ATTEN > 0.0 && Z_LT_ATTEN <= 1.0 && XY_LT_ATTEN > 0.0 && XY_LT_ATTEN <= 1.0);
-	DZ_VAL_INV2   = DZ_VAL_SCALE/DZ_VAL;
-	SHIFT_DXYZ[0] = SHIFT_DX = SHIFT_VAL*DX_VAL;
-	SHIFT_DXYZ[1] = SHIFT_DY = SHIFT_VAL*DY_VAL;
-	czmin0        = czmin;//max(czmin, zbottom);
-	assert(lm_dz_adj >= 0.0);
 	float const czspan(calc_czspan()), dz(DZ_VAL_INV2*czspan);
 	assert(dz >= 0.0);
 	assert(coll_objects.empty() || !has_fixed || dz > 0.0); // too strict (all cobjs can be shifted off the mesh)
@@ -695,7 +700,6 @@ void build_lightmap(bool verbose) {
 	if (verbose) cout << "zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;
 	assert(zstep > 0.0);
 	float const z_atten(1.0 - (1.0 - Z_LT_ATTEN)/scene_scale), xy_atten(1.0 - (1.0 - XY_LT_ATTEN)/scene_scale);
-	if (!ldynamic) matrix_gen_2d(ldynamic, MESH_X_SIZE, MESH_Y_SIZE);
 	lmap_manager.alloc(nbins, zsize, need_lmcell);
 	using_lightmap = (nonempty > 0);
 	lm_alloc       = 1;
@@ -996,7 +1000,6 @@ unsigned upload_voxel_flow_texture() {
 void upload_dlights_textures() {
 
 	RESET_TIME;
-	assert(lm_alloc && lmap_manager.vlmap);
 	if (disable_shaders) return;
 	static int supports_tex_int(2); // starts at unknown
 	static bool last_dlights_empty(0);
@@ -1020,8 +1023,8 @@ void upload_dlights_textures() {
 	unsigned const ndl(min(max_dlights, dl_sources.size()));
 	unsigned const ysz(floats_per_light/4);
 	float const radius_scale(1.0/X_SCENE_SIZE);
-	vector3d const poff(-X_SCENE_SIZE, -Y_SCENE_SIZE, get_zval(0));
-	vector3d const pscale(0.5/X_SCENE_SIZE, 0.5/Y_SCENE_SIZE, 1.0/(get_zval(MESH_SIZE[2]) - poff.z));
+	vector3d const poff(-X_SCENE_SIZE, -Y_SCENE_SIZE, get_zval_min());
+	vector3d const pscale(0.5/X_SCENE_SIZE, 0.5/Y_SCENE_SIZE, 1.0/(get_zval_max() - poff.z));
 	has_dir_lights = 0;
 
 	for (unsigned i = 0; i < ndl; ++i) {
@@ -1449,9 +1452,8 @@ bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 // used on mesh and water
 void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float lightscale, float *ls, vector3d const *const norm, float const *const spec) {
 
-	assert(lm_alloc && lmap_manager.vlmap);
-
-	if (using_lightmap && !light_sources.empty() && lmap_manager.is_valid_cell(x, y, z)) {
+	if (lm_alloc && using_lightmap && !light_sources.empty() && lmap_manager.is_valid_cell(x, y, z)) {
+		assert(lmap_manager.vlmap);
 		float const *const lcolor(lmap_manager.vlmap[y][x][z].lc);
 		ADD_LIGHT_CONTRIB(lcolor, ls);
 	}
@@ -1461,7 +1463,8 @@ void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float li
 
 float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
 
-	assert(lm_alloc && lmap_manager.vlmap);
+	if (!lm_alloc) return 1.0;
+	assert(lmap_manager.vlmap);
 	float val(1.0);
 	bool outside_mesh(0);
 	colorRGB cscale(cur_ambient);

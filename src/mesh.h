@@ -61,6 +61,8 @@ inline float get_xval(int xpos)  {return -X_SCENE_SIZE + DX_VAL*xpos;}
 inline float get_yval(int ypos)  {return -Y_SCENE_SIZE + DY_VAL*ypos;}
 inline float get_zval(int zpos)  {return czmin + zpos/DZ_VAL_INV2;}
 inline float get_zval2(int zpos) {return -Z_SCENE_SIZE + DZ_VAL*zpos;}
+inline float get_zval_min()      {return get_zval(0);}
+inline float get_zval_max()      {return get_zval(max(MESH_SIZE[2], 1));}
 
 inline int get_xpos(float xval) {return int((xval + X_SCENE_SIZE)*DX_VAL_INV + 0.5);}
 inline int get_ypos(float yval) {return int((yval + Y_SCENE_SIZE)*DY_VAL_INV + 0.5);}
