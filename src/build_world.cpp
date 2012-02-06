@@ -324,10 +324,10 @@ void process_groups() {
 		if (objg.app_rate > 0 && fticks > 0 && app_rate == 0) app_rate = 1;
 		float const time(TIMESTEP*fticks_max), grav_dz(base_gravity*GRAVITY*time*time*otype.gravity);
 		cobj_params cp(otype.elasticity, otype.color, 0, 1, coll_func, -1, -1, 1.0, 0, 0);
-		unsigned const max_objs(objg.max_objects());
+		size_t const max_objs(objg.max_objects());
 
-		for (unsigned jj = 0; jj < max_objs; ++jj) {
-			unsigned const j((type == SMILEY) ? (jj + scounter)%objg.max_objects() : jj); // handle smiley permutation
+		for (size_t jj = 0; jj < max_objs; ++jj) {
+			unsigned const j(unsigned((type == SMILEY) ? (jj + scounter)%objg.max_objects() : jj)); // handle smiley permutation
 			dwobject &obj(objg.get_obj(j));
 			if (large_radius && obj.coll_id >= 0) remove_reset_coll_obj(obj.coll_id);
 			if (obj.status == OBJ_STAT_RES) continue; // ignore
@@ -795,7 +795,7 @@ void check_layer(bool has_layer) {
 void coll_obj::add_to_vector(coll_obj_group &cobjs, int type_) {
 
 	type = type_;
-	id   = cobjs.size();
+	id   = (unsigned)cobjs.size();
 	check_if_cube();
 	set_npoints();
 	if (type == COLL_POLYGON) {assert(npoints >= 3); norm = get_poly_norm(points);}
@@ -840,7 +840,7 @@ void coll_obj::check_if_cube() {
 
 void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj) {
 
-	cobj.npoints = poly.size();
+	cobj.npoints = (short)poly.size();
 	for (int j = 0; j < cobj.npoints; ++j) {cobj.points[j] = poly[j].v;}
 }
 
@@ -852,7 +852,7 @@ void copy_tquad_to_cobj(coll_tquad const &tquad, coll_obj &cobj) {
 }
 
 
-void maybe_reserve_fixed_cobjs(unsigned size) {
+void maybe_reserve_fixed_cobjs(size_t size) {
 
 	if (size > 2*fixed_cobjs.size()) {fixed_cobjs.reserve(size + fixed_cobjs.size());} // reserve to the correct size
 }
@@ -1009,7 +1009,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (!no_cobjs) {
 					if (group_cobjs) {
 						for (unsigned i = 0; i < 3; ++i) {
-							group_ids[i] = obj_draw_groups.size();
+							group_ids[i] = (int)obj_draw_groups.size();
 							obj_draw_groups.push_back(obj_draw_group(use_dlist));
 						}
 					}
@@ -1033,7 +1033,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 					for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
 						cur_cube.copy_from(*i);
-						cur_cube.id = fixed_cobjs.size();
+						cur_cube.id = (int)fixed_cobjs.size();
 						fixed_cobjs.push_back(cur_cube);
 					}
 				}
@@ -1050,7 +1050,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				cobj.platform_id = -1;
 			}
 			else {
-				cobj.platform_id = platforms.size();
+				cobj.platform_id = (short)platforms.size();
 				if (!platforms.add_from_file(fp)) return read_error(fp, "platform", coll_obj_file);
 				assert(cobj.platform_id < (int)platforms.size());
 			}

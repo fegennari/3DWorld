@@ -309,7 +309,7 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 	if (free_for_all) { // smileys attack each other, not only the player
 		assert((int)obj_groups[cid].max_objects() == num_smileys);
 
-		for (int i = obj_groups[cid].max_objects()-1; i >= 0; --i) {
+		for (int i = num_smileys-1; i >= 0; --i) {
 			dwobject const &obj(obj_groups[cid].get_obj(i));
 			if (obj.disabled() || i == smiley_id || same_team(smiley_id, i))      continue;
 			if (last_hitter != i && sstates[i].powerup == PU_INVISIBILITY)        continue; // invisible

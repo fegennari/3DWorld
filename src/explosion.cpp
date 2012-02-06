@@ -156,7 +156,7 @@ void blastr::process() const { // land mode
 void update_blasts() {
 
 	gm_blast = 0;
-	unsigned const nbr(blastrs.size());
+	unsigned const nbr((unsigned)blastrs.size());
 
 	for (unsigned i = 0; i < nbr; ++i) {
 		blastr &br(blastrs[i]);

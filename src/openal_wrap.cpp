@@ -145,7 +145,7 @@ bool openal_buffer::load_from_file_std_path(std::string const &fn) {
 bool openal_buffer::load_from_memory(void const *data, size_t length) {
 	assert(data);
 	assert(length > 0);
-	buffer = alutCreateBufferFromFileImage(data, length);
+	buffer = alutCreateBufferFromFileImage(data, (ALsizei)length);
 	return load_check();
 }
 
@@ -159,7 +159,7 @@ bool openal_buffer::load_from_waveform(int waveshape, float frequency, float pha
 
 unsigned buffer_manager_t::add_file_buffer(std::string const &fn) {
 
-	unsigned const ix(buffers.size());
+	unsigned const ix((unsigned)buffers.size());
 	buffers.push_back(openal_buffer());
 	
 	if (!buffers.back().load_from_file_std_path(fn)) {
@@ -251,7 +251,7 @@ void source_manager_t::create_channels(unsigned num_channels) {
 }
 
 unsigned source_manager_t::new_source() {
-	unsigned const ix(sources.size());
+	unsigned const ix((unsigned)sources.size());
 	sources.push_back(openal_source());
 	sources.back().alloc();
 	return ix;

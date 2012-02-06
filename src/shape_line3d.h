@@ -64,7 +64,7 @@ public:
 	void set_scale(float scale_)             {scale = scale_;}
 	void set_shape_color(colorRGBA const &c) {color = c;}
 	void translate(vector3d const &vd)       {shift_by(vd);}
-	unsigned get_num_faces() const           {return faces.size();}
+	size_t get_num_faces() const             {return faces.size();}
 	void gen_face_normals();
 	void get_face_normal(unsigned face_id);
 	void get_triangle_center(point &center, unsigned face_id, unsigned quality);

@@ -239,7 +239,7 @@ public:
 		assert(!empty());
 		assert(cur_avail < size());
 		vector<T> const &v(*this);
-		unsigned const start(cur_avail), sz(size());
+		unsigned const start(cur_avail), sz((unsigned)size());
 
 		for (unsigned i = 0; i < sz; ++i) {
 			unsigned ix(i + start);
@@ -260,7 +260,7 @@ public:
 		if (num == 0) return;
 		ixs.reserve(num);
 		vector<T> const &v(*this);
-		unsigned const start(cur_avail), sz(size());
+		unsigned const start(cur_avail), sz((unsigned)size());
 
 		for (unsigned i = 0; i < sz; ++i) {
 			unsigned ix(i + start);
@@ -274,7 +274,7 @@ public:
 				return; // we're done
 			}
 		}
-		unsigned const num_rem(num - ixs.size());
+		unsigned const num_rem(num - (unsigned)ixs.size());
 		vector<int_uint_pair> time_ixs;
 		time_ixs.reserve(sz);
 

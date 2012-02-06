@@ -697,9 +697,8 @@ void get_cube_points(const float d[3][2], point pts[8]) {
 void coll_obj_group::remove_invalid_cobjs() {
 
 	coll_obj_group cobjs2;
-	unsigned const ncobjs(size());
 
-	for (unsigned i = 0; i < ncobjs; ++i) { // create new shapes vector with bad shapes removed
+	for (size_t i = 0; i < size(); ++i) { // create new shapes vector with bad shapes removed
 		if ((*this)[i].type != COLL_INVALID) cobjs2.push_back((*this)[i]);
 	}
 	this->swap(cobjs2);
@@ -709,9 +708,8 @@ void coll_obj_group::remove_invalid_cobjs() {
 void coll_obj_group::check_cubes() {
 
 	if (!CHECK_COBJS) return;
-	unsigned const ncobjs(size());
 
-	for (unsigned i = 0; i < ncobjs; ++i) {
+	for (size_t i = 0; i < size(); ++i) {
 		if ((*this)[i].type != COLL_CUBE) continue;
 		csg_cube const cube((*this)[i]);
 		
@@ -728,7 +726,7 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 
 	if (!MERGE_COBJS) return;
 	RESET_TIME;
-	unsigned const ncobjs(size());
+	unsigned const ncobjs((unsigned)size());
 	unsigned merged(0);
 	cobj_tree_t<3> cube_tree(*this, 0, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
@@ -769,7 +767,7 @@ void coll_obj_group::remove_overlapping_cubes() { // objects specified later are
 
 	if (!UNOVERLAP_COBJS || empty()) return;
 	RESET_TIME;
-	unsigned const ncobjs(size());
+	unsigned const ncobjs((unsigned)size());
 	cobj_tree_t<3> cube_tree(*this, 0, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
 	vector<pair<unsigned, unsigned> > proc_order;
@@ -855,18 +853,18 @@ bool coll_obj::subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cub
 void coll_obj_group::process_negative_shapes() { // negtive shapes should be non-overlapping
 
 	RESET_TIME;
-	unsigned const ncobj(size());
+	unsigned const orig_ncobjs((unsigned)size());
 	unsigned neg(0);
 	coll_obj_group new_cobjs;
 
-	for (unsigned i = 0; i < ncobj; ++i) { // find a negative cobj
+	for (unsigned i = 0; i < orig_ncobjs; ++i) { // find a negative cobj
 		if ((*this)[i].status != COLL_NEGATIVE) continue;
 
 		if ((*this)[i].type != COLL_CUBE) {
 			cout << "Only negative cubes are supported." << endl;
 			exit(1);
 		}
-		unsigned ncobjs(size()); // so as not to retest newly created subcubes
+		unsigned ncobjs((unsigned)size()); // so as not to retest newly created subcubes
 		csg_cube cube((*this)[i]); // the negative cube
 		if (cube.is_zero_area()) continue;
 
@@ -891,7 +889,7 @@ void coll_obj_group::process_negative_shapes() { // negtive shapes should be non
 		++neg;
 	}
 	if (neg > 0) remove_invalid_cobjs();
-	cout << ncobj << " => " << size() << endl;
+	cout << orig_ncobjs << " => " << size() << endl;
 	PRINT_TIME("Negative Shape Processing");
 }
 
@@ -923,7 +921,7 @@ bool coll_obj::subdiv_fixed_cube(coll_obj_group &cobjs) {
 			}
 			if (i != 0)      cp.surfs |= EFLAGS[maxdim][0]; // remove interior edges
 			if (i != ndiv-1) cp.surfs |= EFLAGS[maxdim][1];
-			id       = cobjs.size();
+			id       = (unsigned)cobjs.size();
 			cobjs.push_back(*this);
 			cp.surfs = surfs; // restore edge flags
 		}
@@ -943,80 +941,77 @@ unsigned get_closest_val_index(float val, vector<double> const &sval) {
 }
 
 
-void coll_obj_group::subdiv_cubes() { // split large/high aspect ratio cubes into smaller cubes
+// split T-junctions of cubes in the same group
+void coll_obj_group::subdiv_cubes() {
 
+	if (!REMOVE_T_JUNCTIONS) return;
 	RESET_TIME;
-	unsigned ncobjs(size()), num_remove(0);
+	unsigned ncobjs((unsigned)size()), num_remove(0);
+	map<int, vector<unsigned> > id_map; // id to cobj indices map
 
-	// split T-junctions of cubes in the same group
-	if (REMOVE_T_JUNCTIONS) {
-		map<int, vector<unsigned> > id_map; // id to cobj indices map
+	for (unsigned i = 0; i < ncobjs; ++i) {
+		if ((*this)[i].type == COLL_INVALID || (*this)[i].type != COLL_CUBE) continue;
+		if (REMOVE_T_JUNCTIONS == 1 && (*this)[i].counter != OBJ_CNT_REM_TJ) continue;
+		id_map[(*this)[i].id].push_back(i);
+	}
+	for (map<int, vector<unsigned> >::const_iterator i = id_map.begin(); i != id_map.end(); ++i) {
+		vector<unsigned> const &v(i->second);
+		if (v.size() == 1) continue; // nothing to do
+		set   <double> splits[3]; // x, y, z
+		vector<double> svals [3]; // x, y, z
 
-		for (unsigned i = 0; i < ncobjs; ++i) {
-			if ((*this)[i].type == COLL_INVALID || (*this)[i].type != COLL_CUBE) continue;
-			if (REMOVE_T_JUNCTIONS == 1 && (*this)[i].counter != OBJ_CNT_REM_TJ) continue;
-			id_map[(*this)[i].id].push_back(i);
-		}
-		for (map<int, vector<unsigned> >::const_iterator i = id_map.begin(); i != id_map.end(); ++i) {
-			vector<unsigned> const &v(i->second);
-			if (v.size() == 1) continue; // nothing to do
-			set   <double> splits[3]; // x, y, z
-			vector<double> svals [3]; // x, y, z
+		for (unsigned j = 0; j < v.size(); ++j) {
+			coll_obj const &c((*this)[v[j]]);
 
-			for (unsigned j = 0; j < v.size(); ++j) {
-				coll_obj const &c((*this)[v[j]]);
-
-				for (unsigned d = 0; d < 3; ++d) {
-					for (unsigned e = 0; e < 2; ++e) {
-						splits[d].insert(c.d[d][e]);
-					}
-				}
-			}
 			for (unsigned d = 0; d < 3; ++d) {
-				for (set<double>::const_iterator s = splits[d].begin(); s != splits[d].end(); ++s) {
-					if (svals[d].empty() || (*s - svals[d].back()) > TOLER) svals[d].push_back(*s); // skip elements that are near equal
+				for (unsigned e = 0; e < 2; ++e) {
+					splits[d].insert(c.d[d][e]);
 				}
-				assert(svals[d].size() > 1);
 			}
-			for (unsigned j = 0; j < v.size(); ++j) {
-				coll_obj const &c((*this)[v[j]]);
-				unsigned bounds[3][2], tot_parts(1);
+		}
+		for (unsigned d = 0; d < 3; ++d) {
+			for (set<double>::const_iterator s = splits[d].begin(); s != splits[d].end(); ++s) {
+				if (svals[d].empty() || (*s - svals[d].back()) > TOLER) svals[d].push_back(*s); // skip elements that are near equal
+			}
+			assert(svals[d].size() > 1);
+		}
+		for (unsigned j = 0; j < v.size(); ++j) {
+			coll_obj const &c((*this)[v[j]]);
+			unsigned bounds[3][2], tot_parts(1);
 
-				for (unsigned d = 0; d < 3; ++d) {
-					for (unsigned e = 0; e < 2; ++e) {
-						bounds[d][e] = get_closest_val_index(c.d[d][e], svals[d]);
-					}
-					assert(bounds[d][0] < bounds[d][1] && bounds[d][1] < svals[d].size());
-					tot_parts *= (bounds[d][1] - bounds[d][0]);
+			for (unsigned d = 0; d < 3; ++d) {
+				for (unsigned e = 0; e < 2; ++e) {
+					bounds[d][e] = get_closest_val_index(c.d[d][e], svals[d]);
 				}
-				assert(tot_parts > 0);
-				if (tot_parts == 1) continue; // no splits required
+				assert(bounds[d][0] < bounds[d][1] && bounds[d][1] < svals[d].size());
+				tot_parts *= (bounds[d][1] - bounds[d][0]);
+			}
+			assert(tot_parts > 0);
+			if (tot_parts == 1) continue; // no splits required
 				
-				for (unsigned x = bounds[0][0]; x < bounds[0][1]; ++x) {
-					for (unsigned y = bounds[1][0]; y < bounds[1][1]; ++y) {
-						for (unsigned z = bounds[2][0]; z < bounds[2][1]; ++z) {
-							unsigned const xyz[3] = {x, y, z};
-							push_back((*this)[v[j]]);
+			for (unsigned x = bounds[0][0]; x < bounds[0][1]; ++x) {
+				for (unsigned y = bounds[1][0]; y < bounds[1][1]; ++y) {
+					for (unsigned z = bounds[2][0]; z < bounds[2][1]; ++z) {
+						unsigned const xyz[3] = {x, y, z};
+						push_back((*this)[v[j]]);
 
-							for (unsigned d = 0; d < 3; ++d) {
-								assert(xyz[d]+1 < svals[d].size());
+						for (unsigned d = 0; d < 3; ++d) {
+							assert(xyz[d]+1 < svals[d].size());
 
-								for (unsigned e = 0; e < 2; ++e) {
-									back().d[d][e] = svals[d][xyz[d]+e];
-								}
+							for (unsigned e = 0; e < 2; ++e) {
+								back().d[d][e] = svals[d][xyz[d]+e];
 							}
 						}
 					}
 				}
-				(*this)[v[j]].type = COLL_INVALID;
-				++num_remove;
-			} // for j
-		} // for i
-		cout << ncobjs << " => " << (size() - num_remove) << endl;
-		ncobjs = size();
-	}
+			}
+			(*this)[v[j]].type = COLL_INVALID;
+			++num_remove;
+		} // for j
+	} // for i
+	cout << ncobjs << " => " << (size() - num_remove) << endl;
 	if (num_remove > 0) remove_invalid_cobjs();
-	cout << (ncobjs - num_remove) << " => " << size() << endl;
+	cout << (size() - num_remove) << " => " << size() << endl;
 	PRINT_TIME("Subdiv Cubes");
 }
 

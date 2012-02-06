@@ -308,10 +308,10 @@ u_ship *create_ship(unsigned sclass, point const &pos0, unsigned align, unsigned
 
 void get_cached_objs(vector<free_obj *> const &objs, vector<cached_obj> &cobjs) {
 
-	unsigned const size(objs.size());
+	size_t const size(objs.size());
 	cobjs.resize(size);
 
-	for (unsigned i = 0; i < size; ++i) {
+	for (size_t i = 0; i < size; ++i) {
 		cobjs[i].set_obj(objs[i]);
 	}
 }
@@ -332,7 +332,7 @@ void apply_univ_physics() {
 	if (TIMETEST) PRINT_TIME("  Purge");
 	get_cached_objs(uobjs, c_uobjs);
 	if (TIMETEST) PRINT_TIME("  Get Cached");
-	unsigned const nobjs(c_uobjs.size());
+	unsigned const nobjs((unsigned)c_uobjs.size());
 	assert(uobjs.size() == nobjs);
 	all_ships.resize(0);
 	stat_objs.resize(0);
@@ -431,7 +431,7 @@ void apply_univ_physics() {
 	}
 	get_cached_objs(uobjs, c_uobjs); // re-validate since new objects may have been added and old ones may have moved
 	sort(c_uobjs.begin(), c_uobjs.end(), comp_co_fast_x()); // re-sort
-	unsigned const ncuo(c_uobjs.size());
+	unsigned const ncuo((unsigned)c_uobjs.size());
 
 	for (unsigned i = 0; i < ncuo; ++i) { // update uobjs to have the same sort order
 		uobjs[i] = c_uobjs[i].obj; // what about objects with time == 0? exclude them?
@@ -465,7 +465,7 @@ bool proc_coll(free_obj *o1, free_obj *o2) {
 void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 
 	//RESET_TIME;
-	unsigned const size(objs.size());
+	unsigned const size((unsigned)objs.size());
 	static vector<cached_obj> new_objs;
 	static vector<interval> intervals;
 	new_objs.resize(0);
@@ -490,7 +490,7 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 		intervals.push_back(interval(left,  i, 1));
 		intervals.push_back(interval(right, i, 0));
 	}
-	unsigned const size2(intervals.size());
+	unsigned const size2((unsigned)intervals.size());
 	static vector<unsigned> locs, work;
 	locs.resize(size);
 	work.resize(0);
@@ -504,7 +504,7 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 		if ((ix_flags & OBJ_FLAGS_PROJ) && (ix_flags & OBJ_FLAGS_NOPC)) bad_flags |= OBJ_FLAGS_PROJ; // no projectile-projectile collision
 		
 		if (intervals[i].ix & LEFT_EDGE_BIT) { // start a new sphere
-			unsigned const wsize(work.size());
+			unsigned const wsize((unsigned)work.size());
 
 			if (wsize > 0) {
 				point const pos_i(objs[ix].pos);
@@ -641,8 +641,8 @@ void shift_univ_objs(point const &pos, bool shift_player_ship) {
 
 void draw_wrays(vector<usw_ray> &wrays) {
 
-	unsigned const size(wrays.size());
 	if (wrays.empty()) return;
+	unsigned const size((unsigned)wrays.size());
 	point const &pspos(get_player_pos2());
 	vector<pair<float, usw_ray const *> > sorted(size);
 
@@ -663,7 +663,7 @@ void draw_wrays(vector<usw_ray> &wrays) {
 void draw_univ_objects(point const &pos) {
 
 	//RESET_TIME;
-	unsigned const nobjs(c_uobjs.size());
+	unsigned const nobjs((unsigned)c_uobjs.size());
 	static vector<pair<float, free_obj *> > sorted;
 	sorted.resize(0);
 	point const &camera(get_player_pos2());
@@ -691,7 +691,7 @@ void draw_univ_objects(point const &pos) {
 		}
 	}
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
-	unsigned const nobjs2(sorted.size());
+	unsigned const nobjs2((unsigned)sorted.size());
 	//PRINT_TIME("Sort");
 
 	for (unsigned i = 0; i < nobjs2; ++i) { // draw ubojs
@@ -721,7 +721,7 @@ void draw_univ_objects(point const &pos) {
 void purge_old_objs() {
 
 	unsigned nbad(0);
-	unsigned const nobjs(uobjs.size());
+	unsigned const nobjs((unsigned)uobjs.size());
 	check_explosion_refs();
 
 	for (unsigned i = 0; i < a_targets.size(); ++i) {

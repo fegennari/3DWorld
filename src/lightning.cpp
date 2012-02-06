@@ -194,7 +194,7 @@ void add_forks(int lforks[5][2], int &nforks, int val, int zpos, int x, int y) {
 void lightning::gen_recur(point &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter) {
 
 	int i(0), hit_water(0), lforks[5][2];
-	unsigned const path_id(path.size());
+	unsigned const path_id((unsigned)path.size());
 	if (path_id >= MAX_LITN_FORKS) return;
 	if (zpos < 0 || zpos >= MESH_Z_SIZE || point_outside_mesh(xpos, ypos)) return; // note this will return if MESH_Z_SIZE == 1
 	path.push_back(line3d());

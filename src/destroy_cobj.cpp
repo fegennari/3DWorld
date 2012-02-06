@@ -370,7 +370,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		cdir.normalize();
 	}
 	//PRINT_TIME("Subtract Cube");
-	return to_remove.size();
+	return (unsigned)to_remove.size();
 }
 
 

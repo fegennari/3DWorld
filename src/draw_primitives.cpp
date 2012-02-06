@@ -1058,7 +1058,7 @@ void draw_quads_from_pts(vector<vert_norm> const &points, unsigned draw_num) {
 
 	if (points.empty()) return;
 	unsigned const MAX_QUADS(1000);
-	unsigned const num(draw_num ? min((unsigned)points.size(), draw_num) : points.size());
+	unsigned const num(draw_num ? min((unsigned)points.size(), draw_num) : (unsigned)points.size());
 	assert((num & 3) == 0);
 
 	if (num+1 < MAX_QUADS) {

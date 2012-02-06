@@ -308,7 +308,7 @@ bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsi
 
 bool is_occluded(vector<int> const &occluders, point const *const pts, int npts, point const &camera) {
 
-	unsigned const nocc(occluders.size());
+	unsigned const nocc((unsigned)occluders.size());
 
 	for (unsigned i = 0; i < nocc; ++i) { // cache last occluder?, promote to the front if occluded?
 		coll_obj const &cobj(coll_objects[occluders[i]]);
@@ -338,7 +338,7 @@ void get_occluders() {
 		stopped_count = 0;
 		last_camera   = camera;
 	}
-	unsigned const ncobjs(coll_objects.size());
+	unsigned const ncobjs((unsigned)coll_objects.size());
 
 	//#pragma omp parallel for schedule(static,1) // helps in some cases and hurts in others
 	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {

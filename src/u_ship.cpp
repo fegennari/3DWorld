@@ -1242,7 +1242,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 	if (NO_AI_FIRE || time < unsigned(1.5*SHIP_AI_DELAY)) return;
 	bool s_turret(weap_turret(get_weapon_id()));
 	if (move_dir != 1 && !s_turret) return; // no attack (should s_turret be checked?)
-	unsigned const nweap(weapons.size());
+	unsigned const nweap((unsigned)weapons.size());
 	if (nweap == 0 || (nweap == 1 && weapons[0].wclass == UWEAP_NONE)) return; // no weapons
 	if (target_dist > specs().fire_dist || target_dist < 0.5*min_dist) return; // target not in range
 	assert(nweap > 0);
@@ -1408,7 +1408,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 	static vector<point> offsets;
 	offsets.resize(0);
 	point const target_pos(pos + fire_dir*target_dist); // recompute target pos since it may account for motion prediction
-	unsigned const nwpts(sw.weap_pts.size()), wspread(specs().weap_spread);
+	unsigned const nwpts((unsigned)sw.weap_pts.size()), wspread(specs().weap_spread);
 
 	if (weap.is_beam) {
 		num_shots = wcount;
@@ -1771,7 +1771,7 @@ void u_ship::spawn_fighter(point const &fpos, vector3d const &fire_dir) {
 bool u_ship::try_fire_weapon() { // player fire
 
 	if (invalid_or_disabled()) return 0;
-	unsigned const temp_cw(curr_weapon), nweap(weapons.size());
+	unsigned const temp_cw(curr_weapon), nweap((unsigned)weapons.size());
 	bool fired_secondary(0), fired(0);
 	target_dir = dir;
 	if (target_obj) target_dir = (target_obj->get_pos() - pos).get_norm();
@@ -1860,7 +1860,7 @@ bool u_ship::check_fire_speed() const {
 
 void u_ship::switch_weapon(bool prev) {
 
-	if (prev) curr_weapon += (weapons.size()-1); else ++curr_weapon;
+	if (prev) curr_weapon += ((unsigned)weapons.size()-1); else ++curr_weapon;
 	curr_weapon = curr_weapon % weapons.size();
 	show_weapon_name();
 }

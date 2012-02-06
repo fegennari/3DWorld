@@ -599,7 +599,7 @@ string get_file_extension(string const &filename, unsigned level, bool make_lowe
 			ext = get_file_extension(fn2, level-1, make_lower); // recursively strip off extensions
 		}
 	}
-	unsigned const len(ext.length());
+	unsigned const len((unsigned)ext.length());
 
 	for (unsigned i = 0; i < len; ++i) { // convert upper case ext letters to lower case
 		ext[i] = tolower(ext[i]);

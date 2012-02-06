@@ -381,7 +381,7 @@ void free_obj::set_temp(float temp, point const &tcenter, free_obj const *source
 
 void free_obj::add_light(unsigned index) {
 
-	unsigned const nexpl(exp_lights.size());
+	unsigned const nexpl((unsigned)exp_lights.size());
 
 	if (nexpl < NUM_EXP_LIGHTS) {
 		exp_lights.push_back(index);
@@ -632,7 +632,7 @@ void free_obj::draw(point const &pos_) const { // view culling has already been 
 	if (is_player_ship()) return; // don't draw player ship
 	if (light_val > 0 && sobj != NULL) sobjs.push_back(sobj);
 	assert(exp_lights.size() <= NUM_EXP_LIGHTS);
-	unsigned const nlights(min((size_t)dscale, exp_lights.size())); // hack to avoid adding too many lights to tiny objects
+	unsigned const nlights(min((unsigned)dscale, (unsigned)exp_lights.size())); // hack to avoid adding too many lights to tiny objects
 
 	if (stencil_shadows && light_val != 3) {
 		if (shadowed) {

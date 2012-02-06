@@ -143,13 +143,12 @@ void ship_defs_file_reader::print_kw_map(kw_map const &strmap) const {
 
 void ship_defs_file_reader::strings_to_map(string const &str, kw_map &strmap) const {
 
-	unsigned const size(str.size());
+	unsigned const size((unsigned)str.size());
 
 	for (unsigned pos = 0, pos_end = 0, index = 0; pos < size; pos = pos_end) {
 		for( ; pos < size && str[pos] == ' '; ++pos) {}
 		if (pos == size) break;
-		pos_end = str.find(' ', pos);
-		pos_end = min(pos_end, size);
+		pos_end = min((unsigned)str.find(' ', pos), size);
 		assert(pos+1 < pos_end);
 		string const substr((str.begin()+pos), (str.begin()+pos_end));
 		strmap.insert(make_pair(substr, index++));
@@ -853,7 +852,7 @@ void us_weapon::setup(unsigned wclass_) {
 	if (is_fighter) {
 		assert(a_mass == 0.0 && ammo_cost == 0 && max_t == 0.0);
 		assert(ammo_type < sclasses.size());
-		sclasses_to_weapons[ammo_type] = us_weapons.size();
+		sclasses_to_weapons[ammo_type] = (unsigned)us_weapons.size();
 		a_mass    = sclasses[ammo_type].mass;
 		ammo_cost = sclasses[ammo_type].cost;
 		max_t     = sclasses[ammo_type].max_t;

@@ -784,7 +784,7 @@ void ugalaxy::process(ucell const &cell) {
 
 	for (unsigned c = 0, cur = 0; c < clusters.size(); ++c) { // calculate actual center and radius values for each cluster
 		system_cluster &cl(clusters[c]);
-		unsigned const nsystems(cl.systems.size());
+		unsigned const nsystems((unsigned)cl.systems.size());
 		cl.radius = 0.0;
 		cl.bounds = 0.0;
 		cl.center = all_zeros;
@@ -845,7 +845,7 @@ bool ugalaxy::gen_system_loc(point &pos2, vector<point> const &placed) {
 			}
 		}
 		if (bad_pos) continue;
-		unsigned in_cluster(clusters.size());
+		unsigned in_cluster((unsigned)clusters.size());
 		float dmin(0.0);
 
 		for (unsigned c = 0; c < clusters.size(); ++c) {
@@ -1132,7 +1132,7 @@ void uplanet::update_shadows() {
 
 void uplanet::gen_prings() {
 
-	unsigned const nr(rings.size());
+	unsigned const nr((unsigned)rings.size());
 	if (nr == 0) return;
 	float const sr(4.0/nr);
 	float lastr(rand_uniform2(radius, 1.1*radius));
@@ -2116,7 +2116,7 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 	float const planet_thresh(expand*4.0*MAX_PLANET_EXTENT), moon_thresh(expand*2.0*MAX_PLANET_EXTENT);
 	float const pt_sq(planet_thresh*planet_thresh), mt_sq(moon_thresh*moon_thresh);
 	static int last_galaxy(-1), last_cluster(-1), last_system(-1);
-	unsigned const ng(cell.galaxies->size());
+	unsigned const ng((unsigned)cell.galaxies->size());
 	unsigned const go((last_galaxy >= 0 && last_galaxy < int(ng)) ? last_galaxy : 0);
 	bool found_system(0);
 
@@ -2145,7 +2145,7 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 				min_gdist     = distg;
 			}
 		}
-		unsigned const num_clusters(galaxy.clusters.size());
+		unsigned const num_clusters((unsigned)galaxy.clusters.size());
 		unsigned const co((last_cluster >= 0 && last_cluster < int(num_clusters) && gc == go) ? last_cluster : 0);
 
 		for (unsigned cl_ = 0; cl_ < num_clusters && !found_system; ++cl_) { // find cluster
@@ -2181,7 +2181,7 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 					}
 				}
 				if (max_level == UTYPE_SYSTEM || max_level == UTYPE_STAR) continue; // system/star
-				unsigned const np(system.planets.size());
+				unsigned const np((unsigned)system.planets.size());
 				
 				for (unsigned pc = 0; pc < np; ++pc) { // find planet
 					uplanet const &planet(system.planets[pc]);
@@ -2205,7 +2205,7 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 						}
 					}
 					if (max_level == UTYPE_PLANET) continue; // planet
-					unsigned const nm(planet.moons.size());
+					unsigned const nm((unsigned)planet.moons.size());
 					
 					for (unsigned mc = 0; mc < nm; ++mc) { // find moon
 						umoon const &moon(planet.moons[mc]);

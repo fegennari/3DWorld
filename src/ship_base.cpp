@@ -425,7 +425,7 @@ bool u_ship_base::bad_angle(float const angle, float target_dist, unsigned weapo
 bool u_ship_base::out_of_ammo_for(unsigned wix, bool current_only) const {
 	
 	assert(wix < weapons.size());
-	unsigned const num_weapons(weapons.size());
+	unsigned const num_weapons((unsigned)weapons.size());
 
 	for (unsigned i = 0; i < num_weapons; ++i) { // iterate over all weapons
 		unsigned const w((wix + i) % num_weapons);

@@ -38,7 +38,7 @@ extern obj_type object_types[];
 void gen_stars(float alpha, int half_sphere) {
 
 	if (show_fog) return;
-	unsigned const cur_num_stars(stars.size());
+	unsigned const cur_num_stars((unsigned)stars.size());
 
 	if (!star_init) {
 		num_stars = cur_num_stars - rand()%max(1U, cur_num_stars/4);

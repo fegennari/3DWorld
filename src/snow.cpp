@@ -161,7 +161,7 @@ public:
 
 	unsigned get_cur_block_id() const {
 		assert(!blocks.empty());
-		return (blocks.size() - 1);
+		return ((unsigned)blocks.size() - 1);
 	}
 };
 
@@ -200,7 +200,7 @@ public:
 
 		// allocate data
 		assert(size == 0);
-		size      = strip_vect.size();
+		size      = (unsigned)strip_vect.size();
 		strips    = sb_alloc.alloc(size);
 		block_id  = sb_alloc.get_cur_block_id();
 		block_pos = sb_alloc.get_pos();
@@ -317,8 +317,8 @@ bool voxel_map::write(char const *const fn) const {
 	cout << "Writing lighting file to " << fn << endl;
 	size_t const n(fwrite(&vox_delta, sizeof(float), 3, fp));
 	assert(n == 3);
-	unsigned const map_size(size());
-	size_t const sz_write(fwrite(&map_size, sizeof(unsigned), 1, fp));
+	unsigned const map_size((unsigned)size()); // should be size_t?
+	size_t const sz_write(fwrite(&map_size, sizeof(map_size), 1, fp));
 	assert(sz_write == 1);
 
 	for (const_iterator i = begin(); i != end(); ++i) {
@@ -359,10 +359,10 @@ public:
 		strip_offsets.reserve(strips.size()+1);
 
 		for (vector<strip_t>::const_iterator i = strips.begin(); i != strips.end(); ++i) {
-			strip_offsets.push_back(indices.size());
+			strip_offsets.push_back((unsigned)indices.size());
 			add_strip(*i);
 		}
-		strip_offsets.push_back(indices.size());
+		strip_offsets.push_back((unsigned)indices.size());
 		assert(indices.size() == 4*nquads);
 	}
 
@@ -396,7 +396,7 @@ private:
 			data[ix].n = (data[ix].n + n)*0.5; // average the normals???
 		}
 		else {
-			ix = data.size();
+			ix = (unsigned)data.size();
 			vmap[map_ix][v] = ix;
 			data.push_back(vert_norm(v, n));
 		}
@@ -493,15 +493,14 @@ public:
 		bind_vbo(ivbo, 1);
 		glVertexPointer(3, GL_FLOAT, sizeof(vert_norm), 0);
 		glNormalPointer(   GL_FLOAT, sizeof(vert_norm), (void *)sizeof(point));
-		glDrawRangeElements(GL_QUADS, 0, data.size(), indices.size(), GL_UNSIGNED_INT, 0); // requires GL/glew.h
-		//glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
+		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0); // requires GL/glew.h
+		//glDrawElements(GL_QUADS, (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 	}
 
 	void show_stats() const {
-		unsigned const dmem(data.size()*sizeof(vert_norm));
-		unsigned const imem(indices.size()*sizeof(unsigned));
+		size_t const dmem(data.size()*sizeof(vert_norm)), imem(indices.size()*sizeof(unsigned));
 		cout << "verts: " << data.size() << ", quads: " << indices.size()/4 << endl;
 		cout << "mem: " << (dmem + imem) << ", vmem: " << (dmem*(vbo != 0) + imem*(ivbo != 0)) << endl;
 	}
@@ -621,7 +620,7 @@ void create_snow_strips(voxel_map &vmap) {
 			last_x_map.clear();
 			cur_x_map.swap(last_x_map);
 			assert(x_strip_map.find(last_x) == x_strip_map.end()); // map should guarantee strictly increasing x
-			x_strip_map[last_x] = snow_strips.size();
+			x_strip_map[last_x] = (unsigned)snow_strips.size();
 		}
 		vmap.erase(v1);
 		cur_x_map[v1] = zv;
@@ -638,7 +637,7 @@ void create_snow_strips(voxel_map &vmap) {
 			vs.push_back(voxel_z_pair(v1, zv));
 			if (!zv.valid()) break; // end of strip
 		}
-		unsigned const sz(vs.size()), num_parts((sz - 1)/MAX_STRIP_LEN + 1); // ceiling
+		unsigned const sz((unsigned)vs.size()), num_parts((sz - 1)/MAX_STRIP_LEN + 1); // ceiling
 
 		for (unsigned n = 0; n < num_parts; ++n) {
 			unsigned const start_pos(n*MAX_STRIP_LEN);
@@ -669,7 +668,7 @@ void create_snow_strips(voxel_map &vmap) {
 				zval_avg z3(last_x_map.find_adj_z(v3, vs[i].z, snow_depth));
 				
 				if (!end_element && !z3.valid()) {
-					last_edge = edge_strip.size() + 2;
+					last_edge = (unsigned)edge_strip.size() + 2;
 					++num_ends;
 				}
 				if (num_ends == 0) {
@@ -683,11 +682,11 @@ void create_snow_strips(voxel_map &vmap) {
 			if (num_ends > 0) {
 				if (last_edge+2 < edge_strip.size()) edge_strip.resize(last_edge+2); // clip off extra points
 				add_strip(edge_strip, 1, last_x, edge_y_start); // add if some edge elements
-				edge_strip_len += edge_strip.size();
+				edge_strip_len += (unsigned)edge_strip.size();
 				++n_edge_strips;
 			}
 			add_strip(strip, 0, last_x, y_start);
-			strip_len += strip.size();
+			strip_len += (unsigned)strip.size();
 			++n_strips;
 		} // for n
 	}

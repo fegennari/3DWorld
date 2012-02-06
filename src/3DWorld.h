@@ -794,7 +794,7 @@ public:
 	void add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid);
 	void draw() const;
 	void draw_and_clear() {draw(); clear();}
-	unsigned get_mem() const {return (points.capacity() + lines.capacity() + triangles.capacity())*sizeof(vnc);}
+	size_t get_mem() const {return (points.capacity() + lines.capacity() + triangles.capacity())*sizeof(vnc);}
 	bool empty() const {return (points.empty() && lines.empty() && triangles.empty());}
 };
 

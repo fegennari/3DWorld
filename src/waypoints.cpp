@@ -120,7 +120,7 @@ wpt_ix_t waypoint_vector::add(waypoint_t const &w) {
 		operator[](ix) = w;
 	}
 	else {
-		ix = waypoints.size();
+		ix = (unsigned)waypoints.size();
 		push_back(w);
 	}
 	operator[](ix).disabled = 0;
@@ -279,7 +279,7 @@ public:
 	void add_cobj_waypoints() {
 		int const cc(camera_change);
 		camera_change = 0; // messes up collision detection code
-		unsigned const num_waypoints(waypoints.size());
+		unsigned const num_waypoints((unsigned)waypoints.size());
 
 		for (coll_obj_group::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
 			add_one_cobj_wpt(*i, 0);
@@ -291,7 +291,7 @@ public:
 	void add_mesh_waypoints() {
 		if (!(display_mode & 0x01)) return; // mesh disabled
 		unsigned const mesh_skip_dist(16);
-		unsigned const num_waypoints(waypoints.size());
+		unsigned const num_waypoints((unsigned)waypoints.size());
 
 		for (int yy = 0; yy <= MESH_Y_SIZE; yy += mesh_skip_dist) {
 			for (int xx = 0; xx <= MESH_X_SIZE; xx += mesh_skip_dist) {
@@ -316,7 +316,7 @@ public:
 	}
 
 	void add_object_waypoints() {
-		unsigned const num_waypoints(waypoints.size());
+		unsigned const num_waypoints((unsigned)waypoints.size());
 
 		for (int i = 0; i < num_groups; ++i) {
 			vector<predef_obj> const &objs(obj_groups[i].get_predef_objs());
@@ -388,7 +388,7 @@ public:
 	void remove_last_waypoint() {
 		assert(!waypoints.empty());
 		assert(waypoints.back().temp); // too strict?
-		disconnect_waypoint(waypoints.size()-1, 1);
+		disconnect_waypoint((unsigned)waypoints.size()-1, 1);
 		waypoints.pop_back();
 	}
 
@@ -406,7 +406,7 @@ public:
 	}
 
 	void connect_all_waypoints() {
-		connect_waypoints(0, waypoints.size(), 0, waypoints.size(), 1, 0);
+		connect_waypoints(0, (unsigned)waypoints.size(), 0, (unsigned)waypoints.size(), 1, 0);
 	}
 
 	void connect_waypoints(unsigned from_start, unsigned from_end, unsigned to_start,

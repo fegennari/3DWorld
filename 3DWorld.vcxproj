@@ -169,7 +169,7 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;libjpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>jpeg-6b;glut-3.7.6-bin;glew-1.5.6\lib;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\pthreads-dll-2004-05-16\lib;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freealut-1.1.0-bin\lib;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\zlib-1.2.1</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>jpeg-6b;glut-3.7.6-bin;glew-1.5.6-64\lib;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\pthreads-dll-2004-05-16\lib;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freealut-1.1.0-bin\lib;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\zlib-1.2.1</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>

@@ -123,7 +123,7 @@ GLUtesselator *init_tess() {
 void tessellate_polygon(polygon_t const &poly) {
 
 	assert(!has_tess_error);
-	unsigned const size(poly.size());
+	unsigned const size((unsigned)poly.size());
 	assert(size >= 3);
 	static GLUtesselator *tobj = NULL;
 	if (tobj == NULL) tobj = init_tess();
@@ -166,7 +166,7 @@ void tessellate_polygon(polygon_t const &poly) {
 
 template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh) {
 
-	unsigned const npts(poly.size());
+	unsigned const npts((unsigned)poly.size());
 	assert(npts >= 3);
 	
 	if (npts <= 4 && (npts == 3 || (poly.is_convex() && poly.is_coplanar(coplanar_thresh)))) { // triangle or convex/coplanar quad

@@ -86,7 +86,7 @@ bool check_face_containment(cube_t const &cube, int dim, int dir, int cobj) {
 	int const x(get_xpos(cent.x)), y(get_ypos(cent.y));
 	if (point_outside_mesh(x, y)) return 0;
 	coll_cell const &cell(v_collision_matrix[y][x]);
-	unsigned const ncv(cell.cvals.size());
+	unsigned const ncv((unsigned)cell.cvals.size());
 
 	for (unsigned i = 0; i < ncv; ++i) { // test for internal faces to be removed
 		coll_obj const &c(coll_objects[cell.cvals[i]]);

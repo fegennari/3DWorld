@@ -70,8 +70,8 @@ class buffer_manager_t {
 public:
 	openal_buffer &get_buffer(unsigned id) {assert(id < buffers.size()); return buffers[id];}
 
-	unsigned add_buffer(bool alloc) {
-		unsigned const ix(buffers.size());
+	size_t add_buffer(bool alloc) {
+		size_t const ix(buffers.size());
 		buffers.push_back(openal_buffer());
 		if (alloc) buffers.back().alloc();
 		return ix;

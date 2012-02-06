@@ -87,7 +87,7 @@ public:
 			if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue; // no grass
 
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				mesh_to_grass_map[y*MESH_X_SIZE+x] = grass.size();
+				mesh_to_grass_map[y*MESH_X_SIZE+x] = (unsigned)grass.size();
 				if (x == MESH_X_SIZE-1 || y == MESH_Y_SIZE-1) continue; // mesh not drawn
 				if (is_mesh_disabled(x, y) || is_mesh_disabled(x+1, y) || is_mesh_disabled(x, y+1) || is_mesh_disabled(x+1, y+1)) continue; // mesh disabled
 				if (mesh_height[y][x] < water_matrix[y][x])   continue; // underwater (make this dynamically update?)
@@ -118,7 +118,7 @@ public:
 				}
 			}
 		}
-		mesh_to_grass_map[XY_MULT_SIZE] = grass.size();
+		mesh_to_grass_map[XY_MULT_SIZE] = (unsigned)grass.size();
 		remove_excess_cap(grass);
 		PRINT_TIME("Grass Generation");
 	}
@@ -386,7 +386,7 @@ public:
 	void upload_data() {
 		if (empty()) return;
 		RESET_TIME;
-		upload_data_to_vbo(0, grass.size(), 1);
+		upload_data_to_vbo(0, (unsigned)grass.size(), 1);
 		data_valid = 1;
 		PRINT_TIME("Grass Upload VBO");
 		cout << "mem used: " << grass.size()*sizeof(grass_t) << ", vmem used: " << 3*grass.size()*sizeof(vert_norm_tc_color) << endl;
@@ -508,7 +508,7 @@ public:
 				last_visible = visible;
 			}
 		}
-		if (last_visible) draw_range(beg_ix, grass.size());
+		if (last_visible) draw_range(beg_ix, (unsigned)grass.size());
 
 		// cleanup drawing state
 		glDisable(GL_COLOR_MATERIAL);

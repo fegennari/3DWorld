@@ -27,7 +27,7 @@ coll_tquad::coll_tquad(coll_obj const &c) : tquad_t(c.npoints), normal(c.norm), 
 }
 
 
-coll_tquad::coll_tquad(polygon_t const &p) : tquad_t(p.size()) {
+coll_tquad::coll_tquad(polygon_t const &p) : tquad_t((unsigned)p.size()) {
 
 	assert(npts == 3 || npts == 4);
 	color.set_c4(p.color);
@@ -171,10 +171,10 @@ void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned d
 	for (unsigned bix = 0; bix < 3; ++bix) { // Note: this loop will invalidate the reference to 'n'
 		unsigned const count(bin_count[bix]);
 		if (count == 0) continue; // empty bin
-		unsigned const kid(nodes.size());
+		unsigned const kid((unsigned)nodes.size());
 		nodes.push_back(tree_node(cur, cur+count));
 		build_tree(kid, skip_dims, depth+1);
-		nodes[kid].next_node_id = nodes.size();
+		nodes[kid].next_node_id = (unsigned)nodes.size();
 		cur += count;
 	}
 	assert(cur == nodes[nix].end);
@@ -185,11 +185,11 @@ void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned d
 void cobj_tree_tquads_t::build_tree_top(bool verbose) {
 
 	nodes.reserve(6*tquads.size()/5); // conservative
-	nodes.push_back(tree_node(0, tquads.size()));
+	nodes.push_back(tree_node(0, (unsigned)tquads.size()));
 	assert(nodes.size() == 1);
 	max_depth = max_leaf_count = num_leaf_nodes = 0;
 	build_tree(0, 0, 0);
-	nodes[0].next_node_id = nodes.size();
+	nodes[0].next_node_id = (unsigned)nodes.size();
 	for (unsigned i = 0; i < 3; ++i) {vector<coll_tquad>().swap(temp_bins[i]);}
 
 	if (verbose) {
@@ -239,7 +239,7 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 	bool ret(0);
 	float t(0.0), tmin(0.0), tmax(1.0);
 	node_ix_mgr nixm(nodes, p1, p2);
-	unsigned const num_nodes(nodes.size());
+	unsigned const num_nodes((unsigned)nodes.size());
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		//++num_node;
@@ -315,11 +315,11 @@ template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
 	clear();
 	if (!create_cixs()) return; // nothing to be done
 	nodes.reserve(6*cixs.size()/5); // conservative
-	nodes.push_back(tree_node(0, cixs.size()));
+	nodes.push_back(tree_node(0, (unsigned)cixs.size()));
 	assert(nodes.size() == 1);
 	max_depth = max_leaf_count = num_leaf_nodes = 0;
 	build_tree(0, 0, 0);
-	nodes[0].next_node_id = nodes.size();
+	nodes[0].next_node_id = (unsigned)nodes.size();
 	for (unsigned i = 0; i < NUM; ++i) {vector<unsigned>().swap(temp_bins[i]);}
 
 	if (verbose) {
@@ -339,7 +339,7 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::check_coll_line(point const &p1, p
 	bool ret(0);
 	float t(0.0), tmin(0.0), tmax(1.0), max_alpha(0.0);
 	node_ix_mgr nixm(nodes, p1, p2);
-	unsigned const num_nodes(nodes.size());
+	unsigned const num_nodes((unsigned)nodes.size());
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
@@ -373,7 +373,7 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::check_coll_line(point const &p1, p
 template<unsigned NUM> void cobj_tree_t<NUM>::get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs,
 	int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const
 {
-	unsigned const num_nodes(nodes.size());
+	unsigned const num_nodes((unsigned)nodes.size());
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
@@ -404,7 +404,7 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::is_cobj_contained(point const &p1,
 {
 	if (nodes.empty()) return 0;
 	node_ix_mgr nixm(nodes, p1, p2);
-	unsigned const num_nodes(nodes.size());
+	unsigned const num_nodes((unsigned)nodes.size());
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
@@ -430,7 +430,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_line_cobjs(point const &p
 	assert(cobjs || cqc);
 	if (nodes.empty()) return;
 	node_ix_mgr nixm(nodes, pos1, pos2);
-	unsigned const num_nodes(nodes.size());
+	unsigned const num_nodes((unsigned)nodes.size());
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
@@ -452,7 +452,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_line_cobjs(point const &p
 template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const {
 
 	if (nodes.empty()) return;
-	unsigned const num_nodes(nodes.size());
+	unsigned const num_nodes((unsigned)nodes.size());
 	cube_t bcube(center, center);
 	bcube.expand_by(radius);
 
@@ -524,10 +524,10 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 	for (unsigned bix = 0; bix < 3; ++bix) { // Note: this loop will invalidate the reference to 'n'
 		unsigned const count(bin_count[bix]);
 		if (count == 0) continue; // empty bin
-		unsigned const kid(nodes.size());
+		unsigned const kid((unsigned)nodes.size());
 		nodes.push_back(tree_node(cur, cur+count));
 		build_tree(kid, skip_dims, depth+1);
-		nodes[kid].next_node_id = nodes.size();
+		nodes[kid].next_node_id = (unsigned)nodes.size();
 		cur += count;
 	}
 	assert(cur == nodes[nix].end);
@@ -571,10 +571,10 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, un
 	for (unsigned bix = 0; bix < 8; ++bix) { // Note: this loop will invalidate the reference to 'n'
 		unsigned const count(bin_count[bix]);
 		if (count == 0) continue; // empty bin
-		unsigned const kid(nodes.size());
+		unsigned const kid((unsigned)nodes.size());
 		nodes.push_back(tree_node(cur, cur+count));
 		build_tree(kid, ((count == num) ? 7 : 0), depth+1); // if all in one bin, make that bin a leaf
-		nodes[kid].next_node_id = nodes.size();
+		nodes[kid].next_node_id = (unsigned)nodes.size();
 		cur += count;
 	}
 	assert(cur == nodes[nix].end);

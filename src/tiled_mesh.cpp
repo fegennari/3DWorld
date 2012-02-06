@@ -402,7 +402,7 @@ public:
 		// can store normals in a normal map texture, but a vertex texture fetch is slow
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
 		glNormalPointer(   GL_FLOAT, ptr_stride, (void *)sizeof(point));
-		glDrawRangeElements(GL_QUADS, 0, data.size(), 4*size*size, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
+		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), 4*size*size, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
 		//glDrawElements(GL_QUADS, 4*size*size, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
@@ -439,7 +439,7 @@ public:
 		int const toffx(int(0.5*camera.x/X_SCENE_SIZE)), toffy(int(0.5*camera.y/Y_SCENE_SIZE));
 		int const x1(-tile_radius + toffx), y1(-tile_radius + toffy);
 		int const x2( tile_radius + toffx), y2( tile_radius + toffy);
-		unsigned const init_tiles(tiles.size());
+		unsigned const init_tiles((unsigned)tiles.size());
 		vector<tile_xy_pair> to_erase;
 
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // free old tiles

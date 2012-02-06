@@ -45,7 +45,7 @@ void cloud_manager_t::create_clouds() { // 3D cloud puffs
 			               Y_SCENE_SIZE*rand_uniform(1.0, 2.0),
 						   Z_SCENE_SIZE*rand_uniform(0.4, 0.8));
 		unsigned const nparts(rand()%(NPARTS/2) + NPARTS/2);
-		unsigned const ix(size());
+		size_t const ix(size());
 		resize(ix + nparts);
 
 		for (unsigned p = 0; p < nparts; ++p) {
@@ -69,7 +69,7 @@ void cloud_manager_t::update_lighting() {
 	RESET_TIME;
 	point const sun_pos(get_sun_pos());
 	bool const calc_sun_light(have_sun && light_factor > 0.4);
-	unsigned const num_clouds(size());
+	unsigned const num_clouds((unsigned)size());
 	int last_src(0);
 	vector<cloud_t> clouds;
 

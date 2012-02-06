@@ -320,7 +320,7 @@ template<typename cwt> void pt_line_drawer_t<cwt>::vnc_cont::draw(int type) cons
 	glVertexPointer(3, GL_FLOAT,     sizeof(vnc), &(front().v));
 	glNormalPointer(   GL_FLOAT,     sizeof(vnc), &(front().n));
 	glColorPointer( 4, cwt::gl_type, sizeof(vnc), &(front().c));
-	glDrawArrays(type, 0, size());
+	glDrawArrays(type, 0, (unsigned)size());
 }
 
 
@@ -361,7 +361,7 @@ void quad_batch_draw::draw() const {
 	if (verts.empty()) return;
 	assert(!(verts.size() & 3)); // must be a multiple of 4
 	verts.front().set_state();
-	glDrawArrays(GL_QUADS, 0, size());
+	glDrawArrays(GL_QUADS, 0, (unsigned)size());
 }
 
 
@@ -570,7 +570,7 @@ void draw_group(obj_group &objg) {
 			assert(tid < NUM_TEXTURES);
 			ordering.push_back(make_pair(tid, j));
 		}
-		num_drawn += ordering.size();
+		num_drawn += (unsigned)ordering.size();
 		sort(ordering.begin(), ordering.end()); // sort by texture id
 
 		for (unsigned j = 0; j < ordering.size(); ++j) {
@@ -2639,7 +2639,7 @@ void draw_camera_filters(vector<camera_filter> &cfs) {
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
 
-	for (int i = cfs.size()-1; i >= 0; --i) { // apply backwards
+	for (int i = (int)cfs.size()-1; i >= 0; --i) { // apply backwards
 		if (cfs[i].time == 0) continue;
 		cfs[i].draw();
 		if ((int)cfs[i].time <= iticks) cfs[i].time = 0; else cfs[i].time -= iticks;

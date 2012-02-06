@@ -162,7 +162,7 @@ public:
 	void add_vertex(T const &v, vertex_map_t<T> &vmap);
 	void finalize(int prim_type);
 	void clear() {vntc_vect_t<T>::clear(); indices.clear();}
-	unsigned num_verts() const {return (indices.empty() ? size() : indices.size());}
+	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
 	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts, bool quads_only) const;
@@ -178,7 +178,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	cube_t get_bbox() const;
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
-	void get_stats(model3d_stats_t &stats) const {stats.blocks += size(); stats.verts += num_unique_verts();}
+	void get_stats(model3d_stats_t &stats) const {stats.blocks += (unsigned)size(); stats.verts += num_unique_verts();}
 	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts, bool quads_only) const;
 	bool write(ostream &out) const;
 	bool read(istream &in);
@@ -287,7 +287,7 @@ public:
 		unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube),
 		from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0) {}
 	~model3d() {clear();}
-	unsigned num_materials(void) const {return materials.size();}
+	size_t num_materials(void) const {return materials.size();}
 
 	material_t &get_material(int mat_id) {
 		assert(mat_id >= 0 && (unsigned)mat_id < materials.size());

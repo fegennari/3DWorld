@@ -332,7 +332,7 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 	leaves.pop_back();
 
 	if (update_data && !leaf_data.empty()) {
-		unsigned const i4(i << 2), tnl4(leaves.size() << 2);
+		unsigned const i4(i << 2), tnl4((unsigned)leaves.size() << 2);
 		assert(4*leaves.size() <= leaf_data.size());
 
 		for (unsigned j = 0; j < 4; ++j) { // shift vertex array (last one is now invalid)
@@ -418,7 +418,7 @@ void tree::drop_leaves() {
 
 	if (damage >= 1.0 || leaves.empty()) return; // too damaged
 	bool const llc(leaves_changed);
-	unsigned const nleaves(leaves.size());
+	unsigned const nleaves((unsigned)leaves.size());
 	float const temp0(max(1.0f, min(0.3f, (20.0f-temperature)/30.0f)));
 	int const rgen(min(LEAF_GEN_RAND2/10, int(rand_uniform(0.5, 1.5)*temp0*LEAF_GEN_RAND2/fticks)));
 
@@ -503,7 +503,7 @@ void tree::draw_tree_shadow() {
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 		select_texture(tree_types[type].leaf_tex);
-		glDrawArrays(GL_QUADS, 0, 4*leaves.size());
+		glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_ALPHA_TEST);
 		bind_vbo(0);
@@ -558,7 +558,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs) {
 
 	if (branch_vbo == 0) { // create vbo
 		assert(branch_ivbo == 0);
-		unsigned const numcylin(all_cylins.size());
+		unsigned const numcylin((unsigned)all_cylins.size());
 		assert(num_branch_quads == 0 && num_unique_pts == 0);
 
 		for (unsigned i = 0; i < numcylin; i++) { // determine required data size
@@ -585,7 +585,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs) {
 			bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
 
 			if (!prev_connect) { // new cylinder section
-				data_pos = data.size();
+				data_pos = (unsigned)data.size();
 				quad_id  = cylin_id = 0;
 			}
 			for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
@@ -632,7 +632,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs) {
 
 void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float mscale, float dist_cs, int leaf_dynamic) {
 
-	unsigned nleaves(leaves.size());
+	unsigned nleaves((unsigned)leaves.size());
 	assert(nleaves <= max_leaves);
 	bool const gen_arrays(leaf_data.empty());
 	unsigned const leaf_stride(sizeof(vert_norm_tc_color));
@@ -789,7 +789,7 @@ void delete_trees() {
 
 	unsigned deleted(0);
 
-	for (unsigned i = t_trees.size(); i > 0; --i) { // delete backwards (pop collision stack)
+	for (unsigned i = (unsigned)t_trees.size(); i > 0; --i) { // delete backwards (pop collision stack)
 		if (t_trees[i-1].delete_tree()) ++deleted;
 	}
 	if (tree_coll_level && !t_trees.empty()) purge_coll_freed(1); // MUST do this for collision detection to work

@@ -560,7 +560,7 @@ void obj_group::add_predef_obj(point const &pos, int type, int rtime) {
 
 void obj_group::preproc_this_frame() {
 
-	unsigned const nobjs(max_objects());
+	unsigned const nobjs((unsigned)max_objects());
 	end_id = nobjs;
 	new_id = 0;
 	if (!enabled) return;

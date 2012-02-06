@@ -702,8 +702,8 @@ bool lmap_manager_t::write_data_to_file(char const *const fn, int ltype) const {
 	assert(fn != NULL);
 	if (!open_file(fp, fn, "lighting output", "wb")) return 0;
 	cout << "Writing lighting file to " << fn << endl;
-	unsigned const data_size(vldata_alloc.size());
-	size_t const sz_write(fwrite(&data_size, sizeof(unsigned), 1, fp));
+	unsigned const data_size((unsigned)vldata_alloc.size()); // should be size_t?
+	size_t const sz_write(fwrite(&data_size, sizeof(data_size), 1, fp));
 	assert(sz_write == 1);
 	unsigned const sz(lmcell::get_dsz(ltype));
 

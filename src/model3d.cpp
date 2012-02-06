@@ -36,7 +36,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 		assert(it->second < textures.size());
 		return it->second;
 	}
-	unsigned const tid(textures.size());
+	unsigned const tid((unsigned)textures.size());
 	tex_map[fn] = tid;
 	if (verbose) cout << "creating texture " << fn << endl;
 	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
@@ -145,7 +145,7 @@ unsigned read_uint(istream &in) {
 }
 
 template<typename V> void write_vector(ostream &out, V const &v) {
-	write_uint(out, v.size());
+	write_uint(out, (unsigned)v.size());
 	out.write((const char *)&v.front(), v.size()*sizeof(V::value_type));
 }
 
@@ -288,7 +288,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));
 
 	if (indices.empty()) { // draw regular arrays
-		glDrawArrays(prim_type, 0, size());
+		glDrawArrays(prim_type, 0, (unsigned)size());
 	}
 	else { // draw indexed arrays
 		if (ivbo == 0) {
@@ -303,7 +303,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		// possible optimization:
 		// sort triangles/quads by size, largest to smallest
 		// render a subset of the indices based on size threshold and distance to camera
-		glDrawRangeElements(prim_type, 0, size(), indices.size(), GL_UNSIGNED_INT, 0);
+		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
 		bind_vbo(0, 1);
 	}
 	bind_vbo(0);
@@ -324,7 +324,7 @@ template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_
 		unsigned ix;
 
 		if (it == vmap.end()) { // not found
-			ix = size();
+			ix = (unsigned)size();
 			push_back(v);
 			vmap[v] = ix;
 		}
@@ -421,7 +421,7 @@ template<typename T> void indexed_vntc_vect_t<T>::read(istream &in) {
 
 bool polygon_t::is_convex() const {
 
-	unsigned const npts(size());
+	unsigned const npts((unsigned)size());
 	assert(npts >= 3);
 	if (npts == 3) return 1;
 	unsigned counts[2] = {0};
@@ -496,7 +496,7 @@ template<typename T> unsigned vntc_vect_block_t<T>::num_verts() const {
 template<typename T> unsigned vntc_vect_block_t<T>::num_unique_verts() const {
 
 	unsigned s(0);
-	for (const_iterator i = begin(); i != end(); ++i) {s += i->size();}
+	for (const_iterator i = begin(); i != end(); ++i) {s += (unsigned)i->size();}
 	return s;
 }
 
@@ -512,7 +512,7 @@ template<typename T> void vntc_vect_block_t<T>::get_polygons(vector<coll_tquad> 
 
 template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 
-	write_uint(out, size());
+	write_uint(out, (unsigned)size());
 	for (const_iterator i = begin(); i != end(); ++i) {i->write(out);}
 	return 1;
 }
@@ -764,7 +764,7 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 	}
 	cube_t const bb(get_polygon_bbox(poly));
 	if (bbox == all_zeros_cube) {bbox = bb;} else {bbox.union_with_cube(bb);}
-	return split_polygons_buffer.size();
+	return (unsigned)split_polygons_buffer.size();
 }
 
 
@@ -834,7 +834,7 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 			}
 		}
 	}
-	return polygons.size();
+	return (unsigned)polygons.size();
 }
 
 
@@ -923,7 +923,7 @@ int model3d::get_material_ix(string const &material_name, string const &fn) {
 	string_map_t::const_iterator it(mat_map.find(material_name));
 
 	if (it == mat_map.end()) {
-		mat_id = materials.size();
+		mat_id = (unsigned)materials.size();
 		mat_map[material_name] = mat_id;
 		materials.push_back(material_t(material_name, fn, ignore_ambient));
 	}
@@ -1107,7 +1107,7 @@ bool model3d::write_to_disk(string const &fn) const {
 	write_uint(out, MAGIC_NUMBER);
 	out.write((char const *)&bbox, sizeof(cube_t));
 	if (!unbound_geom.write(out)) return 0;
-	write_uint(out, materials.size());
+	write_uint(out, (unsigned)materials.size());
 	
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (!m->write(out)) {

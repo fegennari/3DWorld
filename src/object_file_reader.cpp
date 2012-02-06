@@ -98,7 +98,7 @@ public:
 				int ix(0);
 
 				while (fscanf(fp, "%i", &ix) == 1) { // read vertex index
-					normalize_index(ix, v.size());
+					normalize_index(ix, (unsigned)v.size());
 					// only fill in the vertex (norm and tc will be unused)
 					if (ppts) poly.push_back(vert_norm_tc(v[ix], zero_vector, 0.0, 0.0));
 					int const c(getc(fp));
@@ -148,7 +148,7 @@ class object_file_reader_model : public object_file_reader {
 	}
 
 	string get_path(string const &fn) const {
-		for (unsigned pos = fn.size(); pos > 0; --pos) {
+		for (unsigned pos = (unsigned)fn.size(); pos > 0; --pos) {
 			if (fn[pos-1] == '\\' || fn[pos-1] == '/') {
 				return string(fn.begin(), fn.begin()+pos);
 			}
@@ -349,24 +349,24 @@ public:
 				poly_data_block &pb(pblocks.back());
 				pb.polys.push_back(poly_header_t(cur_mat_id, obj_group_id));
 				unsigned &npts(pb.polys.back().npts);
-				unsigned const pix(pb.pts.size());
+				unsigned const pix((unsigned)pb.pts.size());
 				int vix(0), tix(0), nix(0);
 
 				while (fscanf(fp, "%i", &vix) == 1) { // read vertex index
-					normalize_index(vix, v.size());
+					normalize_index(vix, (unsigned)v.size());
 					vntc_ix_t vntc_ix(vix, 0, 0);
 					int const c(getc(fp));
 
 					if (c == '/') {
 						if (fscanf(fp, "%i", &tix) == 1) { // read text coord index
-							normalize_index(tix, tc.size()-1); // account for tc[0]
+							normalize_index(tix, (unsigned)tc.size()-1); // account for tc[0]
 							vntc_ix.tix = tix+1; // account for tc[0]
 						}
 						int const c2(getc(fp));
 
 						if (c2 == '/') {
 							if (fscanf(fp, "%i", &nix) == 1 && !recalc_normals) { // read normal index
-								normalize_index(nix, n.size()-1); // account for n[0]
+								normalize_index(nix, (unsigned)n.size()-1); // account for n[0]
 								vntc_ix.nix = nix+1; // account for n[0]
 							} // else the normal will be recalculated later
 						}
@@ -484,7 +484,7 @@ public:
 		PRINT_TIME("Object File Load");
 		model.load_all_used_tids(); // need to load the textures here to get the colors
 		PRINT_TIME("Model Texture Load");
-		unsigned const num_blocks(pblocks.size());
+		size_t const num_blocks(pblocks.size());
 
 		for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) { // if recalc_normals
 			if (!i->is_valid()) continue; // invalid, remains invalid
@@ -530,7 +530,7 @@ public:
 		PRINT_TIME("Model3d Build");
 		
 		if (verbose) {
-			unsigned const nn(recalc_normals ? vn.size() : n.size());
+			size_t const nn(recalc_normals ? vn.size() : n.size());
 			cout << "verts: " << v.size() << ", normals: " << nn << ", tcs: " << tc.size() << ", faces: " << num_faces << ", objects: " << num_objects
 				 << ", groups: " << num_groups << ", blocks: " << num_blocks << endl;
 			cout << "bbox: "; model.get_bbox().print(); cout << endl;

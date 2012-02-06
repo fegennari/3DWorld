@@ -206,11 +206,9 @@ void shift_light_sources(vector3d const &vd) {
 }
 
 
-void dls_cell::get_close_sources(point const &pos, float radius, vector<unsigned> &dlights) const {
+void dls_cell::get_close_sources(point const &pos, float radius, vector<unsigned> &dlights) const { // unused
 
-	unsigned const lsz(lsrc.size());
-
-	for (unsigned l = 0; l < lsz; ++l) { // slow, unfinished
+	for (unsigned l = 0; l < (unsigned)lsrc.size(); ++l) { // slow, unfinished
 		light_source &ls(dl_sources[lsrc[l]]);
 		//if (!ls.check_counter()) continue;
 		if (!dist_less_than(pos, ls.get_center(), (radius + ls.get_radius()))) continue;
@@ -273,7 +271,7 @@ bool r_profile::add_rect(float const d[3][2], unsigned d0, unsigned d1, float al
 		avg_alpha = alpha;
 		return 1;
 	}
-	unsigned const nrects(rects.size());
+	unsigned const nrects((unsigned)rects.size());
 
 	for (unsigned i = 0; i < nrects; ++i) { // check if contained in any rect
 		if (rects[i].contains(r.d)) return 1; // minor performance improvement
@@ -304,7 +302,7 @@ float r_profile::clipped_den_inv(float const c[2]) const { // clip by first dime
 	if (filled)        return (1.0 - avg_alpha);
 	if (rects.empty()) return 1.0;
 	bool const no_clip(c[0] == bb.d[0][0] && c[1] == bb.d[0][1]);
-	unsigned const nrects(rects.size());
+	unsigned const nrects((unsigned)rects.size());
 	float a(0.0);
 
 	if (no_clip) {
@@ -348,9 +346,7 @@ void r_profile::clear_within(float const c[2]) {
 
 void reset_cobj_counters() {
 
-	unsigned const ncobjs(coll_objects.size());
-
-	for (unsigned i = 0; i < ncobjs; ++i) {
+	for (unsigned i = 0; i < (unsigned)coll_objects.size(); ++i) {
 		coll_objects[i].counter = -1;
 	}
 }
@@ -473,7 +469,7 @@ bool has_fixed_cobjs(int x, int y) {
 	bool has_fixed(0);
 	assert(!point_outside_mesh(x, y));
 	vector<int> const &cvals(v_collision_matrix[y][x].cvals);
-	unsigned const ncv(cvals.size());
+	unsigned const ncv((unsigned)cvals.size());
 
 	for (unsigned k = 0; k < ncv && !has_fixed; ++k) {
 		if (coll_objects[cvals[k]].fixed && coll_objects[cvals[k]].status == COLL_STATIC) has_fixed = 1;
@@ -519,7 +515,7 @@ void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int
 	if (vldata == NULL) return;
 	float const bbz[2][2] = {{get_xval(j), get_xval(j+1)}, {get_yval(i), get_yval(i+1)}}; // X x Y
 	coll_cell const &cell(v_collision_matrix[i][j]);
-	unsigned const ncv(cell.cvals.size());
+	unsigned const ncv((unsigned)cell.cvals.size());
 	float val(1.0), vscale(Z_WT_SCALE);
 	r_profile prof(bbz);
 	vector<pair<float, unsigned> > cobj_z;
@@ -544,7 +540,7 @@ void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int
 		}
 		sort(cobj_z.begin(), cobj_z.end(), std::greater<pair<float, unsigned> >()); // max to min z
 	}
-	unsigned const ncv2(cobj_z.size());
+	unsigned const ncv2((unsigned)cobj_z.size());
 	unsigned c(0);
 
 	for (int v = MESH_SIZE[2]-1; v >= 0; --v) { // top to bottom
@@ -751,7 +747,7 @@ void build_lightmap(bool verbose) {
 						int i[2] = {(dim ? t : s), (dim ? s : t)}; // dim = 0 => {s, t} = {x, y}
 						assert(!point_outside_mesh(i[0], i[1]));
 						coll_cell const &cell(v_collision_matrix[i[1]][i[0]]);
-						unsigned const ncv(cell.cvals.size());
+						unsigned const ncv((unsigned)cell.cvals.size());
 						lmcell *vlm(lmap_manager.vlmap[i[1]][i[0]]);
 
 						if (vlm == NULL) { // no cobjs
@@ -1291,7 +1287,7 @@ void add_dynamic_lights() {
 	}
 	// Note: do we want to sort by y/x position to minimize cache misses?
 	sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
-	unsigned const ndl(dl_sources.size());
+	unsigned const ndl((unsigned)dl_sources.size());
 	has_dl_sources = (ndl > 0);
 	bool first(1);
 
@@ -1397,7 +1393,7 @@ bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 	assert(!point_outside_mesh(x, y));
 	dls_cell const &ldv(ldynamic[y][x]);
 	if (!ldv.check_z(p[2])) return 0;
-	unsigned const lsz(ldv.size());
+	unsigned const lsz((unsigned)ldv.size());
 	CELL_LOC_T const cl[3] = {x, y, z}; // what about SHIFT_VAL?
 	bool added(0);
 	unsigned index(0);

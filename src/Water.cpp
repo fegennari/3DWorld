@@ -1429,7 +1429,7 @@ void calc_water_flow() {
 			if (minima.empty() || wmij != minima.back()) minima.push_back(wmij);
 		}
 	}
-	unsigned const msize(minima.size());
+	unsigned const msize((unsigned)minima.size());
 	if (msize == 0) return;
 	std::sort(minima.begin(), minima.end());
 	total_watershed = 0;
@@ -1449,7 +1449,7 @@ void calc_water_flow() {
 		cout << "Error: Too many water pools. Max is 32767." << endl;
 		exit(1);
 	}
-	spill.init(valleys.size());
+	spill.init((unsigned)valleys.size());
 	vector<int> vmap(XY_MULT_SIZE, 0);
 
 	for (unsigned k = 0; k < valleys.size(); ++k) {

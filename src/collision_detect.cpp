@@ -108,20 +108,20 @@ public:
 	unsigned cobjs_removed;
 	cobj_manager_t(coll_obj_group &cobjs_) : cobjs(cobjs_), index_top(0), cobjs_removed(0) {}
 
-	void reserve_cobjs(unsigned size) {
-		unsigned const old_size(cobjs.size());
+	void reserve_cobjs(size_t size) {
+		size_t const old_size(cobjs.size());
 		if (old_size >= size) return; // already large enough
-		unsigned const new_size(max(size, 2*old_size)); // prevent small incremental reserves
+		size_t const new_size(max(size, 2*old_size)); // prevent small incremental reserves
 		cobjs.resize(new_size);
 		index_stack.resize(new_size);
 
-		for (unsigned i = old_size; i < new_size; ++i) { // initialize
+		for (size_t i = old_size; i < new_size; ++i) { // initialize
 			index_stack[i] = (int)i; // put on the free list
 		}
 	}
 
 	int get_next_avail_index() {
-		unsigned const old_size(cobjs.size());
+		size_t const old_size(cobjs.size());
 		assert(index_stack.size() == old_size);
 		if (index_top >= old_size) reserve_cobjs(2*index_top + 4); // approx double in size
 		int const index(index_stack[index_top]);
@@ -576,11 +576,11 @@ inline void coll_cell::update_zmm(float zmin_, float zmax_, coll_obj const &cobj
 void cobj_stats() {
 
 	unsigned ncv(0), nonempty(0), ncobj(0);
-	unsigned const csize(coll_objects.size());
+	unsigned const csize((unsigned)coll_objects.size());
 
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			unsigned const sz(v_collision_matrix[y][x].cvals.size());
+			unsigned const sz((unsigned)v_collision_matrix[y][x].cvals.size());
 			ncv += sz;
 			if (sz > 0) ++nonempty;
 		}
@@ -602,7 +602,7 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 	assert((unsigned)index < coll_objects.size());
 	vcm.add_entry(index);
 	coll_obj const &cobj(coll_objects[index]);
-	unsigned const size(vcm.cvals.size());
+	unsigned const size((unsigned)vcm.cvals.size());
 
 	if (size > 1 && cobj.status == COLL_STATIC && coll_objects[vcm.cvals[size-2]].status == COLL_DYNAMIC) {
 		std::rotate(vcm.cvals.begin(), vcm.cvals.begin()+size-1, vcm.cvals.end()); // rotate last point to first point???
@@ -694,7 +694,7 @@ void purge_coll_freed(bool force) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			bool changed(0);
 			coll_cell &vcm(v_collision_matrix[i][j]);
-			unsigned const size(vcm.cvals.size());
+			unsigned const size((unsigned)vcm.cvals.size());
 
 			for (unsigned k = 0; k < size && !changed; ++k) {
 				if (coll_objects[vcm.cvals[k]].freed_unused()) changed = 1;
@@ -718,7 +718,7 @@ void purge_coll_freed(bool force) {
 			h_collision_matrix[i][j] = vcm.zmax; // need to think about add_to_hcm...
 		}
 	}
-	unsigned const ncobjs(coll_objects.size());
+	unsigned const ncobjs((unsigned)coll_objects.size());
 
 	for (unsigned i = 0; i < ncobjs; ++i) {
 		if (coll_objects[i].status == COLL_FREED) cobj_manager.free_index(i);
