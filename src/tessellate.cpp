@@ -1,4 +1,4 @@
-// 3D World - GLUT Polygon Tessellation code
+// 3D World - GLU Polygon Tessellation code
 // by Frank Gennari
 // 5/29/06
 

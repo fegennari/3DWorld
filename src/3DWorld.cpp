@@ -146,9 +146,9 @@ bool check_gl_error(unsigned loc_id) {
 }
 
 
-void doRedraw(int arg) {
+void post_window_redisplay() {
 
-	glutPostWindowRedisplay(curr_window);
+	glutPostWindowRedisplay(curr_window); // Schedule a new display event
 }
 
 
@@ -171,6 +171,31 @@ void init_context() {
 
 	screen_reset = 1;
 	glFinish();
+}
+
+
+void init_window() {
+
+	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
+	glutDisplayFunc(display);
+    glutReshapeFunc(resize);
+    glutMouseFunc(mouseButton);
+    glutMotionFunc(mouseMotion);
+    glutKeyboardFunc(keyboard);
+	glutSpecialFunc(keyboard2);
+
+	if (KBD_HANDLER) {
+		glutIgnoreKeyRepeat(1);
+		glutKeyboardUpFunc(keyboard_up);
+		glutSpecialUpFunc(keyboard2_up);
+		init_keyset();
+	}
+	glutPassiveMotionFunc(mousePassiveMotion);
+
+    // Initialize GL
+	glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+	glClearColor(0.0, 0.0, 0.0, 0.0);
 }
 
 
@@ -202,31 +227,6 @@ void un_maximize() {
 	window_height = wh2;
 	init_context();
 	//nop_frame = 1;
-}
-
-
-void init_window() {
-
-	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
-	glutDisplayFunc(display);
-    glutReshapeFunc(resize);
-    glutMouseFunc(mouseButton);
-    glutMotionFunc(mouseMotion);
-    glutKeyboardFunc(keyboard);
-	glutSpecialFunc(keyboard2);
-
-	if (KBD_HANDLER) {
-		glutIgnoreKeyRepeat(1);
-		glutKeyboardUpFunc(keyboard_up);
-		glutSpecialUpFunc(keyboard2_up);
-		init_keyset();
-	}
-	glutPassiveMotionFunc(mousePassiveMotion);
-
-    // Initialize GL
-	glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-	glClearColor(0.0, 0.0, 0.0, 0.0);
 }
 
 
@@ -543,7 +543,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 	obj_pld.free_mem();
 	//if (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) calc_visibility(SUN_SHADOW | MOON_SHADOW);
 	glDrawBuffer(GL_BACK);
-	glutPostWindowRedisplay(curr_window);
+	post_window_redisplay();
 	
 	if (world_mode == WMODE_INF_TERRAIN) {
 		mt2        = mesh_type;
@@ -587,7 +587,7 @@ void resize(int x, int y) {
 	set_gl_params();
 	calc_viewing_cone();
 	curr_window = glutGetWindow();
-	glutPostWindowRedisplay(curr_window);
+	post_window_redisplay();
 }
 
 
@@ -699,7 +699,7 @@ void mouseMotion(int x, int y) {
 			last_mouse_y = 1;
 		}
 	}
-	if (dx != 0.0 || dy != 0.0) glutPostWindowRedisplay(curr_window); // Schedule a new display event
+	if (dx != 0.0 || dy != 0.0) post_window_redisplay();
 }
 
 
@@ -726,7 +726,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	
 	case 'm': // maximize/minimize
 		if (!displayed) break;
-		mtime2 = glutGet(GLUT_ELAPSED_TIME);
+		mtime2 = GET_TIME_MS();
 		if (min_time != 0 && (mtime2 - min_time) < MIN_TIME_MS) break;
 		min_time = mtime2;
 		if (maximized) un_maximize(); else maximize();
@@ -1125,7 +1125,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		d_part_sys.clear();
 		break;
 	}
-	glutPostWindowRedisplay(curr_window); // Schedule a new display event
+	post_window_redisplay();
 }
 
 
@@ -1232,7 +1232,7 @@ void keyboard2(int key, int x, int y) {
 	case GLUT_KEY_F12: // unused
 		break;
 	}
-	glutPostWindowRedisplay(curr_window); // Schedule a new display event
+	post_window_redisplay();
 }
 
 
@@ -1857,7 +1857,7 @@ int main(int argc, char** argv) {
 	int rs(1);
 
 	if (srand_param == 1) {
-		rs = glutGet(GLUT_ELAPSED_TIME);
+		rs = GET_TIME_MS();
 	}
 	else if (srand_param != 0) {
 		rs = srand_param;

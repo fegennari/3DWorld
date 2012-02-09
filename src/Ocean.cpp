@@ -153,7 +153,7 @@ inline double Amplitude(double f, double theta, double k) {
 
 void AnimateWater() {
 
-	float const time(glutGet(GLUT_ELAPSED_TIME)/2000.0);
+	float const time(GET_TIME_MS()/2000.0);
 
 	for (int q = 0; q < WaterX*WaterY; q++) {
 		WaterHeight[q] = 0.0;

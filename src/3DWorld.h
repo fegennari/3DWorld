@@ -1141,8 +1141,9 @@ colorRGBA const BACKGROUND_NIGHT(BLACK);
 
 
 // macros
-#define RESET_TIME       int const timer1(glutGet(GLUT_ELAPSED_TIME));
-#define GET_DELTA_TIME   (glutGet(GLUT_ELAPSED_TIME) - timer1)
+#define GET_TIME_MS()    glutGet(GLUT_ELAPSED_TIME)
+#define RESET_TIME       int const timer1(GET_TIME_MS());
+#define GET_DELTA_TIME   (GET_TIME_MS() - timer1)
 #define PRINT_TIME(str) {cout << str << " time = " << GET_DELTA_TIME << endl;}
 
 

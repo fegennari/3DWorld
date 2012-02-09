@@ -43,7 +43,7 @@ upos_point_type cur_origin(all_zeros);
 
 extern bool nop_frame, combined_gu, have_sun, use_stencil_shadows, clear_landscape_vbo, show_lightning;
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
-extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain;
+extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, brightness;
 extern float water_h_off;
 extern double camera_zh;
@@ -51,6 +51,8 @@ extern point mesh_origin, flow_source, surface_pos, univ_sun_pos, orig_cdir, sun
 extern colorRGBA sun_color, bkg_color;
 extern vector<camera_filter> cfilters;
 
+void check_xy_offsets();
+void post_window_redisplay();
 void display_universe();
 void display_inf_terrain();
 bool universe_intersection_test(point const &pos, vector3d const &dir, float range);
@@ -259,7 +261,7 @@ void draw_frame_rate(float framerate) {
 float get_framerate(int &timer_b) {
 
 	static float fr_average(0.0);
-	timer_b = glutGet(GLUT_ELAPSED_TIME);
+	timer_b = GET_TIME_MS();
 
 	if (timer_b > timer_a) { // skip zero time frames
 		float const framerate(1000.0/float(timer_b - timer_a));
@@ -286,7 +288,7 @@ void final_draw(float framerate) {
 void swap_buffers_and_redraw() {
 
 	glutSwapBuffers();
-	if (animate) glutPostWindowRedisplay(curr_window);
+	if (animate) post_window_redisplay();
 }
 
 
@@ -788,7 +790,7 @@ void display(void) {
 			show_framerate = 0;
 		}
 		if (show_framerate == 1) {
-			timer_a = glutGet(GLUT_ELAPSED_TIME);
+			timer_a = GET_TIME_MS();
 			show_framerate = 2;
 		}
 		if (world_mode == WMODE_GROUND) process_platforms(); // must be before camera code

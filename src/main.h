@@ -34,11 +34,6 @@ extern obj_group obj_groups[];
 extern double c_radius, c_theta, c_phi, up_theta, camera_y;
 extern float sun_rot, moon_rot;
 extern point cpos2;
-extern int orig_window, curr_window;
-
-// 3DWorld function prototypes
-void init_window();
-void check_xy_offsets();
 
 
 #endif
