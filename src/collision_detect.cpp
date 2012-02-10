@@ -1471,7 +1471,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	if (is_camera /*|| type == WAYPOINT*/) z2 += camera_zh; // add camera height
 	coll_cell const &cell(v_collision_matrix[ypos][xpos]);
 	int any_coll(0), moved(0);
-	float zceil, zfloor, zt, zb;
+	float zceil, zfloor;
 
 	for (int k = (int)cell.cvals.size()-1; k >= 0; --k) { // iterate backwards
 		int const index(cell.cvals[k]);
@@ -1479,9 +1479,11 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		assert(unsigned(index) < coll_objects.size());
 		coll_obj const &cobj(coll_objects[index]);
 		if (cobj.d[2][0] > z2)         continue; // above the top of the object - can't affect it
+		if (any_coll && cobj.d[2][1] < min(z1, min(zmu, zfloor))) continue; // top below a previously seen floor
 		if (!cobj.contains_pt_xy(pos)) continue; // test bounding cube
 		if (cobj.no_collision())       continue;
 		if (skip_dynamic && cobj.status == COLL_DYNAMIC) continue;
+		float zt, zb;
 		int coll(0);
 		
 		switch (cobj.type) {
