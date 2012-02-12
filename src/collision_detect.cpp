@@ -104,20 +104,27 @@ class cobj_manager_t {
 	coll_obj_group &cobjs;
 	unsigned index_top;
 
+	void extend_index_stack(unsigned start, unsigned end) {
+		index_stack.resize(end);
+
+		for (size_t i = start; i < end; ++i) { // initialize
+			index_stack[i] = (int)i; // put on the free list
+		}
+	}
+
 public:
 	unsigned cobjs_removed;
-	cobj_manager_t(coll_obj_group &cobjs_) : cobjs(cobjs_), index_top(0), cobjs_removed(0) {}
+
+	cobj_manager_t(coll_obj_group &cobjs_) : cobjs(cobjs_), index_top(0), cobjs_removed(0) {
+		extend_index_stack(0, cobjs.size());
+	}
 
 	void reserve_cobjs(size_t size) {
 		size_t const old_size(cobjs.size());
 		if (old_size >= size) return; // already large enough
 		size_t const new_size(max(size, 2*old_size)); // prevent small incremental reserves
 		cobjs.resize(new_size);
-		index_stack.resize(new_size);
-
-		for (size_t i = old_size; i < new_size; ++i) { // initialize
-			index_stack[i] = (int)i; // put on the free list
-		}
+		extend_index_stack(old_size, new_size);
 	}
 
 	int get_next_avail_index() {
@@ -141,6 +148,21 @@ public:
 			index_stack[--index_top] = index;
 		}
 	}
+
+	bool swap_and_set_as_coll_objects(coll_obj_group &new_cobjs) {
+		if (!cobjs.empty()) return 0;
+		cobjs.swap(new_cobjs);
+		unsigned const ncobjs(cobjs.size());
+		cobjs.resize(cobjs.capacity()); // use up all available capacity
+		extend_index_stack(0, cobjs.size());
+
+		for (unsigned i = 0; i < ncobjs; ++i) {
+			coll_obj temp_cobj(cobjs[i]);
+			temp_cobj.add_as_fixed_cobj(); // don't need to remove it
+			assert(cobjs[i].id == i);
+		}
+		return 1;
+	}
 };
 
 cobj_manager_t cobj_manager(coll_objects);
@@ -148,6 +170,11 @@ cobj_manager_t cobj_manager(coll_objects);
 
 void reserve_coll_objects(unsigned size) {
 	cobj_manager.reserve_cobjs(size);
+}
+
+
+bool swap_and_set_as_coll_objects(coll_obj_group &new_cobjs) {
+	return cobj_manager.swap_and_set_as_coll_objects(new_cobjs);
 }
 
 
