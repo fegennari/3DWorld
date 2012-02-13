@@ -253,6 +253,11 @@ inline vector3d get_poly_norm(point const *const points) { // requires at least 
 }
 
 
+inline bool is_axis_aligned(vector3d const &n) { // n must be normalized
+	return (fabs(n.x) > 0.99 || fabs(n.y) > 0.99 || fabs(n.z) > 0.99);
+}
+
+
 inline bool is_triangle_valid(point const &p1, point const &p2, point const &p3) {
 	return (!dist_less_than(p1, p2, TOLERANCE) && !dist_less_than(p2, p3, TOLERANCE) && !dist_less_than(p3, p1, TOLERANCE));
 }

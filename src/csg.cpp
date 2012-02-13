@@ -555,6 +555,12 @@ bool csg_cube::subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &
 }
 
 
+bool csg_cube::subtract_from_thick_polygon(coll_obj_group &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
+
+	return 0; // FIXME: not yet implemented
+}
+
+
 float get_cube_dmax() {
 
 	return REL_DMAX*(X_SCENE_SIZE + Y_SCENE_SIZE);
@@ -843,8 +849,13 @@ bool coll_obj::subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cub
 	else if (is_cylinder()) {
 		removed = cube.subtract_from_cylinder(new_cobjs, *this);
 	}
-	else if (include_polys && is_thin_poly()) {
-		removed = cube.subtract_from_polygon(new_cobjs, *this);
+	else if (include_polys) {
+		if (is_thin_poly()) {
+			removed = cube.subtract_from_polygon(new_cobjs, *this);
+		}
+		else if (is_axis_aligned(norm)) {
+			removed = cube.subtract_from_thick_polygon(new_cobjs, *this); // not yet implemented
+		}
 	}
 	return removed;
 }
