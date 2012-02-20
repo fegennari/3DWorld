@@ -21,7 +21,7 @@ float const SMOKE_DIS_ZD     = 0.03;
 
 
 bool smoke_visible(0), smoke_exists(0), have_indir_smoke_tex(0);
-unsigned smoke_tid(0);
+unsigned smoke_tid(0), last_smoke_update(0);
 colorRGB const_indir_color(BLACK);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
@@ -247,23 +247,28 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	static colorRGBA last_cur_ambient(ALPHA0), last_cur_diffuse(ALPHA0);
 	bool const lighting_changed(cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
 	bool const full_update(init_call || (!no_sun_lpos_update && lighting_changed));
+	bool const could_have_smoke(smoke_exists || last_smoke_update > 0);
 
 	if (full_update) {
 		last_cur_ambient = cur_ambient;
 		last_cur_diffuse = cur_diffuse;
 	}
-	// Note: Even if there is no smoke, a small amount might remain in the matrix
-	//       This will likely not be noticeable, and will be removed the next time the texture is updated
-	if (!full_update && !smoke_exists && !indir_lighting_updated && !lighting_changed) return 0; // return 1?
+	if (!full_update && !could_have_smoke && !indir_lighting_updated && !lighting_changed) return 0; // return 1?
 
 	static int cur_block(0);
-	unsigned const skipval(smoke_exists ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP);
+	unsigned const skipval(could_have_smoke ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP);
 	unsigned const block_size(MESH_Y_SIZE/skipval);
 	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
 	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
 	have_indir_smoke_tex = 1;
-	
+
+	if (smoke_exists) {
+		last_smoke_update = SMOKE_SEND_SKIP;
+	}
+	else if (last_smoke_update > 0) {
+		--last_smoke_update;
+	}
 	if (indir_lighting_updated) { // running with multiple threads, don't use openmp
 		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
 			update_smoke_row(data, default_lmc, y, full_update);
