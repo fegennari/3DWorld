@@ -132,6 +132,13 @@ colorRGBA texture_manager::get_tex_avg_color(int tid) const {
 }
 
 
+bool texture_manager::has_binary_alpha(int tid) const {
+
+	assert((unsigned)tid < textures.size());
+	return textures[tid].has_binary_alpha;
+}
+
+
 // ************ read/write code ************
 
 void write_uint(ostream &out, unsigned val) {
@@ -630,9 +637,11 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 	}
 	else {
 		int const tex_id(get_render_texture());
+		bool has_binary_alpha(1);
 		
 		if (tex_id >= 0) {
 			tmgr.bind_texture(tex_id);
+			has_binary_alpha = tmgr.has_binary_alpha(tex_id);
 		}
 		else {
 			select_texture(((default_tid >= 0) ? default_tid : WHITE_TEX), 0); // no texture specified - use white texture
@@ -646,18 +655,20 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			if (s_tid >= 0) tmgr.bind_texture(s_tid); else select_texture(WHITE_TEX);
 		}
 		if (alpha < 1.0 && ni != 1.0) {
-			// set index of refraction (and reset it at the end)
+			// FIXME: set index of refraction (and reset it at the end)
 		}
 		if (alpha_tid >= 0) enable_blend();
 		float const spec_val((ks.R + ks.G + ks.B)/3.0);
+		float const min_alpha((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0);
 		set_specular(spec_val, ns);
 		set_color_e(colorRGBA(ke, alpha));
 
 		if (shader.is_setup()) {
 			set_color_d(get_ad_color());
-			shader.add_uniform_float("min_alpha", ((alpha_tid >= 0) ? 0.9 : 0.0)); // FIXME: check has_binary_alpha?
+			shader.add_uniform_float("min_alpha", min_alpha);
 		}
 		else {
+			glAlphaFunc(GL_GREATER, min_alpha);
 			set_color_a(colorRGBA((ignore_ambient ? kd : ka), alpha));
 			set_color_d(colorRGBA(kd, alpha));
 		}
@@ -1190,7 +1201,6 @@ void model3ds::render(bool is_shadow_pass) {
 		set_color_a(WHITE); // ambient will be set by indirect lighting in the shader
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, model3d_alpha_thresh);
 	}
 	BLACK.do_glColor();
 	set_specular(0.0, 1.0);

@@ -84,7 +84,7 @@ float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-F
 float water_h_off(0.0), perspective_fovy(0.0), perspective_nclip(0.0), atmosphere(1.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
-float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(DEF_STEP_HEIGHT), wapypoint_sz_thresh(1.0), model3d_alpha_thresh(0.5);
+float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(DEF_STEP_HEIGHT), wapypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9);
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;

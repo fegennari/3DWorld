@@ -222,6 +222,7 @@ public:
 	void ensure_tid_bound(int tid);
 	void bind_texture(int tid) const;
 	colorRGBA get_tex_avg_color(int tid) const;
+	bool has_binary_alpha(int tid) const;
 };
 
 
