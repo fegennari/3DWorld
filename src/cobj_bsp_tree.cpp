@@ -233,8 +233,6 @@ void cobj_tree_tquads_t::add_polygons(vector<polygon_t> const &polygons, bool ve
 
 bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA *color, int *cindex, int ignore_cobj, bool exact) const {
 
-	//static unsigned num_checks(0), num_node(0), num_tests(0), num_hits(0), num_success(0);
-	//++num_checks;
 	if (nodes.empty()) return 0;
 	bool ret(0);
 	float t(0.0), tmin(0.0), tmax(1.0);
@@ -242,17 +240,14 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 	unsigned const num_nodes((unsigned)nodes.size());
 
 	for (unsigned nix = 0; nix < num_nodes;) {
-		//++num_node;
 		tree_node const &n(nodes[nix]);
 		if (!nixm.check_node(nix)) continue;
 
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 			// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 			// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
-			//++num_tests;
 			if (cindex && (int)tquads[i].cid == ignore_cobj)             continue;
 			if (!tquads[i].line_int_exact(p1, p2, t, cnorm, tmin, tmax)) continue;
-			//++num_hits;
 			if (cindex) *cindex = tquads[i].cid;
 			if (color ) *color  = tquads[i].color.get_c4();
 			cpos = p1 + (p2 - p1)*t;
@@ -263,8 +258,6 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 			ret  = 1;
 		}
 	}
-	//if (ret) ++num_success;
-	//if ((num_checks % 10000) == 0) {cout << "nc: " << num_checks << ", nn: " << num_node << ", nt: " << num_tests << ", nh: " << num_hits << ", ns: " << num_success << endl;}
 	return ret;
 }
 

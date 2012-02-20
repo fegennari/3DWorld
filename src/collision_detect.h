@@ -184,7 +184,7 @@ public:
 };
 
 
-struct coll_tquad : public tquad_t { // size = 60
+struct coll_tquad : public tquad_t { // size = 68
 
 	vector3d normal;
 	
