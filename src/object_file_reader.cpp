@@ -31,26 +31,26 @@ protected:
 		if (fp) fclose(fp);
 		fp = NULL;
 	}
+	int get_char(FILE *fp_)    const {return getc(fp_);}
+	int get_char(ifstream &in) const {return in.get();}
 
-	void read_to_newline(ifstream &in) const {
-		// FIXME: what about '\' line wraps?
-		in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-	}
+	template<typename T> void read_to_newline(T &stream) const {
+		bool prev_was_escape(0);
 
-	void read_to_newline(FILE *fp_) const {
 		while (1) {
-			int const c(getc(fp_));
-			if (c == '\n' || c == '\0' || c == EOF) return;
+			int const c(get_char(stream));
+			if ((!prev_was_escape && c == '\n') || c == '\0' || c == EOF) return;
+			prev_was_escape = (c == '\\'); // handle escape character at end of line
 		}
 		assert(0); // never gets here
 	}
 
-	void read_str_to_newline(FILE *fp_, string &str) const {
-		assert(fp_);
+	template<typename T> void read_str_to_newline(T &stream, string &str) const {
 		str.resize(0);
+		bool prev_was_escape(0);
 
 		while (1) {
-			int const c(getc(fp_));
+			int const c(get_char(stream));
 			if (c == '\n' || c == '\0' || c == EOF) break; // end of file or line
 			if (!isspace(c) || !str.empty()) str.push_back(c);
 		}
