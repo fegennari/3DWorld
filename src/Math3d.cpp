@@ -229,8 +229,6 @@ bool get_poly_zvals(vector<tquad_t> const &pts, float xv, float yv, float &z1, f
 
 void gen_poly_planes(point const *const points, unsigned npoints, vector3d const &norm, float thick, point pts[2][4]) {
 
-	assert(npoints == 3 || npoints == 4);
-
 	for (unsigned i = 0; i < 2; ++i) { // back face cull?
 		float const tv(0.5*(i ? -thick : thick));
 		
@@ -246,14 +244,15 @@ vector<tquad_t> thick_poly_to_sides(point const *const points, unsigned npoints,
 	vector<tquad_t> pts;
 	assert(npoints >= 3);
 	pts.resize(npoints + 2);
-	point plane_pts[2][4];
-	gen_poly_planes(points, npoints, norm, thick, plane_pts); // generate top and bottom surfaces
 
-	for (unsigned d = 0; d < 2; ++d) { // FIXME: can this copy be removed?
-		pts[d].npts = npoints;
-		for (unsigned i = 0; i < npoints; ++i) {pts[d][i] = plane_pts[d][i];}
+	for (unsigned i = 0; i < 2; ++i) { // same as gen_poly_planes()
+		float const tv(0.5*(i ? -thick : thick));
+		
+		for (unsigned j = 0; j < npoints; ++j) {
+			pts[i][j] = points[j] + norm*tv;
+		}
+		pts[i].npts = npoints;
 	}
-
 	for (unsigned i = 0; i < npoints; ++i) { // test the <npoints> sides
 		unsigned const inext((i+1)%npoints);
 		pts[i+2].npts = 4;
