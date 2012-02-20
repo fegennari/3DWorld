@@ -1002,12 +1002,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				bool const use_model3d(ivals[0] >= 3);
 				bool const no_cobjs   (ivals[0] >= 4);
 				bool const use_cubes  (ivals[0] == 5);
-				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: one for each texture?)
+				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (could use one for each texture)
 				ppts.resize(0);
 				vector<cube_t> cubes;
+				cube_t model_bbox(0,0,0,0,0,0);
 				
-				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), xf, cobj.cp.tid, cobj.cp.color,
-					voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), (ignore_ambient != 0), 1))
+				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), model_bbox, xf, cobj.cp.tid,
+					cobj.cp.color, voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), (ignore_ambient != 0), 1))
 				{
 					return read_error(fp, "object file data", coll_obj_file);
 				}
@@ -1042,7 +1043,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 						fixed_cobjs.push_back(cur_cube);
 					}
 				}
-				// FIXME: else {czmax = max(czmax, model.zmax)}
+				else if (use_model3d) {
+					czmin = min(czmin, model_bbox.d[2][0]);
+					czmax = max(czmax, model_bbox.d[2][1]);
+				}
 				PRINT_TIME("Obj File Load/Process");
 				break;
 			}

@@ -340,8 +340,9 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 void free_model_context();
 void render_models(bool shadow_pass);
 
-bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose);
+bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bbox,
+	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file,
+	bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose);
 
 
 #endif // _MODEL3D_H_

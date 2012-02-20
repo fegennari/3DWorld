@@ -541,8 +541,9 @@ public:
 };
 
 
-bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, float voxel_xy_spacing, bool load_models, bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose)
+bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bbox,
+	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_models,
+	bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
@@ -586,6 +587,7 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 			//cur_model.set_has_cobjs(); // billboard cobjs are not added, and the colors/textures are missing
 			PRINT_TIME("Create Model3d Cubes");
 		}
+		model_bbox = cur_model.get_bbox();
 		return 1;
 	}
 	else {
