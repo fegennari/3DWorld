@@ -1076,7 +1076,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 		display_mesh3(NULL, water_z);
 		glDisable(GL_CLIP_PLANE0);
 	}
-	// FIXME: render more of the scene here
+	// could render more of the scene here
 	glPopMatrix();
 
 	// render reflection to texture

@@ -226,7 +226,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool use_wind) {
 	s.set_frag_shader("linear_fog.part+simple_texture");
 	
 	if (use_wind) { // wind on leaves
-		// FIXME: leaves are drawn as quads, not triangles
+		// FIXME: leaves are drawn as quads, not triangles, so this won't work
 		s.set_geom_shader("wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
 	}
 	s.begin_shader();

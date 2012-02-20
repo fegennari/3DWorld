@@ -1002,7 +1002,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				bool const use_model3d(ivals[0] >= 3);
 				bool const no_cobjs   (ivals[0] >= 4);
 				bool const use_cubes  (ivals[0] == 5);
-				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (could use one for each texture)
+				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: use one for each texture?)
 				ppts.resize(0);
 				vector<cube_t> cubes;
 				cube_t model_bbox(0,0,0,0,0,0);

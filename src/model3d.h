@@ -230,11 +230,11 @@ struct material_params_t {
 	colorRGB ka, kd, ks, ke, tf;
 	float ns, ni, alpha, tr;
 	unsigned illum;
-	bool skip, is_used;
+	bool skip, is_used, unused1, unused2; // unused bools to pad the struct
 
 	material_params_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color),
-		ns(1.0), ni(1.0), alpha(1.0), tr(0.0), illum(2), skip(0), is_used(0) {}
-};
+		ns(1.0), ni(1.0), alpha(1.0), tr(0.0), illum(2), skip(0), is_used(0), unused1(0), unused2(0) {}
+}; // must be padded
 
 
 struct material_t : public material_params_t {

@@ -280,7 +280,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		unsigned const nix((npoints == 3) ? 3 : 6); // triangle or quad (2 tris)
 		
 		for (unsigned i = 0; i < nix; ++i) {
-			norm.do_glNormal(); // FIXME: smooth?
+			norm.do_glNormal(); // if vertex normals are needed, then use the model3d rendering path
 			points[ixs[i]].do_glVertex();
 		}
 		obj_draw_groups[group_id].mark_as_drawn(cix);

@@ -20,11 +20,16 @@ protected:
 	char buffer[MAX_CHARS];
 	bool verbose;
 
-	bool open_file() { // FIXME: what about multiple opens/reads?
+	bool open_file() {
 		assert(!filename.empty());
+		assert(!fp); // must call close_file() before reusing
 		fp = fopen(filename.c_str(), "r");
 		if (!fp) cerr << "Error: Could not open object file " << filename << endl;
 		return (fp != 0);
+	}
+	void close_file() {
+		if (fp) fclose(fp);
+		fp = NULL;
 	}
 
 	void read_to_newline(ifstream &in) const {
@@ -70,7 +75,7 @@ protected:
 
 public:
 	object_file_reader(string const &fn) : filename(fn), fp(NULL), verbose(0) {assert(!fn.empty());}
-	~object_file_reader() {if (fp) fclose(fp);}
+	~object_file_reader() {close_file();}
 
 	bool read(vector<coll_tquad> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
@@ -195,7 +200,7 @@ public:
 					cerr << "Error reading material name" << endl;
 					return 0;
 				}
-				if (verbose) cout << "Material " << material_name << endl; // FIXME: too verbose?
+				if (verbose) cout << "Material " << material_name << endl; // maybe too verbose?
 				cur_mat_id =  model.get_material_ix(material_name, fn);
 				cur_mat    = &model.get_material(cur_mat_id);
 			}
@@ -541,6 +546,14 @@ public:
 };
 
 
+void check_obj_file_ext(string const &filename, string const &ext) {
+
+	if (ext != "obj") {
+		cout << "Warning: Attempting to read file '" << filename << "' with extension '" << ext << "' as an object file." << endl;
+	}
+}
+
+
 bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bbox,
 	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_models,
 	bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose)
@@ -558,7 +571,8 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 			if (!reader.load_from_model3d_file(verbose)) return 0; // FIXME: xf is ignored, assumed to be already applied
 		}
 		else {
-			assert(ext == "obj"); // FIXME: too strong?
+			check_obj_file_ext(filename, ext);
+
 			if (!reader.read(xf, recalc_normals, verbose)) return 0;
 			
 			if (write_file) {
@@ -591,7 +605,7 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 		return 1;
 	}
 	else {
-		assert(ext == "obj"); // FIXME: too strong?
+		check_obj_file_ext(filename, ext);
 		object_file_reader reader(filename);
 		return reader.read(ppts, xf, verbose);
 	}

@@ -1863,7 +1863,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				coll_obj const &c(coll_objects[i]);
 				if (c.no_draw()) continue;
 				
-				if (c.is_semi_trans()) { // FIXME: dlists containing semi-transparent grouped polygons?
+				if (c.is_semi_trans()) { // slow when polygons are grouped
 					float dist(distance_to_camera(c.get_center_pt()));
 
 					if (c.type == COLL_SPHERE) { // distance to surface closest to the camera

@@ -411,22 +411,18 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 				assert((unsigned)curw < waypoints.size());
 
 				if (dist_less_than(waypoints[curw].pos, pos, sradius)) { // smiley has reached waypoint
-					//cout << "reached target waypoint " << curw << " at time " << tfticks << endl; // testing
 					waypts_used.insert(curw); // insert as the last used waypoint and remove from consideration
 					waypoints[curw].mark_visited_by_smiley(smiley_id);
 					unreachable[1].clear();
 					waypt_adj_vect const &next(waypoints[curw].next_wpts);
 
 					if (!next.empty()) { // choose next waypoint from graph
-						//cout << "choose next waypoint, curw: " << curw << endl;
 						// FIXME: skip path waypoints that are in unreachable[1]?
 						curw = find_optimal_next_waypoint(curw, goal); // can return -1
-						//cout << "next curw: " << curw << endl;
 
 						for (unsigned i = 0; i < next.size(); ++i) {
 							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu, 1, 0.0);
 						}
-						//cout << "size: " << oddatav.size() << endl;
 						continue;
 					}
 					// disconntected waypoint - should rarely get here
@@ -903,7 +899,6 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			float const start_cost(using_dest_mark ? 0.0 : get_pos_cost(smiley_id, obj.pos, opos, pdu, radius, step_height, 0));
 		
 			if (start_cost > 0.0) {
-				//cout << "cost: " << start_cost << ", stepv: "; stepv.print(); cout << endl; // testing
 				unsigned const ndirs(16);
 				dir_cost_t best;
 
@@ -914,7 +909,6 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 					dir_cost_t const cur(cost, dir, stepv);
 					if (i == 0 || cur < best) best = cur;
 				}
-				//if (best.dp < 1.0) {cout << "best: cost: " << best.cost << ", dp: " << best.dp << ", dir: "; best.dir.print(); cout << endl;}
 				if (best.cost > 0.0) {} // FIXME: still not good, what to do?
 				obj.pos = opos + step_dist_scale(obj, best.dir)*step_dist;
 			}

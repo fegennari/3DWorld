@@ -252,7 +252,8 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 		last_cur_ambient = cur_ambient;
 		last_cur_diffuse = cur_diffuse;
 	}
-	// Note: even if there is no smoke, a small amount might remain in the matrix - FIXME?
+	// Note: Even if there is no smoke, a small amount might remain in the matrix
+	//       This will likely not be noticeable, and will be removed the next time the texture is updated
 	if (!full_update && !smoke_exists && !indir_lighting_updated && !lighting_changed) return 0; // return 1?
 
 	static int cur_block(0);

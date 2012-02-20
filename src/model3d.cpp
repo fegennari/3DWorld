@@ -725,7 +725,7 @@ bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t
 
 bool material_t::write(ostream &out) const {
 
-	out.write((char const *)this, sizeof(material_params_t)); // FIXME: can write garbage bytes
+	out.write((char const *)this, sizeof(material_params_t));
 	write_vector(out, name);
 	write_vector(out, filename);
 	return (geom.write(out) && geom_tan.write(out));
@@ -734,7 +734,7 @@ bool material_t::write(ostream &out) const {
 
 bool material_t::read(istream &in) {
 
-	in.read((char *)this, sizeof(material_params_t)); // FIXME: can read garbage bytes
+	in.read((char *)this, sizeof(material_params_t));
 	read_vector(in, name);
 	read_vector(in, filename);
 	return (geom.read(in) && geom_tan.read(in));
@@ -897,7 +897,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
 					//assert(in_cube);
 					assert(j > 0); // bottom must be set
 					cube.d[2][1] = val;
-					assert(cube.d[2][0] < cube.d[2][1]); // no zero height cubes - FIXME: too strict?
+					assert(cube.d[2][0] < cube.d[2][1]); // no zero height cubes (should be ok, but can remove later if too strict)
 					bool merged(0);
 					unsigned num(0);
 
