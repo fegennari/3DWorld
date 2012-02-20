@@ -31,7 +31,7 @@ bool coll_obj::cobj_plane_side_test(point const *pts, unsigned npts, point const
 
 		if (type == COLL_POLYGON) {
 			if (thickness > MIN_POLY_THICK) { // thick polygon
-				if (ppts.empty()) ppts = thick_poly_to_sides(points, npoints, norm, thickness);
+				if (ppts.empty()) thick_poly_to_sides(points, npoints, norm, thickness, ppts);
 
 				for (unsigned i = 0; i < ppts.size(); ++i) {
 					for (unsigned j = 0; j < ppts[i].npts; ++j) {

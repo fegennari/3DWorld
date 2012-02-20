@@ -412,7 +412,7 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 	float const dzx(norm.z == 0.0 ? 0.0 : DX_VAL*norm.x/norm.z), dzy(norm.z == 0.0 ? 0.0 : DY_VAL*norm.y/norm.z);
 	float const delta_z(sqrt(dzx*dzx + dzy*dzy));
 	vector<tquad_t> pts;
-	if (cobj.thickness > MIN_POLY_THICK) pts = thick_poly_to_sides(cobj.points, cobj.npoints, norm, cobj.thickness);
+	if (cobj.thickness > MIN_POLY_THICK) thick_poly_to_sides(cobj.points, cobj.npoints, norm, cobj.thickness, pts);
 	cube_t cube;
 	cube.d[2][0] = zminc - SMALL_NUMBER;
 	cube.d[2][1] = zmaxc + SMALL_NUMBER;
@@ -1157,7 +1157,8 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 
 				if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, max(0.0f, (thick - MIN_POLY_THICK)))) {
 					if (cobj.thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
-						vector<tquad_t> const pts(thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness));
+						vector<tquad_t> pts;
+						thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
 						if (!sphere_intersect_poly_sides(pts, pos, o_radius, val, norm, 1)) break; // no collision
 						bool intersects(0), inside(1);
 						
@@ -1570,7 +1571,8 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				if (cobj.thickness > MIN_POLY_THICK && !poly_z) {
 					float val;
 					vector3d norm;
-					vector<tquad_t> const pts(thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness));
+					vector<tquad_t> pts;
+					thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
 					if (!sphere_intersect_poly_sides(pts, pos, radius, val, norm, 0)) break; // no collision
 					float const zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]);
 					zb = zmaxc;

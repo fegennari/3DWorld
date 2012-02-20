@@ -239,30 +239,29 @@ void gen_poly_planes(point const *const points, unsigned npoints, vector3d const
 }
 
 
-vector<tquad_t> thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick) {
+void thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick, vector<tquad_t> &sides) {
 
-	vector<tquad_t> pts;
 	assert(npoints >= 3);
-	pts.resize(npoints + 2);
+	sides.clear();
+	sides.resize(npoints + 2);
 
 	for (unsigned i = 0; i < 2; ++i) { // same as gen_poly_planes()
 		float const tv(0.5*(i ? -thick : thick));
 		
 		for (unsigned j = 0; j < npoints; ++j) {
-			pts[i][j] = points[j] + norm*tv;
+			sides[i][j] = points[j] + norm*tv;
 		}
-		pts[i].npts = npoints;
+		sides[i].npts = npoints;
 	}
 	for (unsigned i = 0; i < npoints; ++i) { // test the <npoints> sides
 		unsigned const inext((i+1)%npoints);
-		pts[i+2].npts = 4;
-		pts[i+2][0] = pts[0][i];
-		pts[i+2][1] = pts[1][i];
-		pts[i+2][2] = pts[1][inext];
-		pts[i+2][3] = pts[0][inext];
+		sides[i+2].npts = 4;
+		sides[i+2][0] = sides[0][i];
+		sides[i+2][1] = sides[1][i];
+		sides[i+2][2] = sides[1][inext];
+		sides[i+2][3] = sides[0][inext];
 	}
-	std::reverse(pts[1].pts, pts[1].pts+pts[1].npts); // reverse point order of bottom side
-	return pts; // FIXME: remove copy/malloc on return?
+	std::reverse(sides[1].pts, sides[1].pts+sides[1].npts); // reverse point order of bottom side
 }
 
 
@@ -352,7 +351,8 @@ bool sphere_ext_poly_intersect(point const * const points, unsigned npoints, vec
 	float thick, rdist;
 	if (!sphere_ext_poly_int_base(points[0], norm, pos, radius, thickness, thick, rdist)) return 0;
 	if (thickness <= MIN_POLY_THICK) return (sphere_poly_intersect(points, npoints, pos, norm, rdist, max(0.0f, (thick - t_adj))));
-	vector<tquad_t> const pts(thick_poly_to_sides(points, npoints, norm, thickness)); // slow
+	vector<tquad_t> pts;
+	thick_poly_to_sides(points, npoints, norm, thickness, pts); // slow
 
 	for (unsigned i = 0; i < pts.size(); ++i) { // adapted from sphere_intersect_poly_sides()
 		if ((radius - dot_product_ptv(pts[i].get_norm(), pos, pts[i][0])) < 0.0) return 0;

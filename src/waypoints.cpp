@@ -259,7 +259,8 @@ public:
 			assert(c.npoints == 3 || c.npoints == 4); // triangle or quad
 				
 			if (c.thickness > MIN_POLY_THICK) { // extruded polygon
-				vector<tquad_t> const pts(thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness));
+				vector<tquad_t> pts;
+				thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness, pts);
 
 				for (unsigned j = 0; j < pts.size(); ++j) {
 					add_waypoint_poly(pts[j].pts, pts[j].npts, pts[j].get_norm(), c.id, connect);
