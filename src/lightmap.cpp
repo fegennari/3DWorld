@@ -206,17 +206,6 @@ void shift_light_sources(vector3d const &vd) {
 }
 
 
-void dls_cell::get_close_sources(point const &pos, float radius, vector<unsigned> &dlights) const { // unused
-
-	for (unsigned l = 0; l < (unsigned)lsrc.size(); ++l) { // slow, unfinished
-		light_source &ls(dl_sources[lsrc[l]]);
-		//if (!ls.check_counter()) continue;
-		if (!dist_less_than(pos, ls.get_center(), (radius + ls.get_radius()))) continue;
-		dlights.push_back(lsrc[l]);
-	}
-}
-
-
 // *** R_PROFILE IMPLEMENTATION ***
 
 

@@ -30,6 +30,8 @@ Completed:
 10b. Smoke Puffs Smoke Effects: VS/FS - OK with smaller smoke puffs
 17. Dynamic Lighting of Cobjs: FS
 16a. Static Light Sources for Cobjs: FS - specular in nicer
+12b. Terrain Tile Water Env Reflection
+16b. Static Light Sources/Shadows for Cobjs (+ shadow map)
 
 Not Implementable/Too Difficult or Inefficient
 3. Grass Effects/Regen (crush, burn, cut, update z): GS - requires state
@@ -47,22 +49,10 @@ quality/blending/lighting
 + Lots of possibilities here, plenty of research done on this topic
 - Not sure what to do yet, or if the improvements would be significant
 
-12b. Terrain Tile Water Env Reflection: VS or FS
-* Reflect sun, clouds, and sky
-+ More agreement with standard mesh water
-+ Better visual quality
-- Only clouds in finite mesh mode, inf terrain has fog
-
 15. Planet Cloud Cover (Universe Mode): FS
 * Add procedurally generated, unique, animated cloud cover to planets
 + Better quality and more realistic
 - Need to figure out procedural noise (generation on GPU or texture)
-
-16b. Static Light Sources/Shadows for Cobjs: FS
-* Add smoother/higher res shadows, maybe as a texture
-+ Better quality of shadows
-+ No need to subdivide shadowed/unshadowed quads/tris
-- Shadows as textures may be too expensive to manage (too many small textures)
 
 17b. Dynamic Light Occlusion/Shadows: FS
 + Looks more correct

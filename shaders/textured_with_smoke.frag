@@ -56,13 +56,6 @@ vec3 add_light0(in vec3 off, in vec3 scale, in vec3 n, in vec3 source, in vec3 d
 	return (ambient + max(dot(normal, light_dir), 0.0)*diffuse + specular);
 }
 
-void add_il_term(in vec3 sp, in vec3 normal, inout vec3 indir_light, inout float sum, in vec3 offset) { // unused
-	float len    = max(1.0, length(offset));
-	float mag    = max(0.0, dot(normal, offset)/(len*len));
-	indir_light += mag*(texture3D(smoke_tex, sp.zxy+0.005*offset).rgb);
-	sum         += mag;
-}
-
 // Note: This may seem like it can go into the vertex shader as well,
 //       but we don't have the tex0 value there and can't determine the full init color
 void main()
