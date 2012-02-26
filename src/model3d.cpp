@@ -192,6 +192,10 @@ template<typename T> void vntc_vect_t<T>::calc_bounding_volumes() {
 
 template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 
+	if (need_normalize) {
+		for (iterator i = begin(); i != end(); ++i) i->n.normalize();
+		need_normalize = 0;
+	}
 	if (indices.empty() || finalized) return; // nothing to do
 	finalized = 1;
 #if 0
@@ -327,7 +331,9 @@ template<typename T> void indexed_vntc_vect_t<T>::add_poly(polygon_t const &poly
 template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_map_t<T> &vmap) {
 
 	if (USE_INDEXED_VERTS) {
-		vertex_map_t<T>::const_iterator it(vmap.find(v));
+		T v2(v);
+		if (vmap.get_average_normals()) v2.n = zero_vector;
+		vertex_map_t<T>::const_iterator it(vmap.find(v2));
 		unsigned ix;
 
 		if (it == vmap.end()) { // not found
@@ -337,8 +343,13 @@ template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_
 		}
 		else { // found
 			ix = it->second;
+			assert(ix < size());
+
+			if (vmap.get_average_normals()) {
+				operator[](ix).n += v.n; // sum the normals
+				need_normalize = 1;
+			}
 		}
-		assert(ix < size());
 		indices.push_back(ix);
 	}
 	else {
@@ -753,6 +764,24 @@ bool material_t::read(istream &in) {
 
 
 // ************ model3d ************
+
+
+unsigned model3d::add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id, unsigned obj_id) {
+
+	vntc_map_t  vmap    [2] = {vntc_map_t (1), vntc_map_t (1)}; // average_normals=1
+	vntct_map_t vmap_tan[2] = {vntct_map_t(1), vntct_map_t(1)}; // average_normals=1
+	unsigned tot_added(0);
+	polygon_t poly(color);
+	poly.resize(3); // triangles
+	float const tc[2] = {0.0, 0.0}; // all zero?
+
+	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		vector3d const normal(i->get_normal()); // average_normals=1 should turn most of these face normals into vertex normals
+		UNROLL_3X(poly[i_] = vert_norm_tc(i->pts[i_], normal, tc);)
+		tot_added += add_polygon(poly, vmap, vmap_tan, mat_id, obj_id);
+	}
+	return tot_added;
+}
 
 
 unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id) {

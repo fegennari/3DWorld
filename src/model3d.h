@@ -108,14 +108,16 @@ template<typename T> class vertex_map_t : public map<T, unsigned> {
 
 	int last_mat_id;
 	unsigned last_obj_id;
+	bool average_normals;
 
 public:
-	vertex_map_t() : last_mat_id(-1), last_obj_id(0) {}
+	vertex_map_t(bool average_normals_=0) : last_mat_id(-1), last_obj_id(0), average_normals(average_normals_) {}
+	bool get_average_normals() const {return average_normals;}
 	
 	void check_for_clear(int mat_id) {
 		if (mat_id != last_mat_id || size() >= MAX_VMAP_SIZE) {
-		last_mat_id = mat_id;
-		clear();
+			last_mat_id = mat_id;
+			clear();
 		}
 	}
 };
@@ -153,9 +155,10 @@ public:
 template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
 	vector<unsigned> indices;
+	bool need_normalize;
 
 public:
-	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_) {}
+	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
 	void render(shader_t &shader, bool is_shadow_pass, int prim_type);
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
@@ -297,7 +300,8 @@ public:
 
 	// creation and query
 	void set_has_cobjs() {has_cobjs = 1;}
-	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id=0);
+	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
+	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
 	void get_cubes(vector<cube_t> &cubes, float spacing) const;
 	int get_material_ix(string const &material_name, string const &fn);
