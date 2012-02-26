@@ -665,6 +665,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
+    <ClCompile Include="src\voxels.cpp" />
     <ClCompile Include="src\water.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
@@ -771,6 +772,7 @@
     <ClInclude Include="src\universe.h" />
     <ClInclude Include="src\Universe_base.h" />
     <ClInclude Include="src\upsurface.h" />
+    <ClInclude Include="src\voxels.h" />
     <ClInclude Include="Targa\targa.h" />
   </ItemGroup>
   <ItemGroup>

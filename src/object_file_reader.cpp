@@ -589,7 +589,7 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 				PRINT_TIME("Model3d Write");
 			}
 		}
-		if (ppts) {
+		if (ppts) { // if adding as cobjs
 			RESET_TIME;
 			cur_model.get_polygons(*ppts);
 			cur_model.set_has_cobjs();

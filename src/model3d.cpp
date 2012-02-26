@@ -5,6 +5,7 @@
 #include "model3d.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
+#include "voxels.h"
 #include <fstream>
 
 bool const USE_SHADERS       = 1;
@@ -766,6 +767,14 @@ bool material_t::read(istream &in) {
 // ************ model3d ************
 
 
+unsigned model3d::add_voxels(voxel_manager const &voxels, float isolevel, colorRGBA const &color, int mat_id) {
+
+	vector<triangle> triangles;
+	voxels.get_triangles(triangles, isolevel);
+	return add_triangles(triangles, color, mat_id, 0);
+}
+
+
 unsigned model3d::add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id, unsigned obj_id) {
 
 	vntc_map_t  vmap    [2] = {vntc_map_t (1), vntc_map_t (1)}; // average_normals=1
@@ -1289,6 +1298,22 @@ bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, ve
 		}
 	}
 	return ret;
+}
+
+
+// ************ Free Functions ************
+
+cube_t voxels_to_model3d(voxel_manager const &voxels, float isolevel, int tid, colorRGBA const &color, vector<coll_tquad> *ppts) {
+
+	all_models.push_back(model3d(all_models.tmgr, tid, color, 0));
+	model3d &cur_model(all_models.back());
+	cur_model.add_voxels(voxels, isolevel, WHITE, -1); // put in unbound_geom for now
+	
+	if (ppts) { // if adding as cobjs
+		cur_model.get_polygons(*ppts);
+		cur_model.set_has_cobjs();
+	}
+	return cur_model.get_bbox();
 }
 
 
