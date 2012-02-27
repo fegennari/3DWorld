@@ -267,6 +267,11 @@ public:
 			else if (s == "map_bump" || s == "bump") { // should be ok if both are set
 				assert(cur_mat);
 				if (!(mat_in >> tfn)) {cerr << "Error reading material " << s << endl; return 0;}
+				
+				if (tfn == "-bm") { // this is the only material sub-option we handle, and the scale is ignored
+					float scale(1.0);
+					if (!(mat_in >> scale >> tfn)) {cerr << "Error reading material " << s << " with -bm" << endl; return 0;}
+				}
 				cur_mat->bump_tid = get_texture(tfn, 0); // can be set from both map_bump and bump
 			}
 			else if (s == "map_refl") {
