@@ -15,7 +15,6 @@ typedef map<string, unsigned> string_map_t;
 
 unsigned const MAX_VMAP_SIZE     = (1 << 18); // 256K
 float const POLY_COPLANAR_THRESH = 0.98;
-colorRGB const def_color(0.0, 0.0, 0.0);
 
 
 struct geom_xform_t {
@@ -236,7 +235,7 @@ struct material_params_t {
 	unsigned illum;
 	bool skip, is_used, unused1, unused2; // unused bools to pad the struct
 
-	material_params_t() : ka(def_color), kd(def_color), ks(def_color), ke(def_color), tf(def_color),
+	material_params_t() : ka(WHITE), kd(WHITE), ks(BLACK), ke(BLACK), tf(WHITE),
 		ns(1.0), ni(1.0), alpha(1.0), tr(0.0), illum(2), skip(0), is_used(0), unused1(0), unused2(0) {}
 }; // must be padded
 

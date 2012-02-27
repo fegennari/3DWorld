@@ -824,7 +824,7 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only) const 
 		get_stats(stats);
 		polygons.reserve((quads_only ? stats.quads : (stats.tris + 1.5*stats.quads)));
 	}
-	colorRGBA unbound_color(def_color);
+	colorRGBA unbound_color(WHITE);
 	if (unbound_tid >= 0) unbound_color.modulate_with(texture_color(unbound_tid));
 	unbound_geom.get_polygons(polygons, unbound_color, quads_only);
 
