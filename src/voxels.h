@@ -13,13 +13,14 @@ struct float_voxel_t {
 };
 
 
-template<typename V> struct voxel_grid : public vector<V> {
+template<typename V> class voxel_grid : public vector<V> {
+public:
 	unsigned nx, ny, nz;
-	float vsz; // size of a voxel, uniform in x,y,z
+	vector3d vsz; // size of a voxel in x,y,z
 	point center, lo_pos;
 
-	voxel_grid() : nx(0), ny(0), nz(0), vsz(0.0) {}
-	void init(unsigned nx_, unsigned ny_, unsigned nz_, float vsz_, point const &center_);
+	voxel_grid() : nx(0), ny(0), nz(0), vsz(zero_vector) {}
+	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_);
 
 	unsigned get_ix(unsigned x, unsigned y, unsigned z) const {
 		assert(x < nx && y < ny && z < nz);

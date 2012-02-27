@@ -42,7 +42,18 @@ public:
 };
 
 
-class upsurface : public ref_counted_obj { // size = 104 + 4*336 = 1450 (+cache)
+class noise_gen_3d {
+public:
+	unsigned num_sines;
+	float rdata[SINE_DATA_SIZE];
+
+	noise_gen_3d() : num_sines(0) {}
+	void gen_sines(float mag, float freq);
+	float get_val(point const &pt) const;
+};
+
+
+class upsurface : public ref_counted_obj, public noise_gen_3d { // size = 104 + 4*336 = 1450 (+cache)
 
 public:
 	struct pt_color {
@@ -75,12 +86,12 @@ private:
 
 public:
 	int type;
-	unsigned ssize, dlist, num_sines;
-	float max_mag, rmax, min_cutoff, rdata[SINE_DATA_SIZE];
+	unsigned ssize, dlist;
+	float max_mag, rmax, min_cutoff;
 	vector<float> heightmap;
 	sd_sphere_d sd;
 
-	upsurface(int type_=0) : type(type_), ssize(0), dlist(0), num_sines(0) {}
+	upsurface(int type_=0) : type(type_), ssize(0), dlist(0) {}
 	~upsurface();
 	void gen(float mag, float freq, unsigned ntests=N_RAND_MAG_TESTS, float mm_scale=1.0);
 	void setup(unsigned size, float mcut, bool alloc_hmap);

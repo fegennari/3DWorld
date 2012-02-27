@@ -19,6 +19,46 @@ extern texture_t textures[];
 
 
 
+void noise_gen_3d::gen_sines(float mag, float freq) {
+
+	assert(SINES_PER_FREQ >= 2);
+	assert(mag > 0.0 && freq > 0.0);
+
+	for (unsigned i = 0; i < MAX_FREQ_BINS; ++i) { // low frequencies first
+		unsigned const offset2(SINES_PER_FREQ*i);
+
+		for (unsigned j = 0; j < SINES_PER_FREQ; ++j) {
+			unsigned const offset(NUM_SINE_PARAMS*(offset2 + j));
+			rdata[offset+0] = rand_uniform2(0.2, 1.0)*mag;  // magnitude
+			rdata[offset+1] = rand_uniform2(0.1, 1.0)*freq; // x frequency
+			rdata[offset+2] = rand2d()*TWO_PI; // x phase
+			rdata[offset+3] = rand_uniform2(0.1, 1.0)*freq; // y frequency
+			rdata[offset+4] = rand2d()*TWO_PI; // y phase
+			rdata[offset+5] = rand_uniform2(0.1, 1.0)*freq; // z frequency
+			rdata[offset+6] = rand2d()*TWO_PI; // z phase
+		}
+		mag  *= M_ATTEN_FACTOR;
+		freq /= F_ATTEN_FACTOR;
+	}
+	num_sines = TOT_NUM_SINES; // initial value; may decrease later
+}
+
+
+float noise_gen_3d::get_val(point const &pt) const {
+
+	float val(0.0);
+
+	for (unsigned k = 0; k < num_sines; ++k) { // performance critical
+		unsigned const index2(NUM_SINE_PARAMS*k);
+		float const x(SINF(rdata[index2+1]*pt.x + rdata[index2+2])); // faster sinf() calls
+		float const y(SINF(rdata[index2+3]*pt.y + rdata[index2+4]));
+		float const z(SINF(rdata[index2+5]*pt.z + rdata[index2+6]));
+		val += rdata[index2]*x*y*z;
+	}
+	return val;
+}
+
+
 void upsurface::pt_color::interpolate_from(pt_color const &A, pt_color const &B, float A_wt) {
 			
 	float const B_wt(1.0 - A_wt);
@@ -38,23 +78,15 @@ inline void upsurface::pt_color::draw(bool do_color) const {
 
 void upsurface::gen(float mag, float freq, unsigned ntests, float mm_scale) {
 
-	assert(SINES_PER_FREQ >= 2);
-	assert(mag > 0.0 && freq > 0.0);
 	max_mag = 0.0;
 	pair<float, unsigned> hf_comps[SINES_PER_FREQ];
+	gen_sines(mag, freq);
 	
 	for (unsigned i = 0; i < MAX_FREQ_BINS; ++i) { // low frequencies first
 		unsigned const offset2(SINES_PER_FREQ*i);
 
 		for (unsigned j = 0; j < SINES_PER_FREQ; ++j) {
 			unsigned const offset(NUM_SINE_PARAMS*(offset2 + j));
-			rdata[offset+0] = rand_uniform2(0.2, 1.0)*mag;  // magnitude
-			rdata[offset+1] = rand_uniform2(0.1, 1.0)*freq; // x frequency
-			rdata[offset+2] = rand2d()*TWO_PI; // x phase
-			rdata[offset+3] = rand_uniform2(0.1, 1.0)*freq; // y frequency
-			rdata[offset+4] = rand2d()*TWO_PI; // y phase
-			rdata[offset+5] = rand_uniform2(0.1, 1.0)*freq; // z frequency
-			rdata[offset+6] = rand2d()*TWO_PI; // z phase
 			float const fmin(min(min(rdata[offset+1], rdata[offset+3]), rdata[offset+5]));
 			hf_comps[j] = make_pair(fmin*rdata[offset+0], j);
 		}
@@ -64,8 +96,6 @@ void upsurface::gen(float mag, float freq, unsigned ntests, float mm_scale) {
 		if (largest > 1.5*next_largest) { // scale down the dominant high frequency
 			rdata[NUM_SINE_PARAMS*(offset2 + hf_comps[SINES_PER_FREQ-1].second)+0] *= 1.5*next_largest/largest;
 		}
-		mag  *= M_ATTEN_FACTOR;
-		freq /= F_ATTEN_FACTOR;
 	}
 	for (unsigned i = 0; i < ntests; ++i) { // choose random test points to approximate max value (procedural way to do this?)
 		float val(0.0);
@@ -114,15 +144,7 @@ float upsurface::get_height_at(point const &pt, bool use_cache) const {
 		cache_index = ce.hash()%CACHE_SIZE;
 		if (val_cache[cache_index].p == pt) return val_cache[cache_index].val;
 	}
-	float val(0.0);
-
-	for (unsigned k = 0; k < num_sines; ++k) { // performance critical
-		unsigned const index2(NUM_SINE_PARAMS*k);
-		float const x(SINF(rdata[index2+1]*pt.x + rdata[index2+2])); // faster sinf() calls
-		float const y(SINF(rdata[index2+3]*pt.y + rdata[index2+4]));
-		float const z(SINF(rdata[index2+5]*pt.z + rdata[index2+6]));
-		val += rdata[index2]*x*y*z;
-	}
+	float val(get_val(pt)); // performance critical
 	val = 0.5*(max(-1.0f, min(1.0f, (1.5f/max_mag)*val)) + 1.0); // duplicate code
 	
 	if (use_cache) {

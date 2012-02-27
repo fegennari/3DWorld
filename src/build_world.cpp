@@ -12,6 +12,7 @@
 #include "physics_objects.h"
 #include "model3d.h"
 #include "subdiv.h"
+#include "voxels.h"
 #include <fstream>
 
 
@@ -863,7 +864,7 @@ void maybe_reserve_fixed_cobjs(size_t size) {
 }
 
 
-void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const &cobj, int *group_ids, bool use_model3d) {
+void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const &cobj, int const *group_ids, bool use_model3d) {
 
 	coll_obj poly(cobj);
 
@@ -1554,6 +1555,34 @@ int read_coll_objects(const char *coll_obj_file) {
 	if (tree_mode & 2) add_small_tree_coll_objs();
 	if (has_scenery2)  add_scenery_cobjs();
 	return 1;
+}
+
+
+void gen_voxel_landscape() {
+
+	// scenery generation parameters
+	float const mag(1.0), freq(1.0), isolevel(0.0);
+	int const tid(-1); // no texture
+	colorRGBA const color(WHITE);
+	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
+
+	// create voxels
+	float const zlo(min(zbottom, czmin)), zhi(max(ztop, czmax));
+	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
+	point const center(0.0, 0.0, 0.5*(zlo + zhi));
+	voxel_manager voxels;
+	voxels.init(nx, ny, nz, vsz, center);
+	voxels.create_procedural(mag, freq);
+
+	// convert to model3d + polygons
+	vector<coll_tquad> ppts;
+	cube_t const bcube(voxels_to_model3d(voxels, isolevel, tid, color, &ppts));
+
+	// add to cobjs
+	coll_obj cobj;
+	cobj.init();
+	cobj.cp.elastic = 0.5;
+	add_polygons_to_cobj_vector(ppts, cobj, NULL, 1);
 }
 
 

@@ -3,7 +3,7 @@
 // 2/25/12
 
 #include "voxels.h"
-#include "sinf.h"
+#include "upsurface.h" // for noise_gen_3d
 
 
 namespace voxel_detail
@@ -310,84 +310,35 @@ namespace voxel_detail
 } // namespace voxel_detail
 
 
-template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, float vsz_, point const &center_) {
+template class voxel_grid<float_voxel_t>; // explicit instantiation
+
+
+template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_) {
 
 	vsz = vsz_;
-	assert(vsz > 0.0);
+	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 	nx = nx_; ny = ny_; nz = nz_;
 	unsigned const tot_size(nx * ny * nz);
 	assert(tot_size > 0);
 	clear();
 	resize(tot_size);
 	center = center_;
-	lo_pos = center - 0.5*point(nx*vsz, ny*vsz, nz*vsz);
+	lo_pos = center - 0.5*point(nx*vsz.x, ny*vsz.y, nz*vsz.z);
 }
-
-
-// move to its own file?
-namespace noise_gen
-{
-	float    const M_ATTEN_FACTOR  = 0.5;
-	float    const F_ATTEN_FACTOR  = 0.4;
-	unsigned const SINES_PER_FREQ  = 12;
-	unsigned const MAX_FREQ_BINS   = 5;
-	unsigned const TOT_NUM_SINES   = SINES_PER_FREQ*MAX_FREQ_BINS;
-	unsigned const NUM_SINE_PARAMS = 2*3+1; // 2*NUM_DIMENSIONS+1
-	unsigned const SINE_DATA_SIZE  = NUM_SINE_PARAMS*TOT_NUM_SINES;
-
-
-	class noise_gen_3d {
-		float rdata[SINE_DATA_SIZE];
-
-	public:
-		void gen(float mag, float freq) {
-			for (unsigned i = 0; i < MAX_FREQ_BINS; ++i) { // low frequencies first
-				unsigned const offset2(SINES_PER_FREQ*i);
-
-				for (unsigned j = 0; j < SINES_PER_FREQ; ++j) {
-					unsigned const offset(NUM_SINE_PARAMS*(offset2 + j));
-					rdata[offset+0] = rand_uniform2(0.2, 1.0)*mag;  // magnitude
-					rdata[offset+1] = rand_uniform2(0.1, 1.0)*freq; // x frequency
-					rdata[offset+2] = rand2d()*TWO_PI; // x phase
-					rdata[offset+3] = rand_uniform2(0.1, 1.0)*freq; // y frequency
-					rdata[offset+4] = rand2d()*TWO_PI; // y phase
-					rdata[offset+5] = rand_uniform2(0.1, 1.0)*freq; // z frequency
-					rdata[offset+6] = rand2d()*TWO_PI; // z phase
-					float const fmin(min(min(rdata[offset+1], rdata[offset+3]), rdata[offset+5]));
-				}
-				mag  *= M_ATTEN_FACTOR;
-				freq /= F_ATTEN_FACTOR;
-			}
-		}
-
-		float get_val(point const &pt) const {
-			float val(0.0);
-
-			for (unsigned k = 0; k < TOT_NUM_SINES; ++k) { // performance critical
-				unsigned const index2(NUM_SINE_PARAMS*k);
-				float const x(SINF(rdata[index2+1]*pt.x + rdata[index2+2])); // faster sinf() calls
-				float const y(SINF(rdata[index2+3]*pt.y + rdata[index2+4]));
-				float const z(SINF(rdata[index2+5]*pt.z + rdata[index2+6]));
-				val += rdata[index2]*x*y*z;
-			}
-			return val;
-		}
-	};
-} // namespace noise_gen
 
 
 void voxel_manager::create_procedural(float mag, float freq) {
 
 	// create sine tables
-	noise_gen::noise_gen_3d ngen;
-	ngen.gen(mag, freq);
+	noise_gen_3d ngen;
+	ngen.gen_sines(mag, freq);
 	float const scale(1.0); // FIXME: always 1.0? calculated experimentally? function argument?
 
 	// calculate voxel values
 	for (unsigned z = 0; z < nz; ++z) {
 		for (unsigned y = 0; y < ny; ++y) {
 			for (unsigned x = 0; x < nx; ++x) {
-				point const pt(point(x*vsz, y*vsz, z*vsz) + lo_pos);
+				point const pt(point(x*vsz.x, y*vsz.y, z*vsz.z) + lo_pos);
 				set(x, y, z, scale*ngen.get_val(pt));
 			}
 		}
@@ -420,7 +371,7 @@ void voxel_manager::add_triangles_from_voxel(vector<triangle> &triangles, unsign
 				if (val < isolevel) cix |= 1 << (x + 2*y + 4*z);
 				unsigned const vix(xhi + 2*yhi + 4*zhi);
 				vals[vix] = val;
-				pts [vix] = point((x+xhi)*vsz, (y+yhi)*vsz, (z+zhi)*vsz) + lo_pos;
+				pts [vix] = point((x+xhi)*vsz.x, (y+yhi)*vsz.y, (z+zhi)*vsz.z) + lo_pos;
 			}
 		}
 	}
@@ -444,7 +395,7 @@ void voxel_manager::add_triangles_from_voxel(vector<triangle> &triangles, unsign
 void voxel_manager::get_triangles(vector<triangle> &triangles, float isolevel) const {
 
 	assert(!empty());
-	assert(vsz > 0.0);
+	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 
 	for (unsigned z = 0; z < nz-1; ++z) {
 		for (unsigned y = 0; y < ny-1; ++y) {
