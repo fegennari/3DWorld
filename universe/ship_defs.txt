@@ -3,8 +3,8 @@
 
 $GLOBAL_REGEN 20.0 # ship regen delay in seconds (0.0 disables)
 $SPAWN_DIST   0.2
-#$START_POS    -0.0796 0.3075 -0.8893  # new computer
-$START_POS    -0.1152 0.3028 -0.9075  # after some random number generator changes
+$START_POS    -0.0796 0.3075 -0.8893  # new computer
+#$START_POS    -0.1152 0.3028 -0.9075  # after some random number generator changes
 $HYPERSPEED   100.0
 $SPEED_SCALE  1.0
 $PLAYER_TURN  8.6
