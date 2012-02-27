@@ -71,6 +71,7 @@ int gen_game_obj(int type);
 point get_sstate_pos(int id);
 void reset_smoke_tex_data();
 void calc_leaf_points();
+void gen_voxel_landscape();
 
 
 
@@ -741,11 +742,10 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 	static int init(0);
 
 	if (!init) {
-		init = 1;
-
 		if (load_coll_objs) {
 			if (!read_coll_objects(coll_obj_file)) exit(1);
 			fixed_cobjs.finalize();
+			//gen_voxel_landscape();
 			RESET_TIME;
 			unsigned const ncobjs(fixed_cobjs.size());
 			
@@ -761,6 +761,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 			remove_excess_cap(fixed_cobjs); // free the memory
 			PRINT_TIME(" Add Fixed Cobjs");
 		}
+		init = 1;
 	}
 	else {
 		for (unsigned i = 0; i < coll_objects.size(); ++i) {
@@ -1567,22 +1568,26 @@ void gen_voxel_landscape() {
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
 
 	// create voxels
+	RESET_TIME;
 	float const zlo(min(zbottom, czmin)), zhi(max(ztop, czmax));
 	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
 	voxel_manager voxels;
 	voxels.init(nx, ny, nz, vsz, center);
 	voxels.create_procedural(mag, freq);
+	PRINT_TIME("Voxel Gen");
 
 	// convert to model3d + polygons
 	vector<coll_tquad> ppts;
 	cube_t const bcube(voxels_to_model3d(voxels, isolevel, tid, color, &ppts));
+	PRINT_TIME("Voxels to Model3d");
 
 	// add to cobjs
 	coll_obj cobj;
 	cobj.init();
 	cobj.cp.elastic = 0.5;
 	add_polygons_to_cobj_vector(ppts, cobj, NULL, 1);
+	PRINT_TIME("Voxels to Cobjs");
 }
 
 

@@ -340,7 +340,7 @@ template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_
 		if (it == vmap.end()) { // not found
 			ix = (unsigned)size();
 			push_back(v);
-			vmap[v] = ix;
+			vmap[v2] = ix;
 		}
 		else { // found
 			ix = it->second;

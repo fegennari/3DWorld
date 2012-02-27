@@ -26,6 +26,7 @@ void main()
 	normal   = normalize(gl_Normal);
 	eye_norm = normalize(gl_NormalMatrix * normal);
 	epos     = gl_ModelViewMatrix * gl_Vertex;
+	//if (dot(eye_norm, epos.xyz) > 0.0) {normal = -normal; eye_norm = -eye_norm;}
 	vpos     = gl_Vertex.xyz;
 	spos     = gl_Vertex.xyz + (indir_vert_offset*half_dxy)*normal; // move slightly away from the vertex
 	eye      = gl_ModelViewMatrixInverse[3].xyz; // world space

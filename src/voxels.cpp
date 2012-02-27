@@ -368,8 +368,8 @@ void voxel_manager::add_triangles_from_voxel(vector<triangle> &triangles, unsign
 		for (unsigned yhi = 0; yhi < 2; ++yhi) {
 			for (unsigned xhi = 0; xhi < 2; ++xhi) {
 				float const val(get(x+xhi, y+yhi, z+zhi).v);
-				if (val < isolevel) cix |= 1 << (x + 2*y + 4*z);
-				unsigned const vix(xhi + 2*yhi + 4*zhi);
+				unsigned const vix((xhi^yhi) + 2*yhi + 4*zhi);
+				if (val < isolevel) cix |= 1 << vix;
 				vals[vix] = val;
 				pts [vix] = point((x+xhi)*vsz.x, (y+yhi)*vsz.y, (z+zhi)*vsz.z) + lo_pos;
 			}
