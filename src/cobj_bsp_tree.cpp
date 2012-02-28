@@ -11,7 +11,7 @@ float const POLY_TOLER       = 1.0E-6;
 float const OVERLAP_AMT      = 0.02;
 
 
-unsigned start_dynamic_range(0);
+vector<unsigned> dynamic_ranges;
 
 extern int display_mode, frame_counter, cobj_counter, begin_motion;
 extern coll_obj_group coll_objects;
@@ -283,17 +283,30 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::create_cixs() {
 			add_cobj(falling_cobjs[i]);
 		}
 	}
+	else if (is_dynamic && !is_static && !dynamic_ranges.empty()) { // use dynamic_ranges here
+		assert(dynamic_ranges.size() & 1);
+
+		for (unsigned r = 0; r < dynamic_ranges.size(); r += 2) {
+			unsigned const end((r+1 < dynamic_ranges.size()) ? dynamic_ranges[r+1] : cobjs.size());
+			for (unsigned i = dynamic_ranges[r]; i < end; ++i) add_cobj(i);
+		}
+	}
 	else {
 		bool const normal_static_mode(is_static && !occluders_only && !cubes_only);
+		bool in_static_range(1);
 
 		if (normal_static_mode) {
 			cixs.reserve(cobjs.size());
-			start_dynamic_range = 0; // recompute
+			dynamic_ranges.resize(0); // recompute
 		}
-		for (unsigned i = ((is_dynamic && !is_static) ? start_dynamic_range : 0); i < cobjs.size(); ++i) {
-			if (normal_static_mode && i == start_dynamic_range && cobjs[i].truly_static()) ++start_dynamic_range;
+		for (unsigned i = 0; i < cobjs.size(); ++i) {
+			if (normal_static_mode && cobjs[i].truly_static() != in_static_range) {
+				dynamic_ranges.push_back(i);
+				in_static_range ^= 1;
+			}
 			add_cobj(i);
 		}
+		if (normal_static_mode && in_static_range) dynamic_ranges.push_back(cobjs.size());
 	}
 	assert(cixs.size() < (1 << 29));
 	return !cixs.empty();
