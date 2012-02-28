@@ -358,8 +358,9 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 }
 
 
-void voxel_manager::add_triangles_from_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z, float isolevel) const {
-
+void voxel_manager::add_triangles_from_voxel(vector<triangle> &triangles,
+	unsigned x, unsigned y, unsigned z, voxel_params_t const &vp) const
+{
 	float vals[8]; // 8 corner voxel values
 	point pts[8]; // corner points
 	unsigned cix(0);
@@ -367,11 +368,13 @@ void voxel_manager::add_triangles_from_voxel(vector<triangle> &triangles, unsign
 	for (unsigned zhi = 0; zhi < 2; ++zhi) {
 		for (unsigned yhi = 0; yhi < 2; ++yhi) {
 			for (unsigned xhi = 0; xhi < 2; ++xhi) {
-				float const val(get(x+xhi, y+yhi, z+zhi).v);
+				unsigned const xx(x+xhi), yy(y+yhi), zz(z+zhi);
+				bool const on_edge(vp.make_closed_surface && ((xx == 0 || xx == nx-1) || (yy == 0 || yy == ny-1) || (zz == 0 || zz == nz-1)));
+				float const val(on_edge ? vp.isolevel : get(xx, yy, zz).v);
 				unsigned const vix((xhi^yhi) + 2*yhi + 4*zhi);
-				if (val < isolevel) cix |= 1 << vix;
+				if (on_edge || ((val < vp.isolevel) ^ vp.invert)) cix |= 1 << vix;
 				vals[vix] = val;
-				pts [vix] = point((x+xhi)*vsz.x, (y+yhi)*vsz.y, (z+zhi)*vsz.z) + lo_pos;
+				pts [vix] = point(xx*vsz.x, yy*vsz.y, zz*vsz.z) + lo_pos;
 			}
 		}
 	}
@@ -384,7 +387,7 @@ void voxel_manager::add_triangles_from_voxel(vector<triangle> &triangles, unsign
 	for (unsigned i = 0; i < 12; ++i) {
 		if (!(edge_val & (1 << i))) continue;
 		unsigned const *eix = voxel_detail::edge_to_vals[i];
-		vlist[i] = interpolate_pt(isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
+		vlist[i] = interpolate_pt(vp.isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
 	}
 	for (unsigned i = 0; tris[i] >= 0; i += 3) {
 		triangles.push_back(triangle(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]));
@@ -392,7 +395,7 @@ void voxel_manager::add_triangles_from_voxel(vector<triangle> &triangles, unsign
 }
 
 
-void voxel_manager::get_triangles(vector<triangle> &triangles, float isolevel) const {
+void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const {
 
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
@@ -400,7 +403,7 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, float isolevel) c
 	for (unsigned z = 0; z < nz-1; ++z) {
 		for (unsigned y = 0; y < ny-1; ++y) {
 			for (unsigned x = 0; x < nx-1; ++x) {
-				add_triangles_from_voxel(triangles, x, y, z, isolevel);
+				add_triangles_from_voxel(triangles, x, y, z, vp);
 			}
 		}
 	}

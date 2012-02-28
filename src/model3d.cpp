@@ -438,6 +438,15 @@ template<typename T> void indexed_vntc_vect_t<T>::read(istream &in) {
 
 // ************ polygon_t ************
 
+void polygon_t::from_triangle(triangle const &t) {
+
+	resize(3);
+	float const tc[2] = {0.0, 0.0}; // all zero?
+	vector3d const normal(t.get_normal());
+	UNROLL_3X(operator[](i_) = vert_norm_tc(t.pts[i_], normal, tc);)
+}
+
+
 bool polygon_t::is_convex() const {
 
 	unsigned const npts((unsigned)size());
@@ -767,26 +776,24 @@ bool material_t::read(istream &in) {
 // ************ model3d ************
 
 
-unsigned model3d::add_voxels(voxel_manager const &voxels, float isolevel, colorRGBA const &color, int mat_id) {
+unsigned model3d::add_voxels(voxel_manager const &voxels, voxel_params_t const &vp, colorRGBA const &color, int mat_id) {
 
 	vector<triangle> triangles;
-	voxels.get_triangles(triangles, isolevel);
+	voxels.get_triangles(triangles, vp);
 	return add_triangles(triangles, color, mat_id, 0);
 }
 
 
 unsigned model3d::add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id, unsigned obj_id) {
 
-	vntc_map_t  vmap    [2] = {vntc_map_t (1), vntc_map_t (1)}; // average_normals=1
-	vntct_map_t vmap_tan[2] = {vntct_map_t(1), vntct_map_t(1)}; // average_normals=1
+	// average_normals=1 should turn most of these face normals into vertex normals
+	vntc_map_t  vmap    [2] = {vntc_map_t (1), vntc_map_t (1)};
+	vntct_map_t vmap_tan[2] = {vntct_map_t(1), vntct_map_t(1)};
 	unsigned tot_added(0);
 	polygon_t poly(color);
-	poly.resize(3); // triangles
-	float const tc[2] = {0.0, 0.0}; // all zero?
 
 	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		vector3d const normal(i->get_normal()); // average_normals=1 should turn most of these face normals into vertex normals
-		UNROLL_3X(poly[i_] = vert_norm_tc(i->pts[i_], normal, tc);)
+		poly.from_triangle(*i);
 		tot_added += add_polygon(poly, vmap, vmap_tan, mat_id, obj_id);
 	}
 	return tot_added;
@@ -1303,11 +1310,11 @@ bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, ve
 
 // ************ Free Functions ************
 
-cube_t voxels_to_model3d(voxel_manager const &voxels, float isolevel, int tid, colorRGBA const &color, vector<coll_tquad> *ppts) {
+cube_t voxels_to_model3d(voxel_manager const &voxels, voxel_params_t const &vp, int tid, colorRGBA const &color, vector<coll_tquad> *ppts) {
 
 	all_models.push_back(model3d(all_models.tmgr, tid, color, 0));
 	model3d &cur_model(all_models.back());
-	cur_model.add_voxels(voxels, isolevel, WHITE, -1); // put in unbound_geom for now
+	cur_model.add_voxels(voxels, vp, WHITE, -1); // put in unbound_geom for now
 	
 	if (ppts) { // if adding as cobjs
 		cur_model.get_polygons(*ppts);

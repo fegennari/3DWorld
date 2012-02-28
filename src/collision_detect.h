@@ -176,6 +176,8 @@ public:
 
 	polygon_t(colorRGBA const &c=ALPHA0) : color(c) {}
 	polygon_t(vector<vert_norm_tc> const &vv, colorRGBA const &c=ALPHA0) : vector<vert_norm_tc>(vv), color(c) {}
+	polygon_t(triangle const &t, colorRGBA const &c=WHITE) : color(c) {from_triangle(t);}
+	void from_triangle(triangle const &t);
 	bool is_convex() const;
 	bool is_coplanar(float thresh) const;
 	vector3d get_planar_normal() const;

@@ -13,6 +13,16 @@ struct float_voxel_t {
 };
 
 
+struct voxel_params_t {
+
+	float isolevel;
+	bool make_closed_surface;
+	bool invert;
+
+	voxel_params_t(float il=0.0, bool mcs=0, bool inv=0) : isolevel(il), make_closed_surface(mcs), invert(inv) {}
+};
+
+
 template<typename V> class voxel_grid : public vector<V> {
 public:
 	unsigned nx, ny, nz;
@@ -47,8 +57,8 @@ class voxel_manager : public float_voxel_grid {
 
 public:
 	void create_procedural(float mag, float freq);
-	void add_triangles_from_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z, float isolevel=0.0) const;
-	void voxel_manager::get_triangles(vector<triangle> &triangles, float isolevel=0.0) const;
+	void add_triangles_from_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z, voxel_params_t const &vp) const;
+	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;
 };
 
 #endif

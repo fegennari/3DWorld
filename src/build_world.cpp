@@ -43,7 +43,7 @@ vector<portal> portals;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo;
+extern bool clear_landscape_vbo, create_voxel_landscape;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
@@ -745,7 +745,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 		if (load_coll_objs) {
 			if (!read_coll_objects(coll_obj_file)) exit(1);
 			fixed_cobjs.finalize();
-			//gen_voxel_landscape();
+			if (create_voxel_landscape) gen_voxel_landscape();
 			RESET_TIME;
 			unsigned const ncobjs(fixed_cobjs.size());
 			
@@ -1563,6 +1563,7 @@ void gen_voxel_landscape() {
 
 	// scenery generation parameters
 	float const mag(1.0), freq(1.0), isolevel(0.0);
+	bool const make_closed_surface(1), invert(1);
 	int const tid(-1); // no texture
 	colorRGBA const color(WHITE);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
@@ -1578,8 +1579,9 @@ void gen_voxel_landscape() {
 	PRINT_TIME("Voxel Gen");
 
 	// convert to model3d + polygons
+	voxel_params_t vp(isolevel, make_closed_surface, invert);
 	vector<coll_tquad> ppts;
-	cube_t const bcube(voxels_to_model3d(voxels, isolevel, tid, color, &ppts));
+	cube_t const bcube(voxels_to_model3d(voxels, vp, tid, color, &ppts));
 	PRINT_TIME("Voxels to Model3d");
 
 	// add to cobjs
