@@ -1,0 +1,34 @@
+ntrees 0
+nsmileys 6
+verbose 0
+rand_seed 0
+load_coll_objs 1
+glaciate 1
+dynamic_mesh_scroll 0
+disable_scenery 1
+#toggle_mesh_enabled # disable mesh draw by default
+
+gravity 1.0
+mesh_height 1.0
+mesh_scale 0.7
+camera_height 0.0
+sun_rot 0.4
+shadow_detail 7
+
+include config_gameplay.txt
+unlimited_weapons 1
+create_voxel_landscape 1
+
+mesh_size  128 128 64
+scene_size 4.0 4.0 2.5
+
+include config_resolution.txt
+shadow_map_sz 2048
+
+coll_obj_file coll_objs/COLL_OBJS_Test.TXT # empty
+ship_def_file universe/ship_defs.txt
+
+end
+
+
+

@@ -5,6 +5,7 @@
 #cornell_box/config_box.txt
 #config_scrolling.txt
 #config.txt
+config_voxels.txt
 #config_trees.txt
 #config_water.txt
 #config_river.txt
@@ -13,6 +14,6 @@
 #sponza/config_sponza2.txt
 #model_data/config_soda.txt
 #config_samples.txt
-config_minecraft.txt
+#config_minecraft.txt
 #laptop_overrides.txt
 

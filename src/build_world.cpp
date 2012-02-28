@@ -1574,7 +1574,7 @@ void gen_voxel_landscape() {
 
 	// create voxels
 	RESET_TIME;
-	float const zlo(min(zbottom, czmin)), zhi(max(ztop, czmax));
+	float const zlo(min(zbottom, czmin)), zhi(max(max(ztop, czmax), zlo + Z_SCENE_SIZE));
 	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
 	voxel_manager voxels;
