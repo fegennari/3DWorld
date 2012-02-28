@@ -273,7 +273,7 @@ void process_groups() {
 	is_cloudy     = 0;
 	used_objs     = 0;
 	if (num_obj_on_mesh != NULL) matrix_clear_2d(num_obj_on_mesh); // should be < 1ms
-	build_cobj_tree(1, 0); // could also do after group processing
+	if (begin_motion) build_cobj_tree(1, 0); // could also do after group processing
 	
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
@@ -751,7 +751,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 			
 			if (!FIXED_COBJS_SWAP || !swap_and_set_as_coll_objects(fixed_cobjs)) {
 				if (ncobjs > 2*coll_objects.size()) {
-					reserve_coll_objects(coll_objects.size() + 1.1*fixed_cobjs.size()); // reserve with 10% buffer
+					reserve_coll_objects(coll_objects.size() + 1.1*ncobjs); // reserve with 10% buffer
 				}
 				for (unsigned i = 0; i < ncobjs; ++i) {
 					fixed_cobjs[i].add_as_fixed_cobj(); // don't need to remove it
@@ -861,7 +861,7 @@ void copy_tquad_to_cobj(coll_tquad const &tquad, coll_obj &cobj) {
 void maybe_reserve_fixed_cobjs(size_t size) {
 
 	unsigned const ncobjs(fixed_cobjs.size());
-	if (size > 2*ncobjs) {fixed_cobjs.reserve(size + (FIXED_COBJS_SWAP ? 11*ncobjs/10 : ncobjs));} // reserve to the correct size
+	if (size > 2*ncobjs) {fixed_cobjs.reserve(ncobjs + (FIXED_COBJS_SWAP ? 1.1 : 1.0)*size);} // reserve to the correct size
 }
 
 
