@@ -382,7 +382,7 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 
 			for (unsigned a = 0; a < 3 && !shared2.shared; ++a) {
 				for (unsigned b = 0; b < 3; ++b) {
-					if (get_vert(i+a) == get_vert(i+b+3)) {
+					if (get_vert(i+a) == get_vert(i+b+3)) { // FIXME: check normals for planar quad?
 						(shared1.shared ? shared2 : shared1) = shared_vertex_t(a, b);
 						break;
 					}
@@ -776,11 +776,23 @@ bool material_t::read(istream &in) {
 // ************ model3d ************
 
 
-unsigned model3d::add_voxels(voxel_manager const &voxels, voxel_params_t const &vp, colorRGBA const &color, int mat_id) {
-
+unsigned model3d::add_voxels(voxel_manager const &voxels, voxel_params_t const &vp,
+	colorRGBA const &color, int mat_id, vector<coll_tquad> *ppts, bool no_quads)
+{
 	vector<triangle> triangles;
 	voxels.get_triangles(triangles, vp);
-	return add_triangles(triangles, color, mat_id, 0);
+	unsigned const num_added(add_triangles(triangles, color, mat_id, 0));
+
+	if (ppts) { // if adding as cobjs
+		if (no_quads) { // keep the triangles, no quad merging, all polygons will be coplanar
+			for (unsigned i = 0; i < triangles.size(); ++i) ppts->push_back(coll_tquad(triangles[i], color));
+		}
+		else {
+			get_polygons(*ppts);
+		}
+		set_has_cobjs();
+	}
+	return num_added;
 }
 
 
@@ -1310,16 +1322,12 @@ bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, ve
 
 // ************ Free Functions ************
 
-cube_t voxels_to_model3d(voxel_manager const &voxels, voxel_params_t const &vp, int tid, colorRGBA const &color, vector<coll_tquad> *ppts) {
-
+cube_t voxels_to_model3d(voxel_manager const &voxels, voxel_params_t const &vp, int tid,
+	colorRGBA const &color, vector<coll_tquad> *ppts, bool no_quads)
+{
 	all_models.push_back(model3d(all_models.tmgr, tid, color, 0));
 	model3d &cur_model(all_models.back());
-	cur_model.add_voxels(voxels, vp, WHITE, -1); // put in unbound_geom for now
-	
-	if (ppts) { // if adding as cobjs
-		cur_model.get_polygons(*ppts);
-		cur_model.set_has_cobjs();
-	}
+	cur_model.add_voxels(voxels, vp, color, -1, ppts, no_quads); // put in unbound_geom for now
 	return cur_model.get_bbox();
 }
 

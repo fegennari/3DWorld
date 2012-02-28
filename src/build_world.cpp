@@ -901,6 +901,15 @@ void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const 
 }
 
 
+void create_xyz_groups(int *group_ids, bool use_dlist) {
+
+	for (unsigned i = 0; i < 3; ++i) {
+		group_ids[i] = (int)obj_draw_groups.size();
+		obj_draw_groups.push_back(obj_draw_group(use_dlist));
+	}
+}
+
+
 void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius, geom_xform_t const &xf) {
 
 	pos.z = 0.0;
@@ -1004,7 +1013,6 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				bool const use_model3d(ivals[0] >= 3);
 				bool const no_cobjs   (ivals[0] >= 4);
 				bool const use_cubes  (ivals[0] == 5);
-				int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: use one for each texture?)
 				ppts.resize(0);
 				vector<cube_t> cubes;
 				cube_t model_bbox(0,0,0,0,0,0);
@@ -1015,12 +1023,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					return read_error(fp, "object file data", coll_obj_file);
 				}
 				if (!no_cobjs) {
-					if (group_cobjs) {
-						for (unsigned i = 0; i < 3; ++i) {
-							group_ids[i] = (int)obj_draw_groups.size();
-							obj_draw_groups.push_back(obj_draw_group(use_dlist));
-						}
-					}
+					int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: use one for each texture?)
+					if (group_cobjs) create_xyz_groups(group_ids, use_dlist);
 					check_layer(has_layer);
 					cobj.thickness *= xf.scale;
 					if (cobj.thickness == 0.0) cobj.thickness = MIN_POLY_THICK; // optional - will be set to this value later anyway
@@ -1563,7 +1567,7 @@ void gen_voxel_landscape() {
 
 	// scenery generation parameters
 	float const mag(1.0), freq(1.0), isolevel(0.0);
-	bool const make_closed_surface(1), invert(1);
+	bool const make_closed_surface(1), invert(1), use_model3d(1), no_quads(1);
 	int const tid(-1); // no texture
 	colorRGBA const color(WHITE);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
@@ -1579,16 +1583,29 @@ void gen_voxel_landscape() {
 	PRINT_TIME("Voxel Gen");
 
 	// convert to model3d + polygons
-	voxel_params_t vp(isolevel, make_closed_surface, invert);
+	int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: use one for each texture?)
 	vector<coll_tquad> ppts;
-	cube_t const bcube(voxels_to_model3d(voxels, vp, tid, color, &ppts));
+	voxel_params_t vp(isolevel, make_closed_surface, invert);
+
+	if (use_model3d) {
+		voxels_to_model3d(voxels, vp, tid, color, &ppts, no_quads);
+	}
+	else {
+		vector<triangle> triangles;
+		voxels.get_triangles(triangles, vp);
+		ppts.reserve(triangles.size());
+		for (unsigned i = 0; i < triangles.size(); ++i) ppts.push_back(coll_tquad(triangles[i], color));
+		create_xyz_groups(group_ids, 1);
+	}
 	PRINT_TIME("Voxels to Model3d");
 
 	// add to cobjs
 	coll_obj cobj;
 	cobj.init();
 	cobj.cp.elastic = 0.5;
-	add_polygons_to_cobj_vector(ppts, cobj, NULL, 1);
+	if (!use_model3d) cobj.cp.draw = 1;
+	add_polygons_to_cobj_vector(ppts, cobj, group_ids, use_model3d);
+	if (!use_model3d) fixed_cobjs.sort_cobjs_for_rendering(); // re-sort to put groups in order
 	PRINT_TIME("Voxels to Cobjs");
 }
 

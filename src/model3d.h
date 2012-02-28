@@ -302,7 +302,8 @@ public:
 
 	// creation and query
 	void set_has_cobjs() {has_cobjs = 1;}
-	unsigned add_voxels(voxel_manager const &voxels, voxel_params_t const &vp, colorRGBA const &color, int mat_id=-1);
+	unsigned add_voxels(voxel_manager const &voxels, voxel_params_t const &vp,
+		colorRGBA const &color, int mat_id, vector<coll_tquad> *ppts, bool no_quads);
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
@@ -345,7 +346,8 @@ struct model3ds : public deque<model3d> {
 
 template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh);
 
-cube_t voxels_to_model3d(voxel_manager const &voxels, voxel_params_t const &vp, int tid, colorRGBA const &color, vector<coll_tquad> *ppts);
+cube_t voxels_to_model3d(voxel_manager const &voxels, voxel_params_t const &vp, int tid,
+	colorRGBA const &color, vector<coll_tquad> *ppts, bool no_quads);
 void free_model_context();
 void render_models(bool shadow_pass);
 
