@@ -373,8 +373,9 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 {
 	unsigned const nv(num_verts());
 	assert((nv % npts) == 0);
-	polygon_t poly(color);
+	polygon_t poly(color), quad_poly(color);
 	poly.resize(npts);
+	quad_poly.resize(4);
 
 	for (unsigned i = 0; i < nv; i += npts) {
 		if (npts == 3 && (i+npts) < nv) { // attempt to merge two adjacent triangles into quads
@@ -396,17 +397,16 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 					if (shared1.bi != j && shared2.bi != j) nsb = j;
 				}
 				assert(nsa < 3 && nsb < 3);
-				coll_tquad quad;
-				quad.color.set_c4(color);
-				quad.npts   = 4;
-				quad.pts[0] = get_vert(i+shared1.ai).v;
-				quad.pts[1] = get_vert(i+nsa).v;
-				quad.pts[2] = get_vert(i+shared2.ai).v;
-				quad.pts[3] = get_vert(i+nsb+3).v;
-				get_normal(quad.pts[0], quad.pts[1], quad.pts[2], quad.normal, 1);
-				polygons.push_back(quad);
-				i += npts;
-				continue;
+				quad_poly[0] = get_vert(i+shared1.ai);
+				quad_poly[1] = get_vert(i+nsa);
+				quad_poly[2] = get_vert(i+shared2.ai);
+				quad_poly[3] = get_vert(i+nsb+3);
+
+				if (quad_poly.is_convex() && quad_poly.is_coplanar(POLY_COPLANAR_THRESH)) {
+					polygons.push_back(quad_poly);
+					i += npts;
+					continue;
+				}
 			}
 		}
 		for (unsigned p = 0; p < npts; ++p) {poly[p] = get_vert(i+p);}
