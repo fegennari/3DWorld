@@ -1567,7 +1567,7 @@ void gen_voxel_landscape() {
 
 	// scenery generation parameters
 	float const mag(1.0), freq(1.0), isolevel(0.0);
-	bool const make_closed_surface(1), invert(1), use_model3d(1), no_quads(1);
+	bool const make_closed_surface(1), invert(1), remove_unconnected(1), remove_under_mesh(1), atten_at_edges(0), use_model3d(1), no_quads(1);
 	int const tid(-1); // no texture
 	colorRGBA const color(WHITE);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
@@ -1580,12 +1580,13 @@ void gen_voxel_landscape() {
 	voxel_manager voxels;
 	voxels.init(nx, ny, nz, vsz, center);
 	voxels.create_procedural(mag, freq);
+	if (atten_at_edges) voxels.atten_at_edges(invert ? 1.0 : -1.0);
 	PRINT_TIME("Voxel Gen");
 
 	// convert to model3d + polygons
 	int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: use one for each texture?)
 	vector<coll_tquad> ppts;
-	voxel_params_t vp(isolevel, make_closed_surface, invert);
+	voxel_params_t vp(isolevel, make_closed_surface, invert, remove_unconnected, remove_under_mesh);
 
 	if (use_model3d) {
 		voxels_to_model3d(voxels, vp, tid, color, &ppts, no_quads);

@@ -402,7 +402,7 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 				quad_poly[2] = get_vert(i+shared2.ai);
 				quad_poly[3] = get_vert(i+nsb+3);
 
-				if (quad_poly.is_convex() && quad_poly.is_coplanar(POLY_COPLANAR_THRESH)) {
+				if (quad_poly.is_coplanar(POLY_COPLANAR_THRESH) && quad_poly.is_convex()) {
 					polygons.push_back(quad_poly);
 					i += npts;
 					continue;

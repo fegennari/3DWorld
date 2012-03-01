@@ -169,12 +169,12 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 	unsigned const npts((unsigned)poly.size());
 	assert(npts >= 3);
 	
-	if (npts <= 4 && (npts == 3 || (poly.is_convex() && poly.is_coplanar(coplanar_thresh)))) { // triangle or convex/coplanar quad
+	if (npts <= 4 && (npts == 3 || (poly.is_coplanar(coplanar_thresh) && poly.is_convex()))) { // triangle or convex/coplanar quad
 		if (!poly.is_valid()) return 0; // invalid zero area polygon - skip
 		ppts.push_back(poly);
 		return 1;
 	}
-	tessellate_polygon(poly);
+	tessellate_polygon(poly); // could special case convex quads, but that might not help much
 
 	// calculate polygon normal (assuming planar polygon)
 	vector3d n(poly.get_planar_normal()), cp_sum(zero_vector);

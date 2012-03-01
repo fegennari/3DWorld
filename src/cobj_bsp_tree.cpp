@@ -373,6 +373,7 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::check_coll_line(point const &p1, p
 			if (!c.line_int_exact(p1, p2, t, cnorm, tmin, tmax))        continue;
 			cindex = cixs[i];
 			cpos   = p1 + (p2 - p1)*t;
+			//if (c.type == COLL_POLYGON && dot_product((p2 - p1), c.norm) < 0.0) {} // back-facing polygon test
 			if (!exact && test_alpha != 2) return 1; // return first hit
 			max_alpha = c.cp.color.alpha; // we need all intersections to find the max alpha
 			nixm.dinv = vector3d(cpos - p1);

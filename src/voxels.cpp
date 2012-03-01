@@ -4,6 +4,7 @@
 
 #include "voxels.h"
 #include "upsurface.h" // for noise_gen_3d
+#include "mesh.h"
 
 
 namespace voxel_detail
@@ -310,7 +311,7 @@ namespace voxel_detail
 } // namespace voxel_detail
 
 
-template class voxel_grid<float_voxel_t>; // explicit instantiation
+template class voxel_grid<float>; // explicit instantiation
 
 
 template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_) {
@@ -339,7 +340,22 @@ void voxel_manager::create_procedural(float mag, float freq) {
 		for (unsigned y = 0; y < ny; ++y) {
 			for (unsigned x = 0; x < nx; ++x) {
 				point const pt(point(x*vsz.x, y*vsz.y, z*vsz.z) + lo_pos);
-				set(x, y, z, scale*ngen.get_val(pt));
+				set(x, y, z, max(-1.0f, min(1.0f, scale*ngen.get_val(pt))));
+			}
+		}
+	}
+}
+
+
+void voxel_manager::atten_at_edges(float val) {
+
+	for (unsigned z = 0; z < nz; ++z) {
+		for (unsigned y = 0; y < ny; ++y) {
+			for (unsigned x = 0; x < nx; ++x) {
+				float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx));
+				float const vy(1.0 - 2.0*fabs(y - 0.5*ny)/float(ny));
+				float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz));
+				get_ref(x, y, z) += val*CLIP_TO_01(20.0f*(0.1f - vx*vy*vz)); // FIXME: could do better
 			}
 		}
 	}
@@ -351,47 +367,10 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 	if (abs(isolevel - val1) < TOLERANCE) return pt1;
 	if (abs(isolevel - val2) < TOLERANCE) return pt2;
 	if (abs(val1     - val2) < TOLERANCE) return pt1;
-	float const mu((isolevel - val1) / (val2 - val1));
+	float const mu(CLIP_TO_01((isolevel - val1) / (val2 - val1)));
 	point pt;
 	UNROLL_3X(pt[i_] = pt1[i_] + mu * (pt2[i_] - pt1[i_]););
 	return pt;
-}
-
-
-void voxel_manager::add_triangles_from_voxel(vector<triangle> &triangles,
-	unsigned x, unsigned y, unsigned z, voxel_params_t const &vp) const
-{
-	float vals[8]; // 8 corner voxel values
-	point pts[8]; // corner points
-	unsigned cix(0);
-
-	for (unsigned zhi = 0; zhi < 2; ++zhi) {
-		for (unsigned yhi = 0; yhi < 2; ++yhi) {
-			for (unsigned xhi = 0; xhi < 2; ++xhi) {
-				unsigned const xx(x+xhi), yy(y+yhi), zz(z+zhi);
-				bool const on_edge(vp.make_closed_surface && ((xx == 0 || xx == nx-1) || (yy == 0 || yy == ny-1) || (zz == 0 || zz == nz-1)));
-				float const val(on_edge ? vp.isolevel : get(xx, yy, zz).v);
-				unsigned const vix((xhi^yhi) + 2*yhi + 4*zhi);
-				if (on_edge || ((val < vp.isolevel) ^ vp.invert)) cix |= 1 << vix;
-				vals[vix] = val;
-				pts [vix] = point(xx*vsz.x, yy*vsz.y, zz*vsz.z) + lo_pos;
-			}
-		}
-	}
-	assert(cix < 256);
-	unsigned const edge_val(voxel_detail::edge_table[cix]);
-	int const *const tris(voxel_detail::tri_table[cix]);
-	if (edge_val == 0) return; // no polygons
-	point vlist[12];
-
-	for (unsigned i = 0; i < 12; ++i) {
-		if (!(edge_val & (1 << i))) continue;
-		unsigned const *eix = voxel_detail::edge_to_vals[i];
-		vlist[i] = interpolate_pt(vp.isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
-	}
-	for (unsigned i = 0; tris[i] >= 0; i += 3) {
-		triangles.push_back(triangle(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]));
-	}
 }
 
 
@@ -400,13 +379,99 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 
-	for (unsigned z = 0; z < nz-1; ++z) {
-		for (unsigned y = 0; y < ny-1; ++y) {
-			for (unsigned x = 0; x < nx-1; ++x) {
-				add_triangles_from_voxel(triangles, x, y, z, vp);
+	// determine inside/outside points
+	voxel_grid<unsigned char> outside;
+	outside.init(nx, ny, nz, vsz, center);
+
+	for (unsigned z = 0; z < nz; ++z) {
+		for (unsigned y = 0; y < ny; ++y) {
+			for (unsigned x = 0; x < nx; ++x) {
+				bool const on_edge(vp.make_closed_surface && ((x == 0 || x == nx-1) || (y == 0 || y == ny-1) || (z == 0 || z == nz-1)));
+				unsigned char const ival(on_edge? 2 : (((get(x, y, z) < vp.isolevel) ^ vp.invert) ? 1 : 0)); // on_edge is considered outside
+				outside.set(x, y, z, ival);
 			}
 		}
 	}
+	if (vp.remove_unconnected) { // check for voxels connected to the mesh surface
+		deque<unsigned> work; // stack of voxels to process
+		int const range[3] = {nx, ny, nz};
+
+		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			for (int x = 0; x < MESH_X_SIZE; ++x) {
+				point const p(get_xval(x), get_yval(y), mesh_height[y][x]);
+				unsigned ix(0);
+				if (!get_ix(p, ix) || outside[ix] != 0) continue; // off the voxel grid, outside, or on edge
+				work.push_back(ix); // inside, anchored to the mesh
+				outside[ix] |= 4; // mark as anchored
+			}
+		}
+		while (!work.empty()) { // flood fill anchored regions
+			unsigned const cur(work.back());
+			work.pop_back();
+			assert(cur < outside.size());
+			assert(outside[cur] & 4);
+			int const z(cur/(nx*ny)), cur_xy(cur - z*nx*ny), y(cur_xy/nx), x(cur_xy - y*nx); // cur = (x + (y + z*ny)*nx)
+			assert(outside.get_ix(x, y, z) == cur);
+
+			for (unsigned dim = 0; dim < 3; ++dim) { // check neighbors
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					int pos[3] = {x, y, z};
+					pos[dim] += dir ? 1 : -1;
+					if (pos[dim] < 0 || pos[dim] >= range[dim]) continue; // off the grid
+					unsigned const ix(outside.get_ix(pos[0], pos[1], pos[2]));
+					assert(ix < outside.size());
+						
+					if (outside[ix] == 0) { // inside
+						work.push_back(ix);
+						outside[ix] |= 4; // mark as anchored
+					}
+				}
+			}
+		} // while
+		for (unsigned i = 0; i < size(); ++i) { // if anchored or on_edge remove the anchored bit, else mark outside
+			outside[i] = (outside[i] & 6) ? (outside[i] & 3) : 1;
+		}
+	} // vp.remove_unconnected
+
+	// create triangles
+	for (unsigned z = 0; z < nz-1; ++z) {
+		for (unsigned y = 0; y < ny-1; ++y) {
+			for (unsigned x = 0; x < nx-1; ++x) {
+				float vals[8]; // 8 corner voxel values
+				point pts[8]; // corner points
+				unsigned cix(0);
+				bool all_under_mesh(vp.remove_under_mesh);
+
+				for (unsigned zhi = 0; zhi < 2; ++zhi) {
+					for (unsigned yhi = 0; yhi < 2; ++yhi) {
+						for (unsigned xhi = 0; xhi < 2; ++xhi) {
+							unsigned const xx(x+xhi), yy(y+yhi), zz(z+zhi), vix((xhi^yhi) + 2*yhi + 4*zhi);
+							unsigned char const outside_val(outside.get(xx, yy, zz));
+							if (outside_val) cix |= 1 << vix; // outside or on edge
+							vals[vix] = (outside_val == 2) ? vp.isolevel : get(xx, yy, zz); // check on_edge status
+							pts [vix] = point(xx*vsz.x, yy*vsz.y, zz*vsz.z) + lo_pos;
+							if (all_under_mesh) all_under_mesh &= is_under_mesh(pts[vix]);
+						}
+					}
+				}
+				assert(cix < 256);
+				if (all_under_mesh) continue;
+				unsigned const edge_val(voxel_detail::edge_table[cix]);
+				if (edge_val == 0)  continue; // no polygons
+				int const *const tris(voxel_detail::tri_table[cix]);
+				point vlist[12];
+
+				for (unsigned i = 0; i < 12; ++i) {
+					if (!(edge_val & (1 << i))) continue;
+					unsigned const *eix = voxel_detail::edge_to_vals[i];
+					vlist[i] = interpolate_pt(vp.isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
+				}
+				for (unsigned i = 0; tris[i] >= 0; i += 3) {
+					triangles.push_back(triangle(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]));
+				}
+			} // for z
+		} // for y
+	} // for z
 }
 
 

@@ -7,19 +7,13 @@
 #include "3DWorld.h"
 
 
-struct float_voxel_t {
-	float v; // right now just a floating-point number
-	float_voxel_t(float v_=0.0) : v(v_) {}
-};
-
-
 struct voxel_params_t {
 
 	float isolevel;
-	bool make_closed_surface;
-	bool invert;
+	bool make_closed_surface, invert, remove_unconnected, remove_under_mesh;
 
-	voxel_params_t(float il=0.0, bool mcs=0, bool inv=0) : isolevel(il), make_closed_surface(mcs), invert(inv) {}
+	voxel_params_t(float il=0.0, bool mcs=0, bool inv=0, bool ru=0, bool rum=0)
+		: isolevel(il), make_closed_surface(mcs), invert(inv), remove_unconnected(ru), remove_under_mesh(rum) {}
 };
 
 
@@ -32,11 +26,23 @@ public:
 	voxel_grid() : nx(0), ny(0), nz(0), vsz(zero_vector) {}
 	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_);
 
+	bool get_ix(point const &p, unsigned &ix) const { // returns whether or not the point was inside the voxel volume
+		int i[3]; // x,y,z
+		UNROLL_3X(i[i_] = int((p[i_] - lo_pos[i_])/vsz[i_]);); // convert to voxel space
+		if (i[0] < 0 || i[1] < 0 || i[2] < 0 || i[0] >= (int)nx || i[1] >= (int)ny || i[2] >= (int)nz) return 0;
+		ix = i[0] + (i[1] + i[2]*ny)*nx;
+		return 1;
+	}
 	unsigned get_ix(unsigned x, unsigned y, unsigned z) const {
 		assert(x < nx && y < ny && z < nz);
 		return (x + (y + z*ny)*nx);
 	}
 	V const &get(unsigned x, unsigned y, unsigned z) const {
+		unsigned const ix(get_ix(x, y, z));
+		assert(ix < size());
+		return operator[](ix);
+	}
+	V &get_ref(unsigned x, unsigned y, unsigned z) {
 		unsigned const ix(get_ix(x, y, z));
 		assert(ix < size());
 		return operator[](ix);
@@ -48,7 +54,7 @@ public:
 	}
 };
 
-typedef voxel_grid<float_voxel_t> float_voxel_grid;
+typedef voxel_grid<float> float_voxel_grid;
 
 
 class voxel_manager : public float_voxel_grid {
@@ -57,7 +63,7 @@ class voxel_manager : public float_voxel_grid {
 
 public:
 	void create_procedural(float mag, float freq);
-	void add_triangles_from_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z, voxel_params_t const &vp) const;
+	void atten_at_edges(float val);
 	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;
 };
 
