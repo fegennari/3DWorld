@@ -392,7 +392,7 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 		}
 	}
 	if (vp.remove_unconnected) { // check for voxels connected to the mesh surface
-		deque<unsigned> work; // stack of voxels to process
+		vector<unsigned> work; // stack of voxels to process
 		int const range[3] = {nx, ny, nz};
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {

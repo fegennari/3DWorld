@@ -101,18 +101,19 @@ void main()
 		if (enable_light7) ADD_LIGHT(7);
 	}
 	if (enable_dlights) lit_color += gl_FrontMaterial.diffuse.rgb * add_dlights(vpos, normalize(normal), eye); // dynamic lighting
-	vec4 color  = vec4((texel.rgb * lit_color), (texel.a * alpha));
-	vec3 eye_c  = eye;
-	vec3 vpos_c = vpos;
+	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 
-	if (smoke_enabled) {
-		pt_pair res = clip_line(vpos, eye, smoke_bb);
-		eye_c  = res.v1;
-		vpos_c = res.v2;
-	}
-	if (!smoke_enabled || eye_c == vpos_c) {
+	if (!smoke_enabled) {
 		if (color.a <= min_alpha) discard;
-		if (!smoke_enabled) color = apply_fog(color); // apply standard fog
+		gl_FragColor = apply_fog(color); // apply standard fog
+		return;
+	}
+	pt_pair res = clip_line(vpos, eye, smoke_bb);
+	vec3 eye_c  = res.v1;
+	vec3 vpos_c = res.v2;
+	
+	if (eye_c == vpos_c) {
+		if (color.a <= min_alpha) discard;
 		gl_FragColor = color;
 		return;
 	}
