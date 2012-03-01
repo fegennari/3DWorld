@@ -49,6 +49,8 @@ public:
 
 	noise_gen_3d() : num_sines(0) {}
 	void gen_sines(float mag, float freq);
+	void gen_xyz_vals(point const &start, vector3d const &step, unsigned const xyz_num[3], vector<float> xyz_vals[3]);
+	float get_val(unsigned x, unsigned y, unsigned z, vector<float> const xyz_vals[3]) const;
 	float get_val(point const &pt) const;
 };
 

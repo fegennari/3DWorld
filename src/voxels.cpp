@@ -330,17 +330,16 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 
 void voxel_manager::create_procedural(float mag, float freq) {
 
-	// create sine tables
 	noise_gen_3d ngen;
-	ngen.gen_sines(mag, freq);
-	float const scale(1.0); // FIXME: always 1.0? calculated experimentally? function argument?
+	ngen.gen_sines(mag, freq); // create sine table
+	unsigned const xyz_num[3] = {nx, ny, nz};
+	vector<float> xyz_vals[3];
+	ngen.gen_xyz_vals(lo_pos, vsz, xyz_num, xyz_vals); // create xyz values
 
-	// calculate voxel values
-	for (unsigned z = 0; z < nz; ++z) {
+	for (unsigned z = 0; z < nz; ++z) { // generate voxel values
 		for (unsigned y = 0; y < ny; ++y) {
 			for (unsigned x = 0; x < nx; ++x) {
-				point const pt(point(x*vsz.x, y*vsz.y, z*vsz.z) + lo_pos);
-				set(x, y, z, max(-1.0f, min(1.0f, scale*ngen.get_val(pt))));
+				set(x, y, z, max(-1.0f, min(1.0f, ngen.get_val(x, y, z, xyz_vals)))); // scale value?
 			}
 		}
 	}
@@ -450,7 +449,11 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 							if (outside_val) cix |= 1 << vix; // outside or on edge
 							vals[vix] = (outside_val == 2) ? vp.isolevel : get(xx, yy, zz); // check on_edge status
 							pts [vix] = point(xx*vsz.x, yy*vsz.y, zz*vsz.z) + lo_pos;
-							if (all_under_mesh) all_under_mesh &= is_under_mesh(pts[vix]);
+
+							if (all_under_mesh) {
+								int const xpos(get_xpos(pts[vix].x)), ypos(get_xpos(pts[vix].y));
+								all_under_mesh = point_outside_mesh(xpos, ypos) ? 0 : (pts[vix].z < mesh_height[ypos][xpos]);
+							}
 						}
 					}
 				}

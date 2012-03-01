@@ -44,6 +44,37 @@ void noise_gen_3d::gen_sines(float mag, float freq) {
 }
 
 
+// Note: xyz_vals is already resized correctly
+void noise_gen_3d::gen_xyz_vals(point const &start, vector3d const &step, unsigned const xyz_num[3], vector<float> xyz_vals[3]) {
+
+	for (unsigned d = 0; d < 3; ++d) {
+		xyz_vals[d].resize(num_sines*xyz_num[d]);
+		float val(start[d]);
+
+		for (unsigned i = 0; i < xyz_num[d]; ++i) {
+			for (unsigned k = 0; k < num_sines; ++k) {
+				unsigned const index2(NUM_SINE_PARAMS*k + 2*d);
+				xyz_vals[d][i*num_sines + k] = SINF(rdata[index2+1]*val + rdata[index2+2]);
+			}
+			val += step[d];
+		}
+	}
+}
+
+
+float noise_gen_3d::get_val(unsigned x, unsigned y, unsigned z, vector<float> const xyz_vals[3]) const {
+
+	float val(0.0);
+	unsigned const xyz[3] = {x, y, z};
+	UNROLL_3X(assert(num_sines*xyz[i_]+num_sines <= xyz_vals[i_].size()););
+
+	for (unsigned k = 0; k < num_sines; ++k) { // performance critical
+		val += rdata[NUM_SINE_PARAMS*k]*(xyz_vals[0][x*num_sines + k])*(xyz_vals[1][y*num_sines + k])*(xyz_vals[2][z*num_sines + k]);
+	}
+	return val;
+}
+
+
 float noise_gen_3d::get_val(point const &pt) const {
 
 	float val(0.0);
