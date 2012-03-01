@@ -785,6 +785,7 @@ unsigned model3d::add_voxels(voxel_manager const &voxels, voxel_params_t const &
 
 	if (ppts) { // if adding as cobjs
 		if (no_quads) { // keep the triangles, no quad merging, all polygons will be coplanar
+			ppts->reserve(ppts->capacity() + triangles.size());
 			for (unsigned i = 0; i < triangles.size(); ++i) ppts->push_back(coll_tquad(triangles[i], color));
 		}
 		else {
@@ -1264,18 +1265,42 @@ void model3ds::render(bool is_shadow_pass) {
 	float const min_alpha(0.5); // will be reset per-material
 
 	for (unsigned bmap_pass = 0; bmap_pass < 2; ++bmap_pass) {
-		shader_t s;
-		colorRGBA orig_fog_color;
-		
-		if (use_shaders) {
-			orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled(), (bmap_pass != 0), enable_spec_map());
-		}
 		bool const render_if_bmap(0); // set this later when bump maps are supported
 
-		for (iterator m = begin(); m != end(); ++m) {
+		for (iterator m = begin(); m != end(); ++m) { // FIXME: reuse shaders across models?
+			shader_t s;
+			colorRGBA orig_fog_color;
+
+			if (!use_shaders) {
+				if (bmap_pass > 0) continue;
+			}
+			else if (m->uses_proc_texture()) { // procedural texture
+				if (bmap_pass > 0) continue; // bump map not supported
+				/*s.setup_enabled_lights();
+				s.set_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
+				s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+				s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
+				s.set_frag_shader("triplanar_texture");
+				s.begin_shader();
+				s.add_uniform_int("tex0", 0);*/
+				orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 0, 0, shadow_map_enabled(), 0, 0);
+			}
+			else {
+				orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled(), (bmap_pass != 0), enable_spec_map());
+			}
 			m->render(s, is_shadow_pass, (bmap_pass != 0));
+
+			if (!use_shaders) {
+				// nothing to do
+			}
+			else if (m->uses_proc_texture()) {
+				//s.end_shader();
+				end_smoke_shaders(s, orig_fog_color);
+			}
+			else {
+				end_smoke_shaders(s, orig_fog_color);
+			}
 		}
-		if (use_shaders) end_smoke_shaders(s, orig_fog_color);
 	}
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_TEXTURE_2D);
@@ -1325,7 +1350,7 @@ bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, ve
 cube_t voxels_to_model3d(voxel_manager const &voxels, voxel_params_t const &vp, int tid,
 	colorRGBA const &color, vector<coll_tquad> *ppts, bool no_quads)
 {
-	all_models.push_back(model3d(all_models.tmgr, tid, color, 0));
+	all_models.push_back(model3d(all_models.tmgr, tid, color, 0, 1)); // procedural texture mode
 	model3d &cur_model(all_models.back());
 	cur_model.add_voxels(voxels, vp, color, -1, ppts, no_quads); // put in unbound_geom for now
 	return cur_model.get_bbox();

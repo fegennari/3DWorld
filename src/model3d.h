@@ -277,7 +277,7 @@ class model3d {
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bbox;
-	bool from_model3d_file, ignore_ambient, has_cobjs;
+	bool from_model3d_file, ignore_ambient, has_cobjs, use_procedural_texture;
 
 	// materials
 	deque<material_t> materials;
@@ -289,9 +289,9 @@ public:
 	// textures
 	texture_manager &tmgr;
 
-	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0) : tmgr(tmgr_),
+	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0, bool proc_tex=0) : tmgr(tmgr_),
 		unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube),
-		from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0) {}
+		from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0), use_procedural_texture(proc_tex) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -328,6 +328,7 @@ public:
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
 	bool write_to_disk (string const &fn) const;
 	bool read_from_disk(string const &fn);
+	bool uses_proc_texture() const {return use_procedural_texture;}
 };
 
 
