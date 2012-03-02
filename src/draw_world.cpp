@@ -1802,7 +1802,7 @@ void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color) {
 }
 
 
-void setup_procedural_shaders(shader_t &s, float min_alpha, bool dlights, bool use_smap) {
+void setup_procedural_shaders(shader_t &s, float min_alpha, bool dlights, bool use_smap, float tex_scale) {
 
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
@@ -1820,6 +1820,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool dlights, bool u
 	s.add_uniform_float("min_alpha", min_alpha);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
 	s.add_uniform_color("const_indir_color", const_indir_color);
+	s.add_uniform_float("tex_scale", tex_scale);
 }
 
 

@@ -1276,7 +1276,8 @@ void model3ds::render(bool is_shadow_pass) {
 			}
 			else if (m->uses_proc_texture()) { // procedural texture
 				if (bmap_pass > 0) continue; // bump map not supported
-				setup_procedural_shaders(s, min_alpha, 1, 1);
+				float const tex_scale(1.0); // where does this come from?
+				setup_procedural_shaders(s, min_alpha, 1, 1, tex_scale);
 			}
 			else {
 				orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map());

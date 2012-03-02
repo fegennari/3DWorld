@@ -9,7 +9,7 @@ varying vec3 eye_norm;
 void main()
 {
 	vec3 norm_normal = normalize(normal);
-	vec4 texel  = lookup_triplanar_texture(norm_normal);
+	vec4 texel  = lookup_triplanar_texture(vpos, norm_normal);
 	float alpha = gl_Color.a;
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
 	lit_color += gl_FrontMaterial.diffuse.rgb * const_indir_color; // add constant indir
