@@ -1784,9 +1784,8 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	colorRGB const black_color(0.0, 0.0, 0.0);
 	s.add_uniform_color("const_indir_color", (have_indir_smoke_tex ? black_color : const_indir_color));
 
-	//return change_fog_color(GRAY);
-
 	// setup fog
+	//return change_fog_color(GRAY);
 	colorRGBA old_fog_color;
 	glGetFloatv(GL_FOG_COLOR, (float *)&old_fog_color);
 	if (smoke_enabled) glFogfv(GL_FOG_COLOR, (float *)&GRAY); // for smoke

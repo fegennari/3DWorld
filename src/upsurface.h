@@ -55,7 +55,7 @@ public:
 };
 
 
-class upsurface : public ref_counted_obj, public noise_gen_3d { // size = 104 + 4*336 = 1450 (+cache)
+class upsurface : public ref_counted_obj, public noise_gen_3d { // size = 104 + 4*336 = 1784 (+cache)
 
 public:
 	struct pt_color {

@@ -1584,7 +1584,7 @@ void gen_voxel_landscape() {
 	PRINT_TIME("Voxel Gen");
 
 	// convert to model3d + polygons
-	int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: use one for each texture?)
+	int group_id(-1);
 	vector<coll_tquad> ppts;
 	voxel_params_t vp(isolevel, make_closed_surface, invert, remove_unconnected, remove_under_mesh);
 
@@ -1596,7 +1596,8 @@ void gen_voxel_landscape() {
 		voxels.get_triangles(triangles, vp);
 		ppts.reserve(triangles.size());
 		for (unsigned i = 0; i < triangles.size(); ++i) ppts.push_back(coll_tquad(triangles[i], color));
-		create_xyz_groups(group_ids, 1);
+		group_id = (int)obj_draw_groups.size();
+		obj_draw_groups.push_back(obj_draw_group(1)); // use_dlist=1
 	}
 	PRINT_TIME("Voxels to Model3d");
 
@@ -1604,8 +1605,10 @@ void gen_voxel_landscape() {
 	coll_obj cobj;
 	cobj.init();
 	cobj.cp.elastic = 0.5;
+	cobj.cp.tid     = tid; // doesn't really work
+	cobj.group_id   = group_id;
 	if (!use_model3d) cobj.cp.draw = 1;
-	add_polygons_to_cobj_vector(ppts, cobj, group_ids, use_model3d);
+	add_polygons_to_cobj_vector(ppts, cobj, NULL, use_model3d);
 	if (!use_model3d) fixed_cobjs.sort_cobjs_for_rendering(); // re-sort to put groups in order
 	PRINT_TIME("Voxels to Cobjs");
 }
