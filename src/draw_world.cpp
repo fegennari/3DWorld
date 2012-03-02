@@ -1728,7 +1728,7 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 }
 
 
-// texture units used: 0: object texture, 1: smoke texture
+// texture units used: 0: object texture, 1: smoke texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map
 colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map)
 {
@@ -1799,6 +1799,27 @@ void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color) {
 	s.end_shader();
 	disable_multitex_a();
 	glFogfv(GL_FOG_COLOR, (float *)&orig_fog_color); // reset to original value
+}
+
+
+void setup_procedural_shaders(shader_t &s, float min_alpha, bool dlights, bool use_smap) {
+
+	bool const use_shadow_map(use_smap && shadow_map_enabled());
+	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
+	set_dlights_booleans(s, dlights, 1); // FS
+	s.setup_enabled_lights(2); // only 2, but could be up to 8 later
+	s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
+	s.set_vert_shader("fog.part+procedural_gen");
+	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_gen");
+	s.begin_shader();
+	s.setup_scene_bounds();
+	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
+	if (dlights && dl_tid > 0) setup_dlight_textures(s);
+	set_multitex(0);
+	s.add_uniform_int("tex0", 0);
+	s.add_uniform_float("min_alpha", min_alpha);
+	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
+	s.add_uniform_color("const_indir_color", const_indir_color);
 }
 
 

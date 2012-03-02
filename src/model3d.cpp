@@ -1276,17 +1276,10 @@ void model3ds::render(bool is_shadow_pass) {
 			}
 			else if (m->uses_proc_texture()) { // procedural texture
 				if (bmap_pass > 0) continue; // bump map not supported
-				/*s.setup_enabled_lights();
-				s.set_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
-				s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
-				s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
-				s.set_frag_shader("triplanar_texture");
-				s.begin_shader();
-				s.add_uniform_int("tex0", 0);*/
-				orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 0, 0, shadow_map_enabled(), 0, 0);
+				setup_procedural_shaders(s, min_alpha, 1, 1);
 			}
 			else {
-				orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled(), (bmap_pass != 0), enable_spec_map());
+				orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map());
 			}
 			m->render(s, is_shadow_pass, (bmap_pass != 0));
 
@@ -1294,8 +1287,7 @@ void model3ds::render(bool is_shadow_pass) {
 				// nothing to do
 			}
 			else if (m->uses_proc_texture()) {
-				//s.end_shader();
-				end_smoke_shaders(s, orig_fog_color);
+				s.end_shader();
 			}
 			else {
 				end_smoke_shaders(s, orig_fog_color);

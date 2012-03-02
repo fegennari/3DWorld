@@ -834,10 +834,10 @@
     <None Include="shaders\no_lighting_tex_coord.vert" />
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />
-    <None Include="shaders\procedural_texture.frag.part" />
+    <None Include="shaders\procedural_texture.part.frag" />
     <None Include="shaders\shadow_map.part" />
     <None Include="shaders\spec_map.part.frag" />
-    <None Include="shaders\triplanar_texture.frag.part" />
+    <None Include="shaders\triplanar_texture.part.frag" />
     <None Include="shaders\vert_xform_only.vert" />
     <None Include="shaders\water_plane.frag" />
     <None Include="shaders\water_plane.vert" />
