@@ -1,5 +1,6 @@
 uniform float min_alpha = 0.0;
 uniform vec3 const_indir_color = vec3(0,0,0);
+uniform sampler2D tex0;
 
 // clipped eye position, clipped vertex position
 varying vec3 eye, vpos, normal; // world space
@@ -9,7 +10,7 @@ varying vec3 eye_norm;
 void main()
 {
 	vec3 norm_normal = normalize(normal);
-	vec4 texel  = lookup_triplanar_texture(vpos, norm_normal);
+	vec4 texel  = lookup_triplanar_texture(vpos, norm_normal, tex0, tex0, tex0);
 	float alpha = gl_Color.a;
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
 	lit_color += gl_FrontMaterial.diffuse.rgb * const_indir_color; // add constant indir
