@@ -328,7 +328,7 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 }
 
 
-void voxel_manager::create_procedural(float mag, float freq) {
+void voxel_manager::create_procedural(float mag, float freq, bool normalize_to_1) {
 
 	noise_gen_3d ngen;
 	ngen.gen_sines(mag, freq); // create sine table
@@ -339,22 +339,43 @@ void voxel_manager::create_procedural(float mag, float freq) {
 	for (unsigned z = 0; z < nz; ++z) { // generate voxel values
 		for (unsigned y = 0; y < ny; ++y) {
 			for (unsigned x = 0; x < nx; ++x) {
-				set(x, y, z, max(-1.0f, min(1.0f, ngen.get_val(x, y, z, xyz_vals)))); // scale value?
+				float val(ngen.get_val(x, y, z, xyz_vals));
+				if (normalize_to_1) val = max(-1.0f, min(1.0f, val));
+				set(x, y, z, val); // scale value?
 			}
 		}
 	}
 }
 
 
-void voxel_manager::atten_at_edges(float val) {
+void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 	for (unsigned z = 0; z < nz; ++z) {
+		float const vz(1.0 - 2.0*max(0.0, (z - 0.5*nz))/float(nz));
+
 		for (unsigned y = 0; y < ny; ++y) {
+			float const vy(1.0 - 2.0*fabs(y - 0.5*ny)/float(ny));
+
 			for (unsigned x = 0; x < nx; ++x) {
 				float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx));
-				float const vy(1.0 - 2.0*fabs(y - 0.5*ny)/float(ny));
-				float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz));
-				get_ref(x, y, z) += val*CLIP_TO_01(20.0f*(0.1f - vx*vy*vz)); // FIXME: could do better
+				float const v(0.25 - vx*vy*vz);
+				if (v > 0.0) get_ref(x, y, z) += 8.0*val*v;
+			}
+		}
+	}
+}
+
+
+void voxel_manager::atten_at_top_only(float val) {
+
+	for (unsigned z = 0; z < nz; ++z) {
+		float const zval(float(z)/float(nz) - 0.75);
+		if (zval <= 0.0) continue;
+		float const atten(12.0*val*zval);
+
+		for (unsigned y = 0; y < ny; ++y) {
+			for (unsigned x = 0; x < nx; ++x) {
+				get_ref(x, y, z) += atten;
 			}
 		}
 	}

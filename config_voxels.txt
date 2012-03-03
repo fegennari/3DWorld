@@ -7,6 +7,7 @@ glaciate 1
 dynamic_mesh_scroll 0
 disable_scenery 1
 #toggle_mesh_enabled # disable mesh draw by default
+default_ground_tex 13 # dirt texture
 
 gravity 1.0
 mesh_height 1.0

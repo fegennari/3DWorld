@@ -1567,9 +1567,11 @@ void gen_voxel_landscape() {
 
 	// scenery generation parameters
 	float const mag(1.0), freq(1.0), isolevel(0.0);
-	bool const make_closed_surface(1), invert(1), remove_unconnected(1), remove_under_mesh(1), atten_at_edges(0), use_model3d(1), no_quads(1);
+	bool const make_closed_surface(1), invert(1), remove_unconnected(1);
+	bool const remove_under_mesh(1), use_model3d(1), no_quads(1), normalize_to_1(0);
+	int const atten_at_edges(1); // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
 	int const tid(ROCK_TEX); // no texture
-	colorRGBA const color(WHITE);
+	colorRGBA const color(use_model3d ? WHITE : ALPHA0);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
 
 	// create voxels
@@ -1579,8 +1581,9 @@ void gen_voxel_landscape() {
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
 	voxel_manager voxels;
 	voxels.init(nx, ny, nz, vsz, center);
-	voxels.create_procedural(mag, freq);
-	if (atten_at_edges) voxels.atten_at_edges(invert ? 1.0 : -1.0);
+	voxels.create_procedural(mag, freq, normalize_to_1);
+	if (atten_at_edges == 1) voxels.atten_at_top_only(invert ? 1.0 : -1.0);
+	if (atten_at_edges == 2) voxels.atten_at_edges   (invert ? 1.0 : -1.0);
 	PRINT_TIME("Voxel Gen");
 
 	// convert to model3d + polygons
@@ -1605,7 +1608,7 @@ void gen_voxel_landscape() {
 	coll_obj cobj;
 	cobj.init();
 	cobj.cp.elastic = 0.5;
-	cobj.cp.tid     = tid; // doesn't really work
+	cobj.cp.tid     = tid;
 	cobj.group_id   = group_id;
 	if (!use_model3d) cobj.cp.draw = 1;
 	add_polygons_to_cobj_vector(ppts, cobj, NULL, use_model3d);

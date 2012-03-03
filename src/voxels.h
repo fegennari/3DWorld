@@ -62,8 +62,9 @@ class voxel_manager : public float_voxel_grid {
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 
 public:
-	void create_procedural(float mag, float freq);
+	void create_procedural(float mag, float freq, bool normalize_to_1);
 	void atten_at_edges(float val);
+	void atten_at_top_only(float val);
 	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;
 };
 

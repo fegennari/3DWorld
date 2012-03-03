@@ -27,7 +27,7 @@ tree_size 1.0
 sun_rot 1.2
 shadow_detail 6
 tree_coll_level 4
-default_ground_tex 0
+default_ground_tex 0 # grass
 #default_ground_tex 13
 # mesh_seed 1
 destroy_thresh 0
