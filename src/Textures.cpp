@@ -298,6 +298,7 @@ void reset_textures() {
 	free_texture(gb_tid);
 	free_texture(flow_tid);
 	free_texture(reflection_tid);
+	setup_3d_noise_texture(0); // free noise texture
 }
 
 

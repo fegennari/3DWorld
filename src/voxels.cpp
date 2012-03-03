@@ -5,6 +5,52 @@
 #include "voxels.h"
 #include "upsurface.h" // for noise_gen_3d
 #include "mesh.h"
+#include "gl_ext_arb.h"
+
+
+class noise_texture_manager_t {
+
+	unsigned noise_tid, tsize;
+
+public:
+	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
+
+	void setup(unsigned size) {
+		if (size == tsize) return; // nothing to do
+		free_texture(noise_tid);
+		tsize = size;
+		if (size == 0) return; // nothing else to do
+		voxel_manager voxels;
+		voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros);
+		voxels.create_procedural(1.0, 1.0, 1);
+		vector<unsigned char> data;
+		data.resize(voxels.size());
+
+		for (unsigned i = 0; i < voxels.size(); ++i) {
+			data[i] = (unsigned char)(255*CLIP_TO_01(fabs(voxels[i]))); // use fabs() to convert from [-1,1] to [0,1]
+		}
+		noise_tid = create_3d_texture(tsize, tsize, tsize, 1, data, GL_LINEAR, GL_REPEAT);
+	}
+	void bind_texture(unsigned tu_id) const {
+		assert(glIsTexture(noise_tid));
+		set_multitex(tu_id);
+		bind_3d_texture(noise_tid);
+		set_multitex(0);
+	}
+};
+
+
+noise_texture_manager_t noise_texture_manager;
+
+
+// if size==old_size, we do nothing;  if size==0, we only free the texture
+void setup_3d_noise_texture(unsigned size) {
+	noise_texture_manager.setup(size);
+}
+
+void bind_3d_noise_texture(unsigned tu_id) {
+	noise_texture_manager.bind_texture(tu_id);
+}
 
 
 namespace voxel_detail
@@ -498,6 +544,5 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 		} // for y
 	} // for z
 }
-
 
 

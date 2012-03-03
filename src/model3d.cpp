@@ -1276,8 +1276,13 @@ void model3ds::render(bool is_shadow_pass) {
 			}
 			else if (m->uses_proc_texture()) { // procedural texture
 				if (bmap_pass > 0) continue; // bump map not supported
-				float const tex_scale(1.0); // where does this come from?
-				setup_procedural_shaders(s, min_alpha, 1, 1, tex_scale);
+				float const tex_scale(1.0), noise_scale(0.1), tex_mix_saturate(8.0); // where does this come from?
+				unsigned const noise_tsize(32);
+				setup_3d_noise_texture(noise_tsize);
+				set_multitex(1);
+				select_texture(SNOW_TEX); // FIXME: remove hard-coded texture
+				set_multitex(0);
+				setup_procedural_shaders(s, min_alpha, 1, 1, tex_scale, noise_scale, tex_mix_saturate);
 			}
 			else {
 				orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map());
@@ -1289,6 +1294,7 @@ void model3ds::render(bool is_shadow_pass) {
 			}
 			else if (m->uses_proc_texture()) {
 				s.end_shader();
+				disable_multitex_a();
 			}
 			else {
 				end_smoke_shaders(s, orig_fog_color);
