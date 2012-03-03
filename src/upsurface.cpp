@@ -29,13 +29,13 @@ void noise_gen_3d::gen_sines(float mag, float freq) {
 
 		for (unsigned j = 0; j < SINES_PER_FREQ; ++j) {
 			unsigned const offset(NUM_SINE_PARAMS*(offset2 + j));
-			rdata[offset+0] = rand_uniform2(0.2, 1.0)*mag;  // magnitude
-			rdata[offset+1] = rand_uniform2(0.1, 1.0)*freq; // x frequency
-			rdata[offset+2] = rand2d()*TWO_PI; // x phase
-			rdata[offset+3] = rand_uniform2(0.1, 1.0)*freq; // y frequency
-			rdata[offset+4] = rand2d()*TWO_PI; // y phase
-			rdata[offset+5] = rand_uniform2(0.1, 1.0)*freq; // z frequency
-			rdata[offset+6] = rand2d()*TWO_PI; // z phase
+			rdata[offset+0] = rgen.rand_uniform(0.2, 1.0)*mag;  // magnitude
+			rdata[offset+1] = rgen.rand_uniform(0.1, 1.0)*freq; // x frequency
+			rdata[offset+2] = rgen.randd()*TWO_PI; // x phase
+			rdata[offset+3] = rgen.rand_uniform(0.1, 1.0)*freq; // y frequency
+			rdata[offset+4] = rgen.randd()*TWO_PI; // y phase
+			rdata[offset+5] = rgen.rand_uniform(0.1, 1.0)*freq; // z frequency
+			rdata[offset+6] = rgen.randd()*TWO_PI; // z phase
 		}
 		mag  *= M_ATTEN_FACTOR;
 		freq /= F_ATTEN_FACTOR;
@@ -136,7 +136,7 @@ void upsurface::gen(float mag, float freq, unsigned ntests, float mm_scale) {
 			float localval(rdata[offset]);
 
 			for (unsigned d = 0; d < 3; ++d) {
-				localval *= SINF(rdata[offset+(d<<1)+1]*rand2d() + rdata[offset+(d<<1)+2]);
+				localval *= SINF(rdata[offset+(d<<1)+1]*rgen.randd() + rdata[offset+(d<<1)+2]);
 			}
 			val += fabs(localval);
 		}
@@ -264,6 +264,7 @@ void urev_body::gen_surface() {
 	delete surface;
 	surface = new upsurface(type);
 	float mag(SURFACE_HEIGHT*radius), freq(((type == UTYPE_MOON) ? 2.0 : 1.0)*INITIAL_FREQ*TWO_PI);
+	surface->set_rand_seeds(urseed1, urseed2);
 	surface->gen(mag, freq);
 }
 

@@ -331,6 +331,7 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 void voxel_manager::create_procedural(float mag, float freq, bool normalize_to_1) {
 
 	noise_gen_3d ngen;
+	ngen.set_rand_seeds(123, 456);
 	ngen.gen_sines(mag, freq); // create sine table
 	unsigned const xyz_num[3] = {nx, ny, nz};
 	vector<float> xyz_vals[3];

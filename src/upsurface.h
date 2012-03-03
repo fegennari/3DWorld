@@ -46,8 +46,10 @@ class noise_gen_3d {
 public:
 	unsigned num_sines;
 	float rdata[SINE_DATA_SIZE];
+	rand_gen_t rgen;
 
 	noise_gen_3d() : num_sines(0) {}
+	void set_rand_seeds(int rs1, int rs2) {rgen.set_state(rs1, rs2);}
 	void gen_sines(float mag, float freq);
 	void gen_xyz_vals(point const &start, vector3d const &step, unsigned const xyz_num[3], vector<float> xyz_vals[3]);
 	float get_val(unsigned x, unsigned y, unsigned z, vector<float> const xyz_vals[3]) const;

@@ -1567,7 +1567,7 @@ void gen_voxel_landscape() {
 
 	// scenery generation parameters
 	float const mag(1.0), freq(1.0), isolevel(0.0);
-	bool const make_closed_surface(1), invert(1), remove_unconnected(1);
+	bool const make_closed_surface(1), invert(0), remove_unconnected(1);
 	bool const remove_under_mesh(1), use_model3d(1), no_quads(1), normalize_to_1(0);
 	int const atten_at_edges(1); // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
 	int const tid(ROCK_TEX); // no texture
