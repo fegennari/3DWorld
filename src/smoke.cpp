@@ -283,7 +283,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	if (init_call) { // create texture
 		cout << "Allocating " << zsize << " by " << MESH_X_SIZE << " by " << MESH_Y_SIZE << " smoke texture of " << ncomp*sz << " bytes." << endl;
 		assert(smoke_tid == 0);
-		smoke_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data, GL_LINEAR);
+		smoke_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data, GL_LINEAR, GL_CLAMP_TO_EDGE);
 	}
 	else { // update region/sync texture
 		unsigned const off(ncomp*y_start*MESH_X_SIZE*zsize);

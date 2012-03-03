@@ -968,7 +968,7 @@ unsigned upload_voxel_flow_texture() {
 			}
 		}
 	}
-	return create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data, GL_LINEAR);
+	return create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data, GL_LINEAR, GL_CLAMP_TO_EDGE);
 }
 
 

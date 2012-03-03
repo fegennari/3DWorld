@@ -21,7 +21,7 @@ void multitex_coord2f_a(GLfloat s, GLfloat t);
 
 // 3D texture prototypes
 void bind_3d_texture(unsigned tid);
-unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter);
+unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap);
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data);
 

@@ -124,7 +124,7 @@ GLenum get_format(unsigned ncomp) {
 }
 
 
-unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter) {
+unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap) {
 
 	assert(data.size() == ncomp*xsz*ysz*zsz);
 	unsigned tid(0);
@@ -132,9 +132,9 @@ unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned nc
 	bind_3d_texture(tid);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filter);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, filter);
-	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, wrap);
+	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, wrap);
+	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrap);
 	glTexImage3D(GL_TEXTURE_3D, 0, ncomp, xsz, ysz, zsz, 0, get_format(ncomp), GL_UNSIGNED_BYTE, &data.front());
 	return tid;
 }
