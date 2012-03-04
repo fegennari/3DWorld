@@ -566,7 +566,7 @@ void voxel_model::build(voxel_params_t const &vp, vector<coll_tquad> *ppts) {
 	PRINT_TIME("  Voxels Get Triangles");
 	if (ppts) coll_tquads_from_triangles(triangles, *ppts, vp.rp.base_color);
 	PRINT_TIME("  Triangles to Tquads");
-	vntc_map_t vmap(1);
+	vertex_map_t<vertex_type_t> vmap(1);
 	polygon_t poly(vp.rp.base_color);
 
 	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {

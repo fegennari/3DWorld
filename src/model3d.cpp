@@ -166,6 +166,10 @@ template<typename V> void read_vector(istream &in, V &v) {
 
 // ************ vntc_vect_t/indexed_vntc_vect_t ************
 
+// explicit template instantiations of vert_norm case, used for voxel_model, where tc=0.0
+template class indexed_vntc_vect_t<vert_norm>;
+
+
 template<typename T> void vntc_vect_t<T>::free_vbos() {
 
 	delete_vbo(vbo);
@@ -295,9 +299,9 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		glEnableVertexAttribArray(loc);
 		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, (void *)sizeof(vert_norm_tc)); // stuff in at the end
 	}
-	glVertexPointer(  3, GL_FLOAT, stride, 0);
-	glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));
-	glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));
+	glVertexPointer(3, GL_FLOAT, stride, 0);
+	if (stride >= sizeof(vert_norm))    glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));
+	if (stride >= sizeof(vert_norm_tc)) glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));
 
 	if (indices.empty()) { // draw regular arrays
 		glDrawArrays(prim_type, 0, (unsigned)size());
@@ -491,6 +495,12 @@ void polygon_t::from_points(vector<point> const &pts) {
 
 
 // ************ vntc_vect_block_t ************
+
+// explicit template instantiations of all used vntc_vect_block_t types
+template struct vntc_vect_block_t<vert_norm>;
+template struct vntc_vect_block_t<vert_norm_tc>;
+template struct vntc_vect_block_t<vert_norm_tc_tan>;
+
 
 template<typename T> void vntc_vect_block_t<T>::remove_excess_cap() {
 

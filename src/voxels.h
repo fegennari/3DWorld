@@ -104,7 +104,7 @@ struct coll_tquad;
 class voxel_model : public voxel_manager {
 
 	voxel_render_params_t params;
-	typedef vert_norm_tc vertex_type_t; // FIXME: vert_norm with no tc
+	typedef vert_norm vertex_type_t;
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	tri_data_t tri_data;
 	noise_texture_manager_t noise_tex_gen;
