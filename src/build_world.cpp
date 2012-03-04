@@ -596,6 +596,10 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		gen_scenery();
 		PRINT_TIME("Scenery generation");
 	}
+	if (create_voxel_landscape) {
+		gen_voxel_landscape();
+		PRINT_TIME("Voxel Landscape Generation");
+	}
 	add_all_coll_objects(coll_obj_file, (num_trees == 0));
 	PRINT_TIME("Collision object addition");
 
@@ -746,7 +750,6 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 		if (load_coll_objs) {
 			if (!read_coll_objects(coll_obj_file)) exit(1);
 			fixed_cobjs.finalize();
-			if (create_voxel_landscape) gen_voxel_landscape();
 			RESET_TIME;
 			unsigned const ncobjs(fixed_cobjs.size());
 			
@@ -883,7 +886,7 @@ void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const 
 		copy_tquad_to_cobj(*i, poly);
 		vector3d const norm(get_poly_norm(poly.points));
 
-		if (get_poly_norm(poly.points) == zero_vector) {
+		if (norm == zero_vector) {
 			static bool had_zero_area_warning(0);
 
 			if (!had_zero_area_warning) {
@@ -1564,10 +1567,11 @@ int read_coll_objects(const char *coll_obj_file) {
 }
 
 
-void gen_voxel_landscape() { // FIXME: should be called from gen_scene
+void gen_voxel_landscape() {
 
+	RESET_TIME;
 	// scenery generation parameters
-	float const mag(1.0), freq(1.0), isolevel(0.0);
+	float const mag(1.0), freq(1.0), isolevel(0.0), elastic(0.8);
 	bool const make_closed_surface(1), invert(0), remove_unconnected(1);
 	bool const remove_under_mesh(1), no_quads(1), normalize_to_1(0);
 	int const atten_at_edges(1); // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
@@ -1578,26 +1582,28 @@ void gen_voxel_landscape() { // FIXME: should be called from gen_scene
 	vp.rp = voxel_render_params_t(tid1, tid2, color1, color2, base_color);
 
 	// create voxels
-	RESET_TIME;
 	float const zlo(min(zbottom, czmin)), zhi(max(max(ztop, czmax), zlo + Z_SCENE_SIZE));
 	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
 	vector<coll_tquad> ppts;
+	terrain_voxel_model.clear();
 	terrain_voxel_model.init(nx, ny, nz, vsz, center);
 	terrain_voxel_model.create_procedural(mag, freq, normalize_to_1, 123, 456);
 	if (atten_at_edges == 1) terrain_voxel_model.atten_at_top_only(invert ? 1.0 : -1.0);
 	if (atten_at_edges == 2) terrain_voxel_model.atten_at_edges   (invert ? 1.0 : -1.0);
-	PRINT_TIME("Voxel Gen");
+	PRINT_TIME(" Voxel Gen");
 	terrain_voxel_model.build(vp, &ppts);
-	PRINT_TIME("Voxels to Triangles");
+	PRINT_TIME(" Voxels to Triangles");
 
 	// add to cobjs
-	coll_obj cobj;
-	cobj.init();
-	cobj.cp.elastic = 0.5;
-	cobj.cp.tid     = tid1; // not that it's used...
-	add_polygons_to_cobj_vector(ppts, cobj, NULL, 1); // use_model3d=1
-	PRINT_TIME("Voxels to Cobjs");
+	cobj_params cparams(elastic, base_color, 0, 0, NULL, 0, tid1);
+	cparams.is_model3d = 1;
+
+	for (vector<coll_tquad>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
+		assert(i->npts == 3);
+		if (i->is_valid()) add_coll_polygon(i->pts, i->npts, cparams, MIN_POLY_THICK);
+	}
+	PRINT_TIME(" Voxels to Cobjs");
 }
 
 

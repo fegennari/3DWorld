@@ -110,7 +110,7 @@ class voxel_model : public voxel_manager {
 	noise_texture_manager_t noise_tex_gen;
 
 public:
-	voxel_model() {}
+	void clear();
 	void build(voxel_params_t const &vp, vector<coll_tquad> *ppts=NULL);
 	void render(bool is_shadow_pass);
 	void free_context();

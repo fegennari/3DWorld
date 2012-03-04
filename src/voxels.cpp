@@ -549,15 +549,23 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 }
 
 
+void voxel_model::clear() {
+
+	free_context();
+	tri_data.clear();
+	voxel_manager::clear();
+}
+
+
 void voxel_model::build(voxel_params_t const &vp, vector<coll_tquad> *ppts) {
 
 	RESET_TIME;
 	params = vp.rp; // copy render parameters
 	vector<triangle> triangles;
 	get_triangles(triangles, vp);
-	PRINT_TIME(" Voxels Get Triangles");
+	PRINT_TIME("  Voxels Get Triangles");
 	if (ppts) coll_tquads_from_triangles(triangles, *ppts, vp.rp.base_color);
-	PRINT_TIME(" Triangles to Tquads");
+	PRINT_TIME("  Triangles to Tquads");
 	vntc_map_t vmap(1);
 	polygon_t poly(vp.rp.base_color);
 
@@ -566,7 +574,7 @@ void voxel_model::build(voxel_params_t const &vp, vector<coll_tquad> *ppts) {
 		if (tri_data.empty()) tri_data.push_back(indexed_vntc_vect_t<vertex_type_t>(0));
 		tri_data.back().add_poly(poly, vmap);
 	}
-	PRINT_TIME(" Triangles to Model");
+	PRINT_TIME("  Triangles to Model");
 }
 
 
