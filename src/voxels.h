@@ -40,7 +40,7 @@ class noise_texture_manager_t {
 
 public:
 	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
-	void setup(unsigned size);
+	void setup(unsigned size, float mag=1.0, float freq=1.0, vector3d const &offset=zero_vector);
 	void bind_texture(unsigned tu_id) const;
 	void clear();
 };
@@ -91,7 +91,7 @@ class voxel_manager : public float_voxel_grid {
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 
 public:
-	void create_procedural(float mag, float freq, bool normalize_to_1, int rseed1, int rseed2);
+	void create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2);
 	void atten_at_edges(float val);
 	void atten_at_top_only(float val);
 	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;

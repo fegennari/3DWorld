@@ -1585,10 +1585,11 @@ void gen_voxel_landscape() {
 	float const zlo(min(zbottom, czmin)), zhi(max(max(ztop, czmax), zlo + Z_SCENE_SIZE));
 	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
+	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	vector<coll_tquad> ppts;
 	terrain_voxel_model.clear();
 	terrain_voxel_model.init(nx, ny, nz, vsz, center);
-	terrain_voxel_model.create_procedural(mag, freq, normalize_to_1, 123, 456);
+	terrain_voxel_model.create_procedural(mag, freq, gen_offset, normalize_to_1, 123, 456);
 	if (atten_at_edges == 1) terrain_voxel_model.atten_at_top_only(invert ? 1.0 : -1.0);
 	if (atten_at_edges == 2) terrain_voxel_model.atten_at_edges   (invert ? 1.0 : -1.0);
 	PRINT_TIME(" Voxel Gen");

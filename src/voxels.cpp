@@ -15,7 +15,7 @@ voxel_model terrain_voxel_model;
 
 
 // if size==old_size, we do nothing;  if size==0, we only free the texture
-void noise_texture_manager_t::setup(unsigned size) {
+void noise_texture_manager_t::setup(unsigned size, float mag, float freq, vector3d const &offset) {
 
 	if (size == tsize) return; // nothing to do
 	clear();
@@ -23,7 +23,7 @@ void noise_texture_manager_t::setup(unsigned size) {
 	if (size == 0) return; // nothing else to do
 	voxel_manager voxels;
 	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros);
-	voxels.create_procedural(1.0, 1.0, 1, 321, 654);
+	voxels.create_procedural(mag, freq, offset, 1, 321, 654);
 	vector<unsigned char> data;
 	data.resize(voxels.size());
 
@@ -371,14 +371,14 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 }
 
 
-void voxel_manager::create_procedural(float mag, float freq, bool normalize_to_1, int rseed1, int rseed2) {
+void voxel_manager::create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2) {
 
 	noise_gen_3d ngen;
 	ngen.set_rand_seeds(rseed1, rseed2);
 	ngen.gen_sines(mag, freq); // create sine table
 	unsigned const xyz_num[3] = {nx, ny, nz};
 	vector<float> xyz_vals[3];
-	ngen.gen_xyz_vals(lo_pos, vsz, xyz_num, xyz_vals); // create xyz values
+	ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
 
 	#pragma omp parallel for schedule(static,1)
 	for (int z = 0; z < (int)nz; ++z) { // generate voxel values
@@ -592,10 +592,11 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 		float const tex_scale(1.0), noise_scale(0.05), tex_mix_saturate(8.0); // where does this come from?
 		unsigned const noise_tsize(64);
 		float const min_alpha(0.5);
-		noise_tex_gen.setup(noise_tsize);
+		noise_tex_gen.setup(noise_tsize, 1.0, 1.0);
 		noise_tex_gen.bind_texture(5); // tu_id = 5
 		set_multitex(0);
 		setup_procedural_shaders(s, min_alpha, 1, 1, 1, tex_scale, noise_scale, tex_mix_saturate);
+		s.add_uniform_vector3d("tex_eval_offset", vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0));
 
 		for (unsigned i = 0; i < 2; ++i) {
 			set_multitex(0+i);
