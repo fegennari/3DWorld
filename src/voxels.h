@@ -46,6 +46,7 @@ public:
 };
 
 
+// stored internally in yxz order
 template<typename V> class voxel_grid : public vector<V> {
 public:
 	unsigned nx, ny, nz;
@@ -59,12 +60,12 @@ public:
 		int i[3]; // x,y,z
 		UNROLL_3X(i[i_] = int((p[i_] - lo_pos[i_])/vsz[i_]);); // convert to voxel space
 		if (i[0] < 0 || i[1] < 0 || i[2] < 0 || i[0] >= (int)nx || i[1] >= (int)ny || i[2] >= (int)nz) return 0;
-		ix = i[0] + (i[1] + i[2]*ny)*nx;
+		ix = i[2] + (i[2] + i[1]*nx)*nz;
 		return 1;
 	}
 	unsigned get_ix(unsigned x, unsigned y, unsigned z) const {
 		assert(x < nx && y < ny && z < nz);
-		return (x + (y + z*ny)*nx);
+		return (z + (x + y*nx)*nz);
 	}
 	V const &get(unsigned x, unsigned y, unsigned z) const {
 		unsigned const ix(get_ix(x, y, z));

@@ -381,9 +381,9 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
 
 	#pragma omp parallel for schedule(static,1)
-	for (int z = 0; z < (int)nz; ++z) { // generate voxel values
-		for (unsigned y = 0; y < ny; ++y) {
-			for (unsigned x = 0; x < nx; ++x) {
+	for (int y = 0; y < (int)ny; ++y) { // generate voxel values
+		for (unsigned x = 0; x < nx; ++x) {
+			for (unsigned z = 0; z < nz; ++z) {
 				float val(ngen.get_val(x, y, z, xyz_vals));
 				if (normalize_to_1) val = max(-1.0f, min(1.0f, val));
 				set(x, y, z, val); // scale value?
@@ -395,15 +395,14 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 
 void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
-	for (unsigned z = 0; z < nz; ++z) {
-		float const vz(1.0 - 2.0*max(0.0, (z - 0.5*nz))/float(nz));
+	for (unsigned y = 0; y < ny; ++y) {
+		float const vy(1.0 - 2.0*max(0.0, (y - 0.5*ny))/float(ny));
 
-		for (unsigned y = 0; y < ny; ++y) {
-			float const vy(1.0 - 2.0*fabs(y - 0.5*ny)/float(ny));
+		for (unsigned x = 0; x < nx; ++x) {
+			float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx));
 
-			for (unsigned x = 0; x < nx; ++x) {
-				float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx));
-				float const v(0.25 - vx*vy*vz);
+			for (unsigned z = 0; z < nz; ++z) {
+				float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz)), v(0.25 - vx*vy*vz);
 				if (v > 0.0) get_ref(x, y, z) += 8.0*val*v;
 			}
 		}
@@ -413,14 +412,13 @@ void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 void voxel_manager::atten_at_top_only(float val) {
 
-	for (unsigned z = 0; z < nz; ++z) {
-		float const zval(float(z)/float(nz) - 0.75);
-		if (zval <= 0.0) continue;
-		float const atten(12.0*val*zval);
+	float const nz_inv(1.0/nz);
 
-		for (unsigned y = 0; y < ny; ++y) {
-			for (unsigned x = 0; x < nx; ++x) {
-				get_ref(x, y, z) += atten;
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			for (unsigned z = 0; z < nz; ++z) {
+				float const zval(z*nz_inv - 0.75);
+				if (zval > 0.0) get_ref(x, y, z) += 12.0*val*zval;
 			}
 		}
 	}
@@ -449,9 +447,9 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 	voxel_grid<unsigned char> outside;
 	outside.init(nx, ny, nz, vsz, center);
 
-	for (unsigned z = 0; z < nz; ++z) {
-		for (unsigned y = 0; y < ny; ++y) {
-			for (unsigned x = 0; x < nx; ++x) {
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			for (unsigned z = 0; z < nz; ++z) {
 				bool const on_edge(vp.make_closed_surface && ((x == 0 || x == nx-1) || (y == 0 || y == ny-1) || (z == 0 || z == nz-1)));
 				unsigned char const ival(on_edge? 2 : (((get(x, y, z) < vp.isolevel) ^ vp.invert) ? 1 : 0)); // on_edge is considered outside
 				outside.set(x, y, z, ival);
@@ -476,7 +474,7 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 			work.pop_back();
 			assert(cur < outside.size());
 			assert(outside[cur] & 4);
-			int const z(cur/(nx*ny)), cur_xy(cur - z*nx*ny), y(cur_xy/nx), x(cur_xy - y*nx); // cur = (x + (y + z*ny)*nx)
+			int const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
 			assert(outside.get_ix(x, y, z) == cur);
 
 			for (unsigned dim = 0; dim < 3; ++dim) { // check neighbors
@@ -501,27 +499,29 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 
 	// create triangles
 	#pragma omp parallel for schedule(static,1)
-	for (int z = 0; z < (int)nz-1; ++z) {
-		for (unsigned y = 0; y < ny-1; ++y) {
-			for (unsigned x = 0; x < nx-1; ++x) {
+	for (int y = 0; y < (int)ny-1; ++y) {
+		for (unsigned x = 0; x < nx-1; ++x) {
+			for (unsigned z = 0; z < nz-1; ++z) {
 				float vals[8]; // 8 corner voxel values
 				point pts[8]; // corner points
 				unsigned cix(0);
 				bool all_under_mesh(vp.remove_under_mesh);
 
-				for (unsigned zhi = 0; zhi < 2; ++zhi) {
-					for (unsigned yhi = 0; yhi < 2; ++yhi) {
-						for (unsigned xhi = 0; xhi < 2; ++xhi) {
-							unsigned const xx(x+xhi), yy(y+yhi), zz(z+zhi), vix((xhi^yhi) + 2*yhi + 4*zhi);
+				for (unsigned yhi = 0; yhi < 2; ++yhi) {
+					for (unsigned xhi = 0; xhi < 2; ++xhi) {
+						unsigned const xx(x+xhi), yy(y+yhi);
+						float const xval(xx*vsz.x + lo_pos.x), yval(yy*vsz.y + lo_pos.y);
+
+						if (all_under_mesh) {
+							int const xpos(get_xpos(xval)), ypos(get_xpos(yval));
+							all_under_mesh = point_outside_mesh(xpos, ypos) ? 0 : (((z+1)*vsz.z + lo_pos.z) < mesh_height[ypos][xpos]);
+						}
+						for (unsigned zhi = 0; zhi < 2; ++zhi) {
+							unsigned const zz(z+zhi), vix((xhi^yhi) + 2*yhi + 4*zhi);
 							unsigned char const outside_val(outside.get(xx, yy, zz));
 							if (outside_val) cix |= 1 << vix; // outside or on edge
 							vals[vix] = (outside_val == 2) ? vp.isolevel : get(xx, yy, zz); // check on_edge status
-							pts [vix] = point(xx*vsz.x, yy*vsz.y, zz*vsz.z) + lo_pos;
-
-							if (all_under_mesh) {
-								int const xpos(get_xpos(pts[vix].x)), ypos(get_xpos(pts[vix].y));
-								all_under_mesh = point_outside_mesh(xpos, ypos) ? 0 : (pts[vix].z < mesh_height[ypos][xpos]);
-							}
+							pts [vix] = point(xval, yval, (zz*vsz.z + lo_pos.z));
 						}
 					}
 				}
