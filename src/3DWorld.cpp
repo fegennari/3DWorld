@@ -156,6 +156,7 @@ void clear_context() {
 
 	reset_textures();
 	free_model_context();
+	free_voxel_context();
 	free_dlists();
 	clear_shaders();
 	reset_snow_vbos();

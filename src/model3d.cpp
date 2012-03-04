@@ -776,21 +776,23 @@ bool material_t::read(istream &in) {
 // ************ model3d ************
 
 
+void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color) {
+
+	ppts.reserve(ppts.capacity() + triangles.size());
+	for (unsigned i = 0; i < triangles.size(); ++i) ppts.push_back(coll_tquad(triangles[i], color));
+}
+
+
 unsigned model3d::add_voxels(voxel_manager const &voxels, voxel_params_t const &vp,
-	colorRGBA const &color, int mat_id, vector<coll_tquad> *ppts, bool no_quads)
+	colorRGBA const &color, int mat_id, vector<coll_tquad> *ppts)
 {
 	vector<triangle> triangles;
 	voxels.get_triangles(triangles, vp);
 	unsigned const num_added(add_triangles(triangles, color, mat_id, 0));
 
 	if (ppts) { // if adding as cobjs
-		if (no_quads) { // keep the triangles, no quad merging, all polygons will be coplanar
-			ppts->reserve(ppts->capacity() + triangles.size());
-			for (unsigned i = 0; i < triangles.size(); ++i) ppts->push_back(coll_tquad(triangles[i], color));
-		}
-		else {
-			get_polygons(*ppts);
-		}
+		// keep the triangles, no quad merging, all polygons will be coplanar
+		coll_tquads_from_triangles(triangles, *ppts, color);
 		set_has_cobjs();
 	}
 	return num_added;
@@ -1256,7 +1258,7 @@ void model3ds::render(bool is_shadow_pass) {
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 	}
 	else {
-		set_color_a(WHITE); // ambient will be set by indirect lighting in the shader
+		set_color_a(WHITE);
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_ALPHA_TEST);
 	}
@@ -1264,42 +1266,15 @@ void model3ds::render(bool is_shadow_pass) {
 	set_specular(0.0, 1.0);
 	float const min_alpha(0.5); // will be reset per-material
 
-	for (unsigned bmap_pass = 0; bmap_pass < 2; ++bmap_pass) {
-		bool const render_if_bmap(0); // set this later when bump maps are supported
+	for (unsigned bmap_pass = 0; bmap_pass < (use_shaders ? 2U : 1U); ++bmap_pass) {
+		shader_t s;
+		colorRGBA orig_fog_color;
+		if (use_shaders) orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map());
 
 		for (iterator m = begin(); m != end(); ++m) { // FIXME: reuse shaders across models?
-			shader_t s;
-			colorRGBA orig_fog_color;
-
-			if (!use_shaders) {
-				if (bmap_pass > 0) continue;
-			}
-			else if (m->uses_proc_texture()) { // procedural texture
-				if (bmap_pass > 0) continue; // bump map not supported
-				float const tex_scale(1.0), noise_scale(0.1), tex_mix_saturate(8.0); // where does this come from?
-				unsigned const noise_tsize(32);
-				setup_3d_noise_texture(noise_tsize);
-				set_multitex(1);
-				select_texture(SNOW_TEX); // FIXME: remove hard-coded texture
-				set_multitex(0);
-				setup_procedural_shaders(s, min_alpha, 1, 1, tex_scale, noise_scale, tex_mix_saturate);
-			}
-			else {
-				orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map());
-			}
 			m->render(s, is_shadow_pass, (bmap_pass != 0));
-
-			if (!use_shaders) {
-				// nothing to do
-			}
-			else if (m->uses_proc_texture()) {
-				s.end_shader();
-				disable_multitex_a();
-			}
-			else {
-				end_smoke_shaders(s, orig_fog_color);
-			}
 		}
+		if (use_shaders) end_smoke_shaders(s, orig_fog_color);
 	}
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_TEXTURE_2D);
@@ -1345,15 +1320,6 @@ bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, ve
 
 
 // ************ Free Functions ************
-
-cube_t voxels_to_model3d(voxel_manager const &voxels, voxel_params_t const &vp, int tid,
-	colorRGBA const &color, vector<coll_tquad> *ppts, bool no_quads)
-{
-	all_models.push_back(model3d(all_models.tmgr, tid, color, 0, 1)); // procedural texture mode
-	model3d &cur_model(all_models.back());
-	cur_model.add_voxels(voxels, vp, color, -1, ppts, no_quads); // put in unbound_geom for now
-	return cur_model.get_bbox();
-}
 
 
 void free_model_context() {

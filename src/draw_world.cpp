@@ -1803,10 +1803,10 @@ void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color) {
 
 // texture units used: 0-1: object texture, 2-4 dynamic lighting, 5: 3D noise texture, 6-7 shadow map
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool dlights, bool use_smap,
-	float tex_scale, float noise_scale, float tex_mix_saturate)
+	bool use_noise_tex, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
-	unsigned const noise_tu_id(5);
+	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
 	set_dlights_booleans(s, dlights, 1); // FS
 	s.setup_enabled_lights(2); // only 2, but could be up to 8 later
@@ -1817,13 +1817,15 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool dlights, bool u
 	s.setup_scene_bounds();
 	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
 	if (dlights && dl_tid > 0) setup_dlight_textures(s);
-	bind_3d_noise_texture(noise_tu_id); // use texture unit 1
 	set_multitex(0);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 1);
-	s.add_uniform_int("noise_tex", noise_tu_id); // does this need an enable option?
-	s.add_uniform_float("noise_scale", noise_scale);
-	s.add_uniform_float("tex_mix_saturate", tex_mix_saturate);
+
+	if (use_noise_tex) {
+		s.add_uniform_int("noise_tex", 5); // does this need an enable option?
+		s.add_uniform_float("noise_scale", noise_scale);
+		s.add_uniform_float("tex_mix_saturate", tex_mix_saturate);
+	}
 	s.add_uniform_float("min_alpha", min_alpha);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
 	s.add_uniform_color("const_indir_color", const_indir_color);

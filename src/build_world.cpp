@@ -59,6 +59,7 @@ extern char *coll_obj_file;
 extern vector<point> app_spots;
 extern vector<light_source> light_sources;
 extern tree_cont_t t_trees;
+extern voxel_model terrain_voxel_model;
 
 
 int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
@@ -1563,56 +1564,39 @@ int read_coll_objects(const char *coll_obj_file) {
 }
 
 
-void gen_voxel_landscape() {
+void gen_voxel_landscape() { // FIXME: should be called from gen_scene
 
 	// scenery generation parameters
 	float const mag(1.0), freq(1.0), isolevel(0.0);
 	bool const make_closed_surface(1), invert(0), remove_unconnected(1);
-	bool const remove_under_mesh(1), use_model3d(1), no_quads(1), normalize_to_1(0);
+	bool const remove_under_mesh(1), no_quads(1), normalize_to_1(0);
 	int const atten_at_edges(1); // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
-	int const tid(ROCK_TEX); // no texture
-	colorRGBA const color(use_model3d ? WHITE : ALPHA0);
+	int const tid1(ROCK_TEX), tid2(SNOW_TEX);
+	colorRGBA const base_color(WHITE), color1(WHITE), color2(WHITE);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
+	voxel_params_t vp(isolevel, make_closed_surface, invert, remove_unconnected, remove_under_mesh);
+	vp.rp = voxel_render_params_t(tid1, tid2, color1, color2, base_color);
 
 	// create voxels
 	RESET_TIME;
 	float const zlo(min(zbottom, czmin)), zhi(max(max(ztop, czmax), zlo + Z_SCENE_SIZE));
 	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
-	voxel_manager voxels;
-	voxels.init(nx, ny, nz, vsz, center);
-	voxels.create_procedural(mag, freq, normalize_to_1);
-	if (atten_at_edges == 1) voxels.atten_at_top_only(invert ? 1.0 : -1.0);
-	if (atten_at_edges == 2) voxels.atten_at_edges   (invert ? 1.0 : -1.0);
-	PRINT_TIME("Voxel Gen");
-
-	// convert to model3d + polygons
-	int group_id(-1);
 	vector<coll_tquad> ppts;
-	voxel_params_t vp(isolevel, make_closed_surface, invert, remove_unconnected, remove_under_mesh);
-
-	if (use_model3d) {
-		voxels_to_model3d(voxels, vp, tid, color, &ppts, no_quads);
-	}
-	else {
-		vector<triangle> triangles;
-		voxels.get_triangles(triangles, vp);
-		ppts.reserve(triangles.size());
-		for (unsigned i = 0; i < triangles.size(); ++i) ppts.push_back(coll_tquad(triangles[i], color));
-		group_id = (int)obj_draw_groups.size();
-		obj_draw_groups.push_back(obj_draw_group(1)); // use_dlist=1
-	}
-	PRINT_TIME("Voxels to Model3d");
+	terrain_voxel_model.init(nx, ny, nz, vsz, center);
+	terrain_voxel_model.create_procedural(mag, freq, normalize_to_1, 123, 456);
+	if (atten_at_edges == 1) terrain_voxel_model.atten_at_top_only(invert ? 1.0 : -1.0);
+	if (atten_at_edges == 2) terrain_voxel_model.atten_at_edges   (invert ? 1.0 : -1.0);
+	PRINT_TIME("Voxel Gen");
+	terrain_voxel_model.build(vp, &ppts);
+	PRINT_TIME("Voxels to Triangles");
 
 	// add to cobjs
 	coll_obj cobj;
 	cobj.init();
 	cobj.cp.elastic = 0.5;
-	cobj.cp.tid     = tid;
-	cobj.group_id   = group_id;
-	if (!use_model3d) cobj.cp.draw = 1;
-	add_polygons_to_cobj_vector(ppts, cobj, NULL, use_model3d);
-	if (!use_model3d) fixed_cobjs.sort_cobjs_for_rendering(); // re-sort to put groups in order
+	cobj.cp.tid     = tid1; // not that it's used...
+	add_polygons_to_cobj_vector(ppts, cobj, NULL, 1); // use_model3d=1
 	PRINT_TIME("Voxels to Cobjs");
 }
 

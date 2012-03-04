@@ -13,8 +13,16 @@ void main()
 {
 	vec3 norm_normal = normalize(normal);
 	vec4 texel0 = lookup_triplanar_texture(vpos, norm_normal, tex0, tex0, tex0) * color0;
-	vec4 texel1 = lookup_triplanar_texture(vpos, norm_normal, tex1, tex1, tex1) * color1;
-	vec4 texel  = mix(texel0, texel1, procedural_eval(vpos)); // interpolate between the two texture/color pairs using a random noise function
+	vec4 texel;
+
+	if (use_noise_tex) {
+		vec4 texel1 = lookup_triplanar_texture(vpos, norm_normal, tex1, tex1, tex1) * color1;
+		// interpolate between the two texture/color pairs using a random noise function
+		texel = mix(texel0, texel1, procedural_eval(vpos));
+	}
+	else {
+		texel = texel0;
+	}
 	float alpha = gl_Color.a;
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
 	lit_color += gl_FrontMaterial.diffuse.rgb * const_indir_color; // add constant indir

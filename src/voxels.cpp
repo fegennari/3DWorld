@@ -6,50 +6,47 @@
 #include "upsurface.h" // for noise_gen_3d
 #include "mesh.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
-class noise_texture_manager_t {
+extern bool disable_shaders, group_back_face_cull;
 
-	unsigned noise_tid, tsize;
-
-public:
-	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
-
-	void setup(unsigned size) {
-		if (size == tsize) return; // nothing to do
-		free_texture(noise_tid);
-		tsize = size;
-		if (size == 0) return; // nothing else to do
-		voxel_manager voxels;
-		voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros);
-		voxels.create_procedural(1.0, 1.0, 1);
-		vector<unsigned char> data;
-		data.resize(voxels.size());
-
-		for (unsigned i = 0; i < voxels.size(); ++i) {
-			data[i] = (unsigned char)(255*CLIP_TO_01(fabs(voxels[i]))); // use fabs() to convert from [-1,1] to [0,1]
-		}
-		noise_tid = create_3d_texture(tsize, tsize, tsize, 1, data, GL_LINEAR, GL_REPEAT);
-	}
-	void bind_texture(unsigned tu_id) const {
-		assert(glIsTexture(noise_tid));
-		set_multitex(tu_id);
-		bind_3d_texture(noise_tid);
-		set_multitex(0);
-	}
-};
-
-
-noise_texture_manager_t noise_texture_manager;
+voxel_model terrain_voxel_model;
 
 
 // if size==old_size, we do nothing;  if size==0, we only free the texture
-void setup_3d_noise_texture(unsigned size) {
-	noise_texture_manager.setup(size);
+void noise_texture_manager_t::setup(unsigned size) {
+
+	if (size == tsize) return; // nothing to do
+	clear();
+	tsize = size;
+	if (size == 0) return; // nothing else to do
+	voxel_manager voxels;
+	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros);
+	voxels.create_procedural(1.0, 1.0, 1, 321, 654);
+	vector<unsigned char> data;
+	data.resize(voxels.size());
+
+	for (unsigned i = 0; i < voxels.size(); ++i) {
+		data[i] = (unsigned char)(255*CLIP_TO_01(fabs(voxels[i]))); // use fabs() to convert from [-1,1] to [0,1]
+	}
+	noise_tid = create_3d_texture(tsize, tsize, tsize, 1, data, GL_LINEAR, GL_REPEAT);
 }
 
-void bind_3d_noise_texture(unsigned tu_id) {
-	noise_texture_manager.bind_texture(tu_id);
+
+void noise_texture_manager_t::bind_texture(unsigned tu_id) const {
+
+	assert(glIsTexture(noise_tid));
+	set_multitex(tu_id);
+	bind_3d_texture(noise_tid);
+	set_multitex(0);
+}
+
+
+void noise_texture_manager_t::clear() {
+
+	free_texture(noise_tid);
+	tsize = 0;
 }
 
 
@@ -374,16 +371,17 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 }
 
 
-void voxel_manager::create_procedural(float mag, float freq, bool normalize_to_1) {
+void voxel_manager::create_procedural(float mag, float freq, bool normalize_to_1, int rseed1, int rseed2) {
 
 	noise_gen_3d ngen;
-	ngen.set_rand_seeds(123, 456);
+	ngen.set_rand_seeds(rseed1, rseed2);
 	ngen.gen_sines(mag, freq); // create sine table
 	unsigned const xyz_num[3] = {nx, ny, nz};
 	vector<float> xyz_vals[3];
 	ngen.gen_xyz_vals(lo_pos, vsz, xyz_num, xyz_vals); // create xyz values
 
-	for (unsigned z = 0; z < nz; ++z) { // generate voxel values
+	#pragma omp parallel for schedule(static,1)
+	for (int z = 0; z < (int)nz; ++z) { // generate voxel values
 		for (unsigned y = 0; y < ny; ++y) {
 			for (unsigned x = 0; x < nx; ++x) {
 				float val(ngen.get_val(x, y, z, xyz_vals));
@@ -443,6 +441,7 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 
 void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const {
 
+	//RESET_TIME;
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 
@@ -501,7 +500,8 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 	} // vp.remove_unconnected
 
 	// create triangles
-	for (unsigned z = 0; z < nz-1; ++z) {
+	#pragma omp parallel for schedule(static,1)
+	for (int z = 0; z < (int)nz-1; ++z) {
 		for (unsigned y = 0; y < ny-1; ++y) {
 			for (unsigned x = 0; x < nx-1; ++x) {
 				float vals[8]; // 8 corner voxel values
@@ -538,11 +538,103 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 					vlist[i] = interpolate_pt(vp.isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
 				}
 				for (unsigned i = 0; tris[i] >= 0; i += 3) {
-					triangles.push_back(triangle(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]));
+					triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
+					#pragma omp critical(triangles_push_back)
+					triangles.push_back(tri);
 				}
 			} // for z
 		} // for y
 	} // for z
+	//PRINT_TIME("Voxels to Triangles");
+}
+
+
+void voxel_model::build(voxel_params_t const &vp, vector<coll_tquad> *ppts) {
+
+	RESET_TIME;
+	params = vp.rp; // copy render parameters
+	vector<triangle> triangles;
+	get_triangles(triangles, vp);
+	PRINT_TIME(" Voxels Get Triangles");
+	if (ppts) coll_tquads_from_triangles(triangles, *ppts, vp.rp.base_color);
+	PRINT_TIME(" Triangles to Tquads");
+	vntc_map_t vmap(1);
+	polygon_t poly(vp.rp.base_color);
+
+	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		poly.from_triangle(*i);
+		if (tri_data.empty()) tri_data.push_back(indexed_vntc_vect_t<vertex_type_t>(0));
+		tri_data.back().add_poly(poly, vmap);
+	}
+	PRINT_TIME(" Triangles to Model");
+}
+
+
+void voxel_model::render(bool is_shadow_pass) { // not const because of vbo caching, etc.
+
+	shader_t s;
+	set_fill_mode();
+	
+	if (is_shadow_pass) {
+		glDisable(GL_LIGHTING);
+	}
+	else if (!disable_shaders) {
+		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
+		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
+		float const tex_scale(1.0), noise_scale(0.05), tex_mix_saturate(8.0); // where does this come from?
+		unsigned const noise_tsize(64);
+		float const min_alpha(0.5);
+		noise_tex_gen.setup(noise_tsize);
+		noise_tex_gen.bind_texture(5); // tu_id = 5
+		set_multitex(0);
+		setup_procedural_shaders(s, min_alpha, 1, 1, 1, tex_scale, noise_scale, tex_mix_saturate);
+
+		for (unsigned i = 0; i < 2; ++i) {
+			set_multitex(0+i);
+			select_texture(params.tids[i]);
+			s.add_uniform_color("color" + char('0'+i), params.colors[i]);
+		}
+		set_multitex(0);
+	}
+	else {
+		set_color_a(WHITE);
+		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_ALPHA_TEST);
+	}
+	BLACK.do_glColor();
+	set_color_d(params.base_color);
+	float const spec(0.0), shine(1.0);
+	set_specular(spec, shine);
+	if (group_back_face_cull) glEnable(GL_CULL_FACE);
+	
+	for (tri_data_t::iterator i = tri_data.begin(); i != tri_data.end(); ++i) {
+		i->render(s, is_shadow_pass, GL_TRIANGLES);
+	}
+	if (s.is_setup()) {
+		s.end_shader();
+		disable_multitex_a();
+	}
+	if (group_back_face_cull) glDisable(GL_CULL_FACE);
+	glDisable(GL_ALPHA_TEST);
+	glDisable(GL_TEXTURE_2D);
+	glEnable(GL_LIGHTING);
+	set_specular(0.0, 1.0);
+}
+
+
+void voxel_model::free_context() {
+
+	tri_data.free_vbos();
+	noise_tex_gen.clear();
+}
+
+
+void render_voxel_data(bool shadow_pass) {
+	terrain_voxel_model.render(shadow_pass);
+}
+
+void free_voxel_context() {
+	terrain_voxel_model.free_context();
 }
 
 

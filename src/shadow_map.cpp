@@ -333,6 +333,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	draw_scenery(1, 1, 1);
 	draw_trees_shadow();
 	render_models(1);
+	render_voxel_data(1);
 
 	if ((display_mode & 0x01) && ground_effects_level != 0) { // draw mesh
 		int const gel(ground_effects_level);

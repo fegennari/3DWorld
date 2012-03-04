@@ -5,15 +5,44 @@
 #define _VOXELS_H_
 
 #include "3DWorld.h"
+#include "model3d.h"
+
+
+struct voxel_render_params_t {
+
+	unsigned tids[2];
+	colorRGBA colors[2];
+	colorRGBA base_color;
+	voxel_render_params_t() {tids[0] = tids[1] = 0; colors[0] = colors[1] = base_color = WHITE;}
+
+	voxel_render_params_t(unsigned t1, unsigned t2, colorRGBA const &c1, colorRGBA const &c2, colorRGBA const &bc) : base_color(bc)
+	{
+		tids  [0] = t1; tids  [1] = t2;
+		colors[0] = c1; colors[1] = c2;
+	}
+};
 
 
 struct voxel_params_t {
 
 	float isolevel;
 	bool make_closed_surface, invert, remove_unconnected, remove_under_mesh;
+	voxel_render_params_t rp;
 
 	voxel_params_t(float il=0.0, bool mcs=0, bool inv=0, bool ru=0, bool rum=0)
 		: isolevel(il), make_closed_surface(mcs), invert(inv), remove_unconnected(ru), remove_under_mesh(rum) {}
+};
+
+
+class noise_texture_manager_t {
+
+	unsigned noise_tid, tsize;
+
+public:
+	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
+	void setup(unsigned size);
+	void bind_texture(unsigned tu_id) const;
+	void clear();
 };
 
 
@@ -62,10 +91,29 @@ class voxel_manager : public float_voxel_grid {
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 
 public:
-	void create_procedural(float mag, float freq, bool normalize_to_1);
+	void create_procedural(float mag, float freq, bool normalize_to_1, int rseed1, int rseed2);
 	void atten_at_edges(float val);
 	void atten_at_top_only(float val);
 	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;
+};
+
+
+struct coll_tquad;
+
+
+class voxel_model : public voxel_manager {
+
+	voxel_render_params_t params;
+	typedef vert_norm_tc vertex_type_t; // FIXME: vert_norm with no tc
+	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
+	tri_data_t tri_data;
+	noise_texture_manager_t noise_tex_gen;
+
+public:
+	voxel_model() {}
+	void build(voxel_params_t const &vp, vector<coll_tquad> *ppts=NULL);
+	void render(bool is_shadow_pass);
+	void free_context();
 };
 
 #endif

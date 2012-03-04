@@ -277,7 +277,7 @@ class model3d {
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bbox;
-	bool from_model3d_file, ignore_ambient, has_cobjs, use_procedural_texture;
+	bool from_model3d_file, ignore_ambient, has_cobjs;
 
 	// materials
 	deque<material_t> materials;
@@ -289,9 +289,9 @@ public:
 	// textures
 	texture_manager &tmgr;
 
-	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0, bool proc_tex=0) : tmgr(tmgr_),
-		unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube),
-		from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0), use_procedural_texture(proc_tex) {}
+	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0)
+		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c),
+		bbox(all_zeros_cube), from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -303,7 +303,7 @@ public:
 	// creation and query
 	void set_has_cobjs() {has_cobjs = 1;}
 	unsigned add_voxels(voxel_manager const &voxels, voxel_params_t const &vp,
-		colorRGBA const &color, int mat_id, vector<coll_tquad> *ppts, bool no_quads);
+		colorRGBA const &color, int mat_id, vector<coll_tquad> *ppts);
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
@@ -328,7 +328,6 @@ public:
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
 	bool write_to_disk (string const &fn) const;
 	bool read_from_disk(string const &fn);
-	bool uses_proc_texture() const {return use_procedural_texture;}
 };
 
 
@@ -347,8 +346,7 @@ struct model3ds : public deque<model3d> {
 
 template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh);
 
-cube_t voxels_to_model3d(voxel_manager const &voxels, voxel_params_t const &vp, int tid,
-	colorRGBA const &color, vector<coll_tquad> *ppts, bool no_quads);
+void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
 void render_models(bool shadow_pass);
 

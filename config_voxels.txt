@@ -19,6 +19,7 @@ shadow_detail 7
 include config_gameplay.txt
 unlimited_weapons 1
 create_voxel_landscape 1
+group_back_face_cull 1
 
 mesh_size  128 128 64
 scene_size 4.0 4.0 2.5
