@@ -793,22 +793,6 @@ void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_t
 }
 
 
-unsigned model3d::add_voxels(voxel_manager const &voxels, voxel_params_t const &vp,
-	colorRGBA const &color, int mat_id, vector<coll_tquad> *ppts)
-{
-	vector<triangle> triangles;
-	voxels.get_triangles(triangles, vp);
-	unsigned const num_added(add_triangles(triangles, color, mat_id, 0));
-
-	if (ppts) { // if adding as cobjs
-		// keep the triangles, no quad merging, all polygons will be coplanar
-		coll_tquads_from_triangles(triangles, *ppts, color);
-		set_has_cobjs();
-	}
-	return num_added;
-}
-
-
 unsigned model3d::add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id, unsigned obj_id) {
 
 	// average_normals=1 should turn most of these face normals into vertex normals

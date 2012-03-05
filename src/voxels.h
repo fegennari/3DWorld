@@ -89,13 +89,22 @@ typedef voxel_grid<float> float_voxel_grid;
 
 class voxel_manager : public float_voxel_grid {
 
+	voxel_grid<unsigned char> outside;
+
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 
+protected:
+	void get_triangles_for_voxel(vector<triangle> &triangles, voxel_params_t const &vp, unsigned x, unsigned y, unsigned z) const;
+
 public:
+	void clear() {outside.clear(); float_voxel_grid::clear();}
 	void create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2);
 	void atten_at_edges(float val);
 	void atten_at_top_only(float val);
-	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;
+	void determine_voxels_outside(voxel_params_t const &vp);
+	void remove_unconnected_outside();
+	void create_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;
+	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp);
 };
 
 
@@ -109,6 +118,20 @@ class voxel_model : public voxel_manager {
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	tri_data_t tri_data;
 	noise_texture_manager_t noise_tex_gen;
+
+	struct pt_ix_t {
+		point pt;
+		unsigned ix;
+		pt_ix_t(point const &pt_=all_zeros, unsigned const ix_=0) : pt(pt_), ix(ix_) {}
+	};
+
+	vector<pt_ix_t> pt_to_ix;
+
+	struct comp_by_dist {
+		point const p;
+		comp_by_dist(point const &p_) : p(p_) {}
+		bool operator()(pt_ix_t const &a, pt_ix_t const &b) const {return (p2p_dist_sq(a.pt, p) < p2p_dist_sq(b.pt, p));}
+	};
 
 public:
 	void clear();

@@ -437,14 +437,56 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 }
 
 
-void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const {
+void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles,
+	voxel_params_t const &vp, unsigned x, unsigned y, unsigned z) const
+{
+	float vals[8]; // 8 corner voxel values
+	point pts[8]; // corner points
+	unsigned cix(0);
+	bool all_under_mesh(vp.remove_under_mesh);
 
-	//RESET_TIME;
+	for (unsigned yhi = 0; yhi < 2; ++yhi) {
+		for (unsigned xhi = 0; xhi < 2; ++xhi) {
+			unsigned const xx(x+xhi), yy(y+yhi);
+			float const xval(xx*vsz.x + lo_pos.x), yval(yy*vsz.y + lo_pos.y);
+
+			if (all_under_mesh) {
+				int const xpos(get_xpos(xval)), ypos(get_xpos(yval));
+				all_under_mesh = point_outside_mesh(xpos, ypos) ? 0 : (((z+1)*vsz.z + lo_pos.z) < mesh_height[ypos][xpos]);
+			}
+			for (unsigned zhi = 0; zhi < 2; ++zhi) {
+				unsigned const zz(z+zhi), vix((xhi^yhi) + 2*yhi + 4*zhi);
+				unsigned char const outside_val(outside.get(xx, yy, zz));
+				if (outside_val) cix |= 1 << vix; // outside or on edge
+				vals[vix] = (outside_val == 2) ? vp.isolevel : get(xx, yy, zz); // check on_edge status
+				pts [vix] = point(xval, yval, (zz*vsz.z + lo_pos.z));
+			}
+		}
+	}
+	assert(cix < 256);
+	if (all_under_mesh) return;
+	unsigned const edge_val(voxel_detail::edge_table[cix]);
+	if (edge_val == 0)  return; // no polygons
+	int const *const tris(voxel_detail::tri_table[cix]);
+	point vlist[12];
+
+	for (unsigned i = 0; i < 12; ++i) {
+		if (!(edge_val & (1 << i))) continue;
+		unsigned const *eix = voxel_detail::edge_to_vals[i];
+		vlist[i] = interpolate_pt(vp.isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
+	}
+	for (unsigned i = 0; tris[i] >= 0; i += 3) {
+		triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
+		#pragma omp critical(triangles_push_back)
+		triangles.push_back(tri);
+	}
+}
+
+
+void voxel_manager::determine_voxels_outside(voxel_params_t const &vp) { // determine inside/outside points
+
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
-
-	// determine inside/outside points
-	voxel_grid<unsigned char> outside;
 	outside.init(nx, ny, nz, vsz, center);
 
 	for (unsigned y = 0; y < ny; ++y) {
@@ -456,95 +498,71 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 			}
 		}
 	}
-	if (vp.remove_unconnected) { // check for voxels connected to the mesh surface
-		vector<unsigned> work; // stack of voxels to process
-		int const range[3] = {nx, ny, nz};
+}
 
-		for (int y = 0; y < MESH_Y_SIZE; ++y) {
-			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				point const p(get_xval(x), get_yval(y), mesh_height[y][x]);
-				unsigned ix(0);
-				if (!get_ix(p, ix) || outside[ix] != 0) continue; // off the voxel grid, outside, or on edge
-				work.push_back(ix); // inside, anchored to the mesh
-				outside[ix] |= 4; // mark as anchored
-			}
+
+void voxel_manager::remove_unconnected_outside() { // check for voxels connected to the mesh surface
+
+	vector<unsigned> work; // stack of voxels to process
+	int const range[3] = {nx, ny, nz};
+
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) {
+			point const p(get_xval(x), get_yval(y), mesh_height[y][x]);
+			unsigned ix(0);
+			if (!get_ix(p, ix) || outside[ix] != 0) continue; // off the voxel grid, outside, or on edge
+			work.push_back(ix); // inside, anchored to the mesh
+			outside[ix] |= 4; // mark as anchored
 		}
-		while (!work.empty()) { // flood fill anchored regions
-			unsigned const cur(work.back());
-			work.pop_back();
-			assert(cur < outside.size());
-			assert(outside[cur] & 4);
-			int const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
-			assert(outside.get_ix(x, y, z) == cur);
+	}
+	while (!work.empty()) { // flood fill anchored regions
+		unsigned const cur(work.back());
+		work.pop_back();
+		assert(cur < outside.size());
+		assert(outside[cur] & 4);
+		int const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
+		assert(outside.get_ix(x, y, z) == cur);
 
-			for (unsigned dim = 0; dim < 3; ++dim) { // check neighbors
-				for (unsigned dir = 0; dir < 2; ++dir) {
-					int pos[3] = {x, y, z};
-					pos[dim] += dir ? 1 : -1;
-					if (pos[dim] < 0 || pos[dim] >= range[dim]) continue; // off the grid
-					unsigned const ix(outside.get_ix(pos[0], pos[1], pos[2]));
-					assert(ix < outside.size());
+		for (unsigned dim = 0; dim < 3; ++dim) { // check neighbors
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				int pos[3] = {x, y, z};
+				pos[dim] += dir ? 1 : -1;
+				if (pos[dim] < 0 || pos[dim] >= range[dim]) continue; // off the grid
+				unsigned const ix(outside.get_ix(pos[0], pos[1], pos[2]));
+				assert(ix < outside.size());
 						
-					if (outside[ix] == 0) { // inside
-						work.push_back(ix);
-						outside[ix] |= 4; // mark as anchored
-					}
+				if (outside[ix] == 0) { // inside
+					work.push_back(ix);
+					outside[ix] |= 4; // mark as anchored
 				}
 			}
-		} // while
-		for (unsigned i = 0; i < size(); ++i) { // if anchored or on_edge remove the anchored bit, else mark outside
-			outside[i] = (outside[i] & 6) ? (outside[i] & 3) : 1;
 		}
-	} // vp.remove_unconnected
+	} // while
+	for (unsigned i = 0; i < size(); ++i) { // if anchored or on_edge remove the anchored bit, else mark outside
+		outside[i] = (outside[i] & 6) ? (outside[i] & 3) : 1;
+	}
+}
 
-	// create triangles
+
+void voxel_manager::create_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const {
+
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)ny-1; ++y) {
 		for (unsigned x = 0; x < nx-1; ++x) {
 			for (unsigned z = 0; z < nz-1; ++z) {
-				float vals[8]; // 8 corner voxel values
-				point pts[8]; // corner points
-				unsigned cix(0);
-				bool all_under_mesh(vp.remove_under_mesh);
+				get_triangles_for_voxel(triangles, vp, x, y, z);
+			}
+		}
+	}
+}
 
-				for (unsigned yhi = 0; yhi < 2; ++yhi) {
-					for (unsigned xhi = 0; xhi < 2; ++xhi) {
-						unsigned const xx(x+xhi), yy(y+yhi);
-						float const xval(xx*vsz.x + lo_pos.x), yval(yy*vsz.y + lo_pos.y);
 
-						if (all_under_mesh) {
-							int const xpos(get_xpos(xval)), ypos(get_xpos(yval));
-							all_under_mesh = point_outside_mesh(xpos, ypos) ? 0 : (((z+1)*vsz.z + lo_pos.z) < mesh_height[ypos][xpos]);
-						}
-						for (unsigned zhi = 0; zhi < 2; ++zhi) {
-							unsigned const zz(z+zhi), vix((xhi^yhi) + 2*yhi + 4*zhi);
-							unsigned char const outside_val(outside.get(xx, yy, zz));
-							if (outside_val) cix |= 1 << vix; // outside or on edge
-							vals[vix] = (outside_val == 2) ? vp.isolevel : get(xx, yy, zz); // check on_edge status
-							pts [vix] = point(xval, yval, (zz*vsz.z + lo_pos.z));
-						}
-					}
-				}
-				assert(cix < 256);
-				if (all_under_mesh) continue;
-				unsigned const edge_val(voxel_detail::edge_table[cix]);
-				if (edge_val == 0)  continue; // no polygons
-				int const *const tris(voxel_detail::tri_table[cix]);
-				point vlist[12];
+void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) {
 
-				for (unsigned i = 0; i < 12; ++i) {
-					if (!(edge_val & (1 << i))) continue;
-					unsigned const *eix = voxel_detail::edge_to_vals[i];
-					vlist[i] = interpolate_pt(vp.isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
-				}
-				for (unsigned i = 0; tris[i] >= 0; i += 3) {
-					triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
-					#pragma omp critical(triangles_push_back)
-					triangles.push_back(tri);
-				}
-			} // for z
-		} // for y
-	} // for z
+	//RESET_TIME;
+	determine_voxels_outside(vp);
+	if (vp.remove_unconnected) remove_unconnected_outside();
+	create_triangles(triangles, vp);
 	//PRINT_TIME("Voxels to Triangles");
 }
 
@@ -561,19 +579,54 @@ void voxel_model::build(voxel_params_t const &vp, vector<coll_tquad> *ppts) {
 
 	RESET_TIME;
 	params = vp.rp; // copy render parameters
+	determine_voxels_outside(vp);
+	PRINT_TIME("  Determine Voxels Outside");
+	if (vp.remove_unconnected) remove_unconnected_outside();
+	PRINT_TIME("  Remove Unconnected");
 	vector<triangle> triangles;
-	get_triangles(triangles, vp);
+	polygon_t poly(vp.rp.base_color);
+
+#if 1
+	unsigned const BLOCK_SIZE(32);
+	pt_to_ix.resize(0);
+
+	for (unsigned yblock = 0; yblock < ny; yblock += BLOCK_SIZE) {
+		for (unsigned xblock = 0; xblock < nx; xblock += BLOCK_SIZE) {
+			triangles.resize(0);
+		
+			#pragma omp parallel for schedule(static,1)
+			for (int y = yblock; y < (int)min(ny-1, yblock+BLOCK_SIZE); ++y) {
+				for (unsigned x = xblock; x < min(nx-1, xblock+BLOCK_SIZE); ++x) {
+					for (unsigned z = 0; z < nz-1; ++z) {
+						get_triangles_for_voxel(triangles, vp, x, y, z);
+					}
+				}
+			}
+			point const center(xblock+BLOCK_SIZE/2, yblock+BLOCK_SIZE/2, nz/2);
+			pt_to_ix.push_back(pt_ix_t((center*vsz + lo_pos), tri_data.size()));
+			vertex_map_t<vertex_type_t> vmap(1);
+			tri_data.push_back(indexed_vntc_vect_t<vertex_type_t>(0));
+
+			for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+				poly.from_triangle(*i);
+				tri_data.back().add_poly(poly, vmap);
+			}
+			if (ppts) coll_tquads_from_triangles(triangles, *ppts, vp.rp.base_color);
+		}
+	}
+#else
+	create_triangles(triangles, vp);
 	PRINT_TIME("  Voxels Get Triangles");
 	if (ppts) coll_tquads_from_triangles(triangles, *ppts, vp.rp.base_color);
 	PRINT_TIME("  Triangles to Tquads");
 	vertex_map_t<vertex_type_t> vmap(1);
-	polygon_t poly(vp.rp.base_color);
+	tri_data.push_back(indexed_vntc_vect_t<vertex_type_t>(0));
 
 	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		poly.from_triangle(*i);
-		if (tri_data.empty()) tri_data.push_back(indexed_vntc_vect_t<vertex_type_t>(0));
 		tri_data.back().add_poly(poly, vmap);
 	}
+#endif
 	PRINT_TIME("  Triangles to Model");
 }
 
@@ -616,9 +669,18 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	set_specular(spec, shine);
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
 	
+#if 1
+	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
+
+	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
+		assert(i->ix < tri_data.size());
+		tri_data[i->ix].render(s, is_shadow_pass, GL_TRIANGLES);
+	}
+#else
 	for (tri_data_t::iterator i = tri_data.begin(); i != tri_data.end(); ++i) {
 		i->render(s, is_shadow_pass, GL_TRIANGLES);
 	}
+#endif
 	if (s.is_setup()) {
 		s.end_shader();
 		disable_multitex_a();

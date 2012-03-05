@@ -302,8 +302,6 @@ public:
 
 	// creation and query
 	void set_has_cobjs() {has_cobjs = 1;}
-	unsigned add_voxels(voxel_manager const &voxels, voxel_params_t const &vp,
-		colorRGBA const &color, int mat_id, vector<coll_tquad> *ppts);
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
