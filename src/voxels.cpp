@@ -583,50 +583,49 @@ void voxel_model::build(voxel_params_t const &vp, vector<coll_tquad> *ppts) {
 	PRINT_TIME("  Determine Voxels Outside");
 	if (vp.remove_unconnected) remove_unconnected_outside();
 	PRINT_TIME("  Remove Unconnected");
-	vector<triangle> triangles;
-	polygon_t poly(vp.rp.base_color);
 
-#if 1
-	unsigned const BLOCK_SIZE(32);
-	pt_to_ix.resize(0);
+	unsigned const BLOCK_SIZE(4); // in x and y, must be a power of 2
+	unsigned const xblocks(nx/BLOCK_SIZE), yblocks(ny/BLOCK_SIZE), tot_blocks(BLOCK_SIZE*BLOCK_SIZE);
+	assert(pt_to_ix.empty() && tri_data.empty());
+	vector<vector<coll_tquad> > block_ppts;
+	block_ppts.resize(tot_blocks);
+	pt_to_ix.resize(tot_blocks);
+	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
+	unsigned tot_tquads(0);
 
-	for (unsigned yblock = 0; yblock < ny; yblock += BLOCK_SIZE) {
-		for (unsigned xblock = 0; xblock < nx; xblock += BLOCK_SIZE) {
-			triangles.resize(0);
+	#pragma omp parallel for schedule(static,1)
+	for (int block = 0; block < (int)tot_blocks; ++block) {
+		unsigned const xbix(block & (BLOCK_SIZE-1)), ybix(block/BLOCK_SIZE);
+		vector<triangle> triangles;
 		
-			#pragma omp parallel for schedule(static,1)
-			for (int y = yblock; y < (int)min(ny-1, yblock+BLOCK_SIZE); ++y) {
-				for (unsigned x = xblock; x < min(nx-1, xblock+BLOCK_SIZE); ++x) {
-					for (unsigned z = 0; z < nz-1; ++z) {
-						get_triangles_for_voxel(triangles, vp, x, y, z);
-					}
+		for (unsigned y = ybix*yblocks; y < min(ny-1, (ybix+1)*yblocks); ++y) {
+			for (unsigned x = xbix*xblocks; x < min(nx-1, (xbix+1)*xblocks); ++x) {
+				for (unsigned z = 0; z < nz-1; ++z) {
+					get_triangles_for_voxel(triangles, vp, x, y, z);
 				}
 			}
-			point const center(xblock+BLOCK_SIZE/2, yblock+BLOCK_SIZE/2, nz/2);
-			pt_to_ix.push_back(pt_ix_t((center*vsz + lo_pos), tri_data.size()));
-			vertex_map_t<vertex_type_t> vmap(1);
-			tri_data.push_back(indexed_vntc_vect_t<vertex_type_t>(0));
+		}
+		pt_to_ix[block].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
+		pt_to_ix[block].ix = block;
+		vertex_map_t<vertex_type_t> vmap(1);
+		polygon_t poly(vp.rp.base_color);
 
-			for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
-				poly.from_triangle(*i);
-				tri_data.back().add_poly(poly, vmap);
-			}
-			if (ppts) coll_tquads_from_triangles(triangles, *ppts, vp.rp.base_color);
+		for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+			poly.from_triangle(*i);
+			tri_data[block].add_poly(poly, vmap);
+		}
+		if (ppts) {
+			coll_tquads_from_triangles(triangles, block_ppts[block], vp.rp.base_color);
+			tot_tquads += block_ppts[block].size();
 		}
 	}
-#else
-	create_triangles(triangles, vp);
-	PRINT_TIME("  Voxels Get Triangles");
-	if (ppts) coll_tquads_from_triangles(triangles, *ppts, vp.rp.base_color);
-	PRINT_TIME("  Triangles to Tquads");
-	vertex_map_t<vertex_type_t> vmap(1);
-	tri_data.push_back(indexed_vntc_vect_t<vertex_type_t>(0));
+	if (ppts) {
+		ppts->reserve(ppts->size() + tot_tquads);
 
-	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		poly.from_triangle(*i);
-		tri_data.back().add_poly(poly, vmap);
+		for (unsigned block = 0; block < tot_blocks; ++block) {
+			copy(block_ppts[block].begin(), block_ppts[block].end(), back_inserter(*ppts));
+		}
 	}
-#endif
 	PRINT_TIME("  Triangles to Model");
 }
 
@@ -668,19 +667,12 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	float const spec(0.0), shine(1.0);
 	set_specular(spec, shine);
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
-	
-#if 1
 	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
 		assert(i->ix < tri_data.size());
 		tri_data[i->ix].render(s, is_shadow_pass, GL_TRIANGLES);
 	}
-#else
-	for (tri_data_t::iterator i = tri_data.begin(); i != tri_data.end(); ++i) {
-		i->render(s, is_shadow_pass, GL_TRIANGLES);
-	}
-#endif
 	if (s.is_setup()) {
 		s.end_shader();
 		disable_multitex_a();
