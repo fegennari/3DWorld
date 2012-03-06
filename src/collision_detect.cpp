@@ -209,8 +209,7 @@ void add_coll_cube_to_matrix(int index, int dhcm) {
 
 	for (int i = y1; i <= y2; ++i) {
 		for (int j = x1; j <= x2; ++j) {
-			int add_to_hcm(i >= y1-1 && i <= y2+1 && j >= x1-1 && j <= x2+1);
-			add_coll_point(i, j, index, ds[2][0], ds[2][1], add_to_hcm, is_dynamic, dhcm);
+			add_coll_point(i, j, index, ds[2][0], ds[2][1], 1, is_dynamic, dhcm);
 		}
 	}
 }
@@ -404,10 +403,18 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 	coll_obj &cobj(coll_objects[index]);
 	get_params(x1, y1, x2, y2, cobj.d);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
+	float const zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]); // thickness has already been added/subtracted
+
+	if (cobj.thickness == 0.0 && (x2-x1) <= 1 && (y2-y1) <=1) { // small polygon
+		for (int i = y1; i <= y2; ++i) {
+			for (int j = x1; j <= x2; ++j) {
+				add_coll_point(i, j, index, zminc, zmaxc, 1, is_dynamic, dhcm);
+			}
+		}
+		return;
+	}
 	vector3d const norm(cobj.norm);
 	float const dval(-dot_product(norm, cobj.points[0]));
-	float const zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]); // thickness has already been added/subtracted
-	float const height(0.5*fabs(norm.z*cobj.thickness)), expand(DX_VAL + DY_VAL);
 	float const thick(0.5*cobj.thickness), dx(0.5*DX_VAL), dy(0.5*DY_VAL);
 	float const dzx(norm.z == 0.0 ? 0.0 : DX_VAL*norm.x/norm.z), dzy(norm.z == 0.0 ? 0.0 : DY_VAL*norm.y/norm.z);
 	float const delta_z(sqrt(dzx*dzx + dzy*dzy));
@@ -419,43 +426,38 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 
 	for (int i = y1; i <= y2; ++i) {
 		float const yv(get_yval(i));
-		cube.d[1][0] = yv - dy - (i<=y1)*thick;
-		cube.d[1][1] = yv + dy + (i>=y2)*thick;
+		cube.d[1][0] = yv - dy - (i==y1)*thick;
+		cube.d[1][1] = yv + dy + (i==y2)*thick;
 
 		for (int j = x1; j <= x2; ++j) {
 			float const xv(get_xval(j));
-			float z1(zminc), z2(zmaxc);
-			bool const add_to_hcm(i >= y1-1 && i <= y2+1 && j >= x1-1 && j <= x2+1);
-			cube.d[0][0] = xv - dx - (j<=x1)*thick;
-			cube.d[0][1] = xv + dx + (j>=x2)*thick;
+			float z1(zmaxc), z2(zminc);
+			cube.d[0][0] = xv - dx - (j==x1)*thick;
+			cube.d[0][1] = xv + dx + (j==x2)*thick;
 
-			if (add_to_hcm) {
-				swap(z1, z2);
+			if (cobj.thickness > MIN_POLY_THICK) { // thick polygon	
+				assert(!pts.empty());
+				bool inside(0);
 
-				if (cobj.thickness > MIN_POLY_THICK) { // thick polygon	
-					assert(!pts.empty());
-					bool inside(0);
+				for (unsigned k = 0; k < pts.size(); ++k) {
+					point const *const p(pts[k].pts);
+					vector3d const pn(get_poly_norm(p));
 
-					for (unsigned k = 0; k < pts.size(); ++k) {
-						point const *const p(pts[k].pts);
-						vector3d const pn(get_poly_norm(p));
-
-						if (fabs(pn.z) > 1.0E-3) { // ignore near-vertical polygon edges (for now)
-							inside |= get_poly_zminmax(p, pts[k].npts, pn, -dot_product(pn, p[0]), cube, z1, z2);
-						}
+					if (fabs(pn.z) > 1.0E-3) { // ignore near-vertical polygon edges (for now)
+						inside |= get_poly_zminmax(p, pts[k].npts, pn, -dot_product(pn, p[0]), cube, z1, z2);
 					}
-					if (!inside) continue;
 				}
-				else if (!get_poly_zminmax(cobj.points, cobj.npoints, norm, dval, cube, z1, z2)) {
-					continue;
-				}
-				// adjust z bounds so that they are for the entire cell x/y bounds, not a single point (conservative)
-				z1 = max(zminc, (z1 - delta_z));
-				z2 = min(zmaxc, (z2 + delta_z));
+				if (!inside) continue;
 			}
-			add_coll_point(i, j, index, z1, z2, add_to_hcm, is_dynamic, dhcm);
-		}
-	}
+			else if (!get_poly_zminmax(cobj.points, cobj.npoints, norm, dval, cube, z1, z2)) {
+				continue;
+			}
+			// adjust z bounds so that they are for the entire cell x/y bounds, not a single point (conservative)
+			z1 = max(zminc, (z1 - delta_z));
+			z2 = min(zmaxc, (z2 + delta_z));
+			add_coll_point(i, j, index, z1, z2, 1, is_dynamic, dhcm);
+		} // for j
+	} // for i
 }
 
 
@@ -467,7 +469,7 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 	assert(npoints <= N_COLL_POLY_PTS);
 	int const index(cobj_manager.get_next_avail_index());
 	coll_obj &cobj(coll_objects[index]);
-	if (thickness == 0.0) thickness = MIN_POLY_THICK;
+	//if (thickness == 0.0) thickness = MIN_POLY_THICK;
 	cobj.norm = get_poly_norm(points);
 
 	if (npoints == 4) { // average the norm from both triangles in case they're not coplanar
@@ -483,18 +485,20 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 		cobj.norm = plus_z; // FIXME: this shouldn't be possible, but FP accuracy/errors make this tough to prevent
 	}
 	assert(cobj.norm != zero_vector);
-	cobj.set_from_points(points, npoints); // set cube_t
-	cobj.translate(xlate);
-	
-	for (unsigned p = 0; p < 3; ++p) {
-		float const thick(0.5*thickness*fabs(cobj.norm[p]));
-		cobj.d[p][0] -= thick;
-		cobj.d[p][1] += thick;
-	}
+
 	for (int i = 0; i < npoints; ++i) {
 		cobj.points[i] = points[i] + xlate;
 	}
-	cobj.npoints   = npoints; // must do this after set_coll_obj_props
+	cobj.set_from_points(cobj.points, npoints); // set cube_t
+	
+	if (thickness > 0.0) {
+		for (unsigned p = 0; p < 3; ++p) {
+			float const thick(0.5*thickness*fabs(cobj.norm[p]));
+			cobj.d[p][0] -= thick;
+			cobj.d[p][1] += thick;
+		}
+	}
+	cobj.npoints   = npoints;
 	cobj.thickness = thickness;
 	float brad;
 	point center; // unused

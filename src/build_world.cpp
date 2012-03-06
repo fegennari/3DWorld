@@ -1602,7 +1602,7 @@ void gen_voxel_landscape() {
 
 	for (vector<coll_tquad>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
 		assert(i->npts == 3);
-		if (i->is_valid()) add_coll_polygon(i->pts, i->npts, cparams, MIN_POLY_THICK);
+		if (i->is_valid()) add_coll_polygon(i->pts, i->npts, cparams, 0.0);
 	}
 	PRINT_TIME(" Voxels to Cobjs");
 }
