@@ -537,10 +537,11 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 
 int is_good_smiley_pos(int xpos, int ypos) {
 
-	if (xpos < 1 || ypos < 1 || xpos >= MESH_X_SIZE-1 || ypos >= MESH_Y_SIZE-1) return 0;
+	if (xpos < 1 || ypos < 1 || xpos >= MESH_X_SIZE-1 || ypos >= MESH_Y_SIZE-1)  return 0;
 	float const radius(object_types[SMILEY].radius), zval(mesh_height[ypos][xpos] + radius);
-	if (temperature > W_FREEZE_POINT && zval <= water_matrix[ypos][xpos])       return 0;
+	if (temperature > W_FREEZE_POINT && zval <= water_matrix[ypos][xpos])        return 0;
 	if (island && zval <= ocean.z) return 0;
+	if (point_inside_voxel_terrain(point(get_xval(xpos), get_yval(ypos), zval))) return 0;
 	int cindex;
 	if (!check_legal_move(xpos, ypos, zval, radius, cindex)) return 0;
 	return 1;

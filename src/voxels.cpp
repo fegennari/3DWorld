@@ -283,6 +283,16 @@ void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t co
 }
 
 
+bool voxel_manager::point_inside_volume(point const &pos) const {
+
+	if (empty()) return 0;
+	unsigned ix(0);
+	if (!outside.get_ix(pos, ix)) return 0; // off the voxel grid
+	assert(ix < outside.size());
+	return ((outside[ix]&3) == 0);
+}
+
+
 void voxel_model::clear() {
 
 	free_context();
@@ -415,6 +425,10 @@ void render_voxel_data(bool shadow_pass) {
 
 void free_voxel_context() {
 	terrain_voxel_model.free_context();
+}
+
+bool point_inside_voxel_terrain(point const &pos) {
+	return terrain_voxel_model.point_inside_volume(pos);
 }
 
 

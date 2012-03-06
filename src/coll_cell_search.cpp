@@ -275,7 +275,8 @@ bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, i
 }
 
 
-bool is_pt_inside_or_near_cobj(point const &pt, float dist, int ignore_cobj, bool skip_dynamic) {
+// Note: not always correct due to backwards polygons, two sided polygons, two polgyons on top of each other, intersecting cobjs, etc.
+bool is_pt_inside_or_near_cobj(point const &pt, float dist, int ignore_cobj, bool skip_dynamic) { // unused
 
 	if (pt.z <= czmin || pt.z >= czmax || !is_over_mesh(pt)) return 0;
 	int cindex;

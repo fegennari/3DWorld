@@ -188,6 +188,7 @@ class waypoint_builder {
 		if (pos.z - radius < mesh_zval)                    return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
 		if (!check_cobj_placement(point(pos), coll_id, 1)) return 0;
 		if (is_point_interior(pos, 0.5*radius))            return 0;
+		if (point_inside_voxel_terrain(pos))               return 0;
 		return 1;
 	}
 

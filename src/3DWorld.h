@@ -1935,6 +1935,7 @@ void check_update_global_lighting(unsigned lights);
 // function prototypes - voxels
 void render_voxel_data(bool shadow_pass);
 void free_voxel_context();
+bool point_inside_voxel_terrain(point const &pos);
 
 // function prototypes - screenshot (these are C functions)
 #ifdef ENABLE_JPEG

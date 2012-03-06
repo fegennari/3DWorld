@@ -60,7 +60,7 @@ public:
 		int i[3]; // x,y,z
 		UNROLL_3X(i[i_] = int((p[i_] - lo_pos[i_])/vsz[i_]);); // convert to voxel space
 		if (i[0] < 0 || i[1] < 0 || i[2] < 0 || i[0] >= (int)nx || i[1] >= (int)ny || i[2] >= (int)nz) return 0;
-		ix = i[2] + (i[2] + i[1]*nx)*nz;
+		ix = i[2] + (i[0] + i[1]*nx)*nz;
 		return 1;
 	}
 	unsigned get_ix(unsigned x, unsigned y, unsigned z) const {
@@ -105,6 +105,7 @@ public:
 	void remove_unconnected_outside(bool keep_at_scene_edge);
 	void create_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;
 	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp);
+	bool point_inside_volume(point const &pos) const;
 };
 
 
