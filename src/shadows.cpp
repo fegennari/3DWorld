@@ -28,8 +28,8 @@ int dshadow_lights(0);
 point light_pos;
 shad_env s_env[NUM_LIGHT_SRC];
 
-extern bool combined_gu, use_stencil_shadows;
-extern int stencil_shadow, island, ground_effects_level;
+extern bool combined_gu, use_stencil_shadows, draw_mesh_shader;
+extern int stencil_shadow, island, ground_effects_level, scrolling;
 extern float sun_rot, moon_rot, zmin, zmax, zbottom, ztop;
 extern point sun_pos, moon_pos, mesh_origin;
 extern vector3d up_norm;
@@ -137,6 +137,7 @@ int light_valid(unsigned light_sources, int l, point &lpos) {
 void coll_obj::add_shadow(unsigned light_sources, bool dynamic) const {
 
 	if (no_shadow() || dynamic != dynamic_shadows_only()) return;
+	if (scrolling && cp.is_model3d && draw_mesh_shader && shadow_map_enabled()) return;
 
 	switch (type) {
 	case COLL_CUBE:
