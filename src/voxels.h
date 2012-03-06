@@ -26,11 +26,11 @@ struct voxel_render_params_t {
 struct voxel_params_t {
 
 	float isolevel;
-	bool make_closed_surface, invert, remove_unconnected, remove_under_mesh;
+	bool make_closed_surface, invert, remove_unconnected, keep_at_scene_edge, remove_under_mesh;
 	voxel_render_params_t rp;
 
-	voxel_params_t(float il=0.0, bool mcs=0, bool inv=0, bool ru=0, bool rum=0)
-		: isolevel(il), make_closed_surface(mcs), invert(inv), remove_unconnected(ru), remove_under_mesh(rum) {}
+	voxel_params_t(float il=0.0, bool mcs=0, bool inv=0, bool ru=0, bool kase=0, bool rum=0)
+		: isolevel(il), make_closed_surface(mcs), invert(inv), remove_unconnected(ru), keep_at_scene_edge(kase), remove_under_mesh(rum) {}
 };
 
 
@@ -102,7 +102,7 @@ public:
 	void atten_at_edges(float val);
 	void atten_at_top_only(float val);
 	void determine_voxels_outside(voxel_params_t const &vp);
-	void remove_unconnected_outside();
+	void remove_unconnected_outside(bool keep_at_scene_edge);
 	void create_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;
 	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp);
 };

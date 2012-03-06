@@ -13,6 +13,7 @@ unsigned const QLP_CACHE_SIZE = 10000;
 
 int cobj_counter(0);
 
+extern bool group_back_face_cull;
 extern int display_mode, begin_motion;
 extern float zmin, zbottom, water_plane_z;
 extern coll_obj_group coll_objects;
@@ -271,6 +272,24 @@ bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, i
 		if (coll_objects[last_cobj].intersects_all_pts(pos1, pts, npts)) return 1;
 	}
 	return cobj_contained_tree(pos1, center, pos1, pts, npts, cobj, last_cobj);
+}
+
+
+bool is_pt_inside_or_near_cobj(point const &pt, float dist, int ignore_cobj, bool skip_dynamic) {
+
+	if (pt.z <= czmin || pt.z >= czmax || !is_over_mesh(pt)) return 0;
+	int cindex;
+	point cpos;
+	vector3d cnorm;
+	point const near_end_pt(pt.x, pt.y, pt.z+dist); // shoot a ray straight up
+	if (check_coll_line(pt, near_end_pt, cindex, ignore_cobj, skip_dynamic, 0)) return 1; // object is close (solid volume?)
+	point const far_end_pt(pt.x, pt.y, czmax+SMALL_NUMBER); // shoot a ray straight up
+	if (!check_coll_line_exact(pt, far_end_pt, cpos, cnorm, cindex, 0.0, ignore_cobj, 0, 0, skip_dynamic)) return 0; // no objects above
+	assert((unsigned)cindex < coll_objects.size());
+	coll_obj const &cobj(coll_objects[cindex]);
+	if (cobj.type != COLL_POLYGON) return 0; // only polygons are non-volume cobjs
+	if (!cobj.cp.is_model3d && !(cobj.group_id >= 0 && group_back_face_cull)) return 0; // only model3d and grouped cobjs have reliable normal directions
+	return (cobj.norm.z > 0.0); // inside the polygon contour if hit the back face of a polygon (normal pointing up)
 }
 
 
