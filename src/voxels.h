@@ -25,12 +25,13 @@ struct voxel_render_params_t {
 
 struct voxel_params_t {
 
-	float isolevel;
+	float isolevel, elasticity;
 	bool make_closed_surface, invert, remove_unconnected, keep_at_scene_edge, remove_under_mesh;
 	voxel_render_params_t rp;
 
-	voxel_params_t(float il=0.0, bool mcs=0, bool inv=0, bool ru=0, bool kase=0, bool rum=0)
-		: isolevel(il), make_closed_surface(mcs), invert(inv), remove_unconnected(ru), keep_at_scene_edge(kase), remove_under_mesh(rum) {}
+	voxel_params_t(float il=0.0, float e=0.5, bool mcs=0, bool inv=0, bool ru=0, bool kase=0, bool rum=0)
+		: isolevel(il), elasticity(e), make_closed_surface(mcs), invert(inv), remove_unconnected(ru),
+		keep_at_scene_edge(kase), remove_under_mesh(rum) {}
 };
 
 
@@ -136,7 +137,7 @@ class voxel_model : public voxel_manager {
 
 public:
 	void clear();
-	void build(voxel_params_t const &vp, vector<coll_tquad> *ppts=NULL);
+	void build(voxel_params_t const &vp, bool add_cobjs);
 	void render(bool is_shadow_pass);
 	void free_context();
 };

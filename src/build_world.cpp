@@ -1571,13 +1571,14 @@ void gen_voxel_landscape() {
 
 	RESET_TIME;
 	// scenery generation parameters
-	float const mag(1.0), freq(1.0), isolevel(0.0), elastic(0.8);
+	bool const add_cobjs(1);
+	float const mag(1.0), freq(1.0), isolevel(0.0), elasticity(0.8);
 	bool const make_closed_surface(1), invert(0), remove_unconnected(1), keep_at_scene_edge(1), remove_under_mesh(1), normalize_to_1(0);
 	int const atten_at_edges(1); // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
 	int const tid1(ROCK_TEX), tid2(SNOW_TEX);
 	colorRGBA const base_color(WHITE), color1(WHITE), color2(WHITE);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
-	voxel_params_t vp(isolevel, make_closed_surface, invert, remove_unconnected, keep_at_scene_edge, remove_under_mesh);
+	voxel_params_t vp(isolevel, elasticity, make_closed_surface, invert, remove_unconnected, keep_at_scene_edge, remove_under_mesh);
 	vp.rp = voxel_render_params_t(tid1, tid2, color1, color2, base_color);
 
 	// create voxels
@@ -1585,26 +1586,14 @@ void gen_voxel_landscape() {
 	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
-	vector<coll_tquad> ppts;
 	terrain_voxel_model.clear();
 	terrain_voxel_model.init(nx, ny, nz, vsz, center);
 	terrain_voxel_model.create_procedural(mag, freq, gen_offset, normalize_to_1, 123, 456);
 	if (atten_at_edges == 1) terrain_voxel_model.atten_at_top_only(invert ? 1.0 : -1.0);
 	if (atten_at_edges == 2) terrain_voxel_model.atten_at_edges   (invert ? 1.0 : -1.0);
 	PRINT_TIME(" Voxel Gen");
-	terrain_voxel_model.build(vp, &ppts);
-	PRINT_TIME(" Voxels to Triangles");
-
-	// add to cobjs
-	if (ppts.size() > 2*coll_objects.size()) reserve_coll_objects(coll_objects.size() + 1.1*ppts.size()); // reserve with 10% buffer
-	cobj_params cparams(elastic, base_color, 0, 0, NULL, 0, tid1);
-	cparams.is_model3d = 1;
-
-	for (vector<coll_tquad>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
-		assert(i->npts == 3);
-		if (i->is_valid()) add_coll_polygon(i->pts, i->npts, cparams, 0.0);
-	}
-	PRINT_TIME(" Voxels to Cobjs");
+	terrain_voxel_model.build(vp, add_cobjs);
+	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 
 

@@ -11,6 +11,7 @@
 
 
 extern bool disable_shaders, group_back_face_cull;
+extern coll_obj_group coll_objects;
 
 voxel_model terrain_voxel_model;
 
@@ -302,7 +303,7 @@ void voxel_model::clear() {
 }
 
 
-void voxel_model::build(voxel_params_t const &vp, vector<coll_tquad> *ppts) {
+void voxel_model::build(voxel_params_t const &vp, bool add_cobjs) {
 
 	RESET_TIME;
 	params = vp.rp; // copy render parameters
@@ -314,21 +315,19 @@ void voxel_model::build(voxel_params_t const &vp, vector<coll_tquad> *ppts) {
 	unsigned const BLOCK_SIZE(4); // in x and y, must be a power of 2
 	unsigned const xblocks(nx/BLOCK_SIZE), yblocks(ny/BLOCK_SIZE), tot_blocks(BLOCK_SIZE*BLOCK_SIZE);
 	assert(pt_to_ix.empty() && tri_data.empty());
-	vector<vector<coll_tquad> > block_ppts;
-	block_ppts.resize(tot_blocks);
+	vector<vector<triangle> > triangles;
+	triangles.resize(tot_blocks);
 	pt_to_ix.resize(tot_blocks);
 	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
-	unsigned tot_tquads(0);
 
 	#pragma omp parallel for schedule(static,1)
 	for (int block = 0; block < (int)tot_blocks; ++block) {
 		unsigned const xbix(block & (BLOCK_SIZE-1)), ybix(block/BLOCK_SIZE);
-		vector<triangle> triangles;
 		
 		for (unsigned y = ybix*yblocks; y < min(ny-1, (ybix+1)*yblocks); ++y) {
 			for (unsigned x = xbix*xblocks; x < min(nx-1, (xbix+1)*xblocks); ++x) {
 				for (unsigned z = 0; z < nz-1; ++z) {
-					get_triangles_for_voxel(triangles, vp, x, y, z);
+					get_triangles_for_voxel(triangles[block], vp, x, y, z);
 				}
 			}
 		}
@@ -337,23 +336,27 @@ void voxel_model::build(voxel_params_t const &vp, vector<coll_tquad> *ppts) {
 		vertex_map_t<vertex_type_t> vmap(1);
 		polygon_t poly(vp.rp.base_color);
 
-		for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		for (vector<triangle>::const_iterator i = triangles[block].begin(); i != triangles[block].end(); ++i) {
 			poly.from_triangle(*i);
 			tri_data[block].add_poly(poly, vmap);
 		}
-		if (ppts) {
-			coll_tquads_from_triangles(triangles, block_ppts[block], vp.rp.base_color);
-			tot_tquads += block_ppts[block].size();
-		}
-	}
-	if (ppts) {
-		ppts->reserve(ppts->size() + tot_tquads);
-
-		for (unsigned block = 0; block < tot_blocks; ++block) {
-			copy(block_ppts[block].begin(), block_ppts[block].end(), back_inserter(*ppts));
-		}
 	}
 	PRINT_TIME("  Triangles to Model");
+
+	if (add_cobjs) {
+		unsigned tot_triangles(0);
+		for (vector<vector<triangle> >::const_iterator i = triangles.begin(); i != triangles.end(); ++i) tot_triangles += i->size();
+		if (tot_triangles > 2*coll_objects.size()) reserve_coll_objects(coll_objects.size() + 1.1*tot_triangles); // reserve with 10% buffer
+		cobj_params cparams(vp.elasticity, vp.rp.base_color, 0, 0, NULL, 0, vp.rp.tids[0]);
+		cparams.is_model3d = 1;
+
+		for (vector<vector<triangle> >::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+			for (vector<triangle>::const_iterator t = i->begin(); t != i->end(); ++t) {
+				add_coll_polygon(t->pts, 3, cparams, 0.0);
+			}
+		}
+		PRINT_TIME("  Triangles to Cobjs");
+	}
 }
 
 
