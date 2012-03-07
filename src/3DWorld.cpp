@@ -1337,7 +1337,7 @@ void proc_kbd_events() {
 }
 
 
-int check_for_config_defaults(const char *def_file) {
+int load_top_level_config(const char *def_file) {
 
 	assert(def_file != NULL);
 	string config_file;
@@ -1869,7 +1869,8 @@ int main(int argc, char** argv) {
 	create_sin_table();
 	gen_gauss_rand_arr();
 	set_scene_constants();
-	check_for_config_defaults(defaults_file);
+	load_texture_names(); // needs to be before config file load
+	load_top_level_config(defaults_file);
 	load_textures();
 	load_flare_textures(); // Sun Flare
 	setup_dlists();

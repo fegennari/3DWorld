@@ -475,11 +475,13 @@ bool parse_voxel_option(FILE *fp) {
 	else if (str == "atten_thresh") {
 		if (!read_float(fp, global_voxel_params.atten_thresh) || global_voxel_params.atten_thresh <= 0.0) voxel_file_err("atten_thresh", error);
 	}
-	else if (str == "tid1") { // FIXME: texture names?
-		if (!read_uint(fp, global_voxel_params.rp.tids[0])) voxel_file_err("tid1", error);
+	else if (str == "tid1") {
+		if (!read_str(fp, strc)) voxel_file_err("tid1", error);
+		global_voxel_params.rp.tids[0] = get_texture_by_name(std::string(strc));
 	}
 	else if (str == "tid2") {
-		if (!read_uint(fp, global_voxel_params.rp.tids[1])) voxel_file_err("tid2", error);
+		if (!read_str(fp, strc)) voxel_file_err("tid2", error);
+		global_voxel_params.rp.tids[1] = get_texture_by_name(std::string(strc));
 	}
 	else if (str == "base_color") {
 		if (!read_color(fp, global_voxel_params.rp.base_color)) voxel_file_err("base_color", error);

@@ -188,18 +188,28 @@ bool is_tex_disabled(int i) {
 }
 
 
+void load_texture_names() {
+
+	if (!texture_name_map.empty()) return; // already loaded
+
+	for (int i = 0; i < NUM_TEXTURES; ++i) {
+		if (is_tex_disabled(i)) continue; // skip
+		//assert(texture_name_map.find(textures[i].name) == texture_name_map.end());
+		texture_name_map[textures[i].name] = i; // multiply used textures such as sky.raw will be overwritten
+	}
+}
+
+
 void load_textures() {
 
 	cout << "loading textures";
+	load_texture_names();
 	if (read_landscape) textures[LANDSCAPE_TEX].type = 0; // loaded from file
 
 	for (int i = 0; i < NUM_TEXTURES; ++i) {
 		cout.flush();
 		cout << ".";
-		if (is_tex_disabled(i)) continue; // skip
-		//assert(texture_name_map.find(textures[i].name) == texture_name_map.end());
-		texture_name_map[textures[i].name] = i; // multiply used textures such as sky.raw will be overwritten
-		textures[i].load(i);
+		if (!is_tex_disabled(i)) textures[i].load(i);
 	}
 	cout << endl;
 	gen_smoke_texture();

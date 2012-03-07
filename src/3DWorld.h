@@ -1707,6 +1707,7 @@ void update_water_zvals(int x1, int y1, int x2, int y2);
 void compute_volume_matrix();
 
 // function prototypes - textures
+void load_texture_names();
 void load_textures();
 int get_texture_by_name(std::string const &name);
 bool select_texture(int id, bool enable=1);
