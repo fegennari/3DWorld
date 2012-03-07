@@ -59,6 +59,7 @@ extern char *coll_obj_file;
 extern vector<point> app_spots;
 extern vector<light_source> light_sources;
 extern tree_cont_t t_trees;
+extern voxel_params_t global_voxel_params;
 extern voxel_model terrain_voxel_model;
 
 
@@ -1570,29 +1571,17 @@ int read_coll_objects(const char *coll_obj_file) {
 void gen_voxel_landscape() {
 
 	RESET_TIME;
-	// scenery generation parameters
-	bool const add_cobjs(1);
-	float const mag(1.0), freq(1.0), isolevel(0.0), elasticity(0.8);
-	bool const make_closed_surface(1), invert(0), remove_unconnected(1), keep_at_scene_edge(1), remove_under_mesh(1), normalize_to_1(0);
-	int const atten_at_edges(1); // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
-	int const tid1(ROCK_TEX), tid2(SNOW_TEX);
-	colorRGBA const base_color(WHITE), color1(WHITE), color2(WHITE);
+	bool const add_cobjs(1), normalize_to_1(0);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
-	voxel_params_t vp(isolevel, elasticity, make_closed_surface, invert, remove_unconnected, keep_at_scene_edge, remove_under_mesh);
-	vp.rp = voxel_render_params_t(tid1, tid2, color1, color2, base_color);
-
-	// create voxels
 	float const zlo(zbottom), zhi(max(ztop, zlo + Z_SCENE_SIZE)); // Note: does not include czmin/czmax range
 	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.clear();
 	terrain_voxel_model.init(nx, ny, nz, vsz, center);
-	terrain_voxel_model.create_procedural(mag, freq, gen_offset, normalize_to_1, 123, 456);
-	if (atten_at_edges == 1) terrain_voxel_model.atten_at_top_only(invert ? 1.0 : -1.0);
-	if (atten_at_edges == 2) terrain_voxel_model.atten_at_edges   (invert ? 1.0 : -1.0);
+	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset, normalize_to_1, 123, 456);
 	PRINT_TIME(" Voxel Gen");
-	terrain_voxel_model.build(vp, add_cobjs);
+	terrain_voxel_model.build(global_voxel_params, add_cobjs);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 

@@ -740,6 +740,7 @@
     <ClInclude Include="src\collision_detect.h" />
     <ClInclude Include="src\csg.h" />
     <ClInclude Include="src\dynamic_particle.h" />
+    <ClInclude Include="src\file_utils.h" />
     <ClInclude Include="src\gameplay.h" />
     <ClInclude Include="src\globals.h" />
     <ClInclude Include="src\gl_ext_arb.h" />
@@ -784,6 +785,7 @@
     <None Include="config_resolution.txt" />
     <None Include="config_samples.txt" />
     <None Include="config_voxels.txt" />
+    <None Include="config_voxel_params.txt" />
     <None Include="icon1.ico" />
     <None Include="coll_objs\COLL_OBJS_Test.TXT" />
     <None Include="config.txt" />

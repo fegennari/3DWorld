@@ -484,8 +484,6 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 		cout << "valid: " << is_poly_valid(points) << endl;
 		cobj.norm = plus_z; // FIXME: this shouldn't be possible, but FP accuracy/errors make this tough to prevent
 	}
-	assert(cobj.norm != zero_vector);
-
 	for (int i = 0; i < npoints; ++i) {
 		cobj.points[i] = points[i] + xlate;
 	}

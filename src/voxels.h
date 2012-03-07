@@ -25,13 +25,14 @@ struct voxel_render_params_t {
 
 struct voxel_params_t {
 
-	float isolevel, elasticity;
+	float isolevel, elasticity, mag, freq, atten_thresh;
 	bool make_closed_surface, invert, remove_unconnected, keep_at_scene_edge, remove_under_mesh;
+	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
 	voxel_render_params_t rp;
 
 	voxel_params_t(float il=0.0, float e=0.5, bool mcs=0, bool inv=0, bool ru=0, bool kase=0, bool rum=0)
-		: isolevel(il), elasticity(e), make_closed_surface(mcs), invert(inv), remove_unconnected(ru),
-		keep_at_scene_edge(kase), remove_under_mesh(rum) {}
+		: isolevel(il), elasticity(e), mag(1.0), freq(1.0), atten_thresh(1.0), make_closed_surface(mcs), invert(inv),
+		remove_unconnected(ru), keep_at_scene_edge(kase), remove_under_mesh(rum), atten_at_edges(0) {}
 };
 
 

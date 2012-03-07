@@ -13,6 +13,7 @@
 #include "gl_ext_arb.h"
 #include "model3d.h"
 #include "openal_wrap.h"
+#include "file_utils.h"
 #include <set>
 
 using namespace std;
@@ -1336,20 +1337,6 @@ void proc_kbd_events() {
 }
 
 
-inline bool read_int  (FILE *fp, int      &val) {return (fscanf(fp, "%i", &val) == 1);}
-inline bool read_uint (FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) == 1);}
-inline bool read_float(FILE *fp, float    &val) {return (fscanf(fp, "%f", &val) == 1);}
-inline bool read_str  (FILE *fp, char     *val) {return (fscanf(fp, "%s",  val) == 1);}
-
-
-inline bool read_bool (FILE *fp, bool     &val) {
-	int tmp;
-	if (fscanf(fp, "%i", &tmp) != 1) return 0;
-	val = (tmp != 0);
-	return 1;
-}
-
-
 int check_for_config_defaults(const char *def_file) {
 
 	assert(def_file != NULL);
@@ -1436,6 +1423,9 @@ int load_config(string const &config_file) {
 		if (str[0] == '#') { // comment
 			char letter(getc(fp));
 			while (letter != '\n' && letter != EOF && letter != 0) letter = getc(fp);
+		}
+		else if (str == "voxel") { // voxel option
+			if (!parse_voxel_option(fp)) cfg_err("voxel option", error);
 		}
 		else if (str == "include") {
 			if (!read_str(fp, include_fname)) cfg_err("include", error);

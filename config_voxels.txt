@@ -1,6 +1,8 @@
 ntrees 0
 nsmileys 6
 verbose 0
+include config_voxel_params.txt
+
 rand_seed 0
 load_coll_objs 1
 glaciate 1

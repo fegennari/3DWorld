@@ -1933,6 +1933,7 @@ float get_scene_radius();
 void check_update_global_lighting(unsigned lights);
 
 // function prototypes - voxels
+bool parse_voxel_option(FILE *fp);
 void render_voxel_data(bool shadow_pass);
 void free_voxel_context();
 bool point_inside_voxel_terrain(point const &pos);

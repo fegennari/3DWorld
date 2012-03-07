@@ -1,0 +1,20 @@
+voxel isolevel 0.0
+voxel elasticity 0.8
+voxel mag 1.0
+voxel freq 1.0
+voxel invert 0
+voxel make_closed_surface 1
+voxel remove_unconnected 1
+voxel keep_at_scene_edge 1
+voxel remove_under_mesh 1
+voxel atten_at_edges 1
+voxel atten_thresh 1.0
+voxel base_color 1.0 1.0 1.0
+voxel color1 1.0 1.0 1.0 1.0
+voxel color2 1.0 1.0 1.0 1.0
+voxel tid1 66 # 66 rock tex
+voxel tid2 9 # 9 snow tex
+
+
+
+

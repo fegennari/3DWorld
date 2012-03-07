@@ -3,16 +3,18 @@
 // 2/25/12
 
 #include "voxels.h"
+#include "marching_cubes.h"
 #include "upsurface.h" // for noise_gen_3d
 #include "mesh.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
-#include "marching_cubes.h"
+#include "file_utils.h"
 
 
 extern bool disable_shaders, group_back_face_cull;
 extern coll_obj_group coll_objects;
 
+voxel_params_t global_voxel_params;
 voxel_model terrain_voxel_model;
 
 
@@ -307,6 +309,10 @@ void voxel_model::build(voxel_params_t const &vp, bool add_cobjs) {
 
 	RESET_TIME;
 	params = vp.rp; // copy render parameters
+	float const atten_thresh((vp.invert ? 1.0 : -1.0)*vp.atten_thresh);
+	if (vp.atten_at_edges == 1) terrain_voxel_model.atten_at_top_only(atten_thresh);
+	if (vp.atten_at_edges == 2) terrain_voxel_model.atten_at_edges   (atten_thresh);
+	PRINT_TIME("  Atten at Top/Edges");
 	determine_voxels_outside(vp);
 	PRINT_TIME("  Determine Voxels Outside");
 	if (vp.remove_unconnected) remove_unconnected_outside(vp.keep_at_scene_edge);
@@ -419,6 +425,72 @@ void voxel_model::free_context() {
 
 	tri_data.free_vbos();
 	noise_tex_gen.clear();
+}
+
+
+void voxel_file_err(string const &str, int &error) {
+	cout << "Error reading voxel config option " << str << "." << endl;
+	error = 1;
+}
+
+
+bool parse_voxel_option(FILE *fp) {
+
+	int error(0);
+	char strc[MAX_CHARS] = {0};
+
+	if (!read_str(fp, strc)) return 0;
+	string const str(strc);
+
+	if (str == "mag") {
+		if (!read_float(fp, global_voxel_params.mag)) voxel_file_err("mag", error);
+	}
+	else if (str == "freq") {
+		if (!read_float(fp, global_voxel_params.freq)) voxel_file_err("freq", error);
+	}
+	else if (str == "isolevel") {
+		if (!read_float(fp, global_voxel_params.isolevel)) voxel_file_err("isolevel", error);
+	}
+	else if (str == "elasticity") {
+		if (!read_float(fp, global_voxel_params.elasticity) || global_voxel_params.elasticity < 0.0) voxel_file_err("elasticity", error);
+	}
+	else if (str == "invert") {
+		if (!read_bool(fp, global_voxel_params.invert)) voxel_file_err("invert", error);
+	}
+	else if (str == "make_closed_surface") {
+		if (!read_bool(fp, global_voxel_params.make_closed_surface)) voxel_file_err("make_closed_surface", error);
+	}
+	else if (str == "remove_unconnected") {
+		if (!read_bool(fp, global_voxel_params.remove_unconnected)) voxel_file_err("remove_unconnected", error);
+	}
+	else if (str == "keep_at_scene_edge") {
+		if (!read_bool(fp, global_voxel_params.keep_at_scene_edge)) voxel_file_err("keep_at_scene_edge", error);
+	}
+	else if (str == "remove_under_mesh") {
+		if (!read_bool(fp, global_voxel_params.remove_under_mesh)) voxel_file_err("remove_under_mesh", error);
+	}
+	else if (str == "atten_at_edges") {
+		if (!read_uint(fp, global_voxel_params.atten_at_edges) || global_voxel_params.atten_at_edges > 2) voxel_file_err("atten_at_edges", error);
+	}
+	else if (str == "atten_thresh") {
+		if (!read_float(fp, global_voxel_params.atten_thresh) || global_voxel_params.atten_thresh <= 0.0) voxel_file_err("atten_thresh", error);
+	}
+	else if (str == "tid1") { // FIXME: texture names?
+		if (!read_uint(fp, global_voxel_params.rp.tids[0])) voxel_file_err("tid1", error);
+	}
+	else if (str == "tid2") {
+		if (!read_uint(fp, global_voxel_params.rp.tids[1])) voxel_file_err("tid2", error);
+	}
+	else if (str == "base_color") {
+		if (!read_color(fp, global_voxel_params.rp.base_color)) voxel_file_err("base_color", error);
+	}
+	else if (str == "color1") {
+		if (!read_color(fp, global_voxel_params.rp.colors[0])) voxel_file_err("color1", error);
+	}
+	else if (str == "color2") {
+		if (!read_color(fp, global_voxel_params.rp.colors[1])) voxel_file_err("color2", error);
+	}
+	return !error;
 }
 
 
