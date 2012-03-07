@@ -385,11 +385,12 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 		set_multitex(0);
 		setup_procedural_shaders(s, min_alpha, 1, 1, 1, tex_scale, noise_scale, tex_mix_saturate);
 		s.add_uniform_vector3d("tex_eval_offset", vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0));
+		const char *cnames[2] = {"color0", "color1"};
 
 		for (unsigned i = 0; i < 2; ++i) {
 			set_multitex(0+i);
 			select_texture(params.tids[i]);
-			s.add_uniform_color("color" + char('0'+i), params.colors[i]);
+			s.add_uniform_color(cnames[i], params.colors[i]);
 		}
 		set_multitex(0);
 	}
