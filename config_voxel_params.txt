@@ -9,6 +9,8 @@ voxel keep_at_scene_edge 1
 voxel remove_under_mesh 1
 voxel atten_at_edges 1
 voxel atten_thresh 1.0
+voxel geom_rseed 123
+voxel texture_rseed 321
 voxel base_color 1.0 1.0 1.0
 voxel color1 1.0 1.0 1.0 1.0
 voxel color2 1.0 1.0 1.0 1.0

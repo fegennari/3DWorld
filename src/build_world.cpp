@@ -12,7 +12,6 @@
 #include "physics_objects.h"
 #include "model3d.h"
 #include "subdiv.h"
-#include "voxels.h"
 #include <fstream>
 
 
@@ -59,8 +58,6 @@ extern char *coll_obj_file;
 extern vector<point> app_spots;
 extern vector<light_source> light_sources;
 extern tree_cont_t t_trees;
-extern voxel_params_t global_voxel_params;
-extern voxel_model terrain_voxel_model;
 
 
 int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
@@ -73,7 +70,6 @@ int gen_game_obj(int type);
 point get_sstate_pos(int id);
 void reset_smoke_tex_data();
 void calc_leaf_points();
-void gen_voxel_landscape();
 
 
 
@@ -1565,24 +1561,6 @@ int read_coll_objects(const char *coll_obj_file) {
 	if (tree_mode & 2) add_small_tree_coll_objs();
 	if (has_scenery2)  add_scenery_cobjs();
 	return 1;
-}
-
-
-void gen_voxel_landscape() {
-
-	RESET_TIME;
-	bool const add_cobjs(1), normalize_to_1(0);
-	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
-	float const zlo(zbottom), zhi(max(ztop, zlo + Z_SCENE_SIZE)); // Note: does not include czmin/czmax range
-	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
-	point const center(0.0, 0.0, 0.5*(zlo + zhi));
-	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
-	terrain_voxel_model.clear();
-	terrain_voxel_model.init(nx, ny, nz, vsz, center);
-	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset, normalize_to_1, 123, 456);
-	PRINT_TIME(" Voxel Gen");
-	terrain_voxel_model.build(global_voxel_params, add_cobjs);
-	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 
 

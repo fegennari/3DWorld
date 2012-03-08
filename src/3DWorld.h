@@ -1934,6 +1934,7 @@ float get_scene_radius();
 void check_update_global_lighting(unsigned lights);
 
 // function prototypes - voxels
+void gen_voxel_landscape();
 bool parse_voxel_option(FILE *fp);
 void render_voxel_data(bool shadow_pass);
 void free_voxel_context();

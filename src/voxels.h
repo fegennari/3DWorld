@@ -11,15 +11,10 @@
 struct voxel_render_params_t {
 
 	unsigned tids[2];
+	int texture_rseed;
 	colorRGBA colors[2];
 	colorRGBA base_color;
-	voxel_render_params_t() {tids[0] = tids[1] = 0; colors[0] = colors[1] = base_color = WHITE;}
-
-	voxel_render_params_t(unsigned t1, unsigned t2, colorRGBA const &c1, colorRGBA const &c2, colorRGBA const &bc) : base_color(bc)
-	{
-		tids  [0] = t1; tids  [1] = t2;
-		colors[0] = c1; colors[1] = c2;
-	}
+	voxel_render_params_t() : texture_rseed(321) {tids[0] = tids[1] = 0; colors[0] = colors[1] = base_color = WHITE;}
 };
 
 
@@ -28,11 +23,11 @@ struct voxel_params_t {
 	float isolevel, elasticity, mag, freq, atten_thresh;
 	bool make_closed_surface, invert, remove_unconnected, keep_at_scene_edge, remove_under_mesh;
 	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
+	int geom_rseed;
 	voxel_render_params_t rp;
 
-	voxel_params_t(float il=0.0, float e=0.5, bool mcs=0, bool inv=0, bool ru=0, bool kase=0, bool rum=0)
-		: isolevel(il), elasticity(e), mag(1.0), freq(1.0), atten_thresh(1.0), make_closed_surface(mcs), invert(inv),
-		remove_unconnected(ru), keep_at_scene_edge(kase), remove_under_mesh(rum), atten_at_edges(0) {}
+	voxel_params_t() : isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), make_closed_surface(0),
+		invert(0), remove_unconnected(0), keep_at_scene_edge(0), remove_under_mesh(0), atten_at_edges(0), geom_rseed(123) {}
 };
 
 
@@ -42,7 +37,7 @@ class noise_texture_manager_t {
 
 public:
 	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
-	void setup(unsigned size, float mag=1.0, float freq=1.0, vector3d const &offset=zero_vector);
+	void setup(unsigned size, int rseed=321, float mag=1.0, float freq=1.0, vector3d const &offset=zero_vector);
 	void bind_texture(unsigned tu_id) const;
 	void clear();
 };

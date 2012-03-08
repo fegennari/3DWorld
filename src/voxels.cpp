@@ -22,7 +22,7 @@ template class voxel_grid<float>; // explicit instantiation
 
 
 // if size==old_size, we do nothing;  if size==0, we only free the texture
-void noise_texture_manager_t::setup(unsigned size, float mag, float freq, vector3d const &offset) {
+void noise_texture_manager_t::setup(unsigned size, int rseed, float mag, float freq, vector3d const &offset) {
 
 	if (size == tsize) return; // nothing to do
 	clear();
@@ -30,7 +30,7 @@ void noise_texture_manager_t::setup(unsigned size, float mag, float freq, vector
 	if (size == 0) return; // nothing else to do
 	voxel_manager voxels;
 	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros);
-	voxels.create_procedural(mag, freq, offset, 1, 321, 654);
+	voxels.create_procedural(mag, freq, offset, 1, rseed, 654);
 	vector<unsigned char> data;
 	data.resize(voxels.size());
 
@@ -380,7 +380,7 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 		float const tex_scale(1.0), noise_scale(0.05), tex_mix_saturate(8.0); // where does this come from?
 		unsigned const noise_tsize(64);
 		float const min_alpha(0.5);
-		noise_tex_gen.setup(noise_tsize, 1.0, 1.0);
+		noise_tex_gen.setup(noise_tsize, params.texture_rseed, 1.0, 1.0);
 		noise_tex_gen.bind_texture(5); // tu_id = 5
 		set_multitex(0);
 		setup_procedural_shaders(s, min_alpha, 1, 1, 1, tex_scale, noise_scale, tex_mix_saturate);
@@ -426,6 +426,25 @@ void voxel_model::free_context() {
 
 	tri_data.free_vbos();
 	noise_tex_gen.clear();
+}
+
+
+void gen_voxel_landscape() {
+
+	RESET_TIME;
+	bool const add_cobjs(1), normalize_to_1(0);
+	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
+	float const zlo(zbottom), zhi(max(ztop, zlo + Z_SCENE_SIZE)); // Note: does not include czmin/czmax range
+	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
+	point const center(0.0, 0.0, 0.5*(zlo + zhi));
+	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
+	terrain_voxel_model.clear();
+	terrain_voxel_model.init(nx, ny, nz, vsz, center);
+	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
+		normalize_to_1, global_voxel_params.geom_rseed, 456);
+	PRINT_TIME(" Voxel Gen");
+	terrain_voxel_model.build(global_voxel_params, add_cobjs);
+	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 
 
@@ -476,6 +495,12 @@ bool parse_voxel_option(FILE *fp) {
 	else if (str == "atten_thresh") {
 		if (!read_float(fp, global_voxel_params.atten_thresh) || global_voxel_params.atten_thresh <= 0.0) voxel_file_err("atten_thresh", error);
 	}
+	else if (str == "geom_rseed") {
+		if (!read_int(fp, global_voxel_params.geom_rseed)) voxel_file_err("geom_rseed", error);
+	}
+	else if (str == "texture_rseed") {
+		if (!read_int(fp, global_voxel_params.rp.texture_rseed)) voxel_file_err("texture_rseed", error);
+	}
 	else if (str == "tid1") {
 		if (!read_str(fp, strc)) voxel_file_err("tid1", error);
 		global_voxel_params.rp.tids[0] = get_texture_by_name(std::string(strc));
@@ -492,6 +517,10 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "color2") {
 		if (!read_color(fp, global_voxel_params.rp.colors[1])) voxel_file_err("color2", error);
+	}
+	else {
+		cout << "Unrecognized voxel keyword in input file: " << str << endl;
+		error = 1;
 	}
 	return !error;
 }
