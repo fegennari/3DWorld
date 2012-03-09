@@ -1,4 +1,4 @@
-uniform float x_scene_size, y_scene_size, czmin, czmax; // scene bounds (world space)
+uniform vec3 scene_llc, scene_scale; // scene bounds (world space)
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
@@ -18,9 +18,7 @@ float get_intensity_at(in vec3 pos, in vec3 lpos, in float radius) { // Note: do
 }
 
 vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye) {
-	vec3 off   = vec3(-x_scene_size, -y_scene_size, czmin);
-	vec3 scale = vec3(2.0*x_scene_size, 2.0*y_scene_size, (czmax - czmin));
-	vec2 norm_pos = clamp((dlpos.xy - off.xy)/scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
+	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
 
 	vec3 color  = vec3(0,0,0);
 	uint gb_ix  = texture2D(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
@@ -32,9 +30,9 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye) {
 	for (uint i = st_ix; i < end_ix; ++i) { // iterate over grid bag elements
 		uint dl_ix  = texelFetch(dlelm_tex,  ivec2((i%elem_tex_sz), (i/elem_tex_sz)), 0).r; // get dynamic light index (uint16)
 		vec4 lpos_r = texelFetch(dlight_tex, ivec2(0, dl_ix), 0); // light center, radius
-		lpos_r.xyz *= scale; // convert from [0,1] back into world space
-		lpos_r.xyz += off;
-		lpos_r.w   *= x_scene_size;
+		lpos_r.xyz *= scene_scale; // convert from [0,1] back into world space
+		lpos_r.xyz += scene_llc;
+		lpos_r.w   *= 0.5*scene_scale.x;
 		//if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case
 		vec4 lcolor     = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
 		lcolor.rgb     *= 10.0; // unscale color

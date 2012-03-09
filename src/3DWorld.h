@@ -1360,7 +1360,7 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type);
 colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten=0, bool use_smap=0, bool use_bmap=0, bool use_spec_map=0);
 void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color);
-void setup_procedural_shaders(shader_t &s, float min_alpha, bool dlights, bool use_smap, bool use_noise_tex,
+void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_noise_tex,
 	float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);
 void setup_object_render_data();
 void end_group(int &last_group_id);

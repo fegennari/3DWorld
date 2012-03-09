@@ -223,10 +223,9 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
 void shader_t::setup_scene_bounds() const {
 
-	add_uniform_float("x_scene_size", X_SCENE_SIZE);
-	add_uniform_float("y_scene_size", Y_SCENE_SIZE);
-	add_uniform_float("czmin", get_zval_min());
-	add_uniform_float("czmax", get_zval_max());
+	float const scene_zmin(get_zval_min()), scene_zmax(get_zval_max());
+	add_uniform_vector3d("scene_llc",   vector3d(-X_SCENE_SIZE, -Y_SCENE_SIZE, scene_zmin));
+	add_uniform_vector3d("scene_scale", vector3d(2.0*X_SCENE_SIZE, 2.0*Y_SCENE_SIZE, (scene_zmax - scene_zmin)));
 }
 
 

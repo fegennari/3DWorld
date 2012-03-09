@@ -834,6 +834,8 @@
     <None Include="shaders\fresnel.part" />
     <None Include="shaders\grass_pp_dl.vert" />
     <None Include="shaders\grass_with_dlights.frag" />
+    <None Include="shaders\indir_lighting.part.frag" />
+    <None Include="shaders\indir_lighting.part.vert" />
     <None Include="shaders\no_lighting_tex_coord.vert" />
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />

@@ -1,5 +1,4 @@
 uniform float min_alpha = 0.0;
-uniform vec3 const_indir_color = vec3(0,0,0);
 uniform vec4 color0 = vec4(1,1,1,1);
 uniform vec4 color1 = vec4(1,1,1,1);
 uniform sampler2D tex0, tex1;
@@ -25,7 +24,7 @@ void main()
 	}
 	float alpha = gl_Color.a;
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
-	lit_color += gl_FrontMaterial.diffuse.rgb * const_indir_color; // add constant indir
+	add_indir_lighting(lit_color);
 	
 	// directional light sources with no attenuation (Note: could add other lights later)
 	if (enable_light0)  lit_color += add_light_comp_pos_smap(normalize(eye_norm), epos, 0).rgb;

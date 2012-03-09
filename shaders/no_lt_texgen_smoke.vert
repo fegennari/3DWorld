@@ -1,10 +1,8 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
-uniform float half_dxy;
-uniform float indir_vert_offset = 0.25;
 
 attribute vec4 tex0_s, tex0_t;
 
-varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
+varying vec3 eye, vpos, normal, lpos0, vposl; // world space
 // epos and eye_norm come from bump_map.vert
 
 void main()
@@ -28,8 +26,8 @@ void main()
 	epos     = gl_ModelViewMatrix * gl_Vertex;
 	//if (dot(eye_norm, epos.xyz) > 0.0) {normal = -normal; eye_norm = -eye_norm;}
 	vpos     = gl_Vertex.xyz;
-	spos     = gl_Vertex.xyz + (indir_vert_offset*half_dxy)*normal; // move slightly away from the vertex
 	eye      = gl_ModelViewMatrixInverse[3].xyz; // world space
+	setup_indir_lighting(normal);
 
 #ifdef USE_BUMP_MAP
 	setup_tbn();

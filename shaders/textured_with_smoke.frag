@@ -1,16 +1,13 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta, half_dxy;
 uniform sampler2D tex0;
-uniform sampler3D smoke_tex;
 uniform float min_alpha = 0.0;
 
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6];
 
-uniform vec3 const_indir_color = vec3(0,0,0);
-
-// clipped eye position, clipped vertex position, starting vertex position
-varying vec3 eye, vpos, spos, normal, lpos0, vposl; // world space
+// clipped eye position, clipped vertex position
+varying vec3 eye, vpos, normal, lpos0, vposl; // world space
 // epos and eye_norm come from bump_map.frag
 
 const float SMOKE_SCALE = 0.25;
@@ -19,14 +16,13 @@ const float SMOKE_SCALE = 0.25;
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_light_comp(n, i).rgb
 
-vec3 add_light0(in vec3 off, in vec3 scale, in vec3 n, in vec3 source, in vec3 dest) {
-
+vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 	float nscale = (use_shadow_map ? get_shadow_map_weight(epos, 0) : 1.0);
 
 	if (smoke_enabled && dynamic_smoke_shadows && source != dest && nscale > 0.0) {
 		vec3 dir      = dest - source;
-		vec3 pos      = (source - off)/scale;
-		vec3 delta    = normalize(dir)*step_delta/scale;
+		vec3 pos      = (source - scene_llc)/scene_scale;
+		vec3 delta    = normalize(dir)*step_delta/scene_scale;
 		float nsteps  = length(dir)/step_delta;
 		int num_steps = 1 + min(100, int(nsteps)); // round up
 		float step_weight  = fract(nsteps);
@@ -34,7 +30,7 @@ vec3 add_light0(in vec3 off, in vec3 scale, in vec3 n, in vec3 source, in vec3 d
 	
 		// smoke volume iteration using 3D texture, light0 to vposl
 		for (int i = 0; i < num_steps; ++i) {
-			float smoke = smoke_sscale*texture3D(smoke_tex, pos.zxy).a*step_weight;
+			float smoke = smoke_sscale*texture3D(smoke_and_indir_tex, pos.zxy).a*step_weight;
 			nscale = mix(nscale, 0.0, smoke);
 			pos   += delta*step_weight; // should be in [0.0, 1.0] range
 			step_weight = 1.0;
@@ -79,19 +75,12 @@ void main()
 		} // else exiting ray in back surface - ignore for now since we don't refract the ray
 	}
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
-	vec3 off   = vec3(-x_scene_size, -y_scene_size, czmin);
-	vec3 scale = vec3(2.0*x_scene_size, 2.0*y_scene_size, (czmax - czmin));
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
-	lit_color += gl_FrontMaterial.diffuse.rgb * const_indir_color; // add constant indir
+	add_indir_lighting(lit_color);
 	
-	if (indir_lighting) {
-		vec3 sp    = clamp((spos  - off)/scale, 0.0, 1.0); // should be in [0.0, 1.0] range
-		vec3 indir_light = texture3D(smoke_tex, sp.zxy).rgb; // add indir light color from texture
-		lit_color += gl_FrontMaterial.diffuse.rgb * indir_light; // indirect lighting
-	}
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(eye_norm);
-		if (enable_light0) lit_color += add_light0(off, scale, n, lpos0, vposl);
+		if (enable_light0) lit_color += add_light0(n, lpos0, vposl);
 		if (enable_light1) lit_color += add_light_comp_pos_smap(n, epos, 1).rgb;
 		if (enable_light2) ADD_LIGHT(2);
 		if (enable_light3) ADD_LIGHT(3);
@@ -120,16 +109,16 @@ void main()
 	
 	// smoke code
 	vec3 dir      = eye_c - vpos_c;
-	vec3 pos      = (vpos_c - off)/scale;
+	vec3 pos      = (vpos_c - scene_llc)/scene_scale;
 	float nsteps  = length(dir)/step_delta;
-	vec3 delta    = dir/(nsteps*scale);
+	vec3 delta    = dir/(nsteps*scene_scale);
 	int num_steps = 1 + min(1000, int(nsteps)); // round up
 	float step_weight  = fract(nsteps);
 	float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
 	
 	// smoke volume iteration using 3D texture, pos to eye
 	for (int i = 0; i < num_steps; ++i) {
-		vec4 tex_val  = texture3D(smoke_tex, pos.zxy); // rgba = {color.rgb, smoke}
+		vec4 tex_val  = texture3D(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
 		float smoke   = smoke_sscale*tex_val.a*step_weight;
 		vec3 rgb_comp = (tex_val.rgb * gl_Fog.color.rgb);
 		float alpha   = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));

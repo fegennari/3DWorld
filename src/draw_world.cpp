@@ -1728,7 +1728,28 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 }
 
 
-// texture units used: 0: object texture, 1: smoke texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map
+void comon_shader_block(shader_t &s, bool dlights, bool use_shadow_map, bool use_smoke_indir, float min_alpha) {
+
+	if (use_smoke_indir && smoke_tid) {
+		set_multitex(1);
+		bind_3d_texture(smoke_tid);
+	}
+	s.setup_scene_bounds();
+	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
+	if (dlights && dl_tid > 0) setup_dlight_textures(s);
+	s.add_uniform_int("smoke_and_indir_tex", 1);
+	set_multitex(0);
+	s.add_uniform_int("tex0", 0);
+	s.add_uniform_float("min_alpha", min_alpha);
+	s.add_uniform_float("half_dxy",  HALF_DXY);
+	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
+	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
+	colorRGB const black_color(0.0, 0.0, 0.0);
+	s.add_uniform_color("const_indir_color", (have_indir_smoke_tex ? black_color : const_indir_color));
+}
+
+
+// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map
 colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
 	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map)
 {
@@ -1738,7 +1759,6 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	smoke_en       &= have_indir_smoke_tex;
 	s.set_int_prefix ("use_texgen",      use_texgen,      0); // VS
 	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
-	s.set_bool_prefix("indir_lighting",  indir_lighting,  1); // FS
 	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
 	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
 	s.set_bool_prefix("use_shadow_map",  use_shadow_map,  1); // FS
@@ -1749,40 +1769,26 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 		// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
 		s.set_bool_prefix("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, i); // VS/FS
 		s.set_bool_prefix("smoke_enabled",         smoke_enabled,         i); // VS/FS
+		s.set_bool_prefix("indir_lighting",        indir_lighting,        i); // VS/FS
 		if (use_bmap) s.set_prefix("#define USE_BUMP_MAP",                i); // VS/FS
 	}
 	set_dlights_booleans(s, dlights, 1); // FS
 	s.setup_enabled_lights(8);
 	s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-	s.set_vert_shader("fog.part+texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
-	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+textured_with_smoke");
+	s.set_vert_shader("fog.part+texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+no_lt_texgen_smoke");
+	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
-	s.setup_scene_bounds();
-	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
-	if (dlights && dl_tid > 0) setup_dlight_textures(s);
 
 	if (use_texgen == 2) {
 		s.register_attrib_name("tex0_s", TEX0_S_ATTR);
 		s.register_attrib_name("tex0_t", TEX0_T_ATTR);
 	}
-	if (smoke_en && smoke_tid) {
-		set_multitex(1);
-		bind_3d_texture(smoke_tid);
-	}
-	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
-	s.add_uniform_int("smoke_tex", 1);
-	set_multitex(0);
-	s.add_uniform_int("tex0", 0);
-	s.add_uniform_float("min_alpha", min_alpha);
-	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
-	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
-	s.add_uniform_float("half_dxy",   HALF_DXY);
-	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
-	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
 	if (use_bmap)     s.add_uniform_int("bump_map", 5);
 	if (use_spec_map) s.add_uniform_int("spec_map", 8);
-	colorRGB const black_color(0.0, 0.0, 0.0);
-	s.add_uniform_color("const_indir_color", (have_indir_smoke_tex ? black_color : const_indir_color));
+	comon_shader_block(s, dlights, use_shadow_map, (smoke_en || indir_lighting), min_alpha);
+	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
+	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
+	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
 
 	// setup fog
 	//return change_fog_color(GRAY);
@@ -1801,35 +1807,33 @@ void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color) {
 }
 
 
-// texture units used: 0-1: object texture, 2-4 dynamic lighting, 5: 3D noise texture, 6-7 shadow map
-void setup_procedural_shaders(shader_t &s, float min_alpha, bool dlights, bool use_smap,
+// texture units used: 0,8: object texture, 1: indir lighting texture, 2-4 dynamic lighting, 5: 3D noise texture, 6-7 shadow map
+void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap,
 	bool use_noise_tex, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
+	indir_lighting &= have_indir_smoke_tex;
 	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
+
+	for (unsigned i = 0; i < 2; ++i) {
+		s.set_bool_prefix("indir_lighting", indir_lighting, i); // VS/FS
+	}
 	set_dlights_booleans(s, dlights, 1); // FS
 	s.setup_enabled_lights(2); // only 2, but could be up to 8 later
 	s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-	s.set_vert_shader("fog.part+procedural_gen");
-	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+procedural_gen");
+	s.set_vert_shader("fog.part+indir_lighting.part+procedural_gen");
+	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+procedural_gen");
 	s.begin_shader();
-	s.setup_scene_bounds();
-	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
-	if (dlights && dl_tid > 0) setup_dlight_textures(s);
-	set_multitex(0);
-	s.add_uniform_int("tex0", 0);
-	s.add_uniform_int("tex1", 1);
+	comon_shader_block(s, dlights, use_shadow_map, indir_lighting, min_alpha);
+	s.add_uniform_int("tex1", 8);
+	s.add_uniform_float("tex_scale", tex_scale);
 
 	if (use_noise_tex) {
 		s.add_uniform_int("noise_tex", 5); // does this need an enable option?
 		s.add_uniform_float("noise_scale", noise_scale);
 		s.add_uniform_float("tex_mix_saturate", tex_mix_saturate);
 	}
-	s.add_uniform_float("min_alpha", min_alpha);
-	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
-	s.add_uniform_color("const_indir_color", const_indir_color);
-	s.add_uniform_float("tex_scale", tex_scale);
 }
 
 
