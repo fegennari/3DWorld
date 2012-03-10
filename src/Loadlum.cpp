@@ -11,7 +11,7 @@
 
 unsigned const MAX_IR_CHARS = 256;
 
-FILE *open_texture_file(std::string filename);
+FILE *open_texture_file(std::string const &filename);
 
 
 struct ImageRec {

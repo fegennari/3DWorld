@@ -15,7 +15,7 @@ voxel base_color 1.0 1.0 1.0
 voxel color1 1.0 1.0 1.0 1.0
 voxel color2 1.0 1.0 1.0 1.0
 voxel tid1 rock.03.raw # 66 rock tex
-voxel tid2 snow.raw # 9 snow tex
+voxel tid2 mossy_rock.jpg # 76 mossy rock tex
 
 
 

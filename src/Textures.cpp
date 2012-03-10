@@ -138,7 +138,8 @@ texture_t(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
 texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
 texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
-texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw")  // not real file
+texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
+texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg")
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [do_compress]
 };
@@ -574,14 +575,13 @@ void get_lum_alpha(colorRGBA const &color, int tid, float &luminance, float &alp
 }
 
 
-FILE *open_texture_file(string filename) {
+FILE *open_texture_file(string const &filename) {
 
-	filename = texture_dir + "/" + filename;
-	FILE *fp = fopen(filename.c_str(), "rb");
+	FILE *fp = fopen((texture_dir + "/" + filename).c_str(), "rb");
 	if (fp != NULL) return fp;
 
-	// if not in the current directory, then look in the parent directory
-	fp = fopen((string("../") + filename).c_str(), "rb");
+	// if not in the current directory, then look in the current directory
+	fp = fopen(filename.c_str(), "rb");
 
 	if (fp == NULL) {
 		cout << "Error loading image " << filename << endl;
@@ -774,12 +774,16 @@ void texture_t::load_targa() {
 
 	assert(!is_allocated());
 	tga_image img;
-	tga_result const ret(tga_read(&img, name.c_str()));
+	tga_result ret(tga_read(&img, (texture_dir + "/" + name).c_str())); // try textures directory
 	//cout << "load texture" << name << endl;
 
 	if (ret != TGA_NOERR) {
-		cerr << "Error reading targa file " << name << ": " << tga_error(ret) << endl;
-		exit(1);
+		ret = tga_read(&img, name.c_str()); // try current directory
+
+		if (ret != TGA_NOERR) {
+			cerr << "Error reading targa file " << name << ": " << tga_error(ret) << endl;
+			exit(1);
+		}
 	}
 	if (width == 0 && height == 0) {
 		width  = img.width;
@@ -811,7 +815,7 @@ void texture_t::load_jpeg() {
 	jpeg_error_mgr jerr;
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_decompress(&cinfo);
-	FILE *fp(fopen(name.c_str(), "rb"));
+	FILE *fp(open_texture_file(name));
 
 	if (fp == NULL) {
 		cerr << "Error opening jpeg file " << name << " for read." << endl;
@@ -848,7 +852,7 @@ void texture_t::load_jpeg() {
 void texture_t::load_png() {
 
 #ifdef ENABLE_PNG
-	FILE *fp(fopen(name.c_str(), "rb"));
+	FILE *fp(open_texture_file(name));
 
 	if (fp == NULL) {
 		cerr << "Error opening png file " << name << " for read." << endl;
