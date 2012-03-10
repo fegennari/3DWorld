@@ -8,26 +8,26 @@
 #include "model3d.h"
 
 
-struct voxel_render_params_t {
-
-	unsigned tids[2];
-	int texture_rseed;
-	colorRGBA colors[2];
-	colorRGBA base_color;
-	voxel_render_params_t() : texture_rseed(321) {tids[0] = tids[1] = 0; colors[0] = colors[1] = base_color = WHITE;}
-};
-
 
 struct voxel_params_t {
 
+	// generation parameters
 	float isolevel, elasticity, mag, freq, atten_thresh;
 	bool make_closed_surface, invert, remove_unconnected, keep_at_scene_edge, remove_under_mesh;
 	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
 	int geom_rseed;
-	voxel_render_params_t rp;
+	
+	// rendering parameters
+	int texture_rseed;
+	unsigned tids[2];
+	colorRGBA colors[2];
+	colorRGBA base_color;
 
-	voxel_params_t() : isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), make_closed_surface(0),
-		invert(0), remove_unconnected(0), keep_at_scene_edge(0), remove_under_mesh(0), atten_at_edges(0), geom_rseed(123) {}
+	voxel_params_t() : isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), make_closed_surface(0), invert(0),
+		remove_unconnected(0), keep_at_scene_edge(0), remove_under_mesh(0), atten_at_edges(0), geom_rseed(123), texture_rseed(321)
+	{
+			tids[0] = tids[1] = 0; colors[0] = colors[1] = base_color = WHITE;
+	}
 };
 
 
@@ -111,7 +111,7 @@ struct coll_tquad;
 
 class voxel_model : public voxel_manager {
 
-	voxel_render_params_t params;
+	voxel_params_t params;
 	typedef vert_norm vertex_type_t;
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	tri_data_t tri_data;

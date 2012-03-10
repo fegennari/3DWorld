@@ -356,7 +356,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 void voxel_model::build(voxel_params_t const &vp, bool add_cobjs) {
 
 	RESET_TIME;
-	params = vp.rp; // copy render parameters
+	params = vp; // copy voxel parameters
 	float const atten_thresh((vp.invert ? 1.0 : -1.0)*vp.atten_thresh);
 	if (vp.atten_at_edges == 1) terrain_voxel_model.atten_at_top_only(atten_thresh);
 	if (vp.atten_at_edges == 2) terrain_voxel_model.atten_at_edges   (atten_thresh);
@@ -368,52 +368,44 @@ void voxel_model::build(voxel_params_t const &vp, bool add_cobjs) {
 
 	unsigned const xblocks(nx/BLOCK_SIZE), yblocks(ny/BLOCK_SIZE), tot_blocks(BLOCK_SIZE*BLOCK_SIZE);
 	assert(pt_to_ix.empty() && tri_data.empty() && data_blocks.empty());
-	vector<vector<triangle> > triangles;
-	triangles.resize(tot_blocks);
 	pt_to_ix.resize(tot_blocks);
 	data_blocks.resize(tot_blocks);
 	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
+	cobj_params cparams(vp.elasticity, vp.base_color, 0, 0, NULL, 0, vp.tids[0]);
+	cparams.is_model3d = 1;
 
 	#pragma omp parallel for schedule(static,1)
 	for (int block = 0; block < (int)tot_blocks; ++block) {
 		unsigned const xbix(block & (BLOCK_SIZE-1)), ybix(block/BLOCK_SIZE);
+		vector<triangle> triangles;
 		
 		for (unsigned y = ybix*yblocks; y < min(ny-1, (ybix+1)*yblocks); ++y) {
 			for (unsigned x = xbix*xblocks; x < min(nx-1, (xbix+1)*xblocks); ++x) {
 				for (unsigned z = 0; z < nz-1; ++z) {
-					get_triangles_for_voxel(triangles[block], vp, x, y, z);
+					get_triangles_for_voxel(triangles, vp, x, y, z);
 				}
 			}
 		}
 		pt_to_ix[block].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
 		pt_to_ix[block].ix = block;
 		vertex_map_t<vertex_type_t> vmap(1);
-		polygon_t poly(vp.rp.base_color);
+		polygon_t poly(vp.base_color);
 
-		for (vector<triangle>::const_iterator i = triangles[block].begin(); i != triangles[block].end(); ++i) {
+		for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
 			poly.from_triangle(*i);
 			tri_data[block].add_poly(poly, vmap);
 		}
-	}
-	PRINT_TIME("  Triangles to Model");
+		if (add_cobjs) {
+			data_blocks[block].cids.reserve(triangles.size());
 
-	if (add_cobjs) {
-		unsigned tot_triangles(0);
-		for (vector<vector<triangle> >::const_iterator i = triangles.begin(); i != triangles.end(); ++i) tot_triangles += i->size();
-		if (tot_triangles > 2*coll_objects.size()) reserve_coll_objects(coll_objects.size() + 1.1*tot_triangles); // reserve with 10% buffer
-		cobj_params cparams(vp.elasticity, vp.rp.base_color, 0, 0, NULL, 0, vp.rp.tids[0]);
-		cparams.is_model3d = 1;
-
-		for (unsigned i = 0; i < triangles.size(); ++i) {
-			data_blocks[i].cids.reserve(triangles[i].size());
-
-			for (vector<triangle>::const_iterator t = triangles[i].begin(); t < triangles[i].end(); ++t) {
-				data_blocks[i].cids.push_back(add_coll_polygon(t->pts, 3, cparams, 0.0));
-				assert(data_blocks[i].cids.back() >= 0);
+			#pragma omp critical(add_coll_polygon)
+			for (vector<triangle>::const_iterator t = triangles.begin(); t < triangles.end(); ++t) {
+				data_blocks[block].cids.push_back(add_coll_polygon(t->pts, 3, cparams, 0.0));
+				assert(data_blocks[block].cids.back() >= 0);
 			}
 		}
-		PRINT_TIME("  Triangles to Cobjs");
 	}
+	PRINT_TIME("  Triangles to Model");
 }
 
 
@@ -551,24 +543,24 @@ bool parse_voxel_option(FILE *fp) {
 		if (!read_int(fp, global_voxel_params.geom_rseed)) voxel_file_err("geom_rseed", error);
 	}
 	else if (str == "texture_rseed") {
-		if (!read_int(fp, global_voxel_params.rp.texture_rseed)) voxel_file_err("texture_rseed", error);
+		if (!read_int(fp, global_voxel_params.texture_rseed)) voxel_file_err("texture_rseed", error);
 	}
 	else if (str == "tid1") {
 		if (!read_str(fp, strc)) voxel_file_err("tid1", error);
-		global_voxel_params.rp.tids[0] = get_texture_by_name(std::string(strc));
+		global_voxel_params.tids[0] = get_texture_by_name(std::string(strc));
 	}
 	else if (str == "tid2") {
 		if (!read_str(fp, strc)) voxel_file_err("tid2", error);
-		global_voxel_params.rp.tids[1] = get_texture_by_name(std::string(strc));
+		global_voxel_params.tids[1] = get_texture_by_name(std::string(strc));
 	}
 	else if (str == "base_color") {
-		if (!read_color(fp, global_voxel_params.rp.base_color)) voxel_file_err("base_color", error);
+		if (!read_color(fp, global_voxel_params.base_color)) voxel_file_err("base_color", error);
 	}
 	else if (str == "color1") {
-		if (!read_color(fp, global_voxel_params.rp.colors[0])) voxel_file_err("color1", error);
+		if (!read_color(fp, global_voxel_params.colors[0])) voxel_file_err("color1", error);
 	}
 	else if (str == "color2") {
-		if (!read_color(fp, global_voxel_params.rp.colors[1])) voxel_file_err("color2", error);
+		if (!read_color(fp, global_voxel_params.colors[1])) voxel_file_err("color2", error);
 	}
 	else {
 		cout << "Unrecognized voxel keyword in input file: " << str << endl;
