@@ -664,8 +664,6 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 }
 
 
-// this needs to be modified to support random addition and removal of collision objects
-// right now it only really works if objects are added and removed in the correct order
 int remove_coll_object(int index, bool reset_draw) {
 
 	if (index < 0) return 0;

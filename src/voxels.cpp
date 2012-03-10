@@ -11,6 +11,9 @@
 #include "file_utils.h"
 
 
+unsigned const BLOCK_SIZE = 4; // in x and y, must be a power of 2
+
+
 extern bool disable_shaders, group_back_face_cull;
 extern coll_obj_group coll_objects;
 
@@ -239,7 +242,7 @@ void voxel_manager::remove_unconnected_outside(bool keep_at_scene_edge) { // che
 		work.pop_back();
 		assert(cur < outside.size());
 		assert(outside[cur] & 4);
-		int const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
+		unsigned const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
 		assert(outside.get_ix(x, y, z) == cur);
 
 		for (unsigned dim = 0; dim < 3; ++dim) { // check neighbors
@@ -296,12 +299,57 @@ bool voxel_manager::point_inside_volume(point const &pos) const {
 }
 
 
+unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
+
+	assert(voxel_ix < size());
+	unsigned const y(voxel_ix/(nz*nx)), vxz(voxel_ix - y*nz*nx), x(vxz/nz), bx(x/BLOCK_SIZE), by(y/BLOCK_SIZE);
+	return by*BLOCK_SIZE + bx;
+}
+
+
 void voxel_model::clear() {
 
+	//for (unsigned i = 0; i < data_blocks.size(); ++i) {clear_block(i);} // unnecessary
 	free_context();
 	tri_data.clear();
+	data_blocks.clear();
 	pt_to_ix.clear();
 	voxel_manager::clear();
+}
+
+
+void voxel_model::clear_block(unsigned block_ix) {
+
+	assert(block_ix < tri_data.size() && block_ix < data_blocks.size());
+	tri_data[block_ix].clear();
+
+	for (vector<int>::const_iterator i = data_blocks[block_ix].cids.begin(); i != data_blocks[block_ix].cids.end(); ++i) {
+		remove_coll_object(*i);
+	}
+	purge_coll_freed(0); // unecessary?
+	data_blocks[block_ix].clear();
+}
+
+
+void voxel_model::regen_block(unsigned block_ix) {
+
+	assert(block_ix < tri_data.size() && block_ix < data_blocks.size());
+	assert(tri_data[block_ix].empty() && data_blocks[block_ix].cids.empty());
+	// FIXME - WRITE
+}
+
+
+// returns true if something was updated
+bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center) {
+
+	assert(radius >= 0.0); // strictly > 0.0?
+	if (val_at_center == 0.0) return 0; // legal?
+	unsigned ix(0);
+	if (!get_ix(center, ix))  return 0;
+	unsigned const bix(get_block_ix(ix));
+	assert(bix < data_blocks.size());
+	// FIXME - WRITE
+	return 1;
 }
 
 
@@ -318,12 +366,12 @@ void voxel_model::build(voxel_params_t const &vp, bool add_cobjs) {
 	if (vp.remove_unconnected) remove_unconnected_outside(vp.keep_at_scene_edge);
 	PRINT_TIME("  Remove Unconnected");
 
-	unsigned const BLOCK_SIZE(4); // in x and y, must be a power of 2
 	unsigned const xblocks(nx/BLOCK_SIZE), yblocks(ny/BLOCK_SIZE), tot_blocks(BLOCK_SIZE*BLOCK_SIZE);
-	assert(pt_to_ix.empty() && tri_data.empty());
+	assert(pt_to_ix.empty() && tri_data.empty() && data_blocks.empty());
 	vector<vector<triangle> > triangles;
 	triangles.resize(tot_blocks);
 	pt_to_ix.resize(tot_blocks);
+	data_blocks.resize(tot_blocks);
 	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
 
 	#pragma omp parallel for schedule(static,1)
@@ -356,9 +404,12 @@ void voxel_model::build(voxel_params_t const &vp, bool add_cobjs) {
 		cobj_params cparams(vp.elasticity, vp.rp.base_color, 0, 0, NULL, 0, vp.rp.tids[0]);
 		cparams.is_model3d = 1;
 
-		for (vector<vector<triangle> >::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
-			for (vector<triangle>::const_iterator t = i->begin(); t != i->end(); ++t) {
-				add_coll_polygon(t->pts, 3, cparams, 0.0);
+		for (unsigned i = 0; i < triangles.size(); ++i) {
+			data_blocks[i].cids.reserve(triangles[i].size());
+
+			for (vector<triangle>::const_iterator t = triangles[i].begin(); t < triangles[i].end(); ++t) {
+				data_blocks[i].cids.push_back(add_coll_polygon(t->pts, 3, cparams, 0.0));
+				assert(data_blocks[i].cids.back() >= 0);
 			}
 		}
 		PRINT_TIME("  Triangles to Cobjs");

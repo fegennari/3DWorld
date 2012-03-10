@@ -117,6 +117,14 @@ class voxel_model : public voxel_manager {
 	tri_data_t tri_data;
 	noise_texture_manager_t noise_tex_gen;
 
+	struct data_block_t {
+		vector<int> cids; // references into coll_objects
+		//unsigned tri_data_ix;
+		void clear() {cids.clear();}
+	};
+
+	vector<data_block_t> data_blocks;
+
 	struct pt_ix_t {
 		point pt;
 		unsigned ix;
@@ -131,8 +139,13 @@ class voxel_model : public voxel_manager {
 		bool operator()(pt_ix_t const &a, pt_ix_t const &b) const {return (p2p_dist_sq(a.pt, p) < p2p_dist_sq(b.pt, p));}
 	};
 
+	unsigned get_block_ix(unsigned voxel_ix) const;
+	void clear_block(unsigned block_ix);
+	void regen_block(unsigned block_ix);
+
 public:
 	void clear();
+	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center);
 	void build(voxel_params_t const &vp, bool add_cobjs);
 	void render(bool is_shadow_pass);
 	void free_context();
