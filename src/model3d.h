@@ -141,6 +141,7 @@ public:
 
 	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), vbo(0), ivbo(0), obj_id(obj_id_) {}
 	void render(shader_t &shader, bool is_shadow_pass, int prim_type);
+	void clear();
 	void free_vbos();
 	void add_poly(vntc_vect_t const &poly);
 	void calc_bounding_volumes();
@@ -163,7 +164,7 @@ public:
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
 	void add_vertex(T const &v, vertex_map_t<T> &vmap);
 	void finalize(int prim_type);
-	void clear() {vntc_vect_t<T>::clear(); indices.clear();}
+	void clear();
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
@@ -176,6 +177,7 @@ public:
 template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t<T> > {
 
 	void remove_excess_cap();
+	void clear() {free_vbos(); deque<indexed_vntc_vect_t<T> >::clear();}
 	void free_vbos();
 	cube_t get_bbox() const;
 	unsigned num_verts() const;

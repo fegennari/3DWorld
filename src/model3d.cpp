@@ -170,6 +170,15 @@ template<typename V> void read_vector(istream &in, V &v) {
 template class indexed_vntc_vect_t<vert_norm>;
 
 
+template<typename T> void vntc_vect_t<T>::clear() {
+	
+	free_vbos();
+	vector<T>::clear();
+	finalized = has_tangents = 0;
+	bsphere.radius = 0.0;
+}
+
+
 template<typename T> void vntc_vect_t<T>::free_vbos() {
 
 	delete_vbo(vbo);
@@ -226,6 +235,14 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 	}
 	indices.swap(new_indices);
 #endif
+}
+
+
+template<typename T> void indexed_vntc_vect_t<T>::clear() {
+	
+	vntc_vect_t<T>::clear();
+	indices.clear();
+	need_normalize = 0;
 }
 
 
