@@ -11,10 +11,11 @@
 #include "file_utils.h"
 
 
-unsigned const BLOCK_SIZE = 4; // in x and y, must be a power of 2
+bool const NORMALIZE_TO_1 = 1;
+unsigned const NUM_BLOCKS = 4; // in x and y, must be a power of 2
 
 
-extern bool disable_shaders, group_back_face_cull;
+extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
 extern coll_obj_group coll_objects;
 
 voxel_params_t global_voxel_params;
@@ -96,32 +97,40 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 }
 
 
+void voxel_manager::atten_edge_val(unsigned x, unsigned y, unsigned z, float val) {
+
+	float const vy(1.0 - 2.0*max(0.0, (y - 0.5*ny))/float(ny));
+	float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx));
+	float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz)), v(0.25 - vx*vy*vz);
+	if (v > 0.0) get_ref(x, y, z) += 8.0*val*v;
+}
+
+
 void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 	for (unsigned y = 0; y < ny; ++y) {
-		float const vy(1.0 - 2.0*max(0.0, (y - 0.5*ny))/float(ny));
-
 		for (unsigned x = 0; x < nx; ++x) {
-			float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx));
-
 			for (unsigned z = 0; z < nz; ++z) {
-				float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz)), v(0.25 - vx*vy*vz);
-				if (v > 0.0) get_ref(x, y, z) += 8.0*val*v;
+				atten_edge_val(x, y, z, val);
 			}
 		}
 	}
 }
 
 
-void voxel_manager::atten_at_top_only(float val) {
+void voxel_manager::atten_top_val(unsigned x, unsigned y, unsigned z, float val) {
 
-	float const nz_inv(1.0/nz);
+	float const zval(z/nz - 0.75);
+	if (zval > 0.0) get_ref(x, y, z) += 12.0*val*zval;
+}
+
+
+void voxel_manager::atten_at_top_only(float val) {
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
-				float const zval(z*nz_inv - 0.75);
-				if (zval > 0.0) get_ref(x, y, z) += 12.0*val*zval;
+				atten_top_val(x, y, z, val);
 			}
 		}
 	}
@@ -140,13 +149,12 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 }
 
 
-void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles,
-	voxel_params_t const &vp, unsigned x, unsigned y, unsigned z) const
-{
+void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z) const {
+
 	float vals[8]; // 8 corner voxel values
 	point pts[8]; // corner points
 	unsigned cix(0);
-	bool all_under_mesh(vp.remove_under_mesh);
+	bool all_under_mesh(params.remove_under_mesh);
 
 	for (unsigned yhi = 0; yhi < 2; ++yhi) {
 		for (unsigned xhi = 0; xhi < 2; ++xhi) {
@@ -161,7 +169,7 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles,
 				unsigned const zz(z+zhi), vix((xhi^yhi) + 2*yhi + 4*zhi);
 				unsigned char const outside_val(outside.get(xx, yy, zz));
 				if (outside_val) cix |= 1 << vix; // outside or on edge
-				vals[vix] = (outside_val == 2) ? vp.isolevel : get(xx, yy, zz); // check on_edge status
+				vals[vix] = (outside_val == 2) ? params.isolevel : get(xx, yy, zz); // check on_edge status
 				pts [vix] = point(xval, yval, (zz*vsz.z + lo_pos.z));
 			}
 		}
@@ -176,17 +184,26 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles,
 	for (unsigned i = 0; i < 12; ++i) {
 		if (!(edge_val & (1 << i))) continue;
 		unsigned const *eix = voxel_detail::edge_to_vals[i];
-		vlist[i] = interpolate_pt(vp.isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
+		vlist[i] = interpolate_pt(params.isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
 	}
 	for (unsigned i = 0; tris[i] >= 0; i += 3) {
 		triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
+		if (tri.pts[0] == tri.pts[1] || tri.pts[0] == tri.pts[2] || tri.pts[1] == tri.pts[2]) continue; // invalid triangle
 		#pragma omp critical(triangles_push_back)
 		triangles.push_back(tri);
 	}
 }
 
 
-void voxel_manager::determine_voxels_outside(voxel_params_t const &vp) { // determine inside/outside points
+void voxel_manager::calc_outside_val(unsigned x, unsigned y, unsigned z) {
+
+	bool const on_edge(params.make_closed_surface && ((x == 0 || x == nx-1) || (y == 0 || y == ny-1) || (z == 0 || z == nz-1)));
+	unsigned char const ival(on_edge? 2 : (((get(x, y, z) < params.isolevel) ^ params.invert) ? 1 : 0)); // on_edge is considered outside
+	outside.set(x, y, z, ival);
+}
+
+
+void voxel_manager::determine_voxels_outside() { // determine inside/outside points
 
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
@@ -195,9 +212,7 @@ void voxel_manager::determine_voxels_outside(voxel_params_t const &vp) { // dete
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
-				bool const on_edge(vp.make_closed_surface && ((x == 0 || x == nx-1) || (y == 0 || y == ny-1) || (z == 0 || z == nz-1)));
-				unsigned char const ival(on_edge? 2 : (((get(x, y, z) < vp.isolevel) ^ vp.invert) ? 1 : 0)); // on_edge is considered outside
-				outside.set(x, y, z, ival);
+				calc_outside_val(x, y, z);
 			}
 		}
 	}
@@ -266,25 +281,25 @@ void voxel_manager::remove_unconnected_outside(bool keep_at_scene_edge) { // che
 }
 
 
-void voxel_manager::create_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const {
+void voxel_manager::create_triangles(vector<triangle> &triangles) const {
 
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)ny-1; ++y) {
 		for (unsigned x = 0; x < nx-1; ++x) {
 			for (unsigned z = 0; z < nz-1; ++z) {
-				get_triangles_for_voxel(triangles, vp, x, y, z);
+				get_triangles_for_voxel(triangles, x, y, z);
 			}
 		}
 	}
 }
 
 
-void voxel_manager::get_triangles(vector<triangle> &triangles, voxel_params_t const &vp) {
+void voxel_manager::get_triangles(vector<triangle> &triangles) {
 
 	//RESET_TIME;
-	determine_voxels_outside(vp);
-	if (vp.remove_unconnected) remove_unconnected_outside(vp.keep_at_scene_edge);
-	create_triangles(triangles, vp);
+	determine_voxels_outside();
+	if (params.remove_unconnected) remove_unconnected_outside(params.keep_at_scene_edge);
+	create_triangles(triangles);
 	//PRINT_TIME("Voxels to Triangles");
 }
 
@@ -302,14 +317,15 @@ bool voxel_manager::point_inside_volume(point const &pos) const {
 unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 
 	assert(voxel_ix < size());
-	unsigned const y(voxel_ix/(nz*nx)), vxz(voxel_ix - y*nz*nx), x(vxz/nz), bx(x/BLOCK_SIZE), by(y/BLOCK_SIZE);
-	return by*BLOCK_SIZE + bx;
+	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS);
+	unsigned const y(voxel_ix/(nz*nx)), vxz(voxel_ix - y*nz*nx), x(vxz/nz), bx(x/xblocks), by(y/yblocks);
+	return by*NUM_BLOCKS + bx;
 }
 
 
 void voxel_model::clear() {
 
-	//for (unsigned i = 0; i < data_blocks.size(); ++i) {clear_block(i);} // unnecessary
+	for (unsigned i = 0; i < data_blocks.size(); ++i) {clear_block(i);} // unnecessary?
 	free_context();
 	tri_data.clear();
 	data_blocks.clear();
@@ -318,92 +334,149 @@ void voxel_model::clear() {
 }
 
 
-void voxel_model::clear_block(unsigned block_ix) {
+// returns true if something was cleared
+bool voxel_model::clear_block(unsigned block_ix) {
 
 	assert(block_ix < tri_data.size() && block_ix < data_blocks.size());
+	bool const was_nonempty(!tri_data[block_ix].empty());
 	tri_data[block_ix].clear();
 
 	for (vector<int>::const_iterator i = data_blocks[block_ix].cids.begin(); i != data_blocks[block_ix].cids.end(); ++i) {
 		remove_coll_object(*i);
 	}
-	purge_coll_freed(0); // unecessary?
 	data_blocks[block_ix].clear();
+	return was_nonempty;
 }
 
 
-void voxel_model::regen_block(unsigned block_ix) {
+// returns the number of triangles created
+unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 
 	assert(block_ix < tri_data.size() && block_ix < data_blocks.size());
 	assert(tri_data[block_ix].empty() && data_blocks[block_ix].cids.empty());
-	// FIXME - WRITE
+	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS);
+	unsigned const xbix(block_ix & (NUM_BLOCKS-1)), ybix(block_ix/NUM_BLOCKS);
+	vector<triangle> triangles;
+	
+	for (unsigned y = ybix*yblocks; y < min(ny-1, (ybix+1)*yblocks); ++y) {
+		for (unsigned x = xbix*xblocks; x < min(nx-1, (xbix+1)*xblocks); ++x) {
+			for (unsigned z = 0; z < nz-1; ++z) {
+				get_triangles_for_voxel(triangles, x, y, z);
+			}
+		}
+	}
+	if (first_create) { // after the first creation pt_to_ix is out of order
+		pt_to_ix[block_ix].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
+		pt_to_ix[block_ix].ix = block_ix;
+	}
+	vertex_map_t<vertex_type_t> vmap(1);
+	polygon_t poly(params.base_color);
+
+	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		poly.from_triangle(*i);
+		tri_data[block_ix].add_poly(poly, vmap);
+	}
+	if (add_cobjs) {
+		cobj_params cparams(params.elasticity, params.base_color, 0, 0, NULL, 0, params.tids[0]);
+		cparams.is_model3d = 1;
+		data_blocks[block_ix].cids.reserve(triangles.size());
+
+		#pragma omp critical(add_coll_polygon)
+		for (vector<triangle>::const_iterator t = triangles.begin(); t < triangles.end(); ++t) {
+			data_blocks[block_ix].cids.push_back(add_coll_polygon(t->pts, 3, cparams, 0.0));
+			assert(data_blocks[block_ix].cids.back() >= 0);
+		}
+	}
+	return triangles.size();
 }
 
 
 // returns true if something was updated
 bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center) {
 
-	assert(radius >= 0.0); // strictly > 0.0?
+	assert(radius > 0.0);
 	if (val_at_center == 0.0) return 0; // legal?
-	unsigned ix(0);
-	if (!get_ix(center, ix))  return 0;
-	unsigned const bix(get_block_ix(ix));
-	assert(bix < data_blocks.size());
-	// FIXME - WRITE
-	return 1;
+	RESET_TIME;
+	if (params.invert) val_at_center *= -1.0; // is this correct?
+	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS);
+	unsigned const num[3] = {nx, ny, nz};
+	unsigned bounds[3][2]; // {x,y,z} x {lo,hi}
+	std::set<unsigned> blocks_to_update;
+	float const dist_adjust(vsz.mag()); // single voxel diagonal length
+	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
+
+	for (unsigned d = 0; d < 3; ++d) {
+		bounds[d][0] = max(0,             int(floor(((center[d] - radius) - lo_pos[d])/vsz[d])));
+		bounds[d][1] = min((int)num[d]-1, int(ceil (((center[d] + radius) - lo_pos[d])/vsz[d])));
+	}
+	for (unsigned y = bounds[1][0]; y <= bounds[1][1]; ++y) {
+		for (unsigned x = bounds[0][0]; x <= bounds[0][1]; ++x) {
+			bool was_updated(0);
+
+			for (unsigned z = bounds[2][0]; z <= bounds[2][1]; ++z) {
+				float const dist(max(0.0f, (p2p_dist(center, get_pt_at(x, y, z)) - dist_adjust)));
+				if (dist >= radius) continue; // too far
+				// update voxel values, linear falloff with distance from center (ending at 0.0 at radius)
+				float &val(get_ref(x, y, z));
+				float const prev_val(val);
+				val += val_at_center*(1.0 - dist/radius);
+				if (NORMALIZE_TO_1) val = max(-1.0f, min(1.0f, val));
+				if (val == prev_val) continue; // no change
+				if (params.atten_at_edges == 1) atten_edge_val(x, y, z, atten_thresh);
+				if (params.atten_at_edges == 2) atten_top_val (x, y, z, atten_thresh);
+				calc_outside_val(x, y, z);
+				was_updated = 1;
+			}
+			if (!was_updated) continue;
+			unsigned const block_x(x/xblocks), block_y(y/yblocks), block_ix(block_y*NUM_BLOCKS + block_x);
+			assert(block_ix < data_blocks.size());
+			blocks_to_update.insert(block_ix);
+		}
+	}
+	bool something_removed(0), something_added(0);
+	
+	// FIXME: generate the new dataset before clearning the old one and check to see if something changed?
+	for (std::set<unsigned>::const_iterator i = blocks_to_update.begin(); i != blocks_to_update.end(); ++i) {
+		//cout << "clear " << *i << endl;
+		something_removed |= clear_block(*i);
+	}
+	if (something_removed) purge_coll_freed(0); // unecessary?
+	//if (something_removed && params.remove_unconnected) remove_unconnected_outside(params.keep_at_scene_edge); // FIXME: how to do this?
+
+	// FIXME: convert to vector and use openmp?
+	for (std::set<unsigned>::const_iterator i = blocks_to_update.begin(); i != blocks_to_update.end(); ++i) {
+		//cout << "create " << *i << endl;
+		something_added |= (create_block(*i, 0) > 0);
+	}
+	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial, parallel, or delayed rebuild? put into dynamic tree?
+	bool const was_updated(something_added || something_removed);
+	scene_dlist_invalid |= was_updated;
+	PRINT_TIME("Update Voxel Region");
+	return was_updated;
 }
 
 
-void voxel_model::build(voxel_params_t const &vp, bool add_cobjs) {
+void voxel_model::build(bool add_cobjs_) {
 
 	RESET_TIME;
-	params = vp; // copy voxel parameters
-	float const atten_thresh((vp.invert ? 1.0 : -1.0)*vp.atten_thresh);
-	if (vp.atten_at_edges == 1) terrain_voxel_model.atten_at_top_only(atten_thresh);
-	if (vp.atten_at_edges == 2) terrain_voxel_model.atten_at_edges   (atten_thresh);
+	add_cobjs = add_cobjs_;
+	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
+	if (params.atten_at_edges == 1) atten_at_top_only(atten_thresh);
+	if (params.atten_at_edges == 2) atten_at_edges   (atten_thresh);
 	PRINT_TIME("  Atten at Top/Edges");
-	determine_voxels_outside(vp);
+	determine_voxels_outside();
 	PRINT_TIME("  Determine Voxels Outside");
-	if (vp.remove_unconnected) remove_unconnected_outside(vp.keep_at_scene_edge);
+	if (params.remove_unconnected) remove_unconnected_outside(params.keep_at_scene_edge);
 	PRINT_TIME("  Remove Unconnected");
-
-	unsigned const xblocks(nx/BLOCK_SIZE), yblocks(ny/BLOCK_SIZE), tot_blocks(BLOCK_SIZE*BLOCK_SIZE);
+	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS), tot_blocks(NUM_BLOCKS*NUM_BLOCKS);
 	assert(pt_to_ix.empty() && tri_data.empty() && data_blocks.empty());
 	pt_to_ix.resize(tot_blocks);
 	data_blocks.resize(tot_blocks);
 	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
-	cobj_params cparams(vp.elasticity, vp.base_color, 0, 0, NULL, 0, vp.tids[0]);
-	cparams.is_model3d = 1;
 
 	#pragma omp parallel for schedule(static,1)
 	for (int block = 0; block < (int)tot_blocks; ++block) {
-		unsigned const xbix(block & (BLOCK_SIZE-1)), ybix(block/BLOCK_SIZE);
-		vector<triangle> triangles;
-		
-		for (unsigned y = ybix*yblocks; y < min(ny-1, (ybix+1)*yblocks); ++y) {
-			for (unsigned x = xbix*xblocks; x < min(nx-1, (xbix+1)*xblocks); ++x) {
-				for (unsigned z = 0; z < nz-1; ++z) {
-					get_triangles_for_voxel(triangles, vp, x, y, z);
-				}
-			}
-		}
-		pt_to_ix[block].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
-		pt_to_ix[block].ix = block;
-		vertex_map_t<vertex_type_t> vmap(1);
-		polygon_t poly(vp.base_color);
-
-		for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
-			poly.from_triangle(*i);
-			tri_data[block].add_poly(poly, vmap);
-		}
-		if (add_cobjs) {
-			data_blocks[block].cids.reserve(triangles.size());
-
-			#pragma omp critical(add_coll_polygon)
-			for (vector<triangle>::const_iterator t = triangles.begin(); t < triangles.end(); ++t) {
-				data_blocks[block].cids.push_back(add_coll_polygon(t->pts, 3, cparams, 0.0));
-				assert(data_blocks[block].cids.back() >= 0);
-			}
-		}
+		create_block(block, 1);
 	}
 	PRINT_TIME("  Triangles to Model");
 }
@@ -476,18 +549,19 @@ void voxel_model::free_context() {
 void gen_voxel_landscape() {
 
 	RESET_TIME;
-	bool const add_cobjs(1), normalize_to_1(0);
+	bool const add_cobjs(1);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
 	float const zlo(zbottom), zhi(max(ztop, zlo + Z_SCENE_SIZE)); // Note: does not include czmin/czmax range
 	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
+	terrain_voxel_model.set_params(global_voxel_params);
 	terrain_voxel_model.clear();
 	terrain_voxel_model.init(nx, ny, nz, vsz, center);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
-		normalize_to_1, global_voxel_params.geom_rseed, 456);
+		NORMALIZE_TO_1, global_voxel_params.geom_rseed, 456);
 	PRINT_TIME(" Voxel Gen");
-	terrain_voxel_model.build(global_voxel_params, add_cobjs);
+	terrain_voxel_model.build(add_cobjs);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 
@@ -580,6 +654,10 @@ void free_voxel_context() {
 
 bool point_inside_voxel_terrain(point const &pos) {
 	return terrain_voxel_model.point_inside_volume(pos);
+}
+
+bool update_voxel_sphere_region(point const &center, float radius, float val_at_center) {
+	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center);
 }
 
 

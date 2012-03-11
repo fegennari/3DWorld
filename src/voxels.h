@@ -79,6 +79,7 @@ public:
 		assert(ix < size());
 		operator[](ix) = val;
 	}
+	point get_pt_at(unsigned x, unsigned y, unsigned z) const {return (point(x, y, z)*vsz + lo_pos);}
 };
 
 typedef voxel_grid<float> float_voxel_grid;
@@ -91,17 +92,23 @@ class voxel_manager : public float_voxel_grid {
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 
 protected:
-	void get_triangles_for_voxel(vector<triangle> &triangles, voxel_params_t const &vp, unsigned x, unsigned y, unsigned z) const;
+	voxel_params_t params;
+	
+	void atten_edge_val(unsigned x, unsigned y, unsigned z, float val);
+	void atten_top_val (unsigned x, unsigned y, unsigned z, float val);
+	void calc_outside_val(unsigned x, unsigned y, unsigned z);
+	void get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z) const;
 
 public:
+	void set_params(voxel_params_t const &p) {params = p;}
 	void clear() {outside.clear(); float_voxel_grid::clear();}
 	void create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2);
 	void atten_at_edges(float val);
 	void atten_at_top_only(float val);
-	void determine_voxels_outside(voxel_params_t const &vp);
+	void determine_voxels_outside();
 	void remove_unconnected_outside(bool keep_at_scene_edge);
-	void create_triangles(vector<triangle> &triangles, voxel_params_t const &vp) const;
-	void get_triangles(vector<triangle> &triangles, voxel_params_t const &vp);
+	void create_triangles(vector<triangle> &triangles) const;
+	void get_triangles(vector<triangle> &triangles);
 	bool point_inside_volume(point const &pos) const;
 };
 
@@ -111,7 +118,7 @@ struct coll_tquad;
 
 class voxel_model : public voxel_manager {
 
-	voxel_params_t params;
+	bool add_cobjs;
 	typedef vert_norm vertex_type_t;
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	tri_data_t tri_data;
@@ -140,13 +147,14 @@ class voxel_model : public voxel_manager {
 	};
 
 	unsigned get_block_ix(unsigned voxel_ix) const;
-	void clear_block(unsigned block_ix);
-	void regen_block(unsigned block_ix);
+	bool clear_block(unsigned block_ix);
+	unsigned create_block(unsigned block_ix, bool first_create);
 
 public:
+	voxel_model() : add_cobjs(0) {}
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center);
-	void build(voxel_params_t const &vp, bool add_cobjs);
+	void build(bool add_cobjs_);
 	void render(bool is_shadow_pass);
 	void free_context();
 };

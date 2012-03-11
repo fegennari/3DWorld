@@ -1268,7 +1268,11 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 			}
 		}
 	}
-	if (damage > 100.0) destroy_coll_objs(pos, damage, shooter, (type == BLAST_RADIUS));
+	if (damage > 100.0) {
+		destroy_coll_objs(pos, damage, shooter, (type == BLAST_RADIUS));
+		float const radius(((type == BLAST_RADIUS) ? 4.0 : 1.0)*sqrt(damage)/650.0); // same as in destroy_coll_objs()
+		update_voxel_sphere_region(pos, radius, -0.1);
+	}
 	//PRINT_TIME("Blast Radius");
 }
 
