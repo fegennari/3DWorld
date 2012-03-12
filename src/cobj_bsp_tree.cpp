@@ -193,7 +193,7 @@ void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned d
 
 void cobj_tree_tquads_t::build_tree_top(bool verbose) {
 
-	nodes.reserve(6*tquads.size()/5); // conservative
+	nodes.reserve(get_conservative_num_nodes(tquads.size()));
 	nodes.push_back(tree_node(0, (unsigned)tquads.size()));
 	assert(nodes.size() == 1);
 	max_depth = max_leaf_count = num_leaf_nodes = 0;
@@ -329,7 +329,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
 	RESET_TIME;
 	clear();
 	if (!create_cixs()) return; // nothing to be done
-	nodes.reserve(6*cixs.size()/5); // conservative
+	nodes.reserve(get_conservative_num_nodes(cixs.size()));
 	nodes.push_back(tree_node(0, (unsigned)cixs.size()));
 	assert(nodes.size() == 1);
 	max_depth = max_leaf_count = num_leaf_nodes = 0;
@@ -598,8 +598,6 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, un
 }
 
 
-// 3: BSP Tree/KD-Tree, 8: Octtree
-typedef cobj_tree_t<3> cobj_tree_type;
 cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0, 0);
 cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
 cobj_tree_type cobj_tree_occlude(coll_objects, 1, 0, 1, 0);

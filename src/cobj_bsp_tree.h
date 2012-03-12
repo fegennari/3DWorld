@@ -28,6 +28,7 @@ protected:
 		max_leaf_count = max(max_leaf_count, num);
 	}
 	bool check_for_leaf(unsigned num, unsigned skip_dims);
+	unsigned get_conservative_num_nodes(unsigned num) const {return 6*num/5;}
 
 	struct node_ix_mgr {
 		point const p1, p2;
@@ -107,6 +108,10 @@ public:
 	void get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> *cobjs, cobj_query_callback *cqc, bool occlude) const;
 	void get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const;
 };
+
+
+// 3: BSP Tree/KD-Tree, 8: Octtree
+typedef cobj_tree_t<3> cobj_tree_type;
 
 
 #endif // _COBJ_BSP_TREE_H_
