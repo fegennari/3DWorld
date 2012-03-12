@@ -53,9 +53,12 @@ public:
 	voxel_grid() : nx(0), ny(0), nz(0), vsz(zero_vector) {}
 	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_);
 
+	void get_xyz(point const &p, int xyz[3]) const { // returns whether or not the point was inside the voxel volume
+		UNROLL_3X(xyz[i_] = int((p[i_] - lo_pos[i_])/vsz[i_]);); // convert to voxel space
+	}
 	bool get_ix(point const &p, unsigned &ix) const { // returns whether or not the point was inside the voxel volume
 		int i[3]; // x,y,z
-		UNROLL_3X(i[i_] = int((p[i_] - lo_pos[i_])/vsz[i_]);); // convert to voxel space
+		get_xyz(p, i);
 		if (i[0] < 0 || i[1] < 0 || i[2] < 0 || i[0] >= (int)nx || i[1] >= (int)ny || i[2] >= (int)nz) return 0;
 		ix = i[2] + (i[0] + i[1]*nx)*nz;
 		return 1;
@@ -97,6 +100,7 @@ protected:
 	void atten_edge_val(unsigned x, unsigned y, unsigned z, float val);
 	void atten_top_val (unsigned x, unsigned y, unsigned z, float val);
 	void calc_outside_val(unsigned x, unsigned y, unsigned z);
+	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2);
 	void get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z) const;
 
 public:
@@ -146,6 +150,7 @@ class voxel_model : public voxel_manager {
 		bool operator()(pt_ix_t const &a, pt_ix_t const &b) const {return (p2p_dist_sq(a.pt, p) < p2p_dist_sq(b.pt, p));}
 	};
 
+	void remove_unconnected_outside_block(unsigned block_ix);
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	bool clear_block(unsigned block_ix);
 	unsigned create_block(unsigned block_ix, bool first_create);

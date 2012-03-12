@@ -120,7 +120,7 @@ void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 void voxel_manager::atten_top_val(unsigned x, unsigned y, unsigned z, float val) {
 
-	float const zval(z/nz - 0.75);
+	float const zval(z/float(nz) - 0.75);
 	if (zval > 0.0) get_ref(x, y, z) += 12.0*val*zval;
 }
 
@@ -221,13 +221,31 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 
 void voxel_manager::remove_unconnected_outside(bool keep_at_scene_edge) { // check for voxels connected to the mesh surface
 
+	remove_unconnected_outside_range(keep_at_scene_edge, 0, 0, nx, ny);
+}
+
+
+void voxel_model::remove_unconnected_outside_block(unsigned block_ix) {
+
+	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS);
+	unsigned const xbix(block_ix & (NUM_BLOCKS-1)), ybix(block_ix/NUM_BLOCKS);
+	remove_unconnected_outside_range(1, xbix*xblocks, ybix*yblocks, min(nx, (xbix+1)*xblocks), min(ny, (ybix+1)*yblocks));
+}
+
+
+// outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored
+void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2) {
+
 	vector<unsigned> work; // stack of voxels to process
-	int const range[3] = {nx, ny, nz};
+	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
 	// add voxels along the mesh surface
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			point const p(get_xval(x), get_yval(y), mesh_height[y][x]);
+			int xyz[3];
+			get_xyz(p, xyz);
+			if (xyz[0] < (int)x1 || xyz[1] < (int)y1 || xyz[0] >= (int)x2 || xyz[1] >= (int)y2) continue; // out of range
 			unsigned ix(0);
 			if (!get_ix(p, ix) || outside[ix] != 0) continue; // off the voxel grid, outside, or on edge
 			work.push_back(ix); // inside, anchored to the mesh
@@ -236,14 +254,14 @@ void voxel_manager::remove_unconnected_outside(bool keep_at_scene_edge) { // che
 	}
 
 	// add voxels along the scene x/y boundary
-	if (keep_at_scene_edge) {
-		for (unsigned y = 0; y < ny; ++y) {
-			for (unsigned x = 0; x < nx; ++x) {
-				if (!((x == 0 || x == nx-1) || (y == 0 || y == ny-1))) continue; // not on scene edge
+	if (keep_at_edge) {
+		for (unsigned y = y1; y < y2; ++y) {
+			for (unsigned x = x1; x < x2; ++x) {
+				if (x != x1 && x+1 != x2 && y != y1 && y+1 != y2) continue; // not on scene edge
 
 				for (unsigned z = 0; z < nz; ++z) {
 					unsigned const ix(outside.get_ix(x, y, z));
-					if (outside[ix] != 2) continue; // off the voxel grid, outside, or on edge
+					if (outside[ix] == 1) continue; // outside
 					work.push_back(ix); // inside, anchored to the mesh
 					outside[ix] |= 4; // mark as anchored
 				}
@@ -264,7 +282,7 @@ void voxel_manager::remove_unconnected_outside(bool keep_at_scene_edge) { // che
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				int pos[3] = {x, y, z};
 				pos[dim] += dir ? 1 : -1;
-				if (pos[dim] < 0 || pos[dim] >= range[dim]) continue; // off the grid
+				if (pos[dim] < min_range[dim] || pos[dim] >= max_range[dim]) continue; // off the grid
 				unsigned const ix(outside.get_ix(pos[0], pos[1], pos[2]));
 				assert(ix < outside.size());
 						
@@ -275,8 +293,15 @@ void voxel_manager::remove_unconnected_outside(bool keep_at_scene_edge) { // che
 			}
 		}
 	} // while
-	for (unsigned i = 0; i < size(); ++i) { // if anchored or on_edge remove the anchored bit, else mark outside
-		outside[i] = (outside[i] & 6) ? (outside[i] & 3) : 1;
+
+	// if anchored or on_edge remove the anchored bit, else mark outside
+	for (unsigned y = y1; y < y2; ++y) {
+		for (unsigned x = x1; x < x2; ++x) {
+			for (unsigned z = 0; z < nz; ++z) {
+				unsigned const ix(outside.get_ix(x, y, z));
+				outside[ix] = (outside[ix] & 6) ? (outside[ix] & 3) : 1;
+			}
+		}
 	}
 }
 
@@ -402,7 +427,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	unsigned const num[3] = {nx, ny, nz};
 	unsigned bounds[3][2]; // {x,y,z} x {lo,hi}
 	std::set<unsigned> blocks_to_update;
-	float const dist_adjust(vsz.mag()); // single voxel diagonal length
+	float const dist_adjust(0.5*vsz.mag()); // single voxel diagonal half-width
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 
 	for (unsigned d = 0; d < 3; ++d) {
@@ -437,15 +462,13 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	
 	// FIXME: generate the new dataset before clearning the old one and check to see if something changed?
 	for (std::set<unsigned>::const_iterator i = blocks_to_update.begin(); i != blocks_to_update.end(); ++i) {
-		//cout << "clear " << *i << endl;
 		something_removed |= clear_block(*i);
 	}
 	if (something_removed) purge_coll_freed(0); // unecessary?
-	//if (something_removed && params.remove_unconnected) remove_unconnected_outside(params.keep_at_scene_edge); // FIXME: how to do this?
 
 	// FIXME: convert to vector and use openmp?
 	for (std::set<unsigned>::const_iterator i = blocks_to_update.begin(); i != blocks_to_update.end(); ++i) {
-		//cout << "create " << *i << endl;
+		if (something_removed && params.remove_unconnected) remove_unconnected_outside_block(*i);
 		something_added |= (create_block(*i, 0) > 0);
 	}
 	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial, parallel, or delayed rebuild? put into dynamic tree?
@@ -524,6 +547,8 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
+		//const char *cnames[2] = {"color0", "color1"};
+		//for (unsigned d = 0; d < 2; ++d) {if (s.is_setup()) s.add_uniform_color(cnames[d], ((bool(i->ix & 1) ^ bool(i->ix & 4)) ? RED : BLUE));}
 		assert(i->ix < tri_data.size());
 		tri_data[i->ix].render(s, is_shadow_pass, GL_TRIANGLES);
 	}
