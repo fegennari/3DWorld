@@ -12,7 +12,7 @@
 
 
 bool const NORMALIZE_TO_1 = 1;
-unsigned const NUM_BLOCKS = 4; // in x and y, must be a power of 2
+unsigned const NUM_BLOCKS = 4; // in x and y
 
 
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
@@ -67,6 +67,8 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 	vsz = vsz_;
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 	nx = nx_; ny = ny_; nz = nz_;
+	xblocks = 1+(nx-1)/NUM_BLOCKS; // ceil
+	yblocks = 1+(ny-1)/NUM_BLOCKS; // ceil
 	unsigned const tot_size(nx * ny * nz);
 	assert(tot_size > 0);
 	clear();
@@ -229,8 +231,7 @@ void voxel_manager::remove_unconnected_outside() { // check for voxels connected
 
 void voxel_model::remove_unconnected_outside_block(unsigned block_ix) {
 
-	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS);
-	unsigned const xbix(block_ix & (NUM_BLOCKS-1)), ybix(block_ix/NUM_BLOCKS);
+	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
 	remove_unconnected_outside_range(1, xbix*xblocks, ybix*yblocks, min(nx, (xbix+1)*xblocks), min(ny, (ybix+1)*yblocks));
 }
 
@@ -344,7 +345,6 @@ bool voxel_manager::point_inside_volume(point const &pos) const {
 unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 
 	assert(voxel_ix < size());
-	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS);
 	unsigned const y(voxel_ix/(nz*nx)), vxz(voxel_ix - y*nz*nx), x(vxz/nz), bx(x/xblocks), by(y/yblocks);
 	return by*NUM_BLOCKS + bx;
 }
@@ -381,8 +381,7 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 
 	assert(block_ix < tri_data.size() && block_ix < data_blocks.size());
 	assert(tri_data[block_ix].empty() && data_blocks[block_ix].cids.empty());
-	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS);
-	unsigned const xbix(block_ix & (NUM_BLOCKS-1)), ybix(block_ix/NUM_BLOCKS);
+	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
 	vector<triangle> triangles;
 	
 	for (unsigned y = ybix*yblocks; y < min(ny-1, (ybix+1)*yblocks); ++y) {
@@ -425,7 +424,6 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	if (val_at_center == 0.0) return 0; // legal?
 	RESET_TIME;
 	if (params.invert) val_at_center *= -1.0; // is this correct?
-	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS);
 	unsigned const num[3] = {nx, ny, nz};
 	unsigned bounds[3][2]; // {x,y,z} x {lo,hi}
 	std::set<unsigned> blocks_to_update;
@@ -501,7 +499,7 @@ void voxel_model::build(bool add_cobjs_) {
 	PRINT_TIME("  Determine Voxels Outside");
 	if (params.remove_unconnected) remove_unconnected_outside();
 	PRINT_TIME("  Remove Unconnected");
-	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS), tot_blocks(NUM_BLOCKS*NUM_BLOCKS);
+	unsigned const tot_blocks(NUM_BLOCKS*NUM_BLOCKS);
 	assert(pt_to_ix.empty() && tri_data.empty() && data_blocks.empty());
 	pt_to_ix.resize(tot_blocks);
 	data_blocks.resize(tot_blocks);

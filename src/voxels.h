@@ -47,11 +47,11 @@ public:
 // stored internally in yxz order
 template<typename V> class voxel_grid : public vector<V> {
 public:
-	unsigned nx, ny, nz;
+	unsigned nx, ny, nz, xblocks, yblocks;
 	vector3d vsz; // size of a voxel in x,y,z
 	point center, lo_pos;
 
-	voxel_grid() : nx(0), ny(0), nz(0), vsz(zero_vector) {}
+	voxel_grid() : nx(0), ny(0), nz(0), xblocks(0), yblocks(0), vsz(zero_vector) {}
 	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_);
 
 	void get_xyz(point const &p, int xyz[3]) const { // returns whether or not the point was inside the voxel volume
