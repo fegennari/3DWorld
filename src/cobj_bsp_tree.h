@@ -28,7 +28,7 @@ protected:
 		max_leaf_count = max(max_leaf_count, num);
 	}
 	bool check_for_leaf(unsigned num, unsigned skip_dims);
-	unsigned get_conservative_num_nodes(unsigned num) const {return 6*num/5;}
+	unsigned get_conservative_num_nodes(unsigned num) const {return (4*num/3 + 8);}
 
 	struct node_ix_mgr {
 		point const p1, p2;
@@ -78,14 +78,23 @@ public:
 template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 
 	coll_obj_group const &cobjs;
-	vector<unsigned> cixs, temp_bins[NUM];
+	vector<unsigned> cixs;
 	bool is_static, is_dynamic, occluders_only, moving_only, cubes_only;
+
+	struct per_thread_data {
+		vector<unsigned> temp_bins[NUM];
+		unsigned start_nix, end_nix, cur_nix;
+		per_thread_data(unsigned start, unsigned end) : start_nix(start), end_nix(end), cur_nix(start) {}
+		unsigned get_next_node_ix() const {return cur_nix;}
+		void increment_node_ix() {assert(cur_nix >= start_nix && cur_nix < end_nix); cur_nix++;}
+	};
 
 	void add_cobj(unsigned ix) {if (obj_ok(cobjs[ix])) cixs.push_back(ix);}
 	coll_obj const &get_cobj(unsigned ix) const {return cobjs[cixs[ix]];}
 	bool create_cixs();
 	void calc_node_bbox(tree_node &n) const;
-	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {assert(0);}
+	void build_tree_top_level_omp();
+	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd) {assert(0);}
 
 	bool obj_ok(coll_obj const &c) const {
 		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC) || (!is_static && !is_dynamic)) &&

@@ -13,6 +13,7 @@ float const OVERLAP_AMT      = 0.02;
 
 vector<unsigned> dynamic_ranges;
 
+extern bool mt_cobj_tree_build;
 extern int display_mode, frame_counter, cobj_counter, begin_motion;
 extern coll_obj_group coll_objects;
 extern vector<unsigned> falling_cobjs;
@@ -131,6 +132,7 @@ bool cobj_tree_base::node_ix_mgr::check_node(unsigned &nix) const {
 
 
 void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
+
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
 	calc_node_bbox(n);
@@ -329,13 +331,19 @@ template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
 	RESET_TIME;
 	clear();
 	if (!create_cixs()) return; // nothing to be done
-	nodes.reserve(get_conservative_num_nodes(cixs.size()));
-	nodes.push_back(tree_node(0, (unsigned)cixs.size()));
-	assert(nodes.size() == 1);
 	max_depth = max_leaf_count = num_leaf_nodes = 0;
-	build_tree(0, 0, 0);
+	nodes.resize(get_conservative_num_nodes(cixs.size()) + 64); // add 8 extra nodes for each of 8 top level splits
+	nodes[0] = tree_node(0, (unsigned)cixs.size());
+
+	if (mt_cobj_tree_build && cixs.size() > MAX_LEAF_SIZE) { // 2x faster build time, 10% slower traversal
+		build_tree_top_level_omp();
+	}
+	else {
+		per_thread_data ptd(1, nodes.size());
+		build_tree(0, 0, 0, ptd);
+		nodes.resize(ptd.get_next_node_ix());
+	}
 	nodes[0].next_node_id = (unsigned)nodes.size();
-	for (unsigned i = 0; i < NUM; ++i) {vector<unsigned>().swap(temp_bins[i]);}
 
 	if (verbose) {
 		PRINT_TIME(" Cobj Tree Create");
@@ -489,8 +497,69 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const 
 }
 
 
+template<unsigned NUM> void cobj_tree_t<NUM>::build_tree_top_level_omp() { // single octtree level
+
+	vector<unsigned> top_temp_bins[8];
+	unsigned const nix(0);
+	tree_node &n(nodes[nix]);
+	calc_node_bbox(n);
+	unsigned const num(n.end - n.start);
+	
+	// determine split values
+	point const sval(n.get_cube_center()); // center point
+	unsigned pos(n.start), bin_count[8] = {0};
+
+	// split in this dimension
+	for (unsigned i = n.start; i < n.end; ++i) {
+		point const center(get_cobj(i).get_cube_center());
+		unsigned bix(0);
+		UNROLL_3X(if (center[i_] > sval[i_]) bix |= (1 << i_);)
+		++bin_count[bix];
+		top_temp_bins[bix].push_back(cixs[i]);
+	}
+	for (unsigned d = 0; d < 8; ++d) {
+		for (unsigned i = 0; i < top_temp_bins[d].size(); ++i) {
+			cixs[pos++] = top_temp_bins[d][i];
+		}
+		top_temp_bins[d].clear();
+	}
+	assert(pos == n.end);
+
+	// create child nodes and call recursively
+	unsigned cur(n.start), cur_nix(1);
+	unsigned curs[8], cur_nixs[8];
+	
+	for (int bix = 0; bix < 8; ++bix) { // Note: this loop will invalidate the reference to 'n'
+		unsigned const count(bin_count[bix]);
+		if (count == 0) continue; // empty bin
+		curs[bix]     = cur;
+		cur_nixs[bix] = cur_nix;
+		cur     += count;
+		cur_nix += get_conservative_num_nodes(count);
+		assert(cur_nix <= nodes.size());
+	}
+
+	#pragma omp parallel for schedule(static,1)
+	for (int bix = 0; bix < 8; ++bix) { // Note: this loop will invalidate the reference to 'n'
+		unsigned const count(bin_count[bix]);
+		if (count == 0) continue; // empty bin
+		unsigned const kid(cur_nixs[bix]), alloc_sz(get_conservative_num_nodes(count)), end_nix(cur_nixs[bix] + alloc_sz);
+		nodes[kid] = tree_node(curs[bix], curs[bix]+count);
+		per_thread_data ptd(cur_nixs[bix]+1, end_nix);
+		build_tree(kid, ((count == num) ? 7 : 0), 1, ptd); // if all in one bin, make that bin a leaf
+		unsigned const next_kid(ptd.get_next_node_ix());
+		assert(next_kid <= end_nix);
+		if (next_kid < end_nix) nodes[next_kid].next_node_id = end_nix; // close the gap of unused nodes
+		nodes[kid].next_node_id = end_nix;
+	}
+	nodes.resize(cur_nix);
+	assert(cur == n.end);
+	n.start = n.end = 0; // branch node has no leaves
+}
+
+
 // BSP Tree/KD-Tree (left, right, mid) kids
-template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
+template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd) {
 	
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
@@ -518,19 +587,19 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 		if (vals[1] <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
 		if (vals[0] >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
 		++bin_count[bix];
-		temp_bins[bix].push_back(cixs[i]);
+		ptd.temp_bins[bix].push_back(cixs[i]);
 	}
 	for (unsigned d = 0; d < 3; ++d) {
-		for (unsigned i = 0; i < temp_bins[d].size(); ++i) {
-			cixs[pos++] = temp_bins[d][i];
+		for (unsigned i = 0; i < ptd.temp_bins[d].size(); ++i) {
+			cixs[pos++] = ptd.temp_bins[d][i];
 		}
-		temp_bins[d].resize(0);
+		ptd.temp_bins[d].resize(0);
 	}
 	assert(pos == n.end);
 
 	// check that dataset has been subdivided (not all in one bin)
 	if (bin_count[0] == num || bin_count[1] == num || bin_count[2] == num) {
-		build_tree(nix, (skip_dims | (1 << dim)), depth); // single bin, rebin with a different dim
+		build_tree(nix, (skip_dims | (1 << dim)), depth, ptd); // single bin, rebin with a different dim
 		return;
 	}
 
@@ -540,19 +609,20 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 	for (unsigned bix = 0; bix < 3; ++bix) { // Note: this loop will invalidate the reference to 'n'
 		unsigned const count(bin_count[bix]);
 		if (count == 0) continue; // empty bin
-		unsigned const kid((unsigned)nodes.size());
-		nodes.push_back(tree_node(cur, cur+count));
-		build_tree(kid, skip_dims, depth+1);
-		nodes[kid].next_node_id = (unsigned)nodes.size();
+		unsigned const kid(ptd.get_next_node_ix());
+		ptd.increment_node_ix();
+		nodes[kid] = tree_node(cur, cur+count);
+		build_tree(kid, skip_dims, depth+1, ptd);
+		nodes[kid].next_node_id = ptd.get_next_node_ix();
 		cur += count;
 	}
-	assert(cur == nodes[nix].end);
-	nodes[nix].start = nodes[nix].end = 0; // branch node has no leaves
+	assert(cur == n.end);
+	n.start = n.end = 0; // branch node has no leaves
 }
 
 
 // OctTree
-template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
+template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd) {
 
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
@@ -565,19 +635,19 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, un
 	point const sval(n.get_cube_center()); // center point
 	unsigned pos(n.start), bin_count[8] = {0};
 
-	// split in this dimension: use upper 3 bits of cixs for storing bin index
+	// split in this dimension
 	for (unsigned i = n.start; i < n.end; ++i) {
 		point const center(get_cobj(i).get_cube_center());
 		unsigned bix(0);
 		UNROLL_3X(if (center[i_] > sval[i_]) bix |= (1 << i_);)
 		++bin_count[bix];
-		temp_bins[bix].push_back(cixs[i]);
+		ptd.temp_bins[bix].push_back(cixs[i]);
 	}
 	for (unsigned d = 0; d < 8; ++d) {
-		for (unsigned i = 0; i < temp_bins[d].size(); ++i) {
-			cixs[pos++] = temp_bins[d][i];
+		for (unsigned i = 0; i < ptd.temp_bins[d].size(); ++i) {
+			cixs[pos++] = ptd.temp_bins[d][i];
 		}
-		temp_bins[d].resize(0);
+		ptd.temp_bins[d].resize(0);
 	}
 	assert(pos == n.end);
 
@@ -587,14 +657,15 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, un
 	for (unsigned bix = 0; bix < 8; ++bix) { // Note: this loop will invalidate the reference to 'n'
 		unsigned const count(bin_count[bix]);
 		if (count == 0) continue; // empty bin
-		unsigned const kid((unsigned)nodes.size());
-		nodes.push_back(tree_node(cur, cur+count));
-		build_tree(kid, ((count == num) ? 7 : 0), depth+1); // if all in one bin, make that bin a leaf
-		nodes[kid].next_node_id = (unsigned)nodes.size();
+		unsigned const kid(ptd.get_next_node_ix());
+		ptd.increment_node_ix();
+		nodes[kid] = tree_node(cur, cur+count);
+		build_tree(kid, ((count == num) ? 7 : 0), depth+1, ptd); // if all in one bin, make that bin a leaf
+		nodes[kid].next_node_id = ptd.get_next_node_ix();
 		cur += count;
 	}
-	assert(cur == nodes[nix].end);
-	nodes[nix].start = nodes[nix].end = 0; // branch node has no leaves
+	assert(cur == n.end);
+	n.start = n.end = 0; // branch node has no leaves
 }
 
 
