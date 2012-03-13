@@ -12,7 +12,7 @@
 
 
 bool const NORMALIZE_TO_1 = 1;
-unsigned const NUM_BLOCKS = 4; // in x and y
+unsigned const NUM_BLOCKS = 8; // in x and y
 
 
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;

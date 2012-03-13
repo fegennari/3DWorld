@@ -529,7 +529,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::build_tree_top_level_omp() { // si
 	unsigned cur(n.start), cur_nix(1);
 	unsigned curs[8], cur_nixs[8];
 	
-	for (int bix = 0; bix < 8; ++bix) { // Note: this loop will invalidate the reference to 'n'
+	for (int bix = 0; bix < 8; ++bix) {
 		unsigned const count(bin_count[bix]);
 		if (count == 0) continue; // empty bin
 		curs[bix]     = cur;
@@ -540,7 +540,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::build_tree_top_level_omp() { // si
 	}
 
 	#pragma omp parallel for schedule(static,1)
-	for (int bix = 0; bix < 8; ++bix) { // Note: this loop will invalidate the reference to 'n'
+	for (int bix = 0; bix < 8; ++bix) {
 		unsigned const count(bin_count[bix]);
 		if (count == 0) continue; // empty bin
 		unsigned const kid(cur_nixs[bix]), alloc_sz(get_conservative_num_nodes(count)), end_nix(cur_nixs[bix] + alloc_sz);
@@ -606,7 +606,7 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 	// create child nodes and call recursively
 	unsigned cur(n.start);
 
-	for (unsigned bix = 0; bix < 3; ++bix) { // Note: this loop will invalidate the reference to 'n'
+	for (unsigned bix = 0; bix < 3; ++bix) {
 		unsigned const count(bin_count[bix]);
 		if (count == 0) continue; // empty bin
 		unsigned const kid(ptd.get_next_node_ix());
@@ -654,7 +654,7 @@ template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, un
 	// create child nodes and call recursively
 	unsigned cur(n.start);
 
-	for (unsigned bix = 0; bix < 8; ++bix) { // Note: this loop will invalidate the reference to 'n'
+	for (unsigned bix = 0; bix < 8; ++bix) {
 		unsigned const count(bin_count[bix]);
 		if (count == 0) continue; // empty bin
 		unsigned const kid(ptd.get_next_node_ix());
