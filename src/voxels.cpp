@@ -452,10 +452,18 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				calc_outside_val(x, y, z);
 				was_updated = 1;
 			}
-			if (!was_updated) continue;
-			unsigned const block_x(x/xblocks), block_y(y/yblocks), block_ix(block_y*NUM_BLOCKS + block_x);
-			assert(block_ix < data_blocks.size());
-			blocks_to_update.insert(block_ix);
+			if (!was_updated) continue; // nothing else to do
+			// check adjacent voxels since we will need to update our neighbors at the boundaries
+			unsigned const bx1(max((int)x-1, 0        )/xblocks), by1(max((int)y-1, 0        )/yblocks);
+			unsigned const bx2(min((int)x+1, (int)nx-1)/xblocks), by2(min((int)y+1, (int)ny-1)/yblocks);
+
+			for (unsigned by = by1; by <= by2; ++by) {
+				for (unsigned bx = bx1; bx <= bx2; ++bx) {
+					unsigned const block_ix(by*NUM_BLOCKS + bx);
+					assert(block_ix < data_blocks.size());
+					blocks_to_update.insert(block_ix);
+				}
+			}
 		}
 	}
 	bool something_removed(0), something_added(0);
