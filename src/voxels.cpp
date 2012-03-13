@@ -16,6 +16,7 @@ unsigned const NUM_BLOCKS = 4; // in x and y, must be a power of 2
 
 
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
+extern int dynamic_mesh_scroll;
 extern coll_obj_group coll_objects;
 
 voxel_params_t global_voxel_params;
@@ -219,9 +220,10 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 }
 
 
-void voxel_manager::remove_unconnected_outside(bool keep_at_scene_edge) { // check for voxels connected to the mesh surface
+void voxel_manager::remove_unconnected_outside() { // check for voxels connected to the mesh surface
 
-	remove_unconnected_outside_range(keep_at_scene_edge, 0, 0, nx, ny);
+	bool const keep_at_edge(params.keep_at_scene_edge == 1 || (params.keep_at_scene_edge == 2 && dynamic_mesh_scroll));
+	remove_unconnected_outside_range(keep_at_edge, 0, 0, nx, ny);
 }
 
 
@@ -323,7 +325,7 @@ void voxel_manager::get_triangles(vector<triangle> &triangles) {
 
 	//RESET_TIME;
 	determine_voxels_outside();
-	if (params.remove_unconnected) remove_unconnected_outside(params.keep_at_scene_edge);
+	if (params.remove_unconnected) remove_unconnected_outside();
 	create_triangles(triangles);
 	//PRINT_TIME("Voxels to Triangles");
 }
@@ -497,7 +499,7 @@ void voxel_model::build(bool add_cobjs_) {
 	PRINT_TIME("  Atten at Top/Edges");
 	determine_voxels_outside();
 	PRINT_TIME("  Determine Voxels Outside");
-	if (params.remove_unconnected) remove_unconnected_outside(params.keep_at_scene_edge);
+	if (params.remove_unconnected) remove_unconnected_outside();
 	PRINT_TIME("  Remove Unconnected");
 	unsigned const xblocks(nx/NUM_BLOCKS), yblocks(ny/NUM_BLOCKS), tot_blocks(NUM_BLOCKS*NUM_BLOCKS);
 	assert(pt_to_ix.empty() && tri_data.empty() && data_blocks.empty());
@@ -635,7 +637,7 @@ bool parse_voxel_option(FILE *fp) {
 		if (!read_bool(fp, global_voxel_params.remove_unconnected)) voxel_file_err("remove_unconnected", error);
 	}
 	else if (str == "keep_at_scene_edge") {
-		if (!read_bool(fp, global_voxel_params.keep_at_scene_edge)) voxel_file_err("keep_at_scene_edge", error);
+		if (!read_uint(fp, global_voxel_params.keep_at_scene_edge) || global_voxel_params.keep_at_scene_edge > 2) voxel_file_err("keep_at_scene_edge", error);
 	}
 	else if (str == "remove_under_mesh") {
 		if (!read_bool(fp, global_voxel_params.remove_under_mesh)) voxel_file_err("remove_under_mesh", error);
