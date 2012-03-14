@@ -502,11 +502,18 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 	vector<unsigned> top_temp_bins[8];
 	unsigned const nix(0);
 	tree_node &n(nodes[nix]);
-	calc_node_bbox(n);
 	unsigned const num(n.end - n.start);
-	
-	// determine split values
-	point const sval(n.get_cube_center()); // center point
+
+	// calculate bbox and determine mean values
+	point sval(all_zeros);
+	n.copy_from(get_cobj(n.start));
+
+	for (unsigned i = n.start; i < n.end; ++i) {
+		coll_obj const &cobj(get_cobj(i));
+		n.union_with_cube(cobj);
+		sval += cobj.get_cube_center();
+	}
+	sval /= num;
 	unsigned pos(n.start), bin_count[8] = {0};
 
 	// split in this dimension

@@ -488,7 +488,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 		if (something_removed && params.remove_unconnected) remove_unconnected_outside_block(*i);
 		something_added |= (create_block(*i, 0) > 0);
 	}
-	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial, parallel, or delayed rebuild? put into dynamic tree?
+	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial or delayed rebuild?
 	PRINT_TIME("Update Voxel Region");
 	if (!(something_added || something_removed)) return 0; // nothing updated
 	scene_dlist_invalid = 1;
