@@ -273,7 +273,7 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 }
 
 
-template<unsigned NUM> bool cobj_tree_t<NUM>::create_cixs() {
+bool cobj_bvh_tree::create_cixs() {
 
 	if (moving_only) {
 		for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
@@ -315,7 +315,7 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::create_cixs() {
 }
 
 
-template<unsigned NUM> void cobj_tree_t<NUM>::calc_node_bbox(tree_node &n) const {
+void cobj_bvh_tree::calc_node_bbox(tree_node &n) const {
 
 	assert(n.start < n.end);
 	n.copy_from(get_cobj(n.start));
@@ -326,7 +326,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::calc_node_bbox(tree_node &n) const
 }
 
 
-template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
+void cobj_bvh_tree::add_cobjs(bool verbose) {
 
 	RESET_TIME;
 	clear();
@@ -335,7 +335,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
 	nodes.resize(get_conservative_num_nodes(cixs.size()) + 64); // add 8 extra nodes for each of 8 top level splits
 	nodes[0] = tree_node(0, (unsigned)cixs.size());
 
-	if (mt_cobj_tree_build && is_static && cixs.size() > MAX_LEAF_SIZE) { // 2x faster build time, 10% slower traversal
+	if (mt_cobj_tree_build && cixs.size() > 10000) { // 2x faster build time, 10% slower traversal
 		build_tree_top_level_omp();
 	}
 	else {
@@ -354,7 +354,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
 
 
 // test_alpha: 0 = allow any alpha value, 1 = require alpha = 1.0, 2 = get intersected cobj with max alpha, 3 = require alpha >= MIN_SHADOW_ALPHA
-template<unsigned NUM> bool cobj_tree_t<NUM>::check_coll_line(point const &p1, point const &p2, point &cpos,
+bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpos,
 	vector3d &cnorm, int &cindex, int ignore_cobj, bool exact, int test_alpha, bool skip_non_drawn) const
 {
 	cindex = -1;
@@ -394,7 +394,7 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::check_coll_line(point const &p1, p
 }
 
 
-template<unsigned NUM> void cobj_tree_t<NUM>::get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs,
+void cobj_bvh_tree::get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs,
 	int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const
 {
 	unsigned const num_nodes((unsigned)nodes.size());
@@ -423,7 +423,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_intersecting_cobjs(cube_t cons
 }
 
 
-template<unsigned NUM> bool cobj_tree_t<NUM>::is_cobj_contained(point const &p1, point const &p2, point const &viewer,
+bool cobj_bvh_tree::is_cobj_contained(point const &p1, point const &p2, point const &viewer,
 	point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const
 {
 	if (nodes.empty()) return 0;
@@ -448,7 +448,7 @@ template<unsigned NUM> bool cobj_tree_t<NUM>::is_cobj_contained(point const &p1,
 }
 
 
-template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_line_cobjs(point const &pos1, point const &pos2,
+void cobj_bvh_tree::get_coll_line_cobjs(point const &pos1, point const &pos2,
 	int ignore_cobj, vector<int> *cobjs, cobj_query_callback *cqc, bool occlude) const
 {
 	assert(cobjs || cqc);
@@ -473,7 +473,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_line_cobjs(point const &p
 
 
 // Note: actually, this only returns sphere intersection candidates
-template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const {
+void cobj_bvh_tree::get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const {
 
 	if (nodes.empty()) return;
 	unsigned const num_nodes((unsigned)nodes.size());
@@ -497,7 +497,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::get_coll_sphere_cobjs(point const 
 }
 
 
-template<unsigned NUM> void cobj_tree_t<NUM>::build_tree_top_level_omp() { // single octtree level
+void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 
 	vector<unsigned> top_temp_bins[8];
 	unsigned const nix(0);
@@ -558,8 +558,8 @@ template<unsigned NUM> void cobj_tree_t<NUM>::build_tree_top_level_omp() { // si
 }
 
 
-// BSP Tree/KD-Tree (left, right, mid) kids
-template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd) {
+// BVH (left, right, mid) kids
+void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd) {
 	
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
@@ -621,62 +621,14 @@ template <> void cobj_tree_t<3>::build_tree(unsigned nix, unsigned skip_dims, un
 }
 
 
-// OctTree
-template <> void cobj_tree_t<8>::build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd) {
-
-	assert(nix < nodes.size());
-	tree_node &n(nodes[nix]);
-	calc_node_bbox(n);
-	unsigned const num(n.end - n.start);
-	max_depth = max(max_depth, depth);
-	if (check_for_leaf(num, skip_dims)) return; // base case
-	
-	// determine split values
-	point const sval(n.get_cube_center()); // center point
-	unsigned pos(n.start), bin_count[8] = {0};
-
-	// split in this dimension
-	for (unsigned i = n.start; i < n.end; ++i) {
-		point const center(get_cobj(i).get_cube_center());
-		unsigned bix(0);
-		UNROLL_3X(if (center[i_] > sval[i_]) bix |= (1 << i_);)
-		++bin_count[bix];
-		ptd.temp_bins[bix].push_back(cixs[i]);
-	}
-	for (unsigned d = 0; d < 8; ++d) {
-		for (unsigned i = 0; i < ptd.temp_bins[d].size(); ++i) {
-			cixs[pos++] = ptd.temp_bins[d][i];
-		}
-		ptd.temp_bins[d].resize(0);
-	}
-	assert(pos == n.end);
-
-	// create child nodes and call recursively
-	unsigned cur(n.start);
-
-	for (unsigned bix = 0; bix < 8; ++bix) {
-		unsigned const count(bin_count[bix]);
-		if (count == 0) continue; // empty bin
-		unsigned const kid(ptd.get_next_node_ix());
-		ptd.increment_node_ix();
-		nodes[kid] = tree_node(cur, cur+count);
-		build_tree(kid, ((count == num) ? 7 : 0), depth+1, ptd); // if all in one bin, make that bin a leaf
-		nodes[kid].next_node_id = ptd.get_next_node_ix();
-		cur += count;
-	}
-	assert(cur == n.end);
-	n.start = n.end = 0; // branch node has no leaves
-}
-
-
-cobj_tree_type cobj_tree_static (coll_objects, 1, 0, 0, 0);
-cobj_tree_type cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
-cobj_tree_type cobj_tree_occlude(coll_objects, 1, 0, 1, 0);
-cobj_tree_type cobj_tree_moving (coll_objects, 1, 0, 0, 1);
+cobj_bvh_tree cobj_tree_static (coll_objects, 1, 0, 0, 0);
+cobj_bvh_tree cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
+cobj_bvh_tree cobj_tree_occlude(coll_objects, 1, 0, 1, 0);
+cobj_bvh_tree cobj_tree_moving (coll_objects, 1, 0, 0, 1);
 cobj_tree_tquads_t cobj_tree_triangles;
 
 
-cobj_tree_type &get_tree(bool dynamic) {
+cobj_bvh_tree &get_tree(bool dynamic) {
 	return (dynamic ? cobj_tree_dynamic : cobj_tree_static);
 }
 

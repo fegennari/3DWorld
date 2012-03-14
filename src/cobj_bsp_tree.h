@@ -74,15 +74,14 @@ public:
 };
 
 
-// 3: BSP Tree/KD-Tree, 8: OctTree
-template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
+class cobj_bvh_tree : public cobj_tree_base {
 
 	coll_obj_group const &cobjs;
 	vector<unsigned> cixs;
 	bool is_static, is_dynamic, occluders_only, moving_only, cubes_only;
 
 	struct per_thread_data {
-		vector<unsigned> temp_bins[NUM];
+		vector<unsigned> temp_bins[3];
 		unsigned start_nix, end_nix, cur_nix;
 		per_thread_data(unsigned start, unsigned end) : start_nix(start), end_nix(end), cur_nix(start) {}
 		unsigned get_next_node_ix() const {return cur_nix;}
@@ -94,7 +93,7 @@ template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 	bool create_cixs();
 	void calc_node_bbox(tree_node &n) const;
 	void build_tree_top_level_omp();
-	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd) {assert(0);}
+	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd);
 
 	bool obj_ok(coll_obj const &c) const {
 		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC) || (!is_static && !is_dynamic)) &&
@@ -102,7 +101,7 @@ template<unsigned NUM> class cobj_tree_t : public cobj_tree_base {
 	}
 
 public:
-	cobj_tree_t(coll_obj_group const &cobjs_, bool s, bool d, bool o, bool m, bool c=0)
+	cobj_bvh_tree(coll_obj_group const &cobjs_, bool s, bool d, bool o, bool m, bool c=0)
 		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), moving_only(m), cubes_only(c) {}
 
 	void clear() {
@@ -117,10 +116,6 @@ public:
 	void get_coll_line_cobjs(point const &pos1, point const &pos2, int ignore_cobj, vector<int> *cobjs, cobj_query_callback *cqc, bool occlude) const;
 	void get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const;
 };
-
-
-// 3: BSP Tree/KD-Tree, 8: Octtree
-typedef cobj_tree_t<3> cobj_tree_type;
 
 
 #endif // _COBJ_BSP_TREE_H_

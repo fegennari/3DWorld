@@ -734,7 +734,7 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 	RESET_TIME;
 	unsigned const ncobjs((unsigned)size());
 	unsigned merged(0);
-	cobj_tree_type cube_tree(*this, 0, 0, 0, 0, 1); // cubes only
+	cobj_bvh_tree cube_tree(*this, 0, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
 	vector<unsigned> cids;
 
@@ -774,7 +774,7 @@ void coll_obj_group::remove_overlapping_cubes() { // objects specified later are
 	if (!UNOVERLAP_COBJS || empty()) return;
 	RESET_TIME;
 	unsigned const ncobjs((unsigned)size());
-	cobj_tree_type cube_tree(*this, 0, 0, 0, 0, 1); // cubes only
+	cobj_bvh_tree cube_tree(*this, 0, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
 	vector<pair<unsigned, unsigned> > proc_order;
 		
