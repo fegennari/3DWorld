@@ -5,7 +5,7 @@ uniform sampler3D noise_tex;
 
 float procedural_eval(in vec3 pos) {
 	float val = 0.0;
-	vec3 tc = (pos + tex_eval_offset)*noise_scale;
+	vec3 tc = (pos.zxy + tex_eval_offset)*noise_scale;
 	val += 1.00*texture3D(noise_tex, 1.00*tc).r;
 	//val += 0.50*texture3D(noise_tex, 1.96*tc).r;
 	//val += 0.25*texture3D(noise_tex, 4.03*tc).r;
