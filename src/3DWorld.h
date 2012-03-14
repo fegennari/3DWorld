@@ -1939,7 +1939,7 @@ bool parse_voxel_option(FILE *fp);
 void render_voxel_data(bool shadow_pass);
 void free_voxel_context();
 bool point_inside_voxel_terrain(point const &pos);
-bool update_voxel_sphere_region(point const &center, float radius, float val_at_center);
+bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
 
 // function prototypes - screenshot (these are C functions)
 #ifdef ENABLE_JPEG

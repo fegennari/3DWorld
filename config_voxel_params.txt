@@ -2,6 +2,10 @@ voxel isolevel 0.0
 voxel elasticity 0.8
 voxel mag 1.0
 voxel freq 1.0
+voxel tex_scale 1.0
+voxel noise_scale 0.05
+voxel noise_freq 1.0
+voxel tex_mix_saturate 6.0
 voxel invert 0
 voxel make_closed_surface 1
 voxel remove_unconnected 1

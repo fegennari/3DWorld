@@ -7,12 +7,13 @@
 #include "3DWorld.h"
 #include "model3d.h"
 
+struct coll_tquad;
 
 
 struct voxel_params_t {
 
 	// generation parameters
-	float isolevel, elasticity, mag, freq, atten_thresh;
+	float isolevel, elasticity, mag, freq, atten_thresh, tex_scale, noise_scale, noise_freq, tex_mix_saturate;
 	bool make_closed_surface, invert, remove_unconnected, remove_under_mesh;
 	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom);
 	unsigned keep_at_scene_edge; // 0=don't keep, 1=always keep, 2=only when scrolling
@@ -24,23 +25,12 @@ struct voxel_params_t {
 	colorRGBA colors[2];
 	colorRGBA base_color;
 
-	voxel_params_t() : isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), make_closed_surface(0), invert(0),
-		remove_unconnected(0), remove_under_mesh(0), atten_at_edges(0), keep_at_scene_edge(0), geom_rseed(123), texture_rseed(321)
+	voxel_params_t() : isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), tex_scale(1.0), noise_scale(0.1),
+		noise_freq(1.0), tex_mix_saturate(5.0), make_closed_surface(0), invert(0), remove_unconnected(0), remove_under_mesh(0),
+		atten_at_edges(0), keep_at_scene_edge(0), geom_rseed(123), texture_rseed(321)
 	{
 			tids[0] = tids[1] = 0; colors[0] = colors[1] = base_color = WHITE;
 	}
-};
-
-
-class noise_texture_manager_t {
-
-	unsigned noise_tid, tsize;
-
-public:
-	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
-	void setup(unsigned size, int rseed=321, float mag=1.0, float freq=1.0, vector3d const &offset=zero_vector);
-	void bind_texture(unsigned tu_id) const;
-	void clear();
 };
 
 
@@ -118,7 +108,18 @@ public:
 };
 
 
-struct coll_tquad;
+class noise_texture_manager_t {
+
+	unsigned noise_tid, tsize;
+	voxel_manager voxels;
+
+public:
+	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
+	void setup(unsigned size, int rseed=321, float mag=1.0, float freq=1.0, vector3d const &offset=zero_vector);
+	void bind_texture(unsigned tu_id) const;
+	void clear();
+	float eval_at(point const &pos) const;
+};
 
 
 class voxel_model : public voxel_manager {
@@ -159,10 +160,11 @@ class voxel_model : public voxel_manager {
 public:
 	voxel_model() : add_cobjs(0) {}
 	void clear();
-	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center);
+	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
 	void build(bool add_cobjs_);
 	void render(bool is_shadow_pass);
 	void free_context();
+	float eval_noise_texture_at(point const &pos) const;
 };
 
 #endif

@@ -11,8 +11,9 @@
 #include "file_utils.h"
 
 
-bool const NORMALIZE_TO_1 = 1;
-unsigned const NUM_BLOCKS = 8; // in x and y
+bool const NORMALIZE_TO_1  = 1;
+unsigned const NUM_BLOCKS  = 8; // in x and y
+unsigned const NOISE_TSIZE = 64;
 
 
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
@@ -33,7 +34,7 @@ void noise_texture_manager_t::setup(unsigned size, int rseed, float mag, float f
 	clear();
 	tsize = size;
 	if (size == 0) return; // nothing else to do
-	voxel_manager voxels;
+	voxels.clear();
 	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros);
 	voxels.create_procedural(mag, freq, offset, 1, rseed, 654);
 	vector<unsigned char> data;
@@ -42,7 +43,7 @@ void noise_texture_manager_t::setup(unsigned size, int rseed, float mag, float f
 	for (unsigned i = 0; i < voxels.size(); ++i) {
 		data[i] = (unsigned char)(255*CLIP_TO_01(fabs(voxels[i]))); // use fabs() to convert from [-1,1] to [0,1]
 	}
-	noise_tid = create_3d_texture(tsize, tsize, tsize, 1, data, GL_LINEAR, GL_REPEAT);
+	noise_tid = create_3d_texture(tsize, tsize, tsize, 1, data, GL_LINEAR, GL_MIRRORED_REPEAT);
 }
 
 
@@ -59,6 +60,14 @@ void noise_texture_manager_t::clear() {
 
 	free_texture(noise_tid);
 	tsize = 0;
+}
+
+
+float noise_texture_manager_t::eval_at(point const &pos) const {
+
+	unsigned ix;
+	if (!voxels.get_ix(pos, ix)) return 0.0; // off the voxel grid
+	return voxels[ix];
 }
 
 
@@ -418,7 +427,7 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 
 
 // returns true if something was updated
-bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center) {
+bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments) {
 
 	assert(radius > 0.0);
 	if (val_at_center == 0.0) return 0; // legal?
@@ -474,16 +483,28 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	}
 	if (something_removed) purge_coll_freed(0); // unecessary?
 
-	// FIXME: convert to vector and use openmp?
+	// convert to vector and use openmp?
 	for (std::set<unsigned>::const_iterator i = blocks_to_update.begin(); i != blocks_to_update.end(); ++i) {
 		if (something_removed && params.remove_unconnected) remove_unconnected_outside_block(*i);
 		something_added |= (create_block(*i, 0) > 0);
 	}
 	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial, parallel, or delayed rebuild? put into dynamic tree?
-	bool const was_updated(something_added || something_removed);
-	scene_dlist_invalid |= was_updated;
 	PRINT_TIME("Update Voxel Region");
-	return was_updated;
+	if (!(something_added || something_removed)) return 0; // nothing updated
+	scene_dlist_invalid = 1;
+	if (num_fragments == 0) return 1;
+	float blend_val(fabs(eval_noise_texture_at(center)));
+	blend_val = min(max(params.tex_mix_saturate*(blend_val - 0.5), -0.5), 0.5) + 0.5;
+	colorRGBA color;
+	blend_color(color, params.colors[1], params.colors[0], blend_val, 1);
+	unsigned const tid(params.tids[blend_val > 0.5]);
+
+	for (unsigned o = 0; o < num_fragments; ++o) {
+		vector3d const velocity(signed_rand_vector(0.5));
+		point fpos(center + signed_rand_vector_spherical(radius));
+		gen_fragment(fpos, velocity, rand_uniform(1.0, 2.0), 0.5*rand_float(), color, tid, 1.0, shooter, 0);
+	}
+	return 1;
 }
 
 
@@ -524,13 +545,11 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	else if (!disable_shaders) {
 		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
-		float const tex_scale(1.0), noise_scale(0.05), tex_mix_saturate(8.0); // where does this come from?
-		unsigned const noise_tsize(64);
 		float const min_alpha(0.5);
-		noise_tex_gen.setup(noise_tsize, params.texture_rseed, 1.0, 1.0);
+		noise_tex_gen.setup(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
 		noise_tex_gen.bind_texture(5); // tu_id = 5
 		set_multitex(0);
-		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, tex_scale, noise_scale, tex_mix_saturate);
+		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
 		s.add_uniform_vector3d("tex_eval_offset", vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0));
 		const char *cnames[2] = {"color0", "color1"};
 		unsigned const tu_ids[2] = {0,8};
@@ -579,6 +598,22 @@ void voxel_model::free_context() {
 }
 
 
+float voxel_model::eval_noise_texture_at(point const &pos) const {
+	
+	point const spos((pos + vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0))*params.noise_scale);
+	point fpos;
+
+	for (unsigned i = 0; i < 3; ++i) {
+		int const ival((int)spos[i]);
+		fpos[i] = spos[i] - ival; // create fractional part
+		if (fpos[i] < 0.0) fpos[i] += 1.0; // make positive
+		if ((spos[i] < 0.0) ^ (ival & 1)) fpos[i] = 1.0 - fpos[i]; // apply mirroring
+		fpos[i] = fpos[i] - 0.5; // transform from [0,1] to [-0.5,0.5]
+	}
+	return noise_tex_gen.eval_at(fpos*NOISE_TSIZE);
+}
+
+
 void gen_voxel_landscape() {
 
 	RESET_TIME;
@@ -624,6 +659,18 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "elasticity") {
 		if (!read_float(fp, global_voxel_params.elasticity) || global_voxel_params.elasticity < 0.0) voxel_file_err("elasticity", error);
+	}
+	else if (str == "tex_scale") {
+		if (!read_float(fp, global_voxel_params.tex_scale)) voxel_file_err("tex_scale", error);
+	}
+	else if (str == "noise_scale") {
+		if (!read_float(fp, global_voxel_params.noise_scale)) voxel_file_err("noise_scale", error);
+	}
+	else if (str == "noise_freq") {
+		if (!read_float(fp, global_voxel_params.noise_freq)) voxel_file_err("noise_freq", error);
+	}
+	else if (str == "tex_mix_saturate") {
+		if (!read_float(fp, global_voxel_params.tex_mix_saturate)) voxel_file_err("tex_mix_saturate", error);
 	}
 	else if (str == "invert") {
 		if (!read_bool(fp, global_voxel_params.invert)) voxel_file_err("invert", error);
@@ -689,8 +736,8 @@ bool point_inside_voxel_terrain(point const &pos) {
 	return terrain_voxel_model.point_inside_volume(pos);
 }
 
-bool update_voxel_sphere_region(point const &center, float radius, float val_at_center) {
-	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center);
+bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments) {
+	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center, shooter, num_fragments);
 }
 
 
