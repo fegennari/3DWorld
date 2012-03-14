@@ -335,7 +335,7 @@ template<unsigned NUM> void cobj_tree_t<NUM>::add_cobjs(bool verbose) {
 	nodes.resize(get_conservative_num_nodes(cixs.size()) + 64); // add 8 extra nodes for each of 8 top level splits
 	nodes[0] = tree_node(0, (unsigned)cixs.size());
 
-	if (mt_cobj_tree_build && cixs.size() > MAX_LEAF_SIZE) { // 2x faster build time, 10% slower traversal
+	if (mt_cobj_tree_build && is_static && cixs.size() > MAX_LEAF_SIZE) { // 2x faster build time, 10% slower traversal
 		build_tree_top_level_omp();
 	}
 	else {
