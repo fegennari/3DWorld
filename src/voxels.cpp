@@ -440,8 +440,8 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 
 	for (unsigned d = 0; d < 3; ++d) {
-		bounds[d][0] = max(0,             int(floor(((center[d] - radius) - lo_pos[d])/vsz[d])));
-		bounds[d][1] = min((int)num[d]-1, int(ceil (((center[d] + radius) - lo_pos[d])/vsz[d])));
+		bounds[d][0] = max(0, min((int)num[d]-1, int(floor(((center[d] - radius) - lo_pos[d])/vsz[d]))));
+		bounds[d][1] = max(0, min((int)num[d]-1, int(ceil (((center[d] + radius) - lo_pos[d])/vsz[d]))));
 	}
 	for (unsigned y = bounds[1][0]; y <= bounds[1][1]; ++y) {
 		for (unsigned x = bounds[0][0]; x <= bounds[0][1]; ++x) {
