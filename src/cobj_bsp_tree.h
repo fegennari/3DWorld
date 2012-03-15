@@ -17,6 +17,7 @@ protected:
 		tree_node(unsigned s=0, unsigned e=0) : start(s), end(e), next_node_id(0) {
 			UNROLL_3X(d[i_][0] = d[i_][1] = 0.0;)
 		}
+		tree_node(unsigned s, unsigned e, cube_t const &cube) : cube_t(cube), start(s), end(e), next_node_id(0) {}
 		unsigned get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const;
 	};
 
