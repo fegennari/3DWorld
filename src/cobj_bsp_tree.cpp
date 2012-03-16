@@ -149,7 +149,7 @@ void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned d
 		return;
 	}
 	float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
-	unsigned pos(n.start), bin_count[3] = {0};
+	unsigned pos(n.start), bin_count[3];
 
 	// split in this dimension
 	for (unsigned i = n.start; i < n.end; ++i) {
@@ -159,13 +159,13 @@ void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned d
 		if (t.npts == 4) {vlo = min(vlo, t.pts[3][dim]); vhi = max(vhi, t.pts[3][dim]);}
 		if (vhi <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
 		if (vlo >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
-		++bin_count[bix];
 		temp_bins[bix].push_back(tquads[i]);
 	}
 	for (unsigned d = 0; d < 3; ++d) {
 		for (unsigned i = 0; i < temp_bins[d].size(); ++i) {
 			tquads[pos++] = temp_bins[d][i];
 		}
+		bin_count[d] = temp_bins[d].size();
 		temp_bins[d].resize(0);
 	}
 	assert(pos == n.end);
@@ -514,21 +514,18 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 		sval += cobj.get_cube_center();
 	}
 	sval /= num;
-	unsigned pos(n.start), bin_count[8] = {0};
+	unsigned pos(n.start);
 
 	// split in this dimension
 	for (unsigned i = n.start; i < n.end; ++i) {
 		point const center(get_cobj(i).get_cube_center());
 		unsigned bix(0);
 		UNROLL_3X(if (center[i_] > sval[i_]) bix |= (1 << i_);)
-		++bin_count[bix];
 		top_temp_bins[bix].push_back(cixs[i]);
 	}
 	for (unsigned d = 0; d < 8; ++d) {
-		for (unsigned i = 0; i < top_temp_bins[d].size(); ++i) {
-			cixs[pos++] = top_temp_bins[d][i];
-		}
-		top_temp_bins[d].clear();
+		memcpy(&cixs[pos], &top_temp_bins[d].front(), top_temp_bins[d].size()*sizeof(unsigned));
+		pos += top_temp_bins[d].size();
 	}
 	assert(pos == n.end);
 
@@ -537,7 +534,7 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 	unsigned curs[8], cur_nixs[8];
 	
 	for (int bix = 0; bix < 8; ++bix) {
-		unsigned const count(bin_count[bix]);
+		unsigned const count(top_temp_bins[bix].size());
 		if (count == 0) continue; // empty bin
 		curs[bix]     = cur;
 		cur_nixs[bix] = cur_nix;
@@ -548,7 +545,7 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 
 	#pragma omp parallel for schedule(static,1)
 	for (int bix = 0; bix < 8; ++bix) {
-		unsigned const count(bin_count[bix]);
+		unsigned const count(top_temp_bins[bix].size());
 		if (count == 0) continue; // empty bin
 		unsigned const kid(cur_nixs[bix]), alloc_sz(get_conservative_num_nodes(count)), end_nix(cur_nixs[bix] + alloc_sz);
 		nodes[kid] = tree_node(curs[bix], curs[bix]+count);
@@ -584,7 +581,7 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 		return;
 	}
 	float const sval_lo(sval+OVERLAP_AMT*max_sz), sval_hi(sval-OVERLAP_AMT*max_sz);
-	unsigned pos(n.start), bin_count[3] = {0};
+	unsigned pos(n.start), bin_count[3];
 
 	// split in this dimension: use upper 2 bits of cixs for storing bin index
 	for (unsigned i = n.start; i < n.end; ++i) {
@@ -593,13 +590,15 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 		assert(vals[0] <= vals[1]);
 		if (vals[1] <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
 		if (vals[0] >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
-		++bin_count[bix];
-		ptd.temp_bins[bix].push_back(cixs[i]);
+		if (bix == 0) cixs[pos++] = cixs[i]; else ptd.temp_bins[bix].push_back(cixs[i]);
 	}
-	for (unsigned d = 0; d < 3; ++d) {
+	bin_count[0] = (pos - n.start);
+
+	for (unsigned d = 1; d < 3; ++d) {
 		for (unsigned i = 0; i < ptd.temp_bins[d].size(); ++i) {
 			cixs[pos++] = ptd.temp_bins[d][i];
 		}
+		bin_count[d] = ptd.temp_bins[d].size();
 		ptd.temp_bins[d].resize(0);
 	}
 	assert(pos == n.end);
