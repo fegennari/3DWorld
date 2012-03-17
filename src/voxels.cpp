@@ -634,7 +634,9 @@ void gen_voxel_landscape() {
 	bool const add_cobjs(1);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
 	float const zlo(zbottom), zhi(max(ztop, zlo + Z_SCENE_SIZE)); // Note: does not include czmin/czmax range
-	vector3d const vsz(2.0*X_SCENE_SIZE/nx, 2.0*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
+	// slightly smaller than 2.0 to avoid z-fighting issues at the edge of the mesh/water
+	float const ssz_xy_mult(2.0*(1.0 - 0.1/(MESH_X_SIZE + MESH_Y_SIZE)));
+	vector3d const vsz(ssz_xy_mult*X_SCENE_SIZE/nx, ssz_xy_mult*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
 	point const center(0.0, 0.0, 0.5*(zlo + zhi));
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.set_params(global_voxel_params);
