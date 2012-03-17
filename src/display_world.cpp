@@ -880,6 +880,7 @@ void display(void) {
 			process_groups();
 			check_gl_error(12);
 			if (game_mode && b2down) fire_weapon();
+			proc_voxel_updates();
 			update_weapon_cobjs(); // and update cblade
 			if (TIMETEST) PRINT_TIME("3");
 			if (!camera_view) camera_shadow(camera);

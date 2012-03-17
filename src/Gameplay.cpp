@@ -49,7 +49,7 @@ team_info *teaminfo = NULL;
 vector<bbox> team_starts;
 
 
-extern bool player_near_fire;
+extern bool player_near_fire, create_voxel_landscape;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, spectate;
@@ -1239,7 +1239,8 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 			int const i(objg.choose_object());
 			objg.create_object_at(i, pos);
 			dwobject &obj(objg.get_obj(i));
-			obj.time     = o;
+			// we stagger the grenade lifetimes so they explode on consecutive frames, except when using the voxel landscape where that causes too many updates
+			obj.time     = (create_voxel_landscape ? 0 : o);
 			obj.velocity = gen_rand_vector(rand_uniform(8.0, 10.0), 2.0, PI_TWO);
 			obj.init_dir = signed_rand_vector_norm();
 			obj.source   = shooter;

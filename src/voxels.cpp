@@ -366,6 +366,7 @@ void voxel_model::clear() {
 	tri_data.clear();
 	data_blocks.clear();
 	pt_to_ix.clear();
+	modified_blocks.clear();
 	voxel_manager::clear();
 }
 
@@ -431,11 +432,10 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 
 	assert(radius > 0.0);
 	if (val_at_center == 0.0 || empty()) return 0;
-	RESET_TIME;
 	if (params.invert) val_at_center *= -1.0; // is this correct?
 	unsigned const num[3] = {nx, ny, nz};
 	unsigned bounds[3][2]; // {x,y,z} x {lo,hi}
-	std::set<unsigned> blocks_to_update_set;
+	std::set<unsigned> blocks_to_update;
 	float const dist_adjust(0.5*vsz.mag()); // single voxel diagonal half-width
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 	bool saw_inside(0), saw_outside(0);
@@ -475,14 +475,35 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				for (unsigned bx = bx1; bx <= bx2; ++bx) {
 					unsigned const block_ix(by*NUM_BLOCKS + bx);
 					assert(block_ix < data_blocks.size());
-					blocks_to_update_set.insert(block_ix);
+					blocks_to_update.insert(block_ix);
 				}
 			}
 		}
 	}
 	if (!saw_inside || !saw_outside) return 0; // nothing else to do
+	copy(blocks_to_update.begin(), blocks_to_update.end(), inserter(modified_blocks, modified_blocks.begin()));
+	if (num_fragments == 0) return 1;
+	float blend_val(fabs(eval_noise_texture_at(center)));
+	blend_val = min(max(params.tex_mix_saturate*(blend_val - 0.5), -0.5), 0.5) + 0.5;
+	colorRGBA color;
+	blend_color(color, params.colors[1], params.colors[0], blend_val, 1);
+	unsigned const tid(params.tids[blend_val > 0.5]);
+
+	for (unsigned o = 0; o < num_fragments; ++o) {
+		vector3d const velocity(signed_rand_vector(0.6));
+		point fpos(center + signed_rand_vector_spherical(radius));
+		gen_fragment(fpos, velocity, rand_uniform(1.0, 2.0), 0.5*rand_float(), color, tid, 1.0, shooter, 0);
+	}
+	return 1;
+}
+
+
+void voxel_model::proc_pending_updates() {
+
+	RESET_TIME;
 	bool something_removed(0), something_added(0);
-	vector<unsigned> blocks_to_update(blocks_to_update_set.begin(), blocks_to_update_set.end());
+	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
+	modified_blocks.clear();
 	
 	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
 		something_removed |= clear_block(blocks_to_update[i]);
@@ -495,22 +516,9 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 		something_added |= (create_block(blocks_to_update[i], 0) > 0);
 	}
 	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial or delayed rebuild?
-	PRINT_TIME("Update Voxel Region");
-	if (!(something_added || something_removed)) return 0; // nothing updated
+	if (!(something_added || something_removed)) return; // nothing updated
 	scene_dlist_invalid = 1;
-	if (num_fragments == 0) return 1;
-	float blend_val(fabs(eval_noise_texture_at(center)));
-	blend_val = min(max(params.tex_mix_saturate*(blend_val - 0.5), -0.5), 0.5) + 0.5;
-	colorRGBA color;
-	blend_color(color, params.colors[1], params.colors[0], blend_val, 1);
-	unsigned const tid(params.tids[blend_val > 0.5]);
-
-	for (unsigned o = 0; o < num_fragments; ++o) {
-		vector3d const velocity(signed_rand_vector(0.5));
-		point fpos(center + signed_rand_vector_spherical(radius));
-		gen_fragment(fpos, velocity, rand_uniform(1.0, 2.0), 0.5*rand_float(), color, tid, 1.0, shooter, 0);
-	}
-	return 1;
+	PRINT_TIME("Process Voxel Updates");
 }
 
 
@@ -744,6 +752,10 @@ bool point_inside_voxel_terrain(point const &pos) {
 
 bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments) {
 	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center, shooter, num_fragments);
+}
+
+void proc_voxel_updates() {
+	terrain_voxel_model.proc_pending_updates();
 }
 
 
