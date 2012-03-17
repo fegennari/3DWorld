@@ -332,10 +332,11 @@ void cobj_bvh_tree::add_cobjs(bool verbose) {
 	clear();
 	if (!create_cixs()) return; // nothing to be done
 	max_depth = max_leaf_count = num_leaf_nodes = 0;
-	nodes.resize(get_conservative_num_nodes(cixs.size()) + 64); // add 8 extra nodes for each of 8 top level splits
+	bool const do_mt_build(mt_cobj_tree_build && cixs.size() > 10000);
+	nodes.resize(get_conservative_num_nodes(cixs.size()) + 64*do_mt_build); // add 8 extra nodes for each of 8 top level splits
 	nodes[0] = tree_node(0, (unsigned)cixs.size());
 
-	if (mt_cobj_tree_build && cixs.size() > 10000) { // 2x faster build time, 10% slower traversal
+	if (do_mt_build) { // 2x faster build time, 10% slower traversal
 		build_tree_top_level_omp();
 	}
 	else {

@@ -430,7 +430,7 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments) {
 
 	assert(radius > 0.0);
-	if (val_at_center == 0.0) return 0; // legal?
+	if (val_at_center == 0.0 || empty()) return 0;
 	RESET_TIME;
 	if (params.invert) val_at_center *= -1.0; // is this correct?
 	unsigned const num[3] = {nx, ny, nz};
@@ -438,6 +438,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	std::set<unsigned> blocks_to_update;
 	float const dist_adjust(0.5*vsz.mag()); // single voxel diagonal half-width
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
+	bool saw_inside(0), saw_outside(0);
 
 	for (unsigned d = 0; d < 3; ++d) {
 		bounds[d][0] = max(0, min((int)num[d]-1, int(floor(((center[d] - radius) - lo_pos[d])/vsz[d]))));
@@ -448,7 +449,9 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 			bool was_updated(0);
 
 			for (unsigned z = bounds[2][0]; z <= bounds[2][1]; ++z) {
-				float const dist(max(0.0f, (p2p_dist(center, get_pt_at(x, y, z)) - dist_adjust)));
+				point const pos(get_pt_at(x, y, z));
+				if (is_under_mesh(pos)) continue;
+				float const dist(max(0.0f, (p2p_dist(center, pos) - dist_adjust)));
 				if (dist >= radius) continue; // too far
 				// update voxel values, linear falloff with distance from center (ending at 0.0 at radius)
 				float &val(get_ref(x, y, z));
@@ -460,8 +463,10 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				if (params.atten_at_edges == 2) atten_top_val (x, y, z, atten_thresh);
 				calc_outside_val(x, y, z);
 				was_updated = 1;
+				((val      < params.isolevel) ? saw_outside : saw_inside) = 1;
+				((prev_val < params.isolevel) ? saw_outside : saw_inside) = 1;
 			}
-			if (!was_updated) continue; // nothing else to do
+			if (!was_updated) continue;
 			// check adjacent voxels since we will need to update our neighbors at the boundaries
 			unsigned const bx1(max((int)x-1, 0        )/xblocks), by1(max((int)y-1, 0        )/yblocks);
 			unsigned const bx2(min((int)x+1, (int)nx-1)/xblocks), by2(min((int)y+1, (int)ny-1)/yblocks);
@@ -475,6 +480,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 			}
 		}
 	}
+	if (!saw_inside || !saw_outside) return 0; // nothing else to do
 	bool something_removed(0), something_added(0);
 	
 	// FIXME: generate the new dataset before clearning the old one and check to see if something changed?
@@ -575,7 +581,7 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
 		//const char *cnames[2] = {"color0", "color1"};
-		//for (unsigned d = 0; d < 2; ++d) {if (s.is_setup()) s.add_uniform_color(cnames[d], ((bool(i->ix & 1) ^ bool(i->ix & 4)) ? RED : BLUE));}
+		//for (unsigned d = 0; d < 2; ++d) {if (s.is_setup()) s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & 4) != 0)) ? RED : BLUE));}
 		assert(i->ix < tri_data.size());
 		tri_data[i->ix].render(s, is_shadow_pass, GL_TRIANGLES);
 	}
