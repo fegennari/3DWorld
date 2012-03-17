@@ -46,7 +46,7 @@ extern bool clear_landscape_vbo, create_voxel_landscape;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
-extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin;
+extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin, model_czmin, model_czmax;
 extern point cpos2, orig_camera, orig_cdir;
 extern unsigned init_item_counts[];
 extern obj_type object_types[];
@@ -702,6 +702,8 @@ void free_all_coll_objects() {
 		}
 	}
 	purge_coll_freed(1);
+	czmin = model_czmin; // reset zmin/zmax to original values before cobjs were added
+	czmax = model_czmax;
 }
 
 
@@ -1051,8 +1053,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					}
 				}
 				else if (use_model3d) {
-					czmin = min(czmin, model_bbox.d[2][0]);
-					czmax = max(czmax, model_bbox.d[2][1]);
+					model_czmin = min(czmin, model_bbox.d[2][0]);
+					model_czmax = max(czmax, model_bbox.d[2][1]);
+					czmin = min(czmin, model_czmin);
+					czmax = max(czmax, model_czmax);
 				}
 				PRINT_TIME("Obj File Load/Process");
 				break;

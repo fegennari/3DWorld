@@ -196,14 +196,15 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 		lmcell const *const vlm(lmap_manager.vlmap[y][x]);
 		if (vlm == NULL && !full_update) continue; // x/y pairs that get into here should also be constant
 		unsigned const off(zsize*(y*MESH_X_SIZE + x));
-		float const zthresh((!(display_mode & 0x01) || is_mesh_disabled(x, y)) ? czmin : mesh_height[y][x]);
+		bool const check_z_thresh((display_mode & 0x01) && !is_mesh_disabled(x, y));
+		float const mh(mesh_height[y][x]);
 
 		for (unsigned z = 0; z < zsize; ++z) {
 			unsigned const off2(ncomp*(off + z));
 			lmcell const &lmc((vlm == NULL) ? default_lmc : vlm[z]);
 
 			if (full_update || indir_lighting_updated) {
-				if (get_zval(z+1) < zthresh) { // adjust by one because GPU will interpolate the texel
+				if (check_z_thresh && get_zval(z+1) < mh) { // adjust by one because GPU will interpolate the texel
 					UNROLL_3X(data[off2+i_] = 0;)
 				}
 				else {
@@ -254,7 +255,6 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 		last_cur_diffuse = cur_diffuse;
 	}
 	if (!full_update && !could_have_smoke && !indir_lighting_updated && !lighting_changed) return 0; // return 1?
-
 	static int cur_block(0);
 	unsigned const skipval(could_have_smoke ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP);
 	unsigned const block_size(MESH_Y_SIZE/skipval);
