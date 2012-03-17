@@ -473,15 +473,6 @@ inline bool is_over_mesh(point const &pos) {
 }
 
 
-inline void player_clip_to_scene(point &pos) {
-
-	if (world_mode != WMODE_INF_TERRAIN) { // make sure object is over simulation region
-		pos.x = max(min(pos.x, (X_SCENE_SIZE - DX_VAL)), -X_SCENE_SIZE);
-		pos.y = max(min(pos.y, (Y_SCENE_SIZE - DY_VAL)), -Y_SCENE_SIZE);
-	}
-}
-
-
 inline bool check_line_clip(point const &v1, point const &v2, float const d[3][2]) {
 
 	float tmin, tmax;

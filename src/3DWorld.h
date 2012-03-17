@@ -1541,6 +1541,7 @@ void auto_advance_time();
 // function prototypes - ai
 void advance_smiley(dwobject &obj, int smiley_id);
 void shift_player_state(vector3d const &vd, int smiley_id);
+void player_clip_to_scene(point &pos);
 void smiley_action(int smiley_id);
 
 // function prototypes - matrix

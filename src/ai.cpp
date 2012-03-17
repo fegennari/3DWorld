@@ -1051,6 +1051,16 @@ void shift_player_state(vector3d const &vd, int smiley_id) {
 }
 
 
+void player_clip_to_scene(point &pos) {
+
+	if (world_mode != WMODE_INF_TERRAIN) { // make sure object is over simulation region
+		float const dist(min(0.2*HALF_DXY, 0.2*CAMERA_RADIUS)); // distance from the exact scene edge the player can get in mesh grid units
+		pos.x = max(min(pos.x, (X_SCENE_SIZE - DX_VAL - dist)), (-X_SCENE_SIZE + dist));
+		pos.y = max(min(pos.y, (Y_SCENE_SIZE - DY_VAL - dist)), (-Y_SCENE_SIZE + dist));
+	}
+}
+
+
 void add_damage_to_smiley_texture(vector3d const &dir, float size, int smiley_id, int type) {
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
