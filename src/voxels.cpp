@@ -435,7 +435,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	if (params.invert) val_at_center *= -1.0; // is this correct?
 	unsigned const num[3] = {nx, ny, nz};
 	unsigned bounds[3][2]; // {x,y,z} x {lo,hi}
-	std::set<unsigned> blocks_to_update;
+	std::set<unsigned> blocks_to_update_set;
 	float const dist_adjust(0.5*vsz.mag()); // single voxel diagonal half-width
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 	bool saw_inside(0), saw_outside(0);
@@ -475,24 +475,24 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				for (unsigned bx = bx1; bx <= bx2; ++bx) {
 					unsigned const block_ix(by*NUM_BLOCKS + bx);
 					assert(block_ix < data_blocks.size());
-					blocks_to_update.insert(block_ix);
+					blocks_to_update_set.insert(block_ix);
 				}
 			}
 		}
 	}
 	if (!saw_inside || !saw_outside) return 0; // nothing else to do
 	bool something_removed(0), something_added(0);
+	vector<unsigned> blocks_to_update(blocks_to_update_set.begin(), blocks_to_update_set.end());
 	
-	// FIXME: generate the new dataset before clearning the old one and check to see if something changed?
-	for (std::set<unsigned>::const_iterator i = blocks_to_update.begin(); i != blocks_to_update.end(); ++i) {
-		something_removed |= clear_block(*i);
+	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
+		something_removed |= clear_block(blocks_to_update[i]);
 	}
 	if (something_removed) purge_coll_freed(0); // unecessary?
 
-	// convert to vector and use openmp?
-	for (std::set<unsigned>::const_iterator i = blocks_to_update.begin(); i != blocks_to_update.end(); ++i) {
-		if (something_removed && params.remove_unconnected) remove_unconnected_outside_block(*i);
-		something_added |= (create_block(*i, 0) > 0);
+	#pragma omp parallel for schedule(static,1)
+	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
+		if (something_removed && params.remove_unconnected) remove_unconnected_outside_block(blocks_to_update[i]);
+		something_added |= (create_block(blocks_to_update[i], 0) > 0);
 	}
 	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial or delayed rebuild?
 	PRINT_TIME("Update Voxel Region");
