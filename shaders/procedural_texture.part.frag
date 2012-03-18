@@ -5,6 +5,7 @@ uniform sampler3D noise_tex;
 
 float procedural_eval(in vec3 pos) {
 	float val = 0.0;
+	//pos += 8.0*texture3D(noise_tex, 0.004*pos).r; // warp to add veins
 	vec3 tc = (pos + tex_eval_offset).zxy*noise_scale;
 	val += 1.00*texture3D(noise_tex, 1.00*tc).r;
 	//val += 0.50*texture3D(noise_tex, 1.96*tc).r;

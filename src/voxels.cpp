@@ -17,7 +17,7 @@ unsigned const NOISE_TSIZE = 64;
 
 
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
-extern int dynamic_mesh_scroll;
+extern int dynamic_mesh_scroll, rand_gen_index;
 extern coll_obj_group coll_objects;
 
 voxel_params_t global_voxel_params;
@@ -36,7 +36,7 @@ void noise_texture_manager_t::setup(unsigned size, int rseed, float mag, float f
 	if (size == 0) return; // nothing else to do
 	voxels.clear();
 	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros);
-	voxels.create_procedural(mag, freq, offset, 1, rseed, 654);
+	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index);
 	vector<unsigned char> data;
 	data.resize(voxels.size());
 
@@ -100,7 +100,13 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	for (int y = 0; y < (int)ny; ++y) { // generate voxel values
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
+#if 1
 				float val(ngen.get_val(x, y, z, xyz_vals));
+#else
+				point pos(get_pt_at(x, y, z));
+				pos += 20.0*fabs(ngen.get_val(0.01*pos))*vector3d(1,1,1); // warp
+				float val(ngen.get_val(pos));
+#endif
 				if (normalize_to_1) val = max(-1.0f, min(1.0f, val));
 				set(x, y, z, val); // scale value?
 			}
@@ -643,7 +649,7 @@ void gen_voxel_landscape() {
 	terrain_voxel_model.clear();
 	terrain_voxel_model.init(nx, ny, nz, vsz, center);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
-		NORMALIZE_TO_1, global_voxel_params.geom_rseed, 456);
+		NORMALIZE_TO_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
 	PRINT_TIME(" Voxel Gen");
 	terrain_voxel_model.build(add_cobjs);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");

@@ -1,4 +1,4 @@
-voxel isolevel 0.0
+voxel isolevel 0.0 # [-1,1], higher is more open space
 voxel elasticity 0.8
 voxel mag 1.0
 voxel freq 1.0
