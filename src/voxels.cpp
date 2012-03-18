@@ -639,7 +639,8 @@ void gen_voxel_landscape() {
 	RESET_TIME;
 	bool const add_cobjs(1);
 	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
-	float const zlo(zbottom), zhi(max(ztop, zlo + Z_SCENE_SIZE)); // Note: does not include czmin/czmax range
+	//float const zlo(zbottom), zhi(max(ztop, zlo + Z_SCENE_SIZE)); // Note: does not include czmin/czmax range
+	float const zlo(zbottom), zhi(min(czmin, zbottom) + Z_SCENE_SIZE); // Note: matches zhi of 3D volume textures/matrices for lighting
 	// slightly smaller than 2.0 to avoid z-fighting issues at the edge of the mesh/water
 	float const ssz_xy_mult(2.0*(1.0 - 0.1/(MESH_X_SIZE + MESH_Y_SIZE)));
 	vector3d const vsz(ssz_xy_mult*X_SCENE_SIZE/nx, ssz_xy_mult*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
