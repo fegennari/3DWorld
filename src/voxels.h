@@ -42,7 +42,8 @@ public:
 	point center, lo_pos;
 
 	voxel_grid() : nx(0), ny(0), nz(0), xblocks(0), yblocks(0), vsz(zero_vector) {}
-	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_);
+	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V default_val);
+	bool is_valid_range(int i[3]) const {return (i[0] >= 0 && i[1] >= 0 && i[2] >= 0 && i[0] < (int)nx && i[1] < (int)ny && i[2] < (int)nz);}
 
 	void get_xyz(point const &p, int xyz[3]) const { // returns whether or not the point was inside the voxel volume
 		UNROLL_3X(xyz[i_] = int((p[i_] - lo_pos[i_])/vsz[i_]);); // convert to voxel space
@@ -50,7 +51,7 @@ public:
 	bool get_ix(point const &p, unsigned &ix) const { // returns whether or not the point was inside the voxel volume
 		int i[3]; // x,y,z
 		get_xyz(p, i);
-		if (i[0] < 0 || i[1] < 0 || i[2] < 0 || i[0] >= (int)nx || i[1] >= (int)ny || i[2] >= (int)nz) return 0;
+		if (!is_valid_range(i)) return 0;
 		ix = i[2] + (i[0] + i[1]*nx)*nz;
 		return 1;
 	}
@@ -82,6 +83,8 @@ typedef voxel_grid<float> float_voxel_grid;
 class voxel_manager : public float_voxel_grid {
 
 	voxel_grid<unsigned char> outside;
+	voxel_grid<float> ao_lighting;
+	vector<unsigned> first_zval_above_mesh;
 
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 
@@ -93,10 +96,11 @@ protected:
 	void calc_outside_val(unsigned x, unsigned y, unsigned z);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2);
 	void get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z) const;
+	void calc_ao_lighting();
 
 public:
 	void set_params(voxel_params_t const &p) {params = p;}
-	void clear() {outside.clear(); float_voxel_grid::clear();}
+	void clear();
 	void create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2);
 	void atten_at_edges(float val);
 	void atten_at_top_only(float val);
@@ -105,6 +109,7 @@ public:
 	void create_triangles(vector<triangle> &triangles) const;
 	void get_triangles(vector<triangle> &triangles);
 	bool point_inside_volume(point const &pos) const;
+	float get_ao_lighting_val(point const &pos) const;
 };
 
 
@@ -163,7 +168,6 @@ public:
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
 	void proc_pending_updates();
-	void calc_ao_lighting();
 	void build(bool add_cobjs_);
 	void render(bool is_shadow_pass);
 	void free_context();

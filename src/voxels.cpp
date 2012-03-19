@@ -17,7 +17,7 @@ unsigned const NOISE_TSIZE = 64;
 
 
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
-extern int dynamic_mesh_scroll, rand_gen_index;
+extern int dynamic_mesh_scroll, rand_gen_index, scrolling;
 extern coll_obj_group coll_objects;
 
 voxel_params_t global_voxel_params;
@@ -35,7 +35,7 @@ void noise_texture_manager_t::setup(unsigned size, int rseed, float mag, float f
 	tsize = size;
 	if (size == 0) return; // nothing else to do
 	voxels.clear();
-	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros);
+	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros, 0.0);
 	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index);
 	vector<unsigned char> data;
 	data.resize(voxels.size());
@@ -71,7 +71,7 @@ float noise_texture_manager_t::eval_at(point const &pos) const {
 }
 
 
-template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_) {
+template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V default_val) {
 
 	vsz = vsz_;
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
@@ -81,9 +81,18 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 	unsigned const tot_size(nx * ny * nz);
 	assert(tot_size > 0);
 	clear();
-	resize(tot_size);
+	resize(tot_size, default_val);
 	center = center_;
 	lo_pos = center - 0.5*point(nx*vsz.x, ny*vsz.y, nz*vsz.z);
+}
+
+
+void voxel_manager::clear() {
+	
+	outside.clear();
+	ao_lighting.clear();
+	first_zval_above_mesh.clear();
+	float_voxel_grid::clear();
 }
 
 
@@ -173,16 +182,14 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigne
 	point pts[8]; // corner points
 	unsigned cix(0);
 	bool all_under_mesh(params.remove_under_mesh);
+	assert(first_zval_above_mesh.size() == nx*ny);
 
 	for (unsigned yhi = 0; yhi < 2; ++yhi) {
 		for (unsigned xhi = 0; xhi < 2; ++xhi) {
 			unsigned const xx(x+xhi), yy(y+yhi);
 			float const xval(xx*vsz.x + lo_pos.x), yval(yy*vsz.y + lo_pos.y);
-
-			if (all_under_mesh) {
-				int const xpos(get_xpos(xval)), ypos(get_xpos(yval));
-				all_under_mesh = point_outside_mesh(xpos, ypos) ? 0 : (((z+1)*vsz.z + lo_pos.z) < mesh_height[ypos][xpos]);
-			}
+			if (all_under_mesh) all_under_mesh = (z < first_zval_above_mesh[yy*nx + xx]);
+			
 			for (unsigned zhi = 0; zhi < 2; ++zhi) {
 				unsigned const zz(z+zhi), vix((xhi^yhi) + 2*yhi + 4*zhi);
 				unsigned char const outside_val(outside.get(xx, yy, zz));
@@ -225,13 +232,18 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
-	outside.init(nx, ny, nz, vsz, center);
+	outside.init(nx, ny, nz, vsz, center, 0);
+	first_zval_above_mesh.resize(nx*ny, 0);
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
 				calc_outside_val(x, y, z);
 			}
+			point const pos(get_pt_at(x, y, 0));
+			int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
+			unsigned const zix(point_outside_mesh(xpos, ypos) ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
+			first_zval_above_mesh[y*nx + x] = zix;
 		}
 	}
 }
@@ -349,11 +361,21 @@ void voxel_manager::get_triangles(vector<triangle> &triangles) {
 
 bool voxel_manager::point_inside_volume(point const &pos) const {
 
-	if (empty()) return 0;
+	if (outside.empty()) return 0;
 	unsigned ix(0);
 	if (!outside.get_ix(pos, ix)) return 0; // off the voxel grid
 	assert(ix < outside.size());
 	return ((outside[ix]&3) == 0);
+}
+
+
+float voxel_manager::get_ao_lighting_val(point const &pos) const {
+
+	if (ao_lighting.empty()) return 1.0;
+	unsigned ix(0);
+	if (!ao_lighting.get_ix(pos, ix)) return 1.0; // off the voxel grid
+	assert(ix < ao_lighting.size());
+	return ao_lighting[ix];
 }
 
 
@@ -431,24 +453,75 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 			data_blocks[block_ix].cids.push_back(cindex);
 		}
 	}
+	// FIXME: update ao_lighting
 	return triangles.size();
 }
 
 
-void voxel_model::calc_ao_lighting() {
+struct step_dir_t {
+	int dir[3];
+	float weight;
+	step_dir_t(int x, int y, int z) {dir[0] = x; dir[1] = y; dir[2] = z; weight = sqrt(float(x*x + y*y + z*z));}
+};
+
+
+void voxel_manager::calc_ao_lighting() {
 
 	if (empty()) return; // nothing to do
+	unsigned const MAX_STEPS(32);
+	float const weight_scale(3.0); // generally >= 2.0
+	float const atten_power (0.7); // generally <= 1.0
+	float const inv_max_steps(1.0/MAX_STEPS);
+	ao_lighting.init(nx, ny, nz, vsz, center, 1.0);
+	if (scrolling) return; // too slow for scrolling, left at all 1.0 for max light
+	vector<step_dir_t> dirs;
+	float norm(0.0);
 
-	for (int y = 0; y < MESH_Y_SIZE; ++y) {
-		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			float const mh(mesh_height[y][x]);
-
-			for (int z = 0; z < MESH_SIZE[2]; ++z) {
-				if (get_zval(z+1) < mh) continue; // under mesh
-				// FIXME - write
+	for (int y = -1; y <= 1; ++y) {
+		for (int x = -1; x <= 1; ++x) {
+			for (int z = -1; z <= 1; ++z) {
+				if (x == 0 && y == 0 && z == 0) continue;
+				dirs.push_back(step_dir_t(x, y, z));
+				norm += dirs.back().weight;
 			}
 		}
 	}
+	assert(!dirs.empty() && norm > 0.0);
+
+	for (vector<step_dir_t>::iterator i = dirs.begin(); i != dirs.end(); ++i) {
+		i->weight *= weight_scale/norm;
+	}
+	#pragma omp parallel for schedule(static,1)
+	for (int y = 0; y < (int)ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			for (unsigned z = 0; z < nz; ++z) {
+				point const pos(ao_lighting.get_pt_at(x, y, z));
+				if (!is_over_mesh(pos)) continue;
+				if (pos.z + DZ_VAL < interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1)) continue;
+				float val(0.0);
+				
+				for (vector<step_dir_t>::const_iterator i = dirs.begin(); i != dirs.end(); ++i) {
+					float cur_val(1.0);
+					int cur[3] = {x, y, z};
+					// bias to pos side by 1 unit for positive steps to help compensate for grid point vs. grid center alignments
+					UNROLL_3X(if (i->dir[i_] > 0) cur[i_] += 1;);
+
+					for (unsigned s = 0; s < MAX_STEPS; ++s) { // take steps in this direction
+						UNROLL_3X(cur[i_] += i->dir[i_];); // increment first to skip the current voxel
+						if (!is_valid_range(cur)) break; // stepped off the volume
+						
+						if (outside.get(cur[0], cur[1], cur[2]) == 0 || cur[2] < (int)first_zval_above_mesh[cur[1]*nx + cur[0]]) {
+							cur_val = s*inv_max_steps;
+							break; // voxel known to be inside the volume or under the mesh
+						}
+					}
+					val += cur_val*i->weight;
+					if (val >= 1.0) break;
+				}
+				ao_lighting.set(x, y, z, CLIP_TO_01(pow(val, atten_power)));
+			} // for z
+		} // for x
+	} // for y
 }
 
 
@@ -671,7 +744,7 @@ void gen_voxel_landscape() {
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.set_params(global_voxel_params);
 	terrain_voxel_model.clear();
-	terrain_voxel_model.init(nx, ny, nz, vsz, center);
+	terrain_voxel_model.init(nx, ny, nz, vsz, center, 0.0);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
 		NORMALIZE_TO_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
 	PRINT_TIME(" Voxel Gen");
@@ -780,6 +853,10 @@ void free_voxel_context() {
 
 bool point_inside_voxel_terrain(point const &pos) {
 	return terrain_voxel_model.point_inside_volume(pos);
+}
+
+float get_voxel_terrain_ao_lighting_val(point const &pos) {
+	return terrain_voxel_model.get_ao_lighting_val(pos);
 }
 
 bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments) {

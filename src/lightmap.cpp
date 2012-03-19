@@ -349,7 +349,7 @@ void reset_flow_cache() {
 }
 
 
-void lmcell::get_final_color(colorRGB &color, float max_indir) const {
+void lmcell::get_final_color(colorRGB &color, float max_indir, float indir_scale) const {
 
 	float const max_s(max(sc[0], max(sc[1], sc[2])));
 	float const max_g(max(gc[0], max(gc[1], gc[2])));
@@ -358,7 +358,7 @@ void lmcell::get_final_color(colorRGB &color, float max_indir) const {
 
 	UNROLL_3X(float indir_term(sv_scaled*sc[i_]*cur_ambient[i_] + gv_scaled*gc[i_]*cur_diffuse[i_]); \
 			  if (indir_term > 0.0 && indir_light_exp != 1.0) indir_term = pow(indir_term, indir_light_exp); \
-			  color[i_] = min(max_indir, indir_term) + min(1.0f, lc[i_]*light_int_scale[LIGHTING_LOCAL]);)
+			  color[i_] = min(max_indir, indir_scale*indir_term) + min(1.0f, lc[i_]*light_int_scale[LIGHTING_LOCAL]);)
 }
 
 

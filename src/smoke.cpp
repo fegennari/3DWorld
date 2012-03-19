@@ -26,7 +26,7 @@ colorRGB const_indir_color(BLACK);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
-extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update;
+extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update, create_voxel_landscape;
 extern int animate2, display_mode;
 extern float czmin0;
 extern colorRGBA cur_ambient, cur_diffuse;
@@ -209,7 +209,8 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 				}
 				else {
 					colorRGB color;
-					lmc.get_final_color(color, 1.0);
+					float const indir_scale(create_voxel_landscape ? get_voxel_terrain_ao_lighting_val(get_xyz_pos(x, y, z)) : 1.0);
+					lmc.get_final_color(color, 1.0, indir_scale);
 					UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
 				}
 			}
