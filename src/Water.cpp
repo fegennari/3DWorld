@@ -433,7 +433,7 @@ void draw_water() {
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
 				if (wminside[i][j] == 1 && (rand()&255) == 0 && get_water_enabled(j, i) && !is_mesh_disabled(j, i)) {
-					modify_grass_at(point(get_xval(j), get_yval(i), mesh_height[i][j]), HALF_DXY, 0, 0, 0, 0, 1);
+					modify_grass_at(get_mesh_xyz_pos(j, i), HALF_DXY, 0, 0, 0, 0, 1);
 				}
 			}
 		}

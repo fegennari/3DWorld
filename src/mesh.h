@@ -99,6 +99,10 @@ inline point get_xyz_pos(int x, int y, int z) {
 	return point(get_xval(x), get_yval(y), get_zval(z));
 }
 
+inline point get_mesh_xyz_pos(int x, int y) { // Note: not bounds checked
+	return point(get_xval(x), get_yval(y), mesh_height[y][x]);
+}
+
 
 inline int get_ext_x1() {return (-(int)scenery_extent*MESH_X_SIZE + 1);}
 inline int get_ext_y1() {return (-(int)scenery_extent*MESH_Y_SIZE + 1);}

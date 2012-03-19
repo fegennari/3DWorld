@@ -434,7 +434,7 @@ void display_mesh() { // fast array version
 			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 				for (int j = 0; j < MESH_X_SIZE; ++j) {
 					for (unsigned k = 0; k < 2; ++k) {
-						data.push_back(point(get_xval(j), get_yval(i+k), mesh_height[i+k][j]));
+						data.push_back(get_mesh_xyz_pos(j, i+k));
 						data.push_back(vertex_normals[i+k][j]);
 					}
 				}

@@ -477,7 +477,7 @@ public:
 
 				for (int xx = x; xx <= min(x+(int)BLOCK_SIZE, MESH_X_SIZE-1) && back_facing; ++xx) {
 					for (int yy = y; yy <= min(y+1, MESH_Y_SIZE-1); ++yy) {
-						back_facing &= (dot_product(surface_normals[yy][xx], (camera - point(get_xval(xx), get_yval(yy), mesh_height[yy][xx]))) < 0.0);
+						back_facing &= (dot_product(surface_normals[yy][xx], (camera - get_mesh_xyz_pos(xx, yy))) < 0.0);
 					}
 				}
 				if (back_facing) {

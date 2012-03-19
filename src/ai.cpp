@@ -118,7 +118,7 @@ bool destination_marker::add_candidate(int x1, int y1, int x2, int y2, float dep
 point destination_marker::get_pos() const {
 
 	assert(!point_outside_mesh(xpos, ypos));
-	return point(get_xval(xpos), get_yval(ypos), (mesh_height[ypos][xpos] + object_types[SMILEY].radius));
+	return get_mesh_xyz_pos(xpos, ypos) + point(0.0, 0.0, object_types[SMILEY].radius);
 }
 
 
