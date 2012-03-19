@@ -460,8 +460,7 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 
 struct step_dir_t {
 	int dir[3];
-	float weight;
-	step_dir_t(int x, int y, int z) {dir[0] = x; dir[1] = y; dir[2] = z; weight = sqrt(float(x*x + y*y + z*z));}
+	step_dir_t(int x, int y, int z) {dir[0] = x; dir[1] = y; dir[2] = z;}
 };
 
 
@@ -475,29 +474,28 @@ void voxel_manager::calc_ao_lighting() {
 	ao_lighting.init(nx, ny, nz, vsz, center, 1.0);
 	if (scrolling) return; // too slow for scrolling, left at all 1.0 for max light
 	vector<step_dir_t> dirs;
-	float norm(0.0);
 
 	for (int y = -1; y <= 1; ++y) {
 		for (int x = -1; x <= 1; ++x) {
 			for (int z = -1; z <= 1; ++z) {
 				if (x == 0 && y == 0 && z == 0) continue;
 				dirs.push_back(step_dir_t(x, y, z));
-				norm += dirs.back().weight;
 			}
 		}
 	}
-	assert(!dirs.empty() && norm > 0.0);
+	float const norm(weight_scale/dirs.size());
 
-	for (vector<step_dir_t>::iterator i = dirs.begin(); i != dirs.end(); ++i) {
-		i->weight *= weight_scale/norm;
-	}
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
 				point const pos(ao_lighting.get_pt_at(x, y, z));
 				if (!is_over_mesh(pos)) continue;
-				if (pos.z + DZ_VAL < interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1)) continue;
+				
+				if (pos.z + DZ_VAL < interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1)) { // under mesh
+					ao_lighting.set(x, y, z, 0);
+					continue;
+				}
 				float val(0.0);
 				
 				for (vector<step_dir_t>::const_iterator i = dirs.begin(); i != dirs.end(); ++i) {
@@ -515,7 +513,7 @@ void voxel_manager::calc_ao_lighting() {
 							break; // voxel known to be inside the volume or under the mesh
 						}
 					}
-					val += cur_val*i->weight;
+					val += norm*cur_val;
 					if (val >= 1.0) break;
 				}
 				ao_lighting.set(x, y, z, CLIP_TO_01(pow(val, atten_power)));
