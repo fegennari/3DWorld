@@ -425,11 +425,30 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 
 		#pragma omp critical(add_coll_polygon)
 		for (vector<triangle>::const_iterator t = triangles.begin(); t < triangles.end(); ++t) {
-			data_blocks[block_ix].cids.push_back(add_coll_polygon(t->pts, 3, cparams, 0.0));
-			assert(data_blocks[block_ix].cids.back() >= 0);
+			int const cindex(add_coll_polygon(t->pts, 3, cparams, 0.0));
+			assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
+			//coll_objects[cindex].fixed = 1; // mark as fixed so that lmap cells will be generated
+			data_blocks[block_ix].cids.push_back(cindex);
 		}
 	}
 	return triangles.size();
+}
+
+
+void voxel_model::calc_ao_lighting() {
+
+	if (empty()) return; // nothing to do
+
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) {
+			float const mh(mesh_height[y][x]);
+
+			for (int z = 0; z < MESH_SIZE[2]; ++z) {
+				if (get_zval(z+1) < mh) continue; // under mesh
+				// FIXME - write
+			}
+		}
+	}
 }
 
 
@@ -507,6 +526,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 void voxel_model::proc_pending_updates() {
 
 	RESET_TIME;
+	if (modified_blocks.empty()) return;
 	bool something_removed(0), something_added(0);
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	modified_blocks.clear();
@@ -551,11 +571,14 @@ void voxel_model::build(bool add_cobjs_) {
 		create_block(block, 1);
 	}
 	PRINT_TIME("  Triangles to Model");
+	calc_ao_lighting();
+	PRINT_TIME("  Voxel AO Lighting");
 }
 
 
 void voxel_model::render(bool is_shadow_pass) { // not const because of vbo caching, etc.
 
+	if (empty()) return; // nothing to do
 	shader_t s;
 	set_fill_mode();
 	

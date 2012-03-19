@@ -694,7 +694,7 @@ void build_lightmap(bool verbose) {
 	if (verbose) PRINT_TIME(" Lighting Setup");
 	bool raytrace_lights[3];
 	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
-	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL]);
+	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL]); // || create_voxel_landscape
 	float const light_off(has_indir_lighting ? 0.0f : LIGHT_OFFSET);
 
 	// process vertical (Z) light projections

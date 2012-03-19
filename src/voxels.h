@@ -163,6 +163,7 @@ public:
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
 	void proc_pending_updates();
+	void calc_ao_lighting();
 	void build(bool add_cobjs_);
 	void render(bool is_shadow_pass);
 	void free_context();
