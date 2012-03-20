@@ -1448,9 +1448,9 @@ void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float li
 
 float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
 
-	if (!lm_alloc) return 1.0;
+	float val(get_voxel_terrain_ao_lighting_val(p));
+	if (!lm_alloc) return val;
 	assert(lmap_manager.vlmap);
-	float val(1.0);
 	bool outside_mesh(0);
 	colorRGB cscale(cur_ambient);
 	point const p_adj((norm && !has_indir_lighting) ? (p + (*norm)*(0.25*HALF_DXY)) : p);
@@ -1465,8 +1465,11 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadow
 	}
 	else if (using_lightmap && p.z < czmax && lmap_manager.vlmap[y][x] != NULL) { // not above all collision objects and not empty cell
 		lmcell const &lmc(lmap_manager.vlmap[y][x][z]);
-		val = lmc.sv + lmc.gv;
-		lmc.get_final_color(cscale, 0.5);
+		lmc.get_final_color(cscale, 0.5, val);
+		val *= lmc.sv + lmc.gv;
+	}
+	else if (val < 1.0) {
+		cscale *= val;
 	}
 	if (!no_dynamic && !outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
 		get_dynamic_light(x, y, z, p, 1.0, (float *)&cscale, norm, spec);

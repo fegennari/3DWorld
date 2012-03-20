@@ -50,7 +50,7 @@ pt_line_drawer_hdr snow_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
-extern bool group_back_face_cull, no_sun_lpos_update, have_indir_smoke_tex;
+extern bool group_back_face_cull, no_sun_lpos_update, have_indir_smoke_tex, create_voxel_landscape;
 extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
@@ -189,7 +189,7 @@ inline void set_ad_colors(colorRGBA const &a, colorRGBA const &d) {
 
 void get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed, bool precip, bool no_dynamic) {
 
-	if ((using_lightmap || (!no_dynamic && has_dl_sources)) && color_a != BLACK) { // somewhat slow
+	if ((using_lightmap || create_voxel_landscape || (!no_dynamic && has_dl_sources)) && color_a != BLACK) { // somewhat slow
 		float const val(get_indir_light(color_a, (pos + vector3d(0.0, 0.0, 0.01)), no_dynamic, (is_shadowed || precip), NULL, NULL)); // get above mesh
 		if (precip && val < 1.0) is_shadowed = 1; // if precip, imply shadow status from indirect light value
 	}
