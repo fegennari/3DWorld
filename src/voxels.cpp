@@ -12,6 +12,7 @@
 
 
 bool const NORMALIZE_TO_1  = 1;
+bool const DEBUG_BLOCKS    = 0;
 unsigned const NUM_BLOCKS  = 8; // in x and y
 unsigned const NOISE_TSIZE = 64;
 
@@ -618,9 +619,13 @@ void voxel_model::proc_pending_updates() {
 	}
 	if (something_removed) purge_coll_freed(0); // unecessary?
 
+	if (something_removed && params.remove_unconnected) {
+		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
+			remove_unconnected_outside_block(blocks_to_update[i]);
+		}
+	}
 	#pragma omp parallel for schedule(static,1)
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
-		if (something_removed && params.remove_unconnected) remove_unconnected_outside_block(blocks_to_update[i]);
 		something_added |= (create_block(blocks_to_update[i], 0) > 0);
 	}
 	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial or delayed rebuild?
@@ -706,8 +711,12 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
-		//const char *cnames[2] = {"color0", "color1"};
-		//for (unsigned d = 0; d < 2; ++d) {if (s.is_setup()) s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & 4) != 0)) ? RED : BLUE));}
+		if (DEBUG_BLOCKS) {
+			const char *cnames[2] = {"color0", "color1"};
+			for (unsigned d = 0; d < 2; ++d) {
+				if (s.is_setup()) s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & NUM_BLOCKS) != 0)) ? RED : BLUE));
+			}
+		}
 		assert(i->ix < tri_data.size());
 		tri_data[i->ix].render(s, is_shadow_pass, GL_TRIANGLES);
 	}
