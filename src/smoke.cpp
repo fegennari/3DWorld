@@ -26,7 +26,7 @@ colorRGB const_indir_color(BLACK);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
-extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update, create_voxel_landscape;
+extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update, create_voxel_landscape, voxel_lighting_changed;
 extern int animate2, display_mode;
 extern float czmin0;
 extern colorRGBA cur_ambient, cur_diffuse;
@@ -191,6 +191,8 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 
 	unsigned const zsize(MESH_SIZE[2]), ncomp(4);
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
+	colorRGB default_color;
+	default_lmc.get_final_color(default_color, 1.0);
 
 	for (int x = 0; x < MESH_X_SIZE; ++x) {
 		lmcell const *const vlm(lmap_manager.vlmap[y][x]);
@@ -201,20 +203,27 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 
 		for (unsigned z = 0; z < zsize; ++z) {
 			unsigned const off2(ncomp*(off + z));
-			lmcell const &lmc((vlm == NULL) ? default_lmc : vlm[z]);
 
 			if (full_update || indir_lighting_updated) {
 				if (check_z_thresh && get_zval(z+1) < mh) { // adjust by one because GPU will interpolate the texel
 					UNROLL_3X(data[off2+i_] = 0;)
 				}
 				else {
-					colorRGB color;
 					float const indir_scale(create_voxel_landscape ? get_voxel_terrain_ao_lighting_val(get_xyz_pos(x, y, z)) : 1.0);
-					lmc.get_final_color(color, 1.0, indir_scale);
+					colorRGB color;
+
+					if (vlm == NULL) {
+						color  = default_color;
+						color *= indir_scale;
+					}
+					else {
+						vlm[z].get_final_color(color, 1.0, indir_scale);
+					}
 					UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
 				}
 			}
-			data[off2+3] = (unsigned char)(255*CLIP_TO_01(smoke_scale*lmc.smoke)); // alpha: smoke
+			float const smoke_val((vlm == NULL) ? 0.0 : CLIP_TO_01(smoke_scale*vlm[z].smoke));
+			data[off2+3] = (unsigned char)(255*smoke_val); // alpha: smoke
 		}
 	}
 }
@@ -248,7 +257,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	}
 	static colorRGBA last_cur_ambient(ALPHA0), last_cur_diffuse(ALPHA0);
 	bool const lighting_changed(cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
-	bool const full_update(init_call || (!no_sun_lpos_update && lighting_changed));
+	bool const full_update(init_call || (!no_sun_lpos_update && lighting_changed) || voxel_lighting_changed);
 	bool const could_have_smoke(smoke_exists || last_smoke_update > 0);
 
 	if (full_update) {
@@ -293,6 +302,7 @@ bool upload_smoke_3d_texture() { // and indirect lighting information
 	}
 	cur_block = (full_update ? 0 : (cur_block+1) % skipval);
 	if (cur_block == 0) indir_lighting_updated = 0; // only stop updating after we wrap around to the beginning again
+	voxel_lighting_changed = 0;
 	//PRINT_TIME("Smoke Upload");
 	return 1;
 }

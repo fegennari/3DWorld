@@ -82,21 +82,17 @@ typedef voxel_grid<float> float_voxel_grid;
 
 class voxel_manager : public float_voxel_grid {
 
+protected:
+	voxel_params_t params;
 	voxel_grid<unsigned char> outside;
-	voxel_grid<float> ao_lighting;
 	vector<unsigned> first_zval_above_mesh;
 
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
-
-protected:
-	voxel_params_t params;
-	
 	void atten_edge_val(unsigned x, unsigned y, unsigned z, float val);
 	void atten_top_val (unsigned x, unsigned y, unsigned z, float val);
 	void calc_outside_val(unsigned x, unsigned y, unsigned z);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2);
 	void get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z) const;
-	void calc_ao_lighting();
 
 public:
 	void set_params(voxel_params_t const &p) {params = p;}
@@ -109,7 +105,6 @@ public:
 	void create_triangles(vector<triangle> &triangles) const;
 	void get_triangles(vector<triangle> &triangles);
 	bool point_inside_volume(point const &pos) const;
-	float get_ao_lighting_val(point const &pos) const;
 };
 
 
@@ -135,13 +130,19 @@ class voxel_model : public voxel_manager {
 	tri_data_t tri_data;
 	noise_texture_manager_t noise_tex_gen;
 	std::set<unsigned> modified_blocks;
+	voxel_grid<float> ao_lighting;
+
+	struct step_dir_t {
+		int dir[3];
+		step_dir_t(int x, int y, int z) {dir[0] = x; dir[1] = y; dir[2] = z;}
+	};
+	vector<step_dir_t> ao_dirs;
 
 	struct data_block_t {
 		vector<int> cids; // references into coll_objects
 		//unsigned tri_data_ix;
 		void clear() {cids.clear();}
 	};
-
 	vector<data_block_t> data_blocks;
 
 	struct pt_ix_t {
@@ -162,6 +163,9 @@ class voxel_model : public voxel_manager {
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	bool clear_block(unsigned block_ix);
 	unsigned create_block(unsigned block_ix, bool first_create);
+	void calc_ao_dirs();
+	void calc_ao_lighting_for_block(unsigned block_ix);
+	void calc_ao_lighting();
 
 public:
 	voxel_model() : add_cobjs(0) {}
@@ -172,6 +176,7 @@ public:
 	void render(bool is_shadow_pass);
 	void free_context();
 	float eval_noise_texture_at(point const &pos) const;
+	float get_ao_lighting_val(point const &pos) const;
 };
 
 #endif

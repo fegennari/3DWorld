@@ -16,12 +16,13 @@ unsigned const NUM_BLOCKS  = 8; // in x and y
 unsigned const NOISE_TSIZE = 64;
 
 
+bool voxel_lighting_changed;
+voxel_params_t global_voxel_params;
+voxel_model terrain_voxel_model;
+
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling;
 extern coll_obj_group coll_objects;
-
-voxel_params_t global_voxel_params;
-voxel_model terrain_voxel_model;
 
 
 template class voxel_grid<float>; // explicit instantiation
@@ -90,7 +91,6 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 void voxel_manager::clear() {
 	
 	outside.clear();
-	ao_lighting.clear();
 	first_zval_above_mesh.clear();
 	float_voxel_grid::clear();
 }
@@ -369,7 +369,7 @@ bool voxel_manager::point_inside_volume(point const &pos) const {
 }
 
 
-float voxel_manager::get_ao_lighting_val(point const &pos) const {
+float voxel_model::get_ao_lighting_val(point const &pos) const {
 
 	if (ao_lighting.empty()) return 1.0;
 	unsigned ix(0);
@@ -395,6 +395,7 @@ void voxel_model::clear() {
 	data_blocks.clear();
 	pt_to_ix.clear();
 	modified_blocks.clear();
+	ao_lighting.clear();
 	voxel_manager::clear();
 }
 
@@ -458,36 +459,34 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 }
 
 
-struct step_dir_t {
-	int dir[3];
-	step_dir_t(int x, int y, int z) {dir[0] = x; dir[1] = y; dir[2] = z;}
-};
+void voxel_model::calc_ao_dirs() {
 
-
-void voxel_manager::calc_ao_lighting() {
-
-	if (empty()) return; // nothing to do
-	unsigned const MAX_STEPS(32);
-	float const weight_scale(3.0); // generally >= 2.0
-	float const atten_power (0.7); // generally <= 1.0
-	float const inv_max_steps(1.0/MAX_STEPS);
-	ao_lighting.init(nx, ny, nz, vsz, center, 1.0);
-	if (scrolling) return; // too slow for scrolling, left at all 1.0 for max light
-	vector<step_dir_t> dirs;
+	if (!ao_dirs.empty()) return; // already calculated
 
 	for (int y = -1; y <= 1; ++y) {
 		for (int x = -1; x <= 1; ++x) {
 			for (int z = -1; z <= 1; ++z) {
 				if (x == 0 && y == 0 && z == 0) continue;
-				dirs.push_back(step_dir_t(x, y, z));
+				ao_dirs.push_back(step_dir_t(x, y, z));
 			}
 		}
 	}
-	float const norm(weight_scale/dirs.size());
+}
 
+
+void voxel_model::calc_ao_lighting_for_block(unsigned block_ix) {
+
+	assert(!ao_lighting.empty());
+	unsigned const MAX_STEPS(32);
+	float const weight_scale(3.0); // generally >= 2.0
+	float const atten_power (0.7); // generally <= 1.0
+	float const inv_max_steps(1.0/MAX_STEPS);
+	float const norm(weight_scale/ao_dirs.size());
+	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
+	
 	#pragma omp parallel for schedule(static,1)
-	for (int y = 0; y < (int)ny; ++y) {
-		for (unsigned x = 0; x < nx; ++x) {
+	for (int y = ybix*yblocks; y < (int)min(ny, (ybix+1)*yblocks); ++y) {
+		for (unsigned x = xbix*xblocks; x < min(nx, (xbix+1)*xblocks); ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
 				point const pos(ao_lighting.get_pt_at(x, y, z));
 				if (!is_over_mesh(pos)) continue;
@@ -498,7 +497,7 @@ void voxel_manager::calc_ao_lighting() {
 				}
 				float val(0.0);
 				
-				for (vector<step_dir_t>::const_iterator i = dirs.begin(); i != dirs.end(); ++i) {
+				for (vector<step_dir_t>::const_iterator i = ao_dirs.begin(); i != ao_dirs.end(); ++i) {
 					float cur_val(1.0);
 					int cur[3] = {x, y, z};
 					// bias to pos side by 1 unit for positive steps to help compensate for grid point vs. grid center alignments
@@ -520,6 +519,18 @@ void voxel_manager::calc_ao_lighting() {
 			} // for z
 		} // for x
 	} // for y
+}
+
+
+void voxel_model::calc_ao_lighting() {
+
+	if (empty() || scrolling) return; // too slow for scrolling
+	ao_lighting.init(nx, ny, nz, vsz, center, 1.0);
+	calc_ao_dirs();
+
+	for (unsigned block = 0; block < data_blocks.size(); ++block) {
+		calc_ao_lighting_for_block(block);
+	}
 }
 
 
@@ -614,6 +625,13 @@ void voxel_model::proc_pending_updates() {
 	}
 	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial or delayed rebuild?
 	if (!(something_added || something_removed)) return; // nothing updated
+
+	if (!ao_lighting.empty()) {
+		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
+			calc_ao_lighting_for_block(blocks_to_update[i]);
+		}
+		voxel_lighting_changed = 1;
+	}
 	scene_dlist_invalid = 1;
 	PRINT_TIME("Process Voxel Updates");
 }
