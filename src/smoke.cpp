@@ -26,7 +26,7 @@ colorRGB const_indir_color(BLACK);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
-extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update, create_voxel_landscape, voxel_lighting_changed;
+extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update, create_voxel_landscape;
 extern int animate2, display_mode;
 extern float czmin0;
 extern colorRGBA cur_ambient, cur_diffuse;
@@ -187,7 +187,7 @@ void reset_smoke_tex_data() {
 }
 
 
-void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, unsigned y, bool full_update) {
+void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, unsigned y, bool update_lighting) {
 
 	unsigned const zsize(MESH_SIZE[2]), ncomp(4);
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
@@ -196,113 +196,113 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 
 	for (int x = 0; x < MESH_X_SIZE; ++x) {
 		lmcell const *const vlm(lmap_manager.vlmap[y][x]);
-		if (vlm == NULL && !full_update) continue; // x/y pairs that get into here should also be constant
+		if (vlm == NULL && !update_lighting) continue; // x/y pairs that get into here should also be constant
 		unsigned const off(zsize*(y*MESH_X_SIZE + x));
 		bool const check_z_thresh((display_mode & 0x01) && !is_mesh_disabled(x, y));
 		float const mh(mesh_height[y][x]);
 
 		for (unsigned z = 0; z < zsize; ++z) {
 			unsigned const off2(ncomp*(off + z));
-
-			if (full_update || indir_lighting_updated) {
-				if (check_z_thresh && get_zval(z+1) < mh) { // adjust by one because GPU will interpolate the texel
-					UNROLL_3X(data[off2+i_] = 0;)
-				}
-				else {
-					float const indir_scale(create_voxel_landscape ? get_voxel_terrain_ao_lighting_val(get_xyz_pos(x, y, z)) : 1.0);
-					colorRGB color;
-
-					if (vlm == NULL) {
-						color  = default_color;
-						color *= indir_scale;
-					}
-					else {
-						vlm[z].get_final_color(color, 1.0, indir_scale);
-					}
-					UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
-				}
-			}
 			float const smoke_val((vlm == NULL) ? 0.0 : CLIP_TO_01(smoke_scale*vlm[z].smoke));
 			data[off2+3] = (unsigned char)(255*smoke_val); // alpha: smoke
+			if (!update_lighting && !indir_lighting_updated) continue; // lighting not needed
+				
+			if (check_z_thresh && get_zval(z+1) < mh) { // adjust by one because GPU will interpolate the texel
+				UNROLL_3X(data[off2+i_] = 0;)
+			}
+			else {
+				float const indir_scale(create_voxel_landscape ? get_voxel_terrain_ao_lighting_val(get_xyz_pos(x, y, z)) : 1.0);
+				colorRGB color;
+
+				if (vlm == NULL) {
+					color  = default_color;
+					color *= indir_scale;
+				}
+				else {
+					vlm[z].get_final_color(color, 1.0, indir_scale);
+				}
+				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
+			}
+		} // for z
+	} // for x
+}
+
+
+void update_smoke_indir_tex_y_range(unsigned y_start, unsigned y_end, bool update_lighting) {
+
+	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
+	if (smoke_tex_data.empty()) return; // not allocated
+	unsigned const ncomp(4);
+	lmcell default_lmc;
+	default_lmc.set_outside_colors();
+	default_lmc.get_final_color(const_indir_color, 1.0);
+	
+	if (indir_lighting_updated) { // running with multiple threads, don't use openmp
+		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
+			update_smoke_row(smoke_tex_data, default_lmc, y, update_lighting);
 		}
+	}
+	else { // use openmp here
+		#pragma omp parallel for schedule(static,1)
+		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
+			update_smoke_row(smoke_tex_data, default_lmc, y, update_lighting);
+		}
+	}
+	if (smoke_tid == 0) { // create texture
+		cout << "Allocating " << MESH_SIZE[2] << " by " << MESH_X_SIZE << " by " << MESH_Y_SIZE << " smoke texture of " << smoke_tex_data.size() << " bytes." << endl;
+		smoke_tid = create_3d_texture(MESH_SIZE[2], MESH_X_SIZE, MESH_Y_SIZE, ncomp, smoke_tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);
+	}
+	else { // update region/sync texture
+		unsigned const off(ncomp*y_start*MESH_X_SIZE*MESH_SIZE[2]);
+		assert(off < smoke_tex_data.size());
+		update_3d_texture(smoke_tid, 0, 0, y_start, MESH_SIZE[2], MESH_X_SIZE, (y_end - y_start), ncomp, &smoke_tex_data[off]);
 	}
 }
 
 
-bool upload_smoke_3d_texture() { // and indirect lighting information
+bool upload_smoke_indir_texture() {
 
 	//RESET_TIME;
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
-	// is it ok when texture z size is not a power of 2?
-	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(4);
-	lmcell default_lmc;
-	default_lmc.set_outside_colors();
-	default_lmc.get_final_color(const_indir_color, 1.0);
+	// ok when texture z size is not a power of 2
+	unsigned const sz(MESH_X_SIZE*MESH_Y_SIZE*MESH_SIZE[2]), ncomp(4);
 
 	if (disable_shaders || lmap_manager.vlmap == NULL || sz == 0) {
 		have_indir_smoke_tex = 0;
 		return 0;
 	}
-	bool init_call(0);
-	vector<unsigned char> &data(smoke_tex_data);
-
 	if (smoke_tex_data.empty()) {
 		free_texture(smoke_tid);
-		data.resize(ncomp*sz, 0);
-		init_call = 1;
+		smoke_tex_data.resize(ncomp*sz, 0);
 	}
-	else {
-		assert(data.size() == ncomp*sz); // sz should be constant (per config file/3DWorld session)
-		init_call = (smoke_tid == 0); // will recreate the texture
+	else { // will recreate the texture
+		assert(smoke_tex_data.size() == ncomp*sz); // sz should be constant (per config file/3DWorld session)
 	}
 	static colorRGBA last_cur_ambient(ALPHA0), last_cur_diffuse(ALPHA0);
 	bool const lighting_changed(cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
-	bool const full_update(init_call || (!no_sun_lpos_update && lighting_changed) || voxel_lighting_changed);
+	bool const full_update(smoke_tid == 0 || (!no_sun_lpos_update && lighting_changed));
 	bool const could_have_smoke(smoke_exists || last_smoke_update > 0);
+	if (!full_update && !could_have_smoke && !indir_lighting_updated && !lighting_changed) return 0; // return 1?
 
 	if (full_update) {
 		last_cur_ambient = cur_ambient;
 		last_cur_diffuse = cur_diffuse;
 	}
-	if (!full_update && !could_have_smoke && !indir_lighting_updated && !lighting_changed) return 0; // return 1?
-	static int cur_block(0);
-	unsigned const skipval(could_have_smoke ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP);
-	unsigned const block_size(MESH_Y_SIZE/skipval);
-	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
-	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
-	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
-	have_indir_smoke_tex = 1;
-
 	if (smoke_exists) {
 		last_smoke_update = SMOKE_SEND_SKIP;
 	}
 	else if (last_smoke_update > 0) {
 		--last_smoke_update;
 	}
-	if (indir_lighting_updated) { // running with multiple threads, don't use openmp
-		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
-			update_smoke_row(data, default_lmc, y, full_update);
-		}
-	}
-	else { // use openmp here
-		#pragma omp parallel for schedule(static,1)
-		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
-			update_smoke_row(data, default_lmc, y, full_update);
-		}
-	}
-	if (init_call) { // create texture
-		cout << "Allocating " << zsize << " by " << MESH_X_SIZE << " by " << MESH_Y_SIZE << " smoke texture of " << ncomp*sz << " bytes." << endl;
-		assert(smoke_tid == 0);
-		smoke_tid = create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data, GL_LINEAR, GL_CLAMP_TO_EDGE);
-	}
-	else { // update region/sync texture
-		unsigned const off(ncomp*y_start*MESH_X_SIZE*zsize);
-		assert(off < data.size());
-		update_3d_texture(smoke_tid, 0, 0, y_start, zsize, MESH_X_SIZE, (full_update ? MESH_Y_SIZE : block_size), ncomp, &data[off]);
-	}
+	static int cur_block(0);
+	unsigned const skipval(could_have_smoke ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP);
+	unsigned const block_size(MESH_Y_SIZE/skipval);
+	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
+	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
+	update_smoke_indir_tex_y_range(y_start, y_end, full_update);
 	cur_block = (full_update ? 0 : (cur_block+1) % skipval);
 	if (cur_block == 0) indir_lighting_updated = 0; // only stop updating after we wrap around to the beginning again
-	voxel_lighting_changed = 0;
+	have_indir_smoke_tex = 1;
 	//PRINT_TIME("Smoke Upload");
 	return 1;
 }

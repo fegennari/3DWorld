@@ -17,7 +17,6 @@ unsigned const NUM_BLOCKS  = 8; // in x and y
 unsigned const NOISE_TSIZE = 64;
 
 
-bool voxel_lighting_changed;
 voxel_params_t global_voxel_params;
 voxel_model terrain_voxel_model;
 
@@ -630,10 +629,15 @@ void voxel_model::proc_pending_updates() {
 	if (!(something_added || something_removed)) return; // nothing updated
 
 	if (!ao_lighting.empty()) {
+		unsigned y_start(MESH_Y_SIZE), y_end(0); // start at denormalized range
+
 		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
+			unsigned const ybix(blocks_to_update[i]/NUM_BLOCKS), y1(ybix*yblocks), y2((ybix+1)*yblocks);
+			y_start = min((unsigned)max(get_xpos(y1*vsz.y + lo_pos.y)-1, 0          ), y_start); // add a border of 1 to account for rounding errors
+			y_end   = max((unsigned)min(get_xpos(y2*vsz.y + lo_pos.y)+1, MESH_Y_SIZE), y_end  );
 			calc_ao_lighting_for_block(blocks_to_update[i]);
 		}
-		voxel_lighting_changed = 1;
+		if (y_start < y_end) update_smoke_indir_tex_y_range(y_start, y_end, 1);
 	}
 	scene_dlist_invalid = 1;
 	PRINT_TIME("Process Voxel Updates");

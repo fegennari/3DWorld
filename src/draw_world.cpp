@@ -1844,7 +1844,7 @@ void setup_object_render_data() {
 	calc_cur_ambient_diffuse();
 	if (TIMETEST) {PRINT_TIME("Init");}
 	distribute_smoke();
-	upload_smoke_3d_texture();
+	upload_smoke_indir_texture();
 	if (TIMETEST) {PRINT_TIME("Distribute Smoke");}
 	add_dynamic_lights();
 	if (TIMETEST) {PRINT_TIME("Add Dlights");}
