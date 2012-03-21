@@ -478,11 +478,9 @@ void voxel_model::calc_ao_dirs() {
 void voxel_model::calc_ao_lighting_for_block(unsigned block_ix) {
 
 	assert(!ao_lighting.empty());
-	unsigned const MAX_STEPS(32);
-	float const weight_scale(3.0); // generally >= 2.0
-	float const atten_power (0.7); // generally <= 1.0
+	unsigned const MAX_STEPS(params.ao_radius/HALF_DXY); // FIXME
 	float const inv_max_steps(1.0/MAX_STEPS);
-	float const norm(weight_scale/ao_dirs.size());
+	float const norm(params.ao_weight_scale/ao_dirs.size());
 	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
 	
 	#pragma omp parallel for schedule(static,1)
@@ -516,7 +514,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix) {
 					val += norm*cur_val;
 					if (val >= 1.0) break;
 				}
-				ao_lighting.set(x, y, z, CLIP_TO_01(pow(val, atten_power)));
+				ao_lighting.set(x, y, z, CLIP_TO_01(pow(val, params.ao_atten_power)));
 			} // for z
 		} // for x
 	} // for y
@@ -815,6 +813,15 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "tex_mix_saturate") {
 		if (!read_float(fp, global_voxel_params.tex_mix_saturate)) voxel_file_err("tex_mix_saturate", error);
+	}
+	else if (str == "ao_radius") {
+		if (!read_float(fp, global_voxel_params.ao_radius) || global_voxel_params.ao_radius < 0.0) voxel_file_err("ao_radius", error);
+	}
+	else if (str == "ao_weight_scale") {
+		if (!read_float(fp, global_voxel_params.ao_weight_scale) || global_voxel_params.ao_weight_scale <= 0.0) voxel_file_err("ao_weight_scale", error);
+	}
+	else if (str == "ao_atten_power") {
+		if (!read_float(fp, global_voxel_params.ao_atten_power) || global_voxel_params.ao_atten_power <= 0.0) voxel_file_err("ao_atten_power", error);
 	}
 	else if (str == "invert") {
 		if (!read_bool(fp, global_voxel_params.invert)) voxel_file_err("invert", error);
