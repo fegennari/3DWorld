@@ -135,7 +135,8 @@ class voxel_model : public voxel_manager {
 
 	struct step_dir_t {
 		int dir[3];
-		step_dir_t(int x, int y, int z) {dir[0] = x; dir[1] = y; dir[2] = z;}
+		unsigned nsteps;
+		step_dir_t(int x, int y, int z, unsigned n) : nsteps(n) {dir[0] = x; dir[1] = y; dir[2] = z;}
 	};
 	vector<step_dir_t> ao_dirs;
 

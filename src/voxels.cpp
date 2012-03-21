@@ -468,7 +468,9 @@ void voxel_model::calc_ao_dirs() {
 		for (int x = -1; x <= 1; ++x) {
 			for (int z = -1; z <= 1; ++z) {
 				if (x == 0 && y == 0 && z == 0) continue;
-				ao_dirs.push_back(step_dir_t(x, y, z));
+				vector3d const delta(x*vsz.x, y*vsz.y, z*vsz.z);
+				unsigned const nsteps(params.ao_radius/delta.mag());
+				ao_dirs.push_back(step_dir_t(x, y, z, nsteps));
 			}
 		}
 	}
@@ -478,8 +480,6 @@ void voxel_model::calc_ao_dirs() {
 void voxel_model::calc_ao_lighting_for_block(unsigned block_ix) {
 
 	assert(!ao_lighting.empty());
-	unsigned const MAX_STEPS(params.ao_radius/HALF_DXY); // FIXME
-	float const inv_max_steps(1.0/MAX_STEPS);
 	float const norm(params.ao_weight_scale/ao_dirs.size());
 	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
 	
@@ -502,12 +502,12 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix) {
 					// bias to pos side by 1 unit for positive steps to help compensate for grid point vs. grid center alignments
 					UNROLL_3X(if (i->dir[i_] > 0) cur[i_] += 1;);
 
-					for (unsigned s = 0; s < MAX_STEPS; ++s) { // take steps in this direction
+					for (unsigned s = 0; s < i->nsteps; ++s) { // take steps in this direction
 						UNROLL_3X(cur[i_] += i->dir[i_];); // increment first to skip the current voxel
 						if (!is_valid_range(cur)) break; // stepped off the volume
 						
 						if (outside.get(cur[0], cur[1], cur[2]) == 0 || cur[2] < (int)first_zval_above_mesh[cur[1]*nx + cur[0]]) {
-							cur_val = s*inv_max_steps;
+							cur_val = float(s)/float(i->nsteps);
 							break; // voxel known to be inside the volume or under the mesh
 						}
 					}
