@@ -79,6 +79,7 @@ class cobj_bvh_tree : public cobj_tree_base {
 
 	coll_obj_group const &cobjs;
 	vector<unsigned> cixs;
+	unsigned extra_cobjs_added, extra_cobj_blocks;
 	bool is_static, is_dynamic, occluders_only, moving_only, cubes_only;
 
 	struct per_thread_data {
@@ -103,13 +104,12 @@ class cobj_bvh_tree : public cobj_tree_base {
 
 public:
 	cobj_bvh_tree(coll_obj_group const &cobjs_, bool s, bool d, bool o, bool m, bool c=0)
-		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), moving_only(m), cubes_only(c) {}
+		: cobjs(cobjs_), extra_cobjs_added(0), extra_cobj_blocks(0), is_static(s), is_dynamic(d),
+		occluders_only(o), moving_only(m), cubes_only(c) {}
 
-	void clear() {
-		cobj_tree_base::clear();
-		cixs.resize(0);
-	}
+	void clear();
 	void add_cobjs(bool verbose);
+	void add_extra_cobjs(vector<unsigned> const &cobj_ixs);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj,
 		bool exact, int test_alpha, bool skip_non_drawn) const;
 	void get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const;

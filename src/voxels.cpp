@@ -608,7 +608,8 @@ void voxel_model::proc_pending_updates() {
 
 	RESET_TIME;
 	if (modified_blocks.empty()) return;
-	bool something_removed(0), something_added(0);
+	bool something_removed(0);
+	unsigned num_added(0);
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	modified_blocks.clear();
 	
@@ -624,10 +625,16 @@ void voxel_model::proc_pending_updates() {
 	}
 	#pragma omp parallel for schedule(static,1)
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
-		something_added |= (create_block(blocks_to_update[i], 0) > 0);
+		num_added += (create_block(blocks_to_update[i], 0) > 0);
 	}
-	if (something_added) build_cobj_tree(0, 0); // FIXME: inefficient - can we do a partial or delayed rebuild?
-	if (!(something_added || something_removed)) return; // nothing updated
+	if (!(num_added > 0 || something_removed)) return; // nothing updated
+	vector<unsigned> cixs;
+	cixs.reserve(num_added);
+
+	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
+		copy(data_blocks[blocks_to_update[i]].cids.begin(), data_blocks[blocks_to_update[i]].cids.end(), back_inserter(cixs));
+	}
+	add_to_cobj_tree(cixs);
 
 	if (!ao_lighting.empty()) {
 		unsigned y_start(MESH_Y_SIZE), y_end(0); // start at denormalized range

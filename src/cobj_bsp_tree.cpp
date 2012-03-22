@@ -273,6 +273,21 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 }
 
 
+void update_dynamic_ranges(coll_obj_group const &cobjs) {
+
+	bool in_static_range(1);
+	dynamic_ranges.resize(0); // recompute
+	
+	for (unsigned i = 0; i < cobjs.size(); ++i) {
+		if (cobjs[i].truly_static() != in_static_range) {
+			dynamic_ranges.push_back(i);
+			in_static_range ^= 1;
+		}
+	}
+	if (in_static_range) dynamic_ranges.push_back(cobjs.size());
+}
+
+
 bool cobj_bvh_tree::create_cixs() {
 
 	if (moving_only) {
@@ -294,21 +309,11 @@ bool cobj_bvh_tree::create_cixs() {
 		}
 	}
 	else {
-		bool const normal_static_mode(is_static && !occluders_only && !cubes_only);
-		bool in_static_range(1);
-
-		if (normal_static_mode) {
-			cixs.reserve(cobjs.size());
-			dynamic_ranges.resize(0); // recompute
-		}
+		if (is_static && !occluders_only && !cubes_only) cixs.reserve(cobjs.size()); // normal static mode
+		
 		for (unsigned i = 0; i < cobjs.size(); ++i) {
-			if (normal_static_mode && cobjs[i].truly_static() != in_static_range) {
-				dynamic_ranges.push_back(i);
-				in_static_range ^= 1;
-			}
 			add_cobj(i);
 		}
-		if (normal_static_mode && in_static_range) dynamic_ranges.push_back(cobjs.size());
 	}
 	assert(cixs.size() < (1 << 29));
 	return !cixs.empty();
@@ -326,6 +331,14 @@ void cobj_bvh_tree::calc_node_bbox(tree_node &n) const {
 }
 
 
+void cobj_bvh_tree::clear() {
+
+	cobj_tree_base::clear();
+	cixs.resize(0);
+	extra_cobjs_added = extra_cobj_blocks = 0;
+}
+
+
 void cobj_bvh_tree::add_cobjs(bool verbose) {
 
 	RESET_TIME;
@@ -334,23 +347,50 @@ void cobj_bvh_tree::add_cobjs(bool verbose) {
 	max_depth = max_leaf_count = num_leaf_nodes = 0;
 	bool const do_mt_build(mt_cobj_tree_build && cixs.size() > 10000);
 	nodes.resize(get_conservative_num_nodes(cixs.size()) + 64*do_mt_build); // add 8 extra nodes for each of 8 top level splits
-	nodes[0] = tree_node(0, (unsigned)cixs.size());
+	unsigned const root(0);
+	nodes[root] = tree_node(0, (unsigned)cixs.size());
 
 	if (do_mt_build) { // 2x faster build time, 10% slower traversal
 		build_tree_top_level_omp();
 	}
 	else {
 		per_thread_data ptd(1, nodes.size());
-		build_tree(0, 0, 0, ptd);
+		build_tree(root, 0, 0, ptd);
 		nodes.resize(ptd.get_next_node_ix());
 	}
-	nodes[0].next_node_id = (unsigned)nodes.size();
+	nodes[root].next_node_id = (unsigned)nodes.size();
 
 	if (verbose) {
 		PRINT_TIME(" Cobj Tree Create");
 		cout << "cobjs: " << cobjs.size() << ", leaves: " << cixs.size() << ", nodes: " << nodes.size()
 				<< ", depth: " << max_depth << ", max_leaves: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
 	}
+}
+
+
+void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs) {
+
+	if (cobj_ixs.empty()) return;
+	unsigned const num(cobj_ixs.size());
+	
+	if ((extra_cobjs_added + num) > nodes.size()/4 || extra_cobj_blocks > 8) {
+		add_cobjs(0); // too many extra cobjs - rebuild the entire tree
+		return;
+	}
+	unsigned const start(cixs.size()), new_root(nodes.size());
+
+	for (vector<unsigned>::const_iterator i = cobj_ixs.begin(); i != cobj_ixs.end(); ++i) {
+		assert(*i < cobjs.size());
+		add_cobj(*i);
+	}
+	nodes.resize(nodes.size() + get_conservative_num_nodes(num) + 1);
+	nodes[new_root] = tree_node(start, (unsigned)cixs.size());
+	per_thread_data ptd(new_root+1, nodes.size());
+	build_tree(new_root, 0, 0, ptd);
+	nodes.resize(ptd.get_next_node_ix());
+	nodes[new_root].next_node_id = (unsigned)nodes.size();
+	extra_cobjs_added += num;
+	++extra_cobj_blocks;
 }
 
 
@@ -640,10 +680,19 @@ cobj_bvh_tree &get_tree(bool dynamic) {
 }
 
 void build_cobj_tree(bool dynamic, bool verbose) {
-
 	get_tree(dynamic).add_cobjs(verbose);
-	if (!dynamic) cobj_tree_occlude.add_cobjs(verbose);
-	//if (!dynamic) cobj_tree_triangles.add_cobjs(coll_objects, verbose);
+	
+	if (!dynamic) {
+		cobj_tree_occlude.add_cobjs(verbose);
+		//cobj_tree_triangles.add_cobjs(coll_objects, verbose);
+		update_dynamic_ranges(coll_objects);
+	}
+}
+
+void add_to_cobj_tree(vector<unsigned> const &cobj_ixs) { // no cobk_tree_occlude update?
+	cobj_tree_static.add_extra_cobjs(cobj_ixs);
+	//cobj_tree_triangles.add_extra_cobjs(cobj_ixs);
+	update_dynamic_ranges(coll_objects);
 }
 
 void build_moving_cobj_tree() {
