@@ -454,7 +454,6 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 			data_blocks[block_ix].cids.push_back(cindex);
 		}
 	}
-	// FIXME: update ao_lighting
 	return triangles.size();
 }
 
@@ -468,7 +467,7 @@ void voxel_model::calc_ao_dirs() {
 			for (int z = -1; z <= 1; ++z) {
 				if (x == 0 && y == 0 && z == 0) continue;
 				vector3d const delta(x*vsz.x, y*vsz.y, z*vsz.z);
-				unsigned const nsteps(params.ao_radius/delta.mag());
+				unsigned const nsteps(max(1, int(params.ao_radius/delta.mag())));
 				ao_dirs.push_back(step_dir_t(x, y, z, nsteps));
 			}
 		}
@@ -476,7 +475,7 @@ void voxel_model::calc_ao_dirs() {
 }
 
 
-void voxel_model::calc_ao_lighting_for_block(unsigned block_ix) {
+void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {
 
 	assert(!ao_lighting.empty());
 	float const norm(params.ao_weight_scale/ao_dirs.size());
@@ -493,6 +492,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix) {
 					ao_lighting.set(x, y, z, 0);
 					continue;
 				}
+				if (increase_only && ao_lighting.get(x, y, z) == 1.0) continue;
 				float val(0.0);
 				
 				for (vector<step_dir_t>::const_iterator i = ao_dirs.begin(); i != ao_dirs.end(); ++i) {
@@ -523,11 +523,12 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix) {
 void voxel_model::calc_ao_lighting() {
 
 	if (empty() || scrolling) return; // too slow for scrolling
+	if (params.ao_radius == 0.0 || params.ao_weight_scale == 0.0) return; // no AO lighting
 	ao_lighting.init(nx, ny, nz, vsz, center, 1.0);
 	calc_ao_dirs();
 
 	for (unsigned block = 0; block < data_blocks.size(); ++block) {
-		calc_ao_lighting_for_block(block);
+		calc_ao_lighting_for_block(block, 0);
 	}
 }
 
@@ -635,7 +636,7 @@ void voxel_model::proc_pending_updates() {
 			unsigned const ybix(blocks_to_update[i]/NUM_BLOCKS), y1(ybix*yblocks), y2((ybix+1)*yblocks);
 			y_start = min((unsigned)max(get_xpos(y1*vsz.y + lo_pos.y)-1, 0          ), y_start); // add a border of 1 to account for rounding errors
 			y_end   = max((unsigned)min(get_xpos(y2*vsz.y + lo_pos.y)+1, MESH_Y_SIZE), y_end  );
-			calc_ao_lighting_for_block(blocks_to_update[i]);
+			calc_ao_lighting_for_block(blocks_to_update[i], 1); // update can only remove, so lighting can only increase
 		}
 		if (y_start < y_end) update_smoke_indir_tex_y_range(y_start, y_end, 1);
 	}

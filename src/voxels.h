@@ -166,7 +166,7 @@ class voxel_model : public voxel_manager {
 	bool clear_block(unsigned block_ix);
 	unsigned create_block(unsigned block_ix, bool first_create);
 	void calc_ao_dirs();
-	void calc_ao_lighting_for_block(unsigned block_ix);
+	void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
 	void calc_ao_lighting();
 
 public:
