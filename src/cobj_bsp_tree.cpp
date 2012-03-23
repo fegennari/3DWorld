@@ -383,6 +383,8 @@ void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs) {
 		assert(*i < cobjs.size());
 		add_cobj(*i);
 	}
+	// FIXME: could result in duplicate cobjs in the tree if a cobj in cobj_ixs replaces a cobj that was deleted in the tree
+	//        this is *probably* ok since it will duplicate a small number of times
 	nodes.resize(nodes.size() + get_conservative_num_nodes(num) + 1);
 	nodes[new_root] = tree_node(start, (unsigned)cixs.size());
 	per_thread_data ptd(new_root+1, nodes.size());
@@ -689,7 +691,7 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 	}
 }
 
-void add_to_cobj_tree(vector<unsigned> const &cobj_ixs) { // no cobk_tree_occlude update?
+void add_to_cobj_tree(vector<unsigned> const &cobj_ixs) { // no cobj_tree_occlude update?
 	cobj_tree_static.add_extra_cobjs(cobj_ixs);
 	//cobj_tree_triangles.add_extra_cobjs(cobj_ixs);
 	update_dynamic_ranges(coll_objects);
