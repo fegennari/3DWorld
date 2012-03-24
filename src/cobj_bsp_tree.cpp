@@ -354,7 +354,7 @@ void cobj_bvh_tree::add_cobjs(bool verbose) {
 		build_tree_top_level_omp();
 	}
 	else {
-		per_thread_data ptd(1, nodes.size());
+		per_thread_data ptd(1, nodes.size(), 1);
 		build_tree(root, 0, 0, ptd);
 		nodes.resize(ptd.get_next_node_ix());
 	}
@@ -387,7 +387,7 @@ void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs) {
 	//        this is *probably* ok since it will duplicate a small number of times
 	nodes.resize(nodes.size() + get_conservative_num_nodes(num) + 1);
 	nodes[new_root] = tree_node(start, (unsigned)cixs.size());
-	per_thread_data ptd(new_root+1, nodes.size());
+	per_thread_data ptd(new_root+1, nodes.size(), 1);
 	build_tree(new_root, 0, 0, ptd);
 	nodes.resize(ptd.get_next_node_ix());
 	nodes[new_root].next_node_id = (unsigned)nodes.size();
@@ -592,7 +592,7 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 		if (count == 0) continue; // empty bin
 		unsigned const kid(cur_nixs[bix]), alloc_sz(get_conservative_num_nodes(count)), end_nix(cur_nixs[bix] + alloc_sz);
 		nodes[kid] = tree_node(curs[bix], curs[bix]+count);
-		per_thread_data ptd(cur_nixs[bix]+1, end_nix);
+		per_thread_data ptd(cur_nixs[bix]+1, end_nix, 0);
 		build_tree(kid, ((count == num) ? 7 : 0), 1, ptd); // if all in one bin, make that bin a leaf
 		unsigned const next_kid(ptd.get_next_node_ix());
 		assert(next_kid <= end_nix);
@@ -660,13 +660,21 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 		if (count == 0) continue; // empty bin
 		unsigned const kid(ptd.get_next_node_ix());
 		ptd.increment_node_ix();
+
+		if (ptd.at_node_end()) {
+			assert(ptd.can_be_resized);
+			unsigned const old_nodes_size(nodes.size());
+			nodes.resize(5*old_nodes_size/4); // increase by 25% (will invalidate n reference)
+			cout << "Warning: Resizing cobj_bvh_tree nodes from " << old_nodes_size << " to " << nodes.size() << endl;
+			ptd.advance_end_range(nodes.size());
+		}
 		nodes[kid] = tree_node(cur, cur+count);
 		build_tree(kid, skip_dims, depth+1, ptd);
 		nodes[kid].next_node_id = ptd.get_next_node_ix();
 		cur += count;
 	}
-	assert(cur == n.end);
-	n.start = n.end = 0; // branch node has no leaves
+	assert(cur == nodes[nix].end);
+	nodes[nix].start = nodes[nix].end = 0; // branch node has no leaves
 }
 
 

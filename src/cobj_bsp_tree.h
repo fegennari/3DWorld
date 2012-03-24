@@ -85,9 +85,13 @@ class cobj_bvh_tree : public cobj_tree_base {
 	struct per_thread_data {
 		vector<unsigned> temp_bins[3];
 		unsigned start_nix, end_nix, cur_nix;
-		per_thread_data(unsigned start, unsigned end) : start_nix(start), end_nix(end), cur_nix(start) {}
-		unsigned get_next_node_ix() const {return cur_nix;}
-		void increment_node_ix() {assert(cur_nix >= start_nix && cur_nix < end_nix); cur_nix++;}
+		bool can_be_resized;
+
+		per_thread_data(unsigned start, unsigned end, bool cbr) : start_nix(start), end_nix(end), cur_nix(start), can_be_resized(cbr) {}
+		bool at_node_end() const {return (cur_nix == end_nix);}
+		void advance_end_range(unsigned new_end_nix) {assert(new_end_nix >= end_nix); end_nix = new_end_nix;}
+		unsigned get_next_node_ix() const {assert(cur_nix < end_nix); return cur_nix;}
+		void increment_node_ix() {assert(cur_nix >= start_nix); cur_nix++;}
 	};
 
 	void add_cobj(unsigned ix) {if (obj_ok(cobjs[ix])) cixs.push_back(ix);}
