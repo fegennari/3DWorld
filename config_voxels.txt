@@ -18,6 +18,7 @@ mesh_scale 0.7
 camera_height 0.0
 sun_rot 0.4
 shadow_detail 7
+cobj_z_bias 0.001
 
 include config_gameplay.txt
 unlimited_weapons 1
@@ -30,7 +31,7 @@ mesh_size  128 128 64
 scene_size 4.0 4.0 2.5
 
 include config_resolution.txt
-shadow_map_sz 2048
+shadow_map_sz 2048 # 4096?
 
 coll_obj_file coll_objs/COLL_OBJS_Test.TXT # empty
 ship_def_file universe/ship_defs.txt

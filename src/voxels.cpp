@@ -13,7 +13,7 @@
 
 bool const NORMALIZE_TO_1  = 1;
 bool const DEBUG_BLOCKS    = 0;
-unsigned const NUM_BLOCKS  = 8; // in x and y
+unsigned const NUM_BLOCKS  = 12; // in x and y
 unsigned const NOISE_TSIZE = 64;
 
 

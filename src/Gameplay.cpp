@@ -1336,6 +1336,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 	}
 	if (weapon == W_BLADE && sstates[shooter].fire_frame > 0 && (rand()&7) == 0) {
 		destroy_coll_objs(pos, 18.0*damage, shooter, 0);
+		update_voxel_sphere_region(pos, radius, -0.02, shooter, (rand()%3));
 	}
 	if (weapon == W_BBBAT && sstates[shooter].fire_frame > 0) {
 		destroy_coll_objs(pos, 0.5*damage, shooter, 0);
@@ -1895,6 +1896,9 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		}
 		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((rand()%50) == 0)) || (cobj.destroy >= EXPLODEABLE && ((rand()%10) == 0))) {
 			destroy_coll_objs(coll_pos, 500.0, shooter, 0, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)
+		}
+		if (!is_laser && cobj.cp.is_model3d) {
+			update_voxel_sphere_region(coll_pos, object_types[PROJC].radius, -0.01, shooter, 0);
 		}
 	}
 	
