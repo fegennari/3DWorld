@@ -266,6 +266,7 @@ void voxel_model::remove_unconnected_outside_block(unsigned block_ix) {
 // outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored
 void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2) {
 
+	assert(first_zval_above_mesh.size() == nx*ny);
 	vector<unsigned> work; // stack of voxels to process
 	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
@@ -327,7 +328,14 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 		for (unsigned x = x1; x < x2; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
 				unsigned const ix(outside.get_ix(x, y, z));
-				outside[ix] = (outside[ix] & 6) ? (outside[ix] & 3) : 1;
+
+				if (outside[ix] & 6) { // anchored or on edge
+					outside[ix] &= 3; // remove anchored bit
+				}
+				else if (outside[ix] != 1) { // inside and non-anchored
+					outside[ix] = 1; // make outside
+					operator[](ix) = params.isolevel - (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
+				}
 			}
 		}
 	}
