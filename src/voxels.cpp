@@ -618,6 +618,11 @@ void voxel_model::proc_pending_updates() {
 	bool something_removed(0);
 	unsigned num_added(0);
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
+	bool can_undo_last_cboj_tree_add(!last_blocks_updated.empty());
+
+	for (vector<unsigned>::const_iterator i = last_blocks_updated.begin(); i != last_blocks_updated.end(); ++i) {
+		if (modified_blocks.find(*i) == modified_blocks.end()) {can_undo_last_cboj_tree_add = 0; break;}
+	}
 	modified_blocks.clear();
 	
 	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
@@ -641,7 +646,7 @@ void voxel_model::proc_pending_updates() {
 	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
 		copy(data_blocks[blocks_to_update[i]].cids.begin(), data_blocks[blocks_to_update[i]].cids.end(), back_inserter(cixs));
 	}
-	if (blocks_to_update == last_blocks_updated) {
+	if (can_undo_last_cboj_tree_add) {
 		try_undo_last_add_to_cobj_tree(0);
 	}
 	last_blocks_updated = blocks_to_update;
