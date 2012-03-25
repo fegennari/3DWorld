@@ -252,19 +252,37 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 void voxel_manager::remove_unconnected_outside() { // check for voxels connected to the mesh surface
 
 	bool const keep_at_edge(params.keep_at_scene_edge == 1 || (params.keep_at_scene_edge == 2 && dynamic_mesh_scroll));
-	remove_unconnected_outside_range(keep_at_edge, 0, 0, nx, ny);
+	remove_unconnected_outside_range(keep_at_edge, 0, 0, nx, ny, NULL);
 }
 
 
-void voxel_model::remove_unconnected_outside_block(unsigned block_ix) {
+void voxel_model::remove_unconnected_outside_block(unsigned block_ix, std::set<unsigned> &updated_blocks) {
 
 	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
-	remove_unconnected_outside_range(1, xbix*xblocks, ybix*yblocks, min(nx, (xbix+1)*xblocks), min(ny, (ybix+1)*yblocks));
+	vector<unsigned> xy_updated;
+	unsigned const pad = 1;
+	remove_unconnected_outside_range(1, max(0, (int)xbix-(int)pad)*xblocks, max(0, (int)ybix-(int)pad)*yblocks,
+		                                min(nx, (xbix+pad+1)*xblocks),      min(ny, (ybix+pad+1)*yblocks), &xy_updated);
+
+	for (vector<unsigned>::const_iterator i = xy_updated.begin(); i != xy_updated.end(); ++i) {
+		unsigned const x((*i)%nx), y((*i)/nx);
+		assert(x < nx && y < ny);
+		unsigned const bx1(max(0, (int)x-1)/xblocks), by1(max(0, (int)y-1)/yblocks);
+		unsigned const bx2(min((int)nx-1, (int)x+1)/xblocks), by2(min((int)nx-1, (int)y+1)/yblocks);
+		
+		for (unsigned by = by1; by <= by2; ++by) {
+			for (unsigned bx = bx1; bx <= bx2; ++bx) {
+				unsigned const bix(by*NUM_BLOCKS + bx);
+				assert(bix < data_blocks.size());
+				updated_blocks.insert(bix);
+			}
+		}
+	}
 }
 
 
 // outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored
-void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2) {
+void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> *xy_updated) {
 
 	assert(first_zval_above_mesh.size() == nx*ny);
 	vector<unsigned> work; // stack of voxels to process
@@ -333,6 +351,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 					outside[ix] &= 3; // remove anchored bit
 				}
 				else if (outside[ix] != 1) { // inside and non-anchored
+					if (xy_updated) {xy_updated->push_back(y*nx + x);}
 					outside[ix] = 1; // make outside
 					operator[](ix) = params.isolevel - (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
 				}
@@ -617,6 +636,15 @@ void voxel_model::proc_pending_updates() {
 	if (modified_blocks.empty()) return;
 	bool something_removed(0);
 	unsigned num_added(0);
+
+	if (params.remove_unconnected) {
+		std::set<unsigned> updated_blocks;
+
+		for (std::set<unsigned>::const_iterator i = modified_blocks.begin(); i != modified_blocks.end(); ++i) {
+			remove_unconnected_outside_block(*i, updated_blocks);
+		}
+		copy(updated_blocks.begin(), updated_blocks.end(), inserter(modified_blocks, modified_blocks.end()));
+	}
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	bool can_undo_last_cboj_tree_add(!last_blocks_updated.empty());
 
@@ -630,11 +658,6 @@ void voxel_model::proc_pending_updates() {
 	}
 	if (something_removed) purge_coll_freed(0); // unecessary?
 
-	if (something_removed && params.remove_unconnected) {
-		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
-			remove_unconnected_outside_block(blocks_to_update[i]);
-		}
-	}
 	#pragma omp parallel for schedule(static,1)
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
 		num_added += (create_block(blocks_to_update[i], 0) > 0);

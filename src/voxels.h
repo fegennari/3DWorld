@@ -92,7 +92,7 @@ protected:
 	void atten_edge_val(unsigned x, unsigned y, unsigned z, float val);
 	void atten_top_val (unsigned x, unsigned y, unsigned z, float val);
 	void calc_outside_val(unsigned x, unsigned y, unsigned z);
-	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2);
+	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> *xy_updated);
 	void get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z) const;
 
 public:
@@ -162,7 +162,7 @@ class voxel_model : public voxel_manager {
 		bool operator()(pt_ix_t const &a, pt_ix_t const &b) const {return (p2p_dist_sq(a.pt, p) < p2p_dist_sq(b.pt, p));}
 	};
 
-	void remove_unconnected_outside_block(unsigned block_ix);
+	void remove_unconnected_outside_block(unsigned block_ix, std::set<unsigned> &updated_blocks);
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	bool clear_block(unsigned block_ix);
 	unsigned create_block(unsigned block_ix, bool first_create);
