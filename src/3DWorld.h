@@ -1585,8 +1585,8 @@ void free_cobj_draw_group_dlists();
 
 // function prototypes - coll_cell_search
 void build_cobj_tree(bool dynamic=0, bool verbose=1);
-void add_to_cobj_tree(vector<unsigned> const &cobj_ixs);
-bool try_undo_last_add_to_cobj_tree();
+void add_to_cobj_tree(vector<unsigned> const &cobj_ixs, unsigned caller_id);
+bool try_undo_last_add_to_cobj_tree(unsigned caller_id);
 void build_moving_cobj_tree();
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm,
 	int &cindex, int ignore_cobj, bool dynamic=0, int test_alpha=0, bool skip_non_drawn=0);

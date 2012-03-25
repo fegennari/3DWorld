@@ -335,7 +335,7 @@ void cobj_bvh_tree::clear() {
 
 	cobj_tree_base::clear();
 	cixs.resize(0);
-	extra_cobjs_added = extra_cobj_blocks = cixs_bef_last_ec_add = nodes_bef_last_ec_add = 0;
+	extra_cobjs_added = extra_cobj_blocks = cixs_bef_last_ec_add = nodes_bef_last_ec_add = last_ec_caller_id = 0;
 }
 
 
@@ -368,7 +368,7 @@ void cobj_bvh_tree::add_cobjs(bool verbose) {
 }
 
 
-void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs) {
+void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs, unsigned caller_id) {
 
 	if (cobj_ixs.empty()) return;
 	
@@ -378,6 +378,7 @@ void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs) {
 	}
 	cixs_bef_last_ec_add  = cixs.size();
 	nodes_bef_last_ec_add = nodes.size();
+	last_ec_caller_id     = caller_id;
 	unsigned const new_root(nodes_bef_last_ec_add);
 
 	for (vector<unsigned>::const_iterator i = cobj_ixs.begin(); i != cobj_ixs.end(); ++i) {
@@ -397,15 +398,15 @@ void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs) {
 }
 
 
-bool cobj_bvh_tree::try_remove_last_extra_cobjs_block() {
+bool cobj_bvh_tree::try_remove_last_extra_cobjs_block(unsigned caller_id) {
 
-	if (extra_cobj_blocks == 0) return 0; // can't remove anything (nothing added or rebuilt since last add)
+	if (extra_cobj_blocks == 0 || caller_id != last_ec_caller_id) return 0; // can't remove anything (nothing added or rebuilt since last add)
 	assert(cixs.size() >= cixs_bef_last_ec_add && nodes.size() >= nodes_bef_last_ec_add);
 	unsigned const last_num_added(cixs.size() - cixs_bef_last_ec_add);
 	assert(extra_cobjs_added >= last_num_added);
 	extra_cobjs_added -= last_num_added; 
 	--extra_cobj_blocks;
-	cixs_bef_last_ec_add = nodes_bef_last_ec_add = 0; // reset so we can't remove last again
+	cixs_bef_last_ec_add = nodes_bef_last_ec_add = last_ec_caller_id = 0; // reset so we can't remove last again
 	return 1;
 }
 
@@ -713,15 +714,14 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 	}
 }
 
-void add_to_cobj_tree(vector<unsigned> const &cobj_ixs) { // no cobj_tree_occlude update?
-	cobj_tree_static.add_extra_cobjs(cobj_ixs);
-	//cobj_tree_triangles.add_extra_cobjs(cobj_ixs);
+void add_to_cobj_tree(vector<unsigned> const &cobj_ixs, unsigned caller_id) { // no cobj_tree_occlude update?
+	cobj_tree_static.add_extra_cobjs(cobj_ixs, caller_id);
 	update_dynamic_ranges(coll_objects);
 }
 
-bool try_undo_last_add_to_cobj_tree() {
+bool try_undo_last_add_to_cobj_tree(unsigned caller_id) {
 	//update_dynamic_ranges(coll_objects); // not needed if we will be calling add_to_cobj_tree() later
-	return cobj_tree_static.try_remove_last_extra_cobjs_block();
+	return cobj_tree_static.try_remove_last_extra_cobjs_block(caller_id);
 }
 
 void build_moving_cobj_tree() {

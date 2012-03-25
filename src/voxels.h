@@ -126,12 +126,12 @@ public:
 class voxel_model : public voxel_manager {
 
 	bool add_cobjs;
-	int last_block_updated;
 	typedef vert_norm vertex_type_t;
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	tri_data_t tri_data;
 	noise_texture_manager_t noise_tex_gen;
 	std::set<unsigned> modified_blocks;
+	vector<unsigned> last_blocks_updated;
 	voxel_grid<float> ao_lighting;
 
 	struct step_dir_t {
@@ -171,7 +171,7 @@ class voxel_model : public voxel_manager {
 	void calc_ao_lighting();
 
 public:
-	voxel_model() : add_cobjs(0), last_block_updated(-1) {}
+	voxel_model() : add_cobjs(0) {}
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
 	void proc_pending_updates();

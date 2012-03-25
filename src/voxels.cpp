@@ -393,6 +393,7 @@ void voxel_model::clear() {
 	data_blocks.clear();
 	pt_to_ix.clear();
 	modified_blocks.clear();
+	last_blocks_updated.clear();
 	ao_lighting.clear();
 	voxel_manager::clear();
 }
@@ -632,11 +633,11 @@ void voxel_model::proc_pending_updates() {
 	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
 		copy(data_blocks[blocks_to_update[i]].cids.begin(), data_blocks[blocks_to_update[i]].cids.end(), back_inserter(cixs));
 	}
-	if (blocks_to_update.size() == 1 && (int)blocks_to_update.front() == last_block_updated) {
-		try_undo_last_add_to_cobj_tree();
+	if (blocks_to_update == last_blocks_updated) {
+		try_undo_last_add_to_cobj_tree(0);
 	}
-	last_block_updated = ((blocks_to_update.size() == 1) ? blocks_to_update.front() : -1);
-	add_to_cobj_tree(cixs);
+	last_blocks_updated = blocks_to_update;
+	add_to_cobj_tree(cixs, 0);
 
 	if (!ao_lighting.empty()) {
 		unsigned y_start(MESH_Y_SIZE), y_end(0); // start at denormalized range
@@ -658,7 +659,6 @@ void voxel_model::build(bool add_cobjs_) {
 
 	RESET_TIME;
 	add_cobjs = add_cobjs_;
-	last_block_updated = -1;
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 	if (params.atten_at_edges == 1) atten_at_top_only(atten_thresh);
 	if (params.atten_at_edges == 2) atten_at_edges   (atten_thresh);
