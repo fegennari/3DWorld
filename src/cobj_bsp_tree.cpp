@@ -335,7 +335,7 @@ void cobj_bvh_tree::clear() {
 
 	cobj_tree_base::clear();
 	cixs.resize(0);
-	extra_cobjs_added = extra_cobj_blocks = 0;
+	extra_cobjs_added = extra_cobj_blocks = cixs_bef_last_ec_add = nodes_bef_last_ec_add = 0;
 }
 
 
@@ -371,13 +371,14 @@ void cobj_bvh_tree::add_cobjs(bool verbose) {
 void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs) {
 
 	if (cobj_ixs.empty()) return;
-	unsigned const num(cobj_ixs.size());
 	
-	if ((extra_cobjs_added + num) > nodes.size()/4 || extra_cobj_blocks > 8) {
+	if ((extra_cobjs_added + cobj_ixs.size()) > nodes.size()/4 || extra_cobj_blocks > 8) {
 		add_cobjs(0); // too many extra cobjs - rebuild the entire tree
 		return;
 	}
-	unsigned const start(cixs.size()), new_root(nodes.size());
+	cixs_bef_last_ec_add  = cixs.size();
+	nodes_bef_last_ec_add = nodes.size();
+	unsigned const new_root(nodes_bef_last_ec_add);
 
 	for (vector<unsigned>::const_iterator i = cobj_ixs.begin(); i != cobj_ixs.end(); ++i) {
 		assert(*i < cobjs.size());
@@ -385,14 +386,27 @@ void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs) {
 	}
 	// FIXME: could result in duplicate cobjs in the tree if a cobj in cobj_ixs replaces a cobj that was deleted in the tree
 	//        this is *probably* ok since it will duplicate a small number of times
-	nodes.resize(nodes.size() + get_conservative_num_nodes(num) + 1);
-	nodes[new_root] = tree_node(start, (unsigned)cixs.size());
+	nodes.resize(nodes.size() + get_conservative_num_nodes(cobj_ixs.size()) + 1);
+	nodes[new_root] = tree_node(cixs_bef_last_ec_add, (unsigned)cixs.size());
 	per_thread_data ptd(new_root+1, nodes.size(), 1);
 	build_tree(new_root, 0, 0, ptd);
 	nodes.resize(ptd.get_next_node_ix());
 	nodes[new_root].next_node_id = (unsigned)nodes.size();
-	extra_cobjs_added += num;
+	extra_cobjs_added += (cixs.size() - cixs_bef_last_ec_add); // actual number added
 	++extra_cobj_blocks;
+}
+
+
+bool cobj_bvh_tree::try_remove_last_extra_cobjs_block() {
+
+	if (extra_cobj_blocks == 0) return 0; // can't remove anything (nothing added or rebuilt since last add)
+	assert(cixs.size() >= cixs_bef_last_ec_add && nodes.size() >= nodes_bef_last_ec_add);
+	unsigned const last_num_added(cixs.size() - cixs_bef_last_ec_add);
+	assert(extra_cobjs_added >= last_num_added);
+	extra_cobjs_added -= last_num_added; 
+	--extra_cobj_blocks;
+	cixs_bef_last_ec_add = nodes_bef_last_ec_add = 0; // reset so we can't remove last again
+	return 1;
 }
 
 
@@ -703,6 +717,11 @@ void add_to_cobj_tree(vector<unsigned> const &cobj_ixs) { // no cobj_tree_occlud
 	cobj_tree_static.add_extra_cobjs(cobj_ixs);
 	//cobj_tree_triangles.add_extra_cobjs(cobj_ixs);
 	update_dynamic_ranges(coll_objects);
+}
+
+bool try_undo_last_add_to_cobj_tree() {
+	//update_dynamic_ranges(coll_objects); // not needed if we will be calling add_to_cobj_tree() later
+	return cobj_tree_static.try_remove_last_extra_cobjs_block();
 }
 
 void build_moving_cobj_tree() {
