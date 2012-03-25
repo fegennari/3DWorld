@@ -270,14 +270,12 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
 	// add voxels along the mesh surface
-	for (int y = 0; y < MESH_Y_SIZE; ++y) {
-		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			point const p(get_xval(x), get_yval(y), mesh_height[y][x]);
-			int xyz[3];
-			get_xyz(p, xyz);
-			if (xyz[0] < (int)x1 || xyz[1] < (int)y1 || xyz[0] >= (int)x2 || xyz[1] >= (int)y2) continue; // out of range
-			unsigned ix(0);
-			if (!get_ix(p, ix) || outside[ix] != 0) continue; // off the voxel grid, outside, or on edge
+	for (unsigned y = y1; y < y2; ++y) {
+		for (unsigned x = x1; x < x2; ++x) {
+			unsigned const zpos(first_zval_above_mesh[y*nx + x]);
+			if (zpos == 0 || zpos >= nz) continue; // off the grid
+			unsigned const ix(outside.get_ix(x, y, zpos));
+			if (outside[ix] != 0) continue; // outside
 			work.push_back(ix); // inside, anchored to the mesh
 			outside[ix] |= 4; // mark as anchored
 		}
