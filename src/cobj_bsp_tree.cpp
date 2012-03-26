@@ -374,6 +374,8 @@ bool cobj_bvh_tree::try_remove_last_extra_cobjs_block(unsigned caller_id) {
 
 	if (extra_cobj_blocks == 0 || caller_id != last_ec_caller_id) return 0; // can't remove anything (nothing added or rebuilt since last add)
 	assert(cixs.size() >= cixs_bef_last_ec_add && nodes.size() >= nodes_bef_last_ec_add);
+	nodes.resize(nodes_bef_last_ec_add);
+	cixs.resize(cixs_bef_last_ec_add);
 	unsigned const last_num_added(cixs.size() - cixs_bef_last_ec_add);
 	assert(extra_cobjs_added >= last_num_added);
 	extra_cobjs_added -= last_num_added; 
