@@ -2525,14 +2525,14 @@ void draw_fires() {
 
 struct crack_point {
 
-	point pos;
+	point pos, orig_pos;
 	int cid, face, time;
 	float alpha;
 	colorRGBA color;
 	
 	crack_point() {}
-	crack_point(point const &pos_, int cid_, int face_, int time_, float alpha_, colorRGBA const &color_)
-		: pos(pos_), cid(cid_), face(face_), time(time_), alpha(alpha_), color(color_) {}
+	crack_point(point const &pos_, point const &opos, int cid_, int face_, int time_, float alpha_, colorRGBA const &color_)
+		: pos(pos_), orig_pos(opos), cid(cid_), face(face_), time(time_), alpha(alpha_), color(color_) {}
 	
 	bool operator<(crack_point const &c) const {
 		if (cid  != c.cid ) return (cid  < c.cid );
@@ -2571,7 +2571,7 @@ void create_and_draw_cracks() {
 		if (skip_cobj) continue;
 		int const face(cobj.closest_face(pos)), dim(face >> 1), dir(face & 1);
 		if ((pos[dim] - camera[dim] < 0) ^ dir) continue; // back facing
-		cpts.push_back(crack_point(pos, i->cid, face, i->time, i->get_alpha(), i->color));
+		cpts.push_back(crack_point(pos, i->pos, i->cid, face, i->time, i->get_alpha(), i->color));
 	}
 	stable_sort(cpts.begin(), cpts.end());
 
@@ -2590,7 +2590,7 @@ void create_and_draw_cracks() {
 			float const center(0.5*(cube.d[dim][0] + cube.d[dim][1]));
 			float const x1(cpt1.pos[d1]), y1(cpt1.pos[d2]);
 			rand_gen_t rgen;
-			rgen.set_state(*(int *)&x1, *(int *)&y1); // hash floats as ints	
+			rgen.set_state(*(int *)&cpt1.orig_pos[d1], *(int *)&cpt1.orig_pos[d2]); // hash floats as ints	
 			point epts[ncracks];
 
 			for (unsigned n = 0; n < ncracks; ++n) {
