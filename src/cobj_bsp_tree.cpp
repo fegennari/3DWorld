@@ -273,17 +273,7 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 
 bool cobj_bvh_tree::create_cixs() {
 
-	if (moving_only) {
-		for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
-			for (vector<unsigned>::const_iterator j = i->cobjs.begin(); j != i->cobjs.end(); ++j) {
-				add_cobj(*j);
-			}
-		}
-		for (unsigned i = 0; i < falling_cobjs.size(); ++i) {
-			add_cobj(falling_cobjs[i]);
-		}
-	}
-	else if (is_dynamic && !is_static) { // use dynamic_ids
+	if (is_dynamic && !is_static) { // use dynamic_ids
 		for (cobj_id_set_t::const_iterator i = cobjs.dynamic_ids.begin(); i != cobjs.dynamic_ids.end(); ++i) {
 			assert(*i < cobjs.size());
 			assert(cobjs[*i].status == COLL_DYNAMIC);
@@ -452,8 +442,6 @@ void cobj_bvh_tree::get_intersecting_cobjs(cube_t const &cube, vector<unsigned> 
 			if ((int)cixs[i] == ignore_cobj) continue;
 			coll_obj const &c(get_cobj(i));
 			if (check_ccounter && c.counter == cobj_counter) continue;
-			// get_intersecting_cobjs_tree() calls this on both static and moving cobj_trees, so we want to check to make sure we don't double include it
-			if (!moving_only && c.maybe_is_moving())         continue;
 			if (!obj_ok(c) || !cube.intersects(c, toler))    continue;
 			if (id_for_cobj_int >= 0 && coll_objects[id_for_cobj_int].intersects_cobj(c, toler) != 1) continue;
 			cobjs.push_back(cixs[i]);
@@ -678,7 +666,6 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 cobj_bvh_tree cobj_tree_static (coll_objects, 1, 0, 0, 0);
 cobj_bvh_tree cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
 cobj_bvh_tree cobj_tree_occlude(coll_objects, 1, 0, 1, 0);
-cobj_bvh_tree cobj_tree_moving (coll_objects, 1, 0, 0, 1);
 cobj_tree_tquads_t cobj_tree_triangles;
 
 
@@ -689,9 +676,19 @@ cobj_bvh_tree &get_tree(bool dynamic) {
 void build_cobj_tree(bool dynamic, bool verbose) {
 	get_tree(dynamic).add_cobjs(verbose);
 	
-	if (!dynamic) {
+	if (!dynamic) { // static
 		cobj_tree_occlude.add_cobjs(verbose);
 		//cobj_tree_triangles.add_cobjs(coll_objects, verbose);
+	}
+	else { // dynamic
+		vector<unsigned> moving_cids(falling_cobjs);
+
+		for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
+			copy(i->cobjs.begin(), i->cobjs.end(), back_inserter(moving_cids));
+		}
+		unsigned const caller_id(1);
+		cobj_tree_static.try_remove_last_extra_cobjs_block(caller_id);
+		cobj_tree_static.add_extra_cobjs(moving_cids, caller_id);
 	}
 }
 
@@ -701,10 +698,6 @@ void add_to_cobj_tree(vector<unsigned> const &cobj_ixs, unsigned caller_id) { //
 
 bool try_undo_last_add_to_cobj_tree(unsigned caller_id) {
 	return cobj_tree_static.try_remove_last_extra_cobjs_block(caller_id);
-}
-
-void build_moving_cobj_tree() {
-	cobj_tree_moving.add_cobjs(0);
 }
 
 // can use with ray trace lighting, snow collision?, maybe water reflections
@@ -728,7 +721,6 @@ void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, in
 	bool dynamic, bool check_ccounter, int id_for_cobj_int)
 {
 	get_tree(dynamic).get_intersecting_cobjs(cube, cobjs, ignore_cobj, toler, check_ccounter, id_for_cobj_int);
-	cobj_tree_moving.get_intersecting_cobjs (cube, cobjs, ignore_cobj, toler, check_ccounter, id_for_cobj_int);
 }
 
 

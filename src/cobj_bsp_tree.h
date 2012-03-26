@@ -80,7 +80,7 @@ class cobj_bvh_tree : public cobj_tree_base {
 	coll_obj_group const &cobjs;
 	vector<unsigned> cixs;
 	unsigned extra_cobjs_added, extra_cobj_blocks, cixs_bef_last_ec_add, nodes_bef_last_ec_add, last_ec_caller_id; // extra_cobjs stuff
-	bool is_static, is_dynamic, occluders_only, moving_only, cubes_only;
+	bool is_static, is_dynamic, occluders_only, cubes_only;
 
 	struct per_thread_data {
 		vector<unsigned> temp_bins[3];
@@ -103,13 +103,13 @@ class cobj_bvh_tree : public cobj_tree_base {
 
 	bool obj_ok(coll_obj const &c) const {
 		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC) || (!is_static && !is_dynamic)) &&
-			(!occluders_only || c.is_occluder()) && (!moving_only || c.maybe_is_moving()) && !c.cp.no_coll && (!cubes_only || c.type == COLL_CUBE));
+			(!occluders_only || c.is_occluder()) && !c.cp.no_coll && (!cubes_only || c.type == COLL_CUBE));
 	}
 
 public:
-	cobj_bvh_tree(coll_obj_group const &cobjs_, bool s, bool d, bool o, bool m, bool c=0)
+	cobj_bvh_tree(coll_obj_group const &cobjs_, bool s, bool d, bool o, bool c)
 		: cobjs(cobjs_), extra_cobjs_added(0), extra_cobj_blocks(0), cixs_bef_last_ec_add(0), nodes_bef_last_ec_add(0), last_ec_caller_id(0),
-		is_static(s), is_dynamic(d), occluders_only(o), moving_only(m), cubes_only(c) {}
+		is_static(s), is_dynamic(d), occluders_only(o), cubes_only(c) {}
 
 	void clear();
 	void add_cobjs(bool verbose);

@@ -258,7 +258,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	cdir = zero_vector;
 	vector<cube_t> mod_cubes;
 	mod_cubes.push_back(cube);
-	build_moving_cobj_tree();
 	vector<unsigned> int_cobjs;
 	get_intersecting_cobjs_tree(cube, int_cobjs, -1, 0.0, 0, 0, -1);
 
@@ -320,10 +319,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		cobjs[to_remove[i]].remove_waypoint();
 		remove_coll_object(to_remove[i]); // remove old collision object
 	}
-	if (!to_remove.empty()) {
-		invalidate_static_cobjs(); // after destroyed cobj removal
-		build_moving_cobj_tree();
-	}
+	if (!to_remove.empty()) invalidate_static_cobjs(); // after destroyed cobj removal
 
 	// add new waypoints (after build_cobj_tree and end_batch)
 	for (unsigned i = 0; i < just_added.size(); ++i) {
@@ -403,7 +399,6 @@ void check_falling_cobjs() {
 	}
 	vector<unsigned> last_falling(falling_cobjs);
 	sort(last_falling.begin(), last_falling.end());
-	build_moving_cobj_tree();
 	check_cobjs_anchored(falling_cobjs, anchored);
 	falling_cobjs.resize(0);
 	add_to_falling_cobjs(anchored[0]);
