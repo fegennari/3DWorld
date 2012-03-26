@@ -722,6 +722,14 @@ void check_contained_cube_sides() {
 }
 
 
+void coll_obj_group::clear() { // unused, but may be useful
+	
+	vector<coll_obj>::clear();
+	dynamic_cobj_ids.clear();
+	have_drawn_cobj = have_platform_cobj = 0;
+}
+
+
 void coll_obj_group::finalize() {
 
 	process_negative_shapes(); // must be first because requires an unmodified ordering of shapes

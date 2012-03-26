@@ -151,8 +151,10 @@ class coll_obj_group : public vector<coll_obj> {
 
 public:
 	bool have_drawn_cobj, have_platform_cobj;
+	set<unsigned> dynamic_cobj_ids;
 
 	coll_obj_group() : have_drawn_cobj(0), have_platform_cobj(0) {}
+	void clear();
 	void finalize();
 	void remove_invalid_cobjs();
 	void check_cubes();

@@ -11,8 +11,6 @@ float const POLY_TOLER       = 1.0E-6;
 float const OVERLAP_AMT      = 0.02;
 
 
-vector<unsigned> dynamic_ranges;
-
 extern bool mt_cobj_tree_build;
 extern int display_mode, frame_counter, cobj_counter, begin_motion;
 extern coll_obj_group coll_objects;
@@ -273,21 +271,6 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 }
 
 
-void update_dynamic_ranges(coll_obj_group const &cobjs) {
-
-	bool in_static_range(1);
-	dynamic_ranges.resize(0); // recompute
-	
-	for (unsigned i = 0; i < cobjs.size(); ++i) {
-		if (cobjs[i].truly_static() != in_static_range) {
-			dynamic_ranges.push_back(i);
-			in_static_range ^= 1;
-		}
-	}
-	if (in_static_range) dynamic_ranges.push_back(cobjs.size());
-}
-
-
 bool cobj_bvh_tree::create_cixs() {
 
 	if (moving_only) {
@@ -300,12 +283,11 @@ bool cobj_bvh_tree::create_cixs() {
 			add_cobj(falling_cobjs[i]);
 		}
 	}
-	else if (is_dynamic && !is_static && !dynamic_ranges.empty()) { // use dynamic_ranges here
-		assert(dynamic_ranges.size() & 1);
-
-		for (unsigned r = 0; r < dynamic_ranges.size(); r += 2) {
-			unsigned const end((r+1 < dynamic_ranges.size()) ? dynamic_ranges[r+1] : cobjs.size());
-			for (unsigned i = dynamic_ranges[r]; i < end; ++i) add_cobj(i);
+	else if (is_dynamic && !is_static) { // use dynamic_cobj_ids
+		for (set<unsigned>::const_iterator i = cobjs.dynamic_cobj_ids.begin(); i != cobjs.dynamic_cobj_ids.end(); ++i) {
+			assert(*i < cobjs.size());
+			assert(cobjs[*i].status == COLL_DYNAMIC);
+			add_cobj(*i);
 		}
 	}
 	else {
@@ -710,17 +692,14 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 	if (!dynamic) {
 		cobj_tree_occlude.add_cobjs(verbose);
 		//cobj_tree_triangles.add_cobjs(coll_objects, verbose);
-		update_dynamic_ranges(coll_objects);
 	}
 }
 
 void add_to_cobj_tree(vector<unsigned> const &cobj_ixs, unsigned caller_id) { // no cobj_tree_occlude update?
 	cobj_tree_static.add_extra_cobjs(cobj_ixs, caller_id);
-	update_dynamic_ranges(coll_objects);
 }
 
 bool try_undo_last_add_to_cobj_tree(unsigned caller_id) {
-	//update_dynamic_ranges(coll_objects); // not needed if we will be calling add_to_cobj_tree() later
 	return cobj_tree_static.try_remove_last_extra_cobjs_block(caller_id);
 }
 

@@ -676,6 +676,11 @@ int remove_coll_object(int index, bool reset_draw) {
 	}
 	if (c.status == COLL_FREED) return 0;
 	if (reset_draw) c.cp.draw = 0;
+
+	if (c.status == COLL_DYNAMIC) {
+		unsigned const num_dynamic_cobjs_removed(coll_objects.dynamic_cobj_ids.erase(index));
+		assert(num_dynamic_cobjs_removed == 1);
+	}
 	c.status   = COLL_FREED;
 	c.waypt_id = -1; // is this necessary?
 	
@@ -774,7 +779,12 @@ void remove_all_coll_obj() {
 void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams) {
 	
 	assert(size_t(index) < coll_objects.size());
-	coll_obj &cobj(coll_objects[index]);
+	coll_obj &cobj(coll_objects[index]); // Note: this is the *only* place a new cobj is allocated/created
+	
+	if (cparams.is_dynamic) {
+		bool const did_insert_dynamic_cobj(coll_objects.dynamic_cobj_ids.insert(index).second);
+		assert(did_insert_dynamic_cobj);
+	}
 	cobj.status      = (cparams.is_dynamic ? COLL_DYNAMIC : COLL_STATIC);
 	cobj.texture_offset = zero_vector;
 	cobj.cp          = cparams;
