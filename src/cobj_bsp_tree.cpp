@@ -283,8 +283,8 @@ bool cobj_bvh_tree::create_cixs() {
 			add_cobj(falling_cobjs[i]);
 		}
 	}
-	else if (is_dynamic && !is_static) { // use dynamic_cobj_ids
-		for (set<unsigned>::const_iterator i = cobjs.dynamic_cobj_ids.begin(); i != cobjs.dynamic_cobj_ids.end(); ++i) {
+	else if (is_dynamic && !is_static) { // use dynamic_ids
+		for (cobj_id_set_t::const_iterator i = cobjs.dynamic_ids.begin(); i != cobjs.dynamic_ids.end(); ++i) {
 			assert(*i < cobjs.size());
 			assert(cobjs[*i].status == COLL_DYNAMIC);
 			add_cobj(*i);

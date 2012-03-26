@@ -675,12 +675,10 @@ int remove_coll_object(int index, bool reset_draw) {
 		return 0;
 	}
 	if (c.status == COLL_FREED) return 0;
+	if (c.status == COLL_DYNAMIC) coll_objects.dynamic_ids.must_erase (index);
+	if (c.cp.draw               ) coll_objects.drawn_ids.must_erase   (index);
+	if (c.platform_id >= 0      ) coll_objects.platform_ids.must_erase(index);
 	if (reset_draw) c.cp.draw = 0;
-
-	if (c.status == COLL_DYNAMIC) {
-		unsigned const num_dynamic_cobjs_removed(coll_objects.dynamic_cobj_ids.erase(index));
-		assert(num_dynamic_cobjs_removed == 1);
-	}
 	c.status   = COLL_FREED;
 	c.waypt_id = -1; // is this necessary?
 	
@@ -780,11 +778,6 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 	
 	assert(size_t(index) < coll_objects.size());
 	coll_obj &cobj(coll_objects[index]); // Note: this is the *only* place a new cobj is allocated/created
-	
-	if (cparams.is_dynamic) {
-		bool const did_insert_dynamic_cobj(coll_objects.dynamic_cobj_ids.insert(index).second);
-		assert(did_insert_dynamic_cobj);
-	}
 	cobj.status      = (cparams.is_dynamic ? COLL_DYNAMIC : COLL_STATIC);
 	cobj.texture_offset = zero_vector;
 	cobj.cp          = cparams;
@@ -804,8 +797,9 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 	cobj.falling     = 0;
 	cobj.calc_size();
 	cobj.set_npoints();
-	coll_objects.have_drawn_cobj    |= cparams.draw;
-	coll_objects.have_platform_cobj |= (platform_id >= 0);
+	if (cparams.is_dynamic) coll_objects.dynamic_ids.must_insert (index);
+	if (cparams.draw      ) coll_objects.drawn_ids.must_insert   (index);
+	if (platform_id >= 0  ) coll_objects.platform_ids.must_insert(index);
 }
 
 

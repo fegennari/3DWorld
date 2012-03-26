@@ -1892,32 +1892,38 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	
 	if (draw_solid) {
 		draw_last.resize(0);
-		
-		if (coll_objects.have_drawn_cobj) {
-			for (unsigned i = 0; i < coll_objects.size(); ++i) {
-				coll_obj const &c(coll_objects[i]);
-				if (c.no_draw()) continue;
-				
-				if (c.is_semi_trans()) { // slow when polygons are grouped
-					float dist(distance_to_camera(c.get_center_pt()));
 
-					if (c.type == COLL_SPHERE) { // distance to surface closest to the camera
-						dist -= c.radius;
-					}
-					else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) { // approx distance to surface closest to the camera
-						dist -= min(0.5*(c.radius + c.radius2), 0.5*p2p_dist(c.points[0], c.points[1]));
-					}
-					draw_last.push_back(make_pair(-dist, i)); // negative distance
+		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
+			unsigned cix(*i);
+			assert(cix < coll_objects.size());
+			coll_obj const &c(coll_objects[cix]);
+			assert(c.cp.draw);
+			if (c.no_draw()) continue; // can still get here sometimes
+				
+			if (c.is_semi_trans()) { // slow when polygons are grouped
+				float dist(distance_to_camera(c.get_center_pt()));
+
+				if (c.type == COLL_SPHERE) { // distance to surface closest to the camera
+					dist -= c.radius;
 				}
-				else {
-					if (c.type != last_type && c.type == COLL_SPHERE) {
-						glFlush(); // HACK: need a flush before texture matrix updates for spheres - FIXME: better way to do this?
-					}
-					last_type = c.type;
-					c.draw_cobj(i, last_tid, last_group_id, &s); // i may not be valid after this call
+				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) { // approx distance to surface closest to the camera
+					dist -= min(0.5*(c.radius + c.radius2), 0.5*p2p_dist(c.points[0], c.points[1]));
+				}
+				draw_last.push_back(make_pair(-dist, cix)); // negative distance
+			}
+			else {
+				if (c.type != last_type && c.type == COLL_SPHERE) {
+					glFlush(); // HACK: need a flush before texture matrix updates for spheres - FIXME: better way to do this?
+				}
+				last_type = c.type;
+				c.draw_cobj(cix, last_tid, last_group_id, &s); // i may not be valid after this call
+				
+				if (cix != *i) {
+					assert(cix > *i);
+					i = std::lower_bound(i, coll_objects.drawn_ids.end(), cix);
 				}
 			}
-		}
+		} // for i
 		end_group(last_group_id);
 	}
 	if (draw_trans) { // called second

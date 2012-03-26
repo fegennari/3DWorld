@@ -213,7 +213,7 @@ void dwobject::update_precip_type() {
 
 void process_platforms() {
 
-	if (animate2 && coll_objects.have_platform_cobj) {
+	if (animate2 && !coll_objects.platform_ids.empty()) {
 		int const max_i(obj_groups[coll_id[SMILEY]].is_enabled() ? num_smileys : 0);
 
 		for (int i = ((camera_mode == 1) ? CAMERA_ID : 0); i < max_i; ++i) {
@@ -222,10 +222,11 @@ void process_platforms() {
 		platforms.advance_timestep();
 	}
 	if (!platforms.empty() && ground_effects_level > 0 && !shadow_map_enabled()) { // add mesh shadows for dynamic platforms
-		for (unsigned i = 0; i < coll_objects.size(); ++i) {
-			if (coll_objects[i].dynamic_shadows_only()) {
-				coll_objects[i].add_shadow((SUN_SHADOW | MOON_SHADOW), 1);
-			}
+		for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
+			assert(*i < coll_objects.size());
+			coll_obj const &cobj(coll_objects[*i]);
+			assert(cobj.platform_id >= 0);
+			if (cobj.dynamic_shadows_only()) cobj.add_shadow((SUN_SHADOW | MOON_SHADOW), 1);
 		}
 	}
 }
@@ -725,8 +726,9 @@ void check_contained_cube_sides() {
 void coll_obj_group::clear() { // unused, but may be useful
 	
 	vector<coll_obj>::clear();
-	dynamic_cobj_ids.clear();
-	have_drawn_cobj = have_platform_cobj = 0;
+	dynamic_ids.clear();
+	drawn_ids.clear();
+	platform_ids.clear();
 }
 
 

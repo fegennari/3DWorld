@@ -147,13 +147,25 @@ public:
 };
 
 
+struct cobj_id_set_t : public set<unsigned> {
+
+	void must_insert(unsigned index) {
+		bool const did_ins(insert(index).second);
+		assert(did_ins);
+	}
+	void must_erase(unsigned index) {
+		unsigned const num_removed(erase(index));
+		assert(num_removed == 1);
+	}
+	bool has(unsigned index) {return find(index) != end();}
+};
+
+
 class coll_obj_group : public vector<coll_obj> {
 
 public:
-	bool have_drawn_cobj, have_platform_cobj;
-	set<unsigned> dynamic_cobj_ids;
+	cobj_id_set_t dynamic_ids, drawn_ids, platform_ids;
 
-	coll_obj_group() : have_drawn_cobj(0), have_platform_cobj(0) {}
 	void clear();
 	void finalize();
 	void remove_invalid_cobjs();

@@ -205,11 +205,11 @@ void platform_cont::advance_timestep() {
 	for (unsigned i = 0; i < size(); ++i) { // cache this?
 		operator[](i).next_frame();
 	}
-	for (unsigned i = 0; i < coll_objects.size(); ++i) {
-		int const pid(coll_objects[i].platform_id);
-		if (pid < 0) continue;
-		assert(pid < (int)size());
-		operator[](pid).add_cobj(i);
+	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
+		assert(*i < coll_objects.size());
+		int const pid(coll_objects[*i].platform_id);
+		assert(pid >= 0 && pid < (int)size());
+		operator[](pid).add_cobj(*i);
 	}
 	for (unsigned i = 0; i < size(); ++i) {
 		operator[](i).advance_timestep();

@@ -294,7 +294,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			draw_sphere_dlist(i->pos, i->radius, ndiv, 0); // use circle texture billboards?
 		}
 	}
-	if (!coll_objects.have_drawn_cobj) {
+	if (coll_objects.drawn_ids.empty()) {
 		// do nothing
 	}
 	else if (smap_dlist) {
