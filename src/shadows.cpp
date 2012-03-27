@@ -137,7 +137,7 @@ int light_valid(unsigned light_sources, int l, point &lpos) {
 void coll_obj::add_shadow(unsigned light_sources, bool dynamic) const {
 
 	if (no_shadow() || dynamic != dynamic_shadows_only()) return;
-	if (scrolling && cp.is_model3d && draw_mesh_shader && shadow_map_enabled()) return;
+	if (scrolling && cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && draw_mesh_shader && shadow_map_enabled()) return;
 
 	switch (type) {
 	case COLL_CUBE:

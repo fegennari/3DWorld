@@ -469,7 +469,7 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
 	}
 	if (add_cobjs) {
 		cobj_params cparams(params.elasticity, params.base_color, 0, 0, NULL, 0, params.tids[0]);
-		cparams.is_model3d = 1;
+		cparams.cobj_type = COBJ_TYPE_VOX_TERRAIN;
 		data_blocks[block_ix].cids.reserve(triangles.size());
 
 		#pragma omp critical(add_coll_polygon)

@@ -289,7 +289,8 @@ bool is_pt_inside_or_near_cobj(point const &pt, float dist, int ignore_cobj, boo
 	assert((unsigned)cindex < coll_objects.size());
 	coll_obj const &cobj(coll_objects[cindex]);
 	if (cobj.type != COLL_POLYGON) return 0; // only polygons are non-volume cobjs
-	if (!cobj.cp.is_model3d && !(cobj.group_id >= 0 && group_back_face_cull)) return 0; // only model3d and grouped cobjs have reliable normal directions
+	// only model3d, voxel terrain, and grouped cobjs have reliable normal directions
+	if (cobj.cp.cobj_type != COBJ_TYPE_STD && !(cobj.group_id >= 0 && group_back_face_cull)) return 0;
 	return (cobj.norm.z > 0.0); // inside the polygon contour if hit the back face of a polygon (normal pointing up)
 }
 

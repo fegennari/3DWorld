@@ -11,9 +11,10 @@
 typedef bool (*collision_func)(int, int, vector3d const &, point const &, float, int);
 
 // object/collision object types/status
-enum {COLL_NULL      = 0, COLL_CUBE,     COLL_CYLINDER, COLL_SPHERE,  COLL_CYLINDER_ROT, COLL_POLYGON,  COLL_INVALID};
-enum {COLL_UNUSED    = 0, COLL_FREED,    COLL_PENDING,  COLL_STATIC,  COLL_DYNAMIC,      COLL_NEGATIVE, COLL_TO_REMOVE};
-enum {OBJ_STAT_BAD   = 0, OBJ_STAT_AIR,  OBJ_STAT_COLL, OBJ_STAT_GND, OBJ_STAT_STOP,     OBJ_STAT_RES};
+enum {COLL_NULL     = 0, COLL_CUBE,     COLL_CYLINDER, COLL_SPHERE,  COLL_CYLINDER_ROT, COLL_POLYGON,  COLL_INVALID};
+enum {COLL_UNUSED   = 0, COLL_FREED,    COLL_PENDING,  COLL_STATIC,  COLL_DYNAMIC,      COLL_NEGATIVE, COLL_TO_REMOVE};
+enum {OBJ_STAT_BAD  = 0, OBJ_STAT_AIR,  OBJ_STAT_COLL, OBJ_STAT_GND, OBJ_STAT_STOP,     OBJ_STAT_RES};
+enum {COBJ_TYPE_STD = 0, COBJ_TYPE_MODEL3D, COBJ_TYPE_VOX_TERRAIN};
 
 unsigned const OBJ_CNT_REM_TJ = 1;
 
@@ -21,7 +22,8 @@ unsigned const OBJ_CNT_REM_TJ = 1;
 class obj_layer { // size = 60
 
 public:
-	bool draw, is_model3d, shadow, swap_txy;
+	bool draw, shadow, swap_txy;
+	unsigned char cobj_type;
 	float elastic, tscale, specular, shine, tdx, tdy, refract_ix, light_atten;
 	int tid;
 	collision_func coll_func;
@@ -29,7 +31,7 @@ public:
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1,
 		float ts=1.0, float spec=0.0, float shi=0.0) :
-		draw(d), is_model3d(0), shadow(1), swap_txy(0), elastic(e), tscale(ts), specular(spec), shine(shi),
+		draw(d), shadow(1), swap_txy(0), cobj_type(COBJ_TYPE_STD), elastic(e), tscale(ts), specular(spec), shine(shi),
 		tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), tid(ti), coll_func(cf), color(c) {}
 
 	// assumes obj_layer contained classes are POD with no padding
@@ -38,7 +40,7 @@ public:
 	bool no_draw()        const {return (!draw || color.alpha == 0.0);}
 	bool has_alpha_texture() const;
 	bool is_semi_trans()  const {return (color.alpha < 1.0 || has_alpha_texture());}
-	bool might_be_drawn() const {return (draw || is_model3d);}
+	bool might_be_drawn() const {return (draw || cobj_type != COBJ_TYPE_STD);}
 	bool is_glass()       const {return (tid < 0 && color.alpha <= 0.5);}
 };
 
@@ -122,7 +124,7 @@ public:
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
-	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.is_model3d && cp.color.A == 1.0)));}
+	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)));}
 	point get_center_pt() const;
 	float get_max_dim()   const;
 	float get_light_transmit(point v1, point v2) const;

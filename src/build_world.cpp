@@ -878,14 +878,11 @@ void maybe_reserve_fixed_cobjs(size_t size) {
 }
 
 
-void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const &cobj, int const *group_ids, bool use_model3d) {
+void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const &cobj, int const *group_ids, unsigned char cobj_type) {
 
 	coll_obj poly(cobj);
-
-	if (use_model3d) {
-		poly.cp.draw       = 0;
-		poly.cp.is_model3d = 1;
-	}
+	poly.cp.cobj_type = cobj_type;
+	if (cobj_type != COBJ_TYPE_STD) poly.cp.draw = 0;
 	maybe_reserve_fixed_cobjs(ppts.size());
 	
 	for (vector<coll_tquad>::const_iterator i = ppts.begin(); i != ppts.end(); ++i) {
@@ -1029,6 +1026,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				ppts.resize(0);
 				vector<cube_t> cubes;
 				cube_t model_bbox(0,0,0,0,0,0);
+				unsigned char const cobj_type(use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD);
 				
 				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), model_bbox, xf, cobj.cp.tid,
 					cobj.cp.color, voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), (ignore_ambient != 0), 1))
@@ -1041,19 +1039,16 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					check_layer(has_layer);
 					cobj.thickness *= xf.scale;
 					if (cobj.thickness == 0.0) cobj.thickness = MIN_POLY_THICK; // optional - will be set to this value later anyway
-					add_polygons_to_cobj_vector(ppts, cobj, group_ids, use_model3d);
+					add_polygons_to_cobj_vector(ppts, cobj, group_ids, cobj_type);
 					cobj.group_id   = -1; // reset
 				}
 				else if (use_cubes) {
 					assert(voxel_xy_spacing > 0.0);
 					check_layer(has_layer);
 					coll_obj cur_cube(cobj); // color and tid left as-is for now
-					cur_cube.type = COLL_CUBE;
-
-					if (use_model3d) {
-						cur_cube.cp.draw       = 0;
-						cur_cube.cp.is_model3d = 1;
-					}
+					cur_cube.type         = COLL_CUBE;
+					cur_cube.cp.cobj_type = cobj_type;
+					if (cobj_type != COBJ_TYPE_STD) cur_cube.cp.draw = 0;
 					maybe_reserve_fixed_cobjs(cubes.size());
 
 					for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
@@ -1333,7 +1328,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			cobj.thickness *= xf.scale;
 			ppts.resize(0);
 			split_polygon(poly, ppts, 0.99);
-			add_polygons_to_cobj_vector(ppts, cobj, NULL, 0);
+			add_polygons_to_cobj_vector(ppts, cobj, NULL, COBJ_TYPE_STD);
 			break;
 
 		case 'c': // hollow cylinder (multisided): x1 y1 z1  x2 y2 z2  ro ri  nsides [start_ix [end_ix]]

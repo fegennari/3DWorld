@@ -423,7 +423,11 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 
 bool coll_obj::truly_static() const {
 
-	return (status == COLL_STATIC && !cp.is_destroyable && destroy < max((int)SHATTERABLE, destroy_thresh+1) && !maybe_is_moving());
+	if (status != COLL_STATIC)                  return 0;
+	if (cp.is_destroyable || maybe_is_moving()) return 0;
+	if (cp.cobj_type == COBJ_TYPE_MODEL3D)      return 1;
+	if (cp.cobj_type == COBJ_TYPE_VOX_TERRAIN)  return 0; // ???
+	return (destroy < max((int)SHATTERABLE, destroy_thresh+1));
 }
 
 

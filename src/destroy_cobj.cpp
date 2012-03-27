@@ -269,7 +269,8 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		unsigned const i(*k);
 		assert(i < cobjs.size());
 		assert(cobjs[i].status == COLL_STATIC);
-		if (cobjs[i].cp.is_model3d) continue; // can't destroy a model3d because the geometry is also stored in a vbo and won't get updated here
+		// can't destroy a model3d or voxel terrain cobj because the geometry is also stored in a vbo and won't get updated here
+		if (cobjs[i].cp.cobj_type != COBJ_TYPE_STD)    continue;
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
 		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), is_polygon(cobjs[i].type == COLL_POLYGON);
