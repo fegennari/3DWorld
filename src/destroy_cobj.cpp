@@ -204,7 +204,8 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 
 			for (vector<unsigned>::const_iterator i = out.begin(); i != out.end(); ++i) {
 				assert(*i >= 0 && *i != cur);
-				assert(coll_objects[*i].counter != cobj_counter); // may be too strong - we might want to allow duplicates and just continue here
+				//assert(coll_objects[*i].counter != cobj_counter); // may be too strong - we might want to allow duplicates and just continue here
+				if (coll_objects[*i].counter == cobj_counter) continue; // not sure we can actually get here
 				open.push_back(*i); // need to do this first
 
 				if (anchored[1].find(*i) != anchored[1].end() || coll_objects[*i].is_anchored()) {
@@ -259,15 +260,16 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	vector<cube_t> mod_cubes;
 	mod_cubes.push_back(cube);
 	vector<unsigned> int_cobjs;
-	get_intersecting_cobjs_tree(cube, int_cobjs, -1, 0.0, 0, 0, -1);
+	get_intersecting_cobjs_tree(cube, int_cobjs, -1, 0.0, 0, 0, -1); // can return duplicate cobjs
+	set<unsigned> unique_cobjs; // unique cobjs here
+	copy(int_cobjs.begin(), int_cobjs.end(), inserter(unique_cobjs, unique_cobjs.begin()));
 
 	// determine affected cobjs
-	for (unsigned k = 0; k < int_cobjs.size(); ++k) {
-		unsigned const i(int_cobjs[k]);
+	for (set<unsigned>::const_iterator k = unique_cobjs.begin(); k != unique_cobjs.end(); ++k) {
+		unsigned const i(*k);
 		assert(i < cobjs.size());
 		assert(cobjs[i].status == COLL_STATIC);
 		if (cobjs[i].cp.is_model3d) continue; // can't destroy a model3d because the geometry is also stored in a vbo and won't get updated here
-		// require fixed cobjs? platforms work now
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
 		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), is_polygon(cobjs[i].type == COLL_POLYGON);
