@@ -9,6 +9,7 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 #include "file_utils.h"
+#include "openal_wrap.h"
 
 
 bool const NORMALIZE_TO_1  = 1;
@@ -279,11 +280,16 @@ void voxel_model::remove_unconnected_outside_block(unsigned block_ix, std::set<u
 			}
 		}
 	}
+	if (updated_pts.empty()) return;
 	float const fragment_radius(0.5*vsz.mag());
+	point center(all_zeros);
 
 	for (vector<point>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
 		create_fragments(*i, fragment_radius, NO_SOURCE, 1);
+		center += *i;
 	}
+	center /= updated_pts.size();
+	gen_sound(SOUND_ROCK_FALL, center, CLIP_TO_01(0.05f*updated_pts.size()), 2.0);
 }
 
 

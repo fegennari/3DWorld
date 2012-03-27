@@ -62,6 +62,7 @@ void setup_sounds() {
 	sounds.add_file_buffer("scream3.wav"    ); // SOUND_SCREAM3
 	sounds.add_file_buffer("squeal.wav"     ); // SOUND_SQUEAL
 	sounds.add_file_buffer("ricochet.wav"   ); // SOUND_RICOCHET
+	sounds.add_file_buffer("rockfall.wav"   ); // SOUND_ROCK_FALL // bricksfall.wav
 	cout << endl;
 
 	// create sources
