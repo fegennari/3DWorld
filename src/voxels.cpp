@@ -252,7 +252,7 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 void voxel_manager::remove_unconnected_outside() { // check for voxels connected to the mesh surface
 
 	bool const keep_at_edge(params.keep_at_scene_edge == 1 || (params.keep_at_scene_edge == 2 && dynamic_mesh_scroll));
-	remove_unconnected_outside_range(keep_at_edge, 0, 0, nx, ny, NULL);
+	remove_unconnected_outside_range(keep_at_edge, 0, 0, nx, ny, NULL, NULL);
 }
 
 
@@ -260,9 +260,10 @@ void voxel_model::remove_unconnected_outside_block(unsigned block_ix, std::set<u
 
 	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
 	vector<unsigned> xy_updated;
+	vector<point> updated_pts;
 	unsigned const pad = 1;
 	remove_unconnected_outside_range(1, max(0, (int)xbix-(int)pad)*xblocks, max(0, (int)ybix-(int)pad)*yblocks,
-		                                min(nx, (xbix+pad+1)*xblocks),      min(ny, (ybix+pad+1)*yblocks), &xy_updated);
+		                                min(nx, (xbix+pad+1)*xblocks),      min(ny, (ybix+pad+1)*yblocks), &xy_updated, &updated_pts);
 
 	for (vector<unsigned>::const_iterator i = xy_updated.begin(); i != xy_updated.end(); ++i) {
 		unsigned const x((*i)%nx), y((*i)/nx);
@@ -278,12 +279,18 @@ void voxel_model::remove_unconnected_outside_block(unsigned block_ix, std::set<u
 			}
 		}
 	}
+	float const fragment_radius(0.5*vsz.mag());
+
+	for (vector<point>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
+		create_fragments(*i, fragment_radius, NO_SOURCE, 1);
+	}
 }
 
 
 // outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored
-void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> *xy_updated) {
-
+void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
+	vector<unsigned> *xy_updated, vector<point> *updated_pts)
+{
 	assert(first_zval_above_mesh.size() == nx*ny);
 	vector<unsigned> work; // stack of voxels to process
 	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
@@ -351,7 +358,8 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 					outside[ix] &= 3; // remove anchored bit
 				}
 				else if (outside[ix] != 1) { // inside and non-anchored
-					if (xy_updated) {xy_updated->push_back(y*nx + x);}
+					if (xy_updated ) {xy_updated ->push_back(y*nx + x);}
+					if (updated_pts) {updated_pts->push_back(get_pt_at(x, y, z));}
 					outside[ix] = 1; // make outside
 					operator[](ix) = params.isolevel - (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
 				}
@@ -614,7 +622,14 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	}
 	if (!saw_inside || !saw_outside) return 0; // nothing else to do
 	copy(blocks_to_update.begin(), blocks_to_update.end(), inserter(modified_blocks, modified_blocks.begin()));
-	if (num_fragments == 0) return 1;
+	create_fragments(center, radius, shooter, num_fragments);
+	return 1;
+}
+
+
+void voxel_model::create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const {
+
+	if (num_fragments == 0) return;
 	float blend_val(fabs(eval_noise_texture_at(center)));
 	blend_val = min(max(params.tex_mix_saturate*(blend_val - 0.5), -0.5), 0.5) + 0.5;
 	colorRGBA color;
@@ -626,7 +641,6 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 		point fpos(center + signed_rand_vector_spherical(radius));
 		gen_fragment(fpos, velocity, rand_uniform(1.0, 2.0), 0.5*rand_float(), color, tid, 1.0, shooter, 0);
 	}
-	return 1;
 }
 
 

@@ -92,7 +92,8 @@ protected:
 	void atten_edge_val(unsigned x, unsigned y, unsigned z, float val);
 	void atten_top_val (unsigned x, unsigned y, unsigned z, float val);
 	void calc_outside_val(unsigned x, unsigned y, unsigned z);
-	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> *xy_updated);
+	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
+		vector<unsigned> *xy_updated, vector<point> *updated_pts);
 	void get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z) const;
 
 public:
@@ -174,6 +175,7 @@ public:
 	voxel_model() : add_cobjs(0) {}
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
+	void create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const;
 	void proc_pending_updates();
 	void build(bool add_cobjs_);
 	void render(bool is_shadow_pass);
