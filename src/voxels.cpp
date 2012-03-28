@@ -257,17 +257,51 @@ void voxel_manager::remove_unconnected_outside() { // check for voxels connected
 }
 
 
+struct block_group_t {
+	unsigned v[2][2]; // {x,y} x {lo,hi}
+	unsigned cost() const {return (v[0][1] - v[0][0])*(v[1][1] - v[1][0]);}
+};
+
+
 void voxel_model::remove_unconnected_outside_modified_blocks() {
 
-	unsigned const pad = 1;
+	if (modified_blocks.empty()) return;
+	int const pad = 1;
 	vector<unsigned> to_proc(modified_blocks.begin(), modified_blocks.end());
 	vector<unsigned> xy_updated;
 	vector<point> updated_pts;
+	vector<block_group_t> groups;
+	unsigned const indiv_cost((2*pad+1)*(2*pad+1));
+	unsigned group_work(0);
 
-	for (vector<unsigned>::const_iterator i = to_proc.begin(); i != to_proc.end(); ++i) {
-		unsigned const xbix(*i % NUM_BLOCKS), ybix(*i / NUM_BLOCKS);
-		remove_unconnected_outside_range(1, max(0, (int)xbix-(int)pad)*xblocks, max(0, (int)ybix-(int)pad)*yblocks,
-											min(nx, (xbix+pad+1)*xblocks),      min(ny, (ybix+pad+1)*yblocks), &xy_updated, &updated_pts);
+	for (unsigned i = 0; i < to_proc.size(); ++i) {
+		int const xbix(to_proc[i] % NUM_BLOCKS), ybix(to_proc[i] / NUM_BLOCKS);
+		block_group_t group;
+		group.v[0][0] = max(0, xbix-pad); // x1
+		group.v[1][0] = max(0, ybix-pad); // y1
+		group.v[0][1] = min(NUM_BLOCKS, xbix+pad+1U); // x2
+		group.v[1][1] = min(NUM_BLOCKS, ybix+pad+1U); // y2
+
+		for (unsigned j = i+1; j < to_proc.size(); ++j) {
+			int const xbix2(to_proc[j] % NUM_BLOCKS), ybix2(to_proc[j] / NUM_BLOCKS);
+			block_group_t group2;
+			group2.v[0][0] = min(group.v[0][0], (unsigned)max(0, xbix2-pad)); // x1
+			group2.v[1][0] = min(group.v[1][0], (unsigned)max(0, ybix2-pad)); // y1
+			group2.v[0][1] = max(group.v[0][1], min(NUM_BLOCKS, xbix2+pad+1U)); // x2
+			group2.v[1][1] = max(group.v[1][1], min(NUM_BLOCKS, ybix2+pad+1U)); // y2
+
+			if (group2.cost() <= group.cost() + indiv_cost) { // keep the merged group
+				group = group2;
+				std::swap(to_proc[j], to_proc.back());
+				to_proc.pop_back();
+				--j;
+			}
+		}
+		groups.push_back(group);
+	}
+	for (vector<block_group_t>::const_iterator i = groups.begin(); i != groups.end(); ++i) {
+		remove_unconnected_outside_range(1, i->v[0][0]*xblocks, i->v[1][0]*yblocks, min(nx, i->v[0][1]*xblocks), min(ny, i->v[1][1]*yblocks), &xy_updated, &updated_pts);
+		group_work += i->cost();
 
 		for (vector<unsigned>::const_iterator i = xy_updated.begin(); i != xy_updated.end(); ++i) {
 			unsigned const x((*i)%nx), y((*i)/nx);
@@ -284,7 +318,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 			}
 		}
 	}
-	//cout << "blocks: " << to_proc.size() << ", work: " << 9*to_proc.size() << ", updated: " << updated_pts.size() << ", xy_up: " << xy_updated.size() << ", out: " << modified_blocks.size() << endl;
+	//cout << "blocks out " << modified_blocks.size() << " groups " << groups.size() << " group work " << group_work << " updated " << updated_pts.size() << " xy_up " << xy_updated.size() << endl;
 	if (updated_pts.empty()) return;
 	float const fragment_radius(0.5*vsz.mag());
 	point center(all_zeros);
