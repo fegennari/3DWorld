@@ -57,25 +57,13 @@ public:
 		return 1;
 	}
 	unsigned get_ix(unsigned x, unsigned y, unsigned z) const {
-		assert(x < nx && y < ny && z < nz);
+		//assert(x < nx && y < ny && z < nz);
 		return (z + (x + y*nx)*nz);
 	}
-	V const &get(unsigned x, unsigned y, unsigned z) const {
-		unsigned const ix(get_ix(x, y, z));
-		assert(ix < size());
-		return operator[](ix);
-	}
-	V &get_ref(unsigned x, unsigned y, unsigned z) {
-		unsigned const ix(get_ix(x, y, z));
-		assert(ix < size());
-		return operator[](ix);
-	}
-	void set(unsigned x, unsigned y, unsigned z, V const &val) {
-		unsigned const ix(get_ix(x, y, z));
-		assert(ix < size());
-		operator[](ix) = val;
-	}
-	point get_pt_at(unsigned x, unsigned y, unsigned z) const {return (point(x, y, z)*vsz + lo_pos);}
+	point get_pt_at(unsigned x, unsigned y, unsigned z) const  {return (point(x, y, z)*vsz + lo_pos);}
+	V const &get   (unsigned x, unsigned y, unsigned z) const  {return operator[](get_ix(x, y, z));}
+	V &get_ref     (unsigned x, unsigned y, unsigned z)        {return operator[](get_ix(x, y, z));}
+	void set       (unsigned x, unsigned y, unsigned z, V const &val) {operator[](get_ix(x, y, z)) = val;}
 };
 
 typedef voxel_grid<float> float_voxel_grid;
