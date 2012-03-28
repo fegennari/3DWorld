@@ -257,29 +257,34 @@ void voxel_manager::remove_unconnected_outside() { // check for voxels connected
 }
 
 
-void voxel_model::remove_unconnected_outside_block(unsigned block_ix, std::set<unsigned> &updated_blocks) {
+void voxel_model::remove_unconnected_outside_modified_blocks() {
 
-	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
+	unsigned const pad = 1;
+	vector<unsigned> to_proc(modified_blocks.begin(), modified_blocks.end());
 	vector<unsigned> xy_updated;
 	vector<point> updated_pts;
-	unsigned const pad = 1;
-	remove_unconnected_outside_range(1, max(0, (int)xbix-(int)pad)*xblocks, max(0, (int)ybix-(int)pad)*yblocks,
-		                                min(nx, (xbix+pad+1)*xblocks),      min(ny, (ybix+pad+1)*yblocks), &xy_updated, &updated_pts);
 
-	for (vector<unsigned>::const_iterator i = xy_updated.begin(); i != xy_updated.end(); ++i) {
-		unsigned const x((*i)%nx), y((*i)/nx);
-		assert(x < nx && y < ny);
-		unsigned const bx1(max(0, (int)x-1)/xblocks), by1(max(0, (int)y-1)/yblocks);
-		unsigned const bx2(min((int)nx-1, (int)x+1)/xblocks), by2(min((int)nx-1, (int)y+1)/yblocks);
+	for (vector<unsigned>::const_iterator i = to_proc.begin(); i != to_proc.end(); ++i) {
+		unsigned const xbix(*i % NUM_BLOCKS), ybix(*i / NUM_BLOCKS);
+		remove_unconnected_outside_range(1, max(0, (int)xbix-(int)pad)*xblocks, max(0, (int)ybix-(int)pad)*yblocks,
+											min(nx, (xbix+pad+1)*xblocks),      min(ny, (ybix+pad+1)*yblocks), &xy_updated, &updated_pts);
+
+		for (vector<unsigned>::const_iterator i = xy_updated.begin(); i != xy_updated.end(); ++i) {
+			unsigned const x((*i)%nx), y((*i)/nx);
+			assert(x < nx && y < ny);
+			unsigned const bx1(max(0, (int)x-1)/xblocks), by1(max(0, (int)y-1)/yblocks);
+			unsigned const bx2(min((int)nx-1, (int)x+1)/xblocks), by2(min((int)nx-1, (int)y+1)/yblocks);
 		
-		for (unsigned by = by1; by <= by2; ++by) {
-			for (unsigned bx = bx1; bx <= bx2; ++bx) {
-				unsigned const bix(by*NUM_BLOCKS + bx);
-				assert(bix < data_blocks.size());
-				updated_blocks.insert(bix);
+			for (unsigned by = by1; by <= by2; ++by) {
+				for (unsigned bx = bx1; bx <= bx2; ++bx) {
+					unsigned const bix(by*NUM_BLOCKS + bx);
+					assert(bix < data_blocks.size());
+					modified_blocks.insert(bix);
+				}
 			}
 		}
 	}
+	//cout << "blocks: " << to_proc.size() << ", work: " << 9*to_proc.size() << ", updated: " << updated_pts.size() << ", xy_up: " << xy_updated.size() << ", out: " << modified_blocks.size() << endl;
 	if (updated_pts.empty()) return;
 	float const fragment_radius(0.5*vsz.mag());
 	point center(all_zeros);
@@ -357,6 +362,8 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 	// if anchored or on_edge remove the anchored bit, else mark outside
 	for (unsigned y = y1; y < y2; ++y) {
 		for (unsigned x = x1; x < x2; ++x) {
+			bool had_update(0);
+
 			for (unsigned z = 0; z < nz; ++z) {
 				unsigned const ix(outside.get_ix(x, y, z));
 
@@ -364,12 +371,13 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 					outside[ix] &= 3; // remove anchored bit
 				}
 				else if (outside[ix] != 1) { // inside and non-anchored
-					if (xy_updated ) {xy_updated ->push_back(y*nx + x);}
 					if (updated_pts) {updated_pts->push_back(get_pt_at(x, y, z));}
 					outside[ix] = 1; // make outside
+					had_update  = 1;
 					operator[](ix) = params.isolevel - (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
 				}
 			}
+			if (had_update && xy_updated) {xy_updated ->push_back(y*nx + x);}
 		}
 	}
 }
@@ -656,15 +664,7 @@ void voxel_model::proc_pending_updates() {
 	if (modified_blocks.empty()) return;
 	bool something_removed(0);
 	unsigned num_added(0);
-
-	if (params.remove_unconnected) {
-		std::set<unsigned> updated_blocks;
-
-		for (std::set<unsigned>::const_iterator i = modified_blocks.begin(); i != modified_blocks.end(); ++i) {
-			remove_unconnected_outside_block(*i, updated_blocks);
-		}
-		copy(updated_blocks.begin(), updated_blocks.end(), inserter(modified_blocks, modified_blocks.end()));
-	}
+	if (params.remove_unconnected) remove_unconnected_outside_modified_blocks();
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	bool can_undo_last_cboj_tree_add(!last_blocks_updated.empty());
 

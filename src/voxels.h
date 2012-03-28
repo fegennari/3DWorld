@@ -163,7 +163,7 @@ class voxel_model : public voxel_manager {
 		bool operator()(pt_ix_t const &a, pt_ix_t const &b) const {return (p2p_dist_sq(a.pt, p) < p2p_dist_sq(b.pt, p));}
 	};
 
-	void remove_unconnected_outside_block(unsigned block_ix, std::set<unsigned> &updated_blocks);
+	void remove_unconnected_outside_modified_blocks(void);
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	bool clear_block(unsigned block_ix);
 	unsigned create_block(unsigned block_ix, bool first_create);
