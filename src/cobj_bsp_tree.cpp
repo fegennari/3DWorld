@@ -359,7 +359,7 @@ void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs, unsigned c
 	}
 	// FIXME: could result in duplicate cobjs in the tree if a cobj in cobj_ixs replaces a cobj that was deleted in the tree
 	//        this is *probably* ok since it will duplicate a small number of times
-	nodes.resize(nodes.size() + get_conservative_num_nodes(cobj_ixs.size()) + 1);
+	nodes.resize(nodes.size() + get_conservative_num_nodes(cobj_ixs.size()) + 1); // Note: not required to be "large enough" here
 	nodes[new_root] = tree_node(cixs_bef_last_ec_add, (unsigned)cixs.size());
 	per_thread_data ptd(new_root+1, nodes.size(), 1);
 	build_tree(new_root, 0, 0, ptd);

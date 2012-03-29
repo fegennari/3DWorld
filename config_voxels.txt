@@ -18,6 +18,7 @@ mesh_scale 0.7
 camera_height 0.0
 sun_rot 0.4
 shadow_detail 7
+destroy_thresh 0
 cobj_z_bias 0.001
 
 include config_gameplay.txt

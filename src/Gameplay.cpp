@@ -53,7 +53,7 @@ extern bool player_near_fire, create_voxel_landscape;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, spectate;
-extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode;
+extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_size;
 extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity;
 extern double camera_zh;
@@ -1269,7 +1269,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 			}
 		}
 	}
-	if (damage > 100.0) {
+	if (damage > 100.0 && destroy_thresh <= 1) {
 		bool const big(type == BLAST_RADIUS);
 		destroy_coll_objs(pos, damage, shooter, big);
 		float const radius((big ? 4.0 : 1.0)*sqrt(damage)/650.0); // same as in destroy_coll_objs()
@@ -1334,7 +1334,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 			if (rock_shapes[i].do_impact_damage(pos, radius)) rock_collision(0, -1, zero_vector, pos, damage, IMPACT);
 		}
 	}
-	if (weapon == W_BLADE && sstates[shooter].fire_frame > 0 && (rand()&7) == 0) {
+	if (weapon == W_BLADE && destroy_thresh <= 1 && sstates[shooter].fire_frame > 0 && (rand()&7) == 0) {
 		destroy_coll_objs(pos, 18.0*damage, shooter, 0);
 		update_voxel_sphere_region(pos, radius, -0.02, shooter, (rand()%3));
 	}
@@ -1897,7 +1897,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((rand()%50) == 0)) || (cobj.destroy >= EXPLODEABLE && ((rand()%10) == 0))) {
 			destroy_coll_objs(coll_pos, 500.0, shooter, 0, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)
 		}
-		if (!is_laser && cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {
+		if (!is_laser && cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && destroy_thresh == 0) {
 			update_voxel_sphere_region(coll_pos, object_types[PROJC].radius, -0.01, shooter, 0);
 		}
 	}
