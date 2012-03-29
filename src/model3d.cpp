@@ -296,8 +296,9 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
 	if (!is_shadow_pass && !camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius)) return; // view frustum culling
 	if (!is_shadow_pass && !camera_pdu.cube_visible(bcube)) return; // test the bounding cube as well
-	set_array_client_state(1, !is_shadow_pass, !is_shadow_pass, 0);
 	unsigned const stride(sizeof(T));
+	bool const have_normals(stride >= sizeof(vert_norm)), have_tex_coords(stride >= sizeof(vert_norm_tc));
+	set_array_client_state(1, (have_tex_coords && !is_shadow_pass), (have_normals && !is_shadow_pass), 0);
 	int loc(-1);
 
 	if (vbo == 0) {
@@ -309,16 +310,16 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	else {
 		bind_vbo(vbo);
 	}
-	if (enable_bump_map() && !is_shadow_pass && has_tangents) { // Note: if we get here, T must be a vert_norm_tc_tan
+	if (enable_bump_map() && !is_shadow_pass && has_tangents && shader.is_setup()) { // Note: if we get here, T must be a vert_norm_tc_tan
 		assert(stride == sizeof(vert_norm_tc_tan));
-		int const loc(shader.get_attrib_loc("tangent"));
+		loc = shader.get_attrib_loc("tangent");
 		assert(loc > 0);
 		glEnableVertexAttribArray(loc);
 		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, (void *)sizeof(vert_norm_tc)); // stuff in at the end
 	}
 	glVertexPointer(3, GL_FLOAT, stride, 0);
-	if (stride >= sizeof(vert_norm))    glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));
-	if (stride >= sizeof(vert_norm_tc)) glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));
+	if (have_normals)    glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));
+	if (have_tex_coords) glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));
 
 	if (indices.empty()) { // draw regular arrays
 		glDrawArrays(prim_type, 0, (unsigned)size());

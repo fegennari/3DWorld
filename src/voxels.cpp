@@ -776,6 +776,7 @@ void voxel_model::build(bool add_cobjs_) {
 void voxel_model::render(bool is_shadow_pass) { // not const because of vbo caching, etc.
 
 	if (empty()) return; // nothing to do
+	noise_tex_gen.setup(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
 	shader_t s;
 	set_fill_mode();
 	
@@ -786,7 +787,6 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 		float const min_alpha(0.5);
-		noise_tex_gen.setup(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
 		noise_tex_gen.bind_texture(5); // tu_id = 5
 		set_multitex(0);
 		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
@@ -814,10 +814,10 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
-		if (DEBUG_BLOCKS) {
+		if (DEBUG_BLOCKS && s.is_setup()) {
 			const char *cnames[2] = {"color0", "color1"};
 			for (unsigned d = 0; d < 2; ++d) {
-				if (s.is_setup()) s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & NUM_BLOCKS) != 0)) ? RED : BLUE));
+				s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & NUM_BLOCKS) != 0)) ? RED : BLUE));
 			}
 		}
 		assert(i->ix < tri_data.size());

@@ -459,7 +459,7 @@ void display_mesh() { // fast array version
 	else { // slower mesh draw with more features
 		shader_t s;
 
-		if (draw_mesh_shader) {
+		if (draw_mesh_shader && !disable_shaders) {
 			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			s.setup_enabled_lights();
 			set_dlights_booleans(s, 1, 1); // FS

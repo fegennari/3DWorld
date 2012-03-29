@@ -32,6 +32,7 @@ scene_size 4.0 4.0 2.5
 
 include config_resolution.txt
 shadow_map_sz 2048 # 4096?
+disable_shaders 0
 
 coll_obj_file coll_objs/COLL_OBJS_Test.TXT # empty
 ship_def_file universe/ship_defs.txt
