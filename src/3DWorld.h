@@ -1884,7 +1884,7 @@ void add_camera_candlelight();
 void add_dynamic_lights();
 void get_xyz(point const &p, int v[3]);
 void get_xyz_v2(point &p, int const v[3]);
-void update_smoke_indir_tex_y_range(unsigned y_start, unsigned y_end, bool update_lighting);
+void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_start, unsigned y_end, bool update_lighting);
 bool upload_smoke_indir_texture();
 void upload_dlights_textures();
 void setup_dlight_textures(shader_t &s);

@@ -259,7 +259,16 @@ void voxel_manager::remove_unconnected_outside() { // check for voxels connected
 
 struct block_group_t {
 	unsigned v[2][2]; // {x,y} x {lo,hi}
-	unsigned cost() const {return (v[0][1] - v[0][0])*(v[1][1] - v[1][0]);}
+
+	block_group_t() {v[0][0] = v[0][1] = v[1][0] = v[1][1] = 0;}
+	unsigned area() const {return (v[0][1] - v[0][0])*(v[1][1] - v[1][0]);}
+
+	void union_with_group(block_group_t const &g) { // not performance critical
+		for (unsigned d = 0; d < 2; ++d) {
+			v[d][0] = min(v[d][0], g.v[d][0]);
+			v[d][1] = max(v[d][1], g.v[d][1]);
+		}
+	}
 };
 
 
@@ -290,7 +299,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 			group2.v[0][1] = max(group.v[0][1], min(NUM_BLOCKS, xbix2+pad+1U)); // x2
 			group2.v[1][1] = max(group.v[1][1], min(NUM_BLOCKS, ybix2+pad+1U)); // y2
 
-			if (group2.cost() <= group.cost() + indiv_cost) { // keep the merged group
+			if (group2.area() <= group.area() + indiv_cost) { // keep the merged group
 				group = group2;
 				std::swap(to_proc[j], to_proc.back());
 				to_proc.pop_back();
@@ -301,7 +310,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 	}
 	for (vector<block_group_t>::const_iterator i = groups.begin(); i != groups.end(); ++i) {
 		remove_unconnected_outside_range(1, i->v[0][0]*xblocks, i->v[1][0]*yblocks, min(nx, i->v[0][1]*xblocks), min(ny, i->v[1][1]*yblocks), &xy_updated, &updated_pts);
-		group_work += i->cost();
+		group_work += i->area();
 
 		for (vector<unsigned>::const_iterator i = xy_updated.begin(); i != xy_updated.end(); ++i) {
 			unsigned const x((*i)%nx), y((*i)/nx);
@@ -730,15 +739,33 @@ void voxel_model::proc_pending_updates() {
 	add_to_cobj_tree(cixs, 0);
 
 	if (!ao_lighting.empty()) {
-		unsigned y_start(MESH_Y_SIZE), y_end(0); // start at denormalized range
+		block_group_t cur_group;
 
-		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
-			unsigned const ybix(blocks_to_update[i]/NUM_BLOCKS), y1(ybix*yblocks), y2((ybix+1)*yblocks);
-			y_start = min((unsigned)max(get_xpos(y1*vsz.y + lo_pos.y)-1, 0          ), y_start); // add a border of 1 to account for rounding errors
-			y_end   = max((unsigned)min(get_xpos(y2*vsz.y + lo_pos.y)+1, MESH_Y_SIZE), y_end  );
+		for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
 			calc_ao_lighting_for_block(blocks_to_update[i], 1); // update can only remove, so lighting can only increase
+			unsigned const xbix(blocks_to_update[i]%NUM_BLOCKS), x1(xbix*xblocks), x2((xbix+1)*xblocks);
+			unsigned const ybix(blocks_to_update[i]/NUM_BLOCKS), y1(ybix*yblocks), y2((ybix+1)*yblocks);
+			block_group_t group; // add a border of 1 to account for rounding errors
+			group.v[0][0] = max(get_xpos(x1*vsz.x + lo_pos.x)-1, 0); // x1
+			group.v[1][0] = max(get_ypos(y1*vsz.y + lo_pos.y)-1, 0); // y1
+			group.v[0][1] = min(get_xpos(x2*vsz.x + lo_pos.x)+1, MESH_X_SIZE); // x2
+			group.v[1][1] = min(get_ypos(y2*vsz.y + lo_pos.y)+1, MESH_Y_SIZE); // y2
+
+			if (i == 0) {
+				cur_group = group;
+			}
+			else if (group.v[1][0] <= cur_group.v[1][1]) { // y range overlap: new group begins at or before the old one ends
+				cur_group.union_with_group(group);
+			}
+			else {
+				assert(cur_group.area() > 0);
+				update_smoke_indir_tex_range(cur_group.v[0][0], cur_group.v[0][1], cur_group.v[1][0], cur_group.v[1][1], 1);
+				cur_group = group;
+			}
 		}
-		if (y_start < y_end) update_smoke_indir_tex_y_range(y_start, y_end, 1);
+		if (cur_group.area() > 0) {
+			update_smoke_indir_tex_range(cur_group.v[0][0], cur_group.v[0][1], cur_group.v[1][0], cur_group.v[1][1], 1);
+		}
 	}
 	scene_dlist_invalid = 1;
 	PRINT_TIME("Process Voxel Updates");

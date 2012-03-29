@@ -187,14 +187,14 @@ void reset_smoke_tex_data() {
 }
 
 
-void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, unsigned y, bool update_lighting) {
+void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, unsigned x_start, unsigned x_end, unsigned y, bool update_lighting) {
 
 	unsigned const zsize(MESH_SIZE[2]), ncomp(4);
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
 	colorRGB default_color;
 	default_lmc.get_final_color(default_color, 1.0);
 
-	for (int x = 0; x < MESH_X_SIZE; ++x) {
+	for (unsigned x = x_start; x < x_end; ++x) {
 		lmcell const *const vlm(lmap_manager.vlmap[y][x]);
 		if (vlm == NULL && !update_lighting) continue; // x/y pairs that get into here should also be constant
 		unsigned const off(zsize*(y*MESH_X_SIZE + x));
@@ -228,7 +228,7 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 }
 
 
-void update_smoke_indir_tex_y_range(unsigned y_start, unsigned y_end, bool update_lighting) {
+void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_start, unsigned y_end, bool update_lighting) {
 
 	assert(y_start < y_end && y_end <= (unsigned)MESH_Y_SIZE);
 	if (smoke_tex_data.empty()) return; // not allocated
@@ -239,13 +239,13 @@ void update_smoke_indir_tex_y_range(unsigned y_start, unsigned y_end, bool updat
 	
 	if (indir_lighting_updated) { // running with multiple threads, don't use openmp
 		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
-			update_smoke_row(smoke_tex_data, default_lmc, y, update_lighting);
+			update_smoke_row(smoke_tex_data, default_lmc, x_start, x_end, y, update_lighting);
 		}
 	}
 	else { // use openmp here
 		#pragma omp parallel for schedule(static,1)
 		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
-			update_smoke_row(smoke_tex_data, default_lmc, y, update_lighting);
+			update_smoke_row(smoke_tex_data, default_lmc, x_start, x_end, y, update_lighting);
 		}
 	}
 	if (smoke_tid == 0) { // create texture
@@ -299,7 +299,7 @@ bool upload_smoke_indir_texture() {
 	unsigned const block_size(MESH_Y_SIZE/skipval);
 	unsigned const y_start(full_update ? 0           :  cur_block*block_size);
 	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
-	update_smoke_indir_tex_y_range(y_start, y_end, full_update);
+	update_smoke_indir_tex_range(0, MESH_X_SIZE, y_start, y_end, full_update);
 	cur_block = (full_update ? 0 : (cur_block+1) % skipval);
 	if (cur_block == 0) indir_lighting_updated = 0; // only stop updating after we wrap around to the beginning again
 	have_indir_smoke_tex = 1;
