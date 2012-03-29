@@ -669,7 +669,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 		}
 	}
 	if (!saw_inside || !saw_outside) return 0; // nothing else to do
-	copy(blocks_to_update.begin(), blocks_to_update.end(), inserter(modified_blocks, modified_blocks.begin()));
+	std::copy(blocks_to_update.begin(), blocks_to_update.end(), inserter(modified_blocks, modified_blocks.begin()));
 	create_fragments(center, radius, shooter, num_fragments);
 	return 1;
 }

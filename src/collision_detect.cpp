@@ -489,12 +489,10 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 	}
 	cobj.set_from_points(cobj.points, npoints); // set cube_t
 	
-	if (thickness > 0.0) {
-		for (unsigned p = 0; p < 3; ++p) {
-			float const thick(0.5*thickness*fabs(cobj.norm[p]));
-			cobj.d[p][0] -= thick;
-			cobj.d[p][1] += thick;
-		}
+	for (unsigned p = 0; p < 3; ++p) {
+		float const thick(0.5*thickness*fabs(cobj.norm[p]) + 1.0E-6);
+		cobj.d[p][0] -= thick;
+		cobj.d[p][1] += thick;
 	}
 	cobj.npoints   = npoints;
 	cobj.thickness = thickness;
