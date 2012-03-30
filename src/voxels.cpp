@@ -182,7 +182,7 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigne
 	float vals[8]; // 8 corner voxel values
 	point pts[8]; // corner points
 	unsigned cix(0);
-	bool all_under_mesh(params.remove_under_mesh);
+	bool all_under_mesh(params.remove_under_mesh && (display_mode & 0x01)); // if mesh draw is enabled
 	assert(first_zval_above_mesh.size() == nx*ny);
 
 	for (unsigned yhi = 0; yhi < 2; ++yhi) {
@@ -238,12 +238,11 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
-			if (display_mode & 0x01) { // if mesh draw is enabled
-				point const pos(get_pt_at(x, y, 0));
-				int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
-				unsigned const zix(point_outside_mesh(xpos, ypos) ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
-				first_zval_above_mesh[y*nx + x] = zix;
-			}
+			point const pos(get_pt_at(x, y, 0));
+			int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
+			unsigned const zix(point_outside_mesh(xpos, ypos) ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
+			first_zval_above_mesh[y*nx + x] = zix;
+			
 			for (unsigned z = 0; z < nz; ++z) {
 				calc_outside_val(x, y, z);
 			}
@@ -582,7 +581,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 				point const pos(ao_lighting.get_pt_at(x, y, z));
 				if (!is_over_mesh(pos)) continue;
 				
-				if (pos.z + DZ_VAL < interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1)) { // under mesh
+				if ((display_mode & 0x01) && pos.z + DZ_VAL < interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1)) { // under mesh
 					ao_lighting.set(x, y, z, 0);
 					continue;
 				}
@@ -602,7 +601,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 						if (!is_valid_range(cur)) break; // stepped off the volume
 						unsigned const xy_ix(cur[1]*nx + cur[0]), ix(xy_ix*nz + cur[2]);
 						
-						if (outside[ix] == 0 || cur[2] < (int)first_zval_above_mesh[xy_ix]) {
+						if (outside[ix] == 0 || ((display_mode & 0x01) && cur[2] < (int)first_zval_above_mesh[xy_ix])) {
 							cur_val = float(s)/float(i->nsteps);
 							break; // voxel known to be inside the volume or under the mesh
 						}
