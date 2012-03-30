@@ -22,7 +22,7 @@ voxel_params_t global_voxel_params;
 voxel_model terrain_voxel_model;
 
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
-extern int dynamic_mesh_scroll, rand_gen_index, scrolling;
+extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode;
 extern coll_obj_group coll_objects;
 
 
@@ -238,13 +238,15 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
+			if (display_mode & 0x01) { // if mesh draw is enabled
+				point const pos(get_pt_at(x, y, 0));
+				int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
+				unsigned const zix(point_outside_mesh(xpos, ypos) ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
+				first_zval_above_mesh[y*nx + x] = zix;
+			}
 			for (unsigned z = 0; z < nz; ++z) {
 				calc_outside_val(x, y, z);
 			}
-			point const pos(get_pt_at(x, y, 0));
-			int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
-			unsigned const zix(point_outside_mesh(xpos, ypos) ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
-			first_zval_above_mesh[y*nx + x] = zix;
 		}
 	}
 }
@@ -576,6 +578,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 	for (int y = ybix*yblocks; y < (int)min(ny, (ybix+1)*yblocks); ++y) {
 		for (unsigned x = xbix*xblocks; x < min(nx, (xbix+1)*xblocks); ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
+				if (increase_only && ao_lighting.get(x, y, z) == 1.0) continue;
 				point const pos(ao_lighting.get_pt_at(x, y, z));
 				if (!is_over_mesh(pos)) continue;
 				
@@ -583,7 +586,6 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 					ao_lighting.set(x, y, z, 0);
 					continue;
 				}
-				if (increase_only && ao_lighting.get(x, y, z) == 1.0) continue;
 				float val(0.0);
 				
 				for (vector<step_dir_t>::const_iterator i = ao_dirs.begin(); i != ao_dirs.end(); ++i) {
@@ -591,12 +593,16 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 					int cur[3] = {x, y, z};
 					// bias to pos side by 1 unit for positive steps to help compensate for grid point vs. grid center alignments
 					UNROLL_3X(if (i->dir[i_] > 0) cur[i_] += 1;);
+					//int const sz[3] = {nx, ny, nz};
+					//unsigned max_steps(i->nsteps);
+					//UNROLL_3X(if (i->dir[i_]) max_steps = min(max_steps, (unsigned)max(0, ((i->dir[i_] < 0) ? cur[i_] : sz[i_]-cur[i_]-1))););
 
 					for (unsigned s = 0; s < i->nsteps; ++s) { // take steps in this direction
 						UNROLL_3X(cur[i_] += i->dir[i_];); // increment first to skip the current voxel
 						if (!is_valid_range(cur)) break; // stepped off the volume
+						unsigned const xy_ix(cur[1]*nx + cur[0]), ix(xy_ix*nz + cur[2]);
 						
-						if (outside.get(cur[0], cur[1], cur[2]) == 0 || cur[2] < (int)first_zval_above_mesh[cur[1]*nx + cur[0]]) {
+						if (outside[ix] == 0 || cur[2] < (int)first_zval_above_mesh[xy_ix]) {
 							cur_val = float(s)/float(i->nsteps);
 							break; // voxel known to be inside the volume or under the mesh
 						}
