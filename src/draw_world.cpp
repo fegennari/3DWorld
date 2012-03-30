@@ -711,7 +711,7 @@ void draw_group(obj_group &objg) {
 				color2 = object_types[obj.type].color;
 			}
 			if (type != SHRAPNEL && type != PARTICLE) {
-				if (type == DROPLET) select_liquid_color(color2, get_ypos(pos.x), get_ypos(pos.y));
+				if (type == DROPLET) select_liquid_color(color2, pos);
 				scale_color_uw(color2); // ???
 
 				if (do_texture) {

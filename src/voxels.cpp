@@ -736,6 +736,7 @@ void voxel_model::proc_pending_updates() {
 		try_undo_last_add_to_cobj_tree(0);
 	}
 	last_blocks_updated = blocks_to_update;
+	//sort(cixs.begin(), cixs.end()); // doesn't really help
 	add_to_cobj_tree(cixs, 0);
 
 	if (!ao_lighting.empty()) {

@@ -399,9 +399,9 @@ int proc_coll_types(int type, int obj_index, float &energy) {
 
 bool camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
-	if (type == CAMERA || type == SMILEY || !camera_mode || !game_mode || spectate ||
-		(type != SMILEY && !damage_done(type, obj_index)))
-	{
+	if (type == DROPLET && get_blood_mix(position) > 0.5) blood_on_camera(1);
+	
+	if (type == CAMERA || type == SMILEY || !camera_mode || !game_mode || spectate || (type != SMILEY && !damage_done(type, obj_index))) {
 		return 1;
 	}
 	if (camera_health < 0.0) return 1; // already dead

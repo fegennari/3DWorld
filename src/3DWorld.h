@@ -1701,6 +1701,7 @@ void calc_watershed();
 bool is_underwater(point const &pos, int check_bottom=0, float *depth=NULL);
 void select_liquid_color(colorRGBA &color, int xpos, int ypos);
 void select_liquid_color(colorRGBA &color, point const &pos);
+float get_blood_mix(point const &pos);
 void add_water_spring(point const &pos, vector3d const &vel, float rate, float diff, int calc_z, int gen_vel);
 void shift_water_springs(vector3d const &vd);
 void update_water_zvals(int x1, int y1, int x2, int y2);
