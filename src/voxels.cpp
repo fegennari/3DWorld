@@ -17,6 +17,10 @@ bool const DEBUG_BLOCKS    = 0;
 unsigned const NUM_BLOCKS  = 12; // in x and y
 unsigned const NOISE_TSIZE = 64;
 
+unsigned char const ON_EDGE_BIT    = 0x02;
+unsigned char const ANCHORED_BIT   = 0x04;
+unsigned char const UNDER_MESH_BIT = 0x08;
+
 
 voxel_params_t global_voxel_params;
 voxel_model terrain_voxel_model;
@@ -189,13 +193,13 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigne
 		for (unsigned xhi = 0; xhi < 2; ++xhi) {
 			unsigned const xx(x+xhi), yy(y+yhi);
 			float const xval(xx*vsz.x + lo_pos.x), yval(yy*vsz.y + lo_pos.y);
-			if (all_under_mesh) all_under_mesh = (z < first_zval_above_mesh[yy*nx + xx]);
+			if (all_under_mesh) all_under_mesh = ((outside.get(xx, yy, z) & UNDER_MESH_BIT) != 0);
 			
 			for (unsigned zhi = 0; zhi < 2; ++zhi) {
 				unsigned const zz(z+zhi), vix((xhi^yhi) + 2*yhi + 4*zhi);
-				unsigned char const outside_val(outside.get(xx, yy, zz));
+				unsigned char const outside_val(outside.get(xx, yy, zz) & 7);
 				if (outside_val) cix |= 1 << vix; // outside or on edge
-				vals[vix] = (outside_val == 2) ? params.isolevel : get(xx, yy, zz); // check on_edge status
+				vals[vix] = (outside_val == ON_EDGE_BIT) ? params.isolevel : get(xx, yy, zz); // check on_edge status
 				pts [vix] = point(xval, yval, (zz*vsz.z + lo_pos.z));
 			}
 		}
@@ -224,7 +228,8 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigne
 void voxel_manager::calc_outside_val(unsigned x, unsigned y, unsigned z) {
 
 	bool const on_edge(params.make_closed_surface && ((x == 0 || x == nx-1) || (y == 0 || y == ny-1) || (z == 0 || z == nz-1)));
-	unsigned char const ival(on_edge? 2 : (((get(x, y, z) < params.isolevel) ^ params.invert) ? 1 : 0)); // on_edge is considered outside
+	unsigned char ival(on_edge? ON_EDGE_BIT : (((get(x, y, z) < params.isolevel) ^ params.invert) ? 1 : 0)); // on_edge is considered outside
+	if ((display_mode & 0x01) && z < first_zval_above_mesh[y*nx + x]) ival |= UNDER_MESH_BIT;
 	outside.set(x, y, z, ival);
 }
 
@@ -342,7 +347,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 }
 
 
-// outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored
+// outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored, 8-bit set=under mesh
 void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 	vector<unsigned> *xy_updated, vector<point> *updated_pts)
 {
@@ -358,7 +363,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 			unsigned const ix(outside.get_ix(x, y, zpos));
 			if (outside[ix] != 0) continue; // outside
 			work.push_back(ix); // inside, anchored to the mesh
-			outside[ix] |= 4; // mark as anchored
+			outside[ix] |= ANCHORED_BIT; // mark as anchored
 		}
 	}
 
@@ -372,7 +377,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 					unsigned const ix(outside.get_ix(x, y, z));
 					if (outside[ix] == 1) continue; // outside
 					work.push_back(ix); // inside, anchored to the mesh
-					outside[ix] |= 4; // mark as anchored
+					outside[ix] |= ANCHORED_BIT; // mark as anchored
 				}
 			}
 		}
@@ -383,7 +388,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 		unsigned const cur(work.back());
 		work.pop_back();
 		assert(cur < outside.size());
-		assert(outside[cur] & 4);
+		assert(outside[cur] & ANCHORED_BIT);
 		unsigned const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
 		assert(outside.get_ix(x, y, z) == cur);
 
@@ -397,7 +402,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 						
 				if (outside[ix] == 0) { // inside
 					work.push_back(ix);
-					outside[ix] |= 4; // mark as anchored
+					outside[ix] |= ANCHORED_BIT; // mark as anchored
 				}
 			}
 		}
@@ -411,8 +416,8 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 			for (unsigned z = 0; z < nz; ++z) {
 				unsigned const ix(outside.get_ix(x, y, z));
 
-				if (outside[ix] & 6) { // anchored or on edge
-					outside[ix] &= 3; // remove anchored bit
+				if (outside[ix] > 1) { // anchored, on edge, or under mesh
+					outside[ix] &= ~ANCHORED_BIT; // remove anchored bit
 				}
 				else if (outside[ix] != 1) { // inside and non-anchored
 					if (updated_pts) {updated_pts->push_back(get_pt_at(x, y, z));}
@@ -560,7 +565,8 @@ void voxel_model::calc_ao_dirs() {
 				if (x == 0 && y == 0 && z == 0) continue;
 				vector3d const delta(x*vsz.x, y*vsz.y, z*vsz.z);
 				unsigned const nsteps(max(1, int(params.ao_radius/delta.mag())));
-				ao_dirs.push_back(step_dir_t(x, y, z, nsteps));
+				int const dist(z + (x + y*(int)nx)*(int)nz);
+				ao_dirs.push_back(step_dir_t(x, y, z, nsteps, dist));
 			}
 		}
 	}
@@ -572,6 +578,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 	assert(!ao_lighting.empty());
 	float const norm(params.ao_weight_scale/ao_dirs.size());
 	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
+	int const voxel_sz[3] = {nx, ny, nz};
 	
 	#pragma omp parallel for schedule(static,1)
 	for (int y = ybix*yblocks; y < (int)min(ny, (ybix+1)*yblocks); ++y) {
@@ -591,17 +598,15 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 					float cur_val(1.0);
 					int cur[3] = {x, y, z};
 					// bias to pos side by 1 unit for positive steps to help compensate for grid point vs. grid center alignments
+					unsigned max_steps(i->nsteps);
 					UNROLL_3X(if (i->dir[i_] > 0) cur[i_] += 1;);
-					//int const sz[3] = {nx, ny, nz};
-					//unsigned max_steps(i->nsteps);
-					//UNROLL_3X(if (i->dir[i_]) max_steps = min(max_steps, (unsigned)max(0, ((i->dir[i_] < 0) ? cur[i_] : sz[i_]-cur[i_]-1))););
+					UNROLL_3X(if (i->dir[i_]) max_steps = min(max_steps, (unsigned)max(0, ((i->dir[i_] < 0) ? cur[i_] : voxel_sz[i_]-cur[i_]-1))););
+					int ix(outside.get_ix(cur[0], cur[1], cur[2]));
 
-					for (unsigned s = 0; s < i->nsteps; ++s) { // take steps in this direction
-						UNROLL_3X(cur[i_] += i->dir[i_];); // increment first to skip the current voxel
-						if (!is_valid_range(cur)) break; // stepped off the volume
-						unsigned const xy_ix(cur[1]*nx + cur[0]), ix(xy_ix*nz + cur[2]);
+					for (unsigned s = 0; s < max_steps; ++s) { // take steps in this direction
+						ix += i->dist_per_step; // increment first to skip the current voxel
 						
-						if (outside[ix] == 0 || ((display_mode & 0x01) && cur[2] < (int)first_zval_above_mesh[xy_ix])) {
+						if (outside[ix] == 0 || (outside[ix] & UNDER_MESH_BIT)) {
 							cur_val = float(s)/float(i->nsteps);
 							break; // voxel known to be inside the volume or under the mesh
 						}

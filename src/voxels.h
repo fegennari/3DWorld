@@ -124,9 +124,9 @@ class voxel_model : public voxel_manager {
 	voxel_grid<float> ao_lighting;
 
 	struct step_dir_t {
-		int dir[3];
 		unsigned nsteps;
-		step_dir_t(int x, int y, int z, unsigned n) : nsteps(n) {dir[0] = x; dir[1] = y; dir[2] = z;}
+		int dir[3], dist_per_step;
+		step_dir_t(int x, int y, int z, unsigned n, int d) : nsteps(n), dist_per_step(d) {dir[0] = x; dir[1] = y; dir[2] = z;}
 	};
 	vector<step_dir_t> ao_dirs;
 
