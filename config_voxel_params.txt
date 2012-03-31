@@ -9,6 +9,7 @@ voxel ao_radius 2.0
 voxel ao_weight_scale 2.0 # generally >= 2.0
 voxel ao_atten_power 0.7 # generally <= 1.0
 voxel tex_mix_saturate 6.0
+voxel z_gradient 0.0
 voxel invert 0
 voxel make_closed_surface 1
 voxel remove_unconnected 1

@@ -109,13 +109,14 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	unsigned const xyz_num[3] = {nx, ny, nz};
 	vector<float> xyz_vals[3];
 	ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
+	float const zscale((params.invert ? -1.0 : 1.0)*params.z_gradient/(nz-1));
 
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)ny; ++y) { // generate voxel values
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
 #if 1
-				float val(ngen.get_val(x, y, z, xyz_vals));
+				float val(ngen.get_val(x, y, z, xyz_vals) + z*zscale);
 #else
 				point pos(get_pt_at(x, y, z));
 				pos += 20.0*fabs(ngen.get_val(0.01*pos))*vector3d(1,1,1); // warp
@@ -956,6 +957,9 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "tex_mix_saturate") {
 		if (!read_float(fp, global_voxel_params.tex_mix_saturate)) voxel_file_err("tex_mix_saturate", error);
+	}
+	else if (str == "z_gradient") {
+		if (!read_float(fp, global_voxel_params.z_gradient)) voxel_file_err("z_gradient", error);
 	}
 	else if (str == "ao_radius") {
 		if (!read_float(fp, global_voxel_params.ao_radius) || global_voxel_params.ao_radius < 0.0) voxel_file_err("ao_radius", error);
