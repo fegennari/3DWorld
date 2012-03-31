@@ -96,7 +96,6 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 void voxel_manager::clear() {
 	
 	outside.clear();
-	first_zval_above_mesh.clear();
 	float_voxel_grid::clear();
 }
 
@@ -188,7 +187,6 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigne
 	point pts[8]; // corner points
 	unsigned cix(0);
 	bool all_under_mesh(params.remove_under_mesh && (display_mode & 0x01)); // if mesh draw is enabled
-	assert(first_zval_above_mesh.size() == nx*ny);
 
 	for (unsigned yhi = 0; yhi < 2; ++yhi) {
 		for (unsigned xhi = 0; xhi < 2; ++xhi) {
@@ -226,11 +224,11 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigne
 }
 
 
-void voxel_manager::calc_outside_val(unsigned x, unsigned y, unsigned z) {
+void voxel_manager::calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh) {
 
 	bool const on_edge(params.make_closed_surface && ((x == 0 || x == nx-1) || (y == 0 || y == ny-1) || (z == 0 || z == nz-1)));
 	unsigned char ival(on_edge? ON_EDGE_BIT : (((get(x, y, z) < params.isolevel) ^ params.invert) ? 1 : 0)); // on_edge is considered outside
-	if ((display_mode & 0x01) && z < first_zval_above_mesh[y*nx + x]) ival |= UNDER_MESH_BIT;
+	if (is_under_mesh) ival |= UNDER_MESH_BIT;
 	outside.set(x, y, z, ival);
 }
 
@@ -240,17 +238,15 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 	outside.init(nx, ny, nz, vsz, center, 0);
-	first_zval_above_mesh.resize(nx*ny, 0);
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
 			point const pos(get_pt_at(x, y, 0));
 			int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
 			unsigned const zix(point_outside_mesh(xpos, ypos) ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
-			first_zval_above_mesh[y*nx + x] = zix;
 			
 			for (unsigned z = 0; z < nz; ++z) {
-				calc_outside_val(x, y, z);
+				calc_outside_val(x, y, z, (z < zix));
 			}
 		}
 	}
@@ -352,19 +348,18 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 	vector<unsigned> *xy_updated, vector<point> *updated_pts)
 {
-	assert(first_zval_above_mesh.size() == nx*ny);
 	vector<unsigned> work; // stack of voxels to process
 	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
 	// add voxels along the mesh surface
 	for (unsigned y = y1; y < y2; ++y) {
 		for (unsigned x = x1; x < x2; ++x) {
-			unsigned const zpos(first_zval_above_mesh[y*nx + x]);
-			if (zpos == 0 || zpos >= nz) continue; // off the grid
-			unsigned const ix(outside.get_ix(x, y, zpos));
-			if (outside[ix] != 0) continue; // outside
-			work.push_back(ix); // inside, anchored to the mesh
-			outside[ix] |= ANCHORED_BIT; // mark as anchored
+			for (unsigned z = 0; z < nz; ++z) {
+				unsigned const ix(outside.get_ix(x, y, z));
+				if (outside[ix] != UNDER_MESH_BIT) continue; // outside or above mesh
+				work.push_back(ix); // inside, anchored to the mesh
+				outside[ix] |= ANCHORED_BIT; // mark as anchored
+			}
 		}
 	}
 
@@ -579,6 +574,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 	assert(!ao_lighting.empty());
 	float const norm(params.ao_weight_scale/ao_dirs.size());
 	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
+	unsigned char const end_ray_flags((display_mode & 0x01) ? UNDER_MESH_BIT : 0);
 	int const voxel_sz[3] = {nx, ny, nz};
 	
 	#pragma omp parallel for schedule(static,1)
@@ -589,7 +585,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 				point const pos(ao_lighting.get_pt_at(x, y, z));
 				if (!is_over_mesh(pos)) continue;
 				
-				if ((display_mode & 0x01) && pos.z + DZ_VAL < interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1)) { // under mesh
+				if (z+1 < nz && outside.get(x, y, z+1) & end_ray_flags) { // under mesh
 					ao_lighting.set(x, y, z, 0);
 					continue;
 				}
@@ -607,7 +603,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 					for (unsigned s = 0; s < max_steps; ++s) { // take steps in this direction
 						ix += i->dist_per_step; // increment first to skip the current voxel
 						
-						if (outside[ix] == 0 || (outside[ix] & UNDER_MESH_BIT)) {
+						if (outside[ix] == 0 || (outside[ix] & end_ray_flags)) {
 							cur_val = float(s)/float(i->nsteps);
 							break; // voxel known to be inside the volume or under the mesh
 						}
@@ -669,7 +665,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				if (val == prev_val) continue; // no change
 				if (params.atten_at_edges == 1) atten_edge_val(x, y, z, atten_thresh);
 				if (params.atten_at_edges == 2) atten_top_val (x, y, z, atten_thresh);
-				calc_outside_val(x, y, z);
+				calc_outside_val(x, y, z, ((outside.get(x, y, z) & UNDER_MESH_BIT) != 0));
 				was_updated = 1;
 				((val      < params.isolevel) ? saw_outside : saw_inside) = 1;
 				((prev_val < params.isolevel) ? saw_outside : saw_inside) = 1;
