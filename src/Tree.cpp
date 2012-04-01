@@ -1620,7 +1620,10 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 				if (max_unique_trees > 0) {
 					global_rand_gen.rseed1 = global_rand_gen.rseed1 % max_unique_trees;
 					global_rand_gen.rseed2 = 12345;
-					// *** unique the trees so they can be reused? ***
+
+					if (tree_coll_level == 0) {
+						// FIXME: unique the trees so they can be reused
+					}
 				}
 				t_trees.push_back(tree());
 				t_trees.back().regen_tree(pos, 0); // use random function #2 for trees

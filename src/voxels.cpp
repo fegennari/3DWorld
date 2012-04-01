@@ -590,7 +590,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 					continue;
 				}
 				float val(0.0);
-				
+
 				for (vector<step_dir_t>::const_iterator i = ao_dirs.begin(); i != ao_dirs.end(); ++i) {
 					float cur_val(1.0);
 					int cur[3] = {x, y, z};
@@ -610,7 +610,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 					}
 					val += norm*cur_val;
 					if (val >= 1.0) break;
-				}
+				} // for i
 				ao_lighting.set(x, y, z, CLIP_TO_01(pow(val, params.ao_atten_power)));
 			} // for z
 		} // for x

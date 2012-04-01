@@ -1,5 +1,5 @@
 ntrees 0
-max_unique_trees 100
+max_unique_trees 0
 nleaves_scale 2.0
 nsmileys 6
 verbose 0
