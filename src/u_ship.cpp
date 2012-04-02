@@ -1698,7 +1698,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 		p2 += fdir*range;
 	}
 	float const length(p2p_dist(p1, p2));
-	if (length < TOLERANCE) return; // rarely happens - only if the ship and target are intersecting (or the ship hits itself?)
+	if (length < 0.1*radius) return; // rarely happens - only if the ship and target are intersecting (or the ship hits itself?)
 
 	// draw beam (even for player)
 	assert(beamwidth > 0.0 && radius > 0.0 && fticks > 0.0 && bwp.bw_escale > 0.0);
@@ -1708,13 +1708,15 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 		b_wrays.push_back(usw_ray(sscale*beamwidth, bwp.bw_escale*beamwidth, p1, p2, bwp.beamc[0], bwp.beamc[1]));
 	}
 	else {
-		unsigned const segments((rand()&7)+4); // max is 11
+		unsigned const segments((rand()&7)+4);
 		float const step(length/segments);
 		vector3d deltas[12];
-		deltas[0] = deltas[segments] = zero_vector;
+		deltas[0] = deltas[segments] = zero_vector; // first and last segments are zero
 
-		for (unsigned i = 1; i <= segments; ++i) { // one extra delta (delta 0 is always 0)
-			deltas[i] = signed_rand_vector(0.1*step);
+		for (unsigned i = 1; i < segments; ++i) {
+			do {
+				deltas[i] = signed_rand_vector(0.1*step);
+			} while (deltas[i] == deltas[i-1]);
 		}
 		for (unsigned i = 0; i < segments; ++i) {
 			float bw[2];
