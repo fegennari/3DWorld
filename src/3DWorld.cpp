@@ -1807,12 +1807,13 @@ int load_config(string const &config_file) {
 		}
 		if (error) {cout << "Parse error in config file." << endl; break;}
 	}
-	fclose(fp);
-	
-	if (universe_only) {
-		world_mode = WMODE_UNIVERSE;
-		assert(!disable_universe);
+	if (universe_only && disable_universe) {
+		cout << "Error: universe_only and disable_universe are mutually exclusive" << endl;
+		error = 1;
 	}
+	fclose(fp);
+	if (universe_only) world_mode = WMODE_UNIVERSE;
+
 	/*if (read_landscape) {
 		DISABLE_SCENERY = 1;
 		DISABLE_WATER   = 1;
