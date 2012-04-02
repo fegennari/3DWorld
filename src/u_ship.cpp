@@ -1708,12 +1708,12 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 		b_wrays.push_back(usw_ray(sscale*beamwidth, bwp.bw_escale*beamwidth, p1, p2, bwp.beamc[0], bwp.beamc[1]));
 	}
 	else {
-		unsigned const segments((rand()&7)+4);
+		unsigned const segments((rand()&7)+4); // max is 11
 		float const step(length/segments);
 		vector3d deltas[12];
 		deltas[0] = deltas[segments] = zero_vector;
 
-		for (unsigned i = 1; i < segments; ++i) {
+		for (unsigned i = 1; i <= segments; ++i) { // one extra delta (delta 0 is always 0)
 			deltas[i] = signed_rand_vector(0.1*step);
 		}
 		for (unsigned i = 0; i < segments; ++i) {
