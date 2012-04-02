@@ -725,6 +725,7 @@ void check_contained_cube_sides() {
 
 void coll_obj_group::clear() { // unused, but may be useful
 	
+	has_lt_atten = 0;
 	vector<coll_obj>::clear();
 	dynamic_ids.clear();
 	drawn_ids.clear();

@@ -35,7 +35,6 @@ extern platform_cont platforms;
 
 
 void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_to_hcm, int is_dynamic, int dhcm);
-void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams);
 
 
 
@@ -223,7 +222,7 @@ int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int
 	cobj.copy_from(cube);
 	// cache the center point and radius
 	cobj.points[0] = cobj.get_cube_center();
-	set_coll_obj_props(index, COLL_CUBE, cobj.get_bsphere_radius(), 0.0, platform_id, cparams);
+	coll_objects.set_coll_obj_props(index, COLL_CUBE, cobj.get_bsphere_radius(), 0.0, platform_id, cparams);
 	add_coll_cube_to_matrix(index, dhcm);
 	return index;
 }
@@ -348,7 +347,7 @@ int add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2
 		cout << "pt0 = "; points[0].print(); cout << ", pt1 = "; points[1].print(); cout << endl;
 		assert(0);
 	}
-	set_coll_obj_props(index, type, radius, radius2, platform_id, cparams);
+	coll_objects.set_coll_obj_props(index, type, radius, radius2, platform_id, cparams);
 	add_coll_cylinder_to_matrix(index, dhcm);
 	return index;
 }
@@ -391,7 +390,7 @@ int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, i
 		cobj.d[i][1] = pt[i] + radius;
 	}
 	cobj.points[0] = pt;
-	set_coll_obj_props(index, COLL_SPHERE, radius, radius, platform_id, cparams);
+	coll_objects.set_coll_obj_props(index, COLL_SPHERE, radius, radius, platform_id, cparams);
 	add_coll_sphere_to_matrix(index, dhcm);
 	return index;
 }
@@ -499,7 +498,7 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 	float brad;
 	point center; // unused
 	polygon_bounding_sphere(points, npoints, thickness, center, brad);
-	set_coll_obj_props(index, COLL_POLYGON, brad, 0.0, platform_id, cparams);
+	coll_objects.set_coll_obj_props(index, COLL_POLYGON, brad, 0.0, platform_id, cparams);
 	add_coll_polygon_to_matrix(index, dhcm);
 	return index;
 }
@@ -772,10 +771,9 @@ void remove_all_coll_obj() {
 }
 
 
-void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams) {
+void coll_obj_group::set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams) {
 	
-	assert(size_t(index) < coll_objects.size());
-	coll_obj &cobj(coll_objects[index]); // Note: this is the *only* place a new cobj is allocated/created
+	coll_obj &cobj(at(index)); // Note: this is the *only* place a new cobj is allocated/created
 	cobj.status      = (cparams.is_dynamic ? COLL_DYNAMIC : COLL_STATIC);
 	cobj.texture_offset = zero_vector;
 	cobj.cp          = cparams;
@@ -795,9 +793,10 @@ void set_coll_obj_props(int index, int type, float radius, float radius2, int pl
 	cobj.falling     = 0;
 	cobj.calc_size();
 	cobj.set_npoints();
-	if (cparams.is_dynamic) coll_objects.dynamic_ids.must_insert (index);
-	if (cparams.draw      ) coll_objects.drawn_ids.must_insert   (index);
-	if (platform_id >= 0  ) coll_objects.platform_ids.must_insert(index);
+	if (cparams.is_dynamic) dynamic_ids.must_insert (index);
+	if (cparams.draw      ) drawn_ids.must_insert   (index);
+	if (platform_id >= 0  ) platform_ids.must_insert(index);
+	if ((type == COLL_CUBE) && cparams.light_atten != 0.0) has_lt_atten = 1;
 }
 
 

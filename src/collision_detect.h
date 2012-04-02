@@ -166,8 +166,10 @@ struct cobj_id_set_t : public set<unsigned> {
 class coll_obj_group : public vector<coll_obj> {
 
 public:
+	bool has_lt_atten;
 	cobj_id_set_t dynamic_ids, drawn_ids, platform_ids;
 
+	coll_obj_group() : has_lt_atten(0) {}
 	void clear();
 	void finalize();
 	void remove_invalid_cobjs();
@@ -177,6 +179,7 @@ public:
 	void remove_overlapping_cubes();
 	void subdiv_cubes();
 	void sort_cobjs_for_rendering();
+	void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams);
 };
 
 

@@ -1884,7 +1884,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
-	bool has_lt_atten(draw_trans && !draw_solid);
+	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
 	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
