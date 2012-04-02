@@ -1884,10 +1884,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
-	bool const has_lt_atten(draw_trans && !draw_solid);
+	bool has_lt_atten(draw_trans && !draw_solid);
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
 	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
+	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled
 	int last_tid(-1), last_group_id(-1), last_type(-1);
 	
 	if (draw_solid) {
@@ -1925,7 +1926,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			}
 		} // for i
 		end_group(last_group_id);
-	}
+	} // end draw solid
 	if (draw_trans) { // called second
 		if (smoke_exists) {
 			for (unsigned i = 0; i < portals.size(); ++i) {
@@ -1943,6 +1944,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			ulocs[0] = s.get_uniform_loc("light_atten");
 			ulocs[1] = s.get_uniform_loc("cube_bb"    );
 			ulocs[2] = s.get_uniform_loc("refract_ix" );
+			assert(ulocs[0] && ulocs[1] && ulocs[2]);
 		}
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
 			int const ix(draw_last[i].second);
@@ -1983,11 +1985,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				c.draw_cobj(cix, last_tid, last_group_id, &s);
 				assert(cix == ix); // should not have changed
 			}
-		}
+		} // for i
 		end_group(last_group_id);
 		disable_blend();
 		draw_last.resize(0);
-	}
+	} // end draw_trans
 	end_smoke_shaders(s, orig_fog_color);
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();
