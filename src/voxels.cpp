@@ -89,7 +89,7 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 	clear();
 	resize(tot_size, default_val);
 	center = center_;
-	lo_pos = center - 0.5*point(nx*vsz.x, ny*vsz.y, nz*vsz.z);
+	lo_pos = center - 0.5*point((nx-1)*vsz.x, (ny-1)*vsz.y, (nz-1)*vsz.z);
 }
 
 
@@ -152,8 +152,20 @@ void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 void voxel_manager::atten_top_val(unsigned x, unsigned y, unsigned z, float val) {
 
-	float const zval(z/float(nz) - 0.75);
-	if (zval > 0.0) get_ref(x, y, z) += 12.0*val*zval;
+	float z_atten(0.0);
+
+	if (params.atten_top_mode == 1) { // atten to mesh
+		point const pos(get_pt_at(x, y, z));
+		float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
+		z_atten = ((pos.z - mh)/(vsz.z*nz) - 0.5);
+	}
+	else if (params.atten_top_mode == 2) { // atten to random
+		// FIXME: write
+	}
+	else {
+		z_atten = (z/float(nz) - 0.75);
+	}
+	if (z_atten > 0.0) get_ref(x, y, z) += val*z_atten;
 }
 
 
@@ -897,13 +909,16 @@ void gen_voxel_landscape() {
 
 	RESET_TIME;
 	bool const add_cobjs(1);
-	unsigned const nx(MESH_X_SIZE), ny(MESH_Y_SIZE), nz(max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
+	unsigned const nx((global_voxel_params.xsize > 0) ? global_voxel_params.xsize : MESH_X_SIZE);
+	unsigned const ny((global_voxel_params.ysize > 0) ? global_voxel_params.ysize : MESH_Y_SIZE);
+	unsigned const nz((global_voxel_params.zsize > 0) ? global_voxel_params.zsize : max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
 	//float const zlo(zbottom), zhi(max(ztop, zlo + Z_SCENE_SIZE)); // Note: does not include czmin/czmax range
 	float const zlo(zbottom), zhi(min(czmin, zbottom) + Z_SCENE_SIZE); // Note: matches zhi of 3D volume textures/matrices for lighting
 	// slightly smaller than 2.0 to avoid z-fighting issues at the edge of the mesh/water
-	float const ssz_xy_mult(2.0*(1.0 - 0.1/(MESH_X_SIZE + MESH_Y_SIZE)));
-	vector3d const vsz(ssz_xy_mult*X_SCENE_SIZE/nx, ssz_xy_mult*Y_SCENE_SIZE/ny, (zhi - zlo)/nz);
-	point const center(0.0, 0.0, 0.5*(zlo + zhi));
+	float const xsz((2.0*(1.0 - 0.05/MESH_X_SIZE)*X_SCENE_SIZE - DX_VAL)/(nx-1));
+	float const ysz((2.0*(1.0 - 0.05/MESH_Y_SIZE)*Y_SCENE_SIZE - DY_VAL)/(ny-1));
+	vector3d const vsz(xsz, ysz, (zhi - zlo)/nz);
+	point const center(-0.5*DX_VAL, -0.5*DY_VAL, 0.5*(zlo + zhi));
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.set_params(global_voxel_params);
 	terrain_voxel_model.clear();
@@ -930,7 +945,16 @@ bool parse_voxel_option(FILE *fp) {
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);
 
-	if (str == "mag") {
+	if (str == "xsize") {
+		if (!read_uint(fp, global_voxel_params.xsize)) voxel_file_err("xsize", error);
+	}
+	else if (str == "ysize") {
+		if (!read_uint(fp, global_voxel_params.ysize)) voxel_file_err("ysize", error);
+	}
+	else if (str == "zsize") {
+		if (!read_uint(fp, global_voxel_params.zsize)) voxel_file_err("zsize", error);
+	}
+	else if (str == "mag") {
 		if (!read_float(fp, global_voxel_params.mag)) voxel_file_err("mag", error);
 	}
 	else if (str == "freq") {
@@ -980,6 +1004,9 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "remove_under_mesh") {
 		if (!read_bool(fp, global_voxel_params.remove_under_mesh)) voxel_file_err("remove_under_mesh", error);
+	}
+	else if (str == "atten_top_mode") {
+		if (!read_uint(fp, global_voxel_params.atten_top_mode) || global_voxel_params.atten_top_mode > 2) voxel_file_err("atten_top_mode", error);
 	}
 	else if (str == "atten_at_edges") {
 		if (!read_uint(fp, global_voxel_params.atten_at_edges) || global_voxel_params.atten_at_edges > 2) voxel_file_err("atten_at_edges", error);
