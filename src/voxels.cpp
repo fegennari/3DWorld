@@ -587,43 +587,51 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 	float const norm(params.ao_weight_scale/ao_dirs.size());
 	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
 	unsigned char const end_ray_flags((display_mode & 0x01) ? UNDER_MESH_BIT : 0);
+	unsigned const xstep(max(1U, nx/MESH_X_SIZE)), ystep(max(1U, ny/MESH_Y_SIZE)), zstep(max(1U, nz/MESH_SIZE[2]));
+	unsigned const x_end(min(nx, (xbix+1)*xblocks)), y_end(min(ny, (ybix+1)*yblocks));
 	int const voxel_sz[3] = {nx, ny, nz};
 	
 	#pragma omp parallel for schedule(static,1)
-	for (int y = ybix*yblocks; y < (int)min(ny, (ybix+1)*yblocks); ++y) {
-		for (unsigned x = xbix*xblocks; x < min(nx, (xbix+1)*xblocks); ++x) {
-			for (unsigned z = 0; z < nz; ++z) {
+	for (int yi = ybix*yblocks; yi < (int)y_end; yi += ystep) {
+		for (unsigned xi = xbix*xblocks; xi < x_end; xi += xstep) {
+			for (unsigned zi = 0; zi < nz; zi += zstep) {
+				if (xi == 0 || yi == 0 || xi >= nx-xstep || (unsigned)yi >= ny-ystep || zi >= nz-zstep) continue; // at the mesh edges
+				unsigned const x(min(x_end-1, xi+(xstep>>1))), y(min(y_end-1, yi+(ystep>>1))), z(min(nz-1, zi+(zstep>>1)));
 				if (increase_only && ao_lighting.get(x, y, z) == 1.0) continue;
 				point const pos(ao_lighting.get_pt_at(x, y, z));
 				if (!is_over_mesh(pos)) continue;
-				
-				if (z+1 < nz && outside.get(x, y, z+1) & end_ray_flags) { // under mesh
-					ao_lighting.set(x, y, z, 0);
-					continue;
-				}
 				float val(0.0);
+				
+				if (z+1 == nz || !(outside.get(x, y, z+1) & end_ray_flags)) { // above mesh
+					for (vector<step_dir_t>::const_iterator i = ao_dirs.begin(); i != ao_dirs.end(); ++i) {
+						float cur_val(1.0);
+						int cur[3] = {x, y, z};
+						// bias to pos side by 1 unit for positive steps to help compensate for grid point vs. grid center alignments
+						unsigned max_steps(i->nsteps);
+						UNROLL_3X(if (i->dir[i_] > 0) cur[i_] += 1;);
+						UNROLL_3X(if (i->dir[i_]) max_steps = min(max_steps, (unsigned)max(0, ((i->dir[i_] < 0) ? cur[i_] : voxel_sz[i_]-cur[i_]-1))););
+						int ix(outside.get_ix(cur[0], cur[1], cur[2]));
 
-				for (vector<step_dir_t>::const_iterator i = ao_dirs.begin(); i != ao_dirs.end(); ++i) {
-					float cur_val(1.0);
-					int cur[3] = {x, y, z};
-					// bias to pos side by 1 unit for positive steps to help compensate for grid point vs. grid center alignments
-					unsigned max_steps(i->nsteps);
-					UNROLL_3X(if (i->dir[i_] > 0) cur[i_] += 1;);
-					UNROLL_3X(if (i->dir[i_]) max_steps = min(max_steps, (unsigned)max(0, ((i->dir[i_] < 0) ? cur[i_] : voxel_sz[i_]-cur[i_]-1))););
-					int ix(outside.get_ix(cur[0], cur[1], cur[2]));
-
-					for (unsigned s = 0; s < max_steps; ++s) { // take steps in this direction
-						ix += i->dist_per_step; // increment first to skip the current voxel
+						for (unsigned s = 0; s < max_steps; ++s) { // take steps in this direction
+							ix += i->dist_per_step; // increment first to skip the current voxel
 						
-						if (outside[ix] == 0 || (outside[ix] & end_ray_flags)) {
-							cur_val = float(s)/float(i->nsteps);
-							break; // voxel known to be inside the volume or under the mesh
+							if (outside[ix] == 0 || (outside[ix] & end_ray_flags)) {
+								cur_val = float(s)/float(i->nsteps);
+								break; // voxel known to be inside the volume or under the mesh
+							}
+						}
+						val += norm*cur_val;
+						if (val >= 1.0) break;
+					} // for i
+					val = CLIP_TO_01(pow(val, params.ao_atten_power));
+				}
+				for (unsigned yy = yi; yy < min(y_end, yi+ystep); ++yy) {
+					for (unsigned xx = xi; xx < min(x_end, xi+xstep); ++xx) {
+						for (unsigned zz = zi; zz < min(nz, zi+zstep); ++zz) {
+							ao_lighting.set(xx, yy, zz, val);
 						}
 					}
-					val += norm*cur_val;
-					if (val >= 1.0) break;
-				} // for i
-				ao_lighting.set(x, y, z, CLIP_TO_01(pow(val, params.ao_atten_power)));
+				}
 			} // for z
 		} // for x
 	} // for y

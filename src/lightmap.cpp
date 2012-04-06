@@ -1448,7 +1448,7 @@ void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float li
 
 float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
 
-	float val(get_voxel_terrain_ao_lighting_val(p));
+	float val(get_voxel_terrain_ao_lighting_val(p)); // shift p?
 	if (!lm_alloc) return val;
 	assert(lmap_manager.vlmap);
 	bool outside_mesh(0);
