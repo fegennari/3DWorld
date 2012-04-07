@@ -26,7 +26,7 @@ voxel_params_t global_voxel_params;
 voxel_model terrain_voxel_model;
 
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
-extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode;
+extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
 extern coll_obj_group coll_objects;
 
 
@@ -160,7 +160,8 @@ void voxel_manager::atten_top_val(unsigned x, unsigned y, unsigned z, float val)
 		z_atten = ((pos.z - mh)/(vsz.z*nz) - 0.5);
 	}
 	else if (params.atten_top_mode == 2) { // atten to random
-		// FIXME: write
+		point const pos(get_pt_at(x, y, z));
+		// FIXME: write - use pos.x and pos.y to lookup in a heightmap function
 	}
 	else {
 		z_atten = (z/float(nz) - 0.75);
@@ -502,6 +503,7 @@ void voxel_model::clear() {
 	last_blocks_updated.clear();
 	ao_lighting.clear();
 	voxel_manager::clear();
+	volume_added = 0;
 }
 
 
@@ -656,6 +658,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 
 	assert(radius > 0.0);
 	if (val_at_center == 0.0 || empty()) return 0;
+	bool const material_removed(val_at_center < 0.0);
 	if (params.invert) val_at_center *= -1.0; // is this correct?
 	unsigned const num[3] = {nx, ny, nz};
 	unsigned bounds[3][2]; // {x,y,z} x {lo,hi}
@@ -683,8 +686,8 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				val += val_at_center*(1.0 - dist/radius);
 				if (NORMALIZE_TO_1) val = max(-1.0f, min(1.0f, val));
 				if (val == prev_val) continue; // no change
-				if (params.atten_at_edges == 1) atten_edge_val(x, y, z, atten_thresh);
-				if (params.atten_at_edges == 2) atten_top_val (x, y, z, atten_thresh);
+				if (params.atten_at_edges == 1) atten_top_val (x, y, z, atten_thresh);
+				if (params.atten_at_edges == 2) atten_edge_val(x, y, z, atten_thresh);
 				calc_outside_val(x, y, z, ((outside.get(x, y, z) & UNDER_MESH_BIT) != 0));
 				was_updated = 1;
 				((val      < params.isolevel) ? saw_outside : saw_inside) = 1;
@@ -706,7 +709,13 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	}
 	if (!saw_inside || !saw_outside) return 0; // nothing else to do
 	std::copy(blocks_to_update.begin(), blocks_to_update.end(), inserter(modified_blocks, modified_blocks.begin()));
-	create_fragments(center, radius, shooter, num_fragments);
+
+	if (material_removed) {
+		create_fragments(center, radius, shooter, num_fragments);
+	}
+	else {
+		volume_added = 1;
+	}
 	return 1;
 }
 
@@ -770,7 +779,7 @@ void voxel_model::proc_pending_updates() {
 		block_group_t cur_group;
 
 		for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
-			calc_ao_lighting_for_block(blocks_to_update[i], 1); // update can only remove, so lighting can only increase
+			calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
 			unsigned const xbix(blocks_to_update[i]%NUM_BLOCKS), x1(xbix*xblocks), x2((xbix+1)*xblocks);
 			unsigned const ybix(blocks_to_update[i]/NUM_BLOCKS), y1(ybix*yblocks), y2((ybix+1)*yblocks);
 			block_group_t group; // add a border of 1 to account for rounding errors
@@ -795,6 +804,7 @@ void voxel_model::proc_pending_updates() {
 			update_smoke_indir_tex_range(cur_group.v[0][0], cur_group.v[0][1], cur_group.v[1][0], cur_group.v[1][1], 1);
 		}
 	}
+	volume_added = 0;
 	scene_dlist_invalid = 1;
 	PRINT_TIME("Process Voxel Updates");
 }
@@ -1070,7 +1080,7 @@ float get_voxel_terrain_ao_lighting_val(point const &pos) {
 }
 
 bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments) {
-	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center, shooter, num_fragments);
+	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center*(display_framerate ? 1.0 : -1.0), shooter, num_fragments);
 }
 
 void proc_voxel_updates() {
