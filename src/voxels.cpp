@@ -130,61 +130,54 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 }
 
 
-void voxel_manager::atten_edge_val(unsigned x, unsigned y, unsigned z, float val) {
-
-	float const vy(1.0 - 2.0*max(0.0, (y - 0.5*ny))/float(ny));
-	float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx));
-	float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz)), v(0.25 - vx*vy*vz);
-	if (v > 0.0) get_ref(x, y, z) += 8.0*val*v;
-}
-
-
 void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 	for (unsigned y = 0; y < ny; ++y) {
+		float const vy(1.0 - 2.0*max(0.0, (y - 0.5*ny))/float(ny));
+
 		for (unsigned x = 0; x < nx; ++x) {
+			float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx));
+
 			for (unsigned z = 0; z < nz; ++z) {
-				atten_edge_val(x, y, z, val);
+				float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz)), v(0.25 - vx*vy*vz);
+				if (v > 0.0) get_ref(x, y, z) += 8.0*val*v;
 			}
 		}
 	}
 }
 
 
-void voxel_manager::atten_top_val(unsigned x, unsigned y, unsigned z, float val) {
-
-	unsigned const tav_ix(y*nx + x);
-	
-	if (params.atten_top_mode > 0 && top_atten_vals.empty()) {
-		top_atten_vals.resize(nx*ny, 0.0);
-		assert(tav_ix < top_atten_vals.size());
-	}
-	float &v(get_ref(x, y, z));
-	
-	if (params.atten_top_mode == 1) { // atten to mesh
-		point const pos(get_pt_at(x, y, z));
-		if (top_atten_vals[tav_ix] == 0) top_atten_vals[tav_ix] = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
-		float const z_atten((pos.z - top_atten_vals[tav_ix])/(vsz.z*nz) - 0.5);
-		if (z_atten > 0.0) v += val*z_atten;
-	}
-	else if (params.atten_top_mode == 2) { // atten to random
-		point const pos(get_pt_at(x, y, z));
-		if (top_atten_vals[tav_ix] == 0) top_atten_vals[tav_ix] = eval_mesh_sin_terms(params.height_eval_freq*pos.x, params.height_eval_freq*pos.y);
-		v += 2.0*top_atten_vals[tav_ix] + val*(z/float(nz) - 0.5);
-	}
-	else {
-		float const z_atten(z/float(nz) - 0.75);
-		if (z_atten > 0.0) v += val*z_atten;
-	}
-}
-
-
 void voxel_manager::atten_at_top_only(float val) {
 
+	if (params.atten_top_mode > 0 && top_atten_vals.empty()) {
+		top_atten_vals.resize(nx*ny, 0.0);
+	}
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
+			unsigned const tav_ix(y*nx + x);
+
+			if (params.atten_top_mode == 1) { // atten to mesh
+				point const pos(get_pt_at(x, y, 0));
+				top_atten_vals[tav_ix] = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
+			}
+			else if (params.atten_top_mode == 2) { // atten to random
+				point const pos(get_pt_at(x, y, 0));
+				top_atten_vals[tav_ix] = eval_mesh_sin_terms(params.height_eval_freq*pos.x, params.height_eval_freq*pos.y);
+			}
 			for (unsigned z = 0; z < nz; ++z) {
-				atten_top_val(x, y, z, val);
+				float &v(get_ref(x, y, z));
+	
+				if (params.atten_top_mode == 1) { // atten to mesh
+					float const z_atten(((z*vsz.z + lo_pos.z) - top_atten_vals[tav_ix])/(vsz.z*nz) - 0.5);
+					if (z_atten > 0.0) v += val*z_atten;
+				}
+				else if (params.atten_top_mode == 2) { // atten to random
+					v += 2.0*top_atten_vals[tav_ix] + val*(z/float(nz) - 0.5);
+				}
+				else {
+					float const z_atten(z/float(nz) - 0.75);
+					if (z_atten > 0.0) v += val*z_atten;
+				}
 			}
 		}
 	}
@@ -700,8 +693,6 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				val += val_at_center*(1.0 - dist/radius);
 				if (NORMALIZE_TO_1) val = max(-1.0f, min(1.0f, val));
 				if (val == prev_val) continue; // no change
-				//if (params.atten_at_edges == 1) atten_top_val (x, y, z, atten_thresh);
-				//if (params.atten_at_edges == 2) atten_edge_val(x, y, z, atten_thresh);
 				calc_outside_val(x, y, z, ((outside.get(x, y, z) & UNDER_MESH_BIT) != 0));
 				was_updated = 1;
 				((val      < params.isolevel) ? saw_outside : saw_inside) = 1;

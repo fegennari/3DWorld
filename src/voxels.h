@@ -79,8 +79,6 @@ protected:
 	vector<float> top_atten_vals;
 
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
-	void atten_edge_val(unsigned x, unsigned y, unsigned z, float val);
-	void atten_top_val (unsigned x, unsigned y, unsigned z, float val);
 	void calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		vector<unsigned> *xy_updated, vector<point> *updated_pts);
