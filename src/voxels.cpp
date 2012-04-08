@@ -596,10 +596,15 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 	#pragma omp parallel for schedule(static,1)
 	for (int yi = ybix*yblocks; yi < (int)y_end; yi += ystep) {
 		for (unsigned xi = xbix*xblocks; xi < x_end; xi += xstep) {
-			for (unsigned zi = 0; zi < nz; zi += zstep) {
-				if (xi == 0 || yi == 0 || xi >= nx-xstep || (unsigned)yi >= ny-ystep || zi >= nz-zstep) continue; // at the mesh edges
+			if (xi == 0 || yi == 0 || xi >= nx-xstep || (unsigned)yi >= ny-ystep) continue; // at the mesh edges
+			bool saw_inside(0);
+
+			for (int zi = nz-2; zi >= 0; zi -= zstep) { // skip top zval
 				unsigned const x(min(x_end-1, xi+(xstep>>1))), y(min(y_end-1, yi+(ystep>>1))), z(min(nz-1, zi+(zstep>>1)));
-				if (increase_only && ao_lighting.get(x, y, z) == 1.0) continue;
+				unsigned char const outside_val(outside.get(x, y, z));
+				saw_inside |= (outside_val == 0 || (outside_val & end_ray_flags));
+				if (!saw_inside) continue;
+				if (increase_only &&  ao_lighting.get(x, y, z) == 1.0) continue;
 				point const pos(ao_lighting.get_pt_at(x, y, z));
 				if (!is_over_mesh(pos)) continue;
 				float val(0.0);
