@@ -76,7 +76,6 @@ class voxel_manager : public float_voxel_grid {
 protected:
 	voxel_params_t params;
 	voxel_grid<unsigned char> outside;
-	vector<float> top_atten_vals;
 
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 	void calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh);

@@ -96,7 +96,6 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 void voxel_manager::clear() {
 	
 	outside.clear();
-	top_atten_vals.clear();
 	float_voxel_grid::clear();
 }
 
@@ -149,30 +148,27 @@ void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 void voxel_manager::atten_at_top_only(float val) {
 
-	if (params.atten_top_mode > 0 && top_atten_vals.empty()) {
-		top_atten_vals.resize(nx*ny, 0.0);
-	}
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
-			unsigned const tav_ix(y*nx + x);
+			float top_atten_val(0.0);
 
 			if (params.atten_top_mode == 1) { // atten to mesh
 				point const pos(get_pt_at(x, y, 0));
-				top_atten_vals[tav_ix] = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
+				top_atten_val = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
 			}
 			else if (params.atten_top_mode == 2) { // atten to random
 				point const pos(get_pt_at(x, y, 0));
-				top_atten_vals[tav_ix] = eval_mesh_sin_terms(params.height_eval_freq*pos.x, params.height_eval_freq*pos.y);
+				top_atten_val = 2.0*eval_mesh_sin_terms(params.height_eval_freq*pos.x, params.height_eval_freq*pos.y);
 			}
 			for (unsigned z = 0; z < nz; ++z) {
 				float &v(get_ref(x, y, z));
 	
 				if (params.atten_top_mode == 1) { // atten to mesh
-					float const z_atten(((z*vsz.z + lo_pos.z) - top_atten_vals[tav_ix])/(vsz.z*nz) - 0.5);
+					float const z_atten(((z*vsz.z + lo_pos.z) - top_atten_val)/(vsz.z*nz) - 0.5);
 					if (z_atten > 0.0) v += val*z_atten;
 				}
 				else if (params.atten_top_mode == 2) { // atten to random
-					v += 2.0*top_atten_vals[tav_ix] + val*(z/float(nz) - 0.5);
+					v += top_atten_val + val*(z/float(nz) - 0.5);
 				}
 				else {
 					float const z_atten(z/float(nz) - 0.75);
