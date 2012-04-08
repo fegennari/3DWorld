@@ -181,19 +181,19 @@ class waypoint_builder {
 
 	float const radius, size_thresh;
 
-	bool is_waypoint_valid(point pos, int coll_id) const {
+	bool is_waypoint_valid(point pos, int coll_id, bool is_mesh_wpt) const {
 		if (pos.z < zmin || !is_over_mesh(pos))            return 0;
 		player_clip_to_scene(pos); // make sure players can reach this waypoint
 		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
-		if (pos.z - radius < mesh_zval)                    return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
+		if (!is_mesh_wpt && pos.z - radius < mesh_zval)    return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
 		if (!check_cobj_placement(point(pos), coll_id, 1)) return 0;
 		if (is_point_interior(pos, 0.5*radius))            return 0;
 		if (point_inside_voxel_terrain(pos))               return 0;
 		return 1;
 	}
 
-	int add_if_valid(point const &pos, int coll_id, bool connect) {
-		if (!is_waypoint_valid(pos, coll_id)) return -1;
+	int add_if_valid(point const &pos, int coll_id, bool connect, bool is_mesh_wpt=0) {
+		if (!is_waypoint_valid(pos, coll_id, is_mesh_wpt)) return -1;
 		unsigned const ix(add_new_waypoint(pos, coll_id, connect, connect, 0, 0));
 
 		if (coll_id >= 0) {
@@ -311,7 +311,7 @@ public:
 				}
 				// *** WRITE - more filtering ***
 				point const pos(get_xval(x), get_yval(y), (zval + radius));
-				add_if_valid(pos, -1, 0);
+				add_if_valid(pos, -1, 0, 1);
 			}
 		}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " terrain waypoints" << endl;

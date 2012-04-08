@@ -9,6 +9,7 @@ glaciate 1
 dynamic_mesh_scroll 0
 disable_scenery 1
 disable_water 0
+use_waypoints 0
 #toggle_mesh_enabled # disable mesh draw by default
 default_ground_tex 13 # dirt texture
 
