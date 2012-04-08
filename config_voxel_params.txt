@@ -13,12 +13,13 @@ voxel ao_weight_scale 2.0 # generally >= 2.0
 voxel ao_atten_power 0.7 # generally <= 1.0
 voxel tex_mix_saturate 6.0
 voxel z_gradient 0.0
+voxel height_eval_freq 100.0
 voxel invert 0
 voxel make_closed_surface 1
 voxel remove_unconnected 1
 voxel keep_at_scene_edge 2 # 0=don't keep, 1=always keep, 2=only when scrolling
 voxel remove_under_mesh 1
-voxel atten_top_mode 1 # 0=constant, 1=mesh, 2=random
+voxel atten_top_mode 1 # 0=constant, 1=current mesh, 2=2d surface mesh
 voxel atten_at_edges 1 # 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
 voxel atten_thresh 12.0
 voxel geom_rseed 123

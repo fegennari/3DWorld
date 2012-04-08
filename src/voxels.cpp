@@ -96,6 +96,7 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 void voxel_manager::clear() {
 	
 	outside.clear();
+	top_atten_vals.clear();
 	float_voxel_grid::clear();
 }
 
@@ -152,21 +153,29 @@ void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 void voxel_manager::atten_top_val(unsigned x, unsigned y, unsigned z, float val) {
 
-	float z_atten(0.0);
-
+	unsigned const tav_ix(y*nx + x);
+	
+	if (params.atten_top_mode > 0 && top_atten_vals.empty()) {
+		top_atten_vals.resize(nx*ny, 0.0);
+		assert(tav_ix < top_atten_vals.size());
+	}
+	float &v(get_ref(x, y, z));
+	
 	if (params.atten_top_mode == 1) { // atten to mesh
 		point const pos(get_pt_at(x, y, z));
-		float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
-		z_atten = ((pos.z - mh)/(vsz.z*nz) - 0.5);
+		if (top_atten_vals[tav_ix] == 0) top_atten_vals[tav_ix] = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
+		float const z_atten((pos.z - top_atten_vals[tav_ix])/(vsz.z*nz) - 0.5);
+		if (z_atten > 0.0) v += val*z_atten;
 	}
 	else if (params.atten_top_mode == 2) { // atten to random
 		point const pos(get_pt_at(x, y, z));
-		// FIXME: write - use pos.x and pos.y to lookup in a heightmap function
+		if (top_atten_vals[tav_ix] == 0) top_atten_vals[tav_ix] = eval_mesh_sin_terms(params.height_eval_freq*pos.x, params.height_eval_freq*pos.y);
+		v += 2.0*top_atten_vals[tav_ix] + val*(z/float(nz) - 0.5);
 	}
 	else {
-		z_atten = (z/float(nz) - 0.75);
+		float const z_atten(z/float(nz) - 0.75);
+		if (z_atten > 0.0) v += val*z_atten;
 	}
-	if (z_atten > 0.0) get_ref(x, y, z) += val*z_atten;
 }
 
 
@@ -691,8 +700,8 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				val += val_at_center*(1.0 - dist/radius);
 				if (NORMALIZE_TO_1) val = max(-1.0f, min(1.0f, val));
 				if (val == prev_val) continue; // no change
-				if (params.atten_at_edges == 1) atten_top_val (x, y, z, atten_thresh);
-				if (params.atten_at_edges == 2) atten_edge_val(x, y, z, atten_thresh);
+				//if (params.atten_at_edges == 1) atten_top_val (x, y, z, atten_thresh);
+				//if (params.atten_at_edges == 2) atten_edge_val(x, y, z, atten_thresh);
 				calc_outside_val(x, y, z, ((outside.get(x, y, z) & UNDER_MESH_BIT) != 0));
 				was_updated = 1;
 				((val      < params.isolevel) ? saw_outside : saw_inside) = 1;
@@ -1003,6 +1012,9 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "z_gradient") {
 		if (!read_float(fp, global_voxel_params.z_gradient)) voxel_file_err("z_gradient", error);
+	}
+	else if (str == "height_eval_freq") {
+		if (!read_float(fp, global_voxel_params.height_eval_freq)) voxel_file_err("height_eval_freq", error);
 	}
 	else if (str == "ao_radius") {
 		if (!read_float(fp, global_voxel_params.ao_radius) || global_voxel_params.ao_radius < 0.0) voxel_file_err("ao_radius", error);

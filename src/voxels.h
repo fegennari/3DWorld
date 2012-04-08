@@ -14,12 +14,12 @@ struct voxel_params_t {
 
 	// generation parameters
 	unsigned xsize, ysize, zsize;
-	float isolevel, elasticity, mag, freq, atten_thresh, tex_scale, noise_scale, noise_freq, tex_mix_saturate, z_gradient;
+	float isolevel, elasticity, mag, freq, atten_thresh, tex_scale, noise_scale, noise_freq, tex_mix_saturate, z_gradient, height_eval_freq;
 	float ao_radius, ao_weight_scale, ao_atten_power;
 	bool make_closed_surface, invert, remove_unconnected, remove_under_mesh;
 	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom);
 	unsigned keep_at_scene_edge; // 0=don't keep, 1=always keep, 2=only when scrolling
-	unsigned atten_top_mode; // 0=constant, 1=mesh, 2=random
+	unsigned atten_top_mode; // 0=constant, 1=current mesh, 2=2d surface mesh
 	int geom_rseed;
 	
 	// rendering parameters
@@ -29,7 +29,7 @@ struct voxel_params_t {
 	colorRGBA base_color;
 
 	voxel_params_t() : xsize(0), ysize(0), zsize(0), isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), tex_scale(1.0), noise_scale(0.1),
-		noise_freq(1.0), tex_mix_saturate(5.0), z_gradient(0.0), ao_radius(1.0), ao_weight_scale(2.0), ao_atten_power(1.0), make_closed_surface(0),
+		noise_freq(1.0), tex_mix_saturate(5.0), z_gradient(0.0), height_eval_freq(1.0), ao_radius(1.0), ao_weight_scale(2.0), ao_atten_power(1.0), make_closed_surface(0),
 		invert(0), remove_unconnected(0), remove_under_mesh(0), atten_at_edges(0), keep_at_scene_edge(0), atten_top_mode(0), geom_rseed(123), texture_rseed(321)
 	{
 			tids[0] = tids[1] = 0; colors[0] = colors[1] = base_color = WHITE;
@@ -76,6 +76,7 @@ class voxel_manager : public float_voxel_grid {
 protected:
 	voxel_params_t params;
 	voxel_grid<unsigned char> outside;
+	vector<float> top_atten_vals;
 
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 	void atten_edge_val(unsigned x, unsigned y, unsigned z, float val);

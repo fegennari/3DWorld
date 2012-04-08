@@ -753,6 +753,18 @@ float fast_eval_from_index(int x, int y, bool use_cache, bool glaciate) {
 }
 
 
+float eval_mesh_sin_terms(float xv, float yv) {
+
+	float zval(0.0);
+
+	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) { // could use end_eval_sin?
+		float const *stk(sinTable[k]);
+		zval += stk[0]*SINF(stk[3]*yv + stk[1])*SINF(stk[4]*xv + stk[2]); // performance critical
+	}
+	return zval;
+}
+
+
 float eval_one_surface_point(float xval, float yval) {
 
 	if (read_landscape || read_heightmap) { // interpolate from provided coords
@@ -760,16 +772,9 @@ float eval_one_surface_point(float xval, float yval) {
 		clamp_to_mesh(xy);
 		return mesh_height[xy[1]][xy[0]]; // could interpolate?
 	}
-	float zval(0.0);
 	float const xv(mesh_scale*(xval + xoff2 - (MESH_X_SIZE >> 1))), yv(mesh_scale*(yval + yoff2 - (MESH_Y_SIZE >> 1)));
-
-	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) { // could use end_eval_sin?
-		float const *stk(sinTable[k]);
-		zval += stk[0]*SINF(stk[3]*yv + stk[1])*SINF(stk[4]*xv + stk[2]); // performance critical
-	}
-	zval /= mesh_scale_z;
-	if (GLACIATE && !island) zval = get_glaciated_zval(zval);
-	return zval;
+	float const zval(eval_mesh_sin_terms(xv, yv)/mesh_scale_z);
+	return ((GLACIATE && !island) ? get_glaciated_zval(zval) : zval);
 }
 
 

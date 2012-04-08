@@ -1515,6 +1515,7 @@ float calc_glaciated_rel_value(float value);
 void init_terrain_mesh();
 void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny);
 float fast_eval_from_index(int x, int y, bool use_cache=1, bool glaciate=1);
+float eval_mesh_sin_terms(float xv, float yv);
 float eval_one_surface_point(float xval, float yval);
 void reset_offsets();
 float get_water_z_height();
