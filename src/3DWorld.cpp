@@ -1095,9 +1095,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		show_scores = !show_scores;
 		break;
 
-	case '1': // toggle mesh draw
+	case '1': // toggle mesh draw / universe star/planet/moon distance culling
 		display_mode ^= 0x01;   break;
-	case '2': // toggle grass/snow draw
+	case '2': // toggle grass/snow draw / universe colonization coloring
 		display_mode ^= 0x02;   break;
 	case '3': // toggle water/ice
 		display_mode ^= 0x04;   break;

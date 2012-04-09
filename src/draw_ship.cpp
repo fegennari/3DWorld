@@ -948,7 +948,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	invert_z();
 	draw_sphere_dlist(all_zeros, 0.4, ndiv, textured, 1); // rear
 	invert_z();
-	gluCylinder(quadric, 0.4, 0.3, 0.6, ndiv, ndiv4); // main body
+	gluCylinder(quadric, 0.4, 0.3, 0.6, ndiv, (dlights ? ndiv4 : 1)); // main body
 	glTranslatef(0.0, 0.0, 0.55);
 	glScalef(1.0, 1.0, 3.06);
 	draw_sphere_dlist(all_zeros, 0.3, ndiv, textured, 1); // front
@@ -1063,14 +1063,14 @@ void uobj_draw_data::draw_us_carrier() const {
 	colorRGBA const ecolor(0.2, 0.2, 1.0, 1.0);
 	light_engine_pair(ecolor, 0, 0.5, 0.7, 0.0, 1.3);
 	draw_cube(point(0.0, 0.0, -0.32), 0.8, 0.38, 2.04, 1, (dlights ? max(1, ndiv/2) : 1), 1, 1.0, 1); // main body
-	glPushMatrix();
 
 	if (t_exp > 0.0) { // while exploding, the front section breaks off and floats away
+		glPushMatrix();
+
 		if (t_exp == 1.0 && animate2 && first_pass) {
 			add_blastr((pos + dir*(1.05*radius)), dir, 2.5*radius, 0.0, int(0.8*TICKS_PER_SECOND), -1, WHITE, BLUE, ETYPE_NUCLEAR, obj);
 		}
-		glTranslatef(0.0, 0.0, 0.5*(1.0 - t_exp));
-		glTranslatef(0.0, 0.0, 1.1);
+		glTranslatef(0.0, 0.0, 1.1+0.5*(1.0 - t_exp));
 		glRotatef(60.0*(1.0 - t_exp), (dir.x+upv.z), (dir.z+upv.x), (dir.y+upv.y));
 		glTranslatef(0.0, 0.0, -1.1);
 	}
@@ -1115,7 +1115,7 @@ void uobj_draw_data::draw_us_carrier() const {
 	glVertex3f( 0.4, -0.19, 0.7);
 	glVertex3f( 0.2, -0.09, 1.1);
 	glEnd();
-	glPopMatrix();
+	if (t_exp > 0.0) glPopMatrix();
 	color_b.do_glColor();
 	glPushMatrix();
 	glTranslatef(0.7, 0.0, -1.2);
