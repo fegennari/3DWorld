@@ -598,7 +598,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 			bool saw_inside(0);
 
 			for (int zi = nz-2; zi >= 0; zi -= zstep) { // skip top zval
-				unsigned const x(min(x_end-1, xi+(xstep>>1))), y(min(y_end-1, yi+(ystep>>1))), z(min(nz-1, zi+(zstep>>1)));
+				unsigned const x(min(x_end-1, xi+xstep-1)), y(min(y_end-1, yi+ystep-1)), z(min(nz-1, zi+zstep-1));
 				unsigned char const outside_val(outside.get(x, y, z));
 				saw_inside |= (outside_val == 0 || (outside_val & end_ray_flags));
 				if (!saw_inside) continue;
