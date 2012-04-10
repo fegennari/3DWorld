@@ -325,7 +325,8 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 	point const listener(get_camera_pos());
 	float const dist(distance_to_camera(pos));
 	bool const close(dist < CAMERA_RADIUS);
-	if (!close && id != SOUND_DROWN && id != SOUND_SPLASH1 && id != SOUND_SPLASH2 && id != SOUND_WATER && (is_underwater(pos) || is_underwater(listener))) return;
+	if (!close && id != SOUND_DROWN && id != SOUND_SPLASH1 && id != SOUND_SPLASH2 && id != SOUND_WATER &&
+		world_mode == WMODE_GROUND && (is_underwater(pos) || is_underwater(listener))) return;
 #if 0
 	openal_source &source(sources.get_inactive_source());
 	if (!close && source.is_playing()) return; // already playing - don't stop it
