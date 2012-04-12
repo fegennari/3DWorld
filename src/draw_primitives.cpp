@@ -1215,11 +1215,12 @@ void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, 
 
 	if (USE_SPHERE_DLIST && ndiv <= N_SPHERE_DIV) { // speedup is highly variable
 		assert(ndiv > 0);
-		glPushMatrix();
+		bool const has_xform(radius != 1.0 || pos != all_zeros);
+		if (has_xform)        glPushMatrix();
 		if (pos != all_zeros) translate_to(pos);
 		if (radius != 1.0)    uniform_scale(radius);
 		draw_sphere_dlist_raw(ndiv, textured, half);
-		glPopMatrix();
+		if (has_xform)        glPopMatrix();
 	}
 	else if (half) {
 		draw_subdiv_sphere_section(pos, radius, ndiv, textured, 0.0, 1.0, 0.0, 0.5);
