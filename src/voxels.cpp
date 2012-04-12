@@ -819,7 +819,7 @@ void voxel_model::build(bool add_cobjs_) {
 	data_blocks.resize(tot_blocks);
 	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
 
-	if (PRE_ALLOC_COBJS) {
+	if (PRE_ALLOC_COBJS && add_cobjs) {
 		unsigned num_triangles(0);
 		#pragma omp parallel for schedule(static,1)
 		for (int block = 0; block < (int)tot_blocks; ++block) {

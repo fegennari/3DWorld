@@ -294,8 +294,13 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (empty()) return;
 	finalize(prim_type);
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
-	if (!is_shadow_pass && !camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius)) return; // view frustum culling
-	if (!is_shadow_pass && !camera_pdu.cube_visible(bcube)) return; // test the bounding cube as well
+
+	if (is_shadow_pass) {
+		// FIXME: surely there is something we can do here (frustum intersect cylinder/cone/projected cube)
+	}
+	else {
+		if (!camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius) || !camera_pdu.cube_visible(bcube)) return; // view frustum culling
+	}
 	unsigned const stride(sizeof(T));
 	bool const have_normals(stride >= sizeof(vert_norm)), have_tex_coords(stride >= sizeof(vert_norm_tc));
 	set_array_client_state(1, (have_tex_coords && !is_shadow_pass), (have_normals && !is_shadow_pass), 0);
