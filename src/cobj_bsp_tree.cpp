@@ -343,8 +343,9 @@ void cobj_bvh_tree::add_cobjs(bool verbose) {
 void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs, unsigned caller_id) {
 
 	if (cobj_ixs.empty()) return;
+	unsigned const max_extra_roots(max(8U, unsigned(log(float(nodes.size()))/log(2.0))));
 	
-	if ((extra_cobjs_added + cobj_ixs.size()) > nodes.size()/4 || extra_cobj_blocks > 8) {
+	if ((extra_cobjs_added + cobj_ixs.size()) > nodes.size()/4 || extra_cobj_blocks >= max_extra_roots) {
 		add_cobjs(0); // too many extra cobjs - rebuild the entire tree
 		return;
 	}
