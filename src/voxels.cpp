@@ -463,7 +463,7 @@ float voxel_model::get_ao_lighting_val(point const &pos) const {
 	unsigned ix(0);
 	if (!ao_lighting.get_ix(pos, ix)) return 1.0; // off the voxel grid
 	assert(ix < ao_lighting.size());
-	return ao_lighting[ix];
+	return ao_lighting[ix]/255.0;
 }
 
 
@@ -590,7 +590,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 				unsigned char const outside_val(outside.get(x, y, z));
 				saw_inside |= (outside_val == 0 || (outside_val & end_ray_flags));
 				if (!saw_inside) continue;
-				if (increase_only &&  ao_lighting.get(x, y, z) == 1.0) continue;
+				if (increase_only && ao_lighting.get(x, y, z) == 255) continue;
 				point const pos(ao_lighting.get_pt_at(x, y, z));
 				if (!is_over_mesh(pos)) continue;
 				float val(0.0);
@@ -618,10 +618,12 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 					} // for i
 					val = CLIP_TO_01(pow(val, params.ao_atten_power));
 				}
+				unsigned char const ao_val(255.0*val);
+
 				for (unsigned yy = yi; yy < min(y_end, yi+ystep); ++yy) {
 					for (unsigned xx = xi; xx < min(x_end, xi+xstep); ++xx) {
 						for (unsigned zz = zi; zz < min(nz, zi+zstep); ++zz) {
-							ao_lighting.set(xx, yy, zz, val);
+							ao_lighting.set(xx, yy, zz, ao_val);
 						}
 					}
 				}
@@ -635,7 +637,7 @@ void voxel_model::calc_ao_lighting() {
 
 	if (empty() || scrolling) return; // too slow for scrolling
 	if (params.ao_radius == 0.0 || params.ao_weight_scale == 0.0) return; // no AO lighting
-	ao_lighting.init(nx, ny, nz, vsz, center, 1.0, params.num_blocks);
+	ao_lighting.init(nx, ny, nz, vsz, center, 255, params.num_blocks);
 	calc_ao_dirs();
 
 	for (unsigned block = 0; block < data_blocks.size(); ++block) {

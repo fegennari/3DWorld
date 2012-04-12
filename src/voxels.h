@@ -118,7 +118,7 @@ class voxel_model : public voxel_manager {
 	noise_texture_manager_t noise_tex_gen;
 	std::set<unsigned> modified_blocks;
 	vector<unsigned> last_blocks_updated;
-	voxel_grid<float> ao_lighting;
+	voxel_grid<unsigned char> ao_lighting;
 
 	struct step_dir_t {
 		unsigned nsteps;
