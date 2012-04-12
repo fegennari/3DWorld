@@ -10,6 +10,7 @@
 
 inline bool read_int  (FILE *fp, int      &val) {return (fscanf(fp, "%i", &val) == 1);}
 inline bool read_uint (FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) == 1);}
+inline bool read_nonzero_uint(FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) == 1 && val > 0);}
 inline bool read_float(FILE *fp, float    &val) {return (fscanf(fp, "%f", &val) == 1);}
 inline bool read_str  (FILE *fp, char     *val) {return (fscanf(fp, "%s",  val) == 1);}
 

@@ -13,7 +13,7 @@ struct coll_tquad;
 struct voxel_params_t {
 
 	// generation parameters
-	unsigned xsize, ysize, zsize;
+	unsigned xsize, ysize, zsize, num_blocks; // num_blocks is in x and y
 	float isolevel, elasticity, mag, freq, atten_thresh, tex_scale, noise_scale, noise_freq, tex_mix_saturate, z_gradient, height_eval_freq;
 	float ao_radius, ao_weight_scale, ao_atten_power;
 	bool make_closed_surface, invert, remove_unconnected, remove_under_mesh;
@@ -28,7 +28,7 @@ struct voxel_params_t {
 	colorRGBA colors[2];
 	colorRGBA base_color;
 
-	voxel_params_t() : xsize(0), ysize(0), zsize(0), isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), tex_scale(1.0), noise_scale(0.1),
+	voxel_params_t() : xsize(0), ysize(0), zsize(0), num_blocks(12), isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), tex_scale(1.0), noise_scale(0.1),
 		noise_freq(1.0), tex_mix_saturate(5.0), z_gradient(0.0), height_eval_freq(1.0), ao_radius(1.0), ao_weight_scale(2.0), ao_atten_power(1.0), make_closed_surface(0),
 		invert(0), remove_unconnected(0), remove_under_mesh(0), atten_at_edges(0), keep_at_scene_edge(0), atten_top_mode(0), geom_rseed(123), texture_rseed(321)
 	{
@@ -45,7 +45,7 @@ public:
 	point center, lo_pos;
 
 	voxel_grid() : nx(0), ny(0), nz(0), xblocks(0), yblocks(0), vsz(zero_vector) {}
-	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V default_val);
+	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V default_val, unsigned num_blocks);
 	bool is_valid_range(int i[3]) const {return (i[0] >= 0 && i[1] >= 0 && i[2] >= 0 && i[0] < (int)nx && i[1] < (int)ny && i[2] < (int)nz);}
 
 	void get_xyz(point const &p, int xyz[3]) const { // returns whether or not the point was inside the voxel volume
@@ -81,7 +81,7 @@ protected:
 	void calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		vector<unsigned> *xy_updated, vector<point> *updated_pts);
-	void get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z) const;
+	unsigned get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z, bool count_only) const;
 
 public:
 	void set_params(voxel_params_t const &p) {params = p;}
@@ -91,8 +91,6 @@ public:
 	void atten_at_top_only(float val);
 	void determine_voxels_outside();
 	void remove_unconnected_outside();
-	void create_triangles(vector<triangle> &triangles) const;
-	void get_triangles(vector<triangle> &triangles);
 	bool point_inside_volume(point const &pos) const;
 };
 
@@ -153,7 +151,7 @@ class voxel_model : public voxel_manager {
 	void remove_unconnected_outside_modified_blocks(void);
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	bool clear_block(unsigned block_ix);
-	unsigned create_block(unsigned block_ix, bool first_create);
+	unsigned create_block(unsigned block_ix, bool first_create, bool count_only);
 	void calc_ao_dirs();
 	void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
 	void calc_ao_lighting();

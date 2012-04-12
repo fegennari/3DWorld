@@ -1759,7 +1759,7 @@ int load_config(string const &config_file) {
 			if (fscanf(fp, "%u%u%u%u", &NPTS, &NRAYS, &LOCAL_RAYS, &GLOBAL_RAYS) < 3) cfg_err("num_light_rays command", error);
 		}
 		else if (str == "num_threads") {
-			if (!read_uint(fp, NUM_THREADS) || NUM_THREADS == 0 || NUM_THREADS > 100) cfg_err("num_threads", error);
+			if (!read_nonzero_uint(fp, NUM_THREADS) || NUM_THREADS > 100) cfg_err("num_threads", error);
 		}
 		else if (str == "max_ray_bounces") {
 			if (!read_uint(fp, MAX_RAY_BOUNCES)) cfg_err("num_threads", error);

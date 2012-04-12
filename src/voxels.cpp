@@ -14,7 +14,7 @@
 
 bool const NORMALIZE_TO_1  = 1;
 bool const DEBUG_BLOCKS    = 0;
-unsigned const NUM_BLOCKS  = 12; // in x and y
+bool const PRE_ALLOC_COBJS = 1;
 unsigned const NOISE_TSIZE = 64;
 
 unsigned char const ON_EDGE_BIT    = 0x02;
@@ -41,7 +41,7 @@ void noise_texture_manager_t::setup(unsigned size, int rseed, float mag, float f
 	tsize = size;
 	if (size == 0) return; // nothing else to do
 	voxels.clear();
-	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros, 0.0);
+	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros, 0.0, 1);
 	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index);
 	vector<unsigned char> data;
 	data.resize(voxels.size());
@@ -77,13 +77,14 @@ float noise_texture_manager_t::eval_at(point const &pos) const {
 }
 
 
-template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V default_val) {
-
+template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_,
+	point const &center_, V default_val, unsigned num_blocks)
+{
 	vsz = vsz_;
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 	nx = nx_; ny = ny_; nz = nz_;
-	xblocks = 1+(nx-1)/NUM_BLOCKS; // ceil
-	yblocks = 1+(ny-1)/NUM_BLOCKS; // ceil
+	xblocks = 1+(nx-1)/num_blocks; // ceil
+	yblocks = 1+(ny-1)/num_blocks; // ceil
 	unsigned const tot_size(nx * ny * nz);
 	assert(tot_size > 0);
 	clear();
@@ -192,7 +193,7 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 }
 
 
-void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z) const {
+unsigned voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z, bool count_only) const {
 
 	float vals[8]; // 8 corner voxel values
 	point pts[8]; // corner points
@@ -215,10 +216,16 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigne
 		}
 	}
 	assert(cix < 256);
-	if (all_under_mesh) return;
+	if (all_under_mesh) return 0;
 	unsigned const edge_val(voxel_detail::edge_table[cix]);
-	if (edge_val == 0)  return; // no polygons
+	if (edge_val == 0)  return 0; // no polygons
 	int const *const tris(voxel_detail::tri_table[cix]);
+
+	if (count_only) {
+		unsigned count(0);
+		for (unsigned i = 0; tris[i] >= 0; i += 3) {++count;}
+		return count;
+	}
 	point vlist[12];
 
 	for (unsigned i = 0; i < 12; ++i) {
@@ -232,6 +239,7 @@ void voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigne
 		#pragma omp critical(triangles_push_back)
 		triangles.push_back(tri);
 	}
+	return triangles.size();
 }
 
 
@@ -248,7 +256,7 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
-	outside.init(nx, ny, nz, vsz, center, 0);
+	outside.init(nx, ny, nz, vsz, center, 0, params.num_blocks);
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
@@ -294,24 +302,24 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 	vector<unsigned> xy_updated;
 	vector<point> updated_pts;
 	vector<block_group_t> groups;
-	unsigned const indiv_cost((2*pad+1)*(2*pad+1));
+	unsigned const indiv_cost((2*pad+1)*(2*pad+1)), num_blocks(params.num_blocks);
 	unsigned group_work(0);
 
 	for (unsigned i = 0; i < to_proc.size(); ++i) {
-		int const xbix(to_proc[i] % NUM_BLOCKS), ybix(to_proc[i] / NUM_BLOCKS);
+		int const xbix(to_proc[i] % num_blocks), ybix(to_proc[i] / num_blocks);
 		block_group_t group;
 		group.v[0][0] = max(0, xbix-pad); // x1
 		group.v[1][0] = max(0, ybix-pad); // y1
-		group.v[0][1] = min(NUM_BLOCKS, xbix+pad+1U); // x2
-		group.v[1][1] = min(NUM_BLOCKS, ybix+pad+1U); // y2
+		group.v[0][1] = min(num_blocks, xbix+pad+1U); // x2
+		group.v[1][1] = min(num_blocks, ybix+pad+1U); // y2
 
 		for (unsigned j = i+1; j < to_proc.size(); ++j) {
-			int const xbix2(to_proc[j] % NUM_BLOCKS), ybix2(to_proc[j] / NUM_BLOCKS);
+			int const xbix2(to_proc[j] % num_blocks), ybix2(to_proc[j] / num_blocks);
 			block_group_t group2;
 			group2.v[0][0] = min(group.v[0][0], (unsigned)max(0, xbix2-pad)); // x1
 			group2.v[1][0] = min(group.v[1][0], (unsigned)max(0, ybix2-pad)); // y1
-			group2.v[0][1] = max(group.v[0][1], min(NUM_BLOCKS, xbix2+pad+1U)); // x2
-			group2.v[1][1] = max(group.v[1][1], min(NUM_BLOCKS, ybix2+pad+1U)); // y2
+			group2.v[0][1] = max(group.v[0][1], min(num_blocks, xbix2+pad+1U)); // x2
+			group2.v[1][1] = max(group.v[1][1], min(num_blocks, ybix2+pad+1U)); // y2
 
 			if (group2.area() <= group.area() + indiv_cost) { // keep the merged group
 				group = group2;
@@ -334,7 +342,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 		
 			for (unsigned by = by1; by <= by2; ++by) {
 				for (unsigned bx = bx1; bx <= bx2; ++bx) {
-					unsigned const bix(by*NUM_BLOCKS + bx);
+					unsigned const bix(by*num_blocks + bx);
 					assert(bix < data_blocks.size());
 					modified_blocks.insert(bix);
 				}
@@ -439,29 +447,6 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 }
 
 
-void voxel_manager::create_triangles(vector<triangle> &triangles) const {
-
-	#pragma omp parallel for schedule(static,1)
-	for (int y = 0; y < (int)ny-1; ++y) {
-		for (unsigned x = 0; x < nx-1; ++x) {
-			for (unsigned z = 0; z < nz-1; ++z) {
-				get_triangles_for_voxel(triangles, x, y, z);
-			}
-		}
-	}
-}
-
-
-void voxel_manager::get_triangles(vector<triangle> &triangles) {
-
-	//RESET_TIME;
-	determine_voxels_outside();
-	if (params.remove_unconnected) remove_unconnected_outside();
-	create_triangles(triangles);
-	//PRINT_TIME("Voxels to Triangles");
-}
-
-
 bool voxel_manager::point_inside_volume(point const &pos) const {
 
 	if (outside.empty()) return 0;
@@ -486,7 +471,7 @@ unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 
 	assert(voxel_ix < size());
 	unsigned const y(voxel_ix/(nz*nx)), vxz(voxel_ix - y*nz*nx), x(vxz/nz), bx(x/xblocks), by(y/yblocks);
-	return by*NUM_BLOCKS + bx;
+	return by*params.num_blocks + bx;
 }
 
 
@@ -521,20 +506,23 @@ bool voxel_model::clear_block(unsigned block_ix) {
 
 
 // returns the number of triangles created
-unsigned voxel_model::create_block(unsigned block_ix, bool first_create) {
+unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool count_only) {
 
 	assert(block_ix < tri_data.size() && block_ix < data_blocks.size());
 	assert(tri_data[block_ix].empty() && data_blocks[block_ix].cids.empty());
-	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
+	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
 	vector<triangle> triangles;
+	unsigned count(0);
 	
 	for (unsigned y = ybix*yblocks; y < min(ny-1, (ybix+1)*yblocks); ++y) {
 		for (unsigned x = xbix*xblocks; x < min(nx-1, (xbix+1)*xblocks); ++x) {
 			for (unsigned z = 0; z < nz-1; ++z) {
-				get_triangles_for_voxel(triangles, x, y, z);
+				count += get_triangles_for_voxel(triangles, x, y, z, count_only);
 			}
 		}
 	}
+	if (count_only) return count;
+
 	if (first_create) { // after the first creation pt_to_ix is out of order
 		pt_to_ix[block_ix].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
 		pt_to_ix[block_ix].ix = block_ix;
@@ -585,7 +573,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 
 	assert(!ao_lighting.empty());
 	float const norm(params.ao_weight_scale/ao_dirs.size());
-	unsigned const xbix(block_ix%NUM_BLOCKS), ybix(block_ix/NUM_BLOCKS);
+	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
 	unsigned char const end_ray_flags((display_mode & 0x01) ? UNDER_MESH_BIT : 0);
 	unsigned const xstep(max(1U, nx/MESH_X_SIZE)), ystep(max(1U, ny/MESH_Y_SIZE)), zstep(max(1U, nz/MESH_SIZE[2]));
 	unsigned const x_end(min(nx, (xbix+1)*xblocks)), y_end(min(ny, (ybix+1)*yblocks));
@@ -647,7 +635,7 @@ void voxel_model::calc_ao_lighting() {
 
 	if (empty() || scrolling) return; // too slow for scrolling
 	if (params.ao_radius == 0.0 || params.ao_weight_scale == 0.0) return; // no AO lighting
-	ao_lighting.init(nx, ny, nz, vsz, center, 1.0);
+	ao_lighting.init(nx, ny, nz, vsz, center, 1.0, params.num_blocks);
 	calc_ao_dirs();
 
 	for (unsigned block = 0; block < data_blocks.size(); ++block) {
@@ -701,7 +689,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 
 			for (unsigned by = by1; by <= by2; ++by) {
 				for (unsigned bx = bx1; bx <= bx2; ++bx) {
-					unsigned const block_ix(by*NUM_BLOCKS + bx);
+					unsigned const block_ix(by*params.num_blocks + bx);
 					assert(block_ix < data_blocks.size());
 					blocks_to_update.insert(block_ix);
 				}
@@ -760,7 +748,7 @@ void voxel_model::proc_pending_updates() {
 
 	#pragma omp parallel for schedule(static,1)
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
-		num_added += (create_block(blocks_to_update[i], 0) > 0);
+		num_added += (create_block(blocks_to_update[i], 0, 0) > 0);
 	}
 	if (!(num_added > 0 || something_removed)) return; // nothing updated
 	vector<unsigned> cixs;
@@ -781,8 +769,8 @@ void voxel_model::proc_pending_updates() {
 
 		for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
 			calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
-			unsigned const xbix(blocks_to_update[i]%NUM_BLOCKS), x1(xbix*xblocks), x2((xbix+1)*xblocks);
-			unsigned const ybix(blocks_to_update[i]/NUM_BLOCKS), y1(ybix*yblocks), y2((ybix+1)*yblocks);
+			unsigned const xbix(blocks_to_update[i]%params.num_blocks), x1(xbix*xblocks), x2((xbix+1)*xblocks);
+			unsigned const ybix(blocks_to_update[i]/params.num_blocks), y1(ybix*yblocks), y2((ybix+1)*yblocks);
 			block_group_t group; // add a border of 1 to account for rounding errors
 			group.v[0][0] = max(get_xpos(x1*vsz.x + lo_pos.x)-1, 0); // x1
 			group.v[1][0] = max(get_ypos(y1*vsz.y + lo_pos.y)-1, 0); // y1
@@ -823,15 +811,24 @@ void voxel_model::build(bool add_cobjs_) {
 	PRINT_TIME("  Determine Voxels Outside");
 	if (params.remove_unconnected) remove_unconnected_outside();
 	PRINT_TIME("  Remove Unconnected");
-	unsigned const tot_blocks(NUM_BLOCKS*NUM_BLOCKS);
+	unsigned const tot_blocks(params.num_blocks*params.num_blocks);
 	assert(pt_to_ix.empty() && tri_data.empty() && data_blocks.empty());
 	pt_to_ix.resize(tot_blocks);
 	data_blocks.resize(tot_blocks);
 	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
 
+	if (PRE_ALLOC_COBJS) {
+		unsigned num_triangles(0);
+		#pragma omp parallel for schedule(static,1)
+		for (int block = 0; block < (int)tot_blocks; ++block) {
+			num_triangles += create_block(block, 1, 1);
+		}
+		reserve_coll_objects(coll_objects.size() + 1.1*num_triangles); // reserve with 10% buffer
+	}
+
 	#pragma omp parallel for schedule(static,1)
 	for (int block = 0; block < (int)tot_blocks; ++block) {
-		create_block(block, 1);
+		create_block(block, 1, 0);
 	}
 	PRINT_TIME("  Triangles to Model");
 	calc_ao_lighting();
@@ -883,7 +880,7 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 		if (DEBUG_BLOCKS && s.is_setup()) {
 			const char *cnames[2] = {"color0", "color1"};
 			for (unsigned d = 0; d < 2; ++d) {
-				s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & NUM_BLOCKS) != 0)) ? RED : BLUE));
+				s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & params.num_blocks) != 0)) ? RED : BLUE));
 			}
 		}
 		assert(i->ix < tri_data.size());
@@ -941,7 +938,7 @@ void gen_voxel_landscape() {
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.set_params(global_voxel_params);
 	terrain_voxel_model.clear();
-	terrain_voxel_model.init(nx, ny, nz, vsz, center, 0.0);
+	terrain_voxel_model.init(nx, ny, nz, vsz, center, 0.0, global_voxel_params.num_blocks);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
 		NORMALIZE_TO_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
 	PRINT_TIME(" Voxel Gen");
@@ -965,13 +962,16 @@ bool parse_voxel_option(FILE *fp) {
 	string const str(strc);
 
 	if (str == "xsize") {
-		if (!read_uint(fp, global_voxel_params.xsize)) voxel_file_err("xsize", error);
+		if (!read_nonzero_uint(fp, global_voxel_params.xsize)) voxel_file_err("xsize", error);
 	}
 	else if (str == "ysize") {
-		if (!read_uint(fp, global_voxel_params.ysize)) voxel_file_err("ysize", error);
+		if (!read_nonzero_uint(fp, global_voxel_params.ysize)) voxel_file_err("ysize", error);
 	}
 	else if (str == "zsize") {
-		if (!read_uint(fp, global_voxel_params.zsize)) voxel_file_err("zsize", error);
+		if (!read_nonzero_uint(fp, global_voxel_params.zsize)) voxel_file_err("zsize", error);
+	}
+	else if (str == "num_blocks") {
+		if (!read_nonzero_uint(fp, global_voxel_params.num_blocks)) voxel_file_err("num_blocks", error);
 	}
 	else if (str == "mag") {
 		if (!read_float(fp, global_voxel_params.mag)) voxel_file_err("mag", error);
