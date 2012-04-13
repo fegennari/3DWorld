@@ -1086,6 +1086,9 @@ float get_voxel_terrain_ao_lighting_val(point const &pos) {
 }
 
 bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments) {
+
+	// optimization/hack to skip the update if the player didn't cause it and the camera can't see it
+	if (shooter != CAMERA_ID && !camera_pdu.sphere_visible_test(center, radius)) return 0;
 	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center*(display_framerate ? 1.0 : -1.0), shooter, num_fragments);
 }
 
