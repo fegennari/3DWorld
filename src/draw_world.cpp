@@ -1872,7 +1872,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	RESET_TIME;
 	assert(draw_solid || draw_trans);
 	static vector<pair<float, int> > draw_last;
-	if (coll_objects.empty() || world_mode != WMODE_GROUND) return;
+	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (!draw_solid && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
 	set_lighted_sides(2);
 	set_fill_mode();
