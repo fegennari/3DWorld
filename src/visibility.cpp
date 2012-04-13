@@ -111,20 +111,17 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 }
 
 
-bool pos_dir_up::cube_visible(cube_t const &cube) const {
+template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) const {
 
-	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
-	point cube_pts[8];
-	get_cube_points(cube.d, cube_pts);
 	bool npass(0), fpass(0); // near, far
-		
-	for (unsigned i = 0; i < 8 && !npass; ++i) {
-		npass = (dot_product(dir, vector3d(cube_pts[i], pos)) > near_);
+
+	for (unsigned i = 0; i < N && !npass; ++i) {
+		npass = (dot_product(dir, vector3d(pts[i], pos)) > near_);
 	}
 	if (!npass) return 0;
 
-	for (unsigned i = 0; i < 8 && !fpass; ++i) {
-		fpass = (dot_product(dir, vector3d(cube_pts[i], pos)) < far_);
+	for (unsigned i = 0; i < N && !fpass; ++i) {
+		fpass = (dot_product(dir, vector3d(pts[i], pos)) < far_);
 	}
 	if (!fpass) return 0;
 	vector3d const v[2] = {upv_,  cp};
@@ -135,14 +132,41 @@ bool pos_dir_up::cube_visible(cube_t const &cube) const {
 			float const w(d ? -1.0 : 1.0);
 			bool pass(0);
 		
-			for (unsigned i = 0; i < 8 && !pass; ++i) {
-				vector3d const pv(cube_pts[i], pos);
+			for (unsigned i = 0; i < N && !pass; ++i) {
+				vector3d const pv(pts[i], pos);
 				pass = (w*dot_product(v[xy], pv) <= a[xy]*pv.mag());
 			}
 			if (!pass) return 0;
 		}
 	}
 	return 1;
+}
+
+
+bool pos_dir_up::cube_visible(cube_t const &cube) const {
+
+	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
+	point cube_pts[8];
+	get_cube_points(cube.d, cube_pts);
+	return pt_set_visible<8>(cube_pts);
+}
+
+
+// approximate
+bool pos_dir_up::projected_cube_visible(cube_t const &cube, point const &proj_pt) const {
+
+	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
+	point cube_pts[16];
+	get_cube_points(cube.d, cube_pts);
+	float dmax(0.0);
+	for (unsigned i = 0; i < 8; ++i) dmax = max(dmax, p2p_dist_sq(cube_pts[i], pos));
+	dmax = sqrt(dmax) + far_; // upper bound: (max_dist_to_furstum_origin + far_clip_dist) usually > max_dist_to_frustum_corner
+
+	for (unsigned i = 0; i < 8; ++i) {
+		vector3d const dir(cube_pts[i] - proj_pt);
+		cube_pts[i+8] = cube_pts[i] + dir*(dmax/dir.mag()); // projected point = dmax*normalized_dir
+	}
+	return pt_set_visible<16>(cube_pts);
 }
 
 

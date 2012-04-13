@@ -17,6 +17,7 @@ unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
 extern int display_mode;
 extern float model3d_alpha_thresh;
+extern pos_dir_up orig_camera_pdu;
 
 
 model3ds all_models;
@@ -296,7 +297,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
 
 	if (is_shadow_pass) {
-		// FIXME: surely there is something we can do here (frustum intersect cylinder/cone/projected cube)
+		if (!orig_camera_pdu.projected_cube_visible(bcube, camera_pdu.pos)) return; // light_pos == camera_pdu.pos for the shadow pass
 	}
 	else {
 		if (!camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius) || !camera_pdu.cube_visible(bcube)) return; // view frustum culling
