@@ -1112,6 +1112,7 @@ void model3d::bind_all_used_tids() {
 			}
 		}
 		if (m->use_spec_map()) tmgr.ensure_tid_bound(m->s_tid);
+		needs_alpha_test |= m->get_needs_alpha_test();
 	}
 }
 
@@ -1282,14 +1283,19 @@ void model3ds::render(bool is_shadow_pass) {
 	}
 	BLACK.do_glColor();
 	set_specular(0.0, 1.0);
-	float const min_alpha(0.5); // will be reset per-material
+	bool needs_alpha_test(0);
+
+	for (const_iterator m = begin(); m != end(); ++m) {
+		needs_alpha_test |= m->get_needs_alpha_test();
+	}
+	float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 
 	for (unsigned bmap_pass = 0; bmap_pass < (use_shaders ? 2U : 1U); ++bmap_pass) {
 		shader_t s;
 		colorRGBA orig_fog_color;
 		if (use_shaders) orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map());
 
-		for (iterator m = begin(); m != end(); ++m) { // FIXME: reuse shaders across models?
+		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (bmap_pass != 0));
 		}
 		if (use_shaders) end_smoke_shaders(s, orig_fog_color);
