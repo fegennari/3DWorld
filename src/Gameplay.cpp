@@ -1886,7 +1886,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		coll_obj &cobj(coll_objects[cindex]);
 		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), (is_laser ? BEAM : PROJECTILE));
 
-		if ((!is_laser || cobj.cp.color.alpha == 1.0) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
+		if ((!is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
 			bool const is_glass(cobj.cp.is_glass());
 			gen_decal(coll_pos, 0.005, coll_norm, cindex, 1.0, (is_glass ? (WHITE*0.5 + cobj.cp.color*0.5) : BLACK), is_glass); // inherit partial glass color
 
