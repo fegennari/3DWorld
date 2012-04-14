@@ -93,15 +93,19 @@ void main()
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 
 	if (!smoke_enabled) {
+#ifndef NO_ALPHA_TEST
+		if (color.a <= min_alpha) discard;
+#endif
+#ifndef NO_FOG
 		color = apply_fog(color); // apply standard fog
+#endif
 	}
 	else {
 		pt_pair res = clip_line(vpos, eye, smoke_bb);
 		vec3 eye_c  = res.v1;
 		vec3 vpos_c = res.v2;
 	
-		if (eye_c != vpos_c) {
-			// smoke code
+		if (eye_c != vpos_c) { // smoke code
 			vec3 dir      = eye_c - vpos_c;
 			vec3 pos      = (vpos_c - scene_llc)/scene_scale;
 			float nsteps  = length(dir)/step_delta;
@@ -122,7 +126,9 @@ void main()
 				step_weight   = 1.0;
 			}
 		}
+#ifndef NO_ALPHA_TEST
+		if (color.a <= min_alpha) discard;
+#endif
 	}
-	if (color.a <= min_alpha) discard;
 	gl_FragColor = color;
 }

@@ -35,9 +35,8 @@ void main()
 
 	if (!smoke_enabled) {
 		set_fog(); // set standard fog coord
-		return;
 	}
-	if (dynamic_smoke_shadows) {
+	else if (dynamic_smoke_shadows) {
 		lpos0 = (gl_ModelViewMatrixInverse * gl_LightSource[0].position).xyz;
 		pt_pair res2 = clip_line(gl_Vertex.xyz, lpos0, smoke_bb);
 		lpos0 = res2.v1;

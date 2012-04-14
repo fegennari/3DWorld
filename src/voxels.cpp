@@ -851,7 +851,7 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	else if (!disable_shaders) {
 		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
-		float const min_alpha(0.5);
+		float const min_alpha(0.0); // not needed (yet)
 		noise_tex_gen.bind_texture(5); // tu_id = 5
 		set_multitex(0);
 		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
