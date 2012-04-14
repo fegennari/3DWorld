@@ -1122,7 +1122,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
-	if (group_back_face_cull) glEnable(GL_CULL_FACE);
+	if (group_back_face_cull || is_shadow_pass) glEnable(GL_CULL_FACE);
 
 	// render geom that was not bound to a material
 	if (!bmap_pass && unbound_color.alpha > 0.0) { // enabled, not in bump map pass
@@ -1143,7 +1143,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 			}
 		}
 	}
-	if (group_back_face_cull) glDisable(GL_CULL_FACE);
+	if (group_back_face_cull || is_shadow_pass) glDisable(GL_CULL_FACE);
 }
 
 
