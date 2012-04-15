@@ -34,7 +34,9 @@ float const VISIBLE_THRESH     = 0.25;
 float const SHIP_REQ_CREW      = 0.5;
 float const TEMP_FACTOR        = 2.0; // damage temperature factor
 float const NDIV_SCALE_U       = 1200.0;
-unsigned const W_SELF_ARM_T    = unsigned(TICKS_PER_SECOND/2); // needed in both free_obj.cpp and u_ship.cpp
+
+unsigned const W_SELF_ARM_T      = unsigned(TICKS_PER_SECOND/2); // needed in both free_obj.cpp and u_ship.cpp
+unsigned const FREE_OBJ_MAX_NDIV = 3*N_SPHERE_DIV/2;
 
 
 // ship classes

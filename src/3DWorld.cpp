@@ -159,6 +159,7 @@ void clear_context() {
 	free_model_context();
 	free_voxel_context();
 	free_dlists();
+	free_ship_dlists();
 	clear_shaders();
 	reset_snow_vbos();
 	update_grass_vbos();

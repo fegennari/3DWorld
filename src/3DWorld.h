@@ -1868,6 +1868,7 @@ void setup_current_system();
 void apply_univ_physics();
 void draw_universe(bool static_only=0, bool skip_closest=0, bool no_distant=0);
 void draw_universe_stats();
+void free_ship_dlists();
 
 // function prototypes - lightmap
 void update_flow_for_voxels(cube_t const &cube);
