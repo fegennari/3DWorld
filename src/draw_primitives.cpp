@@ -268,7 +268,7 @@ void draw_cylinder(float length, float radius1, float radius2, int ndiv, int nst
 				   bool draw_ends, bool first_end_only, bool last_end_only)
 { // length can be negative
 	assert(quadric && ndiv > 0 && nstacks > 0);
-	set_fill_mode();
+	//set_fill_mode(); // too slow? not needed?
 	//if (nstacks == 1) draw_cylin_fast(radius1, radius2, length, ndiv, 0, 1); // tex coords?
 	gluCylinder(quadric, radius1, radius2, length, ndiv, nstacks); // draw quad/triangle if small?
 	
@@ -916,10 +916,8 @@ int draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim, bool no_nor
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv,
 			   float texture_scale, bool proportional_texture, vector3d const *const view_dir)
 {
-	glPushMatrix();
-	translate_to(pos);
-	glScalef(sx, sy, sz);
-	glTranslatef(-0.5, -0.5, -0.5); // move origin from center to min corner
+	point const scale(sx, sy, sz);
+	point const xlate(pos - 0.5*scale); // move origin from center to min corner
 	float const step(1.0/float(ndiv));
 	unsigned ndivs[3] = {ndiv, ndiv, ndiv};
 	float    steps[3] = {step, step, step};
@@ -943,7 +941,7 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 			vector3d norm(zero_vector);
 			point pt;
 			norm[n] = (2.0*j - 1.0); // -1 or 1
-			pt[n]   = (float)j;
+			pt[n]   = j;
 			norm.do_glNormal();
 
 			for (unsigned s0 = 0; s0 < ndivs[d[0]]; ++s0) {
@@ -957,18 +955,16 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 						pt[d[0]] = va[k^j]; // need to orient the vertices differently for each side
 						
 						if (texture) {
-							float const s[2] = {(proportional_texture ? sizes[d[1]] : 1.0)*texture_scale*pt[d[1]],
-								                (proportional_texture ? sizes[d[0]] : 1.0)*texture_scale*pt[d[0]]};
-							glTexCoord2fv(s);
+							glTexCoord2f((proportional_texture ? sizes[d[1]] : 1.0)*texture_scale*pt[d[1]],
+								         (proportional_texture ? sizes[d[0]] : 1.0)*texture_scale*pt[d[0]]);
 						}
-						pt.do_glVertex();
+						(pt*scale + xlate).do_glVertex();
 					}
 				}
 				glEnd();
 			}
-		}
-	}
-	glPopMatrix();
+		} // for j
+	} // for i
 }
 
 
