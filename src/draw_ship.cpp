@@ -337,13 +337,14 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 
 void uobj_draw_data::draw_engine_trail(point const &offset, float width, float w2s, float len, colorRGBA const &color) const {
 
+	if (!animate2) return;
 	if ((len <= 1.5 && ndiv <= 3) || time < 4) return; // too small/far away to draw
 	if (vel.mag_sq() < TOLERANCE*TOLERANCE)    return; // not moving
 	assert(radius > 0.0 && width > 0.0 && w2s > 0.0 && len > 0.0);
 	point const pos2(pos + offset*radius);
 	vector3d const trail_dir(TRAIL_FOLLOWS_VEL ? vel : dir*vel.mag());
 	point const pos0(pos2 - trail_dir*len); // 1 tick (not times fticks)
-	if (animate2) t_wrays.push_back(usw_ray(width*radius, w2s*width*radius, pos2, pos0, color, ALPHA0));
+	t_wrays.push_back(usw_ray(width*radius, w2s*width*radius, pos2, pos0, color, ALPHA0));
 }
 
 
@@ -574,8 +575,9 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 	unsigned const num_segments((rand()&7)+1);
 	float const ns_inv(1.0/num_segments);
 	point cur(p1);
-	vector3d delta((p2 - cur)*ns_inv);
+	vector3d delta((p2 - p1)*ns_inv);
 	float const dmag(delta.mag());
+	if (dmag < TOLERANCE) return; // shouldn't happen?
 
 	for (unsigned i = 0; i < num_segments; ++i) {
 		vadd_rand(delta, 0.25*dmag);

@@ -1729,7 +1729,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 				pt[d] = (p2*val + p1*(1.0 - val)) + deltas[i+d];
 				blend_color(c[d], bwp.beamc[1], bwp.beamc[0], val, 1);
 			}
-			b_wrays.push_back(usw_ray(bw[0], bw[1], pt[0], pt[1], c[0], c[1]));
+			if (pt[0] != pt[1]) b_wrays.push_back(usw_ray(bw[0], bw[1], pt[0], pt[1], c[0], c[1]));
 		}
 	}
 }
