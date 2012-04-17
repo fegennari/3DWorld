@@ -2686,8 +2686,10 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		} // show shields
 	} // final pass/phase
 #ifdef TIME_SHIP_DRAW
-	times[sclass] += GET_DELTA_TIME;
-	++counts[sclass];
+	unsigned const off((display_mode & 0x08) == 0);
+	//display_mode ^= 0x08;
+	times[sclass+off] += GET_DELTA_TIME;
+	++counts[sclass+off];
 	//if (frame_counter == 1000) exit(0); // testing
 	
 	if (((++count) & 1023) == 0) {

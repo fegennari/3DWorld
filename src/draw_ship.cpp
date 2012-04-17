@@ -347,33 +347,46 @@ void uobj_draw_data::draw_engine_trail(point const &offset, float width, float w
 }
 
 
-void uobj_draw_data::draw_ehousing_pair(float length, float r1, float r2, float lcone, float dx, float dy, bool texture) const {
-
+void uobj_draw_data::draw_ehousing_pairs(float length, float r1, float r2, float lcone, float dx, float dy, bool texture,
+	point const &offset, point const &per_pair_off, unsigned num_pairs) const
+{
 	assert(length > 0.0 && (r1 > 0.0 || r2 > 0.0));
 	unsigned const ndiv2(get_ndiv(ndiv/2)), nstacks(dlights ? max(1, ndiv/5) : 1);
 	set_lighted_sides(2);
 
-	for (unsigned i = 0; i < 2; ++i) { // draw engine housings
-		draw_cylinder_nstacks(length, r1, r2, ndiv2, nstacks, texture);
-		if (lcone > 0.0 && r1 > 0.0) draw_cylin_fast(r1, 0.0, lcone, ndiv2, texture, 1);
-		glTranslatef(0.0, 0.0, length);
-		if (lcone > 0.0 && r2 > 0.0) draw_cylin_fast(r2, 0.0, lcone, ndiv2, texture, 1); // change color?
-		if (i == 0) glTranslatef(dx, dy, -length);
+	for (unsigned p = 0; p < num_pairs; ++p) {
+		glPushMatrix();
+		translate_to(offset + p*per_pair_off);
+
+		for (unsigned i = 0; i < 2; ++i) { // draw engine housings
+			draw_cylinder_nstacks(length, r1, r2, ndiv2, nstacks, texture);
+			if (lcone > 0.0 && r1 > 0.0) draw_cylin_fast(r1, 0.0, lcone, ndiv2, texture, 1);
+			glTranslatef(0.0, 0.0, length);
+			if (lcone > 0.0 && r2 > 0.0) draw_cylin_fast(r2, 0.0, lcone, ndiv2, texture, 1); // change color?
+			if (i == 0) glTranslatef(dx, dy, -length);
+		}
+		glPopMatrix();
 	}
 	set_lighted_sides(1);
 }
 
 
-void uobj_draw_data::draw_engine_pair(colorRGBA const &color, unsigned eflags_off, float escale,
-									  float dx, float dy, float dz, float ar, vector3d const &stretch_dir) const
+void uobj_draw_data::draw_engine_pairs(colorRGBA const &color, unsigned eflags_ix, float escale, float dx, float dy, float dz,
+		point const &per_pair_off, unsigned num_pairs, float ar, vector3d const &stretch_dir) const
 {
 	if (ndiv < 4 || !is_moving() || !first_pass) return; // really should check for thrust, first_pass isn't quite right
 	enable_flares(color); // draw engine glow
 
-	for (unsigned i = 0; i < 2; ++i) {
-		if (!(eflags & (1 << (i + eflags_off)))) {
-			draw_engine(color, point((1.0 - 2.0*i)*dx, dy, dz), escale, ar, stretch_dir);
+	for (unsigned p = 0; p < num_pairs; ++p) {
+		for (unsigned i = 0; i < 2; ++i) {
+			if (!(eflags & (1 << eflags_ix))) {
+				draw_engine(color, point((1.0 - 2.0*i)*dx, dy, dz), escale, ar, stretch_dir);
+			}
+			++eflags_ix;
 		}
+		dx += per_pair_off.x;
+		dy += per_pair_off.y;
+		dz += per_pair_off.z;
 	}
 	disable_flares();
 }
@@ -1044,10 +1057,8 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	if (textured) end_ship_texture();
 	glPopMatrix(); // undo invert_z()
 
-	// draw engine glow
-	for (unsigned i = 0; i < 2; ++i) { // bottom, top
-		draw_engine_pair(ecolor, (i<<1), escale, 0.4, (dy + 1.5*erad*(2.0*i - 1.0)), (1.0 + 0.2*escale));
-	}
+	// draw engine glow (bottom, top)
+	draw_engine_pairs(ecolor, 0, escale, 0.4, (dy - 1.5*erad), (1.0 + 0.2*escale), point(0.0, 3.0*erad, 0.0), 2);
 	unlight_engine_pair();
 }
 
@@ -1168,11 +1179,8 @@ void uobj_draw_data::draw_us_carrier() const {
 	glEnd();
 	if (t_exp > 0.0) glPopMatrix();
 	color_b.do_glColor();
-	glPushMatrix();
-	glTranslatef(0.7, 0.0, -1.2);
 	set_ship_texture(SHIP_HULL_TEX);
-	draw_ehousing_pair(1.0, 0.13, 0.14, 0.2, -1.4, 0.0, 1);
-	glPopMatrix();
+	draw_ehousing_pairs(1.0, 0.13, 0.14, 0.2, -1.4, 0.0, 1, point(0.7, 0.0, -1.2));
 	set_ship_texture(VSTRIPE_TEX);
 	glPushMatrix();
 	glTranslatef(0.0, 0.19, -0.2);
@@ -1217,7 +1225,7 @@ void uobj_draw_data::draw_us_carrier() const {
 		glutSolidCube(1.0);
 	}
 	glPopMatrix(); // undo invert_z()
-	draw_engine_pair(ecolor, 0, 0.5, 0.7, 0.0, 1.3, 1.5, vector3d(0.0, 1.0, 0.0)); // medium blue, high aspect ratio
+	draw_engine_pairs(ecolor, 0, 0.5, 0.7, 0.0, 1.3, all_zeros, 1, 1.5, vector3d(0.0, 1.0, 0.0)); // medium blue, high aspect ratio
 	unlight_engine_pair();
 }
 
@@ -1278,12 +1286,11 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 		glPopMatrix();
 	}
 	set_cloak_color(DK_GRAY); // draw engines
-	glTranslatef(0.42, -0.62, -0.75);
 	set_ship_texture(SHIP_HULL_TEX);
-	draw_ehousing_pair(0.9, 0.12, 0.12, 0.15, -0.84, 0.0, 1);
+	draw_ehousing_pairs(0.9, 0.12, 0.12, 0.15, -0.84, 0.0, 1, point(0.42, -0.62, -0.75));
 	end_ship_texture();
 	glPopMatrix(); // undo invert_z()
-	draw_engine_pair(ecolor, 0, 0.45, 0.42, -0.62, 0.86);
+	draw_engine_pairs(ecolor, 0, 0.45, 0.42, -0.62, 0.86);
 	unlight_engine_pair();
 }
 
@@ -1443,12 +1450,11 @@ void uobj_draw_data::draw_bshuttle() const {
 	glEnd();
 
 	color_b.do_glColor();
-	glTranslatef(-0.8, 0.0, -0.8);
 	select_texture(BCUBE_T_TEX);
-	draw_ehousing_pair(1.0, 0.18, 0.18, 0.22, 1.6, 0.0, 1); // length r1 r2 lcone dx dy
+	draw_ehousing_pairs(1.0, 0.18, 0.18, 0.22, 1.6, 0.0, 1, point(-0.8, 0.0, -0.8)); // length r1 r2 lcone dx dy
 	glDisable(GL_TEXTURE_2D);
 	glPopMatrix(); // undo invert_z()
-	draw_engine_pair(LT_BLUE, 0, 0.8, 0.8, 0.0, 1.0); // escale dx dy dz
+	draw_engine_pairs(LT_BLUE, 0, 0.8, 0.8, 0.0, 1.0); // escale dx dy dz
 }
 
 
@@ -1460,25 +1466,14 @@ void uobj_draw_data::draw_tractor() const { // could be better
 	draw_cube(point(0.0, 0.0, -0.2), 1.6, 1.2, 2.0, textured, (dlights ? max(1, ndiv/3) : 1), 1);
 	color_b.do_glColor();
 	draw_cube(point(0.0, 0.0, 1.0), 0.4, 0.2, 0.4, textured, 1);
-
-	for (unsigned i = 0; i < 2; ++i) {
-		glPushMatrix();
-		glTranslatef(-1.05, (i ? -0.2 : 0.2), -0.8);
-		draw_ehousing_pair(1.0, 0.25, 0.25, 0.3, 2.1, 0.0, 1); // length r1 r2 lcone dx dy
-		glPopMatrix();
-	}
+	draw_ehousing_pairs(1.0, 0.25, 0.25, 0.3, 2.1, 0.0, 1, point(-1.05, 0.25, -0.8), point(0.0, -0.5, 0.0), 2); // length r1 r2 lcone dx dy
 	if (textured) end_ship_texture();
 	enable_blend();
 	set_cloak_color(colorRGBA(1.0, 1.0, 1.0, 0.5));
 	draw_cube(point(0.0, 0.0, 1.1), 0.8, 0.4, 0.65, 0, 1);
 	disable_blend();
 	glPopMatrix(); // undo invert_z()
-	glPushMatrix();
-
-	for (unsigned i = 0; i < 2; ++i) {
-		draw_engine_pair(WHITE, (i<<1), 0.9, 1.0, (i ? 0.4 : -0.2), 1.0); // escale dx dy dz
-	}
-	glPopMatrix();
+	draw_engine_pairs(WHITE, 0, 0.9, 1.0, 0.25, 1.0, point(0.0, -0.5, 0.0), 2); // escale dx dy dz
 }
 
 
@@ -1682,10 +1677,8 @@ void uobj_draw_data::draw_dwcarrier() const {
 	glPopMatrix(); // undo invert_z()
 
 	if (phase2) { // draw engine glow
-		for (unsigned i = 0; i < 3; ++i) {
-			draw_engine_pair(BLUE, (i<<1), 0.4, 0.32, 0.3*(1.0 - i), 1.45);
-		}
-		//draw_engine_pair(BLUE, 0, 0.4, 0.32, 0.0, 1.45, 2.8);
+		draw_engine_pairs(BLUE, 0, 0.4, 0.32, 0.3, 1.45, point(0.0, -0.3, 0.0), 3);
+		//draw_engine_pairs(BLUE, 0, 0.4, 0.32, 0.0, 1.45, all_zeros, 1, 2.8);
 	}
 	if (powered && first_pass) glDisable(GL_LIGHT7);
 }
@@ -1829,11 +1822,7 @@ void uobj_draw_data::draw_dwexterm() const {
 		set_ship_texture(SHIP_HULL_TEX);
 
 		for (unsigned i = 0; i < 4; ++i) { // engines
-			float const val(0.07*i);
-			glPushMatrix();
-			glTranslatef(-0.24-val, 0.05-val, -1.12+0.02*i);
-			draw_ehousing_pair(0.6-0.08*i, 0.04, 0.0, 0.034, 0.48+2.0*val, 0.0, 1);
-			glPopMatrix();
+			draw_ehousing_pairs(0.6-0.08*i, 0.04, 0.0, 0.034, 0.48+0.14*i, 0.0, 1, point(-0.24-0.07*i, 0.05-0.07*i, -1.12+0.02*i));
 		}
 		end_ship_texture();
 	}
@@ -1856,9 +1845,7 @@ void uobj_draw_data::draw_dwexterm() const {
 	}
 
 	// draw engine glow
-	for (unsigned i = 0; i < 4; ++i) {
-		draw_engine_pair(BLUE, (i<<1), 0.24, 0.36+0.1*i, 0.07-0.1*i, 1.96-0.03*i);
-	}
+	draw_engine_pairs(BLUE, 0, 0.24, 0.36, 0.07, 1.96, point(0.1, -0.1, -0.03), 4);
 }
 
 
@@ -2067,12 +2054,7 @@ void uobj_draw_data::draw_supply() const {
 	draw_cube(point(0.0, 0.0, -1.3), 0.6, 0.9, 0.6, textured, (dlights ? max(1, ndiv/4) : 1), 1); // rear
 
 	if (ndiv > 4) { // draw engines
-		for (unsigned i = 0; i < 3; ++i) {
-			glPushMatrix();
-			glTranslatef(-0.25, (-0.4 + 0.4*i), -1.7);
-			draw_ehousing_pair(0.55, 0.2, 0.12, 0.1, 0.5, 0.0, 1);
-			glPopMatrix();
-		}
+		draw_ehousing_pairs(0.55, 0.2, 0.12, 0.1, 0.5, 0.0, 1, point(-0.25, -0.4, -1.7), point(0.0, 0.4, 0.0), 3);
 	}
 	if (textured) end_ship_texture();
 	glDisable(GL_LIGHTING);
@@ -2090,7 +2072,7 @@ void uobj_draw_data::draw_supply() const {
 	glPopMatrix(); // undo invert_z()
 
 	for (unsigned i = 0; i < 3; ++i) {
-		draw_engine_pair(LT_BLUE, (i<<1), 0.5, 0.25, (-0.4 + 0.4*i), 1.75);
+		draw_engine_pairs(LT_BLUE, (i<<1), 0.5, 0.25, (-0.4 + 0.4*i), 1.75);
 	}
 }
 
