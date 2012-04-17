@@ -18,7 +18,7 @@ default_ground_tex 13 # dirt texture
 
 gravity 1.0
 mesh_height 1.0
-mesh_scale 0.7
+mesh_scale 2.0
 camera_height 0.0
 sun_rot 0.4
 shadow_detail 7
@@ -33,7 +33,7 @@ mt_cobj_tree_build 1
 group_back_face_cull 1
 
 mesh_size  128 128 64
-scene_size 4.0 4.0 2.5
+scene_size 16.0 16.0 4.0
 
 include config_resolution.txt
 shadow_map_sz 2048 # 4096?

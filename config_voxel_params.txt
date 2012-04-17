@@ -1,6 +1,7 @@
-voxel xsize 128
-voxel ysize 128
+voxel xsize 512
+voxel ysize 512
 voxel zsize 64
+voxel num_blocks 32
 voxel isolevel 0.0 # [-1,1], higher is more open space
 voxel elasticity 0.8
 voxel mag 1.0
@@ -8,7 +9,7 @@ voxel freq 1.0
 voxel tex_scale 1.0
 voxel noise_scale 0.05
 voxel noise_freq 1.0
-voxel ao_radius 2.0
+voxel ao_radius 8.0
 voxel ao_weight_scale 2.0 # generally >= 2.0
 voxel ao_atten_power 0.7 # generally <= 1.0
 voxel tex_mix_saturate 6.0
