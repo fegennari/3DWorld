@@ -825,7 +825,9 @@ void voxel_model::build(bool add_cobjs_) {
 		for (int block = 0; block < (int)tot_blocks; ++block) {
 			num_triangles += create_block(block, 1, 1);
 		}
-		reserve_coll_objects(coll_objects.size() + 1.1*num_triangles); // reserve with 10% buffer
+		if (2*coll_objects.size() < num_triangles) {
+			reserve_coll_objects(coll_objects.size() + 1.1*num_triangles); // reserve with 10% buffer
+		}
 	}
 
 	#pragma omp parallel for schedule(static,1)
@@ -926,7 +928,6 @@ float voxel_model::eval_noise_texture_at(point const &pos) const {
 void gen_voxel_landscape() {
 
 	RESET_TIME;
-	bool const add_cobjs(1);
 	unsigned const nx((global_voxel_params.xsize > 0) ? global_voxel_params.xsize : MESH_X_SIZE);
 	unsigned const ny((global_voxel_params.ysize > 0) ? global_voxel_params.ysize : MESH_Y_SIZE);
 	unsigned const nz((global_voxel_params.zsize > 0) ? global_voxel_params.zsize : max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
@@ -938,13 +939,13 @@ void gen_voxel_landscape() {
 	vector3d const vsz(xsz, ysz, (zhi - zlo)/nz);
 	point const center(-0.5*DX_VAL, -0.5*DY_VAL, 0.5*(zlo + zhi));
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
-	terrain_voxel_model.set_params(global_voxel_params);
 	terrain_voxel_model.clear();
+	terrain_voxel_model.set_params(global_voxel_params);
 	terrain_voxel_model.init(nx, ny, nz, vsz, center, 0.0, global_voxel_params.num_blocks);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
 		NORMALIZE_TO_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
 	PRINT_TIME(" Voxel Gen");
-	terrain_voxel_model.build(add_cobjs);
+	terrain_voxel_model.build(global_voxel_params.add_cobjs);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 
@@ -974,6 +975,9 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "num_blocks") {
 		if (!read_nonzero_uint(fp, global_voxel_params.num_blocks)) voxel_file_err("num_blocks", error);
+	}
+	else if (str == "add_cobjs") {
+		if (!read_bool(fp, global_voxel_params.add_cobjs)) voxel_file_err("add_cobjs", error);
 	}
 	else if (str == "mag") {
 		if (!read_float(fp, global_voxel_params.mag)) voxel_file_err("mag", error);

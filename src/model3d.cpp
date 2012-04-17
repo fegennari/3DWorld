@@ -297,6 +297,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
 
 	if (is_shadow_pass) {
+		if (vbo == 0) return; // don't create the vbo on the shadow pass
 		if (!orig_camera_pdu.projected_cube_visible(bcube, camera_pdu.pos)) return; // light_pos == camera_pdu.pos for the shadow pass
 	}
 	else {

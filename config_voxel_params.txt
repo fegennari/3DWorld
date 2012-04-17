@@ -2,6 +2,7 @@ voxel xsize 512
 voxel ysize 512
 voxel zsize 64
 voxel num_blocks 32
+voxel add_cobjs 1
 voxel isolevel 0.0 # [-1,1], higher is more open space
 voxel elasticity 0.8
 voxel mag 1.0
