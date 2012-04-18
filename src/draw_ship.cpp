@@ -1036,14 +1036,12 @@ void uobj_draw_data::draw_us_bcruiser() const {
 
 		for (unsigned i = 0; i < 2; ++i) { // left, right
 			for (unsigned j = 0; j < 2; ++j) { // bottom, top
-				point const xlate(0.08*(2.0*i - 1.0), 0.16*(2.0*j - 1.0), 0.6);
 				glPushMatrix();
 				// draw forward weapons
-				translate_to(xlate);
+				glTranslatef(0.08*(2.0*i - 1.0), 0.16*(2.0*j - 1.0), 0.6);
 				draw_cylinder(0.7, 0.04, 0.04, ndiv3, 1, 1, 0, 1);
-				translate_to(-1.0*xlate);
 				// draw engines
-				glTranslatef(0.4*(2.0*i - 1.0), (dy + 1.5*erad*(2.0*j - 1.0)), -0.8);
+				glTranslatef(0.32*(2.0*i - 1.0), (dy + (1.5*erad - 0.16)*(2.0*j - 1.0)), -1.4);
 				draw_cylinder(0.8, erad, erad, ndiv3, ndiv4, 1, 1, 0);
 				set_lighted_sides(2);
 				draw_fast_cylinder(point(0.0, 0.0, -0.2), all_zeros, 0.6*erad, erad, ndiv3, textured);
