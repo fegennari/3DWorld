@@ -213,9 +213,45 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 	}
 	if (indices.empty() || finalized) return; // nothing to do
 	finalized = 1;
-#if 0
 	unsigned const npts((prim_type == GL_TRIANGLES) ? 3 : 4), nverts(num_verts()); // triangles or quads
 	assert((nverts % npts) == 0);
+
+	// subdivide large buffers
+	unsigned const block_size = 16384;
+	unsigned const num_prims(nverts/npts);
+
+	if (num_prims >= 2*block_size) { // divide into 2x2x2 grid for now
+		point center(bcube.get_cube_center());
+		vector<unsigned> bins[8]; // x,y,z
+
+		for (unsigned i = 0; i < nverts; i += npts) {
+			point pt(all_zeros);
+			for (unsigned j = i; j < i+npts; ++j) {pt += get_vert(j).v;} // calculate primitive center
+			pt /= npts;
+			unsigned ix(0);
+			for (unsigned j = 0; j < 3; ++j) {ix += ((pt[j] > center[j]) << j);} // calculate bin index
+			for (unsigned j = i; j < i+npts; ++j) {bins[ix].push_back(indices[j]);} // add to bin
+		}
+		unsigned cur_ix(0);
+
+		for (unsigned i = 0; i < 8; ++i) {
+			unsigned const sz(bins[i].size());
+			if (sz == 0) continue;
+			assert((sz % npts) == 0);
+			point const &v0(at(bins[i][0]).v);
+			cube_t bc(v0, v0);
+			
+			for (unsigned j = 0; j < sz; ++j) {
+				indices[cur_ix+j] = bins[i][j]; // copy over index data
+				bc.union_with_pt(at(bins[i][j]).v); // update bounding cube
+			}
+			blocks.push_back(geom_block_t(cur_ix, sz, bc));
+			cur_ix += sz;
+		}
+		assert(cur_ix == nverts);
+	}
+
+#if 0
 	vector<pair<unsigned, unsigned> > area_ix_pairs;
 	area_ix_pairs.resize(nverts/npts);
 	point pts[4];
@@ -341,10 +377,20 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		else {
 			bind_vbo(ivbo, 1);
 		}
-		// possible optimization:
-		// sort triangles/quads by size, largest to smallest
-		// render a subset of the indices based on size threshold and distance to camera
-		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
+		if (is_shadow_pass || blocks.empty() || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
+			unsigned const num(indices.size()/2);
+			// possible optimization:
+			// sort triangles/quads by size, largest to smallest
+			// render a subset of the indices based on size threshold and distance to camera
+			glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
+		}
+		else { // draw each block independently
+			for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
+				if (camera_pdu.cube_visible(i->bcube)) {
+					glDrawRangeElements(prim_type, 0, (unsigned)size(), i->num, GL_UNSIGNED_INT, (void *)(i->start_ix*sizeof(unsigned)));
+				}
+			}
+		}
 		bind_vbo(0, 1);
 	}
 	bind_vbo(0);

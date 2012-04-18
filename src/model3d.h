@@ -157,6 +157,14 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 	vector<unsigned> indices;
 	bool need_normalize;
 
+	struct geom_block_t {
+		unsigned start_ix, num;
+		cube_t bcube;
+		geom_block_t() : start_ix(0), num(0) {}
+		geom_block_t(unsigned s, unsigned n, cube_t const &bc) : start_ix(s), num(n), bcube(bc) {}
+	};
+	vector<geom_block_t> blocks;
+
 public:
 	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
