@@ -69,29 +69,6 @@ cube_t tquad_t::get_bcube() const {
 }
 
 
-unsigned cobj_tree_base::tree_node::get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const {
-
-	unsigned dim(0);
-	max_sz = 0;
-
-	for (unsigned i = 0; i < 3; ++i) {
-		if (skip_dims & (1 << i)) continue;
-		float const dim_sz(d[i][1] - d[i][0]);
-		assert(dim_sz >= 0.0);
-		
-		if (dim_sz > max_sz) {
-			max_sz = dim_sz;
-			dim    = i;
-		}
-	}
-	if (max_sz > 0.0) {
-		sval = get_cube_center()[dim]; // center point (mean seems to work better than median)
-		assert(!(skip_dims & (1 << dim)));
-	}
-	return dim;
-}
-
-
 void cobj_tree_tquads_t::calc_node_bbox(tree_node &n) const {
 
 	assert(n.start < n.end);

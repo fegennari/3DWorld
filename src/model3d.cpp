@@ -13,6 +13,7 @@ bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
 bool const USE_INDEXED_VERTS = 1;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
+unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
 extern int display_mode;
@@ -205,6 +206,42 @@ template<typename T> void vntc_vect_t<T>::calc_bounding_volumes() {
 }
 
 
+template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims) {
+
+	unsigned const num(ixs.size());
+	assert(num > 0 && (num % npts) == 0);
+	point const &v0(at(ixs.front()).v);
+	cube_t bc(v0, v0);
+	bool make_leaf(0);
+	
+	for (vector<unsigned>::const_iterator i = ixs.begin(); i != ixs.end(); ++i) {
+		bc.union_with_pt(at(*i).v); // update bounding cube
+	}
+	if (num > BLOCK_SIZE) { // subdiv case
+		float max_sz(0), sval(0);
+		unsigned const dim(bc.get_split_dim(max_sz, sval, skip_dims));
+
+		if (max_sz > 0) { // can split
+			vector<unsigned> bins[2];
+			for (unsigned i = 0; i < 2; ++i) {bins[i].reserve(num/2);}
+
+			for (unsigned i = 0; i < num; i += npts) {
+				bool const bix(at(ixs[i]).v[dim] > sval); // use the first point to determine the bin
+				for (unsigned j = i; j < i+npts; ++j) {bins[bix].push_back(ixs[j]);}
+			}
+			if (bins[0].empty() || bins[1].empty()) {skip_dims |= (1 << dim);}
+
+			for (unsigned i = 0; i < 2; ++i) {
+				if (!bins[i].empty()) subdiv_recur(bins[i], npts, skip_dims);
+			}
+			return;
+		}
+	}
+	blocks.push_back(geom_block_t(indices.size(), num, bc));
+	copy(ixs.begin(), ixs.end(), back_inserter(indices)); // make leaf
+}
+
+
 template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 
 	if (need_normalize) {
@@ -215,40 +252,14 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 	finalized = 1;
 	unsigned const npts((prim_type == GL_TRIANGLES) ? 3 : 4), nverts(num_verts()); // triangles or quads
 	assert((nverts % npts) == 0);
+	assert(blocks.empty());
 
-	// subdivide large buffers
-	unsigned const block_size = 16384;
-	unsigned const num_prims(nverts/npts);
-
-	if (num_prims >= 2*block_size) { // divide into 2x2x2 grid for now
-		point center(bcube.get_cube_center());
-		vector<unsigned> bins[8]; // x,y,z
-
-		for (unsigned i = 0; i < nverts; i += npts) {
-			point pt(all_zeros);
-			for (unsigned j = i; j < i+npts; ++j) {pt += get_vert(j).v;} // calculate primitive center
-			pt /= npts;
-			unsigned ix(0);
-			for (unsigned j = 0; j < 3; ++j) {ix += ((pt[j] > center[j]) << j);} // calculate bin index
-			for (unsigned j = i; j < i+npts; ++j) {bins[ix].push_back(indices[j]);} // add to bin
-		}
-		unsigned cur_ix(0);
-
-		for (unsigned i = 0; i < 8; ++i) {
-			unsigned const sz(bins[i].size());
-			if (sz == 0) continue;
-			assert((sz % npts) == 0);
-			point const &v0(at(bins[i][0]).v);
-			cube_t bc(v0, v0);
-			
-			for (unsigned j = 0; j < sz; ++j) {
-				indices[cur_ix+j] = bins[i][j]; // copy over index data
-				bc.union_with_pt(at(bins[i][j]).v); // update bounding cube
-			}
-			blocks.push_back(geom_block_t(cur_ix, sz, bc));
-			cur_ix += sz;
-		}
-		assert(cur_ix == nverts);
+	if (nverts > 2*BLOCK_SIZE) { // subdivide large buffers
+		//RESET_TIME;
+		vector<unsigned> ixs(indices);
+		indices.clear();
+		subdiv_recur(ixs, npts, 0);
+		//PRINT_TIME("Subdiv");
 	}
 
 #if 0

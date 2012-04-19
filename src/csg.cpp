@@ -176,6 +176,29 @@ bool cube_t::is_near_zero_area() const {
 }
 
 
+unsigned cube_t::get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const {
+
+	unsigned dim(0);
+	max_sz = 0;
+
+	for (unsigned i = 0; i < 3; ++i) {
+		if (skip_dims & (1 << i)) continue;
+		float const dim_sz(d[i][1] - d[i][0]);
+		assert(dim_sz >= 0.0);
+		
+		if (dim_sz > max_sz) {
+			max_sz = dim_sz;
+			dim    = i;
+		}
+	}
+	if (max_sz > 0.0) {
+		sval = get_cube_center()[dim]; // center point (mean seems to work better than median)
+		assert(!(skip_dims & (1 << dim)));
+	}
+	return dim;
+}
+
+
 bool cube_t::cube_intersection(const cube_t &cube, cube_t &res) const { // flags are not set
 	
 	for (unsigned i = 0; i < 3; ++i) {

@@ -171,6 +171,7 @@ public:
 	void render(shader_t &shader, bool is_shadow_pass, int prim_type);
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
 	void add_vertex(T const &v, vertex_map_t<T> &vmap);
+	void subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims);
 	void finalize(int prim_type);
 	void clear();
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
