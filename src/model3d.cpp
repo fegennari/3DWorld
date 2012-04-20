@@ -389,7 +389,6 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 			bind_vbo(ivbo, 1);
 		}
 		if (is_shadow_pass || blocks.empty() || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
-			unsigned const num(indices.size()/2);
 			// possible optimization:
 			// sort triangles/quads by size, largest to smallest
 			// render a subset of the indices based on size threshold and distance to camera
