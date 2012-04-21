@@ -148,17 +148,24 @@ inline int get_ndiv(int num) {
 }
 
 
-inline void set_ship_texture(int tid) {
+void set_ship_texture(int tid) {
 	
 	select_texture(tid);
 	gluQuadricTexture(quadric, GL_TRUE);
 }
 
 
-inline void end_ship_texture() {
+void end_texture() {
+
+	//glDisable(GL_TEXTURE_2D);
+	select_texture(WHITE_TEX); // texturing is always enabled
+}
+
+
+void end_ship_texture() {
 	
 	gluQuadricTexture(quadric, GL_FALSE);
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 }
 
 
@@ -415,8 +422,8 @@ void uobj_draw_data::light_engine_pair(colorRGBA const &color, unsigned eflags_o
 void uobj_draw_data::unlight_engine_pair() const {
 
 	if (!can_have_engine_lights()) return;
-	glDisable(GL_LIGHT6);
-	glDisable(GL_LIGHT7);
+	clear_colors_and_disable_light(GL_LIGHT6);
+	clear_colors_and_disable_light(GL_LIGHT7);
 }
 
 
@@ -561,7 +568,7 @@ void uobj_draw_data::draw_usw_emp() const {
 	glRotatef(90.0, 1.0, 0.0, 0.0);
 	draw_sphere_dlist_back_to_front(all_zeros, 1.0, ndiv, 1);
 	glDisable(GL_ALPHA_TEST);
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 	glEnable(GL_LIGHTING);
 	disable_blend();
 	glPopMatrix();
@@ -624,7 +631,7 @@ void uobj_draw_data::draw_usw_rfire() const {
 	enable_blend();
 	select_texture(PLASMA_TEX);
 	draw_torus(0.12, 0.72, get_ndiv(ndiv/2), ndiv, 1);
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 	disable_blend();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_LIGHTING);
@@ -1341,7 +1348,7 @@ void uobj_draw_data::draw_defsat() const {
 	for (unsigned i = 0; i < 2; ++i) {
 		draw_cube(point((i ? -1.0 : 1.0), 0.0, 0.0), 1.1, 0.8, 0.1, 1, (dlights ? max(1, ndiv/4) : 1), 1, 4.0);
 	}
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 	set_cloak_color(GRAY);
 	end_specular();
 	draw_cube(point(0.0, 0.0, 0.0), 1.1, 0.08, 0.05, 0, 1);
@@ -1410,7 +1417,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		disable_blend();
 		glDisable(GL_ALPHA_TEST);
 	}
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 	
 	if (powered && animate2 && final_pass && phase1) {
 		add_colored_lights(pos, radius, GREEN, 0.25, (rand() & (is_small ? 3 : 7)), obj); // add eerie green light sources
@@ -1423,7 +1430,7 @@ void uobj_draw_data::draw_bshuttle() const {
 	setup_draw_ship();
 	select_texture(BCUBE_T_TEX);
 	draw_cube(point(0.0, 0.0, -0.4), 1.3, 0.6, 1.6, 1, (dlights ? max(1, ndiv/3) : 1), 1);
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 
 	glBegin(GL_QUADS);
 	glNormal3f( 0.0,   0.8, 0.6); // T
@@ -1452,7 +1459,7 @@ void uobj_draw_data::draw_bshuttle() const {
 	color_b.do_glColor();
 	select_texture(BCUBE_T_TEX);
 	draw_ehousing_pairs(1.0, 0.18, 0.18, 0.22, 1.6, 0.0, 1, point(-0.8, 0.0, -0.8)); // length r1 r2 lcone dx dy
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 	glPopMatrix(); // undo invert_z()
 	draw_engine_pairs(LT_BLUE, 0, 0.8, 0.8, 0.0, 1.0); // escale dx dy dz
 }
@@ -1680,7 +1687,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 		draw_engine_pairs(BLUE, 0, 0.4, 0.32, 0.3, 1.45, point(0.0, -0.3, 0.0), 3);
 		//draw_engine_pairs(BLUE, 0, 0.4, 0.32, 0.0, 1.45, all_zeros, 1, 2.8);
 	}
-	if (powered && first_pass) glDisable(GL_LIGHT7);
+	if (powered && first_pass) clear_colors_and_disable_light(GL_LIGHT7);
 }
 
 
@@ -1918,7 +1925,7 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 		color_b.do_glColor();
 	}
 	if (phase2) draw_wraith_tail(0.27, ndiv_tail, rscale);
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 	disable_blend();
 	glPopMatrix();
 	if (is_moving() && phase1) add_light_source(pos, 4.0*radius, color_b); // radius = f(health)?
@@ -1991,7 +1998,7 @@ void uobj_draw_data::draw_reaper() const {
 	draw_sphere_dlist_back_to_front(all_zeros, 1.0, 3*ndiv/2, 0);
 	//end_ship_texture();
 	disable_blend();
-	if (can_have_engine_lights()) glDisable(GL_LIGHT7);
+	if (can_have_engine_lights()) clear_colors_and_disable_light(GL_LIGHT7);
 	end_specular();
 	glPopMatrix(); // undo invert_z()
 	glPopMatrix(); // undo rotations
@@ -2182,16 +2189,14 @@ void uobj_draw_data::draw_juggernaut() const {
 void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 
 	unsigned const nstacks(dlights ? max(1, ndiv/8) : 1), ndiv32(3*ndiv/2), ndiv2(get_ndiv(ndiv/2)), ndiv4(get_ndiv(ndiv/4));
+	bool const pt_light(can_have_engine_lights() && !(eflags & 1));
 	setup_draw_ship();
 	uniform_scale(1.5);
 	if (rotated) glRotatef(-90.0, 1.0, 0.0, 0.0); // rotate so that "up" is in +y
 	if (mothership) glScalef(1.0, 1.0, 0.75);
 	color_b.do_glColor(); // WHITE?
 	if (specular_en) set_specular(0.9, 90.0);
-
-	if (can_have_engine_lights() && !(eflags & 1)) {
-		setup_point_light(point(0.0, 0.0, -0.5), color_a, 3.0*radius, GL_LIGHT7);
-	}
+	if (pt_light) setup_point_light(point(0.0, 0.0, -0.5), color_a, 3.0*radius, GL_LIGHT7);
 	set_ship_texture(SHIP_HULL_TEX);
 	glPushMatrix();
 	glScalef(1.0, 1.0, 0.1);
@@ -2203,7 +2208,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	draw_cylinder_nstacks(0.3, 0.2, 0.8, ndiv32, nstacks, 1); // bottom
 	glPopMatrix();
 	end_ship_texture();
-	glDisable(GL_LIGHT7);
+	if (pt_light) clear_colors_and_disable_light(GL_LIGHT7);
 
 	if (ndiv > 4) {
 		color_a.do_glColor();
@@ -2355,7 +2360,7 @@ void uobj_draw_data::draw_seige() const {
 	glScalef(0.3, 1.0, 1.0);
 	glRotatef(70.0, 1.0, 0.0, 0.0);
 	draw_cylin_fast(0.7, 0.0, 1.3, ndiv, 1, 0, 0);
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 	color_a.do_glColor();
 	glScalef(1.0/0.3, 1.0, 1.0);
 	draw_sphere_dlist(point(0.0, 0.0, 1.3), 0.12, ndiv2, 0); // weapon sphere
@@ -2483,7 +2488,7 @@ void uobj_draw_data::draw_asteroid() const {
 	WHITE.do_glColor();
 	select_texture(MOON_TEX);
 	draw_sphere_dlist(all_zeros, 1.0, 3*ndiv/2, 1);
-	glDisable(GL_TEXTURE_2D);
+	end_texture();
 }
 
 

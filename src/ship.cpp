@@ -7,6 +7,7 @@
 #include "explosion.h"
 #include "obj_sort.h"
 #include "timetest.h"
+#include "shaders.h"
 
 
 bool const TIMETEST          = (GLOBAL_TIMETEST || 0);
@@ -50,6 +51,7 @@ float align_t_kills[NUM_ALIGNMENT]    = {0};
 float friendly_kills[NUM_ALIGNMENT]   = {0};
 
 
+extern bool disable_shaders;
 extern int show_framerate, display_mode, animate2;
 extern float fticks, tfticks;
 extern unsigned owner_counts[];
@@ -693,7 +695,17 @@ void draw_univ_objects(point const &pos) {
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
 	unsigned const nobjs2((unsigned)sorted.size());
 	//PRINT_TIME("Sort");
+	bool const use_shaders(!disable_shaders && !(display_mode & 0x08));
+	shader_t s;
+	select_texture(WHITE_TEX, 0); // always textured
 
+	if (use_shaders) {
+		s.setup_enabled_lights(8, 2); // FS
+		s.set_vert_shader("ship_draw");
+		s.set_frag_shader("ads_lighting.part*+ship_draw");
+		s.begin_shader();
+		s.add_uniform_int("tex0", 0);
+	}
 	for (unsigned i = 0; i < nobjs2; ++i) { // draw ubojs
 		free_obj *fobj(sorted[i].second);
 		assert(fobj != NULL);
@@ -701,6 +713,8 @@ void draw_univ_objects(point const &pos) {
 		fobj->draw(pos);
 		fobj->reset_lights(); // reset for next frame
 	}
+	if (use_shaders) s.end_shader();
+	glDisable(GL_TEXTURE_2D);
 	enable_blend();
 	particle_pld.draw_and_clear();
 	glDisable(GL_LIGHTING);

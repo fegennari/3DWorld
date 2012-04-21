@@ -131,6 +131,15 @@ void set_colors_and_enable_light(int light, float const ambient[4], float const 
 }
 
 
+void clear_colors_and_disable_light(int light) {
+
+	float const ad[4] = {0.0, 0.0, 0.0, 0.0};
+	glDisable(light);
+	glLightfv(light, GL_AMBIENT, ad);
+	glLightfv(light, GL_DIFFUSE, ad);
+}
+
+
 void set_gl_light_pos(int light, point const &pos, float w) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);

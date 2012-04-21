@@ -665,7 +665,7 @@ void free_obj::draw(point const &pos_) const { // view culling has already been 
 
 		if (ndiv > 3) {
 			for (unsigned i = 0; i < nlights; ++i) {
-				glDisable(EXPLOSION_LIGHT + i);
+				clear_colors_and_disable_light(EXPLOSION_LIGHT + i);
 			}
 		}
 		if (partial_shadow) { // partially shadowed - draw the sun's light with a stencil pass

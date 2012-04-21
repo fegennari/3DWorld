@@ -841,6 +841,8 @@
     <None Include="shaders\procedural_gen.vert" />
     <None Include="shaders\procedural_texture.part.frag" />
     <None Include="shaders\shadow_map.part" />
+    <None Include="shaders\ship_draw.frag" />
+    <None Include="shaders\ship_draw.vert" />
     <None Include="shaders\spec_map.part.frag" />
     <None Include="shaders\triplanar_texture.part.frag" />
     <None Include="shaders\vert_xform_only.vert" />

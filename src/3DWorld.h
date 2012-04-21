@@ -1342,6 +1342,7 @@ void set_fill_mode();
 int get_universe_ambient_light();
 void set_gl_light_pos(int light, point const &pos, float w);
 void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]);
+void clear_colors_and_disable_light(int light);
 int get_light();
 void draw_solid_object_groups();
 void draw_transparent_object_groups();
