@@ -12,7 +12,7 @@ bool const USE_SMAP = 1;
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
-extern bool invalid_ccache, keep_beams;
+extern bool invalid_ccache, keep_beams, disable_shaders;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, begin_motion;
 extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPONS, animate2;
 extern float fticks;
@@ -753,9 +753,10 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
 	shader_t s;
 
-	if (draw_pass == 0) {
+	if (draw_pass == 0 && !disable_shaders) {
 		bool const use_smap(use_smap_here());
 		s.setup_enabled_lights();
+		set_dlights_booleans(s, 0, 1); // disabled (for now)
 		for (unsigned d = 0; d < 2; ++d) s.set_bool_prefix("no_normalize", 0, d); // VS/FS
 		s.set_bool_prefix("use_texgen", 0, 0); // VS
 		s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
@@ -771,7 +772,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass);
 
-	if (draw_pass == 0) s.end_shader();
+	if (draw_pass == 0 && !disable_shaders) s.end_shader();
 	if (shooter == CAMERA_ID) fired = 0;
 	if (cull_face) glDisable(GL_CULL_FACE);
 }

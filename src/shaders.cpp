@@ -7,7 +7,8 @@
 
 using namespace std;
 
-bool const PRINT_SHADER = 0;
+bool const PRINT_SHADER = 0; // print shaders loaded from files
+bool const DEBUG_SHADER = 0; // print final generated shaders
 bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
@@ -376,6 +377,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 			exit(1);
 		}
 	}
+	if (DEBUG_SHADER) cout << "final shader data for <" << name << ">:" << endl << data << endl;
 	unsigned const shader(glCreateShader(shader_type_table[type]));
 	assert(shader);
 	const char *src(data.c_str());

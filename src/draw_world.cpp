@@ -1723,6 +1723,7 @@ void calc_cur_ambient_diffuse() {
 
 void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
+	if (!enable) s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type); // if we're not even enabling dlights
 	s.set_bool_prefix("has_dir_lights",  has_dir_lights, shader_type);
 	s.set_bool_prefix("enable_dlights",  (enable && dl_tid > 0 && !dl_sources.empty()), shader_type);
 }

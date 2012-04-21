@@ -11,6 +11,7 @@ unsigned const VOXELS_PER_DIV = 8; // 1024 for 128 vertex mesh
 unsigned const MAX_STRIP_LEN  = 200; // larger = faster, less overhead; smaller = smaller edge strips, better culling
 int      const Z_CHECK_RANGE  = 1; // larger = smoother and fewer strips, but longer preprocessing
 bool     const USE_VBOS       = 1; // faster drawing but more GPU resources
+bool const ENABLE_SNOW_DLIGHTS= 1; // looks nice, but slow
 
 bool has_snow(0);
 point vox_delta;
@@ -769,13 +770,16 @@ void draw_snow() {
 	if (!disable_shaders) {
 		bool const use_smap(shadow_map_enabled());
 		s.setup_enabled_lights();
+		set_dlights_booleans(s, ENABLE_SNOW_DLIGHTS, 1); // FS
 		for (unsigned d = 0; d < 2; ++d) s.set_bool_prefix("no_normalize", !use_smap, d); // VS/FS
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
 		s.set_bool_prefix("use_texgen", 1, 0); // VS
 		s.set_vert_shader("fog.part+texture_gen.part+per_pixel_lighting_textured");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+per_pixel_lighting_textured");
 		s.begin_shader();
+		s.setup_scene_bounds();
+		setup_dlight_textures(s);
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		if (use_smap) set_smap_shader_for_all_lights(s);
