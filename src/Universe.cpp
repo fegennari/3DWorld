@@ -296,6 +296,13 @@ bool get_universe_sun_pos(point const &pos, point &spos) {
 }
 
 
+void clear_ambient_color() {
+
+	float const uambient[4] = {0.0, 0.0, 0.0, 0.0};
+	glLightfv(get_universe_ambient_light(), GL_AMBIENT, uambient); // light is not enabled or disabled
+}
+
+
 // return values: -1: no sun, 0: not shadowed, 1: < half shadowed, 2: > half shadowed, 3: fully shadowed
 // caches sobj and only determines if there is a shadow if NULL
 int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,
@@ -324,14 +331,14 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 			//atten_color(color, pos2, galaxy.pos, (galaxy.radius + MAX_SYSTEM_EXTENT), expand);
 		}
 		if (no_ambient) {
-			set_ambient_color(BLACK);
+			clear_ambient_color();
 		}
 		else {
 			set_ambient_color(color*3.2); // hack to increase light on ships (isn't ambient reset below in some cases?)
 		}
 	}
 	else { // not near any galaxies
-		set_ambient_color(BLACK);
+		clear_ambient_color();
 	}
 	if (!found && !blend) { // no sun
 		set_light_galaxy_ambient_only();

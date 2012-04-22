@@ -696,11 +696,7 @@ void free_obj::draw(point const &pos_) const { // view culling has already been 
 			glDisable(GL_CULL_FACE);
 
 			set_uobj_color(finpos, c_radius, 0, 2, sun_pos, sobj, 1); // enable diffuse/specular only
-			int const a_light(get_universe_ambient_light());
-			GLboolean const has_alight(glIsEnabled(a_light));
-			if (has_alight) glDisable(a_light); // don't redraw ambient
 			transform_and_draw_obj(udd, 1, 0, 1);
-			if (has_alight) glEnable(a_light);
 
 			glDepthMask(GL_TRUE);
 			glDepthFunc(GL_LEQUAL);
@@ -902,7 +898,7 @@ void uobj_asteroid::draw_obj(uobj_draw_data &ddata) const {
 			//select_texture(MOON_TEX);
 			select_texture(ROCK_SPHERE_TEX);
 			surface.sd.draw_ndiv_pow2(ddata.ndiv); // use dlist?
-			glDisable(GL_TEXTURE_2D);
+			end_texture();
 			break;
 		default:
 			assert(0);
@@ -1009,7 +1005,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 	case PTYPE_SPHERE: // low resolution particles (ship pieces)
 		if (texture_id > 0) select_texture(texture_id);
 		draw_sphere_dlist(all_zeros, 1.0, min((no_coll() ? ddata.ndiv : max(3, 3*ddata.ndiv/4)), N_SPHERE_DIV/2), (texture_id > 0));
-		if (texture_id > 0) glDisable(GL_TEXTURE_2D);
+		if (texture_id > 0) end_texture();
 		break;
 	case PTYPE_TRIANGLE:
 		rotate_about(angle, axis); // rotate around some random axis

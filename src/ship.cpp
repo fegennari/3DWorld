@@ -697,7 +697,8 @@ void draw_univ_objects(point const &pos) {
 	//PRINT_TIME("Sort");
 	bool const use_shaders(!disable_shaders && !(display_mode & 0x08));
 	shader_t s;
-	select_texture(WHITE_TEX, 0); // always textured
+	select_texture(WHITE_TEX, 0); // always textured (see end_texture())
+	set_lighted_sides(2); // doesn't hurt
 
 	if (use_shaders) {
 		s.setup_enabled_lights(8, 2); // FS
@@ -713,6 +714,7 @@ void draw_univ_objects(point const &pos) {
 		fobj->draw(pos);
 		fobj->reset_lights(); // reset for next frame
 	}
+	set_lighted_sides(1);
 	if (use_shaders) s.end_shader();
 	glDisable(GL_TEXTURE_2D);
 	enable_blend();
