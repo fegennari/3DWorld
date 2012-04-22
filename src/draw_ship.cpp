@@ -369,14 +369,14 @@ void uobj_draw_data::draw_ehousing_pairs(float length, float r1, float r2, float
 	point const &offset, point const &per_pair_off, unsigned num_pairs) const
 {
 	assert(length > 0.0 && (r1 > 0.0 || r2 > 0.0));
-	unsigned const ndiv2(get_ndiv(ndiv/2)), nstacks(dlights ? max(1, ndiv/5) : 1);
+	unsigned const ndiv2(get_ndiv(ndiv/2));
 
 	for (unsigned p = 0; p < num_pairs; ++p) {
 		glPushMatrix();
 		translate_to(offset + p*per_pair_off);
 
 		for (unsigned i = 0; i < 2; ++i) { // draw engine housings
-			draw_cylinder_nstacks(length, r1, r2, ndiv2, nstacks, texture);
+			draw_cylin_fast(r1, r2, length, ndiv2, texture, 1);
 			if (lcone > 0.0 && r1 > 0.0) draw_cylin_fast(r1, 0.0, lcone, ndiv2, texture, 1);
 			glTranslatef(0.0, 0.0, length);
 			if (lcone > 0.0 && r2 > 0.0) draw_cylin_fast(r2, 0.0, lcone, ndiv2, texture, 1); // change color?
@@ -854,7 +854,7 @@ void uobj_draw_data::draw_us_destroyer() const {
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 
 	glTranslatef(0.0, 0.0, -1.0);
-	draw_cylinder(1.7, 0.45, 0.45, ndiv, (dlights ? max(1, ndiv/4) : 1), 1, 1, 0);
+	draw_cylinder(1.7, 0.45, 0.45, ndiv, 1, 1, 1, 0); // FIXME: nstacks
 	glPushMatrix();
 	glScalef(1.0, 1.0, 2.0);
 	draw_sphere_dlist(point(0.0, 0.0, 0.85), 0.45, ndiv, textured, 1);
@@ -922,7 +922,7 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 
 	glTranslatef(0.0, 0.0, -0.9);
-	draw_cylinder_nstacks(1.8, 0.38, 0.26, ndiv, (dlights ? max(1, ndiv/5) : 1), textured);
+	draw_cylinder_nstacks(1.8, 0.38, 0.26, ndiv, 1, textured); // FIXME: nstacks
 	glPushMatrix();
 	glScalef(1.0, 1.0, 1.45);
 	invert_z(); // invert for half sphere
@@ -1014,7 +1014,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	invert_z();
 	draw_sphere_dlist(all_zeros, 0.4, ndiv, textured, 1); // rear
 	invert_z();
-	gluCylinder(quadric, 0.4, 0.3, 0.6, ndiv, (dlights ? get_ndiv(ndiv/4) : 1)); // main body
+	gluCylinder(quadric, 0.4, 0.3, 0.6, ndiv, 1); // main body // FIXME: nstacks
 	glTranslatef(0.0, 0.0, 0.55);
 	glScalef(1.0, 1.0, 3.06);
 	draw_sphere_dlist(all_zeros, 0.3, ndiv, textured, 1); // front
@@ -1067,7 +1067,7 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 	bool const textured(1);
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 	glTranslatef(0.0, 0.0, -1.1);
-	gluCylinder(quadric, 0.65, 0.0, 2.4, ndiv32, (dlights ? ndiv2 : 1)); // main body
+	gluCylinder(quadric, 0.65, 0.0, 2.4, ndiv32, 1); // main body // FIXME: nstacks
 	draw_circle_normal(0.0, 0.65, ndiv32, 0);
 	color_b.do_glColor();
 	if (textured) end_ship_texture();
@@ -1113,13 +1113,13 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 
 void uobj_draw_data::draw_us_carrier() const {
 
-	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv_dl8(dlights ? max(1, ndiv/8) : 1);
+	unsigned const ndiv2(get_ndiv(ndiv/2));
 	assert(nengines == 2);
 	setup_draw_ship();
 	set_ship_texture(PLASTER_TEX);
 	colorRGBA const ecolor(0.2, 0.2, 1.0, 1.0);
 	light_engine_pair(ecolor, 0, 0.5, 0.7, 0.0, 1.3);
-	draw_cube(point(0.0, 0.0, -0.32), 0.8, 0.38, 2.04, 1, (dlights ? max(1, ndiv/2) : 1), 1, 1.0, 1); // main body
+	draw_cube(point(0.0, 0.0, -0.32), 0.8, 0.38, 2.04, 1, 1, 1, 1.0, 1); // main body // FIXME: nstacks
 
 	if (t_exp > 0.0) { // while exploding, the front section breaks off and floats away
 		glPushMatrix();
@@ -1134,7 +1134,7 @@ void uobj_draw_data::draw_us_carrier() const {
 	glPushMatrix();
 	glTranslatef(0.0, -0.09, 1.1);
 	glRotatef(-90.0, 1.0, 0.0, 0.0);
-	draw_cylinder(0.18, 0.2, 0.2, ndiv, ndiv_dl8, 1); // front
+	draw_cylinder(0.18, 0.2, 0.2, ndiv, 1, 1); // front // FIXME: nstacks
 
 	if (ndiv > 6) {
 		color_b.do_glColor();
@@ -1179,7 +1179,7 @@ void uobj_draw_data::draw_us_carrier() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.19, -0.2);
 	glRotatef(-90.0, 1.0, 0.0, 0.0);
-	if (ndiv > 3) draw_cylinder_nstacks(0.1, 0.22, 0.22, ndiv2, ndiv_dl8, 1); // weapons turret
+	if (ndiv > 3) draw_cylinder_nstacks(0.1, 0.22, 0.22, ndiv2, 1, 1); // weapons turret // FIXME: nstacks
 	glScalef(1.0, 1.0, 0.5);
 	draw_sphere_dlist(point(0.0, 0.0, 0.2), 0.22, ndiv2, 1, 1);
 	glPopMatrix();
@@ -1241,7 +1241,7 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 	glPopMatrix();
 
 	color_b.do_glColor();
-	draw_cube(point(0.0, -0.68, 0.0), 0.6, 0.4, 1.2, 1, (dlights ? max(1, ndiv/3) : 1), 1, 1.0, 1); // box
+	draw_cube(point(0.0, -0.68, 0.0), 0.6, 0.4, 1.2, 1, 1, 1, 1.0, 1); // box // FIXME: nstacks
 	end_ship_texture();
 	unsigned const nbands(5), nspikes(8); // > 1
 
@@ -1308,17 +1308,16 @@ void uobj_draw_data::draw_us_shadow() const { // could be improved
 
 void uobj_draw_data::draw_defsat() const {
 
-	unsigned const dl_ndiv5(dlights ? max(1, ndiv/5) : 1);
 	setup_draw_ship();
 	setup_exp_texture();
 
 	// draw main body
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -1.3);
-	draw_cylinder(1.0, 0.5, 0.5, ndiv, dl_ndiv5, 1); // body
+	draw_cylinder(1.0, 0.5, 0.5, ndiv, 1, 1); // body // FIXME: nstacks
 	glTranslatef(0.0, 0.0, 1.0);
 	color_b.do_glColor();
-	draw_cylinder_nstacks(1.9, 0.11, 0.0, get_ndiv(ndiv/2), dl_ndiv5, 0); // point
+	draw_cylinder_nstacks(1.9, 0.11, 0.0, get_ndiv(ndiv/2), 1, 0); // point // FIXME: nstacks
 	glScalef(1.0, 1.0, 0.6);
 	color_a.do_glColor();
 	draw_sphere_dlist(point(0.0, 0.0, 1.4), 0.5, ndiv, (t_exp > 0));
@@ -1331,7 +1330,7 @@ void uobj_draw_data::draw_defsat() const {
 	select_texture(PARTB_TEX);
 	
 	for (unsigned i = 0; i < 2; ++i) {
-		draw_cube(point((i ? -1.0 : 1.0), 0.0, 0.0), 1.1, 0.8, 0.1, 1, (dlights ? max(1, ndiv/4) : 1), 1, 4.0);
+		draw_cube(point((i ? -1.0 : 1.0), 0.0, 0.0), 1.1, 0.8, 0.1, 1, 1, 1, 4.0); // FIXME: nstacks
 	}
 	end_texture();
 	set_cloak_color(GRAY);
@@ -1345,7 +1344,6 @@ void uobj_draw_data::draw_starbase() const {
 
 	assert(obj);
 	int const cyl_ndiv(get_ndiv((2*ndiv)/3)), spoke_ndiv(get_ndiv(ndiv/2));
-	int const cyl_nsta(dlights ? max(1, ndiv/4) : 1), spoke_nsta(dlights ? max(1, ndiv/6) : 1);
 	cobj_vector_t const &cobjs(obj->get_cobjs());
 	assert(cobjs.size() == 8); // should make this more flexible later
 	setup_exp_texture();
@@ -1356,13 +1354,13 @@ void uobj_draw_data::draw_starbase() const {
 
 	// draw center
 	color_b.do_glColor();
-	cobjs[1]->draw_cylin(cyl_ndiv, cyl_nsta, 0);
+	cobjs[1]->draw_cylin(cyl_ndiv, 1, 0);
 
 	// draw spokes
 	set_cloak_color(BRONZE_C);
 
 	for (unsigned i = 2; i < cobjs.size(); ++i) {
-		cobjs[i]->draw_cylin(spoke_ndiv, spoke_nsta, 0);
+		cobjs[i]->draw_cylin(spoke_ndiv, 1, 0);
 	}
 	end_exp_texture();
 }
@@ -1412,7 +1410,7 @@ void uobj_draw_data::draw_bshuttle() const {
 
 	setup_draw_ship();
 	select_texture(BCUBE_T_TEX);
-	draw_cube(point(0.0, 0.0, -0.4), 1.3, 0.6, 1.6, 1, (dlights ? max(1, ndiv/3) : 1), 1);
+	draw_cube(point(0.0, 0.0, -0.4), 1.3, 0.6, 1.6, 1, 1, 1); // FIXME: nstacks
 	end_texture();
 
 	glBegin(GL_QUADS);
@@ -1453,7 +1451,7 @@ void uobj_draw_data::draw_tractor() const { // could be better
 	bool const textured(1);
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 	setup_draw_ship();
-	draw_cube(point(0.0, 0.0, -0.2), 1.6, 1.2, 2.0, textured, (dlights ? max(1, ndiv/3) : 1), 1);
+	draw_cube(point(0.0, 0.0, -0.2), 1.6, 1.2, 2.0, textured, 1, 1); // FIXME: nstacks
 	color_b.do_glColor();
 	draw_cube(point(0.0, 0.0, 1.0), 0.4, 0.2, 0.4, textured, 1);
 	draw_ehousing_pairs(1.0, 0.25, 0.25, 0.3, 2.1, 0.0, 1, point(-1.05, 0.25, -0.8), point(0.0, -0.5, 0.0), 2); // length r1 r2 lcone dx dy
@@ -1484,9 +1482,9 @@ void uobj_draw_data::draw_gunship() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -0.95);
 	glScalef(0.25, 1.0, 1.0);
-	gluCylinder(quadric, 0.45, 0.25,  1.6, ndiv2, (dlights ? ndiv4 : 1)); // main body
+	gluCylinder(quadric, 0.45, 0.25,  1.6, ndiv2, 1); // main body // FIXME: nstacks
 	glScalef(4.0, 0.25, 1.0);
-	gluCylinder(quadric, 0.45, 0.25,  1.6, ndiv2, (dlights ? ndiv4 : 1)); // main body
+	gluCylinder(quadric, 0.45, 0.25,  1.6, ndiv2, 1); // main body // FIXME: nstacks
 	glTranslatef(0.0, 0.0, -0.2);
 	gluCylinder(quadric, 0.00, 0.45,  0.2, ndiv2, 1); // rear
 	glScalef(0.25, 4.0, 1.0);
@@ -1515,7 +1513,7 @@ void uobj_draw_data::draw_gunship() const {
 		for (unsigned i = 0; i < 4; ++i) {
 			glPushMatrix();
 			glTranslatef(0.35*dxy[0][i], 0.35*dxy[1][i], -1.1);
-			gluCylinder(quadric, 0.05, 0.05, 0.25, ndiv2, (dlights ? ndiv4 : 1));
+			gluCylinder(quadric, 0.05, 0.05, 0.25, ndiv2, 1); // FIXME: nstacks
 			
 			if (ndiv > 12) {
 				glTranslatef(0.0, 0.0, 0.05);
@@ -1574,7 +1572,7 @@ void uobj_draw_data::draw_nightmare() const {
 void uobj_draw_data::draw_dwcarrier() const {
 
 	unsigned const ndiv35(get_ndiv(3*ndiv/5)), ndiv2(get_ndiv(ndiv/2)), ndiv4(get_ndiv(ndiv/4));
-	unsigned const ndiv8(get_ndiv(ndiv/8)), ndiv_dl((dlights ? ndiv8 : 1));
+	unsigned const ndiv8(get_ndiv(ndiv/8));
 	setup_draw_ship();
 	if (powered && first_pass) setup_point_light(point(0.0, 0.4, 0.8), RED, 2.0*radius, GL_LIGHT7);
 
@@ -1595,14 +1593,14 @@ void uobj_draw_data::draw_dwcarrier() const {
 			glScalef((1.0 - 0.18*i), (0.16 + 0.1*i), 1.0);
 
 			if (ndiv < 10) { // approximate low-detail version with only one cylinder and no ends
-				draw_cylinder_nstacks(2.4, 0.72, 0.15, ndiv35, ndiv_dl, 0);
+				draw_cylinder_nstacks(2.4, 0.72, 0.15, ndiv35, 1, 0); // FIXME: nstacks
 			}
 			else {
 				glPushMatrix();
 
 				for (unsigned j = 0; j < 4; ++j) {
 					float const length(0.93 - 0.2*j);
-					draw_cylinder(length, (0.72 - 0.2*j), (0.61 - 0.2*j), ndiv35, ndiv_dl, (ndiv >= 8), 0, 1);
+					draw_cylinder(length, (0.72 - 0.2*j), (0.61 - 0.2*j), ndiv35, 1, (ndiv >= 8), 0, 1); // FIXME: nstacks
 					if (j < 3) glTranslatef(0.0, 0.0, length);
 				}
 				glPopMatrix();
@@ -1621,7 +1619,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 			glTranslatef(1.0, 0.0, -1.35);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				draw_cylinder(1.0, 0.38, 0.1, ndiv2, ndiv_dl, (ndiv >= 8), 1, 0);
+				draw_cylinder(1.0, 0.38, 0.1, ndiv2, 1, (ndiv >= 8), 1, 0); // FIXME: nstacks
 				if (i == 0) glTranslatef(-2.0, 0.0, 0.0);
 			}
 			glPopMatrix();
@@ -1667,7 +1665,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 
 void uobj_draw_data::draw_dwexterm() const {
 
-	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv3(get_ndiv(ndiv/3)), ndiv4(get_ndiv(ndiv/4)), ndiv4x(dlights ? ndiv4 : 1);
+	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv3(get_ndiv(ndiv/3)), ndiv4(get_ndiv(ndiv/4));
 	setup_draw_ship();
 	colorRGBA const tex_color(0.3, 0.4, 0.3, 1.0);
 	uniform_scale(1.5);
@@ -1675,9 +1673,9 @@ void uobj_draw_data::draw_dwexterm() const {
 
 	// backbone + body
 	select_texture(BCUBE2_TEX);
-	draw_cube(point(0.0, 0.01,  0.45), 0.12, 0.14, 1.5, 1, ndiv4x, 1, 2.0, 1);
-	draw_cube(point(0.0, 0.01, -1.15), 0.12, 0.14, 0.1, 1, 1, 2.0, 1);
-	draw_cube(point(0.0, 0.00, -0.70), 0.36, 0.16, 0.8, 1, ndiv4x, 1, 2.0, 1);
+	draw_cube(point(0.0, 0.01,  0.45), 0.12, 0.14, 1.5, 1, 1, 1, 2.0, 1); // FIXME: nstacks
+	draw_cube(point(0.0, 0.01, -1.15), 0.12, 0.14, 0.1, 1, 1, 1, 2.0, 1);
+	draw_cube(point(0.0, 0.00, -0.70), 0.36, 0.16, 0.8, 1, 1, 1, 2.0, 1);
 
 	// the bridge
 	set_ship_texture(SHIP_HULL_TEX);
@@ -1700,13 +1698,13 @@ void uobj_draw_data::draw_dwexterm() const {
 	glPushMatrix();
 	glTranslatef(0.0, -0.38, 0.01);
 	glScalef(1.2, 0.8, 1.0);
-	draw_cylinder(0.56, 0.028, 0.028, ndiv2, ndiv4x, 1);
+	draw_cylinder(0.56, 0.028, 0.028, ndiv2, 1, 1); // FIXME: nstacks
 	glPopMatrix();
 	tex_color.do_glColor();
 	set_ship_texture(BCUBE2_TEX);
 
 	// forward deck
-	draw_cube(point(0.0, 0.11, 0.30), 0.32, 0.06, 0.60, 1, ndiv4x, 1, 1.0, 1);
+	draw_cube(point(0.0, 0.11, 0.30), 0.32, 0.06, 0.60, 1, 1, 1, 1.0, 1); // FIXME: nstacks
 
 	for (unsigned i = 0; i < 2; ++i) { // forward "wings"
 		float const val(i ? 1.0 : -1.0);
@@ -1715,16 +1713,16 @@ void uobj_draw_data::draw_dwexterm() const {
 		glRotatef(-43.0*val, 0.0, 0.0, 1.0);
 		glScalef(0.15, 1.0, 1.0);
 		glRotatef(21.0*val, 0.0, 0.0, 1.0);
-		draw_cylinder(0.62, 0.2, 0.2, 6, ndiv4x, 1);
+		draw_cylinder(0.62, 0.2, 0.2, 6, 1, 1); // FIXME: nstacks
 		glPopMatrix();
 	}
 
 	// rear deck
-	draw_cube(point(0.0, 0.11, -0.70), 0.40, 0.06, 0.80, 1, ndiv4x, 1, 1.0, 1);
+	draw_cube(point(0.0, 0.11, -0.70), 0.40, 0.06, 0.80, 1, 1, 1, 1.0, 1); // FIXME: nstacks
 	glPushMatrix();
 	glTranslatef(0.0, 0.1, -1.2);
 	glScalef(1.0, 0.13, 1.0);
-	draw_cylinder(0.1, 0.1, 0.22, 6, ndiv4x, 1);
+	draw_cylinder(0.1, 0.1, 0.22, 6, 1, 1); // FIXME: nstacks
 	glPopMatrix();
 
 	for (unsigned i = 0; i < 2; ++i) { // rear "wings"
@@ -1735,7 +1733,7 @@ void uobj_draw_data::draw_dwexterm() const {
 		glRotatef(-13.5, 1.0, 0.0, 0.0);
 		glScalef(0.08, 1.0, 1.0);
 		glRotatef(24.0*val, 0.0, 0.0, 1.0);
-		draw_cylinder(0.78, 0.3, 0.1, 6, ndiv4x, 1);
+		draw_cylinder(0.78, 0.3, 0.1, 6, 1, 1); // FIXME: nstacks
 		glPopMatrix();
 	}
 
@@ -1743,14 +1741,14 @@ void uobj_draw_data::draw_dwexterm() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.052, 0.75);
 	glScalef(1.0, 0.7, 1.0);
-	draw_cylinder(0.4, 0.0, 0.1, ndiv, ndiv4x, 1);
+	draw_cylinder(0.4, 0.0, 0.1, ndiv, 1, 1); // FIXME: nstacks
 	glPopMatrix();
 
 	glPushMatrix();
 	glTranslatef(0.0, 0.04, 1.2);
 	glScalef(1.0, 1.0, 1.8);
 	glRotatef(-90.0, 1.0, 0.0, 0.0);
-	draw_cylinder(0.08, 0.14, 0.06, ndiv, ndiv4x, 1);
+	draw_cylinder(0.08, 0.14, 0.06, ndiv, 1, 1); // FIXME: nstacks
 	glPopMatrix();
 	color_a.do_glColor();
 	end_ship_texture();
@@ -2001,32 +1999,32 @@ void uobj_draw_data::draw_death_orb() const {
 
 void uobj_draw_data::draw_supply() const {
 
-	unsigned const ndiv2(get_ndiv(ndiv/2)), nstacks(dlights ? max(1, ndiv/5) : 1);
+	unsigned const ndiv2(get_ndiv(ndiv/2));
 	setup_draw_ship();
 	bool const textured(1);
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 
-	draw_cylinder(point(0.0, 0.0, 1.0), 0.4, 0.5, 0.5, ndiv, nstacks, 1); // front ring
+	draw_cylinder(point(0.0, 0.0, 1.0), 0.4, 0.5, 0.5, ndiv, 1, 1); // front ring // FIXME: nstacks
 	color_b.do_glColor();
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -1.0);
 	glScalef(1.0, 1.8, 1.0);
-	draw_cylinder_nstacks(1.8, 0.1, 0.1, ndiv2, (dlights ? max(1, ndiv/4) : 1), textured); // backbone
+	draw_cylinder_nstacks(1.8, 0.1, 0.1, ndiv2, 1, textured); // backbone // FIXME: nstacks
 	glPopMatrix();
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, 0.8);
-	draw_cylinder_nstacks(0.8, 0.45, 0.45, ndiv, nstacks, textured); // front cylinder
+	draw_cylinder_nstacks(0.8, 0.45, 0.45, ndiv, 1, textured); // front cylinder // FIXME: nstacks
 	glTranslatef(0.0, 0.0, -0.6);
-	draw_cylinder_nstacks(0.6, 0.00, 0.45, ndiv, nstacks, textured);
+	draw_cylinder_nstacks(0.6, 0.00, 0.45, ndiv, 1, textured); // FIXME: nstacks
 	glTranslatef(0.0, 0.0, -1.2);
 	glScalef(1.0, 1.5, 1.0);
-	draw_cylinder_nstacks(0.6, 0.3, 0.0, ndiv, (dlights ? max(1, ndiv/6) : 1), textured);
+	draw_cylinder_nstacks(0.6, 0.3, 0.0, ndiv, 1, textured); // FIXME: nstacks
 	glPopMatrix();
 	glPushMatrix();
 	glScalef(1.0, 1.0, 0.5);
 	draw_sphere_dlist(point(0.0, 0.0, 3.2), 0.45, ndiv, textured, 1); // front sphere
 	glPopMatrix();
-	draw_cube(point(0.0, 0.0, -1.3), 0.6, 0.9, 0.6, textured, (dlights ? max(1, ndiv/4) : 1), 1); // rear
+	draw_cube(point(0.0, 0.0, -1.3), 0.6, 0.9, 0.6, textured, 1, 1); // rear // FIXME: nstacks
 
 	if (ndiv > 4) { // draw engines
 		draw_ehousing_pairs(0.55, 0.2, 0.12, 0.1, 0.5, 0.0, 1, point(-0.25, -0.4, -1.7), point(0.0, 0.4, 0.0), 3);
@@ -2152,7 +2150,7 @@ void uobj_draw_data::draw_juggernaut() const {
 
 void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 
-	unsigned const nstacks(dlights ? max(1, ndiv/8) : 1), ndiv32(3*ndiv/2), ndiv2(get_ndiv(ndiv/2)), ndiv4(get_ndiv(ndiv/4));
+	unsigned const ndiv32(3*ndiv/2), ndiv2(get_ndiv(ndiv/2)), ndiv4(get_ndiv(ndiv/4));
 	bool const pt_light(can_have_engine_lights() && !(eflags & 1));
 	setup_draw_ship();
 	uniform_scale(1.5);
@@ -2166,10 +2164,10 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	glScalef(1.0, 1.0, 0.1);
 	draw_sphere_dlist(all_zeros, 1.0, ndiv32, 1); // center
 	glPopMatrix();
-	draw_cylinder_nstacks(0.4, 0.95, 0.15, ndiv32, nstacks, 1); // top
+	draw_cylinder_nstacks(0.4, 0.95, 0.15, ndiv32, 1, 1); // top // FIXME: nstacks
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -0.3);
-	draw_cylinder_nstacks(0.3, 0.2, 0.8, ndiv32, nstacks, 1); // bottom
+	draw_cylinder_nstacks(0.3, 0.2, 0.8, ndiv32, 1, 1); // bottom // FIXME: nstacks
 	glPopMatrix();
 	end_ship_texture();
 	if (pt_light) clear_colors_and_disable_light(GL_LIGHT7);
@@ -2180,7 +2178,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 		glTranslatef(0.0, 0.0, 0.4);
 
 		if (mothership) {
-			draw_cylinder_nstacks(0.6, 0.15, 0.0, ndiv2, nstacks, 0); // pointy top cylinder
+			draw_cylinder_nstacks(0.6, 0.15, 0.0, ndiv2, 1, 0); // pointy top cylinder // FIXME: nstacks
 		}
 		else {
 			glScalef(1.0, 1.0, 0.5);
@@ -2384,7 +2382,7 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -1.0);
-	draw_cylinder(1.5, 1.0, 1.0, 3*ndiv/2, (dlights ? max(1, ndiv/4) : 1), 1, 1, 0);
+	draw_cylinder(1.5, 1.0, 1.0, 3*ndiv/2, 1, 1, 1, 0); // FIXME: nstacks
 	glPopMatrix();
 
 	glPushMatrix();
@@ -2408,13 +2406,11 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 		glPopMatrix();
 	}
 	if (hw && ndiv > 3) {
-		unsigned const nstacks(dlights ? max(1, ndiv/6) : 1);
-
 		for (unsigned i = 0; i < 3; ++i) {
 			float const theta(TWO_PI*i/3.0), x(1.05*cosf(theta)), y(1.05*sinf(theta));
 			glPushMatrix();
 			glTranslatef(x, y, -0.6);
-			draw_cylinder(1.1, 0.2, 0.2, ndiv2, nstacks, 1, 1, 0);
+			draw_cylinder(1.1, 0.2, 0.2, ndiv2, 1, 1, 1, 0); // FIXME: nstacks
 			draw_sphere_dlist(point(0.0, 0.0, 0.0), 0.2, ndiv2, textured, 0);
 			draw_sphere_dlist(point(0.0, 0.0, 1.1), 0.2, ndiv2, textured, 0);
 			glPopMatrix();
