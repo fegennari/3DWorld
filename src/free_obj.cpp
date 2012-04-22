@@ -703,7 +703,7 @@ void free_obj::draw(point const &pos_) const { // view culling has already been 
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 			if (display_mode & 0x10) { // testing
-				glDisable(GL_LIGHTING);
+				set_emissive_color(GREEN); // will be reset
 				glPushMatrix();
 				global_translate(pos);
 
@@ -711,7 +711,7 @@ void free_obj::draw(point const &pos_) const { // view culling has already been 
 					if (sobjs[d] != &player_ship()) draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv, 1);
 				}
 				glPopMatrix();
-				glEnable(GL_LIGHTING);
+				clear_emissive_color();
 			}
 		} // partial_shadow
 	} // pass

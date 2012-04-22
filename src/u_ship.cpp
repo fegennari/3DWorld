@@ -2669,11 +2669,10 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 				rotate_sphere_tex_to_dir(hit_dir);
 			}
 			assert(radius > 0.0);
-			glDisable(GL_LIGHTING);
-			color_alpha.do_glColor();
+			set_emissive_color(color_alpha);
 			draw_sphere_dlist_back_to_front(all_zeros, ssize, ndiv, has_hit_dir); // partial sphere?
 			glDisable(GL_CULL_FACE);
-			glEnable(GL_LIGHTING);
+			clear_emissive_color();
 
 			if (has_hit_dir) {
 				end_texture();

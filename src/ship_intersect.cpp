@@ -648,7 +648,7 @@ void ushadow_volume::draw_geom(upos_point_type const &pos, bool test) const {
 	if (invalid) return;
 
 	if (test) {
-		glColor4f(cv, (1.0 - cv), 0.0, 0.25);
+		set_emissive_color(colorRGBA(cv, (1.0 - cv), 0.0, 0.25));
 		draw(pos);
 		return;
 	}

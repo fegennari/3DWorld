@@ -141,38 +141,40 @@ void ship_bounded_cylinder::draw(unsigned ndiv) const {
 
 
 inline int get_ndiv(int num) {
-
 	int ndiv(max(3, num));
 	if (ndiv > 8 && (ndiv&1)) ++ndiv; // an even size is divisible by 2
 	return ndiv;
 }
 
-
 void set_ship_texture(int tid) {
-	
 	select_texture(tid);
 	gluQuadricTexture(quadric, GL_TRUE);
 }
 
-
 void end_ship_texture() {
-	
 	gluQuadricTexture(quadric, GL_FALSE);
 	end_texture();
 }
 
-
 void draw_ship_flare(point const &pos, point const &xlate, float xsize, float ysize) {
-
 	draw_flare_no_blend(pos, xlate, xsize, ysize);
 	end_texture();
+}
+
+void set_emissive_color(colorRGBA const &color) {
+	color.do_glColor();
+	set_color_e(color);
+}
+
+
+void clear_emissive_color() {
+	set_color_e(BLACK);
 }
 
 
 void enable_ship_flares(colorRGBA const &color) {
 
-	glDisable(GL_LIGHTING);
-	color.do_glColor();
+	set_emissive_color(color);
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	select_texture(BLUR_TEX);
 	glNormal3f(0.0, 0.0, 1.0);
@@ -183,16 +185,15 @@ void disable_ship_flares() {
 
 	end_texture();
 	glDepthMask(GL_TRUE);
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 }
 
 
 void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color) {
 
-	glDisable(GL_LIGHTING);
-	color.do_glColor();
+	set_emissive_color(color);
 	draw_ship_flare(pos, xlate, xsize, ysize);
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 }
 
 
@@ -444,10 +445,9 @@ void uobj_draw_data::add_light_source(point const &lpos, float lradius, colorRGB
 void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) const {
 
 	if (!symmetric) glPopMatrix();
-	glDisable(GL_LIGHTING);
-	color.do_glColor();
+	set_emissive_color(color);
 	draw_sphere_dlist(all_zeros, 0.25, get_ndiv(ndiv/3), 0); // draw central area that shows up when the draw order is incorrect
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 	float angle(TWO_PI*time/TICKS_PER_SECOND);
 
 	for (unsigned i = 0; i < 2; ++i) {
@@ -542,10 +542,9 @@ void uobj_draw_data::draw_spherical_shot(colorRGBA const &color) const {
 		emissive_pld.add_pt(make_pt_global(pos), (get_player_pos2() - pos), color);
 		return;
 	}
-	glDisable(GL_LIGHTING);
-	color.do_glColor();
+	set_emissive_color(color);
 	draw_sphere_dlist(all_zeros, 1.0, min(ndiv, N_SPHERE_DIV/2), 0);
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 }
 
 
@@ -567,16 +566,15 @@ void uobj_draw_data::draw_usw_emp() const {
 
 	float const alpha(0.5*CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
 	glPushMatrix();
-	glDisable(GL_LIGHTING);
 	select_texture(SBLUR_TEX);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.01);
-	glColor4f(1.0, 0.9, 0.7, alpha);
+	set_emissive_color(colorRGBA(1.0, 0.9, 0.7, alpha));
 	glRotatef(90.0, 1.0, 0.0, 0.0);
 	draw_sphere_dlist_back_to_front(all_zeros, 1.0, ndiv, 1);
 	glDisable(GL_ALPHA_TEST);
 	end_texture();
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 	glPopMatrix();
 	if (animate2) gen_lightning_from(pos, radius, 0.5, obj);
 }
@@ -631,14 +629,13 @@ void uobj_draw_data::draw_usw_rfire() const {
 		return;
 	}
 	float const ctime(CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
-	glDisable(GL_LIGHTING);
 	glEnable(GL_CULL_FACE);
-	colorRGBA(1.0, (0.5 + 0.5*ctime), (0.1 + 0.1*ctime), 1.0).do_glColor();
+	set_emissive_color(colorRGBA(1.0, (0.5 + 0.5*ctime), (0.1 + 0.1*ctime), 1.0));
 	select_texture(PLASMA_TEX);
 	draw_torus(0.12, 0.72, get_ndiv(ndiv/2), ndiv, 1);
 	end_texture();
 	glDisable(GL_CULL_FACE);
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 }
 
 
@@ -666,8 +663,7 @@ void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point 
 									   float rad, float instability, bool lit) const
 {
 	colorRGBA const light_color(1.0, 0.95, 0.9);
-	glDisable(GL_LIGHTING);
-	WHITE.do_glColor();
+	set_emissive_color(light_color);
 	rotate_about(360.0*rand_float(), signed_rand_vector());
 	select_texture(NOISE_TEX);
 
@@ -676,7 +672,7 @@ void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point 
 	if (instability > 0.0) star_mesh.add_random(instability, -0.5*max(1.0f, instability), instability, 4);
 	star_mesh.draw_perturbed_sphere(all_zeros, rad, ndiv_, 1);
 
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 	glPopMatrix(); // undo transforms
 	enable_ship_flares(WHITE);
 	draw_engine(ALPHA0, lpos0, 3.0*rad*(1.0 + instability));
@@ -2038,7 +2034,6 @@ void uobj_draw_data::draw_supply() const {
 		draw_ehousing_pairs(0.55, 0.2, 0.12, 0.1, 0.5, 0.0, 1, point(-0.25, -0.4, -1.7), point(0.0, 0.4, 0.0), 3);
 	}
 	if (textured) end_ship_texture();
-	glDisable(GL_LIGHTING);
 	colorRGBA light_color(BLACK);
 
 	if (powered && ((2*time/TICKS_PER_SECOND) & 1)) { // draw blinky light
@@ -2047,9 +2042,9 @@ void uobj_draw_data::draw_supply() const {
 		}
 		if (light_color == BLACK) light_color = WHITE;
 	}
-	light_color.do_glColor();
+	set_emissive_color(light_color);
 	draw_sphere_dlist(point(0.0, 0.0, 1.825), 0.07, get_ndiv(ndiv/4), 0, 0);
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 	glPopMatrix(); // undo invert_z()
 
 	for (unsigned i = 0; i < 3; ++i) {
@@ -2120,13 +2115,12 @@ void uobj_draw_data::draw_juggernaut() const {
 			draw_sphere_dlist(eyes[i], 0.04, ndiv4, 0); // head
 		}
 	}
-	color_b.do_glColor();
 	glPushMatrix();
 	glTranslatef(0.0, 0.05, -0.45);
 	glScalef(0.55, 1.5, 1.0);
-	if (powered) glDisable(GL_LIGHTING);
+	if (powered) set_emissive_color(color_b); else color_b.do_glColor();
 	draw_sphere_dlist(all_zeros, 0.65, ndiv, 0); // back
-	if (powered) glEnable(GL_LIGHTING);
+	if (powered) clear_emissive_color();
 	glPopMatrix();
 	color_a.do_glColor();
 
@@ -2211,8 +2205,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 
 		for (unsigned is_lit = 0; is_lit < 2; ++is_lit) {
 			if (is_lit) {
-				glDisable(GL_LIGHTING); // always red
-				RED.do_glColor();
+				set_emissive_color(RED); // always red
 			}
 			else {
 				color_b.do_glColor();
@@ -2222,7 +2215,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 				float const theta(TWO_PI*i/float(nlights));
 				draw_sphere_dlist(point(cosf(theta), sinf(theta), 0.0), 0.045, ndiv4, 0);
 			}
-			if (is_lit) glEnable(GL_LIGHTING);
+			if (is_lit) clear_emissive_color();
 		}
 	}
 	end_specular();

@@ -274,6 +274,8 @@ float get_ship_cost     (unsigned sclass, unsigned align, unsigned reserve_credi
 bool alloc_resources_for(unsigned sclass, unsigned align, unsigned reserve_credits=0, float discount=0.0);
 
 // draw_ship.cpp
+void set_emissive_color(colorRGBA const &color);
+void clear_emissive_color();
 void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color);
 void draw_crosshair(upos_point_type const &pos, float dist, colorRGBA const &color);
 void draw_crosshair_from_camera(point const &pos, colorRGBA const &color);
