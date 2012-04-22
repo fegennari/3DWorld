@@ -13,5 +13,9 @@ void main()
 	for (int i = 0; i < 8; ++i) {
 		color += add_pt_light_comp(n, epos, i);
 	}
-	gl_FragColor = vec4(texel.rgb * clamp(color.rgb, 0.0, 1.0), texel.a * gl_Color.a); // use diffuse alpha directly
+	color = vec4(texel.rgb * clamp(color.rgb, 0.0, 1.0), texel.a * gl_Color.a); // use diffuse alpha directly
+#ifndef NO_FOG
+	color = apply_fog(color); // apply standard fog
+#endif
+	gl_FragColor = color;
 }

@@ -704,10 +704,12 @@ void draw_univ_objects(point const &pos) {
 
 	if (use_shaders) {
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		if (!glIsEnabled(GL_FOG)) s.set_prefix("#define NO_FOG", 1); // FS
 		s.set_vert_shader("ship_draw");
-		s.set_frag_shader("ads_lighting.part*+ship_draw");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+ship_draw");
 		s.begin_shader();
 		s.add_uniform_int("tex0", 0);
+		s.setup_fog_scale();
 	}
 	for (unsigned i = 0; i < nobjs2; ++i) { // draw ubojs
 		free_obj *fobj(sorted[i].second);
