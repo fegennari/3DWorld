@@ -1399,7 +1399,6 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		else {
 			draw_sphere_dlist(all_zeros, 1.0, ndiv2, 1);
 		}
-
 		glDisable(GL_ALPHA_TEST);
 	}
 	end_texture();

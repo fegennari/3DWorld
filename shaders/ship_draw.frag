@@ -5,9 +5,11 @@ varying vec3 normal; // world space
 
 void main()
 {
+	//gl_FragColor = gl_Color; return;
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	if (texel.a <= min_alpha) discard;
 	vec3 n = normalize(normal); // renormalize
+	//if (dot(n, epos.xyz) > 0.0) {n = -n;} // two-sided lighting
 	vec4 color = vec4(0,0,0,1);
 
 	for (int i = 0; i < 8; ++i) {

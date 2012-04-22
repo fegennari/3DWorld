@@ -699,10 +699,10 @@ void draw_univ_objects(point const &pos) {
 	shader_t s;
 	select_texture(WHITE_TEX, 0); // always textured (see end_texture())
 	set_lighted_sides(2); // doesn't hurt
-	enable_blend();
+	enable_blend(); // doesn't hurt
+	clear_emissive_color(); // just to be sure
 
 	if (use_shaders) {
-		s.setup_enabled_lights(8, 2); // FS
 		s.set_vert_shader("ship_draw");
 		s.set_frag_shader("ads_lighting.part*+ship_draw");
 		s.begin_shader();
