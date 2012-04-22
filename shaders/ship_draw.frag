@@ -7,8 +7,7 @@ void main()
 {
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	if (texel.a <= min_alpha) discard;
-	vec3 n = normalize(normal); // renormalize
-	//if (dot(n, epos.xyz) > 0.0) {n = -n;} // two-sided lighting
+	vec3 n = (gl_FrontFacing ? normalize(normal) : -normalize(normal)); // two-sided lighting
 	vec4 color = gl_FrontMaterial.emission;
 
 	for (int i = 0; i < 8; ++i) {
