@@ -703,6 +703,7 @@ void draw_univ_objects(point const &pos) {
 	clear_emissive_color(); // just to be sure
 
 	if (use_shaders) {
+		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		s.set_vert_shader("ship_draw");
 		s.set_frag_shader("ads_lighting.part*+ship_draw");
 		s.begin_shader();
