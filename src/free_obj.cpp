@@ -690,7 +690,6 @@ void free_obj::draw(point const &pos_) const { // view culling has already been 
 			glDepthFunc(GL_EQUAL);
 			glStencilFunc(GL_EQUAL, 0, ~0);
 			glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE); //glBlendFunc(GL_ONE, GL_ONE);
 			glCullFace(GL_BACK);
 			glDisable(GL_CULL_FACE);
@@ -714,7 +713,6 @@ void free_obj::draw(point const &pos_) const { // view culling has already been 
 				glPopMatrix();
 				glEnable(GL_LIGHTING);
 			}
-			glDisable(GL_BLEND);
 		} // partial_shadow
 	} // pass
 	//if (GET_DELTA_TIME > 10) cout << get_name() << ": " << GET_DELTA_TIME << endl;

@@ -699,6 +699,7 @@ void draw_univ_objects(point const &pos) {
 	shader_t s;
 	select_texture(WHITE_TEX, 0); // always textured (see end_texture())
 	set_lighted_sides(2); // doesn't hurt
+	enable_blend();
 
 	if (use_shaders) {
 		s.setup_enabled_lights(8, 2); // FS
@@ -712,12 +713,11 @@ void draw_univ_objects(point const &pos) {
 		assert(fobj != NULL);
 		if (!fobj->is_ok()) continue;
 		fobj->draw(pos);
-		fobj->reset_lights(); // reset for next frame
+		fobj->reset_lights(); // reset for next frameq
 	}
 	set_lighted_sides(1);
 	if (use_shaders) s.end_shader();
 	glDisable(GL_TEXTURE_2D);
-	enable_blend();
 	particle_pld.draw_and_clear();
 	glDisable(GL_LIGHTING);
 	emissive_pld.draw_and_clear();

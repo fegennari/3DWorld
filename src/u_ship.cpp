@@ -2568,7 +2568,6 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 	
 	if (cloaked > 0.0) {
 		assert(sc.has_cloak);
-		enable_blend();
 		ddata.cloakval = cloaked;
 		ddata.color_a  = ddata.apply_cloak(color_a);
 		ddata.color_b  = ddata.apply_cloak(color_b);
@@ -2636,7 +2635,6 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		//if (GET_DELTA_TIME > 10) PRINT_TIME(get_name());
 	}
 	if (over_temp > 0.0) set_color_e(BLACK);
-	if (cloaked   > 0.0) disable_blend();
 
 	if (ddata.final_pass && ddata.phase2) {
 		glDisable(GL_STENCIL_TEST); // disable in case it's enabled
@@ -2671,13 +2669,11 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 				rotate_sphere_tex_to_dir(hit_dir);
 			}
 			assert(radius > 0.0);
-			enable_blend();
 			glDisable(GL_LIGHTING);
 			color_alpha.do_glColor();
 			draw_sphere_dlist_back_to_front(all_zeros, ssize, ndiv, has_hit_dir); // partial sphere?
 			glDisable(GL_CULL_FACE);
 			glEnable(GL_LIGHTING);
-			disable_blend();
 
 			if (has_hit_dir) {
 				end_texture();

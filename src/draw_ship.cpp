@@ -164,29 +164,24 @@ void end_ship_texture() {
 
 void draw_ship_flare(point const &pos, point const &xlate, float xsize, float ysize) {
 
-	draw_flare(pos, xlate, xsize, ysize);
+	draw_flare_no_blend(pos, xlate, xsize, ysize);
 	end_texture();
 }
 
 
-// FIXME: duplicate code
 void enable_ship_flares(colorRGBA const &color) {
 
 	glDisable(GL_LIGHTING);
 	color.do_glColor();
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
-	enable_blend();
 	select_texture(BLUR_TEX);
 	glNormal3f(0.0, 0.0, 1.0);
 }
 
 
-// FIXME: duplicate code
 void disable_ship_flares() {
 
-	//glDisable(GL_TEXTURE_2D);
 	end_texture();
-	disable_blend();
 	glDepthMask(GL_TRUE);
 	glEnable(GL_LIGHTING);
 }
@@ -237,24 +232,20 @@ void draw_crosshair_from_camera(point const &pos, colorRGBA const &color) {
 
 void draw_cobjs(cobj_vector_t const &cobjs, unsigned ndiv) {
 
-	enable_blend();
 	colorRGBA(1.0, 1.0, 1.0, 0.25).do_glColor();
 
 	for (unsigned i = 0; i < cobjs.size(); ++i) {
 		assert(cobjs[i]);
 		cobjs[i]->draw(ndiv);
 	}
-	disable_blend();
 }
 
 
 void us_class::draw_bounding_volume(unsigned ndiv) const {
 
 	if (cobjs.empty()) {
-		enable_blend();
 		colorRGBA(1.0, 1.0, 1.0, 0.25).do_glColor();
 		bnd_sphere.draw(ndiv); // no special objects (incorrect for dynamic/growing objects)
-		disable_blend();
 	}
 	else {
 		draw_cobjs(cobjs, ndiv);
@@ -282,14 +273,12 @@ colorRGBA uobj_draw_data::apply_cloak(colorRGBA const &color) const {
 }
 
 
-void uobj_draw_data::draw_bounding_sphere(colorRGBA color) const {
+void uobj_draw_data::draw_bounding_sphere(colorRGBA color) const { // unused
 
 	glEnable(GL_CULL_FACE);
-	enable_blend();
 	color.alpha = 0.25;
 	color.do_glColor();
 	draw_sphere_dlist(all_zeros, crs, ndiv, 0);
-	disable_blend();
 	glDisable(GL_CULL_FACE);
 }
 
@@ -299,7 +288,6 @@ void uobj_draw_data::setup_exp_texture() const {
 	// Is this valid during explosion frames?
 	if (t_exp > 0.0) { // drops from 1.0 to 0.0
 		uniform_scale(1.0 + 0.25*(1.0 - t_exp));
-		enable_blend();
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.9 + 0.05*(1.0 - t_exp));
 		set_ship_texture(DISINT_TEX);
@@ -310,7 +298,6 @@ void uobj_draw_data::setup_exp_texture() const {
 void uobj_draw_data::end_exp_texture() const {
 
 	if (t_exp > 0.0) {
-		disable_blend();
 		glDisable(GL_ALPHA_TEST);
 		end_ship_texture();
 	}
@@ -580,7 +567,6 @@ void uobj_draw_data::draw_usw_emp() const {
 
 	float const alpha(0.5*CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
 	glPushMatrix();
-	enable_blend();
 	glDisable(GL_LIGHTING);
 	select_texture(SBLUR_TEX);
 	glEnable(GL_ALPHA_TEST);
@@ -591,7 +577,6 @@ void uobj_draw_data::draw_usw_emp() const {
 	glDisable(GL_ALPHA_TEST);
 	end_texture();
 	glEnable(GL_LIGHTING);
-	disable_blend();
 	glPopMatrix();
 	if (animate2) gen_lightning_from(pos, radius, 0.5, obj);
 }
@@ -649,11 +634,9 @@ void uobj_draw_data::draw_usw_rfire() const {
 	glDisable(GL_LIGHTING);
 	glEnable(GL_CULL_FACE);
 	colorRGBA(1.0, (0.5 + 0.5*ctime), (0.1 + 0.1*ctime), 1.0).do_glColor();
-	enable_blend();
 	select_texture(PLASMA_TEX);
 	draw_torus(0.12, 0.72, get_ndiv(ndiv/2), ndiv, 1);
 	end_texture();
-	disable_blend();
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_LIGHTING);
 }
@@ -1411,7 +1394,6 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.1);
 		select_texture(SMOKE_TEX);
-		enable_blend();
 		colorRGBA outer_color(color_a*0.75);
 		outer_color.do_glColor();
 
@@ -1421,7 +1403,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		else {
 			draw_sphere_dlist(all_zeros, 1.0, ndiv2, 1);
 		}
-		disable_blend();
+
 		glDisable(GL_ALPHA_TEST);
 	}
 	end_texture();
@@ -1482,10 +1464,8 @@ void uobj_draw_data::draw_tractor() const { // could be better
 	draw_cube(point(0.0, 0.0, 1.0), 0.4, 0.2, 0.4, textured, 1);
 	draw_ehousing_pairs(1.0, 0.25, 0.25, 0.3, 2.1, 0.0, 1, point(-1.05, 0.25, -0.8), point(0.0, -0.5, 0.0), 2); // length r1 r2 lcone dx dy
 	if (textured) end_ship_texture();
-	enable_blend();
 	set_cloak_color(colorRGBA(1.0, 1.0, 1.0, 0.5));
 	draw_cube(point(0.0, 0.0, 1.1), 0.8, 0.4, 0.65, 0, 1);
-	disable_blend();
 	glPopMatrix(); // undo invert_z()
 	draw_engine_pairs(WHITE, 0, 0.9, 1.0, 0.25, 1.0, point(0.0, -0.5, 0.0), 2); // escale dx dy dz
 }
@@ -1665,8 +1645,6 @@ void uobj_draw_data::draw_dwcarrier() const {
 	} // end phase1
 	if (phase2 && ndiv > 6) { // razorback
 		if (ndiv > 9) { // draw "holes" in backwards depth order
-			GLboolean const blend(glIsEnabled(GL_BLEND));
-			if (!blend) enable_blend();
 			ALPHA0.do_glColor();
 			glPushMatrix();
 			glRotatef(90.0, 0.0, 1.0, 0.0);
@@ -1677,7 +1655,6 @@ void uobj_draw_data::draw_dwcarrier() const {
 				if (i < 4) glTranslatef(-0.3, -0.04, 0.0);
 			}
 			glPopMatrix();
-			if (!blend) disable_blend();
 		}
 		color_b.do_glColor();
 		glRotatef(10.0, 1.0, 0.0, 0.0); // Note: push/pop not needed since this is the last draw
@@ -1890,7 +1867,6 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 
 	unsigned const ndiv_head(get_ndiv(3*ndiv/4)), ndiv_tail(get_ndiv(ndiv/3));
 	setup_draw_ship();
-	enable_blend();
 
 	if (phase1) { // draw head - eyes?
 		glPushMatrix();
@@ -1929,7 +1905,6 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 	}
 	if (phase2) draw_wraith_tail(0.27, ndiv_tail, rscale);
 	end_texture();
-	disable_blend();
 	glPopMatrix();
 	if (is_moving() && phase1) add_light_source(pos, 4.0*radius, color_b); // radius = f(health)?
 }
@@ -1994,11 +1969,9 @@ void uobj_draw_data::draw_reaper() const {
 		glPopMatrix();
 	}
 	color_b.do_glColor();
-	enable_blend();
 	//set_ship_texture(NOISE_TEX);
 	draw_sphere_dlist_back_to_front(all_zeros, 1.0, 3*ndiv/2, 0);
 	//end_ship_texture();
-	disable_blend();
 	if (can_have_engine_lights()) clear_colors_and_disable_light(GL_LIGHT7);
 	end_specular();
 	glPopMatrix(); // undo invert_z()
@@ -2494,7 +2467,7 @@ void uobj_draw_data::draw_black_hole() const { // should be non-rotated
 	float const dist_to_player(player_dir.mag());
 
 	if (dist_to_player > 2.0*radius) {
-		draw_flare(pos, player_dir*(1.2/dist_to_player), 3.0, 3.0); // move towards the camera
+		draw_flare_no_blend(pos, player_dir*(1.2/dist_to_player), 3.0, 3.0); // move towards the camera
 	}
 }
 

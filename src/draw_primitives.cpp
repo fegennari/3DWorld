@@ -703,19 +703,25 @@ void draw_textured_square_alpha_test(float size, float z, int tid) {
 }
 
 
-void draw_flare(point const &pos, point const &xlate, float xsize, float ysize) {
+void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, float ysize) {
 
 	glDepthMask(GL_FALSE);
-	enable_blend();
 	point const camera(get_camera_pos());
 	select_texture(BLUR_TEX);
 	(camera - pos).do_glNormal();
 	glBegin(GL_QUADS);
 	draw_billboard(xlate, (camera - pos + xlate), up_vector, xsize, ysize);
 	glEnd();
-	disable_blend();
 	glDepthMask(GL_TRUE);
 	glDisable(GL_TEXTURE_2D);
+}
+
+
+void draw_flare(point const &pos, point const &xlate, float xsize, float ysize) {
+
+	enable_blend();
+	draw_flare_no_blend(pos, xlate, xsize, ysize);
+	disable_blend();
 }
 
 

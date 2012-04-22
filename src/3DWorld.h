@@ -1435,6 +1435,7 @@ void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, bool do_tex)
 void rotate_towards_camera(point const &pos);
 void draw_textured_square(float size, float z, int tid);
 void draw_textured_square_alpha_test(float size, float z, int tid);
+void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, float ysize);
 void draw_flare(point const &pos, point const &xlate, float xsize, float ysize);
 void enable_flares(colorRGBA const &color, bool zoomed=0);
 void disable_flares();
