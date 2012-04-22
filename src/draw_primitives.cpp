@@ -665,10 +665,10 @@ void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, bool do_tex)
 			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				if (do_tex) glTexCoord2f(ts*(s+i), tt*t);
-				vector3d const delta(point(0.0, 0.0, cp) + pos[i]*sp);
+				if (do_tex) glTexCoord2f(ts*(s+1-i), tt*t);
+				vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
 				delta.do_glNormal();
-				(pos[i]*ro + delta*ri).do_glVertex();
+				(pos[1-i]*ro + delta*ri).do_glVertex();
 			}
 		}
 		glEnd();
