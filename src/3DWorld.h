@@ -1451,7 +1451,7 @@ void end_line_tquad_draw();
 void draw_animated_billboard(point const &pos, float size, float timescale);
 int  draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim=PRIM_DISABLED, bool no_normals=0, int eflags=0,
 	float texture_scale=1.0, vector3d const *const view_dir=NULL);
-void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv=0,
+void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv=1, bool scale_ndiv=0,
 			   float texture_scale=1.0, bool proportional_texture=0, vector3d const *const view_dir=NULL);
 int draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
 int  draw_simple_polygon(point const *const points, int npoints, vector3d const &norm, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
