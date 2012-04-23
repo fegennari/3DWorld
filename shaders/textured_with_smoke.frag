@@ -79,7 +79,7 @@ void main()
 	add_indir_lighting(lit_color);
 	
 	if (direct_lighting) { // directional light sources with no attenuation
-		vec3 n = normalize(eye_norm);
+		vec3 n = ((!two_sided_lighting || gl_FrontFacing) ? normalize(eye_norm) : -normalize(eye_norm)); // two-sided lighting
 		if (enable_light0) lit_color += add_light0(n, lpos0, vposl);
 		if (enable_light1) lit_color += add_light_comp_pos_smap(n, epos, 1).rgb;
 		if (enable_light2) ADD_LIGHT(2);
@@ -89,7 +89,10 @@ void main()
 		if (enable_light6) ADD_LIGHT(6);
 		if (enable_light7) ADD_LIGHT(7);
 	}
-	if (enable_dlights) lit_color += gl_FrontMaterial.diffuse.rgb * add_dlights(vpos, normalize(normal), eye); // dynamic lighting
+	if (enable_dlights) {
+		vec3 n = ((!two_sided_lighting || gl_FrontFacing) ? normalize(normal) : -normalize(normal)); // two-sided lighting
+		lit_color += gl_FrontMaterial.diffuse.rgb * add_dlights(vpos, n, eye); // dynamic lighting
+	}
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 
 	if (!smoke_enabled) {

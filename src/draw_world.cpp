@@ -49,7 +49,7 @@ pt_line_drawer_hdr snow_pld;
 
 
 extern GLUquadricObj* quadric;
-extern bool have_sun, underwater, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists;
+extern bool have_sun, underwater, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists, two_sided_lighting;
 extern bool group_back_face_cull, no_sun_lpos_update, have_indir_smoke_tex, create_voxel_landscape;
 extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
@@ -1786,6 +1786,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
 	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
 	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
+	s.set_bool_prefix("two_sided_lighting", two_sided_lighting, 1); // FS
 	if (use_spec_map) s.set_prefix("#define USE_SPEC_MAP",  1); // FS
 	
 	for (unsigned i = 0; i < 2; ++i) {

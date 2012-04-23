@@ -695,7 +695,7 @@ void draw_univ_objects(point const &pos) {
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
 	unsigned const nobjs2((unsigned)sorted.size());
 	//PRINT_TIME("Sort");
-	bool const use_shaders(!disable_shaders && !(display_mode & 0x08));
+	bool const use_shaders(!disable_shaders && (display_mode & 0x08));
 	shader_t s;
 	select_texture(WHITE_TEX, 0); // always textured (see end_texture())
 	set_lighted_sides(2); // doesn't hurt
