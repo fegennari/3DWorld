@@ -894,11 +894,11 @@ void display(void) {
 				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.B)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
 				glFogf(GL_FOG_END, fog_dist);
 			}
-			draw_camera_weapon(0);
 			check_gl_error(6);
 			if (TIMETEST) PRINT_TIME("4");
 			setup_object_render_data();
 			check_gl_error(101);
+			draw_camera_weapon(0);
 			if (TIMETEST) PRINT_TIME("4.5");
 			
 			if (display_mode & 0x01) { // draw mesh

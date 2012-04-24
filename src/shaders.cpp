@@ -64,6 +64,10 @@ void shader_t::set_uniform_color(int loc, colorRGB  const &val) const {
 	if (loc >= 0) glUniform3fv(loc, 1, &val.R);
 }
 
+void shader_t::set_uniform_matrid_4x4(int loc, float *m, bool transpose) const {
+	if (loc >= 0) glUniformMatrix4fv(loc, 1, transpose, m);
+}
+
 
 void shader_t::add_uniform_float_array(char const *const name, float const *const val, unsigned num) const {
 	if (!disable_shaders) set_uniform_float_array(get_uniform_loc(name), val, num);
@@ -87,6 +91,10 @@ void shader_t::add_uniform_color(char const *const name, colorRGBA const &val) c
 
 void shader_t::add_uniform_color(char const *const name, colorRGB  const &val) const {
 	if (!disable_shaders) set_uniform_color(get_uniform_loc(name), val);
+}
+
+void shader_t::add_uniform_matrid_4x4(char const *const name, float *m, bool transpose) const {
+	if (!disable_shaders) set_uniform_matrid_4x4(get_uniform_loc(name), m, transpose);
 }
 
 

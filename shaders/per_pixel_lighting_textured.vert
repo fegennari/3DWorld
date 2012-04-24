@@ -1,19 +1,18 @@
+uniform mat4 world_space_mvm;
+
 varying vec4 epos;
 varying vec3 eye, dlpos, normal; // world space
+varying vec3 dl_normal;
 
 void main()
 {
-	if (use_texgen) {
-		setup_texgen(0);
-	}
-	else {
-		gl_TexCoord[0] = gl_MultiTexCoord0;
-	}
-	vec3 n = gl_NormalMatrix * gl_Normal;
-	normal = (no_normalize ? n : normalize(n));
-	epos   = gl_ModelViewMatrix * gl_Vertex;
-	dlpos  = gl_Vertex.xyz;
-	eye    = gl_ModelViewMatrixInverse[3].xyz; // world space
+	gl_TexCoord[0] = gl_MultiTexCoord0;
+	epos      = gl_ModelViewMatrix * gl_Vertex;
+	normal    = normalize(gl_NormalMatrix * gl_Normal);
+	dl_normal = normalize((transpose(world_space_mvm) * vec4(normal, 1)).xyz);
+	mat4 mvm_inv = inverse(world_space_mvm);
+	dlpos     = (mvm_inv * epos).xyz;
+	eye       = mvm_inv[3].xyz;
 	gl_Position = ftransform();
 	set_fog();
 }

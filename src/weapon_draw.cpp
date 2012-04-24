@@ -303,7 +303,7 @@ void set_color_alpha(colorRGBA color, point const &pos, float alpha, bool shadow
 
 	color.alpha *= alpha;
 	colorRGBA const dcolor((shadowed && !use_smap_here()) ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
-	set_shadowed_color_custom_ad(color, dcolor, pos, shadowed);
+	set_shadowed_color_custom_ad(color, dcolor, pos, shadowed, 0, !disable_shaders); // shaders will handle dynamic lighting
 }
 
 
@@ -756,18 +756,20 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	if (draw_pass == 0 && !disable_shaders) {
 		bool const use_smap(use_smap_here());
 		s.setup_enabled_lights();
-		set_dlights_booleans(s, 0, 1); // disabled (for now)
+		set_dlights_booleans(s, 1, 1); // FS
 		for (unsigned d = 0; d < 2; ++d) s.set_bool_prefix("no_normalize", 0, d); // VS/FS
-		s.set_bool_prefix("use_texgen", 0, 0); // VS
 		s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
 		s.set_vert_shader("fog.part+texture_gen.part+per_pixel_lighting_textured");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+per_pixel_lighting_textured");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+per_pixel_lighting_textured");
 		s.begin_shader();
+		s.setup_scene_bounds();
+		setup_dlight_textures(s);
 		s.setup_fog_scale();
 		s.add_uniform_float("min_alpha", 0.9*alpha);
 		s.add_uniform_int("tex0", 0);
 		if (use_smap) set_smap_shader_for_all_lights(s, 0.005); // larger bias to reduce self-shadowing artifacts when the player moves across the shadow map/scene
 		select_texture(WHITE_TEX, 0); // always textured
+		upload_mvm_to_shader(s, "world_space_mvm");
 	}
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass);
