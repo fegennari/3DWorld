@@ -12,7 +12,7 @@ bool const USE_SMAP = 1;
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
-extern bool invalid_ccache, keep_beams, disable_shaders;
+extern bool invalid_ccache, keep_beams, disable_shaders, have_indir_smoke_tex;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, begin_motion;
 extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPONS, animate2;
 extern float fticks;
@@ -27,9 +27,7 @@ extern player_state *sstates;
 
 
 
-bool use_smap_here() {
-	return (USE_SMAP && shadow_map_enabled());
-}
+bool use_smap_here() {return (USE_SMAP && shadow_map_enabled());}
 
 
 void beam3d::draw() const {
@@ -303,7 +301,14 @@ void set_color_alpha(colorRGBA color, point const &pos, float alpha, bool shadow
 
 	color.alpha *= alpha;
 	colorRGBA const dcolor((shadowed && !use_smap_here()) ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
-	set_shadowed_color_custom_ad(color, dcolor, pos, shadowed, 0, !disable_shaders); // shaders will handle dynamic lighting
+	
+	if (!disable_shaders && have_indir_smoke_tex) {
+		set_color_a(BLACK);
+		set_color_d(dcolor);
+	}
+	else {
+		set_shadowed_color_custom_ad(color, dcolor, pos, shadowed, 0, !disable_shaders); // shaders will handle dynamic lighting
+	}
 }
 
 
@@ -759,8 +764,12 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 		set_dlights_booleans(s, 1, 1); // FS
 		for (unsigned d = 0; d < 2; ++d) s.set_bool_prefix("no_normalize", 0, d); // VS/FS
 		s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
-		s.set_vert_shader("fog.part+texture_gen.part+per_pixel_lighting_textured");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+per_pixel_lighting_textured");
+
+		for (unsigned i = 0; i < 2; ++i) {
+			s.set_bool_prefix("indir_lighting", have_indir_smoke_tex, i); // VS/FS
+		}
+		s.set_vert_shader("fog.part+texture_gen.part+indir_lighting.part+per_pixel_lighting_textured");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+indir_lighting.part+per_pixel_lighting_textured");
 		s.begin_shader();
 		s.setup_scene_bounds();
 		setup_dlight_textures(s);
@@ -770,10 +779,10 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 		if (use_smap) set_smap_shader_for_all_lights(s, 0.005); // larger bias to reduce self-shadowing artifacts when the player moves across the shadow map/scene
 		select_texture(WHITE_TEX, 0); // always textured
 		upload_mvm_to_shader(s, "world_space_mvm");
+		set_indir_lighting_block(s, have_indir_smoke_tex);
 	}
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass);
-
 	if (draw_pass == 0 && !disable_shaders) s.end_shader();
 	if (shooter == CAMERA_ID) fired = 0;
 	if (cull_face) glDisable(GL_CULL_FACE);

@@ -1760,24 +1760,30 @@ void common_shader_block_pre(shader_t &s, bool dlights, bool use_shadow_map, boo
 }
 
 
-void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bool use_smoke_indir, float min_alpha) {
+void set_indir_lighting_block(shader_t &s, bool use_smoke_indir) {
 
 	if (use_smoke_indir && smoke_tid) {
 		set_multitex(1);
 		bind_3d_texture(smoke_tid);
 	}
+	set_multitex(0);
+	s.add_uniform_int("smoke_and_indir_tex", 1);
+	s.add_uniform_float("half_dxy",  HALF_DXY);
+	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
+	colorRGB const black_color(0.0, 0.0, 0.0);
+	s.add_uniform_color("const_indir_color", (have_indir_smoke_tex ? black_color : const_indir_color));
+}
+
+
+void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bool use_smoke_indir, float min_alpha) {
+
 	s.setup_scene_bounds();
 	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
 	if (dlights && dl_tid > 0) setup_dlight_textures(s);
-	s.add_uniform_int("smoke_and_indir_tex", 1);
-	set_multitex(0);
+	set_indir_lighting_block(s, use_smoke_indir);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
-	s.add_uniform_float("half_dxy",  HALF_DXY);
-	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
-	colorRGB const black_color(0.0, 0.0, 0.0);
-	s.add_uniform_color("const_indir_color", (have_indir_smoke_tex ? black_color : const_indir_color));
 }
 
 
