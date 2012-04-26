@@ -50,7 +50,7 @@ pt_line_drawer_hdr snow_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, underwater, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists, two_sided_lighting;
-extern bool group_back_face_cull, no_sun_lpos_update, have_indir_smoke_tex, create_voxel_landscape;
+extern bool group_back_face_cull, no_sun_lpos_update, have_indir_smoke_tex, create_voxel_landscape, disable_shaders;
 extern int is_cloudy, do_zoom, xoff, yoff, xoff2, yoff2, iticks, display_mode, show_fog;
 extern int num_groups, frame_counter, world_mode, island, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, animate2;
@@ -148,37 +148,6 @@ void set_gl_light_pos(int light, point const &pos, float w) {
 	position[3] = w;
 	glLightfv(light, GL_POSITION, position);
 	gl_light_positions[light - GL_LIGHT0] = pos;
-}
-
-
-void draw_solid_object_groups() {
-
-	draw_waypoints();
-	draw_select_groups(1);
-	if (display_mode & 0x0200) d_part_sys.draw();
-}
-
-
-void draw_transparent_object_groups() {
-
-	draw_select_groups(0);
-}
-
-
-void draw_select_groups(int solid) {
-
-	if (!begin_motion) return;
-
-	for (int i = 0; i < num_groups; ++i) {
-		obj_group &objg(obj_groups[i]);
-
-		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) {
-			if ((objg.large_radius() && !(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {
-				invalid_ccache = 1;
-				draw_group(objg);
-			}
-		}
-	}
 }
 
 
@@ -418,6 +387,66 @@ void draw_unit_sphere(int ndiv, bool do_texture) {
 	draw_sphere_dlist_raw(ndiv, do_texture);
 #endif
 }
+
+
+void draw_solid_object_groups() {
+
+	draw_waypoints();
+	draw_select_groups(1);
+	if (display_mode & 0x0200) d_part_sys.draw();
+}
+
+
+void draw_transparent_object_groups() {
+
+	draw_select_groups(0);
+}
+
+
+void draw_select_groups(int solid) {
+
+	if (!begin_motion) return;
+#if 0
+	colorRGBA orig_fog_color;
+	shader_t s;
+	if (!disable_shaders) orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled());
+#endif
+
+	for (int i = 0; i < num_groups; ++i) {
+		obj_group &objg(obj_groups[i]);
+
+		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) {
+			if ((objg.large_radius() && !(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {
+				invalid_ccache = 1;
+				draw_group(objg);
+			}
+		}
+	}
+	//if (!disable_shaders) end_smoke_shaders(s, orig_fog_color);
+
+	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
+		set_specular(0.0, 1.0); // disable
+		select_texture(object_types[SNOW].tid);
+		check_drawing_flags(object_types[SNOW].flags, 1, 0);
+		glDepthMask(GL_FALSE);
+		shader_t s;
+		s.setup_enabled_lights();
+		s.set_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
+		s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+		s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
+		s.set_frag_shader("simple_texture");
+		s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
+		s.begin_shader();
+		s.add_uniform_float("size", 2.0*object_types[SNOW].radius); // Note: size no longer depends on angle
+		s.add_uniform_int("tex0", 0);
+		snow_pld.draw_and_clear();
+		s.end_shader();
+		glDepthMask(GL_TRUE);
+		glDisable(GL_TEXTURE_2D);
+		check_drawing_flags(object_types[SNOW].flags, 0, 0);
+	}
+}
+
 
 
 struct wap_obj {
@@ -792,24 +821,9 @@ void draw_group(obj_group &objg) {
 			glDisable(GL_ALPHA_TEST);
 			break;
 		case SNOW:
-			if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
-				shader_t s;
-				s.setup_enabled_lights();
-				s.set_prefix("vec4 apply_fog(in vec4 color) {return color;}", 1); // add pass-through fog implementation for FS
-				s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
-				s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
-				s.set_frag_shader("simple_texture");
-				s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
-				s.begin_shader();
-				s.add_uniform_float("size", 2.0*radius); // Note: size no longer depends on angle
-				s.add_uniform_int("tex0", 0);
-				snow_pld.draw_and_clear();
-				s.end_shader();
-			}
 			glDepthMask(GL_TRUE);
 			break;
 		}
-		glDisable(GL_TEXTURE_2D);
 		obj_pld.draw_and_clear();
 	} // small object
 	check_drawing_flags(flags, 0, 0);

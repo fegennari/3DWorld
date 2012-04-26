@@ -1354,7 +1354,6 @@ void draw_group(obj_group &objg);
 colorRGBA get_powerup_color(int powerup);
 void draw_shadow_volume(point const &pos, point const &lpos, float radius, int &inverts);
 int  draw_shadowed_objects(int light);
-void check_drawing_flags(unsigned flags, int init_draw);
 void set_specular(float specularity, float shininess);
 colorRGBA get_glowing_obj_color(point const &pos, int time, int lifetime, float &stime, bool shrapnel_cscale, bool fade);
 colorRGBA const &get_landmine_light_color(int time);
