@@ -1163,6 +1163,7 @@ inline void atten_by_water_depth(float *c, float dist) {
 #define set_color_a(Color) glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,             (const float *)&(Color))
 #define set_color_d(Color) glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,             (const float *)&(Color))
 #define set_color_e(Color) glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION,            (const float *)&(Color))
+#define set_color_s(Color) glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,            (const float *)&(Color))
 #define set_obj_color(obj) set_color(object_types[obj.type].color)
 
 
