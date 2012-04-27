@@ -1,4 +1,5 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
+uniform mat4 world_space_mvm;
 
 attribute vec4 tex0_s, tex0_t;
 
@@ -21,12 +22,21 @@ void main()
 	}
 	gl_Position   = ftransform();
 	gl_FrontColor = gl_Color;
-	normal   = normalize(gl_Normal);
-	eye_norm = normalize(gl_NormalMatrix * normal);
+	eye_norm = normalize(gl_NormalMatrix * gl_Normal);
 	epos     = gl_ModelViewMatrix * gl_Vertex;
-	vpos     = gl_Vertex.xyz;
-	eye      = gl_ModelViewMatrixInverse[3].xyz; // world space
-	setup_indir_lighting(normal);
+
+	if (use_world_space_mvm) {
+		normal = normalize((transpose(world_space_mvm) * vec4(eye_norm, 1)).xyz);
+		mat4 mvm_inv = inverse(world_space_mvm);
+		vpos   = (mvm_inv * epos).xyz; // world space
+		eye    = mvm_inv[3].xyz; // world space
+	}
+	else {
+		vpos = gl_Vertex.xyz;
+		eye  = gl_ModelViewMatrixInverse[3].xyz; // world space
+		normal   = normalize(gl_Normal);
+	}
+	setup_indir_lighting(vpos, normal);
 
 #ifdef USE_BUMP_MAP
 	setup_tbn();
@@ -37,7 +47,7 @@ void main()
 	}
 	else if (dynamic_smoke_shadows) {
 		lpos0 = (gl_ModelViewMatrixInverse * gl_LightSource[0].position).xyz;
-		pt_pair res2 = clip_line(gl_Vertex.xyz, lpos0, smoke_bb);
+		pt_pair res2 = clip_line(vpos, lpos0, smoke_bb);
 		lpos0 = res2.v1;
 		vposl = res2.v2;
 	}

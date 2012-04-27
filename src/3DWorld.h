@@ -1344,11 +1344,12 @@ void set_gl_light_pos(int light, point const &pos, float w);
 void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]);
 void clear_colors_and_disable_light(int light);
 int get_light();
-void draw_solid_object_groups();
-void draw_transparent_object_groups();
 void set_shadowed_color_custom_ad(colorRGBA const &ac, colorRGBA const &dc, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
 void set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
 bool pt_is_shadowed(point const &pos, int light, float radius, int cid, int fast);
+void draw_camera_weapon(bool want_has_trans);
+void draw_solid_object_groups();
+void draw_transparent_object_groups();
 void draw_select_groups(int solid);
 void draw_group(obj_group &objg);
 colorRGBA get_powerup_color(int powerup);
@@ -1362,8 +1363,8 @@ colorRGBA get_plasma_color(float size);
 void upload_mvm_to_shader(shader_t &s, char const *const var_name);
 void set_dlights_booleans(shader_t &s, bool enable, int shader_type);
 void set_indir_lighting_block(shader_t &s, bool use_smoke_indir);
-colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
-	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten=0, bool use_smap=0, bool use_bmap=0, bool use_spec_map=0);
+colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
+	bool dlights, bool smoke_en, bool has_lt_atten=0, bool use_smap=0, bool use_bmap=0, bool use_spec_map=0, bool use_mvm=0);
 void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color);
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_noise_tex,
 	float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);

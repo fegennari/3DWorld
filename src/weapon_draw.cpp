@@ -300,9 +300,11 @@ void update_weapon_cobjs() { // and update cblade and lighting
 void set_color_alpha(colorRGBA color, point const &pos, float alpha, bool shadowed) {
 
 	color.alpha *= alpha;
-	colorRGBA const dcolor((shadowed && !use_smap_here()) ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
+	colorRGBA const black_with_alpha(0.0, 0.0, 0.0, color.alpha);
+	colorRGBA const dcolor((shadowed && !use_smap_here()) ? black_with_alpha : color);
 	
 	if (!disable_shaders && have_indir_smoke_tex) {
+		black_with_alpha.do_glColor(); // sets alpha component
 		set_color_a(BLACK);
 		set_color_d(dcolor);
 	}
@@ -756,9 +758,11 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	unsigned const delay(max(1u, weapons[wid].fire_delay));
 	float const fire_val((float)sstate.fire_frame/(float)delay);
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
+	select_texture(WHITE_TEX, 0); // always textured, but not enabled
 	shader_t s;
+	bool const use_shader(draw_pass == 0 && !disable_shaders && shooter != CAMERA_ID);
 
-	if (draw_pass == 0 && !disable_shaders) {
+	if (use_shader) {
 		bool const use_smap(use_smap_here());
 		s.setup_enabled_lights();
 		set_dlights_booleans(s, 1, 1); // FS
@@ -777,13 +781,12 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 		s.add_uniform_float("min_alpha", 0.9*alpha);
 		s.add_uniform_int("tex0", 0);
 		if (use_smap) set_smap_shader_for_all_lights(s, 0.005); // larger bias to reduce self-shadowing artifacts when the player moves across the shadow map/scene
-		select_texture(WHITE_TEX, 0); // always textured
 		upload_mvm_to_shader(s, "world_space_mvm");
 		set_indir_lighting_block(s, have_indir_smoke_tex);
 	}
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass);
-	if (draw_pass == 0 && !disable_shaders) s.end_shader();
+	if (use_shader) s.end_shader();
 	if (shooter == CAMERA_ID) fired = 0;
 	if (cull_face) glDisable(GL_CULL_FACE);
 }
@@ -798,10 +801,15 @@ void draw_weapon_in_hand(int shooter) {
 
 
 void draw_scheduled_weapons() {
+	
+	if (scheduled_weapons.empty()) return;
+	shader_t s;
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, shadow_map_enabled(), 0, 0, 1));
 
 	for (set<int>::const_iterator i = scheduled_weapons.begin(); i != scheduled_weapons.end(); ++i) {
 		draw_weapon_in_hand_real(*i, 1);
 	}
+	end_smoke_shaders(s, orig_fog_color);
 	scheduled_weapons.clear();
 }
 

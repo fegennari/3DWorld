@@ -376,6 +376,16 @@ void vert_color::set_state(unsigned vbo) const { // typically called on element 
 }
 
 
+void draw_camera_weapon(bool want_has_trans) {
+
+	if (!game_mode || weap_has_transparent(CAMERA_ID) != want_has_trans) return;
+	shader_t s;
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, shadow_map_enabled(), 0, 0, 1));
+	draw_weapon_in_hand(-1);
+	end_smoke_shaders(s, orig_fog_color);
+}
+
+
 void draw_unit_sphere(int ndiv, bool do_texture) {
 
 #if 0
@@ -1802,8 +1812,8 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map
-colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting,
-	bool direct_lighting, bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map)
+colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
+	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map, bool use_mvm)
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
@@ -1814,8 +1824,9 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
 	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
 	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
-	s.set_bool_prefix("two_sided_lighting", two_sided_lighting, 1); // FS
-	if (use_spec_map) s.set_prefix("#define USE_SPEC_MAP",  1); // FS
+	s.set_bool_prefix("two_sided_lighting",  two_sided_lighting, 1); // FS
+	s.set_bool_prefix("use_world_space_mvm", use_mvm,     0); // VS
+	if (use_spec_map) s.set_prefix("#define USE_SPEC_MAP", 1); // FS
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		// Note: dynamic_smoke_shadows applies to light0 only
@@ -1839,6 +1850,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
+	if (use_mvm) upload_mvm_to_shader(s, "world_space_mvm");
 
 	// setup fog
 	//return change_fog_color(GRAY);

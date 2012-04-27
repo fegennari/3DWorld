@@ -539,12 +539,6 @@ void draw_universe_bkg(bool underwater, float depth) {
 }
 
 
-void draw_camera_weapon(bool want_has_trans) {
-
-	if (weap_has_transparent(CAMERA_ID) == want_has_trans) draw_weapon_in_hand(-1);
-}
-
-
 void draw_game_elements(int timer1) {
 
 	if (TIMETEST) PRINT_TIME("B");
