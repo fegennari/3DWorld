@@ -380,7 +380,7 @@ void draw_camera_weapon(bool want_has_trans) {
 
 	if (!game_mode || weap_has_transparent(CAMERA_ID) != want_has_trans) return;
 	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, shadow_map_enabled(), 0, 0, 1));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1));
 	draw_weapon_in_hand(-1);
 	end_smoke_shaders(s, orig_fog_color);
 }
@@ -419,7 +419,7 @@ void draw_select_groups(int solid) {
 #if 0
 	colorRGBA orig_fog_color;
 	shader_t s;
-	if (!disable_shaders) orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, shadow_map_enabled());
+	if (!disable_shaders) orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1);
 #endif
 
 	for (int i = 0; i < num_groups; ++i) {
@@ -482,7 +482,6 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 			draw_smiley(pos, obj.orientation, radius, ndiv, obj.time, obj.health, j, is_shadowed,
 				(in_ammo ? NULL : &objg.get_td()->get_mesh(j)));
 		}
-		draw_weapon_in_hand(j); // Note: view culling doesn't use correct bounding sphere for all weapons
 		break;
 	case SFPART:
 		draw_smiley_part(pos, pos, obj.orientation, obj.direction, 1, ndiv, is_shadowed);
@@ -666,6 +665,7 @@ void draw_group(obj_group &objg) {
 		vector<wap_obj> wap_vis_objs[2];
 		bool const gm_smiley(game_mode && type == SMILEY);
 		float const radius_ext(gm_smiley ? 2.0*radius : radius); // double smiley radius to account for weapons
+		vector<unsigned> smiley_weapons_to_draw;
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
@@ -673,6 +673,7 @@ void draw_group(obj_group &objg) {
 			point const &pos(obj.pos);
 			if (!sphere_in_camera_view(pos, radius_ext, clip_level)) continue;
 			bool const is_shadowed(is_object_shadowed(obj, calc_shadow, cd_scale, radius, light, num_shadow_test));
+			if (type == SMILEY) smiley_weapons_to_draw.push_back(j);
 
 			if ((int)is_shadowed != last_shadowed) {
 				set_obj_specular(is_shadowed, flags, specular_brightness); // slow?
@@ -712,6 +713,15 @@ void draw_group(obj_group &objg) {
 				set_shadowed_color(color, obj.pos, wa.is_shadowed, 0);
 				draw_subdiv_sphere(obj.pos, radius, wa.ndiv, 0, 0);
 			}
+		}
+		if (!smiley_weapons_to_draw.empty()) {
+			shader_t s;
+			colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 2, 0, 1, 0, 0, 1));
+
+			for (vector<unsigned>::const_iterator i = smiley_weapons_to_draw.begin(); i != smiley_weapons_to_draw.end(); ++i) {
+				draw_weapon_in_hand(*i); // Note: view culling doesn't use correct bounding sphere for all weapons
+			}
+			end_smoke_shaders(s, orig_fog_color);
 		}
 	} // large objects
 	else { // small objects
@@ -1943,7 +1953,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, shadow_map_enabled()));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1));
 	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled
 	int last_tid(-1), last_group_id(-1), last_type(-1);
 	
