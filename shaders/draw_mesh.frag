@@ -13,7 +13,7 @@ void main()
 	if (enable_light1) lit_color += add_light_comp_pos_smap(eye_norm, epos, 1);
 	lit_color = clamp(lit_color, 0.0, 1.0);
 
-	if (enable_dlights) lit_color.rgb += add_dlights(dlpos.xyz, normalize(normal), epos.xyz); // dynamic lighting
+	if (enable_dlights) lit_color.rgb += add_dlights(dlpos.xyz, normalize(normal), epos.xyz, vec3(1,1,1)); // dynamic lighting
 	vec4 color   = vec4((texel0.rgb * texel1.rgb * lit_color.rgb), (texel0.a * texel1.a * gl_Color.a));
 	gl_FragColor = apply_fog(color); // add fog
 }

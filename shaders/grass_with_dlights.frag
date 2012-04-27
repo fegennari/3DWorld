@@ -8,7 +8,7 @@ void main()
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	if (texel.a <= min_alpha) discard;
 	vec3 lit_color = gl_Color.rgb;
-	if (enable_dlights) lit_color += add_dlights(dlpos, normal, eye); // dynamic lighting
+	if (enable_dlights) lit_color += add_dlights(dlpos, normal, eye, vec3(1,1,1)); // dynamic lighting
 	vec4 color = vec4(texel.rgb * lit_color.rgb, texel.a * gl_Color.a);
 	gl_FragColor = apply_fog(color);
 }

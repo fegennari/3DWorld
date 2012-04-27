@@ -17,7 +17,7 @@ float get_intensity_at(in vec3 pos, in vec3 lpos, in float radius) { // Note: do
 	return rscale*rscale; // quadratic 1/r^2 attenuation
 }
 
-vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye) {
+vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye, in vec3 diff_color) {
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
 
 	vec3 color  = vec3(0,0,0);
@@ -61,7 +61,7 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye) {
 #ifdef USE_SPEC_MAP
 		spec_color    *= get_spec_color();
 #endif
-		color += lcolor.rgb * (spec_color*spec_mag + vec3(1,1,1)*diff_mag) * (lcolor.a * intensity);
+		color += lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
 	}
 	return min(color, 1.0);
 }

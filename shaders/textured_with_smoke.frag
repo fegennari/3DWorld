@@ -91,7 +91,7 @@ void main()
 	}
 	if (enable_dlights) {
 		vec3 n = ((!two_sided_lighting || gl_FrontFacing) ? normalize(normal) : -normalize(normal)); // two-sided lighting
-		lit_color += gl_FrontMaterial.diffuse.rgb * add_dlights(vpos, n, eye); // dynamic lighting
+		lit_color += add_dlights(vpos, n, eye, gl_FrontMaterial.diffuse.rgb); // dynamic lighting
 	}
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 
