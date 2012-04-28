@@ -855,7 +855,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (camera_mode == 1) camera_invincible = 1; // in air (else on ground)
 		break;
 
-	case 'h': // change camera surface collision detection
+	case 'h': // change camera surface collision detection / toggle universe planet LOD
 		if (world_mode == WMODE_UNIVERSE) {
 			univ_planet_lod = !univ_planet_lod;
 			break;

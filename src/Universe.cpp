@@ -27,7 +27,7 @@ bool const SHOW_SPHERE_TIME  = 0; // debugging
 bool const USE_SPHERE_DLISTS = 0; // sometimes faster on newer video cards, slower on older ones
 
 unsigned const MAX_TRIES     = 100;
-unsigned const SPHERE_MAX_ND = 128; // could be higher
+unsigned const SPHERE_MAX_ND = 256;
 int   const RAND_CONST       = 1;
 float const ROTREV_TIMESCALE = 1.0;
 float const ROT_RATE_CONST   = 0.5*ROTREV_TIMESCALE;
