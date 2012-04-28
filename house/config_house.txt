@@ -43,7 +43,7 @@ use_waypoints 1
 
 include config_gameplay.txt
 num_dodgeballs 6
-unlimited_weapons 0
+unlimited_weapons 1
 
 snow_depth 0.0
 snow_random 0.1

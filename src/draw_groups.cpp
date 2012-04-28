@@ -109,10 +109,10 @@ inline void set_color_v2(const colorRGBA &color, point const &pos, int status, b
 }
 
 
-void set_emissive_color_spec(colorRGBA const &color) {
+void set_emissive_color_obj(colorRGBA const &color) {
 	set_emissive_color(color);
 	set_color(color);
-	set_specular(0.0, 1.0); // should this be here?
+	//set_specular(0.0, 1.0); // should this be here?
 }
 
 
@@ -222,9 +222,9 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	bool const cull_face(get_cull_face(type, color));
 	if (cull_face) glEnable(GL_CULL_FACE);
 	
-	if (type == POWERUP || type == HEALTH || type == SHIELD || type == LANDMINE || type == PLASMA) {
-		check_drawing_flags(object_types[type].flags, 1, 0); // these objects are emissive, and specular needs to be set per-object
-	}
+	/*if (type == POWERUP || type == HEALTH || type == SHIELD || type == LANDMINE || type == PLASMA) {
+		check_drawing_flags(object_types[type].flags, 1, is_shadowed); // these objects are emissive, and specular needs to be set per-object
+	}*/
 	switch (type) {
 	case SMILEY:
 		if (!(obj.flags & CAMERA_VIEW)) {
@@ -1032,7 +1032,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, bool is_shadowed) {
 
-	set_emissive_color_spec((type == -1) ? color : get_powerup_color(type));
+	set_emissive_color_obj((type == -1) ? color : get_powerup_color(type));
 	draw_subdiv_sphere(pos, 0.7*radius, ndiv, 0, 0); // draw flare/billboard?
 	clear_emissive_color();
 	set_shadowed_color(color, pos, is_shadowed);
@@ -1180,7 +1180,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 
 	if (time > 5) {
 		pos.z += 0.15*radius;
-		set_emissive_color_spec(get_landmine_light_color(time));
+		set_emissive_color_obj(get_landmine_light_color(time));
 		draw_subdiv_sphere(pos, 0.15*radius, ndiv/2, 0, 0); // warning light
 		clear_emissive_color();
 	}
@@ -1205,7 +1205,7 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	else {
 		setup_texgen(0.2/radius, 0.2/radius, 0.0, 0.0, 0.0, tmode);
 	}
-	set_emissive_color_spec(color);
+	set_emissive_color_obj(color);
 	if (animate2) radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));
 	draw_sphere_dlist(pos, size*radius, ndiv, 1);
 	clear_emissive_color();
