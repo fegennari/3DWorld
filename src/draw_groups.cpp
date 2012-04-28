@@ -109,6 +109,13 @@ inline void set_color_v2(const colorRGBA &color, point const &pos, int status, b
 }
 
 
+void set_emissive_color_spec(colorRGBA const &color) {
+	set_emissive_color(color);
+	set_color(color);
+	set_specular(0.0, 1.0); // should this be here?
+}
+
+
 inline bool is_droplet(int type) {
 	return ((object_types[type].flags & OBJ_IS_DROP) || type == HAIL || type == CHARRED);
 }
@@ -119,6 +126,11 @@ inline bool get_cull_face(int type, colorRGBA const &color) {
 
 void draw_unit_sphere(int ndiv, bool do_texture) {
 	draw_sphere_dlist_raw(ndiv, do_texture);
+}
+
+void select_no_texture() {
+	//glDisable(GL_TEXTURE_2D);
+	select_texture(WHITE_TEX, 0);
 }
 
 
@@ -152,6 +164,7 @@ void draw_select_groups(int solid) {
 	colorRGBA orig_fog_color;
 	shader_t s;
 	if (!disable_shaders) orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1);
+	select_no_texture();
 #endif
 
 	for (int i = 0; i < num_groups; ++i) {
@@ -164,6 +177,7 @@ void draw_select_groups(int solid) {
 			}
 		}
 	}
+	glDisable(GL_TEXTURE_2D);
 	//if (!disable_shaders) end_smoke_shaders(s, orig_fog_color);
 
 	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
@@ -207,7 +221,10 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	point const &pos(obj.pos);
 	bool const cull_face(get_cull_face(type, color));
 	if (cull_face) glEnable(GL_CULL_FACE);
-
+	
+	if (type == POWERUP || type == HEALTH || type == SHIELD || type == LANDMINE || type == PLASMA) {
+		check_drawing_flags(object_types[type].flags, 1, 0); // these objects are emissive, and specular needs to be set per-object
+	}
 	switch (type) {
 	case SMILEY:
 		if (!(obj.flags & CAMERA_VIEW)) {
@@ -387,7 +404,6 @@ void draw_group(obj_group &objg) {
 			glPopMatrix();
 		} // for j
 		//s.end_shader();
-		//glDisable(GL_TEXTURE_2D);
 		disable_blend();
 		set_specular(0.0, 1.0);
 		glDisable(GL_ALPHA_TEST);
@@ -434,7 +450,7 @@ void draw_group(obj_group &objg) {
 		}
 		if (!wap_vis_objs[0].empty() || !wap_vis_objs[1].empty()) {
 			check_drawing_flags(otype.flags, 1, 0);
-			if (!select_texture(tid)) glDisable(GL_TEXTURE_2D);
+			if (!select_texture(tid)) select_no_texture();
 			gluQuadricTexture(quadric, do_texture);
 		}
 		for (unsigned j = 0; j < 2; ++j) {
@@ -490,7 +506,7 @@ void draw_group(obj_group &objg) {
 			if (type == FRAGMENT) {
 				tid = -obj.coll_id - 2; // should we sort fragments by texture id?
 				do_texture = select_texture(tid);
-				if (!do_texture) glDisable(GL_TEXTURE_2D);
+				if (!do_texture) select_no_texture();
 				UNROLL_3X(color2[i_] = obj.init_dir[i_];)
 				color2.alpha = obj.vdeform.y;
 			}
@@ -580,7 +596,7 @@ void draw_group(obj_group &objg) {
 	} // small object
 	check_drawing_flags(flags, 0, 0);
 	gluQuadricTexture(quadric, GL_FALSE);
-	glDisable(GL_TEXTURE_2D);
+	select_no_texture();
 
 	if (SHOW_DRAW_TIME) {
 		cout << "type = " << objg.type << ", num = " << objg.end_id << ", drawn = " << num_drawn << ", shadow tests: " << num_shadow_test << " ";
@@ -626,7 +642,7 @@ void draw_sized_point(dwobject const &obj, float radius, float cd_scale, const c
 		glBegin(GL_QUADS);
 		draw_billboard(pos, (pos + plus_z), vector3d(1.0, 0.0, 0.0), 5.0*radius, 5.0*radius);
 		glEnd();
-		glDisable(GL_TEXTURE_2D);
+		select_no_texture();
 		glDepthMask(GL_TRUE);
 		return;
 	}
@@ -705,9 +721,9 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 
 	if (atype >= 0) {
 		check_drawing_flags(object_types[atype].flags, 1, is_shadowed);
-		int const tex(select_texture(object_types[atype].tid));
-		if (!tex) glDisable(GL_TEXTURE_2D);
-		gluQuadricTexture(quadric, tex);
+		int const textured(select_texture(object_types[atype].tid));
+		if (!textured) select_no_texture();
+		gluQuadricTexture(quadric, textured);
 		set_shadowed_color(object_types[atype].color, pos, is_shadowed);
 		bool const cull_face(get_cull_face(atype, color));
 		if (cull_face) glEnable(GL_CULL_FACE);
@@ -934,7 +950,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	else {
 		draw_sphere_dlist(all_zeros, radius, ndiv, 1);
 	}
-	glDisable(GL_TEXTURE_2D);
+	select_no_texture();
 
 	if (teams > 1) { // draw team headband
 		set_shadowed_color(mult_alpha(get_smiley_team_color(id), alpha), pos, is_shadowed);
@@ -981,7 +997,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		select_texture(select_dodgeball_texture(id));
 		set_shadowed_color(mult_alpha(object_types[BALL].color, alpha), pos, is_shadowed);
 		draw_sphere_dlist(point(0.0, 1.3*radius, 0.0), 0.8*object_types[BALL].radius, ndiv, 1);
-		glDisable(GL_TEXTURE_2D);
+		select_no_texture();
 	}
 	glPopMatrix();
 	vector3d hit_dir;
@@ -1008,7 +1024,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			draw_sphere_dlist(pos, 1.05*radius, ndiv, 1);
 		}
 		disable_blend();
-		glDisable(GL_TEXTURE_2D);
+		select_no_texture();
 	}
 	if (alpha < 1.0) disable_blend();
 }
@@ -1016,11 +1032,9 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, bool is_shadowed) {
 
-	colorRGBA const color2((type == -1) ? color : get_powerup_color(type));
-	glDisable(GL_LIGHTING);
-	color2.do_glColor();
+	set_emissive_color_spec((type == -1) ? color : get_powerup_color(type));
 	draw_subdiv_sphere(pos, 0.7*radius, ndiv, 0, 0); // draw flare/billboard?
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 	set_shadowed_color(color, pos, is_shadowed);
 	draw_subdiv_sphere(pos, radius, ndiv, 0, 0);
 }
@@ -1101,7 +1115,7 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 	set_shadowed_color(WHITE, pos, is_shadowed); // since seekd is black, is_shadowed may always be 0
 	select_texture(SKULL_TEX);
 	draw_unit_sphere(ndiv, 1);
-	glDisable(GL_TEXTURE_2D);
+	select_no_texture();
 
 	glPopMatrix();
 	if (type == SEEK_D) gen_rocket_smoke(pos, orient, radius);
@@ -1134,8 +1148,8 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 		}
 	}
 	if (!DEBUG_COLORCODE) set_shadowed_color(WHITE, pos, is_shadowed);
-	draw_subdiv_sphere(pos, radius, ndiv, 1, 0); // man body
-	glDisable(GL_TEXTURE_2D);
+	draw_subdiv_sphere(pos, radius, ndiv, 1, 0); // main body
+	select_no_texture();
 	glPushMatrix();
 	translate_to(pos);
 	float const val(get_landmine_sensor_height(radius, time));
@@ -1166,12 +1180,11 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 
 	if (time > 5) {
 		pos.z += 0.15*radius;
-		get_landmine_light_color(time).do_glColor();
-		glDisable(GL_LIGHTING);
+		set_emissive_color_spec(get_landmine_light_color(time));
 		draw_subdiv_sphere(pos, 0.15*radius, ndiv/2, 0, 0); // warning light
-		glEnable(GL_LIGHTING);
+		clear_emissive_color();
 	}
-	if (glIsTexture(object_types[LANDMINE].tid)) glEnable(GL_TEXTURE_2D);
+	if (glIsTexture(object_types[LANDMINE].tid)) select_texture(object_types[LANDMINE].tid);
 }
 
 
@@ -1192,11 +1205,10 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	else {
 		setup_texgen(0.2/radius, 0.2/radius, 0.0, 0.0, 0.0, tmode);
 	}
-	glDisable(GL_LIGHTING);
-	color.do_glColor();
+	set_emissive_color_spec(color);
 	if (animate2) radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));
 	draw_sphere_dlist(pos, size*radius, ndiv, 1);
-	glEnable(GL_LIGHTING);
+	clear_emissive_color();
 	disable_texgen();
 	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) gen_particles(part_pos, 1);
 }

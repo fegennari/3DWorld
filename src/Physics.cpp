@@ -390,7 +390,7 @@ void init_objects() {
 	object_types[PLASMA].health            = 0.1;
 	object_types[PLASMA].color             = YELLOW;
 	object_types[PLASMA].color.alpha       = 0.6; // average color
-	object_types[PLASMA].flags             = LOW_SPECULAR | SELECTABLE | BLEND | SEMI_TRANSPARENT | OBJ_EXPLODES | EXPL_ON_COLL;
+	object_types[PLASMA].flags             = SELECTABLE | BLEND | SEMI_TRANSPARENT | OBJ_EXPLODES | EXPL_ON_COLL;
 	object_types[PLASMA].tid               = PLASMA_TEX;
 
 	object_types[GRENADE].air_factor       = 0.07;

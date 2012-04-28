@@ -1166,6 +1166,15 @@ inline void atten_by_water_depth(float *c, float dist) {
 #define set_color_s(Color) glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,            (const float *)&(Color))
 #define set_obj_color(obj) set_color(object_types[obj.type].color)
 
+inline void set_emissive_color(colorRGBA const &color) {
+	BLACK.do_glColor();
+	set_color_e(color);
+}
+
+inline void clear_emissive_color() {
+	set_color_e(BLACK);
+}
+
 
 // world modes
 enum {WMODE_GROUND=0, WMODE_UNIVERSE, WMODE_INF_TERRAIN, NUM_WMODE};

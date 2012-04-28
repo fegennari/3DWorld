@@ -161,15 +161,6 @@ void draw_ship_flare(point const &pos, point const &xlate, float xsize, float ys
 	end_texture();
 }
 
-void set_emissive_color(colorRGBA const &color) {
-	BLACK.do_glColor();
-	set_color_e(color);
-}
-
-void clear_emissive_color() {
-	set_color_e(BLACK);
-}
-
 
 void enable_ship_flares(colorRGBA const &color) {
 
