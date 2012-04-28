@@ -54,7 +54,7 @@ extern vector<camera_filter> cfilters;
 void check_xy_offsets();
 void post_window_redisplay();
 void display_universe();
-void display_inf_terrain();
+void display_inf_terrain(float uw_depth);
 bool universe_intersection_test(point const &pos, vector3d const &dir, float range);
 void update_temperature(bool verbose);
 void update_sound_loops();
@@ -834,7 +834,7 @@ void display(void) {
 		if (TIMETEST) PRINT_TIME("\n\n0");
 		
 		if (combined_gu) { // light from current system's star
-			draw_universe_bkg(underwater, depth); // infinite universe as background
+			if (world_mode != WMODE_INF_TERRAIN) draw_universe_bkg(underwater, depth); // infinite universe as background
 		}
 		else {
 			do_look_at();
@@ -848,7 +848,7 @@ void display(void) {
 		if (TIMETEST) PRINT_TIME("1");
 
 		if (world_mode == WMODE_INF_TERRAIN) { // infinite terrain mode
-			display_inf_terrain();
+			display_inf_terrain(depth);
 		}
 		else { // finite terrain mode
 			create_shadow_map(); // move down?
@@ -1114,7 +1114,7 @@ unsigned create_reflection() {
 }
 
 
-void display_inf_terrain() { // infinite terrain mode (Note: uses light params from ground mode)
+void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses light params from ground mode)
 
 	static int init_xx(1);
 	static float zmin2(0.0);
@@ -1165,13 +1165,15 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	
 	if (show_fog || underwater) {
 		colorRGBA const fog_color(set_inf_terrain_fog(underwater, zmin2));
-
-		if (!combined_gu) {
-			glClearColor_rgba(fog_color);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		}
+		glClearColor_rgba(fog_color);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
+	if (draw_water && !underwater) reflection_tid = create_reflection();
+
 	if (combined_gu) {
+		draw_universe_bkg(underwater, uw_depth); // infinite universe as background
+		check_gl_error(4);
+
 		enable_blend();
 		select_texture(BLUR_TEX_INV);
 		gluQuadricTexture(quadric, GL_TRUE);
@@ -1182,7 +1184,6 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		disable_blend();
 	}
 	else {
-		if (draw_water && !underwater) reflection_tid = create_reflection();
 		draw_sun_moon_stars();
 	}
 	draw_sun_flare();
