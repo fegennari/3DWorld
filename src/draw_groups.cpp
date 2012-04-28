@@ -477,11 +477,9 @@ void draw_group(obj_group &objg) {
 
 		switch (type) { // pre-draw
 		case SHRAPNEL:
-			glDisable(GL_LIGHTING);
 			glBegin(GL_TRIANGLES);
 			break;
 		case PARTICLE:
-			glDisable(GL_LIGHTING);
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.01);
 			glBegin(GL_QUADS);
@@ -579,13 +577,12 @@ void draw_group(obj_group &objg) {
 		} // for j
 		switch (type) { // post-draw
 		case SHRAPNEL:
+			clear_emissive_color();
 			glEnd();
-			glEnable(GL_LIGHTING);
-			glDisable(GL_ALPHA_TEST);
 			break;
 		case PARTICLE:
+			clear_emissive_color();
 			glEnd();
-			glEnable(GL_LIGHTING);
 			glDisable(GL_ALPHA_TEST);
 			break;
 		case SNOW:
@@ -1358,8 +1355,9 @@ colorRGBA get_glowing_obj_color(point const &pos, int time, int lifetime, float 
 void set_glow_color(dwobject const &obj, bool shrapnel_cscale) {
 
 	float stime;
-	colorRGBA const color(get_glowing_obj_color(obj.pos, obj.time, object_types[obj.type].lifetime, stime, shrapnel_cscale, ((obj.flags & TYPE_FLAG) != 0)));
-	(shrapnel_cscale ? color*CLIP_TO_01(1.0f - stime) : color).do_glColor();
+	colorRGBA color(get_glowing_obj_color(obj.pos, obj.time, object_types[obj.type].lifetime, stime, shrapnel_cscale, ((obj.flags & TYPE_FLAG) != 0)));
+	if (shrapnel_cscale) color *= CLIP_TO_01(1.0f - stime);
+	set_emissive_color_obj(color);
 }
 
 
