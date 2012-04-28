@@ -593,7 +593,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 			if (shooter == CAMERA_ID && fired) {
 				//beams.push_back(beam3d(0, shooter, p1, p2)); // should probably use this instead
-				set_color(RED);
+				RED.do_glColor();
 				set_color_e(RED);
 				glTranslatef(-tx, -ty, 0.148);
 				glRotatef(30.0, -dir.y, dir.x, 0.0);
@@ -638,7 +638,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (just_fired) {
 				float const size(((wmode&1) == 0) ? 0.02 : 0.0272);
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
-				set_color(ORANGE);
+				ORANGE.do_glColor();
 				set_color_e(ORANGE);
 				glTranslatef(0.0, 0.0, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
@@ -652,7 +652,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (just_fired) {
 				radius = 0.0042;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
-				set_color(ORANGE);
+				ORANGE.do_glColor();
 				set_color_e(ORANGE);
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
@@ -784,7 +784,7 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 	obj_group &objg(obj_groups[cid]);
 	if (shooter == CAMERA_ID || (objg.get_obj(shooter).flags & CAMERA_VIEW)) ndiv *= 3;
 	draw_plasma(pos, (pos + pos0), radius, psize, ndiv, 0, 1, 0);
-	glDisable(GL_TEXTURE_2D);
+	select_texture(WHITE_TEX, 0);
 	glDisable(GL_CULL_FACE);
 	if (psize < 0.9*MAX_PLASMA_SIZE) return;
 
