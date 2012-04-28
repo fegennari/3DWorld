@@ -14,6 +14,5 @@ void main()
 	dlpos     = (mvm_inv * epos).xyz;
 	eye       = mvm_inv[3].xyz;
 	gl_Position = ftransform();
-	if (indir_lighting) {spos = clamp((dlpos - scene_llc)/scene_scale, 0.0, 1.0);} // should be in [0.0, 1.0] range
 	set_fog();
 }
