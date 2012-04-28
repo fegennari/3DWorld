@@ -1268,6 +1268,7 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	blend_color(scolor, YELLOW, ORANGE, rand_uniform(0.3, 0.7), 1);
 	float const size(radius*rand_uniform(0.5, 0.7));
 	sparks.push_back(spark_t(spos, scolor, size));
+	add_dynamic_light(0.15, spos, scolor); // out of sync by a frame?
 	if (!in_ammo && (rand()&15) == 0) gen_particles(spos, 1, 0.5, 1);
 }
 
