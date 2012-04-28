@@ -1345,9 +1345,10 @@ void set_gl_light_pos(int light, point const &pos, float w);
 void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]);
 void clear_colors_and_disable_light(int light);
 int get_light();
+void get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed, bool precip, bool no_dynamic);
 void set_shadowed_color_custom_ad(colorRGBA const &ac, colorRGBA const &dc, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
 void set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
-bool pt_is_shadowed(point const &pos, int light, float radius, int cid, int fast);
+bool pt_is_shadowed(point const &pos, int light, float radius, int cid, bool fast, bool use_mesh);
 void draw_camera_weapon(bool want_has_trans);
 void draw_solid_object_groups();
 void draw_transparent_object_groups();
@@ -1786,6 +1787,7 @@ bool sball_collision(int index, int obj_index, vector3d const &velocity, point c
 bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 
+void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius);
 int get_smiley_hit(vector3d &hdir, int index);
 void blast_radius(point const &pos, int type, int obj_index, int shooter, int chain_level);
 void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview);
