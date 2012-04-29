@@ -264,10 +264,16 @@ void check_init_texture(int id) {
 }
 
 
-bool select_texture(int id, bool enable) {
+bool select_texture(int id, bool enable, bool white_tex_default) {
 
 	if (id < 0) {
-		glBindTexture(GL_TEXTURE_2D, 0); // bind to none
+		if (white_tex_default) {
+			check_init_texture(WHITE_TEX);
+			textures[WHITE_TEX].bind_gl();
+		}
+		else {
+			glBindTexture(GL_TEXTURE_2D, 0); // bind to none
+		}
 		return 0;
 	}
 	assert(id < NUM_TEXTURES);

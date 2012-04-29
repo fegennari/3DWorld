@@ -23,7 +23,7 @@ pt_line_drawer obj_pld;
 pt_line_drawer_hdr snow_pld;
 
 
-extern bool underwater, invalid_ccache;
+extern bool underwater, invalid_ccache, disable_shaders;
 extern int display_mode, num_groups, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, draw_model, animate2;
 extern float fticks, TIMESTEP, base_gravity, leaf_size, brightness;
@@ -182,7 +182,7 @@ void draw_select_groups(int solid) {
 
 	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 		set_specular(0.0, 1.0); // disable
-		select_texture(object_types[SNOW].tid);
+		select_texture(object_types[SNOW].tid, 1, 1);
 		check_drawing_flags(object_types[SNOW].flags, 1, 0);
 		glDepthMask(GL_FALSE);
 		shader_t s;
@@ -332,7 +332,7 @@ void draw_group(obj_group &objg) {
 	int tid(otype.tid), last_shadowed(-1);
 	float const radius(otype.radius), cd_scale(NDIV_SCALE*radius*window_width);
 	unsigned const flags(otype.flags);
-	bool do_texture(select_texture(tid));
+	bool do_texture(select_texture(tid, 1, 1));
 	colorRGBA color(otype.color), tcolor(color);
 	set_color(color);
 	gluQuadricTexture(quadric, do_texture);
@@ -375,7 +375,7 @@ void draw_group(obj_group &objg) {
 			int const tid(ordering[j].first);
 			
 			if (draw_model == 0 && tid != last_tid) {
-				select_texture(tid);
+				select_texture(tid, 1, 1);
 				last_tid = tid;
 			}
 			point pos(obj.pos);
@@ -450,7 +450,7 @@ void draw_group(obj_group &objg) {
 		}
 		if (!wap_vis_objs[0].empty() || !wap_vis_objs[1].empty()) {
 			check_drawing_flags(otype.flags, 1, 0);
-			if (!select_texture(tid)) select_no_texture();
+			select_texture(tid, 1, 1);
 			gluQuadricTexture(quadric, do_texture);
 		}
 		for (unsigned j = 0; j < 2; ++j) {
@@ -503,8 +503,7 @@ void draw_group(obj_group &objg) {
 			}
 			if (type == FRAGMENT) {
 				tid = -obj.coll_id - 2; // should we sort fragments by texture id?
-				do_texture = select_texture(tid);
-				if (!do_texture) select_no_texture();
+				do_texture = select_texture(tid, 1, 1);
 				UNROLL_3X(color2[i_] = obj.init_dir[i_];)
 				color2.alpha = obj.vdeform.y;
 			}
@@ -718,8 +717,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 
 	if (atype >= 0) {
 		check_drawing_flags(object_types[atype].flags, 1, is_shadowed);
-		int const textured(select_texture(object_types[atype].tid));
-		if (!textured) select_no_texture();
+		int const textured(select_texture(object_types[atype].tid, 1, 1));
 		gluQuadricTexture(quadric, textured);
 		set_shadowed_color(object_types[atype].color, pos, is_shadowed);
 		bool const cull_face(get_cull_face(atype, color));
@@ -991,7 +989,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		draw_smiley_part(pos4, pos, orient, SF_TONGUE, 0, ndiv2, is_shadowed);
 	}
 	if (game_mode == 2 && (sstates[id].p_ammo[W_BALL] > 0 || UNLIMITED_WEAPONS)) { // dodgeball
-		select_texture(select_dodgeball_texture(id));
+		select_texture(select_dodgeball_texture(id), 1, 1);
 		set_shadowed_color(mult_alpha(object_types[BALL].color, alpha), pos, is_shadowed);
 		draw_sphere_dlist(point(0.0, 1.3*radius, 0.0), 0.8*object_types[BALL].radius, ndiv, 1);
 		select_no_texture();
@@ -1039,7 +1037,7 @@ void draw_powerup(point const &pos, float radius, int ndiv, int type, const colo
 
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix) {
 
-	select_texture(tid);
+	select_texture(tid, 1, 1);
 	glPushMatrix();
 	translate_to(pos);
 	
@@ -1181,7 +1179,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 		draw_subdiv_sphere(pos, 0.15*radius, ndiv/2, 0, 0); // warning light
 		clear_emissive_color();
 	}
-	if (glIsTexture(object_types[LANDMINE].tid)) select_texture(object_types[LANDMINE].tid);
+	select_texture(object_types[LANDMINE].tid, 1, 1);
 }
 
 
