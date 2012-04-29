@@ -26,9 +26,8 @@ struct sky_pos_orient {
 
 
 // Global Variables
-bool invalid_ccache(1);
 float sun_radius, moon_radius, earth_radius, brightness(1.0);
-colorRGBA cur_ambient(BLACK), cur_diffuse(BLACK), last_a(BLACK), last_d(BLACK);
+colorRGBA cur_ambient(BLACK), cur_diffuse(BLACK);
 point sun_pos, moon_pos;
 point gl_light_positions[8] = {all_zeros};
 point const earth_pos(-15.0, -8.0, 21.0);
@@ -104,41 +103,12 @@ void set_gl_light_pos(int light, point const &pos, float w) {
 }
 
 
-inline void set_ad_colors(colorRGBA const &a, colorRGBA const &d) {
-
-	if (invalid_ccache || a != last_a) {
-		set_color_a(a);
-		last_a = a;
-	}
-	if (invalid_ccache || d != last_d) {
-		set_color_d(d);
-		last_d = d;
-	}
-	invalid_ccache = 0;
-}
-
-
 void get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed, bool precip, bool no_dynamic) {
 
 	if ((using_lightmap || create_voxel_landscape || (!no_dynamic && has_dl_sources)) && color_a != BLACK) { // somewhat slow
 		float const val(get_indir_light(color_a, (pos + vector3d(0.0, 0.0, 0.01)), no_dynamic, (is_shadowed || precip), NULL, NULL)); // get above mesh
 		if (precip && val < 1.0) is_shadowed = 1; // if precip, imply shadow status from indirect light value
 	}
-}
-
-
-void set_shadowed_color_custom_ad(colorRGBA const &ac, colorRGBA const &dc, point const &pos, bool is_shadowed, bool precip, bool no_dynamic) {
-
-	colorRGBA a(ac);
-	get_shadowed_color(a, pos, is_shadowed, precip, no_dynamic);
-	set_ad_colors(a, dc);
-}
-
-
-void set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip, bool no_dynamic) {
-
-	colorRGBA const dcolor(is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
-	set_shadowed_color_custom_ad(color, dcolor, pos, is_shadowed, precip, no_dynamic);
 }
 
 
@@ -156,6 +126,15 @@ bool pt_is_shadowed(point const &pos, int light, float radius, int cid, bool fas
 		if (fast) return (is_shadowed_lightmap(pos)); // use the precomputed lightmap value
 	}
 	return (!is_visible_to_light_cobj(pos, light, radius, cid, 0));
+}
+
+
+void set_color_alpha(colorRGBA color, float alpha) {
+
+	color.alpha *= alpha;
+	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor(); // sets alpha component
+	set_color_a(BLACK);
+	set_color_d(color);
 }
 
 
@@ -202,7 +181,6 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 	lines.draw(GL_LINES);
 	triangles.draw(GL_TRIANGLES);
 	if (!col_mat_en) glDisable(GL_COLOR_MATERIAL);
-	last_a = last_d = BLACK;
 	//cout << "mem: " << get_mem() << endl;
 }
 
@@ -404,7 +382,7 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke_indir) {
 	}
 	set_multitex(0);
 	s.add_uniform_int("smoke_and_indir_tex", 1);
-	s.add_uniform_float("half_dxy",  HALF_DXY);
+	s.add_uniform_float("half_dxy", HALF_DXY);
 	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
 	colorRGB const black_color(0.0, 0.0, 0.0);
 	s.add_uniform_color("const_indir_color", (have_indir_smoke_tex ? black_color : const_indir_color));

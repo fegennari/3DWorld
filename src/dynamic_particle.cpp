@@ -18,7 +18,6 @@ float    const MAX_D_HEIGHT   = 0.1;
 dynamic_particle_system d_part_sys;
 
 
-extern bool invalid_ccache;
 extern int window_width, iticks, begin_motion, animate2, display_mode, frame_counter;
 extern float zbottom, ztop, czmin, czmax, fticks, base_gravity, TIMESTEP, XY_SCENE_SIZE;
 extern texture_t textures[];
@@ -65,7 +64,11 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 		set_color(RGBA0); // hack to fix material color bug
 	}
 	else {
-		set_shadowed_color(color, pos, !is_visible_to_light_cobj(pos, get_light(), radius, -1, 0), 0, 0);
+		bool is_shadowed(!is_visible_to_light_cobj(pos, get_light(), radius, -1, 0));
+		colorRGBA a(color);
+		get_shadowed_color(a, pos, is_shadowed, 0, 0);
+		set_color_a(a);
+		set_color_d(is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
 	}
 	int const ndiv(min(N_SPHERE_DIV, max(3, int(3.0f*sqrt(radius*window_width/distance_to_camera(pos))))));
 	bool const bfc(!texture || !textures[tid].has_alpha());
@@ -174,7 +177,6 @@ void dynamic_particle_system::create_particles(unsigned num, bool only_if_empty)
 void dynamic_particle_system::draw() const {
 	
 	RESET_TIME;
-	invalid_ccache = 1;
 
 	for (unsigned i = 0; i < size(); ++i) {
 		particles[i].draw();

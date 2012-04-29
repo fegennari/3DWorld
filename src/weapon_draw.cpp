@@ -10,7 +10,7 @@
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
-extern bool invalid_ccache, keep_beams, have_indir_smoke_tex;
+extern bool keep_beams, have_indir_smoke_tex;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, begin_motion;
 extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPONS, animate2;
 extern float fticks;
@@ -292,15 +292,6 @@ void update_weapon_cobjs() { // and update cblade and lighting
 }
 
 
-void set_color_alpha(colorRGBA color, float alpha) {
-
-	color.alpha *= alpha;
-	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor(); // sets alpha component
-	set_color_a(BLACK);
-	set_color_d(color);
-}
-
-
 inline void rotate_to_dir(vector3d const &dir, float vadd, float vmult) {
 
 	glRotatef(TO_DEG*vmult*atan2(dir.y, dir.x) + vadd, 0.0, 0.0, 1.0);
@@ -353,7 +344,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		else return; // nothing to draw
 	}
 	assert(quadric);
-	invalid_ccache = 1;
 	dir.negate(); // used to be backwards
 	float rot_angle, radius, rxy;
 	//glDisable(GL_DEPTH_TEST);

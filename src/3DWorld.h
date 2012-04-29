@@ -1355,9 +1355,8 @@ void set_colors_and_enable_light(int light, float const ambient[4], float const 
 void clear_colors_and_disable_light(int light);
 int get_light();
 void get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed, bool precip, bool no_dynamic);
-void set_shadowed_color_custom_ad(colorRGBA const &ac, colorRGBA const &dc, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
-void set_shadowed_color(colorRGBA const &color, point const &pos, bool is_shadowed, bool precip=0, bool no_dynamic=0);
 bool pt_is_shadowed(point const &pos, int light, float radius, int cid, bool fast, bool use_mesh);
+void set_color_alpha(colorRGBA color, float alpha=1.0);
 void draw_camera_weapon(bool want_has_trans);
 void draw_solid_object_groups();
 void draw_transparent_object_groups();
