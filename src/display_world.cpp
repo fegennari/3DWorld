@@ -855,7 +855,6 @@ void display(void) {
 			display_inf_terrain(depth);
 		}
 		else { // finite terrain mode
-			create_shadow_map(); // move down?
 			if (TIMETEST) PRINT_TIME("1.5");
 
 			if (mesh_invalidated) {
@@ -894,6 +893,7 @@ void display(void) {
 			}
 			check_gl_error(6);
 			if (TIMETEST) PRINT_TIME("4");
+			create_shadow_map(); // where should this go?
 			setup_object_render_data();
 			check_gl_error(101);
 			draw_camera_weapon(0);
