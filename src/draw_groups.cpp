@@ -38,6 +38,7 @@ extern int coll_id[];
 
 
 
+void draw_group(obj_group &objg, shader_t &s);
 void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
 					  bool do_texture, int is_chunky=0);
 void draw_weapon2(dwobject const &obj, float radius);
@@ -174,14 +175,13 @@ void draw_select_groups(int solid) {
 	// FIXME:
 	// laser, plasma emission?
 	// droplets/points
-	// snow
 
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
 
 		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) {
 			if ((objg.large_radius() && !(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {
-				draw_group(objg);
+				draw_group(objg, s);
 			}
 		}
 	}
@@ -315,7 +315,7 @@ bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) {
 }
 
 
-void draw_group(obj_group &objg) {
+void draw_group(obj_group &objg, shader_t &s) {
 
 	RESET_TIME;
 	set_specular(0.0, 1.0); // disable
@@ -419,7 +419,9 @@ void draw_group(obj_group &objg) {
 			else if (type != SMILEY && type != SFPART && type != ROCKET && type != CHUNK &&
 				type != LANDMINE && type != PLASMA && type != POWERUP && type != HEALTH && type != SHIELD)
 			{
-				set_color_alpha(color);
+				colorRGBA color2(color);
+				scale_color_uw(color2);
+				set_color_alpha(color2);
 			}
 			++num_drawn;
 			float const pt_size(cd_scale/distance_to_camera(pos));
@@ -455,18 +457,13 @@ void draw_group(obj_group &objg) {
 		}
 	} // large objects
 	else { // small objects
-		switch (type) { // pre-draw
-		case SHRAPNEL:
+		if (type == SHRAPNEL) {
 			glBegin(GL_TRIANGLES);
-			break;
-		case PARTICLE:
+		}
+		else if (type == PARTICLE) {
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.01);
 			glBegin(GL_QUADS);
-			break;
-		case SNOW:
-			glDepthMask(GL_FALSE);
-			break;
 		}
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
@@ -490,7 +487,7 @@ void draw_group(obj_group &objg) {
 			}
 			if (type != SHRAPNEL && type != PARTICLE) {
 				if (type == DROPLET) select_liquid_color(color2, pos);
-				scale_color_uw(color2); // ???
+				scale_color_uw(color2);
 
 				if (do_texture) {
 					assert(tid >= 0);
@@ -547,21 +544,21 @@ void draw_group(obj_group &objg) {
 				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 0);
 			} // switch (type)
 		} // for j
-		switch (type) { // post-draw
-		case SHRAPNEL:
+		if (type == SHRAPNEL) {
 			clear_emissive_color();
 			glEnd();
-			break;
-		case PARTICLE:
+		}
+		else if (type == PARTICLE) {
 			clear_emissive_color();
 			glEnd();
 			glDisable(GL_ALPHA_TEST);
-			break;
-		case SNOW:
-			glDepthMask(GL_TRUE);
-			break;
 		}
-		obj_pld.draw_and_clear(); // FIXME: shaders
+		if (!obj_pld.empty()) {
+			select_no_texture();
+			if (s.is_setup()) s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+			obj_pld.draw_and_clear();
+			if (s.is_setup()) s.add_uniform_float("base_color_scale", 1.0);
+		}
 	} // small object
 	check_drawing_flags(flags, 0);
 	gluQuadricTexture(quadric, GL_FALSE);
