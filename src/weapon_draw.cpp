@@ -588,23 +588,23 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_LASER:
+			if (shooter == CAMERA_ID && fired) {
+				//beams.push_back(beam3d(0, shooter, (pos0 + dir*0.08), (pos0 + dir*1.08), RED)); // should probably use this instead
+				glPushMatrix();
+				set_emissive_color_only(RED);
+				glTranslatef(0.0, 0.0, 0.148);
+				glRotatef(30.0, -dir.y, dir.x, 0.0);
+				glTranslatef(tx, ty, 0.0);
+				gluCylinder(quadric, 0.0007, 0.0007, 0.103, ndiv, 1);
+				set_color_e(BLACK);
+				glPopMatrix();
+			}
 			set_color_alpha(colorRGBA(0.45, 0.45, 0.45), alpha);
 			set_specular(0.8, 50.0);
 			glTranslatef(tx, ty, 0.04);
 			gluCylinder(quadric, 0.006, 0.0015, 0.16, 2*ndiv, ndiv);
 			draw_sphere_dlist(point(0.0, 0.0, 0.0), 0.006, ndiv, 0);
-			glTranslatef(0.0, 0.0, -0.04);
 			set_specular(0.0, 1.0);
-
-			if (shooter == CAMERA_ID && fired) {
-				//beams.push_back(beam3d(0, shooter, p1, p2)); // should probably use this instead
-				set_emissive_color_only(RED);
-				glTranslatef(-tx, -ty, 0.148);
-				glRotatef(30.0, -dir.y, dir.x, 0.0);
-				glTranslatef(tx, ty, 0.0);
-				gluCylinder(quadric, 0.0007, 0.0007, 0.103, ndiv, 1);
-				set_color_e(BLACK);
-			}
 			break;
 
 		case W_GASSER:
