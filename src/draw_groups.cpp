@@ -172,9 +172,6 @@ void draw_select_groups(int solid) {
 	}
 	select_no_texture();
 	BLACK.do_glColor();
-	// FIXME:
-	// laser, plasma emission?
-	// droplets/points
 
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);

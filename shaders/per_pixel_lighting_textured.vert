@@ -14,5 +14,5 @@ void main()
 	dlpos     = (mvm_inv * epos).xyz;
 	eye       = mvm_inv[3].xyz;
 	gl_Position = ftransform();
-	set_fog();
+	gl_FogFragCoord = length(epos.xyz);
 }

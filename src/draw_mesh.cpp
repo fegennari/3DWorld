@@ -464,7 +464,7 @@ void display_mesh() { // fast array version
 			s.setup_enabled_lights();
 			set_dlights_booleans(s, 1, 1); // FS
 			s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
-			s.set_vert_shader("fog.part+texture_gen.part+draw_mesh");
+			s.set_vert_shader("texture_gen.part+draw_mesh");
 			s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh");
 			s.begin_shader();
 			if (shadow_map_enabled()) set_smap_shader_for_all_lights(s, 0.001);
@@ -803,7 +803,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		s.set_bool_prefix("reflections", reflections, 1); // FS
 		s.set_bool_prefix("add_waves", ((display_mode & 0x0100) != 0), 1); // FS
-		s.set_vert_shader("fog.part+texture_gen.part+water_plane");
+		s.set_vert_shader("texture_gen.part+water_plane");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
 		s.begin_shader();
 		s.setup_fog_scale();

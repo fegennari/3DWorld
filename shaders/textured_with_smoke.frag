@@ -101,7 +101,7 @@ void main()
 		if (color.a <= min_alpha) discard;
 #endif
 #ifndef NO_FOG
-		color = apply_fog(color); // apply standard fog
+		color = apply_fog_epos(color, epos); // apply standard fog
 #endif
 	}
 	else {

@@ -8,5 +8,5 @@ void main()
 	epos   = gl_ModelViewMatrix * gl_Vertex;
 	proj_pos = ftransform();
 	gl_Position = proj_pos;
-	set_fog();
+	gl_FogFragCoord = length(epos.xyz);
 }

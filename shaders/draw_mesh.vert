@@ -12,5 +12,5 @@ void main()
 	dlpos  = gl_Vertex;
 	epos   = gl_ModelViewMatrix * gl_Vertex;
 	gl_FrontColor = gl_Color;
-	set_fog();
+	gl_FogFragCoord = length(epos.xyz);
 } 

@@ -864,7 +864,6 @@
     <None Include="universe.modmap" />
     <None Include="cornell_box\coll_objs_box.txt" />
     <None Include="cornell_box\config_box.txt" />
-    <None Include="shaders\fog.part.vert" />
     <None Include="shaders\grass.vert" />
     <None Include="shaders\no_lighting_texture_gen.vert" />
     <None Include="shaders\no_lt_texgen_smoke.vert" />

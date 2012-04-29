@@ -13,5 +13,5 @@ void main()
 	dlpos  = gl_Vertex.xyz;
 	eye    = gl_ModelViewMatrixInverse[3].xyz; // world space
 	gl_Position = ftransform();
-	set_fog();
+	gl_FogFragCoord = length(epos.xyz);
 }

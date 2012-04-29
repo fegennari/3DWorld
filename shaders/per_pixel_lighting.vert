@@ -4,5 +4,5 @@ void main()
 {
 	normal = normalize(gl_NormalMatrix * gl_Normal);
 	gl_Position = ftransform();
-	set_fog();
+	gl_FogFragCoord = length((gl_ModelViewMatrix * gl_Vertex).xyz);
 }

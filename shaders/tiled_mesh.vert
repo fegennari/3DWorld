@@ -47,7 +47,7 @@ void main()
 
 	// calculate fog coord
 #if 0
-	set_fog();
+	gl_FogFragCoord = length((gl_ModelViewMatrix * gl_Vertex).xyz);
 #else
 	// clip the line to the water plane if the eye is above the water
 	// could use different terms/fog scaling/color for inside/outside water?

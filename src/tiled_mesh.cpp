@@ -470,7 +470,7 @@ public:
 
 	static void setup_mesh_draw_shaders(shader_t &s, float wpz) {
 		s.setup_enabled_lights();
-		s.set_vert_shader("fog.part+texture_gen.part+tiled_mesh");
+		s.set_vert_shader("texture_gen.part+tiled_mesh");
 		s.set_frag_shader("linear_fog.part+multitex_2");
 		s.begin_shader();
 		s.setup_fog_scale();

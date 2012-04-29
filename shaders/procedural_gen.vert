@@ -12,5 +12,5 @@ void main()
 	vpos     = gl_Vertex.xyz;
 	eye      = gl_ModelViewMatrixInverse[3].xyz; // world space
 	setup_indir_lighting(vpos, normal);
-	set_fog(); // set standard fog coord
+	gl_FogFragCoord = length(epos.xyz); // set standard fog coord
 } 
