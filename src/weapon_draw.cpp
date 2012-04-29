@@ -594,7 +594,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			gluCylinder(quadric, 0.006, 0.0015, 0.16, 2*ndiv, ndiv);
 			draw_sphere_dlist(point(0.0, 0.0, 0.0), 0.006, ndiv, 0);
 			glTranslatef(0.0, 0.0, -0.04);
-			set_specular(0.0, 0.0);
+			set_specular(0.0, 1.0);
 
 			if (shooter == CAMERA_ID && fired) {
 				//beams.push_back(beam3d(0, shooter, p1, p2)); // should probably use this instead
@@ -760,7 +760,7 @@ void draw_scheduled_weapons() {
 	
 	if (scheduled_weapons.empty()) return;
 	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1));
 
 	for (set<int>::const_iterator i = scheduled_weapons.begin(); i != scheduled_weapons.end(); ++i) {
 		draw_weapon_in_hand_real(*i, 1);

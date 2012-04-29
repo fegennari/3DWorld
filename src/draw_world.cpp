@@ -403,7 +403,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map
 colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
-	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map, bool use_mvm)
+	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl)
 {
 	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
@@ -414,7 +414,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
 	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
 	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
-	s.set_bool_prefix("two_sided_lighting",  two_sided_lighting, 1); // FS
+	s.set_bool_prefix("two_sided_lighting",  (two_sided_lighting || force_tsl), 1); // FS
 	s.set_bool_prefix("use_world_space_mvm", use_mvm,     0); // VS
 	if (use_spec_map) s.set_prefix("#define USE_SPEC_MAP", 1); // FS
 	

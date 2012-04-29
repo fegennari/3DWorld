@@ -26,7 +26,7 @@ pt_line_drawer_hdr snow_pld;
 extern bool underwater, disable_shaders;
 extern int display_mode, num_groups, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, draw_model, animate2;
-extern float fticks, TIMESTEP, base_gravity, leaf_size, brightness;
+extern float fticks, TIMESTEP, base_gravity, leaf_size, brightness, indir_vert_offset, cobj_z_bias;
 extern point leaf_points[], star_pts[];
 extern vector3d up_norm;
 extern GLUquadricObj* quadric;
@@ -134,7 +134,7 @@ void select_no_texture() {
 }
 
 
-inline void scale_color_uw(colorRGBA &color) {
+void scale_color_uw(colorRGBA &color) {
 
 	if (!underwater) return;
 	color.R *= 0.45;
@@ -160,16 +160,21 @@ void draw_transparent_object_groups() {
 void draw_select_groups(int solid) {
 
 	if (!begin_motion) return;
+	float const orig_ivo(indir_vert_offset), orig_czb(cobj_z_bias); // store original variable values FIXME: pass into setup_smoke_shaders?
 	colorRGBA orig_fog_color;
 	shader_t s;
-	if (!disable_shaders) orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1);
+	
+	if (!disable_shaders) {
+		indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
+		cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
+		orig_fog_color    = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1);
+	}
 	select_no_texture();
 	BLACK.do_glColor();
 	// FIXME:
-	// two-sided lighting
-	// make indir_vert_offset small
-	// make cobj_z_bias larger
-	// laser emission?
+	// laser, plasma emission?
+	// droplets/points
+	// snow
 
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
@@ -182,6 +187,8 @@ void draw_select_groups(int solid) {
 	}
 	glDisable(GL_TEXTURE_2D);
 	if (!disable_shaders) end_smoke_shaders(s, orig_fog_color);
+	indir_vert_offset  = orig_ivo; // restore original variable values
+	cobj_z_bias        = orig_czb;
 
 	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 		set_specular(0.0, 1.0); // disable
@@ -330,7 +337,6 @@ void draw_group(obj_group &objg) {
 
 	if (type == LEAF) { // leaves
 		int last_tid(-1);
-		set_lighted_sides(2);
 		enable_blend();
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
@@ -380,7 +386,7 @@ void draw_group(obj_group &objg) {
 			UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
 			if (leaf_color != BLACK) blend_color(leaf_color, dry_color, leaf_color, t, 0);
 			set_color_alpha(leaf_color);
-			glBegin(GL_QUADS);
+			glBegin(GL_QUADS); // Note: needs 2-sided lighting
 
 			for (unsigned k = 0; k < 4; ++k) {
 				glTexCoord2f(float(k>>1), float(k==0||k==3));
@@ -393,7 +399,6 @@ void draw_group(obj_group &objg) {
 		disable_blend();
 		set_specular(0.0, 1.0);
 		glDisable(GL_ALPHA_TEST);
-		set_lighted_sides(1);
 	} // leaf
 	else if (objg.large_radius()) { // large objects
 		vector<wap_obj> wap_vis_objs[2];
@@ -523,11 +528,9 @@ void draw_group(obj_group &objg) {
 			case FRAGMENT: // draw_fragment()?
 				if (obj.vdeform.z > 0.0) { // shatterable - use triangle
 					set_color_v2(color2, obj.status);
-					set_lighted_sides(2);
-					glBegin(GL_TRIANGLES);
+					glBegin(GL_TRIANGLES); // Note: needs 2-sided lighting
 					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0)); // obj.vdeform.z = tscale
 					glEnd();
-					set_lighted_sides(1);
 					break;
 				}
 				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 2);
@@ -558,7 +561,7 @@ void draw_group(obj_group &objg) {
 			glDepthMask(GL_TRUE);
 			break;
 		}
-		obj_pld.draw_and_clear();
+		obj_pld.draw_and_clear(); // FIXME: shaders
 	} // small object
 	check_drawing_flags(flags, 0);
 	gluQuadricTexture(quadric, GL_FALSE);
@@ -612,13 +615,16 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		glDepthMask(GL_TRUE);
 		return;
 	}
-	if (!draw_large || draw_snowflake) { // draw as a point
+	if (draw_snowflake) { // draw as a point to be converted to a billboard by the geometry shader
 		colorRGBA a(do_texture ? tcolor : color);
 		bool is_shadowed(is_object_shadowed(obj, cd_scale, radius));
-		get_shadowed_color(a, pos, is_shadowed, precip, 0); // FIXME: replace with lighting computation in the shader?
+		snow_pld.add_pt(pos, (get_light_pos() - pos), a);
+		return;
+	}
+	if (!draw_large) { // draw as a point
 		bool const scatters(type == RAIN || type == SNOW);
-		vector3d const n(is_shadowed ? (pos - get_light_pos()) : ((scatters ? get_light_pos() : camera) - pos));
-		if (draw_snowflake) snow_pld.add_pt(pos, n, a); else obj_pld.add_pt(pos, n, a);
+		vector3d const n((scatters ? get_light_pos() : camera) - pos);
+		obj_pld.add_pt(pos, n, (do_texture ? tcolor : color));
 		return;
 	}
 	colorRGBA color_l(color);
@@ -1253,8 +1259,7 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 		rotate_by_vector(init_dir, -90.0);
 		if (angle != 0.0) rotate_about(angle, orient);
 	}
-	set_lighted_sides(2);
-	glBegin(GL_TRIANGLES);
+	glBegin(GL_TRIANGLES); // Note: needs 2-sided lighting
 
 	for (int i = N_STAR_POINTS-1; i >= 0; --i) {
 		int ii((i == 0) ? (N_STAR_POINTS<<1)-1 : (i<<1)-1);
@@ -1265,7 +1270,6 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 		star_pts[ii].do_glVertex();
 	}
 	glEnd();
-	set_lighted_sides(1);
 	glPopMatrix();
 }
 
@@ -1281,8 +1285,7 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	glRotatef(TO_DEG*init_dir.x, 0.0, 0.0, 1.0);
 	//rotate_by_vector(init_dir, 0.0);
 	rotate_about(angle, orient);
-	uniform_scale(radius);
-	set_lighted_sides(2);
+	uniform_scale(radius); // Note: needs 2-sided lighting
 
 	if (type == 0) { // M16 shell casing
 		gluCylinder(quadric, 1.0, 1.0, 4.0, ndiv, 1);
@@ -1300,7 +1303,6 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	else {
 		assert(0);
 	}
-	set_lighted_sides(1);
 	glPopMatrix();
 	//glDepthMask(0);
 }
