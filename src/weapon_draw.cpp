@@ -333,6 +333,14 @@ void draw_chaingun_section(float tx, float ty, float radius, int ndiv) {
 }
 
 
+void set_emissive_color_only(colorRGBA const &color) {
+
+	color.do_glColor();
+	set_color_e(color);
+	set_color(BLACK);
+}
+
+
 void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid, int wmode, int fframe, int p_loaded,
 				 int ammo, int rot_counter, unsigned delay, int shooter, int sb_tex, float alpha, float dpos,
 				 float fire_val, float scale, bool draw_pass)
@@ -499,9 +507,16 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			gluCylinder(quadric, 0.005, 0.0, 0.07, 2*ndiv, ndiv);
 			//gluCylinder(quadric, radius, radius, 0.18, 2*ndiv, ndiv);
 			{
-				colorRGBA const color(0.8, 0.6, 1.0);
-				set_color_alpha(color, 0.5*alpha);
-				if (p_loaded) set_color_e(color);
+				colorRGBA color(0.8, 0.6, 1.0);
+				
+				if (p_loaded) {
+					set_color_e(color);
+					color.alpha = 0.5*alpha;
+					color.do_glColor();
+				}
+				else {
+					set_color_alpha(color, 0.5*alpha);
+				}
 				glScalef(1.0, 1.0, 0.2);
 				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.25), 0.01, ndiv, 0, 0);
 				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.17), 0.01, ndiv, 0, 0);
@@ -593,8 +608,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 			if (shooter == CAMERA_ID && fired) {
 				//beams.push_back(beam3d(0, shooter, p1, p2)); // should probably use this instead
-				RED.do_glColor();
-				set_color_e(RED);
+				set_emissive_color_only(RED);
 				glTranslatef(-tx, -ty, 0.148);
 				glRotatef(30.0, -dir.y, dir.x, 0.0);
 				glTranslatef(tx, ty, 0.0);
@@ -638,8 +652,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (just_fired) {
 				float const size(((wmode&1) == 0) ? 0.02 : 0.0272);
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
-				ORANGE.do_glColor();
-				set_color_e(ORANGE);
+				set_emissive_color_only(ORANGE);
 				glTranslatef(0.0, 0.0, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
 				draw_textured_square_alpha_test(size, 0.0, BLUR_TEX);
@@ -652,8 +665,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (just_fired) {
 				radius = 0.0042;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
-				ORANGE.do_glColor();
-				set_color_e(ORANGE);
+				set_emissive_color_only(ORANGE);
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
 				point const translates[2] = {point(-0.9*rdx, -0.9*rdy, 0.124), point(1.9*rdx, 1.9*rdy, -0.002)};
