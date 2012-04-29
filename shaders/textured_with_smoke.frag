@@ -2,6 +2,7 @@ uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta, half_dxy;
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
+uniform float base_color_scale = 1.0;
 
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6];
@@ -75,7 +76,7 @@ void main()
 		} // else exiting ray in back surface - ignore for now since we don't refract the ray
 	}
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
-	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
+	vec3 lit_color = gl_Color.rgb*base_color_scale; // base color (with some lighting)
 	add_indir_lighting(lit_color);
 	
 	if (direct_lighting) { // directional light sources with no attenuation
