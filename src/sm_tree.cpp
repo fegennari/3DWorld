@@ -178,23 +178,25 @@ void draw_small_trees(bool shadow_only) {
 	if (small_trees.size() < 100) { // shadow_only?
 		sort(small_trees.begin(), small_trees.end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
-
-	// two pass draw is more efficient because it avoids texture thrashing
-	for (unsigned pass = 0; pass < 2; ++pass) { // first pass: draw trunk, second pass: draw leaves
-		for (unsigned i = 0; i < small_trees.size(); ++i) {
-			small_tree const &t(small_trees[i]);
-			
-			if (pass == 1 && (i == 0 || small_trees[i-1].get_type() != t.get_type())) {
-				small_trees[i].pre_leaf_draw(); // first of this type
-			}
-			t.draw((1 << pass), shadow_only);
-			
-			if (pass == 1 && (i+1 == small_trees.size() || small_trees[i+1].get_type() != t.get_type())) {
-				t.post_leaf_draw(); // last of this type
-			}
-		}
-		glDisable(GL_TEXTURE_2D);
+	for (unsigned i = 0; i < small_trees.size(); ++i) { // draw branches
+		small_tree const &t(small_trees[i]);
+		t.draw(1, shadow_only);
 	}
+	for (unsigned i = 0; i < small_trees.size(); ++i) { // draw leaves
+		small_tree const &t(small_trees[i]);
+		set_lighted_sides(2);
+			
+		if (i == 0 || small_trees[i-1].get_type() != t.get_type()) {
+			small_trees[i].pre_leaf_draw(); // first of this type
+		}
+		t.draw(2, shadow_only);
+			
+		if (i+1 == small_trees.size() || small_trees[i+1].get_type() != t.get_type()) {
+			t.post_leaf_draw(); // last of this type
+		}
+		set_lighted_sides(1);
+	}
+	glDisable(GL_TEXTURE_2D);
 	gluQuadricTexture(quadric, GL_FALSE);
 	tree_scenery_pld.draw_and_clear();
 	//PRINT_TIME("small tree draw");
@@ -326,16 +328,12 @@ void small_tree::calc_points() { // pine trees
 
 void small_tree::pre_leaf_draw() const {
 
-	if ((type == T_PINE || type == T_SH_PINE) && (draw_model != 0)) {
-		glDisable(GL_TEXTURE_2D);
-	}
-	else {
-		select_texture(stt[type].tid);
-	}
+	bool const untextured((type == T_PINE || type == T_SH_PINE) && (draw_model != 0));
+	select_texture(untextured ? WHITE_TEX : stt[type].tid);
+
 	switch (type) {
 	case T_PINE: // pine tree
 	case T_SH_PINE: // short pine tree
-		set_lighted_sides(2);
 		enable_blend();
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
@@ -365,7 +363,6 @@ void small_tree::post_leaf_draw() const {
 	case T_SH_PINE: // short pine tree
 		glDisable(GL_ALPHA_TEST);
 		disable_blend();
-		set_lighted_sides(1);
 		break;
 	case T_DECID: // decidious tree
 		glDisable(GL_ALPHA_TEST);
