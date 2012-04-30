@@ -278,6 +278,9 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close, bool i
 
 void gen_decal(point const &pos, float radius, vector3d const &orient, int cid, float init_alpha, colorRGBA const &color, bool is_glass_) {
 
+	static point last_pos(all_zeros);
+	if (dist_less_than(pos, last_pos, TOLERANCE)) return; // skip duplicate locations
+	last_pos = pos;
 	decal_obj decal;
 	decal.gen(pos, radius, orient, cid, init_alpha, color, is_glass_);
 	if (decal.is_on_cobj(cid)) decals[decals.choose_element()] = decal;
