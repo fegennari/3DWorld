@@ -135,8 +135,9 @@ void select_no_texture() {
 }
 
 
-void scale_color_uw(colorRGBA &color) {
+void scale_color_uw(colorRGBA &color, point const &pos) {
 
+	water_color_atten_at_pos(color, pos); // ???
 	if (!underwater) return;
 	color.R *= 0.45;
 	color.G *= 0.45;
@@ -417,7 +418,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 				type != LANDMINE && type != PLASMA && type != POWERUP && type != HEALTH && type != SHIELD)
 			{
 				colorRGBA color2(color);
-				scale_color_uw(color2);
+				scale_color_uw(color2, pos);
 				set_color_alpha(color2);
 			}
 			++num_drawn;
@@ -484,7 +485,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			}
 			if (type != SHRAPNEL && type != PARTICLE) {
 				if (type == DROPLET) select_liquid_color(color2, pos);
-				scale_color_uw(color2);
+				scale_color_uw(color2, pos);
 
 				if (do_texture) {
 					assert(tid >= 0);

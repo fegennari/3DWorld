@@ -45,8 +45,8 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 float msms2(1.0);
 
 
-extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, DISABLE_WATER, draw_model;
-extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, max_water_height, fticks;
+extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, draw_model;
+extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, fticks;
 extern GLUquadricObj* quadric;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern rand_gen_t global_rand_gen;
@@ -115,14 +115,7 @@ float scenery_obj::get_shadowed_color(point const &p, float eff_radius) const { 
 
 colorRGBA scenery_obj::get_atten_color(colorRGBA c) const {
 
-	// Note: could make this work in inf terrain mode if water_matrix[][] is always equal to water_plane_z
-	if (!DISABLE_WATER && world_mode == WMODE_GROUND && (pos.z + radius) < max_water_height) {
-		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
-		
-		if (!point_outside_mesh(x, y) && (pos.z + radius) < water_matrix[y][x]) {
-			water_color_atten(((float *)&(c.R)), x, y, (pos + point(0.0, 0.0, radius)));
-		}
-	}
+	water_color_atten_at_pos(c, (pos + point(0.0, 0.0, radius)));
 	return c;
 }
 

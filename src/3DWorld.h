@@ -1709,6 +1709,7 @@ vector3d get_firing_dir(vector3d const &src, vector3d const &dest, float fvel, f
 bool get_water_enabled(int x, int y);
 bool has_water(int x, int y);
 bool mesh_is_underwater(int x, int y);
+void water_color_atten_at_pos(colorRGBA &c, point const &pos);
 void select_water_ice_texture(colorRGBA &color, float *use_this_temp=NULL);
 void draw_water();
 void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound);

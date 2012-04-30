@@ -155,6 +155,19 @@ bool mesh_is_underwater(int x, int y) {
 }
 
 
+void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
+
+	// Note: could make this work in inf terrain mode if water_matrix[][] is always equal to water_plane_z
+	if (!DISABLE_WATER && world_mode == WMODE_GROUND && pos.z < max_water_height) {
+		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
+		
+		if (!point_outside_mesh(x, y) && pos.z < water_matrix[y][x]) {
+			water_color_atten((float *)&(c.R), x, y, pos);
+		}
+	}
+}
+
+
 void select_water_ice_texture(colorRGBA &color, float *use_this_temp) {
 
 	if (((use_this_temp != NULL) ? *use_this_temp : temperature) > W_FREEZE_POINT) { // water
