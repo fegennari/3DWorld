@@ -79,7 +79,7 @@ texture_t(0, 0, 512,  512,  1, 3, 2, "desert_sand.raw"),
 texture_t(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "camoflage.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
-texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp"),
+texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 1, 8.0),
 texture_t(0, 2, 512,  512,  1, 3, 1, "manhole.bmp"),
 texture_t(0, 0, 128,  128,  1, 4, 3, "palmtree.raw"),
 texture_t(1, 0, 256,  256,  1, 4, 1, "@smoke.raw"),  // not real file
@@ -88,9 +88,9 @@ texture_t(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
 texture_t(2, 0, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
 texture_t(1, 0, 128,  128,  0, 3, 0, "@tree_end.raw"),  // not real file
 texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi.raw"), // not real file, mipmap for trees?
-texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp"),   // not real file
-texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw"),
-texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw"),
+texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp", 1, 8.0),   // not real file
+texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw", 1, 16.0),
+texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw", 1, 8.0),
 texture_t(0, 0, 128,  128,  0, 4, 3, "mj_leaf.raw"),
 texture_t(0, 0, 128,  128,  0, 4, 3, "live_oak.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "leaf2.raw"),
@@ -99,7 +99,7 @@ texture_t(0, 0, 256,  256,  0, 4, 3, "plant1.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant2.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant3.raw"),
 texture_t(0, 0, 64,   64,   0, 4, 3, "hibiscus.raw"),
-texture_t(1, 0, 256,  256,  1, 3, 1, "@fence.raw"), // not real file, light paneling
+texture_t(1, 0, 256,  256,  1, 3, 1, "@fence.raw", 1, 8.0), // not real file, light paneling
 texture_t(0, 2, 128,  128,  1, 3, 1, "skull.raw"),
 texture_t(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
 texture_t(0, 2, 128,  128,  1, 3, 1, "yuck.raw"),
@@ -110,15 +110,15 @@ texture_t(0, 0, 256,  256,  1, 4, 1, "blur_s.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 0, "pine.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "noise.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "wood.raw"),
-texture_t(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw"),
-texture_t(0, 0, 128,  128,  1, 3, 1, "particleb.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw", 1, 8.0),
+texture_t(0, 0, 128,  128,  1, 3, 1, "particleb.raw", 1, 8.0),
 texture_t(0, 0, 128,  128,  1, 3, 1, "plaster.raw"),
-texture_t(0, 0, 256,  256,  1, 3, 1, "tile.raw"),
+texture_t(0, 0, 256,  256,  1, 3, 1, "tile.raw", 1, 8.0),
 texture_t(0, 2, 256,  32,   1, 3, 1, "CommandCAD.raw"),
 texture_t(1, 0, 32,   32,   1, 4, 1, "@disint.raw"),   // not real file
 texture_t(1, 0, 256,  256,  1, 4, 1, "@blur_inv.raw"), // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe.raw"),  // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe.raw"),  // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe.raw", 1, 8.0),  // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe.raw", 1, 8.0),  // not real file
 texture_t(0, 0, 512,  512,  1, 3, 1, "bcube.raw"),
 texture_t(0, 0, 512,  512,  0, 4, 1, "explosion.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "shiphull.raw"),
@@ -424,7 +424,7 @@ void texture_t::do_gl_init() {
 	}
 	//cout << "bind texture" << name << endl;
 	assert(is_allocated() && width > 0 && height > 0);
-	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap);
+	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap, 0, 0, 0, anisotropy);
 	//if (use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
 	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), GL_UNSIGNED_BYTE, data);
 	if (use_mipmaps == 1 || use_mipmaps == 2) gen_mipmaps();
@@ -1068,7 +1068,7 @@ void bind_2d_texture(unsigned tid) {
 }
 
 
-void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest) {
+void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest, float anisotropy) {
 
 	assert(tid == 0);
 	assert(!nearest || !mipmap);
@@ -1085,6 +1085,9 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 
 	// when texture area is large, bilinear filter the first mipmap
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
+
+	// enable anisotropic filtering (slower but higher quality)
+	if (anisotropy > 1.0) glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);
 
 	// if wrap is true,  the texture wraps over at the edges (repeat) or is mirrored
 	// if wrap is false, the texture ends at the edges (clamp)

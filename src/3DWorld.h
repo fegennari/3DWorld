@@ -925,6 +925,7 @@ public:
 	char type, format, use_mipmaps;
 	bool wrap, do_compress, has_binary_alpha;
 	int width, height, ncolors, bump_tid, alpha_tid;
+	float anisotropy;
 
 private:
 	unsigned char *data, *orig_data, *colored_data, *mm_data;
@@ -934,12 +935,12 @@ private:
 
 public:
 	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), width(0), height(0), ncolors(0),
-		bump_tid(-1), alpha_tid(-1), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
+		bump_tid(-1), alpha_tid(-1), anisotropy(1.0), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
-	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool do_comp=1)
+	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool do_comp=1, float a=1.0)
 		: name(n), type(t), format(f), use_mipmaps(um), wrap(wra), do_compress(do_comp), has_binary_alpha(0),
-		width(w), height(h), ncolors(nc), bump_tid(-1), alpha_tid(-1), data(0), orig_data(0), colored_data(0),
-		mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
+		width(w), height(h), ncolors(nc), bump_tid(-1), alpha_tid(-1), anisotropy(a), data(0), orig_data(0),
+		colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	void init();
 	void do_gl_init();
 	GLenum calc_internal_format() const;
@@ -1735,7 +1736,8 @@ bool select_texture(int id, bool enable=1, bool white_tex_default=0);
 float get_tex_ar(int id);
 void bind_1d_texture(unsigned tid);
 void bind_2d_texture(unsigned tid);
-void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s=0, bool mirror_t=0, bool nearest=0);
+void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t,
+	bool mirror_s=0, bool mirror_t=0, bool nearest=0, float anisotropy=1.0);
 void free_textures();
 void reset_textures();
 void free_texture(unsigned &tid);
