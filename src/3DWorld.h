@@ -1152,6 +1152,14 @@ colorRGBA const BACKGROUND_NIGHT(BLACK);
 #define GET_DELTA_TIME   (GET_TIME_MS() - timer1)
 #define PRINT_TIME(str) {cout << str << " time = " << GET_DELTA_TIME << endl;}
 
+#if 0 // still only ms accuracy in windows
+#include <time.h>
+#define GET_TIME_CLOCK()  clock()
+#define RESET_TIME2       clock_t const timer1(GET_TIME_CLOCK());
+#define GET_DELTA_TIME2   double(GET_TIME_CLOCK() - timer1)/double(CLOCKS_PER_SEC)
+#define PRINT_TIME2(str) {cout << str << " time = " << GET_DELTA_TIME << endl;}
+#endif
+
 
 inline void atten_by_water_depth(float *c, float dist) {
 	float const m[3] = {0.98, 0.97, 0.95};
