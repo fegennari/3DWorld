@@ -30,19 +30,21 @@ struct cloud_t {
 };
 
 
+float get_xy_cloud_scale() {return ((world_mode == WMODE_INF_TERRAIN) ? 4.0 : 1.0);}
+
+
 void cloud_manager_t::create_clouds() { // 3D cloud puffs
 
 	unsigned const NCLOUDS = 10;
 	unsigned const NPARTS  = 1000;
+	float const xsz(X_SCENE_SIZE*get_xy_cloud_scale()), ysz(Y_SCENE_SIZE*get_xy_cloud_scale());
 	clear();
 	srand(123);
 
 	for (unsigned c = 0; c < NCLOUDS; ++c) {
-		point const center(4.0*X_SCENE_SIZE*signed_rand_float(),
-			               4.0*Y_SCENE_SIZE*signed_rand_float(),
+		point const center(4.0*xsz*signed_rand_float(), 4.0*ysz*signed_rand_float(),
 						   (ztop + CLOUD_CEILING + Z_SCENE_SIZE*rand_uniform(0.25, 0.75)));
-		point const bounds(X_SCENE_SIZE*rand_uniform(1.0, 2.0),
-			               Y_SCENE_SIZE*rand_uniform(1.0, 2.0),
+		point const bounds(xsz*rand_uniform(1.0, 2.0), ysz*rand_uniform(1.0, 2.0),
 						   Z_SCENE_SIZE*rand_uniform(0.4, 0.8));
 		unsigned const nparts(rand()%(NPARTS/2) + NPARTS/2);
 		size_t const ix(size());
@@ -56,7 +58,7 @@ void cloud_manager_t::create_clouds() { // 3D cloud puffs
 			}
 			if (pos.z < 0.0) pos.z *= 0.5; // compressed on the bottom
 			pos += center;
-			float const radius(0.045*(X_SCENE_SIZE + Y_SCENE_SIZE)*rand_uniform(0.5, 1.0));
+			float const radius(0.045*(xsz + ysz)*rand_uniform(0.5, 1.0));
 			float const density(rand_uniform(0.05, 0.12));
 			(*this)[ix + p].gen(pos, WHITE, zero_vector, radius, density, 0.0, 0.0, -((int)c+2), 0, 0, 1, 1); // no lighting
 		}
@@ -191,7 +193,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	// setup projection matrix
 	cube_t const bcube(get_bcube());
 	float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
-	float const scene_xy(max(X_SCENE_SIZE, Y_SCENE_SIZE)), angle(atan2(cloud_xy, cloud_bot)), z1(min(zbottom, czmin));
+	float const scene_xy(get_xy_cloud_scale()*max(X_SCENE_SIZE, Y_SCENE_SIZE)), angle(atan2(cloud_xy, cloud_bot)), z1(min(zbottom, czmin));
 	frustum_z = z1 - scene_xy*(cloud_bot - z1)/(cloud_xy - scene_xy);
 	//pos_dir_up const pdu(get_pt_cube_frustum_pdu(get_camera_pos(), bcube, 1));
 	//pos_dir_up const pdu(all_zeros, plus_z, plus_x, tanf(angle)*SQRT2, sinf(angle), NEAR_CLIP, FAR_CLIP, 1.0);

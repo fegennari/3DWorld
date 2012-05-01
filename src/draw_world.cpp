@@ -833,12 +833,22 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 }
 
 
-void draw_sky(int order) {
+void draw_puffy_clouds(int order) {
+
+	if (cloud_manager.is_inited() && (get_camera_pos().z > cloud_manager.get_z_plane()) != order) return;
 
 	if (atmosphere < 0.01) {
 		cloud_manager.clear();
-		return; // no atmosphere
 	}
+	else if (display_mode & 0x40) { // key 7
+		cloud_manager.draw();
+	}
+}
+
+
+void draw_sky(int order) {
+
+	if (atmosphere < 0.01) return; // no atmosphere
 	set_specular(0.0, 1.0);
 	float radius(0.55*(FAR_CLIP+X_SCENE_SIZE));
 	point center((camera_mode == 1) ? surface_pos : mesh_origin);
@@ -897,7 +907,6 @@ void draw_sky(int order) {
 	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
 	disable_textures_texgen(); // reset S and T parameters
 	disable_blend();
-	if (display_mode & 0x40) cloud_manager.draw(); // detailed clouds
 	glDisable(light);
 }
 

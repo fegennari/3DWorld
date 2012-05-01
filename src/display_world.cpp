@@ -870,6 +870,7 @@ void display(void) {
 			compute_brightness();
 			if (!combined_gu) draw_earth();
 			draw_sky(0);
+			draw_puffy_clouds(0);
 			draw_env_other();
 			reset_shadows(DYNAMIC_SHADOW);
 			check_gl_error(5);
@@ -947,6 +948,7 @@ void display(void) {
 			if (!use_stencil_shadows && shadows) create_shadows();
 			setup_basic_fog();
 			draw_sky(1);
+			draw_puffy_clouds(1);
 			draw_sun_flare();
 			check_gl_error(10);
 			//draw_scene_bounds_and_light_frustum(get_light_pos()); // TESTING
@@ -1192,6 +1194,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	}
 	draw_sun_flare();
 	//draw_sky(0);
+	draw_puffy_clouds(0);
 	//if (!camera_view) camera_shadow(camera);
 	draw_camera_weapon(0);
 	if (TIMETEST) PRINT_TIME("3.2");

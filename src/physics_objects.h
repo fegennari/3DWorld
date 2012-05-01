@@ -308,6 +308,8 @@ public:
 	bool create_texture(bool force_recreate);
 	void free_textures();
 	void draw();
+	bool is_inited()    const {return (txsize > 0);}
+	float get_z_plane() const {return get_bcube().d[2][1];}
 };
 
 
