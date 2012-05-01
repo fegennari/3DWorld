@@ -19,12 +19,14 @@ float const MAX_COLONY_TEMP  = 28.0;
 float const MAX_LAND_TEMP    = 29.0;
 float const BOIL_TEMP        = 30.0;
 float const NO_AIR_TEMP      = 32.0;
+float const NDIV_SIZE_SCALE1 = 6.0;
+float const NDIV_SIZE_SCALE2 = 0.5;
 
 bool const USE_HEIGHTMAP     = 1; // for planets/moons/(stars)
 bool const STAR_PERTURB      = 0; // star heightmap
 bool const CACHE_SPHERE_DATA = 1; // more memory but much faster rendering
 bool const SHOW_SPHERE_TIME  = 0; // debugging
-bool const USE_SPHERE_DLISTS = 0; // sometimes faster on newer video cards, slower on older ones
+bool const USE_SPHERE_DLISTS = 1; // sometimes faster on newer video cards, slower on older ones
 
 unsigned const MAX_TRIES     = 100;
 unsigned const SPHERE_MAX_ND = 256;
@@ -1762,11 +1764,11 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, float rscale) {
 		int ndiv;
 		
 		if (star || size < 256) {
-			ndiv = max(4, min((star ? 56 : 48), int(4.0*sqrt(size))));
+			ndiv = max(4, min((star ? 56 : 48), int(NDIV_SIZE_SCALE1*sqrt(size))));
 			if (ndiv > 16) ndiv = ndiv & 0xFFFC;
 		}
 		else {
-			ndiv = min((int)min(MAX_TEXTURE_SIZE, SPHERE_MAX_ND), (int(0.35*size)&0xFFE0));
+			ndiv = min((int)min(MAX_TEXTURE_SIZE, SPHERE_MAX_ND), (int(NDIV_SIZE_SCALE2*size)&0xFFE0));
 		}
 		assert(ndiv > 0);
 		set_fill_mode();
