@@ -35,11 +35,14 @@ float get_xy_cloud_scale() {return ((world_mode == WMODE_INF_TERRAIN) ? 4.0 : 1.
 
 void cloud_manager_t::create_clouds() { // 3D cloud puffs
 
+	float const xy_scale(get_xy_cloud_scale()), xsz(X_SCENE_SIZE*xy_scale), ysz(Y_SCENE_SIZE*xy_scale);
+	if (!empty() && xy_scale == last_xy_scale) return; // keep the old clouds
+	last_xy_scale = xy_scale;
+	clear();
+	free_textures();
+	srand(123);
 	unsigned const NCLOUDS = 10;
 	unsigned const NPARTS  = 1000;
-	float const xsz(X_SCENE_SIZE*get_xy_cloud_scale()), ysz(Y_SCENE_SIZE*get_xy_cloud_scale());
-	clear();
-	srand(123);
 
 	for (unsigned c = 0; c < NCLOUDS; ++c) {
 		point const center(4.0*xsz*signed_rand_float(), 4.0*ysz*signed_rand_float(),
@@ -254,7 +257,7 @@ void cloud_manager_t::free_textures() {
 void cloud_manager_t::draw() {
 
 	if (atmosphere < 0.01) return; // no atmosphere
-	if (empty()) create_clouds();
+	create_clouds();
 	if (empty()) return;
 	//glFinish(); // testing
 	RESET_TIME;
@@ -285,6 +288,7 @@ void cloud_manager_t::draw() {
 		s.add_uniform_int("tex0", 0);
 
 		glBegin(GL_QUADS);
+		point const camera(get_camera_pos());
 		cube_t const bcube(get_bcube());
 		float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
 		float const xy_exp((cloud_top - frustum_z)/(cloud_bot - frustum_z));
@@ -292,7 +296,7 @@ void cloud_manager_t::draw() {
 		for (unsigned d = 0; d < 2; ++d) { // render the bottom face of bcube
 			for (unsigned e = 0; e < 2; ++e) {
 				glTexCoord2f(float(d^e^1), float(d));
-				point(xy_exp*((d^e) ? cloud_xy : -cloud_xy), xy_exp*(d ? cloud_xy : -cloud_xy), cloud_top).do_glVertex();
+				point(xy_exp*((d^e) ? cloud_xy : -cloud_xy)+camera.x, xy_exp*(d ? cloud_xy : -cloud_xy)+camera.y, cloud_top).do_glVertex();
 			}
 		}
 		glEnd();

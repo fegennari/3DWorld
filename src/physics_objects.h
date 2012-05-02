@@ -294,12 +294,12 @@ public:
 class cloud_manager_t : public obj_vector_t<particle_cloud> {
 
 	unsigned cloud_tid, fbo_id, txsize, tysize;
-	float frustum_z;
+	float frustum_z, last_xy_scale;
 
 	void set_red_only(bool val) {for (iterator i = begin(); i != end(); ++i) i->red_only = val;}
 
 public:
-	cloud_manager_t() : cloud_tid(0), fbo_id(0), txsize(0), tysize(0), frustum_z(0.0) {}
+	cloud_manager_t() : cloud_tid(0), fbo_id(0), txsize(0), tysize(0), frustum_z(0.0), last_xy_scale(0.0) {}
 	~cloud_manager_t() {free_textures();}
 	void create_clouds();
 	void update_lighting();
