@@ -124,7 +124,7 @@ void ship_cube::draw_svol(point const &tpos, float cur_radius, point const &spos
 	for (unsigned dim = 0; dim < 3; ++dim) {
 		unsigned const d0((dim+1)%3), d1((dim+2)%3);
 
-		for (unsigned dir = 0; dir < 2; ++dir) { // only use the three faces facing the sun?
+		for (unsigned dir = 0; dir < 2; ++dir) {
 			if ((shadow_dir[dim] < 0.0) ^ dir) continue; // back facing
 
 			for (unsigned i = 0; i < 4; ++i) {
@@ -299,6 +299,46 @@ void ship_bounded_cylinder::draw_svol(point const &tpos, float cur_radius, point
 	// should really be an AND
 	ship_cylinder::draw_svol(tpos, cur_radius, spos, ndiv, player, test, obj);
 	//bcube.draw_svol(tpos, cur_radius, spos, ndiv, player, test, obj);
+}
+
+
+void ship_triangle_list::translate(point const &p) {
+
+	ship_sphere::translate(p);
+	for (vector<triangle>::iterator i = triangles.begin(); i != triangles.end(); ++i) {*i += p;}
+}
+
+bool ship_triangle_list::line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const {
+
+	float t_int(1.0);
+
+	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		if (line_poly_intersect(lp1, lp2, i->pts, 3, i->get_normal(), t_int)) {
+			if (!calc_t) return 1;
+			if (t_int < t) t = t_int; // closer intersection point
+		}
+	}
+	return (t_int < 1.0);
+}
+
+bool ship_triangle_list::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
+
+	return ship_sphere::sphere_intersect(sc, sr, p_last, p_int, norm, calc_int);
+}
+
+void ship_triangle_list::draw_svol(point const &tpos, float cur_radius, point const &spos,
+	int ndiv, bool player, bool test, free_obj const *const obj) const
+{
+	point spos_xf(spos);
+	obj->xform_point(spos_xf);
+	vector3d const shadow_dir(pos - spos_xf);
+
+	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		if (dot_product(i->get_normal(), shadow_dir) > 0.0) continue; // back facing
+		upos_point_type pts[3];
+		UNROLL_3X(pts[i_] = i->pts[i_];)
+		ushadow_polygon(pts, 3, tpos, cur_radius, spos, player, obj).draw_geom(tpos, test);
+	}
 }
 
 
@@ -561,7 +601,7 @@ bool ushadow_polygon::is_outside(upos_point_type const *const p, unsigned npts,
 	return (neg_norm != (dot_product(norm, (ppos - c + norm*(perspective_nclip*(neg_norm ? -1.0 : 1.0)))) < 0.0));
 }
 
-ushadow_polygon::ushadow_polygon(upos_point_type const pts[4], unsigned np, upos_point_type const &cur_pos, float cur_radius,
+ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos, float cur_radius,
 								 point const &sun_pos, bool player, free_obj const *const obj, float rmin) : npts(np)
 {
 	assert(npts == 3 || npts == 4);

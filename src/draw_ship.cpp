@@ -137,6 +137,18 @@ void ship_bounded_cylinder::draw(unsigned ndiv) const {
 }
 
 
+void ship_triangle_list::draw(unsigned ndiv) const {
+
+	glBegin(GL_TRIANGLES);
+
+	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
+		i->get_normal().do_glNormal();
+		UNROLL_3X(i->pts[i_].do_glVertex();)
+	}
+	glEnd();
+}
+
+
 // ******************* GENERAL DRAWING CODE *******************
 
 
@@ -705,37 +717,20 @@ void uobj_draw_data::draw_usw_seige() const {
 void uobj_draw_data::draw_us_fighter() const {
 	
 	assert(nengines > 1);
-	float const ns(sqrt(0.8*0.8 + 1.5*1.5)), t1(0.8/ns), t2(1.5/ns), edy(1.5/(nengines-1));
 	setup_draw_ship();
 	glTranslatef(0.0, 0.0, 0.25); // move forward slightly
 	
-	// draw ship sides (display list?)
-	glBegin(GL_TRIANGLES);
-	glNormal3f( t1, -t2,   0); // T1
-	glVertex3f( 0.8, 0,   -2);
-	glVertex3f( 0,   0,    2);
-	glVertex3f( 0,  -1.5, -2);
-	glNormal3f( t1,  t2,   0); // T2
-	glVertex3f( 0.8, 0,   -2);
-	glVertex3f( 0,   1.5, -2);
-	glVertex3f( 0,   0,    2);
-	glNormal3f(-t1, -t2,   0); // B1
-	glVertex3f(-0.8, 0,   -2);
-	glVertex3f( 0,  -1.5, -2);
-	glVertex3f( 0,   0,    2);
-	glNormal3f(-t1,  t2,   0); // B2
-	glVertex3f(-0.8, 0,   -2);
-	glVertex3f( 0,   0,    2);
-	glVertex3f( 0,   1.5, -2);
-	glNormal3f( 0,   0,   -1); // R1
-	glVertex3f(-0.8, 0,   -2);
-	glVertex3f( 0.8, 0,   -2);
-	glVertex3f( 0,  -1.5, -2);
-	glNormal3f( 0,   0,   -1); // R2
-	glVertex3f(-0.8, 0,   -2);
-	glVertex3f( 0,   1.5, -2);
-	glVertex3f( 0.8, 0,   -2);
-	glEnd();
+	// draw ship sides
+	point const p[5] = {point(0.8,0,-2), point(0,0,2), point(0,-1.5,-2), point(0,1.5,-2), point(-0.8,0,-2)};
+	ship_triangle_list tl;
+	tl.add_triangle(triangle(p[0],p[1],p[2]));
+	tl.add_triangle(triangle(p[0],p[3],p[1]));
+	tl.add_triangle(triangle(p[4],p[2],p[1]));
+	tl.add_triangle(triangle(p[4],p[1],p[3]));
+	tl.add_triangle(triangle(p[4],p[0],p[2]));
+	tl.add_triangle(triangle(p[4],p[3],p[0]));
+	tl.draw(0);
+	float const edy(1.5/(nengines-1));
 
 	// draw engines
 	if (ndiv > 6) {

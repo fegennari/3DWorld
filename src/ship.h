@@ -191,7 +191,7 @@ class ushadow_polygon : public ushadow_volume { // currently only supports trian
 	upos_point_type p[2][4];
 
 public:
-	ushadow_polygon(upos_point_type const pts[4], unsigned np, upos_point_type const &cur_pos, float cur_radius,
+	ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos, float cur_radius,
 		point const &sun_pos, bool player, free_obj const *const obj=NULL, float rmin=0.0);
 	void draw(upos_point_type const &pos) const;
 	bool is_outside(upos_point_type const *const p, unsigned npts, upos_point_type const &center, upos_point_type const &ppos) const;
@@ -452,6 +452,27 @@ public:
 	string get_name()  const {return "Bounded Cylinder";}
 	float get_volume() const {return min(ship_cylinder::get_volume(),   bcube.get_volume());} // ???
 	float get_s_area() const {return 0.5*(ship_cylinder::get_s_area() + bcube.get_s_area());} // ???
+};
+
+// triangle_list inherits from sphere (used as bounding sphere) and only overrides some functions
+class ship_triangle_list : public ship_sphere {
+
+	vector<triangle> triangles;
+
+public:
+	ship_triangle_list(point const &c=all_zeros, float r=0.0, float ds=1.0) : ship_sphere(c, r, ds) {}
+	ship_triangle_list* clone() const {return new ship_triangle_list(*this);}
+	void add_triangle(triangle const &tri) {triangles.push_back(tri);}
+	void translate(point const &p);
+	void draw(unsigned ndiv) const;
+	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
+	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
+	void get_bounding_sphere(point &c, float &r) const {return ship_sphere::get_bounding_sphere(c, r);}
+	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, bool test,
+		free_obj const *const obj=NULL) const;
+	string get_name()  const {return "Triangle List";}
+	float get_volume() const {return ship_sphere::get_volume();}
+	float get_s_area() const {return ship_sphere::get_s_area();}
 };
 
 
