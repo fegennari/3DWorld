@@ -657,6 +657,13 @@ void us_class::add_bcylin_cube(ship_cylinder const &c, float x1, float x2, float
 }
 
 
+void us_class::add_triangle(triangle const &tri) {
+
+	assert(inited);
+	cobj_triangles.push_back(tri);
+}
+
+
 float us_class::offense_rating() const {
 
 	if (offense >= 0.0) return offense; // cached

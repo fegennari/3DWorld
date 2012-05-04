@@ -311,14 +311,16 @@ void ship_triangle_list::translate(point const &p) {
 bool ship_triangle_list::line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const {
 
 	float t_int(1.0);
+	bool intersected(0);
 
 	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		if (line_poly_intersect(lp1, lp2, i->pts, 3, i->get_normal(), t_int)) {
 			if (!calc_t) return 1;
 			if (t_int < t) t = t_int; // closer intersection point
+			intersected = 1;
 		}
 	}
-	return (t_int < 1.0);
+	return intersected;
 }
 
 bool ship_triangle_list::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {

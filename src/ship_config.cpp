@@ -105,7 +105,7 @@ class ship_defs_file_reader {
 	enum {CMD_GLOBAL_REGEN=0, CMD_RAND_SEED, CMD_SPAWN_DIST, CMD_START_POS, CMD_HYPERSPEED, CMD_SPEED_SCALE, CMD_PLAYER_TURN,
 		CMD_SPAWN_HWORLD, CMD_PLAYER_ENEMY, CMD_BUILD_ANY, CMD_TEAM_CREDITS, CMD_SHIP, CMD_WEAP, CMD_WBEAM, CMD_SHIP_WEAP,
 		CMD_ADD, CMD_WEAP_PT, CMD_PLAYER_WEAP, CMD_MESH_PARAMS, CMD_SHIP_CYLINDER, CMD_SHIP_CUBE, CMD_SHIP_SPHERE, CMD_SHIP_TORUS,
-		CMD_SHIP_BCYLIN, CMD_FLEET, CMD_SHIP_ADD_INIT, CMD_SHIP_ADD_GEN, CMD_SHIP_BUILD, CMD_ALIGN, CMD_SHIP_NAMES,
+		CMD_SHIP_BCYLIN, CMD_SHIP_TRIANGLE, CMD_FLEET, CMD_SHIP_ADD_INIT, CMD_SHIP_ADD_GEN, CMD_SHIP_BUILD, CMD_ALIGN, CMD_SHIP_NAMES,
 		CMD_ADD_SHIP, CMD_ADD_ASTEROID, CMD_BLACK_HOLE, CMD_PLAYER, CMD_LAST_PARENT, CMD_END};
 	ifstream cfg;
 	kw_map command_m, ship_m, weap_m, explosion_m, align_m, ai_m, target_m;
@@ -410,6 +410,15 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 			}
 			break;
 
+		case CMD_SHIP_TRIANGLE: // <enum ship_id> <point p1> <point p2> <point p3>
+			{
+				if (!read_ship_type(type)) return 0;
+				triangle tri;
+				if (!read_pt(tri.pts[0]) || !read_pt(tri.pts[1]) || !read_pt(tri.pts[2])) return 0;
+				sclasses[type].add_triangle(tri);
+			}
+			break;
+
 		case CMD_FLEET: // <string name> <unsigned multiplier> <enum alignment> <enum ai_type> <enum target_type> <float rand_gen_dist> <point pos> <unsigned counts>+ [<float flagship_child_stray_dist> <enum ship_id>]
 			{
 				bool using_flagship(0);
@@ -593,7 +602,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
 void ship_defs_file_reader::setup_keywords() {
 
-	string const commands  ("$GLOBAL_REGEN $RAND_SEED $SPAWN_DIST $START_POS $HYPERSPEED $SPEED_SCALE $PLAYER_TURN $SPAWN_HWORLD $PLAYER_ENEMY $BUILD_ANY $TEAM_CREDITS $SHIP $WEAP $WBEAM $SHIP_WEAP $ADD $WEAP_PT $PLAYER_WEAP $MESH_PARAMS $SHIP_CYLINDER $SHIP_CUBE $SHIP_SPHERE $SHIP_TORUS $SHIP_BCYLIN $FLEET $SHIP_ADD_INIT $SHIP_ADD_GEN $SHIP_BUILD $ALIGN $SHIP_NAMES $ADD_SHIP $ADD_ASTEROID $BLACK_HOLE $PLAYER $LAST_PARENT $END");
+	string const commands  ("$GLOBAL_REGEN $RAND_SEED $SPAWN_DIST $START_POS $HYPERSPEED $SPEED_SCALE $PLAYER_TURN $SPAWN_HWORLD $PLAYER_ENEMY $BUILD_ANY $TEAM_CREDITS $SHIP $WEAP $WBEAM $SHIP_WEAP $ADD $WEAP_PT $PLAYER_WEAP $MESH_PARAMS $SHIP_CYLINDER $SHIP_CUBE $SHIP_SPHERE $SHIP_TORUS $SHIP_BCYLIN $SHIP_TRIANGLE $FLEET $SHIP_ADD_INIT $SHIP_ADD_GEN $SHIP_BUILD $ALIGN $SHIP_NAMES $ADD_SHIP $ADD_ASTEROID $BLACK_HOLE $PLAYER $LAST_PARENT $END");
 	string const ship_strs ("USC_FIGHTER USC_X1EXTREME USC_FRIGATE USC_DESTROYER USC_LCRUISER USC_HCRUISER USC_BCRUISER USC_ENFORCER USC_CARRIER USC_ARMAGEDDON USC_SHADOW USC_DEFSAT USC_STARBASE USC_BCUBE USC_BSPHERE USC_BTCUBE USC_BSPH_SM USC_BSHUTTLE USC_TRACTOR USC_GUNSHIP USC_NIGHTMARE USC_DWCARRIER USC_DWEXTERM USC_WRAITH USC_ABOMIN USC_REAPER USC_DEATH_ORB USC_SUPPLY USC_ANTI_MISS USC_JUGGERNAUT USC_SAUCER USC_SAUCER_V2 USC_MOTHERSHIP USC_HUNTER USC_SEIGE USC_COLONY USC_ARMED_COL USC_HW_COL USC_STARPORT USC_HW_SPORT");
 	string const weap_strs ("UWEAP_NONE UWEAP_TARGET UWEAP_QUERY UWEAP_RENAME UWEAP_DESTROY UWEAP_PBEAM UWEAP_EBEAM UWEAP_REPULSER UWEAP_TRACTORB UWEAP_G_HOOK UWEAP_LRCPA UWEAP_ENERGY UWEAP_ATOMIC UWEAP_ROCKET UWEAP_NUKEDEV UWEAP_TORPEDO UWEAP_EMP UWEAP_PT_DEF UWEAP_DFLARE UWEAP_CHAFF UWEAP_FIGHTER UWEAP_B_BAY UWEAP_CRU_BAY UWEAP_SOD_BAY UWEAP_BOARDING UWEAP_NM_BAY UWEAP_RFIRE UWEAP_FUSCUT UWEAP_SHIELDD UWEAP_THUNDER UWEAP_ESTEAL UWEAP_WRAI_BAY UWEAP_STAR UWEAP_HUNTER UWEAP_DEATHORB UWEAP_LITNING UWEAP_INFERNO UWEAP_PARALYZE UWEAP_MIND_C UWEAP_SAUC_BAY UWEAP_SEIGEC");
 	string const exp_strs  ("ETYPE_NONE ETYPE_FIRE ETYPE_NUCLEAR ETYPE_ENERGY ETYPE_ATOMIC ETYPE_PLASMA ETYPE_EMP ETYPE_STARB ETYPE_FUSION ETYPE_EBURST ETYPE_ESTEAL ETYPE_ANIM_FIRE ETYPE_SIEGE");
@@ -763,6 +772,14 @@ void us_class::setup(unsigned sclass_) {
 	assert(has_fast_speed || !has_hyper);
 	sclass = sclass_;
 
+	if (!cobj_triangles.empty()) {
+		ship_triangle_list *tlist(new ship_triangle_list(bnd_sphere));
+		
+		for (vector<triangle>::const_iterator i = cobj_triangles.begin(); i != cobj_triangles.end(); ++i) {
+			tlist->add_triangle(*i);
+		}
+		cobjs.push_back(tlist);
+	}
 	if (!dynamic_cobjs) { // check to make sure none of the turretted weapon points are within a bounding collision shape
 		u_ship test_ship(sclass, all_zeros, ALIGN_NEUTRAL, AI_IGNORE, TARGET_CLOSEST, 0);
 
@@ -784,6 +801,7 @@ void us_class::clear_cobjs() {
 		delete cobjs[i];
 	}
 	cobjs.clear();
+	cobj_triangles.clear();
 }
 
 

@@ -442,7 +442,21 @@ $ADD UWEAP_SEIGEC
 $MESH_PARAMS USC_ARMAGEDDON 1 1 0 0 0
 
 
-# setup bounding cube/cylinder dimensions (cylinder: front then back with front in -Z direction)
+# setup bounding shape dimensions (cylinder: front then back with front in -Z direction)
+$SHIP_TRIANGLE USC_FIGHTER     0.8  0 1.75    0    0    -2.25    0   -1.5   1.75
+$SHIP_TRIANGLE USC_FIGHTER     0.8  0 1.75    0    1.5   1.75    0    0    -2.25
+$SHIP_TRIANGLE USC_FIGHTER    -0.8  0 1.75    0   -1.5   1.75    0    0    -2.25
+$SHIP_TRIANGLE USC_FIGHTER    -0.8  0 1.75    0    0    -2.25    0    1.5   1.75
+$SHIP_TRIANGLE USC_FIGHTER    -0.8  0 1.75    0.8  0     1.75    0   -1.5   1.75
+$SHIP_TRIANGLE USC_FIGHTER    -0.8  0 1.75    0    1.5   1.75    0.8  0     1.75
+
+$SHIP_TRIANGLE USC_X1EXTREME   1.04 0 1.225   0    0    -1.575   0   -1.65  1.225
+$SHIP_TRIANGLE USC_X1EXTREME   1.04 0 1.225   0    1.65  1.225   0    0    -1.575
+$SHIP_TRIANGLE USC_X1EXTREME  -1.04 0 1.225   0   -1.65  1.225   0    0    -1.575
+$SHIP_TRIANGLE USC_X1EXTREME  -1.04 0 1.225   0    0    -1.575   0    1.65  1.225
+$SHIP_TRIANGLE USC_X1EXTREME  -1.04 0 1.225   1.04 0     1.225   0   -1.65  1.225
+$SHIP_TRIANGLE USC_X1EXTREME  -1.04 0 1.225   0    1.65  1.225   1.04 0     1.225
+
 $SHIP_CYLINDER USC_FRIGATE     0.0 -0.6 0.0  0.0 0.6 0.0  1.66 1.66 1
 $SHIP_CYLINDER USC_DESTROYER   0.0 0.0 -0.96  0.0 0.0 0.9  0.7 0.7 0  0.8  # p1 p2 r1 r2 check_ends [dscale]
 $SHIP_SPHERE   USC_DESTROYER   0.0 0.0 -0.96  0.7  1.1  # x y z r [dscale]

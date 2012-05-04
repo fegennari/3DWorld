@@ -714,29 +714,26 @@ void uobj_draw_data::draw_usw_seige() const {
 // ******************* SHIPS *******************
 
 
-void uobj_draw_data::draw_us_fighter() const {
-	
-	assert(nengines > 1);
-	setup_draw_ship();
-	glTranslatef(0.0, 0.0, 0.25); // move forward slightly
+void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 	
 	// draw ship sides
-	point const p[5] = {point(0.8,0,-2), point(0,0,2), point(0,-1.5,-2), point(0,1.5,-2), point(-0.8,0,-2)};
-	ship_triangle_list tl;
-	tl.add_triangle(triangle(p[0],p[1],p[2]));
-	tl.add_triangle(triangle(p[0],p[3],p[1]));
-	tl.add_triangle(triangle(p[4],p[2],p[1]));
-	tl.add_triangle(triangle(p[4],p[1],p[3]));
-	tl.add_triangle(triangle(p[4],p[0],p[2]));
-	tl.add_triangle(triangle(p[4],p[3],p[0]));
-	tl.draw(0);
-	float const edy(1.5/(nengines-1));
+	color_a.do_glColor();
+	cobj_vector_t const &cobjs(obj->get_cobjs());
+	assert(cobjs.size() == 1); // triangles only
+	cobjs[0]->draw(0); // ndiv is unused
 
 	// draw engines
+	assert(nengines > 1);
+	bool const is_scaled(scale != vector3d(1.0, 1.0, 1.0));
+	if (is_scaled) glPushMatrix();
+	if (is_scaled) glScalef(scale.x, scale.y, scale.z);
+	setup_draw_ship();
+	float const edy(1.5/(nengines-1));
+
 	if (ndiv > 6) {
 		unsigned const ndiv2(get_ndiv(ndiv/2));
 		color_b.do_glColor();
-		glTranslatef(0.0, -0.75, -2.25);
+		glTranslatef(0.0, -0.75, -2.0);
 
 		for (unsigned i = 0; i < nengines; ++i) {
 			draw_cylin_fast(0.3, 0.25, 0.25, ndiv2, 0, 1);
@@ -761,14 +758,7 @@ void uobj_draw_data::draw_us_fighter() const {
 		}
 		disable_ship_flares();
 	}
-}
-
-
-void uobj_draw_data::draw_x1_extreme() const { // could be better
-
-	glScalef(1.3, 1.1, 0.7); // shorter, fatter version of a fighter
-	draw_us_fighter();
-	glScalef(1.0/1.3, 1.0/1.1, 1.0/0.7);
+	if (is_scaled) glPopMatrix();
 }
 
 

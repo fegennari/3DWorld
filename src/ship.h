@@ -262,8 +262,9 @@ public:
 	void draw_usw_star()     const;
 	void draw_usw_seige()    const;
 
-	void draw_us_fighter()   const;
-	void draw_x1_extreme()   const;
+	void draw_base_fighter(vector3d const &scale) const;
+	void draw_us_fighter()   const {draw_base_fighter(vector3d(1.0, 1.0, 1.0));}
+	void draw_x1_extreme()   const {draw_base_fighter(vector3d(1.3, 1.1, 0.7));}
 	void draw_xwing()        const;
 	void draw_us_frigate()   const;
 	void draw_us_destroyer() const;
@@ -460,7 +461,7 @@ class ship_triangle_list : public ship_sphere {
 	vector<triangle> triangles;
 
 public:
-	ship_triangle_list(point const &c=all_zeros, float r=0.0, float ds=1.0) : ship_sphere(c, r, ds) {}
+	ship_triangle_list(ship_sphere const &ss) : ship_sphere(ss) {}
 	ship_triangle_list* clone() const {return new ship_triangle_list(*this);}
 	void add_triangle(triangle const &tri) {triangles.push_back(tri);}
 	void translate(point const &p);
@@ -495,6 +496,7 @@ public:
 	colorRGBA base_color;
 	ship_sphere bnd_sphere;
 	cobj_vector_t cobjs; // never really gets freed
+	vector<triangle> cobj_triangles;
 	vector<ship_weapon> weapons;
 
 	us_class() : inited(0), offense(-1.0), defense(-1.0), weap_range(-1.0), fire_speed(FSPEED_SLOW) {}
@@ -508,6 +510,7 @@ public:
 	void add_bsphere(point const &center, float r, float dscale);
 	void add_btorus(point const &center, float ri, float ro, float dscale);
 	void add_bcylin_cube(ship_cylinder const &c, float x1, float x2, float y1, float y2, float z1, float z2);
+	void add_triangle(triangle const &tri);
 	float offense_rating() const;
 	float defense_rating() const;
 	unsigned weap_cost()   const;
