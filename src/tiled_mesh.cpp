@@ -232,109 +232,11 @@ public:
 		//PRINT_TIME("Create Data");
 	}
 
-//#define GET_TEX_DATA(t, td, id, tx, ty, tex_bs) (t[id].data + t[id].ncolors*(((ty<<tex_bs)&(t[id].height-1))*t[id].width + ((tx<<tex_bs)&(t[id].width-1))))
-#define GET_TEX_DATA(t, td, id, tx, ty, tex_bs) (td[id] + t[id].ncolors*((ty&((t[id].height>>tex_bs)-1))*(t[id].width>>tex_bs) + (tx&((t[id].width>>tex_bs)-1))))
-
-	void create_texture(unsigned tex_bs) {
+	void create_texture() {
 		assert(tid == 0);
 		assert(!island);
 		assert(zvals.size() == zvsize*zvsize);
 		//RESET_TIME;
-#if 0
-		unsigned const tsize(base_tsize >> tex_bs), scale(tsize/size);
-		float const dz_inv(1.0/(zmax - zmin)), fscale_inv(1.0/scale);
-		unsigned char *data(new unsigned char[3*tsize*tsize]); // RGB
-		int k1, k2, k3, k4;
-		float t;
-		unsigned char const *tex_data[NUM_TEXTURES] = {0};
-
-		for (unsigned i = 0; i < NTEX_DIRT; ++i) {
-			assert(lttex_dirt[i].id < NUM_TEXTURES);
-			tex_data[lttex_dirt[i].id] = textures[lttex_dirt[i].id].get_mipmap_data(tex_bs);
-		}
-		for (unsigned y = 0; y < size; ++y) { // makes a big performance improvement
-			for (unsigned x = 0; x < size; ++x) {
-				unsigned const ix(y*zvsize + x);
-				float const vnz00(get_norm(ix).z), vnz01(get_norm(ix+1).z);
-				float const vnz10(get_norm(ix+zvsize).z), vnz11(get_norm(ix+zvsize+1).z);
-				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-				float const dist(fabs(mh01 - mh00) + fabs(mh00 - mh10) + fabs(mh01 - mh11) + fabs(mh10 - mh11));
-				float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
-				float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
-				get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2, t);
-				get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4, t);
-				bool const same_tid(k1 == k4);
-				k2 = k4;
-				
-				for (unsigned sy = 0; sy < scale; ++sy) {
-					// tx/ty skip one texel at the upper texture edges so that the edge texels are shared on both sides
-					// of the tile boundaries, ensuring a smooth texture transition between landscape tiles
-					unsigned const ty_dest(y*scale + sy), ty((ty_dest == tsize-1) ? 0 : ty_dest);
-					float const ypi(sy*fscale_inv);
-
-					for (unsigned sx = 0; sx < scale; ++sx) {
-						unsigned const tx_dest(x*scale + sx), tx((tx_dest == tsize-1) ? 0 : tx_dest), off(3*(ty_dest*tsize + tx_dest));
-						float const xpi(sx*fscale_inv);
-						float const mh((1.0 - xpi)*((1.0 - ypi)*mh00 + ypi*mh10) + xpi*((1.0 - ypi)*mh01 + ypi*mh11));
-
-						if (!same_tid) {
-							float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
-							get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, t);
-						}
-						int const id(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
-						unsigned char const *t1_data(GET_TEX_DATA(textures, tex_data, id, tx, ty, tex_bs));
-						unsigned char *td(data + off);
-						
-						if (k1 == k2) { // single texture
-							RGB_BLOCK_COPY(td, t1_data);
-						}
-						else { // blend two textures - performance critical
-							unsigned char const *t2_data(GET_TEX_DATA(textures, tex_data, id2, tx, ty, tex_bs));
-							BLEND_COLOR(td, t2_data, t1_data, t);
-						}
-
-						// handle steep slopes (dirt/rock texture replaces grass texture)
-						float const sthresh[2] = {0.45, 0.7};
-						float const vnz((1.0 - xpi)*((1.0 - ypi)*vnz00 + ypi*vnz10) + xpi*((1.0 - ypi)*vnz01 + ypi*vnz11));
-
-						if (vnz < sthresh[1]) {
-							if (id == GROUND_TEX || id2 == GROUND_TEX) { // ground/grass
-								assert(tex_data[DIRT_TEX]);
-								unsigned char const *ta_data(GET_TEX_DATA(textures, tex_data, DIRT_TEX, tx, ty, tex_bs));
-								unsigned char temp[3];
-
-								if (id == GROUND_TEX || id2 == ROCK_TEX) {
-									assert(tex_data[ROCK_TEX]);
-									unsigned char const *tb_data(GET_TEX_DATA(textures, tex_data, ROCK_TEX, tx, ty, tex_bs));
-									BLEND_COLOR(temp, tb_data, ta_data, t);
-								}
-								else {
-									RGB_BLOCK_COPY(temp, ta_data);
-								}
-								float const val(CLIP_TO_01((vnz - sthresh[0])/(sthresh[1] - sthresh[0])));
-								BLEND_COLOR(td, td, temp, val);
-							}
-							else if (id2 == SNOW_TEX) { // snow
-								assert(tex_data[ROCK_TEX]);
-								unsigned char const *ta_data(GET_TEX_DATA(textures, tex_data, ROCK_TEX, tx, ty, tex_bs));
-								float const val(CLIP_TO_01(2.0f*(vnz - sthresh[0])/(sthresh[1] - sthresh[0])));
-								BLEND_COLOR(td, td, ta_data, val);
-							}
-						}
-					} // for sx
-				} // for sy
-			} // for x
-		} // for y
-		//if (tex_bs == 0) {PRINT_TIME("Texture Gen");}
-		bool const mipmaps(1); // mipmaps take about 33% more memory
-		setup_texture(tid, GL_MODULATE, mipmaps, 0, 0, 0, 0);
-		assert(tid > 0 && glIsTexture(tid));
-		//if (mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-		glTexImage2D(GL_TEXTURE_2D, 0, 3, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGB - too slow
-		if (mipmaps) gen_mipmaps();
-		glDisable(GL_TEXTURE_2D);
-		delete [] data;
-#else
 		unsigned char *data(new unsigned char[4*size*size]); // RGBA
 		float const dz_inv(1.0/(zmax - zmin));
 		int k1, k2, k3, k4, dirt_tex_ix(-1), rock_tex_ix(-1);
@@ -362,12 +264,11 @@ public:
 					float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
 					get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, t);
 				}
-				// handle steep slopes (dirt/rock texture replaces grass texture)
 				float const sthresh[2] = {0.45, 0.7};
 				float const vnz(get_norm(ix).z);
 				float weight_scale(1.0);
 
-				if (vnz < sthresh[1]) {
+				if (vnz < sthresh[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
 					int const id(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
 
 					if (id == GROUND_TEX || id2 == GROUND_TEX) { // ground/grass
@@ -381,48 +282,21 @@ public:
 						weights[rock_tex_ix] += 1.0 - weight_scale;
 					}
 				}
-				if (k1 == k2) { // single texture
-					weights[k1] += weight_scale;
-				}
-				else { // blend two textures
-					weights[k2] += weight_scale*t;
-					weights[k1] += weight_scale*(1.0 - t);
-				}
-
-				// Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
+				weights[k2] += weight_scale*t;
+				weights[k1] += weight_scale*(1.0 - t);
 				unsigned const off(4*(y*size + x));
 
-				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) {
+				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 					data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
 				}
 			} // for x
 		} // for y
 		setup_texture(tid, GL_MODULATE, 0, 0, 0, 0, 0);
 		assert(tid > 0 && glIsTexture(tid));
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGB - too slow
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
 		glDisable(GL_TEXTURE_2D);
 		delete [] data;
-#endif
 		//if (tex_bs == 0) {PRINT_TIME("Texture Upload");}
-	}
-
-	void check_texture() {
-		float dist(get_rel_dist_to_camera()*get_tile_radius()); // in tiles
-		unsigned tex_bs(0);
-
-		while (dist > 1.0 && (base_tsize >> tex_bs) > size) { // texture LOD
-			dist /= 2;
-			++tex_bs;
-		}
-		unsigned const new_tsize(base_tsize >> tex_bs);
-
-		//if (new_tsize > gen_tsize) {
-		//if (new_tsize != gen_tsize) { // power of 2 >= size
-		if (new_tsize > gen_tsize || 2*new_tsize < gen_tsize) {
-			clear_tid();
-			gen_tsize = new_tsize; // power of 2 >= size
-			create_texture(tex_bs);
-		}
 	}
 
 	float get_rel_dist_to_camera() const {
@@ -450,7 +324,7 @@ public:
 		if (!is_visible()) return 0; // not visible to camera
 
 		if (!DISABLE_TEXTURES) {
-			check_texture();
+			if (tid == 0) create_texture();
 			
 			if (tid > 0) {
 				glEnable(GL_TEXTURE_2D);
@@ -486,25 +360,6 @@ public:
 		return 1;
 	}
 };
-
-
-void setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool use_sand) { // unused, but useful
-
-	unsigned const base_tsize(get_norm_texels());
-
-	for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
-		int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
-		float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
-		unsigned const tu_id(start_tu_id + i);
-		select_multitex(tid, tu_id, 0);
-		std::ostringstream oss, oss2;
-		oss  << "tex" << tu_id;
-		oss2 << "ts"  << tu_id;
-		s.add_uniform_int(oss.str().c_str(), tu_id);
-		s.add_uniform_float(oss2.str().c_str(), tscale);
-	}
-	set_multitex(0);
-}
 
 
 class tile_draw_t {
@@ -562,18 +417,35 @@ public:
 		//PRINT_TIME("Tiled Terrain Update");
 	}
 
-	static void setup_mesh_draw_shaders(shader_t &s, float wpz) {
+
+	static void setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool use_sand) {
+		unsigned const base_tsize(get_norm_texels());
+
+		for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
+			int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
+			float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
+			unsigned const tu_id(start_tu_id + i);
+			select_multitex(tid, tu_id, 0);
+			std::ostringstream oss, oss2;
+			oss  << "tex" << tu_id;
+			oss2 << "ts"  << tu_id;
+			s.add_uniform_int(oss.str().c_str(), tu_id);
+			s.add_uniform_float(oss2.str().c_str(), tscale);
+		}
+		set_multitex(0);
+	}
+
+	static void setup_mesh_draw_shaders(shader_t &s, float wpz, bool blend_textures_in_shaders) {
 		s.setup_enabled_lights();
 		s.set_vert_shader("texture_gen.part+tiled_mesh");
-		s.set_frag_shader("linear_fog.part+tiled_mesh");
-		//s.set_frag_shader("linear_fog.part+multitex_2");
+		s.set_frag_shader(blend_textures_in_shaders ? "linear_fog.part+tiled_mesh" : "linear_fog.part+multitex_2");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
 		s.add_uniform_float("water_plane_z", (has_water() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
-		setup_terrain_textures(s, 2, 0);
+		if (blend_textures_in_shaders) setup_terrain_textures(s, 2, 0);
 	}
 
 	float draw(bool add_hole, float wpz) {
@@ -592,7 +464,7 @@ public:
 			last_moon = moon_pos;
 		}
 		shader_t s;
-		setup_mesh_draw_shaders(s, wpz);
+		setup_mesh_draw_shaders(s, wpz, 1);
 		if (world_mode == WMODE_INF_TERRAIN && show_fog) draw_water_edge(wpz); // Note: doesn't take into account waves
 		setup_mesh_lighting();
 		vector<pair<float, tile_t *> > to_draw;
@@ -666,7 +538,7 @@ void fill_gap(float wpz) {
 		yv[i] = (ystart + (i + 0.5)*DY_VAL);
 	}
 	shader_t s;
-	terrain_tile_draw.setup_mesh_draw_shaders(s, wpz);
+	terrain_tile_draw.setup_mesh_draw_shaders(s, wpz, 0);
 
 	// draw +x
 	build_xy_mesh_arrays(&xv.front(), &yv[MESH_Y_SIZE], MESH_X_SIZE, 1);
