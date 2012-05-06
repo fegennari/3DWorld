@@ -86,6 +86,9 @@ public:
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
 		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin, mzmax);
 	}
+	bool contains_camera() const {
+		return get_cube().contains_pt_xy(get_camera_pos());
+	}
 
 	void calc_start_step(int dx, int dy) {
 		xstart = get_xval(x1 + dx);
@@ -98,7 +101,7 @@ public:
 		unsigned mem(0);
 		if (vbo  > 0) mem += 2*stride*size*sizeof(vert_type_t);
 		if (ivbo > 0) mem += size*size*sizeof(unsigned short);
-		if (tid  > 0) mem += 3*gen_tsize*gen_tsize;
+		if (tid  > 0) mem += 4*gen_tsize*gen_tsize; // 3 bytes per texel, but 1/3 overhead for mipmaps
 		return mem;
 	}
 
@@ -225,6 +228,7 @@ public:
 				indices[iix+3] = vix + 1;
 			}
 		}
+		// FIXME: create and use lower LOD indices
 		//PRINT_TIME("Create Data");
 	}
 
@@ -333,7 +337,6 @@ public:
 	}
 
 	void check_texture() {
-		// FIXME: tile contains camera case
 		float dist(get_rel_dist_to_camera()*get_tile_radius()); // in tiles
 		unsigned tex_bs(0);
 
@@ -404,7 +407,6 @@ public:
 		// can store normals in a normal map texture, but a vertex texture fetch is slow
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
 		glNormalPointer(   GL_FLOAT, ptr_stride, (void *)sizeof(point));
-		glColorPointer (4, GL_UNSIGNED_BYTE, ptr_stride, (void *)(sizeof(point) + sizeof(vector3d)));
 		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), 4*size*size, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
 		//glDrawElements(GL_QUADS, 4*size*size, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
@@ -473,7 +475,7 @@ public:
 			for (int x = x1; x <= x2; ++x ) {
 				tile_xy_pair const txy(x, y);
 				if (tiles.find(txy) != tiles.end()) continue; // already exists
-				tile_t tile(MESH_X_SIZE, x, y); // FIXME: half size for reflection pass?
+				tile_t tile(MESH_X_SIZE, x, y);
 				if (tile.get_rel_dist_to_camera() >= 1.5) continue; // too far away to create
 				tile_t *new_tile(new tile_t(tile));
 				new_tile->create_zvals();
@@ -503,7 +505,7 @@ public:
 	float draw(bool add_hole, float wpz) {
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
-		set_array_client_state(1, 0, 1, 1);
+		set_array_client_state(1, 0, 1, 0);
 		unsigned num_drawn(0);
 		unsigned long long mem(0);
 		vector<tile_t::vert_type_t> data;
