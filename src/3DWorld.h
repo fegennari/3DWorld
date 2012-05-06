@@ -725,6 +725,14 @@ struct vert_color : public color_wrapper { // size = 16
 };
 
 
+struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
+
+	vert_norm_color() {}
+	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const &c_) : vert_norm(v_, n_) {set_c4(c_);}
+	vert_norm_color(point const &v_, vector3d const &n_, unsigned char const *c_) : vert_norm(v_, n_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
+};
+
+
 struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size = 36
 	vert_norm_tc_color() {}
 	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGB const &c_)
