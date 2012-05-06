@@ -54,8 +54,7 @@ class tile_t {
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 
 public:
-	//typedef vert_norm vert_type_t;
-	typedef vert_norm_color vert_type_t;
+	typedef vert_norm vert_type_t;
 
 	tile_t() : tid(0), vbo(0), ivbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {}
 	~tile_t() {clear_vbo_tid(1,1);}
@@ -226,68 +225,6 @@ public:
 				indices[iix+3] = vix + 1;
 			}
 		}
-
-		// create texture weights
-		assert(!island);
-		float const dz_inv(1.0/(zmax - zmin));
-		int k1, k2, k3, k4, dirt_tex_ix(-1), rock_tex_ix(-1);
-		float t;
-
-		for (unsigned i = 0; i < NTEX_DIRT; ++i) {
-			if (lttex_dirt[i].id == DIRT_TEX) dirt_tex_ix = i;
-			if (lttex_dirt[i].id == ROCK_TEX) rock_tex_ix = i;
-		}
-		assert(dirt_tex_ix >= 0 && rock_tex_ix >= 0);
-
-		for (unsigned y = 0; y <= size; ++y) {
-			for (unsigned x = 0; x <= size; ++x) {
-				float weights[NTEX_DIRT] = {0};
-				unsigned const ix(min(y, size-1)*zvsize + min(x, size-1));
-				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-				float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
-				float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
-				get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2, t);
-				get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4, t);
-				bool const same_tid(k1 == k4);
-				k2 = k4;
-				
-				if (!same_tid) {
-					float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
-					get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, t);
-				}
-				// handle steep slopes (dirt/rock texture replaces grass texture)
-				float const sthresh[2] = {0.45, 0.7};
-				float const vnz(get_norm(ix).z);
-				float weight_scale(1.0);
-
-				if (vnz < sthresh[1]) {
-					int const id(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
-
-					if (id == GROUND_TEX || id2 == GROUND_TEX) { // ground/grass
-						float const rock_weight((id == GROUND_TEX || id2 == ROCK_TEX) ? t : 0.0);
-						weight_scale = CLIP_TO_01((vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
-						weights[rock_tex_ix] += (1.0 - weight_scale)*rock_weight;
-						weights[dirt_tex_ix] += (1.0 - weight_scale)*(1.0 - rock_weight);
-					}
-					else if (id2 == SNOW_TEX) { // snow
-						weight_scale = CLIP_TO_01(2.0f*(vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
-						weights[rock_tex_ix] += 1.0 - weight_scale;
-					}
-				}
-				if (k1 == k2) { // single texture
-					weights[k1] += weight_scale;
-				}
-				else { // blend two textures
-					weights[k2] += weight_scale*t;
-					weights[k1] += weight_scale*(1.0 - t);
-				}
-
-				// Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
-				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) {
-					data[y*stride + x].c[i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
-				}
-			} // for x
-		} // for y
 		//PRINT_TIME("Create Data");
 	}
 
@@ -479,7 +416,7 @@ public:
 };
 
 
-void setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool use_sand) {
+void setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool use_sand) { // unused, but useful
 
 	for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
 		int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
@@ -488,6 +425,7 @@ void setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool use_sand) {
 		std::ostringstream oss;
 		oss << "tex" << tu_id;
 		s.add_uniform_int(oss.str().c_str(), tu_id);
+		// FIXME: add scales
 	}
 	set_multitex(0);
 }
@@ -551,15 +489,15 @@ public:
 	static void setup_mesh_draw_shaders(shader_t &s, float wpz) {
 		s.setup_enabled_lights();
 		s.set_vert_shader("texture_gen.part+tiled_mesh");
-		s.set_frag_shader("linear_fog.part+tiled_mesh");
-		//s.set_frag_shader("linear_fog.part+multitex_2");
+		//s.set_frag_shader("linear_fog.part+tiled_mesh");
+		s.set_frag_shader("linear_fog.part+multitex_2");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
 		s.add_uniform_float("water_plane_z", (has_water() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
-		setup_terrain_textures(s, 2, 0);
+		//setup_terrain_textures(s, 2, 0);
 	}
 
 	float draw(bool add_hole, float wpz) {

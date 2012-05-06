@@ -1,6 +1,5 @@
 uniform float water_plane_z = 0.0;
 uniform float water_atten = 1.0;
-varying vec4 weights;
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
@@ -45,7 +44,6 @@ void main()
 	if (enable_light0) color += add_light_comp(normal, 0);
 	if (enable_light1) color += add_light_comp(normal, 1);
 	gl_FrontColor = color;
-	weights = gl_Color;
 
 	// calculate fog coord
 #if 0
