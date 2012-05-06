@@ -101,7 +101,7 @@ public:
 		unsigned mem(0);
 		if (vbo  > 0) mem += 2*stride*size*sizeof(vert_type_t);
 		if (ivbo > 0) mem += size*size*sizeof(unsigned short);
-		if (tid  > 0) mem += 4*gen_tsize*gen_tsize; // 3 bytes per texel, but 1/3 overhead for mipmaps
+		if (tid  > 0) mem += 4*size*size; // 4 bytes per texel
 		return mem;
 	}
 
@@ -240,6 +240,7 @@ public:
 		assert(!island);
 		assert(zvals.size() == zvsize*zvsize);
 		//RESET_TIME;
+#if 0
 		unsigned const tsize(base_tsize >> tex_bs), scale(tsize/size);
 		float const dz_inv(1.0/(zmax - zmin)), fscale_inv(1.0/scale);
 		unsigned char *data(new unsigned char[3*tsize*tsize]); // RGB
@@ -333,6 +334,75 @@ public:
 		if (mipmaps) gen_mipmaps();
 		glDisable(GL_TEXTURE_2D);
 		delete [] data;
+#else
+		unsigned char *data(new unsigned char[4*size*size]); // RGBA
+		float const dz_inv(1.0/(zmax - zmin));
+		int k1, k2, k3, k4, dirt_tex_ix(-1), rock_tex_ix(-1);
+		float t;
+
+		for (unsigned i = 0; i < NTEX_DIRT; ++i) {
+			if (lttex_dirt[i].id == DIRT_TEX) dirt_tex_ix = i;
+			if (lttex_dirt[i].id == ROCK_TEX) rock_tex_ix = i;
+		}
+		assert(dirt_tex_ix >= 0 && rock_tex_ix >= 0);
+
+		for (unsigned y = 0; y < size; ++y) {
+			for (unsigned x = 0; x < size; ++x) {
+				float weights[NTEX_DIRT] = {0};
+				unsigned const ix(y*zvsize + x);
+				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
+				float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
+				float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
+				get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2, t);
+				get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4, t);
+				bool const same_tid(k1 == k4);
+				k2 = k4;
+				
+				if (!same_tid) {
+					float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
+					get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, t);
+				}
+				// handle steep slopes (dirt/rock texture replaces grass texture)
+				float const sthresh[2] = {0.45, 0.7};
+				float const vnz(get_norm(ix).z);
+				float weight_scale(1.0);
+
+				if (vnz < sthresh[1]) {
+					int const id(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
+
+					if (id == GROUND_TEX || id2 == GROUND_TEX) { // ground/grass
+						float const rock_weight((id == GROUND_TEX || id2 == ROCK_TEX) ? t : 0.0);
+						weight_scale = CLIP_TO_01((vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
+						weights[rock_tex_ix] += (1.0 - weight_scale)*rock_weight;
+						weights[dirt_tex_ix] += (1.0 - weight_scale)*(1.0 - rock_weight);
+					}
+					else if (id2 == SNOW_TEX) { // snow
+						weight_scale = CLIP_TO_01(2.0f*(vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
+						weights[rock_tex_ix] += 1.0 - weight_scale;
+					}
+				}
+				if (k1 == k2) { // single texture
+					weights[k1] += weight_scale;
+				}
+				else { // blend two textures
+					weights[k2] += weight_scale*t;
+					weights[k1] += weight_scale*(1.0 - t);
+				}
+
+				// Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
+				unsigned const off(4*(y*size + x));
+
+				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) {
+					data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
+				}
+			} // for x
+		} // for y
+		setup_texture(tid, GL_MODULATE, 0, 0, 0, 0, 0);
+		assert(tid > 0 && glIsTexture(tid));
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGB - too slow
+		glDisable(GL_TEXTURE_2D);
+		delete [] data;
+#endif
 		//if (tex_bs == 0) {PRINT_TIME("Texture Upload");}
 	}
 
@@ -420,14 +490,18 @@ public:
 
 void setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool use_sand) { // unused, but useful
 
+	unsigned const base_tsize(get_norm_texels());
+
 	for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
 		int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
+		float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
 		unsigned const tu_id(start_tu_id + i);
 		select_multitex(tid, tu_id, 0);
-		std::ostringstream oss;
-		oss << "tex" << tu_id;
+		std::ostringstream oss, oss2;
+		oss  << "tex" << tu_id;
+		oss2 << "ts"  << tu_id;
 		s.add_uniform_int(oss.str().c_str(), tu_id);
-		// FIXME: add scales
+		s.add_uniform_float(oss2.str().c_str(), tscale);
 	}
 	set_multitex(0);
 }
@@ -491,15 +565,15 @@ public:
 	static void setup_mesh_draw_shaders(shader_t &s, float wpz) {
 		s.setup_enabled_lights();
 		s.set_vert_shader("texture_gen.part+tiled_mesh");
-		//s.set_frag_shader("linear_fog.part+tiled_mesh");
-		s.set_frag_shader("linear_fog.part+multitex_2");
+		s.set_frag_shader("linear_fog.part+tiled_mesh");
+		//s.set_frag_shader("linear_fog.part+multitex_2");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
 		s.add_uniform_float("water_plane_z", (has_water() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
-		//setup_terrain_textures(s, 2, 0);
+		setup_terrain_textures(s, 2, 0);
 	}
 
 	float draw(bool add_hole, float wpz) {
