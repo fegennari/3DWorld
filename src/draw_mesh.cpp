@@ -531,10 +531,10 @@ int set_texture(float zval, int &tex_id) {
 }
 
 
-float display_mesh3(int const *const hole_bounds, float wpz) { // WM3 - infinite terrain
+float display_mesh3(int const *const hole_bounds, float wpz, bool reflection_pass) { // WM3 - infinite terrain
 
 	bool const add_hole((hole_bounds != NULL) && xoff2 == 0 && yoff2 == 0);
-	return draw_tiled_terrain(add_hole, wpz);
+	return draw_tiled_terrain(add_hole, wpz, reflection_pass);
 }
 
 

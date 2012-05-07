@@ -196,6 +196,7 @@ bool setup_gen_buffers() {
 unsigned create_vbo() {
 	unsigned id;
 	glGenBuffers(1, &id);
+	assert(id > 0);
 	return id;
 }
 

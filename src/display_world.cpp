@@ -906,7 +906,7 @@ void display(void) {
 				if (!disable_inf_terrain && !island && (display_mode & 0x10)) { // draw larger WM3 mesh
 					int const hole_bounds[4] = {0, MESH_X_SIZE-1, 0, MESH_Y_SIZE-1};
 					float const wpz(get_water_z_height() + get_ocean_wave_height());
-					float const zmin2(display_mesh3(hole_bounds, wpz)); // no trees/scenery
+					float const zmin2(display_mesh3(hole_bounds, wpz, 0)); // no trees/scenery
 					//set_inf_terrain_fog(underwater, zmin2); // not right
 					if ((display_mode & 0x04) && wpz >= zmin2) draw_water_plane(wpz, 0, hole_bounds);
 				}
@@ -1076,7 +1076,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 		double const plane[4] = {0.0, 0.0, 1.0, -water_z}; // water at z=-water_z (mirrored)
 		glEnable(GL_CLIP_PLANE0);
 		glClipPlane(GL_CLIP_PLANE0, plane);
-		display_mesh3(NULL, water_z);
+		display_mesh3(NULL, water_z, 1);
 		glDisable(GL_CLIP_PLANE0);
 	}
 	// could render more of the scene here
@@ -1202,7 +1202,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (TIMETEST) PRINT_TIME("3.25");
 
 	if (display_mode & 0x01) {
-		zmin2 = display_mesh3(NULL, water_plane_z);
+		zmin2 = display_mesh3(NULL, water_plane_z, 0);
 		if (TIMETEST) PRINT_TIME("3.3");
 	}
 	if (TERRAIN_SCENERY) draw_scenery(1, 1);

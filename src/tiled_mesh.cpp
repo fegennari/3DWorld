@@ -13,6 +13,7 @@ bool const DEBUG_TILES       = 0;
 int  const DISABLE_TEXTURES  = 0;
 int  const TILE_RADIUS       = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT    = 5; // WM3, in mesh sizes
+unsigned const NUM_LODS      = 2;
 
 
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
@@ -47,7 +48,7 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 class tile_t {
 
 	int x1, y1, x2, y2, init_dxoff, init_dyoff;
-	unsigned tid, vbo, ivbo, size, stride, zvsize, base_tsize, gen_tsize;
+	unsigned tid, vbo, ivbo[NUM_LODS], size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, xstart, ystart, xstep, ystep;
 	vector<float> zvals;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
@@ -56,11 +57,11 @@ class tile_t {
 public:
 	typedef vert_norm_comp vert_type_t;
 
-	tile_t() : tid(0), vbo(0), ivbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {}
+	tile_t() : tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {init_vbo_ids();}
 	~tile_t() {clear_vbo_tid(1,1);}
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2),
-		tid(0), vbo(0), ivbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0)
+		tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -71,6 +72,7 @@ public:
 		radius = 0.5*sqrt(xstep*xstep + ystep*ystep)*size; // approximate (lower bound)
 		mzmin  = mzmax = get_camera_pos().z;
 		base_tsize = get_norm_texels();
+		init_vbo_ids();
 		
 		if (DEBUG_TILES) {
 			cout << "create " << size << ": " << x << "," << y << ", coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;
@@ -99,9 +101,12 @@ public:
 
 	unsigned get_gpu_memory() const {
 		unsigned mem(0);
-		if (vbo  > 0) mem += 2*stride*size*sizeof(vert_type_t);
-		if (ivbo > 0) mem += size*size*sizeof(unsigned short);
-		if (tid  > 0) mem += 4*size*size; // 4 bytes per texel
+		if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
+		if (tid > 0) mem += 4*size*size; // 4 bytes per texel
+
+		for (unsigned i = 0; i < NUM_LODS; ++i) {
+			if (ivbo[i] > 0) mem += (size>>i)*(size>>i)*sizeof(unsigned short);
+		}
 		return mem;
 	}
 
@@ -117,11 +122,16 @@ public:
 		gen_tsize = 0;
 	}
 
+	void init_vbo_ids() {
+		vbo = 0;
+		for (unsigned i = 0; i < NUM_LODS; ++i) {ivbo[i] = 0;}
+	}
+
 	void clear_vbo_tid(bool vclear, bool tclear) {
 		if (vclear) {
 			delete_vbo(vbo);
-			delete_vbo(ivbo);
-			vbo = ivbo = 0;
+			for (unsigned i = 0; i < NUM_LODS; ++i) {delete_vbo(ivbo[i]);}
+			init_vbo_ids();
 			clear_shadows();
 		}
 		if (tclear) {clear_tid();}
@@ -192,11 +202,10 @@ public:
 		}
 	}
 
-	void create_data(vector<vert_type_t> &data, vector<unsigned short> &indices) {
+	void create_data(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
 		//RESET_TIME;
 		assert(zvals.size() == zvsize*zvsize);
 		data.resize(stride*stride);
-		indices.resize(4*size*size);
 		calc_start_step(init_dxoff, init_dyoff);
 		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
 		assert(has_sun || has_moon);
@@ -219,16 +228,20 @@ public:
 				data[y*stride + x] = vert_norm_comp(v, get_norm(ix)*light_scale);
 			}
 		}
-		for (unsigned y = 0; y < size; ++y) {
-			for (unsigned x = 0; x < size; ++x) {
-				unsigned const vix(y*stride + x), iix(4*(y*size + x));
-				indices[iix+0] = vix;
-				indices[iix+1] = vix + stride;
-				indices[iix+2] = vix + stride + 1;
-				indices[iix+3] = vix + 1;
+		for (unsigned i = 0; i < NUM_LODS; ++i) {
+			indices[i].resize(4*(size>>i)*(size>>i));
+			unsigned const step(1 << i);
+
+			for (unsigned y = 0; y < size; y += step) {
+				for (unsigned x = 0; x < size; x += step) {
+					unsigned const vix(y*stride + x), iix(4*((y>>i)*(size>>i) + (x>>i)));
+					indices[i][iix+0] = vix;
+					indices[i][iix+1] = vix + step*stride;
+					indices[i][iix+2] = vix + step*stride + step;
+					indices[i][iix+3] = vix + step;
+				}
 			}
 		}
-		// FIXME: create and use lower LOD indices
 		//PRINT_TIME("Create Data");
 	}
 
@@ -313,13 +326,7 @@ public:
 		return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());
 	}
 
-	void bind_vbos() {
-		assert(vbo > 0 && ivbo > 0);
-		bind_vbo(vbo,  0);
-		bind_vbo(ivbo, 1);
-	}
-
-	bool draw(vector<vert_type_t> &data, vector<unsigned short> &indices) { // make const or make vbo mutable?
+	bool draw(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], bool reflection_pass) { // make const or make vbo mutable?
 		assert(size > 0);
 		if (!is_visible()) return 0; // not visible to camera
 
@@ -337,23 +344,31 @@ public:
 		unsigned const ptr_stride(sizeof(vert_type_t));
 
 		if (vbo == 0) {
-			assert(ivbo == 0);
 			create_data(data, indices);
-			vbo  = create_vbo();
-			ivbo = create_vbo();
-			bind_vbos();
-			upload_vbo_data(&data.front(),    data.size()*ptr_stride,                0);
-			upload_vbo_data(&indices.front(), indices.size()*sizeof(unsigned short), 1);
+			vbo = create_vbo();
+			bind_vbo(vbo, 0);
+			upload_vbo_data(&data.front(), data.size()*ptr_stride, 0);
+
+			for (unsigned i = 0; i < NUM_LODS; ++i) {
+				assert(ivbo[i] == 0);
+				ivbo[i] = create_vbo();
+				bind_vbo(ivbo[i], 1);
+				assert(!indices[i].empty());
+				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
+			}
 		}
-		else {
-			bind_vbos();
-		}
+		unsigned const lod_level(reflection_pass ? 1 : 0); // FIXME: dynamic
+		assert(lod_level < NUM_LODS);
+		assert(vbo > 0 && ivbo[lod_level] > 0);
+		bind_vbo(vbo,  0);
+		bind_vbo(ivbo[lod_level], 1);
+		unsigned const isz(size >> lod_level);
+		
 		// can store normals in a normal map texture, but a vertex texture fetch is slow
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
 		//glNormalPointer(GL_FLOAT, ptr_stride, (void *)sizeof(point));
 		glNormalPointer(GL_BYTE, ptr_stride, (void *)sizeof(point));
-		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), 4*size*size, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
-		//glDrawElements(GL_QUADS, 4*size*size, GL_UNSIGNED_SHORT, 0);
+		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), 4*isz*isz, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 		glPopMatrix();
@@ -449,14 +464,14 @@ public:
 		if (blend_textures_in_shaders) setup_terrain_textures(s, 2, 0);
 	}
 
-	float draw(bool add_hole, float wpz) {
+	float draw(bool add_hole, float wpz, bool reflection_pass) {
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
 		set_array_client_state(1, 0, 1, 0);
 		unsigned num_drawn(0);
 		unsigned long long mem(0);
 		vector<tile_t::vert_type_t> data;
-		vector<unsigned short> indices;
+		vector<unsigned short> indices[NUM_LODS];
 		static point last_sun(all_zeros), last_moon(all_zeros);
 
 		if (sun_pos != last_sun || moon_pos != last_moon) {
@@ -482,7 +497,7 @@ public:
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			num_drawn += to_draw[i].second->draw(data, indices);
+			num_drawn += to_draw[i].second->draw(data, indices, reflection_pass);
 		}
 		s.end_shader();
 		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
@@ -576,7 +591,7 @@ void fill_gap(float wpz) {
 }
 
 
-float draw_tiled_terrain(bool add_hole, float wpz) {
+float draw_tiled_terrain(bool add_hole, float wpz, bool reflection_pass) {
 
 	//RESET_TIME;
 	bool const vbo_supported(setup_gen_buffers());
@@ -586,7 +601,7 @@ float draw_tiled_terrain(bool add_hole, float wpz) {
 		return zmin;
 	}
 	terrain_tile_draw.update();
-	float const zmin(terrain_tile_draw.draw(add_hole, wpz));
+	float const zmin(terrain_tile_draw.draw(add_hole, wpz, reflection_pass));
 	if (add_hole) fill_gap(wpz); // need to fill the gap on +x/+y
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	return zmin;
