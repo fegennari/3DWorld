@@ -54,7 +54,7 @@ class tile_t {
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 
 public:
-	typedef vert_norm vert_type_t;
+	typedef vert_norm_comp vert_type_t;
 
 	tile_t() : tid(0), vbo(0), ivbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {}
 	~tile_t() {clear_vbo_tid(1,1);}
@@ -216,7 +216,7 @@ public:
 					light_scale = 0.0;
 				}
 				point const v((xstart + x*xstep), (ystart + y*ystep), zvals[ix]);
-				data[y*stride + x].assign(v, get_norm(ix)*light_scale);
+				data[y*stride + x] = vert_norm_comp(v, get_norm(ix)*light_scale);
 			}
 		}
 		for (unsigned y = 0; y < size; ++y) {
@@ -334,7 +334,7 @@ public:
 		glPushMatrix();
 		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
 		if (tid > 0) set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
-		unsigned ptr_stride(sizeof(vert_type_t));
+		unsigned const ptr_stride(sizeof(vert_type_t));
 
 		if (vbo == 0) {
 			assert(ivbo == 0);
@@ -350,7 +350,8 @@ public:
 		}
 		// can store normals in a normal map texture, but a vertex texture fetch is slow
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
-		glNormalPointer(   GL_FLOAT, ptr_stride, (void *)sizeof(point));
+		//glNormalPointer(GL_FLOAT, ptr_stride, (void *)sizeof(point));
+		glNormalPointer(GL_BYTE, ptr_stride, (void *)sizeof(point));
 		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), 4*size*size, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
 		//glDrawElements(GL_QUADS, 4*size*size, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
