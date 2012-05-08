@@ -273,7 +273,10 @@ public:
 				bool const same_tid(k1 == k4);
 				k2 = k4;
 				
-				if (!same_tid) {
+				if (same_tid) {
+					t = 0.0;
+				}
+				else {
 					float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
 					get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, t);
 				}
