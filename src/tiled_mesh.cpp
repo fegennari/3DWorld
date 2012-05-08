@@ -13,7 +13,7 @@ bool const DEBUG_TILES       = 0;
 int  const DISABLE_TEXTURES  = 0;
 int  const TILE_RADIUS       = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT    = 5; // WM3, in mesh sizes
-unsigned const NUM_LODS      = 2;
+unsigned const NUM_LODS      = 4;
 
 
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
@@ -360,7 +360,13 @@ public:
 				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
 			}
 		}
-		unsigned const lod_level(reflection_pass ? 1 : 0); // FIXME: dynamic
+		unsigned lod_level(reflection_pass ? 1 : 0);
+		float dist(get_rel_dist_to_camera()*get_tile_radius()); // in tiles
+
+        while (dist > 1.0 && lod_level+1 < NUM_LODS) {
+            dist /= 2;
+            ++lod_level;
+        }
 		assert(lod_level < NUM_LODS);
 		assert(vbo > 0 && ivbo[lod_level] > 0);
 		bind_vbo(vbo,  0);
