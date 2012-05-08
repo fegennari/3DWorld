@@ -1007,11 +1007,11 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'L': // increase terrain zoom
 		if (mesh_seed != 0 || read_heightmap) break; // ???
-		if (!world_mode == WMODE_UNIVERSE) change_terrain_zoom(2.0);
+		if (world_mode != WMODE_UNIVERSE) change_terrain_zoom(2.0);
 		break;
 	case 'Y': // decrease terrain zoom
 		if (mesh_seed != 0 || read_heightmap) break; // ???
-		if (!world_mode == WMODE_UNIVERSE) change_terrain_zoom(0.5);
+		if (world_mode != WMODE_UNIVERSE) change_terrain_zoom(0.5);
 		break;
 
 	// object enables
