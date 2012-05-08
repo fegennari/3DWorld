@@ -443,13 +443,16 @@ public:
 		for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
 			int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
 			float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
+			float const cscale((world_mode == WMODE_INF_TERRAIN && tid == GROUND_TEX) ? 0.5 : 1.0); // darker grass
 			unsigned const tu_id(start_tu_id + i);
 			select_multitex(tid, tu_id, 0);
-			std::ostringstream oss, oss2;
-			oss  << "tex" << tu_id;
+			std::ostringstream oss1, oss2, oss3;
+			oss1 << "tex" << tu_id;
 			oss2 << "ts"  << tu_id;
-			s.add_uniform_int(oss.str().c_str(), tu_id);
+			oss3 << "cs"  << tu_id;
+			s.add_uniform_int(  oss1.str().c_str(), tu_id);
 			s.add_uniform_float(oss2.str().c_str(), tscale);
+			s.add_uniform_float(oss3.str().c_str(), cscale);
 		}
 		set_multitex(0);
 	}
