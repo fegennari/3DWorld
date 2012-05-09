@@ -12,8 +12,8 @@
 bool const DEBUG_TILES       = 0;
 int  const DISABLE_TEXTURES  = 0;
 int  const TILE_RADIUS       = 4; // WM0, in mesh sizes
-int  const TILE_RADIUS_IT    = 5; // WM3, in mesh sizes
-unsigned const NUM_LODS      = 4;
+int  const TILE_RADIUS_IT    = 6; // WM3, in mesh sizes
+unsigned const NUM_LODS      = 5;
 
 
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
@@ -153,13 +153,15 @@ public:
 		}
 		build_xy_mesh_arrays(&xv.front(), &yv.front(), zvsize, zvsize);
 
-		for (unsigned y = 0; y < zvsize; ++y) {
+		#pragma omp parallel for schedule(static,1)
+		for (int y = 0; y < (int)zvsize; ++y) {
 			for (unsigned x = 0; x < zvsize; ++x) {
-				float const zval(fast_eval_from_index(x, y, 0, 1));
-				zvals[y*zvsize + x] = zval;
-				mzmin = min(mzmin, zval);
-				mzmax = max(mzmax, zval);
+				zvals[y*zvsize + x] = fast_eval_from_index(x, y, 0, 1);
 			}
+		}
+		for (vector<float>::const_iterator i = zvals.begin(); i != zvals.end(); ++i) {
+			mzmin = min(mzmin, *i);
+			mzmax = max(mzmax, *i);
 		}
 		assert(mzmin <= mzmax);
 		radius = 0.5*sqrt((xstep*xstep + ystep*ystep)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
@@ -363,7 +365,7 @@ public:
 		unsigned lod_level(reflection_pass ? 1 : 0);
 		float dist(get_rel_dist_to_camera()*get_tile_radius()); // in tiles
 
-        while (dist > 1.0 && lod_level+1 < NUM_LODS) {
+        while (dist > (reflection_pass ? 1.0 : 2.0) && lod_level+1 < NUM_LODS) {
             dist /= 2;
             ++lod_level;
         }
@@ -497,7 +499,7 @@ public:
 		setup_mesh_lighting();
 		vector<pair<float, tile_t *> > to_draw;
 
-		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
 			if (DEBUG_TILES) mem += i->second->get_gpu_memory();
 			if (add_hole && i->first.x == 0 && i->first.y == 0) continue;
