@@ -80,9 +80,9 @@ int enable_fsource(0), run_forward(0), advanced(0), passive_motion(P_MOTION_DEF)
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 int read_snow_file(0), write_snow_file(0);
 unsigned num_snowflakes(0), scenery_extent(0), num_vpls(0);
-float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), tree_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0);
+float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), tree_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0);
-float water_h_off(0.0), perspective_fovy(0.0), perspective_nclip(0.0), atmosphere(1.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
+float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
 float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(DEF_STEP_HEIGHT), wapypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9);
@@ -1539,8 +1539,10 @@ int load_config(string const &config_file) {
 		else if (str == "relh_adj_tex") {
 			if (!read_float(fp, relh_adj_tex)) cfg_err("relh_adj_tex command", error);
 		}
-		else if (str == "water_h_off") {
+		else if (str == "water_h_off") { // abs [rel]
 			if (!read_float(fp, water_h_off)) cfg_err("water_h_off command", error);
+			water_h_off_rel = 0.0;
+			read_float(fp, water_h_off_rel); // optional
 		}
 		else if (str == "lm_dz_adj") {
 			if (!read_float(fp, lm_dz_adj) || lm_dz_adj < 0.0) cfg_err("lm_dz_adj command", error);

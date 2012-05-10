@@ -1091,7 +1091,7 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 
 	// if wrap is true,  the texture wraps over at the edges (repeat) or is mirrored
 	// if wrap is false, the texture ends at the edges (clamp)
-	int const mode_s(wrap_s ? (mirror_s ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE);
+	int const mode_s(wrap_s ? (mirror_s ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE); // Note: clamp is more efficient than wrap
 	int const mode_t(wrap_t ? (mirror_t ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mode_s);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mode_t);

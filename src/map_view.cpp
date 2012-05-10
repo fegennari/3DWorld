@@ -15,7 +15,7 @@ float map_zoom(0.25);
 extern bool use_stencil_shadows;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, begin_motion;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER;
-extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, water_h_off;
+extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex;
 extern int coll_id[];
 extern obj_group obj_groups[];
 
@@ -37,19 +37,18 @@ void draw_overhead_map() {
 	while (min(window_width, window_height) > 2*nx) nx *= 2;
 	if (nx < 4) return;
 	int const ny(nx), nx2(nx/2), ny2(ny/2);
-	float const zmax2(zmax_est*((map_color || no_water) ? 1.0 : 0.855));
+	float const zmax2(zmax_est*((map_color || no_water) ? 1.0 : 0.855)), hscale(0.5/zmax2);
 	float const scale(2.0*map_zoom*X_SCENE_SIZE*DX_VAL), scale_val(scale/64);
 	float x0(map_x + xoff2*DX_VAL), y0(map_y + yoff2*DY_VAL);
-	float const relh(get_rel_height(water_plane_z, -zmax_est, zmax_est));
-	float const hscale(0.5/zmax2), wpz(relh*2.0*zmax_est - zmax_est);	
+	float const relh_water(get_rel_height(water_plane_z, -zmax_est, zmax_est));
 	point const camera(get_camera_pos());
 	float map_heights[6];
-	map_heights[0] = 0.9*lttex_dirt[3].zval + 0.1*lttex_dirt[4].zval;
+	map_heights[0] = 0.9*lttex_dirt[3].zval  + 0.1*lttex_dirt[4].zval;
 	map_heights[1] = 0.5*(lttex_dirt[2].zval + lttex_dirt[3].zval);
 	map_heights[2] = 0.5*(lttex_dirt[1].zval + lttex_dirt[2].zval);
 	map_heights[3] = 0.5*(lttex_dirt[0].zval + lttex_dirt[1].zval);
-	map_heights[4] = hscale*(wpz + zmax2);
-	map_heights[5] = 0.5*map_heights[4] + water_h_off/zmax_est;
+	map_heights[4] = relh_water;
+	map_heights[5] = 0.5*map_heights[4];
 
 	colorRGBA const map_colors[6] = {
 		((DISABLE_WATER == 2) ? DK_GRAY : WHITE),
@@ -115,19 +114,26 @@ void draw_overhead_map() {
 					height += relh_adj_tex;
 
 					if (height <= map_heights[5]) {
-						unpack_color(rgb, map_colors[5]); // water
+						unpack_color(rgb, map_colors[5]); // deep water
+					}
+					else if (height <= map_heights[3]) {
+						unpack_color(rgb, map_colors[3]); // sand
 					}
 					else if (height >= map_heights[0]) {
 						unpack_color(rgb, map_colors[0]); // snow
 					}
 					else {
-						for (unsigned k = 0; k < 5; ++k) { // mixed
+						for (unsigned k = 0; k < 4; ++k) { // mixed
 							if (height > map_heights[k+1]) {
 								float const hval((height - map_heights[k+1])/(map_heights[k] - map_heights[k+1]));
 								UNROLL_3X(rgb[i_] = (unsigned char)(255.0*(hval*map_colors[k][i_] + (1.0 - hval)*map_colors[k+1][i_]));)
 								break;
 							}
 						}
+					}
+					if (height <= map_heights[4] && height > map_heights[5]) { // shallow water
+						float const hval(0.5*(height - map_heights[5])/(map_heights[4] - map_heights[5]));
+						UNROLL_3X(rgb[i_] = (unsigned char)(255.0*(1.0 - hval)*map_colors[5][i_] + hval*rgb[i_]);)
 					}
 					if (!use_stencil_shadows) {
 						vector3d normal(plus_z);

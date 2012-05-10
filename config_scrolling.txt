@@ -28,7 +28,7 @@ default_ground_tex -1
 ground_effects_level 9
 # mesh_seed 2
 
-#water_h_off 2.0
+#water_h_off 0.0 0.1
 #relh_adj_tex -0.1
 
 include config_gameplay.txt

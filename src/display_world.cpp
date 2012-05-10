@@ -45,7 +45,6 @@ extern bool nop_frame, combined_gu, have_sun, use_stencil_shadows, clear_landsca
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, brightness;
-extern float water_h_off;
 extern double camera_zh;
 extern point mesh_origin, flow_source, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern colorRGBA sun_color, bkg_color;

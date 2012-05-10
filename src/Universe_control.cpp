@@ -26,7 +26,7 @@ float resource_counts[NUM_ALIGNMENT] = {0.0};
 extern bool univ_planet_lod; // smaller near_clip if true?
 extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
-extern float def_water_level, water_plane_z, tan_term, sin_term, init_temperature, camera_shake;
+extern float def_water_level, water_plane_z, water_h_off_rel, tan_term, sin_term, init_temperature, camera_shake;
 extern unsigned team_credits[];
 extern point last_camera;
 extern string user_text;
@@ -146,6 +146,7 @@ void setup_current_system() {
 			
 			if (water_rel != def_water_level || water_rel != water_plane_z) {
 				//cout << "water: " << def_water_level << "/" << water_plane_z << " => " << water << "/" << water_rel << endl;
+				//water_h_off_rel = ???;
 				//def_water_level = water_plane_z = water_rel; // *** FIX ***
 				//regen_mesh      = 1; // regen texture?
 				// *** recalculate water ***

@@ -84,7 +84,7 @@ extern int island, xoff, yoff, xoff2, yoff2, world_mode, resolution, rand_gen_in
 extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode;
 extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
-extern float water_h_off, disabled_mesh_z, read_mesh_zmm, init_temperature;
+extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature;
 extern point mesh_origin, surface_pos;
 extern char *mh_filename_raw, *mh_filename_bmp, *dem_filename, *dem_raw_out, *mesh_file;
 extern rand_gen_t global_rand_gen;
@@ -624,7 +624,7 @@ void set_zvals() {
 
 float get_water_z_height() {
 
-	float wpz(W_PLANE_Z);
+	float wpz(CLIP_TO_01(W_PLANE_Z + water_h_off_rel));
 	if (GLACIATE && !island) wpz = DO_GLACIATE_EXP(wpz);
 	return wpz*zmax_est2 - zmax_est + water_h_off;
 }
