@@ -13,7 +13,7 @@ bool const DEBUG_TILES       = 0;
 int  const DISABLE_TEXTURES  = 0;
 int  const TILE_RADIUS       = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT    = 6; // WM3, in mesh sizes
-unsigned const NUM_LODS      = 5;
+unsigned const NUM_LODS      = 5; // > 0
 
 
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
@@ -137,26 +137,30 @@ public:
 		if (tclear) {clear_tid();}
 	}
 
+	void create_xy_arrays(unsigned xy_size, float xy_scale) {
+		static vector<float> xv, yv; // move somewhere else?
+		xv.resize(xy_size);
+		yv.resize(xy_size);
+
+		for (unsigned i = 0; i < xy_size; ++i) { // not sure about this -x, +y thing
+			xv[i] = xy_scale*(xstart + (i - 0.5)*xstep);
+			yv[i] = xy_scale*(ystart + (i + 0.5)*ystep);
+		}
+		build_xy_mesh_arrays(&xv.front(), &yv.front(), xy_size, xy_size);
+	}
+
 	void create_zvals() {
 		//RESET_TIME;
 		zvals.resize(zvsize*zvsize);
-		static vector<float> xv, yv; // move somewhere else?
-		xv.resize(zvsize);
-		yv.resize(zvsize);
 		calc_start_step(0, 0);
+		create_xy_arrays(zvsize, 1.0);
 		mzmin =  FAR_CLIP;
 		mzmax = -FAR_CLIP;
-
-		for (unsigned i = 0; i < zvsize; ++i) { // not sure about this -x, +y thing
-			xv[i] = (xstart + (i - 0.5)*xstep);
-			yv[i] = (ystart + (i + 0.5)*ystep);
-		}
-		build_xy_mesh_arrays(&xv.front(), &yv.front(), zvsize, zvsize);
 
 		#pragma omp parallel for schedule(static,1)
 		for (int y = 0; y < (int)zvsize; ++y) {
 			for (unsigned x = 0; x < zvsize; ++x) {
-				zvals[y*zvsize + x] = fast_eval_from_index(x, y, 0, 1);
+				zvals[y*zvsize + x] = fast_eval_from_index(x, y);
 			}
 		}
 		for (vector<float>::const_iterator i = zvals.begin(); i != zvals.end(); ++i) {
@@ -262,14 +266,17 @@ public:
 			if (lttex_dirt[i].id == ROCK_TEX) rock_tex_ix = i;
 		}
 		assert(dirt_tex_ix >= 0 && rock_tex_ix >= 0);
+		if (world_mode == WMODE_INF_TERRAIN) {create_xy_arrays(zvsize, 80.0);}
 
+		//#pragma omp parallel for schedule(static,1)
 		for (unsigned y = 0; y < size; ++y) {
 			for (unsigned x = 0; x < size; ++x) {
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-				float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
-				float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
+				float const rand_offset((world_mode == WMODE_INF_TERRAIN) ? 0.003*fast_eval_from_index(x, y, 0) : 0.0);
+				float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv + rand_offset);
+				float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv + rand_offset);
 				get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2, t);
 				get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4, t);
 				bool const same_tid(k1 == k4);
@@ -314,7 +321,7 @@ public:
 		glTexImage2D(GL_TEXTURE_2D, 0, 4, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
 		glDisable(GL_TEXTURE_2D);
 		delete [] data;
-		//if (tex_bs == 0) {PRINT_TIME("Texture Upload");}
+		//PRINT_TIME("Texture Upload");
 	}
 
 	float get_rel_dist_to_camera() const {
@@ -362,7 +369,7 @@ public:
 				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
 			}
 		}
-		unsigned lod_level(reflection_pass ? 1 : 0);
+		unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
 		float dist(get_rel_dist_to_camera()*get_tile_radius()); // in tiles
 
         while (dist > (reflection_pass ? 1.0 : 2.0) && lod_level+1 < NUM_LODS) {
@@ -577,10 +584,10 @@ void fill_gap(float wpz) {
 	for (int x = 0; x < MESH_X_SIZE; ++x) {
 		vertex_normals[MESH_Y_SIZE-1][x].do_glNormal();
 		draw_vert_color(color, get_xval(x), Y_SCENE_SIZE-DY_VAL, mesh_height[MESH_Y_SIZE-1][x]);
-		draw_vert_color(color, get_xval(x), Y_SCENE_SIZE       , fast_eval_from_index(x, 0, 0, 1));
+		draw_vert_color(color, get_xval(x), Y_SCENE_SIZE       , fast_eval_from_index(x, 0));
 	}
 	glEnd();
-	float const z_end_val(fast_eval_from_index(MESH_X_SIZE-1, 0, 0, 1));
+	float const z_end_val(fast_eval_from_index(MESH_X_SIZE-1, 0));
 
 	// draw +y
 	build_xy_mesh_arrays(&xv[MESH_X_SIZE], &yv.front(), 1, MESH_Y_SIZE+1);
@@ -589,12 +596,12 @@ void fill_gap(float wpz) {
 	for (int y = 0; y < MESH_X_SIZE; ++y) {
 		vertex_normals[y][MESH_X_SIZE-1].do_glNormal();
 		draw_vert_color(color, X_SCENE_SIZE-DX_VAL, get_yval(y), mesh_height[y][MESH_X_SIZE-1]);
-		draw_vert_color(color, X_SCENE_SIZE       , get_yval(y), fast_eval_from_index(0, y, 0, 1));
+		draw_vert_color(color, X_SCENE_SIZE       , get_yval(y), fast_eval_from_index(0, y));
 	}
 
 	// draw corner quad
 	draw_vert_color(color, X_SCENE_SIZE-DX_VAL, Y_SCENE_SIZE, z_end_val);
-	draw_vert_color(color, X_SCENE_SIZE       , Y_SCENE_SIZE, fast_eval_from_index(0, MESH_Y_SIZE, 0, 1));
+	draw_vert_color(color, X_SCENE_SIZE       , Y_SCENE_SIZE, fast_eval_from_index(0, MESH_Y_SIZE));
 	glEnd();
 
 	s.end_shader();

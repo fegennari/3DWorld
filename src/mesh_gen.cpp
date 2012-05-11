@@ -600,7 +600,7 @@ void estimate_zminmax(int using_eq) {
 
 		for (unsigned i = 0; i < EST_RAND_PARAM; ++i) {
 			for (unsigned j = 0; j < EST_RAND_PARAM; ++j) {
-				zmax_est = max(zmax_est, float(fabs(fast_eval_from_index(j, i, 0, 0))));
+				zmax_est = max(zmax_est, float(fabs(fast_eval_from_index(j, i, 0))));
 			}
 		}
 	}
@@ -727,30 +727,34 @@ void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny) {
 }
 
 
-float fast_eval_from_index(int x, int y, bool use_cache, bool glaciate) {
+float fast_eval_from_index(int x, int y, bool glaciate) {
 
-	int ci(0);
 	float zval(hoff_global);
 	assert(x >= 0 && y >= 0 && x < DYNAMIC_MESH_SZ && y < DYNAMIC_MESH_SZ);
-
-	if (USE_MESH_CACHE && use_cache) {
-		float const xr(xv0_cached[x]), yr(yv0_cached[y]);
-		ci = (unsigned(xr*DX_VAL_INV + yr*49157*DY_VAL_INV))%MESH_CACHE_SIZE;
-		mesh_cache_entry &mci(mesh_cache[ci]);
-		if (mci.counter == cache_counter && mci.xval == xr && mci.yval == yr) return mci.height;
-		mci.counter = cache_counter;
-		mci.xval    = xr;
-		mci.yval    = yr;
-	}
 	float *ity(iTerms2[y]), *jtx(jTerms2[x]);
 
 	for (int i = start_eval_sin; i < F_TABLE_SIZE; ++i) {
 		zval += ity[i]*jtx[i]; // performance critical
 	}
 	if (GLACIATE && glaciate && !island) zval = get_glaciated_zval(zval);
-	if (USE_MESH_CACHE && use_cache) mesh_cache[ci].height = zval;
 	return zval;
 }
+
+
+float fast_eval_from_index_cached(int x, int y, bool glaciate) {
+
+	if (!USE_MESH_CACHE) return fast_eval_from_index(x, y, glaciate);
+	float const xr(xv0_cached[x]), yr(yv0_cached[y]);
+	int const ci((unsigned(xr*DX_VAL_INV + yr*49157*DY_VAL_INV))%MESH_CACHE_SIZE);
+	mesh_cache_entry &mci(mesh_cache[ci]);
+	if (mci.counter == cache_counter && mci.xval == xr && mci.yval == yr) return mci.height;
+	mci.counter = cache_counter;
+	mci.xval    = xr;
+	mci.yval    = yr;
+	mci.height  = fast_eval_from_index(x, y, glaciate);
+	return mci.height;
+}
+
 
 
 float eval_mesh_sin_terms(float xv, float yv) {

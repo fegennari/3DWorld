@@ -105,7 +105,7 @@ void draw_overhead_map() {
 				rgb[0] = rgb[1] = rgb[2] = 0; // world boundary
 			}
 			else {
-				float height(CLIP_TO_01(hscale*(fast_eval_from_index(j, i, 1) + zmax2)));
+				float height(CLIP_TO_01(hscale*(fast_eval_from_index_cached(j, i) + zmax2)));
 
 				if (!map_color) { // grayscale
 					rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*pow(height, glaciate_exp_inv)); // un-glaciate: slow
@@ -140,7 +140,7 @@ void draw_overhead_map() {
 
 						if (height > map_heights[4]) {
 							float const hx((j == 0) ? height : last_height);
-							float const hy(CLIP_TO_01(hscale*(fast_eval_from_index(j, max(i-1, 0), 1) + zmax2)));
+							float const hy(CLIP_TO_01(hscale*(fast_eval_from_index_cached(j, max(i-1, 0)) + zmax2)));
 							normal = vector3d(DY_VAL*(hx - height), DX_VAL*(hy - height), dxdy).get_norm();
 						}
 						last_height = height;
