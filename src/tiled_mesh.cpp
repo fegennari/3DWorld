@@ -17,7 +17,7 @@ unsigned const NUM_LODS      = 5; // > 0
 
 
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
-extern float zmax, zmin, water_plane_z, mesh_scale, vegetation, relh_adj_tex;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
@@ -257,7 +257,9 @@ public:
 		assert(zvals.size() == zvsize*zvsize);
 		//RESET_TIME;
 		unsigned char *data(new unsigned char[4*size*size]); // RGBA
-		float const dz_inv(1.0/(zmax - zmin));
+		float const MESH_NOISE_SCALE = 0.003;
+		float const MESH_NOISE_FREQ  = 80.0;
+		float const dz_inv(1.0/(zmax - zmin)), noise_scale(MESH_NOISE_SCALE*mesh_scale_z);
 		int k1, k2, k3, k4, dirt_tex_ix(-1), rock_tex_ix(-1);
 		float t;
 
@@ -266,7 +268,7 @@ public:
 			if (lttex_dirt[i].id == ROCK_TEX) rock_tex_ix = i;
 		}
 		assert(dirt_tex_ix >= 0 && rock_tex_ix >= 0);
-		if (world_mode == WMODE_INF_TERRAIN) {create_xy_arrays(zvsize, 80.0);}
+		if (world_mode == WMODE_INF_TERRAIN) {create_xy_arrays(zvsize, MESH_NOISE_FREQ);}
 
 		//#pragma omp parallel for schedule(static,1)
 		for (unsigned y = 0; y < size; ++y) {
@@ -274,7 +276,7 @@ public:
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-				float const rand_offset((world_mode == WMODE_INF_TERRAIN) ? 0.003*fast_eval_from_index(x, y, 0) : 0.0);
+				float const rand_offset((world_mode == WMODE_INF_TERRAIN) ? noise_scale*fast_eval_from_index(x, y, 0) : 0.0);
 				float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv + rand_offset);
 				float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv + rand_offset);
 				get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2, t);
