@@ -44,7 +44,7 @@ cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 extern bool clear_landscape_vbo, create_voxel_landscape;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
-extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items;
+extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin, model_czmin, model_czmax;
 extern point cpos2, orig_camera, orig_cdir;
@@ -702,9 +702,14 @@ void free_all_coll_objects() {
 			if (obj_groups[i].enabled) obj_groups[i].remove_reset_cobjs();
 		}
 	}
+	remove_coll_object(camera_coll_id);
 	purge_coll_freed(1);
+	coll_objects.clear_ids(); // FIXME: should already be cleared - memory leak?
 	czmin = model_czmin; // reset zmin/zmax to original values before cobjs were added
 	czmax = model_czmax;
+	assert(coll_objects.dynamic_ids.empty());
+	assert(coll_objects.drawn_ids.empty());
+	assert(coll_objects.platform_ids.empty());
 }
 
 
@@ -723,13 +728,19 @@ void check_contained_cube_sides() {
 }
 
 
+void coll_obj_group::clear_ids() {
+	
+	dynamic_ids.clear();
+	drawn_ids.clear();
+	platform_ids.clear();
+}
+
+
 void coll_obj_group::clear() { // unused, but may be useful
 	
 	has_lt_atten = 0;
 	vector<coll_obj>::clear();
-	dynamic_ids.clear();
-	drawn_ids.clear();
-	platform_ids.clear();
+	clear_ids();
 }
 
 

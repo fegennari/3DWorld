@@ -170,6 +170,7 @@ public:
 	cobj_id_set_t dynamic_ids, drawn_ids, platform_ids;
 
 	coll_obj_group() : has_lt_atten(0) {}
+	void clear_ids();
 	void clear();
 	void finalize();
 	void remove_invalid_cobjs();
