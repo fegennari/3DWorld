@@ -79,6 +79,10 @@ float iTerms2[DYNAMIC_MESH_SZ][F_TABLE_SIZE], jTerms2[DYNAMIC_MESH_SZ][F_TABLE_S
 
 mesh_cache_entry mesh_cache[MESH_CACHE_SIZE];
 
+ttex lttex_sand[NTEX_SAND] = {{SAND_TEX, 0.18}, {GROUND_TEX, 0.40}, {ROCK_TEX, 0.70},   {SNOW_TEX, 1.0}};
+ttex lttex_dirt[NTEX_DIRT] = {{SAND_TEX, 0.40}, {DIRT_TEX, 0.44},   {GROUND_TEX, 0.55}, {ROCK_TEX, 0.66}, {SNOW_TEX, 1.0}};
+
+
 extern bool combined_gu;
 extern int island, xoff, yoff, xoff2, yoff2, world_mode, resolution, rand_gen_index, mesh_scale_change;
 extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode;
@@ -511,15 +515,20 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 
 
 float get_glaciated_zval(float zval) {
-
 	float const relh((zval + zmax_est)*zmax_est2_inv);
 	return DO_GLACIATE_EXP(relh)*zmax_est2 - zmax_est;
 }
 
-
 float calc_glaciated_rel_value(float value) {
-
 	return zmin + DO_GLACIATE_EXP(value)*(zmax - zmin);
+}
+
+float do_glaciate_exp(float value) {
+	return DO_GLACIATE_EXP(value);
+}
+
+float get_rel_wpz() {
+	return CLIP_TO_01(W_PLANE_Z + water_h_off_rel);
 }
 
 
@@ -541,9 +550,27 @@ void glaciate() {
 }
 
 
+// should be named setup_lltex_sand_dirt() or something like that?
 void init_terrain_mesh() {
 
-	// use textures h_sand[] and h_dirt[]
+	float const rel_wpz(get_rel_wpz());
+	unsigned const sizes[2] = {NTEX_SAND, NTEX_DIRT}; // move into gen_tex_height_tables()?
+	ttex *ts[2] = {lttex_sand, lttex_dirt};
+
+	for (unsigned d = 0; d < 2; ++d) {
+		for (unsigned i = 0; i < sizes[d]; ++i) {
+			float &h(ts[d][i].zval);
+
+			if (h < W_PLANE_Z) { // below water
+				h *= rel_wpz/W_PLANE_Z;
+			}
+			else { // above water
+				float const rel_h((h - W_PLANE_Z)/(1.0 - W_PLANE_Z));
+				h = rel_wpz + rel_h*(1.0 - rel_wpz);
+			}
+		}
+	}
+	gen_tex_height_tables();
 }
 
 
@@ -624,7 +651,7 @@ void set_zvals() {
 
 float get_water_z_height() {
 
-	float wpz(CLIP_TO_01(W_PLANE_Z + water_h_off_rel));
+	float wpz(get_rel_wpz());
 	if (GLACIATE && !island) wpz = DO_GLACIATE_EXP(wpz);
 	return wpz*zmax_est2 - zmax_est + water_h_off;
 }

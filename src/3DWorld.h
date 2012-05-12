@@ -1556,6 +1556,8 @@ void gen_mesh_sine_table(float **matrix, float **jterms, int x_offset, int y_off
 void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_zvals);
 float get_glaciated_zval(float zval);
 float calc_glaciated_rel_value(float value);
+float do_glaciate_exp(float value);
+float get_rel_wpz();
 void init_terrain_mesh();
 void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny);
 float fast_eval_from_index(int x, int y, bool glaciate=1);

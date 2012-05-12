@@ -142,14 +142,18 @@ void setup_current_system() {
 		}
 		else {
 			if (DISABLE_WATER == 2) DISABLE_WATER = 0; // enable
-			float const water_rel(calc_glaciated_rel_value(water));
-			
-			if (water_rel != def_water_level || water_rel != water_plane_z) {
-				//cout << "water: " << def_water_level << "/" << water_plane_z << " => " << water << "/" << water_rel << endl;
-				//water_h_off_rel = ???;
-				//def_water_level = water_plane_z = water_rel; // *** FIX ***
-				//regen_mesh      = 1; // regen texture?
-				// *** recalculate water ***
+			float const water_level(0.5 + 0.5*(water - 0.5)), rel_wpz(get_rel_wpz());
+
+			if (fabs(water_level - rel_wpz) > 0.001) {
+				cout << "water: " << water << ", water_level: " << water_level << ", rel_wpz: " << rel_wpz << ", water_h_off_rel: " << water_h_off_rel << endl;
+				water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
+				water_h_off_rel = water_level - get_rel_wpz();
+				regen_mesh      = 1; // regen texture (is this needed?)
+				init_terrain_mesh();
+				clear_tiled_terrain();
+				//def_water_level = water_plane_z = get_water_z_height(); // ???
+				// *** FIXME: recalculate water in ground mode ***
+				// FIXME: less snow if low water?
 			}
 		}
 	}

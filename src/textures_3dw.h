@@ -20,8 +20,7 @@ struct ttex {
 };
 
 
-ttex const lttex_sand[NTEX_SAND] = {{SAND_TEX, 0.18}, {GROUND_TEX, 0.40}, {ROCK_TEX, 0.70},   {SNOW_TEX, 1.0}};
-ttex const lttex_dirt[NTEX_DIRT] = {{SAND_TEX, 0.40}, {DIRT_TEX, 0.44},   {GROUND_TEX, 0.55}, {ROCK_TEX, 0.66}, {SNOW_TEX, 1.0}};
+extern ttex lttex_sand[], lttex_dirt[];
 
 
 #define RGB_BLOCK_COPY(dst, src)           {dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2];            }
