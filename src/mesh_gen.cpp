@@ -79,8 +79,11 @@ float iTerms2[DYNAMIC_MESH_SZ][F_TABLE_SIZE], jTerms2[DYNAMIC_MESH_SZ][F_TABLE_S
 
 mesh_cache_entry mesh_cache[MESH_CACHE_SIZE];
 
-ttex lttex_sand[NTEX_SAND] = {{SAND_TEX, 0.18}, {GROUND_TEX, 0.40}, {ROCK_TEX, 0.70},   {SNOW_TEX, 1.0}};
-ttex lttex_dirt[NTEX_DIRT] = {{SAND_TEX, 0.40}, {DIRT_TEX, 0.44},   {GROUND_TEX, 0.55}, {ROCK_TEX, 0.66}, {SNOW_TEX, 1.0}};
+int const mesh_tids_sand[NTEX_SAND] = {SAND_TEX, GROUND_TEX, ROCK_TEX,   SNOW_TEX};
+int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX,   GROUND_TEX, ROCK_TEX, SNOW_TEX};
+float const mesh_rh_sand[NTEX_SAND] = {0.18, 0.40, 0.70, 1.0};
+float const mesh_rh_dirt[NTEX_DIRT] = {0.40, 0.44, 0.55, 0.66, 1.0};
+ttex lttex_sand[NTEX_SAND], lttex_dirt[NTEX_DIRT];
 
 
 extern bool combined_gu;
@@ -555,19 +558,29 @@ void init_terrain_mesh() {
 
 	float const rel_wpz(get_rel_wpz());
 	unsigned const sizes[2] = {NTEX_SAND, NTEX_DIRT}; // move into gen_tex_height_tables()?
+	int const *const mesh_tids[2] = {mesh_tids_sand, mesh_tids_dirt};
+	float const *const mesh_rh[2] = {mesh_rh_sand,   mesh_rh_dirt};
 	ttex *ts[2] = {lttex_sand, lttex_dirt};
 
 	for (unsigned d = 0; d < 2; ++d) {
 		for (unsigned i = 0; i < sizes[d]; ++i) {
-			float &h(ts[d][i].zval);
+			ts[d][i].id = mesh_tids[d][i];
+			float const def_h(mesh_rh[d][i]);
+			float h;
 
-			if (h < W_PLANE_Z) { // below water
-				h *= rel_wpz/W_PLANE_Z;
+			if (mesh_rh[d][i] < W_PLANE_Z) { // below water
+				h = def_h*rel_wpz/W_PLANE_Z;
 			}
 			else { // above water
-				float const rel_h((h - W_PLANE_Z)/(1.0 - W_PLANE_Z));
+				float const rel_h((def_h - W_PLANE_Z)/(1.0 - W_PLANE_Z));
 				h = rel_wpz + rel_h*(1.0 - rel_wpz);
+				
+				if (mesh_tids[d][i] == SNOW_TEX) {
+					h = min(h, def_h); // snow can't get lower when water lowers
+					if (temperature > 40.0) h += 0.01*(temperature - 40.0); // less snow with increasing temperature
+				}
 			}
+			ts[d][i].zval = h;
 		}
 	}
 	gen_tex_height_tables();

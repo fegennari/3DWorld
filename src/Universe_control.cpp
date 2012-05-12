@@ -114,6 +114,7 @@ void setup_current_system() {
 		cout << "temperature: " << univ_temp << endl;
 		last_temp   = univ_temp;
 		temperature = univ_temp;
+		regen_mesh  = 1; // regen texture (is this needed?)
 		//init_temperature = univ_temp; // ???
 	}
 	if (clobj0.type == UTYPE_PLANET) { // determine atmosphere and cloud cover
@@ -149,11 +150,8 @@ void setup_current_system() {
 				water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
 				water_h_off_rel = water_level - get_rel_wpz();
 				regen_mesh      = 1; // regen texture (is this needed?)
-				init_terrain_mesh();
-				clear_tiled_terrain();
-				//def_water_level = water_plane_z = get_water_z_height(); // ???
-				// *** FIXME: recalculate water in ground mode ***
-				// FIXME: less snow if low water?
+				def_water_level = water_plane_z = get_water_z_height(); // ???
+				calc_watershed();
 			}
 		}
 	}
@@ -163,6 +161,11 @@ void setup_current_system() {
 	}
 	//if (regen_mesh) *** regen mesh ***
 	setup_landscape_tex_colors(c1, c2);
+
+	if (regen_mesh) {
+		init_terrain_mesh();
+		clear_tiled_terrain();
+	}
 }
 
 

@@ -504,7 +504,7 @@ public:
 		}
 		shader_t s;
 		setup_mesh_draw_shaders(s, wpz, 1);
-		if (world_mode == WMODE_INF_TERRAIN && show_fog) draw_water_edge(wpz); // Note: doesn't take into account waves
+		if (world_mode == WMODE_INF_TERRAIN && show_fog && !DISABLE_WATER) draw_water_edge(wpz); // Note: doesn't take into account waves
 		setup_mesh_lighting();
 		vector<pair<float, tile_t *> > to_draw;
 
