@@ -701,6 +701,7 @@ void draw_univ_objects(point const &pos) {
 	set_lighted_sides(2); // doesn't hurt
 	enable_blend(); // doesn't hurt
 	clear_emissive_color(); // just to be sure
+	BLACK.do_glColor();
 
 	if (use_shaders) {
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS

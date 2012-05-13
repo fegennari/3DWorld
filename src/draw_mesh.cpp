@@ -42,7 +42,7 @@ extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, draw_mesh_sha
 extern unsigned num_jterms;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
-extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature;
+extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
@@ -763,7 +763,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 	float const dx(xoff*DX_VAL), dy(yoff*DY_VAL);
 	float const vdx(vd_scale*X_SCENE_SIZE), vdy(vd_scale*Y_SCENE_SIZE);
 	colorRGBA color;
-	select_water_ice_texture(color, ((world_mode == WMODE_INF_TERRAIN) ? &init_temperature : &temperature));
+	select_water_ice_texture(color, ((world_mode == WMODE_INF_TERRAIN) ? (combined_gu ? &univ_temp : &init_temperature) : &temperature));
 	bool const reflections(!(display_mode & 0x20));
 	color.alpha *= 0.5;
 
@@ -798,6 +798,9 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 		else {
 			blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 		}
+		set_multitex(2);
+		select_texture(WATER_TEX, 0);
+		set_multitex(0);
 		rcolor.alpha = 0.5*(0.5 + color.alpha);
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
@@ -809,6 +812,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 		s.setup_fog_scale();
 		s.add_uniform_int("water_tex",      0);
 		s.add_uniform_int("reflection_tex", 1);
+		s.add_uniform_int("ripple_tex",     2);
 		s.add_uniform_color("water_color",   color);
 		s.add_uniform_color("reflect_color", rcolor);
 		set_color(WHITE);

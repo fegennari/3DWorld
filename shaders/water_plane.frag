@@ -1,6 +1,6 @@
 varying vec3 normal;
 varying vec4 epos, proj_pos;
-uniform sampler2D water_tex, reflection_tex;
+uniform sampler2D water_tex, ripple_tex, reflection_tex;
 uniform vec4 water_color, reflect_color;
 
 void main()
@@ -12,7 +12,7 @@ void main()
 
 	if (add_waves) {
 		// calculate ripple adjustment of normal and reflection based on scaled water texture
-		ripple = vec2(texture2D(water_tex, 12.0*st).g, texture2D(water_tex, 10.0*st+vec2(0.5,0.5)).g) - 0.575;
+		ripple = vec2(texture2D(ripple_tex, 12.0*st).g, texture2D(ripple_tex, 10.0*st+vec2(0.5,0.5)).g) - 0.575;
 		norm   = normalize(norm + 2.0*vec3(ripple, 0));
 	}
 

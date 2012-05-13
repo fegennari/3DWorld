@@ -91,7 +91,7 @@ extern int island, xoff, yoff, xoff2, yoff2, world_mode, resolution, rand_gen_in
 extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode;
 extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
-extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature;
+extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
 extern point mesh_origin, surface_pos;
 extern char *mh_filename_raw, *mh_filename_bmp, *dem_filename, *dem_raw_out, *mesh_file;
 extern rand_gen_t global_rand_gen;
@@ -672,10 +672,10 @@ float get_water_z_height() {
 
 void update_temperature(bool verbose) {
 
-	if (camera_mode != 1) return;
+	if (camera_mode != 1) return; // camera in air, don't use altitude temp
 
 	// keep planet temperatures in combined landscape + universe
-	alt_temp = init_temperature;
+	alt_temp = (combined_gu ? univ_temp : init_temperature);
 
 	if (/*world_mode == WMODE_INF_TERRAIN ||*/ island || read_landscape || read_heightmap || do_read_mesh) {
 		temperature = alt_temp;
