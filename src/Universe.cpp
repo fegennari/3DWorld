@@ -1444,7 +1444,11 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 
 	if (val < water) { // underwater
 		RGB_BLOCK_COPY(data, wic[frozen]);
-		if (coldness > 0.9) {BLEND_COLOR(data, white, data, 10.0*(coldness - 0.9));} // ice
+
+		if (coldness > 0.8) { // ice
+			float const blend_val(CLIP_TO_01(5.0f*(coldness - 0.8f) + 2.0f*(val - water)));
+			BLEND_COLOR(data, white, data, blend_val);
+		}
 		return;
 	}
 	float const water_adj(0.07), val_ws((water > 0.0) ? wr_scale*(val - water) : val); // rescale for water
@@ -1479,7 +1483,7 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 		float const coldness(fabs(phi - PI_TWO)*2.0*PI_INV), st((1.0 - coldness*coldness)*snow_thresh);
 
 		if (val > (st + 1.0E-6)) { // blend in some snow
-			BLEND_COLOR(data, white, data, ((val - st)/(1.0 - st)));
+			BLEND_COLOR(data, white, data, (val - st)/(1.0 - st));
 			return;
 		}
 	}
