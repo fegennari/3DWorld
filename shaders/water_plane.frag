@@ -9,11 +9,13 @@ void main()
 	vec4 color  = texture2D(water_tex, st) * water_color;
 	vec3 norm   = normalize(normal); // renormalize
 	vec2 ripple = vec2(0,0);
+	vec3 delta_n= vec3(0,0,0);
 
 	if (add_waves) {
 		// calculate ripple adjustment of normal and reflection based on scaled water texture
 		ripple = vec2(texture2D(ripple_tex, 12.0*st).g, texture2D(ripple_tex, 10.0*st+vec2(0.5,0.5)).g) - 0.575;
-		norm   = normalize(norm + 2.0*vec3(ripple, 0));
+		delta_n= clamp(2.0*vec3(ripple, 0), 0, 1);
+		norm   = normalize(norm + delta_n);
 	}
 
 	// calculate lighting
@@ -22,7 +24,7 @@ void main()
 	if (enable_light1) lighting += add_light_comp_pos(norm, epos, 1);
 
 	if (reflections) {
-		vec3 epos_n = normalize(normalize(epos.xyz) + 2.0*vec3(ripple, 0));
+		vec3 epos_n = normalize(normalize(epos.xyz) + delta_n);
 
 		// add some green at shallow view angles
 		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), 0.2*(1.0 - abs(dot(epos_n, norm))));

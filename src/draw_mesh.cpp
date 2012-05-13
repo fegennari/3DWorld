@@ -738,7 +738,8 @@ void draw_water_sides(int check_zvals) {
 void draw_water_edge(float zval) { // used for WM3 tiled terrain
 
 	glDepthMask(GL_FALSE);
-	select_texture(WHITE_TEX);
+	select_texture(WHITE_TEX); // tex coords won't have any effect
+	glTexCoord2f(0.0, 0.0); // but it doesn't hurt to set them
 	set_color(BLACK);
 	BLACK.do_glColor();
 	float const vd_scale(2.0*get_tile_radius()*SQRT2), dx(xoff*DX_VAL), dy(yoff*DY_VAL);
@@ -755,7 +756,7 @@ void draw_water_edge(float zval) { // used for WM3 tiled terrain
 }
 
 
-// texture units used: 0: water texture, 1: reflection texture
+// texture units used: 0: water texture, 1: reflection texture, 2: ripple texture
 void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole_bounds) {
 
 	if (DISABLE_WATER) return;
@@ -771,6 +772,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 		water_xoff -= WATER_WIND_EFF*wind.x*fticks;
 		water_yoff -= WATER_WIND_EFF*wind.y*fticks;
 	}
+	// FIXME: sun behind terrain sets specular to 0
 	point const camera(get_camera_pos());
 	vector3d(0.0, 0.0, ((camera.z < zval) ? -1.0 : 1.0)).do_glNormal();
 	set_fill_mode();

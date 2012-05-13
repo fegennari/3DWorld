@@ -15,5 +15,5 @@ float get_fresnel_reflection(in vec3 v_inc, in vec3 norm, in float n1, in float 
 	float cos_theta_t = sqrt(1.0 - val*val);
 	float rs_sqrt = (n1*cos_theta_i - n2*cos_theta_t)/(n1*cos_theta_i + n2*cos_theta_t);
 	float rp_sqrt = (n1*cos_theta_t - n2*cos_theta_i)/(n1*cos_theta_t + n2*cos_theta_i);
-	return 0.5*(rs_sqrt*rs_sqrt + rp_sqrt*rp_sqrt); // average of rs and rp
+	return min(1.0, 0.5*(rs_sqrt*rs_sqrt + rp_sqrt*rp_sqrt)); // average of rs and rp (Note: min() only needed for degenerate cases)
 }
