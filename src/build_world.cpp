@@ -702,9 +702,9 @@ void free_all_coll_objects() {
 			if (obj_groups[i].enabled) obj_groups[i].remove_reset_cobjs();
 		}
 	}
-	remove_coll_object(camera_coll_id);
+	remove_coll_object(camera_coll_id); // not necessary?
 	purge_coll_freed(1);
-	coll_objects.clear_ids(); // FIXME: should already be cleared - memory leak?
+	//coll_objects.clear_ids(); // FIXME: should already be cleared - memory leak?
 	czmin = model_czmin; // reset zmin/zmax to original values before cobjs were added
 	czmax = model_czmax;
 	assert(coll_objects.dynamic_ids.empty());

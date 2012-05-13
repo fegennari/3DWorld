@@ -181,6 +181,7 @@ public:
 	void subdiv_cubes();
 	void sort_cobjs_for_rendering();
 	void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams);
+	void remove_index_from_ids(int index);
 };
 
 

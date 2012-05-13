@@ -672,9 +672,7 @@ int remove_coll_object(int index, bool reset_draw) {
 		return 0;
 	}
 	if (c.status == COLL_FREED) return 0;
-	if (c.status == COLL_DYNAMIC) coll_objects.dynamic_ids.must_erase (index);
-	if (c.cp.draw               ) coll_objects.drawn_ids.must_erase   (index);
-	if (c.platform_id >= 0      ) coll_objects.platform_ids.must_erase(index);
+	coll_objects.remove_index_from_ids(index);
 	if (reset_draw) c.cp.draw = 0;
 	c.status   = COLL_FREED;
 	c.waypt_id = -1; // is this necessary?
@@ -766,7 +764,10 @@ void remove_all_coll_obj() {
 		}
 	}
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {
-		if (coll_objects[i].status != COLL_UNUSED) cobj_manager.free_index(i);
+		if (coll_objects[i].status != COLL_UNUSED) {
+			coll_objects.remove_index_from_ids(i);
+			cobj_manager.free_index(i);
+		}
 	}
 }
 
@@ -797,6 +798,16 @@ void coll_obj_group::set_coll_obj_props(int index, int type, float radius, float
 	if (cparams.draw      ) drawn_ids.must_insert   (index);
 	if (platform_id >= 0  ) platform_ids.must_insert(index);
 	if ((type == COLL_CUBE) && cparams.light_atten != 0.0) has_lt_atten = 1;
+}
+
+
+void coll_obj_group::remove_index_from_ids(int index) {
+
+	if (index < 0) return;
+	assert(index < size());
+	if (operator[](index).status == COLL_DYNAMIC) coll_objects.dynamic_ids.must_erase (index);
+	if (operator[](index).cp.draw               ) coll_objects.drawn_ids.must_erase   (index);
+	if (operator[](index).platform_id >= 0      ) coll_objects.platform_ids.must_erase(index);
 }
 
 
