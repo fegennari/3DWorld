@@ -9,11 +9,15 @@
 #include "shaders.h"
 
 
-bool const DEBUG_TILES       = 0;
-int  const DISABLE_TEXTURES  = 0;
-int  const TILE_RADIUS       = 4; // WM0, in mesh sizes
-int  const TILE_RADIUS_IT    = 6; // WM3, in mesh sizes
-unsigned const NUM_LODS      = 5; // > 0
+bool const DEBUG_TILES        = 0;
+int  const DISABLE_TEXTURES   = 0;
+int  const TILE_RADIUS        = 4; // WM0, in mesh sizes
+int  const TILE_RADIUS_IT     = 6; // WM3, in mesh sizes
+unsigned const NUM_LODS       = 5; // > 0
+float const DRAW_DIST_TILES   = 1.4;
+float const CREATE_DIST_TILES = 1.5;
+float const CLEAR_DIST_TILES  = 1.5;
+float const DELETE_DIST_TILES = 2.0;
 
 
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
@@ -29,6 +33,9 @@ int get_tile_radius() {
 	return ((world_mode == WMODE_INF_TERRAIN) ? TILE_RADIUS_IT : TILE_RADIUS);
 }
 
+float get_inf_terrain_fog_dist() {
+	return DRAW_DIST_TILES*get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE);
+}
 
 bool has_water () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 
@@ -332,8 +339,8 @@ public:
 
 	bool update_range() { // if returns 0, tile will be deleted
 		float const dist(get_rel_dist_to_camera());
-		if (dist > 1.5) clear_vbo_tid(1,1);
-		return (dist < 2.0);
+		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
+		return (dist < DELETE_DIST_TILES);
 	}
 
 	bool is_visible() const {
@@ -441,7 +448,7 @@ public:
 				tile_xy_pair const txy(x, y);
 				if (tiles.find(txy) != tiles.end()) continue; // already exists
 				tile_t tile(MESH_X_SIZE, x, y);
-				if (tile.get_rel_dist_to_camera() >= 1.5) continue; // too far away to create
+				if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
 				tile_t *new_tile(new tile_t(tile));
 				new_tile->create_zvals();
 				tiles[txy] = new_tile;
@@ -513,7 +520,7 @@ public:
 			if (DEBUG_TILES) mem += i->second->get_gpu_memory();
 			if (add_hole && i->first.x == 0 && i->first.y == 0) continue;
 			float const dist(i->second->get_rel_dist_to_camera());
-			if (dist > 1.4) continue; // too far to draw
+			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, i->second->get_zmin());
 			to_draw.push_back(make_pair(dist, i->second));
 		}

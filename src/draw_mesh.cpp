@@ -874,8 +874,3 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 }
 
 
-float get_inf_terrain_fog_dist() {
-	return 3.0*get_tile_radius()*XY_SCENE_SIZE;
-}
-
-
