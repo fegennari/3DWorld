@@ -772,7 +772,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 		water_xoff -= WATER_WIND_EFF*wind.x*fticks;
 		water_yoff -= WATER_WIND_EFF*wind.y*fticks;
 	}
-	// FIXME: sun behind terrain sets specular to 0
+	if (light_factor >= 0.4 && get_sun_pos().z < water_plane_z) {set_specular(0.0, 1.0);} // has sun but it's below the water level
 	point const camera(get_camera_pos());
 	vector3d(0.0, 0.0, ((camera.z < zval) ? -1.0 : 1.0)).do_glNormal();
 	set_fill_mode();
