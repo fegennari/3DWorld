@@ -654,7 +654,7 @@ void draw_sun_flare() {
 	//RESET_TIME;
 	point const sun_pos(get_sun_pos());
 
-	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, sun_radius, 2)) {
+	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, 4.0*sun_radius, 2)) { // use larger radius to include the flare/halo
 		float intensity(1.0);
 
 		if (world_mode == WMODE_GROUND) {
