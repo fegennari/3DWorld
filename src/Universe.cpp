@@ -1774,6 +1774,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, float rscale) {
 		else {
 			ndiv = min((int)min(MAX_TEXTURE_SIZE, SPHERE_MAX_ND), (int(NDIV_SIZE_SCALE2*size)&0xFFE0));
 		}
+		if (world_mode != WMODE_UNIVERSE) ndiv = max(4, ndiv/2); // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
 		apply_gl_rotate();
@@ -1999,7 +2000,7 @@ void urev_body::show_colonizable_liveable(point const &pos_, float radius0) cons
 
 void uplanet::draw_prings(upos_point_type const &pos_, float size_) const {
 
-	if (size_ < 0.05 || rings.empty()) return;
+	if (size_ < 0.1 || rings.empty()) return;
 	enable_blend(); // must be drawn last
 	glDisable(GL_LIGHTING);
 	glPushMatrix();
