@@ -139,7 +139,13 @@ texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
 texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
 texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
 texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
-texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg")
+texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg"), // 500x500
+// bark
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark1.jpg"), // 600x600
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark_lendrick.jpg"), // 894x894
+texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png") // 1024x768
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [do_compress]
 };

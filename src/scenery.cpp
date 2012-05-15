@@ -53,6 +53,7 @@ extern rand_gen_t global_rand_gen;
 
 
 void gen_scenery_deterministic();
+int get_bark_tex_for_tree_type(int type);
 
 inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
 
@@ -468,6 +469,8 @@ class s_log : public scenery_obj { // size = 57 (60)
 	point pt2;
 	vector3d dir;
 
+	int get_tid() const {return get_bark_tex_for_tree_type(type);}
+
 public:
 	void shift_by(vector3d const &vd) {
 		scenery_obj::shift_by(vd);
@@ -502,7 +505,7 @@ public:
 	}
 
 	void add_cobjs() {
-		coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, WOOD_TEX));
+		coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
 	}
 
 	void draw(float sscale, bool shadow_only) const {
@@ -513,12 +516,12 @@ public:
 		float const dist(distance_to_camera(pos));
 
 		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
-			tree_scenery_pld.add_textured_line(pos, pt2, color, WOOD_TEX);
+			tree_scenery_pld.add_textured_line(pos, pt2, color, get_tid());
 			return;
 		}
 		set_color(color);
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
-		if (!shadow_only) select_texture(WOOD_TEX);
+		if (!shadow_only) select_texture(get_tid());
 		glPushMatrix();
 		translate_to(pos);
 		rotate_by_vector(dir, 0.0);
@@ -543,6 +546,8 @@ class s_stump : public scenery_obj { // size = 29 (32)
 
 	float radius2, height;
 
+	int get_tid() const {return get_bark_tex_for_tree_type(type);}
+
 public:
 	int create(int x, int y, int use_xy, float minz) {
 		gen_spos(x, y, use_xy);
@@ -563,7 +568,7 @@ public:
 
 	void add_cobjs() {
 		coll_id = add_coll_cylinder(pos, point(pos.x, pos.y, (pos.z + height)), radius, radius2,
-			cobj_params(0.8, BROWN, 0, 0, NULL, 0, WOOD_TEX));
+			cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
 	}
 
 	void draw(float sscale, bool shadow_only) const {
@@ -574,12 +579,12 @@ public:
 		float const dist(distance_to_camera(pos));
 
 		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
-			tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, height)), color, WOOD_TEX);
+			tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, height)), color, get_tid());
 			return;
 		}
 		set_color(color);
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
-		if (!shadow_only) select_texture(WOOD_TEX);
+		if (!shadow_only) select_texture(get_tid());
 		glPushMatrix();
 		translate_to(pos);
 		gluCylinder(quadric, radius, radius2, height, ndiv, 1);

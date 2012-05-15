@@ -59,7 +59,7 @@ lmap_manager_t lmap_manager;
 extern bool disable_shaders;
 extern int animate2, display_mode, frame_counter, read_light_files[], write_light_files[];
 extern unsigned num_vpls;
-extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[];
+extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[], voxel_xy_spacing;
 extern colorRGBA cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
 extern vector<light_source> enabled_lights;
@@ -696,6 +696,7 @@ void build_lightmap(bool verbose) {
 	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
 	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL]); // || create_voxel_landscape
 	float const light_off(has_indir_lighting ? 0.0f : LIGHT_OFFSET);
+	if (voxel_xy_spacing > 0.0) {} // FIXME: use voxel algorithm for this instead of X,Y,Z passes
 
 	// process vertical (Z) light projections
 	r_profile flow_prof[2][3]; // {light, particle} x {x, y, z}

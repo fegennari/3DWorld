@@ -23,22 +23,27 @@ enum {T_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_
 
 struct sm_tree_type {
 
-	int tid;
+	int leaf_tid, bark_tid;
 	float w2, ws, h, ss;
 	colorRGBA c;
 
-	sm_tree_type(float w2_, float ws_, float h_, float ss_, colorRGBA const &c_, int tid_)
-		: tid(tid_), w2(w2_), ws(ws_), h(h_), ss(ss_), c(c_) {}
+	sm_tree_type(float w2_, float ws_, float h_, float ss_, colorRGBA const &c_, int ltid, int btid)
+		: leaf_tid(ltid), bark_tid(btid), w2(w2_), ws(ws_), h(h_), ss(ss_), c(c_) {}
 };
 
 sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
-	sm_tree_type(0.00, 0.10, 0.35, 0.4, PTREE_C, PINE_TEX), // T_PINE
-	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX), // T_DECID // GRASS_TEX?
-	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  GROUND_TEX), // T_TDECID
-	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   GROUND_TEX), // T_BUSH
-	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX), // T_PALM
-	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX), // T_SH_PINE
+	sm_tree_type(0.00, 0.10, 0.35, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_PINE
+	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX, BARK3_TEX), // T_DECID // GRASS_TEX?
+	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  GROUND_TEX,    BARK1_TEX), // T_TDECID
+	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   GROUND_TEX,    BARK4_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
+	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX,      BARK1_TEX), // T_PALM FIXME: PALM_BARK_TEX?
+	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
 };
+
+int get_bark_tex_for_tree_type(int type) {
+	assert(type < NUM_ST_TYPES);
+	return stt[type].bark_tid;
+}
 
 
 vector<small_tree> small_trees;
@@ -150,7 +155,7 @@ void add_small_tree_coll_objs() { // doesn't handle rotation angle
 
 	if (small_trees.empty() || !SMALL_TREE_COLL) return;
 	cobj_params cp      (0.65, GREEN, DRAW_COBJS, 0, NULL, 0, -1);
-	cobj_params cp_trunk(0.9, TREE_C, DRAW_COBJS, 0, NULL, 0, WOOD_TEX);
+	cobj_params cp_trunk(0.9, TREE_C, DRAW_COBJS, 0, NULL, 0, -1);
 	cp.shadow       = (shadow_detail >= 5);
 	cp_trunk.shadow = (shadow_detail >= 6);
 
@@ -260,12 +265,13 @@ vector3d small_tree::get_rot_dir() const {
 }
 
 
-void small_tree::add_cobjs(cobj_params &cp, cobj_params const &cp_trunk) {
+void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 
 	if (type == T_PINE || type == T_SH_PINE) calc_points();
 	if (!is_over_mesh(pos)) return; // not sure why, but this makes drawing slower
 	vector3d const dir(get_rot_dir());
-	cp.tid = stt[type].tid;
+	cp.tid       = stt[type].leaf_tid;
+	cp_trunk.tid = stt[type].bark_tid;
 
 	if (type != T_BUSH && type != T_SH_PINE) {
 		float const hval((type == T_PINE) ? 1.0 : 0.75), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
@@ -329,7 +335,7 @@ void small_tree::calc_points() { // pine trees
 void small_tree::pre_leaf_draw() const {
 
 	bool const untextured((type == T_PINE || type == T_SH_PINE) && (draw_model != 0));
-	select_texture(untextured ? WHITE_TEX : stt[type].tid);
+	select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
 
 	switch (type) {
 	case T_PINE: // pine tree
@@ -392,7 +398,7 @@ void small_tree::draw(int mode, bool shadow_only) const {
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, radius, (cobj_cull ? 2 : 0))) return;
 	float const dist(distance_to_camera(pos));
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size(zoom_f*SM_TREE_QUALITY*stt[type].ss*width*window_width/dist);
-	int const max_sides(N_CYL_SIDES/2);
+	int const max_sides(N_CYL_SIDES);
 
 	// slow because of:
 	// glBegin()/glEnd() overhead of lots of low ndiv spheres
@@ -413,11 +419,11 @@ void small_tree::draw(int mode, bool shadow_only) const {
 				draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()));
 			}
 			else if (LINE_THRESH*zoom_f*(w1 + w2) < distance_to_camera(pos)) { // draw as line
-				tree_scenery_pld.add_textured_line(p1, (p1 + dir*len), tcolor, WOOD_TEX);
+				tree_scenery_pld.add_textured_line(p1, (p1 + dir*len), tcolor, stt[type].bark_tid);
 			}
 			else { // draw as cylinder
 				set_color(tcolor);
-				select_texture(WOOD_TEX);
+				select_texture(stt[type].bark_tid);
 				glPushMatrix();
 				translate_to(pos);
 				if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);

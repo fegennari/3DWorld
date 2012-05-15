@@ -175,7 +175,7 @@ public:
 	small_tree(point const &p, float h, float w, int t, bool calc_z);
 	void setup_rotation();
 	vector3d get_rot_dir() const;
-	void add_cobjs(cobj_params &cp, cobj_params const &cp_trunk);
+	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
 	void calc_points();
 	void pre_leaf_draw() const;

@@ -253,8 +253,8 @@ void draw_trees() {
 		bool const lpos_change(!no_sun_lpos_update && lpos != last_lpos);
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
-		bool const branch_smap = 1; // looks better, but slower
 		shader_t s;
+		bool const branch_smap = 1; // looks better, but slower
 		colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, branch_smap)); // dynamic lights, but no smoke (yet)
 		draw_trees_bl(s, lpos_change, 1, 0, 0); // branches
 		end_smoke_shaders(s, orig_fog_color);
