@@ -5,6 +5,7 @@
 #include "3DWorld.h"
 #include "mesh.h"
 #include "tree_3dw.h"
+#include "shaders.h"
 
 
 float const SM_TREE_SIZE    = 0.05;
@@ -183,10 +184,17 @@ void draw_small_trees(bool shadow_only) {
 	if (small_trees.size() < 100) { // shadow_only?
 		sort(small_trees.begin(), small_trees.end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
+	shader_t s;
+	bool const bump_map(0); // enable when this works
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, bump_map, 0, 1)); // dynamic lights, but no smoke
+	BLACK.do_glColor();
+
 	for (unsigned i = 0; i < small_trees.size(); ++i) { // draw branches
 		small_tree const &t(small_trees[i]);
 		t.draw(1, shadow_only);
 	}
+	end_smoke_shaders(s, orig_fog_color);
+
 	for (unsigned i = 0; i < small_trees.size(); ++i) { // draw leaves
 		small_tree const &t(small_trees[i]);
 		set_lighted_sides(2);
@@ -403,7 +411,7 @@ void small_tree::draw(int mode, bool shadow_only) const {
 	// slow because of:
 	// glBegin()/glEnd() overhead of lots of low ndiv spheres
 	// dlist thrashing
-	if ((mode & 1) && (shadow_only || size > 1.0) && type != T_BUSH) {
+	if ((mode & 1) && (shadow_only || size > 1.0) && type != T_BUSH) { // trunk
 		float const cz(camera_origin.z - cview_radius*cview_dir.z), vxy(1.0 - (cz - pos.z)/dist);
 
 		if (type == T_SH_PINE || type == T_PINE || dist < 0.2 || vxy >= 0.2*width/stt[type].h) { // if trunk not obscured by leaves
@@ -434,7 +442,7 @@ void small_tree::draw(int mode, bool shadow_only) const {
 			}
 		}
 	}
-	if (mode & 2) {
+	if (mode & 2) { // leaves
 		set_color(color);
 
 		if (pine_tree) { // 30 quads per tree
