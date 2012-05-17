@@ -1152,7 +1152,7 @@ colorRGBA const SPLASH_C (0.7,  0.7,  1.0,  SPLASH_ALPHA);
 colorRGBA const BLOOD_C  (0.4,  0.0,  0.0,  1.0);
 colorRGBA const CLOUD_C  (0.9,  0.9,  0.9,  1.0);
 colorRGBA const TREE_C   (0.7,  0.4,  0.2,  1.0);
-colorRGBA const PTREE_C  (0.4,  0.3,  0.25, 1.0);
+colorRGBA const PTREE_C  (0.8,  0.6,  0.5,  1.0);
 colorRGBA const GOLD     (0.9,  0.65, 0.05, 1.0); // more like yellow
 colorRGBA const MUD_C    (0.3,  0.18, 0.09, 1.0);
 colorRGBA const MUD_S_C  (0.7,  0.35, 0.25, 1.0);

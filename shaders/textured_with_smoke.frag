@@ -3,6 +3,8 @@ uniform float step_delta, half_dxy;
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 uniform float base_color_scale = 1.0;
+uniform float tex_scale_s = 1.0;
+uniform float tex_scale_t = 1.0;
 
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6];
@@ -57,7 +59,7 @@ vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 //       but we don't have the tex0 value there and can't determine the full init color
 void main()
 {
-	vec4 texel  = texture2D(tex0, gl_TexCoord[0].st);
+	vec4 texel  = texture2D(tex0, gl_TexCoord[0].st*vec2(tex_scale_s, tex_scale_t));
 	float alpha = gl_Color.a;
 
 	if (do_lt_atten) {

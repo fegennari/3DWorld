@@ -187,6 +187,7 @@ void draw_small_trees(bool shadow_only) {
 	shader_t s;
 	bool const bump_map(0); // enable when this works
 	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, bump_map, 0, 1)); // dynamic lights, but no smoke
+	s.add_uniform_float("tex_scale_t", 5.0);
 	BLACK.do_glColor();
 
 	for (unsigned i = 0; i < small_trees.size(); ++i) { // draw branches
