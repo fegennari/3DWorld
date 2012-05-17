@@ -837,8 +837,7 @@ void build_lightmap(bool verbose) {
 						CELL_LOC_T const cur_loc[3] = {x, y, z};
 				
 						if (ls.is_directional()) {
-							vector3d const vlp(lpos, p);
-							cscale *= ls.get_dir_intensity(vlp);
+							cscale *= ls.get_dir_intensity(lpos - p);
 							if (cscale < CTHRESH) continue;
 						}
 						float flow[2] = {1.0, 1.0};
@@ -1490,10 +1489,12 @@ unsigned enable_dynamic_lights(point const center, float radius) {
 
 	for (unsigned i = 0; i < dl_sources.size(); ++i) {
 		light_source const &ls(dl_sources[i]);
+		if (ls.is_directional() && radius == 0.0) continue; // directional lights only supported in sphere mode
 		float const ls_radius(ls.get_radius());
-		point const &ls_center(ls.get_center());
 		if (ls_radius == 0.0) continue; // not handling zero radius lights yet
+		point const &ls_center(ls.get_center());
 		if (radius > 0.0 && !dist_less_than(center, ls_center, (radius + ls_radius))) continue;
+		if (ls.is_directional() && ls.get_dir_intensity(ls_center - center) == 0.0)   continue; // wrong direction
 		if (!sphere_in_camera_view(ls_center, ls_radius, 0)) continue;
 		float weight(p2p_dist(ls_center, camera)); // distance from light to camera
 		if (radius > 0.0) weight += p2p_dist(ls_center, center); // distance from light to object center
