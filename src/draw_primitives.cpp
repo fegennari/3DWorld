@@ -347,10 +347,10 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 	if (draw_sides_ends == 2) {
 		// draw ends only - nothing to do here
 	}
-	else if (use_quads) { // divide into stacks for 2D?
+	else if (use_quads) {
 		glBegin(GL_QUADS);
 		
-		for (unsigned S = s0; S < s1; ++S) { // ndiv can change
+		for (unsigned S = s0; S < s1; ++S) {
 			if (render_map && !render_map[S]) continue;
 			float const exp(expand + (exp_map ? exp_map[S] : 0.0));
 			unsigned const s[2] = {S, (S+ndiv-1)%ndiv};
@@ -367,10 +367,28 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		}
 		glEnd();
 	}
+	else if (radius2 == 0.0) { // cone
+		glBegin(GL_TRIANGLES);
+
+		for (unsigned s = s0; s < s1; ++s) {
+			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv);
+			//if (texture) glTexCoord2f((1.0 - (s+0.5)*ndiv_inv), 1.0); // small discontinuities at every position
+			if (texture) glTexCoord2f(0.5, 1.0); // one big discontinuity at one position
+			vpn.n[s].do_glNormal();
+			vpn.p[(s <<1)+1].do_glVertex();
+			if (texture) glTexCoord2f((1.0 - (s+0.0)*ndiv_inv), 0.0);
+			(vpn.n[s] + vpn.n[sp]).do_glNormal(); // normalize?
+			vpn.p[(s <<1)+0].do_glVertex();
+			if (texture) glTexCoord2f((1.0 - (s+1.0)*ndiv_inv), 0.0);
+			(vpn.n[s] + vpn.n[sn]).do_glNormal(); // normalize?
+			vpn.p[(sn<<1)+0].do_glVertex();
+		}
+		glEnd();
+	}
 	else {
 		glBegin(GL_QUAD_STRIP);
 
-		for (unsigned S = s0; S <= s1; ++S) { // ndiv can change
+		for (unsigned S = s0; S <= s1; ++S) {
 			unsigned const s(S%ndiv);
 			(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]).do_glNormal(); // normalize?
 

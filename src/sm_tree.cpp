@@ -5,6 +5,7 @@
 #include "3DWorld.h"
 #include "mesh.h"
 #include "tree_3dw.h"
+#include "gl_ext_arb.h"
 #include "shaders.h"
 
 
@@ -17,6 +18,7 @@ float const SM_TREE_QUALITY = 1.0;
 float const LINE_THRESH     = 700.0;
 bool const SMALL_TREE_COLL  = 1;
 bool const DRAW_COBJS       = 0; // for debugging
+bool const USE_BUMP_MAP     = 0;
 int  const NUM_SMALL_TREES  = 40000;
 
 
@@ -185,9 +187,17 @@ void draw_small_trees(bool shadow_only) {
 		sort(small_trees.begin(), small_trees.end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
 	shader_t s;
-	bool const bump_map(0); // enable when this works
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, bump_map, 0, 1)); // dynamic lights, but no smoke
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, USE_BUMP_MAP, 0, 1)); // dynamic lights, but no smoke
 	s.add_uniform_float("tex_scale_t", 5.0);
+
+	if (USE_BUMP_MAP) {
+		vector4d const tangent(0.0, 0.0, 1.0, 1.0); // FIXME: set based on tree trunk direction?
+		int const tangent_loc(s.get_attrib_loc("tangent"));
+		if (tangent_loc >= 0) glVertexAttrib4fv(tangent_loc, &tangent.x);
+		set_multitex(5);
+		select_texture(BARK2_NORMAL_TEX, 0);
+		set_multitex(0);
+	}
 	BLACK.do_glColor();
 
 	for (unsigned i = 0; i < small_trees.size(); ++i) { // draw branches
@@ -437,7 +447,7 @@ void small_tree::draw(int mode, bool shadow_only) const {
 				translate_to(pos);
 				if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
 				glTranslatef(0.0, 0.0, (zbot - pos.z));
-				int const nsides2(max(3, min(max_sides/2, int(0.25*size))));
+				int const nsides2(max(3, min(2*max_sides/3, int(0.25*size))));
 				draw_cylin_fast(w1, w2, len, nsides2, 1, 0, 1); // trunk (draw quad if small?)
 				glPopMatrix();
 			}

@@ -1,5 +1,7 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform mat4 world_space_mvm;
+uniform float tex_scale_s = 1.0;
+uniform float tex_scale_t = 1.0;
 
 attribute vec4 tex0_s, tex0_t;
 
@@ -19,6 +21,7 @@ void main()
 	}
 	else {
 		gl_TexCoord[0] = gl_MultiTexCoord0;
+		gl_TexCoord[0].st *= vec2(tex_scale_s, tex_scale_t);
 	}
 	gl_Position   = ftransform();
 	gl_FrontColor = gl_Color;
