@@ -35,6 +35,9 @@ int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
 int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
 
+bool const USE_LEAF_GEOM_SHADER   = 0;
+bool const USE_BRANCH_GEOM_SHADER = 0;
+
 
 reusable_mem<tree_cylin >   tree::cylin_cache [CYLIN_CACHE_ENTRIES ];
 reusable_mem<tree_branch>   tree::branch_cache[BRANCH_CACHE_ENTRIES];
@@ -218,16 +221,25 @@ void draw_trees_bl(shader_t const &s, bool lpos_change, bool draw_branches, bool
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, bool use_wind) {
+void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree, bool use_wind) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 	s.setup_enabled_lights(2);
-	s.set_vert_shader("ads_lighting.part*+tree_leaves");
-	s.set_frag_shader("linear_fog.part+simple_texture");
+
+	if (USE_LEAF_GEOM_SHADER && for_tree) {
+		s.set_vert_shader("ads_lighting.part*+tree_leaves"); // FIXME: will be different
+		s.set_frag_shader("linear_fog.part+simple_texture"); // same?
+		s.set_geom_shader("point_to_quad", GL_POINTS, GL_TRIANGLES, 6);
+		if (use_wind) {} // FIXME: add wind
+	}
+	else {
+		s.set_vert_shader("ads_lighting.part*+tree_leaves");
+		s.set_frag_shader("linear_fog.part+simple_texture");
 	
-	if (use_wind) { // wind on leaves
-		// FIXME: leaves are drawn as quads, not triangles, so this won't work
-		s.set_geom_shader("wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
+		if (use_wind) { // wind on leaves
+			// FIXME: leaves are drawn as quads, not triangles, so this won't work
+			s.set_geom_shader("wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
+		}
 	}
 	s.begin_shader();
 	if (use_wind) setup_wind_for_shader(s);
@@ -254,14 +266,25 @@ void draw_trees() {
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
 		shader_t s;
+		unsigned const def_ndiv = 12;
+		
+		if (USE_BRANCH_GEOM_SHADER) {
+			s.set_geom_shader("line_to_cylinder", GL_LINES, GL_TRIANGLES, 6*def_ndiv); // with adjacency?
+			// FIXME - Write the rest
+		}
 		bool const branch_smap = 1; // looks better, but slower
 		colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, branch_smap)); // dynamic lights, but no smoke (yet)
+
+		if (USE_BRANCH_GEOM_SHADER) {
+			s.add_uniform_int("ndiv", def_ndiv);
+			// anything else?
+		}
 		draw_trees_bl(s, lpos_change, 1, 0, 0); // branches
 		end_smoke_shaders(s, orig_fog_color);
-		set_leaf_shader(s, 0.75, 0);
+		set_leaf_shader(s, 0.75, 1, 0);
 		draw_trees_bl(s, lpos_change, 0, 0, 1); // far  leaves
 		//s.end_shader();
-		//set_leaf_shader(s, 0.75, 1);
+		//set_leaf_shader(s, 0.75, 1, 1);
 		draw_trees_bl(s, lpos_change, 0, 1, 0); // near leaves
 		s.end_shader();
 		last_lpos = lpos;
@@ -486,28 +509,38 @@ void tree::draw_tree_shadow() {
 
 	if (!created || !is_over_mesh()) return;
 	
-	if (branch_vbo > 0 && branch_ivbo > 0) { // draw branches
-		size_t const branch_stride(sizeof(vert_norm_tc));
-		bind_vbo(branch_vbo,  0); // use vbo for rendering
-		bind_vbo(branch_ivbo, 1);
-		set_array_client_state(1, 0, 0, 0);
-		glVertexPointer(3, GL_FLOAT, branch_stride, 0);
-		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num_branch_quads, GL_UNSIGNED_SHORT, 0);
-		bind_vbo(0, 0);
-		bind_vbo(0, 1);
+	if (branch_vbo > 0) { // draw branches (untextured)
+		if (USE_BRANCH_GEOM_SHADER) {
+			// FIXME: Write
+		}
+		else {
+			size_t const branch_stride(sizeof(vert_norm_tc));
+			bind_vbo(branch_vbo,  0); // use vbo for rendering
+			bind_vbo(branch_ivbo, 1);
+			set_array_client_state(1, 0, 0, 0); // vertices only
+			glVertexPointer(3, GL_FLOAT, branch_stride, 0);
+			glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num_branch_quads, GL_UNSIGNED_SHORT, 0);
+			bind_vbo(0, 1);
+		}
 	}
 	if (leaf_vbo > 0 && !leaves.empty()) { // draw leaves
-		assert(leaf_data.size() >= 4*leaves.size());
-		bind_vbo(leaf_vbo);
-		vert_norm_tc_color::set_vbo_arrays(1);
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 		select_texture(tree_types[type].leaf_tex);
-		glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
+		bind_vbo(leaf_vbo);
+
+		if (USE_BRANCH_GEOM_SHADER) {
+			// FIXME: Write
+		}
+		else {
+			assert(leaf_data.size() >= 4*leaves.size());
+			vert_norm_tc_color::set_vbo_arrays(1); // FIXME: Disable normals and colors?
+			glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
+		}
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_ALPHA_TEST);
-		bind_vbo(0);
 	}
+	bind_vbo(0, 0);
 }
 
 
@@ -548,84 +581,107 @@ void tree::draw_tree(shader_t const &s, bool invalidate_norms, bool draw_branche
 void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs) {
 
 	point const camera(get_camera_pos());
+	unsigned const numcylin((unsigned)all_cylins.size());
 	set_fill_mode();
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
 	BLACK.do_glColor();
 
-	// draw with branch vbos
-	size_t const branch_stride(sizeof(vert_norm_tc));
+	if (USE_BRANCH_GEOM_SHADER) {
+		size_t const branch_stride(sizeof(point)); // FIXME: where do radius and dir come from?
 
-	if (branch_vbo == 0) { // create vbo
-		assert(branch_ivbo == 0);
-		unsigned const numcylin((unsigned)all_cylins.size());
-		assert(num_branch_quads == 0 && num_unique_pts == 0);
-
-		for (unsigned i = 0; i < numcylin; i++) { // determine required data size
-			bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
-			unsigned const ndiv(all_cylins[i].get_num_div());
-			num_branch_quads += ndiv;
-			num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
+		if (branch_vbo == 0) { // create vbo
+			branch_vbo = create_vbo(); // do we need indexed vertices? no?
+			assert(branch_vbo > 0);
+			bind_vbo(branch_vbo, 0);
+			// FIXME: Write upload code
 		}
-		typedef unsigned short index_t;
-		assert(num_unique_pts < (1 << 8*sizeof(index_t))); // cutting it close with 4th order branches
-		vector<vert_norm_tc> data;
-		vector<index_t> idata;
-		idata.reserve(4*num_branch_quads);
-		data.reserve(num_unique_pts);
-		unsigned cylin_id(0), data_pos(0), quad_id(0);
+		else {
+			assert(branch_vbo > 0);
+			bind_vbo(branch_vbo, 0); // use vbo for rendering
+		}
+		set_array_client_state(1, 0, 0, 0); // v=1 tc=0 n=0 c=0
+		glVertexPointer(3, GL_FLOAT, branch_stride, 0);
+		unsigned const num(min(numcylin, max((numcylin/8), unsigned(20.0*numcylin*mscale/dist_cs)))); // branch LOD
+		glDrawArrays(GL_LINES, 0, 2*num);
+		bind_vbo(0, 0);
+	}
+	else {
+		// draw with branch vbos
+		size_t const branch_stride(sizeof(vert_norm_tc));
 
-		for (unsigned i = 0; i < numcylin; i++) {
-			draw_cylin const &cylin(all_cylins[i]);
-			unsigned const ndiv(cylin.get_num_div());
-			point const ce[2] = {cylin.p1, cylin.p2};
-			float const ndiv_inv(1.0/ndiv);
-			vector3d v12; // (ce[1] - ce[0]).get_norm()
-			vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
-			bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
+		if (branch_vbo == 0) { // create vbos
+			assert(branch_ivbo == 0);
+			assert(num_branch_quads == 0 && num_unique_pts == 0);
 
-			if (!prev_connect) { // new cylinder section
-				data_pos = (unsigned)data.size();
-				quad_id  = cylin_id = 0;
+			for (unsigned i = 0; i < numcylin; i++) { // determine required data size
+				bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
+				unsigned const ndiv(all_cylins[i].get_num_div());
+				num_branch_quads += ndiv;
+				num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
 			}
-			for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
-				for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
-					float const tx(2.0*fabs(S*ndiv_inv - 0.5));
-					// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
-					data.push_back(vert_norm_tc(vpn.p[(S<<1)+j], vpn.n[S], tx, float(cylin_id + j))); // average normals?
+			typedef unsigned short index_t;
+			assert(num_unique_pts < (1 << 8*sizeof(index_t))); // cutting it close with 4th order branches
+			vector<vert_norm_tc> data;
+			vector<index_t> idata;
+			idata.reserve(4*num_branch_quads);
+			data.reserve(num_unique_pts);
+			unsigned cylin_id(0), data_pos(0), quad_id(0);
+
+			for (unsigned i = 0; i < numcylin; i++) {
+				draw_cylin const &cylin(all_cylins[i]);
+				unsigned const ndiv(cylin.get_num_div());
+				point const ce[2] = {cylin.p1, cylin.p2};
+				float const ndiv_inv(1.0/ndiv);
+				vector3d v12; // (ce[1] - ce[0]).get_norm()
+				vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
+				bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
+
+				if (!prev_connect) { // new cylinder section
+					data_pos = (unsigned)data.size();
+					quad_id  = cylin_id = 0;
 				}
-			}
-			for (unsigned S = 0; S < ndiv; ++S) { // create index data
-				bool const last_edge((quad_id % ndiv) == ndiv-1);
-				unsigned const ix(data_pos + quad_id++);
-				idata.push_back(ix);
-				idata.push_back(ix+ndiv);
-				idata.push_back(last_edge ? ix+1 : ix+ndiv+1);
-				idata.push_back(last_edge ? ix+1-ndiv : ix+1);
-			}
-			++cylin_id;
-		} // for i
-		assert(data.size()  == data.capacity());
-		assert(idata.size() == idata.capacity());
-		branch_vbo  = create_vbo();
-		branch_ivbo = create_vbo();
-		assert(branch_vbo > 0 && branch_ivbo > 0);
-		bind_vbo(branch_vbo,  0);
-		bind_vbo(branch_ivbo, 1);
-		upload_vbo_data(&data.front(),  data.size()*branch_stride,    0); // ~350KB
-		upload_vbo_data(&idata.front(), idata.size()*sizeof(index_t), 1); // ~75KB (with 16-bit index)
-	} // end create vbo
-	assert(branch_vbo > 0 && branch_ivbo > 0);
-	bind_vbo(branch_vbo,  0); // use vbo for rendering
-	bind_vbo(branch_ivbo, 1);
-	set_array_client_state(1, 1, 1, 0);
-	glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
-	glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
-	glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(point) + sizeof(vector3d)));
-	unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
-	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0);
-	bind_vbo(0, 0);
-	bind_vbo(0, 1);
+				for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
+					for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
+						float const tx(2.0*fabs(S*ndiv_inv - 0.5));
+						// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
+						data.push_back(vert_norm_tc(vpn.p[(S<<1)+j], vpn.n[S], tx, float(cylin_id + j))); // average normals?
+					}
+				}
+				for (unsigned S = 0; S < ndiv; ++S) { // create index data
+					bool const last_edge((quad_id % ndiv) == ndiv-1);
+					unsigned const ix(data_pos + quad_id++);
+					idata.push_back(ix);
+					idata.push_back(ix+ndiv);
+					idata.push_back(last_edge ? ix+1 : ix+ndiv+1);
+					idata.push_back(last_edge ? ix+1-ndiv : ix+1);
+				}
+				++cylin_id;
+			} // for i
+			assert(data.size()  == data.capacity());
+			assert(idata.size() == idata.capacity());
+			branch_vbo  = create_vbo();
+			branch_ivbo = create_vbo();
+			assert(branch_vbo > 0 && branch_ivbo > 0);
+			bind_vbo(branch_vbo,  0);
+			bind_vbo(branch_ivbo, 1);
+			upload_vbo_data(&data.front(),  data.size()*branch_stride,    0); // ~350KB
+			upload_vbo_data(&idata.front(), idata.size()*sizeof(index_t), 1); // ~75KB (with 16-bit index)
+		} // end create vbo
+		else {
+			assert(branch_vbo > 0 && branch_ivbo > 0);
+			bind_vbo(branch_vbo,  0); // use vbo for rendering
+			bind_vbo(branch_ivbo, 1);
+		}
+		set_array_client_state(1, 1, 1, 0);
+		glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
+		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
+		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(point) + sizeof(vector3d)));
+		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
+		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0);
+		bind_vbo(0, 0);
+		bind_vbo(0, 1);
+	}
 	glDisable(GL_TEXTURE_2D);
 }
 
@@ -634,129 +690,21 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 
 	unsigned nleaves((unsigned)leaves.size());
 	assert(nleaves <= max_leaves);
-	bool const gen_arrays(leaf_data.empty());
-	unsigned const leaf_stride(sizeof(vert_norm_tc_color));
+	bool const gen_arrays(leaf_data.empty()), create_leaf_vbo(leaf_vbo == 0);
 
-	if (gen_arrays) { // extra memory = 176*nleaves
-		if (deadness > 0) {
-			for (unsigned i = 0; i < nleaves; i++) { // process deadness stuff
-				if (deadness > rand_float2()) {
-					remove_leaf(i, 0);
-					--nleaves;
-				}
+	if (gen_arrays && deadness > 0) {
+		for (unsigned i = 0; i < nleaves; i++) { // process deadness stuff
+			if (deadness > rand_float2()) {
+				remove_leaf(i, 0);
+				--nleaves;
 			}
 		}
-		leaf_data.resize(4*nleaves);
-		gen_quad_tex_coords(leaf_data.front().t, nleaves, leaf_stride/sizeof(float));
 	}
 	unsigned nl(nleaves);
 	if (ENABLE_CLIP_LEAVES) nl = min(nl, max((nl/8), unsigned(4.0*nl*mscale/dist_cs))); // leaf LOD
-	
-	if (gen_arrays || (reset_leaves && !leaf_dynamic)) {
-		for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
-			for (unsigned j = 0; j < 4; ++j) {
-				leaf_data[j+(i<<2)].v = leaves[i].pts[j];
-				leaf_data[j+(i<<2)].n = leaves[i].norm*leaves[i].get_norm_scale(j);
-			}
-		}
-		reset_leaves   = 0;
-		leaves_changed = 1;
-	}
-	if (leaf_dynamic > 1) { // leaves move in wind or when struck by an object (somewhat slow)
-		int last_xpos(0), last_ypos(0);
-		vector3d local_wind;
-
-		for (unsigned i = 0; i < nl; i++) { // process leaf wind and collisions
-			tree_leaf const &l(leaves[i]);
-			int const xpos(get_xpos(l.pts[0].x)), ypos(get_ypos(l.pts[0].y));
-			
-			// Note: should check for similar z-value, but z is usually similar within the leaves of a single tree
-			if (i == 0 || xpos != last_xpos || ypos != last_ypos) {
-				local_wind = get_local_wind(l.pts[0]); // slow
-				last_xpos  = xpos;
-				last_ypos  = ypos;
-			}
-			float hit_angle(0.0);
-
-			if (l.coll_index >= 0) { // rotate leaves when hit by an object
-				assert(l.coll_index < (int)coll_objects.size());
-				unsigned char &last_coll(coll_objects[l.coll_index].last_coll);
-				unsigned char &coll_type(coll_objects[l.coll_index].coll_type);
-				
-				if (last_coll > 0) {
-					if (coll_type == BEAM) { // do burn damage
-						if (damage_leaf(i, BEAM_DAMAGE)) {--i; --nl; --nleaves;}
-					}
-					else {
-						if (coll_type == PROJECTILE) {
-							if ((rand()&3) == 0) { // shoot off leaf
-								gen_leaf_at(l.pts, l.norm, type, get_leaf_color(i));
-								remove_leaf(i, 1);
-								--i; --nl; --nleaves;
-								continue;
-							}
-							coll_type = IMPACT; // reset to impact after first hit
-						}
-						hit_angle += PI_TWO*last_coll/TICKS_PER_SECOND; // 90 degree max rotate
-					}
-					last_coll = ((last_coll < iticks) ? 0 : (last_coll - iticks));
-				}
-			}
-			float const wscale(dot_product(local_wind, l.norm));
-			float const angle(0.5*PI*max(-1.0f, min(1.0f, wscale)) + hit_angle); // not physically correct, but it looks good
-			point const p1((l.pts[1] + l.pts[2])*0.5); // tip
-			point const p2((l.pts[0] + l.pts[3])*0.5); // base
-			vector3d const orig_dir(p1 - p2); // vector from base to tip
-			vector3d const new_dir(orig_dir*cos(angle) + l.norm*(orig_dir.mag()*sin(angle))); // s=orig_dir.get_norm(), t=l.norm
-			vector3d const delta(new_dir - orig_dir);
-			leaf_data[(i<<2)+1].v = l.pts[1] + delta;
-			leaf_data[(i<<2)+2].v = l.pts[2] + delta;
-			vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
-
-			for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
-				leaf_data[j+(i<<2)].n = normal*l.get_norm_scale(j);
-			}
-			if (LEAF_HEAL_RATE > 0.0 && l.color > 0.0 && l.color < 1.0) { // leaf heal
-				leaves[i].color = min(1.0f, (l.color + LEAF_HEAL_RATE*fticks));
-				copy_color(l.calc_leaf_color(leaf_color, base_color), i);
-			}
-			reset_leaves = 1; // Do we want to update the normals and collision objects as well?
-			mark_leaf_changed(i);
-		} // for i
-	}
-	if (gen_arrays || leaf_color_changed) { // process leaf colors
-		for (unsigned i = 0; i < nleaves; i++) {
-			copy_color(leaves[i].calc_leaf_color(leaf_color, base_color), i);
-		}
-	}
-	if (gen_arrays || (invalidate_norms && tree_coll_level >= 4)) { // process leaf shadows/normals
-		int const light(get_light());
-
-		for (unsigned i = 0; i < nleaves; i++) {
-			tree_leaf &l(leaves[i]);
-			l.shadow_bits = 0;
-
-			for (unsigned j = 0; j < 4; ++j) {
-				bool const shadowed(l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1));
-				l.shadow_bits |= (int(shadowed) << j);
-				leaf_data[j+(i<<2)].n = l.norm*l.get_norm_scale(j);
-			}
-		}
-		leaves_changed = 1;
-	}
-	assert(leaf_data.size() >= 4*leaves.size());
-
-	if (leaf_vbo == 0) {
-		leaf_vbo = create_vbo();
-		assert(leaf_vbo > 0);
-		bind_vbo(leaf_vbo);
-		upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride); // ~150KB
-	}
-	else {
-		bind_vbo(leaf_vbo);
-		if (leaves_changed) upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride);
-	}
-	vert_norm_tc_color::set_vbo_arrays(1);
+	if (create_leaf_vbo) leaf_vbo = create_vbo();
+	assert(leaf_vbo > 0);
+	bind_vbo(leaf_vbo);
 
 	if (draw_model == 0) { // solid fill
 		enable_blend();
@@ -771,7 +719,52 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
 	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
-	glDrawArrays(GL_QUADS, 0, 4*nl);
+
+	if (USE_LEAF_GEOM_SHADER) {
+		// FIXME: Write
+		set_array_client_state(1, 0, 1, 1); // v=1 tc=0 n=1 c=1
+		unsigned const stride(sizeof(vert_norm_color)); // FIXME: add tangent vector
+		glVertexPointer  (3, GL_FLOAT,         stride, (void *)(0));
+		glNormalPointer  (   GL_FLOAT,         stride, (void *)(sizeof(point)));
+		glColorPointer   (3, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(point) + sizeof(vector3d)));
+		glDrawArrays(GL_POINTS, 0, nl);
+	}
+	else {
+		unsigned const leaf_stride(sizeof(vert_norm_tc_color));
+
+		if (gen_arrays) { // extra memory = 176*nleaves
+			leaf_data.resize(4*nleaves);
+			gen_quad_tex_coords(leaf_data.front().t, nleaves, leaf_stride/sizeof(float));
+		}
+		if (gen_arrays || (reset_leaves && !leaf_dynamic)) {
+			for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
+				for (unsigned j = 0; j < 4; ++j) {
+					leaf_data[j+(i<<2)].v = leaves[i].pts[j];
+					leaf_data[j+(i<<2)].n = leaves[i].norm*leaves[i].get_norm_scale(j);
+				}
+			}
+			reset_leaves   = 0;
+			leaves_changed = 1;
+		}
+		if (leaf_dynamic > 1) {update_leaf_orients(nl, nleaves);}
+	
+		if (gen_arrays || leaf_color_changed) { // process leaf colors
+			for (unsigned i = 0; i < nleaves; i++) {
+				copy_color(leaves[i].calc_leaf_color(leaf_color, base_color), i);
+			}
+		}
+		if (gen_arrays || (invalidate_norms && tree_coll_level >= 4)) {calc_leaf_shadows(nleaves);}
+		assert(leaf_data.size() >= 4*leaves.size());
+
+		if (create_leaf_vbo) {
+			upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride); // ~150KB
+		}
+		else if (leaves_changed) {
+			upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride);
+		}
+		vert_norm_tc_color::set_vbo_arrays(1);
+		glDrawArrays(GL_QUADS, 0, 4*nl);
+	}
 	glDisable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
 	glDisable(GL_TEXTURE_2D);
@@ -782,6 +775,89 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 	disable_dynamic_lights(num_dlights);
 	if (leaf_vbo > 0) bind_vbo(0);
 	leaves_changed = 0;
+}
+
+
+void tree::update_leaf_orients(unsigned &nl, unsigned &nleaves) { // leaves move in wind or when struck by an object (somewhat slow)
+
+	int last_xpos(0), last_ypos(0);
+	vector3d local_wind;
+
+	for (unsigned i = 0; i < nl; i++) { // process leaf wind and collisions
+		tree_leaf const &l(leaves[i]);
+		int const xpos(get_xpos(l.pts[0].x)), ypos(get_ypos(l.pts[0].y));
+			
+		// Note: should check for similar z-value, but z is usually similar within the leaves of a single tree
+		if (i == 0 || xpos != last_xpos || ypos != last_ypos) {
+			local_wind = get_local_wind(l.pts[0]); // slow
+			last_xpos  = xpos;
+			last_ypos  = ypos;
+		}
+		float hit_angle(0.0);
+
+		if (l.coll_index >= 0) { // rotate leaves when hit by an object
+			assert(l.coll_index < (int)coll_objects.size());
+			unsigned char &last_coll(coll_objects[l.coll_index].last_coll);
+			unsigned char &coll_type(coll_objects[l.coll_index].coll_type);
+				
+			if (last_coll > 0) {
+				if (coll_type == BEAM) { // do burn damage
+					if (damage_leaf(i, BEAM_DAMAGE)) {--i; --nl; --nleaves;}
+				}
+				else {
+					if (coll_type == PROJECTILE) {
+						if ((rand()&3) == 0) { // shoot off leaf
+							gen_leaf_at(l.pts, l.norm, type, get_leaf_color(i));
+							remove_leaf(i, 1);
+							--i; --nl; --nleaves;
+							continue;
+						}
+						coll_type = IMPACT; // reset to impact after first hit
+					}
+					hit_angle += PI_TWO*last_coll/TICKS_PER_SECOND; // 90 degree max rotate
+				}
+				last_coll = ((last_coll < iticks) ? 0 : (last_coll - iticks));
+			}
+		}
+		float const wscale(dot_product(local_wind, l.norm));
+		float const angle(0.5*PI*max(-1.0f, min(1.0f, wscale)) + hit_angle); // not physically correct, but it looks good
+		point const p1((l.pts[1] + l.pts[2])*0.5); // tip
+		point const p2((l.pts[0] + l.pts[3])*0.5); // base
+		vector3d const orig_dir(p1 - p2); // vector from base to tip
+		vector3d const new_dir(orig_dir*cos(angle) + l.norm*(orig_dir.mag()*sin(angle))); // s=orig_dir.get_norm(), t=l.norm
+		vector3d const delta(new_dir - orig_dir);
+		leaf_data[(i<<2)+1].v = l.pts[1] + delta;
+		leaf_data[(i<<2)+2].v = l.pts[2] + delta;
+		vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
+
+		for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
+			leaf_data[j+(i<<2)].n = normal*l.get_norm_scale(j);
+		}
+		if (LEAF_HEAL_RATE > 0.0 && l.color > 0.0 && l.color < 1.0) { // leaf heal
+			leaves[i].color = min(1.0f, (l.color + LEAF_HEAL_RATE*fticks));
+			copy_color(l.calc_leaf_color(leaf_color, base_color), i);
+		}
+		reset_leaves = 1; // Do we want to update the normals and collision objects as well?
+		mark_leaf_changed(i);
+	} // for i
+}
+
+
+void tree::calc_leaf_shadows(unsigned nleaves) { // process leaf shadows/normals
+
+	int const light(get_light());
+
+	for (unsigned i = 0; i < nleaves; i++) {
+		tree_leaf &l(leaves[i]);
+		l.shadow_bits = 0;
+
+		for (unsigned j = 0; j < 4; ++j) {
+			bool const shadowed(l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1));
+			l.shadow_bits |= (int(shadowed) << j);
+			leaf_data[j+(i<<2)].n = l.norm*l.get_norm_scale(j);
+		}
+	}
+	leaves_changed = 1;
 }
 
 

@@ -114,6 +114,9 @@ class tree { // size = BIG
 	float num_leaves_per_occ, damage_scale;
 	unsigned num_branch_quads, num_unique_pts;
 
+	void update_leaf_orients(unsigned &nl, unsigned &nleaves);
+	void calc_leaf_shadows(unsigned nleaves);
+
 public:
 	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
 		leaves_changed(0), not_visible(0), num_branch_quads(0), num_unique_pts(0) {}
