@@ -315,10 +315,16 @@ void tree::mark_leaf_changed(unsigned i) {
 
 void tree::copy_color(colorRGB const &color, unsigned i) {
 
-	assert(i < leaf_data.size());
+	if (USE_LEAF_GEOM_SHADER) {
+		assert(i < leaf_data2.size());
+		leaf_data2[i].set_c3(color);
+	}
+	else {
+		assert(i < leaf_data.size());
 	
-	for (unsigned j = 0; j < 4; ++j) {
-		leaf_data[j+(i<<2)].set_c3(color);
+		for (unsigned j = 0; j < 4; ++j) {
+			leaf_data[j+(i<<2)].set_c3(color);
+		}
 	}
 	if (i < leaves.size() && leaves[i].coll_index >= 0) { // update cobj color so that leaf water reflection is correct
 		assert((unsigned)leaves[i].coll_index < coll_objects.size());
@@ -330,7 +336,7 @@ void tree::copy_color(colorRGB const &color, unsigned i) {
 
 void tree::change_leaf_color(colorRGBA &base_color, unsigned i) {
 
-	if (leaf_data.empty()) return;
+	if (!has_leaf_data()) return;
 	colorRGB color3;
 	colorRGBA const leafc(get_leaf_base_color(type));
 
@@ -353,16 +359,22 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 	}
 	leaves[i] = leaves.back();
 	leaves.pop_back();
+	if (!update_data || !has_leaf_data()) return;
 
-	if (update_data && !leaf_data.empty()) {
+	if (USE_LEAF_GEOM_SHADER) {
+		unsigned const i4(i << 2), tnl4((unsigned)leaves.size() << 2);
+		assert(leaves.size() <= leaf_data2.size());
+		leaf_data2[i] = leaf_data2[leaves.size()]; // shift vertex array (last one is now invalid)
+	}
+	else {
 		unsigned const i4(i << 2), tnl4((unsigned)leaves.size() << 2);
 		assert(4*leaves.size() <= leaf_data.size());
 
 		for (unsigned j = 0; j < 4; ++j) { // shift vertex array (last one is now invalid)
 			leaf_data[j+i4] = leaf_data[j+tnl4];
 		}
-		mark_leaf_changed(i);
 	}
+	mark_leaf_changed(i);
 }
 
 
@@ -395,7 +407,7 @@ bool tree::damage_leaf(unsigned i, float damage_done) {
 		lcolor = -1.0;
 		if ((rand()&3) == 0) gen_leaf_at(leaves[i].pts, leaves[i].norm, type, black); // 50/50 chance of the burned leaf falling
 		
-		if (!leaf_data.empty()) { // remove leaf i
+		if (has_leaf_data()) { // remove leaf i
 			remove_leaf(i, 1);
 			return 1;
 		}
@@ -404,7 +416,7 @@ bool tree::damage_leaf(unsigned i, float damage_done) {
 		float const llc(lcolor);
 		lcolor = max(0.0, (lcolor - 0.3*damage_done));
 		if (lcolor == 0.0 && llc > 0.0) damage += damage_scale;
-		if (!leaf_data.empty()) change_leaf_color(base_color, i);
+		if (has_leaf_data()) change_leaf_color(base_color, i);
 	}
 	return 0;
 }
@@ -450,7 +462,7 @@ void tree::drop_leaves() {
 			gen_leaf_at(leaves[i].pts, leaves[i].norm, type, get_leaf_color(i));
 			// create a new leaf with a different color (and orient?)
 			leaves[i].create_init_color(0);
-			if (!leaf_data.empty()) copy_color(leaves[i].calc_leaf_color(leaf_color, base_color), i);
+			if (has_leaf_data()) copy_color(leaves[i].calc_leaf_color(leaf_color, base_color), i);
 		}
 	}
 	leaves_changed = llc; // reset to original value so we don't do an update just because of this
@@ -476,9 +488,16 @@ void tree::gen_leaf_color() {
 colorRGB tree::get_leaf_color(unsigned i) const {
 
 	assert(i < leaves.size());
-	if (leaf_data.empty()) return leaves[i].calc_leaf_color(leaf_color, base_color);
-	assert(4*i < leaf_data.size());
-	return leaf_data[i<<2].get_c3(); // return color of first vertex since they all should be the same
+	if (!has_leaf_data()) return leaves[i].calc_leaf_color(leaf_color, base_color);
+
+	if (USE_LEAF_GEOM_SHADER) {
+		assert(i < leaf_data2.size());
+		return leaf_data2[i].get_c3();
+	}
+	else {
+		assert(4*i < leaf_data.size());
+		return leaf_data[i<<2].get_c3(); // return color of first vertex since they all should be the same
+	}
 }
 
 
@@ -529,7 +548,7 @@ void tree::draw_tree_shadow() {
 		select_texture(tree_types[type].leaf_tex);
 		bind_vbo(leaf_vbo);
 
-		if (USE_BRANCH_GEOM_SHADER) {
+		if (USE_LEAF_GEOM_SHADER) {
 			// FIXME: Write
 		}
 		else {
@@ -572,13 +591,13 @@ void tree::draw_tree(shader_t const &s, bool invalidate_norms, bool draw_branche
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
-	if (draw_branches) draw_tree_branches(mscale, dist_c, dist_cs);
+	if (draw_branches) draw_tree_branches(s, mscale, dist_c, dist_cs);
 	if (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0) return;
 	if (draw_leaves  ) draw_tree_leaves(s, invalidate_norms, mscale, dist_cs, (leaf_dynamic + leaf_dynamic_en));
 }
 
 
-void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs) {
+void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, float dist_cs) {
 
 	point const camera(get_camera_pos());
 	unsigned const numcylin((unsigned)all_cylins.size());
@@ -588,33 +607,50 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs) {
 	BLACK.do_glColor();
 
 	if (USE_BRANCH_GEOM_SHADER) {
-		size_t const branch_stride(sizeof(point)); // FIXME: where do radius and dir come from?
+		size_t const branch_stride(sizeof(branch_node_t));
 
 		if (branch_vbo == 0) { // create vbo
 			branch_vbo = create_vbo(); // do we need indexed vertices? no?
 			assert(branch_vbo > 0);
 			bind_vbo(branch_vbo, 0);
-			// FIXME: Write upload code
+			vector<branch_node_t> data(2*numcylin);
+			
+			for (unsigned i = 0; i < numcylin; ++i) {
+				bool const prev_connect(i   > 0        && all_cylins[i].can_merge(all_cylins[i-1]));
+				bool const next_connect(i+1 < numcylin && all_cylins[i].can_merge(all_cylins[i+1]));
+				data[(i<<1)+0].r = all_cylins[i].r1;
+				data[(i<<1)+1].r = all_cylins[i].r2;
+				data[(i<<1)+0].v = all_cylins[i].p1;
+				data[(i<<1)+1].v = all_cylins[i].p2;
+				data[(i<<1)+0].n = -all_cylins[i-prev_connect].get_norm_dir_vect();
+				data[(i<<1)+1].n =  all_cylins[i+next_connect].get_norm_dir_vect();
+			}
+			upload_vbo_data(&data.front(), data.size()*branch_stride, 0);
 		}
 		else {
 			assert(branch_vbo > 0);
 			bind_vbo(branch_vbo, 0); // use vbo for rendering
 		}
-		set_array_client_state(1, 0, 0, 0); // v=1 tc=0 n=0 c=0
-		glVertexPointer(3, GL_FLOAT, branch_stride, 0);
 		unsigned const num(min(numcylin, max((numcylin/8), unsigned(20.0*numcylin*mscale/dist_cs)))); // branch LOD
+		set_array_client_state(1, 0, 1, 0); // v=1 tc=0 n=1 c=0
+		int const loc(s.get_attrib_loc("radius"));
+		assert(loc > 0);
+		glEnableVertexAttribArray(loc);
+		glVertexPointer  (3, GL_FLOAT,         branch_stride, (void *)(0));
+		glNormalPointer  (   GL_FLOAT,         branch_stride, (void *)(sizeof(point)));
+		glVertexAttribPointer(loc, 1, GL_FLOAT, GL_FALSE, branch_stride, (void *)sizeof(vert_norm));
 		glDrawArrays(GL_LINES, 0, 2*num);
+		glDisableVertexAttribArray(loc);
 		bind_vbo(0, 0);
 	}
-	else {
-		// draw with branch vbos
+	else { // draw with branch vbos
 		size_t const branch_stride(sizeof(vert_norm_tc));
 
 		if (branch_vbo == 0) { // create vbos
 			assert(branch_ivbo == 0);
 			assert(num_branch_quads == 0 && num_unique_pts == 0);
 
-			for (unsigned i = 0; i < numcylin; i++) { // determine required data size
+			for (unsigned i = 0; i < numcylin; ++i) { // determine required data size
 				bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
 				unsigned const ndiv(all_cylins[i].get_num_div());
 				num_branch_quads += ndiv;
@@ -676,7 +712,7 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs) {
 		set_array_client_state(1, 1, 1, 0);
 		glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
 		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
-		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(point) + sizeof(vector3d)));
+		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(vert_norm)));
 		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
 		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
@@ -688,18 +724,15 @@ void tree::draw_tree_branches(float mscale, float dist_c, float dist_cs) {
 
 void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float mscale, float dist_cs, int leaf_dynamic) {
 
-	unsigned nleaves((unsigned)leaves.size());
-	assert(nleaves <= max_leaves);
-	bool const gen_arrays(leaf_data.empty()), create_leaf_vbo(leaf_vbo == 0);
+	assert(leaves.size() <= max_leaves);
+	bool const gen_arrays(!has_leaf_data()), create_leaf_vbo(leaf_vbo == 0);
 
 	if (gen_arrays && deadness > 0) {
-		for (unsigned i = 0; i < nleaves; i++) { // process deadness stuff
-			if (deadness > rand_float2()) {
-				remove_leaf(i, 0);
-				--nleaves;
-			}
+		for (unsigned i = 0; i < leaves.size(); i++) { // process deadness stuff
+			if (deadness > rand_float2()) {remove_leaf(i, 0);}
 		}
 	}
+	unsigned nleaves((unsigned)leaves.size());
 	unsigned nl(nleaves);
 	if (ENABLE_CLIP_LEAVES) nl = min(nl, max((nl/8), unsigned(4.0*nl*mscale/dist_cs))); // leaf LOD
 	if (create_leaf_vbo) leaf_vbo = create_vbo();
@@ -721,13 +754,39 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 	glDisable(GL_NORMALIZE);
 
 	if (USE_LEAF_GEOM_SHADER) {
-		// FIXME: Write
+		unsigned const leaf_stride(sizeof(vert_norm_color_tangent));
+		if (gen_arrays) leaf_data2.resize(nleaves);
+		
+		if (gen_arrays || (reset_leaves && !leaf_dynamic)) {
+			for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
+				leaf_data2[i].v = leaves[i].get_center();
+				leaf_data2[i].n = leaves[i].norm;//*leaves[i].get_norm_scale(j);
+				leaf_data2[i].t = (leaves[i].pts[1] - leaves[i].pts[0]); // not normalized FIXME: 2-1?
+			}
+			reset_leaves   = 0;
+			leaves_changed = 1;
+		}
+		if (leaf_dynamic > 1) {update_leaf_orients(nl);}
+		if (gen_arrays || leaf_color_changed) {copy_all_leaf_colors();}
+		if (gen_arrays || (invalidate_norms && tree_coll_level >= 4)) {calc_leaf_shadows();}
+		assert(leaf_data2.size() >= leaves.size());
+
+		if (create_leaf_vbo) {
+			upload_vbo_data(&leaf_data2.front(), leaf_data2.size()*leaf_stride);
+		}
+		else if (leaves_changed) {
+			upload_vbo_sub_data(&leaf_data2.front(), 0, leaf_data2.size()*leaf_stride);
+		}
 		set_array_client_state(1, 0, 1, 1); // v=1 tc=0 n=1 c=1
-		unsigned const stride(sizeof(vert_norm_color)); // FIXME: add tangent vector
-		glVertexPointer  (3, GL_FLOAT,         stride, (void *)(0));
-		glNormalPointer  (   GL_FLOAT,         stride, (void *)(sizeof(point)));
-		glColorPointer   (3, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(point) + sizeof(vector3d)));
+		int const loc(s.get_attrib_loc("tangent"));
+		assert(loc > 0);
+		glEnableVertexAttribArray(loc);
+		glVertexPointer  (3, GL_FLOAT,         leaf_stride, (void *)(0));
+		glNormalPointer  (   GL_FLOAT,         leaf_stride, (void *)(sizeof(point)));
+		glColorPointer   (3, GL_UNSIGNED_BYTE, leaf_stride, (void *)(sizeof(vert_norm)));
+		glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, leaf_stride, (void *)sizeof(vert_norm_color));
 		glDrawArrays(GL_POINTS, 0, nl);
+		glDisableVertexAttribArray(loc);
 	}
 	else {
 		unsigned const leaf_stride(sizeof(vert_norm_tc_color));
@@ -746,14 +805,9 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 			reset_leaves   = 0;
 			leaves_changed = 1;
 		}
-		if (leaf_dynamic > 1) {update_leaf_orients(nl, nleaves);}
-	
-		if (gen_arrays || leaf_color_changed) { // process leaf colors
-			for (unsigned i = 0; i < nleaves; i++) {
-				copy_color(leaves[i].calc_leaf_color(leaf_color, base_color), i);
-			}
-		}
-		if (gen_arrays || (invalidate_norms && tree_coll_level >= 4)) {calc_leaf_shadows(nleaves);}
+		if (leaf_dynamic > 1) {update_leaf_orients(nl);}
+		if (gen_arrays || leaf_color_changed) {copy_all_leaf_colors();}
+		if (gen_arrays || (invalidate_norms && tree_coll_level >= 4)) {calc_leaf_shadows();}
 		assert(leaf_data.size() >= 4*leaves.size());
 
 		if (create_leaf_vbo) {
@@ -778,7 +832,15 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 }
 
 
-void tree::update_leaf_orients(unsigned &nl, unsigned &nleaves) { // leaves move in wind or when struck by an object (somewhat slow)
+void tree::copy_all_leaf_colors() {
+
+	for (unsigned i = 0; i < leaves.size(); i++) {
+		copy_color(leaves[i].calc_leaf_color(leaf_color, base_color), i);
+	}
+}
+
+
+void tree::update_leaf_orients(unsigned &nl) { // leaves move in wind or when struck by an object (somewhat slow)
 
 	int last_xpos(0), last_ypos(0);
 	vector3d local_wind;
@@ -802,14 +864,14 @@ void tree::update_leaf_orients(unsigned &nl, unsigned &nleaves) { // leaves move
 				
 			if (last_coll > 0) {
 				if (coll_type == BEAM) { // do burn damage
-					if (damage_leaf(i, BEAM_DAMAGE)) {--i; --nl; --nleaves;}
+					if (damage_leaf(i, BEAM_DAMAGE)) {--i; --nl;}
 				}
 				else {
 					if (coll_type == PROJECTILE) {
 						if ((rand()&3) == 0) { // shoot off leaf
 							gen_leaf_at(l.pts, l.norm, type, get_leaf_color(i));
 							remove_leaf(i, 1);
-							--i; --nl; --nleaves;
+							--i; --nl;
 							continue;
 						}
 						coll_type = IMPACT; // reset to impact after first hit
@@ -826,12 +888,19 @@ void tree::update_leaf_orients(unsigned &nl, unsigned &nleaves) { // leaves move
 		vector3d const orig_dir(p1 - p2); // vector from base to tip
 		vector3d const new_dir(orig_dir*cos(angle) + l.norm*(orig_dir.mag()*sin(angle))); // s=orig_dir.get_norm(), t=l.norm
 		vector3d const delta(new_dir - orig_dir);
-		leaf_data[(i<<2)+1].v = l.pts[1] + delta;
-		leaf_data[(i<<2)+2].v = l.pts[2] + delta;
 		vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
+		
+		if (USE_LEAF_GEOM_SHADER) {
+			// FIXME: Write the rest
+			//leaf_data[i].n = normal;//*l.get_norm_scale(j);
+		}
+		else {
+			leaf_data[(i<<2)+1].v = l.pts[1] + delta;
+			leaf_data[(i<<2)+2].v = l.pts[2] + delta;
 
-		for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
-			leaf_data[j+(i<<2)].n = normal*l.get_norm_scale(j);
+			for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
+				leaf_data[j+(i<<2)].n = normal*l.get_norm_scale(j);
+			}
 		}
 		if (LEAF_HEAL_RATE > 0.0 && l.color > 0.0 && l.color < 1.0) { // leaf heal
 			leaves[i].color = min(1.0f, (l.color + LEAF_HEAL_RATE*fticks));
@@ -843,18 +912,24 @@ void tree::update_leaf_orients(unsigned &nl, unsigned &nleaves) { // leaves move
 }
 
 
-void tree::calc_leaf_shadows(unsigned nleaves) { // process leaf shadows/normals
+void tree::calc_leaf_shadows() { // process leaf shadows/normals
 
 	int const light(get_light());
 
-	for (unsigned i = 0; i < nleaves; i++) {
+	for (unsigned i = 0; i < leaves.size(); i++) {
 		tree_leaf &l(leaves[i]);
 		l.shadow_bits = 0;
 
 		for (unsigned j = 0; j < 4; ++j) {
 			bool const shadowed(l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1));
 			l.shadow_bits |= (int(shadowed) << j);
-			leaf_data[j+(i<<2)].n = l.norm*l.get_norm_scale(j);
+
+			if (USE_LEAF_GEOM_SHADER) {
+				// FIXME: Write
+			}
+			else {
+				leaf_data[j+(i<<2)].n = l.norm*l.get_norm_scale(j);
+			}
 		}
 	}
 	leaves_changed = 1;
@@ -880,6 +955,7 @@ int tree::delete_tree() {
 	if (no_delete) return 0;
 	all_cylins.clear();
 	leaf_data.clear();
+	leaf_data2.clear();
 	created = 0;
 	return 1;
 }
@@ -1093,6 +1169,7 @@ void tree::gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs)
 	sphere_center = pos; // z value will be reset later
 	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 	leaf_data.clear();
+	leaf_data2.clear();
 
 	//fixed tree variables
 	type     = ((ttype < 0) ? rand2() : ttype)%NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
@@ -1740,6 +1817,9 @@ void tree::shift_tree(vector3d const &vd) { // tree has no single pos, have to t
 	}
 	for (unsigned i = 0; i < leaf_data.size(); ++i) {
 		leaf_data[i].v += vd;
+	}
+	for (unsigned i = 0; i < leaf_data2.size(); ++i) {
+		leaf_data2[i].v += vd;
 	}
 }
 

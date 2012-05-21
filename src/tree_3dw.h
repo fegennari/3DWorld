@@ -27,6 +27,7 @@ struct tree_leaf { // size = 32 + 48 = 80
 	void create_init_color(bool deterministic);
 	colorRGB calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const;
 	float get_norm_scale(unsigned pt_ix) const;
+	point get_center() const {return 0.25*(pts[0] + pts[1] + pts[2] + pts[3]);} // average of all 4 leaf points
 };
 
 
@@ -70,9 +71,16 @@ struct tree_branch { // size = 12
 	float total_length;
 	short num_cylins, num_branches;
 
-	void clear_num() {
-		num_cylins = num_branches = 0;
-	}
+	void clear_num() {num_cylins = num_branches = 0;}
+};
+
+
+struct branch_node_t : public vert_norm { // size = 28, norm is direction to adjacent vertex
+
+	float r; // radius
+
+	branch_node_t() {}
+	branch_node_t(point const &v_, vector3d const &dir_, float r_) : vert_norm(v_, dir_), r(r_) {}
 };
 
 
@@ -84,7 +92,8 @@ class tree { // size = BIG
 
 	int type, created, trseed1, trseed2, branch_vbo, branch_ivbo, leaf_vbo;
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
-	vector<vert_norm_tc_color> leaf_data;
+	vector<vert_norm_tc_color> leaf_data; // old leaf data
+	vector<vert_norm_color_tangent> leaf_data2; // new leaf data
 	point sphere_center;
 	float sphere_radius, init_deadness, deadness, damage;
 	vector<draw_cylin> all_cylins;
@@ -114,8 +123,10 @@ class tree { // size = BIG
 	float num_leaves_per_occ, damage_scale;
 	unsigned num_branch_quads, num_unique_pts;
 
-	void update_leaf_orients(unsigned &nl, unsigned &nleaves);
-	void calc_leaf_shadows(unsigned nleaves);
+	void copy_all_leaf_colors();
+	void update_leaf_orients(unsigned &nl);
+	void calc_leaf_shadows();
+	bool has_leaf_data() const {return (!leaf_data.empty() || !leaf_data2.empty());}
 
 public:
 	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
@@ -137,7 +148,7 @@ public:
 	void clear_vbo();
 	void draw_tree_shadow();
 	void draw_tree(shader_t const &s, bool invalidate_norms, bool draw_branches=1, bool draw_near_leaves=1, bool draw_far_leaves=1);
-	void draw_tree_branches(float mscale, float dist_c, float dist_cs);
+	void draw_tree_branches(shader_t const &s, float mscale, float dist_c, float dist_cs);
 	void draw_tree_leaves(shader_t const &s, bool invalidate_norms, float mscale, float dist_cs, int leaf_dynamic);
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);
