@@ -666,12 +666,12 @@ struct vert_norm { // size = 24
 
 
 struct vert_norm_comp { // size = 16
-		point v;
-		char n[3];
+	point v;
+	char n[3];
 
-		vert_norm_comp() {}
-		vert_norm_comp(point const &v_, vector3d const &n_) : v(v_) {UNROLL_3X(n[i_] = (char)(127.0*n_[i_]);)}
-	};
+	vert_norm_comp() {}
+	vert_norm_comp(point const &v_, vector3d const &n_) : v(v_) {UNROLL_3X(n[i_] = (char)(127.0*n_[i_]);)}
+};
 
 
 struct vert_norm_tc : public vert_norm { // size = 32
@@ -735,9 +735,8 @@ struct vert_color : public color_wrapper { // size = 16
 
 
 struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
-
 	vert_norm_color() {}
-	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const &c_) : vert_norm(v_, n_) {set_c4(c_);}
+	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const     &c_) : vert_norm(v_, n_) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, unsigned char const *c_) : vert_norm(v_, n_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
 };
 
@@ -755,6 +754,15 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 	}
 	static void set_vbo_arrays(unsigned stride_mult=1);
 	void set_state(unsigned stride_mult=1) const;
+};
+
+
+struct vert_norm_color_tangent : public vert_norm_color {
+	vector3d t;
+
+	vert_norm_color_tangent() {}
+	vert_norm_color_tangent(point const &v_, vector3d const &n_, colorRGBA const     &c_, vector3d const &t_) : vert_norm_color(v_, n_, c_), t(t_) {}
+	vert_norm_color_tangent(point const &v_, vector3d const &n_, unsigned char const *c_, vector3d const &t_) : vert_norm_color(v_, n_, c_), t(t_) {}
 };
 
 
