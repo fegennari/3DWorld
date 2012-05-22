@@ -229,7 +229,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree, bool use_wind)
 	if (USE_LEAF_GEOM_SHADER && for_tree) {
 		s.set_vert_shader("ads_lighting.part*+tree_leaves"); // FIXME: will be different
 		s.set_frag_shader("linear_fog.part+simple_texture"); // same?
-		s.set_geom_shader("point_to_quad", GL_POINTS, GL_TRIANGLES, 6);
+		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLES, 6);
 		if (use_wind) {} // FIXME: add wind
 	}
 	else {
@@ -269,7 +269,7 @@ void draw_trees() {
 		unsigned const def_ndiv = 12;
 		
 		if (USE_BRANCH_GEOM_SHADER) {
-			s.set_geom_shader("line_to_cylinder", GL_LINES, GL_TRIANGLES, 6*def_ndiv); // with adjacency?
+			s.set_geom_shader("output_quad.part+line_to_cylinder", GL_LINES, GL_TRIANGLES, 6*def_ndiv); // with adjacency?
 			// FIXME - Write the rest
 		}
 		bool const branch_smap = 1; // looks better, but slower
@@ -754,14 +754,12 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 	glDisable(GL_NORMALIZE);
 
 	if (USE_LEAF_GEOM_SHADER) {
-		unsigned const leaf_stride(sizeof(vert_norm_color_tangent));
+		unsigned const leaf_stride(sizeof(leaf_node_t));
 		if (gen_arrays) leaf_data2.resize(nleaves);
 		
 		if (gen_arrays || (reset_leaves && !leaf_dynamic)) {
 			for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
-				leaf_data2[i].v = leaves[i].get_center();
-				leaf_data2[i].n = leaves[i].norm;//*leaves[i].get_norm_scale(j);
-				leaf_data2[i].t = (leaves[i].pts[1] - leaves[i].pts[0]); // not normalized FIXME: 2-1?
+				leaf_data2[i].set_from_leaf(leaves[i]);
 			}
 			reset_leaves   = 0;
 			leaves_changed = 1;
@@ -832,6 +830,14 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 }
 
 
+void leaf_node_t::set_from_leaf(tree_leaf const &l) {
+
+	v = l.pts[0]; // origin is at LLC (TC 0,0)
+	n = l.norm;//*l.get_norm_scale(j);
+	t = (l.pts[1] - l.pts[0]); // not normalized FIXME: 2-1?
+}
+
+
 void tree::copy_all_leaf_colors() {
 
 	for (unsigned i = 0; i < leaves.size(); i++) {
@@ -891,8 +897,8 @@ void tree::update_leaf_orients(unsigned &nl) { // leaves move in wind or when st
 		vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
 		
 		if (USE_LEAF_GEOM_SHADER) {
-			// FIXME: Write the rest
-			//leaf_data[i].n = normal;//*l.get_norm_scale(j);
+			leaf_data2[i].t = ((l.pts[1] + delta) - l.pts[0]); // not normalized FIXME: 2-1?
+			leaf_data2[i].n = normal;
 		}
 		else {
 			leaf_data[(i<<2)+1].v = l.pts[1] + delta;
@@ -926,6 +932,7 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 
 			if (USE_LEAF_GEOM_SHADER) {
 				// FIXME: Write
+				//leaf_data[i].shadowed[j] = shadowed;
 			}
 			else {
 				leaf_data[j+(i<<2)].n = l.norm*l.get_norm_scale(j);

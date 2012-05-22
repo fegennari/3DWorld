@@ -1,7 +1,7 @@
 // input: line as two points {point.xyz, radius, color [,next_dir.xyz]}, ndiv
 // output: textured cylinder/cone as triangles
 uniform int ndiv = 12;
-varying out vec3 normal;
+varying in float r1, r2; // FIXME: per-vertex
 
 void main()
 {
@@ -9,15 +9,16 @@ void main()
 	vec4 pos1 = gl_ModelViewMatrix * gl_PositionIn[0];
 	vec4 pos2 = gl_ModelViewMatrix * gl_PositionIn[1];
 
-	vec3 v12 = pos2 - pos1;
+	vec3 v12 = (pos2 - pos1).xyz;
 	vec3 vt = v12;
 	vec3 vab[2];
-	((abs(v12.x) < abs(v12.y)) ? ((abs(v12.x) < abs(v12.z)) ? vt.x : vt.z) : ((abs(v12.y) < abs(v12.z)) ? vt.y : vt.z)) += 0.5; // add to min dim
+	int min_dim = ((abs(v12.x) < abs(v12.y)) ? ((abs(v12.x) < abs(v12.z)) ? 0 : 2) : ((abs(v12.y) < abs(v12.z)) ? 1 : 2));
+	vt[min_dim] += 0.5; // add to min dim
 	vab[0] = normalize(cross(vt,  v12   )); // vab[0] is orthogonal to v12
 	vab[1] = normalize(cross(v12, vab[0])); // vab[1] is orthogonal to v12 and vab[0]
 
-	float r[2] = {r1, r2}; // FIXME: where do these come from?
-	vec3 ce[2] = {pos0, pos1};
+	float r[2]; r[0] = r1; r[1] = r2; // FIXME: where do these come from?
+	vec4 ce[2]; ce[0] = pos1; ce[1] = pos2;
 	float PI  = 3.14159;
 	float css = 2.0*PI/float(ndiv);
 	float sin_ds = sin(css);
@@ -28,17 +29,17 @@ void main()
 	// cos(x + y) = cos(x)*cos(y) - sin(x)*sin(y)
 
 	for (int s = 0; s < ndiv; ++s) {
-		float sin_vals[2] = {sin_s, (sin_s*cos_ds + cos_s*sin_ds)}; // cur, next
-		float cos_vals[2] = {cos_s, (cos_s*cos_ds - sin_s*sin_ds)}; // cur, next
+		float sin_vals[2]; sin_vals[0] = sin_s; sin_vals[1] = (sin_s*cos_ds + cos_s*sin_ds); // cur, next
+		float cos_vals[2]; cos_vals[0] = cos_s; cos_vals[1] = (cos_s*cos_ds - sin_s*sin_ds); // cur, next
 		vec4 pts[4];
 		vec3 n[4];
-		vec2 tc[2];
+		vec2 tc[4];
 
 		for (int i = 0; i < 2; ++i) { // two ends
 			for (int j = 0; j < 2; ++j) { // prev and cur edges
 				int ix = 2*i + j;
 				vec3 delta = vab[0]*sin_vals[j] + vab[1]*cos_vals[j];
-				pts[ix]   = ce[i] + r[i]*delta;
+				pts[ix]   = ce[i] + r[i]*vec4(delta, 0.0);
 				n  [ix]   = normalize(delta);
 				tc [ix].s = float(s+j)/float(ndiv);
 				tc [ix].t = float(i);

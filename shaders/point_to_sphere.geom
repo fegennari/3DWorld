@@ -12,7 +12,7 @@ void main()
 		for (int t = 0; t < ndiv; ++t) {
 			vec4 pts[4];
 			vec3 n[4];
-			vec2 tc[2];
+			vec2 tc[4];
 			// FIXME: Write
 			output_quad(pts, n, tc);
 		}
