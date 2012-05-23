@@ -837,6 +837,7 @@
     <None Include="shaders\grass_with_dlights.frag" />
     <None Include="shaders\indir_lighting.part.frag" />
     <None Include="shaders\indir_lighting.part.vert" />
+    <None Include="shaders\leaf_lighting.part.vert" />
     <None Include="shaders\line_to_cylinder.geom" />
     <None Include="shaders\no_lighting_tex_coord.vert" />
     <None Include="shaders\output_quad.part.geom" />
@@ -852,6 +853,7 @@
     <None Include="shaders\snow.vert" />
     <None Include="shaders\spec_map.part.frag" />
     <None Include="shaders\tiled_mesh.frag" />
+    <None Include="shaders\tree_leaves_as_pts.vert" />
     <None Include="shaders\triplanar_texture.part.frag" />
     <None Include="shaders\vert_xform_only.vert" />
     <None Include="shaders\water_plane.frag" />

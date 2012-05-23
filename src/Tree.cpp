@@ -227,13 +227,13 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree, bool use_wind)
 	s.setup_enabled_lights(2);
 
 	if (USE_LEAF_GEOM_SHADER && for_tree) {
-		s.set_vert_shader("ads_lighting.part*+tree_leaves"); // FIXME: will be different
+		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves_as_pts");
 		s.set_frag_shader("linear_fog.part+simple_texture"); // same?
-		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLES, 6);
+		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLE_STRIP, 6);
 		if (use_wind) {} // FIXME: add wind
 	}
 	else {
-		s.set_vert_shader("ads_lighting.part*+tree_leaves");
+		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves");
 		s.set_frag_shader("linear_fog.part+simple_texture");
 	
 		if (use_wind) { // wind on leaves
@@ -247,6 +247,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree, bool use_wind)
 	s.add_uniform_float("min_alpha", min_alpha);
 	set_multitex(0);
 	s.add_uniform_int("tex0", 0);
+	check_gl_error(301);
 }
 
 
@@ -269,7 +270,7 @@ void draw_trees() {
 		unsigned const def_ndiv = 12;
 		
 		if (USE_BRANCH_GEOM_SHADER) {
-			s.set_geom_shader("output_quad.part+line_to_cylinder", GL_LINES, GL_TRIANGLES, 6*def_ndiv); // with adjacency?
+			s.set_geom_shader("output_quad.part+line_to_cylinder", GL_LINES, GL_TRIANGLE_STRIP, 6*def_ndiv); // with adjacency?
 			// FIXME - Write the rest
 		}
 		bool const branch_smap = 1; // looks better, but slower
@@ -834,7 +835,7 @@ void leaf_node_t::set_from_leaf(tree_leaf const &l) {
 
 	v = l.pts[0]; // origin is at LLC (TC 0,0)
 	n = l.norm;//*l.get_norm_scale(j);
-	t = (l.pts[1] - l.pts[0]); // not normalized FIXME: 2-1?
+	t = (l.pts[3] - l.pts[0]); // not normalized
 }
 
 
@@ -897,7 +898,6 @@ void tree::update_leaf_orients(unsigned &nl) { // leaves move in wind or when st
 		vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
 		
 		if (USE_LEAF_GEOM_SHADER) {
-			leaf_data2[i].t = ((l.pts[1] + delta) - l.pts[0]); // not normalized FIXME: 2-1?
 			leaf_data2[i].n = normal;
 		}
 		else {

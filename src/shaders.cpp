@@ -438,6 +438,7 @@ bool shader_t::begin_shader() {
 			assert(verts_out > 0);
 			glProgramParameteriEXT(program, GL_GEOMETRY_VERTICES_OUT_EXT, verts_out);
 		}
+		check_gl_error(300);
 		glLinkProgram(program);
 		int status(0);
 		glGetProgramiv(program, GL_LINK_STATUS, &status);
