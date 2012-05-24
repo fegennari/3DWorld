@@ -151,7 +151,7 @@ public:
 	void gen_leaf_color();
 	colorRGB get_leaf_color(unsigned i) const;
 	void clear_vbo();
-	void draw_tree_shadow();
+	void draw_tree_shadow(bool draw_branches, bool draw_leaves);
 	void draw_tree(shader_t const &s, bool invalidate_norms, bool draw_branches=1, bool draw_near_leaves=1, bool draw_far_leaves=1);
 	void draw_tree_branches(shader_t const &s, float mscale, float dist_c, float dist_cs);
 	void draw_tree_leaves(shader_t const &s, bool invalidate_norms, float mscale, float dist_cs, int leaf_dynamic);

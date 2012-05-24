@@ -1907,7 +1907,7 @@ void shift_hmv(vector3d const &vd);
 // function prototypes - tree + sm_tree (see also tree_3dw.h)
 void mult_leaf_points_by(float val);
 int get_tree_type_from_height(float zpos);
-void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree, bool use_wind);
+void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree);
 
 // function prototypes - csg
 void get_cube_points(const float d[3][2], point pts[8]);

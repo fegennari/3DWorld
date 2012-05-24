@@ -863,7 +863,7 @@ void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 		enable_blend();
 		glEnable(GL_COLOR_MATERIAL);
 		shader_t s;
-		set_leaf_shader(s, 0.9, 0, 0);
+		set_leaf_shader(s, 0.9, 0);
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw(sscale, 2, shadow_only); // draw leaves

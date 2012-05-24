@@ -342,7 +342,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		glNormal3f(0.0, 1.0, 0.0);
 		set_specular(0.1, 10.0); // FIXME: should leaves on trees be a matching specular again?
 		//shader_t s;
-		//set_leaf_shader(s, 0.75, 0, 0); // Note: needs colors, but we set a/d lighting for shadows
+		//set_leaf_shader(s, 0.75, 0); // Note: needs colors, but we set a/d lighting for shadows
 		static vector<pair<unsigned, unsigned> > ordering;
 		ordering.resize(0);
 		ordering.reserve(objg.end_id);

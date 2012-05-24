@@ -221,7 +221,7 @@ void draw_trees_bl(shader_t const &s, bool lpos_change, bool draw_branches, bool
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree, bool use_wind) {
+void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 	s.setup_enabled_lights(2);
@@ -230,19 +230,14 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree, bool use_wind)
 		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves_as_pts");
 		s.set_frag_shader("linear_fog.part+simple_texture"); // same?
 		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLE_STRIP, 6);
-		if (use_wind) {} // FIXME: add wind
+		s.begin_shader();
+		//setup_wind_for_shader(s); // FIXME: add wind?
 	}
 	else {
 		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves");
 		s.set_frag_shader("linear_fog.part+simple_texture");
-	
-		if (use_wind) { // wind on leaves
-			// FIXME: leaves are drawn as quads, not triangles, so this won't work
-			s.set_geom_shader("wind.part*+tri_wind", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
-		}
+		s.begin_shader();
 	}
-	s.begin_shader();
-	if (use_wind) setup_wind_for_shader(s);
 	s.setup_fog_scale();
 	s.add_uniform_float("min_alpha", min_alpha);
 	set_multitex(0);
@@ -282,10 +277,8 @@ void draw_trees() {
 		}
 		draw_trees_bl(s, lpos_change, 1, 0, 0); // branches
 		end_smoke_shaders(s, orig_fog_color);
-		set_leaf_shader(s, 0.75, 1, 0);
+		set_leaf_shader(s, 0.75, 1);
 		draw_trees_bl(s, lpos_change, 0, 0, 1); // far  leaves
-		//s.end_shader();
-		//set_leaf_shader(s, 0.75, 1, 1);
 		draw_trees_bl(s, lpos_change, 0, 1, 0); // near leaves
 		s.end_shader();
 		last_lpos = lpos;
@@ -299,8 +292,9 @@ void draw_trees_shadow() {
 
 	if (!(tree_mode & 1)) return;
 	
-	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].draw_tree_shadow();
+	// FIXME: geom shader support requires setting shaders
+	for (unsigned i = 0; i < t_trees.size(); ++i) { // branches + leaves
+		t_trees[i].draw_tree_shadow(1, 1);
 	}
 }
 
@@ -525,11 +519,11 @@ void tree::clear_vbo() {
 }
 
 
-void tree::draw_tree_shadow() {
+void tree::draw_tree_shadow(bool draw_branches, bool draw_leaves) {
 
 	if (!created || !is_over_mesh()) return;
 	
-	if (branch_vbo > 0) { // draw branches (untextured)
+	if (draw_branches && branch_vbo > 0) { // draw branches (untextured)
 		if (USE_BRANCH_GEOM_SHADER) {
 			// FIXME: Write
 		}
@@ -543,7 +537,7 @@ void tree::draw_tree_shadow() {
 			bind_vbo(0, 1);
 		}
 	}
-	if (leaf_vbo > 0 && !leaves.empty()) { // draw leaves
+	if (draw_leaves && leaf_vbo > 0 && !leaves.empty()) { // draw leaves
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 		select_texture(tree_types[type].leaf_tex);
@@ -554,7 +548,7 @@ void tree::draw_tree_shadow() {
 		}
 		else {
 			assert(leaf_data.size() >= 4*leaves.size());
-			vert_norm_tc_color::set_vbo_arrays(1); // FIXME: Disable normals and colors?
+			vert_norm_tc_color::set_vbo_arrays(1); // could also disable normals and colors, but that doesn't seem to help much
 			glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
 		}
 		glDisable(GL_TEXTURE_2D);
@@ -834,7 +828,7 @@ void tree::draw_tree_leaves(shader_t const &s, bool invalidate_norms, float msca
 void leaf_node_t::set_from_leaf(tree_leaf const &l) {
 
 	v = l.pts[0]; // origin is at LLC (TC 0,0)
-	n = l.norm;//*l.get_norm_scale(j);
+	n = l.norm*l.get_norm_scale(0);
 	t = (l.pts[3] - l.pts[0]); // not normalized
 }
 
@@ -898,7 +892,7 @@ void tree::update_leaf_orients(unsigned &nl) { // leaves move in wind or when st
 		vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
 		
 		if (USE_LEAF_GEOM_SHADER) {
-			leaf_data2[i].n = normal;
+			leaf_data2[i].n = normal*l.get_norm_scale(0);
 		}
 		else {
 			leaf_data[(i<<2)+1].v = l.pts[1] + delta;
@@ -924,17 +918,17 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 
 	for (unsigned i = 0; i < leaves.size(); i++) {
 		tree_leaf &l(leaves[i]);
-		l.shadow_bits = 0;
 
-		for (unsigned j = 0; j < 4; ++j) {
-			bool const shadowed(l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1));
-			l.shadow_bits |= (int(shadowed) << j);
+		if (USE_LEAF_GEOM_SHADER) {
+			l.shadow_bits = (l.coll_index >= 0 && !is_visible_to_light_cobj(l.get_center(), light, 0.0, l.coll_index, 1));
+			leaf_data2[i].n = l.norm*l.get_norm_scale(0);
+		}
+		else {
+			l.shadow_bits = 0;
 
-			if (USE_LEAF_GEOM_SHADER) {
-				// FIXME: Write
-				//leaf_data[i].shadowed[j] = shadowed;
-			}
-			else {
+			for (unsigned j = 0; j < 4; ++j) {
+				bool const shadowed(l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1));
+				l.shadow_bits |= (int(shadowed) << j);
 				leaf_data[j+(i<<2)].n = l.norm*l.get_norm_scale(j);
 			}
 		}
