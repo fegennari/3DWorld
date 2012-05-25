@@ -804,10 +804,12 @@ void coll_obj_group::set_coll_obj_props(int index, int type, float radius, float
 void coll_obj_group::remove_index_from_ids(int index) {
 
 	if (index < 0) return;
-	assert((size_t)index < size());
-	if (operator[](index).status == COLL_DYNAMIC) coll_objects.dynamic_ids.must_erase (index);
-	if (operator[](index).cp.draw               ) coll_objects.drawn_ids.must_erase   (index);
-	if (operator[](index).platform_id >= 0      ) coll_objects.platform_ids.must_erase(index);
+	coll_obj &cobj(at(index));
+	if (cobj.status == COLL_DYNAMIC) coll_objects.dynamic_ids.must_erase (index);
+	if (cobj.cp.draw               ) coll_objects.drawn_ids.must_erase   (index);
+	if (cobj.platform_id >= 0      ) coll_objects.platform_ids.must_erase(index);
+	cobj.cp.draw     = 0;
+	cobj.platform_id = -1;
 }
 
 
