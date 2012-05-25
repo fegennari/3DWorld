@@ -1203,7 +1203,7 @@ void keyboard2(int key, int x, int y) {
 	case GLUT_KEY_F5: // toggle large/small trees
 		if (world_mode != WMODE_GROUND || (num_trees == 0 && t_trees.empty())) break;
 		tree_mode = (tree_mode+1)%4; // 0=none, 1=large, 2=small, 3=large+small
-		if (num_trees == 0) break; // Note: will skip scene/cobj updates on scenes that have placed trees
+		//if (num_trees == 0) break; // Note: will skip scene/cobj updates on scenes that have placed trees
 #if 1
 		gen_scene(0, 1, 1, 0, 1); // Note: will destroy any fixed cobjs
 #else

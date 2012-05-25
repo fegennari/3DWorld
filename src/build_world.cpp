@@ -707,9 +707,6 @@ void free_all_coll_objects() {
 	//coll_objects.clear_ids(); // FIXME: should already be cleared - memory leak?
 	czmin = model_czmin; // reset zmin/zmax to original values before cobjs were added
 	czmax = model_czmax;
-	assert(coll_objects.dynamic_ids.empty());
-	assert(coll_objects.drawn_ids.empty());
-	assert(coll_objects.platform_ids.empty());
 }
 
 
