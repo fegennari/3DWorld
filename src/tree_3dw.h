@@ -130,8 +130,9 @@ class tree { // size = BIG
 
 	void copy_all_leaf_colors();
 	void update_leaf_orients(unsigned &nl);
-	void calc_leaf_shadows();
 	bool has_leaf_data() const {return (!leaf_data.empty() || !leaf_data2.empty());}
+	void draw_branches_as_lines(shader_t const &s, unsigned num);
+	void draw_leaves_as_points(shader_t const &s, unsigned nl);
 
 public:
 	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
@@ -139,6 +140,7 @@ public:
 	bool is_over_mesh() const;
 	void gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs);
 	void regen_tree(point &pos, int recalc_shadows);
+	void calc_leaf_shadows();
 	void gen_tree_shadows(unsigned light_sources);
 	void add_tree_collision_objects();
 	void remove_collision_objects();
@@ -151,10 +153,9 @@ public:
 	void gen_leaf_color();
 	colorRGB get_leaf_color(unsigned i) const;
 	void clear_vbo();
-	void draw_tree_shadow(bool draw_branches, bool draw_leaves);
-	void draw_tree(shader_t const &s, bool invalidate_norms, bool draw_branches=1, bool draw_near_leaves=1, bool draw_far_leaves=1);
+	void draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool shadow_only);
 	void draw_tree_branches(shader_t const &s, float mscale, float dist_c, float dist_cs);
-	void draw_tree_leaves(shader_t const &s, bool invalidate_norms, float mscale, float dist_cs, int leaf_dynamic);
+	void draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int leaf_dynamic);
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);
 	void gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test);
@@ -223,7 +224,7 @@ typedef vector<tree> tree_cont_t;
 // function prototypes - tree
 float get_tree_z_bottom(float z, point const &pos);
 void remove_tree_cobjs();
-void draw_trees();
+void draw_trees(bool shadow_only=0);
 void delete_trees();
 void regen_trees(bool recalc_shadows, bool keep_old);
 void shift_trees(vector3d const &vd);

@@ -19,8 +19,7 @@ extern int window_width, window_height, animate2, display_mode, ground_effects_l
 extern vector<shadow_sphere> shadow_objs;
 extern coll_obj_group coll_objects;
 
-void draw_small_trees(bool shadow_only);
-void draw_trees_shadow();
+void draw_trees(bool shadow_only=0);
 
 
 struct smap_data_t {
@@ -329,9 +328,8 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		//} // for n
 		if (ENABLE_DLIST) glEndList();
 	}
-	draw_small_trees(1);
 	draw_scenery(1, 1, 1);
-	draw_trees_shadow();
+	draw_trees(1);
 	render_models(1);
 	render_voxel_data(1);
 
