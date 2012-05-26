@@ -2,6 +2,7 @@
 // output: textured cylinder/cone as triangles
 uniform int ndiv = 12;
 varying in float r1, r2; // FIXME: per-vertex
+varying out vec3 normal;
 
 void main()
 {
@@ -28,25 +29,19 @@ void main()
 	// sin(x + y) = sin(x)*cos(y) + cos(x)*sin(y)
 	// cos(x + y) = cos(x)*cos(y) - sin(x)*sin(y)
 
-	for (int s = 0; s < ndiv; ++s) {
-		float sin_vals[2]; sin_vals[0] = sin_s; sin_vals[1] = (sin_s*cos_ds + cos_s*sin_ds); // cur, next
-		float cos_vals[2]; cos_vals[0] = cos_s; cos_vals[1] = (cos_s*cos_ds - sin_s*sin_ds); // cur, next
-		vec4 pts[4];
-		vec3 n[4];
-		vec2 tc[4];
+	for (int s = 0; s <= ndiv; ++s) {
+		float sin_val = (sin_s*cos_ds + cos_s*sin_ds);
+		float cos_val = (cos_s*cos_ds - sin_s*sin_ds);
 
 		for (int i = 0; i < 2; ++i) { // two ends
-			for (int j = 0; j < 2; ++j) { // prev and cur edges
-				int ix = 2*i + j;
-				vec3 delta = vab[0]*sin_vals[j] + vab[1]*cos_vals[j];
-				pts[ix]   = ce[i] + r[i]*vec4(delta, 0.0);
-				n  [ix]   = normalize(delta);
-				tc [ix].s = float(s+j)/float(ndiv);
-				tc [ix].t = float(i);
-			}
+			vec3 delta  = vab[0]*sin_s + vab[1]*cos_s;
+			gl_Position = ce[i] + r[i]*vec4(delta, 0.0);
+			normal = normalize(delta);
+			gl_TexCoord[0].st = vec2(float(s)/float(ndiv), float(i));
+			EmitVertex();
 		}
-		output_quad(pts, n, tc);
-		sin_s = sin_vals[1];
-		cos_s = cos_vals[1];
+		sin_s = sin_val;
+		cos_s = cos_val;
 	}
+	EndPrimitive();
 }

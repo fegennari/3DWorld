@@ -840,7 +840,6 @@
     <None Include="shaders\leaf_lighting.part.vert" />
     <None Include="shaders\line_to_cylinder.geom" />
     <None Include="shaders\no_lighting_tex_coord.vert" />
-    <None Include="shaders\output_quad.part.geom" />
     <None Include="shaders\output_textured_quad.part.geom" />
     <None Include="shaders\point_to_quad.geom" />
     <None Include="shaders\point_to_sphere.geom" />

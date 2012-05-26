@@ -280,7 +280,7 @@ void draw_trees(bool shadow_only) {
 		unsigned const def_ndiv = 12;
 		
 		if (USE_BRANCH_GEOM_SHADER) {
-			s.set_geom_shader("output_quad.part+line_to_cylinder", GL_LINES, GL_TRIANGLE_STRIP, 6*def_ndiv); // with adjacency?
+			s.set_geom_shader("line_to_cylinder", GL_LINES, GL_TRIANGLE_STRIP, 6*def_ndiv); // with adjacency?
 			// FIXME - Write the rest
 		}
 		bool const branch_smap(1 && !shadow_only); // looks better, but slower
