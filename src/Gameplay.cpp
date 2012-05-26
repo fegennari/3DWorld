@@ -1801,7 +1801,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	point coll_pos, res_pos(pos);
 	vector3d vcf(vcf_), vca(pos), coll_norm(plus_z);
 	float const vcf_mag(vcf.mag()), MAX_RANGE(min((float)FAR_CLIP, 2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE + Z_SCENE_SIZE)));
-	float specular(0.0), luminance(0.0), alpha(1.0), refract_ix(1.0);
+	float specular(0.0), luminance(0.0), alpha(1.0), refract_ix(1.0), hardness(1.0);
 	player_state const &sstate(sstates[shooter]);
 	int const wtype(sstate.weapon), wmode(sstate.wmode);
 	float const radius(get_sstate_radius(shooter));
@@ -1830,11 +1830,15 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	if (cindex >= 0) assert(unsigned(cindex) < coll_objects.size());
 	point cpos(pos), p_int(pos), lsip(pos);
 
-	if (is_laser && cindex >= 0) {
+	if (cindex >= 0) {
 		cobj_params const &cp(coll_objects[cindex].cp);
-		get_lum_alpha(cp.color, cp.tid, luminance, alpha);
-		specular    = cp.specular;
-		refract_ix  = cp.refract_ix;
+		hardness = cp.elastic;
+
+		if (is_laser) {
+			get_lum_alpha(cp.color, cp.tid, luminance, alpha);
+			specular   = cp.specular;
+			refract_ix = cp.refract_ix;
+		}
 	}
 	for (int g = 0; g < num_groups; ++g) { // collisions with dynamic group objects - this can be slow
 		obj_group const &objg(obj_groups[g]);
@@ -1852,6 +1856,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				closest_t = type;
 				cpos      = p_int;
 				range     = p2p_dist(pos, cpos);
+				hardness  = 1.0; // 'hard'
 				
 				if (is_laser && type != SMILEY && type != CAMERA) {
 					get_lum_alpha(otype.color, otype.tid, luminance, alpha);
@@ -1869,6 +1874,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			closest_t = CAMERA;
 			cpos      = p_int;
 			range     = p2p_dist(pos, cpos);
+			hardness  = 1.0;
 			camera_collision(wtype, shooter, zero_vector, cpos, damage, proj_type);
 		}
 	}
@@ -1884,7 +1890,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			point const light_pos(coll_pos - vcf*(0.1*ssize));
 			add_dynamic_light(0.6*CLIP_TO_01(sqrt(intensity)), light_pos, scolor);
 
-			if (coll && intensity >= 1.0 && (!is_laser || (alpha == 1.0 && ((rand()&1) == 0)))) {
+			if (coll && hardness >= 0.5 && intensity >= 1.0 && (!is_laser || (alpha == 1.0 && ((rand()&1) == 0)))) {
 				gen_particles(light_pos, 1, 0.5, 1); // sparks
 			}
 		}
