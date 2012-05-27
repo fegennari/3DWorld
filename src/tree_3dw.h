@@ -97,7 +97,7 @@ class tree { // size = BIG
 
 	int type, created, trseed1, trseed2, branch_vbo, branch_ivbo, leaf_vbo;
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
-	vector<vert_norm_tc_color> leaf_data; // old leaf data
+	vector<vert_norm_color> leaf_data; // old leaf data
 	vector<leaf_node_t> leaf_data2; // new leaf data
 	point sphere_center;
 	float sphere_radius, init_deadness, deadness, damage;

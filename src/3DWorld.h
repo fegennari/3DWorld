@@ -738,6 +738,7 @@ struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 	vert_norm_color() {}
 	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const     &c_) : vert_norm(v_, n_) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, unsigned char const *c_) : vert_norm(v_, n_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
+	static void set_vbo_arrays(unsigned stride_mult=1);
 };
 
 

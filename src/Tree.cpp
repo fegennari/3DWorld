@@ -224,6 +224,7 @@ void draw_trees_bl(shader_t const &s, bool draw_branches, bool near_draw_leaves,
 void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+	if (!USE_LEAF_GEOM_SHADER && for_tree) s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0); // VS
 	s.setup_enabled_lights(2);
 
 	if (USE_LEAF_GEOM_SHADER && for_tree) {
@@ -562,7 +563,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leave
 			}
 			else {
 				assert(leaf_data.size() >= 4*leaves.size());
-				vert_norm_tc_color::set_vbo_arrays(1); // could also disable normals and colors, but that doesn't seem to help much
+				vert_norm_color::set_vbo_arrays(1); // could also disable normals and colors, but that doesn't seem to help much
 				glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
 			}
 		}
@@ -789,12 +790,8 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 		draw_leaves_as_points(s, nl);
 	}
 	else {
-		unsigned const leaf_stride(sizeof(vert_norm_tc_color));
+		if (gen_arrays) {leaf_data.resize(4*nleaves);}
 
-		if (gen_arrays) { // extra memory = 176*nleaves
-			leaf_data.resize(4*nleaves);
-			gen_quad_tex_coords(leaf_data.front().t, nleaves, leaf_stride/sizeof(float));
-		}
 		if (gen_arrays || (reset_leaves && !leaf_dynamic)) {
 			for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
 				for (unsigned j = 0; j < 4; ++j) {
@@ -809,6 +806,7 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 		if (gen_arrays || leaf_color_changed) {copy_all_leaf_colors();}
 		if (gen_arrays) {calc_leaf_shadows();}
 		assert(leaf_data.size() >= 4*leaves.size());
+		unsigned const leaf_stride(sizeof(vert_norm_color));
 
 		if (create_leaf_vbo) {
 			upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride); // ~150KB
@@ -816,7 +814,7 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 		else if (leaves_changed) {
 			upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride);
 		}
-		vert_norm_tc_color::set_vbo_arrays(1);
+		vert_norm_color::set_vbo_arrays(1);
 		glDrawArrays(GL_QUADS, 0, 4*nl);
 	}
 	disable_dynamic_lights(num_dlights);

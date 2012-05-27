@@ -209,6 +209,17 @@ void quad_batch_draw::draw() const {
 }
 
 
+void vert_norm_color::set_vbo_arrays(unsigned stride_mult) {
+
+	assert(stride_mult > 0);
+	set_array_client_state(1, 0, 1, 1);
+	unsigned const stride(stride_mult*sizeof(vert_norm_color));
+	glVertexPointer  (3, GL_FLOAT,         stride, (void *)(0));
+	glNormalPointer  (   GL_FLOAT,         stride, (void *)(sizeof(point)));
+	glColorPointer   (3, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm)));
+}
+
+
 void vert_norm_tc_color::set_vbo_arrays(unsigned stride_mult) {
 
 	assert(stride_mult > 0);
