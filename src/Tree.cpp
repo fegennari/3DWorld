@@ -274,27 +274,17 @@ void draw_trees(bool shadow_only) {
 		set_fill_mode();
 
 		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
-		shader_t s;
+		shader_t bs, ls;
 
 		// draw branches
-		unsigned const def_ndiv = 12;
-		
-		if (USE_BRANCH_GEOM_SHADER) {
-			s.set_geom_shader("line_to_cylinder", GL_LINES, GL_TRIANGLE_STRIP, 2*(def_ndiv + 1)); // with adjacency?
-			// FIXME - Write the rest
-		}
 		bool const branch_smap(1 && !shadow_only); // looks better, but slower
-		colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, !shadow_only, !shadow_only, 0, 0, branch_smap)); // dynamic lights, but no smoke (yet)
-
-		if (USE_BRANCH_GEOM_SHADER) {
-			s.add_uniform_int("ndiv", def_ndiv);
-			// anything else?
-		}
-		draw_trees_bl(s, 1, 0, 0, shadow_only);
-		end_smoke_shaders(s, orig_fog_color);
+		set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap, USE_BRANCH_GEOM_SHADER);
+		draw_trees_bl(bs, 1, 0, 0, shadow_only);
+		bs.end_shader();
+		disable_multitex_a();
 
 		// draw leaves
-		set_leaf_shader(s, 0.75, 1);
+		set_leaf_shader(ls, 0.75, 1);
 		
 		if (draw_model == 0) { // solid fill
 			enable_blend();
@@ -305,10 +295,10 @@ void draw_trees(bool shadow_only) {
 		set_specular(0.1, 10.0);
 		glEnable(GL_COLOR_MATERIAL);
 		glDisable(GL_NORMALIZE);
-		draw_trees_bl(s, 0, 0, 1, shadow_only); // far  leaves
-		draw_trees_bl(s, 0, 1, 0, shadow_only); // near leaves
+		draw_trees_bl(ls, 0, 0, 1, shadow_only); // far  leaves
+		draw_trees_bl(ls, 0, 1, 0, shadow_only); // near leaves
 		set_lighted_sides(1);
-		s.end_shader();
+		ls.end_shader();
 		glDisable(GL_COLOR_MATERIAL);
 		glEnable(GL_NORMALIZE);
 		disable_blend();
