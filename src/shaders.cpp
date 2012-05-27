@@ -497,5 +497,8 @@ void shader_t::end_shader() { // ok to call if not in a shader
 	}
 	prog_name_suffix.clear();
 	attrib_locs.clear();
+	vs_name.clear();
+	fs_name.clear();
+	gs_name.clear();
 }
 
