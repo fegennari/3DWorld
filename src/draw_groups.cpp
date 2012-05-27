@@ -200,7 +200,7 @@ void draw_select_groups(int solid) {
 		s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
 		s.set_frag_shader("simple_texture");
 		s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
-		//s.set_geom_shader("output_textured_quad.part+pt_billboard", GL_POINTS, GL_TRIANGLE_STRIP, 6);
+		//s.set_geom_shader("output_textured_quad.part+pt_billboard", GL_POINTS, GL_TRIANGLE_STRIP, 4);
 		s.begin_shader();
 		s.add_uniform_float("size", 2.0*object_types[SNOW].radius); // Note: size no longer depends on angle
 		s.add_uniform_int("tex0", 0);

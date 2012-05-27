@@ -229,7 +229,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree) {
 	if (USE_LEAF_GEOM_SHADER && for_tree) {
 		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves_as_pts");
 		s.set_frag_shader("linear_fog.part+simple_texture"); // same?
-		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLE_STRIP, 6);
+		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLE_STRIP, 4);
 		s.begin_shader();
 		//setup_wind_for_shader(s); // FIXME: add wind?
 	}
@@ -280,7 +280,7 @@ void draw_trees(bool shadow_only) {
 		unsigned const def_ndiv = 12;
 		
 		if (USE_BRANCH_GEOM_SHADER) {
-			s.set_geom_shader("line_to_cylinder", GL_LINES, GL_TRIANGLE_STRIP, 6*def_ndiv); // with adjacency?
+			s.set_geom_shader("line_to_cylinder", GL_LINES, GL_TRIANGLE_STRIP, 2*(def_ndiv + 1)); // with adjacency?
 			// FIXME - Write the rest
 		}
 		bool const branch_smap(1 && !shadow_only); // looks better, but slower
