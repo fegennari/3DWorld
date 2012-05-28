@@ -95,7 +95,7 @@ class tree { // size = BIG
 	static reusable_mem<tree_branch>   branch_cache[BRANCH_CACHE_ENTRIES];
 	static reusable_mem<tree_branch *> branch_ptr_cache;
 
-	typedef vert_norm_color tree_leaf_type_t;
+	typedef vert_norm_comp_color tree_leaf_type_t;
 
 	int type, created, trseed1, trseed2, branch_vbo, branch_ivbo, leaf_vbo;
 	bool no_delete, reset_leaves, leaves_changed, not_visible;

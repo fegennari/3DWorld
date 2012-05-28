@@ -671,7 +671,8 @@ struct vert_norm_comp { // size = 16
 	char n[3];
 
 	vert_norm_comp() {}
-	vert_norm_comp(point const &v_, vector3d const &n_) : v(v_) {UNROLL_3X(n[i_] = (char)(127.0*n_[i_]);)}
+	vert_norm_comp(point const &v_, vector3d const &n_) : v(v_) {set_norm(n_);}
+	void set_norm(vector3d const &n_) {UNROLL_3X(n[i_] = (char)(127.0*n_[i_]);)}
 };
 
 

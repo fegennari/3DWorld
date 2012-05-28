@@ -785,7 +785,7 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 			for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
 				for (unsigned j = 0; j < 4; ++j) {
 					leaf_data[j+(i<<2)].v = leaves[i].pts[j];
-					leaf_data[j+(i<<2)].n = leaves[i].norm*leaves[i].get_norm_scale(j);
+					leaf_data[j+(i<<2)].set_norm(leaves[i].norm*leaves[i].get_norm_scale(j));
 				}
 			}
 			reset_leaves   = 0;
@@ -887,11 +887,13 @@ void tree::update_leaf_orients(unsigned &nl) { // leaves move in wind or when st
 			leaf_data[ix+2].v = l.pts[2] + delta;
 
 			if (l.shadow_bits == 0) {
-				leaf_data[0+ix].n = leaf_data[1+ix].n = leaf_data[2+ix].n = leaf_data[3+ix].n = normal;
+				for (unsigned j = 0; j < 4; ++j) {
+					leaf_data[j+ix].set_norm(normal);
+				}
 			}
 			else {
 				for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
-					leaf_data[j+ix].n = normal*l.get_norm_scale(j);
+					leaf_data[j+ix].set_norm(normal*l.get_norm_scale(j));
 				}
 			}
 		}
@@ -923,7 +925,7 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 			for (unsigned j = 0; j < 4; ++j) {
 				bool const shadowed(l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1));
 				l.shadow_bits |= (int(shadowed) << j);
-				leaf_data[j+(i<<2)].n = l.norm*l.get_norm_scale(j);
+				leaf_data[j+(i<<2)].set_norm(l.norm*l.get_norm_scale(j));
 			}
 		}
 	}
