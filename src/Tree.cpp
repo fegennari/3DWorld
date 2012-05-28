@@ -221,22 +221,21 @@ void draw_trees_bl(shader_t const &s, bool draw_branches, bool near_draw_leaves,
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree) {
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
-	if (!USE_LEAF_GEOM_SHADER && for_tree) s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0); // VS
+	if (gen_tex_coords) s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0); // VS
 	s.setup_enabled_lights(2);
+	s.set_frag_shader("linear_fog.part+simple_texture");
 
-	if (USE_LEAF_GEOM_SHADER && for_tree) {
+	if (use_geom_shader) {
 		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves_as_pts");
-		s.set_frag_shader("linear_fog.part+simple_texture"); // same?
 		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLE_STRIP, 4);
 		s.begin_shader();
 		//setup_wind_for_shader(s); // FIXME: add wind?
 	}
 	else {
 		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves");
-		s.set_frag_shader("linear_fog.part+simple_texture");
 		s.begin_shader();
 	}
 	s.setup_fog_scale();
@@ -285,7 +284,7 @@ void draw_trees(bool shadow_only) {
 		disable_multitex_a();
 
 		// draw leaves
-		set_leaf_shader(ls, 0.75, 1);
+		set_leaf_shader(ls, 0.75, !USE_LEAF_GEOM_SHADER, USE_LEAF_GEOM_SHADER);
 		
 		if (draw_model == 0) { // solid fill
 			enable_blend();
@@ -563,7 +562,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leave
 			}
 			else {
 				assert(leaf_data.size() >= 4*leaves.size());
-				vert_norm_color::set_vbo_arrays(1); // could also disable normals and colors, but that doesn't seem to help much
+				tree_leaf_type_t::set_vbo_arrays(); // could also disable normals and colors, but that doesn't seem to help much
 				glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
 			}
 		}
@@ -603,13 +602,11 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leave
 
 void tree::draw_branches_as_lines(shader_t const &s, unsigned num) {
 
-	set_array_client_state(1, 0, 1, 0); // v=1 tc=0 n=1 c=0
 	size_t const branch_stride(sizeof(branch_node_t));
+	vert_norm::set_vbo_arrays(branch_stride);
 	int const loc(s.get_attrib_loc("radius"));
 	assert(loc > 0);
 	glEnableVertexAttribArray(loc);
-	glVertexPointer  (3, GL_FLOAT,         branch_stride, (void *)(0));
-	glNormalPointer  (   GL_FLOAT,         branch_stride, (void *)(sizeof(point)));
 	glVertexAttribPointer(loc, 1, GL_FLOAT, GL_FALSE, branch_stride, (void *)sizeof(vert_norm));
 	glDrawArrays(GL_LINES, 0, 2*num);
 	glDisableVertexAttribArray(loc);
@@ -652,8 +649,6 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 		bind_vbo(0, 0);
 	}
 	else { // draw with branch vbos
-		size_t const branch_stride(sizeof(vert_norm_tc));
-
 		if (branch_vbo == 0) { // create vbos
 			assert(branch_ivbo == 0);
 			assert(num_branch_quads == 0 && num_unique_pts == 0);
@@ -709,18 +704,15 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 			assert(branch_vbo > 0 && branch_ivbo > 0);
 			bind_vbo(branch_vbo,  0);
 			bind_vbo(branch_ivbo, 1);
-			upload_vbo_data(&data.front(),  data.size()*branch_stride,    0); // ~350KB
-			upload_vbo_data(&idata.front(), idata.size()*sizeof(index_t), 1); // ~75KB (with 16-bit index)
+			upload_vbo_data(&data.front(),  data.size()*sizeof(vert_norm_tc), 0); // ~350KB
+			upload_vbo_data(&idata.front(), idata.size()*sizeof(index_t),     1); // ~75KB (with 16-bit index)
 		} // end create vbo
 		else {
 			assert(branch_vbo > 0 && branch_ivbo > 0);
 			bind_vbo(branch_vbo,  0); // use vbo for rendering
 			bind_vbo(branch_ivbo, 1);
 		}
-		set_array_client_state(1, 1, 1, 0);
-		glVertexPointer(  3, GL_FLOAT, branch_stride, 0);
-		glNormalPointer(     GL_FLOAT, branch_stride, (void *)(sizeof(point)));
-		glTexCoordPointer(2, GL_FLOAT, branch_stride, (void *)(sizeof(vert_norm)));
+		vert_norm_tc::set_vbo_arrays();
 		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
 		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
@@ -731,14 +723,11 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 
 void tree::draw_leaves_as_points(shader_t const &s, unsigned nl) {
 
-	set_array_client_state(1, 0, 1, 1); // v=1 tc=0 n=1 c=1
 	unsigned const leaf_stride(sizeof(leaf_node_t));
+	vert_norm_color::set_vbo_arrays(leaf_stride);
 	int const loc(s.get_attrib_loc("tangent"));
 	assert(loc > 0);
 	glEnableVertexAttribArray(loc);
-	glVertexPointer  (3, GL_FLOAT,         leaf_stride, (void *)(0));
-	glNormalPointer  (   GL_FLOAT,         leaf_stride, (void *)(sizeof(point)));
-	glColorPointer   (3, GL_UNSIGNED_BYTE, leaf_stride, (void *)(sizeof(vert_norm)));
 	glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, leaf_stride, (void *)sizeof(vert_norm_color));
 	glDrawArrays(GL_POINTS, 0, nl);
 	glDisableVertexAttribArray(loc);
@@ -806,7 +795,7 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 		if (gen_arrays || leaf_color_changed) {copy_all_leaf_colors();}
 		if (gen_arrays) {calc_leaf_shadows();}
 		assert(leaf_data.size() >= 4*leaves.size());
-		unsigned const leaf_stride(sizeof(vert_norm_color));
+		unsigned const leaf_stride(sizeof(tree_leaf_type_t));
 
 		if (create_leaf_vbo) {
 			upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride); // ~150KB
@@ -814,7 +803,7 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 		else if (leaves_changed) {
 			upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride);
 		}
-		vert_norm_color::set_vbo_arrays(1);
+		tree_leaf_type_t::set_vbo_arrays();
 		glDrawArrays(GL_QUADS, 0, 4*nl);
 	}
 	disable_dynamic_lights(num_dlights);
@@ -893,11 +882,17 @@ void tree::update_leaf_orients(unsigned &nl) { // leaves move in wind or when st
 			leaf_data2[i].n = normal*l.get_norm_scale(0);
 		}
 		else {
-			leaf_data[(i<<2)+1].v = l.pts[1] + delta;
-			leaf_data[(i<<2)+2].v = l.pts[2] + delta;
+			unsigned const ix(i<<2);
+			leaf_data[ix+1].v = l.pts[1] + delta;
+			leaf_data[ix+2].v = l.pts[2] + delta;
 
-			for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
-				leaf_data[j+(i<<2)].n = normal*l.get_norm_scale(j);
+			if (l.shadow_bits == 0) {
+				leaf_data[0+ix].n = leaf_data[1+ix].n = leaf_data[2+ix].n = leaf_data[3+ix].n = normal;
+			}
+			else {
+				for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
+					leaf_data[j+ix].n = normal*l.get_norm_scale(j);
+				}
 			}
 		}
 		if (LEAF_HEAL_RATE > 0.0 && l.color > 0.0 && l.color < 1.0) { // leaf heal

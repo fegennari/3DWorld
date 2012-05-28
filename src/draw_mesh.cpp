@@ -447,9 +447,7 @@ void display_mesh() { // fast array version
 		else {
 			bind_vbo(mesh_vbo);
 		}
-		set_array_client_state(1, 0, 1, 0);
-		glVertexPointer(3, GL_FLOAT, 2*sizeof(point), 0);
-		glNormalPointer(   GL_FLOAT, 2*sizeof(point), (void *)sizeof(point));
+		vert_norm::set_vbo_arrays();
 
 		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 			glDrawArrays(GL_QUAD_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);

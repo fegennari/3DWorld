@@ -662,6 +662,7 @@ struct vert_norm { // size = 24
 	void assign(point const &v_, vector3d const &n_) {v = v_; n = n_;}
 	bool operator< (vert_norm const &p) const {return ((v == p.v) ? (n < p.n) : (v < p.v));}
 	bool operator==(vert_norm const &p) const {return (v == p.v && n == p.n);}
+	static void set_vbo_arrays(unsigned force_stride=0);
 };
 
 
@@ -671,6 +672,14 @@ struct vert_norm_comp { // size = 16
 
 	vert_norm_comp() {}
 	vert_norm_comp(point const &v_, vector3d const &n_) : v(v_) {UNROLL_3X(n[i_] = (char)(127.0*n_[i_]);)}
+};
+
+
+struct vert_norm_comp_tc { // size = 24
+	float t[2];
+
+	vert_norm_comp_tc() {}
+	static void set_vbo_arrays(unsigned force_stride=0);
 };
 
 
@@ -692,6 +701,7 @@ struct vert_norm_tc : public vert_norm { // size = 32
 		return (t[1] < p.t[1]);
 	}
 	bool operator==(vert_norm_tc const &p) const {return (v == p.v && n == p.n && t[0] == p.t[0] && t[1] == p.t[1]);}
+	static void set_vbo_arrays(unsigned force_stride=0);
 };
 
 
@@ -738,7 +748,13 @@ struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 	vert_norm_color() {}
 	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const     &c_) : vert_norm(v_, n_) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, unsigned char const *c_) : vert_norm(v_, n_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
-	static void set_vbo_arrays(unsigned stride_mult=1);
+	static void set_vbo_arrays(unsigned force_stride=0);
+};
+
+
+struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // size = 20
+	vert_norm_comp_color() {}
+	static void set_vbo_arrays(unsigned force_stride=0);
 };
 
 
@@ -753,8 +769,8 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0) {
 		v = v_; n = n_; t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; if (has_alpha) c[3] = c_[3];
 	}
-	static void set_vbo_arrays(unsigned stride_mult=1);
-	void set_state(unsigned stride_mult=1) const;
+	static void set_vbo_arrays(unsigned force_stride=0);
+	void set_state() const;
 };
 
 
@@ -1909,7 +1925,7 @@ void shift_hmv(vector3d const &vd);
 // function prototypes - tree + sm_tree (see also tree_3dw.h)
 void mult_leaf_points_by(float val);
 int get_tree_type_from_height(float zpos);
-void set_leaf_shader(shader_t &s, float min_alpha, bool for_tree);
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader);
 
 // function prototypes - csg
 void get_cube_points(const float d[3][2], point pts[8]);

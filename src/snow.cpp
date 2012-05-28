@@ -492,8 +492,7 @@ public:
 		assert(vbo != 0 && ivbo != 0);
 		bind_vbo(vbo,  0);
 		bind_vbo(ivbo, 1);
-		glVertexPointer(3, GL_FLOAT, sizeof(vert_norm), 0);
-		glNormalPointer(   GL_FLOAT, sizeof(vert_norm), (void *)sizeof(point));
+		vert_norm::set_vbo_arrays();
 		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0); // requires GL/glew.h
 		//glDrawElements(GL_QUADS, (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
 		bind_vbo(0, 0);
@@ -789,7 +788,6 @@ void draw_snow() {
 	point const camera(get_camera_pos());
 	enable_blend();
 	glDisable(GL_NORMALIZE);
-	set_array_client_state(1, 0, 1, 0);
 	select_texture(NOISE_TEX);
 	setup_texgen(50.0, 50.0, 0.0, 0.0);
 	snow_draw.draw();
