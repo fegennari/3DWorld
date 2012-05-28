@@ -545,7 +545,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leave
 				draw_branches_as_lines(s, all_cylins.size());
 			}
 			else {
-				size_t const branch_stride(sizeof(vert_norm_tc));
+				size_t const branch_stride(sizeof(branch_vert_type_t));
 				bind_vbo(branch_ivbo, 1);
 				set_array_client_state(1, 0, 0, 0); // vertices only
 				glVertexPointer(3, GL_FLOAT, branch_stride, 0);
@@ -562,7 +562,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leave
 			}
 			else {
 				assert(leaf_data.size() >= 4*leaves.size());
-				tree_leaf_type_t::set_vbo_arrays(); // could also disable normals and colors, but that doesn't seem to help much
+				leaf_vert_type_t::set_vbo_arrays(); // could also disable normals and colors, but that doesn't seem to help much
 				glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
 			}
 		}
@@ -659,7 +659,6 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 				num_branch_quads += ndiv;
 				num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
 			}
-			typedef vert_norm_tc branch_vert_type_t;
 			typedef unsigned short index_t;
 			assert(num_unique_pts < (1 << 8*sizeof(index_t))); // cutting it close with 4th order branches
 			vector<branch_vert_type_t> data;
@@ -713,7 +712,7 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 			bind_vbo(branch_vbo,  0); // use vbo for rendering
 			bind_vbo(branch_ivbo, 1);
 		}
-		vert_norm_tc::set_vbo_arrays();
+		vert_norm_comp_tc::set_vbo_arrays();
 		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
 		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
@@ -796,7 +795,7 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 		if (gen_arrays || leaf_color_changed) {copy_all_leaf_colors();}
 		if (gen_arrays) {calc_leaf_shadows();}
 		assert(leaf_data.size() >= 4*leaves.size());
-		unsigned const leaf_stride(sizeof(tree_leaf_type_t));
+		unsigned const leaf_stride(sizeof(leaf_vert_type_t));
 
 		if (create_leaf_vbo) {
 			upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride); // ~150KB
@@ -804,7 +803,7 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 		else if (leaves_changed) {
 			upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride);
 		}
-		tree_leaf_type_t::set_vbo_arrays();
+		leaf_vert_type_t::set_vbo_arrays();
 		glDrawArrays(GL_QUADS, 0, 4*nl);
 	}
 	disable_dynamic_lights(num_dlights);
