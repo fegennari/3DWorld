@@ -132,8 +132,9 @@ class tree { // size = BIG
 	unsigned num_branch_quads, num_unique_pts;
 
 	void copy_all_leaf_colors();
-	void update_leaf_orients(unsigned &nl);
+	void update_leaf_orients();
 	bool has_leaf_data() const {return (!leaf_data.empty() || !leaf_data2.empty());}
+	bool has_no_leaves() const {return (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0);}
 	void draw_branches_as_lines(shader_t const &s, unsigned num);
 	void draw_leaves_as_points(shader_t const &s, unsigned nl);
 
@@ -141,6 +142,7 @@ public:
 	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
 		leaves_changed(0), not_visible(0), num_branch_quads(0), num_unique_pts(0) {}
 	bool is_over_mesh() const;
+	bool is_visible_to_camera() const;
 	void gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs);
 	void regen_tree(point &pos, int recalc_shadows);
 	void calc_leaf_shadows();
@@ -156,9 +158,9 @@ public:
 	void gen_leaf_color();
 	colorRGB get_leaf_color(unsigned i) const;
 	void clear_vbo();
-	void draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool shadow_only);
-	void draw_tree_branches(shader_t const &s, float mscale, float dist_c, float dist_cs);
-	void draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int leaf_dynamic);
+	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only);
+	void draw_tree_branches(shader_t const &s, float size_scale);
+	void draw_tree_leaves(shader_t const &s, float size_scale);
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);
 	void gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test);

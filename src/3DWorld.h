@@ -157,6 +157,7 @@ float const SQRT_ZOOMF_INV  = 1.0/SQRT_ZOOMF;
 #define BITSHIFT_CEIL(num, bs) (((num-1) >> bs) + 1)
 
 #define UNROLL_3X(expr) {{unsigned const i_(0); expr} {unsigned const i_(1); expr} {unsigned const i_(2); expr}}
+#define UNROLL_4X(expr) {UNROLL_3X(expr) {unsigned const i_(3); expr}}
 
 
 enum {CAM_FILT_DAMAGE=0, CAM_FILT_FOG, CAM_FILT_BURN, CAMERA_FILT_BKG, CAM_FILT_UWATER};
@@ -656,7 +657,6 @@ struct colorRGBA : public colorRGB { // size = 16
 struct vert_norm { // size = 24
 	point v;
 	vector3d n;
-
 	vert_norm() {}
 	vert_norm(point const &v_, vector3d const &n_) : v(v_), n(n_) {}
 	void assign(point const &v_, vector3d const &n_) {v = v_; n = n_;}
@@ -666,19 +666,29 @@ struct vert_norm { // size = 24
 };
 
 
-struct vert_norm_comp { // size = 16
-	point v;
+struct norm_comp { // size = 4
 	char n[3];
-
-	vert_norm_comp() {}
-	vert_norm_comp(point const &v_, vector3d const &n_) : v(v_) {set_norm(n_);}
+	norm_comp() {}
+	norm_comp(vector3d const &n_) {set_norm(n_);}
 	void set_norm(vector3d const &n_) {UNROLL_3X(n[i_] = (char)(127.0*n_[i_]);)}
+};
+
+
+struct vert_wrap_t { // so we can put the vertex first
+	point v;
+	vert_wrap_t() {}
+	vert_wrap_t(point const &v_) : v(v_) {}
+};
+
+
+struct vert_norm_comp : public vert_wrap_t, norm_comp { // size = 16
+	vert_norm_comp() {}
+	vert_norm_comp(point const &v_, vector3d const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
 };
 
 
 struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 	float t[2];
-
 	vert_norm_comp_tc() {}
 	vert_norm_comp_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
 	static void set_vbo_arrays(unsigned force_stride=0);
@@ -687,7 +697,6 @@ struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 
 struct vert_norm_tc : public vert_norm { // size = 32
 	float t[2];
-
 	vert_norm_tc() {}
 	vert_norm_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm(v_, n_) {t[0] = ts;    t[1] = tt;   }
 	vert_norm_tc(point const &v_, vector3d const &n_, float const t_[2])  : vert_norm(v_, n_) {t[0] = t_[0]; t[1] = t_[1];}

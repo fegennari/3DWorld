@@ -23,7 +23,7 @@ float const TREE_MIN_H       = -0.15; // 0.15
 float const TREE_MAX_H       = 0.6;
 int   const LEAF_GEN_RAND1   = 10; //500
 int   const LEAF_GEN_RAND2   = 200000; // larger is fewer leaves falling
-float const DIST_C_SCALE     = 0.25;
+float const DIST_C_SCALE     = 0.01;
 float const LEAF_SHADOW_VAL  = 0.25;
 float const BR_SHADOW_VAL    = 0.6;
 float const TREE_DEPTH       = 0.1;
@@ -90,13 +90,10 @@ int next_branch_num;
 //designed to handle only positive numbers correctly
 //return a random number between start and end
 inline int rand_gen(int start, int end) {
-
 	return (rand2()%(end - start + 1) + start);
 }
 
-
 float get_tree_z_bottom(float z, point const &pos) {
-
 	return (is_over_mesh(pos) ? max(zbottom, (z - TREE_DEPTH)) : (z - TREE_DEPTH));
 }
 
@@ -213,10 +210,10 @@ void remove_tree_cobjs() {
 }
 
 
-void draw_trees_bl(shader_t const &s, bool draw_branches, bool near_draw_leaves, bool draw_far_leaves, bool shadow_only) {
+void draw_trees_bl(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only) {
 
 	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].draw_tree(s, draw_branches, near_draw_leaves, draw_far_leaves, shadow_only);
+		t_trees[i].draw_tree(s, draw_branches, draw_leaves, shadow_only);
 	}
 }
 
@@ -279,7 +276,7 @@ void draw_trees(bool shadow_only) {
 		// draw branches
 		bool const branch_smap(1 && !shadow_only); // looks better, but slower
 		set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap, USE_BRANCH_GEOM_SHADER);
-		draw_trees_bl(bs, 1, 0, 0, shadow_only);
+		draw_trees_bl(bs, 1, 0, shadow_only);
 		bs.end_shader();
 		disable_multitex_a();
 
@@ -295,8 +292,7 @@ void draw_trees(bool shadow_only) {
 		set_specular(0.1, 10.0);
 		glEnable(GL_COLOR_MATERIAL);
 		glDisable(GL_NORMALIZE);
-		draw_trees_bl(ls, 0, 0, 1, shadow_only); // far  leaves
-		draw_trees_bl(ls, 0, 1, 0, shadow_only); // near leaves
+		draw_trees_bl(ls, 0, 1, shadow_only);
 		set_lighted_sides(1);
 		ls.end_shader();
 		glDisable(GL_COLOR_MATERIAL);
@@ -531,7 +527,14 @@ void tree::clear_vbo() {
 }
 
 
-void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool shadow_only) {
+bool tree::is_visible_to_camera() const {
+
+	int const level((island || get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh in non-island mode?
+	return sphere_in_camera_view(sphere_center, 1.1*sphere_radius, level);
+}
+
+
+void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only) {
 
 	if (!created) return;
 
@@ -553,7 +556,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leave
 				bind_vbo(0, 1);
 			}
 		}
-		if (draw_far_leaves && leaf_vbo > 0 && !leaves.empty()) { // draw leaves
+		if (leaf_vbo > 0 && !leaves.empty()) { // draw leaves
 			select_texture(tree_types[type].leaf_tex);
 			bind_vbo(leaf_vbo);
 
@@ -571,13 +574,6 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leave
 	}
 	set_rand2_state(trseed1, trseed2);
 	gen_leaf_color();
-
-	float const mscale(mesh_scale*mesh_scale2);
-	float const dist_c(mscale*DIST_C_SCALE/(do_zoom ? ZOOM_FACTOR : 1.0));
-	float const dist_cs(distance_to_camera(sphere_center)*dist_c*(0.04/base_radius));
-	int const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
-	int const leaf_dynamic(leaf_dynamic_en && mscale/dist_cs > 0.5);
-	bool const draw_leaves(leaf_dynamic ? draw_near_leaves : draw_far_leaves);
 	
 	if (draw_leaves && deadness < 1.0 && init_deadness < 1.0) {
 		burn_leaves();
@@ -586,17 +582,13 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_near_leave
 		if (begin_motion && animate2) drop_leaves();
 	}
 	if (TEST_RTREE_COBJS) return;
-
-	if (!draw_leaves || draw_branches) { // second pass only
-		int const level((island || get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh in non-island mode?
-		not_visible = !sphere_in_camera_view(sphere_center, 1.1*sphere_radius, level);
-	}
+	if (!draw_leaves || draw_branches) {not_visible = !is_visible_to_camera();} // second pass only
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
-	if (draw_branches) draw_tree_branches(s, mscale, dist_c, dist_cs);
-	if (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0) return;
-	if (draw_leaves  ) draw_tree_leaves(s, mscale, dist_cs, (leaf_dynamic + leaf_dynamic_en));
+	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*base_radius/(distance_to_camera(sphere_center)*DIST_C_SCALE));
+	if (draw_branches) draw_tree_branches(s, size_scale);
+	if (draw_leaves && !has_no_leaves()) draw_tree_leaves(s, size_scale);
 }
 
 
@@ -613,7 +605,7 @@ void tree::draw_branches_as_lines(shader_t const &s, unsigned num) {
 }
 
 
-void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, float dist_cs) {
+void tree::draw_tree_branches(shader_t const &s, float size_scale) {
 
 	point const camera(get_camera_pos());
 	unsigned const numcylin((unsigned)all_cylins.size());
@@ -644,7 +636,7 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 			assert(branch_vbo > 0);
 			bind_vbo(branch_vbo, 0); // use vbo for rendering
 		}
-		unsigned const num(min(numcylin, max((numcylin/8), unsigned(20.0*numcylin*mscale/dist_cs)))); // branch LOD
+		unsigned const num(min(numcylin, max((numcylin/8), unsigned(20.0*numcylin*size_scale)))); // branch LOD
 		draw_branches_as_lines(s, num);
 		bind_vbo(0, 0);
 	}
@@ -713,7 +705,7 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 			bind_vbo(branch_ivbo, 1);
 		}
 		vert_norm_comp_tc::set_vbo_arrays();
-		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*mscale/dist_cs)))); // branch LOD
+		unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
 		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
@@ -734,19 +726,21 @@ void tree::draw_leaves_as_points(shader_t const &s, unsigned nl) {
 }
 
 
-void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int leaf_dynamic) {
+void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
 
 	assert(leaves.size() <= max_leaves);
 	bool const gen_arrays(!has_leaf_data()), create_leaf_vbo(leaf_vbo == 0);
+	int const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
 
 	if (gen_arrays && deadness > 0) {
 		for (unsigned i = 0; i < leaves.size(); i++) { // process deadness stuff
 			if (deadness > rand_float2()) {remove_leaf(i, 0);}
 		}
 	}
+	if (!gen_arrays && leaf_dynamic_en && size_scale > 0.5) {update_leaf_orients();}
 	unsigned nleaves((unsigned)leaves.size());
 	unsigned nl(nleaves);
-	if (ENABLE_CLIP_LEAVES) nl = min(nl, max((nl/8), unsigned(4.0*nl*mscale/dist_cs))); // leaf LOD
+	if (ENABLE_CLIP_LEAVES) nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale))); // leaf LOD
 	if (create_leaf_vbo) leaf_vbo = create_vbo();
 	assert(leaf_vbo > 0);
 	bind_vbo(leaf_vbo);
@@ -757,14 +751,13 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 	if (USE_LEAF_GEOM_SHADER) {
 		if (gen_arrays) leaf_data2.resize(nleaves);
 		
-		if (gen_arrays || (reset_leaves && !leaf_dynamic)) {
+		if (gen_arrays || (reset_leaves && !leaf_dynamic_en)) {
 			for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
 				leaf_data2[i].set_from_leaf(leaves[i]);
 			}
 			reset_leaves   = 0;
 			leaves_changed = 1;
 		}
-		if (leaf_dynamic > 1) {update_leaf_orients(nl);}
 		if (gen_arrays || leaf_color_changed) {copy_all_leaf_colors();}
 		if (gen_arrays) {calc_leaf_shadows();}
 		assert(leaf_data2.size() >= leaves.size());
@@ -781,7 +774,7 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 	else {
 		if (gen_arrays) {leaf_data.resize(4*nleaves);}
 
-		if (gen_arrays || (reset_leaves && !leaf_dynamic)) {
+		if (gen_arrays || (reset_leaves && !leaf_dynamic_en)) {
 			for (unsigned i = 0; i < nleaves; i++) { // process leaf points - reset to default positions and normals
 				for (unsigned j = 0; j < 4; ++j) {
 					leaf_data[j+(i<<2)].v = leaves[i].pts[j];
@@ -791,7 +784,6 @@ void tree::draw_tree_leaves(shader_t const &s, float mscale, float dist_cs, int 
 			reset_leaves   = 0;
 			leaves_changed = 1;
 		}
-		if (leaf_dynamic > 1) {update_leaf_orients(nl);}
 		if (gen_arrays || leaf_color_changed) {copy_all_leaf_colors();}
 		if (gen_arrays) {calc_leaf_shadows();}
 		assert(leaf_data.size() >= 4*leaves.size());
@@ -828,12 +820,12 @@ void tree::copy_all_leaf_colors() {
 }
 
 
-void tree::update_leaf_orients(unsigned &nl) { // leaves move in wind or when struck by an object (somewhat slow)
+void tree::update_leaf_orients() { // leaves move in wind or when struck by an object (somewhat slow)
 
 	int last_xpos(0), last_ypos(0);
 	vector3d local_wind;
 
-	for (unsigned i = 0; i < nl; i++) { // process leaf wind and collisions
+	for (unsigned i = 0; i < leaves.size(); i++) { // process leaf wind and collisions
 		tree_leaf const &l(leaves[i]);
 		int const xpos(get_xpos(l.pts[0].x)), ypos(get_ypos(l.pts[0].y));
 			
@@ -852,14 +844,14 @@ void tree::update_leaf_orients(unsigned &nl) { // leaves move in wind or when st
 				
 			if (last_coll > 0) {
 				if (coll_type == BEAM) { // do burn damage
-					if (damage_leaf(i, BEAM_DAMAGE)) {--i; --nl;}
+					if (damage_leaf(i, BEAM_DAMAGE)) {--i;}
 				}
 				else {
 					if (coll_type == PROJECTILE) {
 						if ((rand()&3) == 0) { // shoot off leaf
 							gen_leaf_at(l.pts, l.norm, type, get_leaf_color(i));
 							remove_leaf(i, 1);
-							--i; --nl;
+							--i;
 							continue;
 						}
 						coll_type = IMPACT; // reset to impact after first hit
@@ -887,14 +879,11 @@ void tree::update_leaf_orients(unsigned &nl) { // leaves move in wind or when st
 			leaf_data[ix+2].v = l.pts[2] + delta;
 
 			if (l.shadow_bits == 0) {
-				for (unsigned j = 0; j < 4; ++j) {
-					leaf_data[j+ix].set_norm(normal);
-				}
+				norm_comp nc(normal);
+				UNROLL_4X((norm_comp)leaf_data[i_+ix] = nc;)
 			}
-			else {
-				for (unsigned j = 0; j < 4; ++j) { // update the normals, even though this slows the algorithm down
-					leaf_data[j+ix].set_norm(normal*l.get_norm_scale(j));
-				}
+			else { // update the normals, even though this slows the algorithm down
+				UNROLL_4X(leaf_data[i_+ix].set_norm(normal*l.get_norm_scale(i_));)
 			}
 		}
 		if (LEAF_HEAL_RATE > 0.0 && l.color > 0.0 && l.color < 1.0) { // leaf heal
