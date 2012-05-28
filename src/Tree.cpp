@@ -659,9 +659,10 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 				num_branch_quads += ndiv;
 				num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
 			}
+			typedef vert_norm_tc branch_vert_type_t;
 			typedef unsigned short index_t;
 			assert(num_unique_pts < (1 << 8*sizeof(index_t))); // cutting it close with 4th order branches
-			vector<vert_norm_tc> data;
+			vector<branch_vert_type_t> data;
 			vector<index_t> idata;
 			idata.reserve(4*num_branch_quads);
 			data.reserve(num_unique_pts);
@@ -684,7 +685,7 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 					for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
 						float const tx(2.0*fabs(S*ndiv_inv - 0.5));
 						// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
-						data.push_back(vert_norm_tc(vpn.p[(S<<1)+j], vpn.n[S], tx, float(cylin_id + j))); // average normals?
+						data.push_back(branch_vert_type_t(vpn.p[(S<<1)+j], vpn.n[S], tx, float(cylin_id + j))); // average normals?
 					}
 				}
 				for (unsigned S = 0; S < ndiv; ++S) { // create index data
@@ -704,8 +705,8 @@ void tree::draw_tree_branches(shader_t const &s, float mscale, float dist_c, flo
 			assert(branch_vbo > 0 && branch_ivbo > 0);
 			bind_vbo(branch_vbo,  0);
 			bind_vbo(branch_ivbo, 1);
-			upload_vbo_data(&data.front(),  data.size()*sizeof(vert_norm_tc), 0); // ~350KB
-			upload_vbo_data(&idata.front(), idata.size()*sizeof(index_t),     1); // ~75KB (with 16-bit index)
+			upload_vbo_data(&data.front(),  data.size() *sizeof(branch_vert_type_t), 0); // ~350KB
+			upload_vbo_data(&idata.front(), idata.size()*sizeof(index_t),            1); // ~75KB (with 16-bit index)
 		} // end create vbo
 		else {
 			assert(branch_vbo > 0 && branch_ivbo > 0);

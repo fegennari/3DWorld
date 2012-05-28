@@ -676,10 +676,11 @@ struct vert_norm_comp { // size = 16
 };
 
 
-struct vert_norm_comp_tc { // size = 24
+struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 	float t[2];
 
 	vert_norm_comp_tc() {}
+	vert_norm_comp_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
 	static void set_vbo_arrays(unsigned force_stride=0);
 };
 
