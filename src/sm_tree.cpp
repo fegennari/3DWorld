@@ -186,14 +186,14 @@ void draw_small_trees(bool shadow_only) {
 	if (small_trees.size() < 100) { // shadow_only?
 		sort(small_trees.begin(), small_trees.end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
-	shader_t s;
+	shader_t bs;
 	bool const use_bmap(USE_BUMP_MAP && !shadow_only);
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, !shadow_only, !shadow_only, 0, 0, !shadow_only, use_bmap, 0, 1)); // dynamic lights, but no smoke
-	if (!shadow_only) s.add_uniform_float("tex_scale_t", 5.0);
+	colorRGBA const orig_fog_color(setup_smoke_shaders(bs, 0.0, 0, 0, 0, !shadow_only, !shadow_only, 0, 0, !shadow_only, use_bmap, 0, 1)); // dynamic lights, but no smoke
+	if (!shadow_only) bs.add_uniform_float("tex_scale_t", 5.0);
 
 	if (use_bmap) {
 		vector4d const tangent(0.0, 0.0, 1.0, 1.0); // FIXME: set based on tree trunk direction?
-		int const tangent_loc(s.get_attrib_loc("tangent"));
+		int const tangent_loc(bs.get_attrib_loc("tangent"));
 		if (tangent_loc >= 0) glVertexAttrib4fv(tangent_loc, &tangent.x);
 		set_multitex(5);
 		select_texture(BARK2_NORMAL_TEX, 0);
@@ -205,22 +205,27 @@ void draw_small_trees(bool shadow_only) {
 		small_tree const &t(small_trees[i]);
 		t.draw(1, shadow_only);
 	}
-	end_smoke_shaders(s, orig_fog_color);
+	end_smoke_shaders(bs, orig_fog_color);
+	set_lighted_sides(2);
+	enable_blend();
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.75);
+	//shader_t ls;
+	//set_leaf_shader(ls, 0.75, 0, 0);
 
 	for (unsigned i = 0; i < small_trees.size(); ++i) { // draw leaves
-		small_tree const &t(small_trees[i]);
-		set_lighted_sides(2);
+		int const type(small_trees[i].get_type());
 			
-		if (i == 0 || small_trees[i-1].get_type() != t.get_type()) {
-			small_trees[i].pre_leaf_draw(); // first of this type
+		if (i == 0 || small_trees[i-1].get_type() != type) { // first of this type
+			bool const untextured((type == T_PINE || type == T_SH_PINE) && (draw_model != 0));
+			select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
 		}
-		t.draw(2, shadow_only);
-			
-		if (i+1 == small_trees.size() || small_trees[i+1].get_type() != t.get_type()) {
-			t.post_leaf_draw(); // last of this type
-		}
-		set_lighted_sides(1);
+		small_trees[i].draw(2, shadow_only);
 	}
+	//ls.end_shader();
+	glDisable(GL_ALPHA_TEST);
+	disable_blend();
+	set_lighted_sides(1);
 	glDisable(GL_TEXTURE_2D);
 	gluQuadricTexture(quadric, GL_FALSE);
 	tree_scenery_pld.draw_and_clear();
@@ -352,60 +357,6 @@ void small_tree::calc_points() { // pine trees
 }
 
 
-void small_tree::pre_leaf_draw() const {
-
-	bool const untextured((type == T_PINE || type == T_SH_PINE) && (draw_model != 0));
-	select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
-
-	switch (type) {
-	case T_PINE: // pine tree
-	case T_SH_PINE: // short pine tree
-		enable_blend();
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.75);
-		break;
-	case T_DECID: // decidious tree
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.5);
-		break;
-	case T_TDECID: // tall decidious tree
-	case T_BUSH: // bush
-		break; // nothing
-	case T_PALM: // palm tree
-		enable_blend();
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.75);
-		break;
-	default:
-		assert(0);
-	}
-}
-
-
-void small_tree::post_leaf_draw() const {
-
-	switch (type) {
-	case T_PINE: // pine tree
-	case T_SH_PINE: // short pine tree
-		glDisable(GL_ALPHA_TEST);
-		disable_blend();
-		break;
-	case T_DECID: // decidious tree
-		glDisable(GL_ALPHA_TEST);
-		break;
-	case T_TDECID: // tall decidious tree
-	case T_BUSH: // bush
-		break; // nothing
-	case T_PALM: // palm tree
-		glDisable(GL_ALPHA_TEST);
-		disable_blend();
-		break;
-	default:
-		assert(0);
-	}
-}
-
-
 void small_tree::draw(int mode, bool shadow_only) const {
 
 	if (!(tree_mode & 2)) return; // disabled
@@ -464,7 +415,6 @@ void small_tree::draw(int mode, bool shadow_only) const {
 			glPushMatrix();
 			translate_to(pos);
 			if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
-			int const nsides(max(6, min(max_sides, (shadow_only ? get_smap_ndiv(width) : (int)size))));
 
 			switch (type) { // draw leaves
 			case T_DECID: // decidious tree
@@ -477,14 +427,20 @@ void small_tree::draw(int mode, bool shadow_only) const {
 				break;
 			case T_BUSH: // bush
 				glScalef((0.1*height+0.8*width)/width, (0.1*height+0.8*width)/width, 1.0);
-				//draw_cube_map_sphere(all_zeros, width, nsides, 1, 1); // slower, but looks better
 				break;
 			case T_PALM: // palm tree
 				glTranslatef(0.0, 0.0, 0.71*height-0.5*width);
 				glScalef(1.2, 1.2, 0.5);
 				break;
 			}
-			draw_sphere_dlist(all_zeros, width, nsides, 1, (type == T_PALM));
+			int const nsides(max(6, min(max_sides, (shadow_only ? get_smap_ndiv(width) : (int)size))));
+
+			/*if (type == T_BUSH && nsides >= 24) {
+				draw_cube_map_sphere(all_zeros, width, nsides/2, 1, 1); // slower, but looks better
+			}
+			else*/ {
+				draw_sphere_dlist(all_zeros, width, nsides, 1, (type == T_PALM));
+			}
 			glPopMatrix();
 		} // end pine else
 	} // end mode

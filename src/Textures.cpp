@@ -88,7 +88,7 @@ texture_t(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
 texture_t(2, 0, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
 texture_t(1, 0, 128,  128,  0, 3, 0, "@tree_end.raw"),  // not real file
 texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi.raw"), // not real file, mipmap for trees?
-texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp", 1, 8.0),   // not real file
+texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp", 1, 8.0), // not real file
 texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw", 1, 16.0),
 texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw", 1, 8.0),
 texture_t(0, 0, 128,  128,  0, 4, 3, "mj_leaf.raw"),
@@ -107,7 +107,7 @@ texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade_b.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 1, "blur.raw"),
 texture_t(0, 0, 256,  256,  1, 4, 1, "blur_s.raw"),
-texture_t(0, 0, 256,  256,  0, 4, 0, "pine.raw"),
+texture_t(0, 0, 256,  256,  0, 4, 0, "pine.raw"), // mipmap?
 texture_t(0, 0, 128,  128,  1, 3, 1, "noise.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "wood.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw", 1, 8.0),
@@ -117,8 +117,8 @@ texture_t(0, 0, 256,  256,  1, 3, 1, "tile.raw", 1, 8.0),
 texture_t(0, 2, 256,  32,   1, 3, 1, "CommandCAD.raw"),
 texture_t(1, 0, 32,   32,   1, 4, 1, "@disint.raw"),   // not real file
 texture_t(1, 0, 256,  256,  1, 4, 1, "@blur_inv.raw"), // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe.raw", 1, 8.0),  // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe.raw", 1, 8.0),  // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe.raw", 1, 8.0), // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe.raw", 1, 8.0), // not real file
 texture_t(0, 0, 512,  512,  1, 3, 1, "bcube.raw"),
 texture_t(0, 0, 512,  512,  0, 4, 1, "explosion.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "shiphull.raw"),
