@@ -53,6 +53,7 @@ vector<small_tree> small_trees;
 pt_line_drawer tree_scenery_pld;
 
 
+extern bool disable_shaders, has_dir_lights;
 extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode;
 extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, tree_size, vegetation, OCEAN_DEPTH;
@@ -186,18 +187,22 @@ void draw_small_trees(bool shadow_only) {
 	if (small_trees.size() < 100) { // shadow_only?
 		sort(small_trees.begin(), small_trees.end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
-	shader_t bs;
-	bool const use_bmap(USE_BUMP_MAP && !shadow_only);
-	colorRGBA const orig_fog_color(setup_smoke_shaders(bs, 0.0, 0, 0, 0, !shadow_only, !shadow_only, 0, 0, !shadow_only, use_bmap, 0, 1)); // dynamic lights, but no smoke
-	if (!shadow_only) bs.add_uniform_float("tex_scale_t", 5.0);
+	shader_t s;
+	bool const can_use_shaders(!disable_shaders && !shadow_only);
+	colorRGBA orig_fog_color;
 
-	if (use_bmap) {
-		vector4d const tangent(0.0, 0.0, 1.0, 1.0); // FIXME: set based on tree trunk direction?
-		int const tangent_loc(bs.get_attrib_loc("tangent"));
-		if (tangent_loc >= 0) glVertexAttrib4fv(tangent_loc, &tangent.x);
-		set_multitex(5);
-		select_texture(BARK2_NORMAL_TEX, 0);
-		set_multitex(0);
+	if (can_use_shaders) {
+		orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, USE_BUMP_MAP, 0, 1); // dynamic lights, but no smoke
+		s.add_uniform_float("tex_scale_t", 5.0);
+
+		if (USE_BUMP_MAP) {
+			vector4d const tangent(0.0, 0.0, 1.0, 1.0); // FIXME: set based on tree trunk direction?
+			int const tangent_loc(s.get_attrib_loc("tangent"));
+			if (tangent_loc >= 0) glVertexAttrib4fv(tangent_loc, &tangent.x);
+			set_multitex(5);
+			select_texture(BARK2_NORMAL_TEX, 0);
+			set_multitex(0);
+		}
 	}
 	BLACK.do_glColor();
 
@@ -205,14 +210,15 @@ void draw_small_trees(bool shadow_only) {
 		small_tree const &t(small_trees[i]);
 		t.draw(1, shadow_only);
 	}
-	end_smoke_shaders(bs, orig_fog_color);
+	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
 	set_lighted_sides(2);
 	enable_blend();
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
-	//shader_t ls;
-	//set_leaf_shader(ls, 0.75, 0, 0);
 
+	if (can_use_shaders && (shadow_map_enabled() || has_dir_lights)) {
+		orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1); // dynamic lights, but no smoke
+	}
 	for (unsigned i = 0; i < small_trees.size(); ++i) { // draw leaves
 		int const type(small_trees[i].get_type());
 			
@@ -222,7 +228,7 @@ void draw_small_trees(bool shadow_only) {
 		}
 		small_trees[i].draw(2, shadow_only);
 	}
-	//ls.end_shader();
+	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
 	glDisable(GL_ALPHA_TEST);
 	disable_blend();
 	set_lighted_sides(1);
