@@ -1,7 +1,5 @@
 // input: line as two points {point.xyz, radius, color [,next_dir.xyz]}, ndiv
 // output: textured cylinder/cone as triangles
-uniform int ndiv = 12;
-
 varying vec3 eye, normal; // world space
 varying vec4 epos;
 varying vec3 eye_norm;

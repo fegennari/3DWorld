@@ -556,7 +556,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 				bind_vbo(0, 1);
 			}
 		}
-		if (leaf_vbo > 0 && !leaves.empty()) { // draw leaves
+		if (draw_leaves && leaf_vbo > 0 && !leaves.empty()) { // draw leaves
 			select_texture(tree_types[type].leaf_tex);
 			bind_vbo(leaf_vbo);
 

@@ -519,15 +519,15 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 	bool const use_shadow_map(use_smap && shadow_map_enabled());
 	common_shader_block_pre(s, dlights, use_shadow_map, 0, 0.0);
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
-	s.set_vert_shader(use_geom_shader ? "tree_branches_as_lines" : "texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+no_lt_texgen_smoke");
-	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
-	
+
 	if (use_geom_shader) {
+		s.set_int_prefix("ndiv", def_ndiv, 2); // GS
 		s.set_geom_shader("line_to_cylinder", GL_LINES, GL_TRIANGLE_STRIP, 2*(def_ndiv + 1)); // with adjacency?
 	}
+	s.set_vert_shader(use_geom_shader ? "tree_branches_as_lines" : "texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+no_lt_texgen_smoke");
+	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
 	common_shader_block_post(s, dlights, use_shadow_map, 0, 0.0);
-	if (use_geom_shader) {s.add_uniform_int("ndiv", def_ndiv);}
 	check_gl_error(400);
 }
 
