@@ -34,13 +34,14 @@ protected:
 	int get_char(FILE *fp_)    const {return getc(fp_);}
 	int get_char(ifstream &in) const {return in.get();}
 
-	template<typename T> void read_to_newline(T &stream) const {
+	template<typename T> void read_to_newline(T &stream, string *str=NULL) const {
 		bool prev_was_escape(0);
 
 		while (1) {
 			int const c(get_char(stream));
 			if ((!prev_was_escape && c == '\n') || c == '\0' || c == EOF) return;
 			prev_was_escape = (c == '\\'); // handle escape character at end of line
+			if (str && !prev_was_escape) {str->push_back(char(c));}
 		}
 		assert(0); // never gets here
 	}
@@ -174,6 +175,14 @@ class object_file_reader_model : public object_file_reader {
 		tid = get_texture(tfn, is_alpha_mask);
 	}
 
+	bool read_map_name(ifstream &in, string &name) const {
+		if (!(in >> name))  {return 0;}
+		assert(!name.empty());
+		if (name[0] == '-') {return 1;} // option, return and let the parser deal with it
+		read_to_newline(in, &name);
+		return 1;
+	}
+
 public:
 	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model(model_) {
 		rel_path = get_path(fn);
@@ -246,37 +255,37 @@ public:
 			}
 			else if (s == "map_Ka") {
 				assert(cur_mat);
-				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Ka" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ka" << endl; return 0;}
 				check_and_bind(cur_mat->a_tid, tfn, 0);
 			}
 			else if (s == "map_Kd") {
 				assert(cur_mat);
-				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Kd" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Kd" << endl; return 0;}
 				check_and_bind(cur_mat->d_tid, tfn, 0);
 			}
 			else if (s == "map_Ks") {
 				assert(cur_mat);
-				if (!(mat_in >> tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
 				check_and_bind(cur_mat->s_tid, tfn, 0);
 			}
 			else if (s == "map_d") {
 				assert(cur_mat);
-				if (!(mat_in >> tfn)) {cerr << "Error reading material map_d" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_d" << endl; return 0;}
 				check_and_bind(cur_mat->alpha_tid, tfn, 1);
 			}
 			else if (s == "map_bump" || s == "bump") { // should be ok if both are set
 				assert(cur_mat);
-				if (!(mat_in >> tfn)) {cerr << "Error reading material " << s << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << endl; return 0;}
 				
 				if (tfn == "-bm") { // this is the only material sub-option we handle, and the scale is ignored
 					float scale(1.0);
-					if (!(mat_in >> scale >> tfn)) {cerr << "Error reading material " << s << " with -bm" << endl; return 0;}
+					if (!(mat_in >> scale) || !read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << " with -bm" << endl; return 0;}
 				}
 				cur_mat->bump_tid = get_texture(tfn, 0); // can be set from both map_bump and bump
 			}
 			else if (s == "map_refl") {
 				assert(cur_mat);
-				if (!(mat_in >> tfn)) {cerr << "Error reading material map_refl" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_refl" << endl; return 0;}
 				check_and_bind(cur_mat->refl_tid, tfn, 0);
 			}
 			else if (s == "skip") { // skip this material

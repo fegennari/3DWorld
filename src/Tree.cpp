@@ -636,7 +636,7 @@ void tree::draw_tree_branches(shader_t const &s, float size_scale) {
 			assert(branch_vbo > 0);
 			bind_vbo(branch_vbo, 0); // use vbo for rendering
 		}
-		unsigned const num(min(numcylin, max((numcylin/8), unsigned(20.0*numcylin*size_scale)))); // branch LOD
+		unsigned const num(min(numcylin, max((numcylin/8), unsigned(18.0*numcylin*size_scale)))); // branch LOD
 		draw_branches_as_lines(s, num);
 		bind_vbo(0, 0);
 	}
