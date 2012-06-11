@@ -1283,6 +1283,9 @@ enum {NON_DEST=0, DESTROYABLE, SHATTERABLE, SHATTER_TO_PORTAL, EXPLODEABLE};
 // lighting files/types
 enum {LIGHTING_SKY=0, LIGHTING_GLOBAL, LIGHTING_LOCAL, NUM_LIGHTING_TYPES};
 
+// tree classes
+enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TREE_CLASS_DETAILED, NUM_TREE_CLASSES};
+
 int const dodgeball_tids[] = {SKULL_TEX, RADIATION_TEX, YUCK_TEX};
 unsigned const NUM_DB_TIDS(sizeof(dodgeball_tids)/sizeof(int));
 
@@ -1935,6 +1938,8 @@ void shift_hmv(vector3d const &vd);
 
 // function prototypes - tree + sm_tree (see also tree_3dw.h)
 void mult_leaf_points_by(float val);
+colorRGBA get_tree_trunk_color(int type);
+int get_tree_class_from_height(float zpos);
 int get_tree_type_from_height(float zpos);
 void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader);
 

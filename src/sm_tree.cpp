@@ -22,7 +22,7 @@ bool const USE_BUMP_MAP     = 0;
 int  const NUM_SMALL_TREES  = 40000;
 
 
-enum {T_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
+enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
 
 struct sm_tree_type {
 
@@ -48,6 +48,11 @@ int get_bark_tex_for_tree_type(int type) {
 	return stt[type].bark_tid;
 }
 
+colorRGBA get_tree_trunk_color(int type) {
+	assert(type < NUM_ST_TYPES);
+	return stt[type].c;
+}
+
 
 vector<small_tree> small_trees;
 pt_line_drawer tree_scenery_pld;
@@ -55,29 +60,50 @@ pt_line_drawer tree_scenery_pld;
 
 extern bool disable_shaders, has_dir_lights;
 extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
-extern int rand_gen_index, display_mode;
+extern int rand_gen_index, display_mode, force_tree_class;
 extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, tree_size, vegetation, OCEAN_DEPTH;
 extern GLUquadricObj* quadric;
 
 
 
-int get_tree_type_from_height(float zpos) {
+int get_tree_class_from_height(float zpos) {
 
 	if (island) {
-		if (zpos > 0.14*Z_SCENE_SIZE || zpos < max(water_plane_z, (zmin + OCEAN_DEPTH))) return 0; // none
+		if (zpos > 0.14*Z_SCENE_SIZE || zpos < max(water_plane_z, (zmin + OCEAN_DEPTH))) return TREE_CLASS_NONE; // none
 	}
-	else if (zpos < water_plane_z) {
-		return 0; // none
+	else {
+		if (zpos < water_plane_z) return TREE_CLASS_NONE;
+	}
+	if (force_tree_class >= 0) {
+		assert(force_tree_class < NUM_TREE_CLASSES);
+		return force_tree_class;
 	}
 	float const relh(get_rel_height(zpos, -zmax_est, zmax_est));
+	if (relh > 0.6) return TREE_CLASS_PINE;
 
-	if (relh > 0.6) {
-		return 1; // pine tree
+	if (island) {
+		if (zpos < 0.85*(zmin + OCEAN_DEPTH)) return TREE_CLASS_PALM;
 	}
-	else if ((island && zpos < 0.85*(zmin + OCEAN_DEPTH)) || (!island && zpos < 0.85*water_plane_z && relh < 0.435)) {
-		return 3; // palm tree
+	else {
+		if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
 	}
-	return 2; // decidious tree
+	return TREE_CLASS_DECID;
+}
+
+
+int get_tree_type_from_height(float zpos) {
+
+	//return T_DECID; // TESTING
+	switch (get_tree_class_from_height(zpos)) {
+	case TREE_CLASS_NONE: return TREE_NONE;
+	case TREE_CLASS_PINE: return ((rand2()%10 == 0) ? T_SH_PINE : T_PINE);
+	case TREE_CLASS_PALM: return T_PALM;
+	case TREE_CLASS_DECID:
+		//if (tree_mode == 3) return TREE_NONE; // use a large (complex) tree here
+		return T_DECID + rand2()%3;
+	default: assert(0);
+	}
+	return TREE_NONE; // never gets here
 }
 
 
@@ -127,21 +153,8 @@ void gen_small_trees() {
 			if (dist_test > (SM_TREE_AMT*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rand_float2())) continue; // tree density function test
 			float const height(rand_uniform2(0.4*tsize, tsize)), width(rand_uniform2(0.25*height, 0.35*height));
 			float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1) - 0.1*height); // 15ms
-			int const tree_type(get_tree_type_from_height(zpos));
-			if (tree_type == 0) continue;
-			int ttype;
-			
-			if (tree_type == 1) {
-				ttype = ((rand2()%10 == 0) ? T_SH_PINE : T_PINE); // pine tree
-			}
-			else if (tree_type == 3) {
-				ttype = T_PALM; // palm tree
-			}
-			else { // 2
-				//if (tree_mode == 3) continue; // use a large (complex) tree here
-				ttype = T_DECID + rand2()%3; // decidious tree
-			}
-			//ttype = T_DECID; // TESTING
+			int const ttype(get_tree_type_from_height(zpos));
+			if (ttype == TREE_NONE) continue;
 			small_tree st(point(xpos, ypos, zpos), height, width, ttype, 0);
 			st.setup_rotation();
 			small_trees.push_back(st);

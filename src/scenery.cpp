@@ -38,8 +38,6 @@ plant_type const pltype[NUM_PLANT_TYPES] = {
 	plant_type(COFFEE_TEX,  LT_BROWN, WHITE)
 };
 
-colorRGBA const log_colors[4] = {BLACK, PTREE_C, TREE_C, TREE_C};
-
 
 int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 float msms2(1.0);
@@ -501,7 +499,7 @@ public:
 		length = dir.mag(); // recalculate
 		dir   /= -length; // something is backwards
 		type   = (char)get_tree_type_from_height(max(pos.z, pt2.z));
-		return 1;
+		return (type >= 0);
 	}
 
 	void add_cobjs() {
@@ -512,7 +510,7 @@ public:
 		float const sz(max(length, max(radius, radius2)));
 		point const center((pos + pt2)*0.5);
 		if (type == 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
-		colorRGBA const color(shadow_only ? WHITE : log_colors[type]*get_shadowed_color(center, sz));
+		colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type)*get_shadowed_color(center, sz));
 		float const dist(distance_to_camera(pos));
 
 		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
@@ -563,7 +561,7 @@ public:
 			radius2 *= 1.3;
 		}
 		type = (char)get_tree_type_from_height(pos.z);
-		return 1;
+		return (type >= 0);
 	}
 
 	void add_cobjs() {
@@ -575,7 +573,7 @@ public:
 		float const sz(max(height, max(radius, radius2)));
 		point const center(pos.x, pos.y, (pos.z + 0.5*height));
 		if (type == 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
-		colorRGBA const color(shadow_only ? WHITE : log_colors[type]*get_shadowed_color(center, sz));
+		colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type)*get_shadowed_color(center, sz));
 		float const dist(distance_to_camera(pos));
 
 		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line

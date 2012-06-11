@@ -1754,7 +1754,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 				// Note: pos.z will be slightly different when calculated within vs. outside the mesh bounds
 				pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 				if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
-				if (tree_mode == 3 && get_tree_type_from_height(pos.z) != 2) continue; // use a small (simple) tree here
+				if (tree_mode == 3 && get_tree_class_from_height(pos.z) != TREE_CLASS_DECID) continue; // use a small (simple) tree here
 				
 				if (max_unique_trees > 0) {
 					global_rand_gen.rseed1 = global_rand_gen.rseed1 % max_unique_trees;
