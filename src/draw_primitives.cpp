@@ -1088,11 +1088,11 @@ int draw_simple_extruded_polygon(float thick, point const *const points, int npo
 
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride) { // stride is in floats
 
-	for (unsigned i = 0, off = 0; i < num; i++) { // 01 00 10 11 for every quad
-		tdata[off] = 0.0; tdata[off+1] = 1.0; off += stride;
+	for (unsigned i = 0, off = 0; i < num; i++) { // 00 10 11 01 for every quad
 		tdata[off] = 0.0; tdata[off+1] = 0.0; off += stride;
 		tdata[off] = 1.0; tdata[off+1] = 0.0; off += stride;
 		tdata[off] = 1.0; tdata[off+1] = 1.0; off += stride;
+		tdata[off] = 0.0; tdata[off+1] = 1.0; off += stride;
 	}
 }
 
@@ -1125,7 +1125,7 @@ void draw_quads_from_pts(vector<vert_norm> const &points, unsigned draw_num) {
 		set_array_client_state(1, 1, 1, 0);
 		glVertexPointer(3,   GL_FLOAT, sizeof(vert_norm), &points[0].v);
 		glNormalPointer(     GL_FLOAT, sizeof(vert_norm), &points[0].n);
-		glTexCoordPointer(2, GL_FLOAT, 0, tdata+2); // offset by 2 (one tex coord) to fix texture orientation
+		glTexCoordPointer(2, GL_FLOAT, 0, tdata);
 		glDrawArrays(GL_QUADS, 0, num);
 	}
 	else {

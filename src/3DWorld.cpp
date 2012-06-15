@@ -132,6 +132,8 @@ void create_sin_table();
 
 void init_openal(int &argc, char** argv);
 
+void clear_sm_tree_vbos();
+
 
 
 bool check_gl_error(unsigned loc_id) {
@@ -164,6 +166,7 @@ void clear_context() {
 	reset_snow_vbos();
 	update_grass_vbos();
 	clear_tree_vbos();
+	clear_sm_tree_vbos();
 	reset_tiled_terrain_state();
 	free_cobj_draw_group_dlists();
 	clear_landscape_vbo = 1;

@@ -65,6 +65,74 @@ extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, tree_size, 
 extern GLUquadricObj* quadric;
 
 
+class vbo_quad_block_manager_t {
+
+	vector<vert_norm_tc> pts;
+	vector<unsigned> offsets;
+	unsigned vbo;
+
+public:
+	vbo_quad_block_manager_t() {clear();}
+	bool empty() const {return pts.empty();}
+
+	unsigned add_tree(vector<vert_norm> const &p) {
+		assert(!p.empty());
+		assert((p.size()&3) == 0); // must be quads
+		unsigned const num_quads(p.size()/4), start_ix(pts.size());
+		
+		for (vector<vert_norm>::const_iterator i = p.begin(); i != p.end(); ++i) {
+			pts.push_back(vert_norm_tc(*i));
+		}
+		gen_quad_tex_coords(pts[start_ix].t, num_quads, sizeof(vert_norm_tc)/sizeof(float));
+		assert(!offsets.empty());
+		unsigned const next_ix(offsets.size() - 1);
+		offsets.push_back(pts.size()); // range will be [start_ix, start_ix+p.size()]
+		return next_ix;
+	}
+	void render_range(unsigned six, unsigned eix) const {
+		assert(six < eix && eix < offsets.size());
+		assert(offsets[eix] <= pts.size());
+		glDrawArrays(GL_QUADS, offsets[six], offsets[eix]-offsets[six]);
+	}
+	void render_all() const {
+		if (!empty()) {render_range(0, offsets.size()-1);}
+	}
+	void upload() {
+		if (vbo || empty()) return; // already uploaded or empty
+		vbo = create_vbo();
+		bind_vbo(vbo);
+		upload_vbo_data(&pts.front(), pts.size()*sizeof(vert_norm_tc));
+		bind_vbo(0);
+	}
+	void begin_render() const {
+		if (empty()) return;
+		assert(vbo);
+		bind_vbo(vbo);
+		vert_norm_tc::set_vbo_arrays();
+	}
+	void end_render() const {
+		bind_vbo(0);
+	}
+	void clear_vbo() {
+		delete_vbo(vbo);
+		vbo = 0;
+	}
+	void clear() {
+		pts.clear();
+		offsets.clear();
+		offsets.push_back(0); // start at 0
+		clear_vbo();
+	}
+};
+
+vbo_quad_block_manager_t pine_tree_vbo_manager;
+
+
+void clear_sm_tree_vbos() {
+	
+	pine_tree_vbo_manager.clear_vbo();
+}
+
 
 int get_tree_class_from_height(float zpos) {
 
@@ -131,6 +199,7 @@ void gen_small_trees() {
 		purge_coll_freed(1);
 	}
 	small_trees.clear();
+	pine_tree_vbo_manager.clear();
 	if (vegetation == 0.0) return;
 	float const tscale((Z_SCENE_SIZE*mesh_scale)/16.0);
 	float const tsize(tree_size*SM_TREE_SIZE*Z_SCENE_SIZE/(tscale*mesh_scale2)); // random tree generation based on transformed mesh height function
@@ -228,6 +297,7 @@ void draw_small_trees(bool shadow_only) {
 	enable_blend();
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
+	pine_tree_vbo_manager.upload();
 
 	if (can_use_shaders && (shadow_map_enabled() || has_dir_lights)) {
 		orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1); // dynamic lights, but no smoke
@@ -236,11 +306,13 @@ void draw_small_trees(bool shadow_only) {
 		int const type(small_trees[i].get_type());
 			
 		if (i == 0 || small_trees[i-1].get_type() != type) { // first of this type
-			bool const untextured((type == T_PINE || type == T_SH_PINE) && (draw_model != 0));
+			bool const is_pine(type == T_PINE || type == T_SH_PINE), untextured(is_pine && (draw_model != 0));
+			if (is_pine) {pine_tree_vbo_manager.begin_render();}
 			select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
 		}
 		small_trees[i].draw(2, shadow_only);
 	}
+	pine_tree_vbo_manager.end_render();
 	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
 	glDisable(GL_ALPHA_TEST);
 	disable_blend();
@@ -253,7 +325,7 @@ void draw_small_trees(bool shadow_only) {
 
 
 small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z) :
-	type(t), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
+	type(t), vbo_mgr_ix(-1), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
 {
 	for (unsigned i = 0; i < 3; ++i) rv[i] = rand2d();
 	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;
@@ -356,11 +428,12 @@ void small_tree::remove_cobjs() {
 void small_tree::calc_points() { // pine trees
 
 	// Note: thse coords could possibly be shared between all pine trees
-	if (!points.empty()) return;
+	if (vbo_mgr_ix >= 0) return;
 	unsigned const nlevels(6), nrings(5);
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
 	float const ms(mesh_scale*mesh_scale2), rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
+	vector<vert_norm> points;
 	points.reserve(4*nlevels*nrings);
 
 	for (unsigned j = 0; j < nlevels; ++j) {
@@ -373,6 +446,7 @@ void small_tree::calc_points() { // pine trees
 			add_rotated_quad_pts(points, theta, rd, z, center, scale);
 		}
 	}
+	vbo_mgr_ix = pine_tree_vbo_manager.add_tree(points);
 }
 
 
@@ -428,7 +502,8 @@ void small_tree::draw(int mode, bool shadow_only) const {
 		set_color(color);
 
 		if (pine_tree) { // 30 quads per tree
-			draw_quads_from_pts(points); // draw textured quad if far away?
+			assert(vbo_mgr_ix >= 0);
+			pine_tree_vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
 		}
 		else { // palm or decidious
 			glPushMatrix();

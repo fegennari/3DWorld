@@ -190,13 +190,13 @@ class small_tree { // size = 81 (82)
 
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
 	vector<int> coll_id;
+	int vbo_mgr_ix;
 	float height, width, r_angle, rx, ry, rv[3];
 	point pos;
 	colorRGBA color;
-	vector<vert_norm> points; // for high detail pine trees
 
 public:
-	small_tree() {}
+	small_tree() : type(-1), vbo_mgr_ix(-1) {}
 	small_tree(point const &p, float h, float w, int t, bool calc_z);
 	void setup_rotation();
 	vector3d get_rot_dir() const;
