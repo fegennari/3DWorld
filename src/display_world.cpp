@@ -34,7 +34,7 @@ float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.75;
 
 
-bool mesh_invalidated(1);
+bool mesh_invalidated(1), inf_terrain_scenery(TERRAIN_SCENERY);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned reflection_tid(0);
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
@@ -1038,7 +1038,7 @@ void display_universe() { // infinite universe
 void draw_transparent(bool above_water) {
 
 	if (above_water) {
-		if (TERRAIN_SCENERY) draw_trees();
+		if (inf_terrain_scenery) draw_trees();
 		draw_transparent_object_groups();
 	}
 	else {
@@ -1147,10 +1147,10 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 
 		if (mesh_type != 0) {
 			mesh_type = 0;
-			gen_scene(1, TERRAIN_SCENERY, KEEP_MESH, 0, 0);
+			gen_scene(1, inf_terrain_scenery, KEEP_MESH, 0, 0);
 			recreated = 1;
 		}
-		else if (TERRAIN_SCENERY) {
+		else if (inf_terrain_scenery) {
 			regen_trees(0, 1);
 			gen_scenery();
 		}
@@ -1204,7 +1204,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		zmin2 = display_mesh3(NULL, water_plane_z, 0);
 		if (TIMETEST) PRINT_TIME("3.3");
 	}
-	if (TERRAIN_SCENERY) draw_scenery(1, 1);
+	if (inf_terrain_scenery) draw_scenery(1, 1);
 	if (TIMETEST) PRINT_TIME("3.4");
 	draw_coll_surfaces(1, 1); // split into two calls?
 	if (TIMETEST) PRINT_TIME("3.5");
@@ -1218,7 +1218,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	point last_spos(surface_pos);
 	check_xy_offsets();
 
-	if (TERRAIN_SCENERY && surface_pos != last_spos) { // camera moves
+	if (inf_terrain_scenery && surface_pos != last_spos) { // camera moves
 		xoff2 -= xoff; yoff2 -= yoff;
 		regen_trees(0, 1);
 		gen_scenery();

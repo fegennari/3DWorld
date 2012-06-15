@@ -106,7 +106,7 @@ int orig_window, curr_window;
 char player_name[MAX_CHARS] = "Player";
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace;
+extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, inf_terrain_scenery;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -1201,7 +1201,8 @@ void keyboard2(int key, int x, int y) {
 		break;
 
 	case GLUT_KEY_F5: // toggle large/small trees
-		if (world_mode != WMODE_GROUND || (num_trees == 0 && t_trees.empty())) break;
+		if (world_mode != WMODE_GROUND && (world_mode != WMODE_INF_TERRAIN || !inf_terrain_scenery)) break;
+		if (num_trees == 0 && t_trees.empty()) break;
 		tree_mode = (tree_mode+1)%4; // 0=none, 1=large, 2=small, 3=large+small
 		//if (num_trees == 0) break; // Note: will skip scene/cobj updates on scenes that have placed trees
 #if 1
@@ -1610,6 +1611,9 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "disable_inf_terrain") {
 			if (!read_int(fp, disable_inf_terrain)) cfg_err("disable inf terrain command", error);
+		}
+		else if (str == "inf_terrain_scenery") {
+			if (!read_bool(fp, inf_terrain_scenery)) cfg_err("dinf_terrain_scenery command", error);
 		}
 		else if (str == "toggle_mesh_enabled") {
 			display_mode ^= 0x01;

@@ -94,7 +94,7 @@ inline int rand_gen(int start, int end) {
 }
 
 float get_tree_z_bottom(float z, point const &pos) {
-	return (is_over_mesh(pos) ? max(zbottom, (z - TREE_DEPTH)) : (z - TREE_DEPTH));
+	return ((world_mode == WMODE_GROUND && is_over_mesh(pos)) ? max(zbottom, (z - TREE_DEPTH)) : (z - TREE_DEPTH));
 }
 
 
