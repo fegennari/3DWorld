@@ -14,7 +14,8 @@ disable_water 0
 disable_scenery 0
 read_landscape 0
 read_heightmap 0
-scenery_extent 0
+scenery_extent 3
+inf_terrain_scenery 1
 
 gravity 1.0
 mesh_height 1.0
@@ -30,7 +31,7 @@ ground_effects_level 9
 
 #water_h_off 0.0 0.1
 #relh_adj_tex -0.1
-force_tree_class -1 # <0 : ignore
+force_tree_class 1 # <0 : ignore
 
 include config_gameplay.txt
 unlimited_weapons 0

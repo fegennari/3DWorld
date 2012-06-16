@@ -22,6 +22,7 @@ public:
 	void gen_spos(int x, int y, int use_xy);
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	bool in_camera_view(float brad=0.0) const;
+	bool is_visible(bool shadow_only, float bradius) const;
 	float get_shadowed_color(point const &p, float eff_radius) const;
 	colorRGBA get_atten_color(colorRGBA c) const;
 	void remove_cobjs();

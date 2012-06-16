@@ -55,11 +55,15 @@ vbo_quad_block_manager_t plant_vbo_manager;
 void gen_scenery_deterministic();
 int get_bark_tex_for_tree_type(int type);
 
-inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
 
+inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
 
 void clear_plant_vbos() {
 	plant_vbo_manager.clear_vbo();
+}
+
+bool skip_uw_draw(point const &pos, float radius) {
+	return (world_mode == WMODE_INF_TERRAIN && (pos.z + radius) < water_plane_z && get_camera_pos().z > water_plane_z);
 }
 
 
@@ -110,6 +114,13 @@ bool scenery_obj::update_zvals(int x1, int y1, int x2, int y2) {
 bool scenery_obj::in_camera_view(float brad) const {
 
 	return sphere_in_camera_view(pos, ((brad == 0.0) ? radius : brad), 0);
+}
+
+
+bool scenery_obj::is_visible(bool shadow_only, float bradius) const {
+
+	if (shadow_only ? !is_over_mesh(pos) : !in_camera_view(bradius)) return 0;
+	return (shadow_only || !skip_uw_draw(pos, radius));
 }
 
 
@@ -309,7 +320,7 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 
 void rock_shape3d::draw(bool shadow_only) const {
 
-	if (shadow_only ? !is_over_mesh(pos) : !in_camera_view()) return;
+	if (!is_visible(shadow_only, 0.0)) return;
 	set_color(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius)));
 	shape3d::draw(1);
 }
@@ -395,7 +406,7 @@ public:
 
 	void draw(float sscale, bool shadow_only) const {
 		assert(surface);
-		if (shadow_only ? !is_over_mesh(pos) : !in_camera_view(0.0)) return;
+		if (!is_visible(shadow_only, 0.0)) return;
 		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, radius));
 		float const dist(distance_to_camera(pos));
 
@@ -447,7 +458,7 @@ public:
 
 	void draw(float sscale, bool shadow_only) const {
 		float const rmax(1.3*radius);
-		if (shadow_only ? !is_over_mesh(pos) : !in_camera_view(rmax)) return;
+		if (!is_visible(shadow_only, rmax)) return;
 		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, rmax));
 		float const dist(distance_to_camera(pos));
 
