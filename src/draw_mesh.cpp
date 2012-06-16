@@ -108,15 +108,15 @@ float integrate_water_dist(point const &targ_pos, point const &src_pos, float co
 	float const t(min(1.0f, (water_z - targ_pos.z)/fabs(src_pos.z - targ_pos.z))); // min(1.0,...) for underwater case
 	point p_int(targ_pos + (src_pos - targ_pos)*t);
 	int const xp(get_xpos(targ_pos.x)), yp(get_ypos(targ_pos.y));
-	if (!point_outside_mesh(xp, yp)) p_int.z = min(src_pos.z, water_matrix[yp][xp]); // account for ripples
+	if (world_mode == WMODE_GROUND && !point_outside_mesh(xp, yp)) p_int.z = min(src_pos.z, water_matrix[yp][xp]); // account for ripples
 	return p2p_dist(p_int, targ_pos)*mesh_scale;
-
 }
 
 
 void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2) {
 
-	float const scale(WATER_COL_ATTEN*((wminside[y][x] == 2) ? 1.0 : 4.0)), wh(water_matrix[y][x]); // higher for interior water
+	float const scale(WATER_COL_ATTEN*((world_mode != WMODE_GROUND || wminside[y][x] == 2) ? 1.0 : 4.0));
+	float const wh((world_mode == WMODE_GROUND) ? water_matrix[y][x] : water_plane_z); // higher for interior water
 	float const dist(scale*(integrate_water_dist(pos, p1, wh) + integrate_water_dist(pos, p2, wh)));
 	atten_by_water_depth(c, dist);
 }

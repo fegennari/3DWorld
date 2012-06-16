@@ -145,7 +145,7 @@ bool get_water_enabled(int x, int y) {
 
 bool has_water(int x, int y) {
 
-	return (!point_outside_mesh(x, y) && wminside[y][x] && get_water_enabled(x, y));
+	return (world_mode == WMODE_GROUND && !point_outside_mesh(x, y) && wminside[y][x] && get_water_enabled(x, y));
 }
 
 
@@ -157,11 +157,10 @@ bool mesh_is_underwater(int x, int y) {
 
 void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 
-	// Note: could make this work in inf terrain mode if water_matrix[][] is always equal to water_plane_z
-	if (!DISABLE_WATER && world_mode == WMODE_GROUND && pos.z < max_water_height) {
+	if (!DISABLE_WATER && pos.z < ((world_mode == WMODE_GROUND) ? max_water_height : water_plane_z)) {
 		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
 		
-		if (!point_outside_mesh(x, y) && pos.z < water_matrix[y][x]) {
+		if (world_mode != WMODE_GROUND || (!point_outside_mesh(x, y) && pos.z < water_matrix[y][x])) {
 			water_color_atten((float *)&(c.R), x, y, pos);
 		}
 	}
