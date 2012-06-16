@@ -810,70 +810,6 @@ typedef triangle_t<point_d>      triangle_d;
 typedef triangle_t<vert_norm_tc> triangle_vntc;
 
 
-template<typename cwt> class pt_line_drawer_t { // and triangles too!
-
-	struct vnc : public cwt { // size = 28
-		point v;
-		vector3d n;
-
-		vnc() {}
-		vnc(point const &v_, vector3d const &n_, colorRGBA const &c_) : v(v_), n(n_) {set_c4(c_);}
-	};
-
-	struct vnc_cont : public vector<vnc> {
-		void draw(int type) const;
-	};
-
-	vnc_cont points, lines, triangles;
-
-public:
-	void clear() {
-		points.resize(0);
-		lines.resize(0);
-		triangles.resize(0);
-	}
-	void free_mem() {
-		points.swap(vnc_cont());
-		lines.swap(vnc_cont());
-		triangles.swap(vnc_cont());
-	}
-	void add_pt(point const &v, vector3d const &n, colorRGBA const &c) {
-		points.push_back(vnc(v, n, c));
-	}
-	void add_line(point const &v1, vector3d const &n1, colorRGBA const &c1, point const &v2, vector3d const &n2, colorRGBA const &c2) {
-		lines.push_back(vnc(v1, n1, c1));
-		lines.push_back(vnc(v2, n2, c2));
-	}
-	void add_triangle(point const &v1, point const &v2, point const &v3, vector3d const &n, colorRGBA const &c) {
-		points.push_back(vnc(v1, n, c));
-		points.push_back(vnc(v2, n, c));
-		points.push_back(vnc(v3, n, c));
-	}
-	void add_textured_pt(point const &v, colorRGBA c, int tid);
-	void add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid);
-	void draw() const;
-	void draw_and_clear() {draw(); clear();}
-	size_t get_mem() const {return (points.capacity() + lines.capacity() + triangles.capacity())*sizeof(vnc);}
-	bool empty() const {return (points.empty() && lines.empty() && triangles.empty());}
-};
-
-
-typedef pt_line_drawer_t<color_wrapper      > pt_line_drawer;
-typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
-
-
-class quad_batch_draw { // unused, but could possibly use for pine trees and plants
-	vector<vert_norm_tc_color> verts;
-
-public:
-	void add_quad_vect(vector<vert_norm> const &points, colorRGBA const &color);
-	void draw() const;
-	void draw_and_clear() {draw(); verts.resize(0);}
-	size_t size() const {return verts.size();}
-	void reserve(size_t sz) {verts.reserve(sz);}
-};
-
-
 struct valley { // size = 70
 
 	struct spill_func { // size = 16
@@ -1538,7 +1474,6 @@ int  draw_simple_polygon(point const *const points, int npoints, vector3d const 
 int  draw_simple_extruded_polygon(float thick, point const *const points, int npoints, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
-void draw_quads_from_pts(vector<vert_norm> const &points, unsigned draw_num=0);
 void free_dlists();
 void setup_dlists();
 void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, bool restore_matrix, bool r_approx=0);

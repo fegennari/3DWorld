@@ -7,6 +7,7 @@
 #include "shape_line3d.h"
 #include "upsurface.h"
 #include "shaders.h"
+#include "draw_utils.h"
 
 
 bool     const NO_ISLAND_SCENERY = 1;
@@ -48,12 +49,18 @@ extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation,
 extern GLUquadricObj* quadric;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern rand_gen_t global_rand_gen;
+vbo_quad_block_manager_t plant_vbo_manager;
 
 
 void gen_scenery_deterministic();
 int get_bark_tex_for_tree_type(int type);
 
 inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
+
+
+void clear_plant_vbos() {
+	plant_vbo_manager.clear_vbo();
+}
 
 
 // ************ SCENERY OBJECT CLASSES ************
@@ -596,31 +603,32 @@ public:
 
 class s_plant : public scenery_obj { // size = 40
 
-	int coll_id2;
+	int coll_id2, vbo_mgr_ix;
 	float height;
-	vector<vert_norm> points;
 
 public:
-	s_plant() : coll_id2(-1), height(1.0) {}
+	s_plant() : coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
 
 	int create(int x, int y, int use_xy, float minz) {
-		points.clear();
+		vbo_mgr_ix = -1;
 		type   = rand2()%NUM_PLANT_TYPES;
 		gen_spos(x, y, use_xy);
 		if (pos.z < minz) return 0;
 		radius = rand_uniform2(0.0025/msms2, 0.0045/msms2);
 		height = rand_uniform2(0.2/msms2, 0.4/msms2) + 0.025;
+		gen_points();
 		return 1;
 	}
 
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z) {
-		points.clear();
+		vbo_mgr_ix = -1;
 		type   = abs(type_)%NUM_PLANT_TYPES;
 		pos    = pos_;
 		radius = radius_;
 		height = height_;
 		if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
+		gen_points();
 	}
 
 	void add_cobjs() {
@@ -634,10 +642,12 @@ public:
 	}
 
 	void gen_points() {
+		if (vbo_mgr_ix >= 0) return; // already generated
 		float const wscale(250.0*radius*msms2);
 		float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
 		unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
 		float rdeg(30.0);
+		vector<vert_norm> points;
 		points.reserve(4*nlevels*nrings);
 
 		for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
@@ -652,6 +662,7 @@ public:
 				add_rotated_quad_pts(points, theta, rdeg/45.0, z, pos, scale);
 			}
 		}
+		vbo_mgr_ix = plant_vbo_manager.add_points(points);
 	}
 
 	void draw(float sscale, int mode, bool shadow_only) { // modifies points, so non-const
@@ -691,8 +702,8 @@ public:
 			(pltype[type].leafc*color_scale).do_glColor();
 			select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
 			set_lighted_sides(2);
-			if (points.empty()) gen_points();
-			draw_quads_from_pts(points);
+			assert(vbo_mgr_ix >= 0);
+			plant_vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
 			glDisable(GL_ALPHA_TEST);
 			set_lighted_sides(1);
 			if (shadow_only) glDisable(GL_TEXTURE_2D);
@@ -731,6 +742,7 @@ void clear_scenery_objs() {
 	logs.clear();
 	stumps.clear();
 	plants.clear();
+	plant_vbo_manager.clear();
 }
 
 
@@ -862,10 +874,13 @@ void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 		glEnable(GL_COLOR_MATERIAL);
 		shader_t s;
 		set_leaf_shader(s, 0.9, 0, 0);
+		plant_vbo_manager.upload();
+		plant_vbo_manager.begin_render();
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw(sscale, 2, shadow_only); // draw leaves
 		}
+		plant_vbo_manager.end_render();
 		s.end_shader();
 		disable_blend();
 		glDisable(GL_COLOR_MATERIAL);

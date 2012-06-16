@@ -5,6 +5,7 @@
 #include "ship.h"
 #include "ship_util.h"
 #include "explosion.h"
+#include "draw_utils.h"
 
 
 bool const PART_COLL_DESTROY = 0;

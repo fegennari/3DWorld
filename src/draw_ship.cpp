@@ -6,6 +6,7 @@
 #include "ship_util.h"
 #include "explosion.h"
 #include "gl_ext_arb.h"
+#include "draw_utils.h"
 
 
 bool const TRAIL_FOLLOWS_VEL = 0;

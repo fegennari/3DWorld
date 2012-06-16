@@ -373,6 +373,7 @@
     </ClCompile>
     <ClCompile Include="src\draw_primitives.cpp" />
     <ClCompile Include="src\draw_shapes.cpp" />
+    <ClCompile Include="src\draw_utils.cpp" />
     <ClCompile Include="src\draw_world.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
@@ -740,6 +741,7 @@
     <ClInclude Include="src\cobj_bsp_tree.h" />
     <ClInclude Include="src\collision_detect.h" />
     <ClInclude Include="src\csg.h" />
+    <ClInclude Include="src\draw_utils.h" />
     <ClInclude Include="src\dynamic_particle.h" />
     <ClInclude Include="src\file_utils.h" />
     <ClInclude Include="src\gameplay.h" />

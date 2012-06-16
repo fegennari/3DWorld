@@ -4,6 +4,7 @@
 #include "universe.h"
 #include "explosion.h"
 #include "textures_3dw.h"
+#include "draw_utils.h"
 
 
 // temperatures

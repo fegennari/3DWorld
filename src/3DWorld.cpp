@@ -14,6 +14,7 @@
 #include "model3d.h"
 #include "openal_wrap.h"
 #include "file_utils.h"
+#include "draw_utils.h"
 #include <set>
 
 using namespace std;
@@ -133,6 +134,7 @@ void create_sin_table();
 void init_openal(int &argc, char** argv);
 
 void clear_sm_tree_vbos();
+void clear_plant_vbos();
 
 
 
@@ -167,6 +169,7 @@ void clear_context() {
 	update_grass_vbos();
 	clear_tree_vbos();
 	clear_sm_tree_vbos();
+	clear_plant_vbos();
 	reset_tiled_terrain_state();
 	free_cobj_draw_group_dlists();
 	clear_landscape_vbo = 1;

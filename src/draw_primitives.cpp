@@ -1107,42 +1107,6 @@ void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // s
 }
 
 
-void draw_quads_from_pts(vector<vert_norm> const &points, unsigned draw_num) {
-
-	if (points.empty()) return;
-	unsigned const MAX_QUADS(1000);
-	unsigned const num(draw_num ? min((unsigned)points.size(), draw_num) : (unsigned)points.size());
-	assert((num & 3) == 0);
-
-	if (num+1 < MAX_QUADS) {
-		static int init(0);
-		static float tdata[8*MAX_QUADS];
-
-		if (!init) {
-			gen_quad_tex_coords(tdata, MAX_QUADS, 2);
-			init = 1;
-		}
-		set_array_client_state(1, 1, 1, 0);
-		glVertexPointer(3,   GL_FLOAT, sizeof(vert_norm), &points[0].v);
-		glNormalPointer(     GL_FLOAT, sizeof(vert_norm), &points[0].n);
-		glTexCoordPointer(2, GL_FLOAT, 0, tdata);
-		glDrawArrays(GL_QUADS, 0, num);
-	}
-	else {
-		glBegin(GL_QUADS);
-
-		for (unsigned p = 0; p < num; p += 4) { // 00 10 11 01
-			for (unsigned i = 0; i < 4; ++i) {
-				glTexCoord2f(float(i==1||i==2), float(i==2||i==3));
-				points[p+i].n.do_glNormal();
-				points[p+i].v.do_glVertex();
-			}
-		}
-		glEnd();
-	}
-}
-
-
 // ******************** DLISTS ********************
 
 

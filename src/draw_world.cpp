@@ -8,6 +8,7 @@
 #include "physics_objects.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "draw_utils.h"
 
 
 bool const DYNAMIC_SMOKE_SHADOWS = 1; // slower, but looks nice
@@ -135,77 +136,6 @@ void set_color_alpha(colorRGBA color, float alpha) {
 	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor(); // sets alpha component
 	set_color_a(BLACK);
 	set_color_d(color);
-}
-
-
-template class pt_line_drawer_t<color_wrapper      >;
-template class pt_line_drawer_t<color_wrapper_float>;
-
-
-template<typename cwt> void pt_line_drawer_t<cwt>::add_textured_pt(point const &v, colorRGBA c, int tid) {
-
-	if (tid >= 0) c = c.modulate_with(texture_color(tid));
-	vector3d const view_dir(get_camera_pos(), v);
-	add_pt(v, view_dir, c);
-}
-
-
-template<typename cwt> void pt_line_drawer_t<cwt>::add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid) {
-
-	if (tid >= 0) c = c.modulate_with(texture_color(tid));
-	vector3d view_dir(get_camera_pos(), (v1 + v2)*0.5);
-	orthogonalize_dir(view_dir, (v2 - v1), view_dir, 0);
-	add_line(v1, view_dir, c, v2, view_dir, c);
-}
-
-
-template<typename cwt> void pt_line_drawer_t<cwt>::vnc_cont::draw(int type) const {
-	
-	if (empty()) return; // nothing to do
-	glVertexPointer(3, GL_FLOAT,     sizeof(vnc), &(front().v));
-	glNormalPointer(   GL_FLOAT,     sizeof(vnc), &(front().n));
-	glColorPointer( 4, cwt::gl_type, sizeof(vnc), &(front().c));
-	glDrawArrays(type, 0, (unsigned)size());
-}
-
-
-template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
-		
-	if (points.empty() && lines.empty()) return;
-	GLboolean const col_mat_en(glIsEnabled(GL_COLOR_MATERIAL));
-	assert(!(lines.size() & 1));
-	assert((triangles.size() % 3) == 0);
-	if (!col_mat_en) glEnable(GL_COLOR_MATERIAL);
-	set_array_client_state(1, 0, 1, 1);
-	points.draw(GL_POINTS);
-	lines.draw(GL_LINES);
-	triangles.draw(GL_TRIANGLES);
-	if (!col_mat_en) glDisable(GL_COLOR_MATERIAL);
-	//cout << "mem: " << get_mem() << endl;
-}
-
-
-void quad_batch_draw::add_quad_vect(vector<vert_norm> const &points, colorRGBA const &color) {
-	
-	assert(!(points.size() & 3)); // must be a multiple of 4
-	float const tcx[4] = {0,1,1,0}, tcy[4] = {0,0,1,1}; // 00 10 11 01
-	color_wrapper cw;
-	cw.set_c3(color);
-
-	for (unsigned i = 0; i < points.size(); ++i) {
-		verts.push_back(vert_norm_tc_color(points[i].v, points[i].n, tcx[i&3], tcy[i&3], cw.c));
-	}
-	unsigned const batch_size(4096);
-	if (size() > batch_size) draw_and_clear();
-}
-
-
-void quad_batch_draw::draw() const {
-	
-	if (verts.empty()) return;
-	assert(!(verts.size() & 3)); // must be a multiple of 4
-	verts.front().set_state();
-	glDrawArrays(GL_QUADS, 0, (unsigned)size());
 }
 
 

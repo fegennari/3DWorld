@@ -8,6 +8,7 @@
 #include "obj_sort.h"
 #include "timetest.h"
 #include "shaders.h"
+#include "draw_utils.h"
 
 
 bool const TIMETEST          = (GLOBAL_TIMETEST || 0);

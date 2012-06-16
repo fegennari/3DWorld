@@ -7,6 +7,7 @@
 #include "tree_3dw.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "draw_utils.h"
 
 
 float const SM_TREE_SIZE    = 0.05;
@@ -56,6 +57,7 @@ colorRGBA get_tree_trunk_color(int type) {
 
 vector<small_tree> small_trees;
 pt_line_drawer tree_scenery_pld;
+vbo_quad_block_manager_t pine_tree_vbo_manager;
 
 
 extern bool disable_shaders, has_dir_lights;
@@ -65,71 +67,8 @@ extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, tree_size, 
 extern GLUquadricObj* quadric;
 
 
-class vbo_quad_block_manager_t {
-
-	vector<vert_norm_tc> pts;
-	vector<unsigned> offsets;
-	unsigned vbo;
-
-public:
-	vbo_quad_block_manager_t() {clear();}
-	bool empty() const {return pts.empty();}
-
-	unsigned add_tree(vector<vert_norm> const &p) {
-		assert(!p.empty());
-		assert((p.size()&3) == 0); // must be quads
-		unsigned const num_quads(p.size()/4), start_ix(pts.size());
-		
-		for (vector<vert_norm>::const_iterator i = p.begin(); i != p.end(); ++i) {
-			pts.push_back(vert_norm_tc(*i));
-		}
-		gen_quad_tex_coords(pts[start_ix].t, num_quads, sizeof(vert_norm_tc)/sizeof(float));
-		assert(!offsets.empty());
-		unsigned const next_ix(offsets.size() - 1);
-		offsets.push_back(pts.size()); // range will be [start_ix, start_ix+p.size()]
-		return next_ix;
-	}
-	void render_range(unsigned six, unsigned eix) const {
-		assert(six < eix && eix < offsets.size());
-		assert(offsets[eix] <= pts.size());
-		glDrawArrays(GL_QUADS, offsets[six], offsets[eix]-offsets[six]);
-	}
-	void render_all() const {
-		if (!empty()) {render_range(0, offsets.size()-1);}
-	}
-	void upload() {
-		if (vbo || empty()) return; // already uploaded or empty
-		vbo = create_vbo();
-		bind_vbo(vbo);
-		upload_vbo_data(&pts.front(), pts.size()*sizeof(vert_norm_tc));
-		bind_vbo(0);
-	}
-	void begin_render() const {
-		if (empty()) return;
-		assert(vbo);
-		bind_vbo(vbo);
-		vert_norm_tc::set_vbo_arrays();
-	}
-	void end_render() const {
-		bind_vbo(0);
-	}
-	void clear_vbo() {
-		delete_vbo(vbo);
-		vbo = 0;
-	}
-	void clear() {
-		pts.clear();
-		offsets.clear();
-		offsets.push_back(0); // start at 0
-		clear_vbo();
-	}
-};
-
-vbo_quad_block_manager_t pine_tree_vbo_manager;
-
 
 void clear_sm_tree_vbos() {
-	
 	pine_tree_vbo_manager.clear_vbo();
 }
 
@@ -299,7 +238,7 @@ void draw_small_trees(bool shadow_only) {
 	glAlphaFunc(GL_GREATER, 0.75);
 	pine_tree_vbo_manager.upload();
 
-	if (can_use_shaders && (shadow_map_enabled() || has_dir_lights)) {
+	if (can_use_shaders && (shadow_map_enabled() || has_dir_lights) && world_mode == WMODE_GROUND) {
 		orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1); // dynamic lights, but no smoke
 	}
 	for (unsigned i = 0; i < small_trees.size(); ++i) { // draw leaves
@@ -446,7 +385,7 @@ void small_tree::calc_points() { // pine trees
 			add_rotated_quad_pts(points, theta, rd, z, center, scale);
 		}
 	}
-	vbo_mgr_ix = pine_tree_vbo_manager.add_tree(points);
+	vbo_mgr_ix = pine_tree_vbo_manager.add_points(points);
 }
 
 

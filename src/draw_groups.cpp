@@ -10,6 +10,7 @@
 #include "dynamic_particle.h"
 #include "physics_objects.h"
 #include "shaders.h"
+#include "draw_utils.h"
 
 
 bool const DEBUG_COLORCODE   = 0;
