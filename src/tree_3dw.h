@@ -186,6 +186,8 @@ public:
 };
 
 
+class vbo_quad_block_manager_t;
+
 class small_tree { // size = 81 (82)
 
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
@@ -202,8 +204,8 @@ public:
 	vector3d get_rot_dir() const;
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
-	void calc_points();
-	void draw(int mode, bool shadow_only) const;
+	void calc_points(vbo_quad_block_manager_t &vbo_manager);
+	void draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}

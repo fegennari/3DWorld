@@ -25,7 +25,6 @@ float const DSCALE             = 0.45;
 float const ASCALE             = 0.35;
 bool  const TIMETEST           = (GLOBAL_TIMETEST || 0);
 bool  const DETERMINISTIC_TIME = 0;
-int   const TERRAIN_SCENERY    = 0; // trees, small trees, plants, etc. - not entirely correct during scrolling
 int   const KEEP_MESH          = 1;
 float const REL_SCROLL_DIST    = 0.4;
 float const LIGHT_W_VAL        = 0.0; // 0 = directional/light at infinity, 1 = point source
@@ -34,7 +33,7 @@ float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.75;
 
 
-bool mesh_invalidated(1), inf_terrain_scenery(TERRAIN_SCENERY);
+bool mesh_invalidated(1), inf_terrain_scenery(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned reflection_tid(0);
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
