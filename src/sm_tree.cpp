@@ -4,10 +4,9 @@
 
 #include "3DWorld.h"
 #include "mesh.h"
-#include "tree_3dw.h"
+#include "small_tree.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
-#include "draw_utils.h"
 
 
 float const SM_TREE_SIZE    = 0.05;
@@ -24,6 +23,9 @@ int  const NUM_SMALL_TREES  = 40000;
 
 
 enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
+
+small_tree_group small_trees;
+pt_line_drawer tree_scenery_pld;
 
 extern bool disable_shaders, has_dir_lights;
 extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
@@ -62,112 +64,103 @@ colorRGBA get_tree_trunk_color(int type) {
 }
 
 
-struct small_tree_group : public vector<small_tree> {
+void small_tree_group::add_cobjs() {
 
-	vbo_quad_block_manager_t vbo_manager;
-	
-	void sort_by_type() {sort(begin(), end());}
-	void sort_by_dist_to_camera() {sort(begin(), end(), small_tree::comp_by_type_dist(get_camera_pos()));}
+	if (empty() || !SMALL_TREE_COLL) return;
+	cobj_params cp      (0.65, GREEN, DRAW_COBJS, 0, NULL, 0, -1);
+	cobj_params cp_trunk(0.9, TREE_C, DRAW_COBJS, 0, NULL, 0, -1);
+	cp.shadow       = (shadow_detail >= 5);
+	cp_trunk.shadow = (shadow_detail >= 6);
 
-	void add_tree(small_tree &st) {
-		st.calc_points(vbo_manager);
-		push_back(st);
+	for (iterator i = begin(); i != end(); ++i) {
+		i->add_cobjs(cp, cp_trunk);
 	}
-	void clear_all() {
-		clear();
-		vbo_manager.clear();
+}
+
+
+void small_tree_group::remove_cobjs() {
+
+	for (iterator i = begin(); i != end(); ++i) {
+		i->remove_cobjs();
 	}
+}
 
-	void add_cobjs() {
-		if (empty() || !SMALL_TREE_COLL) return;
-		cobj_params cp      (0.65, GREEN, DRAW_COBJS, 0, NULL, 0, -1);
-		cobj_params cp_trunk(0.9, TREE_C, DRAW_COBJS, 0, NULL, 0, -1);
-		cp.shadow       = (shadow_detail >= 5);
-		cp_trunk.shadow = (shadow_detail >= 6);
 
-		for (iterator i = begin(); i != end(); ++i) {
-			i->add_cobjs(cp, cp_trunk);
-		}
+void small_tree_group::translate_by(vector3d const &vd) {
+
+	for (iterator i = begin(); i != end(); ++i) {
+		i->translate_by(vd);
 	}
+}
 
-	void remove_cobjs() {
-		for (iterator i = begin(); i != end(); ++i) {
-			i->remove_cobjs();
-		}
+
+void small_tree_group::draw_branches(bool shadow_only) const {
+
+	BLACK.do_glColor();
+
+	for (const_iterator i = begin(); i != end(); ++i) {
+		i->draw(1, shadow_only, 0, vbo_manager);
 	}
-	void translate_by(vector3d const &vd) {
-		for (iterator i = begin(); i != end(); ++i) {
-			i->translate_by(vd);
-		}
-	}
+}
 
-	void draw_branches(bool shadow_only) const {
-		BLACK.do_glColor();
 
-		for (const_iterator i = begin(); i != end(); ++i) {
-			i->draw(1, shadow_only, 0, vbo_manager);
-		}
-	}
+void small_tree_group::draw_leaves(bool shadow_only) const {
 
-	void draw_leaves(bool shadow_only) const {
-		set_lighted_sides(2);
-		enable_blend();
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.75);
+	set_lighted_sides(2);
+	enable_blend();
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.75);
 
-		for (const_iterator i = begin(); i != end(); ++i) {
-			int const type(i->get_type());
+	for (const_iterator i = begin(); i != end(); ++i) {
+		int const type(i->get_type());
 			
-			if (i == begin() || (i-1)->get_type() != type) { // first of this type
-				bool const is_pine(type == T_PINE || type == T_SH_PINE), untextured(is_pine && (draw_model != 0));
-				if (is_pine) {vbo_manager.begin_render();}
-				select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
-			}
-			i->draw(2, shadow_only, (size() < 100), vbo_manager); // only cull pine tree leaves if there aren't too many
+		if (i == begin() || (i-1)->get_type() != type) { // first of this type
+			bool const is_pine(type == T_PINE || type == T_SH_PINE), untextured(is_pine && (draw_model != 0));
+			if (is_pine) {vbo_manager.begin_render();}
+			select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
 		}
-		vbo_manager.end_render();
-		glDisable(GL_ALPHA_TEST);
-		disable_blend();
-		set_lighted_sides(1);
-		glDisable(GL_TEXTURE_2D);
+		i->draw(2, shadow_only, (size() < 100), vbo_manager); // only cull pine tree leaves if there aren't too many
 	}
+	vbo_manager.end_render();
+	glDisable(GL_ALPHA_TEST);
+	disable_blend();
+	set_lighted_sides(1);
+	glDisable(GL_TEXTURE_2D);
+}
 
-	void gen_trees(int x1, int y1, int x2, int y2) {
-		float const tscale((Z_SCENE_SIZE*mesh_scale)/16.0);
-		int const ntrees(int(min(1.0f, vegetation*(tscale*mesh_scale2)*(tscale*mesh_scale2)/8.0f)*NUM_SMALL_TREES));
-		if (ntrees == 0) return;
-		float const tsize(tree_size*SM_TREE_SIZE*Z_SCENE_SIZE/(tscale*mesh_scale2)); // random tree generation based on transformed mesh height function
-		float const x0(TREE_DIST_MH_S*X_SCENE_SIZE + xoff2*DX_VAL), y0(TREE_DIST_MH_S*Y_SCENE_SIZE + yoff2*DY_VAL);
-		float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)*mesh_scale2);
-		int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), skip_val(max(1, int(1.0/sqrt((mesh_scale*mesh_scale2)))));
-		//PRINT_TIME("Delete");
+
+void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
+
+	float const tscale((Z_SCENE_SIZE*mesh_scale)/16.0);
+	int const ntrees(int(min(1.0f, vegetation*(tscale*mesh_scale2)*(tscale*mesh_scale2)/8.0f)*NUM_SMALL_TREES));
+	if (ntrees == 0) return;
+	float const tsize(tree_size*SM_TREE_SIZE*Z_SCENE_SIZE/(tscale*mesh_scale2)); // random tree generation based on transformed mesh height function
+	float const x0(TREE_DIST_MH_S*X_SCENE_SIZE + xoff2*DX_VAL), y0(TREE_DIST_MH_S*Y_SCENE_SIZE + yoff2*DY_VAL);
+	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)*mesh_scale2);
+	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), skip_val(max(1, int(1.0/sqrt((mesh_scale*mesh_scale2)))));
+	//PRINT_TIME("Delete");
 	
-		for (int i = y1; i < y2; i += skip_val) {
-			for (int j = x1; j < x2; j += skip_val) {
-				set_rand2_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
-								(845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
-				if ((rand2_seed_mix()%tree_prob) != 0) continue; // not selected
-				rand2_mix();
-				float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*signed_rand_float2());
-				float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*signed_rand_float2());
-				float const dist_test(get_rel_height(eval_one_surface_point((tds*(xpos+x0)-xoff2), (tds*(ypos+y0)-yoff2)), -zmax_est, zmax_est)); // 20ms
-				if (dist_test > (SM_TREE_AMT*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rand_float2())) continue; // tree density function test
-				float const height(rand_uniform2(0.4*tsize, tsize)), width(rand_uniform2(0.25*height, 0.35*height));
-				float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1) - 0.1*height); // 15ms
-				int const ttype(get_tree_type_from_height(zpos));
-				if (ttype == TREE_NONE) continue;
-				small_tree st(point(xpos, ypos, zpos), height, width, ttype, 0);
-				st.setup_rotation();
-				add_tree(st);
-			}
+	for (int i = y1; i < y2; i += skip_val) {
+		for (int j = x1; j < x2; j += skip_val) {
+			set_rand2_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
+							(845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
+			if ((rand2_seed_mix()%tree_prob) != 0) continue; // not selected
+			rand2_mix();
+			float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*signed_rand_float2());
+			float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*signed_rand_float2());
+			float const dist_test(get_rel_height(eval_one_surface_point((tds*(xpos+x0)-xoff2), (tds*(ypos+y0)-yoff2)), -zmax_est, zmax_est)); // 20ms
+			if (dist_test > (SM_TREE_AMT*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rand_float2())) continue; // tree density function test
+			float const height(rand_uniform2(0.4*tsize, tsize)), width(rand_uniform2(0.25*height, 0.35*height));
+			float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1) - 0.1*height); // 15ms
+			int const ttype(get_tree_type_from_height(zpos));
+			if (ttype == TREE_NONE) continue;
+			small_tree st(point(xpos, ypos, zpos), height, width, ttype, 0);
+			st.setup_rotation();
+			add_tree(st);
 		}
-		sort_by_type();
 	}
-};
-
-
-small_tree_group small_trees;
-pt_line_drawer tree_scenery_pld;
+	sort_by_type();
+}
 
 
 int get_tree_class_from_height(float zpos) {

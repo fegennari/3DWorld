@@ -762,6 +762,7 @@
     <ClInclude Include="src\shaders.h" />
     <ClInclude Include="src\shape_line3d.h" />
     <ClInclude Include="src\sinf.h" />
+    <ClInclude Include="src\small_tree.h" />
     <ClInclude Include="src\spillover.h" />
     <ClInclude Include="src\subdiv.h" />
     <ClInclude Include="src\Textures_3dw.h" />
