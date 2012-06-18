@@ -64,6 +64,14 @@ colorRGBA get_tree_trunk_color(int type) {
 }
 
 
+void small_tree_group::clear_all() {
+
+	clear();
+	vbo_manager.clear();
+	generated = 0;
+}
+
+
 void small_tree_group::add_cobjs() {
 
 	if (empty() || !SMALL_TREE_COLL) return;
@@ -131,6 +139,8 @@ void small_tree_group::draw_leaves(bool shadow_only) const {
 
 void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
 
+	if (vegetation == 0.0) return;
+	generated = 1;
 	float const tscale((Z_SCENE_SIZE*mesh_scale)/16.0);
 	int const ntrees(int(min(1.0f, vegetation*(tscale*mesh_scale2)*(tscale*mesh_scale2)/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
@@ -227,7 +237,6 @@ void gen_small_trees() {
 		purge_coll_freed(1);
 	}
 	small_trees.clear_all();
-	if (vegetation == 0.0) return;
 	small_trees.gen_trees(get_ext_x1(), get_ext_y1(), get_ext_x2(), get_ext_y2());
 	//PRINT_TIME("Gen");
 	small_trees.add_cobjs(); // 20ms
@@ -251,6 +260,10 @@ void remove_small_tree_cobjs() {
 void shift_small_trees(vector3d const &vd) {
 	if (num_trees > 0) return; // dynamically created, not placed
 	small_trees.translate_by(vd);
+}
+
+void draw_and_clear_tree_pld() {
+	tree_scenery_pld.draw_and_clear();
 }
 
 
@@ -286,7 +299,7 @@ void draw_small_trees(bool shadow_only) {
 	}
 	small_trees.draw_leaves(shadow_only);
 	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
-	tree_scenery_pld.draw_and_clear();
+	draw_and_clear_tree_pld();
 	//PRINT_TIME("small tree draw");
 }
 

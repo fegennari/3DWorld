@@ -693,7 +693,7 @@ public:
 				}
 			}
 		}
-		if (mode & 1) {
+		if (mode & 1) { // stem
 			colorRGBA color(pltype[type].stemc*color_scale);
 			float const dist(distance_to_camera(pos));
 
@@ -707,17 +707,11 @@ public:
 				draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
 			}
 		}
-		if (mode & 2) {
-			glEnable(GL_ALPHA_TEST);
-			glAlphaFunc(GL_GREATER, 0.9);
+		if (mode & 2) { // leaves
 			(pltype[type].leafc*color_scale).do_glColor();
 			select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
-			set_lighted_sides(2);
 			assert(vbo_mgr_ix >= 0);
 			plant_vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-			glDisable(GL_ALPHA_TEST);
-			set_lighted_sides(1);
-			if (shadow_only) glDisable(GL_TEXTURE_2D);
 		}
 	}
 
@@ -883,6 +877,9 @@ void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 	if (draw_transparent) {
 		enable_blend();
 		glEnable(GL_COLOR_MATERIAL);
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.9);
+		set_lighted_sides(2);
 		shader_t s;
 		set_leaf_shader(s, 0.9, 0, 0);
 		plant_vbo_manager.upload();
@@ -894,6 +891,8 @@ void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 		plant_vbo_manager.end_render();
 		s.end_shader();
 		disable_blend();
+		glDisable(GL_ALPHA_TEST);
+		set_lighted_sides(1);
 		glDisable(GL_COLOR_MATERIAL);
 		glDisable(GL_TEXTURE_2D);
 	}

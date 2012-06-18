@@ -79,7 +79,8 @@ class vbo_quad_block_manager_t {
 	unsigned vbo;
 
 public:
-	vbo_quad_block_manager_t() {clear();}
+	vbo_quad_block_manager_t() : vbo(0) {clear();}
+	~vbo_quad_block_manager_t() {clear_vbo();}
 	bool empty() const {return pts.empty();}
 	unsigned add_points(vector<vert_norm> const &p);
 	void render_range(unsigned six, unsigned eix) const;

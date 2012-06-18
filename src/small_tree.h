@@ -46,7 +46,9 @@ public:
 struct small_tree_group : public vector<small_tree> {
 
 	vbo_quad_block_manager_t vbo_manager;
+	bool generated;
 	
+	small_tree_group() : generated(0) {}
 	void sort_by_type() {sort(begin(), end());}
 
 	void sort_by_dist_to_camera() {
@@ -56,10 +58,7 @@ struct small_tree_group : public vector<small_tree> {
 		st.calc_points(vbo_manager);
 		push_back(st);
 	}
-	void clear_all() {
-		clear();
-		vbo_manager.clear();
-	}
+	void clear_all();
 	void add_cobjs();
 	void remove_cobjs();
 	void translate_by(vector3d const &vd);

@@ -207,6 +207,7 @@ void remove_small_tree_cobjs();
 void gen_small_trees();
 void draw_small_trees(bool shadow_only);
 void shift_small_trees(vector3d const &vd);
+void draw_and_clear_tree_pld();
 
 
 #endif // _TREE_H_
