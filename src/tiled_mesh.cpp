@@ -7,6 +7,7 @@
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "small_tree.h"
 
 
 bool const DEBUG_TILES        = 0;
@@ -20,11 +21,13 @@ float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 2.0;
 
 
-extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog;
+extern bool disable_shaders;
+extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
+extern pt_line_drawer tree_scenery_pld;
 
 void draw_water_edge(float zval);
 
@@ -54,12 +57,13 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 
 class tile_t {
 
-	int x1, y1, x2, y2, init_dxoff, init_dyoff;
+	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_tree_dxoff, init_tree_dyoff;
 	unsigned tid, vbo, ivbo[NUM_LODS], size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, xstart, ystart, xstep, ystep;
 	vector<float> zvals;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
+	small_tree_group trees;
 
 public:
 	typedef vert_norm_comp vert_type_t;
@@ -68,6 +72,7 @@ public:
 	~tile_t() {clear_vbo_tid(1,1);}
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2),
+		init_tree_dxoff(init_dxoff), init_tree_dyoff(init_dyoff),
 		tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0)
 	{
 		assert(size > 0);
@@ -140,6 +145,7 @@ public:
 			for (unsigned i = 0; i < NUM_LODS; ++i) {delete_vbo(ivbo[i]);}
 			init_vbo_ids();
 			clear_shadows();
+			trees.vbo_manager.clear_vbo();
 		}
 		if (tclear) {clear_tid();}
 	}
@@ -347,9 +353,26 @@ public:
 		return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());
 	}
 
-	bool draw(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], bool reflection_pass) { // make const or make vbo mutable?
+	void init_tree_draw() {
+		if (!trees.generated) {
+			init_tree_dxoff = xoff - xoff2;
+			init_tree_dyoff = yoff - yoff2;
+			trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
+		}
+		trees.vbo_manager.upload();
+	}
+
+	void draw_trees(bool draw_branches, bool draw_leaves) const {
+		glPushMatrix();
+		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
+		translate_to(xlate);
+		if (draw_branches) {trees.draw_branches(0, xlate);}
+		if (draw_leaves  ) {trees.draw_leaves  (0, xlate);}
+		glPopMatrix();
+	}
+
+	void draw(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], bool reflection_pass) {
 		assert(size > 0);
-		if (!is_visible()) return 0; // not visible to camera
 
 		if (!DISABLE_TEXTURES) {
 			if (tid == 0) create_texture();
@@ -399,7 +422,6 @@ public:
 		bind_vbo(0, 1);
 		glPopMatrix();
 		if (tid > 0) disable_textures_texgen();
-		return 1;
 	}
 };
 
@@ -521,17 +543,47 @@ public:
 			float const dist(i->second->get_rel_dist_to_camera());
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, i->second->get_zmin());
-			to_draw.push_back(make_pair(dist, i->second));
+			if (i->second->is_visible()) {to_draw.push_back(make_pair(dist, i->second));}
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			num_drawn += to_draw[i].second->draw(data, indices, reflection_pass);
+			to_draw[i].second->draw(data, indices, reflection_pass);
 		}
 		s.end_shader();
-		if (DEBUG_TILES) cout << "tiles drawn: " << num_drawn << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
+		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
+		if (tree_mode & 2) {draw_trees(to_draw);}
 		return zmin;
+	}
+
+	void draw_trees(vector<pair<float, tile_t *> > const &to_draw) {
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			to_draw[i].second->init_tree_draw();
+		}
+		shader_t s;
+		colorRGBA orig_fog_color;
+
+		if (0 && !disable_shaders) { // shaders disabled for now, for performance reasons
+			orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1);
+			s.add_uniform_float("tex_scale_t", 5.0);
+			/*s.setup_enabled_lights();
+			s.set_vert_shader("ads_lighting.part*+two_lights_texture");
+			s.set_frag_shader("linear_fog.part+simple_texture");
+			s.begin_shader();
+			s.add_uniform_int("tex0", 0);*/
+		}
+		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
+			to_draw[i].second->draw_trees(1, 0);
+		}
+		if (s.is_setup()) {s.add_uniform_float("tex_scale_t", 1.0);}
+		
+		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
+			to_draw[i].second->draw_trees(0, 1);
+		}
+		if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
+		//s.end_shader();
+		tree_scenery_pld.draw_and_clear();
 	}
 
 	void clear_vbos_tids(bool vclear, bool tclear) {
