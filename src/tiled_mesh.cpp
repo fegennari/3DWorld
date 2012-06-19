@@ -502,7 +502,7 @@ public:
 		set_multitex(0);
 	}
 
-	static void setup_mesh_draw_shaders(shader_t &s, float wpz, bool blend_textures_in_shaders) {
+	static void setup_mesh_draw_shaders(shader_t &s, float wpz, bool blend_textures_in_shaders, bool reflection_pass) {
 		s.setup_enabled_lights();
 		s.set_vert_shader("texture_gen.part+tiled_mesh");
 		s.set_frag_shader(blend_textures_in_shaders ? "linear_fog.part+tiled_mesh" : "linear_fog.part+multitex_2");
@@ -512,6 +512,7 @@ public:
 		s.add_uniform_int("tex1", 1);
 		s.add_uniform_float("water_plane_z", (has_water() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
+		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 		if (blend_textures_in_shaders) setup_terrain_textures(s, 2, 0);
 	}
 
@@ -531,7 +532,7 @@ public:
 			last_moon = moon_pos;
 		}
 		shader_t s;
-		setup_mesh_draw_shaders(s, wpz, 1);
+		setup_mesh_draw_shaders(s, wpz, 1, reflection_pass);
 		if (world_mode == WMODE_INF_TERRAIN && show_fog && !DISABLE_WATER) draw_water_edge(wpz); // Note: doesn't take into account waves
 		setup_mesh_lighting();
 		vector<pair<float, tile_t *> > to_draw;
@@ -616,7 +617,7 @@ void draw_vert_color(colorRGBA c, float x, float y, float z) {
 }
 
 
-void fill_gap(float wpz) {
+void fill_gap(float wpz, bool reflection_pass) {
 
 	//RESET_TIME;
 	colorRGBA const color(setup_mesh_lighting());
@@ -635,7 +636,7 @@ void fill_gap(float wpz) {
 		yv[i] = (ystart + (i + 0.5)*DY_VAL);
 	}
 	shader_t s;
-	terrain_tile_draw.setup_mesh_draw_shaders(s, wpz, 0);
+	terrain_tile_draw.setup_mesh_draw_shaders(s, wpz, 0, reflection_pass);
 
 	// draw +x
 	build_xy_mesh_arrays(&xv.front(), &yv[MESH_Y_SIZE], MESH_X_SIZE, 1);
@@ -683,7 +684,7 @@ float draw_tiled_terrain(bool add_hole, float wpz, bool reflection_pass) {
 	}
 	terrain_tile_draw.update();
 	float const zmin(terrain_tile_draw.draw(add_hole, wpz, reflection_pass));
-	if (add_hole) fill_gap(wpz); // need to fill the gap on +x/+y
+	if (add_hole) fill_gap(wpz, reflection_pass); // need to fill the gap on +x/+y
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	return zmin;
 }
