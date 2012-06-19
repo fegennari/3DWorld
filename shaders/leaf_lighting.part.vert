@@ -1,4 +1,5 @@
 uniform int num_dlights = 0;
+uniform float normal_scale = 1.0;
 
 vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in int i)
 {
@@ -34,7 +35,7 @@ vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos
 void calc_leaf_lighting()
 {
 	// transform the normal into eye space, but don't normalize because it may be scaled for shadows, and we know there are no glScale() calls
-	vec3 normal = gl_NormalMatrix * gl_Normal;
+	vec3 normal = gl_NormalMatrix * gl_Normal * normal_scale;
 	
 	vec4 eye_space_pos = gl_ModelViewMatrix * gl_Vertex;
 	if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse (could use faceforward())

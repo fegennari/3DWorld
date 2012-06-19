@@ -291,9 +291,12 @@ void draw_small_trees(bool shadow_only) {
 	small_trees.vbo_manager.upload();
 
 	if (can_use_shaders && (shadow_map_enabled() || has_dir_lights) && world_mode == WMODE_GROUND) {
+		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1); // dynamic lights, but no smoke
 	}
+	if (s.is_setup()) s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
 	small_trees.draw_leaves(shadow_only);
+	if (s.is_setup()) s.add_uniform_float("base_color_scale", 1.0);
 	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
 	tree_scenery_pld.draw_and_clear();
 	//PRINT_TIME("small tree draw");
@@ -421,7 +424,7 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager) {
 			add_rotated_quad_pts(points, theta, rd, z, center, scale);
 		}
 	}
-	vbo_mgr_ix = vbo_manager.add_points(points);
+	vbo_mgr_ix = vbo_manager.add_points(points, color);
 }
 
 
@@ -473,13 +476,12 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_m
 		}
 	}
 	if (mode & 2) { // leaves
-		set_color(color);
-
 		if (pine_tree) { // 30 quads per tree
 			assert(vbo_mgr_ix >= 0);
 			vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
 		}
 		else { // palm or decidious
+			set_color(color);
 			glPushMatrix();
 			translate_to(pos);
 			if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);

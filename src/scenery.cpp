@@ -673,46 +673,45 @@ public:
 				add_rotated_quad_pts(points, theta, rdeg/45.0, z, pos, scale);
 			}
 		}
-		vbo_mgr_ix = plant_vbo_manager.add_points(points);
+		vbo_mgr_ix = plant_vbo_manager.add_points(points, pltype[type].leafc);
 	}
 
-	void draw(float sscale, int mode, bool shadow_only) { // modifies points, so non-const
+	bool is_shadowed() const {
+		int const light(get_light());
+
+		for (unsigned i = 0; i < 3; ++i) {
+			point p(pos);
+			p.z += 0.5*i*height;
+			if (is_visible_to_light_cobj(p, light, (radius + height), coll_id, 0)) {return 0;}
+		}
+		return 1;
+	}
+
+	void draw_stem(float sscale, bool shadow_only) const {
+		if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 0)) return;
+		bool const shadowed(shadow_only ? 0 : is_shadowed());
+		colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
+		float const dist(distance_to_camera(pos));
+
+		if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
+			tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
+		}
+		else {
+			int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
+			if (!shadow_only) select_texture(WOOD_TEX);
+			set_color(color);
+			draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
+		}
+	}
+
+	void draw_leaves(shader_t &s, float sscale, bool shadow_only) const {
 		if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 2)) return;
-		float color_scale(SHADOW_VAL);
-
-		if (!shadow_only) {
-			int const light(get_light());
-
-			for (unsigned i = 0; i < 3; ++i) {
-				point p(pos);
-				p.z += 0.5*i*height;
-
-				if (is_visible_to_light_cobj(p, light, (radius + height), coll_id, 0)) {
-					color_scale = 1.0;
-					break;
-				}
-			}
-		}
-		if (mode & 1) { // stem
-			colorRGBA color(pltype[type].stemc*color_scale);
-			float const dist(distance_to_camera(pos));
-
-			if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
-				tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
-			}
-			else {
-				int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
-				if (!shadow_only) select_texture(WOOD_TEX);
-				set_color(color);
-				draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
-			}
-		}
-		if (mode & 2) { // leaves
-			(pltype[type].leafc*color_scale).do_glColor();
-			select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
-			assert(vbo_mgr_ix >= 0);
-			plant_vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-		}
+		bool const shadowed(shadow_only ? 0 : is_shadowed());
+		if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
+		select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
+		assert(vbo_mgr_ix >= 0);
+		plant_vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+		if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
 	}
 
 	void remove_cobjs() {
@@ -857,7 +856,7 @@ void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 	assert(quadric != 0);
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 
-	if (draw_opaque) {
+	if (draw_opaque) { // draw stems
 		for (unsigned i = 0; i < rock_shapes.size(); ++i) { // draw rock shapes
 			rock_shapes[i].draw();
 		}
@@ -869,12 +868,12 @@ void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 		gluQuadricTexture(quadric, GL_FALSE);
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
-			plants[i].draw(sscale, 1, shadow_only); // draw stem
+			plants[i].draw_stem(sscale, shadow_only);
 		}
 		glDisable(GL_TEXTURE_2D);
 		tree_scenery_pld.draw_and_clear();
 	}
-	if (draw_transparent) {
+	if (draw_transparent) { // draw leaves
 		enable_blend();
 		glEnable(GL_COLOR_MATERIAL);
 		glEnable(GL_ALPHA_TEST);
@@ -886,7 +885,7 @@ void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 		plant_vbo_manager.begin_render();
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
-			plants[i].draw(sscale, 2, shadow_only); // draw leaves
+			plants[i].draw_leaves(s, sscale, shadow_only);
 		}
 		plant_vbo_manager.end_render();
 		s.end_shader();

@@ -74,7 +74,8 @@ public:
 
 class vbo_quad_block_manager_t {
 
-	vector<vert_norm_tc> pts;
+	typedef vert_norm_tc_color vert_type_t;
+	vector<vert_type_t> pts;
 	vector<unsigned> offsets;
 	unsigned vbo;
 
@@ -82,7 +83,7 @@ public:
 	vbo_quad_block_manager_t() : vbo(0) {clear();}
 	~vbo_quad_block_manager_t() {clear_vbo();}
 	bool empty() const {return pts.empty();}
-	unsigned add_points(vector<vert_norm> const &p);
+	unsigned add_points(vector<vert_norm> const &p, colorRGBA const &color);
 	void render_range(unsigned six, unsigned eix) const;
 	void render_all() const {if (!empty()) {render_range(0, offsets.size()-1);}}
 	void upload();
