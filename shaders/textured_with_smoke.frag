@@ -47,8 +47,14 @@ vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 	vec3 normal  = nscale*n;
 	vec3 eye_pos = epos.xyz;
 #endif
-	vec3 diffuse  = gl_FrontLightProduct[0].diffuse.rgb;
-	vec3 ambient  = gl_FrontLightProduct[0].ambient.rgb;
+#ifdef USE_LIGHT_COLORS
+	vec3 color   = gl_Color.rgb;
+	vec3 diffuse = color * gl_LightSource[0].diffuse.rgb;
+	vec3 ambient = color * gl_LightSource[0].ambient.rgb;
+#else // use light material properties
+	vec3 diffuse = gl_FrontLightProduct[0].diffuse.rgb;
+	vec3 ambient = gl_FrontLightProduct[0].ambient.rgb;
+#endif
 	vec3 specular = get_light_specular(normal, light_dir, eye_pos, 0).rgb;
 	return (ambient + max(dot(normal, light_dir), 0.0)*diffuse + specular);
 }
@@ -92,7 +98,12 @@ void main()
 	}
 	if (enable_dlights) {
 		vec3 n = ((!two_sided_lighting || gl_FrontFacing) ? normalize(normal) : -normalize(normal)); // two-sided lighting
-		lit_color += add_dlights(vpos, n, eye, gl_FrontMaterial.diffuse.rgb); // dynamic lighting
+#ifdef USE_LIGHT_COLORS
+		vec3 dlight_color = gl_Color.rgb;
+#else
+		vec3 dlight_color = gl_FrontMaterial.diffuse.rgb;
+#endif
+		lit_color += add_dlights(vpos, n, eye, dlight_color); // dynamic lighting
 	}
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 
