@@ -718,6 +718,29 @@ void mousePassiveMotion(int x, int y) {
 }
 
 
+void change_tree_mode() {
+
+	if (world_mode != WMODE_GROUND && world_mode != WMODE_INF_TERRAIN) return;
+	if (num_trees == 0 && t_trees.empty()) return;
+	int const last_tree_mode(tree_mode);
+	tree_mode = (tree_mode+1)%4; // 0=none, 1=large, 2=small, 3=large+small
+			
+	if (world_mode == WMODE_INF_TERRAIN) {
+		if ((tree_mode & 2) != (last_tree_mode & 2)) clear_tiled_terrain();
+	}
+	else {
+		//if (num_trees == 0) return; // Note: will skip scene/cobj updates on scenes that have placed trees
+#if 1
+		gen_scene(0, 1, 1, 0, 1); // Note: will destroy any fixed cobjs
+#else
+		remove_small_tree_cobjs();
+		remove_tree_cobjs();
+		regen_trees(1, 0); // Note: won't regen trees if num_trees == 0, won't reset mesh shadows
+#endif
+	}
+}
+
+
 // This function is called whenever there is a keyboard input
 // key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127)
 // x and y are the location of the mouse
@@ -1207,17 +1230,7 @@ void keyboard2(int key, int x, int y) {
 		break;
 
 	case GLUT_KEY_F5: // toggle large/small trees
-		if (world_mode != WMODE_GROUND && (world_mode != WMODE_INF_TERRAIN || !inf_terrain_scenery)) break;
-		if (num_trees == 0 && t_trees.empty()) break;
-		tree_mode = (tree_mode+1)%4; // 0=none, 1=large, 2=small, 3=large+small
-		//if (num_trees == 0) break; // Note: will skip scene/cobj updates on scenes that have placed trees
-#if 1
-		gen_scene(0, 1, 1, 0, 1); // Note: will destroy any fixed cobjs
-#else
-		remove_small_tree_cobjs();
-		remove_tree_cobjs();
-		regen_trees(1, 0); // Note: won't regen trees if num_trees == 0, won't reset mesh shadows
-#endif
+		change_tree_mode();
 		break;
 
 	case GLUT_KEY_F6: // toggle draw_mesh shader

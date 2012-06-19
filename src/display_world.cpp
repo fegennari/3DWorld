@@ -1037,7 +1037,6 @@ void display_universe() { // infinite universe
 void draw_transparent(bool above_water) {
 
 	if (above_water) {
-		if (inf_terrain_scenery) draw_trees();
 		draw_transparent_object_groups();
 	}
 	else {
@@ -1146,11 +1145,10 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 
 		if (mesh_type != 0) {
 			mesh_type = 0;
-			gen_scene(1, inf_terrain_scenery, KEEP_MESH, 0, 0);
+			gen_scene(1, 0, KEEP_MESH, 0, 0);
 			recreated = 1;
 		}
 		else if (inf_terrain_scenery) {
-			regen_trees(0, 1);
 			gen_scenery();
 		}
 	}
@@ -1219,7 +1217,6 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 
 	if (inf_terrain_scenery && surface_pos != last_spos) { // camera moves
 		xoff2 -= xoff; yoff2 -= yoff;
-		regen_trees(0, 1);
 		gen_scenery();
 		xoff2 += xoff; yoff2 += yoff;
 	}
