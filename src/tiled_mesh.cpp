@@ -72,7 +72,7 @@ public:
 	~tile_t() {clear_vbo_tid(1,1);}
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2),
-		init_tree_dxoff(init_dxoff), init_tree_dyoff(init_dyoff),
+		init_tree_dxoff(0), init_tree_dyoff(0),
 		tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0)
 	{
 		assert(size > 0);
@@ -261,6 +261,7 @@ public:
 				}
 			}
 		}
+		if (tree_mode & 2) {init_tree_draw();}
 		//PRINT_TIME("Create Data");
 	}
 
@@ -355,8 +356,8 @@ public:
 
 	void init_tree_draw() {
 		if (!trees.generated) {
-			init_tree_dxoff = xoff - xoff2;
-			init_tree_dyoff = yoff - yoff2;
+			init_tree_dxoff = -xoff2;
+			init_tree_dyoff = -yoff2;
 			trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
 		}
 		trees.vbo_manager.upload();
@@ -562,9 +563,6 @@ public:
 	}
 
 	void draw_trees(vector<pair<float, tile_t *> > const &to_draw) {
-		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->init_tree_draw();
-		}
 		shader_t s;
 		colorRGBA orig_fog_color;
 
