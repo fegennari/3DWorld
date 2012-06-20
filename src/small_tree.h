@@ -63,7 +63,7 @@ struct small_tree_group : public vector<small_tree> {
 	void remove_cobjs();
 	void translate_by(vector3d const &vd);
 	void draw_branches(bool shadow_only, vector3d const xlate=zero_vector) const;
-	void draw_leaves(bool shadow_only, vector3d const xlate=zero_vector) const;
+	void draw_leaves(bool shadow_only, bool draw_all_pine=0, vector3d const xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2);
 };
 

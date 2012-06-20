@@ -362,12 +362,14 @@ public:
 		trees.vbo_manager.upload();
 	}
 
+	unsigned num_trees() const {return trees.size();}
+
 	void draw_trees(bool draw_branches, bool draw_leaves) const {
 		glPushMatrix();
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
 		if (draw_branches) {trees.draw_branches(0, xlate);}
-		if (draw_leaves  ) {trees.draw_leaves  (0, xlate);}
+		if (draw_leaves  ) {trees.draw_leaves  (0, camera_pdu.sphere_completely_visible_test(get_center(), radius), xlate);}
 		glPopMatrix();
 	}
 
@@ -520,7 +522,7 @@ public:
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
 		set_array_client_state(1, 0, 1, 0);
-		unsigned num_drawn(0);
+		unsigned num_drawn(0), num_trees(0);
 		unsigned long long mem(0);
 		vector<tile_t::vert_type_t> data;
 		vector<unsigned short> indices[NUM_LODS];
@@ -549,10 +551,11 @@ public:
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			num_trees += to_draw[i].second->num_trees();
 			to_draw[i].second->draw(data, indices, reflection_pass);
 		}
 		s.end_shader();
-		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", gpu mem: " << mem/1024/1024 << endl;
+		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
 		if (tree_mode & 2) {draw_trees(to_draw);}
 		return zmin;

@@ -112,22 +112,29 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate) con
 }
 
 
-void small_tree_group::draw_leaves(bool shadow_only, vector3d const xlate) const {
+void small_tree_group::draw_leaves(bool shadow_only, bool draw_all_pine, vector3d const xlate) const {
 
 	set_lighted_sides(2);
 	enable_blend();
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
 
-	for (const_iterator i = begin(); i != end(); ++i) {
-		int const type(i->get_type());
+	if (draw_all_pine) {
+		vbo_manager.begin_render();
+		select_texture(stt[T_PINE].leaf_tid);
+		vbo_manager.render_all();
+	}
+	else {
+		for (const_iterator i = begin(); i != end(); ++i) {
+			int const type(i->get_type());
 			
-		if (i == begin() || (i-1)->get_type() != type) { // first of this type
-			bool const is_pine(type == T_PINE || type == T_SH_PINE), untextured(is_pine && (draw_model != 0));
-			if (is_pine) {vbo_manager.begin_render();}
-			select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
+			if (i == begin() || (i-1)->get_type() != type) { // first of this type
+				bool const is_pine(type == T_PINE || type == T_SH_PINE), untextured(is_pine && (draw_model != 0));
+				select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
+				if (is_pine) {vbo_manager.begin_render();}
+			}
+			i->draw(2, shadow_only, (size() < 100), vbo_manager, xlate); // only cull pine tree leaves if there aren't too many
 		}
-		i->draw(2, shadow_only, (size() < 100), vbo_manager, xlate); // only cull pine tree leaves if there aren't too many
 	}
 	vbo_manager.end_render();
 	glDisable(GL_ALPHA_TEST);
@@ -185,6 +192,7 @@ int get_tree_class_from_height(float zpos) {
 		assert(force_tree_class < NUM_TREE_CLASSES);
 		return force_tree_class;
 	}
+	if (world_mode == WMODE_INF_TERRAIN) return TREE_CLASS_PINE;
 	float const relh(get_rel_height(zpos, -zmax_est, zmax_est));
 	if (relh > 0.6) return TREE_CLASS_PINE;
 
@@ -412,7 +420,7 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager) {
 	float const ms(mesh_scale*mesh_scale2), rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
 	vector<vert_norm> points;
-	points.reserve(4*nlevels*nrings);
+	points.reserve(4*nlevels*nrings); // 120
 
 	for (unsigned j = 0; j < nlevels; ++j) {
 		float const sz(0.5*(height0 + 0.03/ms)*((nlevels - j - 0.4)/(float)nlevels));
@@ -425,6 +433,35 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager) {
 		}
 	}
 	vbo_mgr_ix = vbo_manager.add_points(points, color);
+#if 0
+	float z1(pos.z + height), z2(pos.z), r1(0.0);
+
+	for (vector<vert_norm>::const_iterator i = points.begin(); i != points.end(); ++i) {
+		r1 = max(r1, p2p_dist_xy(pos, i->v));
+		z1 = min(z1, i->v.z);
+		z2 = max(z2, i->v.z);
+	}
+	z1 -= 0.3*height;
+	z2 -= 0.1*height;
+	points.resize(0);
+
+	for (unsigned d = 0; d < 2; ++d) { // 2 quads: cross billboard simplified model
+		vector3d norm(zero_vector);
+		norm[d] = 1.0; // or use +z?
+		point pt;
+		pt[!d] = pos[!d];
+		pt[2]  = z2;
+		pt[d]  = pos[d] + r1;
+		points.push_back(vert_norm(pt, norm));
+		pt[d]  = pos[d] - r1;
+		points.push_back(vert_norm(pt, norm));
+		pt[2]  = z1;
+		points.push_back(vert_norm(pt, norm));
+		pt[d]  = pos[d] + r1;
+		points.push_back(vert_norm(pt, norm));
+	}
+	vbo_manager.add_points(points, color);
+#endif
 }
 
 
