@@ -14,5 +14,5 @@ void main()
 				   cs6*weights4 *texture2D(tex6, ts6*tc).rgb;
 	vec3 texel1  = texture2D(tex1, gl_TexCoord[1].st).rgb; // detail texture
 	vec4 color   = vec4((texel0.rgb * texel1.rgb * gl_Color.rgb), gl_Color.a);
-	gl_FragColor = apply_fog_quadratic(color); // add fog
+	gl_FragColor = apply_fog(color); // add fog
 }

@@ -507,6 +507,7 @@ public:
 
 	static void setup_mesh_draw_shaders(shader_t &s, float wpz, bool blend_textures_in_shaders, bool reflection_pass) {
 		s.setup_enabled_lights();
+		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_vert_shader("texture_gen.part+tiled_mesh");
 		s.set_frag_shader(blend_textures_in_shaders ? "linear_fog.part+tiled_mesh" : "linear_fog.part+multitex_2");
 		s.begin_shader();
@@ -566,26 +567,32 @@ public:
 		shader_t s;
 		colorRGBA orig_fog_color;
 
-		if (0 && !disable_shaders) { // shaders disabled for now, for performance reasons
-			orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1);
+		if (1 && !disable_shaders) { // shaders disabled for now, for performance reasons
+			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+			orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0);
 			s.add_uniform_float("tex_scale_t", 5.0);
-			/*s.setup_enabled_lights();
-			s.set_vert_shader("ads_lighting.part*+two_lights_texture");
-			s.set_frag_shader("linear_fog.part+simple_texture");
-			s.begin_shader();
-			s.add_uniform_int("tex0", 0);*/
 		}
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
 			to_draw[i].second->draw_trees(1, 0);
 		}
-		if (s.is_setup()) {s.add_uniform_float("tex_scale_t", 1.0);}
-		
+		if (s.is_setup()) {
+			s.end_shader();
+			s.set_prefix("#define USE_LIGHT_COLORS",  1); // FS
+			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+			orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1);
+			s.add_uniform_float("tex_scale_t", 1.0);
+			s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+		}
+		select_texture(WHITE_TEX, 0); // enable=0
+		tree_scenery_pld.draw_and_clear(); // FIXME: colors/normals are off?
+
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
 			to_draw[i].second->draw_trees(0, 1);
 		}
-		if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
-		//s.end_shader();
-		tree_scenery_pld.draw_and_clear();
+		if (s.is_setup()) {
+			s.add_uniform_float("base_color_scale", 1.0);
+			end_smoke_shaders(s, orig_fog_color);
+		}
 	}
 
 	void clear_vbos_tids(bool vclear, bool tclear) {

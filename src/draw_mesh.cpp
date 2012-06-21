@@ -804,6 +804,7 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 		rcolor.alpha = 0.5*(0.5 + color.alpha);
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
+		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_bool_prefix("reflections", reflections, 1); // FS
 		s.set_bool_prefix("add_waves", ((display_mode & 0x0100) != 0), 1); // FS
 		s.set_vert_shader("texture_gen.part+water_plane");
