@@ -374,11 +374,12 @@ void setup_lighting(bool underwater, float depth) {
 	config_bkg_color_and_clear(underwater, depth, 0);
 	
 	// setup light position
+	float const light_pos_scale((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode since 
 	glDisable(GL_LIGHT0);
 	glDisable(GL_LIGHT1);
 	glDisable(GL_LIGHT2);
-	set_gl_light_pos(GL_LIGHT0, sun_pos,  LIGHT_W_VAL);
-	set_gl_light_pos(GL_LIGHT1, moon_pos, LIGHT_W_VAL);
+	set_gl_light_pos(GL_LIGHT0, sun_pos*light_pos_scale,  LIGHT_W_VAL);
+	set_gl_light_pos(GL_LIGHT1, moon_pos*light_pos_scale, LIGHT_W_VAL);
 	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0); // reset attenuation to 1.0
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
