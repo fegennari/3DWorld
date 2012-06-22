@@ -493,7 +493,8 @@ public:
 			}
 			else {
 				cerr << "Error: Undefined entry '" << s << "' in object file " << filename << endl;
-				return 0;
+				read_to_newline(fp); // ignore this line
+				//return 0;
 			}
 		}
 		remove_excess_cap(v);
