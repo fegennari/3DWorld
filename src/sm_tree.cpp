@@ -73,12 +73,12 @@ void small_tree_group::add_tree(small_tree &st) {
 }
 
 
-void small_tree_group::finalize() {
+void small_tree_group::finalize(bool low_detail) {
 
-	vbo_manager.reserve_pts(4*N_PT_LEVELS*N_PT_RINGS*num_pine_trees);
+	vbo_manager.reserve_pts(4*(low_detail ? 2 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->calc_points(vbo_manager);
+		i->calc_points(vbo_manager, low_detail);
 	}
 }
 
@@ -184,7 +184,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
 			rand2_mix();
 			float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*signed_rand_float2());
 			float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*signed_rand_float2());
-			float const dist_test(get_rel_height(eval_one_surface_point((tds*(xpos+x0)-xoff2), (tds*(ypos+y0)-yoff2)), -zmax_est, zmax_est)); // 20ms
+			float const dist_test(get_rel_height(eval_one_surface_point((tds*(xpos+x0)-xoff2), (tds*(ypos+y0)-yoff2)), -zmax_est, zmax_est));
 			if (dist_test > (SM_TREE_AMT*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rand_float2())) continue; // tree density function test
 			float const height(rand_uniform2(0.4*tsize, tsize)), width(rand_uniform2(0.25*height, 0.35*height));
 			float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1) - 0.1*height); // 15ms
@@ -196,7 +196,6 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
 		}
 	}
 	sort_by_type();
-	finalize();
 }
 
 
@@ -266,8 +265,9 @@ void gen_small_trees() {
 	}
 	small_trees.clear_all();
 	small_trees.gen_trees(get_ext_x1(), get_ext_y1(), get_ext_x2(), get_ext_y2());
+	small_trees.finalize(0);
 	//PRINT_TIME("Gen");
-	small_trees.add_cobjs(); // 20ms
+	small_trees.add_cobjs();
 	//PRINT_TIME("Cobj");
 	cout << "small trees: " << small_trees.size() << endl;
 }
@@ -431,7 +431,7 @@ void small_tree::remove_cobjs() {
 }
 
 
-void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager) {
+void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_detail) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
 	if (vbo_mgr_ix >= 0) return; // points already calculated
@@ -439,6 +439,7 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager) {
 	float const ms(mesh_scale*mesh_scale2), rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
 	vector<vert_norm> points;
+	points.reserve(4*N_PT_LEVELS*N_PT_RINGS);
 
 	for (unsigned j = 0; j < N_PT_LEVELS; ++j) {
 		float const sz(0.5*(height0 + 0.03/ms)*((N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS));
@@ -450,36 +451,35 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager) {
 			add_rotated_quad_pts(points, theta, rd, z, center, scale);
 		}
 	}
+	if (low_detail) {
+		float z1(pos.z + height), z2(pos.z), r1(0.0);
+
+		for (vector<vert_norm>::const_iterator i = points.begin(); i != points.end(); ++i) {
+			r1 = max(r1, p2p_dist_xy(pos, i->v));
+			z1 = min(z1, i->v.z);
+			z2 = max(z2, i->v.z);
+		}
+		z1 -= 0.3*height;
+		z2 -= 0.1*height;
+		points.resize(0);
+
+		for (unsigned d = 0; d < 2; ++d) { // 2 quads: cross billboard simplified model
+			vector3d norm(zero_vector);
+			norm[d] = 1.0; // or use +z?
+			point pt;
+			pt[!d] = pos[!d];
+			pt[2]  = z2;
+			pt[d]  = pos[d] + r1;
+			points.push_back(vert_norm(pt, norm));
+			pt[d]  = pos[d] - r1;
+			points.push_back(vert_norm(pt, norm));
+			pt[2]  = z1;
+			points.push_back(vert_norm(pt, norm));
+			pt[d]  = pos[d] + r1;
+			points.push_back(vert_norm(pt, norm));
+		}
+	}
 	vbo_mgr_ix = vbo_manager.add_points(points, color);
-#if 0
-	float z1(pos.z + height), z2(pos.z), r1(0.0);
-
-	for (vector<vert_norm>::const_iterator i = points.begin(); i != points.end(); ++i) {
-		r1 = max(r1, p2p_dist_xy(pos, i->v));
-		z1 = min(z1, i->v.z);
-		z2 = max(z2, i->v.z);
-	}
-	z1 -= 0.3*height;
-	z2 -= 0.1*height;
-	points.resize(0);
-
-	for (unsigned d = 0; d < 2; ++d) { // 2 quads: cross billboard simplified model
-		vector3d norm(zero_vector);
-		norm[d] = 1.0; // or use +z?
-		point pt;
-		pt[!d] = pos[!d];
-		pt[2]  = z2;
-		pt[d]  = pos[d] + r1;
-		points.push_back(vert_norm(pt, norm));
-		pt[d]  = pos[d] - r1;
-		points.push_back(vert_norm(pt, norm));
-		pt[2]  = z1;
-		points.push_back(vert_norm(pt, norm));
-		pt[d]  = pos[d] + r1;
-		points.push_back(vert_norm(pt, norm));
-	}
-	vbo_manager.add_points(points, color);
-#endif
 }
 
 

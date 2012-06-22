@@ -40,7 +40,8 @@ float get_inf_terrain_fog_dist() {
 	return DRAW_DIST_TILES*get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE);
 }
 
-bool has_water () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
+bool is_water_enabled() {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
+bool trees_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (tree_mode & 2));}
 
 
 struct tile_xy_pair {
@@ -71,8 +72,7 @@ public:
 	tile_t() : tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {init_vbo_ids();}
 	~tile_t() {clear_vbo_tid(1,1);}
 	
-	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2),
-		init_tree_dxoff(0), init_tree_dyoff(0),
+	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_tree_dxoff(0), init_tree_dyoff(0),
 		tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0)
 	{
 		assert(size > 0);
@@ -92,6 +92,7 @@ public:
 	}
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
+	bool has_water() const {return (mzmin < water_plane_z);}
 	
 	point get_center() const {
 		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
@@ -221,6 +222,12 @@ public:
 		}
 	}
 
+	void apply_tree_ao_shadows(vector<vert_type_t> &data) { // should this generate a float or unsigned char shadow weight instead?
+		for (small_tree_group::const_iterator i = trees.begin(); i != trees.end(); ++i) {
+			// WRITE
+		}
+	}
+
 	void create_data(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
 		//RESET_TIME;
 		assert(zvals.size() == zvsize*zvsize);
@@ -247,6 +254,8 @@ public:
 				data[y*stride + x] = vert_norm_comp(v, get_norm(ix)*light_scale);
 			}
 		}
+		if (trees_enabled()) {apply_tree_ao_shadows(data);}
+
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			indices[i].resize(4*(size>>i)*(size>>i));
 			unsigned const step(1 << i);
@@ -261,7 +270,7 @@ public:
 				}
 			}
 		}
-		if (tree_mode & 2) {init_tree_draw();}
+		if (trees_enabled()) {init_tree_draw();}
 		//PRINT_TIME("Create Data");
 	}
 
@@ -359,6 +368,7 @@ public:
 			init_tree_dxoff = -xoff2;
 			init_tree_dyoff = -yoff2;
 			trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
+			trees.finalize(0); // FIXME: change LOD?
 		}
 		trees.vbo_manager.upload();
 	}
@@ -426,7 +436,7 @@ public:
 		glPopMatrix();
 		if (tid > 0) disable_textures_texgen();
 	}
-};
+}; // tile_t
 
 
 class tile_draw_t {
@@ -514,7 +524,7 @@ public:
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
-		s.add_uniform_float("water_plane_z", (has_water() ? wpz : zmin));
+		s.add_uniform_float("water_plane_z", (is_water_enabled() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 		if (blend_textures_in_shaders) setup_terrain_textures(s, 2, 0);
@@ -537,7 +547,10 @@ public:
 		}
 		shader_t s;
 		setup_mesh_draw_shaders(s, wpz, 1, reflection_pass);
-		if (world_mode == WMODE_INF_TERRAIN && show_fog && !DISABLE_WATER) draw_water_edge(wpz); // Note: doesn't take into account waves
+		
+		if (world_mode == WMODE_INF_TERRAIN && show_fog && is_water_enabled() && !reflection_pass) {
+			draw_water_edge(wpz); // Note: doesn't take into account waves
+		}
 		setup_mesh_lighting();
 		vector<pair<float, tile_t *> > to_draw;
 
@@ -559,17 +572,17 @@ public:
 		s.end_shader();
 		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
-		if (tree_mode & 2) {draw_trees(to_draw);}
+		if (trees_enabled()) {draw_trees(to_draw, reflection_pass);}
 		return zmin;
 	}
 
-	void draw_trees(vector<pair<float, tile_t *> > const &to_draw) {
+	void draw_trees(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
 		shader_t s;
 		colorRGBA orig_fog_color;
 
-		if (1 && !disable_shaders) { // shaders disabled for now, for performance reasons
+		if (!disable_shaders) {
 			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0);
+			orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0);
 			s.add_uniform_float("tex_scale_t", 5.0);
 		}
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
@@ -606,7 +619,7 @@ public:
 		if (it != tiles.end()) return it->second;
 		return NULL;
 	}
-};
+}; // tile_draw_t
 
 
 tile_draw_t terrain_tile_draw;

@@ -736,7 +736,7 @@ void draw_water_sides(int check_zvals) {
 void draw_water_edge(float zval) { // used for WM3 tiled terrain
 
 	glDepthMask(GL_FALSE);
-	select_texture(WHITE_TEX); // tex coords won't have any effect
+	select_texture(WHITE_TEX, 0); // tex coords won't have any effect
 	glTexCoord2f(0.0, 0.0); // but it doesn't hurt to set them
 	set_color(BLACK);
 	BLACK.do_glColor();

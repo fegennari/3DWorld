@@ -25,7 +25,7 @@ public:
 	vector3d get_rot_dir() const;
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
-	void calc_points(vbo_quad_block_manager_t &vbo_manager);
+	void calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_detail);
 	void draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager, vector3d const xlate=zero_vector) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
@@ -56,7 +56,7 @@ struct small_tree_group : public vector<small_tree> {
 		sort(begin(), end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
 	void add_tree(small_tree &st);
-	void finalize();
+	void finalize(bool low_detail);
 	void clear_all();
 	void add_cobjs();
 	void remove_cobjs();
