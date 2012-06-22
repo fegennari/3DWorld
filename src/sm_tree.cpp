@@ -20,6 +20,8 @@ bool const SMALL_TREE_COLL  = 1;
 bool const DRAW_COBJS       = 0; // for debugging
 bool const USE_BUMP_MAP     = 0;
 int  const NUM_SMALL_TREES  = 40000;
+unsigned const N_PT_LEVELS  = 6;
+unsigned const N_PT_RINGS   = 5;
 
 
 enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
@@ -61,6 +63,23 @@ int get_bark_tex_for_tree_type(int type) {
 colorRGBA get_tree_trunk_color(int type) {
 	assert(type < NUM_ST_TYPES);
 	return stt[type].c;
+}
+
+
+void small_tree_group::add_tree(small_tree &st) {
+
+	if (st.get_type() == T_PINE || st.get_type() == T_SH_PINE) ++num_pine_trees;
+	push_back(st);
+}
+
+
+void small_tree_group::finalize() {
+
+	vbo_manager.reserve_pts(4*N_PT_LEVELS*N_PT_RINGS*num_pine_trees);
+
+	for (iterator i = begin(); i != end(); ++i) {
+		i->calc_points(vbo_manager);
+	}
 }
 
 
@@ -177,6 +196,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
 		}
 	}
 	sort_by_type();
+	finalize();
 }
 
 
@@ -415,20 +435,18 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
 	if (vbo_mgr_ix >= 0) return; // points already calculated
-	unsigned const nlevels(6), nrings(5);
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
 	float const ms(mesh_scale*mesh_scale2), rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
 	vector<vert_norm> points;
-	points.reserve(4*nlevels*nrings); // 120
 
-	for (unsigned j = 0; j < nlevels; ++j) {
-		float const sz(0.5*(height0 + 0.03/ms)*((nlevels - j - 0.4)/(float)nlevels));
-		float const z((j + 1.8)*height0/(nlevels + 2.8) - rd*sz);
+	for (unsigned j = 0; j < N_PT_LEVELS; ++j) {
+		float const sz(0.5*(height0 + 0.03/ms)*((N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS));
+		float const z((j + 1.8)*height0/(N_PT_LEVELS + 2.8) - rd*sz);
 		vector3d const scale(sz, sz, sz);
 
-		for (unsigned k = 0; k < nrings; ++k) {
-			float const theta(TWO_PI*(3.3*j + k/(float)nrings) + theta0);
+		for (unsigned k = 0; k < N_PT_RINGS; ++k) {
+			float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0);
 			add_rotated_quad_pts(points, theta, rd, z, center, scale);
 		}
 	}

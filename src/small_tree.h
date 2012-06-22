@@ -47,17 +47,16 @@ struct small_tree_group : public vector<small_tree> {
 
 	vbo_quad_block_manager_t vbo_manager;
 	bool generated;
+	unsigned num_pine_trees;
 	
-	small_tree_group() : generated(0) {}
+	small_tree_group() : generated(0), num_pine_trees(0) {}
 	void sort_by_type() {sort(begin(), end());}
 
 	void sort_by_dist_to_camera() {
 		sort(begin(), end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
-	void add_tree(small_tree &st) {
-		st.calc_points(vbo_manager);
-		push_back(st);
-	}
+	void add_tree(small_tree &st);
+	void finalize();
 	void clear_all();
 	void add_cobjs();
 	void remove_cobjs();
