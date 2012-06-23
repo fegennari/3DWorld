@@ -11,6 +11,8 @@
 
 
 bool const DEBUG_TILES        = 0;
+bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
+bool const ENABLE_TREE_BFC    = 0; // faster but has popping artifacts
 int  const DISABLE_TEXTURES   = 0;
 int  const TILE_RADIUS        = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT     = 6; // WM3, in mesh sizes
@@ -223,8 +225,28 @@ public:
 	}
 
 	void apply_tree_ao_shadows(vector<vert_type_t> &data) { // should this generate a float or unsigned char shadow weight instead?
+		point const tree_off((init_dxoff - init_tree_dxoff)*DX_VAL, (init_dyoff - init_tree_dyoff)*DY_VAL, 0.0);
+
 		for (small_tree_group::const_iterator i = trees.begin(); i != trees.end(); ++i) {
-			// WRITE
+			point const pos(i->get_pos() + tree_off);
+			float const radius(i->get_pine_tree_radius());
+			int const xc((pos.x - xstart)/xstep), yc((pos.y - ystart)/ystep);
+			if (xc < 0 || yc < 0 || xc >= (int)stride || yc >= (int)stride) continue; // off the edge of the mesh (shouldn't occur)
+			int rval(max(int(radius/xstep), int(radius/ystep)) + 2);
+			rval = min(rval, min(xc, yc)); // clip to lower bounds
+			rval = min(rval, min((int)stride-xc-1, (int)stride-yc-1)); // clip to upper bounds
+			float const rval_inv(1.0/rval);
+			int const x1(xc-rval), y1(yc-rval), x2(xc+rval), y2(yc+rval);
+			assert(x1 >= 0 && y1 >= 0 && x2 < (int)stride && y2 < (int)stride);
+
+			for (int y = y1; y <= y2; ++y) {
+				for (int x = x1; x <= x2; ++x) {
+					float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
+					if (dist > rval) continue;
+					float const atten(0.6*dist*rval_inv);
+					UNROLL_3X(data[y*stride + x].n[i_] *= atten;);
+				}
+			}
 		}
 	}
 
@@ -254,8 +276,10 @@ public:
 				data[y*stride + x] = vert_norm_comp(v, get_norm(ix)*light_scale);
 			}
 		}
-		if (trees_enabled()) {apply_tree_ao_shadows(data);}
-
+		if (trees_enabled()) {
+			init_tree_draw();
+			apply_tree_ao_shadows(data);
+		}
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			indices[i].resize(4*(size>>i)*(size>>i));
 			unsigned const step(1 << i);
@@ -270,7 +294,6 @@ public:
 				}
 			}
 		}
-		if (trees_enabled()) {init_tree_draw();}
 		//PRINT_TIME("Create Data");
 	}
 
@@ -352,6 +375,7 @@ public:
 	float get_rel_dist_to_camera() const {
 		return (p2p_dist_xy(get_camera_pos(), get_center()) - radius)/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	}
+	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*get_tile_radius();}
 
 	bool update_range() { // if returns 0, tile will be deleted
 		float const dist(get_rel_dist_to_camera());
@@ -364,19 +388,16 @@ public:
 	}
 
 	void init_tree_draw() {
-		if (!trees.generated) {
-			init_tree_dxoff = -xoff2;
-			init_tree_dyoff = -yoff2;
-			trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
-		}
+		if (trees.generated) return; // already generate
+		init_tree_dxoff = -xoff2;
+		init_tree_dyoff = -yoff2;
+		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
 	}
 
 	void update_tree_draw() {
-		float const dist(get_rel_dist_to_camera()*get_tile_radius()); // in tiles
-		unsigned const desired_tlod((dist >= 4) ? 1 : 2);
+		unsigned const desired_tlod((ENABLE_TREE_LOD && get_dist_to_camera_in_tiles() >= 4) ? 1 : 2);
 
 		if (tree_lod_level != desired_tlod) {
-			//cout << "Change tree LOD from " << tree_lod_level << " to " << desired_tlod << endl;
 			tree_lod_level = desired_tlod;
 			trees.clear_vbo_manager();
 			trees.finalize(tree_lod_level == 1);
@@ -391,7 +412,13 @@ public:
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
 		if (draw_branches) {trees.draw_branches(0, xlate);}
-		if (draw_leaves  ) {trees.draw_leaves  (0, camera_pdu.sphere_completely_visible_test(get_center(), radius), xlate);}
+		
+		if (draw_leaves) {
+			bool const cull(ENABLE_TREE_BFC && get_dist_to_camera_in_tiles() >= 4);
+			if (cull) {glEnable (GL_CULL_FACE);}
+			trees.draw_leaves(0, camera_pdu.sphere_completely_visible_test(get_center(), radius), xlate);
+			if (cull) {glDisable(GL_CULL_FACE);}
+		}
 		glPopMatrix();
 	}
 
@@ -426,7 +453,7 @@ public:
 			}
 		}
 		unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
-		float dist(get_rel_dist_to_camera()*get_tile_radius()); // in tiles
+		float dist(get_dist_to_camera_in_tiles());
 
         while (dist > (reflection_pass ? 1.0 : 2.0) && lod_level+1 < NUM_LODS) {
             dist /= 2;

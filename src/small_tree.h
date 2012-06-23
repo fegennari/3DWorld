@@ -31,7 +31,8 @@ public:
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}
-	int get_type()  const {return type;}
+	int get_type () const {return type;}
+	float get_pine_tree_radius() const {return 1.25*width*height;}
 
 	struct comp_by_type_dist {
 		point pos;

@@ -413,7 +413,7 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 	case T_PINE: // pine tree
 	case T_SH_PINE: // short pine tree
 		// Note: smaller than the actual pine tree render at the base so that it's easier for the player to walk under pine trees
-		coll_id.push_back(add_coll_cylinder((pos + ((type == T_PINE) ? dir*(0.35*height) : all_zeros)), (pos + dir*height), 1.25*width*height, 0.0, cp, -1, 1));
+		coll_id.push_back(add_coll_cylinder((pos + ((type == T_PINE) ? dir*(0.35*height) : all_zeros)), (pos + dir*height), get_pine_tree_radius(), 0.0, cp, -1, 1));
 		break;
 	case T_DECID: // decidious tree
 		coll_id.push_back(add_coll_sphere((pos + dir*(0.75*height)), 1.3*width, cp, -1, 1));
