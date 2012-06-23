@@ -80,6 +80,8 @@ class vbo_quad_block_manager_t {
 	unsigned vbo;
 
 public:
+	vector<vert_norm> temp_points;
+
 	vbo_quad_block_manager_t() : vbo(0) {clear();}
 	~vbo_quad_block_manager_t() {clear_vbo();}
 	void reserve_pts(unsigned num) {pts.reserve(num);}

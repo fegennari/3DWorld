@@ -438,8 +438,8 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
 	float const ms(mesh_scale*mesh_scale2), rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
-	vector<vert_norm> points;
-	points.reserve(4*N_PT_LEVELS*N_PT_RINGS);
+	vector<vert_norm> &points(vbo_manager.temp_points);
+	points.resize(0);
 
 	for (unsigned j = 0; j < N_PT_LEVELS; ++j) {
 		float const sz(0.5*(height0 + 0.03/ms)*((N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS));

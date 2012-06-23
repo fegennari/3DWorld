@@ -22,6 +22,7 @@ y 4.0
 #t 0 0 1.0  s 1 2  M 0  m 0.01  O ../models/FlyingSpaghettiMonster.obj 4 0 0 0
 #t 0 0 0.0  M0  m 0.004 O ../models/RenderStuff_Big_forged_golden_mirror.obj 4 0 0 0
 #t 0 0 0.0  s 1 2 M0  m 10.0 O ../models/head/head.obj 4 1 0 0
-t 0 0 0  s 1 2  M 0  m 0.01  O "../models/starship/Insignia Class Starship.model3d" 4 0 0 0
+#t 0 0 0  s 1 2  M 0  m 0.01  O "../models/starship/Insignia Class Starship.model3d" 4 0 0 0
+t 0 0 0  s 1 2  M 0  m 0.00002  O ../models/powerplant/powerplant.model3d 4 0 0 1
 
 

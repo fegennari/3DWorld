@@ -658,8 +658,8 @@ public:
 		float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
 		unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
 		float rdeg(30.0);
-		vector<vert_norm> points;
-		points.reserve(4*nlevels*nrings);
+		vector<vert_norm> &points(plant_vbo_manager.temp_points);
+		points.resize(0);
 
 		for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
 			float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));

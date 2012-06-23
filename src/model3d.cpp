@@ -772,7 +772,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (alpha_tid >= 0) enable_blend();
 		float const spec_val((ks.R + ks.G + ks.B)/3.0);
 		float const min_alpha((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0);
-		if (ns > 0.0) {set_specular(spec_val, ns);} // ns==0 => undefined?
+		if (ns > 0.0) {set_specular(spec_val, ns);} // ns<=0 is undefined?
 		set_color_e(colorRGBA(ke, alpha));
 
 		if (shader.is_setup()) {
