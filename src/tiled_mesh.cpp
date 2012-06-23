@@ -59,7 +59,7 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 class tile_t {
 
 	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_tree_dxoff, init_tree_dyoff;
-	unsigned tid, vbo, ivbo[NUM_LODS], size, stride, zvsize, base_tsize, gen_tsize;
+	unsigned tid, vbo, ivbo[NUM_LODS], size, stride, zvsize, base_tsize, gen_tsize, tree_lod_level;
 	float radius, mzmin, mzmax, xstart, ystart, xstep, ystep;
 	vector<float> zvals;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
@@ -69,11 +69,11 @@ class tile_t {
 public:
 	typedef vert_norm_comp vert_type_t;
 
-	tile_t() : tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {init_vbo_ids();}
+	tile_t() : tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0), tree_lod_level(0) {init_vbo_ids();}
 	~tile_t() {clear_vbo_tid(1,1);}
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_tree_dxoff(0), init_tree_dyoff(0),
-		tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0)
+		tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), tree_lod_level(0)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -368,7 +368,18 @@ public:
 			init_tree_dxoff = -xoff2;
 			init_tree_dyoff = -yoff2;
 			trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
-			trees.finalize(0); // FIXME: change LOD?
+		}
+	}
+
+	void update_tree_draw() {
+		float const dist(get_rel_dist_to_camera()*get_tile_radius()); // in tiles
+		unsigned const desired_tlod((dist >= 4) ? 1 : 2);
+
+		if (tree_lod_level != desired_tlod) {
+			//cout << "Change tree LOD from " << tree_lod_level << " to " << desired_tlod << endl;
+			tree_lod_level = desired_tlod;
+			trees.clear_vbo_manager();
+			trees.finalize(tree_lod_level == 1);
 		}
 		trees.vbo_manager.upload();
 	}
@@ -561,7 +572,8 @@ public:
 			float const dist(i->second->get_rel_dist_to_camera());
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, i->second->get_zmin());
-			if (i->second->is_visible()) {to_draw.push_back(make_pair(dist, i->second));}
+			if (!i->second->is_visible()) continue;
+			to_draw.push_back(make_pair(dist, i->second));
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 
@@ -577,6 +589,9 @@ public:
 	}
 
 	void draw_trees(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			if (trees_enabled()) {to_draw[i].second->update_tree_draw();}
+		}
 		shader_t s;
 		colorRGBA orig_fog_color;
 

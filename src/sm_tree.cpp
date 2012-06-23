@@ -83,10 +83,19 @@ void small_tree_group::finalize(bool low_detail) {
 }
 
 
+void small_tree_group::clear_vbo_manager() {
+	
+	for (iterator i = begin(); i != end(); ++i) {
+		i->clear_vbo_mgr_ix();
+	}
+	vbo_manager.clear();
+}
+
+
 void small_tree_group::clear_all() {
 
 	clear();
-	vbo_manager.clear();
+	clear_vbo_manager();
 	generated = 0;
 }
 
@@ -465,7 +474,7 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 
 		for (unsigned d = 0; d < 2; ++d) { // 2 quads: cross billboard simplified model
 			vector3d norm(zero_vector);
-			norm[d] = 1.0; // or use +z?
+			norm[d] = norm[2] = 1.0/SQRT2; // partially facing up and partially facing in that direction
 			point pt;
 			pt[!d] = pos[!d];
 			pt[2]  = z2;
