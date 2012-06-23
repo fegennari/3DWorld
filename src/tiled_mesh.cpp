@@ -43,7 +43,7 @@ float get_inf_terrain_fog_dist() {
 }
 
 bool is_water_enabled() {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
-bool trees_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (tree_mode & 2));}
+bool trees_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (tree_mode & 2) && vegetation > 0.0);}
 
 
 struct tile_xy_pair {
@@ -386,6 +386,9 @@ public:
 	bool is_visible() const {
 		return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());
 	}
+	bool trees_are_distant() const {
+		return (get_dist_to_camera_in_tiles() >= max(1.0, 5.0*calc_tree_size()));
+	}
 
 	void init_tree_draw() {
 		if (trees.generated) return; // already generate
@@ -395,7 +398,7 @@ public:
 	}
 
 	void update_tree_draw() {
-		unsigned const desired_tlod((ENABLE_TREE_LOD && get_dist_to_camera_in_tiles() >= 4) ? 1 : 2);
+		unsigned const desired_tlod((ENABLE_TREE_LOD && trees_are_distant()) ? 1 : 2);
 
 		if (tree_lod_level != desired_tlod) {
 			tree_lod_level = desired_tlod;
@@ -414,7 +417,7 @@ public:
 		if (draw_branches) {trees.draw_branches(0, xlate);}
 		
 		if (draw_leaves) {
-			bool const cull(ENABLE_TREE_BFC && get_dist_to_camera_in_tiles() >= 4);
+			bool const cull(ENABLE_TREE_BFC && trees_are_distant());
 			if (cull) {glEnable (GL_CULL_FACE);}
 			trees.draw_leaves(0, camera_pdu.sphere_completely_visible_test(get_center(), radius), xlate);
 			if (cull) {glDisable(GL_CULL_FACE);}

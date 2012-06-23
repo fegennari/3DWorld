@@ -70,5 +70,8 @@ struct small_tree_group : public vector<small_tree> {
 };
 
 
+float calc_tree_size();
+
+
 #endif // _SMALL_TREE_H_
 

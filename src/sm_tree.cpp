@@ -172,14 +172,17 @@ void small_tree_group::draw_leaves(bool shadow_only, bool draw_all_pine, vector3
 }
 
 
+float calc_tree_scale() {return (Z_SCENE_SIZE*mesh_scale)/16.0;}
+float calc_tree_size () {return tree_size*SM_TREE_SIZE*Z_SCENE_SIZE/(calc_tree_scale()*mesh_scale2);}
+
+
 void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
 
 	if (vegetation == 0.0) return;
 	generated = 1;
-	float const tscale((Z_SCENE_SIZE*mesh_scale)/16.0);
+	float const tscale(calc_tree_scale()), tsize(calc_tree_size()); // random tree generation based on transformed mesh height function
 	int const ntrees(int(min(1.0f, vegetation*(tscale*mesh_scale2)*(tscale*mesh_scale2)/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
-	float const tsize(tree_size*SM_TREE_SIZE*Z_SCENE_SIZE/(tscale*mesh_scale2)); // random tree generation based on transformed mesh height function
 	float const x0(TREE_DIST_MH_S*X_SCENE_SIZE + xoff2*DX_VAL), y0(TREE_DIST_MH_S*Y_SCENE_SIZE + yoff2*DY_VAL);
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)*mesh_scale2);
 	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), skip_val(max(1, int(1.0/sqrt((mesh_scale*mesh_scale2)))));
@@ -461,30 +464,37 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 		}
 	}
 	if (low_detail) {
-		float z1(pos.z + height), z2(pos.z), r1(0.0);
+		float z1(pos.z + height), z2(pos.z), r1(0.0), nz_avg(0.0);
 
 		for (vector<vert_norm>::const_iterator i = points.begin(); i != points.end(); ++i) {
+			nz_avg += i->n.z;
 			r1 = max(r1, p2p_dist_xy(pos, i->v));
 			z1 = min(z1, i->v.z);
 			z2 = max(z2, i->v.z);
 		}
+		nz_avg /= points.size();
 		z1 -= 0.3*height;
 		z2 -= 0.1*height;
 		points.resize(0);
 
 		for (unsigned d = 0; d < 2; ++d) { // 2 quads: cross billboard simplified model
-			vector3d norm(zero_vector);
-			norm[d] = norm[2] = 1.0/SQRT2; // partially facing up and partially facing in that direction
+			//for (unsigned e = 0; e < 2; ++e) {
+			//float const sign((get_camera_pos()[d] < pos[d]) ? -1.0 : 1.0);
+			//float const sign(e ? -1.0 : 1.0);
+			float const sign(1.0);
+			vector3d norm(zero_vector); // partially facing up and partially facing towards the camera
+			norm[d] = -sqrt(1.0 - nz_avg*nz_avg);
+			norm[2] = nz_avg;
 			point pt;
 			pt[!d] = pos[!d];
 			pt[2]  = z2;
-			pt[d]  = pos[d] + r1;
+			pt[d]  = pos[d] + r1*sign;
 			points.push_back(vert_norm(pt, norm));
-			pt[d]  = pos[d] - r1;
+			pt[d]  = pos[d] - r1*sign;
 			points.push_back(vert_norm(pt, norm));
 			pt[2]  = z1;
 			points.push_back(vert_norm(pt, norm));
-			pt[d]  = pos[d] + r1;
+			pt[d]  = pos[d] + r1*sign;
 			points.push_back(vert_norm(pt, norm));
 		}
 	}
