@@ -729,6 +729,36 @@ public:
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
 
 
+class scenery_group {
+
+	vector<rock_shape3d> rock_shapes;
+	vector<surface_rock> surface_rocks;
+	vector<s_rock>       rocks;
+	vector<s_log>        logs;
+	vector<s_stump>      stumps;
+	vector<s_plant>      plants;
+	vbo_quad_block_manager_t plant_vbo_manager;
+
+public:
+	void clear() {
+		free_scenery();
+		rock_shapes.clear();
+		surface_rocks.clear();
+		rocks.clear();
+		logs.clear();
+		stumps.clear();
+		plants.clear();
+		plant_vbo_manager.clear();
+	}
+	void add_plant(point const &pos, float height, float radius, int type, int calc_z) {
+		assert(height > 0.0 && radius > 0.0);
+		plants.push_back(s_plant());
+		plants.back().create2(pos, height, radius, type, calc_z);
+		has_scenery2 = 1;
+	}
+};
+
+
 vector<rock_shape3d> rock_shapes;
 vector<surface_rock> surface_rocks;
 vector<s_rock>       rocks;
