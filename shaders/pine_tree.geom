@@ -32,10 +32,10 @@ void main()
 				pts[i] = pos + vec4(sz*(sin(tv2)+s), sz*(cos(tv2)+c), rd*sz*(-1.0+2.0*(i>>1))+z, 0.0);
 			}
 			normal = normalize(gl_NormalMatrix * cross((pts[1] - pts[0]).xyz, (pts[2] - pts[1]).xyz));
-			gl_Position = gl_ModelViewProjectionMatrix * pts[0]; gl_TexCoord[0].st = vec2(0.0, 1.0); EmitVertex();
-			gl_Position = gl_ModelViewProjectionMatrix * pts[1]; gl_TexCoord[0].st = vec2(0.0, 0.0); EmitVertex();
-			gl_Position = gl_ModelViewProjectionMatrix * pts[2]; gl_TexCoord[0].st = vec2(1.0, 1.0); EmitVertex();
-			gl_Position = gl_ModelViewProjectionMatrix * pts[3]; gl_TexCoord[0].st = vec2(1.0, 0.0); EmitVertex();
+			gl_Position = gl_ModelViewProjectionMatrix * pts[0]; gl_FogFragCoord = length(gl_ModelViewMatrix * pts[0]); gl_TexCoord[0].st = vec2(0.0, 0.0); EmitVertex();
+			gl_Position = gl_ModelViewProjectionMatrix * pts[1]; gl_FogFragCoord = length(gl_ModelViewMatrix * pts[1]); gl_TexCoord[0].st = vec2(1.0, 0.0); EmitVertex();
+			gl_Position = gl_ModelViewProjectionMatrix * pts[3]; gl_FogFragCoord = length(gl_ModelViewMatrix * pts[3]); gl_TexCoord[0].st = vec2(0.0, 1.0); EmitVertex();
+			gl_Position = gl_ModelViewProjectionMatrix * pts[2]; gl_FogFragCoord = length(gl_ModelViewMatrix * pts[2]); gl_TexCoord[0].st = vec2(1.0, 1.0); EmitVertex();
 			EndPrimitive();
 		}
 	}

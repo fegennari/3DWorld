@@ -138,19 +138,19 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate) con
 	BLACK.do_glColor();
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(1, shadow_only, 0, vbo_manager, xlate);
+		i->draw(1, shadow_only, 0, vbo_manager, 0, xlate);
 	}
 }
 
 
-void small_tree_group::draw_leaves(bool shadow_only, bool draw_all_pine, vector3d const xlate) const {
+void small_tree_group::draw_leaves(bool shadow_only, bool draw_all_pine, bool use_pine_leaf_gs, vector3d const xlate) const {
 
 	set_lighted_sides(2);
 	enable_blend();
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
 
-	if (draw_all_pine) {
+	if (draw_all_pine && !use_pine_leaf_gs) {
 		vbo_manager.begin_render();
 		select_texture(stt[T_PINE].leaf_tid);
 		vbo_manager.render_all();
@@ -164,7 +164,7 @@ void small_tree_group::draw_leaves(bool shadow_only, bool draw_all_pine, vector3
 				select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
 				if (is_pine) {vbo_manager.begin_render();}
 			}
-			i->draw(2, shadow_only, (size() < 100), vbo_manager, xlate); // only cull pine tree leaves if there aren't too many
+			i->draw(2, shadow_only, (size() < 100), vbo_manager, use_pine_leaf_gs, xlate); // only cull pine tree leaves if there aren't too many
 		}
 	}
 	vbo_manager.end_render();
@@ -505,7 +505,7 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 }
 
 
-void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager, vector3d const xlate) const {
+void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager, bool use_pine_leaf_gs, vector3d const xlate) const {
 
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
@@ -554,8 +554,14 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_m
 	}
 	if (mode & 2) { // leaves
 		if (pine_tree) { // 30 quads per tree
-			assert(vbo_mgr_ix >= 0);
-			vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
+			if (use_pine_leaf_gs) {
+				float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
+				tree_scenery_pld.add_pt((pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)) + xlate), vector3d(height0, 0.0, 0.0), color);
+			}
+			else {
+				assert(vbo_mgr_ix >= 0);
+				vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
+			}
 		}
 		else { // palm or decidious
 			set_color(color);

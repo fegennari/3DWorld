@@ -13,6 +13,7 @@
 bool const DEBUG_TILES        = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
 bool const ENABLE_TREE_BFC    = 0; // faster but has popping artifacts
+bool const USE_TREE_GS        = 0;
 int  const DISABLE_TEXTURES   = 0;
 int  const TILE_RADIUS        = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT     = 6; // WM3, in mesh sizes
@@ -25,7 +26,7 @@ float const DELETE_DIST_TILES = 2.0;
 
 extern bool disable_shaders;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, vegetation, relh_adj_tex;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
@@ -419,7 +420,7 @@ public:
 		if (draw_leaves) {
 			bool const cull(ENABLE_TREE_BFC && trees_are_distant());
 			if (cull) {glEnable (GL_CULL_FACE);}
-			trees.draw_leaves(0, camera_pdu.sphere_completely_visible_test(get_center(), radius), xlate);
+			trees.draw_leaves(0, camera_pdu.sphere_completely_visible_test(get_center(), radius), USE_TREE_GS, xlate);
 			if (cull) {glDisable(GL_CULL_FACE);}
 		}
 		glPopMatrix();
@@ -647,9 +648,15 @@ public:
 			s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 			s.set_bool_prefix("two_sided_lighting", 1, 1); // FS
 			s.setup_enabled_lights(2);
-			s.set_vert_shader("pine_tree");
 			s.set_frag_shader("linear_fog.part+ads_lighting.part*+pine_tree");
-			//s.set_geom_shader("pine_tree", GL_POINTS, GL_TRIANGLE_STRIP, 120); // actually outputs quads
+
+			if (USE_TREE_GS) {
+				s.set_vert_shader("pine_tree_gs");
+				s.set_geom_shader("pine_tree", GL_POINTS, GL_TRIANGLE_STRIP, 120); // actually outputs quads
+			}
+			else {
+				s.set_vert_shader("pine_tree");
+			}
 			s.begin_shader();
 			s.setup_fog_scale();
 			s.add_uniform_int("tex0", 0);
@@ -658,6 +665,10 @@ public:
 		}
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
 			to_draw[i].second->draw_trees(0, 1);
+		}
+		if (USE_TREE_GS) {
+			s.add_uniform_float("mesh_scale", mesh_scale*mesh_scale2);
+			tree_scenery_pld.draw_and_clear();
 		}
 		if (s.is_setup()) {s.end_shader();}
 	}
