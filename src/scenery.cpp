@@ -528,7 +528,7 @@ public:
 		float const sz(max(length, max(radius, radius2)));
 		point const center((pos + pt2)*0.5);
 		if (type == 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
-		colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type)*get_shadowed_color(center, sz));
+		colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
 		float const dist(distance_to_camera(pos));
 
 		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
@@ -591,7 +591,7 @@ public:
 		float const sz(max(height, max(radius, radius2)));
 		point const center(pos.x, pos.y, (pos.z + 0.5*height));
 		if (type == 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
-		colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type)*get_shadowed_color(center, sz));
+		colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
 		float const dist(distance_to_camera(pos));
 
 		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line

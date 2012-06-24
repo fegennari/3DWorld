@@ -9,6 +9,9 @@
 #include "draw_utils.h"
 
 
+enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
+
+
 class small_tree { // size = 81 (82)
 
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine

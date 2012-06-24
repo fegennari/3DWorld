@@ -24,8 +24,6 @@ unsigned const N_PT_LEVELS  = 6;
 unsigned const N_PT_RINGS   = 5;
 
 
-enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
-
 small_tree_group small_trees;
 pt_line_drawer tree_scenery_pld;
 
@@ -60,9 +58,14 @@ int get_bark_tex_for_tree_type(int type) {
 	return stt[type].bark_tid;
 }
 
-colorRGBA get_tree_trunk_color(int type) {
+colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture) {
 	assert(type < NUM_ST_TYPES);
-	return stt[type].c;
+	colorRGBA c(stt[type].c);
+	
+	if (modulate_with_texture && stt[type].bark_tid >= 0) {
+		return c.modulate_with(texture_color(stt[type].bark_tid));
+	}
+	return c;
 }
 
 

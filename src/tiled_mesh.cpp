@@ -633,6 +633,12 @@ public:
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
 			to_draw[i].second->draw_trees(1, 0);
 		}
+		set_color(get_tree_trunk_color(T_PINE, 1)); // all a constant color
+		select_texture(WHITE_TEX, 0); // enable=0
+		if (s.is_setup()) s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+		tree_scenery_pld.draw_and_clear();
+		if (s.is_setup()) s.add_uniform_float("base_color_scale", 1.0);
+
 		if (s.is_setup()) {
 			s.add_uniform_float("tex_scale_t", 1.0);
 			s.end_shader();
@@ -650,9 +656,6 @@ public:
 			s.add_uniform_float("min_alpha", 0.75);
 			check_gl_error(302);
 		}
-		select_texture(WHITE_TEX, 0); // enable=0
-		tree_scenery_pld.draw_and_clear(); // FIXME: draw with material properties, not colors, and move up
-
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
 			to_draw[i].second->draw_trees(0, 1);
 		}
