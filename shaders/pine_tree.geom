@@ -1,7 +1,6 @@
 // input: point.xyz, height, color
 // output: 30 pine tree quads
 uniform float mesh_scale = 1.0;
-varying in float height;
 varying out vec3 normal;
 
 const int N_PT_LEVELS = 6;
@@ -12,9 +11,10 @@ const float PI = 3.14159;
 void main()
 {
 	gl_FrontColor = gl_FrontColorIn[0]; // all colors are the same
-	vec4 pos = gl_PositionIn[0]; // center of the tree
-	float SQRT2  = sqrt(2.0);
-	float theta0 = (int(1.0E6*height)%360)*(PI/180.0); // pseudo-random rotation
+	vec4 pos      = gl_PositionIn[0]; // center of the tree
+	float height  = gl_TexCoordIn[0][7].s;
+	float SQRT2   = sqrt(2.0);
+	float theta0  = (int(1.0E6*height)%360)*(PI/180.0); // pseudo-random rotation
 
 	for (int j = 0; j < N_PT_LEVELS; ++j) {
 		float sz = 0.5*(height + 0.03/mesh_scale)*((N_PT_LEVELS - j - 0.4)/float(N_PT_LEVELS));

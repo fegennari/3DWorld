@@ -648,9 +648,10 @@ public:
 			s.setup_fog_scale();
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_float("min_alpha", 0.75);
+			check_gl_error(302);
 		}
 		select_texture(WHITE_TEX, 0); // enable=0
-		tree_scenery_pld.draw_and_clear();
+		tree_scenery_pld.draw_and_clear(); // FIXME: draw with material properties, not colors, and move up
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
 			to_draw[i].second->draw_trees(0, 1);
