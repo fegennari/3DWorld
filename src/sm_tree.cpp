@@ -481,23 +481,19 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 		points.resize(0);
 
 		for (unsigned d = 0; d < 2; ++d) { // 2 quads: cross billboard simplified model
-			//for (unsigned e = 0; e < 2; ++e) {
-			//float const sign((get_camera_pos()[d] < pos[d]) ? -1.0 : 1.0);
-			//float const sign(e ? -1.0 : 1.0);
-			float const sign(1.0);
 			vector3d norm(zero_vector); // partially facing up and partially facing towards the camera
 			norm[d] = -sqrt(1.0 - nz_avg*nz_avg);
 			norm[2] = nz_avg;
 			point pt;
 			pt[!d] = pos[!d];
 			pt[2]  = z2;
-			pt[d]  = pos[d] + r1*sign;
+			pt[d]  = pos[d] + r1;
 			points.push_back(vert_norm(pt, norm));
-			pt[d]  = pos[d] - r1*sign;
+			pt[d]  = pos[d] - r1;
 			points.push_back(vert_norm(pt, norm));
 			pt[2]  = z1;
 			points.push_back(vert_norm(pt, norm));
-			pt[d]  = pos[d] + r1*sign;
+			pt[d]  = pos[d] + r1;
 			points.push_back(vert_norm(pt, norm));
 		}
 	}
@@ -554,7 +550,7 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_m
 	}
 	if (mode & 2) { // leaves
 		if (pine_tree) { // 30 quads per tree
-			if (use_pine_leaf_gs) {
+			if (use_pine_leaf_gs) { // unused/incorrect
 				float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
 				tree_scenery_pld.add_pt((pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)) + xlate), vector3d(height0, 0.0, 0.0), color);
 			}

@@ -13,7 +13,6 @@
 bool const DEBUG_TILES        = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
 bool const ENABLE_TREE_BFC    = 0; // faster but has popping artifacts
-bool const USE_TREE_GS        = 0;
 int  const DISABLE_TEXTURES   = 0;
 int  const TILE_RADIUS        = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT     = 6; // WM3, in mesh sizes
@@ -420,7 +419,7 @@ public:
 		if (draw_leaves) {
 			bool const cull(ENABLE_TREE_BFC && trees_are_distant());
 			if (cull) {glEnable (GL_CULL_FACE);}
-			trees.draw_leaves(0, camera_pdu.sphere_completely_visible_test(get_center(), radius), USE_TREE_GS, xlate);
+			trees.draw_leaves(0, camera_pdu.sphere_completely_visible_test(get_center(), radius), 0, xlate);
 			if (cull) {glDisable(GL_CULL_FACE);}
 		}
 		glPopMatrix();
@@ -643,33 +642,26 @@ public:
 		if (s.is_setup()) {
 			s.add_uniform_float("tex_scale_t", 1.0);
 			s.end_shader();
-			s.set_prefix("#define USE_LIGHT_COLORS",  1); // FS
+			s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
+			s.set_prefix("#define USE_GOOD_SPECULAR", 1); // VS
 			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
-			s.set_bool_prefix("two_sided_lighting", 1, 1); // FS
 			s.setup_enabled_lights(2);
-			s.set_frag_shader("linear_fog.part+ads_lighting.part*+pine_tree");
-
-			if (USE_TREE_GS) {
-				s.set_vert_shader("pine_tree_gs");
-				s.set_geom_shader("pine_tree", GL_POINTS, GL_TRIANGLE_STRIP, 120); // actually outputs quads
-			}
-			else {
-				s.set_vert_shader("pine_tree");
-			}
+			s.set_vert_shader("ads_lighting.part*+pine_tree");
+			s.set_frag_shader("linear_fog.part+pine_tree");
+			//s.set_geom_shader("pine_tree", GL_POINTS, GL_TRIANGLE_STRIP, 120); // actually outputs quads
 			s.begin_shader();
 			s.setup_fog_scale();
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_float("min_alpha", 0.75);
 			check_gl_error(302);
 		}
+		set_specular(0.2, 8.0);
+
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
+			s.add_uniform_float("camera_facing_scale", (to_draw[i].second->trees_are_distant() ? 1.0 : 0.0));
 			to_draw[i].second->draw_trees(0, 1);
 		}
-		if (USE_TREE_GS) {
-			s.add_uniform_float("mesh_scale", mesh_scale*mesh_scale2);
-			tree_scenery_pld.draw_and_clear();
-		}
+		set_specular(0.0, 1.0);
 		if (s.is_setup()) {s.end_shader();}
 	}
 
