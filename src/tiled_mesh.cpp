@@ -634,23 +634,28 @@ public:
 			to_draw[i].second->draw_trees(1, 0);
 		}
 		if (s.is_setup()) {
+			s.add_uniform_float("tex_scale_t", 1.0);
 			s.end_shader();
 			s.set_prefix("#define USE_LIGHT_COLORS",  1); // FS
 			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1);
-			s.add_uniform_float("tex_scale_t", 1.0);
-			s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+			s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
+			s.set_bool_prefix("two_sided_lighting", 1, 1); // FS
+			s.setup_enabled_lights(2);
+			s.set_vert_shader("pine_tree");
+			s.set_frag_shader("linear_fog.part+ads_lighting.part*+pine_tree");
+			//s.set_geom_shader("pine_tree", GL_POINTS, GL_TRIANGLE_STRIP, 120); // actually outputs quads
+			s.begin_shader();
+			s.setup_fog_scale();
+			s.add_uniform_int("tex0", 0);
+			s.add_uniform_float("min_alpha", 0.75);
 		}
 		select_texture(WHITE_TEX, 0); // enable=0
-		tree_scenery_pld.draw_and_clear(); // FIXME: colors/normals are off?
+		tree_scenery_pld.draw_and_clear();
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
 			to_draw[i].second->draw_trees(0, 1);
 		}
-		if (s.is_setup()) {
-			s.add_uniform_float("base_color_scale", 1.0);
-			end_smoke_shaders(s, orig_fog_color);
-		}
+		if (s.is_setup()) {s.end_shader();}
 	}
 
 	void clear_vbos_tids(bool vclear, bool tclear) {

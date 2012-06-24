@@ -81,7 +81,9 @@ void main()
 			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha
 		} // else exiting ray in back surface - ignore for now since we don't refract the ray
 	}
+#ifndef NO_ALPHA_TEST
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
+#endif
 	vec3 lit_color = gl_Color.rgb*base_color_scale; // base color (with some lighting)
 	add_indir_lighting(lit_color);
 	
