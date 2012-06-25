@@ -23,7 +23,6 @@ float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 2.0;
 
 
-extern bool disable_shaders;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, vegetation, relh_adj_tex;
 extern point sun_pos, moon_pos;
@@ -411,15 +410,22 @@ public:
 
 	unsigned num_trees() const {return trees.size();}
 
-	void draw_trees(bool draw_branches, bool draw_leaves) const {
+	void draw_trees(vector<point> &trunk_pts, bool draw_branches, bool draw_leaves) const {
 		glPushMatrix();
-		bool const all_visible(camera_pdu.sphere_completely_visible_test(get_center(), radius));
+		bool const distant(trees_are_distant()), all_visible(camera_pdu.sphere_completely_visible_test(get_center(), radius));
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
-		if (draw_branches) {trees.draw_branches(0, all_visible, xlate);}
 		
+		if (draw_branches) {
+			if (distant) {
+				trees.add_trunk_pts(xlate, trunk_pts);
+			}
+			else {
+				trees.draw_branches(0, all_visible, xlate);
+			}
+		}
 		if (draw_leaves) {
-			bool const cull(ENABLE_TREE_BFC && trees_are_distant()), draw_all(use_low_tree_detail() || all_visible);
+			bool const cull(ENABLE_TREE_BFC && distant), draw_all(use_low_tree_detail() || all_visible);
 			if (cull) {glEnable (GL_CULL_FACE);}
 			trees.draw_leaves(0, draw_all, xlate);
 			if (cull) {glDisable(GL_CULL_FACE);}
@@ -486,6 +492,7 @@ class tile_draw_t {
 
 	typedef map<tile_xy_pair, tile_t*> tile_map;
 	tile_map tiles;
+	vector<point> tree_trunk_pts;
 
 public:
 	tile_draw_t() {
@@ -498,6 +505,7 @@ public:
 			delete i->second;
 		}
 		tiles.clear();
+		tree_trunk_pts.clear();
 	}
 
 	void update() {
@@ -625,48 +633,55 @@ public:
 			if (trees_enabled()) {to_draw[i].second->update_tree_draw();}
 		}
 		shader_t s;
-		colorRGBA orig_fog_color;
-
-		if (!disable_shaders) {
-			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0);
-			s.add_uniform_float("tex_scale_t", 5.0);
-		}
+		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0));
+		s.add_uniform_float("tex_scale_t", 5.0);
 		set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
-			to_draw[i].second->draw_trees(1, 0);
+			to_draw[i].second->draw_trees(tree_trunk_pts, 1, 0);
 		}
-		set_color(get_tree_trunk_color(T_PINE, 1)); // all a constant color
+		colorRGBA const trunk_textured_color(get_tree_trunk_color(T_PINE, 1));
+		set_color(trunk_textured_color); // all a constant color
 		select_texture(WHITE_TEX, 0); // enable=0
-		if (s.is_setup()) s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+		s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
 		tree_scenery_pld.draw_and_clear();
-		if (s.is_setup()) s.add_uniform_float("base_color_scale", 1.0);
+		s.add_uniform_float("base_color_scale", 1.0);
 
-		if (s.is_setup()) {
-			s.add_uniform_float("tex_scale_t", 1.0);
-			s.end_shader();
-			s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
-			s.set_prefix("#define USE_GOOD_SPECULAR", 1); // VS
-			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			s.setup_enabled_lights(2);
-			s.set_vert_shader("ads_lighting.part*+pine_tree");
-			s.set_frag_shader("linear_fog.part+pine_tree");
-			//s.set_geom_shader("pine_tree", GL_POINTS, GL_TRIANGLE_STRIP, 120); // actually outputs quads
-			s.begin_shader();
-			s.setup_fog_scale();
-			s.add_uniform_int("tex0", 0);
-			s.add_uniform_float("min_alpha", 0.75);
-			check_gl_error(302);
+		s.add_uniform_float("tex_scale_t", 1.0);
+		s.end_shader();
+		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
+		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // VS
+		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.setup_enabled_lights(2);
+		s.set_vert_shader("ads_lighting.part*+pine_tree");
+		s.set_frag_shader("linear_fog.part+pine_tree");
+		//s.set_geom_shader("pine_tree", GL_POINTS, GL_TRIANGLE_STRIP, 120); // actually outputs quads
+		s.begin_shader();
+		s.setup_fog_scale();
+		s.add_uniform_int("tex0", 0);
+		s.add_uniform_float("min_alpha", 0.75);
+		check_gl_error(302);
+		
+		if (!tree_trunk_pts.empty()) { // color/texture already set above
+			assert(!(tree_trunk_pts.size() & 1));
+			s.add_uniform_float("camera_facing_scale", 1.0);
+			trunk_textured_color.do_glColor();
+			zero_vector.do_glNormal();
+			set_array_client_state(1, 0, 0, 0);
+			glVertexPointer(3, GL_FLOAT, sizeof(point), &tree_trunk_pts.front());
+			glDrawArrays(GL_LINES, 0, (unsigned)tree_trunk_pts.size());
+			tree_trunk_pts.resize(0);
 		}
 		set_specular(0.2, 8.0);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
 			s.add_uniform_float("camera_facing_scale", (to_draw[i].second->use_low_tree_detail() ? 1.0 : 0.0));
-			to_draw[i].second->draw_trees(0, 1);
+			to_draw[i].second->draw_trees(tree_trunk_pts, 0, 1);
 		}
+		assert(tree_trunk_pts.empty());
 		set_specular(0.0, 1.0);
-		if (s.is_setup()) {s.end_shader();}
+		s.end_shader();
 	}
 
 	void clear_vbos_tids(bool vclear, bool tclear) {

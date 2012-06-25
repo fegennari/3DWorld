@@ -79,9 +79,19 @@ void small_tree_group::add_tree(small_tree &st) {
 void small_tree_group::finalize(bool low_detail) {
 
 	vbo_manager.reserve_pts(4*(low_detail ? 2 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
+	trunk_pts.reserve(2*size());
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->calc_points(vbo_manager, low_detail);
+		i->add_trunk_as_line(trunk_pts);
+	}
+}
+
+
+void small_tree_group::add_trunk_pts(point const &xlate, vector<point> &pts) const {
+
+	for (vector<point>::const_iterator i = trunk_pts.begin(); i != trunk_pts.end(); ++i) {
+		pts.push_back(*i + xlate);
 	}
 }
 
@@ -99,6 +109,7 @@ void small_tree_group::clear_all() {
 
 	clear();
 	clear_vbo_manager();
+	trunk_pts.clear();
 	generated = 0;
 }
 
@@ -499,6 +510,14 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 		}
 	}
 	vbo_mgr_ix = vbo_manager.add_points(points, color);
+}
+
+
+void small_tree::add_trunk_as_line(vector<point> &points) const {
+
+	float const hval((type == T_PINE || type == T_SH_PINE) ? 1.0 : 0.75);
+	points.push_back(pos);
+	points.push_back(pos + get_rot_dir()*(hval*height));
 }
 
 
