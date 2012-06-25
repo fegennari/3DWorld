@@ -389,6 +389,7 @@ public:
 	bool trees_are_distant() const {
 		return (get_dist_to_camera_in_tiles() >= max(1.0, 5.0*calc_tree_size()));
 	}
+	bool use_low_tree_detail() const {return (ENABLE_TREE_LOD && trees_are_distant());}
 
 	void init_tree_draw() {
 		if (trees.generated) return; // already generate
@@ -398,7 +399,7 @@ public:
 	}
 
 	void update_tree_draw() {
-		unsigned const desired_tlod((ENABLE_TREE_LOD && trees_are_distant()) ? 1 : 2);
+		unsigned const desired_tlod(use_low_tree_detail() ? 1 : 2);
 
 		if (tree_lod_level != desired_tlod) {
 			tree_lod_level = desired_tlod;
@@ -418,8 +419,9 @@ public:
 		
 		if (draw_leaves) {
 			bool const cull(ENABLE_TREE_BFC && trees_are_distant());
+			bool const draw_all(use_low_tree_detail() || camera_pdu.sphere_completely_visible_test(get_center(), radius));
 			if (cull) {glEnable (GL_CULL_FACE);}
-			trees.draw_leaves(0, camera_pdu.sphere_completely_visible_test(get_center(), radius), 0, xlate);
+			trees.draw_leaves(0, draw_all, 0, xlate);
 			if (cull) {glDisable(GL_CULL_FACE);}
 		}
 		glPopMatrix();
@@ -660,7 +662,7 @@ public:
 		set_specular(0.2, 8.0);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
-			s.add_uniform_float("camera_facing_scale", (to_draw[i].second->trees_are_distant() ? 1.0 : 0.0));
+			s.add_uniform_float("camera_facing_scale", (to_draw[i].second->use_low_tree_detail() ? 1.0 : 0.0));
 			to_draw[i].second->draw_trees(0, 1);
 		}
 		set_specular(0.0, 1.0);
