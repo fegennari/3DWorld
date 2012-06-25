@@ -413,15 +413,15 @@ public:
 
 	void draw_trees(bool draw_branches, bool draw_leaves) const {
 		glPushMatrix();
+		bool const all_visible(camera_pdu.sphere_completely_visible_test(get_center(), radius));
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
-		if (draw_branches) {trees.draw_branches(0, xlate);}
+		if (draw_branches) {trees.draw_branches(0, all_visible, xlate);}
 		
 		if (draw_leaves) {
-			bool const cull(ENABLE_TREE_BFC && trees_are_distant());
-			bool const draw_all(use_low_tree_detail() || camera_pdu.sphere_completely_visible_test(get_center(), radius));
+			bool const cull(ENABLE_TREE_BFC && trees_are_distant()), draw_all(use_low_tree_detail() || all_visible);
 			if (cull) {glEnable (GL_CULL_FACE);}
-			trees.draw_leaves(0, draw_all, 0, xlate);
+			trees.draw_leaves(0, draw_all, xlate);
 			if (cull) {glDisable(GL_CULL_FACE);}
 		}
 		glPopMatrix();
