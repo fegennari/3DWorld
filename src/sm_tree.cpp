@@ -260,6 +260,7 @@ int add_small_tree(point const &pos, float height, float width, int tree_type, b
 
 	assert(height > 0.0 && width > 0.0);
 	small_trees.add_tree(small_tree(pos, height, width, (abs(tree_type)%NUM_ST_TYPES), calc_z)); // could have a type error
+	small_trees.back().calc_points(small_trees.vbo_manager, 0);
 	return 1; // might return zero in some case
 }
 
@@ -530,7 +531,7 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_m
 
 			if (shadow_only) {
 				cylinder_3dw const cylin(p1, (p1 + dir*len), w1, w2);
-				draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()));
+				draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()), -1, 1);
 			}
 			else if (LINE_THRESH*zoom_f*(w1 + w2) < dist) { // draw as line
 				tree_scenery_pld.add_textured_line(p1+xlate, (p1+xlate + dir*len), tcolor, stt[type].bark_tid);
