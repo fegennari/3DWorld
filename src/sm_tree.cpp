@@ -522,8 +522,6 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_m
 		float const cz(camera_origin.z - cview_radius*cview_dir.z), vxy(1.0 - (cz - pos.z)/dist);
 
 		if (type == T_SH_PINE || type == T_PINE || dist < 0.2 || vxy >= 0.2*width/stt[type].h) { // if trunk not obscured by leaves
-			colorRGBA tcolor(stt[type].c);
-			UNROLL_3X(tcolor[i_] = min(1.0f, tcolor[i_]*(0.85f + 0.3f*rv[i_]));)
 			float const hval(pine_tree ? 1.0 : 0.75), w1(stt[type].ws*width), w2(stt[type].w2*width);
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 			vector3d const dir(get_rot_dir());
@@ -533,19 +531,24 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_m
 				cylinder_3dw const cylin(p1, (p1 + dir*len), w1, w2);
 				draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()), -1, 1);
 			}
-			else if (LINE_THRESH*zoom_f*(w1 + w2) < dist) { // draw as line
-				tree_scenery_pld.add_textured_line(p1+xlate, (p1+xlate + dir*len), tcolor, stt[type].bark_tid);
-			}
-			else { // draw as cylinder
-				set_color(tcolor);
-				select_texture(stt[type].bark_tid);
-				glPushMatrix();
-				translate_to(pos);
-				if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
-				glTranslatef(0.0, 0.0, (zbot - pos.z));
-				int const nsides2(max(3, min(2*max_sides/3, int(0.25*size))));
-				draw_cylin_fast(w1, w2, len, nsides2, 1, 0, 1); // trunk (draw quad if small?)
-				glPopMatrix();
+			else {
+				colorRGBA tcolor(stt[type].c);
+				UNROLL_3X(tcolor[i_] = min(1.0f, tcolor[i_]*(0.85f + 0.3f*rv[i_]));)
+
+				if (LINE_THRESH*zoom_f*(w1 + w2) < dist) { // draw as line
+					tree_scenery_pld.add_textured_line(p1+xlate, (p1+xlate + dir*len), tcolor, stt[type].bark_tid);
+				}
+				else { // draw as cylinder
+					if (world_mode == WMODE_GROUND) {set_color(tcolor);}
+					select_texture(stt[type].bark_tid);
+					glPushMatrix();
+					translate_to(pos);
+					if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
+					glTranslatef(0.0, 0.0, (zbot - pos.z));
+					int const nsides2(max(3, min(2*max_sides/3, int(0.25*size))));
+					draw_cylin_fast(w1, w2, len, nsides2, 1, 0, 1); // trunk (draw quad if small?)
+					glPopMatrix();
+				}
 			}
 		}
 	}

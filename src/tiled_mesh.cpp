@@ -630,6 +630,8 @@ public:
 			orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0);
 			s.add_uniform_float("tex_scale_t", 5.0);
 		}
+		set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
+
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
 			to_draw[i].second->draw_trees(1, 0);
 		}
