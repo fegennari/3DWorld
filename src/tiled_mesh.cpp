@@ -60,7 +60,7 @@ class tile_t {
 
 	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_tree_dxoff, init_tree_dyoff;
 	unsigned tid, vbo, ivbo[NUM_LODS], size, stride, zvsize, base_tsize, gen_tsize, tree_lod_level;
-	float radius, mzmin, mzmax, xstart, ystart, xstep, ystep;
+	float radius, mzmin, mzmax, tzmax, xstart, ystart, xstep, ystep;
 	vector<float> zvals;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
@@ -82,7 +82,7 @@ public:
 		y2 = y1 + size;
 		calc_start_step(0, 0);
 		radius = 0.5*sqrt(xstep*xstep + ystep*ystep)*size; // approximate (lower bound)
-		mzmin  = mzmax = get_camera_pos().z;
+		mzmin  = mzmax = tzmax = get_camera_pos().z;
 		base_tsize = get_norm_texels();
 		init_vbo_ids();
 		
@@ -99,7 +99,7 @@ public:
 	}
 	cube_t get_cube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
-		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin, mzmax);
+		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin, max(mzmax, tzmax));
 	}
 	bool contains_camera() const {
 		return get_cube().contains_pt_xy(get_camera_pos());
@@ -394,6 +394,11 @@ public:
 		init_tree_dxoff = -xoff2;
 		init_tree_dyoff = -yoff2;
 		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
+		tzmax = mzmin;
+		
+		for (small_tree_group::const_iterator i = trees.begin(); i != trees.end(); ++i) {
+			tzmax = max(tzmax, i->get_zmax()); // calculate tree zmax
+		}
 	}
 
 	void update_tree_draw() {

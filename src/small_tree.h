@@ -39,6 +39,7 @@ public:
 	point get_pos() const {return pos;}
 	int get_type () const {return type;}
 	float get_pine_tree_radius() const {return 1.25*width*height;}
+	float get_zmax() const;
 
 	struct comp_by_type_dist {
 		point pos;

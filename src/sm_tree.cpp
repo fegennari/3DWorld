@@ -513,6 +513,9 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 }
 
 
+float small_tree::get_zmax() const {return (pos.z + height);} // approximate
+
+
 void small_tree::add_trunk_as_line(vector<point> &points) const {
 
 	float const hval((type == T_PINE || type == T_SH_PINE) ? 1.0 : 0.75);
@@ -522,6 +525,7 @@ void small_tree::add_trunk_as_line(vector<point> &points) const {
 
 
 colorRGBA small_tree::get_bark_color() const {
+
 	colorRGBA tcolor(stt[type].c);
 	UNROLL_3X(tcolor[i_] = min(1.0f, tcolor[i_]*(0.85f + 0.3f*rv[i_]));)
 	return tcolor;
