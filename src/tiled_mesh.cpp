@@ -28,7 +28,6 @@ extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, v
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
-extern pt_line_drawer tree_scenery_pld;
 
 void draw_water_edge(float zval);
 
@@ -412,7 +411,7 @@ public:
 
 	void draw_trees(vector<point> &trunk_pts, bool draw_branches, bool draw_leaves) const {
 		glPushMatrix();
-		bool const distant(trees_are_distant()), all_visible(camera_pdu.sphere_completely_visible_test(get_center(), radius));
+		bool const distant(trees_are_distant());
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
 		
@@ -421,11 +420,12 @@ public:
 				trees.add_trunk_pts(xlate, trunk_pts);
 			}
 			else {
-				trees.draw_branches(0, all_visible, xlate);
+				trees.draw_branches(0, xlate, &trunk_pts);
 			}
 		}
 		if (draw_leaves) {
-			bool const cull(ENABLE_TREE_BFC && distant), draw_all(use_low_tree_detail() || all_visible);
+			bool const cull(ENABLE_TREE_BFC && distant);
+			bool const draw_all(use_low_tree_detail() || camera_pdu.sphere_completely_visible_test(get_center(), radius));
 			if (cull) {glEnable (GL_CULL_FACE);}
 			trees.draw_leaves(0, draw_all, xlate);
 			if (cull) {glDisable(GL_CULL_FACE);}
@@ -641,13 +641,6 @@ public:
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
 			to_draw[i].second->draw_trees(tree_trunk_pts, 1, 0);
 		}
-		colorRGBA const trunk_textured_color(get_tree_trunk_color(T_PINE, 1));
-		set_color(trunk_textured_color); // all a constant color
-		select_texture(WHITE_TEX, 0); // enable=0
-		s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
-		tree_scenery_pld.draw_and_clear();
-		s.add_uniform_float("base_color_scale", 1.0);
-
 		s.add_uniform_float("tex_scale_t", 1.0);
 		s.end_shader();
 		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
@@ -666,7 +659,8 @@ public:
 		if (!tree_trunk_pts.empty()) { // color/texture already set above
 			assert(!(tree_trunk_pts.size() & 1));
 			s.add_uniform_float("camera_facing_scale", 1.0);
-			trunk_textured_color.do_glColor();
+			select_texture(WHITE_TEX, 0); // enable=0
+			get_tree_trunk_color(T_PINE, 1).do_glColor();
 			zero_vector.do_glNormal();
 			set_array_client_state(1, 0, 0, 0);
 			glVertexPointer(3, GL_FLOAT, sizeof(point), &tree_trunk_pts.front());

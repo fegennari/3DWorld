@@ -31,7 +31,9 @@ public:
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
 	void calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
-	void draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager, bool no_vfc=0, vector3d const xlate=zero_vector) const;
+	colorRGBA get_bark_color() const;
+	void draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager,
+		vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}
@@ -70,7 +72,7 @@ struct small_tree_group : public vector<small_tree> {
 	void add_cobjs();
 	void remove_cobjs();
 	void translate_by(vector3d const &vd);
-	void draw_branches(bool shadow_only, bool no_vfc=0, vector3d const xlate=zero_vector) const;
+	void draw_branches(bool shadow_only, vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
 	void draw_leaves(bool shadow_only, bool draw_all_pine=0, vector3d const xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2);
 };

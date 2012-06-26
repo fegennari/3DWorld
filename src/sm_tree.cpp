@@ -144,12 +144,12 @@ void small_tree_group::translate_by(vector3d const &vd) {
 }
 
 
-void small_tree_group::draw_branches(bool shadow_only, bool no_vfc, vector3d const xlate) const {
+void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate, vector<point> *points) const {
 
 	BLACK.do_glColor();
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(1, shadow_only, 0, vbo_manager, no_vfc, xlate);
+		i->draw(1, shadow_only, 0, vbo_manager, xlate, points);
 	}
 }
 
@@ -175,7 +175,7 @@ void small_tree_group::draw_leaves(bool shadow_only, bool draw_all_pine, vector3
 				select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
 				if (is_pine) {vbo_manager.begin_render();}
 			}
-			i->draw(2, shadow_only, (size() < 100), vbo_manager, 0, xlate); // only cull pine tree leaves if there aren't too many
+			i->draw(2, shadow_only, (size() < 100), vbo_manager, xlate); // only cull pine tree leaves if there aren't too many
 		}
 	}
 	vbo_manager.end_render();
@@ -521,22 +521,25 @@ void small_tree::add_trunk_as_line(vector<point> &points) const {
 }
 
 
-void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager, bool no_vfc, vector3d const xlate) const {
+colorRGBA small_tree::get_bark_color() const {
+	colorRGBA tcolor(stt[type].c);
+	UNROLL_3X(tcolor[i_] = min(1.0f, tcolor[i_]*(0.85f + 0.3f*rv[i_]));)
+	return tcolor;
+}
 
+
+void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager,
+	vector3d const xlate, vector<point> *points) const
+{
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
-	assert(quadric);
-	float const radius(max(1.5*width, 0.5*height));
-	point const pos_x(pos + xlate), pos2(pos_x + point(0.0, 0.0, 0.5*height));
+	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	bool const pine_tree(type == T_PINE || type == T_SH_PINE), cobj_cull(pine_tree && do_cull);
-	if (!no_vfc && (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, radius, (cobj_cull ? 2 : 0)))) return;
-	float const dist(distance_to_camera(pos_x));
+	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, max(1.5*width, 0.5*height), (cobj_cull ? 2 : 0))) return;
+	float const dist(distance_to_camera(pos + xlate));
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size(zoom_f*SM_TREE_QUALITY*stt[type].ss*width*window_width/dist);
 	int const max_sides(N_CYL_SIDES);
 
-	// slow because of:
-	// glBegin()/glEnd() overhead of lots of low ndiv spheres
-	// dlist thrashing
 	if ((mode & 1) && (shadow_only || size > 1.0) && type != T_BUSH) { // trunk
 		float const cz(camera_origin.z - cview_radius*cview_dir.z), vxy(1.0 - (cz - pos.z)/dist);
 
@@ -550,24 +553,25 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_m
 				cylinder_3dw const cylin(p1, (p1 + dir*len), w1, w2);
 				draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()), -1, 1);
 			}
-			else {
-				colorRGBA tcolor(stt[type].c);
-				UNROLL_3X(tcolor[i_] = min(1.0f, tcolor[i_]*(0.85f + 0.3f*rv[i_]));)
-
-				if (LINE_THRESH*zoom_f*(w1 + w2) < dist) { // draw as line
-					tree_scenery_pld.add_textured_line(p1+xlate, (p1+xlate + dir*len), tcolor, stt[type].bark_tid);
+			else if (LINE_THRESH*zoom_f*(w1 + w2) < dist) { // draw as line
+				if (points) {
+					points->push_back(p1 + xlate);
+					points->push_back(p1 + xlate + dir*len);
 				}
-				else { // draw as cylinder
-					if (world_mode == WMODE_GROUND) {set_color(tcolor);}
-					select_texture(stt[type].bark_tid);
-					glPushMatrix();
-					translate_to(pos);
-					if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
-					glTranslatef(0.0, 0.0, (zbot - pos.z));
-					int const nsides2(max(3, min(2*max_sides/3, int(0.25*size))));
-					draw_cylin_fast(w1, w2, len, nsides2, 1, 0, 1); // trunk (draw quad if small?)
-					glPopMatrix();
+				else {
+					tree_scenery_pld.add_textured_line((p1 + xlate), (p1 + xlate + dir*len), get_bark_color(), stt[type].bark_tid);
 				}
+			}
+			else { // draw as cylinder
+				if (world_mode == WMODE_GROUND) {set_color(get_bark_color());}
+				select_texture(stt[type].bark_tid);
+				glPushMatrix();
+				translate_to(pos);
+				if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
+				glTranslatef(0.0, 0.0, (zbot - pos.z));
+				int const nsides2(max(3, min(2*max_sides/3, int(0.25*size))));
+				draw_cylin_fast(w1, w2, len, nsides2, 1, 0, 1); // trunk (draw quad if small?)
+				glPopMatrix();
 			}
 		}
 	}
