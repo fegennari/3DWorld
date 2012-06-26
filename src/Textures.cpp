@@ -61,7 +61,7 @@ texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a ba
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
-// type format width height wrap ncolors use_mipmaps name [do_compress]
+// type format width height wrap ncolors use_mipmaps name [do_compress] [anisotropy], [mipmap_alpha_weight]
 //texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
 texture_t(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
@@ -107,7 +107,7 @@ texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade_b.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 1, "blur.raw"),
 texture_t(0, 0, 256,  256,  1, 4, 1, "blur_s.raw"),
-texture_t(0, 0, 256,  256,  0, 4, 0, "pine.raw"), // mipmap?
+texture_t(0, 0, 256,  256,  0, 4, 3, "pine.raw", 1, 1.0, 0.3),
 texture_t(0, 0, 128,  128,  1, 3, 1, "noise.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "wood.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw", 1, 8.0),
@@ -1050,7 +1050,7 @@ void texture_t::create_custom_mipmaps() {
 					unsigned const a1(idata[ix2+3]), a2(idata[ix2+xinc+3]), a3(idata[ix2+yinc+3]), a4(idata[ix2+yinc+xinc+3]);
 					unsigned const a_sum(max(1U, (a1 + a2 + a3 + a4))); // no div by 0
 					UNROLL_3X(odata[ix1+i_] = (unsigned char)((a1*idata[ix2+i_] + a2*idata[ix2+xinc+i_] + a3*idata[ix2+yinc+i_] + a4*idata[ix2+yinc+xinc+i_]) / a_sum);)
-					odata[ix1+3] = max(max(a1, a2), max(a3, a4));
+					odata[ix1+3] = min(255U, min(max(max(a1, a2), max(a3, a4)), unsigned(mipmap_alpha_weight*a_sum)));
 				}
 			}
 		}
