@@ -517,7 +517,7 @@ void small_tree::add_trunk_as_line(vector<point> &points) const {
 
 	float const hval((type == T_PINE || type == T_SH_PINE) ? 1.0 : 0.75);
 	points.push_back(pos);
-	points.push_back(pos + get_rot_dir()*(hval*height));
+	points.push_back(pos + get_rot_dir()*(hval*height*((stt[type].w2 == 0.0) ? 0.7 : 1.0))); // slightly shorter for distant pine trees
 }
 
 
@@ -554,12 +554,14 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_m
 				draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()), -1, 1);
 			}
 			else if (LINE_THRESH*zoom_f*(w1 + w2) < dist) { // draw as line
+				point const p2(p1 + dir*(len*((w2 == 0.0) ? 0.8 : 1.0)));
+				
 				if (points) {
 					points->push_back(p1 + xlate);
-					points->push_back(p1 + xlate + dir*len);
+					points->push_back(p2 + xlate);
 				}
 				else {
-					tree_scenery_pld.add_textured_line((p1 + xlate), (p1 + xlate + dir*len), get_bark_color(), stt[type].bark_tid);
+					tree_scenery_pld.add_textured_line(p1+xlate, p2+xlate, get_bark_color(), stt[type].bark_tid);
 				}
 			}
 			else { // draw as cylinder

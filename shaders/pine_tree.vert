@@ -9,7 +9,7 @@ void main()
 	vec3 normal = normalize(gl_NormalMatrix * gl_Normal);
 	vec3 nz     = (gl_NormalMatrix * vec3(0.0, 0.0, gl_Normal.z));
 	vec3 n_mod  = normalize(nz + vec3(0.0, 0.0, sqrt(1.0 - nz.x*nz.x - nz.y*nz.y - nz.z*nz.z))) * camera_facing_scale;
-	n_mod      += normal * (normal.z/abs(normal.z) * (1.0 - camera_facing_scale));
+	n_mod      += normal * ((two_sided_lighting ? normal.z/abs(normal.z) : 1.0) * (1.0 - camera_facing_scale));
 	vec3 color  = vec3(0,0,0);
 	if (enable_light0) color += add_light_comp(n_mod, 0).rgb;
 	if (enable_light1) color += add_light_comp(n_mod, 1).rgb;

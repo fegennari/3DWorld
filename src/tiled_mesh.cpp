@@ -643,9 +643,10 @@ public:
 		}
 		s.add_uniform_float("tex_scale_t", 1.0);
 		s.end_shader();
-		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
-		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // VS
-		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.set_bool_prefix("two_sided_lighting", 0, 0); // VS
+		s.set_prefix("#define USE_LIGHT_COLORS",   0); // VS
+		s.set_prefix("#define USE_GOOD_SPECULAR",  1); // VS
+		s.set_prefix("#define USE_QUADRATIC_FOG",  1); // FS
 		s.setup_enabled_lights(2);
 		s.set_vert_shader("ads_lighting.part*+pine_tree");
 		s.set_frag_shader("linear_fog.part+pine_tree");
