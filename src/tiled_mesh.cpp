@@ -230,7 +230,7 @@ public:
 			float const radius(i->get_pine_tree_radius());
 			int const xc((pos.x - xstart)/xstep), yc((pos.y - ystart)/ystep);
 			if (xc < 0 || yc < 0 || xc >= (int)stride || yc >= (int)stride) continue; // off the edge of the mesh (shouldn't occur)
-			int rval(max(int(radius/xstep), int(radius/ystep)) + 2);
+			int rval(max(int(radius/xstep), int(radius/ystep)) + 1);
 			rval = min(rval, min(xc, yc)); // clip to lower bounds
 			rval = min(rval, min((int)stride-xc-1, (int)stride-yc-1)); // clip to upper bounds
 			float const rval_inv(1.0/rval);
@@ -425,7 +425,7 @@ public:
 		}
 		if (draw_leaves) {
 			bool const cull(ENABLE_TREE_BFC && distant);
-			bool const draw_all(use_low_tree_detail() || camera_pdu.sphere_completely_visible_test(get_center(), radius));
+			bool const draw_all(use_low_tree_detail() || camera_pdu.sphere_completely_visible_test(get_center(), 0.5*radius));
 			if (cull) {glEnable (GL_CULL_FACE);}
 			trees.draw_leaves(0, draw_all, xlate);
 			if (cull) {glDisable(GL_CULL_FACE);}
