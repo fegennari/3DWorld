@@ -1,13 +1,10 @@
-// 3D World - OpenGL CS184 Computer Graphics Project
+// 3D World - Scenery Classes Implementations (plants, rocks, logs stumps)
 // by Frank Gennari
 // 12/5/02
 
-#include "3DWorld.h"
+#include "scenery.h"
 #include "mesh.h"
-#include "shape_line3d.h"
-#include "upsurface.h"
 #include "shaders.h"
-#include "draw_utils.h"
 
 
 bool     const NO_ISLAND_SCENERY = 1;
@@ -15,16 +12,6 @@ unsigned const ROCK_NDIV         = 24;
 float    const SHADOW_VAL        = 0.5;
 float    const PT_LINE_THRESH    = 800.0;
 
-
-enum {PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, NUM_PLANT_TYPES};
-
-struct plant_type {
-
-	int tid;
-	colorRGBA stemc, leafc;
-
-	plant_type(int tid_, colorRGBA const &sc, colorRGBA const &lc) : tid(tid_), stemc(sc), leafc(lc) {}
-};
 
 colorRGBA const stem_c(0.4, 0.6, 0.2, 1.0);
 colorRGBA const leaf_c(0.7, 0.7, 0.7, 1.0);
@@ -321,404 +308,375 @@ void rock_shape3d::draw(bool shadow_only) const {
 }
 
 
-struct surface_cache {
+upsurface *surface_cache::get_surface() {
 
-	typedef pair<long, long> seed_pair;
-	typedef map<seed_pair, upsurface *> surface_map;
-	surface_map scache;
-
-	upsurface *get_surface() {
-		seed_pair const sp(global_rand_gen.rseed1, global_rand_gen.rseed2);
-		surface_map::const_iterator it(scache.find(sp));
+	seed_pair const sp(global_rand_gen.rseed1, global_rand_gen.rseed2);
+	surface_map::const_iterator it(scache.find(sp));
 		
-		if (it != scache.end()) {
-			assert(it->second);
-			it->second->inc_ref();
-			return it->second;
-		}
-		upsurface *surface(new upsurface);
-		scache[sp] = surface;
-		surface->inc_ref();
-		return surface;
+	if (it != scache.end()) {
+		assert(it->second);
+		it->second->inc_ref();
+		return it->second;
 	}
+	upsurface *surface(new upsurface);
+	scache[sp] = surface;
+	surface->inc_ref();
+	return surface;
+}
 
-	void clear() {
-		for (surface_map::const_iterator i = scache.begin(); i != scache.end(); ++i) {
-			assert(i->second);
-			delete i->second;
-		}
-		scache.clear();
+void surface_cache::clear() {
+
+	for (surface_map::const_iterator i = scache.begin(); i != scache.end(); ++i) {
+		assert(i->second);
+		delete i->second;
 	}
+	scache.clear();
+}
 
-	void clear_unref() {
-		vector<seed_pair> to_erase;
+void surface_cache::clear_unref() {
 
-		for (surface_map::iterator i = scache.begin(); i != scache.end(); ++i) {
-			assert(i->second);
+	vector<seed_pair> to_erase;
+
+	for (surface_map::iterator i = scache.begin(); i != scache.end(); ++i) {
+		assert(i->second);
 			
-			if (i->second->unrefed()) {
-				delete i->second;
-				to_erase.push_back(i->first);
-			}
-		}
-		for (vector<seed_pair>::const_iterator i = to_erase.begin(); i != to_erase.end(); ++i) {
-			scache.erase(*i);
+		if (i->second->unrefed()) {
+			delete i->second;
+			to_erase.push_back(i->first);
 		}
 	}
-};
+	for (vector<seed_pair>::const_iterator i = to_erase.begin(); i != to_erase.end(); ++i) {
+		scache.erase(*i);
+	}
+}
+
 
 surface_cache surface_rock_cache;
 
 
-class surface_rock : public scenery_obj { // size = 1456+
+void surface_rock::create(int x, int y, int use_xy) {
 
-	float scale;
-	vector3d dir;
-	upsurface *surface;
+	gen_spos(x, y, use_xy);
+	radius  = 0.5*rand_uniform2(0.2/msms2, 0.8/msms2)*rand_float2();
+	dir     = signed_rand_vector2_norm();
+	surface = surface_rock_cache.get_surface();
+	assert(surface);
 
-public:
-	surface_rock() : surface(NULL) {}
-
-	void create(int x, int y, int use_xy) {
-		gen_spos(x, y, use_xy);
-		radius  = 0.5*rand_uniform2(0.2/msms2, 0.8/msms2)*rand_float2();
-		dir     = signed_rand_vector2_norm();
-		surface = surface_rock_cache.get_surface();
-		assert(surface);
-
-		if (surface->ssize == 0) { // not inited
-			surface->gen(0.5, rand_uniform2(0.5, 5.0), 10, rand_uniform2(0.5, 2.0));
-			surface->setup(ROCK_NDIV, 0.0, 0);
-			surface->setup_draw_sphere(all_zeros, rand_uniform2(0.25, 1.0), 0.0, ROCK_NDIV, NULL);
-			surface->calc_rmax();
-		}
-		scale   = radius/surface->rmax;
+	if (surface->ssize == 0) { // not inited
+		surface->gen(0.5, rand_uniform2(0.5, 5.0), 10, rand_uniform2(0.5, 2.0));
+		surface->setup(ROCK_NDIV, 0.0, 0);
+		surface->setup_draw_sphere(all_zeros, rand_uniform2(0.25, 1.0), 0.0, ROCK_NDIV, NULL);
+		surface->calc_rmax();
 	}
+	scale   = radius/surface->rmax;
+}
 
-	void add_cobjs() {
-		coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
+void surface_rock::add_cobjs() {
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
+}
+
+void surface_rock::draw(float sscale, bool shadow_only) const {
+
+	assert(surface);
+	if (!is_visible(shadow_only, 0.0)) return;
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, radius));
+	float const dist(distance_to_camera(pos));
+
+	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
+		tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
+		return;
 	}
+	set_color(color);
+	if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
+	glPushMatrix();
+	translate_to(pos);
+	uniform_scale(scale);
+	rotate_into_plus_z(dir);
+	surface->sd.draw_ndiv_pow2(shadow_only ? get_smap_ndiv(radius) : sscale*radius/dist);
+	glPopMatrix();
+}
 
-	void draw(float sscale, bool shadow_only) const {
-		assert(surface);
-		if (!is_visible(shadow_only, 0.0)) return;
-		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, radius));
-		float const dist(distance_to_camera(pos));
+void surface_rock::destroy() {
 
-		if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
-			tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
-			return;
-		}
-		set_color(color);
-		if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
-		glPushMatrix();
-		translate_to(pos);
-		uniform_scale(scale);
-		rotate_into_plus_z(dir);
-		surface->sd.draw_ndiv_pow2(shadow_only ? get_smap_ndiv(radius) : sscale*radius/dist);
-		glPopMatrix();
+	//delete surface;
+	if (surface) surface->dec_ref();
+	surface = NULL;
+	scenery_obj::destroy();
+}
+
+
+void s_rock::create(int x, int y, int use_xy) {
+
+	for (unsigned i = 0; i < 3; ++i) {
+		scale[i] = rand_uniform2(0.8, 1.3);
 	}
+	gen_spos(x, y, use_xy);
+	size   = 0.02*rand_uniform2(0.2/msms2, 0.8/msms2);
+	if ((rand2()&3) == 0) size *= rand_uniform2(1.2, 8.0);
+	dir    = signed_rand_vector2_norm();
+	angle  = rand_uniform2(0.0, 360.0);
+	radius = size*(scale.x + scale.y + scale.z)/3.0;
+	pos.z += radius*rand_uniform2(-0.1, 0.25);
+}
 
-	void destroy() {
-		//delete surface;
-		if (surface) surface->dec_ref();
-		surface = NULL;
-		scenery_obj::destroy();
+void s_rock::add_cobjs() {
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
+}
+
+void s_rock::draw(float sscale, bool shadow_only) const {
+
+	float const rmax(1.3*radius);
+	if (!is_visible(shadow_only, rmax)) return;
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, rmax));
+	float const dist(distance_to_camera(pos));
+
+	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
+		tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
+		return;
 	}
-};
+	set_color(color);
+	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(radius) : int(sscale*radius/dist)))));
+	if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
+	glPushMatrix();
+	translate_to(pos);
+	rotate_about(angle, dir);
+	scale_by(scale);
+	draw_sphere_dlist(all_zeros, size, ndiv, 1);
+	glPopMatrix();
+}
 
 
-class s_rock : public scenery_obj { // size = 48
+void s_log::shift_by(vector3d const &vd) {
 
-	float size, angle;
-	vector3d scale, dir;
+	scenery_obj::shift_by(vd);
+	pt2   += vd;
+	pt2.z -= dz;
+	dz     = 0.0;
+}
 
-public:
-	void create(int x, int y, int use_xy) {
-		for (unsigned i = 0; i < 3; ++i) {
-			scale[i] = rand_uniform2(0.8, 1.3);
-		}
-		gen_spos(x, y, use_xy);
-		size   = 0.02*rand_uniform2(0.2/msms2, 0.8/msms2);
-		if ((rand2()&3) == 0) size *= rand_uniform2(1.2, 8.0);
-		dir    = signed_rand_vector2_norm();
-		angle  = rand_uniform2(0.0, 360.0);
-		radius = size*(scale.x + scale.y + scale.z)/3.0;
-		pos.z += radius*rand_uniform2(-0.1, 0.25);
+int s_log::create(int x, int y, int use_xy, float minz) {
+
+	gen_spos(x, y, use_xy);
+	radius  = rand_uniform2(0.003/msms2, 0.008/msms2);
+	radius2 = rand_uniform2(0.9*radius, 1.1*radius);
+	length  = rand_uniform2(max(0.03/msms2, 4.0*radius), min(0.15/msms2, 20.0*radius));
+	dir     = signed_rand_vector2_norm();
+	dir.x  *= length;
+	dir.y  *= length;
+	pt2.x   = pos.x + dir.x;
+	pt2.y   = pos.y + dir.y;
+
+	if (pt2.x > X_SCENE_SIZE-DX_VAL || pt2.x < -X_SCENE_SIZE+DX_VAL || pt2.y > Y_SCENE_SIZE-DY_VAL || pt2.y < -Y_SCENE_SIZE+DY_VAL) {
+		return 0; // off the end of the mesh
 	}
+	pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) + rand_uniform2(0.7, 0.99)*radius;
+	pt2.z = interpolate_mesh_zval(pt2.x, pt2.y, 0.0, 1, 1) + rand_uniform2(0.7, 0.99)*radius2;
+	if (max(pos.z, pt2.z) < minz)       return 0;
+	if (pos.z <= zmin || pt2.z <= zmin) return 0; // bad z value
+	dir.z  = (pt2.z - pos.z);
+	length = dir.mag(); // recalculate
+	dir   /= -length; // something is backwards
+	type   = (char)get_tree_type_from_height(max(pos.z, pt2.z));
+	return (type >= 0);
+}
 
-	void add_cobjs() {
-		coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
+void s_log::add_cobjs() {
+	coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
+}
+
+void s_log::draw(float sscale, bool shadow_only) const {
+
+	float const sz(max(length, max(radius, radius2)));
+	point const center((pos + pt2)*0.5);
+	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
+	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
+	float const dist(distance_to_camera(pos));
+
+	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
+		tree_scenery_pld.add_textured_line(pos, pt2, color, get_tid());
+		return;
 	}
+	set_color(color);
+	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
+	if (!shadow_only) select_texture(get_tid());
+	glPushMatrix();
+	translate_to(pos);
+	rotate_by_vector(dir, 0.0);
+	gluCylinder(quadric, radius, radius2, length, ndiv, 1);
+	if (!shadow_only) select_texture(TREE_END_TEX);
+	draw_circle_normal(0.0, radius, ndiv, 1);
+	glTranslatef(0.0, 0.0, length);
+	draw_circle_normal(0.0, radius2, ndiv, 0);
+	glPopMatrix();
+}
 
-	void draw(float sscale, bool shadow_only) const {
-		float const rmax(1.3*radius);
-		if (!is_visible(shadow_only, rmax)) return;
-		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, rmax));
-		float const dist(distance_to_camera(pos));
+bool s_log::update_zvals(int x1, int y1, int x2, int y2) {
 
-		if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
-			tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
-			return;
-		}
-		set_color(color);
-		int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(radius) : int(sscale*radius/dist)))));
-		if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
-		glPushMatrix();
-		translate_to(pos);
-		rotate_about(angle, dir);
-		scale_by(scale);
-		draw_sphere_dlist(all_zeros, size, ndiv, 1);
-		glPopMatrix();
-	}
-};
-
-
-class s_log : public scenery_obj { // size = 57 (60)
-
-	float length, radius2;
-	point pt2;
-	vector3d dir;
-
-	int get_tid() const {return get_bark_tex_for_tree_type(type);}
-
-public:
-	void shift_by(vector3d const &vd) {
-		scenery_obj::shift_by(vd);
-		pt2   += vd;
-		pt2.z -= dz;
-		dz     = 0.0;
-	}
-
-	int create(int x, int y, int use_xy, float minz) {
-		gen_spos(x, y, use_xy);
-		radius  = rand_uniform2(0.003/msms2, 0.008/msms2);
-		radius2 = rand_uniform2(0.9*radius, 1.1*radius);
-		length  = rand_uniform2(max(0.03/msms2, 4.0*radius), min(0.15/msms2, 20.0*radius));
-		dir     = signed_rand_vector2_norm();
-		dir.x  *= length;
-		dir.y  *= length;
-		pt2.x   = pos.x + dir.x;
-		pt2.y   = pos.y + dir.y;
-
-		if (pt2.x > X_SCENE_SIZE-DX_VAL || pt2.x < -X_SCENE_SIZE+DX_VAL || pt2.y > Y_SCENE_SIZE-DY_VAL || pt2.y < -Y_SCENE_SIZE+DY_VAL) {
-			return 0; // off the end of the mesh
-		}
-		pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) + rand_uniform2(0.7, 0.99)*radius;
-		pt2.z = interpolate_mesh_zval(pt2.x, pt2.y, 0.0, 1, 1) + rand_uniform2(0.7, 0.99)*radius2;
-		if (max(pos.z, pt2.z) < minz)       return 0;
-		if (pos.z <= zmin || pt2.z <= zmin) return 0; // bad z value
-		dir.z  = (pt2.z - pos.z);
-		length = dir.mag(); // recalculate
-		dir   /= -length; // something is backwards
-		type   = (char)get_tree_type_from_height(max(pos.z, pt2.z));
-		return (type >= 0);
-	}
-
-	void add_cobjs() {
-		coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
-	}
-
-	void draw(float sscale, bool shadow_only) const {
-		float const sz(max(length, max(radius, radius2)));
-		point const center((pos + pt2)*0.5);
-		if (type == 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
-		colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
-		float const dist(distance_to_camera(pos));
-
-		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
-			tree_scenery_pld.add_textured_line(pos, pt2, color, get_tid());
-			return;
-		}
-		set_color(color);
-		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
-		if (!shadow_only) select_texture(get_tid());
-		glPushMatrix();
-		translate_to(pos);
-		rotate_by_vector(dir, 0.0);
-		gluCylinder(quadric, radius, radius2, length, ndiv, 1);
-		if (!shadow_only) select_texture(TREE_END_TEX);
-		draw_circle_normal(0.0, radius, ndiv, 1);
-		glTranslatef(0.0, 0.0, length);
-		draw_circle_normal(0.0, radius2, ndiv, 0);
-		glPopMatrix();
-	}
-
-	bool update_zvals(int x1, int y1, int x2, int y2) {
-		float const orig_pz(pos.z);
-		if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
-		pt2.z += (pos.z - orig_pz); // apply the same offset to pt2 even though it might be at a different mesh location
-		return 1;
-	}
-};
+	float const orig_pz(pos.z);
+	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
+	pt2.z += (pos.z - orig_pz); // apply the same offset to pt2 even though it might be at a different mesh location
+	return 1;
+}
 
 
-class s_stump : public scenery_obj { // size = 29 (32)
+int s_stump::create(int x, int y, int use_xy, float minz) {
 
-	float radius2, height;
-
-	int get_tid() const {return get_bark_tex_for_tree_type(type);}
-
-public:
-	int create(int x, int y, int use_xy, float minz) {
-		gen_spos(x, y, use_xy);
-		radius  = rand_uniform2(0.005/msms2, 0.01/msms2);
-		radius2 = rand_uniform2(0.8*radius, radius);
-		pos.z  -= 2.0*radius;
-		if (pos.z < minz) return 0;
-		height  = rand_uniform2(0.01/msms2, min(0.05/msms2, 4.0*radius)) + 0.015;
+	gen_spos(x, y, use_xy);
+	radius  = rand_uniform2(0.005/msms2, 0.01/msms2);
+	radius2 = rand_uniform2(0.8*radius, radius);
+	pos.z  -= 2.0*radius;
+	if (pos.z < minz) return 0;
+	height  = rand_uniform2(0.01/msms2, min(0.05/msms2, 4.0*radius)) + 0.015;
 		
-		if ((rand2()&3) == 0) {
-			height  *= rand_uniform2(1.0, 5.0); // larger stump = upright dead tree
-			radius  *= 1.5;
-			radius2 *= 1.3;
-		}
-		type = (char)get_tree_type_from_height(pos.z);
-		return (type >= 0);
+	if ((rand2()&3) == 0) {
+		height  *= rand_uniform2(1.0, 5.0); // larger stump = upright dead tree
+		radius  *= 1.5;
+		radius2 *= 1.3;
 	}
+	type = (char)get_tree_type_from_height(pos.z);
+	return (type >= 0);
+}
 
-	void add_cobjs() {
-		coll_id = add_coll_cylinder(pos, point(pos.x, pos.y, (pos.z + height)), radius, radius2,
-			cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
+void s_stump::add_cobjs() {
+	coll_id = add_coll_cylinder(pos, point(pos.x, pos.y, (pos.z + height)), radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
+}
+
+void s_stump::draw(float sscale, bool shadow_only) const {
+
+	float const sz(max(height, max(radius, radius2)));
+	point const center(pos.x, pos.y, (pos.z + 0.5*height));
+	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
+	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
+	float const dist(distance_to_camera(pos));
+
+	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
+		tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, height)), color, get_tid());
+		return;
 	}
+	set_color(color);
+	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
+	if (!shadow_only) select_texture(get_tid());
+	glPushMatrix();
+	translate_to(pos);
+	gluCylinder(quadric, radius, radius2, height, ndiv, 1);
+	if (!shadow_only) select_texture(TREE_END_TEX);
+	glTranslatef(0.0, 0.0, height);
+	gluDisk(quadric, 0.0, radius2, ndiv, 1);
+	glPopMatrix();
+}
 
-	void draw(float sscale, bool shadow_only) const {
-		float const sz(max(height, max(radius, radius2)));
-		point const center(pos.x, pos.y, (pos.z + 0.5*height));
-		if (type == 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
-		colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
-		float const dist(distance_to_camera(pos));
 
-		if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
-			tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, height)), color, get_tid());
-			return;
+int s_plant::create(int x, int y, int use_xy, float minz, vbo_quad_block_manager_t &vbo_manager) {
+
+	vbo_mgr_ix = -1;
+	type   = rand2()%NUM_PLANT_TYPES;
+	gen_spos(x, y, use_xy);
+	if (pos.z < minz) return 0;
+	radius = rand_uniform2(0.0025/msms2, 0.0045/msms2);
+	height = rand_uniform2(0.2/msms2, 0.4/msms2) + 0.025;
+	gen_points(vbo_manager);
+	return 1;
+}
+
+void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_quad_block_manager_t &vbo_manager) {
+
+	vbo_mgr_ix = -1;
+	type   = abs(type_)%NUM_PLANT_TYPES;
+	pos    = pos_;
+	radius = radius_;
+	height = height_;
+	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
+	gen_points(vbo_manager);
+}
+
+void s_plant::add_cobjs() {
+
+	point cpos(pos), cpos2(pos);
+	float const wscale(radius*msms2/0.004);
+	float const r2(radius+0.07*wscale*(height+0.03));
+	cpos.z  += height;
+	cpos2.z += 3.0*height/(36.0*height + 4.0);
+	coll_id  = add_coll_cylinder(pos,   cpos, radius, 0.0,    cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX        )); // trunk
+	coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
+}
+
+void s_plant::gen_points(vbo_quad_block_manager_t &vbo_manager) {
+
+	if (vbo_mgr_ix >= 0) return; // already generated
+	float const wscale(250.0*radius*msms2);
+	float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
+	unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
+	float rdeg(30.0);
+	vector<vert_norm> &points(vbo_manager.temp_points);
+	points.resize(0);
+
+	for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
+		float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
+		float const z((j + 3.0)*height/(nlevels + 4.0));
+		vector3d const scale(sz*wscale, sz*wscale, sz);
+
+		for (unsigned k = 0; k < nrings; ++k) {
+			float const theta(TWO_PI*(3.3*j + 0.2*k) + theta0);
+			int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
+			rdeg += 0.01*(val - 150);
+			add_rotated_quad_pts(points, theta, rdeg/45.0, z, pos, scale);
 		}
+	}
+	vbo_mgr_ix = vbo_manager.add_points(points, pltype[type].leafc);
+}
+
+bool s_plant::is_shadowed() const {
+
+	int const light(get_light());
+
+	for (unsigned i = 0; i < 3; ++i) {
+		point p(pos);
+		p.z += 0.5*i*height;
+		if (is_visible_to_light_cobj(p, light, (radius + height), coll_id, 0)) {return 0;}
+	}
+	return 1;
+}
+
+void s_plant::draw_stem(float sscale, bool shadow_only) const {
+
+	if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 0)) return;
+	bool const shadowed(shadow_only ? 0 : is_shadowed());
+	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
+	float const dist(distance_to_camera(pos));
+
+	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
+		tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
+	}
+	else {
+		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
+		if (!shadow_only) select_texture(WOOD_TEX);
 		set_color(color);
-		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
-		if (!shadow_only) select_texture(get_tid());
-		glPushMatrix();
-		translate_to(pos);
-		gluCylinder(quadric, radius, radius2, height, ndiv, 1);
-		if (!shadow_only) select_texture(TREE_END_TEX);
-		glTranslatef(0.0, 0.0, height);
-		gluDisk(quadric, 0.0, radius2, ndiv, 1);
-		glPopMatrix();
+		draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
 	}
-};
+}
 
+void s_plant::draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, float sscale, bool shadow_only) const {
 
-class s_plant : public scenery_obj { // size = 40
+	if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 2)) return;
+	bool const shadowed(shadow_only ? 0 : is_shadowed());
+	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
+	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
+	assert(vbo_mgr_ix >= 0);
+	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+	if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
+}
 
-	int coll_id2, vbo_mgr_ix;
-	float height;
+void s_plant::remove_cobjs() {
 
-public:
-	s_plant() : coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
-	bool operator<(s_plant const &p) const {return (type < p.type);}
+	remove_reset_coll_obj(coll_id2);
+	scenery_obj::remove_cobjs();
+}
 
-	int create(int x, int y, int use_xy, float minz, vbo_quad_block_manager_t &vbo_manager) {
-		vbo_mgr_ix = -1;
-		type   = rand2()%NUM_PLANT_TYPES;
-		gen_spos(x, y, use_xy);
-		if (pos.z < minz) return 0;
-		radius = rand_uniform2(0.0025/msms2, 0.0045/msms2);
-		height = rand_uniform2(0.2/msms2, 0.4/msms2) + 0.025;
-		gen_points(vbo_manager);
-		return 1;
-	}
+void s_plant::destroy() {
 
-	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_quad_block_manager_t &vbo_manager) {
-		vbo_mgr_ix = -1;
-		type   = abs(type_)%NUM_PLANT_TYPES;
-		pos    = pos_;
-		radius = radius_;
-		height = height_;
-		if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
-		gen_points(vbo_manager);
-	}
-
-	void add_cobjs() {
-		point cpos(pos), cpos2(pos);
-		float const wscale(radius*msms2/0.004);
-		float const r2(radius+0.07*wscale*(height+0.03));
-		cpos.z  += height;
-		cpos2.z += 3.0*height/(36.0*height + 4.0);
-		coll_id  = add_coll_cylinder(pos,   cpos, radius, 0.0,    cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX        )); // trunk
-		coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
-	}
-
-	void gen_points(vbo_quad_block_manager_t &vbo_manager) {
-		if (vbo_mgr_ix >= 0) return; // already generated
-		float const wscale(250.0*radius*msms2);
-		float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
-		unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
-		float rdeg(30.0);
-		vector<vert_norm> &points(vbo_manager.temp_points);
-		points.resize(0);
-
-		for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
-			float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
-			float const z((j + 3.0)*height/(nlevels + 4.0));
-			vector3d const scale(sz*wscale, sz*wscale, sz);
-
-			for (unsigned k = 0; k < nrings; ++k) {
-				float const theta(TWO_PI*(3.3*j + 0.2*k) + theta0);
-				int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
-				rdeg += 0.01*(val - 150);
-				add_rotated_quad_pts(points, theta, rdeg/45.0, z, pos, scale);
-			}
-		}
-		vbo_mgr_ix = vbo_manager.add_points(points, pltype[type].leafc);
-	}
-
-	bool is_shadowed() const {
-		int const light(get_light());
-
-		for (unsigned i = 0; i < 3; ++i) {
-			point p(pos);
-			p.z += 0.5*i*height;
-			if (is_visible_to_light_cobj(p, light, (radius + height), coll_id, 0)) {return 0;}
-		}
-		return 1;
-	}
-
-	void draw_stem(float sscale, bool shadow_only) const {
-		if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 0)) return;
-		bool const shadowed(shadow_only ? 0 : is_shadowed());
-		colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
-		float const dist(distance_to_camera(pos));
-
-		if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
-			tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
-		}
-		else {
-			int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
-			if (!shadow_only) select_texture(WOOD_TEX);
-			set_color(color);
-			draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
-		}
-	}
-
-	void draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, float sscale, bool shadow_only) const {
-		if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 2)) return;
-		bool const shadowed(shadow_only ? 0 : is_shadowed());
-		if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
-		select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
-		assert(vbo_mgr_ix >= 0);
-		vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-		if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
-	}
-
-	void remove_cobjs() {
-		remove_reset_coll_obj(coll_id2);
-		scenery_obj::remove_cobjs();
-	}
-
-	void destroy() {
-		remove_cobjs();
-		scenery_obj::destroy(); // will remove coll_id twice, which is OK
-	}
-};
+	remove_cobjs();
+	scenery_obj::destroy(); // will remove coll_id twice, which is OK
+}
 
 
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
@@ -753,172 +711,167 @@ template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int 
 }
 
 
-class scenery_group {
+void scenery_group::clear() {
 
-	vector<rock_shape3d> rock_shapes;
-	vector<surface_rock> surface_rocks;
-	vector<s_rock>       rocks;
-	vector<s_log>        logs;
-	vector<s_stump>      stumps;
-	vector<s_plant>      plants;
-	vbo_quad_block_manager_t vbo_manager;
+	free();
+	rock_shapes.clear();
+	surface_rocks.clear();
+	rocks.clear();
+	logs.clear();
+	stumps.clear();
+	plants.clear();
+	clear_vbo();
+}
 
-public:
-	void clear_vbo() {vbo_manager.clear_vbo();}
+void scenery_group::free() {
 
-	void clear() {
-		free();
-		rock_shapes.clear();
-		surface_rocks.clear();
-		rocks.clear();
-		logs.clear();
-		stumps.clear();
-		plants.clear();
-		clear_vbo();
+	free_scenery_vector(rock_shapes);
+	free_scenery_vector(surface_rocks);
+	free_scenery_vector(rocks);
+	free_scenery_vector(logs);
+	free_scenery_vector(stumps);
+	free_scenery_vector(plants);
+}
+
+void scenery_group::add_cobjs() {
+
+	add_scenery_vector_cobjs(rock_shapes);
+	add_scenery_vector_cobjs(surface_rocks);
+	add_scenery_vector_cobjs(rocks);
+	add_scenery_vector_cobjs(logs);
+	add_scenery_vector_cobjs(stumps);
+	add_scenery_vector_cobjs(plants);
+}
+
+void scenery_group::shift(vector3d const &vd) {
+
+	shift_scenery_vector(rock_shapes,   vd);
+	shift_scenery_vector(surface_rocks, vd);
+	shift_scenery_vector(rocks,         vd);
+	shift_scenery_vector(logs,          vd);
+	shift_scenery_vector(stumps,        vd);
+	shift_scenery_vector(plants,        vd);
+}
+
+// update region is inclusive: [x1,x2]x[y1,y2]
+void scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficient, should use spatial subdivision
+
+	assert(x1 <= x2 && y1 <= y2);
+	// test if there are any cobjs within this region?
+	update_scenery_zvals_vector(rock_shapes,   x1, y1, x2, y2);
+	update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2);
+	update_scenery_zvals_vector(rocks,         x1, y1, x2, y2);
+	update_scenery_zvals_vector(logs,          x1, y1, x2, y2);
+	update_scenery_zvals_vector(stumps,        x1, y1, x2, y2);
+	update_scenery_zvals_vector(plants,        x1, y1, x2, y2);
+}
+
+void scenery_group::do_rock_damage(point const &pos, float radius, float damage) {
+
+	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
+		if (rock_shapes[i].do_impact_damage(pos, radius)) rock_collision(0, -1, zero_vector, pos, damage, IMPACT);
 	}
+}
 
-	void free() {
-		free_scenery_vector(rock_shapes);
-		free_scenery_vector(surface_rocks);
-		free_scenery_vector(rocks);
-		free_scenery_vector(logs);
-		free_scenery_vector(stumps);
-		free_scenery_vector(plants);
-	}
+void scenery_group::add_plant(point const &pos, float height, float radius, int type, int calc_z) {
 
-	void add_cobjs() {
-		add_scenery_vector_cobjs(rock_shapes);
-		add_scenery_vector_cobjs(surface_rocks);
-		add_scenery_vector_cobjs(rocks);
-		add_scenery_vector_cobjs(logs);
-		add_scenery_vector_cobjs(stumps);
-		add_scenery_vector_cobjs(plants);
-	}
+	assert(height > 0.0 && radius > 0.0);
+	plants.push_back(s_plant());
+	plants.back().create2(pos, height, radius, type, calc_z, vbo_manager);
+}
 
-	void shift(vector3d const &vd) {
-		shift_scenery_vector(rock_shapes,   vd);
-		shift_scenery_vector(surface_rocks, vd);
-		shift_scenery_vector(rocks,         vd);
-		shift_scenery_vector(logs,          vd);
-		shift_scenery_vector(stumps,        vd);
-		shift_scenery_vector(plants,        vd);
-	}
+void scenery_group::gen(int x1, int y1, int x2, int y2) {
 
-	// update region is inclusive: [x1,x2]x[y1,y2]
-	void update_zvals(int x1, int y1, int x2, int y2) { // inefficient, should use spatial subdivision
-		assert(x1 <= x2 && y1 <= y2);
-		// test if there are any cobjs within this region?
-		update_scenery_zvals_vector(rock_shapes,   x1, y1, x2, y2);
-		update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2);
-		update_scenery_zvals_vector(rocks,         x1, y1, x2, y2);
-		update_scenery_zvals_vector(logs,          x1, y1, x2, y2);
-		update_scenery_zvals_vector(stumps,        x1, y1, x2, y2);
-		update_scenery_zvals_vector(plants,        x1, y1, x2, y2);
-	}
+	unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(mesh_scale*mesh_scale2+1))));
+	float const min_stump_z(water_plane_z + 0.010*zmax_est);
+	float const min_plant_z(water_plane_z + 0.016*zmax_est);
+	float const min_log_z  (water_plane_z - 0.040*zmax_est);
+	msms2 = mesh_scale*mesh_scale2;
 
-	void do_rock_damage(point const &pos, float radius, float damage) {
-		for (unsigned i = 0; i < rock_shapes.size(); ++i) {
-			if (rock_shapes[i].do_impact_damage(pos, radius)) rock_collision(0, -1, zero_vector, pos, damage, IMPACT);
-		}
-	}
-
-	void add_plant(point const &pos, float height, float radius, int type, int calc_z) {
-		assert(height > 0.0 && radius > 0.0);
-		plants.push_back(s_plant());
-		plants.back().create2(pos, height, radius, type, calc_z, vbo_manager);
-	}
-
-	void gen(int x1, int y1, int x2, int y2) {
-		unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(mesh_scale*mesh_scale2+1))));
-		float const min_stump_z(water_plane_z + 0.010*zmax_est);
-		float const min_plant_z(water_plane_z + 0.016*zmax_est);
-		float const min_log_z  (water_plane_z - 0.040*zmax_est);
-		msms2 = mesh_scale*mesh_scale2;
-
-		for (int i = y1; i < y2; ++i) {
-			for (int j = x1; j < x2; ++j) {
-				global_rand_gen.rseed1 = 786433* (i + yoff2) + 196613 *rand_gen_index;
-				global_rand_gen.rseed2 = 6291469*(j + xoff2) + 1572869*rand_gen_index;
-				int const val(rand2_seed_mix()%smod);
-				if (val > 100) continue;
-				rand2_mix();
-				bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation);
+	for (int i = y1; i < y2; ++i) {
+		for (int j = x1; j < x2; ++j) {
+			global_rand_gen.rseed1 = 786433* (i + yoff2) + 196613 *rand_gen_index;
+			global_rand_gen.rseed2 = 6291469*(j + xoff2) + 1572869*rand_gen_index;
+			int const val(rand2_seed_mix()%smod);
+			if (val > 100) continue;
+			rand2_mix();
+			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation);
 			
-				if (veg && rand2()%100 < 30) {
-					plants.push_back(s_plant());
-					if (!plants.back().create(j, i, 1, min_plant_z, vbo_manager)) plants.pop_back();
-				}
-				else if (val < 5) {
-					rock_shapes.push_back(rock_shape3d());
-					rock_shapes.back().create(j, i, 1);
-				}
-				else if (val < 15) {
-					surface_rocks.push_back(surface_rock());
-					surface_rocks.back().create(j, i, 1);
-				}
-				else if (val < 50) {
-					rocks.push_back(s_rock());
-					rocks.back().create(j, i, 1);
-				}
-				else if (veg && val < 85) {
-					logs.push_back(s_log());
-					if (!logs.back().create(j, i, 1, min_log_z)) logs.pop_back();
-				}
-				else if (veg) {
-					stumps.push_back(s_stump());
-					if (!stumps.back().create(j, i, 1, min_stump_z)) stumps.pop_back();
-				}
+			if (veg && rand2()%100 < 30) {
+				plants.push_back(s_plant());
+				if (!plants.back().create(j, i, 1, min_plant_z, vbo_manager)) plants.pop_back();
 			}
-		}
-		surface_rock_cache.clear_unref();
-		sort(plants.begin(), plants.end()); // sort by type
-	}
-
-	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only) {
-		assert(quadric != 0);
-		int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
-
-		if (draw_opaque) { // draw stems, rocks, logs, and stumps
-			for (unsigned i = 0; i < rock_shapes.size(); ++i) {
-				rock_shapes[i].draw();
+			else if (val < 5) {
+				rock_shapes.push_back(rock_shape3d());
+				rock_shapes.back().create(j, i, 1);
 			}
-			draw_scenery_vector(surface_rocks, sscale, shadow_only);
-			draw_scenery_vector(rocks,  sscale, shadow_only);
-			gluQuadricTexture(quadric, GL_TRUE);
-			draw_scenery_vector(logs,   sscale, shadow_only);
-			draw_scenery_vector(stumps, sscale, shadow_only);
-			gluQuadricTexture(quadric, GL_FALSE);
-
-			for (unsigned i = 0; i < plants.size(); ++i) {
-				plants[i].draw_stem(sscale, shadow_only);
+			else if (val < 15) {
+				surface_rocks.push_back(surface_rock());
+				surface_rocks.back().create(j, i, 1);
 			}
-			glDisable(GL_TEXTURE_2D);
-			tree_scenery_pld.draw_and_clear();
-		}
-		if (draw_transparent) { // draw leaves
-			enable_blend();
-			glEnable(GL_COLOR_MATERIAL);
-			glEnable(GL_ALPHA_TEST);
-			glAlphaFunc(GL_GREATER, 0.9);
-			set_lighted_sides(2);
-			shader_t s;
-			set_leaf_shader(s, 0.9, 0, 0);
-			vbo_manager.upload();
-			vbo_manager.begin_render();
-
-			for (unsigned i = 0; i < plants.size(); ++i) {
-				plants[i].draw_leaves(s, vbo_manager, sscale, shadow_only);
+			else if (val < 50) {
+				rocks.push_back(s_rock());
+				rocks.back().create(j, i, 1);
 			}
-			vbo_manager.end_render();
-			s.end_shader();
-			disable_blend();
-			glDisable(GL_ALPHA_TEST);
-			set_lighted_sides(1);
-			glDisable(GL_COLOR_MATERIAL);
-			glDisable(GL_TEXTURE_2D);
+			else if (veg && val < 85) {
+				logs.push_back(s_log());
+				if (!logs.back().create(j, i, 1, min_log_z)) logs.pop_back();
+			}
+			else if (veg) {
+				stumps.push_back(s_stump());
+				if (!stumps.back().create(j, i, 1, min_stump_z)) stumps.pop_back();
+			}
 		}
 	}
-};
+	surface_rock_cache.clear_unref();
+	sort(plants.begin(), plants.end()); // sort by type
+}
+
+void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_only) {
+
+	assert(quadric != 0);
+	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
+
+	if (draw_opaque) { // draw stems, rocks, logs, and stumps
+		for (unsigned i = 0; i < rock_shapes.size(); ++i) {
+			rock_shapes[i].draw();
+		}
+		draw_scenery_vector(surface_rocks, sscale, shadow_only);
+		draw_scenery_vector(rocks,  sscale, shadow_only);
+		gluQuadricTexture(quadric, GL_TRUE);
+		draw_scenery_vector(logs,   sscale, shadow_only);
+		draw_scenery_vector(stumps, sscale, shadow_only);
+		gluQuadricTexture(quadric, GL_FALSE);
+
+		for (unsigned i = 0; i < plants.size(); ++i) {
+			plants[i].draw_stem(sscale, shadow_only);
+		}
+		glDisable(GL_TEXTURE_2D);
+		tree_scenery_pld.draw_and_clear();
+	}
+	if (draw_transparent) { // draw leaves
+		enable_blend();
+		glEnable(GL_COLOR_MATERIAL);
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.9);
+		set_lighted_sides(2);
+		shader_t s;
+		set_leaf_shader(s, 0.9, 0, 0);
+		vbo_manager.upload();
+		vbo_manager.begin_render();
+
+		for (unsigned i = 0; i < plants.size(); ++i) {
+			plants[i].draw_leaves(s, vbo_manager, sscale, shadow_only);
+		}
+		vbo_manager.end_render();
+		s.end_shader();
+		disable_blend();
+		glDisable(GL_ALPHA_TEST);
+		set_lighted_sides(1);
+		glDisable(GL_COLOR_MATERIAL);
+		glDisable(GL_TEXTURE_2D);
+	}
+}
 
 
 scenery_group all_scenery;
