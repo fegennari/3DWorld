@@ -1851,6 +1851,7 @@ void gen_scenery();
 void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only=0);
 void update_scenery_zvals(int x1, int y1, int x2, int y2);
 void free_scenery();
+void do_rock_damage(point const &pos, float radius, float damage);
 void add_scenery_cobjs();
 void shift_scenery(vector3d const &vd);
 void add_plant(point const &pos, float height, float radius, int type, int calc_z);

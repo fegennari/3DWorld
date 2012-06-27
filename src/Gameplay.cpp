@@ -63,7 +63,6 @@ extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern char player_name[];
 extern texture_t textures[];
-extern vector<rock_shape3d> rock_shapes;
 extern coll_obj_group coll_objects;
 extern GLUquadricObj* quadric;
 
@@ -1339,12 +1338,8 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 		gen_sound(((weapon == W_BBBAT) ? SOUND_HURT : SOUND_SQUISH2), pos, sound_gain);
 	}
 	damage *= sstates[shooter].get_damage_scale();
+	if (weapon != W_BLADE || rand()%20 == 0) {do_rock_damage(pos, radius, damage);}
 
-	if (weapon != W_BLADE || rand()%20 == 0) {
-		for (unsigned i = 0; i < rock_shapes.size(); ++i) {
-			if (rock_shapes[i].do_impact_damage(pos, radius)) rock_collision(0, -1, zero_vector, pos, damage, IMPACT);
-		}
-	}
 	if (weapon == W_BLADE && destroy_thresh <= 1 && sstates[shooter].fire_frame > 0 && (rand()&7) == 0) {
 		destroy_coll_objs(pos, 18.0*damage, shooter, 0);
 		update_voxel_sphere_region(pos, radius, -0.05, shooter, (rand()%3));

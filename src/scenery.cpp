@@ -49,18 +49,13 @@ extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation,
 extern GLUquadricObj* quadric;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern rand_gen_t global_rand_gen;
-vbo_quad_block_manager_t plant_vbo_manager;
 
 
-void gen_scenery_deterministic();
 int get_bark_tex_for_tree_type(int type);
 
 
 inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
 
-void clear_plant_vbos() {
-	plant_vbo_manager.clear_vbo();
-}
 
 bool skip_uw_draw(point const &pos, float radius) {
 	return (world_mode == WMODE_INF_TERRAIN && (pos.z + radius) < water_plane_z && get_camera_pos().z > water_plane_z);
@@ -621,25 +616,25 @@ public:
 	s_plant() : coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
 
-	int create(int x, int y, int use_xy, float minz) {
+	int create(int x, int y, int use_xy, float minz, vbo_quad_block_manager_t &vbo_manager) {
 		vbo_mgr_ix = -1;
 		type   = rand2()%NUM_PLANT_TYPES;
 		gen_spos(x, y, use_xy);
 		if (pos.z < minz) return 0;
 		radius = rand_uniform2(0.0025/msms2, 0.0045/msms2);
 		height = rand_uniform2(0.2/msms2, 0.4/msms2) + 0.025;
-		gen_points();
+		gen_points(vbo_manager);
 		return 1;
 	}
 
-	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z) {
+	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_quad_block_manager_t &vbo_manager) {
 		vbo_mgr_ix = -1;
 		type   = abs(type_)%NUM_PLANT_TYPES;
 		pos    = pos_;
 		radius = radius_;
 		height = height_;
 		if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
-		gen_points();
+		gen_points(vbo_manager);
 	}
 
 	void add_cobjs() {
@@ -652,13 +647,13 @@ public:
 		coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
 	}
 
-	void gen_points() {
+	void gen_points(vbo_quad_block_manager_t &vbo_manager) {
 		if (vbo_mgr_ix >= 0) return; // already generated
 		float const wscale(250.0*radius*msms2);
 		float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
 		unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
 		float rdeg(30.0);
-		vector<vert_norm> &points(plant_vbo_manager.temp_points);
+		vector<vert_norm> &points(vbo_manager.temp_points);
 		points.resize(0);
 
 		for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
@@ -673,7 +668,7 @@ public:
 				add_rotated_quad_pts(points, theta, rdeg/45.0, z, pos, scale);
 			}
 		}
-		vbo_mgr_ix = plant_vbo_manager.add_points(points, pltype[type].leafc);
+		vbo_mgr_ix = vbo_manager.add_points(points, pltype[type].leafc);
 	}
 
 	bool is_shadowed() const {
@@ -704,13 +699,13 @@ public:
 		}
 	}
 
-	void draw_leaves(shader_t &s, float sscale, bool shadow_only) const {
+	void draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, float sscale, bool shadow_only) const {
 		if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 2)) return;
 		bool const shadowed(shadow_only ? 0 : is_shadowed());
 		if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
 		select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
 		assert(vbo_mgr_ix >= 0);
-		plant_vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+		vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
 		if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
 	}
 
@@ -727,127 +722,6 @@ public:
 
 
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
-
-
-class scenery_group {
-
-	vector<rock_shape3d> rock_shapes;
-	vector<surface_rock> surface_rocks;
-	vector<s_rock>       rocks;
-	vector<s_log>        logs;
-	vector<s_stump>      stumps;
-	vector<s_plant>      plants;
-	vbo_quad_block_manager_t plant_vbo_manager;
-
-public:
-	void clear() {
-		free_scenery();
-		rock_shapes.clear();
-		surface_rocks.clear();
-		rocks.clear();
-		logs.clear();
-		stumps.clear();
-		plants.clear();
-		plant_vbo_manager.clear();
-	}
-	void add_plant(point const &pos, float height, float radius, int type, int calc_z) {
-		assert(height > 0.0 && radius > 0.0);
-		plants.push_back(s_plant());
-		plants.back().create2(pos, height, radius, type, calc_z);
-		has_scenery2 = 1;
-	}
-};
-
-
-vector<rock_shape3d> rock_shapes;
-vector<surface_rock> surface_rocks;
-vector<s_rock>       rocks;
-vector<s_log>        logs;
-vector<s_stump>      stumps;
-vector<s_plant>      plants;
-
-
-void clear_scenery_objs() {
-
-	free_scenery();
-	rock_shapes.clear();
-	surface_rocks.clear();
-	rocks.clear();
-	logs.clear();
-	stumps.clear();
-	plants.clear();
-	plant_vbo_manager.clear();
-}
-
-
-void gen_scenery() {
-
-	if (has_scenery2) return; // don't generate scenery if some has already been added
-	clear_scenery_objs();
-	has_scenery = 0;
-	if (DISABLE_SCENERY || (NO_ISLAND_SCENERY && island)) return;
-	has_scenery = 1;
-	msms2       = mesh_scale*mesh_scale2;
-	gen_scenery_deterministic();
-	add_scenery_cobjs();
-}
-
-
-void add_plant(point const &pos, float height, float radius, int type, int calc_z) {
-
-	assert(height > 0.0 && radius > 0.0);
-	plants.push_back(s_plant());
-	plants.back().create2(pos, height, radius, type, calc_z);
-	has_scenery2 = 1;
-}
-
-
-void gen_scenery_deterministic() {
-
-	unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(mesh_scale*mesh_scale2+1))));
-	float const min_stump_z(water_plane_z + 0.010*zmax_est);
-	float const min_plant_z(water_plane_z + 0.016*zmax_est);
-	float const min_log_z  (water_plane_z - 0.040*zmax_est);
-	clear_scenery_objs();
-
-	for (int i = get_ext_y1(); i < get_ext_y2(); ++i) {
-		for (int j = get_ext_x1(); j < get_ext_x2(); ++j) {
-			global_rand_gen.rseed1 = 786433* (i + yoff2) + 196613 *rand_gen_index;
-			global_rand_gen.rseed2 = 6291469*(j + xoff2) + 1572869*rand_gen_index;
-			int const val(rand2_seed_mix()%smod);
-			if (val > 100) continue;
-			rand2_mix();
-			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation);
-			
-			if (veg && rand2()%100 < 30) {
-				plants.push_back(s_plant());
-				if (!plants.back().create(j, i, 1, min_plant_z)) plants.pop_back();
-			}
-			else if (val < 5) {
-				rock_shapes.push_back(rock_shape3d());
-				rock_shapes.back().create(j, i, 1);
-			}
-			else if (val < 15) {
-				surface_rocks.push_back(surface_rock());
-				surface_rocks.back().create(j, i, 1);
-			}
-			else if (val < 50) {
-				rocks.push_back(s_rock());
-				rocks.back().create(j, i, 1);
-			}
-			else if (veg && val < 85) {
-				logs.push_back(s_log());
-				if (!logs.back().create(j, i, 1, min_log_z)) logs.pop_back();
-			}
-			else if (veg) {
-				stumps.push_back(s_stump());
-				if (!stumps.back().create(j, i, 1, min_stump_z)) stumps.pop_back();
-			}
-		}
-	}
-	surface_rock_cache.clear_unref();
-	sort(plants.begin(), plants.end()); // sort by type
-}
 
 
 template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only) {
@@ -879,100 +753,224 @@ template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int 
 }
 
 
-void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
+class scenery_group {
 
+	vector<rock_shape3d> rock_shapes;
+	vector<surface_rock> surface_rocks;
+	vector<s_rock>       rocks;
+	vector<s_log>        logs;
+	vector<s_stump>      stumps;
+	vector<s_plant>      plants;
+	vbo_quad_block_manager_t vbo_manager;
+
+public:
+	void clear_vbo() {vbo_manager.clear_vbo();}
+
+	void clear() {
+		free();
+		rock_shapes.clear();
+		surface_rocks.clear();
+		rocks.clear();
+		logs.clear();
+		stumps.clear();
+		plants.clear();
+		clear_vbo();
+	}
+
+	void free() {
+		free_scenery_vector(rock_shapes);
+		free_scenery_vector(surface_rocks);
+		free_scenery_vector(rocks);
+		free_scenery_vector(logs);
+		free_scenery_vector(stumps);
+		free_scenery_vector(plants);
+	}
+
+	void add_cobjs() {
+		add_scenery_vector_cobjs(rock_shapes);
+		add_scenery_vector_cobjs(surface_rocks);
+		add_scenery_vector_cobjs(rocks);
+		add_scenery_vector_cobjs(logs);
+		add_scenery_vector_cobjs(stumps);
+		add_scenery_vector_cobjs(plants);
+	}
+
+	void shift(vector3d const &vd) {
+		shift_scenery_vector(rock_shapes,   vd);
+		shift_scenery_vector(surface_rocks, vd);
+		shift_scenery_vector(rocks,         vd);
+		shift_scenery_vector(logs,          vd);
+		shift_scenery_vector(stumps,        vd);
+		shift_scenery_vector(plants,        vd);
+	}
+
+	// update region is inclusive: [x1,x2]x[y1,y2]
+	void update_zvals(int x1, int y1, int x2, int y2) { // inefficient, should use spatial subdivision
+		assert(x1 <= x2 && y1 <= y2);
+		// test if there are any cobjs within this region?
+		update_scenery_zvals_vector(rock_shapes,   x1, y1, x2, y2);
+		update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2);
+		update_scenery_zvals_vector(rocks,         x1, y1, x2, y2);
+		update_scenery_zvals_vector(logs,          x1, y1, x2, y2);
+		update_scenery_zvals_vector(stumps,        x1, y1, x2, y2);
+		update_scenery_zvals_vector(plants,        x1, y1, x2, y2);
+	}
+
+	void do_rock_damage(point const &pos, float radius, float damage) {
+		for (unsigned i = 0; i < rock_shapes.size(); ++i) {
+			if (rock_shapes[i].do_impact_damage(pos, radius)) rock_collision(0, -1, zero_vector, pos, damage, IMPACT);
+		}
+	}
+
+	void add_plant(point const &pos, float height, float radius, int type, int calc_z) {
+		assert(height > 0.0 && radius > 0.0);
+		plants.push_back(s_plant());
+		plants.back().create2(pos, height, radius, type, calc_z, vbo_manager);
+	}
+
+	void gen(int x1, int y1, int x2, int y2) {
+		unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(mesh_scale*mesh_scale2+1))));
+		float const min_stump_z(water_plane_z + 0.010*zmax_est);
+		float const min_plant_z(water_plane_z + 0.016*zmax_est);
+		float const min_log_z  (water_plane_z - 0.040*zmax_est);
+		msms2 = mesh_scale*mesh_scale2;
+
+		for (int i = y1; i < y2; ++i) {
+			for (int j = x1; j < x2; ++j) {
+				global_rand_gen.rseed1 = 786433* (i + yoff2) + 196613 *rand_gen_index;
+				global_rand_gen.rseed2 = 6291469*(j + xoff2) + 1572869*rand_gen_index;
+				int const val(rand2_seed_mix()%smod);
+				if (val > 100) continue;
+				rand2_mix();
+				bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation);
+			
+				if (veg && rand2()%100 < 30) {
+					plants.push_back(s_plant());
+					if (!plants.back().create(j, i, 1, min_plant_z, vbo_manager)) plants.pop_back();
+				}
+				else if (val < 5) {
+					rock_shapes.push_back(rock_shape3d());
+					rock_shapes.back().create(j, i, 1);
+				}
+				else if (val < 15) {
+					surface_rocks.push_back(surface_rock());
+					surface_rocks.back().create(j, i, 1);
+				}
+				else if (val < 50) {
+					rocks.push_back(s_rock());
+					rocks.back().create(j, i, 1);
+				}
+				else if (veg && val < 85) {
+					logs.push_back(s_log());
+					if (!logs.back().create(j, i, 1, min_log_z)) logs.pop_back();
+				}
+				else if (veg) {
+					stumps.push_back(s_stump());
+					if (!stumps.back().create(j, i, 1, min_stump_z)) stumps.pop_back();
+				}
+			}
+		}
+		surface_rock_cache.clear_unref();
+		sort(plants.begin(), plants.end()); // sort by type
+	}
+
+	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only) {
+		assert(quadric != 0);
+		int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
+
+		if (draw_opaque) { // draw stems, rocks, logs, and stumps
+			for (unsigned i = 0; i < rock_shapes.size(); ++i) {
+				rock_shapes[i].draw();
+			}
+			draw_scenery_vector(surface_rocks, sscale, shadow_only);
+			draw_scenery_vector(rocks,  sscale, shadow_only);
+			gluQuadricTexture(quadric, GL_TRUE);
+			draw_scenery_vector(logs,   sscale, shadow_only);
+			draw_scenery_vector(stumps, sscale, shadow_only);
+			gluQuadricTexture(quadric, GL_FALSE);
+
+			for (unsigned i = 0; i < plants.size(); ++i) {
+				plants[i].draw_stem(sscale, shadow_only);
+			}
+			glDisable(GL_TEXTURE_2D);
+			tree_scenery_pld.draw_and_clear();
+		}
+		if (draw_transparent) { // draw leaves
+			enable_blend();
+			glEnable(GL_COLOR_MATERIAL);
+			glEnable(GL_ALPHA_TEST);
+			glAlphaFunc(GL_GREATER, 0.9);
+			set_lighted_sides(2);
+			shader_t s;
+			set_leaf_shader(s, 0.9, 0, 0);
+			vbo_manager.upload();
+			vbo_manager.begin_render();
+
+			for (unsigned i = 0; i < plants.size(); ++i) {
+				plants[i].draw_leaves(s, vbo_manager, sscale, shadow_only);
+			}
+			vbo_manager.end_render();
+			s.end_shader();
+			disable_blend();
+			glDisable(GL_ALPHA_TEST);
+			set_lighted_sides(1);
+			glDisable(GL_COLOR_MATERIAL);
+			glDisable(GL_TEXTURE_2D);
+		}
+	}
+};
+
+
+scenery_group all_scenery;
+
+
+void gen_scenery() {
+
+	if (has_scenery2) return; // don't generate scenery if some has already been added
+	all_scenery.clear();
+	has_scenery = 0;
+	if (DISABLE_SCENERY || (NO_ISLAND_SCENERY && island)) return;
+	has_scenery = 1;
+	all_scenery.gen(get_ext_x1(), get_ext_y1(), get_ext_x2(), get_ext_y2());
+	all_scenery.add_cobjs();
+}
+
+
+void add_plant(point const &pos, float height, float radius, int type, int calc_z) {
+	all_scenery.add_plant(pos, height, radius, type, calc_z);
+	has_scenery2 = 1;
+}
+
+void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 	if (!has_scenery && !has_scenery2) return;
 	set_fill_mode();
-	assert(quadric != 0);
-	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
-
-	if (draw_opaque) { // draw stems
-		for (unsigned i = 0; i < rock_shapes.size(); ++i) { // draw rock shapes
-			rock_shapes[i].draw();
-		}
-		draw_scenery_vector(surface_rocks, sscale, shadow_only);
-		draw_scenery_vector(rocks,  sscale, shadow_only); // can unset gluQuadricTexture
-		gluQuadricTexture(quadric, GL_TRUE);
-		draw_scenery_vector(logs,   sscale, shadow_only);
-		draw_scenery_vector(stumps, sscale, shadow_only);
-		gluQuadricTexture(quadric, GL_FALSE);
-
-		for (unsigned i = 0; i < plants.size(); ++i) {
-			plants[i].draw_stem(sscale, shadow_only);
-		}
-		glDisable(GL_TEXTURE_2D);
-		tree_scenery_pld.draw_and_clear();
-	}
-	if (draw_transparent) { // draw leaves
-		enable_blend();
-		glEnable(GL_COLOR_MATERIAL);
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.9);
-		set_lighted_sides(2);
-		shader_t s;
-		set_leaf_shader(s, 0.9, 0, 0);
-		plant_vbo_manager.upload();
-		plant_vbo_manager.begin_render();
-
-		for (unsigned i = 0; i < plants.size(); ++i) {
-			plants[i].draw_leaves(s, sscale, shadow_only);
-		}
-		plant_vbo_manager.end_render();
-		s.end_shader();
-		disable_blend();
-		glDisable(GL_ALPHA_TEST);
-		set_lighted_sides(1);
-		glDisable(GL_COLOR_MATERIAL);
-		glDisable(GL_TEXTURE_2D);
-	}
+	all_scenery.draw(draw_opaque, draw_transparent, shadow_only);
 }
-
 
 void add_scenery_cobjs() {
-
-	add_scenery_vector_cobjs(rock_shapes);
-	add_scenery_vector_cobjs(surface_rocks);
-	add_scenery_vector_cobjs(rocks);
-	add_scenery_vector_cobjs(logs);
-	add_scenery_vector_cobjs(stumps);
-	add_scenery_vector_cobjs(plants);
+	all_scenery.add_cobjs();
 }
-
 
 void shift_scenery(vector3d const &vd) {
-
 	if (!has_scenery2) return; // dynamically created, not placed
-	shift_scenery_vector(rock_shapes,   vd);
-	shift_scenery_vector(surface_rocks, vd);
-	shift_scenery_vector(rocks,         vd);
-	shift_scenery_vector(logs,          vd);
-	shift_scenery_vector(stumps,        vd);
-	shift_scenery_vector(plants,        vd);
+	all_scenery.shift(vd);
 }
-
 
 // update region is inclusive: [x1,x2]x[y1,y2]
-void update_scenery_zvals(int x1, int y1, int x2, int y2) { // inefficient, should use spatial subdivision
-
-	assert(x1 <= x2 && y1 <= y2);
-	// test if there are any cobjs within this region?
-	update_scenery_zvals_vector(rock_shapes,   x1, y1, x2, y2);
-	update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2);
-	update_scenery_zvals_vector(rocks,         x1, y1, x2, y2);
-	update_scenery_zvals_vector(logs,          x1, y1, x2, y2);
-	update_scenery_zvals_vector(stumps,        x1, y1, x2, y2);
-	update_scenery_zvals_vector(plants,        x1, y1, x2, y2);
+void update_scenery_zvals(int x1, int y1, int x2, int y2) {
+	all_scenery.update_zvals(x1, y1, x2, y2);
 }
 
-
 void free_scenery() {
+	all_scenery.free();
+}
 
-	free_scenery_vector(rock_shapes);
-	free_scenery_vector(surface_rocks);
-	free_scenery_vector(rocks);
-	free_scenery_vector(logs);
-	free_scenery_vector(stumps);
-	free_scenery_vector(plants);
+void clear_plant_vbos() {
+	all_scenery.clear_vbo();
+}
+
+void do_rock_damage(point const &pos, float radius, float damage) {
+	all_scenery.do_rock_damage(pos, radius, damage);
 }
 
 
