@@ -468,14 +468,14 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 	vector<vert_norm> &points(vbo_manager.temp_points);
 	points.resize(0);
 
-	for (unsigned j = 0; j < N_PT_LEVELS; ++j) {
+	for (unsigned j = 0; j < N_PT_LEVELS; j += (low_detail ? N_PT_LEVELS-1 : 1)) {
 		float const sz(0.5*(height0 + 0.03/ms)*((N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS));
 		float const z((j + 1.8)*height0/(N_PT_LEVELS + 2.8) - rd*sz);
 		vector3d const scale(sz, sz, sz);
 
-		for (unsigned k = 0; k < N_PT_RINGS; ++k) {
+		for (unsigned k = 0; k < (low_detail ? 1 : N_PT_RINGS); ++k) { // only need one level to get the bounds in low_detail mode
 			float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0);
-			add_rotated_quad_pts(points, theta, rd, z, center, scale);
+			add_rotated_quad_pts(points, theta, rd, z, center, scale); // bounds are (sz, sz, rd*sz+z)
 		}
 	}
 	if (low_detail) {

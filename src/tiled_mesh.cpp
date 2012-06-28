@@ -8,6 +8,7 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 #include "small_tree.h"
+#include "scenery.h"
 
 
 bool const DEBUG_TILES        = 0;
@@ -65,6 +66,7 @@ class tile_t {
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group trees;
+	scenery_group scenery; // unused
 
 public:
 	typedef vert_norm_comp vert_type_t;
