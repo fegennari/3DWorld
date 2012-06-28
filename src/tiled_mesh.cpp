@@ -13,7 +13,6 @@
 
 bool const DEBUG_TILES        = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
-bool const ENABLE_TREE_BFC    = 0; // faster but has popping artifacts
 int  const DISABLE_TEXTURES   = 0;
 int  const TILE_RADIUS        = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT     = 6; // WM3, in mesh sizes
@@ -22,6 +21,7 @@ float const DRAW_DIST_TILES   = 1.4;
 float const CREATE_DIST_TILES = 1.5;
 float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 2.0;
+float const GEOMORPH_THRESH   = 5.0;
 
 
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
@@ -148,7 +148,7 @@ public:
 			for (unsigned i = 0; i < NUM_LODS; ++i) {delete_vbo(ivbo[i]);}
 			init_vbo_ids();
 			clear_shadows();
-			trees.vbo_manager.clear_vbo();
+			trees.clear_vbos();
 		}
 		if (tclear) {clear_tid();}
 	}
@@ -373,23 +373,18 @@ public:
 	}
 
 	float get_rel_dist_to_camera() const {
-		return (p2p_dist_xy(get_camera_pos(), get_center()) - radius)/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		return max(0.0f, (p2p_dist_xy(get_camera_pos(), get_center()) - radius))/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	}
-	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*get_tile_radius();}
-
 	bool update_range() { // if returns 0, tile will be deleted
 		float const dist(get_rel_dist_to_camera());
 		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
 		return (dist < DELETE_DIST_TILES);
 	}
-
-	bool is_visible() const {
-		return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());
-	}
-	bool trees_are_distant() const {
-		return (get_dist_to_camera_in_tiles() >= max(1.0, 5.0*calc_tree_size()));
-	}
-	bool use_low_tree_detail() const {return (ENABLE_TREE_LOD && trees_are_distant());}
+	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());}
+	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*get_tile_radius();}
+	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/max(1.0, 5.0*calc_tree_size());}
+	float get_tree_far_weight () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
+	float get_tree_near_weight() const {return (1.0 - get_tree_far_weight());}
 
 	void init_tree_draw() {
 		if (trees.generated) return; // already generate
@@ -404,26 +399,38 @@ public:
 	}
 
 	void update_tree_draw() {
-		unsigned const desired_tlod(use_low_tree_detail() ? 1 : 2);
+		float const weights[2] = {get_tree_near_weight(), get_tree_far_weight()}; // {high, low} detail
 
-		if (tree_lod_level != desired_tlod) {
-			tree_lod_level = desired_tlod;
-			trees.clear_vbo_manager();
-			trees.finalize(tree_lod_level == 1);
+		for (unsigned d = 0; d < 2; ++d) {
+			if (tree_lod_level & (1<<d)) { // currently enabled
+				if (weights[d] == 0.0) { // not needed
+					tree_lod_level &= ~(1<<d);
+					trees.clear_vbo_manager_and_ids(1<<d);
+				}
+			}
+			else if (weights[d] > 0.0) { // currently disabled, but needed
+				tree_lod_level |= (1<<d);
+				trees.finalize(d != 0);
+			}
+			if (weights[d] > 0.0) {trees.vbo_manager[d].upload();}
 		}
-		trees.vbo_manager.upload();
 	}
 
 	unsigned num_trees() const {return trees.size();}
 
-	void draw_trees(vector<point> &trunk_pts, bool draw_branches, bool draw_leaves) const {
+	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail) const {
+		s.add_uniform_float("camera_facing_scale", (low_detail ? 1.0 : 0.0));
+		bool const draw_all(low_detail || camera_pdu.sphere_completely_visible_test(get_center(), 0.5*radius));
+		trees.draw_leaves(0, low_detail, draw_all, xlate);
+	}
+
+	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_leaves, bool is_moving) const {
 		glPushMatrix();
-		bool const distant(trees_are_distant());
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
 		
 		if (draw_branches) {
-			if (distant) {
+			if (get_tree_dist_scale() > 1.0) { // far away, use low detail branches
 				trees.add_trunk_pts(xlate, trunk_pts);
 			}
 			else {
@@ -431,11 +438,20 @@ public:
 			}
 		}
 		if (draw_leaves) {
-			bool const cull(ENABLE_TREE_BFC && distant);
-			bool const draw_all(use_low_tree_detail() || camera_pdu.sphere_completely_visible_test(get_center(), 0.5*radius));
-			if (cull) {glEnable (GL_CULL_FACE);}
-			trees.draw_leaves(0, draw_all, xlate);
-			if (cull) {glDisable(GL_CULL_FACE);}
+			float weights[2] = {get_tree_near_weight(), get_tree_far_weight()}; // {high, low} detail
+
+			if (/*is_moving &&*/ weights[0] > 0 && weights[1] > 0.0) { // use geomorphing
+				bool const d(weights[1] > weights[0]);
+				for (unsigned d = 0; d < 2; ++d) {weights[d] = max(0.6f, weights[d]);}
+				s.add_uniform_float("alpha_post_scale", weights[d]);
+				draw_tree_leaves_lod(s, xlate, d);
+				s.add_uniform_float("alpha_post_scale", weights[!d]);
+				draw_tree_leaves_lod(s, xlate, !d);
+				s.add_uniform_float("alpha_post_scale", 1.0);
+			}
+			else {
+				draw_tree_leaves_lod(s, xlate, (weights[1] > 0.0));
+			}
 		}
 		glPopMatrix();
 	}
@@ -596,13 +612,16 @@ public:
 		unsigned long long mem(0);
 		vector<tile_t::vert_type_t> data;
 		vector<unsigned short> indices[NUM_LODS];
-		static point last_sun(all_zeros), last_moon(all_zeros);
+		static point last_sun(all_zeros), last_moon(all_zeros), last_cpos(all_zeros);
 
 		if (sun_pos != last_sun || moon_pos != last_moon) {
 			clear_vbos_tids(1,0); // light source changed, clear vbos and build new shadow map
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}
+		point const cpos(get_camera_pos());
+		bool const is_moving(cpos != last_cpos);
+		if (!reflection_pass) {last_cpos = cpos;}
 		shader_t s;
 		setup_mesh_draw_shaders(s, wpz, 1, reflection_pass);
 		
@@ -631,11 +650,11 @@ public:
 		s.end_shader();
 		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
-		if (trees_enabled()) {draw_trees(to_draw, reflection_pass);}
+		if (trees_enabled()) {draw_trees(to_draw, reflection_pass, is_moving);}
 		return zmin;
 	}
 
-	void draw_trees(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
+	void draw_trees(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass, bool is_moving) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			if (trees_enabled()) {to_draw[i].second->update_tree_draw();}
 		}
@@ -646,7 +665,7 @@ public:
 		set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
-			to_draw[i].second->draw_trees(tree_trunk_pts, 1, 0);
+			to_draw[i].second->draw_trees(s, tree_trunk_pts, 1, 0, is_moving);
 		}
 		s.add_uniform_float("tex_scale_t", 1.0);
 		s.end_shader();
@@ -662,6 +681,7 @@ public:
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_float("min_alpha", 0.75);
+		s.add_uniform_float("alpha_post_scale", 1.0);
 		check_gl_error(302);
 		
 		if (!tree_trunk_pts.empty()) { // color/texture already set above
@@ -678,8 +698,7 @@ public:
 		set_specular(0.2, 8.0);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
-			s.add_uniform_float("camera_facing_scale", (to_draw[i].second->use_low_tree_detail() ? 1.0 : 0.0));
-			to_draw[i].second->draw_trees(tree_trunk_pts, 0, 1);
+			to_draw[i].second->draw_trees(s, tree_trunk_pts, 0, 1, is_moving);
 		}
 		assert(tree_trunk_pts.empty());
 		set_specular(0.0, 1.0);

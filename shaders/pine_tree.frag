@@ -1,9 +1,11 @@
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
+uniform float alpha_post_scale = 1.0;
 
 void main()
 {
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	if (texel.a <= min_alpha) discard;
-	gl_FragColor = apply_fog(texel * gl_Color);
+	gl_FragColor    = apply_fog(texel * gl_Color);
+	gl_FragColor.a *= alpha_post_scale;
 }

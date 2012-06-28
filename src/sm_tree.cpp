@@ -78,11 +78,11 @@ void small_tree_group::add_tree(small_tree &st) {
 
 void small_tree_group::finalize(bool low_detail) {
 
-	vbo_manager.reserve_pts(4*(low_detail ? 2 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
+	vbo_manager[low_detail].reserve_pts(4*(low_detail ? 2 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
 	trunk_pts.reserve(2*size());
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->calc_points(vbo_manager, low_detail);
+		i->calc_points(vbo_manager[low_detail], low_detail);
 		i->add_trunk_as_line(trunk_pts);
 	}
 }
@@ -96,19 +96,34 @@ void small_tree_group::add_trunk_pts(point const &xlate, vector<point> &pts) con
 }
 
 
-void small_tree_group::clear_vbo_manager() {
+void small_tree_group::clear_vbos() {
+	
+	for (unsigned i = 0; i < 2; ++i) {
+		vbo_manager[i].clear_vbo();
+	}
+}
+
+
+void small_tree_group::clear_vbo_manager(int which) {
+	
+	if (which & 1) {vbo_manager[0].clear();}
+	if (which & 2) {vbo_manager[1].clear();}
+}
+
+
+void small_tree_group::clear_vbo_manager_and_ids(int which) {
 	
 	for (iterator i = begin(); i != end(); ++i) {
-		i->clear_vbo_mgr_ix();
+		i->clear_vbo_mgr_ix(which);
 	}
-	vbo_manager.clear();
+	clear_vbo_manager(which);
 }
 
 
 void small_tree_group::clear_all() {
 
 	clear();
-	clear_vbo_manager();
+	clear_vbo_manager_and_ids();
 	trunk_pts.clear();
 	generated = 0;
 }
@@ -149,22 +164,20 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate, vec
 	BLACK.do_glColor();
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(1, shadow_only, 0, vbo_manager, xlate, points);
+		i->draw(1, shadow_only, 0, vbo_manager[0], 0, xlate, points);
 	}
 }
 
 
-void small_tree_group::draw_leaves(bool shadow_only, bool draw_all_pine, vector3d const xlate) const {
+void small_tree_group::draw_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, vector3d const xlate) const {
 
-	set_lighted_sides(2);
 	enable_blend();
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.75);
+	vbo_quad_block_manager_t const &vbomgr(vbo_manager[low_detail]);
 
 	if (draw_all_pine) {
-		vbo_manager.begin_render();
+		vbomgr.begin_render();
 		select_texture(stt[T_PINE].leaf_tid);
-		vbo_manager.render_all();
+		vbomgr.render_all();
 	}
 	else {
 		for (const_iterator i = begin(); i != end(); ++i) {
@@ -173,16 +186,13 @@ void small_tree_group::draw_leaves(bool shadow_only, bool draw_all_pine, vector3
 			if (i == begin() || (i-1)->get_type() != type) { // first of this type
 				bool const is_pine(type == T_PINE || type == T_SH_PINE), untextured(is_pine && (draw_model != 0));
 				select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
-				if (is_pine) {vbo_manager.begin_render();}
+				if (is_pine) {vbomgr.begin_render();}
 			}
-			i->draw(2, shadow_only, (size() < 100), vbo_manager, xlate); // only cull pine tree leaves if there aren't too many
+			i->draw(2, shadow_only, (size() < 100), vbomgr, low_detail, xlate); // only cull pine tree leaves if there aren't too many
 		}
 	}
-	vbo_manager.end_render();
-	glDisable(GL_ALPHA_TEST);
+	vbomgr.end_render();
 	disable_blend();
-	set_lighted_sides(1);
-	glDisable(GL_TEXTURE_2D);
 }
 
 
@@ -271,7 +281,7 @@ int add_small_tree(point const &pos, float height, float width, int tree_type, b
 
 	assert(height > 0.0 && width > 0.0);
 	small_trees.add_tree(small_tree(pos, height, width, (abs(tree_type)%NUM_ST_TYPES), calc_z)); // could have a type error
-	small_trees.back().calc_points(small_trees.vbo_manager, 0);
+	small_trees.back().calc_points(small_trees.vbo_manager[0], 0);
 	return 1; // might return zero in some case
 }
 
@@ -301,7 +311,7 @@ void gen_small_trees() {
 
 
 void clear_sm_tree_vbos() {
-	small_trees.vbo_manager.clear_vbo();
+	small_trees.clear_vbo_manager();
 }
 
 void add_small_tree_coll_objs() { // doesn't handle rotation angle
@@ -343,14 +353,20 @@ void draw_small_trees(bool shadow_only) {
 	set_fill_mode();
 	small_trees.draw_branches(shadow_only);
 	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
-	small_trees.vbo_manager.upload();
+	small_trees.vbo_manager[0].upload();
 
 	if (can_use_shaders && (shadow_map_enabled() || has_dir_lights) && world_mode == WMODE_GROUND) {
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1); // dynamic lights, but no smoke
 	}
 	if (s.is_setup()) s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+	set_lighted_sides(2);
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.75);
 	small_trees.draw_leaves(shadow_only);
+	glDisable(GL_ALPHA_TEST);
+	set_lighted_sides(1);
+	glDisable(GL_TEXTURE_2D);
 	if (s.is_setup()) s.add_uniform_float("base_color_scale", 1.0);
 	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
 	tree_scenery_pld.draw_and_clear();
@@ -359,8 +375,9 @@ void draw_small_trees(bool shadow_only) {
 
 
 small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z) :
-	type(t), vbo_mgr_ix(-1), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
+	type(t), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
 {
+	clear_vbo_mgr_ix();
 	for (unsigned i = 0; i < 3; ++i) rv[i] = rand2d();
 	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;
 
@@ -458,10 +475,16 @@ void small_tree::remove_cobjs() {
 }
 
 
+void small_tree::clear_vbo_mgr_ix(int which) {
+	if (which & 1) {vbo_mgr_ix[0] = -1;}
+	if (which & 2) {vbo_mgr_ix[1] = -1;}
+}
+
+
 void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_detail) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
-	if (vbo_mgr_ix >= 0) return; // points already calculated
+	if (vbo_mgr_ix[low_detail] >= 0) return; // points already calculated
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
 	float const ms(mesh_scale*mesh_scale2), rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
@@ -509,7 +532,7 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 			points.push_back(vert_norm(pt, norm));
 		}
 	}
-	vbo_mgr_ix = vbo_manager.add_points(points, color);
+	vbo_mgr_ix[low_detail] = vbo_manager.add_points(points, color);
 }
 
 
@@ -533,7 +556,7 @@ colorRGBA small_tree::get_bark_color() const {
 
 
 void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager,
-	vector3d const xlate, vector<point> *points) const
+	bool low_detail, vector3d const xlate, vector<point> *points) const
 {
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
@@ -588,8 +611,8 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_m
 				tree_scenery_pld.add_pt((pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)) + xlate), vector3d(height0, 0.0, 0.0), color);
 			}
 			else {
-				assert(vbo_mgr_ix >= 0);
-				vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
+				assert(vbo_mgr_ix[low_detail] >= 0);
+				vbo_manager.render_range(vbo_mgr_ix[low_detail], vbo_mgr_ix[low_detail]+1); // draw textured quad if far away?
 			}
 		}
 		else { // palm or decidious
