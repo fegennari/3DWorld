@@ -145,7 +145,9 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark1.jpg"), // 600x600
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg"), // 892x892
-texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png") // 1024x768
+texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png"), // 1024x768
+
+texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen.raw") // not real file
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [do_compress]
 };
@@ -182,6 +184,7 @@ void gen_tree_end_texture();
 void gen_blur_cent_texture();
 void gen_gradient_texture();
 void gen_wind_texture();
+void gen_noise_texture();
 void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
 int get_bare_ls_tid(float zval);
@@ -229,6 +232,7 @@ void load_textures() {
 	gen_stripe_texture(VSTRIPE_TEX, 0);
 	gen_blur_cent_texture();
 	gen_gradient_texture();
+	gen_noise_texture();
 
 	if (!universe_only) {
 		gen_wind_texture();
@@ -1293,6 +1297,19 @@ void gen_wind_texture() {
 
 	for (unsigned i = 0; i < size; ++i) {
 		tex_data[i] = tex_data2[(i<<2)+3]; // put alpha in luminance
+	}
+}
+
+
+void gen_noise_texture() {
+
+	texture_t &tex(textures[NOISE_GEN_TEX]);
+	assert(tex.ncolors == 1);
+	unsigned char *tex_data(tex.get_data());
+	unsigned const size(tex.num_pixels());
+
+	for (unsigned i = 0; i < size; ++i) {
+		tex_data[i] = rand() % 256;
 	}
 }
 
