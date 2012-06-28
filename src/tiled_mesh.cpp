@@ -384,7 +384,6 @@ public:
 	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*get_tile_radius();}
 	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/max(1.0, 5.0*calc_tree_size());}
 	float get_tree_far_weight () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
-	float get_tree_near_weight() const {return (1.0 - get_tree_far_weight());}
 
 	void init_tree_draw() {
 		if (trees.generated) return; // already generate
@@ -399,7 +398,8 @@ public:
 	}
 
 	void update_tree_draw() {
-		float const weights[2] = {get_tree_near_weight(), get_tree_far_weight()}; // {high, low} detail
+		float const weight(get_tree_far_weight());
+		float const weights[2] = {1.0-weight, weight}; // {high, low} detail
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (tree_lod_level & (1<<d)) { // currently enabled
@@ -424,7 +424,7 @@ public:
 		trees.draw_leaves(0, low_detail, draw_all, xlate);
 	}
 
-	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_leaves, bool is_moving) const {
+	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_leaves) const {
 		glPushMatrix();
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
@@ -438,19 +438,18 @@ public:
 			}
 		}
 		if (draw_leaves) {
-			float weights[2] = {get_tree_near_weight(), get_tree_far_weight()}; // {high, low} detail
+			float const weight(1.0 - get_tree_far_weight());
 
-			if (/*is_moving &&*/ weights[0] > 0 && weights[1] > 0.0) { // use geomorphing
-				bool const d(weights[1] > weights[0]);
-				for (unsigned d = 0; d < 2; ++d) {weights[d] = max(0.6f, weights[d]);}
-				s.add_uniform_float("alpha_post_scale", weights[d]);
-				draw_tree_leaves_lod(s, xlate, d);
-				s.add_uniform_float("alpha_post_scale", weights[!d]);
-				draw_tree_leaves_lod(s, xlate, !d);
-				s.add_uniform_float("alpha_post_scale", 1.0);
+			if (weight > 0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
+				s.add_uniform_float("max_noise", weight);
+				draw_tree_leaves_lod(s, xlate, 0);
+				s.add_uniform_float("max_noise", 1.0);
+				s.add_uniform_float("min_noise", weight);
+				draw_tree_leaves_lod(s, xlate, 1);
+				s.add_uniform_float("min_noise", 0.0);
 			}
 			else {
-				draw_tree_leaves_lod(s, xlate, (weights[1] > 0.0));
+				draw_tree_leaves_lod(s, xlate, (weight == 0.0));
 			}
 		}
 		glPopMatrix();
@@ -612,16 +611,13 @@ public:
 		unsigned long long mem(0);
 		vector<tile_t::vert_type_t> data;
 		vector<unsigned short> indices[NUM_LODS];
-		static point last_sun(all_zeros), last_moon(all_zeros), last_cpos(all_zeros);
+		static point last_sun(all_zeros), last_moon(all_zeros);
 
 		if (sun_pos != last_sun || moon_pos != last_moon) {
 			clear_vbos_tids(1,0); // light source changed, clear vbos and build new shadow map
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}
-		point const cpos(get_camera_pos());
-		bool const is_moving(cpos != last_cpos);
-		if (!reflection_pass) {last_cpos = cpos;}
 		shader_t s;
 		setup_mesh_draw_shaders(s, wpz, 1, reflection_pass);
 		
@@ -650,11 +646,11 @@ public:
 		s.end_shader();
 		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
-		if (trees_enabled()) {draw_trees(to_draw, reflection_pass, is_moving);}
+		if (trees_enabled()) {draw_trees(to_draw, reflection_pass);}
 		return zmin;
 	}
 
-	void draw_trees(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass, bool is_moving) {
+	void draw_trees(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			if (trees_enabled()) {to_draw[i].second->update_tree_draw();}
 		}
@@ -665,7 +661,7 @@ public:
 		set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
-			to_draw[i].second->draw_trees(s, tree_trunk_pts, 1, 0, is_moving);
+			to_draw[i].second->draw_trees(s, tree_trunk_pts, 1, 0);
 		}
 		s.add_uniform_float("tex_scale_t", 1.0);
 		s.end_shader();
@@ -676,12 +672,16 @@ public:
 		s.setup_enabled_lights(2);
 		s.set_vert_shader("ads_lighting.part*+pine_tree");
 		s.set_frag_shader("linear_fog.part+pine_tree");
-		//s.set_geom_shader("pine_tree", GL_POINTS, GL_TRIANGLE_STRIP, 120); // actually outputs quads
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_float("min_alpha", 0.75);
-		s.add_uniform_float("alpha_post_scale", 1.0);
+
+		set_multitex(1);
+		select_texture(NOISE_GEN_TEX, 0);
+		s.add_uniform_int("noise_tex", 1);
+		s.add_uniform_float("noise_tex_size", get_texture_size(NOISE_GEN_TEX, 0));
+		set_multitex(0);
 		check_gl_error(302);
 		
 		if (!tree_trunk_pts.empty()) { // color/texture already set above
@@ -698,7 +698,7 @@ public:
 		set_specular(0.2, 8.0);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
-			to_draw[i].second->draw_trees(s, tree_trunk_pts, 0, 1, is_moving);
+			to_draw[i].second->draw_trees(s, tree_trunk_pts, 0, 1);
 		}
 		assert(tree_trunk_pts.empty());
 		set_specular(0.0, 1.0);
