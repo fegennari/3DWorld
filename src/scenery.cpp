@@ -627,12 +627,13 @@ void s_plant::gen_points(vbo_quad_block_manager_t &vbo_manager) {
 
 bool s_plant::is_shadowed() const {
 
+	if (world_mode != WMODE_GROUND) return 0;
 	int const light(get_light());
 
 	for (unsigned i = 0; i < 3; ++i) {
 		point p(pos);
 		p.z += 0.5*i*height;
-		if (is_visible_to_light_cobj(p, light, (radius + height), coll_id, 0)) {return 0;}
+		if (is_visible_to_light_cobj(p, light, (radius + height), coll_id, 0)) return 0;
 	}
 	return 1;
 }
@@ -655,7 +656,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only) const {
 	}
 }
 
-void s_plant::draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, float sscale, bool shadow_only) const {
+void s_plant::draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, bool shadow_only) const {
 
 	if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 2)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
@@ -682,7 +683,7 @@ void s_plant::destroy() {
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
 
 
-template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only) {
+template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only, vector3d const &xlate) {
 	for (unsigned i = 0; i < v.size(); ++i) v[i].draw(sscale, shadow_only);
 }
 
@@ -721,6 +722,7 @@ void scenery_group::clear() {
 	stumps.clear();
 	plants.clear();
 	clear_vbo();
+	generated = 0;
 }
 
 void scenery_group::free() {
@@ -786,7 +788,8 @@ void scenery_group::gen(int x1, int y1, int x2, int y2) {
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
 	float const min_log_z  (water_plane_z - 0.040*zmax_est);
-	msms2 = mesh_scale*mesh_scale2;
+	msms2     = mesh_scale*mesh_scale2;
+	generated = 1;
 
 	for (int i = y1; i < y2; ++i) {
 		for (int j = x1; j < x2; ++j) {
@@ -827,50 +830,46 @@ void scenery_group::gen(int x1, int y1, int x2, int y2) {
 	sort(plants.begin(), plants.end()); // sort by type
 }
 
-void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_only) {
+void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate) {
 
-	assert(quadric != 0);
-	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
+	enable_blend();
+	vbo_manager.upload();
+	vbo_manager.begin_render();
+
+	for (unsigned i = 0; i < plants.size(); ++i) {
+		plants[i].draw_leaves(s, vbo_manager, shadow_only);
+	}
+	vbo_manager.end_render();
+	disable_blend();
+}
+
+void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate) {
 
 	if (draw_opaque) { // draw stems, rocks, logs, and stumps
 		for (unsigned i = 0; i < rock_shapes.size(); ++i) {
 			rock_shapes[i].draw();
 		}
-		draw_scenery_vector(surface_rocks, sscale, shadow_only);
-		draw_scenery_vector(rocks,  sscale, shadow_only);
+		assert(quadric != 0);
+		int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
+		draw_scenery_vector(surface_rocks, sscale, shadow_only, xlate);
+		draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
 		gluQuadricTexture(quadric, GL_TRUE);
-		draw_scenery_vector(logs,   sscale, shadow_only);
-		draw_scenery_vector(stumps, sscale, shadow_only);
+		draw_scenery_vector(logs,   sscale, shadow_only, xlate);
+		draw_scenery_vector(stumps, sscale, shadow_only, xlate);
 		gluQuadricTexture(quadric, GL_FALSE);
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw_stem(sscale, shadow_only);
 		}
-		glDisable(GL_TEXTURE_2D);
 		tree_scenery_pld.draw_and_clear();
 	}
 	if (draw_transparent) { // draw leaves
-		enable_blend();
-		glEnable(GL_COLOR_MATERIAL);
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.9);
-		set_lighted_sides(2);
 		shader_t s;
 		set_leaf_shader(s, 0.9, 0, 0);
-		vbo_manager.upload();
-		vbo_manager.begin_render();
-
-		for (unsigned i = 0; i < plants.size(); ++i) {
-			plants[i].draw_leaves(s, vbo_manager, sscale, shadow_only);
-		}
-		vbo_manager.end_render();
+		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
-		disable_blend();
-		glDisable(GL_ALPHA_TEST);
-		set_lighted_sides(1);
-		glDisable(GL_COLOR_MATERIAL);
-		glDisable(GL_TEXTURE_2D);
 	}
+	glDisable(GL_TEXTURE_2D);
 }
 
 

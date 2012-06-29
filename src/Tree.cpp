@@ -221,7 +221,8 @@ void draw_trees_bl(shader_t const &s, bool draw_branches, bool draw_leaves, bool
 void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
-	if (gen_tex_coords) s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0); // VS
+	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
+	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
 	s.setup_enabled_lights(2);
 	s.set_frag_shader("linear_fog.part+simple_texture");
 

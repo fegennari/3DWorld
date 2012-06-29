@@ -21,9 +21,12 @@ float const DRAW_DIST_TILES   = 1.4;
 float const CREATE_DIST_TILES = 1.5;
 float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 2.0;
+float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
+float const SCENERY_THRESH    = 2.0;
 
 
+extern bool inf_terrain_scenery;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, vegetation, relh_adj_tex;
 extern point sun_pos, moon_pos;
@@ -59,14 +62,14 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 
 class tile_t {
 
-	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_tree_dxoff, init_tree_dyoff;
+	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_tree_dxoff, init_tree_dyoff, init_scenery_dxoff, init_scenery_dyoff;
 	unsigned tid, vbo, ivbo[NUM_LODS], size, stride, zvsize, base_tsize, gen_tsize, tree_lod_level;
 	float radius, mzmin, mzmax, tzmax, xstart, ystart, xstep, ystep;
 	vector<float> zvals;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group trees;
-	scenery_group scenery; // unused
+	scenery_group scenery;
 
 public:
 	typedef vert_norm_comp vert_type_t;
@@ -74,7 +77,8 @@ public:
 	tile_t() : tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0), tree_lod_level(0) {init_vbo_ids();}
 	~tile_t() {clear_vbo_tid(1,1);}
 	
-	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_tree_dxoff(0), init_tree_dyoff(0),
+	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2),
+		init_tree_dxoff(0), init_tree_dyoff(0), init_scenery_dxoff(0), init_scenery_dyoff(0),
 		tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), tree_lod_level(0)
 	{
 		assert(size > 0);
@@ -149,6 +153,7 @@ public:
 			init_vbo_ids();
 			clear_shadows();
 			trees.clear_vbos();
+			scenery.clear_vbo();
 		}
 		if (tclear) {clear_tid();}
 	}
@@ -376,17 +381,19 @@ public:
 		return max(0.0f, (p2p_dist_xy(get_camera_pos(), get_center()) - radius))/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	}
 	bool update_range() { // if returns 0, tile will be deleted
+		update_scenery();
 		float const dist(get_rel_dist_to_camera());
 		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
 		return (dist < DELETE_DIST_TILES);
 	}
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());}
 	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*get_tile_radius();}
-	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/max(1.0, 5.0*calc_tree_size());}
-	float get_tree_far_weight () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
+	float get_scenery_dist_scale () const {return get_dist_to_camera_in_tiles()/(SCENERY_THRESH*calc_tree_size());}
+	float get_tree_dist_scale    () const {return get_dist_to_camera_in_tiles()/max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
+	float get_tree_far_weight    () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
 
 	void init_tree_draw() {
-		if (trees.generated) return; // already generate
+		if (trees.generated) return; // already generated
 		init_tree_dxoff = -xoff2;
 		init_tree_dyoff = -yoff2;
 		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
@@ -451,6 +458,30 @@ public:
 			else {
 				draw_tree_leaves_lod(s, xlate, (weight == 0.0));
 			}
+		}
+		glPopMatrix();
+	}
+
+	void update_scenery() {
+		float const dist_scale(get_scenery_dist_scale()); // tree_dist_scale should correlate with mesh scale
+		if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
+		if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
+		init_scenery_dxoff = -xoff2;
+		init_scenery_dyoff = -yoff2;
+		scenery.gen(x1+init_scenery_dxoff, y1+init_scenery_dyoff, x2+init_scenery_dxoff, y2+init_scenery_dyoff);
+	}
+
+	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves) {
+		if (!scenery.generated || get_scenery_dist_scale() > 1.0) return;
+		glPushMatrix();
+		vector3d const xlate(((xoff - xoff2) - init_scenery_dxoff)*DX_VAL, ((yoff - yoff2) - init_scenery_dyoff)*DY_VAL, 0.0);
+		translate_to(xlate);
+
+		if (draw_opaque) {
+			scenery.draw(draw_opaque, draw_leaves, 0, xlate);
+		}
+		else if (draw_leaves) {
+			scenery.draw_plant_leaves(s, 0, xlate);
 		}
 		glPopMatrix();
 	}
@@ -541,7 +572,7 @@ public:
 		unsigned const init_tiles((unsigned)tiles.size());
 		vector<tile_xy_pair> to_erase;
 
-		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // free old tiles
+		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
 			if (!i->second->update_range()) {
 				to_erase.push_back(i->first);
 				delete i->second;
@@ -646,13 +677,14 @@ public:
 		s.end_shader();
 		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
-		if (trees_enabled()) {draw_trees(to_draw, reflection_pass);}
+		if (trees_enabled())     {draw_trees  (to_draw, reflection_pass);}
+		if (inf_terrain_scenery) {draw_scenery(to_draw, reflection_pass);}
 		return zmin;
 	}
 
 	void draw_trees(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			if (trees_enabled()) {to_draw[i].second->update_tree_draw();}
+			to_draw[i].second->update_tree_draw();
 		}
 		shader_t s;
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
@@ -702,6 +734,20 @@ public:
 		}
 		assert(tree_trunk_pts.empty());
 		set_specular(0.0, 1.0);
+		s.end_shader();
+	}
+
+	void draw_scenery(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
+		shader_t s;
+		
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			to_draw[i].second->draw_scenery(s, 1, 0); // opaque
+		}
+		set_leaf_shader(s, 0.9, 0, 0);
+
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			to_draw[i].second->draw_scenery(s, 0, 1); // leaves
+		}
 		s.end_shader();
 	}
 

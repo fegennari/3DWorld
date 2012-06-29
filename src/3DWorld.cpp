@@ -63,6 +63,7 @@ bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), use_stencil_
 bool univ_planet_lod(0), draw_mesh_shader(1), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), player_near_fire(0), global_lighting_update(0), use_waypoint_app_spots(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), create_voxel_landscape(0), mt_cobj_tree_build(0), two_sided_lighting(0);
+bool inf_terrain_scenery(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
@@ -107,7 +108,7 @@ int orig_window, curr_window;
 char player_name[MAX_CHARS] = "Player";
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, inf_terrain_scenery;
+extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -510,7 +511,6 @@ void change_terrain_zoom(float val) {
 	mesh_scale_change = 1;
 	update_mesh(val, 2);
 	clear_tiled_terrain();
-	if (world_mode == WMODE_INF_TERRAIN) regen_trees(1, 1);
 	compute_volume_matrix(); // make lightning strike the new tree(s)
 	calc_watershed();
 }

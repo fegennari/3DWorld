@@ -108,7 +108,7 @@ public:
 	void gen_points(vbo_quad_block_manager_t &vbo_manager);
 	bool is_shadowed() const;
 	void draw_stem(float sscale, bool shadow_only) const;
-	void draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, float sscale, bool shadow_only) const;
+	void draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, bool shadow_only) const;
 	void remove_cobjs();
 	void destroy();
 };
@@ -125,6 +125,9 @@ class scenery_group {
 	vbo_quad_block_manager_t vbo_manager;
 
 public:
+	bool generated;
+
+	scenery_group() : generated(0) {}
 	void clear_vbo() {vbo_manager.clear_vbo();}
 	void clear();
 	void free();
@@ -134,7 +137,8 @@ public:
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 	void gen(int x1, int y1, int x2, int y2);
-	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only);
+	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate=zero_vector);
+	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);
 };
 
 

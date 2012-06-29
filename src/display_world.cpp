@@ -33,7 +33,7 @@ float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.75;
 
 
-bool mesh_invalidated(1), inf_terrain_scenery(0);
+bool mesh_invalidated(1);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned reflection_tid(0);
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
@@ -1149,9 +1149,6 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 			gen_scene(1, 0, KEEP_MESH, 0, 0);
 			recreated = 1;
 		}
-		else if (inf_terrain_scenery) {
-			gen_scenery();
-		}
 	}
 	if ((display_mode & 0x04) && !DISABLE_WATER) {
 		water_plane_z = get_water_z_height() + get_ocean_wave_height();
@@ -1202,7 +1199,6 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		zmin2 = display_mesh3(NULL, water_plane_z, 0);
 		if (TIMETEST) PRINT_TIME("3.3");
 	}
-	if (inf_terrain_scenery) draw_scenery(1, 1);
 	if (TIMETEST) PRINT_TIME("3.4");
 	draw_coll_surfaces(1, 1); // split into two calls?
 	if (TIMETEST) PRINT_TIME("3.5");
@@ -1215,12 +1211,6 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (shadows_enabled()) create_shadows();
 	point last_spos(surface_pos);
 	check_xy_offsets();
-
-	if (inf_terrain_scenery && surface_pos != last_spos) { // camera moves
-		xoff2 -= xoff; yoff2 -= yoff;
-		gen_scenery();
-		xoff2 += xoff; yoff2 += yoff;
-	}
 	init_x = 0;
 	if (TIMETEST) PRINT_TIME("3.9");
 }

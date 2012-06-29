@@ -42,7 +42,7 @@ vector<portal> portals;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, create_voxel_landscape, inf_terrain_scenery;
+extern bool clear_landscape_vbo, create_voxel_landscape;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
@@ -582,7 +582,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	PRINT_TIME("Collision object cleanup");
 	
 	if (num_trees > 0) {
-		if (gen_trees) {
+		if (!inf_terrain && gen_trees) {
 			regen_trees((gen_trees == 2), 1);
 			PRINT_TIME("Tree generation");
 		}
@@ -590,11 +590,11 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 			delete_trees();
 		}
 	}
-	if (!inf_terrain || inf_terrain_scenery) {
+	if (!inf_terrain) {
 		gen_scenery();
 		PRINT_TIME("Scenery generation");
 	}
-	if (create_voxel_landscape) {
+	if (!inf_terrain && create_voxel_landscape) {
 		gen_voxel_landscape();
 		PRINT_TIME("Voxel Landscape Generation");
 	}
@@ -625,9 +625,10 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	calc_visibility(sflags);
 	PRINT_TIME("Visibility calculation");
 
-	if (!inf_terrain) gen_grass(generate_mesh != 0);
-	if (generate_mesh || gen_trees) reset_smoke_tex_data();
-
+	if (!inf_terrain) {
+		gen_grass(generate_mesh != 0);
+		if (generate_mesh || gen_trees) reset_smoke_tex_data();
+	}
 	//triangle_counter(1).proc_cobjs(coll_objects);
 }
 
