@@ -21,8 +21,8 @@ public:
 	void shift_by(vector3d const &vd);
 	void gen_spos(int x, int y, int use_xy);
 	bool update_zvals(int x1, int y1, int x2, int y2);
-	bool in_camera_view(float brad=0.0) const;
-	bool is_visible(bool shadow_only, float bradius) const;
+	bool in_camera_view(float brad=0.0, vector3d const &xlate=zero_vector) const;
+	bool is_visible(bool shadow_only, float bradius, vector3d const &xlate) const;
 	float get_shadowed_color(point const &p, float eff_radius) const;
 	colorRGBA get_atten_color(colorRGBA c) const;
 	void remove_cobjs();
@@ -85,7 +85,7 @@ public:
 	void gen_rock(unsigned nverts, float size, int &rand_seed, int type);
 	void add_cobjs();
 	bool do_impact_damage(point const &pos_, float radius_);
-	void draw(bool shadow_only=0) const;
+	void draw(bool shadow_only=0, vector3d const &xlate=zero_vector) const;
 };
 
 

@@ -93,21 +93,22 @@ bool scenery_obj::update_zvals(int x1, int y1, int x2, int y2) {
 }
 
 
-bool scenery_obj::in_camera_view(float brad) const {
+bool scenery_obj::in_camera_view(float brad, vector3d const &xlate) const {
 
-	return sphere_in_camera_view(pos, ((brad == 0.0) ? radius : brad), 0);
+	return sphere_in_camera_view(pos+xlate, ((brad == 0.0) ? radius : brad), 0);
 }
 
 
-bool scenery_obj::is_visible(bool shadow_only, float bradius) const {
+bool scenery_obj::is_visible(bool shadow_only, float bradius, vector3d const &xlate) const {
 
-	if (shadow_only ? !is_over_mesh(pos) : !in_camera_view(bradius)) return 0;
-	return (shadow_only || !skip_uw_draw(pos, radius));
+	if (shadow_only ? !is_over_mesh(pos+xlate) : !in_camera_view(bradius, xlate)) return 0;
+	return (shadow_only || !skip_uw_draw(pos+xlate, radius));
 }
 
 
 float scenery_obj::get_shadowed_color(point const &p, float eff_radius) const { // not used on rock_shapes
 
+	if (world_mode != WMODE_GROUND) return 1.0;
 	return (is_visible_to_light_cobj(p, get_light(), eff_radius, coll_id, 0) ? 1.0 : SHADOW_VAL);
 }
 
@@ -300,9 +301,9 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 }
 
 
-void rock_shape3d::draw(bool shadow_only) const {
+void rock_shape3d::draw(bool shadow_only, vector3d const &xlate) const {
 
-	if (!is_visible(shadow_only, 0.0)) return;
+	if (!is_visible(shadow_only, 0.0, xlate)) return;
 	set_color(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius)));
 	shape3d::draw(1);
 }
@@ -375,12 +376,12 @@ void surface_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void surface_rock::draw(float sscale, bool shadow_only) const {
+void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 
 	assert(surface);
-	if (!is_visible(shadow_only, 0.0)) return;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, radius));
-	float const dist(distance_to_camera(pos));
+	if (!is_visible(shadow_only, 0.0, xlate)) return;
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, radius));
+	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
 		tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
@@ -423,12 +424,12 @@ void s_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void s_rock::draw(float sscale, bool shadow_only) const {
+void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 
 	float const rmax(1.3*radius);
-	if (!is_visible(shadow_only, rmax)) return;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos, rmax));
-	float const dist(distance_to_camera(pos));
+	if (!is_visible(shadow_only, rmax, xlate)) return;
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, rmax));
+	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
 		tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
@@ -466,7 +467,7 @@ int s_log::create(int x, int y, int use_xy, float minz) {
 	pt2.x   = pos.x + dir.x;
 	pt2.y   = pos.y + dir.y;
 
-	if (pt2.x > X_SCENE_SIZE-DX_VAL || pt2.x < -X_SCENE_SIZE+DX_VAL || pt2.y > Y_SCENE_SIZE-DY_VAL || pt2.y < -Y_SCENE_SIZE+DY_VAL) {
+	if (world_mode == WMODE_GROUND && (pt2.x > X_SCENE_SIZE-DX_VAL || pt2.x < -X_SCENE_SIZE+DX_VAL || pt2.y > Y_SCENE_SIZE-DY_VAL || pt2.y < -Y_SCENE_SIZE+DY_VAL)) {
 		return 0; // off the end of the mesh
 	}
 	pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) + rand_uniform2(0.7, 0.99)*radius;
@@ -484,13 +485,13 @@ void s_log::add_cobjs() {
 	coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
 }
 
-void s_log::draw(float sscale, bool shadow_only) const {
+void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 
 	float const sz(max(length, max(radius, radius2)));
-	point const center((pos + pt2)*0.5);
-	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
+	point const center((pos + pt2)*0.5 + xlate);
+	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz, xlate))) return;
 	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
-	float const dist(distance_to_camera(pos));
+	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
 		tree_scenery_pld.add_textured_line(pos, pt2, color, get_tid());
@@ -541,13 +542,13 @@ void s_stump::add_cobjs() {
 	coll_id = add_coll_cylinder(pos, point(pos.x, pos.y, (pos.z + height)), radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
 }
 
-void s_stump::draw(float sscale, bool shadow_only) const {
+void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 
 	float const sz(max(height, max(radius, radius2)));
-	point const center(pos.x, pos.y, (pos.z + 0.5*height));
-	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz))) return;
+	point const center(pos + point(0.0, 0.0, 0.5*height) + xlate);
+	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz, xlate))) return;
 	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
-	float const dist(distance_to_camera(pos));
+	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
 		tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, height)), color, get_tid());
@@ -638,12 +639,12 @@ bool s_plant::is_shadowed() const {
 	return 1;
 }
 
-void s_plant::draw_stem(float sscale, bool shadow_only) const {
+void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const {
 
-	if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 0)) return;
+	if (shadow_only ? !is_over_mesh(pos+xlate) : !sphere_in_camera_view(pos+xlate, (height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
-	float const dist(distance_to_camera(pos));
+	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
 		tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
@@ -656,9 +657,10 @@ void s_plant::draw_stem(float sscale, bool shadow_only) const {
 	}
 }
 
-void s_plant::draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, bool shadow_only) const {
+void s_plant::draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const {
 
-	if (shadow_only ? !is_over_mesh(pos) : !sphere_in_camera_view(pos, (height + radius), 2)) return;
+	point const pos2(pos + xlate);
+	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, (height + radius), 2)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
@@ -684,7 +686,7 @@ void s_plant::destroy() {
 
 
 template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only, vector3d const &xlate) {
-	for (unsigned i = 0; i < v.size(); ++i) v[i].draw(sscale, shadow_only);
+	for (unsigned i = 0; i < v.size(); ++i) v[i].draw(sscale, shadow_only, xlate);
 }
 
 template<typename T> void add_scenery_vector_cobjs(vector<T> &v) {
@@ -837,31 +839,38 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 	vbo_manager.begin_render();
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
-		plants[i].draw_leaves(s, vbo_manager, shadow_only);
+		plants[i].draw_leaves(s, vbo_manager, shadow_only, xlate);
 	}
 	vbo_manager.end_render();
 	disable_blend();
 }
 
+
+void scenery_group::draw_opaque_objects(bool shadow_only, vector3d const &xlate, bool draw_pld) {
+
+	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
+		rock_shapes[i].draw(shadow_only, xlate);
+	}
+	assert(quadric != 0);
+	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
+	draw_scenery_vector(surface_rocks, sscale, shadow_only, xlate);
+	draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
+	gluQuadricTexture(quadric, GL_TRUE);
+	draw_scenery_vector(logs,   sscale, shadow_only, xlate);
+	draw_scenery_vector(stumps, sscale, shadow_only, xlate);
+	gluQuadricTexture(quadric, GL_FALSE);
+
+	for (unsigned i = 0; i < plants.size(); ++i) {
+		plants[i].draw_stem(sscale, shadow_only, xlate);
+	}
+	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
+}
+
+
 void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate) {
 
 	if (draw_opaque) { // draw stems, rocks, logs, and stumps
-		for (unsigned i = 0; i < rock_shapes.size(); ++i) {
-			rock_shapes[i].draw();
-		}
-		assert(quadric != 0);
-		int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
-		draw_scenery_vector(surface_rocks, sscale, shadow_only, xlate);
-		draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
-		gluQuadricTexture(quadric, GL_TRUE);
-		draw_scenery_vector(logs,   sscale, shadow_only, xlate);
-		draw_scenery_vector(stumps, sscale, shadow_only, xlate);
-		gluQuadricTexture(quadric, GL_FALSE);
-
-		for (unsigned i = 0; i < plants.size(); ++i) {
-			plants[i].draw_stem(sscale, shadow_only);
-		}
-		tree_scenery_pld.draw_and_clear();
+		draw_opaque_objects(shadow_only, xlate, 1);
 	}
 	if (draw_transparent) { // draw leaves
 		shader_t s;

@@ -47,7 +47,7 @@ public:
 	surface_rock() : surface(NULL) {}
 	void create(int x, int y, int use_xy);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only) const;
+	void draw(float sscale, bool shadow_only, vector3d const &xlate) const;
 	void destroy();
 };
 
@@ -60,7 +60,7 @@ class s_rock : public scenery_obj { // size = 48
 public:
 	void create(int x, int y, int use_xy);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only) const;
+	void draw(float sscale, bool shadow_only, vector3d const &xlate) const;
 };
 
 
@@ -76,7 +76,7 @@ public:
 	void shift_by(vector3d const &vd);
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only) const;
+	void draw(float sscale, bool shadow_only, vector3d const &xlate) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);
 };
 
@@ -90,7 +90,7 @@ class s_stump : public scenery_obj { // size = 29 (32)
 public:
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only) const;
+	void draw(float sscale, bool shadow_only, vector3d const &xlate) const;
 };
 
 
@@ -107,8 +107,8 @@ public:
 	void add_cobjs();
 	void gen_points(vbo_quad_block_manager_t &vbo_manager);
 	bool is_shadowed() const;
-	void draw_stem(float sscale, bool shadow_only) const;
-	void draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, bool shadow_only) const;
+	void draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const;
+	void draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const;
 	void remove_cobjs();
 	void destroy();
 };
@@ -137,7 +137,8 @@ public:
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 	void gen(int x1, int y1, int x2, int y2);
-	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate=zero_vector);
+	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate);
+	void draw_opaque_objects(bool shadow_only, vector3d const &xlate, bool draw_pld);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);
 };
 

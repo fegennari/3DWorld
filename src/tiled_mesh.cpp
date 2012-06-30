@@ -476,13 +476,8 @@ public:
 		glPushMatrix();
 		vector3d const xlate(((xoff - xoff2) - init_scenery_dxoff)*DX_VAL, ((yoff - yoff2) - init_scenery_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
-
-		if (draw_opaque) {
-			scenery.draw(draw_opaque, draw_leaves, 0, xlate);
-		}
-		else if (draw_leaves) {
-			scenery.draw_plant_leaves(s, 0, xlate);
-		}
+		if (draw_opaque) {scenery.draw_opaque_objects(0, xlate, 1);}
+		if (draw_leaves) {scenery.draw_plant_leaves(s, 0, xlate);}
 		glPopMatrix();
 	}
 
@@ -699,7 +694,7 @@ public:
 		s.end_shader();
 		s.set_bool_prefix("two_sided_lighting", 0, 0); // VS
 		s.set_prefix("#define USE_LIGHT_COLORS",   0); // VS
-		s.set_prefix("#define USE_GOOD_SPECULAR",  1); // VS
+		s.set_prefix("#define USE_GOOD_SPECULAR",  0); // VS
 		s.set_prefix("#define USE_QUADRATIC_FOG",  1); // FS
 		s.setup_enabled_lights(2);
 		s.set_vert_shader("ads_lighting.part*+pine_tree");
@@ -739,10 +734,18 @@ public:
 
 	void draw_scenery(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
 		shader_t s;
+		s.setup_enabled_lights(2);
+		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.set_vert_shader("ads_lighting.part*+two_lights_texture");
+		s.set_frag_shader("linear_fog.part+simple_texture");
+		s.begin_shader();
+		s.setup_fog_scale();
+		s.add_uniform_int("tex0", 0);
 		
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->draw_scenery(s, 1, 0); // opaque
 		}
+		s.end_shader();
 		set_leaf_shader(s, 0.9, 0, 0);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
