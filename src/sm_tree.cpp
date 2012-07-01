@@ -311,7 +311,7 @@ void gen_small_trees() {
 
 
 void clear_sm_tree_vbos() {
-	small_trees.clear_vbo_manager();
+	small_trees.clear_vbos();
 }
 
 void add_small_tree_coll_objs() { // doesn't handle rotation angle

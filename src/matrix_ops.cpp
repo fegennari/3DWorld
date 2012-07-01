@@ -12,7 +12,6 @@ int   const DEF_MESH_Z_SIZE  = 1;
 float const DEF_X_SCENE_SIZE = 4.0;
 float const DEF_Y_SCENE_SIZE = 4.0;
 float const DEF_Z_SCENE_SIZE = 4.0;
-int const USE_REAL_EQ_WM0    = 0;
 int const INTERPOLATE_METHOD = 1;
 
 
@@ -294,7 +293,7 @@ float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equa
 
 	int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
 	
-	if ((USE_REAL_EQ_WM0 || world_mode == WMODE_INF_TERRAIN || point_outside_mesh(xpos, ypos)) && use_real_equation) {
+	if ((world_mode == WMODE_INF_TERRAIN || point_outside_mesh(xpos, ypos)) && use_real_equation) {
 		return get_exact_zval(xval, yval);
 	}
 	if (point_outside_mesh(xpos, ypos)) return (zbottom - SMALL_NUMBER);

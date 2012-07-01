@@ -46,6 +46,7 @@ float get_inf_terrain_fog_dist() {
 
 bool is_water_enabled() {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool trees_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (tree_mode & 2) && vegetation > 0.0);}
+bool scenery_enabled () {return (world_mode == WMODE_INF_TERRAIN && inf_terrain_scenery);}
 
 
 struct tile_xy_pair {
@@ -672,8 +673,8 @@ public:
 		s.end_shader();
 		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
-		if (trees_enabled())     {draw_trees  (to_draw, reflection_pass);}
-		if (inf_terrain_scenery) {draw_scenery(to_draw, reflection_pass);}
+		if (trees_enabled())   {draw_trees  (to_draw, reflection_pass);}
+		if (scenery_enabled()) {draw_scenery(to_draw, reflection_pass);}
 		return zmin;
 	}
 
