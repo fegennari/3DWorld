@@ -736,6 +736,7 @@ public:
 	void draw_scenery(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
 		shader_t s;
 		s.setup_enabled_lights(2);
+		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_vert_shader("ads_lighting.part*+two_lights_texture");
 		s.set_frag_shader("linear_fog.part+simple_texture");

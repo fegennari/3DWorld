@@ -269,7 +269,7 @@ void shape3d::draw(bool skip_color_set) const {
 	glEnd();
 	disable_blend();
 	if (tid >= 0) glDisable(GL_TEXTURE_2D);
-	set_specular(0.0, 0.0);
+	if (!colors.empty()) {set_specular(0.0, 0.0);}
 }
 
 

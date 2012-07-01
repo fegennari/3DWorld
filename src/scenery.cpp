@@ -304,7 +304,7 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 void rock_shape3d::draw(bool shadow_only, vector3d const &xlate) const {
 
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
-	set_color(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius)));
+	(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius))).do_glColor();
 	shape3d::draw(1);
 }
 
@@ -390,15 +390,20 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, v
 		tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
 		return;
 	}
-	set_color(color);
+	color.do_glColor();
 	if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
 	glPushMatrix();
 	translate_to(pos);
 	uniform_scale(scale);
 	rotate_into_plus_z(dir);
-	//surface->sd.draw_ndiv_pow2(shadow_only ? get_smap_ndiv(radius) : sscale*radius/dist);
-	assert(vbo_mgr_ix >= 0);
-	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+
+	if (color == WHITE) { // not shadowed or underwater - vbo colors are correct
+		assert(vbo_mgr_ix >= 0);
+		vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+	}
+	else {
+		surface->sd.draw_ndiv_pow2(shadow_only ? get_smap_ndiv(radius) : sscale*radius/dist);
+	}
 	glPopMatrix();
 }
 
@@ -441,7 +446,7 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 		tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
 		return;
 	}
-	set_color(color);
+	color.do_glColor();
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(radius) : int(sscale*radius/dist)))));
 	if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
 	glPushMatrix();
@@ -503,7 +508,7 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 		tree_scenery_pld.add_textured_line(pos, pt2, color, get_tid());
 		return;
 	}
-	set_color(color);
+	color.do_glColor();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
 	if (!shadow_only) select_texture(get_tid());
 	glPushMatrix();
@@ -560,7 +565,7 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate) const 
 		tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, height)), color, get_tid());
 		return;
 	}
-	set_color(color);
+	color.do_glColor();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
 	if (!shadow_only) select_texture(get_tid());
 	glPushMatrix();
@@ -658,7 +663,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 	else {
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
 		if (!shadow_only) select_texture(WOOD_TEX);
-		set_color(color);
+		color.do_glColor();
 		draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
 	}
 }
@@ -854,18 +859,21 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 
 void scenery_group::draw_opaque_objects(bool shadow_only, vector3d const &xlate, bool draw_pld) {
 
+	glEnable(GL_COLOR_MATERIAL);
+
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
 		rock_shapes[i].draw(shadow_only, xlate);
 	}
 	assert(quadric != 0);
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	vbo_manager.upload();
-	vbo_manager.begin_render(0);
+	vbo_manager.begin_render(1);
 
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) {
 		surface_rocks[i].draw(sscale, shadow_only, xlate, vbo_manager);
 	}
 	vbo_manager.end_render();
+	glEnable(GL_COLOR_MATERIAL);
 	draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
 	gluQuadricTexture(quadric, GL_TRUE);
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate);
@@ -876,6 +884,7 @@ void scenery_group::draw_opaque_objects(bool shadow_only, vector3d const &xlate,
 		plants[i].draw_stem(sscale, shadow_only, xlate);
 	}
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
+	glDisable(GL_COLOR_MATERIAL);
 }
 
 
