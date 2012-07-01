@@ -355,7 +355,7 @@ void surface_cache::clear_unref() {
 surface_cache surface_rock_cache;
 
 
-void surface_rock::create(int x, int y, int use_xy) {
+void surface_rock::create(int x, int y, int use_xy, vbo_quad_block_manager_t &vbo_manager) {
 
 	gen_spos(x, y, use_xy);
 	radius  = 0.5*rand_uniform2(0.2/msms2, 0.8/msms2)*rand_float2();
@@ -369,14 +369,17 @@ void surface_rock::create(int x, int y, int use_xy) {
 		surface->setup_draw_sphere(all_zeros, rand_uniform2(0.25, 1.0), 0.0, ROCK_NDIV, NULL);
 		surface->calc_rmax();
 	}
-	scale   = radius/surface->rmax;
+	scale = radius/surface->rmax;
+	vector<vert_norm_tc> points;
+	surface->sd.get_quad_points(points);
+	vbo_mgr_ix = vbo_manager.add_points(points, WHITE);
 }
 
 void surface_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
+void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, vbo_quad_block_manager_t &vbo_manager) const {
 
 	assert(surface);
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
@@ -393,7 +396,9 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) c
 	translate_to(pos);
 	uniform_scale(scale);
 	rotate_into_plus_z(dir);
-	surface->sd.draw_ndiv_pow2(shadow_only ? get_smap_ndiv(radius) : sscale*radius/dist);
+	//surface->sd.draw_ndiv_pow2(shadow_only ? get_smap_ndiv(radius) : sscale*radius/dist);
+	assert(vbo_mgr_ix >= 0);
+	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
 	glPopMatrix();
 }
 
@@ -401,7 +406,8 @@ void surface_rock::destroy() {
 
 	//delete surface;
 	if (surface) surface->dec_ref();
-	surface = NULL;
+	vbo_mgr_ix = -1;
+	surface    = NULL;
 	scenery_obj::destroy();
 }
 
@@ -812,7 +818,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2) {
 			}
 			else if (val < 15) {
 				surface_rocks.push_back(surface_rock());
-				surface_rocks.back().create(j, i, 1);
+				surface_rocks.back().create(j, i, 1, vbo_manager);
 			}
 			else if (val < 50) {
 				rocks.push_back(s_rock());
@@ -836,7 +842,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 
 	enable_blend();
 	vbo_manager.upload();
-	vbo_manager.begin_render();
+	vbo_manager.begin_render(s.is_setup());
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
 		plants[i].draw_leaves(s, vbo_manager, shadow_only, xlate);
@@ -853,7 +859,13 @@ void scenery_group::draw_opaque_objects(bool shadow_only, vector3d const &xlate,
 	}
 	assert(quadric != 0);
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
-	draw_scenery_vector(surface_rocks, sscale, shadow_only, xlate);
+	vbo_manager.upload();
+	vbo_manager.begin_render(0);
+
+	for (unsigned i = 0; i < surface_rocks.size(); ++i) {
+		surface_rocks[i].draw(sscale, shadow_only, xlate, vbo_manager);
+	}
+	vbo_manager.end_render();
 	draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
 	gluQuadricTexture(quadric, GL_TRUE);
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate);

@@ -73,22 +73,31 @@ void quad_batch_draw::draw() const {
 }
 
 
-unsigned vbo_quad_block_manager_t::add_points(vector<vert_norm> const &p, colorRGBA const &color) {
+template<typename T> unsigned vbo_quad_block_manager_t::add_points_int(vector<T> const &p, colorRGBA const &color) {
 
 	assert(!p.empty());
 	assert((p.size()&3) == 0); // must be quads
-	unsigned const num_quads(p.size()/4), start_ix(pts.size());
 	color_wrapper cw;
 	cw.set_c4(color);
 		
-	for (vector<vert_norm>::const_iterator i = p.begin(); i != p.end(); ++i) {
+	for (vector<T>::const_iterator i = p.begin(); i != p.end(); ++i) {
 		pts.push_back(vert_type_t(*i, cw));
 	}
-	gen_quad_tex_coords(pts[start_ix].t, num_quads, sizeof(vert_type_t)/sizeof(float));
 	assert(!offsets.empty());
 	unsigned const next_ix(offsets.size() - 1);
 	offsets.push_back(pts.size()); // range will be [start_ix, start_ix+p.size()]
 	return next_ix;
+}
+
+unsigned vbo_quad_block_manager_t::add_points(vector<vert_norm> const &p, colorRGBA const &color) {
+
+	unsigned const num_quads(p.size()/4), start_ix(pts.size()), next_ix(add_points_int(p, color));
+	gen_quad_tex_coords(pts[start_ix].t, num_quads, sizeof(vert_type_t)/sizeof(float));
+	return next_ix;
+}
+
+unsigned vbo_quad_block_manager_t::add_points(vector<vert_norm_tc> const &p, colorRGBA const &color) {
+	return add_points_int(p, color);
 }
 
 void vbo_quad_block_manager_t::render_range(unsigned six, unsigned eix) const {
@@ -107,11 +116,11 @@ void vbo_quad_block_manager_t::upload() {
 	bind_vbo(0);
 }
 
-void vbo_quad_block_manager_t::begin_render() const {
+void vbo_quad_block_manager_t::begin_render(bool color_mat) const {
 
 	if (empty()) return;
+	if (color_mat) {glEnable(GL_COLOR_MATERIAL);}
 	set_color(BLACK);
-	glEnable(GL_COLOR_MATERIAL);
 	assert(vbo);
 	bind_vbo(vbo);
 	vert_type_t::set_vbo_arrays();

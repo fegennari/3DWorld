@@ -175,7 +175,7 @@ void small_tree_group::draw_leaves(bool shadow_only, bool low_detail, bool draw_
 	vbo_quad_block_manager_t const &vbomgr(vbo_manager[low_detail]);
 
 	if (draw_all_pine) {
-		vbomgr.begin_render();
+		vbomgr.begin_render(1);
 		select_texture(stt[T_PINE].leaf_tid);
 		vbomgr.render_all();
 	}
@@ -186,7 +186,7 @@ void small_tree_group::draw_leaves(bool shadow_only, bool low_detail, bool draw_
 			if (i == begin() || (i-1)->get_type() != type) { // first of this type
 				bool const is_pine(type == T_PINE || type == T_SH_PINE), untextured(is_pine && (draw_model != 0));
 				select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
-				if (is_pine) {vbomgr.begin_render();}
+				if (is_pine) {vbomgr.begin_render(1);}
 			}
 			i->draw(2, shadow_only, (size() < 100), vbomgr, low_detail, xlate); // only cull pine tree leaves if there aren't too many
 		}

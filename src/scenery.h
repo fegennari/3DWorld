@@ -39,15 +39,16 @@ struct surface_cache {
 
 class surface_rock : public scenery_obj { // size = 1456+
 
+	int vbo_mgr_ix;
 	float scale;
 	vector3d dir;
 	upsurface *surface;
 
 public:
-	surface_rock() : surface(NULL) {}
-	void create(int x, int y, int use_xy);
+	surface_rock() : vbo_mgr_ix(-1), surface(NULL) {}
+	void create(int x, int y, int use_xy, vbo_quad_block_manager_t &vbo_manager);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only, vector3d const &xlate) const;
+	void draw(float sscale, bool shadow_only, vector3d const &xlate, vbo_quad_block_manager_t &vbo_manager) const;
 	void destroy();
 };
 

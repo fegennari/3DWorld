@@ -570,6 +570,37 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 }
 
 
+void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const {
+
+	unsigned const ndiv(spn.ndiv);
+	assert(ndiv > 0);
+	float const ndiv_inv(1.0/float(ndiv)), rv(def_pert + radius), rv_sq(rv*rv);
+	float const toler(1.0E-6*radius*radius + rv_sq), dmax(rv + 0.1*radius), dmax_sq(dmax*dmax);
+	point **points   = spn.points;
+	vector3d **norms = spn.norms;
+	if (quad_pts.empty()) {quad_pts.reserve(4*ndiv*ndiv);}
+	glBegin(GL_QUADS);
+	
+	for (unsigned s = 0; s < ndiv; ++s) {
+		unsigned const sn((s+1)%ndiv), snt(min((s+1), ndiv));
+
+		for (unsigned t = 0; t < ndiv; ++t) {
+			unsigned const ix(s*(ndiv+1)+t);
+			unsigned const tn(min(t+1, ndiv+1));
+			point          pts[4]     = {points[s][t], points[sn][t], points[sn][tn], points[s][tn]};
+			vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][tn], norms [s][tn]};
+
+			for (unsigned i = 0; i < 4; ++i) {
+				float const tc[2] = {(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), (1.0f - ((i>>1) ? tn : t)*ndiv_inv)};
+				vert_norm_tc v(pts[i], normals[i], tc);
+				quad_pts.push_back(v);
+			}
+		}
+	}
+	glEnd();
+}
+
+
 void sd_sphere_d::draw_ndiv_pow2(unsigned ndiv) const {
 
 	ndiv = max(ndiv, 4U);

@@ -86,11 +86,13 @@ public:
 	~vbo_quad_block_manager_t() {clear_vbo();}
 	void reserve_pts(unsigned num) {pts.reserve(num);}
 	bool empty() const {return pts.empty();}
+	template<typename T> unsigned add_points_int(vector<T> const &p, colorRGBA const &color);
 	unsigned add_points(vector<vert_norm> const &p, colorRGBA const &color);
+	unsigned add_points(vector<vert_norm_tc> const &p, colorRGBA const &color);
 	void render_range(unsigned six, unsigned eix) const;
 	void render_all() const {if (!empty()) {render_range(0, offsets.size()-1);}}
 	void upload();
-	void begin_render() const;
+	void begin_render(bool color_mat) const;
 	void end_render() const;
 	void clear_vbo();
 	void clear();
