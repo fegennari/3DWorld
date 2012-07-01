@@ -135,7 +135,7 @@ void create_sin_table();
 void init_openal(int &argc, char** argv);
 
 void clear_sm_tree_vbos();
-void clear_plant_vbos();
+void clear_scenery_vbos_and_dlists();
 
 
 
@@ -170,7 +170,7 @@ void clear_context() {
 	update_grass_vbos();
 	clear_tree_vbos();
 	clear_sm_tree_vbos();
-	clear_plant_vbos();
+	clear_scenery_vbos_and_dlists();
 	reset_tiled_terrain_state();
 	free_cobj_draw_group_dlists();
 	clear_landscape_vbo = 1;

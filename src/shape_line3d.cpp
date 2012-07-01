@@ -218,7 +218,6 @@ void shape3d::draw(bool skip_color_set) const {
 	if (colors.empty() && tid >= 0) select_texture(tid);
 	enable_blend();
 	if (!skip_color_set) set_color(color);
-	set_fill_mode();
 	glBegin(GL_TRIANGLES);
 
 	for (unsigned i = 0; i < faces.size(); ++i) {

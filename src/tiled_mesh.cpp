@@ -154,7 +154,7 @@ public:
 			init_vbo_ids();
 			clear_shadows();
 			trees.clear_vbos();
-			scenery.clear_vbo();
+			scenery.clear_vbos_and_dlists();
 		}
 		if (tclear) {clear_tid();}
 	}

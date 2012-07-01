@@ -129,7 +129,7 @@ public:
 	bool generated;
 
 	scenery_group() : generated(0) {}
-	void clear_vbo() {vbo_manager.clear_vbo();}
+	void clear_vbos_and_dlists();
 	void clear();
 	void free();
 	void add_cobjs();
