@@ -841,27 +841,27 @@ void scenery_group::gen(int x1, int y1, int x2, int y2) {
 			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation);
 			
 			if (veg && rand2()%100 < 30) {
-				plants.push_back(s_plant());
+				plants.push_back(s_plant()); // 30%
 				if (!plants.back().create(j, i, 1, min_plant_z, vbo_manager)) plants.pop_back();
 			}
-			else if (val < 5) {
+			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());
 				rock_shapes.back().create(j, i, 1);
 			}
-			else if (val < 15) {
+			else if (val < 15) { // 7%
 				surface_rocks.push_back(surface_rock());
 				surface_rocks.back().create(j, i, 1, vbo_manager);
 			}
-			else if (val < 50) {
+			else if (val < 50) { // 24.5%
 				rocks.push_back(s_rock());
 				rocks.back().create(j, i, 1);
 			}
-			else if (veg && val < 85) {
+			else if (veg && val < 85) { // 24.5%
 				logs.push_back(s_log());
 				if (!logs.back().create(j, i, 1, min_log_z)) logs.pop_back();
 			}
 			else if (veg) {
-				stumps.push_back(s_stump());
+				stumps.push_back(s_stump()); // 10.5%
 				if (!stumps.back().create(j, i, 1, min_stump_z)) stumps.pop_back();
 			}
 		}
