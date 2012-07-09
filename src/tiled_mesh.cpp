@@ -10,6 +10,18 @@
 #include "small_tree.h"
 #include "scenery.h"
 
+// grass:
+// 1. Create 64x64 array of grass blocks with normals distributed over the +z hemisphere
+// 2. Create several LOD levels by merging pairs of nearby grass blades by averaging parameters and conserving area
+// 3. Upload to a single large VBO, and keep pointers into the base and LOD data for every block
+// 4. For each tile within some distance of the camera:
+//  4. For each block that contains grass texture:
+//   4A. Select the grass block that most closely matches the surface normal for the block (preprocessing)
+//   4B. Select a block sub_size in [1, block_size] based on grass texture weight (preprocessing)
+//   4C. Select the correct LOD based on distance from the block to the camera (rendering)
+//   4D. Translate to the correct tile offset + block offset (rendering)
+//   4E. Render a region from block_start_ix of size sub_size from the grass VBO (rendering)
+
 
 bool const DEBUG_TILES        = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
@@ -71,6 +83,7 @@ class tile_t {
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group trees;
 	scenery_group scenery;
+	// FIXME: add grass stuff
 
 public:
 	typedef vert_norm_comp vert_type_t;

@@ -28,7 +28,8 @@ extern coll_obj_group coll_objects;
 
 
 class grass_manager_t {
-	
+
+protected:
 	struct grass_t { // size = 48
 		point p;
 		vector3d dir, n;
@@ -42,32 +43,110 @@ class grass_manager_t {
 	};
 
 	vector<grass_t> grass;
+	unsigned vbo;
+	bool vbo_valid, data_valid;
+	rand_gen_t rgen;
+
+public:
+	grass_manager_t() : vbo(0), vbo_valid(0), data_valid(0) {}
+	~grass_manager_t() {clear();}
+	size_t size() const {return grass.size ();} // 2 points per grass blade
+	bool empty()  const {return grass.empty();}
+	void invalidate_vbo() {vbo_valid = 0;}
+
+	void clear() {
+		delete_vbo(vbo);
+		vbo = 0;
+		invalidate_vbo();
+		grass.clear();
+	}
+
+	void add_grass_blade(point const &pos) {
+		vector3d const base_dir(plus_z);
+		//vector3d const base_dir(interpolate_mesh_normal(pos));
+		vector3d const dir((base_dir + rgen.signed_rand_vector(0.3)).get_norm());
+		vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
+		float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
+		float const base_color[3] = {0.3,  0.6, 0.08};
+		float const mod_color [3] = {0.2,  0.2, 0.08};
+		float const lbc_mult  [3] = {0.2,  0.4, 0.0 };
+		float const dead_color[3] = {0.75, 0.6, 0.0 };
+		unsigned char color[3];
+
+		for (unsigned i = 0; i < 3; ++i) {
+			float const ccomp(CLIP_TO_01(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float()));
+			color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
+		}
+		float const length(grass_length*rgen.rand_uniform(0.7, 1.3));
+		float const width( grass_width *rgen.rand_uniform(0.7, 1.3));
+		grass.push_back(grass_t(pos, dir*length, norm, color, width));
+	}
+
+	void create_new_vbo() {
+		delete_vbo(vbo);
+		vbo        = create_vbo();
+		vbo_valid  = 1;
+		data_valid = 0;
+	}
+
+	void add_to_vbo_data(grass_t const &g, vector<vert_norm_tc_color> &data, unsigned &ix, vector3d &norm) const {
+		point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
+		vector3d const binorm(cross_product(g.dir, g.n).get_norm());
+		vector3d const delta(binorm*(0.5*g.w));
+		norm *= (g.shadowed ? 0.001 : 1.0);
+		float const tc_adj(0.1); // border around grass blade texture
+		data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
+		data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
+		data[ix++].assign(p2,       norm,     tc_adj, 0.5,        g.c);
+		assert(ix <= data.size());
+	}
+
+	void begin_draw() const {
+		assert(vbo_valid && vbo > 0);
+		bind_vbo(vbo);
+		vert_norm_tc_color::set_vbo_arrays();
+		select_multitex(GRASS_BLADE_TEX, 0);
+		enable_blend();
+		set_specular(0.2, 20.0);
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.75);
+		glEnable(GL_COLOR_MATERIAL);
+		glDisable(GL_NORMALIZE);
+	}
+
+	void end_draw() const {
+		glDisable(GL_COLOR_MATERIAL);
+		glEnable(GL_NORMALIZE);
+		set_specular(0.0, 1.0);
+		disable_blend();
+		glDisable(GL_ALPHA_TEST);
+		disable_multitex_a();
+		bind_vbo(0);
+		check_gl_error(40);
+	}
+};
+
+
+class grass_manager_dynamic_t : public grass_manager_t {
+	
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
 	vector<unsigned char> modified; // only used for shadows
-	unsigned vbo;
-	bool vbo_valid, shadows_valid, data_valid;
+	bool shadows_valid;
 	int last_cobj;
 	int last_light;
 	point last_lpos;
-	rand_gen_t rgen;
 
 	bool hcm_chk(int x, int y) const {
 		return (!point_outside_mesh(x, y) && (mesh_height[y][x] + SMALL_NUMBER < h_collision_matrix[y][x]));
 	}
 
 public:
-	grass_manager_t() : vbo(0), vbo_valid(0), shadows_valid(0), data_valid(0), last_light(-1), last_lpos(all_zeros) {}
-	~grass_manager_t() {clear();}
-	size_t size() const {return grass.size() ;} // 2 points per grass blade
-	bool empty()  const {return grass.empty();}
-	void invalidate_vbo()     {vbo_valid     = 0;}
-	void invalidate_shadows() {shadows_valid = 0;}
+	grass_manager_dynamic_t() : shadows_valid(0), last_light(-1), last_lpos(all_zeros) {}
+	void invalidate_shadows()  {shadows_valid = 0;}
 	
 	void clear() {
-		delete_vbo(vbo);
-		vbo = 0;
-		vbo_valid = shadows_valid = data_valid = 0;
-		grass.clear();
+		grass_manager_t::clear();
+		invalidate_shadows();
 		mesh_to_grass_map.clear();
 		modified.clear();
 	}
@@ -115,34 +194,13 @@ public:
 					// skip grass intersecting cobjs
 					if (do_cobj_check && dwobject(GRASS, pos).check_vert_collision(0, 0, 0)) continue; // make a GRASS object for collision detection
 					if (point_inside_voxel_terrain(pos)) continue; // inside voxel volume
-					add_grass(pos);
+					add_grass_blade(pos);
 				}
 			}
 		}
 		mesh_to_grass_map[XY_MULT_SIZE] = (unsigned)grass.size();
 		remove_excess_cap(grass);
 		PRINT_TIME("Grass Generation");
-	}
-
-	void add_grass(point const &pos) {
-		vector3d const base_dir(plus_z);
-		//vector3d const base_dir(interpolate_mesh_normal(pos));
-		vector3d const dir((base_dir + rgen.signed_rand_vector(0.3)).get_norm());
-		vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
-		float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
-		float const base_color[3] = {0.3,  0.6, 0.08};
-		float const mod_color [3] = {0.2,  0.2, 0.08};
-		float const lbc_mult  [3] = {0.2,  0.4, 0.0 };
-		float const dead_color[3] = {0.75, 0.6, 0.0 };
-		unsigned char color[3];
-
-		for (unsigned i = 0; i < 3; ++i) {
-			float const ccomp(CLIP_TO_01(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float()));
-			color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
-		}
-		float const length(grass_length*rgen.rand_uniform(0.7, 1.3));
-		float const width( grass_width *rgen.rand_uniform(0.7, 1.3));
-		grass.push_back(grass_t(pos, dir*length, norm, color, width));
 	}
 
 	unsigned char get_shadow_bits(int cid) const {
@@ -189,13 +247,6 @@ public:
 		PRINT_TIME("Grass Find Shadows");
 	}
 
-	void create_new_vbo() {
-		delete_vbo(vbo);
-		vbo        = create_vbo();
-		vbo_valid  = 1;
-		data_valid = 0;
-	}
-
 	vector3d interpolate_mesh_normal(point const &pos) const {
 		float const xp((pos.x + X_SCENE_SIZE)*DX_VAL_INV), yp((pos.y + Y_SCENE_SIZE)*DY_VAL_INV);
 		int const x0((int)xp), y0((int)yp);
@@ -210,8 +261,7 @@ public:
 	void upload_data_to_vbo(unsigned start, unsigned end, bool create) const {
 		if (start == end) return; // nothing to update
 		assert(start < end && end <= grass.size());
-		unsigned const num_verts(3*(end - start));
-		unsigned const block_size(3*4096); // must be a multiple of 3
+		unsigned const num_verts(3*(end - start)), block_size(3*4096); // must be a multiple of 3
 		unsigned const vntc_sz(sizeof(vert_norm_tc_color));
 		unsigned offset(3*start);
 		vector<vert_norm_tc_color> data(min(num_verts, block_size));
@@ -221,20 +271,11 @@ public:
 			upload_vbo_data(NULL, 3*grass.size()*vntc_sz);
 		}
 		for (unsigned i = start, ix = 0; i < end; ++i) {
-			grass_t const &g(grass[i]);
-			point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
-			vector3d const binorm(cross_product(g.dir, g.n).get_norm());
-			vector3d const delta(binorm*(0.5*g.w));
-			float const nmag(g.shadowed ? 0.001 : 1.0);
-			//vector3d const &norm(plus_z*nmag); // use grass normal? 2-sided lighting?
-			//vector3d const &norm(g.n*nmag);
-			//vector3d const &norm(surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]*nmag);
-			vector3d const &norm(interpolate_mesh_normal(p1)*nmag);
-			float const tc_adj(0.1); // border around grass blade texture
-			data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
-			data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
-			data[ix++].assign(p2,       norm,     tc_adj, 0.5,        g.c);
-			assert(ix <= data.size());
+			//vector3d norm(plus_z); // use grass normal? 2-sided lighting?
+			//vector3d norm(grass[i].n);
+			//vector3d norm(surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]);
+			vector3d norm(interpolate_mesh_normal(grass[i].p));
+			add_to_vbo_data(grass[i], data, ix, norm);
 
 			if (ix == block_size || i+1 == end) { // filled block or last entry
 				upload_vbo_sub_data(&data.front(), offset*vntc_sz, ix*vntc_sz); // upload part or all of the data
@@ -447,19 +488,7 @@ public:
 			s.setup_fog_scale();
 			s.add_uniform_float("height", grass_length);
 		}
-
-		// setup drawing state
-		set_array_client_state(1, 1, 1, 1);
-		assert(vbo_valid && vbo > 0);
-		bind_vbo(vbo);
-		vert_norm_tc_color::set_vbo_arrays();
-		select_multitex(GRASS_BLADE_TEX, 0);
-		enable_blend();
-		set_specular(0.2, 20.0);
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.75);
-		glEnable(GL_COLOR_MATERIAL);
-		glDisable(GL_NORMALIZE);
+		begin_draw();
 
 		// draw the grass
 		unsigned const BLOCK_SIZE = 4;
@@ -510,22 +539,13 @@ public:
 			}
 		}
 		if (last_visible) draw_range(beg_ix, (unsigned)grass.size());
-
-		// cleanup drawing state
-		glDisable(GL_COLOR_MATERIAL);
-		glEnable(GL_NORMALIZE);
-		set_specular(0.0, 1.0);
-		disable_blend();
-		glDisable(GL_ALPHA_TEST);
 		s.end_shader();
-		disable_multitex_a();
 		disable_dynamic_lights(num_dlights);
-		bind_vbo(0);
-		check_gl_error(40);
+		end_draw();
 	}
 };
 
-grass_manager_t grass_manager;
+grass_manager_dynamic_t grass_manager;
 
 
 void setup_wind_for_shader(shader_t &s) {
