@@ -9,18 +9,7 @@
 #include "shaders.h"
 #include "small_tree.h"
 #include "scenery.h"
-
-// grass:
-// 1. Create 64x64 array of grass blocks with normals distributed over the +z hemisphere
-// 2. Create several LOD levels by merging pairs of nearby grass blades by averaging parameters and conserving area
-// 3. Upload to a single large VBO, and keep pointers into the base and LOD data for every block
-// 4. For each tile within some distance of the camera:
-//  4. For each block that contains grass texture:
-//   4A. Select the grass block that most closely matches the surface normal for the block (preprocessing)
-//   4B. Select a block sub_size in [1, block_size] based on grass texture weight (preprocessing)
-//   4C. Select the correct LOD based on distance from the block to the camera (rendering)
-//   4D. Translate to the correct tile offset + block offset (rendering)
-//   4E. Render a region from block_start_ix of size sub_size from the grass VBO (rendering)
+#include "grass.h"
 
 
 bool const DEBUG_TILES        = 0;
@@ -37,8 +26,13 @@ float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH    = 2.0;
 
+unsigned const GRASS_BLOCK_SZ = 8;
+unsigned const NUM_GRASS_BLOCKS = 64;
+float    const GRASS_THRESH   = 1.5;
+
 
 extern bool inf_terrain_scenery;
+extern unsigned grass_density;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, vegetation, relh_adj_tex;
 extern point sun_pos, moon_pos;
@@ -58,7 +52,69 @@ float get_inf_terrain_fog_dist() {
 
 bool is_water_enabled() {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool trees_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (tree_mode & 2) && vegetation > 0.0);}
-bool scenery_enabled () {return (world_mode == WMODE_INF_TERRAIN && inf_terrain_scenery);}
+bool scenery_enabled () {return (world_mode == WMODE_INF_TERRAIN && inf_terrain_scenery && SCENERY_THRESH > 0.0);}
+bool grass_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
+
+
+// grass:
+// 1. Create NUM_GRASS_BLOCKS GRASS_BLOCK_SZxGRASS_BLOCK_SZ mesh unit blocks of grass with z=0.0
+// 2. Create several LOD levels for each block by merging pairs of nearby grass blades by averaging parameters and conserving area
+// 3. Upload to a single large VBO, and keep pointers into the base and LOD data for every block
+// 4. For each tile within GRASS_THRESH of the camera (in tile units) that contains grass texture:
+//   4.1. Create a tile_sz x tile_sz 16-bit grayscale heightmap texture
+//   4.2. For each block (out of 256) in the tile that contains grass texture:
+//     4.2.1. Select a block sub_size in [1, block_size] based on grass texture weight (preprocessing)
+//     4.2.2. Select the correct LOD based on distance from the block to the camera (rendering)
+//     4.2.3. Translate to the correct tile offset + block offset (rendering)
+//     4.2.4. Render a region from block_start_ix of size sub_size from the grass VBO (rendering)
+
+class grass_tile_manager_t : public grass_manager_t {
+	vector<unsigned> vbo_offsets;
+
+public:
+	void clear() {
+		grass_manager_t::clear();
+		vbo_offsets.clear();
+	}
+
+	void upload_data() {
+		if (empty()) return;
+		assert(vbo);
+		vector<vert_norm_tc_color> data(3*size()); // 3 vertices per grass blade
+
+		for (unsigned i = 0, ix = 0; i < size(); ++i) {
+			vector3d norm(plus_z); // use grass normal? 2-sided lighting? generate normals in vertex shader?
+			//vector3d norm(grass[i].n);
+			add_to_vbo_data(grass[i], data, ix, norm);
+		}
+		bind_vbo(vbo);
+		upload_vbo_data(&data.front(), data.size()*sizeof(vert_norm_tc_color));
+		bind_vbo(0);
+		data_valid = 1;
+	}
+
+	void gen_grass() {
+		for (unsigned i = 0; i < NUM_GRASS_BLOCKS; ++i) {
+			// FIXME - WRITE
+		}
+	}
+
+	void update() { // to be called once per frame
+		if (!grass_enabled()) {
+			clear();
+			return;
+		}
+		if (vbo_offsets.empty()) {gen_grass();}
+		if (!vbo_valid ) create_new_vbo();
+		if (!data_valid) upload_data();
+	}
+};
+
+grass_tile_manager_t grass_tile_manager;
+
+void update_tiled_terrain_grass_vbos() {
+	grass_tile_manager.invalidate_vbo();
+}
 
 
 struct tile_xy_pair {
@@ -83,7 +139,7 @@ class tile_t {
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group trees;
 	scenery_group scenery;
-	// FIXME: add grass stuff
+	vector<int> grass_blocks; // -1 is unused
 
 public:
 	typedef vert_norm_comp vert_type_t;
@@ -140,6 +196,7 @@ public:
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			if (ivbo[i] > 0) mem += (size>>i)*(size>>i)*sizeof(unsigned short);
 		}
+		// FIXME: add trees, scenery, and grass?
 		return mem;
 	}
 
@@ -395,7 +452,8 @@ public:
 		return max(0.0f, (p2p_dist_xy(get_camera_pos(), get_center()) - radius))/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	}
 	bool update_range() { // if returns 0, tile will be deleted
-		update_scenery();
+		if (scenery_enabled()) {update_scenery();}
+		if (grass_enabled  ()) {update_grass  ();}
 		float const dist(get_rel_dist_to_camera());
 		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
 		return (dist < DELETE_DIST_TILES);
@@ -405,6 +463,7 @@ public:
 	float get_scenery_dist_scale () const {return get_dist_to_camera_in_tiles()/(SCENERY_THRESH*calc_tree_size());}
 	float get_tree_dist_scale    () const {return get_dist_to_camera_in_tiles()/max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
 	float get_tree_far_weight    () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
+	float get_grass_dist_scale   () const {return get_dist_to_camera_in_tiles()/GRASS_THRESH;}
 
 	void init_tree_draw() {
 		if (trees.generated) return; // already generated
@@ -495,6 +554,24 @@ public:
 		glPopMatrix();
 	}
 
+	void update_grass() {
+		float const dist_scale(get_grass_dist_scale());
+		if (dist_scale > 1.2) {grass_blocks.clear();}
+		if (dist_scale > 1.0 || !grass_blocks.empty() || !is_visible()) return; // too far away, already generated, or not visible
+		// FIXME - WRITE
+	}
+
+	void draw_grass(shader_t &s) {
+		if (get_grass_dist_scale() > 1.0) return;
+
+		for (vector<int>::const_iterator i = grass_blocks.begin(); i != grass_blocks.end(); ++i) {
+			glPushMatrix();
+			//translate_to(?, ?, 0.0);
+			// FIXME - WRITE
+			glPopMatrix();
+		}
+	}
+
 	void draw(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], bool reflection_pass) {
 		assert(size > 0);
 
@@ -572,6 +649,7 @@ public:
 
 	void update() {
 		//RESET_TIME;
+		grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
 		assert(MESH_X_SIZE == MESH_Y_SIZE); // limitation, for now
 		point const camera(get_camera_pos() - point((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
 		int const tile_radius(int(1.5*get_tile_radius()) + 1);
@@ -686,8 +764,9 @@ public:
 		s.end_shader();
 		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
-		if (trees_enabled())   {draw_trees  (to_draw, reflection_pass);}
+		if (trees_enabled()  ) {draw_trees  (to_draw, reflection_pass);}
 		if (scenery_enabled()) {draw_scenery(to_draw, reflection_pass);}
+		if (grass_enabled()  ) {draw_grass  (to_draw, reflection_pass);}
 		return zmin;
 	}
 
@@ -765,6 +844,16 @@ public:
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->draw_scenery(s, 0, 1); // leaves
+		}
+		s.end_shader();
+	}
+
+	void draw_grass(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
+		shader_t s;
+		// FIXME - WRITE
+
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			//to_draw[i].second->draw_grass(s);
 		}
 		s.end_shader();
 	}

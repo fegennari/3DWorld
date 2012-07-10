@@ -748,6 +748,7 @@
     <ClInclude Include="src\globals.h" />
     <ClInclude Include="src\gl_ext_arb.h" />
     <ClInclude Include="src\gl_includes.h" />
+    <ClInclude Include="src\grass.h" />
     <ClInclude Include="src\inlines.h" />
     <ClInclude Include="src\lightmap.h" />
     <ClInclude Include="src\main.h" />

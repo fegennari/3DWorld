@@ -3,8 +3,8 @@
 #house/config_house_winter.txt
 #mapx/config_mapx.txt
 #cornell_box/config_box.txt
-config_scrolling.txt
-#config.txt
+#config_scrolling.txt
+config.txt
 #config_voxels.txt
 #config_trees.txt
 #config_water.txt

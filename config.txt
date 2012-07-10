@@ -15,6 +15,7 @@ disable_scenery 0
 read_landscape 0
 read_heightmap 0
 scenery_extent 0
+inf_terrain_scenery 1
 
 grass_density 100
 grass_size 0.02 0.002

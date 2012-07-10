@@ -3,6 +3,7 @@
 // 9/28/10
 
 #include "3DWorld.h"
+#include "grass.h"
 #include "mesh.h"
 #include "physics_objects.h"
 #include "textures_3dw.h"
@@ -27,104 +28,82 @@ extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 
 
-class grass_manager_t {
+void grass_manager_t::clear() {
 
-protected:
-	struct grass_t { // size = 48
-		point p;
-		vector3d dir, n;
-		unsigned char c[3];
-		unsigned char shadowed;
-		float w;
+	delete_vbo(vbo);
+	vbo = 0;
+	invalidate_vbo();
+	grass.clear();
+}
 
-		grass_t() {} // optimization
-		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, unsigned char const *const c_, float w_)
-			: p(p_), dir(dir_), n(n_), shadowed(0), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
-	};
+void grass_manager_t::add_grass_blade(point const &pos) {
 
-	vector<grass_t> grass;
-	unsigned vbo;
-	bool vbo_valid, data_valid;
-	rand_gen_t rgen;
+	vector3d const base_dir(plus_z);
+	//vector3d const base_dir(interpolate_mesh_normal(pos));
+	vector3d const dir((base_dir + rgen.signed_rand_vector(0.3)).get_norm());
+	vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
+	float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
+	float const base_color[3] = {0.3,  0.6, 0.08};
+	float const mod_color [3] = {0.2,  0.2, 0.08};
+	float const lbc_mult  [3] = {0.2,  0.4, 0.0 };
+	float const dead_color[3] = {0.75, 0.6, 0.0 };
+	unsigned char color[3];
 
-public:
-	grass_manager_t() : vbo(0), vbo_valid(0), data_valid(0) {}
-	~grass_manager_t() {clear();}
-	size_t size() const {return grass.size ();} // 2 points per grass blade
-	bool empty()  const {return grass.empty();}
-	void invalidate_vbo() {vbo_valid = 0;}
-
-	void clear() {
-		delete_vbo(vbo);
-		vbo = 0;
-		invalidate_vbo();
-		grass.clear();
+	for (unsigned i = 0; i < 3; ++i) {
+		float const ccomp(CLIP_TO_01(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float()));
+		color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
 	}
+	float const length(grass_length*rgen.rand_uniform(0.7, 1.3));
+	float const width( grass_width *rgen.rand_uniform(0.7, 1.3));
+	grass.push_back(grass_t(pos, dir*length, norm, color, width));
+}
 
-	void add_grass_blade(point const &pos) {
-		vector3d const base_dir(plus_z);
-		//vector3d const base_dir(interpolate_mesh_normal(pos));
-		vector3d const dir((base_dir + rgen.signed_rand_vector(0.3)).get_norm());
-		vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
-		float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
-		float const base_color[3] = {0.3,  0.6, 0.08};
-		float const mod_color [3] = {0.2,  0.2, 0.08};
-		float const lbc_mult  [3] = {0.2,  0.4, 0.0 };
-		float const dead_color[3] = {0.75, 0.6, 0.0 };
-		unsigned char color[3];
+void grass_manager_t::create_new_vbo() {
 
-		for (unsigned i = 0; i < 3; ++i) {
-			float const ccomp(CLIP_TO_01(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float()));
-			color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
-		}
-		float const length(grass_length*rgen.rand_uniform(0.7, 1.3));
-		float const width( grass_width *rgen.rand_uniform(0.7, 1.3));
-		grass.push_back(grass_t(pos, dir*length, norm, color, width));
-	}
+	delete_vbo(vbo);
+	vbo        = create_vbo();
+	vbo_valid  = 1;
+	data_valid = 0;
+}
 
-	void create_new_vbo() {
-		delete_vbo(vbo);
-		vbo        = create_vbo();
-		vbo_valid  = 1;
-		data_valid = 0;
-	}
+void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<vert_norm_tc_color> &data, unsigned &ix, vector3d &norm) const {
 
-	void add_to_vbo_data(grass_t const &g, vector<vert_norm_tc_color> &data, unsigned &ix, vector3d &norm) const {
-		point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
-		vector3d const binorm(cross_product(g.dir, g.n).get_norm());
-		vector3d const delta(binorm*(0.5*g.w));
-		norm *= (g.shadowed ? 0.001 : 1.0);
-		float const tc_adj(0.1); // border around grass blade texture
-		data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
-		data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
-		data[ix++].assign(p2,       norm,     tc_adj, 0.5,        g.c);
-		assert(ix <= data.size());
-	}
+	point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
+	vector3d const binorm(cross_product(g.dir, g.n).get_norm());
+	vector3d const delta(binorm*(0.5*g.w));
+	norm *= (g.shadowed ? 0.001 : 1.0);
+	float const tc_adj(0.1); // border around grass blade texture
+	data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
+	data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
+	data[ix++].assign(p2,       norm,     tc_adj, 0.5,        g.c);
+	assert(ix <= data.size());
+}
 
-	void begin_draw() const {
-		assert(vbo_valid && vbo > 0);
-		bind_vbo(vbo);
-		vert_norm_tc_color::set_vbo_arrays();
-		select_multitex(GRASS_BLADE_TEX, 0);
-		enable_blend();
-		set_specular(0.2, 20.0);
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.75);
-		glEnable(GL_COLOR_MATERIAL);
-		glDisable(GL_NORMALIZE);
-	}
+void grass_manager_t::begin_draw() const {
 
-	void end_draw() const {
-		glDisable(GL_COLOR_MATERIAL);
-		glEnable(GL_NORMALIZE);
-		set_specular(0.0, 1.0);
-		disable_blend();
-		glDisable(GL_ALPHA_TEST);
-		disable_multitex_a();
-		bind_vbo(0);
-		check_gl_error(40);
-	}
-};
+	assert(vbo_valid && vbo > 0);
+	bind_vbo(vbo);
+	vert_norm_tc_color::set_vbo_arrays();
+	select_multitex(GRASS_BLADE_TEX, 0);
+	enable_blend();
+	set_specular(0.2, 20.0);
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.75);
+	glEnable(GL_COLOR_MATERIAL);
+	glDisable(GL_NORMALIZE);
+}
+
+void grass_manager_t::end_draw() const {
+
+	glDisable(GL_COLOR_MATERIAL);
+	glEnable(GL_NORMALIZE);
+	set_specular(0.0, 1.0);
+	disable_blend();
+	glDisable(GL_ALPHA_TEST);
+	disable_multitex_a();
+	bind_vbo(0);
+	check_gl_error(40);
+}
 
 
 class grass_manager_dynamic_t : public grass_manager_t {
