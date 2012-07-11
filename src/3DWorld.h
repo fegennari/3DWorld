@@ -1500,6 +1500,7 @@ int get_tile_radius();
 float draw_tiled_terrain(bool add_hole, float wpz, bool reflection_pass);
 void clear_tiled_terrain();
 void reset_tiled_terrain_state();
+void update_tiled_terrain_grass_vbos();
 
 // function prototypes - map_view
 void draw_overhead_map();

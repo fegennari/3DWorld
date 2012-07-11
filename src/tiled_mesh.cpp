@@ -28,13 +28,14 @@ float const SCENERY_THRESH    = 2.0;
 
 unsigned const GRASS_BLOCK_SZ = 8;
 unsigned const NUM_GRASS_BLOCKS = 64;
+unsigned const NUM_GRASS_LODS = 4;
 float    const GRASS_THRESH   = 1.5;
 
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, vegetation, relh_adj_tex;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, vegetation, relh_adj_tex, grass_length;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
@@ -63,10 +64,10 @@ bool grass_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (display_mod
 // 4. For each tile within GRASS_THRESH of the camera (in tile units) that contains grass texture:
 //   4.1. Create a tile_sz x tile_sz 16-bit grayscale heightmap texture
 //   4.2. For each block (out of 256) in the tile that contains grass texture:
-//     4.2.1. Select a block sub_size in [1, block_size] based on grass texture weight (preprocessing)
-//     4.2.2. Select the correct LOD based on distance from the block to the camera (rendering)
-//     4.2.3. Translate to the correct tile offset + block offset (rendering)
-//     4.2.4. Render a region from block_start_ix of size sub_size from the grass VBO (rendering)
+//     4.2.1. Select the correct LOD based on distance from the block to the camera
+//     4.2.2. Translate to the correct tile offset + block offset
+//     4.2.3. Render a region from block_start_ix of size sub_size from the grass VBO
+//     4.2.4. Possibly Render a grass blade in the geometry shader based on grass texture weight
 
 class grass_tile_manager_t : public grass_manager_t {
 	vector<unsigned> vbo_offsets;
@@ -79,6 +80,7 @@ public:
 
 	void upload_data() {
 		if (empty()) return;
+		RESET_TIME;
 		assert(vbo);
 		vector<vert_norm_tc_color> data(3*size()); // 3 vertices per grass blade
 
@@ -91,12 +93,31 @@ public:
 		upload_vbo_data(&data.front(), data.size()*sizeof(vert_norm_tc_color));
 		bind_vbo(0);
 		data_valid = 1;
+		PRINT_TIME("Grass Tile Upload");
 	}
 
 	void gen_grass() {
+		RESET_TIME;
+
 		for (unsigned i = 0; i < NUM_GRASS_BLOCKS; ++i) {
-			// FIXME - WRITE
+			vbo_offsets.push_back(grass.size());
+
+			for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
+				for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
+					float const xval(x*DX_VAL), yval(y*DY_VAL);
+
+					for (unsigned n = 0; n < grass_density; ++n) {
+						add_grass_blade(point(rgen.rand_uniform(xval, xval + DX_VAL), rgen.rand_uniform(yval, yval + DY_VAL), 0.0));
+					}
+				}
+			}
+			for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
+				// FIXME GRASS: add LODs
+			}
 		}
+		assert(vbo_offsets.size() == NUM_GRASS_BLOCKS);
+		vbo_offsets.push_back(grass.size()); // terminator
+		PRINT_TIME("Grass Tile Gen");
 	}
 
 	void update() { // to be called once per frame
@@ -104,9 +125,14 @@ public:
 			clear();
 			return;
 		}
-		if (vbo_offsets.empty()) {gen_grass();}
+		if (empty()) {gen_grass();}
 		if (!vbo_valid ) create_new_vbo();
 		if (!data_valid) upload_data();
+	}
+
+	void render_block(unsigned block_ix) const {
+		assert(block_ix+1 < vbo_offsets.size());
+		glDrawArrays(GL_TRIANGLES, 3*vbo_offsets[block_ix], 3*(vbo_offsets[block_ix+1] - vbo_offsets[block_ix]));
 	}
 };
 
@@ -139,7 +165,7 @@ class tile_t {
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group trees;
 	scenery_group scenery;
-	vector<int> grass_blocks; // -1 is unused
+	vector<unsigned short> grass_blocks; // 0 is unused
 
 public:
 	typedef vert_norm_comp vert_type_t;
@@ -373,11 +399,15 @@ public:
 		//PRINT_TIME("Create Data");
 	}
 
+	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
+
 	void create_texture() {
 		assert(tid == 0);
 		assert(!island);
 		assert(zvals.size() == zvsize*zvsize);
 		//RESET_TIME;
+		grass_blocks.clear();
+		unsigned const grass_block_dim(get_grass_block_dim());
 		unsigned char *data(new unsigned char[4*size*size]); // RGBA
 		float const MESH_NOISE_SCALE = 0.003;
 		float const MESH_NOISE_FREQ  = 80.0;
@@ -416,17 +446,16 @@ public:
 				float const sthresh[2] = {0.45, 0.7};
 				float const vnz(get_norm(ix).z);
 				float weight_scale(1.0);
+				bool const has_grass(lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == GROUND_TEX);
 
 				if (vnz < sthresh[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
-					int const id(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
-
-					if (id == GROUND_TEX || id2 == GROUND_TEX) { // ground/grass
-						float const rock_weight((id == GROUND_TEX || id2 == ROCK_TEX) ? t : 0.0);
+					if (has_grass) { // ground/grass
+						float const rock_weight((lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == ROCK_TEX) ? t : 0.0);
 						weight_scale = CLIP_TO_01((vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
 						weights[rock_tex_ix] += (1.0 - weight_scale)*rock_weight;
 						weights[dirt_tex_ix] += (1.0 - weight_scale)*(1.0 - rock_weight);
 					}
-					else if (id2 == SNOW_TEX) { // snow
+					else if (lttex_dirt[k2].id == SNOW_TEX) { // snow
 						weight_scale = CLIP_TO_01(2.0f*(vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
 						weights[rock_tex_ix] += 1.0 - weight_scale;
 					}
@@ -437,6 +466,12 @@ public:
 
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 					data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
+				}
+				if (has_grass) {
+					unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
+					if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim, 0);}
+					assert(bix < grass_blocks.size());
+					if (grass_blocks[bix] == 0) {grass_blocks[bix] = (rand2() % NUM_GRASS_BLOCKS) + 1;} // randomly select a block
 				}
 			} // for x
 		} // for y
@@ -555,19 +590,22 @@ public:
 	}
 
 	void update_grass() {
-		float const dist_scale(get_grass_dist_scale());
-		if (dist_scale > 1.2) {grass_blocks.clear();}
-		if (dist_scale > 1.0 || !grass_blocks.empty() || !is_visible()) return; // too far away, already generated, or not visible
-		// FIXME - WRITE
+		//if (get_grass_dist_scale() > 1.0 || grass_blocks.empty() || !is_visible()) return; // too far away, already generated, or not visible
+		// FIXME GRASS - WRITE
 	}
 
 	void draw_grass(shader_t &s) {
 		if (get_grass_dist_scale() > 1.0) return;
+		unsigned const grass_block_dim(get_grass_block_dim());
 
-		for (vector<int>::const_iterator i = grass_blocks.begin(); i != grass_blocks.end(); ++i) {
+		for (vector<unsigned short>::const_iterator i = grass_blocks.begin(); i != grass_blocks.end(); ++i) {
+			if (*i == 0) continue; // empty block
+			unsigned const ix(i - grass_blocks.begin()), xpos(ix % grass_block_dim), ypos(ix / grass_block_dim);
+			// FIXME GRASS: view frustum culling of block
+			// FIXME GRASS: heightmap texture scaled to map [mzmin, mzmax] to [0,1]
 			glPushMatrix();
-			//translate_to(?, ?, 0.0);
-			// FIXME - WRITE
+			glTranslatef(get_xval((xoff - xoff2) + x1 + xpos*GRASS_BLOCK_SZ), get_yval((yoff - yoff2) + y1 + ypos*GRASS_BLOCK_SZ), mzmin); // FIXME GRASS
+			grass_tile_manager.render_block(*i - 1);
 			glPopMatrix();
 		}
 	}
@@ -721,6 +759,8 @@ public:
 		if (blend_textures_in_shaders) setup_terrain_textures(s, 2, 0);
 	}
 
+	typedef vector<pair<float, tile_t *> > draw_vect_t;
+
 	float draw(bool add_hole, float wpz, bool reflection_pass) {
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
@@ -743,7 +783,7 @@ public:
 			draw_water_edge(wpz); // Note: doesn't take into account waves
 		}
 		setup_mesh_lighting();
-		vector<pair<float, tile_t *> > to_draw;
+		draw_vect_t to_draw;
 
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
@@ -770,7 +810,7 @@ public:
 		return zmin;
 	}
 
-	void draw_trees(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
+	void draw_trees(draw_vect_t const &to_draw, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->update_tree_draw();
 		}
@@ -825,7 +865,7 @@ public:
 		s.end_shader();
 	}
 
-	void draw_scenery(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
+	void draw_scenery(draw_vect_t const &to_draw, bool reflection_pass) {
 		shader_t s;
 		s.setup_enabled_lights(2);
 		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
@@ -848,13 +888,25 @@ public:
 		s.end_shader();
 	}
 
-	void draw_grass(vector<pair<float, tile_t *> > const &to_draw, bool reflection_pass) {
+	void draw_grass(draw_vect_t const &to_draw, bool reflection_pass) {
+		if (reflection_pass) return; // no grass refletion (yet)
 		shader_t s;
-		// FIXME - WRITE
+		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
+		s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
+		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.setup_enabled_lights(2);
+		s.set_vert_shader("ads_lighting.part*+grass_tiled");
+		s.set_frag_shader("linear_fog.part+simple_texture");
+		s.begin_shader();
+		//setup_wind_for_shader(s); // FIXME GRASS: add wind
+		s.setup_fog_scale();
+		s.add_uniform_float("height", grass_length);
+		grass_tile_manager.begin_draw();
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			//to_draw[i].second->draw_grass(s);
+			to_draw[i].second->draw_grass(s);
 		}
+		grass_tile_manager.end_draw();
 		s.end_shader();
 	}
 

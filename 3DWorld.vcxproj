@@ -839,6 +839,7 @@
     <None Include="shaders\exponential_fog.part.frag" />
     <None Include="shaders\fresnel.part" />
     <None Include="shaders\grass_pp_dl.vert" />
+    <None Include="shaders\grass_tiled.vert" />
     <None Include="shaders\grass_with_dlights.frag" />
     <None Include="shaders\indir_lighting.part.frag" />
     <None Include="shaders\indir_lighting.part.vert" />
