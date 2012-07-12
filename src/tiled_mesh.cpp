@@ -35,7 +35,7 @@ float    const GRASS_THRESH   = 1.5;
 extern bool inf_terrain_scenery;
 extern unsigned grass_density;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, vegetation, relh_adj_tex, grass_length;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
@@ -58,15 +58,15 @@ bool grass_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (display_mod
 
 
 // grass:
-// 1. Create NUM_GRASS_BLOCKS GRASS_BLOCK_SZxGRASS_BLOCK_SZ mesh unit blocks of grass with z=0.0
+// 1. * Create NUM_GRASS_BLOCKS GRASS_BLOCK_SZxGRASS_BLOCK_SZ mesh unit blocks of grass with z=0.0
 // 2. Create several LOD levels for each block by merging pairs of nearby grass blades by averaging parameters and conserving area
-// 3. Upload to a single large VBO, and keep pointers into the base and LOD data for every block
-// 4. For each tile within GRASS_THRESH of the camera (in tile units) that contains grass texture:
-//   4.1. Create a tile_sz x tile_sz 16-bit grayscale heightmap texture
-//   4.2. For each block (out of 256) in the tile that contains grass texture:
+// 3. * Upload to a single large VBO, and keep pointers into the base and LOD data for every block
+// 4. * For each tile within GRASS_THRESH of the camera (in tile units) that contains grass texture:
+//   4.1. * Create a tile_sz x tile_sz 16-bit grayscale heightmap texture
+//   4.2. * For each block (out of 256) in the tile that contains grass texture:
 //     4.2.1. Select the correct LOD based on distance from the block to the camera
-//     4.2.2. Translate to the correct tile offset + block offset
-//     4.2.3. Render a region from block_start_ix of size sub_size from the grass VBO
+//     4.2.2. * Translate to the correct tile offset + block offset
+//     4.2.3. * Render a region from block_start_ix of size sub_size from the grass VBO
 //     4.2.4. Possibly Render a grass blade in the geometry shader based on grass texture weight
 
 class grass_tile_manager_t : public grass_manager_t {
@@ -158,7 +158,8 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 class tile_t {
 
 	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_tree_dxoff, init_tree_dyoff, init_scenery_dxoff, init_scenery_dyoff;
-	unsigned tid, vbo, ivbo[NUM_LODS], size, stride, zvsize, base_tsize, gen_tsize, tree_lod_level;
+	unsigned weight_tid, height_tid, shadow_tid, vbo, ivbo[NUM_LODS];
+	unsigned size, stride, zvsize, base_tsize, gen_tsize, tree_lod_level;
 	float radius, mzmin, mzmax, tzmax, xstart, ystart, xstep, ystep;
 	vector<float> zvals;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
@@ -170,12 +171,14 @@ class tile_t {
 public:
 	typedef vert_norm_comp vert_type_t;
 
-	tile_t() : tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0), tree_lod_level(0) {init_vbo_ids();}
+	tile_t() : weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0), tree_lod_level(0) {
+		init_vbo_ids();
+	}
 	~tile_t() {clear_vbo_tid(1,1);}
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2),
 		init_tree_dxoff(0), init_tree_dyoff(0), init_scenery_dxoff(0), init_scenery_dyoff(0),
-		tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), tree_lod_level(0)
+		weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), tree_lod_level(0)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -217,7 +220,9 @@ public:
 	unsigned get_gpu_memory() const {
 		unsigned mem(0);
 		if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
-		if (tid > 0) mem += 4*size*size; // 4 bytes per texel
+		if (weight_tid > 0) mem += 4*size*size; // 4 bytes per texel (RGBA8)
+		if (height_tid > 0) mem += 2*size*size; // 2 bytes per texel (L16)
+		if (shadow_tid > 0) mem += 1*size*size; // 1 byte  per texel (L8)
 
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			if (ivbo[i] > 0) mem += (size>>i)*(size>>i)*sizeof(unsigned short);
@@ -233,8 +238,10 @@ public:
 		}
 	}
 
-	void clear_tid() {
-		free_texture(tid);
+	void clear_tids() {
+		free_texture(weight_tid);
+		free_texture(height_tid);
+		free_texture(shadow_tid);
 		gen_tsize = 0;
 	}
 
@@ -252,7 +259,7 @@ public:
 			trees.clear_vbos();
 			scenery.clear_vbos_and_dlists();
 		}
-		if (tclear) {clear_tid();}
+		if (tclear) {clear_tids();}
 	}
 
 	void create_xy_arrays(unsigned xy_size, float xy_scale) {
@@ -402,7 +409,7 @@ public:
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 
 	void create_texture() {
-		assert(tid == 0);
+		assert(weight_tid == 0);
 		assert(!island);
 		assert(zvals.size() == zvsize*zvsize);
 		//RESET_TIME;
@@ -475,8 +482,8 @@ public:
 				}
 			} // for x
 		} // for y
-		setup_texture(tid, GL_MODULATE, 0, 0, 0, 0, 0);
-		assert(tid > 0 && glIsTexture(tid));
+		setup_texture(weight_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+		assert(weight_tid > 0 && glIsTexture(weight_tid));
 		glTexImage2D(GL_TEXTURE_2D, 0, 4, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
 		glDisable(GL_TEXTURE_2D);
 		delete [] data;
@@ -488,7 +495,6 @@ public:
 	}
 	bool update_range() { // if returns 0, tile will be deleted
 		if (scenery_enabled()) {update_scenery();}
-		if (grass_enabled  ()) {update_grass  ();}
 		float const dist(get_rel_dist_to_camera());
 		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
 		return (dist < DELETE_DIST_TILES);
@@ -589,22 +595,45 @@ public:
 		glPopMatrix();
 	}
 
-	void update_grass() {
-		//if (get_grass_dist_scale() > 1.0 || grass_blocks.empty() || !is_visible()) return; // too far away, already generated, or not visible
-		// FIXME GRASS - WRITE
-	}
-
 	void draw_grass(shader_t &s) {
-		if (get_grass_dist_scale() > 1.0) return;
+		if (grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
+		int const dx(xoff - xoff2), dy(yoff - yoff2);
+
+		if (!height_tid) { // heightmap texture scaled to map [mzmin, mzmax] to [0,1]
+			assert(zvals.size() == zvsize*zvsize);
+			vector<unsigned short> data(size*size); // FIXME: texture should be size+1 by size+1
+			float const scale(65535/(mzmax - mzmin));
+
+			for (unsigned y = 0; y < size; ++y) {
+				for (unsigned x = 0; x < size; ++x) {
+					float const zval(0.25*(zvals[y*zvsize+x] + zvals[(y+1)*zvsize+x] + zvals[y*zvsize+(x+1)] + zvals[(y+1)*zvsize+(x+1)]));
+					data[y*size+x] = (unsigned short)(scale*(zval - mzmin));
+				}
+			}
+			setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, size, size, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
+		}
+		assert(height_tid);
+		set_multitex(1);
+		glBindTexture(GL_TEXTURE_2D, height_tid);
+		set_multitex(0);
+		s.add_uniform_float("x1", get_xval(x1+dx));
+		s.add_uniform_float("y1", get_yval(y1+dy));
+		s.add_uniform_float("x2", get_xval(x2+dx));
+		s.add_uniform_float("y2", get_yval(y2+dy));
+		s.add_uniform_float("zmin", mzmin);
+		s.add_uniform_float("zmax", mzmax);
 		unsigned const grass_block_dim(get_grass_block_dim());
 
 		for (vector<unsigned short>::const_iterator i = grass_blocks.begin(); i != grass_blocks.end(); ++i) {
 			if (*i == 0) continue; // empty block
 			unsigned const ix(i - grass_blocks.begin()), xpos(ix % grass_block_dim), ypos(ix / grass_block_dim);
-			// FIXME GRASS: view frustum culling of block
-			// FIXME GRASS: heightmap texture scaled to map [mzmin, mzmax] to [0,1]
+			float const gx1(get_xval(x1 + dx + xpos*GRASS_BLOCK_SZ));
+			float const gy1(get_yval(y1 + dy + ypos*GRASS_BLOCK_SZ));
+			cube_t const bcube(gx1, gx1+GRASS_BLOCK_SZ*DX_VAL, gy1, gy1+GRASS_BLOCK_SZ*DY_VAL, mzmin, mzmax);
+			if (!camera_pdu.cube_visible(bcube)) continue;
 			glPushMatrix();
-			glTranslatef(get_xval((xoff - xoff2) + x1 + xpos*GRASS_BLOCK_SZ), get_yval((yoff - yoff2) + y1 + ypos*GRASS_BLOCK_SZ), mzmin); // FIXME GRASS
+			glTranslatef(gx1, gy1, 0.0);
 			grass_tile_manager.render_block(*i - 1);
 			glPopMatrix();
 		}
@@ -614,16 +643,16 @@ public:
 		assert(size > 0);
 
 		if (!DISABLE_TEXTURES) {
-			if (tid == 0) create_texture();
+			if (weight_tid == 0) create_texture();
 			
-			if (tid > 0) {
+			if (weight_tid > 0) {
 				glEnable(GL_TEXTURE_2D);
-				glBindTexture(GL_TEXTURE_2D, tid);
+				glBindTexture(GL_TEXTURE_2D, weight_tid);
 			}
 		}
 		glPushMatrix();
 		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
-		if (tid > 0) set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
+		if (weight_tid > 0) set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
 		unsigned const ptr_stride(sizeof(vert_type_t));
 
 		if (vbo == 0) {
@@ -660,7 +689,7 @@ public:
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 		glPopMatrix();
-		if (tid > 0) disable_textures_texgen();
+		if (weight_tid > 0) disable_textures_texgen();
 	}
 }; // tile_t
 
@@ -898,9 +927,12 @@ public:
 		s.set_vert_shader("ads_lighting.part*+grass_tiled");
 		s.set_frag_shader("linear_fog.part+simple_texture");
 		s.begin_shader();
-		//setup_wind_for_shader(s); // FIXME GRASS: add wind
+		//setup_wind_for_shader(s); // FIXME GRASS: add wind?
+		s.add_uniform_int("tex0", 0);
+		s.add_uniform_int("height_tex", 1);
 		s.setup_fog_scale();
 		s.add_uniform_float("height", grass_length);
+		upload_mvm_to_shader(s, "world_space_mvm");
 		grass_tile_manager.begin_draw();
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
