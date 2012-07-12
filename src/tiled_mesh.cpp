@@ -26,10 +26,10 @@ float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH    = 2.0;
 
-unsigned const GRASS_BLOCK_SZ = 8;
+unsigned const GRASS_BLOCK_SZ   = 8;
 unsigned const NUM_GRASS_BLOCKS = 64;
-unsigned const NUM_GRASS_LODS = 4;
-float    const GRASS_THRESH   = 1.5;
+unsigned const NUM_GRASS_LODS   = 4;
+float    const GRASS_THRESH     = 1.5;
 
 
 extern bool inf_terrain_scenery;
@@ -600,43 +600,46 @@ public:
 		int const dx(xoff - xoff2), dy(yoff - yoff2);
 
 		if (!height_tid) { // heightmap texture scaled to map [mzmin, mzmax] to [0,1]
-			assert(zvals.size() == zvsize*zvsize);
-			vector<unsigned short> data(size*size); // FIXME: texture should be size+1 by size+1
 			float const scale(65535/(mzmax - mzmin));
+			unsigned const tsize(zvsize); // make texture one size larger than it needs to be to meet 4-byte alignment requirements
+			assert(zvals.size() == zvsize*zvsize);
+			vector<unsigned short> data(tsize*tsize);
 
-			for (unsigned y = 0; y < size; ++y) {
-				for (unsigned x = 0; x < size; ++x) {
-					float const zval(0.25*(zvals[y*zvsize+x] + zvals[(y+1)*zvsize+x] + zvals[y*zvsize+(x+1)] + zvals[(y+1)*zvsize+(x+1)]));
-					data[y*size+x] = (unsigned short)(scale*(zval - mzmin));
+			for (unsigned y = 0; y < tsize; ++y) {
+				for (unsigned x = 0; x < tsize; ++x) {
+					data[y*tsize+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - mzmin));
 				}
 			}
 			setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, size, size, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, tsize, tsize, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
 		}
 		assert(height_tid);
 		set_multitex(1);
 		glBindTexture(GL_TEXTURE_2D, height_tid);
 		set_multitex(0);
-		s.add_uniform_float("x1", get_xval(x1+dx));
-		s.add_uniform_float("y1", get_yval(y1+dy));
-		s.add_uniform_float("x2", get_xval(x2+dx));
-		s.add_uniform_float("y2", get_yval(y2+dy));
+		s.add_uniform_float("x1", -0.5*DX_VAL);
+		s.add_uniform_float("y1", -0.5*DY_VAL);
+		s.add_uniform_float("x2", (size + 1.5)*DX_VAL); // make bounds one unit larger to account for the extra texture row/column
+		s.add_uniform_float("y2", (size + 1.5)*DY_VAL);
 		s.add_uniform_float("zmin", mzmin);
 		s.add_uniform_float("zmax", mzmax);
 		unsigned const grass_block_dim(get_grass_block_dim());
+		unsigned const tx_loc(s.get_uniform_loc("translate_x")), ty_loc(s.get_uniform_loc("translate_y"));
+		float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
+		glPushMatrix();
+		glTranslatef(llcx, llcy, 0.0);
 
 		for (vector<unsigned short>::const_iterator i = grass_blocks.begin(); i != grass_blocks.end(); ++i) {
 			if (*i == 0) continue; // empty block
 			unsigned const ix(i - grass_blocks.begin()), xpos(ix % grass_block_dim), ypos(ix / grass_block_dim);
-			float const gx1(get_xval(x1 + dx + xpos*GRASS_BLOCK_SZ));
-			float const gy1(get_yval(y1 + dy + ypos*GRASS_BLOCK_SZ));
-			cube_t const bcube(gx1, gx1+GRASS_BLOCK_SZ*DX_VAL, gy1, gy1+GRASS_BLOCK_SZ*DY_VAL, mzmin, mzmax);
+			float const block_dx(xpos*dx_step), block_dy(ypos*dy_step);
+			cube_t const bcube(llcx+block_dx, llcx+block_dx+dx_step, llcy+block_dy, llcy+block_dy+dy_step, mzmin, mzmax);
 			if (!camera_pdu.cube_visible(bcube)) continue;
-			glPushMatrix();
-			glTranslatef(gx1, gy1, 0.0);
+			s.set_uniform_float(tx_loc, block_dx);
+			s.set_uniform_float(ty_loc, block_dy);
 			grass_tile_manager.render_block(*i - 1);
-			glPopMatrix();
 		}
+		glPopMatrix();
 	}
 
 	void draw(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], bool reflection_pass) {
@@ -932,7 +935,6 @@ public:
 		s.add_uniform_int("height_tex", 1);
 		s.setup_fog_scale();
 		s.add_uniform_float("height", grass_length);
-		upload_mvm_to_shader(s, "world_space_mvm");
 		grass_tile_manager.begin_draw();
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
