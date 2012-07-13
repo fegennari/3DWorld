@@ -58,16 +58,11 @@ bool grass_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (display_mod
 
 
 // grass:
-// 1. * Create NUM_GRASS_BLOCKS GRASS_BLOCK_SZxGRASS_BLOCK_SZ mesh unit blocks of grass with z=0.0
-// 2. Create several LOD levels for each block by merging pairs of nearby grass blades by averaging parameters and conserving area
-// 3. * Upload to a single large VBO, and keep pointers into the base and LOD data for every block
-// 4. * For each tile within GRASS_THRESH of the camera (in tile units) that contains grass texture:
-//   4.1. * Create a tile_sz x tile_sz 16-bit grayscale heightmap texture
-//   4.2. * For each block (out of 256) in the tile that contains grass texture:
-//     4.2.1. Select the correct LOD based on distance from the block to the camera
-//     4.2.2. * Translate to the correct tile offset + block offset
-//     4.2.3. * Render a region from block_start_ix of size sub_size from the grass VBO
-//     4.2.4. Possibly Render a grass blade in the geometry shader based on grass texture weight
+// fix bad lighting on first frame
+// add LODs
+// add wind
+// add shadows
+
 
 class grass_tile_manager_t : public grass_manager_t {
 	vector<unsigned> vbo_offsets;
@@ -612,17 +607,25 @@ public:
 			}
 			setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, tsize, tsize, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
+			return; // FIXME: lighting is wrong the first time a new tile is rendered??? so skip it
 		}
 		assert(height_tid);
 		set_multitex(1);
 		glBindTexture(GL_TEXTURE_2D, height_tid);
+		assert(weight_tid);
+		set_multitex(2);
+		glBindTexture(GL_TEXTURE_2D, weight_tid);
 		set_multitex(0);
-		s.add_uniform_float("x1", -0.5*DX_VAL);
-		s.add_uniform_float("y1", -0.5*DY_VAL);
-		s.add_uniform_float("x2", (size + 1.5)*DX_VAL); // make bounds one unit larger to account for the extra texture row/column
-		s.add_uniform_float("y2", (size + 1.5)*DY_VAL);
+
+		s.add_uniform_float("x1",  -0.5*DX_VAL);
+		s.add_uniform_float("y1",  -0.5*DY_VAL);
+		s.add_uniform_float("x2",  (size + 1.5)*DX_VAL); // make bounds one unit larger to account for the extra texture row/column
+		s.add_uniform_float("y2",  (size + 1.5)*DY_VAL);
+		s.add_uniform_float("wx2", size*DX_VAL);
+		s.add_uniform_float("wy2", size*DY_VAL);
 		s.add_uniform_float("zmin", mzmin);
 		s.add_uniform_float("zmax", mzmax);
+
 		unsigned const grass_block_dim(get_grass_block_dim());
 		unsigned const tx_loc(s.get_uniform_loc("translate_x")), ty_loc(s.get_uniform_loc("translate_y"));
 		float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
@@ -646,12 +649,8 @@ public:
 		assert(size > 0);
 
 		if (!DISABLE_TEXTURES) {
-			if (weight_tid == 0) create_texture();
-			
-			if (weight_tid > 0) {
-				glEnable(GL_TEXTURE_2D);
-				glBindTexture(GL_TEXTURE_2D, weight_tid);
-			}
+			if (weight_tid == 0) {create_texture();}
+			if (weight_tid >  0) {glBindTexture(GL_TEXTURE_2D, weight_tid);}
 		}
 		glPushMatrix();
 		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
@@ -842,6 +841,13 @@ public:
 		return zmin;
 	}
 
+	void set_noise_tex(shader_t &s, unsigned tu_id) const {
+		set_multitex(tu_id);
+		select_texture(NOISE_GEN_TEX, 0);
+		s.add_uniform_int("noise_tex", tu_id);
+		set_multitex(0);
+	}
+
 	void draw_trees(draw_vect_t const &to_draw, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->update_tree_draw();
@@ -869,11 +875,8 @@ public:
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_float("min_alpha", 0.75);
 
-		set_multitex(1);
-		select_texture(NOISE_GEN_TEX, 0);
-		s.add_uniform_int("noise_tex", 1);
+		set_noise_tex(s, 1);
 		s.add_uniform_float("noise_tex_size", get_texture_size(NOISE_GEN_TEX, 0));
-		set_multitex(0);
 		check_gl_error(302);
 		
 		if (!tree_trunk_pts.empty()) { // color/texture already set above
@@ -929,12 +932,17 @@ public:
 		s.setup_enabled_lights(2);
 		s.set_vert_shader("ads_lighting.part*+grass_tiled");
 		s.set_frag_shader("linear_fog.part+simple_texture");
+		//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
 		s.begin_shader();
 		//setup_wind_for_shader(s); // FIXME GRASS: add wind?
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("height_tex", 1);
+		s.add_uniform_int("weight_tex", 2);
+		set_noise_tex(s, 3);
 		s.setup_fog_scale();
 		s.add_uniform_float("height", grass_length);
+		s.add_uniform_float("dist_const", (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH);
+		s.add_uniform_float("dist_slope", 0.5);
 		grass_tile_manager.begin_draw();
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
