@@ -35,7 +35,7 @@ public:
 	bool empty()  const {return grass.empty();}
 	void invalidate_vbo() {vbo_valid = 0;}
 	void clear();
-	void add_grass_blade(point const &pos);
+	void add_grass_blade(point const &pos, float cscale);
 	void create_new_vbo();
 	void add_to_vbo_data(grass_t const &g, vector<vert_norm_tc_color> &data, unsigned &ix, vector3d &norm) const;
 	void begin_draw() const;

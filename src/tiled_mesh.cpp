@@ -27,7 +27,7 @@ float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH    = 2.0;
 
 unsigned const GRASS_BLOCK_SZ   = 8;
-unsigned const NUM_GRASS_BLOCKS = 64;
+unsigned const NUM_GRASS_BLOCKS = 16;
 unsigned const NUM_GRASS_LODS   = 4;
 float    const GRASS_THRESH     = 1.5;
 
@@ -107,7 +107,7 @@ public:
 					float const xval(x*DX_VAL), yval(y*DY_VAL);
 
 					for (unsigned n = 0; n < grass_density; ++n) {
-						add_grass_blade(point(rgen.rand_uniform(xval, xval + DX_VAL), rgen.rand_uniform(yval, yval + DY_VAL), 0.0));
+						add_grass_blade(point(rgen.rand_uniform(xval, xval + DX_VAL), rgen.rand_uniform(yval, yval + DY_VAL), 0.0), 0.48);
 					}
 				}
 			}

@@ -36,21 +36,21 @@ void grass_manager_t::clear() {
 	grass.clear();
 }
 
-void grass_manager_t::add_grass_blade(point const &pos) {
+void grass_manager_t::add_grass_blade(point const &pos, float cscale) {
 
 	vector3d const base_dir(plus_z);
 	//vector3d const base_dir(interpolate_mesh_normal(pos));
 	vector3d const dir((base_dir + rgen.signed_rand_vector(0.3)).get_norm());
 	vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
 	float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
-	float const base_color[3] = {0.3,  0.6, 0.08};
+	float const base_color[3] = {0.25, 0.6, 0.08};
 	float const mod_color [3] = {0.2,  0.2, 0.08};
 	float const lbc_mult  [3] = {0.2,  0.4, 0.0 };
 	float const dead_color[3] = {0.75, 0.6, 0.0 };
 	unsigned char color[3];
 
 	for (unsigned i = 0; i < 3; ++i) {
-		float const ccomp(CLIP_TO_01(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float()));
+		float const ccomp(CLIP_TO_01(cscale*(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float())));
 		color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
 	}
 	float const length(grass_length*rgen.rand_uniform(0.7, 1.3));
@@ -173,7 +173,7 @@ public:
 					// skip grass intersecting cobjs
 					if (do_cobj_check && dwobject(GRASS, pos).check_vert_collision(0, 0, 0)) continue; // make a GRASS object for collision detection
 					if (point_inside_voxel_terrain(pos)) continue; // inside voxel volume
-					add_grass_blade(pos);
+					add_grass_blade(pos, 1.0);
 				}
 			}
 		}
