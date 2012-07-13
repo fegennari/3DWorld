@@ -9,14 +9,23 @@ void main()
 	gl_TexCoord[0] = gl_MultiTexCoord0;
 	vec4 vertex = gl_Vertex;
 	vertex.xy  += vec2(translate_x, translate_y);
-	float grass_weight = texture2D(weight_tex, vec2(vertex.x/wx2, vertex.y/wy2)).b;
-	float noise_weight = texture2D(noise_tex,  vec2(10.0*gl_Color.r, 10.0*gl_Color.g)).r; // "hash" the color
-
 	vertex.z   += zmin + (zmax - zmin)*texture2D(height_tex, vec2((vertex.x - x1)/(x2 - x1), (vertex.y - y1)/(y2 - y1))).r;
-	// FIXME: add wind?
+
+	if (enable_grass_wind) {
+		float motion_val = clamp((1.5 - 2.0*gl_TexCoord[0].s), 0.0, 1.0); // 1.0 for top vertex, 0.0 for bottom vertices
+		// Note: grass motion amplitude should depend on dot(wind, gl_Normal), but the normal is incorrect
+		float delta = get_wind_delta(vertex.xyz, gl_Color.g) * height * motion_val;
+		// apply x/y delta but maintain the existing height
+		vec3 v = normalize(vec3(delta*wind_x, delta*wind_y, height)) * height;
+		v.z   -= height;
+		vertex.xyz += v;
+	}
+
 	vec4 epos   = gl_ModelViewMatrix  * vertex;
 	gl_Position = gl_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
+	float grass_weight = texture2D(weight_tex, vec2(vertex.x/wx2, vertex.y/wy2)).b;
+	float noise_weight = texture2D(noise_tex,  vec2(10.0*gl_Color.r, 10.0*gl_Color.g)).r; // "hash" the color
 	grass_weight   *= 1.0 - clamp(dist_slope*(gl_FogFragCoord - dist_const), 0.0, 1.0); // decrease weight far away from camera
 	
 	// calculate lighting

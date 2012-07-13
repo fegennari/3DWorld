@@ -30,6 +30,7 @@ unsigned const GRASS_BLOCK_SZ   = 8;
 unsigned const NUM_GRASS_BLOCKS = 16;
 unsigned const NUM_GRASS_LODS   = 4;
 float    const GRASS_THRESH     = 1.5;
+float    const GRASS_COLOR_SCALE= 0.5;
 
 
 extern bool inf_terrain_scenery;
@@ -102,7 +103,7 @@ public:
 					float const xval(x*DX_VAL), yval(y*DY_VAL);
 
 					for (unsigned n = 0; n < grass_density; ++n) {
-						add_grass_blade(point(rgen.rand_uniform(xval, xval + DX_VAL), rgen.rand_uniform(yval, yval + DY_VAL), 0.0), 0.48);
+						add_grass_blade(point(rgen.rand_uniform(xval, xval + DX_VAL), rgen.rand_uniform(yval, yval + DY_VAL), 0.0), GRASS_COLOR_SCALE);
 					}
 				}
 			}
@@ -135,6 +136,15 @@ grass_tile_manager_t grass_tile_manager;
 
 void update_tiled_terrain_grass_vbos() {
 	grass_tile_manager.invalidate_vbo();
+}
+
+
+void bind_texture_tu(unsigned tid, unsigned tu_id) {
+
+	assert(tid);
+	set_multitex(tu_id);
+	bind_2d_texture(tid);
+	set_multitex(0);
 }
 
 
@@ -609,14 +619,8 @@ public:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, tsize, tsize, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
 			return; // FIXME: lighting is wrong the first time a new tile is rendered??? so skip it
 		}
-		assert(height_tid);
-		set_multitex(1);
-		glBindTexture(GL_TEXTURE_2D, height_tid);
-		assert(weight_tid);
-		set_multitex(2);
-		glBindTexture(GL_TEXTURE_2D, weight_tid);
-		set_multitex(0);
-
+		bind_texture_tu(height_tid, 2);
+		bind_texture_tu(weight_tid, 3);
 		s.add_uniform_float("x1",  -0.5*DX_VAL);
 		s.add_uniform_float("y1",  -0.5*DY_VAL);
 		s.add_uniform_float("x2",  (size + 1.5)*DX_VAL); // make bounds one unit larger to account for the extra texture row/column
@@ -650,7 +654,7 @@ public:
 
 		if (!DISABLE_TEXTURES) {
 			if (weight_tid == 0) {create_texture();}
-			if (weight_tid >  0) {glBindTexture(GL_TEXTURE_2D, weight_tid);}
+			if (weight_tid >  0) {bind_2d_texture(weight_tid);}
 		}
 		glPushMatrix();
 		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
@@ -761,7 +765,7 @@ public:
 		for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
 			int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
 			float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
-			float const cscale((world_mode == WMODE_INF_TERRAIN && tid == GROUND_TEX) ? 0.5 : 1.0); // darker grass
+			float const cscale((world_mode == WMODE_INF_TERRAIN && tid == GROUND_TEX) ? GRASS_COLOR_SCALE : 1.0); // darker grass
 			unsigned const tu_id(start_tu_id + i);
 			select_multitex(tid, tu_id, 0);
 			std::ostringstream oss1, oss2, oss3;
@@ -929,16 +933,16 @@ public:
 		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
 		s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.set_bool_prefix("enable_grass_wind", 0, 0); // VS FIXME GRASS: enable
 		s.setup_enabled_lights(2);
-		s.set_vert_shader("ads_lighting.part*+grass_tiled");
+		s.set_vert_shader("ads_lighting.part*+wind.part*+grass_tiled");
 		s.set_frag_shader("linear_fog.part+simple_texture");
 		//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
 		s.begin_shader();
-		//setup_wind_for_shader(s); // FIXME GRASS: add wind?
-		s.add_uniform_int("tex0", 0);
-		s.add_uniform_int("height_tex", 1);
-		s.add_uniform_int("weight_tex", 2);
-		set_noise_tex(s, 3);
+		setup_wind_for_shader(s); // uses tu_ids 0 and 1
+		s.add_uniform_int("height_tex", 2);
+		s.add_uniform_int("weight_tex", 3);
+		set_noise_tex(s, 4);
 		s.setup_fog_scale();
 		s.add_uniform_float("height", grass_length);
 		s.add_uniform_float("dist_const", (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH);
