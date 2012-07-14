@@ -929,31 +929,37 @@ public:
 
 	void draw_grass(draw_vect_t const &to_draw, bool reflection_pass) {
 		if (reflection_pass) return; // no grass refletion (yet)
-		shader_t s;
-		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
-		s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
-		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-		s.set_bool_prefix("enable_grass_wind", 0, 0); // VS FIXME GRASS: enable
-		s.setup_enabled_lights(2);
-		s.set_vert_shader("ads_lighting.part*+wind.part*+grass_tiled");
-		s.set_frag_shader("linear_fog.part+simple_texture");
-		//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
-		s.begin_shader();
-		setup_wind_for_shader(s); // uses tu_ids 0 and 1
-		s.add_uniform_int("height_tex", 2);
-		s.add_uniform_int("weight_tex", 3);
-		set_noise_tex(s, 4);
-		s.setup_fog_scale();
-		s.add_uniform_float("height", grass_length);
-		s.add_uniform_float("dist_const", (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH);
-		s.add_uniform_float("dist_slope", 0.5);
 		grass_tile_manager.begin_draw();
+		shader_t s;
 
-		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->draw_grass(s);
+		for (unsigned pass = 0; pass < 2; ++pass) { // wind, no wind
+			s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
+			s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
+			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+			s.set_bool_prefix("enable_grass_wind", (pass == 0), 0); // VS FIXME GRASS: enable
+			s.setup_enabled_lights(2);
+			s.set_vert_shader("ads_lighting.part*+wind.part*+grass_tiled");
+			s.set_frag_shader("linear_fog.part+simple_texture");
+			//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
+			s.begin_shader();
+			if (pass == 0) {setup_wind_for_shader(s);} // uses tu_ids 0 and 1
+			s.add_uniform_int("tex0", 0);
+			s.add_uniform_int("height_tex", 2);
+			s.add_uniform_int("weight_tex", 3);
+			set_noise_tex(s, 4);
+			s.setup_fog_scale();
+			s.add_uniform_float("height", grass_length);
+			s.add_uniform_float("dist_const", (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH);
+			s.add_uniform_float("dist_slope", 0.5);
+
+			for (unsigned i = 0; i < to_draw.size(); ++i) {
+				if ((to_draw[i].second->get_dist_to_camera_in_tiles() > 0.75) == pass) {
+					to_draw[i].second->draw_grass(s);
+				}
+			}
+			s.end_shader();
 		}
 		grass_tile_manager.end_draw();
-		s.end_shader();
 	}
 
 	void clear_vbos_tids(bool vclear, bool tclear) {

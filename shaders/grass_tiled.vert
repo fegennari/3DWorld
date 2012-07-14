@@ -12,15 +12,8 @@ void main()
 	vertex.z   += zmin + (zmax - zmin)*texture2D(height_tex, vec2((vertex.x - x1)/(x2 - x1), (vertex.y - y1)/(y2 - y1))).r;
 
 	if (enable_grass_wind) {
-		float motion_val = clamp((1.5 - 2.0*gl_TexCoord[0].s), 0.0, 1.0); // 1.0 for top vertex, 0.0 for bottom vertices
-		// Note: grass motion amplitude should depend on dot(wind, gl_Normal), but the normal is incorrect
-		float delta = get_wind_delta(vertex.xyz, gl_Color.g) * height * motion_val;
-		// apply x/y delta but maintain the existing height
-		vec3 v = normalize(vec3(delta*wind_x, delta*wind_y, height)) * height;
-		v.z   -= height;
-		vertex.xyz += v;
+		vertex.xyz += get_grass_wind_delta(vertex.xyz, height);
 	}
-
 	vec4 epos   = gl_ModelViewMatrix  * vertex;
 	gl_Position = gl_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);

@@ -464,6 +464,7 @@ public:
 #endif
 			if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);
 			setup_wind_for_shader(s);
+			s.add_uniform_int("tex0", 0);
 			s.setup_fog_scale();
 			s.add_uniform_float("height", grass_length);
 		}
@@ -534,7 +535,6 @@ void setup_wind_for_shader(shader_t &s) { // uses tu_ids 0 and 1
 	s.add_uniform_float("time", 0.5*time/TICKS_PER_SECOND);
 	s.add_uniform_float("wind_x", wind.x);
 	s.add_uniform_float("wind_y", wind.y);
-	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("wind_noise_tex", 1);
 	select_multitex(WIND_TEX, 1, 0);
 	set_multitex(0);
