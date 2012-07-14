@@ -28,8 +28,9 @@ float const SCENERY_THRESH    = 2.0;
 
 unsigned const GRASS_BLOCK_SZ   = 8;
 unsigned const NUM_GRASS_BLOCKS = 16;
-unsigned const NUM_GRASS_LODS   = 4;
+unsigned const NUM_GRASS_LODS   = 5;
 float    const GRASS_THRESH     = 1.5;
+float    const GRASS_LOD_SCALE  = 15.0;
 float    const GRASS_COLOR_SCALE= 0.5;
 
 
@@ -61,12 +62,16 @@ bool grass_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (display_mod
 // grass:
 // fix bad lighting on first frame
 // add LODs
-// add wind
 // add shadows
 
 
 class grass_tile_manager_t : public grass_manager_t {
-	vector<unsigned> vbo_offsets;
+
+	struct offset_ixs_t {
+		unsigned v[NUM_GRASS_LODS+1];
+	};
+
+	vector<offset_ixs_t> vbo_offsets;
 
 public:
 	void clear() {
@@ -94,9 +99,11 @@ public:
 
 	void gen_grass() {
 		RESET_TIME;
+		assert(NUM_GRASS_LODS > 0);
+		vbo_offsets.resize(NUM_GRASS_BLOCKS);
 
 		for (unsigned i = 0; i < NUM_GRASS_BLOCKS; ++i) {
-			vbo_offsets.push_back(grass.size());
+			vbo_offsets[i].v[0] = grass.size();
 
 			for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
 				for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
@@ -107,12 +114,12 @@ public:
 					}
 				}
 			}
-			for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
+			for (unsigned lod = 1; lod < NUM_GRASS_LODS; ++lod) {
+				vbo_offsets[i].v[lod] = grass.size();
 				// FIXME GRASS: add LODs
 			}
+			vbo_offsets[i].v[NUM_GRASS_LODS] = grass.size();
 		}
-		assert(vbo_offsets.size() == NUM_GRASS_BLOCKS);
-		vbo_offsets.push_back(grass.size()); // terminator
 		PRINT_TIME("Grass Tile Gen");
 	}
 
@@ -126,9 +133,11 @@ public:
 		if (!data_valid) upload_data();
 	}
 
-	void render_block(unsigned block_ix) const {
-		assert(block_ix+1 < vbo_offsets.size());
-		glDrawArrays(GL_TRIANGLES, 3*vbo_offsets[block_ix], 3*(vbo_offsets[block_ix+1] - vbo_offsets[block_ix]));
+	void render_block(unsigned block_ix, unsigned lod_level) const {
+		assert(block_ix  < vbo_offsets.size());
+		assert(lod_level < NUM_GRASS_LODS);
+		unsigned const *const v(vbo_offsets[block_ix].v);
+		glDrawArrays(GL_TRIANGLES, 3*v[lod_level], 3*(v[lod_level+1] - v[lod_level]));
 	}
 };
 
@@ -171,7 +180,14 @@ class tile_t {
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group trees;
 	scenery_group scenery;
-	vector<unsigned short> grass_blocks; // 0 is unused
+
+	struct grass_block_t {
+		unsigned ix; // 0 is unused
+		float zmin, zmax;
+		grass_block_t() : ix(0), zmin(0.0), zmax(0.0) {}
+	};
+
+	vector<grass_block_t> grass_blocks;
 
 public:
 	typedef vert_norm_comp vert_type_t;
@@ -441,8 +457,9 @@ public:
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
 				float const rand_offset((world_mode == WMODE_INF_TERRAIN) ? noise_scale*fast_eval_from_index(x, y, 0) : 0.0);
-				float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv + rand_offset);
-				float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv + rand_offset);
+				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
+				float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
+				float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
 				get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2, t);
 				get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4, t);
 				bool const same_tid(k1 == k4);
@@ -481,9 +498,19 @@ public:
 				}
 				if (has_grass) {
 					unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
-					if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim, 0);}
+					if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
 					assert(bix < grass_blocks.size());
-					if (grass_blocks[bix] == 0) {grass_blocks[bix] = (rand2() % NUM_GRASS_BLOCKS) + 1;} // randomly select a block
+					grass_block_t &gb(grass_blocks[bix]);
+					
+					if (gb.ix == 0) { // not yet set
+						gb.ix   = (rand2() % NUM_GRASS_BLOCKS) + 1; // randomly select a block
+						gb.zmin = mhmin;
+						gb.zmax = mhmax;
+					}
+					else {
+						gb.zmin = min(gb.zmin, mhmin);
+						gb.zmax = max(gb.zmax, mhmax);
+					}
 				}
 			} // for x
 		} // for y
@@ -496,7 +523,7 @@ public:
 	}
 
 	float get_rel_dist_to_camera() const {
-		return max(0.0f, (p2p_dist_xy(get_camera_pos(), get_center()) - radius))/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		return max(0.0f, p2p_dist_xy(get_camera_pos(), get_center()) - radius)/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	}
 	bool update_range() { // if returns 0, tile will be deleted
 		if (scenery_enabled()) {update_scenery();}
@@ -633,18 +660,22 @@ public:
 		unsigned const grass_block_dim(get_grass_block_dim());
 		unsigned const tx_loc(s.get_uniform_loc("translate_x")), ty_loc(s.get_uniform_loc("translate_y"));
 		float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
+		float const lod_scale(1.0/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE)));
 		glPushMatrix();
 		glTranslatef(llcx, llcy, 0.0);
 
-		for (vector<unsigned short>::const_iterator i = grass_blocks.begin(); i != grass_blocks.end(); ++i) {
-			if (*i == 0) continue; // empty block
+		for (vector<grass_block_t>::const_iterator i = grass_blocks.begin(); i != grass_blocks.end(); ++i) {
+			if (i->ix == 0) continue; // empty block
 			unsigned const ix(i - grass_blocks.begin()), xpos(ix % grass_block_dim), ypos(ix / grass_block_dim);
 			float const block_dx(xpos*dx_step), block_dy(ypos*dy_step);
-			cube_t const bcube(llcx+block_dx, llcx+block_dx+dx_step, llcy+block_dy, llcy+block_dy+dy_step, mzmin, mzmax);
+			cube_t const bcube(llcx+block_dx, llcx+block_dx+dx_step, llcy+block_dy, llcy+block_dy+dy_step, i->zmin, (i->zmax + grass_length));
+			point const center(bcube.get_cube_center());
+			if (max(0.0f, p2p_dist_xy(get_camera_pos(), center) - radius)*get_tile_radius()*lod_scale > GRASS_THRESH) continue;
 			if (!camera_pdu.cube_visible(bcube)) continue;
 			s.set_uniform_float(tx_loc, block_dx);
 			s.set_uniform_float(ty_loc, block_dy);
-			grass_tile_manager.render_block(*i - 1);
+			unsigned const lod_level(0);//min(NUM_GRASS_LODS-1, unsigned(GRASS_LOD_SCALE*lod_scale*distance_to_camera(center))));
+			grass_tile_manager.render_block((i->ix - 1), lod_level);
 		}
 		glPopMatrix();
 	}
@@ -936,7 +967,7 @@ public:
 			s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
 			s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
 			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			s.set_bool_prefix("enable_grass_wind", (pass == 0), 0); // VS FIXME GRASS: enable
+			s.set_bool_prefix("enable_grass_wind", (pass == 0), 0); // VS
 			s.setup_enabled_lights(2);
 			s.set_vert_shader("ads_lighting.part*+wind.part*+grass_tiled");
 			s.set_frag_shader("linear_fog.part+simple_texture");
