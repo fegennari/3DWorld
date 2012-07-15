@@ -73,6 +73,58 @@ class grass_tile_manager_t : public grass_manager_t {
 
 	vector<offset_ixs_t> vbo_offsets;
 
+	void gen_block(unsigned bix) {
+		offset_ixs_t &oix(vbo_offsets[bix]);
+		oix.v[0] = grass.size();
+
+		for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
+			for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
+				float const xval(x*DX_VAL), yval(y*DY_VAL);
+
+				for (unsigned n = 0; n < grass_density; ++n) {
+					add_grass_blade(point(rgen.rand_uniform(xval, xval + DX_VAL), rgen.rand_uniform(yval, yval + DY_VAL), 0.0), GRASS_COLOR_SCALE);
+				}
+			}
+		}
+		unsigned const search_dist(2*grass_density); // enough for a cell + adjacent cell
+		vector<unsigned char> used;
+		cout << "init num: " << (grass.size() - oix.v[0]) << endl;
+
+		for (unsigned lod = 1; lod < NUM_GRASS_LODS; ++lod) {
+			oix.v[lod] = grass.size();
+			unsigned const start_ix(oix.v[lod-1]), end_ix(oix.v[lod]);
+			used.resize(0);
+			used.resize((end_ix - start_ix), 0); // initially all unused
+			float const dmax(2.0*grass_width*(1 << lod));
+			
+			for (unsigned i = start_ix; i < end_ix; ++i) {
+				if (used[i-start_ix]) continue; // already used
+				grass.push_back(grass[i]); // seed with an existing grass blade
+				float dmin_sq(dmax*dmax); // start at max allowed dist
+				unsigned merge_ix(i); // start at ourself (invalid)
+				unsigned const end_val(min(i+search_dist, end_ix));
+
+				for (unsigned cur = i+1; cur < end_val; ++cur) {
+					float const dist_sq(p2p_dist_sq(grass[i].p, grass[cur].p));
+					
+					if (dist_sq < dmin_sq) {
+						dmin_sq  = dist_sq;
+						merge_ix = cur;
+					}
+				}
+				cout << endl << "iters: " << (end_val - i) << ", dmax: " << dmax << ", dmin: " << sqrt(dmin_sq) << ", merged: " << (merge_ix > i) << endl; // testing
+				if (merge_ix > i) {
+					assert(merge_ix < grass.size());
+					assert(merge_ix-start_ix < used.size());
+					grass.back().merge(grass[merge_ix]);
+					used[merge_ix-start_ix] = 1;
+				}
+			} // for i
+			cout << endl << "level " << lod << " num: " << (grass.size() - end_ix) << endl;
+		} // for lod
+		oix.v[NUM_GRASS_LODS] = grass.size();
+	}
+
 public:
 	void clear() {
 		grass_manager_t::clear();
@@ -101,25 +153,7 @@ public:
 		RESET_TIME;
 		assert(NUM_GRASS_LODS > 0);
 		vbo_offsets.resize(NUM_GRASS_BLOCKS);
-
-		for (unsigned i = 0; i < NUM_GRASS_BLOCKS; ++i) {
-			vbo_offsets[i].v[0] = grass.size();
-
-			for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
-				for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
-					float const xval(x*DX_VAL), yval(y*DY_VAL);
-
-					for (unsigned n = 0; n < grass_density; ++n) {
-						add_grass_blade(point(rgen.rand_uniform(xval, xval + DX_VAL), rgen.rand_uniform(yval, yval + DY_VAL), 0.0), GRASS_COLOR_SCALE);
-					}
-				}
-			}
-			for (unsigned lod = 1; lod < NUM_GRASS_LODS; ++lod) {
-				vbo_offsets[i].v[lod] = grass.size();
-				// FIXME GRASS: add LODs
-			}
-			vbo_offsets[i].v[NUM_GRASS_LODS] = grass.size();
-		}
+		for (unsigned i = 0; i < NUM_GRASS_BLOCKS; ++i) {gen_block(i);}
 		PRINT_TIME("Grass Tile Gen");
 	}
 
@@ -674,7 +708,7 @@ public:
 			if (!camera_pdu.cube_visible(bcube)) continue;
 			s.set_uniform_float(tx_loc, block_dx);
 			s.set_uniform_float(ty_loc, block_dy);
-			unsigned const lod_level(0);//min(NUM_GRASS_LODS-1, unsigned(GRASS_LOD_SCALE*lod_scale*distance_to_camera(center))));
+			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(GRASS_LOD_SCALE*lod_scale*distance_to_camera(center))));
 			grass_tile_manager.render_block((i->ix - 1), lod_level);
 		}
 		glPopMatrix();
