@@ -83,7 +83,8 @@ public:
 	vector<vert_norm> temp_points;
 
 	vbo_quad_block_manager_t() : vbo(0) {clear();}
-	~vbo_quad_block_manager_t() {clear_vbo();}
+	// can't free in the destructor because the gl context may be destroyed before this point
+	//~vbo_quad_block_manager_t() {clear_vbo();}
 	void reserve_pts(unsigned num) {pts.reserve(num);}
 	bool empty() const {return pts.empty();}
 	template<typename T> unsigned add_points_int(vector<T> const &p, colorRGBA const &color);

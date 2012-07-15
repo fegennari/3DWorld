@@ -21,6 +21,7 @@ protected:
 		grass_t() {} // optimization
 		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, unsigned char const *const c_, float w_)
 			: p(p_), dir(dir_), n(n_), shadowed(0), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
+		void merge(grass_t const &g);
 	};
 
 	vector<grass_t> grass;
@@ -30,7 +31,8 @@ protected:
 
 public:
 	grass_manager_t() : vbo(0), vbo_valid(0), data_valid(0) {}
-	~grass_manager_t() {clear();}
+	// can't free in the destructor because the gl context may be destroyed before this point
+	//~grass_manager_t() {clear();}
 	size_t size() const {return grass.size ();} // 2 points per grass blade
 	bool empty()  const {return grass.empty();}
 	void invalidate_vbo() {vbo_valid = 0;}

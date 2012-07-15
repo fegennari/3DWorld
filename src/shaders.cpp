@@ -276,6 +276,11 @@ struct program_t {
 
 
 class string_prog_map : public map<string, program_t> {
+public:
+	void clear() {
+		free_data();
+		map<string, program_t>::clear();
+	}
 	void free_data() {
 		for (const_iterator i = begin(); i != end(); ++i) {
 			if (i->second.vs) glDetachShader(i->second.p, i->second.vs);
@@ -284,19 +289,25 @@ class string_prog_map : public map<string, program_t> {
 			glDeleteProgram(i->second.p);
 		}
 	}
-public:
-	~string_prog_map() {free_data();}
+	// can't free in the destructor because the gl context may be destroyed before this point
+	//~string_prog_map() {free_data();}
 };
 
 
 class string_shad_map : public map<string, unsigned> {
+public:
+	void clear() {
+		free_data();
+		map<string, unsigned>::clear();
+	}
 	void free_data() {
 		for (const_iterator i = begin(); i != end(); ++i) {
+			//assert(glIsShader(i->second));
 			glDeleteShader(i->second);
 		}
 	}
-public:
-	~string_shad_map() {free_data();}
+	// can't free in the destructor because the gl context may be destroyed before this point
+	//~string_shad_map() {free_data();}
 };
 
 

@@ -346,7 +346,8 @@ class snow_renderer {
 
 public:
 	snow_renderer() : vbo(0), ivbo(0), last_x(0.0) {}
-	~snow_renderer() {free_vbos();}
+	// can't free in the destructor because the gl context may be destroyed before this point
+	//~snow_renderer() {free_vbos();}
 	bool empty() const {return data.empty();}
 
 	void add_all_strips(vector<strip_t> const &strips) {

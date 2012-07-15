@@ -229,7 +229,8 @@ public:
 	tile_t() : weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0), tree_lod_level(0) {
 		init_vbo_ids();
 	}
-	~tile_t() {clear_vbo_tid(1,1);}
+	// can't free in the destructor because the gl context may be destroyed before this point
+	//~tile_t() {clear_vbo_tid(1,1);}
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2),
 		init_tree_dxoff(0), init_tree_dyoff(0), init_scenery_dxoff(0), init_scenery_dyoff(0),
@@ -248,6 +249,19 @@ public:
 		
 		if (DEBUG_TILES) {
 			cout << "create " << size << ": " << x << "," << y << ", coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;
+		}
+	}
+	void clear() {
+		clear_vbo_tid(1, 1);
+		zvals.clear();
+		
+		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {
+			smask[i].clear();
+			sh_out[i][0].clear();
+			sh_out[i][1].clear();
+			trees.clear();
+			scenery.clear();
+			grass_blocks.clear();
 		}
 	}
 	float get_zmin() const {return mzmin;}
@@ -779,6 +793,7 @@ public:
 
 	void clear() {
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
+			i->second->clear();
 			delete i->second;
 		}
 		tiles.clear();
@@ -800,6 +815,7 @@ public:
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
 			if (!i->second->update_range()) {
 				to_erase.push_back(i->first);
+				i->second->clear();
 				delete i->second;
 			}
 		}
