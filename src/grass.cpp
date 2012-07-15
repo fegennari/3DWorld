@@ -28,6 +28,18 @@ extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 
 
+void grass_manager_t::grass_t::merge(grass_t const &g) {
+
+	p   = (p + g.p)*0.5; // average locations
+	float const dmag1(dir.mag()), dmag2(g.dir.mag());
+	dir = (dir/dmag1 + g.dir/dmag2).get_norm() * (0.5*(dmag1 + dmag2)); // average directions and lengths independently
+	n   = (n + g.n).get_norm(); // average normals
+	//UNROLL_3X(c[i_] = (unsigned char)(unsigned(c[i_]) + unsigned(g.c[i_]))/2;) // don't average colors because they're used for the density filtering hash
+	// keep original shadowed bit
+	w  += g.w; // add widths to preserve surface area
+}
+
+
 void grass_manager_t::clear() {
 
 	delete_vbo(vbo);
