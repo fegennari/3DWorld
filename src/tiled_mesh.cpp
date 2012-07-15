@@ -59,11 +59,6 @@ bool scenery_enabled () {return (world_mode == WMODE_INF_TERRAIN && inf_terrain_
 bool grass_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
 
 
-// grass:
-// fix bad lighting on first frame
-// add shadows
-
-
 class grass_tile_manager_t : public grass_manager_t {
 
 	struct offset_ixs_t {
@@ -673,25 +668,24 @@ public:
 		glPopMatrix();
 	}
 
-	void draw_grass(shader_t &s) {
-		if (grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
-		int const dx(xoff - xoff2), dy(yoff - yoff2);
+	void init_draw_grass() {
+		if (height_tid || grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
+		float const scale(65535/(mzmax - mzmin));
+		unsigned const tsize(zvsize); // make texture one size larger than it needs to be to meet 4-byte alignment requirements
+		assert(zvals.size() == zvsize*zvsize);
+		vector<unsigned short> data(tsize*tsize);
 
-		if (!height_tid) { // heightmap texture scaled to map [mzmin, mzmax] to [0,1]
-			float const scale(65535/(mzmax - mzmin));
-			unsigned const tsize(zvsize); // make texture one size larger than it needs to be to meet 4-byte alignment requirements
-			assert(zvals.size() == zvsize*zvsize);
-			vector<unsigned short> data(tsize*tsize);
-
-			for (unsigned y = 0; y < tsize; ++y) {
-				for (unsigned x = 0; x < tsize; ++x) {
-					data[y*tsize+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - mzmin));
-				}
+		for (unsigned y = 0; y < tsize; ++y) {
+			for (unsigned x = 0; x < tsize; ++x) {
+				data[y*tsize+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - mzmin));
 			}
-			setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, tsize, tsize, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
-			return; // FIXME: lighting is wrong the first time a new tile is rendered??? so skip it
 		}
+		setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, tsize, tsize, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
+	}
+
+	void draw_grass(shader_t &s) const {
+		if (grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
 		bind_texture_tu(height_tid, 2);
 		bind_texture_tu(weight_tid, 3);
 		s.add_uniform_float("x1",  -0.5*DX_VAL);
@@ -705,6 +699,7 @@ public:
 
 		unsigned const grass_block_dim(get_grass_block_dim());
 		unsigned const tx_loc(s.get_uniform_loc("translate_x")), ty_loc(s.get_uniform_loc("translate_y"));
+		int const dx(xoff - xoff2), dy(yoff - yoff2);
 		float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
 		float const lod_scale(1.0/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE)));
 		glPushMatrix();
@@ -1008,6 +1003,10 @@ public:
 
 	void draw_grass(draw_vect_t const &to_draw, bool reflection_pass) {
 		if (reflection_pass) return; // no grass refletion (yet)
+
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			to_draw[i].second->init_draw_grass();
+		}
 		grass_tile_manager.begin_draw();
 		shader_t s;
 
