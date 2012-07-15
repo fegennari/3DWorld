@@ -28,9 +28,9 @@ float const SCENERY_THRESH    = 2.0;
 
 unsigned const GRASS_BLOCK_SZ   = 8;
 unsigned const NUM_GRASS_BLOCKS = 16;
-unsigned const NUM_GRASS_LODS   = 5;
+unsigned const NUM_GRASS_LODS   = 6;
 float    const GRASS_THRESH     = 1.5;
-float    const GRASS_LOD_SCALE  = 15.0;
+float    const GRASS_LOD_SCALE  = 16.0;
 float    const GRASS_COLOR_SCALE= 0.5;
 
 
@@ -61,7 +61,6 @@ bool grass_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (display_mod
 
 // grass:
 // fix bad lighting on first frame
-// add LODs
 // add shadows
 
 
@@ -86,16 +85,16 @@ class grass_tile_manager_t : public grass_manager_t {
 				}
 			}
 		}
-		unsigned const search_dist(2*grass_density); // enough for a cell + adjacent cell
+		unsigned const search_dist(1*grass_density); // enough for one cell
 		vector<unsigned char> used;
-		cout << "init num: " << (grass.size() - oix.v[0]) << endl;
+		//cout << "init num: " << (grass.size() - oix.v[0]) << endl;
 
 		for (unsigned lod = 1; lod < NUM_GRASS_LODS; ++lod) {
 			oix.v[lod] = grass.size();
 			unsigned const start_ix(oix.v[lod-1]), end_ix(oix.v[lod]);
 			used.resize(0);
 			used.resize((end_ix - start_ix), 0); // initially all unused
-			float const dmax(2.0*grass_width*(1 << lod));
+			float const dmax(2.5*grass_width*(1 << lod));
 			
 			for (unsigned i = start_ix; i < end_ix; ++i) {
 				if (used[i-start_ix]) continue; // already used
@@ -112,7 +111,6 @@ class grass_tile_manager_t : public grass_manager_t {
 						merge_ix = cur;
 					}
 				}
-				cout << endl << "iters: " << (end_val - i) << ", dmax: " << dmax << ", dmin: " << sqrt(dmin_sq) << ", merged: " << (merge_ix > i) << endl; // testing
 				if (merge_ix > i) {
 					assert(merge_ix < grass.size());
 					assert(merge_ix-start_ix < used.size());
@@ -120,7 +118,7 @@ class grass_tile_manager_t : public grass_manager_t {
 					used[merge_ix-start_ix] = 1;
 				}
 			} // for i
-			cout << endl << "level " << lod << " num: " << (grass.size() - end_ix) << endl;
+			//cout << "level " << lod << " num: " << (grass.size() - end_ix) << endl;
 		} // for lod
 		oix.v[NUM_GRASS_LODS] = grass.size();
 	}
@@ -1031,10 +1029,10 @@ public:
 			s.setup_fog_scale();
 			s.add_uniform_float("height", grass_length);
 			s.add_uniform_float("dist_const", (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH);
-			s.add_uniform_float("dist_slope", 0.5);
+			s.add_uniform_float("dist_slope", 0.25);
 
 			for (unsigned i = 0; i < to_draw.size(); ++i) {
-				if ((to_draw[i].second->get_dist_to_camera_in_tiles() > 0.75) == pass) {
+				if ((to_draw[i].second->get_dist_to_camera_in_tiles() > 0.5) == pass) {
 					to_draw[i].second->draw_grass(s);
 				}
 			}
