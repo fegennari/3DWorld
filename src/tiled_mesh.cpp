@@ -1015,7 +1015,7 @@ public:
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->init_draw_grass();
 		}
-		grass_tile_manager.begin_draw();
+		grass_tile_manager.begin_draw(0.1);
 		shader_t s;
 
 		for (unsigned pass = 0; pass < 2; ++pass) { // wind, no wind

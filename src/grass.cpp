@@ -91,14 +91,14 @@ void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<vert_norm_tc_colo
 	assert(ix <= data.size());
 }
 
-void grass_manager_t::begin_draw() const {
+void grass_manager_t::begin_draw(float spec_weight) const {
 
 	assert(vbo_valid && vbo > 0);
 	bind_vbo(vbo);
 	vert_norm_tc_color::set_vbo_arrays();
 	select_multitex(GRASS_BLADE_TEX, 0);
 	enable_blend();
-	set_specular(0.2, 20.0);
+	set_specular(spec_weight, 20.0);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
 	glEnable(GL_COLOR_MATERIAL);
@@ -480,7 +480,7 @@ public:
 			s.setup_fog_scale();
 			s.add_uniform_float("height", grass_length);
 		}
-		begin_draw();
+		begin_draw(0.2);
 
 		// draw the grass
 		unsigned const BLOCK_SIZE = 4;
