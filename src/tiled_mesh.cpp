@@ -750,7 +750,7 @@ public:
 				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
 			}
 		}
-		bind_texture_tu(shadow_tid, 2);
+		bind_texture_tu(shadow_tid, 7);
 		unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
 		float dist(get_dist_to_camera_in_tiles());
 
@@ -866,7 +866,7 @@ public:
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
-		s.add_uniform_int("shadow_tex", 2);
+		s.add_uniform_int("shadow_tex", 7);
 		s.add_uniform_float("water_plane_z", (is_water_enabled() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
