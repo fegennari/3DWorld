@@ -475,7 +475,7 @@ public:
 			s.begin_shader();
 #endif
 			if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);
-			setup_wind_for_shader(s);
+			setup_wind_for_shader(s, 1);
 			s.add_uniform_int("tex0", 0);
 			s.setup_fog_scale();
 			s.add_uniform_float("height", grass_length);
@@ -540,15 +540,15 @@ public:
 grass_manager_dynamic_t grass_manager;
 
 
-void setup_wind_for_shader(shader_t &s) { // uses tu_ids 0 and 1
+void setup_wind_for_shader(shader_t &s, unsigned tu_id) {
 
 	static float time(0.0);
 	if (animate2) time = tfticks;
 	s.add_uniform_float("time", 0.5*time/TICKS_PER_SECOND);
 	s.add_uniform_float("wind_x", wind.x);
 	s.add_uniform_float("wind_y", wind.y);
-	s.add_uniform_int("wind_noise_tex", 1);
-	select_multitex(WIND_TEX, 1, 0);
+	s.add_uniform_int("wind_noise_tex", tu_id);
+	select_multitex(WIND_TEX, tu_id, 0);
 	set_multitex(0);
 }
 

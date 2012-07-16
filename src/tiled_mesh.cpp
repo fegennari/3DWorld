@@ -203,6 +203,7 @@ class tile_t {
 	unsigned size, stride, zvsize, base_tsize, gen_tsize, tree_lod_level;
 	float radius, mzmin, mzmax, tzmax, xstart, ystart, xstep, ystep;
 	vector<float> zvals;
+	vector<unsigned char> shadow_map;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group trees;
@@ -244,19 +245,6 @@ public:
 			cout << "create " << size << ": " << x << "," << y << ", coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;
 		}
 	}
-	void clear() {
-		clear_vbo_tid(1, 1);
-		zvals.clear();
-		
-		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {
-			smask[i].clear();
-			sh_out[i][0].clear();
-			sh_out[i][1].clear();
-			trees.clear();
-			scenery.clear();
-			grass_blocks.clear();
-		}
-	}
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
 	bool has_water() const {return (mzmin < water_plane_z);}
@@ -293,11 +281,21 @@ public:
 		return mem;
 	}
 
+	void clear() {
+		clear_vbo_tid(1, 1);
+		zvals.clear();
+		clear_shadows();
+		trees.clear();
+		scenery.clear();
+		grass_blocks.clear();
+	}
+
 	void clear_shadows() {
 		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 			smask[l].clear();
 			for (unsigned d = 0; d < 2; ++d) sh_out[l][d].clear();
 		}
+		shadow_map.clear();
 	}
 
 	void clear_tids() {
@@ -416,6 +414,7 @@ public:
 					if (dist > rval) continue;
 					float const atten(0.6*dist*rval_inv);
 					UNROLL_3X(data[y*stride + x].n[i_] *= atten;);
+					if (x < (int)size && y < (int)size) {shadow_map[y*size + x] = (unsigned char)(atten*shadow_map[y*size + x]);} // FIXME: off-by-1 in size?
 				}
 			}
 		}
@@ -429,6 +428,7 @@ public:
 		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
 		assert(has_sun || has_moon);
 		calc_shadows(has_sun, has_moon);
+		shadow_map.resize(size*size);
 		
 		for (unsigned y = 0; y <= size; ++y) {
 			for (unsigned x = 0; x <= size; ++x) {
@@ -445,6 +445,7 @@ public:
 				}
 				point const v((xstart + x*xstep), (ystart + y*ystep), zvals[ix]);
 				data[y*stride + x] = vert_norm_comp(v, get_norm(ix)*light_scale);
+				if (x < size && y < size) {shadow_map[y*size + x] = (unsigned char)(255.0*light_scale);} // FIXME: off-by-1 in size?
 			}
 		}
 		if (trees_enabled()) {
@@ -465,6 +466,11 @@ public:
 				}
 			}
 		}
+
+		// create shadow map texture
+		free_texture(shadow_tid);
+		setup_texture(shadow_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8, size, size, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &shadow_map.front());
 		//PRINT_TIME("Create Data");
 	}
 
@@ -688,6 +694,7 @@ public:
 		if (grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
 		bind_texture_tu(height_tid, 2);
 		bind_texture_tu(weight_tid, 3);
+		bind_texture_tu(shadow_tid, 4);
 		s.add_uniform_float("x1",  -0.5*DX_VAL);
 		s.add_uniform_float("y1",  -0.5*DY_VAL);
 		s.add_uniform_float("x2",  (size + 1.5)*DX_VAL); // make bounds one unit larger to account for the extra texture row/column
@@ -1001,6 +1008,7 @@ public:
 		s.end_shader();
 	}
 
+	// tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: shadow map, 5: noise
 	void draw_grass(draw_vect_t const &to_draw, bool reflection_pass) {
 		if (reflection_pass) return; // no grass refletion (yet)
 
@@ -1020,11 +1028,12 @@ public:
 			s.set_frag_shader("linear_fog.part+simple_texture");
 			//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
 			s.begin_shader();
-			if (pass == 0) {setup_wind_for_shader(s);} // uses tu_ids 0 and 1
+			if (pass == 0) {setup_wind_for_shader(s, 1);}
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_int("height_tex", 2);
 			s.add_uniform_int("weight_tex", 3);
-			set_noise_tex(s, 4);
+			s.add_uniform_int("shadow_tex", 4);
+			set_noise_tex(s, 5);
 			s.setup_fog_scale();
 			s.add_uniform_float("height", grass_length);
 			s.add_uniform_float("dist_const", (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH);

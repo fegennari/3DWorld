@@ -230,7 +230,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves_as_pts");
 		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLE_STRIP, 4);
 		s.begin_shader();
-		//setup_wind_for_shader(s); // FIXME: add wind?
+		//setup_wind_for_shader(s, 1); // FIXME: add wind?
 	}
 	else {
 		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves");
