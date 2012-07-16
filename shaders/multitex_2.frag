@@ -4,6 +4,5 @@ void main()
 {
 	vec4 texel0  = texture2D(tex0, gl_TexCoord[0].st);
 	vec4 texel1  = texture2D(tex1, gl_TexCoord[1].st);
-	vec4 color   = vec4((texel0.rgb * texel1.rgb * gl_Color.rgb), (texel0.a * texel1.a * gl_Color.a));
-	gl_FragColor = apply_fog(color); // add fog
+	gl_FragColor = apply_fog(texel0 * texel1 * gl_Color); // add fog
 }
