@@ -14,7 +14,6 @@
 
 bool const DEBUG_TILES        = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
-int  const DISABLE_TEXTURES   = 0;
 int  const TILE_RADIUS        = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT     = 6; // WM3, in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
@@ -393,7 +392,7 @@ public:
 		}
 	}
 
-	void apply_tree_ao_shadows(vector<vert_type_t> &data) { // should this generate a float or unsigned char shadow weight instead?
+	void apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
 		point const tree_off((init_dxoff - init_tree_dxoff)*DX_VAL, (init_dyoff - init_tree_dyoff)*DY_VAL, 0.0);
 
 		for (small_tree_group::const_iterator i = trees.begin(); i != trees.end(); ++i) {
@@ -410,11 +409,10 @@ public:
 
 			for (int y = y1; y <= y2; ++y) {
 				for (int x = x1; x <= x2; ++x) {
+					if (x == size || y == size) continue; // FIXME: off-by-1 in size?
 					float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
 					if (dist > rval) continue;
-					float const atten(0.6*dist*rval_inv);
-					UNROLL_3X(data[y*stride + x].n[i_] *= atten;);
-					if (x < (int)size && y < (int)size) {shadow_map[y*size + x] = (unsigned char)(atten*shadow_map[y*size + x]);} // FIXME: off-by-1 in size?
+					shadow_map[y*size + x] = (unsigned char)(0.6*dist*rval_inv*shadow_map[y*size + x]);
 				}
 			}
 		}
@@ -444,13 +442,13 @@ public:
 					light_scale = 0.0;
 				}
 				point const v((xstart + x*xstep), (ystart + y*ystep), zvals[ix]);
-				data[y*stride + x] = vert_norm_comp(v, get_norm(ix)*light_scale);
+				data[y*stride + x] = vert_norm_comp(v, get_norm(ix));
 				if (x < size && y < size) {shadow_map[y*size + x] = (unsigned char)(255.0*light_scale);} // FIXME: off-by-1 in size?
 			}
 		}
 		if (trees_enabled()) {
 			init_tree_draw();
-			apply_tree_ao_shadows(data);
+			apply_tree_ao_shadows();
 		}
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			indices[i].resize(4*(size>>i)*(size>>i));
@@ -730,14 +728,12 @@ public:
 
 	void draw(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], bool reflection_pass) {
 		assert(size > 0);
-
-		if (!DISABLE_TEXTURES) {
-			if (weight_tid == 0) {create_texture();}
-			if (weight_tid >  0) {bind_2d_texture(weight_tid);}
-		}
+		if (weight_tid == 0) {create_texture();}
+		assert(weight_tid > 0);
+		bind_2d_texture(weight_tid);
 		glPushMatrix();
 		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
-		if (weight_tid > 0) set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
+		set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
 		unsigned const ptr_stride(sizeof(vert_type_t));
 
 		if (vbo == 0) {
@@ -754,6 +750,7 @@ public:
 				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
 			}
 		}
+		bind_texture_tu(shadow_tid, 2);
 		unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
 		float dist(get_dist_to_camera_in_tiles());
 
@@ -869,6 +866,7 @@ public:
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
+		s.add_uniform_int("shadow_tex", 2);
 		s.add_uniform_float("water_plane_z", (is_water_enabled() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
@@ -1083,11 +1081,8 @@ void fill_gap(float wpz, bool reflection_pass) {
 
 	//RESET_TIME;
 	colorRGBA const color(setup_mesh_lighting());
-	
-	if (!DISABLE_TEXTURES) {
-		select_texture(LANDSCAPE_TEX);
-		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
-	}
+	select_texture(LANDSCAPE_TEX);
+	set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
 	vector<float> xv(MESH_X_SIZE+1), yv(MESH_Y_SIZE+1);
 	float const xstart(get_xval(xoff2)), ystart(get_yval(yoff2));
 
