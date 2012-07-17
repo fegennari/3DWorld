@@ -1,14 +1,14 @@
 uniform float height = 1.0;
 uniform float dist_const = 10.0;
 uniform float dist_slope = 0.5;
-uniform float x1, y1, x2, y2, wx2, wy2, zmin, zmax, translate_x, translate_y;
+uniform float x1, y1, x2, y2, wx2, wy2, zmin, zmax, translate_y;
 uniform sampler2D height_tex, shadow_tex, weight_tex, noise_tex;
 
 void main()
 {
 	gl_TexCoord[0] = gl_MultiTexCoord0;
 	vec4 vertex = gl_Vertex;
-	vertex.xy  += vec2(translate_x, translate_y);
+	vertex.y   += translate_y;
 	vertex.z   += zmin + (zmax - zmin)*texture2D(height_tex, vec2((vertex.x - x1)/(x2 - x1), (vertex.y - y1)/(y2 - y1))).r;
 	vec2 tc     = vec2(vertex.x/wx2, vertex.y/wy2);
 

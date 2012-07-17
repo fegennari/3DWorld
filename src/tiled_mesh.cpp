@@ -25,8 +25,7 @@ float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH    = 2.0;
 
-unsigned const GRASS_BLOCK_SZ   = 8;
-unsigned const NUM_GRASS_BLOCKS = 16;
+unsigned const GRASS_BLOCK_SZ   = 4;
 unsigned const NUM_GRASS_LODS   = 6;
 float    const GRASS_THRESH     = 1.5;
 float    const GRASS_LOD_SCALE  = 16.0;
@@ -60,67 +59,66 @@ bool grass_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (display_mod
 
 class grass_tile_manager_t : public grass_manager_t {
 
-	struct offset_ixs_t {
-		unsigned v[NUM_GRASS_LODS+1];
-	};
-
-	vector<offset_ixs_t> vbo_offsets;
+	vector<unsigned> vbo_offsets[NUM_GRASS_LODS];
+	unsigned start_render_ix, end_render_ix;
 
 	void gen_block(unsigned bix) {
-		offset_ixs_t &oix(vbo_offsets[bix]);
-		oix.v[0] = grass.size();
-
 		for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
 			for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
-				float const xval(x*DX_VAL), yval(y*DY_VAL);
+				float const xval((x+bix*GRASS_BLOCK_SZ)*DX_VAL), yval(y*DY_VAL);
 
 				for (unsigned n = 0; n < grass_density; ++n) {
-					add_grass_blade(point(rgen.rand_uniform(xval, xval + DX_VAL), rgen.rand_uniform(yval, yval + DY_VAL), 0.0), GRASS_COLOR_SCALE);
+					add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), GRASS_COLOR_SCALE);
 				}
 			}
 		}
+		assert(bix+1 < vbo_offsets[0].size());
+		vbo_offsets[0][bix+1] = grass.size(); // end of block/beginning of next block
+	}
+
+	void gen_lod_block(unsigned bix, unsigned lod) {
+		if (lod == 0) {
+			gen_block(bix);
+			return;
+		}
+		assert(bix+1 < vbo_offsets[lod].size());
 		unsigned const search_dist(1*grass_density); // enough for one cell
-		vector<unsigned char> used;
-		//cout << "init num: " << (grass.size() - oix.v[0]) << endl;
-
-		for (unsigned lod = 1; lod < NUM_GRASS_LODS; ++lod) {
-			oix.v[lod] = grass.size();
-			unsigned const start_ix(oix.v[lod-1]), end_ix(oix.v[lod]);
-			used.resize(0);
-			used.resize((end_ix - start_ix), 0); // initially all unused
-			float const dmax(2.5*grass_width*(1 << lod));
+		unsigned const start_ix(vbo_offsets[lod-1][bix]), end_ix(vbo_offsets[lod-1][bix+1]); // from previous LOD
+		float const dmax(2.5*grass_width*(1 << lod));
+		vector<unsigned char> used((end_ix - start_ix), 0); // initially all unused;
 			
-			for (unsigned i = start_ix; i < end_ix; ++i) {
-				if (used[i-start_ix]) continue; // already used
-				grass.push_back(grass[i]); // seed with an existing grass blade
-				float dmin_sq(dmax*dmax); // start at max allowed dist
-				unsigned merge_ix(i); // start at ourself (invalid)
-				unsigned const end_val(min(i+search_dist, end_ix));
+		for (unsigned i = start_ix; i < end_ix; ++i) {
+			if (used[i-start_ix]) continue; // already used
+			grass.push_back(grass[i]); // seed with an existing grass blade
+			float dmin_sq(dmax*dmax); // start at max allowed dist
+			unsigned merge_ix(i); // start at ourself (invalid)
+			unsigned const end_val(min(i+search_dist, end_ix));
 
-				for (unsigned cur = i+1; cur < end_val; ++cur) {
-					float const dist_sq(p2p_dist_sq(grass[i].p, grass[cur].p));
+			for (unsigned cur = i+1; cur < end_val; ++cur) {
+				float const dist_sq(p2p_dist_sq(grass[i].p, grass[cur].p));
 					
-					if (dist_sq < dmin_sq) {
-						dmin_sq  = dist_sq;
-						merge_ix = cur;
-					}
+				if (dist_sq < dmin_sq) {
+					dmin_sq  = dist_sq;
+					merge_ix = cur;
 				}
-				if (merge_ix > i) {
-					assert(merge_ix < grass.size());
-					assert(merge_ix-start_ix < used.size());
-					grass.back().merge(grass[merge_ix]);
-					used[merge_ix-start_ix] = 1;
-				}
-			} // for i
-			//cout << "level " << lod << " num: " << (grass.size() - end_ix) << endl;
-		} // for lod
-		oix.v[NUM_GRASS_LODS] = grass.size();
+			}
+			if (merge_ix > i) {
+				assert(merge_ix < grass.size());
+				assert(merge_ix-start_ix < used.size());
+				grass.back().merge(grass[merge_ix]);
+				used[merge_ix-start_ix] = 1;
+			}
+		} // for i
+		//cout << "level " << lod << " num: " << (grass.size() - vbo_offsets[lod][bix]) << endl;
+		vbo_offsets[lod][bix+1] = grass.size(); // end of current LOD block/beginning of next LOD block
 	}
 
 public:
+	grass_tile_manager_t() : start_render_ix(0), end_render_ix(0) {}
+
 	void clear() {
 		grass_manager_t::clear();
-		vbo_offsets.clear();
+		for (unsigned lod = 0; lod <= NUM_GRASS_LODS; ++lod) {vbo_offsets[lod].clear();}
 	}
 
 	void upload_data() {
@@ -144,8 +142,14 @@ public:
 	void gen_grass() {
 		RESET_TIME;
 		assert(NUM_GRASS_LODS > 0);
-		vbo_offsets.resize(NUM_GRASS_BLOCKS);
-		for (unsigned i = 0; i < NUM_GRASS_BLOCKS; ++i) {gen_block(i);}
+		assert((MESH_X_SIZE % GRASS_BLOCK_SZ) == 0 && (MESH_Y_SIZE % GRASS_BLOCK_SZ) == 0);
+		unsigned const num_grass_blocks(MESH_X_SIZE/GRASS_BLOCK_SZ);
+
+		for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
+			vbo_offsets[lod].resize(num_grass_blocks+1);
+			vbo_offsets[lod][0] = grass.size(); // start
+			for (unsigned i = 0; i < num_grass_blocks; ++i) {gen_lod_block(i, lod);}
+		}
 		PRINT_TIME("Grass Tile Gen");
 	}
 
@@ -159,11 +163,12 @@ public:
 		if (!data_valid) upload_data();
 	}
 
-	void render_block(unsigned block_ix, unsigned lod_level) const {
-		assert(block_ix  < vbo_offsets.size());
-		assert(lod_level < NUM_GRASS_LODS);
-		unsigned const *const v(vbo_offsets[block_ix].v);
-		glDrawArrays(GL_TRIANGLES, 3*v[lod_level], 3*(v[lod_level+1] - v[lod_level]));
+	void render_block(unsigned block_ix, unsigned lod) {
+		assert(lod < NUM_GRASS_LODS);
+		assert(block_ix+1 < vbo_offsets[lod].size());
+		unsigned const start_ix(vbo_offsets[lod][block_ix]), end_ix(vbo_offsets[lod][block_ix+1]);
+		assert(start_ix < end_ix && end_ix <= grass.size());
+		glDrawArrays(GL_TRIANGLES, 3*start_ix, 3*(end_ix - start_ix));
 	}
 };
 
@@ -548,7 +553,7 @@ public:
 					grass_block_t &gb(grass_blocks[bix]);
 					
 					if (gb.ix == 0) { // not yet set
-						gb.ix   = (rand2() % NUM_GRASS_BLOCKS) + 1; // randomly select a block
+						gb.ix   = bx + 1;
 						gb.zmin = mhmin;
 						gb.zmax = mhmax;
 					}
@@ -703,25 +708,27 @@ public:
 		s.add_uniform_float("zmax", mzmax);
 
 		unsigned const grass_block_dim(get_grass_block_dim());
-		unsigned const tx_loc(s.get_uniform_loc("translate_x")), ty_loc(s.get_uniform_loc("translate_y"));
+		assert(grass_blocks.size() == grass_block_dim*grass_block_dim);
+		unsigned const ty_loc(s.get_uniform_loc("translate_y"));
 		int const dx(xoff - xoff2), dy(yoff - yoff2);
 		float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
 		float const lod_scale(1.0/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE)));
 		glPushMatrix();
 		glTranslatef(llcx, llcy, 0.0);
 
-		for (vector<grass_block_t>::const_iterator i = grass_blocks.begin(); i != grass_blocks.end(); ++i) {
-			if (i->ix == 0) continue; // empty block
-			unsigned const ix(i - grass_blocks.begin()), xpos(ix % grass_block_dim), ypos(ix / grass_block_dim);
-			float const block_dx(xpos*dx_step), block_dy(ypos*dy_step);
-			cube_t const bcube(llcx+block_dx, llcx+block_dx+dx_step, llcy+block_dy, llcy+block_dy+dy_step, i->zmin, (i->zmax + grass_length));
-			point const center(bcube.get_cube_center());
-			if (max(0.0f, p2p_dist_xy(get_camera_pos(), center) - radius)*get_tile_radius()*lod_scale > GRASS_THRESH) continue;
-			if (!camera_pdu.cube_visible(bcube)) continue;
-			s.set_uniform_float(tx_loc, block_dx);
-			s.set_uniform_float(ty_loc, block_dy);
-			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(GRASS_LOD_SCALE*lod_scale*distance_to_camera(center))));
-			grass_tile_manager.render_block((i->ix - 1), lod_level);
+		for (unsigned y = 0; y < grass_block_dim; ++y) {
+			s.set_uniform_float(ty_loc, y*dy_step);
+
+			for (unsigned x = 0; x < grass_block_dim; ++x) {
+				grass_block_t const &gb(grass_blocks[y*grass_block_dim+x]);
+				if (gb.ix == 0) continue; // empty block
+				cube_t const bcube(llcx+x*dx_step, llcx+(x+1)*dx_step, llcy+y*dy_step, llcy+(y+1)*dy_step, gb.zmin, (gb.zmax + grass_length));
+				point const center(bcube.get_cube_center());
+				if (max(0.0f, p2p_dist_xy(get_camera_pos(), center) - radius)*get_tile_radius()*lod_scale > GRASS_THRESH) continue;
+				if (!camera_pdu.cube_visible(bcube)) continue;
+				unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(GRASS_LOD_SCALE*lod_scale*distance_to_camera(center))));
+				grass_tile_manager.render_block((gb.ix - 1), lod_level);
+			}
 		}
 		glPopMatrix();
 	}
