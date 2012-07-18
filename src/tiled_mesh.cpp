@@ -414,10 +414,9 @@ public:
 
 			for (int y = y1; y <= y2; ++y) {
 				for (int x = x1; x <= x2; ++x) {
-					if (x == size || y == size) continue; // FIXME: off-by-1 in size?
 					float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
 					if (dist > rval) continue;
-					shadow_map[y*size + x] = (unsigned char)(0.6*dist*rval_inv*shadow_map[y*size + x]);
+					shadow_map[y*stride + x] = (unsigned char)(0.6*dist*rval_inv*shadow_map[y*stride + x]);
 				}
 			}
 		}
@@ -431,7 +430,7 @@ public:
 		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
 		assert(has_sun || has_moon);
 		calc_shadows(has_sun, has_moon);
-		shadow_map.resize(size*size);
+		shadow_map.resize(stride*stride);
 		
 		for (unsigned y = 0; y <= size; ++y) {
 			for (unsigned x = 0; x <= size; ++x) {
@@ -448,7 +447,7 @@ public:
 				}
 				point const v((xstart + x*xstep), (ystart + y*ystep), zvals[ix]);
 				data[y*stride + x] = vert_norm_comp(v, get_norm(ix));
-				if (x < size && y < size) {shadow_map[y*size + x] = (unsigned char)(255.0*light_scale);} // FIXME: off-by-1 in size?
+				shadow_map[y*stride + x] = (unsigned char)(255.0*light_scale);
 			}
 		}
 		if (trees_enabled()) {
@@ -473,7 +472,9 @@ public:
 		// create shadow map texture
 		free_texture(shadow_tid);
 		setup_texture(shadow_tid, GL_MODULATE, 0, 0, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8, size, size, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &shadow_map.front());
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &shadow_map.front());
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 		//PRINT_TIME("Create Data");
 	}
 
@@ -680,17 +681,18 @@ public:
 	void init_draw_grass() {
 		if (height_tid || grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
 		float const scale(65535/(mzmax - mzmin));
-		unsigned const tsize(zvsize); // make texture one size larger than it needs to be to meet 4-byte alignment requirements
 		assert(zvals.size() == zvsize*zvsize);
-		vector<unsigned short> data(tsize*tsize);
+		vector<unsigned short> data(stride*stride);
 
-		for (unsigned y = 0; y < tsize; ++y) {
-			for (unsigned x = 0; x < tsize; ++x) {
-				data[y*tsize+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - mzmin));
+		for (unsigned y = 0; y < stride; ++y) {
+			for (unsigned x = 0; x < stride; ++x) {
+				data[y*stride+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - mzmin));
 			}
 		}
 		setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, tsize, tsize, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	}
 
 	void draw_grass(shader_t &s) const {
@@ -700,8 +702,8 @@ public:
 		bind_texture_tu(shadow_tid, 4);
 		s.add_uniform_float("x1",  -0.5*DX_VAL);
 		s.add_uniform_float("y1",  -0.5*DY_VAL);
-		s.add_uniform_float("x2",  (size + 1.5)*DX_VAL); // make bounds one unit larger to account for the extra texture row/column
-		s.add_uniform_float("y2",  (size + 1.5)*DY_VAL);
+		s.add_uniform_float("x2",  (size + 0.5)*DX_VAL);
+		s.add_uniform_float("y2",  (size + 0.5)*DY_VAL);
 		s.add_uniform_float("wx2", size*DX_VAL);
 		s.add_uniform_float("wy2", size*DY_VAL);
 		s.add_uniform_float("zmin", mzmin);
