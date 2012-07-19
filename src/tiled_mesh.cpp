@@ -486,8 +486,8 @@ public:
 		assert(zvals.size() == zvsize*zvsize);
 		//RESET_TIME;
 		grass_blocks.clear();
-		unsigned const grass_block_dim(get_grass_block_dim());
-		unsigned char *data(new unsigned char[4*size*size]); // RGBA
+		unsigned const grass_block_dim(get_grass_block_dim()), tsize(stride);
+		unsigned char *data(new unsigned char[4*tsize*tsize]); // RGBA
 		float const MESH_NOISE_SCALE = 0.003;
 		float const MESH_NOISE_FREQ  = 80.0;
 		float const dz_inv(1.0/(zmax - zmin)), noise_scale(MESH_NOISE_SCALE*mesh_scale_z);
@@ -502,8 +502,8 @@ public:
 		if (world_mode == WMODE_INF_TERRAIN) {create_xy_arrays(zvsize, MESH_NOISE_FREQ);}
 
 		//#pragma omp parallel for schedule(static,1)
-		for (unsigned y = 0; y < size; ++y) {
-			for (unsigned x = 0; x < size; ++x) {
+		for (unsigned y = 0; y < tsize; ++y) {
+			for (unsigned x = 0; x < tsize; ++x) {
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
@@ -542,12 +542,12 @@ public:
 				}
 				weights[k2] += weight_scale*t;
 				weights[k1] += weight_scale*(1.0 - t);
-				unsigned const off(4*(y*size + x));
+				unsigned const off(4*(y*tsize + x));
 
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 					data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
 				}
-				if (has_grass) {
+				if (has_grass && x < size && y < size) {
 					unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
 					if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
 					assert(bix < grass_blocks.size());
@@ -567,7 +567,7 @@ public:
 		} // for y
 		setup_texture(weight_tid, GL_MODULATE, 0, 0, 0, 0, 0);
 		assert(weight_tid > 0 && glIsTexture(weight_tid));
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
 		glDisable(GL_TEXTURE_2D);
 		delete [] data;
 		//PRINT_TIME("Texture Upload");
@@ -690,7 +690,7 @@ public:
 			}
 		}
 		setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	}
