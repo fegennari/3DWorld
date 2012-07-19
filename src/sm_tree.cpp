@@ -186,7 +186,7 @@ void small_tree_group::draw_leaves(bool shadow_only, bool low_detail, bool draw_
 			if (i == begin() || (i-1)->get_type() != type) { // first of this type
 				bool const is_pine(type == T_PINE || type == T_SH_PINE), untextured(is_pine && (draw_model != 0));
 				select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
-				if (is_pine) {vbomgr.begin_render(1);}
+				if (is_pine) {vbomgr.begin_render(1);} else {vbomgr.end_render();}
 			}
 			i->draw(2, shadow_only, (size() < 100), vbomgr, low_detail, xlate); // only cull pine tree leaves if there aren't too many
 		}
@@ -436,9 +436,11 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 
 	if (!is_over_mesh(pos)) return; // not sure why, but this makes drawing slower
 	vector3d const dir(get_rot_dir());
-	cp.tid       = stt[type].leaf_tid;
-	cp_trunk.tid = stt[type].bark_tid;
 
+	if (!DRAW_COBJS) {
+		cp.tid       = stt[type].leaf_tid;
+		cp_trunk.tid = stt[type].bark_tid;
+	}
 	if (type != T_BUSH && type != T_SH_PINE) {
 		float const hval((type == T_PINE) ? 1.0 : 0.75), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 		point const p1((pos + dir*(zbot - pos.z)));
@@ -478,6 +480,12 @@ void small_tree::remove_cobjs() {
 void small_tree::clear_vbo_mgr_ix(int which) {
 	if (which & 1) {vbo_mgr_ix[0] = -1;}
 	if (which & 2) {vbo_mgr_ix[1] = -1;}
+}
+
+
+float small_tree::get_pine_tree_radius() const {
+	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height), ms(mesh_scale*mesh_scale2);
+	return 0.35*(height0 + 0.03/ms);
 }
 
 
