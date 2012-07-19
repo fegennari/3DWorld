@@ -56,6 +56,7 @@ void display_inf_terrain(float uw_depth);
 bool universe_intersection_test(point const &pos, vector3d const &dir, float range);
 void update_temperature(bool verbose);
 void update_sound_loops();
+void calc_cur_ambient_diffuse();
 
 
 inline void glClearColor_rgba(const colorRGBA &color) {
@@ -1192,7 +1193,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	//if (!camera_view) camera_shadow(camera);
 	draw_camera_weapon(0);
 	if (TIMETEST) PRINT_TIME("3.2");
-	setup_object_render_data();
+	calc_cur_ambient_diffuse();
 	if (TIMETEST) PRINT_TIME("3.25");
 
 	if (display_mode & 0x01) {
