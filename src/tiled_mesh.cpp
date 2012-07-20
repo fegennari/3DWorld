@@ -206,6 +206,7 @@ class tile_t {
 	unsigned weight_tid, height_tid, shadow_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize, tree_lod_level;
 	float radius, mzmin, mzmax, tzmax, xstart, ystart, xstep, ystep;
+	bool shadows_invalid;
 	vector<float> zvals;
 	vector<unsigned char> shadow_map;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
@@ -230,9 +231,9 @@ public:
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~tile_t() {clear_vbo_tid(1,1);}
 	
-	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2),
-		init_tree_dxoff(0), init_tree_dyoff(0), init_scenery_dxoff(0), init_scenery_dyoff(0),
-		weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), tree_lod_level(0)
+	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_tree_dxoff(0), init_tree_dyoff(0),
+		init_scenery_dxoff(0), init_scenery_dyoff(0), weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(size_), stride(size+1),
+		zvsize(stride+1), gen_tsize(0), tree_lod_level(0), shadows_invalid(1)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -273,10 +274,11 @@ public:
 
 	unsigned get_gpu_memory() const {
 		unsigned mem(0);
+		unsigned const num_texels(stride*stride);
 		if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
-		if (weight_tid > 0) mem += 4*size*size; // 4 bytes per texel (RGBA8)
-		if (height_tid > 0) mem += 2*size*size; // 2 bytes per texel (L16)
-		if (shadow_tid > 0) mem += 1*size*size; // 1 byte  per texel (L8)
+		if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
+		if (height_tid > 0) mem += 2*num_texels; // 2 bytes per texel (L16)
+		if (shadow_tid > 0) mem += 1*num_texels; // 1 byte  per texel (L8)
 
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			if (ivbo[i] > 0) mem += (size>>i)*(size>>i)*sizeof(unsigned short);
@@ -397,29 +399,78 @@ public:
 		}
 	}
 
-	void apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
-		point const tree_off((init_dxoff - init_tree_dxoff)*DX_VAL, (init_dyoff - init_tree_dyoff)*DY_VAL, 0.0);
+	tile_t *get_adj_tile_smap(int dx, int dy) const {
+		tile_xy_pair const tp((x1/(int)size)+dx, (y1/(int)size)+dy);
+		tile_t *adj_tile(get_tile_from_xy(tp));
+		return ((adj_tile && !adj_tile->shadow_map.empty()) ? adj_tile : NULL);
+	}
 
-		for (small_tree_group::const_iterator i = trees.begin(); i != trees.end(); ++i) {
-			point const pos(i->get_pos() + tree_off);
-			float const radius(i->get_pine_tree_radius());
-			int const xc((pos.x - xstart)/xstep), yc((pos.y - ystart)/ystep);
-			if (xc < 0 || yc < 0 || xc >= (int)stride || yc >= (int)stride) continue; // off the edge of the mesh (shouldn't occur)
-			int rval(max(int(radius/xstep), int(radius/ystep)) + 1);
-			rval = min(rval, min(xc, yc)); // clip to lower bounds
-			rval = min(rval, min((int)stride-xc-1, (int)stride-yc-1)); // clip to upper bounds
-			float const rval_inv(1.0/rval);
-			int const x1(xc-rval), y1(yc-rval), x2(xc+rval), y2(yc+rval);
-			assert(x1 >= 0 && y1 >= 0 && x2 < (int)stride && y2 < (int)stride);
+	void push_tree_ao_shadow(int dx, int dy, point const &pos, float radius) const {
+		tile_t *const adj_tile(get_adj_tile_smap(dx, dy));
+		if (!adj_tile) return;
+		point const pos2(pos + point((adj_tile->init_dxoff - init_dxoff)*DX_VAL, (adj_tile->init_dyoff - init_dyoff)*DY_VAL, 0.0));
+		adj_tile->add_tree_ao_shadow(pos2, radius, 1);
+	}
 
-			for (int y = y1; y <= y2; ++y) {
-				for (int x = x1; x <= x2; ++x) {
-					float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
-					if (dist > rval) continue;
-					shadow_map[y*stride + x] = (unsigned char)(0.6*dist*rval_inv*shadow_map[y*stride + x]);
+	void add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test) {
+		// FIXME: tree size
+		int const xc(round_fp((pos.x - xstart)/xstep)), yc(round_fp((pos.y - ystart)/ystep));
+		int rval(max(int(radius/xstep), int(radius/ystep)) + 1);
+		int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
+
+		for (int y = y1; y <= y2; ++y) {
+			for (int x = x1; x <= x2; ++x) {
+				float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
+				if (dist > rval) continue;
+				shadow_map[y*stride + x] = (unsigned char)((0.6*dist/rval)*shadow_map[y*stride + x]);
+			}
+		}
+		if (!no_adj_test) {
+			bool const x_test[3] = {(xc <= rval), 1, (xc >= (int)size-rval)};
+			bool const y_test[3] = {(yc <= rval), 1, (yc >= (int)size-rval)};
+
+			for (int dy = -1; dy <= 1; ++dy) {
+				for (int dx = -1; dx <= 1; ++dx) {
+					if (dx == 0 && dy == 0) continue;
+					if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, radius);}
 				}
 			}
 		}
+		shadows_invalid = 1;
+	}
+
+	void apply_ao_shadows_for_trees(small_tree_group const &tg, point const &tree_off, bool no_adj_test) {
+		for (small_tree_group::const_iterator i = tg.begin(); i != tg.end(); ++i) {
+			add_tree_ao_shadow((i->get_pos() + tree_off), i->get_pine_tree_radius(), no_adj_test);
+		}
+		if (!no_adj_test) { // pull mode
+			for (int dy = -1; dy <= 1; ++dy) {
+				for (int dx = -1; dx <= 1; ++dx) {
+					if (dx == 0 && dy == 0) continue;
+					tile_t const *const adj_tile(get_adj_tile_smap(dx, dy));
+					if (!adj_tile) continue;
+					point const tree_off2((init_dxoff - adj_tile->init_tree_dxoff)*DX_VAL, (init_dyoff - adj_tile->init_tree_dyoff)*DY_VAL, 0.0);
+					apply_ao_shadows_for_trees(adj_tile->trees, tree_off2, 1);
+				}
+			}
+		}
+	}
+
+	void apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
+		RESET_TIME;
+		point const tree_off((init_dxoff - init_tree_dxoff)*DX_VAL, (init_dyoff - init_tree_dyoff)*DY_VAL, 0.0);
+		apply_ao_shadows_for_trees(trees, tree_off, 0);
+		PRINT_TIME("Shadows");
+	}
+
+	void check_shadow_map_texture() {
+		if (shadows_invalid) {free_texture(shadow_tid);}
+		if (shadow_tid) return; // up-to-date
+		setup_texture(shadow_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &shadow_map.front());
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		shadows_invalid = 0;
 	}
 
 	void create_data(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
@@ -468,13 +519,6 @@ public:
 				}
 			}
 		}
-
-		// create shadow map texture
-		free_texture(shadow_tid);
-		setup_texture(shadow_tid, GL_MODULATE, 0, 0, 0, 0, 0);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &shadow_map.front());
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 		//PRINT_TIME("Create Data");
 	}
 
@@ -584,7 +628,7 @@ public:
 	}
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());}
 	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*get_tile_radius();}
-	float get_scenery_dist_scale () const {return get_dist_to_camera_in_tiles()/(SCENERY_THRESH*calc_tree_size());}
+	float get_scenery_dist_scale () const {return get_dist_to_camera_in_tiles()/SCENERY_THRESH;}
 	float get_tree_dist_scale    () const {return get_dist_to_camera_in_tiles()/max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
 	float get_tree_far_weight    () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
 	float get_grass_dist_scale   () const {return get_dist_to_camera_in_tiles()/GRASS_THRESH;}
@@ -695,7 +739,7 @@ public:
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	}
 
-	void draw_grass(shader_t &s) const {
+	void draw_grass(shader_t &s) {
 		if (grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
 		bind_texture_tu(height_tid, 2);
 		bind_texture_tu(weight_tid, 3);
@@ -735,21 +779,14 @@ public:
 		glPopMatrix();
 	}
 
-	void draw(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], bool reflection_pass) {
-		assert(size > 0);
+	void pre_draw_update(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
 		if (weight_tid == 0) {create_texture();}
-		assert(weight_tid > 0);
-		bind_2d_texture(weight_tid);
-		glPushMatrix();
-		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
-		set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
-		unsigned const ptr_stride(sizeof(vert_type_t));
 
 		if (vbo == 0) {
 			create_data(data, indices);
 			vbo = create_vbo();
 			bind_vbo(vbo, 0);
-			upload_vbo_data(&data.front(), data.size()*ptr_stride, 0);
+			upload_vbo_data(&data.front(), data.size()*sizeof(vert_type_t), 0);
 
 			for (unsigned i = 0; i < NUM_LODS; ++i) {
 				assert(ivbo[i] == 0);
@@ -759,6 +796,17 @@ public:
 				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
 			}
 		}
+		check_shadow_map_texture();
+	}
+
+	void draw(bool reflection_pass) const {
+		assert(vbo);
+		assert(size > 0);
+		assert(weight_tid > 0);
+		bind_2d_texture(weight_tid);
+		glPushMatrix();
+		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
+		set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
 		bind_texture_tu(shadow_tid, 7);
 		unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
 		float dist(get_dist_to_camera_in_tiles());
@@ -771,12 +819,12 @@ public:
 		assert(vbo > 0 && ivbo[lod_level] > 0);
 		bind_vbo(vbo,  0);
 		bind_vbo(ivbo[lod_level], 1);
-		unsigned const isz(size >> lod_level);
+		unsigned const isz(size >> lod_level), ptr_stride(sizeof(vert_type_t));
 		
 		// can store normals in a normal map texture, but a vertex texture fetch is slow
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
 		glNormalPointer(GL_BYTE, ptr_stride, (void *)sizeof(point)); // was GL_FLOAT
-		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), 4*isz*isz, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
+		glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz*isz, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 		glPopMatrix();
@@ -795,7 +843,7 @@ public:
 	tile_draw_t() {
 		assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 	}
-	~tile_draw_t() {clear();}
+	//~tile_draw_t() {clear();}
 
 	void clear() {
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
@@ -893,21 +941,13 @@ public:
 		vector<tile_t::vert_type_t> data;
 		vector<unsigned short> indices[NUM_LODS];
 		static point last_sun(all_zeros), last_moon(all_zeros);
+		draw_vect_t to_draw;
 
 		if (sun_pos != last_sun || moon_pos != last_moon) {
 			clear_vbos_tids(1,0); // light source changed, clear vbos and build new shadow map
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}
-		shader_t s;
-		setup_mesh_draw_shaders(s, wpz, 1, reflection_pass);
-		
-		if (world_mode == WMODE_INF_TERRAIN && show_fog && is_water_enabled() && !reflection_pass) {
-			draw_water_edge(wpz); // Note: doesn't take into account waves
-		}
-		setup_mesh_lighting();
-		draw_vect_t to_draw;
-
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
 			if (DEBUG_TILES) mem += i->second->get_gpu_memory();
@@ -916,13 +956,21 @@ public:
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, i->second->get_zmin());
 			if (!i->second->is_visible()) continue;
+			i->second->pre_draw_update(data, indices);
 			to_draw.push_back(make_pair(dist, i->second));
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
+		shader_t s;
+		setup_mesh_draw_shaders(s, wpz, 1, reflection_pass);
+		
+		if (world_mode == WMODE_INF_TERRAIN && show_fog && is_water_enabled() && !reflection_pass) {
+			draw_water_edge(wpz); // Note: doesn't take into account waves
+		}
+		setup_mesh_lighting();
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			num_trees += to_draw[i].second->num_trees();
-			to_draw[i].second->draw(data, indices, reflection_pass);
+			to_draw[i].second->draw(reflection_pass);
 		}
 		s.end_shader();
 		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
