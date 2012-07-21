@@ -435,7 +435,7 @@ void texture_t::do_gl_init() {
 	//cout << "bind texture" << name << endl;
 	assert(is_allocated() && width > 0 && height > 0);
 	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap, 0, 0, 0, anisotropy);
-	//if (use_mipmaps) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+	//if (use_mipmaps == 1 || use_mipmaps == 2) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
 	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), GL_UNSIGNED_BYTE, data);
 	if (use_mipmaps == 1 || use_mipmaps == 2) gen_mipmaps();
 	if (use_mipmaps == 3) create_custom_mipmaps();
@@ -1559,8 +1559,14 @@ void create_landscape_texture() {
 			ls0_invalid = 1;
 		}
 	}
-	tex.gl_delete(); // should we try to update rather than recreating from scratch?
-	init_texture(LANDSCAPE_TEX); // performance bottleneck
+	if (scrolling) { // supposedly more efficient
+		tex.bind_gl();
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, tex.calc_format(), GL_UNSIGNED_BYTE, tex_data);
+	}
+	else {
+		tex.gl_delete(); // should we try to update rather than recreating from scratch?
+		init_texture(LANDSCAPE_TEX); // performance bottleneck
+	}
 	PRINT_TIME(" Final");
 }
 
