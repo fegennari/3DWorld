@@ -412,11 +412,11 @@ public:
 		adj_tile->add_tree_ao_shadow(pos2, radius, 1);
 	}
 
-	void add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test) {
-		// FIXME: tree size
+	bool add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test) {
 		int const xc(round_fp((pos.x - xstart)/xstep)), yc(round_fp((pos.y - ystart)/ystep));
 		int rval(max(int(radius/xstep), int(radius/ystep)) + 1);
 		int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
+		bool on_edge(0);
 
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
@@ -432,11 +432,12 @@ public:
 			for (int dy = -1; dy <= 1; ++dy) {
 				for (int dx = -1; dx <= 1; ++dx) {
 					if (dx == 0 && dy == 0) continue;
-					if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, radius);}
+					if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, radius); on_edge = 1;}
 				}
 			}
 		}
 		shadows_invalid = 1;
+		return on_edge;
 	}
 
 	void apply_ao_shadows_for_trees(small_tree_group const &tg, point const &tree_off, bool no_adj_test) {
@@ -457,10 +458,10 @@ public:
 	}
 
 	void apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
-		RESET_TIME;
+		//RESET_TIME;
 		point const tree_off((init_dxoff - init_tree_dxoff)*DX_VAL, (init_dyoff - init_tree_dyoff)*DY_VAL, 0.0);
 		apply_ao_shadows_for_trees(trees, tree_off, 0);
-		PRINT_TIME("Shadows");
+		//PRINT_TIME("Shadows");
 	}
 
 	void check_shadow_map_texture() {
