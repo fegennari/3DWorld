@@ -168,9 +168,11 @@ void draw_select_groups(int solid) {
 	shader_t s;
 	
 	if (!disable_shaders) {
+		bool const v(world_mode == WMODE_GROUND);
 		indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 		cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
-		orig_fog_color    = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1);
+		orig_fog_color    = setup_smoke_shaders(s, 0.0, 0, 0, v, 1, v, v, 0, v, 0, 0, 1, 1);
+		//const_indir_color
 	}
 	select_no_texture();
 	BLACK.do_glColor();
@@ -185,10 +187,12 @@ void draw_select_groups(int solid) {
 		}
 	}
 	glDisable(GL_TEXTURE_2D);
-	if (!disable_shaders) end_smoke_shaders(s, orig_fog_color);
-	indir_vert_offset  = orig_ivo; // restore original variable values
-	cobj_z_bias        = orig_czb;
 
+	if (s.is_setup()) {
+		end_smoke_shaders(s, orig_fog_color);
+		indir_vert_offset  = orig_ivo; // restore original variable values
+		cobj_z_bias        = orig_czb;
+	}
 	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 		set_specular(0.0, 1.0); // disable
 		select_texture(object_types[SNOW].tid, 1, 1);
@@ -614,7 +618,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 	}
 	if (draw_snowflake) { // draw as a point to be converted to a billboard by the geometry shader
 		colorRGBA a(do_texture ? tcolor : color);
-		bool is_shadowed(is_object_shadowed(obj, cd_scale, radius));
+		bool is_shadowed(world_mode == WMODE_GROUND && is_object_shadowed(obj, cd_scale, radius));
 		snow_pld.add_pt(pos, (get_light_pos() - pos), a);
 		return;
 	}
@@ -624,8 +628,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		obj_pld.add_pt(pos, n, (do_texture ? tcolor : color));
 		return;
 	}
-	colorRGBA color_l(color);
-	set_color_v2(color_l, obj.status);
+	set_color_v2(color, obj.status);
 	bool const cull_face(get_cull_face(type, color));
 	glPushMatrix();
 

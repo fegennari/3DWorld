@@ -41,7 +41,7 @@ obj_type object_types[NUM_TOT_OBJS];
 
 extern int num_groups, display_mode, frame_counter, game_mode, island, camera_coll_id, ocean_set;
 extern int s_ball_id, world_mode, w_acc, is_snow, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2;
-extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks;
+extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks, water_plane_z;
 extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, grass_length;
 extern point ocean;
 extern vector3d up_norm, orig_cdir;
@@ -645,7 +645,8 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 	verify_data();
 	obj_type const &otype(object_types[type]);
 
-	if (status == 0 || pos.z < zmin || time > otype.lifetime || (type == PARTICLE && is_underwater(pos))) {
+	if (status == 0 || pos.z < zmin || time > otype.lifetime || (type == PARTICLE && is_underwater(pos)) ||
+		((otype.flags & IS_PRECIP) && world_mode == WMODE_INF_TERRAIN && pos.z < water_plane_z)) {
 		assert(type != SMILEY);
 		status = 0;
 		return;
@@ -839,7 +840,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) modify_grass_at(pos, radius, 1, 0, 0, 0); // crush grass
 		}
 		else if (val == 1) { // stopped
-			if ((flags & PRECIPITATION) || (otype.flags & IS_PRECIP)) {
+			if (otype.flags & IS_PRECIP) {
 				int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
 				if (!point_outside_mesh(xpos, ypos) && spillway_matrix[ypos][xpos] >= short(frame_counter-1)) {

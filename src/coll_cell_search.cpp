@@ -235,6 +235,7 @@ public:
 
 bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha) {
 
+	if (world_mode != WMODE_GROUND) return 0;
 	if (check_coll_line_tree(pos1, pos2, cindex, cobj, 0, test_alpha, (skip_dynamic >= 2))) return 1;
 	if (!skip_dynamic && begin_motion && check_coll_line_tree(pos1, pos2, cindex, cobj, 1, test_alpha)) return 1; // find dynamic cobj intersection
 	return 0;
@@ -244,6 +245,7 @@ bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dyn
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm, int &cindex, float splash_val,
 						   int ignore_cobj, bool fast, bool test_alpha, bool skip_dynamic)
 {
+	if (world_mode != WMODE_GROUND) return 0;
 	if (check_coll_line_exact_tree(pos1, pos2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha)) pos2 = cpos;
 
 	if (!skip_dynamic && begin_motion) { // find dynamic cobj intersection

@@ -361,8 +361,8 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke_indir) {
 	s.add_uniform_int("smoke_and_indir_tex", 1);
 	s.add_uniform_float("half_dxy", HALF_DXY);
 	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
-	colorRGB const black_color(0.0, 0.0, 0.0);
-	s.add_uniform_color("const_indir_color", (have_indir_smoke_tex ? black_color : const_indir_color));
+	colorRGB const indir_color((have_indir_smoke_tex && world_mode == WMODE_GROUND) ? colorRGB(0.0, 0.0, 0.0) : const_indir_color);
+	s.add_uniform_color("const_indir_color", indir_color);
 }
 
 
