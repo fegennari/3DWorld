@@ -6,6 +6,20 @@
 #define _GL_EXT_ARB_H_
 
 
+inline GLenum get_internal_texture_format(int ncolors, bool compressed=0) {
+	GLenum const cformats[4] = {GL_COMPRESSED_LUMINANCE, GL_COMPRESSED_LUMINANCE_ALPHA, GL_COMPRESSED_RGB, GL_COMPRESSED_RGBA};
+	GLenum const formats [4] = {GL_LUMINANCE8, GL_LUMINANCE8_ALPHA8, GL_RGB8, GL_RGBA8};
+	return (compressed ? cformats : formats)[ncolors-1];
+}
+
+
+inline GLenum get_texture_format(int ncolors) {
+	assert(ncolors >= 1 && ncolors <= 4);
+	GLenum const formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA}; // GL_BGRA is supposedly faster, but do we want to swap things here?
+	return formats[ncolors-1];
+}
+
+
 void init_glew();
 
 

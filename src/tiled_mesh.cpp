@@ -612,7 +612,7 @@ public:
 		} // for y
 		setup_texture(weight_tid, GL_MODULATE, 0, 0, 0, 0, 0);
 		assert(weight_tid > 0 && glIsTexture(weight_tid));
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
 		glDisable(GL_TEXTURE_2D);
 		delete [] data;
 		//PRINT_TIME("Texture Upload");

@@ -1166,7 +1166,7 @@ void init_smiley_texture(int smiley_id) {
 	else {
 		glBindTexture(GL_TEXTURE_2D, sstates[smiley_id].tid);
 	}
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, SMILEY_TEX_SIZE, SMILEY_TEX_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, tdata);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SMILEY_TEX_SIZE, SMILEY_TEX_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, tdata);
 }
 
 

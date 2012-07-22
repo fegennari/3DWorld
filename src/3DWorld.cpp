@@ -217,7 +217,6 @@ void maximize() {
 	glutGameModeString(game_mode_string);
 	curr_window   = glutEnterGameMode();
 	init_window();
-	glFinish();
 	ww2           = window_width;
 	wh2           = window_height;
 	window_width  = gmww;

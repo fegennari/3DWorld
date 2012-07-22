@@ -174,7 +174,7 @@ void draw_overhead_map() {
 	glDisable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_2D);
 	setup_texture(tid, GL_MODULATE, 0, 0, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, nx, ny, 0, GL_RGB, GL_UNSIGNED_BYTE, &buf.front());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, nx, ny, 0, GL_RGB, GL_UNSIGNED_BYTE, &buf.front());
 	draw_tquad(0.58*((float)window_width)/((float)window_height), 0.58, -1.0, 1);
 	free_texture(tid);
 	glEnable(GL_LIGHTING);

@@ -398,28 +398,12 @@ GLenum texture_t::calc_internal_format() const {
 
 	static int has_comp(2); // starts unknown
 	if (has_comp == 2) has_comp = has_extension("GL_ARB_texture_compression"); // unknown, calculate it
-
-	if (COMPRESS_TEXTURES && has_comp && do_compress && type != 2) {
-		switch (ncolors) {
-		case 1: return GL_COMPRESSED_LUMINANCE;
-		case 3: return GL_COMPRESSED_RGB;
-		case 4: return GL_COMPRESSED_RGBA;
-		default: assert(0);
-		}
-	}
-	return ncolors;
+	assert(ncolors >= 1 && ncolors <= 4);
+	return get_internal_texture_format(ncolors, (COMPRESS_TEXTURES && has_comp && do_compress && type != 2));
 }
 
-
 GLenum texture_t::calc_format() const {
-	
-	switch (ncolors) {
-	case 1: return GL_LUMINANCE;
-	case 3: return GL_RGB;
-	case 4: return GL_RGBA; // GL_BGRA is supposedly faster, but do we want to swap things here?
-	default: assert(0);
-	}
-	return 0;
+	return get_texture_format(ncolors);
 }
 
 
@@ -1108,13 +1092,6 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 }
 
 
-void init_texture(int id) {
-
-	assert(id < NUM_TEXTURES);
-	textures[id].do_gl_init();
-}
-
-
 void texture_t::gen_rand_texture(unsigned char val, unsigned char a_add, unsigned a_rand) {
 
 	assert(ncolors == 4);
@@ -1565,7 +1542,7 @@ void create_landscape_texture() {
 	}
 	else {
 		tex.gl_delete(); // should we try to update rather than recreating from scratch?
-		init_texture(LANDSCAPE_TEX); // performance bottleneck
+		tex.do_gl_init();
 	}
 	PRINT_TIME(" Final");
 }

@@ -1110,7 +1110,7 @@ unsigned create_reflection() {
 	}
 	if (!reflection_tid) {
 		setup_texture(reflection_tid, GL_MODULATE, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, 3, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	assert(glIsTexture(reflection_tid));
 	create_reflection_texture(reflection_tid, xsize, ysize, water_plane_z);

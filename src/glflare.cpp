@@ -128,7 +128,7 @@ void gen_texture(std::string const &filename, GLuint &tid, int &id, bool init) {
 
 	if (init) ft_buf[id] = load_luminance(filename, &ft_width[id], &ft_height[id], &ft_components[id]);
 	setup_texture(tid, GL_MODULATE, 0, 0, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, 1, ft_width[id], ft_height[id], 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ft_buf[id]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8, ft_width[id], ft_height[id], 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ft_buf[id]);
 	id++;
 }
 

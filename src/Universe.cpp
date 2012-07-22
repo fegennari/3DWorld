@@ -1517,7 +1517,7 @@ void uobj_solid::create_texture(unsigned size) {
 	vector<unsigned char> data(3*size*size);
 	gen_texture_data(&data.front(), size, USE_HEIGHTMAP);
 	setup_texture(tid, GL_MODULATE, 0, 0, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
 }
 
 

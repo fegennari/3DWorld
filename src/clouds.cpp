@@ -179,7 +179,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	
 	if (!cloud_tid) {
 		setup_texture(cloud_tid, GL_MODULATE, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, 3, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	assert(glIsTexture(cloud_tid));
 	check_gl_error(800);
