@@ -23,7 +23,7 @@ float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 2.0;
 float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
-float const SCENERY_THRESH    = 2.0;
+float const SCENERY_THRESH    = 1.6;
 
 unsigned const GRASS_BLOCK_SZ   = 4;
 unsigned const NUM_GRASS_LODS   = 6;
@@ -205,7 +205,7 @@ class tile_t {
 	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_tree_dxoff, init_tree_dyoff, init_scenery_dxoff, init_scenery_dyoff;
 	unsigned weight_tid, height_tid, shadow_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize, tree_lod_level;
-	float radius, mzmin, mzmax, tzmax, xstart, ystart, xstep, ystep;
+	float radius, mzmin, mzmax, tzmax, trmax, xstart, ystart, xstep, ystep;
 	bool shadows_invalid;
 	vector<float> zvals;
 	vector<unsigned char> shadow_map;
@@ -233,7 +233,7 @@ public:
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_tree_dxoff(0), init_tree_dyoff(0),
 		init_scenery_dxoff(0), init_scenery_dyoff(0), weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(size_), stride(size+1),
-		zvsize(stride+1), gen_tsize(0), tree_lod_level(0), shadows_invalid(1)
+		zvsize(stride+1), gen_tsize(0), tree_lod_level(0), trmax(0.0), shadows_invalid(1)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -241,7 +241,7 @@ public:
 		x2 = x1 + size;
 		y2 = y1 + size;
 		calc_start_step(0, 0);
-		radius = 0.5*sqrt(xstep*xstep + ystep*ystep)*size; // approximate (lower bound)
+		radius = calc_radius();
 		mzmin  = mzmax = tzmax = get_camera_pos().z;
 		base_tsize = get_norm_texels();
 		init_vbo_ids();
@@ -250,6 +250,7 @@ public:
 			cout << "create " << size << ": " << x << "," << y << ", coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;
 		}
 	}
+	float calc_radius() const {return 0.5*sqrt(xstep*xstep + ystep*ystep)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
 	bool has_water() const {return (mzmin < water_plane_z);}
@@ -260,7 +261,7 @@ public:
 	cube_t get_cube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
 		float const z2(max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), tzmax));
-		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin, z2);
+		return cube_t(xv1-trmax, xv1+(x2-x1)*DX_VAL+trmax, yv1-trmax, yv1+(y2-y1)*DY_VAL+trmax, mzmin, z2);
 	}
 	bool contains_camera() const {
 		return get_cube().contains_pt_xy(get_camera_pos());
@@ -641,10 +642,13 @@ public:
 		init_tree_dyoff = -yoff2;
 		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
 		tzmax = mzmin;
+		trmax = 0.0;
 		
 		for (small_tree_group::const_iterator i = trees.begin(); i != trees.end(); ++i) {
-			tzmax = max(tzmax, i->get_zmax()); // calculate tree zmax
+			tzmax = max(tzmax, i->get_zmax());
+			trmax = max(trmax, i->get_pine_tree_radius());
 		}
+		radius = calc_radius() + trmax; // is this really needed?
 	}
 
 	void update_tree_draw() {
