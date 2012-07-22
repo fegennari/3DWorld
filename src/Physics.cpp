@@ -646,7 +646,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 	obj_type const &otype(object_types[type]);
 
 	if (status == 0 || pos.z < zmin || time > otype.lifetime || (type == PARTICLE && is_underwater(pos)) ||
-		((otype.flags & IS_PRECIP) && world_mode == WMODE_INF_TERRAIN && pos.z < water_plane_z)) {
+		(world_mode == WMODE_INF_TERRAIN && !DISABLE_WATER && (display_mode & 0x04) /*&& (otype.flags & IS_PRECIP)*/ && pos.z < water_plane_z)) {
 		assert(type != SMILEY);
 		status = 0;
 		return;

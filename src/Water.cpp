@@ -1608,7 +1608,7 @@ bool is_underwater(point const &pos, int check_bottom, float *depth) { // or und
 	if (depth) *depth = 0.0;
 	if (DISABLE_WATER) return 0; // water disabled
 
-	if (world_mode == WMODE_INF_TERRAIN) {
+	if (world_mode == WMODE_INF_TERRAIN && (display_mode & 0x04)) {
 		if (depth) *depth = max(0.0f, (water_plane_z - pos.z));
 		return (pos.z < water_plane_z);
 	}
