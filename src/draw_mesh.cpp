@@ -798,24 +798,37 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 		else {
 			blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 		}
+		bool const add_waves((display_mode & 0x0100) != 0);
+		bool const rain_mode(add_waves && is_rain_enabled());
+		rcolor.alpha = 0.5*(0.5 + color.alpha);
 		set_multitex(2);
 		select_texture(WATER_TEX, 0);
 		set_multitex(0);
-		rcolor.alpha = 0.5*(0.5 + color.alpha);
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_bool_prefix("reflections", reflections, 1); // FS
-		s.set_bool_prefix("add_waves", ((display_mode & 0x0100) != 0), 1); // FS
+		s.set_bool_prefix("add_waves", add_waves, 1); // FS
+		s.set_bool_prefix("add_noise", rain_mode, 1); // FS
 		s.set_vert_shader("texture_gen.part+water_plane");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
 		s.begin_shader();
 		s.setup_fog_scale();
-		s.add_uniform_int("water_tex",      0);
-		s.add_uniform_int("reflection_tex", 1);
-		s.add_uniform_int("ripple_tex",     2);
-		s.add_uniform_color("water_color",   color);
-		s.add_uniform_color("reflect_color", rcolor);
+		s.add_uniform_int  ("water_tex",      0);
+		s.add_uniform_int  ("reflection_tex", 1);
+		s.add_uniform_int  ("ripple_tex",     2);
+		s.add_uniform_color("water_color",    color);
+		s.add_uniform_color("reflect_color",  rcolor);
+		s.add_uniform_float("ripple_scale", 10.0);
+		s.add_uniform_float("ripple_mag",   2.0);
+
+		if (rain_mode) { // rain ripples
+			set_multitex(3);
+			select_texture(NOISE_GEN_TEX, 0);
+			set_multitex(0);
+			s.add_uniform_int  ("noise_tex", 3);
+			s.add_uniform_float("time", frame_counter);
+		}
 		set_color(WHITE);
 	}
 	else {

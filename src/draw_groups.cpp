@@ -172,7 +172,6 @@ void draw_select_groups(int solid) {
 		indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 		cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
 		orig_fog_color    = setup_smoke_shaders(s, 0.0, 0, 0, v, 1, v, v, 0, v, 0, 0, 1, 1);
-		//const_indir_color
 	}
 	select_no_texture();
 	BLACK.do_glColor();

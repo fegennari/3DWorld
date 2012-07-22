@@ -185,6 +185,12 @@ void dwobject::add_obj_dynamic_light(int index) const {
 }
 
 
+bool is_rain_enabled() {
+
+	return (begin_motion && temperature > W_FREEZE_POINT && obj_groups[coll_id[PRECIP]].is_enabled());
+}
+
+
 inline int get_precip_type() {
 
 	return ((temperature > RAIN_MIN_TEMP) ? RAIN : ((temperature > SNOW_MAX_TEMP) ? HAIL : SNOW));

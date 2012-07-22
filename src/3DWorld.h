@@ -1337,8 +1337,9 @@ bool line_intersect_mesh(point const &v1, point const &v2, int fast=0);
 void gen_mesh_bsp_tree();
 bool line_int_mesh_bsp(point const &v1, point const &v2);
 
-// function prototypes - build
+// function prototypes - build_world
 void create_object_groups();
+bool is_rain_enabled();
 void shift_all_objs(vector3d const &vd);
 void process_platforms();
 void process_groups();

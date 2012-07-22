@@ -259,7 +259,8 @@ public:
 	}
 	cube_t get_cube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
-		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin, max(mzmax, tzmax));
+		float const z2(max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), tzmax));
+		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin, z2);
 	}
 	bool contains_camera() const {
 		return get_cube().contains_pt_xy(get_camera_pos());

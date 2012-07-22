@@ -570,7 +570,7 @@ void update_sound_loops() {
 
 	bool const universe(world_mode == WMODE_UNIVERSE);
 	set_sound_loop_state(SOUND_LOOP_FIRE, (!universe && player_near_fire));
-	set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && begin_motion && temperature > W_FREEZE_POINT && obj_groups[coll_id[PRECIP]].is_enabled()));
+	set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && is_rain_enabled()));
 	set_sound_loop_state(SOUND_LOOP_WIND, (!universe && wind.mag() >= 1.0));
 	player_near_fire = 0;
 	proc_delayed_sounds();

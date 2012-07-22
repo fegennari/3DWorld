@@ -1,7 +1,8 @@
 varying vec3 normal;
 varying vec4 epos, proj_pos;
-uniform sampler2D water_tex, ripple_tex, reflection_tex;
+uniform sampler2D water_tex, ripple_tex, noise_tex, reflection_tex;
 uniform vec4 water_color, reflect_color;
+uniform float time;
 
 void main()
 {
@@ -11,11 +12,16 @@ void main()
 	vec2 ripple = vec2(0,0);
 	vec3 delta_n= vec3(0,0,0);
 
+	if (add_noise) {
+		vec2 st2 = 3.21*proj_pos.xy/proj_pos.w;
+		ripple  += 0.1*vec2(texture2D(noise_tex, (1.1*st2 + 12.34*time)).g, texture2D(ripple_tex, (st2 + vec2(0.5,0.5) + 43.21*time)).g) - 0.05;
+		delta_n += clamp(vec3(ripple, 0), 0, 1);
+	}
 	if (add_waves) {
 		// calculate ripple adjustment of normal and reflection based on scaled water texture
-		ripple = vec2(texture2D(ripple_tex, 12.0*st).g, texture2D(ripple_tex, 10.0*st+vec2(0.5,0.5)).g) - 0.575;
-		delta_n= clamp(2.0*vec3(ripple, 0), 0, 1);
-		norm   = normalize(norm + delta_n);
+		ripple  += vec2(texture2D(ripple_tex, 11.0*st).g, texture2D(ripple_tex, 10.0*st+vec2(0.5,0.5)).g) - 0.575;
+		delta_n += clamp(2.0*vec3(ripple, 0), 0, 1);
+		norm     = normalize(norm + delta_n);
 	}
 
 	// calculate lighting
