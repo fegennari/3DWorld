@@ -13,5 +13,5 @@ void main()
 	vec3 color  = vec3(0,0,0);
 	if (enable_light0) color += add_light_comp(n_mod, 0).rgb;
 	if (enable_light1) color += add_light_comp(n_mod, 1).rgb;
-	gl_FrontColor = vec4(color, 1.0);
+	gl_FrontColor = vec4(color, gl_Color.a);
 } 

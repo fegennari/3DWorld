@@ -14,6 +14,7 @@
 
 bool const DEBUG_TILES        = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
+bool const PINE_TREE_SNOW     = 0;
 int  const TILE_RADIUS        = 4; // WM0, in mesh sizes
 int  const TILE_RADIUS_IT     = 6; // WM3, in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
@@ -655,9 +656,14 @@ public:
 		tzmax = mzmin;
 		trmax = 0.0;
 		
-		for (small_tree_group::const_iterator i = trees.begin(); i != trees.end(); ++i) {
+		for (small_tree_group::iterator i = trees.begin(); i != trees.end(); ++i) {
 			tzmax = max(tzmax, i->get_zmax());
 			trmax = max(trmax, i->get_pine_tree_radius());
+			
+			if (PINE_TREE_SNOW) {
+				float const relh1(relh_adj_tex + (i->get_pos().z - zmin)/(zmax - zmin));
+				if (relh1 > h_dirt[NTEX_DIRT-2]) {i->set_alpha_comp(0.0);}
+			}
 		}
 		radius = calc_radius() + trmax; // is this really needed?
 	}
@@ -1008,6 +1014,8 @@ public:
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->update_tree_draw();
 		}
+
+		// trunks
 		shader_t s;
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0));
@@ -1019,6 +1027,9 @@ public:
 		}
 		s.add_uniform_float("tex_scale_t", 1.0);
 		s.end_shader();
+
+		// leaves/branches
+		s.set_bool_prefix("add_snow", PINE_TREE_SNOW, 1); // FS
 		s.set_bool_prefix("two_sided_lighting", 0, 0); // VS
 		s.set_prefix("#define USE_LIGHT_COLORS",   0); // VS
 		s.set_prefix("#define USE_GOOD_SPECULAR",  0); // VS
@@ -1028,7 +1039,7 @@ public:
 		s.set_frag_shader("linear_fog.part+pine_tree");
 		s.begin_shader();
 		s.setup_fog_scale();
-		s.add_uniform_int("tex0", 0);
+		s.add_uniform_int("branch_tex", 0);
 		s.add_uniform_float("min_alpha", 0.75);
 
 		set_noise_tex(s, 1);
@@ -1045,6 +1056,12 @@ public:
 			glVertexPointer(3, GL_FLOAT, sizeof(point), &tree_trunk_pts.front());
 			glDrawArrays(GL_LINES, 0, (unsigned)tree_trunk_pts.size());
 			tree_trunk_pts.resize(0);
+		}
+		if (PINE_TREE_SNOW) {
+			set_multitex(2);
+			select_texture(SNOW_TEX, 0);
+			set_multitex(0);
+			s.add_uniform_int("snow_tex", 2);
 		}
 		set_specular(0.2, 8.0);
 

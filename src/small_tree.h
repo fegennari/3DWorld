@@ -40,6 +40,7 @@ public:
 	int get_type () const {return type;}
 	float get_pine_tree_radius() const;
 	float get_zmax() const;
+	void set_alpha_comp(float val) {color.alpha = val;} // for tiled terrain mode
 
 	struct comp_by_type_dist {
 		point pos;
