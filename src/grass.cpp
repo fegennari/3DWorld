@@ -100,7 +100,7 @@ void grass_manager_t::begin_draw(float spec_weight) const {
 	enable_blend();
 	set_specular(spec_weight, 20.0);
 	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.75);
+	glAlphaFunc(GL_GREATER, 0.99);
 	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
 }

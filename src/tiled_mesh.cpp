@@ -208,7 +208,7 @@ class tile_t {
 	float radius, mzmin, mzmax, tzmax, trmax, xstart, ystart, xstep, ystep;
 	bool shadows_invalid;
 	vector<float> zvals;
-	vector<unsigned char> shadow_map;
+	vector<unsigned char> shadow_map, tree_map;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group trees;
@@ -304,6 +304,7 @@ public:
 			for (unsigned d = 0; d < 2; ++d) sh_out[l][d].clear();
 		}
 		shadow_map.clear();
+		tree_map.clear();
 	}
 
 	void clear_tids() {
@@ -419,12 +420,14 @@ public:
 		int rval(max(int(radius/xstep), int(radius/ystep)) + 1);
 		int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
 		bool on_edge(0);
+		float const scale(0.6/rval);
 
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
 				float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
 				if (dist > rval) continue;
-				shadow_map[y*stride + x] = (unsigned char)((0.6*dist/rval)*shadow_map[y*stride + x]);
+				shadow_map[y*stride + x] *= scale*dist;
+				tree_map  [y*stride + x] *= (0.2 + 0.8*scale*dist);
 			}
 		}
 		if (!no_adj_test) {
@@ -484,7 +487,8 @@ public:
 		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
 		assert(has_sun || has_moon);
 		calc_shadows(has_sun, has_moon);
-		shadow_map.resize(stride*stride);
+		shadow_map.resize(stride*stride, 255);
+		tree_map.resize(shadow_map.size(), 255);
 		
 		for (unsigned y = 0; y <= size; ++y) {
 			for (unsigned x = 0; x <= size; ++x) {
@@ -531,6 +535,7 @@ public:
 		assert(weight_tid == 0);
 		assert(!island);
 		assert(zvals.size() == zvsize*zvsize);
+		assert(tree_map.size() == stride*stride);
 		//RESET_TIME;
 		grass_blocks.clear();
 		unsigned const grass_block_dim(get_grass_block_dim()), tsize(stride);
@@ -538,14 +543,15 @@ public:
 		float const MESH_NOISE_SCALE = 0.003;
 		float const MESH_NOISE_FREQ  = 80.0;
 		float const dz_inv(1.0/(zmax - zmin)), noise_scale(MESH_NOISE_SCALE*mesh_scale_z);
-		int k1, k2, k3, k4, dirt_tex_ix(-1), rock_tex_ix(-1);
+		int k1, k2, k3, k4, dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1);
 		float t;
 
 		for (unsigned i = 0; i < NTEX_DIRT; ++i) {
-			if (lttex_dirt[i].id == DIRT_TEX) dirt_tex_ix = i;
-			if (lttex_dirt[i].id == ROCK_TEX) rock_tex_ix = i;
+			if (lttex_dirt[i].id == DIRT_TEX  ) dirt_tex_ix  = i;
+			if (lttex_dirt[i].id == GROUND_TEX) grass_tex_ix = i;
+			if (lttex_dirt[i].id == ROCK_TEX  ) rock_tex_ix  = i;
 		}
-		assert(dirt_tex_ix >= 0 && rock_tex_ix >= 0);
+		assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0);
 		if (world_mode == WMODE_INF_TERRAIN) {create_xy_arrays(zvsize, MESH_NOISE_FREQ);}
 
 		//#pragma omp parallel for schedule(static,1)
@@ -589,8 +595,13 @@ public:
 				}
 				weights[k2] += weight_scale*t;
 				weights[k1] += weight_scale*(1.0 - t);
-				unsigned const off(4*(y*tsize + x));
+				unsigned const ix_val(y*tsize + x), off(4*ix_val);
 
+				if (tree_map[ix_val] < 255) { // replace grass under trees with dirt
+					float const v(tree_map[ix_val]/255.0);
+					weights[dirt_tex_ix]  += (1.0 - v)*weights[grass_tex_ix];
+					weights[grass_tex_ix] *= v;
+				}
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 					data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
 				}
@@ -786,8 +797,6 @@ public:
 	}
 
 	void pre_draw_update(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
-		if (weight_tid == 0) {create_texture();}
-
 		if (vbo == 0) {
 			create_data(data, indices);
 			vbo = create_vbo();
@@ -802,6 +811,7 @@ public:
 				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
 			}
 		}
+		if (weight_tid == 0) {create_texture();}
 		check_shadow_map_texture();
 	}
 
