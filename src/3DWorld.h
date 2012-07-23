@@ -720,7 +720,7 @@ struct color_wrapper { // size = 4
 	static int const gl_type = GL_UNSIGNED_BYTE;
 	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
 
-	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
+	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));) c[3] = 255;}
 	void set_c4(colorRGBA const &c_) {set_c3(c_); c[3] = (unsigned char)(255.0*CLIP_TO_01(c_[3]));}
 	colorRGB  get_c3() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	colorRGBA get_c4() const {return colorRGBA(get_c3(), c[3]/255.0);}
@@ -731,7 +731,7 @@ struct color_wrapper_float { // size = 16
 	static int const gl_type = GL_FLOAT;
 	colorRGBA c; // Note: c[3] (alpha component) is not used in all cases
 
-	template<typename T> void set_c3(T const &c_) {c = c_;}
+	template<typename T> void set_c3(T const &c_) {c = c_; c.A = 1.0;}
 	void set_c4(colorRGBA const &c_) {c = c_;}
 	colorRGB  get_c3() const {return colorRGB(c.R, c.G, c.B);}
 	colorRGBA get_c4() const {return c;}
@@ -779,7 +779,7 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 		: vert_norm_tc(v_, n_, ts, tt) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; if (has_alpha) c[3] = c_[3];}
 	vert_norm_tc_color(vert_norm_tc const &vntc, color_wrapper const &cw) : vert_norm_tc(vntc), color_wrapper(cw) {}
 	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0) {
-		v = v_; n = n_; t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; if (has_alpha) c[3] = c_[3];
+		v = v_; n = n_; t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = (has_alpha ? c_[3] : 255);
 	}
 	static void set_vbo_arrays(unsigned force_stride=0);
 	void set_state() const;
