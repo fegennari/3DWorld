@@ -294,7 +294,7 @@ public:
 		clear_vbo_tid(1, 1);
 		zvals.clear();
 		clear_shadows();
-		trees.clear();
+		trees.clear_all();
 		scenery.clear();
 		grass_blocks.clear();
 	}

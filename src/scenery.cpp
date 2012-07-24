@@ -939,6 +939,7 @@ void gen_scenery() {
 
 	if (has_scenery2) return; // don't generate scenery if some has already been added
 	all_scenery.clear();
+	all_scenery = scenery_group(); // really force a clear
 	has_scenery = 0;
 	if (DISABLE_SCENERY || (NO_ISLAND_SCENERY && island)) return;
 	has_scenery = 1;
