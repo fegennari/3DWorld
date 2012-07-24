@@ -67,7 +67,7 @@ texture_t(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
 texture_t(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "water.raw"),
 texture_t(0, 0, 64,   64,   1, 3, 1, "water_sm.raw"), // WATER2_TEX is unused
-texture_t(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
+texture_t(0, 0, 1024, 1024, 1, 4, 0, "sky.raw"),
 texture_t(0, 0, 64,   64,   1, 3, 1, "sun.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "moon.raw"),
 texture_t(0, 0, 256,  256,  0, 3, 1, "earth.raw"),
@@ -141,11 +141,11 @@ texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
 texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
 texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg"), // 500x500
 // bark
-texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark1.jpg"), // 600x600
-texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg"), // 892x892
-texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png"), // 1024x768
+texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark1.jpg"), // 600x600
+texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark2.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark2-normal.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark_lendrick.jpg"), // 892x892
+texture_t(0, 6, 0,    0,    1, 4, 1, "bark/bark_lylejk.png"), // 1024x768
 
 texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen.raw") // not real file
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
@@ -416,7 +416,7 @@ void texture_t::do_gl_init() {
 		tmem += tsize;
 		cout << "tex vmem = " << tmem << endl;
 	}
-	//cout << "bind texture" << name << " size " << width << "x" << height << endl;
+	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
 	//RESET_TIME;
 	assert(is_allocated() && width > 0 && height > 0);
 	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap, 0, 0, 0, anisotropy);
