@@ -78,12 +78,18 @@ void small_tree_group::add_tree(small_tree &st) {
 
 void small_tree_group::finalize(bool low_detail) {
 
+	assert(vbo_manager[low_detail].empty());
 	vbo_manager[low_detail].reserve_pts(4*(low_detail ? 2 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
-	trunk_pts.reserve(2*size());
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->calc_points(vbo_manager[low_detail], low_detail);
-		i->add_trunk_as_line(trunk_pts);
+	}
+	if (trunk_pts.empty()) {
+		trunk_pts.reserve(2*size());
+
+		for (iterator i = begin(); i != end(); ++i) {
+			i->add_trunk_as_line(trunk_pts);
+		}
 	}
 }
 
@@ -106,8 +112,9 @@ void small_tree_group::clear_vbos() {
 
 void small_tree_group::clear_vbo_manager(int which) {
 	
-	if (which & 1) {vbo_manager[0].clear();}
-	if (which & 2) {vbo_manager[1].clear();}
+	for (unsigned d = 0; d < 2; ++d) {
+		if (which & (1<<d)) {vbo_manager[d].clear();}
+	}
 }
 
 

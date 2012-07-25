@@ -634,6 +634,7 @@ public:
 		return max(0.0f, p2p_dist_xy(get_camera_pos(), get_center()) - radius)/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	}
 	bool update_range() { // if returns 0, tile will be deleted
+		if (trees_enabled  ()) {update_tree_state(0);}
 		if (scenery_enabled()) {update_scenery();}
 		float const dist(get_rel_dist_to_camera());
 		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
@@ -666,22 +667,24 @@ public:
 		radius = calc_radius() + trmax; // is this really needed?
 	}
 
-	void update_tree_draw() {
+	void update_tree_state(bool upload_if_needed) {
 		float const weight(get_tree_far_weight());
 		float const weights[2] = {1.0-weight, weight}; // {high, low} detail
 
 		for (unsigned d = 0; d < 2; ++d) {
-			if (tree_lod_level & (1<<d)) { // currently enabled
-				if (weights[d] == 0.0) { // not needed
-					tree_lod_level &= ~(1<<d);
-					trees.clear_vbo_manager_and_ids(1<<d);
+			if (weights[d] > 0.0) { // needed
+				if (upload_if_needed) { // needed for drawing
+					if (!(tree_lod_level & (1<<d))) { // currently disabled, but needed
+						tree_lod_level |= (1<<d);
+						trees.finalize(d != 0);
+					}
+					trees.vbo_manager[d].upload();
 				}
 			}
-			else if (weights[d] > 0.0) { // currently disabled, but needed
-				tree_lod_level |= (1<<d);
-				trees.finalize(d != 0);
+			else if (tree_lod_level & (1<<d)) { // currently enabled, but not needed
+				tree_lod_level &= ~(1<<d);
+				trees.clear_vbo_manager_and_ids(1<<d);
 			}
-			if (weights[d] > 0.0) {trees.vbo_manager[d].upload();}
 		}
 	}
 
@@ -1010,7 +1013,7 @@ public:
 
 	void draw_trees(draw_vect_t const &to_draw, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->update_tree_draw();
+			to_draw[i].second->update_tree_state(1);
 		}
 
 		// trunks
