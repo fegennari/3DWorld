@@ -245,11 +245,12 @@ void load_textures() {
 	}
 	setup_multitexture();
 
-	int max_tc(0), max_tu(0), max_tiu(0);
+	int max_tc(0), max_tu(0), max_tiu(0), max_ctiu(0);
 	glGetIntegerv(GL_MAX_TEXTURE_COORDS,      &max_tc);
 	glGetIntegerv(GL_MAX_TEXTURE_UNITS,       &max_tu);
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_tiu);
-	cout << "max tex coords: " << max_tc << ", max tex units: " << max_tu << ", max tex img units: " << max_tiu << endl;
+	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &max_ctiu);
+	cout << "max TCs: " << max_tc << ", max TUs: " << max_tu << ", max FS TIUs: " << max_tiu << ", max combined TIUs: " << max_ctiu << endl;
 }
 
 

@@ -97,6 +97,7 @@ public:
 	void end_render() const;
 	void clear_vbo();
 	void clear();
+	unsigned get_gpu_mem() const {return (vbo ? pts.size()*sizeof(vert_type_t) : 0);} // not implemented
 };
 
 

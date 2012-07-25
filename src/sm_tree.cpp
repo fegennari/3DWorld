@@ -500,7 +500,7 @@ void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_det
 	vector<vert_norm> &points(vbo_manager.temp_points);
 	points.resize(0);
 
-	for (unsigned j = 0; j < N_PT_LEVELS; j += (low_detail ? N_PT_LEVELS-1 : 1)) {
+	for (unsigned j = 0; j < N_PT_LEVELS; j += (low_detail ? max(1U, N_PT_LEVELS-1) : 1)) {
 		float const sz(0.5*(height0 + 0.03/ms)*((N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS));
 		float const z((j + 1.8)*height0/(N_PT_LEVELS + 2.8) - rd*sz);
 		vector3d const scale(sz, sz, sz);

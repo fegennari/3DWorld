@@ -122,6 +122,8 @@ public:
 		for (unsigned lod = 0; lod <= NUM_GRASS_LODS; ++lod) {vbo_offsets[lod].clear();}
 	}
 
+	unsigned get_gpu_mem() const {return (vbo ? 3*size()*sizeof(vert_norm_tc_color) : 0);}
+
 	void upload_data() {
 		if (empty()) return;
 		RESET_TIME;
@@ -246,10 +248,6 @@ public:
 		mzmin  = mzmax = tzmax = get_camera_pos().z;
 		base_tsize = get_norm_texels();
 		init_vbo_ids();
-		
-		if (DEBUG_TILES) {
-			cout << "create " << size << ": " << x << "," << y << ", coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;
-		}
 	}
 	float calc_radius() const {return 0.5*sqrt(xstep*xstep + ystep*ystep)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
@@ -276,7 +274,7 @@ public:
 	}
 
 	unsigned get_gpu_memory() const {
-		unsigned mem(0);
+		unsigned mem(trees.get_gpu_mem() + scenery.get_gpu_mem());
 		unsigned const num_texels(stride*stride);
 		if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
 		if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
@@ -286,7 +284,6 @@ public:
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			if (ivbo[i] > 0) mem += (size>>i)*(size>>i)*sizeof(unsigned short);
 		}
-		// FIXME: add trees, scenery, and grass?
 		return mem;
 	}
 
@@ -365,6 +362,7 @@ public:
 		assert(mzmin <= mzmax);
 		radius = 0.5*sqrt((xstep*xstep + ystep*ystep)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
 		//PRINT_TIME("Create Zvals");
+		if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
 	}
 
 	inline vector3d get_norm(unsigned ix) const {
@@ -959,7 +957,7 @@ public:
 		glDisable(GL_NORMALIZE);
 		set_array_client_state(1, 0, 1, 0);
 		unsigned num_drawn(0), num_trees(0);
-		unsigned long long mem(0);
+		unsigned long long mem(grass_tile_manager.get_gpu_mem());
 		vector<tile_t::vert_type_t> data;
 		vector<unsigned short> indices[NUM_LODS];
 		static point last_sun(all_zeros), last_moon(all_zeros);

@@ -141,6 +141,7 @@ public:
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate);
 	void draw_opaque_objects(bool shadow_only, vector3d const &xlate, bool draw_pld);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);
+	unsigned get_gpu_mem() const {return vbo_manager.get_gpu_mem();} // only accounts for part of the memory
 };
 
 
