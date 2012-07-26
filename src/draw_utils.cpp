@@ -103,13 +103,13 @@ unsigned vbo_quad_block_manager_t::add_points(vector<vert_norm_tc> const &p, col
 void vbo_quad_block_manager_t::render_range(unsigned six, unsigned eix) const {
 
 	assert(six < eix && eix < offsets.size());
-	assert(offsets[eix] <= pts.size());
 	glDrawArrays(GL_QUADS, offsets[six], offsets[eix]-offsets[six]);
 }
 
 bool vbo_quad_block_manager_t::upload() {
 
-	if (vbo || empty()) return 0; // already uploaded or empty
+	if (vbo || !has_data()) return 0; // already uploaded or empty
+	assert(!pts.empty());
 	vbo = create_vbo();
 	bind_vbo(vbo);
 	upload_vbo_data(&pts.front(), pts.size()*sizeof(vert_type_t));
@@ -119,7 +119,7 @@ bool vbo_quad_block_manager_t::upload() {
 
 void vbo_quad_block_manager_t::begin_render(bool color_mat) const {
 
-	if (empty()) return;
+	if (!has_data()) return;
 	if (color_mat) {glEnable(GL_COLOR_MATERIAL);}
 	set_color(BLACK);
 	assert(vbo);
@@ -141,7 +141,7 @@ void vbo_quad_block_manager_t::clear_vbo() {
 
 void vbo_quad_block_manager_t::clear() {
 
-	pts.clear();
+	clear_points();
 	offsets.clear();
 	offsets.push_back(0); // start at 0
 	clear_vbo();

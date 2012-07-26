@@ -676,18 +676,10 @@ public:
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (weights[d] > 0.0) { // needed
-				if (upload_if_needed) { // needed for drawing
-					//RESET_TIME;
-					if (!trees.is_finalized(d != 0)) { // currently disabled, but needed
-						trees.finalize(d != 0);
-						//if (!d) {PRINT_TIME("Finalize");}
-					}
-					bool const uploaded(trees.vbo_manager[d].upload());
-					//if (uploaded && !d) {PRINT_TIME("Finalize + Upload");}
-				}
+				if (upload_if_needed) {trees.finalize_upload_and_clear_pts(d != 0);} // needed for drawing
 			}
-			else if (trees.is_finalized(d != 0)) { // currently enabled, but not needed
-				trees.clear_vbo_manager_and_ids(1<<d);
+			else { // not needed
+				trees.clear_vbo_and_ids_if_needed(d != 0);
 			}
 		}
 	}

@@ -85,19 +85,21 @@ public:
 	vbo_quad_block_manager_t() : vbo(0) {clear();}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~vbo_quad_block_manager_t() {clear_vbo();}
-	void reserve_pts(unsigned num) {pts.reserve(num);}
-	bool empty() const {return pts.empty();}
+	void reserve_pts(unsigned num) {assert(pts.empty()); pts.reserve(num);}
+	bool is_uploaded() const {return (vbo != 0);}
+	bool has_data() const {return (offsets.size() > 1);}
 	template<typename T> unsigned add_points_int(vector<T> const &p, colorRGBA const &color);
 	unsigned add_points(vector<vert_norm> const &p, colorRGBA const &color);
 	unsigned add_points(vector<vert_norm_tc> const &p, colorRGBA const &color);
 	void render_range(unsigned six, unsigned eix) const;
-	void render_all() const {if (!empty()) {render_range(0, offsets.size()-1);}}
+	void render_all() const {if (has_data()) {render_range(0, offsets.size()-1);}}
 	bool upload();
 	void begin_render(bool color_mat) const;
 	void end_render() const;
+	void clear_points() {pts.swap(vector<vert_type_t>());}
 	void clear_vbo();
 	void clear();
-	unsigned get_gpu_mem() const {return (vbo ? pts.size()*sizeof(vert_type_t) : 0);} // not implemented
+	unsigned get_gpu_mem() const {return ((vbo && has_data()) ? offsets.back()*sizeof(vert_type_t) : 0);} // not implemented
 };
 
 

@@ -89,12 +89,25 @@ void small_tree_group::calc_trunk_pts() {
 
 void small_tree_group::finalize(bool low_detail) {
 
-	assert(!is_finalized(low_detail));
+	if (empty()) return;
+	assert(!is_uploaded(low_detail));
+	vbo_manager[low_detail].clear();
 	vbo_manager[low_detail].reserve_pts(4*(low_detail ? 2 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->calc_points(vbo_manager[low_detail], low_detail);
 	}
+}
+
+
+void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) {
+
+	if (empty() || is_uploaded(low_detail)) return;
+	//RESET_TIME;
+	finalize(low_detail);
+	vbo_manager[low_detail].upload();
+	vbo_manager[low_detail].clear_points();
+	//if (!low_detail) {PRINT_TIME("Finalize + Upload");}
 }
 
 
@@ -128,6 +141,12 @@ void small_tree_group::clear_vbo_manager_and_ids(int which) {
 		i->clear_vbo_mgr_ix(which);
 	}
 	clear_vbo_manager(which);
+}
+
+
+void small_tree_group::clear_vbo_and_ids_if_needed(bool low_detail) {
+	
+	if (is_uploaded(low_detail)) {clear_vbo_manager_and_ids(low_detail ? 2 : 1);}
 }
 
 
@@ -504,7 +523,6 @@ float small_tree::get_pine_tree_radius() const {
 void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_detail) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
-	if (vbo_mgr_ix[low_detail] >= 0) return; // points already calculated
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
 	float const ms(mesh_scale*mesh_scale2), rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
