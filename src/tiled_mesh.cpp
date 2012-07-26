@@ -689,7 +689,7 @@ public:
 	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail) const {
 		s.add_uniform_float("camera_facing_scale", (low_detail ? 1.0 : 0.0));
 		bool const draw_all(low_detail || camera_pdu.sphere_completely_visible_test(get_center(), 0.5*radius));
-		trees.draw_leaves(0, low_detail, draw_all, xlate);
+		trees.draw_pine_leaves(0, low_detail, draw_all, xlate);
 	}
 
 	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_leaves) const {

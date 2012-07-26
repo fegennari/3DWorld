@@ -199,29 +199,38 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate, vec
 }
 
 
-void small_tree_group::draw_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, vector3d const xlate) const {
+void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, vector3d const xlate) const {
 
 	enable_blend();
 	vbo_quad_block_manager_t const &vbomgr(vbo_manager[low_detail]);
+	vbomgr.begin_render(1);
+	select_texture((draw_model != 0) ? WHITE_TEX : stt[T_PINE].leaf_tid);
 
 	if (draw_all_pine) {
-		vbomgr.begin_render(1);
-		select_texture(stt[T_PINE].leaf_tid);
 		vbomgr.render_all();
 	}
 	else {
 		for (const_iterator i = begin(); i != end(); ++i) {
 			int const type(i->get_type());
-			
-			if (i == begin() || (i-1)->get_type() != type) { // first of this type
-				bool const is_pine(type == T_PINE || type == T_SH_PINE), untextured(is_pine && (draw_model != 0));
-				select_texture(untextured ? WHITE_TEX : stt[type].leaf_tid);
-				if (is_pine) {vbomgr.begin_render(1);} else {vbomgr.end_render();}
-			}
+			if (type != T_PINE && type != T_SH_PINE) continue;
 			i->draw(2, shadow_only, (size() < 100), vbomgr, low_detail, xlate); // only cull pine tree leaves if there aren't too many
 		}
 	}
 	vbomgr.end_render();
+	disable_blend();
+}
+
+
+void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const xlate) const {
+
+	enable_blend();
+
+	for (const_iterator i = begin(); i != end(); ++i) {
+		int const type(i->get_type());
+		if (type == T_PINE || type == T_SH_PINE) continue;
+		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
+		i->draw(2, shadow_only, (size() < 100), vbo_manager[0], 0, xlate); // only cull pine tree leaves if there aren't too many
+	}
 	disable_blend();
 }
 
@@ -365,11 +374,11 @@ void draw_small_trees(bool shadow_only) {
 	if (small_trees.empty() || !(tree_mode & 2)) return;
 	if (small_trees.size() < 100) {small_trees.sort_by_dist_to_camera();} // shadow_only?
 	shader_t s;
-	bool const can_use_shaders(!disable_shaders && !shadow_only);
+	bool const can_use_shaders(!disable_shaders), v(!shadow_only);
 	colorRGBA orig_fog_color;
 
 	if (can_use_shaders) {
-		orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, USE_BUMP_MAP, 0, 1); // dynamic lights, but no smoke
+		orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 0, v, v, 0, 0, v, (USE_BUMP_MAP && v), 0, v); // dynamic lights, but no smoke
 		s.add_uniform_float("tex_scale_t", 5.0);
 
 		if (USE_BUMP_MAP) {
@@ -386,20 +395,24 @@ void draw_small_trees(bool shadow_only) {
 	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
 	small_trees.vbo_manager[0].upload();
 
-	if (can_use_shaders && (shadow_map_enabled() || has_dir_lights) && world_mode == WMODE_GROUND) {
+	if (can_use_shaders) {
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-		orig_fog_color = setup_smoke_shaders(s, 0.75, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1); // dynamic lights, but no smoke
+		orig_fog_color = setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke
+		s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
 	}
-	if (s.is_setup()) s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
 	set_lighted_sides(2);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
-	small_trees.draw_leaves(shadow_only);
+	small_trees.draw_pine_leaves(shadow_only);
+	
+	if (s.is_setup()) {
+		s.add_uniform_float("base_color_scale", 1.0);
+		end_smoke_shaders(s, orig_fog_color);
+	}
+	small_trees.draw_non_pine_leaves(shadow_only); // not using shaders
 	glDisable(GL_ALPHA_TEST);
 	set_lighted_sides(1);
 	glDisable(GL_TEXTURE_2D);
-	if (s.is_setup()) s.add_uniform_float("base_color_scale", 1.0);
-	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
 	tree_scenery_pld.draw_and_clear();
 	//PRINT_TIME("small tree draw");
 }
