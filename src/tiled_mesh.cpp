@@ -21,7 +21,7 @@ unsigned const NUM_LODS       = 5; // > 0
 float const DRAW_DIST_TILES   = 1.4;
 float const CREATE_DIST_TILES = 1.5;
 float const CLEAR_DIST_TILES  = 1.5;
-float const DELETE_DIST_TILES = 2.0;
+float const DELETE_DIST_TILES = 1.7;
 float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH    = 1.6;
@@ -207,7 +207,7 @@ class tile_t {
 
 	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_tree_dxoff, init_tree_dyoff, init_scenery_dxoff, init_scenery_dyoff;
 	unsigned weight_tid, height_tid, shadow_tid, vbo, ivbo[NUM_LODS];
-	unsigned size, stride, zvsize, base_tsize, gen_tsize, tree_lod_level;
+	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, tzmax, trmax, xstart, ystart, xstep, ystep;
 	bool shadows_invalid;
 	vector<float> zvals;
@@ -228,7 +228,7 @@ class tile_t {
 public:
 	typedef vert_norm_comp vert_type_t;
 
-	tile_t() : weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0), tree_lod_level(0) {
+	tile_t() : weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {
 		init_vbo_ids();
 	}
 	// can't free in the destructor because the gl context may be destroyed before this point
@@ -236,7 +236,7 @@ public:
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_tree_dxoff(0), init_tree_dyoff(0),
 		init_scenery_dxoff(0), init_scenery_dyoff(0), weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(size_), stride(size+1),
-		zvsize(stride+1), gen_tsize(0), tree_lod_level(0), trmax(0.0), shadows_invalid(1)
+		zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -636,6 +636,7 @@ public:
 	bool update_range() { // if returns 0, tile will be deleted
 		if (trees_enabled  ()) {update_tree_state(0);}
 		if (scenery_enabled()) {update_scenery();}
+		if (height_tid && !grass_blocks.empty() && get_grass_dist_scale() > 1.2) {free_texture(height_tid);}
 		float const dist(get_rel_dist_to_camera());
 		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
 		return (dist < DELETE_DIST_TILES);
@@ -665,24 +666,27 @@ public:
 			}
 		}
 		radius = calc_radius() + trmax; // is this really needed?
+		trees.calc_trunk_pts();
 	}
 
 	void update_tree_state(bool upload_if_needed) {
+		if (trees.empty()) return;
 		float const weight(get_tree_far_weight());
 		float const weights[2] = {1.0-weight, weight}; // {high, low} detail
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (weights[d] > 0.0) { // needed
 				if (upload_if_needed) { // needed for drawing
-					if (!(tree_lod_level & (1<<d))) { // currently disabled, but needed
-						tree_lod_level |= (1<<d);
+					//RESET_TIME;
+					if (!trees.is_finalized(d != 0)) { // currently disabled, but needed
 						trees.finalize(d != 0);
+						//if (!d) {PRINT_TIME("Finalize");}
 					}
-					trees.vbo_manager[d].upload();
+					bool const uploaded(trees.vbo_manager[d].upload());
+					//if (uploaded && !d) {PRINT_TIME("Finalize + Upload");}
 				}
 			}
-			else if (tree_lod_level & (1<<d)) { // currently enabled, but not needed
-				tree_lod_level &= ~(1<<d);
+			else if (trees.is_finalized(d != 0)) { // currently enabled, but not needed
 				trees.clear_vbo_manager_and_ids(1<<d);
 			}
 		}
@@ -697,6 +701,7 @@ public:
 	}
 
 	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_leaves) const {
+		if (trees.empty()) return;
 		glPushMatrix();
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
@@ -996,7 +1001,7 @@ public:
 			to_draw[i].second->draw(reflection_pass);
 		}
 		s.end_shader();
-		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
+		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
 		run_post_mesh_draw();
 		if (trees_enabled()  ) {draw_trees  (to_draw, reflection_pass);}
 		if (scenery_enabled()) {draw_scenery(to_draw, reflection_pass);}
@@ -1020,6 +1025,7 @@ public:
 		shader_t s;
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0));
+		s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 		s.add_uniform_float("tex_scale_t", 5.0);
 		set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
 

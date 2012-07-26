@@ -107,13 +107,14 @@ void vbo_quad_block_manager_t::render_range(unsigned six, unsigned eix) const {
 	glDrawArrays(GL_QUADS, offsets[six], offsets[eix]-offsets[six]);
 }
 
-void vbo_quad_block_manager_t::upload() {
+bool vbo_quad_block_manager_t::upload() {
 
-	if (vbo || empty()) return; // already uploaded or empty
+	if (vbo || empty()) return 0; // already uploaded or empty
 	vbo = create_vbo();
 	bind_vbo(vbo);
 	upload_vbo_data(&pts.front(), pts.size()*sizeof(vert_type_t));
 	bind_vbo(0);
+	return 1;
 }
 
 void vbo_quad_block_manager_t::begin_render(bool color_mat) const {

@@ -92,7 +92,7 @@ public:
 	unsigned add_points(vector<vert_norm_tc> const &p, colorRGBA const &color);
 	void render_range(unsigned six, unsigned eix) const;
 	void render_all() const {if (!empty()) {render_range(0, offsets.size()-1);}}
-	void upload();
+	bool upload();
 	void begin_render(bool color_mat) const;
 	void end_render() const;
 	void clear_vbo();

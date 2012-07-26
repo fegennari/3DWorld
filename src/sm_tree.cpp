@@ -76,20 +76,24 @@ void small_tree_group::add_tree(small_tree &st) {
 }
 
 
+void small_tree_group::calc_trunk_pts() {
+
+	if (!trunk_pts.empty()) return; // already calculated
+	trunk_pts.reserve(2*size());
+
+	for (iterator i = begin(); i != end(); ++i) {
+		i->add_trunk_as_line(trunk_pts);
+	}
+}
+
+
 void small_tree_group::finalize(bool low_detail) {
 
-	assert(vbo_manager[low_detail].empty());
+	assert(!is_finalized(low_detail));
 	vbo_manager[low_detail].reserve_pts(4*(low_detail ? 2 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->calc_points(vbo_manager[low_detail], low_detail);
-	}
-	if (trunk_pts.empty()) {
-		trunk_pts.reserve(2*size());
-
-		for (iterator i = begin(); i != end(); ++i) {
-			i->add_trunk_as_line(trunk_pts);
-		}
 	}
 }
 

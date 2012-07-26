@@ -67,6 +67,7 @@ struct small_tree_group : public vector<small_tree> {
 		sort(begin(), end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
 	void add_tree(small_tree &st);
+	void calc_trunk_pts();
 	void finalize(bool low_detail);
 	void add_trunk_pts(point const &xlate, vector<point> &pts) const;
 	void clear_vbos();
@@ -80,6 +81,7 @@ struct small_tree_group : public vector<small_tree> {
 	void draw_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, vector3d const xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2);
 	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());}
+	bool is_finalized(bool low_detail) const {return !vbo_manager[low_detail].empty();}
 };
 
 
