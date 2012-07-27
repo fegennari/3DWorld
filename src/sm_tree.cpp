@@ -538,34 +538,36 @@ void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
-	float const ms(mesh_scale*mesh_scale2), rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
+	float const sz_scale(0.5*(height0 + 0.03/(mesh_scale*mesh_scale2)));
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
 	vector<vert_norm> &points(vbo_manager.temp_points);
 	points.resize(0);
 
-	for (unsigned j = 0; j < N_PT_LEVELS; j += (low_detail ? max(1U, N_PT_LEVELS-1) : 1)) {
-		float const sz(0.5*(height0 + 0.03/ms)*((N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS));
-		float const z((j + 1.8)*height0/(N_PT_LEVELS + 2.8) - rd*sz);
-		vector3d const scale(sz, sz, sz);
+	if (!low_detail) {
+		float const rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 
-		for (unsigned k = 0; k < (low_detail ? 1 : N_PT_RINGS); ++k) { // only need one level to get the bounds in low_detail mode
-			float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0);
-			add_rotated_quad_pts(points, theta, rd, z, center, scale); // bounds are (sz, sz, rd*sz+z)
+		for (unsigned j = 0; j < N_PT_LEVELS; ++j) {
+			float const sz(sz_scale*((N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS));
+			float const z((j + 1.8)*height0/(N_PT_LEVELS + 2.8) - rd*sz);
+			vector3d const scale(sz, sz, sz);
+
+			for (unsigned k = 0; k < N_PT_RINGS; ++k) {
+				float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0);
+				add_rotated_quad_pts(points, theta, rd, z, center, scale); // bounds are (sz, sz, rd*sz+z)
+			}
 		}
 	}
-	if (low_detail) {
+	else {
+#if 0
 		float z1(pos.z + height), z2(pos.z), r1(0.0), nz_avg(0.0);
-
 		for (vector<vert_norm>::const_iterator i = points.begin(); i != points.end(); ++i) {
-			nz_avg += i->n.z;
-			r1 = max(r1, p2p_dist_xy(pos, i->v));
-			z1 = min(z1, i->v.z);
-			z2 = max(z2, i->v.z);
+			nz_avg += i->n.z; r1 = max(r1, p2p_dist_xy(pos, i->v)); z1 = min(z1, i->v.z); z2 = max(z2, i->v.z);
 		}
 		nz_avg /= points.size();
-		z1 -= 0.3*height;
-		z2 -= 0.1*height;
-		points.resize(0);
+		//cout << "type: " << int(type) << ", nz_avg: " << nz_avg << ", r1s: " << r1/sz_scale << ", z1r: " << (z1-center.z)/sz_scale << ", z2r: " << (z2-center.z)/sz_scale << endl;
+		z1 -= 0.3*height; z2 -= 0.1*height;
+#endif
+		float const nz_avg(0.816), r1(1.475*sz_scale), z1(center.z - 0.55*sz_scale - 0.3*height), z2(center.z + 1.45*sz_scale - 0.1*height);
 
 		for (unsigned d = 0; d < 2; ++d) { // 2 quads: cross billboard simplified model
 			vector3d norm(zero_vector); // partially facing up and partially facing towards the camera
