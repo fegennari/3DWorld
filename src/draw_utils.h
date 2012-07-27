@@ -100,8 +100,8 @@ public:
 };
 
 
-typedef vbo_quad_block_manager_t<vert_norm_color   > vbo_vnc_quad_block_manager_t;
-typedef vbo_quad_block_manager_t<vert_norm_tc_color> vbo_vntc_quad_block_manager_t;
+typedef vbo_quad_block_manager_t<vert_norm_comp_color> vbo_vnc_quad_block_manager_t;
+typedef vbo_quad_block_manager_t<vert_norm_tc_color  > vbo_vntc_quad_block_manager_t;
 
 
 #endif // _DRAW_UTILS_H_

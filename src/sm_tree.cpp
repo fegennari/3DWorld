@@ -105,6 +105,7 @@ void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) {
 	if (empty() || is_uploaded(low_detail)) return;
 	//RESET_TIME;
 	finalize(low_detail);
+	//if (!low_detail) {PRINT_TIME("Finalize");}
 	vbo_manager[low_detail].upload();
 	vbo_manager[low_detail].clear_points();
 	//if (!low_detail) {PRINT_TIME("Finalize + Upload");}

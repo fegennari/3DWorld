@@ -145,8 +145,8 @@ void vbo_quad_block_manager_t<vert_type_t>::clear_vbo() {
 }
 
 // explicit template instantiations
-template class vbo_quad_block_manager_t<vert_norm_color   >;
-template class vbo_quad_block_manager_t<vert_norm_tc_color>;
+template class vbo_quad_block_manager_t<vert_norm_comp_color>;
+template class vbo_quad_block_manager_t<vert_norm_tc_color  >;
 
 
 
