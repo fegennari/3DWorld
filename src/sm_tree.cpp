@@ -202,7 +202,7 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate, vec
 void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, vector3d const xlate) const {
 
 	enable_blend();
-	vbo_quad_block_manager_t const &vbomgr(vbo_manager[low_detail]);
+	vbo_vnc_quad_block_manager_t const &vbomgr(vbo_manager[low_detail]);
 	vbomgr.begin_render(1);
 	select_texture((draw_model != 0) ? WHITE_TEX : stt[T_PINE].leaf_tid);
 
@@ -533,7 +533,7 @@ float small_tree::get_pine_tree_radius() const {
 }
 
 
-void small_tree::calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_detail) {
+void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low_detail) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
@@ -606,7 +606,7 @@ colorRGBA small_tree::get_bark_color() const {
 }
 
 
-void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager,
+void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_quad_block_manager_t const &vbo_manager,
 	bool low_detail, vector3d const xlate, vector<point> *points) const
 {
 	if (!(tree_mode & 2)) return; // disabled

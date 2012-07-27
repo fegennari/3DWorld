@@ -286,6 +286,7 @@ public:
 		}
 		return mem;
 	}
+	unsigned get_tree_mem() const {return trees.capacity()*sizeof(small_tree);}
 
 	void clear() {
 		clear_vbo_tid(1, 1);
@@ -653,6 +654,7 @@ public:
 		init_tree_dxoff = -xoff2;
 		init_tree_dyoff = -yoff2;
 		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
+		//small_tree_group(trees).swap(trees); // makes little difference
 		tzmax = mzmin;
 		trmax = 0.0;
 		
@@ -957,7 +959,7 @@ public:
 		glDisable(GL_NORMALIZE);
 		set_array_client_state(1, 0, 1, 0);
 		unsigned num_drawn(0), num_trees(0);
-		unsigned long long mem(grass_tile_manager.get_gpu_mem());
+		unsigned long long mem(grass_tile_manager.get_gpu_mem()), tree_mem(0);
 		vector<tile_t::vert_type_t> data;
 		vector<unsigned short> indices[NUM_LODS];
 		static point last_sun(all_zeros), last_moon(all_zeros);
@@ -970,7 +972,11 @@ public:
 		}
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			assert(i->second);
-			if (DEBUG_TILES) mem += i->second->get_gpu_memory();
+			
+			if (DEBUG_TILES) {
+				mem += i->second->get_gpu_memory();
+				tree_mem += i->second->get_tree_mem();
+			}
 			if (add_hole && i->first.x == 0 && i->first.y == 0) continue;
 			float const dist(i->second->get_rel_dist_to_camera());
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
@@ -993,7 +999,11 @@ public:
 			to_draw[i].second->draw(reflection_pass);
 		}
 		s.end_shader();
-		if (DEBUG_TILES) cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", gpu mem: " << mem/1024/1024 << endl;
+		
+		if (DEBUG_TILES) {
+			cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: "
+				<< num_trees << ", gpu mem: " << mem/1024/1024 << ", tree mem: " << tree_mem/1024/1024 << endl;
+		}
 		run_post_mesh_draw();
 		if (trees_enabled()  ) {draw_trees  (to_draw, reflection_pass);}
 		if (scenery_enabled()) {draw_scenery(to_draw, reflection_pass);}
@@ -1087,7 +1097,7 @@ public:
 			to_draw[i].second->draw_scenery(s, 1, 0); // opaque
 		}
 		s.end_shader();
-		set_leaf_shader(s, 0.9, 0, 0);
+		set_leaf_shader(s, 0.9, 1, 0);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->draw_scenery(s, 0, 1); // leaves

@@ -72,9 +72,8 @@ public:
 };
 
 
-class vbo_quad_block_manager_t {
+template< typename vert_type_t > class vbo_quad_block_manager_t {
 
-	typedef vert_norm_tc_color vert_type_t;
 	vector<vert_type_t> pts;
 	vector<unsigned> offsets;
 	unsigned vbo;
@@ -88,9 +87,7 @@ public:
 	void reserve_pts(unsigned num) {assert(pts.empty()); pts.reserve(num);}
 	bool is_uploaded() const {return (vbo != 0);}
 	bool has_data() const {return (offsets.size() > 1);}
-	template<typename T> unsigned add_points_int(vector<T> const &p, colorRGBA const &color);
-	unsigned add_points(vector<vert_norm> const &p, colorRGBA const &color);
-	unsigned add_points(vector<vert_norm_tc> const &p, colorRGBA const &color);
+	unsigned add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color);
 	void render_range(unsigned six, unsigned eix) const;
 	void render_all() const {if (has_data()) {render_range(0, offsets.size()-1);}}
 	bool upload();
@@ -101,6 +98,10 @@ public:
 	void clear();
 	unsigned get_gpu_mem() const {return ((vbo && has_data()) ? offsets.back()*sizeof(vert_type_t) : 0);} // not implemented
 };
+
+
+typedef vbo_quad_block_manager_t<vert_norm_color   > vbo_vnc_quad_block_manager_t;
+typedef vbo_quad_block_manager_t<vert_norm_tc_color> vbo_vntc_quad_block_manager_t;
 
 
 #endif // _DRAW_UTILS_H_

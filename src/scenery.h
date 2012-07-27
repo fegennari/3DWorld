@@ -46,9 +46,9 @@ class surface_rock : public scenery_obj { // size = 1456+
 
 public:
 	surface_rock() : vbo_mgr_ix(-1), surface(NULL) {}
-	void create(int x, int y, int use_xy, vbo_quad_block_manager_t &vbo_manager);
+	void create(int x, int y, int use_xy, vbo_vntc_quad_block_manager_t &vbo_manager);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only, vector3d const &xlate, vbo_quad_block_manager_t &vbo_manager) const;
+	void draw(float sscale, bool shadow_only, vector3d const &xlate, vbo_vntc_quad_block_manager_t &vbo_manager) const;
 	void destroy();
 };
 
@@ -103,13 +103,13 @@ class s_plant : public scenery_obj { // size = 40
 public:
 	s_plant() : coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
-	int create(int x, int y, int use_xy, float minz, vbo_quad_block_manager_t &vbo_manager);
-	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_quad_block_manager_t &vbo_manager);
+	int create(int x, int y, int use_xy, float minz, vbo_vnc_quad_block_manager_t &vbo_manager);
+	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_quad_block_manager_t &vbo_manager);
 	void add_cobjs();
-	void gen_points(vbo_quad_block_manager_t &vbo_manager);
+	void gen_points(vbo_vnc_quad_block_manager_t &vbo_manager);
 	bool is_shadowed() const;
 	void draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const;
-	void draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const;
+	void draw_leaves(shader_t &s, vbo_vnc_quad_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const;
 	void remove_cobjs();
 	void destroy();
 };
@@ -123,7 +123,8 @@ class scenery_group {
 	vector<s_log>        logs;
 	vector<s_stump>      stumps;
 	vector<s_plant>      plants;
-	vbo_quad_block_manager_t vbo_manager;
+	vbo_vnc_quad_block_manager_t plant_vbo_manager;
+	vbo_vntc_quad_block_manager_t rock_vbo_manager;
 
 public:
 	bool generated;
@@ -141,7 +142,7 @@ public:
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate);
 	void draw_opaque_objects(bool shadow_only, vector3d const &xlate, bool draw_pld);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);
-	unsigned get_gpu_mem() const {return vbo_manager.get_gpu_mem();} // only accounts for part of the memory
+	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
 };
 
 

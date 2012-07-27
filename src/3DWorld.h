@@ -756,7 +756,9 @@ struct vert_color : public color_wrapper { // size = 16
 
 
 struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
+	typedef vert_norm non_color_class;
 	vert_norm_color() {}
+	vert_norm_color(vert_norm const &vn, color_wrapper const &cw) : vert_norm(vn), color_wrapper(cw) {}
 	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const     &c_) : vert_norm(v_, n_) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, unsigned char const *c_) : vert_norm(v_, n_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
 	static void set_vbo_arrays(unsigned force_stride=0);
@@ -764,12 +766,16 @@ struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 
 
 struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // size = 20
+	typedef vert_norm_comp non_color_class;
 	vert_norm_comp_color() {}
+	vert_norm_comp_color(vert_norm_comp const &vn, colorRGBA const &c_) : vert_norm_comp(vn) {set_c4(c_);}
+	vert_norm_comp_color(point const &v_, vector3d const &n_, colorRGBA const &c_) : vert_norm_comp(v_, n_) {set_c4(c_);}
 	static void set_vbo_arrays(unsigned force_stride=0);
 };
 
 
 struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size = 36
+	typedef vert_norm_tc non_color_class;
 	vert_norm_tc_color() {}
 	vert_norm_tc_color(point const &v_, vector3d const &n_, float ts, float tt, colorRGB const &c_)
 		: vert_norm_tc(v_, n_, ts, tt) {set_c3(c_);}
@@ -1880,7 +1886,7 @@ void mult_leaf_points_by(float val);
 colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture);
 int get_tree_class_from_height(float zpos);
 int get_tree_type_from_height(float zpos);
-void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader);
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords=0, bool use_geom_shader=0, unsigned tc_start_ix=0);
 
 // function prototypes - csg
 void get_cube_points(const float d[3][2], point pts[8]);

@@ -73,14 +73,15 @@ void quad_batch_draw::draw() const {
 }
 
 
-template<typename T> unsigned vbo_quad_block_manager_t::add_points_int(vector<T> const &p, colorRGBA const &color) {
+template< typename vert_type_t >
+unsigned vbo_quad_block_manager_t<vert_type_t>::add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
 
 	assert(!p.empty());
 	assert((p.size()&3) == 0); // must be quads
 	color_wrapper cw;
 	cw.set_c4(color);
 		
-	for (vector<T>::const_iterator i = p.begin(); i != p.end(); ++i) {
+	for (vector<vert_type_t::non_color_class>::const_iterator i = p.begin(); i != p.end(); ++i) {
 		pts.push_back(vert_type_t(*i, cw));
 	}
 	assert(!offsets.empty());
@@ -89,24 +90,15 @@ template<typename T> unsigned vbo_quad_block_manager_t::add_points_int(vector<T>
 	return next_ix;
 }
 
-unsigned vbo_quad_block_manager_t::add_points(vector<vert_norm> const &p, colorRGBA const &color) {
-
-	unsigned const num_quads(p.size()/4), start_ix(pts.size()), next_ix(add_points_int(p, color));
-	gen_quad_tex_coords(pts[start_ix].t, num_quads, sizeof(vert_type_t)/sizeof(float));
-	return next_ix;
-}
-
-unsigned vbo_quad_block_manager_t::add_points(vector<vert_norm_tc> const &p, colorRGBA const &color) {
-	return add_points_int(p, color);
-}
-
-void vbo_quad_block_manager_t::render_range(unsigned six, unsigned eix) const {
+template< typename vert_type_t >
+void vbo_quad_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix) const {
 
 	assert(six < eix && eix < offsets.size());
 	glDrawArrays(GL_QUADS, offsets[six], offsets[eix]-offsets[six]);
 }
 
-bool vbo_quad_block_manager_t::upload() {
+template< typename vert_type_t >
+bool vbo_quad_block_manager_t<vert_type_t>::upload() {
 
 	if (vbo || !has_data()) return 0; // already uploaded or empty
 	assert(!pts.empty());
@@ -117,7 +109,8 @@ bool vbo_quad_block_manager_t::upload() {
 	return 1;
 }
 
-void vbo_quad_block_manager_t::begin_render(bool color_mat) const {
+template< typename vert_type_t >
+void vbo_quad_block_manager_t<vert_type_t>::begin_render(bool color_mat) const {
 
 	if (!has_data()) return;
 	if (color_mat) {glEnable(GL_COLOR_MATERIAL);}
@@ -127,25 +120,33 @@ void vbo_quad_block_manager_t::begin_render(bool color_mat) const {
 	vert_type_t::set_vbo_arrays();
 }
 
-void vbo_quad_block_manager_t::end_render() const {
+template< typename vert_type_t >
+void vbo_quad_block_manager_t<vert_type_t>::end_render() const {
 
 	glDisable(GL_COLOR_MATERIAL);
 	bind_vbo(0);
 }
 
-void vbo_quad_block_manager_t::clear_vbo() {
+template< typename vert_type_t >
+void vbo_quad_block_manager_t<vert_type_t>::clear() {
+
+	clear_points();
+	temp_points.clear();
+	offsets.clear();
+	offsets.push_back(0); // start at 0
+	clear_vbo();
+}
+
+template< typename vert_type_t >
+void vbo_quad_block_manager_t<vert_type_t>::clear_vbo() {
 	
 	delete_vbo(vbo);
 	vbo = 0;
 }
 
-void vbo_quad_block_manager_t::clear() {
-
-	clear_points();
-	offsets.clear();
-	offsets.push_back(0); // start at 0
-	clear_vbo();
-}
+// explicit template instantiations
+template class vbo_quad_block_manager_t<vert_norm_color   >;
+template class vbo_quad_block_manager_t<vert_norm_tc_color>;
 
 
 

@@ -374,7 +374,7 @@ void surface_cache::clear_unref() {
 surface_cache surface_rock_cache;
 
 
-void surface_rock::create(int x, int y, int use_xy, vbo_quad_block_manager_t &vbo_manager) {
+void surface_rock::create(int x, int y, int use_xy, vbo_vntc_quad_block_manager_t &vbo_manager) {
 
 	gen_spos(x, y, use_xy);
 	radius  = 0.5*rand_uniform2(0.2/msms2, 0.8/msms2)*rand_float2();
@@ -398,7 +398,7 @@ void surface_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, vbo_quad_block_manager_t &vbo_manager) const {
+void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, vbo_vntc_quad_block_manager_t &vbo_manager) const {
 
 	assert(surface);
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
@@ -597,7 +597,7 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate) const 
 }
 
 
-int s_plant::create(int x, int y, int use_xy, float minz, vbo_quad_block_manager_t &vbo_manager) {
+int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_quad_block_manager_t &vbo_manager) {
 
 	vbo_mgr_ix = -1;
 	type   = rand2()%NUM_PLANT_TYPES;
@@ -609,7 +609,7 @@ int s_plant::create(int x, int y, int use_xy, float minz, vbo_quad_block_manager
 	return 1;
 }
 
-void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_quad_block_manager_t &vbo_manager) {
+void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_quad_block_manager_t &vbo_manager) {
 
 	vbo_mgr_ix = -1;
 	type   = abs(type_)%NUM_PLANT_TYPES;
@@ -631,7 +631,7 @@ void s_plant::add_cobjs() {
 	coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
 }
 
-void s_plant::gen_points(vbo_quad_block_manager_t &vbo_manager) {
+void s_plant::gen_points(vbo_vnc_quad_block_manager_t &vbo_manager) {
 
 	if (vbo_mgr_ix >= 0) return; // already generated
 	float const wscale(250.0*radius*msms2);
@@ -687,7 +687,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 	}
 }
 
-void s_plant::draw_leaves(shader_t &s, vbo_quad_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const {
+void s_plant::draw_leaves(shader_t &s, vbo_vnc_quad_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const {
 
 	point const pos2(pos + xlate);
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, (height + radius), 2)) return;
@@ -749,7 +749,8 @@ void scenery_group::clear_vbos_and_dlists() {
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
 		rock_shapes[i].clear_dlist();
 	}
-	vbo_manager.clear_vbo();
+	plant_vbo_manager.clear_vbo();
+	rock_vbo_manager.clear_vbo();
 }
 
 void scenery_group::clear() {
@@ -819,7 +820,7 @@ void scenery_group::add_plant(point const &pos, float height, float radius, int 
 
 	assert(height > 0.0 && radius > 0.0);
 	plants.push_back(s_plant());
-	plants.back().create2(pos, height, radius, type, calc_z, vbo_manager);
+	plants.back().create2(pos, height, radius, type, calc_z, plant_vbo_manager);
 }
 
 void scenery_group::gen(int x1, int y1, int x2, int y2) {
@@ -842,7 +843,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2) {
 			
 			if (veg && rand2()%100 < 30) {
 				plants.push_back(s_plant()); // 30%
-				if (!plants.back().create(j, i, 1, min_plant_z, vbo_manager)) plants.pop_back();
+				if (!plants.back().create(j, i, 1, min_plant_z, plant_vbo_manager)) plants.pop_back();
 			}
 			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());
@@ -850,7 +851,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2) {
 			}
 			else if (val < 15) { // 7%
 				surface_rocks.push_back(surface_rock());
-				surface_rocks.back().create(j, i, 1, vbo_manager);
+				surface_rocks.back().create(j, i, 1, rock_vbo_manager);
 			}
 			else if (val < 50) { // 24.5%
 				rocks.push_back(s_rock());
@@ -873,13 +874,13 @@ void scenery_group::gen(int x1, int y1, int x2, int y2) {
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate) {
 
 	enable_blend();
-	vbo_manager.upload();
-	vbo_manager.begin_render(s.is_setup());
+	plant_vbo_manager.upload();
+	plant_vbo_manager.begin_render(s.is_setup());
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
-		plants[i].draw_leaves(s, vbo_manager, shadow_only, xlate);
+		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, xlate);
 	}
-	vbo_manager.end_render();
+	plant_vbo_manager.end_render();
 	disable_blend();
 }
 
@@ -895,13 +896,13 @@ void scenery_group::draw_opaque_objects(bool shadow_only, vector3d const &xlate,
 	}
 	assert(quadric != 0);
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
-	vbo_manager.upload();
-	vbo_manager.begin_render(1);
+	rock_vbo_manager.upload();
+	rock_vbo_manager.begin_render(1);
 
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) {
-		surface_rocks[i].draw(sscale, shadow_only, xlate, vbo_manager);
+		surface_rocks[i].draw(sscale, shadow_only, xlate, rock_vbo_manager);
 	}
-	vbo_manager.end_render();
+	rock_vbo_manager.end_render();
 	glEnable(GL_COLOR_MATERIAL);
 	draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
 	gluQuadricTexture(quadric, GL_TRUE);
@@ -924,7 +925,7 @@ void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_on
 	}
 	if (draw_transparent) { // draw leaves
 		shader_t s;
-		set_leaf_shader(s, 0.9, 0, 0);
+		set_leaf_shader(s, 0.9, 1, 0);
 		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
 	}

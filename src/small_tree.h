@@ -29,10 +29,10 @@ public:
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
 	void clear_vbo_mgr_ix(int which=3);
-	void calc_points(vbo_quad_block_manager_t &vbo_manager, bool low_detail);
+	void calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_bark_color() const;
-	void draw(int mode, bool shadow_only, bool do_cull, vbo_quad_block_manager_t const &vbo_manager,
+	void draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_quad_block_manager_t const &vbo_manager,
 		bool low_detail=0, vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
@@ -55,7 +55,7 @@ public:
 
 struct small_tree_group : public vector<small_tree> {
 
-	vbo_quad_block_manager_t vbo_manager[2]; // {high, low} detail
+	vbo_vnc_quad_block_manager_t vbo_manager[2]; // {high, low} detail
 	vector<point> trunk_pts;
 	bool generated;
 	unsigned num_pine_trees;

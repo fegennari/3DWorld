@@ -218,7 +218,7 @@ void draw_trees_bl(shader_t const &s, bool draw_branches, bool draw_leaves, bool
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader) {
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
@@ -240,6 +240,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 	s.add_uniform_float("min_alpha", min_alpha);
 	set_multitex(0);
 	s.add_uniform_int("tex0", 0);
+	s.add_uniform_int("tc_start_ix", tc_start_ix);
 	check_gl_error(301);
 }
 
@@ -282,7 +283,7 @@ void draw_trees(bool shadow_only) {
 		disable_multitex_a();
 
 		// draw leaves
-		set_leaf_shader(ls, 0.75, !USE_LEAF_GEOM_SHADER, USE_LEAF_GEOM_SHADER);
+		set_leaf_shader(ls, 0.75, !USE_LEAF_GEOM_SHADER, USE_LEAF_GEOM_SHADER, 3);
 		
 		if (draw_model == 0) { // solid fill
 			enable_blend();

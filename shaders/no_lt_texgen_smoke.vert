@@ -19,6 +19,10 @@ void main()
 		gl_TexCoord[0].p = 0.0;
 		gl_TexCoord[0].q = 1.0;
 	}
+	else if (use_texgen == 3) {
+		int tc_table_ix = gl_VertexID & 3;
+		gl_TexCoord[0].st = vec2(vec4(0,1,1,0)[tc_table_ix], vec4(0,0,1,1)[tc_table_ix]);
+	}
 	else {
 		gl_TexCoord[0] = gl_MultiTexCoord0;
 		gl_TexCoord[0].st *= vec2(tex_scale_s, tex_scale_t);
