@@ -1,7 +1,7 @@
 uniform float water_plane_z  = 0.0;
 uniform float water_atten    = 1.0;
 uniform float normal_z_scale = 1.0;
-uniform sampler2D shadow_tex;
+uniform sampler2D shadow_normal_tex;
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
@@ -41,8 +41,8 @@ void main()
 	setup_texgen(0);
 	setup_texgen(1);
 	gl_Position = ftransform();
-	vec3 normal = normalize(gl_NormalMatrix * (gl_Normal * vec3(1.0, 1.0, normal_z_scale))); // eye space
-	normal     *= texture2D(shadow_tex, gl_TexCoord[0].st).r;
+	vec4 shadow_normal = texture2D(shadow_normal_tex, gl_TexCoord[0].st);
+	vec3 normal = normalize(gl_NormalMatrix * ((2.0*shadow_normal.xyz - 1.0) * vec3(1.0, 1.0, normal_z_scale))) * shadow_normal.w; // eye space
 	vec4 color  = gl_LightModel.ambient;
 	if (enable_light0) color += add_light_comp(normal, 0);
 	if (enable_light1) color += add_light_comp(normal, 1);

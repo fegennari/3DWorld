@@ -206,7 +206,7 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 class tile_t {
 
 	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_tree_dxoff, init_tree_dyoff, init_scenery_dxoff, init_scenery_dyoff;
-	unsigned weight_tid, height_tid, shadow_tid, vbo, ivbo[NUM_LODS];
+	unsigned weight_tid, height_tid, shadow_normal_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, tzmax, trmax, xstart, ystart, xstep, ystep;
 	bool shadows_invalid;
@@ -226,16 +226,16 @@ class tile_t {
 	vector<grass_block_t> grass_blocks;
 
 public:
-	typedef vert_norm_comp vert_type_t;
+	typedef point vert_type_t;
 
-	tile_t() : weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {
+	tile_t() : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {
 		init_vbo_ids();
 	}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~tile_t() {clear_vbo_tid(1,1);}
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_tree_dxoff(0), init_tree_dyoff(0),
-		init_scenery_dxoff(0), init_scenery_dyoff(0), weight_tid(0), height_tid(0), shadow_tid(0), vbo(0), size(size_), stride(size+1),
+		init_scenery_dxoff(0), init_scenery_dyoff(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(size_), stride(size+1),
 		zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1)
 	{
 		assert(size > 0);
@@ -279,7 +279,7 @@ public:
 		if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
 		if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 		if (height_tid > 0) mem += 2*num_texels; // 2 bytes per texel (L16)
-		if (shadow_tid > 0) mem += 1*num_texels; // 1 byte  per texel (L8)
+		if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (L8)
 
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			if (ivbo[i] > 0) mem += (size>>i)*(size>>i)*sizeof(unsigned short);
@@ -309,7 +309,7 @@ public:
 	void clear_tids() {
 		free_texture(weight_tid);
 		free_texture(height_tid);
-		free_texture(shadow_tid);
+		free_texture(shadow_normal_tid);
 		gen_tsize = 0;
 	}
 
@@ -469,13 +469,25 @@ public:
 		//PRINT_TIME("Shadows");
 	}
 
-	void check_shadow_map_texture() {
-		if (shadows_invalid) {free_texture(shadow_tid);}
-		if (shadow_tid) return; // up-to-date
-		setup_texture(shadow_tid, GL_MODULATE, 0, 0, 0, 0, 0);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &shadow_map.front());
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	struct norm_comp_with_shadow {
+		unsigned char v[4];
+	};
+
+	void check_shadow_map_and_normal_texture() {
+		if (shadows_invalid) {free_texture(shadow_normal_tid);}
+		if (shadow_normal_tid) return; // up-to-date
+		setup_texture(shadow_normal_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+		vector<norm_comp_with_shadow> data(stride*stride);
+
+		for (unsigned y = 0; y < stride; ++y) {
+			for (unsigned x = 0; x < stride; ++x) {
+				unsigned const ix(y*stride + x);
+				vector3d const norm(get_norm(y*zvsize + x));
+				UNROLL_3X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));)
+				data[ix].v[3] = shadow_map[ix];
+			}
+		}
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
 		shadows_invalid = 0;
 	}
 
@@ -503,8 +515,7 @@ public:
 				else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix] & SHADOWED_ALL) {
 					light_scale = 0.0;
 				}
-				point const v((xstart + x*xstep), (ystart + y*ystep), zvals[ix]);
-				data[y*stride + x] = vert_norm_comp(v, get_norm(ix));
+				data[y*stride + x].assign((xstart + x*xstep), (ystart + y*ystep), zvals[ix]);
 				shadow_map[y*stride + x] = (unsigned char)(255.0*light_scale);
 			}
 		}
@@ -766,7 +777,7 @@ public:
 		if (grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
 		bind_texture_tu(height_tid, 2);
 		bind_texture_tu(weight_tid, 3);
-		bind_texture_tu(shadow_tid, 4);
+		bind_texture_tu(shadow_normal_tid, 4);
 		s.add_uniform_float("x1",  -0.5*DX_VAL);
 		s.add_uniform_float("y1",  -0.5*DY_VAL);
 		s.add_uniform_float("x2",  (size + 0.5)*DX_VAL);
@@ -818,7 +829,7 @@ public:
 			}
 		}
 		if (weight_tid == 0) {create_texture();}
-		check_shadow_map_texture();
+		check_shadow_map_and_normal_texture();
 	}
 
 	void draw(bool reflection_pass) const {
@@ -829,7 +840,7 @@ public:
 		glPushMatrix();
 		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
 		set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
-		bind_texture_tu(shadow_tid, 7);
+		bind_texture_tu(shadow_normal_tid, 7);
 		unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
 		float dist(get_dist_to_camera_in_tiles());
 
@@ -845,7 +856,6 @@ public:
 		
 		// can store normals in a normal map texture, but a vertex texture fetch is slow
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
-		glNormalPointer(GL_BYTE, ptr_stride, (void *)sizeof(point)); // was GL_FLOAT
 		glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz*isz, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
@@ -945,7 +955,7 @@ public:
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
-		s.add_uniform_int("shadow_tex", 7);
+		s.add_uniform_int("shadow_normal_tex", 7);
 		s.add_uniform_float("water_plane_z", (is_water_enabled() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
@@ -957,7 +967,7 @@ public:
 	float draw(bool add_hole, float wpz, bool reflection_pass) {
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
-		set_array_client_state(1, 0, 1, 0);
+		set_array_client_state(1, 0, 0, 0);
 		unsigned num_drawn(0), num_trees(0);
 		unsigned long long mem(grass_tile_manager.get_gpu_mem()), tree_mem(0);
 		vector<tile_t::vert_type_t> data;
@@ -1129,7 +1139,7 @@ public:
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_int("height_tex", 2);
 			s.add_uniform_int("weight_tex", 3);
-			s.add_uniform_int("shadow_tex", 4);
+			s.add_uniform_int("shadow_normal_tex", 4);
 			set_noise_tex(s, 5);
 			s.setup_fog_scale();
 			s.add_uniform_float("height", grass_length);
