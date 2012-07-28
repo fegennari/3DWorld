@@ -2,8 +2,7 @@ uniform float camera_facing_scale = 0.0;
 
 void main()
 {
-	int tc_table_ix = gl_VertexID & 3;
-	gl_TexCoord[0].st = vec2(vec4(0,1,1,0)[tc_table_ix], vec4(0,0,1,1)[tc_table_ix]);
+	set_tc0_from_vert_id();
 	gl_Position     = ftransform();
 	vec3 epos       = (gl_ModelViewMatrix * gl_Vertex).xyz;
 	gl_FogFragCoord = length(epos); // set standard fog coord

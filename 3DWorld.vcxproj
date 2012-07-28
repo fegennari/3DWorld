@@ -862,6 +862,7 @@
     <None Include="shaders\ship_draw.vert" />
     <None Include="shaders\snow.vert" />
     <None Include="shaders\spec_map.part.frag" />
+    <None Include="shaders\tc_by_vert_id.part.vert" />
     <None Include="shaders\tiled_mesh.frag" />
     <None Include="shaders\tree_branches_as_lines.vert" />
     <None Include="shaders\tree_leaves_as_pts.vert" />

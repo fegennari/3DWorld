@@ -1044,7 +1044,7 @@ public:
 		s.set_prefix("#define USE_GOOD_SPECULAR",  0); // VS
 		s.set_prefix("#define USE_QUADRATIC_FOG",  1); // FS
 		s.setup_enabled_lights(2);
-		s.set_vert_shader("ads_lighting.part*+pine_tree");
+		s.set_vert_shader("ads_lighting.part*+tc_by_vert_id.part+pine_tree");
 		s.set_frag_shader("linear_fog.part+pine_tree");
 		s.begin_shader();
 		s.setup_fog_scale();

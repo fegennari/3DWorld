@@ -233,7 +233,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 		//setup_wind_for_shader(s, 1); // FIXME: add wind?
 	}
 	else {
-		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves");
+		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tc_by_vert_id.part+tree_leaves");
 		s.begin_shader();
 	}
 	s.setup_fog_scale();

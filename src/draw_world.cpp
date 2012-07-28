@@ -393,7 +393,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	smoke_en       &= have_indir_smoke_tex;
 	common_shader_block_pre(s, dlights, use_shadow_map, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_enabled, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, (two_sided_lighting || force_tsl));
-	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+no_lt_texgen_smoke");
+	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+tc_by_vert_id.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
 
@@ -437,7 +437,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 		s.set_int_prefix("ndiv", def_ndiv, 2); // GS
 		s.set_geom_shader("line_to_cylinder", GL_LINES, GL_TRIANGLE_STRIP, 2*(def_ndiv + 1)); // with adjacency?
 	}
-	s.set_vert_shader(use_geom_shader ? "tree_branches_as_lines" : "texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+no_lt_texgen_smoke");
+	s.set_vert_shader(use_geom_shader ? "tree_branches_as_lines" : "texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+tc_by_vert_id.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
 	common_shader_block_post(s, dlights, use_shadow_map, 0, 0.0);
