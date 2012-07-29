@@ -541,9 +541,9 @@ void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low
 	float const sz_scale(0.5*(height0 + 0.03/(mesh_scale*mesh_scale2)));
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
 	vector<vert_norm> &points(vbo_manager.temp_points);
-	points.resize(0);
 
 	if (!low_detail) {
+		points.resize(0);
 		float const rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 
 		for (unsigned j = 0; j < N_PT_LEVELS; ++j) {
@@ -568,22 +568,23 @@ void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low
 		z1 -= 0.3*height; z2 -= 0.1*height;
 #endif
 		float const nz_avg(0.816), r1(1.475*sz_scale), z1(center.z - 0.55*sz_scale - 0.3*height), z2(center.z + 1.45*sz_scale - 0.1*height);
+		points.resize(8);
 
-		for (unsigned d = 0; d < 2; ++d) { // 2 quads: cross billboard simplified model
-			vector3d norm(zero_vector); // partially facing up and partially facing towards the camera
-			norm[d] = -sqrt(1.0 - nz_avg*nz_avg);
-			norm[2] = nz_avg;
-			point pt;
-			pt[!d] = pos[!d];
-			pt[2]  = z2;
-			pt[d]  = pos[d] + r1;
-			points.push_back(vert_norm(pt, norm));
-			pt[d]  = pos[d] - r1;
-			points.push_back(vert_norm(pt, norm));
-			pt[2]  = z1;
-			points.push_back(vert_norm(pt, norm));
-			pt[d]  = pos[d] + r1;
-			points.push_back(vert_norm(pt, norm));
+		for (unsigned d = 0, ix = 0; d < 2; ++d) { // 2 quads: cross billboard simplified model
+			vert_norm vn;
+			vn.n[!d] = 0.0;
+			vn.n[d] = -sqrt(1.0 - nz_avg*nz_avg); // partially facing up and partially facing towards the camera
+			vn.n[2] = nz_avg;
+			vn.v[!d] = pos[!d];
+			vn.v[2]  = z2;
+			vn.v[d]  = pos[d] + r1;
+			points[ix++] = vn;
+			vn.v[d]  = pos[d] - r1;
+			points[ix++] = vn;
+			vn.v[2]  = z1;
+			points[ix++] = vn;
+			vn.v[d]  = pos[d] + r1;
+			points[ix++] = vn;
 		}
 	}
 	vbo_mgr_ix[low_detail] = vbo_manager.add_points(points, color);

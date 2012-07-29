@@ -291,12 +291,9 @@ float get_exact_zval(float xval, float yval) {
 // This really solves for the z value of an x/y point on the mesh plane, but it is somewhat like interpolation.
 float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equation, int ignore_ice) {
 
+	if (world_mode == WMODE_INF_TERRAIN) {return get_exact_zval(xval, yval);}
 	int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
-	
-	if ((world_mode == WMODE_INF_TERRAIN || point_outside_mesh(xpos, ypos)) && use_real_equation) {
-		return get_exact_zval(xval, yval);
-	}
-	if (point_outside_mesh(xpos, ypos)) return (zbottom - SMALL_NUMBER);
+	if (point_outside_mesh(xpos, ypos)) {return (use_real_equation ? get_exact_zval(xval, yval) : (zbottom - SMALL_NUMBER));}
 	float const xp((xval + X_SCENE_SIZE)*DX_VAL_INV), yp((yval + Y_SCENE_SIZE)*DY_VAL_INV);
 	int const x0((int)xp), y0((int)yp);
 	bool const xy0_bad(x0 < 0 || y0 < 0 || x0 >= MESH_X_SIZE-1 || y0 >= MESH_Y_SIZE-1);

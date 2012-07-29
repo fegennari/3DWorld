@@ -811,7 +811,7 @@ float eval_mesh_sin_terms(float xv, float yv) {
 
 float eval_one_surface_point(float xval, float yval) {
 
-	if (read_landscape || read_heightmap) { // interpolate from provided coords
+	if ((read_landscape || read_heightmap) && world_mode == WMODE_GROUND) { // interpolate from provided coords
 		int xy[2] = {int(xval + 0.5), int(yval + 0.5)};
 		clamp_to_mesh(xy);
 		return mesh_height[xy[1]][xy[0]]; // could interpolate?
