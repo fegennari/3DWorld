@@ -502,6 +502,8 @@ void change_terrain_zoom(float val) {
 		mesh_scale2   /= val;
 		rand_gen_index = rand();
 		regen_trees(1, 1);
+		build_cobj_tree();
+		gen_grass(0);
 		compute_volume_matrix(); // make lightning strike the new tree(s)
 		return;
 	}
