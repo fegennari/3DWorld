@@ -39,7 +39,6 @@ float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, draw_mesh_shader, disable_shaders;
-extern unsigned num_jterms;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;

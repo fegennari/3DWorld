@@ -53,7 +53,6 @@ int   const START_L0_FREQ_COMP = NUM_FREQ_COMP - NUM_L0_FREQ_COMP;
 
 
 // Global Variables
-unsigned num_jterms(F_TABLE_SIZE);
 int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), mesh_scale2(1.0), mesh_scale_z(1.0), hoff_global(0.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
@@ -61,7 +60,7 @@ float mesh_height_scale(1.0), zmm_calc(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
 float *sin_table(NULL), *cos_table(NULL);
 
 // landscape tables
-float sinTable[F_TABLE_SIZE][5], iTerms[F_TABLE_SIZE], **jTerms = NULL;
+float sinTable[F_TABLE_SIZE][5], jTerms[F_TABLE_SIZE][DYNAMIC_MESH_SZ];
 float iTerms2[DYNAMIC_MESH_SZ][F_TABLE_SIZE], jTerms2[DYNAMIC_MESH_SZ][F_TABLE_SIZE];
 
 int const mesh_tids_sand[NTEX_SAND] = {SAND_TEX, GROUND_TEX, ROCK_TEX,   SNOW_TEX};
@@ -88,7 +87,6 @@ void estimate_zminmax(bool using_eq);
 void set_zvals();
 void update_temperature(bool verbose);
 void compute_scale(int make_island);
-void init_jterms();
 
 
 
@@ -234,12 +232,13 @@ void gen_mesh_random(float height) {
 }
 
 
-void gen_mesh_sine_table(float **matrix, float **jterms, int x_offset, int y_offset, int xsize, int ysize, int make_island) {
+void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, int ysize, int make_island) {
 
 	assert(matrix);
 	int const num_freq(make_island ? NUM_L0_FREQ_COMP : NUM_FREQ_COMP), nsines(num_freq*N_RAND_SIN2);
 	float hoff(0.0);
 	int i2(y_offset - ysize/2), j2(x_offset - xsize/2);
+	assert(end_eval_sin <= F_TABLE_SIZE && xsize <= DYNAMIC_MESH_SZ);
 
 	if (end_eval_sin < nsines) {
 		float const iscale(mesh_scale*i2), jscale(mesh_scale*j2);
@@ -254,7 +253,7 @@ void gen_mesh_sine_table(float **matrix, float **jterms, int x_offset, int y_off
 		float const *stk(sinTable[k]);
 
 		for (int j = 0; j < xsize; ++j) {
-			jterms[k][j] = sinf(mesh_scale*stk[4]*(j+j2) + stk[2]);
+			jTerms[k][j] = sinf(mesh_scale*stk[4]*(j+j2) + stk[2]);
 		}
 	}
 	for (int i = 0; i < ysize; ++i) {
@@ -266,7 +265,7 @@ void gen_mesh_sine_table(float **matrix, float **jterms, int x_offset, int y_off
 			float const val((stk[0]/mesh_scale_z)*sinf(stk[3]*si2 + stk[1]));
 
 			for (int j = 0; j < xsize; ++j) {
-				matrix[i][j] += val*jterms[k][j]; // performance critical
+				matrix[i][j] += val*jTerms[k][j]; // performance critical
 			}
 		}
 		if (hoff != 0.0) { // add in low frequency terms
@@ -319,7 +318,6 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 	bool surface_generated(0);
 	bool const loaded_surface(surface_type >= 3);
 	bool const gen_scroll_surface(GEN_SCROLLING_MESH && scrolling && loaded_surface);
-	init_jterms();
 	++cache_counter; // invalidate mesh cache
 	int const num_freq(make_island ? NUM_L0_FREQ_COMP : NUM_FREQ_COMP);
 	float const scaled_height(MESH_HEIGHT*mesh_height_scale);
@@ -384,7 +382,7 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 			// *** sort sinTable? ***
 		}
 		if (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) {
-			gen_mesh_sine_table(mesh_height, jTerms, xoff2, yoff2, MESH_X_SIZE, MESH_Y_SIZE, make_island);
+			gen_mesh_sine_table(mesh_height, xoff2, yoff2, MESH_X_SIZE, MESH_Y_SIZE, make_island);
 		} // world_mode test
 	} // end sine waves
 	if (surface_type == 1) { // random
@@ -682,12 +680,6 @@ void compute_scale(int make_island) {
 }
 
 
-void init_jterms() {
-
-	if (jTerms == NULL) matrix_gen_2d(jTerms, MESH_X_SIZE, F_TABLE_SIZE);
-}
-
-
 void build_xy_mesh_arrays(float x0, float y0, float dx, float dy, int nx, int ny) {
 
 	if (nx <= 0 || ny <= 0 || nx > DYNAMIC_MESH_SZ || ny > DYNAMIC_MESH_SZ) {
@@ -731,7 +723,7 @@ float fast_eval_from_index(int x, int y, bool glaciate) {
 
 	float zval(hoff_global);
 	assert(x >= 0 && y >= 0 && x < DYNAMIC_MESH_SZ && y < DYNAMIC_MESH_SZ);
-	float *ity(iTerms2[y]), *jtx(jTerms2[x]);
+	float const *ity(iTerms2[y]), *jtx(jTerms2[x]);
 
 	for (int i = start_eval_sin; i < F_TABLE_SIZE; ++i) {
 		zval += ity[i]*jtx[i]; // performance critical
