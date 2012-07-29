@@ -599,7 +599,7 @@ void gen_terrain_map() {
 
 void estimate_zminmax(int using_eq) {
 
-	static float xv[EST_RAND_PARAM], yv[EST_RAND_PARAM];
+	static float xv[EST_RAND_PARAM];
 	assert(EST_RAND_PARAM <= DYNAMIC_MESH_SZ);
 
 	if (mesh_scale_change) {
@@ -615,13 +615,8 @@ void estimate_zminmax(int using_eq) {
 		return;
 	}
 	if (using_eq) {
-		float const rm_scale(10000.0*XY_SCENE_SIZE/mesh_scale);
-
-		for (unsigned i = 0; i < EST_RAND_PARAM; ++i) {
-			xv[i] = rm_scale*rand_float();
-			yv[i] = rm_scale*rand_float();
-		}
-		build_xy_mesh_arrays(xv, yv, EST_RAND_PARAM, EST_RAND_PARAM);
+		float const rm_scale(1000.0*XY_SCENE_SIZE/mesh_scale);
+		build_xy_mesh_arrays(0.0, 0.0, rm_scale, rm_scale, EST_RAND_PARAM, EST_RAND_PARAM);
 
 		for (unsigned i = 0; i < EST_RAND_PARAM; ++i) {
 			for (unsigned j = 0; j < EST_RAND_PARAM; ++j) {
@@ -707,11 +702,9 @@ void init_jterms() {
 }
 
 
-void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny) {
+void build_xy_mesh_arrays(float x0, float y0, float dx, float dy, int nx, int ny) {
 
 	//RESET_TIME;
-	assert(xv != NULL && yv != NULL);
-
 	if (nx <= 0 || ny <= 0 || nx > DYNAMIC_MESH_SZ || ny > DYNAMIC_MESH_SZ) {
 		cout << "nx = " << nx << ", ny = " << ny << ", max = " << DYNAMIC_MESH_SZ << endl;
 		assert(0);
@@ -727,7 +720,7 @@ void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny) {
 	float const ms2(0.5*mscale), msz_inv(1.0/mscale_z);
 
 	if (end_eval_sin < F_TABLE_SIZE) {
-		float const xval(msx*xv[nx >> 1]), yval(msy*yv[ny >> 1]);
+		float const xval(msx*(x0 + 0.5*(nx-1)*dx)), yval(msy*(y0 + 0.5*(ny-1)*dy)); // center points
 
 		for (int k = end_eval_sin; k < F_TABLE_SIZE; ++k) {
 			hoff_global += sinTable[k][0]*SINF(sinTable[k][3]*yval + ms2*sinTable[k][3] + sinTable[k][1])
@@ -736,14 +729,14 @@ void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny) {
 		hoff_global *= msz_inv;
 	}
 	for (int k = start_eval_sin; k < end_eval_sin; ++k) {
-		float const j_const(ms2*sinTable[k][4] + sinTable[k][2]), i_const(ms2*sinTable[k][3] + sinTable[k][1]);
-		float const j_mult(msx*sinTable[k][4]), i_mult(msy*sinTable[k][3]), i_scale(msz_inv*sinTable[k][0]);
+		float const x_const(ms2*sinTable[k][4] + sinTable[k][2]), y_const(ms2*sinTable[k][3] + sinTable[k][1]);
+		float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(msz_inv*sinTable[k][0]);
 
-		for (int j = 0; j < nx; ++j) {
-			jTerms2[j][k] = SINF(j_mult*xv[j] + j_const);
+		for (int i = 0; i < nx; ++i) {
+			jTerms2[i][k] = SINF(x_mult*(x0 + i*dx) + x_const);
 		}
 		for (int i = 0; i < ny; ++i) {
-			iTerms2[i][k] = i_scale*SINF(i_mult*yv[i] + i_const);
+			iTerms2[i][k] = y_scale*SINF(y_mult*(y0 + i*dy) + y_const);
 		}
 	}
 	//PRINT_TIME("Final");

@@ -25,7 +25,6 @@ void draw_overhead_map() {
 
 	//RESET_TIME
 	unsigned tid(0);
-	static float xv[DYNAMIC_MESH_SZ], yv[DYNAMIC_MESH_SZ];
 	if (map_mode == 0) return;
 	
 	if (map_mode == 2) {
@@ -74,14 +73,7 @@ void draw_overhead_map() {
 	vector3d const dir(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm());
 	int const cx(int(nx2 - map_x/scale)), cy(int(ny2 - map_y/scale));
 	int const xx(cx + int(4*dir.x)), yy(cy + int(4*dir.y));
-
-	for (int i = 0; i < nx; ++i) {
-		xv[i] = x0 + (i - nx2)*scale;
-	}
-	for (int i = 0; i < ny; ++i) {
-		yv[i] = y0 + (i - ny2)*scale;
-	}
-	build_xy_mesh_arrays(xv, yv, nx, ny);
+	build_xy_mesh_arrays((x0 - nx2*scale), (y0 - ny2*scale), scale, scale, nx, ny);
 	vector<unsigned char> buf(nx*ny*3*sizeof(unsigned char));
 	vector3d const light_dir(get_light_pos().get_norm()); // assume directional lighting to origin
 

@@ -331,15 +331,7 @@ public:
 	}
 
 	void create_xy_arrays(unsigned xy_size, float xy_scale) {
-		static vector<float> xv, yv; // move somewhere else?
-		xv.resize(xy_size);
-		yv.resize(xy_size);
-
-		for (unsigned i = 0; i < xy_size; ++i) { // not sure about this -x, +y thing
-			xv[i] = xy_scale*(xstart + (i - 0.5)*xstep);
-			yv[i] = xy_scale*(ystart + (i + 0.5)*ystep);
-		}
-		build_xy_mesh_arrays(&xv.front(), &yv.front(), xy_size, xy_size);
+		build_xy_mesh_arrays((xy_scale*(xstart - 0.5*xstep)), (xy_scale*(ystart + 0.5*ystep)), xy_scale*xstep, xy_scale*ystep, xy_size, xy_size);
 	}
 
 	void create_zvals() {
@@ -662,6 +654,7 @@ public:
 
 	void init_tree_draw() {
 		if (trees.generated) return; // already generated
+		//RESET_TIME;
 		init_tree_dxoff = -xoff2;
 		init_tree_dyoff = -yoff2;
 		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
@@ -680,6 +673,7 @@ public:
 		}
 		radius = calc_radius() + trmax; // is this really needed?
 		trees.calc_trunk_pts();
+		//PRINT_TIME("Tree Gen");
 	}
 
 	void update_tree_state(bool upload_if_needed) {
@@ -1192,20 +1186,12 @@ void fill_gap(float wpz, bool reflection_pass) {
 	colorRGBA const color(setup_mesh_lighting());
 	select_texture(LANDSCAPE_TEX);
 	set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
-	vector<float> xv(MESH_X_SIZE+1), yv(MESH_Y_SIZE+1);
-	float const xstart(get_xval(xoff2)), ystart(get_yval(yoff2));
-
-	for (int i = 0; i <= MESH_X_SIZE; ++i) { // not sure about this -x, +y thing
-		xv[i] = (xstart + (i - 0.5)*DX_VAL);
-	}
-	for (int i = 0; i <= MESH_Y_SIZE; ++i) {
-		yv[i] = (ystart + (i + 0.5)*DY_VAL);
-	}
+	float const xstart(get_xval(xoff2)), ystart(get_yval(yoff2)), x0(xstart - 0.5*DX_VAL), y0(ystart + 0.5*DY_VAL);
 	shader_t s;
 	terrain_tile_draw.setup_mesh_draw_shaders(s, wpz, 0, reflection_pass);
 
 	// draw +x
-	build_xy_mesh_arrays(&xv.front(), &yv[MESH_Y_SIZE], MESH_X_SIZE, 1);
+	build_xy_mesh_arrays(x0, (y0 + MESH_Y_SIZE*DY_VAL), DX_VAL, 0.0, MESH_X_SIZE, 1);
 	glBegin(GL_QUAD_STRIP);
 
 	for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -1217,7 +1203,7 @@ void fill_gap(float wpz, bool reflection_pass) {
 	float const z_end_val(fast_eval_from_index(MESH_X_SIZE-1, 0));
 
 	// draw +y
-	build_xy_mesh_arrays(&xv[MESH_X_SIZE], &yv.front(), 1, MESH_Y_SIZE+1);
+	build_xy_mesh_arrays((x0 + MESH_X_SIZE*DX_VAL), y0, 0.0, DY_VAL, 1, MESH_Y_SIZE+1);
 	glBegin(GL_QUAD_STRIP);
 
 	for (int y = 0; y < MESH_X_SIZE; ++y) {

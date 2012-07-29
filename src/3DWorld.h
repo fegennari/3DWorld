@@ -1545,7 +1545,7 @@ float calc_glaciated_rel_value(float value);
 float do_glaciate_exp(float value);
 float get_rel_wpz();
 void init_terrain_mesh();
-void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny);
+void build_xy_mesh_arrays(float x0, float y0, float dx, float dy, int nx, int ny);
 float fast_eval_from_index(int x, int y, bool glaciate=1);
 float eval_mesh_sin_terms(float xv, float yv);
 float eval_one_surface_point(float xval, float yval);
