@@ -639,9 +639,9 @@ void s_plant::gen_points(vbo_vnc_quad_block_manager_t &vbo_manager) {
 	unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
 	float rdeg(30.0);
 	vector<vert_norm> &points(vbo_manager.temp_points);
-	points.resize(0);
+	points.resize(4*nlevels*nrings);
 
-	for (unsigned j = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
+	for (unsigned j = 0, ix = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
 		float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
 		float const z((j + 3.0)*height/(nlevels + 4.0));
 		vector3d const scale(sz*wscale, sz*wscale, sz);
@@ -650,7 +650,7 @@ void s_plant::gen_points(vbo_vnc_quad_block_manager_t &vbo_manager) {
 			float const theta(TWO_PI*(3.3*j + 0.2*k) + theta0);
 			int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
 			rdeg += 0.01*(val - 150);
-			add_rotated_quad_pts(points, theta, rdeg/45.0, z, pos, scale);
+			add_rotated_quad_pts(&points.front(), ix, theta, rdeg/45.0, z, pos, scale);
 		}
 	}
 	vbo_mgr_ix = vbo_manager.add_points(points, pltype[type].leafc);

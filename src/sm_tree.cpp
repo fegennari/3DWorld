@@ -266,11 +266,11 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
 			rand2_mix();
 			float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*signed_rand_float2());
 			float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*signed_rand_float2());
-			float const height(rand_uniform2(0.4*tsize, tsize)), width(rand_uniform2(0.25*height, 0.35*height));
-			float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1) - 0.1*height);
+			float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1));
 			int const ttype(get_tree_type_from_height(zpos));
 			if (ttype == TREE_NONE) continue;
-			small_tree st(point(xpos, ypos, zpos), height, width, ttype, 0);
+			float const height(rand_uniform2(0.4*tsize, tsize)), width(rand_uniform2(0.25*height, 0.35*height));
+			small_tree st(point(xpos, ypos, zpos-0.1*height), height, width, ttype, 0);
 			st.setup_rotation();
 			add_tree(st);
 		}
@@ -547,17 +547,17 @@ void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low
 	vector<vert_norm> &points(vbo_manager.temp_points);
 
 	if (!low_detail) {
-		points.resize(0);
+		points.resize(4*N_PT_LEVELS*N_PT_RINGS);
 		float const rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 
-		for (unsigned j = 0; j < N_PT_LEVELS; ++j) {
-			float const sz(sz_scale*((N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS));
+		for (unsigned j = 0, ix = 0; j < N_PT_LEVELS; ++j) {
+			float const sz(sz_scale*(N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS);
 			float const z((j + 1.8)*height0/(N_PT_LEVELS + 2.8) - rd*sz);
 			vector3d const scale(sz, sz, sz);
 
 			for (unsigned k = 0; k < N_PT_RINGS; ++k) {
 				float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0);
-				add_rotated_quad_pts(points, theta, rd, z, center, scale); // bounds are (sz, sz, rd*sz+z)
+				add_rotated_quad_pts(&points.front(), ix, theta, rd, z, center, scale); // bounds are (sz, sz, rd*sz+z)
 			}
 		}
 	}
