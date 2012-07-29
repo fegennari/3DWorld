@@ -29,8 +29,6 @@ float    const MAG_MULT           = 2.0;
 float    const W_PLANE_Z          = 0.42;
 
 unsigned const EST_RAND_PARAM     = 128;
-unsigned const MESH_CACHE_SIZE    = 500000; // 8MB, larger number = faster but more memory
-bool     const USE_MESH_CACHE     = 1;
 
 float    const READ_MESH_H_SCALE  = 0.0008;
 bool     const AUTOSCALE_HEIGHT   = 1;
@@ -49,16 +47,6 @@ float    const S_GEN_ATTEN_DIST   = 128.0;
 //#define DO_GLACIATE_EXP(val) (4.0*pow((val), (float)0.33)) // GLACIATE_EXP = custom
 
 
-
-struct mesh_cache_entry { // size = 16
-
-	int counter;
-	float height, xval, yval;
-
-	mesh_cache_entry() : counter(0) {}
-};
-
-
 float const FREQ_MULT          = 1.0/MAG_MULT;
 int   const F_TABLE_SIZE       = NUM_FREQ_COMP*N_RAND_SIN2;
 int   const START_L0_FREQ_COMP = NUM_FREQ_COMP - NUM_L0_FREQ_COMP;
@@ -70,14 +58,11 @@ int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE)
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), mesh_scale2(1.0), mesh_scale_z(1.0), hoff_global(0.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmm_calc(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
-float *xv0_cached, *yv0_cached;
 float *sin_table(NULL), *cos_table(NULL);
 
 // landscape tables
 float sinTable[F_TABLE_SIZE][5], iTerms[F_TABLE_SIZE], **jTerms = NULL;
 float iTerms2[DYNAMIC_MESH_SZ][F_TABLE_SIZE], jTerms2[DYNAMIC_MESH_SZ][F_TABLE_SIZE];
-
-mesh_cache_entry mesh_cache[MESH_CACHE_SIZE];
 
 int const mesh_tids_sand[NTEX_SAND] = {SAND_TEX, GROUND_TEX, ROCK_TEX,   SNOW_TEX};
 int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX,   GROUND_TEX, ROCK_TEX, SNOW_TEX};
@@ -731,8 +716,6 @@ void build_xy_mesh_arrays(float *xv, float *yv, int nx, int ny) {
 		cout << "nx = " << nx << ", ny = " << ny << ", max = " << DYNAMIC_MESH_SZ << endl;
 		assert(0);
 	}
-	xv0_cached  = xv; // for caching
-	yv0_cached  = yv;
 	hoff_global = 0.0;
 	float mscale(mesh_scale), mscale_z(mesh_scale_z); // could modify later...
 
@@ -778,21 +761,6 @@ float fast_eval_from_index(int x, int y, bool glaciate) {
 	}
 	if (GLACIATE && glaciate && !island) zval = get_glaciated_zval(zval);
 	return zval;
-}
-
-
-float fast_eval_from_index_cached(int x, int y, bool glaciate) {
-
-	if (!USE_MESH_CACHE) return fast_eval_from_index(x, y, glaciate);
-	float const xr(xv0_cached[x]), yr(yv0_cached[y]);
-	int const ci((unsigned(xr*DX_VAL_INV + yr*49157*DY_VAL_INV))%MESH_CACHE_SIZE);
-	mesh_cache_entry &mci(mesh_cache[ci]);
-	if (mci.counter == cache_counter && mci.xval == xr && mci.yval == yr) return mci.height;
-	mci.counter = cache_counter;
-	mci.xval    = xr;
-	mci.yval    = yr;
-	mci.height  = fast_eval_from_index(x, y, glaciate);
-	return mci.height;
 }
 
 
