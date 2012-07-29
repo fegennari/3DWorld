@@ -267,7 +267,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
 			float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*signed_rand_float2());
 			float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*signed_rand_float2());
 			float const height(rand_uniform2(0.4*tsize, tsize)), width(rand_uniform2(0.25*height, 0.35*height));
-			float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1) - 0.1*height); // 15ms
+			float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1) - 0.1*height);
 			int const ttype(get_tree_type_from_height(zpos));
 			if (ttype == TREE_NONE) continue;
 			small_tree st(point(xpos, ypos, zpos), height, width, ttype, 0);

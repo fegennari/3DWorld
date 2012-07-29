@@ -84,7 +84,7 @@ extern rand_gen_t global_rand_gen;
 
 void glaciate();
 void gen_terrain_map();
-void estimate_zminmax(int using_eq);
+void estimate_zminmax(bool using_eq);
 void set_zvals();
 void update_temperature(bool verbose);
 void compute_scale(int make_island);
@@ -581,23 +581,10 @@ void gen_terrain_map() {
 		glaciate_exp     = 1.0;
 		glaciate_exp_inv = 1.0;
 	}
-	 // *** EXPERIMENTAL - for testing purposes only now ***
-	// 1st pass - low f for landscape shape
-	// add peaks and valleys
-	// add surface roughness
-	// create oceans, lakes, and rivers (watershed)
-	// erode rivers
-	// 2nd pass - medium f
-	// create streams and ponds (water flow)
-	// add tree cover and ground type (dist from water)
-	// 3rd pass - high f
-	// determine landscape textures
-	// add scenery
-	// subdivide...
 }
 
 
-void estimate_zminmax(int using_eq) {
+void estimate_zminmax(bool using_eq) {
 
 	static float xv[EST_RAND_PARAM];
 	assert(EST_RAND_PARAM <= DYNAMIC_MESH_SZ);
@@ -692,7 +679,6 @@ void compute_scale(int make_island) {
 	iscale         = int(log(mesh_scale)/log(2.0));
 	start_eval_sin = N_RAND_SIN2*max(0, min(num_freq-MIN_FREQS, (iscale+filter)));
 	end_eval_sin   = N_RAND_SIN2*min(num_freq, (start_eval_sin+FREQ_RANGE));
-	//cout << "*** iscale = " << iscale << ", start = " << start_eval_sin << ", end = " << end_eval_sin << endl;
 }
 
 
@@ -704,7 +690,6 @@ void init_jterms() {
 
 void build_xy_mesh_arrays(float x0, float y0, float dx, float dy, int nx, int ny) {
 
-	//RESET_TIME;
 	if (nx <= 0 || ny <= 0 || nx > DYNAMIC_MESH_SZ || ny > DYNAMIC_MESH_SZ) {
 		cout << "nx = " << nx << ", ny = " << ny << ", max = " << DYNAMIC_MESH_SZ << endl;
 		assert(0);
@@ -739,7 +724,6 @@ void build_xy_mesh_arrays(float x0, float y0, float dx, float dy, int nx, int ny
 			iTerms2[i][k] = y_scale*SINF(y_mult*(y0 + i*dy) + y_const);
 		}
 	}
-	//PRINT_TIME("Final");
 }
 
 
