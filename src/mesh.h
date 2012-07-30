@@ -10,16 +10,25 @@
 #include "collision_detect.h"
 
 
-
-// should be based on mesh size
-int const DYNAMIC_MESH_SZ = 4096;
-
 float const MESH_MIN_Z = -1.0E6; // special mesh height that is guaranteed to be smaller than any mesh zval
 
 
 struct ripple_state {
 
 	float rval, acc;
+};
+
+
+class mesh_xy_grid_cache_t {
+
+	vector<float> xterms, yterms;
+	unsigned cur_nx, cur_ny;
+	float hoff;
+
+public:
+	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), hoff(0.0) {}
+	void build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny);
+	float eval_index(unsigned x, unsigned y, bool glaciate=1) const;
 };
 
 

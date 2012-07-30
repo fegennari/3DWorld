@@ -330,22 +330,22 @@ public:
 		if (tclear) {clear_tids();}
 	}
 
-	void create_xy_arrays(unsigned xy_size, float xy_scale) {
-		build_xy_mesh_arrays((xy_scale*(xstart - 0.5*xstep)), (xy_scale*(ystart + 0.5*ystep)), xy_scale*xstep, xy_scale*ystep, xy_size, xy_size);
+	void create_xy_arrays(mesh_xy_grid_cache_t &height_gen, unsigned xy_size, float xy_scale) {
+		height_gen.build_arrays((xy_scale*(xstart - 0.5*xstep)), (xy_scale*(ystart + 0.5*ystep)), xy_scale*xstep, xy_scale*ystep, xy_size, xy_size);
 	}
 
-	void create_zvals() {
+	void create_zvals(mesh_xy_grid_cache_t &height_gen) {
 		//RESET_TIME;
 		zvals.resize(zvsize*zvsize);
 		calc_start_step(0, 0);
-		create_xy_arrays(zvsize, 1.0);
+		create_xy_arrays(height_gen, zvsize, 1.0);
 		mzmin =  FAR_CLIP;
 		mzmax = -FAR_CLIP;
 
 		#pragma omp parallel for schedule(static,1)
 		for (int y = 0; y < (int)zvsize; ++y) {
 			for (unsigned x = 0; x < zvsize; ++x) {
-				zvals[y*zvsize + x] = fast_eval_from_index(x, y);
+				zvals[y*zvsize + x] = height_gen.eval_index(x, y);
 			}
 		}
 		for (vector<float>::const_iterator i = zvals.begin(); i != zvals.end(); ++i) {
@@ -534,7 +534,7 @@ public:
 
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 
-	void create_texture() {
+	void create_texture(mesh_xy_grid_cache_t &height_gen) {
 		assert(weight_tid == 0);
 		assert(!island);
 		assert(zvals.size() == zvsize*zvsize);
@@ -555,7 +555,7 @@ public:
 			if (lttex_dirt[i].id == ROCK_TEX  ) rock_tex_ix  = i;
 		}
 		assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0);
-		if (world_mode == WMODE_INF_TERRAIN) {create_xy_arrays(zvsize, MESH_NOISE_FREQ);}
+		if (world_mode == WMODE_INF_TERRAIN) {create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);}
 
 		//#pragma omp parallel for schedule(static,1)
 		for (unsigned y = 0; y < tsize; ++y) {
@@ -563,7 +563,7 @@ public:
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-				float const rand_offset((world_mode == WMODE_INF_TERRAIN) ? noise_scale*fast_eval_from_index(x, y, 0) : 0.0);
+				float const rand_offset((world_mode == WMODE_INF_TERRAIN) ? noise_scale*height_gen.eval_index(x, y, 0) : 0.0);
 				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
 				float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
 				float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
@@ -807,7 +807,7 @@ public:
 		glPopMatrix();
 	}
 
-	void pre_draw_update(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
+	void pre_draw_update(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], mesh_xy_grid_cache_t &height_gen) {
 		if (vbo == 0) {
 			create_data(data, indices);
 			vbo = create_vbo();
@@ -822,7 +822,7 @@ public:
 				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
 			}
 		}
-		if (weight_tid == 0) {create_texture();}
+		if (weight_tid == 0) {create_texture(height_gen);}
 		check_shadow_map_and_normal_texture();
 	}
 
@@ -864,6 +864,7 @@ class tile_draw_t {
 	typedef map<tile_xy_pair, tile_t*> tile_map;
 	tile_map tiles;
 	vector<point> tree_trunk_pts;
+	mesh_xy_grid_cache_t height_gen;
 
 public:
 	tile_draw_t() {
@@ -909,7 +910,7 @@ public:
 				tile_t tile(MESH_X_SIZE, x, y);
 				if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
 				tile_t *new_tile(new tile_t(tile));
-				new_tile->create_zvals();
+				new_tile->create_zvals(height_gen);
 				tiles[txy] = new_tile;
 			}
 		}
@@ -986,7 +987,7 @@ public:
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, i->second->get_zmin());
 			if (!i->second->is_visible()) continue;
-			i->second->pre_draw_update(data, indices);
+			i->second->pre_draw_update(data, indices, height_gen);
 			to_draw.push_back(make_pair(dist, i->second));
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
@@ -1189,32 +1190,33 @@ void fill_gap(float wpz, bool reflection_pass) {
 	float const xstart(get_xval(xoff2)), ystart(get_yval(yoff2)), x0(xstart - 0.5*DX_VAL), y0(ystart + 0.5*DY_VAL);
 	shader_t s;
 	terrain_tile_draw.setup_mesh_draw_shaders(s, wpz, 0, reflection_pass);
+	mesh_xy_grid_cache_t height_gen;
 
 	// draw +x
-	build_xy_mesh_arrays(x0, (y0 + MESH_Y_SIZE*DY_VAL), DX_VAL, 0.0, MESH_X_SIZE, 1);
+	height_gen.build_arrays(x0, (y0 + MESH_Y_SIZE*DY_VAL), DX_VAL, 0.0, MESH_X_SIZE, 1);
 	glBegin(GL_QUAD_STRIP);
 
 	for (int x = 0; x < MESH_X_SIZE; ++x) {
 		vertex_normals[MESH_Y_SIZE-1][x].do_glNormal();
 		draw_vert_color(color, get_xval(x), Y_SCENE_SIZE-DY_VAL, mesh_height[MESH_Y_SIZE-1][x]);
-		draw_vert_color(color, get_xval(x), Y_SCENE_SIZE       , fast_eval_from_index(x, 0));
+		draw_vert_color(color, get_xval(x), Y_SCENE_SIZE       , height_gen.eval_index(x, 0));
 	}
 	glEnd();
-	float const z_end_val(fast_eval_from_index(MESH_X_SIZE-1, 0));
+	float const z_end_val(height_gen.eval_index(MESH_X_SIZE-1, 0));
 
 	// draw +y
-	build_xy_mesh_arrays((x0 + MESH_X_SIZE*DX_VAL), y0, 0.0, DY_VAL, 1, MESH_Y_SIZE+1);
+	height_gen.build_arrays((x0 + MESH_X_SIZE*DX_VAL), y0, 0.0, DY_VAL, 1, MESH_Y_SIZE+1);
 	glBegin(GL_QUAD_STRIP);
 
 	for (int y = 0; y < MESH_X_SIZE; ++y) {
 		vertex_normals[y][MESH_X_SIZE-1].do_glNormal();
 		draw_vert_color(color, X_SCENE_SIZE-DX_VAL, get_yval(y), mesh_height[y][MESH_X_SIZE-1]);
-		draw_vert_color(color, X_SCENE_SIZE       , get_yval(y), fast_eval_from_index(0, y));
+		draw_vert_color(color, X_SCENE_SIZE       , get_yval(y), height_gen.eval_index(0, y));
 	}
 
 	// draw corner quad
 	draw_vert_color(color, X_SCENE_SIZE-DX_VAL, Y_SCENE_SIZE, z_end_val);
-	draw_vert_color(color, X_SCENE_SIZE       , Y_SCENE_SIZE, fast_eval_from_index(0, MESH_Y_SIZE));
+	draw_vert_color(color, X_SCENE_SIZE       , Y_SCENE_SIZE, height_gen.eval_index(0, MESH_Y_SIZE));
 	glEnd();
 
 	s.end_shader();

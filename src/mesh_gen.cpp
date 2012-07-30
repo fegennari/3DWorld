@@ -55,13 +55,10 @@ int   const START_L0_FREQ_COMP = NUM_FREQ_COMP - NUM_L0_FREQ_COMP;
 // Global Variables
 int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
-float mesh_scale(1.0), mesh_scale2(1.0), mesh_scale_z(1.0), hoff_global(0.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
+float mesh_scale(1.0), mesh_scale2(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmm_calc(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
 float *sin_table(NULL), *cos_table(NULL);
-
-// landscape tables
-float sinTable[F_TABLE_SIZE][5], jTerms[F_TABLE_SIZE][DYNAMIC_MESH_SZ];
-float iTerms2[DYNAMIC_MESH_SZ][F_TABLE_SIZE], jTerms2[DYNAMIC_MESH_SZ][F_TABLE_SIZE];
+float sinTable[F_TABLE_SIZE][5];
 
 int const mesh_tids_sand[NTEX_SAND] = {SAND_TEX, GROUND_TEX, ROCK_TEX,   SNOW_TEX};
 int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX,   GROUND_TEX, ROCK_TEX, SNOW_TEX};
@@ -232,13 +229,14 @@ void gen_mesh_random(float height) {
 }
 
 
+
 void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, int ysize, int make_island) {
 
 	assert(matrix);
 	int const num_freq(make_island ? NUM_L0_FREQ_COMP : NUM_FREQ_COMP), nsines(num_freq*N_RAND_SIN2);
 	float hoff(0.0);
 	int i2(y_offset - ysize/2), j2(x_offset - xsize/2);
-	assert(end_eval_sin <= F_TABLE_SIZE && xsize <= DYNAMIC_MESH_SZ);
+	vector<float> jTerms(xsize*(end_eval_sin - start_eval_sin));
 
 	if (end_eval_sin < nsines) {
 		float const iscale(mesh_scale*i2), jscale(mesh_scale*j2);
@@ -249,23 +247,23 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 		}
 		hoff /= mesh_scale_z;
 	}
-	for (int k = start_eval_sin; k < end_eval_sin; ++k) {
+	for (int k = start_eval_sin, ix = 0; k < end_eval_sin; ++k) {
 		float const *stk(sinTable[k]);
 
 		for (int j = 0; j < xsize; ++j) {
-			jTerms[k][j] = sinf(mesh_scale*stk[4]*(j+j2) + stk[2]);
+			jTerms[ix++] = sinf(mesh_scale*stk[4]*(j+j2) + stk[2]);
 		}
 	}
 	for (int i = 0; i < ysize; ++i) {
 		++i2;
 		float const si2(mesh_scale*i2);
 
-		for (int k = start_eval_sin; k < end_eval_sin; ++k) {
+		for (int k = start_eval_sin, ix = 0; k < end_eval_sin; ++k) {
 			float const *stk(sinTable[k]);
 			float const val((stk[0]/mesh_scale_z)*sinf(stk[3]*si2 + stk[1]));
 
 			for (int j = 0; j < xsize; ++j) {
-				matrix[i][j] += val*jTerms[k][j]; // performance critical
+				matrix[i][j] += val*jTerms[ix++]; // performance critical
 			}
 		}
 		if (hoff != 0.0) { // add in low frequency terms
@@ -584,9 +582,6 @@ void gen_terrain_map() {
 
 void estimate_zminmax(bool using_eq) {
 
-	static float xv[EST_RAND_PARAM];
-	assert(EST_RAND_PARAM <= DYNAMIC_MESH_SZ);
-
 	if (mesh_scale_change) {
 		set_zmax_est(max(max(-zmin, zmax), zmax_est));
 		mesh_scale_change = 0;
@@ -601,11 +596,12 @@ void estimate_zminmax(bool using_eq) {
 	}
 	if (using_eq) {
 		float const rm_scale(1000.0*XY_SCENE_SIZE/mesh_scale);
-		build_xy_mesh_arrays(0.0, 0.0, rm_scale, rm_scale, EST_RAND_PARAM, EST_RAND_PARAM);
+		mesh_xy_grid_cache_t height_gen;
+		height_gen.build_arrays(0.0, 0.0, rm_scale, rm_scale, EST_RAND_PARAM, EST_RAND_PARAM);
 
 		for (unsigned i = 0; i < EST_RAND_PARAM; ++i) {
 			for (unsigned j = 0; j < EST_RAND_PARAM; ++j) {
-				zmax_est = max(zmax_est, float(fabs(fast_eval_from_index(j, i, 0))));
+				zmax_est = max(zmax_est, float(fabs(height_gen.eval_index(j, i, 0))));
 			}
 		}
 	}
@@ -680,54 +676,47 @@ void compute_scale(int make_island) {
 }
 
 
-void build_xy_mesh_arrays(float x0, float y0, float dx, float dy, int nx, int ny) {
+void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
 
-	if (nx <= 0 || ny <= 0 || nx > DYNAMIC_MESH_SZ || ny > DYNAMIC_MESH_SZ) {
-		cout << "nx = " << nx << ", ny = " << ny << ", max = " << DYNAMIC_MESH_SZ << endl;
-		assert(0);
-	}
-	hoff_global = 0.0;
-	float mscale(mesh_scale), mscale_z(mesh_scale_z); // could modify later...
-
-	if (island && world_mode == WMODE_INF_TERRAIN) {
-		mscale   /= ISLAND_MAG_SCALE;
-		mscale_z /= ISLAND_MAG_SCALE;
-	}
-	float const msx(mscale*DX_VAL_INV), msy(mscale*DY_VAL_INV);
-	float const ms2(0.5*mscale), msz_inv(1.0/mscale_z);
+	assert(nx >= 0 && ny >= 0);
+	cur_nx = nx; cur_ny = ny;
+	xterms.resize(nx*F_TABLE_SIZE);
+	yterms.resize(ny*F_TABLE_SIZE);
+	hoff = 0.0;
+	float const ms_scale((island && world_mode == WMODE_INF_TERRAIN) ? 1.0/ISLAND_MAG_SCALE : 1.0);
+	float const mscale(ms_scale*mesh_scale), mscale_z(ms_scale*mesh_scale_z);
+	float const msx(mscale*DX_VAL_INV), msy(mscale*DY_VAL_INV), ms2(0.5*mscale), msz_inv(1.0/mscale_z);
 
 	if (end_eval_sin < F_TABLE_SIZE) {
 		float const xval(msx*(x0 + 0.5*(nx-1)*dx)), yval(msy*(y0 + 0.5*(ny-1)*dy)); // center points
 
 		for (int k = end_eval_sin; k < F_TABLE_SIZE; ++k) {
-			hoff_global += sinTable[k][0]*SINF(sinTable[k][3]*yval + ms2*sinTable[k][3] + sinTable[k][1])
-				                         *SINF(sinTable[k][4]*xval + ms2*sinTable[k][4] + sinTable[k][2]);
+			hoff += sinTable[k][0]*SINF(sinTable[k][3]*yval + ms2*sinTable[k][3] + sinTable[k][1])
+									*SINF(sinTable[k][4]*xval + ms2*sinTable[k][4] + sinTable[k][2]);
 		}
-		hoff_global *= msz_inv;
+		hoff *= msz_inv;
 	}
 	for (int k = start_eval_sin; k < end_eval_sin; ++k) {
 		float const x_const(ms2*sinTable[k][4] + sinTable[k][2]), y_const(ms2*sinTable[k][3] + sinTable[k][1]);
 		float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(msz_inv*sinTable[k][0]);
 
-		for (int i = 0; i < nx; ++i) {
-			jTerms2[i][k] = SINF(x_mult*(x0 + i*dx) + x_const);
+		for (unsigned i = 0; i < nx; ++i) {
+			xterms[i*F_TABLE_SIZE+k] = SINF(x_mult*(x0 + i*dx) + x_const);
 		}
-		for (int i = 0; i < ny; ++i) {
-			iTerms2[i][k] = y_scale*SINF(y_mult*(y0 + i*dy) + y_const);
+		for (unsigned i = 0; i < ny; ++i) {
+			yterms[i*F_TABLE_SIZE+k] = y_scale*SINF(y_mult*(y0 + i*dy) + y_const);
 		}
 	}
 }
 
 
-float fast_eval_from_index(int x, int y, bool glaciate) {
+float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate) const {
 
-	float zval(hoff_global);
-	assert(x >= 0 && y >= 0 && x < DYNAMIC_MESH_SZ && y < DYNAMIC_MESH_SZ);
-	float const *ity(iTerms2[y]), *jtx(jTerms2[x]);
-
-	for (int i = start_eval_sin; i < F_TABLE_SIZE; ++i) {
-		zval += ity[i]*jtx[i]; // performance critical
-	}
+	assert(x < cur_nx && y < cur_ny);
+	float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
+	float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
+	float zval(hoff);
+	for (int i = start_eval_sin; i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
 	if (GLACIATE && glaciate && !island) zval = get_glaciated_zval(zval);
 	return zval;
 }

@@ -73,7 +73,8 @@ void draw_overhead_map() {
 	vector3d const dir(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm());
 	int const cx(int(nx2 - map_x/scale)), cy(int(ny2 - map_y/scale));
 	int const xx(cx + int(4*dir.x)), yy(cy + int(4*dir.y));
-	build_xy_mesh_arrays((x0 - nx2*scale), (y0 - ny2*scale), scale, scale, nx, ny);
+	mesh_xy_grid_cache_t height_gen;
+	height_gen.build_arrays((x0 - nx2*scale), (y0 - ny2*scale), scale, scale, nx, ny);
 	vector<unsigned char> buf(nx*ny*3*sizeof(unsigned char));
 	vector3d const light_dir(get_light_pos().get_norm()); // assume directional lighting to origin
 
@@ -97,7 +98,7 @@ void draw_overhead_map() {
 				rgb[0] = rgb[1] = rgb[2] = 0; // world boundary
 			}
 			else {
-				float height(CLIP_TO_01(hscale*(fast_eval_from_index(j, i, 1) + zmax2)));
+				float height(CLIP_TO_01(hscale*(height_gen.eval_index(j, i, 1) + zmax2)));
 
 				if (!map_color) { // grayscale
 					rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*pow(height, glaciate_exp_inv)); // un-glaciate: slow
@@ -132,7 +133,7 @@ void draw_overhead_map() {
 
 						if (height > map_heights[4]) {
 							float const hx((j == 0) ? height : last_height);
-							float const hy(CLIP_TO_01(hscale*(fast_eval_from_index(j, max(i-1, 0), 1) + zmax2)));
+							float const hy(CLIP_TO_01(hscale*(height_gen.eval_index(j, max(i-1, 0), 1) + zmax2)));
 							normal = vector3d(DY_VAL*(hx - height), DX_VAL*(hy - height), dxdy).get_norm();
 						}
 						last_height = height;
