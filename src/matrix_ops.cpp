@@ -249,7 +249,7 @@ vector3d get_matrix_surf_norm(float **matrix, char **enabled, int xsize, int ysi
 
 void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize, int i, int j) {
 
-	vector3d norm(get_matrix_surf_norm(matrix, enabled, xsize, ysize, i, j));
+	vector3d const norm(get_matrix_surf_norm(matrix, enabled, xsize, ysize, i, j));
 	sn[i][j] = norm;
 	vn[i][j] = (norm + sn[max(i-1, 0)][j] + sn[max(i-1, 0)][max(j-1, 0)] + sn[i][max(j-1, 0)])*0.25;
 }

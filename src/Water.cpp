@@ -96,7 +96,7 @@ vector<water_spring> water_springs;
 vector<water_section> wsections;
 spillover spill;
 
-extern bool mesh_invalidated, using_lightmap, has_dl_sources, has_snow;
+extern bool using_lightmap, has_dl_sources, has_snow;
 extern int display_mode, frame_counter, game_mode, TIMESCALE2, I_TIMESCALE2, ocean_set;
 extern int world_mode, island, rand_gen_index, begin_motion, animate, animate2, blood_spilled;
 extern int landscape_changed, xoff2, yoff2, scrolling, dx_scroll, dy_scroll, INIT_DISABLE_WATER;

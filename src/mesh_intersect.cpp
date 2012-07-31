@@ -442,17 +442,7 @@ void gen_mesh_bsp_tree() {
 	//RESET_TIME;
 	delete bspt;
 	bspt = new mesh_bsp_tree(); // must be created after mesh size is read from config file
-	//cout << "mz1 = " << bspt->get_root().z[0] << ", mz2 = " << bspt->get_root().z[1] << endl;
 	//PRINT_TIME("BSP Tree");
-}
-
-
-bool line_int_mesh_bsp(point const &v1, point const &v2) {
-
-	assert(bspt);
-	int xpos, ypos;
-	float zval;
-	return bspt->search(v1, v2, xpos, ypos, zval);
 }
 
 

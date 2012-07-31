@@ -692,7 +692,7 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 
 		for (int k = end_eval_sin; k < F_TABLE_SIZE; ++k) {
 			hoff += sinTable[k][0]*SINF(sinTable[k][3]*yval + ms2*sinTable[k][3] + sinTable[k][1])
-									*SINF(sinTable[k][4]*xval + ms2*sinTable[k][4] + sinTable[k][2]);
+				                  *SINF(sinTable[k][4]*xval + ms2*sinTable[k][4] + sinTable[k][2]);
 		}
 		hoff *= msz_inv;
 	}

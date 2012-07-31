@@ -1342,7 +1342,6 @@ bool line_intersect_surface_cached(point const &v1, point const &v2, int &xpos, 
 bool line_intersect_mesh(point const &v1, point const &v2, int &xpos, int &ypos, float &zval, int fast=0, bool cached=0);
 bool line_intersect_mesh(point const &v1, point const &v2, int fast=0);
 void gen_mesh_bsp_tree();
-bool line_int_mesh_bsp(point const &v1, point const &v2);
 
 // function prototypes - build_world
 void create_object_groups();
