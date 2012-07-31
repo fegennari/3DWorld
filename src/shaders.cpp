@@ -215,16 +215,17 @@ void shader_t::add_attrib_int(unsigned ix, int val) const {
 
 void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
+	assert(num <= 8);
 	prog_name_suffix += ",el";
+	string name("enable_light0");
 
 	for (unsigned i = 0; i < num; ++i) { // 0=sun, 1=moon, ...
 		GLboolean const enabled(glIsEnabled(GL_LIGHT0 + i));
 		prog_name_suffix += (enabled ? '1' : '0');
+		name.back() = char('0'+i);
 
 		for (unsigned s = 0; s < 3; ++s) { // put into correct shader(s): V, F, G
-			if (shaders_enabled & (1<<s)) {
-				set_bool_prefix((string("enable_light") + char('0'+i)), (enabled != 0), s);
-			}
+			if (shaders_enabled & (1<<s)) {set_bool_prefix(name, (enabled != 0), s);}
 		}
 	}
 }
