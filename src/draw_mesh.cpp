@@ -208,7 +208,7 @@ class mesh_vertex_draw {
 				light_scale = pow(val, 8);
 			}
 		}
-		if (ground_effects_level >= 2 && !has_snow && light_scale > 0.0 && !(display_mode & 0x10)) {
+		if (ground_effects_level >= 2 && !has_snow && light_scale > 0.0) {
 			light_scale *= get_cloud_shadow_atten(j, i);
 		}
 		// Note: normal is never set to zero because we need it for dynamic light sources
@@ -363,8 +363,6 @@ void draw_coll_vert(int i, int j) {
 void display_mesh() { // fast array version
 
 	if (mesh_height == NULL) return; // no mesh to display
-	// can't put the hole in the right place, so only draw the tiled terrain
-	if (!island && (display_mode & 0x10) && (xoff2 != 0 || yoff2 != 0)) return;
 	RESET_TIME;
 
 	if ((display_mode & 0x80) && !DISABLE_WATER && !ocean_set && zmin < max_water_height && ground_effects_level != 0) {
@@ -528,13 +526,6 @@ int set_texture(float zval, int &tex_id) {
 }
 
 
-float display_mesh3(int const *const hole_bounds, float wpz, bool reflection_pass) { // WM3 - infinite terrain
-
-	bool const add_hole((hole_bounds != NULL) && xoff2 == 0 && yoff2 == 0);
-	return draw_tiled_terrain(add_hole, wpz, reflection_pass);
-}
-
-
 inline void draw_vertex(float x, float y, float z, bool in_y, float tscale=1.0) { // xz or zy
 
 	glTexCoord2f(tscale*(in_y ? z : x), tscale*(in_y ? y : z));
@@ -545,7 +536,6 @@ inline void draw_vertex(float x, float y, float z, bool in_y, float tscale=1.0) 
 // NOTE: There is a buffer of one unit around the drawn area
 void draw_sides_and_bottom() {
 
-	if (!disable_inf_terrain && (display_mode & 0x10)) return;
 	int const lx(MESH_X_SIZE-1), ly(MESH_Y_SIZE-1);
 	float const botz(zbottom - 0.05), z_avg(0.5*(zbottom + ztop)), ts(4.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
 	float const x1(-X_SCENE_SIZE), y1(-Y_SCENE_SIZE), x2(X_SCENE_SIZE-DX_VAL), y2(Y_SCENE_SIZE-DY_VAL);
@@ -726,7 +716,6 @@ void water_renderer::draw() { // modifies color
 
 void draw_water_sides(int check_zvals) {
 
-	if (!disable_inf_terrain && (display_mode & 0x10)) return;
 	water_renderer wr(resolution, resolution, check_zvals);
 	wr.draw();
 }
@@ -754,7 +743,7 @@ void draw_water_edge(float zval) { // used for WM3 tiled terrain
 
 
 // texture units used: 0: water texture, 1: reflection texture, 2: ripple texture
-void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole_bounds) {
+void draw_water_plane(float zval, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), vd_scale(2.5*get_tile_radius()*SQRT2);
@@ -837,44 +826,21 @@ void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, zval);
 	glBegin(GL_QUADS);
+	float const xinc(2.0*vdx/(float)W_STEPS); // about 9
+	float const yinc(2.0*vdy/(float)W_STEPS);
+	float yval(dy - vdy);
 
-	if (hole_bounds) { // x1 x2 y1 y2
-		float const obnd[2][2] = {{dx-vdx, dx+vdx}, {dy-vdy, dy+vdy}}; // {x,y} x {1,2}
-		float ibnd[2][2]; // {x,y} x {1,2}
+	for (unsigned i = 0; i < W_STEPS; ++i) {
+		float xval(dx - vdx);
 
-		for (unsigned i = 0; i < 2; ++i) {
-			ibnd[0][i] = get_xval(hole_bounds[i+0]);
-			ibnd[1][i] = get_yval(hole_bounds[i+2]);
+		for (unsigned j = 0; j < W_STEPS; ++j) {
+			glVertex2f( xval,        yval);
+			glVertex2f((xval+xinc),  yval);
+			glVertex2f((xval+xinc), (yval+yinc));
+			glVertex2f( xval,       (yval+yinc));
+			xval += xinc;
 		}
-		for (unsigned i = 0; i < 2; ++i) {
-			glVertex2f(obnd[0][0], obnd[1][i]);
-			glVertex2f(obnd[0][1], obnd[1][i]);
-			glVertex2f(obnd[0][1], ibnd[1][i]);
-			glVertex2f(obnd[0][0], ibnd[1][i]);
-
-			glVertex2f(obnd[0][i], ibnd[1][0]);
-			glVertex2f(ibnd[0][i], ibnd[1][0]);
-			glVertex2f(ibnd[0][i], ibnd[1][1]);
-			glVertex2f(obnd[0][i], ibnd[1][1]);
-		}
-	}
-	else {
-		float const xinc(2.0*vdx/(float)W_STEPS); // about 9
-		float const yinc(2.0*vdy/(float)W_STEPS);
-		float yval(dy - vdy);
-
-		for (unsigned i = 0; i < W_STEPS; ++i) {
-			float xval(dx - vdx);
-
-			for (unsigned j = 0; j < W_STEPS; ++j) {
-				glVertex2f( xval,        yval);
-				glVertex2f((xval+xinc),  yval);
-				glVertex2f((xval+xinc), (yval+yinc));
-				glVertex2f( xval,       (yval+yinc));
-				xval += xinc;
-			}
-			yval += yinc;
-		}
+		yval += yinc;
 	}
 	glEnd();
 	glPopMatrix();

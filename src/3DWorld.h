@@ -1405,7 +1405,7 @@ void draw_puffy_clouds(int order);
 void draw_sky(int order);
 void draw_stationary_sky(float radius, float density);
 void compute_brightness();
-void draw_water_plane(float zval, unsigned reflection_tid, int const *const hole_bounds);
+void draw_water_plane(float zval, unsigned reflection_tid);
 void draw_bubbles();
 void draw_smoke();
 void draw_fires();
@@ -1498,13 +1498,12 @@ colorRGBA setup_mesh_lighting();
 void run_post_mesh_draw();
 void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex=1);
 void display_mesh();
-float display_mesh3(int const *const hole_bounds, float wpz, bool reflection_pass);
 void draw_water_sides(int check_zvals);
 float get_inf_terrain_fog_dist();
 
 // function prototypes - tiled mesh
 int get_tile_radius();
-float draw_tiled_terrain(bool add_hole, float wpz, bool reflection_pass);
+float draw_tiled_terrain(float wpz, bool reflection_pass);
 void clear_tiled_terrain();
 void reset_tiled_terrain_state();
 void update_tiled_terrain_grass_vbos();

@@ -941,11 +941,11 @@ public:
 		set_multitex(0);
 	}
 
-	static void setup_mesh_draw_shaders(shader_t &s, float wpz, bool blend_textures_in_shaders, bool reflection_pass) {
+	static void setup_mesh_draw_shaders(shader_t &s, float wpz, bool reflection_pass) {
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_vert_shader("texture_gen.part+tiled_mesh");
-		s.set_frag_shader(blend_textures_in_shaders ? "linear_fog.part+tiled_mesh" : "linear_fog.part+multitex_2");
+		s.set_frag_shader("linear_fog.part+tiled_mesh");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
@@ -954,12 +954,12 @@ public:
 		s.add_uniform_float("water_plane_z", (is_water_enabled() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
-		if (blend_textures_in_shaders) setup_terrain_textures(s, 2, 0);
+		setup_terrain_textures(s, 2, 0);
 	}
 
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
-	float draw(bool add_hole, float wpz, bool reflection_pass) {
+	float draw(float wpz, bool reflection_pass) {
 		float zmin(FAR_CLIP);
 		glDisable(GL_NORMALIZE);
 		set_array_client_state(1, 0, 0, 0);
@@ -982,7 +982,6 @@ public:
 				mem += i->second->get_gpu_memory();
 				tree_mem += i->second->get_tree_mem();
 			}
-			if (add_hole && i->first.x == 0 && i->first.y == 0) continue;
 			float const dist(i->second->get_rel_dist_to_camera());
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, i->second->get_zmin());
@@ -992,7 +991,7 @@ public:
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 		shader_t s;
-		setup_mesh_draw_shaders(s, wpz, 1, reflection_pass);
+		setup_mesh_draw_shaders(s, wpz, reflection_pass);
 		
 		if (world_mode == WMODE_INF_TERRAIN && show_fog && is_water_enabled() && !reflection_pass) {
 			draw_water_edge(wpz); // Note: doesn't take into account waves
@@ -1174,60 +1173,7 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp) {
 }
 
 
-void draw_vert_color(colorRGBA c, float x, float y, float z) {
-
-	c.do_glColor();
-	glVertex3f(x, y, z);
-}
-
-
-void fill_gap(float wpz, bool reflection_pass) {
-
-	//RESET_TIME;
-	colorRGBA const color(setup_mesh_lighting());
-	select_texture(LANDSCAPE_TEX);
-	set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
-	float const xstart(get_xval(xoff2)), ystart(get_yval(yoff2)), x0(xstart - 0.5*DX_VAL), y0(ystart + 0.5*DY_VAL);
-	shader_t s;
-	terrain_tile_draw.setup_mesh_draw_shaders(s, wpz, 0, reflection_pass);
-	mesh_xy_grid_cache_t height_gen;
-
-	// draw +x
-	height_gen.build_arrays(x0, (y0 + MESH_Y_SIZE*DY_VAL), DX_VAL, 0.0, MESH_X_SIZE, 1);
-	glBegin(GL_QUAD_STRIP);
-
-	for (int x = 0; x < MESH_X_SIZE; ++x) {
-		vertex_normals[MESH_Y_SIZE-1][x].do_glNormal();
-		draw_vert_color(color, get_xval(x), Y_SCENE_SIZE-DY_VAL, mesh_height[MESH_Y_SIZE-1][x]);
-		draw_vert_color(color, get_xval(x), Y_SCENE_SIZE       , height_gen.eval_index(x, 0));
-	}
-	glEnd();
-	float const z_end_val(height_gen.eval_index(MESH_X_SIZE-1, 0));
-
-	// draw +y
-	height_gen.build_arrays((x0 + MESH_X_SIZE*DX_VAL), y0, 0.0, DY_VAL, 1, MESH_Y_SIZE+1);
-	glBegin(GL_QUAD_STRIP);
-
-	for (int y = 0; y < MESH_X_SIZE; ++y) {
-		vertex_normals[y][MESH_X_SIZE-1].do_glNormal();
-		draw_vert_color(color, X_SCENE_SIZE-DX_VAL, get_yval(y), mesh_height[y][MESH_X_SIZE-1]);
-		draw_vert_color(color, X_SCENE_SIZE       , get_yval(y), height_gen.eval_index(0, y));
-	}
-
-	// draw corner quad
-	draw_vert_color(color, X_SCENE_SIZE-DX_VAL, Y_SCENE_SIZE, z_end_val);
-	draw_vert_color(color, X_SCENE_SIZE       , Y_SCENE_SIZE, height_gen.eval_index(0, MESH_Y_SIZE));
-	glEnd();
-
-	s.end_shader();
-	disable_textures_texgen();
-	glDisable(GL_COLOR_MATERIAL);
-	run_post_mesh_draw();
-	//PRINT_TIME("Fill Gap");
-}
-
-
-float draw_tiled_terrain(bool add_hole, float wpz, bool reflection_pass) {
+float draw_tiled_terrain(float wpz, bool reflection_pass) {
 
 	//RESET_TIME;
 	bool const vbo_supported(setup_gen_buffers());
@@ -1237,8 +1183,7 @@ float draw_tiled_terrain(bool add_hole, float wpz, bool reflection_pass) {
 		return zmin;
 	}
 	terrain_tile_draw.update();
-	float const zmin(terrain_tile_draw.draw(add_hole, wpz, reflection_pass));
-	if (add_hole) fill_gap(wpz, reflection_pass); // need to fill the gap on +x/+y
+	float const zmin(terrain_tile_draw.draw(wpz, reflection_pass));
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	return zmin;
 }
