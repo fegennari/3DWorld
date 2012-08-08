@@ -249,6 +249,7 @@ public:
 		base_tsize = get_norm_texels();
 		init_vbo_ids();
 	}
+	void invalidate_shadows() {shadows_invalid = 1;}
 	float calc_radius() const {return 0.5*sqrt(xstep*xstep + ystep*ystep)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
@@ -304,6 +305,7 @@ public:
 		}
 		shadow_map.clear();
 		tree_map.clear();
+		invalidate_shadows();
 	}
 
 	void clear_tids() {
@@ -433,7 +435,7 @@ public:
 				}
 			}
 		}
-		shadows_invalid = 1;
+		invalidate_shadows();
 		return on_edge;
 	}
 

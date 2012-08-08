@@ -58,7 +58,7 @@ void main()
 				   cs6*weights4 *texture2D(tex6, ts6*tc).rgb;
 	vec3 texel1  = texture2D(tex1, gl_TexCoord[1].st).rgb; // detail texture
 
-	float spec      = spec_scale*(0.25*weights.b + 0.25*weights4); // grass and snow
+	float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
 	float shininess = 20.0*weights.b + 40.0*weights4;
 	vec4 shadow_normal = texture2D(shadow_normal_tex, tc);
 	vec3 normal = normalize(gl_NormalMatrix * ((2.0*shadow_normal.xyz - 1.0) * vec3(1.0, 1.0, normal_z_scale))) * shadow_normal.w; // eye space
