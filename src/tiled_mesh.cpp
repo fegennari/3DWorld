@@ -15,8 +15,7 @@
 bool const DEBUG_TILES        = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
 bool const PINE_TREE_SNOW     = 0;
-int  const TILE_RADIUS        = 4; // WM0, in mesh sizes
-int  const TILE_RADIUS_IT     = 6; // WM3, in mesh sizes
+int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
 float const DRAW_DIST_TILES   = 1.4;
 float const CREATE_DIST_TILES = 1.5;
@@ -44,18 +43,13 @@ extern texture_t textures[];
 void draw_water_edge(float zval);
 
 
-int get_tile_radius() {
-	return ((world_mode == WMODE_INF_TERRAIN) ? TILE_RADIUS_IT : TILE_RADIUS);
-}
-
-float get_inf_terrain_fog_dist() {
-	return DRAW_DIST_TILES*get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE);
-}
-
+int get_tile_radius() {return TILE_RADIUS;}
+float get_scaled_tile_radius  () {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
+float get_inf_terrain_fog_dist() {return DRAW_DIST_TILES*get_scaled_tile_radius();}
 bool is_water_enabled() {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
-bool trees_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (tree_mode & 2) && vegetation > 0.0);}
-bool scenery_enabled () {return (world_mode == WMODE_INF_TERRAIN && inf_terrain_scenery && SCENERY_THRESH > 0.0);}
-bool grass_enabled   () {return (world_mode == WMODE_INF_TERRAIN && (display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
+bool trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
+bool scenery_enabled () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
+bool grass_enabled   () {return ((display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
 
 
 class grass_tile_manager_t : public grass_manager_t {
@@ -557,7 +551,7 @@ public:
 			if (lttex_dirt[i].id == ROCK_TEX  ) rock_tex_ix  = i;
 		}
 		assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0);
-		if (world_mode == WMODE_INF_TERRAIN) {create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);}
+		create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);
 
 		//#pragma omp parallel for schedule(static,1)
 		for (unsigned y = 0; y < tsize; ++y) {
@@ -565,7 +559,7 @@ public:
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-				float const rand_offset((world_mode == WMODE_INF_TERRAIN) ? noise_scale*height_gen.eval_index(x, y, 0) : 0.0);
+				float const rand_offset(noise_scale*height_gen.eval_index(x, y, 0));
 				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
 				float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
 				float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
@@ -637,7 +631,7 @@ public:
 	}
 
 	float get_rel_dist_to_camera() const {
-		return max(0.0f, p2p_dist_xy(get_camera_pos(), get_center()) - radius)/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		return max(0.0f, p2p_dist_xy(get_camera_pos(), get_center()) - radius)/get_scaled_tile_radius();
 	}
 	bool update_range() { // if returns 0, tile will be deleted
 		if (trees_enabled  ()) {update_tree_state(0);}
@@ -648,7 +642,7 @@ public:
 		return (dist < DELETE_DIST_TILES);
 	}
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());}
-	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*get_tile_radius();}
+	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*TILE_RADIUS;}
 	float get_scenery_dist_scale () const {return get_dist_to_camera_in_tiles()/SCENERY_THRESH;}
 	float get_tree_dist_scale    () const {return get_dist_to_camera_in_tiles()/max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
 	float get_tree_far_weight    () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
@@ -788,7 +782,7 @@ public:
 		unsigned const ty_loc(s.get_uniform_loc("translate_y"));
 		int const dx(xoff - xoff2), dy(yoff - yoff2);
 		float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
-		float const lod_scale(1.0/(get_tile_radius()*(X_SCENE_SIZE + Y_SCENE_SIZE)));
+		float const lod_scale(1.0/get_scaled_tile_radius());
 		glPushMatrix();
 		glTranslatef(llcx, llcy, 0.0);
 
@@ -800,7 +794,7 @@ public:
 				if (gb.ix == 0) continue; // empty block
 				cube_t const bcube(llcx+x*dx_step, llcx+(x+1)*dx_step, llcy+y*dy_step, llcy+(y+1)*dy_step, gb.zmin, (gb.zmax + grass_length));
 				point const center(bcube.get_cube_center());
-				if (max(0.0f, p2p_dist_xy(get_camera_pos(), center) - radius)*get_tile_radius()*lod_scale > GRASS_THRESH) continue;
+				if (max(0.0f, p2p_dist_xy(get_camera_pos(), center) - radius)*TILE_RADIUS*lod_scale > GRASS_THRESH) continue;
 				if (!camera_pdu.cube_visible(bcube)) continue;
 				unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(GRASS_LOD_SCALE*lod_scale*distance_to_camera(center))));
 				grass_tile_manager.render_block((gb.ix - 1), lod_level);
@@ -888,7 +882,7 @@ public:
 		grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
 		assert(MESH_X_SIZE == MESH_Y_SIZE); // limitation, for now
 		point const camera(get_camera_pos() - point((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
-		int const tile_radius(int(1.5*get_tile_radius()) + 1);
+		int const tile_radius(int(1.5*TILE_RADIUS) + 1);
 		int const toffx(int(0.5*camera.x/X_SCENE_SIZE)), toffy(int(0.5*camera.y/Y_SCENE_SIZE));
 		int const x1(-tile_radius + toffx), y1(-tile_radius + toffy);
 		int const x2( tile_radius + toffx), y2( tile_radius + toffy);
@@ -929,7 +923,7 @@ public:
 		for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
 			int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
 			float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
-			float const cscale((world_mode == WMODE_INF_TERRAIN && tid == GROUND_TEX) ? GRASS_COLOR_SCALE : 1.0); // darker grass
+			float const cscale((tid == GROUND_TEX) ? GRASS_COLOR_SCALE : 1.0); // darker grass
 			unsigned const tu_id(start_tu_id + i);
 			select_multitex(tid, tu_id, 0);
 			std::ostringstream oss1, oss2, oss3;
@@ -995,7 +989,7 @@ public:
 		shader_t s;
 		setup_mesh_draw_shaders(s, wpz, reflection_pass);
 		
-		if (world_mode == WMODE_INF_TERRAIN && show_fog && is_water_enabled() && !reflection_pass) {
+		if (show_fog && is_water_enabled() && !reflection_pass) {
 			s.add_uniform_float("spec_scale", 0.0);
 			draw_water_edge(wpz); // Note: doesn't take into account waves
 		}
