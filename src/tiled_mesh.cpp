@@ -994,8 +994,10 @@ public:
 		setup_mesh_draw_shaders(s, wpz, reflection_pass);
 		
 		if (world_mode == WMODE_INF_TERRAIN && show_fog && is_water_enabled() && !reflection_pass) {
+			s.add_uniform_float("spec_scale", 0.0);
 			draw_water_edge(wpz); // Note: doesn't take into account waves
 		}
+		s.add_uniform_float("spec_scale", 1.0);
 		setup_mesh_lighting();
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
