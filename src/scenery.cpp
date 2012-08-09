@@ -944,7 +944,7 @@ void gen_scenery() {
 	has_scenery = 0;
 	if (DISABLE_SCENERY || (NO_ISLAND_SCENERY && island)) return;
 	has_scenery = 1;
-	all_scenery.gen(get_ext_x1(), get_ext_y1(), get_ext_x2(), get_ext_y2());
+	all_scenery.gen(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1);
 	all_scenery.add_cobjs();
 }
 

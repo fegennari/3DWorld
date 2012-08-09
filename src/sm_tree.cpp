@@ -348,7 +348,7 @@ void gen_small_trees() {
 	}
 	small_trees.clear_all();
 	small_trees = small_tree_group(); // really force a clear
-	small_trees.gen_trees(get_ext_x1(), get_ext_y1(), get_ext_x2(), get_ext_y2());
+	small_trees.gen_trees(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1);
 	small_trees.finalize(0);
 	//PRINT_TIME("Gen");
 	small_trees.add_cobjs();

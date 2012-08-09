@@ -81,7 +81,7 @@ int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1
 int enable_fsource(0), run_forward(0), advanced(0), passive_motion(P_MOTION_DEF), dynamic_mesh_scroll(0);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 int read_snow_file(0), write_snow_file(0);
-unsigned num_snowflakes(0), scenery_extent(0), num_vpls(0);
+unsigned num_snowflakes(0), num_vpls(0);
 float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), tree_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
@@ -1827,10 +1827,6 @@ int load_config(string const &config_file) {
 			int write_mode(0);
 			if (fscanf(fp, "%s%i", snow_file, &write_mode) != 2) cfg_err("snow_file command", error);
 			(write_mode ? write_snow_file : read_snow_file) = 1;
-		}
-
-		else if (str == "scenery_extent") { // in mesh sizes
-			if (!read_uint(fp, scenery_extent)) cfg_err("scenery_extent", error);
 		}
 
 		else if (str == "mesh_draw_bmp") {

@@ -1679,7 +1679,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 	RESET_TIME;
 	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
 	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
-	int const ext_x1(get_ext_x1()), ext_x2(get_ext_x2()), ext_y1(get_ext_y1()), ext_y2(get_ext_y2());
+	int const ext_x1(1), ext_x2(MESH_X_SIZE-1), ext_y1(1), ext_y2(MESH_Y_SIZE-1);
 	static int init(0), last_rgi(0), last_xoff2(0), last_yoff2(0);
 	static float last_ms(0.0), last_ms2(0.0);
 	if (tree_mode && recalc_shadows) reset_shadows(OBJECT_SHADOW);

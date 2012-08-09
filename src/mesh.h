@@ -35,7 +35,6 @@ public:
 // should be const, but depend on mesh size
 extern int MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, MAX_XY_SIZE, XY_MULT_SIZE, XY_SUM_SIZE, I_TIMESCALE;
 extern int MESH_SIZE[];
-extern unsigned scenery_extent;
 extern float DX_VAL, DY_VAL, DZ_VAL, HALF_DXY, DX_VAL_INV, DY_VAL_INV, dxdy, CLOUD_CEILING, LARGE_ZVAL;
 extern float SCENE_SIZE[];
 extern float czmin, DZ_VAL_INV2;
@@ -111,12 +110,6 @@ inline point get_xyz_pos(int x, int y, int z) {
 inline point get_mesh_xyz_pos(int x, int y) { // Note: not bounds checked
 	return point(get_xval(x), get_yval(y), mesh_height[y][x]);
 }
-
-
-inline int get_ext_x1() {return (-(int)scenery_extent*MESH_X_SIZE + 1);}
-inline int get_ext_y1() {return (-(int)scenery_extent*MESH_Y_SIZE + 1);}
-inline int get_ext_x2() {return (((int)scenery_extent + 1)*MESH_X_SIZE - 1);}
-inline int get_ext_y2() {return (((int)scenery_extent + 1)*MESH_Y_SIZE - 1);}
 
 
 inline float blend_light(float lfactor, bool has_sun, bool has_moon) {
