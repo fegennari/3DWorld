@@ -950,6 +950,7 @@ public:
 		s.add_uniform_float("water_plane_z", (is_water_enabled() ? wpz : zmin));
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
+		set_noise_tex(s, 8);
 		setup_terrain_textures(s, 2, 0);
 	}
 
@@ -1013,7 +1014,7 @@ public:
 		return zmin;
 	}
 
-	void set_noise_tex(shader_t &s, unsigned tu_id) const {
+	static void set_noise_tex(shader_t &s, unsigned tu_id) {
 		set_multitex(tu_id);
 		select_texture(NOISE_GEN_TEX, 0);
 		s.add_uniform_int("noise_tex", tu_id);
