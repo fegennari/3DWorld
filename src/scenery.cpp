@@ -32,7 +32,7 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 float msms2(1.0);
 
 
-extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, draw_model;
+extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, draw_model, DISABLE_WATER;
 extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, fticks;
 extern GLUquadricObj* quadric;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
@@ -46,7 +46,8 @@ inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR 
 
 
 bool skip_uw_draw(point const &pos, float radius) {
-	return (world_mode == WMODE_INF_TERRAIN && (pos.z + radius) < water_plane_z && get_camera_pos().z > water_plane_z);
+	if (world_mode != WMODE_INF_TERRAIN || DISABLE_WATER || !(display_mode & 0x04)) return 0;
+	return (get_camera_pos().z > water_plane_z && (pos.z + radius) < (get_water_z_height() - OCEAN_WAVE_HEIGHT)); // water_plane_z
 }
 
 

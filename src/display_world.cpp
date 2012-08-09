@@ -646,7 +646,7 @@ float get_ocean_wave_height() {
 	if (!(display_mode & 0x0100)) return 0.0;
 	static float time(0.0);
 	if (animate2 && temperature > W_FREEZE_POINT) time += fticks;
-	return 0.01*sin(1.0*time/TICKS_PER_SECOND); // add small waves
+	return OCEAN_WAVE_HEIGHT*sin(1.0*time/TICKS_PER_SECOND); // add small waves
 }
 
 
