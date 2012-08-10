@@ -24,10 +24,10 @@ void main()
 	
 	// calculate lighting
 	vec4 shadow_normal = texture2D(shadow_normal_tex, tc);
-	vec3 normal = normalize(gl_NormalMatrix * (2.0*shadow_normal.xyz - 1.0)) * shadow_normal.w; // eye space
+	vec3 normal = normalize(gl_NormalMatrix * (2.0*shadow_normal.xyz - 1.0)); // eye space
 	vec4 color  = gl_Color * gl_LightModel.ambient;
-	if (enable_light0) color += add_light_comp_pos(normal, epos, 0);
-	if (enable_light1) color += add_light_comp_pos(normal, epos, 1);
+	if (enable_light0) color += add_light_comp_pos_scaled(normal, epos, 0, shadow_normal.w);
+	if (enable_light1) color += add_light_comp_pos_scaled(normal, epos, 1, shadow_normal.w);
 	color.a = ((grass_weight < noise_weight) ? 0.0 : color.a); // skip some grass blades by making them transparent
 	gl_FrontColor  = color;
 } 

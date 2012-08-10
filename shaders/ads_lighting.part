@@ -17,7 +17,7 @@ vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in i
 }
 
 // Note: eye space point light computation with no attenuation, or use vec3(0,0,0) for directional
-vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i)
+vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float ds_scale)
 {
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
 	vec3 eye_pos   = epos.xyz;
@@ -46,7 +46,11 @@ vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i)
 #else
 	vec4 specular = get_light_specular_fast(normal, i);
 #endif
-	return (ambient + max(dot(normal, light_dir), 0.0)*diffuse + specular);
+	return (ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
+}
+
+vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i) {
+	return add_light_comp_pos_scaled(normal, epos, i, 1.0);
 }
 
 vec4 add_light_comp(in vec3 normal, in int i) {

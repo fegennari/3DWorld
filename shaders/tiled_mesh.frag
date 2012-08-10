@@ -23,7 +23,7 @@ vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in f
 	return vec4(spec, spec, spec, 1.0) * pow(max(dot(normal, half_vect), 0.0), shininess);
 }
 
-vec4 add_light_comp(in vec3 normal, in int i, in float spec, in float shininess) {
+vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float spec, in float shininess) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 lightDir = normalize(gl_LightSource[i].position.xyz);
 		
@@ -33,8 +33,8 @@ vec4 add_light_comp(in vec3 normal, in int i, in float spec, in float shininess)
 	// compute the ambient and diffuse lighting
 	vec4 diffuse = gl_LightSource[i].diffuse;
 	vec4 ambient = gl_LightSource[i].ambient;
-	vec4 specular= get_light_specular(normal, lightDir, epos, spec, shininess);
-	vec4 color   = ambient + max(dot(normal, lightDir), 0.0)*diffuse + specular;
+	vec4 color   = ambient + shadow_weight*max(dot(normal, lightDir), 0.0)*diffuse;
+	if (enable_light0) {color += get_light_specular(normal, lightDir, epos, shadow_weight*spec, shininess);}
 	
 	// apply underwater attenuation
 	// Note: ok if vertex is above the water, dist will come out as 0
@@ -58,13 +58,16 @@ void main()
 				   cs6*weights4 *texture2D(tex6, ts6*tc).rgb;
 	vec3 texel1  = texture2D(tex1, gl_TexCoord[1].st).rgb; // detail texture
 
-	float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
-	float shininess = 20.0*weights.b + 40.0*weights4;
 	vec4 shadow_normal = texture2D(shadow_normal_tex, tc);
-	vec3 normal = normalize(gl_NormalMatrix * ((2.0*shadow_normal.xyz - 1.0) * vec3(1.0, 1.0, normal_z_scale))) * shadow_normal.w; // eye space
+	vec3 normal = normalize(gl_NormalMatrix * ((2.0*shadow_normal.xyz - 1.0) * vec3(1.0, 1.0, normal_z_scale))); // eye space
 	//normal += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5);
 	vec4 color  = gl_LightModel.ambient;
-	if (enable_light0) color += add_light_comp(normal, 0, spec, shininess);
-	if (enable_light1) color += add_light_comp(normal, 1, 0.0, 1.0);
+	
+	if (enable_light0) {
+		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
+		float shininess = 20.0*weights.b + 40.0*weights4;
+		color += add_light_comp(normal, 0, shadow_normal.w, spec, shininess);
+	}
+	if (enable_light1) color += add_light_comp(normal, 1, shadow_normal.w, 0.0, 1.0);
 	gl_FragColor = apply_fog(vec4((texel0.rgb * texel1.rgb * color.rgb), color.a)); // add fog
 }
