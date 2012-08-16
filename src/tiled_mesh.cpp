@@ -713,6 +713,7 @@ public:
 			float const weight(1.0 - get_tree_far_weight());
 
 			if (weight > 0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
+				//glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 				s.add_uniform_float("max_noise", weight);
 				draw_tree_leaves_lod(s, xlate, 0);
 				s.add_uniform_float("max_noise", 1.0);

@@ -288,7 +288,7 @@ public:
 		bool mesh_int(0);
 
 		if (!skip_mesh && line_intersect_mesh(vs, ve, xpos, ypos, mesh_zval, fast, 1) /*&& mesh_zval > vs.z*/) { // not sure about this last test
-			float const t((mesh_zval - vs0.z)/(ve0.z - vs0.z));
+			float const t((fabs(ve0.z - vs0.z) < TOLERANCE) ? 0.0 : (mesh_zval - vs0.z)/(ve0.z - vs0.z));
 			ve0      = (vs0 + (ve0 - vs0)*t);
 			rcolor   = get_landscape_color(xpos, ypos);
 			mesh_int = 1;
@@ -297,7 +297,7 @@ public:
 				// if mesh int point is underwater, attenuate along light path and blend like we do when drawing the mesh
 				// could calculate approx water intersection and call recursively, but there are too many problems with that approach
 				water_color_atten_pt(&rcolor.R, xpos, ypos, ve0, v, get_light_pos());
-				float const t2((water_matrix[ypos][xpos] - ve0.z)/(v.z - ve0.z));
+				float const t2((fabs(v.z - ve0.z) < TOLERANCE) ? 0.0 : (water_matrix[ypos][xpos] - ve0.z)/(v.z - ve0.z));
 				ve0 = (ve0 + (v - ve0)*t2); // updated approx water collision point
 				blend_color(rcolor, color, rcolor, 0.5, 1); // add in a watery color
 			}
@@ -305,6 +305,7 @@ public:
 		int cindex;
 		point cpos; // unused
 		vector3d cnorm; // unused
+		assert(!is_nan(vs0) && !is_nan(ve0));
 
 		if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, 0)) {
 			get_object_color(cindex, rcolor);
