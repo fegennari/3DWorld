@@ -827,19 +827,6 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 }
 
 
-void draw_puffy_clouds(int order) {
-
-	if (cloud_manager.is_inited() && (get_camera_pos().z > cloud_manager.get_z_plane()) != order) return;
-
-	if (atmosphere < 0.01) {
-		cloud_manager.clear();
-	}
-	else if (display_mode & 0x40) { // key 7
-		cloud_manager.draw();
-	}
-}
-
-
 void draw_sky(int order) {
 
 	if (atmosphere < 0.01) return; // no atmosphere

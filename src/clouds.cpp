@@ -14,7 +14,7 @@ unsigned const CLOUD_GEN_TEX_SZ = 1024;
 cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
-extern int window_width, window_height, cloud_model;
+extern int window_width, window_height, cloud_model, display_mode;
 extern float CLOUD_CEILING, atmosphere, sun_rot;
 
 
@@ -309,6 +309,31 @@ void cloud_manager_t::draw() {
 	glEnable(GL_DEPTH_TEST);
 	//glFinish(); // testing
 	//PRINT_TIME("Clouds");
+}
+
+
+void draw_puffy_clouds(int order) {
+
+	if (cloud_manager.is_inited() && (get_camera_pos().z > cloud_manager.get_z_plane()) != order) return;
+
+	if (atmosphere < 0.01) {
+		cloud_manager.clear();
+	}
+	else if (display_mode & 0x40) { // key 7
+		cloud_manager.draw();
+	}
+}
+
+
+void draw_cloud_plane() {
+
+	if (!(display_mode & 0x40)) return;
+	float const size(SQRT2*FAR_CLIP), zval(get_camera_pos().z + CLOUD_CEILING);
+	glDisable(GL_LIGHTING);
+	WHITE.do_glColor();
+	draw_textured_quad(size, size, zval, CLOUD_TEX); // extends to at least the far clipping plane
+	//draw_tquad(size, size, zval, 0);
+	glEnable(GL_LIGHTING);
 }
 
 

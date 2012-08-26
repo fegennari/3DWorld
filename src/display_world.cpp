@@ -1163,22 +1163,21 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (combined_gu) {
 		draw_universe_bkg(underwater, uw_depth); // infinite universe as background
 		check_gl_error(4);
-
-		enable_blend();
-		select_texture(BLUR_TEX_INV);
-		gluQuadricTexture(quadric, GL_TRUE);
-		set_color(bkg_color); // will turn into fog color
-		draw_sphere_at(get_camera_pos(), 0.9*FAR_CLIP, N_SPHERE_DIV);
-		gluQuadricTexture(quadric, GL_FALSE);
-		glDisable(GL_TEXTURE_2D);
-		disable_blend();
 	}
 	else {
-		draw_sun_moon_stars();
+		config_bkg_color_and_clear(underwater, uw_depth, 1);
+		draw_sun_moon_stars(); // FIXME: no moon or stars?
 	}
+	enable_blend();
+	select_texture(BLUR_TEX_INV);
+	set_color(bkg_color); // will turn into fog color
+	draw_sphere_at_tc(get_camera_pos(), 0.9*FAR_CLIP, N_SPHERE_DIV, 1, 0);
+	glDisable(GL_TEXTURE_2D);
+	disable_blend();
+	draw_cloud_plane();
 	draw_sun_flare();
 	//draw_sky(0);
-	draw_puffy_clouds(0);
+	//draw_puffy_clouds(0);
 	//if (!camera_view) camera_shadow(camera);
 	draw_camera_weapon(0);
 	if (TIMETEST) PRINT_TIME("3.2");
