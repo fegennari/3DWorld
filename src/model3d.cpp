@@ -76,7 +76,6 @@ void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump)
 
 	if (!t.is_allocated()) {
 		t.load(-1);
-		//t.resize(910, 910); // TESTING
 		
 		if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
 			ensure_tid_loaded(t.alpha_tid, 0);
