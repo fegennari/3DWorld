@@ -28,6 +28,7 @@ protected:
 	unsigned vbo;
 	bool vbo_valid, data_valid;
 	rand_gen_t rgen;
+	typedef vert_norm_comp_tc_color grass_data_t;
 
 public:
 	grass_manager_t() : vbo(0), vbo_valid(0), data_valid(0) {}
@@ -39,7 +40,7 @@ public:
 	void clear();
 	void add_grass_blade(point const &pos, float cscale);
 	void create_new_vbo();
-	void add_to_vbo_data(grass_t const &g, vector<vert_norm_tc_color> &data, unsigned &ix, vector3d &norm) const;
+	void add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d &norm) const;
 	void begin_draw(float spec_weight) const;
 	void end_draw() const;
 };

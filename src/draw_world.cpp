@@ -185,6 +185,14 @@ void vert_norm_tc_color::set_vbo_arrays(unsigned force_stride) {
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_tc)));
 }
 
+void vert_norm_comp_tc_color::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 1, 1, 1);
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc_color));
+	set_vn_ptrs(stride, 1);
+	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(vert_norm_comp)));
+	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp_tc)));
+}
+
 void vert_norm_tc_color::set_state() const {
 	set_array_client_state(1, 1, 1, 1);
 	unsigned const stride(sizeof(*this));

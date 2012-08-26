@@ -794,6 +794,17 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 };
 
 
+struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper { // size = 28
+	typedef vert_norm_tc non_color_class;
+	vert_norm_comp_tc_color() {}
+	vert_norm_comp_tc_color(vert_norm_comp_tc const &vntc, color_wrapper const &cw) : vert_norm_comp_tc(vntc), color_wrapper(cw) {}
+	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_) {
+		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
+	}
+	static void set_vbo_arrays(unsigned force_stride=0);
+};
+
+
 struct vert_norm_color_tangent : public vert_norm_color {
 	vector3d t;
 

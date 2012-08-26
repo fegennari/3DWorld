@@ -116,13 +116,13 @@ public:
 		for (unsigned lod = 0; lod <= NUM_GRASS_LODS; ++lod) {vbo_offsets[lod].clear();}
 	}
 
-	unsigned get_gpu_mem() const {return (vbo ? 3*size()*sizeof(vert_norm_tc_color) : 0);}
+	unsigned get_gpu_mem() const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
 
 	void upload_data() {
 		if (empty()) return;
 		RESET_TIME;
 		assert(vbo);
-		vector<vert_norm_tc_color> data(3*size()); // 3 vertices per grass blade
+		vector<grass_data_t> data(3*size()); // 3 vertices per grass blade
 
 		for (unsigned i = 0, ix = 0; i < size(); ++i) {
 			vector3d norm(plus_z); // use grass normal? 2-sided lighting? generate normals in vertex shader?
@@ -130,7 +130,7 @@ public:
 			add_to_vbo_data(grass[i], data, ix, norm);
 		}
 		bind_vbo(vbo);
-		upload_vbo_data(&data.front(), data.size()*sizeof(vert_norm_tc_color));
+		upload_vbo_data(&data.front(), data.size()*sizeof(grass_data_t));
 		bind_vbo(0);
 		data_valid = 1;
 		PRINT_TIME("Grass Tile Upload");

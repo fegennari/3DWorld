@@ -78,7 +78,7 @@ void grass_manager_t::create_new_vbo() {
 	data_valid = 0;
 }
 
-void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<vert_norm_tc_color> &data, unsigned &ix, vector3d &norm) const {
+void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d &norm) const {
 
 	point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
 	vector3d const binorm(cross_product(g.dir, g.n).get_norm());
@@ -95,7 +95,7 @@ void grass_manager_t::begin_draw(float spec_weight) const {
 
 	assert(vbo_valid && vbo > 0);
 	bind_vbo(vbo);
-	vert_norm_tc_color::set_vbo_arrays();
+	grass_data_t::set_vbo_arrays();
 	select_multitex(GRASS_BLADE_TEX, 0);
 	enable_blend();
 	set_specular(spec_weight, 20.0);
@@ -253,9 +253,9 @@ public:
 		if (start == end) return; // nothing to update
 		assert(start < end && end <= grass.size());
 		unsigned const num_verts(3*(end - start)), block_size(3*4096); // must be a multiple of 3
-		unsigned const vntc_sz(sizeof(vert_norm_tc_color));
+		unsigned const vntc_sz(sizeof(grass_data_t));
 		unsigned offset(3*start);
-		vector<vert_norm_tc_color> data(min(num_verts, block_size));
+		vector<grass_data_t> data(min(num_verts, block_size));
 		bind_vbo(vbo);
 
 		if (create) { // initial upload (setup, no data)
@@ -422,7 +422,7 @@ public:
 		upload_data_to_vbo(0, (unsigned)grass.size(), 1);
 		data_valid = 1;
 		PRINT_TIME("Grass Upload VBO");
-		cout << "mem used: " << grass.size()*sizeof(grass_t) << ", vmem used: " << 3*grass.size()*sizeof(vert_norm_tc_color) << endl;
+		cout << "mem used: " << grass.size()*sizeof(grass_t) << ", vmem used: " << 3*grass.size()*sizeof(grass_data_t) << endl;
 	}
 
 	void check_for_updates() {
