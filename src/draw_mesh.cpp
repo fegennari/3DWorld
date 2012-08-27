@@ -823,27 +823,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		if (reflections) color.alpha *= 1.5;
 		set_color(color);
 	}
-	glPushMatrix();
-	glTranslatef(0.0, 0.0, zval);
-	glBegin(GL_QUADS);
-	float const xinc(2.0*vdx/(float)W_STEPS); // about 9
-	float const yinc(2.0*vdy/(float)W_STEPS);
-	float yval(dy - vdy);
-
-	for (unsigned i = 0; i < W_STEPS; ++i) {
-		float xval(dx - vdx);
-
-		for (unsigned j = 0; j < W_STEPS; ++j) {
-			glVertex2f( xval,        yval);
-			glVertex2f((xval+xinc),  yval);
-			glVertex2f((xval+xinc), (yval+yinc));
-			glVertex2f( xval,       (yval+yinc));
-			xval += xinc;
-		}
-		yval += yinc;
-	}
-	glEnd();
-	glPopMatrix();
+	draw_z_plane(dx-vdx, dy-vdy, dx+vdx, dy+vdy, zval, W_STEPS, W_STEPS);
 	disable_multitex_a();
 	s.end_shader();
 	disable_blend();

@@ -832,6 +832,8 @@
     <None Include="model_data\config_soda.txt" />
     <None Include="shaders\bump_map.part.frag" />
     <None Include="shaders\bump_map.part.vert" />
+    <None Include="shaders\clouds.frag" />
+    <None Include="shaders\clouds.vert" />
     <None Include="shaders\cloud_billboard.frag" />
     <None Include="shaders\draw_mesh.frag" />
     <None Include="shaders\draw_mesh.vert" />

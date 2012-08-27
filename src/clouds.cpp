@@ -15,7 +15,8 @@ cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
 extern int window_width, window_height, cloud_model, display_mode;
-extern float CLOUD_CEILING, atmosphere, sun_rot;
+extern float CLOUD_CEILING, atmosphere, sun_rot, fticks;
+extern vector3d wind;
 
 
 void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bool zoomed);
@@ -328,12 +329,23 @@ void draw_puffy_clouds(int order) {
 void draw_cloud_plane() {
 
 	if (!(display_mode & 0x40)) return;
-	float const size(SQRT2*FAR_CLIP), zval(get_camera_pos().z + CLOUD_CEILING);
-	glDisable(GL_LIGHTING);
-	WHITE.do_glColor();
-	draw_textured_quad(size, size, zval, CLOUD_TEX); // extends to at least the far clipping plane
-	//draw_tquad(size, size, zval, 0);
-	glEnable(GL_LIGHTING);
+	float const size(SQRT2*FAR_CLIP), zval(get_camera_pos().z + 0.5*CLOUD_CEILING); // extends to at least the far clipping plane
+	shader_t s;
+	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+	s.set_vert_shader("clouds");
+	s.set_frag_shader("linear_fog.part+clouds");
+	s.begin_shader();
+	s.setup_fog_scale();
+	s.add_uniform_int("tex0", 0);
+	vector3d const offset(-get_camera_pos()); // FIXME: add wind
+	s.add_uniform_vector3d("offset", offset);
+	s.add_uniform_float("time", fticks);
+	enable_blend();
+	select_texture(NOISE_TEX);
+	get_cloud_color().do_glColor();
+	draw_z_plane(-size, -size, size, size, zval, 16, 16);
+	disable_blend();
+	s.end_shader();
 }
 
 
