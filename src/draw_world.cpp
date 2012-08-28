@@ -731,7 +731,7 @@ void draw_sun() {
 
 void draw_moon() {
 
-	if (show_fog) return; // don't draw when there is fog
+	if (world_mode == WMODE_GROUND && show_fog) return; // don't draw when there is fog
 	point const pos(get_moon_pos());
 	if (!sphere_in_camera_view(pos, moon_radius, 1)) return;
 	set_color(WHITE);

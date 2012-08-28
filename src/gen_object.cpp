@@ -37,7 +37,7 @@ extern obj_type object_types[];
 
 void gen_stars(float alpha, int half_sphere) {
 
-	if (show_fog) return;
+	if (world_mode == WMODE_GROUND && show_fog) return;
 	unsigned const cur_num_stars((unsigned)stars.size());
 
 	if (!star_init) {
