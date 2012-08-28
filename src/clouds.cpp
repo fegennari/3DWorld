@@ -329,7 +329,10 @@ void draw_puffy_clouds(int order) {
 void draw_cloud_plane() {
 
 	if (!(display_mode & 0x40)) return;
-	float const size(SQRT2*FAR_CLIP), zval(get_camera_pos().z + 0.5*CLOUD_CEILING); // extends to at least the far clipping plane
+	float const size(SQRT2*FAR_CLIP), zval(get_camera_pos().z + CLOUD_CEILING); // extends to at least the far clipping plane
+	static vector2d wind_pos(0.0, 0.0);
+	wind_pos.x += fticks*wind.x;
+	wind_pos.y += fticks*wind.y;
 	shader_t s;
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	s.set_vert_shader("clouds");
@@ -339,7 +342,7 @@ void draw_cloud_plane() {
 	s.add_uniform_int("tex0", 0);
 	vector3d const offset(-get_camera_pos()); // FIXME: add wind
 	s.add_uniform_vector3d("offset", offset);
-	s.add_uniform_float("time", fticks);
+	s.add_uniform_vector2d("dxy", wind_pos);
 	enable_blend();
 	select_texture(NOISE_TEX);
 	get_cloud_color().do_glColor();
