@@ -40,7 +40,7 @@ pt_line_drawer bubble_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists, two_sided_lighting;
-extern bool group_back_face_cull, have_indir_smoke_tex, create_voxel_landscape;
+extern bool group_back_face_cull, have_indir_smoke_tex, create_voxel_landscape, combined_gu;
 extern int is_cloudy, iticks, display_mode, show_fog, num_groups, island;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode;
 extern unsigned smoke_tid, dl_tid, num_stars;
@@ -911,19 +911,19 @@ void compute_brightness() {
 	brightness = 0.8 + 0.2*light_factor;
 	if (!have_sun) brightness *= 0.25;
 	if (is_cloudy) brightness *= 0.5;
+	float const sun_bright(0.5 + 0.5*max(0.0f, sun_pos.z/sun_pos.mag()));
+	float const moon_bright(combined_gu ? 0.1 : 0.3*(0.5 + 0.5*max(0.0f, moon_pos.z/moon_pos.mag())));
 	
-	if (light_pos.z < zmin) {
-		brightness *= 0.1;
+	if (light_factor >= 0.6) {
+		brightness *= sun_bright;
 	}
-	else if (light_factor <= 0.4 || light_factor >= 0.6) {
-		brightness *= 0.15 + 0.85*light_pos.z/light_pos.mag();
+	else if (light_factor <= 0.4) {
+		brightness *= moon_bright;
 	}
 	else {
-		float const sun_bright (sun_pos.z /sun_pos.mag() );
-		float const moon_bright(moon_pos.z/moon_pos.mag());
-		brightness *= 0.15 + 0.85*5.0*((light_factor - 0.4)*sun_bright + (0.6 - light_factor)*moon_bright);
+		brightness *= 5.0*((light_factor - 0.4)*sun_bright + (0.6 - light_factor)*moon_bright);
 	}
-	brightness = max(0.99f, min(0.0f, brightness));
+	brightness = min(0.99f, max(0.0f, brightness));
 }
 
 
