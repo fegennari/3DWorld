@@ -52,6 +52,10 @@ void shader_t::set_uniform_int(int loc, int val) const {
 	if (loc >= 0) glUniform1i(loc, val);
 }
 
+void shader_t::set_uniform_vector2d(int loc, vector2d const &val) const {
+	if (loc >= 0) glUniform2fv(loc, 1, &val.x);
+}
+
 void shader_t::set_uniform_vector3d(int loc, vector3d const &val) const {
 	if (loc >= 0) glUniform3fv(loc, 1, &val.x);
 }
@@ -79,6 +83,10 @@ void shader_t::add_uniform_float(char const *const name, float val) const {
 
 void shader_t::add_uniform_int(char const *const name, int val) const {
 	if (!disable_shaders) set_uniform_int(get_uniform_loc(name), val);
+}
+
+void shader_t::add_uniform_vector2d(char const *const name, vector2d const &val) const {
+	if (!disable_shaders) set_uniform_vector2d(get_uniform_loc(name), val);
 }
 
 void shader_t::add_uniform_vector3d(char const *const name, vector3d const &val) const {

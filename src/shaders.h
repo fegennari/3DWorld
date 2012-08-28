@@ -48,6 +48,7 @@ public:
 	void set_uniform_float_array(int loc, float const *const val, unsigned num) const;
 	void set_uniform_float      (int loc, float val) const;
 	void set_uniform_int        (int loc, int val) const;
+	void set_uniform_vector2d   (int loc, vector2d const &val) const;
 	void set_uniform_vector3d   (int loc, vector3d const &val) const;
 	void set_uniform_color      (int loc, colorRGBA const &val) const;
 	void set_uniform_color      (int loc, colorRGB  const &val) const;
@@ -56,6 +57,7 @@ public:
 	void add_uniform_float_array (char const *const name, float const *const val, unsigned num) const;
 	void add_uniform_float       (char const *const name, float val) const;
 	void add_uniform_int         (char const *const name, int val) const;
+	void add_uniform_vector2d    (char const *const name, vector2d const &val) const;
 	void add_uniform_vector3d    (char const *const name, vector3d const &val) const;
 	void add_uniform_color       (char const *const name, colorRGBA const &val) const;
 	void add_uniform_color       (char const *const name, colorRGB  const &val) const;

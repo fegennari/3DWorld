@@ -181,6 +181,8 @@ template<typename T> struct point2d { // size = 8
 	}
 };
 
+typedef point2d<float> vector2d;
+
 
 template<typename T> struct pointT { // size = 12 (float), 24(double)
 
