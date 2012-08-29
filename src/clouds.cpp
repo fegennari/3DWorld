@@ -328,7 +328,6 @@ void draw_puffy_clouds(int order) {
 
 void draw_cloud_plane() {
 
-	if (!(display_mode & 0x40)) return;
 	float const size(SQRT2*FAR_CLIP), zval(get_camera_pos().z + CLOUD_CEILING); // extends to at least the far clipping plane
 	static vector2d wind_pos(0.0, 0.0);
 	wind_pos.x += fticks*wind.x;

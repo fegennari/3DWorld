@@ -751,12 +751,12 @@ void draw_moon() {
 	glDisable(GL_LIGHT4);
 
 	if (light_factor >= 0.4) { // fade moon into background color when the sun comes up
-		colorRGBA color = bkg_color;
-		color.alpha     = 5.0*(light_factor - 0.4);
+		colorRGBA color(bkg_color);
+		color.alpha = 5.0*(light_factor - 0.4);
 		glDisable(GL_LIGHTING);
 		enable_blend();
 		color.do_glColor();
-		draw_subdiv_sphere(pos, 1.2*moon_radius, N_SPHERE_DIV, 0, 0);
+		draw_subdiv_sphere(pos, 1.02*moon_radius, N_SPHERE_DIV, 0, 0);
 		glEnable(GL_LIGHTING);
 		disable_blend();
 	}

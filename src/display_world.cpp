@@ -598,7 +598,7 @@ colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
 		fog_dist = 0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2));
 	}
 	else {
-		fog_color = GRAY;
+		fog_color = colorRGBA(0.6, 0.6, 0.6, 1.0); // GRAY/LT_GRAY
 		apply_red_sky(fog_color);
 		blend_color(fog_color, fog_color, bkg_color, 0.5, 1);
 		fog_dist = get_inf_terrain_fog_dist();
@@ -1058,7 +1058,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	// draw partial scene
 	draw_sun_moon_stars();
 	draw_sun_flare();
-	draw_cloud_plane(); // slower but a nice effect
+	if (display_mode & 0x40) {draw_cloud_plane();} // slower but a nice effect
 
 	if (display_mode & 0x01) { // draw mesh
 		// setup above-water clip plane
@@ -1167,7 +1167,6 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	}
 	else {
 		config_bkg_color_and_clear(underwater, uw_depth, 1);
-		draw_sun_moon_stars(); // FIXME: no moon or stars?
 	}
 	enable_blend();
 	select_texture(BLUR_TEX_INV);
@@ -1175,11 +1174,17 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	draw_sphere_at_tc(get_camera_pos(), 0.9*FAR_CLIP, N_SPHERE_DIV, 1, 0);
 	glDisable(GL_TEXTURE_2D);
 	disable_blend();
+
+	if (!combined_gu) {
+		int const fog_enabled(glIsEnabled(GL_FOG));
+		if (fog_enabled) {glDisable(GL_FOG);}
+		draw_sun_moon_stars();
+		if (fog_enabled) {glEnable(GL_FOG);}
+	}
 	draw_cloud_plane();
 	draw_sun_flare();
 	//draw_sky(0);
 	//draw_puffy_clouds(0);
-	//if (!camera_view) camera_shadow(camera);
 	draw_camera_weapon(0);
 	if (TIMETEST) PRINT_TIME("3.2");
 	calc_cur_ambient_diffuse();
