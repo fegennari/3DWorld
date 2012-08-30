@@ -328,7 +328,7 @@ void draw_puffy_clouds(int order) {
 
 void draw_cloud_plane() {
 
-	float const size(SQRT2*FAR_CLIP), zval(get_camera_pos().z + CLOUD_CEILING); // extends to at least the far clipping plane
+	float const size(SQRT2*FAR_CLIP), zval(get_camera_pos().z + 1.0*CLOUD_CEILING); // extends to at least the far clipping plane
 	static vector2d wind_pos(0.0, 0.0);
 	wind_pos.x += fticks*wind.x;
 	wind_pos.y += fticks*wind.y;
@@ -343,9 +343,11 @@ void draw_cloud_plane() {
 	s.add_uniform_vector3d("offset", offset);
 	s.add_uniform_vector2d("dxy", wind_pos);
 	enable_blend();
+	glDepthMask(GL_FALSE);
 	select_texture(NOISE_TEX);
 	get_cloud_color().do_glColor();
 	draw_z_plane(-size, -size, size, size, zval, 16, 16);
+	glDepthMask(GL_TRUE);
 	disable_blend();
 	s.end_shader();
 }
