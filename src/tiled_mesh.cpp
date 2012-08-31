@@ -695,7 +695,7 @@ public:
 		trees.draw_pine_leaves(0, low_detail, draw_all, xlate);
 	}
 
-	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_leaves) const {
+	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_leaves, bool reflection_pass) const {
 		if (trees.empty()) return;
 		glPushMatrix();
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
@@ -709,8 +709,8 @@ public:
 				trees.draw_branches(0, xlate, &trunk_pts);
 			}
 		}
-		if (draw_leaves) {
-			float const weight(1.0 - get_tree_far_weight());
+		if (draw_leaves) { // could use reflection_pass as an optimization
+			float const weight(1.0 - get_tree_far_weight()); // 0 => low detail, 1 => high detail
 
 			if (weight > 0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
 				//glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
@@ -974,18 +974,20 @@ public:
 			last_moon = moon_pos;
 		}
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-			assert(i->second);
+			tile_t *const tile(i->second);
+			assert(tile);
 			
 			if (DEBUG_TILES) {
-				mem += i->second->get_gpu_memory();
-				tree_mem += i->second->get_tree_mem();
+				mem      += tile->get_gpu_memory();
+				tree_mem += tile->get_tree_mem();
 			}
-			float const dist(i->second->get_rel_dist_to_camera());
+			float const dist(tile->get_rel_dist_to_camera());
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
-			zmin = min(zmin, i->second->get_zmin());
-			if (!i->second->is_visible()) continue;
-			i->second->pre_draw_update(data, indices, height_gen);
-			to_draw.push_back(make_pair(dist, i->second));
+			zmin = min(zmin, tile->get_zmin());
+			if (!tile->is_visible()) continue;
+			//if (reflection_pass && tile->contains_camera() && !tile->has_water()) continue;
+			tile->pre_draw_update(data, indices, height_gen);
+			to_draw.push_back(make_pair(dist, tile));
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 		shader_t s;
@@ -1036,7 +1038,7 @@ public:
 		set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
-			to_draw[i].second->draw_trees(s, tree_trunk_pts, 1, 0);
+			to_draw[i].second->draw_trees(s, tree_trunk_pts, 1, 0, reflection_pass);
 		}
 		s.add_uniform_float("tex_scale_t", 1.0);
 		s.end_shader();
@@ -1079,7 +1081,7 @@ public:
 		set_specular(0.2, 8.0);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
-			to_draw[i].second->draw_trees(s, tree_trunk_pts, 0, 1);
+			to_draw[i].second->draw_trees(s, tree_trunk_pts, 0, 1, reflection_pass);
 		}
 		assert(tree_trunk_pts.empty());
 		set_specular(0.0, 1.0);
