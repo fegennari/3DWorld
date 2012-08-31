@@ -289,7 +289,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 			if (!bfc || !camera_behind_polygon(side_pts, 4)) {
 				if ((display_mode & 0x08) && !occluders.empty() && is_occluded(occluders, side_pts, npoints, camera)) continue;
 				vector3d const norm2(get_poly_norm(side_pts));
-				draw_polygon(tid, side_pts, npoints, norm2, shader);
+				draw_polygon(tid, side_pts, 4, norm2, shader);
 			}
 		}
 	}
