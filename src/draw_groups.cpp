@@ -60,7 +60,6 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, unsigned char type);
-void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale);
 void draw_shrapnel(dwobject const &obj, float radius);
 void draw_particle(dwobject const &obj, float radius);
 
@@ -143,6 +142,49 @@ void scale_color_uw(colorRGBA &color, point const &pos) {
 	color.R *= 0.45;
 	color.G *= 0.45;
 	color.B *= 0.85;
+}
+
+
+void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, float thickness=0.0, int tid=-1, bool thick_poly=0) {
+	/*
+	tXX  + c	tXY + sZ	tXZ - sY	0
+	tXY - sZ	tYY + c		tYZ + sX	0
+	tXZ + sY	tYZ - sX	tZZ + c		0
+	0			0			0			1
+		c = cos (theta), s = sin (theta), t = 1-cos (theta), and <X,Y,Z>
+	x [-r, 0, 0, 1]^-1 => [tX^2 + c,  tXY + sZ, tXZ  - sY, 1]
+	x [ 0, 0, q, 1]^-1 => [tXZ  + sY, tYZ - sX, tZ^2 + c,  1]
+	*/
+	angle *= TO_RADIANS;
+	float const r(1.5*radius), q(3.0*radius); // o must be normalized
+	float const c(cos(angle)), s(sin(angle)), t(1.0 - c);
+	point const p1(r*(t*o.x*o.x + c),     r*(t*o.x*o.y - s*o.z), r*(t*o.x*o.z - s*o.y));
+	point const p2(q*(t*o.x*o.z + s*o.y), q*(t*o.y*o.z - s*o.x), q*(t*o.z*o.z + c));
+	vector3d const norm(cross_product(p2, p1).get_norm());
+
+	if (thick_poly) {
+		coll_obj cobj;
+		cobj.type      = COLL_POLYGON;
+		cobj.thickness = thickness;
+		cobj.norm      = norm;
+		cobj.npoints   = 3;
+		cobj.cp.tid    = tid;
+		cobj.cp.tscale = tscale*radius;
+		cobj.points[0] = (pos + p1);
+		cobj.points[1] = (pos - p1);
+		cobj.points[2] = (pos + p2);
+		cobj.draw_extruded_polygon(tid, NULL);
+	}
+	else {
+		norm.do_glNormal();
+		float const ts(123.456*radius), tt(654.321*radius);
+		if (tscale != 0.0) glTexCoord2f(ts, tt);
+		(pos + p1).do_glVertex();
+		if (tscale != 0.0) glTexCoord2f(ts+2*tscale*radius, tt);
+		(pos - p1).do_glVertex();
+		if (tscale != 0.0) glTexCoord2f(ts, tt+2*tscale*radius);
+		(pos + p2).do_glVertex();
+	}
 }
 
 
@@ -528,9 +570,10 @@ void draw_group(obj_group &objg, shader_t &s) {
 			case FRAGMENT: // draw_fragment()?
 				if (obj.vdeform.z > 0.0) { // shatterable - use triangle
 					set_color_v2(color2, obj.status);
-					glBegin(GL_TRIANGLES); // Note: needs 2-sided lighting
-					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0)); // obj.vdeform.z = tscale
-					glEnd();
+					bool const use_thick(tid < 0); // when not textured
+					if (!use_thick) glBegin(GL_TRIANGLES); // Note: needs 2-sided lighting
+					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0), 0.2*tradius, tid, use_thick); // obj.vdeform.z = tscale
+					if (!use_thick) glEnd();
 					break;
 				}
 				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 2);
@@ -1328,34 +1371,6 @@ void set_glow_color(dwobject const &obj, bool shrapnel_cscale) {
 	colorRGBA color(get_glowing_obj_color(obj.pos, obj.time, object_types[obj.type].lifetime, stime, shrapnel_cscale, ((obj.flags & TYPE_FLAG) != 0)));
 	if (shrapnel_cscale) color *= CLIP_TO_01(1.0f - stime);
 	set_emissive_color_obj(color);
-}
-
-
-void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale) {
-
-	/*
-	tXX  + c	tXY + sZ	tXZ - sY	0
-	tXY - sZ	tYY + c		tYZ + sX	0
-	tXZ + sY	tYZ - sX	tZZ + c		0
-	0			0			0			1
-		c = cos (theta), s = sin (theta), t = 1-cos (theta), and <X,Y,Z>
-	x [-r, 0, 0, 1]^-1 => [tX^2 + c,  tXY + sZ, tXZ  - sY, 1]
-	x [ 0, 0, q, 1]^-1 => [tXZ  + sY, tYZ - sX, tZ^2 + c,  1]
-	*/
-	angle *= TO_RADIANS;
-	float const r(1.5*radius), q(3.0*radius); // o must be normalized
-	float const c(cos(angle)), s(sin(angle)), t(1.0 - c);
-	point const p1(r*(t*o.x*o.x + c),     r*(t*o.x*o.y - s*o.z), r*(t*o.x*o.z - s*o.y));
-	point const p2(q*(t*o.x*o.z + s*o.y), q*(t*o.y*o.z - s*o.x), q*(t*o.z*o.z + c));
-	vector3d const norm(cross_product(p2, p1).get_norm());
-	norm.do_glNormal();
-	float const ts(123.456*radius), tt(654.321*radius);
-	if (tscale != 0.0) glTexCoord2f(ts, tt);
-	(pos + p1).do_glVertex();
-	if (tscale != 0.0) glTexCoord2f(ts+2*tscale*radius, tt);
-	(pos - p1).do_glVertex();
-	if (tscale != 0.0) glTexCoord2f(ts, tt+2*tscale*radius);
-	(pos + p2).do_glVertex();
 }
 
 
