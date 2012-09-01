@@ -15,7 +15,7 @@ cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
 extern int window_width, window_height, cloud_model, display_mode;
-extern float CLOUD_CEILING, atmosphere, sun_rot, fticks;
+extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
 extern vector3d wind;
 
 
@@ -326,9 +326,17 @@ void draw_puffy_clouds(int order) {
 }
 
 
+void draw_cloud_vert(float x, float y, float z1, float z2, float r) {
+	float const xx(x - get_camera_pos().x), yy(y - get_camera_pos().y);
+	glVertex3f(x, y, (z1 + (z2 - z1)*cos(PI_TWO*min(1.0f, sqrt(xx*xx + yy*yy)/r))));
+}
+
+
 void draw_cloud_plane() {
 
-	float const size(SQRT2*FAR_CLIP), zval(get_camera_pos().z + 1.0*CLOUD_CEILING); // extends to at least the far clipping plane
+	float const camera_z(get_camera_pos().z);
+	float const size(FAR_CLIP); // extends to at least the far clipping plane
+	float const z1(water_plane_z), z2(camera_z + CLOUD_CEILING);
 	static vector2d wind_pos(0.0, 0.0);
 	wind_pos.x += fticks*wind.x;
 	wind_pos.y += fticks*wind.y;
@@ -346,7 +354,29 @@ void draw_cloud_plane() {
 	glDepthMask(GL_FALSE);
 	select_texture(NOISE_TEX);
 	get_cloud_color().do_glColor();
-	draw_z_plane(-size, -size, size, size, zval, 16, 16);
+
+#if 0
+	draw_z_plane(-size, -size, size, size, z2, 16, 16);
+#else
+	glBegin(GL_QUADS);
+	unsigned const NUM_DIV = 32;
+	float const dxy(2*size/(NUM_DIV-1));
+	float yval(-size);
+
+	for (unsigned i = 0; i < NUM_DIV; ++i) {
+		float xval(-size);
+
+		for (unsigned j = 0; j < NUM_DIV; ++j) {
+			draw_cloud_vert( xval,       yval,      z1, z2, size);
+			draw_cloud_vert((xval+dxy),  yval,      z1, z2, size);
+			draw_cloud_vert((xval+dxy), (yval+dxy), z1, z2, size);
+			draw_cloud_vert( xval,      (yval+dxy), z1, z2, size);
+			xval += dxy;
+		}
+		yval += dxy;
+	}
+	glEnd();
+#endif
 	glDepthMask(GL_TRUE);
 	disable_blend();
 	s.end_shader();
