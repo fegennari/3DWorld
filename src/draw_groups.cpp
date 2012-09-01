@@ -145,7 +145,9 @@ void scale_color_uw(colorRGBA &color, point const &pos) {
 }
 
 
-void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, float thickness=0.0, int tid=-1, bool thick_poly=0) {
+void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale,
+	float thickness=0.0, int tid=-1, colorRGBA const &color=WHITE, bool thick_poly=0)
+{
 	/*
 	tXX  + c	tXY + sZ	tXZ - sY	0
 	tXY - sZ	tYY + c		tYZ + sX	0
@@ -160,23 +162,23 @@ void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, fl
 	float const c(cos(angle)), s(sin(angle)), t(1.0 - c);
 	point const p1(r*(t*o.x*o.x + c),     r*(t*o.x*o.y - s*o.z), r*(t*o.x*o.z - s*o.y));
 	point const p2(q*(t*o.x*o.z + s*o.y), q*(t*o.y*o.z - s*o.x), q*(t*o.z*o.z + c));
-	vector3d const norm(cross_product(p2, p1).get_norm());
 
 	if (thick_poly) {
 		coll_obj cobj;
 		cobj.type      = COLL_POLYGON;
 		cobj.thickness = thickness;
-		cobj.norm      = norm;
 		cobj.npoints   = 3;
+		cobj.cp.color  = color;
 		cobj.cp.tid    = tid;
 		cobj.cp.tscale = tscale*radius;
 		cobj.points[0] = (pos + p1);
 		cobj.points[1] = (pos - p1);
 		cobj.points[2] = (pos + p2);
+		cobj.norm      = get_poly_norm(cobj.points);
 		cobj.draw_extruded_polygon(tid, NULL);
 	}
 	else {
-		norm.do_glNormal();
+		cross_product(p2, p1).get_norm().do_glNormal();
 		float const ts(123.456*radius), tt(654.321*radius);
 		if (tscale != 0.0) glTexCoord2f(ts, tt);
 		(pos + p1).do_glVertex();
@@ -572,7 +574,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 					set_color_v2(color2, obj.status);
 					bool const use_thick(tid < 0); // when not textured
 					if (!use_thick) glBegin(GL_TRIANGLES); // Note: needs 2-sided lighting
-					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0), 0.2*tradius, tid, use_thick); // obj.vdeform.z = tscale
+					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0), 0.2*tradius, tid, color2, use_thick); // obj.vdeform.z = tscale
 					if (!use_thick) glEnd();
 					break;
 				}
