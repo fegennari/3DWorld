@@ -571,8 +571,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		if (smoke_exists) {
 			for (unsigned i = 0; i < portals.size(); ++i) {
 				if (!portals[i].is_visible()) continue;
-				float const neg_dist_sq(-distance_to_camera_sq(portals[i].get_center_pt()));
-				draw_last.push_back(make_pair(neg_dist_sq, -(int)(i+1)));
+				draw_last.push_back(make_pair(-distance_to_camera(portals[i].get_center_pt()), -(int)(i+1)));
 			}
 		}
 		sort(draw_last.begin(), draw_last.end()); // sort back to front
