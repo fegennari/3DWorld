@@ -168,7 +168,6 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		p[d0 ] = d[d0][1]; pts[1] = p;
 		p[d1 ] = d[d1][1]; pts[2] = p;
 		p[d0 ] = d[d0][0]; pts[3] = p;
-		if ((display_mode & 0x08) && !occluders.empty() && is_occluded(occluders, pts, 4, camera)) continue; // makes little difference
 
 		if (textured) {
 			float a[4] = {0.0}, b[4] = {0.0};
@@ -277,9 +276,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 				std::reverse(pts[s], pts[s]+npoints);
 				norm2.negate();
 			}
-			if (!(display_mode & 0x08) || occluders.empty() || !is_occluded(occluders, pts[s], npoints, camera)) {
-				draw_polygon(tid, pts[s], npoints, norm2, shader); // draw bottom surface
-			}
+			draw_polygon(tid, pts[s], npoints, norm2, shader); // draw bottom surface
 			if (!s) std::reverse(pts[s], pts[s]+npoints);
 		}
 		else { // draw sides
@@ -287,7 +284,6 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
 			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
 
 			if (!bfc || !camera_behind_polygon(side_pts, 4)) {
-				if ((display_mode & 0x08) && !occluders.empty() && is_occluded(occluders, side_pts, npoints, camera)) continue;
 				vector3d const norm2(get_poly_norm(side_pts));
 				draw_polygon(tid, side_pts, 4, norm2, shader);
 			}

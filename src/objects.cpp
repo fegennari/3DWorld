@@ -299,7 +299,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
 			int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 			bool const draw_ends(!(cp.surfs & 1));
-			setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader);
+			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader);}
 			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, (draw_ends && tid < 0)); // Note: using texgen, not textured
 
 			if (draw_ends && tid >= 0) { // draw ends with different texture matrix
@@ -314,7 +314,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		{
 			float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
-			setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader);
+			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader);}
 			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
 		}
 		break;
