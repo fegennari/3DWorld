@@ -721,27 +721,6 @@ void draw_water_sides(int check_zvals) {
 }
 
 
-void draw_water_edge(float zval) { // used for WM3 tiled terrain
-
-	glDepthMask(GL_FALSE);
-	select_texture(WHITE_TEX, 0); // tex coords won't have any effect
-	glTexCoord2f(0.0, 0.0); // but it doesn't hurt to set them
-	set_color(BLACK);
-	BLACK.do_glColor();
-	float const vd_scale(2.0*get_tile_radius()*SQRT2), dx(xoff*DX_VAL), dy(yoff*DY_VAL);
-	float const radius(0.5*vd_scale*(X_SCENE_SIZE + Y_SCENE_SIZE));
-	unsigned const num_stacks(16);
-	float const dz((zval - zmin)/num_stacks);
-
-	for (unsigned i = 0; i < num_stacks; ++i) {
-		float const z(zmin + i*dz);
-		draw_fast_cylinder(point(dx, dy, z), point(dx, dy, z+dz), radius, radius, 64, 0);
-	}
-	glDisable(GL_TEXTURE_2D);
-	glDepthMask(GL_TRUE);
-}
-
-
 // texture units used: 0: water texture, 1: reflection texture, 2: ripple texture
 void draw_water_plane(float zval, unsigned reflection_tid) {
 

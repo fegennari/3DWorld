@@ -334,13 +334,26 @@ void draw_cloud_vert(float x, float y, float z1, float z2, float r) {
 
 void draw_cloud_plane() {
 
-	float const camera_z(get_camera_pos().z);
-	float const size(FAR_CLIP); // extends to at least the far clipping plane
-	float const z1(water_plane_z), z2(camera_z + CLOUD_CEILING);
+	point const camera(get_camera_pos());
+	float const size(FAR_CLIP), rval(0.95*size); // extends to at least the far clipping plane
+	float const z1(zmin), z2(camera.z + max(zmax, CLOUD_CEILING));
 	static vector2d wind_pos(0.0, 0.0);
 	wind_pos.x += fticks*wind.x;
 	wind_pos.y += fticks*wind.y;
 	shader_t s;
+	glDepthMask(GL_FALSE);
+
+	// draw a plane at zmin to properly blend the fog
+	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+	s.set_vert_shader("fog_only");
+	s.set_frag_shader("linear_fog.part+fog_only");
+	s.begin_shader();
+	s.setup_fog_scale();
+	BLACK.do_glColor();
+	draw_z_plane(-size, -size, size, size, zmin, 4, 4);
+	s.end_shader();
+
+	// draw clouds
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	s.set_vert_shader("clouds");
 	s.set_frag_shader("linear_fog.part+clouds");
@@ -351,13 +364,8 @@ void draw_cloud_plane() {
 	s.add_uniform_vector3d("offset", offset);
 	s.add_uniform_vector2d("dxy", wind_pos);
 	enable_blend();
-	glDepthMask(GL_FALSE);
-	select_texture(NOISE_TEX);
+	select_texture(NOISE_TEX, 0);
 	get_cloud_color().do_glColor();
-
-#if 0
-	draw_z_plane(-size, -size, size, size, z2, 16, 16);
-#else
 	glBegin(GL_QUADS);
 	unsigned const NUM_DIV = 32;
 	float const dxy(2*size/(NUM_DIV-1));
@@ -367,19 +375,19 @@ void draw_cloud_plane() {
 		float xval(-size);
 
 		for (unsigned j = 0; j < NUM_DIV; ++j) {
-			draw_cloud_vert( xval,       yval,      z1, z2, size);
-			draw_cloud_vert((xval+dxy),  yval,      z1, z2, size);
-			draw_cloud_vert((xval+dxy), (yval+dxy), z1, z2, size);
-			draw_cloud_vert( xval,      (yval+dxy), z1, z2, size);
+			draw_cloud_vert( xval,       yval,      z1, z2, rval);
+			draw_cloud_vert((xval+dxy),  yval,      z1, z2, rval);
+			draw_cloud_vert((xval+dxy), (yval+dxy), z1, z2, rval);
+			draw_cloud_vert( xval,      (yval+dxy), z1, z2, rval);
 			xval += dxy;
 		}
 		yval += dxy;
 	}
 	glEnd();
-#endif
-	glDepthMask(GL_TRUE);
-	disable_blend();
 	s.end_shader();
+
+	disable_blend();
+	glDepthMask(GL_TRUE);
 }
 
 

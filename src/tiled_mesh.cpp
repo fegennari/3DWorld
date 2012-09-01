@@ -40,8 +40,6 @@ extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
 
-void draw_water_edge(float zval);
-
 
 int get_tile_radius() {return TILE_RADIUS;}
 float get_scaled_tile_radius  () {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
@@ -992,11 +990,6 @@ public:
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 		shader_t s;
 		setup_mesh_draw_shaders(s, wpz, reflection_pass);
-		
-		if (show_fog && is_water_enabled() && !reflection_pass) {
-			s.add_uniform_float("spec_scale", 0.0);
-			draw_water_edge(wpz); // Note: doesn't take into account waves
-		}
 		s.add_uniform_float("spec_scale", 1.0);
 		setup_mesh_lighting();
 

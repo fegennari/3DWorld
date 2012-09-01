@@ -598,9 +598,7 @@ colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
 		fog_dist = 0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2));
 	}
 	else {
-		fog_color = colorRGBA(0.6, 0.6, 0.6, 1.0); // GRAY/LT_GRAY
-		apply_red_sky(fog_color);
-		blend_color(fog_color, fog_color, bkg_color, 0.5, 1);
+		blend_color(fog_color, get_cloud_color(), bkg_color, 0.5, 1);
 		fog_dist = get_inf_terrain_fog_dist();
 	}
 	fog_color = set_lighted_fog_color(fog_color); // under water/ice
@@ -1168,13 +1166,6 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	else {
 		config_bkg_color_and_clear(underwater, uw_depth, 1);
 	}
-	enable_blend();
-	select_texture(BLUR_TEX_INV);
-	set_color(bkg_color); // will turn into fog color
-	draw_sphere_at_tc(get_camera_pos(), 0.9*FAR_CLIP, N_SPHERE_DIV, 1, 0);
-	glDisable(GL_TEXTURE_2D);
-	disable_blend();
-
 	if (!combined_gu) {
 		int const fog_enabled(glIsEnabled(GL_FOG));
 		if (fog_enabled) {glDisable(GL_FOG);}
@@ -1183,7 +1174,6 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	}
 	draw_cloud_plane();
 	draw_sun_flare();
-	//draw_sky(0);
 	//draw_puffy_clouds(0);
 	draw_camera_weapon(0);
 	if (TIMETEST) PRINT_TIME("3.2");
