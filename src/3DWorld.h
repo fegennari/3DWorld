@@ -1416,7 +1416,7 @@ colorRGBA get_cloud_color();
 float get_cloud_density(point const &pt, vector3d const &dir);
 void free_cloud_textures();
 void draw_puffy_clouds(int order);
-void draw_cloud_plane();
+void draw_cloud_plane(bool reflection_pass);
 void draw_sky(int order);
 void draw_stationary_sky(float radius, float density);
 void compute_brightness();

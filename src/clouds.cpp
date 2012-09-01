@@ -332,7 +332,7 @@ void draw_cloud_vert(float x, float y, float z1, float z2, float r) {
 }
 
 
-void draw_cloud_plane() {
+void draw_cloud_plane(bool reflection_pass) {
 
 	point const camera(get_camera_pos());
 	float const size(FAR_CLIP), rval(0.95*size); // extends to at least the far clipping plane
@@ -344,14 +344,16 @@ void draw_cloud_plane() {
 	glDepthMask(GL_FALSE);
 
 	// draw a plane at zmin to properly blend the fog
-	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-	s.set_vert_shader("fog_only");
-	s.set_frag_shader("linear_fog.part+fog_only");
-	s.begin_shader();
-	s.setup_fog_scale();
-	BLACK.do_glColor();
-	draw_z_plane(-size, -size, size, size, zmin, 4, 4);
-	s.end_shader();
+	if (!reflection_pass) {
+		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.set_vert_shader("fog_only");
+		s.set_frag_shader("linear_fog.part+fog_only");
+		s.begin_shader();
+		s.setup_fog_scale();
+		BLACK.do_glColor();
+		draw_z_plane(-size, -size, size, size, zmin, 4, 4);
+		s.end_shader();
+	}
 
 	// draw clouds
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS

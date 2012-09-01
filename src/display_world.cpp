@@ -1056,7 +1056,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	// draw partial scene
 	draw_sun_moon_stars();
 	draw_sun_flare();
-	if (display_mode & 0x40) {draw_cloud_plane();} // slower but a nice effect
+	if (display_mode & 0x40) {draw_cloud_plane(1);} // slower but a nice effect
 
 	if (display_mode & 0x01) { // draw mesh
 		// setup above-water clip plane
@@ -1172,7 +1172,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		draw_sun_moon_stars();
 		if (fog_enabled) {glEnable(GL_FOG);}
 	}
-	draw_cloud_plane();
+	draw_cloud_plane(0);
 	draw_sun_flare();
 	//draw_puffy_clouds(0);
 	draw_camera_weapon(0);
