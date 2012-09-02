@@ -957,7 +957,6 @@ public:
 
 	float draw(float wpz, bool reflection_pass) {
 		float zmin(FAR_CLIP);
-		glDisable(GL_NORMALIZE);
 		set_array_client_state(1, 0, 0, 0);
 		unsigned num_drawn(0), num_trees(0);
 		unsigned long long mem(grass_tile_manager.get_gpu_mem()), tree_mem(0);

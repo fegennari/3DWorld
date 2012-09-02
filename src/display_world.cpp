@@ -357,7 +357,7 @@ void config_bkg_color_and_clear(bool underwater, float depth, bool no_fog) {
 
 	calc_bkg_color();
 	glClearColor_rgba((!no_fog && show_fog) ? GRAY : bkg_color);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Clear the background
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT /*| GL_ACCUM_BUFFER_BIT*/); // Clear the background
 }
 
 
@@ -1165,15 +1165,12 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	}
 	else {
 		config_bkg_color_and_clear(underwater, uw_depth, 1);
-	}
-	draw_cloud_plane(0);
-
-	if (!combined_gu) {
 		int const fog_enabled(glIsEnabled(GL_FOG));
 		if (fog_enabled) {glDisable(GL_FOG);}
 		draw_sun_moon_stars();
 		if (fog_enabled) {glEnable(GL_FOG);}
 	}
+	draw_cloud_plane(0);
 	draw_sun_flare();
 	//draw_puffy_clouds(0);
 	draw_camera_weapon(0);
