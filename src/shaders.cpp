@@ -407,7 +407,11 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	}
 	if (DEBUG_SHADER) cout << "final shader data for <" << name << ">:" << endl << data << endl;
 	unsigned const shader(glCreateShader(shader_type_table[type]));
-	assert(shader);
+	
+	if (!shader) {
+		cerr << "Error: Failed to create shader " << name << ". Exiting." << endl;
+		exit(1);
+	}
 	const char *src(data.c_str());
 	glShaderSource(shader, 1, &src, 0);
 	glCompileShader(shader);

@@ -40,7 +40,7 @@ pt_line_drawer bubble_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists, two_sided_lighting;
-extern bool group_back_face_cull, have_indir_smoke_tex, create_voxel_landscape, combined_gu;
+extern bool group_back_face_cull, have_indir_smoke_tex, create_voxel_landscape, combined_gu, disable_shaders;
 extern int is_cloudy, iticks, display_mode, show_fog, num_groups, island;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode;
 extern unsigned smoke_tid, dl_tid, num_stars;
@@ -677,8 +677,15 @@ void draw_stars(float alpha) {
 	glPointSize(2.0);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
-	glBegin(GL_POINTS);
+	shader_t s;
 	
+	if (!disable_shaders) {
+		s.set_vert_shader("vert_xform_only");
+		s.set_frag_shader("color_only");
+		s.begin_shader();
+	}
+	glBegin(GL_POINTS);
+
 	for (unsigned i = 0; i < num_stars; ++i) {
 		if ((rand()%400) == 0) continue; // flicker out
 
@@ -690,6 +697,7 @@ void draw_stars(float alpha) {
 		stars[i].pos.do_glVertex();
 	}
 	glEnd();
+	if (!disable_shaders) {s.end_shader();}
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glPointSize(1.0);
