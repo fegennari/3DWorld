@@ -29,11 +29,10 @@ plant_type const pltype[NUM_PLANT_TYPES] = {
 
 
 int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
-float msms2(1.0);
 
 
 extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, draw_model, DISABLE_WATER;
-extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, vegetation, fticks;
+extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks;
 extern GLUquadricObj* quadric;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern rand_gen_t global_rand_gen;
@@ -132,7 +131,7 @@ void rock_shape3d::create(int x, int y, bool use_xy) {
 
 	int rs_rock(rand2());
 	gen_spos(x, y, use_xy);
-	gen_rock(48, 0.05/msms2, rs_rock, (rand2()&1));
+	gen_rock(48, 0.05/tree_scale, rs_rock, (rand2()&1));
 	radius = 0.0;
 	
 	for (unsigned i = 0; i < points.size(); ++i) { // calculate radius
@@ -378,7 +377,7 @@ surface_cache surface_rock_cache;
 void surface_rock::create(int x, int y, int use_xy, vbo_vntc_quad_block_manager_t &vbo_manager) {
 
 	gen_spos(x, y, use_xy);
-	radius  = 0.5*rand_uniform2(0.2/msms2, 0.8/msms2)*rand_float2();
+	radius  = 0.5*rand_uniform2(0.2, 0.8)*rand_float2()/tree_scale;
 	dir     = signed_rand_vector2_norm();
 	surface = surface_rock_cache.get_surface();
 	assert(surface);
@@ -443,7 +442,7 @@ void s_rock::create(int x, int y, int use_xy) {
 		scale[i] = rand_uniform2(0.8, 1.3);
 	}
 	gen_spos(x, y, use_xy);
-	size   = 0.02*rand_uniform2(0.2/msms2, 0.8/msms2);
+	size   = 0.02*rand_uniform2(0.2, 0.8)/tree_scale;
 	if ((rand2()&3) == 0) size *= rand_uniform2(1.2, 8.0);
 	dir    = signed_rand_vector2_norm();
 	angle  = rand_uniform2(0.0, 360.0);
@@ -489,9 +488,9 @@ void s_log::shift_by(vector3d const &vd) {
 int s_log::create(int x, int y, int use_xy, float minz) {
 
 	gen_spos(x, y, use_xy);
-	radius  = rand_uniform2(0.003/msms2, 0.008/msms2);
+	radius  = rand_uniform2(0.003, 0.008)/tree_scale;
 	radius2 = rand_uniform2(0.9*radius, 1.1*radius);
-	length  = rand_uniform2(max(0.03/msms2, 4.0*radius), min(0.15/msms2, 20.0*radius));
+	length  = rand_uniform2(max(0.03/tree_scale, 4.0*radius), min(0.15/tree_scale, 20.0*radius));
 	dir     = signed_rand_vector2_norm();
 	dir.x  *= length;
 	dir.y  *= length;
@@ -554,11 +553,11 @@ bool s_log::update_zvals(int x1, int y1, int x2, int y2) {
 int s_stump::create(int x, int y, int use_xy, float minz) {
 
 	gen_spos(x, y, use_xy);
-	radius  = rand_uniform2(0.005/msms2, 0.01/msms2);
+	radius  = rand_uniform2(0.005, 0.01)/tree_scale;
 	radius2 = rand_uniform2(0.8*radius, radius);
 	pos.z  -= 2.0*radius;
 	if (pos.z < minz) return 0;
-	height  = rand_uniform2(0.01/msms2, min(0.05/msms2, 4.0*radius)) + 0.015;
+	height  = rand_uniform2(0.01/tree_scale, min(0.05/tree_scale, 4.0*radius)) + 0.015;
 		
 	if ((rand2()&3) == 0) {
 		height  *= rand_uniform2(1.0, 5.0); // larger stump = upright dead tree
@@ -604,8 +603,8 @@ int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_quad_block_man
 	type   = rand2()%NUM_PLANT_TYPES;
 	gen_spos(x, y, use_xy);
 	if (pos.z < minz) return 0;
-	radius = rand_uniform2(0.0025/msms2, 0.0045/msms2);
-	height = rand_uniform2(0.2/msms2, 0.4/msms2) + 0.025;
+	radius = rand_uniform2(0.0025, 0.0045)/tree_scale;
+	height = rand_uniform2(0.2, 0.4)/tree_scale + 0.025;
 	gen_points(vbo_manager);
 	return 1;
 }
@@ -624,7 +623,7 @@ void s_plant::create2(point const &pos_, float height_, float radius_, int type_
 void s_plant::add_cobjs() {
 
 	point cpos(pos), cpos2(pos);
-	float const wscale(radius*msms2/0.004);
+	float const wscale(radius*tree_scale/0.004);
 	float const r2(radius+0.07*wscale*(height+0.03));
 	cpos.z  += height;
 	cpos2.z += 3.0*height/(36.0*height + 4.0);
@@ -635,15 +634,14 @@ void s_plant::add_cobjs() {
 void s_plant::gen_points(vbo_vnc_quad_block_manager_t &vbo_manager) {
 
 	if (vbo_mgr_ix >= 0) return; // already generated
-	float const wscale(250.0*radius*msms2);
-	float const ms(mesh_scale*mesh_scale2), theta0((int(1.0E6*height)%360)*TO_RADIANS);
-	unsigned const nlevels(unsigned(36.0*height*ms)), nrings(3);
+	float const wscale(250.0*radius*tree_scale), theta0((int(1.0E6*height)%360)*TO_RADIANS);
+	unsigned const nlevels(unsigned(36.0*height*tree_scale)), nrings(3);
 	float rdeg(30.0);
 	vector<vert_norm> &points(vbo_manager.temp_points);
 	points.resize(4*nlevels*nrings);
 
 	for (unsigned j = 0, ix = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
-		float const sz(0.07*(height + 0.03/ms)*((nlevels - j + 3.0)/(float)nlevels));
+		float const sz(0.07*(height + 0.03/tree_scale)*((nlevels - j + 3.0)/(float)nlevels));
 		float const z((j + 3.0)*height/(nlevels + 4.0));
 		vector3d const scale(sz*wscale, sz*wscale, sz);
 
@@ -826,11 +824,10 @@ void scenery_group::add_plant(point const &pos, float height, float radius, int 
 
 void scenery_group::gen(int x1, int y1, int x2, int y2) {
 
-	unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(mesh_scale*mesh_scale2+1))));
+	unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(tree_scale+1))));
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
 	float const min_log_z  (water_plane_z - 0.040*zmax_est);
-	msms2     = mesh_scale*mesh_scale2;
 	generated = 1;
 
 	for (int i = y1; i < y2; ++i) {

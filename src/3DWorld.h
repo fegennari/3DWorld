@@ -1893,7 +1893,6 @@ void add_shape_coll_objs();
 void shift_hmv(vector3d const &vd);
 
 // function prototypes - tree + sm_tree (see also tree_3dw.h)
-void mult_leaf_points_by(float val);
 colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture);
 int get_tree_class_from_height(float zpos);
 int get_tree_type_from_height(float zpos);

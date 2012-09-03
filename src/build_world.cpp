@@ -69,7 +69,6 @@ void gen_star_points();
 int gen_game_obj(int type);
 point get_sstate_pos(int id);
 void reset_smoke_tex_data();
-void calc_leaf_points();
 
 
 
@@ -558,7 +557,6 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	RESET_TIME;
 	static int st_valid(0);
 	bool const inf_terrain(world_mode == WMODE_INF_TERRAIN);
-	calc_leaf_points();
 
 	if (!st_valid) {
 		keep_sin_table = 0;

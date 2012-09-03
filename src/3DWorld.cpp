@@ -82,7 +82,7 @@ int enable_fsource(0), run_forward(0), advanced(0), passive_motion(P_MOTION_DEF)
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 int read_snow_file(0), write_snow_file(0);
 unsigned num_snowflakes(0), num_vpls(0);
-float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), tree_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
+float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
@@ -113,7 +113,7 @@ extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, ons
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
-extern float mesh_scale, mesh_scale2, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width;
+extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width;
 extern point hmv_pos;
 extern int coll_id[];
 extern vector<bbox> team_starts;
@@ -498,23 +498,29 @@ void advance_camera(int dir) {
 void change_terrain_zoom(float val) {
 
 	if (island) {
-		mesh_scale     = 1.0;
-		mesh_scale2   /= val;
+		mesh_scale  = 1.0;
+		tree_scale /= val;
 		rand_gen_index = rand();
-		regen_trees(1, 1);
+		regen_trees(1, 0);
 		build_cobj_tree();
 		gen_grass(0);
-		compute_volume_matrix(); // make lightning strike the new tree(s)
-		return;
 	}
-	last_temp         = -100.0; // force update
-	mesh_scale2       = 1.0;
-	camera_change     = 1;
-	mesh_scale_change = 1;
-	update_mesh(val, 2);
-	clear_tiled_terrain();
+	else if (!(display_mode & 0x01)) { // mesh not enabled - only scale trees
+		tree_scale /= val;
+		regen_trees(1, 0);
+		build_cobj_tree();
+		gen_grass(0);
+		clear_tiled_terrain();
+	}
+	else {
+		last_temp         = -100.0; // force update
+		camera_change     = 1;
+		mesh_scale_change = 1;
+		update_mesh(val, 2);
+		clear_tiled_terrain();
+		calc_watershed();
+	}
 	compute_volume_matrix(); // make lightning strike the new tree(s)
-	calc_watershed();
 }
 
 
@@ -826,7 +832,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			break;
 		}
 		mesh_type  = (mesh_type+1)%3;
-		mesh_scale = mesh_scale2 = 1.0;
+		mesh_scale = tree_scale = 1.0;
 		break;
 
 	case 'n': // toggle fog / reset player target
@@ -1601,8 +1607,9 @@ int load_config(string const &config_file) {
 			if (fscanf(fp, "%f%f%f", &surface_pos.x, &surface_pos.y, &surface_pos.z) != 3) cfg_err("player_start command", error);
 		}
 		else if (str == "tree_size") {
+			float tree_size(1.0);
 			if (!read_float(fp, tree_size)) cfg_err("tree size command", error);
-			mult_leaf_points_by(tree_size);
+			tree_scale = 1.0/tree_size;
 		}
 		else if (str == "tree_deadness") {
 			if (!read_float(fp, tree_deadness)) cfg_err("tree deadness command", error);

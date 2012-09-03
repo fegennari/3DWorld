@@ -63,7 +63,7 @@ tree_cont_t t_trees;
 extern bool has_snow, no_sun_lpos_update;
 extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll;
-extern float zmin, zmax_est, zbottom, water_plane_z, mesh_scale, mesh_scale2, temperature, fticks, tree_size, vegetation;
+extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation;
 extern point ocean;
 extern lightning l_strike;
 extern blastr latest_blastr;
@@ -74,7 +74,7 @@ extern rand_gen_t global_rand_gen;
 
 void calc_leaf_points() {
 
-	leaf_size = REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*mesh_scale*mesh_scale2);
+	leaf_size = REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale);
 	leaf_points[0].assign(-2.0*leaf_size, 0.0, 0.0);
 	leaf_points[1].assign(-2.0*leaf_size, 0.0, 4.0*leaf_size);
 	leaf_points[2].assign( 2.0*leaf_size, 0.0, 4.0*leaf_size);
@@ -95,14 +95,6 @@ inline int rand_gen(int start, int end) {
 
 float get_tree_z_bottom(float z, point const &pos) {
 	return ((world_mode == WMODE_GROUND && is_over_mesh(pos)) ? max(zbottom, (z - TREE_DEPTH)) : (z - TREE_DEPTH));
-}
-
-
-void mult_leaf_points_by(float val) {
-
-	for (unsigned p = 0; p < 4; ++p) {
-		leaf_points[p] *= val;
-	}
 }
 
 
@@ -966,7 +958,7 @@ void tree::process_cylins(tree_cylin const *const cylins, unsigned num) {
 
 		if (leaves.capacity() > 0) { // leaves was reserved
 			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
-				float tsize((mesh_scale*base_radius/(TREE_SIZE*tree_size) + 10.0/mesh_scale2)/18.0);
+				float tsize((tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
 				if (type == 3) tsize *= 1.5; // this tree type has larger leaves
 				add_leaves_to_cylin(cylins[i], tsize);
 			}
@@ -1193,7 +1185,7 @@ void tree::gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs)
 	num_3_branches_max   = 10;
 	num_34_branches[1]   = 0;
 	if (size <= 0) size  = rand_gen(40, 80); // tree size
-	base_radius            = size * (0.1*tree_size*TREE_SIZE*tree_types[type].size/(mesh_scale*mesh_scale2));
+	base_radius            = size * (0.1*TREE_SIZE*tree_types[type].size/tree_scale);
 	num_leaves_per_occ     = 0.01*nleaves_scale*(rand_gen(30, 60) + size);
 	base_length_min        = rand_gen(4, 6) * base_radius;
 	base_length_max        = base_length_min * 1.5;
@@ -1677,11 +1669,12 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 
 	cout << "vegetation: " << vegetation << endl;
 	RESET_TIME;
+	calc_leaf_points();
 	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
 	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
 	int const ext_x1(1), ext_x2(MESH_X_SIZE-1), ext_y1(1), ext_y2(MESH_Y_SIZE-1);
 	static int init(0), last_rgi(0), last_xoff2(0), last_yoff2(0);
-	static float last_ms(0.0), last_ms2(0.0);
+	static float last_ts(0.0);
 	if (tree_mode && recalc_shadows) reset_shadows(OBJECT_SHADOW);
 	
 	if (tree_mode & 2) {
@@ -1691,8 +1684,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 		//remove_small_tree_cobjs();
 	}
 	if ((tree_mode & 1) && num_trees > 0) {
-		if (keep_old && init && last_rgi == rand_gen_index && last_xoff2 == xoff2 && last_yoff2 == yoff2 &&
-			last_ms == mesh_scale && last_ms2 == mesh_scale2)
+		if (keep_old && init && last_rgi == rand_gen_index && last_xoff2 == xoff2 && last_yoff2 == yoff2 && last_ts == tree_scale)
 		{ // keep old trees
 			if (recalc_shadows) calc_visibility(SUN_SHADOW | MOON_SHADOW | TREE_ONLY);
 			add_tree_cobjs();
@@ -1737,7 +1729,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 		}
 		PRINT_TIME(" Delete Trees");
 		unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1, XY_MULT_SIZE/num_trees));
-		unsigned const skip_val(max(1, int(1.0/sqrt((mesh_scale*mesh_scale2))))); // similar to deterministic gen in scenery.cpp
+		unsigned const skip_val(max(1, int(1.0/sqrt(tree_scale)))); // similar to deterministic gen in scenery.cpp
 
 		for (int i = ext_y1; i < ext_y2; i += skip_val) {
 			for (int j = ext_x1; j < ext_x2; j += skip_val) {
@@ -1774,8 +1766,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 		last_rgi   = rand_gen_index;
 		last_xoff2 = xoff2;
 		last_yoff2 = yoff2;
-		last_ms    = mesh_scale;
-		last_ms2   = mesh_scale2;
+		last_ts    = tree_scale;
 		init       = 1;
 	}
 	if (recalc_shadows) calc_visibility(SUN_SHADOW | MOON_SHADOW | TREE_ONLY);

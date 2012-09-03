@@ -1,6 +1,6 @@
 // input: point.xyz, height, color
 // output: 30 pine tree quads
-uniform float mesh_scale = 1.0;
+uniform float tree_scale = 1.0;
 varying out vec3 normal;
 
 const int N_PT_LEVELS = 6;
@@ -17,7 +17,7 @@ void main()
 	float theta0  = (int(1.0E6*height)%360)*(PI/180.0); // pseudo-random rotation
 
 	for (int j = 0; j < N_PT_LEVELS; ++j) {
-		float sz = 0.5*(height + 0.03/mesh_scale)*((N_PT_LEVELS - j - 0.4)/float(N_PT_LEVELS));
+		float sz = 0.5*(height + 0.03/tree_scale)*((N_PT_LEVELS - j - 0.4)/float(N_PT_LEVELS));
 		float z = (j + 1.8)*height/(N_PT_LEVELS + 2.8) - rd*sz;
 
 		for (int k = 0; k < N_PT_RINGS; ++k) {

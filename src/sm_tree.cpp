@@ -30,7 +30,7 @@ pt_line_drawer tree_scenery_pld;
 extern bool disable_shaders, has_dir_lights;
 extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
-extern float zmin, zmax_est, water_plane_z, mesh_scale, mesh_scale2, tree_size, vegetation, OCEAN_DEPTH;
+extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, OCEAN_DEPTH;
 extern GLUquadricObj* quadric;
 
 
@@ -236,8 +236,8 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const xla
 }
 
 
-float calc_tree_scale() {return (Z_SCENE_SIZE*mesh_scale)/16.0;}
-float calc_tree_size () {return tree_size*SM_TREE_SIZE*Z_SCENE_SIZE/(calc_tree_scale()*mesh_scale2);}
+float calc_tree_scale() {return (Z_SCENE_SIZE*tree_scale)/16.0;}
+float calc_tree_size () {return SM_TREE_SIZE*Z_SCENE_SIZE/calc_tree_scale();}
 
 
 void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
@@ -245,12 +245,12 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
 	if (vegetation == 0.0) return;
 	generated = 1;
 	float const tscale(calc_tree_scale()), tsize(calc_tree_size()); // random tree generation based on transformed mesh height function
-	int const ntrees(int(min(1.0f, vegetation*(tscale*mesh_scale2)*(tscale*mesh_scale2)/8.0f)*NUM_SMALL_TREES));
+	int const ntrees(int(min(1.0f, vegetation*tscale*tscale/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
 	assert(x1 < x2 && y1 < y2);
 	float const x0(TREE_DIST_MH_S*X_SCENE_SIZE + xoff2*DX_VAL), y0(TREE_DIST_MH_S*Y_SCENE_SIZE + yoff2*DY_VAL);
-	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)*mesh_scale2);
-	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/sqrt((mesh_scale*mesh_scale2)))));
+	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0));
+	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/sqrt(tree_scale))));
 	float const xv(DX_VAL*(tds*(get_xval(x1)+x0) - (MESH_X_SIZE >> 1))), yv(DY_VAL*(tds*(get_yval(y1)+y0) - (MESH_Y_SIZE >> 1)));
 	mesh_xy_grid_cache_t height_gen;
 	height_gen.build_arrays(xv, yv, tds*DX_VAL*DX_VAL, tds*DY_VAL*DY_VAL, (x2-x1), (y2-y1));
@@ -538,16 +538,15 @@ void small_tree::clear_vbo_mgr_ix(int which) {
 
 
 float small_tree::get_pine_tree_radius() const {
-	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height), ms(mesh_scale*mesh_scale2);
-	return 0.35*(height0 + 0.03/ms);
+	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
+	return 0.35*(height0 + 0.03/tree_scale);
 }
 
 
 void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low_detail) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
-	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
-	float const sz_scale(0.5*(height0 + 0.03/(mesh_scale*mesh_scale2)));
+	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height), sz_scale(0.5*(height0 + 0.03/tree_scale));
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
 	vector<vert_norm> &points(vbo_manager.temp_points);
 

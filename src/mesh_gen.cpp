@@ -55,7 +55,7 @@ int   const START_L0_FREQ_COMP = NUM_FREQ_COMP - NUM_L0_FREQ_COMP;
 // Global Variables
 int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
-float mesh_scale(1.0), mesh_scale2(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
+float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmm_calc(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
 float *sin_table(NULL), *cos_table(NULL);
 float sinTable[F_TABLE_SIZE][5];
@@ -322,7 +322,7 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 	float const mesh_h((make_island ? ISLAND_MAG_SCALE : 1.0)*scaled_height/sqrt(0.1*N_RAND_SIN2));
 
 	if (make_island) {
-		mesh_scale   = 1.0; // *** CHANGE ***
+		mesh_scale   = 1.0;
 		mesh_scale_z = 1.0;
 	}
 	compute_scale(make_island);
@@ -767,11 +767,11 @@ void update_mesh(float dms, bool do_regen_trees) { // called when mesh_scale cha
 
 	++cache_counter;
 	mesh_scale /= dms;
+	tree_scale  = mesh_scale;
 	xoff2       = int(xoff2*dms);
 	yoff2       = int(yoff2*dms);
 	set_zmax_est(zmax_est*pow(dms, (float)MESH_SCALE_Z_EXP));
 	mesh_scale_z = pow(mesh_scale, (float)MESH_SCALE_Z_EXP);
-	mult_leaf_points_by(dms);
 
 	if (world_mode == WMODE_INF_TERRAIN) {
 		zmax = -LARGE_ZVAL;

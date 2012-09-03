@@ -35,7 +35,7 @@ float    const GRASS_COLOR_SCALE= 0.5;
 extern bool inf_terrain_scenery;
 extern unsigned grass_density;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale2, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
