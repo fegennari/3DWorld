@@ -41,7 +41,6 @@ extern float h_dirt[];
 extern texture_t textures[];
 
 
-int get_tile_radius() {return TILE_RADIUS;}
 float get_scaled_tile_radius  () {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 float get_inf_terrain_fog_dist() {return DRAW_DIST_TILES*get_scaled_tile_radius();}
 bool is_water_enabled() {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
@@ -851,6 +850,15 @@ public:
 		glPopMatrix();
 		if (weight_tid > 0) disable_textures_texgen();
 	}
+
+	void draw_water(float z) const {
+		if (!has_water() || get_rel_dist_to_camera() > DRAW_DIST_TILES || !is_visible()) return;
+		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*DX_VAL), yv2(yv1+(y2-y1)*DY_VAL);
+		glVertex3f(xv1, yv1, z);
+		glVertex3f(xv1, yv2, z);
+		glVertex3f(xv2, yv2, z);
+		glVertex3f(xv2, yv1, z);
+	}
 }; // tile_t
 
 
@@ -1007,6 +1015,15 @@ public:
 		if (scenery_enabled()) {draw_scenery(to_draw, reflection_pass);}
 		if (grass_enabled()  ) {draw_grass  (to_draw, reflection_pass);}
 		return zmin;
+	}
+
+	void draw_water(float zval) const {
+		glBegin(GL_QUADS);
+
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+			i->second->draw_water(zval);
+		}
+		glEnd();
 	}
 
 	static void set_noise_tex(shader_t &s, unsigned tu_id) {
@@ -1189,6 +1206,10 @@ void clear_tiled_terrain() {
 
 void reset_tiled_terrain_state() {
 	terrain_tile_draw.clear_vbos_tids(1,1);
+}
+
+void draw_tiled_terrain_water(float zval) {
+	terrain_tile_draw.draw_water(zval);
 }
 
 

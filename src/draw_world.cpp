@@ -697,7 +697,7 @@ void draw_stars(float alpha) {
 		stars[i].pos.do_glVertex();
 	}
 	glEnd();
-	if (!disable_shaders) {s.end_shader();}
+	s.end_shader();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glPointSize(1.0);

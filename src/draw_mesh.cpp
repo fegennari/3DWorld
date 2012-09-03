@@ -17,7 +17,6 @@ float const VD_SCALE         = 1.0;
 float const SURF_HEAL_RATE   = 0.005;
 float const MAX_SURFD        = 20.0;
 float const DLIGHT_SCALE     = 4.0;
-unsigned const W_STEPS       = 16;
 int   const DRAW_BORDER      = 3;
 
 int   const SHOW_MESH_TIME   = 0;
@@ -725,9 +724,7 @@ void draw_water_sides(int check_zvals) {
 void draw_water_plane(float zval, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
-	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), vd_scale(2.5*get_tile_radius()*SQRT2);
-	float const dx(xoff*DX_VAL), dy(yoff*DY_VAL);
-	float const vdx(vd_scale*X_SCENE_SIZE), vdy(vd_scale*Y_SCENE_SIZE);
+	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE);
 	colorRGBA color;
 	select_water_ice_texture(color, ((world_mode == WMODE_INF_TERRAIN) ? (combined_gu ? &univ_temp : &init_temperature) : &temperature));
 	bool const reflections(!(display_mode & 0x20));
@@ -802,7 +799,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		if (reflections) color.alpha *= 1.5;
 		set_color(color);
 	}
-	draw_z_plane(dx-vdx, dy-vdy, dx+vdx, dy+vdy, zval, W_STEPS, W_STEPS);
+	draw_tiled_terrain_water(zval);
 	disable_multitex_a();
 	s.end_shader();
 	disable_blend();
