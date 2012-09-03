@@ -18,6 +18,6 @@ void main()
 			freq2 *= 2.25;
 		}
 	}
-	alpha = clamp(6.0*(0.5*alpha-1.68), 0.0, 1.0);
-	gl_FragColor = gl_FragColor = apply_fog(color*vec4(1,1,1, alpha));
+	alpha = clamp(7.0*(0.5*alpha-1.68), 0.0, 1.0);
+	gl_FragColor = apply_fog(color*vec4(1,1,1, alpha));
 }

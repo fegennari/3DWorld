@@ -994,7 +994,7 @@ public:
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			num_trees += to_draw[i].second->num_trees();
-			to_draw[i].second->draw(reflection_pass);
+			if (display_mode & 0x01) {to_draw[i].second->draw(reflection_pass);}
 		}
 		s.end_shader();
 		

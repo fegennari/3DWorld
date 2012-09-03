@@ -1057,15 +1057,12 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	draw_sun_moon_stars();
 	draw_sun_flare();
 	if (display_mode & 0x40) {draw_cloud_plane(1);} // slower but a nice effect
-
-	if (display_mode & 0x01) { // draw mesh
-		// setup above-water clip plane
-		double const plane[4] = {0.0, 0.0, 1.0, -water_z}; // water at z=-water_z (mirrored)
-		glEnable(GL_CLIP_PLANE0);
-		glClipPlane(GL_CLIP_PLANE0, plane);
-		draw_tiled_terrain(water_z, 1);
-		glDisable(GL_CLIP_PLANE0);
-	}
+	// setup above-water clip plane for mesh
+	double const plane[4] = {0.0, 0.0, 1.0, -water_z}; // water at z=-water_z (mirrored)
+	glEnable(GL_CLIP_PLANE0);
+	glClipPlane(GL_CLIP_PLANE0, plane);
+	draw_tiled_terrain(water_z, 1);
+	glDisable(GL_CLIP_PLANE0);
 	// could render more of the scene here
 	glPopMatrix();
 
@@ -1102,6 +1099,7 @@ unsigned create_reflection() {
 	}
 	assert(glIsTexture(reflection_tid));
 	create_reflection_texture(reflection_tid, xsize, ysize, water_plane_z);
+	glDisable(GL_TEXTURE_2D);
 	check_gl_error(999);
 	return reflection_tid;
 }
@@ -1170,18 +1168,15 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		draw_sun_moon_stars();
 		if (fog_enabled) {glEnable(GL_FOG);}
 	}
-	draw_cloud_plane(0);
+	draw_cloud_plane(0); // these two lines could go in either order
 	draw_sun_flare();
 	//draw_puffy_clouds(0);
 	draw_camera_weapon(0);
 	if (TIMETEST) PRINT_TIME("3.2");
 	calc_cur_ambient_diffuse();
 	if (TIMETEST) PRINT_TIME("3.25");
-
-	if (display_mode & 0x01) {
-		zmin2 = draw_tiled_terrain(water_plane_z, 0);
-		if (TIMETEST) PRINT_TIME("3.3");
-	}
+	zmin2 = draw_tiled_terrain(water_plane_z, 0);
+	if (TIMETEST) PRINT_TIME("3.3");
 	if (TIMETEST) PRINT_TIME("3.4");
 	draw_coll_surfaces(1, 1); // split into two calls?
 	if (TIMETEST) PRINT_TIME("3.5");
