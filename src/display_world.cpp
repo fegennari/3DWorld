@@ -598,7 +598,9 @@ colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
 		fog_dist = 0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2));
 	}
 	else {
-		blend_color(fog_color, get_cloud_color(), bkg_color, 0.5, 1);
+		colorRGBA cloud_color(get_cloud_color());
+		cloud_color.alpha = 1.0;
+		blend_color(fog_color, cloud_color, bkg_color, 0.5, 1);
 		fog_dist = get_inf_terrain_fog_dist();
 	}
 	fog_color = set_lighted_fog_color(fog_color); // under water/ice
