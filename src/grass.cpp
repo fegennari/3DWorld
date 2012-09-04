@@ -185,7 +185,7 @@ public:
 					// skip grass intersecting cobjs
 					if (do_cobj_check && dwobject(GRASS, pos).check_vert_collision(0, 0, 0)) continue; // make a GRASS object for collision detection
 					if (point_inside_voxel_terrain(pos)) continue; // inside voxel volume
-					add_grass_blade(pos, 1.0);
+					add_grass_blade(pos, 0.8);
 				}
 			}
 		}
