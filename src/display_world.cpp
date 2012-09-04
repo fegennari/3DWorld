@@ -594,6 +594,7 @@ colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
 	if (underwater) { // under water/ice
 		float const camera_z(get_camera_pos().z);
 		fog_color = (temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C;
+		fog_color.alpha = 1.0;
 		atten_uw_fog_color(fog_color, (water_plane_z - camera_z));
 		fog_dist = 0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2));
 	}
