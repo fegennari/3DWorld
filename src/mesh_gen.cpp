@@ -39,12 +39,7 @@ bool     const GEN_SCROLLING_MESH = 1;
 float    const S_GEN_ATTEN_DIST   = 128.0;
 
 
-//#define DO_GLACIATE_EXP(val) (val) // GLACIATE_EXP = 1.0
-//#define DO_GLACIATE_EXP(val) ((val)*(val)) // GLACIATE_EXP = 2.0
 #define DO_GLACIATE_EXP(val) ((val)*(val)*(val)) // GLACIATE_EXP = 3.0
-//#define DO_GLACIATE_EXP(val) ((val)*(val)*(val)*(val)) // GLACIATE_EXP = 4.0
-//#define DO_GLACIATE_EXP(val) (pow((val), GLACIATE_EXP)) // GLACIATE_EXP = other
-//#define DO_GLACIATE_EXP(val) (4.0*pow((val), (float)0.33)) // GLACIATE_EXP = custom
 
 
 float const FREQ_MULT          = 1.0/MAG_MULT;
@@ -63,7 +58,8 @@ float sinTable[F_TABLE_SIZE][5];
 int const mesh_tids_sand[NTEX_SAND] = {SAND_TEX, GROUND_TEX, ROCK_TEX,   SNOW_TEX};
 int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX,   GROUND_TEX, ROCK_TEX, SNOW_TEX};
 float const mesh_rh_sand[NTEX_SAND] = {0.18, 0.40, 0.70, 1.0};
-float const mesh_rh_dirt[NTEX_DIRT] = {0.40, 0.44, 0.55, 0.66, 1.0};
+float const mesh_rh_dirt[NTEX_DIRT] = {0.40, 0.44, 0.60, 0.75, 1.0};
+float sthresh[2][2][2] = {{{0.68, 0.86}, {0.48, 0.72}}, {{0.5, 0.7}, {0.3, 0.55}}}; // {normal, island}, {grass, snow}, {lo, hi}
 ttex lttex_sand[NTEX_SAND], lttex_dirt[NTEX_DIRT];
 
 

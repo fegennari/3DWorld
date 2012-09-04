@@ -335,7 +335,7 @@ void draw_cloud_vert(float x, float y, float z1, float z2, float r) {
 void draw_cloud_plane(bool reflection_pass) {
 
 	point const camera(get_camera_pos());
-	float const size(FAR_CLIP), rval(0.95*size); // extends to at least the far clipping plane
+	float const size(FAR_CLIP), rval(0.94*size); // extends to at least the far clipping plane
 	float const z1(zmin), z2(camera.z + max(zmax, CLOUD_CEILING));
 	static vector2d wind_pos(0.0, 0.0);
 	wind_pos.x += fticks*wind.x;

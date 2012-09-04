@@ -1473,39 +1473,38 @@ void create_landscape_texture() {
 			}
 
 			// handle steep slopes (dirt/rock texture replaces grass texture)
-			float const sthresh[2][2] = {{0.45, 0.7}, {0.3, 0.55}};
-			float const *const sti(sthresh[island]);
+			bool const grass(id == GROUND_TEX || id2 == GROUND_TEX), snow(id2 == SNOW_TEX);
+			if (!grass && !snow) continue;
+			float const *const sti(sthresh[island][snow]);
 			float const vnz00(vertex_normals[ypos][xpos].z);
+			if (vnz00 > sti[1]+0.1) continue; // not steep enough
+			float const vnz01(vertex_normals[ypos][xpos1].z), vnz10(vertex_normals[ypos1][xpos].z), vnz11(vertex_normals[ypos1][xpos1].z);
+			float const vnz((1.0 - xpi)*((1.0 - ypi)*vnz00 + ypi*vnz10) + xpi*((1.0 - ypi)*vnz01 + ypi*vnz11));
 
-			if (vnz00 < sti[1]+0.1) {
-				float const vnz01(vertex_normals[ypos][xpos1].z), vnz10(vertex_normals[ypos1][xpos].z), vnz11(vertex_normals[ypos1][xpos1].z);
-				float const vnz((1.0 - xpi)*((1.0 - ypi)*vnz00 + ypi*vnz10) + xpi*((1.0 - ypi)*vnz01 + ypi*vnz11));
+			if (grass && vnz < sti[1]) { // ground/grass
+				texture_t const &ta(textures[DIRT_TEX]);
+				unsigned char const *ta_data(ta.get_data());
+				int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
+				unsigned char temp[3];
 
-				if ((id == GROUND_TEX || id2 == GROUND_TEX) && vnz < sti[1]) { // ground/grass
-					texture_t const &ta(textures[DIRT_TEX]);
-					unsigned char const *ta_data(ta.get_data());
-					int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
-					unsigned char temp[3];
-
-					if (id == GROUND_TEX || id2 == ROCK_TEX) {
-						texture_t const &tb(textures[ROCK_TEX]);
-						unsigned char const *tb_data(tb.get_data());
-						int const tofb(tb.ncolors*(((i+toy)&(tb.height-1))*tb.width + ((j+tox)&(tb.width-1))));
-						BLEND_COLOR(temp, (tb_data+tofb), (ta_data+tofa), t);
-					}
-					else {
-						RGB_BLOCK_COPY(temp, (ta_data+tofa));
-					}
-					float const val(CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0])));
-					BLEND_COLOR((tex_data+o2), (tex_data+o2), temp, val);
+				if (id == GROUND_TEX || id2 == ROCK_TEX) {
+					texture_t const &tb(textures[ROCK_TEX]);
+					unsigned char const *tb_data(tb.get_data());
+					int const tofb(tb.ncolors*(((i+toy)&(tb.height-1))*tb.width + ((j+tox)&(tb.width-1))));
+					BLEND_COLOR(temp, (tb_data+tofb), (ta_data+tofa), t);
 				}
-				else if (id2 == SNOW_TEX && vnz < sti[1]) { // snow
-					texture_t const &ta(textures[ROCK_TEX]);
-					unsigned char const *ta_data(ta.get_data());
-					int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
-					float const val(CLIP_TO_01(2.0f*(vnz - sti[0])/(sti[1] - sti[0])));
-					BLEND_COLOR((tex_data+o2), (tex_data+o2), (ta_data+tofa), val);
+				else {
+					RGB_BLOCK_COPY(temp, (ta_data+tofa));
 				}
+				float const val(CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0])));
+				BLEND_COLOR((tex_data+o2), (tex_data+o2), temp, val);
+			}
+			else if (vnz < sti[1]) { // snow
+				texture_t const &ta(textures[ROCK_TEX]);
+				unsigned char const *ta_data(ta.get_data());
+				int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
+				float const val(CLIP_TO_01(2.0f*(vnz - sti[0])/(sti[1] - sti[0])));
+				BLEND_COLOR((tex_data+o2), (tex_data+o2), (ta_data+tofa), val);
 			}
 		} // for j
 	} // for i

@@ -572,21 +572,24 @@ public:
 					float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
 					get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, t);
 				}
-				float const sthresh[2] = {0.45, 0.7};
 				float const vnz(get_norm(ix).z);
 				float weight_scale(1.0);
-				bool const has_grass(lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == GROUND_TEX);
+				bool const grass(lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == GROUND_TEX), snow(lttex_dirt[k2].id == SNOW_TEX);
 
-				if (vnz < sthresh[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
-					if (has_grass) { // ground/grass
-						float const rock_weight((lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == ROCK_TEX) ? t : 0.0);
-						weight_scale = CLIP_TO_01((vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
-						weights[rock_tex_ix] += (1.0 - weight_scale)*rock_weight;
-						weights[dirt_tex_ix] += (1.0 - weight_scale)*(1.0 - rock_weight);
-					}
-					else if (lttex_dirt[k2].id == SNOW_TEX) { // snow
-						weight_scale = CLIP_TO_01(2.0f*(vnz - sthresh[0])/(sthresh[1] - sthresh[0]));
-						weights[rock_tex_ix] += 1.0 - weight_scale;
+				if (grass || snow) {
+					float const *const sti(sthresh[0][snow]);
+
+					if (vnz < sti[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
+						if (grass) { // ground/grass
+							float const rock_weight((lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == ROCK_TEX) ? t : 0.0);
+							weight_scale = CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0]));
+							weights[rock_tex_ix] += (1.0 - weight_scale)*rock_weight;
+							weights[dirt_tex_ix] += (1.0 - weight_scale)*(1.0 - rock_weight);
+						}
+						else { // snow
+							weight_scale = CLIP_TO_01(2.0f*(vnz - sti[0])/(sti[1] - sti[0]));
+							weights[rock_tex_ix] += 1.0 - weight_scale;
+						}
 					}
 				}
 				weights[k2] += weight_scale*t;
@@ -601,7 +604,7 @@ public:
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 					data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
 				}
-				if (has_grass && x < size && y < size) {
+				if (grass && x < size && y < size) {
 					unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
 					if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
 					assert(bix < grass_blocks.size());
