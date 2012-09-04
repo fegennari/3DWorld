@@ -62,6 +62,7 @@ void main()
 	vec3 normal = normalize(gl_NormalMatrix * ((2.0*shadow_normal.xyz - 1.0) * vec3(1.0, 1.0, normal_z_scale))); // eye space
 	//normal += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5);
 	vec4 color  = gl_LightModel.ambient;
+	//texel0 = mix(vec3(0.05, 0.25, 0.05), texel0, shadow_normal.w*shadow_normal.w);
 	
 	if (enable_light0) {
 		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow

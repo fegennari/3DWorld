@@ -702,12 +702,14 @@ public:
 		translate_to(xlate);
 		
 		if (draw_branches) {
-			if (get_tree_dist_scale() > 1.0) { // far away, use low detail branches
-				trees.add_trunk_pts(xlate, trunk_pts);
-			}
-			else {
+			float const dscale(get_tree_dist_scale());
+
+			if (dscale < 1.0) { // close, draw as polygons
 				trees.draw_branches(0, xlate, &trunk_pts);
 			}
+			else if (dscale < 2.5) { // far away, use low detail branches
+				//trees.add_trunk_pts(xlate, trunk_pts);
+			} // else very far, skip branches
 		}
 		if (draw_leaves) { // could use reflection_pass as an optimization
 			float const weight(1.0 - get_tree_far_weight()); // 0 => low detail, 1 => high detail
@@ -722,6 +724,7 @@ public:
 				s.add_uniform_float("min_noise", 0.0);
 			}
 			else {
+				//if ((display_mode & 0x10) || get_tree_dist_scale() < 4.0) // draw as texture in the shader?
 				draw_tree_leaves_lod(s, xlate, (weight == 0.0));
 			}
 		}
