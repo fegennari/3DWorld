@@ -1146,6 +1146,7 @@ void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 
 void tree::gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs) {
 
+	calc_leaf_points(); // required for placed trees
 	sphere_center = pos; // z value will be reset later
 	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 	leaf_data.clear();
