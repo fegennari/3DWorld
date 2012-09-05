@@ -871,7 +871,6 @@ void scenery_group::gen(int x1, int y1, int x2, int y2) {
 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate) {
 
-	enable_blend();
 	plant_vbo_manager.upload();
 	plant_vbo_manager.begin_render(s.is_setup());
 
@@ -879,7 +878,6 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, xlate);
 	}
 	plant_vbo_manager.end_render();
-	disable_blend();
 }
 
 

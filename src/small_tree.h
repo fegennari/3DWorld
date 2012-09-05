@@ -16,7 +16,7 @@ class small_tree { // size = 81 (82)
 
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
 	vector<int> coll_id;
-	int vbo_mgr_ix[2]; // {high, low} detail
+	int vbo_mgr_ix; // high detail
 	float height, width, r_angle, rx, ry, rv[3];
 	point pos;
 	colorRGBA color;
@@ -28,12 +28,12 @@ public:
 	vector3d get_rot_dir() const;
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
-	void clear_vbo_mgr_ix(int which=3);
+	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
 	void calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_bark_color() const;
 	void draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_quad_block_manager_t const &vbo_manager,
-		bool low_detail=0, vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
+		vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}

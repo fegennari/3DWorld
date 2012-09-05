@@ -138,8 +138,8 @@ void small_tree_group::clear_vbo_manager(int which) {
 
 void small_tree_group::clear_vbo_manager_and_ids(int which) {
 	
-	for (iterator i = begin(); i != end(); ++i) {
-		i->clear_vbo_mgr_ix(which);
+	if (which & 1) { // high detail
+		for (iterator i = begin(); i != end(); ++i) {i->clear_vbo_mgr_ix();}
 	}
 	clear_vbo_manager(which);
 }
@@ -195,14 +195,13 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate, vec
 	BLACK.do_glColor();
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(1, shadow_only, 0, vbo_manager[0], 0, xlate, points);
+		i->draw(1, shadow_only, 0, vbo_manager[0], xlate, points);
 	}
 }
 
 
 void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, vector3d const xlate) const {
 
-	enable_blend();
 	vbo_vnc_quad_block_manager_t const &vbomgr(vbo_manager[low_detail]);
 	vbomgr.begin_render(1);
 	select_texture((draw_model != 0) ? WHITE_TEX : stt[T_PINE].leaf_tid);
@@ -211,14 +210,15 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 		vbomgr.render_all();
 	}
 	else {
+		assert(!low_detail);
+
 		for (const_iterator i = begin(); i != end(); ++i) {
 			int const type(i->get_type());
 			if (type != T_PINE && type != T_SH_PINE) continue;
-			i->draw(2, shadow_only, (size() < 100), vbomgr, low_detail, xlate); // only cull pine tree leaves if there aren't too many
+			i->draw(2, shadow_only, (size() < 100), vbomgr, xlate); // only cull pine tree leaves if there aren't too many
 		}
 	}
 	vbomgr.end_render();
-	disable_blend();
 }
 
 
@@ -230,7 +230,7 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const xla
 		int const type(i->get_type());
 		if (type == T_PINE || type == T_SH_PINE) continue;
 		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
-		i->draw(2, shadow_only, (size() < 100), vbo_manager[0], 0, xlate); // only cull pine tree leaves if there aren't too many
+		i->draw(2, shadow_only, (size() < 100), vbo_manager[0], xlate); // only cull pine tree leaves if there aren't too many
 	}
 	disable_blend();
 }
@@ -531,12 +531,6 @@ void small_tree::remove_cobjs() {
 }
 
 
-void small_tree::clear_vbo_mgr_ix(int which) {
-	if (which & 1) {vbo_mgr_ix[0] = -1;}
-	if (which & 2) {vbo_mgr_ix[1] = -1;}
-}
-
-
 float small_tree::get_pine_tree_radius() const {
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
 	return 0.35*(height0 + 0.03/tree_scale);
@@ -550,7 +544,7 @@ void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
 	vector<vert_norm> &points(vbo_manager.temp_points);
 
-	if (!low_detail) {
+	if (!low_detail) { // high detail
 		points.resize(4*N_PT_LEVELS*N_PT_RINGS);
 		float const rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 
@@ -564,8 +558,9 @@ void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low
 				add_rotated_quad_pts(&points.front(), ix, theta, rd, z, center, scale); // bounds are (sz, sz, rd*sz+z)
 			}
 		}
+		vbo_mgr_ix = vbo_manager.add_points(points, color);
 	}
-	else {
+	else { // low detail
 #if 0
 		float z1(pos.z + height), z2(pos.z), r1(0.0), nz_avg(0.0);
 		for (vector<vert_norm>::const_iterator i = points.begin(); i != points.end(); ++i) {
@@ -594,8 +589,8 @@ void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low
 			vn.v[d]  = pos[d] + r1;
 			points[ix++] = vn;
 		}
+		vbo_manager.add_points(points, color);
 	}
-	vbo_mgr_ix[low_detail] = vbo_manager.add_points(points, color);
 }
 
 
@@ -619,7 +614,7 @@ colorRGBA small_tree::get_bark_color() const {
 
 
 void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_quad_block_manager_t const &vbo_manager,
-	bool low_detail, vector3d const xlate, vector<point> *points) const
+	vector3d const xlate, vector<point> *points) const
 {
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
@@ -669,14 +664,8 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_quad_blo
 	}
 	if (mode & 2) { // leaves
 		if (pine_tree) { // 30 quads per tree
-			if (0) { // pine tree leaf shader support unused/incorrect
-				float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
-				tree_scenery_pld.add_pt((pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)) + xlate), vector3d(height0, 0.0, 0.0), color);
-			}
-			else {
-				assert(vbo_mgr_ix[low_detail] >= 0);
-				vbo_manager.render_range(vbo_mgr_ix[low_detail], vbo_mgr_ix[low_detail]+1); // draw textured quad if far away?
-			}
+			assert(vbo_mgr_ix >= 0);
+			vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
 		}
 		else { // palm or decidious
 			set_color(color);
