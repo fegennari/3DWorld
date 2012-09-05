@@ -3,7 +3,6 @@ uniform float min_alpha = 0.0;
 uniform float noise_tex_size = 128.0;
 uniform float min_noise = 0.0;
 uniform float max_noise = 1.0;
-uniform float camera_facing_scale = 0.0;
 
 void main()
 {

@@ -684,12 +684,11 @@ public:
 	unsigned num_trees() const {return trees.size();}
 
 	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail) const {
-		s.add_uniform_float("camera_facing_scale", (low_detail ? 1.0 : 0.0));
 		bool const draw_all(low_detail || camera_pdu.sphere_completely_visible_test(get_center(), 0.5*radius));
 		trees.draw_pine_leaves(0, low_detail, draw_all, xlate);
 	}
 
-	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_leaves, bool reflection_pass) const {
+	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass) const {
 		if (trees.empty()) return;
 		glPushMatrix();
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
@@ -702,22 +701,25 @@ public:
 				trees.draw_branches(0, xlate, &trunk_pts);
 			}
 			else if (dscale < 2.5) { // far away, use low detail branches
-				//trees.add_trunk_pts(xlate, trunk_pts);
+				trees.add_trunk_pts(xlate, trunk_pts);
 			} // else very far, skip branches
 		}
-		if (draw_leaves) { // could use reflection_pass as an optimization
+		if (draw_near_leaves || draw_far_leaves) { // could use reflection_pass as an optimization
 			float const weight(1.0 - get_tree_far_weight()); // 0 => low detail, 1 => high detail
 
 			if (weight > 0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
-				//glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
-				s.add_uniform_float("max_noise", weight);
-				draw_tree_leaves_lod(s, xlate, 0);
-				s.add_uniform_float("max_noise", 1.0);
-				s.add_uniform_float("min_noise", weight);
-				draw_tree_leaves_lod(s, xlate, 1);
-				s.add_uniform_float("min_noise", 0.0);
+				if (draw_near_leaves) { // GL_SAMPLE_ALPHA_TO_COVERAGE?
+					s.add_uniform_float("max_noise", weight);
+					draw_tree_leaves_lod(s, xlate, 0);
+					s.add_uniform_float("max_noise", 1.0);
+				}
+				if (draw_far_leaves) {
+					s.add_uniform_float("min_noise", weight);
+					draw_tree_leaves_lod(s, xlate, 1);
+					s.add_uniform_float("min_noise", 0.0);
+				}
 			}
-			else {
+			else if ((weight == 0.0) ? draw_far_leaves : draw_near_leaves) {
 				//if ((display_mode & 0x10) || get_tree_dist_scale() < 4.0) // draw as texture in the shader?
 				draw_tree_leaves_lod(s, xlate, (weight == 0.0));
 			}
@@ -1051,6 +1053,13 @@ public:
 		check_gl_error(302);
 	}
 
+	void draw_tree_leaves(draw_vect_t const &to_draw, shader_t &s, bool near, bool far, bool reflection_pass) {
+		for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
+			to_draw[i].second->draw_trees(s, tree_trunk_pts, 0, near, far, reflection_pass);
+		}
+		assert(tree_trunk_pts.empty());
+	}
+
 	void draw_trees(draw_vect_t const &to_draw, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->update_tree_state(1);
@@ -1065,17 +1074,16 @@ public:
 		set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // branches
-			to_draw[i].second->draw_trees(s, tree_trunk_pts, 1, 0, reflection_pass);
+			to_draw[i].second->draw_trees(s, tree_trunk_pts, 1, 0, 0, reflection_pass);
 		}
 		s.add_uniform_float("tex_scale_t", 1.0);
 		s.end_shader();
 
 		// leaves/distant trunks
-		set_pine_tree_shader(s, "pine_tree");
+		set_pine_tree_shader(s, "pine_tree_billboard");
 		
 		if (!tree_trunk_pts.empty()) { // color/texture already set above
 			assert(!(tree_trunk_pts.size() & 1));
-			s.add_uniform_float("camera_facing_scale", 1.0);
 			select_texture(WHITE_TEX, 0); // enable=0
 			get_tree_trunk_color(T_PINE, 1).do_glColor();
 			zero_vector.do_glNormal();
@@ -1085,13 +1093,12 @@ public:
 			tree_trunk_pts.resize(0);
 		}
 		set_specular(0.2, 8.0);
-
-		for (unsigned i = 0; i < to_draw.size(); ++i) { // leaves
-			to_draw[i].second->draw_trees(s, tree_trunk_pts, 0, 1, reflection_pass);
-		}
-		assert(tree_trunk_pts.empty());
-		set_specular(0.0, 1.0);
+		draw_tree_leaves(to_draw, s, 0, 1, reflection_pass); // far leaves
 		s.end_shader();
+		set_pine_tree_shader(s, "pine_tree");
+		draw_tree_leaves(to_draw, s, 1, 0, reflection_pass); // near leaves
+		s.end_shader();
+		set_specular(0.0, 1.0);
 	}
 
 	void draw_scenery(draw_vect_t const &to_draw, bool reflection_pass) {
