@@ -653,7 +653,6 @@ public:
 		init_tree_dxoff = -xoff2;
 		init_tree_dyoff = -yoff2;
 		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
-		//small_tree_group(trees).swap(trees); // makes little difference
 		tzmax = mzmin;
 		trmax = 0.0;
 		
@@ -673,7 +672,11 @@ public:
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (weights[d] > 0.0) { // needed
-				if (upload_if_needed) {trees.finalize_upload_and_clear_pts(d != 0);} // needed for drawing
+				if (upload_if_needed) {
+					vector3d const delta(get_camera_pos() - get_center());
+					bool const pri_dim(fabs(delta.y) < fabs(delta.x));
+					trees.finalize_upload_and_clear_pts((d != 0), pri_dim); // needed for drawing
+				}
 			}
 			else { // not needed
 				trees.clear_vbo_and_ids_if_needed(d != 0);
@@ -700,7 +703,7 @@ public:
 			if (dscale < 1.0) { // close, draw as polygons
 				trees.draw_branches(0, xlate, &trunk_pts);
 			}
-			else if (dscale < 2.5) { // far away, use low detail branches
+			else if (dscale < 2.0) { // far away, use low detail branches
 				trees.add_trunk_pts(xlate, trunk_pts);
 			} // else very far, skip branches
 		}

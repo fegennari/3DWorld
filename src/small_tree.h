@@ -29,7 +29,7 @@ public:
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
-	void calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low_detail);
+	void calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low_detail, bool pri_dim);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_bark_color() const;
 	void draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_quad_block_manager_t const &vbo_manager,
@@ -56,10 +56,10 @@ struct small_tree_group : public vector<small_tree> {
 
 	vbo_vnc_quad_block_manager_t vbo_manager[2]; // {high, low} detail
 	vector<point> trunk_pts;
-	bool generated;
+	bool generated, last_pri_dim;
 	unsigned num_pine_trees;
 	
-	small_tree_group() : generated(0), num_pine_trees(0) {}
+	small_tree_group() : generated(0), last_pri_dim(0), num_pine_trees(0) {}
 	void sort_by_type() {sort(begin(), end());}
 
 	void sort_by_dist_to_camera() {
@@ -67,8 +67,8 @@ struct small_tree_group : public vector<small_tree> {
 	}
 	void add_tree(small_tree &st);
 	void calc_trunk_pts();
-	void finalize(bool low_detail);
-	void finalize_upload_and_clear_pts(bool low_detail);
+	void finalize(bool low_detail, bool pri_dim);
+	void finalize_upload_and_clear_pts(bool low_detail, bool pri_dim);
 	void add_trunk_pts(point const &xlate, vector<point> &pts) const;
 	void clear_vbos();
 	void clear_vbo_manager(int which=3);
