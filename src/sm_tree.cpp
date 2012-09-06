@@ -561,15 +561,6 @@ void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low
 		vbo_mgr_ix = vbo_manager.add_points(points, color);
 	}
 	else { // low detail
-#if 0
-		float z1(pos.z + height), z2(pos.z), r1(0.0), nz_avg(0.0);
-		for (vector<vert_norm>::const_iterator i = points.begin(); i != points.end(); ++i) {
-			nz_avg += i->n.z; r1 = max(r1, p2p_dist_xy(pos, i->v)); z1 = min(z1, i->v.z); z2 = max(z2, i->v.z);
-		}
-		nz_avg /= points.size();
-		//cout << "type: " << int(type) << ", nz_avg: " << nz_avg << ", r1s: " << r1/sz_scale << ", z1r: " << (z1-center.z)/sz_scale << ", z2r: " << (z2-center.z)/sz_scale << endl;
-		z1 -= 0.3*height; z2 -= 0.1*height;
-#endif
 		float const nz_avg(0.816), r1(1.475*sz_scale), z1(center.z - 0.55*sz_scale - 0.3*height), z2(center.z + 1.45*sz_scale - 0.1*height);
 		points.resize(8);
 

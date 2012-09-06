@@ -100,6 +100,7 @@ public:
 };
 
 
+typedef vbo_quad_block_manager_t<vert_color> vbo_vc_quad_block_manager_t;
 typedef vbo_quad_block_manager_t<vert_norm_comp_color> vbo_vnc_quad_block_manager_t;
 typedef vbo_quad_block_manager_t<vert_norm_tc_color  > vbo_vntc_quad_block_manager_t;
 

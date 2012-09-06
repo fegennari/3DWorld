@@ -163,6 +163,13 @@ void vert_norm_tc::set_vbo_arrays(unsigned force_stride) {
 	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_norm)));
 }
 
+void vert_color::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 0, 0, 1);
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_color));
+	glVertexPointer(3, GL_FLOAT, stride, (void *)(0));
+	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(point)));
+}
+
 void vert_norm_color::set_vbo_arrays(unsigned force_stride) {
 	set_array_client_state(1, 0, 1, 1);
 	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_color));

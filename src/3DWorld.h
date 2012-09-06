@@ -751,11 +751,14 @@ inline void colorRGBA::do_glColor4ubv() const {
 
 struct vert_color : public color_wrapper { // size = 16
 	point v;
+	typedef point non_color_class;
 
 	vert_color() {}
+	vert_color(point const &v_, color_wrapper const &cw) : v(v_), color_wrapper(cw) {}
 	vert_color(point const &v_, colorRGBA const &c_)     : v(v_) {set_c4(c_);}
 	vert_color(point const &v_, unsigned char const *c_) : v(v_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
 	void set_state(unsigned vbo) const;
+	static void set_vbo_arrays(unsigned force_stride=0);
 };
 
 
