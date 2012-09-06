@@ -278,7 +278,6 @@ void draw_trees(bool shadow_only) {
 		set_leaf_shader(ls, 0.75, !USE_LEAF_GEOM_SHADER, USE_LEAF_GEOM_SHADER, 3);
 		
 		if (draw_model == 0) { // solid fill
-			enable_blend();
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.75);
 		}
@@ -291,7 +290,6 @@ void draw_trees(bool shadow_only) {
 		ls.end_shader();
 		glDisable(GL_COLOR_MATERIAL);
 		glEnable(GL_NORMALIZE);
-		disable_blend();
 		set_specular(0.0, 1.0);
 		glDisable(GL_ALPHA_TEST);
 		glDisable(GL_TEXTURE_2D);

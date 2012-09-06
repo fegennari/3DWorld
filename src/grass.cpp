@@ -97,7 +97,6 @@ void grass_manager_t::begin_draw(float spec_weight) const {
 	bind_vbo(vbo);
 	grass_data_t::set_vbo_arrays();
 	select_multitex(GRASS_BLADE_TEX, 0);
-	enable_blend();
 	set_specular(spec_weight, 20.0);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.99);
@@ -110,7 +109,6 @@ void grass_manager_t::end_draw() const {
 	glDisable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
 	set_specular(0.0, 1.0);
-	disable_blend();
 	glDisable(GL_ALPHA_TEST);
 	disable_multitex_a();
 	bind_vbo(0);
