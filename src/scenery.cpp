@@ -374,7 +374,7 @@ void surface_cache::clear_unref() {
 surface_cache surface_rock_cache;
 
 
-void surface_rock::create(int x, int y, int use_xy, vbo_vntc_quad_block_manager_t &vbo_manager) {
+void surface_rock::create(int x, int y, int use_xy, vbo_vntc_block_manager_t &vbo_manager) {
 
 	gen_spos(x, y, use_xy);
 	radius  = 0.5*rand_uniform2(0.2, 0.8)*rand_float2()/tree_scale;
@@ -391,14 +391,14 @@ void surface_rock::create(int x, int y, int use_xy, vbo_vntc_quad_block_manager_
 	scale = radius/surface->rmax;
 	vector<vert_norm_tc> points;
 	surface->sd.get_quad_points(points);
-	vbo_mgr_ix = vbo_manager.add_points(points, WHITE);
+	vbo_mgr_ix = vbo_manager.add_points_with_offset(points, WHITE);
 }
 
 void surface_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, vbo_vntc_quad_block_manager_t &vbo_manager) const {
+void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, vbo_vntc_block_manager_t &vbo_manager) const {
 
 	assert(surface);
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
@@ -418,7 +418,7 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, v
 
 	if (color == WHITE) { // not shadowed or underwater - vbo colors are correct
 		assert(vbo_mgr_ix >= 0);
-		vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+		vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1);
 	}
 	else {
 		surface->sd.draw_ndiv_pow2(shadow_only ? get_smap_ndiv(radius) : sscale*radius/dist);
@@ -597,7 +597,7 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate) const 
 }
 
 
-int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_quad_block_manager_t &vbo_manager) {
+int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager) {
 
 	vbo_mgr_ix = -1;
 	type   = rand2()%NUM_PLANT_TYPES;
@@ -609,7 +609,7 @@ int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_quad_block_man
 	return 1;
 }
 
-void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_quad_block_manager_t &vbo_manager) {
+void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager) {
 
 	vbo_mgr_ix = -1;
 	type   = abs(type_)%NUM_PLANT_TYPES;
@@ -631,7 +631,7 @@ void s_plant::add_cobjs() {
 	coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
 }
 
-void s_plant::gen_points(vbo_vnc_quad_block_manager_t &vbo_manager) {
+void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 
 	if (vbo_mgr_ix >= 0) return; // already generated
 	float const wscale(250.0*radius*tree_scale), theta0((int(1.0E6*height)%360)*TO_RADIANS);
@@ -652,7 +652,7 @@ void s_plant::gen_points(vbo_vnc_quad_block_manager_t &vbo_manager) {
 			add_rotated_quad_pts(&points.front(), ix, theta, rdeg/45.0, z, pos, scale);
 		}
 	}
-	vbo_mgr_ix = vbo_manager.add_points(points, pltype[type].leafc);
+	vbo_mgr_ix = vbo_manager.add_points_with_offset(points, pltype[type].leafc);
 }
 
 bool s_plant::is_shadowed() const {
@@ -686,7 +686,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 	}
 }
 
-void s_plant::draw_leaves(shader_t &s, vbo_vnc_quad_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const {
+void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const {
 
 	point const pos2(pos + xlate);
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, (height + radius), 2)) return;
@@ -694,7 +694,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_quad_block_manager_t &vbo_manager
 	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX);
 	assert(vbo_mgr_ix >= 0);
-	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1);
 	if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
 }
 

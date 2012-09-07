@@ -108,8 +108,7 @@ void small_tree_group::finalize_upload_and_clear_pts(bool low_detail, bool pri_d
 	//RESET_TIME;
 	finalize(low_detail, pri_dim);
 	//if (!low_detail) {PRINT_TIME("Finalize");}
-	vbo_manager[low_detail].upload();
-	vbo_manager[low_detail].clear_points();
+	vbo_manager[low_detail].upload_and_clear_points();
 	//if (!low_detail) {PRINT_TIME("Finalize + Upload");}
 }
 
@@ -204,12 +203,12 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate, vec
 
 void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, vector3d const xlate) const {
 
-	vbo_vnc_quad_block_manager_t const &vbomgr(vbo_manager[low_detail]);
+	vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);
 	vbomgr.begin_render(1);
 	select_texture((draw_model != 0) ? WHITE_TEX : stt[T_PINE].leaf_tid);
 
 	if (draw_all_pine) {
-		vbomgr.render_all();
+		vbomgr.render_all(GL_QUADS);
 	}
 	else {
 		assert(!low_detail);
@@ -539,7 +538,7 @@ float small_tree::get_pine_tree_radius() const {
 }
 
 
-void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low_detail, bool pri_dim) {
+void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool pri_dim) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height), sz_scale(0.5*(height0 + 0.03/tree_scale));
@@ -560,7 +559,7 @@ void small_tree::calc_points(vbo_vnc_quad_block_manager_t &vbo_manager, bool low
 				add_rotated_quad_pts(&points.front(), ix, theta, rd, z, center, scale); // bounds are (sz, sz, rd*sz+z)
 			}
 		}
-		vbo_mgr_ix = vbo_manager.add_points(points, color);
+		vbo_mgr_ix = vbo_manager.add_points_with_offset(points, color);
 	}
 	else { // low detail billboard
 		float const nz_avg(0.816), r1(1.7*sz_scale), z1(center.z - 0.55*sz_scale - 0.3*height), z2(center.z + 1.45*sz_scale - 0.1*height);
@@ -605,7 +604,7 @@ colorRGBA small_tree::get_bark_color() const {
 }
 
 
-void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_quad_block_manager_t const &vbo_manager,
+void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_block_manager_t const &vbo_manager,
 	vector3d const xlate, vector<point> *points) const
 {
 	if (!(tree_mode & 2)) return; // disabled
@@ -657,7 +656,7 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_quad_blo
 	if (mode & 2) { // leaves
 		if (pine_tree) { // 30 quads per tree
 			assert(vbo_mgr_ix >= 0);
-			vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
+			vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
 		}
 		else { // palm or decidious
 			set_color(color);

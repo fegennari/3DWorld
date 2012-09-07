@@ -5,6 +5,91 @@
 #include "gl_ext_arb.h"
 
 
+void set_vn_ptrs(unsigned stride, bool comp) {
+	glVertexPointer(3, GL_FLOAT, stride, (void *)(0));
+	glNormalPointer((comp ? GL_BYTE : GL_FLOAT), stride, (void *)(sizeof(point)));
+}
+
+void vert_norm::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 0, 1, 0);
+	set_vn_ptrs((force_stride ? force_stride : sizeof(vert_norm)), 0);
+}
+
+void vert_norm_comp_tc::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 1, 1, 0);
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc));
+	set_vn_ptrs(stride, 1);
+	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_norm_comp)));
+}
+
+void vert_norm_tc::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 1, 1, 0);
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_tc));
+	set_vn_ptrs(stride, 0);
+	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_norm)));
+}
+
+void vert_color::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 0, 0, 1);
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_color));
+	glVertexPointer(3, GL_FLOAT, stride, (void *)(0));
+	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(point)));
+}
+
+void vert_norm_color::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 0, 1, 1);
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_color));
+	set_vn_ptrs(stride, 0);
+	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm)));
+}
+
+void vert_norm_comp_color::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 0, 1, 1);
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_color));
+	set_vn_ptrs(stride, 1);
+	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp)));
+}
+
+void vert_norm_tc_color::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 1, 1, 1);
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_tc_color));
+	set_vn_ptrs(stride, 0);
+	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(vert_norm)));
+	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_tc)));
+}
+
+void vert_norm_comp_tc_color::set_vbo_arrays(unsigned force_stride) {
+	set_array_client_state(1, 1, 1, 1);
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc_color));
+	set_vn_ptrs(stride, 1);
+	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(vert_norm_comp)));
+	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp_tc)));
+}
+
+void vert_norm_tc_color::set_state() const { // typically called on element 0
+	set_array_client_state(1, 1, 1, 1);
+	unsigned const stride(sizeof(*this));
+	glVertexPointer  (3, GL_FLOAT,         stride, &v);
+	glNormalPointer  (   GL_FLOAT,         stride, &n);
+	glTexCoordPointer(2, GL_FLOAT,         stride, &t);
+	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, &c);
+}
+
+void vert_color::set_state() const { // typically called on element 0
+	unsigned const stride(sizeof(*this));
+	set_array_client_state(1, 0, 0, 1);
+	glVertexPointer(3, GL_FLOAT,         stride, &v);
+	glColorPointer (4, GL_UNSIGNED_BYTE, stride, &c);
+}
+
+void vert_norm_comp_color::set_state() const { // typically called on element 0
+	unsigned const stride(sizeof(*this));
+	set_array_client_state(1, 0, 1, 1);
+	glVertexPointer(3, GL_FLOAT,        stride, &v);
+	glNormalPointer(GL_BYTE,            stride, &n);
+	glColorPointer(4, GL_UNSIGNED_BYTE, stride, &c);
+}
+
 
 template class pt_line_drawer_t<color_wrapper      >;
 template class pt_line_drawer_t<color_wrapper_float>;
@@ -50,40 +135,22 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 }
 
 
-void quad_batch_draw::add_quad_vect(vector<vert_norm> const &points, colorRGBA const &color) {
-	
-	assert(!(points.size() & 3)); // must be a multiple of 4
-	float const tcx[4] = {0,1,1,0}, tcy[4] = {0,0,1,1}; // 00 10 11 01
-	color_wrapper cw;
-	cw.set_c3(color);
-
-	for (unsigned i = 0; i < points.size(); ++i) {
-		verts.push_back(vert_norm_tc_color(points[i].v, points[i].n, tcx[i&3], tcy[i&3], cw.c));
-	}
-	unsigned const batch_size(4096);
-	if (size() > batch_size) draw_and_clear();
-}
-
-void quad_batch_draw::draw() const {
-	
-	if (verts.empty()) return;
-	assert(!(verts.size() & 3)); // must be a multiple of 4
-	verts.front().set_state();
-	glDrawArrays(GL_QUADS, 0, (unsigned)size());
-}
-
-
 template< typename vert_type_t >
-unsigned vbo_quad_block_manager_t<vert_type_t>::add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
+void vbo_block_manager_t<vert_type_t>::add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
 
 	assert(!p.empty());
-	assert((p.size()&3) == 0); // must be quads
 	color_wrapper cw;
 	cw.set_c4(color);
 		
 	for (vector<vert_type_t::non_color_class>::const_iterator i = p.begin(); i != p.end(); ++i) {
 		pts.push_back(vert_type_t(*i, cw));
 	}
+}
+
+template< typename vert_type_t >
+unsigned vbo_block_manager_t<vert_type_t>::add_points_with_offset(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
+
+	add_points(p, color);
 	assert(!offsets.empty());
 	unsigned const next_ix(offsets.size() - 1);
 	offsets.push_back(pts.size()); // range will be [start_ix, start_ix+p.size()]
@@ -91,17 +158,28 @@ unsigned vbo_quad_block_manager_t<vert_type_t>::add_points(vector<typename vert_
 }
 
 template< typename vert_type_t >
-void vbo_quad_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix) const {
+void vbo_block_manager_t<vert_type_t>::render_range(int gl_type, unsigned six, unsigned eix) const {
 
 	assert(six < eix && eix < offsets.size());
-	glDrawArrays(GL_QUADS, offsets[six], offsets[eix]-offsets[six]);
+	glDrawArrays(gl_type, offsets[six], offsets[eix]-offsets[six]);
+}
+
+
+template< typename vert_type_t >
+void vbo_block_manager_t<vert_type_t>::draw_no_vbos(int gl_type) const { // unused
+
+	if (pts.empty()) return;
+	pts.front().set_state();
+	glDrawArrays(gl_type, 0, (unsigned)pts.size());
 }
 
 template< typename vert_type_t >
-bool vbo_quad_block_manager_t<vert_type_t>::upload() {
+bool vbo_block_manager_t<vert_type_t>::upload() {
 
 	if (vbo || !has_data()) return 0; // already uploaded or empty
 	assert(!pts.empty());
+	assert(!offsets.empty());
+	if (offsets.back() != pts.size()) {offsets.push_back(pts.size());} // add terminator
 	vbo = create_vbo();
 	bind_vbo(vbo);
 	upload_vbo_data(&pts.front(), pts.size()*sizeof(vert_type_t));
@@ -110,7 +188,7 @@ bool vbo_quad_block_manager_t<vert_type_t>::upload() {
 }
 
 template< typename vert_type_t >
-void vbo_quad_block_manager_t<vert_type_t>::begin_render(bool color_mat) const {
+void vbo_block_manager_t<vert_type_t>::begin_render(bool color_mat) const {
 
 	if (!has_data()) return;
 	if (color_mat) {glEnable(GL_COLOR_MATERIAL);}
@@ -121,14 +199,14 @@ void vbo_quad_block_manager_t<vert_type_t>::begin_render(bool color_mat) const {
 }
 
 template< typename vert_type_t >
-void vbo_quad_block_manager_t<vert_type_t>::end_render() const {
+void vbo_block_manager_t<vert_type_t>::end_render() const {
 
 	glDisable(GL_COLOR_MATERIAL);
 	bind_vbo(0);
 }
 
 template< typename vert_type_t >
-void vbo_quad_block_manager_t<vert_type_t>::clear() {
+void vbo_block_manager_t<vert_type_t>::clear() {
 
 	clear_points();
 	temp_points.clear();
@@ -138,16 +216,16 @@ void vbo_quad_block_manager_t<vert_type_t>::clear() {
 }
 
 template< typename vert_type_t >
-void vbo_quad_block_manager_t<vert_type_t>::clear_vbo() {
+void vbo_block_manager_t<vert_type_t>::clear_vbo() {
 	
 	delete_vbo(vbo);
 	vbo = 0;
 }
 
 // explicit template instantiations
-template class vbo_quad_block_manager_t<vert_color>;
-template class vbo_quad_block_manager_t<vert_norm_comp_color>;
-template class vbo_quad_block_manager_t<vert_norm_tc_color  >;
+template class vbo_block_manager_t<vert_color>;
+template class vbo_block_manager_t<vert_norm_comp_color>;
+template class vbo_block_manager_t<vert_norm_tc_color  >;
 
 
 

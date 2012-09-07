@@ -10,12 +10,9 @@
 
 template<typename cwt> class pt_line_drawer_t { // and triangles too!
 
-	struct vnc : public cwt { // size = 28
-		point v;
-		vector3d n;
-
+	struct vnc : public vert_norm, public cwt { // size = 28
 		vnc() {}
-		vnc(point const &v_, vector3d const &n_, colorRGBA const &c_) : v(v_), n(n_) {set_c4(c_);}
+		vnc(point const &v_, vector3d const &n_, colorRGBA const &c_) : vert_norm(v_, n_) {set_c4(c_);}
 	};
 
 	struct vnc_cont : public vector<vnc> {
@@ -60,49 +57,41 @@ typedef pt_line_drawer_t<color_wrapper      > pt_line_drawer;
 typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
 
 
-class quad_batch_draw { // unused, but could possibly use for pine trees and plants
-	vector<vert_norm_tc_color> verts;
-
-public:
-	void add_quad_vect(vector<vert_norm> const &points, colorRGBA const &color);
-	void draw() const;
-	void draw_and_clear() {draw(); verts.resize(0);}
-	size_t size() const {return verts.size();}
-	void reserve(size_t sz) {verts.reserve(sz);}
-};
-
-
-template< typename vert_type_t > class vbo_quad_block_manager_t {
+template< typename vert_type_t > class vbo_block_manager_t {
 
 	vector<vert_type_t> pts;
 	vector<unsigned> offsets;
 	unsigned vbo;
 
+	bool has_data() const {return (!pts.empty() || offsets.size() > 1);}
+
 public:
 	vector<vert_norm> temp_points;
 
-	vbo_quad_block_manager_t() : vbo(0) {clear();}
+	vbo_block_manager_t() : vbo(0) {clear();}
 	// can't free in the destructor because the gl context may be destroyed before this point
-	//~vbo_quad_block_manager_t() {clear_vbo();}
-	void reserve_pts(unsigned num) {assert(pts.empty()); pts.reserve(num);}
+	//~vbo_block_manager_t() {clear_vbo();}
 	bool is_uploaded() const {return (vbo != 0);}
-	bool has_data() const {return (offsets.size() > 1);}
-	unsigned add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color);
-	void render_range(unsigned six, unsigned eix) const;
-	void render_all() const {if (has_data()) {render_range(0, offsets.size()-1);}}
+	void reserve_pts(unsigned num) {assert(pts.empty()); pts.reserve(num);}
+	void add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color);
+	unsigned add_points_with_offset(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color);
+	void render_range(int gl_type, unsigned six, unsigned eix) const;
+	void render_all(int gl_type) const {if (has_data()) {render_range(gl_type, 0, offsets.size()-1);}}
+	void draw_no_vbos(int gl_type) const;
 	bool upload();
 	void begin_render(bool color_mat) const;
 	void end_render() const;
 	void clear_points() {pts.swap(vector<vert_type_t>());}
 	void clear_vbo();
 	void clear();
-	unsigned get_gpu_mem() const {return ((vbo && has_data()) ? offsets.back()*sizeof(vert_type_t) : 0);} // not implemented
+	void upload_and_clear_points() {upload(); clear_points();}
+	unsigned get_gpu_mem() const {return ((vbo && has_data()) ? offsets.back()*sizeof(vert_type_t) : 0);}
 };
 
 
-typedef vbo_quad_block_manager_t<vert_color> vbo_vc_quad_block_manager_t;
-typedef vbo_quad_block_manager_t<vert_norm_comp_color> vbo_vnc_quad_block_manager_t;
-typedef vbo_quad_block_manager_t<vert_norm_tc_color  > vbo_vntc_quad_block_manager_t;
+typedef vbo_block_manager_t<vert_color> vbo_vc_block_manager_t;
+typedef vbo_block_manager_t<vert_norm_comp_color> vbo_vnc_block_manager_t;
+typedef vbo_block_manager_t<vert_norm_tc_color  > vbo_vntc_block_manager_t;
 
 
 #endif // _DRAW_UTILS_H_
