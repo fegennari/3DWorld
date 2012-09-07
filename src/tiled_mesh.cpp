@@ -654,11 +654,10 @@ public:
 		init_tree_dyoff = -yoff2;
 		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
 		tzmax = mzmin;
-		trmax = 0.0;
+		trmax = trees.max_pt_radius;
 		
 		for (small_tree_group::iterator i = trees.begin(); i != trees.end(); ++i) {
 			tzmax = max(tzmax, i->get_zmax());
-			trmax = max(trmax, i->get_pine_tree_radius());
 		}
 		radius = calc_radius() + trmax; // is this really needed?
 		trees.calc_trunk_pts();

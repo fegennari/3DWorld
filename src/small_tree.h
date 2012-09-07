@@ -38,6 +38,7 @@ public:
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}
 	int get_type () const {return type;}
+	bool is_pine_tree() const {return (type == T_PINE || type == T_SH_PINE);}
 	float get_pine_tree_radius() const;
 	float get_zmax() const;
 
@@ -58,8 +59,9 @@ struct small_tree_group : public vector<small_tree> {
 	vector<point> trunk_pts;
 	bool generated, last_pri_dim;
 	unsigned num_pine_trees;
+	float max_pt_radius;
 	
-	small_tree_group() : generated(0), last_pri_dim(0), num_pine_trees(0) {}
+	small_tree_group() : generated(0), last_pri_dim(0), num_pine_trees(0), max_pt_radius(0.0) {}
 	void sort_by_type() {sort(begin(), end());}
 
 	void sort_by_dist_to_camera() {

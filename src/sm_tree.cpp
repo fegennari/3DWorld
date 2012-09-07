@@ -71,7 +71,10 @@ colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture) {
 
 void small_tree_group::add_tree(small_tree &st) {
 
-	if (st.get_type() == T_PINE || st.get_type() == T_SH_PINE) ++num_pine_trees;
+	if (st.is_pine_tree()) {
+		max_pt_radius = max(max_pt_radius, st.get_pine_tree_radius());
+		++num_pine_trees;
+	}
 	push_back(st);
 }
 
@@ -157,7 +160,8 @@ void small_tree_group::clear_all() {
 	clear();
 	clear_vbo_manager_and_ids();
 	trunk_pts.clear();
-	generated = 0;
+	generated     = 0;
+	max_pt_radius = 0.0;
 }
 
 
@@ -229,7 +233,7 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const xla
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		int const type(i->get_type());
-		if (type == T_PINE || type == T_SH_PINE) continue;
+		if (i->is_pine_tree()) continue;
 		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
 		i->draw(2, shadow_only, (size() < 100), vbo_manager[0], xlate); // only cull pine tree leaves if there aren't too many
 	}
@@ -541,7 +545,7 @@ float small_tree::get_pine_tree_radius() const {
 void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool pri_dim) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
-	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height), sz_scale(0.5*(height0 + 0.03/tree_scale));
+	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height), sz_scale(SQRT2*get_pine_tree_radius());
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
 	vector<vert_norm> &points(vbo_manager.temp_points);
 
@@ -590,7 +594,7 @@ float small_tree::get_zmax() const {return (pos.z + height);} // approximate
 
 void small_tree::add_trunk_as_line(vector<point> &points) const {
 
-	float const hval((type == T_PINE || type == T_SH_PINE) ? 1.0 : 0.75);
+	float const hval(is_pine_tree() ? 1.0 : 0.75);
 	points.push_back(pos);
 	points.push_back(pos + get_rot_dir()*(hval*height*((stt[type].w2 == 0.0) ? 0.7 : 1.0))); // slightly shorter for distant pine trees
 }
@@ -610,7 +614,7 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_block_ma
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
-	bool const pine_tree(type == T_PINE || type == T_SH_PINE), cobj_cull(pine_tree && do_cull);
+	bool const pine_tree(is_pine_tree()), cobj_cull(pine_tree && do_cull);
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, max(1.5*width, 0.5*height), (cobj_cull ? 2 : 0))) return;
 	float const dist(distance_to_camera(pos + xlate));
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size(zoom_f*SM_TREE_QUALITY*stt[type].ss*width*window_width/dist);
@@ -619,7 +623,7 @@ void small_tree::draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_block_ma
 	if ((mode & 1) && (shadow_only || size > 1.0) && type != T_BUSH) { // trunk
 		float const cz(camera_origin.z - cview_radius*cview_dir.z), vxy(1.0 - (cz - pos.z)/dist);
 
-		if (type == T_SH_PINE || type == T_PINE || dist < 0.2 || vxy >= 0.2*width/stt[type].h) { // if trunk not obscured by leaves
+		if (pine_tree || dist < 0.2 || vxy >= 0.2*width/stt[type].h) { // if trunk not obscured by leaves
 			float const hval(pine_tree ? 1.0 : 0.75), w1(stt[type].ws*width), w2(stt[type].w2*width);
 			float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 			vector3d const dir(get_rot_dir());
