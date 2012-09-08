@@ -993,7 +993,7 @@ public:
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, tile->get_zmin());
 			if (!tile->is_visible()) continue;
-			//if (reflection_pass && tile->contains_camera() && !tile->has_water()) continue;
+			if (reflection_pass && tile->contains_camera() && !tile->has_water()) continue;
 			tile->pre_draw_update(data, indices, height_gen);
 			to_draw.push_back(make_pair(dist, tile));
 		}

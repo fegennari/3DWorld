@@ -61,7 +61,7 @@ struct small_tree_group : public vector<small_tree> {
 	float max_pt_radius;
 	
 	small_tree_group() : generated(0), last_pri_dim(0), num_pine_trees(0), max_pt_radius(0.0) {}
-	void sort_by_type() {sort(begin(), end());}
+	void sort_by_type() {stable_sort(begin(), end());}
 
 	void sort_by_dist_to_camera() {
 		sort(begin(), end(), small_tree::comp_by_type_dist(get_camera_pos()));
