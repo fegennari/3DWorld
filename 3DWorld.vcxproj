@@ -744,6 +744,7 @@
     <ClInclude Include="src\draw_utils.h" />
     <ClInclude Include="src\dynamic_particle.h" />
     <ClInclude Include="src\file_utils.h" />
+    <ClInclude Include="src\function_registry.h" />
     <ClInclude Include="src\gameplay.h" />
     <ClInclude Include="src\globals.h" />
     <ClInclude Include="src\gl_ext_arb.h" />

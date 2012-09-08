@@ -12,6 +12,7 @@
 #include "physics_objects.h"
 #include "model3d.h"
 #include "subdiv.h"
+#include "player_state.h"
 #include <fstream>
 
 

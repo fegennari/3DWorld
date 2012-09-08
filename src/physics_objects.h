@@ -11,6 +11,8 @@
 
 float const MAX_PART_CLOUD_RAD = 0.25;
 
+extern float CAMERA_RADIUS, C_STEP_HEIGHT;
+
 
 struct spark_t {
 
@@ -428,6 +430,9 @@ template<typename T> void reset_status(vector<T> &objs) {
 
 unsigned const XYZ_STOPPED(XY_STOPPED | Z_STOPPED);
 unsigned const ALL_COLL_STOPPED(XYZ_STOPPED | STATIC_COBJ_COLL);
+
+// collision object destroyability
+enum {NON_DEST=0, DESTROYABLE, SHATTERABLE, SHATTER_TO_PORTAL, EXPLODEABLE};
 
 
 #endif // _PHYSICS_OBJECTS_H_

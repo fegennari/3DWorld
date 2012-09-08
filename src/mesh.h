@@ -16,7 +16,6 @@ extern float sthresh[2][2][2];
 
 
 struct ripple_state {
-
 	float rval, acc;
 };
 
@@ -31,6 +30,43 @@ public:
 	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), hoff(0.0) {}
 	void build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny);
 	float eval_index(unsigned x, unsigned y, bool glaciate=1) const;
+};
+
+
+struct valley { // size = 70
+
+	struct spill_func { // size = 16
+
+		short index, i, j, si, sj, spill;
+		float z_over;
+
+		spill_func() : index(-1), i(0), j(0), si(0), sj(0), spill(0), z_over(0.0) {}
+		spill_func(short ix, short i_, short j_, short si_, short sj_, short s, float z)
+			: index(ix), i(i_), j(j_), si(si_), sj(sj_), spill(s), z_over(z) {}
+	};
+
+	short x, y, spill_index;
+	bool has_spilled;
+	float w_volume, spill_vol, lwv, zval, min_zval, dz, area, fvol, depth, blood_mix, mud_mix, spill_integral;
+	spill_func sf;
+
+	valley(short x_=0, short y_=0) : x(x_), y(y_), spill_index(-1), has_spilled(0),
+		w_volume(0.0), spill_vol(0.0), lwv(0.0), zval(0.0), min_zval(0.0), dz(0.0),
+		area(0.0), fvol(0.0), depth(0.0), blood_mix(0.0), mud_mix(0.0), spill_integral(0.0) {}
+	void copy_state_from(valley const &v);
+	void create(int wsi);
+	float get_volume() const;
+};
+
+
+struct valley_w { // size = 8
+	short wsi, x, y, inside8;
+};
+
+
+struct surf_adv { // size = 4
+	short x, y;
+	void assign(int x_, int y_) {x = x_; y = y_;}
 };
 
 

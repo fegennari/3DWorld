@@ -1201,10 +1201,7 @@ void accumulate_object(point const &pos, int type) {
 		if (!DISABLE_WATER && (display_mode & 0x04) && wminside[ypos][xpos] == 1) {
 			int const wsi(watershed_matrix[ypos][xpos].wsi);
 			float const wvol(valleys[wsi].w_volume);
-
-			if (MIX_BLOOD_WATER && wvol >= 0) {
-				valleys[wsi].blood_mix = (valleys[wsi].blood_mix*wvol + 1.0*(type == BLOOD))/(wvol + 1.0);
-			}
+			if (wvol >= 0) {valleys[wsi].blood_mix = (valleys[wsi].blood_mix*wvol + 1.0*(type == BLOOD))/(wvol + 1.0);}
 			valleys[wsi].w_volume += 1.0;
 		}
 	}

@@ -22,7 +22,6 @@ extern bool combined_gu;
 extern int window_width, window_height, do_zoom, ocean_set, display_mode, shadow_detail, ground_effects_level, camera_coll_id;
 extern float zmin, zmax, czmin, czmax, zbottom, ztop, sun_rot, moon_rot;
 extern point sun_pos, moon_pos, litning_pos;
-extern lightning l_strike;
 extern obj_type object_types[];
 
 

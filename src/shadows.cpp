@@ -33,7 +33,6 @@ extern int stencil_shadow, island, ground_effects_level, scrolling;
 extern float sun_rot, moon_rot, zmin, zmax, zbottom, ztop;
 extern point sun_pos, moon_pos, mesh_origin;
 extern vector3d up_norm;
-extern lightning l_strike;
 extern tree_cont_t t_trees;
 extern coll_obj_group coll_objects;
 

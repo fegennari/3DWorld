@@ -351,7 +351,7 @@ void gen_leaf_at(point const *const points, vector3d const &normal, int type, co
 
 void gen_gauss_rand_arr() {
 
-	float const mconst(2.0E-4*RG_NORM), aconst(((float)N_RAND_GAUSS)*RG_NORM);
+	float const RG_NORM(sqrt(3.0/N_RAND_GAUSS)), mconst(2.0E-4*RG_NORM), aconst(((float)N_RAND_GAUSS)*RG_NORM);
 
 	for (int i = 0; i < N_RAND_DIST+2; ++i) {
 		float val(0.0);

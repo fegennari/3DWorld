@@ -11,7 +11,6 @@
 #include "tree_3dw.h"
 
 
-int const START_MODE     = WMODE_GROUND; // 0 = island/standard mesh, 1 = planet/universe, 2 = no redraw mesh, 3 = infinite terrain
 int const INIT_MESH_TYPE = 0; // 0 = chunk of earth, 1 = island, 2 = tall island
 
 

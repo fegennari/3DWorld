@@ -9,20 +9,25 @@
 #include "3DWorld.h"
 using std::string;
 
-int const NUM_WEAPONS = 15;
-
+int const NUM_WEAPONS       = 15;
 unsigned const POWERUP_TIME = unsigned(40*TICKS_PER_SECOND);
+int const dodgeball_tids[]  = {SKULL_TEX, RADIATION_TEX, YUCK_TEX};
+unsigned const NUM_DB_TIDS(sizeof(dodgeball_tids)/sizeof(int));
+
+// weapons
+enum {W_UNARMED = 0, W_BBBAT, W_BALL, W_SBALL, W_ROCKET, W_LANDMINE, W_SEEK_D, W_STAR5, W_M16, W_SHOTGUN, W_GRENADE,
+	W_LASER, W_PLASMA, W_BLADE, W_GASSER, /* non-selectable*/ W_CGRENADE};
+
+enum {SF_EYE = 0, SF_NOSE, SF_TONGUE, NUM_SMILEY_PARTS};
 
 
 struct bbox { // size = 20
-
 	float x1, y1, x2, y2;
 	int index;
 };
 
 
 struct team_info { // size = 20
-
 	bbox bb; // add others?
 };
 
@@ -137,6 +142,13 @@ struct type_wt_t {
 	unsigned type;
 	float weight;
 	type_wt_t(unsigned t=0, float w=1.0) : type(t), weight(w) {}
+};
+
+
+struct user_waypt_t {
+	int type;
+	point pos;
+	user_waypt_t(int type_=0, point const &pos_=all_zeros) : type(type_), pos(pos_) {}
 };
 
 

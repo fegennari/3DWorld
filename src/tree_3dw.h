@@ -15,6 +15,9 @@ unsigned const BRANCH_CACHE_ENTRIES = 3;
 
 struct blastr; // forward reference
 
+// small tree classes
+enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TREE_CLASS_DETAILED, NUM_TREE_CLASSES};
+
 
 struct tree_leaf { // size = 32 + 48 = 80
 
@@ -187,7 +190,6 @@ public:
 
 
 typedef vector<tree> tree_cont_t;
-
 
 
 // function prototypes - tree

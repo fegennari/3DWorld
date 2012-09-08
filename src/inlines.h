@@ -609,8 +609,16 @@ inline point get_light_pos(int light=-1) {
 
 
 inline void water_color_atten(float *c, int x, int y, point const &pos) {
-
 	water_color_atten_pt(c, x, y, pos, get_camera_pos(), get_light_pos());
+}
+
+
+inline void atten_by_water_depth(float *c, float dist) {
+
+	float const m[3] = {0.98, 0.97, 0.95};
+	float const s[3] = {1.5,  0.9,  0.5 };
+	UNROLL_3X(c[i_] *= (1.0 - min(m[i_], s[i_]*dist));)
+	//UNROLL_3X(c[i_] *= max(1.0f-m[i_], exp(-s[i_]*dist));)
 }
 
 

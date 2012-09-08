@@ -20,6 +20,7 @@ source_manager_t sources, looping_sources;
 vector<delayed_sound_t> delayed_sounds;
 
 extern int frame_counter, iticks;
+extern float CAMERA_RADIUS;
 
 
 // supported: au, wav

@@ -27,6 +27,7 @@ float    const START_FREQ         = 240.0;
 float    const START_MAG          = 0.02;
 float    const MAG_MULT           = 2.0;
 float    const W_PLANE_Z          = 0.42;
+float    const HEIGHT_SCALE       = 0.01;
 
 unsigned const EST_RAND_PARAM     = 128;
 
@@ -346,7 +347,7 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 		if (make_island == 1) freqs[l] *= ISLAND_FREQ_SCALE;
 		h_sum += mags[l];
 	}
-	h_sum *= N_RAND_SIN2*scaled_height/HEIGHT_SCALE;
+	h_sum *= N_RAND_SIN2*scaled_height*HEIGHT_SCALE;
 
 	if (surface_type == 0 || gen_scroll_surface) { // sine waves
 		if (X_SCENE_SIZE > Y_SCENE_SIZE) yf_scale *= (float)Y_SCENE_SIZE/(float)X_SCENE_SIZE;

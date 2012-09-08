@@ -711,7 +711,8 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	player_state &sstate(sstates[shooter]);
 	int const wid(sstate.weapon);
 	if (wid == W_UNARMED) return;
-	float alpha(1.0), cradius;
+	float alpha(1.0);
+	float const cradius(object_types[SMILEY].radius);
 	bool cull_face(0);
 
 	if (shooter == CAMERA_ID) { // camera/player
@@ -727,13 +728,11 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 				glCullFace(GL_BACK);
 			}
 		}
-		cradius = DEF_CAMERA_RADIUS; // based on near clipping plane, not actual camera radius
 	}
 	else { // smiley - out of sync by a frame?
 		assert(shooter >= 0 && shooter < num_smileys);
 		if (sstate.powerup == PU_INVISIBILITY)         return;
 		if (sstate.weapon == W_BALL && game_mode == 2) return; // dodgeball already drawn
-		cradius = object_types[SMILEY].radius;
 	}
 	int const cid((shooter == CAMERA_ID) ? camera_coll_id : obj_groups[coll_id[SMILEY]].get_obj(shooter).coll_id);
 	vector3d const dir(get_sstate_dir(shooter));
