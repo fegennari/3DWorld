@@ -686,7 +686,7 @@ public:
 	unsigned num_trees() const {return trees.size();}
 
 	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail) const {
-		bool const draw_all(low_detail || camera_pdu.sphere_completely_visible_test(get_center(), 0.5*radius));
+		bool const draw_all(low_detail || camera_pdu.sphere_visible_test(get_center(), 0.0)); // tile center is in view
 		trees.draw_pine_leaves(0, low_detail, draw_all, xlate);
 	}
 
@@ -722,7 +722,6 @@ public:
 				}
 			}
 			else if ((weight == 0.0) ? draw_far_leaves : draw_near_leaves) {
-				//if ((display_mode & 0x10) || get_tree_dist_scale() < 4.0) // draw as texture in the shader?
 				draw_tree_leaves_lod(s, xlate, (weight == 0.0));
 			}
 		}

@@ -32,8 +32,7 @@ public:
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool pri_dim);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_bark_color() const;
-	void draw(int mode, bool shadow_only, bool do_cull, vbo_vnc_block_manager_t const &vbo_manager,
-		vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
+	void draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const &vbo_manager, vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}

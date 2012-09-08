@@ -1,4 +1,4 @@
-uniform sampler2D branch_tex, snow_tex, noise_tex;
+uniform sampler2D branch_tex, noise_tex;
 uniform float min_alpha = 0.0;
 uniform float noise_tex_size = 128.0;
 uniform float min_noise = 0.0;
