@@ -1038,7 +1038,6 @@ public:
 	}
 
 	void set_pine_tree_shader(shader_t &s, string const &vs) const {
-		s.set_bool_prefix("two_sided_lighting", 0, 0); // VS
 		s.set_prefix("#define USE_LIGHT_COLORS",   0); // VS
 		s.set_prefix("#define USE_GOOD_SPECULAR",  0); // VS
 		s.set_prefix("#define USE_QUADRATIC_FOG",  1); // FS
@@ -1094,6 +1093,20 @@ public:
 			glDrawArrays(GL_LINES, 0, (unsigned)tree_trunk_pts.size());
 			tree_trunk_pts.resize(0);
 		}
+#if 0
+		s.end_shader();
+		s.setup_enabled_lights(2);
+		s.set_prefix("#define USE_LIGHT_COLORS",   0); // VS
+		s.set_prefix("#define USE_GOOD_SPECULAR",  0); // VS
+		s.set_prefix("#define USE_QUADRATIC_FOG",  1); // FS
+		s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
+		s.set_frag_shader("linear_fog.part+simple_texture");
+		s.set_geom_shader("output_textured_quad.part+pt_billboard", GL_POINTS, GL_TRIANGLE_STRIP, 4);
+		s.begin_shader();
+		s.add_uniform_float("size", 0.2);
+		s.setup_fog_scale();
+		s.add_uniform_int("branch_tex", 0);
+#endif
 		set_specular(0.2, 8.0);
 		draw_tree_leaves(to_draw, s, 0, 1, reflection_pass); // far leaves
 		s.end_shader();

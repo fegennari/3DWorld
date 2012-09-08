@@ -213,6 +213,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 
 	if (draw_all_pine) {
 		vbomgr.render_all(GL_QUADS);
+		//vbomgr.render_all(low_detail ? GL_POINTS : GL_QUADS);
 	}
 	else {
 		assert(!low_detail);
@@ -565,6 +566,12 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		}
 		vbo_mgr_ix = vbo_manager.add_points_with_offset(points, color);
 	}
+	/*else if (1) { // single point
+		points.resize(1);
+		points[0].v = pos;
+		points[0].n.assign(0.0, 0.0, 0.816);
+		vbo_manager.add_points(points, color);
+	}*/
 	else { // low detail billboard
 		float const nz_avg(0.816), r1(1.7*sz_scale), z1(center.z - 0.55*sz_scale - 0.3*height), z2(center.z + 1.45*sz_scale - 0.1*height);
 		unsigned const d(pri_dim);
@@ -572,8 +579,8 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		points.resize(4);
 		vert_norm vn;
 		vn.n[!d] = 0.0;
-		vn.n[d] = -sqrt(1.0 - nz_avg*nz_avg); // partially facing up and partially facing towards the camera
-		vn.n[2] = nz_avg;
+		vn.n[d]  = -sqrt(1.0 - nz_avg*nz_avg); // partially facing up and partially facing towards the camera
+		vn.n[2]  = nz_avg;
 		vn.v[!d] = pos[!d];
 		vn.v[2]  = z2;
 		vn.v[d]  = pos[d] + r1;
