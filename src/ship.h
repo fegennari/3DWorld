@@ -9,6 +9,7 @@
 #include "transform_obj.h"
 #include "shape_line3d.h" // for rock_shape3d
 #include "upsurface.h"
+#include "function_registry.h"
 #include "string"
 #include "deque"
 #include <iostream>

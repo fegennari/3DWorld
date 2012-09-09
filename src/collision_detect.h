@@ -6,7 +6,7 @@
 #define _COLLISION_DETECT_H_
 
 
-#include "3DWorld.h"
+#include "function_registry.h"
 
 typedef bool (*collision_func)(int, int, vector3d const &, point const &, float, int);
 

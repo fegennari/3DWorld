@@ -24,6 +24,8 @@ string const c_ending = c_com + c_com + c_com + c_com + c_str + c_end;
 
 vector<string> n_start[2], n_middle[2], n_ending[2];
 
+int rand2();
+
 
 
 void parse_str_list(string const &str, vector<string> &vs) { // str must end with a space

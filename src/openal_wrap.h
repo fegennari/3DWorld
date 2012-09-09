@@ -30,7 +30,7 @@ struct sound_params_t {
 
 	sound_params_t(point const &P=all_zeros, float g=1.0, float p=1.0, bool r=0)
 		: pos(P), gain(g), pitch(p), rel_to_listener(r) {}
-	float get_loudness() const {return gain/max(SMALL_NUMBER, distance_to_camera(pos));}
+	float get_loudness() const;
 };
 
 

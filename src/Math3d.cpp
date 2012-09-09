@@ -2,7 +2,7 @@
 // by Frank Gennari
 // 4/24/02
 
-#include "3DWorld.h"
+#include "function_registry.h"
 #include "sinf.h"
 
 

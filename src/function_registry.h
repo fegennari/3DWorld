@@ -8,23 +8,6 @@
 #include "3DWorld.h"
 
 
-// forward references
-class  sd_sphere_d;
-struct dwobject;
-class  obj_group;
-struct star;
-class  cobj_params;
-class  coll_obj;
-class  coll_obj_group;
-class  shape3d;
-struct lightning;
-struct color_tid_vol;
-class  shader_t;
-class  vert_coll_detector;
-struct cobj_query_callback;
-struct user_waypt_t;
-
-
 // function prototypes - main (3DWorld.cpp, etc.)
 bool check_gl_error(unsigned loc_id);
 void enable_blend();
@@ -273,10 +256,7 @@ void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade
 int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,
 	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment);
 void gen_leaf_at(point const *const points, vector3d const &normal, int type, colorRGB const &color);
-float rgauss();
 void gen_gauss_rand_arr();
-int  rand2();
-double rand2d();
 
 // function prototypes - mesh_gen
 bool bmp_to_chars(char *fname, char **&data);
@@ -735,6 +715,9 @@ int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
 int screenshot(unsigned window_width, unsigned window_height, char *file_path);
 int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
 #endif
+
+
+#include "inlines.h"
 
 
 #endif // _FUNCTION_REGISTRY_H_

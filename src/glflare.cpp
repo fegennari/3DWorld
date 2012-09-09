@@ -1,5 +1,5 @@
 // http://www.opengl.org/resources/features/KilgardTechniques/LensFlare/
-#include "3DWorld.h"
+#include "function_registry.h"
 #include "textures_3dw.h"
 
 #include <stdio.h>

@@ -259,22 +259,6 @@ void disable_blend() {
 }
 
 
-void set_array_client_state(bool va, bool tca, bool na, bool ca) {
-
-	bool const enables[4] = {va, tca, na, ca};
-	int  const arrays [4] = {GL_VERTEX_ARRAY, GL_TEXTURE_COORD_ARRAY, GL_NORMAL_ARRAY, GL_COLOR_ARRAY};
-
-	for (unsigned i = 0; i < 4; ++i) {
-		if (enables[i]) {
-			glEnableClientState(arrays[i]);
-		}
-		else {
-			glDisableClientState(arrays[i]);
-		}
-	}
-}
-
-
 void set_lighted_sides(int num) {
 
 	assert(num == 1 || num == 2);

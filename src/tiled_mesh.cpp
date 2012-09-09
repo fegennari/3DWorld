@@ -189,6 +189,11 @@ struct tile_xy_pair {
 };
 
 
+unsigned get_norm_texels() {
+	return (world_mode == WMODE_INF_TERRAIN) ? 512 : get_texture_size(LANDSCAPE_TEX, 0);
+}
+
+
 class tile_t;
 tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 

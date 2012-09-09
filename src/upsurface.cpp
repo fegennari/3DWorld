@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 4/5/07
 
+#include "function_registry.h"
 #include "upsurface.h"
 #include "universe.h"
 #include "sinf.h"

@@ -29,6 +29,8 @@ unsigned const MAX_MULTITEX = 32; // max is GL_TEXTURE31
 unsigned max_used_multitex(0);
 bool multitex_enabled[MAX_MULTITEX] = {0};
 
+bool select_texture(int id, bool enable=1, bool white_tex_default=0);
+
 
 void set_multitex(unsigned tu_id) {
 

@@ -1,6 +1,7 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 9/4/02
+#include "function_registry.h"
 #include "universe.h"
 #include "explosion.h"
 #include "textures_3dw.h"

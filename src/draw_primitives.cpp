@@ -1,7 +1,7 @@
 // 3D World - Shape primitive drawing
 // by Frank Gennari
 // 3/6/06
-#include "3DWorld.h"
+#include "function_registry.h"
 #include "subdiv.h"
 #include "upsurface.h"
 #include "gl_ext_arb.h"

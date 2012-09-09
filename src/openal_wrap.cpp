@@ -3,6 +3,7 @@
 // 8/28/11
 // Sounds from http://www.findsounds.com
 #include "openal_wrap.h"
+#include "function_registry.h"
 #include <iostream>
 #include <assert.h>
 #include <al.h>
@@ -104,6 +105,11 @@ bool check_and_print_alut_error() { // returns 1 on error
 		return 1;
 	}
 	return 0;
+}
+
+
+float sound_params_t::get_loudness() const {
+	return gain/max(SMALL_NUMBER, distance_to_camera(pos));
 }
 
 

@@ -370,6 +370,11 @@ void lmcell::set_outside_colors() {
 }
 
 
+bool lmap_manager_t::is_valid_cell(int x, int y, int z) const {
+	return (z >= 0 && z < MESH_SIZE[2] && !point_outside_mesh(x, y) && vlmap[y][x] != NULL);
+}
+
+
 lmcell *lmap_manager_t::get_lmcell(point const &p) {
 
 	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
