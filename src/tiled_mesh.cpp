@@ -249,6 +249,7 @@ public:
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
 	bool has_water() const {return (mzmin < water_plane_z);}
+	bool trees_generated() const {return trees.generated;}
 	
 	point get_center() const {
 		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
@@ -435,6 +436,8 @@ public:
 	}
 
 	void apply_ao_shadows_for_trees(small_tree_group const &tg, point const &tree_off, bool no_adj_test) {
+		assert(trees.generated);
+
 		for (small_tree_group::const_iterator i = tg.begin(); i != tg.end(); ++i) {
 			add_tree_ao_shadow((i->get_pos() + tree_off), i->get_pine_tree_radius(), no_adj_test);
 		}
@@ -507,10 +510,6 @@ public:
 				data[y*stride + x].assign((xstart + x*xstep), (ystart + y*ystep), zvals[ix]);
 				shadow_map[y*stride + x] = (unsigned char)(255.0*light_scale);
 			}
-		}
-		if (trees_enabled()) {
-			init_tree_draw();
-			apply_tree_ao_shadows();
 		}
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			indices[i].resize(4*(size>>i)*(size>>i));
@@ -653,7 +652,6 @@ public:
 	float get_grass_dist_scale   () const {return get_dist_to_camera_in_tiles()/GRASS_THRESH;}
 
 	void init_tree_draw() {
-		if (trees.generated) return; // already generated
 		//RESET_TIME;
 		init_tree_dxoff = -xoff2;
 		init_tree_dyoff = -yoff2;
@@ -812,6 +810,7 @@ public:
 	void pre_draw_update(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], mesh_xy_grid_cache_t &height_gen) {
 		if (vbo == 0) {
 			create_data(data, indices);
+			if (trees_enabled()) {apply_tree_ao_shadows();}
 			vbo = create_vbo();
 			bind_vbo(vbo, 0);
 			upload_vbo_data(&data.front(), data.size()*sizeof(vert_type_t), 0);
@@ -980,6 +979,7 @@ public:
 		vector<unsigned short> indices[NUM_LODS];
 		static point last_sun(all_zeros), last_moon(all_zeros);
 		draw_vect_t to_draw;
+		vector<tile_t *> to_gen_trees;
 
 		if (sun_pos != last_sun || moon_pos != last_moon) {
 			clear_vbos_tids(1,0); // light source changed, clear vbos and build new shadow map
@@ -997,10 +997,19 @@ public:
 			float const dist(tile->get_rel_dist_to_camera());
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, tile->get_zmin());
-			if (!tile->is_visible()) continue;
+			if (!tile->is_visible())    continue;
+			if (trees_enabled() && !tile->trees_generated()) {to_gen_trees.push_back(tile);}
 			if (reflection_pass && tile->contains_camera() && !tile->has_water()) continue;
-			tile->pre_draw_update(data, indices, height_gen);
 			to_draw.push_back(make_pair(dist, tile));
+		}
+		if (!to_gen_trees.empty()) {
+			#pragma omp parallel for schedule(static,1)
+			for (int i = 0; i < (int)to_gen_trees.size(); ++i) {
+				to_gen_trees[i]->init_tree_draw();
+			}
+		}
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			to_draw[i].second->pre_draw_update(data, indices, height_gen);
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 		shader_t s;
