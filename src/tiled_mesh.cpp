@@ -206,7 +206,7 @@ class tile_t {
 	float radius, mzmin, mzmax, tzmax, trmax, xstart, ystart, xstep, ystep;
 	bool shadows_invalid;
 	vector<float> zvals;
-	vector<unsigned char> shadow_map, tree_map;
+	vector<unsigned char> tree_map;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group trees;
@@ -287,6 +287,7 @@ public:
 
 	void clear() {
 		clear_vbo_tid(1, 1);
+		tree_map.clear();
 		zvals.clear();
 		clear_shadows();
 		trees.clear_all();
@@ -299,8 +300,6 @@ public:
 			smask[l].clear();
 			for (unsigned d = 0; d < 2; ++d) sh_out[l][d].clear();
 		}
-		shadow_map.clear();
-		tree_map.clear();
 		invalidate_shadows();
 	}
 
@@ -390,12 +389,13 @@ public:
 			calc_mesh_shadows(l, lpos, &zvals.front(), &smask[l].front(), zvsize, zvsize,
 				sh_in[0], sh_in[1], &sh_out[l][0].front(), &sh_out[l][1].front());
 		}
+		invalidate_shadows();
 	}
 
 	tile_t *get_adj_tile_smap(int dx, int dy) const {
 		tile_xy_pair const tp((x1/(int)size)+dx, (y1/(int)size)+dy);
 		tile_t *adj_tile(get_tile_from_xy(tp));
-		return ((adj_tile && !adj_tile->shadow_map.empty()) ? adj_tile : NULL);
+		return ((adj_tile && !adj_tile->tree_map.empty()) ? adj_tile : NULL);
 	}
 
 	void push_tree_ao_shadow(int dx, int dy, point const &pos, float radius) const {
@@ -415,9 +415,7 @@ public:
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
 				float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
-				if (dist > rval) continue;
-				shadow_map[y*stride + x] *= scale*dist;
-				tree_map  [y*stride + x] *= (0.2 + 0.8*scale*dist);
+				if (dist < rval) {tree_map[y*stride + x] *= (0.2 + 0.8*scale*dist);}
 			}
 		}
 		if (!no_adj_test) {
@@ -470,13 +468,26 @@ public:
 		if (shadow_normal_tid) return; // up-to-date
 		setup_texture(shadow_normal_tid, GL_MODULATE, 0, 0, 0, 0, 0);
 		vector<norm_comp_with_shadow> data(stride*stride);
+		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
+		assert(has_sun || has_moon);
+		calc_shadows(has_sun, has_moon);
 
 		for (unsigned y = 0; y < stride; ++y) {
 			for (unsigned x = 0; x < stride; ++x) {
-				unsigned const ix(y*stride + x);
+				unsigned const ix(y*stride + x), ix2(y*zvsize + x);
 				vector3d const norm(get_norm(y*zvsize + x));
-				UNROLL_3X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));)
-				data[ix].v[3] = shadow_map[ix];
+				UNROLL_3X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0)););
+				unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]);
+
+				if (has_sun && has_moon) {
+					bool const no_sun( (smask[LIGHT_SUN ][ix2] & SHADOWED_ALL) != 0);
+					bool const no_moon((smask[LIGHT_MOON][ix2] & SHADOWED_ALL) != 0);
+					shadow_val *= blend_light(light_factor, !no_sun, !no_moon);
+				}
+				else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix2] & SHADOWED_ALL) {
+					shadow_val = 0; // full shadow
+				}
+				data[ix].v[3] = shadow_val;
 			}
 		}
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
@@ -486,29 +497,12 @@ public:
 	void create_data(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
 		//RESET_TIME;
 		assert(zvals.size() == zvsize*zvsize);
-		data.resize(stride*stride);
 		calc_start_step(init_dxoff, init_dyoff);
-		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
-		assert(has_sun || has_moon);
-		calc_shadows(has_sun, has_moon);
-		shadow_map.resize(stride*stride, 255);
-		tree_map.resize(shadow_map.size(), 255);
-		
+		data.resize(stride*stride);
+
 		for (unsigned y = 0; y <= size; ++y) {
 			for (unsigned x = 0; x <= size; ++x) {
-				unsigned const ix(y*zvsize + x);
-				float light_scale(1.0);
-
-				if (has_sun && has_moon) {
-					bool const no_sun( (smask[LIGHT_SUN ][ix] & SHADOWED_ALL) != 0);
-					bool const no_moon((smask[LIGHT_MOON][ix] & SHADOWED_ALL) != 0);
-					light_scale = blend_light(light_factor, !no_sun, !no_moon);
-				}
-				else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix] & SHADOWED_ALL) {
-					light_scale = 0.0;
-				}
-				data[y*stride + x].assign((xstart + x*xstep), (ystart + y*ystep), zvals[ix]);
-				shadow_map[y*stride + x] = (unsigned char)(255.0*light_scale);
+				data[y*stride + x].assign((xstart + x*xstep), (ystart + y*ystep), zvals[y*zvsize + x]);
 			}
 		}
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
@@ -534,7 +528,6 @@ public:
 		assert(weight_tid == 0);
 		assert(!island);
 		assert(zvals.size() == zvsize*zvsize);
-		assert(tree_map.size() == stride*stride);
 		//RESET_TIME;
 		grass_blocks.clear();
 		unsigned const grass_block_dim(get_grass_block_dim()), tsize(stride);
@@ -599,7 +592,7 @@ public:
 				weights[k1] += weight_scale*(1.0 - t);
 				unsigned const ix_val(y*tsize + x), off(4*ix_val);
 
-				if (tree_map[ix_val] < 255) { // replace grass under trees with dirt
+				if (!tree_map.empty() && tree_map[ix_val] < 255) { // replace grass under trees with dirt
 					float const v(tree_map[ix_val]/255.0);
 					weights[dirt_tex_ix]  += (1.0 - v)*weights[grass_tex_ix];
 					weights[grass_tex_ix] *= v;
@@ -664,6 +657,7 @@ public:
 		}
 		radius = calc_radius() + trmax; // is this really needed?
 		trees.calc_trunk_pts();
+		tree_map.resize(stride*stride, 255);
 		//PRINT_TIME("Tree Gen");
 	}
 
@@ -981,8 +975,10 @@ public:
 		draw_vect_t to_draw;
 		vector<tile_t *> to_gen_trees;
 
-		if (sun_pos != last_sun || moon_pos != last_moon) {
-			clear_vbos_tids(1,0); // light source changed, clear vbos and build new shadow map
+		if (sun_pos != last_sun || moon_pos != last_moon) { // light source change
+			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
+				i->second->clear_shadows();
+			}
 			last_sun  = sun_pos;
 			last_moon = moon_pos;
 		}
