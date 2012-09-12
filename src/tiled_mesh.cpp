@@ -13,6 +13,7 @@
 
 
 bool const DEBUG_TILES        = 0;
+bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
 int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
@@ -359,7 +360,7 @@ public:
 		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy).get_norm();
 	}
 
-	void calc_shadows(bool calc_sun, bool calc_moon) {
+	void calc_shadows(bool calc_sun, bool calc_moon, bool no_push=0) {
 		bool calc_light[NUM_LIGHT_SRC] = {0};
 		calc_light[LIGHT_SUN ] = calc_sun;
 		calc_light[LIGHT_MOON] = calc_moon;
@@ -368,10 +369,12 @@ public:
 		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // calculate mesh shadows for each light source
 			if (!calc_light[l])    continue; // light not enabled
 			if (!smask[l].empty()) continue; // already calculated (cached)
+
+			// pull from adjacent tiles that already had their shadows calculated
 			float const *sh_in[2] = {0, 0};
 			point const lpos(get_light_pos(l));
 			tile_xy_pair const adj_tp[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? -1 : 1)), tp.y),
-				                            tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? -1 : 1)))};
+				                            tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? -1 : 1)))}; // toward the light source
 
 			for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
 				sh_out[l][!d].resize(zvsize, MESH_MIN_Z); // init value really should not be used, but it sometimes is
@@ -380,16 +383,30 @@ public:
 				vector<float> const &adj_sh_out(adj_tile->sh_out[l][!d]);
 				
 				if (adj_sh_out.empty()) { // adjacent tile not initialized
-					adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON)); // recursive call on adjacent tile
+					adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON), 1); // recursive call on adjacent tile
 				}
 				assert(adj_sh_out.size() == zvsize);
 				sh_in[!d] = &adj_sh_out.front(); // chain our input to our neighbor's output
 			}
+
+			// calculate shadows of current tile
 			smask[l].resize(zvals.size());
 			calc_mesh_shadows(l, lpos, &zvals.front(), &smask[l].front(), zvsize, zvsize,
 				sh_in[0], sh_in[1], &sh_out[l][0].front(), &sh_out[l][1].front());
+			invalidate_shadows();
+
+			if (!no_push) { // push to adjacent tiles (FIXME: once, but that might not be enough)
+				tile_xy_pair const adj_tp2[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? 1 : -1)), tp.y),
+												 tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? 1 : -1)))}; // away from the light source
+
+				for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
+					tile_t *adj_tile(get_tile_from_xy(adj_tp2[d]));
+					if (adj_tile == NULL || adj_tile->smask[l].empty()) continue; // no adjacent tile, or not initialized
+					adj_tile->smask[l].clear();
+					adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON), 1);
+				}
+			}
 		}
-		invalidate_shadows();
 	}
 
 	tile_t *get_adj_tile_smap(int dx, int dy) const {
@@ -547,8 +564,8 @@ public:
 		create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);
 
 		//#pragma omp parallel for schedule(static,1)
-		for (unsigned y = 0; y < tsize; ++y) {
-			for (unsigned x = 0; x < tsize; ++x) {
+		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) {
+			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
