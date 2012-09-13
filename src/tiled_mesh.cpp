@@ -369,6 +369,7 @@ public:
 		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // calculate mesh shadows for each light source
 			if (!calc_light[l])    continue; // light not enabled
 			if (!smask[l].empty()) continue; // already calculated (cached)
+			vector<float> const prev_sh_out[2] = {sh_out[l][0], sh_out[l][1]};
 
 			// pull from adjacent tiles that already had their shadows calculated
 			float const *sh_in[2] = {0, 0};
@@ -393,9 +394,8 @@ public:
 			smask[l].resize(zvals.size());
 			calc_mesh_shadows(l, lpos, &zvals.front(), &smask[l].front(), zvsize, zvsize,
 				sh_in[0], sh_in[1], &sh_out[l][0].front(), &sh_out[l][1].front());
-			invalidate_shadows();
 
-			if (!no_push) { // push to adjacent tiles (FIXME: once, but that might not be enough)
+			if (!no_push && (sh_out[l][0] != prev_sh_out[0] || sh_out[l][1] != prev_sh_out[1])) { // push to adjacent tiles
 				tile_xy_pair const adj_tp2[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? 1 : -1)), tp.y),
 												 tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? 1 : -1)))}; // away from the light source
 
@@ -403,9 +403,10 @@ public:
 					tile_t *adj_tile(get_tile_from_xy(adj_tp2[d]));
 					if (adj_tile == NULL || adj_tile->smask[l].empty()) continue; // no adjacent tile, or not initialized
 					adj_tile->smask[l].clear();
-					adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON), 1);
+					adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON), 0);
 				}
 			}
+			invalidate_shadows();
 		}
 	}
 
@@ -487,7 +488,9 @@ public:
 		vector<norm_comp_with_shadow> data(stride*stride);
 		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
 		assert(has_sun || has_moon);
+		//RESET_TIME;
 		calc_shadows(has_sun, has_moon);
+		//PRINT_TIME("Calc Shadows");
 
 		for (unsigned y = 0; y < stride; ++y) {
 			for (unsigned x = 0; x < stride; ++x) {
