@@ -205,7 +205,7 @@ class tile_t {
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, tzmax, trmax, xstart, ystart, xstep, ystep;
-	bool shadows_invalid;
+	bool shadows_invalid, in_queue;
 	vector<float> zvals;
 	vector<unsigned char> tree_map;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
@@ -232,7 +232,7 @@ public:
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_tree_dxoff(0), init_tree_dyoff(0),
 		init_scenery_dxoff(0), init_scenery_dyoff(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(size_), stride(size+1),
-		zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1)
+		zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1), in_queue(0)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -360,53 +360,80 @@ public:
 		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy).get_norm();
 	}
 
-	void calc_shadows(bool calc_sun, bool calc_moon, bool no_push=0) {
-		bool calc_light[NUM_LIGHT_SRC] = {0};
-		calc_light[LIGHT_SUN ] = calc_sun;
-		calc_light[LIGHT_MOON] = calc_moon;
+	void calc_shadows_for_light(unsigned l) {
+		assert(!smask[l].empty());
 		tile_xy_pair const tp(x1/(int)size, y1/(int)size);
 
-		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // calculate mesh shadows for each light source
-			if (!calc_light[l])    continue; // light not enabled
-			if (!smask[l].empty()) continue; // already calculated (cached)
-			vector<float> const prev_sh_out[2] = {sh_out[l][0], sh_out[l][1]};
+		// pull from adjacent tiles that already had their shadows calculated
+		float const *sh_in[2] = {0, 0};
+		point const lpos(get_light_pos(l));
+		tile_xy_pair const adj_tp[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? -1 : 1)), tp.y),
+										tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? -1 : 1)))}; // toward the light source
 
-			// pull from adjacent tiles that already had their shadows calculated
-			float const *sh_in[2] = {0, 0};
-			point const lpos(get_light_pos(l));
-			tile_xy_pair const adj_tp[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? -1 : 1)), tp.y),
-				                            tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? -1 : 1)))}; // toward the light source
-
-			for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
-				sh_out[l][!d].resize(zvsize, MESH_MIN_Z); // init value really should not be used, but it sometimes is
-				tile_t *adj_tile(get_tile_from_xy(adj_tp[d]));
-				if (adj_tile == NULL) continue; // no adjacent tile
-				vector<float> const &adj_sh_out(adj_tile->sh_out[l][!d]);
+		for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
+			sh_out[l][!d].resize(zvsize, MESH_MIN_Z); // init value really should not be used, but it sometimes is
+			tile_t *adj_tile(get_tile_from_xy(adj_tp[d]));
+			if (adj_tile == NULL) continue; // no adjacent tile
+			vector<float> const &adj_sh_out(adj_tile->sh_out[l][!d]);
 				
-				if (adj_sh_out.empty()) { // adjacent tile not initialized
-					adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON), 1); // recursive call on adjacent tile
-				}
-				assert(adj_sh_out.size() == zvsize);
-				sh_in[!d] = &adj_sh_out.front(); // chain our input to our neighbor's output
+			if (adj_sh_out.empty()) { // adjacent tile not initialized
+				adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON), 1); // recursive call on adjacent tile
 			}
+			assert(adj_sh_out.size() == zvsize);
+			sh_in[!d] = &adj_sh_out.front(); // chain our input to our neighbor's output
+		}
 
-			// calculate shadows of current tile
-			smask[l].resize(zvals.size());
-			calc_mesh_shadows(l, lpos, &zvals.front(), &smask[l].front(), zvsize, zvsize,
-				sh_in[0], sh_in[1], &sh_out[l][0].front(), &sh_out[l][1].front());
+		// calculate shadows of current tile
+		calc_mesh_shadows(l, lpos, &zvals.front(), &smask[l].front(), zvsize, zvsize,
+			sh_in[0], sh_in[1], &sh_out[l][0].front(), &sh_out[l][1].front());
+		invalidate_shadows();
+	}
 
-			if (!no_push && (sh_out[l][0] != prev_sh_out[0] || sh_out[l][1] != prev_sh_out[1])) { // push to adjacent tiles
+	static void proc_tile_queue(tile_t *init_tile, unsigned l) {
+		point const lpos(get_light_pos(l));
+		deque<tile_t *> tile_queue;
+		tile_queue.push_front(init_tile);
+		init_tile->in_queue = 1;
+
+		while (!tile_queue.empty()) {
+			tile_t *t(tile_queue.back());
+			tile_queue.pop_back();
+			assert(t->in_queue);
+			t->in_queue = 0;
+			vector<float> const prev_sh_out[2] = {t->sh_out[l][0], t->sh_out[l][1]};
+			t->calc_shadows_for_light(l);
+
+			if (t->sh_out[l][0] != prev_sh_out[0] || t->sh_out[l][1] != prev_sh_out[1]) { // changed, push to adjacent tiles
+				tile_xy_pair const tp(t->x1/int(t->size), t->y1/int(t->size));
 				tile_xy_pair const adj_tp2[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? 1 : -1)), tp.y),
 												 tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? 1 : -1)))}; // away from the light source
 
 				for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
 					tile_t *adj_tile(get_tile_from_xy(adj_tp2[d]));
-					if (adj_tile == NULL || adj_tile->smask[l].empty()) continue; // no adjacent tile, or not initialized
-					adj_tile->smask[l].clear();
-					adj_tile->calc_shadows((l == LIGHT_SUN), (l == LIGHT_MOON), 0);
+					if (adj_tile == NULL || adj_tile->smask[l].empty() || adj_tile->in_queue) continue; // no adjacent tile, not initialized, or already in queue
+					tile_queue.push_front(adj_tile);
+					adj_tile->in_queue = 1;
 				}
 			}
-			invalidate_shadows();
+		}
+	}
+
+	void calc_shadows(bool calc_sun, bool calc_moon, bool no_push=0) {
+		bool calc_light[NUM_LIGHT_SRC] = {0};
+		calc_light[LIGHT_SUN ] = calc_sun;
+		calc_light[LIGHT_MOON] = calc_moon;
+
+		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // calculate mesh shadows for each light source
+			if (!calc_light[l])    continue; // light not enabled
+			if (!smask[l].empty()) continue; // already calculated (cached)
+			smask[l].resize(zvals.size());
+
+			if (no_push) {
+				calc_shadows_for_light(l);
+			}
+			else {
+				proc_tile_queue(this, l);
+			}
 		}
 	}
 
