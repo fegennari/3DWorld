@@ -402,18 +402,16 @@ public:
 			t->in_queue = 0;
 			vector<float> const prev_sh_out[2] = {t->sh_out[l][0], t->sh_out[l][1]};
 			t->calc_shadows_for_light(l);
+			tile_xy_pair const tp(t->x1/int(t->size), t->y1/int(t->size));
+			tile_xy_pair const adj_tp2[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? 1 : -1)), tp.y),
+											 tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? 1 : -1)))}; // away from the light source
 
-			if (t->sh_out[l][0] != prev_sh_out[0] || t->sh_out[l][1] != prev_sh_out[1]) { // changed, push to adjacent tiles
-				tile_xy_pair const tp(t->x1/int(t->size), t->y1/int(t->size));
-				tile_xy_pair const adj_tp2[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? 1 : -1)), tp.y),
-												 tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? 1 : -1)))}; // away from the light source
-
-				for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
-					tile_t *adj_tile(get_tile_from_xy(adj_tp2[d]));
-					if (adj_tile == NULL || adj_tile->smask[l].empty() || adj_tile->in_queue) continue; // no adjacent tile, not initialized, or already in queue
-					tile_queue.push_front(adj_tile);
-					adj_tile->in_queue = 1;
-				}
+			for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
+				if (t->sh_out[l][!d] == prev_sh_out[!d]) continue; // unchanged, no update needed
+				tile_t *adj_tile(get_tile_from_xy(adj_tp2[d]));
+				if (adj_tile == NULL || adj_tile->smask[l].empty() || adj_tile->in_queue) continue; // no adjacent tile, not initialized, or already in queue
+				tile_queue.push_front(adj_tile); // changed, push to adjacent tiles
+				adj_tile->in_queue = 1;
 			}
 		}
 	}
