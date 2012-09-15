@@ -41,7 +41,7 @@ pt_line_drawer bubble_pld;
 extern GLUquadricObj* quadric;
 extern bool have_sun, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists, two_sided_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, create_voxel_landscape, combined_gu, disable_shaders;
-extern int is_cloudy, iticks, display_mode, show_fog, num_groups, island;
+extern int is_cloudy, iticks, display_mode, show_fog, num_groups, island, xoff, yoff;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode;
 extern unsigned smoke_tid, dl_tid, num_stars;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
@@ -1420,7 +1420,7 @@ void draw_compass_and_alt() { // and temperature
 	float const aspect_ratio((float)window_width/(float)window_height);
 	string const dirs[8] = {"N", "NW", "W", "SW", "S", "SE", "E", "NE"};
 	YELLOW.do_glColor();
-	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", (camera_origin.x+xoff2*DX_VAL), (camera_origin.y+yoff2*DY_VAL), camera_origin.z);
+	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", (camera_origin.x+(xoff2-xoff)*DX_VAL), (camera_origin.y+(yoff2-yoff)*DY_VAL), camera_origin.z);
 	draw_text(-0.005*aspect_ratio, -0.01, -0.02, text);
 	float const theta(safe_acosf(-cview_dir.x)*TO_DEG);
 	int const octant(int(((cview_dir.y > 0) ? (360.0 - theta) : theta)/45.0 + 2.5)%8);

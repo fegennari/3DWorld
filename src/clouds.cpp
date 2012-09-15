@@ -14,7 +14,7 @@ unsigned const CLOUD_GEN_TEX_SZ = 1024;
 cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
-extern int window_width, window_height, cloud_model, display_mode;
+extern int window_width, window_height, cloud_model, display_mode, xoff, yoff;
 extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
 extern vector3d wind;
 
@@ -337,6 +337,7 @@ void draw_cloud_plane(bool reflection_pass) {
 	point const camera(get_camera_pos());
 	float const size(FAR_CLIP), rval(0.94*size); // extends to at least the far clipping plane
 	float const z1(zmin), z2(camera.z + max(zmax, CLOUD_CEILING));
+	point const world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
 	static vector2d wind_pos(0.0, 0.0);
 	wind_pos.x += fticks*wind.x;
 	wind_pos.y += fticks*wind.y;
@@ -362,7 +363,7 @@ void draw_cloud_plane(bool reflection_pass) {
 	s.begin_shader();
 	s.setup_fog_scale();
 	s.add_uniform_int("tex0", 0);
-	vector3d const offset(-get_camera_pos()); // FIXME: add wind
+	vector3d const offset(-camera + 0.5*world_pos); // relative cloud velocity is half the camera velocity
 	s.add_uniform_vector3d("offset", offset);
 	s.add_uniform_vector2d("dxy", wind_pos);
 	enable_blend();
