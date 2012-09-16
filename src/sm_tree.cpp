@@ -244,12 +244,12 @@ float calc_tree_scale() {return (Z_SCENE_SIZE*tree_scale)/16.0;}
 float calc_tree_size () {return SM_TREE_SIZE*Z_SCENE_SIZE/calc_tree_scale();}
 
 
-void small_tree_group::gen_trees(int x1, int y1, int x2, int y2) {
+void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetation_) {
 
-	if (vegetation == 0.0) return;
-	generated = 1;
+	generated = 1; // mark as generated if we got here, even if there are no actual trees generated
+	if (vegetation_ == 0.0) return;
 	float const tscale(calc_tree_scale()), tsize(calc_tree_size()); // random tree generation based on transformed mesh height function
-	int const ntrees(int(min(1.0f, vegetation*tscale*tscale/8.0f)*NUM_SMALL_TREES));
+	int const ntrees(int(min(1.0f, vegetation_*tscale*tscale/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
 	assert(x1 < x2 && y1 < y2);
 	float const x0(TREE_DIST_MH_S*X_SCENE_SIZE + xoff2*DX_VAL), y0(TREE_DIST_MH_S*Y_SCENE_SIZE + yoff2*DY_VAL);
@@ -355,7 +355,7 @@ void gen_small_trees() {
 	}
 	small_trees.clear_all();
 	small_trees = small_tree_group(); // really force a clear
-	small_trees.gen_trees(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1);
+	small_trees.gen_trees(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation);
 	small_trees.finalize(0, 0);
 	//PRINT_TIME("Gen");
 	small_trees.add_cobjs();

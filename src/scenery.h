@@ -138,7 +138,7 @@ public:
 	void update_zvals(int x1, int y1, int x2, int y2);
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
-	void gen(int x1, int y1, int x2, int y2);
+	void gen(int x1, int y1, int x2, int y2, float vegetation_);
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate);
 	void draw_opaque_objects(bool shadow_only, vector3d const &xlate, bool draw_pld);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);

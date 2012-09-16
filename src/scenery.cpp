@@ -822,7 +822,7 @@ void scenery_group::add_plant(point const &pos, float height, float radius, int 
 	plants.back().create2(pos, height, radius, type, calc_z, plant_vbo_manager);
 }
 
-void scenery_group::gen(int x1, int y1, int x2, int y2) {
+void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 
 	unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(tree_scale+1))));
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
@@ -837,7 +837,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2) {
 			int const val(rand2_seed_mix()%smod);
 			if (val > 100) continue;
 			rand2_mix();
-			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation);
+			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation_);
 			
 			if (veg && rand2()%100 < 30) {
 				plants.push_back(s_plant()); // 30%
@@ -940,7 +940,7 @@ void gen_scenery() {
 	has_scenery = 0;
 	if (DISABLE_SCENERY || (NO_ISLAND_SCENERY && island)) return;
 	has_scenery = 1;
-	all_scenery.gen(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1);
+	all_scenery.gen(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation);
 	all_scenery.add_cobjs();
 }
 
