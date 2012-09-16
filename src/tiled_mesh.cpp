@@ -15,6 +15,7 @@
 bool const DEBUG_TILES        = 0;
 bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
+bool const ENABLE_TERRAIN_ENV = 0;
 int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
 float const DRAW_DIST_TILES   = 1.4;
@@ -39,6 +40,8 @@ extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, re
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
+
+bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 
 
 float get_scaled_tile_radius  () {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
@@ -225,18 +228,24 @@ class tile_t {
 	vector<grass_block_t> grass_blocks;
 
 	struct terrain_params_t {
-		float hoff, hscale, veg;
-		terrain_params_t() : hoff(0.0), hscale(1.0), veg(1.0) {}
+		float hoff, hscale, veg, grass;
+		terrain_params_t() : hoff(0.0), hscale(1.0), veg(1.0), grass(1.0) {}
 	};
 
 	terrain_params_t params[2][2]; // {ylo,yhi} x {xlo,xhi}
 
 	void update_terrain_params() {
+		float const off_mult(0.4), height_mult(0.8), veg_mult(0.5), off_scale(1.0);
+
 		for (unsigned yp = 0; yp < 2; ++yp) {
 			for (unsigned xp = 0; xp < 2; ++xp) {
 				terrain_params_t &param(params[yp][xp]);
-				float const xv(get_xval((xp ? x2 : x1) + xoff - xoff2)), yv(get_yval((yp ? y2 : y1) + yoff - yoff2));
-				// FIXME: calculate param.hoff, param.hscale, and param.veg at point (xv, yv)
+				float const xv(mesh_scale*(xp ? x2 : x1)), yv(mesh_scale*get_yval(yp ? y2 : y1));
+				//param.hoff   = off_scale*eval_mesh_sin_terms(off_mult*xv+123, off_mult*yv+456);
+				//param.hscale = min(2.0f, max(0.2f, 0.5f*fabs(eval_mesh_sin_terms(height_mult*xv+789, height_mult*yv+111))));
+				float const veg_val(eval_mesh_sin_terms(veg_mult*xv, veg_mult*yv));
+				param.veg    = CLIP_TO_01(5.000f*(veg_val + 0.5f));
+				param.grass  = CLIP_TO_01(200.0f*(veg_val + 1.0f)); // depends on hoff?
 			}
 		}
 	}
@@ -270,8 +279,8 @@ public:
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
 	bool has_water() const {return (mzmin < water_plane_z);}
-	bool trees_generated() const {return trees.generated;}
-	float get_avg_veg() const {return 0.25*vegetation*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
+	bool has_trees() const {return (trees.generated && !trees.empty());}
+	float get_avg_veg() const {return 0.25*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
 	
 	point get_center() const {
 		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
@@ -355,12 +364,13 @@ public:
 
 	void create_zvals(mesh_xy_grid_cache_t &height_gen) {
 		//RESET_TIME;
+		if (enable_terrain_env) {update_terrain_params();}
 		zvals.resize(zvsize*zvsize);
 		calc_start_step(0, 0);
 		create_xy_arrays(height_gen, zvsize, 1.0);
 		mzmin =  FAR_CLIP;
 		mzmax = -FAR_CLIP;
-		float const xy_mult(1.0/float(zvsize-1));
+		float const xy_mult(1.0/float(size));
 
 		#pragma omp parallel for schedule(static,1)
 		for (int y = 0; y < (int)zvsize; ++y) {
@@ -601,19 +611,24 @@ public:
 		grass_blocks.clear();
 		unsigned const grass_block_dim(get_grass_block_dim()), tsize(stride);
 		unsigned char *data(new unsigned char[4*tsize*tsize]); // RGBA
-		float const xy_mult(1.0/float(tsize-1));
+		float const xy_mult(1.0/float(size));
 		float const MESH_NOISE_SCALE = 0.003;
 		float const MESH_NOISE_FREQ  = 80.0;
 		float const dz_inv(1.0/(zmax - zmin)), noise_scale(MESH_NOISE_SCALE*mesh_scale_z);
-		int k1, k2, k3, k4, dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1);
+		int k1, k2, k3, k4, sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
 		float t;
 
 		for (unsigned i = 0; i < NTEX_DIRT; ++i) {
-			if (lttex_dirt[i].id == DIRT_TEX  ) dirt_tex_ix  = i;
-			if (lttex_dirt[i].id == GROUND_TEX) grass_tex_ix = i;
-			if (lttex_dirt[i].id == ROCK_TEX  ) rock_tex_ix  = i;
+			switch (lttex_dirt[i].id) {
+			case SAND_TEX:   sand_tex_ix  = i; break;
+			case DIRT_TEX:   dirt_tex_ix  = i; break;
+			case GROUND_TEX: grass_tex_ix = i; break;
+			case ROCK_TEX:   rock_tex_ix  = i; break;
+			case SNOW_TEX:   snow_tex_ix  = i; break;
+			default: assert(0);
+			}
 		}
-		assert(dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0);
+		assert(sand_tex_ix >= 0 && dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0 && snow_tex_ix >= 0);
 		create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);
 
 		//#pragma omp parallel for schedule(static,1)
@@ -668,10 +683,15 @@ public:
 					weights[grass_tex_ix] *= v;
 				}
 				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
-				float const veg(BILINEAR_INTERP(params, veg, xv, yv));
+				float const veg_scale(BILINEAR_INTERP(params, veg, xv, yv)), grass_scale(BILINEAR_INTERP(params, grass, xv, yv));
 
-				if (veg < 1.0) {
-					// FIXME: apply vegetation scale: convert snow to rock, grass to rock or dirt, and dirt to sand
+				if (veg_scale  < 1.0) { // apply vegetation scale: convert dirt to sand
+					weights[sand_tex_ix ] += (1.0 - veg_scale )*weights[dirt_tex_ix];
+					weights[dirt_tex_ix ] *= veg_scale;
+				}
+				if (grass_scale < 1.0) { // apply grass scale: convert grass to sand
+					weights[sand_tex_ix ] += (1.0 - grass_scale)*weights[grass_tex_ix];
+					weights[grass_tex_ix] *= grass_scale;
 				}
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 					data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
@@ -724,10 +744,7 @@ public:
 		//RESET_TIME;
 		init_tree_dxoff = -xoff2;
 		init_tree_dyoff = -yoff2;
-		float const orig_veg(vegetation);
-		vegetation = get_avg_veg();
-		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff);
-		vegetation = orig_veg;
+		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff, vegetation*get_avg_veg());
 		tzmax = mzmin;
 		trmax = trees.max_pt_radius;
 		
@@ -810,10 +827,7 @@ public:
 		if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
 		init_scenery_dxoff = -xoff2;
 		init_scenery_dyoff = -yoff2;
-		float const orig_veg(vegetation);
-		vegetation = get_avg_veg();
-		scenery.gen(x1+init_scenery_dxoff, y1+init_scenery_dyoff, x2+init_scenery_dxoff, y2+init_scenery_dyoff);
-		vegetation = orig_veg;
+		scenery.gen(x1+init_scenery_dxoff, y1+init_scenery_dyoff, x2+init_scenery_dxoff, y2+init_scenery_dyoff, vegetation*get_avg_veg());
 	}
 
 	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves) {
@@ -1076,7 +1090,7 @@ public:
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, tile->get_zmin());
 			if (!tile->is_visible())    continue;
-			if (trees_enabled() && !tile->trees_generated()) {to_gen_trees.push_back(tile);}
+			if (trees_enabled() && !tile->has_trees()) {to_gen_trees.push_back(tile);}
 			if (reflection_pass && tile->contains_camera() && !tile->has_water()) continue;
 			to_draw.push_back(make_pair(dist, tile));
 		}
