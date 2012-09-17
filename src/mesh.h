@@ -70,6 +70,12 @@ struct surf_adv { // size = 4
 };
 
 
+struct mesh_height_gen_t { // unused
+	virtual float get_zval_at(float xval, float yval) const = 0;
+	virtual ~mesh_height_gen_t() {}
+};
+
+
 // should be const, but depend on mesh size
 extern int MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, MAX_XY_SIZE, XY_MULT_SIZE, XY_SUM_SIZE, I_TIMESCALE;
 extern int MESH_SIZE[];
