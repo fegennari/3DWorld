@@ -11,6 +11,7 @@ bool     const USE_CLOUD_FBO    = 1;
 unsigned const CLOUD_GEN_TEX_SZ = 1024;
 
 
+vector2d cloud_wind_pos(0.0, 0.0);
 cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
@@ -332,15 +333,24 @@ void draw_cloud_vert(float x, float y, float z1, float z2, float r) {
 }
 
 
+void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
+
+	select_multitex(NOISE_TEX, tu_id, 0);
+	s.add_uniform_int("cloud_noise_tex", tu_id);
+	set_multitex(0);
+	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
+	vector3d const offset(-camera + 0.5*world_pos); // relative cloud velocity is half the camera velocity
+	s.add_uniform_vector3d("offset", offset);
+	s.add_uniform_vector2d("dxy", cloud_wind_pos);
+}
+
+
 void draw_cloud_plane(bool reflection_pass) {
 
-	point const camera(get_camera_pos());
 	float const size(FAR_CLIP), rval(0.94*size); // extends to at least the far clipping plane
-	float const z1(zmin), z2(camera.z + max(zmax, CLOUD_CEILING));
-	point const world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
-	static vector2d wind_pos(0.0, 0.0);
-	wind_pos.x += fticks*wind.x;
-	wind_pos.y += fticks*wind.y;
+	float const z1(zmin), z2(get_camera_pos().z + max(zmax, CLOUD_CEILING));
+	cloud_wind_pos.x += fticks*wind.x;
+	cloud_wind_pos.y += fticks*wind.y;
 	shader_t s;
 	glDepthMask(GL_FALSE);
 
@@ -359,15 +369,11 @@ void draw_cloud_plane(bool reflection_pass) {
 	// draw clouds
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	s.set_vert_shader("clouds");
-	s.set_frag_shader("linear_fog.part+clouds");
+	s.set_frag_shader("linear_fog.part+perlin_clouds.part+clouds");
 	s.begin_shader();
 	s.setup_fog_scale();
-	s.add_uniform_int("tex0", 0);
-	vector3d const offset(-camera + 0.5*world_pos); // relative cloud velocity is half the camera velocity
-	s.add_uniform_vector3d("offset", offset);
-	s.add_uniform_vector2d("dxy", wind_pos);
+	set_cloud_uniforms(s, 0);
 	enable_blend();
-	select_texture(NOISE_TEX, 0);
 	get_cloud_color().do_glColor();
 	glBegin(GL_QUADS);
 	unsigned const NUM_DIV = 32;
@@ -388,7 +394,6 @@ void draw_cloud_plane(bool reflection_pass) {
 	}
 	glEnd();
 	s.end_shader();
-
 	disable_blend();
 	glDepthMask(GL_TRUE);
 }
