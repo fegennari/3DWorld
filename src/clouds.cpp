@@ -15,7 +15,7 @@ vector2d cloud_wind_pos(0.0, 0.0);
 cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
-extern int window_width, window_height, cloud_model, display_mode, xoff, yoff;
+extern int window_width, window_height, cloud_model, display_mode, xoff, yoff, animate2;
 extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
 extern vector3d wind;
 
@@ -333,6 +333,9 @@ void draw_cloud_vert(float x, float y, float z1, float z2, float r) {
 }
 
 
+float get_cloud_zmax() {return get_camera_pos().z + max(zmax, CLOUD_CEILING);}
+
+
 void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
 
 	select_multitex(NOISE_TEX, tu_id, 0);
@@ -348,9 +351,12 @@ void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
 void draw_cloud_plane(bool reflection_pass) {
 
 	float const size(FAR_CLIP), rval(0.94*size); // extends to at least the far clipping plane
-	float const z1(zmin), z2(get_camera_pos().z + max(zmax, CLOUD_CEILING));
-	cloud_wind_pos.x += fticks*wind.x;
-	cloud_wind_pos.y += fticks*wind.y;
+	float const z1(zmin), z2(get_cloud_zmax());
+
+	if (animate2) {
+		cloud_wind_pos.x += fticks*wind.x;
+		cloud_wind_pos.y += fticks*wind.y;
+	}
 	shader_t s;
 	glDepthMask(GL_FALSE);
 

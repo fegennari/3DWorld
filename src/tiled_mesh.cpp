@@ -36,7 +36,7 @@ float    const GRASS_COLOR_SCALE= 0.5;
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density;
-extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode;
+extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, ground_effects_level;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
@@ -1042,11 +1042,13 @@ public:
 		set_multitex(0);
 	}
 
+	// uses texture units 0-9
 	static void setup_mesh_draw_shaders(shader_t &s, float wpz, bool reflection_pass) {
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.set_bool_prefix("apply_cloud_shadows", (ground_effects_level >= 2 && !reflection_pass), 1); // FS
 		s.set_vert_shader("texture_gen.part+tiled_mesh");
-		s.set_frag_shader("linear_fog.part+tiled_mesh");
+		s.set_frag_shader("linear_fog.part+perlin_clouds.part+tiled_mesh");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
@@ -1056,6 +1058,8 @@ public:
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 		set_noise_tex(s, 8);
+		set_cloud_uniforms(s, 9);
+		s.add_uniform_float("sky_plane_z", get_cloud_zmax());
 		setup_terrain_textures(s, 2, 0);
 	}
 

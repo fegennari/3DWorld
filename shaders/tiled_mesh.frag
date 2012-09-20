@@ -1,7 +1,7 @@
 uniform sampler2D tex0, tex1, tex2, tex3, tex4, tex5, tex6;
 uniform float ts2, ts3, ts4, ts5, ts6; // texture scales
 uniform float cs2, cs3, cs4, cs5, cs6; // color scales
-uniform float water_plane_z;
+uniform float water_plane_z, cloud_plane_z;
 uniform float water_atten    = 1.0;
 uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
@@ -29,6 +29,12 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 		
 	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex.
 	float NdotL = dot(normal, lightDir);
+	vec4 light  = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
+
+	if (apply_cloud_shadows) {
+		float t = (cloud_plane_z - vertex.z)/(light.z - vertex.z); // sky intersection position along vertex->light vector
+		normal *= 1.0 - 0.75*gen_cloud_alpha(vertex.xy + t*(light.xy - vertex.xy));
+	}
 	
 	// compute the ambient and diffuse lighting
 	vec4 diffuse = gl_LightSource[i].diffuse;
@@ -39,7 +45,6 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 	// apply underwater attenuation
 	// Note: ok if vertex is above the water, dist will come out as 0
 	vec4 eye   = gl_ModelViewMatrixInverse[3]; // world space
-	vec4 light = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 	float dist = integrate_water_dist(vertex, eye.xyz, water_plane_z) + integrate_water_dist(vertex, light.xyz, water_plane_z);
 	atten_color(color, dist*water_atten);
 	return color;
