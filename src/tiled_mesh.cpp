@@ -18,7 +18,8 @@ bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
 bool const ENABLE_TERRAIN_ENV = 1;
 int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
-float const DRAW_DIST_TILES   = 1.4;
+float const FOG_DIST_TILES    = 1.4;
+float const DRAW_DIST_TILES   = 1.45;
 float const CREATE_DIST_TILES = 1.5;
 float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 1.7;
@@ -45,7 +46,7 @@ bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 
 
 float get_scaled_tile_radius  () {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
-float get_inf_terrain_fog_dist() {return DRAW_DIST_TILES*get_scaled_tile_radius();}
+float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
 bool is_water_enabled() {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool scenery_enabled () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
