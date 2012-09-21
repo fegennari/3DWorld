@@ -280,7 +280,9 @@ public:
 	float calc_radius() const {return 0.5*sqrt(xstep*xstep + ystep*ystep)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
+	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), tzmax);}
 	bool has_water() const {return (mzmin < water_plane_z);}
+	bool all_water() const {return (get_tile_zmax() < water_plane_z);}
 	bool trees_generated() const {return trees.generated;}
 	bool has_trees() const {return (trees_generated() && !trees.empty());}
 	float get_avg_veg() const {return 0.25*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
@@ -289,8 +291,7 @@ public:
 		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
 	}
 	cube_t get_cube() const {
-		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
-		float const z2(max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), tzmax));
+		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), z2(get_tile_zmax());
 		return cube_t(xv1-trmax, xv1+(x2-x1)*DX_VAL+trmax, yv1-trmax, yv1+(y2-y1)*DY_VAL+trmax, mzmin, z2);
 	}
 	bool contains_camera() const {
@@ -1096,7 +1097,7 @@ public:
 			zmin = min(zmin, tile->get_zmin());
 			if (!tile->is_visible())    continue;
 			if (trees_enabled() && !tile->trees_generated()) {to_gen_trees.push_back(tile);}
-			if (reflection_pass && tile->contains_camera() && !tile->has_water()) continue;
+			if (reflection_pass && ((tile->contains_camera() && !tile->has_water()) || tile->all_water())) continue;
 			to_draw.push_back(make_pair(dist, tile));
 		}
 		if (!to_gen_trees.empty()) {
