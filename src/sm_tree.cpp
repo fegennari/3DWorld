@@ -290,18 +290,16 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 
 int get_tree_class_from_height(float zpos) {
 
-	if (island) {
-		if (zpos > 0.14*Z_SCENE_SIZE || zpos < max(water_plane_z, (zmin + OCEAN_DEPTH))) return TREE_CLASS_NONE; // none
-	}
-	else {
-		if (zpos < water_plane_z) return TREE_CLASS_NONE;
-	}
+	if (zpos < water_plane_z) return TREE_CLASS_NONE;
+	if (island && (zpos > 0.14*Z_SCENE_SIZE || zpos < (zmin + OCEAN_DEPTH))) return TREE_CLASS_NONE;
+	
 	if (force_tree_class >= 0) {
 		assert(force_tree_class < NUM_TREE_CLASSES);
 		return force_tree_class;
 	}
-	if (world_mode == WMODE_INF_TERRAIN) return TREE_CLASS_PINE;
 	float const relh(get_rel_height(zpos, -zmax_est, zmax_est));
+	if (relh > 0.9) return TREE_CLASS_NONE; // too high
+	if (world_mode == WMODE_INF_TERRAIN) return TREE_CLASS_PINE;
 	if (relh > 0.6) return TREE_CLASS_PINE;
 
 	if (island) {

@@ -931,7 +931,7 @@ public:
 		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
 		set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
 		
-		if (!reflection_pass) {
+		if (!reflection_pass && cloud_shadows_enabled()) {
 			vector3d const offset(-init_dxoff*DX_VAL, -init_dyoff*DY_VAL, 0.0);
 			s.add_uniform_vector3d("cloud_offset", offset);
 		}
