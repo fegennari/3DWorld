@@ -262,10 +262,7 @@ void common_shader_block_pre(shader_t &s, bool dlights, bool use_shadow_map, boo
 	s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 	if (!glIsEnabled(GL_FOG)) s.set_prefix("#define NO_FOG",        1); // FS
 	if (min_alpha == 0.0)     s.set_prefix("#define NO_ALPHA_TEST", 1); // FS
-
-	for (unsigned i = 0; i < 2; ++i) {
-		s.set_bool_prefix("indir_lighting", indir_lighting, i); // VS/FS
-	}
+	s.set_bool_prefixes("indir_lighting", indir_lighting, 3); // VS/FS
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
 	set_dlights_booleans(s, dlights, 1); // FS
 }
@@ -307,14 +304,15 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
 	s.set_bool_prefix("two_sided_lighting",  use_tsl,     1); // FS
 	s.set_bool_prefix("use_world_space_mvm", use_mvm,     0); // VS
-	if (use_spec_map) s.set_prefix("#define USE_SPEC_MAP", 1); // FS
+	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP", 1);} // FS
+
+	// Note: dynamic_smoke_shadows applies to light0 only
+	// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
+	s.set_bool_prefixes("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, 3); // VS/FS
+	s.set_bool_prefixes("smoke_enabled",         smoke_enabled,         3); // VS/FS
 	
 	for (unsigned i = 0; i < 2; ++i) {
-		// Note: dynamic_smoke_shadows applies to light0 only
-		// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
-		s.set_bool_prefix("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, i); // VS/FS
-		s.set_bool_prefix("smoke_enabled",         smoke_enabled,         i); // VS/FS
-		if (use_bmap) s.set_prefix("#define USE_BUMP_MAP",                i); // VS/FS
+		if (use_bmap) {s.set_prefix("#define USE_BUMP_MAP", i);} // VS/FS
 	}
 	s.setup_enabled_lights(8);
 }

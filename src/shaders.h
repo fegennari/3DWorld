@@ -75,6 +75,7 @@ public:
 	void setup_fog_scale() const;
 	void set_prefix(string const &prefix, unsigned shader_type);
 	void set_bool_prefix(string const &name, bool val, unsigned shader_type);
+	void set_bool_prefixes(string const &name, bool val, unsigned shaders_enabled=3);
 	void set_int_prefix(string const &name, int val, unsigned shader_type);
 };
 

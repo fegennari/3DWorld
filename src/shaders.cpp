@@ -231,10 +231,7 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 		GLboolean const enabled(glIsEnabled(GL_LIGHT0 + i));
 		prog_name_suffix += (enabled ? '1' : '0');
 		name.back() = char('0'+i);
-
-		for (unsigned s = 0; s < 3; ++s) { // put into correct shader(s): V, F, G
-			if (shaders_enabled & (1<<s)) {set_bool_prefix(name, (enabled != 0), s);}
-		}
+		set_bool_prefixes(name, (enabled != 0), shaders_enabled);
 	}
 }
 
@@ -264,6 +261,14 @@ void shader_t::set_prefix(string const &prefix, unsigned shader_type) {
 void shader_t::set_bool_prefix(string const &name, bool val, unsigned shader_type) {
 	
 	set_prefix((string("const bool ") + name + " = " + (val ? "true;" : "false;")), shader_type);
+}
+
+
+void shader_t::set_bool_prefixes(string const &name, bool val, unsigned shaders_enabled) {
+
+	for (unsigned s = 0; s < 3; ++s) { // put into correct shader(s): V, F, G
+		if (shaders_enabled & (1<<s)) {set_bool_prefix(name, val, s);}
+	}
 }
 
 
