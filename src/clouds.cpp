@@ -341,9 +341,6 @@ void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
 	select_multitex(NOISE_TEX, tu_id, 0);
 	s.add_uniform_int("cloud_noise_tex", tu_id);
 	set_multitex(0);
-	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
-	vector3d const offset(-camera + 0.5*world_pos); // relative cloud velocity is half the camera velocity
-	s.add_uniform_vector3d("offset", offset);
 	s.add_uniform_vector2d("dxy", cloud_wind_pos);
 }
 
@@ -352,6 +349,9 @@ void draw_cloud_plane(bool reflection_pass) {
 
 	float const size(FAR_CLIP), rval(0.94*size); // extends to at least the far clipping plane
 	float const z1(zmin), z2(get_cloud_zmax());
+	float const cloud_rel_vel = 1.0; // relative cloud velocity compared to camera velocity
+	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
+	vector3d const offset(-camera + cloud_rel_vel*world_pos);
 
 	if (animate2) {
 		cloud_wind_pos.x += fticks*wind.x;
@@ -374,11 +374,14 @@ void draw_cloud_plane(bool reflection_pass) {
 
 	// draw clouds
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+	s.set_prefix("#define NUM_OCTAVES 8",     1); // FS
 	s.set_vert_shader("clouds");
 	s.set_frag_shader("linear_fog.part+perlin_clouds.part+clouds");
 	s.begin_shader();
 	s.setup_fog_scale();
+	s.add_uniform_float("cloud_scale", 0.5);
 	set_cloud_uniforms(s, 0);
+	s.add_uniform_vector3d("cloud_offset", offset);
 	enable_blend();
 	get_cloud_color().do_glColor();
 	glBegin(GL_QUADS);

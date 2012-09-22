@@ -5,6 +5,7 @@ uniform float water_plane_z, cloud_plane_z;
 uniform float water_atten    = 1.0;
 uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
+uniform vec3 cloud_offset    = vec3(0,0,0);
 uniform sampler2D shadow_normal_tex, noise_tex;
 varying vec3 vertex, epos;
 
@@ -32,8 +33,9 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 	vec4 light  = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 
 	if (apply_cloud_shadows) {
-		float t = (cloud_plane_z - vertex.z)/(light.z - vertex.z); // sky intersection position along vertex->light vector
-		normal *= 1.0 - 0.75*gen_cloud_alpha(vertex.xy + t*(light.xy - vertex.xy));
+		vec3 cpos = vertex + cloud_offset;
+		float t = (cloud_plane_z - cpos.z)/(light.z - cpos.z); // sky intersection position along vertex->light vector
+		normal *= 1.0 - 0.75*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
 	}
 	
 	// compute the ambient and diffuse lighting

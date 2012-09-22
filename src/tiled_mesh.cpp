@@ -51,6 +51,7 @@ bool is_water_enabled() {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool scenery_enabled () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
 bool grass_enabled   () {return ((display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
+bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
 
 
 class grass_tile_manager_t : public grass_manager_t {
@@ -59,12 +60,14 @@ class grass_tile_manager_t : public grass_manager_t {
 	unsigned start_render_ix, end_render_ix;
 
 	void gen_block(unsigned bix) {
+		float const color_scale(GRASS_COLOR_SCALE*(cloud_shadows_enabled() ? 0.875 : 1.0));
+
 		for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
 			for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
 				float const xval((x+bix*GRASS_BLOCK_SZ)*DX_VAL), yval(y*DY_VAL);
 
 				for (unsigned n = 0; n < grass_density; ++n) {
-					add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), GRASS_COLOR_SCALE);
+					add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), color_scale);
 				}
 			}
 		}
@@ -919,7 +922,7 @@ public:
 		check_shadow_map_and_normal_texture();
 	}
 
-	void draw(bool reflection_pass) const {
+	void draw(shader_t &s, bool reflection_pass) const {
 		assert(vbo);
 		assert(size > 0);
 		assert(weight_tid > 0);
@@ -927,6 +930,11 @@ public:
 		glPushMatrix();
 		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
 		set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
+		
+		if (!reflection_pass) {
+			vector3d const offset(-init_dxoff*DX_VAL, -init_dyoff*DY_VAL, 0.0);
+			s.add_uniform_vector3d("cloud_offset", offset);
+		}
 		bind_texture_tu(shadow_normal_tid, 7);
 		unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
 		float dist(get_dist_to_camera_in_tiles());
@@ -1047,7 +1055,8 @@ public:
 	static void setup_mesh_draw_shaders(shader_t &s, float wpz, bool reflection_pass) {
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-		s.set_bool_prefix("apply_cloud_shadows", (ground_effects_level >= 2 && !reflection_pass), 1); // FS
+		s.set_prefix("#define NUM_OCTAVES 4",     1); // FS (for clouds)
+		s.set_bool_prefix("apply_cloud_shadows", (cloud_shadows_enabled() && !reflection_pass), 1); // FS
 		s.set_vert_shader("texture_gen.part+tiled_mesh");
 		s.set_frag_shader("linear_fog.part+perlin_clouds.part+tiled_mesh");
 		s.begin_shader();
@@ -1059,6 +1068,7 @@ public:
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 		set_noise_tex(s, 8);
+		s.add_uniform_float("cloud_scale", 0.535);
 		set_cloud_uniforms(s, 9);
 		s.add_uniform_float("sky_plane_z", get_cloud_zmax());
 		setup_terrain_textures(s, 2, 0);
@@ -1119,7 +1129,7 @@ public:
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			num_trees += to_draw[i].second->num_trees();
-			if (display_mode & 0x01) {to_draw[i].second->draw(reflection_pass);}
+			if (display_mode & 0x01) {to_draw[i].second->draw(s, reflection_pass);}
 		}
 		s.end_shader();
 		
