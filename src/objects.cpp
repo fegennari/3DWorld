@@ -484,6 +484,25 @@ bool coll_obj::check_poly_billboard_alpha(point const &p1, point const &p2, floa
 }
 
 
+coll_obj test_cobj; // reused to aviod slow constructor calls
+
+// Note: these two intersection functions are inexact: they return 0 for no intersection, 1 for intersection, and 2 for maybe intersection
+int coll_obj::cube_intersects(cube_t const &cube) const {
+
+	test_cobj.type = COLL_CUBE;
+	test_cobj.copy_from(cube);
+	return intersects_cobj(test_cobj); // Note: no toler
+}
+
+int coll_obj::sphere_intersects(point const &pos, float radius) const {
+
+	test_cobj.type      = COLL_SPHERE;
+	test_cobj.radius    = radius;
+	test_cobj.points[0] = pos;
+	return intersects_cobj(test_cobj); // Note: no toler
+}
+
+
 // ******************* OBJ_GROUP MEMBERS ******************
 
 

@@ -297,17 +297,6 @@ bool is_pt_inside_or_near_cobj(point const &pt, float dist, int ignore_cobj, boo
 }
 
 
-bool coll_obj::is_occluder() const {
-	
-	if (status != COLL_STATIC || !cp.draw || is_semi_trans()) return 0; // cp.might_be_drawn()?
-	if (type == COLL_CUBE)    return 1;
-	if (type != COLL_POLYGON) return 0;
-	unsigned big_dims(0);
-	UNROLL_3X(if ((d[i_][1] - d[i_][0]) > 0.2*SCENE_SIZE[i_]) ++big_dims;)
-	return (big_dims >= 2);
-}
-
-
 bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsigned npts) const {
 
 	switch (type) {
@@ -326,6 +315,17 @@ bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsi
 		return 0; // not supported
 	}
 	return 1;
+}
+
+
+bool coll_obj::is_occluder() const {
+	
+	if (status != COLL_STATIC || !cp.draw || is_semi_trans()) return 0; // cp.might_be_drawn()?
+	if (type == COLL_CUBE)    return 1;
+	if (type != COLL_POLYGON) return 0;
+	unsigned big_dims(0);
+	UNROLL_3X(if ((d[i_][1] - d[i_][0]) > 0.2*SCENE_SIZE[i_]) ++big_dims;)
+	return (big_dims >= 2);
 }
 
 

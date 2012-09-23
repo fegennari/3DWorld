@@ -141,6 +141,12 @@ public:
 	void add_connect_waypoint(); // waypoints.cpp
 	void remove_waypoint();
 
+	// inexact primitive intersections
+	int cube_intersects(cube_t const &cube) const;
+	int sphere_intersects(point const &pos, float radius) const;
+	int sphere_intersects(sphere_t const &sphere) const {return sphere_intersects(sphere.pos, sphere.radius);}
+	int contains_point(point const &pos) const {return sphere_intersects(pos, 0.0);} // not efficient/might not be correct in all cases
+
 	// drawing code
 	void draw_coll_cube(int do_fill, int tid, shader_t *shader) const;
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t *shader) const;

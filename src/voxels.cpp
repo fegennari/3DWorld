@@ -129,6 +129,34 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 }
 
 
+void voxel_manager::create_from_cobjs(coll_obj_group const &cobjs, float filled_val) {
+
+	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
+		add_cobj_voxels(*i, filled_val);
+	}
+}
+
+
+void voxel_manager::add_cobj_voxels(coll_obj const &cobj, float filled_val) {
+
+	cube_t const &bcube(cobj);
+	int llc[3], urc[3];
+	get_xyz(bcube.get_llc(), llc);
+	get_xyz(bcube.get_urc(), urc);
+	float const sphere_radius(0.5*vsz.mag()); // FIXME: step the radius to generate grayscale intersection values?
+
+	for (int y = max(0, llc[1]); y <= min(int(ny)-1, urc[1]); ++y) {
+		for (int x = max(0, llc[0]); x <= min(int(nx)-1, urc[0]); ++x) {
+			for (int z = max(0, llc[2]); z <= min(int(nz)-1, urc[2]); ++z) {
+				int const ret(cobj.sphere_intersects(get_pt_at(x, y, z), sphere_radius));
+				float const int_val((ret == 0) ? 0.0 : ((ret == 1) ? 1.0 : 0.5)); // return value of 2 is 'half' intersection
+				set(x, y, z, int_val*filled_val);
+			}
+		}
+	}
+}
+
+
 void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 	for (unsigned y = 0; y < ny; ++y) {
@@ -979,12 +1007,11 @@ float voxel_model::eval_noise_texture_at(point const &pos) const {
 }
 
 
-void gen_voxel_landscape() {
+void setup_voxel_landscape(voxel_params_t const &params) {
 
-	RESET_TIME;
-	unsigned const nx((global_voxel_params.xsize > 0) ? global_voxel_params.xsize : MESH_X_SIZE);
-	unsigned const ny((global_voxel_params.ysize > 0) ? global_voxel_params.ysize : MESH_Y_SIZE);
-	unsigned const nz((global_voxel_params.zsize > 0) ? global_voxel_params.zsize : max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
+	unsigned const nx((params.xsize > 0) ? params.xsize : MESH_X_SIZE);
+	unsigned const ny((params.ysize > 0) ? params.ysize : MESH_Y_SIZE);
+	unsigned const nz((params.zsize > 0) ? params.zsize : max((unsigned)MESH_Z_SIZE, (nx+ny)/4));
 	//float const zlo(zbottom), zhi(max(ztop, zlo + Z_SCENE_SIZE)); // Note: does not include czmin/czmax range
 	float const zlo(zbottom), zhi(min(czmin, zbottom) + Z_SCENE_SIZE); // Note: matches zhi of 3D volume textures/matrices for lighting
 	// slightly smaller than 2.0 to avoid z-fighting issues at the edge of the mesh/water
@@ -992,15 +1019,36 @@ void gen_voxel_landscape() {
 	float const ysz((2.0*(1.0 - 0.05/MESH_Y_SIZE)*Y_SCENE_SIZE - DY_VAL)/(ny-1));
 	vector3d const vsz(xsz, ysz, (zhi - zlo)/nz);
 	point const center(-0.5*DX_VAL, -0.5*DY_VAL, 0.5*(zlo + zhi));
-	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.clear();
-	terrain_voxel_model.set_params(global_voxel_params);
-	terrain_voxel_model.init(nx, ny, nz, vsz, center, 0.0, global_voxel_params.num_blocks);
+	terrain_voxel_model.set_params(params);
+	terrain_voxel_model.init(nx, ny, nz, vsz, center, 0.0, params.num_blocks);
+}
+
+
+void gen_voxel_landscape() {
+
+	RESET_TIME;
+	setup_voxel_landscape(global_voxel_params);
+	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
 		global_voxel_params.normalize_to_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
 	PRINT_TIME(" Voxel Gen");
 	terrain_voxel_model.build(global_voxel_params.add_cobjs);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
+}
+
+
+void gen_voxels_from_cobjs(coll_obj_group const &cobjs) {
+
+	RESET_TIME;
+	voxel_params_t params(global_voxel_params);
+	// FIXME: override/setup params
+	// FIXME: is czmin set at this point? should it be set to something, or is FAR_CLIP ok?
+	setup_voxel_landscape(params);
+	terrain_voxel_model.create_from_cobjs(cobjs, 1.0);
+	PRINT_TIME(" Cobjs Voxel Gen");
+	terrain_voxel_model.build(params.add_cobjs);
+	PRINT_TIME(" Cobjs Voxels to Triangles/Cobjs");
 }
 
 
