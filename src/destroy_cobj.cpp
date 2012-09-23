@@ -485,7 +485,7 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 
 
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
-// 15 total: 9 complete, 6 partial
+// 15 total: 10 complete, 5 partial
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	if (c.type < type) return c.intersects_cobj(*this, toler); // swap arguments
@@ -530,7 +530,8 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_CYLINDER:
 			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius));
 		case COLL_SPHERE:
-			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius)); // FIXME: inexact (return 2?)
+			if (dist_xy_less_than(points[0], c.points[0], (c.radius+radius))) return 1;
+			return sphere_intersect_cylinder(c.points[0], c.radius, points[0], points[1], radius, radius2);
 		case COLL_CYLINDER_ROT:
 			return cylin_cylin_int(c, *this);
 		case COLL_POLYGON:
