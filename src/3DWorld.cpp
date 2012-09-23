@@ -77,12 +77,12 @@ int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window d
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
 int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), verbose_mode(0), leaf_color_changed(0);
 int shadow_detail(DEF_SD), do_zoom(0), disable_universe(0), disable_inf_terrain(0);
-int num_trees(0), num_smileys(1), gmww = 640, gmwh = 480, srand_param(3), left_handed(0), mesh_scale_change(0);
+int num_trees(0), num_smileys(1), gmww(640), gmwh(480), srand_param(3), left_handed(0), mesh_scale_change(0);
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
 int enable_fsource(0), run_forward(0), advanced(0), passive_motion(P_MOTION_DEF), dynamic_mesh_scroll(0);
+int read_snow_file(0), write_snow_file(0), color_bit_depth(32), refresh_rate(75);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
-int read_snow_file(0), write_snow_file(0);
 unsigned num_snowflakes(0), num_vpls(0);
 float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0);
@@ -1429,12 +1429,8 @@ void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) {
 // should use a hashtable here
 int load_config(string const &config_file) {
 
-	int gms_set(0), color_bit_depth(32), refresh_rate(75), error(0);
+	int gms_set(0), error(0);
 	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
-	gmww          = 640;
-	gmwh          = 480;
-	mesh_draw     = NULL;
-	water_enabled = NULL;
 	FILE *fp;
 	if (!open_file(fp, config_file.c_str(), "input configuration file")) return 0;
 

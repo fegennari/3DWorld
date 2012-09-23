@@ -25,28 +25,28 @@ float DX_VAL, DY_VAL, HALF_DXY, DX_VAL_INV, DY_VAL_INV, DZ_VAL, dxdy, CLOUD_CEIL
 
 
 // global arrays dependent on mesh size
-unsigned char **num_obj_on_mesh;
-valley_w  **watershed_matrix; // inside: 0 = outside mesh, 1 = inside mesh, 2 = under water level
-char      **wminside;
-vector3d  **wat_surf_normals;
-vector3d  **wat_vert_normals;
+unsigned char **num_obj_on_mesh = NULL;
+valley_w  **watershed_matrix = NULL; // inside: 0 = outside mesh, 1 = inside mesh, 2 = under water level
+char      **wminside = NULL;
+vector3d  **wat_surf_normals = NULL;
+vector3d  **wat_vert_normals = NULL;
 float     **mesh_height = NULL;
-float     **z_min_matrix;
-float     **accumulation_matrix;
-float     **h_collision_matrix;
-coll_cell **v_collision_matrix; // *** should use 3X 1D arrays ***
-float     **water_matrix;
-short     **spillway_matrix;
-surf_adv  **w_motion_matrix;
-vector3d  **surface_normals;
-vector3d  **vertex_normals;
-float     **charge_dist;
-float     **surface_damage;
-ripple_state **ripples;
-char      **mesh_draw;
-char      **water_enabled;
-short     ***volume_matrix;
-unsigned char ***shadow_mask;
+float     **z_min_matrix = NULL;
+float     **accumulation_matrix = NULL;
+float     **h_collision_matrix = NULL;
+coll_cell **v_collision_matrix = NULL; // *** should use 3X 1D arrays ***
+float     **water_matrix = NULL;
+short     **spillway_matrix = NULL;
+surf_adv  **w_motion_matrix = NULL;
+vector3d  **surface_normals = NULL;
+vector3d  **vertex_normals = NULL;
+float     **charge_dist = NULL;
+float     **surface_damage = NULL;
+ripple_state **ripples = NULL;
+char      **mesh_draw = NULL;
+char      **water_enabled = NULL;
+short     ***volume_matrix = NULL;
+unsigned char ***shadow_mask = NULL;
 
 extern bool last_int, mesh_invalidated;
 extern int world_mode, MAX_RUN_DIST, island, xoff, yoff, I_TIMESCALE2, DISABLE_WATER;
