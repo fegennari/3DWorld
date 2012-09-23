@@ -19,8 +19,9 @@ void main()
 	gl_Position = gl_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
 	float grass_weight = texture2D(weight_tex, tc).b;
+	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
 	float noise_weight = texture2D(noise_tex,  vec2(10.0*gl_Color.r, 10.0*gl_Color.g)).r; // "hash" the color
-	grass_weight   *= 1.0 - clamp(dist_slope*(gl_FogFragCoord - dist_const), 0.0, 1.0); // decrease weight far away from camera
+	grass_weight *= 1.0 - clamp(dist_slope*(gl_FogFragCoord - dist_const), 0.0, 1.0); // decrease weight far away from camera
 	
 	// calculate lighting
 	vec4 shadow_normal = texture2D(shadow_normal_tex, tc);

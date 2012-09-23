@@ -239,17 +239,17 @@ class tile_t {
 	terrain_params_t params[2][2]; // {ylo,yhi} x {xlo,xhi}
 
 	void update_terrain_params() {
-		float const off_mult(0.4), height_mult(0.8), dirt_mult(0.5), veg_mult(2.0), off_scale(1.0);
+		float const off_mult(0.4), height_mult(0.8), dirt_mult(1.0), veg_mult(5.0), off_scale(1.0);
 
 		for (unsigned yp = 0; yp < 2; ++yp) {
 			for (unsigned xp = 0; xp < 2; ++xp) {
 				terrain_params_t &param(params[yp][xp]);
-				float const xv(mesh_scale*(xp ? x2 : x1)), yv(mesh_scale*get_yval(yp ? y2 : y1));
+				float const xv(mesh_scale*get_xval(xp ? x2 : x1)), yv(mesh_scale*get_yval(yp ? y2 : y1));
 				//param.hoff   = off_scale*eval_mesh_sin_terms(off_mult*xv+123, off_mult*yv+456);
-				//param.hscale = min(2.0f, max(0.2f, 0.5f*fabs(eval_mesh_sin_terms(height_mult*xv+789, height_mult*yv+111))));
+				//param.hscale = min(2.0f, max(0.5f, 0.5f*fabs(eval_mesh_sin_terms(height_mult*xv+789, height_mult*yv+111))));
 				float const veg_val(eval_mesh_sin_terms(veg_mult*xv, veg_mult*yv));
 				param.veg    = CLIP_TO_01(5.000f*(veg_val + 1.5f));
-				param.grass  = CLIP_TO_01(100.0f*(veg_val + 2.5f)); // depends on hoff?
+				param.grass  = CLIP_TO_01(100.0f*(veg_val + 3.0f)); // depends on hoff?
 				param.dirt   = CLIP_TO_01(5.0f*(eval_mesh_sin_terms(dirt_mult*xv, dirt_mult*yv) + 1.0f));
 			}
 		}
@@ -686,14 +686,15 @@ public:
 				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
 				float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv));
 				float const grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
+				float const gscale(CLIP_TO_01(2.5f*(grass_scale - 0.5f) + 0.5f));
 
 				if (dirt_scale  < 1.0) { // apply dirt scale: convert dirt to sand
 					weights[sand_tex_ix ] += (1.0 - dirt_scale )*weights[dirt_tex_ix];
 					weights[dirt_tex_ix ] *= dirt_scale;
 				}
 				if (grass_scale < 1.0) { // apply grass scale: convert grass to sand
-					weights[sand_tex_ix ] += (1.0 - grass_scale)*weights[grass_tex_ix];
-					weights[grass_tex_ix] *= grass_scale;
+					weights[sand_tex_ix ] += (1.0 - gscale)*weights[grass_tex_ix];
+					weights[grass_tex_ix] *= gscale;
 				}
 				if (!tree_map.empty() && tree_map[ix_val] < 255) { // replace grass under trees with dirt
 					float const v(tree_map[ix_val]/255.0);

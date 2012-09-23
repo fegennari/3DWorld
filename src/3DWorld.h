@@ -1012,8 +1012,8 @@ public:
 		return rand_num/2147483563.;
 	}
 	int rand_seed_mix() {
-		//int val1(rand()); swap(rseed1, rseed2); return (val1 + rand()); // more random
-		return (rseed1 ^ (rseed2 >> 8)); // faster (should call rand2_mix() after)
+		int val1(rand()); swap(rseed1, rseed2); return (val1 + rand()); // more random
+		//return (rseed1 ^ (rseed2 >> 8)); // faster (should call rand2_mix() after)
 	}
 	void rand_mix() {rand(); swap(rseed1, rseed2);}
 	float rand_float() {return 0.000001*(rand()%1000000);} // uniform 0 to 1
