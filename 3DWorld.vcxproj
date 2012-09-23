@@ -792,6 +792,7 @@
     <None Include="config_resolution.txt" />
     <None Include="config_samples.txt" />
     <None Include="config_voxels.txt" />
+    <None Include="config_voxels2.txt" />
     <None Include="config_voxel_params.txt" />
     <None Include="icon1.ico" />
     <None Include="coll_objs\COLL_OBJS_Test.TXT" />

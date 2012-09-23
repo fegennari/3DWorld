@@ -4,8 +4,9 @@
 #mapx/config_mapx.txt
 #cornell_box/config_box.txt
 #config_scrolling.txt
-config.txt
+#config.txt
 #config_voxels.txt
+config_voxels2.txt
 #config_trees.txt
 #config_water.txt
 #config_river.txt

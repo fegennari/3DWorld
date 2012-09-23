@@ -1,7 +1,7 @@
 voxel xsize 512
 voxel ysize 512
 voxel zsize 64
-voxel num_blocks 32
+voxel num_blocks 32 # in x and y
 voxel add_cobjs 1
 voxel isolevel 0.0 # [-1,1], higher is more open space
 voxel elasticity 0.8
@@ -17,12 +17,13 @@ voxel tex_mix_saturate 6.0
 voxel z_gradient 0.0
 voxel height_eval_freq 100.0
 voxel invert 0
+voxel normalize_to_1 1
 voxel make_closed_surface 1
 voxel remove_unconnected 1
 voxel keep_at_scene_edge 2 # 0=don't keep, 1=always keep, 2=only when scrolling
 voxel remove_under_mesh 1
 voxel atten_top_mode 1 # 0=constant, 1=current mesh, 2=2d surface mesh
-voxel atten_at_edges 1 # 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom)
+voxel atten_at_edges 1 # 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer)
 voxel atten_thresh 12.0
 voxel geom_rseed 123
 voxel texture_rseed 321

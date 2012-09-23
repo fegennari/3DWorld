@@ -12,7 +12,6 @@
 #include "openal_wrap.h"
 
 
-bool const NORMALIZE_TO_1  = 1;
 bool const DEBUG_BLOCKS    = 0;
 bool const PRE_ALLOC_COBJS = 1;
 unsigned const NOISE_TSIZE = 64;
@@ -122,7 +121,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 				pos += 20.0*fabs(ngen.get_val(0.01*pos))*vector3d(1,1,1); // warp
 				float val(ngen.get_val(pos));
 #endif
-				if (normalize_to_1) val = max(-1.0f, min(1.0f, val));
+				if (normalize_to_1) val = CLIP_TO_pm1(val);
 				set(x, y, z, val); // scale value?
 			}
 		}
@@ -133,10 +132,10 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 	for (unsigned y = 0; y < ny; ++y) {
-		float const vy(1.0 - 2.0*max(0.0, (y - 0.5*ny))/float(ny));
+		float const vy(1.0 - 2.0*fabs(y - 0.5*ny)/float(ny)); // 0 at edges, 1 at center
 
 		for (unsigned x = 0; x < nx; ++x) {
-			float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx));
+			float const vx(1.0 - 2.0*fabs(x - 0.5*nx)/float(nx)); // 0 at edges, 1 at center
 
 			for (unsigned z = 0; z < nz; ++z) {
 				float const vz(1.0 - 2.0*fabs(z - 0.5*nz)/float(nz)), v(0.25 - vx*vy*vz);
@@ -175,6 +174,32 @@ void voxel_manager::atten_at_top_only(float val) {
 					float const z_atten(z/float(nz) - 0.75);
 					if (z_atten > 0.0) v += val*z_atten;
 				}
+			}
+		}
+	}
+}
+
+
+void voxel_manager::atten_to_sphere(float val, float inner_radius, bool atten_inner) {
+
+	for (unsigned y = 0; y < ny; ++y) {
+		float const vy(2.0*fabs(y - 0.5*ny)/float(ny)); // 1 at edges, 0 at center
+
+		for (unsigned x = 0; x < nx; ++x) {
+			float const vx(2.0*fabs(x - 0.5*nx)/float(nx)); // 1 at edges, 0 at center
+
+			for (unsigned z = 0; z < nz; ++z) {
+				float const vz(2.0*fabs(z - 0.5*nz)/float(nz)); // 1 at edges, 0 at center
+				float const radius(sqrt(vx*vx + vy*vy + vz*vz));
+				float adj(0.0);
+				
+				if (radius > inner_radius) {
+					adj = (radius - inner_radius)/(1.0 - inner_radius);
+				}
+				else if (atten_inner) {
+					adj = -(inner_radius - radius)/inner_radius;
+				}
+				get_ref(x, y, z) += val*adj;
 			}
 		}
 	}
@@ -379,6 +404,16 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 				work.push_back(ix); // inside, anchored to the mesh
 				outside[ix] |= ANCHORED_BIT; // mark as anchored
 			}
+		}
+	}
+	if (params.atten_at_edges == 3 || params.atten_at_edges == 4) {
+		unsigned const x(nx/2), y(ny/2); // sphere mode, add a single point at the center of the sphere (FIXME: will only work for filled sphere center)
+
+		if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
+			unsigned const ix(outside.get_ix(x, y, nz/2));
+			assert(outside[ix] != UNDER_MESH_BIT); // outside or above mesh
+			work.push_back(ix); // inside, anchored to the mesh
+			outside[ix] |= ANCHORED_BIT; // mark as anchored
 		}
 	}
 
@@ -677,7 +712,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				float &val(get_ref(x, y, z));
 				float const prev_val(val);
 				val += val_at_center*(1.0 - dist/radius);
-				if (NORMALIZE_TO_1) val = max(-1.0f, min(1.0f, val));
+				if (params.normalize_to_1) val = CLIP_TO_pm1(val);
 				if (val == prev_val) continue; // no change
 				calc_outside_val(x, y, z, ((outside.get(x, y, z) & UNDER_MESH_BIT) != 0));
 				was_updated = 1;
@@ -806,8 +841,15 @@ void voxel_model::build(bool add_cobjs_) {
 	RESET_TIME;
 	add_cobjs = add_cobjs_;
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
-	if (params.atten_at_edges == 1) atten_at_top_only(atten_thresh);
-	if (params.atten_at_edges == 2) atten_at_edges   (atten_thresh);
+
+	switch (params.atten_at_edges) {
+	case 0: break; // do nothing
+	case 1: atten_at_top_only(atten_thresh); break;
+	case 2: atten_at_edges   (atten_thresh); break;
+	case 3: atten_to_sphere  (atten_thresh, params.radius_val, 0); break;
+	case 4: atten_to_sphere  (atten_thresh, params.radius_val, 1); break;
+	default: assert(0);
+	}
 	PRINT_TIME("  Atten at Top/Edges");
 	determine_voxels_outside();
 	PRINT_TIME("  Determine Voxels Outside");
@@ -840,44 +882,25 @@ void voxel_model::build(bool add_cobjs_) {
 }
 
 
-void voxel_model::render(bool is_shadow_pass) { // not const because of vbo caching, etc.
+void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
-	if (empty()) return; // nothing to do
+	s.add_uniform_vector3d("tex_eval_offset", vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0)); // should this be here?
 	noise_tex_gen.setup(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
-	shader_t s;
-	set_fill_mode();
-	
-	if (is_shadow_pass) {
-		glDisable(GL_LIGHTING);
-	}
-	else if (!disable_shaders) {
-		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
-		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
-		float const min_alpha(0.0); // not needed (yet)
-		noise_tex_gen.bind_texture(5); // tu_id = 5
-		set_multitex(0);
-		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
-		s.add_uniform_vector3d("tex_eval_offset", vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0));
-		const char *cnames[2] = {"color0", "color1"};
-		unsigned const tu_ids[2] = {0,8};
+	noise_tex_gen.bind_texture(5); // tu_id = 5
+	const char *cnames[2] = {"color0", "color1"};
+	unsigned const tu_ids[2] = {0,8};
 
-		for (unsigned i = 0; i < 2; ++i) {
-			set_multitex(tu_ids[i]);
-			select_texture(params.tids[i]);
-			s.add_uniform_color(cnames[i], params.colors[i]);
-		}
-		set_multitex(0);
+	for (unsigned i = 0; i < 2; ++i) {
+		set_multitex(tu_ids[i]);
+		select_texture(params.tids[i]);
+		s.add_uniform_color(cnames[i], params.colors[i]);
 	}
-	else {
-		set_color_a(WHITE);
-		glEnable(GL_TEXTURE_2D);
-		glEnable(GL_ALPHA_TEST);
-	}
-	BLACK.do_glColor();
-	set_color_d(params.base_color);
-	float const spec(0.0), shine(1.0);
-	set_specular(spec, shine);
-	if (group_back_face_cull) glEnable(GL_CULL_FACE);
+	set_multitex(0);
+}
+
+
+void voxel_model::core_render(shader_t &s, bool is_shadow_pass) {
+
 	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
@@ -890,6 +913,37 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 		assert(i->ix < tri_data.size());
 		tri_data[i->ix].render(s, is_shadow_pass, GL_TRIANGLES);
 	}
+}
+
+
+void voxel_model::render(bool is_shadow_pass) { // not const because of vbo caching, etc.
+
+	if (empty()) return; // nothing to do
+	shader_t s;
+	set_fill_mode();
+	
+	if (is_shadow_pass) {
+		glDisable(GL_LIGHTING);
+	}
+	else if (!disable_shaders) {
+		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
+		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
+		float const min_alpha(0.0); // not needed (yet)
+		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
+		setup_tex_gen_for_rendering(s);
+	}
+	else {
+		set_color_a(WHITE);
+		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_ALPHA_TEST);
+	}
+	BLACK.do_glColor();
+	set_color_d(params.base_color);
+	float const spec(0.0), shine(1.0);
+	set_specular(spec, shine);
+	if (group_back_face_cull) glEnable(GL_CULL_FACE);
+	core_render(s, is_shadow_pass);
+	
 	if (s.is_setup()) {
 		s.end_shader();
 		disable_multitex_a();
@@ -943,7 +997,7 @@ void gen_voxel_landscape() {
 	terrain_voxel_model.set_params(global_voxel_params);
 	terrain_voxel_model.init(nx, ny, nz, vsz, center, 0.0, global_voxel_params.num_blocks);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
-		NORMALIZE_TO_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
+		global_voxel_params.normalize_to_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
 	PRINT_TIME(" Voxel Gen");
 	terrain_voxel_model.build(global_voxel_params.add_cobjs);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
@@ -979,6 +1033,9 @@ bool parse_voxel_option(FILE *fp) {
 	else if (str == "add_cobjs") {
 		if (!read_bool(fp, global_voxel_params.add_cobjs)) voxel_file_err("add_cobjs", error);
 	}
+	else if (str == "normalize_to_1") {
+		if (!read_bool(fp, global_voxel_params.normalize_to_1)) voxel_file_err("normalize_to_1", error);
+	}
 	else if (str == "mag") {
 		if (!read_float(fp, global_voxel_params.mag)) voxel_file_err("mag", error);
 	}
@@ -1005,6 +1062,9 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "z_gradient") {
 		if (!read_float(fp, global_voxel_params.z_gradient)) voxel_file_err("z_gradient", error);
+	}
+	else if (str == "radius_val") {
+		if (!read_float(fp, global_voxel_params.radius_val) || global_voxel_params.radius_val < 0.0) voxel_file_err("radius_val", error);
 	}
 	else if (str == "height_eval_freq") {
 		if (!read_float(fp, global_voxel_params.height_eval_freq)) voxel_file_err("height_eval_freq", error);
@@ -1037,7 +1097,7 @@ bool parse_voxel_option(FILE *fp) {
 		if (!read_uint(fp, global_voxel_params.atten_top_mode) || global_voxel_params.atten_top_mode > 2) voxel_file_err("atten_top_mode", error);
 	}
 	else if (str == "atten_at_edges") {
-		if (!read_uint(fp, global_voxel_params.atten_at_edges) || global_voxel_params.atten_at_edges > 2) voxel_file_err("atten_at_edges", error);
+		if (!read_uint(fp, global_voxel_params.atten_at_edges) || global_voxel_params.atten_at_edges > 4) voxel_file_err("atten_at_edges", error);
 	}
 	else if (str == "atten_thresh") {
 		if (!read_float(fp, global_voxel_params.atten_thresh) || global_voxel_params.atten_thresh <= 0.0) voxel_file_err("atten_thresh", error);
