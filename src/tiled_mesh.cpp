@@ -239,7 +239,7 @@ class tile_t {
 	terrain_params_t params[2][2]; // {ylo,yhi} x {xlo,xhi}
 
 	void update_terrain_params() {
-		float const off_mult(0.4), height_mult(0.8), veg_mult(0.5), off_scale(1.0);
+		float const off_mult(0.4), height_mult(0.8), dirt_mult(0.5), veg_mult(2.0), off_scale(1.0);
 
 		for (unsigned yp = 0; yp < 2; ++yp) {
 			for (unsigned xp = 0; xp < 2; ++xp) {
@@ -248,9 +248,9 @@ class tile_t {
 				//param.hoff   = off_scale*eval_mesh_sin_terms(off_mult*xv+123, off_mult*yv+456);
 				//param.hscale = min(2.0f, max(0.2f, 0.5f*fabs(eval_mesh_sin_terms(height_mult*xv+789, height_mult*yv+111))));
 				float const veg_val(eval_mesh_sin_terms(veg_mult*xv, veg_mult*yv));
-				//param.veg    = CLIP_TO_01(5.000f*(veg_val + 0.5f));
-				//param.grass  = CLIP_TO_01(200.0f*(veg_val + 1.0f)); // depends on hoff?
-				param.dirt   = CLIP_TO_01(5.0f*(veg_val + 1.0f));
+				param.veg    = CLIP_TO_01(5.000f*(veg_val + 1.5f));
+				param.grass  = CLIP_TO_01(100.0f*(veg_val + 2.5f)); // depends on hoff?
+				param.dirt   = CLIP_TO_01(5.0f*(eval_mesh_sin_terms(dirt_mult*xv, dirt_mult*yv) + 1.0f));
 			}
 		}
 	}
