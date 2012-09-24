@@ -237,6 +237,7 @@ public:
 
 	void add_one_cobj_wpt(coll_obj &c, bool connect) {
 		if (c.status != COLL_STATIC || c.platform_id >= 0) return; // only static objects (not platforms) - use c.truly_static()?
+		if (c.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN)       return; // skip voxel terrain polygons (too many, too dynamic, too hard to walk on)
 		assert(c.waypt_id < 0); // must not already be set
 
 		switch (c.type) {

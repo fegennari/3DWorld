@@ -43,13 +43,13 @@ vector<portal> portals;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, create_voxel_landscape;
+extern bool clear_landscape_vbo;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin, model_czmin, model_czmax;
 extern point cpos2, orig_camera, orig_cdir;
-extern unsigned init_item_counts[];
+extern unsigned create_voxel_landscape, init_item_counts[];
 extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 extern platform_cont platforms;
@@ -599,7 +599,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		gen_scenery();
 		PRINT_TIME("Scenery generation");
 	}
-	if (!inf_terrain && create_voxel_landscape) {
+	if (!inf_terrain && create_voxel_landscape == 1) {
 		gen_voxel_landscape();
 		PRINT_TIME("Voxel Landscape Generation");
 	}
@@ -774,20 +774,26 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 		if (load_coll_objs) {
 			if (!read_coll_objects(coll_obj_file)) exit(1);
 			fixed_cobjs.finalize();
-			RESET_TIME;
-			unsigned const ncobjs(fixed_cobjs.size());
+
+			if (create_voxel_landscape == 2) {
+				gen_voxels_from_cobjs(fixed_cobjs);
+			}
+			else {
+				RESET_TIME;
+				unsigned const ncobjs(fixed_cobjs.size());
 			
-			if (!FIXED_COBJS_SWAP || !swap_and_set_as_coll_objects(fixed_cobjs)) {
-				if (ncobjs > 2*coll_objects.size()) {
-					reserve_coll_objects(coll_objects.size() + 1.1*ncobjs); // reserve with 10% buffer
+				if (!FIXED_COBJS_SWAP || !swap_and_set_as_coll_objects(fixed_cobjs)) {
+					if (ncobjs > 2*coll_objects.size()) {
+						reserve_coll_objects(coll_objects.size() + 1.1*ncobjs); // reserve with 10% buffer
+					}
+					for (unsigned i = 0; i < ncobjs; ++i) {
+						fixed_cobjs[i].add_as_fixed_cobj(); // don't need to remove it
+					}
 				}
-				for (unsigned i = 0; i < ncobjs; ++i) {
-					fixed_cobjs[i].add_as_fixed_cobj(); // don't need to remove it
-				}
+				PRINT_TIME(" Add Fixed Cobjs");
 			}
 			fixed_cobjs.clear();
 			remove_excess_cap(fixed_cobjs); // free the memory
-			PRINT_TIME(" Add Fixed Cobjs");
 		}
 		init = 1;
 	}

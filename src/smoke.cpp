@@ -26,7 +26,8 @@ colorRGB const_indir_color(BLACK);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
-extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update, create_voxel_landscape;
+extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update;
+extern unsigned create_voxel_landscape;
 extern int animate2, display_mode;
 extern float czmin0;
 extern colorRGBA cur_ambient, cur_diffuse;

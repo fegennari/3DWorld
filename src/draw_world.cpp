@@ -40,10 +40,10 @@ pt_line_drawer bubble_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists, two_sided_lighting;
-extern bool group_back_face_cull, have_indir_smoke_tex, create_voxel_landscape, combined_gu, disable_shaders;
+extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, disable_shaders;
 extern int is_cloudy, iticks, display_mode, show_fog, num_groups, island, xoff, yoff;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode;
-extern unsigned smoke_tid, dl_tid, num_stars;
+extern unsigned smoke_tid, dl_tid, num_stars, create_voxel_landscape;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, zbottom, indir_vert_offset;
 extern point light_pos, mesh_origin, flow_source, surface_pos;

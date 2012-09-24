@@ -139,6 +139,7 @@ void voxel_manager::create_from_cobjs(coll_obj_group const &cobjs, float filled_
 
 void voxel_manager::add_cobj_voxels(coll_obj const &cobj, float filled_val) {
 
+	if (cobj.cp.color.alpha < 0.5) return; // skip transparent objects (should they be here?)
 	cube_t const &bcube(cobj);
 	int llc[3], urc[3];
 	get_xyz(bcube.get_llc(), llc);
@@ -310,12 +311,13 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 	outside.init(nx, ny, nz, vsz, center, 0, params.num_blocks);
+	bool const sphere_mode(params.atten_at_edges == 3 || params.atten_at_edges == 4);
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
 			point const pos(get_pt_at(x, y, 0));
 			int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
-			unsigned const zix(point_outside_mesh(xpos, ypos) ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
+			unsigned const zix((sphere_mode || point_outside_mesh(xpos, ypos)) ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
 			
 			for (unsigned z = 0; z < nz; ++z) {
 				calc_outside_val(x, y, z, (z < zix));
@@ -420,20 +422,10 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 	vector<unsigned> *xy_updated, vector<point> *updated_pts)
 {
+	assert(!outside.empty());
 	vector<unsigned> work; // stack of voxels to process
 	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
-	// add voxels along the mesh surface
-	for (unsigned y = y1; y < y2; ++y) {
-		for (unsigned x = x1; x < x2; ++x) {
-			for (unsigned z = 0; z < nz; ++z) {
-				unsigned const ix(outside.get_ix(x, y, z));
-				if (outside[ix] != UNDER_MESH_BIT) continue; // outside or above mesh
-				work.push_back(ix); // inside, anchored to the mesh
-				outside[ix] |= ANCHORED_BIT; // mark as anchored
-			}
-		}
-	}
 	if (params.atten_at_edges == 3 || params.atten_at_edges == 4) {
 		unsigned const x(nx/2), y(ny/2); // sphere mode, add a single point at the center of the sphere (FIXME: will only work for filled sphere center)
 
@@ -442,6 +434,18 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 			assert(outside[ix] != UNDER_MESH_BIT); // outside or above mesh
 			work.push_back(ix); // inside, anchored to the mesh
 			outside[ix] |= ANCHORED_BIT; // mark as anchored
+		}
+	}
+	else { // add voxels along the mesh surface
+		for (unsigned y = y1; y < y2; ++y) {
+			for (unsigned x = x1; x < x2; ++x) {
+				for (unsigned z = 0; z < nz; ++z) {
+					unsigned const ix(outside.get_ix(x, y, z));
+					if (outside[ix] != UNDER_MESH_BIT) continue; // outside or above mesh
+					work.push_back(ix); // inside, anchored to the mesh
+					outside[ix] |= ANCHORED_BIT; // mark as anchored
+				}
+			}
 		}
 	}
 
@@ -1007,7 +1011,7 @@ float voxel_model::eval_noise_texture_at(point const &pos) const {
 }
 
 
-void setup_voxel_landscape(voxel_params_t const &params) {
+void setup_voxel_landscape(voxel_params_t const &params, float default_val) {
 
 	unsigned const nx((params.xsize > 0) ? params.xsize : MESH_X_SIZE);
 	unsigned const ny((params.ysize > 0) ? params.ysize : MESH_Y_SIZE);
@@ -1021,17 +1025,22 @@ void setup_voxel_landscape(voxel_params_t const &params) {
 	point const center(-0.5*DX_VAL, -0.5*DY_VAL, 0.5*(zlo + zhi));
 	terrain_voxel_model.clear();
 	terrain_voxel_model.set_params(params);
-	terrain_voxel_model.init(nx, ny, nz, vsz, center, 0.0, params.num_blocks);
+	terrain_voxel_model.init(nx, ny, nz, vsz, center, default_val, params.num_blocks);
 }
 
 
 void gen_voxel_landscape() {
 
 	RESET_TIME;
-	setup_voxel_landscape(global_voxel_params);
+#if 1
+	setup_voxel_landscape(global_voxel_params, 0.0);
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
 		global_voxel_params.normalize_to_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
+#else
+	point const center(0.0, 0.0, (zbottom + 0.5*Z_SCENE_SIZE));
+	gen_voxel_asteroid(terrain_voxel_model, center, 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE), MESH_X_SIZE, 456+rand_gen_index);
+#endif
 	PRINT_TIME(" Voxel Gen");
 	terrain_voxel_model.build(global_voxel_params.add_cobjs);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
@@ -1042,13 +1051,35 @@ void gen_voxels_from_cobjs(coll_obj_group const &cobjs) {
 
 	RESET_TIME;
 	voxel_params_t params(global_voxel_params);
-	// FIXME: override/setup params
+	params.ao_atten_power = 0.7; // user-specified?
+	params.ao_radius      = 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE);
 	// FIXME: is czmin set at this point? should it be set to something, or is FAR_CLIP ok?
-	setup_voxel_landscape(params);
+	setup_voxel_landscape(params, -1.0);
 	terrain_voxel_model.create_from_cobjs(cobjs, 1.0);
 	PRINT_TIME(" Cobjs Voxel Gen");
 	terrain_voxel_model.build(params.add_cobjs);
 	PRINT_TIME(" Cobjs Voxels to Triangles/Cobjs");
+}
+
+
+void gen_voxel_asteroid(voxel_model &model, point const &center, float radius, unsigned size, int rseed) {
+
+	RESET_TIME;
+	voxel_params_t params;
+	params.normalize_to_1 = 0;
+	params.atten_at_edges = 4; // or could be 3
+	params.radius_val     = 0.75; // seems to work well
+	params.atten_thresh   = 3.0; // user-specified?
+	params.ao_atten_power = 0.7; // user-specified?
+	params.ao_radius      = 1.0*radius;
+	params.tids[0]        = ROCK_TEX;
+	params.tids[1]        = MOSSY_ROCK_TEX; // maybe change later
+	float const vsz(2.0*radius/size);
+	model.clear();
+	model.set_params(params);
+	model.init(size, size, size, vector3d(vsz, vsz, vsz), center, -1.0, params.num_blocks);
+	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed);
+	PRINT_TIME("Asteroid Voxel Gen");
 }
 
 

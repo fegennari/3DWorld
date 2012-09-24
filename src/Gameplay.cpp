@@ -49,11 +49,12 @@ team_info *teaminfo = NULL;
 vector<bbox> team_starts;
 
 
-extern bool player_near_fire, create_voxel_landscape;
+extern bool player_near_fire;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, spectate;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
+extern unsigned create_voxel_landscape;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_size;
 extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity;
 extern double camera_zh;

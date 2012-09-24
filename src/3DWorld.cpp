@@ -64,8 +64,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), use_stencil_shadows(0), univ_stencil_shadows(1);
 bool univ_planet_lod(0), draw_mesh_shader(1), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), player_near_fire(0), global_lighting_update(0), use_waypoint_app_spots(0);
-bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), create_voxel_landscape(0), mt_cobj_tree_build(0), two_sided_lighting(0);
-bool inf_terrain_scenery(0);
+bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
@@ -83,7 +82,7 @@ int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1
 int enable_fsource(0), run_forward(0), advanced(0), passive_motion(P_MOTION_DEF), dynamic_mesh_scroll(0);
 int read_snow_file(0), write_snow_file(0), color_bit_depth(32), refresh_rate(75);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
-unsigned num_snowflakes(0), num_vpls(0);
+unsigned num_snowflakes(0), num_vpls(0), create_voxel_landscape(0);
 float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
@@ -1694,7 +1693,7 @@ int load_config(string const &config_file) {
 			if (!read_bool(fp, use_dense_voxels)) cfg_err("use_dense_voxels command", error);
 		}
 		else if (str == "create_voxel_landscape") {
-			if (!read_bool(fp, create_voxel_landscape)) cfg_err("create_voxel_landscape command", error);
+			if (!read_uint(fp, create_voxel_landscape) || create_voxel_landscape > 2) cfg_err("create_voxel_landscape command", error);
 		}
 		else if (str == "mt_cobj_tree_build") {
 			if (!read_bool(fp, mt_cobj_tree_build)) cfg_err("mt_cobj_tree_build command", error);
