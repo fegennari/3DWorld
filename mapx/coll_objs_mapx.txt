@@ -1,5 +1,6 @@
 # range is -10, 10 in X and Y
 T 0.0 0.0 -0.29
+#v 1 # enable voxel mode
 
 # testing
 #l 0.9 0.7 0.6 0.55 1.0 27 1 # concrete block (red/brown)

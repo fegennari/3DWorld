@@ -774,24 +774,19 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 		if (load_coll_objs) {
 			if (!read_coll_objects(coll_obj_file)) exit(1);
 			fixed_cobjs.finalize();
-
-			if (create_voxel_landscape == 2) {
-				gen_voxels_from_cobjs(fixed_cobjs);
-			}
-			else {
-				RESET_TIME;
-				unsigned const ncobjs(fixed_cobjs.size());
+			bool const has_voxel_cobjs(gen_voxels_from_cobjs(fixed_cobjs));
+			unsigned const ncobjs(fixed_cobjs.size());
+			RESET_TIME;
 			
-				if (!FIXED_COBJS_SWAP || !swap_and_set_as_coll_objects(fixed_cobjs)) {
-					if (ncobjs > 2*coll_objects.size()) {
-						reserve_coll_objects(coll_objects.size() + 1.1*ncobjs); // reserve with 10% buffer
-					}
-					for (unsigned i = 0; i < ncobjs; ++i) {
-						fixed_cobjs[i].add_as_fixed_cobj(); // don't need to remove it
-					}
+			if (!FIXED_COBJS_SWAP || has_voxel_cobjs || !swap_and_set_as_coll_objects(fixed_cobjs)) {
+				if (ncobjs > 2*coll_objects.size()) {reserve_coll_objects(coll_objects.size() + 1.1*ncobjs);} // reserve with 10% buffer
+				
+				for (unsigned i = 0; i < ncobjs; ++i) {
+					if (fixed_cobjs[i].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) continue; // skip it
+					fixed_cobjs[i].add_as_fixed_cobj(); // don't need to remove it
 				}
-				PRINT_TIME(" Add Fixed Cobjs");
 			}
+			PRINT_TIME(" Add Fixed Cobjs");
 			fixed_cobjs.clear();
 			remove_excess_cap(fixed_cobjs); // free the memory
 		}
@@ -1021,10 +1016,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			{
 				string const fn(read_filename(fp));
 				if (fn.empty()) return read_error(fp, "include file", coll_obj_file);
-				
-				if (!read_coll_obj_file(fn.c_str(), xf, cobj, has_layer, lcolor)) {
-					return read_error(fp, "include file", coll_obj_file);
-				}
+				if (!read_coll_obj_file(fn.c_str(), xf, cobj, has_layer, lcolor)) {return read_error(fp, "include file", coll_obj_file);}
 			}
 			break;
 
@@ -1103,9 +1095,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'E': // place tree: xpos ypos size type [zpos], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3
-			if (fscanf(fp, "%f%f%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0]) != 4) {
-				return read_error(fp, "tree", coll_obj_file);
-			}
+			if (fscanf(fp, "%f%f%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0]) != 4) {return read_error(fp, "tree", coll_obj_file);}
 			assert(fvals[0] > 0.0);
 			use_z = (fscanf(fp, "%f", &pos.z) == 1);
 			
@@ -1122,9 +1112,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'F': // place small tree: xpos ypos height width type [zpos], type: T_PINE = 0, T_DECID = 1, T_TDECID = 2, T_BUSH = 3, T_PALM = 4, T_SH_PINE = 5
-			if (fscanf(fp, "%f%f%f%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0]) != 5) {
-				return read_error(fp, "small tree", coll_obj_file);
-			}
+			if (fscanf(fp, "%f%f%f%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0]) != 5) {return read_error(fp, "small tree", coll_obj_file);}
 			assert(fvals[0] > 0.0 && fvals[1] > 0.0);
 			use_z = (fscanf(fp, "%f", &pos.z) == 1);
 			xf.xform_pos(pos);
@@ -1138,9 +1126,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'G': // place plant: xpos ypos radius height type [zpos], type: PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4
-			if (fscanf(fp, "%f%f%f%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0]) != 5) {
-				return read_error(fp, "plant", coll_obj_file);
-			}
+			if (fscanf(fp, "%f%f%f%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0]) != 5) {return read_error(fp, "plant", coll_obj_file);}
 			assert(fvals[0] > 0.0 && fvals[1] > 0.0);
 			use_z = (fscanf(fp, "%f", &pos.z) == 1);
 			xf.xform_pos(pos);
@@ -1161,9 +1147,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'A': // appearance spot: xpos ypos [zpos]
-			if (fscanf(fp, "%f%f", &pos.x, &pos.y) != 2) {
-				return read_error(fp, "appearance spot", coll_obj_file);
-			}
+			if (fscanf(fp, "%f%f", &pos.x, &pos.y) != 2) {return read_error(fp, "appearance spot", coll_obj_file);}
 			{
 				float const smiley_radius(object_types[SMILEY].radius);
 				read_or_calc_zval(fp, pos, smiley_radius, smiley_radius, xf);
@@ -1247,9 +1231,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'w': // water spring/source: xpos ypos rate [zpos] [vx vy vz diff]
-			if (fscanf(fp, "%f%f%f", &pos.x, &pos.y, &fvals[0]) != 3) {
-				return read_error(fp, "water source", coll_obj_file);
-			}
+			if (fscanf(fp, "%f%f%f", &pos.x, &pos.y, &fvals[0]) != 3) {return read_error(fp, "water source", coll_obj_file);}
 			fvals[1] = 0.1;
 			use_z    = (fscanf(fp, "%f", &pos.z) == 1);
 			use_vel  = (fscanf(fp, "%f%f%f%f", &vel.x, &vel.y, &vel.z, &fvals[1]) == 4);
@@ -1323,9 +1305,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'P': // polygon: npts (x y z)* thickness
-			if (fscanf(fp, "%u", &npoints) != 1) {
-				return read_error(fp, "collision polygon npoints", coll_obj_file);
-			}
+			if (fscanf(fp, "%u", &npoints) != 1) {return read_error(fp, "collision polygon npoints", coll_obj_file);}
+
 			if (npoints < 3) {
 				cout << "Error: Collision polygon must have at least 3 points: " << npoints << "." << endl;
 				fclose(fp);
@@ -1342,14 +1323,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				xf.xform_pos(poly[i].v);
 			}
-			if (fscanf(fp, "%f", &cobj.thickness) != 1) {
-				return read_error(fp, "collision polygon", coll_obj_file);
-			}
+			if (fscanf(fp, "%f", &cobj.thickness) != 1) {return read_error(fp, "collision polygon", coll_obj_file);}
 			check_layer(has_layer);
 			cobj.thickness *= xf.scale;
 			ppts.resize(0);
 			split_polygon(poly, ppts, 0.99);
-			add_polygons_to_cobj_vector(ppts, cobj, NULL, COBJ_TYPE_STD);
+			add_polygons_to_cobj_vector(ppts, cobj, NULL, cobj.cp.cobj_type);
 			break;
 
 		case 'c': // hollow cylinder (multisided): x1 y1 z1  x2 y2 z2  ro ri  nsides [start_ix [end_ix]]
@@ -1357,9 +1336,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				point pt[2];
 				float ro, ri;
 
-				if (fscanf(fp, "%f%f%f%f%f%f%f%f%u", &pt[0].x, &pt[0].y, &pt[0].z,
-					&pt[1].x, &pt[1].y, &pt[1].z, &ro, &ri, &npoints) != 9)
-				{
+				if (fscanf(fp, "%f%f%f%f%f%f%f%f%u", &pt[0].x, &pt[0].y, &pt[0].z, &pt[1].x, &pt[1].y, &pt[1].z, &ro, &ri, &npoints) != 9) {
 					return read_error(fp, "hollow cylinder", coll_obj_file);
 				}
 				if (npoints < 3 || ro <= 0.0 || ri < 0.0 || ro < ri || pt[0] == pt[1]) {
@@ -1367,10 +1344,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				unsigned six(0), eix(npoints);
 				fscanf(fp, "%u%u", &six, &eix); // optional
-
-				if (six >= eix || eix > npoints) {
-					return read_error(fp, "hollow cylinder start/end indices", coll_obj_file);
-				}
+				if (six >= eix || eix > npoints) {return read_error(fp, "hollow cylinder start/end indices", coll_obj_file);}
 				check_layer(has_layer);
 				for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(pt[i]);}
 				cobj.thickness = xf.scale*(ro - ri);
@@ -1418,18 +1392,11 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'D': // step delta (for stairs, etc.): dx dy dz num [dsx [dsy [dsz]]]
-			if (cobj.type == COLL_NULL) {
-				return read_error(fp, "step delta must appear after shape definition", coll_obj_file);
-			}
-			if (fscanf(fp, "%f%f%f%u", &pos.x, &pos.y, &pos.z, &npoints) != 4) {
-				return read_error(fp, "step delta", coll_obj_file);
-			}
+			if (cobj.type == COLL_NULL) {return read_error(fp, "step delta must appear after shape definition", coll_obj_file);}
+			if (fscanf(fp, "%f%f%f%u", &pos.x, &pos.y, &pos.z, &npoints) != 4) {return read_error(fp, "step delta", coll_obj_file);}
 			vel = zero_vector; // size delta
 			fscanf(fp, "%f%f%f", &vel.x, &vel.y, &vel.z);
-
-			if (pos == all_zeros && vel == zero_vector) {
-				return read_error(fp, "step delta must have nonzero delta", coll_obj_file);
-			}
+			if (pos == all_zeros && vel == zero_vector) {return read_error(fp, "step delta must have nonzero delta", coll_obj_file);}
 			xf.xform_pos_rms(pos); // no translate
 			xf.xform_pos_rms(vel); // no translate
 
@@ -1484,43 +1451,29 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'r': // set specular
-			if (fscanf(fp, "%f%f", &cobj.cp.specular, &cobj.cp.shine) != 2) {
-				return read_error(fp, "specular lighting", coll_obj_file);
-			}
+			if (fscanf(fp, "%f%f", &cobj.cp.specular, &cobj.cp.shine) != 2) {return read_error(fp, "specular lighting", coll_obj_file);}
 			break;
 
 		case 't': // relative translate
-			if (fscanf(fp, "%f%f%f", &tv0.x, &tv0.y, &tv0.z) != 3) {
-				return read_error(fp, "translate", coll_obj_file);
-			}
+			if (fscanf(fp, "%f%f%f", &tv0.x, &tv0.y, &tv0.z) != 3) {return read_error(fp, "translate", coll_obj_file);}
 			xf.tv += tv0;
 			break;
 		case 'T': // absolute translate
-			if (fscanf(fp, "%f%f%f", &xf.tv.x, &xf.tv.y, &xf.tv.z) != 3) {
-				return read_error(fp, "translate", coll_obj_file);
-			}
+			if (fscanf(fp, "%f%f%f", &xf.tv.x, &xf.tv.y, &xf.tv.z) != 3) {return read_error(fp, "translate", coll_obj_file);}
 			break;
 
 		case 'm': // scale/magnitude
-			if (fscanf(fp, "%f", &xf.scale) != 1) {
-				return read_error(fp, "scale", coll_obj_file);
-			}
+			if (fscanf(fp, "%f", &xf.scale) != 1) {return read_error(fp, "scale", coll_obj_file);}
 			assert(xf.scale > 0.0);
 			break;
 
 		case 'M': // mirror <dim>, dim = [0,1,2] => [x,y,z]
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {
-				return read_error(fp, "mirror", coll_obj_file);
-			}
-			if (ivals[0] < 0 || ivals[0] > 2) {
-				return read_error(fp, "mirror: dim must be in [0,2]", coll_obj_file);
-			}
+			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "mirror", coll_obj_file);}
+			if (ivals[0] < 0 || ivals[0] > 2) {return read_error(fp, "mirror: dim must be in [0,2]", coll_obj_file);}
 			xf.mirror[ivals[0]] ^= 1;
 			break;
 		case 's': // swap dimensions <dim1> <dim2>
-			if (fscanf(fp, "%i%i", &ivals[0], &ivals[1]) != 2) {
-				return read_error(fp, "swap dimensions", coll_obj_file);
-			}
+			if (fscanf(fp, "%i%i", &ivals[0], &ivals[1]) != 2) {return read_error(fp, "swap dimensions", coll_obj_file);}
 			if (ivals[0] == ivals[1] || ivals[0] < 0 || ivals[0] > 2 || ivals[1] < 0 || ivals[1] > 2) {
 				return read_error(fp, "swap dimensions: dims must be different and in [0,2]", coll_obj_file);
 			}
@@ -1534,32 +1487,29 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'y': // texture scale
-			if (fscanf(fp, "%f", &cobj.cp.tscale) != 1) {
-				return read_error(fp, "texture scale", coll_obj_file);
-			}
+			if (fscanf(fp, "%f", &cobj.cp.tscale) != 1) {return read_error(fp, "texture scale", coll_obj_file);}
 			break;
 
 		case 'Y': // texture translate (cubes, polygons, cylinder ends only), swap xy (cubes/polygons only): <tdx> <tdy> [<swap_xy>]
-			if (fscanf(fp, "%f%f", &cobj.cp.tdx, &cobj.cp.tdy) != 2) {
-				return read_error(fp, "texture translate", coll_obj_file);
-			}
+			if (fscanf(fp, "%f%f", &cobj.cp.tdx, &cobj.cp.tdy) != 2) {return read_error(fp, "texture translate", coll_obj_file);}
 			ivals[0] = 0;
 			fscanf(fp, "%i", &ivals[0]); // optional
 			cobj.cp.swap_txy = (ivals[0] != 0);
 			break;
 
 		case 'n': // toggle negative shape
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {
-				return read_error(fp, "negative shape", coll_obj_file);
-			}
+			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "negative shape", coll_obj_file);}
 			if (ivals[0]) cobj.status |= COLL_NEGATIVE; else cobj.status &= ~COLL_NEGATIVE;
 			break;
 
 		case 'a': // toggle destroyability
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {
-				return read_error(fp, "destroy shape", coll_obj_file);
-			}
+			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy shape", coll_obj_file);}
 			cobj.destroy = (char)ivals[0];
+			break;
+
+		case 'v': // set voxel mode
+			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "set voxel mode", coll_obj_file);}
+			cobj.cp.cobj_type = (ivals[0] ? COBJ_TYPE_VOX_TERRAIN : COBJ_TYPE_STD);
 			break;
 
 		case 'q': // quit reading object file

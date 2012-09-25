@@ -131,7 +131,8 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 
 void voxel_manager::create_from_cobjs(coll_obj_group const &cobjs, float filled_val) {
 
-	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
+	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) { // doesn't seem to parallelize well
+		if (i->cp.cobj_type != COBJ_TYPE_VOX_TERRAIN) continue; // skip it
 		add_cobj_voxels(*i, filled_val);
 	}
 }
@@ -140,17 +141,29 @@ void voxel_manager::create_from_cobjs(coll_obj_group const &cobjs, float filled_
 void voxel_manager::add_cobj_voxels(coll_obj const &cobj, float filled_val) {
 
 	if (cobj.cp.color.alpha < 0.5) return; // skip transparent objects (should they be here?)
+	unsigned const num_test_pts = 4;
 	cube_t const &bcube(cobj);
 	int llc[3], urc[3];
 	get_xyz(bcube.get_llc(), llc);
 	get_xyz(bcube.get_urc(), urc);
-	float const sphere_radius(0.5*vsz.mag()); // FIXME: step the radius to generate grayscale intersection values?
+	float const sphere_radius(0.5*vsz.mag()/num_test_pts); // FIXME: step the radius to generate grayscale intersection values?
+	float const dv(1.0/(num_test_pts*num_test_pts*num_test_pts));
 
 	for (int y = max(0, llc[1]); y <= min(int(ny)-1, urc[1]); ++y) {
 		for (int x = max(0, llc[0]); x <= min(int(nx)-1, urc[0]); ++x) {
 			for (int z = max(0, llc[2]); z <= min(int(nz)-1, urc[2]); ++z) {
-				int const ret(cobj.sphere_intersects(get_pt_at(x, y, z), sphere_radius)); // return value of 2 is considered an intersection
-				if (ret) {set(x, y, z, filled_val);}
+				float val(0.0);
+
+				for (unsigned xx = 0; xx < num_test_pts; ++xx) {
+					for (unsigned yy = 0; yy < num_test_pts; ++yy) {
+						for (unsigned zz = 0; zz < num_test_pts; ++zz) {
+							point const offset(xx*vsz.x/num_test_pts, yy*vsz.y/num_test_pts, zz*vsz.z/num_test_pts);
+							if (cobj.sphere_intersects((get_pt_at(x, y, z) + offset), sphere_radius)) {val += dv;} // return value of 2 is considered an intersection
+						}
+					}
+				}
+				float &v(get_ref(x, y, z));
+				if (val > 0.0) {v = max(v, val*filled_val);}
 			}
 		}
 	}
@@ -1047,9 +1060,15 @@ void gen_voxel_landscape() {
 }
 
 
-void gen_voxels_from_cobjs(coll_obj_group const &cobjs) {
+bool gen_voxels_from_cobjs(coll_obj_group const &cobjs) {
 
 	RESET_TIME;
+	bool has_voxel_cobjs(0);
+
+	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end() && !has_voxel_cobjs; ++i) {
+		has_voxel_cobjs = (i->cp.cobj_type == COBJ_TYPE_VOX_TERRAIN);
+	}
+	if (!has_voxel_cobjs) return 0; // nothing to do
 	voxel_params_t params(global_voxel_params);
 	params.ao_atten_power = 0.7; // user-specified?
 	params.ao_radius      = 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE);
@@ -1059,6 +1078,7 @@ void gen_voxels_from_cobjs(coll_obj_group const &cobjs) {
 	PRINT_TIME(" Cobjs Voxel Gen");
 	terrain_voxel_model.build(params.add_cobjs, 1);
 	PRINT_TIME(" Cobjs Voxels to Triangles/Cobjs");
+	return 1;
 }
 
 
