@@ -499,6 +499,7 @@ int coll_obj::sphere_intersects(point const &pos, float radius) const {
 	test_cobj.type      = COLL_SPHERE;
 	test_cobj.radius    = radius;
 	test_cobj.points[0] = pos;
+	test_cobj.set_from_sphere(pos, radius); // set the bounding cube
 	return intersects_cobj(test_cobj); // Note: no toler
 }
 

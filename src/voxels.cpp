@@ -149,9 +149,8 @@ void voxel_manager::add_cobj_voxels(coll_obj const &cobj, float filled_val) {
 	for (int y = max(0, llc[1]); y <= min(int(ny)-1, urc[1]); ++y) {
 		for (int x = max(0, llc[0]); x <= min(int(nx)-1, urc[0]); ++x) {
 			for (int z = max(0, llc[2]); z <= min(int(nz)-1, urc[2]); ++z) {
-				int const ret(cobj.sphere_intersects(get_pt_at(x, y, z), sphere_radius));
-				float const int_val((ret == 0) ? 0.0 : ((ret == 1) ? 1.0 : 0.5)); // return value of 2 is 'half' intersection
-				set(x, y, z, int_val*filled_val);
+				int const ret(cobj.sphere_intersects(get_pt_at(x, y, z), sphere_radius)); // return value of 2 is considered an intersection
+				if (ret) {set(x, y, z, filled_val);}
 			}
 		}
 	}
@@ -610,7 +609,7 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 		for (vector<triangle>::const_iterator t = triangles.begin(); t < triangles.end(); ++t) {
 			int const cindex(add_coll_polygon(t->pts, 3, cparams, 0.0));
 			assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
-			//coll_objects[cindex].fixed = 1; // mark as fixed so that lmap cells will be generated
+			if (add_as_fixed) {coll_objects[cindex].fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
 			data_blocks[block_ix].cids.push_back(cindex);
 		}
 	}
@@ -868,10 +867,11 @@ void voxel_model::proc_pending_updates() {
 }
 
 
-void voxel_model::build(bool add_cobjs_) {
+void voxel_model::build(bool add_cobjs_, bool add_as_fixed_) {
 
 	RESET_TIME;
-	add_cobjs = add_cobjs_;
+	add_cobjs    = add_cobjs_;
+	add_as_fixed = add_as_fixed_;
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 
 	switch (params.atten_at_edges) {
@@ -1042,7 +1042,7 @@ void gen_voxel_landscape() {
 	gen_voxel_asteroid(terrain_voxel_model, center, 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE), MESH_X_SIZE, 456+rand_gen_index);
 #endif
 	PRINT_TIME(" Voxel Gen");
-	terrain_voxel_model.build(global_voxel_params.add_cobjs);
+	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 
@@ -1057,7 +1057,7 @@ void gen_voxels_from_cobjs(coll_obj_group const &cobjs) {
 	setup_voxel_landscape(params, -1.0);
 	terrain_voxel_model.create_from_cobjs(cobjs, 1.0);
 	PRINT_TIME(" Cobjs Voxel Gen");
-	terrain_voxel_model.build(params.add_cobjs);
+	terrain_voxel_model.build(params.add_cobjs, 1);
 	PRINT_TIME(" Cobjs Voxels to Triangles/Cobjs");
 }
 

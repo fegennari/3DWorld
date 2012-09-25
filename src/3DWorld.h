@@ -365,6 +365,9 @@ struct cube_t { // size = 24
 		UNROLL_3X(d[i_][0] = c.d[i_][0];)
 		UNROLL_3X(d[i_][1] = c.d[i_][1];)
 	}
+	void set_from_sphere(point const &pt, float radius) {
+		UNROLL_3X(d[i_][0] = pt[i_]-radius; d[i_][1] = pt[i_]+radius;)
+	}
 	bool operator==(cube_t const &c) const {
 		UNROLL_3X(if (d[i_][0] != c.d[i_][0]) return 0;)
 		UNROLL_3X(if (d[i_][1] != c.d[i_][1]) return 0;)

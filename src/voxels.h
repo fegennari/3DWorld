@@ -114,7 +114,7 @@ public:
 
 class voxel_model : public voxel_manager {
 
-	bool add_cobjs, volume_added;
+	bool add_cobjs, add_as_fixed, volume_added;
 	typedef vert_norm vertex_type_t;
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	tri_data_t tri_data;
@@ -160,12 +160,12 @@ class voxel_model : public voxel_manager {
 	void calc_ao_lighting();
 
 public:
-	voxel_model() : add_cobjs(0), volume_added(0) {}
+	voxel_model() : add_cobjs(0), add_as_fixed(0), volume_added(0) {}
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
 	void create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const;
 	void proc_pending_updates();
-	void build(bool add_cobjs_);
+	void build(bool add_cobjs_, bool add_as_fixed_);
 	void setup_tex_gen_for_rendering(shader_t &s);
 	void core_render(shader_t &s, bool is_shadow_pass);
 	void render(bool is_shadow_pass);
