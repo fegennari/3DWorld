@@ -43,6 +43,7 @@ grass_size 0.025 0.002
 use_waypoints 1
 
 create_voxel_landscape 0
+voxel remove_unconnected 0
 voxel tid1 rock.03.raw # 66 rock tex
 voxel tid2 mossy_rock.jpg # 76 mossy rock tex
 

@@ -129,19 +129,20 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 }
 
 
-void voxel_manager::create_from_cobjs(coll_obj_group const &cobjs, float filled_val) {
+void voxel_manager::create_from_cobjs(coll_obj_group &cobjs, float filled_val) {
 
-	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) { // doesn't seem to parallelize well
+	for (coll_obj_group::iterator i = cobjs.begin(); i != cobjs.end(); ++i) { // doesn't seem to parallelize well
 		if (i->cp.cobj_type != COBJ_TYPE_VOX_TERRAIN) continue; // skip it
 		add_cobj_voxels(*i, filled_val);
 	}
 }
 
 
-void voxel_manager::add_cobj_voxels(coll_obj const &cobj, float filled_val) {
+void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 
 	if (cobj.cp.color.alpha < 0.5) return; // skip transparent objects (should they be here?)
 	unsigned const num_test_pts = 4;
+	cobj.calc_bcube(); // this is why cobj is passed by non-const reference
 	cube_t const &bcube(cobj);
 	int llc[3], urc[3];
 	get_xyz(bcube.get_llc(), llc);
@@ -1060,7 +1061,7 @@ void gen_voxel_landscape() {
 }
 
 
-bool gen_voxels_from_cobjs(coll_obj_group const &cobjs) {
+bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 
 	RESET_TIME;
 	bool has_voxel_cobjs(0);

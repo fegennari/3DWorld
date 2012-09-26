@@ -84,6 +84,7 @@ public:
 	void init();
 	void clear_internal_data();
 	void calc_size();
+	void calc_bcube();
 	float calc_min_dim() const;
 	bool clip_in_2d(float const bb[2][2], float &ztop, int d1, int d2, int dir) const;
 	void set_npoints();

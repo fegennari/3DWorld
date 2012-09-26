@@ -93,6 +93,40 @@ void coll_obj::calc_size() {
 }
 
 
+void coll_obj::calc_bcube() {
+
+	switch (type) {
+	case COLL_CUBE:
+		break; // already set
+	case COLL_SPHERE:
+		set_from_sphere(points[0], radius);
+		break;
+	case COLL_POLYGON:
+		set_from_points(points, npoints); // set cube_t
+		for (unsigned p = 0; p < 3; ++p) { // Note: assumes norm has already been set
+			float const thick(0.5*thickness*fabs(norm[p]) + 1.0E-6);
+			d[p][0] -= thick;
+			d[p][1] += thick;
+		}
+		break;
+	case COLL_CYLINDER:
+	case COLL_CYLINDER_ROT:
+		{
+			float const x1(points[0].x), y1(points[0].y), z1(points[0].z), x2(points[1].x), y2(points[1].y), z2(points[1].z), rmax(max(radius, radius2));
+			bool const vertical(x1 == x2 && y1 == y2);
+			d[0][0] = min(x1, x2) - rmax;
+			d[0][1] = max(x1, x2) + rmax;
+			d[1][0] = min(y1, y2) - rmax;
+			d[1][1] = max(y1, y2) + rmax;
+			d[2][0] = (vertical ? min(z1, z2) : min(z1-radius, z2-radius2));
+			d[2][1] = (vertical ? max(z1, z2) : max(z1+radius, z2+radius2));
+			break;
+		}
+	default: assert(0);
+	}
+}
+
+
 float coll_obj::calc_min_dim() const {
 
 	float min_dim(min_len());

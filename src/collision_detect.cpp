@@ -316,28 +316,14 @@ int add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2
 	radius2 = fabs(radius2);
 	float const rav(max(radius, radius2));
 	assert(radius > 0.0 || radius2 > 0.0);
-	cobj.d[0][0] = min(x1, x2) - rav;
-	cobj.d[0][1] = max(x1, x2) + rav;
-	cobj.d[1][0] = min(y1, y2) - rav;
-	cobj.d[1][1] = max(y1, y2) + rav;
-	int const vertical(x1 == x2 && y1 == y2), nonvert(!vertical || (fabs(radius - radius2)/max(radius, radius2)) > 0.2);
+	bool const nonvert(x1 != x2 || y1 != y2 || (fabs(radius - radius2)/max(radius, radius2)) > 0.2);
 
 	if (nonvert) {
-		if (vertical) {
-			cobj.d[2][0] = min(z1, z2);
-			cobj.d[2][1] = max(z1, z2);
-		}
-		else {
-			cobj.d[2][0] = min(z1-radius, z2-radius2);
-			cobj.d[2][1] = max(z1+radius, z2+radius2);
-		}
 		type = COLL_CYLINDER_ROT;
 	}
 	else { // standard vertical constant-radius cylinder
 		if (z2 < z1) swap(z2, z1);
-		cobj.d[2][0] = z1;
-		cobj.d[2][1] = z2;
-		type         = COLL_CYLINDER;
+		type = COLL_CYLINDER;
 	}
 	point *points = cobj.points;
 	points[0].x = x1; points[0].y = y1; points[0].z = z1;
@@ -383,13 +369,7 @@ int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, i
 
 	radius = fabs(radius);
 	int const index(cobj_manager.get_next_avail_index());
-	coll_obj &cobj(coll_objects[index]);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		cobj.d[i][0] = pt[i] - radius;
-		cobj.d[i][1] = pt[i] + radius;
-	}
-	cobj.points[0] = pt;
+	coll_objects[index].points[0] = pt;
 	coll_objects.set_coll_obj_props(index, COLL_SPHERE, radius, radius, platform_id, cparams);
 	add_coll_sphere_to_matrix(index, dhcm);
 	return index;
@@ -485,13 +465,6 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 	}
 	for (int i = 0; i < npoints; ++i) {
 		cobj.points[i] = points[i] + xlate;
-	}
-	cobj.set_from_points(cobj.points, npoints); // set cube_t
-	
-	for (unsigned p = 0; p < 3; ++p) {
-		float const thick(0.5*thickness*fabs(cobj.norm[p]) + 1.0E-6);
-		cobj.d[p][0] -= thick;
-		cobj.d[p][1] += thick;
 	}
 	cobj.npoints   = npoints;
 	cobj.thickness = thickness;
@@ -794,6 +767,7 @@ void coll_obj_group::set_coll_obj_props(int index, int type, float radius, float
 	cobj.falling     = 0;
 	cobj.calc_size();
 	cobj.set_npoints();
+	cobj.calc_bcube();
 	if (cparams.is_dynamic) dynamic_ids.must_insert (index);
 	if (cparams.draw      ) drawn_ids.must_insert   (index);
 	if (platform_id >= 0  ) platform_ids.must_insert(index);

@@ -82,13 +82,13 @@ protected:
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		vector<unsigned> *xy_updated, vector<point> *updated_pts);
 	unsigned get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z, bool count_only) const;
-	void add_cobj_voxels(coll_obj const &cobj, float filled_val);
+	void add_cobj_voxels(coll_obj &cobj, float filled_val);
 
 public:
 	void set_params(voxel_params_t const &p) {params = p;}
 	void clear();
 	void create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2);
-	void create_from_cobjs(coll_obj_group const &cobjs, float filled_val=1.0);
+	void create_from_cobjs(coll_obj_group &cobjs, float filled_val=1.0);
 	void atten_at_edges(float val);
 	void atten_at_top_only(float val);
 	void atten_to_sphere(float val, float inner_radius, bool atten_inner);
