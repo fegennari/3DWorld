@@ -102,8 +102,10 @@ void coll_obj::calc_bcube() {
 		set_from_sphere(points[0], radius);
 		break;
 	case COLL_POLYGON:
+		if (norm == zero_vector) {norm = get_poly_norm(points);} // Note: doesn't check for non-coplanar or degenerate polygons
 		set_from_points(points, npoints); // set cube_t
-		for (unsigned p = 0; p < 3; ++p) { // Note: assumes norm has already been set
+
+		for (unsigned p = 0; p < 3; ++p) {
 			float const thick(0.5*thickness*fabs(norm[p]) + 1.0E-6);
 			d[p][0] -= thick;
 			d[p][1] += thick;
