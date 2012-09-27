@@ -7,8 +7,6 @@
 
 #include "universe_base.h"
 #include "transform_obj.h"
-#include "shape_line3d.h" // for rock_shape3d
-#include "upsurface.h"
 #include "function_registry.h"
 #include "string"
 #include "deque"
@@ -807,28 +805,14 @@ public:
 
 class uobj_asteroid : public stationary_obj { // a free_obj that doesn't actually move?
 
-	unsigned model;
-	float scale_val;
-	rock_shape3d model3d;
-	upsurface surface;
-	static vector<float> pmap_vector;
-
 public:
-	uobj_asteroid(point const &pos_, float radius_, unsigned model_, unsigned lt=0);
-	~uobj_asteroid() {model3d.destroy();}
-	void get_tex_coords_at(point const &query_pos, int &tx, int &ty) const;
-	float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc);
-	void draw_obj(uobj_draw_data &ddata) const;
+	static uobj_asteroid *create(point const &pos, float radius, unsigned model, unsigned lt=0);
+	uobj_asteroid(point const &pos_, float radius_, unsigned lt=0) : stationary_obj(SO_ASTEROID, pos_, radius_, lt) {}
 	bool calc_rvs() const {return 1;} // so that texture is oriented properly
-	float get_radius_at(point const &pt) const;
-	float const *get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const;
-	bool has_detailed_coll(free_obj const *const other_obj) const;
-	bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params())      const;
-	bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=intersect_params())      const;
-	bool obj_int_obj (free_obj const *const obj, intersect_params &ip=intersect_params())      const;
 	string get_name() const {return "Asteroid";}
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
+	virtual bool has_detailed_coll(free_obj const *const other_obj) const {return 0;}
 };
 
 

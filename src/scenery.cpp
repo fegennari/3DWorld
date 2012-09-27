@@ -166,7 +166,7 @@ public:
 };
 
 
-void rock_shape3d::gen_rock(unsigned nverts, float size, int &rand_seed, int type) {
+void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type) {
 
 	set_rand2_state(rand_seed, 10423232);
 	nverts    = max(nverts, 4U);

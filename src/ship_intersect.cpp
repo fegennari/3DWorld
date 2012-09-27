@@ -9,7 +9,6 @@
 bool const COBJ_SHADOWS     = 1;
 bool const NO_OBJ_OBJ_INT   = 0;
 float const MIN_SHADOW_DIST = 0.01;
-float const AST_COLL_RAD    = 0.25;
 
 
 extern int display_mode;
@@ -490,55 +489,6 @@ bool u_ship::cobjs_int_obj(cobj_vector_t const &cobjs2, free_obj const *const ob
 }
 
 
-float uobj_asteroid::get_radius_at(point const &pt) const {
-
-	int tx, ty;
-	get_tex_coords_at(pt, tx, ty);
-	point **points = surface.sd.get_points();
-	assert(points);
-	return radius*scale_val*points[tx][ty].mag();
-}
-
-
-bool uobj_asteroid::sphere_int_obj(point const &c, float r, intersect_params &ip) const {
-
-	if (model != AS_MODEL_HMAP || r > AST_COLL_RAD*radius) return free_obj::sphere_int_obj(c, r, ip); // use default sphere collision
-	float const asteroid_radius(get_radius_at(c));
-	if (!dist_less_than(pos, c, (r + asteroid_radius))) return 0;
-	
-	if (ip.calc_int) {
-		get_sphere_mov_sphere_int_pt(pos, c, (c - ip.p_last), 1.01*(r + asteroid_radius), ip.p_int);
-		ip.norm = (ip.p_int - pos).get_norm();
-		//ip.norm  = (c - pos).get_norm();
-		//ip.p_int = pos + ip.norm*(1.01*(r + asteroid_radius));
-	}
-	return 1;
-}
-
-
-bool uobj_asteroid::ship_int_obj(u_ship const *const ship, intersect_params &ip) const {
-
-	assert(ship);
-	if (model != AS_MODEL_HMAP || ship->has_detailed_coll(this)) return free_obj::ship_int_obj(ship, ip);
-	return sphere_int_obj(ship->get_pos(), ship->get_c_radius(), ip); // has simple cobjs, use mesh model
-}
-
-
-bool uobj_asteroid::obj_int_obj(free_obj const *const obj, intersect_params &ip) const {
-
-	assert(obj);
-	if (model != AS_MODEL_HMAP || obj->has_detailed_coll(this)) return free_obj::obj_int_obj(obj, ip);
-	return sphere_int_obj(obj->get_pos(), obj->get_c_radius(), ip); // has simple cobjs, use mesh model
-}
-
-
-bool uobj_asteroid::has_detailed_coll(free_obj const *const other_obj) const {
-	
-	assert(other_obj);
-	return (model == AS_MODEL_HMAP && !other_obj->is_ship() && other_obj->get_radius() <= AST_COLL_RAD*radius);
-}
-
-
 // ***** SHADOW CODE *****
 
 
@@ -737,23 +687,4 @@ void u_ship::draw_shadow_volumes(point const &targ_pos, float cur_radius, point 
 		cobjs[i]->draw_svol(targ_pos, cur_radius, sun_pos, ndiv, player, test, this);
 	}
 }
-
-
-float const *uobj_asteroid::get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {
-
-	if (model != AS_MODEL_HMAP) return NULL;
-	assert(ndiv >= 3);
-	float const dist_to_sun(p2p_dist(pos, sun_pos)), scale_val((dist_to_sun + p2p_dist(pos, obj_pos))/dist_to_sun);
-	pmap_vector.resize(ndiv);
-	point const ce[2] = {pos, sun_pos};
-	vector3d v12; // unused
-	vector_point_norm const &vpn(gen_cylinder_data(ce, c_radius, 0.0, ndiv, v12));
-
-	for (int i = 0; i < ndiv; ++i) { // assumes the cylinder is more or less constant radius
-		pmap_vector[i] = scale_val*(get_radius_at(vpn.p[i<<1]) - c_radius);
-	}
-	return &pmap_vector.front();
-}
-
-
 

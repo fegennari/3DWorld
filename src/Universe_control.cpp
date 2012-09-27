@@ -937,7 +937,7 @@ void uobject::gen_fragments() const {
 	unsigned const num_fragments((rand()&7) + 8);
 
 	for (unsigned i = 0; i < num_fragments; ++i) {
-		add_uobj(new uobj_asteroid((pos + signed_rand_vector(1.2*radius)),
+		add_uobj(uobj_asteroid::create((pos + signed_rand_vector(1.2*radius)),
 			0.2*radius*rand_uniform(0.5, 1.0), AS_MODEL_SPHERE, (10*TICKS_PER_SECOND + rand()%TICKS_PER_SECOND))); // temporary
 	}
 	gen_moving_fragments(pos, unsigned(rand_uniform(40, 60)), 1.0);

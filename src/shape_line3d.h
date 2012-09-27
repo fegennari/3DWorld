@@ -85,7 +85,7 @@ class rock_shape3d : public shape3d { // size = 72
 public:
 	rock_shape3d() : dlist(0) {}
 	void create(int x, int y, bool use_xy);
-	void gen_rock(unsigned nverts, float size, int &rand_seed, int type);
+	void gen_rock(unsigned nverts, float size, int rand_seed, int type);
 	void add_cobjs();
 	bool do_impact_damage(point const &pos_, float radius_);
 	void draw(bool shadow_only=0, bool use_dlist=0, vector3d const &xlate=zero_vector) const;
