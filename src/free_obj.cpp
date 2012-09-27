@@ -814,6 +814,9 @@ uobj_asteroid::uobj_asteroid(point const &pos_, float radius_, unsigned model_, 
 			surface.calc_rmax();
 			scale_val = 1.0/surface.rmax;
 			break;
+		case AS_MODEL_VOXEL: // voxel model
+			// WRITE
+			break;
 		default:
 			assert(0);
 	}
@@ -878,11 +881,11 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 
 void uobj_asteroid::draw_obj(uobj_draw_data &ddata) const {
 
+	if (ddata.ndiv <= 4) {
+		ddata.draw_asteroid();
+		return;
+	}
 	switch (model) {
-		if (ddata.ndiv <= 4) {
-			ddata.draw_asteroid();
-			return;
-		}
 		case AS_MODEL_SPHERE: // simple sphere
 			ddata.draw_asteroid();
 			break;
@@ -898,6 +901,9 @@ void uobj_asteroid::draw_obj(uobj_draw_data &ddata) const {
 			select_texture(ROCK_SPHERE_TEX);
 			surface.sd.draw_ndiv_pow2(ddata.ndiv); // use dlist?
 			end_texture();
+			break;
+		case AS_MODEL_VOXEL: // voxel model
+			// WRITE
 			break;
 		default:
 			assert(0);

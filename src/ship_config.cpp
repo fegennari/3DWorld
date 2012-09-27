@@ -549,7 +549,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 				float r1, r2, dist(0.0);
 				point pos;
 				if (!(cfg >> num >> model >> r1 >> r2)) return 0;
-				assert(r1 <= r2 && model < 4);
+				assert(r1 <= r2 && model < NUM_AS_MODELS);
 				bool const pos_set(read_pt(pos));
 				if (!pos_set) cfg.clear();
 				assert(num == 1 || !pos_set);
