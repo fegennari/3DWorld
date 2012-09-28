@@ -108,7 +108,7 @@ class ship_defs_file_reader {
 		CMD_SHIP_BCYLIN, CMD_SHIP_TRIANGLE, CMD_FLEET, CMD_SHIP_ADD_INIT, CMD_SHIP_ADD_GEN, CMD_SHIP_BUILD, CMD_ALIGN, CMD_SHIP_NAMES,
 		CMD_ADD_SHIP, CMD_ADD_ASTEROID, CMD_BLACK_HOLE, CMD_PLAYER, CMD_LAST_PARENT, CMD_END};
 	ifstream cfg;
-	kw_map command_m, ship_m, weap_m, explosion_m, align_m, ai_m, target_m;
+	kw_map command_m, ship_m, weap_m, explosion_m, align_m, ai_m, target_m, asteroid_m;
 	u_ship *last_ship;
 	vector<point> weap_pts;
 	unsigned cur_ship_type, ship_add_mode;
@@ -548,7 +548,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 				unsigned model, num;
 				float r1, r2, dist(0.0);
 				point pos;
-				if (!(cfg >> num >> model >> r1 >> r2)) return 0;
+				if (!(cfg >> num) || !read_enum(asteroid_m, model, "alignment") || !(cfg >> r1 >> r2)) return 0;
 				assert(r1 <= r2 && model < NUM_AS_MODELS);
 				bool const pos_set(read_pt(pos));
 				if (!pos_set) cfg.clear();
@@ -609,6 +609,7 @@ void ship_defs_file_reader::setup_keywords() {
 	string const align_strs("NEUTRAL PLAYER GOV PIRATE RED BLUE ORANGE PURPLE");
 	string const ai_strs   ("AI_IGNORE AI_RETREAT AI_ATT_WAIT AI_ATT_ENEMY AI_ATT_ALL AI_SEEKING AI_NONE");
 	string const targ_strs ("TARGET_CLOSEST TARGET_ATTACKER TARGET_LAST TARGET_PARENT");
+	string const ast_strs  ("AS_MODEL_SPHERE AS_MODEL_ROCK1 AS_MODEL_ROCK2 AS_MODEL_HMAP AS_MODEL_VOXEL");
 	strings_to_map(commands,   command_m);
 	strings_to_map(ship_strs,  ship_m);
 	strings_to_map(weap_strs,  weap_m);
@@ -616,6 +617,7 @@ void ship_defs_file_reader::setup_keywords() {
 	strings_to_map(align_strs, align_m);
 	strings_to_map(ai_strs,    ai_m);
 	strings_to_map(targ_strs,  target_m);
+	strings_to_map(ast_strs,   asteroid_m);
 }
 
 

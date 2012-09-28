@@ -881,7 +881,7 @@ void voxel_model::proc_pending_updates() {
 }
 
 
-void voxel_model::build(bool add_cobjs_, bool add_as_fixed_) {
+void voxel_model::build(bool add_cobjs_, bool add_as_fixed_, bool verbose) {
 
 	RESET_TIME;
 	add_cobjs    = add_cobjs_;
@@ -896,11 +896,11 @@ void voxel_model::build(bool add_cobjs_, bool add_as_fixed_) {
 	case 4: atten_to_sphere  (atten_thresh, params.radius_val, 1); break;
 	default: assert(0);
 	}
-	PRINT_TIME("  Atten at Top/Edges");
+	if (verbose) {PRINT_TIME("  Atten at Top/Edges");}
 	determine_voxels_outside();
-	PRINT_TIME("  Determine Voxels Outside");
+	if (verbose) {PRINT_TIME("  Determine Voxels Outside");}
 	if (params.remove_unconnected) remove_unconnected_outside();
-	PRINT_TIME("  Remove Unconnected");
+	if (verbose) {PRINT_TIME("  Remove Unconnected");}
 	unsigned const tot_blocks(params.num_blocks*params.num_blocks);
 	assert(pt_to_ix.empty() && tri_data.empty() && data_blocks.empty());
 	pt_to_ix.resize(tot_blocks);
@@ -922,9 +922,9 @@ void voxel_model::build(bool add_cobjs_, bool add_as_fixed_) {
 	for (int block = 0; block < (int)tot_blocks; ++block) {
 		create_block(block, 1, 0);
 	}
-	PRINT_TIME("  Triangles to Model");
+	if (verbose) {PRINT_TIME("  Triangles to Model");}
 	calc_ao_lighting();
-	PRINT_TIME("  Voxel AO Lighting");
+	if (verbose) {PRINT_TIME("  Voxel AO Lighting");}
 }
 
 
@@ -946,8 +946,6 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
 
 void voxel_model::core_render(shader_t &s, bool is_shadow_pass) {
-
-	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
 		if (DEBUG_BLOCKS && s.is_setup()) {
@@ -988,6 +986,7 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	float const spec(0.0), shine(1.0);
 	set_specular(spec, shine);
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
+	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
 	core_render(s, is_shadow_pass);
 	
 	if (s.is_setup()) {
@@ -1056,7 +1055,7 @@ void gen_voxel_landscape() {
 	gen_voxel_asteroid(terrain_voxel_model, center, 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE), MESH_X_SIZE, 456+rand_gen_index);
 #endif
 	PRINT_TIME(" Voxel Gen");
-	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0);
+	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0, 1);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 
@@ -1077,7 +1076,7 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 	setup_voxel_landscape(params, -1.0);
 	terrain_voxel_model.create_from_cobjs(cobjs, 1.0);
 	PRINT_TIME(" Cobjs Voxel Gen");
-	terrain_voxel_model.build(params.add_cobjs, 1);
+	terrain_voxel_model.build(params.add_cobjs, 1, 1);
 	PRINT_TIME(" Cobjs Voxels to Triangles/Cobjs");
 	return 1;
 }
@@ -1085,7 +1084,7 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 
 void gen_voxel_asteroid(voxel_model &model, point const &center, float radius, unsigned size, int rseed) {
 
-	RESET_TIME;
+	//RESET_TIME;
 	voxel_params_t params;
 	params.normalize_to_1 = 0;
 	params.atten_at_edges = 4; // or could be 3
@@ -1100,7 +1099,7 @@ void gen_voxel_asteroid(voxel_model &model, point const &center, float radius, u
 	model.set_params(params);
 	model.init(size, size, size, vector3d(vsz, vsz, vsz), center, -1.0, params.num_blocks);
 	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed);
-	PRINT_TIME("Asteroid Voxel Gen");
+	//PRINT_TIME("Asteroid Voxel Gen");
 }
 
 

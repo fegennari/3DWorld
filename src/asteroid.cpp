@@ -11,10 +11,11 @@
 
 
 unsigned const ASTEROID_NDIV   = 32; // for sphere model, better if a power of 2
-unsigned const ASTEROID_VOX_SZ = 128; // for voxel model
+unsigned const ASTEROID_VOX_SZ = 64; // for voxel model
 float    const AST_COLL_RAD    = 0.25;
 
 
+extern unsigned context_clear_counter;
 extern vector<us_weapon> us_weapons;
 
 
@@ -41,6 +42,8 @@ public:
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
 		WHITE.do_glColor();
 		model3d.draw();
+		end_texture();
+		enable_blend();
 	}
 };
 
@@ -188,22 +191,32 @@ vector<float> uobj_asteroid_hmap::pmap_vector; // static
 
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
+	mutable unsigned clear_counter_val;
 	mutable voxel_model model; // FIXME: const problems
 
 public:
-	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt) {
+	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt), clear_counter_val(0) {
 		static int obj_id(0); // for random seed
-		gen_voxel_asteroid(model, pos, radius, ASTEROID_VOX_SZ, ++obj_id);
-		model.build(0, 0); // no cobjs
+		RESET_TIME;
+		gen_voxel_asteroid(model, all_zeros, radius, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos during rendering
+		model.build(0, 0, 0); // no cobjs
+		PRINT_TIME("Create Asteroid");
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
+		
+		if (clear_counter_val != context_clear_counter) {
+			clear_counter_val = context_clear_counter;
+			model.free_context();
+		}
 		shader_t s;
 		// FIXME: write
+		camera_pdu.valid = 0; // disable view frustum culling because it's not correct (due to transform matrices)
 		model.core_render(s, 0);
+		camera_pdu.valid = 1;
+		//model.render(0);
 		s.end_shader();
-		//disable_multitex_a();
 		if (ddata.shader.is_setup()) {ddata.shader.enable();}
 	}
 	virtual void apply_damage(float damage, point const &hit_pos) {
