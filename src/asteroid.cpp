@@ -194,14 +194,17 @@ public:
 	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt) {
 		static int obj_id(0); // for random seed
 		gen_voxel_asteroid(model, pos, radius, ASTEROID_VOX_SZ, ++obj_id);
+		model.build(0, 0); // no cobjs
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
+		if (ddata.shader.is_setup()) {ddata.shader.disable();}
 		shader_t s;
 		// FIXME: write
 		model.core_render(s, 0);
 		s.end_shader();
-		disable_multitex_a();
+		//disable_multitex_a();
+		if (ddata.shader.is_setup()) {ddata.shader.enable();}
 	}
 	virtual void apply_damage(float damage, point const &hit_pos) {
 		// FIXME: write

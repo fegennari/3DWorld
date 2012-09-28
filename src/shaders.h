@@ -41,6 +41,8 @@ public:
 		gs_name = gs_name_; in_prim = in_prim_; out_prim = out_prim_; verts_out = verts_out_;
 	}
 	bool is_setup() const {return (program > 0);}
+	void enable () const;
+	void disable() const;
 	bool begin_shader();
 	void end_shader();
 

@@ -208,13 +208,14 @@ public:
 	vector3d vel, dir, upv, tdir;
 	colorRGBA color_a, color_b;
 	free_obj const *obj;
+	shader_t &shader;
 
-	uobj_draw_data(free_obj const *const obj_, int ndiv_, unsigned t, bool power, bool spec_en, float texp,
+	uobj_draw_data(free_obj const *const obj_, shader_t &shader_, int ndiv_, unsigned t, bool power, bool spec_en, float texp,
 		upos_point_type const &pos_, vector3d const &vel_, vector3d const &dir_, vector3d const &upv_, float dist_,
 		float radius_, float crs_, bool dlights_, bool first, bool final, bool p1, bool p2)
 		: ndiv(ndiv_), time(t), on_time(t), lifetime(0), eflags(0), nengines(0), powered(power), specular_en(spec_en),
-		dlights(dlights_), final_pass(final), first_pass(first), phase1(p1), phase2(p2), t_exp(texp), dist(dist_),
-		radius(radius_), crs(crs_), cloakval(0.0), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir), obj(obj_) {}
+		dlights(dlights_), final_pass(final), first_pass(first), phase1(p1), phase2(p2), t_exp(texp), dist(dist_), radius(radius_),
+		crs(crs_), cloakval(0.0), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir), obj(obj_), shader(shader_) {}
 
 	inline bool is_moving() const {return (powered && (vel.mag_sq() > TOLERANCE));}
 	bool can_have_engine_lights() const;
@@ -652,7 +653,7 @@ public:
 	void inverse_rotate() const;
 	void draw_shadow_volumes_from(uobject const *sobj, point const &sun_pos, float dscale, int ndiv, bool test) const;
 	void transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const;
-	void draw(point const &pos_) const;
+	void draw(shader_t &shader, point const &pos_) const;
 
 	void invalidate_permanently() {status = 2;} // status set to anything other than 0 or 1 makes this object invalid
 	void verify_status() const {assert(status == 0 || status == 1);}

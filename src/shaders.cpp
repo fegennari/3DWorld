@@ -484,8 +484,7 @@ bool shader_t::begin_shader() {
 		loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
 		//PRINT_TIME("Create Program"); // 90ms
 	}
-	assert(program);
-	glUseProgram(program);
+	enable();
 	return 1;
 }
 
@@ -520,7 +519,7 @@ void shader_t::print_program_info_log() const {
 
 void shader_t::end_shader() { // ok to call if not in a shader
 
-	glUseProgram(0);
+	disable();
 	program = 0;
 	
 	for (unsigned i = 0; i < 3; ++i) {
@@ -532,4 +531,8 @@ void shader_t::end_shader() { // ok to call if not in a shader
 	fs_name.clear();
 	gs_name.clear();
 }
+
+
+void shader_t::enable () const {assert(program); glUseProgram(program);}
+void shader_t::disable() const {glUseProgram(0);}
 

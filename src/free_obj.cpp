@@ -590,7 +590,7 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 }
 
 
-void free_obj::draw(point const &pos_) const { // view culling has already been performed
+void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling has already been performed
 
 	//RESET_TIME;
 	if (!is_ok()) return; // dead
@@ -646,7 +646,7 @@ void free_obj::draw(point const &pos_) const { // view culling has already been 
 	calc_rotation_vectors();
 	unsigned const npasses(partial_shadow ? get_num_draw_passes() : 1); // will be slow if > 1
 	bool const specular(!known_shadowed && (light_val == 0 || (!stencil_shadows && light_val == 1))); // less than half shadowed
-	uobj_draw_data udd(this, ndiv, time, powered(), specular, 0, pos, velocity, dir, upv,
+	uobj_draw_data udd(this, shader, ndiv, time, powered(), specular, 0, pos, velocity, dir, upv,
 		dist, radius, c_radius/radius, (nlights > 0), 1, !partial_shadow, 1, (npasses == 1));
 
 	for (unsigned pass = 0; pass < npasses; ++pass) {

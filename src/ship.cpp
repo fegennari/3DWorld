@@ -717,7 +717,7 @@ void draw_univ_objects(point const &pos) {
 		free_obj *fobj(sorted[i].second);
 		assert(fobj != NULL);
 		if (!fobj->is_ok()) continue;
-		fobj->draw(pos);
+		fobj->draw(s, pos);
 		fobj->reset_lights(); // reset for next frameq
 	}
 	set_lighted_sides(1);
