@@ -197,7 +197,7 @@ public:
 		static int obj_id(0); // for random seed
 		RESET_TIME;
 		gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
-		model.build(0, 0, 0); // no cobjs
+		model.build(0, 0, 0, 0); // no cobjs
 		PRINT_TIME("Create Asteroid");
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
@@ -220,8 +220,7 @@ public:
 
 		model.setup_tex_gen_for_rendering(s);
 		WHITE.do_glColor();
-		set_color(WHITE);
-		set_specular(0.0, 1.0);
+		set_specular(0.0, 1.0); // ???
 		glEnable(GL_CULL_FACE);
 		camera_pdu.valid = 0; // disable view frustum culling because it's not correct (due to transform matrices)
 		model.core_render(s, 0);
@@ -229,6 +228,7 @@ public:
 		glDisable(GL_CULL_FACE);
 		s.end_shader();
 		if (ddata.shader.is_setup()) {ddata.shader.enable();}
+		select_texture(WHITE_TEX, 0);
 	}
 	virtual void apply_damage(float damage, point const &hit_pos) {
 		// FIXME: write

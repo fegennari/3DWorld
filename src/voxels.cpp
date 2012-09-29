@@ -881,7 +881,7 @@ void voxel_model::proc_pending_updates() {
 }
 
 
-void voxel_model::build(bool add_cobjs_, bool add_as_fixed_, bool verbose) {
+void voxel_model::build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, bool verbose) {
 
 	RESET_TIME;
 	add_cobjs    = add_cobjs_;
@@ -923,8 +923,11 @@ void voxel_model::build(bool add_cobjs_, bool add_as_fixed_, bool verbose) {
 		create_block(block, 1, 0);
 	}
 	if (verbose) {PRINT_TIME("  Triangles to Model");}
-	calc_ao_lighting();
-	if (verbose) {PRINT_TIME("  Voxel AO Lighting");}
+	
+	if (ao_lighting) {
+		calc_ao_lighting();
+		if (verbose) {PRINT_TIME("  Voxel AO Lighting");}
+	}
 }
 
 
@@ -1055,7 +1058,7 @@ void gen_voxel_landscape() {
 	gen_voxel_asteroid(terrain_voxel_model, center, 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE), MESH_X_SIZE, 456+rand_gen_index);
 #endif
 	PRINT_TIME(" Voxel Gen");
-	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0, 1);
+	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0, 1, 1);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 
@@ -1076,7 +1079,7 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 	setup_voxel_landscape(params, -1.0);
 	terrain_voxel_model.create_from_cobjs(cobjs, 1.0);
 	PRINT_TIME(" Cobjs Voxel Gen");
-	terrain_voxel_model.build(params.add_cobjs, 1, 1);
+	terrain_voxel_model.build(params.add_cobjs, 1, 1, 1);
 	PRINT_TIME(" Cobjs Voxels to Triangles/Cobjs");
 	return 1;
 }
@@ -1088,6 +1091,7 @@ void gen_voxel_asteroid(voxel_model &model, point const &center, float radius, u
 	voxel_params_t params;
 	params.normalize_to_1 = 0;
 	params.atten_at_edges = 4; // or could be 3
+	params.num_blocks     = 1; // subdivision not needed? it produces seams
 	params.radius_val     = 0.75; // seems to work well
 	params.atten_thresh   = 3.0; // user-specified?
 	params.ao_atten_power = 0.7; // user-specified?
