@@ -1,7 +1,4 @@
 uniform float min_alpha = 0.0;
-uniform vec4 color0 = vec4(1,1,1,1);
-uniform vec4 color1 = vec4(1,1,1,1);
-uniform sampler2D tex0, tex1;
 
 // clipped eye position, clipped vertex position
 varying vec3 eye, vpos, normal; // world space
@@ -11,16 +8,13 @@ varying vec3 eye_norm;
 void main()
 {
 	vec3 norm_normal = normalize(normal);
-	vec4 texel0 = lookup_triplanar_texture(vpos, norm_normal, tex0, tex0, tex0) * color0;
 	vec4 texel;
 
 	if (use_noise_tex) {
-		vec4 texel1 = lookup_triplanar_texture(vpos, norm_normal, tex1, tex1, tex1) * color1;
-		// interpolate between the two texture/color pairs using a random noise function
-		texel = mix(texel0, texel1, procedural_eval(vpos));
+		texel = get_texture_val(norm_normal, vpos);
 	}
 	else {
-		texel = texel0;
+		texel = lookup_triplanar_texture(vpos, norm_normal, tex0, tex0, tex0) * color0;
 	}
 	float alpha = gl_Color.a;
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)

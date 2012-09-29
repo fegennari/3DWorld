@@ -390,7 +390,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
 	s.setup_enabled_lights(2); // only 2, but could be up to 8 later
 	s.set_vert_shader("indir_lighting.part+procedural_gen");
-	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+procedural_gen");
+	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+voxel_texture.part+procedural_gen");
 	s.begin_shader();
 	common_shader_block_post(s, dlights, use_shadow_map, indir_lighting, min_alpha);
 	s.add_uniform_int("tex1", 8);

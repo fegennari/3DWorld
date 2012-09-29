@@ -203,13 +203,30 @@ public:
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
-		WHITE.do_glColor();
+		
 		shader_t s;
-		// FIXME: write
+		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		if (!glIsEnabled(GL_FOG)) s.set_prefix("#define NO_FOG", 1); // FS
+		s.set_vert_shader("asteroid");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+asteroid");
+		s.begin_shader();
+		s.setup_fog_scale();
+		s.add_uniform_int("tex0", 0);
+		s.add_uniform_int("tex1", 8);
+		s.add_uniform_int("noise_tex", 5);
+		s.add_uniform_float("tex_scale", 1.0);
+		s.add_uniform_float("noise_scale", 0.1);
+		s.add_uniform_float("tex_mix_saturate", 5.0);
+
+		model.setup_tex_gen_for_rendering(s);
+		WHITE.do_glColor();
+		set_color(WHITE);
+		set_specular(0.0, 1.0);
+		glEnable(GL_CULL_FACE);
 		camera_pdu.valid = 0; // disable view frustum culling because it's not correct (due to transform matrices)
 		model.core_render(s, 0);
 		camera_pdu.valid = 1;
-		//model.render(0);
+		glDisable(GL_CULL_FACE);
 		s.end_shader();
 		if (ddata.shader.is_setup()) {ddata.shader.enable();}
 	}

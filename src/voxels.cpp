@@ -938,7 +938,7 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
 	for (unsigned i = 0; i < 2; ++i) {
 		set_multitex(tu_ids[i]);
-		select_texture(params.tids[i]);
+		select_texture(params.tids[i], 0);
 		s.add_uniform_color(cnames[i], params.colors[i]);
 	}
 	set_multitex(0);
