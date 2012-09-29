@@ -642,6 +642,14 @@ void shift_univ_objs(point const &pos, bool shift_player_ship) {
 }
 
 
+void clear_univ_obj_contexts() {
+
+	for (unsigned i = 0; i < uobjs.size(); ++i) {
+		if (uobjs[i]) {uobjs[i]->clear_context();}
+	}
+}
+
+
 void draw_wrays(vector<usw_ray> &wrays) {
 
 	if (wrays.empty()) return;

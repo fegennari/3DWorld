@@ -82,7 +82,7 @@ int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1
 int enable_fsource(0), run_forward(0), advanced(0), passive_motion(P_MOTION_DEF), dynamic_mesh_scroll(0);
 int read_snow_file(0), write_snow_file(0), color_bit_depth(32), refresh_rate(75);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
-unsigned num_snowflakes(0), num_vpls(0), create_voxel_landscape(0), context_clear_counter(0);
+unsigned num_snowflakes(0), num_vpls(0), create_voxel_landscape(0);
 float water_plane_z(0.0), base_gravity(1.0), crater_size(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
@@ -174,8 +174,8 @@ void clear_context() {
 	clear_scenery_vbos_and_dlists();
 	reset_tiled_terrain_state();
 	free_cobj_draw_group_dlists();
+	clear_univ_obj_contexts();
 	clear_landscape_vbo = 1;
-	++context_clear_counter;
 }
 
 

@@ -714,6 +714,7 @@ public:
 	virtual void reset();
 	virtual void check_ref_objs();
 	virtual void move_by(point const &pos_) {pos += pos_;} // reset_pos?
+	virtual void clear_context() {}
 	virtual int   auto_orient()    const {return 0;}
 	virtual float get_max_t()      const = 0;
 	virtual float get_mass()       const {return (S_BODY_DENSITY*MASS_SCALE*radius*radius*radius + extra_mass);}

@@ -15,7 +15,6 @@ unsigned const ASTEROID_VOX_SZ = 64; // for voxel model
 float    const AST_COLL_RAD    = 0.25;
 
 
-extern unsigned context_clear_counter;
 extern vector<us_weapon> us_weapons;
 
 
@@ -191,25 +190,20 @@ vector<float> uobj_asteroid_hmap::pmap_vector; // static
 
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
-	mutable unsigned clear_counter_val;
 	mutable voxel_model model; // FIXME: const problems
 
 public:
-	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt), clear_counter_val(0) {
+	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt) {
 		static int obj_id(0); // for random seed
 		RESET_TIME;
-		gen_voxel_asteroid(model, all_zeros, radius, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos during rendering
+		gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
 		model.build(0, 0, 0); // no cobjs
 		PRINT_TIME("Create Asteroid");
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
-		
-		if (clear_counter_val != context_clear_counter) {
-			clear_counter_val = context_clear_counter;
-			model.free_context();
-		}
+		WHITE.do_glColor();
 		shader_t s;
 		// FIXME: write
 		camera_pdu.valid = 0; // disable view frustum culling because it's not correct (due to transform matrices)
@@ -231,6 +225,7 @@ public:
 		// FIXME: write
 		return 1;
 	}
+	virtual void clear_context() {model.free_context();}
 	// FIXME: shadow function?
 };
 
