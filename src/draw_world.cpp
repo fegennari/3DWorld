@@ -270,11 +270,7 @@ void common_shader_block_pre(shader_t &s, bool dlights, bool use_shadow_map, boo
 
 void set_indir_lighting_block(shader_t &s, bool use_smoke_indir) {
 
-	if (use_smoke_indir && smoke_tid) {
-		set_multitex(1);
-		bind_3d_texture(smoke_tid);
-	}
-	set_multitex(0);
+	if (use_smoke_indir && smoke_tid) {set_3d_texture_as_current(smoke_tid, 1);}
 	s.add_uniform_int("smoke_and_indir_tex", 1);
 	s.add_uniform_float("half_dxy", HALF_DXY);
 	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
@@ -292,6 +288,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
+	set_multitex(0);
 }
 
 

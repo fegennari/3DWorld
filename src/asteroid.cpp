@@ -12,7 +12,7 @@
 
 unsigned const ASTEROID_NDIV   = 32; // for sphere model, better if a power of 2
 unsigned const ASTEROID_VOX_SZ = 64; // for voxel model
-float    const AST_COLL_RAD    = 0.25;
+float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for accuracy (heightmap) or performance (voxel)
 
 
 extern vector<us_weapon> us_weapons;
@@ -73,17 +73,19 @@ public:
 		assert(other_obj);
 		return (!other_obj->is_ship() && other_obj->get_radius() <= AST_COLL_RAD*radius);
 	}
-
-	virtual bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=intersect_params()) const {
-		assert(ship);
-		if (ship->has_detailed_coll(this)) return uobj_asteroid::ship_int_obj(ship, ip);
-		return sphere_int_obj(ship->get_pos(), ship->get_c_radius(), ip); // has simple cobjs, use mesh model
-	}
-
-	virtual bool obj_int_obj (free_obj const *const obj, intersect_params &ip=intersect_params()) const {
+	bool check_sphere_int(free_obj const *const obj, intersect_params &ip) const {
 		assert(obj);
-		if (obj->has_detailed_coll(this)) return uobj_asteroid::obj_int_obj(obj, ip);
-		return sphere_int_obj(obj->get_pos(), obj->get_c_radius(), ip); // has simple cobjs, use mesh model
+		return sphere_int_obj(obj->get_pos(), obj->get_c_radius(), ip);
+	}
+	virtual bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=intersect_params()) const {
+		if (!check_sphere_int(ship, ip))    return 0; // use mesh model
+		if (!ship->has_detailed_coll(this)) return 1; // simple intersection
+		return uobj_asteroid::ship_int_obj(ship, ip); // has detailed cobjs, do detailed intersection
+	}
+	virtual bool obj_int_obj (free_obj const *const obj, intersect_params &ip=intersect_params()) const {
+		if (!check_sphere_int(obj, ip))    return 0; // use mesh model
+		if (!obj->has_detailed_coll(this)) return 1; // simple intersection
+		return uobj_asteroid::obj_int_obj(obj, ip);  // has detailed cobjs, do detailed intersection
 	}
 };
 
@@ -198,8 +200,13 @@ public:
 		RESET_TIME;
 		gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
 		model.build(0, 0, 0, 0); // no cobjs
+		float const gen_radius(model.get_bsphere().radius);
+		assert(gen_radius > 0.0);
+		radius /= gen_radius;
 		PRINT_TIME("Create Asteroid");
+		//cout << "radius: " << gen_radius << endl;
 	}
+
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
@@ -230,16 +237,39 @@ public:
 		if (ddata.shader.is_setup()) {ddata.shader.enable();}
 		select_texture(WHITE_TEX, 0);
 	}
+
 	virtual void apply_damage(float damage, point const &hit_pos) {
-		// FIXME: write
+		cout << "asteroid apply damage" << endl;
+		float const damage_radius(min(0.2, 0.001*damage));
+		point center(hit_pos);
+		xform_point(center);
+		model.update_voxel_sphere_region(center, damage_radius, -1.0);
 	}
+
 	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const {
 		if (r > AST_COLL_RAD*radius) return uobj_asteroid_destroyable::sphere_int_obj(c, r, ip); // use default sphere collision
+		cout << "asteroid sphere_int_obj" << endl;
+		r /= radius; // scale to 1.0
+		point p(c);
+		xform_point(p);
+		if (!model.sphere_intersect(p, r, (ip.calc_int ? &ip.p_int : NULL))) return 0;
+
 		// FIXME: write
+		if (ip.calc_int) { // untested, may be incorrect
+			cout << "asteroid calc_int" << endl;
+			ip.norm  = (p - pos).get_norm(); // we can't actually calculate the normal, so we use the direction from asteroid center to object center
+			ip.p_int = p - ip.norm*r; // FIXME: remove when voxel sphere intersection is finished
+			xform_point_inv(ip.p_int);
+			rotate_point_inv(ip.norm); // ip.norm will be normalized
+		}
 		return 1;
 	}
-	virtual bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const {
-		// FIXME: write
+	virtual bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const { // Note: dscale is ignored
+		cout << "asteroid line_int_obj" << endl;
+		point p[2] = {p1, p2};
+		xform_point_x2(p[0], p[1]);
+		if (!model.line_intersect(p[0], p[1], p_int)) return 0;
+		if (p_int) {xform_point_inv(*p_int);}
 		return 1;
 	}
 	virtual void clear_context() {model.free_context();}

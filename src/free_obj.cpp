@@ -569,13 +569,10 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 
 	if (near_b_hole && gvect.mag() > 0.05*BLACK_HOLE_GRAV) { // stretch the object
 		vector3d gscale;
-		
-		for (unsigned i = 0; i < 3; ++i) {
-			gscale[i] = fabs(gvect[i]) + 0.1*BLACK_HOLE_GRAV;
-		}
+		UNROLL_3X(gscale[i_] = fabs(gvect[i_]) + 0.1*BLACK_HOLE_GRAV;)
 		gscale.normalize();
 		float volume(1.0);
-		for (unsigned i = 0; i < 3; ++i) volume *= gscale[i];
+		UNROLL_3X(volume *= gscale[i_];)
 		gscale *= pow(1.0/volume, 1.0/3.0);
 		scale_by(gscale);
 	}

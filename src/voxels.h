@@ -95,6 +95,9 @@ public:
 	void determine_voxels_outside();
 	void remove_unconnected_outside();
 	bool point_inside_volume(point const &pos) const;
+	bool sphere_intersect(point const &center, float radius, point *int_pt) const;
+	bool line_intersect(point const &p1, point const &p2, point *int_pt) const;
+	unsigned upload_to_3d_texture(int wrap) const;
 };
 
 
@@ -162,7 +165,7 @@ class voxel_model : public voxel_manager {
 public:
 	voxel_model() : add_cobjs(0), add_as_fixed(0), volume_added(0) {}
 	void clear();
-	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
+	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter=-1, unsigned num_fragments=0);
 	void create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const;
 	void proc_pending_updates();
 	void build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, bool verbose);
@@ -172,6 +175,8 @@ public:
 	void free_context();
 	float eval_noise_texture_at(point const &pos) const;
 	float get_ao_lighting_val(point const &pos) const;
+	cube_t get_bcube() const {return ((tri_data.empty()) ? cube_t(center, center) : tri_data.get_bbox());}
+	sphere_t get_bsphere() const;
 };
 
 #endif

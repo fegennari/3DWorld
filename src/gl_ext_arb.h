@@ -38,6 +38,7 @@ void bind_3d_texture(unsigned tid);
 unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap);
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data);
+void set_3d_texture_as_current(unsigned tid, unsigned tu_id);
 
 // fog coord prototypes
 void setup_fog_coord();

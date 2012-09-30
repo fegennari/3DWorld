@@ -294,6 +294,7 @@ float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equa
 	if (world_mode == WMODE_INF_TERRAIN) {return get_exact_zval(xval, yval);}
 	int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
 	if (point_outside_mesh(xpos, ypos)) {return (use_real_equation ? get_exact_zval(xval, yval) : (zbottom - SMALL_NUMBER));}
+	assert(mesh_height != NULL);
 	float const xp((xval + X_SCENE_SIZE)*DX_VAL_INV), yp((yval + Y_SCENE_SIZE)*DY_VAL_INV);
 	int const x0((int)xp), y0((int)yp);
 	bool const xy0_bad(x0 < 0 || y0 < 0 || x0 >= MESH_X_SIZE-1 || y0 >= MESH_Y_SIZE-1);

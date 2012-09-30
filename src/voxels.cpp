@@ -42,22 +42,13 @@ void noise_texture_manager_t::setup(unsigned size, int rseed, float mag, float f
 	voxels.clear();
 	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros, 0.0, 1);
 	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index);
-	vector<unsigned char> data;
-	data.resize(voxels.size());
-
-	for (unsigned i = 0; i < voxels.size(); ++i) {
-		data[i] = (unsigned char)(255*CLIP_TO_01(fabs(voxels[i]))); // use fabs() to convert from [-1,1] to [0,1]
-	}
-	noise_tid = create_3d_texture(tsize, tsize, tsize, 1, data, GL_LINEAR, GL_MIRRORED_REPEAT);
+	noise_tid = voxels.upload_to_3d_texture(GL_MIRRORED_REPEAT);
 }
 
 
 void noise_texture_manager_t::bind_texture(unsigned tu_id) const {
 
-	assert(glIsTexture(noise_tid));
-	set_multitex(tu_id);
-	bind_3d_texture(noise_tid);
-	set_multitex(0);
+	set_3d_texture_as_current(noise_tid, tu_id);
 }
 
 
@@ -537,6 +528,34 @@ bool voxel_manager::point_inside_volume(point const &pos) const {
 }
 
 
+bool voxel_manager::sphere_intersect(point const &center, float radius, point *int_pt) const {
+
+	if (outside.empty()) return 0;
+	// FIXME: write
+	return 1;
+}
+
+
+bool voxel_manager::line_intersect(point const &p1, point const &p2, point *int_pt) const {
+
+	if (outside.empty()) return 0;
+	// FIXME: write
+	return 1;
+}
+
+
+unsigned voxel_manager::upload_to_3d_texture(int wrap) const {
+
+	vector<unsigned char> data;
+	data.resize(size());
+
+	for (unsigned i = 0; i < size(); ++i) {
+		data[i] = (unsigned char)(255*CLIP_TO_01(fabs(operator[](i)))); // use fabs() to convert from [-1,1] to [0,1]
+	}
+	return create_3d_texture(nx, ny, nz, 1, data, GL_LINEAR, wrap);
+}
+
+
 float voxel_model::get_ao_lighting_val(point const &pos) const {
 
 	if (ao_lighting.empty()) return 1.0;
@@ -544,6 +563,20 @@ float voxel_model::get_ao_lighting_val(point const &pos) const {
 	if (!ao_lighting.get_ix(pos, ix)) return 1.0; // off the voxel grid
 	assert(ix < ao_lighting.size());
 	return ao_lighting[ix]/255.0;
+}
+
+
+sphere_t voxel_model::get_bsphere() const {
+
+	sphere_t bsphere(center, 0.0);
+	
+	for (tri_data_t::const_iterator i = tri_data.begin(); i != tri_data.end(); ++i) {
+		for (vector<vertex_type_t>::const_iterator v = i->begin(); v != i->end(); ++v) {
+			bsphere.radius = max(bsphere.radius, p2p_dist_sq(center, v->v));
+		}
+	}
+	bsphere.radius = sqrt(bsphere.radius);
+	return bsphere;
 }
 
 
@@ -672,7 +705,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 				if (!saw_inside) continue;
 				if (increase_only && ao_lighting.get(x, y, z) == 255) continue;
 				point const pos(ao_lighting.get_pt_at(x, y, z));
-				if (!is_over_mesh(pos)) continue;
+				if (world_mode == WMODE_GROUND && !is_over_mesh(pos)) continue;
 				float val(0.0);
 				
 				if (z+1 == nz || !(outside.get(x, y, z+1) & end_ray_flags)) { // above mesh
@@ -750,7 +783,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 
 			for (unsigned z = bounds[2][0]; z <= bounds[2][1]; ++z) {
 				point const pos(get_pt_at(x, y, z));
-				if (is_under_mesh(pos)) continue;
+				if (world_mode == WMODE_GROUND && is_under_mesh(pos)) continue;
 				float const dist(max(0.0f, (p2p_dist(center, pos) - dist_adjust)));
 				if (dist >= radius) continue; // too far
 				// update voxel values, linear falloff with distance from center (ending at 0.0 at radius)
