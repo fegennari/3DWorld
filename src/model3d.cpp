@@ -289,6 +289,7 @@ template<typename T> void indexed_vntc_vect_t<T>::clear() {
 	
 	vntc_vect_t<T>::clear();
 	indices.clear();
+	blocks.clear();
 	need_normalize = 0;
 }
 
