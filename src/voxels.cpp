@@ -528,19 +528,61 @@ bool voxel_manager::point_inside_volume(point const &pos) const {
 }
 
 
+bool voxel_manager::point_intersect(point const &center, point *int_pt) const {
+
+	if (!point_inside_volume(center)) return 0;
+	if (int_pt) {*int_pt = center;}
+	return 1;
+}
+
+
 bool voxel_manager::sphere_intersect(point const &center, float radius, point *int_pt) const {
 
-	if (outside.empty()) return 0;
-	// FIXME: write
-	return 1;
+	if (point_intersect(center, int_pt))  return 1; // optimization
+	if (radius == 0.0 || outside.empty()) return 0;
+	cube_t bcube;
+	bcube.set_from_sphere(center, radius);
+	int llc[3], urc[3];
+	get_xyz(bcube.get_llc(), llc);
+	get_xyz(bcube.get_urc(), urc);
+
+	for (int y = max(0, llc[1]); y <= min(int(ny)-1, urc[1]); ++y) {
+		for (int x = max(0, llc[0]); x <= min(int(nx)-1, urc[0]); ++x) {
+			for (int z = max(0, llc[2]); z <= min(int(nz)-1, urc[2]); ++z) {
+				point const p(get_pt_at(x, y, z));
+				if (!dist_less_than(p, center, radius)) continue;
+				unsigned const ix(get_ix(x, y, z));
+				assert(ix < outside.size());
+				if ((outside[ix]&3) != 0) continue;
+				if (int_pt) {*int_pt = p;}
+				return 1;
+			}
+		}
+	}
+	return 0;
 }
 
 
 bool voxel_manager::line_intersect(point const &p1, point const &p2, point *int_pt) const {
 
 	if (outside.empty()) return 0;
-	// FIXME: write
-	return 1;
+	point pa(p1), pb(p2);
+	if (!do_line_clip(pa, pb, get_raw_bbox().d)) return 0; // no bbox intersection
+	if (point_intersect(pa, int_pt))             return 1; // first point intersects
+	if (dist_less_than(pa, pb, TOLERANCE))       return 0; // near zero length line
+	float const step0(min(vsz.x, min(vsz.y, vsz.z))), dist(p2p_dist(pa, pb));
+	assert(step0 > 0);
+	unsigned const num_steps(ceil(dist/step0));
+	assert(num_steps > 0);
+	float const step(dist/num_steps);
+	vector3d const delta((pb - pa)/num_steps);
+	point p(pa + delta); // first point has already been tested
+	
+	for (unsigned i = 0; i < num_steps; ++i) {
+		if (point_intersect(p, int_pt)) return 1;
+		p += delta;
+	}
+	return 0;
 }
 
 
@@ -826,7 +868,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 
 void voxel_model::create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const {
 
-	if (num_fragments == 0) return;
+	if (world_mode != WMODE_GROUND || num_fragments == 0) return;
 	float blend_val(fabs(eval_noise_texture_at(center)));
 	blend_val = min(max(params.tex_mix_saturate*(blend_val - 0.5), -0.5), 0.5) + 0.5;
 	colorRGBA color;

@@ -207,6 +207,11 @@ public:
 		//cout << "radius: " << gen_radius << endl;
 	}
 
+	virtual void apply_physics() {
+		uobj_asteroid_destroyable::apply_physics();
+		model.proc_pending_updates();
+	}
+
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
@@ -239,8 +244,7 @@ public:
 	}
 
 	virtual void apply_damage(float damage, point const &hit_pos) {
-		cout << "asteroid apply damage" << endl;
-		float const damage_radius(min(0.2, 0.001*damage));
+		float const damage_radius(min(0.2, 0.1*damage));
 		point center(hit_pos);
 		xform_point(center);
 		model.update_voxel_sphere_region(center, damage_radius, -1.0);
@@ -248,24 +252,21 @@ public:
 
 	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const {
 		if (r > AST_COLL_RAD*radius) return uobj_asteroid_destroyable::sphere_int_obj(c, r, ip); // use default sphere collision
-		cout << "asteroid sphere_int_obj" << endl;
+		//cout << "asteroid sphere_int_obj" << endl;
 		r /= radius; // scale to 1.0
 		point p(c);
 		xform_point(p);
 		if (!model.sphere_intersect(p, r, (ip.calc_int ? &ip.p_int : NULL))) return 0;
 
-		// FIXME: write
-		if (ip.calc_int) { // untested, may be incorrect
-			cout << "asteroid calc_int" << endl;
+		if (ip.calc_int) {
 			ip.norm  = (p - pos).get_norm(); // we can't actually calculate the normal, so we use the direction from asteroid center to object center
-			ip.p_int = p - ip.norm*r; // FIXME: remove when voxel sphere intersection is finished
+			//ip.p_int = p - ip.norm*r; // remove when voxel sphere intersection is finished
 			xform_point_inv(ip.p_int);
 			rotate_point_inv(ip.norm); // ip.norm will be normalized
 		}
 		return 1;
 	}
 	virtual bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const { // Note: dscale is ignored
-		cout << "asteroid line_int_obj" << endl;
 		point p[2] = {p1, p2};
 		xform_point_x2(p[0], p[1]);
 		if (!model.line_intersect(p[0], p[1], p_int)) return 0;

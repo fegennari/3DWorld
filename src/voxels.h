@@ -66,6 +66,7 @@ public:
 	V const &get   (unsigned x, unsigned y, unsigned z) const  {return operator[](get_ix(x, y, z));}
 	V &get_ref     (unsigned x, unsigned y, unsigned z)        {return operator[](get_ix(x, y, z));}
 	void set       (unsigned x, unsigned y, unsigned z, V const &val) {operator[](get_ix(x, y, z)) = val;}
+	cube_t get_raw_bbox() const {return cube_t(lo_pos, center + (center - lo_pos));}
 };
 
 typedef voxel_grid<float> float_voxel_grid;
@@ -95,6 +96,7 @@ public:
 	void determine_voxels_outside();
 	void remove_unconnected_outside();
 	bool point_inside_volume(point const &pos) const;
+	bool point_intersect(point const &center, point *int_pt) const;
 	bool sphere_intersect(point const &center, float radius, point *int_pt) const;
 	bool line_intersect(point const &p1, point const &p2, point *int_pt) const;
 	unsigned upload_to_3d_texture(int wrap) const;
