@@ -210,7 +210,6 @@ public:
 		assert(gen_radius > 0.0);
 		radius /= gen_radius;
 		PRINT_TIME("Create Asteroid");
-		//cout << "radius: " << gen_radius << endl;
 	}
 
 	virtual void apply_physics() {
@@ -264,15 +263,14 @@ public:
 
 	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const {
 		if (r > AST_COLL_RAD*radius) return uobj_asteroid_destroyable::sphere_int_obj(c, r, ip); // use default sphere collision
-		//cout << "asteroid sphere_int_obj" << endl;
 		r /= radius; // scale to 1.0
 		point p(c);
 		xform_point(p);
 		if (!model.sphere_intersect(p, r, (ip.calc_int ? &ip.p_int : NULL))) return 0;
 
 		if (ip.calc_int) {
-			ip.norm  = (p - pos).get_norm(); // we can't actually calculate the normal, so we use the direction from asteroid center to object center
-			//ip.p_int = p - ip.norm*r; // remove when voxel sphere intersection is finished
+			ip.norm = (p - pos).get_norm(); // we can't actually calculate the normal, so we use the direction from asteroid center to object center
+			if (ip.p_int == p) {ip.p_int = p - ip.norm*r;} // intersecting at the center, determine actual pos based on normal
 			xform_point_inv(ip.p_int);
 			rotate_point_inv(ip.norm); // ip.norm will be normalized
 		}

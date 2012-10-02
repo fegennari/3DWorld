@@ -555,6 +555,8 @@ bool voxel_manager::sphere_intersect(point const &center, float radius, point *i
 				assert(ix < outside.size());
 				if ((outside[ix]&3) != 0) continue;
 				if (int_pt) {*int_pt = p;}
+				//vector<triangle> triangles;
+				//get_triangles_for_voxel(triangles, x, y, z, 0);
 				return 1;
 			}
 		}
