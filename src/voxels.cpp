@@ -882,6 +882,10 @@ void voxel_model::create_fragments(point const &center, float radius, int shoote
 	}
 }
 
+unsigned voxel_model::get_texture_at(point const &pos) const {
+	return params.tids[fabs(eval_noise_texture_at(pos)) > 0.5];
+}
+
 
 void voxel_model::proc_pending_updates() {
 

@@ -62,12 +62,13 @@ public:
 			if (us_weapons[wc].const_dam) gen_fragments = 0;
 		}
 		if (gen_fragments) {
-			float const damage(min(0.5, 0.02*val));
-			apply_damage(damage, hit_pos);
-			gen_moving_fragments(hit_pos, min(25U, max(1U, unsigned(20*damage))), 0.25);
+			float const damage_val(min(0.5, 0.02*val));
+			apply_damage(damage_val, hit_pos);
+			gen_moving_fragments(hit_pos, min(25U, max(1U, unsigned(20*damage_val))), get_fragment_tid(hit_pos), 0.25);
 		}
 		return uobj_asteroid::damage(val, type, hit_pos, source, wc);
 	}
+	virtual int get_fragment_tid(point const &hit_pos) const = 0;
 
 	virtual bool has_detailed_coll(free_obj const *const other_obj) const {
 		assert(other_obj);
@@ -141,6 +142,7 @@ public:
 			}
 		}
 	}
+	virtual int get_fragment_tid(point const &hit_pos) const {return ROCK_SPHERE_TEX;}
 
 	virtual float const *get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {
 		assert(ndiv >= 3);
@@ -190,6 +192,10 @@ public:
 vector<float> uobj_asteroid_hmap::pmap_vector; // static
 
 
+// FIXME:
+// sphere collision normal
+// AO lighting
+// subdiv for parallel creation and partial updates
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 	mutable voxel_model model; // FIXME: const problems
@@ -248,6 +254,12 @@ public:
 		point center(hit_pos);
 		xform_point(center);
 		model.update_voxel_sphere_region(center, damage_radius, -1.0);
+	}
+
+	virtual int get_fragment_tid(point const &hit_pos) const {
+		point p(hit_pos);
+		xform_point(p);
+		return model.get_texture_at(p);
 	}
 
 	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const {

@@ -169,6 +169,7 @@ public:
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter=-1, unsigned num_fragments=0);
 	void create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const;
+	unsigned get_texture_at(point const &pos) const;
 	void proc_pending_updates();
 	void build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, bool verbose);
 	void setup_tex_gen_for_rendering(shader_t &s);
