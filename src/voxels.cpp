@@ -1172,7 +1172,7 @@ void gen_voxel_asteroid(voxel_model &model, point const &center, float radius, u
 	voxel_params_t params;
 	params.normalize_to_1 = 0;
 	params.atten_at_edges = 4; // or could be 3
-	params.num_blocks     = 1; // subdivision not needed? it produces seams
+	params.num_blocks     = 2; // subdivision not needed? it produces seams
 	params.radius_val     = 0.75; // seems to work well
 	params.atten_thresh   = 3.0; // user-specified?
 	params.ao_atten_power = 0.7; // user-specified?

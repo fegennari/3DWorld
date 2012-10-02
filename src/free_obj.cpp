@@ -431,6 +431,7 @@ void free_obj::calc_rotation_vectors() const {
 	vector3d const orient(get_orient().get_norm());
 	cross_product(upv0, dir0, rv2); // constant, could be cached?
 	cross_product(rv2, orient, rv1);
+	if (rv1.mag() < TOLERANCE) {rv1 = plus_z;} // otherwise this will assertion fail
 	ra1 = get_angle(rv2.get_norm(), orient);
 
 	// rotate up to <upv>

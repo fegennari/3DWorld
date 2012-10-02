@@ -195,13 +195,13 @@ vector<float> uobj_asteroid_hmap::pmap_vector; // static
 // FIXME:
 // sphere collision normal
 // AO lighting
-// subdiv for parallel creation and partial updates
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 	mutable voxel_model model; // FIXME: const problems
+	bool have_sun_pos;
 
 public:
-	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt) {
+	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt), have_sun_pos(0) {
 		static int obj_id(0); // for random seed
 		RESET_TIME;
 		gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
@@ -213,6 +213,12 @@ public:
 	}
 
 	virtual void apply_physics() {
+		point sun_pos;
+
+		if (!have_sun_pos && get_universe_sun_pos(pos, sun_pos)) { // too slow if there is no sun?
+			dir = (pos - sun_pos).get_norm(); // orient toward the sun
+			have_sun_pos = 1;
+		}
 		uobj_asteroid_destroyable::apply_physics();
 		model.proc_pending_updates();
 	}
