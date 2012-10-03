@@ -228,6 +228,7 @@ public:
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
 		
 		shader_t s;
+		s.set_int_prefix("num_lights", min(8U, exp_lights.size()+2U), 1); // FS
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		if (!glIsEnabled(GL_FOG)) s.set_prefix("#define NO_FOG", 1); // FS
 		s.set_vert_shader("asteroid");
