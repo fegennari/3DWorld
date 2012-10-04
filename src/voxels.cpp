@@ -22,7 +22,7 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 
 
 voxel_params_t global_voxel_params;
-voxel_model terrain_voxel_model;
+voxel_model_ground terrain_voxel_model;
 
 extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
@@ -402,7 +402,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 			for (unsigned by = by1; by <= by2; ++by) {
 				for (unsigned bx = bx1; bx <= bx2; ++bx) {
 					unsigned const bix(by*num_blocks + bx);
-					assert(bix < data_blocks.size());
+					assert(bix < tri_data.size());
 					modified_blocks.insert(bix);
 				}
 			}
@@ -414,7 +414,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 	point center(all_zeros);
 
 	for (vector<point>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
-		create_fragments(*i, fragment_radius, NO_SOURCE, 1);
+		maybe_create_fragments(*i, fragment_radius, NO_SOURCE, 1);
 		center += *i;
 	}
 	center /= updated_pts.size();
@@ -572,7 +572,7 @@ bool voxel_manager::line_intersect(point const &p1, point const &p2, point *int_
 	if (!do_line_clip(pa, pb, get_raw_bbox().d)) return 0; // no bbox intersection
 	if (point_intersect(pa, int_pt))             return 1; // first point intersects
 	if (dist_less_than(pa, pb, TOLERANCE))       return 0; // near zero length line
-	float const step0(min(vsz.x, min(vsz.y, vsz.z))), dist(p2p_dist(pa, pb));
+	float const step0(0.5*min(vsz.x, min(vsz.y, vsz.z))), dist(p2p_dist(pa, pb));
 	assert(step0 > 0);
 	unsigned const num_steps(ceil(dist/step0));
 	assert(num_steps > 0);
@@ -634,39 +634,56 @@ unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 
 void voxel_model::clear() {
 
-	for (unsigned i = 0; i < data_blocks.size(); ++i) {clear_block(i);} // unnecessary?
 	free_context();
 	tri_data.clear();
-	data_blocks.clear();
 	pt_to_ix.clear();
 	modified_blocks.clear();
-	last_blocks_updated.clear();
 	ao_lighting.clear();
 	voxel_manager::clear();
 	volume_added = 0;
 }
 
 
+void voxel_model_ground::clear() {
+	
+	voxel_model::clear();
+	for (unsigned i = 0; i < data_blocks.size(); ++i) {clear_block(i);} // unnecessary?
+	data_blocks.clear();
+	last_blocks_updated.clear();
+}
+
+
 // returns true if something was cleared
 bool voxel_model::clear_block(unsigned block_ix) {
 
-	assert(block_ix < tri_data.size() && block_ix < data_blocks.size());
+	assert(block_ix < tri_data.size());
 	bool const was_nonempty(!tri_data[block_ix].empty());
 	tri_data[block_ix].clear();
-
-	for (vector<int>::const_iterator i = data_blocks[block_ix].cids.begin(); i != data_blocks[block_ix].cids.end(); ++i) {
-		remove_coll_object(*i);
-	}
-	data_blocks[block_ix].clear();
 	return was_nonempty;
+}
+
+
+bool voxel_model_ground::clear_block(unsigned block_ix) {
+
+	bool const ret(voxel_model::clear_block(block_ix));
+
+	if (add_cobjs) {
+		assert(block_ix < data_blocks.size());
+
+		for (vector<int>::const_iterator i = data_blocks[block_ix].cids.begin(); i != data_blocks[block_ix].cids.end(); ++i) {
+			remove_coll_object(*i);
+		}
+		data_blocks[block_ix].clear();
+	}
+	return ret;
 }
 
 
 // returns the number of triangles created
 unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool count_only) {
 
-	assert(block_ix < tri_data.size() && block_ix < data_blocks.size());
-	assert(tri_data[block_ix].empty() && data_blocks[block_ix].cids.empty());
+	assert(block_ix < tri_data.size());
+	assert(tri_data[block_ix].empty());
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
 	vector<triangle> triangles;
 	unsigned count(0);
@@ -691,20 +708,27 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 		poly.from_triangle(*i);
 		tri_data[block_ix].add_poly(poly, vmap);
 	}
-	if (add_cobjs) {
-		cobj_params cparams(params.elasticity, params.base_color, 0, 0, NULL, 0, params.tids[0]);
-		cparams.cobj_type = COBJ_TYPE_VOX_TERRAIN;
-		data_blocks[block_ix].cids.reserve(triangles.size());
-
-		#pragma omp critical(add_coll_polygon)
-		for (vector<triangle>::const_iterator t = triangles.begin(); t < triangles.end(); ++t) {
-			int const cindex(add_coll_polygon(t->pts, 3, cparams, 0.0));
-			assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
-			if (add_as_fixed) {coll_objects[cindex].fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
-			data_blocks[block_ix].cids.push_back(cindex);
-		}
-	}
+	create_block_hook(block_ix, triangles);
 	return triangles.size();
+}
+
+
+void voxel_model_ground::create_block_hook(unsigned block_ix, vector<triangle> const &triangles) {
+
+	if (!add_cobjs) return; // nothing to do
+	cobj_params cparams(params.elasticity, params.base_color, 0, 0, NULL, 0, params.tids[0]);
+	cparams.cobj_type = COBJ_TYPE_VOX_TERRAIN;
+	assert(block_ix < data_blocks.size());
+	assert(data_blocks[block_ix].cids.empty());
+	data_blocks[block_ix].cids.reserve(triangles.size());
+
+	#pragma omp critical(add_coll_polygon)
+	for (vector<triangle>::const_iterator t = triangles.begin(); t < triangles.end(); ++t) {
+		int const cindex(add_coll_polygon(t->pts, 3, cparams, 0.0));
+		assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
+		if (add_as_fixed) {coll_objects[cindex].fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
+		data_blocks[block_ix].cids.push_back(cindex);
+	}
 }
 
 
@@ -749,7 +773,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 				if (!saw_inside) continue;
 				if (increase_only && ao_lighting.get(x, y, z) == 255) continue;
 				point const pos(ao_lighting.get_pt_at(x, y, z));
-				if (world_mode == WMODE_GROUND && !is_over_mesh(pos)) continue;
+				if (test_mesh && !is_over_mesh(pos)) continue;
 				float val(0.0);
 				
 				if (z+1 == nz || !(outside.get(x, y, z+1) & end_ray_flags)) { // above mesh
@@ -790,6 +814,13 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 }
 
 
+void voxel_model_space::calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {
+
+	voxel_model::calc_ao_lighting_for_block(block_ix, increase_only);
+	free_ao_texture(); // will be recalculated if needed
+}
+
+
 void voxel_model::calc_ao_lighting() {
 
 	if (empty() || scrolling) return; // too slow for scrolling
@@ -797,7 +828,7 @@ void voxel_model::calc_ao_lighting() {
 	ao_lighting.init(nx, ny, nz, vsz, center, 255, params.num_blocks);
 	calc_ao_dirs();
 
-	for (unsigned block = 0; block < data_blocks.size(); ++block) {
+	for (unsigned block = 0; block < tri_data.size(); ++block) {
 		calc_ao_lighting_for_block(block, 0);
 	}
 }
@@ -827,7 +858,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 
 			for (unsigned z = bounds[2][0]; z <= bounds[2][1]; ++z) {
 				point const pos(get_pt_at(x, y, z));
-				if (world_mode == WMODE_GROUND && is_under_mesh(pos)) continue;
+				if (test_mesh && is_under_mesh(pos)) continue;
 				float const dist(max(0.0f, (p2p_dist(center, pos) - dist_adjust)));
 				if (dist >= radius) continue; // too far
 				// update voxel values, linear falloff with distance from center (ending at 0.0 at radius)
@@ -849,7 +880,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 			for (unsigned by = by1; by <= by2; ++by) {
 				for (unsigned bx = bx1; bx <= bx2; ++bx) {
 					unsigned const block_ix(by*params.num_blocks + bx);
-					assert(block_ix < data_blocks.size());
+					assert(block_ix < tri_data.size());
 					blocks_to_update.insert(block_ix);
 				}
 			}
@@ -859,7 +890,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	std::copy(blocks_to_update.begin(), blocks_to_update.end(), inserter(modified_blocks, modified_blocks.begin()));
 
 	if (material_removed) {
-		create_fragments(center, radius, shooter, num_fragments);
+		maybe_create_fragments(center, radius, shooter, num_fragments);
 	}
 	else {
 		volume_added = 1;
@@ -868,9 +899,9 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 }
 
 
-void voxel_model::create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const {
+void voxel_model_ground::maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const {
 
-	if (world_mode != WMODE_GROUND || num_fragments == 0) return;
+	if (num_fragments == 0) return;
 	float blend_val(fabs(eval_noise_texture_at(center)));
 	blend_val = min(max(params.tex_mix_saturate*(blend_val - 0.5), -0.5), 0.5) + 0.5;
 	colorRGBA color;
@@ -884,6 +915,7 @@ void voxel_model::create_fragments(point const &center, float radius, int shoote
 	}
 }
 
+
 unsigned voxel_model::get_texture_at(point const &pos) const {
 	return params.tids[fabs(eval_noise_texture_at(pos)) > 0.5];
 }
@@ -895,14 +927,8 @@ void voxel_model::proc_pending_updates() {
 	if (modified_blocks.empty()) return;
 	bool something_removed(0);
 	unsigned num_added(0);
-	if (params.remove_unconnected) remove_unconnected_outside_modified_blocks();
+	if (params.remove_unconnected == 2) remove_unconnected_outside_modified_blocks();
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
-	bool can_undo_last_cboj_tree_add(!last_blocks_updated.empty());
-
-	for (vector<unsigned>::const_iterator i = last_blocks_updated.begin(); i != last_blocks_updated.end(); ++i) {
-		if (modified_blocks.find(*i) == modified_blocks.end()) {can_undo_last_cboj_tree_add = 0; break;}
-	}
-	modified_blocks.clear();
 	
 	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
 		something_removed |= clear_block(blocks_to_update[i]);
@@ -913,25 +939,51 @@ void voxel_model::proc_pending_updates() {
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
 		num_added += (create_block(blocks_to_update[i], 0, 0) > 0);
 	}
-	if (!(num_added > 0 || something_removed)) return; // nothing updated
-	vector<unsigned> cixs;
-	cixs.reserve(num_added);
-
-	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
-		copy(data_blocks[blocks_to_update[i]].cids.begin(), data_blocks[blocks_to_update[i]].cids.end(), back_inserter(cixs));
+	if (!(num_added > 0 || something_removed)) { // nothing updated
+		modified_blocks.clear();
+		return;
 	}
-	if (can_undo_last_cboj_tree_add) {
-		try_undo_last_add_to_cobj_tree(0);
+	if (!ao_lighting.empty()) {
+		for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
+			calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
+		}
 	}
-	last_blocks_updated = blocks_to_update;
-	//sort(cixs.begin(), cixs.end()); // doesn't really help
-	add_to_cobj_tree(cixs, 0);
+	update_blocks_hook(blocks_to_update, num_added);
+	modified_blocks.clear();
+	volume_added = 0;
+	scene_dlist_invalid = 1;
+	PRINT_TIME("Process Voxel Updates");
+}
 
+
+void update_ao_texture(block_group_t const &group) {
+	assert(group.area() > 0);
+	update_smoke_indir_tex_range(group.v[0][0], group.v[0][1], group.v[1][0], group.v[1][1], 1);
+}
+
+
+void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added) {
+
+	if (add_cobjs) {
+		vector<unsigned> cixs;
+		cixs.reserve(num_added);
+		bool can_undo_last_cboj_tree_add(!last_blocks_updated.empty());
+
+		for (vector<unsigned>::const_iterator i = last_blocks_updated.begin(); i != last_blocks_updated.end(); ++i) {
+			if (modified_blocks.find(*i) == modified_blocks.end()) {can_undo_last_cboj_tree_add = 0; break;}
+		}
+		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
+			copy(data_blocks[blocks_to_update[i]].cids.begin(), data_blocks[blocks_to_update[i]].cids.end(), back_inserter(cixs));
+		}
+		if (can_undo_last_cboj_tree_add) {try_undo_last_add_to_cobj_tree(0);}
+		last_blocks_updated = blocks_to_update;
+		//sort(cixs.begin(), cixs.end()); // doesn't really help
+		add_to_cobj_tree(cixs, 0);
+	}
 	if (!ao_lighting.empty()) {
 		block_group_t cur_group;
 
 		for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
-			calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
 			unsigned const xbix(blocks_to_update[i]%params.num_blocks), x1(xbix*xblocks), x2((xbix+1)*xblocks);
 			unsigned const ybix(blocks_to_update[i]/params.num_blocks), y1(ybix*yblocks), y2((ybix+1)*yblocks);
 			block_group_t group; // add a border of 1 to account for rounding errors
@@ -947,26 +999,18 @@ void voxel_model::proc_pending_updates() {
 				cur_group.union_with_group(group);
 			}
 			else {
-				assert(cur_group.area() > 0);
-				update_smoke_indir_tex_range(cur_group.v[0][0], cur_group.v[0][1], cur_group.v[1][0], cur_group.v[1][1], 1);
+				update_ao_texture(cur_group);
 				cur_group = group;
 			}
 		}
-		if (cur_group.area() > 0) {
-			update_smoke_indir_tex_range(cur_group.v[0][0], cur_group.v[0][1], cur_group.v[1][0], cur_group.v[1][1], 1);
-		}
+		if (cur_group.area() > 0) {update_ao_texture(cur_group);}
 	}
-	volume_added = 0;
-	scene_dlist_invalid = 1;
-	PRINT_TIME("Process Voxel Updates");
 }
 
 
-void voxel_model::build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, bool verbose) {
+void voxel_model::build(bool ao_lighting, bool verbose) {
 
 	RESET_TIME;
-	add_cobjs    = add_cobjs_;
-	add_as_fixed = add_as_fixed_;
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 
 	switch (params.atten_at_edges) {
@@ -983,21 +1027,10 @@ void voxel_model::build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, b
 	if (params.remove_unconnected) remove_unconnected_outside();
 	if (verbose) {PRINT_TIME("  Remove Unconnected");}
 	unsigned const tot_blocks(params.num_blocks*params.num_blocks);
-	assert(pt_to_ix.empty() && tri_data.empty() && data_blocks.empty());
+	assert(pt_to_ix.empty() && tri_data.empty());
 	pt_to_ix.resize(tot_blocks);
-	data_blocks.resize(tot_blocks);
 	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
-
-	if (PRE_ALLOC_COBJS && add_cobjs) {
-		unsigned num_triangles(0);
-		#pragma omp parallel for schedule(static,1)
-		for (int block = 0; block < (int)tot_blocks; ++block) {
-			num_triangles += create_block(block, 1, 1);
-		}
-		if (2*coll_objects.size() < num_triangles) {
-			reserve_coll_objects(coll_objects.size() + 1.1*num_triangles); // reserve with 10% buffer
-		}
-	}
+	pre_build_hook();
 
 	#pragma omp parallel for schedule(static,1)
 	for (int block = 0; block < (int)tot_blocks; ++block) {
@@ -1009,6 +1042,31 @@ void voxel_model::build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, b
 		calc_ao_lighting();
 		if (verbose) {PRINT_TIME("  Voxel AO Lighting");}
 	}
+}
+
+
+void voxel_model_ground::pre_build_hook() {
+
+	assert(data_blocks.empty());
+	if (!add_cobjs)       return; // nothing to do
+	data_blocks.resize(tri_data.size());
+	if (!PRE_ALLOC_COBJS) return; // nothing to do
+	unsigned num_triangles(0);
+	#pragma omp parallel for schedule(static,1)
+	for (int block = 0; block < (int)tri_data.size(); ++block) {
+		num_triangles += create_block(block, 1, 1);
+	}
+	if (2*coll_objects.size() < num_triangles) {
+		reserve_coll_objects(coll_objects.size() + 1.1*num_triangles); // reserve with 10% buffer
+	}
+}
+
+
+void voxel_model_ground::build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, bool verbose) {
+
+	add_cobjs    = add_cobjs_;
+	add_as_fixed = add_as_fixed_;
+	voxel_model::build(ao_lighting, verbose);
 }
 
 
@@ -1129,15 +1187,10 @@ void setup_voxel_landscape(voxel_params_t const &params, float default_val) {
 void gen_voxel_landscape() {
 
 	RESET_TIME;
-#if 1
 	setup_voxel_landscape(global_voxel_params, 0.0);
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
 		global_voxel_params.normalize_to_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
-#else
-	point const center(0.0, 0.0, (zbottom + 0.5*Z_SCENE_SIZE));
-	gen_voxel_asteroid(terrain_voxel_model, center, 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE), MESH_X_SIZE, 456+rand_gen_index);
-#endif
 	PRINT_TIME(" Voxel Gen");
 	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0, 1, 1);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
@@ -1166,10 +1219,11 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 }
 
 
-void gen_voxel_asteroid(voxel_model &model, point const &center, float radius, unsigned size, int rseed) {
+void gen_voxel_asteroid(voxel_model_space &model, point const &center, float radius, unsigned size, int rseed) {
 
 	//RESET_TIME;
 	voxel_params_t params;
+	params.remove_unconnected = 1; // init only
 	params.normalize_to_1 = 0;
 	params.atten_at_edges = 4; // or could be 3
 	params.num_blocks     = 2; // subdivision not needed? it produces seams
@@ -1269,7 +1323,7 @@ bool parse_voxel_option(FILE *fp) {
 		if (!read_bool(fp, global_voxel_params.make_closed_surface)) voxel_file_err("make_closed_surface", error);
 	}
 	else if (str == "remove_unconnected") {
-		if (!read_bool(fp, global_voxel_params.remove_unconnected)) voxel_file_err("remove_unconnected", error);
+		if (!read_uint(fp, global_voxel_params.remove_unconnected) || global_voxel_params.remove_unconnected > 2) voxel_file_err("remove_unconnected", error);
 	}
 	else if (str == "keep_at_scene_edge") {
 		if (!read_uint(fp, global_voxel_params.keep_at_scene_edge) || global_voxel_params.keep_at_scene_edge > 2) voxel_file_err("keep_at_scene_edge", error);

@@ -703,7 +703,7 @@ void check_update_global_lighting(unsigned lights);
 // function prototypes - voxels
 void gen_voxel_landscape();
 bool gen_voxels_from_cobjs(coll_obj_group &cobjs);
-void gen_voxel_asteroid(voxel_model &model, point const &center, float radius, unsigned size, int rseed=456);
+void gen_voxel_asteroid(voxel_model_space &model, point const &center, float radius, unsigned size, int rseed=456);
 bool parse_voxel_option(FILE *fp);
 void render_voxel_data(bool shadow_pass);
 void free_voxel_context();

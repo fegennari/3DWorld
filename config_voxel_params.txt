@@ -19,7 +19,7 @@ voxel height_eval_freq 100.0
 voxel invert 0
 voxel normalize_to_1 1
 voxel make_closed_surface 1
-voxel remove_unconnected 1
+voxel remove_unconnected 2 # 0=never, 1=init only, 2=always
 voxel keep_at_scene_edge 2 # 0=don't keep, 1=always keep, 2=only when scrolling
 voxel remove_under_mesh 1
 voxel atten_top_mode 1 # 0=constant, 1=current mesh, 2=2d surface mesh

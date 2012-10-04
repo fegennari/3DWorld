@@ -1220,7 +1220,7 @@ class  shader_t;
 class  vert_coll_detector;
 struct cobj_query_callback;
 struct user_waypt_t;
-class  voxel_model;
+class  voxel_model_space;
 
 
 #endif // _3DWORLD_H_

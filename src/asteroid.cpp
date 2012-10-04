@@ -197,7 +197,7 @@ vector<float> uobj_asteroid_hmap::pmap_vector; // static
 // AO lighting
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
-	mutable voxel_model model; // FIXME: const problems
+	mutable voxel_model_space model; // FIXME: const problems
 	bool have_sun_pos;
 
 public:
@@ -205,7 +205,7 @@ public:
 		static int obj_id(0); // for random seed
 		RESET_TIME;
 		gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
-		model.build(0, 0, 0, 0); // no cobjs
+		model.build(0, 0);
 		float const gen_radius(model.get_bsphere().radius);
 		assert(gen_radius > 0.0);
 		radius /= gen_radius;

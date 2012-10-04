@@ -16,7 +16,8 @@ struct voxel_params_t {
 	unsigned xsize, ysize, zsize, num_blocks; // num_blocks is in x and y
 	float isolevel, elasticity, mag, freq, atten_thresh, tex_scale, noise_scale, noise_freq, tex_mix_saturate, z_gradient, height_eval_freq, radius_val;
 	float ao_radius, ao_weight_scale, ao_atten_power;
-	bool make_closed_surface, invert, remove_unconnected, remove_under_mesh, add_cobjs, normalize_to_1;
+	bool make_closed_surface, invert, remove_under_mesh, add_cobjs, normalize_to_1;
+	unsigned remove_unconnected; // 0=never, 1=init only, 2=always
 	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer)
 	unsigned keep_at_scene_edge; // 0=don't keep, 1=always keep, 2=only when scrolling
 	unsigned atten_top_mode; // 0=constant, 1=current mesh, 2=2d surface mesh
@@ -30,7 +31,7 @@ struct voxel_params_t {
 
 	voxel_params_t() : xsize(0), ysize(0), zsize(0), num_blocks(12), isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), tex_scale(1.0), noise_scale(0.1),
 		noise_freq(1.0), tex_mix_saturate(5.0), z_gradient(0.0), height_eval_freq(1.0), radius_val(0.5), ao_radius(1.0), ao_weight_scale(2.0), ao_atten_power(1.0), make_closed_surface(1),
-		invert(0), remove_unconnected(1), remove_under_mesh(0), add_cobjs(1), normalize_to_1(1), atten_at_edges(0), keep_at_scene_edge(0), atten_top_mode(0), geom_rseed(123), texture_rseed(321)
+		invert(0), remove_under_mesh(0), add_cobjs(1), normalize_to_1(1), remove_unconnected(1), atten_at_edges(0), keep_at_scene_edge(0), atten_top_mode(0), geom_rseed(123), texture_rseed(321)
 	{
 			tids[0] = tids[1] = 0; colors[0] = colors[1] = base_color = WHITE;
 	}
@@ -119,13 +120,13 @@ public:
 
 class voxel_model : public voxel_manager {
 
-	bool add_cobjs, add_as_fixed, volume_added;
+protected:
+	bool test_mesh, volume_added;
 	typedef vert_norm vertex_type_t;
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	tri_data_t tri_data;
 	noise_texture_manager_t noise_tex_gen;
 	std::set<unsigned> modified_blocks;
-	vector<unsigned> last_blocks_updated;
 	voxel_grid<unsigned char> ao_lighting;
 
 	struct step_dir_t {
@@ -134,13 +135,6 @@ class voxel_model : public voxel_manager {
 		step_dir_t(int x, int y, int z, unsigned n, int d) : nsteps(n), dist_per_step(d) {dir[0] = x; dir[1] = y; dir[2] = z;}
 	};
 	vector<step_dir_t> ao_dirs;
-
-	struct data_block_t {
-		vector<int> cids; // references into coll_objects
-		//unsigned tri_data_ix;
-		void clear() {cids.clear();}
-	};
-	vector<data_block_t> data_blocks;
 
 	struct pt_ix_t {
 		point pt;
@@ -158,20 +152,25 @@ class voxel_model : public voxel_manager {
 
 	void remove_unconnected_outside_modified_blocks(void);
 	unsigned get_block_ix(unsigned voxel_ix) const;
-	bool clear_block(unsigned block_ix);
+	virtual bool clear_block(unsigned block_ix);
 	unsigned create_block(unsigned block_ix, bool first_create, bool count_only);
 	void calc_ao_dirs();
-	void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
+	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
 	void calc_ao_lighting();
 
+	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const {} // do nothing
+	virtual void create_block_hook(unsigned block_ix, vector<triangle> const &triangles) {}
+	virtual void update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added) {}
+	virtual void pre_build_hook() {}
+
 public:
-	voxel_model() : add_cobjs(0), add_as_fixed(0), volume_added(0) {}
+	voxel_model(bool test_mesh_) : test_mesh(test_mesh_), volume_added(0) {}
+	virtual ~voxel_model() {}
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter=-1, unsigned num_fragments=0);
-	void create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const;
 	unsigned get_texture_at(point const &pos) const;
 	void proc_pending_updates();
-	void build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, bool verbose);
+	void build(bool ao_lighting, bool verbose);
 	void setup_tex_gen_for_rendering(shader_t &s);
 	void core_render(shader_t &s, bool is_shadow_pass);
 	void render(bool is_shadow_pass);
@@ -181,6 +180,46 @@ public:
 	cube_t get_bcube() const {return ((tri_data.empty()) ? cube_t(center, center) : tri_data.get_bbox());}
 	sphere_t get_bsphere() const;
 };
+
+
+class voxel_model_ground : public voxel_model {
+
+	bool add_cobjs, add_as_fixed;
+	vector<unsigned> last_blocks_updated;
+
+	struct data_block_t {
+		vector<int> cids; // references into coll_objects
+		//unsigned tri_data_ix;
+		void clear() {cids.clear();}
+	};
+	vector<data_block_t> data_blocks;
+
+	virtual bool clear_block(unsigned block_ix);
+	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const;
+	virtual void create_block_hook(unsigned block_ix, vector<triangle> const &triangles);
+	virtual void update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added);
+	virtual void pre_build_hook();
+
+public:
+	voxel_model_ground() : voxel_model(1), add_cobjs(0), add_as_fixed(0) {}
+	void clear();
+	void build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, bool verbose);
+};
+
+
+class voxel_model_space : public voxel_model {
+
+	unsigned ao_tid;
+	//unsigned shadow_tid;
+
+	void free_ao_texture() {free_texture(ao_tid);}
+	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
+
+public:
+	voxel_model_space() : voxel_model(0), ao_tid(0) {}
+	void free_context() {voxel_model::free_context(); free_ao_texture();}
+};
+
 
 #endif
 
