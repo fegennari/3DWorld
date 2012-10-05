@@ -205,7 +205,7 @@ public:
 		static int obj_id(0); // for random seed
 		RESET_TIME;
 		gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
-		model.build(0, 0);
+		model.build(1, 0);
 		float const gen_radius(model.get_bsphere().radius);
 		assert(gen_radius > 0.0);
 		radius /= gen_radius;
@@ -216,7 +216,8 @@ public:
 		point sun_pos;
 
 		if (!have_sun_pos && get_universe_sun_pos(pos, sun_pos)) { // too slow if there is no sun?
-			dir = (pos - sun_pos).get_norm(); // orient toward the sun
+			dir = (sun_pos - pos).get_norm(); // orient toward the sun
+			force_calc_rotation_vectors();
 			have_sun_pos = 1;
 		}
 		uobj_asteroid_destroyable::apply_physics();
@@ -238,6 +239,8 @@ public:
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 8);
 		s.add_uniform_int("noise_tex", 5);
+		s.add_uniform_int("ao_tex", 9);
+		s.add_uniform_int("shadow_tex", 10);
 		s.add_uniform_float("tex_scale", 1.0);
 		s.add_uniform_float("noise_scale", 0.1);
 		s.add_uniform_float("tex_mix_saturate", 5.0);

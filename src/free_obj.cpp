@@ -426,6 +426,11 @@ void free_obj::calc_rotation_vectors() const {
 		rv1 = rv2 = dir;
 		return;
 	}
+	force_calc_rotation_vectors();
+}
+
+
+void free_obj::force_calc_rotation_vectors() const {
 
 	// rotate in direction <dir>
 	vector3d const orient(get_orient().get_norm());

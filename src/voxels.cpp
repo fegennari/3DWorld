@@ -321,7 +321,8 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 		for (unsigned x = 0; x < nx; ++x) {
 			point const pos(get_pt_at(x, y, 0));
 			int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
-			unsigned const zix((sphere_mode || point_outside_mesh(xpos, ypos)) ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
+			bool const no_zix(sphere_mode || !use_mesh || point_outside_mesh(xpos, ypos));
+			unsigned const zix(no_zix ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
 			
 			for (unsigned z = 0; z < nz; ++z) {
 				calc_outside_val(x, y, z, (z < zix));
@@ -588,7 +589,7 @@ bool voxel_manager::line_intersect(point const &p1, point const &p2, point *int_
 }
 
 
-unsigned voxel_manager::upload_to_3d_texture(int wrap) const {
+unsigned voxel_manager::upload_to_3d_texture(int wrap) const { // only works for float type
 
 	vector<unsigned char> data;
 	data.resize(size());
@@ -756,7 +757,9 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 	float const norm(params.ao_weight_scale/ao_dirs.size());
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
 	unsigned char const end_ray_flags((display_mode & 0x01) ? UNDER_MESH_BIT : 0);
-	unsigned const xstep(max(1U, nx/MESH_X_SIZE)), ystep(max(1U, ny/MESH_Y_SIZE)), zstep(max(1U, nz/MESH_SIZE[2]));
+	unsigned const xstep(use_mesh ? max(1U, nx/MESH_X_SIZE ) : 1U);
+	unsigned const ystep(use_mesh ? max(1U, ny/MESH_Y_SIZE ) : 1U);
+	unsigned const zstep(use_mesh ? max(1U, nz/MESH_SIZE[2]) : 1U);
 	unsigned const x_end(min(nx, (xbix+1)*xblocks)), y_end(min(ny, (ybix+1)*yblocks));
 	int const voxel_sz[3] = {nx, ny, nz};
 	
@@ -773,7 +776,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 				if (!saw_inside) continue;
 				if (increase_only && ao_lighting.get(x, y, z) == 255) continue;
 				point const pos(ao_lighting.get_pt_at(x, y, z));
-				if (test_mesh && !is_over_mesh(pos)) continue;
+				if (use_mesh && !is_over_mesh(pos)) continue;
 				float val(0.0);
 				
 				if (z+1 == nz || !(outside.get(x, y, z+1) & end_ray_flags)) { // above mesh
@@ -845,7 +848,6 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	unsigned bounds[3][2]; // {x,y,z} x {lo,hi}
 	std::set<unsigned> blocks_to_update;
 	float const dist_adjust(0.5*vsz.mag()); // single voxel diagonal half-width
-	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 	bool saw_inside(0), saw_outside(0);
 
 	for (unsigned d = 0; d < 3; ++d) {
@@ -858,7 +860,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 
 			for (unsigned z = bounds[2][0]; z <= bounds[2][1]; ++z) {
 				point const pos(get_pt_at(x, y, z));
-				if (test_mesh && is_under_mesh(pos)) continue;
+				if (use_mesh && is_under_mesh(pos)) continue;
 				float const dist(max(0.0f, (p2p_dist(center, pos) - dist_adjust)));
 				if (dist >= radius) continue; // too far
 				// update voxel values, linear falloff with distance from center (ending at 0.0 at radius)
@@ -1087,6 +1089,41 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 }
 
 
+void voxel_model_space::calc_shadows(voxel_grid<unsigned char> &shadow_data) {
+
+	shadow_data.init(nx, ny, nz, vsz, center, 0, params.num_blocks);
+
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			bool shadowed(0);
+			
+			for (unsigned z = 0; z < nz; ++z) {
+				shadow_data.set(x, y, z, (shadowed ? 0 : 255)); // before shadowed is updated
+				if ((outside.get(x, y, z) & 3) == 0) {shadowed = 1;} // inside
+			}
+		}
+	}
+}
+
+
+void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
+
+	voxel_model::setup_tex_gen_for_rendering(s);
+	
+	if (!ao_lighting.empty()) {
+		if (ao_tid == 0) {ao_tid = create_3d_texture(nx, ny, nz, 1, ao_lighting, GL_LINEAR, GL_CLAMP_TO_EDGE);}
+		set_3d_texture_as_current(ao_tid, 9);
+	}
+	if (!shadow_tid) {
+		voxel_grid<unsigned char> shadow_data;
+		calc_shadows(shadow_data);
+		shadow_tid = create_3d_texture(nx, ny, nz, 1, shadow_data, GL_LINEAR, GL_CLAMP_TO_EDGE);
+	}
+	set_3d_texture_as_current(shadow_tid, 10);
+	set_multitex(0);
+}
+
+
 void voxel_model::core_render(shader_t &s, bool is_shadow_pass) {
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
@@ -1225,11 +1262,13 @@ void gen_voxel_asteroid(voxel_model_space &model, point const &center, float rad
 	voxel_params_t params;
 	params.remove_unconnected = 1; // init only
 	params.normalize_to_1 = 0;
-	params.atten_at_edges = 4; // or could be 3
+	params.atten_at_edges = 4; // sphere (could be 3 or 4)
 	params.num_blocks     = 2; // subdivision not needed? it produces seams
+	params.freq           = 1.2;
+	params.mag            = 1.2;
 	params.radius_val     = 0.75; // seems to work well
 	params.atten_thresh   = 3.0; // user-specified?
-	params.ao_atten_power = 0.7; // user-specified?
+	params.ao_atten_power = 1.5; // user-specified?
 	params.ao_radius      = 1.0*radius;
 	params.tids[0]        = ROCK_TEX;
 	params.tids[1]        = MOSSY_ROCK_TEX; // maybe change later

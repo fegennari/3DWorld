@@ -641,6 +641,7 @@ public:
 	void add_light(unsigned index);
 	vector3d get_orient() const;
 	void calc_rotation_vectors() const;
+	void force_calc_rotation_vectors() const;
 	template<typename T> void rotate_point    (pointT<T> &pt) const;
 	template<typename T> void xform_point     (pointT<T> &pt) const;
 	template<typename T> void rotate_point_inv(pointT<T> &pt) const;

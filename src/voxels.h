@@ -76,6 +76,7 @@ typedef voxel_grid<float> float_voxel_grid;
 class voxel_manager : public float_voxel_grid {
 
 protected:
+	bool use_mesh;
 	voxel_params_t params;
 	voxel_grid<unsigned char> outside;
 
@@ -87,6 +88,7 @@ protected:
 	void add_cobj_voxels(coll_obj &cobj, float filled_val);
 
 public:
+	voxel_manager(bool use_mesh_=0) : use_mesh(use_mesh_) {}
 	void set_params(voxel_params_t const &p) {params = p;}
 	void clear();
 	void create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2);
@@ -121,7 +123,7 @@ public:
 class voxel_model : public voxel_manager {
 
 protected:
-	bool test_mesh, volume_added;
+	bool volume_added;
 	typedef vert_norm vertex_type_t;
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	tri_data_t tri_data;
@@ -164,14 +166,14 @@ protected:
 	virtual void pre_build_hook() {}
 
 public:
-	voxel_model(bool test_mesh_) : test_mesh(test_mesh_), volume_added(0) {}
+	voxel_model(bool use_mesh_) : voxel_manager(use_mesh_), volume_added(0) {}
 	virtual ~voxel_model() {}
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter=-1, unsigned num_fragments=0);
 	unsigned get_texture_at(point const &pos) const;
 	void proc_pending_updates();
 	void build(bool ao_lighting, bool verbose);
-	void setup_tex_gen_for_rendering(shader_t &s);
+	virtual void setup_tex_gen_for_rendering(shader_t &s);
 	void core_render(shader_t &s, bool is_shadow_pass);
 	void render(bool is_shadow_pass);
 	void free_context();
@@ -209,15 +211,16 @@ public:
 
 class voxel_model_space : public voxel_model {
 
-	unsigned ao_tid;
-	//unsigned shadow_tid;
+	unsigned ao_tid, shadow_tid;
 
-	void free_ao_texture() {free_texture(ao_tid);}
+	void free_ao_texture() {free_texture(ao_tid); free_texture(shadow_tid);}
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
+	void calc_shadows(voxel_grid<unsigned char> &shadow_data);
 
 public:
-	voxel_model_space() : voxel_model(0), ao_tid(0) {}
+	voxel_model_space() : voxel_model(0), ao_tid(0), shadow_tid(0) {}
 	void free_context() {voxel_model::free_context(); free_ao_texture();}
+	virtual void setup_tex_gen_for_rendering(shader_t &s);
 };
 
 
