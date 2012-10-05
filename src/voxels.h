@@ -172,7 +172,7 @@ public:
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter=-1, unsigned num_fragments=0);
 	unsigned get_texture_at(point const &pos) const;
 	void proc_pending_updates();
-	void build(bool ao_lighting, bool verbose);
+	void build(bool verbose);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
 	void core_render(shader_t &s, bool is_shadow_pass);
 	void render(bool is_shadow_pass);
@@ -205,7 +205,7 @@ class voxel_model_ground : public voxel_model {
 public:
 	voxel_model_ground() : voxel_model(1), add_cobjs(0), add_as_fixed(0) {}
 	void clear();
-	void build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, bool verbose);
+	void build(bool add_cobjs_, bool add_as_fixed_, bool verbose);
 };
 
 
@@ -213,13 +213,13 @@ class voxel_model_space : public voxel_model {
 
 	unsigned ao_tid, shadow_tid;
 
-	void free_ao_texture() {free_texture(ao_tid); free_texture(shadow_tid);}
+	void free_ao_and_shadow_texture() {free_texture(ao_tid); free_texture(shadow_tid);}
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
 	void calc_shadows(voxel_grid<unsigned char> &shadow_data);
 
 public:
 	voxel_model_space() : voxel_model(0), ao_tid(0), shadow_tid(0) {}
-	void free_context() {voxel_model::free_context(); free_ao_texture();}
+	void free_context() {voxel_model::free_context(); free_ao_and_shadow_texture();}
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
 };
 

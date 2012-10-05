@@ -753,7 +753,7 @@ void voxel_model::calc_ao_dirs() {
 
 void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {
 
-	assert(!ao_lighting.empty());
+	if (ao_lighting.empty()) return; // nothing to do
 	float const norm(params.ao_weight_scale/ao_dirs.size());
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
 	unsigned char const end_ray_flags((display_mode & 0x01) ? UNDER_MESH_BIT : 0);
@@ -820,7 +820,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 void voxel_model_space::calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {
 
 	voxel_model::calc_ao_lighting_for_block(block_ix, increase_only);
-	free_ao_texture(); // will be recalculated if needed
+	free_ao_and_shadow_texture(); // will be recalculated if needed
 }
 
 
@@ -945,10 +945,8 @@ void voxel_model::proc_pending_updates() {
 		modified_blocks.clear();
 		return;
 	}
-	if (!ao_lighting.empty()) {
-		for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
-			calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
-		}
+	for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
+		calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
 	}
 	update_blocks_hook(blocks_to_update, num_added);
 	modified_blocks.clear();
@@ -1010,7 +1008,7 @@ void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_up
 }
 
 
-void voxel_model::build(bool ao_lighting, bool verbose) {
+void voxel_model::build(bool verbose) {
 
 	RESET_TIME;
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
@@ -1039,11 +1037,8 @@ void voxel_model::build(bool ao_lighting, bool verbose) {
 		create_block(block, 1, 0);
 	}
 	if (verbose) {PRINT_TIME("  Triangles to Model");}
-	
-	if (ao_lighting) {
-		calc_ao_lighting();
-		if (verbose) {PRINT_TIME("  Voxel AO Lighting");}
-	}
+	calc_ao_lighting();
+	if (verbose) {PRINT_TIME("  Voxel AO Lighting");}
 }
 
 
@@ -1064,11 +1059,11 @@ void voxel_model_ground::pre_build_hook() {
 }
 
 
-void voxel_model_ground::build(bool add_cobjs_, bool add_as_fixed_, bool ao_lighting, bool verbose) {
+void voxel_model_ground::build(bool add_cobjs_, bool add_as_fixed_, bool verbose) {
 
 	add_cobjs    = add_cobjs_;
 	add_as_fixed = add_as_fixed_;
-	voxel_model::build(ao_lighting, verbose);
+	voxel_model::build(verbose);
 }
 
 
@@ -1229,7 +1224,7 @@ void gen_voxel_landscape() {
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
 		global_voxel_params.normalize_to_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
 	PRINT_TIME(" Voxel Gen");
-	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0, 1, 1);
+	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0, 1);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
 }
 
@@ -1250,7 +1245,7 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 	setup_voxel_landscape(params, -1.0);
 	terrain_voxel_model.create_from_cobjs(cobjs, 1.0);
 	PRINT_TIME(" Cobjs Voxel Gen");
-	terrain_voxel_model.build(params.add_cobjs, 1, 1, 1);
+	terrain_voxel_model.build(params.add_cobjs, 1, 1);
 	PRINT_TIME(" Cobjs Voxels to Triangles/Cobjs");
 	return 1;
 }

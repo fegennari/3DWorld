@@ -658,21 +658,21 @@ void free_obj::draw_shadow_volumes_from(uobject const *sobj, point const &sun_po
 
 	assert(sobj);
 	assert(radius > TOLERANCE);
+	
+	if (COBJ_SHADOWS && !sobj->get_cobjs().empty()) {
+		sobj->draw_shadow_volumes(pos, c_radius, sun_pos, ndiv, test); // must be a u_ship
+		return;
+	}
 	// insert custom drawn-from-sun's-point-of-view code in here...
 	float const sobj_radius(sobj->get_radius());
 	bool const player(sobj == &player_ship());
 	int const ndiv_raw(int(sqrt(16.0*dscale*sobj_radius/radius)));
 	int nsides((player ? 2 : 1)*min(2*N_CYL_SIDES, min(max(N_CYL_SIDES, 4*ndiv), max(3, ndiv_raw))));
 	if (nsides > 32) nsides &= ~7; // remove the last three bits
-	
-	if (!COBJ_SHADOWS || sobj->get_cobjs().empty()) {
-		ushadow_sphere uss(sobj->get_pos(), sobj_radius, pos, c_radius, sun_pos, nsides, player, NULL);
-		float const *const pmap(sobj->get_sphere_shadow_pmap(sun_pos, pos, nsides));
-		if (pmap) uss.set_pmap(pmap);
-		uss.draw_geom(pos, test);
-		return;
-	}
-	sobj->draw_shadow_volumes(pos, c_radius, sun_pos, ndiv, test); // must be a u_ship
+	ushadow_sphere uss(sobj->get_pos(), sobj_radius, pos, c_radius, sun_pos, nsides, player, NULL);
+	float const *const pmap(sobj->get_sphere_shadow_pmap(sun_pos, pos, nsides));
+	if (pmap) uss.set_pmap(pmap);
+	uss.draw_geom(pos, test);
 }
 
 

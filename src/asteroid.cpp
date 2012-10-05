@@ -205,7 +205,7 @@ public:
 		static int obj_id(0); // for random seed
 		RESET_TIME;
 		gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
-		model.build(1, 0);
+		model.build(0);
 		float const gen_radius(model.get_bsphere().radius);
 		assert(gen_radius > 0.0);
 		radius /= gen_radius;
