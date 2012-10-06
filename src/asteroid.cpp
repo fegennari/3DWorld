@@ -112,8 +112,7 @@ public:
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
 		uniform_scale(scale_val);
 		WHITE.do_glColor();
-		//select_texture(MOON_TEX);
-		select_texture(ROCK_SPHERE_TEX);
+		select_texture(ROCK_SPHERE_TEX); // MOON_TEX
 		surface.sd.draw_ndiv_pow2(ddata.ndiv); // use dlist?
 		end_texture();
 	}
@@ -194,7 +193,8 @@ vector<float> uobj_asteroid_hmap::pmap_vector; // static
 
 // FIXME:
 // sphere collision normal
-// AO lighting
+// complex collisions
+// projeted shadows
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 	mutable voxel_model_space model; // FIXME: const problems
@@ -203,11 +203,14 @@ class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 public:
 	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt), have_sun_pos(0) {
 		static int obj_id(0); // for random seed
+		float gen_radius(0.0);
 		RESET_TIME;
-		gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
-		model.build(0);
-		float const gen_radius(model.get_bsphere().radius);
-		assert(gen_radius > 0.0);
+
+		while (gen_radius == 0.0) { // loop until we get a valid asteroid
+			gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
+			model.build(0);
+			gen_radius = model.get_bsphere().radius;
+		}
 		radius /= gen_radius;
 		PRINT_TIME("Create Asteroid");
 	}

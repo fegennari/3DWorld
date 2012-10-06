@@ -431,8 +431,8 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 	vector<unsigned> work; // stack of voxels to process
 	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
-	if (params.atten_at_edges == 3 || params.atten_at_edges == 4) {
-		unsigned const x(nx/2), y(ny/2); // sphere mode, add a single point at the center of the sphere (FIXME: will only work for filled sphere center)
+	if (params.atten_at_edges == 3 || params.atten_at_edges == 4 || !use_mesh) { // sphere mode / not mesh mode
+		unsigned const x(nx/2), y(ny/2); // add a single point at the center of the sphere (FIXME: will only work for filled sphere center)
 
 		if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
 			unsigned const ix(outside.get_ix(x, y, nz/2));
