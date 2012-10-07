@@ -165,7 +165,7 @@ public:
 	ushadow_volume() : cv(0), invalid(0) {}
 	virtual ~ushadow_volume() {}
 	virtual void draw(upos_point_type const &pos) const = 0;
-	void draw_geom(upos_point_type const &pos, bool test) const;
+	void draw_geom(upos_point_type const &pos, bool test, unsigned which_passes=3) const;
 };
 
 class ushadow_sphere : public ushadow_volume { // currently only supports spheres/cylinder shadow projections
@@ -186,12 +186,12 @@ public:
 
 class ushadow_polygon : public ushadow_volume { // currently only supports triangles and quads
 
-	unsigned npts, enable_edge_bits;
+	unsigned npts, disable_edge_bits;
 	upos_point_type p[2][4];
 
 public:
 	ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos, float cur_radius,
-		point const &sun_pos, bool player, free_obj const *const obj=NULL, float rmin=0.0, unsigned ebits=15);
+		point const &sun_pos, bool player, free_obj const *const obj=NULL, float rmin=0.0, unsigned debits=0);
 	void draw(upos_point_type const &pos) const;
 	bool is_outside(upos_point_type const *const p, unsigned npts, upos_point_type const &center, upos_point_type const &ppos) const;
 };

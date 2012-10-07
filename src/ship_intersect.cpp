@@ -554,8 +554,8 @@ bool ushadow_polygon::is_outside(upos_point_type const *const p, unsigned npts,
 }
 
 ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos,
-	float cur_radius, point const &sun_pos, bool player, free_obj const *const obj, float rmin, unsigned ebits)
-	: npts(np), enable_edge_bits(ebits)
+	float cur_radius, point const &sun_pos, bool player, free_obj const *const obj, float rmin, unsigned debits)
+	: npts(np), disable_edge_bits(debits) // Note: setting disable_edge_bits will disable polygon culling
 {
 	assert(npts == 3 || npts == 4);
 	upos_point_type pts_[4];
@@ -570,7 +570,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 	}
 	radius = sqrt(radius);
 
-	if (!dist_less_than(center, cur_pos, cur_radius)) { // not a self-shadow
+	if (disable_edge_bits == 0 && !dist_less_than(center, cur_pos, cur_radius)) { // not a self-shadow
 		vector3d_d const shadow_dir((center - sun_pos).get_norm());
 		
 		if (!sphere_test_comp(sun_pos, cur_pos, shadow_dir*-1.0, (cur_radius + radius)*(cur_radius + radius))) {
@@ -600,7 +600,8 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 		if (is_outside(p[i], npts, center2, ppos)) cv = 0;
 	}
 	for (unsigned i = 0; i < npts && cv; ++i) { // sides
-		if (!(enable_edge_bits & (1<<i))) continue;
+		if (disable_edge_bits & (1<<i)) continue;
+
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < 2; ++k) {
 				pts_[(j<<1)+k] = p[j][(i+(k^j))%npts];
@@ -627,7 +628,8 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 		glBegin(GL_QUADS); // quad strip?
 	}
 	for (unsigned i = 0; i < npts; ++i) { // sides
-		if (!(enable_edge_bits & (1<<i))) continue;
+		if (disable_edge_bits & (1<<i)) continue;
+
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < 2; ++k) {
 				(p[j][(i+(k^j))%npts] - pos).do_glVertex();
@@ -638,7 +640,7 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 }
 
 
-void ushadow_volume::draw_geom(upos_point_type const &pos, bool test) const {
+void ushadow_volume::draw_geom(upos_point_type const &pos, bool test, unsigned which_passes) const {
 
 	if (invalid) return;
 
@@ -650,6 +652,7 @@ void ushadow_volume::draw_geom(upos_point_type const &pos, bool test) const {
 	GLenum const bf[2] = {GL_BACK, GL_FRONT}, zp[2] = {GL_INCR, GL_DECR};
 
 	for (unsigned spass = 0; spass < 2; ++spass) { // GL_STENCIL_TWO_SIDE_EXT?
+		if (!(which_passes & (1<<spass))) continue;
 		glCullFace(bf[spass == 0]);
 		glStencilOp(zp[spass], zp[spass], GL_KEEP);
 		draw(pos);
