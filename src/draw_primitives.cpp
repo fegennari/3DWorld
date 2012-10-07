@@ -376,12 +376,12 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			if (texture) glTexCoord2f(0.5, 1.0); // one big discontinuity at one position
 			vpn.n[s].do_glNormal();
 			vpn.p[(s <<1)+1].do_glVertex();
-			if (texture) glTexCoord2f((1.0 - (s+0.0)*ndiv_inv), 0.0);
-			(vpn.n[s] + vpn.n[sp]).do_glNormal(); // normalize?
-			vpn.p[(s <<1)+0].do_glVertex();
 			if (texture) glTexCoord2f((1.0 - (s+1.0)*ndiv_inv), 0.0);
 			(vpn.n[s] + vpn.n[sn]).do_glNormal(); // normalize?
 			vpn.p[(sn<<1)+0].do_glVertex();
+			if (texture) glTexCoord2f((1.0 - (s+0.0)*ndiv_inv), 0.0);
+			(vpn.n[s] + vpn.n[sp]).do_glNormal(); // normalize?
+			vpn.p[(s <<1)+0].do_glVertex();
 		}
 		glEnd();
 	}
