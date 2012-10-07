@@ -44,7 +44,11 @@ vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float 
 #ifdef USE_GOOD_SPECULAR
 	vec4 specular = get_light_specular(normal, light_dir, eye_pos, i);
 #else
+#ifndef NO_SPECULAR
+	vec4 specular = vec4(0,0,0,0);
+#else
 	vec4 specular = get_light_specular_fast(normal, i);
+#endif
 #endif
 	return (ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
 }
