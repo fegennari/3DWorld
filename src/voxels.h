@@ -176,7 +176,7 @@ public:
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
 	void core_render(shader_t &s, bool is_shadow_pass);
 	void render(bool is_shadow_pass);
-	void free_context();
+	virtual void free_context();
 	float eval_noise_texture_at(point const &pos) const;
 	float get_ao_lighting_val(point const &pos) const;
 	cube_t get_bcube() const {return ((tri_data.empty()) ? cube_t(center, center) : tri_data.get_bbox());}
@@ -212,15 +212,19 @@ public:
 class voxel_model_space : public voxel_model {
 
 	unsigned ao_tid, shadow_tid;
+	vector<tquad_t> shadow_edge_quads;
 
 	void free_ao_and_shadow_texture() {free_texture(ao_tid); free_texture(shadow_tid);}
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
-	void calc_shadows(voxel_grid<unsigned char> &shadow_data);
+	void calc_shadows(voxel_grid<unsigned char> &shadow_data) const;
+	void extract_shadow_edges(voxel_grid<unsigned char> const &shadow_data);
 
 public:
 	voxel_model_space() : voxel_model(0), ao_tid(0), shadow_tid(0) {}
-	void free_context() {voxel_model::free_context(); free_ao_and_shadow_texture();}
+	void clear() {voxel_model::clear(); shadow_edge_quads.clear();}
+	virtual void free_context() {voxel_model::free_context(); free_ao_and_shadow_texture();}
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
+	vector<tquad_t> const &get_shadow_edge_quads() const {return shadow_edge_quads;}
 };
 
 

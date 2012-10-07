@@ -234,6 +234,7 @@ public:
 		shader_t s;
 		s.set_int_prefix("num_lights", min(8U, exp_lights.size()+2U), 1); // FS
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		s.set_prefix("#define NO_SPECULAR", 1); // FS (optional/optimization)
 		if (!glIsEnabled(GL_FOG)) s.set_prefix("#define NO_FOG", 1); // FS
 		s.set_vert_shader("asteroid");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+asteroid");
@@ -289,6 +290,7 @@ public:
 		}
 		return 1;
 	}
+
 	virtual bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const { // Note: dscale is ignored
 		point p[2] = {p1, p2};
 		xform_point_x2(p[0], p[1]);
@@ -296,8 +298,22 @@ public:
 		if (p_int) {xform_point_inv(*p_int);}
 		return 1;
 	}
+
+	virtual void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool test) const {
+		point spos_xf(sun_pos);
+		xform_point(spos_xf);
+		vector<tquad_t> const &quads(model.get_shadow_edge_quads());
+
+		for (unsigned pass = 0; pass < 2; ++pass) {
+			for (vector<tquad_t>::const_iterator i = quads.begin(); i != quads.end(); ++i) {
+				upos_point_type pts[4];
+				for (unsigned j = 0; j < i->npts; ++j) {pts[j] = i->pts[j];}
+				ushadow_polygon(pts, i->npts, targ_pos, cur_radius, sun_pos, 0, this, 0.0, 6).draw_geom(targ_pos, test, (1<<pass));
+			}
+		}
+	}
+	virtual bool casts_detailed_shadow() const {return !model.get_shadow_edge_quads().empty();}
 	virtual void clear_context() {model.free_context();}
-	// FIXME: shadow function?
 };
 
 

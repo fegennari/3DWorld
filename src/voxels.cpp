@@ -1084,7 +1084,7 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 }
 
 
-void voxel_model_space::calc_shadows(voxel_grid<unsigned char> &shadow_data) {
+void voxel_model_space::calc_shadows(voxel_grid<unsigned char> &shadow_data) const {
 
 	shadow_data.init(nx, ny, nz, vsz, center, 0, params.num_blocks);
 
@@ -1101,6 +1101,48 @@ void voxel_model_space::calc_shadows(voxel_grid<unsigned char> &shadow_data) {
 }
 
 
+void voxel_model_space::extract_shadow_edges(voxel_grid<unsigned char> const &shadow_data) {
+
+#if 0
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			cout << ((shadow_data.get(x, y, nz-1) == 0) ? "*" : ".");
+		}
+		cout << endl;
+	}
+	cout << endl;
+#endif
+
+	// use the z=nz-1 2D projection
+	shadow_edge_quads.clear();
+	unsigned const ndiv(max(nx, ny));
+	float const step_delta(0.5*min(vsz.x, min(vsz.y, vsz.z)));
+	point last(center);
+
+	for (unsigned n = 0; n <= ndiv; ++n) { // first and last ray are the same
+		float const angle(TWO_PI*((float)n/(float)ndiv)), dx(cosf(angle)), dy(sinf(angle));
+		vector3d const step(step_delta*point(dx, dy, 0.0));
+		point pos(center);
+
+		while (1) {
+			int i[3]; // x,y,z
+			get_xyz(pos, i);
+			if (!is_valid_range(i)) break; // off the grid
+			if (shadow_data.get(i[0], i[1], nz-1) != 0) break; // unshadowed
+			pos += step;
+		}
+		if (n > 0) { // last is valid
+			tquad_t tri(3);
+			tri[0] = pos;
+			tri[1] = last;
+			tri[2] = center;
+			shadow_edge_quads.push_back(tri);
+		}
+		last = pos;
+	}
+}
+
+
 void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 
 	voxel_model::setup_tex_gen_for_rendering(s);
@@ -1110,8 +1152,9 @@ void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 		set_3d_texture_as_current(ao_tid, 9);
 	}
 	if (!shadow_tid) {
-		voxel_grid<unsigned char> shadow_data;
+		voxel_grid<unsigned char> shadow_data; // 0 == no light/in shadow, 255 = full light/no shadow
 		calc_shadows(shadow_data);
+		extract_shadow_edges(shadow_data);
 		shadow_tid = create_3d_texture(nx, ny, nz, 1, shadow_data, GL_LINEAR, GL_CLAMP_TO_EDGE);
 	}
 	set_3d_texture_as_current(shadow_tid, 10);
