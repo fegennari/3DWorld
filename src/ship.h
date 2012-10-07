@@ -186,12 +186,12 @@ public:
 
 class ushadow_polygon : public ushadow_volume { // currently only supports triangles and quads
 
-	unsigned npts;
+	unsigned npts, enable_edge_bits;
 	upos_point_type p[2][4];
 
 public:
 	ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos, float cur_radius,
-		point const &sun_pos, bool player, free_obj const *const obj=NULL, float rmin=0.0);
+		point const &sun_pos, bool player, free_obj const *const obj=NULL, float rmin=0.0, unsigned ebits=15);
 	void draw(upos_point_type const &pos) const;
 	bool is_outside(upos_point_type const *const p, unsigned npts, upos_point_type const &center, upos_point_type const &ppos) const;
 };

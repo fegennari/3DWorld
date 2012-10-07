@@ -553,8 +553,9 @@ bool ushadow_polygon::is_outside(upos_point_type const *const p, unsigned npts,
 	return (neg_norm != (dot_product(norm, (ppos - c + norm*(perspective_nclip*(neg_norm ? -1.0 : 1.0)))) < 0.0));
 }
 
-ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos, float cur_radius,
-								 point const &sun_pos, bool player, free_obj const *const obj, float rmin) : npts(np)
+ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos,
+	float cur_radius, point const &sun_pos, bool player, free_obj const *const obj, float rmin, unsigned ebits)
+	: npts(np), enable_edge_bits(ebits)
 {
 	assert(npts == 3 || npts == 4);
 	upos_point_type pts_[4];
@@ -599,6 +600,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 		if (is_outside(p[i], npts, center2, ppos)) cv = 0;
 	}
 	for (unsigned i = 0; i < npts && cv; ++i) { // sides
+		if (!(enable_edge_bits & (1<<i))) continue;
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < 2; ++k) {
 				pts_[(j<<1)+k] = p[j][(i+(k^j))%npts];
@@ -625,6 +627,7 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 		glBegin(GL_QUADS); // quad strip?
 	}
 	for (unsigned i = 0; i < npts; ++i) { // sides
+		if (!(enable_edge_bits & (1<<i))) continue;
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < 2; ++k) {
 				(p[j][(i+(k^j))%npts] - pos).do_glVertex();
@@ -659,8 +662,8 @@ void free_obj::draw_shadow_volumes_from(uobject const *sobj, point const &sun_po
 	assert(sobj);
 	assert(radius > TOLERANCE);
 	
-	if (COBJ_SHADOWS && !sobj->get_cobjs().empty()) {
-		sobj->draw_shadow_volumes(pos, c_radius, sun_pos, ndiv, test); // must be a u_ship
+	if (COBJ_SHADOWS && sobj->casts_detailed_shadow()) {
+		sobj->draw_shadow_volumes(pos, c_radius, sun_pos, ndiv, test);
 		return;
 	}
 	// insert custom drawn-from-sun's-point-of-view code in here...
@@ -670,7 +673,7 @@ void free_obj::draw_shadow_volumes_from(uobject const *sobj, point const &sun_po
 	int nsides((player ? 2 : 1)*min(2*N_CYL_SIDES, min(max(N_CYL_SIDES, 4*ndiv), max(3, ndiv_raw))));
 	if (nsides > 32) nsides &= ~7; // remove the last three bits
 	ushadow_sphere uss(sobj->get_pos(), sobj_radius, pos, c_radius, sun_pos, nsides, player, NULL);
-	float const *const pmap(sobj->get_sphere_shadow_pmap(sun_pos, pos, nsides));
+	float const *const pmap(sobj->get_sphere_shadow_pmap(sun_pos, pos, nsides)); // FIXME: implement this for planets and moons
 	if (pmap) uss.set_pmap(pmap);
 	uss.draw_geom(pos, test);
 }

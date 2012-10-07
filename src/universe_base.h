@@ -67,6 +67,7 @@ public:
 	virtual int  get_type()  const {assert(0); return 0;}
 	virtual int  get_owner() const {assert(0); return 0;}
 	virtual cobj_vector_t const &get_cobjs() const;
+	virtual bool casts_detailed_shadow() const {return !get_cobjs().empty();}
 	virtual void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool test) const {assert(0);}
 	virtual float const *get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {return NULL;}
 };
