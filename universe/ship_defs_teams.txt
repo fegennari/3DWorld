@@ -14,7 +14,7 @@ $PLAYER_ENEMY 1
 $BUILD_ANY    1
 $RAND_SEED    1
 
-$ADD_ASTEROID 10 AS_MODEL_HMAP 0.005 0.02 # type number rseed rmin rmax
+$ADD_ASTEROID 10 AS_MODEL_HMAP 0.005 0.02 0.2 # type number rseed rmin rmax distribution [px py pz]
 
 #$BLACK_HOLE  -0.3 0.0 0.0  0.025
 

@@ -543,19 +543,19 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 			}
 			break;
 
-		case CMD_ADD_ASTEROID: // <unsigned num> <unsigned model> <float min_radius> <float max_radius> [px py pz]
+		case CMD_ADD_ASTEROID: // <unsigned num> <unsigned model> <float min_radius> <float max_radius> <float distribution> [px py pz]
 			{
 				unsigned model, num;
 				float r1, r2, dist(0.0);
 				point pos;
-				if (!(cfg >> num) || !read_enum(asteroid_m, model, "alignment") || !(cfg >> r1 >> r2)) return 0;
+				if (!(cfg >> num) || !read_enum(asteroid_m, model, "alignment") || !(cfg >> r1 >> r2 >> dist)) return 0;
 				assert(r1 <= r2 && model < NUM_AS_MODELS);
 				bool const pos_set(read_pt(pos));
 				if (!pos_set) cfg.clear();
 				assert(num == 1 || !pos_set);
 
 				for (unsigned i = 0; i < num; ++i) { // could check for collisions
-					point const pos(ustart_pos + (pos_set ? pos : signed_rand_vector_spherical(spawn_dist)));
+					point const pos((pos_set ? pos : ustart_pos) + signed_rand_vector_spherical(dist));
 					add_uobj(uobj_asteroid::create(pos, rand_uniform(r1, r2), model));
 				}
 			}
