@@ -169,7 +169,7 @@ public:
 	voxel_model(bool use_mesh_) : voxel_manager(use_mesh_), volume_added(0) {}
 	virtual ~voxel_model() {}
 	void clear();
-	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter=-1, unsigned num_fragments=0);
+	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, point *damage_pos=NULL, int shooter=-1, unsigned num_fragments=0);
 	unsigned get_texture_at(point const &pos) const;
 	void proc_pending_updates();
 	void build(bool verbose);

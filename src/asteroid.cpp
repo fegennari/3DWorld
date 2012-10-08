@@ -51,7 +51,7 @@ class uobj_asteroid_destroyable : public uobj_asteroid {
 
 public:
 	uobj_asteroid_destroyable(point const &pos_, float radius_, unsigned lt) : uobj_asteroid(pos_, radius_, lt) {}
-	virtual void apply_damage(float damage, point const &hit_pos) = 0;
+	virtual bool apply_damage(float damage, point &hit_pos) = 0;
 
 	virtual float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
 		// similar to add_damage_to_smiley_surface()
@@ -63,8 +63,11 @@ public:
 		}
 		if (gen_fragments) {
 			float const damage_val(min(0.5, 0.02*val));
-			apply_damage(damage_val, hit_pos);
-			gen_moving_fragments(hit_pos, min(25U, max(1U, unsigned(20*damage_val))), get_fragment_tid(hit_pos), 0.25);
+			point mod_hit_pos(hit_pos);
+			
+			if (apply_damage(((wc == WCLASS_EXPLODE) ? 10.0 : 1.0)*damage_val, mod_hit_pos)) { // ship explosions are more damaging
+				gen_moving_fragments(mod_hit_pos, min(25U, max(1U, unsigned(20*damage_val))), get_fragment_tid(mod_hit_pos), 0.25);
+			}
 		}
 		return uobj_asteroid::damage(val, type, hit_pos, source, wc);
 	}
@@ -117,13 +120,14 @@ public:
 		end_texture();
 	}
 
-	virtual void apply_damage(float damage, point const &hit_pos) {
+	virtual bool apply_damage(float damage, point &hit_pos) {
 		int tx, ty;
 		get_tex_coords_at(hit_pos, tx, ty);
 		int const tsize(int(0.05*damage*ASTEROID_NDIV + 1.0)), radsq(4*tsize*tsize);
 		int x1(tx - tsize), y1(ty - 2*tsize), x2(tx + tsize), y2(ty + 2*tsize);
 		point **points = surface.sd.get_points();
 		assert(points);
+		bool damaged(0);
 
 		for (int yy = y1; yy < y2; ++yy) { // allow texture wrap
 			int const y((yy + ASTEROID_NDIV) % ASTEROID_NDIV), yterm((yy-ty)*(yy-ty));
@@ -138,8 +142,10 @@ public:
 				pt -= pt*(damage/((dist + 2.0)*pt_mag));
 				float const pt_mag2(pt.mag());
 				if (pt_mag2 < 0.19) pt *= 0.19/pt_mag2;
+				damaged = 1;
 			}
 		}
+		return damaged;
 	}
 	virtual int get_fragment_tid(point const &hit_pos) const {return ROCK_SPHERE_TEX;}
 
@@ -262,11 +268,13 @@ public:
 		select_texture(WHITE_TEX, 0);
 	}
 
-	virtual void apply_damage(float damage, point const &hit_pos) {
-		float const damage_radius(min(0.2, 0.1*damage));
-		point center(hit_pos);
-		xform_point(center);
-		model.update_voxel_sphere_region(center, damage_radius, -1.0);
+	virtual bool apply_damage(float damage, point &hit_pos) {
+		float const damage_radius(min(0.5, 0.1*damage));
+		xform_point(hit_pos);
+		point const center(hit_pos);
+		bool const damaged(model.update_voxel_sphere_region(center, damage_radius, -1.0, &hit_pos));
+		xform_point_inv(hit_pos);
+		return damaged;
 	}
 
 	virtual int get_fragment_tid(point const &hit_pos) const {

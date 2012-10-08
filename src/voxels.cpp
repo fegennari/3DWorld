@@ -838,8 +838,9 @@ void voxel_model::calc_ao_lighting() {
 
 
 // returns true if something was updated
-bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments) {
-
+bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center,
+	point *damage_pos, int shooter, unsigned num_fragments)
+{
 	assert(radius > 0.0);
 	if (val_at_center == 0.0 || empty()) return 0;
 	bool const material_removed(val_at_center < 0.0);
@@ -873,6 +874,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				was_updated = 1;
 				((val      < params.isolevel) ? saw_outside : saw_inside) = 1;
 				((prev_val < params.isolevel) ? saw_outside : saw_inside) = 1;
+				if (damage_pos) {*damage_pos = pos;}
 			}
 			if (!was_updated) continue;
 			// check adjacent voxels since we will need to update our neighbors at the boundaries
@@ -1462,7 +1464,7 @@ bool update_voxel_sphere_region(point const &center, float radius, float val_at_
 
 	// optimization/hack to skip the update if the player didn't cause it and the camera can't see it
 	if (shooter != CAMERA_ID && !camera_pdu.sphere_visible_test(center, radius)) return 0;
-	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center*(display_framerate ? 1.0 : -1.0), shooter, num_fragments);
+	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center*(display_framerate ? 1.0 : -1.0), NULL, shooter, num_fragments);
 }
 
 void proc_voxel_updates() {
