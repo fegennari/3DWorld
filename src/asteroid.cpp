@@ -300,19 +300,9 @@ public:
 	}
 
 	virtual void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool test) const {
-		point spos_xf(sun_pos);
-		xform_point(spos_xf);
-		vector<tquad_t> const &quads(model.get_shadow_edge_quads());
-
-		for (unsigned pass = 0; pass < 2; ++pass) {
-			for (vector<tquad_t>::const_iterator i = quads.begin(); i != quads.end(); ++i) {
-				upos_point_type pts[4];
-				for (unsigned j = 0; j < i->npts; ++j) {pts[j] = i->pts[j];}
-				ushadow_polygon(pts, i->npts, targ_pos, cur_radius, sun_pos, 0, this, 0.0, 6).draw_geom(targ_pos, test, (1<<pass));
-			}
-		}
+		ushadow_voxel_tris(model.get_shadow_edge_tris(), targ_pos, cur_radius, sun_pos, radius, pos, this, 0.0).draw_geom(targ_pos, test);
 	}
-	virtual bool casts_detailed_shadow() const {return !model.get_shadow_edge_quads().empty();}
+	virtual bool casts_detailed_shadow() const {return !model.get_shadow_edge_tris().empty();}
 	virtual void clear_context() {model.free_context();}
 };
 

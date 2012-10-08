@@ -161,11 +161,11 @@ void merge_weapons(vector<ship_weapon> &weapons, ship_weapon const &w); // has t
 class ushadow_volume {
 
 public:
-	bool cv, invalid;
-	ushadow_volume() : cv(0), invalid(0) {}
+	bool invalid;
+	ushadow_volume() : invalid(0) {}
 	virtual ~ushadow_volume() {}
 	virtual void draw(upos_point_type const &pos) const = 0;
-	void draw_geom(upos_point_type const &pos, bool test, unsigned which_passes=3) const;
+	void draw_geom(upos_point_type const &pos, bool test) const;
 };
 
 class ushadow_sphere : public ushadow_volume { // currently only supports spheres/cylinder shadow projections
@@ -186,14 +186,27 @@ public:
 
 class ushadow_polygon : public ushadow_volume { // currently only supports triangles and quads
 
-	unsigned npts, disable_edge_bits;
+	unsigned npts;
 	upos_point_type p[2][4];
 
 public:
 	ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos, float cur_radius,
-		point const &sun_pos, bool player, free_obj const *const obj=NULL, float rmin=0.0, unsigned debits=0);
+		point const &sun_pos, bool player, free_obj const *const obj=NULL, float rmin=0.0);
 	void draw(upos_point_type const &pos) const;
-	bool is_outside(upos_point_type const *const p, unsigned npts, upos_point_type const &center, upos_point_type const &ppos) const;
+};
+
+class ushadow_voxel_tris : public ushadow_volume {
+
+	struct voxel_triangle_t {
+		upos_point_type p[2][3];
+	};
+	typedef vector<voxel_triangle_t> tri_vect_t;
+	tri_vect_t tris;
+
+public:
+	ushadow_voxel_tris(vector<triangle> const &triangles, upos_point_type const &cur_pos, float cur_radius,
+		point const &sun_pos, float obj_radius, point const &obj_center, free_obj const *const obj=NULL, float rmin=0.0);
+	void draw(upos_point_type const &pos) const;
 };
 
 

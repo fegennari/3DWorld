@@ -529,10 +529,6 @@ ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, up
 		return;
 	}
 	if (min(rad[0], rad[1])/max(rad[0], rad[1]) > 0.94) rad[0] = rad[1] = 0.5*(rad[0] + rad[1]);
-	// what if scale != zero_vector?
-	// what about pmap? since cv is conservative, can sometimes have a false 1, though that seems to be OK
-	/*cv = (player || point_in_cylinder((spos[0] + shadow_dir*perspective_nclip), (spos[1] - shadow_dir*perspective_nclip),
-		get_player_pos2(), (rad[0] + perspective_nclip), (rad[1] + perspective_nclip)));*/ // use nc to partially deal with near clipping plane
 }
 
 
@@ -543,19 +539,8 @@ void ushadow_sphere::draw(upos_point_type const &pos) const {
 }
 
 
-bool ushadow_polygon::is_outside(upos_point_type const *const p, unsigned npts,
-								 upos_point_type const &center, upos_point_type const &ppos) const
-{
-	upos_point_type norm;
-	get_normal(p[0], p[1], p[2], norm, 1);
-	upos_point_type const c(get_center(p, npts));
-	bool const neg_norm(dot_product(norm, (center - c)) < 0.0);
-	return (neg_norm != (dot_product(norm, (ppos - c + norm*(perspective_nclip*(neg_norm ? -1.0 : 1.0)))) < 0.0));
-}
-
 ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, upos_point_type const &cur_pos,
-	float cur_radius, point const &sun_pos, bool player, free_obj const *const obj, float rmin, unsigned debits)
-	: npts(np), disable_edge_bits(debits) // Note: setting disable_edge_bits will disable polygon culling
+	float cur_radius, point const &sun_pos, bool player, free_obj const *const obj, float rmin) : npts(np)
 {
 	assert(npts == 3 || npts == 4);
 	upos_point_type pts_[4];
@@ -570,7 +555,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 	}
 	radius = sqrt(radius);
 
-	if (disable_edge_bits == 0 && !dist_less_than(center, cur_pos, cur_radius)) { // not a self-shadow
+	if (!dist_less_than(center, cur_pos, cur_radius)) { // not a self-shadow
 		vector3d_d const shadow_dir((center - sun_pos).get_norm());
 		
 		if (!sphere_test_comp(sun_pos, cur_pos, shadow_dir*-1.0, (cur_radius + radius)*(cur_radius + radius))) {
@@ -583,8 +568,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 	double const min_dist(max(rmin, MIN_SHADOW_DIST*radius));
 
 	for (unsigned i = 0; i < npts; ++i) {
-		unsigned const i_((dp > 0.0) ? (npts - i - 1) : i);
-		upos_point_type const &pos(pts_[i_]);
+		upos_point_type const &pos(pts_[(dp > 0.0) ? (npts - i - 1) : i]);
 		vector3d_d const shadow_dir((pos - sun_pos).get_norm());
 		double const dist(dot_product_ptv(shadow_dir, cur_pos, pos));
 
@@ -592,23 +576,6 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 			p[j][i] = pos + shadow_dir*max(min_dist, (dist + (1.2 - 2.4*j)*cur_radius));
 		}
 	}
-	/*cv = 1;
-	if (player) return; // done
-	upos_point_type const ppos(get_player_pos()), center2((get_center(p[0], npts) + get_center(p[1], npts))*0.5);
-
-	for (unsigned i = 0; i < 2 && cv; ++i) { // ends
-		if (is_outside(p[i], npts, center2, ppos)) cv = 0;
-	}
-	for (unsigned i = 0; i < npts && cv; ++i) { // sides
-		if (disable_edge_bits & (1<<i)) continue;
-
-		for (unsigned j = 0; j < 2; ++j) {
-			for (unsigned k = 0; k < 2; ++k) {
-				pts_[(j<<1)+k] = p[j][(i+(k^j))%npts];
-			}
-		}
-		if (is_outside(pts_, 4, center2, ppos)) cv = 0;
-	}*/
 }
 
 // could use back face culling, but the glBegin/glEnd dominates so it wouldn't help much
@@ -623,36 +590,85 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 			(p[i][i ? j : (npts-j-1)] - pos).do_glVertex();
 		}
 	}
-	if (npts == 3) {
-		glEnd();
-		glBegin(GL_QUADS); // quad strip?
-	}
 	for (unsigned i = 0; i < npts; ++i) { // sides
-		if (disable_edge_bits & (1<<i)) continue;
-
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < 2; ++k) {
 				(p[j][(i+(k^j))%npts] - pos).do_glVertex();
 			}
+		}
+		if (npts == 3) { // need to draw as triangles (0 and 2)
+			(p[0][i] - pos).do_glVertex();
+			(p[1][(i+1)%npts] - pos).do_glVertex();
 		}
 	}
 	glEnd();
 }
 
 
-void ushadow_volume::draw_geom(upos_point_type const &pos, bool test, unsigned which_passes) const {
+ushadow_voxel_tris::ushadow_voxel_tris(vector<triangle> const &triangles, upos_point_type const &cur_pos,
+	float cur_radius, point const &sun_pos, float obj_radius, point const &obj_center, free_obj const *const obj, float rmin)
+{
+	tris.resize(triangles.size());
+	point center(obj_center);
+	if (obj) obj->xform_point_inv(center);
+	double const min_dist(max(rmin, MIN_SHADOW_DIST*obj_radius));
+
+	for (unsigned t = 0; t < triangles.size(); ++t) {
+		upos_point_type pts[3];
+		UNROLL_3X(pts[i_] = triangles[t].pts[i_];)
+		if (obj) obj->xform_point_inv_multi(pts, 3);
+		upos_point_type norm;
+		get_normal(pts[0], pts[1], pts[2], norm, 0);
+		double const dp(dot_product(norm, upos_point_type(center - sun_pos)));
+
+		for (unsigned i = 0; i < 3; ++i) {
+			upos_point_type const &pos(pts[(dp > 0.0) ? (2-i) : i]);
+			vector3d_d const shadow_dir((pos - sun_pos).get_norm());
+			double const dist(dot_product_ptv(shadow_dir, cur_pos, pos));
+
+			for (unsigned j = 0; j < 2; ++j) {
+				tris[t].p[j][i] = pos + shadow_dir*max(min_dist, (dist + (1.2 - 2.4*j)*cur_radius));
+			}
+		}
+	}
+}
+
+
+void ushadow_voxel_tris::draw(upos_point_type const &pos) const {
+
+	assert(!invalid);
+	glBegin(GL_TRIANGLES);
+
+	for (tri_vect_t::const_iterator t = tris.begin(); t != tris.end(); ++t) {
+		for (unsigned i = 0; i < 2; ++i) { // ends (cull faces?)
+			for (unsigned j = 0; j < 3; ++j) {
+				(t->p[i][i ? j : (2-j)] - pos).do_glVertex();
+			}
+		}
+		for (unsigned j = 0; j < 2; ++j) {
+			for (unsigned k = 0; k < 2; ++k) {
+				(t->p[j][(k^j)%3] - pos).do_glVertex();
+			}
+		}
+		(t->p[0][0] - pos).do_glVertex(); // need to draw as triangles (0 and 2)
+		(t->p[1][1] - pos).do_glVertex();
+	}
+	glEnd();
+}
+
+
+void ushadow_volume::draw_geom(upos_point_type const &pos, bool test) const {
 
 	if (invalid) return;
 
 	if (test) {
-		set_emissive_color(colorRGBA(cv, (1.0 - cv), 0.0, 0.25));
+		set_emissive_color(colorRGBA(0.0, 1.0, 0.0, 0.25));
 		draw(pos);
 		return;
 	}
 	GLenum const bf[2] = {GL_BACK, GL_FRONT}, zp[2] = {GL_INCR, GL_DECR};
 
 	for (unsigned spass = 0; spass < 2; ++spass) { // GL_STENCIL_TWO_SIDE_EXT?
-		if (!(which_passes & (1<<spass))) continue;
 		glCullFace(bf[spass == 0]);
 		glStencilOp(zp[spass], zp[spass], GL_KEEP);
 		draw(pos);

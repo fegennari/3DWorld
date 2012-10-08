@@ -212,7 +212,7 @@ public:
 class voxel_model_space : public voxel_model {
 
 	unsigned ao_tid, shadow_tid;
-	vector<tquad_t> shadow_edge_quads;
+	vector<triangle> shadow_edge_tris;
 
 	void free_ao_and_shadow_texture() {free_texture(ao_tid); free_texture(shadow_tid);}
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
@@ -221,10 +221,10 @@ class voxel_model_space : public voxel_model {
 
 public:
 	voxel_model_space() : voxel_model(0), ao_tid(0), shadow_tid(0) {}
-	void clear() {voxel_model::clear(); shadow_edge_quads.clear();}
+	void clear() {voxel_model::clear(); shadow_edge_tris.clear();}
 	virtual void free_context() {voxel_model::free_context(); free_ao_and_shadow_texture();}
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
-	vector<tquad_t> const &get_shadow_edge_quads() const {return shadow_edge_quads;}
+	vector<triangle> const &get_shadow_edge_tris() const {return shadow_edge_tris;}
 };
 
 

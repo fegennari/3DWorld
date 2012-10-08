@@ -1114,7 +1114,7 @@ void voxel_model_space::extract_shadow_edges(voxel_grid<unsigned char> const &sh
 #endif
 
 	// use the z=nz-1 2D projection
-	shadow_edge_quads.clear();
+	shadow_edge_tris.clear();
 	unsigned const ndiv(max(nx, ny));
 	float const step_delta(0.5*min(vsz.x, min(vsz.y, vsz.z)));
 	point last(center);
@@ -1131,13 +1131,7 @@ void voxel_model_space::extract_shadow_edges(voxel_grid<unsigned char> const &sh
 			if (shadow_data.get(i[0], i[1], nz-1) != 0) break; // unshadowed
 			pos += step;
 		}
-		if (n > 0) { // last is valid
-			tquad_t tri(3);
-			tri[0] = pos;
-			tri[1] = last;
-			tri[2] = center;
-			shadow_edge_quads.push_back(tri);
-		}
+		if (n > 0) {shadow_edge_tris.push_back(triangle(pos, last, center));} // last is valid
 		last = pos;
 	}
 }
