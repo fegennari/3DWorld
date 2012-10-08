@@ -883,6 +883,7 @@ public:
 		int const dx(xoff - xoff2), dy(yoff - yoff2);
 		float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
 		float const lod_scale(1.0/get_scaled_tile_radius());
+		point const camera(get_camera_pos());
 		glPushMatrix();
 		glTranslatef(llcx, llcy, 0.0);
 
@@ -894,8 +895,17 @@ public:
 				if (gb.ix == 0) continue; // empty block
 				cube_t const bcube(llcx+x*dx_step, llcx+(x+1)*dx_step, llcy+y*dy_step, llcy+(y+1)*dy_step, gb.zmin, (gb.zmax + grass_length));
 				point const center(bcube.get_cube_center());
-				if (max(0.0f, p2p_dist_xy(get_camera_pos(), center) - radius)*TILE_RADIUS*lod_scale > GRASS_THRESH) continue;
+				if (max(0.0f, p2p_dist_xy(camera, center) - radius)*TILE_RADIUS*lod_scale > GRASS_THRESH) continue;
 				if (!camera_pdu.cube_visible(bcube)) continue;
+				bool back_facing(1);
+
+				for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) {
+					for (unsigned xx = x*GRASS_BLOCK_SZ; xx <= (x+1)*GRASS_BLOCK_SZ && back_facing; ++xx) {
+						unsigned const ix(yy*zvsize + xx);
+						back_facing &= (dot_product(get_norm(ix), (camera - point(llcx+xx*DX_VAL, llcy+yy*DY_VAL, zvals[ix]))) < 0.0);
+					}
+				}
+				if (back_facing) continue;
 				unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(GRASS_LOD_SCALE*lod_scale*distance_to_camera(center))));
 				grass_tile_manager.render_block((gb.ix - 1), lod_level);
 			}
