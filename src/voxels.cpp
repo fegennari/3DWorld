@@ -523,9 +523,7 @@ bool voxel_manager::point_inside_volume(point const &pos) const {
 
 	if (outside.empty()) return 0;
 	unsigned ix(0);
-	if (!outside.get_ix(pos, ix)) return 0; // off the voxel grid
-	assert(ix < outside.size());
-	return ((outside[ix]&3) == 0);
+	return (outside.get_ix(pos, ix) && !is_outside(ix));
 }
 
 
@@ -551,10 +549,7 @@ bool voxel_manager::sphere_intersect(point const &center, float radius, point *i
 		for (int x = max(0, llc[0]); x <= min(int(nx)-1, urc[0]); ++x) {
 			for (int z = max(0, llc[2]); z <= min(int(nz)-1, urc[2]); ++z) {
 				point const p(get_pt_at(x, y, z));
-				if (!dist_less_than(p, center, radius)) continue;
-				unsigned const ix(get_ix(x, y, z));
-				assert(ix < outside.size());
-				if ((outside[ix]&3) != 0) continue;
+				if (!dist_less_than(p, center, radius) || is_outside(get_ix(x, y, z))) continue;
 				if (int_pt) {*int_pt = p;}
 				//vector<triangle> triangles;
 				//get_triangles_for_voxel(triangles, x, y, z, 0);

@@ -98,6 +98,7 @@ public:
 	void atten_to_sphere(float val, float inner_radius, bool atten_inner);
 	void determine_voxels_outside();
 	void remove_unconnected_outside();
+	bool is_outside(unsigned ix) const {assert(ix < outside.size()); return((outside[ix]&3) != 0);}
 	bool point_inside_volume(point const &pos) const;
 	bool point_intersect(point const &center, point *int_pt) const;
 	bool sphere_intersect(point const &center, float radius, point *int_pt) const;

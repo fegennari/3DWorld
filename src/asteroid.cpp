@@ -199,8 +199,7 @@ vector<float> uobj_asteroid_hmap::pmap_vector; // static
 
 // FIXME:
 // sphere collision normal
-// complex collisions
-// projeted shadows
+// complex collisions (debug/test)
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 	mutable voxel_model_space model; // FIXME: const problems
@@ -281,6 +280,47 @@ public:
 		point p(hit_pos);
 		xform_point(p);
 		return model.get_texture_at(p);
+	}
+
+	virtual bool ship_int_obj(u_ship const *const ship, intersect_params &ip=intersect_params()) const {
+		if (!uobj_asteroid_destroyable::ship_int_obj(ship, ip)) return 0;
+		if (!ship->has_detailed_coll(this)) return 1; // simple intersection
+		assert(ship);
+		cobj_vector_t const &cobjs(ship->get_cobjs());
+		assert(!cobjs.empty());
+		point center(ship->get_pos()), p_last(ip.p_last);
+		xform_point(center); // global to current local
+		ship->xform_point(p_last); // global to ship local
+		float const obj_radius(ship->get_radius()), sphere_radius(obj_radius/radius), sr(2.0*sphere_radius/model.nx);
+		cube_t bcube;
+		bcube.set_from_sphere(center, sphere_radius);
+		int llc[3], urc[3];
+		model.get_xyz(bcube.get_llc(), llc);
+		model.get_xyz(bcube.get_urc(), urc);
+
+		for (int y = max(0, llc[1]); y <= min(int(model.ny)-1, urc[1]); ++y) {
+			for (int x = max(0, llc[0]); x <= min(int(model.nx)-1, urc[0]); ++x) {
+				for (int z = max(0, llc[2]); z <= min(int(model.nz)-1, urc[2]); ++z) {
+					point p(model.get_pt_at(x, y, z));
+					if (!dist_less_than(p, center, sphere_radius) || model.is_outside(model.get_ix(x, y, z))) continue;
+					xform_point_inv(p); // local to global
+					ship->xform_point(p); // global to ship local
+
+					for (cobj_vector_t::const_iterator c = cobjs.begin(); c != cobjs.end(); ++c) {
+						assert(*c);
+						
+						if ((*c)->sphere_intersect(p, sr, p_last, ip.p_int, ip.norm, ip.calc_int)) {
+							if (ip.calc_int) {
+								ship->xform_point_inv(ip.p_int);
+								ship->rotate_point_inv(ip.norm);
+							}
+							return 1;
+						}
+					} // for c
+				} // for z
+			} // for x
+		} // for y
+		return 0;
 	}
 
 	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const {
