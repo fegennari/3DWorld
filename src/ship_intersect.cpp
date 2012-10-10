@@ -507,7 +507,7 @@ ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, up
 	// reduce nsides if sphere_r is small?
 	vector3d_d const shadow_dir((sphere_pos - sun_pos).get_norm());
 
-	if (!sphere_test_comp(sun_pos, cur_pos, shadow_dir*-1.0, (cur_radius + sphere_r)*(cur_radius + sphere_r))) { // self shadow test?
+	if (!sphere_test_comp(sun_pos, cur_pos, -shadow_dir, (cur_radius + sphere_r)*(cur_radius + sphere_r))) { // self shadow test?
 		invalid = 1;
 		return;
 	}
@@ -518,9 +518,10 @@ ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, up
 	assert(dist_to_sun > TOLERANCE);
 
 	for (unsigned i = 0; i < 2; ++i) {
-		double delta((i ? -1.25 : 1.25)*cur_radius);
+		double const mult(i ? -1 : 1);
+		double delta(1.25*mult*cur_radius);
 		if (!player || !i) delta += dist;
-		delta   = max(min_dist, delta);
+		delta   = max(mult*min_dist, delta);
 		rad[i]  = sphere_r*(dist_to_sun + delta)/dist_to_sun;
 		spos[i] = sphere_pos + shadow_dir*delta;
 	}
