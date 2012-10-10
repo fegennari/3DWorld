@@ -1090,7 +1090,7 @@ void voxel_model_space::calc_shadows(voxel_grid<unsigned char> &shadow_data) con
 			bool shadowed(0);
 			
 			for (unsigned z = 0; z < nz; ++z) {
-				shadow_data.set(x, y, z, (shadowed ? 0 : 255)); // before shadowed is updated
+				if (z+1 < nz) {shadow_data.set(x, y, z+1, (shadowed ? 0 : 255));} // z offset by 1, before shadowed is updated
 				if ((outside.get(x, y, z) & 3) == 0) {shadowed = 1;} // inside
 			}
 		}
@@ -1099,16 +1099,6 @@ void voxel_model_space::calc_shadows(voxel_grid<unsigned char> &shadow_data) con
 
 
 void voxel_model_space::extract_shadow_edges(voxel_grid<unsigned char> const &shadow_data) {
-
-#if 0
-	for (unsigned y = 0; y < ny; ++y) {
-		for (unsigned x = 0; x < nx; ++x) {
-			cout << ((shadow_data.get(x, y, nz-1) == 0) ? "*" : ".");
-		}
-		cout << endl;
-	}
-	cout << endl;
-#endif
 
 	// use the z=nz-1 2D projection
 	shadow_edge_tris.clear();
@@ -1119,15 +1109,19 @@ void voxel_model_space::extract_shadow_edges(voxel_grid<unsigned char> const &sh
 	for (unsigned n = 0; n <= ndiv; ++n) { // first and last ray are the same
 		float const angle(TWO_PI*((float)n/(float)ndiv)), dx(cosf(angle)), dy(sinf(angle));
 		vector3d const step(step_delta*point(dx, dy, 0.0));
-		point pos(center);
+		point pos(center), shadow_edge_pos(all_zeros);
+		bool last_unshadowed(0);
 
 		while (1) {
 			int i[3]; // x,y,z
 			get_xyz(pos, i);
 			if (!is_valid_range(i)) break; // off the grid
-			if (shadow_data.get(i[0], i[1], nz-1) != 0) break; // unshadowed
+			bool const unshadowed(shadow_data.get(i[0], i[1], nz-1) != 0);
+			if (unshadowed && !last_unshadowed) {shadow_edge_pos = pos;}
+			last_unshadowed = unshadowed;
 			pos += step;
 		}
+		if (shadow_edge_pos != all_zeros) {pos = shadow_edge_pos;} // found the edge
 		if (n > 0) {shadow_edge_tris.push_back(triangle(pos, last, center));} // last is valid
 		last = pos;
 	}

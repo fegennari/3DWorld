@@ -291,7 +291,7 @@ public:
 		point center(ship->get_pos()), p_last(ip.p_last);
 		xform_point(center); // global to current local
 		ship->xform_point(p_last); // global to ship local
-		float const obj_radius(ship->get_radius()), sphere_radius(obj_radius/radius), sr(2.0*sphere_radius/model.nx);
+		float const obj_radius(ship->get_radius()), sphere_radius(obj_radius/radius), sr(sphere_radius/ASTEROID_VOX_SZ);
 		cube_t bcube;
 		bcube.set_from_sphere(center, sphere_radius);
 		int llc[3], urc[3];
