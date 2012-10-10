@@ -518,10 +518,9 @@ ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, up
 	assert(dist_to_sun > TOLERANCE);
 
 	for (unsigned i = 0; i < 2; ++i) {
-		double const mult(i ? -1 : 1);
-		double delta(1.25*mult*cur_radius);
+		double delta((i ? -1 : 1)*max(min_dist, 1.25*cur_radius));
 		if (!player || !i) delta += dist;
-		delta   = max(mult*min_dist, delta);
+		delta = max(0.0, delta);
 		rad[i]  = sphere_r*(dist_to_sun + delta)/dist_to_sun;
 		spos[i] = sphere_pos + shadow_dir*delta;
 	}
