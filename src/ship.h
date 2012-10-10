@@ -312,7 +312,7 @@ public:
 	void draw_colony(bool armed, bool hw, bool starport) const;
 	void draw_default_ship() const;
 
-	void draw_asteroid()     const;
+	void draw_asteroid(int tex_id) const;
 	void draw_black_hole()   const;
 };
 
@@ -822,7 +822,7 @@ public:
 class uobj_asteroid : public stationary_obj { // a free_obj that doesn't actually move?
 
 public:
-	static uobj_asteroid *create(point const &pos, float radius, unsigned model, unsigned lt=0);
+	static uobj_asteroid *create(point const &pos, float radius, unsigned model, int tid, unsigned lt=0);
 	uobj_asteroid(point const &pos_, float radius_, unsigned lt=0) : stationary_obj(SO_ASTEROID, pos_, radius_, lt) {}
 	bool calc_rvs() const {return 1;} // so that texture is oriented properly
 	string get_name() const {return "Asteroid";}

@@ -556,7 +556,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
 				for (unsigned i = 0; i < num; ++i) { // could check for collisions
 					point const pos((pos_set ? pos : ustart_pos) + signed_rand_vector_spherical(dist));
-					add_uobj(uobj_asteroid::create(pos, rand_uniform(r1, r2), model));
+					add_uobj(uobj_asteroid::create(pos, rand_uniform(r1, r2), model, ROCK_SPHERE_TEX));
 				}
 			}
 			break;

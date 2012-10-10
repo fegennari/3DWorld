@@ -935,18 +935,19 @@ cobj_vector_t const &uobject::get_cobjs() const {
 void uobject::gen_fragments() const {
 
 	unsigned const num_fragments((rand()&7) + 8);
+	int const tex_id(get_fragment_tid(all_zeros));
 
 	for (unsigned i = 0; i < num_fragments; ++i) {
 		add_uobj(uobj_asteroid::create((pos + signed_rand_vector(1.2*radius)),
-			0.2*radius*rand_uniform(0.5, 1.0), AS_MODEL_SPHERE, (10*TICKS_PER_SECOND + rand()%TICKS_PER_SECOND))); // temporary
+			0.2*radius*rand_uniform(0.5, 1.0), AS_MODEL_SPHERE, tex_id, (10*TICKS_PER_SECOND + rand()%TICKS_PER_SECOND))); // temporary
 	}
-	gen_moving_fragments(pos, unsigned(rand_uniform(40, 60)), ROCK_SPHERE_TEX, 1.0);
+	gen_moving_fragments(pos, unsigned(rand_uniform(40, 60)), tex_id, 1.0);
 }
 
 
 void uobject::gen_moving_fragments(point const &hit_pos, unsigned num, int tid, float rscale, float vscale) const {
 
-	colorRGBA const &pcolor(/*texture_color(ROCK_SPHERE_TEX)*/WHITE);
+	colorRGBA const &pcolor(WHITE);
 
 	for (unsigned i = 0; i < num; ++i) {
 		unsigned const ltime(5*TICKS_PER_SECOND + rand()%TICKS_PER_SECOND);

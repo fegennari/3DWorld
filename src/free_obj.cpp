@@ -1063,7 +1063,7 @@ float us_projectile::damage(float val, int type, point const &hit_pos, free_obj 
 
 		if (sobj_coll && damage_done >= 20.0) { // exploded on a planet or moon
 			point const hit_pos2(pos + (pos - hit_pos).get_norm()*radius);
-			gen_moving_fragments(hit_pos2, min(25U, max(1U, unsigned(min(10.0f, 0.4f*damage_done)))), ROCK_SPHERE_TEX, 3.2, 6.0);
+			gen_moving_fragments(hit_pos2, min(25U, max(1U, unsigned(min(10.0f, 0.4f*damage_done)))), get_fragment_tid(all_zeros), 3.2, 6.0);
 		}
 	}
 	else if (etype != ETYPE_NONE) {

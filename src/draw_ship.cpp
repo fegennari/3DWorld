@@ -2400,10 +2400,10 @@ void uobj_draw_data::draw_default_ship() const {
 // ******************* STELLAR OBJECTS *******************
 
 
-void uobj_draw_data::draw_asteroid() const {
+void uobj_draw_data::draw_asteroid(int tex_id) const {
 
 	WHITE.do_glColor();
-	select_texture(MOON_TEX);
+	select_texture(tex_id);
 	draw_sphere_dlist(all_zeros, 1.0, 3*ndiv/2, 1);
 	end_texture();
 }

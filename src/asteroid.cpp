@@ -8,20 +8,24 @@
 #include "upsurface.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
+#include "explosion.h"
 
 
 unsigned const ASTEROID_NDIV   = 32; // for sphere model, better if a power of 2
 unsigned const ASTEROID_VOX_SZ = 64; // for voxel model
-float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for accuracy (heightmap) or performance (voxel)
+float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for accuracy (heightmap)
 
 
 extern vector<us_weapon> us_weapons;
 
 
 class uobj_asteroid_sphere : public uobj_asteroid {
+	int tex_id;
+
 public:
-	uobj_asteroid_sphere(point const &pos_, float radius_, unsigned lt) : uobj_asteroid(pos_, radius_, lt) {}
-	virtual void draw_obj(uobj_draw_data &ddata) const {ddata.draw_asteroid();}
+	uobj_asteroid_sphere(point const &pos_, float radius_, int tex_id_, unsigned lt) : uobj_asteroid(pos_, radius_, lt), tex_id(tex_id_) {}
+	virtual void draw_obj(uobj_draw_data &ddata) const {ddata.draw_asteroid(tex_id);}
+	virtual int get_fragment_tid(point const &hit_pos) const {return tex_id;}
 };
 
 
@@ -38,7 +42,7 @@ public:
 	~uobj_asteroid_rock3d() {model3d.destroy();}
 
 	virtual void draw_obj(uobj_draw_data &ddata) const {
-		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
+		if (ddata.ndiv <= 4) {ddata.draw_asteroid(MOON_TEX); return;}
 		WHITE.do_glColor();
 		model3d.draw();
 		end_texture();
@@ -71,7 +75,6 @@ public:
 		}
 		return uobj_asteroid::damage(val, type, hit_pos, source, wc);
 	}
-	virtual int get_fragment_tid(point const &hit_pos) const = 0;
 
 	virtual bool has_detailed_coll(free_obj const *const other_obj) const {
 		assert(other_obj);
@@ -112,10 +115,11 @@ public:
 	}
 
 	virtual void draw_obj(uobj_draw_data &ddata) const {
-		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
+		int const tex_id(ROCK_SPHERE_TEX); // MOON_TEX?
+		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
 		uniform_scale(scale_val);
 		WHITE.do_glColor();
-		select_texture(ROCK_SPHERE_TEX); // MOON_TEX
+		select_texture(tex_id);
 		surface.sd.draw_ndiv_pow2(ddata.ndiv); // use dlist?
 		end_texture();
 	}
@@ -147,7 +151,6 @@ public:
 		}
 		return damaged;
 	}
-	virtual int get_fragment_tid(point const &hit_pos) const {return ROCK_SPHERE_TEX;}
 
 	virtual float const *get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {
 		assert(ndiv >= 3);
@@ -230,10 +233,14 @@ public:
 		}
 		uobj_asteroid_destroyable::apply_physics();
 		model.proc_pending_updates();
+
+		if (model.get_bsphere().radius == 0.0) { // completely destroyed (center anchor point is gone)
+			explode(0.0, radius, ETYPE_NONE, zero_vector, 0, WCLASS_EXPLODE, ALIGN_NEUTRAL, 0, NULL);
+		}
 	}
 
 	virtual void draw_obj(uobj_draw_data &ddata) const {
-		if (ddata.ndiv <= 4) {ddata.draw_asteroid(); return;}
+		if (ddata.ndiv <= 4) {ddata.draw_asteroid(model.get_params().tids[0]); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
 		
 		shader_t s;
@@ -273,6 +280,7 @@ public:
 		point const center(hit_pos);
 		bool const damaged(model.update_voxel_sphere_region(center, damage_radius, -1.0, &hit_pos));
 		xform_point_inv(hit_pos);
+		hit_pos += 0.5*(radius/ASTEROID_VOX_SZ)*(hit_pos - pos).get_norm(); // move slightly away from asteroid center
 		return damaged;
 	}
 
@@ -323,8 +331,7 @@ public:
 		return 0;
 	}
 
-	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const {
-		if (r > AST_COLL_RAD*radius) return uobj_asteroid_destroyable::sphere_int_obj(c, r, ip); // use default sphere collision
+	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const { // Note: no size check
 		r /= radius; // scale to 1.0
 		point p(c);
 		xform_point(p);
@@ -355,10 +362,10 @@ public:
 };
 
 
-uobj_asteroid *uobj_asteroid::create(point const &pos, float radius, unsigned model, unsigned lt) {
+uobj_asteroid *uobj_asteroid::create(point const &pos, float radius, unsigned model, int tex_id, unsigned lt) {
 
 	switch (model) {
-	case AS_MODEL_SPHERE: return new uobj_asteroid_sphere(pos, radius, lt);
+	case AS_MODEL_SPHERE: return new uobj_asteroid_sphere(pos, radius, tex_id, lt);
 	case AS_MODEL_ROCK1:  return new uobj_asteroid_rock3d(pos, radius, lt, 0);
 	case AS_MODEL_ROCK2:  return new uobj_asteroid_rock3d(pos, radius, lt, 1);
 	case AS_MODEL_HMAP:   return new uobj_asteroid_hmap  (pos, radius, lt);

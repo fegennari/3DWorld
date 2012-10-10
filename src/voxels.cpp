@@ -1283,7 +1283,7 @@ void gen_voxel_asteroid(voxel_model_space &model, point const &center, float rad
 
 	//RESET_TIME;
 	voxel_params_t params;
-	params.remove_unconnected = 1; // init only
+	params.remove_unconnected = 2; // always
 	params.normalize_to_1 = 0;
 	params.atten_at_edges = 4; // sphere (could be 3 or 4)
 	params.num_blocks     = 2; // subdivision not needed? it produces seams
