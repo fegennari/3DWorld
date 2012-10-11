@@ -58,25 +58,10 @@ void ship_cylinder::draw_svol(point const &tpos, float cur_radius, point const &
 	upos_point_type pts[4]; // 3 or 4
 	for (int i = 0; i < npts; ++i) pts[i] = pts_[i];
 	ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj).draw_geom(tpos, test);
-
-	if (check_ends) { // inexact but close for r1 != r2
-		float sphere_radius(0.5*(r1 + r2));
-		vector3d scale(zero_vector);
-		point sphere_center(center);
-		vector3d const vc(p2 - p1);
-		float const length(vc.mag());
-		assert(length > TOLERANCE);
-		float const dp(fabs(dot_product(vc, v1)/(length*v1.mag()))), rad2(2.0*sphere_radius);
-		if (sinf(safe_acosf(dp))*length > rad2*dp) return;
-
-		if (ndiv > 3 && (length < rad2 || r1 != r2)) {
-			sphere_radius = max(r1, r2);
-			if (r1 > r2) sphere_center = p1; else if (r2 > r1) sphere_center = p2; // else sphere_center remains center
-			orthogonalize_dir(vc, v1, scale, 1);
-			obj->rotate_point_inv(scale);
-			scale *= dp;
-		}
-		ushadow_sphere(sphere_center, sphere_radius, tpos, cur_radius, spos, ndiv, player, obj, scale).draw_geom(tpos, test);
+	
+	if (check_ends) {
+		point const pos((r1 < r2) ? p2 : p1);
+		ushadow_triangle_mesh(pos, max(r1, r2), (p2 - p1), ndiv, tpos, cur_radius, spos, obj).draw_geom(tpos, test);
 	}
 }
 
@@ -247,7 +232,7 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 			}
 		}
 		for (unsigned i = 0; i < 2; ++i) {
-			ushadow_sphere(tpts[pmin[i]], ri, tpos, cur_radius, spos, ndiv, player, obj, zero_vector, min_sdist).draw_geom(tpos, test);
+			ushadow_sphere(tpts[pmin[i]], ri, tpos, cur_radius, spos, ndiv, player, obj, min_sdist).draw_geom(tpos, test);
 		}
 	}
 }
@@ -493,8 +478,7 @@ bool u_ship::cobjs_int_obj(cobj_vector_t const &cobjs2, free_obj const *const ob
 
 
 ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, upos_point_type const &cur_pos, float cur_radius,
-							   point const &sun_pos, int ndiv, bool player, free_obj const *const obj,
-							   vector3d const &scale_, float rmin) : nsides(ndiv), scale(scale_), pmap(NULL)
+							   point const &sun_pos, int ndiv, bool player, free_obj const *const obj, float rmin) : nsides(ndiv), pmap(NULL)
 {
 	assert(sobj_r > TOLERANCE && cur_radius > TOLERANCE);
 	float sphere_r(sobj_r);
@@ -545,7 +529,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 	assert(npts == 3 || npts == 4);
 	upos_point_type pts_[4];
 	for (unsigned i = 0; i < npts; ++i) pts_[i] = pts[i];
-	if (obj) obj->xform_point_inv_multi(pts_, npts);
+	if (obj) {obj->xform_point_inv_multi(pts_, npts);}
 	upos_point_type norm;
 	upos_point_type const center(get_center(pts_, npts));
 	float radius(0.0);
@@ -605,13 +589,15 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 }
 
 
-ushadow_voxel_tris::ushadow_voxel_tris(vector<triangle> const &triangles, upos_point_type const &cur_pos,
-	float cur_radius, point const &sun_pos, float obj_radius, point const &obj_center, free_obj const *const obj, float rmin)
+// voxel triangles constructor
+ushadow_triangle_mesh::ushadow_triangle_mesh(vector<triangle> const &triangles, upos_point_type const &cur_pos,
+	float cur_radius, point const &sun_pos, float obj_radius, point const &obj_center, free_obj const *const obj)
 {
 	tris.resize(triangles.size());
 	point center(obj_center);
-	if (obj) obj->xform_point_inv(center);
-	double const min_dist(max(rmin, MIN_SHADOW_DIST*obj_radius));
+	if (obj) {obj->xform_point_inv(center);}
+	upos_point_type const dir(center - sun_pos);
+	double const min_dist(MIN_SHADOW_DIST*obj_radius);
 
 	for (unsigned t = 0; t < triangles.size(); ++t) {
 		upos_point_type pts[3];
@@ -619,22 +605,63 @@ ushadow_voxel_tris::ushadow_voxel_tris(vector<triangle> const &triangles, upos_p
 		if (obj) obj->xform_point_inv_multi(pts, 3);
 		upos_point_type norm;
 		get_normal(pts[0], pts[1], pts[2], norm, 0);
-		double const dp(dot_product(norm, upos_point_type(center - sun_pos)));
+		if (dot_product(norm, dir) > 0.0) {swap(pts[0], pts[1]);}
+		set_triangle(t, pts, sun_pos, cur_pos, min_dist, cur_radius);
+	}
+}
 
-		for (unsigned i = 0; i < 3; ++i) {
-			upos_point_type const &pos(pts[(dp > 0.0) ? (2-i) : i]);
-			vector3d_d const shadow_dir((pos - sun_pos).get_norm());
-			double const dist(dot_product_ptv(shadow_dir, cur_pos, pos));
 
-			for (unsigned j = 0; j < 2; ++j) {
-				tris[t].p[j][i] = pos + shadow_dir*max(min_dist, (dist + (1.2 - 2.4*j)*cur_radius));
-			}
+// circle constructor
+ushadow_triangle_mesh::ushadow_triangle_mesh(point const &circle_center, float circle_radius, vector3d const &circle_normal,
+	unsigned ndiv, upos_point_type const &cur_pos, float cur_radius, point const &sun_pos, free_obj const *const obj)
+{
+	tris.resize(ndiv);
+	point center(circle_center);
+	vector3d normal(circle_normal);
+	
+	if (obj) {
+		obj->xform_point_inv(center);
+		obj->rotate_point_inv(normal);
+		circle_radius *= obj->get_radius();
+	}
+	vector3d const dir(center - sun_pos);
+	double const dp(dot_product(normal, dir)), min_dist(MIN_SHADOW_DIST*circle_radius);
+	vector3d vref(zero_vector);
+	vref[fabs(normal.x) > fabs(normal.y)] = 1.0;
+	point const cp1(cross_product(normal, vref).get_norm()), cp2(cross_product(normal, cp1).get_norm());
+	upos_point_type last(center);
+
+	for (unsigned t = 0; t <= ndiv; ++t) {
+		float const angle(TWO_PI*((float)t/(float)ndiv)), d1(cosf(angle)), d2(sinf(angle));
+		upos_point_type const pos(center + circle_radius*(d1*cp1 + d2*cp2));
+
+		if (t > 0) { // last is not valid
+			upos_point_type pts[3] = {pos, last, center};
+			if (dp < 0.0) {swap(pts[0], pts[1]);}
+			set_triangle(t-1, pts, sun_pos, cur_pos, min_dist, cur_radius);
+		}
+		last = pos;
+	}
+}
+
+
+void ushadow_triangle_mesh::set_triangle(unsigned t, upos_point_type const pts[3], point const &sun_pos,
+	upos_point_type const &cur_pos, double min_dist, double cur_radius)
+{
+	assert(t < tris.size());
+
+	for (unsigned i = 0; i < 3; ++i) {
+		upos_point_type const shadow_dir((pts[i] - sun_pos).get_norm());
+		double const dist(dot_product_ptv(shadow_dir, cur_pos, pts[i]));
+
+		for (unsigned j = 0; j < 2; ++j) {
+			tris[t].p[j][i] = pts[i] + shadow_dir*max(min_dist, (dist + (1.2 - 2.4*j)*cur_radius));
 		}
 	}
 }
 
 
-void ushadow_voxel_tris::draw(upos_point_type const &pos) const {
+void ushadow_triangle_mesh::draw(upos_point_type const &pos) const {
 
 	assert(!invalid);
 	glBegin(GL_TRIANGLES);

@@ -173,13 +173,11 @@ class ushadow_sphere : public ushadow_volume { // currently only supports sphere
 	int nsides;
 	double rad[2];
 	upos_point_type spos[2];
-	vector3d scale;
 	float const *pmap;
 
 public:
 	ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, upos_point_type const &cur_pos, float cur_radius,
-		point const &sun_pos, int ndiv, bool player, free_obj const *const obj=NULL,
-		vector3d const &scale_=zero_vector, float rmin=0.0);
+		point const &sun_pos, int ndiv, bool player, free_obj const *const obj=NULL, float rmin=0.0);
 	void set_pmap(float const *const pmap_) {pmap = pmap_;}
 	void draw(upos_point_type const &pos) const;
 };
@@ -195,7 +193,7 @@ public:
 	void draw(upos_point_type const &pos) const;
 };
 
-class ushadow_voxel_tris : public ushadow_volume {
+class ushadow_triangle_mesh : public ushadow_volume {
 
 	struct voxel_triangle_t {
 		upos_point_type p[2][3];
@@ -203,9 +201,13 @@ class ushadow_voxel_tris : public ushadow_volume {
 	typedef vector<voxel_triangle_t> tri_vect_t;
 	tri_vect_t tris;
 
+	void set_triangle(unsigned t, upos_point_type const pts[3], point const &sun_pos, upos_point_type const &cur_pos, double min_dist, double cur_radius);
+
 public:
-	ushadow_voxel_tris(vector<triangle> const &triangles, upos_point_type const &cur_pos, float cur_radius,
-		point const &sun_pos, float obj_radius, point const &obj_center, free_obj const *const obj=NULL, float rmin=0.0);
+	ushadow_triangle_mesh(vector<triangle> const &triangles, upos_point_type const &cur_pos, float cur_radius,
+		point const &sun_pos, float obj_radius, point const &obj_center, free_obj const *const obj=NULL);
+	ushadow_triangle_mesh(point const &circle_center, float circle_radius, vector3d const &circle_normal, unsigned ndiv,
+		upos_point_type const &cur_pos, float cur_radius, point const &sun_pos, free_obj const *const obj=NULL);
 	void draw(upos_point_type const &pos) const;
 };
 
