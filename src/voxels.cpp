@@ -1083,7 +1083,7 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
 void voxel_model_space::calc_shadows(voxel_grid<unsigned char> &shadow_data) const {
 
-	shadow_data.init(nx, ny, nz, vsz, center, 0, params.num_blocks);
+	shadow_data.init(nx, ny, nz, vsz, center, 255, params.num_blocks); // default is unshadowed
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
