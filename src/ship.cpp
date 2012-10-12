@@ -452,6 +452,7 @@ bool proc_coll(free_obj *o1, free_obj *o2) {
 		if (o1->no_proj_coll() || o2->no_proj_coll())                return 0; // no p-p coll for this type
 		if (o1->get_src() != NULL && o1->get_src() == o2->get_src()) return 0; // ship's projectiles don't collide with each other
 	}
+	if (o1->is_stationary() && o2->is_stationary()) return 0; // two stationary objects - if they collide we can't do anything
 	if (!o1->obj_int_obj(o2)) return 0;
 	point const p1(o1->get_pos()), p2(o2->get_pos()); // cache these in case they change
 	vector3d const v1(o1->get_tot_vel_at(p2)), v2(o2->get_tot_vel_at(p1)); // cache these in case they change

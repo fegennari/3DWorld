@@ -18,6 +18,18 @@ float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for 
 
 extern vector<us_weapon> us_weapons;
 
+shader_t cached_shaders[8][2]; // num_lights x enable_fog
+
+
+void clear_cached_shaders() {
+
+	for (unsigned i = 0; i < 8; ++i) {
+		for (unsigned j = 0; j < 2; ++j) {
+			cached_shaders[i][j].end_shader();
+		}
+	}
+}
+
 
 class uobj_asteroid_sphere : public uobj_asteroid {
 	int tex_id;
@@ -201,8 +213,7 @@ vector<float> uobj_asteroid_hmap::pmap_vector; // static
 
 
 // FIXME:
-// sphere collision normal
-// complex collisions (debug/test)
+// sphere collision normal / pos
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 	mutable voxel_model_space model; // FIXME: const problems
@@ -234,7 +245,7 @@ public:
 		uobj_asteroid_destroyable::apply_physics();
 		model.proc_pending_updates();
 
-		if (model.get_bsphere().radius == 0.0) { // completely destroyed (center anchor point is gone)
+		if (!model.has_triangles()) { // completely destroyed (center anchor point is gone)
 			explode(0.0, radius, ETYPE_NONE, zero_vector, 0, WCLASS_EXPLODE, ALIGN_NEUTRAL, 0, NULL);
 		}
 	}
@@ -242,36 +253,45 @@ public:
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(model.get_params().tids[0]); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
+		unsigned const num_lights(min(8U, exp_lights.size()+2U));
+		bool const no_fog(glIsEnabled(GL_FOG) == 0);
+		shader_t &s(cached_shaders[num_lights][no_fog]);
 		
-		shader_t s;
-		s.set_int_prefix("num_lights", min(8U, exp_lights.size()+2U), 1); // FS
-		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-		s.set_prefix("#define NO_SPECULAR", 1); // FS (optional/optimization)
-		if (!glIsEnabled(GL_FOG)) s.set_prefix("#define NO_FOG", 1); // FS
-		s.set_vert_shader("asteroid");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+asteroid");
-		s.begin_shader();
-		s.setup_fog_scale();
-		s.add_uniform_int("tex0", 0);
-		s.add_uniform_int("tex1", 8);
-		s.add_uniform_int("noise_tex", 5);
-		s.add_uniform_int("ao_tex", 9);
-		s.add_uniform_int("shadow_tex", 10);
-		s.add_uniform_float("tex_scale", 1.0);
-		s.add_uniform_float("noise_scale", 0.1);
-		s.add_uniform_float("tex_mix_saturate", 5.0);
-
-		model.setup_tex_gen_for_rendering(s);
+		if (s.is_setup()) { // already setup
+			s.enable();
+		}
+		else {
+			s.set_int_prefix("num_lights", num_lights, 1); // FS
+			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+			s.set_prefix("#define NO_SPECULAR", 1); // FS (optional/optimization)
+			if (no_fog) s.set_prefix("#define NO_FOG", 1); // FS
+			s.set_vert_shader("asteroid");
+			s.set_frag_shader("linear_fog.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+asteroid");
+			s.begin_shader();
+			s.setup_fog_scale();
+			s.add_uniform_int("tex0", 0);
+			s.add_uniform_int("tex1", 8);
+			s.add_uniform_int("noise_tex", 5);
+			s.add_uniform_int("ao_tex", 9);
+			s.add_uniform_int("shadow_tex", 10);
+			s.add_uniform_float("tex_scale", 1.0);
+			s.add_uniform_float("noise_scale", 0.1);
+			s.add_uniform_float("tex_mix_saturate", 5.0);
+			s.add_uniform_vector3d("tex_eval_offset", zero_vector);
+		}
+		if (ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
 		WHITE.do_glColor();
-		set_specular(0.0, 1.0); // ???
 		glEnable(GL_CULL_FACE);
-		camera_pdu.valid = 0; // disable view frustum culling because it's not correct (due to transform matrices)
+		camera_pdu.valid = 0; // temporarily disable view frustum culling because it's not correct (due to transform matrices)
 		model.core_render(s, 0);
 		camera_pdu.valid = 1;
 		glDisable(GL_CULL_FACE);
-		s.end_shader();
-		if (ddata.shader.is_setup()) {ddata.shader.enable();}
-		select_texture(WHITE_TEX, 0);
+		s.disable();
+
+		if (ddata.final_pass) {
+			if (ddata.shader.is_setup()) {ddata.shader.enable();}
+			select_texture(WHITE_TEX, 0);
+		}
 	}
 
 	virtual bool apply_damage(float damage, point &hit_pos) {

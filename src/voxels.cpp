@@ -544,15 +544,19 @@ bool voxel_manager::sphere_intersect(point const &center, float radius, point *i
 	int llc[3], urc[3];
 	get_xyz(bcube.get_llc(), llc);
 	get_xyz(bcube.get_urc(), urc);
+	int const num[3] = {nx, ny, nz};
+	UNROLL_3X(llc[i_] = max(0, llc[i_]);)
+	UNROLL_3X(urc[i_] = min(num[i_]-1, urc[i_]);)
 
-	for (int y = max(0, llc[1]); y <= min(int(ny)-1, urc[1]); ++y) {
-		for (int x = max(0, llc[0]); x <= min(int(nx)-1, urc[0]); ++x) {
-			for (int z = max(0, llc[2]); z <= min(int(nz)-1, urc[2]); ++z) {
+	for (int y = llc[1]; y <= urc[1]; ++y) {
+		for (int x = llc[0]; x <= urc[0]; ++x) {
+			unsigned const xy_offset((x + y*nx)*nz);
+
+			for (int z = llc[2]; z <= urc[2]; ++z) {
+				if (is_outside(xy_offset+z)) continue;
 				point const p(get_pt_at(x, y, z));
-				if (!dist_less_than(p, center, radius) || is_outside(get_ix(x, y, z))) continue;
+				if (!dist_less_than(p, center, radius)) continue;
 				if (int_pt) {*int_pt = p;}
-				//vector<triangle> triangles;
-				//get_triangles_for_voxel(triangles, x, y, z, 0);
 				return 1;
 			}
 		}
@@ -617,6 +621,15 @@ sphere_t voxel_model::get_bsphere() const {
 	}
 	bsphere.radius = sqrt(bsphere.radius);
 	return bsphere;
+}
+
+
+bool voxel_model::has_triangles() const {
+
+	for (tri_data_t::const_iterator i = tri_data.begin(); i != tri_data.end(); ++i) {
+		if (!i->empty()) return 1;
+	}
+	return 0;
 }
 
 
@@ -1066,7 +1079,6 @@ void voxel_model_ground::build(bool add_cobjs_, bool add_as_fixed_, bool verbose
 
 void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
-	s.add_uniform_vector3d("tex_eval_offset", vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0)); // should this be here?
 	noise_tex_gen.setup(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
 	noise_tex_gen.bind_texture(5); // tu_id = 5
 	const char *cnames[2] = {"color0", "color1"};
@@ -1078,6 +1090,13 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 		s.add_uniform_color(cnames[i], params.colors[i]);
 	}
 	set_multitex(0);
+}
+
+
+void voxel_model_ground::setup_tex_gen_for_rendering(shader_t &s) {
+
+	s.add_uniform_vector3d("tex_eval_offset", vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0));
+	voxel_model::setup_tex_gen_for_rendering(s);
 }
 
 

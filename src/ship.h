@@ -199,7 +199,7 @@ class ushadow_triangle_mesh : public ushadow_volume {
 		upos_point_type p[2][3];
 	};
 	typedef vector<voxel_triangle_t> tri_vect_t;
-	tri_vect_t tris;
+	static tri_vect_t tris; // static to avoid excessive memory allocations
 
 	void set_triangle(unsigned t, upos_point_type const pts[3], point const &sun_pos, upos_point_type const &cur_pos, double min_dist, double cur_radius);
 

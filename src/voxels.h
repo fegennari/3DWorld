@@ -183,6 +183,7 @@ public:
 	float get_ao_lighting_val(point const &pos) const;
 	cube_t get_bcube() const {return ((tri_data.empty()) ? cube_t(center, center) : tri_data.get_bbox());}
 	sphere_t get_bsphere() const;
+	bool has_triangles() const;
 };
 
 
@@ -208,6 +209,7 @@ public:
 	voxel_model_ground() : voxel_model(1), add_cobjs(0), add_as_fixed(0) {}
 	void clear();
 	void build(bool add_cobjs_, bool add_as_fixed_, bool verbose);
+	virtual void setup_tex_gen_for_rendering(shader_t &s);
 };
 
 

@@ -41,8 +41,6 @@ void ship_cylinder::get_bounding_sphere(point &c, float &r) const {
 	cylinder_bounding_sphere(p, r1, r2, c, r);
 }
 
-// cylinder-cylinder intersection?
-
 void ship_cylinder::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv,
 							  bool player, bool test, free_obj const *const obj) const
 {
@@ -587,6 +585,9 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 	}
 	glEnd();
 }
+
+
+ushadow_triangle_mesh::tri_vect_t ushadow_triangle_mesh::tris;
 
 
 // voxel triangles constructor

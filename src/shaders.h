@@ -33,7 +33,7 @@ class shader_t {
 
 public:
 	shader_t() : program(0), in_prim(0), out_prim(0), verts_out(0) {}
-	~shader_t() {assert(!program); } // end_shader() should have been called
+	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
 
 	void set_vert_shader(string const &vs_name_) {vs_name = vs_name_;}
 	void set_frag_shader(string const &fs_name_) {fs_name = fs_name_;}
