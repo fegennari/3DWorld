@@ -5,6 +5,7 @@
 #include "ship.h"
 #include "ship_util.h"
 #include "explosion.h"
+#include "openal_wrap.h"
 #include <sstream>
 
 
@@ -2463,6 +2464,11 @@ void u_ship::do_explode() {
 	edir.normalize();
 	def_explode(get_def_explode_damage(), specs().exp_type, edir, WCLASS_EXPLODE,
 		alignment, EXP_FLAGS_SHIP, parent); // can we blame a ship's explosion on its parent?
+	
+	if (specs().mass >= 10.0) { // medium to large ship
+		float const gain(0.001/max(1E-6f, distance_to_camera(pos)));
+		if (gain > 0.001) {gen_sound(SOUND_EXPLODE, pos, gain);}
+	}
 }
 
 
