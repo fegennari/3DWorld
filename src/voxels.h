@@ -176,7 +176,7 @@ public:
 	void proc_pending_updates();
 	void build(bool verbose);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
-	void core_render(shader_t &s, bool is_shadow_pass);
+	void core_render(shader_t &s, bool is_shadow_pass, bool no_vfc=0);
 	void render(bool is_shadow_pass);
 	virtual void free_context();
 	float eval_noise_texture_at(point const &pos) const;

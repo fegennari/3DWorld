@@ -337,14 +337,17 @@ template<typename T> void vntc_vect_t<T>::read(istream &in) {
 }
 
 
-template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, int prim_type) {
+template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, int prim_type, bool no_vfc) {
 
 	if (empty()) return;
 	finalize(prim_type);
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
+	if (is_shadow_pass && vbo == 0) return; // don't create the vbo on the shadow pass
 
-	if (is_shadow_pass) {
-		if (vbo == 0) return; // don't create the vbo on the shadow pass
+	if (no_vfc) {
+		// do nothing
+	}
+	else if (is_shadow_pass) {
 		if (!orig_camera_pdu.projected_cube_visible(bcube, camera_pdu.pos)) return; // light_pos == camera_pdu.pos for the shadow pass
 	}
 	else {
@@ -389,7 +392,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		else {
 			bind_vbo(ivbo, 1);
 		}
-		if (is_shadow_pass || blocks.empty() || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
+		if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
 			// possible optimization:
 			// sort triangles/quads by size, largest to smallest
 			// render a subset of the indices based on size threshold and distance to camera

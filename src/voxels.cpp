@@ -1166,7 +1166,7 @@ void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 }
 
 
-void voxel_model::core_render(shader_t &s, bool is_shadow_pass) {
+void voxel_model::core_render(shader_t &s, bool is_shadow_pass, bool no_vfc) {
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
 		if (DEBUG_BLOCKS && s.is_setup()) {
@@ -1176,7 +1176,7 @@ void voxel_model::core_render(shader_t &s, bool is_shadow_pass) {
 			}
 		}
 		assert(i->ix < tri_data.size());
-		tri_data[i->ix].render(s, is_shadow_pass, GL_TRIANGLES);
+		tri_data[i->ix].render(s, is_shadow_pass, GL_TRIANGLES, no_vfc);
 	}
 }
 
@@ -1300,12 +1300,11 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 
 void gen_voxel_asteroid(voxel_model_space &model, point const &center, float radius, unsigned size, int rseed) {
 
-	//RESET_TIME;
 	voxel_params_t params;
 	params.remove_unconnected = 2; // always
 	params.normalize_to_1 = 0;
 	params.atten_at_edges = 4; // sphere (could be 3 or 4)
-	params.num_blocks     = 2; // subdivision not needed? it produces seams
+	params.num_blocks     = 2; // in each of x and y - subdivision not needed? it produces seams
 	params.freq           = 1.2;
 	params.mag            = 1.2;
 	params.radius_val     = 0.75; // seems to work well
@@ -1319,7 +1318,6 @@ void gen_voxel_asteroid(voxel_model_space &model, point const &center, float rad
 	model.set_params(params);
 	model.init(size, size, size, vector3d(vsz, vsz, vsz), center, -1.0, params.num_blocks);
 	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed);
-	//PRINT_TIME("Asteroid Voxel Gen");
 }
 
 

@@ -212,8 +212,7 @@ public:
 vector<float> uobj_asteroid_hmap::pmap_vector; // static
 
 
-// FIXME:
-// sphere collision normal / pos
+// FIXME: sphere collision normal / pos
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 	mutable voxel_model_space model; // FIXME: const problems
@@ -282,9 +281,7 @@ public:
 		if (ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
 		WHITE.do_glColor();
 		glEnable(GL_CULL_FACE);
-		camera_pdu.valid = 0; // temporarily disable view frustum culling because it's not correct (due to transform matrices)
-		model.core_render(s, 0);
-		camera_pdu.valid = 1;
+		model.core_render(s, 0, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 		glDisable(GL_CULL_FACE);
 		s.disable();
 
