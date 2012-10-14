@@ -1122,6 +1122,7 @@ struct ray2d {
 
 void create_and_draw_cracks() {
 
+	if (decals.empty()) return;
 	vector<crack_point> cpts;  // static?
 	vector<ray2d> crack_lines; // static?
 	int last_cobj(-1);

@@ -133,7 +133,8 @@ template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) con
 		
 			for (unsigned i = 0; i < N && !pass; ++i) {
 				vector3d const pv(pts[i], pos);
-				pass = (w*dot_product(v[xy], pv) <= a[xy]*pv.mag());
+				float const dp(w*dot_product(v[xy], pv));
+				pass = (dp <= 0.0 || dp <= a[xy]*pv.mag());
 			}
 			if (!pass) return 0;
 		}

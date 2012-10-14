@@ -205,6 +205,7 @@ void rotate_into_dir(vector3d const &dir, point const &pos) {
 
 void draw_blasts() {
 
+	if (blastrs.empty()) return;
 	//RESET_TIME;
 	bool const universe(world_mode == WMODE_UNIVERSE);
 	glDisable(GL_LIGHTING);

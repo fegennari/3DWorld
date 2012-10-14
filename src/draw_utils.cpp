@@ -168,7 +168,7 @@ template< typename vert_type_t >
 unsigned vbo_block_manager_t<vert_type_t>::add_points_with_offset(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
 
 	add_points(p, color);
-	assert(!offsets.empty());
+	if (offsets.empty()) {offsets.push_back(0);} // start at 0
 	unsigned const next_ix(offsets.size() - 1);
 	offsets.push_back(pts.size()); // range will be [start_ix, start_ix+p.size()]
 	return next_ix;
@@ -195,7 +195,7 @@ bool vbo_block_manager_t<vert_type_t>::upload() {
 
 	if (vbo || !has_data()) return 0; // already uploaded or empty
 	assert(!pts.empty());
-	assert(!offsets.empty());
+	if (offsets.empty()) {offsets.push_back(0);} // start at 0
 	if (offsets.back() != pts.size()) {offsets.push_back(pts.size());} // add terminator
 	vbo = create_vbo();
 	bind_vbo(vbo);
@@ -228,7 +228,6 @@ void vbo_block_manager_t<vert_type_t>::clear() {
 	clear_points();
 	temp_points.clear();
 	offsets.clear();
-	offsets.push_back(0); // start at 0
 	clear_vbo();
 }
 
