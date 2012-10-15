@@ -40,6 +40,7 @@ public:
 	void set_geom_shader(string const &gs_name_, int in_prim_, int out_prim_, int verts_out_) {
 		gs_name = gs_name_; in_prim = in_prim_; out_prim = out_prim_; verts_out = verts_out_;
 	}
+	void init_from_active_shader(shader_t const &s) {assert(s.is_setup()); program = s.program;}
 	bool is_setup() const {return (program > 0);}
 	void enable () const;
 	void disable() const;

@@ -283,7 +283,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 
 	s.setup_scene_bounds();
 	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
-	if (dlights && dl_tid > 0) setup_dlight_textures(s);
+	if (dlights) setup_dlight_textures(s);
 	set_indir_lighting_block(s, use_smoke_indir);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
@@ -293,7 +293,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 
 
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting,
-	bool smoke_enabled, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
+	bool smoke_enabled, bool has_lt_atten, bool use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
 {
 	s.set_int_prefix ("use_texgen",      use_texgen,      0); // VS
 	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
@@ -319,12 +319,18 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
 	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl)
 {
-	bool const smoke_enabled(smoke_en && smoke_exists && smoke_tid > 0);
-	bool const use_shadow_map(use_smap && shadow_map_enabled());
+	use_smap       &= shadow_map_enabled();
 	indir_lighting &= have_indir_smoke_tex;
-	smoke_en       &= have_indir_smoke_tex;
-	common_shader_block_pre(s, dlights, use_shadow_map, indir_lighting, min_alpha);
-	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_enabled, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, (two_sided_lighting || force_tsl));
+	smoke_en       &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
+	dlights        &= (dl_tid > 0 && has_dl_sources);
+	force_tsl      |= two_sided_lighting;
+#if 0
+	unsigned sig = ((min_alpha > 0.0) | (use_texgen<<1)) | (keep_alpha<<2) | (indir_lighting<<3) | (direct_lighting<<4) | (dlights<<5) | (smoke_en<<6) |
+		            (has_lt_atten<<7) | (use_smap<<8) | (use_bmap<<9) | (use_spec_map<<10) | (use_mvm<<11) | (force_tsl<<12) | (glIsEnabled(GL_FOG)<<13);
+	for (unsigned i = 0; i < 8; ++i) {sig |= (glIsEnabled(GL_LIGHT0 + i) << (14+i));}
+#endif
+	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
+	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+tc_by_vert_id.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
@@ -335,7 +341,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	}
 	if (use_bmap)     s.add_uniform_int("bump_map", 5);
 	if (use_spec_map) s.add_uniform_int("spec_map", 8);
-	common_shader_block_post(s, dlights, use_shadow_map, (smoke_en || indir_lighting), min_alpha);
+	common_shader_block_post(s, dlights, use_smap, (smoke_en || indir_lighting), min_alpha);
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
@@ -345,7 +351,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	//return change_fog_color(GRAY);
 	colorRGBA old_fog_color;
 	glGetFloatv(GL_FOG_COLOR, (float *)&old_fog_color);
-	if (smoke_enabled) glFogfv(GL_FOG_COLOR, (float *)&GRAY); // for smoke
+	if (smoke_en) glFogfv(GL_FOG_COLOR, (float *)&GRAY); // for smoke
 	return old_fog_color;
 }
 
@@ -361,9 +367,10 @@ void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color) {
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap, bool use_geom_shader) {
 
 	unsigned const def_ndiv = 12; // default for geom shader
-	bool const use_shadow_map(use_smap && shadow_map_enabled());
-	common_shader_block_pre(s, dlights, use_shadow_map, 0, 0.0);
-	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
+	use_smap &= shadow_map_enabled();
+	dlights  &= (dl_tid > 0 && has_dl_sources);
+	common_shader_block_pre(s, dlights, use_smap, 0, 0.0);
+	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, 0, 0, 0, 0);
 
 	if (use_geom_shader) {
 		s.set_int_prefix("ndiv", def_ndiv, 2); // GS
@@ -372,7 +379,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 	s.set_vert_shader(use_geom_shader ? "tree_branches_as_lines" : "texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+tc_by_vert_id.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
-	common_shader_block_post(s, dlights, use_shadow_map, 0, 0.0);
+	common_shader_block_post(s, dlights, use_smap, 0, 0.0);
 	check_gl_error(400);
 }
 
@@ -381,15 +388,16 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap,
 	bool use_noise_tex, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
-	bool const use_shadow_map(use_smap && shadow_map_enabled());
+	use_smap       &= shadow_map_enabled();
 	indir_lighting &= have_indir_smoke_tex;
-	common_shader_block_pre(s, dlights, use_shadow_map, indir_lighting, min_alpha);
+	dlights        &= (dl_tid > 0 && has_dl_sources);
+	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
 	s.setup_enabled_lights(2); // only 2, but could be up to 8 later
 	s.set_vert_shader("indir_lighting.part+procedural_gen");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+voxel_texture.part+procedural_gen");
 	s.begin_shader();
-	common_shader_block_post(s, dlights, use_shadow_map, indir_lighting, min_alpha);
+	common_shader_block_post(s, dlights, use_smap, indir_lighting, min_alpha);
 	s.add_uniform_int("tex1", 8);
 	s.add_uniform_float("tex_scale", tex_scale);
 
