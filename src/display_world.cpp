@@ -749,9 +749,11 @@ void display(void) {
 		}
 		swap_buffers_and_redraw();
 		check_xy_offsets();
-		process_platforms(); // ???
-		process_groups(); // ???
-		if (game_mode) update_game_frame(); // ???
+
+		if (world_mode == WMODE_GROUND) {
+			process_groups(); // ???
+			if (game_mode) update_game_frame(); // ???
+		}
 		return;
 	}
 	set_lighted_sides(1);
@@ -794,7 +796,7 @@ void display(void) {
 			timer_a = GET_TIME_MS();
 			show_framerate = 2;
 		}
-		if (world_mode == WMODE_GROUND) process_platforms(); // must be before camera code
+		if (world_mode == WMODE_GROUND) {process_platforms();} // must be before camera code
 
 		// camera position code
 		auto_advance_camera();
@@ -965,11 +967,9 @@ void display(void) {
 			if (cdist > REL_SCROLL_DIST) scroll_scene();
 		}
 	} // not universe mode
-	//cout << 1000.0/max(1, GET_DELTA_TIME) << endl;
 	swap_buffers_and_redraw();
 	check_gl_error(11);
 	if (TIMETEST) PRINT_TIME("G");
-	//if (TIMETEST && (display_mode & 0x10) && GET_DELTA_TIME > 70) exit(0); // testing
 }
 
 
@@ -1122,23 +1122,18 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		surface_pos         = all_zeros;
 		camera_surf_collide = 1;
 	}
+	camera_view = 0;
 	update_temperature(0);
 	point const camera(get_camera_pos());
 	apply_camera_offsets(camera);
 	compute_brightness();
-	process_groups();
-	//reset_shadows(SHADOWED_ALL);
-	if (TIMETEST) PRINT_TIME("3.1");
+	set_global_state();
 	bool draw_water(0);
 
-	if (init_x) {
-		reset_shadows(SHADOWED_ALL);
-
-		if (mesh_type != 0) {
-			mesh_type = 0;
-			gen_scene(1, 0, KEEP_MESH, 0, 0);
-			recreated = 1;
-		}
+	if (init_x && mesh_type != 0) {
+		mesh_type = 0;
+		gen_scene(1, 0, KEEP_MESH, 0, 0);
+		recreated = 1;
 	}
 	if ((display_mode & 0x04) && !DISABLE_WATER) {
 		water_plane_z = get_water_z_height() + get_ocean_wave_height();
@@ -1154,8 +1149,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	unsigned reflection_tid(0);
 	
 	if (show_fog || underwater) {
-		colorRGBA const fog_color(set_inf_terrain_fog(underwater, zmin2));
-		glClearColor_rgba(fog_color);
+		glClearColor_rgba(set_inf_terrain_fog(underwater, zmin2));
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 	if (draw_water && !underwater) reflection_tid = create_reflection();
@@ -1173,24 +1167,12 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	}
 	draw_cloud_plane(0); // these two lines could go in either order
 	draw_sun_flare();
-	//draw_puffy_clouds(0);
-	draw_camera_weapon(0);
 	if (TIMETEST) PRINT_TIME("3.2");
 	calc_cur_ambient_diffuse();
 	if (TIMETEST) PRINT_TIME("3.25");
 	zmin2 = draw_tiled_terrain(water_plane_z, 0);
 	if (TIMETEST) PRINT_TIME("3.3");
-	if (TIMETEST) PRINT_TIME("3.4");
-	draw_coll_surfaces(1, 1); // split into two calls?
-	if (TIMETEST) PRINT_TIME("3.5");
-	draw_solid_object_groups();
-	if (TIMETEST) PRINT_TIME("3.6");
-	draw_transparent(underwater);
 	if (draw_water) draw_water_plane(water_plane_z, reflection_tid);
-	draw_transparent(!underwater);
-	draw_game_elements(timer1);
-	if (shadows_enabled()) create_shadows();
-	point last_spos(surface_pos);
 	check_xy_offsets();
 	init_x = 0;
 	if (TIMETEST) PRINT_TIME("3.9");

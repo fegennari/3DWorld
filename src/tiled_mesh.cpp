@@ -36,8 +36,8 @@ float    const GRASS_COLOR_SCALE= 0.5;
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density;
-extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, ground_effects_level;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
+extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, ground_effects_level, begin_motion, is_cloudy;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, temperature, vegetation, relh_adj_tex, grass_length, grass_width;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
@@ -1088,7 +1088,7 @@ public:
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
 	float draw(float wpz, bool reflection_pass) {
-		float zmin(FAR_CLIP);
+		float zmin(FAR_CLIP), zmax(-FAR_CLIP);
 		set_array_client_state(1, 0, 0, 0);
 		unsigned num_drawn(0), num_trees(0);
 		unsigned long long mem(grass_tile_manager.get_gpu_mem()), tree_mem(0);
@@ -1116,6 +1116,7 @@ public:
 			float const dist(tile->get_rel_dist_to_camera());
 			if (dist > DRAW_DIST_TILES) continue; // too far to draw
 			zmin = min(zmin, tile->get_zmin());
+			zmax = max(zmax, tile->get_zmax());
 			if (!tile->is_visible())    continue;
 			if (trees_enabled() && !tile->trees_generated()) {to_gen_trees.push_back(tile);}
 			if (reflection_pass && ((tile->contains_camera() && !tile->has_water()) || tile->all_water())) continue;
@@ -1152,6 +1153,7 @@ public:
 		if (trees_enabled()  ) {draw_trees  (to_draw, reflection_pass);}
 		if (scenery_enabled()) {draw_scenery(to_draw, reflection_pass);}
 		if (grass_enabled()  ) {draw_grass  (to_draw, reflection_pass);}
+		if (!reflection_pass ) {draw_precipitation(zmin, zmax);}
 		return zmin;
 	}
 
@@ -1162,6 +1164,14 @@ public:
 			i->second->draw_water(zval);
 		}
 		glEnd();
+	}
+
+	// FIXME: maybe shouldn't be here
+	void draw_precipitation(float zmin, float zmax) const {
+		if (!is_cloudy || !begin_motion) return; // is_rain_enabled()?
+		bool const is_snow(temperature <= W_FREEZE_POINT);
+		float const precip_dist = 2.0;
+		// FIXME: generate rain or snow out to precip_dist within the view frustum, from zmax+something to zmin
 	}
 
 	static void set_noise_tex(shader_t &s, unsigned tu_id) {

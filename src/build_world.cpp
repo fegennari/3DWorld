@@ -256,6 +256,14 @@ void object_line_coll(dwobject &obj, point const &old_pos, float radius, unsigne
 }
 
 
+void set_global_state() {
+
+	camera_view = 0;
+	used_objs   = 0;
+	is_cloudy   = obj_groups[coll_id[PRECIP]].enabled;
+}
+
+
 void process_groups() {
 
 	if (animate2) advance_physics_objects();
@@ -266,17 +274,15 @@ void process_groups() {
 		d_part_sys.add_mesh_shadows();
 		d_part_sys.add_light();
 	}
+	set_global_state();
 	if (num_groups == 0) return; // groups not enabled
 	RESET_TIME;
 	unsigned num_objs(0);
 	static int camera_follow(0);
 	static unsigned scounter(0);
-	++scounter;
 	int const lcf(camera_follow);
+	++scounter;
 	camera_follow = 0;
-	camera_view   = 0;
-	is_cloudy     = 0;
-	used_objs     = 0;
 	if (num_obj_on_mesh != NULL) matrix_clear_2d(num_obj_on_mesh); // should be < 1ms
 	if (begin_motion) build_cobj_tree(1, 0); // could also do after group processing
 	
@@ -288,7 +294,6 @@ void process_groups() {
 		obj_type const &otype(object_types[objg.type]);
 		bool const precip((flags & PRECIPITATION) != 0);
 		int const type(objg.get_ptype());
-		if (precip) is_cloudy = 1;
 
 		if (!objg.temperature_ok()) {
 			if (temp_change) {
