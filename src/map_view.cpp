@@ -78,6 +78,7 @@ void draw_overhead_map() {
 	vector<unsigned char> buf(nx*ny*3*sizeof(unsigned char));
 	vector3d const light_dir(get_light_pos().get_norm()); // assume directional lighting to origin
 
+	#pragma omp parallel for schedule(static,1)
 	for (int i = 0; i < ny; ++i) {
 		int const inx(i*nx), iyy((i - yy)*(i - yy)), icy((i - cy)*(i - cy));
 		float last_height(0.0);
