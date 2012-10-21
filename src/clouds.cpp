@@ -32,17 +32,13 @@ struct cloud_t {
 };
 
 
-float get_xy_cloud_scale() {return ((world_mode == WMODE_INF_TERRAIN) ? 4.0 : 1.0);}
-
-
 void cloud_manager_t::create_clouds() { // 3D cloud puffs
 
-	float const xy_scale(get_xy_cloud_scale()), xsz(X_SCENE_SIZE*xy_scale), ysz(Y_SCENE_SIZE*xy_scale);
-	if (!empty() && xy_scale == last_xy_scale) return; // keep the old clouds
-	last_xy_scale = xy_scale;
+	if (!empty()) return; // keep the old clouds
 	clear();
 	free_textures();
 	srand(123);
+	float const xsz(X_SCENE_SIZE), ysz(Y_SCENE_SIZE);
 	unsigned const NCLOUDS = 10;
 	unsigned const NPARTS  = 1000;
 
@@ -198,7 +194,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	// setup projection matrix
 	cube_t const bcube(get_bcube());
 	float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
-	float const scene_xy(get_xy_cloud_scale()*max(X_SCENE_SIZE, Y_SCENE_SIZE)), angle(atan2(cloud_xy, cloud_bot)), z1(min(zbottom, czmin));
+	float const scene_xy(max(X_SCENE_SIZE, Y_SCENE_SIZE)), angle(atan2(cloud_xy, cloud_bot)), z1(min(zbottom, czmin));
 	frustum_z = z1 - scene_xy*(cloud_bot - z1)/(cloud_xy - scene_xy);
 	//pos_dir_up const pdu(get_pt_cube_frustum_pdu(get_camera_pos(), bcube, 1));
 	//pos_dir_up const pdu(all_zeros, plus_z, plus_x, tanf(angle)*SQRT2, sinf(angle), NEAR_CLIP, FAR_CLIP, 1.0);

@@ -1134,10 +1134,7 @@ int draw_spill_section(int x1, int y1, int x2, int y2, float z1, float z2, float
 	if (!get_water_enabled(x1, y1) && !get_water_enabled(x2, y2)) return 2;
 	spillway_matrix[y1][x1] = (short)frame_counter;
 	float xa(get_xval(x1)), ya(get_yval(y1));
-
-	if (world_mode != WMODE_INF_TERRAIN && (z1+flow_height) < water_plane_z && (z2+flow_height) < water_plane_z) {
-		return 0;
-	}
+	if ((z1+flow_height) < water_plane_z && (z2+flow_height) < water_plane_z) return 0;
 	if (island && (z1+0.02) < ocean.z && (z2+0.02) < ocean.z) return 0;
 	vector3d const &norm(vertex_normals[y1][x1]);
 	norm.do_glNormal();
@@ -1268,7 +1265,7 @@ void calc_watershed() {
 				water_matrix[i][j] = zmin - 1.0;
 			}
 		}
-		if (world_mode == WMODE_GROUND) def_water_level = water_plane_z = zmin; // wm == 3???
+		if (world_mode == WMODE_GROUND) {def_water_level = water_plane_z = zmin;} 
 		init_water_springs(NUM_WATER_SPRINGS);
 		return;
 	}
@@ -1548,7 +1545,7 @@ void process_water_springs() {
 
 	if (DISABLE_WATER && INIT_DISABLE_WATER) return;
 	int const cid(coll_id[WDROPLET]);
-	if (world_mode != WMODE_GROUND || !begin_motion || !animate || !animate2 || temperature <= W_FREEZE_POINT) return;
+	if (!begin_motion || !animate || !animate2 || temperature <= W_FREEZE_POINT) return;
 	if (ztop < water_plane_z)  return; // all water
 	if (water_springs.empty()) return;
 

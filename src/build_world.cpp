@@ -603,10 +603,11 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	if (!inf_terrain) {
 		gen_scenery();
 		PRINT_TIME("Scenery generation");
-	}
-	if (!inf_terrain && create_voxel_landscape == 1) {
-		gen_voxel_landscape();
-		PRINT_TIME("Voxel Landscape Generation");
+
+		if (create_voxel_landscape == 1) {
+			gen_voxel_landscape();
+			PRINT_TIME("Voxel Landscape Generation");
+		}
 	}
 	add_all_coll_objects(coll_obj_file, (num_trees == 0));
 	PRINT_TIME("Collision object addition");

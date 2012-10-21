@@ -18,6 +18,7 @@ bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
 bool const ENABLE_TERRAIN_ENV = 1;
 int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
+unsigned const NORM_TEXELS    = 512;
 float const FOG_DIST_TILES    = 1.4;
 float const DRAW_DIST_TILES   = 1.45;
 float const CREATE_DIST_TILES = 1.5;
@@ -197,11 +198,6 @@ struct tile_xy_pair {
 };
 
 
-unsigned get_norm_texels() {
-	return (world_mode == WMODE_INF_TERRAIN) ? 512 : get_texture_size(LANDSCAPE_TEX, 0);
-}
-
-
 #define BILINEAR_INTERP(arr, var, x, y) (y*(x*arr[1][1].var + (1.0-x)*arr[1][0].var) + (1.0-y)*(x*arr[0][1].var + (1.0-x)*arr[0][0].var))
 
 
@@ -276,7 +272,7 @@ public:
 		calc_start_step(0, 0);
 		radius = calc_radius();
 		mzmin  = mzmax = tzmax = get_camera_pos().z;
-		base_tsize = get_norm_texels();
+		base_tsize = NORM_TEXELS;
 		init_vbo_ids();
 	}
 	void invalidate_shadows() {shadows_invalid = 1;}
@@ -1043,7 +1039,7 @@ public:
 
 
 	static void setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool use_sand) {
-		unsigned const base_tsize(get_norm_texels());
+		unsigned const base_tsize(NORM_TEXELS);
 
 		for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
 			int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);

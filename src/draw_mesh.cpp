@@ -491,7 +491,7 @@ void display_mesh() { // fast array version
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	disable_textures_texgen();
 	glDisable(GL_COLOR_MATERIAL);
-	if (!island && world_mode != WMODE_INF_TERRAIN) draw_sides_and_bottom();
+	if (!island) draw_sides_and_bottom();
 	run_post_mesh_draw();
 
 	if (SHOW_NORMALS) {
@@ -726,7 +726,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	if (DISABLE_WATER) return;
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE);
 	colorRGBA color;
-	select_water_ice_texture(color, ((world_mode == WMODE_INF_TERRAIN) ? (combined_gu ? &univ_temp : &init_temperature) : &temperature));
+	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature));
 	bool const reflections(!(display_mode & 0x20));
 	color.alpha *= 0.5;
 
@@ -756,11 +756,9 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		if (reflection_tid) {
 			rcolor = WHITE;
 		}
-		else if (world_mode == WMODE_INF_TERRAIN) {
-			glGetFloatv(GL_FOG_COLOR, (float *)&rcolor);
-		}
 		else {
-			blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
+			glGetFloatv(GL_FOG_COLOR, (float *)&rcolor);
+			//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 		}
 		bool const add_waves((display_mode & 0x0100) != 0);
 		bool const rain_mode(add_waves && is_rain_enabled());

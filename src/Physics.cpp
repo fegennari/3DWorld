@@ -645,8 +645,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 	verify_data();
 	obj_type const &otype(object_types[type]);
 
-	if (status == 0 || pos.z < zmin || time > otype.lifetime || (type == PARTICLE && is_underwater(pos)) ||
-		(world_mode == WMODE_INF_TERRAIN && !DISABLE_WATER && (display_mode & 0x04) /*&& (otype.flags & IS_PRECIP)*/ && pos.z < water_plane_z)) {
+	if (status == 0 || pos.z < zmin || time > otype.lifetime || (type == PARTICLE && is_underwater(pos))) {
 		assert(type != SMILEY);
 		status = 0;
 		return;
@@ -756,11 +755,6 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		assert(!is_nan(tstep));
 		pos.z += tstep*velocity.z;
 		verify_data();
-
-		if (world_mode == WMODE_INF_TERRAIN) { // infinite landscape case
-			if (pos.z < zmin) status = 0; // not sure about this
-			return;
-		}
 
 		// check collisions
 		float const r2((otype.flags & COLL_DESTROYS) ? 0.25*radius : radius);

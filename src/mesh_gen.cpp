@@ -483,8 +483,7 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 	update_temperature(1);
 	gen_terrain_map();
 
-	if (GLACIATE && !make_island && world_mode == WMODE_GROUND &&
-		(!keep_sin_table || !init || update_zvals) && AUTOSCALE_HEIGHT) {
+	if (GLACIATE && !make_island && world_mode == WMODE_GROUND && (!keep_sin_table || !init || update_zvals) && AUTOSCALE_HEIGHT) {
 		float const zval(0.5*(zbottom + ztop)); // readjust camera height
 		mesh_origin.z   = zval;
 		camera_origin.z = zval;
@@ -635,7 +634,7 @@ void update_temperature(bool verbose) {
 	// keep planet temperatures in combined landscape + universe
 	alt_temp = (combined_gu ? univ_temp : init_temperature);
 
-	if (/*world_mode == WMODE_INF_TERRAIN ||*/ island || read_landscape || read_heightmap || do_read_mesh) {
+	if (island || read_landscape || read_heightmap || do_read_mesh) {
 		temperature = alt_temp;
 		return;
 	}
@@ -680,7 +679,7 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 	xterms.resize(nx*F_TABLE_SIZE);
 	yterms.resize(ny*F_TABLE_SIZE);
 	hoff = 0.0;
-	float const ms_scale((island && world_mode == WMODE_INF_TERRAIN) ? 1.0/ISLAND_MAG_SCALE : 1.0);
+	float const ms_scale((island && world_mode == WMODE_INF_TERRAIN) ? 1.0/ISLAND_MAG_SCALE : 1.0); // FIXME: seems incorrect?
 	float const mscale(ms_scale*mesh_scale), mscale_z(ms_scale*mesh_scale_z);
 	float const msx(mscale*DX_VAL_INV), msy(mscale*DY_VAL_INV), ms2(0.5*mscale), msz_inv(1.0/mscale_z);
 
@@ -898,7 +897,7 @@ bool load_state(const char *filename) {
 	}
 	fclose(fp);
 	update_cpos();
-	if (world_mode == WMODE_GROUND) gen_scene(1, (world_mode == WMODE_GROUND), 1, 1, 0);
+	if (world_mode == WMODE_GROUND) {gen_scene(1, (world_mode == WMODE_GROUND), 1, 1, 0);}
 	cout << "State file '" << filename << "' has been loaded." << endl;
 	return 1;
 }

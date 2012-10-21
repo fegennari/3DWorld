@@ -840,24 +840,23 @@ void display(void) {
 		check_gl_error(3);
 		if (TIMETEST) PRINT_TIME("\n\n0");
 		
-		if (combined_gu) { // light from current system's star
-			if (world_mode != WMODE_INF_TERRAIN) draw_universe_bkg(underwater, depth); // infinite universe as background
-		}
-		else {
+		if (!combined_gu) {
 			do_look_at();
 			sun_color = SUN_LT_C;
 			apply_red_sky(sun_color);
 			reset_planet_defaults();
 			setup_lighting(underwater, depth);
 			set_light_atten(GL_LIGHT0, 1.0); // reset light0
+			check_gl_error(4);
+			if (TIMETEST) PRINT_TIME("1");
 		}
-		check_gl_error(4);
-		if (TIMETEST) PRINT_TIME("1");
-
 		if (world_mode == WMODE_INF_TERRAIN) { // infinite terrain mode
 			display_inf_terrain(depth);
 		}
 		else { // finite terrain mode
+			if (combined_gu) { // light from current system's star
+				draw_universe_bkg(underwater, depth); // infinite universe as background
+			}
 			if (TIMETEST) PRINT_TIME("1.5");
 
 			if (mesh_invalidated) {

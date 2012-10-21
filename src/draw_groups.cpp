@@ -212,10 +212,9 @@ void draw_select_groups(int solid) {
 	shader_t s;
 	
 	if (!disable_shaders) {
-		bool const v(world_mode == WMODE_GROUND);
 		indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 		cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
-		orig_fog_color    = setup_smoke_shaders(s, 0.0, 0, 0, v, 1, v, v, 0, v, 0, 0, 1, 1);
+		orig_fog_color    = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1);
 	}
 	select_no_texture();
 	BLACK.do_glColor();
@@ -661,9 +660,8 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		return;
 	}
 	if (draw_snowflake) { // draw as a point to be converted to a billboard by the geometry shader
-		colorRGBA a(do_texture ? tcolor : color);
-		bool is_shadowed(world_mode == WMODE_GROUND && is_object_shadowed(obj, cd_scale, radius));
-		snow_pld.add_pt(pos, (get_light_pos() - pos), a);
+		bool const is_shadowed(is_object_shadowed(obj, cd_scale, radius));
+		snow_pld.add_pt(pos, (is_shadowed ? zero_vector : (get_light_pos() - pos)), (do_texture ? tcolor : color));
 		return;
 	}
 	if (!draw_large) { // draw as a point

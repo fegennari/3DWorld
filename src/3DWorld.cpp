@@ -544,7 +544,6 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 	reset_fog();
 	clear_tiled_terrain();
 	obj_pld.free_mem();
-	//if (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) calc_visibility(SUN_SHADOW | MOON_SHADOW);
 	glDrawBuffer(GL_BACK);
 	post_window_redisplay();
 	
@@ -870,7 +869,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'v': // reset camera and change camera mode from air to surface
 		reset_camera_pos();
-		if (world_mode != WMODE_GROUND) break; // universe mode
+		if (world_mode != WMODE_GROUND) break; // universe/inf terrain mode
 		gamemode_rand_appear();
 		camera_mode   = !camera_mode;
 		camera_reset  = 1;

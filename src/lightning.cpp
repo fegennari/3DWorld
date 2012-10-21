@@ -251,10 +251,9 @@ void lightning::gen_recur(point &start, float strength, int xpos, int ypos, int 
 			hit_water = 1;
 			break;
 		}
-		if (zval <= get_lit_h(ptx, pty))                               break;
-		if (world_mode == WMODE_INF_TERRAIN && zval < water_plane_z)   break;
-		if (world_mode == WMODE_GROUND && ocean_set && zval < ocean.z) break;
-		if (rand()%L_FORK_END_PARAM == 0)                              break;
+		if (zval <= get_lit_h(ptx, pty))  break;
+		if (ocean_set && zval < ocean.z)  break;
+		if (rand()%L_FORK_END_PARAM == 0) break;
 		zval -= dz;
 	}
 	++i;
