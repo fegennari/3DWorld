@@ -679,7 +679,7 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 	xterms.resize(nx*F_TABLE_SIZE);
 	yterms.resize(ny*F_TABLE_SIZE);
 	hoff = 0.0;
-	float const ms_scale((island && world_mode == WMODE_INF_TERRAIN) ? 1.0/ISLAND_MAG_SCALE : 1.0); // FIXME: seems incorrect?
+	float const ms_scale((island && world_mode == WMODE_GROUND) ? 1.0/ISLAND_MAG_SCALE : 1.0);
 	float const mscale(ms_scale*mesh_scale), mscale_z(ms_scale*mesh_scale_z);
 	float const msx(mscale*DX_VAL_INV), msy(mscale*DY_VAL_INV), ms2(0.5*mscale), msz_inv(1.0/mscale_z);
 
