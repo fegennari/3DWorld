@@ -781,7 +781,7 @@ public:
 	unsigned num_trees() const {return trees.size();}
 
 	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail) const {
-		bool const draw_all(low_detail || camera_pdu.sphere_visible_test(get_center(), 0.0)); // tile center is in view
+		bool const draw_all(low_detail || camera_pdu.point_visible_test(get_center())); // tile center is in view
 		trees.draw_pine_leaves(0, low_detail, draw_all, xlate);
 	}
 

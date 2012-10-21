@@ -97,6 +97,18 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 }
 
 
+bool pos_dir_up::point_visible_test(point const &pos_) const { // simplified/optimized version of sphere_visible_test()
+
+	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
+	vector3d const pv(pos_, pos);
+	if (dot_product(dir, pv) < 0.0) return 0; // point behind - optimization
+	float const dist(pv.mag());
+	if (fabs(dot_product(upv_, pv)) >   dist*sterm) return 0; // y-direction (up)
+	if (fabs(dot_product(cp,   pv)) > A*dist*sterm) return 0; // x-direction
+	return (dist > near_ && dist < far_); // Note: approximate/conservative but fast
+}
+
+
 // view frustum check: dir and upv must be normalized - checks view frustum
 bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 
