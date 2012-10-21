@@ -16,6 +16,7 @@ bool const DEBUG_TILES        = 0;
 bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
 bool const ENABLE_TERRAIN_ENV = 1;
+bool const GRASS_CLOUD_SHADOWS= 1; // slow, but looks nice
 int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
 unsigned const NORM_TEXELS    = 512;
@@ -859,7 +860,7 @@ public:
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	}
 
-	void draw_grass(shader_t &s) {
+	void draw_grass(shader_t &s, bool use_cloud_shadows) {
 		if (grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
 		bind_texture_tu(height_tid, 2);
 		bind_texture_tu(weight_tid, 3);
@@ -872,7 +873,11 @@ public:
 		s.add_uniform_float("wy2", size*DY_VAL);
 		s.add_uniform_float("zmin", mzmin);
 		s.add_uniform_float("zmax", mzmax);
-
+		
+		if (use_cloud_shadows) {
+			vector3d const offset(get_xval(x1), get_yval(y1), 0.0);
+			s.add_uniform_vector3d("cloud_offset", offset);
+		}
 		unsigned const grass_block_dim(get_grass_block_dim());
 		assert(grass_blocks.size() == grass_block_dim*grass_block_dim);
 		unsigned const ty_loc(s.get_uniform_loc("translate_y"));
@@ -1065,7 +1070,7 @@ public:
 		s.set_prefix("#define NUM_OCTAVES 4",     1); // FS (for clouds)
 		s.set_bool_prefix("apply_cloud_shadows", (cloud_shadows_enabled() && !reflection_pass), 1); // FS
 		s.set_vert_shader("texture_gen.part+tiled_mesh");
-		s.set_frag_shader("linear_fog.part+perlin_clouds.part+tiled_mesh");
+		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+tiled_mesh");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
@@ -1076,8 +1081,8 @@ public:
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 		set_noise_tex(s, 8);
 		s.add_uniform_float("cloud_scale", 0.535);
+		s.add_uniform_float("cloud_plane_z", get_cloud_zmax());
 		set_cloud_uniforms(s, 9);
-		s.add_uniform_float("sky_plane_z", get_cloud_zmax());
 		setup_terrain_textures(s, 2, 0);
 	}
 
@@ -1265,7 +1270,7 @@ public:
 		s.end_shader();
 	}
 
-	// tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: shadow map, 5: noise
+	// tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: shadow map, 5: noise, 9: cloud noise
 	void draw_grass(draw_vect_t const &to_draw, bool reflection_pass) {
 		if (reflection_pass) return; // no grass refletion (yet)
 
@@ -1274,14 +1279,17 @@ public:
 		}
 		grass_tile_manager.begin_draw(0.1);
 		shader_t s;
+		bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled() && !reflection_pass);
 
 		for (unsigned pass = 0; pass < 2; ++pass) { // wind, no wind
 			s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
 			s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
 			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+			s.set_prefix("#define NUM_OCTAVES 4",     0); // VS (for clouds)
+			s.set_bool_prefix("apply_cloud_shadows", use_cloud_shadows, 0); // VS
 			s.set_bool_prefix("enable_grass_wind", (pass == 0), 0); // VS
 			s.setup_enabled_lights(2);
-			s.set_vert_shader("ads_lighting.part*+wind.part*+grass_tiled");
+			s.set_vert_shader("ads_lighting.part*+wind.part*+perlin_clouds.part*+grass_tiled");
 			s.set_frag_shader("linear_fog.part+simple_texture");
 			//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
 			s.begin_shader();
@@ -1295,10 +1303,13 @@ public:
 			s.add_uniform_float("height", grass_length);
 			s.add_uniform_float("dist_const", (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH);
 			s.add_uniform_float("dist_slope", 0.25);
+			s.add_uniform_float("cloud_scale", 0.535);
+			s.add_uniform_float("cloud_plane_z", get_cloud_zmax());
+			set_cloud_uniforms(s, 9);
 
 			for (unsigned i = 0; i < to_draw.size(); ++i) {
 				if ((to_draw[i].second->get_dist_to_camera_in_tiles() > 0.5) == pass) {
-					to_draw[i].second->draw_grass(s);
+					to_draw[i].second->draw_grass(s, use_cloud_shadows);
 				}
 			}
 			s.end_shader();

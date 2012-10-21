@@ -372,7 +372,7 @@ void draw_cloud_plane(bool reflection_pass) {
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	s.set_prefix("#define NUM_OCTAVES 8",     1); // FS
 	s.set_vert_shader("clouds");
-	s.set_frag_shader("linear_fog.part+perlin_clouds.part+clouds");
+	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+clouds");
 	s.begin_shader();
 	s.setup_fog_scale();
 	s.add_uniform_float("cloud_scale", 0.5);
