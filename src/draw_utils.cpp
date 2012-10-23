@@ -83,6 +83,13 @@ void vert_norm_comp_tc_color::set_vbo_arrays(unsigned force_stride) {
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp_tc)));
 }
 
+
+void vert_wrap_t::set_state() const { // typically called on element 0
+	unsigned const stride(sizeof(*this));
+	set_array_client_state(1, 0, 0, 0);
+	glVertexPointer(3, GL_FLOAT, stride, &v);
+}
+
 void vert_norm_tc_color::set_state() const { // typically called on element 0
 	set_array_client_state(1, 1, 1, 1);
 	unsigned const stride(sizeof(*this));

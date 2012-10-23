@@ -677,6 +677,7 @@ struct vert_wrap_t { // so we can put the vertex first
 	point v;
 	vert_wrap_t() {}
 	vert_wrap_t(point const &v_) : v(v_) {}
+	void set_state() const;
 };
 
 
