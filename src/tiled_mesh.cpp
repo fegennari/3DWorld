@@ -28,7 +28,7 @@ float const DELETE_DIST_TILES = 1.7;
 float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH    = 1.6;
-float const PRECIP_DIST       = 8.0;
+float const PRECIP_DIST       = 20.0;
 float const GRASS_THRESH      = 1.5;
 float const GRASS_LOD_SCALE   = 16.0;
 
@@ -54,6 +54,7 @@ bool is_grass_enabled() {return ((display_mode & 0x02) && GRASS_THRESH > 0.0 && 
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
 
 
+
 grass_tile_manager_t grass_tile_manager;
 
 void update_tiled_terrain_grass_vbos() {
@@ -69,13 +70,15 @@ protected:
 
 	void render(int type, colorRGBA const &base_color) const {
 		if (empty()) return;
-		base_color.do_glColor(); // FIXME: modulate with current background/sky color
+		colorRGBA color;
+		get_avg_sky_color(color);
+		color.modulate_with(base_color).do_glColor();
 		assert(!(size() % VERTS_PER_PRIM));
 		plus_z.do_glNormal();
-		enable_blend(); // FIXME: split into point smooth and blend?
+		enable_blend(); // split into point smooth and blend?
 		glDisable(GL_LIGHTING);
 		verts.front().set_state();
-		glDrawArrays(type, 0, size()/VERTS_PER_PRIM); // view frustum culling?
+		glDrawArrays(type, 0, size()/VERTS_PER_PRIM);
 		glEnable(GL_LIGHTING);
 		disable_blend();
 	}
@@ -86,7 +89,7 @@ public:
 	size_t size() const {return verts.size();}
 	float get_zmin() const {return max(zmin, water_plane_z);}
 	float get_zmax() const {return get_cloud_zmax();}
-	unsigned get_num_precip() {return 25000;} // FIXME: based on precip object group count
+	unsigned get_num_precip() {return 40000;} // FIXME: based on precip object group count
 	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), PRECIP_DIST);}
 	vector3d get_velocity(float vz) const {return fticks*(0.02*wind + vector3d(0.0, 0.0, vz));}
 	
@@ -114,7 +117,7 @@ public:
 	void update() {
 		check_size();
 		vector3d const v(get_velocity(-0.2)); // FIXME - dynamic
-		vector3d const dir(0.1*v.get_norm()); // FIXME - dynamic
+		vector3d const dir(0.1*v.get_norm()); // length is 0.1
 		float const vmult(0.1/verts.size());
 
 		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
@@ -123,7 +126,7 @@ public:
 			verts[i+1].v = verts[i].v + dir;
 		}
 	}
-	void render() const {precip_manager_t::render(GL_LINES, colorRGBA(1,1,1,0.12));} // partially transparent
+	void render() const {precip_manager_t::render(GL_LINES, colorRGBA(1,1,1,0.2));} // partially transparent
 };
 
 
@@ -149,6 +152,23 @@ public:
 
 rain_manager_t rain_manager;
 snow_manager_t snow_manager;
+
+
+void draw_tiled_terrain_precipitation() {
+
+	if (!is_cloudy || !begin_motion) return; // is_rain_enabled()?
+
+	if (temperature <= W_FREEZE_POINT) { // draw snow
+		rain_manager.clear();
+		snow_manager.update();
+		snow_manager.render();
+	}
+	else { // draw rain
+		snow_manager.clear();
+		rain_manager.update();
+		rain_manager.render();
+	}
+}
 
 
 void bind_texture_tu(unsigned tid, unsigned tu_id) {
@@ -1122,7 +1142,6 @@ public:
 		if (trees_enabled()   ) {draw_trees  (to_draw, reflection_pass);}
 		if (scenery_enabled() ) {draw_scenery(to_draw, reflection_pass);}
 		if (is_grass_enabled()) {draw_grass  (to_draw, reflection_pass);}
-		if (!reflection_pass  ) {draw_precipitation();}
 		return zmin;
 	}
 
@@ -1133,23 +1152,6 @@ public:
 			i->second->draw_water(zval);
 		}
 		glEnd();
-	}
-
-
-	// FIXME: maybe shouldn't be here
-	void draw_precipitation() const {
-		if (!is_cloudy || !begin_motion) return; // is_rain_enabled()?
-
-		if (temperature <= W_FREEZE_POINT) { // draw snow
-			rain_manager.clear();
-			snow_manager.update();
-			snow_manager.render();
-		}
-		else { // draw rain
-			snow_manager.clear();
-			rain_manager.update();
-			rain_manager.render();
-		}
 	}
 
 	static void set_noise_tex(shader_t &s, unsigned tu_id) {

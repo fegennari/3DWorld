@@ -127,6 +127,7 @@ void draw_earth();
 void draw_stationary_earth(float radius);
 void apply_red_sky(colorRGBA &color);
 colorRGBA get_cloud_color();
+void get_avg_sky_color(colorRGBA &avg_color);
 float get_cloud_density(point const &pt, vector3d const &dir);
 void free_cloud_textures();
 void draw_puffy_clouds(int order);
@@ -239,6 +240,7 @@ void clear_tiled_terrain();
 void reset_tiled_terrain_state();
 void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(float zval);
+void draw_tiled_terrain_precipitation();
 
 // function prototypes - map_view
 void draw_overhead_map();

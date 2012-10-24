@@ -599,9 +599,7 @@ colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
 		fog_dist = 0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2));
 	}
 	else {
-		colorRGBA cloud_color(get_cloud_color());
-		cloud_color.alpha = 1.0;
-		blend_color(fog_color, cloud_color, bkg_color, 0.5, 1);
+		get_avg_sky_color(fog_color);
 		fog_dist = get_inf_terrain_fog_dist();
 	}
 	fog_color = set_lighted_fog_color(fog_color); // under water/ice
@@ -1171,7 +1169,9 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (TIMETEST) PRINT_TIME("3.25");
 	zmin2 = draw_tiled_terrain(water_plane_z, 0);
 	if (TIMETEST) PRINT_TIME("3.3");
-	if (draw_water) draw_water_plane(water_plane_z, reflection_tid);
+	if (underwater ) {draw_tiled_terrain_precipitation();}
+	if (draw_water ) {draw_water_plane(water_plane_z, reflection_tid);}
+	if (!underwater) {draw_tiled_terrain_precipitation();}
 	check_xy_offsets();
 	init_x = 0;
 	if (TIMETEST) PRINT_TIME("3.9");

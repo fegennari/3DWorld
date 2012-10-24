@@ -756,6 +756,14 @@ colorRGBA get_cloud_color() {
 }
 
 
+void get_avg_sky_color(colorRGBA &avg_color) {
+
+	colorRGBA cloud_color(get_cloud_color());
+	cloud_color.alpha = 1.0;
+	blend_color(avg_color, cloud_color, bkg_color, 0.5, 1);
+}
+
+
 float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 
 	if (atmosphere == 0.0) return 0.0;
