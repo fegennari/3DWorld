@@ -8,6 +8,11 @@
 #include "3DWorld.h"
 
 
+unsigned const NUM_GRASS_LODS    = 6;
+unsigned const GRASS_BLOCK_SZ    = 4;
+float const TT_GRASS_COLOR_SCALE = 0.5;
+
+
 class grass_manager_t {
 
 protected:
@@ -43,6 +48,25 @@ public:
 	void add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d &norm) const;
 	void begin_draw(float spec_weight) const;
 	void end_draw() const;
+};
+
+
+class grass_tile_manager_t : public grass_manager_t {
+
+	vector<unsigned> vbo_offsets[NUM_GRASS_LODS];
+	unsigned start_render_ix, end_render_ix;
+
+	void gen_block(unsigned bix);
+	void gen_lod_block(unsigned bix, unsigned lod);
+
+public:
+	grass_tile_manager_t() : start_render_ix(0), end_render_ix(0) {}
+	void clear();
+	unsigned get_gpu_mem() const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
+	void upload_data();
+	void gen_grass();
+	void update();
+	void render_block(unsigned block_ix, unsigned lod);
 };
 
 

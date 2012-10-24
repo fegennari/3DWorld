@@ -27,6 +27,8 @@ extern vector3d wind;
 extern obj_type object_types[];
 extern coll_obj_group coll_objects;
 
+bool is_grass_enabled();
+
 
 void grass_manager_t::grass_t::merge(grass_t const &g) {
 
@@ -113,6 +115,126 @@ void grass_manager_t::end_draw() const {
 	disable_multitex_a();
 	bind_vbo(0);
 	check_gl_error(40);
+}
+
+
+void grass_tile_manager_t::gen_block(unsigned bix) {
+
+	for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
+		for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
+			float const xval((x+bix*GRASS_BLOCK_SZ)*DX_VAL), yval(y*DY_VAL);
+
+			for (unsigned n = 0; n < grass_density; ++n) {
+				add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), TT_GRASS_COLOR_SCALE);
+			}
+		}
+	}
+	assert(bix+1 < vbo_offsets[0].size());
+	vbo_offsets[0][bix+1] = grass.size(); // end of block/beginning of next block
+}
+
+
+void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
+
+	if (lod == 0) {
+		gen_block(bix);
+		return;
+	}
+	assert(bix+1 < vbo_offsets[lod].size());
+	unsigned const search_dist(1*grass_density); // enough for one cell
+	unsigned const start_ix(vbo_offsets[lod-1][bix]), end_ix(vbo_offsets[lod-1][bix+1]); // from previous LOD
+	float const dmax(2.5*grass_width*(1 << lod));
+	vector<unsigned char> used((end_ix - start_ix), 0); // initially all unused;
+			
+	for (unsigned i = start_ix; i < end_ix; ++i) {
+		if (used[i-start_ix]) continue; // already used
+		grass.push_back(grass[i]); // seed with an existing grass blade
+		float dmin_sq(dmax*dmax); // start at max allowed dist
+		unsigned merge_ix(i); // start at ourself (invalid)
+		unsigned const end_val(min(i+search_dist, end_ix));
+
+		for (unsigned cur = i+1; cur < end_val; ++cur) {
+			float const dist_sq(p2p_dist_sq(grass[i].p, grass[cur].p));
+					
+			if (dist_sq < dmin_sq) {
+				dmin_sq  = dist_sq;
+				merge_ix = cur;
+			}
+		}
+		if (merge_ix > i) {
+			assert(merge_ix < grass.size());
+			assert(merge_ix-start_ix < used.size());
+			grass.back().merge(grass[merge_ix]);
+			used[merge_ix-start_ix] = 1;
+		}
+	} // for i
+	//cout << "level " << lod << " num: " << (grass.size() - vbo_offsets[lod][bix]) << endl;
+	vbo_offsets[lod][bix+1] = grass.size(); // end of current LOD block/beginning of next LOD block
+}
+
+
+void grass_tile_manager_t::clear() {
+
+	grass_manager_t::clear();
+	for (unsigned lod = 0; lod <= NUM_GRASS_LODS; ++lod) {vbo_offsets[lod].clear();}
+}
+
+
+void grass_tile_manager_t::upload_data() {
+
+	if (empty()) return;
+	RESET_TIME;
+	assert(vbo);
+	vector<grass_data_t> data(3*size()); // 3 vertices per grass blade
+
+	for (unsigned i = 0, ix = 0; i < size(); ++i) {
+		vector3d norm(plus_z); // use grass normal? 2-sided lighting? generate normals in vertex shader?
+		//vector3d norm(grass[i].n);
+		add_to_vbo_data(grass[i], data, ix, norm);
+	}
+	bind_vbo(vbo);
+	upload_vbo_data(&data.front(), data.size()*sizeof(grass_data_t));
+	bind_vbo(0);
+	data_valid = 1;
+	PRINT_TIME("Grass Tile Upload");
+}
+
+
+void grass_tile_manager_t::gen_grass() {
+
+	RESET_TIME;
+	assert(NUM_GRASS_LODS > 0);
+	assert((MESH_X_SIZE % GRASS_BLOCK_SZ) == 0 && (MESH_Y_SIZE % GRASS_BLOCK_SZ) == 0);
+	unsigned const num_grass_blocks(MESH_X_SIZE/GRASS_BLOCK_SZ);
+
+	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
+		vbo_offsets[lod].resize(num_grass_blocks+1);
+		vbo_offsets[lod][0] = grass.size(); // start
+		for (unsigned i = 0; i < num_grass_blocks; ++i) {gen_lod_block(i, lod);}
+	}
+	PRINT_TIME("Grass Tile Gen");
+}
+
+
+void grass_tile_manager_t::update() { // to be called once per frame
+
+	if (!is_grass_enabled()) {
+		clear();
+		return;
+	}
+	if (empty()) {gen_grass();}
+	if (!vbo_valid ) create_new_vbo();
+	if (!data_valid) upload_data();
+}
+
+
+void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod) {
+
+	assert(lod < NUM_GRASS_LODS);
+	assert(block_ix+1 < vbo_offsets[lod].size());
+	unsigned const start_ix(vbo_offsets[lod][block_ix]), end_ix(vbo_offsets[lod][block_ix+1]);
+	assert(start_ix < end_ix && end_ix <= grass.size());
+	glDrawArrays(GL_TRIANGLES, 3*start_ix, 3*(end_ix - start_ix));
 }
 
 

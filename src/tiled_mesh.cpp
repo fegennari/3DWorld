@@ -29,12 +29,8 @@ float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH    = 1.6;
 float const PRECIP_DIST       = 8.0;
-
-unsigned const GRASS_BLOCK_SZ   = 4;
-unsigned const NUM_GRASS_LODS   = 6;
-float    const GRASS_THRESH     = 1.5;
-float    const GRASS_LOD_SCALE  = 16.0;
-float    const GRASS_COLOR_SCALE= 0.5;
+float const GRASS_THRESH      = 1.5;
+float const GRASS_LOD_SCALE   = 16.0;
 
 
 extern bool inf_terrain_scenery;
@@ -54,128 +50,9 @@ float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius()
 bool is_water_enabled() {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool scenery_enabled () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
-bool grass_enabled   () {return ((display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
+bool is_grass_enabled() {return ((display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
 
-
-class grass_tile_manager_t : public grass_manager_t {
-
-	vector<unsigned> vbo_offsets[NUM_GRASS_LODS];
-	unsigned start_render_ix, end_render_ix;
-
-	void gen_block(unsigned bix) {
-		float const color_scale(GRASS_COLOR_SCALE*(cloud_shadows_enabled() ? 0.875 : 1.0));
-
-		for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
-			for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
-				float const xval((x+bix*GRASS_BLOCK_SZ)*DX_VAL), yval(y*DY_VAL);
-
-				for (unsigned n = 0; n < grass_density; ++n) {
-					add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), color_scale);
-				}
-			}
-		}
-		assert(bix+1 < vbo_offsets[0].size());
-		vbo_offsets[0][bix+1] = grass.size(); // end of block/beginning of next block
-	}
-
-	void gen_lod_block(unsigned bix, unsigned lod) {
-		if (lod == 0) {
-			gen_block(bix);
-			return;
-		}
-		assert(bix+1 < vbo_offsets[lod].size());
-		unsigned const search_dist(1*grass_density); // enough for one cell
-		unsigned const start_ix(vbo_offsets[lod-1][bix]), end_ix(vbo_offsets[lod-1][bix+1]); // from previous LOD
-		float const dmax(2.5*grass_width*(1 << lod));
-		vector<unsigned char> used((end_ix - start_ix), 0); // initially all unused;
-			
-		for (unsigned i = start_ix; i < end_ix; ++i) {
-			if (used[i-start_ix]) continue; // already used
-			grass.push_back(grass[i]); // seed with an existing grass blade
-			float dmin_sq(dmax*dmax); // start at max allowed dist
-			unsigned merge_ix(i); // start at ourself (invalid)
-			unsigned const end_val(min(i+search_dist, end_ix));
-
-			for (unsigned cur = i+1; cur < end_val; ++cur) {
-				float const dist_sq(p2p_dist_sq(grass[i].p, grass[cur].p));
-					
-				if (dist_sq < dmin_sq) {
-					dmin_sq  = dist_sq;
-					merge_ix = cur;
-				}
-			}
-			if (merge_ix > i) {
-				assert(merge_ix < grass.size());
-				assert(merge_ix-start_ix < used.size());
-				grass.back().merge(grass[merge_ix]);
-				used[merge_ix-start_ix] = 1;
-			}
-		} // for i
-		//cout << "level " << lod << " num: " << (grass.size() - vbo_offsets[lod][bix]) << endl;
-		vbo_offsets[lod][bix+1] = grass.size(); // end of current LOD block/beginning of next LOD block
-	}
-
-public:
-	grass_tile_manager_t() : start_render_ix(0), end_render_ix(0) {}
-
-	void clear() {
-		grass_manager_t::clear();
-		for (unsigned lod = 0; lod <= NUM_GRASS_LODS; ++lod) {vbo_offsets[lod].clear();}
-	}
-
-	unsigned get_gpu_mem() const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
-
-	void upload_data() {
-		if (empty()) return;
-		RESET_TIME;
-		assert(vbo);
-		vector<grass_data_t> data(3*size()); // 3 vertices per grass blade
-
-		for (unsigned i = 0, ix = 0; i < size(); ++i) {
-			vector3d norm(plus_z); // use grass normal? 2-sided lighting? generate normals in vertex shader?
-			//vector3d norm(grass[i].n);
-			add_to_vbo_data(grass[i], data, ix, norm);
-		}
-		bind_vbo(vbo);
-		upload_vbo_data(&data.front(), data.size()*sizeof(grass_data_t));
-		bind_vbo(0);
-		data_valid = 1;
-		PRINT_TIME("Grass Tile Upload");
-	}
-
-	void gen_grass() {
-		RESET_TIME;
-		assert(NUM_GRASS_LODS > 0);
-		assert((MESH_X_SIZE % GRASS_BLOCK_SZ) == 0 && (MESH_Y_SIZE % GRASS_BLOCK_SZ) == 0);
-		unsigned const num_grass_blocks(MESH_X_SIZE/GRASS_BLOCK_SZ);
-
-		for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
-			vbo_offsets[lod].resize(num_grass_blocks+1);
-			vbo_offsets[lod][0] = grass.size(); // start
-			for (unsigned i = 0; i < num_grass_blocks; ++i) {gen_lod_block(i, lod);}
-		}
-		PRINT_TIME("Grass Tile Gen");
-	}
-
-	void update() { // to be called once per frame
-		if (!grass_enabled()) {
-			clear();
-			return;
-		}
-		if (empty()) {gen_grass();}
-		if (!vbo_valid ) create_new_vbo();
-		if (!data_valid) upload_data();
-	}
-
-	void render_block(unsigned block_ix, unsigned lod) {
-		assert(lod < NUM_GRASS_LODS);
-		assert(block_ix+1 < vbo_offsets[lod].size());
-		unsigned const start_ix(vbo_offsets[lod][block_ix]), end_ix(vbo_offsets[lod][block_ix+1]);
-		assert(start_ix < end_ix && end_ix <= grass.size());
-		glDrawArrays(GL_TRIANGLES, 3*start_ix, 3*(end_ix - start_ix));
-	}
-};
 
 grass_tile_manager_t grass_tile_manager;
 
@@ -207,7 +84,7 @@ public:
 	void clear () {verts.clear();}
 	bool empty () const {return verts.empty();}
 	size_t size() const {return verts.size();}
-	float get_zmin() const {return water_plane_z;}
+	float get_zmin() const {return max(zmin, water_plane_z);}
 	float get_zmax() const {return get_cloud_zmax();}
 	unsigned get_num_precip() {return 25000;} // FIXME: based on precip object group count
 	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), PRECIP_DIST);}
@@ -238,10 +115,11 @@ public:
 		check_size();
 		vector3d const v(get_velocity(-0.2)); // FIXME - dynamic
 		vector3d const dir(0.1*v.get_norm()); // FIXME - dynamic
+		float const vmult(0.1/verts.size());
 
 		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
 			check_pos(verts[i].v);
-			if (animate2) {verts[i].v += rgen.rand_uniform(0.9, 1.1)*v;}
+			if (animate2) {verts[i].v += (1.0 + i*vmult)*v;}
 			verts[i+1].v = verts[i].v + dir;
 		}
 	}
@@ -254,10 +132,11 @@ public:
 	void update() {
 		check_size();
 		vector3d const v(get_velocity(-0.02)); // FIXME - dynamic
+		float const vmult(0.1/verts.size());
 
 		for (unsigned i = 0; i < verts.size(); ++i) {
 			check_pos(verts[i].v);
-			if (animate2) {verts[i].v += rgen.rand_uniform(0.9, 1.1)*v;}
+			if (animate2) {verts[i].v += (1.0 + i*vmult)*v;}
 		}
 	}
 	void render() const {
@@ -1139,7 +1018,7 @@ public:
 		for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
 			int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
 			float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
-			float const cscale((tid == GROUND_TEX) ? GRASS_COLOR_SCALE : 1.0); // darker grass
+			float const cscale((tid == GROUND_TEX) ? TT_GRASS_COLOR_SCALE : 1.0); // darker grass
 			unsigned const tu_id(start_tu_id + i);
 			select_multitex(tid, tu_id, 0);
 			std::ostringstream oss1, oss2, oss3;
@@ -1240,10 +1119,10 @@ public:
 				<< num_trees << ", gpu mem: " << mem/1024/1024 << ", tree mem: " << tree_mem/1024/1024 << endl;
 		}
 		run_post_mesh_draw();
-		if (trees_enabled()  ) {draw_trees  (to_draw, reflection_pass);}
-		if (scenery_enabled()) {draw_scenery(to_draw, reflection_pass);}
-		if (grass_enabled()  ) {draw_grass  (to_draw, reflection_pass);}
-		if (!reflection_pass ) {draw_precipitation();}
+		if (trees_enabled()   ) {draw_trees  (to_draw, reflection_pass);}
+		if (scenery_enabled() ) {draw_scenery(to_draw, reflection_pass);}
+		if (is_grass_enabled()) {draw_grass  (to_draw, reflection_pass);}
+		if (!reflection_pass  ) {draw_precipitation();}
 		return zmin;
 	}
 
