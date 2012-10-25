@@ -1057,9 +1057,11 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case 'N': // decrease precipitation rate by 1.5X
 		obj_groups[coll_id[PRECIP]].update_app_rate(1.0/1.5, 2, 1000);
 		obj_pld.free_mem();
+		cout << "decrease precip to " << obj_groups[coll_id[PRECIP]].max_objects() << endl;
 		break;
 	case 'M': // increase precipitation rate by 1.5X
 		obj_groups[coll_id[PRECIP]].update_app_rate(1.5, 2, 1000);
+		cout << "increase precip to " << obj_groups[coll_id[PRECIP]].max_objects() << endl;
 		break;
 
 	case 'H': // save mesh state/modmap

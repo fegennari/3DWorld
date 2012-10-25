@@ -545,6 +545,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
     <ClCompile Include="src\platform.cpp" />
+    <ClCompile Include="src\precipitation.cpp" />
     <ClCompile Include="src\ray_trace.cpp" />
     <ClCompile Include="src\scenery.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>

@@ -28,17 +28,15 @@ float const DELETE_DIST_TILES = 1.7;
 float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH    = 1.6;
-float const PRECIP_DIST       = 20.0;
 float const GRASS_THRESH      = 1.5;
 float const GRASS_LOD_SCALE   = 16.0;
 
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density;
-extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, ground_effects_level, animate2, begin_motion, is_cloudy;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, temperature, vegetation, relh_adj_tex, grass_length, grass_width, fticks;
+extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, ground_effects_level;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
 extern point sun_pos, moon_pos;
-extern vector3d wind;
 extern float h_dirt[];
 extern texture_t textures[];
 
@@ -59,115 +57,6 @@ grass_tile_manager_t grass_tile_manager;
 
 void update_tiled_terrain_grass_vbos() {
 	grass_tile_manager.invalidate_vbo();
-}
-
-
-template <unsigned VERTS_PER_PRIM> class precip_manager_t {
-protected:
-	typedef vert_wrap_t vert_type_t;
-	vector<vert_type_t> verts;
-	rand_gen_t rgen;
-
-	void render(int type, colorRGBA const &base_color) const {
-		if (empty()) return;
-		colorRGBA color;
-		get_avg_sky_color(color);
-		color.modulate_with(base_color).do_glColor();
-		assert(!(size() % VERTS_PER_PRIM));
-		plus_z.do_glNormal();
-		enable_blend(); // split into point smooth and blend?
-		glDisable(GL_LIGHTING);
-		verts.front().set_state();
-		glDrawArrays(type, 0, size()/VERTS_PER_PRIM);
-		glEnable(GL_LIGHTING);
-		disable_blend();
-	}
-
-public:
-	void clear () {verts.clear();}
-	bool empty () const {return verts.empty();}
-	size_t size() const {return verts.size();}
-	float get_zmin() const {return max(zmin, water_plane_z);}
-	float get_zmax() const {return get_cloud_zmax();}
-	unsigned get_num_precip() {return 40000;} // FIXME: based on precip object group count
-	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), PRECIP_DIST);}
-	vector3d get_velocity(float vz) const {return fticks*(0.02*wind + vector3d(0.0, 0.0, vz));}
-	
-	point gen_pt(float zval) {
-		point const camera(get_camera_pos());
-
-		while (1) {
-			vector3d const off(PRECIP_DIST*rgen.signed_rand_float(), PRECIP_DIST*rgen.signed_rand_float(), zval);
-			if (off.x*off.x + off.y*off.y < PRECIP_DIST*PRECIP_DIST) {return (vector3d(camera.x, camera.y, 0.0) + off);}
-		}
-		return zero_vector; // never gets here
-	}
-	void check_pos(point &pos) {
-		if (0) {}
-		else if (pos == all_zeros  ) {pos = gen_pt(rgen.rand_uniform(get_zmin(), get_zmax()));} // initial location
-		else if (pos.z < get_zmin()) {pos = gen_pt(get_zmax());} // start again at the top
-		else if (!in_range(pos)    ) {pos = gen_pt(pos.z);} // move inside the range
-	}
-	void check_size() {verts.resize(VERTS_PER_PRIM*get_num_precip(), all_zeros);} // FIXME: always reset to zeros when resizing?
-};
-
-
-class rain_manager_t : public precip_manager_t<2> {
-public:
-	void update() {
-		check_size();
-		vector3d const v(get_velocity(-0.2)); // FIXME - dynamic
-		vector3d const dir(0.1*v.get_norm()); // length is 0.1
-		float const vmult(0.1/verts.size());
-
-		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
-			check_pos(verts[i].v);
-			if (animate2) {verts[i].v += (1.0 + i*vmult)*v;}
-			verts[i+1].v = verts[i].v + dir;
-		}
-	}
-	void render() const {precip_manager_t::render(GL_LINES, colorRGBA(1,1,1,0.2));} // partially transparent
-};
-
-
-class snow_manager_t : public precip_manager_t<1> {
-public:
-	void update() {
-		check_size();
-		vector3d const v(get_velocity(-0.02)); // FIXME - dynamic
-		float const vmult(0.1/verts.size());
-
-		for (unsigned i = 0; i < verts.size(); ++i) {
-			check_pos(verts[i].v);
-			if (animate2) {verts[i].v += (1.0 + i*vmult)*v;}
-		}
-	}
-	void render() const {
-		glPointSize(2);
-		precip_manager_t::render(GL_POINTS, WHITE);
-		glPointSize(1);
-	}
-};
-
-
-rain_manager_t rain_manager;
-snow_manager_t snow_manager;
-
-
-void draw_tiled_terrain_precipitation() {
-
-	if (!is_cloudy || !begin_motion) return; // is_rain_enabled()?
-
-	if (temperature <= W_FREEZE_POINT) { // draw snow
-		rain_manager.clear();
-		snow_manager.update();
-		snow_manager.render();
-	}
-	else { // draw rain
-		snow_manager.clear();
-		rain_manager.update();
-		rain_manager.render();
-	}
 }
 
 
