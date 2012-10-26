@@ -37,7 +37,7 @@ public:
 	void clear () {verts.clear();}
 	bool empty () const {return verts.empty();}
 	size_t size() const {return verts.size();}
-	float get_zmin() const {return max(zmin, water_plane_z);}
+	float get_zmin() const {return get_tiled_terrain_water_level();}
 	float get_zmax() const {return get_cloud_zmax();}
 	size_t get_num_precip() {return obj_groups[coll_id[PRECIP]].max_objects();}
 	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), PRECIP_DIST);}

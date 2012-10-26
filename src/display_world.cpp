@@ -1035,7 +1035,7 @@ void draw_transparent(bool above_water) {
 
 
 // render scene reflection to texture
-void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float water_z) {
+void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 
 	//RESET_TIME;
 	// setup viewport and projection matrix
@@ -1049,19 +1049,19 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	// setup mirror transform
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
-	glTranslatef(0.0, 0.0,  water_z); // translate to water plane
+	glTranslatef(0.0, 0.0,  water_plane_z); // translate to water plane
 	glScalef(1.0, 1.0, -1.0); // scale in z
-	glTranslatef(0.0, 0.0, -water_z); // translate back
+	glTranslatef(0.0, 0.0, -water_plane_z); // translate back
 
 	// draw partial scene
 	draw_sun_moon_stars();
 	draw_sun_flare();
 	if (display_mode & 0x40) {draw_cloud_plane(1);} // slower but a nice effect
 	// setup above-water clip plane for mesh
-	double const plane[4] = {0.0, 0.0, 1.0, -water_z}; // water at z=-water_z (mirrored)
+	double const plane[4] = {0.0, 0.0, 1.0, -water_plane_z}; // water at z=-water_z (mirrored)
 	glEnable(GL_CLIP_PLANE0);
 	glClipPlane(GL_CLIP_PLANE0, plane);
-	draw_tiled_terrain(water_z, 1);
+	draw_tiled_terrain(1);
 	glDisable(GL_CLIP_PLANE0);
 	// could render more of the scene here
 	glPopMatrix();
@@ -1098,7 +1098,7 @@ unsigned create_reflection() {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	assert(glIsTexture(reflection_tid));
-	create_reflection_texture(reflection_tid, xsize, ysize, water_plane_z);
+	create_reflection_texture(reflection_tid, xsize, ysize);
 	glDisable(GL_TEXTURE_2D);
 	check_gl_error(999);
 	return reflection_tid;
@@ -1167,7 +1167,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (TIMETEST) PRINT_TIME("3.2");
 	calc_cur_ambient_diffuse();
 	if (TIMETEST) PRINT_TIME("3.25");
-	zmin2 = draw_tiled_terrain(water_plane_z, 0);
+	zmin2 = draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.3");
 	if (underwater ) {draw_tiled_terrain_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, reflection_tid);}

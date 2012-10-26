@@ -50,7 +50,7 @@ bool trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool scenery_enabled () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
 bool is_grass_enabled() {return ((display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
-
+float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
 
 
 grass_tile_manager_t grass_tile_manager;
@@ -942,7 +942,7 @@ public:
 	}
 
 	// uses texture units 0-9
-	static void setup_mesh_draw_shaders(shader_t &s, float wpz, bool reflection_pass) {
+	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_prefix("#define NUM_OCTAVES 4",     1); // FS (for clouds)
@@ -954,7 +954,7 @@ public:
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
 		s.add_uniform_int("shadow_normal_tex", 7);
-		s.add_uniform_float("water_plane_z", (is_water_enabled() ? wpz : zmin));
+		s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 		set_noise_tex(s, 8);
@@ -966,7 +966,7 @@ public:
 
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
-	float draw(float wpz, bool reflection_pass) {
+	float draw(bool reflection_pass) {
 		float zmin(FAR_CLIP);
 		set_array_client_state(1, 0, 0, 0);
 		unsigned num_drawn(0), num_trees(0);
@@ -1013,7 +1013,7 @@ public:
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 		shader_t s;
-		setup_mesh_draw_shaders(s, wpz, reflection_pass);
+		setup_mesh_draw_shaders(s, reflection_pass);
 		s.add_uniform_float("spec_scale", 1.0);
 		setup_mesh_lighting();
 
@@ -1208,7 +1208,7 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp) {
 }
 
 
-float draw_tiled_terrain(float wpz, bool reflection_pass) {
+float draw_tiled_terrain(bool reflection_pass) {
 
 	//RESET_TIME;
 	bool const vbo_supported(setup_gen_buffers());
@@ -1218,7 +1218,7 @@ float draw_tiled_terrain(float wpz, bool reflection_pass) {
 		return zmin;
 	}
 	terrain_tile_draw.update();
-	float const zmin(terrain_tile_draw.draw(wpz, reflection_pass));
+	float const zmin(terrain_tile_draw.draw(reflection_pass));
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	return zmin;
 }

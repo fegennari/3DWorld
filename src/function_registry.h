@@ -236,9 +236,10 @@ void draw_water_sides(int check_zvals);
 float get_inf_terrain_fog_dist();
 
 // function prototypes - tiled mesh
-float draw_tiled_terrain(float wpz, bool reflection_pass);
+float draw_tiled_terrain(bool reflection_pass);
 void clear_tiled_terrain();
 void reset_tiled_terrain_state();
+float get_tiled_terrain_water_level();
 void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(float zval);
 
