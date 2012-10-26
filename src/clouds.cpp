@@ -372,10 +372,12 @@ void draw_cloud_plane(bool reflection_pass) {
 	// draw clouds
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	s.set_prefix("#define NUM_OCTAVES 8",     1); // FS
-	s.set_vert_shader("clouds");
+	s.set_bool_prefix("underwater_atten", (glIsEnabled(GL_FOG) != 0), 1); // FS
+	s.set_vert_shader("water_fog.part+clouds");
 	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+clouds");
 	s.begin_shader();
 	s.setup_fog_scale();
+	s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
 	s.add_uniform_float("cloud_scale", 0.5);
 	set_cloud_uniforms(s, 0);
 	s.add_uniform_vector3d("cloud_offset", offset);

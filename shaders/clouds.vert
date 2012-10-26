@@ -5,7 +5,7 @@ varying vec4 pos, color;
 void main()
 {
 	pos = gl_Vertex + vec4(cloud_offset, 1.0);
-	color = gl_Color;
 	gl_Position = ftransform();
-	gl_FogFragCoord = length((gl_ModelViewMatrix * gl_Vertex).xyz);
+	set_fog_coord();
+	color = gl_Color;
 } 
