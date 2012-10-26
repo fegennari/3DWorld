@@ -881,6 +881,7 @@
     <None Include="shaders\triplanar_texture.part.frag" />
     <None Include="shaders\vert_xform_only.vert" />
     <None Include="shaders\voxel_texture.part.frag" />
+    <None Include="shaders\water_fog.part.vert" />
     <None Include="shaders\water_plane.frag" />
     <None Include="shaders\water_plane.vert" />
     <None Include="shaders\wind.part" />

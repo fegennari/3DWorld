@@ -359,12 +359,13 @@ void draw_cloud_plane(bool reflection_pass) {
 	// draw a plane at zmin to properly blend the fog
 	if (!reflection_pass) {
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-		s.set_vert_shader("fog_only");
+		s.set_vert_shader("water_fog.part+fog_only");
 		s.set_frag_shader("linear_fog.part+fog_only");
 		s.begin_shader();
 		s.setup_fog_scale();
+		s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
 		BLACK.do_glColor();
-		draw_z_plane(-size, -size, size, size, zmin, 4, 4);
+		draw_z_plane(-size, -size, size, size, zmin, 32, 32);
 		s.end_shader();
 	}
 

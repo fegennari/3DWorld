@@ -947,7 +947,7 @@ public:
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_prefix("#define NUM_OCTAVES 4",     1); // FS (for clouds)
 		s.set_bool_prefix("apply_cloud_shadows", (cloud_shadows_enabled() && !reflection_pass), 1); // FS
-		s.set_vert_shader("texture_gen.part+tiled_mesh");
+		s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
 		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+tiled_mesh");
 		s.begin_shader();
 		s.setup_fog_scale();

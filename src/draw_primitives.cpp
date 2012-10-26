@@ -1059,8 +1059,6 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 void draw_z_plane(float x1, float y1, float x2, float y2, float zval, unsigned nx, unsigned ny) {
 
 	assert(x1 < x2 && y1 < y2 && nx > 0 && ny > 0);
-	glPushMatrix();
-	glTranslatef(0.0, 0.0, zval);
 	glBegin(GL_QUADS);
 	float const xinc((x2 - x1)/nx), yinc((y2 - y1)/ny);
 	float yval(y1);
@@ -1069,16 +1067,15 @@ void draw_z_plane(float x1, float y1, float x2, float y2, float zval, unsigned n
 		float xval(x1);
 
 		for (unsigned j = 0; j < nx; ++j) {
-			glVertex2f( xval,        yval);
-			glVertex2f((xval+xinc),  yval);
-			glVertex2f((xval+xinc), (yval+yinc));
-			glVertex2f( xval,       (yval+yinc));
+			glVertex3f( xval,        yval,       zval);
+			glVertex3f((xval+xinc),  yval,       zval);
+			glVertex3f((xval+xinc), (yval+yinc), zval);
+			glVertex3f( xval,       (yval+yinc), zval);
 			xval += xinc;
 		}
 		yval += yinc;
 	}
 	glEnd();
-	glPopMatrix();
 }
 
 
