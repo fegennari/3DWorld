@@ -5,6 +5,7 @@
 #include "physics_objects.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
+#include "draw_utils.h"
 
 
 bool     const USE_CLOUD_FBO    = 1;
@@ -365,7 +366,8 @@ void draw_cloud_plane(bool reflection_pass) {
 		s.setup_fog_scale();
 		s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
 		BLACK.do_glColor();
-		draw_z_plane(-size, -size, size, size, zmin, 32, 32);
+		static indexed_mesh_draw<vert_wrap_t> imd;
+		imd.render_z_plane(-size, -size, size, size, zmin, 32, 32);
 		s.end_shader();
 	}
 
@@ -388,7 +390,7 @@ void draw_cloud_plane(bool reflection_pass) {
 	float const dxy(2*size/(NUM_DIV-1));
 	float yval(-size);
 
-	for (unsigned i = 0; i < NUM_DIV; ++i) {
+	for (unsigned i = 0; i < NUM_DIV; ++i) { // FIXME: view frustum culling?
 		float xval(-size);
 
 		for (unsigned j = 0; j < NUM_DIV; ++j) {

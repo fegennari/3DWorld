@@ -57,6 +57,26 @@ typedef pt_line_drawer_t<color_wrapper      > pt_line_drawer;
 typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
 
 
+template<typename T> class indexed_mesh_draw { // quads
+
+	unsigned nx, ny; // in quads
+	vector<T> verts;
+	vector<unsigned> indices;
+
+public:
+	indexed_mesh_draw() : nx(0), ny(0) {}
+	void clear();
+	void init(unsigned nx_, unsigned ny_);
+
+	void set_vert(unsigned x, unsigned y, T const &v) {
+		assert(x <= nx && y <= ny);
+		verts[y*(nx+1) + x] = v;
+	}
+	void render() const;
+	void render_z_plane(float x1, float y1, float x2, float y2, float zval, unsigned nx_, unsigned ny_);
+};
+
+
 template< typename vert_type_t > class vbo_block_manager_t {
 
 	vector<vert_type_t> pts;

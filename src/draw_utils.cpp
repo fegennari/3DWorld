@@ -159,6 +159,61 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 }
 
 
+template<typename T> void indexed_mesh_draw<T>::clear() {
+
+	verts.clear();
+	indices.clear();
+	nx = ny = 0;
+}
+
+template<typename T> void indexed_mesh_draw<T>::init(unsigned nx_, unsigned ny_) {
+
+	if (nx == nx_ && ny == ny_) return; // already setup
+	nx = nx_; ny = ny_;
+	assert(nx > 0 && ny > 0);
+	verts.resize((nx+1)*(ny+1));
+	indices.resize(4*nx*ny);
+		
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			unsigned const iix(4*(y*nx + x)), vix(y*(nx+1) + x);
+			indices[iix+0] = vix;
+			indices[iix+1] = vix + 1;
+			indices[iix+2] = vix + (nx+1) + 1;
+			indices[iix+3] = vix + (nx+1);
+		}
+	}
+}
+
+template<typename T> void indexed_mesh_draw<T>::render() const {
+
+	if (verts.empty()) return;
+	verts.front().set_state();
+	glDrawRangeElements(GL_QUADS, 0, verts.size(), indices.size(), GL_UNSIGNED_INT, &indices.front());
+}
+
+template<typename T> void indexed_mesh_draw<T>::render_z_plane(float x1, float y1, float x2, float y2, float zval, unsigned nx_, unsigned ny_) {
+
+	assert(x1 < x2 && y1 < y2);
+	init(nx_, ny_);
+	float const xinc((x2 - x1)/nx), yinc((y2 - y1)/ny);
+	float yval(y1);
+
+	for (unsigned y = 0; y <= ny; ++y) {
+		float xval(x1);
+
+		for (unsigned x = 0; x <= nx; ++x) {
+			set_vert(x, y, point(xval, yval, zval));
+			xval += xinc;
+		}
+		yval += yinc;
+	}
+	render();
+}
+
+template class indexed_mesh_draw<vert_wrap_t>;
+
+
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
 

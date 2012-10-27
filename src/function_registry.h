@@ -210,7 +210,6 @@ int  draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim=PRIM_DISABL
 	float texture_scale=1.0, vector3d const *const view_dir=NULL);
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv=1, bool scale_ndiv=0,
 			   float texture_scale=1.0, bool proportional_texture=0, vector3d const *const view_dir=NULL);
-void draw_z_plane(float x1, float y1, float x2, float y2, float zval, unsigned nx, unsigned ny);
 int draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
 int  draw_simple_polygon(point const *const points, int npoints, vector3d const &norm, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
 int  draw_simple_extruded_polygon(float thick, point const *const points, int npoints, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
