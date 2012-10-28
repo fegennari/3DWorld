@@ -69,7 +69,7 @@ public:
 	void init(unsigned nx_, unsigned ny_);
 
 	void set_vert(unsigned x, unsigned y, T const &v) {
-		assert(x <= nx && y <= ny);
+		assert(!verts.empty() && x <= nx && y <= ny);
 		verts[y*(nx+1) + x] = v;
 	}
 	void render() const;

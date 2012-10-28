@@ -324,12 +324,6 @@ void draw_puffy_clouds(int order) {
 }
 
 
-void draw_cloud_vert(float x, float y, float z1, float z2, float r) {
-	float const xx(x - get_camera_pos().x), yy(y - get_camera_pos().y);
-	glVertex3f(x, y, (z1 + (z2 - z1)*cos(PI_TWO*min(1.0f, sqrt(xx*xx + yy*yy)/r))));
-}
-
-
 float get_cloud_zmax() {return get_camera_pos().z + max(zmax, CLOUD_CEILING);}
 
 
@@ -344,18 +338,20 @@ void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
 
 void draw_cloud_plane(bool reflection_pass) {
 
-	float const size(FAR_CLIP), rval(0.94*size); // extends to at least the far clipping plane
-	float const z1(zmin), z2(get_cloud_zmax());
+	unsigned const NUM_DIV = 32;
 	float const cloud_rel_vel = 1.0; // relative cloud velocity compared to camera velocity
+	float const size(FAR_CLIP), rval(0.94*size), rval_inv(1.0/rval); // extends to at least the far clipping plane
+	float const z1(zmin), z2(get_cloud_zmax()), ndiv_inv(1.0/NUM_DIV);
 	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
 	vector3d const offset(-camera + cloud_rel_vel*world_pos);
+	static indexed_mesh_draw<vert_wrap_t> imd;
+	shader_t s;
+	glDepthMask(GL_FALSE);
 
 	if (animate2) {
 		cloud_wind_pos.x += fticks*wind.x;
 		cloud_wind_pos.y += fticks*wind.y;
 	}
-	shader_t s;
-	glDepthMask(GL_FALSE);
 
 	// draw a plane at zmin to properly blend the fog
 	if (!reflection_pass) {
@@ -366,8 +362,7 @@ void draw_cloud_plane(bool reflection_pass) {
 		s.setup_fog_scale();
 		s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
 		BLACK.do_glColor();
-		static indexed_mesh_draw<vert_wrap_t> imd;
-		imd.render_z_plane(-size, -size, size, size, zmin, 32, 32);
+		imd.render_z_plane(-size, -size, size, size, zmin, NUM_DIV, NUM_DIV);
 		s.end_shader();
 	}
 
@@ -385,24 +380,23 @@ void draw_cloud_plane(bool reflection_pass) {
 	s.add_uniform_vector3d("cloud_offset", offset);
 	enable_blend();
 	get_cloud_color().do_glColor();
-	glBegin(GL_QUADS);
-	unsigned const NUM_DIV = 32;
-	float const dxy(2*size/(NUM_DIV-1));
-	float yval(-size);
+	imd.init(NUM_DIV, NUM_DIV);
+	float xvals[NUM_DIV+1], yvals[NUM_DIV+1];
 
-	for (unsigned i = 0; i < NUM_DIV; ++i) { // FIXME: view frustum culling?
-		float xval(-size);
-
-		for (unsigned j = 0; j < NUM_DIV; ++j) {
-			draw_cloud_vert( xval,       yval,      z1, z2, rval);
-			draw_cloud_vert((xval+dxy),  yval,      z1, z2, rval);
-			draw_cloud_vert((xval+dxy), (yval+dxy), z1, z2, rval);
-			draw_cloud_vert( xval,      (yval+dxy), z1, z2, rval);
-			xval += dxy;
-		}
-		yval += dxy;
+	for (unsigned t = 0; t <= NUM_DIV; ++t) {
+		float const angle(TWO_PI*(t*ndiv_inv));
+		xvals[t] = cosf(angle);
+		yvals[t] = sinf(angle);
 	}
-	glEnd();
+	for (unsigned r = 0; r <= NUM_DIV; ++r) {// spherical section
+		float const radius(size*r*ndiv_inv);
+		float const zval(z1 + (z2 - z1)*cos(PI_TWO*min(1.0f, radius*rval_inv)));
+
+		for (unsigned t = 0; t <= NUM_DIV; ++t) {
+			imd.set_vert(t, r, point((radius*xvals[t] - camera.x), (radius*yvals[t] - camera.y), zval));
+		}
+	}
+	imd.render();
 	s.end_shader();
 	disable_blend();
 	glDepthMask(GL_TRUE);
