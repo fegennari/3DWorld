@@ -513,9 +513,7 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 		if (show_fog) glDisable(GL_FOG);
 		select_texture(WATER_TEX);
 		color.do_glColor();
-		glBegin(GL_QUADS);
-		draw_one_tquad(-ocean.x, -ocean.y, ocean.x, ocean.y, ocean.z, 1, 0.0, 0.0, 100.0*OCEAN_REPEAT, 100.0*OCEAN_REPEAT);
-		glEnd();
+		draw_tquad(ocean.x, ocean.y, ocean.z, 1, 0.0, 0.0, 100.0*OCEAN_REPEAT, 100.0*OCEAN_REPEAT);
 		if (show_fog) glEnable(GL_FOG);
 		if (camera.z <= ocean.z + 0.1) draw_sand(color, cscale, 1);
 		glDisable(GL_TEXTURE_2D);

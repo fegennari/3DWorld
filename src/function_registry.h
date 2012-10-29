@@ -197,7 +197,7 @@ void draw_flare(point const &pos, point const &xlate, float xsize, float ysize);
 void enable_flares(colorRGBA const &color, bool zoomed=0);
 void disable_flares();
 void draw_textured_quad(float xsize, float ysize, float z, int tid);
-void draw_tquad(float xsize, float ysize, float z, bool texture);
+void draw_tquad(float xsize, float ysize, float z, bool texture, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z, bool texture, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_one_mult_tex_quad(float x1, float y1, float x2, float y2, float z, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir,

@@ -579,7 +579,6 @@ void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const {
 	point **points   = spn.points;
 	vector3d **norms = spn.norms;
 	if (quad_pts.empty()) {quad_pts.reserve(4*ndiv*ndiv);}
-	glBegin(GL_QUADS);
 	
 	for (unsigned s = 0; s < ndiv; ++s) {
 		unsigned const sn((s+1)%ndiv), snt(min((s+1), ndiv));
@@ -597,7 +596,6 @@ void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const {
 			}
 		}
 	}
-	glEnd();
 }
 
 
@@ -802,7 +800,7 @@ void draw_textured_quad(float xsize, float ysize, float z, int tid) {
 }
 
 
-void draw_tquad(float xsize, float ysize, float z, bool texture) {
+void draw_tquad(float xsize, float ysize, float z, bool texture, float tx1, float ty1, float tx2, float ty2) {
 
 	glBegin(GL_QUADS);
 	draw_one_tquad(-xsize, -ysize, xsize, ysize, z, texture);

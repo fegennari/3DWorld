@@ -653,7 +653,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		select_texture(BLUR_TEX);
 		glNormal3f(0.0, 0.0, 1.0);
 		glBegin(GL_QUADS);
-		draw_billboard(pos, (pos + plus_z), vector3d(1.0, 0.0, 0.0), 5.0*radius, 5.0*radius);
+		draw_billboard(pos, (pos + plus_z), vector3d(1.0, 0.0, 0.0), 5.0*radius, 5.0*radius); // FIXME: collect into a vector and draw all at once
 		glEnd();
 		select_no_texture();
 		glDepthMask(GL_TRUE);

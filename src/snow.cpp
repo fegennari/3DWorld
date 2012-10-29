@@ -494,8 +494,7 @@ public:
 		bind_vbo(vbo,  0);
 		bind_vbo(ivbo, 1);
 		vert_norm::set_vbo_arrays();
-		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0); // requires GL/glew.h
-		//glDrawElements(GL_QUADS, (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
+		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 	}

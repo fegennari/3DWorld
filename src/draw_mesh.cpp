@@ -331,8 +331,6 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 
 
 void draw_coll_vert(int i, int j) {
-
-	BLUE.do_glColor();
 	glVertex3f(get_xval(j), get_yval(i), max(czmin, v_collision_matrix[i][j].zmax));
 }
 
@@ -369,6 +367,7 @@ void display_mesh() { // fast array version
 		}
 		else {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			BLUE.do_glColor();
 
 			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 				glBegin(GL_TRIANGLE_STRIP);
@@ -525,44 +524,34 @@ void draw_sides_and_bottom() {
 	glBegin(GL_QUADS);
 	glNormal3f(0.0, 0.0, -1.0); // bottom surface
 	draw_one_tquad(x1, y1, x2, y2, botz, 1, ts*x1, ts*y1, ts*x2, ts*y2);
+	float xv(x1), yv(y1);
+	glNormal3f(0.0, -1.0, 0.0);
+
+	for (int i = 1; i < MESH_X_SIZE; ++i) { // y sides
+		for (unsigned d = 0; d < 2; ++d) {
+			int const xy_ix(d ? ly : 0);
+			float const limit(d ? y2 : y1);
+			draw_vertex(xv,        limit, botz, 0, ts);
+			draw_vertex(xv+DX_VAL, limit, botz, 0, ts);
+			draw_vertex(xv+DX_VAL, limit, mesh_height[xy_ix][i  ], 0, ts);
+			draw_vertex(xv,        limit, mesh_height[xy_ix][i-1], 0, ts);
+		}
+		xv += DX_VAL;
+	}
+	glNormal3f(1.0, 0.0, 0.0);
+
+	for (int i = 1; i < MESH_Y_SIZE; ++i) { // x sides
+		for (unsigned d = 0; d < 2; ++d) {
+			int const xy_ix(d ? lx : 0);
+			float const limit(d ? x2 : x1);
+			draw_vertex(limit, yv,        botz, 1, ts);
+			draw_vertex(limit, yv+DY_VAL, botz, 1, ts);
+			draw_vertex(limit, yv+DY_VAL, mesh_height[i][xy_ix  ], 1, ts);
+			draw_vertex(limit, yv,        mesh_height[i-1][xy_ix], 1, ts);
+		}
+		yv += DY_VAL;
+	}
 	glEnd();
-	{
-		float xv(x1);
-		glNormal3f(0.0, -1.0, 0.0);
-		glBegin(GL_QUADS);
-		unsigned steps(0);
-
-		for (int i = 1; i < MESH_X_SIZE; ++i) { // y sides
-			for (unsigned d = 0; d < 2; ++d) {
-				int const xy_ix(d ? ly : 0);
-				float const limit(d ? y2 : y1);
-				draw_vertex(xv,        limit, botz, 0, ts);
-				draw_vertex(xv+DX_VAL, limit, botz, 0, ts);
-				draw_vertex(xv+DX_VAL, limit, mesh_height[xy_ix][i  ], 0, ts);
-				draw_vertex(xv,        limit, mesh_height[xy_ix][i-1], 0, ts);
-			}
-			xv += DX_VAL;
-		}
-		glEnd();
-	}
-	{
-		float yv(y1);
-		glNormal3f(1.0, 0.0, 0.0);
-		glBegin(GL_QUADS);
-
-		for (int i = 1; i < MESH_Y_SIZE; ++i) { // x sides
-			for (unsigned d = 0; d < 2; ++d) {
-				int const xy_ix(d ? lx : 0);
-				float const limit(d ? x2 : x1);
-				draw_vertex(limit, yv,        botz, 1, ts);
-				draw_vertex(limit, yv+DY_VAL, botz, 1, ts);
-				draw_vertex(limit, yv+DY_VAL, mesh_height[i][xy_ix  ], 1, ts);
-				draw_vertex(limit, yv,        mesh_height[i-1][xy_ix], 1, ts);
-			}
-			yv += DY_VAL;
-		}
-		glEnd();
-	}
 	glNormal3f(0.0, 0.0, 1.0);
 	set_lighted_sides(1);
 	glDisable(GL_TEXTURE_2D);

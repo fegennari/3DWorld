@@ -233,7 +233,6 @@ void draw_blasts() {
 				draw_animated_billboard(pos, size, timescale);
 				glEnd();
 				glDepthMask(GL_TRUE);
-				glDisable(GL_TEXTURE_2D);
 				continue;
 			}
 			// use distance_to_camera() for non-universe mode?
@@ -248,7 +247,6 @@ void draw_blasts() {
 				select_texture(PLASMA_TEX);
 				//draw_subdiv_sphere(make_pt_global(pos), size, ndiv, 1, 0); // incorrect bfc due to transforms
 				draw_sphere_at_tc(make_pt_global(pos), size, ndiv, 1, 1);
-				glDisable(GL_TEXTURE_2D);
 				break;
 
 			case ETYPE_ENERGY:
@@ -264,7 +262,6 @@ void draw_blasts() {
 					draw_sphere_dlist(all_zeros, size, ndiv, 1);
 					glPopMatrix();
 					//glDisable(GL_CULL_FACE);
-					glDisable(GL_TEXTURE_2D);
 					glDisable(GL_ALPHA_TEST);
 				}
 				break;
@@ -291,7 +288,6 @@ void draw_blasts() {
 				else {
 					rotate_into_dir(br.dir, pos);
 					draw_textured_quad(2.0*size, 2.0*size, 0.0, BLUR_TEX);
-					glDisable(GL_TEXTURE_2D);
 				}
 				glPopMatrix();
 				glDepthMask(GL_TRUE);
@@ -302,6 +298,7 @@ void draw_blasts() {
 			} // switch
 		} // visibility test
 	} // for i
+	glDisable(GL_TEXTURE_2D);
 	//glDisable(GL_ALPHA_TEST);
 	gluQuadricTexture(quadric, GL_FALSE);
 	disable_blend();
