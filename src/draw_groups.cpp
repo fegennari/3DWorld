@@ -19,7 +19,18 @@ bool const SHOW_DRAW_TIME    = 0;
 float const NDIV_SCALE       = 1.6;
 
 
+struct puddle_t {
+	point pos;
+	float radius;
+	colorRGBA color;
+
+	puddle_t() {}
+	puddle_t(point const &pos_, float radius_, colorRGBA const &color_) : pos(pos_), radius(radius_), color(color_) {}
+};
+
+
 // Global Variables
+vector<puddle_t> puddles;
 pt_line_drawer obj_pld;
 pt_line_drawer_hdr snow_pld;
 
@@ -591,6 +602,21 @@ void draw_group(obj_group &objg, shader_t &s) {
 				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 0);
 			} // switch (type)
 		} // for j
+		if (!puddles.empty()) { // draw puddles
+			glDepthMask(GL_FALSE);
+			select_texture(BLUR_TEX);
+			glNormal3f(0.0, 0.0, 1.0);
+			glBegin(GL_QUADS);
+
+			for (vector<puddle_t>::const_iterator p = puddles.begin(); p != puddles.end(); ++p) {
+				set_color_alpha(p->color);
+				draw_billboard(p->pos, (p->pos + plus_z), vector3d(1.0, 0.0, 0.0), 5.0*p->radius, 5.0*p->radius);
+			}
+			glEnd();
+			glDepthMask(GL_TRUE);
+			select_no_texture();
+			puddles.resize(0);
+		}
 		if (type == SHRAPNEL) {
 			clear_emissive_color();
 			glEnd();
@@ -648,15 +674,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		assert(!do_texture);
 		colorRGBA color2(color);
 		if (type == RAIN) color2.alpha *= 0.5; // rain is mostly transparent when small
-		set_color_v2(color2, obj.status);
-		glDepthMask(GL_FALSE);
-		select_texture(BLUR_TEX);
-		glNormal3f(0.0, 0.0, 1.0);
-		glBegin(GL_QUADS);
-		draw_billboard(pos, (pos + plus_z), vector3d(1.0, 0.0, 0.0), 5.0*radius, 5.0*radius); // FIXME: collect into a vector and draw all at once
-		glEnd();
-		select_no_texture();
-		glDepthMask(GL_TRUE);
+		puddles.push_back(puddle_t(pos, radius, color2));
 		return;
 	}
 	if (draw_snowflake) { // draw as a point to be converted to a billboard by the geometry shader
