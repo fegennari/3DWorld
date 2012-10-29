@@ -83,15 +83,6 @@ colorRGBA setup_mesh_lighting() {
 }
 
 
-void setup_arrays(void *varr, void *narr, void *carr) {
-
-	set_array_client_state(1, 0, 1, (carr != 0));
-	if (varr) glVertexPointer(3, GL_FLOAT, 0, varr);
-	if (narr) glNormalPointer(   GL_FLOAT, 0, narr);
-	if (carr) glColorPointer( 3, GL_FLOAT, 0, carr);
-}
-
-
 void run_post_mesh_draw() {
 	
 	glEnable(GL_NORMALIZE);
@@ -141,39 +132,32 @@ float get_cloud_shadow_atten(int x, int y) {
 class mesh_vertex_draw {
 
 	float const healr;
-	vector<point>    varr;
-	vector<vector3d> narr;
-	vector<colorRGB> carr;
+	vector<vert_norm_color> data;
 
 	struct norm_color_ix {
 		vector3d n;
-		colorRGB c;
+		color_wrapper c;
 		int ix;
 		norm_color_ix() : ix(-1) {}
-		norm_color_ix(vector3d const &n_, colorRGB const &c_, int ix_) : n(n_), c(c_), ix(ix_) {}
+		norm_color_ix(vert_norm_color const &vnc, int ix_) : n(vnc.n), c(vnc), ix(ix_) {}
 	};
 
 	vector<norm_color_ix> last_rows;
 
-	void update_color(int i, int j) {
-		float color_scale(DEF_DIFFUSE);
+	void update_vertex(int i, int j) {
+		float color_scale(DEF_DIFFUSE), light_scale(1.0);
 		float &sd(surface_damage[i][j]);
 
 		if (sd > 0.0) {
 			sd = min(MAX_SURFD, max(0.0f, (sd - healr)));
 			color_scale *= max(0.0f, (1.0f - sd));
 		}
-		carr[c].set_to_val(color_scale);
+		//data[c].c.set_to_val(color_scale);
+		colorRGB color(color_scale, color_scale, color_scale);
 
 		if (DLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) { // somewhat slow
-			get_sd_light(j, i, get_zpos(varr[c].z), varr[c], (!has_dl_sources || draw_mesh_shader),
-				DLIGHT_SCALE, &carr[c].R, &surface_normals[i][j], NULL);
+			get_sd_light(j, i, get_zpos(data[c].v.z), data[c].v, (!has_dl_sources || draw_mesh_shader), DLIGHT_SCALE, &color.R, &surface_normals[i][j], NULL);
 		}
-	}
-
-	void set_normal_array(int i, int j) {
-		float light_scale(1.0);
-
 		if (shadow_map_enabled() && draw_mesh_shader) {
 			// nothing to do here
 		}
@@ -190,14 +174,14 @@ class mesh_vertex_draw {
 		}
 
 		// water light attenuation: total distance from sun/moon, reflected off bottom, to viewer
-		if (!DISABLE_WATER && varr[c][2] < max_water_height && varr[c][2] < water_matrix[i][j]) {
+		if (!DISABLE_WATER && data[c].v.z < max_water_height && data[c].v.z < water_matrix[i][j]) {
 			point const pos(get_xval(j), get_yval(i), mesh_height[i][j]);
-			water_color_atten(((float *)&(carr[c].R)), j, i, pos);
+			water_color_atten(&color.R, j, i, pos);
 
 			if (wminside[i][j] == 1) { // too slow?
 				colorRGBA wc(WHITE);
 				select_liquid_color(wc, j, i);
-				UNROLL_3X(carr[c][i_] *= wc[i_];)
+				UNROLL_3X(color[i_] *= wc[i_];)
 			}
 			
 			// water caustics: slow and low resolution, but conceptually interesting
@@ -211,44 +195,38 @@ class mesh_vertex_draw {
 			light_scale *= get_cloud_shadow_atten(j, i);
 		}
 		// Note: normal is never set to zero because we need it for dynamic light sources
-		narr[c] = vertex_normals[i][j]*max(light_scale, 0.01f);
+		data[c].n= vertex_normals[i][j]*max(light_scale, 0.01f);
+		data[c].set_c3(color);
 	}
 
 public:
 	unsigned c;
 
-	mesh_vertex_draw() : healr(fticks*SURF_HEAL_RATE),
-		varr(2*(MAX_XY_SIZE+1)), narr(varr.size()), carr(varr.size()), c(0)
-	{
+	mesh_vertex_draw() : healr(fticks*SURF_HEAL_RATE), data(2*(MAX_XY_SIZE+1)), c(0) {
 		assert(shadow_mask != NULL);
+		assert(!data.empty());
 		last_rows.resize(MESH_X_SIZE+1);
-		setup_arrays(&varr.front(), &narr.front(), &carr.front());
-	}
-
-	bool test_draw_vertex(int i, int j) const {
-		if (c == 1) return 1;
-		if (mesh_draw != NULL && (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1))) return 0;
-		if (mesh_z_cutoff <= -FAR_CLIP) return 1;
-		return (mesh_z_cutoff < max(mesh_height[i][j], mesh_height[i+1][j]));
+		data.front().set_state();
 	}
 
 	bool draw_mesh_vertex_pair(int i, int j, float x, float y) {
-		if (!test_draw_vertex(i, j)) return 0;
-		
+		if (c > 1) {
+			if (mesh_draw != NULL && (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1))) return 0;
+			if (mesh_z_cutoff > -FAR_CLIP && mesh_z_cutoff > max(mesh_height[i][j], mesh_height[i+1][j])) return 0;
+		}
 		for (unsigned p = 0; p < 2; ++p, ++c) {
 			int const iinc(min((MESH_Y_SIZE-1), int(i+p)));
-			assert(c < varr.size());
-			varr[c].assign(x, (y + p*DY_VAL), mesh_height[iinc][j]);
+			assert(c < data.size());
+			data[c].v.assign(x, (y + p*DY_VAL), mesh_height[iinc][j]);
 			assert(unsigned(j) < last_rows.size());
 		
 			if (last_rows[j].ix == iinc) { // gets here nearly half the time
-				narr[c] = last_rows[j].n;
-				carr[c] = last_rows[j].c;
+				data[c].n = last_rows[j].n;
+				UNROLL_4X(data[c].c[i_] = last_rows[j].c.c[i_];)
 			}
 			else {
-				update_color(iinc, j);
-				set_normal_array(iinc, j);
-				last_rows[j] = norm_color_ix(narr[c], carr[c], iinc);
+				update_vertex(iinc, j);
+				last_rows[j] = norm_color_ix(data[c], iinc);
 			}
 		}
 		return 1;

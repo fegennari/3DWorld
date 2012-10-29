@@ -106,6 +106,14 @@ void vert_color::set_state() const { // typically called on element 0
 	glColorPointer (4, GL_UNSIGNED_BYTE, stride, &c);
 }
 
+void vert_norm_color::set_state() const { // typically called on element 0
+	unsigned const stride(sizeof(*this));
+	set_array_client_state(1, 0, 1, 1);
+	glVertexPointer(3, GL_FLOAT,         stride, &v);
+	glNormalPointer(   GL_FLOAT,         stride, &n);
+	glColorPointer (4, GL_UNSIGNED_BYTE, stride, &c);
+}
+
 void vert_norm_comp_color::set_state() const { // typically called on element 0
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 0, 1, 1);
@@ -176,7 +184,7 @@ template<typename T> void indexed_mesh_draw<T>::init(unsigned nx_, unsigned ny_)
 		
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
-			unsigned const iix(4*(y*nx + x)), vix(y*(nx+1) + x);
+			unsigned const iix(4*(y*nx + x)), vix(get_vert_ix(x, y));
 			indices[iix+0] = vix;
 			indices[iix+1] = vix + 1;
 			indices[iix+2] = vix + (nx+1) + 1;

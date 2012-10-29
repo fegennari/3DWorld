@@ -59,6 +59,7 @@ typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
 
 template<typename T> class indexed_mesh_draw { // quads
 
+protected:
 	unsigned nx, ny; // in quads
 	vector<T> verts;
 	vector<unsigned> indices;
@@ -68,10 +69,11 @@ public:
 	void clear();
 	void init(unsigned nx_, unsigned ny_);
 
-	void set_vert(unsigned x, unsigned y, T const &v) {
+	unsigned get_vert_ix(unsigned x, unsigned y) const {
 		assert(!verts.empty() && x <= nx && y <= ny);
-		verts[y*(nx+1) + x] = v;
+		return (y*(nx+1) + x);
 	}
+	void set_vert(unsigned x, unsigned y, T const &v) {verts[get_vert_ix(x, y)] = v;}
 	void render() const;
 	void render_z_plane(float x1, float y1, float x2, float y2, float zval, unsigned nx_, unsigned ny_);
 };
