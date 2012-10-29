@@ -158,58 +158,6 @@ void mesh2d::draw_perturbed_cylinder(point const &p1, point const &p2, float rad
 }
 
 
-// *** untested ***
-// drawn in +z (xy plane), size by size
-void mesh2d::draw_perturbed_quad_xy(float const d[2][2], float zval, bool texture) const { // expand is unused
-
-	plus_z.do_glNormal();
-	glBegin(GL_QUADS);
-
-	if (!pmap && !rmap && !emap && !ptsh) { // single quad
-		draw_one_tquad(d[0][0], d[1][0], d[0][1], d[1][1], zval, texture);
-	}
-	else {
-		float const sz_inv(1.0/float(size));
-		float const step[2] = {(d[0][1] - d[0][0])/float(size), (d[1][1] - d[1][0])/float(size)};
-
-		for (unsigned i = 0; i < size; ++i) { // y
-			float const y(d[1][0] + i*step[1]), ty(i*sz_inv);
-			//if (!rmap && !emap && !ptsh) {} // QUAD_STRIP?
-
-			for (unsigned j = 0; j < size; ++j) { // x
-				unsigned const ix(i*(size+1) + j); // stride/width is size+1 but height is only size
-				if (rmap && !rmap[ix]) continue;
-				float const x(d[0][0] + i*step[0]), tx(j*sz_inv);
-				point p(x, y, (zval + (emap ? emap[ix] : 0.0)));
-				if (ptsh) p += ptsh[ix];
-				
-				if (pmap) { // untested, probably incorrect
-					for (unsigned k = 0; k < 4; ++k) {
-						unsigned const xi(k>>1), yi((k>>1)^(k&1));
-						unsigned const ix2(min(size-1, i+yi)*(size+1) + j+xi); // have to clamp in y but not x
-						if (texture) glTexCoord2f(tx+xi*sz_inv, ty+yi*sz_inv); // use setup_texgen()?
-						//glNormal3f(0.0, 0.0, 1.0); // update normal?
-						glVertex3f(p.x+xi*step[0], p.y+yi*step[1], p.z+pmap[ix2]);
-					}
-				}
-				else {
-					draw_one_tquad(p.x, p.y, p.x+step[0], p.y+step[1], p.z, texture, tx, ty, tx+sz_inv, ty+sz_inv);
-				}
-			}
-		}
-	}
-	glEnd();
-}
-
-
-void mesh2d::draw_perturbed_cube(float const d[3][2], bool texture) const {
-
-	assert(0);
-	// *** WRITE ***
-	//draw_perturbed_quad_xy(d[2][2], zval, texture);
-}
-
-
 // *** transform_data ***
 
 

@@ -66,8 +66,6 @@ public:
 		float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void draw_perturbed_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv,
 		bool texture, bool draw_ends=0, float s_beg=0.0, float s_end=1.0) const;
-	void draw_perturbed_quad_xy(float const d[2][2], float zval, bool texture) const;
-	void draw_perturbed_cube(float const d[3][2], bool texture) const;
 };
 
 
