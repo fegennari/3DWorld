@@ -388,12 +388,11 @@ void draw_cloud_plane(bool reflection_pass) {
 		xvals[t] = cosf(angle);
 		yvals[t] = sinf(angle);
 	}
-	for (unsigned r = 0; r <= NUM_DIV; ++r) {// spherical section
-		float const radius(size*r*ndiv_inv);
-		float const zval(z1 + (z2 - z1)*cos(PI_TWO*min(1.0f, radius*rval_inv)));
+	for (unsigned r = 0; r <= NUM_DIV; ++r) { // spherical section
+		float const radius(size*r*ndiv_inv), zval(z1 + (z2 - z1)*cos(PI_TWO*min(1.0f, radius*rval_inv)));
 
 		for (unsigned t = 0; t <= NUM_DIV; ++t) {
-			imd.set_vert(t, r, point((radius*xvals[t] - camera.x), (radius*yvals[t] - camera.y), zval));
+			imd.set_vert(t, r, point((radius*xvals[t] + camera.x), (radius*yvals[t] + camera.y), zval));
 		}
 	}
 	imd.render();
