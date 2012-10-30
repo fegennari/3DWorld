@@ -72,7 +72,8 @@ texture_t(0, 0, 64,   64,   1, 3, 1, "sun.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "moon.raw"),
 texture_t(0, 0, 256,  256,  0, 3, 1, "earth.raw"),
 texture_t(0, 0, 64,   64,   1, 3, 1, "ice.raw"), // marble?
-texture_t(0, 0, 256,  256,  1, 3, 2, "snow.raw"),
+//texture_t(0, 0, 256,  256,  1, 3, 2, "snow.raw"),
+texture_t(0, 7, 0,  0,  1, 3, 2, "snow2.jpg"),
 texture_t(0, 0, 128,  128,  0, 4, 3, "leaf.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 0, "bark.raw"), // mipmap?
 texture_t(0, 0, 512,  512,  1, 3, 2, "desert_sand.raw"),
