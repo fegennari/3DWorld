@@ -1314,7 +1314,8 @@ void gen_voxel_asteroid(voxel_model_space &model, point const &center, float rad
 	params.tids[0]        = ROCK_TEX;
 	params.tids[1]        = MOSSY_ROCK_TEX; // maybe change later
 	float const vsz(2.0*radius/size);
-	model.clear();
+	//model.clear(); // should this be here? model should start empty
+	assert(model.empty());
 	model.set_params(params);
 	model.init(size, size, size, vector3d(vsz, vsz, vsz), center, -1.0, params.num_blocks);
 	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed);

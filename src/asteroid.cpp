@@ -222,7 +222,7 @@ public:
 	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt), have_sun_pos(0) {
 		static int obj_id(0); // for random seed
 		float gen_radius(0.0);
-		RESET_TIME;
+		//RESET_TIME;
 
 		while (gen_radius == 0.0) { // loop until we get a valid asteroid
 			gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
@@ -230,7 +230,7 @@ public:
 			gen_radius = model.get_bsphere().radius;
 		}
 		radius /= gen_radius;
-		PRINT_TIME("Create Asteroid");
+		//PRINT_TIME("Create Asteroid");
 	}
 
 	virtual void apply_physics() {

@@ -553,11 +553,36 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 				bool const pos_set(read_pt(pos));
 				if (!pos_set) cfg.clear();
 				assert(num == 1 || !pos_set);
+				cout << endl;
+				RESET_TIME;
 
-				for (unsigned i = 0; i < num; ++i) { // could check for collisions
-					point const pos((pos_set ? pos : ustart_pos) + signed_rand_vector_spherical(dist));
-					add_uobj(uobj_asteroid::create(pos, rand_uniform(r1, r2), model, ROCK_SPHERE_TEX));
+				struct asteroid_data_t {
+					uobj_asteroid *a;
+					point p;
+					float r;
+					asteroid_data_t() : a(NULL), r(0.0) {}
+				};
+				vector<asteroid_data_t> asteroid_data(num);
+
+				for (unsigned i = 0; i < num; ++i) {
+					asteroid_data[i].p = (pos_set ? pos : ustart_pos) + signed_rand_vector_spherical(dist);
+					asteroid_data[i].r = rand_uniform(r1, r2);
 				}
+				if (model == AS_MODEL_VOXEL) { // parallel creation
+					#pragma omp parallel for schedule(dynamic,1)
+					for (int i = 0; i < (int)num; ++i) { // could check for collisions
+						asteroid_data[i].a = uobj_asteroid::create(asteroid_data[i].p, asteroid_data[i].r, model, ROCK_SPHERE_TEX);
+					}
+				}
+				else {
+					for (int i = 0; i < (int)num; ++i) { // could check for collisions
+						asteroid_data[i].a = uobj_asteroid::create(asteroid_data[i].p, asteroid_data[i].r, model, ROCK_SPHERE_TEX);
+					}
+				}
+				for (unsigned i = 0; i < num; ++i) {
+					add_uobj(asteroid_data[i].a);
+				}
+				PRINT_TIME("Create Asteroids");
 			}
 			break;
 
