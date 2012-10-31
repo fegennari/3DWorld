@@ -340,6 +340,7 @@ void setup_landscape_tex_colors(colorRGBA const &c1, colorRGBA const &c2) { // c
 
 void free_texture(unsigned &tid) {
 
+	if (tid == 0) return; // avoid GL calls
 	if (glIsTexture(tid)) glDeleteTextures(1, &tid);
 	tid = 0;
 }
