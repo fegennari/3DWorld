@@ -5,6 +5,7 @@
 #include "scenery.h"
 #include "mesh.h"
 #include "shaders.h"
+#include "voxels.h"
 
 
 bool     const NO_ISLAND_SCENERY = 1;
@@ -709,6 +710,42 @@ void s_plant::destroy() {
 	remove_cobjs();
 	scenery_obj::destroy(); // will remove coll_id twice, which is OK
 }
+
+
+class voxel_rock : public scenery_obj {
+
+	
+
+public:
+	voxel_rock() {}
+
+	void create(int x, int y, int use_xy) {
+
+	}
+
+	void add_cobjs() {
+		coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
+	}
+
+	void remove_cobjs() {
+		scenery_obj::remove_cobjs();
+	}
+
+	void draw(float sscale, bool shadow_only, vector3d const &xlate) const {
+		if (!is_visible(shadow_only, radius, xlate)) return;
+		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, radius));
+		color.do_glColor();
+		glPushMatrix();
+		translate_to(pos);
+		uniform_scale(radius);
+		// render
+		glPopMatrix();
+	}
+
+	void destroy() {
+		scenery_obj::destroy();
+	}
+};
 
 
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
