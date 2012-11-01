@@ -263,7 +263,7 @@ void cobj_triangle_visitor::proc_cobj(coll_obj const &c) {
 		{
 			unsigned const ndiv(N_SPHERE_DIV);
 			sd_sphere_d sd(c.points[0], c.radius, ndiv);
-			sd.gen_points_norms();
+			sd.gen_points_norms_static();
 			point **points = sd.get_points();
 	
 			for (unsigned s = 0; s < ndiv; ++s) {

@@ -93,6 +93,7 @@ public:
 	unsigned ssize, dlist;
 	float max_mag, rmax, min_cutoff;
 	vector<float> heightmap;
+	sphere_point_norm spn;
 	sd_sphere_d sd;
 
 	upsurface(int type_=0) : type(type_), ssize(0), dlist(0) {}

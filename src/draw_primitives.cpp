@@ -106,21 +106,26 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 }
 
 
-void sd_sphere_d::gen_points_norms(float s_beg, float s_end, float t_beg, float t_end) {
+void sd_sphere_d::gen_points_norms_static(float s_beg, float s_end, float t_beg, float t_end) {
+
+	static sphere_point_norm temp_spn;
+	gen_points_norms(temp_spn, s_beg, s_end, t_beg, t_end);
+}
+
+
+void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, float s_end, float t_beg, float t_end) {
 
 	unsigned const ndiv(spn.ndiv);
-	assert(ndiv > 0 && ndiv < 100000);
-	float const cs_scale(PI/(float)ndiv), cs_scale2(2.0*cs_scale), sin_dt(sin(cs_scale)), cos_dt(cos(cs_scale));
-	static sphere_point_norm temp_spn;
+	assert(ndiv > 0 && ndiv < 100000); // FIXME: should we refuse to accept (ndiv < 3) ?
 
-	if (temp_spn.points == NULL || ndiv > temp_spn.ndiv) { // allocate all memory
-		if (temp_spn.points != NULL) temp_spn.free(); // already allocated at least once
-		temp_spn.alloc(ndiv);
-		unsigned const stride(ndiv+1);
+	if (cur_spn.points == NULL || ndiv > cur_spn.ndiv) { // allocate all memory
+		if (cur_spn.points != NULL) cur_spn.free(); // already allocated at least once
+		cur_spn.alloc(ndiv);
 	}
 	else {
-		temp_spn.set_pointer_stride(ndiv);
+		cur_spn.set_pointer_stride(ndiv);
 	}
+	float const cs_scale(PI/(float)ndiv), cs_scale2(2.0*cs_scale), sin_dt(sin(cs_scale)), cos_dt(cos(cs_scale));
 	unsigned s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
 	if (s1 == ndiv) s0 = 0; // make wraparound correct
 	s1 = min(ndiv, s1+1);   // allow for sn
@@ -133,37 +138,37 @@ void sd_sphere_d::gen_points_norms(float s_beg, float s_end, float t_beg, float 
 		unsigned const soff((ndiv+1)*s);
 
 		for (unsigned t = t0; t <= t1; ++t) { // Note: x and y are swapped because theta is out of phase by 90 degrees to match tex coords
-			point &pt(temp_spn.points[s][t]);
+			point &pt(cur_spn.points[s][t]);
 			float const sv(sin_t), cv(cos_t);
 			pt.assign(sv*tvs, sv*tvc, cv); // R*sin(phi)*sin(theta), R*sin(phi)*cos(theta), R*cos(phi)
 			sin_t = sv*cos_dt + cv*sin_dt;
 			cos_t = cv*cos_dt - sv*sin_dt;
-			temp_spn.norms[s][t] = pt; // Note: perturb_map does not affect normals until later
+			cur_spn.norms[s][t] = pt; // Note: perturb_map does not affect normals until later
 			pt   *= radius;
 			pt   += pos;
-			if (perturb_map) pt += temp_spn.norms[s][t]*perturb_map[t+soff];
-			if (surf)        pt += temp_spn.norms[s][t]*surf->get_height_at(pt);
+			if (perturb_map) pt += cur_spn.norms[s][t]*perturb_map[t+soff];
+			if (surf)        pt += cur_spn.norms[s][t]*surf->get_height_at(pt);
 		}
 	}
 	if (perturb_map || surf) { // recalculate vertex/surface normals
 		for (unsigned s = s0; s < s1; ++s) {
 			for (unsigned t = max(1U, t0); t <= min(t1, ndiv-1); ++t) { // skip the poles
-				point const p(temp_spn.points[s][t]);
+				point const p(cur_spn.points[s][t]);
 				vector3d n(zero_vector);
 
 				for (unsigned d = 0; d < 4; ++d) { // s+,t+  t-,s+  s-,t-  t+,s-
 					unsigned const si((d==0||d==1) ? (s+1)%ndiv : (s+ndiv-1)%ndiv);
 					unsigned const ti((d==0||d==3) ? (t+1)      : (t-1));
-					vector3d const nst(cross_product((temp_spn.points[si][t] - p), (temp_spn.points[s][ti] - p)));
+					vector3d const nst(cross_product((cur_spn.points[si][t] - p), (cur_spn.points[s][ti] - p)));
 					float const nmag(nst.mag());
 					if (nmag > TOLERANCE) n += nst*(((d&1) ? -0.25 : 0.25)/nmag);
 				}
-				temp_spn.norms[s][t] = n;
+				cur_spn.norms[s][t] = n;
 			}
 		}
 	}
-	spn.points = temp_spn.points;
-	spn.norms  = temp_spn.norms;
+	spn.points = cur_spn.points;
+	spn.norms  = cur_spn.norms;
 }
 
 
@@ -196,25 +201,6 @@ void sd_sphere_d::set_data(point const &p, float r, int n, float const *pm, floa
 }
 
 
-void sd_sphere_d::make_local_copy() {
-
-	assert(!local);
-	local = 1;
-	point *pdata(spn.points[0]); // make a temporary copy
-	spn.alloc(spn.ndiv);
-	assert(sizeof(point) == sizeof(vector3d));
-	memcpy(spn.points[0], pdata, 2*(spn.ndiv*(spn.ndiv+1))*sizeof(point));
-}
-
-
-void sd_sphere_d::free_local_data() {
-
-	assert(local);
-	local = 0;
-	spn.free();
-}
-
-
 // *** sphere_point_norm ***
 
 
@@ -238,6 +224,7 @@ void sphere_point_norm::set_pointer_stride(unsigned ndiv_) {
 
 void sphere_point_norm::free() {
 
+	if (points == NULL) {assert(norms == NULL); return;} // already freed (okay)
 	assert(points && norms && points[0] && norms[0]);
 	matrix_delete_2d(points);
 	norms = NULL;
@@ -614,7 +601,7 @@ void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &v
 						point const *const pt_shift, float expand, float s_beg, float s_end, float t_beg, float t_end)
 {
 	sd_sphere_d sd(pos, radius, ndiv, perturb_map);
-	sd.gen_points_norms(s_beg, s_end, t_beg, t_end);
+	sd.gen_points_norms_static(s_beg, s_end, t_beg, t_end);
 	sd.draw_subdiv_sphere(vfrom, texture, disable_bfc, render_map, exp_map, pt_shift, expand, s_beg, s_end, t_beg, t_end);
 }
 

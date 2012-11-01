@@ -568,16 +568,9 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 					asteroid_data[i].p = (pos_set ? pos : ustart_pos) + signed_rand_vector_spherical(dist);
 					asteroid_data[i].r = rand_uniform(r1, r2);
 				}
-				if (model == AS_MODEL_VOXEL) { // parallel creation
-					#pragma omp parallel for schedule(dynamic,1)
-					for (int i = 0; i < (int)num; ++i) { // could check for collisions
-						asteroid_data[i].a = uobj_asteroid::create(asteroid_data[i].p, asteroid_data[i].r, model, ROCK_SPHERE_TEX, i);
-					}
-				}
-				else {
-					for (int i = 0; i < (int)num; ++i) { // could check for collisions
-						asteroid_data[i].a = uobj_asteroid::create(asteroid_data[i].p, asteroid_data[i].r, model, ROCK_SPHERE_TEX, i);
-					}
+				#pragma omp parallel for schedule(dynamic,1)
+				for (int i = 0; i < (int)num; ++i) { // could check for collisions
+					asteroid_data[i].a = uobj_asteroid::create(asteroid_data[i].p, asteroid_data[i].r, model, ROCK_SPHERE_TEX, i);
 				}
 				for (unsigned i = 0; i < num; ++i) {
 					add_uobj(asteroid_data[i].a);

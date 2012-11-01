@@ -189,10 +189,8 @@ float upsurface::get_height_at(point const &pt, bool use_cache) const {
 
 void upsurface::setup_draw_sphere(point const &pos, float radius, float dp, int ndiv, float const *const pmap) {
 
-	if (sd.is_local()) sd.free_local_data();
 	sd.set_data(pos, radius, ndiv, pmap, dp, (pmap ? NULL : this));
-	sd.gen_points_norms();
-	sd.make_local_copy();
+	sd.gen_points_norms(spn);
 }
 
 
@@ -254,7 +252,7 @@ upsurface::ptc_block &upsurface::get_ptc(unsigned s, unsigned t, unsigned f) con
 
 upsurface::~upsurface() {
 
-	if (sd.is_local()) sd.free_local_data();
+	spn.free();
 	free_dlist();
 }
 
@@ -398,7 +396,7 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, c
 	assert(radius0 > 0.0);
 	init_ptc_cache();
 	sd_sphere_d sd(all_zeros, radius0, ND_TEST, NULL);
-	sd.gen_points_norms();
+	sd.gen_points_norms_static();
 	point **points   = sd.get_points();
 	vector3d **norms = sd.get_norms();
 	float const omcinv(1.0/(1.0 - min_cutoff)), rscale(HMAP_SCALE*radius0), cscale(1.0/255.0);

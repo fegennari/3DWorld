@@ -116,7 +116,7 @@ class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 
 public:
 	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned rseed_ix, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt) {
-		set_rand2_state(rseed_ix, 1);
+		surface.rgen.set_state(rseed_ix, 1);
 		surface.gen(0.15, 2.0, 10, 1.0);
 		surface.setup(ASTEROID_NDIV, 0.0, 0);
 		surface.setup_draw_sphere(all_zeros, 1.0, 0.0, ASTEROID_NDIV, NULL);
@@ -284,7 +284,7 @@ public:
 
 		if (ddata.final_pass) {
 			if (ddata.shader.is_setup()) {ddata.shader.enable();}
-			select_texture(WHITE_TEX, 0);
+			end_texture();
 		}
 	}
 

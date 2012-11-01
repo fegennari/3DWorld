@@ -824,7 +824,7 @@ public:
 class uobj_asteroid : public stationary_obj { // a free_obj that doesn't actually move?
 
 public:
-	static uobj_asteroid *create(point const &pos, float radius, unsigned model, int tid, unsigned lt=0);
+	static uobj_asteroid *create(point const &pos, float radius, unsigned model, int tid, unsigned rseed_ix=0, unsigned lt=0);
 	uobj_asteroid(point const &pos_, float radius_, unsigned lt=0) : stationary_obj(SO_ASTEROID, pos_, radius_, lt) {}
 	bool calc_rvs() const {return 1;} // so that texture is oriented properly
 	string get_name() const {return "Asteroid";}
