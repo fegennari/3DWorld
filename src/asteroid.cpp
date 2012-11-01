@@ -46,9 +46,8 @@ class uobj_asteroid_rock3d : public uobj_asteroid {
 	rock_shape3d model3d;
 
 public:
-	uobj_asteroid_rock3d(point const &pos_, float radius_, unsigned lt, int type) : uobj_asteroid(pos_, radius_, lt) {
-		static int obj_id(0); // for random seed
-		model3d.gen_rock(24, 1.0, ++obj_id, type); // pos starts at and stays at all_zeros
+	uobj_asteroid_rock3d(point const &pos_, float radius_, unsigned rseed_ix, unsigned lt, int type) : uobj_asteroid(pos_, radius_, lt) {
+		model3d.gen_rock(24, 1.0, rseed_ix, type); // pos starts at and stays at all_zeros
 		model3d.set_texture(MOON_TEX, 0.2);
 	}
 	~uobj_asteroid_rock3d() {model3d.destroy();}
@@ -116,9 +115,8 @@ class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 	static vector<float> pmap_vector;
 
 public:
-	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt) {
-		static int obj_id(0); // for random seed
-		set_rand2_state(++obj_id, 1);
+	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned rseed_ix, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt) {
+		set_rand2_state(rseed_ix, 1);
 		surface.gen(0.15, 2.0, 10, 1.0);
 		surface.setup(ASTEROID_NDIV, 0.0, 0);
 		surface.setup_draw_sphere(all_zeros, 1.0, 0.0, ASTEROID_NDIV, NULL);
@@ -219,13 +217,12 @@ class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 	bool have_sun_pos;
 
 public:
-	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt), have_sun_pos(0) {
-		static int obj_id(0); // for random seed
+	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned rseed_ix, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt), have_sun_pos(0) {
 		float gen_radius(0.0);
 		//RESET_TIME;
 
 		while (gen_radius == 0.0) { // loop until we get a valid asteroid
-			gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, ++obj_id); // will be translated to pos and scaled by radius during rendering
+			gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, rseed_ix); // will be translated to pos and scaled by radius during rendering
 			model.build(0);
 			gen_radius = model.get_bsphere().radius;
 		}
@@ -379,14 +376,14 @@ public:
 };
 
 
-uobj_asteroid *uobj_asteroid::create(point const &pos, float radius, unsigned model, int tex_id, unsigned lt) {
+uobj_asteroid *uobj_asteroid::create(point const &pos, float radius, unsigned model, int tex_id, unsigned rseed_ix, unsigned lt) {
 
 	switch (model) {
 	case AS_MODEL_SPHERE: return new uobj_asteroid_sphere(pos, radius, tex_id, lt);
-	case AS_MODEL_ROCK1:  return new uobj_asteroid_rock3d(pos, radius, lt, 0);
-	case AS_MODEL_ROCK2:  return new uobj_asteroid_rock3d(pos, radius, lt, 1);
-	case AS_MODEL_HMAP:   return new uobj_asteroid_hmap  (pos, radius, lt);
-	case AS_MODEL_VOXEL:  return new uobj_asteroid_voxel (pos, radius, lt);
+	case AS_MODEL_ROCK1:  return new uobj_asteroid_rock3d(pos, radius, rseed_ix, lt, 0);
+	case AS_MODEL_ROCK2:  return new uobj_asteroid_rock3d(pos, radius, rseed_ix, lt, 1);
+	case AS_MODEL_HMAP:   return new uobj_asteroid_hmap  (pos, radius, rseed_ix, lt);
+	case AS_MODEL_VOXEL:  return new uobj_asteroid_voxel (pos, radius, rseed_ix, lt);
 	default: assert(0);
 	}
 	return NULL; // never gets here

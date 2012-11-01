@@ -571,12 +571,12 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 				if (model == AS_MODEL_VOXEL) { // parallel creation
 					#pragma omp parallel for schedule(dynamic,1)
 					for (int i = 0; i < (int)num; ++i) { // could check for collisions
-						asteroid_data[i].a = uobj_asteroid::create(asteroid_data[i].p, asteroid_data[i].r, model, ROCK_SPHERE_TEX);
+						asteroid_data[i].a = uobj_asteroid::create(asteroid_data[i].p, asteroid_data[i].r, model, ROCK_SPHERE_TEX, i);
 					}
 				}
 				else {
 					for (int i = 0; i < (int)num; ++i) { // could check for collisions
-						asteroid_data[i].a = uobj_asteroid::create(asteroid_data[i].p, asteroid_data[i].r, model, ROCK_SPHERE_TEX);
+						asteroid_data[i].a = uobj_asteroid::create(asteroid_data[i].p, asteroid_data[i].r, model, ROCK_SPHERE_TEX, i);
 					}
 				}
 				for (unsigned i = 0; i < num; ++i) {
