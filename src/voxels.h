@@ -174,7 +174,7 @@ public:
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, point *damage_pos=NULL, int shooter=-1, unsigned num_fragments=0);
 	unsigned get_texture_at(point const &pos) const;
 	void proc_pending_updates();
-	void build(bool verbose);
+	void build(bool verbose, bool do_ao_lighting=1);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
 	void core_render(shader_t &s, bool is_shadow_pass, bool no_vfc=0);
 	void render(bool is_shadow_pass);
@@ -210,6 +210,16 @@ public:
 	void clear();
 	void build(bool add_cobjs_, bool add_as_fixed_, bool verbose);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
+};
+
+
+class voxel_model_rock : public voxel_model {
+
+	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {} // do nothing
+
+public:
+	voxel_model_rock() : voxel_model(0) {}
+	void build(bool verbose) {voxel_model::build(verbose, 0);}
 };
 
 

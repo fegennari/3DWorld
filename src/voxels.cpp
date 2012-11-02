@@ -1018,7 +1018,7 @@ void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_up
 }
 
 
-void voxel_model::build(bool verbose) {
+void voxel_model::build(bool verbose, bool do_ao_lighting) {
 
 	RESET_TIME;
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
@@ -1047,8 +1047,11 @@ void voxel_model::build(bool verbose) {
 		create_block(block, 1, 0);
 	}
 	if (verbose) {PRINT_TIME("  Triangles to Model");}
-	calc_ao_lighting();
-	if (verbose) {PRINT_TIME("  Voxel AO Lighting");}
+
+	if (do_ao_lighting) {
+		calc_ao_lighting();
+		if (verbose) {PRINT_TIME("  Voxel AO Lighting");}
+	}
 }
 
 
@@ -1079,6 +1082,7 @@ void voxel_model_ground::build(bool add_cobjs_, bool add_as_fixed_, bool verbose
 
 void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
+	assert(s.is_setup());
 	noise_tex_gen.setup(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
 	noise_tex_gen.bind_texture(5); // tu_id = 5
 	const char *cnames[2] = {"color0", "color1"};
@@ -1298,19 +1302,15 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 }
 
 
-void gen_voxel_asteroid(voxel_model_space &model, point const &center, float radius, unsigned size, int rseed) {
+void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const &center, float radius, unsigned size, int rseed) {
 
-	voxel_params_t params;
 	params.remove_unconnected = 2; // always
 	params.normalize_to_1 = 0;
 	params.atten_at_edges = 4; // sphere (could be 3 or 4)
-	params.num_blocks     = 2; // in each of x and y - subdivision not needed? it produces seams
 	params.freq           = 1.2;
 	params.mag            = 1.2;
 	params.radius_val     = 0.75; // seems to work well
 	params.atten_thresh   = 3.0; // user-specified?
-	params.ao_atten_power = 1.5; // user-specified?
-	params.ao_radius      = 1.0*radius;
 	params.tids[0]        = ROCK_TEX;
 	params.tids[1]        = MOSSY_ROCK_TEX; // maybe change later
 	float const vsz(2.0*radius/size);
@@ -1319,6 +1319,23 @@ void gen_voxel_asteroid(voxel_model_space &model, point const &center, float rad
 	model.set_params(params);
 	model.init(size, size, size, vector3d(vsz, vsz, vsz), center, -1.0, params.num_blocks);
 	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed);
+}
+
+void gen_voxel_rock(voxel_model &model, point const &center, float radius, unsigned size, int rseed) {
+
+	voxel_params_t params;
+	params.num_blocks = 1; // no subdivision
+	gen_voxel_spherical(model, params, center, radius, size, rseed);
+}
+
+
+void gen_voxel_asteroid(voxel_model &model, point const &center, float radius, unsigned size, int rseed) {
+
+	voxel_params_t params;
+	params.num_blocks     = 2; // in each of x and y - subdivision not needed? it produces seams
+	params.ao_atten_power = 1.5; // user-specified?
+	params.ao_radius      = 1.0*radius;
+	gen_voxel_spherical(model, params, center, radius, size, rseed);
 }
 
 

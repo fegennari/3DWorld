@@ -9,6 +9,7 @@
 #include "shape_line3d.h"
 #include "upsurface.h"
 #include "draw_utils.h"
+#include "voxels.h"
 
 
 int get_bark_tex_for_tree_type(int type);
@@ -62,6 +63,19 @@ public:
 	void create(int x, int y, int use_xy);
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, vector3d const &xlate) const;
+};
+
+
+class voxel_rock : public scenery_obj {
+
+	mutable voxel_model_rock model; // FIXME: const problems
+
+public:
+	void create(int x, int y, int use_xy);
+	void add_cobjs();
+	void draw(float sscale, bool shadow_only, vector3d const &xlate, shader_t &s) const;
+	void free_context() {model.free_context();}
+	void destroy();
 };
 
 
@@ -119,6 +133,7 @@ class scenery_group {
 
 	vector<rock_shape3d> rock_shapes;
 	vector<surface_rock> surface_rocks;
+	vector<voxel_rock>   voxel_rocks;
 	vector<s_rock>       rocks;
 	vector<s_log>        logs;
 	vector<s_stump>      stumps;
@@ -140,7 +155,7 @@ public:
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 	void gen(int x1, int y1, int x2, int y2, float vegetation_);
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate);
-	void draw_opaque_objects(bool shadow_only, vector3d const &xlate, bool draw_pld);
+	void draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
 };

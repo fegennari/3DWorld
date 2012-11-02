@@ -5,12 +5,12 @@
 #include "scenery.h"
 #include "mesh.h"
 #include "shaders.h"
-#include "voxels.h"
 
 
 bool     const NO_ISLAND_SCENERY = 1;
 bool     const USE_ROCK_DLISTS   = 1;
 unsigned const ROCK_NDIV         = 24;
+unsigned const ROCK_VOX_SZ       = 32;
 float    const SHADOW_VAL        = 0.5;
 float    const PT_LINE_THRESH    = 800.0;
 
@@ -478,6 +478,45 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 }
 
 
+void voxel_rock::create(int x, int y, int use_xy) {
+
+	RESET_TIME;
+	float gen_radius(0.0);
+	//RESET_TIME;
+
+	while (gen_radius == 0.0) { // loop until we get a valid asteroid
+		gen_voxel_rock(model, all_zeros, 1.0, ROCK_VOX_SZ, rand2()); // will be translated to pos and scaled by radius during rendering
+		model.build(0);
+		gen_radius = model.get_bsphere().radius;
+	}
+	radius /= gen_radius;
+	PRINT_TIME("Gen Voxel Rock");
+}
+
+void voxel_rock::add_cobjs() {
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, model.get_params().tids[0]));
+}
+
+void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, shader_t &s) const {
+
+	if (!is_visible(shadow_only, radius, xlate)) return;
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, radius));
+	color.do_glColor();
+	glPushMatrix();
+	translate_to(pos);
+	uniform_scale(radius);
+	if (s.is_setup()) {model.setup_tex_gen_for_rendering(s);}
+	model.core_render(s, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
+	glPopMatrix();
+}
+
+void voxel_rock::destroy() {
+
+	model.clear();
+	scenery_obj::destroy();
+}
+
+
 void s_log::shift_by(vector3d const &vd) {
 
 	scenery_obj::shift_by(vd);
@@ -712,42 +751,6 @@ void s_plant::destroy() {
 }
 
 
-class voxel_rock : public scenery_obj {
-
-	
-
-public:
-	voxel_rock() {}
-
-	void create(int x, int y, int use_xy) {
-
-	}
-
-	void add_cobjs() {
-		coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
-	}
-
-	void remove_cobjs() {
-		scenery_obj::remove_cobjs();
-	}
-
-	void draw(float sscale, bool shadow_only, vector3d const &xlate) const {
-		if (!is_visible(shadow_only, radius, xlate)) return;
-		colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, radius));
-		color.do_glColor();
-		glPushMatrix();
-		translate_to(pos);
-		uniform_scale(radius);
-		// render
-		glPopMatrix();
-	}
-
-	void destroy() {
-		scenery_obj::destroy();
-	}
-};
-
-
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
 
 
@@ -785,6 +788,9 @@ void scenery_group::clear_vbos_and_dlists() {
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
 		rock_shapes[i].clear_dlist();
 	}
+	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
+		voxel_rocks[i].free_context();
+	}
 	plant_vbo_manager.clear_vbo();
 	rock_vbo_manager.clear_vbo();
 }
@@ -794,6 +800,7 @@ void scenery_group::clear() {
 	free();
 	rock_shapes.clear();
 	surface_rocks.clear();
+	voxel_rocks.clear();
 	rocks.clear();
 	logs.clear();
 	stumps.clear();
@@ -806,6 +813,7 @@ void scenery_group::free() {
 
 	free_scenery_vector(rock_shapes);
 	free_scenery_vector(surface_rocks);
+	free_scenery_vector(voxel_rocks);
 	free_scenery_vector(rocks);
 	free_scenery_vector(logs);
 	free_scenery_vector(stumps);
@@ -816,6 +824,7 @@ void scenery_group::add_cobjs() {
 
 	add_scenery_vector_cobjs(rock_shapes);
 	add_scenery_vector_cobjs(surface_rocks);
+	add_scenery_vector_cobjs(voxel_rocks);
 	add_scenery_vector_cobjs(rocks);
 	add_scenery_vector_cobjs(logs);
 	add_scenery_vector_cobjs(stumps);
@@ -826,6 +835,7 @@ void scenery_group::shift(vector3d const &vd) {
 
 	shift_scenery_vector(rock_shapes,   vd);
 	shift_scenery_vector(surface_rocks, vd);
+	shift_scenery_vector(voxel_rocks,   vd);
 	shift_scenery_vector(rocks,         vd);
 	shift_scenery_vector(logs,          vd);
 	shift_scenery_vector(stumps,        vd);
@@ -839,6 +849,7 @@ void scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficien
 	// test if there are any cobjs within this region?
 	update_scenery_zvals_vector(rock_shapes,   x1, y1, x2, y2);
 	update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2);
+	update_scenery_zvals_vector(voxel_rocks,   x1, y1, x2, y2);
 	update_scenery_zvals_vector(rocks,         x1, y1, x2, y2);
 	update_scenery_zvals_vector(logs,          x1, y1, x2, y2);
 	update_scenery_zvals_vector(stumps,        x1, y1, x2, y2);
@@ -880,6 +891,12 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 				plants.push_back(s_plant()); // 30%
 				if (!plants.back().create(j, i, 1, min_plant_z, plant_vbo_manager)) plants.pop_back();
 			}
+#if 0
+			else if (1) { // FIXME: temporary
+				voxel_rocks.push_back(voxel_rock());
+				voxel_rocks.back().create(j, i, 1);
+			}
+#endif
 			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());
 				rock_shapes.back().create(j, i, 1);
@@ -918,7 +935,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 }
 
 
-void scenery_group::draw_opaque_objects(bool shadow_only, vector3d const &xlate, bool draw_pld) {
+void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld) {
 
 	set_fill_mode();
 	glEnable(GL_COLOR_MATERIAL);
@@ -937,6 +954,10 @@ void scenery_group::draw_opaque_objects(bool shadow_only, vector3d const &xlate,
 	}
 	rock_vbo_manager.end_render();
 	glEnable(GL_COLOR_MATERIAL);
+
+	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
+		voxel_rocks[i].draw(sscale, shadow_only, xlate, s);
+	}
 	draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
 	gluQuadricTexture(quadric, GL_TRUE);
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate);
@@ -954,7 +975,8 @@ void scenery_group::draw_opaque_objects(bool shadow_only, vector3d const &xlate,
 void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate) {
 
 	if (draw_opaque) { // draw stems, rocks, logs, and stumps
-		draw_opaque_objects(shadow_only, xlate, 1);
+		shader_t s; // unset
+		draw_opaque_objects(s, shadow_only, xlate, 1);
 	}
 	if (draw_transparent) { // draw leaves
 		shader_t s;

@@ -716,7 +716,7 @@ public:
 		glPushMatrix();
 		vector3d const xlate(((xoff - xoff2) - init_scenery_dxoff)*DX_VAL, ((yoff - yoff2) - init_scenery_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
-		if (draw_opaque) {scenery.draw_opaque_objects(0, xlate, 1);}
+		if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 1);}
 		if (draw_leaves) {scenery.draw_plant_leaves(s, 0, xlate);}
 		glPopMatrix();
 	}
