@@ -1314,7 +1314,6 @@ void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const
 	params.tids[0]        = ROCK_TEX;
 	params.tids[1]        = MOSSY_ROCK_TEX; // maybe change later
 	float const vsz(2.0*radius/size);
-	//model.clear(); // should this be here? model should start empty
 	assert(model.empty());
 	model.set_params(params);
 	model.init(size, size, size, vector3d(vsz, vsz, vsz), center, -1.0, params.num_blocks);

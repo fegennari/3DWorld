@@ -9,6 +9,7 @@
 
 bool     const NO_ISLAND_SCENERY = 1;
 bool     const USE_ROCK_DLISTS   = 1;
+bool     const USE_VOXEL_ROCKS   = 0;
 unsigned const ROCK_NDIV         = 24;
 unsigned const ROCK_VOX_SZ       = 32;
 float    const SHADOW_VAL        = 0.5;
@@ -481,10 +482,12 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 void voxel_rock::create(int x, int y, int use_xy) {
 
 	RESET_TIME;
+	gen_spos(x, y, use_xy);
+	radius = 0.2*rand_uniform2(0.5, 1.0)*rand_float2()/tree_scale;
 	float gen_radius(0.0);
-	//RESET_TIME;
 
 	while (gen_radius == 0.0) { // loop until we get a valid asteroid
+		model.clear();
 		gen_voxel_rock(model, all_zeros, 1.0, ROCK_VOX_SZ, rand2()); // will be translated to pos and scaled by radius during rendering
 		model.build(0);
 		gen_radius = model.get_bsphere().radius;
@@ -494,18 +497,25 @@ void voxel_rock::create(int x, int y, int use_xy) {
 }
 
 void voxel_rock::add_cobjs() {
-	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, model.get_params().tids[0]));
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, get_tid()));
 }
 
 void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, shader_t &s) const {
 
+	assert(radius > 0.0);
 	if (!is_visible(shadow_only, radius, xlate)) return;
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, radius));
 	color.do_glColor();
 	glPushMatrix();
 	translate_to(pos);
 	uniform_scale(radius);
-	if (s.is_setup()) {model.setup_tex_gen_for_rendering(s);}
+	
+	if (s.is_setup()) {
+		model.setup_tex_gen_for_rendering(s);
+	}
+	else {
+		select_texture(get_tid());
+	}
 	model.core_render(s, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 	glPopMatrix();
 }
@@ -891,12 +901,6 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 				plants.push_back(s_plant()); // 30%
 				if (!plants.back().create(j, i, 1, min_plant_z, plant_vbo_manager)) plants.pop_back();
 			}
-#if 0
-			else if (1) { // FIXME: temporary
-				voxel_rocks.push_back(voxel_rock());
-				voxel_rocks.back().create(j, i, 1);
-			}
-#endif
 			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());
 				rock_shapes.back().create(j, i, 1);
@@ -904,6 +908,10 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 			else if (val < 15) { // 7%
 				surface_rocks.push_back(surface_rock());
 				surface_rocks.back().create(j, i, 1, rock_vbo_manager);
+			}
+			else if (USE_VOXEL_ROCKS && val < 30) { // FIXME: too slow, and need special shaders for texturing
+				voxel_rocks.push_back(voxel_rock());
+				voxel_rocks.back().create(j, i, 1);
 			}
 			else if (val < 50) { // 24.5%
 				rocks.push_back(s_rock());

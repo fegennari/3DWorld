@@ -70,6 +70,8 @@ class voxel_rock : public scenery_obj {
 
 	mutable voxel_model_rock model; // FIXME: const problems
 
+	unsigned get_tid() const {return model.get_params().tids[0];}
+
 public:
 	void create(int x, int y, int use_xy);
 	void add_cobjs();
