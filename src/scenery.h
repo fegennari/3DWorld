@@ -68,14 +68,14 @@ public:
 
 class voxel_rock : public scenery_obj {
 
-	mutable voxel_model_rock model; // FIXME: const problems
+	voxel_model_rock model;
 
 	unsigned get_tid() const {return model.get_params().tids[0];}
 
 public:
 	void create(int x, int y, int use_xy);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only, vector3d const &xlate, shader_t &s) const;
+	void draw(float sscale, bool shadow_only, vector3d const &xlate, shader_t &s);
 	void free_context() {model.free_context();}
 	void destroy();
 };

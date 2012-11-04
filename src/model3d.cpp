@@ -313,7 +313,7 @@ template<> void indexed_vntc_vect_t<vert_norm_tc_tan>::calc_tangents(unsigned np
 	if (!indices.empty()) { // using index array, need to renormalilze tangents
 		for (iterator i = begin(); i != end(); ++i) {
 			i->tangent.normalize();
-			i->tangent.w = ((i->tangent.w < 0.0) ? -1.0 : 1.0); // FIXME: what if 0.0?
+			i->tangent.w = ((i->tangent.w < 0.0) ? -1.0 : 1.0);
 		}
 	}
 }
@@ -472,7 +472,7 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 
 			for (unsigned a = 0; a < 3 && !shared2.shared; ++a) {
 				for (unsigned b = 0; b < 3; ++b) {
-					if (get_vert(i+a) == get_vert(i+b+3)) { // FIXME: check normals for planar quad?
+					if (get_vert(i+a) == get_vert(i+b+3)) {
 						(shared1.shared ? shared2 : shared1) = shared_vertex_t(a, b);
 						break;
 					}

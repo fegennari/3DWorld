@@ -213,7 +213,7 @@ vector<float> uobj_asteroid_hmap::pmap_vector; // static
 // FIXME: sphere collision normal / pos
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
-	mutable voxel_model_space model; // FIXME: const problems
+	mutable voxel_model_space model; // FIXME: const problems with draw()
 	bool have_sun_pos;
 
 public:

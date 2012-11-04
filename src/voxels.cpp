@@ -432,7 +432,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
 	if (params.atten_at_edges == 3 || params.atten_at_edges == 4 || !use_mesh) { // sphere mode / not mesh mode
-		unsigned const x(nx/2), y(ny/2); // add a single point at the center of the sphere (FIXME: will only work for filled sphere center)
+		unsigned const x(nx/2), y(ny/2); // add a single point at the center of the sphere (will only work for filled sphere center)
 
 		if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
 			unsigned const ix(outside.get_ix(x, y, nz/2));
@@ -1292,7 +1292,6 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 	voxel_params_t params(global_voxel_params);
 	params.ao_atten_power = 0.7; // user-specified?
 	params.ao_radius      = 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE);
-	// FIXME: is czmin set at this point? should it be set to something, or is FAR_CLIP ok?
 	setup_voxel_landscape(params, -1.0);
 	terrain_voxel_model.create_from_cobjs(cobjs, 1.0);
 	PRINT_TIME(" Cobjs Voxel Gen");

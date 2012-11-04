@@ -188,7 +188,7 @@ public:
 		rel_path = get_path(fn);
 	}
 
-	bool load_mat_lib(string const &fn) { // FIXME: cache these files or reload every time?
+	bool load_mat_lib(string const &fn) { // Note: could cache filename, but seems to never be included more than once
 		ifstream mat_in;
 		if (open_include_file(fn, "material library", mat_in).empty()) return 0;
 		cout << "loading material library " << fn << endl;

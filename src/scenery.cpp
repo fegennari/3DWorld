@@ -500,7 +500,7 @@ void voxel_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, get_tid()));
 }
 
-void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, shader_t &s) const {
+void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, shader_t &s) {
 
 	assert(radius > 0.0);
 	if (!is_visible(shadow_only, radius, xlate)) return;
