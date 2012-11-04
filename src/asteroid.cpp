@@ -222,6 +222,7 @@ public:
 		//RESET_TIME;
 
 		while (gen_radius == 0.0) { // loop until we get a valid asteroid
+			rseed_ix *= 27751; // make unique for each iteration
 			model.clear();
 			gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, rseed_ix); // will be translated to pos and scaled by radius during rendering
 			model.build(0);

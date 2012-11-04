@@ -481,19 +481,23 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 
 void voxel_rock::create(int x, int y, int use_xy) {
 
-	RESET_TIME;
 	gen_spos(x, y, use_xy);
 	radius = 0.2*rand_uniform2(0.5, 1.0)*rand_float2()/tree_scale;
+	rseed  = rand2();
+}
+
+void voxel_rock::build_model() {
+
 	float gen_radius(0.0);
 
 	while (gen_radius == 0.0) { // loop until we get a valid asteroid
+		rseed *= 27751; // make unique for each iteration
 		model.clear();
-		gen_voxel_rock(model, all_zeros, 1.0, ROCK_VOX_SZ, rand2()); // will be translated to pos and scaled by radius during rendering
+		gen_voxel_rock(model, all_zeros, 1.0, ROCK_VOX_SZ, rseed); // will be translated to pos and scaled by radius during rendering
 		model.build(0);
 		gen_radius = model.get_bsphere().radius;
 	}
 	radius /= gen_radius;
-	PRINT_TIME("Gen Voxel Rock");
 }
 
 void voxel_rock::add_cobjs() {
@@ -909,7 +913,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 				surface_rocks.push_back(surface_rock());
 				surface_rocks.back().create(j, i, 1, rock_vbo_manager);
 			}
-			else if (USE_VOXEL_ROCKS && val < 30) { // FIXME: too slow, and need special shaders for texturing
+			else if (USE_VOXEL_ROCKS && val < 35) { // FIXME: too slow, and need special shaders for texturing
 				voxel_rocks.push_back(voxel_rock());
 				voxel_rocks.back().create(j, i, 1);
 			}
@@ -929,6 +933,13 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 	}
 	surface_rock_cache.clear_unref();
 	sort(plants.begin(), plants.end()); // sort by type
+	RESET_TIME;
+
+	#pragma omp parallel for schedule(dynamic,1)
+	for (int i = 0; i < (int)voxel_rocks.size(); ++i) {
+		voxel_rocks[i].build_model();
+	}
+	PRINT_TIME("Gen Voxel Rocks");
 }
 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate) {

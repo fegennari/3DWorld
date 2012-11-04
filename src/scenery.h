@@ -69,11 +69,14 @@ public:
 class voxel_rock : public scenery_obj {
 
 	voxel_model_rock model;
+	int rseed;
 
 	unsigned get_tid() const {return model.get_params().tids[0];}
 
 public:
+	voxel_rock() : rseed(1) {}
 	void create(int x, int y, int use_xy);
+	void build_model();
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, vector3d const &xlate, shader_t &s);
 	void free_context() {model.free_context();}
