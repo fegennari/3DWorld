@@ -128,7 +128,7 @@ void alloc_matrices() { // called at the beginning of main()
 void delete_matrices() { // called at the end of main()
 
 	RESET_TIME;
-	assert(matrix_alloced);
+	if (!matrix_alloced) return;
 	matrix_delete_2d(num_obj_on_mesh);
 	matrix_delete_2d(watershed_matrix);
 	matrix_delete_2d(wminside);

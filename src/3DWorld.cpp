@@ -734,6 +734,21 @@ void change_tree_mode() {
 }
 
 
+void quit_3dworld() {
+
+	cout << "quitting" << endl;
+	kill_raytrace = 1;
+	free_textures();
+
+	if (!universe_only) {
+		free_models();
+		free_scenery();
+		delete_matrices();
+	}
+	exit(0); // quit
+}
+
+
 // This function is called whenever there is a keyboard input
 // key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127)
 // x and y are the location of the mouse
@@ -744,9 +759,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
     switch (key) {
 	case 0x1B: // ESC key (27)
-		cout << "quitting" << endl;
-		kill_raytrace = 1;
-		exit(0); // quit
+		quit_3dworld();
 		break;
 	
 	case 'm': // maximize/minimize
@@ -1857,24 +1870,27 @@ int load_config(string const &config_file) {
 }
 
 
+void progress() {cout << "."; cout.flush();}
+
+
 int main(int argc, char** argv) {
 
 	cout << "Starting 3DWorld."; cout.flush();
 	
     // Initialize GLUT
-	cout << "."; cout.flush();
+	progress();
     glutInit(&argc, argv);
-	cout << "."; cout.flush();
+	progress();
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
 	//glutInitDisplayString("rgb double depth>=16 samples>=4");
-	cout << "."; cout.flush();
+	progress();
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;
-	cout << "."; cout.flush();
+	progress();
 	init_openal(argc, argv);
-	cout << "."; cout.flush();
+	progress();
 	init_glew();
-	cout << "."; cout.flush();
+	progress();
 	init_window();
 	cout << ".GL Initialized." << endl;
 	//glutFullScreen();
@@ -1920,15 +1936,7 @@ int main(int argc, char** argv) {
 		build_lightmap(1);
 	}
 	glutMainLoop(); // Switch to main loop
-
-	// cleanup - never actually gets here, but could put in quit code
-	free_textures();
-
-	if (!universe_only) {
-		free_models();
-		free_scenery();
-		delete_matrices();
-	}
-    return 0;        
+	quit_3dworld(); // never actually gets here
+    return 0;
 }
 
