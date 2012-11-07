@@ -71,21 +71,6 @@ struct tree_branch { // size = 12
 };
 
 
-struct branch_node_t : public vert_norm { // size = 28, norm is direction to adjacent vertex
-
-	float r; // radius
-
-	branch_node_t() {}
-	branch_node_t(point const &v_, vector3d const &dir_, float r_) : vert_norm(v_, dir_), r(r_) {}
-};
-
-
-struct leaf_node_t : public vert_norm_color_tangent {
-	//unsigned char shadowed[4]; // per-corner
-	void set_from_leaf(tree_leaf const &l);
-};
-
-
 class tree { // size = BIG
 
 	static reusable_mem<tree_cylin >   cylin_cache [CYLIN_CACHE_ENTRIES ];
@@ -100,8 +85,7 @@ class tree { // size = BIG
 	int type, created, trseed1, trseed2, branch_vbo, branch_ivbo, leaf_vbo;
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
 	vector<leaf_vert_type_t> leaf_data; // old leaf data
-	vector<leaf_node_t> leaf_data2; // new leaf data
-	point sphere_center;
+	point sphere_center, tree_center;
 	float sphere_radius, init_deadness, deadness, damage;
 	vector<draw_cylin> all_cylins;
 	colorRGBA color, base_color, leaf_color, bcolor;
@@ -133,10 +117,8 @@ class tree { // size = BIG
 	coll_obj &get_leaf_cobj(unsigned i) const;
 	void copy_all_leaf_colors();
 	void update_leaf_orients();
-	bool has_leaf_data() const {return (!leaf_data.empty() || !leaf_data2.empty());}
+	bool has_leaf_data() const {return !leaf_data.empty();}
 	bool has_no_leaves() const {return (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0);}
-	void draw_branches_as_lines(shader_t const &s, unsigned num);
-	void draw_leaves_as_points(shader_t const &s, unsigned nl);
 
 public:
 	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
