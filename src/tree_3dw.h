@@ -19,14 +19,14 @@ struct blastr; // forward reference
 enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TREE_CLASS_DETAILED, NUM_TREE_CLASSES};
 
 
-struct tree_leaf { // size = 32 + 48 = 80
+struct tree_leaf { // size = 28 + 48 = 76
 
-	int coll_index, shadow_bits;
+	int shadow_bits;
 	float color, lred, lgreen;
 	vector3d norm;
 	point pts[4];
 
-	tree_leaf() : coll_index(-1), shadow_bits(0) {}
+	tree_leaf() : shadow_bits(0) {}
 	void create_init_color(bool deterministic);
 	colorRGB calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const;
 	float get_norm_scale(unsigned pt_ix) const;
@@ -39,30 +39,24 @@ inline bool comp_leaf(const tree_leaf &A, const tree_leaf &B) {
 }
 
 
-struct draw_cylin : public cylinder_3dw { // size = 39 (40)
+struct draw_cylin : public cylinder_3dw { // size = 35 (36)
 
-	int coll_index;
 	unsigned char level;
 	unsigned short branch_id;
 
-	draw_cylin() : coll_index(-1) {}
+	draw_cylin() : level(0), branch_id(0) {}
 	unsigned get_num_div() const {return (N_CYL_SIDES >> 1) - ((level - 1) << 2);}
 	bool can_merge(draw_cylin const &c) const {return (level == c.level && branch_id == c.branch_id);}
 };
 
 
-struct tree_cylin : public draw_cylin { // size = 59 (60)
+struct tree_cylin : public draw_cylin { // size = 55 (56)
 
 	float length, deg_rotate;
 	vector3d rotate;
 
 	void assign_params(unsigned char lev, unsigned short bid, float r1_, float r2_, float len, float drot) {
-		level      = lev;
-		branch_id  = bid;
-		r1         = r1_;
-		r2         = r2_;
-		length     = len;
-		deg_rotate = drot;
+		level = lev; branch_id = bid; r1 = r1_; r2 = r2_; length = len; deg_rotate = drot;
 	}
 };
 
@@ -97,6 +91,8 @@ class tree { // size = BIG
 	static reusable_mem<tree_cylin >   cylin_cache [CYLIN_CACHE_ENTRIES ];
 	static reusable_mem<tree_branch>   branch_cache[BRANCH_CACHE_ENTRIES];
 	static reusable_mem<tree_branch *> branch_ptr_cache;
+
+	vector<int> branch_cobjs, leaf_cobjs;
 
 	typedef vert_norm_comp_color leaf_vert_type_t;
 	typedef vert_norm_comp_tc branch_vert_type_t;
@@ -134,6 +130,7 @@ class tree { // size = BIG
 	float num_leaves_per_occ, damage_scale;
 	unsigned num_branch_quads, num_unique_pts;
 
+	coll_obj &get_leaf_cobj(unsigned i) const;
 	void copy_all_leaf_colors();
 	void update_leaf_orients();
 	bool has_leaf_data() const {return (!leaf_data.empty() || !leaf_data2.empty());}

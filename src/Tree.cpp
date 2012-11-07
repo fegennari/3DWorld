@@ -145,19 +145,17 @@ void tree::add_tree_collision_objects() {
 	if (!(tree_mode & 1) || !tree_coll_level || !created) return;
 	remove_collision_objects();
 	if (!is_over_mesh()) return; // optimization
-	int const btid(tree_types[type].bark_tex);
+	int const btid(tree_types[type].bark_tex), branch_coll_level(min(tree_coll_level, 4));
 	colorRGBA const bcolor(tree_types[type].barkc);
 	cobj_params cp(0.8, bcolor, TEST_RTREE_COBJS, 0, NULL, 0, btid, 4.0, 1, 0);
 	cp.shadow = 0; // will be handled by gen_tree_shadows()
+	assert(branch_cobjs.empty());
 
 	for (unsigned i = 0; i < all_cylins.size(); i++) {
 		draw_cylin &c(all_cylins[i]);
 
-		if (c.level < min(tree_coll_level, 4)) {
-			c.coll_index = add_coll_cylinder(c.p1, c.p2, c.r1, c.r2, cp, -1, ((c.level == 0) ? 0 : 1));
-		}
-		else {
-			c.coll_index = -1;
+		if (c.level < branch_coll_level) {
+			branch_cobjs.push_back(add_coll_cylinder(c.p1, c.p2, c.r1, c.r2, cp, -1, ((c.level == 0) ? 0 : 1)));
 		}
 	}
 	if (tree_coll_level >= 4) {
@@ -168,11 +166,12 @@ void tree::add_tree_collision_objects() {
 		cpl.shadow         = 0;
 		cpl.is_destroyable = 1; // so that truly_static() returns false
 		point const xlate(all_zeros); // for now
+		leaf_cobjs.resize(leaves.size());
 
 		for (unsigned i = 0; i < leaves.size(); i++) { // loop through leaves
 			// Note: line collisions with leaves will use the texture alpha component for a more exact test
-			leaves[i].coll_index = add_coll_polygon(leaves[i].pts, 4, cpl, 0.0, xlate, -1, 2);
-			coll_objects[leaves[i].coll_index].is_billboard = 1;
+			leaf_cobjs[i] = add_coll_polygon(leaves[i].pts, 4, cpl, 0.0, xlate, -1, 2);
+			coll_objects[leaf_cobjs[i]].is_billboard = 1;
 		}
 	}
 	//PRINT_TIME("Tree Cobjs");
@@ -181,16 +180,14 @@ void tree::add_tree_collision_objects() {
 
 void tree::remove_collision_objects() {
 
-	if (!created) return;
-
-	for (unsigned i = 0; i < all_cylins.size(); i++) {
-		remove_reset_coll_obj(all_cylins[i].coll_index);
+	for (unsigned i = 0; i < branch_cobjs.size(); i++) {
+		remove_reset_coll_obj(branch_cobjs[i]);
 	}
-	if (tree_coll_level >= 5 || tree_coll_level >= 4) {
-		for (unsigned i = 0; i < leaves.size(); ++i) {
-			remove_reset_coll_obj(leaves[i].coll_index);
-		}
+	for (unsigned i = 0; i < leaf_cobjs.size(); i++) {
+		remove_reset_coll_obj(leaf_cobjs[i]);
 	}
+	branch_cobjs.clear();
+	leaf_cobjs.clear();
 }
 
 
@@ -308,6 +305,14 @@ void tree::mark_leaf_changed(unsigned i) {
 }
 
 
+coll_obj &tree::get_leaf_cobj(unsigned i) const {
+
+	assert(i < leaf_cobjs.size());
+	assert(leaf_cobjs[i] < (int)coll_objects.size());
+	return coll_objects[leaf_cobjs[i]];
+}
+
+
 void tree::copy_color(colorRGB const &color, unsigned i) {
 
 	if (USE_LEAF_GEOM_SHADER) {
@@ -321,9 +326,8 @@ void tree::copy_color(colorRGB const &color, unsigned i) {
 			leaf_data[j+(i<<2)].set_c3(color);
 		}
 	}
-	if (i < leaves.size() && leaves[i].coll_index >= 0) { // update cobj color so that leaf water reflection is correct
-		assert((unsigned)leaves[i].coll_index < coll_objects.size());
-		coll_objects[leaves[i].coll_index].cp.color = colorRGBA(color).modulate_with(texture_color(tree_types[type].leaf_tex));
+	if (!leaf_cobjs.empty()) { // update cobj color so that leaf water reflection is correct
+		get_leaf_cobj(i).cp.color = colorRGBA(color).modulate_with(texture_color(tree_types[type].leaf_tex));
 	}
 	mark_leaf_changed(i);
 }
@@ -346,11 +350,12 @@ void tree::change_leaf_color(colorRGBA &base_color, unsigned i) {
 void tree::remove_leaf(unsigned i, bool update_data) {
 
 	assert(i < leaves.size());
-	int const cix(leaves[i].coll_index);
 	
-	if (cix >= 0) {
-		assert((unsigned)cix < coll_objects.size());
-		remove_coll_object(cix);
+	if (!leaf_cobjs.empty()) {
+		assert(leaf_cobjs.size() == leaves.size());
+		remove_coll_object(leaf_cobjs[i]);
+		leaf_cobjs[i] = leaf_cobjs.back();
+		leaf_cobjs.pop_back();
 	}
 	leaves[i] = leaves.back();
 	leaves.pop_back();
@@ -829,28 +834,26 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 		}
 		float hit_angle(0.0);
 
-		if (l.coll_index >= 0) { // rotate leaves when hit by an object
-			assert(l.coll_index < (int)coll_objects.size());
-			unsigned char &last_coll(coll_objects[l.coll_index].last_coll);
-			unsigned char &coll_type(coll_objects[l.coll_index].coll_type);
+		if (!leaf_cobjs.empty()) { // rotate leaves when hit by an object
+			coll_obj &cobj(get_leaf_cobj(i));
 				
-			if (last_coll > 0) {
-				if (coll_type == BEAM) { // do burn damage
+			if (cobj.last_coll > 0) {
+				if (cobj.coll_type == BEAM) { // do burn damage
 					if (damage_leaf(i, BEAM_DAMAGE)) {--i;}
 				}
 				else {
-					if (coll_type == PROJECTILE) {
+					if (cobj.coll_type == PROJECTILE) {
 						if ((rand()&3) == 0) { // shoot off leaf
 							gen_leaf_at(l.pts, l.norm, type, get_leaf_color(i));
 							remove_leaf(i, 1);
 							--i;
 							continue;
 						}
-						coll_type = IMPACT; // reset to impact after first hit
+						cobj.coll_type = IMPACT; // reset to impact after first hit
 					}
-					hit_angle += PI_TWO*last_coll/TICKS_PER_SECOND; // 90 degree max rotate
+					hit_angle += PI_TWO*cobj.last_coll/TICKS_PER_SECOND; // 90 degree max rotate
 				}
-				last_coll = ((last_coll < iticks) ? 0 : (last_coll - iticks));
+				cobj.last_coll = ((cobj.last_coll < iticks) ? 0 : (cobj.last_coll - iticks));
 			}
 		}
 		float const wscale(dot_product(local_wind, l.norm));
@@ -897,14 +900,14 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 		tree_leaf &l(leaves[i]);
 
 		if (USE_LEAF_GEOM_SHADER) {
-			l.shadow_bits = (l.coll_index >= 0 && !is_visible_to_light_cobj(l.get_center(), light, 0.0, l.coll_index, 1));
+			l.shadow_bits = (!leaf_cobjs.empty() && !is_visible_to_light_cobj(l.get_center(), light, 0.0, leaf_cobjs[i], 1));
 			leaf_data2[i].n = l.norm*l.get_norm_scale(0);
 		}
 		else {
 			l.shadow_bits = 0;
 
 			for (unsigned j = 0; j < 4; ++j) {
-				bool const shadowed(l.coll_index >= 0 && !is_visible_to_light_cobj(l.pts[j], light, 0.0, l.coll_index, 1));
+				bool const shadowed(!leaf_cobjs.empty() && !is_visible_to_light_cobj(l.pts[j], light, 0.0, leaf_cobjs[i], 1));
 				l.shadow_bits |= (int(shadowed) << j);
 				leaf_data[j+(i<<2)].set_norm(l.norm*l.get_norm_scale(j));
 			}
