@@ -84,7 +84,7 @@ class tree { // size = BIG
 
 	int type, created, trseed1, trseed2, branch_vbo, branch_ivbo, leaf_vbo;
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
-	vector<leaf_vert_type_t> leaf_data; // old leaf data
+	vector<leaf_vert_type_t> leaf_data;
 	point sphere_center, tree_center;
 	float sphere_radius, init_deadness, deadness, damage;
 	vector<draw_cylin> all_cylins;

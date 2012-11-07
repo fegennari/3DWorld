@@ -2,6 +2,7 @@ uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform mat4 world_space_mvm;
 uniform float tex_scale_s = 1.0;
 uniform float tex_scale_t = 1.0;
+uniform vec3 world_space_offset = vec3(0,0,0);
 
 attribute vec4 tex0_s, tex0_t;
 
@@ -38,9 +39,9 @@ void main()
 		eye    = mvm_inv[3].xyz; // world space
 	}
 	else {
-		vpos = gl_Vertex.xyz;
+		vpos = gl_Vertex.xyz + world_space_offset;
 		eye  = gl_ModelViewMatrixInverse[3].xyz; // world space
-		normal   = normalize(gl_Normal);
+		normal = normalize(gl_Normal);
 	}
 	setup_indir_lighting(vpos, normal);
 
