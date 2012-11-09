@@ -107,8 +107,8 @@ inline colorRGBA get_leaf_base_color(int type) {
 
 bool tree::is_over_mesh() const {
 
-	int const x1(get_xpos(sphere_center.x - sphere_radius)), y1(get_ypos(sphere_center.y - sphere_radius));
-	int const x2(get_xpos(sphere_center.x + sphere_radius)), y2(get_ypos(sphere_center.y + sphere_radius));
+	int const x1(get_xpos(tree_center.x - sphere_radius)), y1(get_ypos(tree_center.y - sphere_radius));
+	int const x2(get_xpos(tree_center.x + sphere_radius)), y2(get_ypos(tree_center.y + sphere_radius));
 	return (x1 < MESH_X_SIZE && y1 < MESH_Y_SIZE && x2 >= 0 && y2 >= 0); // completely off the mesh
 }
 
@@ -118,7 +118,7 @@ void tree::gen_tree_shadows(unsigned light_sources) {
 	if (shadow_detail < 2 || !(tree_mode & 1) || !created) return;
 	// Note: not entirely correct since an off mesh tree can still cast a shadow on the mesh
 	if (!is_over_mesh()) return; // optimization
-	if (!enable_shadow_envelope(sphere_center, sphere_radius, light_sources, 1)) return;
+	if (!enable_shadow_envelope(sphere_center(), sphere_radius, light_sources, 1)) return;
 
 	for (unsigned i = 0; i < all_cylins.size(); i++) {
 		draw_cylin const &c(all_cylins[i]);
@@ -423,7 +423,7 @@ void tree::blast_damage(blastr const *const blast_radius) {
 	float const bradius(blast_radius->cur_size), bdamage(LEAF_DAM_SCALE*blast_radius->damage);
 	if (bdamage == 0.0) return;
 	point const &bpos(blast_radius->pos);
-	if (p2p_dist_sq(bpos, sphere_center) > (bradius + sphere_radius)*(bradius + sphere_radius)) return;
+	if (p2p_dist_sq(bpos, sphere_center()) > (bradius + sphere_radius)*(bradius + sphere_radius)) return;
 	float const bradius_sq(bradius*bradius);
 
 	for (unsigned i = 0; i < leaves.size(); i++) {
@@ -515,7 +515,7 @@ void tree::clear_vbo() {
 bool tree::is_visible_to_camera() const {
 
 	int const level((island || get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh in non-island mode?
-	return sphere_in_camera_view(sphere_center, 1.1*sphere_radius, level);
+	return sphere_in_camera_view(sphere_center(), 1.1*sphere_radius, level);
 }
 
 
@@ -562,7 +562,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
-	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*base_radius/(distance_to_camera(sphere_center)*DIST_C_SCALE));
+	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*base_radius/(distance_to_camera(sphere_center())*DIST_C_SCALE));
 	if (draw_branches) draw_tree_branches(s, size_scale);
 	if (draw_leaves && !has_no_leaves()) draw_tree_leaves(s, size_scale);
 }
@@ -670,7 +670,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
 	if (create_leaf_vbo) leaf_vbo = create_vbo();
 	assert(leaf_vbo > 0);
 	bind_vbo(leaf_vbo);
-	unsigned const num_dlights(enable_dynamic_lights(sphere_center, sphere_radius));
+	unsigned const num_dlights(enable_dynamic_lights(sphere_center(), sphere_radius));
 	s.add_uniform_int("num_dlights", num_dlights);
 	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
 	if (gen_arrays) {leaf_data.resize(4*nleaves);}
@@ -827,22 +827,15 @@ int tree::delete_tree() {
 }
 
 
-inline void update_radius(point const &end, point const &sc, float &radius) {
-
-	float const distance = (end.x-sc.x)*(end.x-sc.x) + (end.y-sc.y)*(end.y-sc.y) + (end.z-sc.z)*(end.z-sc.z);
-	if (distance > radius*radius) radius = sqrt(distance);
-}
-
-
 void tree::process_cylins(tree_cylin const *const cylins, unsigned num) {
+
+	float dmax_sq(0.0);
 
 	for (unsigned i = 0; i < num; ++i) {
 		assert(cylins[i].r1 > 0.0 || cylins[i].r2 > 0.0);
 		assert(cylins[i].p1 != cylins[i].p2);
-		update_radius(cylins[i].p2, sphere_center, sphere_radius);
+		dmax_sq = max(dmax_sq, p2p_dist_sq(cylins[i].p2, vector3d(0.0, 0.0, sphere_center_zoff)));
 		all_cylins.push_back(cylins[i]);
-		all_cylins.back().p1 -= tree_center;
-		all_cylins.back().p2 -= tree_center; // FIXME: remove later
 
 		if (leaves.capacity() > 0) { // leaves was reserved
 			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
@@ -852,6 +845,7 @@ void tree::process_cylins(tree_cylin const *const cylins, unsigned num) {
 			}
 		}
 	}
+	sphere_radius = max(sphere_radius, sqrt(dmax_sq));
 }
 
 
@@ -867,8 +861,8 @@ void tree::create_leaves_and_one_branch_array() {
 
 	//set the bounding sphere center
 	assert(base_num_cylins > 0);
-	sphere_center.z = base.cylin[max(0, (base_num_cylins - 2))].p2.z;
-	sphere_radius   = 0.0;
+	sphere_center_zoff = base.cylin[max(0, (base_num_cylins - 2))].p2.z;
+	sphere_radius      = 0.0;
 
 	//process cylinders
 	unsigned num_total_cylins(base_num_cylins); // start with trunk cylinders
@@ -1033,10 +1027,9 @@ void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs) {
 
 	calc_leaf_points(); // required for placed trees
-	sphere_center = pos; // z value will be reset later
-	tree_center   = pos;
+	tree_center = pos;
 	if (calc_z) {tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);}
-	point const trunk_origin(tree_center);
+	point const trunk_origin(all_zeros);
 	leaf_data.clear();
 
 	//fixed tree variables
@@ -1497,7 +1490,6 @@ void tree::add_leaves_to_cylin(tree_cylin const &cylin, float tsize) {
 		setup_rotate(rotate, rotate_start, temp_deg);
 		rotate_around_axis(cylin);
 		add_rotation(start, cylin.p1, 0.9);
-		start -= tree_center; // FIXME: remove later
 		tree_leaf leaf;
 		int const val(rand_gen(0,60));
 		float const deg_rotate(cylin.deg_rotate + ((cylin.deg_rotate > 0.0) ? val : -val));
@@ -1661,13 +1653,6 @@ void tree::regen_tree(point const &pos, int recalc_shadows) {
 
 	gen_tree(pos, 0, -1, 1, 1);
 	if (recalc_shadows) gen_tree_shadows((SUN_SHADOW | MOON_SHADOW));
-}
-
-
-void tree::shift_tree(vector3d const &vd) { // tree has no single pos, have to translate every coordinate!!!
-
-	sphere_center += vd;
-	tree_center   += vd;
 }
 
 

@@ -85,8 +85,8 @@ class tree { // size = BIG
 	int type, created, trseed1, trseed2, branch_vbo, branch_ivbo, leaf_vbo;
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
 	vector<leaf_vert_type_t> leaf_data;
-	point sphere_center, tree_center;
-	float sphere_radius, init_deadness, deadness, damage;
+	point tree_center;
+	float sphere_center_zoff, sphere_radius, init_deadness, deadness, damage;
 	vector<draw_cylin> all_cylins;
 	colorRGBA color, base_color, leaf_color, bcolor;
 	tree_branch base, *branches_34[2], **branches;
@@ -121,10 +121,11 @@ class tree { // size = BIG
 	bool has_no_leaves() const {return (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0);}
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const {UNROLL_4X(pts[i_] = leaves[ix].pts[i_]+tree_center;)}
 	void create_leaf_obj(unsigned ix) const;
+	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, sphere_center_zoff));}
 
 public:
 	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
-		leaves_changed(0), not_visible(0), num_branch_quads(0), num_unique_pts(0) {}
+		leaves_changed(0), not_visible(0), sphere_center_zoff(0.0), num_branch_quads(0), num_unique_pts(0) {}
 	bool is_over_mesh() const;
 	bool is_visible_to_camera() const;
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs);
@@ -161,10 +162,10 @@ public:
 	void mark_leaf_changed(unsigned i);
 	void copy_color(colorRGB const &color, unsigned i);
 	void change_leaf_color(colorRGBA &base_color, unsigned i);
-	void shift_tree(vector3d const &vd);
+	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	int delete_tree();
 	int get_type()       const {return type;}
-	point get_center()   const {return sphere_center;}
+	point get_center()   const {return tree_center;}
 	bool get_no_delete() const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
 };
