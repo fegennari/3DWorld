@@ -119,14 +119,16 @@ class tree { // size = BIG
 	void update_leaf_orients();
 	bool has_leaf_data() const {return !leaf_data.empty();}
 	bool has_no_leaves() const {return (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0);}
+	void get_abs_leaf_pts(point pts[4], unsigned ix) const {UNROLL_4X(pts[i_] = leaves[ix].pts[i_]+tree_center;)}
+	void create_leaf_obj(unsigned ix) const;
 
 public:
 	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
 		leaves_changed(0), not_visible(0), num_branch_quads(0), num_unique_pts(0) {}
 	bool is_over_mesh() const;
 	bool is_visible_to_camera() const;
-	void gen_tree(point &pos, int size, int ttype, int calc_z, bool add_cobjs);
-	void regen_tree(point &pos, int recalc_shadows);
+	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs);
+	void regen_tree(point const &pos, int recalc_shadows);
 	void calc_leaf_shadows();
 	void gen_tree_shadows(unsigned light_sources);
 	void add_tree_collision_objects();
