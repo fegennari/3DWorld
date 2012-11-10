@@ -164,14 +164,27 @@ public:
 	void change_leaf_color(colorRGBA &base_color, unsigned i);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	int delete_tree();
-	int get_type()       const {return type;}
-	point get_center()   const {return tree_center;}
+	int get_type() const {return type;}
+	point const &get_center() const {return tree_center;}
 	bool get_no_delete() const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
 };
 
 
-typedef vector<tree> tree_cont_t;
+struct tree_cont_t : public vector<tree> {
+
+	void remove_cobjs();
+	void draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only);
+	void check_leaf_shadow_change();
+	void draw(bool shadow_only);
+	unsigned delete_all();
+	unsigned scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2);
+	void post_scroll_remove();
+	void gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_y2);
+	void shift_by(vector3d const &vd);
+	void add_cobjs();
+	void clear_vbos();
+};
 
 
 // function prototypes - tree

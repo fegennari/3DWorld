@@ -191,18 +191,18 @@ void tree::remove_collision_objects() {
 }
 
 
-void remove_tree_cobjs() {
+void tree_cont_t::remove_cobjs() {
 
-	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].remove_collision_objects();
+	for (iterator i = begin(); i != end(); ++i) {
+		i->remove_collision_objects();
 	}
 }
 
 
-void draw_trees_bl(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only) {
+void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only) {
 
-	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].draw_tree(s, draw_branches, draw_leaves, shadow_only);
+	for (iterator i = begin(); i != end(); ++i) {
+		i->draw_tree(s, draw_branches, draw_leaves, shadow_only);
 	}
 }
 
@@ -234,17 +234,52 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 }
 
 
-void check_leaf_shadow_change() {
+void tree_cont_t::check_leaf_shadow_change() {
 
 	static point last_lpos(all_zeros);
 	point const lpos(get_light_pos());
 		
 	if (!no_sun_lpos_update && lpos != last_lpos) {
-		for (unsigned i = 0; i < t_trees.size(); ++i) {
-			t_trees[i].calc_leaf_shadows();
+		for (iterator i = begin(); i != end(); ++i) {
+			i->calc_leaf_shadows();
 		}
 	}
 	last_lpos = lpos;
+}
+
+
+void tree_cont_t::draw(bool shadow_only) {
+
+	// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
+	shader_t bs, ls;
+
+	// draw branches
+	bool const branch_smap(1 && !shadow_only); // looks better, but slower
+	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
+	draw_branches_and_leaves(bs, 1, 0, shadow_only);
+	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
+	bs.end_shader();
+	disable_multitex_a();
+
+	// draw leaves
+	set_leaf_shader(ls, 0.75, 1, 0, 3);
+		
+	if (draw_model == 0) { // solid fill
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.75);
+	}
+	set_lighted_sides(2);
+	set_specular(0.1, 10.0);
+	glEnable(GL_COLOR_MATERIAL);
+	glDisable(GL_NORMALIZE);
+	draw_branches_and_leaves(ls, 0, 1, shadow_only);
+	set_lighted_sides(1);
+	ls.end_shader();
+	glDisable(GL_COLOR_MATERIAL);
+	glEnable(GL_NORMALIZE);
+	set_specular(0.0, 1.0);
+	glDisable(GL_ALPHA_TEST);
+	glDisable(GL_TEXTURE_2D);
 }
 
 
@@ -258,39 +293,9 @@ void draw_trees(bool shadow_only) {
 		//PRINT_TIME("Small Trees");
 	}
 	if (tree_mode & 1) { // trees
-		if (!shadow_only) check_leaf_shadow_change();
+		if (!shadow_only) {t_trees.check_leaf_shadow_change();}
 		set_fill_mode();
-
-		// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
-		shader_t bs, ls;
-
-		// draw branches
-		bool const branch_smap(1 && !shadow_only); // looks better, but slower
-		set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
-		draw_trees_bl(bs, 1, 0, shadow_only);
-		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
-		bs.end_shader();
-		disable_multitex_a();
-
-		// draw leaves
-		set_leaf_shader(ls, 0.75, 1, 0, 3);
-		
-		if (draw_model == 0) { // solid fill
-			glEnable(GL_ALPHA_TEST);
-			glAlphaFunc(GL_GREATER, 0.75);
-		}
-		set_lighted_sides(2);
-		set_specular(0.1, 10.0);
-		glEnable(GL_COLOR_MATERIAL);
-		glDisable(GL_NORMALIZE);
-		draw_trees_bl(ls, 0, 1, shadow_only);
-		set_lighted_sides(1);
-		ls.end_shader();
-		glDisable(GL_COLOR_MATERIAL);
-		glEnable(GL_NORMALIZE);
-		set_specular(0.0, 1.0);
-		glDisable(GL_ALPHA_TEST);
-		glDisable(GL_TEXTURE_2D);
+		t_trees.draw(shadow_only);
 		//glFinish(); // testing
 		//PRINT_TIME(((tree_mode & 2) ? "Large + Small Trees" : "Large Trees"));
 	}
@@ -803,14 +808,21 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 }
 
 
-void delete_trees() {
+unsigned tree_cont_t::delete_all() {
 
 	unsigned deleted(0);
 
-	for (unsigned i = (unsigned)t_trees.size(); i > 0; --i) { // delete backwards (pop collision stack)
-		if (t_trees[i-1].delete_tree()) ++deleted;
+	for (reverse_iterator i = rbegin(); i != rend(); ++i) { // delete backwards (pop collision stack)
+		if (i->delete_tree()) ++deleted;
 	}
-	if (tree_coll_level && !t_trees.empty()) purge_coll_freed(1); // MUST do this for collision detection to work
+	return deleted;
+}
+
+
+void delete_trees() {
+
+	t_trees.delete_all();
+	if (tree_coll_level && !t_trees.empty()) {purge_coll_freed(1);} // MUST do this for collision detection to work
 }
 
 
@@ -1540,17 +1552,91 @@ int generate_next_cylin(int cylin_num, float branch_curveness, int ncib, bool br
 }
 
 
+unsigned tree_cont_t::scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2) {
+
+	unsigned nkeep(0);
+	vector3d const vd(-dx_scroll*DX_VAL, -dy_scroll*DY_VAL, 0.0);
+
+	for (iterator i = begin(); i != end(); ++i) { // keep any tree that's still in the scene
+		point const &gen_pos(i->get_center());
+		int const xp(get_xpos(gen_pos.x) - dx_scroll), yp(get_ypos(gen_pos.y) - dy_scroll);
+		bool const keep(xp >= ext_x1 && xp <= ext_x2 && yp >= ext_y1 && yp <= ext_y2);
+		i->set_no_delete(keep);
+
+		if (keep) { // shift it - don't have to recreate it
+			i->shift_tree(vd);
+			++nkeep;
+		}
+	}
+	return nkeep;
+}
+
+
+void tree_cont_t::post_scroll_remove() {
+
+	for (unsigned i = 0; i < size(); ++i) {
+		if (at(i).get_no_delete()) {
+			at(i).add_tree_collision_objects();
+			at(i).set_no_delete(0);
+		}
+		else { // remove this tree from the vector
+			std::swap(at(i), back()); // deep copy = bad?
+			pop_back();
+			--i;
+		}
+	}
+}
+
+
+void tree_cont_t::gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_y2) {
+
+	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
+	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
+	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1, XY_MULT_SIZE/num_trees));
+	unsigned const skip_val(max(1, int(1.0/sqrt(tree_scale)))); // similar to deterministic gen in scenery.cpp
+
+	for (int i = ext_y1; i < ext_y2; i += skip_val) {
+		for (int j = ext_x1; j < ext_x2; j += skip_val) {
+			if (scrolling) {
+				int const ox(j + dx_scroll), oy(i + dy_scroll); // positions in original coordinate system
+				if (ox >= ext_x1 && ox <= ext_x2 && oy >= ext_y1 && oy <= ext_y2) continue; // use orignal tree from last position
+			}
+			global_rand_gen.rseed1 = 805306457*(i + yoff2) + 12582917*(j + xoff2) + 100663319*rand_gen_index;
+			global_rand_gen.rseed2 = 6291469  *(j + xoff2) + 3145739 *(i + yoff2) + 1572869  *rand_gen_index;
+			rand2_mix();
+			unsigned const val(((unsigned)rand2_seed_mix())%smod);
+			if (val <= 100)         continue; // scenery
+			if (val%tree_prob != 0) continue; // not selected
+			if ((global_rand_gen.rseed1&127)/128.0 >= vegetation) continue;
+			point pos((get_xval(j) + 0.5*DX_VAL*rand2d()), (get_yval(i) + 0.5*DY_VAL*rand2d()), 0.0);
+			// Note: pos.z will be slightly different when calculated within vs. outside the mesh bounds
+			pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
+			if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
+			if (tree_mode == 3 && get_tree_class_from_height(pos.z) != TREE_CLASS_DECID) continue; // use a small (simple) tree here
+				
+			if (max_unique_trees > 0) {
+				global_rand_gen.rseed1 = global_rand_gen.rseed1 % max_unique_trees;
+				global_rand_gen.rseed2 = 12345;
+
+				if (tree_coll_level == 0) {
+					// FIXME: unique the trees so they can be reused
+				}
+			}
+			push_back(tree());
+			back().regen_tree(pos, 0); // use random function #2 for trees
+		}
+	}
+}
+
+
 void regen_trees(bool recalc_shadows, bool keep_old) {
 
 	cout << "vegetation: " << vegetation << endl;
 	RESET_TIME;
 	calc_leaf_points();
-	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
-	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
-	int const ext_x1(1), ext_x2(MESH_X_SIZE-1), ext_y1(1), ext_y2(MESH_Y_SIZE-1);
 	static int init(0), last_rgi(0), last_xoff2(0), last_yoff2(0);
 	static float last_ts(0.0);
-	if (tree_mode && recalc_shadows) reset_shadows(OBJECT_SHADOW);
+	if (tree_mode && recalc_shadows) {reset_shadows(OBJECT_SHADOW);}
 	
 	if (tree_mode & 2) {
 		gen_small_trees();
@@ -1566,77 +1652,17 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 			PRINT_TIME(" gen tree fast");
 			return;
 		}
-		unsigned nkeep(0);
+		int const ext_x1(1), ext_x2(MESH_X_SIZE-1), ext_y1(1), ext_y2(MESH_Y_SIZE-1);
 
-		if (scrolling) {
-			vector3d const vd(-dx_scroll*DX_VAL, -dy_scroll*DY_VAL, 0.0);
-
-			for (unsigned i = 0; i < t_trees.size(); ++i) { // keep any tree that's still in the scene
-				point const gen_pos(t_trees[i].get_center());
-				int const xp(get_xpos(gen_pos.x) - dx_scroll), yp(get_ypos(gen_pos.y) - dy_scroll);
-				bool const keep(xp >= ext_x1 && xp <= ext_x2 && yp >= ext_y1 && yp <= ext_y2);
-				t_trees[i].set_no_delete(keep);
-
-				if (keep) { // shift it - don't have to recreate it
-					t_trees[i].shift_tree(vd);
-					++nkeep;
-				}
-			}
-		}
-		delete_trees();
-
-		if (nkeep > 0) {
-			for (unsigned i = 0; i < t_trees.size(); ++i) {
-				if (t_trees[i].get_no_delete()) {
-					t_trees[i].add_tree_collision_objects();
-					t_trees[i].set_no_delete(0);
-				}
-				else { // remove this tree from the vector
-					swap(t_trees[i], t_trees.back()); // deep copy = bad?
-					t_trees.pop_back();
-					--i;
-				}
-			}
+		if (scrolling && t_trees.scroll_trees(ext_x1, ext_x2, ext_y1, ext_y2)) {
+			t_trees.post_scroll_remove();
 		}
 		else {
 			max_leaves = 0;
 			t_trees.resize(0);
 		}
 		PRINT_TIME(" Delete Trees");
-		unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1, XY_MULT_SIZE/num_trees));
-		unsigned const skip_val(max(1, int(1.0/sqrt(tree_scale)))); // similar to deterministic gen in scenery.cpp
-
-		for (int i = ext_y1; i < ext_y2; i += skip_val) {
-			for (int j = ext_x1; j < ext_x2; j += skip_val) {
-				if (scrolling) {
-					int const ox(j + dx_scroll), oy(i + dy_scroll); // positions in original coordinate system
-					if (ox >= ext_x1 && ox <= ext_x2 && oy >= ext_y1 && oy <= ext_y2) continue; // use orignal tree from last position
-				}
-				global_rand_gen.rseed1 = 805306457*(i + yoff2) + 12582917*(j + xoff2) + 100663319*rand_gen_index;
-				global_rand_gen.rseed2 = 6291469  *(j + xoff2) + 3145739 *(i + yoff2) + 1572869  *rand_gen_index;
-				rand2_mix();
-				unsigned const val(((unsigned)rand2_seed_mix())%smod);
-				if (val <= 100)         continue; // scenery
-				if (val%tree_prob != 0) continue; // not selected
-				if ((global_rand_gen.rseed1&127)/128.0 >= vegetation) continue;
-				point pos((get_xval(j) + 0.5*DX_VAL*rand2d()), (get_yval(i) + 0.5*DY_VAL*rand2d()), 0.0);
-				// Note: pos.z will be slightly different when calculated within vs. outside the mesh bounds
-				pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
-				if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
-				if (tree_mode == 3 && get_tree_class_from_height(pos.z) != TREE_CLASS_DECID) continue; // use a small (simple) tree here
-				
-				if (max_unique_trees > 0) {
-					global_rand_gen.rseed1 = global_rand_gen.rseed1 % max_unique_trees;
-					global_rand_gen.rseed2 = 12345;
-
-					if (tree_coll_level == 0) {
-						// FIXME: unique the trees so they can be reused
-					}
-				}
-				t_trees.push_back(tree());
-				t_trees.back().regen_tree(pos, 0); // use random function #2 for trees
-			}
-		}
+		t_trees.gen_deterministic(ext_x1, ext_x2, ext_y1, ext_y2);
 		if (!scrolling) cout << "Num trees = " << t_trees.size() << endl;
 		last_rgi   = rand_gen_index;
 		last_xoff2 = xoff2;
@@ -1656,30 +1682,27 @@ void tree::regen_tree(point const &pos, int recalc_shadows) {
 }
 
 
+void tree_cont_t::shift_by(vector3d const &vd) {
+	for (iterator i = begin(); i != end(); ++i) {i->shift_tree(vd);}
+}
+
+void tree_cont_t::add_cobjs() {
+	for (iterator i = begin(); i != end(); ++i) {i->add_tree_collision_objects();}
+}
+
+void tree_cont_t::clear_vbos() {
+	for (iterator i = begin(); i != end(); ++i) {i->clear_vbo();}
+}
+
+
 void shift_trees(vector3d const &vd) {
-
 	if (num_trees > 0) return; // dynamically created, not placed
-
-	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].shift_tree(vd);
-	}
+	t_trees.shift_by(vd);
 }
 
-
-void add_tree_cobjs() {
-
-	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].add_tree_collision_objects();
-	}
-}
-
-
-void clear_tree_vbos() {
-
-	for (unsigned i = 0; i < t_trees.size(); ++i) {
-		t_trees[i].clear_vbo();
-	}
-}
+void add_tree_cobjs   () {t_trees.add_cobjs();}
+void remove_tree_cobjs() {t_trees.remove_cobjs();}
+void clear_tree_vbos  () {t_trees.clear_vbos();}
 
 
 
