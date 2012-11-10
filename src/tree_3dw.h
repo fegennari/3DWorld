@@ -123,27 +123,16 @@ class tree { // size = BIG
 	void create_leaf_obj(unsigned ix) const;
 	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, sphere_center_zoff));}
 
-public:
-	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
-		leaves_changed(0), not_visible(0), sphere_center_zoff(0.0), num_branch_quads(0), num_unique_pts(0) {}
 	bool is_over_mesh() const;
 	bool is_visible_to_camera() const;
-	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs);
-	void regen_tree(point const &pos, int recalc_shadows);
-	void calc_leaf_shadows();
-	void gen_tree_shadows(unsigned light_sources);
-	void add_tree_collision_objects();
-	void remove_collision_objects();
-	void remove_leaf(unsigned i, bool update_data);
+	void gen_leaf_color();
+	colorRGB get_leaf_color(unsigned i) const;
 	void burn_leaves();
-	bool damage_leaf(unsigned i, float damage_done);
 	void blast_damage(blastr const *const blast_radius);
 	void lightning_damage(point const &ltpos);
 	void drop_leaves();
-	void gen_leaf_color();
-	colorRGB get_leaf_color(unsigned i) const;
-	void clear_vbo();
-	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only);
+	void remove_leaf(unsigned i, bool update_data);
+	bool damage_leaf(unsigned i, float damage_done);
 	void draw_tree_branches(shader_t const &s, float size_scale);
 	void draw_tree_leaves(shader_t const &s, float size_scale);
 	float gen_bc_size(float branch_var);
@@ -162,6 +151,18 @@ public:
 	void mark_leaf_changed(unsigned i);
 	void copy_color(colorRGB const &color, unsigned i);
 	void change_leaf_color(colorRGBA &base_color, unsigned i);
+
+public:
+	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
+		leaves_changed(0), not_visible(0), sphere_center_zoff(0.0), num_branch_quads(0), num_unique_pts(0) {}
+	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs);
+	void regen_tree(point const &pos, int recalc_shadows);
+	void calc_leaf_shadows();
+	void gen_tree_shadows(unsigned light_sources);
+	void add_tree_collision_objects();
+	void remove_collision_objects();
+	void clear_vbo();
+	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	int delete_tree();
 	int get_type() const {return type;}
