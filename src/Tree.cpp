@@ -381,8 +381,8 @@ void tree::burn_leaves() {
 		unsigned const index(rand()%leaves.size());
 		leaves[index].color = max(0.0f, (leaves[index].color - 0.25f));
 		change_leaf_color(base_color, index);
-		if (rand()&1) gen_smoke(leaves[index].pts[0] + tree_center);
-		if (leaves[index].color <= 0.0) remove_leaf(index, 1);
+		if (rand()&1) {gen_smoke(leaves[index].pts[0] + tree_center);}
+		if (leaves[index].color <= 0.0) {remove_leaf(index, 1);}
 	}
 }
 
@@ -1036,11 +1036,9 @@ void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 
 
 
-void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs) {
+void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed) {
 
 	calc_leaf_points(); // required for placed trees
-	tree_center = pos;
-	if (calc_z) {tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);}
 	point const trunk_origin(all_zeros);
 	leaf_data.clear();
 
@@ -1181,20 +1179,23 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	//done with base ------------------------------------------------------------------
 	if (TREE_4TH_BRANCHES) create_4th_order_branches();
 
-	// cylinder from base into ground
-	bool const mesh_disabled(is_mesh_disabled(get_xpos(tree_center.x), get_ypos(tree_center.y)));
-	float const lmp(mesh_disabled ? (tree_center.z - TREE_DEPTH) : get_tree_z_bottom(lowest_mesh_point(tree_center, base_radius), tree_center));
+	tree_center = pos;
+	if (calc_z) {tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);}
 
-	if (tree_center.z > lmp) { // add the bottom cylinder section (possibly to the bottom of the mesh)
+	// add the bottom cylinder section from the base into the ground
+	float tree_depth(TREE_DEPTH*(0.5 + 0.5/tree_scale));
+	if (user_placed && calc_z) {tree_depth = tree_center.z - get_tree_z_bottom(lowest_mesh_point(tree_center, base_radius), tree_center);} // more accurate
+
+	if (tree_depth > 0.0) {
 		tree_cylin &cylin(base.cylin[base_num_cylins]);
-		cylin.assign_params(0, 1, base_radius, base_radius, (tree_center.z - lmp), 180.0);
+		cylin.assign_params(0, 1, base_radius, base_radius, tree_depth, 180.0);
 		cylin.p1 = cylin.p2 = trunk_origin;
 		cylin.rotate.assign(1.0, 0.0, 0.0);
 		rotate_cylin(cylin);
 		++base_num_cylins;
 	}
 	create_leaves_and_one_branch_array();
-	if (add_cobjs) add_tree_collision_objects();
+	if (add_cobjs) {add_tree_collision_objects();}
 }
 
 
@@ -1677,7 +1678,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 
 void tree::regen_tree(point const &pos, int recalc_shadows) {
 
-	gen_tree(pos, 0, -1, 1, 1);
+	gen_tree(pos, 0, -1, 1, 1, 0);
 	if (recalc_shadows) gen_tree_shadows((SUN_SHADOW | MOON_SHADOW));
 }
 

@@ -155,7 +155,7 @@ class tree { // size = BIG
 public:
 	tree() : created(0), branch_vbo(0), branch_ivbo(0), leaf_vbo(0), no_delete(0), reset_leaves(0),
 		leaves_changed(0), not_visible(0), sphere_center_zoff(0.0), num_branch_quads(0), num_unique_pts(0) {}
-	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs);
+	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed);
 	void regen_tree(point const &pos, int recalc_shadows);
 	void calc_leaf_shadows();
 	void gen_tree_shadows(unsigned light_sources);
