@@ -21,7 +21,7 @@ struct tree_type {
 		: bark_tex(bt), leaf_tex(lt), size(sz), barkc(bc), leafc(lc) {}
 };
 
-// bark_tex, leaf_tex, barkc, leafc
+// bark_tex, leaf_tex, size, barkc, leafc
 tree_type const tree_types[NUM_TREE_TYPES] = {
 	tree_type(BARK3_TEX, LEAF_TEX,     1.0, colorRGBA(0.7, 0.7, 0.5, 1.0), colorRGBA(0.2, 1.0, 0.2, 1.0)),
 	tree_type(BARK4_TEX, LIVE_OAK_TEX, 1.0, colorRGBA(1.0, 0.9, 0.8, 1.0), WHITE),

@@ -71,7 +71,17 @@ struct tree_branch { // size = 12
 };
 
 
+class tree_data_t {
+
+	// FIXME: move stuff into here
+};
+
+
 class tree { // size = BIG
+
+	tree_data_t tree_data; // FIXME: by pointer
+	tree_data_t       &tdata()       {return tree_data;}
+	tree_data_t const &tdata() const {return tree_data;}
 
 	static reusable_mem<tree_cylin >   cylin_cache [CYLIN_CACHE_ENTRIES ];
 	static reusable_mem<tree_branch>   branch_cache[BRANCH_CACHE_ENTRIES];
@@ -86,7 +96,7 @@ class tree { // size = BIG
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
 	vector<leaf_vert_type_t> leaf_data;
 	point tree_center;
-	float sphere_center_zoff, sphere_radius, init_deadness, deadness, damage;
+	float sphere_center_zoff, sphere_radius, deadness, damage;
 	vector<draw_cylin> all_cylins;
 	colorRGBA color, base_color, leaf_color, bcolor;
 	tree_branch base, *branches_34[2], **branches;
@@ -118,11 +128,12 @@ class tree { // size = BIG
 	void copy_all_leaf_colors();
 	void update_leaf_orients();
 	bool has_leaf_data() const {return !leaf_data.empty();}
-	bool has_no_leaves() const {return (leaves.empty() || deadness >= 1.0 || init_deadness >= 1.0);}
+	bool has_no_leaves() const {return (leaves.empty() || deadness >= 1.0);}
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const {UNROLL_4X(pts[i_] = leaves[ix].pts[i_]+tree_center;)}
 	void create_leaf_obj(unsigned ix) const;
 	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, sphere_center_zoff));}
 
+	void gen_tree_data(int size, float tree_depth);
 	bool is_over_mesh() const;
 	bool is_visible_to_camera() const;
 	void gen_leaf_color();
@@ -133,6 +144,10 @@ class tree { // size = BIG
 	void drop_leaves();
 	void remove_leaf(unsigned i, bool update_data);
 	bool damage_leaf(unsigned i, float damage_done);
+	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const;
+	void setup_branch_vbos();
+	void setup_leaf_vbo();
+	void reset_leaf_pos_norm();
 	void draw_tree_branches(shader_t const &s, float size_scale);
 	void draw_tree_leaves(shader_t const &s, float size_scale);
 	float gen_bc_size(float branch_var);
