@@ -36,9 +36,9 @@ int const ENABLE_CLIP_LEAVES = 1;
 int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
 
 
-reusable_mem<tree_cylin >   tree::cylin_cache [CYLIN_CACHE_ENTRIES ];
-reusable_mem<tree_branch>   tree::branch_cache[BRANCH_CACHE_ENTRIES];
-reusable_mem<tree_branch *> tree::branch_ptr_cache;
+reusable_mem<tree_cylin >   tree_builder_t::cylin_cache [CYLIN_CACHE_ENTRIES ];
+reusable_mem<tree_branch>   tree_builder_t::branch_cache[BRANCH_CACHE_ENTRIES];
+reusable_mem<tree_branch *> tree_builder_t::branch_ptr_cache;
 
 
 // tree helper methods
@@ -557,7 +557,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 		glPopMatrix();
 		return;
 	}
-	set_rand2_state(trseed1, trseed2);
+	set_rand2_state(trseed[0], trseed[1]);
 	gen_leaf_color();
 	
 	if (draw_leaves && deadness < 1.0) {
@@ -852,44 +852,29 @@ int tree::delete_tree() {
 }
 
 
-void tree::process_cylins(tree_cylin const *const cylins, unsigned num) {
-
-	float dmax_sq(0.0);
+void tree_builder_t::process_cylins(tree_cylin const *const cylins, unsigned num, int tree_type, float deadness,
+	vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves) const
+{
+	float const leaf_size(tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
 
 	for (unsigned i = 0; i < num; ++i) {
 		assert(cylins[i].r1 > 0.0 || cylins[i].r2 > 0.0);
 		assert(cylins[i].p1 != cylins[i].p2);
-		dmax_sq = max(dmax_sq, p2p_dist_sq(cylins[i].p2, vector3d(0.0, 0.0, sphere_center_zoff)));
 		all_cylins.push_back(cylins[i]);
 
 		if (leaves.capacity() > 0) { // leaves was reserved
 			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
-				float tsize((tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
-				if (type == 3) tsize *= 1.5; // this tree type has larger leaves
-				add_leaves_to_cylin(cylins[i], tsize);
+				add_leaves_to_cylin(cylins[i], leaf_size, deadness, leaves);
 			}
 		}
 	}
-	sphere_radius = max(sphere_radius, sqrt(dmax_sq));
 }
 
 
-void tree::create_leaves_and_one_branch_array() {
-
-	assert(all_cylins.empty());
-
-	//tree leaf variables
-	if (deadness < 1.0 && !DISABLE_LEAVES) {
-		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*all_cylins.size()) + 1); // determine the number of leaves
-		leaves.reserve(nl);
-	}
-
-	//set the bounding sphere center
-	assert(base_num_cylins > 0);
-	sphere_center_zoff = base.cylin[max(0, (base_num_cylins - 2))].p2.z;
-	sphere_radius      = 0.0;
+void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness, vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves) {
 
 	//process cylinders
+	assert(all_cylins.empty());
 	unsigned num_total_cylins(base_num_cylins); // start with trunk cylinders
 
 	for (int i = 0; i < num_1_branches; i++) {
@@ -903,19 +888,24 @@ void tree::create_leaves_and_one_branch_array() {
 		}
 	}
 	all_cylins.reserve(num_total_cylins);
-	process_cylins(base.cylin, base_num_cylins);
+
+	//tree leaf variables
+	if (deadness < 1.0 && !DISABLE_LEAVES) {
+		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
+		leaves.reserve(nl);
+	}
+	process_cylins(base.cylin, base_num_cylins, tree_type, deadness, all_cylins, leaves);
 
 	for (int i = 0; i < num_1_branches; i++) { //add the first and second order branches
 		for (int k = 0; k < (branches[i][0].num_branches + 1); k++) {
-			process_cylins(branches[i][k].cylin, branches[i][k].num_cylins);
+			process_cylins(branches[i][k].cylin, branches[i][k].num_cylins, tree_type, deadness, all_cylins, leaves);
 		}
 	}
 	for (unsigned w = 0; w < 2; ++w) {
 		for (int i = 0; i < num_34_branches[w]; i++) { //add the third and fourth order branches
-			process_cylins(branches_34[w][i].cylin,  branches_34[w][i].num_cylins);
+			process_cylins(branches_34[w][i].cylin,  branches_34[w][i].num_cylins, tree_type, deadness, all_cylins, leaves);
 		}
 	}
-	assert(all_cylins.size() == all_cylins.capacity());
 
 	//now delete the branches b/c they are unneccessary
 	cylin_cache [2].reusable_free(branches_34[0][0].cylin);
@@ -929,7 +919,31 @@ void tree::create_leaves_and_one_branch_array() {
 		cylin_cache [3].reusable_free(branches_34[1][0].cylin);
 		branch_cache[2].reusable_free(branches_34[1]);
 	}
-	max_leaves = max(max_leaves, unsigned(leaves.size()));
+	assert(all_cylins.size() == all_cylins.capacity());
+}
+
+
+float tree_builder_t::get_bsphere_center_zval() const {
+
+	assert(base_num_cylins > 0);
+	assert(base.cylin);
+	return base.cylin[max(0, (base_num_cylins - 2))].p2.z;
+}
+
+
+void tree::create_leaves_and_one_branch_array() {
+
+	sphere_center_zoff = get_bsphere_center_zval();
+	create_all_cylins_and_leaves(type, deadness, all_cylins, leaves);
+
+	// set the bounding sphere center
+	sphere_radius = 0.0;
+
+	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
+		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, vector3d(0.0, 0.0, sphere_center_zoff)));
+	}
+	sphere_radius = sqrt(sphere_radius);
+	max_leaves    = max(max_leaves, unsigned(leaves.size()));
 
 	/*for (unsigned i = 0; i < leaves.size(); ++i) { // scramble leaves so that LOD is unbiased/randomly sampled
 		swap(leaves[i], leaves[(i + 1572869)%leaves.size()]);
@@ -1082,6 +1096,13 @@ void tree::gen_tree_data(int size, float tree_depth) {
 		int const num(rand_gen(1, 100));
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
+	create_tree_branches(type, size, tree_depth);
+	create_leaves_and_one_branch_array();
+}
+
+
+void tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth) {
+
 	ncib                 = 10;
 	base_num_cylins      = 5;
 	num_cylin_factor     = 10.0;
@@ -1097,7 +1118,7 @@ void tree::gen_tree_data(int size, float tree_depth) {
 	num_3_branches_max   = 10;
 	num_34_branches[1]   = 0;
 	if (size <= 0) size  = rand_gen(40, 80); // tree size
-	base_radius            = size * (0.1*TREE_SIZE*tree_types[type].size/tree_scale);
+	base_radius            = size * (0.1*TREE_SIZE*tree_types[tree_type].branch_size/tree_scale);
 	num_leaves_per_occ     = 0.01*nleaves_scale*(rand_gen(30, 60) + size);
 	base_length_min        = rand_gen(4, 6) * base_radius;
 	base_length_max        = base_length_min * 1.5;
@@ -1123,8 +1144,7 @@ void tree::gen_tree_data(int size, float tree_depth) {
 	max_2_angle_rotate     = 50.0;
 	max_3_angle_rotate     = 50.0;
 	branch_1_random_rotate = 40.0;
-	trseed1                = rand2();
-	trseed2                = rand2();
+	for (unsigned d = 0; d < 2; ++d) {trseed[d] = rand2();}
 
 	//temporary variables
 	int num_b_so_far(0);
@@ -1208,23 +1228,22 @@ void tree::gen_tree_data(int size, float tree_depth) {
 		rotate_cylin(cylin);
 		++base_num_cylins;
 	}
-	create_leaves_and_one_branch_array();
 }
 
 
-inline float tree::gen_bc_size(float branch_var) {
+inline float tree_builder_t::gen_bc_size(float branch_var) {
 
 	return (rand_gen((int)branch_var - 5, (int)branch_var + 5)/100.0)*(num_cylin_factor/ncib);
 }
 
 
-inline float tree::gen_bc_size2(float branch_var) {
+inline float tree_builder_t::gen_bc_size2(float branch_var) {
 
 	return rand_gen((int)branch_var - 5, (int)branch_var + 5)/100.0;
 }
 
 
-void tree::gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test) {
+void tree_builder_t::gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test) {
 
 	cylin.assign_params(level, branch_id, lcylin.r2, (rad_var_test ? lcylin.r1*gen_bc_size(rad_var) : 0.0),
 		((level == 4) ? branch_4_length*var : lcylin.length*gen_bc_size(var)), lcylin.deg_rotate);
@@ -1233,7 +1252,7 @@ void tree::gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, floa
 }
 
 
-void tree::gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int level, int branch_id) {
+void tree_builder_t::gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int level, int branch_id) {
 
 	rotate_around_axis(src_cylin);
 	add_rotation(cylin.p1, src_cylin.p1, BRANCH_LEN_SCALE);
@@ -1250,7 +1269,7 @@ void tree::gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstar
 }
 
 
-void tree::create_1_order_branch(int base_cylin_num, float rotate_start, int branch_num) {
+void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_start, int branch_num) {
 
 	bool branch_just_created(false), branch_deflected(false);
 	int rotation((rand2() & 1) ? -1 : 1);
@@ -1322,7 +1341,7 @@ void tree::create_1_order_branch(int base_cylin_num, float rotate_start, int bra
 }
 
 
-void tree::create_2nd_order_branch(int i, int j, int cylin_num, bool branch_deflected, int rotation) {
+void tree_builder_t::create_2nd_order_branch(int i, int j, int cylin_num, bool branch_deflected, int rotation) {
 	
 	int index(0), num_3_branches_created(0);
 	float const rotate_start((float)rand_gen(0, int(max_2_angle_rotate)));
@@ -1381,7 +1400,7 @@ void tree::create_2nd_order_branch(int i, int j, int cylin_num, bool branch_defl
 }
 
 
-void tree::create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, bool branch_deflected, int rotation) {
+void tree_builder_t::create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, bool branch_deflected, int rotation) {
 	
 	int index(0);
 	float const rotate_start((float)rand_gen(0, int(max_3_angle_rotate)));
@@ -1411,7 +1430,7 @@ void tree::create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, 
 }
 
 
-void tree::gen_b4(tree_branch &branch, int &branch_num, int i, int k) {
+void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int i, int k) {
 
 	int ncib(branch.num_cylins);
 
@@ -1431,7 +1450,7 @@ void tree::gen_b4(tree_branch &branch, int &branch_num, int i, int k) {
 }
 
 
-void tree::create_4th_order_branches() {
+void tree_builder_t::create_4th_order_branches() {
 
 	num_34_branches[1]           = 2000;
 	branch_4_distribution        = 0.2;
@@ -1461,7 +1480,7 @@ void tree::create_4th_order_branches() {
 }
 
 
-void tree::generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num) {
+void tree_builder_t::generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num) {
 	
 	int index(0);
 	bool branch_deflected(false);
@@ -1498,7 +1517,7 @@ void tree_leaf::create_init_color(bool deterministic) {
 }
 
 
-void tree::add_leaves_to_cylin(tree_cylin const &cylin, float tsize) {
+void tree_builder_t::add_leaves_to_cylin(tree_cylin const &cylin, float tsize, float deadness, vector<tree_leaf> &leaves) const {
 
 	static float acc(0.0);
 	point start;

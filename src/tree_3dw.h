@@ -71,41 +71,19 @@ struct tree_branch { // size = 12
 };
 
 
-class tree_data_t {
-
-	// FIXME: move stuff into here
-};
-
-
-class tree { // size = BIG
-
-	tree_data_t tree_data; // FIXME: by pointer
-	tree_data_t       &tdata()       {return tree_data;}
-	tree_data_t const &tdata() const {return tree_data;}
+class tree_builder_t {
 
 	static reusable_mem<tree_cylin >   cylin_cache [CYLIN_CACHE_ENTRIES ];
 	static reusable_mem<tree_branch>   branch_cache[BRANCH_CACHE_ENTRIES];
 	static reusable_mem<tree_branch *> branch_ptr_cache;
 
-	vector<int> branch_cobjs, leaf_cobjs;
-
-	typedef vert_norm_comp_color leaf_vert_type_t;
-	typedef vert_norm_comp_tc branch_vert_type_t;
-
-	int type, created, trseed1, trseed2, branch_vbo, branch_ivbo, leaf_vbo;
-	bool no_delete, reset_leaves, leaves_changed, not_visible;
-	vector<leaf_vert_type_t> leaf_data;
-	point tree_center;
-	float sphere_center_zoff, sphere_radius, deadness, damage;
-	vector<draw_cylin> all_cylins;
-	colorRGBA color, base_color, leaf_color, bcolor;
 	tree_branch base, *branches_34[2], **branches;
 	int base_num_cylins, ncib;
 	int num_1_branches, num_big_branches_min, num_big_branches_max;
 	int num_2_branches_min, num_2_branches_max;
 	int num_34_branches[2], num_3_branches_min, num_3_branches_max;
 	int tree_slimness, tree_wideness, base_break_off;
-	float base_radius, base_length_min, base_length_max, base_curveness;
+	float base_length_min, base_length_max, base_curveness;
 	float branch_curveness, branch_upwardness, branch_distribution, branch_1_distribution;
 	float base_var, num_cylin_factor, base_cylin_factor;
 	float branch_1_var, branch_1_rad_var, branch_1_start, branch_2_var, branch_2_rad_var, branch_2_start;
@@ -119,9 +97,58 @@ class tree { // size = BIG
 	float branch_4_rad_var, branch_4_var, branch_4_length;
 
 	//leaves specs
-	vector<tree_leaf> leaves;
 	int num_min_leaves, num_max_leaves, leaf_min_angle, leaf_max_angle;
-	float num_leaves_per_occ, damage_scale;
+
+	float gen_bc_size(float branch_var);
+	float gen_bc_size2(float branch_var);
+	void gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test);
+	void gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int level, int branch_id);
+	void create_1_order_branch(int base_cylin_num, float rotate_start, int branch_num);
+	void create_2nd_order_branch(int i, int j, int cylin_num, bool branch_deflected, int rotation);
+	void create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, bool branch_deflected, int rotation);
+	void gen_b4(tree_branch &branch, int &branch_num, int i, int k);
+	void create_4th_order_branches();
+	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
+	void add_leaves_to_cylin(tree_cylin const &cylin, float tsize, float deadness, vector<tree_leaf> &leaves) const;
+	void process_cylins(tree_cylin const *const cylins, unsigned num, int tree_type, float deadness,
+		vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves) const;
+
+protected:
+	int trseed[2]; // FIXME: move to tree_data_t, but will change trees?
+	float base_radius, num_leaves_per_occ;
+
+public:
+	void create_tree_branches(int tree_type, int size, float tree_depth);
+	void create_all_cylins_and_leaves(int tree_type, float deadness, vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves);
+	float get_bsphere_center_zval() const;
+};
+
+
+class tree_data_t {
+
+	// FIXME: move stuff into here
+};
+
+
+class tree : public tree_builder_t { // size = BIG
+
+	tree_data_t tree_data; // FIXME: by pointer
+	tree_data_t       &tdata()       {return tree_data;}
+	tree_data_t const &tdata() const {return tree_data;}
+
+	vector<int> branch_cobjs, leaf_cobjs;
+
+	typedef vert_norm_comp_color leaf_vert_type_t;
+	typedef vert_norm_comp_tc branch_vert_type_t;
+
+	int type, created, branch_vbo, branch_ivbo, leaf_vbo;
+	bool no_delete, reset_leaves, leaves_changed, not_visible;
+	vector<leaf_vert_type_t> leaf_data;
+	point tree_center;
+	float sphere_center_zoff, sphere_radius, deadness, damage, damage_scale;
+	vector<draw_cylin> all_cylins;
+	vector<tree_leaf> leaves;
+	colorRGBA color, base_color, leaf_color, bcolor;
 	unsigned num_branch_quads, num_unique_pts;
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
@@ -150,19 +177,7 @@ class tree { // size = BIG
 	void reset_leaf_pos_norm();
 	void draw_tree_branches(shader_t const &s, float size_scale);
 	void draw_tree_leaves(shader_t const &s, float size_scale);
-	float gen_bc_size(float branch_var);
-	float gen_bc_size2(float branch_var);
-	void gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test);
-	void gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int level, int branch_id);
-	void create_1_order_branch(int base_cylin_num, float rotate_start, int branch_num);
-	void create_2nd_order_branch(int i, int j, int cylin_num, bool branch_deflected, int rotation);
-	void create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, bool branch_deflected, int rotation);
-	void gen_b4(tree_branch &branch, int &branch_num, int i, int k);
-	void create_4th_order_branches();
-	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
-	void process_cylins(tree_cylin const *const cylins, unsigned num);
 	void create_leaves_and_one_branch_array();
-	void add_leaves_to_cylin(tree_cylin const &cylin, float tsize);
 	void mark_leaf_changed(unsigned i);
 	void copy_color(colorRGB const &color, unsigned i);
 	void change_leaf_color(colorRGBA &base_color, unsigned i);
