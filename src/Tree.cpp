@@ -931,28 +931,6 @@ float tree_builder_t::get_bsphere_center_zval() const {
 }
 
 
-void tree::create_leaves_and_one_branch_array() {
-
-	sphere_center_zoff = get_bsphere_center_zval();
-	create_all_cylins_and_leaves(type, deadness, all_cylins, leaves);
-
-	// set the bounding sphere center
-	sphere_radius = 0.0;
-
-	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
-		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, vector3d(0.0, 0.0, sphere_center_zoff)));
-	}
-	sphere_radius = sqrt(sphere_radius);
-	max_leaves    = max(max_leaves, unsigned(leaves.size()));
-
-	/*for (unsigned i = 0; i < leaves.size(); ++i) { // scramble leaves so that LOD is unbiased/randomly sampled
-		swap(leaves[i], leaves[(i + 1572869)%leaves.size()]);
-	}*/
-	reverse(leaves.begin(), leaves.end()); // order leaves so that LOD removes from the center first, which is less noticeable
-	if (!leaves.empty()) damage_scale = 1.0/leaves.size();
-}
-
-
 inline void add_rotation(point &dest, point const &src, float mult) {
 
 	UNROLL_3X(dest[i_] = src[i_] + mult*re_matrix[i_];)
@@ -1078,8 +1056,6 @@ void tree::gen_tree_data(int size, float tree_depth) {
 
 	calc_leaf_points(); // required for placed trees
 	leaf_data.clear();
-
-	//fixed tree variables
 	created = 1;
 	damage  = 0.0;
 	damage_scale = 0.0;
@@ -1096,13 +1072,33 @@ void tree::gen_tree_data(int size, float tree_depth) {
 		int const num(rand_gen(1, 100));
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
-	create_tree_branches(type, size, tree_depth);
-	create_leaves_and_one_branch_array();
+	tree_builder_t builder;
+	base_radius = builder.create_tree_branches(type, size, tree_depth, trseed);
+	
+	// create leaves and all_cylins
+	sphere_center_zoff = builder.get_bsphere_center_zval();
+	builder.create_all_cylins_and_leaves(type, deadness, all_cylins, leaves);
+
+	// set the bounding sphere center
+	sphere_radius = 0.0;
+
+	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
+		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, vector3d(0.0, 0.0, sphere_center_zoff)));
+	}
+	sphere_radius = sqrt(sphere_radius);
+	max_leaves    = max(max_leaves, unsigned(leaves.size()));
+
+	/*for (unsigned i = 0; i < leaves.size(); ++i) { // scramble leaves so that LOD is unbiased/randomly sampled
+		swap(leaves[i], leaves[(i + 1572869)%leaves.size()]);
+	}*/
+	reverse(leaves.begin(), leaves.end()); // order leaves so that LOD removes from the center first, which is less noticeable
+	if (!leaves.empty()) damage_scale = 1.0/leaves.size();
 }
 
 
-void tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth) {
+float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, int trseed[2]) {
 
+	//fixed tree variables
 	ncib                 = 10;
 	base_num_cylins      = 5;
 	num_cylin_factor     = 10.0;
@@ -1228,6 +1224,7 @@ void tree_builder_t::create_tree_branches(int tree_type, int size, float tree_de
 		rotate_cylin(cylin);
 		++base_num_cylins;
 	}
+	return base_radius;
 }
 
 
