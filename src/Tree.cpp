@@ -319,13 +319,17 @@ coll_obj &tree::get_leaf_cobj(unsigned i) const {
 }
 
 
-void tree::copy_color(colorRGB const &color, unsigned i) {
+void tree_data_t::update_leaf_color(colorRGB const &color, unsigned i) {
 
 	assert(i < leaf_data.size());
+	UNROLL_4X(leaf_data[i_+(i<<2)].set_c3(color);)
+}
+
+
+void tree::copy_color(colorRGB const &color, unsigned i) {
+
+	update_leaf_color(color, i);
 	
-	for (unsigned j = 0; j < 4; ++j) {
-		leaf_data[j+(i<<2)].set_c3(color);
-	}
 	if (!leaf_cobjs.empty()) { // update cobj color so that leaf water reflection is correct
 		get_leaf_cobj(i).cp.color = colorRGBA(color).modulate_with(texture_color(tree_types[type].leaf_tex));
 	}
@@ -333,40 +337,51 @@ void tree::copy_color(colorRGB const &color, unsigned i) {
 }
 
 
-void tree::change_leaf_color(colorRGBA &base_color, unsigned i) {
+colorRGB tree_data_t::get_color_for_leaf(colorRGBA &base_color, unsigned i, int tree_type) const {
 
-	if (!has_leaf_data()) return;
 	colorRGB color3;
-	colorRGBA const leafc(get_leaf_base_color(type));
+	colorRGBA const leafc(get_leaf_base_color(tree_type));
+	assert(i < leaves.size());
 
 	for (unsigned j = 0; j < 3; ++j) {
 		color3[j] = leaves[i].color*(leaf_color_coherence*leafc[j] +
 			(1.0 - leaf_color_coherence)*((j==0) ? leaves[i].lred : leaves[i].lgreen)) + base_color[j];
 	}
-	copy_color(color3, i);
+	return color3;
+}
+
+
+void tree::change_leaf_color(colorRGBA &base_color, unsigned i) {
+
+	if (has_leaf_data()) {copy_color(get_color_for_leaf(base_color, i, type), i);}
+}
+
+
+void tree_data_t::remove_leaf_ix(unsigned i, bool update_data) {
+
+	assert(i < leaves.size());
+	leaves[i] = leaves.back();
+	leaves.pop_back();
+	if (!update_data) return;
+	unsigned const i4(i << 2), tnl4((unsigned)leaves.size() << 2);
+	assert(4*leaves.size() <= leaf_data.size());
+
+	// shift vertex array (last one is now invalid)
+	UNROLL_4X(leaf_data[i_+i4] = leaf_data[i_+tnl4];)
 }
 
 
 void tree::remove_leaf(unsigned i, bool update_data) {
-
-	assert(i < leaves.size());
 	
 	if (!leaf_cobjs.empty()) {
-		assert(leaf_cobjs.size() == leaves.size());
+		assert(i < leaf_cobjs.size());
 		remove_coll_object(leaf_cobjs[i]);
 		leaf_cobjs[i] = leaf_cobjs.back();
 		leaf_cobjs.pop_back();
 	}
-	leaves[i] = leaves.back();
-	leaves.pop_back();
-	if (!update_data || !has_leaf_data()) return;
-	unsigned const i4(i << 2), tnl4((unsigned)leaves.size() << 2);
-	assert(4*leaves.size() <= leaf_data.size());
-
-	for (unsigned j = 0; j < 4; ++j) { // shift vertex array (last one is now invalid)
-		leaf_data[j+i4] = leaf_data[j+tnl4];
-	}
-	mark_leaf_changed(i);
+	update_data &= has_leaf_data();
+	remove_leaf_ix(i, update_data);
+	if (update_data) {mark_leaf_changed(i);}
 }
 
 
@@ -384,6 +399,12 @@ void tree::burn_leaves() {
 		if (rand()&1) {gen_smoke(leaves[index].pts[0] + tree_center);}
 		if (leaves[index].color <= 0.0) {remove_leaf(index, 1);}
 	}
+}
+
+
+void tree::get_abs_leaf_pts(point pts[4], unsigned ix) const {
+	
+	UNROLL_4X(pts[i_] = leaves[ix].pts[i_]+tree_center;)
 }
 
 
@@ -480,17 +501,22 @@ void tree::gen_leaf_color() {
 		float cscale((i<2) ? 0.5 : 0.125);
 		base_color[i] = rand_uniform2(-cscale*tree_color_coherence, cscale*tree_color_coherence);
 		leaf_color[i] = leaf_color_coherence*leafc[i];
-		bcolor[i]    *= min(1.0f, dc_scale*color[i]);
+		bcolor[i]    *= min(1.0f, dc_scale*tree_color[i]);
 	}
+}
+
+
+colorRGB tree_data_t::get_leaf_data_color(unsigned i) const {
+
+	assert((i<<2) < leaf_data.size());
+	return leaf_data[i<<2].get_c3(); // return color of first vertex since they all should be the same
 }
 
 
 colorRGB tree::get_leaf_color(unsigned i) const {
 
 	assert(i < leaves.size());
-	if (!has_leaf_data()) return leaves[i].calc_leaf_color(leaf_color, base_color);
-	assert(4*i < leaf_data.size());
-	return leaf_data[i<<2].get_c3(); // return color of first vertex since they all should be the same
+	return (has_leaf_data() ? get_leaf_data_color(i) : leaves[i].calc_leaf_color(leaf_color, base_color));
 }
 
 
@@ -507,7 +533,7 @@ inline float tree_leaf::get_norm_scale(unsigned pt_ix) const {
 }
 
 
-void tree::clear_vbo() {
+void tree_data_t::clear_vbos() {
 
 	delete_vbo(branch_vbo);
 	delete_vbo(branch_ivbo);
@@ -524,7 +550,7 @@ bool tree::is_visible_to_camera() const {
 }
 
 
-void tree::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const {
+void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves, int tree_type) const {
 
 	if (draw_branches && branch_vbo > 0) { // draw branches (untextured)
 		bind_vbo(branch_vbo, 0);
@@ -536,7 +562,7 @@ void tree::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const {
 		bind_vbo(0, 1);
 	}
 	if (draw_leaves && leaf_vbo > 0 && !leaves.empty()) { // draw leaves
-		select_texture(tree_types[type].leaf_tex);
+		select_texture(tree_types[tree_type].leaf_tex);
 		bind_vbo(leaf_vbo);
 		assert(leaf_data.size() >= 4*leaves.size());
 		leaf_vert_type_t::set_vbo_arrays(); // could also disable normals and colors, but that doesn't seem to help much
@@ -553,7 +579,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 		if (!is_over_mesh()) return;
 		glPushMatrix();
 		translate_to(tree_center);
-		draw_tree_shadow_only(draw_branches, draw_leaves);
+		draw_tree_shadow_only(draw_branches, draw_leaves, type);
 		glPopMatrix();
 		return;
 	}
@@ -577,7 +603,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 }
 
 
-void tree::setup_branch_vbos() {
+void tree_data_t::setup_branch_vbos() {
 
 	if (branch_vbo == 0) { // create vbos
 		assert(branch_ivbo == 0);
@@ -664,7 +690,7 @@ void tree::draw_tree_branches(shader_t const &s, float size_scale) {
 }
 
 
-void tree::reset_leaf_pos_norm() {
+void tree_data_t::reset_leaf_pos_norm() {
 
 	for (unsigned i = 0; i < (unsigned)leaves.size(); i++) { // process leaf points - reset to default positions and normals
 		for (unsigned j = 0; j < 4; ++j) {
@@ -675,7 +701,7 @@ void tree::reset_leaf_pos_norm() {
 }
 
 
-void tree::setup_leaf_vbo() {
+void tree_data_t::setup_leaf_vbo(bool update_vbo_data) {
 
 	assert(leaf_data.size() >= 4*leaves.size());
 	bool const create_leaf_vbo(leaf_vbo == 0);
@@ -687,7 +713,7 @@ void tree::setup_leaf_vbo() {
 	if (create_leaf_vbo) {
 		upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride); // ~150KB
 	}
-	else if (leaves_changed) {
+	else if (update_vbo_data) {
 		upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride);
 	}
 	leaf_vert_type_t::set_vbo_arrays();
@@ -702,7 +728,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
 	if (!gen_arrays && leaf_dynamic_en && size_scale > 0.5) {update_leaf_orients();}
 	unsigned nl(leaves.size());
 	if (ENABLE_CLIP_LEAVES) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
-	if (gen_arrays) {leaf_data.resize(4*leaves.size());}
+	if (gen_arrays) {alloc_leaf_data();}
 
 	if (gen_arrays || (reset_leaves && !leaf_dynamic_en)) {
 		reset_leaf_pos_norm();
@@ -711,7 +737,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
 	}
 	if (gen_arrays || leaf_color_changed) {copy_all_leaf_colors();}
 	if (gen_arrays) {calc_leaf_shadows();}
-	setup_leaf_vbo();
+	setup_leaf_vbo(leaves_changed);
 	unsigned const num_dlights(enable_dynamic_lights(sphere_center(), sphere_radius));
 	s.add_uniform_int("num_dlights", num_dlights);
 	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
@@ -845,10 +871,17 @@ int tree::delete_tree() {
 	if (!created)  return 0;
 	if (tree_coll_level) remove_collision_objects();
 	if (no_delete) return 0;
-	all_cylins.clear();
-	leaf_data.clear();
+	clear_data();
 	created = 0;
 	return 1;
+}
+
+
+void tree_data_t::clear_data() {
+	
+	all_cylins.clear();
+	leaf_data.clear();
+	leaves.clear(); // Note: not present in original delete_trees()
 }
 
 
@@ -1048,23 +1081,20 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	if (calc_z) {tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);}
 	float tree_depth(TREE_DEPTH*(0.5 + 0.5/tree_scale));
 	if (user_placed && calc_z) {tree_depth = tree_center.z - get_tree_z_bottom(lowest_mesh_point(tree_center, base_radius), tree_center);} // more accurate
-	gen_tree_data(size, tree_depth);
+	tree_color.alpha = 1.0;
+	UNROLL_3X(tree_color[i_] = 0.01*rand_gen(80, 120);) // FIXME: rand_gen() called outside gen_tree_data(), is this okay?
+	gen_tree_data(type, size, tree_depth, trseed);
+	damage       = 0.0;
+	damage_scale = (leaves.empty() ? 0.0 : 1.0/leaves.size());
 	if (add_cobjs) {add_tree_collision_objects();}
 }
 
 
-void tree::gen_tree_data(int size, float tree_depth) {
+void tree_data_t::gen_tree_data(int tree_type, int size, float tree_depth, int trseed[2]) {
 
 	calc_leaf_points(); // required for placed trees
 	leaf_data.clear();
-	damage  = 0.0;
-	damage_scale = 0.0;
 	leaf_vbo = branch_vbo = branch_ivbo = 0;
-	color.alpha = 1.0;
-
-	for (unsigned i = 0; i < 3; ++i) {
-		color[i] = 0.01*rand_gen(80, 120);
-	}
 	float deadness(DISABLE_LEAVES ? 1.0 : tree_deadness);
 
 	if (deadness < 0.0) {
@@ -1072,11 +1102,11 @@ void tree::gen_tree_data(int size, float tree_depth) {
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
 	tree_builder_t builder;
-	base_radius = builder.create_tree_branches(type, size, tree_depth, trseed);
+	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, trseed);
 	
 	// create leaves and all_cylins
 	sphere_center_zoff = builder.get_bsphere_center_zval();
-	builder.create_all_cylins_and_leaves(type, deadness, all_cylins, leaves);
+	builder.create_all_cylins_and_leaves(tree_type, deadness, all_cylins, leaves);
 
 	// set the bounding sphere center
 	sphere_radius = 0.0;
@@ -1091,7 +1121,6 @@ void tree::gen_tree_data(int size, float tree_depth) {
 		swap(leaves[i], leaves[(i + 1572869)%leaves.size()]);
 	}*/
 	reverse(leaves.begin(), leaves.end()); // order leaves so that LOD removes from the center first, which is less noticeable
-	if (!leaves.empty()) damage_scale = 1.0/leaves.size();
 }
 
 

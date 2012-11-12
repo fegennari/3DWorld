@@ -112,46 +112,65 @@ public:
 
 class tree_data_t {
 
-public:
 	typedef vert_norm_comp_color leaf_vert_type_t;
 	typedef vert_norm_comp_tc branch_vert_type_t;
 
+	int branch_vbo, branch_ivbo, leaf_vbo;
+
+public:
+	unsigned num_branch_quads, num_unique_pts;
+	float base_radius, sphere_center_zoff, sphere_radius;
 	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
 	vector<tree_leaf> leaves;
+	//unsigned ref_count;
+	//bool private_copy;
 
-	int branch_vbo, branch_ivbo, leaf_vbo;
-	unsigned num_branch_quads, num_unique_pts;
-
-	tree_data_t() : branch_vbo(0), branch_ivbo(0), leaf_vbo(0), num_branch_quads(0), num_unique_pts(0) {}
+	tree_data_t() : branch_vbo(0), branch_ivbo(0), leaf_vbo(0), num_branch_quads(0), num_unique_pts(0),
+		sphere_center_zoff(0.0), sphere_radius(0.0) {}
+	void gen_tree_data(int tree_type, int size, float tree_depth, int trseed[2]);
+	void update_leaf_color(colorRGB const &color, unsigned i);
+	colorRGB get_color_for_leaf(colorRGBA &base_color, unsigned i, int tree_type) const;
+	colorRGB get_leaf_data_color(unsigned i) const;
+	void remove_leaf_ix(unsigned i, bool update_data);
+	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves, int tree_type) const;
+	void setup_branch_vbos();
+	void setup_leaf_vbo(bool update_vbo_data);
+	void reset_leaf_pos_norm();
+	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
+	void clear_data();
+	void clear_vbos();
+	//void deep_copy(tree_data_t &dest) const;
 };
 
 
 class tree : public tree_data_t {
 
 	//tree_data_t tree_data; // FIXME: by pointer
-	//tree_data_t       &tdata()       {return tree_data;}
-	//tree_data_t const &tdata() const {return tree_data;}
+	// constant access to shared data
+	//tree_data_t const &tdata() const  {return tree_data;}
+	// non-constant access to shared data (by a single tree per frame)
+	//tree_data_t       &tdata()        {return tree_data;}
+	// non-constant access to a private copy of the data (created the first time this is called)
+	//tree_data_t &tdata_private_copy() {return tree_data;}
 
-	vector<int> branch_cobjs, leaf_cobjs;
-
-	int type, created;
+	int type, created; // FIXME: should type be a member of tree_data_t?
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
 	point tree_center;
-	float base_radius, sphere_center_zoff, sphere_radius, damage, damage_scale;
-	colorRGBA color, base_color, leaf_color, bcolor;
+	float damage, damage_scale;
+	colorRGBA tree_color, base_color, leaf_color, bcolor;
 	int trseed[2];
+	vector<int> branch_cobjs, leaf_cobjs;
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
 	void copy_all_leaf_colors();
 	void update_leaf_orients();
 	bool has_leaf_data() const {return !leaf_data.empty();}
 	bool has_no_leaves() const {return leaves.empty();}
-	void get_abs_leaf_pts(point pts[4], unsigned ix) const {UNROLL_4X(pts[i_] = leaves[ix].pts[i_]+tree_center;)}
+	void get_abs_leaf_pts(point pts[4], unsigned ix) const;
 	void create_leaf_obj(unsigned ix) const;
 	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, sphere_center_zoff));}
 
-	void gen_tree_data(int size, float tree_depth);
 	bool is_over_mesh() const;
 	bool is_visible_to_camera() const;
 	void gen_leaf_color();
@@ -162,10 +181,6 @@ class tree : public tree_data_t {
 	void drop_leaves();
 	void remove_leaf(unsigned i, bool update_data);
 	bool damage_leaf(unsigned i, float damage_done);
-	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const;
-	void setup_branch_vbos();
-	void setup_leaf_vbo();
-	void reset_leaf_pos_norm();
 	void draw_tree_branches(shader_t const &s, float size_scale);
 	void draw_tree_leaves(shader_t const &s, float size_scale);
 	void mark_leaf_changed(unsigned i);
@@ -173,14 +188,14 @@ class tree : public tree_data_t {
 	void change_leaf_color(colorRGBA &base_color, unsigned i);
 
 public:
-	tree() : created(0), no_delete(0), reset_leaves(0),	leaves_changed(0), not_visible(0), sphere_center_zoff(0.0) {}
+	tree() : created(0), no_delete(0), reset_leaves(0),	leaves_changed(0), not_visible(0) {}
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed);
 	void regen_tree(point const &pos, int recalc_shadows);
 	void calc_leaf_shadows();
 	void gen_tree_shadows(unsigned light_sources);
 	void add_tree_collision_objects();
 	void remove_collision_objects();
-	void clear_vbo();
+	void clear_vbo() {clear_vbos();}
 	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	int delete_tree();
