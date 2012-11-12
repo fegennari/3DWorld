@@ -560,7 +560,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 	set_rand2_state(trseed[0], trseed[1]);
 	gen_leaf_color();
 	
-	if (draw_leaves && deadness < 1.0) {
+	if (draw_leaves && !leaves.empty()) {
 		burn_leaves();
 		if (l_strike.enabled == 1)    lightning_damage(l_strike.end);
 		if (game_mode && gm_blast)    blast_damage(&latest_blastr);
@@ -690,6 +690,7 @@ void tree::setup_leaf_vbo() {
 	else if (leaves_changed) {
 		upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride);
 	}
+	leaf_vert_type_t::set_vbo_arrays();
 }
 
 
@@ -716,7 +717,6 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
 	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
 	glPushMatrix();
 	translate_to(tree_center);
-	leaf_vert_type_t::set_vbo_arrays();
 	glDrawArrays(GL_QUADS, 0, 4*nl);
 	disable_dynamic_lights(num_dlights);
 	bind_vbo(0);
@@ -862,7 +862,7 @@ void tree_builder_t::process_cylins(tree_cylin const *const cylins, unsigned num
 		assert(cylins[i].p1 != cylins[i].p2);
 		all_cylins.push_back(cylins[i]);
 
-		if (leaves.capacity() > 0) { // leaves was reserved
+		if (deadness < 1.0) { // leaves was reserved
 			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
 				add_leaves_to_cylin(cylins[i], leaf_size, deadness, leaves);
 			}
@@ -890,7 +890,7 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 	all_cylins.reserve(num_total_cylins);
 
 	//tree leaf variables
-	if (deadness < 1.0 && !DISABLE_LEAVES) {
+	if (deadness < 1.0) {
 		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
 		leaves.reserve(nl);
 	}
@@ -1044,6 +1044,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 
 	type = ((ttype < 0) ? rand2() : ttype)%NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
 	tree_center = pos;
+	created = 1;
 	if (calc_z) {tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);}
 	float tree_depth(TREE_DEPTH*(0.5 + 0.5/tree_scale));
 	if (user_placed && calc_z) {tree_depth = tree_center.z - get_tree_z_bottom(lowest_mesh_point(tree_center, base_radius), tree_center);} // more accurate
@@ -1056,7 +1057,6 @@ void tree::gen_tree_data(int size, float tree_depth) {
 
 	calc_leaf_points(); // required for placed trees
 	leaf_data.clear();
-	created = 1;
 	damage  = 0.0;
 	damage_scale = 0.0;
 	leaf_vbo = branch_vbo = branch_ivbo = 0;
@@ -1065,10 +1065,9 @@ void tree::gen_tree_data(int size, float tree_depth) {
 	for (unsigned i = 0; i < 3; ++i) {
 		color[i] = 0.01*rand_gen(80, 120);
 	}
-	if (tree_deadness >= 0.0) {
-		deadness = tree_deadness;
-	}
-	else {
+	float deadness(DISABLE_LEAVES ? 1.0 : tree_deadness);
+
+	if (deadness < 0.0) {
 		int const num(rand_gen(1, 100));
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
