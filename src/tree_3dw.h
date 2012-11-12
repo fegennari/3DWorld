@@ -116,11 +116,12 @@ class tree_data_t {
 	typedef vert_norm_comp_tc branch_vert_type_t;
 
 	int branch_vbo, branch_ivbo, leaf_vbo;
+	colorRGBA base_color, leaf_color;
+	vector<leaf_vert_type_t> leaf_data;
 
 public:
 	unsigned num_branch_quads, num_unique_pts;
 	float base_radius, sphere_center_zoff, sphere_radius;
-	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
 	vector<tree_leaf> leaves;
 	//unsigned ref_count;
@@ -129,13 +130,18 @@ public:
 	tree_data_t() : branch_vbo(0), branch_ivbo(0), leaf_vbo(0), num_branch_quads(0), num_unique_pts(0),
 		sphere_center_zoff(0.0), sphere_radius(0.0) {}
 	void gen_tree_data(int tree_type, int size, float tree_depth, int trseed[2]);
+	void gen_leaf_color(int tree_type);
 	void update_leaf_color(colorRGB const &color, unsigned i);
-	colorRGB get_color_for_leaf(colorRGBA &base_color, unsigned i, int tree_type) const;
-	colorRGB get_leaf_data_color(unsigned i) const;
+	colorRGB get_color_for_leaf(unsigned i, int tree_type) const;
+	colorRGB get_color_from_leaf(unsigned i) const;
+	colorRGB get_leaf_color(unsigned i) const;
+	bool leaf_data_allocated() const {return !leaf_data.empty();}
 	void remove_leaf_ix(unsigned i, bool update_data);
+	void bend_leaf(unsigned i, float angle);
 	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves, int tree_type) const;
 	void setup_branch_vbos();
 	void setup_leaf_vbo(bool update_vbo_data);
+	void update_normal_for_leaf(unsigned i);
 	void reset_leaf_pos_norm();
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
 	void clear_data();
@@ -158,14 +164,14 @@ class tree : public tree_data_t {
 	bool no_delete, reset_leaves, leaves_changed, not_visible;
 	point tree_center;
 	float damage, damage_scale;
-	colorRGBA tree_color, base_color, leaf_color, bcolor;
+	colorRGBA tree_color, bcolor;
 	int trseed[2];
 	vector<int> branch_cobjs, leaf_cobjs;
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
 	void copy_all_leaf_colors();
 	void update_leaf_orients();
-	bool has_leaf_data() const {return !leaf_data.empty();}
+	bool has_leaf_data() const {return leaf_data_allocated();}
 	bool has_no_leaves() const {return leaves.empty();}
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const;
 	void create_leaf_obj(unsigned ix) const;
@@ -173,8 +179,6 @@ class tree : public tree_data_t {
 
 	bool is_over_mesh() const;
 	bool is_visible_to_camera() const;
-	void gen_leaf_color();
-	colorRGB get_leaf_color(unsigned i) const;
 	void burn_leaves();
 	void blast_damage(blastr const *const blast_radius);
 	void lightning_damage(point const &ltpos);
@@ -185,7 +189,7 @@ class tree : public tree_data_t {
 	void draw_tree_leaves(shader_t const &s, float size_scale);
 	void mark_leaf_changed(unsigned i);
 	void copy_color(colorRGB const &color, unsigned i);
-	void change_leaf_color(colorRGBA &base_color, unsigned i);
+	void change_leaf_color(unsigned i);
 
 public:
 	tree() : created(0), no_delete(0), reset_leaves(0),	leaves_changed(0), not_visible(0) {}

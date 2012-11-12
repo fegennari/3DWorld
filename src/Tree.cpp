@@ -337,7 +337,7 @@ void tree::copy_color(colorRGB const &color, unsigned i) {
 }
 
 
-colorRGB tree_data_t::get_color_for_leaf(colorRGBA &base_color, unsigned i, int tree_type) const {
+colorRGB tree_data_t::get_color_for_leaf(unsigned i, int tree_type) const {
 
 	colorRGB color3;
 	colorRGBA const leafc(get_leaf_base_color(tree_type));
@@ -351,9 +351,9 @@ colorRGB tree_data_t::get_color_for_leaf(colorRGBA &base_color, unsigned i, int 
 }
 
 
-void tree::change_leaf_color(colorRGBA &base_color, unsigned i) {
+void tree::change_leaf_color(unsigned i) {
 
-	if (has_leaf_data()) {copy_color(get_color_for_leaf(base_color, i, type), i);}
+	if (has_leaf_data()) {copy_color(get_color_for_leaf(i, type), i);}
 }
 
 
@@ -388,14 +388,14 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 void tree::burn_leaves() {
 
 	float const max_t(get_max_t(LEAF));
-	if (temperature < max_t || leaves.empty()) return;
+	if (temperature < max_t || has_no_leaves()) return;
 	unsigned const num_burn(max(1U, min(5U, unsigned(5*(temperature - max_t)/max_t))));
 	damage += ((1.0 - damage)*num_burn)/leaves.size();
 
 	for (unsigned i = 0; i < num_burn && !leaves.empty(); ++i) {
 		unsigned const index(rand()%leaves.size());
 		leaves[index].color = max(0.0f, (leaves[index].color - 0.25f));
-		change_leaf_color(base_color, index);
+		change_leaf_color(index);
 		if (rand()&1) {gen_smoke(leaves[index].pts[0] + tree_center);}
 		if (leaves[index].color <= 0.0) {remove_leaf(index, 1);}
 	}
@@ -437,7 +437,7 @@ bool tree::damage_leaf(unsigned i, float damage_done) {
 		float const llc(lcolor);
 		lcolor = max(0.0, (lcolor - 0.3*damage_done));
 		if (lcolor == 0.0 && llc > 0.0) damage += damage_scale;
-		if (has_leaf_data()) change_leaf_color(base_color, i);
+		if (has_leaf_data()) change_leaf_color(i);
 	}
 	return 0;
 }
@@ -472,7 +472,7 @@ void tree::lightning_damage(point const &ltpos) {
 
 void tree::drop_leaves() {
 
-	if (damage >= 1.0 || leaves.empty()) return; // too damaged
+	if (damage >= 1.0 || has_no_leaves()) return; // too damaged
 	bool const llc(leaves_changed);
 	unsigned const nleaves((unsigned)leaves.size());
 	float const temp0(max(1.0f, min(0.3f, (20.0f-temperature)/30.0f)));
@@ -483,40 +483,40 @@ void tree::drop_leaves() {
 			create_leaf_obj(i);
 			// create a new leaf with a different color (and orient?)
 			leaves[i].create_init_color(0);
-			if (has_leaf_data()) copy_color(leaves[i].calc_leaf_color(leaf_color, base_color), i);
+			if (has_leaf_data()) copy_color(get_color_from_leaf(i), i);
 		}
 	}
 	leaves_changed = llc; // reset to original value so we don't do an update just because of this
 }
 
 
-void tree::gen_leaf_color() {
+void tree_data_t::gen_leaf_color(int tree_type) {
 
-	float dc_scale(1.0 - 0.95*damage);
-	colorRGBA const leafc(get_leaf_base_color(type));
-	bcolor = tree_types[type].barkc;
+	colorRGBA const leafc(get_leaf_base_color(tree_type));
 	base_color.alpha = 1.0;
 
 	for (unsigned i = 0; i < 3; ++i) {
 		float cscale((i<2) ? 0.5 : 0.125);
 		base_color[i] = rand_uniform2(-cscale*tree_color_coherence, cscale*tree_color_coherence);
 		leaf_color[i] = leaf_color_coherence*leafc[i];
-		bcolor[i]    *= min(1.0f, dc_scale*tree_color[i]);
 	}
 }
 
 
-colorRGB tree_data_t::get_leaf_data_color(unsigned i) const {
+colorRGB tree_data_t::get_color_from_leaf(unsigned i) const {
 
-	assert((i<<2) < leaf_data.size());
-	return leaf_data[i<<2].get_c3(); // return color of first vertex since they all should be the same
+	assert(i < leaves.size());
+	return leaves[i].calc_leaf_color(leaf_color, base_color);
 }
 
 
-colorRGB tree::get_leaf_color(unsigned i) const {
+colorRGB tree_data_t::get_leaf_color(unsigned i) const {
 
-	assert(i < leaves.size());
-	return (has_leaf_data() ? get_leaf_data_color(i) : leaves[i].calc_leaf_color(leaf_color, base_color));
+	if (leaf_data_allocated()) {
+		assert((i<<2) < leaf_data.size());
+		return leaf_data[i<<2].get_c3(); // return color of first vertex since they all should be the same
+	}
+	return get_color_from_leaf(i);
 }
 
 
@@ -584,9 +584,12 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 		return;
 	}
 	set_rand2_state(trseed[0], trseed[1]);
-	gen_leaf_color();
+	float dc_scale(1.0 - 0.95*damage);
+	bcolor = tree_types[type].barkc;
+	UNROLL_3X(bcolor[i_] *= min(1.0f, dc_scale*tree_color[i_]);)
+	gen_leaf_color(type);
 	
-	if (draw_leaves && !leaves.empty()) {
+	if (draw_leaves && !has_no_leaves()) {
 		burn_leaves();
 		if (l_strike.enabled == 1)    lightning_damage(l_strike.end);
 		if (game_mode && gm_blast)    blast_damage(&latest_blastr);
@@ -690,13 +693,18 @@ void tree::draw_tree_branches(shader_t const &s, float size_scale) {
 }
 
 
+void tree_data_t::update_normal_for_leaf(unsigned i) {
+
+	assert(i < leaves.size());
+	UNROLL_4X(leaf_data[i_+(i<<2)].set_norm(leaves[i].norm*leaves[i].get_norm_scale(i_));)
+}
+
+
 void tree_data_t::reset_leaf_pos_norm() {
 
 	for (unsigned i = 0; i < (unsigned)leaves.size(); i++) { // process leaf points - reset to default positions and normals
-		for (unsigned j = 0; j < 4; ++j) {
-			leaf_data[j+(i<<2)].v = leaves[i].pts[j];
-			leaf_data[j+(i<<2)].set_norm(leaves[i].norm*leaves[i].get_norm_scale(j));
-		}
+		UNROLL_4X(leaf_data[i_+(i<<2)].v = leaves[i].pts[i_];)
+		update_normal_for_leaf(i);
 	}
 }
 
@@ -754,7 +762,31 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
 void tree::copy_all_leaf_colors() {
 
 	for (unsigned i = 0; i < leaves.size(); i++) {
-		copy_color(leaves[i].calc_leaf_color(leaf_color, base_color), i);
+		copy_color(get_color_from_leaf(i), i);
+	}
+}
+
+
+void tree_data_t::bend_leaf(unsigned i, float angle) {
+
+	assert(i < leaves.size());
+	tree_leaf const &l(leaves[i]);
+	point const p1((l.pts[1] + l.pts[2])*0.5); // tip
+	point const p2((l.pts[0] + l.pts[3])*0.5); // base
+	vector3d const orig_dir(p1 - p2); // vector from base to tip
+	vector3d const new_dir(orig_dir*cos(angle) + l.norm*(orig_dir.mag()*sin(angle))); // s=orig_dir.get_norm(), t=l.norm
+	vector3d const delta(new_dir - orig_dir);
+	vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
+	unsigned const ix(i<<2);
+	leaf_data[ix+1].v = l.pts[1] + delta;
+	leaf_data[ix+2].v = l.pts[2] + delta;
+
+	if (l.shadow_bits == 0) {
+		norm_comp nc(normal);
+		UNROLL_4X((norm_comp)leaf_data[i_+ix] = nc;)
+	}
+	else { // update the normals, even though this slows the algorithm down
+		UNROLL_4X(leaf_data[i_+ix].set_norm(normal*l.get_norm_scale(i_));) // almost update_normal_for_leaf(i);
 	}
 }
 
@@ -801,26 +833,11 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 		}
 		float const wscale(dot_product(local_wind, l.norm));
 		float const angle(0.5*PI*max(-1.0f, min(1.0f, wscale)) + hit_angle); // not physically correct, but it looks good
-		point const p1((l.pts[1] + l.pts[2])*0.5); // tip
-		point const p2((l.pts[0] + l.pts[3])*0.5); // base
-		vector3d const orig_dir(p1 - p2); // vector from base to tip
-		vector3d const new_dir(orig_dir*cos(angle) + l.norm*(orig_dir.mag()*sin(angle))); // s=orig_dir.get_norm(), t=l.norm
-		vector3d const delta(new_dir - orig_dir);
-		vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
-		unsigned const ix(i<<2);
-		leaf_data[ix+1].v = l.pts[1] + delta;
-		leaf_data[ix+2].v = l.pts[2] + delta;
+		bend_leaf(i, angle);
 
-		if (l.shadow_bits == 0) {
-			norm_comp nc(normal);
-			UNROLL_4X((norm_comp)leaf_data[i_+ix] = nc;)
-		}
-		else { // update the normals, even though this slows the algorithm down
-			UNROLL_4X(leaf_data[i_+ix].set_norm(normal*l.get_norm_scale(i_));)
-		}
 		if (LEAF_HEAL_RATE > 0.0 && l.color > 0.0 && l.color < 1.0) { // leaf heal
 			leaves[i].color = min(1.0f, (l.color + LEAF_HEAL_RATE*fticks));
-			copy_color(l.calc_leaf_color(leaf_color, base_color), i);
+			copy_color(get_color_from_leaf(i), i);
 		}
 		reset_leaves = 1; // Do we want to update the normals and collision objects as well?
 		mark_leaf_changed(i);
@@ -831,6 +848,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 void tree::calc_leaf_shadows() { // process leaf shadows/normals
 
 	if (!has_leaf_data()) return; // leaf data not yet created (can happen if called when light source changes)
+	// FIXME: if not a private tree_data_t copy, return
 	int const light(get_light());
 
 	for (unsigned i = 0; i < leaves.size(); i++) {
@@ -840,8 +858,8 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 		for (unsigned j = 0; j < 4; ++j) {
 			bool const shadowed(!leaf_cobjs.empty() && !is_visible_to_light_cobj(l.pts[j]+tree_center, light, 0.0, leaf_cobjs[i], 1));
 			l.shadow_bits |= (int(shadowed) << j);
-			leaf_data[j+(i<<2)].set_norm(l.norm*l.get_norm_scale(j));
 		}
+		update_normal_for_leaf(i);
 	}
 	leaves_changed = 1;
 }
@@ -1085,7 +1103,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	UNROLL_3X(tree_color[i_] = 0.01*rand_gen(80, 120);) // FIXME: rand_gen() called outside gen_tree_data(), is this okay?
 	gen_tree_data(type, size, tree_depth, trseed);
 	damage       = 0.0;
-	damage_scale = (leaves.empty() ? 0.0 : 1.0/leaves.size());
+	damage_scale = (has_no_leaves() ? 0.0 : 1.0/leaves.size());
 	if (add_cobjs) {add_tree_collision_objects();}
 }
 
