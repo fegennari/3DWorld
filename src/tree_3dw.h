@@ -87,7 +87,7 @@ class tree_builder_t {
 	float angle_rotate, branch_min_angle, branch_max_angle, branch_1_random_rotate;
 	float max_2_angle_rotate, max_3_angle_rotate;  //max angle to rotate 3rd order branches around from the 2nd order branch
 	float branch_4_distribution, branch_4_rad_var, branch_4_var, branch_4_length;
-	int num_4_branches_per_occurance, num_4_cylins, num_min_leaves, num_max_leaves, leaf_min_angle, leaf_max_angle;
+	int num_4_branches_per_occurance, num_4_cylins, num_min_leaves, leaf_min_angle, leaf_max_angle;
 
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);
@@ -119,6 +119,8 @@ class tree_data_t {
 	unsigned num_branch_quads, num_unique_pts;
 	colorRGBA base_color, leaf_color;
 	vector<leaf_vert_type_t> leaf_data;
+	vector<draw_cylin> all_cylins;
+	vector<tree_leaf> leaves;
 	int last_update_frame;
 	bool leaves_changed, reset_leaves;
 
@@ -127,15 +129,17 @@ class tree_data_t {
 
 public:
 	float base_radius, sphere_center_zoff, sphere_radius;
-	vector<draw_cylin> all_cylins;
-	vector<tree_leaf> leaves;
 	//unsigned ref_count;
 	//bool private_copy;
 
 	tree_data_t() : branch_vbo(0), branch_ivbo(0), leaf_vbo(0), num_branch_quads(0), num_unique_pts(0),
 		last_update_frame(0), leaves_changed(0), reset_leaves(0), sphere_center_zoff(0.0), sphere_radius(0.0) {}
+	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
+	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
+	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
 	void gen_tree_data(int tree_type, int size, float tree_depth, int trseed[2]);
 	void gen_leaf_color(int tree_type);
+	void update_all_leaf_colors();
 	void update_leaf_color(unsigned i);
 	colorRGB get_leaf_color(unsigned i) const;
 	bool leaf_data_allocated() const {return !leaf_data.empty();}
@@ -176,7 +180,6 @@ class tree : public tree_data_t {
 	coll_obj &get_leaf_cobj(unsigned i) const;
 	void update_leaf_orients();
 	bool has_leaf_data() const {return leaf_data_allocated();}
-	bool has_no_leaves() const {return leaves.empty();}
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const;
 	void create_leaf_obj(unsigned ix) const;
 	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, sphere_center_zoff));}
@@ -191,8 +194,8 @@ class tree : public tree_data_t {
 	bool damage_leaf(unsigned i, float damage_done);
 	void draw_tree_branches(shader_t const &s, float size_scale);
 	void draw_tree_leaves(shader_t const &s, float size_scale);
+	void update_leaf_cobj_color(unsigned i);
 	void copy_color(unsigned i);
-	void change_leaf_color(unsigned i);
 
 public:
 	tree() : created(0), no_delete(0), not_visible(0) {}
