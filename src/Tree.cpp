@@ -43,7 +43,6 @@ reusable_mem<tree_branch *> tree_builder_t::branch_ptr_cache;
 
 // tree helper methods
 void rotate_all(point const &rotate, float angle, float x, float y, float z);
-int generate_next_cylin(int cylin_num, float branch_curveness, int ncib, bool branch_just_created, bool &branch_deflected);
 
 
 // tree_mode: 0 = no trees, 1 = large only, 2 = small only, 3 = both large and small
@@ -1189,7 +1188,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	branch_max_angle       = 40.0;
 	max_2_angle_rotate     = 50.0;
 	max_3_angle_rotate     = 50.0;
-	branch_1_random_rotate = 40.0;
+	float const branch_1_random_rotate = 40.0;
 	for (unsigned d = 0; d < 2; ++d) {trseed[d] = rand2();}
 
 	//temporary variables
@@ -1366,7 +1365,7 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 				        (float(branch.num_branches/(branch.num_cylins*(num_2_branches_created+1))));
 		}
 		if (temp_num2*branch_1_distribution >= 1.0 && num_2_branches_created < branch.num_branches) branch_just_created = true;
-		int const deg_added(generate_next_cylin(j, branch_curveness, branch.num_cylins, branch_just_created, branch_deflected));
+		int const deg_added(generate_next_cylin(j, branch.num_cylins, branch_just_created, branch_deflected));
 		cylin.deg_rotate += deg_added;
 		cylin.deg_rotate *= branch_upwardness;
 
@@ -1422,7 +1421,7 @@ void tree_builder_t::create_2nd_order_branch(int i, int j, int cylin_num, bool b
 		float const temp_num2(float((index+1)*temp_num_big_branches)/((num_3_branches_created+1)*((float)branch.num_cylins)) +
 			float(temp_num_big_branches/(((float)branch.num_cylins)*(num_3_branches_created+1))));
 		if (temp_num*branch_1_distribution >= 1.0 && num_3_branches_created < branch.num_branches) branch_just_created = true;
-		int const deg_added(generate_next_cylin(index, branch_curveness, branch.num_cylins, branch_just_created, branch_deflected));
+		int const deg_added(generate_next_cylin(index, branch.num_cylins, branch_just_created, branch_deflected));
 		gen_cylin_rotate(cylin.rotate, lcylin.rotate, deg_added*rotate_factor);
 		cylin.rotate.z    = lcylin.rotate.z;
 		cylin.deg_rotate += ((branch.cylin[0].deg_rotate < 0.0) ? deg_added : -deg_added);
@@ -1469,7 +1468,7 @@ void tree_builder_t::create_3rd_order_branch(int i, int j, int cylin_num, int br
 		tree_cylin &cylin(branch.cylin[index]), &lcylin(branch.cylin[index-1]);
 		gen_next_cylin(cylin, lcylin, branch_2_var, branch_2_rad_var, 3, branch_num, (index < branch.num_cylins-1));
 		cylin.rotate = lcylin.rotate;
-		int const deg_added(generate_next_cylin(index, branch_curveness, branch.num_cylins, branch_just_created, branch_deflected));
+		int const deg_added(generate_next_cylin(index, branch.num_cylins, branch_just_created, branch_deflected));
 		cylin.deg_rotate += ((branch.cylin[0].deg_rotate < 0.0) ? deg_added : -deg_added);
 		add_rotation(lcylin.p2, lcylin.p1, 1.0);
 		if (index == (branch.num_cylins - 1)) rotate_cylin(cylin);
@@ -1477,9 +1476,10 @@ void tree_builder_t::create_3rd_order_branch(int i, int j, int cylin_num, int br
 }
 
 
-void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int i, int k) {
+void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int num_4_branches, int i, int k) {
 
 	int ncib(branch.num_cylins);
+	float const branch_4_distribution = 0.2;
 
 	for (int j = 0; j < ncib-1; j++) {
 		if ((float(((float)j)/((float)ncib))) >= branch_4_distribution) {
@@ -1487,8 +1487,8 @@ void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int i, int k) 
 			float temp_deg(safe_acosf(cylin.rotate.x)), rotate_start(0.0);
 			if (cylin.rotate.y < 0.0) temp_deg *= -1.0;
 
-			for (int l = 0; l < num_4_branches_per_occurance; l++) {
-				rotate_start += 360.0/num_4_branches_per_occurance*l + rand_gen(1,30);
+			for (int l = 0; l < num_4_branches; l++) {
+				rotate_start += 360.0/num_4_branches*l + rand_gen(1,30);
 				if (rotate_start > 360.0) rotate_start -= 360.0;
 				generate_4th_order_branch(branch, j, rotate_start, temp_deg, branch_num++);
 			}
@@ -1499,14 +1499,10 @@ void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int i, int k) 
 
 void tree_builder_t::create_4th_order_branches() {
 
-	num_34_branches[1]           = 2000;
-	branch_4_distribution        = 0.2;
-	num_4_branches_per_occurance = 2;
-	num_4_cylins                 = 10;
-	branch_4_rad_var             = 100.0*0.85;
-	branch_4_var                 = 0.70;
-	branch_4_length              = 0.006; //0.03;
-	branch_4_max_radius          = 0.008;
+	num_34_branches[1]  = 2000;
+	int num_4_branches  = 2;
+	branch_4_length     = 0.006; //0.03;
+	branch_4_max_radius = 0.008;
 	int branch_num(0);
 	assert(num_34_branches[1] > 0);
 	branch_cache[2].reusable_malloc(branches_34[1],          num_34_branches[1]);
@@ -1517,11 +1513,11 @@ void tree_builder_t::create_4th_order_branches() {
 	}
 	for (int i = 0; i < num_1_branches; i++) { // b1->b4
 		for (int k = 0; k < (branches[i][0].num_branches + 1); k++) {
-			gen_b4(branches[i][k], branch_num, i, k); // b2->b4
+			gen_b4(branches[i][k], branch_num, num_4_branches, i, k); // b2->b4
 		}
 	}
 	for (int i = 0; i < num_34_branches[0]; i++) { // b2->b4
-		gen_b4(branches_34[0][i], branch_num, i, 0);
+		gen_b4(branches_34[0][i], branch_num, num_4_branches, i, 0);
 	}
 	num_34_branches[1] = branch_num;
 }
@@ -1529,13 +1525,15 @@ void tree_builder_t::create_4th_order_branches() {
 
 void tree_builder_t::generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num) {
 	
+	float const branch_4_rad_var = 85.0;
+	float const branch_4_var     = 0.70;
 	int index(0);
 	bool branch_deflected(false);
 	tree_branch &branch(branches_34[1][branch_num]);
 	tree_cylin &cylin(branch.cylin[0]);
 	setup_rotate(cylin.rotate, rotate_start, temp_deg);
 	tree_cylin &src_cylin(src_branch.cylin[j]);
-	branch.num_cylins = num_4_cylins;
+	branch.num_cylins = 10; // number of cylinders
 	float const radius1(src_branch.cylin[int(0.65*src_branch.num_cylins)].r2*0.9);
 	cylin.assign_params(4, branch_num, radius1, radius1*gen_bc_size2(branch_4_rad_var), branch_4_length,
 		src_cylin.deg_rotate + ((src_cylin.deg_rotate > 0.0) ? 1 : -1)*rand_gen(0,60));
@@ -1546,7 +1544,7 @@ void tree_builder_t::generate_4th_order_branch(tree_branch &src_branch, int j, f
 	for (index = 1; index < branch.num_cylins; index++) {
 		tree_cylin &cylin(branch.cylin[index]), &lcylin(branch.cylin[index-1]);
 		gen_next_cylin(cylin, lcylin, branch_4_var, branch_4_rad_var, 4, branch_num, (index < branch.num_cylins-1));
-		int const deg_added(generate_next_cylin(index, branch_curveness, branch.num_cylins, false, branch_deflected));
+		int const deg_added(generate_next_cylin(index, branch.num_cylins, false, branch_deflected));
 		gen_cylin_rotate(cylin.rotate, lcylin.rotate, deg_added*rotate_factor);
 		cylin.rotate.z = lcylin.rotate.z;
 		cylin.deg_rotate += ((branch.cylin[0].deg_rotate < 0.0) ? deg_added : -deg_added);
@@ -1602,7 +1600,7 @@ void tree_builder_t::add_leaves_to_cylin(tree_cylin const &cylin, float tsize, f
 }
 
 
-int generate_next_cylin(int cylin_num, float branch_curveness, int ncib, bool branch_just_created, bool &branch_deflected) {
+int tree_builder_t::generate_next_cylin(int cylin_num, int ncib, bool branch_just_created, bool &branch_deflected) {
 
 	//vars used in generating deg_rotate for cylinders
 	float const PI_16(PI/16.0);
