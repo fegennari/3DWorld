@@ -106,8 +106,9 @@ inline colorRGBA get_leaf_base_color(int type) {
 
 bool tree::is_over_mesh() const {
 
-	int const x1(get_xpos(tree_center.x - sphere_radius)), y1(get_ypos(tree_center.y - sphere_radius));
-	int const x2(get_xpos(tree_center.x + sphere_radius)), y2(get_ypos(tree_center.y + sphere_radius));
+	float const r(tdata().sphere_radius);
+	int const x1(get_xpos(tree_center.x - r)), y1(get_ypos(tree_center.y - r));
+	int const x2(get_xpos(tree_center.x + r)), y2(get_ypos(tree_center.y + r));
 	return (x1 < MESH_X_SIZE && y1 < MESH_Y_SIZE && x2 >= 0 && y2 >= 0); // completely off the mesh
 }
 
@@ -117,8 +118,9 @@ void tree::gen_tree_shadows(unsigned light_sources) {
 	if (shadow_detail < 2 || !(tree_mode & 1) || !created) return;
 	// Note: not entirely correct since an off mesh tree can still cast a shadow on the mesh
 	if (!is_over_mesh()) return; // optimization
-	if (!enable_shadow_envelope(sphere_center(), sphere_radius, light_sources, 1)) return;
-	vector<draw_cylin> const &cylins(get_all_cylins());
+	tree_data_t const &td(tdata());
+	if (!enable_shadow_envelope(sphere_center(), td.sphere_radius, light_sources, 1)) return;
+	vector<draw_cylin> const &cylins(td.get_all_cylins());
 
 	for (unsigned i = 0; i < cylins.size(); i++) {
 		draw_cylin const &c(cylins[i]);
@@ -127,7 +129,7 @@ void tree::gen_tree_shadows(unsigned light_sources) {
 	}
 	if (shadow_detail < 6) return;
 	int const ltid(tree_types[type].leaf_tex);
-	vector<tree_leaf> const &leaves(get_leaves());
+	vector<tree_leaf> const &leaves(td.get_leaves());
 	
 	for (unsigned i = 0; i < leaves.size(); i++) { // loop through leaves
 		point pts[4];
@@ -149,7 +151,7 @@ void tree::add_tree_collision_objects() {
 	cobj_params cp(0.8, bcolor, TEST_RTREE_COBJS, 0, NULL, 0, btid, 4.0, 1, 0);
 	cp.shadow = 0; // will be handled by gen_tree_shadows()
 	assert(branch_cobjs.empty());
-	vector<draw_cylin> const &cylins(get_all_cylins());
+	vector<draw_cylin> const &cylins(tdata().get_all_cylins());
 
 	for (unsigned i = 0; i < cylins.size(); i++) {
 		draw_cylin const &c(cylins[i]);
@@ -166,7 +168,7 @@ void tree::add_tree_collision_objects() {
 		cpl.shadow         = 0;
 		cpl.is_destroyable = 1; // so that truly_static() returns false
 		point const xlate(all_zeros); // for now
-		vector<tree_leaf> const &leaves(get_leaves());
+		vector<tree_leaf> const &leaves(tdata().get_leaves());
 		leaf_cobjs.resize(leaves.size());
 
 		for (unsigned i = 0; i < leaves.size(); i++) { // loop through leaves
@@ -306,6 +308,18 @@ void draw_trees(bool shadow_only) {
 }
 
 
+void tree_data_t::deep_copy_no_vbos(tree_data_t &dest) const {
+
+	// FIXME: WRITE
+}
+
+
+void tree::make_private_tdata_copy() {
+
+	// FIXME: WRITE
+}
+
+
 coll_obj &tree::get_leaf_cobj(unsigned i) const {
 
 	assert(i < leaf_cobjs.size());
@@ -363,14 +377,14 @@ void tree_data_t::update_all_leaf_colors() {
 void tree::update_leaf_cobj_color(unsigned i) {
 
 	// update cobj color so that leaf water reflection is correct (Note: not always correct with tree instancing)
-	get_leaf_cobj(i).cp.color = colorRGBA(get_leaf_color(i)).modulate_with(texture_color(tree_types[type].leaf_tex));
+	get_leaf_cobj(i).cp.color = colorRGBA(tdata().get_leaf_color(i)).modulate_with(texture_color(tree_types[type].leaf_tex));
 }
 
 
 void tree::copy_color(unsigned i) {
 
 	if (!has_leaf_data()) return;
-	update_leaf_color(i);
+	tdata().update_leaf_color(i);
 	if (!leaf_cobjs.empty()) {update_leaf_cobj_color(i);}
 }
 
@@ -397,16 +411,16 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 		leaf_cobjs[i] = leaf_cobjs.back();
 		leaf_cobjs.pop_back();
 	}
-	// FIXME: need private tree_data_t copy before this can be called
+	make_private_tdata_copy();
 	update_data &= has_leaf_data();
-	remove_leaf_ix(i, update_data);
+	tdata().remove_leaf_ix(i, update_data);
 }
 
 
 void tree::burn_leaves() {
 
 	float const max_t(get_max_t(LEAF)), burn_amt(0.25); // FIXME: burn_amt depends on tree_data_t ref_count
-	vector<tree_leaf> &leaves(get_leaves());
+	vector<tree_leaf> &leaves(tdata().get_leaves());
 	if (temperature < max_t || leaves.empty()) return;
 	unsigned const num_burn(max(1U, min(5U, unsigned(5*(temperature - max_t)/max_t))));
 	damage += ((1.0 - damage)*num_burn)/leaves.size();
@@ -423,7 +437,8 @@ void tree::burn_leaves() {
 
 void tree::get_abs_leaf_pts(point pts[4], unsigned ix) const {
 	
-	UNROLL_4X(pts[i_] = get_leaves()[ix].pts[i_]+tree_center;)
+	vector<tree_leaf> const &leaves(tdata().get_leaves());
+	UNROLL_4X(pts[i_] = leaves[ix].pts[i_]+tree_center;)
 }
 
 
@@ -431,15 +446,15 @@ void tree::create_leaf_obj(unsigned ix) const {
 
 	point pts[4];
 	get_abs_leaf_pts(pts, ix);
-	gen_leaf_at(pts, get_leaves()[ix].norm, type, get_leaf_color(ix));
+	gen_leaf_at(pts, tdata().get_leaves()[ix].norm, type, tdata().get_leaf_color(ix));
 }
 
 
 bool tree::damage_leaf(unsigned i, float damage_done) {
 
 	if (damage_done == 0.0) return 0;
-	// FIXME: need private tree_data_t copy before this can be called
-	vector<tree_leaf> &leaves(get_leaves());
+	make_private_tdata_copy();
+	vector<tree_leaf> &leaves(tdata().get_leaves());
 	assert(i < leaves.size());
 	float &lcolor(leaves[i].color);
 	colorRGB const black(0.0, 0.0, 0.0);
@@ -470,9 +485,10 @@ void tree::blast_damage(blastr const *const blast_radius) {
 	float const bradius(blast_radius->cur_size), bdamage(LEAF_DAM_SCALE*blast_radius->damage);
 	if (bdamage == 0.0) return;
 	point const &bpos(blast_radius->pos);
-	if (p2p_dist_sq(bpos, sphere_center()) > (bradius + sphere_radius)*(bradius + sphere_radius)) return;
+	float const radius(bradius + tdata().sphere_radius);
+	if (p2p_dist_sq(bpos, sphere_center()) > radius*radius) return;
 	float const bradius_sq(bradius*bradius);
-	vector<tree_leaf> const &leaves(get_leaves());
+	vector<tree_leaf> const &leaves(tdata().get_leaves());
 
 	for (unsigned i = 0; i < leaves.size(); i++) {
 		if (leaves[i].color < 0.0) continue;
@@ -494,7 +510,7 @@ void tree::lightning_damage(point const &ltpos) {
 
 void tree::drop_leaves() const {
 
-	unsigned const nleaves(get_leaves().size());
+	unsigned const nleaves(tdata().get_leaves().size());
 	if (damage >= 1.0 || nleaves == 0) return; // too damaged
 	float const temp0(max(1.0f, min(0.3f, (20.0f-temperature)/30.0f)));
 	int const rgen(min(LEAF_GEN_RAND2/10, int(rand_uniform(0.5, 1.5)*temp0*LEAF_GEN_RAND2/fticks)));
@@ -529,7 +545,7 @@ void tree_data_t::clear_vbos() {
 bool tree::is_visible_to_camera() const {
 
 	int const level((island || get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh in non-island mode?
-	return sphere_in_camera_view(sphere_center(), 1.1*sphere_radius, level);
+	return sphere_in_camera_view(sphere_center(), 1.1*tdata().sphere_radius, level);
 }
 
 
@@ -557,12 +573,13 @@ void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves, in
 void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only) {
 
 	if (!created) return;
+	tree_data_t &td(tdata());
 
 	if (shadow_only) {
 		if (!is_over_mesh()) return;
 		glPushMatrix();
 		translate_to(tree_center);
-		draw_tree_shadow_only(draw_branches, draw_leaves, type);
+		td.draw_tree_shadow_only(draw_branches, draw_leaves, type);
 		glPopMatrix();
 		return;
 	}
@@ -570,8 +587,8 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 	float dc_scale(1.0 - 0.95*damage);
 	bcolor = tree_types[type].barkc;
 	UNROLL_3X(bcolor[i_] *= min(1.0f, dc_scale*tree_color[i_]);)
-	gen_leaf_color(type);
-	bool const has_leaves(!get_leaves().empty());
+	td.gen_leaf_color(type);
+	bool const has_leaves(!td.get_leaves().empty());
 	
 	if (draw_leaves && has_leaves) {
 		burn_leaves();
@@ -584,7 +601,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
-	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*base_radius/(distance_to_camera(sphere_center())*DIST_C_SCALE));
+	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(distance_to_camera(sphere_center())*DIST_C_SCALE));
 	if (draw_branches) draw_tree_branches(s, size_scale);
 	if (draw_leaves && has_leaves) draw_tree_leaves(s, size_scale);
 }
@@ -678,7 +695,7 @@ void tree::draw_tree_branches(shader_t const &s, float size_scale) {
 	s.add_uniform_vector3d("world_space_offset", tree_center);
 	glPushMatrix();
 	translate_to(tree_center);
-	draw_branches(size_scale);
+	tdata().draw_branches(size_scale);
 	glPopMatrix();
 }
 
@@ -731,25 +748,34 @@ void tree_data_t::draw_leaves(float size_scale) {
 }
 
 
-void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
+bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
 
-	bool const gen_arrays(!has_leaf_data());
-	int const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
-	if (!gen_arrays && leaf_dynamic_en && size_scale > 0.5) {update_leaf_orients();}
+	bool const gen_arrays(!leaf_data_allocated());
 	if (gen_arrays) {alloc_leaf_data();}
 	if (gen_arrays || (leaves_need_reset() && !leaf_dynamic_en)) {reset_leaf_pos_norm();}
+	// may do duplicate work, but should at least keep the cobj colors in sync
+	if (gen_arrays || leaf_color_changed) {update_all_leaf_colors();}
+	return gen_arrays;
+}
+
+
+void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
+
+	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
+	tree_data_t &td(tdata());
+	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
+	if (!gen_arrays && leaf_dynamic_en && size_scale > 0.5) {update_leaf_orients();}
 
 	if (gen_arrays || leaf_color_changed) {
-		update_all_leaf_colors(); // may do duplicate work, but should at least keep the cobj colors in sync
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
 	if (gen_arrays) {calc_leaf_shadows();}
-	unsigned const num_dlights(enable_dynamic_lights(sphere_center(), sphere_radius));
+	unsigned const num_dlights(enable_dynamic_lights(sphere_center(), td.sphere_radius));
 	s.add_uniform_int("num_dlights", num_dlights);
 	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
 	glPushMatrix();
 	translate_to(tree_center);
-	draw_leaves(size_scale);
+	td.draw_leaves(size_scale);
 	disable_dynamic_lights(num_dlights);
 	glPopMatrix();
 }
@@ -793,13 +819,14 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 
 	int last_xpos(0), last_ypos(0);
 	vector3d local_wind;
-	bool const do_update(check_if_needs_updated());
+	tree_data_t &td(tdata());
+	bool const do_update(td.check_if_needs_updated());
 
-	for (unsigned i = 0; i < get_leaves().size(); i++) { // process leaf wind and collisions
+	for (unsigned i = 0; i < td.get_leaves().size(); i++) { // process leaf wind and collisions
 		float wscale(0.0), hit_angle(0.0);
 
 		if (do_update) {
-			tree_leaf const &leaf(get_leaves()[i]);
+			tree_leaf const &leaf(td.get_leaves()[i]);
 			point const p0(leaf.pts[0] + tree_center);
 			int const xpos(get_xpos(p0.x)), ypos(get_ypos(p0.y));
 			
@@ -836,9 +863,9 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 		}
 		if (wscale != 0.0 || hit_angle != 0.0) {
 			float const angle(0.5*PI*max(-1.0f, min(1.0f, wscale)) + hit_angle); // not physically correct, but it looks good
-			bend_leaf(i, angle); // do we want to update collision objects as well?
+			td.bend_leaf(i, angle); // do we want to update collision objects as well?
 		}
-		float &lcolor(get_leaves()[i].color);
+		float &lcolor(td.get_leaves()[i].color);
 
 		if (LEAF_HEAL_RATE > 0.0 && lcolor > 0.0 && lcolor < 1.0) { // leaf heal
 			if (do_update) {lcolor = min(1.0f, (lcolor + LEAF_HEAL_RATE*fticks));}
@@ -853,7 +880,8 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 	if (!has_leaf_data()) return; // leaf data not yet created (can happen if called when light source changes)
 	// FIXME: if not a private tree_data_t copy, return
 	int const light(get_light());
-	vector<tree_leaf> &leaves(get_leaves());
+	tree_data_t &td(tdata());
+	vector<tree_leaf> &leaves(td.get_leaves());
 
 	for (unsigned i = 0; i < leaves.size(); i++) {
 		tree_leaf &l(leaves[i]);
@@ -863,7 +891,7 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 			bool const shadowed(!leaf_cobjs.empty() && !is_visible_to_light_cobj(l.pts[j]+tree_center, light, 0.0, leaf_cobjs[i], 1));
 			l.shadow_bits |= (int(shadowed) << j);
 		}
-		update_normal_for_leaf(i);
+		td.update_normal_for_leaf(i);
 	}
 }
 
@@ -892,7 +920,7 @@ int tree::delete_tree() {
 	if (!created)  return 0;
 	if (tree_coll_level) remove_collision_objects();
 	if (no_delete) return 0;
-	clear_data();
+	tdata().clear_data(); // FIXME: only if local copy
 	created = 0;
 	return 1;
 }
@@ -1094,20 +1122,26 @@ void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 }
 
 
+//gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
+//gen_tree(pos, 0, -1, 1, 1, 0);
 void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed) {
 
-	type = ((ttype < 0) ? rand2() : ttype)%NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
+	assert(calc_z || user_placed);
+	type        = ((ttype < 0) ? rand2() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
 	tree_center = pos;
-	created = 1;
-	if (calc_z) {tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);}
+	created     = 1;
 	float tree_depth(TREE_DEPTH*(0.5 + 0.5/tree_scale));
-	if (user_placed && calc_z) {tree_depth = tree_center.z - get_tree_z_bottom(lowest_mesh_point(tree_center, base_radius), tree_center);} // more accurate
+	
+	if (calc_z) {
+		tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
+		if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
+	}
 	tree_color.alpha = 1.0;
 	UNROLL_3X(tree_color[i_] = 0.01*rand_gen(80, 120);) // rand_gen() called outside gen_tree_data()
-	gen_tree_data(type, size, tree_depth, trseed);
-	unsigned const nleaves(get_leaves().size());
-	damage       = 0.0;
+	tdata().gen_tree_data(type, size, tree_depth, trseed); // FIXME: guard with an if (!has_tdata()), and assert(user_placed)
+	unsigned const nleaves(tdata().get_leaves().size());
 	damage_scale = (nleaves ? 1.0/nleaves : 0.0);
+	damage       = 0.0;
 	if (add_cobjs) {add_tree_collision_objects();}
 }
 

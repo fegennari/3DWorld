@@ -127,15 +127,16 @@ class tree_data_t {
 	void setup_leaf_vbo();
 
 public:
-	float base_radius, sphere_center_zoff, sphere_radius;
+	float base_radius, sphere_radius, sphere_center_zoff;
 	//unsigned ref_count;
 	//bool private_copy;
 
 	tree_data_t() : branch_vbo(0), branch_ivbo(0), leaf_vbo(0), num_branch_quads(0), num_unique_pts(0),
-		last_update_frame(0), leaves_changed(0), reset_leaves(0), sphere_center_zoff(0.0), sphere_radius(0.0) {}
+		last_update_frame(0), leaves_changed(0), reset_leaves(0), sphere_radius(0.0), sphere_center_zoff(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
+	void deep_copy_no_vbos(tree_data_t &dest) const;
 	void gen_tree_data(int tree_type, int size, float tree_depth, int trseed[2]);
 	void gen_leaf_color(int tree_type);
 	void update_all_leaf_colors();
@@ -149,39 +150,36 @@ public:
 	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves, int tree_type) const;
 	void draw_branches(float size_scale);
 	void draw_leaves(float size_scale);
+	bool leaf_draw_setup(bool leaf_dynamic_en);
 	void update_normal_for_leaf(unsigned i);
 	void reset_leaf_pos_norm();
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
 	void clear_data();
 	void clear_vbos();
-	//void deep_copy(tree_data_t &dest) const;
 };
 
 
-class tree : public tree_data_t {
-
-	//tree_data_t tree_data; // FIXME: by pointer
-	// constant access to shared data
-	//tree_data_t const &tdata() const  {return tree_data;}
-	// non-constant access to shared data (by a single tree per frame)
-	//tree_data_t       &tdata()        {return tree_data;}
-	// non-constant access to a private copy of the data (created the first time this is called)
-	//tree_data_t &tdata_private_copy() {return tree_data;}
+class tree
+{
+	tree_data_t tree_data; // FIXME: by pointer
+	void make_private_tdata_copy();
+	tree_data_t const &tdata() const {return tree_data;}
+	tree_data_t       &tdata()       {return tree_data;}
 
 	int type, created; // FIXME: should type be a member of tree_data_t?
 	bool no_delete, not_visible;
 	point tree_center;
 	float damage, damage_scale;
 	colorRGBA tree_color, bcolor;
-	int trseed[2];
+	int trseed[2]; // FIXME: remove?
 	vector<int> branch_cobjs, leaf_cobjs;
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
 	void update_leaf_orients();
-	bool has_leaf_data() const {return leaf_data_allocated();}
+	bool has_leaf_data() const {return tdata().leaf_data_allocated();}
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const;
 	void create_leaf_obj(unsigned ix) const;
-	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, sphere_center_zoff));}
+	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, tdata().sphere_center_zoff));}
 
 	bool is_over_mesh() const;
 	bool is_visible_to_camera() const;
@@ -204,7 +202,7 @@ public:
 	void gen_tree_shadows(unsigned light_sources);
 	void add_tree_collision_objects();
 	void remove_collision_objects();
-	void clear_vbo() {clear_vbos();}
+	void clear_vbo() {tdata().clear_vbos();}
 	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	int delete_tree();

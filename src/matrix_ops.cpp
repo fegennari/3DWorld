@@ -409,13 +409,10 @@ float proc_mesh_point(point const &pt, float radius, comp_func cf) {
 
 
 float lowest_mesh_point(point const &pt, float radius) {
-
 	return proc_mesh_point(pt, radius, comp_min);
 }
 
-
 float highest_mesh_point(point const &pt, float radius) {
-
 	return proc_mesh_point(pt, radius, comp_max);
 }
 
