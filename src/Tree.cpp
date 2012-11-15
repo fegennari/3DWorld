@@ -52,7 +52,8 @@ float tree_temp_matrix[3], i_matrix[9], re_matrix[3];
 float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), leaf_size(0.0);
 colorRGBA leaf_base_color(BLACK);
 point leaf_points[4]; // z = 0.0 -> -0.05
-tree_cont_t t_trees;
+tree_data_manager_t tree_data_manager;
+tree_cont_t t_trees(tree_data_manager);
 
 
 extern bool has_snow, no_sun_lpos_update;
@@ -308,15 +309,20 @@ void draw_trees(bool shadow_only) {
 }
 
 
-void tree_data_t::deep_copy_no_vbos(tree_data_t &dest) const {
-
-	// FIXME: WRITE
+void tree_data_t::make_private_copy(tree_data_t &dest) const {
+	
+	dest = *this;
+	dest.clear_vbo_ixs();
+	//dest.ref_count = 1;
 }
 
 
 void tree::make_private_tdata_copy() {
 
-	// FIXME: WRITE
+	if (!tree_data || td_is_private()) return; // tree pointer is NULL or already private
+	tree_data->make_private_copy(priv_tree_data);
+	//tree_data->dec_ref_count();
+	tree_data = NULL;
 }
 
 
@@ -359,12 +365,12 @@ colorRGB tree_data_t::get_leaf_color(unsigned i) const {
 }
 
 
-void tree_data_t::update_leaf_color(unsigned i) {
+void tree_data_t::update_leaf_color(unsigned i, bool no_mark_changed) {
 
 	assert(i < leaves.size());
 	colorRGB const color(leaves[i].calc_leaf_color(leaf_color, base_color));
 	UNROLL_4X(leaf_data[i_+(i<<2)].set_c3(color);)
-	leaves_changed = 1;
+	if (!no_mark_changed) {leaves_changed = 1;}
 }
 
 
@@ -381,10 +387,10 @@ void tree::update_leaf_cobj_color(unsigned i) {
 }
 
 
-void tree::copy_color(unsigned i) {
+void tree::copy_color(unsigned i, bool no_mark_changed) {
 
 	if (!has_leaf_data()) return;
-	tdata().update_leaf_color(i);
+	tdata().update_leaf_color(i, no_mark_changed);
 	if (!leaf_cobjs.empty()) {update_leaf_cobj_color(i);}
 }
 
@@ -419,8 +425,10 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 
 void tree::burn_leaves() {
 
-	float const max_t(get_max_t(LEAF)), burn_amt(0.25); // FIXME: burn_amt depends on tree_data_t ref_count
-	vector<tree_leaf> &leaves(tdata().get_leaves());
+	float const max_t(get_max_t(LEAF));
+	float const burn_amt(td_is_private() ? 0.25 : 0.12); // burn_amt depends on tree_data_t ref_count?
+	tree_data_t &td(tdata());
+	vector<tree_leaf> &leaves(td.get_leaves());
 	if (temperature < max_t || leaves.empty()) return;
 	unsigned const num_burn(max(1U, min(5U, unsigned(5*(temperature - max_t)/max_t))));
 	damage += ((1.0 - damage)*num_burn)/leaves.size();
@@ -430,7 +438,7 @@ void tree::burn_leaves() {
 		leaves[index].color = max(0.0f, (leaves[index].color - burn_amt));
 		copy_color(index);
 		if (rand()&1) {gen_smoke(leaves[index].pts[0] + tree_center);}
-		if (leaves[index].color <= 0.0) {remove_leaf(index, 1);} // FIXME: only if private tree_data_t copy
+		if (td_is_private() && leaves[index].color <= 0.0) {remove_leaf(index, 1);}
 	}
 }
 
@@ -508,9 +516,11 @@ void tree::lightning_damage(point const &ltpos) {
 }
 
 
-void tree::drop_leaves() const {
+void tree::drop_leaves() {
 
-	unsigned const nleaves(tdata().get_leaves().size());
+	tree_data_t &td(tdata());
+	vector<tree_leaf> &leaves(td.get_leaves());
+	unsigned const nleaves(leaves.size());
 	if (damage >= 1.0 || nleaves == 0) return; // too damaged
 	float const temp0(max(1.0f, min(0.3f, (20.0f-temperature)/30.0f)));
 	int const rgen(min(LEAF_GEN_RAND2/10, int(rand_uniform(0.5, 1.5)*temp0*LEAF_GEN_RAND2/fticks)));
@@ -518,10 +528,11 @@ void tree::drop_leaves() const {
 	for (unsigned i = (rand()%LEAF_GEN_RAND1); i < nleaves; i += LEAF_GEN_RAND1) {
 		if ((rand()%rgen) != 0) continue;
 		create_leaf_obj(i);
-		// create a new leaf with a different color (and orient?)
-		// FIXME: only if a private copy of tree_data_t, but don't set leaves_changed
-		//leaves[i].create_init_color(0);
-		//copy_color(i);
+		
+		if (td_is_private()) { // create a new leaf with a different color (and orient?)
+			leaves[i].create_init_color(0);
+			copy_color(i, 1); // don't set leaves_changed (too slow)
+		}
 	}
 }
 
@@ -532,13 +543,19 @@ inline float tree_leaf::get_norm_scale(unsigned pt_ix) const {
 }
 
 
+void tree_data_t::clear_vbo_ixs() {
+
+	branch_vbo = branch_ivbo = leaf_vbo = 0;
+	num_branch_quads = num_unique_pts   = 0;
+}
+
+
 void tree_data_t::clear_vbos() {
 
 	delete_vbo(branch_vbo);
 	delete_vbo(branch_ivbo);
 	delete_vbo(leaf_vbo);
-	branch_vbo = branch_ivbo = leaf_vbo = 0;
-	num_branch_quads = num_unique_pts   = 0;
+	clear_vbo_ixs();
 }
 
 
@@ -752,7 +769,7 @@ bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
 
 	bool const gen_arrays(!leaf_data_allocated());
 	if (gen_arrays) {alloc_leaf_data();}
-	if (gen_arrays || (leaves_need_reset() && !leaf_dynamic_en)) {reset_leaf_pos_norm();}
+	if (gen_arrays || (reset_leaves && !leaf_dynamic_en)) {reset_leaf_pos_norm();}
 	// may do duplicate work, but should at least keep the cobj colors in sync
 	if (gen_arrays || leaf_color_changed) {update_all_leaf_colors();}
 	return gen_arrays;
@@ -877,10 +894,9 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 
 void tree::calc_leaf_shadows() { // process leaf shadows/normals
 
-	if (!has_leaf_data()) return; // leaf data not yet created (can happen if called when light source changes)
-	// FIXME: if not a private tree_data_t copy, return
-	int const light(get_light());
 	tree_data_t &td(tdata());
+	if (!td.leaf_data_allocated() || !td_is_private()) return; // leaf data not yet created (can happen if called when light source changes), or shared data
+	int const light(get_light());
 	vector<tree_leaf> &leaves(td.get_leaves());
 
 	for (unsigned i = 0; i < leaves.size(); i++) {
@@ -914,13 +930,19 @@ void delete_trees() {
 }
 
 
+void tree::clear_vbo() {
+	
+	if (td_is_private()) {tdata().clear_vbos();}
+}
+
+
 int tree::delete_tree() {
 
 	clear_vbo();
 	if (!created)  return 0;
-	if (tree_coll_level) remove_collision_objects();
+	if (tree_coll_level) {remove_collision_objects();}
 	if (no_delete) return 0;
-	tdata().clear_data(); // FIXME: only if local copy
+	if (td_is_private()) {tdata().clear_data();}
 	created = 0;
 	return 1;
 }
@@ -1122,6 +1144,15 @@ void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 }
 
 
+float get_default_tree_depth() {
+	return TREE_DEPTH*(0.5 + 0.5/tree_scale);
+}
+
+void gen_trseeds(int trseed[2]) {
+	for (unsigned d = 0; d < 2; ++d) {trseed[d] = rand2();}
+}
+
+
 //gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
 //gen_tree(pos, 0, -1, 1, 1, 0);
 void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed) {
@@ -1130,16 +1161,27 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	type        = ((ttype < 0) ? rand2() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
 	tree_center = pos;
 	created     = 1;
-	float tree_depth(TREE_DEPTH*(0.5 + 0.5/tree_scale));
-	
-	if (calc_z) {
-		tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
-		if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
-	}
 	tree_color.alpha = 1.0;
 	UNROLL_3X(tree_color[i_] = 0.01*rand_gen(80, 120);) // rand_gen() called outside gen_tree_data()
-	tdata().gen_tree_data(type, size, tree_depth, trseed); // FIXME: guard with an if (!has_tdata()), and assert(user_placed)
-	unsigned const nleaves(tdata().get_leaves().size());
+	tree_data_t &td(tdata());
+
+	if (td.is_created()) { // pre-allocated, shared tree
+		assert(!td_is_private());
+		assert(!user_placed);
+		assert(size <= 0); // too strong?
+		// FIXME: check that td.type == type
+		gen_trseeds(trseed);
+	}
+	else {
+		float tree_depth(get_default_tree_depth());
+	
+		if (calc_z) {
+			tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
+			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
+		}
+		td.gen_tree_data(type, size, tree_depth, trseed); // create the tree here
+	}
+	unsigned const nleaves(td.get_leaves().size());
 	damage_scale = (nleaves ? 1.0/nleaves : 0.0);
 	damage       = 0.0;
 	if (add_cobjs) {add_tree_collision_objects();}
@@ -1223,7 +1265,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	max_2_angle_rotate     = 50.0;
 	max_3_angle_rotate     = 50.0;
 	float const branch_1_random_rotate = 40.0;
-	for (unsigned d = 0; d < 2; ++d) {trseed[d] = rand2();}
+	gen_trseeds(trseed);
 
 	//temporary variables
 	int num_b_so_far(0);
@@ -1729,10 +1771,7 @@ void tree_cont_t::gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_
 			if (max_unique_trees > 0) {
 				global_rand_gen.rseed1 = global_rand_gen.rseed1 % max_unique_trees;
 				global_rand_gen.rseed2 = 12345;
-
-				if (tree_coll_level == 0) {
-					// FIXME: unique the trees so they can be reused
-				}
+				// FIXME: unique the trees so they can be reused using shared_tree_data
 			}
 			push_back(tree());
 			back().regen_tree(pos, 0); // use random function #2 for trees
@@ -1801,8 +1840,13 @@ void tree_cont_t::add_cobjs() {
 	for (iterator i = begin(); i != end(); ++i) {i->add_tree_collision_objects();}
 }
 
+void tree_data_manager_t::clear_vbos() {
+	for (iterator i = begin(); i != end(); ++i) {i->clear_vbos();}
+}
+
 void tree_cont_t::clear_vbos() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_vbo();}
+	shared_tree_data.clear_vbos();
 }
 
 
