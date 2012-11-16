@@ -315,6 +315,7 @@ void tree_data_t::make_private_copy(tree_data_t &dest) const {
 
 void tree::make_private_tdata_copy() {
 
+	//cout << "make private copy, is_private: " << td_is_private() << endl;
 	if (!tree_data || td_is_private()) return; // tree pointer is NULL or already private
 	tree_data->make_private_copy(priv_tree_data);
 	//tree_data->dec_ref_count();
@@ -432,11 +433,11 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 
 void tree::burn_leaves() {
 
-	float const max_t(get_max_t(LEAF));
-	float const burn_amt(td_is_private() ? 0.25 : 0.12); // burn_amt depends on tree_data_t ref_count?
 	tree_data_t &td(tdata());
 	vector<tree_leaf> &leaves(td.get_leaves());
+	float const max_t(get_max_t(LEAF));
 	if (temperature < max_t || leaves.empty()) return;
+	float const burn_amt(0.25*((td_is_private() || t_trees.empty()) ? 1.0 : float(tree_data_manager.size())/float(t_trees.size())));
 	unsigned const num_burn(max(1U, min(5U, unsigned(5*(temperature - max_t)/max_t))));
 	damage += ((1.0 - damage)*num_burn)/leaves.size();
 
@@ -445,7 +446,7 @@ void tree::burn_leaves() {
 		leaves[index].color = max(0.0f, (leaves[index].color - burn_amt));
 		copy_color(index);
 		if (rand()&1) {gen_smoke(leaves[index].pts[0] + tree_center);}
-		if (td_is_private() && leaves[index].color <= 0.0) {remove_leaf(index, 1);}
+		if (td_is_private() && leaves[index].color <= 0.0) {remove_leaf(index, 1);} // Note: if we modify shared data, leaves.size() must be dynamic
 	}
 }
 
@@ -500,17 +501,17 @@ void tree::blast_damage(blastr const *const blast_radius) {
 	float const bradius(blast_radius->cur_size), bdamage(LEAF_DAM_SCALE*blast_radius->damage);
 	if (bdamage == 0.0) return;
 	point const &bpos(blast_radius->pos);
-	float const radius(bradius + tdata().sphere_radius);
+	float const radius(bradius + tdata().sphere_radius), bradius_sq(bradius*bradius);
 	if (p2p_dist_sq(bpos, sphere_center()) > radius*radius) return;
-	float const bradius_sq(bradius*bradius);
-	vector<tree_leaf> const &leaves(tdata().get_leaves());
+	unsigned nleaves(tdata().get_leaves().size());
 
-	for (unsigned i = 0; i < leaves.size(); i++) {
-		if (leaves[i].color < 0.0) continue;
-		float const dist(p2p_dist_sq(bpos, leaves[i].pts[0]+tree_center));
+	for (unsigned i = 0; i < nleaves; i++) {
+		tree_leaf const &l(tdata().get_leaves()[i]);
+		if (l.color < 0.0) continue;
+		float const dist(p2p_dist_sq(bpos, l.pts[0]+tree_center));
 		if (dist < TOLERANCE || dist > bradius_sq) continue;
 		float const blast_damage(bdamage*InvSqrt(dist));
-		if (damage_leaf(i, blast_damage)) --i; // force reprocess of this leaf, wraparound to -1 is OK
+		if (damage_leaf(i, blast_damage)) {--i; --nleaves;} // force reprocess of this leaf, wraparound to -1 is OK
 	} // for i
 	damage = min(1.0f, damage);
 }
@@ -844,8 +845,9 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	vector3d local_wind;
 	tree_data_t &td(tdata());
 	bool const do_update(td.check_if_needs_updated());
+	unsigned nleaves(td.get_leaves().size());
 
-	for (unsigned i = 0; i < td.get_leaves().size(); i++) { // process leaf wind and collisions
+	for (unsigned i = 0; i < nleaves; i++) { // process leaf wind and collisions
 		float wscale(0.0), hit_angle(0.0);
 
 		if (do_update) {
@@ -865,21 +867,26 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 			coll_obj &cobj(get_leaf_cobj(i));
 				
 			if (cobj.last_coll > 0) {
+				bool removed(0);
+
 				// Note: the code below can cause the tree_data_t to be deep copied, invalidating any iterators
 				if (cobj.coll_type == BEAM) { // do burn damage
-					if (damage_leaf(i, BEAM_DAMAGE)) {--i;}
+					removed = damage_leaf(i, BEAM_DAMAGE);
 				}
 				else {
 					if (cobj.coll_type == PROJECTILE) {
 						if ((rand()&3) == 0) { // shoot off leaf
 							create_leaf_obj(i);
 							remove_leaf(i, 1);
-							--i;
-							continue;
+							removed = 1;
 						}
 						cobj.coll_type = IMPACT; // reset to impact after first hit
 					}
 					hit_angle += PI_TWO*cobj.last_coll/TICKS_PER_SECOND; // 90 degree max rotate
+				}
+				if (removed) {
+					--i; --nleaves;
+					continue;
 				}
 				cobj.last_coll = ((cobj.last_coll < iticks) ? 0 : (cobj.last_coll - iticks));
 			}
@@ -1769,12 +1776,14 @@ void tree_cont_t::gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_
 			pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 			if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
 			if (tree_mode == 3 && get_tree_class_from_height(pos.z) != TREE_CLASS_DECID) continue; // use a small (simple) tree here
+			push_back(tree());
 				
 			if (max_unique_trees > 0) {
-				global_rand_gen.rseed1 = global_rand_gen.rseed1 % max_unique_trees;
-				// FIXME: unique the trees so they can be reused using shared_tree_data
+				unsigned const tree_id(global_rand_gen.rseed1 % max_unique_trees);
+				//cout << "selected tree " << tree_id << " of " << shared_tree_data.size() << endl;
+				assert(tree_id < shared_tree_data.size());
+				back().bind_to_td(&shared_tree_data[tree_id]);
 			}
-			push_back(tree());
 			back().regen_tree(pos, 0); // use random function #2 for trees
 		}
 	}
@@ -1814,7 +1823,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 		}
 		PRINT_TIME(" Delete Trees");
 		t_trees.gen_deterministic(ext_x1, ext_x2, ext_y1, ext_y2);
-		if (!scrolling) cout << "Num trees = " << t_trees.size() << endl;
+		if (!scrolling) {cout << "Num trees = " << t_trees.size() << endl;}
 		last_rgi   = rand_gen_index;
 		last_xoff2 = xoff2;
 		last_yoff2 = yoff2;

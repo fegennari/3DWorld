@@ -165,7 +165,6 @@ class tree
 	tree_data_t priv_tree_data; // by pointer?
 	tree_data_t *tree_data; // by index?
 	void make_private_tdata_copy();
-	void bind_to_td(tree_data_t *td);
 	tree_data_t const &tdata() const {return (tree_data ? *tree_data : priv_tree_data);}
 	tree_data_t       &tdata()       {return (tree_data ? *tree_data : priv_tree_data);}
 	bool td_is_private() const {return (tree_data == NULL);}
@@ -199,6 +198,7 @@ class tree
 
 public:
 	tree() : tree_data(NULL), created(0), no_delete(0), not_visible(0) {}
+	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed);
 	void regen_tree(point const &pos, int recalc_shadows);
 	void calc_leaf_shadows();
