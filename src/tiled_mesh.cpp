@@ -10,6 +10,7 @@
 #include "small_tree.h"
 #include "scenery.h"
 #include "grass.h"
+#include "tree_3dw.h"
 
 
 bool const DEBUG_TILES        = 0;
@@ -39,6 +40,7 @@ extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, re
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
 extern texture_t textures[];
+extern tree_data_manager_t tree_data_manager;
 
 bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 
@@ -95,8 +97,9 @@ class tile_t {
 	vector<unsigned char> tree_map;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
-	small_tree_group trees;
+	small_tree_group pine_trees;
 	scenery_group scenery;
+	tree_cont_t trees;
 
 	struct grass_block_t {
 		unsigned ix; // 0 is unused
@@ -133,7 +136,7 @@ class tile_t {
 public:
 	typedef point vert_type_t;
 
-	tile_t() : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0) {
+	tile_t() : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0), trees(tree_data_manager) {
 		init_vbo_ids();
 	}
 	// can't free in the destructor because the gl context may be destroyed before this point
@@ -141,7 +144,7 @@ public:
 	
 	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_tree_dxoff(0), init_tree_dyoff(0),
 		init_scenery_dxoff(0), init_scenery_dyoff(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(size_), stride(size+1),
-		zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1), in_queue(0)
+		zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1), in_queue(0), trees(tree_data_manager)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -161,8 +164,8 @@ public:
 	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), tzmax);}
 	bool has_water() const {return (mzmin < water_plane_z);}
 	bool all_water() const {return (get_tile_zmax() < water_plane_z);}
-	bool trees_generated() const {return trees.generated;}
-	bool has_trees() const {return (trees_generated() && !trees.empty());}
+	bool trees_generated() const {return pine_trees.generated;}
+	bool has_trees() const {return (trees_generated() && !pine_trees.empty());}
 	float get_avg_veg() const {return 0.25*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
 
 	point get_center() const {
@@ -184,7 +187,7 @@ public:
 	}
 
 	unsigned get_gpu_memory() const {
-		unsigned mem(trees.get_gpu_mem() + scenery.get_gpu_mem());
+		unsigned mem(pine_trees.get_gpu_mem() + scenery.get_gpu_mem());
 		unsigned const num_texels(stride*stride);
 		if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
 		if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
@@ -196,14 +199,14 @@ public:
 		}
 		return mem;
 	}
-	unsigned get_tree_mem() const {return trees.capacity()*sizeof(small_tree);}
+	unsigned get_tree_mem() const {return pine_trees.capacity()*sizeof(small_tree);}
 
 	void clear() {
 		clear_vbo_tid(1, 1);
 		tree_map.clear();
 		zvals.clear();
 		clear_shadows();
-		trees.clear_all();
+		pine_trees.clear_all();
 		scenery.clear();
 		grass_blocks.clear();
 	}
@@ -234,7 +237,7 @@ public:
 			for (unsigned i = 0; i < NUM_LODS; ++i) {delete_vbo(ivbo[i]);}
 			init_vbo_ids();
 			clear_shadows();
-			trees.clear_vbos();
+			pine_trees.clear_vbos();
 			scenery.clear_vbos_and_dlists();
 		}
 		if (tclear) {clear_tids();}
@@ -393,7 +396,7 @@ public:
 	}
 
 	void apply_ao_shadows_for_trees(small_tree_group const &tg, point const &tree_off, bool no_adj_test) {
-		assert(trees.generated);
+		assert(pine_trees.generated);
 
 		for (small_tree_group::const_iterator i = tg.begin(); i != tg.end(); ++i) {
 			add_tree_ao_shadow((i->get_pos() + tree_off), i->get_pine_tree_radius(), no_adj_test);
@@ -405,7 +408,7 @@ public:
 					tile_t const *const adj_tile(get_adj_tile_smap(dx, dy));
 					if (!adj_tile) continue;
 					point const tree_off2((init_dxoff - adj_tile->init_tree_dxoff)*DX_VAL, (init_dyoff - adj_tile->init_tree_dyoff)*DY_VAL, 0.0);
-					apply_ao_shadows_for_trees(adj_tile->trees, tree_off2, 1);
+					apply_ao_shadows_for_trees(adj_tile->pine_trees, tree_off2, 1);
 				}
 			}
 		}
@@ -414,7 +417,7 @@ public:
 	void apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
 		//RESET_TIME;
 		point const tree_off((init_dxoff - init_tree_dxoff)*DX_VAL, (init_dyoff - init_tree_dyoff)*DY_VAL, 0.0);
-		apply_ao_shadows_for_trees(trees, tree_off, 0);
+		apply_ao_shadows_for_trees(pine_trees, tree_off, 0);
 		//PRINT_TIME("Shadows");
 	}
 
@@ -626,20 +629,20 @@ public:
 	void init_tree_draw() {
 		init_tree_dxoff = -xoff2;
 		init_tree_dyoff = -yoff2;
-		trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff, vegetation*get_avg_veg());
+		pine_trees.gen_trees(x1+init_tree_dxoff, y1+init_tree_dyoff, x2+init_tree_dxoff, y2+init_tree_dyoff, vegetation*get_avg_veg());
 		tzmax = mzmin;
-		trmax = trees.max_pt_radius;
+		trmax = pine_trees.max_pt_radius;
 		
-		for (small_tree_group::iterator i = trees.begin(); i != trees.end(); ++i) {
+		for (small_tree_group::iterator i = pine_trees.begin(); i != pine_trees.end(); ++i) {
 			tzmax = max(tzmax, i->get_zmax());
 		}
 		radius = calc_radius() + trmax; // is this really needed?
-		trees.calc_trunk_pts();
+		pine_trees.calc_trunk_pts();
 		tree_map.resize(stride*stride, 255);
 	}
 
 	void update_tree_state(bool upload_if_needed) {
-		if (trees.empty()) return;
+		if (pine_trees.empty()) return;
 		float const weight(get_tree_far_weight());
 		float const weights[2] = {1.0-weight, weight}; // {high, low} detail
 
@@ -648,24 +651,24 @@ public:
 				if (upload_if_needed) {
 					vector3d const delta(get_camera_pos() - get_center());
 					bool const pri_dim(fabs(delta.y) < fabs(delta.x));
-					trees.finalize_upload_and_clear_pts((d != 0), pri_dim); // needed for drawing
+					pine_trees.finalize_upload_and_clear_pts((d != 0), pri_dim); // needed for drawing
 				}
 			}
 			else { // not needed
-				trees.clear_vbo_and_ids_if_needed(d != 0);
+				pine_trees.clear_vbo_and_ids_if_needed(d != 0);
 			}
 		}
 	}
 
-	unsigned num_trees() const {return trees.size();}
+	unsigned num_trees() const {return pine_trees.size();}
 
 	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail) const {
 		bool const draw_all(low_detail || camera_pdu.point_visible_test(get_center())); // tile center is in view
-		trees.draw_pine_leaves(0, low_detail, draw_all, xlate);
+		pine_trees.draw_pine_leaves(0, low_detail, draw_all, xlate);
 	}
 
 	void draw_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass) const {
-		if (trees.empty()) return;
+		if (pine_trees.empty()) return;
 		glPushMatrix();
 		vector3d const xlate(((xoff - xoff2) - init_tree_dxoff)*DX_VAL, ((yoff - yoff2) - init_tree_dyoff)*DY_VAL, 0.0);
 		translate_to(xlate);
@@ -674,10 +677,10 @@ public:
 			float const dscale(get_tree_dist_scale());
 
 			if (dscale < 1.0) { // close, draw as polygons
-				trees.draw_branches(0, xlate, &trunk_pts);
+				pine_trees.draw_branches(0, xlate, &trunk_pts);
 			}
 			else if (dscale < 2.0) { // far away, use low detail branches
-				trees.add_trunk_pts(xlate, trunk_pts);
+				pine_trees.add_trunk_pts(xlate, trunk_pts);
 			} // else very far, skip branches
 		}
 		if (draw_near_leaves || draw_far_leaves) { // could use reflection_pass as an optimization

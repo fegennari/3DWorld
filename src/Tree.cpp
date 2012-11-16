@@ -113,7 +113,7 @@ bool tree::is_over_mesh() const {
 
 void tree::gen_tree_shadows(unsigned light_sources) {
 
-	if (shadow_detail < 2 || !(tree_mode & 1) || !created) return;
+	if (shadow_detail < 2 || !physics_enabled()) return;
 	// Note: not entirely correct since an off mesh tree can still cast a shadow on the mesh
 	if (!is_over_mesh()) return; // optimization
 	tree_data_t const &td(tdata());
@@ -141,7 +141,7 @@ void tree::gen_tree_shadows(unsigned light_sources) {
 void tree::add_tree_collision_objects() {
 
 	//RESET_TIME;
-	if (!(tree_mode & 1) || !tree_coll_level || !created) return;
+	if (!tree_coll_level || !physics_enabled()) return;
 	remove_collision_objects();
 	if (!is_over_mesh()) return; // optimization
 	int const btid(tree_types[type].bark_tex), branch_coll_level(min(tree_coll_level, 4));
@@ -433,6 +433,7 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 
 void tree::burn_leaves() {
 
+	if (!physics_enabled()) return;
 	tree_data_t &td(tdata());
 	vector<tree_leaf> &leaves(td.get_leaves());
 	float const max_t(get_max_t(LEAF));
@@ -448,6 +449,12 @@ void tree::burn_leaves() {
 		if (rand()&1) {gen_smoke(leaves[index].pts[0] + tree_center);}
 		if (td_is_private() && leaves[index].color <= 0.0) {remove_leaf(index, 1);} // Note: if we modify shared data, leaves.size() must be dynamic
 	}
+}
+
+
+bool tree::physics_enabled() const {
+
+	return (created && (tree_mode & 1) && world_mode == WMODE_GROUND);
 }
 
 
@@ -497,6 +504,7 @@ bool tree::damage_leaf(unsigned i, float damage_done) {
 
 void tree::blast_damage(blastr const *const blast_radius) {
 
+	if (!physics_enabled()) return;
 	assert(blast_radius);
 	float const bradius(blast_radius->cur_size), bdamage(LEAF_DAM_SCALE*blast_radius->damage);
 	if (bdamage == 0.0) return;
@@ -526,6 +534,7 @@ void tree::lightning_damage(point const &ltpos) {
 
 void tree::drop_leaves() {
 
+	if (!physics_enabled()) return;
 	tree_data_t &td(tdata());
 	vector<tree_leaf> &leaves(td.get_leaves());
 	unsigned const nleaves(leaves.size());
@@ -845,6 +854,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	vector3d local_wind;
 	tree_data_t &td(tdata());
 	bool const do_update(td.check_if_needs_updated()), priv_data(td_is_private());
+	if (!do_update && !physics_enabled()) return;
 	unsigned nleaves(td.get_leaves().size());
 
 	for (unsigned i = 0; i < nleaves; i++) { // process leaf wind and collisions
@@ -908,6 +918,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 
 void tree::calc_leaf_shadows() { // process leaf shadows/normals
 
+	if (!physics_enabled()) return;
 	tree_data_t &td(tdata());
 	if (!td.leaf_data_allocated() || !td_is_private()) return; // leaf data not yet created (can happen if called when light source changes), or shared data
 	int const light(get_light());

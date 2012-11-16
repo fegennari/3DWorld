@@ -178,7 +178,8 @@ class tree
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
 	void update_leaf_orients();
-	bool has_leaf_data() const {return tdata().leaf_data_allocated();}
+	bool has_leaf_data()   const {return tdata().leaf_data_allocated();}
+	bool physics_enabled() const;
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const;
 	void create_leaf_obj(unsigned ix) const;
 	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, tdata().sphere_center_zoff));}
