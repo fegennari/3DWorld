@@ -94,13 +94,10 @@ float get_tree_z_bottom(float z, point const &pos) {
 }
 
 
-inline colorRGBA get_leaf_base_color(int type) {
+colorRGBA get_leaf_base_color(int type) {
 
 	colorRGBA color(tree_types[type].leafc);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		color[i] = CLIP_TO_01(color[i] + leaf_base_color[i]);
-	}
+	UNROLL_3X(color[i_] = CLIP_TO_01(color[i_] + leaf_base_color[i_]);)
 	return color;
 }
 
@@ -148,7 +145,6 @@ void tree::add_tree_collision_objects() {
 	remove_collision_objects();
 	if (!is_over_mesh()) return; // optimization
 	int const btid(tree_types[type].bark_tex), branch_coll_level(min(tree_coll_level, 4));
-	colorRGBA const bcolor(tree_types[type].barkc);
 	cobj_params cp(0.8, bcolor, TEST_RTREE_COBJS, 0, NULL, 0, btid, 4.0, 1, 0);
 	cp.shadow = 0; // will be handled by gen_tree_shadows()
 	assert(branch_cobjs.empty());
@@ -326,6 +322,16 @@ void tree::make_private_tdata_copy() {
 }
 
 
+void tree::bind_to_td(tree_data_t *td) {
+
+	assert(td);
+	assert(!created); // too strong?
+	assert(leaf_cobjs.empty() && branch_cobjs.empty());
+	if (td_is_private()) {tdata().clear_data();}
+	tree_data = td;
+}
+
+
 coll_obj &tree::get_leaf_cobj(unsigned i) const {
 
 	assert(i < leaf_cobjs.size());
@@ -336,6 +342,7 @@ coll_obj &tree::get_leaf_cobj(unsigned i) const {
 
 void tree_data_t::gen_leaf_color(int tree_type) {
 
+	set_rand2_state(trseed[0], trseed[1]);
 	colorRGBA const leafc(get_leaf_base_color(tree_type));
 	base_color.alpha = 1.0;
 
@@ -600,7 +607,6 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 		glPopMatrix();
 		return;
 	}
-	set_rand2_state(trseed[0], trseed[1]);
 	float dc_scale(1.0 - 0.95*damage);
 	bcolor = tree_types[type].barkc;
 	UNROLL_3X(bcolor[i_] *= min(1.0f, dc_scale*tree_color[i_]);)
@@ -1148,10 +1154,6 @@ float get_default_tree_depth() {
 	return TREE_DEPTH*(0.5 + 0.5/tree_scale);
 }
 
-void gen_trseeds(int trseed[2]) {
-	for (unsigned d = 0; d < 2; ++d) {trseed[d] = rand2();}
-}
-
 
 //gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
 //gen_tree(pos, 0, -1, 1, 1, 0);
@@ -1170,7 +1172,6 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 		assert(!user_placed);
 		assert(size <= 0); // too strong?
 		// FIXME: check that td.type == type
-		gen_trseeds(trseed);
 	}
 	else {
 		float tree_depth(get_default_tree_depth());
@@ -1179,7 +1180,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
-		td.gen_tree_data(type, size, tree_depth, trseed); // create the tree here
+		td.gen_tree_data(type, size, tree_depth); // create the tree here
 	}
 	unsigned const nleaves(td.get_leaves().size());
 	damage_scale = (nleaves ? 1.0/nleaves : 0.0);
@@ -1188,7 +1189,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 }
 
 
-void tree_data_t::gen_tree_data(int tree_type, int size, float tree_depth, int trseed[2]) {
+void tree_data_t::gen_tree_data(int tree_type, int size, float tree_depth) {
 
 	calc_leaf_points(); // required for placed trees
 	leaf_data.clear();
@@ -1265,7 +1266,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	max_2_angle_rotate     = 50.0;
 	max_3_angle_rotate     = 50.0;
 	float const branch_1_random_rotate = 40.0;
-	gen_trseeds(trseed);
+	for (unsigned d = 0; d < 2; ++d) {trseed[d] = rand2();}
 
 	//temporary variables
 	int num_b_so_far(0);
@@ -1748,6 +1749,7 @@ void tree_cont_t::gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_
 	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
 	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1, XY_MULT_SIZE/num_trees));
 	unsigned const skip_val(max(1, int(1.0/sqrt(tree_scale)))); // similar to deterministic gen in scenery.cpp
+	shared_tree_data.ensure_init();
 
 	for (int i = ext_y1; i < ext_y2; i += skip_val) {
 		for (int j = ext_x1; j < ext_x2; j += skip_val) {
@@ -1770,7 +1772,6 @@ void tree_cont_t::gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_
 				
 			if (max_unique_trees > 0) {
 				global_rand_gen.rseed1 = global_rand_gen.rseed1 % max_unique_trees;
-				global_rand_gen.rseed2 = 12345;
 				// FIXME: unique the trees so they can be reused using shared_tree_data
 			}
 			push_back(tree());
@@ -1832,6 +1833,15 @@ void tree::regen_tree(point const &pos, int recalc_shadows) {
 }
 
 
+void tree_data_manager_t::ensure_init() {
+	if (max_unique_trees > 0 && empty()) {resize(max_unique_trees);}
+}
+
+void tree_data_manager_t::clear_vbos() {
+	for (iterator i = begin(); i != end(); ++i) {i->clear_vbos();}
+}
+
+
 void tree_cont_t::shift_by(vector3d const &vd) {
 	for (iterator i = begin(); i != end(); ++i) {i->shift_tree(vd);}
 }
@@ -1840,13 +1850,8 @@ void tree_cont_t::add_cobjs() {
 	for (iterator i = begin(); i != end(); ++i) {i->add_tree_collision_objects();}
 }
 
-void tree_data_manager_t::clear_vbos() {
-	for (iterator i = begin(); i != end(); ++i) {i->clear_vbos();}
-}
-
 void tree_cont_t::clear_vbos() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_vbo();}
-	shared_tree_data.clear_vbos();
 }
 
 
@@ -1857,7 +1862,11 @@ void shift_trees(vector3d const &vd) {
 
 void add_tree_cobjs   () {t_trees.add_cobjs();}
 void remove_tree_cobjs() {t_trees.remove_cobjs();}
-void clear_tree_vbos  () {t_trees.clear_vbos();}
+
+void clear_tree_vbos() {
+	t_trees.clear_vbos();
+	tree_data_manager.clear_vbos();
+}
 
 
 

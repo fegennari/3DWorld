@@ -116,6 +116,7 @@ class tree_data_t {
 
 	int branch_vbo, branch_ivbo, leaf_vbo;
 	unsigned num_branch_quads, num_unique_pts;
+	int trseed[2];
 	colorRGBA base_color, leaf_color;
 	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
@@ -137,7 +138,7 @@ public:
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
 	void make_private_copy(tree_data_t &dest) const;
-	void gen_tree_data(int tree_type, int size, float tree_depth, int trseed[2]);
+	void gen_tree_data(int tree_type, int size, float tree_depth);
 	void gen_leaf_color(int tree_type);
 	void update_all_leaf_colors();
 	void update_leaf_color(unsigned i, bool no_mark_changed=0);
@@ -164,6 +165,7 @@ class tree
 	tree_data_t priv_tree_data; // by pointer?
 	tree_data_t *tree_data; // by index?
 	void make_private_tdata_copy();
+	void bind_to_td(tree_data_t *td);
 	tree_data_t const &tdata() const {return (tree_data ? *tree_data : priv_tree_data);}
 	tree_data_t       &tdata()       {return (tree_data ? *tree_data : priv_tree_data);}
 	bool td_is_private() const {return (tree_data == NULL);}
@@ -173,7 +175,6 @@ class tree
 	point tree_center;
 	float damage, damage_scale;
 	colorRGBA tree_color, bcolor;
-	int trseed[2];
 	vector<int> branch_cobjs, leaf_cobjs;
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
@@ -217,6 +218,7 @@ public:
 
 struct tree_data_manager_t : public vector<tree_data_t> {
 
+	void ensure_init();
 	void clear_vbos();
 };
 
