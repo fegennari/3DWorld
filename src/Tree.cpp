@@ -844,7 +844,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	int last_xpos(0), last_ypos(0);
 	vector3d local_wind;
 	tree_data_t &td(tdata());
-	bool const do_update(td.check_if_needs_updated());
+	bool const do_update(td.check_if_needs_updated()), priv_data(td_is_private());
 	unsigned nleaves(td.get_leaves().size());
 
 	for (unsigned i = 0; i < nleaves; i++) { // process leaf wind and collisions
@@ -852,12 +852,13 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 
 		if (do_update) {
 			tree_leaf const &leaf(td.get_leaves()[i]);
-			point const p0(leaf.pts[0] + tree_center);
+			point p0(leaf.pts[0]);
+			if (priv_data) {p0 += tree_center;}
 			int const xpos(get_xpos(p0.x)), ypos(get_ypos(p0.y));
 			
 			// Note: should check for similar z-value, but z is usually similar within the leaves of a single tree
 			if (i == 0 || xpos != last_xpos || ypos != last_ypos) {
-				local_wind = get_local_wind(p0); // slow
+				local_wind = get_local_wind(p0, !priv_data); // slow
 				last_xpos  = xpos;
 				last_ypos  = ypos;
 			}

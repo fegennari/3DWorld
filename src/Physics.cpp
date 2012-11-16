@@ -580,24 +580,27 @@ vector3d get_flow_velocity(point pos) { // has same effect as wind
 }
 
 
-vector3d get_local_wind(point const &pt) {
+vector3d get_local_wind(point const &pt, bool no_use_mesh) {
 
 	int const xpos(get_xpos(pt.x)), ypos(get_ypos(pt.y));
-	if (point_outside_mesh(xpos, ypos)) return wind;
+	float pressure(1.0), hval(0.5);
+	vector3d local_wind(wind);
 
-	// calculate direction of wind based on mesh orientation
-	float const mh(mesh_height[ypos][xpos]);
-	if (pt.z < mh)    return all_zeros; // under the mesh - no wind
-	float const szmax(max(ztop, czmax)); // scene zmax
-	if (pt.z > szmax) return wind; // above the top of the mesh
-	float const rel_height((pt.z - mh)/(szmax - mh)); // 0 at mesh level, 1 at scene_ztop
-	float const pressure(min(2.0, 0.5*(zmax - zbottom)/(zmax - mh))); // pressure is higher at the top of hills
-	vector3d v_ortho;
-	orthogonalize_dir(wind, vertex_normals[ypos][xpos], v_ortho, 0);
-	v_ortho.z *= 0.1; // z component of velocity is much smaller
-	float const hval((1.0 - rel_height)*(1.0 - rel_height)); // at surface: 1.0, middle: 0.25, top: 0.0
-	vector3d const local_wind(v_ortho*hval + wind*(1.0 - hval)); // wind follows the surface contour when close to the mesh
-
+	if (!no_use_mesh) {
+		if (point_outside_mesh(xpos, ypos)) return wind;
+		// calculate direction of wind based on mesh orientation
+		float const mh(mesh_height[ypos][xpos]);
+		if (pt.z < mh)    return all_zeros; // under the mesh - no wind
+		float const szmax(max(ztop, czmax)); // scene zmax
+		if (pt.z > szmax) return wind; // above the top of the mesh
+		float const rel_height((pt.z - mh)/(szmax - mh)); // 0 at mesh level, 1 at scene_ztop
+		vector3d v_ortho;
+		orthogonalize_dir(wind, vertex_normals[ypos][xpos], v_ortho, 0);
+		v_ortho.z *= 0.1; // z component of velocity is much smaller
+		pressure   = min(2.0, 0.5*(zmax - zbottom)/(zmax - mh)); // pressure is higher at the top of hills
+		hval       = (1.0 - rel_height)*(1.0 - rel_height); // at surface: 1.0, middle: 0.25, top: 0.0
+		local_wind = v_ortho*hval + wind*(1.0 - hval); // wind follows the surface contour when close to the mesh
+	}
 	// calculate wind intensity
 	float const tx((xpos + xoff2 - total_wind.x/TWO_XSS)/MESH_X_SIZE);
 	float const ty((ypos + yoff2 - total_wind.y/TWO_YSS)/MESH_Y_SIZE);
