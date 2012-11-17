@@ -576,6 +576,16 @@ void tree_data_t::clear_vbos() {
 }
 
 
+unsigned tree_data_t::get_gpu_memory() const {
+
+	unsigned mem(0);
+	if (leaf_vbo   ) {mem += leaf_data.size()  *sizeof(leaf_vert_type_t);}
+	if (branch_vbo ) {mem += num_unique_pts    *sizeof(branch_vert_type_t);}
+	if (branch_ivbo) {mem += 4*num_branch_quads*sizeof(branch_index_t);}
+	return mem;
+}
+
+
 bool tree::is_visible_to_camera() const {
 
 	int const level((island || get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh in non-island mode?
@@ -653,10 +663,9 @@ void tree_data_t::setup_branch_vbos() {
 			num_branch_quads += ndiv;
 			num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
 		}
-		typedef unsigned short index_t;
-		assert(num_unique_pts < (1 << 8*sizeof(index_t))); // cutting it close with 4th order branches
+		assert(num_unique_pts < (1 << 8*sizeof(branch_index_t))); // cutting it close with 4th order branches
 		vector<branch_vert_type_t> data;
-		vector<index_t> idata;
+		vector<branch_index_t> idata;
 		idata.reserve(4*num_branch_quads);
 		data.reserve(num_unique_pts);
 		unsigned cylin_id(0), data_pos(0), quad_id(0);
@@ -699,7 +708,7 @@ void tree_data_t::setup_branch_vbos() {
 		bind_vbo(branch_vbo,  0);
 		bind_vbo(branch_ivbo, 1);
 		upload_vbo_data(&data.front(),  data.size() *sizeof(branch_vert_type_t), 0); // ~350KB
-		upload_vbo_data(&idata.front(), idata.size()*sizeof(index_t),            1); // ~75KB (with 16-bit index)
+		upload_vbo_data(&idata.front(), idata.size()*sizeof(branch_index_t),     1); // ~75KB (with 16-bit index)
 	} // end create vbo
 	else {
 		assert(branch_vbo > 0 && branch_ivbo > 0);
@@ -1799,6 +1808,7 @@ void tree_cont_t::gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_
 			back().regen_tree(pos, 0); // use random function #2 for trees
 		}
 	}
+	generated = 1;
 }
 
 
@@ -1860,6 +1870,13 @@ void tree_data_manager_t::ensure_init() {
 
 void tree_data_manager_t::clear_vbos() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_vbos();}
+}
+
+unsigned tree_data_manager_t::get_gpu_memory() const {
+
+	unsigned mem(0);
+	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_memory();}
+	return mem;
 }
 
 

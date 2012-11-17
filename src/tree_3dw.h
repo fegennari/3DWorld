@@ -113,6 +113,7 @@ class tree_data_t {
 
 	typedef vert_norm_comp_color leaf_vert_type_t;
 	typedef vert_norm_comp_tc branch_vert_type_t;
+	typedef unsigned short branch_index_t;
 
 	int branch_vbo, branch_ivbo, leaf_vbo;
 	unsigned num_branch_quads, num_unique_pts;
@@ -157,6 +158,7 @@ public:
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
 	void clear_data();
 	void clear_vbos();
+	unsigned get_gpu_memory() const;
 };
 
 
@@ -214,6 +216,7 @@ public:
 	point const &get_center() const {return tree_center;}
 	bool get_no_delete() const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
+	unsigned get_gpu_memory() const {return (td_is_private() ? tdata().get_gpu_memory() : 0);}
 };
 
 
@@ -221,15 +224,18 @@ struct tree_data_manager_t : public vector<tree_data_t> {
 
 	void ensure_init();
 	void clear_vbos();
+	unsigned get_gpu_memory() const;
 };
 
 
 class tree_cont_t : public vector<tree> {
 
 	tree_data_manager_t &shared_tree_data;
+	bool generated;
 
 public:
-	tree_cont_t(tree_data_manager_t &tds) : shared_tree_data(tds) {}
+	tree_cont_t(tree_data_manager_t &tds) : shared_tree_data(tds), generated(0) {}
+	bool was_generated() const {return generated;}
 	void remove_cobjs();
 	void draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only);
 	void check_leaf_shadow_change();
@@ -241,6 +247,7 @@ public:
 	void shift_by(vector3d const &vd);
 	void add_cobjs();
 	void clear_vbos();
+	void clear() {vector<tree>::clear(); generated = 0;}
 };
 
 
