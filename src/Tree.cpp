@@ -576,7 +576,7 @@ void tree_data_t::clear_vbos() {
 }
 
 
-unsigned tree_data_t::get_gpu_memory() const {
+unsigned tree_data_t::get_gpu_mem() const {
 
 	unsigned mem(0);
 	if (leaf_vbo   ) {mem += leaf_data.size()  *sizeof(leaf_vert_type_t);}
@@ -953,6 +953,7 @@ unsigned tree_cont_t::delete_all() {
 	for (reverse_iterator i = rbegin(); i != rend(); ++i) { // delete backwards (pop collision stack)
 		if (i->delete_tree()) ++deleted;
 	}
+	generated = 0;
 	return deleted;
 }
 
@@ -1872,10 +1873,18 @@ void tree_data_manager_t::clear_vbos() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_vbos();}
 }
 
-unsigned tree_data_manager_t::get_gpu_memory() const {
+unsigned tree_data_manager_t::get_gpu_mem() const {
 
 	unsigned mem(0);
-	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_memory();}
+	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
+	return mem;
+}
+
+
+unsigned tree_cont_t::get_gpu_mem() const {
+
+	unsigned mem(0);
+	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
 	return mem;
 }
 

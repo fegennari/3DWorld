@@ -89,11 +89,21 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 
 class tile_t {
 
-	int x1, y1, x2, y2, init_dxoff, init_dyoff, init_ptree_dxoff, init_ptree_dyoff, init_scenery_dxoff, init_scenery_dyoff;
+	struct offset_t {
+		int dxoff, dyoff;
+
+		offset_t(int dxoff_=0, int dyoff_=0) : dxoff(dxoff_), dyoff(dyoff_) {}
+		void set_from_xyoff2() {dxoff = -xoff2; dyoff = -yoff2;}
+		vector3d get_xlate() const {return vector3d(((xoff - xoff2) - dxoff)*DX_VAL, ((yoff - yoff2) - dyoff)*DY_VAL, 0.0);}
+		vector3d subtract_from(offset_t const &o) const {return vector3d((o.dxoff - dxoff)*DX_VAL, (o.dyoff - dyoff)*DY_VAL, 0.0);}
+	};
+
+	int x1, y1, x2, y2;
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, ptrmax, xstart, ystart, xstep, ystep;
 	bool shadows_invalid, in_queue;
+	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	vector<float> zvals;
 	vector<unsigned char> tree_map;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
@@ -143,9 +153,8 @@ public:
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~tile_t() {clear_vbo_tid(1,1);}
 	
-	tile_t(unsigned size_, int x, int y) : init_dxoff(xoff - xoff2), init_dyoff(yoff - yoff2), init_ptree_dxoff(0), init_ptree_dyoff(0),
-		init_scenery_dxoff(0), init_scenery_dyoff(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(size_), stride(size+1),
-		zvsize(stride+1), gen_tsize(0), ptrmax(0.0), shadows_invalid(1), in_queue(0), decid_trees(tree_data_manager)
+	tile_t(unsigned size_, int x, int y) : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(size_), stride(size+1),
+		zvsize(stride+1), gen_tsize(0), ptrmax(0.0), shadows_invalid(1), in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -187,8 +196,8 @@ public:
 		ystep  = (get_yval(y2 + dy) - ystart)/size;
 	}
 
-	unsigned get_gpu_memory() const {
-		unsigned mem(pine_trees.get_gpu_mem() + scenery.get_gpu_mem());
+	unsigned get_gpu_mem() const {
+		unsigned mem(pine_trees.get_gpu_mem() + scenery.get_gpu_mem() + decid_trees.get_gpu_mem());
 		unsigned const num_texels(stride*stride);
 		if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
 		if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
@@ -210,7 +219,6 @@ public:
 		zvals.clear();
 		clear_shadows();
 		pine_trees.clear_all();
-		decid_trees.delete_all(); // probably not necessary
 		decid_trees.clear();
 		scenery.clear();
 		grass_blocks.clear();
@@ -284,6 +292,8 @@ public:
 	inline vector3d get_norm(unsigned ix) const {
 		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy).get_norm();
 	}
+
+	// *** shadows ***
 
 	void calc_shadows_for_light(unsigned l) {
 		assert(!smask[l].empty());
@@ -369,7 +379,7 @@ public:
 	void push_tree_ao_shadow(int dx, int dy, point const &pos, float radius) const {
 		tile_t *const adj_tile(get_adj_tile_smap(dx, dy));
 		if (!adj_tile) return;
-		point const pos2(pos + point((adj_tile->init_dxoff - init_dxoff)*DX_VAL, (adj_tile->init_dyoff - init_dyoff)*DY_VAL, 0.0));
+		point const pos2(pos + mesh_off.subtract_from(adj_tile->mesh_off));
 		adj_tile->add_tree_ao_shadow(pos2, radius, 1);
 	}
 
@@ -412,19 +422,14 @@ public:
 				for (int dx = -1; dx <= 1; ++dx) {
 					if (dx == 0 && dy == 0) continue;
 					tile_t const *const adj_tile(get_adj_tile_smap(dx, dy));
-					if (!adj_tile) continue;
-					point const tree_off2((init_dxoff - adj_tile->init_ptree_dxoff)*DX_VAL, (init_dyoff - adj_tile->init_ptree_dyoff)*DY_VAL, 0.0);
-					apply_ao_shadows_for_trees(adj_tile->pine_trees, tree_off2, 1);
+					if (adj_tile) {apply_ao_shadows_for_trees(adj_tile->pine_trees, adj_tile->ptree_off.subtract_from(mesh_off), 1);}
 				}
 			}
 		}
 	}
 
 	void apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
-		//RESET_TIME;
-		point const tree_off((init_dxoff - init_ptree_dxoff)*DX_VAL, (init_dyoff - init_ptree_dyoff)*DY_VAL, 0.0);
-		apply_ao_shadows_for_trees(pine_trees, tree_off, 0);
-		//PRINT_TIME("Shadows");
+		apply_ao_shadows_for_trees(pine_trees, ptree_off.subtract_from(mesh_off), 0);
 	}
 
 	struct norm_comp_with_shadow {
@@ -464,10 +469,12 @@ public:
 		shadows_invalid = 0;
 	}
 
+	// *** mesh creation ***
+
 	void create_data(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
 		//RESET_TIME;
 		assert(zvals.size() == zvsize*zvsize);
-		calc_start_step(init_dxoff, init_dyoff);
+		calc_start_step(mesh_off.dxoff, mesh_off.dyoff);
 		data.resize(stride*stride);
 
 		for (unsigned y = 0; y <= size; ++y) {
@@ -632,18 +639,18 @@ public:
 	float get_tree_far_weight    () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
 	float get_grass_dist_scale   () const {return get_dist_to_camera_in_tiles()/GRASS_THRESH;}
 
-	// pine trees
+	// *** pine trees ***
+
 	void init_pine_tree_draw() {
-		init_ptree_dxoff = -xoff2;
-		init_ptree_dyoff = -yoff2;
-		pine_trees.gen_trees(x1+init_ptree_dxoff, y1+init_ptree_dyoff, x2+init_ptree_dxoff, y2+init_ptree_dyoff, vegetation*get_avg_veg());
+		ptree_off.set_from_xyoff2();
+		pine_trees.gen_trees(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, vegetation*get_avg_veg());
 		ptzmax = mzmin;
 		ptrmax = pine_trees.max_pt_radius;
 		
 		for (small_tree_group::iterator i = pine_trees.begin(); i != pine_trees.end(); ++i) {
 			ptzmax = max(ptzmax, i->get_zmax());
 		}
-		radius = calc_radius() + ptrmax; // is this really needed?
+		radius = max(radius, (calc_radius() + ptrmax)); // is this really needed?
 		pine_trees.calc_trunk_pts();
 		tree_map.resize(stride*stride, 255);
 	}
@@ -677,7 +684,7 @@ public:
 	void draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass) const {
 		if (pine_trees.empty()) return;
 		glPushMatrix();
-		vector3d const xlate(((xoff - xoff2) - init_ptree_dxoff)*DX_VAL, ((yoff - yoff2) - init_ptree_dyoff)*DY_VAL, 0.0);
+		vector3d const xlate(ptree_off.get_xlate());
 		translate_to(xlate);
 		
 		if (draw_branches) {
@@ -712,41 +719,45 @@ public:
 		glPopMatrix();
 	}
 
-	// decidious trees
+	// *** decidious trees ***
+
 	unsigned num_decid_trees() const {return decid_trees.size();}
 
 	void gen_decid_trees_if_needed() {
 		if (decid_trees.was_generated()) return; // already generated
+		dtree_off.set_from_xyoff2();
 		//decid_trees.gen_deterministic(x1, y1, x2, y2); // FIXME: init offsets?
 		// FIXME - dtzmax, dtrmax
 	}
 
 	void draw_decid_trees(shader_t &s, bool draw_branches, bool draw_leaves, bool reflection_pass) {
 		// FIXME - setup transforms and stuff
+		vector3d const xlate(dtree_off.get_xlate());
 		decid_trees.draw_branches_and_leaves(s, draw_branches, draw_leaves, 0);
 	}
 
-	// scenery
+	// *** scenery ***
+
 	void update_scenery() {
 		float const dist_scale(get_scenery_dist_scale()); // tree_dist_scale should correlate with mesh scale
 		if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
 		if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
-		init_scenery_dxoff = -xoff2;
-		init_scenery_dyoff = -yoff2;
-		scenery.gen(x1+init_scenery_dxoff, y1+init_scenery_dyoff, x2+init_scenery_dxoff, y2+init_scenery_dyoff, vegetation*get_avg_veg());
+		scenery_off.set_from_xyoff2();
+		scenery.gen(x1+scenery_off.dxoff, y1+scenery_off.dyoff, x2+scenery_off.dxoff, y2+scenery_off.dyoff, vegetation*get_avg_veg());
 	}
 
 	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves) {
 		if (!scenery.generated || get_scenery_dist_scale() > 1.0) return;
 		glPushMatrix();
-		vector3d const xlate(((xoff - xoff2) - init_scenery_dxoff)*DX_VAL, ((yoff - yoff2) - init_scenery_dyoff)*DY_VAL, 0.0);
+		vector3d const xlate(scenery_off.get_xlate());
 		translate_to(xlate);
 		if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 1);}
-		if (draw_leaves) {scenery.draw_plant_leaves(s, 0, xlate);}
+		if (draw_leaves) {scenery.draw_plant_leaves  (s, 0, xlate);}
 		glPopMatrix();
 	}
 
-	// grass
+	// *** grass ***
+
 	void init_draw_grass() {
 		if (height_tid || grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
 		float const scale(65535/(mzmax - mzmin));
@@ -818,7 +829,8 @@ public:
 		glPopMatrix();
 	}
 
-	// rendering
+	// *** rendering ***
+
 	void pre_draw_update(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], mesh_xy_grid_cache_t &height_gen) {
 		if (vbo == 0) {
 			create_data(data, indices);
@@ -845,11 +857,11 @@ public:
 		assert(weight_tid > 0);
 		bind_2d_texture(weight_tid);
 		glPushMatrix();
-		glTranslatef(((xoff - xoff2) - init_dxoff)*DX_VAL, ((yoff - yoff2) - init_dyoff)*DY_VAL, 0.0);
-		set_landscape_texgen(1.0, (-x1 - init_dxoff), (-y1 - init_dyoff), MESH_X_SIZE, MESH_Y_SIZE);
+		translate_to(mesh_off.get_xlate());
+		set_landscape_texgen(1.0, (-x1 - mesh_off.dxoff), (-y1 - mesh_off.dyoff), MESH_X_SIZE, MESH_Y_SIZE);
 		
 		if (!reflection_pass && cloud_shadows_enabled()) {
-			vector3d const offset(-init_dxoff*DX_VAL, -init_dyoff*DY_VAL, 0.0);
+			vector3d const offset(-mesh_off.dxoff*DX_VAL, -mesh_off.dyoff*DY_VAL, 0.0);
 			s.add_uniform_vector3d("cloud_offset", offset);
 		}
 		bind_texture_tu(shadow_normal_tid, 7);
@@ -997,7 +1009,7 @@ public:
 		float zmin(FAR_CLIP);
 		set_array_client_state(1, 0, 0, 0);
 		unsigned num_drawn(0), num_trees(0);
-		unsigned long long mem(grass_tile_manager.get_gpu_mem()), tree_mem(tree_data_manager.get_gpu_memory());
+		unsigned long long mem(grass_tile_manager.get_gpu_mem() + tree_data_manager.get_gpu_mem()), tree_mem(0);
 		vector<tile_t::vert_type_t> data;
 		vector<unsigned short> indices[NUM_LODS];
 		static point last_sun(all_zeros), last_moon(all_zeros);
@@ -1016,7 +1028,7 @@ public:
 			assert(tile);
 			
 			if (DEBUG_TILES) {
-				mem      += tile->get_gpu_memory();
+				mem      += tile->get_gpu_mem();
 				tree_mem += tile->get_tree_mem();
 			}
 			float const dist(tile->get_rel_dist_to_camera());

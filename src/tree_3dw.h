@@ -158,7 +158,7 @@ public:
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
 	void clear_data();
 	void clear_vbos();
-	unsigned get_gpu_memory() const;
+	unsigned get_gpu_mem() const;
 };
 
 
@@ -216,7 +216,7 @@ public:
 	point const &get_center() const {return tree_center;}
 	bool get_no_delete() const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
-	unsigned get_gpu_memory() const {return (td_is_private() ? tdata().get_gpu_memory() : 0);}
+	unsigned get_gpu_mem() const {return (td_is_private() ? tdata().get_gpu_mem() : 0);}
 };
 
 
@@ -224,7 +224,7 @@ struct tree_data_manager_t : public vector<tree_data_t> {
 
 	void ensure_init();
 	void clear_vbos();
-	unsigned get_gpu_memory() const;
+	unsigned get_gpu_mem() const;
 };
 
 
@@ -247,7 +247,8 @@ public:
 	void shift_by(vector3d const &vd);
 	void add_cobjs();
 	void clear_vbos();
-	void clear() {vector<tree>::clear(); generated = 0;}
+	void clear() {delete_all(); vector<tree>::clear();}
+	unsigned get_gpu_mem() const;
 };
 
 
