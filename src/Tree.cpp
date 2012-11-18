@@ -104,6 +104,7 @@ colorRGBA get_leaf_base_color(int type) {
 
 bool tree::is_over_mesh() const {
 
+	//if (world_mode != WMODE_GROUND) return 1; // ???
 	float const r(tdata().sphere_radius);
 	int const x1(get_xpos(tree_center.x - r)), y1(get_ypos(tree_center.y - r));
 	int const x2(get_xpos(tree_center.x + r)), y2(get_ypos(tree_center.y + r));
@@ -201,10 +202,10 @@ void tree_cont_t::remove_cobjs() {
 }
 
 
-void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only) {
+void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate) {
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->draw_tree(s, draw_branches, draw_leaves, shadow_only);
+		i->draw_tree(s, draw_branches, draw_leaves, shadow_only, xlate);
 	}
 }
 
@@ -258,7 +259,7 @@ void tree_cont_t::draw(bool shadow_only) {
 	// draw branches
 	bool const branch_smap(1 && !shadow_only); // looks better, but slower
 	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
-	draw_branches_and_leaves(bs, 1, 0, shadow_only);
+	draw_branches_and_leaves(bs, 1, 0, shadow_only, zero_vector);
 	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 	bs.end_shader();
 	disable_multitex_a();
@@ -274,7 +275,7 @@ void tree_cont_t::draw(bool shadow_only) {
 	set_specular(0.1, 10.0);
 	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
-	draw_branches_and_leaves(ls, 0, 1, shadow_only);
+	draw_branches_and_leaves(ls, 0, 1, shadow_only, zero_vector);
 	set_lighted_sides(1);
 	ls.end_shader();
 	glDisable(GL_COLOR_MATERIAL);
@@ -586,10 +587,10 @@ unsigned tree_data_t::get_gpu_mem() const {
 }
 
 
-bool tree::is_visible_to_camera() const {
+bool tree::is_visible_to_camera(vector3d const &xlate) const {
 
 	int const level((island || get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh in non-island mode?
-	return sphere_in_camera_view(sphere_center(), 1.1*tdata().sphere_radius, level);
+	return sphere_in_camera_view((sphere_center() + xlate), 1.1*tdata().sphere_radius, level);
 }
 
 
@@ -614,7 +615,7 @@ void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves, in
 }
 
 
-void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only) {
+void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate) {
 
 	if (!created) return;
 	tree_data_t &td(tdata());
@@ -622,7 +623,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 	if (shadow_only) {
 		if (!is_over_mesh()) return;
 		glPushMatrix();
-		translate_to(tree_center);
+		translate_to(tree_center + xlate);
 		td.draw_tree_shadow_only(draw_branches, draw_leaves, type);
 		glPopMatrix();
 		return;
@@ -640,13 +641,13 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 		if (begin_motion && animate2) drop_leaves();
 	}
 	if (TEST_RTREE_COBJS) return;
-	if (!draw_leaves || draw_branches) {not_visible = !is_visible_to_camera();} // second pass only
+	if (!draw_leaves || draw_branches) {not_visible = !is_visible_to_camera(xlate);} // second pass only
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
-	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(distance_to_camera(sphere_center())*DIST_C_SCALE));
-	if (draw_branches) draw_tree_branches(s, size_scale);
-	if (draw_leaves && has_leaves) draw_tree_leaves(s, size_scale);
+	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(distance_to_camera((sphere_center() + xlate))*DIST_C_SCALE));
+	if (draw_branches) draw_tree_branches(s, size_scale, xlate);
+	if (draw_leaves && has_leaves) draw_tree_leaves(s, size_scale, xlate);
 }
 
 
@@ -729,14 +730,14 @@ void tree_data_t::draw_branches(float size_scale) {
 }
 
 
-void tree::draw_tree_branches(shader_t const &s, float size_scale) {
+void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate) {
 
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
 	BLACK.do_glColor();
-	s.add_uniform_vector3d("world_space_offset", tree_center);
+	s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));
 	glPushMatrix();
-	translate_to(tree_center);
+	translate_to(tree_center + xlate);
 	tdata().draw_branches(size_scale);
 	glPopMatrix();
 }
@@ -801,7 +802,7 @@ bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
 }
 
 
-void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
+void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const &xlate) {
 
 	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
 	tree_data_t &td(tdata());
@@ -812,11 +813,11 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
 	if (gen_arrays) {calc_leaf_shadows();}
-	unsigned const num_dlights(enable_dynamic_lights(sphere_center(), td.sphere_radius));
+	unsigned const num_dlights(enable_dynamic_lights((sphere_center() + xlate), td.sphere_radius));
 	s.add_uniform_int("num_dlights", num_dlights);
 	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
 	glPushMatrix();
-	translate_to(tree_center);
+	translate_to(tree_center + xlate);
 	td.draw_leaves(size_scale);
 	disable_dynamic_lights(num_dlights);
 	glPopMatrix();
@@ -1874,7 +1875,6 @@ void tree_data_manager_t::clear_vbos() {
 }
 
 unsigned tree_data_manager_t::get_gpu_mem() const {
-
 	unsigned mem(0);
 	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
 	return mem;
@@ -1882,12 +1882,20 @@ unsigned tree_data_manager_t::get_gpu_mem() const {
 
 
 unsigned tree_cont_t::get_gpu_mem() const {
-
 	unsigned mem(0);
 	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
 	return mem;
 }
 
+float tree_cont_t::get_rmax() const {
+	float rmax(0.0);
+	for (const_iterator i = begin(); i != end(); ++i) {rmax = max(rmax, i->get_bradius());}
+	return rmax;
+}
+
+void tree_cont_t::update_zmax(float &tzmax) const {
+	for (const_iterator i = begin(); i != end(); ++i) {tzmax = max(tzmax, (i->get_center().z + i->get_bradius()));}
+}
 
 void tree_cont_t::shift_by(vector3d const &vd) {
 	for (iterator i = begin(); i != end(); ++i) {i->shift_tree(vd);}

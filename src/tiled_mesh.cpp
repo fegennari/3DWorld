@@ -101,7 +101,7 @@ class tile_t {
 	int x1, y1, x2, y2;
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
-	float radius, mzmin, mzmax, ptzmax, ptrmax, xstart, ystart, xstep, ystep;
+	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep;
 	bool shadows_invalid, in_queue;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	vector<float> zvals;
@@ -153,8 +153,8 @@ public:
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~tile_t() {clear_vbo_tid(1,1);}
 	
-	tile_t(unsigned size_, int x, int y) : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(size_), stride(size+1),
-		zvsize(stride+1), gen_tsize(0), ptrmax(0.0), shadows_invalid(1), in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	tile_t(unsigned size_, int x, int y) : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1),
+		gen_tsize(0), trmax(0.0), shadows_invalid(1), in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -163,7 +163,7 @@ public:
 		y2 = y1 + size;
 		calc_start_step(0, 0);
 		radius = calc_radius();
-		mzmin  = mzmax = ptzmax = get_camera_pos().z;
+		mzmin  = mzmax = ptzmax = dtzmax = get_camera_pos().z;
 		base_tsize = NORM_TEXELS;
 		init_vbo_ids();
 	}
@@ -171,7 +171,7 @@ public:
 	float calc_radius() const {return 0.5*sqrt(xstep*xstep + ystep*ystep)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
-	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), ptzmax);}
+	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), max(ptzmax, dtzmax));}
 	bool has_water() const {return (mzmin < water_plane_z);}
 	bool all_water() const {return (get_tile_zmax() < water_plane_z);}
 	bool pine_trees_generated() const {return pine_trees.generated;}
@@ -183,7 +183,7 @@ public:
 	}
 	cube_t get_cube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), z2(get_tile_zmax());
-		return cube_t(xv1-ptrmax, xv1+(x2-x1)*DX_VAL+ptrmax, yv1-ptrmax, yv1+(y2-y1)*DY_VAL+ptrmax, mzmin, z2);
+		return cube_t(xv1-trmax, xv1+(x2-x1)*DX_VAL+trmax, yv1-trmax, yv1+(y2-y1)*DY_VAL+trmax, mzmin, z2);
 	}
 	bool contains_camera() const {
 		return get_cube().contains_pt_xy(get_camera_pos());
@@ -645,12 +645,9 @@ public:
 		ptree_off.set_from_xyoff2();
 		pine_trees.gen_trees(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, vegetation*get_avg_veg());
 		ptzmax = mzmin;
-		ptrmax = pine_trees.max_pt_radius;
-		
-		for (small_tree_group::iterator i = pine_trees.begin(); i != pine_trees.end(); ++i) {
-			ptzmax = max(ptzmax, i->get_zmax());
-		}
-		radius = max(radius, (calc_radius() + ptrmax)); // is this really needed?
+		pine_trees.update_zmax(ptzmax);
+		trmax  = max(trmax, pine_trees.max_pt_radius);
+		radius = max(radius, (calc_radius() + trmax)); // is this really needed?
 		pine_trees.calc_trunk_pts();
 		tree_map.resize(stride*stride, 255);
 	}
@@ -726,14 +723,16 @@ public:
 	void gen_decid_trees_if_needed() {
 		if (decid_trees.was_generated()) return; // already generated
 		dtree_off.set_from_xyoff2();
-		//decid_trees.gen_deterministic(x1, y1, x2, y2); // FIXME: init offsets?
-		// FIXME - dtzmax, dtrmax
+		//decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff);
+		ptzmax = mzmin;
+		decid_trees.update_zmax(ptzmax);
+		trmax  = max(trmax, decid_trees.get_rmax());
+		radius = max(radius, (calc_radius() + trmax)); // is this really needed?
 	}
 
 	void draw_decid_trees(shader_t &s, bool draw_branches, bool draw_leaves, bool reflection_pass) {
-		// FIXME - setup transforms and stuff
-		vector3d const xlate(dtree_off.get_xlate());
-		decid_trees.draw_branches_and_leaves(s, draw_branches, draw_leaves, 0);
+		if (decid_trees.empty()) return;
+		decid_trees.draw_branches_and_leaves(s, draw_branches, draw_leaves, 0, dtree_off.get_xlate());
 	}
 
 	// *** scenery ***

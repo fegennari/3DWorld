@@ -288,6 +288,11 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 }
 
 
+void small_tree_group::update_zmax(float &tzmax) const {
+	for (const_iterator i = begin(); i != end(); ++i) {tzmax = max(tzmax, i->get_zmax());}
+}
+
+
 int get_tree_class_from_height(float zpos) {
 
 	if (zpos < water_plane_z) return TREE_CLASS_NONE;

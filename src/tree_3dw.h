@@ -187,15 +187,15 @@ class tree
 	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, tdata().sphere_center_zoff));}
 
 	bool is_over_mesh() const;
-	bool is_visible_to_camera() const;
+	bool is_visible_to_camera(vector3d const &xlate) const;
 	void burn_leaves();
 	void blast_damage(blastr const *const blast_radius);
 	void lightning_damage(point const &ltpos);
 	void drop_leaves();
 	void remove_leaf(unsigned i, bool update_data);
 	bool damage_leaf(unsigned i, float damage_done);
-	void draw_tree_branches(shader_t const &s, float size_scale);
-	void draw_tree_leaves(shader_t const &s, float size_scale);
+	void draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate);
+	void draw_tree_leaves(shader_t const &s, float size_scale, vector3d const &xlate);
 	void update_leaf_cobj_color(unsigned i);
 	void copy_color(unsigned i, bool no_mark_changed=0);
 
@@ -208,15 +208,16 @@ public:
 	void gen_tree_shadows(unsigned light_sources);
 	void add_tree_collision_objects();
 	void remove_collision_objects();
-	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only);
+	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	void clear_vbo();
 	int delete_tree();
-	int get_type() const {return type;}
+	int get_type()            const {return type;}
+	float get_bradius()       const {return tdata().sphere_radius;}
 	point const &get_center() const {return tree_center;}
-	bool get_no_delete() const {return no_delete;}
+	unsigned get_gpu_mem()    const {return (td_is_private() ? tdata().get_gpu_mem() : 0);}
+	bool get_no_delete()      const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
-	unsigned get_gpu_mem() const {return (td_is_private() ? tdata().get_gpu_mem() : 0);}
 };
 
 
@@ -237,7 +238,7 @@ public:
 	tree_cont_t(tree_data_manager_t &tds) : shared_tree_data(tds), generated(0) {}
 	bool was_generated() const {return generated;}
 	void remove_cobjs();
-	void draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only);
+	void draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate);
 	void check_leaf_shadow_change();
 	void draw(bool shadow_only);
 	unsigned delete_all();
@@ -249,6 +250,8 @@ public:
 	void clear_vbos();
 	void clear() {delete_all(); vector<tree>::clear();}
 	unsigned get_gpu_mem() const;
+	float get_rmax() const;
+	void update_zmax(float &tzmax) const;
 };
 
 
