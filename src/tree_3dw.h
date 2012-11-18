@@ -244,7 +244,7 @@ public:
 	unsigned delete_all();
 	unsigned scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2);
 	void post_scroll_remove();
-	void gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_y2);
+	void gen_deterministic(int ext_x1, int ext_y1, int ext_x2, int ext_y2, float vegetation_);
 	void shift_by(vector3d const &vd);
 	void add_cobjs();
 	void clear_vbos();

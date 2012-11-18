@@ -262,24 +262,24 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 	
 	for (int i = y1; i < y2; i += skip_val) {
 		for (int j = x1; j < x2; j += skip_val) {
-			set_rand2_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
-							(845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
-			if ((rand2_seed_mix()%tree_prob) != 0) continue; // not selected
+			rgen.set_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
+						   (845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
+			if ((rgen.rand_seed_mix()%tree_prob) != 0) continue; // not selected
 			//float const val(eval_one_surface_point((tds*(xpos+x0)-xoff2), (tds*(ypos+y0)-yoff2)));
 			float const val(height_gen.eval_index(j-x1, i-y1, 1));
 			float const dist_test(get_rel_height(val, -zmax_est, zmax_est));
 
 			for (int n = 0; n < trees_per_block; ++n) {
-				if (dist_test > (SM_TREE_AMT*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rand_float2())) continue; // tree density function test
-				rand2_mix();
-				float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*signed_rand_float2());
-				float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*signed_rand_float2());
+				if (dist_test > (SM_TREE_AMT*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rgen.rand_float())) continue; // tree density function test
+				rgen.rand_mix();
+				float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
+				float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
 				float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1));
-				int const ttype(get_tree_type_from_height(zpos));
+				int const ttype(get_tree_type_from_height(zpos, rgen));
 				if (ttype == TREE_NONE) continue;
-				float const height(rand_uniform2(0.4*tsize, tsize)), width(rand_uniform2(0.25*height, 0.35*height));
-				small_tree st(point(xpos, ypos, zpos-0.1*height), height, width, ttype, 0);
-				st.setup_rotation();
+				float const height(rgen.rand_uniform(0.4*tsize, tsize)), width(rgen.rand_uniform(0.25*height, 0.35*height));
+				small_tree st(point(xpos, ypos, zpos-0.1*height), height, width, ttype, 0, rgen);
+				st.setup_rotation(rgen);
 				add_tree(st);
 			}
 		}
@@ -317,16 +317,16 @@ int get_tree_class_from_height(float zpos) {
 }
 
 
-int get_tree_type_from_height(float zpos) {
+int get_tree_type_from_height(float zpos, rand_gen_t &rgen) {
 
 	//return T_DECID; // TESTING
 	switch (get_tree_class_from_height(zpos)) {
 	case TREE_CLASS_NONE: return TREE_NONE;
-	case TREE_CLASS_PINE: return ((rand2()%10 == 0) ? T_SH_PINE : T_PINE);
+	case TREE_CLASS_PINE: return ((rgen.rand()%10 == 0) ? T_SH_PINE : T_PINE);
 	case TREE_CLASS_PALM: return T_PALM;
 	case TREE_CLASS_DECID:
 		//if (tree_mode == 3) return TREE_NONE; // use a large (complex) tree here
-		return T_DECID + rand2()%3;
+		return T_DECID + rgen.rand()%3;
 	default: assert(0);
 	}
 	return TREE_NONE; // never gets here
@@ -336,14 +336,14 @@ int get_tree_type_from_height(float zpos) {
 int add_small_tree(point const &pos, float height, float width, int tree_type, bool calc_z) {
 
 	assert(height > 0.0 && width > 0.0);
-	small_trees.add_tree(small_tree(pos, height, width, (abs(tree_type)%NUM_ST_TYPES), calc_z)); // could have a type error
+	small_trees.add_tree(small_tree(pos, height, width, (abs(tree_type)%NUM_ST_TYPES), calc_z, small_trees.rgen)); // could have a type error
 	small_trees.back().calc_points(small_trees.vbo_manager[0], 0, 0);
 	return 1; // might return zero in some case
 }
 
 
-colorRGBA colorgen(float r1, float r2, float g1, float g2, float b1, float b2) {
-	return colorRGBA(rand_uniform2(r1, r2), rand_uniform2(g1, g2), rand_uniform2(b1, b2), 1.0);
+colorRGBA colorgen(float r1, float r2, float g1, float g2, float b1, float b2, rand_gen_t &rgen) {
+	return colorRGBA(rgen.rand_uniform(r1, r2), rgen.rand_uniform(g1, g2), rgen.rand_uniform(b1, b2), 1.0);
 }
 
 
@@ -435,39 +435,39 @@ void draw_small_trees(bool shadow_only) {
 }
 
 
-small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z) :
+small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen) :
 	type(t), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
 {
 	clear_vbo_mgr_ix();
-	for (unsigned i = 0; i < 3; ++i) rv[i] = rand2d();
+	for (unsigned i = 0; i < 3; ++i) rv[i] = rgen.randd();
 	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;
 
 	switch (type) {
 	case T_PINE: // pine tree
 		width  *= 1.1;
 		height *= 1.2;
-		color   = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35);
+		color   = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
 		break;
 	case T_SH_PINE: // pine tree
 		width  *= 1.2;
 		height *= 0.8;
-		color   = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35);
+		color   = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
 		break;
 	case T_PALM: // palm tree
-		color   = colorgen(0.6, 1.0, 0.6, 1.0, 0.6, 1.0);
+		color   = colorgen(0.6, 1.0, 0.6, 1.0, 0.6, 1.0, rgen);
 		width  *= 1.4;
 		height *= 2.0;
 		break;
 	case T_DECID: // decidious tree
-		color = colorgen(0.6, 0.9, 0.7, 1.0, 0.4, 0.7);
+		color = colorgen(0.6, 0.9, 0.7, 1.0, 0.4, 0.7, rgen);
 		break;
 	case T_TDECID: // tall decidious tree
-		color = colorgen(0.3, 0.6, 0.7, 1.0, 0.1, 0.2);
+		color = colorgen(0.3, 0.6, 0.7, 1.0, 0.1, 0.2, rgen);
 		break;
 	case T_BUSH: // bush
-		color  = colorgen(0.6, 0.9, 0.7, 1.0, 0.1, 0.2);
+		color  = colorgen(0.6, 0.9, 0.7, 1.0, 0.1, 0.2, rgen);
 		pos.z += 0.3*height;
-		if (rand2()%100 < 50) pos.z -= height*rand_uniform2(0.0, 0.2);
+		if (rgen.rand()%100 < 50) pos.z -= height*rgen.rand_uniform(0.0, 0.2);
 		break;
 	default: assert(0);
 	}
@@ -475,12 +475,12 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z) :
 }
 
 
-void small_tree::setup_rotation() {
+void small_tree::setup_rotation(rand_gen_t &rgen) {
 
-	if (!(rand2()&3) && (type == T_DECID || type == T_TDECID || type == T_PALM)) {
-		r_angle = ((type == T_PALM) ? rand_uniform2(-15.0, 15.0) : rand_uniform2(-7.5, 7.5));
-		rx = rand_uniform2(-1.0, 1.0);
-		ry = rand_uniform2(-1.0, 1.0);
+	if (!(rgen.rand()&3) && (type == T_DECID || type == T_TDECID || type == T_PALM)) {
+		r_angle = ((type == T_PALM) ? rgen.rand_uniform(-15.0, 15.0) : rgen.rand_uniform(-7.5, 7.5));
+		rx = rgen.rand_uniform(-1.0, 1.0);
+		ry = rgen.rand_uniform(-1.0, 1.0);
 	}
 }
 

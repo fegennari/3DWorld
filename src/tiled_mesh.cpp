@@ -722,8 +722,10 @@ public:
 
 	void gen_decid_trees_if_needed() {
 		if (decid_trees.was_generated()) return; // already generated
+		assert(decid_trees.empty());
+		//return; // FIXME: temporary
 		dtree_off.set_from_xyoff2();
-		//decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff);
+		decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg());
 		ptzmax = mzmin;
 		decid_trees.update_zmax(ptzmax);
 		trmax  = max(trmax, decid_trees.get_rmax());
@@ -1156,6 +1158,10 @@ public:
 	}
 
 	void draw_decid_trees(draw_vect_t const &to_draw, bool reflection_pass) {
+		//unsigned tot(0);
+		//for (unsigned i = 0; i < to_draw.size(); ++i) {tot += to_draw[i].second->num_decid_trees();}
+		//cout << "to draw: " << to_draw.size() << " of " << tiles.size() << ", total trees: " << tot << endl;
+
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->gen_decid_trees_if_needed();
 		}

@@ -719,7 +719,7 @@ void change_tree_mode() {
 	tree_mode = (tree_mode+1)%4; // 0=none, 1=large, 2=small, 3=large+small
 			
 	if (world_mode == WMODE_INF_TERRAIN) {
-		if ((tree_mode & 2) != (last_tree_mode & 2)) clear_tiled_terrain();
+		clear_tiled_terrain();
 	}
 	else {
 		//if (num_trees == 0) return; // Note: will skip scene/cobj updates on scenes that have placed trees
@@ -965,10 +965,16 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		}
 		else {
 			rand_gen_index = rand();
-			//gen_scenery();
-			//regen_trees(1, 0);
-			//compute_volume_matrix(); // make lightning strike the new tree(s)
-			gen_scene(0, 1, 1, 0, 1);
+
+			if (world_mode == WMODE_GROUND) {
+				//gen_scenery();
+				//regen_trees(1, 0);
+				//compute_volume_matrix(); // make lightning strike the new tree(s)
+				gen_scene(0, 1, 1, 0, 1);
+			}
+			else {
+				clear_tiled_terrain();
+			}
 		}
 		break;
 

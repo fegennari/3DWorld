@@ -23,8 +23,8 @@ class small_tree { // size = 81 (82)
 
 public:
 	small_tree() : type(-1) {clear_vbo_mgr_ix();}
-	small_tree(point const &p, float h, float w, int t, bool calc_z);
-	void setup_rotation();
+	small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen);
+	void setup_rotation(rand_gen_t &rgen);
 	vector3d get_rot_dir() const;
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
@@ -56,6 +56,7 @@ struct small_tree_group : public vector<small_tree> {
 
 	vbo_vnc_block_manager_t vbo_manager[2]; // {high, low} detail
 	vector<point> trunk_pts;
+	rand_gen_t rgen;
 	bool generated, last_pri_dim;
 	unsigned num_pine_trees;
 	float max_pt_radius;

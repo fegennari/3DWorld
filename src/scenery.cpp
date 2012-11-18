@@ -561,7 +561,7 @@ int s_log::create(int x, int y, int use_xy, float minz) {
 	dir.z  = (pt2.z - pos.z);
 	length = dir.mag(); // recalculate
 	dir   /= -length; // something is backwards
-	type   = (char)get_tree_type_from_height(max(pos.z, pt2.z));
+	type   = (char)get_tree_type_from_height(max(pos.z, pt2.z), global_rand_gen);
 	return (type >= 0);
 }
 
@@ -618,7 +618,7 @@ int s_stump::create(int x, int y, int use_xy, float minz) {
 		radius  *= 1.5;
 		radius2 *= 1.3;
 	}
-	type = (char)get_tree_type_from_height(pos.z);
+	type = (char)get_tree_type_from_height(pos.z, global_rand_gen);
 	return (type >= 0);
 }
 
@@ -933,13 +933,16 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 	}
 	surface_rock_cache.clear_unref();
 	sort(plants.begin(), plants.end()); // sort by type
-	RESET_TIME;
 
-	#pragma omp parallel for schedule(dynamic,1)
-	for (int i = 0; i < (int)voxel_rocks.size(); ++i) {
-		voxel_rocks[i].build_model();
+	if (!voxel_rocks.empty()) {
+		RESET_TIME;
+
+		#pragma omp parallel for schedule(dynamic,1)
+		for (int i = 0; i < (int)voxel_rocks.size(); ++i) {
+			voxel_rocks[i].build_model();
+		}
+		PRINT_TIME("Gen Voxel Rocks");
 	}
-	PRINT_TIME("Gen Voxel Rocks");
 }
 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate) {

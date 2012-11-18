@@ -735,7 +735,7 @@ void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d cons
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
 	BLACK.do_glColor();
-	s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));
+	if (s.is_setup()) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
 	glPushMatrix();
 	translate_to(tree_center + xlate);
 	tdata().draw_branches(size_scale);
@@ -814,7 +814,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 	}
 	if (gen_arrays) {calc_leaf_shadows();}
 	unsigned const num_dlights(enable_dynamic_lights((sphere_center() + xlate), td.sphere_radius));
-	s.add_uniform_int("num_dlights", num_dlights);
+	if (s.is_setup()) {s.add_uniform_int("num_dlights", num_dlights);}
 	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
 	glPushMatrix();
 	translate_to(tree_center + xlate);
@@ -1773,7 +1773,7 @@ void tree_cont_t::post_scroll_remove() {
 }
 
 
-void tree_cont_t::gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_y2) {
+void tree_cont_t::gen_deterministic(int ext_x1, int ext_y1, int ext_x2, int ext_y2, float vegetation_) {
 
 	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
 	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
@@ -1793,12 +1793,12 @@ void tree_cont_t::gen_deterministic(int ext_x1, int ext_x2, int ext_y1, int ext_
 			unsigned const val(((unsigned)rand2_seed_mix())%smod);
 			if (val <= 100)         continue; // scenery
 			if (val%tree_prob != 0) continue; // not selected
-			if ((global_rand_gen.rseed1&127)/128.0 >= vegetation) continue;
+			if ((global_rand_gen.rseed1&127)/128.0 >= vegetation_) continue;
 			point pos((get_xval(j) + 0.5*DX_VAL*rand2d()), (get_yval(i) + 0.5*DY_VAL*rand2d()), 0.0);
 			// Note: pos.z will be slightly different when calculated within vs. outside the mesh bounds
 			pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 			if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
-			if (tree_mode == 3 && get_tree_class_from_height(pos.z) != TREE_CLASS_DECID) continue; // use a small (simple) tree here
+			if (tree_mode == 3 && world_mode == WMODE_GROUND && get_tree_class_from_height(pos.z) != TREE_CLASS_DECID) continue; // use a small (simple) tree here
 			push_back(tree());
 				
 			if (max_unique_trees > 0) {
@@ -1846,7 +1846,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 			t_trees.resize(0);
 		}
 		PRINT_TIME(" Delete Trees");
-		t_trees.gen_deterministic(ext_x1, ext_x2, ext_y1, ext_y2);
+		t_trees.gen_deterministic(ext_x1, ext_y1, ext_x2, ext_y2, vegetation);
 		if (!scrolling) {cout << "Num trees = " << t_trees.size() << endl;}
 		last_rgi   = rand_gen_index;
 		last_xoff2 = xoff2;
