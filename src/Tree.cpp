@@ -34,6 +34,7 @@ int const TREE_COLL          = 2;
 int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
 int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
+bool const FORCE_TREE_TYPE   = 1;
 
 
 reusable_mem<tree_cylin >   tree_builder_t::cylin_cache [CYLIN_CACHE_ENTRIES ];
@@ -145,6 +146,7 @@ void tree::add_tree_collision_objects() {
 	if (!tree_coll_level || !physics_enabled()) return;
 	remove_collision_objects();
 	if (!is_over_mesh()) return; // optimization
+	assert(type < NUM_TREE_TYPES);
 	int const btid(tree_types[type].bark_tex), branch_coll_level(min(tree_coll_level, 4));
 	cobj_params cp(0.8, bcolor, TEST_RTREE_COBJS, 0, NULL, 0, btid, 4.0, 1, 0);
 	cp.shadow = 0; // will be handled by gen_tree_shadows()
@@ -354,7 +356,7 @@ coll_obj &tree::get_leaf_cobj(unsigned i) const {
 }
 
 
-void tree_data_t::gen_leaf_color(int tree_type) {
+void tree_data_t::gen_leaf_color() {
 
 	set_rand2_state(trseed[0], trseed[1]);
 	colorRGBA const leafc(get_leaf_base_color(tree_type));
@@ -643,7 +645,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 	float dc_scale(1.0 - 0.95*damage);
 	bcolor = tree_types[type].barkc;
 	UNROLL_3X(bcolor[i_] *= min(1.0f, dc_scale*tree_color[i_]);)
-	td.gen_leaf_color(type);
+	td.gen_leaf_color();
 	bool const has_leaves(!td.get_leaves().empty());
 	
 	if (draw_leaves && has_leaves) {
@@ -1209,7 +1211,6 @@ float get_default_tree_depth() {
 void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed) {
 
 	assert(calc_z || user_placed);
-	type        = ((ttype < 0) ? rand2() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
 	tree_center = pos;
 	created     = 1;
 	tree_color.alpha = 1.0;
@@ -1220,9 +1221,20 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 		assert(!td_is_private());
 		assert(!user_placed);
 		assert(size <= 0); // too strong?
-		// FIXME: check that td.type == type
+		int const td_type(tdata().get_tree_type());
+		
+		if (ttype < 0) {
+			type = (FORCE_TREE_TYPE ? td_type : (rand2() % NUM_TREE_TYPES));
+		}
+		else if (FORCE_TREE_TYPE) {
+			type = ttype;
+			// Note: we could relax this restruction and let type be different, which gives us more tree variation,
+			// but then the leaf and branch sizes/colors couldn't be different per tree
+			assert(type == td_type); // up to the caller to ensure this
+		}
 	}
 	else {
+		type = ((ttype < 0) ? rand2() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
 		float tree_depth(get_default_tree_depth());
 	
 		if (calc_z) {
@@ -1231,6 +1243,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 		}
 		td.gen_tree_data(type, size, tree_depth); // create the tree here
 	}
+	assert(type < NUM_TREE_TYPES);
 	unsigned const nleaves(td.get_leaves().size());
 	damage_scale = (nleaves ? 1.0/nleaves : 0.0);
 	damage       = 0.0;
@@ -1238,8 +1251,10 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 }
 
 
-void tree_data_t::gen_tree_data(int tree_type, int size, float tree_depth) {
+void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 
+	tree_type = tree_type_;
+	assert(tree_type < NUM_TREE_TYPES);
 	calc_leaf_points(); // required for placed trees
 	leaf_data.clear();
 	leaf_vbo = branch_vbo = branch_ivbo = 0;

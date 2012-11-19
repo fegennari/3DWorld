@@ -117,7 +117,7 @@ class tree_data_t {
 
 	int branch_vbo, branch_ivbo, leaf_vbo;
 	unsigned num_branch_quads, num_unique_pts;
-	int trseed[2];
+	int tree_type, trseed[2];
 	colorRGBA base_color, leaf_color;
 	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
@@ -139,8 +139,8 @@ public:
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
 	void make_private_copy(tree_data_t &dest) const;
-	void gen_tree_data(int tree_type, int size, float tree_depth);
-	void gen_leaf_color(int tree_type);
+	void gen_tree_data(int tree_type_, int size, float tree_depth);
+	void gen_leaf_color();
 	void update_all_leaf_colors();
 	void update_leaf_color(unsigned i, bool no_mark_changed=0);
 	colorRGB get_leaf_color(unsigned i) const;
@@ -159,6 +159,7 @@ public:
 	void clear_data();
 	void clear_vbos();
 	unsigned get_gpu_mem() const;
+	int get_tree_type() const {return tree_type;}
 };
 
 
