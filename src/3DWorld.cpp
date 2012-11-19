@@ -994,6 +994,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			combined_gu = !combined_gu;
 			if (combined_gu) setup_current_system(); else reset_planet_defaults(); // have to do this so that regen_trees gets correct vegetation
 			regen_trees(1, 0);
+			gen_grass(1);
 			reset_tiled_terrain_state();
 			
 			if (!combined_gu) {

@@ -221,8 +221,13 @@ public:
 };
 
 
-struct tree_data_manager_t : public vector<tree_data_t> {
+class tree_data_manager_t : public vector<tree_data_t> {
 
+	float last_tree_scale;
+	int last_rgi;
+
+public:
+	tree_data_manager_t() : last_tree_scale(1.0), last_rgi(0) {}
 	void ensure_init();
 	void clear_vbos();
 	unsigned get_gpu_mem() const;

@@ -1004,9 +1004,10 @@ int tree::delete_tree() {
 
 void tree_data_t::clear_data() {
 	
-	all_cylins.clear();
-	leaf_data.clear();
-	leaves.clear(); // Note: not present in original delete_trees()
+	clear_vbos();
+	all_cylins.clear(); remove_excess_cap(all_cylins);
+	leaf_data.clear();  remove_excess_cap(leaf_data);
+	leaves.clear();     remove_excess_cap(leaves); // Note: not present in original delete_trees()
 }
 
 
@@ -1885,7 +1886,15 @@ void tree::regen_tree(point const &pos, int recalc_shadows) {
 
 
 void tree_data_manager_t::ensure_init() {
-	if (max_unique_trees > 0 && empty()) {resize(max_unique_trees);}
+
+	if (max_unique_trees > 0 && empty()) {
+		resize(max_unique_trees);
+	}
+	else if (tree_scale != last_tree_scale || rand_gen_index != last_rgi) {
+		for (iterator i = begin(); i != end(); ++i) {i->clear_data();}
+		last_tree_scale = tree_scale;
+		last_rgi        = rand_gen_index;
+	}
 }
 
 void tree_data_manager_t::clear_vbos() {
