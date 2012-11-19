@@ -1162,7 +1162,6 @@ public:
 		//for (unsigned i = 0; i < to_draw.size(); ++i) {tot += to_draw[i].second->num_decid_trees();}
 		//cout << "to draw: " << to_draw.size() << " of " << tiles.size() << ", total trees: " << tot << endl;
 
-		// FIXME: make wind work
 		// FIXME: tree leaf ambient too high?
 		// FIXME: make all leaves the same size and same color by modifying the textures (TREE_MAPLE leaf color, TREE_B leaf size)
 		// FIXME: faster (view clipping, LOD, etc.)

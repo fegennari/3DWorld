@@ -1496,7 +1496,6 @@ void advance_physics_objects() {
 	for (unsigned i = 0; i < decals.size(); ++i) {
 		decals[i].check_cobj();
 	}
-	total_wind += wind*fticks; // only when objects are enabled?
 	check_falling_cobjs();
 }
 

@@ -784,7 +784,7 @@ void draw_sky(int order) {
 
 	if (wmag > TOLERANCE) {
 		for (unsigned d = 0; d < 2; ++d) {
-			sky_rot_xy[d] += fticks*CLOUD_WIND_SPEED*(wmag + 0.5*WIND_ADJUST)*wind[d]/wmag;
+			sky_rot_xy[d] -= fticks*CLOUD_WIND_SPEED*(wmag + 0.5*WIND_ADJUST)*wind[d]/wmag;
 		}
 	}
 	cur_spo = sky_pos_orient(center, radius, sky_rot_xy[0], sky_rot_xy[1]);

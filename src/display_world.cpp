@@ -46,6 +46,7 @@ extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs,
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop;
 extern double camera_zh;
 extern point mesh_origin, flow_source, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
+extern vector3d total_wind;
 extern colorRGBA sun_color, bkg_color;
 extern vector<camera_filter> cfilters;
 
@@ -835,6 +836,7 @@ void display(void) {
 		underwater     = check_underwater(CAMERA_ID, depth);
 		stencil_shadow = 0;
 		auto_advance_time();
+		if (animate2) {total_wind += wind*fticks;}
 		check_gl_error(3);
 		if (TIMETEST) PRINT_TIME("\n\n0");
 		

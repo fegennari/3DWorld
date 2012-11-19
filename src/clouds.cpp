@@ -349,8 +349,8 @@ void draw_cloud_plane(bool reflection_pass) {
 	glDepthMask(GL_FALSE);
 
 	if (animate2) {
-		cloud_wind_pos.x += fticks*wind.x;
-		cloud_wind_pos.y += fticks*wind.y;
+		cloud_wind_pos.x -= fticks*wind.x;
+		cloud_wind_pos.y -= fticks*wind.y;
 	}
 
 	// draw a plane at zmin to properly blend the fog
