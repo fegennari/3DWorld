@@ -1120,7 +1120,7 @@ public:
 		// nearby trunks
 		shader_t s;
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-		colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0));
+		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0);
 		s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 		s.add_uniform_float("tex_scale_t", 5.0);
 		set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
@@ -1162,16 +1162,31 @@ public:
 		//for (unsigned i = 0; i < to_draw.size(); ++i) {tot += to_draw[i].second->num_decid_trees();}
 		//cout << "to draw: " << to_draw.size() << " of " << tiles.size() << ", total trees: " << tot << endl;
 
+		// FIXME: make all leaves the same size and same color by modifying the textures (TREE_MAPLE leaf color, TREE_B leaf size)
+		// FIXME: make wind work
+		// FIXME: tree leaf ambient too high?
+		// FIXME: scale trees by landscape scale
+		// FIXME: faster (view clipping, LOD, etc.)
+
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->gen_decid_trees_if_needed();
 		}
-		shader_t s;
-		// setup branch shader
-		draw_decid_tree_bl(to_draw, s, 1, 0, reflection_pass); // branches
 
-		// setup leaf shader
-		draw_decid_tree_bl(to_draw, s, 0, 1, reflection_pass); // leaves
-		s.end_shader();
+		// draw branches
+		shader_t bs;
+		bs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		set_tree_branch_shader(bs, 1, 0, 0);
+		bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
+		draw_decid_tree_bl(to_draw, bs, 1, 0, reflection_pass);
+		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
+		bs.end_shader();
+		disable_multitex_a();
+
+		// draw leaves
+		shader_t ls;
+		tree_cont_t::pre_leaf_draw(ls);
+		draw_decid_tree_bl(to_draw, ls, 0, 1, reflection_pass);
+		tree_cont_t::post_leaf_draw(ls);
 	}
 
 	void draw_scenery(draw_vect_t const &to_draw, bool reflection_pass) {

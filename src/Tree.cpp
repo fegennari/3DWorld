@@ -56,7 +56,7 @@ tree_data_manager_t tree_data_manager;
 tree_cont_t t_trees(tree_data_manager);
 
 
-extern bool has_snow, no_sun_lpos_update;
+extern bool has_snow, no_sun_lpos_update, has_dl_sources;
 extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation;
@@ -213,6 +213,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches
 void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+	if (!has_dl_sources)                 {s.set_prefix("#define NO_LEAF_DLIGHTS",     0);} // VS optimization
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
 	s.setup_enabled_lights(2);
@@ -251,22 +252,8 @@ void tree_cont_t::check_leaf_shadow_change() {
 }
 
 
-void tree_cont_t::draw(bool shadow_only) {
+void tree_cont_t::pre_leaf_draw(shader_t &shader) {
 
-	// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
-	shader_t bs, ls;
-
-	// draw branches
-	bool const branch_smap(1 && !shadow_only); // looks better, but slower
-	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
-	draw_branches_and_leaves(bs, 1, 0, shadow_only, zero_vector);
-	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
-	bs.end_shader();
-	disable_multitex_a();
-
-	// draw leaves
-	set_leaf_shader(ls, 0.75, 1, 0, 3);
-		
 	if (draw_model == 0) { // solid fill
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
@@ -275,14 +262,39 @@ void tree_cont_t::draw(bool shadow_only) {
 	set_specular(0.1, 10.0);
 	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
-	draw_branches_and_leaves(ls, 0, 1, shadow_only, zero_vector);
+	set_leaf_shader(shader, 0.75, 1, 0, 3);
+}
+
+
+void tree_cont_t::post_leaf_draw(shader_t &shader) {
+
+	shader.end_shader();
 	set_lighted_sides(1);
-	ls.end_shader();
 	glDisable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
 	set_specular(0.0, 1.0);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_TEXTURE_2D);
+}
+
+
+void tree_cont_t::draw(bool shadow_only) {
+
+	// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
+	// draw branches
+	shader_t bs;
+	bool const branch_smap(1 && !shadow_only); // looks better, but slower
+	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
+	draw_branches_and_leaves(bs, 1, 0, shadow_only, zero_vector);
+	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
+	bs.end_shader();
+	disable_multitex_a();
+
+	// draw leaves
+	shader_t ls;
+	pre_leaf_draw(ls);
+	draw_branches_and_leaves(ls, 0, 1, shadow_only, zero_vector);
+	post_leaf_draw(ls);
 }
 
 
@@ -688,7 +700,8 @@ void tree_data_t::setup_branch_vbos() {
 				for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
 					float const tx(2.0*fabs(S*ndiv_inv - 0.5));
 					// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
-					data.push_back(branch_vert_type_t(vpn.p[(S<<1)+j], vpn.n[S], tx, float(cylin_id + j))); // average normals?
+					vector3d const n(0.5*vpn.n[S] + 0.5*vpn.n[(S+ndiv-1)%ndiv]); // average face normals to get vert normals
+					data.push_back(branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, float(cylin_id + j)));
 				}
 			}
 			for (unsigned S = 0; S < ndiv; ++S) { // create index data
@@ -804,8 +817,8 @@ bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
 
 void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const &xlate) {
 
-	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
 	tree_data_t &td(tdata());
+	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
 	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
 	if (!gen_arrays && leaf_dynamic_en && size_scale > 0.5) {update_leaf_orients();}
 
@@ -813,13 +826,18 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
 	if (gen_arrays) {calc_leaf_shadows();}
-	unsigned const num_dlights(enable_dynamic_lights((sphere_center() + xlate), td.sphere_radius));
-	if (s.is_setup()) {s.add_uniform_int("num_dlights", num_dlights);}
+	unsigned num_dlights(0);
+	bool const enable_dlights(has_dl_sources && world_mode == WMODE_GROUND && s.is_setup());
+
+	if (enable_dlights) {
+		num_dlights = enable_dynamic_lights((sphere_center() + xlate), td.sphere_radius);
+		s.add_uniform_int("num_dlights", num_dlights);
+	}
 	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
 	glPushMatrix();
 	translate_to(tree_center + xlate);
 	td.draw_leaves(size_scale);
-	disable_dynamic_lights(num_dlights);
+	if (enable_dlights) {disable_dynamic_lights(num_dlights);}
 	glPopMatrix();
 }
 

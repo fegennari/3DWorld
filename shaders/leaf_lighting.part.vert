@@ -45,11 +45,13 @@ void calc_leaf_lighting()
 	vec4 color = gl_Color * gl_LightModel.ambient;
 	if (enable_light0) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 0);
 	if (enable_light1) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 1);
+#ifndef NO_LEAF_DLIGHTS
 	vec3 n = normalize(normal);
 
 	for (int i = 2; i < num_dlights+2; ++i) { // add N dynamic point light sources
 		color += add_pt_light_comp(n, eye_space_pos, i);
 	}
+#endif
 	gl_FrontColor   = clamp(color, 0.0, 1.0);
 	gl_FogFragCoord = length(eye_space_pos.xyz);
 }
