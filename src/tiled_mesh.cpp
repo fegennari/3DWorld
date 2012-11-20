@@ -1178,7 +1178,6 @@ public:
 		//for (unsigned i = 0; i < to_draw.size(); ++i) {tot += to_draw[i].second->num_decid_trees();}
 		//cout << "to draw: " << to_draw.size() << " of " << tiles.size() << ", total trees: " << tot << endl;
 
-		// FIXME: tree leaf ambient too high?
 		// FIXME: faster (view clipping, LOD, etc.)
 
 		// draw branches
@@ -1194,7 +1193,10 @@ public:
 		// draw leaves
 		shader_t ls;
 		tree_cont_t::pre_leaf_draw(ls);
+		float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
+		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 		draw_decid_tree_bl(to_draw, ls, 0, 1, reflection_pass);
+		ls.add_uniform_color("color_scale", WHITE);
 		tree_cont_t::post_leaf_draw(ls);
 	}
 

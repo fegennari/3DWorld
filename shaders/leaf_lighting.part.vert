@@ -1,5 +1,6 @@
 uniform int num_dlights = 0;
 uniform float normal_scale = 1.0;
+uniform vec4 color_scale = vec4(1,1,1,1);
 
 vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in int i)
 {
@@ -52,6 +53,6 @@ void calc_leaf_lighting()
 		color += add_pt_light_comp(n, eye_space_pos, i);
 	}
 #endif
-	gl_FrontColor   = clamp(color, 0.0, 1.0);
+	gl_FrontColor   = clamp(color*color_scale, 0.0, 1.0);
 	gl_FogFragCoord = length(eye_space_pos.xyz);
 }
