@@ -214,7 +214,7 @@ public:
 	void clear_vbo();
 	int delete_tree();
 	int get_type()            const {return type;}
-	float get_bradius()       const {return tdata().sphere_radius;}
+	float get_radius()        const {return tdata().sphere_radius;}
 	point const &get_center() const {return tree_center;}
 	unsigned get_gpu_mem()    const {return (td_is_private() ? tdata().get_gpu_mem() : 0);}
 	bool get_no_delete()      const {return no_delete;}

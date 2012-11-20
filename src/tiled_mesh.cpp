@@ -50,6 +50,7 @@ float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius()
 bool is_water_enabled     () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool pine_trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool decid_trees_enabled  () {return ((tree_mode & 1) && vegetation > 0.0);}
+bool any_trees_enabled    () {return (pine_trees_enabled() || decid_trees_enabled());}
 bool scenery_enabled      () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
 bool is_grass_enabled     () {return ((display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
@@ -197,7 +198,7 @@ public:
 	}
 
 	unsigned get_gpu_mem() const {
-		unsigned mem(pine_trees.get_gpu_mem() + scenery.get_gpu_mem() + decid_trees.get_gpu_mem());
+		unsigned mem(pine_trees.get_gpu_mem() + decid_trees.get_gpu_mem() + scenery.get_gpu_mem());
 		unsigned const num_texels(stride*stride);
 		if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
 		if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
@@ -251,7 +252,7 @@ public:
 			init_vbo_ids();
 			clear_shadows();
 			pine_trees.clear_vbos();
-			decid_trees.clear_vbos(); // probably not necessary
+			decid_trees.clear_vbos(); // only necessary if not using instancing
 			scenery.clear_vbos_and_dlists();
 		}
 		if (tclear) {clear_tids();}
@@ -393,7 +394,7 @@ public:
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
 				float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
-				if (dist < rval) {tree_map[y*stride + x] *= (0.2 + 0.8*scale*dist);}
+				if (dist < rval) {tree_map[y*stride + x] *= (0.1 + 0.9*scale*dist);}
 			}
 		}
 		if (!no_adj_test) {
@@ -411,25 +412,36 @@ public:
 		return on_edge;
 	}
 
-	void apply_ao_shadows_for_trees(small_tree_group const &tg, point const &tree_off, bool no_adj_test) {
-		assert(pine_trees_generated());
+	void apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test) {
+		if (pine_trees_enabled()) {
+			assert(pine_trees_generated());
+			point const pt_off(tile->ptree_off.subtract_from(mesh_off));
 
-		for (small_tree_group::const_iterator i = tg.begin(); i != tg.end(); ++i) {
-			add_tree_ao_shadow((i->get_pos() + tree_off), i->get_pine_tree_radius(), no_adj_test);
+			for (small_tree_group::const_iterator i = tile->pine_trees.begin(); i != tile->pine_trees.end(); ++i) {
+				add_tree_ao_shadow((i->get_pos() + pt_off), i->get_pine_tree_radius(), no_adj_test);
+			}
+		}
+		if (decid_trees_enabled()) {
+			assert(decid_trees.was_generated());
+			point const dt_off(tile->dtree_off.subtract_from(mesh_off));
+
+			for (tree_cont_t::const_iterator i = tile->decid_trees.begin(); i != tile->decid_trees.end(); ++i) {
+				add_tree_ao_shadow((i->get_center() + dt_off), i->get_radius(), no_adj_test);
+			}
 		}
 		if (!no_adj_test) { // pull mode
 			for (int dy = -1; dy <= 1; ++dy) {
 				for (int dx = -1; dx <= 1; ++dx) {
 					if (dx == 0 && dy == 0) continue;
 					tile_t const *const adj_tile(get_adj_tile_smap(dx, dy));
-					if (adj_tile) {apply_ao_shadows_for_trees(adj_tile->pine_trees, adj_tile->ptree_off.subtract_from(mesh_off), 1);}
+					if (adj_tile) {apply_ao_shadows_for_trees(adj_tile, 1);}
 				}
 			}
 		}
 	}
 
 	void apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
-		apply_ao_shadows_for_trees(pine_trees, ptree_off.subtract_from(mesh_off), 0);
+		apply_ao_shadows_for_trees(this, 0);
 	}
 
 	struct norm_comp_with_shadow {
@@ -641,15 +653,19 @@ public:
 
 	// *** pine trees ***
 
+	template <typename T> void postproc_trees(T const &trees, float &tzmax) { // pine/decidious trees
+		tzmax  = mzmin;
+		trees.update_zmax(tzmax);
+		trmax  = max(trmax, trees.get_rmax());
+		radius = max(radius, (calc_radius() + trmax)); // is this really needed?
+		tree_map.resize(stride*stride, 255);
+	}
+
 	void init_pine_tree_draw() {
 		ptree_off.set_from_xyoff2();
 		pine_trees.gen_trees(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, vegetation*get_avg_veg());
-		ptzmax = mzmin;
-		pine_trees.update_zmax(ptzmax);
-		trmax  = max(trmax, pine_trees.max_pt_radius);
-		radius = max(radius, (calc_radius() + trmax)); // is this really needed?
 		pine_trees.calc_trunk_pts();
-		tree_map.resize(stride*stride, 255);
+		postproc_trees(pine_trees, ptzmax);
 	}
 
 	void update_pine_tree_state(bool upload_if_needed) {
@@ -723,13 +739,9 @@ public:
 	void gen_decid_trees_if_needed() {
 		if (decid_trees.was_generated()) return; // already generated
 		assert(decid_trees.empty());
-		//return; // FIXME: temporary
 		dtree_off.set_from_xyoff2();
 		decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg());
-		ptzmax = mzmin;
-		decid_trees.update_zmax(ptzmax);
-		trmax  = max(trmax, decid_trees.get_rmax());
-		radius = max(radius, (calc_radius() + trmax)); // is this really needed?
+		postproc_trees(decid_trees, dtzmax);
 	}
 
 	void draw_decid_trees(shader_t &s, bool draw_branches, bool draw_leaves, bool reflection_pass) {
@@ -835,7 +847,7 @@ public:
 	void pre_draw_update(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], mesh_xy_grid_cache_t &height_gen) {
 		if (vbo == 0) {
 			create_data(data, indices);
-			if (pine_trees_enabled()) {apply_tree_ao_shadows();}
+			if (any_trees_enabled()) {apply_tree_ao_shadows();}
 			vbo = create_vbo();
 			bind_vbo(vbo, 0);
 			upload_vbo_data(&data.front(), data.size()*sizeof(vert_type_t), 0);
@@ -1037,6 +1049,7 @@ public:
 			zmin = min(zmin, tile->get_zmin());
 			if (!tile->is_visible())    continue;
 			if (pine_trees_enabled() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
+			if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
 			if (reflection_pass && ((tile->contains_camera() && !tile->has_water()) || tile->all_water())) continue;
 			to_draw.push_back(make_pair(dist, tile));
 		}
@@ -1164,10 +1177,6 @@ public:
 
 		// FIXME: tree leaf ambient too high?
 		// FIXME: faster (view clipping, LOD, etc.)
-
-		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->gen_decid_trees_if_needed();
-		}
 
 		// draw branches
 		shader_t bs;

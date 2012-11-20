@@ -1931,12 +1931,12 @@ unsigned tree_cont_t::get_gpu_mem() const {
 
 float tree_cont_t::get_rmax() const {
 	float rmax(0.0);
-	for (const_iterator i = begin(); i != end(); ++i) {rmax = max(rmax, i->get_bradius());}
+	for (const_iterator i = begin(); i != end(); ++i) {rmax = max(rmax, i->get_radius());}
 	return rmax;
 }
 
 void tree_cont_t::update_zmax(float &tzmax) const {
-	for (const_iterator i = begin(); i != end(); ++i) {tzmax = max(tzmax, (i->get_center().z + i->get_bradius()));}
+	for (const_iterator i = begin(); i != end(); ++i) {tzmax = max(tzmax, (i->get_center().z + i->get_radius()));}
 }
 
 void tree_cont_t::shift_by(vector3d const &vd) {

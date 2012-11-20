@@ -87,6 +87,7 @@ struct small_tree_group : public vector<small_tree> {
 	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());}
 	bool is_uploaded(bool low_detail) const {return vbo_manager[low_detail].is_uploaded();}
 	void update_zmax(float &tzmax) const;
+	float get_rmax() const {return max_pt_radius;}
 };
 
 
