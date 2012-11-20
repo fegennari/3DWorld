@@ -103,7 +103,7 @@ class tile_t {
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep;
-	bool shadows_invalid, in_queue;
+	bool shadows_invalid, weights_invalid, in_queue;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	vector<float> zvals;
 	vector<unsigned char> tree_map;
@@ -155,7 +155,7 @@ public:
 	//~tile_t() {clear_vbo_tid(1,1);}
 	
 	tile_t(unsigned size_, int x, int y) : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1),
-		gen_tsize(0), trmax(0.0), shadows_invalid(1), in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+		gen_tsize(0), trmax(0.0), shadows_invalid(1), weights_invalid(1), in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 	{
 		assert(size > 0);
 		x1 = x*size;
@@ -409,6 +409,7 @@ public:
 			}
 		}
 		invalidate_shadows();
+		weights_invalid = 1; // Note: may be slow, and doesn't have a big impact
 		return on_edge;
 	}
 
@@ -426,7 +427,7 @@ public:
 			point const dt_off(tile->dtree_off.subtract_from(mesh_off));
 
 			for (tree_cont_t::const_iterator i = tile->decid_trees.begin(); i != tile->decid_trees.end(); ++i) {
-				add_tree_ao_shadow((i->get_center() + dt_off), i->get_radius(), no_adj_test);
+				add_tree_ao_shadow((i->get_center() + dt_off), 0.5*i->get_radius(), no_adj_test); // less dense => smaller radius
 			}
 		}
 		if (!no_adj_test) { // pull mode
@@ -441,6 +442,7 @@ public:
 	}
 
 	void apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
+		tree_map.resize(stride*stride, 255);
 		apply_ao_shadows_for_trees(this, 0);
 	}
 
@@ -518,6 +520,7 @@ public:
 		assert(!island);
 		assert(zvals.size() == zvsize*zvsize);
 		//RESET_TIME;
+		weights_invalid = 0;
 		grass_blocks.clear();
 		unsigned const grass_block_dim(get_grass_block_dim()), tsize(stride);
 		unsigned char *data(new unsigned char[4*tsize*tsize]); // RGBA
@@ -658,7 +661,6 @@ public:
 		trees.update_zmax(tzmax);
 		trmax  = max(trmax, trees.get_rmax());
 		radius = max(radius, (calc_radius() + trmax)); // is this really needed?
-		tree_map.resize(stride*stride, 255);
 	}
 
 	void init_pine_tree_draw() {
@@ -860,6 +862,7 @@ public:
 				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
 			}
 		}
+		if (weights_invalid) {free_texture(weight_tid);}
 		if (weight_tid == 0) {create_texture(height_gen);}
 		check_shadow_map_and_normal_texture();
 	}
