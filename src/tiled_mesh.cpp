@@ -846,22 +846,24 @@ public:
 
 	// *** rendering ***
 
-	void pre_draw_update(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS], mesh_xy_grid_cache_t &height_gen) {
-		if (vbo == 0) {
-			create_data(data, indices);
-			if (any_trees_enabled()) {apply_tree_ao_shadows();}
-			vbo = create_vbo();
-			bind_vbo(vbo, 0);
-			upload_vbo_data(&data.front(), data.size()*sizeof(vert_type_t), 0);
+	void ensure_vbo(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
+		if (vbo) return; // already allocated
+		create_data(data, indices);
+		if (any_trees_enabled()) {apply_tree_ao_shadows();}
+		vbo = create_vbo();
+		bind_vbo(vbo, 0);
+		upload_vbo_data(&data.front(), data.size()*sizeof(vert_type_t), 0);
 
-			for (unsigned i = 0; i < NUM_LODS; ++i) {
-				assert(ivbo[i] == 0);
-				ivbo[i] = create_vbo();
-				bind_vbo(ivbo[i], 1);
-				assert(!indices[i].empty());
-				upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
-			}
+		for (unsigned i = 0; i < NUM_LODS; ++i) {
+			assert(ivbo[i] == 0);
+			ivbo[i] = create_vbo();
+			bind_vbo(ivbo[i], 1);
+			assert(!indices[i].empty());
+			upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
 		}
+	}
+
+	void ensure_weights(mesh_xy_grid_cache_t &height_gen) {
 		if (weights_invalid) {free_texture(weight_tid);}
 		if (weight_tid == 0) {create_texture(height_gen);}
 		check_shadow_map_and_normal_texture();
@@ -1063,7 +1065,10 @@ public:
 			}
 		}
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->pre_draw_update(data, indices, height_gen);
+			to_draw[i].second->ensure_vbo(data, indices);
+		}
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			to_draw[i].second->ensure_weights(height_gen);
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 		shader_t s;
@@ -1179,6 +1184,7 @@ public:
 		//cout << "to draw: " << to_draw.size() << " of " << tiles.size() << ", total trees: " << tot << endl;
 
 		// FIXME: faster (view clipping, LOD, etc.)
+		// FIXME: shadow map?
 
 		// draw branches
 		shader_t bs;
