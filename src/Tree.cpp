@@ -747,6 +747,7 @@ void tree_data_t::draw_branches(float size_scale) {
 
 void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate) {
 
+	if (size_scale < 0.05) return; // too far away, don't draw any branches
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
 	BLACK.do_glColor();
@@ -1834,14 +1835,16 @@ void tree_cont_t::gen_deterministic(int ext_x1, int ext_y1, int ext_x2, int ext_
 			if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
 			if (tree_mode == 3 && world_mode == WMODE_GROUND && get_tree_class_from_height(pos.z) != TREE_CLASS_DECID) continue; // use a small (simple) tree here
 			push_back(tree());
+			int ttype(-1);
 				
 			if (max_unique_trees > 0) {
 				unsigned const tree_id(global_rand_gen.rseed1 % max_unique_trees);
-				//cout << "selected tree " << tree_id << " of " << shared_tree_data.size() << endl;
 				assert(tree_id < shared_tree_data.size());
 				back().bind_to_td(&shared_tree_data[tree_id]);
+				ttype = tree_id % NUM_TREE_TYPES;
+				//cout << "selected tree " << tree_id << " of " << shared_tree_data.size() << " type " << ttype << endl;
 			}
-			back().regen_tree(pos, 0); // use random function #2 for trees
+			back().gen_tree(pos, 0, ttype, 1, 1, 0);
 		}
 	}
 	generated = 1;
@@ -1890,13 +1893,6 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 	}
 	if (recalc_shadows) calc_visibility(SUN_SHADOW | MOON_SHADOW | TREE_ONLY);
 	PRINT_TIME(" Gen Trees");
-}
-
-
-void tree::regen_tree(point const &pos, int recalc_shadows) {
-
-	gen_tree(pos, 0, -1, 1, 1, 0);
-	if (recalc_shadows) gen_tree_shadows((SUN_SHADOW | MOON_SHADOW));
 }
 
 

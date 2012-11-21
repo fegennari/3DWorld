@@ -39,8 +39,8 @@ void main()
 		eye    = mvm_inv[3].xyz; // world space
 	}
 	else {
-		vpos = gl_Vertex.xyz + world_space_offset;
-		eye  = gl_ModelViewMatrixInverse[3].xyz; // world space
+		vpos   = gl_Vertex.xyz + world_space_offset;
+		eye    = gl_ModelViewMatrixInverse[3].xyz; // world space
 		normal = normalize(gl_Normal);
 	}
 	setup_indir_lighting(vpos, normal);
