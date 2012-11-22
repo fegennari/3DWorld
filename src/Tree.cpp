@@ -206,6 +206,8 @@ void tree_cont_t::remove_cobjs() {
 
 void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate) {
 
+	BLACK.do_glColor();
+
 	for (iterator i = begin(); i != end(); ++i) {
 		i->draw_tree(s, draw_branches, draw_leaves, shadow_only, xlate);
 	}
@@ -358,22 +360,15 @@ coll_obj &tree::get_leaf_cobj(unsigned i) const {
 
 void tree_data_t::gen_leaf_color() {
 
-	set_rand2_state(trseed[0], trseed[1]);
-	colorRGBA const leafc(get_leaf_base_color(tree_type));
-	base_color.alpha = 1.0;
-
-	for (unsigned i = 0; i < 3; ++i) {
-		float cscale((i<2) ? 0.5 : 0.125);
-		base_color[i] = rand_uniform2(-cscale*tree_color_coherence, cscale*tree_color_coherence);
-		leaf_color[i] = leaf_color_coherence*leafc[i];
-	}
+	leaf_color = get_leaf_base_color(tree_type) * leaf_color_coherence;
 }
 
 
 inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const {
 
 	float const ilch(1.0 - leaf_color_coherence);
-	return colorRGB(color*(leaf_color.R + ilch*lred) + base_color.R, color*(leaf_color.G + ilch*lgreen) + base_color.G, 0.0);
+	return colorRGB(color*(leaf_color.R + ilch*lred  ) + base_color.R*tree_color_coherence,
+		            color*(leaf_color.G + ilch*lgreen) + base_color.G*tree_color_coherence, 0.0);
 }
 
 
@@ -750,7 +745,6 @@ void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d cons
 	if (size_scale < 0.05) return; // too far away, don't draw any branches
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
-	BLACK.do_glColor();
 	if (s.is_setup()) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
 	glPushMatrix();
 	translate_to(tree_center + xlate);
@@ -1266,7 +1260,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
 	tree_builder_t builder;
-	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, trseed);
+	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color);
 	
 	// create leaves and all_cylins
 	sphere_center_zoff = builder.get_bsphere_center_zval();
@@ -1287,7 +1281,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 }
 
 
-float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, int trseed[2]) {
+float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color) {
 
 	//fixed tree variables
 	ncib                 = 10;
@@ -1331,7 +1325,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	max_2_angle_rotate     = 50.0;
 	max_3_angle_rotate     = 50.0;
 	float const branch_1_random_rotate = 40.0;
-	for (unsigned d = 0; d < 2; ++d) {trseed[d] = rand2();}
+	base_color = colorRGBA(0.5*signed_rand_float2(), 0.5*signed_rand_float2(), 0.0, 1.0); // no blue
 
 	//temporary variables
 	int num_b_so_far(0);

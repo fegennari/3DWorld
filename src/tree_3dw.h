@@ -103,7 +103,7 @@ class tree_builder_t {
 		vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves) const;
 
 public:
-	float create_tree_branches(int tree_type, int size, float tree_depth, int trseed[2]);
+	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color);
 	void create_all_cylins_and_leaves(int tree_type, float deadness, vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves);
 	float get_bsphere_center_zval() const;
 };
@@ -117,7 +117,7 @@ class tree_data_t {
 
 	int branch_vbo, branch_ivbo, leaf_vbo;
 	unsigned num_branch_quads, num_unique_pts;
-	int tree_type, trseed[2];
+	int tree_type;
 	colorRGBA base_color, leaf_color;
 	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
