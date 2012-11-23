@@ -198,22 +198,6 @@ public:
 		float const dy(max(fabs(pt.y - bc.d[1][0]), fabs(pt.y - bc.d[1][1])));
 		return sqrt(dx*dx + dy*dy);
 	}
-	float get_min_xy_dist_to_water(point const &pt) const { // zero = infinite
-		if (!has_water()) {return 0.0;}
-		// check all_water()?
-		float dmin_sq(0.0);
-
-		for (unsigned y = 0; y <= size; ++y) {
-			for (unsigned x = 0; x <= size; ++x) {
-				if (zvals[y*zvsize + x] < water_plane_z) {
-					float const dx(fabs(pt.x - xstart + x*xstep)), dy(fabs(pt.y - ystart + y*ystep));
-					float const dsq(dx*dx + dy*dy);
-					dmin_sq = ((dmin_sq == 0.0) ? dsq : min(dmin_sq, dsq));
-				}
-			}
-		}
-		return sqrt(dmin_sq);
-	}
 	bool contains_camera() const {
 		return get_cube().contains_pt_xy(get_camera_pos());
 	}
@@ -1091,26 +1075,6 @@ public:
 			for (int i = 0; i < (int)to_gen_trees.size(); ++i) {
 				to_gen_trees[i]->init_pine_tree_draw();
 			}
-		}
-		if (reflection_pass && (display_mode & 0x10)) {
-			RESET_TIME;
-			float min_water_dist(FAR_CLIP);
-			point const camera(get_camera_pos());
-			unsigned const init_num_draw(to_draw.size());
-
-			for (unsigned i = 0; i < to_draw.size(); ++i) {
-				float const water_dist(to_draw[i].second->get_min_xy_dist_to_water(camera));
-				min_water_dist = ((water_dist == 0.0) ? min_water_dist : min(min_water_dist, water_dist));
-			}
-			for (unsigned i = 0; i < to_draw.size(); ++i) {
-				if (to_draw[i].second->get_max_xy_dist_to_pt(camera) < min_water_dist) { // closer than the nearest water
-					swap(to_draw[i], to_draw.back());
-					to_draw.pop_back(); // remove/skip reflection rendering pass
-					--i; // wraparound ok
-				}
-			}
-			PRINT_TIME("Min Water Dist");
-			cout << init_num_draw << " " << to_draw.size() << endl;
 		}
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->ensure_vbo(data, indices);
