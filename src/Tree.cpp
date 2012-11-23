@@ -1802,19 +1802,28 @@ void tree_cont_t::post_scroll_remove() {
 }
 
 
-void tree_cont_t::gen_deterministic(int ext_x1, int ext_y1, int ext_x2, int ext_y2, float vegetation_) {
+void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_) {
 
+	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
 	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
 	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
-	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1, XY_MULT_SIZE/num_trees));
+	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? TREE_DEN_THRESH : 1.0));
+	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1U, XY_MULT_SIZE/mod_num_trees));
 	unsigned const skip_val(max(1, int(1.0/sqrt(tree_scale)))); // similar to deterministic gen in scenery.cpp
 	shared_tree_data.ensure_init();
+	mesh_xy_grid_cache_t density_gen[NUM_TREE_TYPES+1];
 
-	for (int i = ext_y1; i < ext_y2; i += skip_val) {
-		for (int j = ext_x1; j < ext_x2; j += skip_val) {
+	if (NONUNIFORM_TREE_DEN) {
+		for (unsigned i = 0; i <= NUM_TREE_TYPES; ++i) {
+			float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)*(i==0 ? 1.0 : 0.1)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
+			density_gen[i].build_arrays(xscale*(x1 + xoff2 + 1000*i), yscale*(y1 + yoff2 - 1500*i), xscale, yscale, (x2-x1), (y2-y1));
+		}
+	}
+	for (int i = y1; i < y2; i += skip_val) {
+		for (int j = x1; j < x2; j += skip_val) {
 			if (scrolling) {
 				int const ox(j + dx_scroll), oy(i + dy_scroll); // positions in original coordinate system
-				if (ox >= ext_x1 && ox <= ext_x2 && oy >= ext_y1 && oy <= ext_y2) continue; // use orignal tree from last position
+				if (ox >= x1 && ox <= x2 && oy >= y1 && oy <= y2) continue; // use orignal tree from last position
 			}
 			global_rand_gen.rseed1 = 805306457*(i + yoff2) + 12582917*(j + xoff2) + 100663319*rand_gen_index;
 			global_rand_gen.rseed2 = 6291469  *(j + xoff2) + 3145739 *(i + yoff2) + 1572869  *rand_gen_index;
@@ -1828,16 +1837,33 @@ void tree_cont_t::gen_deterministic(int ext_x1, int ext_y1, int ext_x2, int ext_
 			pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 			if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
 			if (tree_mode == 3 && world_mode == WMODE_GROUND && get_tree_class_from_height(pos.z) != TREE_CLASS_DECID) continue; // use a small (simple) tree here
-			push_back(tree());
-			int ttype(-1);
-				
-			if (max_unique_trees > 0) {
-				unsigned const tree_id(global_rand_gen.rseed1 % max_unique_trees);
-				assert(tree_id < shared_tree_data.size());
-				back().bind_to_td(&shared_tree_data[tree_id]);
-				ttype = tree_id % NUM_TREE_TYPES;
+			int ttype(-1), tree_id(-1);
+
+			if (NONUNIFORM_TREE_DEN) {
+				float const dist_test(get_rel_height(density_gen[0].eval_index(j-x1, i-y1, 1), -zmax_est, zmax_est));
+				if (dist_test > TREE_DEN_THRESH) continue; // density function test
+				float max_val(0.0);
+
+				for (unsigned tt = 0; tt < NUM_TREE_TYPES; ++tt) {
+					float const den_val(density_gen[tt+1].eval_index(j-x1, i-y1, 1));
+					if (max_val == 0.0 || den_val > max_val) {max_val = den_val; ttype = tt;}
+				}
+				max_val = get_rel_height(max_val, -zmax_est, zmax_est);
+			}
+			if (!shared_tree_data.empty()) {
+				if (ttype >= 0) {
+					unsigned const num_per_type(max(1U, shared_tree_data.size()/NUM_TREE_TYPES));
+					tree_id = min(unsigned((global_rand_gen.rseed2 % num_per_type) + ttype*num_per_type), shared_tree_data.size()-1);
+					if (shared_tree_data[tree_id].is_created()) {ttype = shared_tree_data[tree_id].get_tree_type();} // in case there weren't enough generated to get the requested type
+				}
+				else {
+					tree_id = (global_rand_gen.rseed2 % shared_tree_data.size());
+					ttype   = tree_id % NUM_TREE_TYPES;
+				}
 				//cout << "selected tree " << tree_id << " of " << shared_tree_data.size() << " type " << ttype << endl;
 			}
+			push_back(tree());
+			if (tree_id >= 0) {back().bind_to_td(&shared_tree_data[tree_id]);}
 			back().gen_tree(pos, 0, ttype, 1, 1, 0);
 		}
 	}

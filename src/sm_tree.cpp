@@ -10,10 +10,7 @@
 
 
 float const SM_TREE_SIZE    = 0.05;
-float const TREE_DIST_SCALE = 100.0;
 float const TREE_DIST_RAND  = 0.2;
-float const TREE_DIST_MH_S  = 100.0;
-float const SM_TREE_AMT     = 0.55;
 float const LINE_THRESH     = 700.0;
 bool const SMALL_TREE_COLL  = 1;
 bool const DRAW_COBJS       = 0; // for debugging
@@ -252,25 +249,20 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 	int const ntrees(int(min(1.0f, vegetation_*tscale*tscale/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
 	assert(x1 < x2 && y1 < y2);
-	float const x0(TREE_DIST_MH_S*X_SCENE_SIZE + xoff2*DX_VAL), y0(TREE_DIST_MH_S*Y_SCENE_SIZE + yoff2*DY_VAL);
-	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0));
 	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/sqrt(tree_scale))));
-	float const xv(DX_VAL*(tds*(get_xval(x1)+x0) - (MESH_X_SIZE >> 1))), yv(DY_VAL*(tds*(get_yval(y1)+y0) - (MESH_Y_SIZE >> 1)));
-	mesh_xy_grid_cache_t height_gen;
-	height_gen.build_arrays(xv, yv, tds*DX_VAL*DX_VAL, tds*DY_VAL*DY_VAL, (x2-x1), (y2-y1));
-	//PRINT_TIME("Delete");
+	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
+	mesh_xy_grid_cache_t density_gen;
+	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1));
 	
 	for (int i = y1; i < y2; i += skip_val) {
 		for (int j = x1; j < x2; j += skip_val) {
 			rgen.set_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
 						   (845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
 			if ((rgen.rand_seed_mix()%tree_prob) != 0) continue; // not selected
-			//float const val(eval_one_surface_point((tds*(xpos+x0)-xoff2), (tds*(ypos+y0)-yoff2)));
-			float const val(height_gen.eval_index(j-x1, i-y1, 1));
-			float const dist_test(get_rel_height(val, -zmax_est, zmax_est));
+			float const dist_test(get_rel_height(density_gen.eval_index(j-x1, i-y1, 1), -zmax_est, zmax_est));
 
 			for (int n = 0; n < trees_per_block; ++n) {
-				if (dist_test > (SM_TREE_AMT*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rgen.rand_float())) continue; // tree density function test
+				if (dist_test > (TREE_DEN_THRESH*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rgen.rand_float())) continue; // tree density function test
 				rgen.rand_mix();
 				float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
 				float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());

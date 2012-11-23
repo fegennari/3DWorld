@@ -35,7 +35,7 @@ float const GRASS_LOD_SCALE   = 16.0;
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density;
-extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, ground_effects_level;
+extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
 extern point sun_pos, moon_pos;
 extern float h_dirt[];
@@ -1216,6 +1216,7 @@ public:
 		draw_decid_tree_bl(to_draw, ls, 0, 1, reflection_pass);
 		ls.add_uniform_color("color_scale", WHITE);
 		tree_cont_t::post_leaf_draw(ls);
+		leaf_color_changed = 0; // Note: only visible trees will be updated
 	}
 
 	void draw_scenery(draw_vect_t const &to_draw, bool reflection_pass) {

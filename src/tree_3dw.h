@@ -9,6 +9,9 @@
 #include "memory_alloc.h"
 
 
+float const TREE_DIST_SCALE = 100.0;
+float const TREE_DEN_THRESH = 0.55;
+
 unsigned const CYLIN_CACHE_ENTRIES  = 4;
 unsigned const BRANCH_CACHE_ENTRIES = 3;
 
@@ -133,8 +136,8 @@ class tree_data_t {
 public:
 	float base_radius, sphere_radius, sphere_center_zoff;
 
-	tree_data_t(bool priv=1) : branch_vbo(0), branch_ivbo(0), leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), last_update_frame(0),
-		leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0) {}
+	tree_data_t(bool priv=1) : branch_vbo(0), branch_ivbo(0), leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1),
+		last_update_frame(0), leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
@@ -251,7 +254,7 @@ public:
 	unsigned delete_all();
 	unsigned scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2);
 	void post_scroll_remove();
-	void gen_deterministic(int ext_x1, int ext_y1, int ext_x2, int ext_y2, float vegetation_);
+	void gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_);
 	void shift_by(vector3d const &vd);
 	void add_cobjs();
 	void clear_vbos();
