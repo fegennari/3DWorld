@@ -1,4 +1,4 @@
-ntrees 5
+ntrees 50
 max_unique_trees 100
 nleaves_scale 2.0
 nsmileys 6

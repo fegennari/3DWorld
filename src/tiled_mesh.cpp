@@ -174,7 +174,7 @@ public:
 	float get_zmax() const {return mzmax;}
 	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), max(ptzmax, dtzmax));}
 	bool has_water() const {return (mzmin < water_plane_z);}
-	bool all_water() const {return (get_tile_zmax() < water_plane_z);}
+	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()?
 	bool pine_trees_generated() const {return pine_trees.generated;}
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
 	float get_avg_veg() const {return 0.25*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
@@ -185,6 +185,34 @@ public:
 	cube_t get_cube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), z2(get_tile_zmax());
 		return cube_t(xv1-trmax, xv1+(x2-x1)*DX_VAL+trmax, yv1-trmax, yv1+(y2-y1)*DY_VAL+trmax, mzmin, z2);
+	}
+	float get_min_dist_to_pt(point const &pt) const {
+		point p1(pt), p2(get_center());
+		bool const ret(do_line_clip(p1, p2, get_cube().d)); // only clip in x and y?
+		assert(ret);
+		return p2p_dist(pt, p1);
+	}
+	float get_max_xy_dist_to_pt(point const &pt) const {
+		cube_t const bc(get_cube());
+		float const dx(max(fabs(pt.x - bc.d[0][0]), fabs(pt.x - bc.d[0][1])));
+		float const dy(max(fabs(pt.y - bc.d[1][0]), fabs(pt.y - bc.d[1][1])));
+		return sqrt(dx*dx + dy*dy);
+	}
+	float get_min_xy_dist_to_water(point const &pt) const { // zero = infinite
+		if (!has_water()) {return 0.0;}
+		// check all_water()?
+		float dmin_sq(0.0);
+
+		for (unsigned y = 0; y <= size; ++y) {
+			for (unsigned x = 0; x <= size; ++x) {
+				if (zvals[y*zvsize + x] < water_plane_z) {
+					float const dx(fabs(pt.x - xstart + x*xstep)), dy(fabs(pt.y - ystart + y*ystep));
+					float const dsq(dx*dx + dy*dy);
+					dmin_sq = ((dmin_sq == 0.0) ? dsq : min(dmin_sq, dsq));
+				}
+			}
+		}
+		return sqrt(dmin_sq);
 	}
 	bool contains_camera() const {
 		return get_cube().contains_pt_xy(get_camera_pos());
@@ -1063,6 +1091,26 @@ public:
 			for (int i = 0; i < (int)to_gen_trees.size(); ++i) {
 				to_gen_trees[i]->init_pine_tree_draw();
 			}
+		}
+		if (reflection_pass && (display_mode & 0x10)) {
+			RESET_TIME;
+			float min_water_dist(FAR_CLIP);
+			point const camera(get_camera_pos());
+			unsigned const init_num_draw(to_draw.size());
+
+			for (unsigned i = 0; i < to_draw.size(); ++i) {
+				float const water_dist(to_draw[i].second->get_min_xy_dist_to_water(camera));
+				min_water_dist = ((water_dist == 0.0) ? min_water_dist : min(min_water_dist, water_dist));
+			}
+			for (unsigned i = 0; i < to_draw.size(); ++i) {
+				if (to_draw[i].second->get_max_xy_dist_to_pt(camera) < min_water_dist) { // closer than the nearest water
+					swap(to_draw[i], to_draw.back());
+					to_draw.pop_back(); // remove/skip reflection rendering pass
+					--i; // wraparound ok
+				}
+			}
+			PRINT_TIME("Min Water Dist");
+			cout << init_num_draw << " " << to_draw.size() << endl;
 		}
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->ensure_vbo(data, indices);
