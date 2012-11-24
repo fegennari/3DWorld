@@ -63,7 +63,6 @@ extern tree_cont_t t_trees;
 
 int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
 				 unsigned app_rate, bool init_enabled, bool reorderable, bool auot_max);
-void free_all_coll_objects();
 void add_all_coll_objects(const char *coll_obj_file, bool re_add);
 int read_coll_objects(const char *coll_obj_file);
 void gen_star_points();
@@ -581,7 +580,6 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		is_snow      = 0;
 		start_ripple = 0;
 	}
-	free_all_coll_objects();
 	PRINT_TIME("Collision object cleanup");
 	
 	if (num_trees > 0) {
@@ -691,12 +689,15 @@ void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) 
 
 void free_all_coll_objects() {
 
+	// Note: all cobjs should have been removed from coll_objects/cobj_manager at the point,
+	//       but the various scene objects could still reference them and need to be cleared
 	free_scenery();
 	remove_small_tree_cobjs();
 	remove_tree_cobjs();
+	bool have_fixed_cobjs(0);
 	
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {
-		if (coll_objects[i].fixed) remove_reset_coll_obj(coll_objects[i].id);
+		have_fixed_cobjs |= coll_objects[i].fixed;
 		coll_objects[i].waypt_id = -1;
 	}
 	for (unsigned i = 0; i < hmv_coll_obj.size(); ++i) {
@@ -704,14 +705,17 @@ void free_all_coll_objects() {
 	}
 	if (begin_motion) {
 		for (int i = 0; i < num_groups; ++i) {
-			if (obj_groups[i].enabled) obj_groups[i].remove_reset_cobjs();
+			if (obj_groups[i].enabled) {obj_groups[i].remove_reset_cobjs();}
 		}
 	}
 	remove_coll_object(camera_coll_id); // not necessary?
 	purge_coll_freed(1);
-	assert(coll_objects.dynamic_ids.empty());
-	assert(coll_objects.drawn_ids.empty());
-	assert(coll_objects.platform_ids.empty());
+
+	if (!have_fixed_cobjs) { // Note: if there are fixed cobjs, these maps will be nonempty
+		assert(coll_objects.dynamic_ids.empty());
+		assert(coll_objects.drawn_ids.empty());
+		assert(coll_objects.platform_ids.empty());
+	}
 	czmin = model_czmin; // reset zmin/zmax to original values before cobjs were added
 	czmax = model_czmax;
 }

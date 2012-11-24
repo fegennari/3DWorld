@@ -35,6 +35,7 @@ extern platform_cont platforms;
 
 
 void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_to_hcm, int is_dynamic, int dhcm);
+void free_all_coll_objects();
 
 
 
@@ -742,6 +743,7 @@ void remove_all_coll_obj() {
 			cobj_manager.free_index(i);
 		}
 	}
+	free_all_coll_objects();
 }
 
 
