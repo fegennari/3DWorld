@@ -267,10 +267,7 @@ bool vbo_block_manager_t<vert_type_t>::upload() {
 	assert(!pts.empty());
 	if (offsets.empty()) {offsets.push_back(0);} // start at 0
 	if (offsets.back() != pts.size()) {offsets.push_back(pts.size());} // add terminator
-	vbo = create_vbo();
-	bind_vbo(vbo);
-	upload_vbo_data(&pts.front(), pts.size()*sizeof(vert_type_t));
-	bind_vbo(0);
+	create_vbo_and_upload(vbo, pts, 0, 1);
 	return 1;
 }
 

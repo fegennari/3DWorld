@@ -7,6 +7,7 @@
 
 #include "3DWorld.h"
 #include "memory_alloc.h"
+#include "gl_ext_arb.h" // for indexed_vbo_manager_t
 
 
 float const TREE_DIST_SCALE = 100.0;
@@ -118,8 +119,8 @@ class tree_data_t {
 	typedef vert_norm_comp_tc branch_vert_type_t;
 	typedef unsigned short branch_index_t;
 
-	int branch_vbo, branch_ivbo, leaf_vbo;
-	unsigned num_branch_quads, num_unique_pts;
+	indexed_vbo_manager_t branch_vbo_manager;
+	unsigned leaf_vbo, num_branch_quads, num_unique_pts;
 	int tree_type;
 	colorRGBA base_color, leaf_color;
 	vector<leaf_vert_type_t> leaf_data;
@@ -136,8 +137,8 @@ class tree_data_t {
 public:
 	float base_radius, sphere_radius, sphere_center_zoff;
 
-	tree_data_t(bool priv=1) : branch_vbo(0), branch_ivbo(0), leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1),
-		last_update_frame(0), leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0) {}
+	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1), last_update_frame(0),
+		leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}

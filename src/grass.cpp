@@ -184,7 +184,6 @@ void grass_tile_manager_t::upload_data() {
 
 	if (empty()) return;
 	RESET_TIME;
-	assert(vbo);
 	vector<grass_data_t> data(3*size()); // 3 vertices per grass blade
 
 	for (unsigned i = 0, ix = 0; i < size(); ++i) {
@@ -192,9 +191,7 @@ void grass_tile_manager_t::upload_data() {
 		//vector3d norm(grass[i].n);
 		add_to_vbo_data(grass[i], data, ix, norm);
 	}
-	bind_vbo(vbo);
-	upload_vbo_data(&data.front(), data.size()*sizeof(grass_data_t));
-	bind_vbo(0);
+	upload_to_vbo(vbo, data, 0, 1);
 	data_valid = 1;
 	PRINT_TIME("Grass Tile Upload");
 }
@@ -377,10 +374,8 @@ public:
 		unsigned offset(3*start);
 		vector<grass_data_t> data(min(num_verts, block_size));
 		bind_vbo(vbo);
-
-		if (create) { // initial upload (setup, no data)
-			upload_vbo_data(NULL, 3*grass.size()*vntc_sz);
-		}
+		if (create) {upload_vbo_data(NULL, 3*grass.size()*vntc_sz);} // initial upload (setup, no data)
+		
 		for (unsigned i = start, ix = 0; i < end; ++i) {
 			//vector3d norm(plus_z); // use grass normal? 2-sided lighting?
 			//vector3d norm(grass[i].n);

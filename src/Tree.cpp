@@ -8,7 +8,6 @@
 #include "tree_leaf.h"
 #include "explosion.h"
 #include "physics_objects.h"
-#include "gl_ext_arb.h"
 #include "shaders.h"
 
 
@@ -572,15 +571,14 @@ inline float tree_leaf::get_norm_scale(unsigned pt_ix) const {
 
 void tree_data_t::clear_vbo_ixs() {
 
-	branch_vbo = branch_ivbo = leaf_vbo = 0;
-	num_branch_quads = num_unique_pts   = 0;
+	leaf_vbo = num_branch_quads = num_unique_pts = 0;
+	branch_vbo_manager.reset_vbos_to_zero();
 }
 
 
 void tree_data_t::clear_vbos() {
 
-	delete_vbo(branch_vbo);
-	delete_vbo(branch_ivbo);
+	branch_vbo_manager.clear_vbos();
 	delete_vbo(leaf_vbo);
 	clear_vbo_ixs();
 }
@@ -588,11 +586,7 @@ void tree_data_t::clear_vbos() {
 
 unsigned tree_data_t::get_gpu_mem() const {
 
-	unsigned mem(0);
-	if (leaf_vbo   ) {mem += leaf_data.size()  *sizeof(leaf_vert_type_t);}
-	if (branch_vbo ) {mem += num_unique_pts    *sizeof(branch_vert_type_t);}
-	if (branch_ivbo) {mem += 4*num_branch_quads*sizeof(branch_index_t);}
-	return mem;
+	return (branch_vbo_manager.gpu_mem + (leaf_vbo ? leaf_data.size()*sizeof(leaf_vert_type_t) : 0));
 }
 
 
@@ -605,14 +599,12 @@ bool tree::is_visible_to_camera(vector3d const &xlate) const {
 
 void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves, int tree_type) const {
 
-	if (draw_branches && branch_vbo > 0) { // draw branches (untextured)
-		bind_vbo(branch_vbo, 0);
-		size_t const branch_stride(sizeof(branch_vert_type_t));
-		bind_vbo(branch_ivbo, 1);
+	if (draw_branches && branch_vbo_manager.vbo) { // draw branches (untextured)
+		branch_vbo_manager.pre_render();
 		set_array_client_state(1, 0, 0, 0); // vertices only
-		glVertexPointer(3, GL_FLOAT, branch_stride, 0);
+		glVertexPointer(3, GL_FLOAT, sizeof(branch_vert_type_t), 0);
 		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num_branch_quads, GL_UNSIGNED_SHORT, 0);
-		bind_vbo(0, 1);
+		branch_vbo_manager.post_render();
 	}
 	if (draw_leaves && leaf_vbo > 0 && !leaves.empty()) { // draw leaves
 		select_texture(tree_types[tree_type].leaf_tex);
@@ -662,87 +654,102 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 
 void tree_data_t::setup_branch_vbos() {
 
-	if (branch_vbo == 0) { // create vbos
-		assert(branch_ivbo == 0);
-		assert(num_branch_quads == 0 && num_unique_pts == 0);
-		unsigned const numcylin((unsigned)all_cylins.size());
+	if (branch_vbo_manager.vbo != 0) return; // vbos already created
+	assert(branch_vbo_manager.ivbo == 0);
+	assert(num_branch_quads == 0 && num_unique_pts == 0);
+	unsigned const numcylin((unsigned)all_cylins.size());
 
-		for (unsigned i = 0; i < numcylin; ++i) { // determine required data size
-			bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
-			unsigned const ndiv(all_cylins[i].get_num_div());
-			num_branch_quads += ndiv;
-			num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
-		}
-		assert(num_unique_pts < (1 << 8*sizeof(branch_index_t))); // cutting it close with 4th order branches
-		vector<branch_vert_type_t> data;
-		vector<branch_index_t> idata;
-		idata.reserve(4*num_branch_quads);
-		data.reserve(num_unique_pts);
-		unsigned cylin_id(0), data_pos(0), quad_id(0);
-
-		for (unsigned i = 0; i < numcylin; i++) {
-			draw_cylin const &cylin(all_cylins[i]);
-			unsigned const ndiv(cylin.get_num_div());
-			point const ce[2] = {cylin.p1, cylin.p2};
-			float const ndiv_inv(1.0/ndiv);
-			vector3d v12; // (ce[1] - ce[0]).get_norm()
-			vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
-			bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
-
-			if (!prev_connect) { // new cylinder section
-				data_pos = (unsigned)data.size();
-				quad_id  = cylin_id = 0;
-			}
-			for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
-				for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
-					float const tx(2.0*fabs(S*ndiv_inv - 0.5));
-					// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
-					vector3d const n(0.5*vpn.n[S] + 0.5*vpn.n[(S+ndiv-1)%ndiv]); // average face normals to get vert normals
-					data.push_back(branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, float(cylin_id + j)));
-				}
-			}
-			for (unsigned S = 0; S < ndiv; ++S) { // create index data
-				bool const last_edge((quad_id % ndiv) == ndiv-1);
-				unsigned const ix(data_pos + quad_id++);
-				idata.push_back(ix);
-				idata.push_back(ix+ndiv);
-				idata.push_back(last_edge ? ix+1 : ix+ndiv+1);
-				idata.push_back(last_edge ? ix+1-ndiv : ix+1);
-			}
-			++cylin_id;
-		} // for i
-		assert(data.size()  == data.capacity());
-		assert(idata.size() == idata.capacity());
-		branch_vbo  = create_vbo();
-		branch_ivbo = create_vbo();
-		assert(branch_vbo > 0 && branch_ivbo > 0);
-		bind_vbo(branch_vbo,  0);
-		bind_vbo(branch_ivbo, 1);
-		upload_vbo_data(&data.front(),  data.size() *sizeof(branch_vert_type_t), 0); // ~350KB
-		upload_vbo_data(&idata.front(), idata.size()*sizeof(branch_index_t),     1); // ~75KB (with 16-bit index)
-	} // end create vbo
-	else {
-		assert(branch_vbo > 0 && branch_ivbo > 0);
-		bind_vbo(branch_vbo,  0); // use vbo for rendering
-		bind_vbo(branch_ivbo, 1);
+	for (unsigned i = 0; i < numcylin; ++i) { // determine required data size
+		bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
+		unsigned const ndiv(all_cylins[i].get_num_div());
+		num_branch_quads += ndiv;
+		num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
 	}
+	assert(num_unique_pts < (1 << 8*sizeof(branch_index_t))); // cutting it close with 4th order branches
+	vector<branch_vert_type_t> data;
+	vector<branch_index_t> idata;
+	idata.reserve(4*num_branch_quads);
+	data.reserve(num_unique_pts);
+	unsigned cylin_id(0), data_pos(0), quad_id(0);
+
+	for (unsigned i = 0; i < numcylin; i++) {
+		draw_cylin const &cylin(all_cylins[i]);
+		unsigned const ndiv(cylin.get_num_div());
+		point const ce[2] = {cylin.p1, cylin.p2};
+		float const ndiv_inv(1.0/ndiv);
+		vector3d v12; // (ce[1] - ce[0]).get_norm()
+		vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
+		bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
+
+		if (!prev_connect) { // new cylinder section
+			data_pos = (unsigned)data.size();
+			quad_id  = cylin_id = 0;
+		}
+		for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
+			for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
+				float const tx(2.0*fabs(S*ndiv_inv - 0.5));
+				// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
+				vector3d const n(0.5*vpn.n[S] + 0.5*vpn.n[(S+ndiv-1)%ndiv]); // average face normals to get vert normals
+				data.push_back(branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, float(cylin_id + j)));
+			}
+		}
+		for (unsigned S = 0; S < ndiv; ++S) { // create index data
+			bool const last_edge((quad_id % ndiv) == ndiv-1);
+			unsigned const ix(data_pos + quad_id++);
+			idata.push_back(ix);
+			idata.push_back(ix+ndiv);
+			idata.push_back(last_edge ? ix+1 : ix+ndiv+1);
+			idata.push_back(last_edge ? ix+1-ndiv : ix+1);
+		}
+		++cylin_id;
+	} // for i
+	assert(data.size()  == data.capacity());
+	assert(idata.size() == idata.capacity());
+	branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 }
 
 
 void tree_data_t::draw_branches(float size_scale) {
 
 	setup_branch_vbos();
+	branch_vbo_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays();
 	unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0); // draw with branch vbos
-	bind_vbo(0, 0);
-	bind_vbo(0, 1);
+	branch_vbo_manager.post_render();
 }
+
+
+class tree_branch_buffer_t : public indexed_vbo_manager_t {
+
+	typedef vert_norm_comp_color vert_type_t;
+	typedef unsigned short index_type_t; // make larger?
+	vector<vert_type_t>  verts;
+	vector<index_type_t> indices;
+
+public:
+	void upload() {
+		create_and_upload(verts, indices);
+	}
+	void render() const {
+		pre_render();
+		vert_type_t::set_vbo_arrays();
+		glDrawRangeElements(GL_QUADS, 0, verts.size(), indices.size(), GL_UNSIGNED_SHORT, 0);
+		post_render();
+	}
+	unsigned get_gpu_mem() const {
+		unsigned mem(0);
+		if (vbo ) {mem += verts.size()  *sizeof(vert_type_t);}
+		if (ivbo) {mem += indices.size()*sizeof(index_type_t);}
+		return mem;
+	}
+};
 
 
 void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate) {
 
 	if (size_scale < 0.05) return; // too far away, don't draw any branches
+	//if (size_scale < 0.2) // draw low detail model
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
 	if (s.is_setup()) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
@@ -775,16 +782,10 @@ void tree_data_t::setup_leaf_vbo() {
 
 	assert(leaf_data.size() >= 4*leaves.size());
 	bool const create_leaf_vbo(leaf_vbo == 0);
-	if (create_leaf_vbo) {leaf_vbo = create_vbo();}
-	assert(leaf_vbo > 0);
-	bind_vbo(leaf_vbo);
-	unsigned const leaf_stride(sizeof(leaf_vert_type_t));
+	create_bind_vbo_and_upload(leaf_vbo, leaf_data, 0);
 
-	if (create_leaf_vbo) {
-		upload_vbo_data(&leaf_data.front(), leaf_data.size()*leaf_stride); // ~150KB
-	}
-	else if (leaves_changed) {
-		upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*leaf_stride); // FIXME: track and update a sub-range?
+	if (!create_leaf_vbo && leaves_changed) {
+		upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*sizeof(leaf_vert_type_t)); // FIXME: track and update a sub-range?
 	}
 	leaves_changed = 0;
 	leaf_vert_type_t::set_vbo_arrays();
@@ -1252,7 +1253,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 	assert(tree_type < NUM_TREE_TYPES);
 	calc_leaf_points(); // required for placed trees
 	leaf_data.clear();
-	leaf_vbo = branch_vbo = branch_ivbo = 0;
+	clear_vbo_ixs();
 	float deadness(DISABLE_LEAVES ? 1.0 : tree_deadness);
 
 	if (deadness < 0.0) {

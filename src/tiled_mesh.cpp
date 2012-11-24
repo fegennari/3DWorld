@@ -406,7 +406,7 @@ public:
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
 				float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
-				if (dist < rval) {tree_map[y*stride + x] *= (0.1 + 0.9*scale*dist);}
+				if (dist < rval) {tree_map[y*stride + x] *= (0.2 + 0.8*scale*dist);}
 			}
 		}
 		if (!no_adj_test) {
@@ -439,7 +439,7 @@ public:
 			point const dt_off(tile->dtree_off.subtract_from(mesh_off));
 
 			for (tree_cont_t::const_iterator i = tile->decid_trees.begin(); i != tile->decid_trees.end(); ++i) {
-				add_tree_ao_shadow((i->get_center() + dt_off), 0.5*i->get_radius(), no_adj_test); // less dense => smaller radius
+				add_tree_ao_shadow((i->get_center() + dt_off), 0.6*i->get_radius(), no_adj_test); // less dense => smaller radius
 			}
 		}
 		if (!no_adj_test) { // pull mode
@@ -862,16 +862,12 @@ public:
 		if (vbo) return; // already allocated
 		create_data(data, indices);
 		if (any_trees_enabled()) {apply_tree_ao_shadows();}
-		vbo = create_vbo();
-		bind_vbo(vbo, 0);
-		upload_vbo_data(&data.front(), data.size()*sizeof(vert_type_t), 0);
+		create_vbo_and_upload(vbo, data, 0, 0);
 
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			assert(ivbo[i] == 0);
-			ivbo[i] = create_vbo();
-			bind_vbo(ivbo[i], 1);
 			assert(!indices[i].empty());
-			upload_vbo_data(&(indices[i].front()), indices[i].size()*sizeof(unsigned short), 1);
+			create_vbo_and_upload(ivbo[i], indices[i], 1, 0);
 		}
 	}
 

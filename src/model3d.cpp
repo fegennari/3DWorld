@@ -357,16 +357,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	bool const have_normals(stride >= sizeof(vert_norm)), have_tex_coords(stride >= sizeof(vert_norm_tc));
 	set_array_client_state(1, (have_tex_coords && !is_shadow_pass), (have_normals && !is_shadow_pass), 0);
 	int loc(-1);
+	create_bind_vbo_and_upload(vbo, *this, 0);
 
-	if (vbo == 0) {
-		vbo = create_vbo();
-		assert(vbo > 0);
-		bind_vbo(vbo);
-		upload_vbo_data(&front(), size()*stride);
-	}
-	else {
-		bind_vbo(vbo);
-	}
 	if (enable_bump_map() && !is_shadow_pass && has_tangents && shader.is_setup()) { // Note: if we get here, T must be a vert_norm_tc_tan
 		assert(stride == sizeof(vert_norm_tc_tan));
 		loc = shader.get_attrib_loc("tangent");
@@ -383,15 +375,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		glDrawArrays(prim_type, 0, (unsigned)size());
 	}
 	else { // draw indexed arrays
-		if (ivbo == 0) {
-			ivbo = create_vbo();
-			assert(ivbo > 0);
-			bind_vbo(ivbo, 1);
-			upload_vbo_data(&indices.front(), indices.size()*sizeof(unsigned), 1);
-		}
-		else {
-			bind_vbo(ivbo, 1);
-		}
+		create_bind_vbo_and_upload(ivbo, indices, 1);
+
 		if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
 			// possible optimization:
 			// sort triangles/quads by size, largest to smallest

@@ -338,14 +338,14 @@ bool voxel_map::write(char const *const fn) const {
 
 class snow_renderer {
 
-	unsigned vbo, ivbo;
+	indexed_vbo_manager_t vbo_mgr;
 	float last_x;
 	vector<vert_norm> data;
 	vector<unsigned> indices, strip_offsets;
 	map<point, unsigned> vmap[2]; // {prev, next} rows
 
 public:
-	snow_renderer() : vbo(0), ivbo(0), last_x(0.0) {}
+	snow_renderer() : last_x(0.0) {}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~snow_renderer() {free_vbos();}
 	bool empty() const {return data.empty();}
@@ -388,7 +388,7 @@ public:
 
 private:
 	unsigned add(point const &v, vector3d const &n, unsigned map_ix) { // can't be called after finalize()
-		assert(vbo == 0 && ivbo == 0);
+		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
 		map<point, unsigned>::const_iterator it(vmap[map_ix].find(v));
 		unsigned ix(0);
 
@@ -426,38 +426,24 @@ private:
 		}
 	}
 
-	void upload_vbo() {
-		assert(!data.empty());
-		if (vbo == 0) vbo = create_vbo();
-		bind_vbo(vbo, 0);
-		upload_vbo_data(&data.front(), data.size()*sizeof(vert_norm), 0);
-		bind_vbo(0, 0);
-	}
-
 	void upload_ivbo() {
 		assert(!indices.empty());
-		if (ivbo == 0) ivbo = create_vbo();
-		bind_vbo(ivbo, 1);
-		upload_vbo_data(&indices.front(), indices.size()*sizeof(unsigned), 1);
-		bind_vbo(0, 1);
+		create_vbo_and_upload(vbo_mgr.ivbo, indices, 1, 0);
 	}
 
 public:
-	void free_vbos() {
-		delete_vbo(vbo);
-		delete_vbo(ivbo);
-		vbo = ivbo = 0;
-	}
+	void free_vbos() {vbo_mgr.clear_vbos();}
 
 	void update_shadows() {
 		calc_shadows();
-		upload_vbo();
+		assert(!data.empty());
+		if (vbo_mgr.vbo) {upload_to_vbo(vbo_mgr.vbo, data, 0, 1);}
 	}
 
 	void update_region(unsigned strip_ix, unsigned strip_pos, unsigned strip_len, float new_z) {
 		// FIXME: update a range at a time?
-		assert(vbo);
-		bind_vbo(vbo, 0);
+		if (!vbo_mgr.vbo) return; // vbo not allocated, so all will be updated when it gets allocated during drawing
+		bind_vbo(vbo_mgr.vbo, 0);
 		assert(strip_ix+1 < strip_offsets.size());
 		assert(strip_len >= 4); // at least one quad
 		unsigned const cur_six(strip_offsets[strip_ix]), next_six(strip_offsets[strip_ix+1]);
@@ -467,8 +453,7 @@ public:
 
 		for (unsigned i = 0; i < 4; ++i) { // 4 points on the quad
 			unsigned index_ix(start_index_ix + i);
-			assert(index_ix < indices.size());
-			assert(index_ix < next_six);
+			assert(index_ix < indices.size() && index_ix < next_six);
 			unsigned const data_ix(indices[index_ix]);
 			assert(data_ix < data.size());
 			vector3d const norm(((i < 2) ? 1.0 : -1.0), ((i & 1) ? -1.0 : 1.0), 0.0);
@@ -480,7 +465,7 @@ public:
 	}
 
 	void finalize() { // can only be called once
-		assert(vbo == 0 && ivbo == 0);
+		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
 		assert((indices.size() & 3) == 0); // must be a multiple of 4
 		upload_ivbo();
 		vmap[0].clear();
@@ -488,21 +473,17 @@ public:
 	}
 
 	void draw() {
-		if (vbo  == 0) upload_vbo ();
-		if (ivbo == 0) upload_ivbo();
-		assert(vbo != 0 && ivbo != 0);
-		bind_vbo(vbo,  0);
-		bind_vbo(ivbo, 1);
+		create_vbo_and_upload(vbo_mgr.vbo, data, 0, 0);
+		upload_ivbo();
+		vbo_mgr.pre_render();
 		vert_norm::set_vbo_arrays();
 		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
-		bind_vbo(0, 0);
-		bind_vbo(0, 1);
+		vbo_mgr.post_render();
 	}
 
 	void show_stats() const {
-		size_t const dmem(data.size()*sizeof(vert_norm)), imem(indices.size()*sizeof(unsigned));
 		cout << "verts: " << data.size() << ", quads: " << indices.size()/4 << endl;
-		cout << "mem: " << (dmem + imem) << ", vmem: " << (dmem*(vbo != 0) + imem*(ivbo != 0)) << endl;
+		cout << "mem: " << (data.size()*sizeof(vert_norm) + indices.size()*sizeof(unsigned)) << ", vmem: " << vbo_mgr.gpu_mem << endl;
 	}
 };
 

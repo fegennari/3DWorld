@@ -60,5 +60,55 @@ void free_fbo(unsigned &fbo_id);
 bool gen_mipmaps();
 
 
+// templated vbo management utility functions/classes
+
+template<typename T> void upload_to_vbo(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0) {
+	assert(vbo > 0);
+	bind_vbo(vbo, is_index);
+	upload_vbo_data(&data.front(), data.size()*sizeof(T), is_index);
+	if (end_with_bind0) {bind_vbo(0, is_index);}
+}
+
+template<typename T> bool create_vbo_and_upload(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0) {
+	if (vbo) return 0; // already uploaded
+	vbo = create_vbo();
+	upload_to_vbo(vbo, data, is_index, end_with_bind0);
+	return 1;
+}
+
+template<typename T> void create_bind_vbo_and_upload(unsigned &vbo, vector<T> const &data, bool is_index=0) {
+	if (!create_vbo_and_upload(vbo, data, is_index, 0)) {bind_vbo(vbo, is_index);}
+}
+
+
+struct indexed_vbo_manager_t {
+
+	unsigned vbo, ivbo, gpu_mem;
+
+	indexed_vbo_manager_t() : vbo(0), ivbo(0), gpu_mem(0) {}
+	void reset_vbos_to_zero() {vbo = ivbo = gpu_mem = 0;};
+
+	void clear_vbos() {
+		delete_vbo(vbo);
+		delete_vbo(ivbo);
+		reset_vbos_to_zero();
+	}
+	template<typename vert_type_t, typename index_type_t>
+	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata) {
+		if (!vbo ) {create_vbo_and_upload(vbo,  data,  0, 0); gpu_mem += data.size() *sizeof(vert_type_t );}
+		if (!ivbo) {create_vbo_and_upload(ivbo, idata, 1, 0); gpu_mem += idata.size()*sizeof(index_type_t);}
+	}
+	void pre_render() const {
+		assert(vbo && ivbo);
+		bind_vbo(vbo,  0);
+		bind_vbo(ivbo, 1);
+	}
+	void post_render() const {
+		bind_vbo(0, 0);
+		bind_vbo(0, 1);
+	}
+};
+
+
 #endif // _GL_EXT_ARB_H_
 

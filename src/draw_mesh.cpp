@@ -412,10 +412,7 @@ void display_mesh() { // fast array version
 					}
 				}
 			}
-			mesh_vbo = create_vbo();
-			assert(mesh_vbo > 0);
-			bind_vbo(mesh_vbo);
-			upload_vbo_data(&data.front(), data.size()*sizeof(point));
+			create_vbo_and_upload(mesh_vbo, data, 0, 0);
 		}
 		else {
 			bind_vbo(mesh_vbo);
