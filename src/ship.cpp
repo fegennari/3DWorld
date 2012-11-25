@@ -681,6 +681,9 @@ void draw_univ_objects(point const &pos) {
 	point const &camera(get_player_pos2());
 	float const ch_dist(100.0*player_ship().specs().sensor_dist);
 
+	for (unsigned i = 0; i < NUM_EXP_LIGHTS; ++i) { // make sure the explosion lights start out cleared
+		clear_colors_and_disable_light(EXPLOSION_LIGHT + i);
+	}
 	for (unsigned i = 0; i < nobjs; ++i) { // make negative so it's sorted largest to smallest
 		cached_obj const &co(c_uobjs[i]);
 		bool const is_bad((co.flags & OBJ_FLAGS_BAD_) != 0);
