@@ -744,6 +744,7 @@ public:
 	virtual void draw_obj(uobj_draw_data &ddata) const = 0;
 	virtual void set_temp(float temp, point const &tcenter, free_obj const *source=NULL);
 	virtual void ai_action() {} // default: no AI
+	virtual void first_frame_hook() {}
 	virtual void apply_physics();
 	virtual void advance_time(float timestep);
 	virtual int get_gravity(vector3d &vgravity, point const &mpos) const {return 0;}

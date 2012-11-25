@@ -232,14 +232,16 @@ public:
 		//PRINT_TIME("Create Asteroid");
 	}
 
-	virtual void apply_physics() {
+	virtual void first_frame_hook() {
 		point sun_pos;
 
-		if (!have_sun_pos && get_universe_sun_pos(pos, sun_pos)) { // too slow if there is no sun?
+		if (get_universe_sun_pos(pos, sun_pos)) { // too slow if there is no sun?
 			dir = (sun_pos - pos).get_norm(); // orient toward the sun
 			force_calc_rotation_vectors();
-			have_sun_pos = 1;
 		}
+	}
+
+	virtual void apply_physics() {
 		uobj_asteroid_destroyable::apply_physics();
 		model.proc_pending_updates();
 

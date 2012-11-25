@@ -53,6 +53,7 @@ void init_universe_display() {
 
 	setup_ships();
 	set_perspective(PERSP_ANGLE, UNIV_NCLIP_SCALE); // that's all (closer near_clip for univ_planet_lod?)
+	check_shift_universe();
 }
 
 
@@ -169,6 +170,15 @@ void setup_current_system() {
 }
 
 
+void proc_uobjs_first_frame() {
+
+	for (unsigned i = 0; i < uobjs.size(); ++i) {
+		assert(uobjs[i]);
+		uobjs[i]->first_frame_hook();
+	}
+}
+
+
 void draw_universe(bool static_only, bool skip_closest, bool no_distant) { // should be process_universe()
 
 	RESET_TIME;
@@ -177,10 +187,9 @@ void draw_universe(bool static_only, bool skip_closest, bool no_distant) { // sh
 	WHITE.do_glColor();
 	do_univ_init();
 
-	if (!inited) { // clobj0 will not be set - need to draw cells before there are any sobjs
-		inited      = 1;
-		static_only = 0; // force full universe init the first time
-	}
+	// clobj0 will not be set - need to draw cells before there are any sobjs
+	if (!inited) {static_only = 0;} // force full universe init the first time
+	
 	if (!static_only) {
 		u_ship &ps(player_ship());
 
@@ -220,6 +229,7 @@ void draw_universe(bool static_only, bool skip_closest, bool no_distant) { // sh
 	check_gl_error(121);
 
 	if (!static_only) {
+		if (!inited) {proc_uobjs_first_frame();}
 		if (TIMETEST) PRINT_TIME(" Universe Draw");
 		check_gl_error(122);
 		draw_univ_objects(all_zeros); // draw free objects
@@ -231,6 +241,7 @@ void draw_universe(bool static_only, bool skip_closest, bool no_distant) { // sh
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(get_universe_ambient_light());
 	glEnable(GL_LIGHT0);
+	inited = 1;
 	if (TIMETEST) PRINT_TIME(" Final Universe");
 }
 
@@ -351,11 +362,12 @@ void check_shift_universe() {
 		int sh[3] = {0, 0, 0};
 
 		for (int sign = -1; sign <= 1; sign += 2) {
-			if ((camera[d] < sign*CELL_SIZEo2) ^ (sign > 0)) {
-				move[d] -= sign*CELL_SIZE;
-				uxyz[d] += sign;
-				sh[d]    = sign;
-				moved    = 1;
+			while ((camera[d] < sign*CELL_SIZEo2) ^ (sign > 0)) {
+				camera[d] -= sign*CELL_SIZE;
+				move[d]   -= sign*CELL_SIZE;
+				uxyz[d]   += sign;
+				sh[d]      = sign;
+				moved      = 1;
 				universe.shift_cells(sh[0], sh[1], sh[2]);
 			}
 		}

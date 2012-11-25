@@ -553,7 +553,6 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 				bool const pos_set(read_pt(pos));
 				if (!pos_set) cfg.clear();
 				assert(num == 1 || !pos_set);
-				cout << endl;
 				RESET_TIME;
 
 				struct asteroid_data_t {
