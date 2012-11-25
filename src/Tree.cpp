@@ -331,7 +331,6 @@ void tree_data_t::make_private_copy(tree_data_t &dest) const {
 
 void tree::make_private_tdata_copy() {
 
-	//cout << "make private copy, is_private: " << td_is_private() << endl;
 	if (!tree_data || td_is_private()) return; // tree pointer is NULL or already private
 	tree_data->make_private_copy(priv_tree_data);
 	//tree_data->dec_ref_count();
@@ -1046,25 +1045,28 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 	}
 	all_cylins.reserve(num_total_cylins);
 
-	//tree leaf variables
+	// tree leaf variables
 	if (deadness < 1.0) {
 		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
 		leaves.reserve(nl);
 	}
 	process_cylins(base.cylin, base_num_cylins, tree_type, deadness, all_cylins, leaves);
 
-	for (int i = 0; i < num_1_branches; i++) { //add the first and second order branches
-		for (int k = 0; k < (branches[i][0].num_branches + 1); k++) {
+	for (int i = 0; i < num_1_branches; i++) { // add the first order branches
+		process_cylins(branches[i][0].cylin, branches[i][0].num_cylins, tree_type, deadness, all_cylins, leaves);
+	}
+	for (int i = 0; i < num_1_branches; i++) { // add second order branches
+		for (int k = 1; k <= branches[i][0].num_branches; k++) {
 			process_cylins(branches[i][k].cylin, branches[i][k].num_cylins, tree_type, deadness, all_cylins, leaves);
 		}
 	}
 	for (unsigned w = 0; w < 2; ++w) {
-		for (int i = 0; i < num_34_branches[w]; i++) { //add the third and fourth order branches
-			process_cylins(branches_34[w][i].cylin,  branches_34[w][i].num_cylins, tree_type, deadness, all_cylins, leaves);
+		for (int i = 0; i < num_34_branches[w]; i++) { // add the third and fourth order branches
+			process_cylins(branches_34[w][i].cylin, branches_34[w][i].num_cylins, tree_type, deadness, all_cylins, leaves);
 		}
 	}
 
-	//now delete the branches b/c they are unneccessary
+	// now delete the branches b/c they are unneccessary
 	cylin_cache [2].reusable_free(branches_34[0][0].cylin);
 	branch_cache[1].reusable_free(branches_34[0]);
 	cylin_cache [1].reusable_free(branches[0][0].cylin);
@@ -1340,10 +1342,9 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	cylin_cache [1].reusable_malloc(branches[0][0].cylin,    nbr*ncib);
 	cylin_cache [2].reusable_malloc(branches_34[0][0].cylin, nbranches*ncib);
 
-	for (int i = 1; i < num_1_branches; i++) { // start at 1
-		branches[i] = branches[0] + i*(num_2_branches_max+1);
-	}
 	for (int i = 0; i < num_1_branches; i++) {
+		branches[i] = branches[0] + i*(num_2_branches_max+1);
+
 		for (int j = 0; j < (num_2_branches_max+1); j++) {
 			branches[i][j].cylin = branches[0][0].cylin + (i*(num_2_branches_max+1) + j)*ncib;
 		}
