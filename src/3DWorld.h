@@ -681,10 +681,11 @@ struct vert_wrap_t { // so we can put the vertex first
 };
 
 
-struct vert_norm_comp : public vert_wrap_t, norm_comp { // size = 16
+struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 	vert_norm_comp() {}
 	vert_norm_comp(vert_norm const &vn) : vert_wrap_t(vn.v), norm_comp(vn.n) {}
-	vert_norm_comp(point const &v_, vector3d const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
+	vert_norm_comp(point const &v_, vector3d  const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
+	vert_norm_comp(point const &v_, norm_comp const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
 };
 
 
@@ -774,6 +775,7 @@ struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // s
 	typedef vert_norm non_color_class; // non-compressed type
 	vert_norm_comp_color() {}
 	vert_norm_comp_color(vert_norm const &vn, color_wrapper const &cw) : vert_norm_comp(vn), color_wrapper(cw) {}
+	vert_norm_comp_color(vert_norm_comp const &vn, color_wrapper const &cw) : vert_norm_comp(vn), color_wrapper(cw) {}
 	vert_norm_comp_color(point const &v_, vector3d const &n_, colorRGBA const &c_) : vert_norm_comp(v_, n_) {set_c4(c_);}
 	void set_state() const;
 	static void set_vbo_arrays(unsigned force_stride=0);
