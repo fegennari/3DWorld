@@ -755,12 +755,23 @@ public:
 		assert(decid_trees.empty());
 		dtree_off.set_from_xyoff2();
 		decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg());
+		//decid_trees.get_large_branch_quads_into_buffer();
 		postproc_trees(decid_trees, dtzmax);
 	}
 
 	void draw_decid_trees(shader_t &s, bool draw_branches, bool draw_leaves, bool reflection_pass) {
 		if (decid_trees.empty()) return;
-		decid_trees.draw_branches_and_leaves(s, draw_branches, draw_leaves, 0, dtree_off.get_xlate());
+		vector3d const xlate(dtree_off.get_xlate());
+
+		/*if (draw_branches && 1) {
+			glPushMatrix();
+			translate_to(xlate);
+			decid_trees.draw_low_detail_branches();
+			glPopMatrix();
+			if (!draw_leaves) return; // we're done
+			draw_branches = 0;
+		}*/
+		decid_trees.draw_branches_and_leaves(s, draw_branches, draw_leaves, 0, xlate);
 	}
 
 	// *** scenery ***

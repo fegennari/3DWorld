@@ -641,7 +641,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 		if (begin_motion && animate2) drop_leaves();
 	}
 	if (TEST_RTREE_COBJS) return;
-	if (!draw_leaves || draw_branches) {not_visible = !is_visible_to_camera(xlate);} // second pass only
+	if (!draw_leaves || draw_branches || display_mode != WMODE_GROUND) {not_visible = !is_visible_to_camera(xlate);} // second pass only
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
@@ -651,28 +651,88 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 }
 
 
-void tree_data_t::setup_branch_vbos() {
+void tree_branch_buffer_t::clear() {
 
-	if (branch_vbo_manager.vbo != 0) return; // vbos already created
-	assert(branch_vbo_manager.ivbo == 0);
-	assert(num_branch_quads == 0 && num_unique_pts == 0);
+	verts.clear();
+	indices.clear();
+	clear_vbos();
+}
+
+void tree_branch_buffer_t::render() const {
+
+	pre_render();
+	vert_type_t::set_vbo_arrays();
+	glDrawRangeElements(GL_QUADS, 0, verts.size(), indices.size(), GL_UNSIGNED_SHORT, 0);
+	post_render();
+}
+
+
+void tree_data_t::get_large_branch_quads(tree_branch_buffer_t &tbb, vector3d const &xlate, colorRGBA const &branch_color) const {
+
+	unsigned const init_index_sz(tbb.indices.size());
+	tbb.tree_vert_buffer.resize(0);
+	create_indexed_quads_for_branches(tbb.tree_vert_buffer, tbb.indices, 1);
+	color_wrapper cw;
+	cw.set_c4(branch_color);
+
+	for (unsigned i = init_index_sz; i < tbb.indices.size(); ++i) {
+		tbb.indices[i] += tbb.verts.size(); // offset by existing data size
+	}
+	for (vector<branch_vert_type_t>::const_iterator i = tbb.tree_vert_buffer.begin(); i != tbb.tree_vert_buffer.end(); ++i) {
+		tbb.add_vert(vert_norm_comp(i->v + xlate, *i), cw);
+	}
+}
+
+
+void tree::get_large_branch_quads(tree_branch_buffer_t &tbb) const {
+
+	colorRGBA branch_color(bcolor);
+	branch_color.modulate_with(texture_color(tree_types[type].bark_tex));
+	tdata().get_large_branch_quads(tbb, tree_center, branch_color);
+}
+
+
+void tree_cont_t::get_large_branch_quads_into_buffer() {
+
+	tbb.clear();
+
+	for (const_iterator i = begin(); i != end(); ++i) {
+		i->get_large_branch_quads(tbb);
+	}
+}
+
+
+void tree_cont_t::draw_low_detail_branches() {
+
+	if (tbb.empty()) return;
+	cout << "verts: " << tbb.verts.size() << ", ixs: " << tbb.indices.size() << endl;
+	tbb.upload();
+	select_texture(WHITE_TEX);
+	//glEnable(GL_COLOR_MATERIAL);
+	tbb.render();
+	//glDisable(GL_COLOR_MATERIAL);
+}
+
+
+void tree_data_t::create_indexed_quads_for_branches(vector<branch_vert_type_t> &data, vector<branch_index_t> &idata, int max_level) const {
+
 	unsigned const numcylin((unsigned)all_cylins.size());
+	unsigned num_quads(0), num_pts(0), cylin_id(0), data_pos(0), quad_id(0);
 
 	for (unsigned i = 0; i < numcylin; ++i) { // determine required data size
+		if (all_cylins[i].level > max_level) break; // assumes branches are sorted by level
 		bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
 		unsigned const ndiv(all_cylins[i].get_num_div());
-		num_branch_quads += ndiv;
-		num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
+		num_quads += ndiv;
+		num_pts   += (prev_connect ? 1 : 2)*ndiv;
 	}
-	assert(num_unique_pts < (1 << 8*sizeof(branch_index_t))); // cutting it close with 4th order branches
-	vector<branch_vert_type_t> data;
-	vector<branch_index_t> idata;
-	idata.reserve(4*num_branch_quads);
-	data.reserve(num_unique_pts);
-	unsigned cylin_id(0), data_pos(0), quad_id(0);
+	assert(data.size() + num_pts < (1 << 8*sizeof(branch_index_t))); // cutting it close with 4th order branches
+	if (data.empty())  {data.reserve(num_pts);}
+	if (idata.empty()) {idata.reserve(4*num_quads);}
 
 	for (unsigned i = 0; i < numcylin; i++) {
 		draw_cylin const &cylin(all_cylins[i]);
+		if (cylin.level > max_level) break; // assumes branches are sorted by level
 		unsigned const ndiv(cylin.get_num_div());
 		point const ce[2] = {cylin.p1, cylin.p2};
 		float const ndiv_inv(1.0/ndiv);
@@ -702,15 +762,23 @@ void tree_data_t::setup_branch_vbos() {
 		}
 		++cylin_id;
 	} // for i
-	assert(data.size()  == data.capacity());
-	assert(idata.size() == idata.capacity());
-	branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 }
 
 
 void tree_data_t::draw_branches(float size_scale) {
 
-	setup_branch_vbos();
+	if (branch_vbo_manager.vbo == 0) { // vbos not yet created
+		assert(branch_vbo_manager.ivbo == 0);
+		assert(num_branch_quads == 0 && num_unique_pts == 0);
+		vector<branch_vert_type_t> data;
+		vector<branch_index_t> idata;
+		create_indexed_quads_for_branches(data, idata, 4);
+		assert(data.size()  == data.capacity());
+		assert(idata.size() == idata.capacity());
+		num_branch_quads = idata.size()/4;
+		num_unique_pts   = data.size();
+		branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
+	}
 	branch_vbo_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays();
 	unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
@@ -719,36 +787,10 @@ void tree_data_t::draw_branches(float size_scale) {
 }
 
 
-class tree_branch_buffer_t : public indexed_vbo_manager_t {
-
-	typedef vert_norm_comp_color vert_type_t;
-	typedef unsigned short index_type_t; // make larger?
-	vector<vert_type_t>  verts;
-	vector<index_type_t> indices;
-
-public:
-	void upload() {
-		create_and_upload(verts, indices);
-	}
-	void render() const {
-		pre_render();
-		vert_type_t::set_vbo_arrays();
-		glDrawRangeElements(GL_QUADS, 0, verts.size(), indices.size(), GL_UNSIGNED_SHORT, 0);
-		post_render();
-	}
-	unsigned get_gpu_mem() const {
-		unsigned mem(0);
-		if (vbo ) {mem += verts.size()  *sizeof(vert_type_t);}
-		if (ivbo) {mem += indices.size()*sizeof(index_type_t);}
-		return mem;
-	}
-};
-
-
 void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate) {
 
 	if (size_scale < 0.05) return; // too far away, don't draw any branches
-	//if (size_scale < 0.2) // draw low detail model
+	//if (size_scale < 0.2) return; // draw low detail model
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
 	if (s.is_setup()) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
@@ -777,9 +819,10 @@ void tree_data_t::reset_leaf_pos_norm() {
 }
 
 
-void tree_data_t::setup_leaf_vbo() {
+void tree_data_t::draw_leaves(float size_scale) {
 
-	assert(leaf_data.size() >= 4*leaves.size());
+	unsigned nl(leaves.size());
+	assert(leaf_data.size() >= 4*nl);
 	bool const create_leaf_vbo(leaf_vbo == 0);
 	create_bind_vbo_and_upload(leaf_vbo, leaf_data, 0);
 
@@ -788,14 +831,7 @@ void tree_data_t::setup_leaf_vbo() {
 	}
 	leaves_changed = 0;
 	leaf_vert_type_t::set_vbo_arrays();
-}
-
-
-void tree_data_t::draw_leaves(float size_scale) {
-
-	unsigned nl(leaves.size());
 	if (ENABLE_CLIP_LEAVES) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
-	setup_leaf_vbo();
 	glDrawArrays(GL_QUADS, 0, 4*nl);
 	bind_vbo(0);
 }
@@ -969,6 +1005,7 @@ unsigned tree_cont_t::delete_all() {
 	for (reverse_iterator i = rbegin(); i != rend(); ++i) { // delete backwards (pop collision stack)
 		if (i->delete_tree()) ++deleted;
 	}
+	tbb.clear();
 	generated = 0;
 	return deleted;
 }
@@ -1770,6 +1807,7 @@ int tree_builder_t::generate_next_cylin(int cylin_num, int ncib, bool branch_jus
 
 unsigned tree_cont_t::scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2) {
 
+	assert(tbb.empty()); // not supported in this mode
 	unsigned nkeep(0);
 	vector3d const vd(-dx_scroll*DX_VAL, -dy_scroll*DY_VAL, 0.0);
 
@@ -1942,7 +1980,7 @@ unsigned tree_data_manager_t::get_gpu_mem() const {
 
 
 unsigned tree_cont_t::get_gpu_mem() const {
-	unsigned mem(0);
+	unsigned mem(tbb.gpu_mem);
 	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
 	return mem;
 }
@@ -1967,6 +2005,7 @@ void tree_cont_t::add_cobjs() {
 
 void tree_cont_t::clear_vbos() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_vbo();}
+	tbb.clear_vbos();
 }
 
 
