@@ -946,13 +946,7 @@ void update_flow_for_voxels(cube_t const &cube) {
 
 void setup_2d_texture(unsigned &tid) {
 
-	assert(tid == 0);
-	glGenTextures(1, &tid);
-	bind_2d_texture(tid);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	setup_texture(tid, GL_MODULATE, 0, 0, 0, 0, 0, 1);
 }
 
 
