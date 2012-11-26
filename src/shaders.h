@@ -44,7 +44,7 @@ public:
 	bool is_setup() const {return (program > 0);}
 	void enable () const;
 	void disable() const;
-	bool begin_shader();
+	bool begin_shader(bool do_enable=1);
 	void end_shader();
 
 	int get_uniform_loc(char const *const name) const;

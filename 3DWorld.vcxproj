@@ -885,6 +885,7 @@
     <None Include="shaders\water_plane.vert" />
     <None Include="shaders\wind.part" />
     <None Include="shaders\write_depth.frag" />
+    <None Include="shaders\write_normal.vert" />
     <None Include="shadow_map_issues.txt" />
     <None Include="sponza\coll_objs_sponza.txt" />
     <None Include="sponza\coll_objs_sponza2.txt" />

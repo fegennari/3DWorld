@@ -436,7 +436,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 }
 
 
-bool shader_t::begin_shader() {
+bool shader_t::begin_shader(bool do_enable) {
 
 	if (disable_shaders) return 0;
 	// get the program
@@ -484,7 +484,7 @@ bool shader_t::begin_shader() {
 		loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
 		//PRINT_TIME("Create Program"); // 90ms
 	}
-	enable();
+	if (do_enable) {enable();}
 	return 1;
 }
 

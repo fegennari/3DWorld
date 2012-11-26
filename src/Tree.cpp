@@ -58,7 +58,7 @@ tree_cont_t t_trees(tree_data_manager);
 
 extern bool has_snow, no_sun_lpos_update, has_dl_sources;
 extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
-extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll;
+extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation;
 extern point ocean;
 extern lightning l_strike;
@@ -66,6 +66,108 @@ extern blastr latest_blastr;
 extern texture_t textures[];
 extern coll_obj_group coll_objects;
 extern rand_gen_t global_rand_gen;
+
+
+struct drawable_t {
+	virtual void draw() const = 0;
+};
+
+
+struct render_to_texture_t {
+
+	unsigned tids[2], fbo_ids[2]; // color, normal
+	unsigned tsize;
+	shader_t write_normal_shader;
+
+	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {tids[0] = tids[1] = fbo_ids[0] = fbo_ids[1] = 0;}
+	
+	void free_context() { // write_normal_shader?
+		for (unsigned d = 0; d < 2; ++d) {
+			free_texture(tids[d]);
+			free_fbo(fbo_ids[d]);
+		}
+	}
+
+	void bind_textures() const {
+		for (unsigned d = 0; d < 2; ++d) {
+			assert(tids[d]);
+			bind_2d_texture(tids[d]);
+			set_multitex(d);
+		}
+		set_multitex(0);
+	}
+
+	void ensure_tid(unsigned &tid) const {
+		if (tid) return; // already created
+		setup_texture(tid, GL_MODULATE, 0, 0, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	}
+
+	void setup_shader() {
+		if (write_normal_shader.is_setup()) return; // already setup
+		write_normal_shader.set_vert_shader("write_normal");
+		write_normal_shader.set_frag_shader("color_only");
+		write_normal_shader.begin_shader(0); // begin, but don't enable
+	}
+
+	void render(point const &eye, point const &center, float radius, shader_t &shader, drawable_t const *const drawable) {
+		assert(drawable);
+		assert(eye != center);
+		assert(radius > 0.0);
+		assert(tsize > 0);
+		assert(write_normal_shader.is_setup());
+		setup_shader();
+
+		// setup matrices
+		glViewport(0, 0, tsize, tsize);
+		glClearColor(0.0, 0.0, 0.0, 0.0); // transparent
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glPushMatrix();
+		glMatrixMode(GL_PROJECTION);
+		glPushMatrix();
+		glLoadIdentity();
+		float const dist(p2p_dist(eye, center));
+		assert(dist > radius);
+		float const angle(asinf(radius/dist)), near_clip(dist - radius), far_clip(dist + radius);
+		assert(near_clip > 0);
+		gluPerspective(2.0*angle/TO_RADIANS, 1.0, near_clip, far_clip); // gluOrtho2D()?
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		vector3d const up_dir(plus_z);
+		gluLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
+
+		// render
+		glDisable(GL_LIGHTING);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			ensure_tid(tids[d]);
+			enable_fbo(fbo_ids[d], tids[d], 0);
+
+			if (d == 1) { // normal pass
+				if (shader.is_setup()) {shader.disable();}
+				write_normal_shader.enable(); // setup write-to-normal shader
+			}
+			drawable->draw();
+
+			if (d == 1) { // normal pass
+				write_normal_shader.disable(); // setup write-to-normal shader
+				if (shader.is_setup()) {shader.enable();}
+			}
+		}
+
+		// restore state
+		//glMatrixMode(GL_TEXTURE);
+		//glLoadIdentity();
+		glMatrixMode(GL_PROJECTION);
+		glPopMatrix();
+		glMatrixMode(GL_MODELVIEW);
+		glPopMatrix();
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glEnable(GL_LIGHTING);
+		disable_fbo();
+		glViewport(0, 0, window_width, window_height);
+	}
+};
 
 
 void calc_leaf_points() {
@@ -725,7 +827,6 @@ void tree_data_t::draw_branches(float size_scale) {
 void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate) {
 
 	if (size_scale < 0.05) return; // too far away, don't draw any branches
-	//if (size_scale < 0.2) return; // draw low detail model
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
 	if (s.is_setup()) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
@@ -1840,6 +1941,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 			back().gen_tree(pos, 0, ttype, 1, 1, 0);
 		}
 	}
+	//sort(begin(), end()); // doesn't help
 	generated = 1;
 }
 
