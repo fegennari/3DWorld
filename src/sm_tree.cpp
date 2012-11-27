@@ -285,7 +285,7 @@ void small_tree_group::update_zmax(float &tzmax) const {
 }
 
 
-int get_tree_class_from_height(float zpos) {
+int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 
 	if (zpos < water_plane_z) return TREE_CLASS_NONE;
 	if (island && (zpos > 0.14*Z_SCENE_SIZE || zpos < (zmin + OCEAN_DEPTH))) return TREE_CLASS_NONE;
@@ -296,8 +296,8 @@ int get_tree_class_from_height(float zpos) {
 	}
 	float const relh(get_rel_height(zpos, -zmax_est, zmax_est));
 	if (relh > 0.9) return TREE_CLASS_NONE; // too high
-	if (world_mode == WMODE_INF_TERRAIN) return TREE_CLASS_PINE;
 	if (relh > 0.6) return TREE_CLASS_PINE;
+	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
 
 	if (island) {
 		if (zpos < 0.85*(zmin + OCEAN_DEPTH)) return TREE_CLASS_PALM;
@@ -312,7 +312,7 @@ int get_tree_class_from_height(float zpos) {
 int get_tree_type_from_height(float zpos, rand_gen_t &rgen) {
 
 	//return T_DECID; // TESTING
-	switch (get_tree_class_from_height(zpos)) {
+	switch (get_tree_class_from_height(zpos, (world_mode == WMODE_INF_TERRAIN))) {
 	case TREE_CLASS_NONE: return TREE_NONE;
 	case TREE_CLASS_PINE: return ((rgen.rand()%10 == 0) ? T_SH_PINE : T_PINE);
 	case TREE_CLASS_PALM: return T_PALM;
