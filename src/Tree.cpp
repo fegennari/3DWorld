@@ -68,24 +68,14 @@ extern coll_obj_group coll_objects;
 extern rand_gen_t global_rand_gen;
 
 
-struct drawable_t {
-	virtual void draw() const = 0;
-};
+struct texture_pair_t {
 
+	unsigned tids[2]; // color, normal
 
-struct render_to_texture_t {
+	texture_pair_t() {tids[0] = tids[1] = 0;}
 
-	unsigned tids[2], fbo_ids[2]; // color, normal
-	unsigned tsize;
-	shader_t write_normal_shader;
-
-	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {tids[0] = tids[1] = fbo_ids[0] = fbo_ids[1] = 0;}
-	
-	void free_context() { // write_normal_shader?
-		for (unsigned d = 0; d < 2; ++d) {
-			free_texture(tids[d]);
-			free_fbo(fbo_ids[d]);
-		}
+	void free_context() {
+		for (unsigned d = 0; d < 2; ++d) {free_texture(tids[d]);}
 	}
 
 	void bind_textures() const {
@@ -97,26 +87,29 @@ struct render_to_texture_t {
 		set_multitex(0);
 	}
 
-	void ensure_tid(unsigned &tid) const {
+	static void ensure_tid(unsigned &tid, unsigned tsize) {
 		if (tid) return; // already created
 		setup_texture(tid, GL_MODULATE, 0, 0, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	}
 
-	void setup_shader() {
-		if (write_normal_shader.is_setup()) return; // already setup
-		write_normal_shader.set_vert_shader("write_normal");
-		write_normal_shader.set_frag_shader("color_only");
-		write_normal_shader.begin_shader(0); // begin, but don't enable
+	void ensure_tids(unsigned tsize) {
+		for (unsigned d = 0; d < 2; ++d) {ensure_tid(tids[d], tsize);}
 	}
+};
 
-	void render(point const &eye, point const &center, float radius, shader_t &shader, drawable_t const *const drawable) {
-		assert(drawable);
+
+struct render_to_texture_t {
+
+	unsigned tsize;
+
+	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
+	virtual ~render_to_texture_t() {}
+
+	void render(texture_pair_t &tpair, point const &eye, point const &center, float radius, vector3d const &up_dir) {
 		assert(eye != center);
 		assert(radius > 0.0);
 		assert(tsize > 0);
-		assert(write_normal_shader.is_setup());
-		setup_shader();
 
 		// setup matrices
 		glViewport(0, 0, tsize, tsize);
@@ -133,26 +126,17 @@ struct render_to_texture_t {
 		gluPerspective(2.0*angle/TO_RADIANS, 1.0, near_clip, far_clip); // gluOrtho2D()?
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		vector3d const up_dir(plus_z);
 		gluLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
 
 		// render
+		tpair.ensure_tids(tsize);
 		glDisable(GL_LIGHTING);
 
 		for (unsigned d = 0; d < 2; ++d) {
-			ensure_tid(tids[d]);
-			enable_fbo(fbo_ids[d], tids[d], 0);
-
-			if (d == 1) { // normal pass
-				if (shader.is_setup()) {shader.disable();}
-				write_normal_shader.enable(); // setup write-to-normal shader
-			}
-			drawable->draw();
-
-			if (d == 1) { // normal pass
-				write_normal_shader.disable(); // setup write-to-normal shader
-				if (shader.is_setup()) {shader.enable();}
-			}
+			unsigned fbo_id(0);
+			enable_fbo(fbo_id, tpair.tids[d], 0); // FIXME: too slow to create and free fbos every time?
+			draw_geom(d != 0);
+			free_fbo(fbo_id);
 		}
 
 		// restore state
@@ -166,6 +150,94 @@ struct render_to_texture_t {
 		glEnable(GL_LIGHTING);
 		disable_fbo();
 		glViewport(0, 0, window_width, window_height);
+	}
+
+	virtual void draw_geom(bool is_normal_pass) = 0;
+};
+
+
+struct render_tree_to_texture_t : public render_to_texture_t {
+
+	shader_t branch_shader[2], leaf_shader[2]; // color, normal
+	tree *cur_tree;
+
+	render_tree_to_texture_t(unsigned tsize_) : render_to_texture_t(tsize_), cur_tree(NULL) {}
+
+	void free_context() {
+		for (unsigned d = 0; d < 2; ++d) {
+			branch_shader[d].end_shader();
+			leaf_shader[d].end_shader();
+		}
+	}
+
+	void set_leaf_shader_consts(bool ix) {
+		leaf_shader[ix].begin_shader(1);
+		leaf_shader[ix].add_uniform_float("min_alpha", 0.75);
+		leaf_shader[ix].add_uniform_int("tex0", 0);
+		leaf_shader[ix].add_uniform_int("tc_start_ix", 3);
+		leaf_shader[ix].disable();
+	}
+
+	void setup_shaders() {
+		if (!branch_shader[0].is_setup()) { // colors
+			branch_shader[0].set_vert_shader("no_lighting_tex_coord");
+			branch_shader[0].set_frag_shader("simple_texture");
+			branch_shader[0].begin_shader(1);
+			branch_shader[0].add_uniform_int("tex0", 0);
+			branch_shader[0].disable();
+		}
+		if (!branch_shader[1].is_setup()) { // normals
+			branch_shader[1].set_vert_shader("write_normal");
+			branch_shader[1].set_frag_shader("write_normal");
+			branch_shader[1].begin_shader(0); // begin, but don't enable
+		}
+		if (!leaf_shader[0].is_setup()) { // colors
+			leaf_shader[0].set_vert_shader("tc_by_vert_id.part+tree_leaves_no_lighting");
+			leaf_shader[0].set_frag_shader("simple_texture");
+			set_leaf_shader_consts(0);
+		}
+		if (!leaf_shader[1].is_setup()) { // normals
+			leaf_shader[1].set_vert_shader("tc_by_vert_id.part+tree_leaves_no_lighting");
+			leaf_shader[1].set_frag_shader("write_normal_textured");
+			set_leaf_shader_consts(1);
+		}
+	}
+
+	virtual void draw_geom(bool is_normal_pass) {
+		assert(cur_tree);
+		BLACK.do_glColor();
+		branch_shader[is_normal_pass].enable();
+		cur_tree->draw_tree(branch_shader[is_normal_pass], 1, 0, is_normal_pass, zero_vector); // draw branches
+		branch_shader[is_normal_pass].disable();
+		disable_multitex_a();
+		tree_cont_t::pre_leaf_draw(leaf_shader[is_normal_pass]);
+		cur_tree->draw_tree(leaf_shader  [is_normal_pass], 0, 1, is_normal_pass, zero_vector); // draw leaves
+		tree_cont_t::post_leaf_draw(leaf_shader[is_normal_pass]);
+	}
+
+	void render_tree(tree &t, texture_pair_t &tpair, vector3d const &view_dir, vector3d const &up_dir) {
+		setup_shaders();
+		cur_tree = &t;
+		float const view_dist_mult = 20.0; // ???
+		float const radius(t.get_radius());
+		point const center(t.sphere_center());
+		point const eye(center - view_dist_mult*radius*view_dir.get_norm());
+		render(tpair, eye, center, radius, up_dir);
+	}
+
+	void render_tree_side_views(tree &t, vector<texture_pair_t> &tpairs, unsigned num) {
+		assert(num > 0);
+
+		for (unsigned i = 0; i < num; ++i) {
+			float const angle(TWO_PI*((float)i/(float)num));
+			vector3d const view_dir(cosf(angle), sinf(angle), 0.0); // should be normalized
+			tpairs.push_back(texture_pair_t());
+			render_tree(t, tpairs.back(), view_dir, plus_z);
+		}
+	}
+
+	void render_tree_top_view(tree &t, texture_pair_t &tpair) {
+		render_tree(t, tpair, vector3d(0.0, 0.0, -1.0), plus_x);
 	}
 };
 
@@ -322,7 +394,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
 	s.setup_enabled_lights(2);
-	s.set_frag_shader("linear_fog.part+simple_texture");
+	s.set_frag_shader("linear_fog.part+textured_with_fog");
 
 	if (use_geom_shader) { // unused
 		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves_as_pts");
@@ -367,13 +439,19 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader) {
 	set_specular(0.1, 10.0);
 	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
-	set_leaf_shader(shader, 0.75, 1, 0, 3);
+	
+	if (shader.is_setup()) {
+		shader.enable();
+	}
+	else {
+		set_leaf_shader(shader, 0.75, 1, 0, 3);
+	}
 }
 
 
 void tree_cont_t::post_leaf_draw(shader_t &shader) {
 
-	shader.end_shader();
+	shader.disable();
 	set_lighted_sides(1);
 	glDisable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);

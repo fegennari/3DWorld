@@ -188,7 +188,6 @@ class tree
 	bool physics_enabled() const;
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const;
 	void create_leaf_obj(unsigned ix) const;
-	point sphere_center() const {return (tree_center + vector3d(0.0, 0.0, tdata().sphere_center_zoff));}
 
 	bool is_over_mesh() const;
 	bool is_visible_to_camera(vector3d const &xlate) const;
@@ -217,6 +216,7 @@ public:
 	int delete_tree();
 	int get_type()            const {return type;}
 	float get_radius()        const {return tdata().sphere_radius;}
+	point sphere_center()     const {return (tree_center + vector3d(0.0, 0.0, tdata().sphere_center_zoff));}
 	point const &get_center() const {return tree_center;}
 	unsigned get_gpu_mem()    const {return (td_is_private() ? tdata().get_gpu_mem() : 0);}
 	bool get_no_delete()      const {return no_delete;}

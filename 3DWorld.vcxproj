@@ -874,9 +874,11 @@
     <None Include="shaders\snow.vert" />
     <None Include="shaders\spec_map.part.frag" />
     <None Include="shaders\tc_by_vert_id.part.vert" />
+    <None Include="shaders\textured_with_fog.frag" />
     <None Include="shaders\tiled_mesh.frag" />
     <None Include="shaders\tree_branches_as_lines.vert" />
     <None Include="shaders\tree_leaves_as_pts.vert" />
+    <None Include="shaders\tree_leaves_no_lighting.vert" />
     <None Include="shaders\triplanar_texture.part.frag" />
     <None Include="shaders\vert_xform_only.vert" />
     <None Include="shaders\voxel_texture.part.frag" />
@@ -885,7 +887,9 @@
     <None Include="shaders\water_plane.vert" />
     <None Include="shaders\wind.part" />
     <None Include="shaders\write_depth.frag" />
+    <None Include="shaders\write_normal.frag" />
     <None Include="shaders\write_normal.vert" />
+    <None Include="shaders\write_normal_textured.frag" />
     <None Include="shadow_map_issues.txt" />
     <None Include="sponza\coll_objs_sponza.txt" />
     <None Include="sponza\coll_objs_sponza2.txt" />

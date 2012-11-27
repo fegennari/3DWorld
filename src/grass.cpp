@@ -586,7 +586,7 @@ public:
 #else // per-vertex dynamic lighting, limited to 6 lights - faster
 			s.setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
 			s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass");
-			s.set_frag_shader("linear_fog.part+simple_texture");
+			s.set_frag_shader("linear_fog.part+textured_with_fog");
 			s.begin_shader();
 #endif
 			if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);

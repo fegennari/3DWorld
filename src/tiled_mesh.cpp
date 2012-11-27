@@ -1221,7 +1221,7 @@ public:
 		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_vert_shader("ads_lighting.part*+two_lights_texture");
-		s.set_frag_shader("linear_fog.part+simple_texture");
+		s.set_frag_shader("linear_fog.part+textured_with_fog");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
@@ -1258,7 +1258,7 @@ public:
 			s.set_bool_prefix("enable_grass_wind", (pass == 0), 0); // VS
 			s.setup_enabled_lights(2);
 			s.set_vert_shader("ads_lighting.part*+wind.part*+perlin_clouds.part*+grass_tiled");
-			s.set_frag_shader("linear_fog.part+simple_texture");
+			s.set_frag_shader("linear_fog.part+textured_with_fog");
 			//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
 			s.begin_shader();
 			if (pass == 0) {setup_wind_for_shader(s, 1);}

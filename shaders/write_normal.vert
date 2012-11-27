@@ -1,5 +1,7 @@
+varying vec3 normal;
+
 void main()
 {
-	gl_Position   = ftransform();
-	gl_FrontColor = vec4(gl_Normal, 1.0); // world space (not normalized)
+	gl_Position = ftransform();
+	normal      = gl_Normal; // world space (not normalized)
 } 
