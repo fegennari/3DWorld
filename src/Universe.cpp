@@ -21,8 +21,8 @@ float const MAX_COLONY_TEMP  = 28.0;
 float const MAX_LAND_TEMP    = 29.0;
 float const BOIL_TEMP        = 30.0;
 float const NO_AIR_TEMP      = 32.0;
-float const NDIV_SIZE_SCALE1 = 6.0;
-float const NDIV_SIZE_SCALE2 = 0.5;
+float const NDIV_SIZE_SCALE1 = 12.0;
+float const NDIV_SIZE_SCALE2 = 1.0;
 
 bool const USE_HEIGHTMAP     = 1; // for planets/moons/(stars)
 bool const STAR_PERTURB      = 0; // star heightmap
