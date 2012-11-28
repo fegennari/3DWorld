@@ -488,15 +488,8 @@ void voxel_rock::create(int x, int y, int use_xy) {
 
 void voxel_rock::build_model() {
 
-	float gen_radius(0.0);
-
-	while (gen_radius == 0.0) { // loop until we get a valid asteroid
-		rseed *= 27751; // make unique for each iteration
-		model.clear();
-		gen_voxel_rock(model, all_zeros, 1.0, ROCK_VOX_SZ, rseed); // will be translated to pos and scaled by radius during rendering
-		model.build(0);
-		gen_radius = model.get_bsphere().radius;
-	}
+	float const gen_radius(gen_voxel_rock(model, all_zeros, 1.0, ROCK_VOX_SZ, 1, rseed)); // will be translated to pos and scaled by radius during rendering
+	assert(gen_radius > 0.0);
 	radius /= gen_radius;
 }
 

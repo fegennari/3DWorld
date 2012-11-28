@@ -184,6 +184,7 @@ public:
 	cube_t get_bcube() const {return ((tri_data.empty()) ? cube_t(center, center) : tri_data.get_bbox());}
 	sphere_t get_bsphere() const;
 	bool has_triangles() const;
+	bool has_filled_at_edges() const;
 };
 
 

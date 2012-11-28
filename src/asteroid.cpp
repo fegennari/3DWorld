@@ -218,16 +218,9 @@ class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 public:
 	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned rseed_ix, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt), have_sun_pos(0) {
-		float gen_radius(0.0);
 		//RESET_TIME;
-
-		while (gen_radius == 0.0) { // loop until we get a valid asteroid
-			rseed_ix *= 27751; // make unique for each iteration
-			model.clear();
-			gen_voxel_asteroid(model, all_zeros, 1.0, ASTEROID_VOX_SZ, rseed_ix); // will be translated to pos and scaled by radius during rendering
-			model.build(0);
-			gen_radius = model.get_bsphere().radius;
-		}
+		float const gen_radius(gen_voxel_rock(model, all_zeros, 1.0, ASTEROID_VOX_SZ, 2, rseed_ix)); // ndiv=2x2, will be translated to pos and scaled by radius during rendering
+		assert(gen_radius > 0.0);
 		radius /= gen_radius;
 		//PRINT_TIME("Create Asteroid");
 	}

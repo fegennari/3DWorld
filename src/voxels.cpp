@@ -633,6 +633,25 @@ bool voxel_model::has_triangles() const {
 }
 
 
+bool voxel_model::has_filled_at_edges() const {
+
+	for (tri_data_t::const_iterator i = tri_data.begin(); i != tri_data.end(); ++i) {
+		unsigned const num(i->num_verts());
+		assert(!(num % 3));
+
+		for (unsigned j = 0; j < num; j += 3) {
+			point v[3];
+			UNROLL_3X(v[i_] = i->get_vert(j+i_).v;)
+
+			for (unsigned d = 0; d < 3; ++d) {
+				if (v[0][d] == v[1][d] && v[0][d] == v[2][d]) return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+
 unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 
 	assert(voxel_ix < size());
@@ -1319,21 +1338,24 @@ void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const
 	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed);
 }
 
-void gen_voxel_rock(voxel_model &model, point const &center, float radius, unsigned size, int rseed) {
+
+float gen_voxel_rock(voxel_model &model, point const &center, float radius, unsigned size, unsigned num_blocks, int rseed) {
 
 	voxel_params_t params;
-	params.num_blocks = 1; // no subdivision
-	gen_voxel_spherical(model, params, center, radius, size, rseed);
-}
-
-
-void gen_voxel_asteroid(voxel_model &model, point const &center, float radius, unsigned size, int rseed) {
-
-	voxel_params_t params;
-	params.num_blocks     = 2; // in each of x and y - subdivision not needed? it produces seams
-	params.ao_atten_power = 1.5; // user-specified?
+	params.num_blocks     = num_blocks; // in each of x and y - subdivision not needed? it produces seams
+	params.ao_atten_power = 1.5; // user-specified? seems like a good value for asteroids
 	params.ao_radius      = 1.0*radius;
-	gen_voxel_spherical(model, params, center, radius, size, rseed);
+
+	while (1) { // loop until we get a valid asteroid
+		rseed = 27751*rseed + 123; // make unique for each iteration
+		model.clear();
+		gen_voxel_spherical(model, params, center, radius, size, rseed);
+		model.build(0);
+		if (model.has_filled_at_edges()) continue; // discard and recreate
+		float const gen_radius(model.get_bsphere().radius);
+		if (gen_radius > 0.0) return gen_radius; // nonempty
+	}
+	return 0.0; // never gets here
 }
 
 
