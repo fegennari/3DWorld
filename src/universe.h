@@ -117,6 +117,7 @@ class ustar;
 class ussystem;
 class ugalaxy;
 class ucell;
+struct ushader_group;
 
 
 struct camera_mv_speed {
@@ -186,7 +187,7 @@ public:
 	void apply_gl_rotate() const;
 	void rotate_vector(vector3d &v) const;
 	void rotate_vector_inv(vector3d &v) const;
-	bool draw(point_d pos_, camera_mv_speed const &cmvs, float rscale);
+	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale);
 	void set_grav_mass();
 	bool collision(point const &p, float rad, vector3d const &v, point &cpos, float &coll_r, bool simple) const;
 	void rename(std::string const &name_) {setname(name_);}
@@ -484,8 +485,8 @@ struct cell_block {
 
 class universe_t : protected cell_block {
 
-	void draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, s_object const &clobj, unsigned pass, bool no_move);
-	void draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, s_object const &clobj, unsigned pass, bool no_move);
+	void draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move);
+	void draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move);
 
 public:
 	void init();

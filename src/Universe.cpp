@@ -6,6 +6,7 @@
 #include "explosion.h"
 #include "textures_3dw.h"
 #include "draw_utils.h"
+#include "shaders.h"
 
 
 // temperatures
@@ -173,6 +174,11 @@ void destroy_sobj(s_object const &target) {
 // *** DRAW CODE ***
 
 
+struct ushader_group {
+	shader_t planet_shader; // and moons
+};
+
+
 void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, bool no_distant) {
 
 	//RESET_TIME;
@@ -183,6 +189,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	vector3d const motion_vector(camera, last_camera);
 	float const speed(motion_vector.mag());
 	camera_mv_speed const cmvs(camera, motion_vector, speed);
+	ushader_group usg;
 	last_camera = camera;
 	to_draw_last.planet = NULL;
 	glDisable(GL_LIGHTING);
@@ -191,7 +198,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 		for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
 			for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
 				for (cxyz[0] = 0; cxyz[0] < int(U_BLOCKS); ++cxyz[0]) { // x
-					draw_cell(cxyz, cmvs, clobj, 0, no_move);
+					draw_cell(cxyz, cmvs, usg, clobj, 0, no_move);
 				}
 			}
 		}
@@ -200,7 +207,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 		unsigned const npasses((skip_closest && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON)) ? 2 : 3);
 
 		for (unsigned pass = 1; pass < npasses; ++pass) { // drawing passes 2-3
-			draw_cell(clobj.cellxyz, cmvs, clobj, pass, no_move);
+			draw_cell(clobj.cellxyz, cmvs, usg, clobj, pass, no_move);
 		}
 	}
 	glDisable(GL_LIGHTING);
@@ -388,7 +395,7 @@ uobject const *get_shadowing_object(uobject const &obj, ustar const &sun) { // u
 }
 
 
-void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, s_object const &clobj, unsigned pass, bool no_move) {
+void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move) {
 
 	ucell &cell(get_cell(cxyz));
 	if (!univ_sphere_vis(cell.rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
@@ -396,7 +403,7 @@ void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, s_obj
 	for (unsigned d = 0; d < 3; ++d) {
 		current.cellxyz[d] = cxyz[d] + uxyz[d];
 	}
-	draw_cell_contents(cell, cmvs, clobj, pass, no_move);
+	draw_cell_contents(cell, cmvs, usg, clobj, pass, no_move);
 }
 
 
@@ -405,7 +412,7 @@ void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, s_obj
 //  If player's system is none then stop
 //  1. Draw the player's system except for the player's sobj
 //  2. Draw the player's sobj
-void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, s_object const &clobj, unsigned pass, bool no_move) {
+void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move) {
 
 	if (cell.galaxies == NULL) return; // galaxies not yet allocated
 	point const &camera(cmvs.camera);
@@ -462,7 +469,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, s_
 
 			if (has_sun && !skip_s && univ_sphere_vis(pos3, 2.0*sradius)) {
 				sol.sun.check_gen_texture(int(sizes));
-				if (!sol.sun.draw(pos3, cmvs, 1.0)) continue;
+				if (!sol.sun.draw(pos3, cmvs, usg, 1.0)) continue;
 				if (sizes > MIN_TEX_OBJ_SZ) sol.sun.rot_ang += rand_uniform(-0.2, 0.2); // random rotation of sun texture
 			}
 			bool const planets_visible(PLANET_MAX_SIZE*sizes >= 0.3*sradius || !sclip);
@@ -511,7 +518,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, s_
 						set_specular(0.4*planet.water, 75.0); // should really only set specular on water triangles
 						set_texture_specular(1);
 					}
-					planet.draw(pos4, cmvs, rscale); // always returns 1?
+					planet.draw(pos4, cmvs, usg, rscale); // always returns 1?
 					
 					if (has_specular) {
 						set_texture_specular(0);
@@ -533,7 +540,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, s_
 						current.moon = l;
 						//uobject const *sobj(sel_s ? get_shadowing_object(moon, sol.sun) : NULL);
 						moon.check_gen_texture(int(sizem));
-						moon.draw(pos5, cmvs, 1.0); // draw moon
+						moon.draw(pos5, cmvs, usg, 1.0); // draw moon
 					}
 				}
 				if (planet.is_ok() && !skip_p) {
@@ -1685,7 +1692,7 @@ void uobj_solid::rotate_vector_inv(vector3d &v) const {
 }
 
 
-bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, float rscale) {
+bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale) {
 
 	vector3d const vcp(cmvs.camera, pos_);
 	float const radius0(rscale*radius), dist(vcp.mag() - radius0);
@@ -1720,7 +1727,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, float rscale) {
 		if (world_mode == WMODE_UNIVERSE && !(display_mode & 2)) {
 			show_colonizable_liveable(pos_, radius0); // show liveable/colonizable planets/moons
 		}
-		if (shadowed) { // slow?
+		if (shadowed) {
 			// *** use exact shadow? ***
 			if (glIsEnabled(GL_LIGHT0)) enable_l0 = 1;
 			glDisable(GL_LIGHT0);
@@ -1765,8 +1772,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, float rscale) {
 		glPushMatrix();
 		global_translate(pos_);
 		if (star && size > 6) draw_flare(pos_, all_zeros, 2.4*radius0, 2.4*radius0); // draw star's flare
-		bool const texture(size > MIN_TEX_OBJ_SZ && glIsTexture(tid));
-		bool drawn(0);
+		bool const texture(tid > 0 && size > MIN_TEX_OBJ_SZ);
 		int ndiv;
 		
 		if (star || size < 256) {
@@ -1784,19 +1790,23 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, float rscale) {
 		if (texture) { // texture map
 			glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D, tid);
-			enable_blend();
 			WHITE.do_glColor();
 
-			if (size >= (SPHERE_MAX_ND >> 1) && (STAR_PERTURB || !star)) {
-				draw_surface(pos_, radius0, size, ndiv);
-				drawn = 1;
-			}
-			else {
-				clear_surface_cache(); // only gets here when the object is visible
+			if (!star) {
+				if (usg.planet_shader.is_setup()) {
+					usg.planet_shader.enable();
+				}
+				else {
+					// setup the shader
+				}
+				// setup enabled lights uniforms
 			}
 		}
-		if (!drawn) {
-			if (star) gluQuadricNormals(quadric, GLU_NONE);
+		if (size >= (SPHERE_MAX_ND >> 1) && (STAR_PERTURB || !star)) {
+			draw_surface(pos_, radius0, size, ndiv);
+		}
+		else {
+			clear_surface_cache(); // only gets here when the object is visible
 
 			if (ndiv >= N_SPHERE_DIV) { // large sphere - back face cull
 				point viewed_from(get_player_pos() - pos_);
@@ -1806,13 +1816,12 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, float rscale) {
 			else { // small sphere - use display list
 				draw_sphere_dlist(all_zeros, radius0, ndiv, texture);
 			}
-			if (star) gluQuadricNormals(quadric, GLU_SMOOTH);
 		}
 		if (star && size >= 64) draw_detail(ndiv, texture);
 		glPopMatrix();
 		
 		if (texture) {
-			disable_blend();
+			if (!star && usg.planet_shader.is_setup()) {usg.planet_shader.disable();}
 			glDisable(GL_TEXTURE_2D);
 		}
 	} // end sphere draw
