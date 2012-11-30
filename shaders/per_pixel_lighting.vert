@@ -1,8 +1,12 @@
+varying vec4 epos;
 varying vec3 normal;
 
 void main()
 {
-	normal = normalize(gl_NormalMatrix * gl_Normal);
-	gl_Position = ftransform();
+	gl_TexCoord[0]  = gl_MultiTexCoord0;
+	normal          = normalize(gl_NormalMatrix * gl_Normal);
+	epos            = gl_ModelViewMatrix * gl_Vertex;
+	gl_Position     = ftransform();
 	gl_FogFragCoord = length((gl_ModelViewMatrix * gl_Vertex).xyz);
+	gl_FrontColor   = gl_Color;
 }

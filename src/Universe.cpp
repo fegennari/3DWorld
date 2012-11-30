@@ -40,7 +40,7 @@ float const REV_RATE_CONST   = 1.0*ROTREV_TIMESCALE;
 float const STAR_BRIGHTNESS  = 1.4;
 float const MIN_TEX_OBJ_SZ   = 3.0;
 float const MAX_WATER        = 0.75;
-float const GLOBAL_AMBIENT   = 0.5;
+float const GLOBAL_AMBIENT   = 0.25;
 
 
 bool have_sun(1);
@@ -176,6 +176,7 @@ void destroy_sobj(s_object const &target) {
 
 struct ushader_group {
 	shader_t planet_shader; // and moons
+	// also: stars, atmosphere/clouds, rings
 };
 
 
@@ -1788,19 +1789,23 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		apply_gl_rotate();
 		
 		if (texture) { // texture map
-			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, tid);
-			WHITE.do_glColor();
-
 			if (!star) {
 				if (usg.planet_shader.is_setup()) {
 					usg.planet_shader.enable();
 				}
 				else {
-					// setup the shader
+					usg.planet_shader.set_vert_shader("per_pixel_lighting");
+					usg.planet_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_draw");
+					usg.planet_shader.begin_shader();
+					usg.planet_shader.add_uniform_int("tex0", 0);
 				}
-				// setup enabled lights uniforms
+				vector2d const light_scale((glIsEnabled(GL_LIGHT0) ? 1.0 : 0.0), (glIsEnabled(GL_LIGHT1) ? 1.0 : 0.0));
+				usg.planet_shader.add_uniform_vector2d("light_scale", light_scale);
+				set_specular(1.0, 80.0);
 			}
+			glEnable(GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, tid);
+			WHITE.do_glColor();
 		}
 		if (size >= (SPHERE_MAX_ND >> 1) && (STAR_PERTURB || !star)) {
 			draw_surface(pos_, radius0, size, ndiv);
@@ -1822,6 +1827,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		
 		if (texture) {
 			if (!star && usg.planet_shader.is_setup()) {usg.planet_shader.disable();}
+			set_specular(0.0, 1.0);
 			glDisable(GL_TEXTURE_2D);
 		}
 	} // end sphere draw
