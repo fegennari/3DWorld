@@ -12,7 +12,7 @@ vec4 add_light_planet(in vec3 normal, in vec4 epos, in vec4 texel, in int i)
 	vec4 ambient = gl_Color * texel * gl_LightSource[i].ambient;
 	vec3 half_vect = normalize(light_dir - normalize(epos.xyz)); // Eye + L = -eye_space_pos + L
 	vec4 specular  = gl_FrontLightProduct[i].specular * pow(max(dot(normal, half_vect), 0.0), gl_FrontMaterial.shininess)*pow(texel.b, 4.0);
-	return (ambient + (max(dot(normal, light_dir), 0.0)*diffuse + specular));
+	return (ambient + (max(dot(normal, light_dir), 0.0)*diffuse + specular)) * calc_light_atten(epos, i);
 }
 
 void main()

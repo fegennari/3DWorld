@@ -117,7 +117,7 @@ class ustar;
 class ussystem;
 class ugalaxy;
 class ucell;
-struct ushader_group;
+class ushader_group;
 
 
 struct camera_mv_speed {
