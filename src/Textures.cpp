@@ -1283,16 +1283,24 @@ void gen_wind_texture() {
 }
 
 
+void noise_fill(unsigned char *data, unsigned size) {
+	for (unsigned i = 0; i < size; ++i) {data[i] = (rand() % 256);}
+}
+
+
 void gen_noise_texture() {
 
 	texture_t &tex(textures[NOISE_GEN_TEX]);
 	assert(tex.ncolors == 1);
-	unsigned char *tex_data(tex.get_data());
-	unsigned const size(tex.num_pixels());
+	noise_fill(tex.get_data(), tex.num_pixels());
+}
 
-	for (unsigned i = 0; i < size; ++i) {
-		tex_data[i] = rand() % 256;
-	}
+
+unsigned create_3d_noise_texture(unsigned size) {
+
+	vector<unsigned char> data(size*size*size);
+	noise_fill(&data.front(), data.size());
+	return create_3d_texture(size, size, size, 1, data, GL_LINEAR, GL_REPEAT);
 }
 
 

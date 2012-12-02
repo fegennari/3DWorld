@@ -859,6 +859,7 @@
     <None Include="shaders\no_lighting_tex_coord.vert" />
     <None Include="shaders\output_textured_quad.part.geom" />
     <None Include="shaders\perlin_clouds.part" />
+    <None Include="shaders\perlin_clouds_3d.part" />
     <None Include="shaders\pine_tree.frag" />
     <None Include="shaders\pine_tree.geom" />
     <None Include="shaders\pine_tree.vert" />

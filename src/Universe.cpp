@@ -250,6 +250,7 @@ public:
 			cloud_shader.set_vert_shader("per_pixel_lighting");
 			cloud_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_clouds");
 			shared_shader_setup(cloud_shader);
+			//tid = create_3d_noise_texture(64);
 		}
 		cloud_shader.enable();
 		set_light_scale(cloud_shader);
