@@ -185,20 +185,22 @@ class ushader_group {
 		vector2d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1));
 		shader.add_uniform_vector2d("light_scale", light_scale);
 	}
+	void shared_shader_setup(shader_t &shader) const {
+		shader.begin_shader();
+		shader.add_uniform_int("tex0", 0);
+		shader.setup_fog_scale(); // fog not needed?
+	}
 
 public:
 	bool enable_planet_shader() {
 		if (disable_shaders) return 0;
 
-		if (planet_shader.is_setup()) {
-			planet_shader.enable();
-		}
-		else {
+		if (!planet_shader.is_setup()) {
 			planet_shader.set_vert_shader("per_pixel_lighting");
 			planet_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_draw");
-			planet_shader.begin_shader();
-			planet_shader.add_uniform_int("tex0", 0);
+			shared_shader_setup(planet_shader);
 		}
+		planet_shader.enable();
 		set_light_scale(planet_shader);
 		set_specular(1.0, 80.0);
 		return 1;
@@ -210,30 +212,30 @@ public:
 		}
 	}
 
-	bool enable_star_shader() {
+	bool enable_star_shader() { // no lighting
 		if (disable_shaders) return 0;
 
-		if (star_shader.is_setup()) {
-			star_shader.enable();
+		if (!star_shader.is_setup()) {
+			//star_shader.set_vert_shader("no_lighting_tex_coord");
+			//star_shader.set_frag_shader("linear_fog.part+star_draw");
+			//shared_shader_setup(star_shader);
 		}
-		else {
-			// write
-		}
+		//star_shader.enable();
 		return 0;
 	}
 	void disable_star_shader() {
 		if (star_shader.is_setup()) {star_shader.disable();}
 	}
 
-	bool enable_ring_shader() {
+	bool enable_ring_shader() { // no lighting?
 		if (disable_shaders) return 0;
 		
-		if (ring_shader.is_setup()) {
-			ring_shader.enable();
+		if (!ring_shader.is_setup()) {
+			//ring_shader.set_vert_shader("per_pixel_lighting");
+			//ring_shader.set_frag_shader("linear_fog.part+planet_ring_draw");
+			//shared_shader_setup(ring_shader);
 		}
-		else {
-			// write
-		}
+		//ring_shader.enable();
 		return 0;
 	}
 	void disable_ring_shader() {
@@ -243,12 +245,12 @@ public:
 	bool enable_cloud_shader() {
 		if (disable_shaders) return 0;
 		
-		if (cloud_shader.is_setup()) {
-			cloud_shader.enable();
+		if (!cloud_shader.is_setup()) {
+			//cloud_shader.set_vert_shader("per_pixel_lighting");
+			//cloud_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_draw");
+			//shared_shader_setup(cloud_shader);
 		}
-		else {
-			// write
-		}
+		//cloud_shader.enable();
 		return 0;
 	}
 	void disable_cloud_shader() {
@@ -288,7 +290,6 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			draw_cell(clobj.cellxyz, cmvs, usg, clobj, pass, no_move);
 		}
 	}
-	glDisable(GL_LIGHTING);
 	universe_pld.draw_and_clear();
 	glEnable(GL_LIGHTING);
 	//PRINT_TIME("Draw Cells");
@@ -1798,7 +1799,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		size *= pscale;
 		pos_  = cmvs.camera - vcp*pscale;
 	}
-	bool lighting(0), enable_l0(0);
+	bool enable_l0(0);
 	colorRGBA ocolor(color);
 
 	if (!star) {
@@ -1811,7 +1812,6 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 			glDisable(GL_LIGHT0);
 		}
 		glEnable(GL_LIGHTING);
-		lighting = 1;
 		if (size < 1.0) cmult = size*size; // small, attenuate
 	}
 	if (cmult != 1.0) blend_color(ocolor, ocolor, bkg_color, cmult, 1);
@@ -1831,7 +1831,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		}
 		else {
 			ocolor.do_glColor();
-			if (lighting) normal.do_glNormal(); // orient towards camera
+			if (!star) normal.do_glNormal(); // orient towards camera
 		
 			if (draw_as_line) {
 				if (!small) glLineWidth(2.0); // 2 pixel width
@@ -1895,7 +1895,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		}
 	} // end sphere draw
 	if (enable_l0) glEnable(GL_LIGHT0);
-	if (lighting)  glDisable(GL_LIGHTING);
+	if (!star)     glDisable(GL_LIGHTING);
 	return 1;
 }
 
@@ -2002,7 +2002,6 @@ void ustar::draw_surface(point_d const &pos_, float radius0, float size, int ndi
 void ustar::draw_detail(int ndiv, bool texture) {
 
 	if (solar_flares.empty()) solar_flares.resize(4 + (rand()&3));
-	glDisable(GL_LIGHTING);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	enable_blend();
@@ -2013,7 +2012,6 @@ void ustar::draw_detail(int ndiv, bool texture) {
 	}
 	disable_blend();
 	glDisable(GL_CULL_FACE);
-	glEnable(GL_LIGHTING);
 }
 
 
@@ -2070,7 +2068,6 @@ void urev_body::show_colonizable_liveable(point const &pos_, float radius0) cons
 	else {
 		return;
 	}
-	glDisable(GL_LIGHTING);
 	glPushMatrix();
 	global_translate(pos_);
 	draw_sphere_dlist(all_zeros, 1.2*radius0, 12, 0);
@@ -2082,7 +2079,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 
 	if (size_ < 0.1 || rings.empty()) return;
 	enable_blend(); // must be drawn last
-	glDisable(GL_LIGHTING);
+	// no lighting?
 	glPushMatrix();
 	global_translate(pos_);
 	scale_by(rscale);
