@@ -16,5 +16,5 @@ float gen_cloud_alpha(in vec2 pos)
 			freq2 *= 2.25;
 		}
 	}
-	return clamp(8.0*(cloud_scale*alpha-1.7), 0.0, 1.0);
+	return clamp(2.0*(cloud_scale*alpha-1.0), 0.0, 1.0);
 }
