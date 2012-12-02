@@ -294,8 +294,8 @@ public:
 	bool colonizable_int() const {return (water > 0.1 && atmos > 0.1);}
 	bool has_vegetation()  const {return (water > 0.2 && atmos > 0.1);}
 	float get_vegetation() const;
-	void draw_prings(upos_point_type const &pos_, float size_) const;
-	void draw_atmosphere(upos_point_type const &pos_, float size_) const;
+	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_) const;
+	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const;
 	void free();
 	string get_name() const {return "Planet " + getname();}
 	string get_info() const;

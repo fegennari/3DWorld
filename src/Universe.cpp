@@ -56,7 +56,7 @@ universe_t universe; // the top level universe
 pt_line_drawer universe_pld;
 
 
-extern bool univ_planet_lod;
+extern bool univ_planet_lod, disable_shaders;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
 extern float tan_term, sin_term, fticks, tfticks;
 extern colorRGBA bkg_color;
@@ -181,8 +181,15 @@ class ushader_group {
 	shader_t planet_shader; // and moons
 	shader_t star_shader, ring_shader, cloud_shader; // unused
 
+	void set_light_scale(shader_t const &shader) const {
+		vector2d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1));
+		shader.add_uniform_vector2d("light_scale", light_scale);
+	}
+
 public:
-	void enable_planet_shader() {
+	bool enable_planet_shader() {
+		if (disable_shaders) return 0;
+
 		if (planet_shader.is_setup()) {
 			planet_shader.enable();
 		}
@@ -192,9 +199,9 @@ public:
 			planet_shader.begin_shader();
 			planet_shader.add_uniform_int("tex0", 0);
 		}
-		vector2d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1));
-		planet_shader.add_uniform_vector2d("light_scale", light_scale);
+		set_light_scale(planet_shader);
 		set_specular(1.0, 80.0);
+		return 1;
 	}
 	void disable_planet_shader() {
 		if (planet_shader.is_setup()) {
@@ -203,22 +210,46 @@ public:
 		}
 	}
 
-	void enable_star_shader() {
-		// write
+	bool enable_star_shader() {
+		if (disable_shaders) return 0;
+
+		if (star_shader.is_setup()) {
+			star_shader.enable();
+		}
+		else {
+			// write
+		}
+		return 0;
 	}
 	void disable_star_shader() {
 		if (star_shader.is_setup()) {star_shader.disable();}
 	}
 
-	void enable_ring_shader() {
-		// write
+	bool enable_ring_shader() {
+		if (disable_shaders) return 0;
+		
+		if (ring_shader.is_setup()) {
+			ring_shader.enable();
+		}
+		else {
+			// write
+		}
+		return 0;
 	}
 	void disable_ring_shader() {
 		if (ring_shader.is_setup()) {ring_shader.disable();}
 	}
 
-	void enable_cloud_shader() {
-		// write
+	bool enable_cloud_shader() {
+		if (disable_shaders) return 0;
+		
+		if (cloud_shader.is_setup()) {
+			cloud_shader.enable();
+		}
+		else {
+			// write
+		}
+		return 0;
 	}
 	void disable_cloud_shader() {
 		if (cloud_shader.is_setup()) {cloud_shader.disable();}
@@ -591,11 +622,11 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 					}
 				}
 				if (planet.is_ok() && !skip_p) {
-					planet.draw_prings(pos4, sizep);
+					planet.draw_prings(usg, pos4, sizep);
 
 					if (planet_visible && planet.atmos > 0.01 && planet.tsize > PLANET_ATM_TEX_SZ) {
 						//if (sel_p) to_draw_last = selected_planet(&planet, pos4, sizep);
-						planet.draw_atmosphere(pos4, sizep);
+						planet.draw_atmosphere(usg, pos4, sizep);
 					}
 				}
 			} // planet k
@@ -1835,7 +1866,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		apply_gl_rotate();
 		
 		if (texture) { // texture map
-			if (!star) {usg.enable_planet_shader();}
+			if (star) {usg.enable_star_shader();} else {usg.enable_planet_shader();}
 			glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D, tid);
 			WHITE.do_glColor();
@@ -1859,7 +1890,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		glPopMatrix();
 		
 		if (texture) {
-			if (!star) {usg.disable_planet_shader();}
+			if (star) {usg.disable_star_shader();} else {usg.disable_planet_shader();}
 			glDisable(GL_TEXTURE_2D);
 		}
 	} // end sphere draw
@@ -2047,7 +2078,7 @@ void urev_body::show_colonizable_liveable(point const &pos_, float radius0) cons
 }
 
 
-void uplanet::draw_prings(upos_point_type const &pos_, float size_) const {
+void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_) const {
 
 	if (size_ < 0.1 || rings.empty()) return;
 	enable_blend(); // must be drawn last
@@ -2061,12 +2092,14 @@ void uplanet::draw_prings(upos_point_type const &pos_, float size_) const {
 	if (do_texture) {
 		select_texture(NOISE_TEX);
 		gluQuadricTexture(quadric, GL_TRUE);
+		usg.enable_ring_shader(); // even in !do_texture mode?
 	}
 	for (unsigned i = 0; i < rings.size(); ++i) {
 		rings[i].color.do_glColor();
 		gluDisk(quadric, rings[i].radius1, rings[i].radius2, max(4, min(2*N_SPHERE_DIV, int(4.0*size_))), 1);
 	}
 	if (do_texture) {
+		usg.disable_ring_shader();
 		gluQuadricTexture(quadric, GL_FALSE);
 		glDisable(GL_TEXTURE_2D);
 	}
@@ -2075,7 +2108,7 @@ void uplanet::draw_prings(upos_point_type const &pos_, float size_) const {
 }
 
 
-void uplanet::draw_atmosphere(upos_point_type const &pos_, float size_) const { // *** must be drawn last ***
+void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const { // *** must be drawn last ***
 
 	if (size_ < 1.5 || atmos == 0) return;
 	colorRGBA color(WHITE);
@@ -2091,12 +2124,14 @@ void uplanet::draw_atmosphere(upos_point_type const &pos_, float size_) const { 
 	apply_gl_rotate();
 	//rotate_about(2.0*rot_ang, rot_axis); // testing
 	//RESET_TIME;
+	usg.enable_cloud_shader();
 	glEnable(GL_CULL_FACE);
 	draw_subdiv_sphere(all_zeros, PLANET_ATM_RSCALE*radius, ndiv, cloud_tex_repeat, 1);
 	glDisable(GL_CULL_FACE);
 	//draw_sphere_at_tc(all_zeros, PLANET_ATM_RSCALE*radius, ndiv, 1, 1); // culling and texturing enabled
 	//draw_sphere_dlist(all_zeros, PLANET_ATM_RSCALE*radius, ndiv, 1, 0);
 	//draw_sphere_dlist_back_to_front(all_zeros, PLANET_ATM_RSCALE*radius, ndiv, 1, 0); // slow
+	usg.disable_cloud_shader();
 	//PRINT_TIME("Sphere");
 	glPopMatrix();
 	disable_blend();
