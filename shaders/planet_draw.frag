@@ -20,7 +20,7 @@ void main()
 	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
 	vec3 norm  = normalize(normal); // renormalize
 	vec4 color = gl_FrontMaterial.emission;
-	color += light_scale[0]*add_light_planet(norm, epos, texel, 0);
-	color += light_scale[1]*add_light_planet(norm, epos, texel, 1);
+	color.rgb += light_scale[0]*add_light_planet(norm, epos, texel, 0).rgb;
+	color.rgb += light_scale[1]*add_light_planet(norm, epos, texel, 1).rgb;
 	gl_FragColor = apply_fog(color);
 }

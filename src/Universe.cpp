@@ -216,11 +216,11 @@ public:
 		if (disable_shaders) return 0;
 
 		if (!star_shader.is_setup()) {
-			//star_shader.set_vert_shader("no_lighting_tex_coord");
-			//star_shader.set_frag_shader("linear_fog.part+star_draw");
-			//shared_shader_setup(star_shader);
+			star_shader.set_vert_shader("no_lighting_tex_coord");
+			star_shader.set_frag_shader("linear_fog.part+star_draw");
+			shared_shader_setup(star_shader);
 		}
-		//star_shader.enable();
+		star_shader.enable();
 		return 0;
 	}
 	void disable_star_shader() {
@@ -231,11 +231,11 @@ public:
 		if (disable_shaders) return 0;
 		
 		if (!ring_shader.is_setup()) {
-			//ring_shader.set_vert_shader("per_pixel_lighting");
-			//ring_shader.set_frag_shader("linear_fog.part+planet_ring_draw");
-			//shared_shader_setup(ring_shader);
+			ring_shader.set_vert_shader("per_pixel_lighting");
+			ring_shader.set_frag_shader("linear_fog.part+planet_rings");
+			shared_shader_setup(ring_shader);
 		}
-		//ring_shader.enable();
+		ring_shader.enable();
 		return 0;
 	}
 	void disable_ring_shader() {
@@ -246,11 +246,13 @@ public:
 		if (disable_shaders) return 0;
 		
 		if (!cloud_shader.is_setup()) {
-			//cloud_shader.set_vert_shader("per_pixel_lighting");
-			//cloud_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_draw");
-			//shared_shader_setup(cloud_shader);
+			cloud_shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+			cloud_shader.set_vert_shader("per_pixel_lighting");
+			cloud_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_clouds");
+			shared_shader_setup(cloud_shader);
 		}
-		//cloud_shader.enable();
+		cloud_shader.enable();
+		set_light_scale(cloud_shader);
 		return 0;
 	}
 	void disable_cloud_shader() {

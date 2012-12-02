@@ -864,7 +864,9 @@
     <None Include="shaders\pine_tree.vert" />
     <None Include="shaders\pine_tree_billboard.vert" />
     <None Include="shaders\pine_tree_gs.vert" />
+    <None Include="shaders\planet_clouds.frag" />
     <None Include="shaders\planet_draw.frag" />
+    <None Include="shaders\planet_rings.frag" />
     <None Include="shaders\point_to_quad.geom" />
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />
@@ -874,6 +876,7 @@
     <None Include="shaders\ship_draw.vert" />
     <None Include="shaders\snow.vert" />
     <None Include="shaders\spec_map.part.frag" />
+    <None Include="shaders\star_draw.frag" />
     <None Include="shaders\tc_by_vert_id.part.vert" />
     <None Include="shaders\textured_with_fog.frag" />
     <None Include="shaders\tiled_mesh.frag" />
