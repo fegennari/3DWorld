@@ -35,6 +35,7 @@ int   const LANDSCAPE_REGEN_MOD   = 32;   // ticks for entire mesh regen pass
 int   const LANDSCAPE_REGEN_RATE  = 400;  // ticks per landscape texture update (slow)
 int   const MAX_UPDATE_SIZE       = 16;
 float const ADJ_VALUE             = 1.0;
+unsigned const NOISE_TEX_3D_SIZE  = 64;
 
 bool const RELOAD_TEX_ON_HOLE  = 0;
 bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update doesn't recompute the mipmaps
@@ -156,6 +157,7 @@ texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen.raw") // not real file
 
 // zval should depend on def_water_level and temperature
 float h_sand[NTEX_SAND], h_dirt[NTEX_DIRT], clip_hs1, clip_hs2, clip_hd1;
+unsigned noise_tex_3d(0);
 std::set<int> ls_color_texels;
 vector<colorRGBA> cached_ls_colors;
 typedef map<string, unsigned> name_map_t;
@@ -327,6 +329,7 @@ void reset_textures() {
 	free_texture(gb_tid);
 	free_texture(flow_tid);
 	free_texture(reflection_tid);
+	free_texture(noise_tex_3d);
 }
 
 
@@ -1301,6 +1304,13 @@ unsigned create_3d_noise_texture(unsigned size) {
 	vector<unsigned char> data(size*size*size);
 	noise_fill(&data.front(), data.size());
 	return create_3d_texture(size, size, size, 1, data, GL_LINEAR, GL_REPEAT);
+}
+
+
+unsigned get_noise_tex_3d() {
+
+	if (noise_tex_3d == 0) {noise_tex_3d = create_3d_noise_texture(NOISE_TEX_3D_SIZE);}
+	return noise_tex_3d;
 }
 
 
