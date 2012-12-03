@@ -866,6 +866,7 @@
     <None Include="shaders\pine_tree_billboard.vert" />
     <None Include="shaders\pine_tree_gs.vert" />
     <None Include="shaders\planet_clouds.frag" />
+    <None Include="shaders\planet_clouds.vert" />
     <None Include="shaders\planet_draw.frag" />
     <None Include="shaders\planet_rings.frag" />
     <None Include="shaders\point_to_quad.geom" />

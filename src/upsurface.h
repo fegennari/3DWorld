@@ -10,7 +10,7 @@
 
 
 unsigned const MAX_TEXTURE_SIZE  = 256; // must be a power of 2
-unsigned const PLANET_ATM_TEX_SZ = 64;
+unsigned const PLANET_ATM_TEX_SZ = 16;
 
 unsigned const SINES_PER_FREQ    = 12;
 unsigned const MAX_FREQ_BINS     = 5;

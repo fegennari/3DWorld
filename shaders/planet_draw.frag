@@ -1,7 +1,7 @@
 uniform vec2 light_scale = vec2(1,1);
 uniform sampler2D tex0;
 varying vec4 epos;
-varying vec3 normal; // world space
+varying vec3 normal;
 
 
 vec4 add_light_planet(in vec3 normal, in vec4 epos, in vec4 texel, in int i)

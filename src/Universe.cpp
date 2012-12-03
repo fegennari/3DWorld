@@ -7,6 +7,7 @@
 #include "textures_3dw.h"
 #include "draw_utils.h"
 #include "shaders.h"
+#include "gl_ext_arb.h"
 
 
 // temperatures
@@ -57,7 +58,7 @@ pt_line_drawer universe_pld;
 
 
 extern bool univ_planet_lod, disable_shaders;
-extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
+extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks, frame_counter;
 extern float tan_term, sin_term, fticks, tfticks;
 extern colorRGBA bkg_color;
 extern exp_type_params et_params[];
@@ -185,9 +186,9 @@ class ushader_group {
 		vector2d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1));
 		shader.add_uniform_vector2d("light_scale", light_scale);
 	}
-	void shared_shader_setup(shader_t &shader) const {
+	void shared_shader_setup(shader_t &shader, const char *texture_name="tex0") const {
 		shader.begin_shader();
-		shader.add_uniform_int("tex0", 0);
+		shader.add_uniform_int(texture_name, 0);
 		shader.setup_fog_scale(); // fog not needed?
 	}
 
@@ -242,18 +243,21 @@ public:
 		if (ring_shader.is_setup()) {ring_shader.disable();}
 	}
 
-	bool enable_cloud_shader() {
+	bool enable_cloud_shader(int cloud_tex_repeat) {
 		if (disable_shaders) return 0;
 		
 		if (!cloud_shader.is_setup()) {
+			bind_3d_texture(get_noise_tex_3d());
 			cloud_shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			cloud_shader.set_vert_shader("per_pixel_lighting");
-			cloud_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_clouds");
-			shared_shader_setup(cloud_shader);
-			//tid = create_3d_noise_texture(64);
+			cloud_shader.set_prefix("#define NUM_OCTAVES 8", 1); // FS
+			cloud_shader.set_vert_shader("planet_clouds");
+			cloud_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+planet_clouds");
+			shared_shader_setup(cloud_shader, "cloud_noise_tex");
+			cloud_shader.add_uniform_float("time", 4.0E-6*frame_counter);
 		}
 		cloud_shader.enable();
 		set_light_scale(cloud_shader);
+		cloud_shader.add_uniform_float("noise_scale", 2.5*cloud_tex_repeat);
 		return 0;
 	}
 	void disable_cloud_shader() {
@@ -2111,31 +2115,20 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const { // *** must be drawn last ***
 
 	if (size_ < 1.5 || atmos == 0) return;
-	colorRGBA color(WHITE);
-	color.alpha = atmos;
 	enable_blend();
 	glEnable(GL_LIGHTING);
-	color.do_glColor();
-	select_texture(CLOUD_TEX);
-	int const ndiv(max(4, min(48, int(4.8*size_))));
+	colorRGBA(1.0, 1.0, 1.0, atmos).do_glColor();
 	set_fill_mode();
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
-	//rotate_about(2.0*rot_ang, rot_axis); // testing
-	//RESET_TIME;
-	usg.enable_cloud_shader();
+	usg.enable_cloud_shader(cloud_tex_repeat);
 	glEnable(GL_CULL_FACE);
-	draw_subdiv_sphere(all_zeros, PLANET_ATM_RSCALE*radius, ndiv, cloud_tex_repeat, 1);
+	draw_subdiv_sphere(all_zeros, PLANET_ATM_RSCALE*radius, max(4, min(48, int(4.8*size_))), 0, 1);
 	glDisable(GL_CULL_FACE);
-	//draw_sphere_at_tc(all_zeros, PLANET_ATM_RSCALE*radius, ndiv, 1, 1); // culling and texturing enabled
-	//draw_sphere_dlist(all_zeros, PLANET_ATM_RSCALE*radius, ndiv, 1, 0);
-	//draw_sphere_dlist_back_to_front(all_zeros, PLANET_ATM_RSCALE*radius, ndiv, 1, 0); // slow
 	usg.disable_cloud_shader();
-	//PRINT_TIME("Sphere");
 	glPopMatrix();
 	disable_blend();
-	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
 }
 
