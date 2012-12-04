@@ -278,7 +278,7 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 	assert((1U<<size_p2) == size); // size must be a power of 2
 	assert(surface);
 	unsigned const table_size(MAX_TEXTURE_SIZE << 1); // larger is more accurate
-	static float xtable[TOT_NUM_SINES*table_size], ytable[TOT_NUM_SINES*table_size], ztable[TOT_NUM_SINES];
+	static float xtable[TOT_NUM_SINES*table_size], ytable[TOT_NUM_SINES*table_size];
 	surface->setup(size, water, use_heightmap);
 	unsigned const num_sines(surface->num_sines);
 	float const *const rdata(surface->rdata);
@@ -301,11 +301,14 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 			ytable[offset+k] = SINF(rdata[index2+3]*sarg + rdata[index2+4]);
 		}
 	}
-	for (unsigned i = 0; i < size; ++i) { // phi values
+
+	#pragma omp parallel for schedule(dynamic,1)
+	for (int i = 0; i < (int)size; ++i) { // phi values
 		unsigned const hmoff(i*size), ti(size-i-1), texoff(ti*size);
 		float const phi((float(i)/(size-1))*PI);
 		float const sin_phi((i == size-1) ? 0.0 : sinf(phi)), zval((i == size-1) ? -1.0 : cosf(phi));
 		float sin_s(0.0), cos_s(1.0);
+		float ztable[TOT_NUM_SINES];
 
 		for (unsigned k = 0; k < num_sines; ++k) { // create z table
 			unsigned const index2(NUM_SINE_PARAMS*k);
@@ -319,7 +322,7 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 			unsigned const ox1((unsigned((xval+1.0)*mt2))*num_sines), oy1((unsigned((yval+1.0)*mt2))*num_sines);
 			float val(0.0);
 
-			if (i <= pole_thresh || i >= (size-pole_thresh-1)) { // slower version near the poles
+			if (i <= (int)pole_thresh || i >= int(size-pole_thresh-1)) { // slower version near the poles
 				for (unsigned k = 0; k < num_sines; ++k) {
 					unsigned const index2(NUM_SINE_PARAMS*k);
 					val += ztable[k]*SINF(rdata[index2+1]*xval + rdata[index2+2])*SINF(rdata[index2+3]*yval + rdata[index2+4]);
