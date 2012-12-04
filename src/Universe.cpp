@@ -1853,14 +1853,10 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		}
 	}
 	else { // sphere
-		ocolor.do_glColor();
-		glPushMatrix();
-		global_translate(pos_);
-		if (star && size > 6) draw_flare(pos_, all_zeros, 2.4*radius0, 2.4*radius0); // draw star's flare
 		bool const texture(tid > 0 && size > MIN_TEX_OBJ_SZ);
 		int ndiv;
 		
-		if (star || size < 256) {
+		if (star || size < 128) {
 			ndiv = max(4, min((star ? 56 : 48), int(NDIV_SIZE_SCALE1*sqrt(size))));
 			if (ndiv > 16) ndiv = ndiv & 0xFFFC;
 		}
@@ -1869,6 +1865,10 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		}
 		if (world_mode != WMODE_UNIVERSE) ndiv = max(4, ndiv/2); // lower res when in background
 		assert(ndiv > 0);
+		ocolor.do_glColor();
+		glPushMatrix();
+		global_translate(pos_);
+		if (star && size > 6) draw_flare(pos_, all_zeros, 2.4*radius0, 2.4*radius0); // draw star's flare
 		set_fill_mode();
 		apply_gl_rotate();
 		
@@ -1878,20 +1878,12 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 			glBindTexture(GL_TEXTURE_2D, tid);
 			WHITE.do_glColor();
 		}
-		if (size >= (SPHERE_MAX_ND >> 1) && (STAR_PERTURB || !star)) {
+		if (size >= N_SPHERE_DIV && (STAR_PERTURB || !star)) {
 			draw_surface(pos_, radius0, size, ndiv);
 		}
 		else {
 			clear_surface_cache(); // only gets here when the object is visible
-
-			if (ndiv >= N_SPHERE_DIV) { // large sphere - back face cull
-				point viewed_from(get_player_pos() - pos_);
-				rotate_vector(viewed_from);
-				draw_subdiv_sphere(all_zeros, radius0, ndiv, viewed_from, NULL, 1, 0);
-			}
-			else { // small sphere - use display list
-				draw_sphere_dlist(all_zeros, radius0, ndiv, texture);
-			}
+			draw_sphere_dlist(all_zeros, radius0, ndiv, texture); // small sphere - use display list
 		}
 		if (star && size >= 64) draw_detail(ndiv, texture);
 		glPopMatrix();
