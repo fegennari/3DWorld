@@ -520,7 +520,7 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 					normals[i].do_glNormal();
 					pts[i].do_glVertex();
 				}
-			}
+			} // for t
 		}
 		else { // use triangle strips
 			glBegin(GL_TRIANGLE_STRIP);
@@ -549,10 +549,10 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 						pts[i].do_glVertex();
 					}
 				}
-			}
+			} // for t
 			glEnd();
 		}
-	}
+	} // for s
 	if (use_quads) glEnd();
 }
 

@@ -90,6 +90,14 @@ void vert_wrap_t::set_state() const { // typically called on element 0
 	glVertexPointer(3, GL_FLOAT, stride, &v);
 }
 
+void vert_norm_tc::set_state() const {
+	set_array_client_state(1, 1, 1, 0);
+	unsigned const stride(sizeof(*this));
+	glVertexPointer  (3, GL_FLOAT, stride, &v);
+	glNormalPointer  (   GL_FLOAT, stride, &n);
+	glTexCoordPointer(2, GL_FLOAT, stride, &t);
+}
+
 void vert_norm_tc_color::set_state() const { // typically called on element 0
 	set_array_client_state(1, 1, 1, 1);
 	unsigned const stride(sizeof(*this));

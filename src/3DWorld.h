@@ -714,6 +714,7 @@ struct vert_norm_tc : public vert_norm { // size = 32
 		return (t[1] < p.t[1]);
 	}
 	bool operator==(vert_norm_tc const &p) const {return (v == p.v && n == p.n && t[0] == p.t[0] && t[1] == p.t[1]);}
+	void set_state() const;
 	static void set_vbo_arrays(unsigned force_stride=0);
 };
 
