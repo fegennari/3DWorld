@@ -27,7 +27,6 @@ float const NDIV_SIZE_SCALE1 = 12.0;
 float const NDIV_SIZE_SCALE2 = 1.0;
 
 bool const USE_HEIGHTMAP     = 1; // for planets/moons/(stars)
-bool const STAR_PERTURB      = 0; // star heightmap
 bool const CACHE_SPHERE_DATA = 1; // more memory but much faster rendering
 bool const SHOW_SPHERE_TIME  = 0; // debugging
 bool const USE_SPHERE_DLISTS = 1; // sometimes faster on newer video cards, slower on older ones
@@ -213,15 +212,25 @@ public:
 		}
 	}
 
-	bool enable_star_shader() { // no lighting
+	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) { // no lighting
 		if (disable_shaders) return 0;
 
 		if (!star_shader.is_setup()) {
-			star_shader.set_vert_shader("no_lighting_tex_coord");
-			star_shader.set_frag_shader("linear_fog.part+star_draw");
-			shared_shader_setup(star_shader);
+			set_multitex(1);
+			bind_3d_texture(get_noise_tex_3d());
+			disable_multitex_a();
+			star_shader.set_prefix("#define NUM_OCTAVES 8", 1); // FS
+			star_shader.set_vert_shader("star_draw");
+			star_shader.set_frag_shader("perlin_clouds_3d.part*+star_draw");
+			star_shader.begin_shader();
+			star_shader.add_uniform_int("tex0", 0);
+			star_shader.add_uniform_int("cloud_noise_tex", 1);
+			star_shader.add_uniform_float("time", 5.0E-5*frame_counter);
+			star_shader.add_uniform_float("noise_scale", 3.5);
 		}
 		star_shader.enable();
+		star_shader.add_uniform_color("colorA", colorA);
+		star_shader.add_uniform_color("colorB", colorB);
 		return 0;
 	}
 	void disable_star_shader() {
@@ -249,7 +258,7 @@ public:
 		if (!cloud_shader.is_setup()) {
 			bind_3d_texture(get_noise_tex_3d());
 			cloud_shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			cloud_shader.set_prefix("#define NUM_OCTAVES 8", 1); // FS
+			cloud_shader.set_prefix("#define NUM_OCTAVES 8",    1); // FS
 			cloud_shader.set_vert_shader("planet_clouds");
 			cloud_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+planet_clouds");
 			shared_shader_setup(cloud_shader, "cloud_noise_tex");
@@ -556,7 +565,6 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 			if (has_sun && !skip_s && univ_sphere_vis(pos3, 2.0*sradius)) {
 				sol.sun.check_gen_texture(int(sizes));
 				if (!sol.sun.draw(pos3, cmvs, usg, 1.0)) continue;
-				if (sizes > MIN_TEX_OBJ_SZ) sol.sun.rot_ang += rand_uniform(-0.2, 0.2); // random rotation of sun texture
 			}
 			bool const planets_visible(PLANET_MAX_SIZE*sizes >= 0.3*sradius || !sclip);
 			if (planets_visible) sol.process();
@@ -1796,7 +1804,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		if (size < 0.25 && !(display_mode & 0x01)) return 0; // too small
 		if (!univ_sphere_vis(pos_, radius0))       return 1; // check if in the view volume
 	}
-	if (!star && world_mode == WMODE_UNIVERSE && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // testing
+	if (!star && world_mode == WMODE_UNIVERSE && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
 		set_owner_color(); // lighting is already disabled
 		draw_sphere_dlist(make_pt_global(pos_), radius0*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
 		return 1;
@@ -1863,35 +1871,42 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		else {
 			ndiv = min((int)min(MAX_TEXTURE_SIZE, SPHERE_MAX_ND), (int(NDIV_SIZE_SCALE2*size)&0xFFE0));
 		}
-		if (world_mode != WMODE_UNIVERSE) ndiv = max(4, ndiv/2); // lower res when in background
+		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
-		ocolor.do_glColor();
 		glPushMatrix();
 		global_translate(pos_);
-		if (star && size > 6) draw_flare(pos_, all_zeros, 2.4*radius0, 2.4*radius0); // draw star's flare
+
+		if (texture) {
+			if (star) {usg.enable_star_shader(colorA, colorB);} else {usg.enable_planet_shader();}
+		}
+		if (star && size > 6) {
+			ocolor.do_glColor();
+			draw_flare(pos_, all_zeros, 2.5*radius0, 2.5*radius0); // draw star's flare
+		}
 		set_fill_mode();
 		apply_gl_rotate();
 		
 		if (texture) { // texture map
-			if (star) {usg.enable_star_shader();} else {usg.enable_planet_shader();}
 			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, tid);
+			if (star) {select_texture(WHITE_TEX);} else {glBindTexture(GL_TEXTURE_2D, tid);}
 			WHITE.do_glColor();
 		}
-		if (size >= N_SPHERE_DIV && (STAR_PERTURB || !star)) {
+		else {
+			ocolor.do_glColor();
+		}
+		if (!star && size >= N_SPHERE_DIV) {
 			draw_surface(pos_, radius0, size, ndiv);
 		}
 		else {
 			clear_surface_cache(); // only gets here when the object is visible
 			draw_sphere_dlist(all_zeros, radius0, ndiv, texture); // small sphere - use display list
 		}
-		if (star && size >= 64) draw_detail(ndiv, texture);
-		glPopMatrix();
-		
 		if (texture) {
 			if (star) {usg.disable_star_shader();} else {usg.disable_planet_shader();}
 			glDisable(GL_TEXTURE_2D);
 		}
+		if (size >= 64) {draw_detail(ndiv, texture);}
+		glPopMatrix();
 	} // end sphere draw
 	if (enable_l0) glEnable(GL_LIGHT0);
 	if (!star)     glDisable(GL_LIGHTING);
