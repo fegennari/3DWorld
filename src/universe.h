@@ -170,7 +170,6 @@ class uobj_solid : public uobj_rgen, public named_obj { // size = 176
 public:
 	bool shadowed;
 	char type;
-	unsigned tid, tsize;
 	float temp, density, mass, gravity;
 	double rot_ang, rot_ang0;
 	vector3d rot_axis;
@@ -178,9 +177,7 @@ public:
 
 	uobj_solid(char type_) : shadowed(0), type(type_) {set_defaults();}
 	virtual ~uobj_solid() {}
-	void set_defaults() {status = 0; gen = tid = tsize = 0;}
-	void check_gen_texture(unsigned size);
-	void create_texture(unsigned size);
+	void set_defaults() {status = 0; gen = 0;}
 	void get_colors(unsigned char ca[3], unsigned char cb[3]) const;
 	void adjust_colorAB(float delta);
 	void gen_colorAB(float delta);
@@ -198,16 +195,15 @@ public:
 	}
 
 	virtual void gen_surface() {} // nothing to do
-	virtual unsigned get_max_tex_size() const {return MAX_TEXTURE_SIZE;}
-	virtual void gen_texture_data(unsigned char *data, unsigned size, bool use_heightmap) = 0;
 	virtual bool surface_test(float rad, point const &p, float &coll_r, bool simple) const {return 1;}
-	virtual void draw_surface(point_d const &pos_, float radius0, float size, int ndiv) = 0;
+	virtual void draw_surface(point_d const &pos_, float radius0, float size, int ndiv) {assert(0);}
 	virtual void draw_detail(int ndiv, bool texture) {}
-	virtual void clear_surface_cache() = 0;
+	virtual void clear_surface_cache() {}
 	virtual void show_colonizable_liveable(point const &pos_, float radius0) const {assert(0);}
-	virtual void free_texture();
 	virtual void set_owner_color() const {assert(0);}
-	virtual void free();
+	virtual bool has_texture() const {return 1;}
+	virtual void enable_texture() const = 0;
+	virtual void free() {gen = 0;}
 };
 
 
@@ -222,21 +218,23 @@ class urev_body : public uobj_solid, public color_gen_class { // size = 268
 public:
 	int owner, cloud_tex_repeat;
 	unsigned orbiting_refs;
+	unsigned tid, tsize;
 	float orbit, rot_rate, rev_rate, atmos, water, resources;
 	double rev_ang, rev_ang0;
 	vector3d rev_axis, v_orbit;
 	upsurface *surface;
 
 	urev_body(char type_) : uobj_solid(type_), owner(NO_OWNER), cloud_tex_repeat(1), orbiting_refs(0),
-		atmos(0.0), water(0.0), resources(0.0), surface(NULL) {}
+		tid(0), tsize(0), atmos(0.0), water(0.0), resources(0.0), surface(NULL) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,
 		float radius0, float max_size, float min_size, float rspacing, float ispacing, float minspacing, float min_gap);
 	void gen_surface();
+	void check_gen_texture(unsigned size);
+	void create_texture(unsigned size);
 	void gen_texture_data(unsigned char *data, unsigned size, bool use_heightmap);
 	bool surface_test(float rad, point const &p, float &coll_r, bool simple) const;
-	unsigned get_max_tex_size() const {return MAX_TEXTURE_SIZE;}
 	float get_dheight_at(point const &p, bool exact=0) const;
 	bool pt_over_land(point const &p) const;
 	bool land_temp_ok() const;
@@ -251,6 +249,8 @@ public:
 	void get_owner_info(ostringstream &oss) const;
 	int  get_owner() const {return owner;}
 	void set_owner_color() const;
+	bool has_texture() const {return (tid > 0);}
+	void enable_texture() const;
 	void get_surface_color(unsigned char *data, float val, float phi) const;
 	void draw_surface(point_d const &pos_, float radius0, float size, int ndiv);
 	void clear_surface_cache() {if (surface != NULL) surface->clear_cache();}
@@ -339,11 +339,9 @@ public:
 	ustar() : uobj_solid(UTYPE_STAR) {}
 	void create(point const &pos_);
 	void gen_color();
-	void gen_texture_data(unsigned char *data, unsigned size, bool use_heightmap);
 	colorRGBA get_ambient_color_val() const;
-	void draw_surface(point_d const &pos_, float radius0, float size, int ndiv);
+	void enable_texture() const;
 	void draw_detail(int ndiv, bool texture);
-	void clear_surface_cache() {} // do nothing
 	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0);}
 	string get_name()  const {return "Star " + getname();}
 	string get_info()  const;

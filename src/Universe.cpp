@@ -563,7 +563,6 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 			current.cluster = sol.cluster_id;
 
 			if (has_sun && !skip_s && univ_sphere_vis(pos3, 2.0*sradius)) {
-				sol.sun.check_gen_texture(int(sizes));
 				if (!sol.sun.draw(pos3, cmvs, usg, 1.0)) continue;
 			}
 			bool const planets_visible(PLANET_MAX_SIZE*sizes >= 0.3*sradius || !sclip);
@@ -1344,6 +1343,7 @@ void urev_body::gen_rotrev() {
 
 	set_defaults();
 	gen_rseeds();
+	tid = tsize = 0;
 	rot_ang  = rev_ang = 0.0;
 	rot_rate = 0.0;
 	rev_rate = 0.0;
@@ -1517,7 +1517,7 @@ void uobj_solid::gen_colorAB(float delta) {
 // *** TEXTURES ***
 
 
-void uobj_solid::check_gen_texture(unsigned size) {
+void urev_body::check_gen_texture(unsigned size) {
 
 	if (size <= MIN_TEX_OBJ_SZ) return; // too small to be textured
 	unsigned const tsize0(get_texture_size(size));
@@ -1535,6 +1535,16 @@ void uobj_solid::check_gen_texture(unsigned size) {
 		tsize = tsize0; // new size
 		create_texture(tsize0); // new texture
 	}
+}
+
+
+void urev_body::create_texture(unsigned size) {
+
+	assert(size <= MAX_TEXTURE_SIZE);
+	vector<unsigned char> data(3*size*size);
+	gen_texture_data(&data.front(), size, USE_HEIGHTMAP);
+	setup_texture(tid, GL_MODULATE, 0, 0, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
 }
 
 
@@ -1612,38 +1622,6 @@ void uobj_solid::get_colors(unsigned char ca[3], unsigned char cb[3]) const {
 }
 
 
-void uobj_solid::create_texture(unsigned size) {
-
-	assert(size <= MAX_TEXTURE_SIZE);
-	size = min(size, get_max_tex_size());
-	vector<unsigned char> data(3*size*size);
-	gen_texture_data(&data.front(), size, USE_HEIGHTMAP);
-	setup_texture(tid, GL_MODULATE, 0, 0, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
-}
-
-
-void ustar::gen_texture_data(unsigned char *data, unsigned size, bool use_heightmap) {
-
-	unsigned const size_sq(size*size), nvals(4*size);
-	vector<unsigned char> vals(3*nvals);
-	unsigned char a[3], b[3];
-	get_colors(a, b);
-
-	for (unsigned i = 0; i < nvals; ++i) { // create random table
-		float const val(rand2d());
-		BLEND_COLOR((&vals.front() + 3*i), a, b, val);
-	}
-	for (unsigned i = 0; i < size_sq; ++i) { // index into random table
-		unsigned const ix(3*(rand2()%nvals));
-
-		for (unsigned d = 0; d < 3; ++d) {
-			data[3*i+d] = vals[ix+d];
-		}
-	}
-}
-
-
 unsigned get_texture_size(float psize) {
 
 	unsigned i;
@@ -1675,7 +1653,6 @@ void universe_t::free_textures() { // should be OK even if universe isn't setup
 					
 					for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
 						ussystem &sol(galaxy.sols[j]);
-						sol.sun.free_texture();
 						
 						for (unsigned k = 0; k < sol.planets.size(); ++k) {
 							uplanet &planet(sol.planets[k]);
@@ -1746,15 +1723,9 @@ void uplanet::free() {
 }
 
 
-void uobj_solid::free() {
-
-	if (gen) free_texture();
-	gen = 0;
-}
-
-
 void urev_body::free() {
 
+	if (gen) free_texture();
 	delete surface; // OK if already NULL
 	surface = NULL;
 	//unset_owner();
@@ -1783,6 +1754,16 @@ void uobj_solid::rotate_vector_inv(vector3d &v) const {
 
 	if (rot_ang != 0.0) rotate_vector3d(plus_z, -rot_ang/TO_DEG, v); // in radians
 	rotate_vector3d_by_vr(plus_z, rot_axis, v);
+}
+
+
+void urev_body::enable_texture() const {
+	assert(tid > 0);
+	glBindTexture(GL_TEXTURE_2D, tid);
+}
+
+void ustar::enable_texture() const {
+	select_texture(WHITE_TEX);
 }
 
 
@@ -1861,7 +1842,7 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		}
 	}
 	else { // sphere
-		bool const texture(tid > 0 && size > MIN_TEX_OBJ_SZ);
+		bool const texture(size > MIN_TEX_OBJ_SZ && has_texture());
 		int ndiv;
 		
 		if (star || size < 128) {
@@ -1888,13 +1869,13 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		
 		if (texture) { // texture map
 			glEnable(GL_TEXTURE_2D);
-			if (star) {select_texture(WHITE_TEX);} else {glBindTexture(GL_TEXTURE_2D, tid);}
+			enable_texture();
 			WHITE.do_glColor();
 		}
 		else {
 			ocolor.do_glColor();
 		}
-		if (!star && size >= N_SPHERE_DIV) {
+		if (!star && ndiv >= N_SPHERE_DIV) {
 			draw_surface(pos_, radius0, size, ndiv);
 		}
 		else {
@@ -1991,25 +1972,6 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 		if (SD_TIMETEST) PRINT_TIME("Sphere Draw v2"); // 25
 	}
 	if (use_dlist) glEndList();
-}
-
-
-void ustar::draw_surface(point_d const &pos_, float radius0, float size, int ndiv) {
-
-	assert(ndiv > 0);
-	point viewed_from(get_player_pos() - pos_);
-	rotate_vector(viewed_from);
-	float *pmap(NULL);
-
-	if (USE_HEIGHTMAP) { // sphere heightmap
-		vector<float> &perturb_map(get_empty_perturb_map(ndiv));
-		pmap = &perturb_map.front();
-		
-		for (unsigned i = 0; i < perturb_map.size(); ++i) {
-			perturb_map[i] = 0.03*radius*rgauss();
-		}
-	}
-	draw_subdiv_sphere(all_zeros, radius0, ndiv, viewed_from, pmap, 1, 0);
 }
 
 
@@ -2722,17 +2684,11 @@ void uobject::add_gravity_vector_base(vector3d &vgravity, point const &mpos, flo
 }
 
 
-void uobj_solid::free_texture() { // and also free display list
-
-	::free_texture(tid);
-	tsize = 0;
-}
-
-
 void urev_body::free_texture() { // and also free display list
 
 	if (surface != NULL) surface->free_dlist();
-	uobj_solid::free_texture();
+	::free_texture(tid);
+	tsize = 0;
 }
 
 
