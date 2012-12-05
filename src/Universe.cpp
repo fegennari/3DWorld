@@ -213,7 +213,6 @@ public:
 	}
 
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) { // no lighting
-		// FIXME: larger color difference
 		if (disable_shaders) return 0;
 
 		if (!star_shader.is_setup()) {
@@ -1452,7 +1451,7 @@ void ustar::gen_color() {
 		color.assign(0.6, 0.8, 1.0);
 	}
 	color.set_valid_color();
-	gen_colorAB(0.4*MP_COLOR_VAR);
+	gen_colorAB(0.8*MP_COLOR_VAR);
 	if (temp < 30.0) colorA.G = colorA.B = colorB.G = colorB.B = 0.0; // make sure it's just red
 }
 
