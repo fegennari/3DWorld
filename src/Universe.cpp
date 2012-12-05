@@ -231,28 +231,31 @@ public:
 		star_shader.enable();
 		star_shader.add_uniform_color("colorA", colorA);
 		star_shader.add_uniform_color("colorB", colorB);
-		return 0;
+		return 1;
 	}
 	void disable_star_shader() {
 		if (star_shader.is_setup()) {star_shader.disable();}
 	}
 
-	bool enable_ring_shader() { // no lighting?
+	bool enable_ring_shader() {
 		// FIXME: soft sun shadows from planet
-		// FIXME: specular/reflective particle effect
 		// FIXME: single texture quad with 1D color texture
 		if (disable_shaders) return 0;
 		
 		if (!ring_shader.is_setup()) {
 			ring_shader.set_vert_shader("per_pixel_lighting");
-			ring_shader.set_frag_shader("linear_fog.part+planet_rings");
+			ring_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_rings");
 			shared_shader_setup(ring_shader);
 		}
 		ring_shader.enable();
-		return 0;
+		set_specular(0.5, 50.0);
+		return 1;
 	}
 	void disable_ring_shader() {
-		if (ring_shader.is_setup()) {ring_shader.disable();}
+		if (ring_shader.is_setup()) {
+			set_specular(0.0, 1.0);
+			ring_shader.disable();
+		}
 	}
 
 	bool enable_cloud_shader(int cloud_tex_repeat) {
@@ -271,7 +274,7 @@ public:
 		cloud_shader.enable();
 		set_light_scale(cloud_shader);
 		cloud_shader.add_uniform_float("noise_scale", 2.5*cloud_tex_repeat);
-		return 0;
+		return 1;
 	}
 	void disable_cloud_shader() {
 		if (cloud_shader.is_setup()) {cloud_shader.disable();}
@@ -2094,15 +2097,14 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 
 	if (size_ < 0.1 || rings.empty()) return;
 	enable_blend(); // must be drawn last
-	// no lighting?
 	glPushMatrix();
 	global_translate(pos_);
 	scale_by(rscale);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
-	bool const do_texture(size_ > 10.0);
+	bool const do_texture(size_ > 5.0);
 
 	if (do_texture) {
-		select_texture(NOISE_TEX);
+		select_texture(NOISE_GEN_MIPMAP_TEX);
 		gluQuadricTexture(quadric, GL_TRUE);
 		usg.enable_ring_shader(); // even in !do_texture mode?
 	}
