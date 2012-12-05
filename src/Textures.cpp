@@ -149,7 +149,8 @@ texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark2-normal.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark_lendrick.jpg"), // 892x892
 texture_t(0, 6, 0,    0,    1, 4, 1, "bark/bark_lylejk.png"), // 1024x768
 
-texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen.raw") // not real file
+texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen.raw"), // not real file
+texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap.raw") // not real file
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [do_compress]
 };
@@ -1293,9 +1294,10 @@ void noise_fill(unsigned char *data, unsigned size) {
 
 void gen_noise_texture() {
 
-	texture_t &tex(textures[NOISE_GEN_TEX]);
-	assert(tex.ncolors == 1);
-	noise_fill(tex.get_data(), tex.num_pixels());
+	for (unsigned i = NOISE_GEN_TEX; i <= NOISE_GEN_MIPMAP_TEX; ++i) {
+		assert(textures[i].ncolors == 1);
+		noise_fill(textures[i].get_data(), textures[i].num_pixels());
+	}
 }
 
 
