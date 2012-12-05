@@ -213,6 +213,7 @@ public:
 	}
 
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) { // no lighting
+		// FIXME: larger color difference
 		if (disable_shaders) return 0;
 
 		if (!star_shader.is_setup()) {
@@ -238,6 +239,9 @@ public:
 	}
 
 	bool enable_ring_shader() { // no lighting?
+		// FIXME: soft sun shadows from planet
+		// FIXME: specular/reflective particle effect
+		// FIXME: single texture quad with 1D color texture
 		if (disable_shaders) return 0;
 		
 		if (!ring_shader.is_setup()) {
@@ -253,6 +257,7 @@ public:
 	}
 
 	bool enable_cloud_shader(int cloud_tex_repeat) {
+		// FIXME: light scattering in clouds
 		if (disable_shaders) return 0;
 		
 		if (!cloud_shader.is_setup()) {
@@ -1757,67 +1762,44 @@ void uobj_solid::rotate_vector_inv(vector3d &v) const {
 }
 
 
-void urev_body::enable_texture() const {
-	assert(tid > 0);
-	glBindTexture(GL_TEXTURE_2D, tid);
-}
-
-void ustar::enable_texture() const {
-	select_texture(WHITE_TEX);
+float get_pixel_size(float radius, float dist) {
+	return min(10000.0f, ((float)window_width)*radius/max(dist, TOLERANCE)); // approx. in pixels
 }
 
 
-bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale) {
+void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist) {
+
+	if (dist > 0.75*FAR_CLIP) { // behind far clipping plane - move closer and scale
+		float const pscale(FAR_CLIP/(1.5*dist));
+		size *= pscale;
+		pos   = camera - (camera - pos)*pscale;
+	}
+}
+
+
+bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale) {
 
 	vector3d const vcp(cmvs.camera, pos_);
 	float const radius0(rscale*radius), dist(vcp.mag() - radius0);
 	if (dist > U_VIEW_DIST) return 0; // too far away
-	float cmult(1.0), size(min(10000.0f, ((float)window_width)*radius0/max(dist, TOLERANCE))); // approx. in pixels
-	bool const star(type == UTYPE_STAR);
-	
-	if (star) { // view volume has already been checked
-		if (size < 0.02) return 0; // too small
-		float const st_prod(STAR_BRIGHTNESS*size*temp);
-		if (st_prod < 2.0 || st_prod*temp < 4.0) return 0; // too dim
-		if (st_prod < 30.0) cmult = 0.00111*st_prod*st_prod; // small, attenuate (divide by 900) (what if behind far clipping plane?)
-	}
-	else {
-		if (size < 0.25 && !(display_mode & 0x01)) return 0; // too small
-		if (!univ_sphere_vis(pos_, radius0))       return 1; // check if in the view volume
-	}
-	if (!star && world_mode == WMODE_UNIVERSE && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
-		set_owner_color(); // lighting is already disabled
-		draw_sphere_dlist(make_pt_global(pos_), radius0*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
-		return 1;
-	}
-	if ((dist + radius0) > 0.75*FAR_CLIP) { // behind far clipping plane - move closer and scale
-		float const pscale(FAR_CLIP/(1.5*(dist + radius0)));
-		size *= pscale;
-		pos_  = cmvs.camera - vcp*pscale;
-	}
-	bool enable_l0(0);
+	float size(get_pixel_size(radius0, dist)); // approx. in pixels
+	// view volume has already been checked
+	if (size < 0.02) return 0; // too small
+	float const st_prod(STAR_BRIGHTNESS*size*temp);
+	if (st_prod < 2.0 || st_prod*temp < 4.0) return 0; // too dim
+	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius0));
 	colorRGBA ocolor(color);
-
-	if (!star) {
-		if (world_mode == WMODE_UNIVERSE && !(display_mode & 2)) {
-			show_colonizable_liveable(pos_, radius0); // show liveable/colonizable planets/moons
-		}
-		if (shadowed) {
-			// *** use exact shadow? ***
-			if (glIsEnabled(GL_LIGHT0)) enable_l0 = 1;
-			glDisable(GL_LIGHT0);
-		}
-		glEnable(GL_LIGHTING);
-		if (size < 1.0) cmult = size*size; // small, attenuate
+		
+	if (st_prod < 30.0) {
+		float const cmult(0.00111*st_prod*st_prod); // small, attenuate (divide by 900) (what if behind far clipping plane?)
+		blend_color(ocolor, ocolor, bkg_color, cmult, 1);
 	}
-	if (cmult != 1.0) blend_color(ocolor, ocolor, bkg_color, cmult, 1);
-
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
-		bool const small(size < 1.5), draw_as_line(star && cmvs.speed > 0.25); // lines of light - "warp speed"
+		bool const small(size < 1.5), draw_as_line(cmvs.speed > 0.25); // lines of light - "warp speed"
 		point const normal(cmvs.camera - pos_);
 		pos_ = make_pt_global(pos_);
 
-		if (star && small) {
+		if (small) {
 			if (draw_as_line) {
 				universe_pld.add_line(pos_, normal, ocolor, (pos_ - cmvs.motion_vector), normal, ocolor);
 			}
@@ -1827,7 +1809,6 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		}
 		else {
 			ocolor.do_glColor();
-			if (!star) normal.do_glNormal(); // orient towards camera
 		
 			if (draw_as_line) {
 				if (!small) glLineWidth(2.0); // 2 pixel width
@@ -1842,11 +1823,77 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		}
 	}
 	else { // sphere
-		bool const texture(size > MIN_TEX_OBJ_SZ && has_texture());
+		int ndiv(max(4, min(56, int(NDIV_SIZE_SCALE1*sqrt(size)))));
+		if (ndiv > 16) ndiv = ndiv & 0xFFFC;
+		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
+		assert(ndiv > 0);
+		set_fill_mode();
+		glPushMatrix();
+		global_translate(pos_);
+		usg.enable_star_shader(colorA, colorB);
+
+		if (size > 6) {
+			ocolor.do_glColor();
+			draw_flare(pos_, all_zeros, 2.5*radius0, 2.5*radius0); // draw star's flare
+		}
+		apply_gl_rotate();
+		glEnable(GL_TEXTURE_2D);
+		select_texture(WHITE_TEX);
+		WHITE.do_glColor();
+		draw_sphere_dlist(all_zeros, radius0, ndiv, 1); // small sphere - use display list
+		usg.disable_star_shader();
+		glDisable(GL_TEXTURE_2D);
+		if (size >= 64) {draw_flares(ndiv, 1);} // FIXME: inline code here?
+		glPopMatrix();
+	} // end sphere draw
+	return 1;
+}
+
+
+bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale) {
+
+	vector3d const vcp(cmvs.camera, pos_);
+	float const radius0(rscale*radius), dist(vcp.mag() - radius0);
+	if (dist > U_VIEW_DIST) return 0; // too far away
+	float size(get_pixel_size(radius0, dist)); // approx. in pixels
+	if (size < 0.25 && !(display_mode & 0x01)) return 0; // too small
+	if (!univ_sphere_vis(pos_, radius0))       return 1; // check if in the view volume
+		
+	if (world_mode == WMODE_UNIVERSE && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
+		set_owner_color(); // lighting is already disabled
+		draw_sphere_dlist(make_pt_global(pos_), radius0*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
+		return 1;
+	}
+	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius0));
+	bool enable_l0(0);
+	colorRGBA ocolor(color);
+
+	if (world_mode == WMODE_UNIVERSE && !(display_mode & 2)) {
+		show_colonizable_liveable(pos_, radius0); // show liveable/colonizable planets/moons
+	}
+	if (shadowed) {
+		// *** use exact shadow? ***
+		if (glIsEnabled(GL_LIGHT0)) enable_l0 = 1;
+		glDisable(GL_LIGHT0);
+	}
+	glEnable(GL_LIGHTING);
+	if (size < 1.0) {blend_color(ocolor, ocolor, bkg_color, size*size, 1);} // small, attenuate
+
+	if (size < 2.5) { // both point cases below, normal is camera->object vector
+		bool const small(size < 1.5);
+		pos_ = make_pt_global(pos_);
+		ocolor.do_glColor();
+		(cmvs.camera - pos_).do_glNormal(); // orient towards camera
+		if (!small) glPointSize(2.0); // 2 pixel diameter
+		draw_point(pos_);
+		if (!small) glPointSize(1.0);
+	}
+	else { // sphere
+		bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0);
 		int ndiv;
 		
-		if (star || size < 128) {
-			ndiv = max(4, min((star ? 56 : 48), int(NDIV_SIZE_SCALE1*sqrt(size))));
+		if (size < 128) {
+			ndiv = max(4, min(48, int(NDIV_SIZE_SCALE1*sqrt(size))));
 			if (ndiv > 16) ndiv = ndiv & 0xFFFC;
 		}
 		else {
@@ -1854,43 +1901,36 @@ bool uobj_solid::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &
 		}
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
+		set_fill_mode();
 		glPushMatrix();
 		global_translate(pos_);
-
-		if (texture) {
-			if (star) {usg.enable_star_shader(colorA, colorB);} else {usg.enable_planet_shader();}
-		}
-		if (star && size > 6) {
-			ocolor.do_glColor();
-			draw_flare(pos_, all_zeros, 2.5*radius0, 2.5*radius0); // draw star's flare
-		}
-		set_fill_mode();
+		if (texture) {usg.enable_planet_shader();}
 		apply_gl_rotate();
 		
 		if (texture) { // texture map
 			glEnable(GL_TEXTURE_2D);
-			enable_texture();
+			assert(tid > 0);
+			glBindTexture(GL_TEXTURE_2D, tid);
 			WHITE.do_glColor();
 		}
 		else {
 			ocolor.do_glColor();
 		}
-		if (!star && ndiv >= N_SPHERE_DIV) {
+		if (ndiv >= N_SPHERE_DIV) {
 			draw_surface(pos_, radius0, size, ndiv);
 		}
 		else {
-			clear_surface_cache(); // only gets here when the object is visible
+			if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
 			draw_sphere_dlist(all_zeros, radius0, ndiv, texture); // small sphere - use display list
 		}
 		if (texture) {
-			if (star) {usg.disable_star_shader();} else {usg.disable_planet_shader();}
+			usg.disable_planet_shader();
 			glDisable(GL_TEXTURE_2D);
 		}
-		if (size >= 64) {draw_detail(ndiv, texture);}
 		glPopMatrix();
 	} // end sphere draw
 	if (enable_l0) glEnable(GL_LIGHT0);
-	if (!star)     glDisable(GL_LIGHTING);
+	glDisable(GL_LIGHTING);
 	return 1;
 }
 
@@ -1975,7 +2015,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 }
 
 
-void ustar::draw_detail(int ndiv, bool texture) {
+void ustar::draw_flares(int ndiv, bool texture) {
 
 	if (solar_flares.empty()) solar_flares.resize(4 + (rand()&3));
 	glEnable(GL_CULL_FACE);

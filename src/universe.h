@@ -184,7 +184,6 @@ public:
 	void apply_gl_rotate() const;
 	void rotate_vector(vector3d &v) const;
 	void rotate_vector_inv(vector3d &v) const;
-	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale);
 	void set_grav_mass();
 	bool collision(point const &p, float rad, vector3d const &v, point &cpos, float &coll_r, bool simple) const;
 	void rename(std::string const &name_) {setname(name_);}
@@ -193,16 +192,8 @@ public:
 	void add_gravity_vector(vector3d &vgravity, point const &mpos) const { // inlined
 		add_gravity_vector_base(vgravity, mpos, gravity, MAX_SOBJ_GRAVITY);
 	}
-
-	virtual void gen_surface() {} // nothing to do
 	virtual bool surface_test(float rad, point const &p, float &coll_r, bool simple) const {return 1;}
-	virtual void draw_surface(point_d const &pos_, float radius0, float size, int ndiv) {assert(0);}
-	virtual void draw_detail(int ndiv, bool texture) {}
-	virtual void clear_surface_cache() {}
-	virtual void show_colonizable_liveable(point const &pos_, float radius0) const {assert(0);}
-	virtual void set_owner_color() const {assert(0);}
-	virtual bool has_texture() const {return 1;}
-	virtual void enable_texture() const = 0;
+	virtual bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale) = 0;
 	virtual void free() {gen = 0;}
 };
 
@@ -249,11 +240,9 @@ public:
 	void get_owner_info(ostringstream &oss) const;
 	int  get_owner() const {return owner;}
 	void set_owner_color() const;
-	bool has_texture() const {return (tid > 0);}
-	void enable_texture() const;
 	void get_surface_color(unsigned char *data, float val, float phi) const;
+	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale);
 	void draw_surface(point_d const &pos_, float radius0, float size, int ndiv);
-	void clear_surface_cache() {if (surface != NULL) surface->clear_cache();}
 	void show_colonizable_liveable(point const &pos_, float radius0) const;
 	void inc_orbiting_refs() {++orbiting_refs;}
 	void dec_orbiting_refs(s_object const &sobj);
@@ -340,8 +329,8 @@ public:
 	void create(point const &pos_);
 	void gen_color();
 	colorRGBA get_ambient_color_val() const;
-	void enable_texture() const;
-	void draw_detail(int ndiv, bool texture);
+	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale);
+	void draw_flares(int ndiv, bool texture);
 	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0);}
 	string get_name()  const {return "Star " + getname();}
 	string get_info()  const;
