@@ -237,17 +237,22 @@ public:
 		if (star_shader.is_setup()) {star_shader.disable();}
 	}
 
-	bool enable_ring_shader() {
+	bool enable_ring_shader(point const &planet_pos, float planet_radius, point const &sun_pos, float sun_radius) {
 		// FIXME: soft sun shadows from planet
 		// FIXME: single texture quad with 1D color texture
 		if (disable_shaders) return 0;
 		
 		if (!ring_shader.is_setup()) {
-			ring_shader.set_vert_shader("per_pixel_lighting");
+			ring_shader.set_vert_shader("planet_rings");
 			ring_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_rings");
 			shared_shader_setup(ring_shader);
 		}
 		ring_shader.enable();
+		ring_shader.add_uniform_vector3d("planet_pos", planet_pos);
+		ring_shader.add_uniform_float("planet_radius", planet_radius);
+		ring_shader.add_uniform_vector3d("sun_pos",    sun_pos);
+		ring_shader.add_uniform_float("sun_radius",    sun_radius);
+		upload_mvm_to_shader(ring_shader, "world_space_mvm");
 		set_specular(0.5, 50.0);
 		return 1;
 	}
@@ -644,7 +649,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 					}
 				}
 				if (planet.is_ok() && !skip_p) {
-					planet.draw_prings(usg, pos4, sizep);
+					planet.draw_prings(usg, pos4, sizep, pos3, (has_sun ? sradius : 0.0));
 
 					if (planet_visible && planet.atmos > 0.01 && planet.tsize > PLANET_ATM_TEX_SZ) {
 						//if (sel_p) to_draw_last = selected_planet(&planet, pos4, sizep);
@@ -2093,21 +2098,22 @@ void urev_body::show_colonizable_liveable(point const &pos_, float radius0) cons
 }
 
 
-void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_) const {
+void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius) const {
 
 	if (size_ < 0.1 || rings.empty()) return;
-	enable_blend(); // must be drawn last
-	glPushMatrix();
-	global_translate(pos_);
-	scale_by(rscale);
-	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
 	bool const do_texture(size_ > 5.0);
 
 	if (do_texture) {
 		select_texture(NOISE_GEN_MIPMAP_TEX);
 		gluQuadricTexture(quadric, GL_TRUE);
-		usg.enable_ring_shader(); // even in !do_texture mode?
+		usg.enable_ring_shader(make_pt_global(pos_), radius, make_pt_global(sun_pos), sun_radius); // even in !do_texture mode?
 	}
+	enable_blend(); // must be drawn last
+	glPushMatrix();
+	global_translate(pos_);
+	scale_by(rscale);
+	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
+
 	for (unsigned i = 0; i < rings.size(); ++i) {
 		rings[i].color.do_glColor();
 		gluDisk(quadric, rings[i].radius1, rings[i].radius2, max(4, min(2*N_SPHERE_DIV, int(4.0*size_))), 1);
@@ -2730,6 +2736,13 @@ void urev_body::free_texture() { // and also free display list
 	if (surface != NULL) surface->free_dlist();
 	::free_texture(tid);
 	tsize = 0;
+}
+
+
+void uplanet::free_texture() {
+
+	urev_body::free_texture();
+	::free_texture(ring_tid);
 }
 
 

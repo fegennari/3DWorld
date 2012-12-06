@@ -246,7 +246,6 @@ public:
 	void show_colonizable_liveable(point const &pos_, float radius0) const;
 	void inc_orbiting_refs() {++orbiting_refs;}
 	void dec_orbiting_refs(s_object const &sobj);
-	void free_texture();
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
 	
@@ -256,6 +255,7 @@ public:
 	virtual void get_valid_orbit_r(float &orbit_r, float obj_r) const = 0;
 	virtual bool colonizable_int() const = 0;
 	virtual point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
+	virtual void free_texture();
 	virtual void free();
 };
 
@@ -269,9 +269,10 @@ public:
 	vector<umoon> moons;
 	vector<upring> rings;
 	ussystem *system;
+	unsigned ring_tid;
 	// trade items?
 
-	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), system(NULL) {}
+	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), system(NULL), ring_tid(0) {}
 	void create(bool phase);
 	void process();
 	point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
@@ -283,8 +284,9 @@ public:
 	bool colonizable_int() const {return (water > 0.1 && atmos > 0.1);}
 	bool has_vegetation()  const {return (water > 0.2 && atmos > 0.1);}
 	float get_vegetation() const;
-	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_) const;
+	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius) const;
 	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const;
+	void free_texture();
 	void free();
 	string get_name() const {return "Planet " + getname();}
 	string get_info() const;
