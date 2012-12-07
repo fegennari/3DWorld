@@ -394,9 +394,9 @@ void draw_small_trees(bool shadow_only) {
 			vector4d const tangent(0.0, 0.0, 1.0, 1.0); // FIXME: set based on tree trunk direction?
 			int const tangent_loc(s.get_attrib_loc("tangent"));
 			if (tangent_loc >= 0) glVertexAttrib4fv(tangent_loc, &tangent.x);
-			set_multitex(5);
+			set_active_texture(5);
 			select_texture(BARK2_NORMAL_TEX, 0);
-			set_multitex(0);
+			set_active_texture(0);
 		}
 	}
 	set_fill_mode();

@@ -32,15 +32,21 @@ bool multitex_enabled[MAX_MULTITEX] = {0};
 bool select_texture(int id, bool enable=1, bool white_tex_default=0);
 
 
-void set_multitex(unsigned tu_id) {
+void set_active_texture(unsigned tu_id) {
 
 	static bool inited(0);
 	if (!inited) setup_multitexture();
 	inited = 1;
 	assert(tu_id < MAX_MULTITEX); // Note: Assumes textures are defined sequentially
+	glActiveTexture((GL_TEXTURE0 + tu_id));
+}
+
+
+void set_multitex(unsigned tu_id) {
+
 	multitex_enabled[tu_id] = 1;
 	max_used_multitex = max(max_used_multitex, (tu_id+1));
-	glActiveTexture(GL_TEXTURE0 + tu_id);
+	set_active_texture(tu_id);
 }
 
 
@@ -56,9 +62,9 @@ void disable_multitex(unsigned tu_id, bool reset) {
 	assert(tu_id < max_used_multitex);
 	multitex_enabled[tu_id] = 0;
 	if ((tu_id+1) == max_used_multitex) --max_used_multitex;
-	glActiveTexture((GL_TEXTURE0 + tu_id));
+	set_active_texture(tu_id);
 	glDisable(GL_TEXTURE_2D);
-	if (reset) glActiveTexture(GL_TEXTURE0); // end back at texture 0
+	if (reset) set_active_texture(0); // end back at texture 0
 }
 
 
@@ -67,7 +73,7 @@ void disable_multitex_a() {
 	for (unsigned i = 0; i < max_used_multitex; ++i) {
 		if (multitex_enabled[i]) disable_multitex(i, 0);
 	}
-	glActiveTexture(GL_TEXTURE0); // end back at texture 0
+	set_active_texture(0); // end back at texture 0
 	max_used_multitex = 0;
 }
 
@@ -279,10 +285,12 @@ void free_fbo(unsigned &fbo_id) {
 // ***************** Other *****************
 
 
-bool gen_mipmaps() {
+bool gen_mipmaps(unsigned dim) {
 
+	assert(dim >= 1 && dim <= 3);
 	if (!glGenerateMipmap) return 0;
-	glGenerateMipmap(GL_TEXTURE_2D);
+	int const tex_dims[3] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D};
+	glGenerateMipmap(tex_dims[dim-1]);
 	return 1;
 }
 

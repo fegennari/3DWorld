@@ -67,9 +67,9 @@ void update_tiled_terrain_grass_vbos() {
 void bind_texture_tu(unsigned tid, unsigned tu_id) {
 
 	assert(tid);
-	set_multitex(tu_id);
+	set_active_texture(tu_id);
 	bind_2d_texture(tid);
-	set_multitex(0);
+	set_active_texture(0);
 }
 
 
@@ -1112,10 +1112,10 @@ public:
 	}
 
 	static void set_noise_tex(shader_t &s, unsigned tu_id) {
-		set_multitex(tu_id);
+		set_active_texture(tu_id);
 		select_texture(NOISE_GEN_TEX, 0);
 		s.add_uniform_int("noise_tex", tu_id);
-		set_multitex(0);
+		set_active_texture(0);
 	}
 
 	void set_pine_tree_shader(shader_t &s, string const &vs) const {

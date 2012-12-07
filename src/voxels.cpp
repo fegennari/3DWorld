@@ -1108,11 +1108,11 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 	unsigned const tu_ids[2] = {0,8};
 
 	for (unsigned i = 0; i < 2; ++i) {
-		set_multitex(tu_ids[i]);
+		set_active_texture(tu_ids[i]);
 		select_texture(params.tids[i], 0);
 		s.add_uniform_color(cnames[i], params.colors[i]);
 	}
-	set_multitex(0);
+	set_active_texture(0);
 }
 
 

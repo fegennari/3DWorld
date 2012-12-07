@@ -707,7 +707,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	shader_t s;
 
 	if (!disable_shaders) {
-		set_multitex(1);
+		set_active_texture(1);
 
 		if (reflection_tid) {
 			glBindTexture(GL_TEXTURE_2D, reflection_tid);
@@ -727,9 +727,9 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		bool const add_waves((display_mode & 0x0100) != 0);
 		bool const rain_mode(add_waves && is_rain_enabled());
 		rcolor.alpha = 0.5*(0.5 + color.alpha);
-		set_multitex(2);
+		set_active_texture(2);
 		select_texture(WATER_TEX, 0);
-		set_multitex(0);
+		set_active_texture(0);
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
@@ -749,9 +749,9 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		s.add_uniform_float("ripple_mag",   2.0);
 
 		if (rain_mode) { // rain ripples
-			set_multitex(3);
+			set_active_texture(3);
 			select_texture(NOISE_GEN_TEX, 0);
-			set_multitex(0);
+			set_active_texture(0);
 			s.add_uniform_int  ("noise_tex", 3);
 			s.add_uniform_float("time", frame_counter);
 		}
@@ -762,7 +762,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		set_color(color);
 	}
 	draw_tiled_terrain_water(zval);
-	disable_multitex_a();
 	s.end_shader();
 	disable_blend();
 	set_specular(0.0, 1.0);

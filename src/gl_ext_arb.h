@@ -25,6 +25,7 @@ void init_glew();
 
 // multitexture prototypes
 void setup_multitexture();
+void set_active_texture(unsigned tu_id);
 void set_multitex(unsigned tu_id);
 void select_multitex(int id, unsigned tu_id, bool enable=1);
 void disable_multitex(unsigned tu_id, bool reset);
@@ -57,7 +58,7 @@ void create_fbo(unsigned &fbo_id, unsigned depth_tid, bool is_depth_fbo);
 void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo);
 void disable_fbo();
 void free_fbo(unsigned &fbo_id);
-bool gen_mipmaps();
+bool gen_mipmaps(unsigned dim=2);
 
 
 // templated vbo management utility functions/classes
