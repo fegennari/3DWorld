@@ -161,9 +161,9 @@ bool set_smap_shader_for_light(shader_t &s, int light, float z_bias) {
 	s.add_uniform_int  (append_array_ix(std::string("sm_tu_id"), light), data.tu_id);
 	s.add_uniform_int  (append_array_ix(std::string("sm_tex"),   light), data.tu_id);
 	s.add_uniform_float(append_array_ix(std::string("sm_scale"), light), (light_valid(0xFF, light, lpos) ? 1.0 : 0.0));
-	set_multitex(data.tu_id);
+	set_active_texture(data.tu_id);
 	bind_2d_texture(data.tid);
-	set_multitex(0);
+	set_active_texture(0);
 	return 1;
 }
 
@@ -270,9 +270,9 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	check_gl_error(201);
 
 	// setup texture matrix
-	set_multitex(tu_id);
+	set_active_texture(tu_id);
 	set_texture_matrix(camera_mv_matrix);
-	disable_multitex_a();
+	set_active_texture(0);
 
 	// render shadow geometry
 	glDisable(GL_LIGHTING);
