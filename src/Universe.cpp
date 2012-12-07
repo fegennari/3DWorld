@@ -106,7 +106,7 @@ inline float calc_sphere_size(point const &pos, point const &camera, float radiu
 s_object get_shifted_sobj(s_object const &sobj) {
 
 	s_object sobj2(sobj);
-	for (unsigned i = 0; i < 3; ++i) sobj2.cellxyz[i] += uxyz[i];
+	UNROLL_3X(sobj2.cellxyz[i_] += uxyz[i_];)
 	return sobj2;
 }
 
@@ -238,7 +238,6 @@ public:
 	}
 
 	bool enable_ring_shader(point const &planet_pos, float planet_radius, point const &sun_pos, float sun_radius) {
-		// FIXME: soft sun shadows from planet
 		// FIXME: single texture quad with 1D color texture
 		if (disable_shaders) return 0;
 		
@@ -506,10 +505,7 @@ void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushad
 
 	ucell &cell(get_cell(cxyz));
 	if (!univ_sphere_vis(cell.rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
-	
-	for (unsigned d = 0; d < 3; ++d) {
-		current.cellxyz[d] = cxyz[d] + uxyz[d];
-	}
+	UNROLL_3X(current.cellxyz[i_] = cxyz[i_] + uxyz[i_];)
 	draw_cell_contents(cell, cmvs, usg, clobj, pass, no_move);
 }
 
@@ -743,10 +739,7 @@ inline int gen_rand_seed2(point const &center) {
 void ucell::gen_cell(int const ii[3]) {
 
 	if (gen) return; // already generated
-
-	for (unsigned d = 0; d < 3; ++d) {
-		rel_center[d] = CELL_SIZE*(float(ii[d] - (int)U_BLOCKSo2));
-	}
+	UNROLL_3X(rel_center[i_] = CELL_SIZE*(float(ii[i_] - (int)U_BLOCKSo2));)
 	pos    = rel_center + get_scaled_upt();
 	radius = 0.5*CELL_SIZE;
 	set_rand2_state(gen_rand_seed1(pos), gen_rand_seed2(pos));
@@ -1260,10 +1253,7 @@ void uplanet::gen_prings() {
 	float const sr(4.0/nr);
 	float lastr(rand_uniform2(radius, 1.1*radius));
 	colorRGBA lastc(color);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		lastc[i] += rand_uniform2(0.1, 0.6);
-	}
+	UNROLL_3X(lastc[i_] += rand_uniform2(0.1, 0.6);)
 	lastc.alpha = rand_uniform2(0.1, 0.5);
 
 	for (unsigned i = 0; i < nr; ++i) {
@@ -1272,22 +1262,13 @@ void uplanet::gen_prings() {
 		ring.radius2     = ring.radius1 + sr*radius*rand_uniform2(0.05, 0.3);
 		ring.color.alpha = rand_uniform2(0.1, 0.6);
 		lastr = ring.radius2;
-
-		for (unsigned j = 0; j < 4; ++j) {
-			ring.color[j] = lastc[j]*(1.0 + rand_uniform2(-0.2, 0.2));
-		}
+		UNROLL_4X(ring.color[i_] = lastc[i_]*(1.0 + rand_uniform2(-0.2, 0.2));)
 		ring.color.set_valid_color();
-
-		for (unsigned j = 0; j < 4; ++j) {
-			lastc[j] = ring.color[j];
-		}
+		UNROLL_4X(lastc[i_] = ring.color[i_];)
 	}
 	float max_rs(0.0);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		rscale[i] = rand_uniform2(0.9, 2.2);
-		max_rs    = max(max_rs, rscale[i]);
-	}
+	UNROLL_3X(rscale[i_] = rand_uniform2(0.9, 2.2);)
+	UNROLL_3X(max_rs     = max(max_rs, rscale[i_]);)
 	mosize = max(mosize, max_rs*lastr); // extend planet effective size
 }
 
@@ -2199,7 +2180,7 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 	float max_gsize(0.0), min_gdist(CELL_SIZE);
 	if (offset) offset_pos(pos);
 	point posc(pos);
-	for (unsigned d = 0; d < 3; ++d) posc[d] += CELL_SIZEo2;
+	UNROLL_3X(posc[i_] += CELL_SIZEo2;)
 	result.init();
 
 	// find the correct cell
@@ -2209,7 +2190,7 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 		result.cellxyz[d] = int(pos_trans[d]/CELL_SIZE);
 	}
 	if (bad_cell_xyz(result.cellxyz)) {
-		for (unsigned d = 0; d < 3; ++d) result.cellxyz[d] = -1;
+		UNROLL_3X(result.cellxyz[i_] = -1;)
 		return 0;
 	}
 	ucell const &cell(get_cell(result.cellxyz));
@@ -2678,14 +2659,8 @@ void set_ambient_color(colorRGBA const &color) {
 
 void set_lighting_params() {
 
-	float ambient[4], diffuse[4];
-	float const zero4[4] = {0.0, 0.0, 0.0, 0.0};
+	float const ambient[4] = {0.5, 0.5, 0.5, 1.0}, diffuse[4] = {1.0, 1.0, 1.0, 1.0}, zero4[4] = {0.0, 0.0, 0.0, 0.0};
 	int const a_light(get_universe_ambient_light()), s_light(GL_LIGHT0);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		diffuse[i] = 1.0;
-		ambient[i] = 0.5;
-	}
 	set_colors_and_enable_light(s_light, ambient, diffuse); // single star diffuse + ambient
 	set_gl_light_pos(s_light, all_zeros, 0.0);
 	set_colors_and_enable_light(a_light, ambient, zero4); // universe + galaxy ambient
