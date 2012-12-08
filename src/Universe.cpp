@@ -33,6 +33,7 @@ bool const USE_SPHERE_DLISTS = 1; // sometimes faster on newer video cards, slow
 
 unsigned const MAX_TRIES     = 100;
 unsigned const SPHERE_MAX_ND = 256;
+unsigned const RING_TEX_SZ   = 256;
 int   const RAND_CONST       = 1;
 float const ROTREV_TIMESCALE = 1.0;
 float const ROT_RATE_CONST   = 0.5*ROTREV_TIMESCALE;
@@ -216,9 +217,9 @@ public:
 		if (disable_shaders) return 0;
 
 		if (!star_shader.is_setup()) {
-			set_multitex(1);
+			set_active_texture(1);
 			bind_3d_texture(get_noise_tex_3d());
-			disable_multitex_a();
+			set_active_texture(0);
 			star_shader.set_prefix("#define NUM_OCTAVES 8", 1); // FS
 			star_shader.set_vert_shader("star_draw");
 			star_shader.set_frag_shader("perlin_clouds_3d.part*+star_draw");
@@ -237,18 +238,23 @@ public:
 		if (star_shader.is_setup()) {star_shader.disable();}
 	}
 
-	bool enable_ring_shader(point const &planet_pos, float planet_radius, point const &sun_pos, float sun_radius) {
-		// FIXME: single texture quad with 1D color texture
+	bool enable_ring_shader(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius) {
 		if (disable_shaders) return 0;
 		
 		if (!ring_shader.is_setup()) {
 			ring_shader.set_vert_shader("planet_rings");
 			ring_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_rings");
-			shared_shader_setup(ring_shader);
+			shared_shader_setup(ring_shader, "ring_tex");
+			ring_shader.add_uniform_int("noise_tex", 1);
 		}
+		set_active_texture(1);
+		select_texture(NOISE_GEN_MIPMAP_TEX);
+		set_active_texture(0);
 		ring_shader.enable();
 		ring_shader.add_uniform_vector3d("planet_pos", planet_pos);
 		ring_shader.add_uniform_float("planet_radius", planet_radius);
+		ring_shader.add_uniform_float("ring_ri",       ring_ri);
+		ring_shader.add_uniform_float("ring_ro",       ring_ro);
 		ring_shader.add_uniform_vector3d("sun_pos",    sun_pos);
 		ring_shader.add_uniform_float("sun_radius",    sun_radius);
 		upload_mvm_to_shader(ring_shader, "world_space_mvm");
@@ -598,7 +604,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 				float const pradius(PLANET_ATM_RSCALE*planet.radius), sizep(calc_sphere_size(pos4, camera, pradius));
 				bool skip_draw(!planets_visible);
 
-				if (sclip && sizep < (planet.rings.empty() ? 0.6 : 0.3)) {
+				if (sclip && sizep < (planet.ring_data.empty() ? 0.6 : 0.3)) {
 					if (!sel_g && sizep < 0.3) planet.free();
 					if (update_pass) skip_draw = 1; else continue;
 				}
@@ -645,8 +651,10 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 					}
 				}
 				if (planet.is_ok() && !skip_p) {
-					planet.draw_prings(usg, pos4, sizep, pos3, (has_sun ? sradius : 0.0));
-
+					if (sizep > 0.1) {
+						planet.ensure_rings_texture();
+						planet.draw_prings(usg, pos4, sizep, pos3, (has_sun ? sradius : 0.0));
+					}
 					if (planet_visible && planet.atmos > 0.01 && planet.tsize > PLANET_ATM_TEX_SZ) {
 						//if (sel_p) to_draw_last = selected_planet(&planet, pos4, sizep);
 						planet.draw_atmosphere(usg, pos4, sizep);
@@ -1124,7 +1132,7 @@ void uplanet::create(bool phase) {
 	gen_rotrev();
 	mosize = radius;
 	moons.clear();
-	rings.clear();
+	ring_data.clear();
 
 	// atmosphere, water, temperature, gravity
 	calc_temperature();
@@ -1171,11 +1179,7 @@ void uplanet::process() {
 	if (gen) return;
 	current.type = UTYPE_PLANET;
 	set_rseeds();
-
-	if (temp < CGAS_TEMP && (rand2()&1)) { // rings
-		rings.resize((rand2()&7)+1);
-		gen_prings();
-	}
+	if (temp < CGAS_TEMP && (rand2()&1)) {gen_prings();} // rings
 	unsigned num_moons(0);
 
 	if (rand2()&1) { // has moons
@@ -1246,25 +1250,41 @@ void uplanet::update_shadows() {
 }
 
 
+struct upring {
+	float radius1, radius2;
+};
+
+
 void uplanet::gen_prings() {
 
-	unsigned const nr((unsigned)rings.size());
-	if (nr == 0) return;
+	unsigned const nr((rand2()%10)+1);
 	float const sr(4.0/nr);
 	float lastr(rand_uniform2(radius, 1.1*radius));
-	colorRGBA lastc(color);
-	UNROLL_3X(lastc[i_] += rand_uniform2(0.1, 0.6);)
-	lastc.alpha = rand_uniform2(0.1, 0.5);
+	vector<upring> rings(nr);
 
 	for (unsigned i = 0; i < nr; ++i) {
 		upring &ring(rings[i]);
-		ring.radius1     = lastr        + sr*radius*rand_uniform2(0.0,  0.15);
-		ring.radius2     = ring.radius1 + sr*radius*rand_uniform2(0.05, 0.3);
-		ring.color.alpha = rand_uniform2(0.1, 0.6);
+		ring.radius1 = lastr        + sr*radius*rand_uniform2(0.0,  0.1);
+		ring.radius2 = ring.radius1 + sr*radius*rand_uniform2(0.05, 0.3);
 		lastr = ring.radius2;
-		UNROLL_4X(ring.color[i_] = lastc[i_]*(1.0 + rand_uniform2(-0.2, 0.2));)
-		ring.color.set_valid_color();
-		UNROLL_4X(lastc[i_] = ring.color[i_];)
+	}
+	ring_data.resize(RING_TEX_SZ);
+	for (unsigned i = 0; i < RING_TEX_SZ; ++i) {ring_data[i].set_c4(ALPHA0);}
+	ring_ri = rings.front().radius1;
+	ring_ro = rings.back().radius2;
+	float const rdiv((RING_TEX_SZ-3)/(ring_ro - ring_ri));
+	colorRGBA rcolor(color);
+	UNROLL_3X(rcolor[i_] += rand_uniform2(0.1, 0.6);)
+	rcolor.alpha = rand_uniform2(0.4, 0.9);
+
+	for (vector<upring>::const_iterator i = rings.begin(); i != rings.end(); ++i) {
+		unsigned const tri(1+(i->radius1 - ring_ri)*rdiv), tro(1+(i->radius2 - ring_ri)*rdiv);
+		assert(tri > 0 && tro+1 < RING_TEX_SZ && tri < tro);
+		color_wrapper cw;
+		UNROLL_3X(rcolor[i_] = CLIP_TO_01(rcolor[i_]*(1.0f + rand_uniform2(-0.15, 0.15)));)
+		rcolor.A = CLIP_TO_01(rcolor.A*(1.0f + rand_uniform2(-0.1, 0.1)));
+		cw.set_c4(rcolor);
+		for (unsigned j = tri; j < tro; ++j) {ring_data[j] = cw;}
 	}
 	float max_rs(0.0);
 	UNROLL_3X(rscale[i_] = rand_uniform2(0.9, 2.2);)
@@ -1711,7 +1731,7 @@ void uplanet::free() {
 
 	for (unsigned i = 0; i < moons.size(); ++i) moons[i].free();
 	moons.clear();
-	rings.clear();
+	ring_data.clear();
 	urev_body::free();
 }
 
@@ -1898,7 +1918,7 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		if (texture) { // texture map
 			glEnable(GL_TEXTURE_2D);
 			assert(tid > 0);
-			glBindTexture(GL_TEXTURE_2D, tid);
+			bind_2d_texture(tid);
 			WHITE.do_glColor();
 		}
 		else {
@@ -2079,31 +2099,32 @@ void urev_body::show_colonizable_liveable(point const &pos_, float radius0) cons
 }
 
 
+void uplanet::ensure_rings_texture() {
+
+	if (ring_data.empty() || ring_tid > 0) return; // no rings, or texture already created
+	bool const mipmap = 1;
+	setup_1d_texture(ring_tid, GL_MODULATE, mipmap, 0, 0, 0);
+	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, RING_TEX_SZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, &ring_data.front());
+	if (mipmap) {gen_mipmaps(1);}
+	check_gl_error(506);
+}
+
+
 void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius) const {
 
-	if (size_ < 0.1 || rings.empty()) return;
-	bool const do_texture(size_ > 5.0);
-
-	if (do_texture) {
-		select_texture(NOISE_GEN_MIPMAP_TEX);
-		gluQuadricTexture(quadric, GL_TRUE);
-		usg.enable_ring_shader(make_pt_global(pos_), radius, make_pt_global(sun_pos), sun_radius); // even in !do_texture mode?
-	}
+	if (ring_data.empty()) return;
+	assert(ring_tid > 0);
+	bind_1d_texture(ring_tid);
+	assert(ring_ri > 0.0 && ring_ri < ring_ro);
+	usg.enable_ring_shader(make_pt_global(pos_), radius, ring_ri, ring_ro, make_pt_global(sun_pos), sun_radius); // even in !do_texture mode?
 	enable_blend(); // must be drawn last
 	glPushMatrix();
 	global_translate(pos_);
 	scale_by(rscale);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
-
-	for (unsigned i = 0; i < rings.size(); ++i) {
-		rings[i].color.do_glColor();
-		gluDisk(quadric, rings[i].radius1, rings[i].radius2, max(4, min(2*N_SPHERE_DIV, int(4.0*size_))), 1);
-	}
-	if (do_texture) {
-		usg.disable_ring_shader();
-		gluQuadricTexture(quadric, GL_FALSE);
-		glDisable(GL_TEXTURE_2D);
-	}
+	WHITE.do_glColor();
+	draw_tquad(ring_ro, ring_ro, 0.0, 1);
+	usg.disable_ring_shader();
 	glPopMatrix();
 	disable_blend();
 }

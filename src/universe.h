@@ -129,13 +129,6 @@ struct camera_mv_speed {
 };
 
 
-struct upring { // size = 24
-
-	float radius1, radius2;
-	colorRGBA color;
-};
-
-
 class named_obj { // size = 16
 
 	string name;
@@ -264,15 +257,15 @@ class uplanet : public urev_body { // size = 324
 
 public:
 	unsigned population; // unused
-	float mosize;
+	float mosize, ring_ri, ring_ro;
 	vector3d rscale;
 	vector<umoon> moons;
-	vector<upring> rings;
+	vector<color_wrapper> ring_data;
 	ussystem *system;
 	unsigned ring_tid;
 	// trade items?
 
-	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), system(NULL), ring_tid(0) {}
+	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), ring_ri(0.0), ring_ro(0.0), system(NULL), ring_tid(0) {}
 	void create(bool phase);
 	void process();
 	point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
@@ -284,6 +277,7 @@ public:
 	bool colonizable_int() const {return (water > 0.1 && atmos > 0.1);}
 	bool has_vegetation()  const {return (water > 0.2 && atmos > 0.1);}
 	float get_vegetation() const;
+	void ensure_rings_texture();
 	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius) const;
 	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const;
 	void free_texture();
