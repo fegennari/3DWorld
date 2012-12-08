@@ -1071,6 +1071,7 @@ void bind_2d_texture(unsigned tid) {
 }
 
 
+// 2D texture
 void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest, float anisotropy) {
 
 	assert(tid == 0);
@@ -1098,6 +1099,19 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 	int const mode_t(wrap_t ? (mirror_t ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mode_s);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mode_t);
+}
+
+
+void setup_1d_texture(unsigned &tid, int type, bool mipmap, bool wrap, bool mirror, bool nearest) {
+
+	assert(tid == 0);
+	assert(!nearest || !mipmap);
+	glGenTextures(1, &tid);
+	bind_1d_texture(tid);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, type);
+	glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
+	glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
+	glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, (wrap ? (mirror ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE));
 }
 
 
