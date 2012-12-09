@@ -1,3 +1,4 @@
+uniform float atmosphere = 1.0;
 uniform vec2 light_scale = vec2(1,1);
 varying vec4 epos;
 varying vec3 normal, world_space_pos;
@@ -10,7 +11,7 @@ void main()
 	color.rgb += light_scale[1]*(gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
 
 	// FIXME: color *= some atmospheric stuff
-	color *= vec4(0.5, 0.5, 1.0, 1.0);
+	color *= vec4(0.5, 0.5, 1.0, atmosphere);
 
 	gl_FragColor = apply_fog(color);
 }

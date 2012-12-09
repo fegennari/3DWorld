@@ -286,7 +286,7 @@ public:
 		if (cloud_shader.is_setup()) {cloud_shader.disable();}
 	}
 
-	bool enable_atmospheric_shader() {
+	bool enable_atmospheric_shader(float atmosphere) {
 		if (disable_shaders) return 0;
 		
 		if (!atmospheric_shader.is_setup()) {
@@ -298,6 +298,7 @@ public:
 			atmospheric_shader.setup_fog_scale();
 		}
 		atmospheric_shader.enable();
+		atmospheric_shader.add_uniform_float("atmosphere", atmosphere);
 		set_light_scale(atmospheric_shader);
 		return 1;
 	}
@@ -2146,7 +2147,7 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 	apply_gl_rotate();
 	glEnable(GL_CULL_FACE);
 
-	if (usg.enable_atmospheric_shader()) {
+	if (usg.enable_atmospheric_shader(atmos)) {
 		WHITE.do_glColor();
 		glCullFace(GL_FRONT);
 		draw_subdiv_sphere(all_zeros, cloud_radius, ndiv, 0, 1);
