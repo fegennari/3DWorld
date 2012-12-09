@@ -1966,6 +1966,8 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 	bool const SD_TIMETEST(SHOW_SPHERE_TIME && size >= 256.0);
 
 	if (USE_HEIGHTMAP && surface != NULL && surface->has_heightmap()) { // sphere heightmap for planet or moon
+		float const hmap_scale(get_hmap_scale());
+
 		if (univ_planet_lod && ndiv == SPHERE_MAX_ND) {
 			vector3d dir(get_player_dir()), upv(get_player_up());
 			rotate_vector(dir);
@@ -1974,10 +1976,10 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 			glDisable(GL_TEXTURE_2D);
 			
 			if (display_mode & 0x20) {
-				surface->draw_view_clipped_sphere(pdu, radius0, this);
+				surface->draw_view_clipped_sphere(pdu, radius0, hmap_scale, this);
 			}
 			else {
-				surface->draw_cube_mapped_sphere(pdu, radius0, this);
+				surface->draw_cube_mapped_sphere(pdu, radius0, hmap_scale, this);
 			}
 			if (SHOW_SPHERE_TIME) PRINT_TIME("Draw VCS");
 			return;
@@ -1988,7 +1990,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 		if (!CACHE_SPHERE_DATA || !surface->sd.equal(all_zeros, radius0, ndiv)) {
 			surface->free_dlist();
 			gen_data = 1;
-			float const cutoff(surface->min_cutoff), omcinv(1.0/(1.0 - cutoff)), rscale(HMAP_SCALE*radius);
+			float const cutoff(surface->min_cutoff), omcinv(1.0/(1.0 - cutoff)), rscale(hmap_scale*radius);
 			vector<float> const &heightmap(surface->heightmap);
 			unsigned const ssize(surface->ssize);
 			assert(ssize > 0 && tsize > 0);
@@ -2015,7 +2017,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 	}
 	if (CACHE_SPHERE_DATA && using_hmap) {
 		assert(surface != NULL);
-		if (gen_data) surface->setup_draw_sphere(all_zeros, radius0, -0.5*HMAP_SCALE*radius, ndiv, pmap);
+		if (gen_data) surface->setup_draw_sphere(all_zeros, radius0, -0.5*get_hmap_scale()*radius, ndiv, pmap);
 		surface->sd.draw_subdiv_sphere(viewed_from, 1, use_dlist);
 		if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast"); // 39
 	}

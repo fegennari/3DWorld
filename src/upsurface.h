@@ -110,8 +110,8 @@ public:
 	void init_ptc_cache() const;
 	ptc_block &get_ptc(unsigned s, unsigned t) const; // sphere
 	ptc_block &get_ptc(unsigned s, unsigned t, unsigned f) const; // cube
-	void draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, color_gen_class const *const cgc=NULL) const;
-	void draw_cube_mapped_sphere (pos_dir_up const &pdu, float radius0, color_gen_class const *const cgc=NULL) const;
+	void draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc=NULL) const;
+	void draw_cube_mapped_sphere (pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc=NULL) const;
 };
 
 

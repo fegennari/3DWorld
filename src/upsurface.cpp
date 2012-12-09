@@ -356,9 +356,10 @@ bool urev_body::surface_test(float rad, point const &p, float &coll_r, bool simp
 
 	// not quite right - should take into consideration peaks in surrounding geometry that also intersect the sphere
 	if (surface != NULL && surface->has_heightmap()) {
-		if (p2p_dist(p, pos) > radius*(1.0 + HMAP_SCALE*0.5) + rad) return 0; // test rmax
+		float const hmap_scale(get_hmap_scale());
+		if (p2p_dist(p, pos) > radius*(1.0 + hmap_scale*0.5) + rad) return 0; // test rmax
 		double const val(get_dheight_at(p, !simple)), cutoff(surface->min_cutoff);
-		coll_r = radius*(1.0 + HMAP_SCALE*((max(cutoff, val) - cutoff)/(1.0 - cutoff) - 0.5));
+		coll_r = radius*(1.0 + hmap_scale*((max(cutoff, val) - cutoff)/(1.0 - cutoff) - 0.5));
 	}
 	return 1;
 }
@@ -394,7 +395,7 @@ inline bool back_facing_approx(point const &pt, vector3d const &norm, point cons
 
 
 // pos is all_zeros (already translated)
-void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, color_gen_class const *const cgc) const {
+void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc) const {
 
 	assert(radius0 > 0.0);
 	init_ptc_cache();
@@ -402,7 +403,7 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, c
 	sd.gen_points_norms_static();
 	point **points   = sd.get_points();
 	vector3d **norms = sd.get_norms();
-	float const omcinv(1.0/(1.0 - min_cutoff)), rscale(HMAP_SCALE*radius0), cscale(1.0/255.0);
+	float const omcinv(1.0/(1.0 - min_cutoff)), rscale(hmap_scale*radius0), cscale(1.0/255.0);
 	float const multval(1.0/SUBDIV_SECTS), pi_over_nd(PI/ND_TEST), delta(multval*pi_over_nd);
 	float const sin_ds(sin(2.0*delta)), cos_ds(cos(2.0*delta)), sin_dt(sin(delta)), cos_dt(cos(delta));
 
@@ -479,14 +480,14 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, c
 }
 
 
-void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, color_gen_class const *const cgc) const {
+void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc) const {
 
 	assert(!(SUBDIV_SECTS&1)); // must be even
 	assert(radius0 > 0.0);
 	unsigned const nsubdiv(SUBDIV_SECTS >> unsigned(pdu.pos.mag() > 1.5*radius0));
 	init_ptc_cache();
 	float const step(1.0/(float)ND_CUBE), step_inner(step/nsubdiv);
-	float const omcinv(1.0/(1.0 - min_cutoff)), rscale(HMAP_SCALE*radius0), cscale(1.0/255.0);
+	float const omcinv(1.0/(1.0 - min_cutoff)), rscale(hmap_scale*radius0), cscale(1.0/255.0);
 	point pt;
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions

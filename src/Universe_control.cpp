@@ -271,7 +271,10 @@ void process_univ_objects() {
 			point const clobj_pos(clobj.object->get_pos());
 			float const temperature(universe.get_point_temperature(clobj, obj_pos)*(5 - uobj->get_shadow_val())); // shadow_val = 0-3
 			uobj->set_temp(temperature, clobj_pos);
-			float const dist_to_cobj(clobj.dist - (HMAP_SCALE*clobj_radius + radius)); // (1.0 + HMAP_SCALE)*radius?
+			float hmap_scale(0.0);
+			if (clobj.type == UTYPE_MOON  ) {hmap_scale = MOON_HMAP_SCALE;  }
+			if (clobj.type == UTYPE_PLANET) {hmap_scale = PLANET_HMAP_SCALE;}
+			float const dist_to_cobj(clobj.dist - (hmap_scale*clobj_radius + radius)); // (1.0 + HMAP_SCALE)*radius?
 			uobj->set_sobj_dist(dist_to_cobj);
 			int coll(0);
 

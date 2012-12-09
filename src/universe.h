@@ -61,12 +61,13 @@ unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
 unsigned const MAX_MOONS_PER_PLANET    = 8;
 
 float const MP_COLOR_VAR        = 0.4;
-float const PLANET_ATM_RSCALE   = 1.05;
+float const PLANET_ATM_RSCALE   = 1.028;
 float const ORBIT_PLANE_DELTA   = 0.06;
 float const ORBIT_SPACE_MARGIN  = 1.1;
 float const CAMERA_MASS         = 1.0;
 float const RANGE_OFFSET        = 0.0001;
-float const HMAP_SCALE          = 0.075;
+float const MOON_HMAP_SCALE     = 0.08;
+float const PLANET_HMAP_SCALE   = 0.04;
 float const SURFACE_HEIGHT      = 0.01; // multiples of the radius
 float const INITIAL_FREQ        = 0.7;
 float const TEX_HEIGHT_SCALE    = 1.0;
@@ -242,6 +243,7 @@ public:
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
 	
+	virtual float get_hmap_scale() const = 0;
 	virtual void create(bool phase) = 0;
 	virtual void calc_temperature() = 0;
 	virtual void update_shadows()   = 0;
@@ -282,6 +284,7 @@ public:
 	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const;
 	void free_texture();
 	void free();
+	float get_hmap_scale() const {return PLANET_HMAP_SCALE;}
 	string get_name() const {return "Planet " + getname();}
 	string get_info() const;
 };
@@ -300,6 +303,7 @@ public:
 	void get_valid_orbit_r(float &orbit_r, float obj_r) const;
 	bool colonizable_int() const {return (radius > 1.5*MOON_MIN_SIZE && planet && planet->colonizable());}
 	void update_shadows() {shadowed = shadowed_by_planet();}
+	float get_hmap_scale() const {return MOON_HMAP_SCALE;}
 	string get_name() const {return "Moon " + getname();}
 	string get_info() const;
 };
