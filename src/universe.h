@@ -61,7 +61,7 @@ unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
 unsigned const MAX_MOONS_PER_PLANET    = 8;
 
 float const MP_COLOR_VAR        = 0.4;
-float const PLANET_ATM_RSCALE   = 1.06;
+float const PLANET_ATM_RSCALE   = 1.05;
 float const ORBIT_PLANE_DELTA   = 0.06;
 float const ORBIT_SPACE_MARGIN  = 1.1;
 float const CAMERA_MASS         = 1.0;

@@ -178,7 +178,7 @@ float get_light_scale(unsigned light) {return (glIsEnabled(light) ? 1.0 : 0.0);}
 
 
 class ushader_group {
-	shader_t planet_shader, star_shader, ring_shader, cloud_shader;
+	shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 	void set_light_scale(shader_t const &shader) const {
 		vector2d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1));
@@ -285,6 +285,25 @@ public:
 	}
 	void disable_cloud_shader() {
 		if (cloud_shader.is_setup()) {cloud_shader.disable();}
+	}
+
+	bool enable_atmospheric_shader() {
+		if (disable_shaders) return 0;
+		
+		if (!atmospheric_shader.is_setup()) {
+			atmospheric_shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+			atmospheric_shader.set_vert_shader("planet_clouds");
+			atmospheric_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+atmosphere");
+			//shared_shader_setup(atmospheric_shader, "tex0");
+			atmospheric_shader.begin_shader();
+			atmospheric_shader.setup_fog_scale();
+		}
+		atmospheric_shader.enable();
+		set_light_scale(atmospheric_shader);
+		return 1;
+	}
+	void disable_atmospheric_shader() {
+		if (atmospheric_shader.is_setup()) {atmospheric_shader.disable();}
 	}
 };
 
@@ -2117,16 +2136,26 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const { // *** must be drawn last ***
 
 	if (size_ < 1.5 || atmos == 0) return;
+	float const cloud_radius(PLANET_ATM_RSCALE*radius);
+	unsigned const ndiv(max(4, min(48, int(4.8*size_))));
 	enable_blend();
 	glEnable(GL_LIGHTING);
-	colorRGBA(1.0, 1.0, 1.0, atmos).do_glColor();
 	set_fill_mode();
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
 	glEnable(GL_CULL_FACE);
+
+	if (usg.enable_atmospheric_shader()) {
+		WHITE.do_glColor();
+		glCullFace(GL_FRONT);
+		draw_subdiv_sphere(all_zeros, cloud_radius, ndiv, 0, 1);
+		glCullFace(GL_BACK);
+		usg.disable_atmospheric_shader();
+	}
+	colorRGBA(1.0, 1.0, 1.0, atmos).do_glColor();
 	usg.enable_cloud_shader(cloud_tex_repeat);
-	draw_subdiv_sphere(all_zeros, PLANET_ATM_RSCALE*radius, max(4, min(48, int(4.8*size_))), 0, 1);
+	draw_subdiv_sphere(all_zeros, cloud_radius, ndiv, 0, 1);
 	usg.disable_cloud_shader();
 	glDisable(GL_CULL_FACE);
 	glPopMatrix();
