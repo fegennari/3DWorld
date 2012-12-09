@@ -248,7 +248,7 @@ public:
 			ring_shader.add_uniform_int("noise_tex", 1);
 		}
 		set_active_texture(1);
-		select_texture(NOISE_GEN_MIPMAP_TEX);
+		select_texture(NOISE_GEN_MIPMAP_TEX, 0);
 		set_active_texture(0);
 		ring_shader.enable();
 		ring_shader.add_uniform_vector3d("planet_pos", planet_pos);

@@ -317,7 +317,7 @@ void free_textures() {
 
 void reset_textures() {
 
-	cout << "Recreating textures..." << endl;
+	cout << "Freeing textures..." << endl;
 	free_textures();
 	free_smiley_textures(); // should this be guarded by a conditional?
 	free_universe_textures();

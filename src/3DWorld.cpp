@@ -1901,6 +1901,7 @@ int main(int argc, char** argv) {
 	init_window();
 	cout << ".GL Initialized." << endl;
 	//glutFullScreen();
+	//atexit(&clear_context); // not legal when quit unexpectedly
 	if (argc == 2) read_ueventlist(argv[1]);
 	int rs(1);
 
