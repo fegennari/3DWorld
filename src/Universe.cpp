@@ -23,8 +23,7 @@ float const MAX_COLONY_TEMP  = 28.0;
 float const MAX_LAND_TEMP    = 29.0;
 float const BOIL_TEMP        = 30.0;
 float const NO_AIR_TEMP      = 32.0;
-float const NDIV_SIZE_SCALE1 = 12.0;
-float const NDIV_SIZE_SCALE2 = 1.0;
+float const NDIV_SIZE_SCALE  = 12.0;
 
 bool const USE_HEIGHTMAP     = 1; // for planets/moons/(stars)
 bool const CACHE_SPHERE_DATA = 1; // more memory but much faster rendering
@@ -1834,7 +1833,7 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, 
 		}
 	}
 	else { // sphere
-		int ndiv(max(4, min(56, int(NDIV_SIZE_SCALE1*sqrt(size)))));
+		int ndiv(max(4, min(56, int(NDIV_SIZE_SCALE*sqrt(size)))));
 		if (ndiv > 16) ndiv = ndiv & 0xFFFC;
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
@@ -1864,7 +1863,7 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, 
 bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale) {
 
 	vector3d const vcp(cmvs.camera, pos_);
-	float const radius0(rscale*radius), dist(vcp.mag() - radius0);
+	float const radius0(rscale*radius), dist(max(TOLERANCE, (vcp.mag() - radius0)));
 	if (dist > U_VIEW_DIST) return 0; // too far away
 	float size(get_pixel_size(radius0, dist)); // approx. in pixels
 	if (size < 0.25 && !(display_mode & 0x01)) return 0; // too small
@@ -1901,14 +1900,15 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 	}
 	else { // sphere
 		bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0);
-		int ndiv;
+		int ndiv(NDIV_SIZE_SCALE*sqrt(size));
 		
-		if (size < 128) {
-			ndiv = max(4, min(48, int(NDIV_SIZE_SCALE1*sqrt(size))));
-			if (ndiv > 16) ndiv = ndiv & 0xFFFC;
+		if (size < 64.0) {
+			ndiv = max(4, min(48, ndiv));
+			if (ndiv > 16) {ndiv = ndiv & 0xFFFC;}
 		}
 		else {
-			ndiv = min((int)min(MAX_TEXTURE_SIZE, SPHERE_MAX_ND), (int(NDIV_SIZE_SCALE2*size)&0xFFE0));
+			int const pref_ndiv(min((int)min(MAX_TEXTURE_SIZE, SPHERE_MAX_ND), ndiv));
+			for (ndiv = 1; ndiv < pref_ndiv; ndiv <<= 1) {} // make a power of 2
 		}
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
