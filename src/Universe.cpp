@@ -52,7 +52,6 @@ float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0);
 point last_camera(all_zeros), univ_sun_pos(all_zeros);
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
-selected_planet to_draw_last;
 universe_t universe; // the top level universe
 pt_line_drawer universe_pld;
 
@@ -179,8 +178,7 @@ float get_light_scale(unsigned light) {return (glIsEnabled(light) ? 1.0 : 0.0);}
 
 
 class ushader_group {
-	shader_t planet_shader; // and moons
-	shader_t star_shader, ring_shader, cloud_shader; // unused
+	shader_t planet_shader, star_shader, ring_shader, cloud_shader;
 
 	void set_light_scale(shader_t const &shader) const {
 		vector2d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1));
@@ -269,7 +267,6 @@ public:
 	}
 
 	bool enable_cloud_shader(int cloud_tex_repeat) {
-		// FIXME: light scattering in clouds
 		if (disable_shaders) return 0;
 		
 		if (!cloud_shader.is_setup()) {
@@ -304,7 +301,6 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	camera_mv_speed const cmvs(camera, motion_vector, speed);
 	ushader_group usg;
 	last_camera = camera;
-	to_draw_last.planet = NULL;
 	glDisable(GL_LIGHTING);
 
 	if (!no_distant || clobj.type < UTYPE_SYSTEM) { // drawing pass 1
@@ -606,7 +602,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 
 				if (sclip && sizep < (planet.ring_data.empty() ? 0.6 : 0.3)) {
 					if (!sel_g && sizep < 0.3) planet.free();
-					if (update_pass) skip_draw = 1; else continue;
+					if (update_pass) {skip_draw = 1;} else {continue;}
 				}
 				current.planet = k;
 				bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET);
@@ -619,18 +615,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 					//uobject const *sobj(sel_s ? get_shadowing_object(planet, sol.sun) : NULL);
 					planet.check_gen_texture(int(sizep));
 					float const rscale((planet.atmos > 0.5 && planet.tsize <= PLANET_ATM_TEX_SZ) ? PLANET_ATM_RSCALE : 1.0);
-					bool const has_specular(sizep > 4.0 && planet.water > 0.0);
-					
-					if (has_specular) {
-						set_specular(0.4*planet.water, 75.0); // should really only set specular on water triangles
-						set_texture_specular(1);
-					}
-					planet.draw(pos4, cmvs, usg, rscale); // always returns 1?
-					
-					if (has_specular) {
-						set_texture_specular(0);
-						set_specular(0.0, 1.0);
-					}
+					planet.draw(pos4, cmvs, usg, rscale); // ignore return value?
 				}
 				planet.process();
 				bool const skip_moons(p_system && sel_planet && !skip_p);
@@ -656,7 +641,6 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 						planet.draw_prings(usg, pos4, sizep, pos3, (has_sun ? sradius : 0.0));
 					}
 					if (planet_visible && planet.atmos > 0.01 && planet.tsize > PLANET_ATM_TEX_SZ) {
-						//if (sel_p) to_draw_last = selected_planet(&planet, pos4, sizep);
 						planet.draw_atmosphere(usg, pos4, sizep);
 					}
 				}
@@ -1851,7 +1835,7 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, 
 		draw_sphere_dlist(all_zeros, radius0, ndiv, 1); // small sphere - use display list
 		usg.disable_star_shader();
 		glDisable(GL_TEXTURE_2D);
-		if (size >= 64) {draw_flares(ndiv, 1);} // FIXME: inline code here?
+		if (size >= 64) {draw_flares(ndiv, 1);}
 		glPopMatrix();
 	} // end sphere draw
 	return 1;
@@ -2140,11 +2124,11 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
-	usg.enable_cloud_shader(cloud_tex_repeat);
 	glEnable(GL_CULL_FACE);
+	usg.enable_cloud_shader(cloud_tex_repeat);
 	draw_subdiv_sphere(all_zeros, PLANET_ATM_RSCALE*radius, max(4, min(48, int(4.8*size_))), 0, 1);
-	glDisable(GL_CULL_FACE);
 	usg.disable_cloud_shader();
+	glDisable(GL_CULL_FACE);
 	glPopMatrix();
 	disable_blend();
 	glDisable(GL_LIGHTING);

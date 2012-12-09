@@ -510,7 +510,6 @@ void setup_polygon_texgen(vector3d const &norm, float const scale[2], float cons
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
 float get_texture_component(unsigned tid, float xval, float yval, int comp);
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);
-void set_texture_specular(bool val);
 
 // function prototypes - sun flares
 void DoFlares(point const &from, point const &at, point const &light, float near_clip, float size, float intensity);

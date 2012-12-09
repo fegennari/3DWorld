@@ -525,17 +525,6 @@ struct coll_test { // size = 16
 };
 
 
-struct selected_planet { // size = 20
-
-	uplanet const *planet;
-	point pos;
-	float size;
-
-	selected_planet(uplanet const *const planet_=NULL, point const &pos_=all_zeros, float size_=0.0)
-		: planet(planet_), pos(pos_), size(size_) {}
-};
-
-
 inline uplanet const &get_planet(s_object const &so) {
   return so.get_planet();
 }

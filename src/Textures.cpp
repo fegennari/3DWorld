@@ -1994,18 +1994,3 @@ bool is_billboard_texture_transparent(point const *const points, point const &po
 }
 
 
-void set_texture_specular(bool val) {
-
-	static bool inited(0), has_ext(0);
-
-	if (!inited) {
-		has_ext = has_extension("GL_EXT_separate_specular_color");
-		inited  = 1;
-	}
-	if (!has_ext) return; // check for extension enabled
-	glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL_EXT, (val ? GL_SEPARATE_SPECULAR_COLOR_EXT : GL_SINGLE_COLOR_EXT));
-}
-
-
-
-
