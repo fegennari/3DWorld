@@ -837,6 +837,7 @@
     <None Include="shaders\asteroid.frag" />
     <None Include="shaders\asteroid.vert" />
     <None Include="shaders\atmosphere.frag" />
+    <None Include="shaders\atmosphere.vert" />
     <None Include="shaders\bump_map.part.frag" />
     <None Include="shaders\bump_map.part.vert" />
     <None Include="shaders\clouds.frag" />

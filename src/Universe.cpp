@@ -47,7 +47,7 @@ bool have_sun(1);
 int uxyz[3] = {0, 0, 0};
 unsigned char water_c[3] = {0}, ice_c[3] = {0};
 unsigned char const *const wic[2] = {water_c, ice_c};
-float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0);
+float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0), cloud_time(0.0);
 point last_camera(all_zeros), univ_sun_pos(all_zeros);
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
@@ -56,7 +56,7 @@ pt_line_drawer universe_pld;
 
 
 extern bool univ_planet_lod, disable_shaders;
-extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks, frame_counter;
+extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
 extern float tan_term, sin_term, fticks, tfticks;
 extern colorRGBA bkg_color;
 extern exp_type_params et_params[];
@@ -176,141 +176,164 @@ void destroy_sobj(s_object const &target) {
 float get_light_scale(unsigned light) {return (glIsEnabled(light) ? 1.0 : 0.0);}
 
 
-class ushader_group {
-	shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
-
-	void set_light_scale(shader_t const &shader) const {
+class universe_shader_t : public shader_t {
+	void set_light_scale() {
 		vector2d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1));
-		shader.add_uniform_vector2d("light_scale", light_scale);
+		add_uniform_vector2d("light_scale", light_scale);
 	}
-	void shared_shader_setup(shader_t &shader, const char *texture_name="tex0") const {
-		shader.begin_shader();
-		shader.add_uniform_int(texture_name, 0);
-		shader.setup_fog_scale(); // fog not needed?
+	void shared_setup(const char *texture_name="tex0") {
+		begin_shader();
+		add_uniform_int(texture_name, 0);
+		setup_fog_scale(); // fog not needed?
 	}
 
 public:
-	bool enable_planet_shader() {
+	bool enable_planet() {
 		if (disable_shaders) return 0;
 
-		if (!planet_shader.is_setup()) {
-			planet_shader.set_vert_shader("per_pixel_lighting");
-			planet_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_draw");
-			shared_shader_setup(planet_shader);
+		if (!is_setup()) {
+			set_vert_shader("per_pixel_lighting");
+			set_frag_shader("linear_fog.part+ads_lighting.part*+planet_draw");
+			shared_setup();
 		}
-		planet_shader.enable();
-		set_light_scale(planet_shader);
+		enable();
+		set_light_scale();
 		set_specular(1.0, 80.0);
 		return 1;
 	}
-	void disable_planet_shader() {
-		if (planet_shader.is_setup()) {
-			planet_shader.disable();
+	void disable_planet() {
+		if (is_setup()) {
+			disable();
 			set_specular(0.0, 1.0);
 		}
 	}
 
-	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) { // no lighting
+	bool enable_star(colorRGBA const &colorA, colorRGBA const &colorB) { // no lighting
 		if (disable_shaders) return 0;
 
-		if (!star_shader.is_setup()) {
+		if (!is_setup()) {
 			set_active_texture(1);
 			bind_3d_texture(get_noise_tex_3d());
 			set_active_texture(0);
-			star_shader.set_prefix("#define NUM_OCTAVES 8", 1); // FS
-			star_shader.set_vert_shader("star_draw");
-			star_shader.set_frag_shader("perlin_clouds_3d.part*+star_draw");
-			star_shader.begin_shader();
-			star_shader.add_uniform_int("tex0", 0);
-			star_shader.add_uniform_int("cloud_noise_tex", 1);
-			star_shader.add_uniform_float("time", 5.0E-5*frame_counter);
-			star_shader.add_uniform_float("noise_scale", 3.5);
+			set_prefix("#define NUM_OCTAVES 8", 1); // FS
+			set_vert_shader("star_draw");
+			set_frag_shader("perlin_clouds_3d.part*+star_draw");
+			begin_shader();
+			add_uniform_int("tex0", 0);
+			add_uniform_int("cloud_noise_tex", 1);
+			add_uniform_float("time", 1.2E-4*cloud_time);
+			add_uniform_float("noise_scale", 3.5);
 		}
-		star_shader.enable();
-		star_shader.add_uniform_color("colorA", colorA);
-		star_shader.add_uniform_color("colorB", colorB);
+		enable();
+		add_uniform_color("colorA", colorA);
+		add_uniform_color("colorB", colorB);
 		return 1;
 	}
-	void disable_star_shader() {
-		if (star_shader.is_setup()) {star_shader.disable();}
+	void disable_star() {
+		if (is_setup()) {disable();}
 	}
 
-	bool enable_ring_shader(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius) {
+	bool enable_ring(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius) {
 		if (disable_shaders) return 0;
 		
-		if (!ring_shader.is_setup()) {
-			ring_shader.set_vert_shader("planet_rings");
-			ring_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+planet_rings");
-			shared_shader_setup(ring_shader, "ring_tex");
-			ring_shader.add_uniform_int("noise_tex", 1);
+		if (!is_setup()) {
+			set_vert_shader("planet_rings");
+			set_frag_shader("linear_fog.part+ads_lighting.part*+planet_rings");
+			shared_setup("ring_tex");
+			add_uniform_int("noise_tex", 1);
 		}
 		set_active_texture(1);
 		select_texture(NOISE_GEN_MIPMAP_TEX, 0);
 		set_active_texture(0);
-		ring_shader.enable();
-		ring_shader.add_uniform_vector3d("planet_pos", planet_pos);
-		ring_shader.add_uniform_float("planet_radius", planet_radius);
-		ring_shader.add_uniform_float("ring_ri",       ring_ri);
-		ring_shader.add_uniform_float("ring_ro",       ring_ro);
-		ring_shader.add_uniform_vector3d("sun_pos",    sun_pos);
-		ring_shader.add_uniform_float("sun_radius",    sun_radius);
-		upload_mvm_to_shader(ring_shader, "world_space_mvm");
+		enable();
+		add_uniform_vector3d("planet_pos", planet_pos);
+		add_uniform_float("planet_radius", planet_radius);
+		add_uniform_float("ring_ri",       ring_ri);
+		add_uniform_float("ring_ro",       ring_ro);
+		add_uniform_vector3d("sun_pos",    sun_pos);
+		add_uniform_float("sun_radius",    sun_radius);
+		upload_mvm_to_shader(*this, "world_space_mvm");
 		set_specular(0.5, 50.0);
 		return 1;
 	}
-	void disable_ring_shader() {
-		if (ring_shader.is_setup()) {
+	void disable_ring() {
+		if (is_setup()) {
 			set_specular(0.0, 1.0);
-			ring_shader.disable();
+			disable();
 		}
 	}
 
-	bool enable_cloud_shader(int cloud_tex_repeat) {
+	bool enable_cloud(int cloud_tex_repeat) {
 		if (disable_shaders) return 0;
 		
-		if (!cloud_shader.is_setup()) {
+		if (!is_setup()) {
 			bind_3d_texture(get_noise_tex_3d());
-			cloud_shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			cloud_shader.set_prefix("#define NUM_OCTAVES 8",    1); // FS
-			cloud_shader.set_vert_shader("planet_clouds");
-			cloud_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+planet_clouds");
-			shared_shader_setup(cloud_shader, "cloud_noise_tex");
-			cloud_shader.add_uniform_float("time", 4.0E-6*frame_counter);
+			set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+			set_prefix("#define NUM_OCTAVES 8",    1); // FS
+			set_vert_shader("planet_clouds");
+			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+planet_clouds");
+			shared_setup("cloud_noise_tex");
+			add_uniform_float("time", 1.0E-5*cloud_time);
 		}
-		cloud_shader.enable();
-		set_light_scale(cloud_shader);
-		cloud_shader.add_uniform_float("noise_scale", 2.5*cloud_tex_repeat);
+		enable();
+		set_light_scale();
+		add_uniform_float("noise_scale", 2.5*cloud_tex_repeat);
 		return 1;
 	}
-	void disable_cloud_shader() {
-		if (cloud_shader.is_setup()) {cloud_shader.disable();}
+	void disable_cloud() {
+		if (is_setup()) {disable();}
 	}
 
-	bool enable_atmospheric_shader(float atmosphere) {
+	bool enable_atmospheric(point const &planet_pos, float cloud_radius, float atmosphere) {
 		if (disable_shaders) return 0;
 		
-		if (!atmospheric_shader.is_setup()) {
-			atmospheric_shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			atmospheric_shader.set_vert_shader("planet_clouds");
-			atmospheric_shader.set_frag_shader("linear_fog.part+ads_lighting.part*+atmosphere");
-			//shared_shader_setup(atmospheric_shader, "tex0");
-			atmospheric_shader.begin_shader();
-			atmospheric_shader.setup_fog_scale();
+		if (!is_setup()) {
+			set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+			set_vert_shader("atmosphere");
+			set_frag_shader("linear_fog.part+ads_lighting.part*+atmosphere");
+			begin_shader();
+			setup_fog_scale();
 		}
-		atmospheric_shader.enable();
-		atmospheric_shader.add_uniform_float("atmosphere", atmosphere);
-		set_light_scale(atmospheric_shader);
+		enable();
+		add_uniform_vector3d("camera_pos", make_pt_global(get_camera_pos()));
+		add_uniform_vector3d("planet_pos", planet_pos);
+		add_uniform_float("cloud_radius", cloud_radius);
+		add_uniform_float("atmosphere", atmosphere);
+		upload_mvm_to_shader(*this, "world_space_mvm");
+		set_light_scale();
 		return 1;
 	}
-	void disable_atmospheric_shader() {
-		if (atmospheric_shader.is_setup()) {atmospheric_shader.disable();}
+	void disable_atmospheric() {
+		if (is_setup()) {disable();}
 	}
+};
+
+
+class ushader_group {
+	universe_shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
+
+public:
+	bool enable_planet_shader() {return planet_shader.enable_planet();}
+	void disable_planet_shader() {planet_shader.disable_planet();}
+	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
+	void disable_star_shader() {star_shader.disable_star();}
+	bool enable_ring_shader(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius) {
+		return ring_shader.enable_ring(planet_pos, planet_radius, ring_ri, ring_ro, sun_pos, sun_radius);
+	}
+	void disable_ring_shader() {ring_shader.disable_ring();}
+	bool enable_cloud_shader(int cloud_tex_repeat) {return cloud_shader.enable_cloud(cloud_tex_repeat);}
+	void disable_cloud_shader() {cloud_shader.disable_cloud();}
+	bool enable_atmospheric_shader(point const &planet_pos, float cloud_radius, float atmosphere) {
+		return atmospheric_shader.enable_atmospheric(planet_pos, cloud_radius, atmosphere);
+	}
+	void disable_atmospheric_shader() {atmospheric_shader.disable_atmospheric();}
 };
 
 
 void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, bool no_distant) {
 
 	//RESET_TIME;
+	if (animate2) {cloud_time += fticks;}
 	unpack_color(water_c, P_WATER_C); // recalculate every time
 	unpack_color(ice_c,   P_ICE_C  );
 	int cxyz[3];
@@ -1916,8 +1939,8 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		set_fill_mode();
 		glPushMatrix();
 		global_translate(pos_);
-		if (texture) {usg.enable_planet_shader();}
 		apply_gl_rotate();
+		if (texture) {usg.enable_planet_shader();}
 		
 		if (texture) { // texture map
 			glEnable(GL_TEXTURE_2D);
@@ -2136,32 +2159,38 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 }
 
 
-void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const { // *** must be drawn last ***
+void uplanet::draw_atmosphere_side(upos_point_type const &pos_, unsigned ndiv) const {
+
+	float const cloud_radius(PLANET_ATM_RSCALE*radius);
+	glPushMatrix();
+	global_translate(pos_);
+	apply_gl_rotate();
+	draw_subdiv_sphere(all_zeros, cloud_radius, ndiv, 0, 1);
+	glPopMatrix();
+}
+
+
+void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const { // must be drawn last
 
 	if (size_ < 1.5 || atmos == 0) return;
-	float const cloud_radius(PLANET_ATM_RSCALE*radius);
 	unsigned const ndiv(max(4, min(48, int(4.8*size_))));
 	enable_blend();
 	glEnable(GL_LIGHTING);
 	set_fill_mode();
-	glPushMatrix();
-	global_translate(pos_);
-	apply_gl_rotate();
 	glEnable(GL_CULL_FACE);
 
-	if (usg.enable_atmospheric_shader(atmos)) {
+	if (usg.enable_atmospheric_shader(make_pt_global(pos_), PLANET_ATM_RSCALE*radius, atmos)) {
 		WHITE.do_glColor();
 		glCullFace(GL_FRONT);
-		draw_subdiv_sphere(all_zeros, cloud_radius, ndiv, 0, 1);
-		glCullFace(GL_BACK);
+		draw_atmosphere_side(pos_, ndiv);
 		usg.disable_atmospheric_shader();
+		glCullFace(GL_BACK);
 	}
 	colorRGBA(1.0, 1.0, 1.0, atmos).do_glColor();
 	usg.enable_cloud_shader(cloud_tex_repeat);
-	draw_subdiv_sphere(all_zeros, cloud_radius, ndiv, 0, 1);
+	draw_atmosphere_side(pos_, ndiv);
 	usg.disable_cloud_shader();
 	glDisable(GL_CULL_FACE);
-	glPopMatrix();
 	disable_blend();
 	glDisable(GL_LIGHTING);
 }

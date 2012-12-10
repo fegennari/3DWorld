@@ -257,6 +257,8 @@ public:
 
 class uplanet : public urev_body { // size = 324
 
+	void draw_atmosphere_side(upos_point_type const &pos_, unsigned ndiv) const;
+
 public:
 	unsigned population; // unused
 	float mosize, ring_ri, ring_ro;
