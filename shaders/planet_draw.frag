@@ -17,6 +17,6 @@ void main()
 	vec3 specular  = gl_FrontLightProduct[0].specular.rgb * pow(max(dot(norm, half_vect), 0.0), gl_FrontMaterial.shininess) * pow(texel.b, 4.0) * lt_atten;
 	vec3 color     = (texel.rgb * (ambient + diffuse)) + specular;
 	float cloud_val= atmosphere*gen_cloud_alpha(world_space_pos);
-	if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;}
+	if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;} // no clouds over high mountains?
 	gl_FragColor = apply_fog(gl_Color * vec4((color + gl_FrontMaterial.emission.rgb), 1.0));
 }

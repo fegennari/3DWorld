@@ -205,7 +205,7 @@ public:
 		enable();
 		set_light_scale();
 		set_specular(1.0, 80.0);
-		add_uniform_float("noise_scale", 2.5*cloud_tex_repeat); // clouds
+		add_uniform_float("noise_scale", 5.0*cloud_tex_repeat); // clouds
 		add_uniform_float("atmosphere",  atmosphere);
 		return 1;
 	}

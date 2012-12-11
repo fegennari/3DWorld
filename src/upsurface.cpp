@@ -262,7 +262,7 @@ void urev_body::gen_surface() {
 	set_rseeds();
 	delete surface;
 	surface = new upsurface(type);
-	float mag(SURFACE_HEIGHT*radius), freq(((type == UTYPE_MOON) ? 2.0 : 1.0)*INITIAL_FREQ*TWO_PI);
+	float mag(SURFACE_HEIGHT*radius), freq(((type == UTYPE_MOON) ? 1.5 : 1.0)*INITIAL_FREQ*TWO_PI);
 	surface->set_rand_seeds(urseed1, urseed2);
 	surface->gen(mag, freq);
 }
