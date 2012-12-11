@@ -205,7 +205,7 @@ public:
 		enable();
 		set_light_scale();
 		set_specular(1.0, 80.0);
-		add_uniform_float("noise_scale", 5.0*cloud_tex_repeat); // clouds
+		add_uniform_float("noise_scale", 4.0*cloud_tex_repeat); // clouds
 		add_uniform_float("atmosphere",  atmosphere);
 		return 1;
 	}
@@ -271,7 +271,7 @@ public:
 		}
 	}
 
-	bool enable_atmospheric(point const &planet_pos, float cloud_radius, float atmosphere) {
+	bool enable_atmospheric(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere) {
 		if (disable_shaders) return 0;
 		
 		if (!is_setup()) {
@@ -284,8 +284,9 @@ public:
 		enable();
 		add_uniform_vector3d("camera_pos", make_pt_global(get_camera_pos()));
 		add_uniform_vector3d("planet_pos", planet_pos);
-		add_uniform_float("cloud_radius", cloud_radius);
-		add_uniform_float("atmosphere", atmosphere);
+		add_uniform_float("planet_radius", planet_radius);
+		add_uniform_float("atmos_radius",  atmos_radius);
+		add_uniform_float("atmosphere",    atmosphere);
 		upload_mvm_to_shader(*this, "world_space_mvm");
 		set_light_scale();
 		return 1;
@@ -308,8 +309,8 @@ public:
 		return ring_shader.enable_ring(planet_pos, planet_radius, ring_ri, ring_ro, sun_pos, sun_radius);
 	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
-	bool enable_atmospheric_shader(point const &planet_pos, float cloud_radius, float atmosphere) {
-		return atmospheric_shader.enable_atmospheric(planet_pos, cloud_radius, atmosphere);
+	bool enable_atmospheric_shader(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere) {
+		return atmospheric_shader.enable_atmospheric(planet_pos, planet_radius, atmos_radius, atmosphere);
 	}
 	void disable_atmospheric_shader() {atmospheric_shader.disable_atmospheric();}
 };
@@ -2147,18 +2148,16 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 
 	if (size_ < 1.5 || atmos == 0) return;
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
-	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), cloud_radius, atmos)) return;
+	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), radius/PLANET_ATM_RSCALE, cloud_radius, atmos)) return;
 	enable_blend();
 	set_fill_mode();
 	WHITE.do_glColor();
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
 	draw_subdiv_sphere(all_zeros, cloud_radius, max(4, min(48, int(4.8*size_))), 0, 1);
 	glPopMatrix();
-	glCullFace(GL_BACK);
 	glDisable(GL_CULL_FACE);
 	disable_blend();
 	usg.disable_atmospheric_shader();
