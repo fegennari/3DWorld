@@ -870,6 +870,7 @@
     <None Include="shaders\planet_clouds.frag" />
     <None Include="shaders\planet_clouds.vert" />
     <None Include="shaders\planet_draw.frag" />
+    <None Include="shaders\planet_draw.vert" />
     <None Include="shaders\planet_rings.frag" />
     <None Include="shaders\planet_rings.vert" />
     <None Include="shaders\point_to_quad.geom" />

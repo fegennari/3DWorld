@@ -188,17 +188,25 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet() {
+	bool enable_planet(float atmosphere, int cloud_tex_repeat) {
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
-			set_vert_shader("per_pixel_lighting");
-			set_frag_shader("linear_fog.part+ads_lighting.part*+planet_draw");
+			set_active_texture(1);
+			bind_3d_texture(get_noise_tex_3d());
+			set_active_texture(0);
+			set_prefix("#define NUM_OCTAVES 8", 1); // FS
+			set_vert_shader("planet_draw");
+			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+planet_draw");
 			shared_setup();
+			add_uniform_int("cloud_noise_tex", 1);
+			add_uniform_float("time", 8.0E-6*cloud_time);
 		}
 		enable();
 		set_light_scale();
 		set_specular(1.0, 80.0);
+		add_uniform_float("noise_scale", 2.5*cloud_tex_repeat); // clouds
+		add_uniform_float("atmosphere",  atmosphere);
 		return 1;
 	}
 	void disable_planet() {
@@ -263,27 +271,6 @@ public:
 		}
 	}
 
-	bool enable_cloud(int cloud_tex_repeat) {
-		if (disable_shaders) return 0;
-		
-		if (!is_setup()) {
-			bind_3d_texture(get_noise_tex_3d());
-			set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			set_prefix("#define NUM_OCTAVES 8",    1); // FS
-			set_vert_shader("planet_clouds");
-			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+planet_clouds");
-			shared_setup("cloud_noise_tex");
-			add_uniform_float("time", 1.0E-5*cloud_time);
-		}
-		enable();
-		set_light_scale();
-		add_uniform_float("noise_scale", 2.5*cloud_tex_repeat);
-		return 1;
-	}
-	void disable_cloud() {
-		if (is_setup()) {disable();}
-	}
-
 	bool enable_atmospheric(point const &planet_pos, float cloud_radius, float atmosphere) {
 		if (disable_shaders) return 0;
 		
@@ -313,7 +300,7 @@ class ushader_group {
 	universe_shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 public:
-	bool enable_planet_shader() {return planet_shader.enable_planet();}
+	bool enable_planet_shader(float atmosphere, int cloud_tex_repeat) {return planet_shader.enable_planet(atmosphere, cloud_tex_repeat);}
 	void disable_planet_shader() {planet_shader.disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
 	void disable_star_shader() {star_shader.disable_star();}
@@ -321,8 +308,6 @@ public:
 		return ring_shader.enable_ring(planet_pos, planet_radius, ring_ri, ring_ro, sun_pos, sun_radius);
 	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
-	bool enable_cloud_shader(int cloud_tex_repeat) {return cloud_shader.enable_cloud(cloud_tex_repeat);}
-	void disable_cloud_shader() {cloud_shader.disable_cloud();}
 	bool enable_atmospheric_shader(point const &planet_pos, float cloud_radius, float atmosphere) {
 		return atmospheric_shader.enable_atmospheric(planet_pos, cloud_radius, atmosphere);
 	}
@@ -615,7 +600,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 			current.cluster = sol.cluster_id;
 
 			if (has_sun && !skip_s && univ_sphere_vis(pos3, 2.0*sradius)) {
-				if (!sol.sun.draw(pos3, cmvs, usg, 1.0)) continue;
+				if (!sol.sun.draw(pos3, cmvs, usg)) continue;
 			}
 			bool const planets_visible(PLANET_MAX_SIZE*sizes >= 0.3*sradius || !sclip);
 			if (planets_visible) sol.process();
@@ -656,8 +641,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 				if (planet_visible && planet.is_ok() && !skip_p) {
 					//uobject const *sobj(sel_s ? get_shadowing_object(planet, sol.sun) : NULL);
 					planet.check_gen_texture(int(sizep));
-					float const rscale((planet.atmos > 0.5 && planet.tsize <= PLANET_ATM_TEX_SZ) ? PLANET_ATM_RSCALE : 1.0);
-					planet.draw(pos4, cmvs, usg, rscale); // ignore return value?
+					planet.draw(pos4, cmvs, usg); // ignore return value?
 				}
 				planet.process();
 				bool const skip_moons(p_system && sel_planet && !skip_p);
@@ -674,7 +658,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 						current.moon = l;
 						//uobject const *sobj(sel_s ? get_shadowing_object(moon, sol.sun) : NULL);
 						moon.check_gen_texture(int(sizem));
-						moon.draw(pos5, cmvs, usg, 1.0); // draw moon
+						moon.draw(pos5, cmvs, usg); // draw moon
 					}
 				}
 				if (planet.is_ok() && !skip_p) {
@@ -1811,17 +1795,17 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 }
 
 
-bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale) {
+bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) {
 
 	vector3d const vcp(cmvs.camera, pos_);
-	float const radius0(rscale*radius), dist(vcp.mag() - radius0);
+	float const dist(vcp.mag() - radius);
 	if (dist > U_VIEW_DIST) return 0; // too far away
-	float size(get_pixel_size(radius0, dist)); // approx. in pixels
+	float size(get_pixel_size(radius, dist)); // approx. in pixels
 	// view volume has already been checked
 	if (size < 0.02) return 0; // too small
 	float const st_prod(STAR_BRIGHTNESS*size*temp);
 	if (st_prod < 2.0 || st_prod*temp < 4.0) return 0; // too dim
-	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius0));
+	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius));
 	colorRGBA ocolor(color);
 		
 	if (st_prod < 30.0) {
@@ -1868,13 +1852,13 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, 
 
 		if (size > 6) {
 			ocolor.do_glColor();
-			draw_flare(pos_, all_zeros, 2.5*radius0, 2.5*radius0); // draw star's flare
+			draw_flare(pos_, all_zeros, 2.5*radius, 2.5*radius); // draw star's flare
 		}
 		apply_gl_rotate();
 		glEnable(GL_TEXTURE_2D);
 		select_texture(WHITE_TEX);
 		WHITE.do_glColor();
-		draw_sphere_dlist(all_zeros, radius0, ndiv, 1); // small sphere - use display list
+		draw_sphere_dlist(all_zeros, radius, ndiv, 1); // small sphere - use display list
 		usg.disable_star_shader();
 		glDisable(GL_TEXTURE_2D);
 		if (size >= 64) {draw_flares(ndiv, 1);}
@@ -1884,26 +1868,26 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, 
 }
 
 
-bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale) {
+bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) {
 
 	vector3d const vcp(cmvs.camera, pos_);
-	float const radius0(rscale*radius), dist(max(TOLERANCE, (vcp.mag() - radius0)));
+	float const dist(max(TOLERANCE, (vcp.mag() - radius)));
 	if (dist > U_VIEW_DIST) return 0; // too far away
-	float size(get_pixel_size(radius0, dist)); // approx. in pixels
+	float size(get_pixel_size(radius, dist)); // approx. in pixels
 	if (size < 0.25 && !(display_mode & 0x01)) return 0; // too small
-	if (!univ_sphere_vis(pos_, radius0))       return 1; // check if in the view volume
+	if (!univ_sphere_vis(pos_, radius))        return 1; // check if in the view volume
 		
 	if (world_mode == WMODE_UNIVERSE && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
 		set_owner_color(); // lighting is already disabled
-		draw_sphere_dlist(make_pt_global(pos_), radius0*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
+		draw_sphere_dlist(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
 		return 1;
 	}
-	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius0));
+	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius));
 	bool enable_l0(0);
 	colorRGBA ocolor(color);
 
 	if (world_mode == WMODE_UNIVERSE && !(display_mode & 2)) {
-		show_colonizable_liveable(pos_, radius0); // show liveable/colonizable planets/moons
+		show_colonizable_liveable(pos_, radius); // show liveable/colonizable planets/moons
 	}
 	if (shadowed) {
 		// *** use exact shadow? ***
@@ -1940,7 +1924,7 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();
-		if (texture) {usg.enable_planet_shader();}
+		if (texture) {usg.enable_planet_shader(atmos, cloud_tex_repeat);}
 		
 		if (texture) { // texture map
 			glEnable(GL_TEXTURE_2D);
@@ -1952,11 +1936,11 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 			ocolor.do_glColor();
 		}
 		if (ndiv >= N_SPHERE_DIV) {
-			draw_surface(pos_, radius0, size, ndiv);
+			draw_surface(pos_, radius, size, ndiv);
 		}
 		else {
 			if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
-			draw_sphere_dlist(all_zeros, radius0, ndiv, texture); // small sphere - use display list
+			draw_sphere_dlist(all_zeros, radius, ndiv, texture); // small sphere - use display list
 		}
 		if (texture) {
 			usg.disable_planet_shader();
@@ -2159,40 +2143,25 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 }
 
 
-void uplanet::draw_atmosphere_side(upos_point_type const &pos_, unsigned ndiv) const {
-
-	float const cloud_radius(PLANET_ATM_RSCALE*radius);
-	glPushMatrix();
-	global_translate(pos_);
-	apply_gl_rotate();
-	draw_subdiv_sphere(all_zeros, cloud_radius, ndiv, 0, 1);
-	glPopMatrix();
-}
-
-
 void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const { // must be drawn last
 
 	if (size_ < 1.5 || atmos == 0) return;
-	unsigned const ndiv(max(4, min(48, int(4.8*size_))));
+	float const cloud_radius(PLANET_ATM_RSCALE*radius);
+	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), cloud_radius, atmos)) return;
 	enable_blend();
-	glEnable(GL_LIGHTING);
 	set_fill_mode();
+	WHITE.do_glColor();
 	glEnable(GL_CULL_FACE);
-
-	if (usg.enable_atmospheric_shader(make_pt_global(pos_), PLANET_ATM_RSCALE*radius, atmos)) {
-		WHITE.do_glColor();
-		glCullFace(GL_FRONT);
-		draw_atmosphere_side(pos_, ndiv);
-		usg.disable_atmospheric_shader();
-		glCullFace(GL_BACK);
-	}
-	colorRGBA(1.0, 1.0, 1.0, atmos).do_glColor();
-	usg.enable_cloud_shader(cloud_tex_repeat);
-	draw_atmosphere_side(pos_, ndiv);
-	usg.disable_cloud_shader();
+	glCullFace(GL_FRONT);
+	glPushMatrix();
+	global_translate(pos_);
+	apply_gl_rotate();
+	draw_subdiv_sphere(all_zeros, cloud_radius, max(4, min(48, int(4.8*size_))), 0, 1);
+	glPopMatrix();
+	glCullFace(GL_BACK);
 	glDisable(GL_CULL_FACE);
 	disable_blend();
-	glDisable(GL_LIGHTING);
+	usg.disable_atmospheric_shader();
 }
 
 

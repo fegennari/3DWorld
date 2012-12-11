@@ -283,12 +283,9 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 	unsigned const num_sines(surface->num_sines);
 	float const *const rdata(surface->rdata);
 	int const type(surface->type);
-	float const sizef(size/TWO_PI), mt2(0.5*(table_size-1)), scale(1.5/surface->max_mag), atm_scaled(atmos/256.0);
+	float const sizef(size/TWO_PI), mt2(0.5*(table_size-1)), scale(1.5/surface->max_mag);
 	float const delta(TWO_PI/size), sin_ds(sin(delta)), cos_ds(cos(delta));
-	bool const blend_atm(atmos > 0.0 && size <= PLANET_ATM_TEX_SZ);
-	unsigned const sx(textures[CLOUD_TEX].width), sy(textures[CLOUD_TEX].height), pole_thresh(size>>5);
-	unsigned char const *const sky(textures[CLOUD_TEX].get_data());
-	assert(sky && textures[CLOUD_TEX].ncolors == 4); // RGBA
+	unsigned const pole_thresh(size>>5);
 	wr_scale = 1.0/(1.0 - water);
 
 	for (unsigned i = 0; i < table_size; ++i) { // build sin table
@@ -336,14 +333,6 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 			val = 0.5*(max(-1.0f, min(1.0f, scale*val)) + 1.0);
 			if (use_heightmap) surface->heightmap[hmoff + j] = val;
 			get_surface_color((data + index), val, phi);
-
-			if (blend_atm) { // blend sky texture into current texture
-				unsigned const tjs(((tj*sx*cloud_tex_repeat)>>size_p2)&(sx-1)), tis(((ti*sy*cloud_tex_repeat)>>size_p2)&(sy-1));
-				//unsigned const soff((sx*((ti*sy)>>size_p2) + ((tj*sx)>>size_p2)) << 2); // RGBA
-				unsigned const soff((sx*tis + tjs) << 2); // RGBA
-				float const atm0(atm_scaled*sky[soff+3]); // multiply alpha values
-				BLEND_COLOR((data + index), (sky + soff), (data + index), atm0);
-			}
 			sin_s = s*cos_ds + c*sin_ds;
 			cos_s = c*cos_ds - s*sin_ds;
 		} // for j

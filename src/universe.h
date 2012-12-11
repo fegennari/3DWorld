@@ -61,7 +61,7 @@ unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
 unsigned const MAX_MOONS_PER_PLANET    = 8;
 
 float const MP_COLOR_VAR        = 0.4;
-float const PLANET_ATM_RSCALE   = 1.028;
+float const PLANET_ATM_RSCALE   = 1.025;
 float const ORBIT_PLANE_DELTA   = 0.06;
 float const ORBIT_SPACE_MARGIN  = 1.1;
 float const CAMERA_MASS         = 1.0;
@@ -187,7 +187,7 @@ public:
 		add_gravity_vector_base(vgravity, mpos, gravity, MAX_SOBJ_GRAVITY);
 	}
 	virtual bool surface_test(float rad, point const &p, float &coll_r, bool simple) const {return 1;}
-	virtual bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale) = 0;
+	virtual bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) = 0;
 	virtual void free() {gen = 0;}
 };
 
@@ -235,7 +235,7 @@ public:
 	int  get_owner() const {return owner;}
 	void set_owner_color() const;
 	void get_surface_color(unsigned char *data, float val, float phi) const;
-	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale);
+	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg);
 	void draw_surface(point_d const &pos_, float radius0, float size, int ndiv);
 	void show_colonizable_liveable(point const &pos_, float radius0) const;
 	void inc_orbiting_refs() {++orbiting_refs;}
@@ -256,9 +256,6 @@ public:
 
 
 class uplanet : public urev_body { // size = 324
-
-	void draw_atmosphere_side(upos_point_type const &pos_, unsigned ndiv) const;
-
 public:
 	unsigned population; // unused
 	float mosize, ring_ri, ring_ro;
@@ -331,7 +328,7 @@ public:
 	void create(point const &pos_);
 	void gen_color();
 	colorRGBA get_ambient_color_val() const;
-	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, float rscale);
+	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg);
 	void draw_flares(int ndiv, bool texture);
 	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0);}
 	string get_name()  const {return "Star " + getname();}
