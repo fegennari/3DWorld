@@ -162,14 +162,13 @@ public:
 class uobj_solid : public uobj_rgen, public named_obj { // size = 176
 
 public:
-	bool shadowed;
 	char type;
 	float temp, density, mass, gravity;
 	double rot_ang, rot_ang0;
 	vector3d rot_axis;
 	colorRGBA color, colorA, colorB;
 
-	uobj_solid(char type_) : shadowed(0), type(type_) {set_defaults();}
+	uobj_solid(char type_) : type(type_) {set_defaults();}
 	virtual ~uobj_solid() {}
 	void set_defaults() {status = 0; gen = 0;}
 	void get_colors(unsigned char ca[3], unsigned char cb[3]) const;
@@ -245,7 +244,6 @@ public:
 	virtual float get_hmap_scale() const = 0;
 	virtual void create(bool phase) = 0;
 	virtual void calc_temperature() = 0;
-	virtual void update_shadows()   = 0;
 	virtual void get_valid_orbit_r(float &orbit_r, float obj_r) const = 0;
 	virtual bool colonizable_int() const = 0;
 	virtual point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
@@ -272,7 +270,6 @@ public:
 	void gen_prings();
 	void gen_color();
 	void calc_temperature();
-	void update_shadows();
 	void get_valid_orbit_r(float &orbit_r, float obj_r) const;
 	bool colonizable_int() const {return (water > 0.1 && atmos > 0.1);}
 	bool has_vegetation()  const {return (water > 0.2 && atmos > 0.1);}
@@ -300,7 +297,6 @@ public:
 	bool shadowed_by_planet();
 	void get_valid_orbit_r(float &orbit_r, float obj_r) const;
 	bool colonizable_int() const {return (radius > 1.5*MOON_MIN_SIZE && planet && planet->colonizable());}
-	void update_shadows() {shadowed = shadowed_by_planet();}
 	float get_hmap_scale() const {return MOON_HMAP_SCALE;}
 	string get_name() const {return "Moon " + getname();}
 	string get_info() const;

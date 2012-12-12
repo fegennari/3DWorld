@@ -71,7 +71,6 @@ int gen_rand_seed1(point const &center);
 int gen_rand_seed2(point const &center);
 bool is_shadowed(point const &pos, float radius, bool expand, ussystem const &sol, uobject const *&sobj);
 unsigned get_texture_size(float psize);
-int moon_shadowed_by_planet(umoon const &moon);
 bool get_gravity(s_object &result, point pos, vector3d &gravity, int offset);
 void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, bool shadowed, bool no_ambient, float a_scale, float d_scale);
 void set_light_galaxy_ambient_only();
@@ -211,6 +210,7 @@ public:
 		add_uniform_float("sun_radius",  sun_radius);
 		add_uniform_vector3d("ss_pos",   ss_pos);
 		add_uniform_float("ss_radius",   ss_radius);
+		upload_mvm_to_shader(*this, "world_space_mvm");
 		return 1;
 	}
 	void disable_planet() {
@@ -249,7 +249,7 @@ public:
 		if (disable_shaders) return 0;
 		
 		if (!is_setup()) {
-			set_vert_shader("planet_rings");
+			set_vert_shader("planet_draw");
 			set_frag_shader("linear_fog.part+ads_lighting.part*+sphere_shadow.part*+planet_rings");
 			shared_setup("ring_tex");
 			add_uniform_int("noise_tex", 1);
@@ -1289,14 +1289,6 @@ point_d uplanet::do_update(point_d const &p0, bool update_rev, bool update_rot) 
 }
 
 
-void uplanet::update_shadows() {
-
-	for (unsigned i = 0; i < moons.size(); ++i) {
-		moons[i].update_shadows();
-	}
-}
-
-
 struct upring {
 	float radius1, radius2;
 };
@@ -1369,7 +1361,7 @@ void umoon::get_valid_orbit_r(float &orbit_r, float obj_r) const { // for satell
 void umoon::calc_temperature() {
 
 	temp = planet->system->sun.get_energy()/max(TOLERANCE, p2p_dist_sq(planet->system->sun.pos, pos));
-	if (shadowed) temp *= 0.75; // cooler in shadow
+	if (shadowed_by_planet()) {temp *= 0.75;} // cooler in shadow
 }
 
 
@@ -1385,7 +1377,6 @@ void umoon::create(bool phase) { // no rotation due to satellites
 		assert(gen == 2);
 		density = rand_uniform2(0.8, 1.2);
 		set_grav_mass();
-		update_shadows();
 		temp = planet->temp;
 		gen_color();
 		gen_name(current);
@@ -1433,11 +1424,7 @@ point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot
 	new_pos *= double(orbit);
 	new_pos += point_d(p0);
 	pos      = new_pos;
-
-	if (update_rev && int(10*ra1) != int(10*rev_ang)) {
-		update_shadows(); // update every 0.1 degree
-		calc_temperature();
-	}
+	if (update_rev && int(10*ra1) != int(10*rev_ang)) {calc_temperature();} // update every 0.1 degree
 	return new_pos;
 }
 
@@ -1544,10 +1531,9 @@ void uplanet::gen_color() {
 void umoon::gen_color() {
 	
 	float const brightness(rand_uniform2(0.5, 0.75));
-	float const mult(shadowed ? BASE_DIFFUSE/BASE_AMBIENT : 1.0);
 
 	for (unsigned i = 0; i < 3; ++i) {
-		color[i] = mult*(0.75*brightness + 0.25*rand2d());
+		color[i] = 0.75*brightness + 0.25*rand2d();
 	}
 	color.alpha = 1.0;
 	color.set_valid_color();
@@ -1920,16 +1906,10 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		return 1;
 	}
 	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius));
-	bool enable_l0(0);
 	colorRGBA ocolor(color);
 
 	if (world_mode == WMODE_UNIVERSE && !(display_mode & 2)) {
 		show_colonizable_liveable(pos_, radius); // show liveable/colonizable planets/moons
-	}
-	if (shadowed) {
-		// *** use exact shadow? ***
-		if (glIsEnabled(GL_LIGHT0)) enable_l0 = 1;
-		glDisable(GL_LIGHT0);
 	}
 	glEnable(GL_LIGHTING);
 	if (size < 1.0) {blend_color(ocolor, ocolor, bkg_color, size*size, 1);} // small, attenuate
@@ -1985,7 +1965,6 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		}
 		glPopMatrix();
 	} // end sphere draw
-	if (enable_l0) glEnable(GL_LIGHT0);
 	glDisable(GL_LIGHTING);
 	return 1;
 }
