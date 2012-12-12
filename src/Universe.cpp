@@ -188,7 +188,7 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(float atmosphere, int cloud_tex_repeat) {
+	bool enable_planet(float atmosphere, int cloud_tex_repeat, point const &sun_pos, float sun_radius, point const &ss_pos, float ss_radius) {
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
@@ -197,7 +197,7 @@ public:
 			set_active_texture(0);
 			set_prefix("#define NUM_OCTAVES 8", 1); // FS
 			set_vert_shader("planet_draw");
-			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+planet_draw");
+			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", 1);
 			add_uniform_float("time", 8.0E-6*cloud_time);
@@ -207,6 +207,10 @@ public:
 		set_specular(1.0, 80.0);
 		add_uniform_float("noise_scale", 4.0*cloud_tex_repeat); // clouds
 		add_uniform_float("atmosphere",  atmosphere);
+		add_uniform_vector3d("sun_pos",  sun_pos);
+		add_uniform_float("sun_radius",  sun_radius);
+		add_uniform_vector3d("ss_pos",   ss_pos);
+		add_uniform_float("ss_radius",   ss_radius);
 		return 1;
 	}
 	void disable_planet() {
@@ -246,7 +250,7 @@ public:
 		
 		if (!is_setup()) {
 			set_vert_shader("planet_rings");
-			set_frag_shader("linear_fog.part+ads_lighting.part*+planet_rings");
+			set_frag_shader("linear_fog.part+ads_lighting.part*+sphere_shadow.part*+planet_rings");
 			shared_setup("ring_tex");
 			add_uniform_int("noise_tex", 1);
 		}
@@ -301,7 +305,9 @@ class ushader_group {
 	universe_shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 public:
-	bool enable_planet_shader(float atmosphere, int cloud_tex_repeat) {return planet_shader.enable_planet(atmosphere, cloud_tex_repeat);}
+	bool enable_planet_shader(float atmosphere, int cloud_tex_repeat, point const &sun_pos, float sun_radius, point const &ss_pos, float ss_radius) {
+		return planet_shader.enable_planet(atmosphere, cloud_tex_repeat, sun_pos, sun_radius, ss_pos, ss_radius);
+	}
 	void disable_planet_shader() {planet_shader.disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
 	void disable_star_shader() {star_shader.disable_star();}
@@ -651,8 +657,25 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 				bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(pos4, pradius));
 				
 				if (planet_visible && planet.is_ok() && !skip_p) {
+					point ss_pos(all_zeros);
+					float ss_radius(0.0);
+
+					if (has_sun) { // determine if any moons shadow the planet
+						for (unsigned l = 0; l < planet.moons.size(); ++l) {
+							umoon const &moon(planet.moons[l]);
+							point_d const pos5(pos + moon.pos);
+
+							if (p2p_dist_sq(pos5, pos3) < p2p_dist_sq(pos4, pos3) &&
+								pt_line_dist(pos5, pos3, pos4) < (pradius + moon.radius))
+							{
+								//cout << "moon " << l << " " << moon.getname() << " shadows planet " << k << " " << planet.getname() << endl;
+								ss_pos    = pos5;
+								ss_radius = moon.radius;
+							}
+						}
+					}
 					planet.check_gen_texture(int(sizep));
-					planet.draw(pos4, cmvs, usg); // ignore return value?
+					planet.draw(pos4, cmvs, usg, pos3, (has_sun ? sradius : 0.0), ss_pos, ss_radius); // ignore return value?
 				}
 				planet.process();
 				bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
@@ -668,7 +691,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 						if ((sizem < 0.2 && sclip) || !univ_sphere_vis(pos5, moon.radius)) continue;
 						current.moon = l;
 						moon.check_gen_texture(int(sizem));
-						moon.draw(pos5, cmvs, usg); // draw moon
+						moon.draw(pos5, cmvs, usg, pos3, (has_sun ? sradius : 0.0), pos4, planet.radius); // draw moon
 					}
 				}
 				if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
@@ -1882,7 +1905,7 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) 
 }
 
 
-bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) {
+bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, point const &sun_pos, float sun_radius, point const &ss_pos, float ss_radius) {
 
 	vector3d const vcp(cmvs.camera, pos_);
 	float const dist(max(TOLERANCE, (vcp.mag() - radius)));
@@ -1935,10 +1958,10 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
+		if (texture) {usg.enable_planet_shader(atmos, cloud_tex_repeat, make_pt_global(sun_pos), sun_radius, make_pt_global(ss_pos), ss_radius);}
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();
-		if (texture) {usg.enable_planet_shader(atmos, cloud_tex_repeat);}
 		
 		if (texture) { // texture map
 			glEnable(GL_TEXTURE_2D);

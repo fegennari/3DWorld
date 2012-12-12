@@ -880,6 +880,7 @@
     <None Include="shaders\ship_draw.vert" />
     <None Include="shaders\snow.vert" />
     <None Include="shaders\spec_map.part.frag" />
+    <None Include="shaders\sphere_shadow.part" />
     <None Include="shaders\star_draw.frag" />
     <None Include="shaders\star_draw.vert" />
     <None Include="shaders\tc_by_vert_id.part.vert" />

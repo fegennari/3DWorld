@@ -1,0 +1,26 @@
+float pt_line_dist(in vec3 P, in vec3 L1, in vec3 L2) {
+	return length(cross((L2 - L1), (L1 - P)))/length(L2 - L1);
+}
+
+float calc_sphere_shadow_atten(in vec3 pos, in vec3 lpos, in float lradius, in vec3 spos, in float sradius) {
+	float atten = 1.0;
+	float ldist = length(lpos - pos);
+
+	if (ldist > length(lpos - spos)) { // behind the sun
+		const float PI = 3.14159;
+		float d = pt_line_dist(spos, lpos, pos);
+		float r = sradius;
+		float R = lradius*length(spos - pos)/ldist;
+		float tot_area = PI*R*R;
+
+		if (d < abs(R - r)) { // fully overlapped
+			atten *= 1.0 - PI*min(r,R)*min(r,R)/tot_area;
+		}
+		else if (d < (r + R)) { // partially overlapped
+			float shadowed_area = r*r*acos((d*d+r*r-R*R)/(2*d*r)) + R*R*acos((d*d+R*R-r*r)/(2*d*R)) - 0.5*sqrt((-d+r+R)*(d+r-R)*(d-r+R)*(d+r+R));
+			atten *= 1.0 - clamp(shadowed_area/tot_area, 0.0, 1.0);
+		}
+	}
+	return atten;
+}
+
