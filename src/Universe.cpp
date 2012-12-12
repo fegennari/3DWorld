@@ -540,6 +540,13 @@ void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushad
 }
 
 
+struct ix_size_t {
+	unsigned ix;
+	float size;
+	ix_size_t(unsigned ix_=0, float size_=0.0) : ix(ix_), size(size_) {}
+};
+
+
 // pass:
 //  0. Draw all except for the player's system
 //  If player's system is none then stop
@@ -553,6 +560,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 	bool const p_system(clobj.type >= UTYPE_SYSTEM);
 	point_d const pos(cell.rel_center);
 	float const wwsq((float)window_width*(float)window_width);
+	vector<ix_size_t> atmos_to_draw, rings_to_draw;
 
 	for (unsigned i = 0; i < cell.galaxies->size(); ++i) { // remember, galaxies can overlap
 		bool const sel_g((int)i == clobj.galaxy), sclip(!sel_g || (display_mode & 0x01) != 0);
@@ -620,6 +628,9 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 				if (!sel_g) sol.free_planets(); // optional
 				if (!update_pass) continue;
 			}
+			atmos_to_draw.resize(0);
+			rings_to_draw.resize(0);
+
 			for (unsigned k = 0; k < sol.planets.size(); ++k) {
 				bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
 				if (p_system && (pass == 2 && !sel_p)) continue; // draw in another pass
@@ -640,16 +651,15 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 				bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(pos4, pradius));
 				
 				if (planet_visible && planet.is_ok() && !skip_p) {
-					//uobject const *sobj(sel_s ? get_shadowing_object(planet, sol.sun) : NULL);
 					planet.check_gen_texture(int(sizep));
 					planet.draw(pos4, cmvs, usg); // ignore return value?
 				}
 				planet.process();
-				bool const skip_moons(p_system && sel_planet && !skip_p);
+				bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
 
 				if (sizep >= 1.0 && !skip_moons) {
 					for (unsigned l = 0; l < planet.moons.size(); ++l) {
-						bool const sel_m(sel_p && clobj.type == UTYPE_MOON && (int)l == clobj.moon);
+						bool const sel_m(sel_moon && (int)l == clobj.moon);
 						if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
 						umoon &moon(planet.moons[l]);
 						if (!moon.is_ok()) continue;
@@ -657,21 +667,24 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 						float const sizem(calc_sphere_size(pos5, camera, moon.radius));
 						if ((sizem < 0.2 && sclip) || !univ_sphere_vis(pos5, moon.radius)) continue;
 						current.moon = l;
-						//uobject const *sobj(sel_s ? get_shadowing_object(moon, sol.sun) : NULL);
 						moon.check_gen_texture(int(sizem));
 						moon.draw(pos5, cmvs, usg); // draw moon
 					}
 				}
-				if (planet.is_ok() && !skip_p) {
-					if (sizep > 0.1) {
-						planet.ensure_rings_texture();
-						planet.draw_prings(usg, pos4, sizep, pos3, (has_sun ? sradius : 0.0));
-					}
-					if (planet_visible && planet.atmos > 0.01 && planet.tsize > PLANET_ATM_TEX_SZ) {
-						planet.draw_atmosphere(usg, pos4, sizep);
-					}
+				if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
+					if (sizep > 0.1) {rings_to_draw.push_back(ix_size_t(k, sizep));}
+					if (planet_visible && planet.atmos > 0.01 && planet.tsize > PLANET_ATM_TEX_SZ) {atmos_to_draw.push_back(ix_size_t(k, sizep));}
 				}
 			} // planet k
+			for (vector<ix_size_t>::const_iterator k = rings_to_draw.begin(); k != rings_to_draw.end(); ++k) {
+				uplanet &planet(sol.planets[k->ix]);
+				planet.ensure_rings_texture();
+				planet.draw_prings(usg, (pos + planet.pos), k->size, pos3, (has_sun ? sradius : 0.0));
+			}
+			for (vector<ix_size_t>::const_iterator k = atmos_to_draw.begin(); k != atmos_to_draw.end(); ++k) {
+				uplanet const &planet(sol.planets[k->ix]);
+				planet.draw_atmosphere(usg, (pos + planet.pos), k->size);
+			}
 		} // system j
 	} // galaxy i
 }
@@ -2137,6 +2150,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	scale_by(rscale);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
 	WHITE.do_glColor();
+	plus_z.do_glNormal();
 	draw_tquad(ring_ro, ring_ro, 0.0, 1);
 	usg.disable_ring_shader();
 	glPopMatrix();
