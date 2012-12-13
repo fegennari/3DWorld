@@ -14,19 +14,20 @@
 unsigned const ASTEROID_NDIV   = 32; // for sphere model, better if a power of 2
 unsigned const ASTEROID_VOX_SZ = 64; // for voxel model
 float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for accuracy (heightmap)
+float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader asteroids
 
 
 extern vector<us_weapon> us_weapons;
 
-shader_t cached_shaders[8][2]; // num_lights x enable_fog
+shader_t cached_voxel_shaders[8]; // one for each value of num_lights
+shader_t cached_proc_shaders [8];
 
 
 void clear_cached_shaders() {
 
 	for (unsigned i = 0; i < 8; ++i) {
-		for (unsigned j = 0; j < 2; ++j) {
-			cached_shaders[i][j].end_shader();
-		}
+		cached_voxel_shaders[i].end_shader();
+		cached_proc_shaders [i].end_shader();
 	}
 }
 
@@ -58,6 +59,49 @@ public:
 		model3d.draw();
 		end_texture();
 		enable_blend();
+	}
+};
+
+
+class uobj_asteroid_shader : public uobj_asteroid {
+	int rseed_ix;
+
+public:
+	uobj_asteroid_shader(point const &pos_, float radius_, int rseed_ix_, unsigned lt) : uobj_asteroid(pos_, radius_, lt) {
+		c_radius = (1.0 + AST_PROC_HEIGHT)*radius;
+	}
+	virtual void draw_obj(uobj_draw_data &ddata) const {
+		if (ddata.shader.is_setup()) {ddata.shader.disable();}
+		unsigned const num_lights(min(8U, exp_lights.size()+2U));
+		shader_t &s(cached_proc_shaders[num_lights]);
+		
+		if (s.is_setup()) { // already setup
+			s.enable();
+		}
+		else {
+			bind_3d_texture(get_noise_tex_3d());
+			s.set_int_prefix("num_lights", num_lights, 1); // FS
+			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+			s.set_prefix("#define NO_SPECULAR",      1); // FS (optional/optimization)
+			s.set_prefix("#define NUM_OCTAVES 8",    0); // VS
+			s.set_vert_shader("perlin_clouds_3d.part*+procedural_rock");
+			s.set_frag_shader("linear_fog.part+ads_lighting.part*+procedural_rock");
+			s.begin_shader();
+			s.setup_fog_scale();
+			s.add_uniform_int("cloud_noise_tex", 0);
+			s.add_uniform_float("time", float(rseed_ix));
+			s.add_uniform_float("noise_scale",  0.1);
+			s.add_uniform_float("height_scale", AST_PROC_HEIGHT);
+		}
+		colorRGBA(0.5, 0.45, 0.4, 1.0).do_glColor();
+		select_texture(WHITE_TEX);
+		draw_sphere_dlist(all_zeros, 1.0, 3*ddata.ndiv/2, 1);
+		s.disable();
+
+		if (ddata.final_pass) {
+			if (ddata.shader.is_setup()) {ddata.shader.enable();}
+			end_texture();
+		}
 	}
 };
 
@@ -247,8 +291,7 @@ public:
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(model.get_params().tids[0]); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
 		unsigned const num_lights(min(8U, exp_lights.size()+2U));
-		bool const no_fog(glIsEnabled(GL_FOG) == 0);
-		shader_t &s(cached_shaders[num_lights][no_fog]);
+		shader_t &s(cached_voxel_shaders[num_lights]);
 		
 		if (s.is_setup()) { // already setup
 			s.enable();
@@ -257,7 +300,6 @@ public:
 			s.set_int_prefix("num_lights", num_lights, 1); // FS
 			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			s.set_prefix("#define NO_SPECULAR", 1); // FS (optional/optimization)
-			if (no_fog) s.set_prefix("#define NO_FOG", 1); // FS
 			s.set_vert_shader("asteroid");
 			s.set_frag_shader("linear_fog.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+asteroid");
 			s.begin_shader();
@@ -381,6 +423,7 @@ uobj_asteroid *uobj_asteroid::create(point const &pos, float radius, unsigned mo
 	case AS_MODEL_ROCK2:  return new uobj_asteroid_rock3d(pos, radius, rseed_ix, lt, 1);
 	case AS_MODEL_HMAP:   return new uobj_asteroid_hmap  (pos, radius, rseed_ix, lt);
 	case AS_MODEL_VOXEL:  return new uobj_asteroid_voxel (pos, radius, rseed_ix, lt);
+	case AS_MODEL_SHADER: return new uobj_asteroid_shader(pos, radius, rseed_ix, lt);
 	default: assert(0);
 	}
 	return NULL; // never gets here

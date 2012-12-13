@@ -9,7 +9,7 @@ point              <float x> <float y> <float z>
 <enum alignment>   {NEUTRAL | PLAYER | GOV | PIRATE | RED | BLUE | ORANGE | PURPLE}
 <enum ai_type>     {AI_IGNORE | AI_RETREAT | AI_ATT_WAIT | AI_ATT_ENEMY | AI_ATT_ALL | AI_SEEKING | AI_NONE}
 <enum target_type> {TARGET_CLOSEST | TARGET_ATTACKER | TARGET_LAST | TARGET_PARENT}
-<enum ast_model>   {AS_MODEL_SPHERE | AS_MODEL_ROCK1 | AS_MODEL_ROCK2 | AS_MODEL_HMAP | AS_MODEL_VOXEL}
+<enum ast_model>   {AS_MODEL_SPHERE | AS_MODEL_ROCK1 | AS_MODEL_ROCK2 | AS_MODEL_HMAP | AS_MODEL_VOXEL | AS_MODEL_SHADER}
 <color>            <float R> <float G> <float B> <float A>
 $GLOBAL_REGEN  <float regen_time(s)>
 $RAND_SEED     <unsigned seed>

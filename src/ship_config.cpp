@@ -626,7 +626,7 @@ void ship_defs_file_reader::setup_keywords() {
 	string const align_strs("NEUTRAL PLAYER GOV PIRATE RED BLUE ORANGE PURPLE");
 	string const ai_strs   ("AI_IGNORE AI_RETREAT AI_ATT_WAIT AI_ATT_ENEMY AI_ATT_ALL AI_SEEKING AI_NONE");
 	string const targ_strs ("TARGET_CLOSEST TARGET_ATTACKER TARGET_LAST TARGET_PARENT");
-	string const ast_strs  ("AS_MODEL_SPHERE AS_MODEL_ROCK1 AS_MODEL_ROCK2 AS_MODEL_HMAP AS_MODEL_VOXEL");
+	string const ast_strs  ("AS_MODEL_SPHERE AS_MODEL_ROCK1 AS_MODEL_ROCK2 AS_MODEL_HMAP AS_MODEL_VOXEL AS_MODEL_SHADER");
 	strings_to_map(commands,   command_m);
 	strings_to_map(ship_strs,  ship_m);
 	strings_to_map(weap_strs,  weap_m);
