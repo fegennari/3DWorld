@@ -658,19 +658,23 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 				
 				if (planet_visible && planet.is_ok() && !skip_p) {
 					point ss_pos(all_zeros);
-					float ss_radius(0.0);
+					float ss_radius(0.0), max_overlap(0.0);
 
 					if (has_sun) { // determine if any moons shadow the planet
+						// Note: if more than one moon shadows the planet, it will be incorrect, but that case is very rare
 						for (unsigned l = 0; l < planet.moons.size(); ++l) {
 							umoon const &moon(planet.moons[l]);
 							point_d const pos5(pos + moon.pos);
 
-							if (p2p_dist_sq(pos5, pos3) < p2p_dist_sq(pos4, pos3) &&
-								pt_line_dist(pos5, pos3, pos4) < (pradius + moon.radius))
-							{
-								//cout << "moon " << l << " " << moon.getname() << " shadows planet " << k << " " << planet.getname() << endl;
-								ss_pos    = pos5;
-								ss_radius = moon.radius;
+							if (p2p_dist_sq(pos5, pos3) < p2p_dist_sq(pos4, pos3)) { // moon closer to sun than planet
+								float const overlap((pradius + moon.radius) - pt_line_dist(pos5, pos3, pos4));
+
+								if (overlap > max_overlap) {
+									//cout << "moon " << l << " " << moon.getname() << " shadows planet " << k << " " << planet.getname() << endl;
+									max_overlap = overlap;
+									ss_pos      = pos5;
+									ss_radius   = moon.radius;
+								}
 							}
 						}
 					}
