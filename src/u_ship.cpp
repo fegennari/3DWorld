@@ -720,7 +720,7 @@ bool u_ship::check_return_to_parent() const {
 }
 
 
-bool sobj_manager::claim_object(free_obj const *parent, bool homeworld) {
+bool sobj_manager::claim_object(free_obj *parent, bool homeworld) {
 
 	return check_dest_ownership(uobj_id, pos, parent, 0, homeworld);
 }

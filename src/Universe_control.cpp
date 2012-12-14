@@ -625,7 +625,7 @@ inline string get_owner_name(unsigned owner) {
 }
 
 
-bool check_dest_ownership(int uobj_id, point const &pos, free_obj const *own, bool check_for_land, bool homeworld) {
+bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool check_for_land, bool homeworld) {
 	
 	assert(uobj_id >= 0 && own); // obj may be an invalid pointer though
 	unsigned const owner(own->get_align());
@@ -643,25 +643,32 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj const *own, bo
 		bool owned(0);
 
 		while (defend > 8.0) {
-			owned  |= add_orbiting_ship(USC_DEFSAT, 0, 0, 0, own, &world); // put a defense satellite in orbit
+			owned  |= (add_orbiting_ship(USC_DEFSAT, 0, 0, 0, own, &world) != NULL); // put a defense satellite in orbit
 			defend -= 12.0;
 		}
 		if (defend > 0.0 || !owned) {
-			owned  |= add_orbiting_ship(USC_ANTI_MISS, 0, 0, 0, own, &world); // put an anti-missile drone in orbit
+			owned  |= (add_orbiting_ship(USC_ANTI_MISS, 0, 0, 0, own, &world) != NULL); // put an anti-missile drone in orbit
 		}
 		float const rsc_val(world.resources - (homeworld ? 0.0 : 20.0));
 
 		if (rsc_val > 0.0 && t == 0) { // planets only - colonies (first homeworld only?)
 			unsigned const colony_types[5] = {USC_COLONY, USC_ARMED_COL, USC_HW_COL, USC_STARPORT, USC_HW_SPORT};
-			bool placed(0);
 			unsigned start_val(0);
 			for (start_val = 0; start_val < 4 && world.resources > 10.0*(start_val+1); ++start_val) {}
 			if (start_val == 3 || (start_val == 2 && (rand()&1))) ++start_val;
+			orbiting_ship const *oship(NULL);
 
-			for (int i = start_val; i >= 0 && !placed; --i) {
-				placed = add_orbiting_ship(colony_types[i], 0, 1, 1, own, &world); // put a colony on world if homeworld
+			for (int i = start_val; i >= 0; --i) {
+				oship = add_orbiting_ship(colony_types[i], 0, 1, 1, own, &world); // put a colony on world
+				
+				if (oship != NULL) {
+					vector3d const dir((own->pos - oship->pos).get_norm());
+					own->move_to(oship->get_pos() + dir*(own->get_c_radius() + oship->get_c_radius())); // move away from object
+					cout << "move parent" << endl;
+					break;
+				}
 			}
-			owned |= placed;
+			owned |= (oship != NULL);
 		}
 		if (owned) {
 			world.set_owner(result, owner); // only if inhabitable?
@@ -811,12 +818,11 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 // ************ ORBITING_SHIP ************
 
 
-bool add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos_from_parent,
-					   free_obj const *parent, urev_body *obj)
-{
+orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos_from_parent, free_obj const *parent, urev_body *obj) {
+
 	assert(obj && parent);
 	//assert(obj->get_owner() == parent->get_align());
-	if (!alloc_resources_for(sclass, parent->get_align(), 0)) return 0;
+	if (!alloc_resources_for(sclass, parent->get_align(), 0)) return NULL;
 	obj->inc_orbiting_refs();
 	float angle(rand_uniform(0.0, TWO_PI));
 	point const parent_pos(parent->get_pos());
@@ -834,7 +840,7 @@ bool add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos
 		orbit_radius, angle, rate));
 	ship->set_parent(parent);
 	add_uobj_ship(ship);
-	return 1;
+	return ship;
 }
 
 

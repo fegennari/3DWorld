@@ -228,9 +228,9 @@ void destroy_player_ship(bool captured);
 bool rename_obj(uobject *obj, unsigned alignment);
 uobject const *get_closest_world_ptr(point const &pos, int type);
 uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned align);
-bool check_dest_ownership(int uobj_id, point const &pos, free_obj const *own, bool check_for_land, bool homeworld);
+bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool check_for_land, bool homeworld);
 void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3d const &fire_dir, float fire_range, int obj_types);
-bool add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos_from_parent, free_obj const *parent, urev_body *obj);
+orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos_from_parent, free_obj const *parent, urev_body *obj);
 
 // ship.cpp
 void print_n_spaces(int n);

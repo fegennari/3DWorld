@@ -1013,7 +1013,7 @@ public:
 	bool update_pos_if_close(uobject const *obj);
 	bool update_pos();
 	void at_dest() {old_uobj_id = uobj_id; uobj_id = -1;}
-	bool claim_object(free_obj const *parent, bool homeworld);
+	bool claim_object(free_obj *parent, bool homeworld);
 	string const &get_name() const {return name;}
 };
 
