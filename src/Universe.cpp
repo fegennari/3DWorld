@@ -706,7 +706,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 				if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
 					if (sizep > 0.1) {rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));}
 					
-					if (planet_visible && planet.atmos > 0.01 && planet.tsize > PLANET_ATM_TEX_SZ) {
+					if (planet_visible && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
 						atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 					}
 				}
@@ -2174,7 +2174,6 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 
 void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const { // must be drawn last
 
-	if (size_ < 1.5 || atmos == 0) return;
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
 	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), radius/PLANET_ATM_RSCALE, cloud_radius, atmos, svars)) return;
 	enable_blend();
@@ -2184,7 +2183,7 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
-	draw_sphere_dlist(all_zeros, cloud_radius, max(4, min(32, int(5.0*size_))), 1);
+	draw_sphere_dlist(all_zeros, 1.01*cloud_radius, max(4, min(32, int(4.0*size_))), 1);
 	glPopMatrix();
 	glDisable(GL_CULL_FACE);
 	disable_blend();

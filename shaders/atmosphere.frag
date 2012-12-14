@@ -16,7 +16,7 @@ void main()
 	float pdist_sq = dp*dp - wpdist*wpdist + planet_radius*planet_radius;
 	if (pdist_sq > 0.0) {dist -= sqrt(pdist_sq);} // ray intersects planet, adjust distance
 	float density  = dist/atmos_radius;
-	float alpha    = atmosphere*clamp(4.0*density-0.1, 0.0, 1.0);
+	float alpha    = atmosphere*clamp(4.0*density, 0.0, 1.0);
 	float lt_atten = 1.0;
 
 	if (sun_radius > 0.0 && ss_radius > 0.0) {
