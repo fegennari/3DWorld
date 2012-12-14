@@ -130,6 +130,14 @@ struct camera_mv_speed {
 };
 
 
+struct shadow_vars_t {
+	point sun_pos, ss_pos;
+	float sun_radius, ss_radius;
+	shadow_vars_t() : sun_radius(0.0), ss_radius(0.0) {}
+	shadow_vars_t(point const &sp, float sr, point const &ssp, float ssr) : sun_pos(sp), ss_pos(ssp), sun_radius(sr), ss_radius(ssr) {}
+};
+
+
 class named_obj { // size = 16
 
 	string name;
@@ -233,7 +241,7 @@ public:
 	int  get_owner() const {return owner;}
 	void set_owner_color() const;
 	void get_surface_color(unsigned char *data, float val, float phi) const;
-	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, point const &sun_pos, float sun_radius, point const &ss_pos, float ss_radius);
+	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, shadow_vars_t const &svars);
 	void draw_surface(point_d const &pos_, float radius0, float size, int ndiv);
 	void show_colonizable_liveable(point const &pos_, float radius0) const;
 	void inc_orbiting_refs() {++orbiting_refs;}
@@ -276,7 +284,7 @@ public:
 	float get_vegetation() const;
 	void ensure_rings_texture();
 	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius) const;
-	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const;
+	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const;
 	void free_texture();
 	void free();
 	float get_hmap_scale() const {return PLANET_HMAP_SCALE;}

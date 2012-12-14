@@ -185,16 +185,28 @@ class universe_shader_t : public shader_t {
 		add_uniform_int(texture_name, 0);
 		setup_fog_scale(); // fog not needed?
 	}
+	void setup_planet_star_shader() {
+		set_active_texture(1);
+		bind_3d_texture(get_noise_tex_3d());
+		set_active_texture(0);
+		set_prefix("#define NUM_OCTAVES 8", 1); // FS
+	}
+	void set_planet_uniforms(float atmosphere, shadow_vars_t const &svars) {
+		set_light_scale();
+		add_uniform_float("atmosphere",  atmosphere);
+		add_uniform_vector3d("sun_pos",  svars.sun_pos);
+		add_uniform_float("sun_radius",  svars.sun_radius);
+		add_uniform_vector3d("ss_pos",   svars.ss_pos);
+		add_uniform_float("ss_radius",   svars.ss_radius);
+		upload_mvm_to_shader(*this, "world_space_mvm");
+	}
 
 public:
-	bool enable_planet(float atmosphere, int cloud_tex_repeat, point const &sun_pos, float sun_radius, point const &ss_pos, float ss_radius) {
+	bool enable_planet(float atmosphere, int cloud_tex_repeat, shadow_vars_t const &svars) {
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
-			set_active_texture(1);
-			bind_3d_texture(get_noise_tex_3d());
-			set_active_texture(0);
-			set_prefix("#define NUM_OCTAVES 8", 1); // FS
+			setup_planet_star_shader();
 			set_vert_shader("planet_draw");
 			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+planet_draw");
 			shared_setup();
@@ -202,15 +214,9 @@ public:
 			add_uniform_float("time", 8.0E-6*cloud_time);
 		}
 		enable();
-		set_light_scale();
 		set_specular(1.0, 80.0);
 		add_uniform_float("noise_scale", 4.0*cloud_tex_repeat); // clouds
-		add_uniform_float("atmosphere",  atmosphere);
-		add_uniform_vector3d("sun_pos",  sun_pos);
-		add_uniform_float("sun_radius",  sun_radius);
-		add_uniform_vector3d("ss_pos",   ss_pos);
-		add_uniform_float("ss_radius",   ss_radius);
-		upload_mvm_to_shader(*this, "world_space_mvm");
+		set_planet_uniforms(atmosphere, svars);
 		return 1;
 	}
 	void disable_planet() {
@@ -224,10 +230,7 @@ public:
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
-			set_active_texture(1);
-			bind_3d_texture(get_noise_tex_3d());
-			set_active_texture(0);
-			set_prefix("#define NUM_OCTAVES 8", 1); // FS
+			setup_planet_star_shader();
 			set_vert_shader("star_draw");
 			set_frag_shader("perlin_clouds_3d.part*+star_draw");
 			begin_shader();
@@ -275,13 +278,13 @@ public:
 		}
 	}
 
-	bool enable_atmospheric(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere) {
+	bool enable_atmospheric(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars) {
 		if (disable_shaders) return 0;
 		
 		if (!is_setup()) {
 			set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			set_vert_shader("atmosphere");
-			set_frag_shader("linear_fog.part+ads_lighting.part*+atmosphere");
+			set_frag_shader("linear_fog.part+ads_lighting.part*+sphere_shadow.part*+atmosphere");
 			begin_shader();
 			setup_fog_scale();
 		}
@@ -290,9 +293,7 @@ public:
 		add_uniform_vector3d("planet_pos", planet_pos);
 		add_uniform_float("planet_radius", planet_radius);
 		add_uniform_float("atmos_radius",  atmos_radius);
-		add_uniform_float("atmosphere",    atmosphere);
-		upload_mvm_to_shader(*this, "world_space_mvm");
-		set_light_scale();
+		set_planet_uniforms(atmosphere, svars);
 		return 1;
 	}
 	void disable_atmospheric() {
@@ -305,8 +306,8 @@ class ushader_group {
 	universe_shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 public:
-	bool enable_planet_shader(float atmosphere, int cloud_tex_repeat, point const &sun_pos, float sun_radius, point const &ss_pos, float ss_radius) {
-		return planet_shader.enable_planet(atmosphere, cloud_tex_repeat, sun_pos, sun_radius, ss_pos, ss_radius);
+	bool enable_planet_shader(float atmosphere, int cloud_tex_repeat, shadow_vars_t const &svars) {
+		return planet_shader.enable_planet(atmosphere, cloud_tex_repeat, svars);
 	}
 	void disable_planet_shader() {planet_shader.disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
@@ -315,8 +316,8 @@ public:
 		return ring_shader.enable_ring(planet_pos, planet_radius, ring_ri, ring_ro, sun_pos, sun_radius);
 	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
-	bool enable_atmospheric_shader(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere) {
-		return atmospheric_shader.enable_atmospheric(planet_pos, planet_radius, atmos_radius, atmosphere);
+	bool enable_atmospheric_shader(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars) {
+		return atmospheric_shader.enable_atmospheric(planet_pos, planet_radius, atmos_radius, atmosphere, svars);
 	}
 	void disable_atmospheric_shader() {atmospheric_shader.disable_atmospheric();}
 };
@@ -546,10 +547,12 @@ void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushad
 }
 
 
-struct ix_size_t {
+struct planet_draw_data_t {
 	unsigned ix;
 	float size;
-	ix_size_t(unsigned ix_=0, float size_=0.0) : ix(ix_), size(size_) {}
+	shadow_vars_t svars;
+	planet_draw_data_t() : ix(0), size(0.0) {}
+	planet_draw_data_t(unsigned ix_, float size_, shadow_vars_t const &svars_) : ix(ix_), size(size_), svars(svars_) {}
 };
 
 
@@ -566,7 +569,7 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 	bool const p_system(clobj.type >= UTYPE_SYSTEM);
 	point_d const pos(cell.rel_center);
 	float const wwsq((float)window_width*(float)window_width);
-	vector<ix_size_t> atmos_to_draw, rings_to_draw;
+	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
 	for (unsigned i = 0; i < cell.galaxies->size(); ++i) { // remember, galaxies can overlap
 		bool const sel_g((int)i == clobj.galaxy), sclip(!sel_g || (display_mode & 0x01) != 0);
@@ -655,10 +658,10 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 				if (!skip_p && !no_move) planet.do_update(sol.pos, has_sun, has_sun); // don't really have to do this if planet is not visible
 				if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(pos4, planet.mosize))) continue;
 				bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(pos4, pradius));
+				shadow_vars_t svars(make_pt_global(pos3), (has_sun ? sradius : 0.0), all_zeros, 0.0);
 				
-				if (planet_visible && planet.is_ok() && !skip_p) {
-					point ss_pos(all_zeros);
-					float ss_radius(0.0), max_overlap(0.0);
+				if (planet_visible && planet.is_ok()) {
+					float max_overlap(0.0);
 
 					if (has_sun) { // determine if any moons shadow the planet
 						// Note: if more than one moon shadows the planet, it will be incorrect, but that case is very rare
@@ -671,21 +674,23 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 
 								if (overlap > max_overlap) {
 									//cout << "moon " << l << " " << moon.getname() << " shadows planet " << k << " " << planet.getname() << endl;
-									max_overlap = overlap;
-									ss_pos      = pos5;
-									ss_radius   = moon.radius;
+									max_overlap     = overlap;
+									svars.ss_pos    = make_pt_global(pos5);
+									svars.ss_radius = moon.radius;
 								}
 							}
 						}
 					}
-					planet.check_gen_texture(int(sizep));
-					planet.draw(pos4, cmvs, usg, pos3, (has_sun ? sradius : 0.0), ss_pos, ss_radius); // ignore return value?
+					if (!skip_p) {
+						planet.check_gen_texture(int(sizep));
+						planet.draw(pos4, cmvs, usg, svars); // ignore return value?
+					}
 				}
 				planet.process();
 				bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
 
 				if (sizep >= 1.0 && !skip_moons) {
-					for (unsigned l = 0; l < planet.moons.size(); ++l) {
+					for (unsigned l = 0; l < planet.moons.size(); ++l) { // draw moons
 						bool const sel_m(sel_moon && (int)l == clobj.moon);
 						if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
 						umoon &moon(planet.moons[l]);
@@ -695,22 +700,25 @@ void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, us
 						if ((sizem < 0.2 && sclip) || !univ_sphere_vis(pos5, moon.radius)) continue;
 						current.moon = l;
 						moon.check_gen_texture(int(sizem));
-						moon.draw(pos5, cmvs, usg, pos3, (has_sun ? sradius : 0.0), pos4, planet.radius); // draw moon
+						moon.draw(pos5, cmvs, usg, shadow_vars_t(svars.sun_pos, svars.sun_radius, make_pt_global(pos4), planet.radius));
 					}
 				}
 				if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
-					if (sizep > 0.1) {rings_to_draw.push_back(ix_size_t(k, sizep));}
-					if (planet_visible && planet.atmos > 0.01 && planet.tsize > PLANET_ATM_TEX_SZ) {atmos_to_draw.push_back(ix_size_t(k, sizep));}
+					if (sizep > 0.1) {rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));}
+					
+					if (planet_visible && planet.atmos > 0.01 && planet.tsize > PLANET_ATM_TEX_SZ) {
+						atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
+					}
 				}
 			} // planet k
-			for (vector<ix_size_t>::const_iterator k = rings_to_draw.begin(); k != rings_to_draw.end(); ++k) {
+			for (vector<planet_draw_data_t>::const_iterator k = rings_to_draw.begin(); k != rings_to_draw.end(); ++k) {
 				uplanet &planet(sol.planets[k->ix]);
 				planet.ensure_rings_texture();
 				planet.draw_prings(usg, (pos + planet.pos), k->size, pos3, (has_sun ? sradius : 0.0));
 			}
-			for (vector<ix_size_t>::const_iterator k = atmos_to_draw.begin(); k != atmos_to_draw.end(); ++k) {
+			for (vector<planet_draw_data_t>::const_iterator k = atmos_to_draw.begin(); k != atmos_to_draw.end(); ++k) {
 				uplanet const &planet(sol.planets[k->ix]);
-				planet.draw_atmosphere(usg, (pos + planet.pos), k->size);
+				planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars);
 			}
 		} // system j
 	} // galaxy i
@@ -1895,7 +1903,7 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) 
 }
 
 
-bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, point const &sun_pos, float sun_radius, point const &ss_pos, float ss_radius) {
+bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, shadow_vars_t const &svars) {
 
 	vector3d const vcp(cmvs.camera, pos_);
 	float const dist(max(TOLERANCE, (vcp.mag() - radius)));
@@ -1942,7 +1950,7 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
-		if (texture) {usg.enable_planet_shader(atmos, cloud_tex_repeat, make_pt_global(sun_pos), sun_radius, make_pt_global(ss_pos), ss_radius);}
+		if (texture) {usg.enable_planet_shader(atmos, cloud_tex_repeat, svars);}
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();
@@ -2164,11 +2172,11 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 }
 
 
-void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_) const { // must be drawn last
+void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const { // must be drawn last
 
 	if (size_ < 1.5 || atmos == 0) return;
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
-	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), radius/PLANET_ATM_RSCALE, cloud_radius, atmos)) return;
+	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), radius/PLANET_ATM_RSCALE, cloud_radius, atmos, svars)) return;
 	enable_blend();
 	set_fill_mode();
 	WHITE.do_glColor();
@@ -2176,7 +2184,7 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
-	draw_subdiv_sphere(all_zeros, cloud_radius, max(4, min(48, int(4.8*size_))), 0, 1);
+	draw_sphere_dlist(all_zeros, cloud_radius, max(4, min(32, int(5.0*size_))), 1);
 	glPopMatrix();
 	glDisable(GL_CULL_FACE);
 	disable_blend();

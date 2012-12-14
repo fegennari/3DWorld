@@ -13,8 +13,9 @@ void main()
 	vec3 norm      = normalize(normal); // renormalize
 	float lt_atten = calc_light_atten(epos, 0);
 
-	if (sun_radius > 0.0 && ss_radius > 0.0) {lt_atten *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, ss_pos, ss_radius);}
-
+	if (sun_radius > 0.0 && ss_radius > 0.0) {
+		lt_atten *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, ss_pos, ss_radius);
+	}
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz);
 	vec3 half_vect = normalize(light_dir - normalize(epos.xyz)); // Eye + L = -eye_space_pos + L
 	vec3 ambient   = (light_scale[0] * gl_LightSource[0].ambient.rgb * lt_atten) + (light_scale[1] * gl_LightSource[1].ambient.rgb);
