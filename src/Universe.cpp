@@ -1601,7 +1601,7 @@ void urev_body::create_texture(unsigned size) {
 	assert(size <= MAX_TEXTURE_SIZE);
 	vector<unsigned char> data(3*size*size);
 	gen_texture_data(&data.front(), size, USE_HEIGHTMAP);
-	setup_texture(tid, GL_MODULATE, 0, 0, 0);
+	setup_texture(tid, GL_MODULATE, 0, 1, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
 }
 
@@ -2054,11 +2054,11 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 		assert(surface != NULL);
 		if (gen_data) surface->setup_draw_sphere(all_zeros, radius0, -0.5*get_hmap_scale()*radius, ndiv, pmap);
 		surface->sd.draw_subdiv_sphere(viewed_from, 1, use_dlist);
-		if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast"); // 39
+		if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast");
 	}
 	else {
 		draw_subdiv_sphere(all_zeros, radius0, ndiv, viewed_from, pmap, 1, use_dlist);
-		if (SD_TIMETEST) PRINT_TIME("Sphere Draw v2"); // 25
+		if (SD_TIMETEST) PRINT_TIME("Sphere Draw v2");
 	}
 	if (use_dlist) glEndList();
 }
