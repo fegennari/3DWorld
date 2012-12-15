@@ -285,7 +285,7 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 	int const type(surface->type);
 	float const sizef(size/TWO_PI), mt2(0.5*(table_size-1)), scale(1.5/surface->max_mag);
 	float const delta(TWO_PI/size), sin_ds(sin(delta)), cos_ds(cos(delta));
-	unsigned const pole_thresh(size>>5);
+	unsigned const pole_thresh(size>>3);
 	wr_scale = 1.0/(1.0 - water);
 
 	for (unsigned i = 0; i < table_size; ++i) { // build sin table
@@ -312,8 +312,6 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 			ztable[k] = rdata[index2]*SINF(rdata[index2+5]*zval + rdata[index2+6]);
 		}
 		for (unsigned j = 0; j < size; ++j) { // theta values, Note: x and y are swapped because theta is out of phase by 90 degrees to match tex coords
-			// Note: chooses the closest precomputed grid point for efficiency -
-			// no interpolation, so has artifacts at the poles
 			float const s(sin_s), c(cos_s), xval(sin_phi*s), yval(sin_phi*c);
 			unsigned const tj(size-j-1), index(3*(texoff + tj));
 			unsigned const ox1((unsigned((xval+1.0)*mt2))*num_sines), oy1((unsigned((yval+1.0)*mt2))*num_sines);
@@ -326,7 +324,9 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 				}
 			}
 			else {
-				for (unsigned k = 0; k < num_sines; ++k) { // performance critical
+				// Note: chooses the closest precomputed grid point for efficiency -
+				// no interpolation, so has artifacts closer to the poles
+				for (unsigned k = 0; k < num_sines; ++k) {
 					val += ztable[k]*xtable[ox1+k]*ytable[oy1+k];
 				}
 			}
