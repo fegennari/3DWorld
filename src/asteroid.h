@@ -24,7 +24,9 @@ class uasteroid_field : public uobject_base, public vector<uasteroid> {
 
 public:
 	uasteroid_field() : max_aradius(0.0) {}
+	void gen_asteroids(unsigned num);
 	void draw(point_d const &pos_, point const &camera) const;
+	void free() {clear();}
 };
 
 

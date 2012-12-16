@@ -412,9 +412,16 @@ public:
 class unebula : public uobject_base {
 
 	colorRGBA color;
+	unsigned vbo_id;
+	vector<vert_color> points; // FIXME: should probably use blocks so that VFC works better
 
 public:
-	// FIXME: WRITE
+	unebula() : vbo_id(0) {}
+	void gen(unsigned num_pts);
+	void upload_and_draw(point_d const &pos_);
+	void draw(point_d const &pos_) const;
+	void free_context();
+	void free();
 };
 
 

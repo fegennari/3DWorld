@@ -442,15 +442,25 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 // *** asteroid field ***
 
 
+void uasteroid_field::gen_asteroids(unsigned num) {
+
+	clear();
+	resize(num);
+
+	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
+		// FIXME: WRITE
+	}
+}
+
+
 void uasteroid_field::draw(point_d const &pos_, point const &camera) const {
 
 	point_d const afpos(pos + pos_);
-	if (empty() || !univ_sphere_vis(afpos, radius)) return;
+	if (empty() || !univ_sphere_vis(afpos, radius))         return;
 	if (calc_sphere_size(afpos, camera, max_aradius) < 1.0) return; // asteroids are too small/far away
 
-	// FIXME: WRITE - shader setup
-	for (vector<uasteroid>::const_iterator j = begin(); j != end(); ++j) {
-		j->draw(pos);
+	for (vector<uasteroid>::const_iterator i = begin(); i != end(); ++i) {
+		i->draw(pos);
 	}
 }
 

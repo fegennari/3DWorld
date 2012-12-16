@@ -568,15 +568,16 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
 	if (pass == 0 && asteroid_fields != NULL) { // draw asteroid fields
+		// FIXME: shader setup
 		for (vector<uasteroid_field>::const_iterator i = asteroid_fields->begin(); i != asteroid_fields->end(); ++i) {
 			i->draw(pos, camera);
 		}
 	}
 
 	if (pass == 0 && nebulas != NULL) { // draw nebulas
-		for (vector<unebula>::const_iterator i = nebulas->begin(); i != nebulas->end(); ++i) {
-			if (!univ_sphere_vis(pos+i->pos, i->radius)) continue;
-			// FIXME: WRITE
+		// FIXME: shader setup
+		for (vector<unebula>::iterator i = nebulas->begin(); i != nebulas->end(); ++i) {
+			i->upload_and_draw(pos);
 		}
 	}
 
@@ -736,6 +737,51 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 }
 
 
+// *** unebula ***
+
+
+void unebula::gen(unsigned num_pts) {
+
+	points.resize(num_pts);
+
+	for (vector<vert_color>::iterator i = points.begin(); i != points.end(); ++i) {
+		// FIXME: WRITE
+	}
+}
+
+
+void unebula::upload_and_draw(point_d const &pos_) {
+
+	if (!univ_sphere_vis((pos_ + pos), radius)) return;
+	create_bind_vbo_and_upload(vbo_id, points, 0);
+	draw(pos_);
+}
+
+
+void unebula::draw(point_d const &pos_) const { // Note: new VFC here
+
+	vert_color::set_vbo_arrays();
+	assert(vbo_id > 0);
+	bind_vbo(vbo_id);
+	glDrawArrays(GL_POINTS, 0, points.size());
+	bind_vbo(0);
+}
+
+
+void unebula::free_context() {
+
+	delete_vbo(vbo_id);
+	vbo_id = 0;
+}
+
+
+void unebula::free() {
+
+	free_context();
+	points.clear();
+}
+
+
 // *** UPDATE CODE ***
 
 
@@ -839,20 +885,28 @@ void ucell::gen_cell(int const ii[3]) {
 			break;
 		}
 	}
-	if (MAX_AST_FIELD_PER_CELL > 0) { // gen asteroid fields
+
+	// gen asteroid fields
+	unsigned const num_af(rand2_uint(MIN_AST_FIELD_PER_CELL, MAX_AST_FIELD_PER_CELL));
+
+	if (num_af > 0) {
 		asteroid_fields = new vector<uasteroid_field>;
-		asteroid_fields->resize(rand2_uint(MIN_AST_FIELD_PER_CELL, MAX_AST_FIELD_PER_CELL));
+		asteroid_fields->resize(num_af);
 
 		for (vector<uasteroid_field>::iterator i = asteroid_fields->begin(); i != asteroid_fields->end(); ++i) {
-			// FIXME: WRITE
+			i->gen_asteroids(0); // FIXME: num
 		}
 	}
-	if (MAX_NEBULAS_PER_CELL > 0) { // gen nebulas
+
+	// gen nebulas
+	unsigned const num_nebulas(rand2_uint(MIN_NEBULAS_PER_CELL, MAX_NEBULAS_PER_CELL));
+
+	if (num_nebulas > 0) {
 		nebulas = new vector<unebula>;
-		nebulas->resize(rand2_uint(MIN_NEBULAS_PER_CELL, MAX_NEBULAS_PER_CELL));
+		nebulas->resize(num_nebulas);
 
 		for (vector<unebula>::iterator i = nebulas->begin(); i != nebulas->end(); ++i) {
-			// FIXME: WRITE
+			i->gen(0); // FIXME: num
 		}
 	}
 }
@@ -1448,8 +1502,7 @@ void urev_body::gen_rotrev() {
 	set_defaults();
 	gen_rseeds();
 	tid = tsize = 0;
-	rot_rate = 0.0;
-	rev_rate = 0.0;
+	rot_rate = rev_rate = 0.0;
 	rotated_obj::rgen_values();
 	// inclination angle = angle between rot_axis and rev_axis
 
@@ -1742,6 +1795,12 @@ void universe_t::free_textures() { // should be OK even if universe isn't setup
 		for (unsigned y = 0; y < U_BLOCKS; ++y) { // y
 			for (unsigned x = 0; x < U_BLOCKS; ++x) { // x
 				ucell &cell(cells[z][y][x]);
+				
+				if (cell.nebulas != NULL) {
+					for (vector<unebula>::iterator i = cell.nebulas->begin(); i != cell.nebulas->end(); ++i) {
+						i->free_context();
+					}
+				}
 				if (cell.galaxies == NULL) continue;
 				
 				for (unsigned i = 0; i < cell.galaxies->size(); ++i) {
@@ -1768,17 +1827,21 @@ void universe_t::free_textures() { // should be OK even if universe isn't setup
 
 // *** MEMORY - FREE CODE ***
 
+
+template<typename T> void free_vector_ptr(vector<T> *&v) {
+
+	if (v != NULL) {
+		for (vector<T>::iterator i = v->begin(); i != v->end(); ++i) {i->free();}
+		delete v;
+		v = NULL;
+	}
+}
+
 void ucell::free() {
 
-	if (galaxies != NULL) {
-		for (unsigned i = 0; i < galaxies->size(); ++i) (*galaxies)[i].free();
-		delete galaxies;
-		galaxies = NULL;
-	}
-	delete asteroid_fields;
-	asteroid_fields = NULL;
-	delete nebulas;
-	nebulas = NULL;
+	free_vector_ptr(galaxies);
+	free_vector_ptr(asteroid_fields);
+	free_vector_ptr(nebulas);
 	gen = 0;
 }
 
