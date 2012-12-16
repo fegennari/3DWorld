@@ -63,10 +63,6 @@ extern exp_type_params et_params[];
 extern GLUquadricObj* quadric;
 extern rand_gen_t global_rand_gen;
 
-
-void draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, s_object const &clobj, unsigned pass, bool no_move);
-void draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, s_object const &clobj, unsigned pass, bool no_move);
-
 int gen_rand_seed1(point const &center);
 int gen_rand_seed2(point const &center);
 bool is_shadowed(point const &pos, float radius, bool expand, ussystem const &sol, uobject const *&sobj);
@@ -540,10 +536,8 @@ uobject const *get_shadowing_object(uobject const &obj, ustar const &sun) { // u
 
 void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move) {
 
-	ucell &cell(get_cell(cxyz));
-	if (!univ_sphere_vis(cell.rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
 	UNROLL_3X(current.cellxyz[i_] = cxyz[i_] + uxyz[i_];)
-	draw_cell_contents(cell, cmvs, usg, clobj, pass, no_move);
+	get_cell(cxyz).draw(cmvs, usg, clobj, pass, no_move);
 }
 
 
@@ -561,25 +555,39 @@ struct planet_draw_data_t {
 //  If player's system is none then stop
 //  1. Draw the player's system except for the player's sobj
 //  2. Draw the player's sobj
-void universe_t::draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move) {
+void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move) {
 
-	if (cell.galaxies == NULL) return; // galaxies not yet allocated
+	if (galaxies == NULL) return; // galaxies not yet allocated
+	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
 	point const &camera(cmvs.camera);
 	assert(!is_nan(camera));
 	bool const p_system(clobj.type >= UTYPE_SYSTEM);
-	point_d const pos(cell.rel_center);
+	point_d const pos(rel_center);
 	float const wwsq((float)window_width*(float)window_width);
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
-	for (unsigned i = 0; i < cell.galaxies->size(); ++i) { // remember, galaxies can overlap
+	if (pass == 0 && asteroid_fields != NULL) { // draw asteroid fields
+		for (vector<uasteroid_field>::iterator i = asteroid_fields->begin(); i != asteroid_fields->end(); ++i) {
+			// FIXME: WRITE
+		}
+	}
+
+	if (pass == 0 && nebulas != NULL) { // draw nebulas
+		for (vector<unebula>::iterator i = nebulas->begin(); i != nebulas->end(); ++i) {
+			// FIXME: WRITE
+		}
+	}
+
+	// draw galaxies
+	for (unsigned i = 0; i < galaxies->size(); ++i) { // remember, galaxies can overlap
 		bool const sel_g((int)i == clobj.galaxy), sclip(!sel_g || (display_mode & 0x01) != 0);
 		if (p_system && pass > 0 && !sel_g) continue; // drawn in previous pass
-		ugalaxy &galaxy((*cell.galaxies)[i]);
+		ugalaxy &galaxy((*galaxies)[i]);
 		point_d const pos2(pos + galaxy.pos);
 		if (calc_sphere_size(pos2, camera, STAR_MAX_SIZE, -galaxy.radius) < 0.18) continue; // too far away
 		if (!univ_sphere_vis(pos2, galaxy.radius)) continue; // conservative, since galaxies are not spherical
 		current.galaxy = i;
-		galaxy.process(cell);
+		galaxy.process(*this);
 		float max_size(0.0);
 		bool visible(0);
 
@@ -804,6 +812,11 @@ inline int gen_rand_seed2(point const &center) {
 }
 
 
+unsigned rand2_uint(unsigned min_val, unsigned max_val) {
+	return (min_val + (rand2() % (max_val - min_val + 1)));
+}
+
+
 void ucell::gen_cell(int const ii[3]) {
 
 	if (gen) return; // already generated
@@ -812,14 +825,32 @@ void ucell::gen_cell(int const ii[3]) {
 	radius = 0.5*CELL_SIZE;
 	set_rand2_state(gen_rand_seed1(pos), gen_rand_seed2(pos));
 	get_rseeds();
-	gen      = 0;
+	gen      = 1;
+
+	// gen galaxies
 	galaxies = new vector<ugalaxy>;
-	galaxies->resize(rand2()%MAX_GALAXIES_PER_CELL + 1);
+	galaxies->resize(rand2_uint(MIN_GALAXIES_PER_CELL, MAX_GALAXIES_PER_CELL));
 
 	for (unsigned l = 0; l < galaxies->size(); ++l) {
 		if (!(*galaxies)[l].create(*this, l)) { // can't place the galaxy
 			galaxies->resize(l); // so remove it
 			break;
+		}
+	}
+	if (MAX_AST_FIELD_PER_CELL > 0) { // gen asteroid fields
+		asteroid_fields = new vector<uasteroid_field>;
+		asteroid_fields->resize(rand2_uint(MIN_AST_FIELD_PER_CELL, MAX_AST_FIELD_PER_CELL));
+
+		for (vector<uasteroid_field>::iterator i = asteroid_fields->begin(); i != asteroid_fields->end(); ++i) {
+			// FIXME: WRITE
+		}
+	}
+	if (MAX_NEBULAS_PER_CELL > 0) { // gen nebulas
+		nebulas = new vector<unebula>;
+		nebulas->resize(rand2_uint(MIN_NEBULAS_PER_CELL, MAX_NEBULAS_PER_CELL));
+
+		for (vector<unebula>::iterator i = nebulas->begin(); i != nebulas->end(); ++i) {
+			// FIXME: WRITE
 		}
 	}
 }
@@ -1738,6 +1769,10 @@ void ucell::free() {
 		delete galaxies;
 		galaxies = NULL;
 	}
+	delete asteroid_fields;
+	asteroid_fields = NULL;
+	delete nebulas;
+	nebulas = NULL;
 	gen = 0;
 }
 

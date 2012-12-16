@@ -31,9 +31,6 @@ float const u_exp_size[NUM_UTYPES] = {
 enum {MOD_DESTROYED=0, MOD_OWNER, MOD_NAME, N_UMODS};
 
 
-unsigned const U_BLOCKS       = 7;
-unsigned const MEM_BLOCK_SIZE = 100;
-
 float const GALAXY_SCALE    = 8.0;
 float const GALAXY_OVERLAP  = 0.5;
 float const GALAXY_MIN_SIZE = 18.0*GALAXY_SCALE;
@@ -55,7 +52,13 @@ float const MOON_TO_PLANET_MIN_GAP     = 0.008;
 float const INTER_MOON_MIN_SPACING     = 0.01;
 float const MIN_RAD_SPACE_FACTOR       = 1.2;
 
+unsigned const U_BLOCKS                = 7;
+unsigned const MIN_GALAXIES_PER_CELL   = 1;
 unsigned const MAX_GALAXIES_PER_CELL   = 4;
+unsigned const MIN_AST_FIELD_PER_CELL  = 0;
+unsigned const MAX_AST_FIELD_PER_CELL  = 0;
+unsigned const MIN_NEBULAS_PER_CELL    = 0;
+unsigned const MAX_NEBULAS_PER_CELL    = 0;
 unsigned const MAX_SYSTEMS_PER_GALAXY  = 500;
 unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
 unsigned const MAX_MOONS_PER_PLANET    = 8;
@@ -64,7 +67,6 @@ float const MP_COLOR_VAR        = 0.4;
 float const PLANET_ATM_RSCALE   = 1.025;
 float const ORBIT_PLANE_DELTA   = 0.06;
 float const ORBIT_SPACE_MARGIN  = 1.1;
-float const CAMERA_MASS         = 1.0;
 float const RANGE_OFFSET        = 0.0001;
 float const MOON_HMAP_SCALE     = 0.08;
 float const PLANET_HMAP_SCALE   = 0.04;
@@ -397,13 +399,34 @@ public:
 };
 
 
+class uasteroid : public uobject_base {
+	// FIXME: WRITE
+};
+
+
+class uasteroid_field : public uobject_base, public vector<uasteroid> {
+	// anything else?
+};
+
+
+class unebula : public uobject_base {
+
+	colorRGBA color;
+	// FIXME: WRITE
+};
+
+
 class ucell : public uobj_rgen { // size = 84
 
 public:
 	point rel_center;
 	vector<ugalaxy> *galaxies; // must be a pointer to a vector to avoid deep copies
+	vector<uasteroid_field> *asteroid_fields;
+	vector<unebula> *nebulas;
 
+	ucell() : galaxies(NULL), asteroid_fields(NULL), nebulas(NULL) {}
 	void gen_cell(int const ii[3]);
+	void draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move);
 	void free();
 	string get_name() const {return "Universe Cell";}
 };
@@ -475,7 +498,6 @@ struct cell_block {
 class universe_t : protected cell_block {
 
 	void draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move);
-	void draw_cell_contents(ucell &cell, camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move);
 
 public:
 	void init();
@@ -497,13 +519,11 @@ public:
 		if (!get_largest_closest_object(result, pos, 0, UTYPE_SYSTEM, 1, expand)) return 0; // find closest system (check last param=offset?)
 		return (result.type >= UTYPE_SYSTEM);
 	}
-
 	bool bad_cell_xyz(int const cxyz[3]) const {
 		if (cxyz[0] < 0              || cxyz[1] < 0              || cxyz[2] < 0)              return 1;
 		if (cxyz[0] >= int(U_BLOCKS) || cxyz[1] >= int(U_BLOCKS) || cxyz[2] >= int(U_BLOCKS)) return 1;
 		return 0;
 	}
-
 	ucell const &get_cell(int const cxyz[3]) const {
 		assert(!bad_cell_xyz(cxyz));
 		return cells[cxyz[2]][cxyz[1]][cxyz[0]];
@@ -512,7 +532,6 @@ public:
 		assert(!bad_cell_xyz(cxyz));
 		return cells[cxyz[2]][cxyz[1]][cxyz[0]];
 	}
-
 	ucell const &get_cell(s_object const &so) const {return get_cell(so.cellxyz);}
 	ucell       &get_cell(s_object const &so)       {return get_cell(so.cellxyz);}
 };

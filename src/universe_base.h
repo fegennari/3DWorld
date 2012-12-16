@@ -40,23 +40,32 @@ public:
 };
 
 
-class uobject { // size = 44
+class uobject_base { // size = 28
 
 public:
 	float radius;
 	upos_point_type pos; // required for high precision universe coordinates (can't use a sphere_t)
+
+	uobject_base() : radius(0.0) {}
+	upos_point_type const &get_pos() const {return pos;}
+	float           get_radius()     const {return radius;}
+	void set_pos(point const &pos_) {pos = pos_;}
+};
+
+
+class uobject : public uobject_base { // size = 44
+
+public:
 	char status;
 
+	uobject() : status(0) {}
 	virtual ~uobject() {}
 	virtual void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
 	void def_explode(float size, int etype, vector3d const &edir, int wclass=WCLASS_EXPLODE, int align=0,
 		unsigned eflags=0, free_obj const *parent_=NULL, float dscale=1.0); // ALIGN_NEUTRAL==0 ?
-	upos_point_type const &get_pos()      const {return pos;}
-	float           get_radius()          const {return radius;}
 	virtual float   get_bounding_radius() const {return radius;}
 	bool            is_ok()               const {return (status != 1);}
-	void set_pos(point const &pos_) {pos = pos_;}
 	void add_gravity_vector_base(vector3d &vgravity, point const &mpos, float gfactor, float gmax) const;
 	void gen_fragments() const;
 	void gen_moving_fragments(point const &hit_pos, unsigned num, int tid=-1, float rscale=1.0, float vscale=1.0) const;
