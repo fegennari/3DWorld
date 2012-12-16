@@ -8,6 +8,7 @@
 #include "draw_utils.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
+#include "asteroid.h"
 
 
 // temperatures
@@ -92,7 +93,7 @@ inline float temp_to_deg_f(float temp) {
 	return (1.8*temp_to_deg_c(temp) + 32.0);
 }
 
-inline float calc_sphere_size(point const &pos, point const &camera, float radius, float d_adj=0.0) {
+float calc_sphere_size(point const &pos, point const &camera, float radius, float d_adj) {
 	return ((float)window_width)*radius/max(TOLERANCE, (p2p_dist(pos, camera) + d_adj)); // approx. in pixels
 }
 
@@ -274,7 +275,7 @@ public:
 		}
 	}
 
-	bool enable_atmospheric(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars) {
+	bool enable_atmospheric(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars, point const &camera) {
 		if (disable_shaders) return 0;
 		
 		if (!is_setup()) {
@@ -285,7 +286,7 @@ public:
 			setup_fog_scale();
 		}
 		enable();
-		add_uniform_vector3d("camera_pos", make_pt_global(get_camera_pos()));
+		add_uniform_vector3d("camera_pos", make_pt_global(camera));
 		add_uniform_vector3d("planet_pos", planet_pos);
 		add_uniform_float("planet_radius", planet_radius);
 		add_uniform_float("atmos_radius",  atmos_radius);
@@ -312,8 +313,8 @@ public:
 		return ring_shader.enable_ring(planet_pos, planet_radius, ring_ri, ring_ro, sun_pos, sun_radius);
 	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
-	bool enable_atmospheric_shader(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars) {
-		return atmospheric_shader.enable_atmospheric(planet_pos, planet_radius, atmos_radius, atmosphere, svars);
+	bool enable_atmospheric_shader(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars, point const &camera) {
+		return atmospheric_shader.enable_atmospheric(planet_pos, planet_radius, atmos_radius, atmosphere, svars, camera);
 	}
 	void disable_atmospheric_shader() {atmospheric_shader.disable_atmospheric();}
 };
@@ -567,13 +568,14 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
 	if (pass == 0 && asteroid_fields != NULL) { // draw asteroid fields
-		for (vector<uasteroid_field>::iterator i = asteroid_fields->begin(); i != asteroid_fields->end(); ++i) {
-			// FIXME: WRITE
+		for (vector<uasteroid_field>::const_iterator i = asteroid_fields->begin(); i != asteroid_fields->end(); ++i) {
+			i->draw(pos, camera);
 		}
 	}
 
 	if (pass == 0 && nebulas != NULL) { // draw nebulas
-		for (vector<unebula>::iterator i = nebulas->begin(); i != nebulas->end(); ++i) {
+		for (vector<unebula>::const_iterator i = nebulas->begin(); i != nebulas->end(); ++i) {
+			if (!univ_sphere_vis(pos+i->pos, i->radius)) continue;
 			// FIXME: WRITE
 		}
 	}
@@ -583,9 +585,9 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 		bool const sel_g((int)i == clobj.galaxy), sclip(!sel_g || (display_mode & 0x01) != 0);
 		if (p_system && pass > 0 && !sel_g) continue; // drawn in previous pass
 		ugalaxy &galaxy((*galaxies)[i]);
-		point_d const pos2(pos + galaxy.pos);
-		if (calc_sphere_size(pos2, camera, STAR_MAX_SIZE, -galaxy.radius) < 0.18) continue; // too far away
-		if (!univ_sphere_vis(pos2, galaxy.radius)) continue; // conservative, since galaxies are not spherical
+		point_d const gpos(pos + galaxy.pos);
+		if (calc_sphere_size(gpos, camera, STAR_MAX_SIZE, -galaxy.radius) < 0.18) continue; // too far away
+		if (!univ_sphere_vis(gpos, galaxy.radius)) continue; // conservative, since galaxies are not spherical
 		current.galaxy = i;
 		galaxy.process(*this);
 		float max_size(0.0);
@@ -610,24 +612,24 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 				if (!sel_g) sol.free();
 				continue;
 			}
-			point_d const pos3(pos + sol.pos);
-			float const sizes(calc_sphere_size(pos3, camera, sradius));
+			point_d const spos(pos + sol.pos);
+			float const sizes(calc_sphere_size(spos, camera, sradius));
 
 			if (sizes < 0.1) {
 				if (!sel_g) sol.free();
 				continue;
 			}
 			bool const update_pass(sel_g && !no_move && ((int(tfticks)+j)&31) == 0);
-			if (!update_pass && sol.gen != 0 && !univ_sphere_vis(pos3, sol.radius)) continue;
+			if (!update_pass && sol.gen != 0 && !univ_sphere_vis(spos, sol.radius)) continue;
 			bool const sel_sun(sel_s && (clobj.type == UTYPE_STAR || clobj.type == UTYPE_SYSTEM));
 			bool const skip_s(p_system && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
-			bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(pos3, 2.0*sradius));
+			bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(spos, 2.0*sradius));
 			bool const planets_visible(PLANET_MAX_SIZE*sizes >= 0.3*sradius || !sclip);
 			current.system  = j;
 			current.cluster = sol.cluster_id;
 
 			for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) {
-				if (sun_visible && sol_draw_pass == unsigned(sel_s) && !sol.sun.draw(pos3, cmvs, usg)) continue;
+				if (sun_visible && sol_draw_pass == unsigned(sel_s) && !sol.sun.draw(spos, cmvs, usg)) continue;
 				if (planets_visible) sol.process();
 				if (sol.planets.empty()) continue;
 
@@ -636,7 +638,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 						set_light_galaxy_ambient_only();
 					}
 					else {
-						set_sun_loc_color(pos3, sol.sun.color, sradius, 0, 0, BASE_AMBIENT, BASE_DIFFUSE); // slow - can this be made faster?
+						set_sun_loc_color(spos, sol.sun.color, sradius, 0, 0, BASE_AMBIENT, BASE_DIFFUSE); // slow - can this be made faster?
 					}
 					set_ambient_color(sol.get_galaxy_color());
 				}
@@ -651,9 +653,9 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 					bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
 					if (p_system && (pass == 2 && !sel_p)) continue; // draw in another pass
 					uplanet &planet(sol.planets[k]);
-					point_d const pos4(pos + planet.pos);
-					if (sel_s && (p2p_dist_sq(camera, pos4) < p2p_dist_sq(camera, pos3)) != sol_draw_pass) continue; // don't draw planet in this pass
-					float const pradius(PLANET_ATM_RSCALE*planet.radius), sizep(calc_sphere_size(pos4, camera, pradius));
+					point_d const ppos(pos + planet.pos);
+					if (sel_s && (p2p_dist_sq(camera, ppos) < p2p_dist_sq(camera, spos)) != sol_draw_pass) continue; // don't draw planet in this pass
+					float const pradius(PLANET_ATM_RSCALE*planet.radius), sizep(calc_sphere_size(ppos, camera, pradius));
 					bool skip_draw(!planets_visible);
 
 					if (sclip && sizep < (planet.ring_data.empty() ? 0.6 : 0.3)) {
@@ -664,9 +666,9 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 					bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET);
 					bool const skip_p(p_system && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
 					if (!skip_p && !no_move) planet.do_update(sol.pos, has_sun, has_sun); // don't really have to do this if planet is not visible
-					if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(pos4, planet.mosize))) continue;
-					bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(pos4, pradius));
-					shadow_vars_t svars(make_pt_global(pos3), (has_sun ? sradius : 0.0), all_zeros, 0.0);
+					if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(ppos, planet.mosize))) continue;
+					bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(ppos, pradius));
+					shadow_vars_t svars(make_pt_global(spos), (has_sun ? sradius : 0.0), all_zeros, 0.0);
 				
 					if (planet_visible && planet.is_ok()) {
 						float max_overlap(0.0);
@@ -675,15 +677,15 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 							// Note: if more than one moon shadows the planet, it will be incorrect, but that case is very rare
 							for (unsigned l = 0; l < planet.moons.size(); ++l) {
 								umoon const &moon(planet.moons[l]);
-								point_d const pos5(pos + moon.pos);
+								point_d const mpos(pos + moon.pos);
 
-								if (p2p_dist_sq(pos5, pos3) < p2p_dist_sq(pos4, pos3)) { // moon closer to sun than planet
-									float const overlap((pradius + moon.radius) - pt_line_dist(pos5, pos3, pos4));
+								if (p2p_dist_sq(mpos, spos) < p2p_dist_sq(ppos, spos)) { // moon closer to sun than planet
+									float const overlap((pradius + moon.radius) - pt_line_dist(mpos, spos, ppos));
 
 									if (overlap > max_overlap) {
 										//cout << "moon " << l << " " << moon.getname() << " shadows planet " << k << " " << planet.getname() << endl;
 										max_overlap     = overlap;
-										svars.ss_pos    = make_pt_global(pos5);
+										svars.ss_pos    = make_pt_global(mpos);
 										svars.ss_radius = moon.radius;
 									}
 								}
@@ -691,7 +693,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 						}
 						if (!skip_p) {
 							planet.check_gen_texture(int(sizep));
-							planet.draw(pos4, cmvs, usg, svars); // ignore return value?
+							planet.draw(ppos, cmvs, usg, svars); // ignore return value?
 						}
 					}
 					planet.process();
@@ -703,12 +705,12 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 							if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
 							umoon &moon(planet.moons[l]);
 							if (!moon.is_ok()) continue;
-							point_d const pos5(pos + moon.pos);
-							float const sizem(calc_sphere_size(pos5, camera, moon.radius));
-							if ((sizem < 0.2 && sclip) || !univ_sphere_vis(pos5, moon.radius)) continue;
+							point_d const mpos(pos + moon.pos);
+							float const sizem(calc_sphere_size(mpos, camera, moon.radius));
+							if ((sizem < 0.2 && sclip) || !univ_sphere_vis(mpos, moon.radius)) continue;
 							current.moon = l;
 							moon.check_gen_texture(int(sizem));
-							moon.draw(pos5, cmvs, usg, shadow_vars_t(svars.sun_pos, svars.sun_radius, make_pt_global(pos4), planet.radius));
+							moon.draw(mpos, cmvs, usg, shadow_vars_t(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius));
 						}
 					}
 					if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
@@ -722,11 +724,11 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 				for (vector<planet_draw_data_t>::const_iterator k = rings_to_draw.begin(); k != rings_to_draw.end(); ++k) {
 					uplanet &planet(sol.planets[k->ix]);
 					planet.ensure_rings_texture();
-					planet.draw_prings(usg, (pos + planet.pos), k->size, pos3, (has_sun ? sradius : 0.0));
+					planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0));
 				}
 				for (vector<planet_draw_data_t>::const_iterator k = atmos_to_draw.begin(); k != atmos_to_draw.end(); ++k) {
 					uplanet const &planet(sol.planets[k->ix]);
-					planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars);
+					planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars, camera);
 				}
 			} // sol_draw_pass
 		} // system j
@@ -1109,7 +1111,6 @@ void ustar::create(point const &pos_) {
 	current.type = UTYPE_STAR;
 	set_defaults();
 	gen_rseeds();
-	rot_ang  = rot_ang0 = 0.0;
 	pos      = pos_;
 	temp     = rand_gaussian2(55.0, 10.0);
 	radius   = 0.25*rand_uniform2(STAR_MIN_SIZE, STAR_MAX_SIZE) + (37.5*STAR_MAX_SIZE/temp)*rand_gaussian2(0.3, 0.1);
@@ -1434,17 +1435,22 @@ void umoon::create(bool phase) { // no rotation due to satellites
 }
 
 
+void rotated_obj::rgen_values() {
+
+	rot_ang  = rot_ang0 = 360.0*rand2d(); // degrees in OpenGL
+	rev_ang  = rev_ang0 = 360.0*rand2d(); // degrees in OpenGL
+	rot_axis = signed_rand_vector2_norm();
+}
+
+
 void urev_body::gen_rotrev() {
 
 	set_defaults();
 	gen_rseeds();
 	tid = tsize = 0;
-	rot_ang  = rev_ang = 0.0;
 	rot_rate = 0.0;
 	rev_rate = 0.0;
-	rot_ang0 = 360.0*rand2d(); // degrees in OpenGL
-	rev_ang0 = 360.0*rand2d(); // degrees in OpenGL
-	rot_axis = signed_rand_vector2_norm();
+	rotated_obj::rgen_values();
 	// inclination angle = angle between rot_axis and rev_axis
 
 	// calculate revolution rate around parent
@@ -1830,21 +1836,21 @@ void urev_body::free() {
 // *** DRAW CODE ***
 
 
-void uobj_solid::apply_gl_rotate() const {
+void rotated_obj::apply_gl_rotate() const {
 
 	rotate_from_v2v(rot_axis, plus_z);
 	if (rot_ang != 0.0) rotate_about(rot_ang, plus_z); // in degrees
 }
 
 
-void uobj_solid::rotate_vector(vector3d &v) const {
+void rotated_obj::rotate_vector(vector3d &v) const {
 
 	rotate_vector3d_by_vr(rot_axis, plus_z, v);
 	if (rot_ang != 0.0) rotate_vector3d(plus_z, rot_ang/TO_DEG, v); // in radians
 }
 
 
-void uobj_solid::rotate_vector_inv(vector3d &v) const {
+void rotated_obj::rotate_vector_inv(vector3d &v) const {
 
 	if (rot_ang != 0.0) rotate_vector3d(plus_z, -rot_ang/TO_DEG, v); // in radians
 	rotate_vector3d_by_vr(plus_z, rot_axis, v);
@@ -1925,7 +1931,6 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) 
 			ocolor.do_glColor();
 			draw_flare(pos_, all_zeros, 2.5*radius, 2.5*radius); // draw star's flare
 		}
-		apply_gl_rotate();
 		glEnable(GL_TEXTURE_2D);
 		select_texture(WHITE_TEX);
 		WHITE.do_glColor();
@@ -2208,10 +2213,10 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 }
 
 
-void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const { // must be drawn last
+void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars, point const &camera) const {
 
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
-	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), radius/PLANET_ATM_RSCALE, cloud_radius, atmos, svars)) return;
+	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), radius/PLANET_ATM_RSCALE, cloud_radius, atmos, svars, camera)) return;
 	enable_blend();
 	set_fill_mode();
 	WHITE.do_glColor();

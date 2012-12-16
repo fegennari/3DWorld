@@ -9,6 +9,7 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "explosion.h"
+#include "asteroid.h"
 
 
 unsigned const ASTEROID_NDIV   = 32; // for sphere model, better if a power of 2
@@ -435,6 +436,35 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 {
 	gen_fragments();
 	uobject::explode(damage, bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
+}
+
+
+// *** asteroid field ***
+
+
+void uasteroid_field::draw(point_d const &pos_, point const &camera) const {
+
+	point_d const afpos(pos + pos_);
+	if (empty() || !univ_sphere_vis(afpos, radius)) return;
+	if (calc_sphere_size(afpos, camera, max_aradius) < 1.0) return; // asteroids are too small/far away
+
+	// FIXME: WRITE - shader setup
+	for (vector<uasteroid>::const_iterator j = begin(); j != end(); ++j) {
+		j->draw(pos);
+	}
+}
+
+
+void uasteroid::draw(point_d const &pos_) const {
+
+	point_d const apos(pos_ + pos);
+	if (!univ_sphere_vis(apos, radius)) return;
+	glPushMatrix();
+	global_translate(apos);
+	apply_gl_rotate();
+	scale_by(radius*scale);
+	// draw asteroid inst_id
+	glPopMatrix();
 }
 
 

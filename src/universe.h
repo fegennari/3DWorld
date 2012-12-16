@@ -174,8 +174,6 @@ class uobj_solid : public uobj_rgen, public named_obj { // size = 176
 public:
 	char type;
 	float temp, density, mass, gravity;
-	double rot_ang, rot_ang0;
-	vector3d rot_axis;
 	colorRGBA color, colorA, colorB;
 
 	uobj_solid(char type_) : type(type_) {set_defaults();}
@@ -184,9 +182,6 @@ public:
 	void get_colors(unsigned char ca[3], unsigned char cb[3]) const;
 	void adjust_colorAB(float delta);
 	void gen_colorAB(float delta);
-	void apply_gl_rotate() const;
-	void rotate_vector(vector3d &v) const;
-	void rotate_vector_inv(vector3d &v) const;
 	void set_grav_mass();
 	bool collision(point const &p, float rad, vector3d const &v, point &cpos, float &coll_r, bool simple) const;
 	void rename(std::string const &name_) {setname(name_);}
@@ -200,7 +195,20 @@ public:
 };
 
 
-class urev_body : public uobj_solid, public color_gen_class { // size = 268
+struct rotated_obj { // size = 20
+
+	vector3d rot_axis;
+	double rev_ang, rev_ang0, rot_ang, rot_ang0; // Note: rev_ang here to preserve rand() call order
+
+	rotated_obj() : rev_ang(0.0), rev_ang0(0.0), rot_ang(0.0), rot_ang0(0.0) {}
+	void rgen_values();
+	void apply_gl_rotate() const;
+	void rotate_vector(vector3d &v) const;
+	void rotate_vector_inv(vector3d &v) const;
+};
+
+
+class urev_body : public uobj_solid, public color_gen_class, public rotated_obj { // size = 268
 
 	// for textures/colors
 	unsigned char a[3], b[3];
@@ -213,7 +221,6 @@ public:
 	unsigned orbiting_refs;
 	unsigned tid, tsize;
 	float orbit, rot_rate, rev_rate, atmos, water, resources;
-	double rev_ang, rev_ang0;
 	vector3d rev_axis, v_orbit;
 	upsurface *surface;
 
@@ -286,7 +293,7 @@ public:
 	float get_vegetation() const;
 	void ensure_rings_texture();
 	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius) const;
-	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const;
+	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars, point const &camera) const;
 	void free_texture();
 	void free();
 	float get_hmap_scale() const {return PLANET_HMAP_SCALE;}
@@ -326,9 +333,12 @@ class ustar : public uobj_solid { // size = 176
 		void update(colorRGBA const &color);
 		void draw(float size, int ndiv, bool texture) const;
 	};
+
 	vector<solar_flare> solar_flares;
 
 public:
+	vector3d rot_axis;
+
 	ustar() : uobj_solid(UTYPE_STAR) {}
 	void create(point const &pos_);
 	void gen_color();
@@ -399,22 +409,16 @@ public:
 };
 
 
-class uasteroid : public uobject_base {
-	// FIXME: WRITE
-};
-
-
-class uasteroid_field : public uobject_base, public vector<uasteroid> {
-	// anything else?
-};
-
-
 class unebula : public uobject_base {
 
 	colorRGBA color;
+
+public:
 	// FIXME: WRITE
 };
 
+
+class uasteroid_field;
 
 class ucell : public uobj_rgen { // size = 84
 
@@ -559,6 +563,7 @@ bool import_default_modmap();
 bool import_modmap(string const &filename);
 bool export_modmap(string const &filename);
 s_object get_shifted_sobj(s_object const &sobj);
+float calc_sphere_size(point const &pos, point const &camera, float radius, float d_adj=0.0);
 
 
 #endif
