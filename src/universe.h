@@ -52,17 +52,6 @@ float const MOON_TO_PLANET_MIN_GAP     = 0.008;
 float const INTER_MOON_MIN_SPACING     = 0.01;
 float const MIN_RAD_SPACE_FACTOR       = 1.2;
 
-unsigned const U_BLOCKS                = 7;
-unsigned const MIN_GALAXIES_PER_CELL   = 1;
-unsigned const MAX_GALAXIES_PER_CELL   = 4;
-unsigned const MIN_AST_FIELD_PER_CELL  = 0;
-unsigned const MAX_AST_FIELD_PER_CELL  = 0;
-unsigned const MIN_NEBULAS_PER_CELL    = 0;
-unsigned const MAX_NEBULAS_PER_CELL    = 0;
-unsigned const MAX_SYSTEMS_PER_GALAXY  = 500;
-unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
-unsigned const MAX_MOONS_PER_PLANET    = 8;
-
 float const MP_COLOR_VAR        = 0.4;
 float const PLANET_ATM_RSCALE   = 1.025;
 float const ORBIT_PLANE_DELTA   = 0.06;
@@ -96,6 +85,7 @@ float const MAX_GALAXY_EXTENT(GALAXY_MAX_SIZE + MAX_SYSTEM_EXTENT);
 float const AVG_STAR_SIZE(0.5*(STAR_MAX_SIZE + STAR_MIN_SIZE));
 float const STAR_MAX_SIZE_INV(1.0/STAR_MAX_SIZE);
 
+unsigned const U_BLOCKS      = 7;
 unsigned const U_BLOCKS_SQ   = U_BLOCKS*U_BLOCKS;
 unsigned const U_BLOCKS_CU   = U_BLOCKS_SQ*U_BLOCKS;
 unsigned const U_BLOCKSo2    = (U_BLOCKS-1)/2;
@@ -374,22 +364,7 @@ public:
 };
 
 
-class unebula : public uobject_base {
-
-	colorRGBA color;
-	unsigned vbo_id;
-	vector<vert_color> points; // FIXME: should probably use blocks so that VFC works better
-
-public:
-	unebula() : vbo_id(0) {}
-	void gen(unsigned num_pts);
-	void upload_and_draw(point_d const &pos_);
-	void draw(point_d const &pos_) const;
-	void free_context();
-	void free();
-};
-
-
+class unebula;
 class uasteroid_field;
 
 
@@ -397,6 +372,10 @@ class ugalaxy : public uobj_rgen, public named_obj { // size = 148 (164)
 
 	mutable float lrq_rad;
 	mutable point lrq_pos;
+
+	void apply_scale_transform(point &pos_) const;
+	point gen_valid_system_pos() const;
+
 public:
 	struct system_cluster {
 
@@ -419,11 +398,10 @@ public:
 	void calc_color();
 	void calc_bounding_sphere();
 	bool create(ucell const &cell, int index);
-	void apply_scale_transform(point &pos_) const;
 	float get_radius_at(point const &pos_) const;
 	bool is_close_to(ugalaxy const &g, float overlap_amount) const;
 	void process(ucell const &cell);
-	bool gen_system_loc(point &pos2, vector<point> const &placed);
+	bool gen_system_loc(vector<point> const &placed);
 	void clear_systems();
 	void free();
 	string get_name() const {return "Galaxy " + getname();}

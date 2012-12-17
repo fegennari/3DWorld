@@ -1,4 +1,4 @@
-// 3D World - Cloud Generation and Drawing Code
+// 3D World - Cloud/Nebula Generation and Drawing Code
 // by Frank Gennari
 // 3/10/12
 #include "3DWorld.h"
@@ -6,6 +6,7 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "draw_utils.h"
+#include "clouds.h" // for uobj_base for unebula
 
 
 bool     const USE_CLOUD_FBO    = 1;
@@ -16,7 +17,7 @@ vector2d cloud_wind_pos(0.0, 0.0);
 cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
-extern int window_width, window_height, cloud_model, display_mode, xoff, yoff, animate2;
+extern int window_width, window_height, cloud_model, draw_model, display_mode, xoff, yoff, animate2;
 extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
 extern vector3d wind;
 
@@ -399,6 +400,80 @@ void draw_cloud_plane(bool reflection_pass) {
 	s.end_shader();
 	disable_blend();
 	glDepthMask(GL_TRUE);
+}
+
+
+// *** nebula code ***
+
+
+unsigned const NUM_NEBULA_QUADS = 16;
+
+void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist);
+
+
+void unebula::gen(float range) {
+
+	rand_gen_t rgen;
+	rgen.set_state(rand2(), rand2());
+	radius = rgen.rand_uniform(0.1, 0.2)*range;
+	color  = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float(), 1.0); // more restricted?
+	points.resize(4*NUM_NEBULA_QUADS);
+
+	for (unsigned i = 0; i < points.size(); i += 4) {
+		vector3d const normal(rgen.signed_rand_vector_norm());
+		vector3d vab[2];
+		get_ortho_vectors(normal, vab);
+
+		for (unsigned j = 0; j < 4; ++j) { // Note: quads will extend beyond radius, but will be rendered as alpha=0 outside radius
+			points[i+j].v = radius*(((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1]);
+			points[i+j].set_norm(normal);
+			points[i+j].set_c4(color); // more variation?
+		}
+	}
+}
+
+
+void unebula::begin_render(shader_t &s) {
+
+	if (!s.is_setup()) {
+		s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
+		s.set_vert_shader("nebula");
+		s.set_frag_shader("nebula");
+		s.begin_shader();
+	}
+	s.enable();
+	enable_blend();
+	glDepthMask(GL_FALSE); // no depth writing
+}
+
+
+void unebula::end_render(shader_t &s) {
+
+	glDepthMask(GL_TRUE);
+	disable_blend();
+	s.disable();
+}
+
+
+void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const { // Note: new VFC here
+
+	pos_ += pos;
+	if (!univ_sphere_vis(pos_, radius)) return;
+	float const dist(p2p_dist(camera, pos_)), dist_scale(CLIP_TO_01(1.0f - (dist - radius)/max_dist));
+	float size_scale(1.0);
+	move_in_front_of_far_clip(pos_, camera, size_scale, (dist + radius)); // distance to furthest point
+	glPushMatrix();
+	global_translate(pos_);
+	uniform_scale(size_scale);
+	
+	if (s.is_setup()) { // assert setup?
+		s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
+		s.add_uniform_float("alpha_scale", ((draw_model == 1) ? 1.0 : 0.5*dist_scale));
+		s.add_uniform_float("radius",      radius);
+	}
+	points.front().set_state();
+	glDrawArrays(GL_QUADS, 0, (unsigned)points.size());
+	glPopMatrix();
 }
 
 

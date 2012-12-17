@@ -9,6 +9,7 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "asteroid.h"
+#include "clouds.h" // for unebula
 
 
 // temperatures
@@ -34,6 +35,16 @@ bool const USE_SPHERE_DLISTS = 1; // sometimes faster on newer video cards, slow
 unsigned const MAX_TRIES     = 100;
 unsigned const SPHERE_MAX_ND = 256;
 unsigned const RING_TEX_SZ   = 256;
+unsigned const MIN_GALAXIES_PER_CELL   = 1;
+unsigned const MAX_GALAXIES_PER_CELL   = 4;
+unsigned const MIN_AST_FIELD_PER_GALAXY= 0;
+unsigned const MAX_AST_FIELD_PER_GALAXY= 0;
+unsigned const MIN_NEBULAS_PER_GALAXY  = 0;
+unsigned const MAX_NEBULAS_PER_GALAXY  = 3;
+unsigned const MAX_SYSTEMS_PER_GALAXY  = 500;
+unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
+unsigned const MAX_MOONS_PER_PLANET    = 8;
+
 int   const RAND_CONST       = 1;
 float const ROTREV_TIMESCALE = 1.0;
 float const ROT_RATE_CONST   = 0.5*ROTREV_TIMESCALE;
@@ -595,12 +606,6 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 				i->draw(pos, camera);
 			}
 		}
-		if (pass == 0 && !galaxy.nebulas.empty()) { // draw nebulas
-			// FIXME: shader setup - emissive, no lighting
-			for (vector<unebula>::iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
-				i->upload_and_draw(pos);
-			}
-		}
 		for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
 			bool const sel_s(sel_g && (int)j == clobj.system);
 			if (p_system && ((pass == 0 && sel_s) || (pass != 0 && !sel_s))) continue; // draw in another pass
@@ -628,7 +633,9 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 			current.cluster = sol.cluster_id;
 
 			for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) {
-				if (sun_visible && sol_draw_pass == unsigned(sel_s) && !sol.sun.draw(spos, cmvs, usg)) continue;
+				if (sun_visible && sol_draw_pass == unsigned(sel_s)) {
+					if (!sol.sun.draw(spos, cmvs, usg)) continue;
+				}
 				if (planets_visible) sol.process();
 				if (sol.planets.empty()) continue;
 
@@ -732,62 +739,22 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 			} // sol_draw_pass
 		} // system j
 	} // galaxy i
-}
 
+	// draw nebulas
+	if (pass == 0) {
+		shader_t nebula_shader;
+		unebula::begin_render(nebula_shader);
 
-// *** unebula ***
+		for (unsigned i = 0; i < galaxies->size(); ++i) {
+			ugalaxy &galaxy((*galaxies)[i]);
+			if (!univ_sphere_vis((pos + galaxy.pos), galaxy.radius)) continue; // conservative, since galaxies are not spherical
 
-
-unsigned const MIN_NEBULA_PTS = 100000;
-unsigned const MAX_NEBULA_PTS = 200000;
-
-
-void unebula::gen(unsigned num_pts) {
-
-	rand_gen_t rgen;
-	rgen.set_state(rand2(), rand2());
-	radius = rgen.rand_uniform(0.2, 0.5)*CELL_SIZEo2;
-	pos    = rgen.signed_rand_vector(CELL_SIZEo2 - radius); // make sure it's contained in the cell
-	color  = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float(), 1.0); // more restricted?
-	if (num_pts == 0) {num_pts = rgen.rand_uniform_uint(MIN_NEBULA_PTS, MAX_NEBULA_PTS);}
-	points.resize(num_pts);
-
-	for (vector<vert_color>::iterator i = points.begin(); i != points.end(); ++i) {
-		i->v = rgen.signed_rand_vector_spherical(1.0); // use nonuniform distribution?
-		i->set_c4(color); // more variation?
+			for (vector<unebula>::const_iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
+				i->draw(pos, camera, U_VIEW_DIST, nebula_shader);
+			}
+		} // galaxy i
+		unebula::end_render(nebula_shader);
 	}
-}
-
-
-void unebula::upload_and_draw(point_d const &pos_) {
-
-	if (!univ_sphere_vis((pos_ + pos), radius)) return;
-	create_bind_vbo_and_upload(vbo_id, points, 0);
-	draw(pos_);
-}
-
-
-void unebula::draw(point_d const &pos_) const { // Note: new VFC here
-
-	vert_color::set_vbo_arrays();
-	assert(vbo_id > 0);
-	bind_vbo(vbo_id);
-	glDrawArrays(GL_POINTS, 0, points.size());
-	bind_vbo(0);
-}
-
-
-void unebula::free_context() {
-
-	delete_vbo(vbo_id);
-	vbo_id = 0;
-}
-
-
-void unebula::free() {
-
-	free_context();
-	points.clear();
 }
 
 
@@ -944,6 +911,15 @@ void ugalaxy::apply_scale_transform(point &pos_) const {
 }
 
 
+point ugalaxy::gen_valid_system_pos() const {
+
+	float const rsize(radius*(1.0 - sqrt(rand2d())));
+	point pos2(gen_rand_vector2(rsize));
+	apply_scale_transform(pos2);
+	return pos2 + pos;
+}
+
+
 float ugalaxy::get_radius_at(point const &pos_) const {
 
 	if (lrq_rad > 0.0 && p2p_dist_sq(pos_, lrq_pos) < 0.000001*min(radius*radius, p2p_dist_sq(pos_, pos))) {
@@ -1022,8 +998,7 @@ void ugalaxy::process(ucell const &cell) {
 		}
 	}
 	for (unsigned i = 0; i < num_systems; ++i) {
-		point pos2;
-		if (!gen_system_loc(pos2, placed)) num_systems = i; // can't place it, give up
+		if (!gen_system_loc(placed)) num_systems = i; // can't place it, give up
 	}
 	sols.resize(num_systems);
 	unsigned tot_systems(0);
@@ -1061,7 +1036,7 @@ void ugalaxy::process(ucell const &cell) {
 	lrq_rad = 0.0;
 
 	// gen asteroid fields
-	unsigned const num_af(rand_uniform_uint2(MIN_AST_FIELD_PER_CELL, MAX_AST_FIELD_PER_CELL));
+	unsigned const num_af(rand_uniform_uint2(MIN_AST_FIELD_PER_GALAXY, MAX_AST_FIELD_PER_GALAXY));
 	asteroid_fields.resize(num_af);
 
 	for (vector<uasteroid_field>::iterator i = asteroid_fields.begin(); i != asteroid_fields.end(); ++i) {
@@ -1069,26 +1044,22 @@ void ugalaxy::process(ucell const &cell) {
 	}
 
 	// gen nebulas
-	unsigned const num_nebulas(rand_uniform_uint2(MIN_NEBULAS_PER_CELL, MAX_NEBULAS_PER_CELL));
+	unsigned const num_nebulas(rand_uniform_uint2(MIN_NEBULAS_PER_GALAXY, MAX_NEBULAS_PER_GALAXY));
 	nebulas.resize(num_nebulas);
 
 	for (vector<unebula>::iterator i = nebulas.begin(); i != nebulas.end(); ++i) {
-		i->gen(0);
+		i->pos = gen_valid_system_pos();
+		i->gen(radius);
 	}
 	gen = 1;
 	//if (num_systems > 480) PRINT_TIME("Galaxy Process");
 }
 
 
-bool ugalaxy::gen_system_loc(point &pos2, vector<point> const &placed) {
-
-	pos2 = zero_vector;
+bool ugalaxy::gen_system_loc(vector<point> const &placed) {
 
 	for (unsigned i = 0; i < MAX_TRIES; ++i) {
-		float const rsize(radius*(1.0 - sqrt(rand2d())));
-		pos2  = gen_rand_vector2(rsize);
-		apply_scale_transform(pos2);
-		pos2 += pos;
+		point const pos2(gen_valid_system_pos());
 		bool bad_pos(0);
 		
 		for (unsigned j = 0; j < 3 && !bad_pos; ++j) {
@@ -1791,9 +1762,6 @@ void universe_t::free_textures() { // should be OK even if universe isn't setup
 				for (unsigned i = 0; i < cell.galaxies->size(); ++i) {
 					ugalaxy &galaxy((*cell.galaxies)[i]);
 					
-					for (vector<unebula>::iterator n = galaxy.nebulas.begin(); n != galaxy.nebulas.end(); ++n) {
-						n->free_context();
-					}
 					for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
 						ussystem &sol(galaxy.sols[j]);
 						
