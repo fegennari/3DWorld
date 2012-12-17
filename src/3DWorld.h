@@ -1030,6 +1030,7 @@ public:
 	float rand_float() {return 0.000001*(rand()%1000000);} // uniform 0 to 1
 	float signed_rand_float() {return 2.0*randd() - 1.0;}
 	float rand_uniform(float val1, float val2) {return 0.5*((val1 + val2) + fabs(val2 - val1)*signed_rand_float());}
+	unsigned rand_uniform_uint(unsigned min_val, unsigned max_val) {return (min_val + (rand() % (max_val - min_val + 1)));}
 
 	vector3d signed_rand_vector(float scale=1.0) {
 		assert(scale > 0.0);

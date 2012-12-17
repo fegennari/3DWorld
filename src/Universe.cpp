@@ -199,7 +199,7 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(float atmosphere, int cloud_tex_repeat, shadow_vars_t const &svars) {
+	bool enable_planet(float atmosphere, float cloud_scale, shadow_vars_t const &svars) {
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
@@ -208,11 +208,11 @@ public:
 			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", 1);
-			add_uniform_float("time", 8.0E-6*cloud_time);
+			add_uniform_float("time", 5.0E-6*cloud_time);
 		}
 		enable();
 		set_specular(1.0, 80.0);
-		add_uniform_float("noise_scale", 4.0*cloud_tex_repeat); // clouds
+		add_uniform_float("noise_scale", 4.0*cloud_scale); // clouds
 		set_planet_uniforms(atmosphere, svars);
 		return 1;
 	}
@@ -303,8 +303,8 @@ class ushader_group {
 	universe_shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 public:
-	bool enable_planet_shader(float atmosphere, int cloud_tex_repeat, shadow_vars_t const &svars) {
-		return planet_shader.enable_planet(atmosphere, cloud_tex_repeat, svars);
+	bool enable_planet_shader(float atmosphere, float cloud_scale, shadow_vars_t const &svars) {
+		return planet_shader.enable_planet(atmosphere, cloud_scale, svars);
 	}
 	void disable_planet_shader() {planet_shader.disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
@@ -567,20 +567,6 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 	float const wwsq((float)window_width*(float)window_width);
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
-	if (pass == 0 && asteroid_fields != NULL) { // draw asteroid fields
-		// FIXME: shader setup
-		for (vector<uasteroid_field>::const_iterator i = asteroid_fields->begin(); i != asteroid_fields->end(); ++i) {
-			i->draw(pos, camera);
-		}
-	}
-
-	if (pass == 0 && nebulas != NULL) { // draw nebulas
-		// FIXME: shader setup
-		for (vector<unebula>::iterator i = nebulas->begin(); i != nebulas->end(); ++i) {
-			i->upload_and_draw(pos);
-		}
-	}
-
 	// draw galaxies
 	for (unsigned i = 0; i < galaxies->size(); ++i) { // remember, galaxies can overlap
 		bool const sel_g((int)i == clobj.galaxy), sclip(!sel_g || (display_mode & 0x01) != 0);
@@ -603,6 +589,18 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 		if (max_size < 0.18) continue; // too small (normally will be freed earlier)
 		set_ambient_color(galaxy.color);
 
+		if (pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
+			// FIXME: shader setup - ambient only?
+			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
+				i->draw(pos, camera);
+			}
+		}
+		if (pass == 0 && !galaxy.nebulas.empty()) { // draw nebulas
+			// FIXME: shader setup - emissive, no lighting
+			for (vector<unebula>::iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
+				i->upload_and_draw(pos);
+			}
+		}
 		for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
 			bool const sel_s(sel_g && (int)j == clobj.system);
 			if (p_system && ((pass == 0 && sel_s) || (pass != 0 && !sel_s))) continue; // draw in another pass
@@ -740,12 +738,23 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 // *** unebula ***
 
 
+unsigned const MIN_NEBULA_PTS = 100000;
+unsigned const MAX_NEBULA_PTS = 200000;
+
+
 void unebula::gen(unsigned num_pts) {
 
+	rand_gen_t rgen;
+	rgen.set_state(rand2(), rand2());
+	radius = rgen.rand_uniform(0.2, 0.5)*CELL_SIZEo2;
+	pos    = rgen.signed_rand_vector(CELL_SIZEo2 - radius); // make sure it's contained in the cell
+	color  = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float(), 1.0); // more restricted?
+	if (num_pts == 0) {num_pts = rgen.rand_uniform_uint(MIN_NEBULA_PTS, MAX_NEBULA_PTS);}
 	points.resize(num_pts);
 
 	for (vector<vert_color>::iterator i = points.begin(); i != points.end(); ++i) {
-		// FIXME: WRITE
+		i->v = rgen.signed_rand_vector_spherical(1.0); // use nonuniform distribution?
+		i->set_c4(color); // more variation?
 	}
 }
 
@@ -860,11 +869,6 @@ inline int gen_rand_seed2(point const &center) {
 }
 
 
-unsigned rand2_uint(unsigned min_val, unsigned max_val) {
-	return (min_val + (rand2() % (max_val - min_val + 1)));
-}
-
-
 void ucell::gen_cell(int const ii[3]) {
 
 	if (gen) return; // already generated
@@ -874,39 +878,13 @@ void ucell::gen_cell(int const ii[3]) {
 	set_rand2_state(gen_rand_seed1(pos), gen_rand_seed2(pos));
 	get_rseeds();
 	gen      = 1;
-
-	// gen galaxies
 	galaxies = new vector<ugalaxy>;
-	galaxies->resize(rand2_uint(MIN_GALAXIES_PER_CELL, MAX_GALAXIES_PER_CELL));
+	galaxies->resize(rand_uniform_uint2(MIN_GALAXIES_PER_CELL, MAX_GALAXIES_PER_CELL));
 
-	for (unsigned l = 0; l < galaxies->size(); ++l) {
+	for (unsigned l = 0; l < galaxies->size(); ++l) { // gen galaxies
 		if (!(*galaxies)[l].create(*this, l)) { // can't place the galaxy
 			galaxies->resize(l); // so remove it
 			break;
-		}
-	}
-
-	// gen asteroid fields
-	unsigned const num_af(rand2_uint(MIN_AST_FIELD_PER_CELL, MAX_AST_FIELD_PER_CELL));
-
-	if (num_af > 0) {
-		asteroid_fields = new vector<uasteroid_field>;
-		asteroid_fields->resize(num_af);
-
-		for (vector<uasteroid_field>::iterator i = asteroid_fields->begin(); i != asteroid_fields->end(); ++i) {
-			i->gen_asteroids(0); // FIXME: num
-		}
-	}
-
-	// gen nebulas
-	unsigned const num_nebulas(rand2_uint(MIN_NEBULAS_PER_CELL, MAX_NEBULAS_PER_CELL));
-
-	if (num_nebulas > 0) {
-		nebulas = new vector<unebula>;
-		nebulas->resize(num_nebulas);
-
-		for (vector<unebula>::iterator i = nebulas->begin(); i != nebulas->end(); ++i) {
-			i->gen(0); // FIXME: num
 		}
 	}
 }
@@ -927,14 +905,9 @@ bool ugalaxy::create(ucell const &cell, int index) {
 	lrq_pos  = all_zeros;
 	gen_name(current);
 	float const dbase(SYSTEM_MIN_SPACING + radius);
-	float d[3][2];
+	cube_t const cube(-radius*scale, radius*scale);
 	point galaxy_ext(all_zeros), pts[8];
-
-	for (unsigned j = 0; j < 3; ++j) {
-		d[j][0] = -radius*scale[j];
-		d[j][1] =  radius*scale[j];
-	}
-	get_cube_points(d, pts);
+	get_cube_points(cube.d, pts);
 
 	for (unsigned p = 0; p < 8; ++p) {
 		rotate_vector3d(axis, -xy_angle, pts[p]);
@@ -1026,6 +999,8 @@ void ugalaxy::process(ucell const &cell) {
 	//RESET_TIME;
 	current.type = UTYPE_GALAXY;
 	set_rseeds();
+
+	// gen systems
 	unsigned num_systems(rand2()%(MAX_SYSTEMS_PER_GALAXY+1));
 	vector<point> placed;
 	vector<ugalaxy> const &galaxies(*cell.galaxies);
@@ -1084,7 +1059,23 @@ void ugalaxy::process(ucell const &cell) {
 	calc_bounding_sphere();
 	calc_color();
 	lrq_rad = 0.0;
-	gen     = 1;
+
+	// gen asteroid fields
+	unsigned const num_af(rand_uniform_uint2(MIN_AST_FIELD_PER_CELL, MAX_AST_FIELD_PER_CELL));
+	asteroid_fields.resize(num_af);
+
+	for (vector<uasteroid_field>::iterator i = asteroid_fields.begin(); i != asteroid_fields.end(); ++i) {
+		i->gen_asteroids(0); // FIXME: num
+	}
+
+	// gen nebulas
+	unsigned const num_nebulas(rand_uniform_uint2(MIN_NEBULAS_PER_CELL, MAX_NEBULAS_PER_CELL));
+	nebulas.resize(num_nebulas);
+
+	for (vector<unebula>::iterator i = nebulas.begin(); i != nebulas.end(); ++i) {
+		i->gen(0);
+	}
+	gen = 1;
 	//if (num_systems > 480) PRINT_TIME("Galaxy Process");
 }
 
@@ -1308,8 +1299,8 @@ void uplanet::create(bool phase) {
 	check_owner(current); // must be after setting of resources
 	gen_color();
 	gen_name(current);
-	cloud_tex_repeat = (1 + (rand2()&1)); // 1 or 2
-	current.type     = UTYPE_PLANET;
+	cloud_scale  = rand_uniform2(1.0, 2.0);
+	current.type = UTYPE_PLANET;
 	if (current.is_destroyed()) status = 1;
 }
 
@@ -1795,17 +1786,14 @@ void universe_t::free_textures() { // should be OK even if universe isn't setup
 		for (unsigned y = 0; y < U_BLOCKS; ++y) { // y
 			for (unsigned x = 0; x < U_BLOCKS; ++x) { // x
 				ucell &cell(cells[z][y][x]);
-				
-				if (cell.nebulas != NULL) {
-					for (vector<unebula>::iterator i = cell.nebulas->begin(); i != cell.nebulas->end(); ++i) {
-						i->free_context();
-					}
-				}
 				if (cell.galaxies == NULL) continue;
 				
 				for (unsigned i = 0; i < cell.galaxies->size(); ++i) {
 					ugalaxy &galaxy((*cell.galaxies)[i]);
 					
+					for (vector<unebula>::iterator n = galaxy.nebulas.begin(); n != galaxy.nebulas.end(); ++n) {
+						n->free_context();
+					}
 					for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
 						ussystem &sol(galaxy.sols[j]);
 						
@@ -1839,9 +1827,11 @@ template<typename T> void free_vector_ptr(vector<T> *&v) {
 
 void ucell::free() {
 
-	free_vector_ptr(galaxies);
-	free_vector_ptr(asteroid_fields);
-	free_vector_ptr(nebulas);
+	if (galaxies != NULL) {
+		for (vector<ugalaxy>::iterator i = galaxies->begin(); i != galaxies->end(); ++i) {i->free();}
+		delete galaxies;
+		galaxies = NULL;
+	}
 	gen = 0;
 }
 
@@ -1850,6 +1840,8 @@ void ugalaxy::clear_systems() {
 
 	sols.clear();
 	clusters.clear();
+	asteroid_fields.clear();
+	nebulas.clear();
 }
 
 
@@ -2054,7 +2046,7 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
-		if (texture) {usg.enable_planet_shader(atmos, cloud_tex_repeat, svars);}
+		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, svars);}
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();

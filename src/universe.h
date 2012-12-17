@@ -217,15 +217,15 @@ class urev_body : public uobj_solid, public color_gen_class, public rotated_obj 
 	void calc_snow_thresh();
 
 public:
-	int owner, cloud_tex_repeat;
+	int owner;
 	unsigned orbiting_refs;
 	unsigned tid, tsize;
-	float orbit, rot_rate, rev_rate, atmos, water, resources;
+	float orbit, rot_rate, rev_rate, atmos, water, resources, cloud_scale;
 	vector3d rev_axis, v_orbit;
 	upsurface *surface;
 
-	urev_body(char type_) : uobj_solid(type_), owner(NO_OWNER), cloud_tex_repeat(1), orbiting_refs(0),
-		tid(0), tsize(0), atmos(0.0), water(0.0), resources(0.0), surface(NULL) {}
+	urev_body(char type_) : uobj_solid(type_), owner(NO_OWNER), orbiting_refs(0),
+		tid(0), tsize(0), atmos(0.0), water(0.0), resources(0.0), cloud_scale(1.0), surface(NULL) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,
@@ -374,6 +374,25 @@ public:
 };
 
 
+class unebula : public uobject_base {
+
+	colorRGBA color;
+	unsigned vbo_id;
+	vector<vert_color> points; // FIXME: should probably use blocks so that VFC works better
+
+public:
+	unebula() : vbo_id(0) {}
+	void gen(unsigned num_pts);
+	void upload_and_draw(point_d const &pos_);
+	void draw(point_d const &pos_) const;
+	void free_context();
+	void free();
+};
+
+
+class uasteroid_field;
+
+
 class ugalaxy : public uobj_rgen, public named_obj { // size = 148 (164)
 
 	mutable float lrq_rad;
@@ -393,6 +412,8 @@ public:
 	vector3d scale, axis;
 	vector<ussystem> sols;
 	deque<system_cluster> clusters;
+	vector<uasteroid_field> asteroid_fields;
+	vector<unebula> nebulas;
 	colorRGBA color;
 
 	void calc_color();
@@ -409,33 +430,13 @@ public:
 };
 
 
-class unebula : public uobject_base {
-
-	colorRGBA color;
-	unsigned vbo_id;
-	vector<vert_color> points; // FIXME: should probably use blocks so that VFC works better
-
-public:
-	unebula() : vbo_id(0) {}
-	void gen(unsigned num_pts);
-	void upload_and_draw(point_d const &pos_);
-	void draw(point_d const &pos_) const;
-	void free_context();
-	void free();
-};
-
-
-class uasteroid_field;
-
 class ucell : public uobj_rgen { // size = 84
 
 public:
 	point rel_center;
 	vector<ugalaxy> *galaxies; // must be a pointer to a vector to avoid deep copies
-	vector<uasteroid_field> *asteroid_fields;
-	vector<unebula> *nebulas;
 
-	ucell() : galaxies(NULL), asteroid_fields(NULL), nebulas(NULL) {}
+	ucell() : galaxies(NULL) {}
 	void gen_cell(int const ii[3]);
 	void draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move);
 	void free();

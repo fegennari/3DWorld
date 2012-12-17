@@ -70,6 +70,7 @@ inline double rand2d()            {return global_rand_gen.randd();}
 inline float rand_float2()        {return global_rand_gen.rand_float();} // uniform 0 to 1
 inline float signed_rand_float2() {return global_rand_gen.signed_rand_float();}
 inline float rand_uniform2(float val1, float val2) {return global_rand_gen.rand_uniform(val1, val2);}
+inline unsigned rand_uniform_uint2(unsigned min_val, unsigned max_val) {return global_rand_gen.rand_uniform_uint(min_val, max_val);}
 inline void set_rand2_state(long rs1, long rs2)    {global_rand_gen.set_state(rs1, rs2);}
 inline vector3d signed_rand_vector2(float scale=1.0)           {return global_rand_gen.signed_rand_vector(scale);}
 inline vector3d signed_rand_vector2_norm(float scale=1.0)      {return global_rand_gen.signed_rand_vector_norm(scale);}
