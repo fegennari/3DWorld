@@ -314,6 +314,8 @@ class ushader_group {
 	universe_shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 public:
+	shader_t nebula_shader;
+
 	bool enable_planet_shader(float atmosphere, float cloud_scale, shadow_vars_t const &svars) {
 		return planet_shader.enable_planet(atmosphere, cloud_scale, svars);
 	}
@@ -742,18 +744,17 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 
 	// draw nebulas
 	if (pass == 0) {
-		shader_t nebula_shader;
-		unebula::begin_render(nebula_shader);
+		unebula::begin_render(usg.nebula_shader);
 
 		for (unsigned i = 0; i < galaxies->size(); ++i) {
 			ugalaxy &galaxy((*galaxies)[i]);
-			if (!univ_sphere_vis((pos + galaxy.pos), galaxy.radius)) continue; // conservative, since galaxies are not spherical
+			if (galaxy.nebulas.empty() || !univ_sphere_vis((pos + galaxy.pos), galaxy.radius)) continue; // conservative, since galaxies are not spherical
 
 			for (vector<unebula>::const_iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
-				i->draw(pos, camera, U_VIEW_DIST, nebula_shader);
+				i->draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);
 			}
 		} // galaxy i
-		unebula::end_render(nebula_shader);
+		unebula::end_render(usg.nebula_shader);
 	}
 }
 

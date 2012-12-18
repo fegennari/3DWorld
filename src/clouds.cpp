@@ -415,7 +415,7 @@ void unebula::gen(float range) {
 
 	rand_gen_t rgen;
 	rgen.set_state(rand2(), rand2());
-	radius = rgen.rand_uniform(0.1, 0.2)*range;
+	radius = rgen.rand_uniform(0.12, 0.18)*range;
 	color  = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float(), 1.0); // more restricted?
 	points.resize(4*NUM_NEBULA_QUADS);
 
@@ -436,10 +436,14 @@ void unebula::gen(float range) {
 void unebula::begin_render(shader_t &s) {
 
 	if (!s.is_setup()) {
+		s.set_prefix("#define NUM_OCTAVES 8", 1); // FS
 		s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
 		s.set_vert_shader("nebula");
-		s.set_frag_shader("nebula");
+		s.set_frag_shader("perlin_clouds_3d.part*+nebula");
 		s.begin_shader();
+		s.add_uniform_int("cloud_noise_tex", 0);
+		s.add_uniform_float("noise_scale", 0.006);
+		bind_3d_texture(get_noise_tex_3d());
 	}
 	s.enable();
 	enable_blend();
@@ -470,6 +474,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 		s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
 		s.add_uniform_float("alpha_scale", ((draw_model == 1) ? 1.0 : 0.5*dist_scale));
 		s.add_uniform_float("radius",      radius);
+		s.add_uniform_float("time",        pos.x);
 	}
 	points.front().set_state();
 	glDrawArrays(GL_QUADS, 0, (unsigned)points.size());
