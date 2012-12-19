@@ -368,7 +368,7 @@ class unebula;
 class uasteroid_field;
 
 
-class ugalaxy : public uobj_rgen, public named_obj { // size = 148 (164)
+class ugalaxy : public uobj_rgen, public named_obj, public ellipsoid_t { // size = 148 (164)
 
 	mutable float lrq_rad;
 	mutable point lrq_pos;
@@ -387,8 +387,6 @@ public:
 		system_cluster(float radius_, point const &center_) : radius(radius_), bounds(0.0), center(center_), s1(0), s2(0) {}
 	};
 
-	float xy_angle;
-	vector3d scale, axis;
 	vector<ussystem> sols;
 	deque<system_cluster> clusters;
 	vector<uasteroid_field> asteroid_fields;

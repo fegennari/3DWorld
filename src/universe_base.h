@@ -83,6 +83,13 @@ public:
 };
 
 
+struct ellipsoid_t {
+
+	float xy_angle;
+	vector3d scale, axis;
+};
+
+
 void reset_player_universe();
 bool get_universe_sun_pos(point const &pos, point &spos);
 int  set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,

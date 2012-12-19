@@ -686,6 +686,7 @@ struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 	vert_norm_comp(vert_norm const &vn) : vert_wrap_t(vn.v), norm_comp(vn.n) {}
 	vert_norm_comp(point const &v_, vector3d  const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
 	vert_norm_comp(point const &v_, norm_comp const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
+	void set_state() const;
 };
 
 

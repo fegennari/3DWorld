@@ -411,12 +411,18 @@ unsigned const NUM_NEBULA_QUADS = 16;
 void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist);
 
 
-void unebula::gen(float range) {
+void unebula::gen(float range, ellipsoid_t const &bounds) {
 
+	// Note: bounds is not currently used, but it can be used to scale the nebula to the galaxy's ellipsoid (but requires some transforms in the shader)
 	rand_gen_t rgen;
 	rgen.set_state(rand2(), rand2());
-	radius = rgen.rand_uniform(0.12, 0.18)*range;
-	color  = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float(), 1.0); // more restricted?
+	radius = rgen.rand_uniform(0.1, 0.15)*range;
+
+	for (unsigned d = 0; d < 2; ++d) {
+		color[d] = colorRGBA(rgen.rand_uniform(0.4, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.8), 1.0);
+		//float const cmax(max(color[d].R, max(color[d].G, color[d].B)));
+		//UNROLL_3X(color[d][i_] = CLIP_TO_01(color[d][i_])/cmax;)
+	}
 	points.resize(4*NUM_NEBULA_QUADS);
 
 	for (unsigned i = 0; i < points.size(); i += 4) {
@@ -427,7 +433,6 @@ void unebula::gen(float range) {
 		for (unsigned j = 0; j < 4; ++j) { // Note: quads will extend beyond radius, but will be rendered as alpha=0 outside radius
 			points[i+j].v = radius*(((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1]);
 			points[i+j].set_norm(normal);
-			points[i+j].set_c4(color); // more variation?
 		}
 	}
 }
@@ -442,7 +447,7 @@ void unebula::begin_render(shader_t &s) {
 		s.set_frag_shader("perlin_clouds_3d.part*+nebula");
 		s.begin_shader();
 		s.add_uniform_int("cloud_noise_tex", 0);
-		s.add_uniform_float("noise_scale", 0.006);
+		s.add_uniform_float("noise_scale", 0.005);
 		bind_3d_texture(get_noise_tex_3d());
 	}
 	s.enable();
@@ -462,20 +467,27 @@ void unebula::end_render(shader_t &s) {
 void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const { // Note: new VFC here
 
 	pos_ += pos;
+	float const dist(p2p_dist(camera, pos_)), dist_scale(CLIP_TO_01(1.0f - 1.5f*(dist - radius)/max_dist));
+	if (dist_scale <= 0.0) return; // too far away
 	if (!univ_sphere_vis(pos_, radius)) return;
-	float const dist(p2p_dist(camera, pos_)), dist_scale(CLIP_TO_01(1.0f - (dist - radius)/max_dist));
 	float size_scale(1.0);
 	move_in_front_of_far_clip(pos_, camera, size_scale, (dist + radius)); // distance to furthest point
 	glPushMatrix();
 	global_translate(pos_);
 	uniform_scale(size_scale);
-	
-	if (s.is_setup()) { // assert setup?
-		s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
-		s.add_uniform_float("alpha_scale", ((draw_model == 1) ? 1.0 : 0.5*dist_scale));
-		s.add_uniform_float("radius",      radius);
-		s.add_uniform_float("time",        pos.x);
+	colorRGBA mod_color[2];
+
+	for (unsigned d = 0; d < 2; ++d) {
+		mod_color[d] = color[d];
+		mod_color[d].alpha *= ((draw_model == 1) ? 1.0 : 0.25*dist_scale);
 	}
+	if (s.is_setup()) { // assert setup?
+		s.add_uniform_color("secondary_color", mod_color[1]);
+		s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
+		s.add_uniform_float("radius", radius);
+		s.add_uniform_float("offset", pos.x);
+	}
+	mod_color[0].do_glColor();
 	points.front().set_state();
 	glDrawArrays(GL_QUADS, 0, (unsigned)points.size());
 	glPopMatrix();

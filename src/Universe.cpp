@@ -748,7 +748,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 
 		for (unsigned i = 0; i < galaxies->size(); ++i) {
 			ugalaxy &galaxy((*galaxies)[i]);
-			if (galaxy.nebulas.empty() || !univ_sphere_vis((pos + galaxy.pos), galaxy.radius)) continue; // conservative, since galaxies are not spherical
+			if (galaxy.nebulas.empty() || !univ_sphere_vis((pos + galaxy.pos), 1.2*galaxy.radius)) continue; // add extra radius for nebulas that go outside the galaxy
 
 			for (vector<unebula>::const_iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
 				i->draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);
@@ -905,9 +905,7 @@ bool ugalaxy::create(ucell const &cell, int index) {
 
 void ugalaxy::apply_scale_transform(point &pos_) const {
 
-	pos_[0] *= scale[0];
-	pos_[1] *= scale[1];
-	pos_[2] *= scale[2];
+	UNROLL_3X(pos_[i_] *= scale[i_];)
 	rotate_vector3d(axis, xy_angle, pos_);
 }
 
@@ -1050,7 +1048,7 @@ void ugalaxy::process(ucell const &cell) {
 
 	for (vector<unebula>::iterator i = nebulas.begin(); i != nebulas.end(); ++i) {
 		i->pos = gen_valid_system_pos();
-		i->gen(radius);
+		i->gen(radius, *this);
 	}
 	gen = 1;
 	//if (num_systems > 480) PRINT_TIME("Galaxy Process");
