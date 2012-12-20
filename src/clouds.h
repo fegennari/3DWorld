@@ -10,7 +10,7 @@
 
 class unebula : public uobject_base {
 
-	colorRGBA color[2];
+	colorRGBA color[3];
 	typedef vert_norm_comp vert_type_t;
 	vector<vert_type_t> points;
 

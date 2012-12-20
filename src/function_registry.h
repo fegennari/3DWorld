@@ -491,7 +491,7 @@ colorRGBA texture_color(int tid);
 unsigned get_texture_size(int tid, bool dim);
 void get_lum_alpha(colorRGBA const &color, int tid, float &luminance, float &alpha);
 std::string get_file_extension(std::string const &filename, unsigned level, bool make_lower);
-unsigned get_noise_tex_3d();
+unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp);
 colorRGBA get_landscape_texture_color(int xpos, int ypos);
 void update_lttex_ix(int &ix);
 void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2, float &t);

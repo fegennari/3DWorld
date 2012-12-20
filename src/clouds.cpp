@@ -418,10 +418,8 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 	rgen.set_state(rand2(), rand2());
 	radius = rgen.rand_uniform(0.1, 0.15)*range;
 
-	for (unsigned d = 0; d < 2; ++d) {
+	for (unsigned d = 0; d < 3; ++d) {
 		color[d] = colorRGBA(rgen.rand_uniform(0.3, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.9), 1.0);
-		//float const cmax(max(color[d].R, max(color[d].G, color[d].B)));
-		//UNROLL_3X(color[d][i_] = CLIP_TO_01(color[d][i_])/cmax;)
 	}
 	points.resize(4*NUM_NEBULA_QUADS);
 
@@ -441,14 +439,14 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 void unebula::begin_render(shader_t &s) {
 
 	if (!s.is_setup()) {
-		s.set_prefix("#define NUM_OCTAVES 8", 1); // FS
+		s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
 		s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
 		s.set_vert_shader("nebula");
-		s.set_frag_shader("perlin_clouds_3d.part*+nebula");
+		s.set_frag_shader("nebula");
 		s.begin_shader();
-		s.add_uniform_int("cloud_noise_tex", 0);
-		s.add_uniform_float("noise_scale", 0.005);
-		bind_3d_texture(get_noise_tex_3d());
+		s.add_uniform_int("noise_tex", 0);
+		s.add_uniform_float("noise_scale", 0.01);
+		bind_3d_texture(get_noise_tex_3d(32, 4)); // RGBA noise
 	}
 	s.enable();
 	enable_blend();
@@ -467,7 +465,7 @@ void unebula::end_render(shader_t &s) {
 void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const { // Note: new VFC here
 
 	pos_ += pos;
-	float const dist(p2p_dist(camera, pos_)), dist_scale(CLIP_TO_01(1.0f - 2.0f*(dist - radius)/max_dist));
+	float const dist(p2p_dist(camera, pos_)), dist_scale(CLIP_TO_01(1.0f - 1.6f*(dist - radius)/max_dist));
 	if (dist_scale <= 0.0) return; // too far away
 	if (!univ_sphere_vis(pos_, radius)) return;
 	float size_scale(1.0);
@@ -475,14 +473,16 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 	glPushMatrix();
 	global_translate(pos_);
 	uniform_scale(size_scale);
-	colorRGBA mod_color[2];
+	colorRGBA mod_color[3];
 
-	for (unsigned d = 0; d < 2; ++d) {
+	for (unsigned d = 0; d < 3; ++d) {
 		mod_color[d] = color[d];
 		mod_color[d].alpha *= ((draw_model == 1) ? 1.0 : 0.25*dist_scale);
 	}
 	if (s.is_setup()) { // assert setup?
-		s.add_uniform_color("secondary_color", mod_color[1]);
+		s.add_uniform_color("color1", mod_color[0]);
+		s.add_uniform_color("color2", mod_color[1]);
+		s.add_uniform_color("color3", mod_color[2]);
 		s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
 		s.add_uniform_float("radius", radius);
 		s.add_uniform_float("offset", pos.x);

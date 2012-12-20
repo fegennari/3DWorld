@@ -35,7 +35,6 @@ int   const LANDSCAPE_REGEN_MOD   = 32;   // ticks for entire mesh regen pass
 int   const LANDSCAPE_REGEN_RATE  = 400;  // ticks per landscape texture update (slow)
 int   const MAX_UPDATE_SIZE       = 16;
 float const ADJ_VALUE             = 1.0;
-unsigned const NOISE_TEX_3D_SIZE  = 64;
 
 bool const RELOAD_TEX_ON_HOLE  = 0;
 bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update doesn't recompute the mipmaps
@@ -158,9 +157,12 @@ texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap.raw") // not real file
 
 // zval should depend on def_water_level and temperature
 float h_sand[NTEX_SAND], h_dirt[NTEX_DIRT], clip_hs1, clip_hs2, clip_hd1;
-unsigned noise_tex_3d(0);
 std::set<int> ls_color_texels;
 vector<colorRGBA> cached_ls_colors;
+
+typedef map<pair<unsigned, unsigned>, unsigned> texture_map_t;
+texture_map_t noise_tex_3ds;
+
 typedef map<string, unsigned> name_map_t;
 name_map_t texture_name_map;
 
@@ -330,7 +332,11 @@ void reset_textures() {
 	free_texture(gb_tid);
 	free_texture(flow_tid);
 	free_texture(reflection_tid);
-	free_texture(noise_tex_3d);
+
+	for (texture_map_t::iterator i = noise_tex_3ds.begin(); i != noise_tex_3ds.end(); ++i) {
+		free_texture(i->second);
+	}
+	noise_tex_3ds.clear();
 }
 
 
@@ -1315,18 +1321,19 @@ void gen_noise_texture() {
 }
 
 
-unsigned create_3d_noise_texture(unsigned size) {
+unsigned create_3d_noise_texture(unsigned size, unsigned ncomp) {
 
-	vector<unsigned char> data(size*size*size);
+	vector<unsigned char> data(ncomp*size*size*size);
 	noise_fill(&data.front(), data.size());
-	return create_3d_texture(size, size, size, 1, data, GL_LINEAR, GL_REPEAT);
+	return create_3d_texture(size, size, size, ncomp, data, GL_LINEAR, GL_REPEAT);
 }
 
 
-unsigned get_noise_tex_3d() {
+unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp) {
 
-	if (noise_tex_3d == 0) {noise_tex_3d = create_3d_noise_texture(NOISE_TEX_3D_SIZE);}
-	return noise_tex_3d;
+	pair<texture_map_t::iterator, bool> ret(noise_tex_3ds.insert(make_pair(make_pair(tsize, ncomp), 0)));
+	if (ret.second) {ret.first->second = create_3d_noise_texture(tsize, ncomp);}
+	return ret.first->second;
 }
 
 

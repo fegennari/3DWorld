@@ -80,7 +80,7 @@ public:
 			s.enable();
 		}
 		else {
-			bind_3d_texture(get_noise_tex_3d());
+			bind_3d_texture(get_noise_tex_3d(64, 1)); // grayscale noise
 			s.set_int_prefix("num_lights", num_lights, 1); // FS
 			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			s.set_prefix("#define NO_SPECULAR",      1); // FS (optional/optimization)

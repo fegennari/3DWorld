@@ -195,7 +195,7 @@ class universe_shader_t : public shader_t {
 	}
 	void setup_planet_star_shader() {
 		set_active_texture(1);
-		bind_3d_texture(get_noise_tex_3d());
+		bind_3d_texture(get_noise_tex_3d(64, 1)); // grayscale noise
 		set_active_texture(0);
 		set_prefix("#define NUM_OCTAVES 8", 1); // FS
 	}
