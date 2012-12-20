@@ -419,7 +419,7 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 	radius = rgen.rand_uniform(0.1, 0.15)*range;
 
 	for (unsigned d = 0; d < 2; ++d) {
-		color[d] = colorRGBA(rgen.rand_uniform(0.4, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.8), 1.0);
+		color[d] = colorRGBA(rgen.rand_uniform(0.3, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.9), 1.0);
 		//float const cmax(max(color[d].R, max(color[d].G, color[d].B)));
 		//UNROLL_3X(color[d][i_] = CLIP_TO_01(color[d][i_])/cmax;)
 	}
@@ -467,7 +467,7 @@ void unebula::end_render(shader_t &s) {
 void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const { // Note: new VFC here
 
 	pos_ += pos;
-	float const dist(p2p_dist(camera, pos_)), dist_scale(CLIP_TO_01(1.0f - 1.5f*(dist - radius)/max_dist));
+	float const dist(p2p_dist(camera, pos_)), dist_scale(CLIP_TO_01(1.0f - 2.0f*(dist - radius)/max_dist));
 	if (dist_scale <= 0.0) return; // too far away
 	if (!univ_sphere_vis(pos_, radius)) return;
 	float size_scale(1.0);

@@ -40,7 +40,7 @@ unsigned const MAX_GALAXIES_PER_CELL   = 4;
 unsigned const MIN_AST_FIELD_PER_GALAXY= 0;
 unsigned const MAX_AST_FIELD_PER_GALAXY= 0;
 unsigned const MIN_NEBULAS_PER_GALAXY  = 0;
-unsigned const MAX_NEBULAS_PER_GALAXY  = 3;
+unsigned const MAX_NEBULAS_PER_GALAXY  = 2;
 unsigned const MAX_SYSTEMS_PER_GALAXY  = 500;
 unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
 unsigned const MAX_MOONS_PER_PLANET    = 8;
@@ -748,7 +748,6 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 
 		for (unsigned i = 0; i < galaxies->size(); ++i) {
 			ugalaxy &galaxy((*galaxies)[i]);
-			if (galaxy.nebulas.empty() || !univ_sphere_vis((pos + galaxy.pos), 1.2*galaxy.radius)) continue; // add extra radius for nebulas that go outside the galaxy
 
 			for (vector<unebula>::const_iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
 				i->draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);
@@ -1034,14 +1033,6 @@ void ugalaxy::process(ucell const &cell) {
 	calc_color();
 	lrq_rad = 0.0;
 
-	// gen asteroid fields
-	unsigned const num_af(rand_uniform_uint2(MIN_AST_FIELD_PER_GALAXY, MAX_AST_FIELD_PER_GALAXY));
-	asteroid_fields.resize(num_af);
-
-	for (vector<uasteroid_field>::iterator i = asteroid_fields.begin(); i != asteroid_fields.end(); ++i) {
-		i->gen_asteroids(0); // FIXME: num
-	}
-
 	// gen nebulas
 	unsigned const num_nebulas(rand_uniform_uint2(MIN_NEBULAS_PER_GALAXY, MAX_NEBULAS_PER_GALAXY));
 	nebulas.resize(num_nebulas);
@@ -1049,6 +1040,14 @@ void ugalaxy::process(ucell const &cell) {
 	for (vector<unebula>::iterator i = nebulas.begin(); i != nebulas.end(); ++i) {
 		i->pos = gen_valid_system_pos();
 		i->gen(radius, *this);
+	}
+
+	// gen asteroid fields
+	unsigned const num_af(rand_uniform_uint2(MIN_AST_FIELD_PER_GALAXY, MAX_AST_FIELD_PER_GALAXY));
+	asteroid_fields.resize(num_af);
+
+	for (vector<uasteroid_field>::iterator i = asteroid_fields.begin(); i != asteroid_fields.end(); ++i) {
+		i->gen_asteroids(0); // FIXME: num
 	}
 	gen = 1;
 	//if (num_systems > 480) PRINT_TIME("Galaxy Process");
@@ -2764,6 +2763,9 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 void set_light_galaxy_ambient_only() {
 
 	glDisable(GL_LIGHT0);
+	float const zero4[4] = {0.0, 0.0, 0.0, 0.0};
+	glLightfv(GL_LIGHT0, GL_AMBIENT, zero4); // need to zero it out as well, since shaders ignore light enable state
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, zero4);
 }
 
 
