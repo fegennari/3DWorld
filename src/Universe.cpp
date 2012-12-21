@@ -348,23 +348,26 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	last_camera = camera;
 	glDisable(GL_LIGHTING);
 
-	if (!no_distant || clobj.type < UTYPE_SYSTEM) { // drawing pass 1
-		for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
-			for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
-				for (cxyz[0] = 0; cxyz[0] < int(U_BLOCKS); ++cxyz[0]) { // x
-					draw_cell(cxyz, cmvs, usg, clobj, 0, no_move);
+	if (!no_distant || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
+		for (unsigned nebula_pass = 0; nebula_pass < 2; ++nebula_pass) {
+			for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
+				for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
+					for (cxyz[0] = 0; cxyz[0] < int(U_BLOCKS); ++cxyz[0]) { // x
+						draw_cell(cxyz, cmvs, usg, clobj, 0, (nebula_pass != 0), no_move);
+					}
 				}
 			}
+			universe_pld.draw_and_clear();
 		}
 	}
 	if (clobj.type >= UTYPE_SYSTEM) { // in a system
 		unsigned const npasses((skip_closest && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON)) ? 2 : 3);
 
-		for (unsigned pass = 1; pass < npasses; ++pass) { // drawing passes 2-3
-			draw_cell(clobj.cellxyz, cmvs, usg, clobj, pass, no_move);
+		for (unsigned pass = 1; pass < npasses; ++pass) { // drawing passes 1-2
+			draw_cell(clobj.cellxyz, cmvs, usg, clobj, pass, 0, no_move);
 		}
+		universe_pld.draw_and_clear();
 	}
-	universe_pld.draw_and_clear();
 	glEnable(GL_LIGHTING);
 	//PRINT_TIME("Draw Cells");
 	//exit(0);
@@ -548,10 +551,11 @@ uobject const *get_shadowing_object(uobject const &obj, ustar const &sun) { // u
 }
 
 
-void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move) {
-
+void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg,
+	s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move)
+{
 	UNROLL_3X(current.cellxyz[i_] = cxyz[i_] + uxyz[i_];)
-	get_cell(cxyz).draw(cmvs, usg, clobj, pass, no_move);
+	get_cell(cxyz).draw(cmvs, usg, clobj, pass, nebula_pass, no_move);
 }
 
 
@@ -569,14 +573,28 @@ struct planet_draw_data_t {
 //  If player's system is none then stop
 //  1. Draw the player's system except for the player's sobj
 //  2. Draw the player's sobj
-void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move) {
+void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move) {
 
 	if (galaxies == NULL) return; // galaxies not yet allocated
 	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
 	point const &camera(cmvs.camera);
+	point_d const pos(rel_center);
+
+	if (nebula_pass) {
+		unebula::begin_render(usg.nebula_shader);
+
+		for (unsigned i = 0; i < galaxies->size(); ++i) {
+			ugalaxy &galaxy((*galaxies)[i]);
+
+			for (vector<unebula>::const_iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
+				i->draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);
+			}
+		}
+		unebula::end_render(usg.nebula_shader);
+		return;
+	}
 	assert(!is_nan(camera));
 	bool const p_system(clobj.type >= UTYPE_SYSTEM);
-	point_d const pos(rel_center);
 	float const wwsq((float)window_width*(float)window_width);
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
@@ -741,20 +759,6 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 			} // sol_draw_pass
 		} // system j
 	} // galaxy i
-
-	// draw nebulas
-	if (pass == 0) {
-		unebula::begin_render(usg.nebula_shader);
-
-		for (unsigned i = 0; i < galaxies->size(); ++i) {
-			ugalaxy &galaxy((*galaxies)[i]);
-
-			for (vector<unebula>::const_iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
-				i->draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);
-			}
-		}
-		unebula::end_render(usg.nebula_shader);
-	}
 }
 
 

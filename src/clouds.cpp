@@ -459,13 +459,11 @@ void unebula::begin_render(shader_t &s) {
 	s.enable();
 	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing
-	//glDisable(GL_DEPTH_TEST);
 }
 
 
 void unebula::end_render(shader_t &s) {
 
-	//glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	disable_blend();
 	s.disable();
