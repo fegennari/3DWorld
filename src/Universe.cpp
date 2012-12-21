@@ -752,7 +752,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 			for (vector<unebula>::const_iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
 				i->draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);
 			}
-		} // galaxy i
+		}
 		unebula::end_render(usg.nebula_shader);
 	}
 }

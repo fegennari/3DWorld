@@ -406,8 +406,6 @@ void draw_cloud_plane(bool reflection_pass) {
 // *** nebula code ***
 
 
-unsigned const NUM_NEBULA_QUADS = 16;
-
 void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist);
 
 
@@ -421,18 +419,28 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 	for (unsigned d = 0; d < 3; ++d) {
 		color[d] = colorRGBA(rgen.rand_uniform(0.3, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.9), 1.0);
 	}
-	points.resize(4*NUM_NEBULA_QUADS);
+	unsigned ix(0);
+	points.resize(4*13);
 
-	for (unsigned i = 0; i < points.size(); i += 4) {
-		vector3d const normal(rgen.signed_rand_vector_norm());
-		vector3d vab[2];
-		get_ortho_vectors(normal, vab);
+	for (int z = -1; z <= 1; ++z) {
+		for (int y = -1; y <= 1; ++y) {
+			for (int x = -1; x <= 1; ++x) {
+				if (x == 0 && y == 0 && z == 0) continue; // zero normal
+				int v(1); if (x) {v *= x;} if (y) {v *= y;} if (z) {v *= z;}
+				if (v < 0) continue; // skip mirrored normals
+				vector3d const normal(vector3d(x, y, z).get_norm());
+				vector3d vab[2];
+				get_ortho_vectors(normal, vab);
 
-		for (unsigned j = 0; j < 4; ++j) { // Note: quads will extend beyond radius, but will be rendered as alpha=0 outside radius
-			points[i+j].v = radius*(((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1]);
-			points[i+j].set_norm(normal);
+				for (unsigned j = 0; j < 4; ++j) { // Note: quads will extend beyond radius, but will be rendered as alpha=0 outside radius
+					points[ix+j].v = radius*(((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1]);
+					points[ix+j].set_norm(normal);
+				}
+				ix += 4;
+			}
 		}
 	}
+	assert(ix == points.size());
 }
 
 
@@ -451,11 +459,13 @@ void unebula::begin_render(shader_t &s) {
 	s.enable();
 	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing
+	//glDisable(GL_DEPTH_TEST);
 }
 
 
 void unebula::end_render(shader_t &s) {
 
+	//glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	disable_blend();
 	s.disable();
@@ -477,7 +487,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 
 	for (unsigned d = 0; d < 3; ++d) {
 		mod_color[d] = color[d];
-		mod_color[d].alpha *= ((draw_model == 1) ? 1.0 : 0.25*dist_scale);
+		mod_color[d].alpha *= ((draw_model == 1) ? 1.0 : 0.3*dist_scale);
 	}
 	if (s.is_setup()) { // assert setup?
 		s.add_uniform_color("color1", mod_color[0]);
