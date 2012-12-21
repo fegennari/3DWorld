@@ -1887,10 +1887,10 @@ float get_pixel_size(float radius, float dist) {
 }
 
 
-void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist) {
+void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist, float dscale) {
 
 	if (dist > 0.75*FAR_CLIP) { // behind far clipping plane - move closer and scale
-		float const pscale(FAR_CLIP/(1.5*dist));
+		float const pscale(FAR_CLIP/(dscale*dist));
 		size *= pscale;
 		pos   = camera - (camera - pos)*pscale;
 	}
@@ -1907,7 +1907,7 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) 
 	if (size < 0.02) return 0; // too small
 	float const st_prod(STAR_BRIGHTNESS*size*temp);
 	if (st_prod < 2.0 || st_prod*temp < 4.0) return 0; // too dim
-	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius));
+	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius), 1.35);
 	colorRGBA ocolor(color);
 		
 	if (st_prod < 30.0) {
@@ -1983,7 +1983,7 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		draw_sphere_dlist(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
 		return 1;
 	}
-	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius));
+	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius), 1.35);
 	colorRGBA ocolor(color);
 
 	if (world_mode == WMODE_UNIVERSE && !(display_mode & 2)) {

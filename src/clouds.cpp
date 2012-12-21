@@ -406,7 +406,7 @@ void draw_cloud_plane(bool reflection_pass) {
 // *** nebula code ***
 
 
-void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist);
+void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist, float dscale);
 
 
 void unebula::gen(float range, ellipsoid_t const &bounds) {
@@ -477,7 +477,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 	if (dist_scale <= 0.0) return; // too far away
 	if (!univ_sphere_vis(pos_, radius)) return;
 	float size_scale(1.0);
-	move_in_front_of_far_clip(pos_, camera, size_scale, (dist + radius)); // distance to furthest point
+	move_in_front_of_far_clip(pos_, camera, size_scale, (dist + radius), 1.5); // distance to furthest point
 	glPushMatrix();
 	global_translate(pos_);
 	uniform_scale(size_scale);
