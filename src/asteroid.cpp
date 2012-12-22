@@ -442,39 +442,100 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 // *** asteroid field ***
 
 
+unsigned const NUM_AST_MODELS  = 100;
+unsigned const AST_FIELD_MODEL = AS_MODEL_HMAP;
+
+
+class asteroid_model_gen_t {
+
+	vector<uobj_asteroid *> asteroids; // FIXME: a case for boost::shared_ptr<>?
+
+public:
+	~asteroid_model_gen_t() {clear();}
+	bool empty() const {return asteroids.empty();}
+	
+	void gen(unsigned num, unsigned model) {
+		RESET_TIME;
+		assert(asteroids.empty());
+		asteroids.resize(num);
+
+		for (unsigned i = 0; i < num; ++i) { // create at the origin with radius=1
+			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, ROCK_SPHERE_TEX, i);
+		}
+		PRINT_TIME("Asteroid Model Gen");
+	}
+	void draw(unsigned ix, point const &pos_, shader_t &s) const {
+		assert(ix < asteroids.size());
+		assert(asteroids[ix]);
+		asteroids[ix]->draw(s, pos_);
+	}
+	void draw(unsigned ix, point const &pos, vector3d const &scale, vector3d const &rot_axis, float rot_ang, shader_t &s) const {
+		glPushMatrix();
+		translate_to(pos);
+		scale_by(scale);
+		if (rot_ang != 0.0) {rotate_about(rot_ang, rot_axis);}
+		draw(ix, pos, s);
+		glPopMatrix();
+	}
+	void clear() {
+		for (vector<uobj_asteroid *>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
+			delete *i;
+		}
+		asteroids.clear();
+	}
+};
+
+asteroid_model_gen_t asteroid_model_gen;
+
+
 void uasteroid_field::gen_asteroids(unsigned num) {
 
+	if (asteroid_model_gen.empty()) {asteroid_model_gen.gen(NUM_AST_MODELS, AST_FIELD_MODEL);}
 	clear();
 	resize(num);
 
 	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
+		i->rgen_values();
 		// FIXME: WRITE
 	}
 }
 
 
-void uasteroid_field::draw(point_d const &pos_, point const &camera) const {
+void setup_ship_draw_shader(shader_t &s);
+
+
+void uasteroid_field::begin_render(shader_t &shader) {
+
+	if (!shader.is_setup()) {setup_ship_draw_shader(shader);} // ambient only? not sure if this is what we want in the end
+	shader.enable();
+	BLACK.do_glColor();
+}
+
+
+void uasteroid_field::end_render(shader_t &shader) {
+
+	shader.disable();
+	glDisable(GL_TEXTURE_2D);
+}
+
+
+void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s) const {
 
 	point_d const afpos(pos + pos_);
 	if (empty() || !univ_sphere_vis(afpos, radius))         return;
 	if (calc_sphere_size(afpos, camera, max_aradius) < 1.0) return; // asteroids are too small/far away
 
 	for (vector<uasteroid>::const_iterator i = begin(); i != end(); ++i) {
-		i->draw(pos);
+		i->draw(pos, s);
 	}
 }
 
 
-void uasteroid::draw(point_d const &pos_) const {
+void uasteroid::draw(point_d const &pos_, shader_t &s) const {
 
 	point_d const apos(pos_ + pos);
 	if (!univ_sphere_vis(apos, radius)) return;
-	glPushMatrix();
-	global_translate(apos);
-	apply_gl_rotate();
-	scale_by(radius*scale);
-	// draw asteroid inst_id
-	glPopMatrix();
+	asteroid_model_gen.draw(inst_id, make_pt_global(apos), radius*scale, rot_axis, rot_ang, s);
 }
 
 

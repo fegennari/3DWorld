@@ -314,7 +314,7 @@ class ushader_group {
 	universe_shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 public:
-	shader_t nebula_shader;
+	shader_t nebula_shader, asteroid_shader;
 
 	bool enable_planet_shader(float atmosphere, float cloud_scale, shadow_vars_t const &svars) {
 		return planet_shader.enable_planet(atmosphere, cloud_scale, svars);
@@ -621,10 +621,12 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 		set_ambient_color(galaxy.color);
 
 		if (pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
-			// FIXME: shader setup - ambient only?
+			uasteroid_field::begin_render(usg.asteroid_shader);
+
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
-				i->draw(pos, camera);
+				i->draw(pos, camera, usg.asteroid_shader);
 			}
+			uasteroid_field::end_render(usg.asteroid_shader);
 		}
 		for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
 			bool const sel_s(sel_g && (int)j == clobj.system);
