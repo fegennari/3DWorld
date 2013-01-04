@@ -113,15 +113,6 @@ class ucell;
 class ushader_group;
 
 
-struct camera_mv_speed {
-
-	point camera;
-	vector3d motion_vector;
-	float speed;
-	camera_mv_speed(point const &c, vector3d const &mv, float s) : camera(c), motion_vector(mv), speed(s) {}
-};
-
-
 struct shadow_vars_t {
 	point sun_pos, ss_pos;
 	float sun_radius, ss_radius;
@@ -240,7 +231,7 @@ public:
 	int  get_owner() const {return owner;}
 	void set_owner_color() const;
 	void get_surface_color(unsigned char *data, float val, float phi) const;
-	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, shadow_vars_t const &svars);
+	bool draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svars);
 	void draw_surface(point_d const &pos_, float radius0, float size, int ndiv);
 	void show_colonizable_liveable(point const &pos_, float radius0) const;
 	void inc_orbiting_refs() {++orbiting_refs;}
@@ -333,7 +324,8 @@ public:
 	void create(point const &pos_);
 	void gen_color();
 	colorRGBA get_ambient_color_val() const;
-	bool draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg);
+	colorRGBA get_light_color() const;
+	bool draw(point_d pos_, ushader_group &usg);
 	void draw_flares(int ndiv, bool texture);
 	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0);}
 	string get_name()  const {return "Star " + getname();}
@@ -414,7 +406,7 @@ public:
 
 	ucell() : galaxies(NULL) {}
 	void gen_cell(int const ii[3]);
-	void draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest);
+	void draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest);
 	void free();
 	string get_name() const {return "Universe Cell";}
 };
@@ -485,8 +477,7 @@ struct cell_block {
 
 class universe_t : protected cell_block {
 
-	void draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg,
-		s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest);
+	void draw_cell(int const cxyz[3], ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest);
 
 public:
 	void init();

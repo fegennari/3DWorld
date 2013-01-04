@@ -60,7 +60,7 @@ int uxyz[3] = {0, 0, 0};
 unsigned char water_c[3] = {0}, ice_c[3] = {0};
 unsigned char const *const wic[2] = {water_c, ice_c};
 float univ_sun_rad(AVG_STAR_SIZE), univ_temp(0.0), cloud_time(0.0);
-point last_camera(all_zeros), univ_sun_pos(all_zeros);
+point univ_sun_pos(all_zeros);
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
 universe_t universe; // the top level universe
@@ -340,12 +340,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	unpack_color(water_c, P_WATER_C); // recalculate every time
 	unpack_color(ice_c,   P_ICE_C  );
 	int cxyz[3];
-	point const &camera(get_player_pos());
-	vector3d const motion_vector(camera, last_camera);
-	float const speed(motion_vector.mag());
-	camera_mv_speed const cmvs(camera, motion_vector, speed);
 	ushader_group usg;
-	last_camera = camera;
 	glDisable(GL_LIGHTING);
 
 	if (!no_distant || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
@@ -353,7 +348,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
 				for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
 					for (cxyz[0] = 0; cxyz[0] < int(U_BLOCKS); ++cxyz[0]) { // x
-						draw_cell(cxyz, cmvs, usg, clobj, 0, (nebula_pass != 0), no_move, skip_closest);
+						draw_cell(cxyz, usg, clobj, 0, (nebula_pass != 0), no_move, skip_closest);
 					}
 				}
 			}
@@ -362,7 +357,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	}
 	if (clobj.type >= UTYPE_SYSTEM) { // in a system
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
-			draw_cell(clobj.cellxyz, cmvs, usg, clobj, pass, 0, no_move, skip_closest);
+			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest);
 		}
 		universe_pld.draw_and_clear();
 	}
@@ -377,7 +372,7 @@ void set_current_system_light(s_object const &clobj, point const &pspos, float a
 	if (clobj.type >= UTYPE_SYSTEM && clobj.get_star().is_ok()) { // in a system
 		ustar const &sun(clobj.get_star());
 		point const pos(clobj.get_ucell().rel_center + sun.pos);
-		set_sun_loc_color(pos, sun.color, sun.radius, 0, 0, a_scale, d_scale); // ending light from current system
+		set_sun_loc_color(pos, sun.get_light_color(), sun.radius, 0, 0, a_scale, d_scale); // ending light from current system
 		univ_sun_pos = pos;
 		univ_sun_rad = sun.radius;
 		univ_temp    = sun.get_energy()/max(TOLERANCE, p2p_dist_sq(sun.pos, pspos));
@@ -519,7 +514,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 	}
 	point const spos(result.get_ucell().rel_center + sun.pos);
 	sun_pos = sun.pos; // spos?
-	colorRGBA color(sun.color);
+	colorRGBA color(sun.get_light_color());
 	if (blend) atten_color(color, pos2, sun.pos, (sol->radius + MAX_PLANET_EXTENT), expand);
 	
 	if (sun.is_ok() && (sobj != NULL || is_shadowed(pos2, radius, 1, *sol, sobj))) { // check for planet/moon shadowing
@@ -549,11 +544,10 @@ uobject const *get_shadowing_object(uobject const &obj, ustar const &sun) { // u
 }
 
 
-void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg,
-	s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest)
-{
+void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest) {
+
 	UNROLL_3X(current.cellxyz[i_] = cxyz[i_] + uxyz[i_];)
-	get_cell(cxyz).draw(cmvs, usg, clobj, pass, nebula_pass, no_move, skip_closest);
+	get_cell(cxyz).draw(usg, clobj, pass, nebula_pass, no_move, skip_closest);
 }
 
 
@@ -571,11 +565,11 @@ struct planet_draw_data_t {
 //  If player's system is none then stop
 //  1. Draw the player's system except for the player's sobj
 //  2. Draw the player's sobj
-void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest) {
+void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest) {
 
 	if (galaxies == NULL) return; // galaxies not yet allocated
 	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
-	point const &camera(cmvs.camera);
+	point const &camera(get_player_pos());
 	point_d const pos(rel_center);
 
 	if (nebula_pass) {
@@ -654,7 +648,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 
 			for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) {
 				if (sun_visible && sol_draw_pass == unsigned(sel_s)) {
-					if (!sol.sun.draw(spos, cmvs, usg)) continue;
+					if (!sol.sun.draw(spos, usg)) continue;
 				}
 				if (planets_visible) sol.process();
 				if (sol.planets.empty()) continue;
@@ -664,7 +658,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 						set_light_galaxy_ambient_only();
 					}
 					else {
-						set_sun_loc_color(spos, sol.sun.color, sradius, 0, 0, BASE_AMBIENT, BASE_DIFFUSE); // slow - can this be made faster?
+						set_sun_loc_color(spos, sol.sun.get_light_color(), sradius, 0, 0, BASE_AMBIENT, BASE_DIFFUSE); // slow - can this be made faster?
 					}
 					set_ambient_color(sol.get_galaxy_color());
 				}
@@ -691,7 +685,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 					current.planet = k;
 					bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET), skip_planet_draw(skip_closest && sel_planet);
 					bool const skip_p(p_system && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
-					if (!skip_p && !no_move) planet.do_update(sol.pos, has_sun, has_sun); // don't really have to do this if planet is not visible
+					if (!skip_p && !no_move) {planet.do_update(sol.pos, has_sun, has_sun);} // don't really have to do this if planet is not visible
 					if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(ppos, planet.mosize))) continue;
 					bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(ppos, pradius));
 					shadow_vars_t svars(make_pt_global(spos), (has_sun ? sradius : 0.0), all_zeros, 0.0);
@@ -719,7 +713,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 						}
 						if (!skip_p && !skip_planet_draw) {
 							planet.check_gen_texture(int(sizep));
-							planet.draw(ppos, cmvs, usg, svars); // ignore return value?
+							planet.draw(ppos, usg, svars); // ignore return value?
 						}
 					} // planet visible
 					planet.process();
@@ -729,7 +723,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 						for (unsigned l = 0; l < planet.moons.size(); ++l) { // draw moons
 							bool const sel_m(sel_moon && (int)l == clobj.moon);
 							if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
-							if (!skip_closest || !sel_m) continue; // skip (closest)
+							if (skip_closest && sel_m) continue; // skip (closest)
 							umoon &moon(planet.moons[l]);
 							if (!moon.is_ok()) continue;
 							point_d const mpos(pos + moon.pos);
@@ -737,7 +731,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 							if ((sizem < 0.2 && sclip) || !univ_sphere_vis(mpos, moon.radius)) continue;
 							current.moon = l;
 							moon.check_gen_texture(int(sizem));
-							moon.draw(mpos, cmvs, usg, shadow_vars_t(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius));
+							moon.draw(mpos, usg, shadow_vars_t(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius));
 						}
 					}
 					if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
@@ -1567,9 +1561,17 @@ void ustar::gen_color() {
 }
 
 
-inline colorRGBA ustar::get_ambient_color_val() const {
+colorRGBA ustar::get_ambient_color_val() const {
 
 	return (is_ok() ? colorRGBA(color.R*STAR_MAX_SIZE_INV, color.G*STAR_MAX_SIZE_INV, color.B*STAR_MAX_SIZE_INV, color.A) : BLACK);
+}
+
+
+colorRGBA ustar::get_light_color() const {
+
+	//return color;
+	// max the RGB for the two colors in each color channel to get a saturation effect
+	return colorRGBA(max(colorA.R, colorB.R), max(colorA.G, colorB.G), max(colorA.B, colorB.B), color.A);
 }
 
 
@@ -1898,9 +1900,10 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 }
 
 
-bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) {
+bool ustar::draw(point_d pos_, ushader_group &usg) {
 
-	vector3d const vcp(cmvs.camera, pos_);
+	point const &camera(get_player_pos());
+	vector3d const vcp(camera, pos_);
 	float const dist(vcp.mag() - radius);
 	if (dist > U_VIEW_DIST) return 0; // too far away
 	float size(get_pixel_size(radius, dist)); // approx. in pixels
@@ -1908,7 +1911,7 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) 
 	if (size < 0.02) return 0; // too small
 	float const st_prod(STAR_BRIGHTNESS*size*temp);
 	if (st_prod < 2.0 || st_prod*temp < 4.0) return 0; // too dim
-	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius), 1.35);
+	move_in_front_of_far_clip(pos_, camera, size, (dist + radius), 1.35);
 	colorRGBA ocolor(color);
 		
 	if (st_prod < 30.0) {
@@ -1916,13 +1919,15 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) 
 		blend_color(ocolor, ocolor, bkg_color, cmult, 1);
 	}
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
-		bool const small(size < 1.5), draw_as_line(cmvs.speed > 0.25); // lines of light - "warp speed"
-		point const normal(cmvs.camera - pos_);
+		vector3d const velocity(get_player_velocity());
+		bool const small(size < 1.5), draw_as_line(velocity.mag() > 0.25); // lines of light - "warp speed"
+		point const normal(camera - pos_);
 		pos_ = make_pt_global(pos_);
 
 		if (small) {
 			if (draw_as_line) {
-				universe_pld.add_line(pos_, normal, ocolor, (pos_ - cmvs.motion_vector), normal, ocolor);
+				blend_color(ocolor, ocolor, bkg_color, 0.5, 1); // half color to make it less bright
+				universe_pld.add_line(pos_, normal, ocolor, (pos_ - velocity), normal, ocolor);
 			}
 			else {
 				universe_pld.add_pt(pos_, normal, ocolor);
@@ -1933,7 +1938,7 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) 
 		
 			if (draw_as_line) {
 				if (!small) glLineWidth(2.0); // 2 pixel width
-				draw_line(pos_, (pos_ - cmvs.motion_vector)); // blend and smooth?
+				draw_line(pos_, (pos_ - velocity)); // blend and smooth?
 				if (!small) glLineWidth(1.0);
 			}
 			else {
@@ -1970,9 +1975,10 @@ bool ustar::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg) 
 }
 
 
-bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &usg, shadow_vars_t const &svars) {
+bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svars) {
 
-	vector3d const vcp(cmvs.camera, pos_);
+	point const &camera(get_player_pos());
+	vector3d const vcp(camera, pos_);
 	float const dist(max(TOLERANCE, (vcp.mag() - radius)));
 	if (dist > U_VIEW_DIST) return 0; // too far away
 	float size(get_pixel_size(radius, dist)); // approx. in pixels
@@ -1984,7 +1990,7 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		draw_sphere_dlist(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
 		return 1;
 	}
-	move_in_front_of_far_clip(pos_, cmvs.camera, size, (dist + radius), 1.35);
+	move_in_front_of_far_clip(pos_, camera, size, (dist + radius), 1.35);
 	colorRGBA ocolor(color);
 
 	if (world_mode == WMODE_UNIVERSE && !(display_mode & 2)) {
@@ -1997,7 +2003,7 @@ bool urev_body::draw(point_d pos_, camera_mv_speed const &cmvs, ushader_group &u
 		bool const small(size < 1.5);
 		pos_ = make_pt_global(pos_);
 		ocolor.do_glColor();
-		(cmvs.camera - pos_).do_glNormal(); // orient towards camera
+		(camera - pos_).do_glNormal(); // orient towards camera
 		if (!small) glPointSize(2.0); // 2 pixel diameter
 		draw_point(pos_);
 		if (!small) glPointSize(1.0);
@@ -2740,6 +2746,7 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	float uambient[4], udiffuse[4];
 	int const light(GL_LIGHT0);
 	point const lpos(make_pt_global(pos));
+	float const ambient_scale(a_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA);
 
 	// set position - cache this?
 	set_gl_light_pos(light, lpos, 1.0); // point light source
@@ -2747,7 +2754,7 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	// set color
 	for (unsigned i = 0; i < 3; ++i) {
 		float const ci(WHITE_COMP_D + OM_WCD*color[i]);
-		uambient[i]  = (no_ambient ? 0.0 : a_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA*color[i]);
+		uambient[i]  = (no_ambient ? 0.0 : ambient_scale*color[i]);
 		udiffuse[i]  = (shadowed   ? 0.0 : d_scale*ci);
 		sun_color[i] = ci;
 	}

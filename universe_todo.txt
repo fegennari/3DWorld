@@ -1,7 +1,4 @@
-Higher ambient in combined_gu mode
 Move player ship to planet surface or center in combined_gu mode
-Lighter/longer/realtime-independent starlight stretch in hyperspeed mode
-Colors of sun brighter than apparent sun color
 Star cross-shaped flare
 Planet lights moon
 Rings shadow planet

@@ -28,7 +28,6 @@ extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, 
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
 extern float def_water_level, water_plane_z, water_h_off_rel, tan_term, sin_term, init_temperature, camera_shake;
 extern unsigned team_credits[];
-extern point last_camera;
 extern string user_text;
 extern vector<free_obj *> uobjs;
 extern vector<cached_obj> stat_objs;
@@ -105,7 +104,6 @@ void setup_current_system() {
 	}
 	point const &pos(get_player_pos2());
 	universe.get_object_closest_to_pos(clobj0, pos);
-	set_current_system_light(clobj0, pos, 0.5, 0.5);
 	colorRGBA c1(ALPHA0), c2(ALPHA0);
 	float water(0.0);
 	atmosphere = 0.0;
@@ -160,6 +158,8 @@ void setup_current_system() {
 		assert(clobj0.object != NULL);
 		base_gravity = 70.0*clobj0.object->gravity;
 	}
+	float const a_scale(0.5 + 1.0*atmosphere); // higher atmosphere = more clouds = more ambient lighting (FIXME: cloud color for ambient?)
+	set_current_system_light(clobj0, pos, a_scale, 0.5);
 	//if (regen_mesh) *** regen mesh ***
 	setup_landscape_tex_colors(c1, c2);
 
@@ -347,7 +347,6 @@ void reset_player_universe() {
 	change_speed_mode(do_run);
 	update_cpos();
 	reset_player_ship();
-	last_camera = get_player_pos2();
 	if (MOVE_PLAYER_RPOS) return; // ???
 	uxyz[0] = uxyz[1] = uxyz[2] = 0;
 	shift_univ_objs(get_scaled_upt(), 0);
@@ -375,10 +374,7 @@ void check_shift_universe() {
 			}
 		}
 	}
-	if (moved) { // advance all free objects by a cell
-		shift_univ_objs(move, 1);
-		last_camera += move;
-	}
+	if (moved) {shift_univ_objs(move, 1);} // advance all free objects by a cell
 }
 
 

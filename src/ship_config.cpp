@@ -26,7 +26,7 @@ map<unsigned, unsigned> sclasses_to_weapons;
 
 extern int do_run;
 extern unsigned team_credits[], init_credits[], alloced_fobjs[];
-extern point player_death_pos, universe_origin, last_camera;
+extern point player_death_pos, universe_origin;
 extern char *ship_def_file;
 
 
@@ -231,7 +231,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 		case CMD_START_POS: // <point start_pos>
 			if (!read_pt(ustart_pos)) return 0;
 			for (unsigned i = 0; i < 3; ++i) ustart_pos[i] *= CELL_SIZE;
-			player_death_pos = universe_origin = last_camera = ustart_pos;
+			player_death_pos = universe_origin = ustart_pos;
 			break;
 
 		case CMD_HYPERSPEED: // <float hyperspeed_mult>

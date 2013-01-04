@@ -624,6 +624,7 @@ void get_cube_points(const float d[3][2], point pts[8]);
 upos_point_type const &get_player_pos();
 vector3d const &get_player_dir();
 vector3d const &get_player_up();
+vector3d const &get_player_velocity();
 void set_player_pos(point const &pos_);
 void set_player_dir(vector3d const &dir_);
 void set_player_up(vector3d const &upv_);
