@@ -414,7 +414,7 @@ public:
 
 	ucell() : galaxies(NULL) {}
 	void gen_cell(int const ii[3]);
-	void draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move);
+	void draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest);
 	void free();
 	string get_name() const {return "Universe Cell";}
 };
@@ -486,7 +486,7 @@ struct cell_block {
 class universe_t : protected cell_block {
 
 	void draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg,
-		s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move);
+		s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest);
 
 public:
 	void init();

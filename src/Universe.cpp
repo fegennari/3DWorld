@@ -353,7 +353,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
 				for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
 					for (cxyz[0] = 0; cxyz[0] < int(U_BLOCKS); ++cxyz[0]) { // x
-						draw_cell(cxyz, cmvs, usg, clobj, 0, (nebula_pass != 0), no_move);
+						draw_cell(cxyz, cmvs, usg, clobj, 0, (nebula_pass != 0), no_move, skip_closest);
 					}
 				}
 			}
@@ -361,10 +361,8 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 		}
 	}
 	if (clobj.type >= UTYPE_SYSTEM) { // in a system
-		unsigned const npasses((skip_closest && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON)) ? 2 : 3);
-
-		for (unsigned pass = 1; pass < npasses; ++pass) { // drawing passes 1-2
-			draw_cell(clobj.cellxyz, cmvs, usg, clobj, pass, 0, no_move);
+		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
+			draw_cell(clobj.cellxyz, cmvs, usg, clobj, pass, 0, no_move, skip_closest);
 		}
 		universe_pld.draw_and_clear();
 	}
@@ -552,10 +550,10 @@ uobject const *get_shadowing_object(uobject const &obj, ustar const &sun) { // u
 
 
 void universe_t::draw_cell(int const cxyz[3], camera_mv_speed const &cmvs, ushader_group &usg,
-	s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move)
+	s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest)
 {
 	UNROLL_3X(current.cellxyz[i_] = cxyz[i_] + uxyz[i_];)
-	get_cell(cxyz).draw(cmvs, usg, clobj, pass, nebula_pass, no_move);
+	get_cell(cxyz).draw(cmvs, usg, clobj, pass, nebula_pass, no_move, skip_closest);
 }
 
 
@@ -573,7 +571,7 @@ struct planet_draw_data_t {
 //  If player's system is none then stop
 //  1. Draw the player's system except for the player's sobj
 //  2. Draw the player's sobj
-void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move) {
+void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest) {
 
 	if (galaxies == NULL) return; // galaxies not yet allocated
 	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
@@ -691,7 +689,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 						if (update_pass) {skip_draw = 1;} else {continue;}
 					}
 					current.planet = k;
-					bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET);
+					bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET), skip_planet_draw(skip_closest && sel_planet);
 					bool const skip_p(p_system && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
 					if (!skip_p && !no_move) planet.do_update(sol.pos, has_sun, has_sun); // don't really have to do this if planet is not visible
 					if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(ppos, planet.mosize))) continue;
@@ -719,11 +717,11 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 								}
 							}
 						}
-						if (!skip_p) {
+						if (!skip_p && !skip_planet_draw) {
 							planet.check_gen_texture(int(sizep));
 							planet.draw(ppos, cmvs, usg, svars); // ignore return value?
 						}
-					}
+					} // planet visible
 					planet.process();
 					bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
 
@@ -731,6 +729,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 						for (unsigned l = 0; l < planet.moons.size(); ++l) { // draw moons
 							bool const sel_m(sel_moon && (int)l == clobj.moon);
 							if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
+							if (!skip_closest || !sel_m) continue; // skip (closest)
 							umoon &moon(planet.moons[l]);
 							if (!moon.is_ok()) continue;
 							point_d const mpos(pos + moon.pos);
@@ -744,7 +743,7 @@ void ucell::draw(camera_mv_speed const &cmvs, ushader_group &usg, s_object const
 					if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
 						if (sizep > 0.1) {rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));}
 					
-						if (planet_visible && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
+						if (planet_visible && !skip_planet_draw && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
 							atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 						}
 					}
