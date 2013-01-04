@@ -1956,18 +1956,24 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 		set_fill_mode();
 		glPushMatrix();
 		global_translate(pos_);
-		usg.enable_star_shader(colorA, colorB);
 
-		if (size > 6) {
-			ocolor.do_glColor();
-			draw_flare(pos_, all_zeros, 2.5*radius, 2.5*radius); // draw star's flare
+		if (size > 4) { // draw star's flares
+			float const cfr(max(1.0, 60.0/size)), alpha(CLIP_TO_01(0.5f*(size - 4.0f)));
+			colorRGBA ca(colorA), cb(colorB);
+			ca.A *= alpha; cb.A *= alpha;
+			usg.enable_star_shader(ca, cb);
+			enable_blend();
+			draw_flare_no_blend(pos_, all_zeros, 2.5*radius, 2.5*radius);
+
+			if (cfr > 2.5) {
+				draw_flare_no_blend(pos_, all_zeros, 0.5*radius, cfr*radius);
+				draw_flare_no_blend(pos_, all_zeros, cfr*radius, 0.5*radius);
+			}
+			disable_blend();
 		}
-		glEnable(GL_TEXTURE_2D);
-		select_texture(WHITE_TEX);
-		WHITE.do_glColor();
-		draw_sphere_dlist(all_zeros, radius, ndiv, 1); // small sphere - use display list
+		usg.enable_star_shader(colorA, colorB);
+		draw_sphere_dlist(all_zeros, radius, ndiv, 0); // small sphere - use display list
 		usg.disable_star_shader();
-		glDisable(GL_TEXTURE_2D);
 		if (size >= 64) {draw_flares(ndiv, 1);}
 		glPopMatrix();
 	} // end sphere draw

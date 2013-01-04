@@ -1,5 +1,4 @@
 Move player ship to planet surface or center in combined_gu mode
-Star cross-shaped flare
 Planet lights moon
 Rings shadow planet
 Gas Giant stripes (1D texture?) - all atmosphere
