@@ -1,0 +1,49 @@
+Higher ambient in combined_gu mode
+Draw rings of planet the user has landed on in combined_gu mode
+Lighter/longer/realtime-independent starlight stretch in hyperspeed mode
+Colors of sun brighter than apparent sun color
+Star cross-shaped flare
+Planet lights moon
+Rings shadow planet
+Gas Giant stripes (1D texture?) - all atmosphere
+Gas Giants - all atmosphere, no collisions?
+craters on planets/moons?
+Add lava to hot planets
+
+Clouds glow near the sun (glow map)
+
+Elliptical ship shields
+
+Noise texture per-planet/moon?
+
+Perlin noise for water ripple texture?
+
+Stars: blue = high mass, red = low mass
+http://en.wikipedia.org/wiki/Stellar_classification
+
+http://www.gamedev.net/page/resources/_/technical/graphics-programming-and-theory/real-time-atmospheric-scattering-r2093
+http://www.mpi-inf.mpg.de/departments/irg3/ws0405/cg/rcomp/29/index.html
+
+Tighter shadow volume
+http://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf
+
+Use perlin noise for terrain in tiled terrain mode?
+
+Use perlin noise for planets/moons:
+* Each planet has generated 3D noise texture
+* Vertex height evaluated on CPU for vertices, collision detection,
+shadows, etc.
+* Detail evaluated in fragment shader based on noise value lookup into
+1D color texture
+* Use more octaves when closer to planet/moon
+* Possible bump map in fragment shader using normals calculated from
+noise derivatives
+
+Tile-Based planet surface generation:
+* Similar to tiled terrain mode, but with a different noise function,
+in 3D, and mapped to a sphere
+* Need to decrease ship velocity further when very close to a planet
+* Transition must be smooth, including atmosphere rendering
+* Evaluate height function at potential collision points (for player
+ship, maybe all ships?)
+* Not sure what to do with colonies

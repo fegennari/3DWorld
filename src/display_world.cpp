@@ -667,8 +667,9 @@ void draw_sun_flare() {
 		
 			for (unsigned i = 0; i < npts; ++i) {
 				int index; // unused
-				if (!pts_valid) pts[i] = signed_rand_vector_norm();
-				if (coll_pt_vis_test(sun_pos+pts[i]*sun_radius, viewer, 0.0, index, camera_coll_id, 0, 1)) ++nvis;
+				if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
+				point const pos(sun_pos + pts[i]*sun_radius);
+				if (coll_pt_vis_test(pos, viewer, 0.0, index, camera_coll_id, 0, 1) && !line_intersect_mesh(pos, viewer, 0)) {++nvis;}
 			}
 			pts_valid = 1;
 			if (nvis == 0) return;
