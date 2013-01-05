@@ -2663,7 +2663,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 				float const ssize0(ssize);
 				ssize *= 1.25/ssects;
 				vector3d hdir_rot(hit_dir);
-				if (has_hit_dir) rotate_point(hdir_rot);
+				if (has_hit_dir) {rotate_point(hdir_rot);}
 				float const z_end(ssize0 - ssize), z_span(2.0*z_end), z_step(z_span/(ssects-1));
 				unsigned const sid(unsigned((hdir_rot.z + 1.0)*(ssects-1)*0.5 + 0.5)); // -1.0,1.0 => 0.0,2.0 => 0,ssects-1
 				translate_to(dir*(z_end - sid*z_step));
@@ -2674,6 +2674,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 				select_texture(SBLUR_TEX);
 				rotate_sphere_tex_to_dir(hit_dir);
 			}
+			//if (ssects == 1) {} // scale to create tightly bounding ellipsoid?
 			assert(radius > 0.0);
 			set_emissive_color(color_alpha);
 			draw_sphere_dlist_back_to_front(all_zeros, ssize, 3*ndiv/2, has_hit_dir); // partial sphere?

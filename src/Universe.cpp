@@ -109,6 +109,14 @@ float calc_sphere_size(point const &pos, point const &camera, float radius, floa
 }
 
 
+void set_star_light_atten(int light, float atten) {
+
+	glLightf(light, GL_CONSTANT_ATTENUATION,  STAR_CONST);
+	glLightf(light, GL_LINEAR_ATTENUATION,    atten*STAR_LINEAR_SCALED);
+	glLightf(light, GL_QUADRATIC_ATTENUATION, atten*STAR_QUAD_SCALED);
+}
+
+
 s_object get_shifted_sobj(s_object const &sobj) {
 
 	s_object sobj2(sobj);
@@ -184,10 +192,6 @@ float get_light_scale(unsigned light) {return (glIsEnabled(light) ? 1.0 : 0.0);}
 
 
 class universe_shader_t : public shader_t {
-	void set_light_scale() {
-		vector2d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1));
-		add_uniform_vector2d("light_scale", light_scale);
-	}
 	void shared_setup(const char *texture_name="tex0") {
 		begin_shader();
 		add_uniform_int(texture_name, 0);
@@ -200,7 +204,8 @@ class universe_shader_t : public shader_t {
 		set_prefix("#define NUM_OCTAVES 8", 1); // FS
 	}
 	void set_planet_uniforms(float atmosphere, shadow_vars_t const &svars) {
-		set_light_scale();
+		vector3d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1), get_light_scale(GL_LIGHT2));
+		add_uniform_vector3d("light_scale", light_scale);
 		add_uniform_float("atmosphere",  atmosphere);
 		add_uniform_vector3d("sun_pos",  svars.sun_pos);
 		add_uniform_float("sun_radius",  svars.sun_radius);
@@ -719,7 +724,15 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 					planet.process();
 					bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
 
-					if (sizep >= 1.0 && !skip_moons) {
+					if (sizep >= 1.0 && !skip_moons && !planet.moons.empty()) {
+						int const p_light(GL_LIGHT2);
+
+						if (planet.is_ok()) { // setup planet as an additional light source for all moons
+							colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
+							set_colors_and_enable_light(p_light, &ALPHA0.R, &pcolor.R); // planet diffuse
+							set_gl_light_pos(p_light, make_pt_global(ppos), 1.0); // point light at planet center
+							set_star_light_atten(p_light, 10.0*PLANET_MAX_SIZE/planet.radius);
+						}
 						for (unsigned l = 0; l < planet.moons.size(); ++l) { // draw moons
 							bool const sel_m(sel_moon && (int)l == clobj.moon);
 							if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
@@ -733,6 +746,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 							moon.check_gen_texture(int(sizem));
 							moon.draw(mpos, usg, shadow_vars_t(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius));
 						}
+						if (planet.is_ok()) {glDisable(p_light);}
 					}
 					if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
 						if (sizep > 0.1) {rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));}
@@ -1125,9 +1139,11 @@ void ustar::create(point const &pos_) {
 	set_defaults();
 	gen_rseeds();
 	pos      = pos_;
+	// temperature/radius/color aren't statistically accurate, see:
+	// http://en.wikipedia.org/wiki/Stellar_classification
 	temp     = rand_gaussian2(55.0, 10.0);
 	radius   = 0.25*rand_uniform2(STAR_MIN_SIZE, STAR_MAX_SIZE) + (37.5*STAR_MAX_SIZE/temp)*rand_gaussian2(0.3, 0.1);
-	radius   = max(radius, STAR_MIN_SIZE); // you get a lot of stars of size exactly STAR_MIN_SIZE
+	radius   = max(radius, STAR_MIN_SIZE); // a lot of stars are of size exactly STAR_MIN_SIZE
 	gen_color();
 	density  = rand_uniform2(3.0, 5.0);
 	set_grav_mass();
@@ -2771,10 +2787,7 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	//cout << "UD: "; ((colorRGBA *)(&udiffuse))->print(); cout << endl;
 
 	// set light attenuation - cache this?
-	float const atten2(max(0.25f, min(1.0f, STAR_MAX_SIZE/radius)));
-	glLightf(light, GL_CONSTANT_ATTENUATION,  STAR_CONST);
-	glLightf(light, GL_LINEAR_ATTENUATION,    atten2*STAR_LINEAR_SCALED);
-	glLightf(light, GL_QUADRATIC_ATTENUATION, atten2*STAR_QUAD_SCALED);
+	set_star_light_atten(light, max(0.25f, min(1.0f, STAR_MAX_SIZE/radius)));
 }
 
 

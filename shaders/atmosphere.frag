@@ -1,7 +1,7 @@
 uniform vec3 camera_pos, planet_pos, sun_pos, ss_pos;
 uniform float planet_radius, atmos_radius, sun_radius, ss_radius;
 uniform float atmosphere = 1.0;
-uniform vec2 light_scale = vec2(1,1);
+uniform vec3 light_scale = vec3(1,1,1);
 varying vec4 epos;
 varying vec3 normal, world_space_pos;
 
@@ -22,8 +22,9 @@ void main()
 	if (sun_radius > 0.0 && ss_radius > 0.0) {
 		lt_atten *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, ss_pos, ss_radius);
 	}
+	// Note: since only moons have a light2 set (from planet reflections), and moons have no atmosphere, light2 is not used here
 	vec4 color  = gl_FrontMaterial.emission;
-	color.rgb  += lt_atten*light_scale[0]*add_pt_light_comp(normalize(normal), epos, 0).rgb; // ambient, diffuse, and specular
+	color.rgb  += lt_atten*light_scale[0]*add_pt_light_comp(normalize(normal), epos, 0).rgb; // sun ADS
 	color.rgb  += light_scale[1]*(gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
 	float rg_comp = atmosphere*min(1.6*density, 1.0);
 	vec3 scatter_color = vec3(rg_comp, rg_comp, 1.0); // precomputed texture lookup or something else better?

@@ -96,9 +96,7 @@ void clear_colors_and_disable_light(int light) {
 void set_gl_light_pos(int light, point const &pos, float w) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	float position[4];
-	for (unsigned i = 0; i < 3; ++i) position[i] = pos[i];
-	position[3] = w;
+	float const position[4] = {pos.x, pos.y, pos.z, w};
 	glLightfv(light, GL_POSITION, position);
 	gl_light_positions[light - GL_LIGHT0] = pos;
 }
