@@ -203,8 +203,8 @@ class universe_shader_t : public shader_t {
 		set_active_texture(0);
 		set_prefix("#define NUM_OCTAVES 8", 1); // FS
 	}
-	void set_planet_uniforms(float atmosphere, shadow_vars_t const &svars) {
-		vector3d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1), get_light_scale(GL_LIGHT2));
+	void set_planet_uniforms(float atmosphere, shadow_vars_t const &svars, bool use_light2) {
+		vector3d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1), (use_light2 ? 1.0 : 0.0));
 		add_uniform_vector3d("light_scale", light_scale);
 		add_uniform_float("atmosphere",  atmosphere);
 		add_uniform_vector3d("sun_pos",  svars.sun_pos);
@@ -215,7 +215,7 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(float atmosphere, float cloud_scale, shadow_vars_t const &svars) {
+	bool enable_planet(float atmosphere, float cloud_scale, shadow_vars_t const &svars, bool use_light2) {
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
@@ -234,7 +234,7 @@ public:
 		add_uniform_float("ring_ri",     svars.ring_ri);
 		add_uniform_float("ring_ro",     svars.ring_ro);
 		add_uniform_float("noise_scale", 4.0*cloud_scale); // clouds
-		set_planet_uniforms(atmosphere, svars);
+		set_planet_uniforms(atmosphere, svars, use_light2);
 		return 1;
 	}
 	void disable_planet() {
@@ -311,7 +311,7 @@ public:
 		add_uniform_vector3d("planet_pos", planet_pos);
 		add_uniform_float("planet_radius", planet_radius);
 		add_uniform_float("atmos_radius",  atmos_radius);
-		set_planet_uniforms(atmosphere, svars);
+		set_planet_uniforms(atmosphere, svars, 0); // atmosphere has no planet reflection light (light2)
 		return 1;
 	}
 	void disable_atmospheric() {
@@ -326,8 +326,8 @@ class ushader_group {
 public:
 	shader_t nebula_shader, asteroid_shader;
 
-	bool enable_planet_shader(float atmosphere, float cloud_scale, shadow_vars_t const &svars) {
-		return planet_shader[svars.ring_ro > 0.0].enable_planet(atmosphere, cloud_scale, svars);
+	bool enable_planet_shader(float atmosphere, float cloud_scale, shadow_vars_t const &svars, bool use_light2) {
+		return planet_shader[svars.ring_ro > 0.0].enable_planet(atmosphere, cloud_scale, svars, use_light2);
 	}
 	void disable_planet_shader() {planet_shader[0].disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
@@ -635,7 +635,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 		int closest_system(clobj.system);
 		bool p_system2(p_system);
 
-		if (sel_g && closest_system < 0) {
+		if (sel_g && closest_system < 0) { // find closest system so we can draw it last
 			float dmin_sq(0.0);
 
 			for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
@@ -742,7 +742,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 								set_active_texture(0);
 							}
 							planet.check_gen_texture(int(sizep));
-							planet.draw(ppos, usg, svars); // ignore return value?
+							planet.draw(ppos, usg, svars, 0); // ignore return value?
 						}
 					} // planet visible
 					planet.process();
@@ -753,7 +753,8 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 
 						if (planet.is_ok()) { // setup planet as an additional light source for all moons
 							colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
-							set_colors_and_enable_light(p_light, &ALPHA0.R, &pcolor.R); // planet diffuse
+							glLightfv(p_light, GL_AMBIENT, &ALPHA0.R);
+							glLightfv(p_light, GL_DIFFUSE, &pcolor.R); // planet diffuse
 							set_gl_light_pos(p_light, make_pt_global(ppos), 1.0); // point light at planet center
 							set_star_light_atten(p_light, 10.0*PLANET_MAX_SIZE/planet.radius);
 						}
@@ -768,9 +769,9 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 							if ((sizem < 0.2 && sclip) || !univ_sphere_vis(mpos, moon.radius)) continue;
 							current.moon = l;
 							moon.check_gen_texture(int(sizem));
-							moon.draw(mpos, usg, shadow_vars_t(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, vector3d(1,1,1), 0.0, 0.0));
+							shadow_vars_t const svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, vector3d(1,1,1), 0.0, 0.0);
+							moon.draw(mpos, usg, svars2, planet.is_ok());
 						}
-						if (planet.is_ok()) {glDisable(p_light);}
 					}
 					if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
 						if (sizep > 0.1 && !planet.ring_data.empty()) {rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));}
@@ -2029,7 +2030,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 }
 
 
-bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svars) {
+bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svars, bool use_light2) {
 
 	point const &camera(get_player_pos());
 	vector3d const vcp(camera, pos_);
@@ -2077,7 +2078,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
-		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, svars);}
+		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, svars, use_light2);}
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();

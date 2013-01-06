@@ -1,5 +1,4 @@
 ring/nebula blend/draw order?
-planet/moon lighting when far away
 slow galaxy render
 
 Gas Giant stripes (1D texture?)
