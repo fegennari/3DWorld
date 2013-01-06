@@ -674,8 +674,7 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 				
 				if (oship != NULL) {
 					vector3d const dir((own->pos - oship->pos).get_norm());
-					own->move_to(oship->get_pos() + dir*(own->get_c_radius() + oship->get_c_radius())); // move away from object
-					cout << "move parent" << endl;
+					own->move_to(oship->get_pos() + dir*(1.1*(own->get_c_radius() + oship->get_c_radius()))); // move away from object
 					break;
 				}
 			}

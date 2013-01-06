@@ -1,8 +1,8 @@
-Move player further from placed colony
 Gas Giant stripes (1D texture?)
 Gas Giants - all atmosphere, no collisions?
 craters on planets/moons?
 Add lava to hot planets
+asteroid fields
 
 Clouds glow near the sun (glow map)
 
@@ -13,8 +13,6 @@ http://www.mpi-inf.mpg.de/departments/irg3/ws0405/cg/rcomp/29/index.html
 
 Tighter shadow volume
 http://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf
-
-Use perlin noise for terrain in tiled terrain mode?
 
 Use perlin noise for planets/moons:
 * Each planet/moon has generated 3D noise texture
@@ -34,5 +32,3 @@ in 3D, and mapped to a sphere
 * Evaluate height function at potential collision points (for player
 ship, maybe all ships?)
 * Not sure what to do with colonies
-
-asteroid fields
