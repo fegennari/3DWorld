@@ -115,9 +115,12 @@ class ushader_group;
 
 struct shadow_vars_t {
 	point sun_pos, ss_pos;
-	float sun_radius, ss_radius;
-	shadow_vars_t() : sun_radius(0.0), ss_radius(0.0) {}
-	shadow_vars_t(point const &sp, float sr, point const &ssp, float ssr) : sun_pos(sp), ss_pos(ssp), sun_radius(sr), ss_radius(ssr) {}
+	vector3d rscale;
+	float sun_radius, ss_radius, ring_ri, ring_ro;
+
+	shadow_vars_t() : sun_radius(0.0), ss_radius(0.0), ring_ri(0.0), ring_ro(0.0) {}
+	shadow_vars_t(point const &sp, float sr, point const &ssp, float ssr, vector3d const &rs, float rri, float rro)
+		: sun_pos(sp), ss_pos(ssp), sun_radius(sr), ss_radius(ssr), rscale(rs), ring_ri(rri), ring_ro(rro) {}
 };
 
 

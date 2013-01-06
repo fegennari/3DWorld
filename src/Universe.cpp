@@ -220,14 +220,19 @@ public:
 
 		if (!is_setup()) {
 			setup_planet_star_shader();
+			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			set_vert_shader("planet_draw");
 			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", 1);
+			add_uniform_int("ring_tex",        2);
 			add_uniform_float("time", 5.0E-6*cloud_time);
 		}
 		enable();
 		set_specular(1.0, 80.0);
+		add_uniform_vector3d("rscale", svars.rscale);
+		add_uniform_float("ring_ri",     svars.ring_ri);
+		add_uniform_float("ring_ro",     svars.ring_ro);
 		add_uniform_float("noise_scale", 4.0*cloud_scale); // clouds
 		set_planet_uniforms(atmosphere, svars);
 		return 1;
@@ -316,15 +321,15 @@ public:
 
 
 class ushader_group {
-	universe_shader_t planet_shader, star_shader, ring_shader, cloud_shader, atmospheric_shader;
+	universe_shader_t planet_shader[2], star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 public:
 	shader_t nebula_shader, asteroid_shader;
 
 	bool enable_planet_shader(float atmosphere, float cloud_scale, shadow_vars_t const &svars) {
-		return planet_shader.enable_planet(atmosphere, cloud_scale, svars);
+		return planet_shader[svars.ring_ro > 0.0].enable_planet(atmosphere, cloud_scale, svars);
 	}
-	void disable_planet_shader() {planet_shader.disable_planet();}
+	void disable_planet_shader() {planet_shader[0].disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
 	void disable_star_shader() {star_shader.disable_star();}
 	bool enable_ring_shader(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius) {
@@ -693,7 +698,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 					if (!skip_p && !no_move) {planet.do_update(sol.pos, has_sun, has_sun);} // don't really have to do this if planet is not visible
 					if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(ppos, planet.mosize))) continue;
 					bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(ppos, pradius));
-					shadow_vars_t svars(make_pt_global(spos), (has_sun ? sradius : 0.0), all_zeros, 0.0);
+					shadow_vars_t svars(make_pt_global(spos), (has_sun ? sradius : 0.0), all_zeros, 0.0, planet.rscale, planet.ring_ri, planet.ring_ro);
 				
 					if (planet_visible && planet.is_ok()) {
 						float max_overlap(0.0);
@@ -717,6 +722,11 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 							}
 						}
 						if (!skip_p && !skip_planet_draw) {
+							if (!planet.ring_data.empty() && planet.ring_tid > 0) { // setup ring texture so we can create ring shadows
+								set_active_texture(2);
+								bind_1d_texture(planet.ring_tid);
+								set_active_texture(0);
+							}
 							planet.check_gen_texture(int(sizep));
 							planet.draw(ppos, usg, svars); // ignore return value?
 						}
@@ -744,12 +754,12 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 							if ((sizem < 0.2 && sclip) || !univ_sphere_vis(mpos, moon.radius)) continue;
 							current.moon = l;
 							moon.check_gen_texture(int(sizem));
-							moon.draw(mpos, usg, shadow_vars_t(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius));
+							moon.draw(mpos, usg, shadow_vars_t(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, vector3d(1,1,1), 0.0, 0.0));
 						}
 						if (planet.is_ok()) {glDisable(p_light);}
 					}
 					if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
-						if (sizep > 0.1) {rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));}
+						if (sizep > 0.1 && !planet.ring_data.empty()) {rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));}
 					
 						if (planet_visible && !skip_planet_draw && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
 							atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
@@ -1377,8 +1387,8 @@ void uplanet::gen_prings() {
 
 	for (unsigned i = 0; i < nr; ++i) {
 		upring &ring(rings[i]);
-		ring.radius1 = lastr        + sr*radius*rand_uniform2(0.0,  0.1);
-		ring.radius2 = ring.radius1 + sr*radius*rand_uniform2(0.05, 0.3);
+		ring.radius1 = lastr        + sr*radius*rand_uniform2(-0.05, 0.05);
+		ring.radius2 = ring.radius1 + sr*radius*rand_uniform2(0.05,  0.3 );
 		lastr = ring.radius2;
 	}
 	ring_data.resize(RING_TEX_SZ);
@@ -1388,20 +1398,24 @@ void uplanet::gen_prings() {
 	float const rdiv((RING_TEX_SZ-3)/(ring_ro - ring_ri));
 	colorRGBA rcolor(color);
 	UNROLL_3X(rcolor[i_] += rand_uniform2(0.1, 0.6);)
-	rcolor.alpha = rand_uniform2(0.4, 0.9);
+	float alpha(rand_uniform2(0.6, 0.9));
 
 	for (vector<upring>::const_iterator i = rings.begin(); i != rings.end(); ++i) {
 		unsigned const tri(1+(i->radius1 - ring_ri)*rdiv), tro(1+(i->radius2 - ring_ri)*rdiv);
 		assert(tri > 0 && tro+1 < RING_TEX_SZ && tri < tro);
-		color_wrapper cw;
 		UNROLL_3X(rcolor[i_] = CLIP_TO_01(rcolor[i_]*(1.0f + rand_uniform2(-0.15, 0.15)));)
-		rcolor.A = CLIP_TO_01(rcolor.A*(1.0f + rand_uniform2(-0.1, 0.1)));
-		cw.set_c4(rcolor);
-		for (unsigned j = tri; j < tro; ++j) {ring_data[j] = cw;}
+		alpha = CLIP_TO_01(alpha*(1.0f + rand_uniform2(-0.1, 0.1)));
+
+		for (unsigned j = tri; j < tro; ++j) {
+			float const v(fabs(j - 0.5*(tri + tro))/(0.5*(tro - tri)));
+			rcolor.A = alpha*(1.0 - v*v);
+			ring_data[j].add_c4(rcolor);
+		}
 	}
+	for (unsigned i = 0; i < 2; ++i) {rscale[i] = rand_uniform2(0.9, 2.2);} // x/y
+	rscale.z = 1.0; // makes no difference
 	float max_rs(0.0);
-	UNROLL_3X(rscale[i_] = rand_uniform2(0.9, 2.2);)
-	UNROLL_3X(max_rs     = max(max_rs, rscale[i_]);)
+	UNROLL_3X(max_rs = max(max_rs, rscale[i_]);)
 	mosize = max(mosize, max_rs*lastr); // extend planet effective size
 }
 
@@ -2120,7 +2134,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 		if (!CACHE_SPHERE_DATA || !surface->sd.equal(all_zeros, radius0, ndiv)) {
 			surface->free_dlist();
 			gen_data = 1;
-			float const cutoff(surface->min_cutoff), omcinv(1.0/(1.0 - cutoff)), rscale(hmap_scale*radius);
+			float const cutoff(surface->min_cutoff), omcinv(1.0/(1.0 - cutoff)), radius_scale(hmap_scale*radius);
 			vector<float> const &heightmap(surface->heightmap);
 			unsigned const ssize(surface->ssize);
 			assert(ssize > 0 && tsize > 0);
@@ -2132,7 +2146,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 					//unsigned const ix((j*ssize)/(ndiv+1));
 					unsigned const ix((j == ndiv) ? (ssize-1) : (j*ssize)/ndiv);
 					float const val(heightmap[iy + ssize*ix]); // x and y are swapped
-					perturb_map[j + offset] = rscale*(omcinv*(max(cutoff, val) - cutoff) - 0.5);
+					perturb_map[j + offset] = radius_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5);
 				}
 			}
 		}
@@ -2256,8 +2270,8 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	enable_blend(); // must be drawn last
 	glPushMatrix();
 	global_translate(pos_);
-	scale_by(rscale);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
+	scale_by(rscale);
 	WHITE.do_glColor();
 	plus_z.do_glNormal();
 	draw_tquad(ring_ro, ring_ro, 0.0, 1);

@@ -725,7 +725,8 @@ struct color_wrapper { // size = 4
 	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
 
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));) c[3] = 255;}
-	void set_c4(colorRGBA const &c_) {set_c3(c_); c[3] = (unsigned char)(255.0*CLIP_TO_01(c_[3]));}
+	void set_c4(colorRGBA const &c_) {UNROLL_4X(c[i_]  = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
+	void add_c4(colorRGBA const &c_) {UNROLL_4X(c[i_] += (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
 	colorRGB  get_c3() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	colorRGBA get_c4() const {return colorRGBA(get_c3(), c[3]/255.0);}
 };
