@@ -1,12 +1,10 @@
-Move player ship to planet surface or center in combined_gu mode
-Gas Giant stripes (1D texture?) - all atmosphere
+Move player further from placed colony
+Gas Giant stripes (1D texture?)
 Gas Giants - all atmosphere, no collisions?
 craters on planets/moons?
 Add lava to hot planets
 
 Clouds glow near the sun (glow map)
-
-Perlin noise for water ripple texture?
 
 Stars: blue = high mass, red = low mass
 

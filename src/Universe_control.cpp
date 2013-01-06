@@ -116,6 +116,21 @@ void setup_current_system() {
 		regen_mesh  = 1; // regen texture (is this needed?)
 		//init_temperature = univ_temp; // ???
 	}
+	if (clobj0.type == UTYPE_PLANET || clobj0.type == UTYPE_MOON) { // planet or moon
+		point const &opos(clobj0.object->get_pos());
+		float const oradius(clobj0.object->get_radius());
+
+		if (dist_less_than(pos, opos, 10.0*oradius)) { // fairly close to the planet
+			if (!dist_less_than(pos, opos, 1.01*oradius)) { // not at the surface
+				//cout << "distance to planet: " << p2p_dist(opos, pos) << ", planet radius: " << oradius << endl;
+				point const p_int(opos + oradius*(pos - opos).get_norm());
+				player_ship().move_to(p_int); // move the player ship to the surface of the planet/moon
+			}
+		}
+		else {
+			// FIXME: what do we do here? still move the player ship? clear the closest planet? refuse to switch world mode? draw empty space?
+		}
+	}
 	if (clobj0.type == UTYPE_PLANET) { // determine atmosphere and cloud cover
 		uplanet const &planet(clobj0.get_planet());
 		atmosphere = planet.atmos;
