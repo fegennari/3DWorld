@@ -365,7 +365,8 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			universe_pld.draw_and_clear();
 		}
 	}
-	if (clobj.type >= UTYPE_SYSTEM) { // in a system
+	//if (clobj.type >= UTYPE_SYSTEM) { // in a system
+	if (clobj.type >= UTYPE_GALAXY) { // in a galaxy
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
 			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest);
 		}
@@ -557,7 +558,8 @@ uobject const *get_shadowing_object(uobject const &obj, ustar const &sun) { // u
 void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest) {
 
 	UNROLL_3X(current.cellxyz[i_] = cxyz[i_] + uxyz[i_];)
-	get_cell(cxyz).draw(usg, clobj, pass, nebula_pass, no_move, skip_closest);
+	bool const sel_cell(clobj.cellxyz[0] == cxyz[0] && clobj.cellxyz[1] == cxyz[1] && clobj.cellxyz[2] == cxyz[2]);
+	get_cell(cxyz).draw(usg, clobj, pass, nebula_pass, no_move, skip_closest, sel_cell);
 }
 
 
@@ -572,10 +574,10 @@ struct planet_draw_data_t {
 
 // pass:
 //  0. Draw all except for the player's system
-//  If player's system is none then stop
+//  If player's system is none (update: galaxy is none) then stop
 //  1. Draw the player's system except for the player's sobj
 //  2. Draw the player's sobj
-void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest) {
+void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest, bool sel_cell) {
 
 	if (galaxies == NULL) return; // galaxies not yet allocated
 	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
@@ -602,7 +604,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 
 	// draw galaxies
 	for (unsigned i = 0; i < galaxies->size(); ++i) { // remember, galaxies can overlap
-		bool const sel_g((int)i == clobj.galaxy), sclip(!sel_g || (display_mode & 0x01) != 0);
+		bool const sel_g(sel_cell && (int)i == clobj.galaxy), sclip(!sel_g || (display_mode & 0x01) != 0);
 		if (p_system && pass > 0 && !sel_g) continue; // drawn in previous pass
 		ugalaxy &galaxy((*galaxies)[i]);
 		point_d const gpos(pos + galaxy.pos);
@@ -622,17 +624,29 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 		if (max_size < 0.18) continue; // too small (normally will be freed earlier)
 		set_ambient_color(galaxy.color);
 
-		if (pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
+		if (pass == 1 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
 			uasteroid_field::begin_render(usg.asteroid_shader);
 
-			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
+			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
 				i->draw(pos, camera, usg.asteroid_shader);
 			}
 			uasteroid_field::end_render(usg.asteroid_shader);
 		}
+		int closest_system(clobj.system);
+		bool p_system2(p_system);
+
+		if (sel_g && closest_system < 0) {
+			float dmin_sq(0.0);
+
+			for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
+				float const dsq(p2p_dist_sq(camera, galaxy.sols[j].pos));
+				if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; closest_system = j;}
+			}
+			if (closest_system >= 0) {p_system2 = 1;}
+		}
 		for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
-			bool const sel_s(sel_g && (int)j == clobj.system);
-			if (p_system && ((pass == 0 && sel_s) || (pass != 0 && !sel_s))) continue; // draw in another pass
+			bool const sel_s(sel_g && (int)j == closest_system);
+			if (p_system2 && ((pass == 0 && sel_s) || (pass != 0 && !sel_s))) continue; // draw in another pass
 			ussystem &sol(galaxy.sols[j]);
 			float const sradius(sol.sun.radius);
 
@@ -650,7 +664,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 			bool const update_pass(sel_g && !no_move && ((int(tfticks)+j)&31) == 0);
 			if (!update_pass && sol.gen != 0 && !univ_sphere_vis(spos, sol.radius)) continue;
 			bool const sel_sun(sel_s && (clobj.type == UTYPE_STAR || clobj.type == UTYPE_SYSTEM));
-			bool const skip_s(p_system && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
+			bool const skip_s(p_system2 && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
 			bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(spos, 2.0*sradius));
 			bool const planets_visible(PLANET_MAX_SIZE*sizes >= 0.3*sradius || !sclip);
 			current.system  = j;
@@ -681,7 +695,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 
 				for (unsigned k = 0; k < sol.planets.size(); ++k) {
 					bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
-					if (p_system && (pass == 2 && !sel_p)) continue; // draw in another pass
+					if (p_system2 && (pass == 2 && !sel_p)) continue; // draw in another pass
 					uplanet &planet(sol.planets[k]);
 					point_d const ppos(pos + planet.pos);
 					if (sel_s && (p2p_dist_sq(camera, ppos) < p2p_dist_sq(camera, spos)) != sol_draw_pass) continue; // don't draw planet in this pass
@@ -694,7 +708,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 					}
 					current.planet = k;
 					bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET), skip_planet_draw(skip_closest && sel_planet);
-					bool const skip_p(p_system && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
+					bool const skip_p(p_system2 && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
 					if (!skip_p && !no_move) {planet.do_update(sol.pos, has_sun, has_sun);} // don't really have to do this if planet is not visible
 					if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(ppos, planet.mosize))) continue;
 					bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(ppos, pradius));
@@ -732,7 +746,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						}
 					} // planet visible
 					planet.process();
-					bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
+					bool const skip_moons(p_system2 && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
 
 					if (sizep >= 1.0 && !skip_moons && !planet.moons.empty()) {
 						int const p_light(GL_LIGHT2);
@@ -745,7 +759,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						}
 						for (unsigned l = 0; l < planet.moons.size(); ++l) { // draw moons
 							bool const sel_m(sel_moon && (int)l == clobj.moon);
-							if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
+							if (p_system2 && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
 							if (skip_closest && sel_m) continue; // skip (closest)
 							umoon &moon(planet.moons[l]);
 							if (!moon.is_ok()) continue;
@@ -1055,6 +1069,7 @@ void ugalaxy::process(ucell const &cell) {
 	calc_bounding_sphere();
 	calc_color();
 	lrq_rad = 0.0;
+	//PRINT_TIME("Gen Galaxy");
 
 	// gen nebulas
 	unsigned const num_nebulas(rand_uniform_uint2(MIN_NEBULAS_PER_GALAXY, MAX_NEBULAS_PER_GALAXY));
@@ -1064,14 +1079,17 @@ void ugalaxy::process(ucell const &cell) {
 		i->pos = gen_valid_system_pos();
 		i->gen(radius, *this);
 	}
+	//PRINT_TIME("Gen Nebulas");
 
 	// gen asteroid fields
 	unsigned const num_af(rand_uniform_uint2(MIN_AST_FIELD_PER_GALAXY, MAX_AST_FIELD_PER_GALAXY));
 	asteroid_fields.resize(num_af);
 
 	for (vector<uasteroid_field>::iterator i = asteroid_fields.begin(); i != asteroid_fields.end(); ++i) {
-		i->gen_asteroids(0); // FIXME: num
+		i->pos    = gen_valid_system_pos();
+		i->radius = radius*rand_uniform2(0.02, 0.05);
 	}
+	//PRINT_TIME("Gen Asteroid Fields");
 	gen = 1;
 	//if (num_systems > 480) PRINT_TIME("Galaxy Process");
 }
@@ -1398,7 +1416,7 @@ void uplanet::gen_prings() {
 	float const rdiv((RING_TEX_SZ-3)/(ring_ro - ring_ri));
 	colorRGBA rcolor(color);
 	UNROLL_3X(rcolor[i_] += rand_uniform2(0.1, 0.6);)
-	float alpha(rand_uniform2(0.6, 0.9));
+	float alpha(rand_uniform2(0.75, 1.0));
 
 	for (vector<upring>::const_iterator i = rings.begin(); i != rings.end(); ++i) {
 		unsigned const tri(1+(i->radius1 - ring_ri)*rdiv), tro(1+(i->radius2 - ring_ri)*rdiv);
@@ -1987,13 +2005,13 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 		glPushMatrix();
 		global_translate(pos_);
 
-		if (size > 4) { // draw star's flares
+		if (size > 4.0) { // draw star's flares
 			float const cfr(max(1.0, 60.0/size)), alpha(CLIP_TO_01(0.5f*(size - 4.0f)));
 			colorRGBA ca(colorA), cb(colorB);
 			ca.A *= alpha; cb.A *= alpha;
 			usg.enable_star_shader(ca, cb);
 			enable_blend();
-			draw_flare_no_blend(pos_, all_zeros, 2.5*radius, 2.5*radius);
+			if (size > 6.0) {draw_flare_no_blend(pos_, all_zeros, 2.5*radius, 2.5*radius);}
 
 			if (cfr > 2.5) {
 				draw_flare_no_blend(pos_, all_zeros, 0.5*radius, cfr*radius);

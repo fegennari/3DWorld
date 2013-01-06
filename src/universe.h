@@ -409,7 +409,7 @@ public:
 
 	ucell() : galaxies(NULL) {}
 	void gen_cell(int const ii[3]);
-	void draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest);
+	void draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest, bool sel_cell);
 	void free();
 	string get_name() const {return "Universe Cell";}
 };

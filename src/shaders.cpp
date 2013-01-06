@@ -534,5 +534,5 @@ void shader_t::end_shader() { // ok to call if not in a shader
 
 
 void shader_t::enable () const {assert(program); glUseProgram(program);}
-void shader_t::disable() const {glUseProgram(0);}
+void shader_t::disable() {glUseProgram(0);}
 

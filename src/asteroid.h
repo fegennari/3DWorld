@@ -14,20 +14,18 @@ class uasteroid : public uobject_base, public rotated_obj {
 
 public:
 	uasteroid() : inst_id(0) {}
+	void gen(float max_dist, float max_radius);
 	void draw(point_d const &pos_, shader_t &s) const;
 };
 
 
 class uasteroid_field : public uobject_base, public vector<uasteroid> {
-	
-	float max_aradius;
 
 public:
-	uasteroid_field() : max_aradius(0.0) {}
 	static void begin_render(shader_t &shader);
 	static void end_render(shader_t &shader);
-	void gen_asteroids(unsigned num);
-	void draw(point_d const &pos_, point const &camera, shader_t &s) const;
+	void gen_asteroids();
+	void draw(point_d const &pos_, point const &camera, shader_t &s);
 	void free() {clear();}
 };
 

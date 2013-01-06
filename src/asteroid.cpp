@@ -442,8 +442,10 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 // *** asteroid field ***
 
 
-unsigned const NUM_AST_MODELS  = 100;
-unsigned const AST_FIELD_MODEL = AS_MODEL_HMAP;
+unsigned const AST_FIELD_MODEL  = AS_MODEL_HMAP;
+unsigned const NUM_AST_MODELS   = 100;
+unsigned const AST_FLD_MAX_NUM  = 1000;
+float    const AST_RADIUS_SCALE = 0.05;
 
 
 class asteroid_model_gen_t {
@@ -451,7 +453,7 @@ class asteroid_model_gen_t {
 	vector<uobj_asteroid *> asteroids; // FIXME: a case for boost::shared_ptr<>?
 
 public:
-	~asteroid_model_gen_t() {clear();}
+	//~asteroid_model_gen_t() {clear();} // can't free after GL context has been destroyed
 	bool empty() const {return asteroids.empty();}
 	
 	void gen(unsigned num, unsigned model) {
@@ -488,15 +490,14 @@ public:
 asteroid_model_gen_t asteroid_model_gen;
 
 
-void uasteroid_field::gen_asteroids(unsigned num) {
+void uasteroid_field::gen_asteroids() {
 
 	if (asteroid_model_gen.empty()) {asteroid_model_gen.gen(NUM_AST_MODELS, AST_FIELD_MODEL);}
 	clear();
-	resize(num);
+	resize((rand2() % AST_FLD_MAX_NUM) + 1);
 
 	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
-		i->rgen_values();
-		// FIXME: WRITE
+		i->gen(radius, AST_RADIUS_SCALE*radius);
 	}
 }
 
@@ -519,15 +520,35 @@ void uasteroid_field::end_render(shader_t &shader) {
 }
 
 
-void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s) const {
+void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist, float dscale);
+
+
+void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s) {
 
 	point_d const afpos(pos + pos_);
-	if (empty() || !univ_sphere_vis(afpos, radius))         return;
-	if (calc_sphere_size(afpos, camera, max_aradius) < 1.0) return; // asteroids are too small/far away
+	if (!univ_sphere_vis(afpos, radius)) return;
+	if (calc_sphere_size(afpos, camera, AST_RADIUS_SCALE*radius) < 1.0) return; // asteroids are too small/far away
+	if (empty()) {gen_asteroids();}
+
+	shader_t::disable();
+	set_color(WHITE);
+	WHITE.do_glColor();
+	draw_sphere_at(make_pt_global(afpos), radius, N_SPHERE_DIV); // TESTING
 
 	for (vector<uasteroid>::const_iterator i = begin(); i != end(); ++i) {
-		i->draw(pos, s);
+		i->draw(afpos, s);
 	}
+}
+
+
+void uasteroid::gen(float max_dist, float max_radius) {
+
+	assert(max_radius > 0.0 && max_radius < max_dist && max_radius);
+	rgen_values();
+	radius  = max_radius*rand_uniform(0.1, 1.0);
+	pos     = signed_rand_vector2(max_dist - radius);
+	inst_id = rand2() % NUM_AST_MODELS;
+	UNROLL_3X(scale[i_] = rand_uniform2(0.5, 1.0);)
 }
 
 
