@@ -172,7 +172,7 @@ public:
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		int const tex_id(ROCK_SPHERE_TEX); // MOON_TEX?
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
-		uniform_scale(scale_val);
+		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		WHITE.do_glColor();
 		select_texture(tex_id);
 		surface.sd.draw_ndiv_pow2(ddata.ndiv); // use dlist?
@@ -442,11 +442,15 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 // *** asteroid field ***
 
 
-unsigned const AST_FIELD_MODEL  = AS_MODEL_HMAP;
-unsigned const NUM_AST_MODELS   = 100;
-unsigned const AST_FLD_MAX_NUM  = 100;
-float    const AST_RADIUS_SCALE = 0.05;
-float    const ASTEROID_AMBIENT_SCALE = 20.0;
+unsigned const AST_FIELD_MODEL   = AS_MODEL_HMAP;
+unsigned const NUM_AST_MODELS    = 100;
+unsigned const AST_FLD_MAX_NUM   = 1000;
+float    const AST_RADIUS_SCALE  = 0.04;
+float    const AST_AMBIENT_SCALE = 20.0;
+float    const AST_AMBIENT_VAL   = 0.15;
+float    const NDIV_SCALE_AST    = 500.0;
+
+//#define USE_FREE_OBJ_DRAW
 
 
 class asteroid_model_gen_t {
@@ -464,24 +468,30 @@ public:
 
 		for (unsigned i = 0; i < num; ++i) { // create at the origin with radius=1
 			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, ROCK_SPHERE_TEX, i);
+#ifdef USE_FREE_OBJ_DRAW
 			asteroids[i]->mark_as_instanced(); // required so that transforms aren't applied
-			asteroids[i]->set_ambient_scale(ASTEROID_AMBIENT_SCALE);
+			asteroids[i]->set_ambient_scale(AST_AMBIENT_SCALE);
+#endif
 		}
 		PRINT_TIME("Asteroid Model Gen");
 	}
-	void draw(unsigned ix, point const &pos_, shader_t &s) const {
-		assert(ix < asteroids.size());
-		assert(asteroids[ix]);
-		asteroids[ix]->draw(s, pos_);
-		//uobj_draw_data ddata(asteroids[ix], s, 32, 0, 0, 0, 0, pos_, zero_vector, plus_z, plus_y, 0.0, 0.0, 1.0, 0, 1, 1, 1, 1);
-		//asteroids[ix]->draw_obj(ddata);
-	}
-	void draw(unsigned ix, point const &pos, vector3d const &scale, vector3d const &rot_axis, float rot_ang, shader_t &s) const {
+	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s) const {
+		float const radius(scale.mag()); // approximate (upper bound)
+		float const dist(p2p_dist(pos, camera)), dscale(NDIV_SCALE_AST*(radius/(dist + 0.1*radius)));
+		if (dscale < 0.5) return; // too far/small - clip it
 		glPushMatrix();
-		translate_to(pos);
+		global_translate(pos);
 		scale_by(scale);
 		if (rot_ang != 0.0) {rotate_about(rot_ang, rot_axis);}
-		draw(ix, pos, s);
+		assert(ix < asteroids.size());
+		assert(asteroids[ix]);
+#ifdef USE_FREE_OBJ_DRAW
+		asteroids[ix]->draw(s, pos_);
+#else
+		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(10.0*dscale)))));
+		uobj_draw_data ddata(asteroids[ix], s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
+		asteroids[ix]->draw_obj(ddata);
+#endif
 		glPopMatrix();
 	}
 	void clear() {
@@ -516,6 +526,11 @@ void uasteroid_field::begin_render(shader_t &shader) {
 	shader.enable();
 	BLACK.do_glColor();
 	glEnable(GL_LIGHTING);
+#ifndef USE_FREE_OBJ_DRAW
+	colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, &acolor.R);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, &BLACK.R);
+#endif
 }
 
 
@@ -562,7 +577,7 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) cons
 	point_d const apos(pos_ + pos);
 	if (!univ_sphere_vis(apos, radius)) return;
 	if (calc_sphere_size(apos, camera, radius) < 1.0) return; // too small/far away
-	asteroid_model_gen.draw(inst_id, make_pt_global(apos), radius*scale, rot_axis, rot_ang, s);
+	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s);
 }
 
 

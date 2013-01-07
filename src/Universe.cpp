@@ -1100,7 +1100,7 @@ void ugalaxy::process(ucell const &cell) {
 
 	for (vector<uasteroid_field>::iterator i = asteroid_fields.begin(); i != asteroid_fields.end(); ++i) {
 		i->pos    = gen_valid_system_pos();
-		i->radius = radius*rand_uniform2(0.01, 0.02);
+		i->radius = radius*rand_uniform2(0.005, 0.01);
 	}
 	//PRINT_TIME("Gen Asteroid Fields");
 	gen = 1;
