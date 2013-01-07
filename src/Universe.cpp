@@ -38,7 +38,7 @@ unsigned const RING_TEX_SZ   = 256;
 unsigned const MIN_GALAXIES_PER_CELL   = 1;
 unsigned const MAX_GALAXIES_PER_CELL   = 4;
 unsigned const MIN_AST_FIELD_PER_GALAXY= 0;
-unsigned const MAX_AST_FIELD_PER_GALAXY= 0;
+unsigned const MAX_AST_FIELD_PER_GALAXY= 15;
 unsigned const MIN_NEBULAS_PER_GALAXY  = 0;
 unsigned const MAX_NEBULAS_PER_GALAXY  = 2;
 unsigned const MAX_SYSTEMS_PER_GALAXY  = 500;
@@ -488,7 +488,7 @@ void clear_ambient_color() {
 // return values: -1: no sun, 0: not shadowed, 1: < half shadowed, 2: > half shadowed, 3: fully shadowed
 // caches sobj and only determines if there is a shadow if NULL
 int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,
-				   uobject const *&sobj, bool no_ambient) // based on current star and current galaxy
+				   uobject const *&sobj, float ambient_scale) // based on current star and current galaxy
 {
 	assert(radius < CELL_SIZE);
 	float const expand(2.0);
@@ -512,11 +512,11 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 			color = galaxy.color;
 			//atten_color(color, pos2, galaxy.pos, (galaxy.radius + MAX_SYSTEM_EXTENT), expand);
 		}
-		if (no_ambient) {
+		if (ambient_scale == 0.0) {
 			clear_ambient_color();
 		}
 		else {
-			set_ambient_color(color*3.2); // hack to increase light on ships (isn't ambient reset below in some cases?)
+			set_ambient_color(color*ambient_scale);
 		}
 	}
 	else { // not near any galaxies
@@ -549,7 +549,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 			if (sr > radius && line_sphere_int_cont(pos2, sun.pos, sobj->get_pos(), (sr - radius))) ++shadow_val;
 		}
 	}
-	set_sun_loc_color(spos, color, sun.radius, (known_shadowed || shadow_val > shadow_thresh), no_ambient, BASE_AMBIENT, BASE_DIFFUSE); // check for sun
+	set_sun_loc_color(spos, color, sun.radius, (known_shadowed || shadow_val > shadow_thresh), (ambient_scale == 0.0), BASE_AMBIENT, BASE_DIFFUSE); // check for sun
 	return shadow_val;
 }
 
@@ -635,7 +635,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 		if (max_size < 0.18) continue; // too small (normally will be freed earlier)
 		set_ambient_color(galaxy.color);
 
-		if (pass == 1 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
+		if (pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
 			uasteroid_field::begin_render(usg.asteroid_shader);
 
 			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
@@ -764,10 +764,10 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 
 						if (planet.is_ok()) { // setup planet as an additional light source for all moons
 							colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
-							glLightfv(p_light, GL_AMBIENT, &ALPHA0.R);
+							glLightfv(p_light, GL_AMBIENT, &BLACK.R);
 							glLightfv(p_light, GL_DIFFUSE, &pcolor.R); // planet diffuse
 							set_gl_light_pos(p_light, make_pt_global(ppos), 1.0); // point light at planet center
-							set_star_light_atten(p_light, 10.0*PLANET_MAX_SIZE/planet.radius);
+							set_star_light_atten(p_light, 5.0*PLANET_MAX_SIZE/planet.radius);
 						}
 						for (unsigned l = 0; l < planet.moons.size(); ++l) { // draw moons
 							bool const sel_m(sel_moon && (int)l == clobj.moon);
@@ -1100,7 +1100,7 @@ void ugalaxy::process(ucell const &cell) {
 
 	for (vector<uasteroid_field>::iterator i = asteroid_fields.begin(); i != asteroid_fields.end(); ++i) {
 		i->pos    = gen_valid_system_pos();
-		i->radius = radius*rand_uniform2(0.02, 0.05);
+		i->radius = radius*rand_uniform2(0.01, 0.02);
 	}
 	//PRINT_TIME("Gen Asteroid Fields");
 	gen = 1;

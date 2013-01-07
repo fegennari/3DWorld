@@ -15,7 +15,7 @@ class uasteroid : public uobject_base, public rotated_obj {
 public:
 	uasteroid() : inst_id(0) {}
 	void gen(float max_dist, float max_radius);
-	void draw(point_d const &pos_, shader_t &s) const;
+	void draw(point_d const &pos_, point const &camera, shader_t &s) const;
 };
 
 

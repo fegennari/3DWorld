@@ -606,10 +606,10 @@ public:
 	};
 
 protected:
-	bool near_b_hole;
+	bool near_b_hole, instanced_no_xform;
 	unsigned flags, reset_timer, time, sobj_coll;
 	mutable int shadow_val;
-	float speed_factor, max_sfactor, temperature, extra_mass, rot_rate, sobj_dist, draw_rscale;
+	float speed_factor, max_sfactor, temperature, extra_mass, rot_rate, sobj_dist, draw_rscale, ambient_scale;
 	point reset_pos;
 	vector3d velocity, upv, dir, dvel, rot_axis, gvect;
 	free_obj const *target_obj, *parent;
@@ -832,6 +832,8 @@ public:
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
 	virtual bool has_detailed_coll(free_obj const *const other_obj) const {return 0;}
+	void mark_as_instanced() {instanced_no_xform = 1;}
+	void set_ambient_scale(float as) {ambient_scale = as;}
 };
 
 

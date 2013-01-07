@@ -444,8 +444,9 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 
 unsigned const AST_FIELD_MODEL  = AS_MODEL_HMAP;
 unsigned const NUM_AST_MODELS   = 100;
-unsigned const AST_FLD_MAX_NUM  = 1000;
+unsigned const AST_FLD_MAX_NUM  = 100;
 float    const AST_RADIUS_SCALE = 0.05;
+float    const ASTEROID_AMBIENT_SCALE = 20.0;
 
 
 class asteroid_model_gen_t {
@@ -463,6 +464,8 @@ public:
 
 		for (unsigned i = 0; i < num; ++i) { // create at the origin with radius=1
 			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, ROCK_SPHERE_TEX, i);
+			asteroids[i]->mark_as_instanced(); // required so that transforms aren't applied
+			asteroids[i]->set_ambient_scale(ASTEROID_AMBIENT_SCALE);
 		}
 		PRINT_TIME("Asteroid Model Gen");
 	}
@@ -470,6 +473,8 @@ public:
 		assert(ix < asteroids.size());
 		assert(asteroids[ix]);
 		asteroids[ix]->draw(s, pos_);
+		//uobj_draw_data ddata(asteroids[ix], s, 32, 0, 0, 0, 0, pos_, zero_vector, plus_z, plus_y, 0.0, 0.0, 1.0, 0, 1, 1, 1, 1);
+		//asteroids[ix]->draw_obj(ddata);
 	}
 	void draw(unsigned ix, point const &pos, vector3d const &scale, vector3d const &rot_axis, float rot_ang, shader_t &s) const {
 		glPushMatrix();
@@ -510,11 +515,13 @@ void uasteroid_field::begin_render(shader_t &shader) {
 	if (!shader.is_setup()) {setup_ship_draw_shader(shader);} // ambient only? not sure if this is what we want in the end
 	shader.enable();
 	BLACK.do_glColor();
+	glEnable(GL_LIGHTING);
 }
 
 
 void uasteroid_field::end_render(shader_t &shader) {
 
+	glDisable(GL_LIGHTING);
 	shader.disable();
 	glDisable(GL_TEXTURE_2D);
 }
@@ -529,14 +536,12 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 	if (!univ_sphere_vis(afpos, radius)) return;
 	if (calc_sphere_size(afpos, camera, AST_RADIUS_SCALE*radius) < 1.0) return; // asteroids are too small/far away
 	if (empty()) {gen_asteroids();}
-
-	shader_t::disable();
-	set_color(WHITE);
+	/*set_color(WHITE);
 	WHITE.do_glColor();
-	draw_sphere_at(make_pt_global(afpos), radius, N_SPHERE_DIV); // TESTING
+	draw_sphere_at(make_pt_global(afpos), radius, N_SPHERE_DIV);*/
 
 	for (vector<uasteroid>::const_iterator i = begin(); i != end(); ++i) {
-		i->draw(afpos, s);
+		i->draw(afpos, camera, s);
 	}
 }
 
@@ -546,16 +551,17 @@ void uasteroid::gen(float max_dist, float max_radius) {
 	assert(max_radius > 0.0 && max_radius < max_dist && max_radius);
 	rgen_values();
 	radius  = max_radius*rand_uniform(0.1, 1.0);
-	pos     = signed_rand_vector2(max_dist - radius);
+	pos     = signed_rand_vector2_spherical(max_dist - radius);
 	inst_id = rand2() % NUM_AST_MODELS;
 	UNROLL_3X(scale[i_] = rand_uniform2(0.5, 1.0);)
 }
 
 
-void uasteroid::draw(point_d const &pos_, shader_t &s) const {
+void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) const {
 
 	point_d const apos(pos_ + pos);
 	if (!univ_sphere_vis(apos, radius)) return;
+	if (calc_sphere_size(apos, camera, radius) < 1.0) return; // too small/far away
 	asteroid_model_gen.draw(inst_id, make_pt_global(apos), radius*scale, rot_axis, rot_ang, s);
 }
 

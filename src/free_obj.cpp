@@ -25,6 +25,7 @@ float const PROJ_ROT_ATTEN   = 0.92;
 float const ROT_FORCE_CONST  = 0.5;
 float const MAX_ROT_RATE     = 0.03;
 float const BLACK_HOLE_GRAV  = 2000.0;
+float const DEF_AMBIENT_SCALE= 3.2; // hack to increase light on ships (isn't ambient reset below in some cases?)
 float const ao_d_time(float(ao_e_time - ao_s_time));
 
 vector3d const init_dir(1.0, 0.0, 0.0);
@@ -57,6 +58,7 @@ void free_obj::reset() {
 	extra_mass  = 0.0;
 	rot_rate    = 0.0;
 	sobj_dist   = 0.0;
+	ambient_scale = DEF_AMBIENT_SCALE;
 	draw_rscale = 1.0;
 	target_obj  = NULL;
 	parent      = NULL;
@@ -68,6 +70,7 @@ void free_obj::reset() {
 	rot_axis    = plus_z;
 	gvect       = zero_vector;
 	near_b_hole = 0;
+	instanced_no_xform = 0;
 	ra1 = ra2   = 0.0;
 	invalidate_rotv();
 	reset_lights(); // should already be reset
@@ -569,27 +572,32 @@ void free_obj::inverse_rotate() const {
 
 void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const {
 
-	glPushMatrix();
-	global_translate(pos);
-	uniform_scale(radius);
+	if (!instanced_no_xform) {
+		glPushMatrix();
+		global_translate(pos);
+		uniform_scale(radius);
 
-	if (near_b_hole && gvect.mag() > 0.05*BLACK_HOLE_GRAV) { // stretch the object
-		vector3d gscale;
-		UNROLL_3X(gscale[i_] = fabs(gvect[i_]) + 0.1*BLACK_HOLE_GRAV;)
-		gscale.normalize();
-		float volume(1.0);
-		UNROLL_3X(volume *= gscale[i_];)
-		gscale *= pow(1.0/volume, 1.0/3.0);
-		scale_by(gscale);
+		if (near_b_hole && gvect.mag() > 0.05*BLACK_HOLE_GRAV) { // stretch the object
+			vector3d gscale;
+			UNROLL_3X(gscale[i_] = fabs(gvect[i_]) + 0.1*BLACK_HOLE_GRAV;)
+			gscale.normalize();
+			float volume(1.0);
+			UNROLL_3X(volume *= gscale[i_];)
+			gscale *= pow(1.0/volume, 1.0/3.0);
+			scale_by(gscale);
+		}
+		if (!is_particle()) glPushMatrix();
+		if (!udd.draw_as_pt() && calc_rvs()) rotate();
 	}
-	if (!is_particle()) glPushMatrix();
-	if (!udd.draw_as_pt() && calc_rvs()) rotate();
 	udd.specular_en = specular;
 	udd.first_pass  = first_pass;
 	udd.final_pass  = final_pass;
 	draw_obj(udd);
-	if (!is_particle()) glPopMatrix();
-	glPopMatrix();
+
+	if (!instanced_no_xform) {
+		if (!is_particle()) glPopMatrix();
+		glPopMatrix();
+	}
 }
 
 
@@ -629,7 +637,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 	}
 	bool const known_shadowed(shadowed == 2 || (stencil_shadows && shadowed));
 	int const shadow_thresh(stencil_shadows ? 0 : 1);
-	int const light_val(set_uobj_color(finpos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, 0));
+	int const light_val(set_uobj_color(finpos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale));
 	shadow_val = max(shadowed, light_val); // only updated if drawn - close enough?
 	if (is_player_ship()) return; // don't draw player ship
 	if (light_val > 0 && sobj != NULL) sobjs.push_back(sobj);
@@ -654,7 +662,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 
 	for (unsigned pass = 0; pass < npasses; ++pass) {
 		if (pass > 0) {
-			set_uobj_color(finpos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, 0);
+			set_uobj_color(finpos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale);
 			udd.phase1 = 0;
 			udd.phase2 = 1;
 		}
@@ -696,7 +704,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 			glCullFace(GL_BACK);
 			glDisable(GL_CULL_FACE);
 
-			set_uobj_color(finpos, c_radius, 0, 2, sun_pos, sobj, 1); // enable diffuse/specular only
+			set_uobj_color(finpos, c_radius, 0, 2, sun_pos, sobj, 0.0); // enable diffuse/specular only
 			transform_and_draw_obj(udd, 1, 0, 1);
 
 			glDepthMask(GL_TRUE);
