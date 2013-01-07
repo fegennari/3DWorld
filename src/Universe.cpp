@@ -64,7 +64,7 @@ point univ_sun_pos(all_zeros);
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
 universe_t universe; // the top level universe
-pt_line_drawer universe_pld;
+pt_line_drawer universe_pld[2]; // 1-pixel, 2-pixel
 
 
 extern bool univ_planet_lod, disable_shaders;
@@ -343,6 +343,17 @@ public:
 };
 
 
+void draw_universe_plds() {
+
+	universe_pld[0].draw_and_clear();
+	glPointSize(2.0); // 2 pixel diameter
+	glLineWidth(2.0); // 2 pixel width
+	universe_pld[1].draw_and_clear();
+	glPointSize(1.0);
+	glLineWidth(1.0);
+}
+
+
 void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, bool no_distant) {
 
 	//RESET_TIME;
@@ -362,7 +373,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 					}
 				}
 			}
-			universe_pld.draw_and_clear();
+			draw_universe_plds();
 		}
 	}
 	//if (clobj.type >= UTYPE_SYSTEM) { // in a system
@@ -370,7 +381,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
 			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest);
 		}
-		universe_pld.draw_and_clear();
+		draw_universe_plds();
 	}
 	glEnable(GL_LIGHTING);
 	//PRINT_TIME("Draw Cells");
@@ -774,8 +785,9 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						}
 					}
 					if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
-						if (sizep > 0.1 && !planet.ring_data.empty()) {rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));}
-					
+						if (!planet.ring_data.empty() && sizep*planet.get_ring_rscale() > 2.5) {
+							rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
+						}
 						if (planet_visible && !skip_planet_draw && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
 							atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 						}
@@ -1969,37 +1981,22 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 	}
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
 		vector3d const velocity(get_player_velocity());
-		bool const small(size < 1.5), draw_as_line(velocity.mag() > 0.25); // lines of light - "warp speed"
+		bool const small(size < 1.5);
+		bool const draw_as_line(get_pixel_size(velocity.mag(), dist) > 1.0); // lines of light - "warp speed"
 		point const normal(camera - pos_);
 		pos_ = make_pt_global(pos_);
 
-		if (small) {
-			if (draw_as_line) {
-				blend_color(ocolor, ocolor, bkg_color, 0.5, 1); // half color to make it less bright
-				universe_pld.add_line(pos_, normal, ocolor, (pos_ - velocity), normal, ocolor);
-			}
-			else {
-				universe_pld.add_pt(pos_, normal, ocolor);
-			}
+		if (draw_as_line) {
+			blend_color(ocolor, ocolor, bkg_color, 0.5, 1); // half color to make it less bright
+			universe_pld[!small].add_line(pos_, normal, ocolor, (pos_ - velocity), normal, ocolor);
 		}
 		else {
-			ocolor.do_glColor();
-		
-			if (draw_as_line) {
-				if (!small) glLineWidth(2.0); // 2 pixel width
-				draw_line(pos_, (pos_ - velocity)); // blend and smooth?
-				if (!small) glLineWidth(1.0);
-			}
-			else {
-				if (!small) glPointSize(2.0); // 2 pixel diameter
-				draw_point(pos_);
-				if (!small) glPointSize(1.0);
-			}
+			universe_pld[!small].add_pt(pos_, normal, ocolor);
 		}
 	}
 	else { // sphere
 		int ndiv(max(4, min(56, int(NDIV_SIZE_SCALE*sqrt(size)))));
-		if (ndiv > 16) ndiv = ndiv & 0xFFFC;
+		if (ndiv > 16) {ndiv = ndiv & 0xFFFC;}
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
@@ -2037,8 +2034,8 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 	float const dist(max(TOLERANCE, (vcp.mag() - radius)));
 	if (dist > U_VIEW_DIST) return 0; // too far away
 	float size(get_pixel_size(radius, dist)); // approx. in pixels
-	if (size < 0.25 && !(display_mode & 0x01)) return 0; // too small
-	if (!univ_sphere_vis(pos_, radius))        return 1; // check if in the view volume
+	if (size < 0.4 && !(display_mode & 0x01)) return 0; // too small
+	if (!univ_sphere_vis(pos_, radius))       return 1; // check if in the view volume
 		
 	if (world_mode == WMODE_UNIVERSE && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
 		set_owner_color(); // lighting is already disabled

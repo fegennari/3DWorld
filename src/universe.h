@@ -280,7 +280,8 @@ public:
 	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars, point const &camera) const;
 	void free_texture();
 	void free();
-	float get_hmap_scale() const {return PLANET_HMAP_SCALE;}
+	float get_hmap_scale () const {return PLANET_HMAP_SCALE;}
+	float get_ring_rscale() const {return max(rscale.x, rscale.y)*ring_ro/radius;}
 	string get_name() const {return "Planet " + getname();}
 	string get_info() const;
 };
