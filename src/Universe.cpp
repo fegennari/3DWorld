@@ -2419,6 +2419,19 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 				min_gdist     = distg;
 			}
 		}
+		if (max_level >= UTYPE_MOON) { // check for asteroid collisions
+			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
+				if (!dist_less_than(pos, i->pos, expand*i->radius)) continue;
+
+				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) { // FIXME: subdivision?
+					if (!dist_less_than(pos, (i->pos + j->pos), expand*j->radius)) continue;
+					float const dista(p2p_dist(pos, (i->pos + j->pos)));
+					result.assign(gc, -1, -1, j->radius/max(TOLERANCE, dista), dista, UTYPE_ASTEROID, NULL);
+					result.asteroid_field = (i - galaxy.asteroid_fields.begin());
+					result.asteroid       = (j - i->begin());
+				}
+			}
+		}
 		unsigned const num_clusters((unsigned)galaxy.clusters.size());
 		unsigned const co((last_cluster >= 0 && last_cluster < int(num_clusters) && gc == go) ? last_cluster : 0);
 
@@ -2627,6 +2640,9 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 		for (unsigned gc = 0; gc < gv.size(); ++gc) {
 			ugalaxy const &galaxy(galaxies[gv[gc].index]);
 
+			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
+				// FIXME: write
+			}
 			for (unsigned c = 0; c < galaxy.clusters.size(); ++c) {
 				ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
 				if (!dist_less_than(curr, cl.center, (cl.bounds + dist))) continue;
@@ -2958,7 +2974,7 @@ void s_object::init() {
 
 	dist   = CELL_SIZE;
 	size   = 0.0;
-	galaxy = cluster = system = planet = moon = -1;
+	galaxy = cluster = system = planet = moon = asteroid_field = asteroid = -1;
 	type   = UTYPE_NONE;
 	val    = id = 0;
 	object = NULL;
@@ -3013,6 +3029,14 @@ bool s_object::bad_cell() const {
 ucell &s_object::get_ucell() const {
 	assert(type >= UTYPE_CELL);
 	return universe.get_cell(*this);
+}
+
+uasteroid &s_object::get_asteroid() const {
+	assert(type == UTYPE_ASTEROID);
+	ugalaxy &g(get_galaxy());
+	assert(asteroid_field >= 0 && (unsigned)asteroid_field < g.asteroid_fields.size());
+	assert(asteroid >= 0 && (unsigned)asteroid < g.asteroid_fields[asteroid_field].size());
+	return g.asteroid_fields[asteroid_field][asteroid];
 }
 
 

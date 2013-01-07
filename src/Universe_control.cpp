@@ -282,41 +282,47 @@ void process_univ_objects() {
 		int const found_close(orbiting ? 0 : universe.get_object_closest_to_pos(clobj, obj_pos));
 
 		if (found_close) {
-			float const clobj_radius(clobj.object->get_radius());
-			point const clobj_pos(clobj.object->get_pos());
-			float const temperature(universe.get_point_temperature(clobj, obj_pos)*(5 - uobj->get_shadow_val())); // shadow_val = 0-3
-			uobj->set_temp(temperature, clobj_pos);
-			float hmap_scale(0.0);
-			if (clobj.type == UTYPE_MOON  ) {hmap_scale = MOON_HMAP_SCALE;  }
-			if (clobj.type == UTYPE_PLANET) {hmap_scale = PLANET_HMAP_SCALE;}
-			float const dist_to_cobj(clobj.dist - (hmap_scale*clobj_radius + radius)); // (1.0 + HMAP_SCALE)*radius?
-			uobj->set_sobj_dist(dist_to_cobj);
-			int coll(0);
+			if (clobj.type == UTYPE_ASTEROID) {
+				cout << "asteroid collision" << endl;
+				uobj->set_temp(0.0, all_zeros); // ???
+			}
+			else {
+				assert(clobj.object != NULL);
+				float const clobj_radius(clobj.object->get_radius());
+				point const clobj_pos(clobj.object->get_pos());
+				float const temperature(universe.get_point_temperature(clobj, obj_pos)*(5 - uobj->get_shadow_val())); // shadow_val = 0-3
+				uobj->set_temp(temperature, clobj_pos);
+				float hmap_scale(0.0);
+				if (clobj.type == UTYPE_MOON  ) {hmap_scale = MOON_HMAP_SCALE;  }
+				if (clobj.type == UTYPE_PLANET) {hmap_scale = PLANET_HMAP_SCALE;}
+				float const dist_to_cobj(clobj.dist - (hmap_scale*clobj_radius + radius)); // (1.0 + HMAP_SCALE)*radius?
+				uobj->set_sobj_dist(dist_to_cobj);
+				int coll(0);
 
-			if (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) {
-				if (dist_to_cobj < 0.0) { // collision (except for stars)
-					assert(clobj.object != NULL);
-					float coll_r;
-					point cpos;
-					coll = 1;
+				if (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) {
+					if (dist_to_cobj < 0.0) { // collision (except for stars)
+						float coll_r;
+						point cpos;
+						coll = 1;
 
-					// player_ship and possibly other ships need the more stable but less accurate algorithm
-					bool const simple_coll(!is_ship && !uobj->is_proj());
-					float const radius_coll(lod_coll ? 1.25*NEAR_CLIP_SCALED : radius);
-					float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
+						// player_ship and possibly other ships need the more stable but less accurate algorithm
+						bool const simple_coll(!is_ship && !uobj->is_proj());
+						float const radius_coll(lod_coll ? 1.25*NEAR_CLIP_SCALED : radius);
+						float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
 
-					if (clobj.object->collision(obj_pos, radius_coll, uobj->get_velocity(), cpos, coll_r, simple_coll)) {
-						assert(clobj.object->mass > 0.0);
-						uobj->set_sobj_coll();
-						uobj->move_to(cpos); // setup correct position for explode?
-						uobj->collision(clobj_pos, zero_vector, S_BODY_DENSITY*clobj.object->mass, coll_r, NULL, elastic);
-						uobj->move_to(cpos); // more accurate since this takes into account the terrain
-						coll = 2;
-					}
-				} // collision
-				if (is_ship) uobj->near_sobj(clobj, coll);
-			} // planet or moon
-			if (calc_gravity) get_gravity(clobj, obj_pos, gravity, 1);
+						if (clobj.object->collision(obj_pos, radius_coll, uobj->get_velocity(), cpos, coll_r, simple_coll)) {
+							assert(clobj.object->mass > 0.0);
+							uobj->set_sobj_coll();
+							uobj->move_to(cpos); // setup correct position for explode?
+							uobj->collision(clobj_pos, zero_vector, S_BODY_DENSITY*clobj.object->mass, coll_r, NULL, elastic);
+							uobj->move_to(cpos); // more accurate since this takes into account the terrain
+							coll = 2;
+						}
+					} // collision
+					if (is_ship) uobj->near_sobj(clobj, coll);
+				} // planet or moon
+				if (calc_gravity) get_gravity(clobj, obj_pos, gravity, 1);
+			}
 		} // found_close
 		else {
 			uobj->set_temp(0.0, all_zeros);

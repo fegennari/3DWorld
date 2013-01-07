@@ -18,13 +18,14 @@ using std::istream;
 
 
 class s_object;
+class uasteroid;
 
 
 // stellar object types - must be ordered largest to smallest
-enum {UTYPE_NONE=0, UTYPE_CELL, UTYPE_GALAXY, UTYPE_SYSTEM, UTYPE_STAR, UTYPE_PLANET, UTYPE_MOON, UTYPE_SURFACE, NUM_UTYPES};
+enum {UTYPE_NONE=0, UTYPE_CELL, UTYPE_GALAXY, UTYPE_SYSTEM, UTYPE_STAR, UTYPE_PLANET, UTYPE_MOON, UTYPE_SURFACE, UTYPE_ASTEROID, NUM_UTYPES};
 
 float const u_exp_size[NUM_UTYPES] = {
-	  0.0,          0.0,        0.0,          0.0,          6.0,        4.0,          3.0,        0.0
+	  0.0,          0.0,        0.0,          0.0,          6.0,        4.0,          3.0,        0.0,           2.0
 };
 
 // stellar object modifications
@@ -419,7 +420,7 @@ public:
 class s_object { // size = 56
 
 public:
-	int cellxyz[3], galaxy, cluster, system, planet, moon, type, val, id;
+	int cellxyz[3], galaxy, cluster, system, planet, moon, asteroid_field, asteroid, type, val, id;
 	float dist, size;
 	uobj_solid const *object;
 
@@ -470,6 +471,7 @@ public:
 		assert(type == UTYPE_MOON);
 		return get_moon();
 	}
+	uasteroid &get_asteroid() const;
 };
 
 
