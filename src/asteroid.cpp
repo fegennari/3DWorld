@@ -307,7 +307,7 @@ public:
 			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			s.set_prefix("#define NO_SPECULAR", 1); // FS (optional/optimization)
 			s.set_vert_shader("asteroid");
-			s.set_frag_shader("linear_fog.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+asteroid");
+			s.set_frag_shader("linear_fog.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+voxel_asteroid");
 			s.begin_shader();
 			s.setup_fog_scale();
 			s.add_uniform_int("tex0", 0);
@@ -470,7 +470,7 @@ public:
 		asteroids.resize(num);
 
 		for (unsigned i = 0; i < num; ++i) { // create at the origin with radius=1
-			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, ROCK_SPHERE_TEX, i);
+			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, MOON_TEX/*ROCK_TEX*/, i);
 		}
 		PRINT_TIME("Asteroid Model Gen");
 	}
@@ -517,7 +517,14 @@ void setup_ship_draw_shader(shader_t &s);
 
 void uasteroid_field::begin_render(shader_t &shader) {
 
-	if (!shader.is_setup()) {setup_ship_draw_shader(shader);} // ambient only? not sure if this is what we want in the end
+	if (!shader.is_setup()) {
+		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		shader.set_vert_shader("asteroid");
+		shader.set_frag_shader("ads_lighting.part*+triplanar_texture.part+asteroid");
+		shader.begin_shader();
+		shader.add_uniform_int("tex0", 0);
+		shader.add_uniform_float("tex_scale", 0.5);
+	}
 	shader.enable();
 	BLACK.do_glColor();
 	glEnable(GL_LIGHTING);

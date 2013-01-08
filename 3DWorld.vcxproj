@@ -896,6 +896,7 @@
     <None Include="shaders\tree_leaves_no_lighting.vert" />
     <None Include="shaders\triplanar_texture.part.frag" />
     <None Include="shaders\vert_xform_only.vert" />
+    <None Include="shaders\voxel_asteroid.frag" />
     <None Include="shaders\voxel_texture.part.frag" />
     <None Include="shaders\water_fog.part.vert" />
     <None Include="shaders\water_plane.frag" />
