@@ -19,6 +19,7 @@ using std::istream;
 
 class s_object;
 class uasteroid;
+class uasteroid_field;
 
 
 // stellar object types - must be ordered largest to smallest
@@ -471,6 +472,7 @@ public:
 		assert(type == UTYPE_MOON);
 		return get_moon();
 	}
+	uasteroid_field &get_asteroid_field() const;
 	uasteroid &get_asteroid() const;
 };
 

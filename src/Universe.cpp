@@ -3031,12 +3031,17 @@ ucell &s_object::get_ucell() const {
 	return universe.get_cell(*this);
 }
 
-uasteroid &s_object::get_asteroid() const {
+uasteroid_field &s_object::get_asteroid_field() const {
 	assert(type == UTYPE_ASTEROID);
 	ugalaxy &g(get_galaxy());
 	assert(asteroid_field >= 0 && (unsigned)asteroid_field < g.asteroid_fields.size());
-	assert(asteroid >= 0 && (unsigned)asteroid < g.asteroid_fields[asteroid_field].size());
-	return g.asteroid_fields[asteroid_field][asteroid];
+	return g.asteroid_fields[asteroid_field];
+}
+
+uasteroid &s_object::get_asteroid() const {
+	uasteroid_field &af(get_asteroid_field());
+	assert(asteroid >= 0 && (unsigned)asteroid < af.size());
+	return af[asteroid];
 }
 
 

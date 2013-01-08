@@ -3,7 +3,8 @@
 
 $GLOBAL_REGEN 20.0 # ship regen delay in seconds (0.0 disables)
 $SPAWN_DIST   0.2
-$START_POS    -0.0796 0.3075 -0.8893  # new computer
+$START_POS    -0.0381 0.1872 -0.7734
+#$START_POS    -0.0796 0.3075 -0.8893  # new computer
 #$START_POS    -0.089 0.236 -0.828 # nebula test
 #$START_POS    -0.1152 0.3028 -0.9075  # after some random number generator changes
 $HYPERSPEED   100.0
@@ -13,7 +14,7 @@ $SPAWN_HWORLD 0
 $PLAYER_ENEMY 0
 $RAND_SEED    1
 
-$ADD_ASTEROID 10 AS_MODEL_VOXEL 0.005 0.02 0.2 # number model rseed rmin rmax distribution [px py pz]
+$ADD_ASTEROID 0 AS_MODEL_VOXEL 0.005 0.02 0.2 # number model rseed rmin rmax distribution [px py pz]
 
 #$BLACK_HOLE  -0.3 0.0 0.0  0.025
 
@@ -581,7 +582,7 @@ $SHIP_ADD_GEN  1
   $ALIGN RED      4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0
   $ALIGN BLUE     4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0
 
-$SHIP_ADD_INIT 1
+$SHIP_ADD_INIT 0
 #                 num FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
   $ALIGN NEUTRAL  0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
   $ALIGN PLAYER   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0

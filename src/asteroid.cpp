@@ -480,8 +480,8 @@ public:
 		if (dscale < 0.5) return; // too far/small - clip it
 		glPushMatrix();
 		global_translate(pos);
-		scale_by(scale);
 		if (rot_ang != 0.0) {rotate_about(rot_ang, rot_axis);}
+		scale_by(scale);
 		assert(ix < asteroids.size());
 		assert(asteroids[ix]);
 		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));

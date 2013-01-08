@@ -16,6 +16,7 @@ public:
 	uasteroid() : inst_id(0) {}
 	void gen(float max_dist, float max_radius);
 	void draw(point_d const &pos_, point const &camera, shader_t &s) const;
+	vector3d const &get_scale() const {return scale;}
 };
 
 
