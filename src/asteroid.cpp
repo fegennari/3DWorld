@@ -450,8 +450,6 @@ float    const AST_AMBIENT_SCALE = 20.0;
 float    const AST_AMBIENT_VAL   = 0.15;
 float    const NDIV_SCALE_AST    = 500.0;
 
-//#define USE_FREE_OBJ_DRAW
-
 
 class asteroid_model_gen_t {
 
@@ -468,10 +466,6 @@ public:
 
 		for (unsigned i = 0; i < num; ++i) { // create at the origin with radius=1
 			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, ROCK_SPHERE_TEX, i);
-#ifdef USE_FREE_OBJ_DRAW
-			asteroids[i]->mark_as_instanced(); // required so that transforms aren't applied
-			asteroids[i]->set_ambient_scale(AST_AMBIENT_SCALE);
-#endif
 		}
 		PRINT_TIME("Asteroid Model Gen");
 	}
@@ -485,13 +479,9 @@ public:
 		if (rot_ang != 0.0) {rotate_about(rot_ang, rot_axis);}
 		assert(ix < asteroids.size());
 		assert(asteroids[ix]);
-#ifdef USE_FREE_OBJ_DRAW
-		asteroids[ix]->draw(s, pos_);
-#else
 		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(10.0*dscale)))));
 		uobj_draw_data ddata(asteroids[ix], s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
 		asteroids[ix]->draw_obj(ddata);
-#endif
 		glPopMatrix();
 	}
 	void clear() {
@@ -526,11 +516,9 @@ void uasteroid_field::begin_render(shader_t &shader) {
 	shader.enable();
 	BLACK.do_glColor();
 	glEnable(GL_LIGHTING);
-#ifndef USE_FREE_OBJ_DRAW
 	colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, &acolor.R);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, &BLACK.R);
-#endif
 }
 
 

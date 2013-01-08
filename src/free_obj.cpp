@@ -70,7 +70,6 @@ void free_obj::reset() {
 	rot_axis    = plus_z;
 	gvect       = zero_vector;
 	near_b_hole = 0;
-	instanced_no_xform = 0;
 	ra1 = ra2   = 0.0;
 	invalidate_rotv();
 	reset_lights(); // should already be reset
@@ -572,32 +571,27 @@ void free_obj::inverse_rotate() const {
 
 void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const {
 
-	if (!instanced_no_xform) {
-		glPushMatrix();
-		global_translate(pos);
-		uniform_scale(radius);
+	glPushMatrix();
+	global_translate(pos);
+	uniform_scale(radius);
 
-		if (near_b_hole && gvect.mag() > 0.05*BLACK_HOLE_GRAV) { // stretch the object
-			vector3d gscale;
-			UNROLL_3X(gscale[i_] = fabs(gvect[i_]) + 0.1*BLACK_HOLE_GRAV;)
-			gscale.normalize();
-			float volume(1.0);
-			UNROLL_3X(volume *= gscale[i_];)
-			gscale *= pow(1.0/volume, 1.0/3.0);
-			scale_by(gscale);
-		}
-		if (!is_particle()) glPushMatrix();
-		if (!udd.draw_as_pt() && calc_rvs()) rotate();
+	if (near_b_hole && gvect.mag() > 0.05*BLACK_HOLE_GRAV) { // stretch the object
+		vector3d gscale;
+		UNROLL_3X(gscale[i_] = fabs(gvect[i_]) + 0.1*BLACK_HOLE_GRAV;)
+		gscale.normalize();
+		float volume(1.0);
+		UNROLL_3X(volume *= gscale[i_];)
+		gscale *= pow(1.0/volume, 1.0/3.0);
+		scale_by(gscale);
 	}
+	if (!is_particle()) glPushMatrix();
+	if (!udd.draw_as_pt() && calc_rvs()) rotate();
 	udd.specular_en = specular;
 	udd.first_pass  = first_pass;
 	udd.final_pass  = final_pass;
 	draw_obj(udd);
-
-	if (!instanced_no_xform) {
-		if (!is_particle()) glPopMatrix();
-		glPopMatrix();
-	}
+	if (!is_particle()) glPopMatrix();
+	glPopMatrix();
 }
 
 
