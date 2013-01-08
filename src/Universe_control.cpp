@@ -488,8 +488,8 @@ void draw_universe_stats() {
 	point const camera(ps.get_pos()), camera_scaled(camera/CELL_SIZE);
 	vector3d const dir(ps.get_dir().get_norm());
 	YELLOW.do_glColor();
-	sprintf(text, "Loc: (%i: %3.3f, %i: %3.3f, %i: %3.3f)  Dir: (%1.3f, %1.3f, %1.3f)",
-		uxyz[0], camera_scaled.x, uxyz[1], camera_scaled.y, uxyz[2], camera_scaled.z, dir.x, dir.y, dir.z);
+	//sprintf(text, "Loc: (%i: %3.3f, %i: %3.3f, %i: %3.3f)  Dir: (%1.3f, %1.3f, %1.3f)", uxyz[0], camera_scaled.x, uxyz[1], camera_scaled.y, uxyz[2], camera_scaled.z, dir.x, dir.y, dir.z);
+	sprintf(text, "Loc: (%3.4f, %3.4f, %3.4f)  Dir: (%1.3f, %1.3f, %1.3f)", uxyz[0]+camera_scaled.x, uxyz[1]+camera_scaled.y, uxyz[2]+camera_scaled.z, dir.x, dir.y, dir.z);
 	draw_text(-0.009*aspect_ratio, -0.014, -0.028, text);
 
 	// draw shields, armor, weapon status, etc.

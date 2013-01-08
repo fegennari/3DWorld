@@ -34,12 +34,10 @@ void clear_cached_shaders() {
 
 
 class uobj_asteroid_sphere : public uobj_asteroid {
-	int tex_id;
 
 public:
-	uobj_asteroid_sphere(point const &pos_, float radius_, int tex_id_, unsigned lt) : uobj_asteroid(pos_, radius_, lt), tex_id(tex_id_) {}
+	uobj_asteroid_sphere(point const &pos_, float radius_, int tid, unsigned lt) : uobj_asteroid(pos_, radius_, tid, lt) {}
 	virtual void draw_obj(uobj_draw_data &ddata) const {ddata.draw_asteroid(tex_id);}
-	virtual int get_fragment_tid(point const &hit_pos) const {return tex_id;}
 };
 
 
@@ -48,14 +46,16 @@ class uobj_asteroid_rock3d : public uobj_asteroid {
 	rock_shape3d model3d;
 
 public:
-	uobj_asteroid_rock3d(point const &pos_, float radius_, unsigned rseed_ix, unsigned lt, int type) : uobj_asteroid(pos_, radius_, lt) {
+	uobj_asteroid_rock3d(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt, int type)
+		: uobj_asteroid(pos_, radius_, tid, lt)
+	{
 		model3d.gen_rock(24, 1.0, rseed_ix, type); // pos starts at and stays at all_zeros
-		model3d.set_texture(MOON_TEX, 0.2);
+		model3d.set_texture(tex_id, 0.2);
 	}
 	~uobj_asteroid_rock3d() {model3d.destroy();}
 
 	virtual void draw_obj(uobj_draw_data &ddata) const {
-		if (ddata.ndiv <= 4) {ddata.draw_asteroid(MOON_TEX); return;}
+		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
 		WHITE.do_glColor();
 		model3d.draw();
 		end_texture();
@@ -68,7 +68,9 @@ class uobj_asteroid_shader : public uobj_asteroid {
 	int rseed_ix;
 
 public:
-	uobj_asteroid_shader(point const &pos_, float radius_, int rseed_ix_, unsigned lt) : uobj_asteroid(pos_, radius_, lt) {
+	uobj_asteroid_shader(point const &pos_, float radius_, int rseed_ix_, int tid, unsigned lt)
+		: uobj_asteroid(pos_, radius_, tid, lt)
+	{
 		c_radius = (1.0 + AST_PROC_HEIGHT)*radius;
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
@@ -110,7 +112,7 @@ public:
 class uobj_asteroid_destroyable : public uobj_asteroid {
 
 public:
-	uobj_asteroid_destroyable(point const &pos_, float radius_, unsigned lt) : uobj_asteroid(pos_, radius_, lt) {}
+	uobj_asteroid_destroyable(point const &pos_, float radius_, int tid, unsigned lt) : uobj_asteroid(pos_, radius_, tid, lt) {}
 	virtual bool apply_damage(float damage, point &hit_pos) = 0;
 
 	virtual float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
@@ -160,7 +162,9 @@ class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 	static vector<float> pmap_vector;
 
 public:
-	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned rseed_ix, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt) {
+	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt)
+		: uobj_asteroid_destroyable(pos_, radius_, tid, lt)
+	{
 		surface.rgen.set_state(rseed_ix, 1);
 		surface.gen(0.15, 2.0, 10, 1.0);
 		surface.setup(ASTEROID_NDIV, 0.0, 0);
@@ -170,7 +174,6 @@ public:
 	}
 
 	virtual void draw_obj(uobj_draw_data &ddata) const {
-		int const tex_id(ROCK_SPHERE_TEX); // MOON_TEX?
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		WHITE.do_glColor();
@@ -262,7 +265,9 @@ class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 	bool have_sun_pos;
 
 public:
-	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned rseed_ix, unsigned lt) : uobj_asteroid_destroyable(pos_, radius_, lt), have_sun_pos(0) {
+	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt)
+		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), have_sun_pos(0)
+	{
 		//RESET_TIME;
 		float const gen_radius(gen_voxel_rock(model, all_zeros, 1.0, ASTEROID_VOX_SZ, 2, rseed_ix)); // ndiv=2x2, will be translated to pos and scaled by radius during rendering
 		assert(gen_radius > 0.0);
@@ -420,11 +425,11 @@ uobj_asteroid *uobj_asteroid::create(point const &pos, float radius, unsigned mo
 
 	switch (model) {
 	case AS_MODEL_SPHERE: return new uobj_asteroid_sphere(pos, radius, tex_id, lt);
-	case AS_MODEL_ROCK1:  return new uobj_asteroid_rock3d(pos, radius, rseed_ix, lt, 0);
-	case AS_MODEL_ROCK2:  return new uobj_asteroid_rock3d(pos, radius, rseed_ix, lt, 1);
-	case AS_MODEL_HMAP:   return new uobj_asteroid_hmap  (pos, radius, rseed_ix, lt);
-	case AS_MODEL_VOXEL:  return new uobj_asteroid_voxel (pos, radius, rseed_ix, lt);
-	case AS_MODEL_SHADER: return new uobj_asteroid_shader(pos, radius, rseed_ix, lt);
+	case AS_MODEL_ROCK1:  return new uobj_asteroid_rock3d(pos, radius, rseed_ix, tex_id, lt, 0);
+	case AS_MODEL_ROCK2:  return new uobj_asteroid_rock3d(pos, radius, rseed_ix, tex_id, lt, 1);
+	case AS_MODEL_HMAP:   return new uobj_asteroid_hmap  (pos, radius, rseed_ix, tex_id, lt);
+	case AS_MODEL_VOXEL:  return new uobj_asteroid_voxel (pos, radius, rseed_ix, tex_id, lt);
+	case AS_MODEL_SHADER: return new uobj_asteroid_shader(pos, radius, rseed_ix, tex_id, lt);
 	default: assert(0);
 	}
 	return NULL; // never gets here
@@ -448,7 +453,7 @@ unsigned const AST_FLD_MAX_NUM   = 1000;
 float    const AST_RADIUS_SCALE  = 0.04;
 float    const AST_AMBIENT_SCALE = 20.0;
 float    const AST_AMBIENT_VAL   = 0.15;
-float    const NDIV_SCALE_AST    = 500.0;
+float    const NDIV_SCALE_AST    = 800.0;
 
 
 class asteroid_model_gen_t {
@@ -470,7 +475,7 @@ public:
 		PRINT_TIME("Asteroid Model Gen");
 	}
 	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s) const {
-		float const radius(scale.mag()); // approximate (upper bound)
+		float const radius(max(scale.x, max(scale.y, scale.z)));
 		float const dist(p2p_dist(pos, camera)), dscale(NDIV_SCALE_AST*(radius/(dist + 0.1*radius)));
 		if (dscale < 0.5) return; // too far/small - clip it
 		glPushMatrix();
@@ -479,7 +484,7 @@ public:
 		if (rot_ang != 0.0) {rotate_about(rot_ang, rot_axis);}
 		assert(ix < asteroids.size());
 		assert(asteroids[ix]);
-		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(10.0*dscale)))));
+		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
 		uobj_draw_data ddata(asteroids[ix], s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
 		asteroids[ix]->draw_obj(ddata);
 		glPopMatrix();

@@ -824,14 +824,18 @@ public:
 
 class uobj_asteroid : public stationary_obj { // a free_obj that doesn't actually move?
 
+protected:
+	int tex_id;
+
 public:
 	static uobj_asteroid *create(point const &pos, float radius, unsigned model, int tid, unsigned rseed_ix=0, unsigned lt=0);
-	uobj_asteroid(point const &pos_, float radius_, unsigned lt=0) : stationary_obj(SO_ASTEROID, pos_, radius_, lt) {}
+	uobj_asteroid(point const &pos_, float radius_, int tid, unsigned lt) : tex_id(tid), stationary_obj(SO_ASTEROID, pos_, radius_, lt) {}
 	bool calc_rvs() const {return 1;} // so that texture is oriented properly
 	string get_name() const {return "Asteroid";}
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
 	virtual bool has_detailed_coll(free_obj const *const other_obj) const {return 0;}
+	virtual int get_fragment_tid(point const &hit_pos) const {return tex_id;}
 };
 
 
