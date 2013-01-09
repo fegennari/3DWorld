@@ -108,10 +108,11 @@ void s_object::set_owner(unsigned owner) const {
 }
 
 
-void named_obj::rename(s_object const &sobj, string const &name_) {
+bool named_obj::rename(s_object const &sobj, string const &name_) {
 
 	name = name_;
 	modmaps[MOD_NAME][sobj] = name;
+	return 1;
 }
 
 

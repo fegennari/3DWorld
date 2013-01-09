@@ -154,9 +154,10 @@ uobject *line_intersect_universe(point const &start, vector3d const &dir, float 
 	s_object target;
 
 	if (universe.get_trajectory_collisions(target, coll, dir, start, length, line_radius)) { // destroy and query
-		if (target.is_solid() && target.object != NULL) {
+		if (target.is_solid()) {
 			dist = p2p_dist(start, coll);
-			return (uobject *)target.object;
+			if (target.type == UTYPE_ASTEROID) {return &target.get_asteroid();}
+			if (target.object != NULL) {return (uobject *)target.object;}
 		}
 	}
 	dist = 0.0;
@@ -179,6 +180,9 @@ void destroy_sobj(s_object const &target) {
 		break;
 	case UTYPE_MOON:
 		target.get_moon().def_explode(u_exp_size[target.type], etype, signed_rand_vector());
+		break;
+	case UTYPE_ASTEROID:
+		target.get_asteroid_field().destroy_asteroid(target.asteroid);
 		break;
 	}
 	target.register_destroyed_sobj();
@@ -551,18 +555,6 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 	}
 	set_sun_loc_color(spos, color, sun.radius, (known_shadowed || shadow_val > shadow_thresh), (ambient_scale == 0.0), BASE_AMBIENT, BASE_DIFFUSE); // check for sun
 	return shadow_val;
-}
-
-
-uobject const *get_shadowing_object(uobject const &obj, ustar const &sun) { // unused
-
-	float dist(0.0); // unused
-	vector3d const sun_dir(sun.pos - obj.pos);
-	float const sun_dist(sun_dir.mag()), length(sun_dist - 1.5*(obj.radius + sun.radius));
-	point const start(obj.pos + sun_dir*(1.5*obj.radius));
-	uobject *res(line_intersect_universe(start, sun_dir, length, obj.radius, dist));
-	assert(res != &obj && res != &sun);
-	return res;
 }
 
 
@@ -2422,13 +2414,13 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 		if (max_level >= UTYPE_MOON) { // check for asteroid collisions
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
 				if (!dist_less_than(pos, i->pos, expand*i->radius)) continue;
+				result.asteroid_field = (i - galaxy.asteroid_fields.begin());
 
 				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) { // FIXME: subdivision?
 					if (!dist_less_than(pos, (i->pos + j->pos), expand*j->radius)) continue;
 					float const dista(p2p_dist(pos, (i->pos + j->pos)));
 					result.assign(gc, -1, -1, j->radius/max(TOLERANCE, dista), dista, UTYPE_ASTEROID, NULL);
-					result.asteroid_field = (i - galaxy.asteroid_fields.begin());
-					result.asteroid       = (j - i->begin());
+					result.asteroid = (j - i->begin());
 				}
 			}
 		}
@@ -2534,7 +2526,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 	float rdist, ldist, t;
 	vector3d c1, c2, val, tv, step;
 	coll_test ctest;
-	static vector<coll_test> gv, sv, pv;
+	static vector<coll_test> gv, sv, pv, av;
 
 	// check for simple point
 	if (dist <= 0.0) {
@@ -2634,15 +2626,50 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 				gv.push_back(ctest);
 			}
 		}
-		if (gv.empty()) continue; // no intersecting galaxies
 		std::sort(gv.begin(), gv.end());
 
 		for (unsigned gc = 0; gc < gv.size(); ++gc) {
 			ugalaxy const &galaxy(galaxies[gv[gc].index]);
 
+			// asteroid fields
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
-				// FIXME: write
+				if (!dist_less_than(curr, i->pos, (i->radius + dist))) continue;
+
+				if (line_intersect_sphere(curr, dir, i->pos, (i->radius+line_radius), rdist, ldist, t)) {
+					ctest.index = i - galaxy.asteroid_fields.begin(); // line passes through asteroid field
+					ctest.dist  = ldist;
+					av.push_back(ctest); // line passes through asteroid field
+				}
 			}
+			std::sort(av.begin(), av.end());
+			ctest.dist = 0.0;
+
+			for (unsigned ac = 0; ac < av.size(); ++ac) {
+				uasteroid_field const &af(galaxy.asteroid_fields[av[ac].index]);
+
+				for (vector<uasteroid>::const_iterator i = af.begin(); i != af.end(); ++i) {
+					point const afpos(af.pos + i->pos);
+					if (!dist_less_than(curr, afpos, (i->radius + dist))) continue;
+
+					if (line_intersect_sphere(curr, dir, afpos, (i->radius+line_radius), rdist, ldist, t)) { // line intersects asteroid
+						// FIXME: detailed intersection (at least using scale)
+
+						if (t > 0.0 && ldist <= dist && (ctest.dist == 0.0 || ldist < ctest.dist)) {
+							//cout << "asteroid: " << (i - af.begin()) << ", ldist: " << ldist << ", ctest.dist: " << ctest.dist << endl;
+							ctest.dist            = ldist;
+							result.type           = UTYPE_ASTEROID;
+							result.dist           = ldist;
+							result.asteroid_field = av[ac].index;
+							result.asteroid       = i - af.begin();
+							coll = afpos;
+						}
+					}
+				}
+			} // ac
+			av.resize(0);
+			float const asteroid_dist(ctest.dist);
+
+			// systems
 			for (unsigned c = 0; c < galaxy.clusters.size(); ++c) {
 				ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
 				if (!dist_less_than(curr, cl.center, (cl.bounds + dist))) continue;
@@ -2661,7 +2688,6 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 					}
 				}
 			}
-			if (sv.empty()) continue; // no intersecting systems
 			std::sort(sv.begin(), sv.end());
 			result.galaxy = gv[gc].index;
 
@@ -2669,11 +2695,13 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 				ussystem const &system(galaxy.sols[sv[sc].index]);
 				
 				if (system.sun.is_ok() && sv[sc].rad <= system.sun.radius && sv[sc].t > 0.0 && sv[sc].dist <= dist) {
-					ctest.index = -1;
-					ctest.dist  = sv[sc].dist;
-					ctest.rad   = sv[sc].rad;
-					ctest.t     = t;
-					pv.push_back(ctest); // line intersects sun
+					if (asteroid_dist == 0.0 || sv[sc].dist < asteroid_dist) { // asteroid is not closer
+						ctest.index = -1;
+						ctest.dist  = sv[sc].dist;
+						ctest.rad   = sv[sc].rad;
+						ctest.t     = t;
+						pv.push_back(ctest); // line intersects sun
+					}
 				}
 				for (unsigned i = 0; i < system.planets.size(); ++i) { // search for planets
 					float const p_radius(system.planets[i].mosize);
@@ -2681,6 +2709,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 
 					// *** test against exact planet contour? ***
 					if (line_intersect_sphere(curr, dir, system.planets[i].pos, (p_radius+line_radius), rdist, ldist, t)) {
+						if (asteroid_dist > 0.0 && ldist > asteroid_dist) continue; // asteroid is closer
 						ctest.index = i;
 						ctest.dist  = ldist;
 						ctest.rad   = rdist;
@@ -2746,6 +2775,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 				pv.resize(0);
 			} // sc
 			sv.resize(0);
+			if (result.type == UTYPE_ASTEROID) {return 1;} // asteroid intersection
 		} // gc
 		gv.resize(0);
 	} // while t

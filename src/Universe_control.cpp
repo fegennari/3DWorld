@@ -426,8 +426,7 @@ void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3
 	s_object target;
 
 	// test for collisions with sloid stellar objects
-	bool const sobj_coll((obj_types & OBJ_TYPE_UOBJ) ?
-		universe.get_trajectory_collisions(target, coll, fire_dir, ship_pos, fire_range, 0.0) : 0);
+	bool const sobj_coll((obj_types & OBJ_TYPE_UOBJ) ? universe.get_trajectory_collisions(target, coll, fire_dir, ship_pos, fire_range, 0.0) : 0);
 	bool sobjc(sobj_coll && target.is_solid());
 
 	// test for other ship collisions
@@ -561,10 +560,13 @@ bool rename_obj(uobject *obj, unsigned alignment) { // a little difficult to use
 	int const owner(obj->get_owner());
 	if (/*owner != NO_OWNER &&*/ owner != alignment) return 0;
 	if (user_text.empty()) return 0;
-	string const str(string("Renaming ") + obj->get_name() + " to " + user_text);
-	print_text_onscreen(str, PURPLE, 0.8, TICKS_PER_SECOND);
-	obj->rename(user_text);
-	return 1;
+
+	if (obj->rename(user_text)) {
+		string const str(string("Renaming ") + obj->get_name() + " to " + user_text);
+		print_text_onscreen(str, PURPLE, 0.8, TICKS_PER_SECOND);
+		return 1;
+	}
+	return 0;
 }
 
 
@@ -991,16 +993,16 @@ cobj_vector_t const &uobject::get_cobjs() const {
 }
 
 
-void uobject::gen_fragments() const {
+void uobject::gen_fragments(upos_point_type const &pos_offset, float rscale) const {
 
 	unsigned const num_fragments((rand()&7) + 8);
 	int const tex_id(get_fragment_tid(all_zeros));
 
 	for (unsigned i = 0; i < num_fragments; ++i) {
-		add_uobj(uobj_asteroid::create((pos + signed_rand_vector(1.2*radius)),
-			0.2*radius*rand_uniform(0.5, 1.0), AS_MODEL_SPHERE, tex_id, (10*TICKS_PER_SECOND + rand()%TICKS_PER_SECOND))); // temporary
+		add_uobj(uobj_asteroid::create((pos_offset + pos + signed_rand_vector(1.2*rscale*radius)),
+			0.2*rscale*radius*rand_uniform(0.5, 1.0), AS_MODEL_SPHERE, tex_id, (10*TICKS_PER_SECOND + rand()%TICKS_PER_SECOND))); // temporary
 	}
-	gen_moving_fragments(pos, unsigned(rand_uniform(40, 60)), tex_id, 1.0);
+	gen_moving_fragments((pos_offset + pos), unsigned(rand_uniform(40, 60)), tex_id, rscale);
 }
 
 

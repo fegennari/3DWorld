@@ -19,6 +19,7 @@ float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader aste
 
 
 extern vector<us_weapon> us_weapons;
+extern exp_type_params et_params[];
 
 shader_t cached_voxel_shaders[8]; // one for each value of num_lights
 shader_t cached_proc_shaders [8];
@@ -460,6 +461,12 @@ class asteroid_model_gen_t {
 
 	vector<uobj_asteroid *> asteroids; // FIXME: a case for boost::shared_ptr<>?
 
+	uobj_asteroid *get_asteroid(unsigned ix) const {
+		assert(ix < asteroids.size());
+		assert(asteroids[ix]);
+		return asteroids[ix];
+	}
+
 public:
 	//~asteroid_model_gen_t() {clear();} // can't free after GL context has been destroyed
 	bool empty() const {return asteroids.empty();}
@@ -482,12 +489,17 @@ public:
 		global_translate(pos);
 		if (rot_ang != 0.0) {rotate_about(rot_ang, rot_axis);}
 		scale_by(scale);
-		assert(ix < asteroids.size());
-		assert(asteroids[ix]);
 		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
-		uobj_draw_data ddata(asteroids[ix], s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
-		asteroids[ix]->draw_obj(ddata);
+		uobj_asteroid const *const asteroid(get_asteroid(ix));
+		uobj_draw_data ddata(asteroid, s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
+		asteroid->draw_obj(ddata);
 		glPopMatrix();
+	}
+	void destroy_inst(unsigned ix, point const &pos, vector3d const &scale) {
+		get_asteroid(ix)->gen_fragments(pos, max(scale.x, max(scale.y, scale.z)));
+	}
+	int get_fragment_tid(unsigned ix, point const &hit_pos) const {
+		return get_asteroid(ix)->get_fragment_tid(hit_pos);
 	}
 	void clear() {
 		for (vector<uobj_asteroid *>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
@@ -561,6 +573,14 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 }
 
 
+void uasteroid_field::destroy_asteroid(unsigned ix) {
+
+	assert(ix < size());
+	operator[](ix).destroy(pos);
+	erase(begin()+ix); // probably okay if empty after this call
+}
+
+
 void uasteroid::gen(float max_dist, float max_radius) {
 
 	assert(max_radius > 0.0 && max_radius < max_dist && max_radius);
@@ -578,6 +598,24 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) cons
 	if (!univ_sphere_vis(apos, radius)) return;
 	if (calc_sphere_size(apos, camera, radius) < 1.0) return; // too small/far away
 	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s);
+}
+
+
+void uasteroid::destroy(upos_point_type const &pos_offset) {
+
+	//def_explode(u_exp_size[UTYPE_ASTEROID], ETYPE_ANIM_FIRE, signed_rand_vector()); // doesn't have pos_offset
+	exp_type_params const &ep(et_params[ETYPE_ANIM_FIRE]);
+	float const scale(u_exp_size[UTYPE_ASTEROID]);
+	int const etime(ep.duration*max(6, min(20, int(3.0*scale))));
+	add_blastr(pos+pos_offset, signed_rand_vector(), scale*radius, 0.0, etime, ALIGN_NEUTRAL, ep.c1, ep.c2, ETYPE_ANIM_FIRE, NULL);
+
+	gen_fragments(pos_offset, 1.0); // either implementation works, but fragments are very dark (no added ambient)
+	//asteroid_model_gen.destroy_inst(inst_id, pos+pos_offset, radius*scale);
+}
+
+
+int uasteroid::get_fragment_tid(point const &hit_pos) const {
+	return asteroid_model_gen.get_fragment_tid(inst_id, pos+hit_pos); // Note: asteroid_field pos is not added to hit_pos here
 }
 
 

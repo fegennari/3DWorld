@@ -136,7 +136,7 @@ public:
 	void setname(string const &name_) {name = name_;}
 	string getname() const {return name;}
 	void gen_name(s_object const &sobj);
-	void rename(s_object const &sobj, string const &name_);
+	bool rename(s_object const &sobj, string const &name_);
 	bool lookup_given_name(s_object const &sobj);
 };
 
@@ -170,7 +170,7 @@ public:
 	void gen_colorAB(float delta);
 	void set_grav_mass();
 	bool collision(point const &p, float rad, vector3d const &v, point &cpos, float &coll_r, bool simple) const;
-	void rename(std::string const &name_) {setname(name_);}
+	bool rename(std::string const &name_) {setname(name_); return 1;}
 	int  get_type() const {return type;}
 
 	void add_gravity_vector(vector3d &vgravity, point const &mpos) const { // inlined
@@ -432,7 +432,7 @@ public:
 	void assign(int gc, int cl, int sy, float sz, float di, int ty, uobj_solid const *obj);
 	bool operator<(const s_object &I) const;
 	bool bad_cell() const;
-	bool is_solid() const {return (type == UTYPE_STAR || type == UTYPE_PLANET || type == UTYPE_MOON);}
+	bool is_solid() const {return (type == UTYPE_STAR || type == UTYPE_PLANET || type == UTYPE_MOON || type == UTYPE_ASTEROID);}
 	void print() const;
 	bool is_destroyed() const;
 	void register_destroyed_sobj() const;

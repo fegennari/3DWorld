@@ -793,7 +793,7 @@ public:
 	virtual bool has_detailed_coll(free_obj const *const other_obj) const {return 0;}
 	virtual string get_name()   const = 0;
 	virtual string get_info()   const {return "";}
-	virtual void rename(std::string const &name_) {} // do nothing
+	virtual bool rename(std::string const &name_) {return 0;} // do nothing
 	
 	// assumes a spherical object, and line/sphere or sphere/sphere intersect has already been tested before these are called
 	virtual bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const {return 1;}
@@ -1194,7 +1194,7 @@ public:
 	bool player_controlled() const;
 	string get_name()   const;
 	string get_info()   const;
-	void rename(string const &name_) {name = name_;}
+	bool rename(string const &name_) {name = name_; return 1;}
 	vector3d predict_target_dir(point const &fpos, free_obj const *targ, unsigned wclass=UWEAP_NONE) const;
 	u_ship_base const *get_ship_base() const {return (u_ship_base *)this;}
 

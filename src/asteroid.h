@@ -7,7 +7,7 @@
 
 #include "universe.h"
 
-class uasteroid : public uobject_base, public rotated_obj {
+class uasteroid : public uobject, public rotated_obj {
 	
 	unsigned inst_id;
 	vector3d scale;
@@ -16,7 +16,13 @@ public:
 	uasteroid() : inst_id(0) {}
 	void gen(float max_dist, float max_radius);
 	void draw(point_d const &pos_, point const &camera, shader_t &s) const;
+	void destroy(upos_point_type const &pos_offset);
 	vector3d const &get_scale() const {return scale;}
+
+	virtual std::string get_name() const {return "Asteroid";}
+	virtual bool rename(std::string const &name_) {return 0;} // not renaemable
+	virtual int  get_owner() const {return NO_OWNER;}
+	virtual int  get_fragment_tid(point const &hit_pos) const;
 };
 
 
@@ -27,6 +33,7 @@ public:
 	static void end_render(shader_t &shader);
 	void gen_asteroids();
 	void draw(point_d const &pos_, point const &camera, shader_t &s);
+	void destroy_asteroid(unsigned ix);
 	void free() {clear();}
 };
 
