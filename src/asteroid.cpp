@@ -19,7 +19,6 @@ float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader aste
 
 
 extern vector<us_weapon> us_weapons;
-extern exp_type_params et_params[];
 
 shader_t cached_voxel_shaders[8]; // one for each value of num_lights
 shader_t cached_proc_shaders [8];
@@ -519,7 +518,7 @@ void uasteroid_field::gen_asteroids() {
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
 
 	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
-		i->gen(radius, AST_RADIUS_SCALE*radius);
+		i->gen(pos, radius, AST_RADIUS_SCALE*radius);
 	}
 }
 
@@ -568,7 +567,7 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 	draw_sphere_at(make_pt_global(afpos), radius, N_SPHERE_DIV);*/
 
 	for (vector<uasteroid>::const_iterator i = begin(); i != end(); ++i) {
-		i->draw(afpos, camera, s);
+		i->draw(pos_, camera, s);
 	}
 }
 
@@ -576,17 +575,17 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 void uasteroid_field::destroy_asteroid(unsigned ix) {
 
 	assert(ix < size());
-	operator[](ix).destroy(pos);
+	operator[](ix).destroy();
 	erase(begin()+ix); // probably okay if empty after this call
 }
 
 
-void uasteroid::gen(float max_dist, float max_radius) {
+void uasteroid::gen(upos_point_type const &pos_offset, float max_dist, float max_radius) {
 
 	assert(max_radius > 0.0 && max_radius < max_dist && max_radius);
 	rgen_values();
 	radius  = max_radius*rand_uniform(0.1, 1.0);
-	pos     = signed_rand_vector2_spherical(max_dist - radius);
+	pos     = pos_offset + signed_rand_vector2_spherical(max_dist - radius);
 	inst_id = rand2() % NUM_AST_MODELS;
 	UNROLL_3X(scale[i_] = rand_uniform2(0.5, 1.0);)
 }
@@ -601,16 +600,12 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) cons
 }
 
 
-void uasteroid::destroy(upos_point_type const &pos_offset) {
+void uasteroid::destroy() {
 
-	//def_explode(u_exp_size[UTYPE_ASTEROID], ETYPE_ANIM_FIRE, signed_rand_vector()); // doesn't have pos_offset
-	exp_type_params const &ep(et_params[ETYPE_ANIM_FIRE]);
-	float const scale(u_exp_size[UTYPE_ASTEROID]);
-	int const etime(ep.duration*max(6, min(20, int(3.0*scale))));
-	add_blastr(pos+pos_offset, signed_rand_vector(), scale*radius, 0.0, etime, ALIGN_NEUTRAL, ep.c1, ep.c2, ETYPE_ANIM_FIRE, NULL);
-
-	gen_fragments(pos_offset, 1.0); // either implementation works, but fragments are very dark (no added ambient)
-	//asteroid_model_gen.destroy_inst(inst_id, pos+pos_offset, radius*scale);
+	def_explode(u_exp_size[UTYPE_ASTEROID], ETYPE_ANIM_FIRE, signed_rand_vector());
+	float const rscale((scale.x + scale.y + scale.z)/3.0);
+	gen_fragments(zero_vector, rscale); // either implementation works, but fragments are very dark (no added ambient)
+	//asteroid_model_gen.destroy_inst(inst_id, pos, radius*scale);
 }
 
 

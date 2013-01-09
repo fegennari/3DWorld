@@ -14,9 +14,9 @@ class uasteroid : public uobject, public rotated_obj {
 
 public:
 	uasteroid() : inst_id(0) {}
-	void gen(float max_dist, float max_radius);
+	void gen(upos_point_type const &pos_offset, float max_dist, float max_radius);
 	void draw(point_d const &pos_, point const &camera, shader_t &s) const;
-	void destroy(upos_point_type const &pos_offset);
+	void destroy();
 	vector3d const &get_scale() const {return scale;}
 
 	virtual std::string get_name() const {return "Asteroid";}

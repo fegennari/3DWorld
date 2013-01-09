@@ -285,24 +285,22 @@ void process_univ_objects() {
 		if (found_close) {
 			if (clobj.type == UTYPE_ASTEROID) {
 				uobj->set_temp(0.0, all_zeros); // ???
-				uasteroid_field const &af(clobj.get_asteroid_field());
 				uasteroid const &asteroid(clobj.get_asteroid());
-				point const apos(asteroid.pos + af.pos);
 				float const dist_to_cobj(clobj.dist - (asteroid.radius + radius));
 				uobj->set_sobj_dist(dist_to_cobj);
 
 				if (dist_to_cobj < 0.0) { // possible collision
 					float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
-					vector3d const norm(obj_pos, apos);
+					vector3d const norm(obj_pos, asteroid.pos);
 					vector3d const &ascale(asteroid.get_scale());
 					double const nmag(norm.mag()), rsum(asteroid.radius*(norm*ascale).mag()/nmag + radius);
 					
 					if (nmag < rsum) {
 						// FIXME: detailed collision?
-						point const cpos(apos + norm*(rsum/nmag)); // normalize, multiply, and add
+						point const cpos(asteroid.pos + norm*(rsum/nmag)); // normalize, multiply, and add
 						uobj->set_sobj_coll();
 						uobj->move_to(cpos); // setup correct position for explode?
-						uobj->collision(apos, zero_vector, S_BODY_DENSITY, asteroid.radius, NULL, elastic); // large mass
+						uobj->collision(asteroid.pos, zero_vector, S_BODY_DENSITY, asteroid.radius, NULL, elastic); // large mass
 						uobj->move_to(cpos); // more accurate since this takes into account the terrain
 					}
 				}

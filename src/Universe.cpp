@@ -2417,8 +2417,8 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 				result.asteroid_field = (i - galaxy.asteroid_fields.begin());
 
 				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) { // FIXME: subdivision?
-					if (!dist_less_than(pos, (i->pos + j->pos), expand*j->radius)) continue;
-					float const dista(p2p_dist(pos, (i->pos + j->pos)));
+					if (!dist_less_than(pos, j->pos, expand*j->radius)) continue;
+					float const dista(p2p_dist(pos, j->pos));
 					result.assign(gc, -1, -1, j->radius/max(TOLERANCE, dista), dista, UTYPE_ASTEROID, NULL);
 					result.asteroid = (j - i->begin());
 				}
@@ -2648,10 +2648,9 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 				uasteroid_field const &af(galaxy.asteroid_fields[av[ac].index]);
 
 				for (vector<uasteroid>::const_iterator i = af.begin(); i != af.end(); ++i) {
-					point const afpos(af.pos + i->pos);
-					if (!dist_less_than(curr, afpos, (i->radius + dist))) continue;
+					if (!dist_less_than(curr, i->pos, (i->radius + dist))) continue;
 
-					if (line_intersect_sphere(curr, dir, afpos, (i->radius+line_radius), rdist, ldist, t)) { // line intersects asteroid
+					if (line_intersect_sphere(curr, dir, i->pos, (i->radius+line_radius), rdist, ldist, t)) { // line intersects asteroid
 						// FIXME: detailed intersection (at least using scale)
 
 						if (t > 0.0 && ldist <= dist && (ctest.dist == 0.0 || ldist < ctest.dist)) {
@@ -2661,7 +2660,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 							result.dist           = ldist;
 							result.asteroid_field = av[ac].index;
 							result.asteroid       = i - af.begin();
-							coll = afpos;
+							coll                  = i->pos;
 						}
 					}
 				}
