@@ -219,7 +219,7 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(float atmosphere, float cloud_scale, shadow_vars_t const &svars, bool use_light2) {
+	bool enable_planet(float atmosphere, float cloud_scale, float water, shadow_vars_t const &svars, bool use_light2) {
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
@@ -234,10 +234,11 @@ public:
 		}
 		enable();
 		set_specular(1.0, 80.0);
-		add_uniform_vector3d("rscale", svars.rscale);
+		add_uniform_vector3d("rscale",   svars.rscale);
 		add_uniform_float("ring_ri",     svars.ring_ri);
 		add_uniform_float("ring_ro",     svars.ring_ro);
 		add_uniform_float("noise_scale", 4.0*cloud_scale); // clouds
+		add_uniform_float("spec_scale",  ((water > 0.0) ? 1.0 : 0.0));
 		set_planet_uniforms(atmosphere, svars, use_light2);
 		return 1;
 	}
@@ -330,8 +331,8 @@ class ushader_group {
 public:
 	shader_t nebula_shader, asteroid_shader;
 
-	bool enable_planet_shader(float atmosphere, float cloud_scale, shadow_vars_t const &svars, bool use_light2) {
-		return planet_shader[svars.ring_ro > 0.0].enable_planet(atmosphere, cloud_scale, svars, use_light2);
+	bool enable_planet_shader(float atmosphere, float cloud_scale, float water, shadow_vars_t const &svars, bool use_light2) {
+		return planet_shader[svars.ring_ro > 0.0].enable_planet(atmosphere, cloud_scale, water, svars, use_light2);
 	}
 	void disable_planet_shader() {planet_shader[0].disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
@@ -1295,20 +1296,24 @@ void uplanet::create(bool phase) {
 	set_grav_mass();
 	
 	if (temp < FREEZE_TEMP) { // cold
-		atmos = rand_uniform2(-0.2, 1.0);
-		water = rand_uniform2(0.0, MAX_WATER); // ice
-	}
-	else if (temp > BOIL_TEMP) { // hot
-		atmos = rand_uniform2(-0.9, 0.5);
-		water = 0.0;
+		atmos   = rand_uniform2(-0.2, 1.0);
+		water   = rand_uniform2(0.0, MAX_WATER); // ice
+		comment = " (cold)";
 	}
 	else if (temp > NO_AIR_TEMP) { // very hot
-		atmos = 0.0;
-		water = 0.0;
+		atmos   = 0.0;
+		water   = 0.0;
+		comment = " (very hot)";
+	}
+	else if (temp > BOIL_TEMP) { // hot
+		atmos   = rand_uniform2(-0.9, 0.5);
+		water   = 0.0;
+		comment = " (hot)";
 	}
 	else { // average temp
-		atmos = rand_uniform2(-0.3, 1.5);
-		water = max(0.0f, min(MAX_WATER, 0.5f*(atmos + rand_uniform2(-MAX_WATER, 0.9*MAX_WATER))));
+		atmos   = rand_uniform2(-0.3, 1.5);
+		water   = max(0.0f, min(MAX_WATER, 0.5f*(atmos + rand_uniform2(-MAX_WATER, 0.9*MAX_WATER))));
+		comment = " (temperate)";
 	}
 	atmos     = CLIP_TO_01(atmos);
 	float const rsc_scale(liveable() ? 2.0 : (colonizable() ? 1.0 : 0.5));
@@ -1492,6 +1497,7 @@ void umoon::create(bool phase) { // no rotation due to satellites
 		gen_color();
 		gen_name(current);
 		resources = 750.0*radius*(colonizable() ? 2.0 : 1.0)*(1.0 - fabs(1.0 - density));
+		if ((rand2()&3) == 0) {water = rand_uniform2(0.0, 0.2);} // some moons have a small amount of water
 		check_owner(current); // must be after setting of resources
 		calc_temperature(); // has to be after setting of resources - resources must be independent of moon position/temperature
 		gen       = 1;
@@ -2067,7 +2073,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
-		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, svars, use_light2);}
+		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, water, svars, use_light2);}
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();
@@ -2324,24 +2330,16 @@ bool umoon::shadowed_by_planet() {
 }
 
 
-string umoon::get_info() const {
-
-	ostringstream oss;
-	oss << "Radius: " << radius << ", Temp: " << temp << ", Resources: " << resources
-		<< ", Can Land: " << land_temp_ok() << ", Colonizable: " << colonizable();
-	get_owner_info(oss);
-	return oss.str();
-}
-
-string uplanet::get_info() const {
+string urev_body::get_info() const {
 
 	ostringstream oss;
 	oss << "Radius: " << radius << ", Temp: " << temp << ", Resources: " << resources
 		<< ", Water: " << water << ", Atmos: " << atmos 
-		<< endl << "Can Land: " << land_temp_ok() << ", Colonizable: " << colonizable() << ", Liveable: " << liveable();
+		<< endl << "Can Land: " << land_temp_ok() << ", Colonizable: " << colonizable() << ", Liveable: " << liveable() << comment;
 	get_owner_info(oss);
 	return oss.str();
 }
+
 
 string ustar::get_info() const {
 

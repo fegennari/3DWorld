@@ -209,6 +209,7 @@ public:
 	float orbit, rot_rate, rev_rate, atmos, water, resources, cloud_scale;
 	vector3d rev_axis, v_orbit;
 	upsurface *surface;
+	string comment;
 
 	urev_body(char type_) : uobj_solid(type_), owner(NO_OWNER), orbiting_refs(0),
 		tid(0), tsize(0), atmos(0.0), water(0.0), resources(0.0), cloud_scale(1.0), surface(NULL) {}
@@ -228,6 +229,7 @@ public:
 	bool colonizable() const;
 	bool liveable() const;
 	float get_land_value(unsigned align, point const &cur_pos, float sradius) const;
+	string get_info() const;
 	void set_owner(s_object const &sobj, unsigned owner_);
 	void set_owner_int(unsigned owner_);
 	void unset_owner();
@@ -285,7 +287,6 @@ public:
 	float get_hmap_scale () const {return PLANET_HMAP_SCALE;}
 	float get_ring_rscale() const {return max(rscale.x, rscale.y)*ring_ro/radius;}
 	string get_name() const {return "Planet " + getname();}
-	string get_info() const;
 };
 
 
@@ -303,7 +304,6 @@ public:
 	bool colonizable_int() const {return (radius > 1.5*MOON_MIN_SIZE && planet && planet->colonizable());}
 	float get_hmap_scale() const {return MOON_HMAP_SCALE;}
 	string get_name() const {return "Moon " + getname();}
-	string get_info() const;
 };
 
 
