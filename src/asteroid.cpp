@@ -456,6 +456,9 @@ float    const AST_AMBIENT_VAL   = 0.15;
 float    const NDIV_SCALE_AST    = 800.0;
 
 
+float get_eq_vol_scale(vector3d const &scale) {return pow(scale.x*scale.y*scale.z, 1.0f/3.0f);}
+
+
 class asteroid_model_gen_t {
 
 	vector<uobj_asteroid *> asteroids; // FIXME: a case for boost::shared_ptr<>?
@@ -495,7 +498,7 @@ public:
 		glPopMatrix();
 	}
 	void destroy_inst(unsigned ix, point const &pos, vector3d const &scale) {
-		get_asteroid(ix)->gen_fragments(pos, max(scale.x, max(scale.y, scale.z)));
+		get_asteroid(ix)->gen_fragments(pos, get_eq_vol_scale(scale));
 	}
 	int get_fragment_tid(unsigned ix, point const &hit_pos) const {
 		return get_asteroid(ix)->get_fragment_tid(hit_pos);
@@ -603,8 +606,7 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) cons
 void uasteroid::destroy() {
 
 	def_explode(u_exp_size[UTYPE_ASTEROID], ETYPE_ANIM_FIRE, signed_rand_vector());
-	float const rscale((scale.x + scale.y + scale.z)/3.0);
-	gen_fragments(zero_vector, rscale); // either implementation works, but fragments are very dark (no added ambient)
+	gen_fragments(zero_vector, get_eq_vol_scale(scale)); // either implementation works, but fragments are very dark (no added ambient)
 	//asteroid_model_gen.destroy_inst(inst_id, pos, radius*scale);
 }
 
