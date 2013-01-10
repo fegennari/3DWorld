@@ -2650,17 +2650,25 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 				for (vector<uasteroid>::const_iterator i = af.begin(); i != af.end(); ++i) {
 					if (!dist_less_than(curr, i->pos, (i->radius + dist))) continue;
 
-					if (line_intersect_sphere(curr, dir, i->pos, (i->radius+line_radius), rdist, ldist, t)) { // line intersects asteroid
-						// FIXME: detailed intersection (at least using scale)
+					if (line_intersect_sphere(curr, dir, i->pos, (i->radius+line_radius), rdist, ldist, t)) { // line intersects asteroid bounding sphere
+						// transform line into asteroid's translated and scaled coord space
+						point curr2;
+						vector3d dir2;
+						vector3d const &ascale(i->get_scale());
+						UNROLL_3X(curr2[i_] = (curr[i_] - i->pos[i_])/ascale[i_]; dir2[i_] = dir[i_]/ascale[i_];)
+						dir2.normalize();
+						float rdist2, ldist2, t2; // unused
 
-						if (t > 0.0 && ldist <= dist && (ctest.dist == 0.0 || ldist < ctest.dist)) {
-							//cout << "asteroid: " << (i - af.begin()) << ", ldist: " << ldist << ", ctest.dist: " << ctest.dist << endl;
-							ctest.dist            = ldist;
-							result.type           = UTYPE_ASTEROID;
-							result.dist           = ldist;
-							result.asteroid_field = av[ac].index;
-							result.asteroid       = i - af.begin();
-							coll                  = i->pos;
+						if (line_intersect_sphere(curr2, dir2, all_zeros, (i->radius+line_radius), rdist2, ldist2, t2)) { // somewhat more accurate test
+							if (t > 0.0 && ldist <= dist && (ctest.dist == 0.0 || ldist < ctest.dist)) {
+								//cout << "asteroid: " << (i - af.begin()) << ", ldist: " << ldist << ", ctest.dist: " << ctest.dist << endl;
+								ctest.dist            = ldist;
+								result.type           = UTYPE_ASTEROID;
+								result.dist           = ldist;
+								result.asteroid_field = av[ac].index;
+								result.asteroid       = i - af.begin();
+								coll                  = i->pos;
+							}
 						}
 					}
 				}

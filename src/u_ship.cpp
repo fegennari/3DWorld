@@ -1643,7 +1643,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 		unsigned const etype(weap.exp_type);
 		float const hradius(hit_obj->get_bounding_radius());
 		point const hpos(hit_obj->get_pos());
-		if (!line_sphere_int(fdir, fpos, hpos, hradius, p2, 0)) return; // no intersection (more robust test)
+		if (!line_sphere_int(fdir, fpos, hpos, hradius, p2, 0)) return; // no intersection (more robust test) (Note: inexact for asteroids)
 
 		if (fobj != NULL) { // update p2 if we have more accurate data
 			float cobj_dscale(1.0);
