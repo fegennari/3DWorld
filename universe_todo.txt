@@ -1,11 +1,8 @@
 Gas Giant stripes (1D texture?)
 Gas Giants - all atmosphere, no collisions?
 craters on planets/moons?
-Add lava to hot planets
 
 Clouds glow near the sun (glow map)
-
-Stars: blue = high mass, red = low mass
 
 http://www.gamedev.net/page/resources/_/technical/graphics-programming-and-theory/real-time-atmospheric-scattering-r2093
 http://www.mpi-inf.mpg.de/departments/irg3/ws0405/cg/rcomp/29/index.html

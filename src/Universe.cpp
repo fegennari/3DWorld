@@ -68,7 +68,7 @@ pt_line_drawer universe_pld[2]; // 1-pixel, 2-pixel
 
 
 extern bool univ_planet_lod, disable_shaders;
-extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
+extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks, show_fog;
 extern float tan_term, sin_term, fticks, tfticks;
 extern colorRGBA bkg_color;
 extern exp_type_params et_params[];
@@ -127,7 +127,7 @@ s_object get_shifted_sobj(s_object const &sobj) {
 
 void setup_universe_fog(s_object const &closest, bool damaged) {
 
-	if (damaged) {
+	if (damaged && show_fog) { // Note: currently disabled since this can't be set in universe mode
 		glEnable(GL_FOG);
 		glFogfv(GL_FOG_COLOR, (float *)&RED);
 		glFogf(GL_FOG_END, 0.02); // interesting effect - shows red color towards star
@@ -141,7 +141,7 @@ void setup_universe_fog(s_object const &closest, bool damaged) {
 			if (atmos > 0.0) {
 				colorRGBA color(0.8, 0.8, 0.8, 0.33*atmos);
 				blend_color(color, color, closest.get_star().color, 0.7, 0);
-				add_camera_filter(color, 4, -1, CAM_FILT_FOG); // ***texture?, GL_FOG? ***
+				add_camera_filter(color, 4, -1, CAM_FILT_FOG); // texture?
 			}
 		}
 	}
@@ -219,7 +219,7 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(float atmosphere, float cloud_scale, float water, shadow_vars_t const &svars, bool use_light2) {
+	bool enable_planet(float atmosphere, float cloud_scale, float water, float lava, shadow_vars_t const &svars, bool use_light2) {
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
@@ -239,6 +239,7 @@ public:
 		add_uniform_float("ring_ro",     svars.ring_ro);
 		add_uniform_float("noise_scale", 4.0*cloud_scale); // clouds
 		add_uniform_float("spec_scale",  ((water > 0.0) ? 1.0 : 0.0));
+		add_uniform_float("lava_scale",  ((lava  > 0.0) ? 1.0 : 0.0));
 		set_planet_uniforms(atmosphere, svars, use_light2);
 		return 1;
 	}
@@ -331,8 +332,8 @@ class ushader_group {
 public:
 	shader_t nebula_shader, asteroid_shader;
 
-	bool enable_planet_shader(float atmosphere, float cloud_scale, float water, shadow_vars_t const &svars, bool use_light2) {
-		return planet_shader[svars.ring_ro > 0.0].enable_planet(atmosphere, cloud_scale, water, svars, use_light2);
+	bool enable_planet_shader(float atmosphere, float cloud_scale, float water, float lava, shadow_vars_t const &svars, bool use_light2) {
+		return planet_shader[svars.ring_ro > 0.0].enable_planet(atmosphere, cloud_scale, water, lava, svars, use_light2);
 	}
 	void disable_planet_shader() {planet_shader[0].disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
@@ -1303,6 +1304,7 @@ void uplanet::create(bool phase) {
 	else if (temp > NO_AIR_TEMP) { // very hot
 		atmos   = 0.0;
 		water   = 0.0;
+		lava    = max(0.0f, rand_uniform2(-0.4, 0.4));
 		comment = " (very hot)";
 	}
 	else if (temp > BOIL_TEMP) { // hot
@@ -1761,7 +1763,18 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 	else { // alien-like planet
 		BLEND_COLOR(data, a, b, val_ws);
 	}
-	if (temp < BOIL_TEMP) {
+	if (lava > 0.0) { // hot lava planet
+		float const lava_adj(0.07);
+		unsigned char const lavac[3] = {255, 0, 0}; // red
+
+		if (val < lava) {
+			RGB_BLOCK_COPY(data, lavac); // move up?
+		}
+		else if (val < lava + lava_adj) { // close to lava line
+			BLEND_COLOR(data, data, lavac, (val - lava)/lava_adj);
+		}
+	}
+	else if (temp < BOIL_TEMP) { // handle water/ice/snow
 		if (val < water + water_adj) { // close to water line (can have a little water even if water == 0)
 			BLEND_COLOR(data, data, wic[frozen], (val - water)/water_adj);
 			if (coldness > 0.9) {BLEND_COLOR(data, white, data, 10.0*(coldness - 0.9));} // ice
@@ -2073,7 +2086,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
-		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, water, svars, use_light2);}
+		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, water, lava, svars, use_light2);}
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();

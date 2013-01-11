@@ -206,13 +206,13 @@ public:
 	int owner;
 	unsigned orbiting_refs;
 	unsigned tid, tsize;
-	float orbit, rot_rate, rev_rate, atmos, water, resources, cloud_scale;
+	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_scale;
 	vector3d rev_axis, v_orbit;
 	upsurface *surface;
 	string comment;
 
 	urev_body(char type_) : uobj_solid(type_), owner(NO_OWNER), orbiting_refs(0),
-		tid(0), tsize(0), atmos(0.0), water(0.0), resources(0.0), cloud_scale(1.0), surface(NULL) {}
+		tid(0), tsize(0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), surface(NULL) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,

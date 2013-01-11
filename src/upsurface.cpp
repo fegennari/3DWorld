@@ -279,7 +279,7 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 	assert(surface);
 	unsigned const table_size(MAX_TEXTURE_SIZE << 1); // larger is more accurate
 	static float xtable[TOT_NUM_SINES*table_size], ytable[TOT_NUM_SINES*table_size];
-	surface->setup(size, water, use_heightmap);
+	surface->setup(size, max(water, lava), use_heightmap);
 	unsigned const num_sines(surface->num_sines);
 	float const *const rdata(surface->rdata);
 	int const type(surface->type);

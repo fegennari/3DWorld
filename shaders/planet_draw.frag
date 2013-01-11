@@ -1,6 +1,7 @@
 // Note: Light 0 is the sun (A+D+S point light), light 1 is universe ambient (constant A), light 2 is planet reflection (D point light)
 uniform float atmosphere = 1.0;
-uniform float spec_scale = 1.0;
+uniform float spec_scale = 0.0;
+uniform float lava_scale = 0.0;
 uniform vec3 light_scale = vec3(1,1,1);
 uniform vec3 sun_pos, ss_pos, rscale;
 uniform float sun_radius, ss_radius, ring_ri, ring_ro;
@@ -48,7 +49,18 @@ void main()
 	                 (gl_LightSource[2].diffuse.rgb * max(dot(norm, ldir2), 0.0) * atten2 * max(dot(ldir2, ldir20), 0.0));
 	vec3 specular  = spec_scale * gl_FrontLightProduct[0].specular.rgb * pow(max(dot(norm, half_vect), 0.0), gl_FrontMaterial.shininess) * pow(texel.b, 4.0) * atten0;
 	vec3 color     = (texel.rgb * (ambient + diffuse)) + specular;
-	float cloud_val= atmosphere*gen_cloud_alpha(vertex);
-	if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;} // no clouds over high mountains?
-	gl_FragColor   = apply_fog(gl_Color * vec4((color + gl_FrontMaterial.emission.rgb), 1.0));
+
+	if (atmosphere > 0.0) {
+		float cloud_val = atmosphere*gen_cloud_alpha(vertex);
+		if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;} // no clouds over high mountains?
+	}
+	if (lava_scale > 0.0) {
+		float heat = max(0.0, (texel.r - texel.g - texel.b));
+
+		if (heat > 0.0) { // lava patch
+			heat *= gen_cloud_alpha(2.0*vertex);
+			color = mix(color, vec3(1.0, 0.25*heat, 0.0), heat); // add lava
+		}
+	}
+	gl_FragColor = apply_fog(gl_Color * vec4((color + gl_FrontMaterial.emission.rgb), 1.0));
 }
