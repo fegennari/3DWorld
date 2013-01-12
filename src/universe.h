@@ -280,8 +280,8 @@ public:
 	bool has_vegetation()  const {return (water > 0.2 && atmos > 0.1);}
 	float get_vegetation() const;
 	void ensure_rings_texture();
-	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius) const;
-	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars, point const &camera) const;
+	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir) const;
+	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const;
 	void free_texture();
 	void free();
 	float get_hmap_scale () const {return PLANET_HMAP_SCALE;}

@@ -6,7 +6,7 @@ float calc_sphere_shadow_atten(in vec3 pos, in vec3 lpos, in float lradius, in v
 	float atten = 1.0;
 	float ldist = length(lpos - pos);
 
-	if (ldist > length(lpos - spos)) { // behind the sun
+	if (ldist > length(lpos - spos)) { // behind the shadowing object
 		const float PI = 3.14159;
 		float d = pt_line_dist(spos, lpos, pos);
 		float r = sradius;

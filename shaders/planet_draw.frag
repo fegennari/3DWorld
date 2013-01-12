@@ -14,7 +14,7 @@ varying vec3 normal, world_space_pos, vertex;
 
 void main()
 {
-	vec4 texel   = texture2D(tex0, gl_TexCoord[0].st);
+	vec4 texel   = texture2D(tex0, gl_TexCoord[0].st);// + 0.5*vec2(gen_cloud_alpha_static(1.23*vertex+vec3(0.1,0.4,0.7))-0.5, gen_cloud_alpha_static(1.27*vertex+vec3(0.6,0.9,0.2))-0.5));
 	vec3 norm    = normalize(normal); // renormalize
 	float atten0 = light_scale[0] * calc_light_atten(epos, 0);
 	float atten2 = light_scale[2] * calc_light_atten(epos, 2);

@@ -272,7 +272,7 @@ public:
 		if (is_setup()) {disable();}
 	}
 
-	bool enable_ring(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius) {
+	bool enable_ring(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius, bool dir) {
 		if (disable_shaders) return 0;
 		
 		if (!is_setup()) {
@@ -291,6 +291,8 @@ public:
 		add_uniform_float("ring_ro",       ring_ro);
 		add_uniform_vector3d("sun_pos",    sun_pos);
 		add_uniform_float("sun_radius",    sun_radius);
+		add_uniform_float("bf_draw_sign",  (dir ? -1.0 : 1.0));
+		add_uniform_vector3d("camera_pos", make_pt_global(get_player_pos()));
 		upload_mvm_to_shader(*this, "world_space_mvm");
 		set_specular(0.5, 50.0);
 		return 1;
@@ -302,7 +304,7 @@ public:
 		}
 	}
 
-	bool enable_atmospheric(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars, point const &camera) {
+	bool enable_atmospheric(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars) {
 		if (disable_shaders) return 0;
 		
 		if (!is_setup()) {
@@ -313,7 +315,7 @@ public:
 			setup_fog_scale();
 		}
 		enable();
-		add_uniform_vector3d("camera_pos", make_pt_global(camera));
+		add_uniform_vector3d("camera_pos", make_pt_global(get_player_pos()));
 		add_uniform_vector3d("planet_pos", planet_pos);
 		add_uniform_float("planet_radius", planet_radius);
 		add_uniform_float("atmos_radius",  atmos_radius);
@@ -338,12 +340,12 @@ public:
 	void disable_planet_shader() {planet_shader[0].disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
 	void disable_star_shader() {star_shader.disable_star();}
-	bool enable_ring_shader(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius) {
-		return ring_shader.enable_ring(planet_pos, planet_radius, ring_ri, ring_ro, sun_pos, sun_radius);
+	bool enable_ring_shader(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius, bool dir) {
+		return ring_shader.enable_ring(planet_pos, planet_radius, ring_ri, ring_ro, sun_pos, sun_radius, dir);
 	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
-	bool enable_atmospheric_shader(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars, point const &camera) {
-		return atmospheric_shader.enable_atmospheric(planet_pos, planet_radius, atmos_radius, atmosphere, svars, camera);
+	bool enable_atmospheric_shader(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars) {
+		return atmospheric_shader.enable_atmospheric(planet_pos, planet_radius, atmos_radius, atmosphere, svars);
 	}
 	void disable_atmospheric_shader() {atmospheric_shader.disable_atmospheric();}
 };
@@ -787,14 +789,18 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						}
 					}
 				} // planet k
-				for (vector<planet_draw_data_t>::const_iterator k = rings_to_draw.begin(); k != rings_to_draw.end(); ++k) {
-					uplanet &planet(sol.planets[k->ix]);
-					planet.ensure_rings_texture();
-					planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0));
-				}
-				for (vector<planet_draw_data_t>::const_iterator k = atmos_to_draw.begin(); k != atmos_to_draw.end(); ++k) {
-					uplanet const &planet(sol.planets[k->ix]);
-					planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars, camera);
+				for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
+					for (vector<planet_draw_data_t>::const_iterator k = rings_to_draw.begin(); k != rings_to_draw.end(); ++k) {
+						uplanet &planet(sol.planets[k->ix]);
+						planet.ensure_rings_texture();
+						planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1));
+					}
+					if (pass == 0) {
+						for (vector<planet_draw_data_t>::const_iterator k = atmos_to_draw.begin(); k != atmos_to_draw.end(); ++k) {
+							uplanet const &planet(sol.planets[k->ix]);
+							planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars);
+						}
+					}
 				}
 			} // sol_draw_pass
 		} // system j
@@ -2287,13 +2293,13 @@ void uplanet::ensure_rings_texture() {
 }
 
 
-void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius) const {
+void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir) const {
 
 	if (ring_data.empty()) return;
 	assert(ring_tid > 0);
 	bind_1d_texture(ring_tid);
 	assert(ring_ri > 0.0 && ring_ri < ring_ro);
-	usg.enable_ring_shader(make_pt_global(pos_), radius, ring_ri, ring_ro, make_pt_global(sun_pos), sun_radius); // even in !do_texture mode?
+	usg.enable_ring_shader(make_pt_global(pos_), radius, ring_ri, ring_ro, make_pt_global(sun_pos), sun_radius, dir); // even in !do_texture mode?
 	enable_blend(); // must be drawn last
 	glPushMatrix();
 	global_translate(pos_);
@@ -2308,10 +2314,10 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 }
 
 
-void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars, point const &camera) const {
+void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const {
 
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
-	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), radius/PLANET_ATM_RSCALE, cloud_radius, atmos, svars, camera)) return;
+	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), radius/PLANET_ATM_RSCALE, cloud_radius, atmos, svars)) return;
 	enable_blend();
 	set_fill_mode();
 	WHITE.do_glColor();
