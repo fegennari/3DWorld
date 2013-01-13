@@ -1,10 +1,9 @@
-uniform vec3 cloud_offset = vec3(0,0,0);
-
-varying vec4 pos, color;
+varying vec3 vertex;
+varying vec4 color;
 
 void main()
 {
-	pos = gl_Vertex + vec4(cloud_offset, 1.0);
+	vertex = gl_Vertex.xyz;
 	gl_Position = ftransform();
 	set_fog_coord();
 	color = gl_Color;

@@ -20,6 +20,7 @@ extern bool have_sun, no_sun_lpos_update;
 extern int window_width, window_height, cloud_model, draw_model, display_mode, xoff, yoff, animate2;
 extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
 extern vector3d wind;
+extern colorRGBA sun_color;
 
 
 void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bool zoomed);
@@ -377,6 +378,9 @@ void draw_cloud_plane(bool reflection_pass) {
 	s.setup_fog_scale();
 	s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
 	s.add_uniform_float("cloud_scale", 0.5);
+	s.add_uniform_vector3d("camera_pos", camera);
+	s.add_uniform_vector3d("sun_pos", get_sun_pos());
+	s.add_uniform_color("sun_color", sun_color);
 	set_cloud_uniforms(s, 0);
 	s.add_uniform_vector3d("cloud_offset", offset);
 	enable_blend();

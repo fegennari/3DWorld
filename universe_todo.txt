@@ -1,7 +1,5 @@
-Gas Giants - all atmosphere, no collisions?
+gas giant cyclones
 craters on planets/moons?
-
-Clouds glow near the sun (glow map) in tiled terrain mode
 
 Tighter shadow volume
 http://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf
