@@ -1,4 +1,3 @@
-Gas Giant stripes (1D texture?)
 Gas Giants - all atmosphere, no collisions?
 craters on planets/moons?
 

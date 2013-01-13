@@ -13,13 +13,18 @@ float gen_cloud_alpha_time(in vec3 pos, in float time_scale)
 		alpha += texture3D(cloud_noise_tex, noise_scale*(freq*pos + ftime)).r/freq;
 		freq  *= 2.0;
 	}
-	return clamp(2.0*(0.5*alpha-0.4), 0.0, 1.0);
+	return 2.0*(0.5*alpha-0.4);
 }
 
 float gen_cloud_alpha(in vec3 pos) {
+	return clamp(gen_cloud_alpha_time(pos, 1.0), 0.0, 1.0);
+}
+float gen_cloud_alpha_non_norm(in vec3 pos) {
 	return gen_cloud_alpha_time(pos, 1.0);
 }
-
 float gen_cloud_alpha_static(in vec3 pos) {
+	return clamp(gen_cloud_alpha_time(pos, 0.0), 0.0, 1.0);
+}
+float gen_cloud_alpha_static_non_norm(in vec3 pos) {
 	return gen_cloud_alpha_time(pos, 0.0);
 }

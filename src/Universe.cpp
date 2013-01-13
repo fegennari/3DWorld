@@ -44,6 +44,8 @@ unsigned const MAX_NEBULAS_PER_GALAXY  = 2;
 unsigned const MAX_SYSTEMS_PER_GALAXY  = 500;
 unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
 unsigned const MAX_MOONS_PER_PLANET    = 8;
+unsigned const GAS_GIANT_TSIZE         = 1024;
+unsigned const GAS_GIANT_BANDS         = 31;
 
 int   const RAND_CONST       = 1;
 float const ROTREV_TIMESCALE = 1.0;
@@ -53,6 +55,7 @@ float const STAR_BRIGHTNESS  = 1.4;
 float const MIN_TEX_OBJ_SZ   = 3.0;
 float const MAX_WATER        = 0.75;
 float const GLOBAL_AMBIENT   = 0.25;
+float const GAS_GIANT_MIN_REL_SZ = 0.38;
 
 
 bool have_sun(1);
@@ -219,11 +222,12 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(float atmosphere, float cloud_scale, float water, float lava, shadow_vars_t const &svars, bool use_light2) {
+	bool enable_planet(float atmosphere, float cloud_scale, float water, float lava, shadow_vars_t const &svars, bool gas_giant, bool use_light2) {
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
 			setup_planet_star_shader();
+			if (gas_giant) {set_prefix("#define GAS_GIANT", 1);} // FS
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			set_vert_shader("planet_draw");
 			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+planet_draw");
@@ -329,15 +333,15 @@ public:
 
 
 class ushader_group {
-	universe_shader_t planet_shader[2], star_shader, ring_shader, cloud_shader, atmospheric_shader;
+	universe_shader_t planet_shader[2][2], star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 public:
 	shader_t nebula_shader, asteroid_shader;
 
-	bool enable_planet_shader(float atmosphere, float cloud_scale, float water, float lava, shadow_vars_t const &svars, bool use_light2) {
-		return planet_shader[svars.ring_ro > 0.0].enable_planet(atmosphere, cloud_scale, water, lava, svars, use_light2);
+	bool enable_planet_shader(float atmosphere, float cloud_scale, float water, float lava, shadow_vars_t const &svars, bool gas_giant, bool use_light2) {
+		return planet_shader[svars.ring_ro > 0.0][gas_giant].enable_planet(atmosphere, cloud_scale, water, lava, svars, gas_giant, use_light2);
 	}
-	void disable_planet_shader() {planet_shader[0].disable_planet();}
+	void disable_planet_shader() {planet_shader[0][0].disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
 	void disable_star_shader() {star_shader.disable_star();}
 	bool enable_ring_shader(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius, bool dir) {
@@ -784,7 +788,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						if (!planet.ring_data.empty() && sizep*planet.get_ring_rscale() > 2.5) {
 							rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 						}
-						if (planet_visible && !skip_planet_draw && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
+						if (planet_visible && !skip_planet_draw && !planet.gas_giant && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
 							atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 						}
 					}
@@ -1262,21 +1266,21 @@ void ussystem::process() {
 }
 
 
-bool urev_body::land_temp_ok() const {
+bool urev_body::can_land() const {
 
-	return (temp >= MIN_LAND_TEMP && temp <= MAX_LAND_TEMP);
+	return (!gas_giant && temp >= MIN_LAND_TEMP && temp <= MAX_LAND_TEMP);
 }
 
 
 bool urev_body::colonizable() const {
 
-	return (is_ok() && temp >= MIN_COLONY_TEMP && temp <= MAX_COLONY_TEMP && colonizable_int());
+	return (is_ok() && !gas_giant && temp >= MIN_COLONY_TEMP && temp <= MAX_COLONY_TEMP && colonizable_int());
 }
 
 
 bool urev_body::liveable() const { // only planets are liveable
 
-	return (is_ok() && water > 0.15 && atmos > 0.25 && temp >= MIN_LIVE_TEMP && temp <= MAX_LIVE_TEMP);
+	return (is_ok() && !gas_giant && water > 0.15 && atmos > 0.25 && temp >= MIN_LIVE_TEMP && temp <= MAX_LIVE_TEMP);
 }
 
 
@@ -1295,6 +1299,7 @@ void uplanet::create(bool phase) {
 	mosize = radius;
 	moons.clear();
 	ring_data.clear();
+	float const rel_radius((radius - PLANET_MIN_SIZE)/(PLANET_MAX_SIZE - PLANET_MIN_SIZE));
 
 	// atmosphere, water, temperature, gravity
 	calc_temperature();
@@ -1303,15 +1308,17 @@ void uplanet::create(bool phase) {
 	set_grav_mass();
 	
 	if (temp < FREEZE_TEMP) { // cold
-		atmos   = rand_uniform2(-0.2, 1.0);
-		water   = rand_uniform2(0.0, MAX_WATER); // ice
-		comment = " (cold)";
+		gas_giant = (rel_radius > GAS_GIANT_MIN_REL_SZ);
+		atmos     = (gas_giant ? 1.0 : rand_uniform2(-0.2, 1.0));
+		water     = rand_uniform2(0.0, MAX_WATER); // ice
+		comment   = " (cold)";
 	}
 	else if (temp > NO_AIR_TEMP) { // very hot
-		atmos   = 0.0;
-		water   = 0.0;
-		lava    = max(0.0f, rand_uniform2(-0.4, 0.4));
-		comment = " (very hot)";
+		gas_giant = (rel_radius > GAS_GIANT_MIN_REL_SZ);
+		atmos     = (gas_giant ? 1.0 : 0.0);
+		water     = 0.0;
+		lava      = (gas_giant ? 0.0 : max(0.0f, rand_uniform2(-0.4, 0.4)));
+		comment   = " (very hot)";
 	}
 	else if (temp > BOIL_TEMP) { // hot
 		atmos   = rand_uniform2(-0.9, 0.5);
@@ -1323,6 +1330,7 @@ void uplanet::create(bool phase) {
 		water   = max(0.0f, min(MAX_WATER, 0.5f*(atmos + rand_uniform2(-MAX_WATER, 0.9*MAX_WATER))));
 		comment = " (temperate)";
 	}
+	if (gas_giant) {comment += " Gas Giant";}
 	atmos     = CLIP_TO_01(atmos);
 	float const rsc_scale(liveable() ? 2.0 : (colonizable() ? 1.0 : 0.5));
 	resources = 750.0*radius*rsc_scale*(1.0 + 0.25*atmos - 0.25*fabs(0.5 - water))*(1.0 - fabs(1.0 - density));
@@ -1703,31 +1711,57 @@ void uobj_solid::gen_colorAB(float delta) {
 void urev_body::check_gen_texture(unsigned size) {
 
 	if (size <= MIN_TEX_OBJ_SZ) return; // too small to be textured
+
+	if (gas_giant) { // perfectly spherical, no surface used
+		if (!glIsTexture(tid)) {create_gas_giant_texture();} // texture has not been generated
+		return;
+	}
 	unsigned const tsize0(get_texture_size(size));
-	bool do_gen(0);
 
 	if (!glIsTexture(tid)) { // texture has not been generated
 		gen_surface();
-		do_gen = 1;
 	}
 	else if (tsize0 != tsize) { // new texture size
 		::free_texture(tid); // delete old texture
-		do_gen = 1;
 	}
-	if (do_gen) {
-		tsize = tsize0; // new size
-		create_texture(tsize0); // new texture
+	else {
+		return; // nothing to do
 	}
+	create_rocky_texture(tsize0); // new texture
 }
 
 
-void urev_body::create_texture(unsigned size) {
+void urev_body::create_rocky_texture(unsigned size) {
 
-	assert(size <= MAX_TEXTURE_SIZE);
-	vector<unsigned char> data(3*size*size);
-	gen_texture_data(&data.front(), size, USE_HEIGHTMAP);
+	tsize = size;
+	assert(tsize <= MAX_TEXTURE_SIZE);
+	vector<unsigned char> data(3*tsize*tsize);
+	gen_texture_data(&data.front(), tsize, USE_HEIGHTMAP);
 	setup_texture(tid, GL_MODULATE, 0, 1, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
+}
+
+
+void urev_body::create_gas_giant_texture() {
+
+	tsize = GAS_GIANT_TSIZE;
+	vector<unsigned char> data(3*tsize);
+	set_rseeds();
+	colorRGBA color(colorA);
+	
+	for (unsigned i = 0; i < tsize; ++i) {
+		if ((rand2() & GAS_GIANT_BANDS) == 0) {
+			blend_color(color, colorA, colorB, rand_float2(), 0);
+		}
+		else {
+			UNROLL_3X(color[i_] = CLIP_TO_01(color[i_] + 0.01f*signed_rand_float2());)
+		}
+		UNROLL_3X(data[3*i+i_] = (unsigned char)(255.0*color[i_]);)
+	}
+	bool const mipmap = 1;
+	setup_1d_texture(tid, GL_MODULATE, mipmap, 0, 0, 0);
+	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB8, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
+	if (mipmap) {gen_mipmaps(1);}
 }
 
 
@@ -2092,15 +2126,14 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
-		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, water, lava, svars, use_light2);}
+		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, water, lava, svars, gas_giant, use_light2);}
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();
 		
 		if (texture) { // texture map
-			glEnable(GL_TEXTURE_2D);
 			assert(tid > 0);
-			bind_2d_texture(tid);
+			(gas_giant ? bind_1d_texture(tid) : bind_2d_texture(tid));
 			WHITE.do_glColor();
 		}
 		else {
@@ -2115,7 +2148,6 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		}
 		if (texture) {
 			usg.disable_planet_shader();
-			glDisable(GL_TEXTURE_2D);
 		}
 		glPopMatrix();
 	} // end sphere draw
@@ -2150,7 +2182,6 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 			rotate_vector(dir);
 			rotate_vector(upv);
 			pos_dir_up const pdu(viewed_from, dir, upv, tan_term, sin_term, NEAR_CLIP_SCALED, FAR_CLIP);
-			glDisable(GL_TEXTURE_2D);
 			
 			if (display_mode & 0x20) {
 				surface->draw_view_clipped_sphere(pdu, radius0, hmap_scale, this);
@@ -2289,7 +2320,6 @@ void uplanet::ensure_rings_texture() {
 	setup_1d_texture(ring_tid, GL_MODULATE, mipmap, 0, 0, 0);
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, RING_TEX_SZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, &ring_data.front());
 	if (mipmap) {gen_mipmaps(1);}
-	check_gl_error(506);
 }
 
 
@@ -2354,7 +2384,7 @@ string urev_body::get_info() const {
 	ostringstream oss;
 	oss << "Radius: " << radius << ", Temp: " << temp << ", Resources: " << resources
 		<< ", Water: " << water << ", Atmos: " << atmos 
-		<< endl << "Can Land: " << land_temp_ok() << ", Colonizable: " << colonizable() << ", Liveable: " << liveable() << comment;
+		<< endl << "Can Land: " << can_land() << ", Colonizable: " << colonizable() << ", Liveable: " << liveable() << comment;
 	get_owner_info(oss);
 	return oss.str();
 }

@@ -203,15 +203,15 @@ class urev_body : public uobj_solid, public color_gen_class, public rotated_obj 
 	void calc_snow_thresh();
 
 public:
+	bool gas_giant; // planets only?
 	int owner;
-	unsigned orbiting_refs;
-	unsigned tid, tsize;
+	unsigned orbiting_refs, tid, tsize;
 	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_scale;
 	vector3d rev_axis, v_orbit;
 	upsurface *surface;
 	string comment;
 
-	urev_body(char type_) : uobj_solid(type_), owner(NO_OWNER), orbiting_refs(0),
+	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0),
 		tid(0), tsize(0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), surface(NULL) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
@@ -219,13 +219,14 @@ public:
 		float radius0, float max_size, float min_size, float rspacing, float ispacing, float minspacing, float min_gap);
 	void gen_surface();
 	void check_gen_texture(unsigned size);
-	void create_texture(unsigned size);
+	void create_rocky_texture(unsigned size);
+	void create_gas_giant_texture();
 	void gen_texture_data(unsigned char *data, unsigned size, bool use_heightmap);
 	bool surface_test(float rad, point const &p, float &coll_r, bool simple) const;
 	float get_dheight_at(point const &p, bool exact=0) const;
 	bool pt_over_land(point const &p) const;
-	bool land_temp_ok() const;
-	bool can_land_at(point const &p) const {return (land_temp_ok() && pt_over_land(p));}
+	bool can_land() const;
+	bool can_land_at(point const &p) const {return (can_land() && pt_over_land(p));}
 	bool colonizable() const;
 	bool liveable() const;
 	float get_land_value(unsigned align, point const &cur_pos, float sradius) const;
