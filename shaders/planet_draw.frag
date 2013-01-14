@@ -74,5 +74,5 @@ void main()
 		}
 	}
 #endif
-	gl_FragColor = apply_fog(gl_Color * vec4((color + gl_FrontMaterial.emission.rgb), 1.0));
+	gl_FragColor = gl_Color * vec4((color + gl_FrontMaterial.emission.rgb), 1.0);
 }

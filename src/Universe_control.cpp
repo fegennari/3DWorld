@@ -222,7 +222,7 @@ void draw_universe(bool static_only, bool skip_closest, bool no_distant) { // sh
 		ps.clear_damaged();
 
 		if (!ps.is_ok()) {
-			damaged = 1; // adds lots of red fog to the player's view while dying
+			damaged = 1; // adds a red filter to the player's view while dying
 			destroy_player_ship(0);
 		}
 		if (damaged) {

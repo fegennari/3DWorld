@@ -88,9 +88,8 @@ public:
 			s.set_prefix("#define NO_SPECULAR",      1); // FS (optional/optimization)
 			s.set_prefix("#define NUM_OCTAVES 8",    0); // VS
 			s.set_vert_shader("perlin_clouds_3d.part*+procedural_rock");
-			s.set_frag_shader("linear_fog.part+ads_lighting.part*+procedural_rock");
+			s.set_frag_shader("ads_lighting.part*+procedural_rock");
 			s.begin_shader();
-			s.setup_fog_scale();
 			s.add_uniform_int("cloud_noise_tex", 0);
 			s.add_uniform_float("time", float(rseed_ix));
 			s.add_uniform_float("noise_scale",  0.1);
@@ -307,9 +306,8 @@ public:
 			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			s.set_prefix("#define NO_SPECULAR", 1); // FS (optional/optimization)
 			s.set_vert_shader("asteroid");
-			s.set_frag_shader("linear_fog.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+voxel_asteroid");
+			s.set_frag_shader("ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+voxel_asteroid");
 			s.begin_shader();
-			s.setup_fog_scale();
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_int("tex1", 8);
 			s.add_uniform_int("noise_tex", 5);

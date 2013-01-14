@@ -9,5 +9,4 @@ void main()
 	normal = normalize(gl_NormalMatrix * gl_Normal);
 	epos   = gl_ModelViewMatrix * gl_Vertex;
 	vpos   = gl_Vertex.xyz;
-	gl_FogFragCoord = length(epos.xyz); // set standard fog coord
 } 

@@ -29,5 +29,5 @@ void main()
 	float rg_comp = atmosphere*min(1.6*density, 1.0);
 	vec3 scatter_color = vec3(rg_comp, rg_comp, 1.0); // precomputed texture lookup or something else better?
 	color *= vec4(scatter_color, alpha);
-	gl_FragColor = apply_fog(color);
+	gl_FragColor = color;
 }

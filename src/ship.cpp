@@ -676,12 +676,10 @@ void draw_wrays(vector<usw_ray> &wrays) {
 void setup_ship_draw_shader(shader_t &s) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-	if (!glIsEnabled(GL_FOG)) s.set_prefix("#define NO_FOG", 1); // FS
 	s.set_vert_shader("ship_draw");
-	s.set_frag_shader("linear_fog.part+ads_lighting.part*+ship_draw");
+	s.set_frag_shader("ads_lighting.part*+ship_draw");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
-	s.setup_fog_scale();
 }
 
 

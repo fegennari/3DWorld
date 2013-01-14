@@ -16,10 +16,6 @@ void main()
 	for (int i = 0; i < num_lights; ++i) { // sun_diffuse, galaxy_ambient, dynamic ...
 		color += light_scales[i]*add_pt_light_comp(n, epos, i);
 	}
-	color = vec4(texel.rgb * clamp(color.rgb, 0.0, 1.0), texel.a * gl_Color.a); // use diffuse alpha directly
-#ifndef NO_FOG
-	color = apply_fog(color); // apply standard fog
-#endif
-	gl_FragColor = color;
+	gl_FragColor = vec4(texel.rgb * clamp(color.rgb, 0.0, 1.0), texel.a * gl_Color.a); // use diffuse alpha directly
 }
 

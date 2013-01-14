@@ -34,5 +34,5 @@ void main()
 	color.rgb += add_light_rings(norm2).rgb; // ambient, diffuse, and specular
 	color.rgb += (gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
 	color.a   *= texture2D(noise_tex, 25*gl_TexCoord[0].st).r;
-	gl_FragColor = apply_fog(color*texel);
+	gl_FragColor = color * texel;
 }

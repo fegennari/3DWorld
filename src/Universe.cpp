@@ -71,7 +71,7 @@ pt_line_drawer universe_pld[2]; // 1-pixel, 2-pixel
 
 
 extern bool univ_planet_lod, disable_shaders;
-extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks, show_fog;
+extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
 extern float tan_term, sin_term, fticks, tfticks;
 extern colorRGBA bkg_color;
 extern exp_type_params et_params[];
@@ -130,11 +130,6 @@ s_object get_shifted_sobj(s_object const &sobj) {
 
 void setup_universe_fog(s_object const &closest, bool damaged) {
 
-	if (damaged && show_fog) { // Note: currently disabled since this can't be set in universe mode
-		glEnable(GL_FOG);
-		glFogfv(GL_FOG_COLOR, (float *)&RED);
-		glFogf(GL_FOG_END, 0.02); // interesting effect - shows red color towards star
-	}
 	if (closest.type == UTYPE_PLANET) {
 		assert(closest.object != NULL);
 
@@ -202,7 +197,6 @@ class universe_shader_t : public shader_t {
 	void shared_setup(const char *texture_name="tex0") {
 		begin_shader();
 		add_uniform_int(texture_name, 0);
-		setup_fog_scale(); // fog not needed?
 	}
 	void setup_planet_star_shader() {
 		set_active_texture(1);
@@ -230,7 +224,7 @@ public:
 			if (gas_giant) {set_prefix("#define GAS_GIANT", 1);} // FS
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			set_vert_shader("planet_draw");
-			set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+planet_draw");
+			set_frag_shader("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", 1);
 			add_uniform_int("ring_tex",        2);
@@ -281,7 +275,7 @@ public:
 		
 		if (!is_setup()) {
 			set_vert_shader("planet_draw");
-			set_frag_shader("linear_fog.part+ads_lighting.part*+sphere_shadow.part*+planet_rings");
+			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+planet_rings");
 			shared_setup("ring_tex");
 			add_uniform_int("noise_tex", 1);
 		}
@@ -314,9 +308,8 @@ public:
 		if (!is_setup()) {
 			set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			set_vert_shader("atmosphere");
-			set_frag_shader("linear_fog.part+ads_lighting.part*+sphere_shadow.part*+atmosphere");
+			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+atmosphere");
 			begin_shader();
-			setup_fog_scale();
 		}
 		enable();
 		add_uniform_vector3d("camera_pos", make_pt_global(get_player_pos()));

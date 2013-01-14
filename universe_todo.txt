@@ -1,10 +1,12 @@
 gas giant cyclones
-craters on planets/moons?
+craters on planets/moons
+Multiple noise octaves for planet rings
 
 Tighter shadow volume
 http://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf
 
 Use perlin noise for planets/moons:
+* Need linear 3D texture lookups/filtering
 * Each planet/moon has generated 3D noise texture
 * Vertex height evaluated on CPU for vertices, collision detection,
 shadows, etc.
