@@ -1,19 +1,9 @@
 gas giant cyclones
 craters on planets/moons
+Bump map in planet fragment shader using procedural noise
 
 Tighter shadow volume
 http://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf
-
-Use perlin noise for planets/moons:
-* Need linear 3D texture lookups/filtering
-* Each planet/moon has generated 3D noise texture
-* Vertex height evaluated on CPU for vertices, collision detection,
-shadows, etc.
-* Detail evaluated in fragment shader based on noise value lookup into
-1D color texture
-* Use more octaves when closer to planet/moon
-* Possible bump map in fragment shader using normals calculated from
-noise derivatives
 
 Tile-Based planet surface generation:
 * Similar to tiled terrain mode, but with a different noise function,

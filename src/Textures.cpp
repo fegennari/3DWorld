@@ -1344,58 +1344,6 @@ unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp) {
 }
 
 
-unsigned get_tv(int v, unsigned sz, bool wrap, bool mirror) {
-
-	if (wrap) {return (v % sz);} // (v & (sz-1))?
-	if (mirror) {return v;} // FIXME
-	return max(0, min(int(sz)-1, v));
-}
-
-
-colorRGBA texture_lookup(vector3d const &val, unsigned char *const data, unsigned xsize, unsigned ysize, unsigned zsize,
-	unsigned ncomp, unsigned dim, bool linear, bool wrap, bool mirror)
-{
-	assert(data != NULL);
-	assert(ncomp >= 1 && ncomp <= 4);
-	assert(dim >= 1 && dim <= 3);
-	assert(!(wrap && mirror));
-	colorRGBA ret(0,0,0,1);
-	point norm_val;
-	unsigned const sz[3] = {xsize, ysize, zsize};
-
-	for (unsigned d = 0; d < 3; ++d) {
-		if (d >= dim) continue;
-		assert(sz[d] > 0);
-		norm_val[d] = val[d]/sz[d];
-
-		if (linear) {
-			int const lo(get_tv(int(floor(norm_val[d])), sz[d], wrap, mirror));
-			int const hi(get_tv(int(ceil(norm_val[d])), sz[d], wrap, mirror));
-			// WRITE
-		}
-		else {
-			int v(get_tv(round_fp(norm_val[d]), sz[d], wrap, mirror));
-			// WRITE
-		}
-	}
-	return ret;
-}
-
-
-colorRGBA texture_t::lookup(vector3d const &val) const {
-
-	assert(data != NULL);
-	return ::texture_lookup(val, data, width, height, 0, ncolors, 2, 1, wrap, 0);
-}
-
-
-colorRGBA texture_lookup(unsigned tid, vector3d const &val) {
-
-	assert(tid < NUM_TEXTURES);
-	return textures[tid].lookup(val);
-}
-
-
 colorRGBA get_landscape_texture_color(int xpos, int ypos) {
 
 	if (cached_ls_colors.empty()) cached_ls_colors.resize(XY_MULT_SIZE, ALPHA0);
