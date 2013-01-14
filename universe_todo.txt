@@ -1,6 +1,5 @@
 gas giant cyclones
 craters on planets/moons
-Multiple noise octaves for planet rings
 
 Tighter shadow volume
 http://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf

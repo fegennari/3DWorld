@@ -1,6 +1,6 @@
 uniform vec3 planet_pos, sun_pos, camera_pos;
 uniform float planet_radius, ring_ri, ring_ro, sun_radius, bf_draw_sign;
-uniform sampler2D noise_tex;
+uniform sampler2D noise_tex, particles_tex;
 uniform sampler1D ring_tex;
 varying vec4 epos;
 varying vec3 normal, world_space_pos, vertex;
@@ -33,6 +33,12 @@ void main()
 	vec4 color = gl_FrontMaterial.emission;
 	color.rgb += add_light_rings(norm2).rgb; // ambient, diffuse, and specular
 	color.rgb += (gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
-	color.a   *= texture2D(noise_tex, 25*gl_TexCoord[0].st).r;
+
+	float alpha = texture2D(particles_tex, 23*gl_TexCoord[0].st).r;
+	alpha      += texture2D(particles_tex, 42*gl_TexCoord[0].st).r;
+	alpha      += texture2D(particles_tex, 75*gl_TexCoord[0].st).r;
+	alpha      += texture2D(particles_tex, 133*gl_TexCoord[0].st).r;
+	color.a    *= min(1.0, alpha); // add 4 octaves of random particles
+
 	gl_FragColor = color * texel;
 }

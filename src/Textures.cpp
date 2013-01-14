@@ -149,7 +149,8 @@ texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark_lendrick.jpg"), // 892x892
 texture_t(0, 6, 0,    0,    1, 4, 1, "bark/bark_lylejk.png"), // 1024x768
 
 texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen.raw"), // not real file
-texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap.raw") // not real file
+texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap.raw"), // not real file
+texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse.raw") // not real file
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [do_compress]
 };
@@ -1308,7 +1309,7 @@ void gen_wind_texture() {
 
 
 void noise_fill(unsigned char *data, unsigned size) {
-	for (unsigned i = 0; i < size; ++i) {data[i] = (rand() % 256);}
+	for (unsigned i = 0; i < size; ++i) {data[i] = (rand() & 255);}
 }
 
 
@@ -1317,6 +1318,12 @@ void gen_noise_texture() {
 	for (unsigned i = NOISE_GEN_TEX; i <= NOISE_GEN_MIPMAP_TEX; ++i) {
 		assert(textures[i].ncolors == 1);
 		noise_fill(textures[i].get_data(), textures[i].num_pixels());
+	}
+	unsigned char *data(textures[SPARSE_NOISE_TEX].get_data());
+	unsigned const size(textures[SPARSE_NOISE_TEX].num_pixels());
+
+	for (unsigned i = 0; i < size; ++i) {
+		data[i] = (((rand()&7) == 0) ? 255 : 0);
 	}
 }
 
@@ -1334,6 +1341,58 @@ unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp) {
 	pair<texture_map_t::iterator, bool> ret(noise_tex_3ds.insert(make_pair(make_pair(tsize, ncomp), 0)));
 	if (ret.second) {ret.first->second = create_3d_noise_texture(tsize, ncomp);}
 	return ret.first->second;
+}
+
+
+unsigned get_tv(int v, unsigned sz, bool wrap, bool mirror) {
+
+	if (wrap) {return (v % sz);} // (v & (sz-1))?
+	if (mirror) {return v;} // FIXME
+	return max(0, min(int(sz)-1, v));
+}
+
+
+colorRGBA texture_lookup(vector3d const &val, unsigned char *const data, unsigned xsize, unsigned ysize, unsigned zsize,
+	unsigned ncomp, unsigned dim, bool linear, bool wrap, bool mirror)
+{
+	assert(data != NULL);
+	assert(ncomp >= 1 && ncomp <= 4);
+	assert(dim >= 1 && dim <= 3);
+	assert(!(wrap && mirror));
+	colorRGBA ret(0,0,0,1);
+	point norm_val;
+	unsigned const sz[3] = {xsize, ysize, zsize};
+
+	for (unsigned d = 0; d < 3; ++d) {
+		if (d >= dim) continue;
+		assert(sz[d] > 0);
+		norm_val[d] = val[d]/sz[d];
+
+		if (linear) {
+			int const lo(get_tv(int(floor(norm_val[d])), sz[d], wrap, mirror));
+			int const hi(get_tv(int(ceil(norm_val[d])), sz[d], wrap, mirror));
+			// WRITE
+		}
+		else {
+			int v(get_tv(round_fp(norm_val[d]), sz[d], wrap, mirror));
+			// WRITE
+		}
+	}
+	return ret;
+}
+
+
+colorRGBA texture_t::lookup(vector3d const &val) const {
+
+	assert(data != NULL);
+	return ::texture_lookup(val, data, width, height, 0, ncolors, 2, 1, wrap, 0);
+}
+
+
+colorRGBA texture_lookup(unsigned tid, vector3d const &val) {
+
+	assert(tid < NUM_TEXTURES);
+	return textures[tid].lookup(val);
 }
 
 

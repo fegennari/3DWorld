@@ -45,7 +45,6 @@ void noise_gen_3d::gen_sines(float mag, float freq) {
 }
 
 
-// Note: xyz_vals is already resized correctly
 void noise_gen_3d::gen_xyz_vals(point const &start, vector3d const &step, unsigned const xyz_num[3], vector<float> xyz_vals[3]) {
 
 	for (unsigned d = 0; d < 3; ++d) {
@@ -268,7 +267,7 @@ void urev_body::gen_surface() {
 }
 
 
-void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_heightmap) {
+void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_heightmap) { // also generates heightmap
 
 	//RESET_TIME;
 	get_colors(a, b);

@@ -277,10 +277,13 @@ public:
 			set_vert_shader("planet_draw");
 			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+planet_rings");
 			shared_setup("ring_tex");
-			add_uniform_int("noise_tex", 1);
+			add_uniform_int("noise_tex",     1);
+			add_uniform_int("particles_tex", 2);
 		}
 		set_active_texture(1);
 		select_texture(NOISE_GEN_MIPMAP_TEX, 0);
+		set_active_texture(2);
+		select_texture(SPARSE_NOISE_TEX, 0);
 		set_active_texture(0);
 		enable();
 		add_uniform_vector3d("planet_pos", planet_pos);
