@@ -18,6 +18,7 @@ float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for 
 float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader asteroids
 
 
+extern float fticks;
 extern vector<us_weapon> us_weapons;
 
 shader_t cached_voxel_shaders[8]; // one for each value of num_lights
@@ -524,6 +525,16 @@ void uasteroid_field::gen_asteroids() {
 }
 
 
+void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { // only needs to be called when visible
+
+	if (empty() || calc_sphere_size((pos + pos_), camera, AST_RADIUS_SCALE*radius) < 1.0) return; // asteroids are too small/far away
+
+	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
+		i->apply_physics(pos, radius); // FIXME: collisions between asteroids?
+	}
+}
+
+
 void setup_ship_draw_shader(shader_t &s);
 
 
@@ -585,10 +596,20 @@ void uasteroid::gen(upos_point_type const &pos_offset, float max_dist, float max
 
 	assert(max_radius > 0.0 && max_radius < max_dist && max_radius);
 	rgen_values();
-	radius  = max_radius*rand_uniform(0.1, 1.0);
-	pos     = pos_offset + signed_rand_vector2_spherical(max_dist - radius);
-	inst_id = rand2() % NUM_AST_MODELS;
+	radius   = max_radius*rand_uniform(0.1, 1.0);
+	pos      = pos_offset + signed_rand_vector2_spherical(max_dist - radius);
+	rot_ang0 = 0.5*fabs(rand_gaussian2(0.0, 1.0)); // rotation rate
+	UNROLL_3X(velocity[i_] = 0.0002*rand_gaussian2(0.0, 1.0);)
+	inst_id  = rand2() % NUM_AST_MODELS;
 	UNROLL_3X(scale[i_] = rand_uniform2(0.5, 1.0);)
+}
+
+
+void uasteroid::apply_physics(point const &af_pos, float af_radius) {
+
+	rot_ang += fticks*rot_ang0;
+	pos     += velocity;
+	if (!dist_less_than((pos - af_pos), all_zeros, (af_radius - radius))) {velocity *= -1.0;} // outside asteroid field bounds, reverse
 }
 
 
@@ -601,7 +622,7 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) cons
 }
 
 
-void uasteroid::destroy() {
+void uasteroid::destroy() { // FIXME: gen fragments with the same velocity?
 
 	def_explode(u_exp_size[UTYPE_ASTEROID], ETYPE_ANIM_FIRE, signed_rand_vector());
 	gen_fragments(zero_vector, get_eq_vol_scale(scale)); // either implementation works, but fragments are very dark (no added ambient)

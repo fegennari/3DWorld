@@ -300,7 +300,7 @@ void process_univ_objects() {
 						point const cpos(asteroid.pos + norm*(rsum/nmag)); // normalize, multiply, and add
 						uobj->set_sobj_coll();
 						uobj->move_to(cpos); // setup correct position for explode?
-						uobj->collision(asteroid.pos, zero_vector, S_BODY_DENSITY, asteroid.radius, NULL, elastic); // large mass
+						uobj->collision(asteroid.pos, asteroid.get_velocity(), S_BODY_DENSITY, asteroid.radius, NULL, elastic); // large mass
 						uobj->move_to(cpos); // more accurate since this takes into account the terrain
 					}
 				}

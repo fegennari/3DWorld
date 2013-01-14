@@ -635,6 +635,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 			uasteroid_field::begin_render(usg.asteroid_shader);
 
 			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
+				if (animate2) {i->apply_physics(pos, camera);}
 				i->draw(pos, camera, usg.asteroid_shader);
 			}
 			uasteroid_field::end_render(usg.asteroid_shader);
