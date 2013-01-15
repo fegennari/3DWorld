@@ -530,7 +530,54 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 	if (empty() || calc_sphere_size((pos + pos_), camera, AST_RADIUS_SCALE*radius) < 1.0) return; // asteroids are too small/far away
 
 	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
-		i->apply_physics(pos, radius); // FIXME: collisions between asteroids?
+		i->apply_physics(pos, radius);
+	}
+
+	// check for collisions between asteroids
+	unsigned const grid_sz = 8;
+	static vector<unsigned> grid[grid_sz][grid_sz][grid_sz];
+	float const mult(0.5*grid_sz/radius);
+
+	for (unsigned z = 0; z < grid_sz; ++z) {
+		for (unsigned y = 0; y < grid_sz; ++y) {
+			for (unsigned x = 0; x < grid_sz; ++x) {
+				grid[z][y][x].resize(0);
+			}
+		}
+	}
+	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
+		unsigned const ix(i - begin());
+		unsigned bnds[3][2];
+
+		for (unsigned d = 0; d < 3; ++d) {
+			bnds[d][0] = max(0, min((int)grid_sz-1, int((i->pos[d] - i->radius - (pos[d] - radius))*mult)));
+			bnds[d][1] = max(0, min((int)grid_sz-1, int((i->pos[d] + i->radius - (pos[d] - radius))*mult)));
+		}
+		for (unsigned z = bnds[2][0]; z <= bnds[2][1]; ++z) {
+			for (unsigned y = bnds[1][0]; y <= bnds[1][1]; ++y) {
+				for (unsigned x = bnds[0][0]; x <= bnds[0][1]; ++x) {
+					vector<unsigned> &gv(grid[z][y][x]);
+
+					for (vector<unsigned>::const_iterator g = gv.begin(); g != gv.end(); ++g) {
+						uasteroid &j(at(*g));
+						float const dmin(i->radius + j.radius);
+						if (!dist_less_than(i->pos, j.pos, dmin)) continue;
+						vector3d norm_dir(i->pos - j.pos);
+						UNROLL_3X(norm_dir[i_] /= (i->get_scale()[i_]*j.get_scale()[i_]);)
+						if (norm_dir.mag_sq() < dmin*dmin) continue;
+						// see free_obj::coll_physics(): v1' = v1*(m1 - m2)/(m1 + m2) + v2*2*m2/(m1 + m2)
+						float const mi(i->get_rel_mass()), mj(j.get_rel_mass());
+						vector3d const &vi(i->get_velocity()), &vj(j.get_velocity());
+						vector3d const vin(vi*(mi - mj)/(mi + mj) + vj*2*mj/(mi + mj));
+						vector3d const vjn(vj*(mj - mi)/(mj + mi) + vi*2*mi/(mj + mi));
+						//cout << "mi: " << mi << ", mj: " << mj << ", vi: " << vi.mag() << ", vj: " << vj.mag() << ", vin: " << vin.mag() << ", vjn: " << vjn.mag() << endl;
+						i->set_velocity(vin);
+						j.set_velocity(vjn);
+					}
+					gv.push_back(ix);
+				}
+			}
+		}
 	}
 }
 

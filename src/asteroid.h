@@ -18,8 +18,10 @@ public:
 	void apply_physics(point const &af_pos, float af_radius);
 	void draw(point_d const &pos_, point const &camera, shader_t &s) const;
 	void destroy();
+	void set_velocity(vector3d const &v) {velocity = v;}
 	vector3d const &get_scale()    const {return scale;}
 	vector3d const &get_velocity() const {return velocity;}
+	float get_rel_mass()           const {return scale.x*scale.y*scale.z*radius*radius*radius;} // mass is proportional to volume which is proportional to radius^3
 
 	virtual std::string get_name() const {return "Asteroid";}
 	virtual bool rename(std::string const &name_) {return 0;} // not renaemable
