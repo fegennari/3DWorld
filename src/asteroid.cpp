@@ -452,6 +452,7 @@ unsigned const AST_FLD_MAX_NUM   = 1000;
 float    const AST_RADIUS_SCALE  = 0.04;
 float    const AST_AMBIENT_SCALE = 20.0;
 float    const AST_AMBIENT_VAL   = 0.15;
+float    const AST_VEL_SCALE     = 0.0002;
 float    const NDIV_SCALE_AST    = 800.0;
 
 
@@ -560,6 +561,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 
 					for (vector<unsigned>::const_iterator g = gv.begin(); g != gv.end(); ++g) {
 						uasteroid &j(at(*g));
+						if (j.last_coll_id == ix) continue; // already collided with this object
 						float const dmin(i->radius + j.radius);
 						if (!dist_less_than(i->pos, j.pos, dmin)) continue;
 						vector3d norm_dir(i->pos - j.pos);
@@ -570,9 +572,8 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 						vector3d const &vi(i->get_velocity()), &vj(j.get_velocity());
 						vector3d const vin(vi*(mi - mj)/(mi + mj) + vj*2*mj/(mi + mj));
 						vector3d const vjn(vj*(mj - mi)/(mj + mi) + vi*2*mi/(mj + mi));
-						//cout << "mi: " << mi << ", mj: " << mj << ", vi: " << vi.mag() << ", vj: " << vj.mag() << ", vin: " << vin.mag() << ", vjn: " << vjn.mag() << endl;
-						i->set_velocity(vin);
-						j.set_velocity(vjn);
+						i->set_velocity(vin); i->last_coll_id = *g;
+						j.set_velocity (vjn); j.last_coll_id  = ix; // FIXME: move so they don't collide?
 					}
 					gv.push_back(ix);
 				}
@@ -646,7 +647,7 @@ void uasteroid::gen(upos_point_type const &pos_offset, float max_dist, float max
 	radius   = max_radius*rand_uniform(0.1, 1.0);
 	pos      = pos_offset + signed_rand_vector2_spherical(max_dist - radius);
 	rot_ang0 = 0.5*fabs(rand_gaussian2(0.0, 1.0)); // rotation rate
-	UNROLL_3X(velocity[i_] = 0.0002*rand_gaussian2(0.0, 1.0);)
+	UNROLL_3X(velocity[i_] = AST_VEL_SCALE*rand_gaussian2(0.0, 1.0);)
 	inst_id  = rand2() % NUM_AST_MODELS;
 	UNROLL_3X(scale[i_] = rand_uniform2(0.5, 1.0);)
 }
@@ -654,6 +655,9 @@ void uasteroid::gen(upos_point_type const &pos_offset, float max_dist, float max
 
 void uasteroid::apply_physics(point const &af_pos, float af_radius) {
 
+	last_coll_id = -1;
+	float const vmag(velocity.mag()), vmax(10.0*AST_VEL_SCALE);
+	if (vmag > vmax) {velocity *= vmax/vmag;} // clamp max velocity (from collisions)
 	rot_ang += fticks*rot_ang0;
 	pos     += velocity;
 	if (!dist_less_than((pos - af_pos), all_zeros, (af_radius - radius))) {velocity *= -1.0;} // outside asteroid field bounds, reverse
@@ -665,6 +669,7 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) cons
 	point_d const apos(pos_ + pos);
 	if (!univ_sphere_vis(apos, radius)) return;
 	if (calc_sphere_size(apos, camera, radius) < 1.0) return; // too small/far away
+	//((last_coll_id >= 0) ? RED : WHITE).do_glColor(); // testing
 	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s);
 }
 

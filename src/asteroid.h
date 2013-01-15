@@ -13,7 +13,9 @@ class uasteroid : public uobject, public rotated_obj {
 	vector3d scale, velocity;
 
 public:
-	uasteroid() : inst_id(0) {}
+	int last_coll_id;
+
+	uasteroid() : inst_id(0), last_coll_id(-1) {}
 	void gen(upos_point_type const &pos_offset, float max_dist, float max_radius);
 	void apply_physics(point const &af_pos, float af_radius);
 	void draw(point_d const &pos_, point const &camera, shader_t &s) const;
