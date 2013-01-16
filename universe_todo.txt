@@ -1,4 +1,3 @@
-asteroid-asteroid collisions
 gas giant cyclones
 craters on planets/moons
 Bump map in planet fragment shader using procedural noise

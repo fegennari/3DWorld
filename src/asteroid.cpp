@@ -535,13 +535,11 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 	}
 
 	// check for collisions between asteroids
-	unsigned const grid_sz = 8;
-	static vector<unsigned> grid[grid_sz][grid_sz][grid_sz];
-	float const mult(0.5*grid_sz/radius);
+	float const mult(0.5*AF_GRID_SZ/radius);
 
-	for (unsigned z = 0; z < grid_sz; ++z) {
-		for (unsigned y = 0; y < grid_sz; ++y) {
-			for (unsigned x = 0; x < grid_sz; ++x) {
+	for (unsigned z = 0; z < AF_GRID_SZ; ++z) {
+		for (unsigned y = 0; y < AF_GRID_SZ; ++y) {
+			for (unsigned x = 0; x < AF_GRID_SZ; ++x) {
 				grid[z][y][x].resize(0);
 			}
 		}
@@ -551,15 +549,15 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 		unsigned bnds[3][2];
 
 		for (unsigned d = 0; d < 3; ++d) {
-			bnds[d][0] = max(0, min((int)grid_sz-1, int((i->pos[d] - i->radius - (pos[d] - radius))*mult)));
-			bnds[d][1] = max(0, min((int)grid_sz-1, int((i->pos[d] + i->radius - (pos[d] - radius))*mult)));
+			bnds[d][0] = max(0, min((int)AF_GRID_SZ-1, int((i->pos[d] - i->radius - (pos[d] - radius))*mult)));
+			bnds[d][1] = max(0, min((int)AF_GRID_SZ-1, int((i->pos[d] + i->radius - (pos[d] - radius))*mult)));
 		}
 		for (unsigned z = bnds[2][0]; z <= bnds[2][1]; ++z) {
 			for (unsigned y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 				for (unsigned x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-					vector<unsigned> &gv(grid[z][y][x]);
+					vector<unsigned short> &gv(grid[z][y][x]);
 
-					for (vector<unsigned>::const_iterator g = gv.begin(); g != gv.end(); ++g) {
+					for (vector<unsigned short>::const_iterator g = gv.begin(); g != gv.end(); ++g) {
 						uasteroid &j(at(*g));
 						if (j.last_coll_id == ix) continue; // already collided with this object
 						float const dmin(i->radius + j.radius);

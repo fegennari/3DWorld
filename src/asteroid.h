@@ -32,7 +32,12 @@ public:
 };
 
 
+unsigned const AF_GRID_SZ = 8;
+
+
 class uasteroid_field : public uobject_base, public vector<uasteroid> {
+
+	vector<unsigned short> grid[AF_GRID_SZ][AF_GRID_SZ][AF_GRID_SZ];
 
 public:
 	static void begin_render(shader_t &shader);
