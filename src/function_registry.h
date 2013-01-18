@@ -512,7 +512,7 @@ float get_texture_component(unsigned tid, float xval, float yval, int comp);
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);
 
 // function prototypes - sun flares
-void DoFlares(point const &from, point const &at, point const &light, float near_clip, float size, float intensity);
+void DoFlares(point const &from, point const &at, point const &light, float near_clip, float size, float intensity, int start_ix=0);
 void load_flare_textures();
 void free_flare_textures();
 

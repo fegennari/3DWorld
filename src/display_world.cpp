@@ -656,10 +656,10 @@ void draw_sun_flare() {
 	point const sun_pos(get_sun_pos());
 
 	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, 4.0*sun_radius, 2)) { // use larger radius to include the flare/halo
+		point const viewer(get_camera_pos());
 		float intensity(1.0);
 
 		if (world_mode == WMODE_GROUND) {
-			point const viewer(get_camera_pos());
 			unsigned const npts = 16;
 			static point pts[npts];
 			static bool pts_valid(0);
@@ -677,9 +677,7 @@ void draw_sun_flare() {
 		}
 		int const fog_enbaled(glIsEnabled(GL_FOG));
 		glDisable(GL_FOG);
-		glDisable(GL_DEPTH_TEST);
-		DoFlares(get_camera_pos(), camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0), intensity);
-		glEnable(GL_DEPTH_TEST);
+		DoFlares(viewer, camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0), intensity);
 		if (fog_enbaled) glEnable(GL_FOG);
 	}
 	//PRINT_TIME("Query + Flare");

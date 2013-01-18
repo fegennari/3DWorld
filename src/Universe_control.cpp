@@ -38,6 +38,7 @@ extern universe_t universe;
 
 void process_univ_objects();
 void check_shift_universe();
+void draw_universe_sun_flare();
 
 
 void setup_universe_fog(s_object const &closest, bool damaged);
@@ -257,6 +258,7 @@ void draw_universe(bool static_only, bool skip_closest, bool no_distant) { // sh
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(get_universe_ambient_light());
 	glEnable(GL_LIGHT0);
+	//draw_universe_sun_flare(); // doesn't look right
 	inited = 1;
 	if (TIMETEST) PRINT_TIME(" Final Universe");
 }
@@ -465,6 +467,46 @@ bool universe_intersection_test(point const &pos, vector3d const &dir, float ran
 	point coll; // unused
 	s_object target;
 	return (universe.get_trajectory_collisions(target, coll, dir, pos, range, 0.0) && target.is_solid());
+}
+
+
+bool universe_ray_intersect(point const &start, point const &end, int obj_types, uobject const *cur=NULL, free_obj const *ignore=NULL) {
+
+	vector3d const dir((end - start).get_norm());
+	float const range(p2p_dist(start, end));
+	//if ((obj_types & OBJ_TYPE_UOBJ) && universe_intersection_test(start, dir, range)) return 1;
+	line_int_data li_data(start, dir, range, cur, ignore, 0, 0); // not sure how cur and ignore are used, or if it makes sense to pass them in here
+	li_data.even_ncoll = 1;
+	free_obj *fobj = NULL; // unused
+	uobject *uobj(line_intersect_objects(li_data, fobj, obj_types));
+	//if (uobj != NULL && uobj != cur && uobj != ignore) {cout << "intersects " << uobj->get_name() << endl;}
+	return (uobj != NULL && uobj != cur && uobj != ignore);
+}
+
+
+void draw_universe_sun_flare() {
+
+	if (clobj0.type < UTYPE_SYSTEM) return; // no star
+	ustar const &sun(clobj0.get_star());
+	if (!sun.is_ok() || !univ_sphere_vis((sun.pos + clobj0.get_ucell().rel_center), sun.radius)) return;
+	float intensity(1.0);
+	u_ship const &ps(player_ship());
+	point const viewer(ps.get_pos());
+	unsigned const npts = 16;
+	static point pts[npts];
+	static bool pts_valid(0);
+	unsigned nvis(0);
+	
+	for (unsigned i = 0; i < npts; ++i) {
+		if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
+		point const pos(sun.pos + pts[i]*sun.radius);
+		if (!universe_ray_intersect(viewer, pos, OBJ_TYPE_ALL, &sun, &ps)) {++nvis;}
+	}
+	pts_valid = 1;
+	if (nvis == 0) return;
+	intensity = 0.1 + 0.9*float(nvis)/float(npts);
+	point const gv(make_pt_global(viewer));
+	DoFlares(gv, (gv + player_ship().get_dir()), make_pt_global(sun.pos), 0.01, 0.02, intensity, 4); // draw only some flares
 }
 
 

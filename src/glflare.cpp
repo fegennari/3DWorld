@@ -50,7 +50,7 @@ unsigned char *load_luminance(std::string const &filename, int *width, int *heig
 
 
 
-void DoFlares(point const &from, point const &at, point const &light, float near_clip, float size, float intensity) {
+void DoFlares(point const &from, point const &at, point const &light, float near_clip, float size, float intensity, int start_ix) {
 
 	if (brightness == 0.0) return;
 	assert(brightness > 0.0);
@@ -79,7 +79,7 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 	vector3d const dy(cross_product(dx2, dx).get_norm());
 	float const cscale(intensity*pow((double)max(brightness, 0.6f), 1.5));
 
-	for (int i = 0; i < num_flares; i++) {
+	for (int i = start_ix; i < num_flares; i++) {
 		float const scale(flare[i].scale * global_scale * size);
 		vector3d const sx(dx*scale), sy(dy*scale);
 		colorRGBA c(flare[i].color);
