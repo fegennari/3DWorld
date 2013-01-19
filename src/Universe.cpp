@@ -216,12 +216,12 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(float atmosphere, float cloud_scale, float water, float lava, shadow_vars_t const &svars, bool gas_giant, bool use_light2) {
+	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
 			setup_planet_star_shader();
-			if (gas_giant) {set_prefix("#define GAS_GIANT", 1);} // FS
+			if (body.gas_giant) {set_prefix("#define GAS_GIANT", 1);} // FS
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			set_vert_shader("planet_draw");
 			set_frag_shader("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+planet_draw");
@@ -235,10 +235,19 @@ public:
 		add_uniform_vector3d("rscale",   svars.rscale);
 		add_uniform_float("ring_ri",     svars.ring_ri);
 		add_uniform_float("ring_ro",     svars.ring_ro);
-		add_uniform_float("noise_scale", 4.0*cloud_scale); // clouds
-		add_uniform_float("spec_scale",  ((water > 0.0) ? 1.0 : 0.0));
-		add_uniform_float("lava_scale",  ((lava  > 0.0) ? 1.0 : 0.0));
-		set_planet_uniforms(atmosphere, svars, use_light2);
+		add_uniform_float("noise_scale", 4.0*body.cloud_scale); // clouds
+		add_uniform_float("water_val",   body.water);
+		add_uniform_float("lava_val",    body.lava);
+#if 0
+		add_uniform_float("planet_radius", body.radius);
+		add_uniform_float("hmap_scale",  body.get_hmap_scale());
+		add_uniform_float("snow_thresh", body.snow_thresh);
+		add_uniform_float("temperature", body.temp);
+		add_uniform_float("wr_scale",    body.wr_scale);
+		add_uniform_color("color_a",     colorRGB(body.colorA));
+		add_uniform_color("color_b",     colorRGB(body.colorB));
+#endif
+		set_planet_uniforms(body.atmos, svars, use_light2);
 		return 1;
 	}
 	void disable_planet() {
@@ -270,7 +279,7 @@ public:
 		if (is_setup()) {disable();}
 	}
 
-	bool enable_ring(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius, bool dir) {
+	bool enable_ring(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir) {
 		if (disable_shaders) return 0;
 		
 		if (!is_setup()) {
@@ -287,9 +296,9 @@ public:
 		set_active_texture(0);
 		enable();
 		add_uniform_vector3d("planet_pos", planet_pos);
-		add_uniform_float("planet_radius", planet_radius);
-		add_uniform_float("ring_ri",       ring_ri);
-		add_uniform_float("ring_ro",       ring_ro);
+		add_uniform_float("planet_radius", planet.radius);
+		add_uniform_float("ring_ri",       planet.ring_ri);
+		add_uniform_float("ring_ro",       planet.ring_ro);
 		add_uniform_vector3d("sun_pos",    sun_pos);
 		add_uniform_float("sun_radius",    sun_radius);
 		add_uniform_float("bf_draw_sign",  (dir ? -1.0 : 1.0));
@@ -305,7 +314,7 @@ public:
 		}
 	}
 
-	bool enable_atmospheric(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars) {
+	bool enable_atmospheric(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {
 		if (disable_shaders) return 0;
 		
 		if (!is_setup()) {
@@ -317,9 +326,9 @@ public:
 		enable();
 		add_uniform_vector3d("camera_pos", make_pt_global(get_player_pos()));
 		add_uniform_vector3d("planet_pos", planet_pos);
-		add_uniform_float("planet_radius", planet_radius);
-		add_uniform_float("atmos_radius",  atmos_radius);
-		set_planet_uniforms(atmosphere, svars, 0); // atmosphere has no planet reflection light (light2)
+		add_uniform_float("planet_radius", planet.radius/PLANET_ATM_RSCALE);
+		add_uniform_float("atmos_radius",  planet.radius*PLANET_ATM_RSCALE);
+		set_planet_uniforms(planet.atmos, svars, 0); // atmosphere has no planet reflection light (light2)
 		return 1;
 	}
 	void disable_atmospheric() {
@@ -334,18 +343,18 @@ class ushader_group {
 public:
 	shader_t nebula_shader, asteroid_shader;
 
-	bool enable_planet_shader(float atmosphere, float cloud_scale, float water, float lava, shadow_vars_t const &svars, bool gas_giant, bool use_light2) {
-		return planet_shader[svars.ring_ro > 0.0][gas_giant].enable_planet(atmosphere, cloud_scale, water, lava, svars, gas_giant, use_light2);
+	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
+		return planet_shader[svars.ring_ro > 0.0][body.gas_giant].enable_planet(body, svars, use_light2);
 	}
 	void disable_planet_shader() {planet_shader[0][0].disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
 	void disable_star_shader() {star_shader.disable_star();}
-	bool enable_ring_shader(point const &planet_pos, float planet_radius, float ring_ri, float ring_ro, point const &sun_pos, float sun_radius, bool dir) {
-		return ring_shader.enable_ring(planet_pos, planet_radius, ring_ri, ring_ro, sun_pos, sun_radius, dir);
+	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir) {
+		return ring_shader.enable_ring(planet, planet_pos, sun_pos, sun_radius, dir);
 	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
-	bool enable_atmospheric_shader(point const &planet_pos, float planet_radius, float atmos_radius, float atmosphere, shadow_vars_t const &svars) {
-		return atmospheric_shader.enable_atmospheric(planet_pos, planet_radius, atmos_radius, atmosphere, svars);
+	bool enable_atmospheric_shader(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {
+		return atmospheric_shader.enable_atmospheric(planet, planet_pos, svars);
 	}
 	void disable_atmospheric_shader() {atmospheric_shader.disable_atmospheric();}
 };
@@ -1767,7 +1776,7 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 	bool const frozen(temp < FREEZE_TEMP);
 	unsigned char const white[3] = {255, 255, 255};
 	unsigned char const gray[3]  = {100, 100, 100};
-	float const coldness(fabs(phi - PI_TWO)*2.0*PI_INV);
+	float const coldness(fabs(phi - PI_TWO)*2.0*PI_INV); // phi=PI/2 => equator, phi=0.0 => north pole, phi=PI => south pole
 
 	if (val < water) { // underwater
 		RGB_BLOCK_COPY(data, wic[frozen]);
@@ -1817,8 +1826,7 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 			if (coldness > 0.9) {BLEND_COLOR(data, white, data, 10.0*(coldness - 0.9));} // ice
 			return;
 		}
-		// phi=PI/2 => equator, phi=0.0 => north pole, phi=PI => south pole
-		float const coldness(fabs(phi - PI_TWO)*2.0*PI_INV), st((1.0 - coldness*coldness)*snow_thresh);
+		float const st((1.0 - coldness*coldness)*snow_thresh);
 
 		if (val > (st + 1.0E-6)) { // blend in some snow
 			BLEND_COLOR(data, white, data, (val - st)/(1.0 - st));
@@ -2123,7 +2131,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
-		if (texture) {usg.enable_planet_shader(atmos, cloud_scale, water, lava, svars, gas_giant, use_light2);}
+		if (texture) {usg.enable_planet_shader(*this, svars, use_light2);}
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();
@@ -2326,7 +2334,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	assert(ring_tid > 0);
 	bind_1d_texture(ring_tid);
 	assert(ring_ri > 0.0 && ring_ri < ring_ro);
-	usg.enable_ring_shader(make_pt_global(pos_), radius, ring_ri, ring_ro, make_pt_global(sun_pos), sun_radius, dir); // even in !do_texture mode?
+	usg.enable_ring_shader(*this, make_pt_global(pos_), make_pt_global(sun_pos), sun_radius, dir); // even in !do_texture mode?
 	enable_blend(); // must be drawn last
 	glPushMatrix();
 	global_translate(pos_);
@@ -2344,7 +2352,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const {
 
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
-	if (!usg.enable_atmospheric_shader(make_pt_global(pos_), radius/PLANET_ATM_RSCALE, cloud_radius, atmos, svars)) return;
+	if (!usg.enable_atmospheric_shader(*this, make_pt_global(pos_), svars)) return;
 	enable_blend();
 	set_fill_mode();
 	WHITE.do_glColor();

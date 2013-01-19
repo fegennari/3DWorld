@@ -198,7 +198,6 @@ class urev_body : public uobj_solid, public color_gen_class, public rotated_obj 
 
 	// for textures/colors
 	unsigned char a[3], b[3];
-	float wr_scale, snow_thresh;
 	
 	void calc_snow_thresh();
 
@@ -206,7 +205,7 @@ public:
 	bool gas_giant; // planets only?
 	int owner;
 	unsigned orbiting_refs, tid, tsize;
-	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_scale;
+	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_scale, wr_scale, snow_thresh;
 	vector3d rev_axis, v_orbit;
 	upsurface *surface;
 	string comment;
