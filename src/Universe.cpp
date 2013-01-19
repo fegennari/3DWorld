@@ -2037,8 +2037,9 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 	}
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
 		vector3d const velocity(get_player_velocity());
+		float const psize(get_pixel_size(velocity.mag(), dist));
 		bool const small(size < 1.5);
-		bool const draw_as_line(get_pixel_size(velocity.mag(), dist) > 1.0); // lines of light - "warp speed"
+		bool const draw_as_line(psize > 1.0 && psize*cross_product(velocity.get_norm(), vcp.get_norm()).mag() > 1.0); // lines of light - "warp speed"
 		point const normal(camera - pos_);
 		pos_ = make_pt_global(pos_);
 
@@ -2109,11 +2110,10 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
 		bool const small(size < 1.5);
-		pos_ = make_pt_global(pos_);
 		ocolor.do_glColor();
-		(camera - pos_).do_glNormal(); // orient towards camera
+		vcp.get_norm().do_glNormal(); // orient towards camera
 		if (!small) glPointSize(2.0); // 2 pixel diameter
-		draw_point(pos_);
+		draw_point(make_pt_global(pos_));
 		if (!small) glPointSize(1.0);
 	}
 	else { // sphere
