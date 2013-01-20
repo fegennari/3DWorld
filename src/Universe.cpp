@@ -1267,6 +1267,7 @@ void ussystem::process() {
 		float const dmax(planets[i].orbit + planets[i].radius + MOON_TO_PLANET_MAX_SPACING + MOON_MAX_SIZE);
 		radius = max(radius, dmax); // too bad we can't use p.mosize
 	}
+	sun.num_satellites = planets.size();
 	radius = max(radius, 0.5f*(PLANET_TO_SUN_MIN_SPACING + PLANET_TO_SUN_MAX_SPACING)); // set min radius so that hyperspeed coll works
 	gen    = 1;
 }
@@ -1280,7 +1281,7 @@ bool urev_body::can_land() const {
 
 bool urev_body::colonizable() const {
 
-	return (is_ok() && !gas_giant && temp >= MIN_COLONY_TEMP && temp <= MAX_COLONY_TEMP && colonizable_int());
+	return (is_ok() && temp >= MIN_COLONY_TEMP && temp <= MAX_COLONY_TEMP && colonizable_int());
 }
 
 
@@ -1404,6 +1405,7 @@ void uplanet::process() {
 		assert(T_sq > 0.0);
 		rot_rate = ROT_RATE_CONST/(10.0*TICKS_PER_SECOND*sqrt(T_sq));
 	}
+	num_satellites = moons.size();
 	gen = 1;
 }
 
@@ -2387,9 +2389,9 @@ bool umoon::shadowed_by_planet() {
 string urev_body::get_info() const {
 
 	ostringstream oss;
-	oss << "Radius: " << radius << ", Temp: " << temp << ", Resources: " << resources
-		<< ", Water: " << water << ", Atmos: " << atmos 
-		<< endl << "Can Land: " << can_land() << ", Colonizable: " << colonizable() << ", Liveable: " << liveable() << comment;
+	oss << "Radius: " << radius << ", Temp: " << temp << ", Resources: " << resources << ", Water: " << water
+		<< ", Atmos: " << atmos  << endl << "Can Land: " << can_land() << ", Colonizable: " << colonizable()
+		<< ", Liveable: " << liveable() << ", Satellites: " << num_satellites << comment;
 	get_owner_info(oss);
 	return oss.str();
 }
@@ -2398,7 +2400,7 @@ string urev_body::get_info() const {
 string ustar::get_info() const {
 
 	ostringstream oss;
-	oss << "Radius: " << radius << ", Temp: " << 100.0*temp;
+	oss << "Radius: " << radius << ", Temp: " << 100.0*temp << ", Planets: " << num_satellites;
 	return oss.str();
 }
 

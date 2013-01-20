@@ -25,6 +25,9 @@ shader_t cached_voxel_shaders[8]; // one for each value of num_lights
 shader_t cached_proc_shaders [8];
 
 
+void set_uniform_atten_lighting(int light);
+
+
 void clear_cached_shaders() {
 
 	for (unsigned i = 0; i < 8; ++i) {
@@ -451,7 +454,7 @@ unsigned const NUM_AST_MODELS    = 100;
 unsigned const AST_FLD_MAX_NUM   = 1000;
 float    const AST_RADIUS_SCALE  = 0.04;
 float    const AST_AMBIENT_SCALE = 20.0;
-float    const AST_AMBIENT_VAL   = 0.05;
+float    const AST_AMBIENT_VAL   = 0.15;
 float    const AST_VEL_SCALE     = 0.0002;
 float    const NDIV_SCALE_AST    = 800.0;
 
@@ -581,9 +584,6 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 }
 
 
-void setup_ship_draw_shader(shader_t &s);
-
-
 void uasteroid_field::begin_render(shader_t &shader) {
 
 	if (!shader.is_setup()) {
@@ -598,9 +598,10 @@ void uasteroid_field::begin_render(shader_t &shader) {
 	BLACK.do_glColor();
 	glEnable(GL_LIGHTING);
 	colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, &acolor.R);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, &BLACK.R);
-	set_star_light_atten(GL_LIGHT0, 0.0);
+	int const light(GL_LIGHT0);
+	glLightfv(light, GL_AMBIENT, &acolor.R);
+	glLightfv(light, GL_DIFFUSE, &BLACK.R);
+	set_uniform_atten_lighting(light);
 }
 
 

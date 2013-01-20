@@ -370,6 +370,14 @@ void reset_planet_defaults() {
 }
 
 
+void set_uniform_atten_lighting(int light) {
+
+	glLightf(light, GL_CONSTANT_ATTENUATION,  1.0);
+	glLightf(light, GL_LINEAR_ATTENUATION,    0.0);
+	glLightf(light, GL_QUADRATIC_ATTENUATION, 0.0);
+}
+
+
 void setup_lighting(bool underwater, float depth) {
 	
 	// background color code
@@ -382,7 +390,7 @@ void setup_lighting(bool underwater, float depth) {
 	glDisable(GL_LIGHT2);
 	set_gl_light_pos(GL_LIGHT0, sun_pos*light_pos_scale,  LIGHT_W_VAL);
 	set_gl_light_pos(GL_LIGHT1, moon_pos*light_pos_scale, LIGHT_W_VAL);
-	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0); // reset attenuation to 1.0
+	set_uniform_atten_lighting(GL_LIGHT0); // reset attenuation to 1.0
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
 	set_fsource_light();

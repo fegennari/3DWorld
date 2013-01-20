@@ -159,10 +159,11 @@ class uobj_solid : public uobj_rgen, public named_obj { // size = 176
 
 public:
 	char type;
+	unsigned short num_satellites;
 	float temp, density, mass, gravity;
 	colorRGBA color, colorA, colorB;
 
-	uobj_solid(char type_) : type(type_) {set_defaults();}
+	uobj_solid(char type_) : type(type_), num_satellites(0) {set_defaults();}
 	virtual ~uobj_solid() {}
 	void set_defaults() {status = 0; gen = 0;}
 	void get_colors(unsigned char ca[3], unsigned char cb[3]) const;
@@ -276,8 +277,8 @@ public:
 	void gen_color();
 	void calc_temperature();
 	void get_valid_orbit_r(float &orbit_r, float obj_r) const;
-	bool colonizable_int() const {return (water > 0.1 && atmos > 0.1);}
-	bool has_vegetation()  const {return (water > 0.2 && atmos > 0.1);}
+	bool colonizable_int() const {return (!gas_giant && water > 0.1 && atmos > 0.1);}
+	bool has_vegetation()  const {return (!gas_giant && water > 0.2 && atmos > 0.1);}
 	float get_vegetation() const;
 	void ensure_rings_texture();
 	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir) const;

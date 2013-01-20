@@ -151,7 +151,8 @@ void main()
 
 		if (heat > 0.0) { // lava patch
 			heat *= gen_cloud_alpha(2.0*vertex);
-			color = mix(color, vec3(1.0, 0.25*heat, 0.0), heat); // add lava
+			//color = mix(color, vec3(1.0, 0.25*heat, 0.0), heat); // add lava
+			color += heat*vec3(1.0, 0.25*heat, 0.0); // add lava
 		}
 	}
 #endif
