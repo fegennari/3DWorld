@@ -2466,13 +2466,13 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 		if (max_level >= UTYPE_MOON) { // check for asteroid collisions
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
 				if (!dist_less_than(pos, i->pos, expand*i->radius)) continue;
-				result.asteroid_field = (i - galaxy.asteroid_fields.begin());
 
 				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) { // FIXME: subdivision?
 					if (!dist_less_than(pos, j->pos, expand*j->radius)) continue;
 					float const dista(p2p_dist(pos, j->pos));
 					result.assign(gc, -1, -1, j->radius/max(TOLERANCE, dista), dista, UTYPE_ASTEROID, NULL);
-					result.asteroid = (j - i->begin());
+					result.asteroid_field = (i - galaxy.asteroid_fields.begin());
+					result.asteroid       = (j - i->begin());
 				}
 			}
 		}
@@ -3123,13 +3123,15 @@ ucell &s_object::get_ucell() const {
 uasteroid_field &s_object::get_asteroid_field() const {
 	assert(type == UTYPE_ASTEROID);
 	ugalaxy &g(get_galaxy());
-	assert(asteroid_field >= 0 && (unsigned)asteroid_field < g.asteroid_fields.size());
+	assert(asteroid_field >= 0);
+	assert((unsigned)asteroid_field < g.asteroid_fields.size());
 	return g.asteroid_fields[asteroid_field];
 }
 
 uasteroid &s_object::get_asteroid() const {
 	uasteroid_field &af(get_asteroid_field());
-	assert(asteroid >= 0 && (unsigned)asteroid < af.size());
+	assert(asteroid >= 0);
+	assert((unsigned)asteroid < af.size());
 	return af[asteroid];
 }
 
