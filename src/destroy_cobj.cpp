@@ -506,6 +506,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			return 2; // FIXME
 		case COLL_POLYGON:
 			for (int i = 0; i < c.npoints; ++i) {
+				if (contains_pt(c.points[i])) return 1; // definite intersection
 				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
 			}
 			if (c.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
