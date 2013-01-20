@@ -38,7 +38,7 @@ unsigned const RING_TEX_SZ   = 256;
 unsigned const MIN_GALAXIES_PER_CELL   = 1;
 unsigned const MAX_GALAXIES_PER_CELL   = 4;
 unsigned const MIN_AST_FIELD_PER_GALAXY= 0;
-unsigned const MAX_AST_FIELD_PER_GALAXY= 15;
+unsigned const MAX_AST_FIELD_PER_GALAXY= 8;
 unsigned const MIN_NEBULAS_PER_GALAXY  = 0;
 unsigned const MAX_NEBULAS_PER_GALAXY  = 2;
 unsigned const MAX_SYSTEMS_PER_GALAXY  = 500;
@@ -600,6 +600,9 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 	point const &camera(get_player_pos());
 	point_d const pos(rel_center);
 
+	// use lower detail when the player is moving quickly in hyperspeed since objects zoom by so quickly
+	float const velocity_mag(get_player_velocity().mag()), sscale_val(1.0/max(1.0f, velocity_mag)); // up to 2.5x lower
+
 	if (nebula_pass) {
 		unebula::begin_render(usg.nebula_shader);
 
@@ -683,7 +686,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 			bool const sel_sun(sel_s && (clobj.type == UTYPE_STAR || clobj.type == UTYPE_SYSTEM));
 			bool const skip_s(p_system2 && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
 			bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(spos, 2.0*sradius));
-			bool const planets_visible(PLANET_MAX_SIZE*sizes >= 0.3*sradius || !sclip);
+			bool const planets_visible(PLANET_MAX_SIZE*sscale_val*sizes >= 0.3*sradius || !sclip);
 			current.system  = j;
 			current.cluster = sol.cluster_id;
 
@@ -716,7 +719,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 					uplanet &planet(sol.planets[k]);
 					point_d const ppos(pos + planet.pos);
 					if (sel_s && (p2p_dist_sq(camera, ppos) < p2p_dist_sq(camera, spos)) != sol_draw_pass) continue; // don't draw planet in this pass
-					float const pradius(PLANET_ATM_RSCALE*planet.radius), sizep(calc_sphere_size(ppos, camera, pradius));
+					float const pradius(PLANET_ATM_RSCALE*planet.radius), sizep(sscale_val*calc_sphere_size(ppos, camera, pradius));
 					bool skip_draw(!planets_visible);
 
 					if (sclip && sizep < (planet.ring_data.empty() ? 0.6 : 0.3)) {
@@ -782,7 +785,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 							umoon &moon(planet.moons[l]);
 							if (!moon.is_ok()) continue;
 							point_d const mpos(pos + moon.pos);
-							float const sizem(calc_sphere_size(mpos, camera, moon.radius));
+							float const sizem(sscale_val*calc_sphere_size(mpos, camera, moon.radius));
 							if ((sizem < 0.2 && sclip) || !univ_sphere_vis(mpos, moon.radius)) continue;
 							current.moon = l;
 							moon.check_gen_texture(int(sizem));
@@ -2040,8 +2043,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
 		vector3d const velocity(get_player_velocity());
 		float const psize(get_pixel_size(velocity.mag(), dist));
-		bool const small(size < 1.5);
-		bool const draw_as_line(psize > 1.0 && psize*cross_product(velocity.get_norm(), vcp.get_norm()).mag() > 1.0); // lines of light - "warp speed"
+		bool const small(size < 1.5), draw_as_line(psize > 1.0); // lines of light - "warp speed"
 		point const normal(camera - pos_);
 		pos_ = make_pt_global(pos_);
 
