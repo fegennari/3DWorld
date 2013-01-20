@@ -1309,7 +1309,9 @@ void gen_wind_texture() {
 
 
 void noise_fill(unsigned char *data, unsigned size) {
-	for (unsigned i = 0; i < size; ++i) {data[i] = (rand() & 255);}
+
+	rand_gen_t rgen;
+	for (unsigned i = 0; i < size; ++i) {data[i] = (rgen.rand() & 255);}
 }
 
 
@@ -1321,9 +1323,10 @@ void gen_noise_texture() {
 	}
 	unsigned char *data(textures[SPARSE_NOISE_TEX].get_data());
 	unsigned const size(textures[SPARSE_NOISE_TEX].num_pixels());
+	rand_gen_t rgen;
 
 	for (unsigned i = 0; i < size; ++i) {
-		data[i] = (((rand()&7) == 0) ? 255 : 0);
+		data[i] = (((rgen.rand()&7) == 0) ? 255 : 0);
 	}
 }
 
