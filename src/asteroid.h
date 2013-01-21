@@ -7,6 +7,9 @@
 
 #include "universe.h"
 
+unsigned const AF_GRID_SZ = 8;
+
+
 class uasteroid : public uobject, public rotated_obj {
 	
 	unsigned inst_id;
@@ -30,9 +33,6 @@ public:
 	virtual int  get_owner() const {return NO_OWNER;}
 	virtual int  get_fragment_tid(point const &hit_pos) const;
 };
-
-
-unsigned const AF_GRID_SZ = 8;
 
 
 class uasteroid_field : public uobject_base, public vector<uasteroid> {

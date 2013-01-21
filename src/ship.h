@@ -81,6 +81,9 @@ enum {FSPEED_HYPER=0, FSPEED_FAST, FSPEED_SLOW, NUM_FSPEEDS};
 // asteroid models
 enum {AS_MODEL_SPHERE=0, AS_MODEL_ROCK1, AS_MODEL_ROCK2, AS_MODEL_HMAP, AS_MODEL_VOXEL, AS_MODEL_SHADER, NUM_AS_MODELS};
 
+// spawned object types
+enum {SPO_COMET, NUM_SPO_TYPES};
+
 
 // flag bits
 unsigned const OBJ_FLAGS_SHIP = 0x0001; // is a ship
@@ -834,8 +837,37 @@ public:
 	string get_name() const {return "Asteroid";}
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
-	virtual bool has_detailed_coll(free_obj const *const other_obj) const {return 0;}
 	virtual int get_fragment_tid(point const &hit_pos) const {return tex_id;}
+};
+
+
+class uobject_rand_spawn_t : public free_obj {
+
+protected:
+	bool first_pos, pos_valid;
+	float max_cdist; // max distance to camera
+
+	void gen_pos();
+
+public:
+	static uobject_rand_spawn_t *create(unsigned type, float radius_, float dmax, float vmag);
+	uobject_rand_spawn_t(float radius_, float dmax, float vmag);
+
+	// virtuals
+	//float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc);
+	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass, int align, unsigned eflags, free_obj const *parent_);
+	void advance_time(float timestep);
+};
+
+
+class ucomet : public uobject_rand_spawn_t {
+
+public:
+	ucomet(float radius_, float dmax, float vmag);
+	float get_max_t() const {return 1000.0;} // a big number
+	void draw_obj(uobj_draw_data &ddata) const;
+	bool calc_rvs() const {return 1;} // ???
+	string get_name() const {return "Comet";}
 };
 
 

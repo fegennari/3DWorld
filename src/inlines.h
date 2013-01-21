@@ -108,8 +108,8 @@ inline vector3d signed_rand_vector_norm(float scale=1.0) {
 	assert(scale > 0.0);
 
 	while (1) {
-		vector3d const v(signed_rand_vector(scale));
-		if (v.mag_sq() > scale*TOLERANCE) return v.get_norm();
+		vector3d const v(signed_rand_vector());
+		if (v.mag_sq() > TOLERANCE) return scale*v.get_norm();
 	}
 	return zero_vector; // never gets here
 }

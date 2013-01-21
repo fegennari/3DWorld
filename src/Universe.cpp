@@ -2769,7 +2769,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 					float const p_radius(system.planets[i].mosize);
 					if (!dist_less_than(curr, system.planets[i].pos, (p_radius + dist))) continue;
 
-					// *** test against exact planet contour? ***
+					// FIXME: test against exact planet contour?
 					if (line_intersect_sphere(curr, dir, system.planets[i].pos, (p_radius+line_radius), rdist, ldist, t)) {
 						if (asteroid_dist > 0.0 && ldist > asteroid_dist) continue; // asteroid is closer
 						ctest.index = i;
@@ -2807,7 +2807,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 							float const m_radius(planet.moons[i].radius);
 							if (!dist_less_than(curr, planet.moons[i].pos, (m_radius + dist))) continue;
 
-							// *** test against exact moon contour? ***
+							// FIXME: test against exact moon contour?
 							if (line_intersect_sphere(curr, dir, planet.moons[i].pos, (m_radius+line_radius), rdist, ldist, t)) {
 								if (t > 0.0 && ldist <= dist && ldist < ctest.dist) {
 									ctest.index = i; // line intersects moon
@@ -2987,7 +2987,7 @@ void uobject::explode(float damage, float bradius, int etype, vector3d const &ed
 void uobject::def_explode(float size, int etype, vector3d const &edir, int wclass, int align, unsigned eflags, free_obj const *parent_, float dscale) {
 	
 	explode(EXPLOSION_DAMAGE*dscale*size*radius, size*radius, etype, edir, 0, wclass, align, eflags, parent_);
-	assert(!is_ok());
+	//assert(!is_ok()); // not true for comets, or anything else that respawns
 }
 
 
@@ -3137,7 +3137,5 @@ uasteroid &s_object::get_asteroid() const {
 	assert((unsigned)asteroid < af.size());
 	return af[asteroid];
 }
-
-
 
 

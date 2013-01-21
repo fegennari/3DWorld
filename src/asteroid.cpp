@@ -393,11 +393,18 @@ public:
 	}
 
 	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const { // Note: no size check
+		bool const contains(r > radius && dist_less_than(c, pos, r-radius)); // sphere contains asteroid
+		if (contains && !ip.calc_int) return 1;
 		r /= radius; // scale to 1.0
 		point p(c);
 		xform_point(p);
-		if (!model.sphere_intersect(p, r, (ip.calc_int ? &ip.p_int : NULL))) return 0;
 
+		if (contains) {
+			ip.p_int = all_zeros; // report asteroid center as collision point
+		}
+		else if (!model.sphere_intersect(p, r, (ip.calc_int ? &ip.p_int : NULL))) {
+			return 0;
+		}
 		if (ip.calc_int) {
 			ip.norm = (p - pos).get_norm(); // we can't actually calculate the normal, so we use the direction from asteroid center to object center
 			if (ip.p_int == p) {ip.p_int = p - ip.norm*r;} // intersecting at the center, determine actual pos based on normal
@@ -532,7 +539,7 @@ void uasteroid_field::gen_asteroids() {
 	clear();
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
 
-	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
+	for (iterator i = begin(); i != end(); ++i) {
 		i->gen(pos, radius, AST_RADIUS_SCALE*radius);
 	}
 }
@@ -542,7 +549,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 
 	if (empty() || calc_sphere_size((pos + pos_), camera, AST_RADIUS_SCALE*radius) < 1.0) return; // asteroids are too small/far away
 
-	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
+	for (iterator i = begin(); i != end(); ++i) {
 		i->apply_physics(pos, radius);
 	}
 
@@ -556,7 +563,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 			}
 		}
 	}
-	for (vector<uasteroid>::iterator i = begin(); i != end(); ++i) {
+	for (iterator i = begin(); i != end(); ++i) {
 		unsigned const ix(i - begin());
 		unsigned bnds[3][2];
 
@@ -635,7 +642,7 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 	WHITE.do_glColor();
 	draw_sphere_at(make_pt_global(afpos), radius, N_SPHERE_DIV);*/
 
-	for (vector<uasteroid>::const_iterator i = begin(); i != end(); ++i) {
+	for (const_iterator i = begin(); i != end(); ++i) {
 		i->draw(pos_, camera, s);
 	}
 }
@@ -695,6 +702,74 @@ void uasteroid::destroy() {
 
 int uasteroid::get_fragment_tid(point const &hit_pos) const {
 	return asteroid_model_gen.get_fragment_tid(inst_id, pos+hit_pos); // Note: asteroid_field pos is not added to hit_pos here
+}
+
+
+// *** uobject_rand_spawn_t / ucomet ***
+
+
+uobject_rand_spawn_t *uobject_rand_spawn_t::create(unsigned type, float radius_, float dmax, float vmag) {
+	
+	switch (type) {
+	case SPO_COMET: {return new ucomet(radius_, dmax, vmag);}
+	default: assert(0);
+	}
+	return NULL;
+}
+
+
+uobject_rand_spawn_t::uobject_rand_spawn_t(float radius_, float dmax, float vmag) : first_pos(1), pos_valid(0), max_cdist(dmax) {
+
+	assert(radius_ > 0.0 && dmax > 0.0 && vmag >= 0.0); // sanity checks
+	radius   = c_radius = radius_;
+	velocity = ((vmag == 0.0) ? zero_vector : signed_rand_vector(vmag));
+	pos      = all_zeros; // temporary
+}
+
+
+void uobject_rand_spawn_t::gen_pos() {
+
+	vector3d const dir(first_pos ? signed_rand_vector(max_cdist) : signed_rand_vector_norm(max_cdist));
+	pos = get_player_pos() + dir;
+	if (dot_product(velocity, dir) > 0.0) {velocity *= -1.0;} // make it approach the camera
+	first_pos = 0;
+	pos_valid = 1;
+}
+
+
+void uobject_rand_spawn_t::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass, int align, unsigned eflags, free_obj const *parent_) {
+
+	free_obj::explode(0.2*damage, 0.2*bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
+
+	if (status == 1) { // actually exploded and was destroyed
+		status    = 0;
+		pos_valid = 0; // respawn
+	}
+}
+
+
+void uobject_rand_spawn_t::advance_time(float timestep) {
+
+	if (!pos_valid) {gen_pos();}
+	free_obj::advance_time(timestep);
+
+	// if too far from the player, respawn at a different location
+	if (!dist_less_than(pos, get_player_pos(), 1.01*max_cdist)) {pos_valid = 0;}
+}
+
+
+ucomet::ucomet(float radius_, float dmax, float vmag) : uobject_rand_spawn_t(radius_, dmax, vmag) {
+
+	//flags = ???;
+	dir = signed_rand_vector_norm();
+}
+
+
+void ucomet::draw_obj(uobj_draw_data &ddata) const {
+
+	if (!pos_valid) return;
+	ddata.draw_asteroid(ROCK_SPHERE_TEX);
+	//ddata.draw_asteroid(WHITE_TEX);
 }
 
 
