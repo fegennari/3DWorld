@@ -38,8 +38,11 @@ unsigned const AF_GRID_SZ = 8;
 class uasteroid_field : public uobject_base, public vector<uasteroid> {
 
 	vector<unsigned short> grid[AF_GRID_SZ][AF_GRID_SZ][AF_GRID_SZ];
+	int rseed;
 
 public:
+	uasteroid_field() : rseed(0) {}
+	void init(point const &pos, float radius);
 	static void begin_render(shader_t &shader);
 	static void end_render(shader_t &shader);
 	void gen_asteroids();

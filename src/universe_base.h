@@ -68,7 +68,8 @@ public:
 	bool            is_ok()               const {return (status != 1);}
 	void add_gravity_vector_base(vector3d &vgravity, point const &mpos, float gfactor, float gmax) const;
 	void gen_fragments(upos_point_type const &pos_offset=upos_point_type(0,0,0), float rscale=1.0) const;
-	void gen_moving_fragments(point const &hit_pos, unsigned num, int tid=-1, float rscale=1.0, float vscale=1.0) const;
+	void gen_moving_fragments(point const &hit_pos, unsigned num, int tid=-1, float rscale=1.0, float vscale=1.0,
+		vector3d const &vadd=zero_vector, colorRGBA const &pcolor=WHITE) const;
 	virtual std::string get_name() const = 0;
 	virtual std::string get_info() const {return "";}
 	virtual int get_id() const {return 0;} // standard uobject has no id

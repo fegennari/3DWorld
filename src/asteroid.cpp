@@ -517,8 +517,17 @@ public:
 asteroid_model_gen_t asteroid_model_gen;
 
 
+void uasteroid_field::init(point const &pos_, float radius_) {
+
+	pos    = pos_;
+	radius = radius_;
+	rseed  = rand2();
+}
+
+
 void uasteroid_field::gen_asteroids() {
 
+	global_rand_gen.set_state(rseed, 123);
 	if (asteroid_model_gen.empty()) {asteroid_model_gen.gen(NUM_AST_MODELS, AST_FIELD_MODEL);}
 	clear();
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
@@ -674,11 +683,13 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) cons
 }
 
 
-void uasteroid::destroy() { // FIXME: gen fragments with the same velocity?
+void uasteroid::destroy() {
 
+	//int const tid(get_fragment_tid(all_zeros));
+	int const tid(ROCK_SPHERE_TEX);
 	def_explode(u_exp_size[UTYPE_ASTEROID], ETYPE_ANIM_FIRE, signed_rand_vector());
-	gen_fragments(zero_vector, get_eq_vol_scale(scale)); // either implementation works, but fragments are very dark (no added ambient)
-	//asteroid_model_gen.destroy_inst(inst_id, pos, radius*scale);
+	gen_moving_fragments(pos, (40 + (rand()%20)), tid, 2.0*get_eq_vol_scale(scale), 0.5, velocity, WHITE*2.5); // scale up the color to increase ambient
+	//asteroid_model_gen.destroy_inst(inst_id, pos, radius*scale); // fragments don't have correct velocity and are very dark (no added ambient)
 }
 
 

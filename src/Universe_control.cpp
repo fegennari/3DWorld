@@ -1042,19 +1042,17 @@ void uobject::gen_fragments(upos_point_type const &pos_offset, float rscale) con
 		add_uobj(uobj_asteroid::create((pos_offset + pos + signed_rand_vector(1.2*rscale*radius)),
 			0.2*rscale*radius*rand_uniform(0.5, 1.0), AS_MODEL_SPHERE, tex_id, (10*TICKS_PER_SECOND + rand()%TICKS_PER_SECOND))); // temporary
 	}
-	gen_moving_fragments((pos_offset + pos), unsigned(rand_uniform(40, 60)), tex_id, rscale);
+	gen_moving_fragments((pos_offset + pos), (40 + (rand()%20)), tex_id, rscale);
 }
 
 
-void uobject::gen_moving_fragments(point const &hit_pos, unsigned num, int tid, float rscale, float vscale) const {
-
-	colorRGBA const &pcolor(WHITE);
+void uobject::gen_moving_fragments(point const &hit_pos, unsigned num, int tid, float rscale, float vscale, vector3d const &vadd, colorRGBA const &pcolor) const {
 
 	for (unsigned i = 0; i < num; ++i) {
 		unsigned const ltime(5*TICKS_PER_SECOND + rand()%TICKS_PER_SECOND);
 		point ppos(hit_pos + signed_rand_vector(0.5*rscale*radius));
 		ppos += (ppos - pos).get_norm()*0.1*radius;
-		vector3d const vel(((ppos - pos).get_norm() + signed_rand_vector(0.25))*radius*vscale*0.02);
+		vector3d const vel(vadd + ((ppos - pos).get_norm() + signed_rand_vector(0.25))*radius*vscale*0.02);
 		gen_particle(PTYPE_SPHERE, pcolor, pcolor, ltime, ppos, vel, rscale*radius*rand_uniform(0.05, 0.1), 0.0, ALIGN_NEUTRAL, 1, tid);
 	}
 }
