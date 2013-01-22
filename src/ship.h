@@ -847,6 +847,7 @@ protected:
 	bool first_pos, pos_valid;
 	float max_cdist; // max distance to camera
 
+	void mark_pos_invalid();
 	void gen_pos();
 
 public:
@@ -864,7 +865,10 @@ class ucomet : public uobject_rand_spawn_t {
 
 public:
 	ucomet(float radius_, float dmax, float vmag);
+
+	// virtuals
 	float get_max_t() const {return 1000.0;} // a big number
+	float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc);
 	void draw_obj(uobj_draw_data &ddata) const;
 	bool calc_rvs() const {return 1;} // ???
 	string get_name() const {return "Comet";}

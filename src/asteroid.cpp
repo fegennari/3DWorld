@@ -19,6 +19,7 @@ float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader aste
 
 
 extern float fticks;
+extern s_object clobj0;
 extern vector<us_weapon> us_weapons;
 
 shader_t cached_voxel_shaders[8]; // one for each value of num_lights
@@ -727,13 +728,23 @@ uobject_rand_spawn_t::uobject_rand_spawn_t(float radius_, float dmax, float vmag
 }
 
 
+void uobject_rand_spawn_t::mark_pos_invalid() {
+
+	pos_valid = 0; // respawn
+	flags    |= OBJ_FLAGS_NCOL; // disable collisions until respawned
+}
+
+
 void uobject_rand_spawn_t::gen_pos() {
 
+	if (clobj0.galaxy < 0) return; // player not within a galaxy, so don't respawn
+	if (player_ship().get_velocity().mag() > 0.2) return; // player ship moving too quickly, don't respawn
 	vector3d const dir(first_pos ? signed_rand_vector(max_cdist) : signed_rand_vector_norm(max_cdist));
 	pos = get_player_pos() + dir;
 	if (dot_product(velocity, dir) > 0.0) {velocity *= -1.0;} // make it approach the camera
 	first_pos = 0;
 	pos_valid = 1;
+	flags    &= ~OBJ_FLAGS_NCOL; // clear the flag
 }
 
 
@@ -743,7 +754,7 @@ void uobject_rand_spawn_t::explode(float damage, float bradius, int etype, vecto
 
 	if (status == 1) { // actually exploded and was destroyed
 		status    = 0;
-		pos_valid = 0; // respawn
+		mark_pos_invalid(); // respawn
 	}
 }
 
@@ -754,22 +765,31 @@ void uobject_rand_spawn_t::advance_time(float timestep) {
 	free_obj::advance_time(timestep);
 
 	// if too far from the player, respawn at a different location
-	if (!dist_less_than(pos, get_player_pos(), 1.01*max_cdist)) {pos_valid = 0;}
+	if (!dist_less_than(pos, get_player_pos(), 1.01*max_cdist)) {mark_pos_invalid();}
 }
 
 
 ucomet::ucomet(float radius_, float dmax, float vmag) : uobject_rand_spawn_t(radius_, dmax, vmag) {
 
-	//flags = ???;
 	dir = signed_rand_vector_norm();
+}
+
+
+float ucomet::damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
+
+	if (rand_float() > 1.0E-5*val/radius) {return 0.0;} // higher damage = higher chance of destroying the comet
+	return free_obj::damage(val, type, hit_pos, source, wc); // will be destroyed
 }
 
 
 void ucomet::draw_obj(uobj_draw_data &ddata) const {
 
 	if (!pos_valid) return;
+
+	if (temperature > 0.0) {
+		// FIXME: draw trail
+	}
 	ddata.draw_asteroid(ROCK_SPHERE_TEX);
-	//ddata.draw_asteroid(WHITE_TEX);
 }
 
 
