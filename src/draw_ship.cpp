@@ -175,7 +175,7 @@ void draw_ship_flare(point const &pos, point const &xlate, float xsize, float ys
 }
 
 
-void enable_ship_flares(colorRGBA const &color) {
+void uobj_draw_data::enable_ship_flares(colorRGBA const &color) {
 
 	set_emissive_color(color);
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
@@ -184,7 +184,7 @@ void enable_ship_flares(colorRGBA const &color) {
 }
 
 
-void disable_ship_flares() {
+void uobj_draw_data::disable_ship_flares() {
 
 	end_texture();
 	glDepthMask(GL_TRUE);
@@ -309,7 +309,7 @@ void uobj_draw_data::end_exp_texture() const {
 
 
 void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale,
-								 float ar, vector3d const &stretch_dir) const
+								 float ar, vector3d const &stretch_dir, float z_offset) const
 {
 	assert(obj != NULL);
 	glPushMatrix();
@@ -318,6 +318,7 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 	point epos;
 
 	if (ar != 1.0) {
+		assert(z_offset == 0.0); // not supported
 		assert(ar > 1.0 && stretch_dir != all_zeros);
 		unsigned const dim(ar > 1.0);
 		point ep[2] = {draw_pos, draw_pos};
@@ -344,7 +345,7 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 		epos = draw_pos;
 		if (ndiv > 3 && epos != all_zeros) obj->rotate_point_inv(epos);
 		rotate_towards_camera(epos*radius + pos);
-		draw_tquad(escale, escale, 0.0, 1);
+		draw_tquad(escale, escale, z_offset, 1);
 		//draw_billboard(epos, get_camera_pos(), up_vector, escale, escale);
 	}
 	glPopMatrix();

@@ -10,6 +10,7 @@
 #include "gl_ext_arb.h"
 #include "explosion.h"
 #include "asteroid.h"
+#include "ship_util.h" // for gen_particle
 
 
 unsigned const ASTEROID_NDIV   = 32; // for sphere model, better if a power of 2
@@ -19,6 +20,7 @@ float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader aste
 
 
 extern float fticks;
+extern colorRGBA sun_color;
 extern s_object clobj0;
 extern vector<us_weapon> us_weapons;
 
@@ -177,13 +179,17 @@ public:
 		scale_val = 1.0/surface.rmax;
 	}
 
-	virtual void draw_obj(uobj_draw_data &ddata) const {
-		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
+	// Note: this class overrides draw_with_texture() because it's used instanced
+	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id) const { // to allow overriding the texture id
+		if (ddata.ndiv <= 4) {ddata.draw_asteroid(force_tex_id); return;}
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		WHITE.do_glColor();
-		select_texture(tex_id);
+		select_texture(force_tex_id);
 		surface.sd.draw_ndiv_pow2(ddata.ndiv); // use dlist?
 		end_texture();
+	}
+	virtual void draw_obj(uobj_draw_data &ddata) const {
+		draw_with_texture(ddata, tex_id);
 	}
 
 	virtual bool apply_damage(float damage, point &hit_pos) {
@@ -474,12 +480,6 @@ class asteroid_model_gen_t {
 
 	vector<uobj_asteroid *> asteroids; // FIXME: a case for boost::shared_ptr<>?
 
-	uobj_asteroid *get_asteroid(unsigned ix) const {
-		assert(ix < asteroids.size());
-		assert(asteroids[ix]);
-		return asteroids[ix];
-	}
-
 public:
 	//~asteroid_model_gen_t() {clear();} // can't free after GL context has been destroyed
 	bool empty() const {return asteroids.empty();}
@@ -493,6 +493,11 @@ public:
 			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, MOON_TEX/*ROCK_TEX*/, i);
 		}
 		PRINT_TIME("Asteroid Model Gen");
+	}
+	uobj_asteroid *get_asteroid(unsigned ix) const {
+		assert(ix < asteroids.size());
+		assert(asteroids[ix]);
+		return asteroids[ix];
 	}
 	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s) const {
 		float const radius(max(scale.x, max(scale.y, scale.z)));
@@ -525,6 +530,12 @@ public:
 asteroid_model_gen_t asteroid_model_gen;
 
 
+void ensure_asteroid_models() {
+
+	if (asteroid_model_gen.empty()) {asteroid_model_gen.gen(NUM_AST_MODELS, AST_FIELD_MODEL);}
+}
+
+
 void uasteroid_field::init(point const &pos_, float radius_) {
 
 	pos    = pos_;
@@ -536,7 +547,7 @@ void uasteroid_field::init(point const &pos_, float radius_) {
 void uasteroid_field::gen_asteroids() {
 
 	global_rand_gen.set_state(rseed, 123);
-	if (asteroid_model_gen.empty()) {asteroid_model_gen.gen(NUM_AST_MODELS, AST_FIELD_MODEL);}
+	ensure_asteroid_models();
 	clear();
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
 
@@ -709,6 +720,9 @@ int uasteroid::get_fragment_tid(point const &hit_pos) const {
 // *** uobject_rand_spawn_t / ucomet ***
 
 
+unsigned const comet_tids[2] = {ROCK_SPHERE_TEX, ICE_TEX};
+
+
 uobject_rand_spawn_t *uobject_rand_spawn_t::create(unsigned type, float radius_, float dmax, float vmag) {
 	
 	switch (type) {
@@ -771,13 +785,19 @@ void uobject_rand_spawn_t::advance_time(float timestep) {
 
 ucomet::ucomet(float radius_, float dmax, float vmag) : uobject_rand_spawn_t(radius_, dmax, vmag) {
 
-	dir = signed_rand_vector_norm();
+	assert(NUM_AST_MODELS > 1); // need two instances, ice and rock
+	dir     = signed_rand_vector_norm();
+	inst_id = rand2() % NUM_AST_MODELS;
 }
 
 
 float ucomet::damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
 
 	if (rand_float() > 1.0E-5*val/radius) {return 0.0;} // higher damage = higher chance of destroying the comet
+
+	for (unsigned i = 0; i < 2; ++i) { // mixed rock and ice
+		gen_moving_fragments(pos, (20 + (rand()%12)), comet_tids[i], 1.0, 1.0, velocity, WHITE);
+	}
 	return free_obj::damage(val, type, hit_pos, source, wc); // will be destroyed
 }
 
@@ -785,11 +805,31 @@ float ucomet::damage(float val, int type, point const &hit_pos, free_obj const *
 void ucomet::draw_obj(uobj_draw_data &ddata) const {
 
 	if (!pos_valid) return;
+	ensure_asteroid_models();
 
-	if (temperature > 0.0) {
-		// FIXME: draw trail
+	for (unsigned i = 0; i < 2; ++i) { // mixed rock and ice
+		glPushMatrix();
+		if (i == 1) {set_specular(0.8, 50.0);} // not sure if this actually works
+		asteroid_model_gen.get_asteroid((inst_id + i) % NUM_AST_MODELS)->draw_with_texture(ddata, comet_tids[i]);
+		if (i == 1) {set_specular(0.0, 1.0);}
+		glPopMatrix();
 	}
-	ddata.draw_asteroid(ROCK_SPHERE_TEX);
+	if (temperature > 0.0) {
+		float const glow_weight(CLIP_TO_01(temperature/40.0f)), z_offset(0.0); // 1.0 if camera is facing the lit side?
+		//cout << "t: " << temperature << ", w: " << glow_weight << endl;
+		colorRGBA color(sun_color);
+		color.alpha = glow_weight;
+		ddata.enable_ship_flares(color);
+		ddata.draw_engine(color, all_zeros, 3.0, 1.0, all_zeros, z_offset);
+		ddata.disable_ship_flares();
+		color.alpha *= 0.5;
+
+		for (unsigned i = 0; i < 1; ++i) { // FIXME: alpha is ignored?
+			vector3d const delta(signed_rand_vector(0.75));
+			gen_particle(PTYPE_GLOW, color, colorRGBA(0,0,0,0), unsigned(1.5*(2.0 - delta.mag())*TICKS_PER_SECOND), (pos + delta*radius),
+				zero_vector, 0.25*radius, 0.0, ALIGN_NEUTRAL, 0);
+		}
+	}
 }
 
 

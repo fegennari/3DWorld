@@ -239,6 +239,9 @@ public:
 	bool can_have_engine_lights() const;
 	bool draw_as_pt() const {return (NDIV_SCALE_U*radius < dist);}
 
+	static void enable_ship_flares(colorRGBA const &color);
+	static void disable_ship_flares();
+
 	colorRGBA apply_cloak(colorRGBA const &color) const;
 	void draw_bounding_sphere(colorRGBA color) const;
 	void setup_exp_texture() const;
@@ -246,7 +249,7 @@ public:
 	void end_specular()      const {if (specular_en) set_specular(0.0, 1.0);}
 	void inverse_rotate()    const;
 	void draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale=1.0,
-		float ar=1.0, vector3d const &stretch_dir=all_zeros) const;
+		float ar=1.0, vector3d const &stretch_dir=all_zeros, float z_offset=0.0) const;
 	void draw_engine_trail(point const &offset, float width, float w2s, float len, colorRGBA const &color) const;
 	void draw_ehousing_pairs(float length, float r1, float r2, float lcone, float dx, float dy, bool texture,
 		point const &offset, point const &per_pair_off=zero_vector, unsigned num_pairs=1) const;
@@ -838,6 +841,7 @@ public:
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
 	virtual int get_fragment_tid(point const &hit_pos) const {return tex_id;}
+	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id) const {draw_obj(ddata);} // default is to ignore force_tex_id
 };
 
 
@@ -862,6 +866,7 @@ public:
 
 
 class ucomet : public uobject_rand_spawn_t {
+	unsigned inst_id;
 
 public:
 	ucomet(float radius_, float dmax, float vmag);
