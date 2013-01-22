@@ -771,7 +771,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 					if (sizep >= 1.0 && !skip_moons && !planet.moons.empty()) {
 						int const p_light(GL_LIGHT2);
 
-						if (planet.is_ok()) { // setup planet as an additional light source for all moons
+						if (has_sun && planet.is_ok()) { // setup planet as an additional light source for all moons
 							colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
 							glLightfv(p_light, GL_AMBIENT, &BLACK.R);
 							glLightfv(p_light, GL_DIFFUSE, &pcolor.R); // planet diffuse
