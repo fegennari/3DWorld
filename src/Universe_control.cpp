@@ -840,9 +840,12 @@ void urev_body::unset_owner() {
 
 void urev_body::check_owner(s_object const &sobj) {
 
-	int const new_owner(sobj.get_owner());
-	//if (new_owner != NO_OWNER && owner == NO_OWNER) ++orbiting_refs; // ???
-	set_owner_int(new_owner);
+	// Note: nothing done here
+	// if the orbiting object(s) have been destroyed since the planet was deleted, it is no longer owned
+	// if the orbiting object(s) still exist, they will set ownership back in their update functions
+	//int const new_owner(sobj.get_owner());
+	//if (new_owner != NO_OWNER && owner == NO_OWNER) {++orbiting_refs;} // ???
+	//set_owner_int(new_owner);
 }
 
 
@@ -920,7 +923,7 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 
 	// not sure what to set orbit_radius to - could collide with other orbiting objects
 	float const orbit_radius(on_surface ? 0.0 : 2.0*obj->get_radius()), rate(0.0);
-	point const start_pos((pos_from_parent && on_surface) ? (parent->get_pos() - obj->get_pos()) : all_zeros);
+	point const start_pos((pos_from_parent && on_surface) ? point(parent->get_pos() - obj->get_pos()) : all_zeros);
 	orbiting_ship *const ship(new orbiting_ship(sclass, parent->get_align(), guardian, obj, zero_vector, start_pos,
 		orbit_radius, angle, rate));
 	ship->set_parent(parent);
@@ -986,7 +989,7 @@ void orbiting_ship::update_state() {
 				world.dec_orbiting_refs(result); // will die this frame
 			}
 			else if (!is_exploding() && world.get_owner() == NO_OWNER) {
-				world.set_owner(result, alignment); // have to reset - world must have been regenerated (untested)
+				world.set_owner(result, alignment); // have to reset - world must have been regenerated
 			}
 			if (world.temp > get_temp()) set_temp(FOBJ_TEMP_SCALE*world.temp, world.get_pos(), NULL);
 		}
