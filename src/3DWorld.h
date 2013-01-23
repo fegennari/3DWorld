@@ -1143,7 +1143,7 @@ colorRGBA const BACKGROUND_NIGHT(BLACK);
 #define set_obj_color(obj) set_color(object_types[obj.type].color)
 
 inline void set_emissive_color(colorRGBA const &color) {
-	BLACK.do_glColor();
+	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor();
 	set_color_e(color);
 }
 
