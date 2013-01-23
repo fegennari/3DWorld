@@ -19,6 +19,7 @@ float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for 
 float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader asteroids
 
 
+extern int animate2;
 extern float fticks;
 extern colorRGBA sun_color;
 extern s_object clobj0;
@@ -753,8 +754,12 @@ void uobject_rand_spawn_t::gen_pos() {
 
 	if (clobj0.galaxy < 0) return; // player not within a galaxy, so don't respawn
 	if (player_ship().get_velocity().mag() > 0.2) return; // player ship moving too quickly, don't respawn
-	vector3d const dir(first_pos ? signed_rand_vector(max_cdist) : signed_rand_vector_norm(max_cdist));
-	pos = get_player_pos() + dir;
+
+	for (unsigned iter_count = 0; iter_count < 10; ++iter_count) { // limit the number of iterations
+		vector3d const dir(first_pos ? signed_rand_vector(max_cdist) : signed_rand_vector_norm(max_cdist));
+		pos = get_player_pos() + dir;
+		if (!player_pdu.valid || !univ_sphere_vis(pos, radius)) break; // don't spawn in player's view
+	}
 	if (dot_product(velocity, dir) > 0.0) {velocity *= -1.0;} // make it approach the camera
 	first_pos = 0;
 	pos_valid = 1;
@@ -778,16 +783,22 @@ void uobject_rand_spawn_t::advance_time(float timestep) {
 	if (!pos_valid) {gen_pos();}
 	free_obj::advance_time(timestep);
 
-	// if too far from the player, respawn at a different location
-	if (!dist_less_than(pos, get_player_pos(), 1.01*max_cdist)) {mark_pos_invalid();}
+	if (!dist_less_than(pos, get_player_pos(), (univ_sphere_vis(pos, radius) ? 2.0 : 1.01)*max_cdist)) { // further if visible
+		mark_pos_invalid(); // if too far from the player, respawn at a different location
+	}
 }
 
 
 ucomet::ucomet(float radius_, float dmax, float vmag) : uobject_rand_spawn_t(radius_, dmax, vmag) {
 
-	assert(NUM_AST_MODELS > 1); // need two instances, ice and rock
-	dir     = signed_rand_vector_norm();
-	inst_id = rand2() % NUM_AST_MODELS;
+	dir = signed_rand_vector_norm();
+
+	for (unsigned d = 0; d < 2; ++d) { // need two instances, ice and rock
+		inst_ids[d] = rand2() % NUM_AST_MODELS;
+	}
+	if (inst_ids[0] == inst_ids[1] && NUM_AST_MODELS > 2) { // same inst_ids
+		inst_ids[1] = (inst_ids[0] + 1) % NUM_AST_MODELS; // make them differ by 1
+	}
 }
 
 
@@ -810,24 +821,28 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 	for (unsigned i = 0; i < 2; ++i) { // mixed rock and ice
 		glPushMatrix();
 		if (i == 1) {set_specular(0.8, 50.0);} // not sure if this actually works
-		asteroid_model_gen.get_asteroid((inst_id + i) % NUM_AST_MODELS)->draw_with_texture(ddata, comet_tids[i]);
+		asteroid_model_gen.get_asteroid((inst_ids[i] + i) % NUM_AST_MODELS)->draw_with_texture(ddata, comet_tids[i]);
 		if (i == 1) {set_specular(0.0, 1.0);}
 		glPopMatrix();
 	}
 	if (temperature > 0.0) {
-		float const glow_weight(CLIP_TO_01(temperature/40.0f)), z_offset(0.0); // 1.0 if camera is facing the lit side?
+		float const glow_weight(CLIP_TO_01(get_true_temp()/40.0f)), z_offset(0.0); // 1.0 if camera is facing the lit side?
 		//cout << "t: " << temperature << ", w: " << glow_weight << endl;
-		colorRGBA color(sun_color);
-		color.alpha = glow_weight;
+		colorRGBA color(sun_color), color2(color);
+		color.alpha  = glow_weight;
+		color2.alpha = 0.0;
 		ddata.enable_ship_flares(color);
 		ddata.draw_engine(color, all_zeros, 3.0, 1.0, all_zeros, z_offset);
 		ddata.disable_ship_flares();
-		color.alpha *= 0.5;
 
-		for (unsigned i = 0; i < 1; ++i) { // FIXME: alpha is ignored?
-			vector3d const delta(signed_rand_vector(0.75));
-			gen_particle(PTYPE_GLOW, color, colorRGBA(0,0,0,0), unsigned(1.5*(2.0 - delta.mag())*TICKS_PER_SECOND), (pos + delta*radius),
-				zero_vector, 0.25*radius, 0.0, ALIGN_NEUTRAL, 0);
+		if (animate2) {
+			color.alpha *= 0.5;
+
+			for (unsigned i = 0; i < 1; ++i) { // FIXME: alpha is ignored?
+				vector3d const delta(signed_rand_vector(0.75));
+				gen_particle(PTYPE_GLOW, color, color2, unsigned(1.5*(2.0 - delta.mag())*TICKS_PER_SECOND), (pos + delta*radius),
+					zero_vector, 0.25*radius, 0.0, ALIGN_NEUTRAL, 0);
+			}
 		}
 	}
 }

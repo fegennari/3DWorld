@@ -2862,7 +2862,7 @@ float universe_t::get_point_temperature(s_object const &clobj, point const &pos)
 
 	if (clobj.system >= 0) return get_temp_in_system(clobj, pos); // existing system is valid
 	s_object result; // invalid system - expand the search radius and try again
-	if (!get_largest_closest_object(result, pos, 0, UTYPE_SYSTEM, 1, 1.0) || result.system < 0) return 0.0;
+	if (!get_largest_closest_object(result, pos, 0, UTYPE_SYSTEM, 1, 4.0) || result.system < 0) return 0.0;
 	return get_temp_in_system(result, pos);
 }
 

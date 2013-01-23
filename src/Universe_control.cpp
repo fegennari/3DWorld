@@ -270,9 +270,9 @@ void process_univ_objects() {
 
 	for (unsigned i = 0; i < uobjs.size(); ++i) { // can we use cached_objs?
 		free_obj *const uobj(uobjs[i]);
-		bool const no_coll(uobj->no_coll());
-		if (no_coll && uobj->is_particle()) continue; // no collisions, gravity, or temperature on this object
-		if (uobj->is_stationary())          continue;
+		bool const no_coll(uobj->no_coll()), particle(uobj->is_particle()), projectile(uobj->is_proj());
+		if (no_coll && particle)   continue; // no collisions, gravity, or temperature on this object
+		if (uobj->is_stationary()) continue;
 		bool const is_ship(uobj->is_ship()), orbiting(uobj->is_orbiting());
 		bool const calc_gravity(((uobj->get_time() + (unsigned(uobj)>>8)) & (GRAV_CHECK_MOD-1)) == 0);
 		bool const lod_coll(univ_planet_lod && is_ship && uobj->is_player_ship());
@@ -283,10 +283,10 @@ void process_univ_objects() {
 		// skip orbiting objects (no collisions or gravity effects, temperature is mostly constant)
 		s_object clobj; // closest object
 		int const found_close(orbiting ? 0 : universe.get_object_closest_to_pos(clobj, obj_pos));
+		bool temp_known(0);
 
 		if (found_close) {
 			if (clobj.type == UTYPE_ASTEROID) {
-				uobj->set_temp(0.0, all_zeros); // ???
 				uasteroid const &asteroid(clobj.get_asteroid());
 				float const dist_to_cobj(clobj.dist - (asteroid.radius + radius));
 				uobj->set_sobj_dist(dist_to_cobj);
@@ -311,8 +311,9 @@ void process_univ_objects() {
 				assert(clobj.object != NULL);
 				float const clobj_radius(clobj.object->get_radius());
 				point const clobj_pos(clobj.object->get_pos());
-				float const temperature(universe.get_point_temperature(clobj, obj_pos)*(5 - uobj->get_shadow_val())); // shadow_val = 0-3
+				float const temperature(universe.get_point_temperature(clobj, obj_pos)*(FOBJ_TEMP_SCALE - uobj->get_shadow_val())); // shadow_val = 0-3
 				uobj->set_temp(temperature, clobj_pos);
+				temp_known = 1;
 				float hmap_scale(0.0);
 				if (clobj.type == UTYPE_MOON  ) {hmap_scale = MOON_HMAP_SCALE;  }
 				if (clobj.type == UTYPE_PLANET) {hmap_scale = PLANET_HMAP_SCALE;}
@@ -327,7 +328,7 @@ void process_univ_objects() {
 						coll = 1;
 
 						// player_ship and possibly other ships need the more stable but less accurate algorithm
-						bool const simple_coll(!is_ship && !uobj->is_proj());
+						bool const simple_coll(!is_ship && !projectile);
 						float const radius_coll(lod_coll ? 1.25*NEAR_CLIP_SCALED : radius);
 						float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
 
@@ -345,8 +346,10 @@ void process_univ_objects() {
 				if (calc_gravity) get_gravity(clobj, obj_pos, gravity, 1);
 			}
 		} // found_close
-		else {
-			uobj->set_temp(0.0, all_zeros);
+		if (!temp_known) {
+			float temperature(0.0);
+			if (!particle && !projectile) {temperature = universe.get_point_temperature(clobj, obj_pos)*FOBJ_TEMP_SCALE;}
+			uobj->set_temp(temperature, all_zeros);
 		}
 		if (calc_gravity) {
 			bool near_b_hole(0);
@@ -547,9 +550,11 @@ void draw_universe_stats() {
 	// draw position and orientation
 	point const camera(ps.get_pos()), camera_scaled(camera/CELL_SIZE);
 	vector3d const dir(ps.get_dir().get_norm());
+	float const player_temp(player_ship().get_true_temp());
 	YELLOW.do_glColor();
 	//sprintf(text, "Loc: (%i: %3.3f, %i: %3.3f, %i: %3.3f)  Dir: (%1.3f, %1.3f, %1.3f)", uxyz[0], camera_scaled.x, uxyz[1], camera_scaled.y, uxyz[2], camera_scaled.z, dir.x, dir.y, dir.z);
-	sprintf(text, "Loc: (%3.4f, %3.4f, %3.4f)  Dir: (%1.3f, %1.3f, %1.3f)", uxyz[0]+camera_scaled.x, uxyz[1]+camera_scaled.y, uxyz[2]+camera_scaled.z, dir.x, dir.y, dir.z);
+	sprintf(text, "Loc: (%3.4f, %3.4f, %3.4f)  Dir: (%1.3f, %1.3f, %1.3f)  T: %3.1f",
+		uxyz[0]+camera_scaled.x, uxyz[1]+camera_scaled.y, uxyz[2]+camera_scaled.z, dir.x, dir.y, dir.z, player_temp);
 	draw_text(-0.009*aspect_ratio, -0.014, -0.028, text);
 
 	// draw shields, armor, weapon status, etc.
@@ -983,7 +988,7 @@ void orbiting_ship::update_state() {
 			else if (!is_exploding() && world.get_owner() == NO_OWNER) {
 				world.set_owner(result, alignment); // have to reset - world must have been regenerated (untested)
 			}
-			if (world.temp > get_temp()) set_temp(world.temp, world.get_pos(), NULL);
+			if (world.temp > get_temp()) set_temp(FOBJ_TEMP_SCALE*world.temp, world.get_pos(), NULL);
 		}
 	}
 	if (!has_sobj) velocity = zero_vector; // stopped

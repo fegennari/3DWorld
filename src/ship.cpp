@@ -737,6 +737,7 @@ void draw_univ_objects(point const &pos) {
 	}
 	set_lighted_sides(1);
 	if (use_shaders) s.end_shader();
+	enable_blend();
 	glDisable(GL_TEXTURE_2D);
 	particle_pld.draw_and_clear();
 	glDisable(GL_LIGHTING);

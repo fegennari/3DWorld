@@ -32,6 +32,7 @@ float const EXP_COLL_ELASTIC   = 1.0;
 float const VISIBLE_THRESH     = 0.25;
 float const SHIP_REQ_CREW      = 0.5;
 float const TEMP_FACTOR        = 2.0; // damage temperature factor
+float const FOBJ_TEMP_SCALE    = 5.0;
 float const NDIV_SCALE_U       = 1200.0;
 
 unsigned const W_SELF_ARM_T      = unsigned(TICKS_PER_SECOND/2); // needed in both free_obj.cpp and u_ship.cpp
@@ -697,6 +698,7 @@ public:
 	float           get_c_radius() const {return c_radius;}
 	float    get_bounding_radius() const {return c_radius;}
 	float           get_temp()     const {return temperature;}
+	float           get_true_temp()const {return temperature/FOBJ_TEMP_SCALE;}
 	float           get_sfactor()  const {return speed_factor;}
 	float           get_max_sf()   const {return max_sfactor;}
 	float        get_draw_rscale() const {return draw_rscale;}
@@ -866,7 +868,7 @@ public:
 
 
 class ucomet : public uobject_rand_spawn_t {
-	unsigned inst_id;
+	unsigned inst_ids[2];
 
 public:
 	ucomet(float radius_, float dmax, float vmag);

@@ -873,7 +873,7 @@ float uparticle::damage(float val, int type, point const &hit_pos, free_obj cons
 void uparticle::draw_obj(uobj_draw_data &ddata) const {
 
 	colorRGBA color(color1);
-	if (color1 != color2) blend_color(color, color1, color2, (1.0 - ((float)time)/((float)lifetime)), 1);
+	if (color1 != color2) blend_color(color, color1, color2, CLIP_TO_01(1.0f - ((float)time)/((float)lifetime)), 1);
 
 	if (ddata.draw_as_pt()) { // Note: may not be in correct back to front ordering for alpha blending
 		((ptype == PTYPE_GLOW) ? emissive_pld : particle_pld).add_pt(make_pt_global(pos), (get_player_pos2() - pos), color);
