@@ -883,7 +883,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 
 	switch (ptype) {
 	case PTYPE_GLOW:
-		if ((display_mode & 0x04) && (60.0*radius < ddata.dist)) {
+		if (60.0*radius < ddata.dist) {
 			glow_pld.add_pt(make_pt_global(pos), vector3d(2.0*radius, 0.0, 0.0), color); // FIXME: radius encoded as normal.x
 		}
 		else {

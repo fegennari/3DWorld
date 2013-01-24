@@ -864,6 +864,7 @@
     <None Include="shaders\nebula.vert" />
     <None Include="shaders\no_lighting_tex_coord.vert" />
     <None Include="shaders\output_textured_quad.part.geom" />
+    <None Include="shaders\particle_draw.vert" />
     <None Include="shaders\perlin_clouds.part" />
     <None Include="shaders\perlin_clouds_3d.part" />
     <None Include="shaders\pine_tree.frag" />

@@ -24,6 +24,7 @@ extern float fticks;
 extern colorRGBA sun_color;
 extern s_object clobj0;
 extern vector<us_weapon> us_weapons;
+extern vector<usw_ray> t_wrays;
 
 shader_t cached_voxel_shaders[8]; // one for each value of num_lights
 shader_t cached_proc_shaders [8];
@@ -831,16 +832,27 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 		color.alpha  = glow_weight;
 		color2.alpha = 0.0;
 		ddata.enable_ship_flares(color);
-		ddata.draw_engine(color, all_zeros, 3.0, 1.0, all_zeros, z_offset);
+		ddata.draw_engine(color, all_zeros, 3.2, 1.0, all_zeros, z_offset);
 		ddata.disable_ship_flares();
 
-		if (animate2) {
+		if (animate2) { // create tail
 			color.alpha *= 0.5;
 
-			for (unsigned i = 0; i < 1; ++i) { // FIXME: alpha is ignored?
+			if (temperature > 4.0) {
+				rand_gen_t rgen;
+				rgen.set_state(inst_ids[0], inst_ids[1]);
+
+				for (unsigned i = 0; i < 10; ++i) {
+					vector3d const dir(radius*rgen.signed_rand_vector());
+					point const pos2(pos - rgen.rand_uniform(150.0, 250.0)*velocity + 2.0*dir);
+					float const width(rgen.rand_uniform(0.5, 1.0));
+					t_wrays.push_back(usw_ray(1.0*width*radius, 2.5*width*radius, (pos + 0.3*dir), pos2, color, color2));
+				}
+			}
+			if (temperature > 2.0 && ddata.ndiv > 6) {
 				vector3d const delta(signed_rand_vector()), pvel(0.2*velocity.mag()*delta);
-				gen_particle(PTYPE_GLOW, color, color2, unsigned(1.5*(3.0 - delta.mag())*TICKS_PER_SECOND), (pos + 0.75*delta*radius),
-					pvel, 0.3*radius, 0.0, ALIGN_NEUTRAL, 0);
+				gen_particle(PTYPE_GLOW, color, color2, unsigned(1.5*(3.0 - delta.mag())*TICKS_PER_SECOND),
+					(pos + 0.75*delta*radius), pvel, 0.3*radius, 0.0, ALIGN_NEUTRAL, 0);
 			}
 		}
 	}

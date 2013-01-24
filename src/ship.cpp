@@ -655,6 +655,7 @@ void clear_univ_obj_contexts() {
 void draw_wrays(vector<usw_ray> &wrays) {
 
 	if (wrays.empty()) return;
+	glDepthMask(GL_FALSE); // ???
 	unsigned const size((unsigned)wrays.size());
 	point const &pspos(get_player_pos2());
 	vector<pair<float, usw_ray const *> > sorted(size);
@@ -670,6 +671,7 @@ void draw_wrays(vector<usw_ray> &wrays) {
 		sorted[i].second->draw();
 	}
 	end_line_tquad_draw();
+	glDepthMask(GL_TRUE);
 }
 
 
