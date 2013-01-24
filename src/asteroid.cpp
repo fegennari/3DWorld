@@ -793,6 +793,18 @@ void uobject_rand_spawn_t::advance_time(float timestep) {
 ucomet::ucomet(float radius_, float dmax, float vmag) : uobject_rand_spawn_t(radius_, dmax, vmag) {
 
 	dir = signed_rand_vector_norm();
+	gen_inst_ids();
+}
+
+
+void ucomet::gen_pos() {
+
+	gen_inst_ids();
+	uobject_rand_spawn_t::gen_pos();
+}
+
+
+void ucomet::gen_inst_ids() {
 
 	for (unsigned d = 0; d < 2; ++d) { // need two instances, ice and rock
 		inst_ids[d] = rand2() % NUM_AST_MODELS;

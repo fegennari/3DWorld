@@ -854,7 +854,7 @@ protected:
 	float max_cdist; // max distance to camera
 
 	void mark_pos_invalid();
-	void gen_pos();
+	virtual void gen_pos();
 
 public:
 	static uobject_rand_spawn_t *create(unsigned type, float radius_, float dmax, float vmag);
@@ -869,6 +869,9 @@ public:
 
 class ucomet : public uobject_rand_spawn_t {
 	unsigned inst_ids[2];
+
+	virtual void gen_pos();
+	void gen_inst_ids();
 
 public:
 	ucomet(float radius_, float dmax, float vmag);
