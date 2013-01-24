@@ -838,9 +838,9 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 			color.alpha *= 0.5;
 
 			for (unsigned i = 0; i < 1; ++i) { // FIXME: alpha is ignored?
-				vector3d const delta(signed_rand_vector(0.75));
-				gen_particle(PTYPE_GLOW, color, color2, unsigned(1.5*(2.0 - delta.mag())*TICKS_PER_SECOND), (pos + delta*radius),
-					zero_vector, 0.25*radius, 0.0, ALIGN_NEUTRAL, 0);
+				vector3d const delta(signed_rand_vector()), pvel(0.2*velocity.mag()*delta);
+				gen_particle(PTYPE_GLOW, color, color2, unsigned(1.5*(3.0 - delta.mag())*TICKS_PER_SECOND), (pos + 0.75*delta*radius),
+					pvel, 0.3*radius, 0.0, ALIGN_NEUTRAL, 0);
 			}
 		}
 	}

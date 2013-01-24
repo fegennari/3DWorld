@@ -259,8 +259,9 @@ void draw_select_groups(int solid) {
 		s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
 		//s.set_geom_shader("output_textured_quad.part+pt_billboard", GL_POINTS, GL_TRIANGLE_STRIP, 4);
 		s.begin_shader();
-		s.add_uniform_float("size", 2.0*object_types[SNOW].radius); // Note: size no longer depends on angle
+		s.add_uniform_float("size", 2.0*object_types[SNOW].radius);
 		s.add_uniform_int("tex0", 0);
+		s.add_uniform_float("min_alpha", 0.0);
 		snow_pld.draw_and_clear();
 		s.end_shader();
 		glDepthMask(GL_TRUE);

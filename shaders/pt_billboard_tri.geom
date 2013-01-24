@@ -1,7 +1,13 @@
+#ifndef SIZE_FROM_NORMAL
 uniform float size = 1.0;
+#endif
 
 void main()
 {
+#ifdef SIZE_FROM_NORMAL
+	float size = gl_TexCoordIn[0][7].s;
+#endif
+
 	gl_FrontColor = gl_FrontColorIn[0]; // all colors are the same
 	vec4 pos = gl_ModelViewMatrix * gl_PositionIn[0];
 	

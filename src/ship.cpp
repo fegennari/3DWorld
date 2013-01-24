@@ -33,7 +33,7 @@ vector<free_obj const *> a_targets(NUM_ALIGNMENT, NULL), attackers(NUM_ALIGNMENT
 vector<cached_obj> c_uobjs;
 vector<usw_ray> b_wrays, t_wrays; // beams and engine trails
 vector<temp_source> temp_sources;
-pt_line_drawer particle_pld, emissive_pld;
+pt_line_drawer particle_pld, emissive_pld, glow_pld;
 
 float weap_damage[NUM_UWEAP+NUM_EXTRA_DAM] = {0};
 float ship_damage_done[NUM_US_CLASS]  = {0};
@@ -742,6 +742,29 @@ void draw_univ_objects(point const &pos) {
 	particle_pld.draw_and_clear();
 	glDisable(GL_LIGHTING);
 	emissive_pld.draw_and_clear();
+
+	if (!glow_pld.empty()) {
+		if (use_shaders) {
+			select_texture(BLUR_TEX, 0);
+			glDepthMask(GL_FALSE);
+			shader_t s;
+			s.set_prefix("#define SIZE_FROM_NORMAL", 2); // GS
+			s.set_vert_shader("particle_draw");
+			s.set_frag_shader("simple_texture");
+			s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
+			s.begin_shader();
+			s.add_uniform_int("tex0", 0);
+			s.add_uniform_float("min_alpha", 0.0);
+			glow_pld.draw_and_clear();
+			s.end_shader();
+			glDepthMask(GL_TRUE);
+			glDisable(GL_TEXTURE_2D);
+		}
+		else {
+			glow_pld.draw_and_clear();
+		}
+	}
+
 	glEnable(GL_LIGHTING);
 	disable_blend();
 	draw_wrays(b_wrays); // draw beam weapons (where should this be?)

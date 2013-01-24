@@ -41,7 +41,7 @@ extern point player_death_pos;
 extern pos_dir_up player_pdu;
 extern vector<us_weapon> us_weapons;
 extern exp_type_params et_params[];
-extern pt_line_drawer particle_pld, emissive_pld;
+extern pt_line_drawer particle_pld, emissive_pld, glow_pld;
 
 
 // ************ FREE_OBJ ************
@@ -881,9 +881,14 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 	}
 	color.do_glColor();
 
-	switch (ptype) { // uparticle::draw()?
+	switch (ptype) {
 	case PTYPE_GLOW:
-		setup_colors_draw_flare(pos, all_zeros, 2.0, 2.0, color); // Note: draw order isn't always correct
+		if ((display_mode & 0x04) && (60.0*radius < ddata.dist)) {
+			glow_pld.add_pt(make_pt_global(pos), vector3d(2.0*radius, 0.0, 0.0), color); // FIXME: radius encoded as normal.x
+		}
+		else {
+			setup_colors_draw_flare(pos, all_zeros, 2.0, 2.0, color); // Note: draw order isn't always correct
+		}
 		break;
 	case PTYPE_SPHERE: // low resolution particles (ship pieces)
 		if (texture_id > 0) select_texture(texture_id);
