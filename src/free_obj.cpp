@@ -606,14 +606,14 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 	if (dscale < 0.5 || (is_particle() && dscale < 1.0)) return; // too far/small - clip it
 	int ndiv(max(3, min((int)FREE_OBJ_MAX_NDIV, int(sqrt(10.0*dscale)))));
 	if (ndiv > 8 && (ndiv&1)) ++ndiv; // an even size is divisible by 2, so hemispheres can be created exactly
-	bool const stencil_shadows(STENCIL_SHADOWS && univ_stencil_shadows && lg_obj_type);
+	bool const stencil_shadows(STENCIL_SHADOWS && univ_stencil_shadows && lg_obj_type), no_lighting(no_light());
 	uobject const *sobj(NULL);
 	vector<uobject const *> sobjs;
 	point sun_pos; // should be the same as lpos?
 	int shadowed(0);
 	bool partial_shadow(0);
 	
-	if (LG_OBJ_SHADOWS && !no_light() && lg_obj_type && ndiv > 5 && get_universe_sun_pos(pos, sun_pos)) {
+	if (LG_OBJ_SHADOWS && !no_lighting && lg_obj_type && ndiv > 5 && get_universe_sun_pos(pos, sun_pos)) {
 		large_obj_visibility_test(sun_pos, c_radius, sobjs, 1); // radius or c_radius? seems to get decoy flares as well as ships
 		
 		for (unsigned i = 0; i < sobjs.size(); ++i) {
@@ -631,7 +631,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 	}
 	bool const known_shadowed(shadowed == 2 || (stencil_shadows && shadowed));
 	int const shadow_thresh(stencil_shadows ? 0 : 1);
-	int const light_val(set_uobj_color(finpos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale));
+	int const light_val(no_lighting ? 0 : set_uobj_color(finpos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale));
 	shadow_val = max(shadowed, light_val); // only updated if drawn - close enough?
 	if (is_player_ship()) return; // don't draw player ship
 	if (light_val > 0 && sobj != NULL) sobjs.push_back(sobj);
