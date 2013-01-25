@@ -423,14 +423,14 @@ class s_object { // size = 56
 
 public:
 	int cellxyz[3], galaxy, cluster, system, planet, moon, asteroid_field, asteroid, type, val, id;
-	float dist, size;
+	float dist;
 	uobj_solid const *object;
 
 	s_object() {init();}
 	bool write(ostream &out) const;
 	bool read(istream &in);
 	void init();
-	void assign(int gc, int cl, int sy, float sz, float di, int ty, uobj_solid const *obj);
+	void assign(int gc, int cl, int sy, float di, int ty, uobj_solid const *obj);
 	bool operator<(const s_object &I) const;
 	bool bad_cell() const;
 	bool is_solid() const {return (type == UTYPE_STAR || type == UTYPE_PLANET || type == UTYPE_MOON || type == UTYPE_ASTEROID);}
@@ -493,19 +493,15 @@ public:
 	void shift_cells(int dx, int dy, int dz);
 	void free_textures();
 	void draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, bool no_distant);
-	int get_largest_closest_object(s_object &result, point pos, int find_largest, int max_level,
-		int offset, float expand, bool get_destroyed=0) const;
+	int get_closest_object(s_object &result, point pos, int max_level, bool offset, float expand, bool get_destroyed=0) const;
 	bool get_trajectory_collisions(s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius) const;
 	float get_point_temperature(s_object const &clobj, point const &pos) const;
 
 	int get_object_closest_to_pos(s_object &result, point const &pos) const {
-		return get_largest_closest_object(result, pos, 0, UTYPE_MOON, 1, 1.0);
-	}
-	int get_object_of_detail(s_object &result, point const &pos) const {
-		return get_largest_closest_object(result, pos, 1, UTYPE_MOON, 1, 1.0);
+		return get_closest_object(result, pos, UTYPE_MOON, 1, 1.0);
 	}
 	int get_close_system(point const &pos, s_object &result, float expand) const {
-		if (!get_largest_closest_object(result, pos, 0, UTYPE_SYSTEM, 1, expand)) return 0; // find closest system (check last param=offset?)
+		if (!get_closest_object(result, pos, UTYPE_SYSTEM, 1, expand)) return 0; // find closest system (check last param=offset?)
 		return (result.type >= UTYPE_SYSTEM);
 	}
 	bool bad_cell_xyz(int const cxyz[3]) const {

@@ -617,7 +617,7 @@ bool rename_obj(uobject *obj, unsigned alignment) { // a little difficult to use
 
 bool get_closest_object(point const &pos, s_object &result, int obj_type, bool get_destroyed=0) {
 
-	if (!universe.get_largest_closest_object(result, pos, 0, obj_type, 1, 4.0, get_destroyed)) return 0;
+	if (!universe.get_closest_object(result, pos, obj_type, 1, 4.0, get_destroyed)) return 0;
 	return (result.type == obj_type && (result.object->is_ok() || get_destroyed));
 }
 
@@ -656,7 +656,7 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 
 	s_object result;
 	float const expand(CELL_SIZE/GALAXY_MIN_SIZE); // Note: can be in more than one galaxy, but should be OK
-	if (!universe.get_largest_closest_object(result, pos, 0, UTYPE_GALAXY, 1, expand) || result.type != UTYPE_GALAXY) return NULL;
+	if (!universe.get_closest_object(result, pos, UTYPE_GALAXY, 1, expand) || result.type != UTYPE_GALAXY) return NULL;
 	ugalaxy const &galaxy(result.get_galaxy());
 	uobject const *dest = NULL;
 	float const distval(2.5*galaxy.get_radius());

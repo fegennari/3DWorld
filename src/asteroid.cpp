@@ -19,7 +19,7 @@ float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for 
 float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader asteroids
 
 
-extern int animate2;
+extern int animate2, iticks;
 extern float fticks;
 extern colorRGBA sun_color;
 extern s_object clobj0;
@@ -861,7 +861,7 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 					t_wrays.push_back(usw_ray(1.0*width*radius, 2.5*width*radius, (pos + 0.3*dir), pos2, color, color2));
 				}
 			}
-			if (temperature > 2.0 && ddata.ndiv > 6) {
+			if (temperature > 2.0 && ddata.ndiv > 6) { // FIXME: iterate and use iticks?
 				vector3d const delta(signed_rand_vector()), pvel(0.2*velocity.mag()*delta);
 				gen_particle(PTYPE_GLOW, color, color2, unsigned(1.5*(3.0 - delta.mag())*TICKS_PER_SECOND),
 					(pos + 0.75*delta*radius), pvel, 0.3*radius, 0.0, ALIGN_NEUTRAL, 0);

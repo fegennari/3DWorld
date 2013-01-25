@@ -700,17 +700,16 @@ void draw_univ_objects(point const &pos) {
 	for (unsigned i = 0; i < nobjs; ++i) { // make negative so it's sorted largest to smallest
 		cached_obj const &co(c_uobjs[i]);
 		bool const is_bad((co.flags & OBJ_FLAGS_BAD_) != 0);
-		point const &pos(co.pos);
 		float const radius_scaled(((co.flags & OBJ_FLAGS_PART) ? co.obj->get_draw_rscale() : 1.0)*co.radius);
 
-		if (!is_bad && univ_sphere_vis_dist(pos, radius_scaled)) {
-			sorted.push_back(make_pair(-(p2p_dist(pos, camera) - radius_scaled), co.obj));
+		if (!is_bad && univ_sphere_vis_dist(co.pos, radius_scaled)) {
+			sorted.push_back(make_pair(-(p2p_dist(co.pos, camera) - radius_scaled), co.obj));
 
 			if (onscreen_display && (co.flags & OBJ_FLAGS_SHIP) && !co.obj->is_player_ship()) {		
-				if ((dist_less_than(pos, camera, ch_dist) || !(co.flags & (OBJ_FLAGS_DIST | OBJ_FLAGS_NEW_))) &&
+				if ((dist_less_than(co.pos, camera, ch_dist) || !(co.flags & (OBJ_FLAGS_DIST | OBJ_FLAGS_NEW_))) &&
 					co.obj->visibility() > 0.1 && co.obj->get_time() > 0)
 				{
-					draw_crosshair_from_camera(pos, alignment_colors[co.obj->get_align()]); // draw_crosshair?
+					draw_crosshair_from_camera(co.pos, alignment_colors[co.obj->get_align()]); // draw_crosshair?
 				}
 			}
 		}

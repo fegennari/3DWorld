@@ -2407,21 +2407,18 @@ string ustar::get_info() const {
 
 
 // if not find_largest then find closest
-int universe_t::get_largest_closest_object(s_object &result, point pos, int find_largest, int max_level,
-										   int offset, float expand, bool get_destroyed) const
-{
-	float max_gsize(0.0), min_gdist(CELL_SIZE);
+int universe_t::get_closest_object(s_object &result, point pos, int max_level, bool offset, float expand, bool get_destroyed) const {
+
+	float min_gdist(CELL_SIZE);
 	if (offset) offset_pos(pos);
 	point posc(pos);
 	UNROLL_3X(posc[i_] += CELL_SIZEo2;)
 	result.init();
 
 	// find the correct cell
-	point const cell_origin(cells[0][0][0].pos), pos_trans(posc, cell_origin);
+	point const cell_origin(cells[0][0][0].pos);
+	UNROLL_3X(result.cellxyz[i_] = int((posc[i_] - cell_origin[i_])/CELL_SIZE);)
 	
-	for (unsigned d = 0; d < 3; ++d) {
-		result.cellxyz[d] = int(pos_trans[d]/CELL_SIZE);
-	}
 	if (bad_cell_xyz(result.cellxyz)) {
 		UNROLL_3X(result.cellxyz[i_] = -1;)
 		return 0;
@@ -2447,22 +2444,17 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 		ugalaxy const &galaxy((*cell.galaxies)[gc]);
 		float const distg(p2p_dist(pos, galaxy.pos));
 		if (distg > expand*(galaxy.radius + MAX_SYSTEM_EXTENT)) continue;
-		float const galaxy_radius(galaxy.get_radius_at((pos - galaxy.pos).get_norm()));
+		float const galaxy_radius(galaxy.get_radius_at((pos - galaxy.pos)/distg));
 		if (distg > expand*(galaxy_radius + MAX_SYSTEM_EXTENT)) continue;
 
 		if (max_level == UTYPE_GALAXY || result.object == NULL) { // galaxy
-			float const size(galaxy.radius/max(TOLERANCE, distg)); // galaxy_radius?
-
 			if (max_level == UTYPE_GALAXY) {
-				if ((find_largest && size > result.size) || (!find_largest && distg < result.dist)) {
-					result.assign(gc, -1, -1, size, distg, UTYPE_GALAXY, NULL);
-				}
+				if (distg < result.dist) {result.assign(gc, -1, -1, distg, UTYPE_GALAXY, NULL);}
 				continue;
 			}
-			else if ((find_largest && size > max_gsize) || (!find_largest && distg < min_gdist)) {
+			else if (distg < min_gdist) {
 				result.galaxy = gc;
 				result.type   = UTYPE_GALAXY;
-				max_gsize     = size;
 				min_gdist     = distg;
 			}
 		}
@@ -2473,7 +2465,7 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) { // FIXME: subdivision?
 					if (!dist_less_than(pos, j->pos, expand*j->radius)) continue;
 					float const dista(p2p_dist(pos, j->pos));
-					result.assign(gc, -1, -1, j->radius/max(TOLERANCE, dista), dista, UTYPE_ASTEROID, NULL);
+					result.assign(gc, -1, -1, dista, UTYPE_ASTEROID, NULL);
 					result.asteroid_field = (i - galaxy.asteroid_fields.begin());
 					result.asteroid       = (j - i->begin());
 				}
@@ -2503,15 +2495,13 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 				
 				if (system.sun.is_ok() || get_destroyed) {
 					dists -= system.sun.radius;
-					float const size(system.sun.radius/max(TOLERANCE, dists));
 
-					if (dists <= 0.0) { // sun collision
-						result.assign(gc, cl, s, size, dists, UTYPE_STAR, &system.sun);
-						result.val = 2;
-						return 2; // system
-					}
-					if ((find_largest && size > result.size) || (!find_largest && dists < result.dist)) {
-						result.assign(gc, cl, s, size, dists, UTYPE_SYSTEM, &system.sun);
+					if (dists < result.dist) {
+						result.assign(gc, cl, s, dists, UTYPE_SYSTEM, &system.sun);
+
+						if (dists <= 0.0) { // sun collision
+							result.val = 2; return 2; // system
+						}
 					}
 				}
 				if (max_level == UTYPE_SYSTEM || max_level == UTYPE_STAR) continue; // system/star
@@ -2521,21 +2511,16 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 					uplanet const &planet(system.planets[pc]);
 					float distp_sq(p2p_dist_sq(pos, planet.pos));
 					if (distp_sq > pt_sq) continue;
-					float distp(sqrt(distp_sq));
+					float const distp(sqrt(distp_sq) - planet.radius);
 					
 					if (planet.is_ok() || get_destroyed) {
-						distp -= planet.radius;
-						float const size(planet.radius/max(TOLERANCE, distp));
-					
-						if (distp <= 0.0) { // planet collision
-							result.assign(gc, cl, s, size, distp, UTYPE_PLANET, &planet);
+						if (distp < result.dist) {
+							result.assign(gc, cl, s, distp, UTYPE_PLANET, &planet);
 							result.planet = pc;
-							result.val    = 2;
-							return 2;
-						}
-						if ((find_largest && size > result.size) || (!find_largest && distp < result.dist)) {
-							result.assign(gc, cl, s, size, distp, UTYPE_PLANET, &planet);
-							result.planet = pc;
+
+							if (distp <= 0.0) { // planet collision
+								result.val = 2; return 2;
+							}
 						}
 					}
 					if (max_level == UTYPE_PLANET) continue; // planet
@@ -2546,31 +2531,27 @@ int universe_t::get_largest_closest_object(s_object &result, point pos, int find
 						if (!moon.is_ok() && !get_destroyed) continue;
 						float const distm_sq(p2p_dist_sq(pos, moon.pos));
 						if (distm_sq > mt_sq)                continue;
-						float const distm(sqrt(distm_sq) - moon.radius), size(moon.radius/max(TOLERANCE, distm));
+						float const distm(sqrt(distm_sq) - moon.radius);
 
-						if (distm <= 0.0) { // moon collision
-							result.assign(gc, cl, s, size, distm, UTYPE_MOON, &moon);
+						if (distm < result.dist) {
+							result.assign(gc, cl, s, distm, UTYPE_MOON, &moon);
 							result.planet = pc;
 							result.moon   = mc;
-							result.val    = 1;
-							return 2;
-						}
-						if ((find_largest && size > result.size) || (!find_largest && distm < result.dist)) {
-							result.assign(gc, cl, s, size, distm, UTYPE_MOON, &moon);
-							result.planet = pc;
-							result.moon   = mc;
+
+							if (distm <= 0.0) { // moon collision
+								result.val = 1; return 2;
+							}
 						}
 					} // moon
 				} // planet
 			} // system
 		} // cluster
 	} // galaxy
-	result.val   = ((result.size > 0.0) ? 1 : -1);
-	last_galaxy  = result.galaxy;
-	last_cluster = result.cluster;
-	last_system  = result.system;
-	//cout << last_galaxy << ":" << last_cluster << ":" << last_system << " "; // 0:4:151
-	return (result.size > 0.0);
+	result.val = ((result.dist < CELL_SIZE) ? 1 : -1);
+	if (result.galaxy  >= 0) {last_galaxy  = result.galaxy; }
+	if (result.cluster >= 0) {last_cluster = result.cluster;}
+	if (result.system  >= 0) {last_system  = result.system; }
+	return (result.val == 1);
 }
 
 
@@ -2585,7 +2566,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 
 	// check for simple point
 	if (dist <= 0.0) {
-		int const ival(get_largest_closest_object(result, start, 0, UTYPE_MOON, 1, 1.0));
+		int const ival(get_closest_object(result, start, UTYPE_MOON, 1, 1.0));
 
 		if (ival == 2 || (ival == 1 && result.dist <= line_radius)) { // collision at start
 			coll = start; return 1;
@@ -2620,7 +2601,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 
 	{ // check for start point collision (slow but important)
 		bool const fast_test(1);
-		int const ival(get_largest_closest_object(result, start, 0, (fast_test ? UTYPE_CELL : UTYPE_MOON), 0, 1.0));
+		int const ival(get_closest_object(result, start, (fast_test ? UTYPE_CELL : UTYPE_MOON), 0, 1.0));
 		assert(ival != 0 || result.val != 0);
 
 		if (!fast_test && (ival == 2 || (ival == 1 && result.dist <= line_radius))) { // collision at start
@@ -2788,7 +2769,6 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 					if (pv[pc].index < 0) { // sun is closer
 						result.dist   = pv[pc].dist;
 						result.object = &(system.sun);
-						result.size   = system.sun.radius/result.dist;
 						result.type   = UTYPE_STAR;
 						coll          = system.sun.pos; // center, not collision point, fix?
 						return 1;
@@ -2822,13 +2802,11 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 
 					if (ctest.index < 0) { // planet is closer
 						result.object = &planet;
-						result.size   = planet.radius/result.dist;
 						result.type   = UTYPE_PLANET;
 					}
 					else { // moon is closer
 						result.moon   = ctest.index;
 						result.object = &(planet.moons[ctest.index]);
-						result.size   = planet.moons[ctest.index].radius/result.dist;
 						result.type   = UTYPE_MOON;
 					}
 					coll = result.object->pos; // center, not collision point, fix?
@@ -2862,7 +2840,8 @@ float universe_t::get_point_temperature(s_object const &clobj, point const &pos)
 
 	if (clobj.system >= 0) return get_temp_in_system(clobj, pos); // existing system is valid
 	s_object result; // invalid system - expand the search radius and try again
-	if (!get_largest_closest_object(result, pos, 0, UTYPE_SYSTEM, 1, 4.0) || result.system < 0) return 0.0;
+	// FIXME: if galaxy is set, start there, and if not return 0.0
+	if (!get_closest_object(result, pos, UTYPE_SYSTEM, 1, 4.0) || result.system < 0) return 0.0;
 	return get_temp_in_system(result, pos);
 }
 
@@ -3065,7 +3044,6 @@ bool s_object::read(istream &in) {
 void s_object::init() {
 
 	dist   = CELL_SIZE;
-	size   = 0.0;
 	galaxy = cluster = system = planet = moon = asteroid_field = asteroid = -1;
 	type   = UTYPE_NONE;
 	val    = id = 0;
@@ -3074,12 +3052,11 @@ void s_object::init() {
 }
 
 
-void s_object::assign(int gc, int cl, int sy, float sz, float di, int ty, uobj_solid const *obj) {
+void s_object::assign(int gc, int cl, int sy, float di, int ty, uobj_solid const *obj) {
 
 	galaxy  = gc;
 	cluster = cl;
 	system  = sy;
-	size    = sz;
 	dist    = di;
 	type    = ty;
 	object  = obj;
