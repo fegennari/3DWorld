@@ -286,7 +286,6 @@ public:
 			shared_setup("ring_tex");
 			add_uniform_int("noise_tex",     1);
 			add_uniform_int("particles_tex", 2);
-			add_uniform_float("noise_tex_size", get_texture_size(NOISE_GEN_MIPMAP_TEX, 0));
 		}
 		set_active_texture(1);
 		select_texture(NOISE_GEN_MIPMAP_TEX, 0);
@@ -392,8 +391,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			draw_universe_plds();
 		}
 	}
-	//if (clobj.type >= UTYPE_SYSTEM) { // in a system
-	if (clobj.type >= UTYPE_GALAXY) { // in a galaxy
+	if (clobj.type >= UTYPE_SYSTEM) { // in a system
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
 			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest);
 		}
@@ -578,6 +576,19 @@ void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const
 }
 
 
+void ucell::draw_nebulas(ushader_group &usg) const {
+
+	point const camera(get_player_pos());
+	unebula::begin_render(usg.nebula_shader);
+
+	for (unsigned i = 0; i < galaxies->size(); ++i) {
+		unebula const &nebula((*galaxies)[i].nebula);
+		if (nebula.is_valid()) {nebula.draw(rel_center, camera, U_VIEW_DIST, usg.nebula_shader);}
+	}
+	unebula::end_render(usg.nebula_shader);
+}
+
+
 struct planet_draw_data_t {
 	unsigned ix;
 	float size;
@@ -596,20 +607,14 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 
 	if (galaxies == NULL) return; // galaxies not yet allocated
 	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
-	point const &camera(get_player_pos());
+	point const camera(get_player_pos());
 	point_d const pos(rel_center);
 
 	// use lower detail when the player is moving quickly in hyperspeed since objects zoom by so quickly
 	float const velocity_mag(get_player_velocity().mag()), sscale_val(1.0/max(1.0f, velocity_mag)); // up to 2.5x lower
 
 	if (nebula_pass) {
-		unebula::begin_render(usg.nebula_shader);
-
-		for (unsigned i = 0; i < galaxies->size(); ++i) {
-			unebula const &nebula((*galaxies)[i].nebula);
-			if (nebula.is_valid()) {nebula.draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);}
-		}
-		unebula::end_render(usg.nebula_shader);
+		draw_nebulas(usg);
 		return;
 	}
 	assert(!is_nan(camera));
@@ -648,21 +653,9 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 			}
 			uasteroid_field::end_render(usg.asteroid_shader);
 		}
-		int closest_system(clobj.system);
-		bool p_system2(p_system);
-
-		if (sel_g && closest_system < 0) { // find closest system so we can draw it last
-			float dmin_sq(0.0);
-
-			for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
-				float const dsq(p2p_dist_sq(camera, galaxy.sols[j].pos));
-				if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; closest_system = j;}
-			}
-			if (closest_system >= 0) {p_system2 = 1;}
-		}
 		for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
-			bool const sel_s(sel_g && (int)j == closest_system);
-			if (p_system2 && ((pass == 0 && sel_s) || (pass != 0 && !sel_s))) continue; // draw in another pass
+			bool const sel_s(sel_g && (int)j == clobj.system);
+			if (p_system && ((pass == 0 && sel_s) || (pass != 0 && !sel_s))) continue; // draw in another pass
 			ussystem &sol(galaxy.sols[j]);
 			float const sradius(sol.sun.radius);
 
@@ -680,7 +673,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 			bool const update_pass(sel_g && !no_move && ((int(tfticks)+j)&31) == 0);
 			if (!update_pass && sol.gen != 0 && !univ_sphere_vis(spos, sol.radius)) continue;
 			bool const sel_sun(sel_s && (clobj.type == UTYPE_STAR || clobj.type == UTYPE_SYSTEM));
-			bool const skip_s(p_system2 && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
+			bool const skip_s(p_system && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
 			bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(spos, 2.0*sradius));
 			bool const planets_visible(PLANET_MAX_SIZE*sscale_val*sizes >= 0.3*sradius || !sclip);
 			current.system  = j;
@@ -711,7 +704,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 
 				for (unsigned k = 0; k < sol.planets.size(); ++k) {
 					bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
-					if (p_system2 && (pass == 2 && !sel_p)) continue; // draw in another pass
+					if (p_system && (pass == 2 && !sel_p)) continue; // draw in another pass
 					uplanet &planet(sol.planets[k]);
 					point_d const ppos(pos + planet.pos);
 					if (sel_s && (p2p_dist_sq(camera, ppos) < p2p_dist_sq(camera, spos)) != sol_draw_pass) continue; // don't draw planet in this pass
@@ -724,7 +717,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 					}
 					current.planet = k;
 					bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET), skip_planet_draw(skip_closest && sel_planet);
-					bool const skip_p(p_system2 && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
+					bool const skip_p(p_system && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
 					if (!skip_p && !no_move) {planet.do_update(sol.pos, has_sun, has_sun);} // don't really have to do this if planet is not visible
 					if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(ppos, planet.mosize))) continue;
 					bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(ppos, pradius));
@@ -762,7 +755,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						}
 					} // planet visible
 					planet.process();
-					bool const skip_moons(p_system2 && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
+					bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
 
 					if (sizep >= 1.0 && !skip_moons && !planet.moons.empty()) {
 						int const p_light(GL_LIGHT2);
@@ -776,7 +769,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						}
 						for (unsigned l = 0; l < planet.moons.size(); ++l) { // draw moons
 							bool const sel_m(sel_moon && (int)l == clobj.moon);
-							if (p_system2 && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
+							if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
 							if (skip_closest && sel_m) continue; // skip (closest)
 							umoon &moon(planet.moons[l]);
 							if (!moon.is_ok()) continue;
