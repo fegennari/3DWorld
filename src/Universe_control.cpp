@@ -279,6 +279,7 @@ void process_univ_objects() {
 		float const radius(uobj->get_c_radius()*(no_coll ? 0.5 : 1.0));
 		upos_point_type const &obj_pos(uobj->get_pos());
 		vector3d gravity(zero_vector); // sum of gravity from sun, planets, possibly some moons, and possibly asteroids
+		point sun_pos(all_zeros);
 
 		// skip orbiting objects (no collisions or gravity effects, temperature is mostly constant)
 		s_object clobj; // closest object
@@ -311,8 +312,8 @@ void process_univ_objects() {
 				assert(clobj.object != NULL);
 				float const clobj_radius(clobj.object->get_radius());
 				point const clobj_pos(clobj.object->get_pos());
-				float const temperature(universe.get_point_temperature(clobj, obj_pos)*(FOBJ_TEMP_SCALE - uobj->get_shadow_val())); // shadow_val = 0-3
-				uobj->set_temp(temperature, clobj_pos);
+				float const temperature(universe.get_point_temperature(clobj, obj_pos, sun_pos)*(FOBJ_TEMP_SCALE - uobj->get_shadow_val())); // shadow_val = 0-3
+				uobj->set_temp(temperature, sun_pos);
 				temp_known = 1;
 				float hmap_scale(0.0);
 				if (clobj.type == UTYPE_MOON  ) {hmap_scale = MOON_HMAP_SCALE;  }
@@ -348,8 +349,8 @@ void process_univ_objects() {
 		} // found_close
 		if (!temp_known) {
 			float temperature(0.0);
-			if (!particle && !projectile) {temperature = universe.get_point_temperature(clobj, obj_pos)*FOBJ_TEMP_SCALE;}
-			uobj->set_temp(temperature, all_zeros);
+			if (!particle && !projectile) {temperature = universe.get_point_temperature(clobj, obj_pos, sun_pos)*FOBJ_TEMP_SCALE;}
+			uobj->set_temp(temperature, sun_pos);
 		}
 		if (calc_gravity) {
 			bool near_b_hole(0);

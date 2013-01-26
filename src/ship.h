@@ -234,7 +234,7 @@ public:
 		float radius_, float crs_, bool dlights_, bool first, bool final, bool p1, bool p2)
 		: ndiv(ndiv_), time(t), on_time(t), lifetime(0), eflags(0), nengines(0), powered(power), specular_en(spec_en),
 		dlights(dlights_), final_pass(final), first_pass(first), phase1(p1), phase2(p2), t_exp(texp), dist(dist_), radius(radius_),
-		crs(crs_), cloakval(0.0), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir), obj(obj_), shader(shader_) {}
+		crs(crs_), cloakval(0.0), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir), color_a(WHITE), color_b(WHITE), obj(obj_), shader(shader_) {}
 
 	inline bool is_moving() const {return (powered && (vel.mag_sq() > TOLERANCE));}
 	bool can_have_engine_lights() const;
@@ -868,6 +868,8 @@ public:
 
 
 class ucomet : public uobject_rand_spawn_t {
+
+	point sun_pos;
 	unsigned inst_ids[2];
 
 	virtual void gen_pos();
@@ -878,6 +880,7 @@ public:
 
 	// virtuals
 	float get_max_t() const {return 1000.0;} // a big number
+	void set_temp(float temp, point const &tcenter, free_obj const *source);
 	float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc);
 	void draw_obj(uobj_draw_data &ddata) const;
 	bool calc_rvs() const {return 1;} // ???

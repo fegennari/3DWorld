@@ -495,7 +495,7 @@ public:
 	void draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, bool no_distant);
 	int get_closest_object(s_object &result, point pos, int max_level, bool offset, float expand, bool get_destroyed=0) const;
 	bool get_trajectory_collisions(s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius) const;
-	float get_point_temperature(s_object const &clobj, point const &pos) const;
+	float get_point_temperature(s_object const &clobj, point const &pos, point &sun_pos) const;
 
 	int get_object_closest_to_pos(s_object &result, point const &pos) const {
 		return get_closest_object(result, pos, UTYPE_MOON, 1, 1.0);

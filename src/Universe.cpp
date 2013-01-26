@@ -2823,12 +2823,13 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 }
 
 
-float get_temp_in_system(s_object const &clobj, point const &pos) {
+float get_temp_in_system(s_object const &clobj, point const &pos, point &sun_pos) {
 
 	assert(clobj.system >= 0);
 	ussystem const &system(clobj.get_system());
 	ustar const &sun(system.sun);
 	if (!sun.is_ok()) return 0.0; // sun is dead
+	sun_pos = sun.pos;
 	point pos2(pos);
 	offset_pos(pos2);
 	float const sr(sun.radius), rdist(p2p_dist((pos2 - clobj.get_ucell().pos), system.pos));
@@ -2836,13 +2837,13 @@ float get_temp_in_system(s_object const &clobj, point const &pos) {
 }
 
 
-float universe_t::get_point_temperature(s_object const &clobj, point const &pos) const {
+float universe_t::get_point_temperature(s_object const &clobj, point const &pos, point &sun_pos) const {
 
-	if (clobj.system >= 0) return get_temp_in_system(clobj, pos); // existing system is valid
+	if (clobj.system >= 0) return get_temp_in_system(clobj, pos, sun_pos); // existing system is valid
 	s_object result; // invalid system - expand the search radius and try again
 	// FIXME: if galaxy is set, start there, and if not return 0.0
 	if (!get_closest_object(result, pos, UTYPE_SYSTEM, 1, 4.0) || result.system < 0) return 0.0;
-	return get_temp_in_system(result, pos);
+	return get_temp_in_system(result, pos, sun_pos);
 }
 
 

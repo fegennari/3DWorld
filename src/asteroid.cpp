@@ -65,7 +65,7 @@ public:
 
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
-		WHITE.do_glColor();
+		ddata.color_a.do_glColor();
 		model3d.draw();
 		end_texture();
 		enable_blend();
@@ -104,7 +104,7 @@ public:
 			s.add_uniform_float("noise_scale",  0.1);
 			s.add_uniform_float("height_scale", AST_PROC_HEIGHT);
 		}
-		colorRGBA(0.5, 0.45, 0.4, 1.0).do_glColor();
+		colorRGBA(0.5, 0.45, 0.4, 1.0).do_glColor(); // Note: ignores color_a
 		select_texture(WHITE_TEX);
 		draw_sphere_dlist(all_zeros, 1.0, 3*ddata.ndiv/2, 1);
 		s.disable();
@@ -185,7 +185,7 @@ public:
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id) const { // to allow overriding the texture id
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(force_tex_id); return;}
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
-		WHITE.do_glColor();
+		ddata.color_a.do_glColor();
 		select_texture(force_tex_id);
 		surface.sd.draw_ndiv_pow2(ddata.ndiv); // use dlist?
 		end_texture();
@@ -332,7 +332,7 @@ public:
 			s.add_uniform_vector3d("tex_eval_offset", zero_vector);
 		}
 		if (ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
-		WHITE.do_glColor();
+		ddata.color_a.do_glColor();
 		glEnable(GL_CULL_FACE);
 		model.core_render(s, 0, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 		glDisable(GL_CULL_FACE);
@@ -790,7 +790,7 @@ void uobject_rand_spawn_t::advance_time(float timestep) {
 }
 
 
-ucomet::ucomet(float radius_, float dmax, float vmag) : uobject_rand_spawn_t(radius_, dmax, vmag) {
+ucomet::ucomet(float radius_, float dmax, float vmag) : uobject_rand_spawn_t(radius_, dmax, vmag), sun_pos(all_zeros) {
 
 	dir = signed_rand_vector_norm();
 	gen_inst_ids();
@@ -815,6 +815,13 @@ void ucomet::gen_inst_ids() {
 }
 
 
+void ucomet::set_temp(float temp, point const &tcenter, free_obj const *source) {
+
+	sun_pos = tcenter;
+	free_obj::set_temp(temp, tcenter, source);
+}
+
+
 float ucomet::damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
 
 	if (rand_float() > 1.0E-5*val/radius) {return 0.0;} // higher damage = higher chance of destroying the comet
@@ -833,6 +840,7 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 
 	for (unsigned i = 0; i < 2; ++i) { // mixed rock and ice
 		glPushMatrix();
+		ddata.color_a = (i ? colorRGBA(2.0, 1.2, 1.0, 1.0) : WHITE); // less blue for ice
 		if (i == 1) {set_specular(0.8, 50.0);} // not sure if this actually works
 		asteroid_model_gen.get_asteroid((inst_ids[i] + i) % NUM_AST_MODELS)->draw_with_texture(ddata, comet_tids[i]);
 		if (i == 1) {set_specular(0.0, 1.0);}
@@ -844,26 +852,27 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 		color.alpha  = glow_weight;
 		color2.alpha = 0.0;
 		ddata.enable_ship_flares(color);
-		ddata.draw_engine(color, all_zeros, 3.2, 1.0, all_zeros, z_offset);
+		ddata.draw_engine(color, all_zeros, 4.0, 1.0, all_zeros, z_offset);
 		ddata.disable_ship_flares();
 
-		if (animate2) { // create tail
+		if (animate2) { // create tails
 			color.alpha *= 0.5;
 
-			if (temperature > 4.0) {
+			if (temperature > 4.0 && sun_pos != all_zeros) { // ion tail points away from the sun
 				rand_gen_t rgen;
 				rgen.set_state(inst_ids[0], inst_ids[1]);
 
 				for (unsigned i = 0; i < 10; ++i) {
 					vector3d const dir(radius*rgen.signed_rand_vector());
-					point const pos2(pos - rgen.rand_uniform(150.0, 250.0)*velocity + 2.0*dir);
+					point const pos2(pos + 30.0*radius*rgen.rand_uniform(0.75, 1.0)*(pos - sun_pos).get_norm() + 2.0*dir);
 					float const width(rgen.rand_uniform(0.5, 1.0));
 					t_wrays.push_back(usw_ray(1.0*width*radius, 2.5*width*radius, (pos + 0.3*dir), pos2, color, color2));
 				}
 			}
-			if (temperature > 2.0 && ddata.ndiv > 6) { // FIXME: iterate and use iticks?
+			if (temperature > 2.0 && ddata.ndiv > 6) { // dust tail follows velocity/path
+				// FIXME: iterate and use iticks?
 				vector3d const delta(signed_rand_vector()), pvel(0.2*velocity.mag()*delta);
-				gen_particle(PTYPE_GLOW, color, color2, unsigned(1.5*(3.0 - delta.mag())*TICKS_PER_SECOND),
+				gen_particle(PTYPE_GLOW, color, color2, unsigned(2.0*(3.0 - delta.mag())*TICKS_PER_SECOND),
 					(pos + 0.75*delta*radius), pvel, 0.3*radius, 0.0, ALIGN_NEUTRAL, 0);
 			}
 		}
