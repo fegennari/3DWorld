@@ -126,19 +126,16 @@ s_object get_shifted_sobj(s_object const &sobj) {
 }
 
 
-void setup_universe_fog(s_object const &closest, bool damaged) {
+void setup_universe_fog(s_object const &closest) { // FIXME: is this useful?
 
 	if (closest.type == UTYPE_PLANET) {
 		assert(closest.object != NULL);
+		float const atmos(closest.get_planet().atmos);
 
-		if (p2p_dist(get_player_pos(), closest.object->pos) < PLANET_ATM_RSCALE*closest.object->radius) {
-			float const atmos(closest.get_planet().atmos);
-			
-			if (atmos > 0.0) {
-				colorRGBA color(0.8, 0.8, 0.8, 0.33*atmos);
-				blend_color(color, color, closest.get_star().color, 0.7, 0);
-				add_camera_filter(color, 4, -1, CAM_FILT_FOG); // texture?
-			}
+		if (atmos > 0.0 && (p2p_dist(get_player_pos(), closest.object->pos) - get_player_radius()) < PLANET_ATM_RSCALE*closest.object->radius) {
+			colorRGBA color(0.8, 0.8, 0.8, 0.33*atmos);
+			blend_color(color, color, closest.get_star().color, 0.7, 0);
+			add_camera_filter(color, 4, -1, CAM_FILT_FOG); // texture?
 		}
 	}
 }

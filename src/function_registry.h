@@ -626,6 +626,7 @@ upos_point_type const &get_player_pos();
 vector3d const &get_player_dir();
 vector3d const &get_player_up();
 vector3d const &get_player_velocity();
+float get_player_radius();
 void set_player_pos(point const &pos_);
 void set_player_dir(vector3d const &dir_);
 void set_player_up(vector3d const &upv_);

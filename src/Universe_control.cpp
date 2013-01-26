@@ -41,7 +41,7 @@ void check_shift_universe();
 void draw_universe_sun_flare();
 
 
-void setup_universe_fog(s_object const &closest, bool damaged);
+void setup_universe_fog(s_object const &closest);
 void set_current_system_light(s_object const &clobj, point const &pspos, float a_scale, float d_scale);
 void destroy_sobj(s_object const &target);
 bool get_gravity(s_object &result, point pos, vector3d &gravity, int offset);
@@ -105,7 +105,7 @@ void setup_current_system() {
 		universe.draw_all_cells(clobj0, 1, 1, 1); // required to gen galaxies/systems
 	}
 	point const &pos(get_player_pos2());
-	universe.get_object_closest_to_pos(clobj0, pos);
+	universe.get_object_closest_to_pos(clobj0, pos, 4.0);
 	colorRGBA c1(ALPHA0), c2(ALPHA0);
 	float water(0.0);
 	atmosphere = 0.0;
@@ -234,12 +234,9 @@ void draw_universe(bool static_only, bool skip_closest, bool no_distant) { // sh
 			float const tratio(ps.get_temp()/ps.specs().max_t);
 			add_camera_filter(colorRGBA(1.0, 0.0, 0.0, min(0.5, max(0.1, 0.1*tratio))), 3, -1, CAM_FILT_BURN); // NOISE_TEX
 		}
-		universe.get_object_closest_to_pos(clobj0, get_player_pos2());
-		setup_universe_fog(clobj0, (burning || damaged));
 	}
-	else {
-		universe.get_object_closest_to_pos(clobj0, get_player_pos2());
-	}
+	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 4.0);
+	if (!static_only) {setup_universe_fog(clobj0);}
 	glEnable(GL_COLOR_MATERIAL);
 	check_gl_error(120);
 	universe.draw_all_cells(clobj0, skip_closest, skip_closest, no_distant);

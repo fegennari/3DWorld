@@ -513,8 +513,8 @@ public:
 	bool get_trajectory_collisions(s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius) const;
 	float get_point_temperature(s_object const &clobj, point const &pos, point &sun_pos) const;
 
-	int get_object_closest_to_pos(s_object &result, point const &pos) const {
-		return get_closest_object(result, pos, UTYPE_MOON, 1, 1.0);
+	int get_object_closest_to_pos(s_object &result, point const &pos, float expand=1.0) const {
+		return get_closest_object(result, pos, UTYPE_MOON, 1, expand);
 	}
 	int get_close_system(point const &pos, s_object &result, float expand) const {
 		if (!get_closest_object(result, pos, UTYPE_SYSTEM, 1, expand)) return 0; // find closest system (check last param=offset?)
