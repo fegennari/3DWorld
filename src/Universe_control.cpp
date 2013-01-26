@@ -8,6 +8,7 @@
 #include "asteroid.h"
 #include "timetest.h"
 #include "openal_wrap.h"
+#include "asteroid.h" // required for vector<usateroid_field>::_Tidy()?
 
 
 bool const TIMETEST           = (GLOBAL_TIMETEST || 0);

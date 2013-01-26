@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 11/18/06
 #include "universe.h"
+#include "asteroid.h" // required for vector<usateroid_field>::_Tidy()?
 #include <iostream>
 #include <fstream>
 

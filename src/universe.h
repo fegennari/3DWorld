@@ -389,9 +389,11 @@ public:
 	vector<ussystem> sols;
 	deque<system_cluster> clusters;
 	vector<uasteroid_field> asteroid_fields;
-	vector<unebula> nebulas;
+	unebula *nebula;
 	colorRGBA color;
 
+	ugalaxy() : nebula(NULL) {}
+	~ugalaxy() {free();}
 	void calc_color();
 	void calc_bounding_sphere();
 	bool create(ucell const &cell, int index);

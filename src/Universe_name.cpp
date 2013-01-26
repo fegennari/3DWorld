@@ -2,6 +2,7 @@
 // by Frank Gennari
 // 4/27/06
 #include "universe.h"
+#include "asteroid.h" // required for vector<usateroid_field>::_Tidy()?
 
 
 string const v_com = "a e i o ";

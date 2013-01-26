@@ -7,6 +7,7 @@
 #include "universe.h"
 #include "sinf.h"
 #include "textures_3dw.h"
+#include "asteroid.h" // required for vector<usateroid_field>::_Tidy()?
 
 
 unsigned const ND_TEST     = 32;

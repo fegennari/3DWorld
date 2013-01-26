@@ -26,6 +26,7 @@ float const MAX_LAND_TEMP    = 29.0;
 float const BOIL_TEMP        = 30.0;
 float const NO_AIR_TEMP      = 32.0;
 float const NDIV_SIZE_SCALE  = 12.0;
+float const NEBULA_PROB      = 0.5;
 
 bool const USE_HEIGHTMAP     = 1; // for planets/moons/(stars)
 bool const CACHE_SPHERE_DATA = 1; // more memory but much faster rendering
@@ -39,8 +40,6 @@ unsigned const MIN_GALAXIES_PER_CELL   = 1;
 unsigned const MAX_GALAXIES_PER_CELL   = 4;
 unsigned const MIN_AST_FIELD_PER_GALAXY= 0;
 unsigned const MAX_AST_FIELD_PER_GALAXY= 8;
-unsigned const MIN_NEBULAS_PER_GALAXY  = 0;
-unsigned const MAX_NEBULAS_PER_GALAXY  = 2;
 unsigned const MAX_SYSTEMS_PER_GALAXY  = 500;
 unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
 unsigned const MAX_MOONS_PER_PLANET    = 8;
@@ -608,11 +607,8 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 		unebula::begin_render(usg.nebula_shader);
 
 		for (unsigned i = 0; i < galaxies->size(); ++i) {
-			ugalaxy &galaxy((*galaxies)[i]);
-
-			for (vector<unebula>::const_iterator i = galaxy.nebulas.begin(); i != galaxy.nebulas.end(); ++i) {
-				i->draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);
-			}
+			unebula const *const nebula((*galaxies)[i].nebula);
+			if (nebula) {nebula->draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);}
 		}
 		unebula::end_render(usg.nebula_shader);
 		return;
@@ -1098,15 +1094,12 @@ void ugalaxy::process(ucell const &cell) {
 	lrq_rad = 0.0;
 	//PRINT_TIME("Gen Galaxy");
 
-	// gen nebulas
-	unsigned const num_nebulas(rand_uniform_uint2(MIN_NEBULAS_PER_GALAXY, MAX_NEBULAS_PER_GALAXY));
-	nebulas.resize(num_nebulas);
-
-	for (vector<unebula>::iterator i = nebulas.begin(); i != nebulas.end(); ++i) {
-		i->pos = gen_valid_system_pos();
-		i->gen(radius, *this);
+	if (rand_float2() < NEBULA_PROB) { // gen nebula
+		nebula = new unebula;
+		nebula->pos = gen_valid_system_pos();
+		nebula->gen(radius, *this);
 	}
-	//PRINT_TIME("Gen Nebulas");
+	//PRINT_TIME("Gen Nebula");
 
 	// gen asteroid fields
 	unsigned const num_af(rand_uniform_uint2(MIN_AST_FIELD_PER_GALAXY, MAX_AST_FIELD_PER_GALAXY));
@@ -1936,7 +1929,8 @@ void ugalaxy::clear_systems() {
 	sols.clear();
 	clusters.clear();
 	asteroid_fields.clear();
-	nebulas.clear();
+	delete nebula;
+	nebula = NULL;
 }
 
 

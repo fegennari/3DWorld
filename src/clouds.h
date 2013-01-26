@@ -20,6 +20,7 @@ public:
 	void gen(float range, ellipsoid_t const &bounds);
 	void draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const;
 	void free() {points.clear();}
+	bool is_valid() const {return !points.empty();}
 };
 
 
