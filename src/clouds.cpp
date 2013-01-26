@@ -6,7 +6,7 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "draw_utils.h"
-#include "clouds.h" // for uobj_base for unebula
+#include "universe.h" // for unebula
 
 
 bool     const USE_CLOUD_FBO    = 1;

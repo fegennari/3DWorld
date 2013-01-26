@@ -363,7 +363,22 @@ public:
 };
 
 
-class unebula;
+class unebula : public uobject_base {
+
+	colorRGBA color[3];
+	typedef vert_norm_comp vert_type_t;
+	vector<vert_type_t> points;
+
+public:
+	static void begin_render(shader_t &s);
+	static void end_render(shader_t &s);
+	void gen(float range, ellipsoid_t const &bounds);
+	void draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const;
+	void free() {points.clear();}
+	bool is_valid() const {return !points.empty();}
+};
+
+
 class uasteroid_field;
 
 
@@ -389,11 +404,9 @@ public:
 	vector<ussystem> sols;
 	deque<system_cluster> clusters;
 	vector<uasteroid_field> asteroid_fields;
-	unebula *nebula;
+	unebula nebula;
 	colorRGBA color;
 
-	ugalaxy() : nebula(NULL) {}
-	~ugalaxy() {free();}
 	void calc_color();
 	void calc_bounding_sphere();
 	bool create(ucell const &cell, int index);

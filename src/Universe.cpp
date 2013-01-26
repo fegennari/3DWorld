@@ -9,7 +9,6 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "asteroid.h"
-#include "clouds.h" // for unebula
 
 
 // temperatures
@@ -607,8 +606,8 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 		unebula::begin_render(usg.nebula_shader);
 
 		for (unsigned i = 0; i < galaxies->size(); ++i) {
-			unebula const *const nebula((*galaxies)[i].nebula);
-			if (nebula) {nebula->draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);}
+			unebula const &nebula((*galaxies)[i].nebula);
+			if (nebula.is_valid()) {nebula.draw(pos, camera, U_VIEW_DIST, usg.nebula_shader);}
 		}
 		unebula::end_render(usg.nebula_shader);
 		return;
@@ -1095,9 +1094,8 @@ void ugalaxy::process(ucell const &cell) {
 	//PRINT_TIME("Gen Galaxy");
 
 	if (rand_float2() < NEBULA_PROB) { // gen nebula
-		nebula = new unebula;
-		nebula->pos = gen_valid_system_pos();
-		nebula->gen(radius, *this);
+		nebula.pos = gen_valid_system_pos();
+		nebula.gen(radius, *this);
 	}
 	//PRINT_TIME("Gen Nebula");
 
@@ -1929,8 +1927,6 @@ void ugalaxy::clear_systems() {
 	sols.clear();
 	clusters.clear();
 	asteroid_fields.clear();
-	delete nebula;
-	nebula = NULL;
 }
 
 
