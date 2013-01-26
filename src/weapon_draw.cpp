@@ -31,7 +31,7 @@ void beam3d::draw() const {
 	float const mag(sqrt(intensity));
 	colorRGBA c(color);
 	c.alpha *= mag;
-	draw_line_tquad(pts[0], pts[1], 0.01*mag, 0.01*mag, c, (distant ? ALPHA0 : c), 0);
+	draw_line_tquad(pts[0], pts[1], 0.01*mag, 0.01*mag, c, (distant ? ALPHA0 : c));
 }
 
 

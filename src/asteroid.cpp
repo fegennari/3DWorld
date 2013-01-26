@@ -866,7 +866,7 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 					vector3d const dir(radius*rgen.signed_rand_vector());
 					point const pos2(pos + 30.0*radius*rgen.rand_uniform(0.75, 1.0)*(pos - sun_pos).get_norm() + 2.0*dir);
 					float const width(rgen.rand_uniform(0.5, 1.0));
-					t_wrays.push_back(usw_ray(1.0*width*radius, 2.5*width*radius, (pos + 0.3*dir), pos2, color, color2));
+					t_wrays.push_back(usw_ray(1.0*width*radius, 3.0*width*radius, (pos + 0.3*dir), pos2, color, color2));
 				}
 			}
 			if (temperature > 2.0 && ddata.ndiv > 6) { // dust tail follows velocity/path

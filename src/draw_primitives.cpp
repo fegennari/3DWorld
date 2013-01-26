@@ -826,27 +826,33 @@ void draw_billboard(point const &pos, point const &viewer, vector3d const &up_di
 }
 
 
-void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2, bool globalize) {
+bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]) {
 
 	int npts(0);
-	point const pcenter((p1 + p2)*0.5);
-	vector3d const v1(get_camera_pos(), pcenter);
+	vector3d const v1(get_camera_pos(), (p1 + p2)*0.5);
 	vector3d v2;
-	if (v1.mag() > 1.0E5*min(w1, w2)) return; // too far away
-	point pts[4];
+	if (v1.mag() > 1.0E5*min(w1, w2)) return 0; // too far away
 	cylinder_quad_projection(pts, cylinder_3dw(p1, p2, w1, w2), v1.get_norm(), v2, npts);
 	assert(npts == 4);
+	return 1;
+}
+
+
+void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2) {
+
+	point pts[4];
+	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
 	color1.do_glColor();
 	
 	for (unsigned i = 0; i < 4; ++i) {
-		if (i == 2 && color2 != color1) color2.do_glColor();
+		if (i == 2 && color2 != color1) {color2.do_glColor();}
 		glTexCoord2f(((i == 0 || i == 3) ? 0.0 : 1.0), 0.5); // 1D blur texture
-		(globalize ? make_pt_global(pts[i]) : pts[i]).do_glVertex();
+		pts[i].do_glVertex();
 	}
 }
 
 
-void begin_line_tquad_draw() {
+void begin_line_tquad_draw(bool draw_as_tris) {
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDisable(GL_LIGHTING);
@@ -854,7 +860,7 @@ void begin_line_tquad_draw() {
 	select_texture(BLUR_TEX);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.01);
-	glBegin(GL_QUADS);
+	glBegin(draw_as_tris ? GL_TRIANGLES : GL_QUADS); // supports quads and triangles
 }
 
 
