@@ -288,6 +288,7 @@ public:
 			shared_setup("ring_tex");
 			add_uniform_int("noise_tex",     1);
 			add_uniform_int("particles_tex", 2);
+			add_uniform_float("noise_tex_size", get_texture_size(NOISE_GEN_MIPMAP_TEX, 0));
 		}
 		set_active_texture(1);
 		select_texture(NOISE_GEN_MIPMAP_TEX, 0);

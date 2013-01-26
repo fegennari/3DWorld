@@ -1,3 +1,4 @@
+uniform float noise_tex_size;
 uniform vec3 planet_pos, sun_pos, camera_pos;
 uniform float planet_radius, ring_ri, ring_ro, sun_radius, bf_draw_sign;
 uniform sampler2D noise_tex, particles_tex;
@@ -39,6 +40,9 @@ void main()
 	alpha      += texture2D(particles_tex, 75*gl_TexCoord[0].st).r;
 	alpha      += texture2D(particles_tex, 133*gl_TexCoord[0].st).r;
 	color.a    *= min(1.0, alpha); // add 4 octaves of random particles
+
+	//if (texture2D(noise_tex, gl_FragCoord.xy/noise_tex_size).r > color.a) discard;
+	//color.a = 1.0;
 
 	gl_FragColor = color * texel;
 }
