@@ -507,7 +507,7 @@ public:
 	void shift_cells(int dx, int dy, int dz);
 	void free_textures();
 	void draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, bool no_distant);
-	int get_closest_object(s_object &result, point pos, int max_level, bool offset, float expand, bool get_destroyed=0) const;
+	int get_closest_object(s_object &result, point pos, int max_level, bool offset, float expand, bool get_destroyed=0, float g_expand=1.0) const;
 	bool get_trajectory_collisions(s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius) const;
 	float get_point_temperature(s_object const &clobj, point const &pos, point &sun_pos) const;
 

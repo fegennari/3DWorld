@@ -2389,7 +2389,7 @@ string ustar::get_info() const {
 
 
 // if not find_largest then find closest
-int universe_t::get_closest_object(s_object &result, point pos, int max_level, bool offset, float expand, bool get_destroyed) const {
+int universe_t::get_closest_object(s_object &result, point pos, int max_level, bool offset, float expand, bool get_destroyed, float g_expand) const {
 
 	float min_gdist(CELL_SIZE);
 	if (offset) offset_pos(pos);
@@ -2425,9 +2425,9 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 		if (gc == 0) gc = go; else if (gc == go) gc = 0;
 		ugalaxy const &galaxy((*cell.galaxies)[gc]);
 		float const distg(p2p_dist(pos, galaxy.pos));
-		if (distg > expand*(galaxy.radius + MAX_SYSTEM_EXTENT)) continue;
+		if (distg > g_expand*(galaxy.radius + MAX_SYSTEM_EXTENT)) continue;
 		float const galaxy_radius(galaxy.get_radius_at((pos - galaxy.pos)/distg));
-		if (distg > expand*(galaxy_radius + MAX_SYSTEM_EXTENT)) continue;
+		if (distg > g_expand*(galaxy_radius + MAX_SYSTEM_EXTENT)) continue;
 
 		if (max_level == UTYPE_GALAXY || result.object == NULL) { // galaxy
 			if (max_level == UTYPE_GALAXY) {

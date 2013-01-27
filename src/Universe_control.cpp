@@ -653,8 +653,8 @@ float urev_body::get_land_value(unsigned align, point const &cur_pos, float srad
 uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned align) {
 
 	s_object result;
-	float const expand(CELL_SIZE/GALAXY_MIN_SIZE); // Note: can be in more than one galaxy, but should be OK
-	if (!universe.get_closest_object(result, pos, UTYPE_GALAXY, 1, expand) || result.type != UTYPE_GALAXY) return NULL;
+	float const g_expand(CELL_SIZE/GALAXY_MIN_SIZE); // Note: can be in more than one galaxy, but should be OK
+	if (!universe.get_closest_object(result, pos, UTYPE_GALAXY, 1, 4.0, 0, g_expand) || result.type != UTYPE_GALAXY) return NULL;
 	ugalaxy const &galaxy(result.get_galaxy());
 	uobject const *dest = NULL;
 	float const distval(2.5*galaxy.get_radius());
