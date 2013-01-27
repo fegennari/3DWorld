@@ -85,7 +85,6 @@ float const MAX_PLANET_EXTENT(MOON_TO_PLANET_MAX_SPACING + MOON_MAX_SIZE);
 float const MAX_SYSTEM_EXTENT(PLANET_TO_SUN_MAX_SPACING + MAX_PLANET_EXTENT);
 float const MAX_GALAXY_EXTENT(GALAXY_MAX_SIZE + MAX_SYSTEM_EXTENT);
 float const AVG_STAR_SIZE(0.5*(STAR_MAX_SIZE + STAR_MIN_SIZE));
-float const STAR_MAX_SIZE_INV(1.0/STAR_MAX_SIZE);
 
 unsigned const U_BLOCKS      = 7;
 unsigned const U_BLOCKS_SQ   = U_BLOCKS*U_BLOCKS;
@@ -393,10 +392,11 @@ public:
 
 		float radius, bounds;
 		point center;
+		colorRGBA color;
 		vector<point> systems;
 		unsigned s1, s2;
 
-		system_cluster(float radius_, point const &center_) : radius(radius_), bounds(0.0), center(center_), s1(0), s2(0) {}
+		system_cluster(float radius_, point const &center_) : radius(radius_), bounds(0.0), center(center_), color(BLACK), s1(0), s2(0) {}
 	};
 
 	vector<ussystem> sols;

@@ -522,8 +522,9 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 			color = sol->get_galaxy_color(); // non-const
 		}
 		else {
-			ugalaxy const &galaxy(result.get_galaxy()); // what about overlapping galaxies?
+			ugalaxy const &galaxy(result.get_galaxy()); // galaxies shouldn't overlap
 			color = galaxy.color;
+			if (result.cluster >= 0) {color = (color + result.get_cluster().color)*0.5;} // average galaxy and cluster colors
 			//atten_color(color, pos2, galaxy.pos, (galaxy.radius + MAX_SYSTEM_EXTENT), expand);
 		}
 		if (ambient_scale == 0.0) {
@@ -649,6 +650,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 			if (!univ_sphere_vis(cpos, galaxy.clusters[c].bounds)) continue;
 			float const max_size(calc_sphere_size(cpos, camera, STAR_MAX_SIZE));
 			ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
+			set_ambient_color((galaxy.color + cl.color)*0.5); // average the galaxy and cluster colors (but probably always reset below)
 
 			for (unsigned j = cl.s1; j < cl.s2; ++j) {
 				bool const sel_s(sel_g && (int)j == clobj.system);
@@ -995,7 +997,7 @@ bool ugalaxy::is_close_to(ugalaxy const &g, float overlap_amount) const {
 
 void ugalaxy::calc_color() {
 
-	color.assign(0.0, 0.0, 0.0, 1.0);
+	color = BLACK;
 
 	for (unsigned j = 0; j < sols.size(); ++j) {
 		color += sols[j].sun.get_ambient_color_val();
@@ -1058,6 +1060,7 @@ void ugalaxy::process(ucell const &cell) {
 		cl.bounds = 0.0;
 		cl.center = all_zeros;
 		cl.s1     = cur;
+		cl.color  = BLACK;
 		current.cluster = c;
 		
 		for (unsigned i = 0; i < nsystems; ++i) {
@@ -1071,8 +1074,12 @@ void ugalaxy::process(ucell const &cell) {
 			sols[cur].galaxy = this;
 			sols[cur].cluster_id = c;
 			sols[cur].create(cl.systems[i]);
+			cl.color += sols[cur].sun.get_ambient_color_val();
 		}
 		cl.systems.clear();
+		remove_excess_cap(cl.systems);
+		cl.color    *= 1.0/nsystems;
+		cl.color.set_valid_color();
 		cl.radius    = sqrt(cl.radius);
 		cl.bounds    = cl.radius + MAX_SYSTEM_EXTENT;
 		tot_systems += nsystems;
@@ -1203,7 +1210,7 @@ void ussystem::calc_color() { // delayed until the color is actually needed
 	assert(galaxy);
 	vector<ussystem> const &sols(galaxy->sols);
 	assert(!sols.empty());
-	galaxy_color.assign(0.0, 0.0, 0.0, 1.0);
+	galaxy_color = BLACK;
 	float const max_dist(5.0*SYSTEM_MIN_SPACING), max_dist_sq(max_dist*max_dist);
 	float sum(0.0);
 
@@ -1606,7 +1613,7 @@ void urev_body::dec_orbiting_refs(s_object const &sobj) {
 void ustar::gen_color() {
 
 	if (temp < 25.0) { // black: 0-25 (black hole)
-		color.assign(0.0, 0.0, 0.0, 1.0);
+		color = BLACK;
 	}
 	else if (temp < 30.0) { // deep red: 25-30
 		color.assign(0.2*(temp - 25.0), 0.0, 0.0, 1.0);
@@ -1631,7 +1638,7 @@ void ustar::gen_color() {
 
 colorRGBA ustar::get_ambient_color_val() const {
 
-	return (is_ok() ? colorRGBA(color.R*STAR_MAX_SIZE_INV, color.G*STAR_MAX_SIZE_INV, color.B*STAR_MAX_SIZE_INV, color.A) : BLACK);
+	return (is_ok() ? colorRGBA(color.R, color.G, color.B, color.A)*sqrt(radius/STAR_MAX_SIZE) : BLACK);
 }
 
 
