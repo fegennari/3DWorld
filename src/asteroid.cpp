@@ -19,7 +19,7 @@ float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for 
 float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader asteroids
 
 
-extern int animate2, iticks;
+extern int animate2;
 extern float fticks;
 extern colorRGBA sun_color;
 extern s_object clobj0;
@@ -856,24 +856,29 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 		ddata.disable_ship_flares();
 
 		if (animate2) { // create tails
+			color.alpha *= 0.5;
+
 			if (temperature > 4.0 && sun_pos != all_zeros) { // ion tail points away from the sun
-				colorRGBA color1(color);
-				color1.alpha *= 0.5;
 				rand_gen_t rgen;
 				rgen.set_state(inst_ids[0], inst_ids[1]);
 
-				for (unsigned i = 0; i < 10; ++i) {
+				for (unsigned i = 0; i < 10; ++i) { // Note: could use a procedural 1D texture similar to planet rings instead of creating multiple rays
 					vector3d const dir(radius*rgen.signed_rand_vector());
 					point const pos2(pos + 30.0*radius*rgen.rand_uniform(0.75, 1.0)*(pos - sun_pos).get_norm() + 2.0*dir);
 					float const width(rgen.rand_uniform(0.5, 1.0));
-					t_wrays.push_back(usw_ray(1.0*width*radius, 3.0*width*radius, (pos + 0.3*dir), pos2, color1, color2));
+					t_wrays.push_back(usw_ray(1.0*width*radius, 3.0*width*radius, (pos + 0.3*dir), pos2, color, color2));
 				}
 			}
 			if (temperature > 2.0 && ddata.ndiv > 6) { // dust tail follows velocity/path
-				// FIXME: iterate and use iticks?
-				vector3d const delta(signed_rand_vector()), pvel(0.2*velocity.mag()*delta);
-				gen_particle(PTYPE_GLOW, color, color2, unsigned(2.0*(2.5 - delta.mag())*TICKS_PER_SECOND),
-					(pos + 0.75*delta*radius), pvel, 0.3*radius, 0.0, ALIGN_NEUTRAL, 0);
+				float const vmag(velocity.mag()), fnum(8000.0*fticks*vmag);
+				unsigned num(fnum);
+				if (rand_float() < (fnum - num)) {++num;}
+
+				for (unsigned i = 0; i < num; ++i) {
+					vector3d const delta(signed_rand_vector()), pvel(0.2*vmag*delta);
+					gen_particle(PTYPE_GLOW, color, color2, unsigned(2.0*(2.5 - delta.mag())*TICKS_PER_SECOND),
+						(pos + 0.75*delta*radius), pvel, 0.25*radius, 0.0, ALIGN_NEUTRAL, 0);
+				}
 			}
 		}
 	}

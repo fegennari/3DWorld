@@ -126,7 +126,8 @@ s_object get_shifted_sobj(s_object const &sobj) {
 }
 
 
-void setup_universe_fog(s_object const &closest) { // FIXME: is this useful?
+// not very useful, but could be after planets and ships are scaled to do better planet approaches and planet surface subdivision
+void setup_universe_fog(s_object const &closest) {
 
 	if (closest.type != UTYPE_PLANET) return;
 	assert(closest.object != NULL);
@@ -2451,7 +2452,8 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
 				if (!dist_less_than(pos, i->pos, expand*i->radius)) continue;
 
-				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) { // FIXME: subdivision?
+				// FIXME: voxel positions are dynamic, so spatial subdivision is difficult
+				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) {
 					if (!dist_less_than(pos, j->pos, expand*j->radius)) continue;
 					float const dista(p2p_dist(pos, j->pos));
 					result.assign(gc, -1, -1, dista, UTYPE_ASTEROID, NULL);

@@ -34,10 +34,11 @@ void main()
 	color.rgb += add_light_rings(norm2).rgb; // ambient, diffuse, and specular
 	color.rgb += (gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
 
-	float alpha = texture2D(particles_tex, 23*gl_TexCoord[0].st).r;
-	alpha      += texture2D(particles_tex, 42*gl_TexCoord[0].st).r;
-	alpha      += texture2D(particles_tex, 75*gl_TexCoord[0].st).r;
+	float alpha = texture2D(particles_tex, 23 *gl_TexCoord[0].st).r;
+	alpha      += texture2D(particles_tex, 42 *gl_TexCoord[0].st).r;
+	alpha      += texture2D(particles_tex, 75 *gl_TexCoord[0].st).r;
 	alpha      += texture2D(particles_tex, 133*gl_TexCoord[0].st).r;
+	if (alpha == 0.0) discard;
 	color.a    *= min(1.0, alpha); // add 4 octaves of random particles
 
 	gl_FragColor = color * texel;
