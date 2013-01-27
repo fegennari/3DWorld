@@ -792,6 +792,7 @@ void uobject_rand_spawn_t::advance_time(float timestep) {
 
 ucomet::ucomet(float radius_, float dmax, float vmag) : uobject_rand_spawn_t(radius_, dmax, vmag), sun_pos(all_zeros) {
 
+	draw_rscale = 10.0; // increase draw radius so that tails are visible even when the comet body is not
 	dir = signed_rand_vector_norm();
 	gen_inst_ids();
 }

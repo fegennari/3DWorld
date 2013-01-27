@@ -701,7 +701,7 @@ public:
 	float           get_true_temp()const {return temperature/FOBJ_TEMP_SCALE;}
 	float           get_sfactor()  const {return speed_factor;}
 	float           get_max_sf()   const {return max_sfactor;}
-	float        get_draw_rscale() const {return draw_rscale;}
+	float        get_draw_radius() const {return draw_rscale*radius;}
 	unsigned        get_align()    const {return alignment;}
 	unsigned        get_time()     const {return time;}
 	unsigned        get_flags()    const {return flags;}

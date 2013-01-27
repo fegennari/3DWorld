@@ -298,7 +298,7 @@ float free_obj::coll_physics(point const &copos, vector3d const &vcoll, float ob
 
 void free_obj::check_distant() {
 	
-	if (is_distant(pos, draw_rscale*radius)) flags |= OBJ_FLAGS_DIST; else flags &= ~OBJ_FLAGS_DIST;
+	if (is_distant(pos, get_draw_radius())) {flags |= OBJ_FLAGS_DIST;} else {flags &= ~OBJ_FLAGS_DIST;}
 }
 
 
@@ -602,7 +602,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 	upos_point_type const finpos(pos + pos_);
 	bool const lg_obj_type(is_ship() || is_stationary());
 	float const dist(p2p_dist(finpos, get_player_pos2())), type_scale(lg_obj_type ? 0.75 : (is_particle() ? 1.2 : 1.0));
-	float const dscale(type_scale*NDIV_SCALE_U*(draw_rscale*radius/(dist + 0.1*radius + TOLERANCE)));
+	float const dscale(type_scale*NDIV_SCALE_U*(get_draw_radius()/(dist + 0.1*radius + TOLERANCE)));
 	if (dscale < 0.5 || (is_particle() && dscale < 1.0)) return; // too far/small - clip it
 	int ndiv(max(3, min((int)FREE_OBJ_MAX_NDIV, int(sqrt(10.0*dscale)))));
 	if (ndiv > 8 && (ndiv&1)) ++ndiv; // an even size is divisible by 2, so hemispheres can be created exactly
