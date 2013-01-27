@@ -448,32 +448,6 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 }
 
 
-void unebula::begin_render(shader_t &s) {
-
-	if (!s.is_setup()) {
-		s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
-		s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
-		s.set_vert_shader("nebula");
-		s.set_frag_shader("nebula");
-		s.begin_shader();
-		s.add_uniform_int("noise_tex", 0);
-		s.add_uniform_float("noise_scale", 0.01);
-		bind_3d_texture(get_noise_tex_3d(32, 4)); // RGBA noise
-	}
-	s.enable();
-	enable_blend();
-	glDepthMask(GL_FALSE); // no depth writing
-}
-
-
-void unebula::end_render(shader_t &s) {
-
-	glDepthMask(GL_TRUE);
-	disable_blend();
-	s.disable();
-}
-
-
 void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const { // Note: new VFC here
 
 	pos_ += pos;
@@ -491,17 +465,31 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 		mod_color[d] = color[d];
 		mod_color[d].alpha *= ((draw_model == 1) ? 1.0 : 0.3*dist_scale);
 	}
-	if (s.is_setup()) { // assert setup?
-		s.add_uniform_color("color1", mod_color[0]);
-		s.add_uniform_color("color2", mod_color[1]);
-		s.add_uniform_color("color3", mod_color[2]);
-		s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
-		s.add_uniform_float("radius", radius);
-		s.add_uniform_float("offset", pos.x);
+	if (!s.is_setup()) {
+		s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
+		s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
+		s.set_vert_shader("nebula");
+		s.set_frag_shader("nebula");
+		s.begin_shader();
+		s.add_uniform_int("noise_tex", 0);
+		s.add_uniform_float("noise_scale", 0.01);
+		bind_3d_texture(get_noise_tex_3d(32, 4)); // RGBA noise
 	}
+	s.enable();
+	enable_blend();
+	glDepthMask(GL_FALSE); // no depth writing
+	s.add_uniform_color("color1", mod_color[0]);
+	s.add_uniform_color("color2", mod_color[1]);
+	s.add_uniform_color("color3", mod_color[2]);
+	s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
+	s.add_uniform_float("radius", radius);
+	s.add_uniform_float("offset", pos.x);
 	mod_color[0].do_glColor();
 	points.front().set_state();
 	glDrawArrays(GL_QUADS, 0, (unsigned)points.size());
+	glDepthMask(GL_TRUE);
+	disable_blend();
+	s.disable();
 	glPopMatrix();
 }
 

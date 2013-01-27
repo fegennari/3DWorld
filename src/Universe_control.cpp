@@ -125,7 +125,7 @@ void setup_current_system() {
 		if (dist_less_than(pos, opos, 10.0*oradius)) { // fairly close to the planet
 			if (!dist_less_than(pos, opos, 1.01*oradius)) { // not at the surface
 				//cout << "distance to planet: " << p2p_dist(opos, pos) << ", planet radius: " << oradius << endl;
-				point const p_int(opos + oradius*(pos - opos).get_norm());
+				point const p_int(opos + (oradius + get_player_radius())*(pos - opos).get_norm());
 				player_ship().move_to(p_int); // move the player ship to the surface of the planet/moon
 			}
 		}

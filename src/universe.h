@@ -370,8 +370,6 @@ class unebula : public uobject_base {
 	vector<vert_type_t> points;
 
 public:
-	static void begin_render(shader_t &s);
-	static void end_render(shader_t &s);
 	void gen(float range, ellipsoid_t const &bounds);
 	void draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const;
 	void free() {points.clear();}

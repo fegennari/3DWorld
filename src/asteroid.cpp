@@ -753,7 +753,7 @@ void uobject_rand_spawn_t::mark_pos_invalid() {
 
 void uobject_rand_spawn_t::gen_pos() {
 
-	if (clobj0.galaxy < 0) return; // player not within a galaxy, so don't respawn
+	if (clobj0.system < 0) return; // player not near a system, so don't respawn
 	if (player_ship().get_velocity().mag() > 0.2) return; // player ship moving too quickly, don't respawn
 
 	for (unsigned iter_count = 0; iter_count < 10; ++iter_count) { // limit the number of iterations
@@ -852,13 +852,13 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 		color.alpha  = glow_weight;
 		color2.alpha = 0.0;
 		ddata.enable_ship_flares(color);
-		ddata.draw_engine(color, all_zeros, 4.0, 1.0, all_zeros, z_offset);
+		ddata.draw_engine(color, all_zeros, 4.0, 1.0, all_zeros, z_offset); // coma
 		ddata.disable_ship_flares();
 
 		if (animate2) { // create tails
-			color.alpha *= 0.5;
-
 			if (temperature > 4.0 && sun_pos != all_zeros) { // ion tail points away from the sun
+				colorRGBA color1(color);
+				color1.alpha *= 0.5;
 				rand_gen_t rgen;
 				rgen.set_state(inst_ids[0], inst_ids[1]);
 
@@ -866,13 +866,13 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 					vector3d const dir(radius*rgen.signed_rand_vector());
 					point const pos2(pos + 30.0*radius*rgen.rand_uniform(0.75, 1.0)*(pos - sun_pos).get_norm() + 2.0*dir);
 					float const width(rgen.rand_uniform(0.5, 1.0));
-					t_wrays.push_back(usw_ray(1.0*width*radius, 3.0*width*radius, (pos + 0.3*dir), pos2, color, color2));
+					t_wrays.push_back(usw_ray(1.0*width*radius, 3.0*width*radius, (pos + 0.3*dir), pos2, color1, color2));
 				}
 			}
 			if (temperature > 2.0 && ddata.ndiv > 6) { // dust tail follows velocity/path
 				// FIXME: iterate and use iticks?
 				vector3d const delta(signed_rand_vector()), pvel(0.2*velocity.mag()*delta);
-				gen_particle(PTYPE_GLOW, color, color2, unsigned(2.0*(3.0 - delta.mag())*TICKS_PER_SECOND),
+				gen_particle(PTYPE_GLOW, color, color2, unsigned(2.0*(2.5 - delta.mag())*TICKS_PER_SECOND),
 					(pos + 0.75*delta*radius), pvel, 0.3*radius, 0.0, ALIGN_NEUTRAL, 0);
 			}
 		}

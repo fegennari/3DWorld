@@ -25,7 +25,7 @@ float const MAX_LAND_TEMP    = 29.0;
 float const BOIL_TEMP        = 30.0;
 float const NO_AIR_TEMP      = 32.0;
 float const NDIV_SIZE_SCALE  = 12.0;
-float const NEBULA_PROB      = 0.5;
+float const NEBULA_PROB      = 0.65;
 
 bool const USE_HEIGHTMAP     = 1; // for planets/moons/(stars)
 bool const CACHE_SPHERE_DATA = 1; // more memory but much faster rendering
@@ -128,15 +128,17 @@ s_object get_shifted_sobj(s_object const &sobj) {
 
 void setup_universe_fog(s_object const &closest) { // FIXME: is this useful?
 
-	if (closest.type == UTYPE_PLANET) {
-		assert(closest.object != NULL);
-		float const atmos(closest.get_planet().atmos);
+	if (closest.type != UTYPE_PLANET) return;
+	assert(closest.object != NULL);
+	float const atmos(closest.get_planet().atmos);
+	if (atmos == 0.0) return;
+	float const rel_dist((p2p_dist(get_player_pos(), closest.object->pos) - get_player_radius())/closest.object->radius);
 
-		if (atmos > 0.0 && (p2p_dist(get_player_pos(), closest.object->pos) - get_player_radius()) < PLANET_ATM_RSCALE*closest.object->radius) {
-			colorRGBA color(0.8, 0.8, 0.8, 0.33*atmos);
-			blend_color(color, color, closest.get_star().color, 0.7, 0);
-			add_camera_filter(color, 4, -1, CAM_FILT_FOG); // texture?
-		}
+	if (rel_dist < PLANET_ATM_RSCALE) {
+		float const ascale(CLIP_TO_01((PLANET_ATM_RSCALE - rel_dist)/(PLANET_ATM_RSCALE - 1.0f)));
+		colorRGBA color(0.8, 0.8, 0.8, 0.33*atmos*ascale);
+		blend_color(color, color, closest.get_star().color, 0.7, 0);
+		add_camera_filter(color, 4, -1, CAM_FILT_FOG);
 	}
 }
 
@@ -434,6 +436,7 @@ void set_current_system_light(s_object const &clobj, point const &pspos, float a
 }
 
 
+// similar to draw_universe_sun_flare(), maybe we can use that for the player?
 bool is_shadowed(point const &pos, float radius, bool expand, ussystem const &sol, uobject const *&sobj) {
 
 	float const exp(expand ? radius : 0.0);
@@ -576,13 +579,14 @@ void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const
 void ucell::draw_nebulas(ushader_group &usg) const {
 
 	point const camera(get_player_pos());
-	unebula::begin_render(usg.nebula_shader);
+	vector<pair<float, unsigned> > to_draw;
 
-	for (unsigned i = 0; i < galaxies->size(); ++i) {
-		unebula const &nebula((*galaxies)[i].nebula);
-		if (nebula.is_valid()) {nebula.draw(rel_center, camera, U_VIEW_DIST, usg.nebula_shader);}
+	for (unsigned i = 0; i < galaxies->size(); ++i) { // neg dist for back-to-front drawing
+		if ((*galaxies)[i].nebula.is_valid()) {to_draw.push_back(make_pair(-p2p_dist_sq(camera, rel_center+(*galaxies)[i].pos), i));}
 	}
-	unebula::end_render(usg.nebula_shader);
+	for (unsigned i = 0; i < to_draw.size(); ++i) {
+		(*galaxies)[to_draw[i].second].nebula.draw(rel_center, camera, U_VIEW_DIST, usg.nebula_shader);
+	}
 }
 
 
@@ -629,16 +633,6 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 		if (!univ_sphere_vis(gpos, galaxy.radius)) continue; // conservative, since galaxies are not spherical
 		current.galaxy = i;
 		galaxy.process(*this);
-		float max_size(0.0);
-		bool visible(0);
-
-		for (unsigned c = 0; c < galaxy.clusters.size() && !visible; ++c) { // is there a better way to use clusters?
-			point const pos_(pos + galaxy.clusters[c].center);
-			visible  = univ_sphere_vis(pos_, galaxy.clusters[c].bounds);
-			max_size = max(max_size, calc_sphere_size(pos_, camera, STAR_MAX_SIZE));
-		}
-		if (!visible)        continue; // galaxy is not visible
-		if (max_size < 0.18) continue; // too small (normally will be freed earlier)
 		set_ambient_color(galaxy.color);
 
 		if (pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
@@ -650,159 +644,166 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 			}
 			uasteroid_field::end_render(usg.asteroid_shader);
 		}
-		for (unsigned j = 0; j < galaxy.sols.size(); ++j) {
-			bool const sel_s(sel_g && (int)j == clobj.system);
-			if (p_system && ((pass == 0 && sel_s) || (pass != 0 && !sel_s))) continue; // draw in another pass
-			ussystem &sol(galaxy.sols[j]);
-			float const sradius(sol.sun.radius);
+		for (unsigned c = 0; c < galaxy.clusters.size(); ++c) {
+			point const cpos(pos + galaxy.clusters[c].center);
+			if (!univ_sphere_vis(cpos, galaxy.clusters[c].bounds)) continue;
+			float const max_size(calc_sphere_size(cpos, camera, STAR_MAX_SIZE));
+			ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
 
-			if (max_size*sradius < 0.1*STAR_MAX_SIZE) {
-				if (!sel_g) sol.free();
-				continue;
-			}
-			point_d const spos(pos + sol.pos);
-			float const sizes(calc_sphere_size(spos, camera, sradius));
+			for (unsigned j = cl.s1; j < cl.s2; ++j) {
+				bool const sel_s(sel_g && (int)j == clobj.system);
+				if (p_system && ((pass == 0 && sel_s) || (pass != 0 && !sel_s))) continue; // draw in another pass
+				ussystem &sol(galaxy.sols[j]);
+				float const sradius(sol.sun.radius);
 
-			if (sizes < 0.1) {
-				if (!sel_g) sol.free();
-				continue;
-			}
-			bool const update_pass(sel_g && !no_move && ((int(tfticks)+j)&31) == 0);
-			if (!update_pass && sol.gen != 0 && !univ_sphere_vis(spos, sol.radius)) continue;
-			bool const sel_sun(sel_s && (clobj.type == UTYPE_STAR || clobj.type == UTYPE_SYSTEM));
-			bool const skip_s(p_system && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
-			bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(spos, 2.0*sradius));
-			bool const planets_visible(PLANET_MAX_SIZE*sscale_val*sizes >= 0.3*sradius || !sclip);
-			current.system  = j;
-			current.cluster = sol.cluster_id;
-
-			for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) {
-				if (sun_visible && sol_draw_pass == unsigned(sel_s)) {
-					if (!sol.sun.draw(spos, usg)) continue;
+				if (max_size*sradius < 0.1*STAR_MAX_SIZE) {
+					if (!sel_g) sol.free();
+					continue;
 				}
-				if (planets_visible) sol.process();
-				if (sol.planets.empty()) continue;
+				point_d const spos(pos + sol.pos);
+				float const sizes(calc_sphere_size(spos, camera, sradius));
 
-				if (planets_visible) {
-					if (!has_sun) { // sun is gone
-						set_light_galaxy_ambient_only();
-					}
-					else {
-						set_sun_loc_color(spos, sol.sun.get_light_color(), sradius, 0, 0, BASE_AMBIENT, BASE_DIFFUSE); // slow - can this be made faster?
-					}
-					set_ambient_color(sol.get_galaxy_color());
+				if (sizes < 0.1) {
+					if (!sel_g) sol.free();
+					continue;
 				}
-				else { // we know all planets are too far away
-					if (!sel_g) sol.free_planets(); // optional
-					if (!update_pass) continue;
-				}
-				atmos_to_draw.resize(0);
-				rings_to_draw.resize(0);
+				bool const update_pass(sel_g && !no_move && ((int(tfticks)+j)&31) == 0);
+				if (!update_pass && sol.gen != 0 && !univ_sphere_vis(spos, sol.radius)) continue;
+				bool const sel_sun(sel_s && (clobj.type == UTYPE_STAR || clobj.type == UTYPE_SYSTEM));
+				bool const skip_s(p_system && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
+				bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(spos, 2.0*sradius));
+				bool const planets_visible(PLANET_MAX_SIZE*sscale_val*sizes >= 0.3*sradius || !sclip);
+				current.system  = j;
+				current.cluster = sol.cluster_id;
 
-				for (unsigned k = 0; k < sol.planets.size(); ++k) {
-					bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
-					if (p_system && (pass == 2 && !sel_p)) continue; // draw in another pass
-					uplanet &planet(sol.planets[k]);
-					point_d const ppos(pos + planet.pos);
-					if (sel_s && (p2p_dist_sq(camera, ppos) < p2p_dist_sq(camera, spos)) != sol_draw_pass) continue; // don't draw planet in this pass
-					float const pradius(PLANET_ATM_RSCALE*planet.radius), sizep(sscale_val*calc_sphere_size(ppos, camera, pradius));
-					bool skip_draw(!planets_visible);
-
-					if (sclip && sizep < (planet.ring_data.empty() ? 0.6 : 0.3)) {
-						if (!sel_g && sizep < 0.3) planet.free();
-						if (update_pass) {skip_draw = 1;} else {continue;}
+				for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) {
+					if (sun_visible && sol_draw_pass == unsigned(sel_s)) {
+						if (!sol.sun.draw(spos, usg)) continue;
 					}
-					current.planet = k;
-					bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET), skip_planet_draw(skip_closest && sel_planet);
-					bool const skip_p(p_system && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
-					if (!skip_p && !no_move) {planet.do_update(sol.pos, has_sun, has_sun);} // don't really have to do this if planet is not visible
-					if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(ppos, planet.mosize))) continue;
-					bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(ppos, pradius));
-					shadow_vars_t svars(make_pt_global(spos), (has_sun ? sradius : 0.0), all_zeros, 0.0, planet.rscale, planet.ring_ri, planet.ring_ro);
+					if (planets_visible) sol.process();
+					if (sol.planets.empty()) continue;
+
+					if (planets_visible) {
+						if (!has_sun) { // sun is gone
+							set_light_galaxy_ambient_only();
+						}
+						else {
+							set_sun_loc_color(spos, sol.sun.get_light_color(), sradius, 0, 0, BASE_AMBIENT, BASE_DIFFUSE); // slow - can this be made faster?
+						}
+						set_ambient_color(sol.get_galaxy_color());
+					}
+					else { // we know all planets are too far away
+						if (!sel_g) sol.free_planets(); // optional
+						if (!update_pass) continue;
+					}
+					atmos_to_draw.resize(0);
+					rings_to_draw.resize(0);
+
+					for (unsigned k = 0; k < sol.planets.size(); ++k) {
+						bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
+						if (p_system && (pass == 2 && !sel_p)) continue; // draw in another pass
+						uplanet &planet(sol.planets[k]);
+						point_d const ppos(pos + planet.pos);
+						if (sel_s && (p2p_dist_sq(camera, ppos) < p2p_dist_sq(camera, spos)) != sol_draw_pass) continue; // don't draw planet in this pass
+						float const pradius(PLANET_ATM_RSCALE*planet.radius), sizep(sscale_val*calc_sphere_size(ppos, camera, pradius));
+						bool skip_draw(!planets_visible);
+
+						if (sclip && sizep < (planet.ring_data.empty() ? 0.6 : 0.3)) {
+							if (!sel_g && sizep < 0.3) planet.free();
+							if (update_pass) {skip_draw = 1;} else {continue;}
+						}
+						current.planet = k;
+						bool const sel_planet(sel_p && clobj.type == UTYPE_PLANET), skip_planet_draw(skip_closest && sel_planet);
+						bool const skip_p(p_system && ((pass == 1 && sel_planet) || (pass == 2 && !sel_planet)));
+						if (!skip_p && !no_move) {planet.do_update(sol.pos, has_sun, has_sun);} // don't really have to do this if planet is not visible
+						if (skip_draw || (planet.gen != 0 && !univ_sphere_vis(ppos, planet.mosize))) continue;
+						bool const planet_visible((sizep >= 0.6 || !sclip) && univ_sphere_vis(ppos, pradius));
+						shadow_vars_t svars(make_pt_global(spos), (has_sun ? sradius : 0.0), all_zeros, 0.0, planet.rscale, planet.ring_ri, planet.ring_ro);
 				
-					if (planet_visible && planet.is_ok()) {
-						float max_overlap(0.0);
+						if (planet_visible && planet.is_ok()) {
+							float max_overlap(0.0);
 
-						if (has_sun) { // determine if any moons shadow the planet
-							// Note: if more than one moon shadows the planet, it will be incorrect, but that case is very rare
-							for (unsigned l = 0; l < planet.moons.size(); ++l) {
-								umoon const &moon(planet.moons[l]);
-								point_d const mpos(pos + moon.pos);
+							if (has_sun) { // determine if any moons shadow the planet
+								// Note: if more than one moon shadows the planet, it will be incorrect, but that case is very rare
+								for (unsigned l = 0; l < planet.moons.size(); ++l) {
+									umoon const &moon(planet.moons[l]);
+									point_d const mpos(pos + moon.pos);
 
-								if (p2p_dist_sq(mpos, spos) < p2p_dist_sq(ppos, spos)) { // moon closer to sun than planet
-									float const overlap((pradius + moon.radius) - pt_line_dist(mpos, spos, ppos));
+									if (p2p_dist_sq(mpos, spos) < p2p_dist_sq(ppos, spos)) { // moon closer to sun than planet
+										float const overlap((pradius + moon.radius) - pt_line_dist(mpos, spos, ppos));
 
-									if (overlap > max_overlap) {
-										//cout << "moon " << l << " " << moon.getname() << " shadows planet " << k << " " << planet.getname() << endl;
-										max_overlap     = overlap;
-										svars.ss_pos    = make_pt_global(mpos);
-										svars.ss_radius = moon.radius;
+										if (overlap > max_overlap) {
+											//cout << "moon " << l << " " << moon.getname() << " shadows planet " << k << " " << planet.getname() << endl;
+											max_overlap     = overlap;
+											svars.ss_pos    = make_pt_global(mpos);
+											svars.ss_radius = moon.radius;
+										}
 									}
 								}
 							}
-						}
-						if (!skip_p && !skip_planet_draw) {
-							if (!planet.ring_data.empty() && planet.ring_tid > 0) { // setup ring texture so we can create ring shadows
-								set_active_texture(2);
-								bind_1d_texture(planet.ring_tid);
-								set_active_texture(0);
+							if (!skip_p && !skip_planet_draw) {
+								if (!planet.ring_data.empty() && planet.ring_tid > 0) { // setup ring texture so we can create ring shadows
+									set_active_texture(2);
+									bind_1d_texture(planet.ring_tid);
+									set_active_texture(0);
+								}
+								planet.check_gen_texture(int(sizep));
+								planet.draw(ppos, usg, svars, 0); // ignore return value?
 							}
-							planet.check_gen_texture(int(sizep));
-							planet.draw(ppos, usg, svars, 0); // ignore return value?
-						}
-					} // planet visible
-					planet.process();
-					bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
+						} // planet visible
+						planet.process();
+						bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
 
-					if (sizep >= 1.0 && !skip_moons && !planet.moons.empty()) {
-						int const p_light(GL_LIGHT2);
+						if (sizep >= 1.0 && !skip_moons && !planet.moons.empty()) {
+							int const p_light(GL_LIGHT2);
 
-						if (has_sun && planet.is_ok()) { // setup planet as an additional light source for all moons
-							colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
-							glLightfv(p_light, GL_AMBIENT, &BLACK.R);
-							glLightfv(p_light, GL_DIFFUSE, &pcolor.R); // planet diffuse
-							set_gl_light_pos(p_light, make_pt_global(ppos), 1.0); // point light at planet center
-							set_star_light_atten(p_light, 5.0*PLANET_MAX_SIZE/planet.radius);
+							if (has_sun && planet.is_ok()) { // setup planet as an additional light source for all moons
+								colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
+								glLightfv(p_light, GL_AMBIENT, &BLACK.R);
+								glLightfv(p_light, GL_DIFFUSE, &pcolor.R); // planet diffuse
+								set_gl_light_pos(p_light, make_pt_global(ppos), 1.0); // point light at planet center
+								set_star_light_atten(p_light, 5.0*PLANET_MAX_SIZE/planet.radius);
+							}
+							for (unsigned l = 0; l < planet.moons.size(); ++l) { // draw moons
+								bool const sel_m(sel_moon && (int)l == clobj.moon);
+								if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
+								if (skip_closest && sel_m) continue; // skip (closest)
+								umoon &moon(planet.moons[l]);
+								if (!moon.is_ok()) continue;
+								point_d const mpos(pos + moon.pos);
+								float const sizem(sscale_val*calc_sphere_size(mpos, camera, moon.radius));
+								if ((sizem < 0.2 && sclip) || !univ_sphere_vis(mpos, moon.radius)) continue;
+								current.moon = l;
+								moon.check_gen_texture(int(sizem));
+								shadow_vars_t const svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, vector3d(1,1,1), 0.0, 0.0);
+								moon.draw(mpos, usg, svars2, planet.is_ok());
+							}
 						}
-						for (unsigned l = 0; l < planet.moons.size(); ++l) { // draw moons
-							bool const sel_m(sel_moon && (int)l == clobj.moon);
-							if (p_system && ((pass == 1 && sel_m) || (pass == 2 && !sel_m))) continue; // draw in another pass
-							if (skip_closest && sel_m) continue; // skip (closest)
-							umoon &moon(planet.moons[l]);
-							if (!moon.is_ok()) continue;
-							point_d const mpos(pos + moon.pos);
-							float const sizem(sscale_val*calc_sphere_size(mpos, camera, moon.radius));
-							if ((sizem < 0.2 && sclip) || !univ_sphere_vis(mpos, moon.radius)) continue;
-							current.moon = l;
-							moon.check_gen_texture(int(sizem));
-							shadow_vars_t const svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, vector3d(1,1,1), 0.0, 0.0);
-							moon.draw(mpos, usg, svars2, planet.is_ok());
+						if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
+							if (!planet.ring_data.empty() && sizep*planet.get_ring_rscale() > 2.5) {
+								rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
+							}
+							if (planet_visible && !skip_planet_draw && !planet.gas_giant && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
+								atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
+							}
+						}
+					} // planet k
+					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
+						for (vector<planet_draw_data_t>::const_iterator k = rings_to_draw.begin(); k != rings_to_draw.end(); ++k) {
+							uplanet &planet(sol.planets[k->ix]);
+							planet.ensure_rings_texture();
+							planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1));
+						}
+						if (pass == 0) {
+							for (vector<planet_draw_data_t>::const_iterator k = atmos_to_draw.begin(); k != atmos_to_draw.end(); ++k) {
+								uplanet const &planet(sol.planets[k->ix]);
+								planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars);
+							}
 						}
 					}
-					if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
-						if (!planet.ring_data.empty() && sizep*planet.get_ring_rscale() > 2.5) {
-							rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
-						}
-						if (planet_visible && !skip_planet_draw && !planet.gas_giant && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
-							atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
-						}
-					}
-				} // planet k
-				for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
-					for (vector<planet_draw_data_t>::const_iterator k = rings_to_draw.begin(); k != rings_to_draw.end(); ++k) {
-						uplanet &planet(sol.planets[k->ix]);
-						planet.ensure_rings_texture();
-						planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1));
-					}
-					if (pass == 0) {
-						for (vector<planet_draw_data_t>::const_iterator k = atmos_to_draw.begin(); k != atmos_to_draw.end(); ++k) {
-							uplanet const &planet(sol.planets[k->ix]);
-							planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars);
-						}
-					}
-				}
-			} // sol_draw_pass
-		} // system j
+				} // sol_draw_pass
+			} // system j
+		} // cluster cs
 	} // galaxy i
 }
 
