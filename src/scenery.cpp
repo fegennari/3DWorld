@@ -963,6 +963,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	rock_vbo_manager.upload();
 	rock_vbo_manager.begin_render(1);
+	select_texture(ROCK_SPHERE_TEX);
 
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) {
 		surface_rocks[i].draw(sscale, shadow_only, xlate, rock_vbo_manager);
