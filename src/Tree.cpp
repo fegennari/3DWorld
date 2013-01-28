@@ -321,7 +321,7 @@ void tree::add_tree_collision_objects() {
 	if (!is_over_mesh()) return; // optimization
 	assert(type < NUM_TREE_TYPES);
 	int const btid(tree_types[type].bark_tex), branch_coll_level(min(tree_coll_level, 4));
-	cobj_params cp(0.8, bcolor, TEST_RTREE_COBJS, 0, NULL, 0, btid, 4.0, 1, 0);
+	cobj_params cp(0.8, tree_types[type].barkc, TEST_RTREE_COBJS, 0, NULL, 0, btid, 4.0, 1, 0);
 	cp.shadow = 0; // will be handled by gen_tree_shadows()
 	assert(branch_cobjs.empty());
 	vector<draw_cylin> const &cylins(tdata().get_all_cylins());
