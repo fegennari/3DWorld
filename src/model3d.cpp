@@ -756,7 +756,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			if (s_tid >= 0) tmgr.bind_texture(s_tid); else select_texture(WHITE_TEX);
 		}
 		if (alpha < 1.0 && ni != 1.0) {
-			// FIXME: set index of refraction (and reset it at the end)
+			//shader.add_uniform_float("refract_index", ni); // FIXME: set index of refraction (and reset it at the end)
 		}
 		if (alpha_tid >= 0) enable_blend();
 		float const spec_val((ks.R + ks.G + ks.B)/3.0);

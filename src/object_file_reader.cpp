@@ -583,7 +583,8 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 		object_file_reader_model reader(filename, cur_model);
 
 		if (ext == "model3d") {
-			if (!reader.load_from_model3d_file(verbose)) return 0; // FIXME: xf is ignored, assumed to be already applied
+			//assert(xf == geom_xform_t()); // FIXME: xf is ignored, assumed to be already applied
+			if (!reader.load_from_model3d_file(verbose)) return 0;
 		}
 		else {
 			check_obj_file_ext(filename, ext);

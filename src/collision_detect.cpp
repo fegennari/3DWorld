@@ -452,7 +452,7 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 	//if (thickness == 0.0) thickness = MIN_POLY_THICK;
 	cobj.norm = get_poly_norm(points);
 
-	if (npoints == 4) { // average the norm from both triangles in case they're not coplanar
+	if (npoints == 4) { // average the normal from both triangles in case they're not coplanar
 		point const p2[3] = {points[0], points[2], points[3]};
 		vector3d const norm2(get_poly_norm(p2));
 		cobj.norm += ((dot_product(cobj.norm, norm2) < 0.0) ? -norm2 : norm2);
@@ -462,7 +462,7 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 		cout << "degenerate polygon created: points:" << endl;
 		for (int i = 0; i < npoints; ++i) {points[i].print(); cout << endl;}
 		cout << "valid: " << is_poly_valid(points) << endl;
-		cobj.norm = plus_z; // FIXME: this shouldn't be possible, but FP accuracy/errors make this tough to prevent
+		cobj.norm = plus_z; // this shouldn't be possible, but FP accuracy/errors make this tough to prevent
 	}
 	for (int i = 0; i < npoints; ++i) {
 		cobj.points[i] = points[i] + xlate;

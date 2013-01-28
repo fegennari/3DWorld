@@ -1187,13 +1187,6 @@ public:
 	}
 
 	void draw_decid_trees(draw_vect_t const &to_draw, bool reflection_pass) {
-		//unsigned tot(0);
-		//for (unsigned i = 0; i < to_draw.size(); ++i) {tot += to_draw[i].second->num_decid_trees();}
-		//cout << "to draw: " << to_draw.size() << " of " << tiles.size() << ", total trees: " << tot << endl;
-
-		// FIXME: faster (view clipping, LOD, etc.)
-		// FIXME: shadow map?
-
 		// draw branches
 		shader_t bs;
 		bs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS

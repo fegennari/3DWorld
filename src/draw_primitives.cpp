@@ -116,7 +116,7 @@ void sd_sphere_d::gen_points_norms_static(float s_beg, float s_end, float t_beg,
 void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, float s_end, float t_beg, float t_end) {
 
 	unsigned const ndiv(spn.ndiv);
-	assert(ndiv > 0 && ndiv < 100000); // FIXME: should we refuse to accept (ndiv < 3) ?
+	assert(ndiv > 0 && ndiv < 1000); // FIXME: should we refuse to accept (ndiv < 3) ?
 
 	if (cur_spn.points == NULL || ndiv > cur_spn.ndiv) { // allocate all memory
 		if (cur_spn.points != NULL) cur_spn.free(); // already allocated at least once

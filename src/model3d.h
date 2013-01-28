@@ -48,6 +48,16 @@ struct geom_xform_t {
 			xform_pos(*i);
 		}
 	}
+	bool operator==(geom_xform_t const &x) const {
+		if (tv != x.tv || scale != x.scale) return 0;
+		UNROLL_3X(if (mirror[i_] != x.mirror[i_]) return 0;)
+
+		for (unsigned i = 0; i < 3; ++i) {
+			UNROLL_3X(if (swap_dim[i][i_] != x.swap_dim[i][i_]) return 0;)
+		}
+		return 1;
+	}
+	bool operator!=(geom_xform_t const &x) const {return !operator==(x);}
 };
 
 
