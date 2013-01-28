@@ -420,8 +420,11 @@ void draw_group(obj_group &objg, shader_t &s) {
 		glAlphaFunc(GL_GREATER, 0.75);
 		glNormal3f(0.0, 1.0, 0.0);
 		set_specular(0.1, 10.0);
-		if (use_leaf_shader) {set_leaf_shader(s, 0.75, 0, 0, 1);}
 
+		if (use_leaf_shader) { // Note: currently does *not* support shadow maps
+			set_leaf_shader(s, 0.75, 0, 0);
+			s.add_uniform_float("normal_scale", 1.0);
+		}
 		for (unsigned j = 0; j < ordering.size(); ++j) {
 			dwobject &obj(objg.get_obj(ordering[j].second));
 			float const scale(obj.init_dir.z), lsize(scale*leaf_size);
@@ -435,7 +438,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 			if (place_obj_on_grass(pos, lsize)) pos.z = 0.5*(obj.pos.z + pos.z-lsize); // leaf is partially on grass
 			glPushMatrix();
 			translate_to(pos);
-			uniform_scale(scale);
 			rotate_about(obj.angle, obj.orientation);
 			glRotatef(TO_DEG*obj.init_dir.x, 0.0, 0.0, 1.0);
 
@@ -449,7 +451,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 
 			for (unsigned k = 0; k < 4; ++k) {
 				glTexCoord2f(float(k>>1), float(k==0||k==3));
-				leaf_points[k].do_glVertex();
+				(scale*leaf_points[k]).do_glVertex();
 			}
 			glEnd();
 			glPopMatrix();
