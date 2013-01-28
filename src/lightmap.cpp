@@ -1195,11 +1195,26 @@ bool light_source::try_merge_into(light_source &ls) const {
 }
 
 
-void add_vpls() {
+void add_vpls() { // Note: basically unused
 
-	if (num_vpls == 0 || (display_mode & 0x08)) return;
+	if (num_vpls == 0 || global_cube_lights.empty() || (display_mode & 0x08)) return;
 	float const scene_radius(get_scene_radius());
+	colorRGBA base_colors[NUM_LIGHT_SRC];
+	point lpos;
 
+	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
+		unsigned const gl_light(GL_LIGHT0 + l);
+		
+		if (!light_valid(0xFF, l, lpos) || !glIsEnabled(gl_light)) {
+			base_colors[l] = BLACK;
+			continue;
+		}
+		colorRGBA ambient, diffuse;
+		glGetLightfv(gl_light, GL_AMBIENT, &ambient.R);
+		glGetLightfv(gl_light, GL_DIFFUSE, &diffuse.R);
+		base_colors[l] = (ambient + diffuse);
+		base_colors[l].set_valid_color();
+	}
 	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		// use the ztop plane of the cube for vpls - FIXME: make more dynamic
 		cube_t const &c(i->bounds);
@@ -1208,16 +1223,9 @@ void add_vpls() {
 		float const dx_step(dx/nx), dy_step(dy/ny);
 		float const light_size(2.0*(dx_step + dy_step));
 		//float const light_size(12.0*HALF_DXY);
-		point lpos;
 	
 		for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-			unsigned const gl_light(GL_LIGHT0 + l);
-			if (!light_valid(0xFF, l, lpos) || !glIsEnabled(gl_light)) continue;
-			colorRGBA ambient, diffuse;
-			glGetLightfv(gl_light, GL_AMBIENT, &ambient.R);
-			glGetLightfv(gl_light, GL_DIFFUSE, &diffuse.R);
-			colorRGBA base_color(ambient + diffuse);
-			base_color.set_valid_color();
+			if (base_colors[l] == BLACK) continue; // not enabled
 			
 			for (unsigned y = 0; y < ny; ++y) {
 				for (unsigned x = 0; x < nx; ++x) {
@@ -1235,7 +1243,7 @@ void add_vpls() {
 						cpos += cnorm*(light_size*0.01);
 						assert(cindex >= 0);
 						coll_obj const &cobj(coll_objects[cindex]);
-						colorRGBA const color(base_color.modulate_with(cobj.get_avg_color()));
+						colorRGBA const color(base_colors[l].modulate_with(cobj.get_avg_color()));
 						add_dynamic_light(dp*light_size, cpos, color, cnorm, 0.5); // 180 degree point spotlight
 						//set_color(color); draw_sphere_at(cpos, dp*light_size, N_SPHERE_DIV);
 					}
