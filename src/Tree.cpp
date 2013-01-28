@@ -387,12 +387,13 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, bool use_colors, unsigned tc_start_ix) {
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, bool normalize, unsigned tc_start_ix) {
 
-	if (use_colors)                      {s.set_prefix("#define USE_LIGHT_COLORS",    0);} // VS
+	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS - actually ignored due to custom lighting, but useful to have for reference
 	if (!has_dl_sources)                 {s.set_prefix("#define NO_LEAF_DLIGHTS",     0);} // VS optimization
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
+	s.set_bool_prefix("do_normalize", normalize, 0); // VS
 	s.setup_enabled_lights(2);
 	s.set_frag_shader("linear_fog.part+textured_with_fog");
 
@@ -444,7 +445,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader) {
 		shader.enable();
 	}
 	else {
-		set_leaf_shader(shader, 0.75, 1, 0, 1, 3);
+		set_leaf_shader(shader, 0.75, 1, 0, 0, 3);
 	}
 }
 

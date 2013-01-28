@@ -393,18 +393,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 	unsigned num_drawn(0);
 
 	if (type == LEAF) { // leaves
-		bool const use_leaf_shader = 0;
-		shader_t s;
-		int last_tid(-1);
-		enable_blend();
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.75);
-		glNormal3f(0.0, 1.0, 0.0);
-		set_specular(0.1, 10.0);
-
-		if (use_leaf_shader) { // FIXME: transforms cause problems
-			set_leaf_shader(s, 0.75, 0, 0, 0); // Note: needs colors, but we set a/d lighting for shadows
-		}
 		static vector<pair<unsigned, unsigned> > ordering;
 		ordering.resize(0);
 		ordering.reserve(objg.end_id);
@@ -423,6 +411,16 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 		num_drawn += (unsigned)ordering.size();
 		sort(ordering.begin(), ordering.end()); // sort by texture id
+
+		bool const use_leaf_shader = 0;
+		shader_t s;
+		int last_tid(-1);
+		enable_blend();
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.75);
+		glNormal3f(0.0, 1.0, 0.0);
+		set_specular(0.1, 10.0);
+		if (use_leaf_shader) {set_leaf_shader(s, 0.75, 0, 0, 1);}
 
 		for (unsigned j = 0; j < ordering.size(); ++j) {
 			dwobject &obj(objg.get_obj(ordering[j].second));
@@ -445,8 +443,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 			colorRGBA const dry_color(1.0, 0.7, 0.1); // this is the final color, even for partially burnt leaves - oh well
 			colorRGBA leaf_color(WHITE);
 			UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
-			if (leaf_color != BLACK) blend_color(leaf_color, dry_color, leaf_color, t, 0);
-			set_color_alpha(leaf_color);
+			if (leaf_color != BLACK) {blend_color(leaf_color, dry_color, leaf_color, t, 0);}
+			if (use_leaf_shader) {leaf_color.do_glColor();} else {set_color_alpha(leaf_color);}
 			glBegin(GL_QUADS); // Note: needs 2-sided lighting
 
 			for (unsigned k = 0; k < 4; ++k) {
