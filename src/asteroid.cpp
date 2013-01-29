@@ -739,7 +739,7 @@ uobject_rand_spawn_t::uobject_rand_spawn_t(float radius_, float dmax, float vmag
 
 	assert(radius_ > 0.0 && dmax > 0.0 && vmag >= 0.0); // sanity checks
 	radius   = c_radius = radius_;
-	velocity = ((vmag == 0.0) ? zero_vector : signed_rand_vector(vmag));
+	velocity = ((vmag == 0.0) ? zero_vector : signed_rand_vector_norm(vmag));
 	pos      = all_zeros; // temporary
 }
 

@@ -578,14 +578,14 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 			}
 			break;
 
-		case CMD_ADD_COMETS: // <unsigned num> <float max_radius> <float max_velocity> <float max_dist_to_camera>
+		case CMD_ADD_COMETS: // <unsigned num> <float max_radius> <float min_velocity> <float max_velocity> <float max_dist_to_camera>
 			{
 				unsigned num;
-				float rmax, vmax, dmax;
-				if (!(cfg >> num >> rmax >> vmax >> dmax)) return 0;
+				float rmax, vmin, vmax, dmax;
+				if (!(cfg >> num >> rmax >> vmin >> vmax >> dmax)) return 0;
 
 				for (unsigned i = 0; i < num; ++i) {
-					add_uobj(uobject_rand_spawn_t::create(SPO_COMET, rand_uniform(0.5, 1.0)*rmax, dmax, rand_uniform(0.01, 1.0)*vmax));
+					add_uobj(uobject_rand_spawn_t::create(SPO_COMET, rand_uniform(0.5, 1.0)*rmax, dmax, rand_uniform(vmin, vmax)));
 				}
 			}
 			break;

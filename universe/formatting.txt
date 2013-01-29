@@ -43,7 +43,7 @@ $ALIGN         <enum alignment> <unsigned num> <unsigned counts>+
 $SHIP_NAMES    <unsigned num> <string names>*
 $ADD_SHIP      <enum ship_id> <unsigned num> <enum alignment> <enum ai_type> <enum target_type> <bool guardian> <bool kamikaze> [point pos]
 $ADD_ASTEROID  <unsigned num> <enum ast_model> <float min_radius> <float max_radius> <float distribution> [point pos]
-$ADD_COMETS    <unsigned num> <float max_radius> <float max_velocity> <float max_dist_to_camera>
+$ADD_COMETS    <unsigned num> <float max_radius> <float min_velocity> <float max_velocity> <float max_dist_to_camera>
 $BLACK_HOLE    <point pos> <float radius>
 $PLAYER        <enum ship_id> <enum alignment>
 $LAST_PARENT   
