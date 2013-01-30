@@ -179,26 +179,40 @@ void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds, bool set_matrix) {
 
 	point const center(bounds.get_cube_center());
+	vector3d const light_dir((center - pos).get_norm()); // almost equal to lpos (point light)
+	float const dist(p2p_dist(pos, center));
+	vector3d up_dir(zero_vector);
+	up_dir[get_min_dim(light_dir)] = 1.0;
 	point corners[8];
 	get_cube_corners(bounds.d, corners);
 	float const radius(bounds.get_bsphere_radius());
+
+#if 1 // tighter bounds / higher quality / slower
+	vector3d dirs[2]; // x, y (up)
+	orthogonalize_dir(up_dir, light_dir, dirs[1], 1);
+	cross_product(light_dir, dirs[1], dirs[0]);
+	float rx(0.0), ry(0.0);
+
+	for (unsigned i = 0; i < 8; ++i) {
+		rx = max(rx, fabs(dot_product(dirs[0], (corners[i] - pos))));
+		ry = max(ry, fabs(dot_product(dirs[1], (corners[i] - pos))));
+	}
+	float const angle(atan2(ry, dist)), aspect(rx/ry);
+#else
 	float radius2(0.0);
 
 	for (unsigned i = 0; i < 8; ++i) {
 		radius2 = max(radius2, pt_line_dist(corners[i], pos, center));
 	}
 	assert(radius2 <= radius); // can fail for cloud frustum?
-	vector3d const light_dir((center - pos).get_norm()); // almost equal to lpos (point light)
-	float const dist(p2p_dist(pos, center));
-	vector3d up_dir(zero_vector);
-	up_dir[get_min_dim(light_dir)] = 1.0;
-	float const angle(atan2(radius2, dist));
-	pos_dir_up const pdu(pos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), max(NEAR_CLIP, dist-radius), dist+radius, 1.0);
+	float const angle(atan2(radius2, dist)), aspect(1.0);
+#endif
+	pos_dir_up const pdu(pos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), max(NEAR_CLIP, dist-radius), dist+radius, aspect);
 
 	if (set_matrix) {
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		gluPerspective(2.0*angle/TO_RADIANS, 1.0, pdu.near_, pdu.far_);
+		gluPerspective(2.0*angle/TO_RADIANS, aspect, pdu.near_, pdu.far_);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		gluLookAt(pos.x, pos.y, pos.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);

@@ -2,7 +2,6 @@ gas giant cyclones
 craters on planets/moons
 Bump map in planet fragment shader using procedural noise
 
-Tighter shadow volume
 http://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf
 
 Tile-Based planet surface generation:
