@@ -580,7 +580,34 @@ bool csg_cube::subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &
 
 bool csg_cube::subtract_from_thick_polygon(coll_obj_group &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
 
-	return 0; // FIXME: not yet implemented
+	assert(cobj.type == COLL_POLYGON && cobj.thickness > 0.0);
+	assert(cobj.npoints == 3 || cobj.npoints == 4); // quad or triangle
+	if (contains_cube(cobj)) return 1; // contained - remove the entire cobj
+
+	if (is_axis_aligned(cobj.norm)) {
+		// FIXME: special case where we can be more efficient or do a better job?
+	}
+	coll_obj polys[6]; // top, bot, and up to 4 sides
+	vector<tquad_t> pts;
+	thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts); // split into 5-6 polygons, one per side
+	assert(pts.size() <= 6);
+	unsigned cur(0);
+
+	for (unsigned i = 0; i < pts.size(); ++i) {
+		polys[cur] = cobj;
+		polys[cur].thickness = 0.1*MIN_POLY_THICK; // thin poly: 0 > val >= MIN_POLY_THICK
+		polys[cur].norm      = pts[i].get_norm();
+		polys[cur].set_from_pts(pts[i].pts, pts[i].npts);
+		bool const removed(subtract_from_polygon(new_cobjs, polys[cur]));
+		if (!removed) {++cur;} // if not removed, keep it
+	}
+	if (cur == pts.size()) return 0; // nothing was removed, no changes to make
+
+	for (unsigned i = 0; i < cur; ++i) {
+		new_cobjs.push_back(polys[i]);
+	}
+	// FIXME: add polygons to fill the gaps between the cube and the remaining polygons
+	return 1;
 }
 
 
@@ -872,11 +899,11 @@ bool coll_obj::subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cub
 	else if (is_cylinder()) {
 		removed = cube.subtract_from_cylinder(new_cobjs, *this);
 	}
-	else if (include_polys) {
+	else if (include_polys && type == COLL_POLYGON) {
 		if (is_thin_poly()) {
 			removed = cube.subtract_from_polygon(new_cobjs, *this);
 		}
-		else if (is_axis_aligned(norm)) {
+		else {
 			removed = cube.subtract_from_thick_polygon(new_cobjs, *this); // not yet implemented
 		}
 	}
