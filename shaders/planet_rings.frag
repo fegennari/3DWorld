@@ -41,5 +41,6 @@ void main()
 	if (alpha == 0.0) discard;
 	color.a    *= min(1.0, alpha); // add 4 octaves of random particles
 
+	color.a = min(1.0, 2.0*color.a); // increase alpha to make alpha_to_coverage mode look better
 	gl_FragColor = color * texel;
 }

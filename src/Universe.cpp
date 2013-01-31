@@ -2324,6 +2324,7 @@ void uplanet::ensure_rings_texture() {
 void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir) const {
 
 	if (ring_data.empty()) return;
+	glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 	assert(ring_tid > 0);
 	bind_1d_texture(ring_tid);
 	assert(ring_ri > 0.0 && ring_ri < ring_ro);
@@ -2339,6 +2340,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	usg.disable_ring_shader();
 	glPopMatrix();
 	disable_blend();
+	glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 }
 
 
