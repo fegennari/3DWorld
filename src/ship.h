@@ -690,7 +690,7 @@ public:
 	void move_to(point const &pos_)       {pos          = pos_;}
 	void move_reset_by(point const &pos_) {reset_pos   += pos_;}
 	void add_mass(float const m)          {extra_mass  += m; assert(extra_mass >= 0.0);} // can this be negative?
-	void add_gravity(vector3d const &gravity, float gscale, bool near_bh);
+	void add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh);
 
 	vector3d const &get_velocity() const {return velocity;}
 	vector3d const &get_dir()      const {return dir;}
@@ -742,6 +742,7 @@ public:
 	virtual int   auto_orient()    const {return 0;}
 	virtual float get_max_t()      const = 0;
 	virtual float get_mass()       const {return (S_BODY_DENSITY*MASS_SCALE*radius*radius*radius + extra_mass);}
+	virtual float get_surf_area()  const {return PI*radius*radius;} // assumes spherical - circle cross sectional area
 	virtual float get_elasticity() const {return OBJ_COLL_ELASTIC;}
 	virtual float get_min_damage() const {return 0.0;}
 	virtual int   get_src_sclass() const {if (parent != NULL) return parent->get_src_sclass(); else return SWCLASS_UNDEF;}

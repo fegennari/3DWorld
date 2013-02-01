@@ -20,6 +20,7 @@ unsigned const ao_s_time     = unsigned(2.00*TICKS_PER_SECOND);
 unsigned const ao_e_time     = unsigned(4.00*TICKS_PER_SECOND);
 
 float const GRAVITY_FACTOR   = 1.0E-8; // G?
+float const SOLAR_WIND_PRES  = 1.0E-5;
 float const COLLISION_ENERGY = 5.0E7;
 float const PROJ_ROT_ATTEN   = 0.92;
 float const ROT_FORCE_CONST  = 0.5;
@@ -177,15 +178,16 @@ void free_obj::tilt(float val) {
 }
 
 
-void free_obj::add_gravity(vector3d const &gravity, float gscale, bool near_bh) {
+void free_obj::add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh) {
 
 	near_b_hole = near_bh;
 	gvect       = gravity;
+	velocity   += SOLAR_WIND_PRES*swp; // apply solar wind pressure (usually negligible)
 	if (gravity == zero_vector) return;
-	velocity += gravity*(GRAVITY_FACTOR*gscale); // velocity scale due to gravitational pull
+	velocity   += gravity*GRAVITY_FACTOR*gscale; // velocity scale due to gravitational pull
 	assert(!is_nan(velocity));
 	
-	if (gravity.mag() > 0.95*BLACK_HOLE_GRAV) { // black hole does collision damage
+	if (near_b_hole && gravity.mag() > 0.95*BLACK_HOLE_GRAV) { // black hole does collision damage
 		damage(1000.0, DAMAGE_COLL, pos, this, WCLASS_COLLISION);
 	}
 }

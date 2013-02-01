@@ -2974,6 +2974,13 @@ void uobject::add_gravity_vector_base(vector3d &vgravity, point const &mpos, flo
 }
 
 
+vector3d ustar::get_solar_wind_accel(point const &obj_pos, float obj_mass, float obj_surf_area) const {
+
+	vector3d const dir_from_sun(obj_pos - pos);
+	return dir_from_sun.get_norm()*(get_energy()*obj_surf_area/(obj_mass*dir_from_sun.mag_sq()));
+}
+
+
 void urev_body::free_texture() { // and also free display list
 
 	if (surface != NULL) surface->free_dlist();

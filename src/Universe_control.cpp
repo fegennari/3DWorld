@@ -351,16 +351,20 @@ void process_univ_objects() {
 		}
 		if (calc_gravity) {
 			bool near_b_hole(0);
+			vector3d swp_accel(zero_vector);
 
 			if (!stat_objs.empty()) {
 				all_query_data qdata(&stat_objs, obj_pos, 10.0, urm_static, uobj, stat_obj_query_res);
 				get_all_close_objects(qdata);
 				
-				for (unsigned j = 0; j < stat_obj_query_res.size(); ++j) { // asteroid gravity
+				for (unsigned j = 0; j < stat_obj_query_res.size(); ++j) { // asteroid/black hole gravity
 					near_b_hole |= (stat_obj_query_res[j]->get_gravity(gravity, obj_pos) == 2);
 				}
 			}
-			uobj->add_gravity(gravity, float(GRAV_CHECK_MOD), near_b_hole);
+			if (clobj.type >= UTYPE_SYSTEM) {
+				swp_accel = clobj.get_star().get_solar_wind_accel(obj_pos, uobj->get_mass(), uobj->get_surf_area());
+			}
+			uobj->add_gravity_swp(gravity, swp_accel, float(GRAV_CHECK_MOD), near_b_hole);
 		}
 		if (is_ship) {
 			for (unsigned t = 0; t < temp_sources.size(); ++t) { // check for temperature of weapons - inefficient
