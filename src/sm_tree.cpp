@@ -645,7 +645,7 @@ void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const 
 					translate_to(pos);
 					if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
 					glTranslatef(0.0, 0.0, (zbot - pos.z));
-					int const nsides2(max(3, min(2*N_CYL_SIDES/3, int(0.25*size))));
+					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size))));
 					draw_cylin_fast(w1, w2, len, nsides2, 1, 0, 1); // trunk (draw quad if small?)
 					glPopMatrix();
 				}
