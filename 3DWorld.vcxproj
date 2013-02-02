@@ -757,7 +757,6 @@
     <ClInclude Include="src\lightmap.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\marching_cubes.h" />
-    <ClInclude Include="src\memory_alloc.h" />
     <ClInclude Include="src\mesh.h" />
     <ClInclude Include="src\mesh_intersect.h" />
     <ClInclude Include="src\model3d.h" />

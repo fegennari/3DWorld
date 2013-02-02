@@ -6,15 +6,11 @@
 #define _TREE_H_
 
 #include "3DWorld.h"
-#include "memory_alloc.h"
 #include "gl_ext_arb.h" // for indexed_vbo_manager_t
 
 
 float const TREE_DIST_SCALE = 100.0;
 float const TREE_DEN_THRESH = 0.55;
-
-unsigned const CYLIN_CACHE_ENTRIES  = 5;
-unsigned const BRANCH_CACHE_ENTRIES = 3;
 
 
 struct blastr; // forward reference
@@ -77,9 +73,9 @@ struct tree_branch { // size = 12
 
 class tree_builder_t {
 
-	static reusable_mem<tree_cylin >   cylin_cache [CYLIN_CACHE_ENTRIES ];
-	static reusable_mem<tree_branch>   branch_cache[BRANCH_CACHE_ENTRIES];
-	static reusable_mem<tree_branch *> branch_ptr_cache;
+	static vector<tree_cylin >   cylin_cache;
+	static vector<tree_branch>   branch_cache;
+	static vector<tree_branch *> branch_ptr_cache;
 
 	tree_branch base, roots, *branches_34[2], **branches;
 	int base_num_cylins, root_num_cylins, ncib, num_1_branches, num_big_branches_min, num_big_branches_max;
@@ -99,7 +95,7 @@ class tree_builder_t {
 	void create_2nd_order_branch(int i, int j, int cylin_num, bool branch_deflected, int rotation);
 	void create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, bool branch_deflected, int rotation);
 	void gen_b4(tree_branch &branch, int &branch_num, int num_4_branches, int i, int k);
-	void create_4th_order_branches();
+	void create_4th_order_branches(int nbranches);
 	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
 	int generate_next_cylin(int cylin_num, int ncib, bool branch_just_created, bool &branch_deflected);
 	void add_leaves_to_cylin(tree_cylin const &cylin, float tsize, float deadness, vector<tree_leaf> &leaves) const;
