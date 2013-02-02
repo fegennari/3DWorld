@@ -609,7 +609,6 @@ public:
 				unsigned const ix(y*MESH_X_SIZE + x);
 				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+BLOCK_SIZE]) continue; // empty section
 				float mzmin(z_min_matrix[y][x]), mzmax(mesh_height[y][x]);
-
 				bool visible(1), back_facing(1);
 
 				for (int xx = x; xx <= min(x+(int)BLOCK_SIZE, MESH_X_SIZE-1) && back_facing; ++xx) {
@@ -636,6 +635,7 @@ public:
 						visible &= !cobj_contained(camera, cube.get_cube_center(), pts, 8, -1);
 					}
 				}
+				//if (visible) {draw_range(mesh_to_grass_map[ix], mesh_to_grass_map[ix+BLOCK_SIZE]);}
 				if (visible && !last_visible) { // start a segment
 					beg_ix = mesh_to_grass_map[ix];
 				}

@@ -13,7 +13,7 @@
 float const TREE_DIST_SCALE = 100.0;
 float const TREE_DEN_THRESH = 0.55;
 
-unsigned const CYLIN_CACHE_ENTRIES  = 4;
+unsigned const CYLIN_CACHE_ENTRIES  = 5;
 unsigned const BRANCH_CACHE_ENTRIES = 3;
 
 
@@ -81,8 +81,8 @@ class tree_builder_t {
 	static reusable_mem<tree_branch>   branch_cache[BRANCH_CACHE_ENTRIES];
 	static reusable_mem<tree_branch *> branch_ptr_cache;
 
-	tree_branch base, *branches_34[2], **branches;
-	int base_num_cylins, ncib, num_1_branches, num_big_branches_min, num_big_branches_max;
+	tree_branch base, roots, *branches_34[2], **branches;
+	int base_num_cylins, root_num_cylins, ncib, num_1_branches, num_big_branches_min, num_big_branches_max;
 	int num_2_branches_min, num_2_branches_max, num_34_branches[2], num_3_branches_min, num_3_branches_max;
 	int tree_slimness, tree_wideness, base_break_off;
 	float base_radius, base_length_min, base_length_max, base_curveness, num_leaves_per_occ;

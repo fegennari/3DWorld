@@ -1181,7 +1181,7 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 
 	//process cylinders
 	assert(all_cylins.empty());
-	unsigned num_total_cylins(base_num_cylins); // start with trunk cylinders
+	unsigned num_total_cylins(base_num_cylins + root_num_cylins); // start with trunk and root cylinders
 
 	for (int i = 0; i < num_1_branches; i++) {
 		for (int k = 0; k < (branches[i][0].num_branches + 1); k++) {
@@ -1200,7 +1200,8 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
 		leaves.reserve(nl);
 	}
-	process_cylins(base.cylin, base_num_cylins, tree_type, deadness, all_cylins, leaves);
+	process_cylins(base.cylin,  base_num_cylins, tree_type, deadness, all_cylins, leaves);
+	process_cylins(roots.cylin, root_num_cylins, tree_type, deadness, all_cylins, leaves);
 
 	for (int i = 0; i < num_1_branches; i++) { // add the first order branches
 		process_cylins(branches[i][0].cylin, branches[i][0].num_cylins, tree_type, deadness, all_cylins, leaves);
@@ -1223,6 +1224,7 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 	branch_cache[0].reusable_free(branches[0]);
 	branch_ptr_cache.reusable_free(branches);
 	cylin_cache [0].reusable_free(base.cylin);
+	if (root_num_cylins > 0) {cylin_cache [4].reusable_free(roots.cylin);}
 
 	if (TREE_4TH_BRANCHES) {
 		cylin_cache [3].reusable_free(branches_34[1][0].cylin);
@@ -1439,6 +1441,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	//fixed tree variables
 	ncib                 = 10;
 	base_num_cylins      = 5;
+	root_num_cylins      = 0;
 	num_cylin_factor     = 10.0;
 	base_cylin_factor    = 5.0; //(type == TREE_A) ? 2.0 : 5.0;
 	base_break_off       = 3;
@@ -1486,7 +1489,8 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 
 	//allocate all the memory required for the tree------------------------------------------------
 	cylin_cache [0].reusable_malloc(base.cylin,              base_num_cylins+1);
-	branch_ptr_cache.reusable_malloc(branches,                num_1_branches);
+	if (root_num_cylins > 0) {cylin_cache [4].reusable_malloc(roots.cylin,             root_num_cylins);}
+	branch_ptr_cache.reusable_malloc(branches,               num_1_branches);
 	branch_cache[0].reusable_malloc(branches[0],             nbr);
 	branch_cache[1].reusable_malloc(branches_34[0],          nbranches);
 	cylin_cache [1].reusable_malloc(branches[0][0].cylin,    nbr*ncib);
@@ -1510,7 +1514,6 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 
 	for (int i = 0; i < base_num_cylins; i++) {
 		tree_cylin &cylin(base.cylin[i]);
-		int num_b_to_create(0);
 
 		if (i == 0) {
 			cylin.assign_params(0, 0, base_radius, base_radius*base_var, length*(num_cylin_factor/base_num_cylins), 0.0);
@@ -1530,25 +1533,18 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		if (base_break_off <= (i+1)) {
 			float const temp_num(branch_distribution*((float)num_1_branches)/init_num_cyl*(float(i+2-base_break_off))/(float(num_b_so_far+1)));
 			float rotate_start(rand_gen(0, 259));
+			int num_b_to_create(0);
 
 			if (temp_num >= 1.0) {
 				float const temp2(((float)num_1_branches - num_b_so_far)/(float(base_num_cylins - i)));
-				num_b_to_create = ((temp2 <= 3.0) ? max(1, int(ceil(temp2))) : int(temp_num + 0.5));
+				num_b_to_create = min(num_1_branches, ((temp2 <= 3.0) ? max(1, int(ceil(temp2))) : int(temp_num + 0.5)));
 			}
-			if (num_b_to_create > num_1_branches) num_b_to_create = num_1_branches;
-			
 			for (int j = 0; j < num_b_to_create; j++) {
 				if (num_b_so_far < num_1_branches) create_1_order_branch(i, rotate_start, num_b_so_far++);
 				rotate_start += 360.0/((float)num_b_to_create) + (3 - 2*rand_gen(1,2))*rand_gen(0,int(branch_1_random_rotate));
 			}
-			if (num_b_to_create < 1) {
-				if ((num_1_branches > 0) && ((i+1) == base_break_off)) {
-					if (num_b_so_far < num_1_branches) create_1_order_branch(i, rotate_start, num_b_so_far++);
-				}
-			}
 		}
 	}
-	if (num_1_branches > num_b_so_far) num_1_branches = num_b_so_far;
 	
 	//done with base ------------------------------------------------------------------
 	if (TREE_4TH_BRANCHES) create_4th_order_branches();
@@ -1560,6 +1556,10 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		cylin.rotate.assign(1.0, 0.0, 0.0);
 		rotate_cylin(cylin);
 		++base_num_cylins;
+
+		for (int i = 0; i < root_num_cylins; ++i) {
+			// FIXME: create tree roots
+		}
 	}
 	return base_radius;
 }
@@ -1626,8 +1626,7 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 	//create rest of the cylinders
 	int num_2_branches_created(0);
 	int const temp_num_big_branches(rand_gen(num_big_branches_min, num_big_branches_max));
-	float const temp_num((float)temp_num_big_branches/((num_2_branches_created+1)*(float(0.5*branch.num_cylins+1))) +
-		                  float(temp_num_big_branches/((float(branch.num_cylins/2+1))*(num_2_branches_created+1))));
+	float const temp_num(2.0*temp_num_big_branches/(0.5*branch.num_cylins+1));
 
 	if (temp_num*branch_1_distribution >= 1.0) {
 		if (num_2_branches_created < branch.num_branches) {
@@ -1645,12 +1644,11 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 
 		//calculate p1, based on the end point of lasy cylinder--------------------
 		if (j < 0.5*branch.num_cylins) {
-			temp_num2 = float((j+1)*temp_num_big_branches)/((num_2_branches_created+1)*(float(0.5*branch.num_cylins+1))) +
-				        float(temp_num_big_branches/((float(branch.num_cylins/2+1))*(num_2_branches_created+1)));
+			temp_num2 = (j+2)*temp_num_big_branches/((num_2_branches_created+1)*(0.5*branch.num_cylins+1));
 		}
 		else {
-			temp_num2 = (float(((j+1)*branch.num_branches)/((num_2_branches_created+1)*branch.num_cylins))) +
-				        (float(branch.num_branches/(branch.num_cylins*(num_2_branches_created+1))));
+			temp_num2 = (j+1)*branch.num_branches/((num_2_branches_created+1)*branch.num_cylins) +
+				              branch.num_branches/((num_2_branches_created+1)*branch.num_cylins);
 		}
 		if (temp_num2*branch_1_distribution >= 1.0 && num_2_branches_created < branch.num_branches) branch_just_created = true;
 		int const deg_added(generate_next_cylin(j, branch.num_cylins, branch_just_created, branch_deflected));
@@ -1691,8 +1689,7 @@ void tree_builder_t::create_2nd_order_branch(int i, int j, int cylin_num, bool b
 	//generate stats for the third order branches
 	branch.num_branches = rand_gen(num_3_branches_min, num_3_branches_max);
 	int const temp_num_big_branches(branch.num_branches);
-	float const temp_num((float)temp_num_big_branches/((num_3_branches_created+1)*((float)branch.num_cylins)) +
-		                  float(temp_num_big_branches/(((float)branch.num_cylins)*(num_3_branches_created+1))));
+	float const temp_num(2.0*temp_num_big_branches/((float)branch.num_cylins));
 
 	if (temp_num*branch_1_distribution >= 1.0) {
 		if (num_3_branches_created < branch.num_branches && cylin.r2 > branch_4_max_radius) {
@@ -1706,8 +1703,7 @@ void tree_builder_t::create_2nd_order_branch(int i, int j, int cylin_num, bool b
 	for (index = 1; index < branch.num_cylins; index++) {
 		tree_cylin &cylin(branch.cylin[index]), &lcylin(branch.cylin[index-1]);
 		gen_next_cylin(cylin, lcylin, branch_2_var, branch_2_rad_var, 2, j, (index < branch.num_cylins-1));
-		float const temp_num2(float((index+1)*temp_num_big_branches)/((num_3_branches_created+1)*((float)branch.num_cylins)) +
-			float(temp_num_big_branches/(((float)branch.num_cylins)*(num_3_branches_created+1))));
+		float const temp_num2(float((index+2)*temp_num_big_branches)/((num_3_branches_created+1)*((float)branch.num_cylins)));
 		if (temp_num*branch_1_distribution >= 1.0 && num_3_branches_created < branch.num_branches) branch_just_created = true;
 		int const deg_added(generate_next_cylin(index, branch.num_cylins, branch_just_created, branch_deflected));
 		gen_cylin_rotate(cylin.rotate, lcylin.rotate, deg_added*rotate_factor);
