@@ -34,6 +34,7 @@ int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
 int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
 bool const FORCE_TREE_TYPE   = 1;
+unsigned const CYLINS_PER_ROOT = 2;
 
 
 vector<tree_cylin >   tree_builder_t::cylin_cache;
@@ -56,7 +57,7 @@ tree_data_manager_t tree_data_manager;
 tree_cont_t t_trees(tree_data_manager);
 
 
-extern bool has_snow, no_sun_lpos_update, has_dl_sources;
+extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots;
 extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation;
@@ -1368,7 +1369,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
-		td.gen_tree_data(type, size, tree_depth, user_placed); // create the tree here
+		td.gen_tree_data(type, size, tree_depth); // create the tree here
 	}
 	assert(type < NUM_TREE_TYPES);
 	unsigned const nleaves(td.get_leaves().size());
@@ -1378,7 +1379,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 }
 
 
-void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, bool user_placed) {
+void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 
 	tree_type = tree_type_;
 	assert(tree_type < NUM_TREE_TYPES);
@@ -1392,7 +1393,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, bool
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
 	tree_builder_t builder;
-	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color, user_placed);
+	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color);
 	
 	// create leaves and all_cylins
 	sphere_center_zoff = builder.get_bsphere_center_zval();
@@ -1413,7 +1414,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, bool
 }
 
 
-float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color, bool user_placed) {
+float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color) {
 
 	//fixed tree variables
 	ncib                 = 10;
@@ -1472,7 +1473,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	branches[0]    = &branch_cache.front();
 	branches_34[0] = branches   [0] + nbr;
 	branches_34[1] = branches_34[0] + nbranches;
-	unsigned const tot_cylins(base_num_cylins+1 + 2*max_num_roots + ncib*(nbr + nbranches + num_34_branches[1]));
+	unsigned const tot_cylins(base_num_cylins+1 + CYLINS_PER_ROOT*max_num_roots + ncib*(nbr + nbranches + num_34_branches[1]));
 	cylin_cache.resize(tot_cylins);
 	base.cylin  = &cylin_cache.front();
 	roots.cylin = base.cylin + base_num_cylins+1;
@@ -1481,7 +1482,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		branches[i] = branches[0] + i*(num_2_branches_max+1);
 
 		for (int j = 0; j < (num_2_branches_max+1); j++) {
-			branches[i][j].cylin = roots.cylin + 2*max_num_roots + (i*(num_2_branches_max+1) + j)*ncib;
+			branches[i][j].cylin = roots.cylin + CYLINS_PER_ROOT*max_num_roots + (i*(num_2_branches_max+1) + j)*ncib;
 		}
 	}
 	for (int i = 0; i < nbranches; i++) {
@@ -1530,19 +1531,21 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 
 	if (tree_depth > 0.0) { // add the bottom cylinder section from the base into the ground
 		// FIXME: hack to prevent roots from being generated in scenes where trees are user-placed and affect the lighting voxel sparsity
-		root_num_cylins = (user_placed ? 0 : 2*rand_gen(min_num_roots, max_num_roots));
+		root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
 
 		for (int i = 0; i < root_num_cylins; i += 2) {
 			tree_cylin &cylin1(roots.cylin[i]), &cylin2(roots.cylin[i+1]);
-			float const root_radius(rand_uniform2(0.38, 0.5)*base_radius);
+			float const root_radius(rand_uniform2(0.35, 0.45)*base_radius);
 			float const theta((TWO_PI*(i + 0.3*signed_rand_float2()))/root_num_cylins);
 			float const deg_rot(180.0+rand_uniform2(40.0, 52.0));
+			vector3d const dir(sin(theta), cos(theta), 0.0);
 			cylin1.assign_params(1, i, root_radius, 0.5*root_radius, 2.5*base_radius, deg_rot); // level 1, with unique branch_id's
-			cylin1.p1 = cylin1.p2 = point(0.0, 0.0, 0.75*base_radius);
-			cylin1.rotate.assign(sin(theta), cos(theta), 0.0);
+			cylin1.p1     = cylin1.p2 = point(0.0, 0.0, 0.75*base_radius);
+			cylin1.rotate = dir;
 			rotate_cylin(cylin1);
+			cylin1.p1    += (0.5*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
 			cylin2.assign_params(1, i, 0.5*root_radius, 0.0, 3.0*base_radius, deg_rot-20.0);
-			cylin2.p1 = cylin1.p2 = cylin1.p2;
+			cylin2.p1     = cylin1.p2 = cylin1.p2;
 			cylin2.rotate = cylin1.rotate;
 			rotate_cylin(cylin2);
 		}
