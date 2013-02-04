@@ -34,7 +34,7 @@ float const GRASS_LOD_SCALE   = 16.0;
 
 
 extern bool inf_terrain_scenery;
-extern unsigned grass_density;
+extern unsigned grass_density, max_unique_trees;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
 extern point sun_pos, moon_pos;
@@ -751,6 +751,10 @@ public:
 	unsigned num_decid_trees() const {return decid_trees.size();}
 
 	void gen_decid_trees_if_needed() {
+		if (max_unique_trees == 0) {
+			cout << "Warning: max_unique_trees needs to be set to something reasonable for tiled terrain mode trees to work efficiently. Setting to 100." << endl;
+			max_unique_trees = 100;
+		}
 		if (decid_trees.was_generated()) return; // already generated
 		assert(decid_trees.empty());
 		dtree_off.set_from_xyoff2();

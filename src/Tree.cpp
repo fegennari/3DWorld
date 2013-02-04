@@ -34,7 +34,7 @@ int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
 int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
 bool const FORCE_TREE_TYPE   = 1;
-unsigned const CYLINS_PER_ROOT = 2;
+unsigned const CYLINS_PER_ROOT = 3;
 
 
 vector<tree_cylin >   tree_builder_t::cylin_cache;
@@ -1458,7 +1458,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	max_2_angle_rotate     = 50.0;
 	max_3_angle_rotate     = 50.0;
 	float const branch_1_random_rotate = 40.0;
-	int const min_num_roots(9), max_num_roots(12);
+	int const min_num_roots(10), max_num_roots(12);
 	base_color = colorRGBA(0.5*signed_rand_float2(), 0.5*signed_rand_float2(), 0.0, 1.0); // no blue
 
 	//temporary variables
@@ -1533,21 +1533,29 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		// FIXME: hack to prevent roots from being generated in scenes where trees are user-placed and affect the lighting voxel sparsity
 		root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
 
-		for (int i = 0; i < root_num_cylins; i += 2) {
-			tree_cylin &cylin1(roots.cylin[i]), &cylin2(roots.cylin[i+1]);
-			float const root_radius(rand_uniform2(0.35, 0.45)*base_radius);
+		for (int i = 0; i < root_num_cylins; i += CYLINS_PER_ROOT) {
+			tree_cylin &cylin1(roots.cylin[i]), &cylin2(roots.cylin[i+1]), &cylin3(roots.cylin[i+2]);
+			float const root_radius(rand_uniform2(0.38, 0.45)*base_radius);
 			float const theta((TWO_PI*(i + 0.3*signed_rand_float2()))/root_num_cylins);
-			float const deg_rot(180.0+rand_uniform2(40.0, 52.0));
+			float const deg_rot(180.0+rand_uniform2(40.0, 50.0));
 			vector3d const dir(sin(theta), cos(theta), 0.0);
-			cylin1.assign_params(1, i, root_radius, 0.5*root_radius, 2.5*base_radius, deg_rot); // level 1, with unique branch_id's
+			cylin1.assign_params(1, i, root_radius, 0.75*root_radius, 1.0*base_radius, deg_rot); // level 1, with unique branch_id's
 			cylin1.p1     = cylin1.p2 = point(0.0, 0.0, 0.75*base_radius);
 			cylin1.rotate = dir;
 			rotate_cylin(cylin1);
-			cylin1.p1    += (0.5*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
-			cylin2.assign_params(1, i, 0.5*root_radius, 0.0, 3.0*base_radius, deg_rot-20.0);
+			cylin1.p1    += (0.3*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
+			cylin1.p1    *= 2.0;
+			cylin1.p2    *= 1.3;
+
+			cylin2.assign_params(1, i, 0.75*root_radius, 0.5*root_radius, 2.0*base_radius, deg_rot+10.0);
 			cylin2.p1     = cylin1.p2 = cylin1.p2;
 			cylin2.rotate = cylin1.rotate;
 			rotate_cylin(cylin2);
+
+			cylin3.assign_params(1, i, 0.5*root_radius, 0.0, 4.0*base_radius, deg_rot-24.0);
+			cylin3.p1     = cylin2.p2 = cylin2.p2;
+			cylin3.rotate = cylin2.rotate;
+			rotate_cylin(cylin3);
 		}
 		if (root_num_cylins == 0) {
 			tree_cylin &cylin(base.cylin[base_num_cylins]);
