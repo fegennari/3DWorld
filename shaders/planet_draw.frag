@@ -101,7 +101,7 @@ vec3 eval_color_cur_pos() {
 void main()
 {
 #ifdef GAS_GIANT
-	vec4 texel   = texture1D(tex0, (gl_TexCoord[0].t + 0.05*(gen_cloud_alpha_static_non_norm(1.5*vertex) - 0.5)));
+	vec4 texel   = texture1D(tex0, (gl_TexCoord[0].t + 0.04*(gen_cloud_alpha_static_non_norm(1.5*vertex) - 0.5)));
 #else
 	vec4 texel   = texture2D(tex0, gl_TexCoord[0].st);
 	//vec4 texel   = vec4(eval_color_cur_pos(), 1.0);

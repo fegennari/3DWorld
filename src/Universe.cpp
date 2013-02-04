@@ -43,7 +43,7 @@ unsigned const MAX_SYSTEMS_PER_GALAXY  = 500;
 unsigned const MAX_PLANETS_PER_SYSTEM  = 16;
 unsigned const MAX_MOONS_PER_PLANET    = 8;
 unsigned const GAS_GIANT_TSIZE         = 1024;
-unsigned const GAS_GIANT_BANDS         = 31;
+unsigned const GAS_GIANT_BANDS         = 63;
 
 int   const RAND_CONST       = 1;
 float const ROTREV_TIMESCALE = 1.0;
@@ -1755,7 +1755,7 @@ void urev_body::create_gas_giant_texture() {
 			blend_color(color, colorA, colorB, rand_float2(), 0);
 		}
 		else {
-			UNROLL_3X(color[i_] = CLIP_TO_01(color[i_] + 0.01f*signed_rand_float2());)
+			UNROLL_3X(color[i_] = CLIP_TO_01(color[i_] + 0.02f*signed_rand_float2());)
 		}
 		UNROLL_3X(data[3*i+i_] = (unsigned char)(255.0*color[i_]);)
 	}
