@@ -1529,42 +1529,47 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	//done with base ------------------------------------------------------------------
 	if (TREE_4TH_BRANCHES) {create_4th_order_branches(nbranches);}
 
-	if (tree_depth > 0.0) { // add the bottom cylinder section from the base into the ground
-		// FIXME: hack to prevent roots from being generated in scenes where trees are user-placed and affect the lighting voxel sparsity
-		root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
+	// FIXME: hack to prevent roots from being generated in scenes where trees are user-placed and affect the lighting voxel sparsity
+	root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
 
-		for (int i = 0; i < root_num_cylins; i += CYLINS_PER_ROOT) {
-			tree_cylin &cylin1(roots.cylin[i]), &cylin2(roots.cylin[i+1]), &cylin3(roots.cylin[i+2]);
-			float const root_radius(rand_uniform2(0.38, 0.45)*base_radius);
-			float const theta((TWO_PI*(i + 0.3*signed_rand_float2()))/root_num_cylins);
-			float const deg_rot(180.0+rand_uniform2(40.0, 50.0));
-			vector3d const dir(sin(theta), cos(theta), 0.0);
-			cylin1.assign_params(1, i, root_radius, 0.75*root_radius, 1.0*base_radius, deg_rot); // level 1, with unique branch_id's
-			cylin1.p1     = cylin1.p2 = point(0.0, 0.0, 0.75*base_radius);
-			cylin1.rotate = dir;
-			rotate_cylin(cylin1);
-			cylin1.p1    += (0.3*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
-			cylin1.p1    *= 2.0;
-			cylin1.p2    *= 1.3;
+	for (int i = 0; i < root_num_cylins; i += CYLINS_PER_ROOT) { // add roots
+		tree_cylin &cylin1(roots.cylin[i]), &cylin2(roots.cylin[i+1]), &cylin3(roots.cylin[i+2]);
+		float const root_radius(rand_uniform2(0.38, 0.45)*base_radius);
+		float const theta((TWO_PI*(i + 0.3*signed_rand_float2()))/root_num_cylins);
+		float const deg_rot(180.0+rand_uniform2(40.0, 50.0));
+		vector3d const dir(sin(theta), cos(theta), 0.0);
+		cylin1.assign_params(1, i, root_radius, 0.75*root_radius, 1.0*base_radius, deg_rot); // level 1, with unique branch_id's
+		cylin1.p1     = cylin1.p2 = point(0.0, 0.0, 0.75*base_radius);
+		cylin1.rotate = dir;
+		rotate_cylin(cylin1);
+		cylin1.p1    += (0.3*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
+		cylin1.p1    *= 2.0;
+		cylin1.p2    *= 1.3;
 
-			cylin2.assign_params(1, i, 0.75*root_radius, 0.5*root_radius, 2.0*base_radius, deg_rot+10.0);
-			cylin2.p1     = cylin1.p2 = cylin1.p2;
-			cylin2.rotate = cylin1.rotate;
-			rotate_cylin(cylin2);
+		cylin2.assign_params(1, i, 0.75*root_radius, 0.5*root_radius, 2.0*base_radius, deg_rot+10.0);
+		cylin2.p1     = cylin1.p2 = cylin1.p2;
+		cylin2.rotate = cylin1.rotate;
+		rotate_cylin(cylin2);
 
-			cylin3.assign_params(1, i, 0.5*root_radius, 0.0, 4.0*base_radius, deg_rot-24.0);
-			cylin3.p1     = cylin2.p2 = cylin2.p2;
-			cylin3.rotate = cylin2.rotate;
-			rotate_cylin(cylin3);
+		cylin3.assign_params(1, i, 0.5*root_radius, 0.0, 4.0*base_radius, deg_rot-24.0);
+		cylin3.p1     = cylin2.p2 = cylin2.p2;
+		cylin3.rotate = cylin2.rotate;
+		rotate_cylin(cylin3);
+
+		if (tree_depth > 0.0) { // keep roots above the tree depth
+			for (unsigned j = i; j < i + CYLINS_PER_ROOT; ++j) {
+				roots.cylin[j].p1.z = max(roots.cylin[j].p1.z, -tree_depth+roots.cylin[j].r1);
+				roots.cylin[j].p2.z = max(roots.cylin[j].p2.z, -tree_depth+roots.cylin[j].r2);
+			}
 		}
-		if (root_num_cylins == 0) {
-			tree_cylin &cylin(base.cylin[base_num_cylins]);
-			cylin.assign_params(0, 1, base_radius, base_radius, tree_depth, 180.0);
-			cylin.p1 = cylin.p2 = all_zeros;
-			cylin.rotate = plus_x;
-			rotate_cylin(cylin);
-			++base_num_cylins;
-		}
+	}
+	if (tree_depth > 0.0 && root_num_cylins == 0) { // add the bottom cylinder section from the base into the ground
+		tree_cylin &cylin(base.cylin[base_num_cylins]);
+		cylin.assign_params(0, 1, base_radius, base_radius, tree_depth, 180.0);
+		cylin.p1 = cylin.p2 = all_zeros;
+		cylin.rotate = plus_x;
+		rotate_cylin(cylin);
+		++base_num_cylins;
 	}
 	return base_radius;
 }
