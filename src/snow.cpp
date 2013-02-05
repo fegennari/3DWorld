@@ -584,11 +584,14 @@ void create_snow_strips(voxel_map &vmap) {
 
 	// create strips of snow for rendering
 	voxel_map cur_x_map, last_x_map;
-	float const delta_depth(snow_depth*VOXELS_PER_DIV*VOXELS_PER_DIV*XY_MULT_SIZE/(1024.0*1024.0*num_snowflakes));
+	unsigned const num_xy_voxels(VOXELS_PER_DIV*VOXELS_PER_DIV*XY_MULT_SIZE);
+	float const delta_depth(snow_depth*num_xy_voxels/(1024.0*1024.0*num_snowflakes));
 	unsigned n_strips(0), n_edge_strips(0), strip_len(0), edge_strip_len(0);
 	int last_x(0);
 	strip_vect_t strip, edge_strip;
 	vector<voxel_z_pair> vs;
+	snow_strips.clear();
+	snow_strips.reserve(8*num_xy_voxels/MAX_STRIP_LEN); // should be more than enough
 
 	while (!vmap.empty()) {
 		pair<voxel_t, zval_avg> start(*vmap.begin());
@@ -671,7 +674,7 @@ void create_snow_strips(voxel_map &vmap) {
 			++n_strips;
 		} // for n
 	}
-	cout << "strips: " << n_strips << " base, " << n_edge_strips << " edge" << endl;
+	cout << "strips: " << n_strips << " base, " << n_edge_strips << " edge" << ", total vector " << snow_strips.size() << endl;
 	cout << "strip lengths: " << strip_len << " base, " << edge_strip_len << " edge" << endl;
 	cout << "x_strip_map: " << x_strip_map.size() << endl;
 	snow_draw.add_all_strips(snow_strips);
