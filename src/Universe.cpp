@@ -234,17 +234,11 @@ public:
 		add_uniform_float("ring_ri",     svars.ring_ri);
 		add_uniform_float("ring_ro",     svars.ring_ro);
 		add_uniform_float("noise_scale", 4.0*body.cloud_scale); // clouds
-		add_uniform_float("water_val",   body.water);
-		add_uniform_float("lava_val",    body.lava);
-#if 0
-		add_uniform_float("planet_radius", body.radius);
-		add_uniform_float("hmap_scale",  body.get_hmap_scale());
-		add_uniform_float("snow_thresh", body.snow_thresh);
-		add_uniform_float("temperature", body.temp);
-		add_uniform_float("wr_scale",    body.wr_scale);
-		add_uniform_color("color_a",     colorRGB(body.colorA));
-		add_uniform_color("color_b",     colorRGB(body.colorB));
-#endif
+		
+		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
+			add_uniform_float("water_val", body.water);
+			add_uniform_float("lava_val",  body.lava);
+		}
 		set_planet_uniforms(body.atmos, svars, use_light2);
 		return 1;
 	}

@@ -1,7 +1,5 @@
 // Note: Light 0 is the sun (A+D+S point light), light 1 is universe ambient (constant A), light 2 is planet reflection (D point light)
-uniform float atmosphere = 1.0;
-uniform float water_val  = 0.0;
-uniform float lava_val   = 0.0;
+uniform float atmosphere = 1.0; // technically not needed for gas giants since assumed to be 1.0
 uniform vec3 light_scale = vec3(1,1,1);
 uniform vec3 sun_pos, ss_pos, rscale;
 uniform float sun_radius, ss_radius, ring_ri, ring_ro;
@@ -11,101 +9,36 @@ uniform sampler1D ring_tex;
 #ifdef GAS_GIANT
 uniform sampler1D tex0;
 #else
+uniform float water_val = 0.0;
+uniform float lava_val  = 0.0;
 uniform sampler2D tex0;
 #endif
 
 varying vec4 epos;
-varying vec3 normal, world_space_pos, vertex;
+varying vec3 normal, world_normal, world_space_pos, vertex;
 
-#if 0
-
-uniform float planet_radius, hmap_scale, snow_thresh, temperature, wr_scale;
-uniform vec3 color_a, color_b;
-
-vec3 eval_color(in float val, in float zval) {
-	const float FREEZE_TEMP = 12.0;
-	const float BOIL_TEMP   = 30.0;
-	const vec3 white = vec3(1.0, 1.0, 1.0);
-	const vec3 gray  = vec3(0.4, 0.4, 0.4);
-	vec3 wic = ((temperature < FREEZE_TEMP) ? vec3(0.5, 0.5, 0.9) : vec3(0.2, 0.2, 0.8));
-	float coldness = pow(abs(zval - 0.5)*2.0, 4.0); // zval=0.5 => equator, zval=0.0 => north pole, zval=1.0 => south pole
-	vec3 color = vec3(0,0,0);
-
-	if (val < water_val) { // underwater
-		color = wic;
-		if (coldness > 0.8) {color = mix(color, white, clamp((5.0*(coldness - 0.8f) + 2.0*(val - water_val)), 0.0, 1.0));} // ice
-		return color;
-	}
-	const float water_adj = 0.07;
-	float val_ws = ((water_val > 0.0) ? wr_scale*(val - water_val) : val); // rescale for water
-
-	if (water_val > 0.2 && atmosphere > 0.1) { // Earthlike planet
-		if (val_ws < 0.1) { // low ground
-			color = color_b;
-		}
-		else if (val_ws < 0.4) {
-			color = mix(color_b, color_a, 3.3333*(val_ws - 0.1));
-		}
-		else if (val_ws < 0.45) { // medium ground
-			color = color_a;
-		}
-		else if (val_ws < 0.6) {
-			color = mix(color_a, gray, 6.6667*(val_ws - 0.45));
-		}
-		else { // high ground
-			color = gray;
-		}
-	}
-	else { // alien-like planet
-		color = mix(color_b, color_a, val_ws);
-	}
-	if (lava_val > 0.0) { // hot lava planet
-		const float lava_adj = 0.07;
-		const vec3 lavac = vec3(1.0, 0.0, 0.0); // red
-
-		if (val < lava_val) {
-			color = lavac; // move up?
-		}
-		else if (val < lava_val + lava_adj) { // close to lava line
-			color = mix(lavac, color, (val - lava_val)/lava_adj);
-		}
-	}
-	else if (temperature < BOIL_TEMP) { // handle water/ice/snow
-		if (val < water_val + water_adj) { // close to water line (can have a little water even if water == 0)
-			color = mix(wic, color, (val - water_val)/water_adj);
-			if (coldness > 0.9) {color = mix(color, white, 10.0*(coldness - 0.9));} // ice
-			return color;
-		}
-		float st = (1.0 - coldness*coldness)*snow_thresh;
-
-		if (val > (st + 1.0E-6)) { // blend in some snow
-			color = mix(color, white, (val - st)/(1.0 - st));
-			return color;
-		}
-	}
-	return color;
-}
-
-vec3 eval_color_cur_pos() {
-
-	float cutoff = max(water_val, lava_val);
-	float val    = cutoff + (1.0 - cutoff)*((length(vertex) - planet_radius)/(hmap_scale*planet_radius) + 0.5);
-	val += 0.05*(gen_cloud_alpha_static(5.0*vertex) - 0.5);
-	float zval   = 0.5*vertex.z/planet_radius + 0.5;
-	return eval_color(val, zval);
-}
-
-#endif
+float rand_01 (float val) {return fract(sin(12.9898 * val) * 43758.5453);}
+float rand_pm1(float val) {return 2.0*(rand_01(val) - 0.5);}
 
 
 void main()
 {
 #ifdef GAS_GIANT
-	float tc     = gl_TexCoord[0].t + 0.04*(gen_cloud_alpha_static_non_norm(1.5*vertex) - 0.5);
+	float tc = gl_TexCoord[0].t + 0.04*(gen_cloud_alpha_static_non_norm(1.5*vertex) - 0.5);
+	float v0 = 1.0; // using a variable here is slow
+
+	for (int i = 0; i < 50; ++i) { // Note: inefficient, but fast enough for a single gas giant render
+		float v1   = rand_pm1(v0+1.0);
+		float v2   = rand_pm1(v0+2.0);
+		float v3   = rand_pm1(v0+3.0);
+		float v4   = rand_01 (v0+4.0);
+		v0        += 5.0;
+		float dist = (0.25 + 0.75*v4)*length(vec3(1.0, 1.0, 2.0)*(world_normal - normalize(vec3(v1, v2, 0.5*v3))));
+		tc        += 0.5*max(0.0, (0.1 - dist))*sin(0.1/dist);
+	}
 	vec4 texel   = texture1D(tex0, tc);
 #else
 	vec4 texel   = texture2D(tex0, gl_TexCoord[0].st);
-	//vec4 texel   = vec4(eval_color_cur_pos(), 1.0);
 #endif
 	vec3 norm    = normalize(normal); // renormalize
 	float atten0 = light_scale[0] * calc_light_atten(epos, 0);
@@ -139,10 +72,12 @@ void main()
 	vec3 ambient   = (gl_LightSource[0].ambient.rgb * atten0) + (gl_LightSource[1].ambient.rgb * light_scale[1]);
 	vec3 diffuse   = (gl_LightSource[0].diffuse.rgb * max(dot(norm, ldir0), 0.0) * atten0) +
 	                 (gl_LightSource[2].diffuse.rgb * max(dot(norm, ldir2), 0.0) * atten2 * max(dot(ldir2, ldir20), 0.0));
-	vec3 specular  = ((water_val > 0.0) ? 1.0 : 0.0) * gl_FrontLightProduct[0].specular.rgb * pow(max(dot(norm, half_vect), 0.0), gl_FrontMaterial.shininess) * pow(texel.b, 4.0) * atten0;
-	vec3 color     = (texel.rgb * (ambient + diffuse)) + specular;
+	vec3 color     = (texel.rgb * (ambient + diffuse));
 
 #ifndef GAS_GIANT
+	float specval  = pow(max(dot(norm, half_vect), 0.0), gl_FrontMaterial.shininess);
+	color         += ((water_val > 0.0) ? 1.0 : 0.0) * gl_FrontLightProduct[0].specular.rgb * specval * pow(texel.b, 4.0) * atten0;
+
 	if (atmosphere > 0.0) {
 		float cloud_val = atmosphere*gen_cloud_alpha(vertex);
 		if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;} // no clouds over high mountains?
