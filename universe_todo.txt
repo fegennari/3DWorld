@@ -1,4 +1,3 @@
-gas giant cyclones
 craters on planets/moons
 Bump map in planet fragment shader using procedural noise
 
@@ -13,14 +12,5 @@ in 3D, and mapped to a sphere
 ship, maybe all ships?)
 * Not sure what to do with colonies
 
-get_closest_object
-  get_object_closest_to_pos (expand=1.0 and 4.0)
-  get_close_system (system only, expand = 1.0 and 2.0)
-  get_trajectory_collisions (default 2x)
-  get_point_temperature (system only, expand=4.0)
-  get_closest_world_ptr (expand=4.0)
-  choose_dest_world (expand=4.0, g_expand to cell)
-  check_dest_ownership (expand=4.0)
-  orbiting_ship::update_state() (expand=4.0)
 
 
