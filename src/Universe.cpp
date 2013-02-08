@@ -214,7 +214,7 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
+	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) { // Note: planet_pos unused
 		if (disable_shaders) return 0;
 
 		if (!is_setup()) {
@@ -236,8 +236,9 @@ public:
 		add_uniform_float("noise_scale", 4.0*body.cloud_scale); // clouds
 		
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
-			add_uniform_float("water_val", body.water);
-			add_uniform_float("lava_val",  body.lava);
+			add_uniform_float("water_val",  body.water);
+			add_uniform_float("lava_val",   body.lava);
+			add_uniform_float("crater_val", ((body.type == UTYPE_MOON) ? 1.0 : 0.0));
 		}
 		set_planet_uniforms(body.atmos, svars, use_light2);
 		return 1;
@@ -335,8 +336,8 @@ class ushader_group {
 public:
 	shader_t nebula_shader, asteroid_shader;
 
-	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
-		return planet_shader[svars.ring_ro > 0.0][body.gas_giant].enable_planet(body, svars, use_light2);
+	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) {
+		return planet_shader[svars.ring_ro > 0.0][body.gas_giant].enable_planet(body, svars, planet_pos, use_light2);
 	}
 	void disable_planet_shader() {planet_shader[0][0].disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
@@ -2118,7 +2119,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
 		set_fill_mode();
-		if (texture) {usg.enable_planet_shader(*this, svars, use_light2);}
+		if (texture) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);}
 		glPushMatrix();
 		global_translate(pos_);
 		apply_gl_rotate();
