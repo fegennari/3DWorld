@@ -1,3 +1,4 @@
+Asteroid field uses star light when near a system (with craters?)
 Bump map in planet fragment shader using procedural noise
 
 http://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf

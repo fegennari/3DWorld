@@ -222,7 +222,7 @@ public:
 			if (body.gas_giant) {set_prefix("#define GAS_GIANT", 1);} // FS
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			set_vert_shader("planet_draw");
-			set_frag_shader("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+planet_draw");
+			set_frag_shader("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+craters.part+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", 1);
 			add_uniform_int("ring_tex",        2);

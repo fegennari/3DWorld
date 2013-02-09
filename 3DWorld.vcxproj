@@ -843,6 +843,7 @@
     <None Include="shaders\clouds.frag" />
     <None Include="shaders\clouds.vert" />
     <None Include="shaders\cloud_billboard.frag" />
+    <None Include="shaders\craters.part.frag" />
     <None Include="shaders\draw_mesh.frag" />
     <None Include="shaders\draw_mesh.vert" />
     <None Include="shaders\dynamic_lighting.part" />
