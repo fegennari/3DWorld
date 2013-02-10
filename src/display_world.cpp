@@ -307,8 +307,12 @@ void calc_bkg_color() {
 	else {
 		blend_color(bkg_color, BACKGROUND_NIGHT, BACKGROUND_DAY, lfn, 1);
 	}
-	if (is_cloudy)        blend_color(bkg_color, bkg_color, GRAY, 0.5, 1);
-	if (atmosphere < 1.0) blend_color(bkg_color, bkg_color, BACKGROUND_NIGHT, atmosphere, 0);
+	if (is_cloudy) {
+		colorRGBA const orig_bkgc(bkg_color);
+		blend_color(bkg_color, bkg_color, GRAY, 0.5, 1);
+		UNROLL_3X(bkg_color[i_] = min(bkg_color[i_], orig_bkgc[i_]);) // can't make it brighter
+	}
+	if (atmosphere < 1.0) {blend_color(bkg_color, bkg_color, BACKGROUND_NIGHT, atmosphere, 0);}
 }
 
 
@@ -457,7 +461,7 @@ void setup_lighting(bool underwater, float depth) {
 void draw_sun_moon_stars() {
 
 	if (light_factor <= 0.4) { // moon
-		gen_stars(1.0, island);
+		if (!is_cloudy) {gen_stars(1.0, island);}
 		draw_moon();
 	}
 	else if (light_factor >= 0.6) { // sun
@@ -465,7 +469,7 @@ void draw_sun_moon_stars() {
 	}
 	else { // sun and moon
 		float const lfn(1.0 - 5.0*(light_factor - 0.4));
-		gen_stars(lfn, island);
+		if (!is_cloudy) {gen_stars(lfn, island);}
 		draw_moon();
 		draw_sun();
 	}
@@ -498,16 +502,18 @@ void draw_universe_bkg(bool underwater, float depth) {
 	translate_to(camera_r);
 
 	// draw universe as background
-	bool const no_stars(atmosphere > 0.8 && light_factor >= 0.6), has_fog(glIsEnabled(GL_FOG) != 0);
-	config_bkg_color_and_clear(underwater, depth, 1);
-	point const camera_pos_orig(camera_pos);
-	camera_pos = get_player_pos(); // trick universe code into thinking the camera is at the player's ship
-	if (has_fog) glDisable(GL_FOG);
-	if (TIMETEST) PRINT_TIME("0.1");
-	draw_universe(1, 1, no_stars); // could clip by horizon?
-	if (TIMETEST) PRINT_TIME("0.2");
-	if (has_fog) glEnable(GL_FOG);
-	camera_pos = camera_pos_orig;
+	if (!is_cloudy) { // if cloudy, can't see anything through the clouds
+		bool const no_stars(atmosphere > 0.8 && light_factor >= 0.6), has_fog(glIsEnabled(GL_FOG) != 0);
+		config_bkg_color_and_clear(underwater, depth, 1);
+		point const camera_pos_orig(camera_pos);
+		camera_pos = get_player_pos(); // trick universe code into thinking the camera is at the player's ship
+		if (has_fog) glDisable(GL_FOG);
+		if (TIMETEST) PRINT_TIME("0.1");
+		draw_universe(1, 1, no_stars); // could clip by horizon?
+		if (TIMETEST) PRINT_TIME("0.2");
+		if (has_fog) glEnable(GL_FOG);
+		camera_pos = camera_pos_orig;
+	}
 	
 	// setup sun light source
 	glPopMatrix();
