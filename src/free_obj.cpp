@@ -26,6 +26,7 @@ float const PROJ_ROT_ATTEN   = 0.92;
 float const ROT_FORCE_CONST  = 0.5;
 float const MAX_ROT_RATE     = 0.03;
 float const BLACK_HOLE_GRAV  = 2000.0;
+float const ASTEROID_DENSITY = 0.1; // lower density/gravity than planets/moons/stars due to incorrect relative size
 float const DEF_AMBIENT_SCALE= 3.2; // hack to increase light on ships (isn't ambient reset below in some cases?)
 float const ao_d_time(float(ao_e_time - ao_s_time));
 
@@ -771,7 +772,7 @@ int stationary_obj::get_gravity(vector3d &vgravity, point const &mpos) const {
 			add_gravity_vector_base(vgravity, mpos, 0.1*BLACK_HOLE_GRAV*radius, BLACK_HOLE_GRAV);
 			return 2;
 		case SO_ASTEROID: // not spherical
-			add_gravity_vector_base(vgravity, mpos, radius, MAX_SOBJ_GRAVITY); // density = 1.0 => gravity = radius
+			add_gravity_vector_base(vgravity, mpos, ASTEROID_DENSITY*radius, MAX_SOBJ_GRAVITY); // gravity = density*radius
 			return 1;
 		default: assert(0);
 	}

@@ -58,7 +58,7 @@ void ship_cylinder::draw_svol(point const &tpos, float cur_radius, point const &
 	ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj).draw_geom(tpos, test);
 	
 	if (check_ends) {
-		point const pos((r1 < r2) ? p2 : p1);
+		point const pos((r1 == r2) ? 0.5*(p1 + p2) : ((r1 < r2) ? p2 : p1)); // center if equal, otherwise end with largest radius
 		ushadow_triangle_mesh(pos, max(r1, r2), (p2 - p1), ndiv, tpos, cur_radius, spos, obj).draw_geom(tpos, test);
 	}
 }
@@ -192,12 +192,13 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 	double const ndiv_inv(1.0/double(ndiv)), step(PI*ro*ndiv_inv + 2.0*ri*sin(PI*ndiv_inv));
 	bool const self_shadow(dist_less_than(obj->get_pos(), tpos, 0.01*cur_radius));
 	float const min_sdist(self_shadow ? 0.1*cur_radius : 0.0);
+	float const ri_mod(0.97*ri); // slightly smaller than actual ri to avoid self-shadowing artifacts
 
 	for (int i = 0; i < ndiv; ++i) {
 		double const theta(TWO_PI*i*ndiv_inv);
 		point const pos(ro*cos(theta), ro*sin(theta), 0.0), p(center + pos);
 		vector3d const delta(cross_product(pos, plus_z).get_norm() * step);
-		cylinder_quad_projection(pts_, cylinder_3dw(p-delta, p+delta, ri, ri), (p - spos_xf), v2, npts);
+		cylinder_quad_projection(pts_, cylinder_3dw(p-delta, p+delta, ri_mod, ri_mod), (p - spos_xf), v2, npts);
 		upos_point_type pts[4]; // 3 or 4
 		for (int i = 0; i < npts; ++i) pts[i] = pts_[i];
 		ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj, min_sdist).draw_geom(tpos, test);
@@ -230,7 +231,7 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 			}
 		}
 		for (unsigned i = 0; i < 2; ++i) {
-			ushadow_sphere(tpts[pmin[i]], ri, tpos, cur_radius, spos, ndiv, player, obj, min_sdist).draw_geom(tpos, test);
+			ushadow_sphere(tpts[pmin[i]], ri_mod, tpos, cur_radius, spos, ndiv, player, obj, min_sdist).draw_geom(tpos, test);
 		}
 	}
 }

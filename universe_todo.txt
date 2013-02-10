@@ -1,3 +1,5 @@
+Cloud colors in rain
+Tiled terrain tree coll
 Asteroid field uses star light when near a system (with craters?)
 Bump map in planet fragment shader using procedural noise
 
