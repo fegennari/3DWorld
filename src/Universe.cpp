@@ -386,7 +386,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			draw_universe_plds();
 		}
 	}
-	if (clobj.type >= UTYPE_SYSTEM) { // in a system
+	if (clobj.has_valid_system()) { // in a system
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
 			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest);
 		}
@@ -400,7 +400,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 
 void set_current_system_light(s_object const &clobj, point const &pspos, float a_scale, float d_scale) {
 
-	if (clobj.type >= UTYPE_SYSTEM && clobj.get_star().is_ok()) { // in a system
+	if (clobj.has_valid_system() && clobj.get_star().is_ok()) { // in a system
 		ustar const &sun(clobj.get_star());
 		point const pos(clobj.get_ucell().rel_center + sun.pos);
 		set_sun_loc_color(pos, sun.get_light_color(), sun.radius, 0, 0, a_scale, d_scale); // ending light from current system
@@ -616,7 +616,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 		return;
 	}
 	assert(!is_nan(camera));
-	bool const p_system(clobj.type >= UTYPE_SYSTEM);
+	bool const p_system(clobj.has_valid_system());
 	float const wwsq((float)window_width*(float)window_width);
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 

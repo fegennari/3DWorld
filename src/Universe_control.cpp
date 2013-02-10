@@ -361,7 +361,7 @@ void process_univ_objects() {
 					near_b_hole |= (stat_obj_query_res[j]->get_gravity(gravity, obj_pos) == 2);
 				}
 			}
-			if (clobj.type >= UTYPE_SYSTEM) {
+			if (clobj.has_valid_system()) {
 				swp_accel = clobj.get_star().get_solar_wind_accel(obj_pos, uobj->get_mass(), uobj->get_surf_area());
 			}
 			uobj->add_gravity_swp(gravity, swp_accel, float(GRAV_CHECK_MOD), near_b_hole);

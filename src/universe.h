@@ -454,6 +454,7 @@ public:
 	void register_destroyed_sobj() const;
 	unsigned get_owner() const;
 	void set_owner(unsigned owner) const;
+	bool has_valid_system() const {return (type >= UTYPE_SYSTEM && system >= 0);}
 	ucell     &get_ucell()  const;
 
 	ugalaxy   &get_galaxy() const {
@@ -468,7 +469,7 @@ public:
 	}
 	ussystem &get_system() const {
 		ugalaxy &g(get_galaxy());
-		assert(type >= UTYPE_SYSTEM && (unsigned)system < g.sols.size());
+		assert(has_valid_system() && (unsigned)system < g.sols.size());
 		return g.sols[system];
 	}
 	ustar &get_star() const {return get_system().sun;}
@@ -517,7 +518,7 @@ public:
 	}
 	int get_close_system(point const &pos, s_object &result, float expand) const {
 		if (!get_closest_object(result, pos, UTYPE_SYSTEM, 1, expand)) return 0; // find closest system (check last param=offset?)
-		return (result.type >= UTYPE_SYSTEM);
+		return result.has_valid_system();
 	}
 	bool bad_cell_xyz(int const cxyz[3]) const {
 		if (cxyz[0] < 0              || cxyz[1] < 0              || cxyz[2] < 0)              return 1;
