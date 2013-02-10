@@ -2027,11 +2027,12 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
 		vector3d const velocity(get_player_velocity());
 		float const psize(get_pixel_size(velocity.mag(), dist));
-		bool const small(size < 1.5), draw_as_line(psize > 1.0); // lines of light - "warp speed"
+		bool const small(size < 1.5);
+		bool const draw_as_line(psize*cross_product(velocity.get_norm(), vcp.get_norm()).mag() > 1.0);
 		point const normal(camera - pos_);
 		pos_ = make_pt_global(pos_);
 
-		if (draw_as_line) {
+		if (draw_as_line) { // lines of light - "warp speed"
 			blend_color(ocolor, ocolor, bkg_color, 0.5, 1); // half color to make it less bright
 			universe_pld[!small].add_line(pos_, normal, ocolor, (pos_ - velocity), normal, ocolor);
 		}
