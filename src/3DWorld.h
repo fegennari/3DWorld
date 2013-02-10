@@ -492,7 +492,7 @@ struct line_3dw {
 
 	point p1, p2;
 
-	line_3dw() {}
+	line_3dw() : p1(all_zeros), p2(all_zeros) {}
 	line_3dw(point const &p1_, point const &p2_) : p1(p1_), p2(p2_) {assert(p1 != p2);}
 	vector3d get_norm_dir_vect() const {return (p2 - p1).get_norm();}
 };
@@ -530,7 +530,7 @@ struct cylinder_3dw : public line_3dw { // size = 32
 
 	float r1, r2;
 
-	cylinder_3dw() {}
+	cylinder_3dw() : r1(0.0), r2(0.0) {}
 	cylinder_3dw(point const &p1_, point const &p2_, float r1_, float r2_) : line_3dw(p1_, p2_), r1(r1_), r2(r2_) {}
 };
 

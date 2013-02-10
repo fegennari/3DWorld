@@ -455,29 +455,28 @@ void advance_camera(int dir) {
 	if (world_mode == WMODE_UNIVERSE) { // universe
 		bool const hyperspeed(do_run == 2);
 		if (player_ship_inited()) player_ship().thrust(dir, speed_mult, hyperspeed);
+		return;
 	}
-	else if (world_mode != WMODE_UNIVERSE) {
-		if (camera_mode != 1 || (map_mode && world_mode != WMODE_INF_TERRAIN)) return;
-		vector3d v;
-		float dist(fticks*speed_mult*player_speed*GROUND_SPEED*calc_speed());
-		if (game_mode && sstates != NULL) dist *= sstates[CAMERA_ID].get_rspeed_scale();
+	if (camera_mode != 1 || (map_mode && world_mode != WMODE_INF_TERRAIN)) return;
+	vector3d v;
+	float dist(fticks*speed_mult*player_speed*GROUND_SPEED*calc_speed());
+	if (game_mode && sstates != NULL) dist *= sstates[CAMERA_ID].get_rspeed_scale();
 		
-		switch (dir) {
-		case MOVE_BACK: // backward
-			dist  = -dist;
-			dist *= BACKWARD_SPEED; // slower backwards
-		case MOVE_FRONT: // forward
-			move_camera_pos(cview_dir, dist);
-			break;
-		case MOVE_RIGHT:
-			dist = -dist;
-		case MOVE_LEFT:
-			dist *= SIDESTEP_SPEED;
-			cross_product(up_vector, cview_dir, v);
-			move_camera_pos(v, dist);
-			break;
-		default: assert(0);
-		}
+	switch (dir) {
+	case MOVE_BACK: // backward
+		dist  = -dist;
+		dist *= BACKWARD_SPEED; // slower backwards
+	case MOVE_FRONT: // forward
+		move_camera_pos(cview_dir, dist);
+		break;
+	case MOVE_RIGHT:
+		dist = -dist;
+	case MOVE_LEFT:
+		dist *= SIDESTEP_SPEED;
+		cross_product(up_vector, cview_dir, v);
+		move_camera_pos(v, dist);
+		break;
+	default: assert(0);
 	}
 }
 

@@ -37,7 +37,7 @@ extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
-extern point sun_pos, moon_pos;
+extern point sun_pos, moon_pos, surface_pos;
 extern float h_dirt[];
 extern texture_t textures[];
 extern tree_data_manager_t tree_data_manager;
@@ -910,7 +910,7 @@ public:
 		
 		// can store normals in a normal map texture, but a vertex texture fetch is slow
 		glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
-		glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz*isz, GL_UNSIGNED_SHORT, 0); // requires GL/glew.h
+		glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz*isz, GL_UNSIGNED_SHORT, 0);
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 		glPopMatrix();
@@ -924,6 +924,30 @@ public:
 		glVertex3f(xv1, yv2, z);
 		glVertex3f(xv2, yv2, z);
 		glVertex3f(xv2, yv1, z);
+	}
+
+	bool check_player_collision() const {
+		if (!contains_camera()) return 0;
+		bool coll(0);
+		point camera(get_camera_pos());
+
+		if (!pine_trees.empty()) {
+			camera -= ptree_off.get_xlate();
+			coll = pine_trees.check_sphere_coll(camera, CAMERA_RADIUS);
+			camera += ptree_off.get_xlate();
+		}
+		if (!decid_trees.empty()) {
+			camera -= dtree_off.get_xlate();
+			//coll = decid_trees.check_sphere_coll(camera, CAMERA_RADIUS);
+			camera += dtree_off.get_xlate();
+		}
+		if (scenery.generated) {
+			camera -= scenery_off.get_xlate();
+			//coll = scenery.check_sphere_coll(camera, CAMERA_RADIUS);
+			camera += scenery_off.get_xlate();
+		}
+		if (coll) {surface_pos = camera;}
+		return coll;
 	}
 }; // tile_t
 
@@ -1293,6 +1317,16 @@ public:
 		if (it != tiles.end()) return it->second;
 		return NULL;
 	}
+
+	bool check_player_collision() const {
+		bool coll(0);
+
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+			assert(i->second);
+			coll |= i->second->check_player_collision();
+		}
+		return coll;
+	}
 }; // tile_draw_t
 
 
@@ -1331,6 +1365,10 @@ void reset_tiled_terrain_state() {
 
 void draw_tiled_terrain_water(float zval) {
 	terrain_tile_draw.draw_water(zval);
+}
+
+bool check_player_tiled_terrain_collision() {
+	return terrain_tile_draw.check_player_collision();
 }
 
 

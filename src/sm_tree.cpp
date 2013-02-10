@@ -183,6 +183,17 @@ void small_tree_group::remove_cobjs() {
 }
 
 
+bool small_tree_group::check_sphere_coll(point &center, float radius) const {
+
+	bool coll(0);
+
+	for (const_iterator i = begin(); i != end(); ++i) {
+		coll |= i->check_sphere_coll(center, radius);
+	}
+	return coll;
+}
+
+
 void small_tree_group::translate_by(vector3d const &vd) {
 
 	for (iterator i = begin(); i != end(); ++i) {
@@ -485,20 +496,27 @@ vector3d small_tree::get_rot_dir() const {
 }
 
 
+cylinder_3dw small_tree::get_trunk_cylin() const {
+
+	if (type == T_BUSH) {return cylinder_3dw();}
+	vector3d const dir(get_rot_dir());
+	float const hval(is_pine_tree() ? 1.0 : 0.75), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
+	point const p1((pos + dir*(zbot - pos.z)));
+	return cylinder_3dw(p1, (p1 + dir*len), stt[type].ws*width, stt[type].w2*width);
+}
+
+
 void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 
 	if (!is_over_mesh(pos)) return; // not sure why, but this makes drawing slower
-	vector3d const dir(get_rot_dir());
 
 	if (!DRAW_COBJS) {
 		cp.tid       = stt[type].leaf_tid;
 		cp_trunk.tid = stt[type].bark_tid;
 	}
-	if (type != T_BUSH && type != T_SH_PINE) {
-		float const hval((type == T_PINE) ? 1.0 : 0.75), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
-		point const p1((pos + dir*(zbot - pos.z)));
-		coll_id.push_back(add_coll_cylinder(p1, (p1 + dir*len), stt[type].ws*width, stt[type].w2*width, cp_trunk, -1, 1));
-	}
+	if (type != T_BUSH && type != T_SH_PINE) {coll_id.push_back(add_coll_cylinder(get_trunk_cylin(), cp_trunk, -1, 1));}
+	vector3d const dir(get_rot_dir());
+
 	switch (type) {
 	case T_PINE: // pine tree
 	case T_SH_PINE: // short pine tree
@@ -527,6 +545,20 @@ void small_tree::remove_cobjs() {
 	for (unsigned j = 0; j < coll_id.size(); ++j) {
 		remove_reset_coll_obj(coll_id[j]);
 	}
+}
+
+
+bool small_tree::check_sphere_coll(point &center, float radius) const { // very simple check against trunk only
+
+	if (type == T_BUSH) return 0; // no trunk, not yet handled
+	cylinder_3dw const c(get_trunk_cylin());
+	float const rsum(radius + max(c.r1, c.r2));
+	assert(rsum > radius); // cylin not degenerate
+	if (center.z < min(c.p1.z, c.p2.z) || center.z > max(c.p1.z, c.p2.z)) return 0; // not enough z overlap (could bias by up to radius)
+	if (!dist_xy_less_than(pos, center, rsum)) return 0;
+	vector3d const normal(vector3d(center.x-c.p1.x, center.y-c.p1.y, 0.0).get_norm()); // Note: assumes (near) vertical cylinder, not correct for all trees
+	center = point(c.p1.x, c.p1.y, center.z) + normal*(1.001*rsum); // move center out along cylin normal so it doesn't intersect
+	return 1;
 }
 
 
@@ -618,35 +650,30 @@ void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const 
 			float const cz(camera_origin.z - cview_radius*cview_dir.z), vxy(1.0 - (cz - pos.z)/dist);
 
 			if (pine_tree || dist < 0.2 || vxy >= 0.2*width/stt[type].h) { // if trunk not obscured by leaves
-				float const hval(pine_tree ? 1.0 : 0.75), w1(stt[type].ws*width), w2(stt[type].w2*width);
-				float const zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
-				vector3d const dir(get_rot_dir());
-				point const p1((pos + dir*(zbot - pos.z)));
+				cylinder_3dw const cylin(get_trunk_cylin());
 
 				if (shadow_only) {
-					cylinder_3dw const cylin(p1, (p1 + dir*len), w1, w2);
 					draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()), -1, 1);
 				}
-				else if (LINE_THRESH*zoom_f*(w1 + w2) < dist) { // draw as line
-					point const p2(p1 + dir*(len*((w2 == 0.0) ? 0.8 : 1.0)));
+				else if (LINE_THRESH*zoom_f*(cylin.r1 + cylin.r2) < dist) { // draw as line
+					point const p2((cylin.r2 == 0.0) ? (0.2*cylin.p1 + 0.8*cylin.p2) : cylin.p2);
 				
 					if (points) {
-						points->push_back(p1 + xlate);
+						points->push_back(cylin.p1 + xlate);
 						points->push_back(p2 + xlate);
 					}
 					else {
-						tree_scenery_pld.add_textured_line(p1+xlate, p2+xlate, get_bark_color(), stt[type].bark_tid);
+						tree_scenery_pld.add_textured_line(cylin.p1+xlate, p2+xlate, get_bark_color(), stt[type].bark_tid);
 					}
 				}
 				else { // draw as cylinder
 					if (world_mode == WMODE_GROUND) {set_color(get_bark_color());}
 					select_texture(stt[type].bark_tid);
 					glPushMatrix();
-					translate_to(pos);
+					translate_to(cylin.p1);
 					if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
-					glTranslatef(0.0, 0.0, (zbot - pos.z));
 					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size))));
-					draw_cylin_fast(w1, w2, len, nsides2, 1, 0, 1); // trunk (draw quad if small?)
+					draw_cylin_fast(cylin.r1, cylin.r2, p2p_dist(cylin.p1, cylin.p2), nsides2, 1, 0, 1); // trunk (draw quad if small?)
 					glPopMatrix();
 				}
 			}

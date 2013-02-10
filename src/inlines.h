@@ -644,6 +644,11 @@ inline int add_coll_cylinder(point const &p1, point const &p2, float radius, flo
 }
 
 
+inline int add_coll_cylinder(cylinder_3dw const &c, cobj_params const &cparams, int platform_id=-1, int dhcm=0) {
+	return add_coll_cylinder(c.p1.x, c.p1.y, c.p1.z, c.p2.x, c.p2.y, c.p2.z, c.r1, c.r2, cparams, platform_id, dhcm);
+}
+
+
 inline void gen_cylin_pts(point *pts, int &npts, point const &p, float radius, vector3d const &v) {
 
 	if (radius == 0.0) {

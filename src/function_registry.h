@@ -242,6 +242,7 @@ void reset_tiled_terrain_state();
 float get_tiled_terrain_water_level();
 void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(float zval);
+bool check_player_tiled_terrain_collision();
 
 // function prototypes - precipitation
 void draw_tiled_terrain_precipitation();

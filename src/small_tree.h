@@ -26,8 +26,10 @@ public:
 	small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen);
 	void setup_rotation(rand_gen_t &rgen);
 	vector3d get_rot_dir() const;
+	cylinder_3dw get_trunk_cylin() const;
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
+	bool check_sphere_coll(point &center, float radius) const;
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool pri_dim);
 	void add_trunk_as_line(vector<point> &points) const;
@@ -79,6 +81,7 @@ struct small_tree_group : public vector<small_tree> {
 	void clear_all();
 	void add_cobjs();
 	void remove_cobjs();
+	bool check_sphere_coll(point &center, float radius) const;
 	void translate_by(vector3d const &vd);
 	void draw_branches(bool shadow_only, vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
 	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, vector3d const xlate=zero_vector) const;
