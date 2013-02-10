@@ -655,6 +655,9 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 	/*set_color(WHITE);
 	WHITE.do_glColor();
 	draw_sphere_at(make_pt_global(afpos), radius, N_SPHERE_DIV);*/
+	point sun_pos;
+	uobject const *sobj(NULL);
+	set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE);
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		i->draw(pos_, camera, s);
