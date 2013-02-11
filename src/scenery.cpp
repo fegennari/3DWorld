@@ -626,11 +626,11 @@ int s_stump::create(int x, int y, int use_xy, float minz) {
 }
 
 void s_stump::add_cobjs() {
-	coll_id = add_coll_cylinder(pos, pos+point(0.0, 0.0, height), radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
+	coll_id = add_coll_cylinder(pos-point(0.0, 0.0, 0.2*height), pos+point(0.0, 0.0, height), radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
 }
 
 bool s_stump::check_sphere_coll(point &center, float sphere_radius) const {
-	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos, pos+point(0.0, 0.0, height), radius, radius));
+	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.2*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
 void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
@@ -642,17 +642,17 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate) const 
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
-		tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, height)), color, get_tid());
+		tree_scenery_pld.add_textured_line((pos - point(0.0, 0.0, 0.2*height)), (pos + point(0.0, 0.0, height)), color, get_tid());
 		return;
 	}
 	color.do_glColor();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
 	if (!shadow_only) select_texture(get_tid());
 	glPushMatrix();
-	translate_to(pos);
-	gluCylinder(quadric, radius, radius2, height, ndiv, 1);
+	translate_to(pos - point(0.0, 0.0, 0.2*height));
+	gluCylinder(quadric, radius, radius2, 1.2*height, ndiv, 1);
 	if (!shadow_only) select_texture(TREE_END_TEX);
-	glTranslatef(0.0, 0.0, height);
+	glTranslatef(0.0, 0.0, 1.2*height);
 	gluDisk(quadric, 0.0, radius2, ndiv, 1);
 	glPopMatrix();
 }
@@ -683,16 +683,17 @@ void s_plant::create2(point const &pos_, float height_, float radius_, int type_
 
 void s_plant::add_cobjs() {
 
-	point cpos(pos), cpos2(pos);
+	point cpos(pos), cpos2(pos), bpos(pos);
 	float const wscale(radius*tree_scale/0.004), r2(radius+0.07*wscale*(height+0.03));
 	cpos.z  += height;
 	cpos2.z += 3.0*height/(36.0*height + 4.0);
-	coll_id  = add_coll_cylinder(pos,   cpos, radius, 0.0,    cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX        )); // trunk
+	bpos.z  -= 0.1*height;
+	coll_id  = add_coll_cylinder(bpos,  cpos, radius, 0.0,    cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX        )); // trunk
 	coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
 }
 
 bool s_plant::check_sphere_coll(point &center, float sphere_radius) const {
-	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos, pos+point(0.0, 0.0, height), radius, radius));
+	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.1*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
 void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
@@ -740,13 +741,13 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
-		tree_scenery_pld.add_textured_line(pos, (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
+		tree_scenery_pld.add_textured_line((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
 	}
 	else {
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
 		if (!shadow_only) select_texture(WOOD_TEX);
 		color.do_glColor();
-		draw_fast_cylinder(pos, (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
+		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
 	}
 }
 
