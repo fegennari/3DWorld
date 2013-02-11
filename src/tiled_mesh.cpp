@@ -938,7 +938,7 @@ public:
 		}
 		if (!decid_trees.empty()) {
 			camera -= dtree_off.get_xlate();
-			//coll = decid_trees.check_sphere_coll(camera, CAMERA_RADIUS);
+			coll = decid_trees.check_sphere_coll(camera, CAMERA_RADIUS);
 			camera += dtree_off.get_xlate();
 		}
 		if (scenery.generated) {

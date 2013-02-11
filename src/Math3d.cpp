@@ -419,6 +419,18 @@ bool line_sphere_int(vector3d const &v1, point const &p1, point const &center, f
 }
 
 
+bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c) {
+
+	float const rsum(radius + max(c.r1, c.r2));
+	assert(rsum > radius); // cylin not degenerate
+	if (center.z < min(c.p1.z, c.p2.z) || center.z > max(c.p1.z, c.p2.z)) return 0; // not enough z overlap (could bias by up to radius)
+	if (!dist_xy_less_than(c.p1, center, rsum)) return 0;
+	vector3d const normal(vector3d(center.x-c.p1.x, center.y-c.p1.y, 0.0).get_norm()); // Note: assumes (near) vertical cylinder, not correct for all trees
+	center = point(c.p1.x, c.p1.y, center.z) + normal*(1.001*rsum); // move center out along cylin normal so it doesn't intersect
+	return 1;
+}
+
+
 void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from, float radius, unsigned num_pts) {
 
 	assert(qp && num_pts <= 5);

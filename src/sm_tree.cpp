@@ -551,14 +551,7 @@ void small_tree::remove_cobjs() {
 bool small_tree::check_sphere_coll(point &center, float radius) const { // very simple check against trunk only
 
 	if (type == T_BUSH) return 0; // no trunk, not yet handled
-	cylinder_3dw const c(get_trunk_cylin());
-	float const rsum(radius + max(c.r1, c.r2));
-	assert(rsum > radius); // cylin not degenerate
-	if (center.z < min(c.p1.z, c.p2.z) || center.z > max(c.p1.z, c.p2.z)) return 0; // not enough z overlap (could bias by up to radius)
-	if (!dist_xy_less_than(pos, center, rsum)) return 0;
-	vector3d const normal(vector3d(center.x-c.p1.x, center.y-c.p1.y, 0.0).get_norm()); // Note: assumes (near) vertical cylinder, not correct for all trees
-	center = point(c.p1.x, c.p1.y, center.z) + normal*(1.001*rsum); // move center out along cylin normal so it doesn't intersect
-	return 1;
+	return sphere_vert_cylin_intersect(center, radius, get_trunk_cylin());
 }
 
 

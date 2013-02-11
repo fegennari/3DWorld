@@ -1135,7 +1135,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		camera_surf_collide = 1;
 	}
 	camera_view = 0;
-	check_player_tiled_terrain_collision();
+	if (camera_surf_collide) {check_player_tiled_terrain_collision();}
 	update_temperature(0);
 	point const camera(get_camera_pos());
 	apply_camera_offsets(camera);
