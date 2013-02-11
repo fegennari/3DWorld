@@ -93,6 +93,7 @@ class s_log : public scenery_obj { // size = 57 (60)
 	int get_tid() const {return get_bark_tex_for_tree_type(type);}
 
 public:
+	bool check_sphere_coll(point &center, float sphere_radius) const {return 0;} // no collisions
 	void shift_by(vector3d const &vd);
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
@@ -110,6 +111,7 @@ class s_stump : public scenery_obj { // size = 29 (32)
 public:
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
+	bool check_sphere_coll(point &center, float sphere_radius) const;
 	void draw(float sscale, bool shadow_only, vector3d const &xlate) const;
 };
 
@@ -125,6 +127,7 @@ public:
 	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager);
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager);
 	void add_cobjs();
+	bool check_sphere_coll(point &center, float sphere_radius) const;
 	void gen_points(vbo_vnc_block_manager_t &vbo_manager);
 	bool is_shadowed() const;
 	void draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const;
@@ -154,6 +157,7 @@ public:
 	void clear();
 	void free();
 	void add_cobjs();
+	bool check_sphere_coll(point &center, float radius) const;
 	void shift(vector3d const &vd);
 	void update_zvals(int x1, int y1, int x2, int y2);
 	void do_rock_damage(point const &pos, float radius, float damage);

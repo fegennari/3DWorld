@@ -55,6 +55,16 @@ bool skip_uw_draw(point const &pos, float radius) {
 // ************ SCENERY OBJECT CLASSES ************
 
 
+bool scenery_obj::check_sphere_coll(point &center, float sphere_radius) const { // sphere-sphere intersection
+
+	float const rsum(radius + sphere_radius);
+	if (!dist_less_than(center, pos, rsum)) return 0;
+	vector3d const normal((center - pos).get_norm());
+	center = pos + normal*(1.001*rsum); // move center out along sphere normal so it doesn't intersect
+	return 1;
+}
+
+
 void scenery_obj::shift_by(vector3d const &vd) {
 		
 	pos   += vd;
@@ -616,7 +626,11 @@ int s_stump::create(int x, int y, int use_xy, float minz) {
 }
 
 void s_stump::add_cobjs() {
-	coll_id = add_coll_cylinder(pos, point(pos.x, pos.y, (pos.z + height)), radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
+	coll_id = add_coll_cylinder(pos, pos+point(0.0, 0.0, height), radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
+}
+
+bool s_stump::check_sphere_coll(point &center, float sphere_radius) const {
+	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos, pos+point(0.0, 0.0, height), radius, radius));
 }
 
 void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
@@ -670,12 +684,15 @@ void s_plant::create2(point const &pos_, float height_, float radius_, int type_
 void s_plant::add_cobjs() {
 
 	point cpos(pos), cpos2(pos);
-	float const wscale(radius*tree_scale/0.004);
-	float const r2(radius+0.07*wscale*(height+0.03));
+	float const wscale(radius*tree_scale/0.004), r2(radius+0.07*wscale*(height+0.03));
 	cpos.z  += height;
 	cpos2.z += 3.0*height/(36.0*height + 4.0);
 	coll_id  = add_coll_cylinder(pos,   cpos, radius, 0.0,    cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX        )); // trunk
 	coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
+}
+
+bool s_plant::check_sphere_coll(point &center, float sphere_radius) const {
+	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos, pos+point(0.0, 0.0, height), radius, radius));
 }
 
 void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
@@ -762,21 +779,27 @@ void s_plant::destroy() {
 
 
 template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only, vector3d const &xlate) {
-	for (unsigned i = 0; i < v.size(); ++i) v[i].draw(sscale, shadow_only, xlate);
+	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw(sscale, shadow_only, xlate);}
 }
 
 template<typename T> void add_scenery_vector_cobjs(vector<T> &v) {
 	for (unsigned i = 0; i < v.size(); ++i) {
-		if (is_over_mesh(v[i].get_pos())) v[i].add_cobjs();
+		if (is_over_mesh(v[i].get_pos())) {v[i].add_cobjs();}
 	}
 }
 
+template<typename T> bool check_scenery_vector_sphere_coll(vector<T> const &v, point &center, float radius) {
+	bool coll(0);
+	for (unsigned i = 0; i < v.size(); ++i) {coll |= v[i].check_sphere_coll(center, radius);}
+	return coll;
+}
+
 template<typename T> void shift_scenery_vector(vector<T> &v, vector3d const &vd) {
-	for (unsigned i = 0; i < v.size(); ++i) v[i].shift_by(vd);
+	for (unsigned i = 0; i < v.size(); ++i) {v[i].shift_by(vd);}
 }
 
 template<typename T> void free_scenery_vector(vector<T> &v) {
-	for (unsigned i = 0; i < v.size(); ++i) v[i].destroy();
+	for (unsigned i = 0; i < v.size(); ++i) {v[i].destroy();}
 }
 
 template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int y1, int x2, int y2) {
@@ -836,6 +859,20 @@ void scenery_group::add_cobjs() {
 	add_scenery_vector_cobjs(logs);
 	add_scenery_vector_cobjs(stumps);
 	add_scenery_vector_cobjs(plants);
+}
+
+
+bool scenery_group::check_sphere_coll(point &center, float radius) const {
+
+	bool coll(0);
+	coll |= check_scenery_vector_sphere_coll(rock_shapes,   center, radius);
+	coll |= check_scenery_vector_sphere_coll(surface_rocks, center, radius);
+	coll |= check_scenery_vector_sphere_coll(voxel_rocks,   center, radius);
+	coll |= check_scenery_vector_sphere_coll(rocks,         center, radius);
+	coll |= check_scenery_vector_sphere_coll(logs,          center, radius);
+	coll |= check_scenery_vector_sphere_coll(stumps,        center, radius);
+	coll |= check_scenery_vector_sphere_coll(plants,        center, radius);
+	return coll;
 }
 
 void scenery_group::shift(vector3d const &vd) {

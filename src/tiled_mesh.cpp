@@ -933,17 +933,17 @@ public:
 
 		if (!pine_trees.empty()) {
 			camera -= ptree_off.get_xlate();
-			coll = pine_trees.check_sphere_coll(camera, CAMERA_RADIUS);
+			coll   |= pine_trees.check_sphere_coll(camera, CAMERA_RADIUS);
 			camera += ptree_off.get_xlate();
 		}
 		if (!decid_trees.empty()) {
 			camera -= dtree_off.get_xlate();
-			coll = decid_trees.check_sphere_coll(camera, CAMERA_RADIUS);
+			coll   |= decid_trees.check_sphere_coll(camera, CAMERA_RADIUS);
 			camera += dtree_off.get_xlate();
 		}
 		if (scenery.generated) {
 			camera -= scenery_off.get_xlate();
-			//coll = scenery.check_sphere_coll(camera, CAMERA_RADIUS);
+			coll   |= scenery.check_sphere_coll(camera, CAMERA_RADIUS);
 			camera += scenery_off.get_xlate();
 		}
 		if (coll) {surface_pos = camera;}

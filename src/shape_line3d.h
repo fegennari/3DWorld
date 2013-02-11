@@ -18,6 +18,7 @@ protected:
 
 public:
 	scenery_obj() : coll_id(-1), type(-1), radius(0.0), dz(0.0), pos(all_zeros) {}
+	bool check_sphere_coll(point &center, float sphere_radius) const; // default implementation
 	void shift_by(vector3d const &vd);
 	void gen_spos(int x, int y, int use_xy);
 	bool update_zvals(int x1, int y1, int x2, int y2);
