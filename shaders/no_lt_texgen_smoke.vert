@@ -28,6 +28,7 @@ void main()
 		gl_TexCoord[0].st *= vec2(tex_scale_s, tex_scale_t);
 	}
 	gl_Position   = ftransform();
+	//gl_Position.z = (2.0*log(gl_Position.w/0.01)/log(100.0/0.01) - 1) * gl_Position.w; // Outerra depth correction (needs to be used in all shaders, problems with large polygons)
 	gl_FrontColor = gl_Color;
 	eye_norm = normalize(gl_NormalMatrix * gl_Normal);
 	epos     = gl_ModelViewMatrix * gl_Vertex;

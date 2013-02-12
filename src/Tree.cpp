@@ -33,6 +33,7 @@ int const TREE_COLL          = 2;
 int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
 int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
+int const TLEAF_START_TUID   = 9;
 bool const FORCE_TREE_TYPE   = 1;
 unsigned const CYLINS_PER_ROOT = 3;
 
@@ -451,6 +452,11 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader) {
 	}
 	else {
 		set_leaf_shader(shader, 0.75, 1, 0, 3);
+
+		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
+			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i, 0);
+		}
+		set_multitex(0);
 	}
 }
 
@@ -986,7 +992,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 		num_dlights = enable_dynamic_lights((sphere_center() + xlate), td.sphere_radius);
 		s.add_uniform_int("num_dlights", num_dlights);
 	}
-	select_texture((draw_model == 0) ? tree_types[type].leaf_tex : WHITE_TEX); // what about texture color mod?
+	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
 	glPushMatrix();
 	translate_to(tree_center + xlate);
 	td.draw_leaves(size_scale);
@@ -2040,7 +2046,6 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 			back().gen_tree(pos, 0, ttype, 1, 1, 0);
 		}
 	}
-	//sort(begin(), end()); // doesn't help
 	generated = 1;
 }
 

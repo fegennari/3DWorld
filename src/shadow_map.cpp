@@ -256,7 +256,7 @@ void set_shadow_tex_params() {
 
 void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
-	tu_id = (6 + light); // Note: only 8 TUs guaranteed so we can have 2 lights
+	tu_id = (6 + light); // Note: currently used with 2 lights, up to TU7
 
 	// setup textures and framebuffer
 	if (!tid) {
