@@ -2963,10 +2963,10 @@ void uobject::def_explode(float size, int etype, vector3d const &edir, int wclas
 void uobject::add_gravity_vector_base(vector3d &vgravity, point const &mpos, float gfactor, float gmax) const {
 
 	if (!is_ok()) return;
-	vector3d const dir(pos, mpos);
-	float const d_sq(dir.mag_sq());
+	vector3d const dir(pos - mpos);
+	float const dmag(dir.mag()), dist(max(dmag, radius));
 	// this is the gravity acceleration - multiply by object mass to get force
-	if (d_sq < 1000.0*radius*radius) vgravity += dir*(min(gfactor/d_sq, gmax)*InvSqrt(d_sq));
+	vgravity += dir*(min(gfactor/(dist*dist), gmax)/dist);
 }
 
 
