@@ -287,7 +287,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 			}
 		}
 	}
-	sort_by_type();
+	if (world_mode == WMODE_GROUND) {sort_by_type();}
 }
 
 
