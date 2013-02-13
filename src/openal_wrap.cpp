@@ -52,6 +52,7 @@ void setup_sounds() {
 	sounds.add_file_buffer("splash2.wav"    ); // SOUND_SPLASH2
 	sounds.add_file_buffer("water.wav"      ); // SOUND_WATER
 	sounds.add_file_buffer("thunder.wav"    ); // SOUND_THUNDER
+	sounds.add_file_buffer("thunder2.wav"   ); // SOUND_THUNDER2
 	sounds.add_file_buffer("boing.wav"      ); // SOUND_BOING
 	sounds.add_file_buffer("swing.wav"      ); // SOUND_SWING
 	sounds.add_file_buffer("hiss.wav"       ); // SOUND_HISS

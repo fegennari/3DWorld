@@ -170,7 +170,7 @@ void lightning::gen() {
 	litning_pos.z += 0.01;
 	draw();
 	++l_frame_counter;
-	gen_sound(SOUND_THUNDER, litning_pos, 4.0);
+	gen_sound(((rand()&1) ? SOUND_THUNDER : SOUND_THUNDER2), litning_pos, 4.0);
 }
 
 
