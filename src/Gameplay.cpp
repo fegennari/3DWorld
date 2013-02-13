@@ -1368,8 +1368,9 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 	
 	if (dist_less_than(pos, camera_pos, 4.0*radius)) {
 		if (camera_mode == 1 && dist_less_than(pos, camera_pos, radius)) {
-			camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type);
-			if (type == FIRE && camera_health > 0.0 && ((rand()&63) == 0)) gen_sound(SOUND_AGONY, pos);
+			if (camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type)) {
+				if (type == FIRE && camera_health > 0.0 && ((rand()&63) == 0)) {gen_sound(SOUND_AGONY, pos);} // skip if player has shielding and self damage?
+			}
 		}
 		if (type == FIRE) player_near_fire = 1;
 	}
