@@ -979,7 +979,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 	tree_data_t &td(tdata());
 	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
 	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
-	if (!gen_arrays && leaf_dynamic_en && size_scale > 0.5) {update_leaf_orients();}
+	if (!gen_arrays && leaf_dynamic_en && (!leaf_orients_valid || size_scale > 0.5)) {update_leaf_orients();}
 
 	if (gen_arrays || leaf_color_changed) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
@@ -1040,7 +1040,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	int last_xpos(0), last_ypos(0);
 	vector3d local_wind;
 	tree_data_t &td(tdata());
-	bool const do_update(td.check_if_needs_updated()), priv_data(td_is_private());
+	bool const do_update(td.check_if_needs_updated() || !leaf_orients_valid), priv_data(td_is_private());
 	if (!do_update && !physics_enabled()) return;
 	unsigned nleaves(td.get_leaves().size());
 
@@ -1100,6 +1100,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 			copy_color(i);
 		}
 	} // for i
+	leaf_orients_valid = 1;
 }
 
 

@@ -172,7 +172,7 @@ class tree
 	bool td_is_private() const {return (tree_data == NULL);}
 
 	int type, created; // should type be a member of tree_data_t?
-	bool no_delete, not_visible;
+	bool no_delete, not_visible, leaf_orients_valid;
 	point tree_center;
 	float damage, damage_scale;
 	colorRGBA tree_color, bcolor;
@@ -199,7 +199,7 @@ class tree
 	void copy_color(unsigned i, bool no_mark_changed=0);
 
 public:
-	tree() : tree_data(NULL), created(0), no_delete(0), not_visible(0) {}
+	tree() : tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0) {}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed);
 	void calc_leaf_shadows();
