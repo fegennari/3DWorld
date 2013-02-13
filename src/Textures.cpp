@@ -743,15 +743,28 @@ void texture_t::load_raw_bmp(int index) {
 			else { // make white/black part transparent, for example leaves
 				float const val(float(buf[0]) + float(buf[1]) + float(buf[2]));
 				
-				if (index == EXPLOSION_TEX || index == FIRE_TEX) {
+				if (index == EXPLOSION_TEX || index == FIRE_TEX) { // animated/multipart textures
 					alpha = (unsigned char)(0.333*val);
 				}
-				else if (alpha_white) {
-					float const thresh((index == LEAF3_TEX) ? 700.0 : 600.0);
-					alpha = ((val > thresh) ? 0 : ((val < thresh-100.0) ? 255 : (unsigned char)(2.55*(thresh - val))));
-				}
 				else {
-					alpha = ((val < ((index == PINE_TEX) ? 65 : 32)) ? 0 : 255);
+					if (alpha_white) {
+						float const thresh((index == LEAF3_TEX) ? 700.0 : 600.0);
+						alpha = ((val > thresh) ? 0 : ((val < thresh-100.0) ? 255 : (unsigned char)(2.55*(thresh - val))));
+					}
+					else {
+						alpha = ((val < ((index == PINE_TEX) ? 65 : 32)) ? 0 : 255);
+					}
+					if (alpha == 0) {
+						// FIXME: fill with the color of nearby pixels so that mipmap generation will work correctly
+					}
+					/*else {
+						colorRGBA c;
+						UNROLL_3X(c[i_] = data[i4+i_]/255.0;)
+						float const background(alpha_white ? 1.0 : 0.0), alpha_val(alpha/255.0), intensity(c.R + c.G + c.B);
+						UNROLL_3X(c[i_] = (background + (c[i_] - background)/alpha_val);)
+						c *= intensity/(c.R + c.G + c.B);
+						UNROLL_3X(data[i4+i_] = (unsigned char)(255.0*c[i_]);)
+					}*/
 				}
 			}
 			data[i4+3] = alpha;
