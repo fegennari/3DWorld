@@ -504,16 +504,17 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 	}
 
 	// draw universe as background
-	if (!is_cloudy) { // if cloudy, can't see anything through the clouds
-		if (!reflection_mode) {config_bkg_color_and_clear(underwater, depth, 1);}
-		point const camera_pos_orig(camera_pos);
-		camera_pos = player_pos; // trick universe code into thinking the camera is at the player's ship
-		if (TIMETEST) PRINT_TIME("0.1");
-		bool const no_stars(atmosphere > 0.8 && light_factor >= 0.6);
-		draw_universe(1, 1, no_stars); // could clip by horizon?
-		if (TIMETEST) PRINT_TIME("0.2");
-		camera_pos = camera_pos_orig;
-	}
+	if (!reflection_mode) {config_bkg_color_and_clear(underwater, depth, 1);}
+	point const camera_pos_orig(camera_pos);
+	camera_pos = player_pos; // trick universe code into thinking the camera is at the player's ship
+	if (TIMETEST) PRINT_TIME("0.1");
+	bool const no_stars(is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6));
+	int const fog_enabled(glIsEnabled(GL_FOG));
+	if (fog_enabled) {glDisable(GL_FOG);}
+	draw_universe(1, 1, no_stars); // could clip by horizon?
+	if (fog_enabled) {glEnable(GL_FOG);}
+	if (TIMETEST) PRINT_TIME("0.2");
+	camera_pos = camera_pos_orig;
 	glPopMatrix(); // undo universe transform
 
 	// setup sun light source
