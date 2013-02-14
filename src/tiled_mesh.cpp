@@ -454,6 +454,7 @@ public:
 	}
 
 	void apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
+		tree_map.resize(0);
 		tree_map.resize(stride*stride, 255);
 		apply_ao_shadows_for_trees(this, 0);
 	}
