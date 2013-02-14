@@ -116,6 +116,7 @@ float    const NEAR_CLIP        = 0.01;
 float    const FAR_CLIP         = 100.0;
 float    const PERSP_ANGLE      = 60.0;
 float    const ZOOM_FACTOR      = 5.0;
+float    const UNIV_NCLIP_SCALE = 0.02;
 
 float    const RES_STEP         = 2.0;
 float    const STEP_SIZE        = 1.0;

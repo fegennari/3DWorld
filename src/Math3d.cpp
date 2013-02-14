@@ -1119,6 +1119,17 @@ template void rotate_vector3d_multi(vector3d const &vrot, double angle, vector3d
 template void rotate_vector3d_multi(vector3d_d const &vrot, double angle, vector3d_d *vout, unsigned nv);
 
 
+void mirror_about_plane(vector3d const &norm, point const &pt) { // applies to GL state
+
+	float const dp(dot_product(pt, norm));
+	double const m[16] = {1-2*norm.x*norm.x,  -2*norm.x*norm.y,  -2*norm.x*norm.z, 0.0,
+			               -2*norm.x*norm.y, 1-2*norm.y*norm.y,  -2*norm.y*norm.z, 0.0,
+		                   -2*norm.x*norm.z,  -2*norm.y*norm.z, 1-2*norm.z*norm.z, 0.0,
+		                    2*dp*norm.x,       2*dp*norm.y,       2*dp*norm.z,     1.0};
+	glMultMatrixd(m);
+}
+
+
 // unused
 float angle_of_projected_vectors(vector3d const &v1, vector3d const &v2, vector3d n) {
 

@@ -2066,7 +2066,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 		usg.enable_star_shader(colorA, colorB);
 		draw_sphere_dlist(all_zeros, radius, ndiv, 0); // small sphere - use display list
 		usg.disable_star_shader();
-		if (size >= 64) {draw_flares(ndiv, 1);}
+		if (world_mode == WMODE_UNIVERSE && size >= 64) {draw_flares(ndiv, 1);}
 		glPopMatrix();
 	} // end sphere draw
 	return 1;

@@ -445,6 +445,7 @@ void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout);
 template<typename T> void rotate_vector3d(pointT<T> vin, pointT<T> const &vrot, double angle, pointT<T> &vout);
 template<typename T> void rotate_vector3d_multi(pointT<T> const &vrot, double angle, pointT<T> *vout, unsigned nv);
 void rotate_vector3d_x2(point const &vrot, double angle, point &vout1, point &vout2);
+void mirror_about_plane(vector3d const &norm, point const &pt);
 float angle_of_projected_vectors(vector3d const &v1, vector3d const &v2, vector3d n);
 vector3d rtp_to_xyz(float radius, double theta, double phi);
 vector3d gen_rand_vector_uniform(float mag);

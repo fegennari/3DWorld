@@ -64,7 +64,6 @@ float const PLANET_HMAP_SCALE   = 0.04;
 float const SURFACE_HEIGHT      = 0.01; // multiples of the radius
 float const INITIAL_FREQ        = 0.7;
 float const TEX_HEIGHT_SCALE    = 1.0;
-float const UNIV_NCLIP_SCALE    = 0.02;
 float const NEAR_CLIP_SCALE     = 1.5;
 
 float const BASE_AMBIENT  = 0.25;

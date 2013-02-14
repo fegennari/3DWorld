@@ -476,81 +476,73 @@ void draw_sun_moon_stars() {
 }
 
 
-void draw_universe_bkg(bool underwater, float depth) {
+void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 
 	RESET_TIME;
 
 	// setup sun position and related parameters
-	point const camera(get_camera_pos());
 	update_sun_and_moon();
-	point const new_sp(sun_pos.get_norm());
+	point const camera(get_camera_pos()), new_sp(sun_pos.get_norm()), player_pos(get_player_pos());
 	init_universe_display();
-	sun_pos = univ_sun_pos - get_player_pos(); // univ_sun_pos won't be correct on the first call
+	sun_pos = univ_sun_pos - player_pos; // univ_sun_pos won't be correct on the first call
 	point const old_sp(sun_pos.get_norm());
 	rotate_vector3d_by_vr(old_sp, new_sp, sun_pos);
-	sun_pos *= 50.0;
+	sun_pos /= UNIV_NCLIP_SCALE;
 	do_look_at(new_sp, old_sp);
 
 	// transform universe coordinate system into current mesh coordinate system
 	glPushMatrix();
-	point sp(get_player_pos());
-	sp.negate();
 	point camera_r(camera);
 	rotate_from_v2v(new_sp, old_sp);
 	rotate_vector3d_by_vr(new_sp, old_sp, camera_r);
-	translate_to(sp);
-	translate_to(camera_r);
+	translate_to(camera_r - player_pos); // shift player_pos to camera pos
+
+	if (reflection_mode) { // setup mirror transform
+		vector3d norm(0.0, 0.0, 1.0); // MZ
+		rotate_vector3d_by_vr(new_sp, old_sp, norm);
+		mirror_about_plane(norm, player_pos); // FIXME: doesn't use water_plane_z, so can't really be correct?
+	}
 
 	// draw universe as background
 	if (!is_cloudy) { // if cloudy, can't see anything through the clouds
-		bool const no_stars(atmosphere > 0.8 && light_factor >= 0.6), has_fog(glIsEnabled(GL_FOG) != 0);
-		config_bkg_color_and_clear(underwater, depth, 1);
+		if (!reflection_mode) {config_bkg_color_and_clear(underwater, depth, 1);}
 		point const camera_pos_orig(camera_pos);
-		camera_pos = get_player_pos(); // trick universe code into thinking the camera is at the player's ship
-		if (has_fog) glDisable(GL_FOG);
+		camera_pos = player_pos; // trick universe code into thinking the camera is at the player's ship
 		if (TIMETEST) PRINT_TIME("0.1");
+		bool const no_stars(atmosphere > 0.8 && light_factor >= 0.6);
 		draw_universe(1, 1, no_stars); // could clip by horizon?
 		if (TIMETEST) PRINT_TIME("0.2");
-		if (has_fog) glEnable(GL_FOG);
 		camera_pos = camera_pos_orig;
 	}
-	
+	glPopMatrix(); // undo universe transform
+
 	// setup sun light source
-	glPopMatrix();
 	setup_current_system();
 	glPushMatrix();
 	translate_to(get_camera_pos());
 	set_gl_light_pos(GL_LIGHT0, sun_pos, LIGHT_W_VAL);
 	glPopMatrix();
-
-	// setup sun light source
-	float const atten(max(0.25f, min(4.0f, 0.0007f*sun_pos.mag()/univ_sun_rad)));
-	//cout << "r: " << univ_sun_rad << ", mag: " << sun_pos.mag() << ", atten: " << atten << endl;
-	set_light_atten(GL_LIGHT0, atten);
+	set_light_atten(GL_LIGHT0, max(0.25f, min(4.0f, 0.0007f*sun_pos.mag()/univ_sun_rad)));
 	glDisable(GL_LIGHT1); // no moonlight (for now)
 	
 	if (!have_sun || light_factor < 0.5) { // sun below horizon
-		float const diffuse[4] = {0.0, 0.0, 0.0, 1.0};
-		glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse); // no diffuse
+		glLightfv(GL_LIGHT0, GL_DIFFUSE, &BLACK.R); // no diffuse
 	}
 	check_zoom(); // reset perspective
-	point const sun_pos_norm(sun_pos.get_norm());
-	//light_factor = (PI + 2.0*asinf(dot_product(sun_pos_norm, plus_z)))/TWO_PI; // shouldn't change much from previous light_factor
+	//light_factor = (PI + 2.0*asinf(dot_product(sun_pos.get_norm(), plus_z)))/TWO_PI; // shouldn't change much from previous light_factor
 
 	// setup background and init for standard mesh draw
 	if (light_factor > 0.4) { // translucent blue for atmosphere
 		colorRGBA color(bkg_color);
+		if (reflection_mode) {glGetFloatv(GL_FOG_COLOR, (float *)&color);} // make the sky reflection in the background blend with the fog in the foreground
 		color.alpha *= 0.75*atmosphere*min(1.0, (light_factor - 0.4)/0.2);
 		vector<camera_filter> cfs;
 		cfs.push_back(camera_filter(color, 1, -1));
 		draw_camera_filters(cfs);
 	}
-	glClear(GL_DEPTH_BUFFER_BIT);
 	do_look_at(new_sp, old_sp);
+	glClear(GL_DEPTH_BUFFER_BIT);
 	if (TIMETEST) PRINT_TIME("0.3");
-	
-	// *** CHANGES ***
-	// planet water
 }
 
 
@@ -868,7 +860,7 @@ void display(void) {
 		}
 		else { // finite terrain mode
 			if (combined_gu) { // light from current system's star
-				draw_universe_bkg(underwater, depth); // infinite universe as background
+				draw_universe_bkg(underwater, depth, 0); // infinite universe as background
 			}
 			if (TIMETEST) PRINT_TIME("1.5");
 
@@ -1049,6 +1041,14 @@ void draw_transparent(bool above_water) {
 }
 
 
+void apply_z_mirror(float zval) {
+
+	glTranslatef(0.0, 0.0, 2*zval); // translate to zval and back
+	glScalef(1.0, 1.0, -1.0); // scale in z
+	//mirror_about_plane(plus_z, point(0.0, 0.0, zval));
+}
+
+
 // render scene reflection to texture
 void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 
@@ -1056,6 +1056,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	// setup viewport and projection matrix
 	glViewport(0, 0, xsize, ysize);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	if (combined_gu && !is_cloudy) {draw_universe_bkg(underwater, 0.0, 1);} // infinite universe as background
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	set_perspective(PERSP_ANGLE, 1.0);
@@ -1064,12 +1065,10 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	// setup mirror transform
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
-	glTranslatef(0.0, 0.0,  water_plane_z); // translate to water plane
-	glScalef(1.0, 1.0, -1.0); // scale in z
-	glTranslatef(0.0, 0.0, -water_plane_z); // translate back
+	apply_z_mirror(water_plane_z);
 
 	// draw partial scene
-	draw_sun_moon_stars();
+	if (!combined_gu) {draw_sun_moon_stars();}
 	draw_sun_flare();
 	if (display_mode & 0x40) {draw_cloud_plane(1);} // slower but a nice effect
 	// setup above-water clip plane for mesh
@@ -1079,7 +1078,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	draw_tiled_terrain(1);
 	glDisable(GL_CLIP_PLANE0);
 	// could render more of the scene here
-	glPopMatrix();
+	glPopMatrix(); // end mirror transform
 
 	// render reflection to texture
 	glBindTexture(GL_TEXTURE_2D, tid);
@@ -1168,7 +1167,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (draw_water && !underwater) reflection_tid = create_reflection();
 
 	if (combined_gu) {
-		draw_universe_bkg(underwater, uw_depth); // infinite universe as background
+		draw_universe_bkg(underwater, uw_depth, 0); // infinite universe as background
 		check_gl_error(4);
 	}
 	else {
