@@ -15,9 +15,8 @@ http://vterrain.org/Plants/Alpha/
 colors for alpha pixels are nearby colors
 
 Lightning in Tiled Terrain Mode
+
 Planet VFC in Reflection
-TT U-mode water edge
-Tree shadows
 
 
 

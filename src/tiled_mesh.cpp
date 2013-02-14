@@ -383,9 +383,13 @@ public:
 		}
 	}
 
-	tile_t *get_adj_tile_smap(int dx, int dy) const {
+	tile_t *get_adj_tile(int dx, int dy) const {
 		tile_xy_pair const tp((x1/(int)size)+dx, (y1/(int)size)+dy);
-		tile_t *adj_tile(get_tile_from_xy(tp));
+		return get_tile_from_xy(tp);
+	}
+
+	tile_t *get_adj_tile_smap(int dx, int dy) const {
+		tile_t *adj_tile(get_adj_tile(dx, dy));
 		return ((adj_tile && !adj_tile->tree_map.empty()) ? adj_tile : NULL);
 	}
 
@@ -915,6 +919,30 @@ public:
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 		glPopMatrix();
+
+		if (has_water()) { // draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
+			cube_t const bcube(get_cube());
+			glBegin(GL_QUADS);
+
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					int dxy[2] = {0,0};
+					dxy[dim] = (dir ? 1 : -1);
+					tile_t const *const adj_tile(get_adj_tile(dxy[0], dxy[1]));
+					if (adj_tile && adj_tile->get_rel_dist_to_camera() < DRAW_DIST_TILES) continue; // adj tile exists
+					unsigned const num_steps = 10;
+					float const dz(water_plane_z - mzmin), zstep(dz/num_steps);
+
+					for (unsigned i = 0; i < num_steps; ++i) {
+						glVertex3f(bcube.d[0][dim ? 0 : dir], bcube.d[1][dim ? dir : 0], mzmin+i*zstep);
+						glVertex3f(bcube.d[0][dim ? 1 : dir], bcube.d[1][dim ? dir : 1], mzmin+i*zstep);
+						glVertex3f(bcube.d[0][dim ? 1 : dir], bcube.d[1][dim ? dir : 1], mzmin+(i+1)*zstep);
+						glVertex3f(bcube.d[0][dim ? 0 : dir], bcube.d[1][dim ? dir : 0], mzmin+(i+1)*zstep);
+					}
+				}
+			}
+			glEnd();
+		}
 		if (weight_tid > 0) disable_textures_texgen();
 	}
 
