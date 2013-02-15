@@ -99,7 +99,18 @@ void calc_moon_atten(float *ambient, float *diffuse, float mlf) {
 }
 
 
-void do_look_at(vector3d const &rv1=plus_z, vector3d const &rv2=plus_z) {
+void set_player_pdu(vector3d const &rv1, vector3d const &rv2) {
+
+	vector3d cview_dir_n(cview_dir), upv(up_vector);
+	rotate_vector3d_by_vr(rv1, rv2, cview_dir_n); //if (rv1 != rv2)?
+	rotate_vector3d_by_vr(rv1, rv2, upv);
+	set_player_up(upv);
+	set_player_dir(cview_dir_n.get_norm());
+	set_univ_pdu();
+}
+
+
+void do_look_at() {
 
 	point eye, center;
 
@@ -115,17 +126,6 @@ void do_look_at(vector3d const &rv1=plus_z, vector3d const &rv2=plus_z) {
 		up_vector.normalize();
 	}
 	else {
-		if ((world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) && combined_gu) {
-			vector3d cview_dir_n(cview_dir), upv(up_vector);
-
-			if (rv1 != rv2) {
-				rotate_vector3d_by_vr(rv1, rv2, cview_dir_n);
-				rotate_vector3d_by_vr(rv1, rv2, upv);
-			}
-			set_player_up(upv);
-			set_player_dir(cview_dir_n.get_norm());
-			set_univ_pdu();
-		}
 		set_camera_pdu();
 		cur_origin = all_zeros;
 		center     = camera_origin;
@@ -488,7 +488,8 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 	point const old_sp(sun_pos.get_norm());
 	rotate_vector3d_by_vr(old_sp, new_sp, sun_pos);
 	sun_pos /= UNIV_NCLIP_SCALE;
-	do_look_at(new_sp, old_sp);
+	set_player_pdu(new_sp, old_sp);
+	do_look_at();
 
 	// transform universe coordinate system into current mesh coordinate system
 	glPushMatrix();
@@ -501,6 +502,8 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 		vector3d norm(0.0, 0.0, 1.0); // MZ
 		rotate_vector3d_by_vr(new_sp, old_sp, norm);
 		mirror_about_plane(norm, player_pos); // FIXME: doesn't use water_plane_z, so can't really be correct?
+		set_player_dir(get_player_dir() - 2*norm*dot_product(get_player_dir(), norm)); // reflect the player view frustum dir
+		set_univ_pdu();
 	}
 
 	// draw universe as background
@@ -511,7 +514,7 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 	bool const no_stars(is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6));
 	int const fog_enabled(glIsEnabled(GL_FOG));
 	if (fog_enabled) {glDisable(GL_FOG);}
-	draw_universe(1, 1, no_stars); // could clip by horizon?
+	draw_universe(1, 1, (no_stars ? 2 : /*reflection_mode*/0)); // could clip by horizon?
 	if (fog_enabled) {glEnable(GL_FOG);}
 	if (TIMETEST) PRINT_TIME("0.2");
 	camera_pos = camera_pos_orig;
@@ -541,7 +544,7 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 		cfs.push_back(camera_filter(color, 1, -1));
 		draw_camera_filters(cfs);
 	}
-	do_look_at(new_sp, old_sp);
+	do_look_at();
 	glClear(GL_DEPTH_BUFFER_BIT);
 	if (TIMETEST) PRINT_TIME("0.3");
 }
@@ -1069,8 +1072,10 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	apply_z_mirror(water_plane_z);
 
 	// draw partial scene
+	camera_pdu.valid = 0; // disable view frustum culling so that reflected sun/moon don't get clipped
 	if (!combined_gu) {draw_sun_moon_stars();}
 	draw_sun_flare();
+	camera_pdu.valid = 1;
 	if (display_mode & 0x40) {draw_cloud_plane(1);} // slower but a nice effect
 	// setup above-water clip plane for mesh
 	double const plane[4] = {0.0, 0.0, 1.0, -water_plane_z}; // water at z=-water_z (mirrored)

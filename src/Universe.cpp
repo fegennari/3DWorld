@@ -364,7 +364,8 @@ void draw_universe_plds() {
 }
 
 
-void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, bool no_distant) {
+// no_distant: 0: draw everything, 1: draw current cell, 2: draw current system
+void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant) {
 
 	//RESET_TIME;
 	if (animate2) {cloud_time += fticks;}
@@ -373,13 +374,14 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	int cxyz[3];
 	ushader_group usg;
 	glDisable(GL_LIGHTING);
+	bool const cur_cell_only(no_distant > 0);
 
-	if (!no_distant || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
+	if ((no_distant != 2) || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
 		for (unsigned nebula_pass = 0; nebula_pass < 2; ++nebula_pass) {
 			for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
 				for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
 					for (cxyz[0] = 0; cxyz[0] < int(U_BLOCKS); ++cxyz[0]) { // x
-						draw_cell(cxyz, usg, clobj, 0, (nebula_pass != 0), no_move, skip_closest);
+						draw_cell(cxyz, usg, clobj, 0, (nebula_pass != 0), no_move, skip_closest, cur_cell_only);
 					}
 				}
 			}
@@ -388,7 +390,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	}
 	if (clobj.has_valid_system()) { // in a system
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
-			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest);
+			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest, cur_cell_only);
 		}
 		draw_universe_plds();
 	}
@@ -565,10 +567,12 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 }
 
 
-void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest) {
-
+void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const &clobj, unsigned pass,
+	bool nebula_pass, bool no_move, bool skip_closest, bool cur_cell_only)
+{
 	UNROLL_3X(current.cellxyz[i_] = cxyz[i_] + uxyz[i_];)
 	bool const sel_cell(clobj.cellxyz[0] == cxyz[0] && clobj.cellxyz[1] == cxyz[1] && clobj.cellxyz[2] == cxyz[2]);
+	if (cur_cell_only && !sel_cell) return;
 	get_cell(cxyz).draw(usg, clobj, pass, nebula_pass, no_move, skip_closest, sel_cell);
 }
 

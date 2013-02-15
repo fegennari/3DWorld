@@ -102,7 +102,7 @@ void setup_current_system() {
 	if (!inited) {
 		inited = 1;
 		set_univ_pdu();
-		universe.draw_all_cells(clobj0, 1, 1, 1); // required to gen galaxies/systems
+		universe.draw_all_cells(clobj0, 1, 1, 2); // required to gen galaxies/systems
 	}
 	point const &pos(get_player_pos2());
 	universe.get_object_closest_to_pos(clobj0, pos, 4.0);
@@ -196,7 +196,7 @@ void proc_uobjs_first_frame() {
 }
 
 
-void draw_universe(bool static_only, bool skip_closest, bool no_distant) { // should be process_universe()
+void draw_universe(bool static_only, bool skip_closest, int no_distant) { // should be process_universe()
 
 	RESET_TIME;
 	static int inited(0);
