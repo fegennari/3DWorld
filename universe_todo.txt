@@ -16,7 +16,6 @@ colors for alpha pixels are nearby colors
 
 Lightning in Tiled Terrain Mode
 
-onscreen text color in TT mode without water?
 
 
 

@@ -422,7 +422,6 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, v
 		return;
 	}
 	color.do_glColor();
-	if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
 	glPushMatrix();
 	translate_to(pos);
 	uniform_scale(scale);
@@ -479,7 +478,6 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 	}
 	color.do_glColor();
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(radius) : int(sscale*radius/dist)))));
-	if (!shadow_only) select_texture(ROCK_SPHERE_TEX);
 	glPushMatrix();
 	translate_to(pos);
 	rotate_about(angle, dir);
@@ -757,7 +755,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, (height + radius), 2)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
-	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
+	select_texture(((draw_model == 0) ? pltype[type].tid : WHITE_TEX), 0); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1);
 	if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
@@ -1001,18 +999,18 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	rock_vbo_manager.upload();
 	rock_vbo_manager.begin_render(1);
-	select_texture(ROCK_SPHERE_TEX);
+	if (!shadow_only) {select_texture(ROCK_SPHERE_TEX);}
 
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) {
 		surface_rocks[i].draw(sscale, shadow_only, xlate, rock_vbo_manager);
 	}
 	rock_vbo_manager.end_render();
 	glEnable(GL_COLOR_MATERIAL);
+	draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
 
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
 		voxel_rocks[i].draw(sscale, shadow_only, xlate, s);
 	}
-	draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
 	gluQuadricTexture(quadric, GL_TRUE);
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate);
 	draw_scenery_vector(stumps, sscale, shadow_only, xlate);
@@ -1023,6 +1021,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	}
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
 	glDisable(GL_COLOR_MATERIAL);
+	glDisable(GL_TEXTURE_2D);
 }
 
 

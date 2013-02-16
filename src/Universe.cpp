@@ -2048,7 +2048,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 		vector3d const velocity(get_player_velocity());
 		float const vmag(velocity.mag());
 		bool const small(size < 1.5);
-		bool const draw_as_line((velocity == zero_vector) ? 0 : (get_pixel_size(vmag, dist)*cross_product(velocity, vcp).mag() > 1.0*vcp_mag*vmag));
+		bool const draw_as_line(get_pixel_size(vmag, dist)*cross_product(velocity, vcp).mag() > 1.0*vcp_mag*vmag);
 		point const normal(camera - pos_);
 		pos_ = make_pt_global(pos_);
 

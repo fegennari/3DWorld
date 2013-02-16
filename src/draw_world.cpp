@@ -1413,7 +1413,6 @@ void draw_framerate(float val) {
 
 	char text[32];
 	WHITE.do_glColor();
-	set_color(WHITE);
 	sprintf(text, "%3.1f", val);
 	float const ar(((float)window_width)/((float)window_height));
 	draw_text(-0.011*ar, -0.011, -2.0*NEAR_CLIP, text);
@@ -1426,7 +1425,6 @@ void draw_compass_and_alt() { // and temperature
 	float const aspect_ratio((float)window_width/(float)window_height);
 	string const dirs[8] = {"N", "NW", "W", "SW", "S", "SE", "E", "NE"};
 	YELLOW.do_glColor();
-	set_color(YELLOW);
 	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", (camera_origin.x+(xoff2-xoff)*DX_VAL), (camera_origin.y+(yoff2-yoff)*DY_VAL), camera_origin.z);
 	draw_text(-0.005*aspect_ratio, -0.01, -0.02, text);
 	float const theta(safe_acosf(-cview_dir.x)*TO_DEG);
