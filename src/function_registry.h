@@ -633,6 +633,7 @@ float get_player_radius();
 void set_player_pos(point const &pos_);
 void set_player_dir(vector3d const &dir_);
 void set_player_up(vector3d const &upv_);
+void stop_player_ship();
 void init_universe_display();
 void set_univ_pdu();
 void setup_current_system();

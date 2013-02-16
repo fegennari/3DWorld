@@ -211,6 +211,7 @@ float get_player_radius()                 {return player_ship().get_radius();}
 void set_player_pos(point const &pos_)    {player_ship().set_pos(pos_);}
 void set_player_dir(vector3d const &dir_) {player_ship().set_dir(dir_);}
 void set_player_up(vector3d const &upv_)  {player_ship().set_upv(upv_);}
+void stop_player_ship()                   {player_ship().set_vel(zero_vector);}
 
 
 void change_speed_mode(int val) {

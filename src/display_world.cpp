@@ -510,6 +510,7 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 	if (!reflection_mode) {config_bkg_color_and_clear(underwater, depth, 1);}
 	point const camera_pos_orig(camera_pos);
 	camera_pos = player_pos; // trick universe code into thinking the camera is at the player's ship
+	stop_player_ship();
 	if (TIMETEST) PRINT_TIME("0.1");
 	bool const no_stars(is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6));
 	int const fog_enabled(glIsEnabled(GL_FOG));
