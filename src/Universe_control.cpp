@@ -111,13 +111,6 @@ void setup_current_system() {
 	atmosphere = 0.0;
 	vegetation = 0.0;
 
-	if (univ_temp != last_temp) { // determine temperature
-		cout << "temperature: " << univ_temp << endl;
-		last_temp   = univ_temp;
-		temperature = univ_temp;
-		regen_mesh  = 1; // regen texture (is this needed?)
-		//init_temperature = univ_temp; // ???
-	}
 	if (clobj0.type == UTYPE_PLANET || clobj0.type == UTYPE_MOON) { // planet or moon
 		point const &opos(clobj0.object->get_pos());
 		float const oradius(clobj0.object->get_radius());
@@ -177,6 +170,14 @@ void setup_current_system() {
 	}
 	float const a_scale(0.5 + 1.0*atmosphere); // higher atmosphere = more clouds = more ambient lighting (FIXME: cloud color for ambient?)
 	set_current_system_light(clobj0, pos, a_scale, 0.5);
+
+	if (fabs(univ_temp - last_temp) > 0.1) { // update temperature
+		cout << "temperature: " << univ_temp << endl;
+		last_temp   = univ_temp;
+		temperature = univ_temp;
+		regen_mesh  = 1; // regen texture (is this needed?)
+		//init_temperature = univ_temp; // ???
+	}
 	//if (regen_mesh) *** regen mesh ***
 	setup_landscape_tex_colors(c1, c2);
 

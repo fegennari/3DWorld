@@ -995,6 +995,7 @@ public:
 	//~tile_draw_t() {clear();}
 
 	void clear() {
+		//cout << "clear with " << tiles.size() << " tiles" << endl;
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			i->second->clear();
 			delete i->second;
