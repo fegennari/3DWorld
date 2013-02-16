@@ -65,7 +65,7 @@ point univ_sun_pos(all_zeros);
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
 universe_t universe; // the top level universe
-pt_line_drawer universe_pld[2]; // 1-pixel, 2-pixel
+pt_line_drawer universe_pld[3]; // 1-pixel, 2-pixel, cached
 
 
 extern bool univ_planet_lod, disable_shaders;
@@ -186,6 +186,15 @@ void destroy_sobj(s_object const &target) {
 
 
 // *** DRAW CODE ***
+
+
+struct planet_draw_data_t {
+	unsigned ix;
+	float size;
+	shadow_vars_t svars;
+	planet_draw_data_t() : ix(0), size(0.0) {}
+	planet_draw_data_t(unsigned ix_, float size_, shadow_vars_t const &svars_) : ix(ix_), size(size_), svars(svars_) {}
+};
 
 
 float get_light_scale(unsigned light) {return (glIsEnabled(light) ? 1.0 : 0.0);}
@@ -335,6 +344,7 @@ class ushader_group {
 
 public:
 	shader_t nebula_shader, asteroid_shader;
+	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
 	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) {
 		return planet_shader[svars.ring_ro > 0.0][body.gas_giant].enable_planet(body, svars, planet_pos, use_light2);
@@ -374,10 +384,26 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	int cxyz[3];
 	ushader_group usg;
 	glDisable(GL_LIGHTING);
-	bool const cur_cell_only(no_distant > 0);
 
+	static colorRGBA last_bkg_color(BLACK);
+	static point last_player_pos(all_zeros);
+	point const player_pos(get_player_pos());
+	bool const cache_stars(dist_less_than(player_pos, last_player_pos, STAR_MAX_SIZE) && bkg_color == last_bkg_color);
+	bool const draw_all(cache_stars && universe_pld[2].empty());
+
+	if (cache_stars) { // should be true in combined_gu mode
+		if (!draw_all) {universe_pld[2].draw();}
+	}
+	else {
+		last_bkg_color  = bkg_color;
+		last_player_pos = player_pos;
+		universe_pld[2].clear();
+	}
 	if ((no_distant != 2) || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
 		for (unsigned nebula_pass = 0; nebula_pass < 2; ++nebula_pass) {
+			if (draw_all && nebula_pass == 0) {player_pdu.valid = 0;}
+			bool const cur_cell_only(no_distant > 0 || (cache_stars && !draw_all && nebula_pass == 0));
+
 			for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
 				for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
 					for (cxyz[0] = 0; cxyz[0] < int(U_BLOCKS); ++cxyz[0]) { // x
@@ -385,12 +411,16 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 					}
 				}
 			}
+			if (draw_all && nebula_pass == 0) {
+				player_pdu.valid = 1;
+				universe_pld[2]  = universe_pld[0];
+			}
 			draw_universe_plds();
 		}
 	}
 	if (clobj.has_valid_system()) { // in a system
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
-			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest, cur_cell_only);
+			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest, 0);
 		}
 		draw_universe_plds();
 	}
@@ -580,24 +610,11 @@ void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const
 void ucell::draw_nebulas(ushader_group &usg) const {
 
 	point const camera(get_player_pos());
-	vector<pair<float, unsigned> > to_draw;
 
-	for (unsigned i = 0; i < galaxies->size(); ++i) { // neg dist for back-to-front drawing
-		if ((*galaxies)[i].nebula.is_valid()) {to_draw.push_back(make_pair(-p2p_dist_sq(camera, rel_center+(*galaxies)[i].pos), i));}
-	}
-	for (unsigned i = 0; i < to_draw.size(); ++i) {
-		(*galaxies)[to_draw[i].second].nebula.draw(rel_center, camera, U_VIEW_DIST, usg.nebula_shader);
+	for (unsigned i = 0; i < galaxies->size(); ++i) { // back-to-front sort not needed?
+		if ((*galaxies)[i].nebula.is_valid()) {(*galaxies)[i].nebula.draw(rel_center, camera, U_VIEW_DIST, usg.nebula_shader);}
 	}
 }
-
-
-struct planet_draw_data_t {
-	unsigned ix;
-	float size;
-	shadow_vars_t svars;
-	planet_draw_data_t() : ix(0), size(0.0) {}
-	planet_draw_data_t(unsigned ix_, float size_, shadow_vars_t const &svars_) : ix(ix_), size(size_), svars(svars_) {}
-};
 
 
 // pass:
@@ -622,7 +639,6 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 	assert(!is_nan(camera));
 	bool const p_system(clobj.has_valid_system());
 	float const wwsq((float)window_width*(float)window_width);
-	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
 	// draw galaxies
 	for (unsigned i = 0; i < galaxies->size(); ++i) { // remember, galaxies can overlap
@@ -698,8 +714,8 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						if (!sel_g) sol.free_planets(); // optional
 						if (!update_pass) continue;
 					}
-					atmos_to_draw.resize(0);
-					rings_to_draw.resize(0);
+					usg.atmos_to_draw.resize(0);
+					usg.rings_to_draw.resize(0);
 
 					for (unsigned k = 0; k < sol.planets.size(); ++k) {
 						bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
@@ -783,21 +799,21 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						}
 						if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
 							if (!planet.ring_data.empty() && sizep*planet.get_ring_rscale() > 2.5) {
-								rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
+								usg.rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 							}
 							if (planet_visible && !skip_planet_draw && !planet.gas_giant && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
-								atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
+								usg.atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 							}
 						}
 					} // planet k
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
-						for (vector<planet_draw_data_t>::const_iterator k = rings_to_draw.begin(); k != rings_to_draw.end(); ++k) {
+						for (vector<planet_draw_data_t>::const_iterator k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
 							uplanet &planet(sol.planets[k->ix]);
 							planet.ensure_rings_texture();
 							planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1));
 						}
 						if (pass == 0) {
-							for (vector<planet_draw_data_t>::const_iterator k = atmos_to_draw.begin(); k != atmos_to_draw.end(); ++k) {
+							for (vector<planet_draw_data_t>::const_iterator k = usg.atmos_to_draw.begin(); k != usg.atmos_to_draw.end(); ++k) {
 								uplanet const &planet(sol.planets[k->ix]);
 								planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars);
 							}
@@ -1930,7 +1946,7 @@ void ugalaxy::clear_systems() {
 
 void ugalaxy::free() {
 
-	for (unsigned i = 0; i < sols.size(); ++i) sols[i].free();
+	for (unsigned i = 0; i < sols.size(); ++i) {sols[i].free();}
 	clear_systems();
 	gen = 0;
 }
@@ -1938,13 +1954,13 @@ void ugalaxy::free() {
 
 void ussystem::free_planets() {
 
-	for (unsigned i = 0; i < planets.size(); ++i) planets[i].free();
+	for (unsigned i = 0; i < planets.size(); ++i) {planets[i].free();}
 }
 
 
 void ussystem::free() {
 
-	free_planets();
+	if (!planets.empty()) {free_planets();}
 	planets.clear();
 	sun.free();
 	galaxy_color.alpha = 0.0; // set to an invalid state
@@ -1954,7 +1970,7 @@ void ussystem::free() {
 
 void uplanet::free() {
 
-	for (unsigned i = 0; i < moons.size(); ++i) moons[i].free();
+	for (unsigned i = 0; i < moons.size(); ++i) {moons[i].free();}
 	moons.clear();
 	ring_data.clear();
 	urev_body::free();
@@ -2014,25 +2030,25 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 
 	point const &camera(get_player_pos());
 	vector3d const vcp(camera, pos_);
-	float const dist(vcp.mag() - radius);
+	float const vcp_mag(vcp.mag()), dist(vcp_mag - radius);
 	if (dist > U_VIEW_DIST) return 0; // too far away
 	float size(get_pixel_size(radius, dist)); // approx. in pixels
 	// view volume has already been checked
 	if (size < 0.02) return 0; // too small
 	float const st_prod(STAR_BRIGHTNESS*size*temp);
 	if (st_prod < 2.0 || st_prod*temp < 4.0) return 0; // too dim
-	move_in_front_of_far_clip(pos_, camera, size, (dist + radius), 1.35);
+	move_in_front_of_far_clip(pos_, camera, size, vcp_mag, 1.35);
 	colorRGBA ocolor(color);
 		
 	if (st_prod < 30.0) {
-		float const cmult(0.00111*st_prod*st_prod); // small, attenuate (divide by 900) (what if behind far clipping plane?)
+		float const cmult(0.00111*st_prod*st_prod); // small, attenuate (divide by 900)
 		blend_color(ocolor, ocolor, bkg_color, cmult, 1);
 	}
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
 		vector3d const velocity(get_player_velocity());
-		float const psize(get_pixel_size(velocity.mag(), dist));
+		float const vmag(velocity.mag());
 		bool const small(size < 1.5);
-		bool const draw_as_line(psize*cross_product(velocity.get_norm(), vcp.get_norm()).mag() > 1.0);
+		bool const draw_as_line((velocity == zero_vector) ? 0 : (get_pixel_size(vmag, dist)*cross_product(velocity, vcp).mag() > 1.0*vcp_mag*vmag));
 		point const normal(camera - pos_);
 		pos_ = make_pt_global(pos_);
 
@@ -2081,30 +2097,32 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 
 	point const &camera(get_player_pos());
 	vector3d const vcp(camera, pos_);
-	float const dist(max(TOLERANCE, (vcp.mag() - radius)));
+	float const vcp_mag(vcp.mag()), dist(max(TOLERANCE, (vcp_mag - radius)));
 	if (dist > U_VIEW_DIST) return 0; // too far away
+	bool const universe_mode(world_mode == WMODE_UNIVERSE);
 	float size(get_pixel_size(radius, dist)); // approx. in pixels
-	if (size < 0.4 && !(display_mode & 0x01)) return 0; // too small
+	if (size < 0.5 && !(display_mode & 0x01)) return 0; // too small
+	if (size < 2.5 && !universe_mode)         return 0; // don't draw distant planets in combined_gu mode
 	if (!univ_sphere_vis(pos_, radius))       return 1; // check if in the view volume
 		
-	if (world_mode == WMODE_UNIVERSE && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
+	if (universe_mode && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
 		set_owner_color(); // lighting is already disabled
 		draw_sphere_dlist(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
 		return 1;
 	}
-	move_in_front_of_far_clip(pos_, camera, size, (dist + radius), 1.35);
+	move_in_front_of_far_clip(pos_, camera, size, vcp_mag, 1.35);
 	colorRGBA ocolor(color);
 
-	if (world_mode == WMODE_UNIVERSE && !(display_mode & 2)) {
+	if (universe_mode && !(display_mode & 0x02)) {
 		show_colonizable_liveable(pos_, radius); // show liveable/colonizable planets/moons
 	}
 	glEnable(GL_LIGHTING);
-	if (size < 1.0) {blend_color(ocolor, ocolor, bkg_color, size*size, 1);} // small, attenuate
 
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
+		if (size < 1.0) {blend_color(ocolor, ocolor, bkg_color, size*size, 1);} // small, attenuate
 		bool const small(size < 1.5);
 		ocolor.do_glColor();
-		vcp.get_norm().do_glNormal(); // orient towards camera
+		(vcp/vcp_mag).do_glNormal(); // orient towards camera
 		if (!small) glPointSize(2.0); // 2 pixel diameter
 		draw_point(make_pt_global(pos_));
 		if (!small) glPointSize(1.0);

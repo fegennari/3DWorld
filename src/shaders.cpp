@@ -260,7 +260,7 @@ void shader_t::set_prefix(string const &prefix, unsigned shader_type) {
 
 void shader_t::set_bool_prefix(string const &name, bool val, unsigned shader_type) {
 	
-	set_prefix((string("const bool ") + name + " = " + (val ? "true;" : "false;")), shader_type);
+	set_prefix((string("const bool ") + name + (val ? " = true;" : " = false;")), shader_type);
 }
 
 
