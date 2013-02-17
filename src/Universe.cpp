@@ -65,7 +65,7 @@ point univ_sun_pos(all_zeros);
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
 universe_t universe; // the top level universe
-pt_line_drawer universe_pld[3]; // 1-pixel, 2-pixel, cached
+pt_line_drawer universe_pld[5]; // 1-pixel stars, 2-pixel stars, cached stars, 1-pixel planets/moons, 2-pixel planets/moons
 
 
 extern bool univ_planet_lod, disable_shaders;
@@ -363,14 +363,16 @@ public:
 };
 
 
-void draw_universe_plds() {
+void draw_universe_plds(bool planets_and_moons) {
 
-	universe_pld[0].draw_and_clear();
+	unsigned const ix(planets_and_moons ? 3 : 0);
+	universe_pld[ix].draw_and_clear();
+	if (universe_pld[ix+1].empty()) return;
 	glPointSize(2.0); // 2 pixel diameter
-	glLineWidth(2.0); // 2 pixel width
-	universe_pld[1].draw_and_clear();
+	if (!planets_and_moons) {glLineWidth(2.0);} // 2 pixel width
+	universe_pld[ix+1].draw_and_clear();
 	glPointSize(1.0);
-	glLineWidth(1.0);
+	if (!planets_and_moons) {glLineWidth(1.0);}
 }
 
 
@@ -415,14 +417,14 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 				player_pdu.valid = 1;
 				universe_pld[2]  = universe_pld[0];
 			}
-			draw_universe_plds();
+			draw_universe_plds(0);
 		}
 	}
 	if (clobj.has_valid_system()) { // in a system
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
 			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest, 0);
 		}
-		draw_universe_plds();
+		draw_universe_plds(0);
 	}
 	glEnable(GL_LIGHTING);
 	//PRINT_TIME("Draw Cells");
@@ -806,6 +808,10 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 							}
 						}
 					} // planet k
+					glEnable(GL_LIGHTING);
+					draw_universe_plds(1);
+					glDisable(GL_LIGHTING);
+					
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
 						for (vector<planet_draw_data_t>::const_iterator k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
 							uplanet &planet(sol.planets[k->ix]);
@@ -2116,58 +2122,49 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 	if (universe_mode && !(display_mode & 0x02)) {
 		show_colonizable_liveable(pos_, radius); // show liveable/colonizable planets/moons
 	}
-	glEnable(GL_LIGHTING);
-
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
 		if (size < 1.0) {blend_color(ocolor, ocolor, bkg_color, size*size, 1);} // small, attenuate
-		bool const small(size < 1.5);
-		ocolor.do_glColor();
-		(vcp/vcp_mag).do_glNormal(); // orient towards camera
-		if (!small) glPointSize(2.0); // 2 pixel diameter
-		draw_point(make_pt_global(pos_));
-		if (!small) glPointSize(1.0);
+		universe_pld[3 + (size > 1.5)].add_pt(make_pt_global(pos_), vcp/vcp_mag, ocolor); // orient towards camera
+		return 1;
 	}
-	else { // sphere
-		bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0);
-		int ndiv(NDIV_SIZE_SCALE*sqrt(size));
+	// draw as sphere
+	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0);
+	int ndiv(NDIV_SIZE_SCALE*sqrt(size));
 		
-		if (size < 64.0) {
-			ndiv = max(4, min(48, ndiv));
-			if (ndiv > 16) {ndiv = ndiv & 0xFFFC;}
-		}
-		else {
-			int const pref_ndiv(min((int)min(MAX_TEXTURE_SIZE, SPHERE_MAX_ND), ndiv));
-			for (ndiv = 1; ndiv < pref_ndiv; ndiv <<= 1) {} // make a power of 2
-		}
-		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
-		assert(ndiv > 0);
-		set_fill_mode();
-		if (texture) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);}
-		glPushMatrix();
-		global_translate(pos_);
-		apply_gl_rotate();
+	if (size < 64.0) {
+		ndiv = max(4, min(48, ndiv));
+		if (ndiv > 16) {ndiv = ndiv & 0xFFFC;}
+	}
+	else {
+		int const pref_ndiv(min((int)min(MAX_TEXTURE_SIZE, SPHERE_MAX_ND), ndiv));
+		for (ndiv = 1; ndiv < pref_ndiv; ndiv <<= 1) {} // make a power of 2
+	}
+	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
+	assert(ndiv > 0);
+	set_fill_mode();
+	if (texture) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);}
+	glPushMatrix();
+	global_translate(pos_);
+	apply_gl_rotate();
 		
-		if (texture) { // texture map
-			assert(tid > 0);
-			(gas_giant ? bind_1d_texture(tid) : bind_2d_texture(tid));
-			WHITE.do_glColor();
-		}
-		else {
-			ocolor.do_glColor();
-		}
-		if (ndiv >= N_SPHERE_DIV) {
-			draw_surface(pos_, radius, size, ndiv);
-		}
-		else {
-			if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
-			draw_sphere_dlist(all_zeros, radius, ndiv, texture); // small sphere - use display list
-		}
-		if (texture) {
-			usg.disable_planet_shader();
-		}
-		glPopMatrix();
-	} // end sphere draw
-	glDisable(GL_LIGHTING);
+	if (texture) { // texture map
+		assert(tid > 0);
+		(gas_giant ? bind_1d_texture(tid) : bind_2d_texture(tid));
+		WHITE.do_glColor();
+	}
+	else {
+		glEnable(GL_LIGHTING);
+		ocolor.do_glColor();
+	}
+	if (ndiv >= N_SPHERE_DIV) {
+		draw_surface(pos_, radius, size, ndiv);
+	}
+	else {
+		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
+		draw_sphere_dlist(all_zeros, radius, ndiv, texture); // small sphere - use display list
+	}
+	if (texture) {usg.disable_planet_shader();} else {glDisable(GL_LIGHTING);}
+	glPopMatrix();
 	return 1;
 }
 
