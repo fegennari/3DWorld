@@ -532,7 +532,3 @@ void shader_t::end_shader() { // ok to call if not in a shader
 	gs_name.clear();
 }
 
-
-void shader_t::enable () const {assert(program); glUseProgram(program);}
-void shader_t::disable() {glUseProgram(0);}
-

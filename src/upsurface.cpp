@@ -134,10 +134,7 @@ void upsurface::gen(float mag, float freq, unsigned ntests, float mm_scale) {
 		for (unsigned j = 0; j < TOT_NUM_SINES; ++j) {
 			unsigned const offset(NUM_SINE_PARAMS*j);
 			float localval(rdata[offset]);
-
-			for (unsigned d = 0; d < 3; ++d) {
-				localval *= SINF(rdata[offset+(d<<1)+1]*rgen.randd() + rdata[offset+(d<<1)+2]);
-			}
+			UNROLL_3X(localval *= SINF(rdata[offset+(i_<<1)+1]*rgen.randd() + rdata[offset+(i_<<1)+2]);)
 			val += fabs(localval);
 		}
 		max_mag = max(max_mag, val);

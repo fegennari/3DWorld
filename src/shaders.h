@@ -42,8 +42,8 @@ public:
 	}
 	void init_from_active_shader(shader_t const &s) {assert(s.is_setup()); program = s.program;}
 	bool is_setup() const {return (program > 0);}
-	void enable () const;
-	static void disable();
+	void enable () const {assert(program); glUseProgram(program);}
+	static void disable() {glUseProgram(0);}
 	bool begin_shader(bool do_enable=1);
 	void end_shader();
 

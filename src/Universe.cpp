@@ -50,7 +50,7 @@ float const ROTREV_TIMESCALE = 1.0;
 float const ROT_RATE_CONST   = 0.5*ROTREV_TIMESCALE;
 float const REV_RATE_CONST   = 1.0*ROTREV_TIMESCALE;
 float const STAR_BRIGHTNESS  = 1.4;
-float const MIN_TEX_OBJ_SZ   = 3.0;
+float const MIN_TEX_OBJ_SZ   = 4.0;
 float const MAX_WATER        = 0.75;
 float const GLOBAL_AMBIENT   = 0.25;
 float const GAS_GIANT_MIN_REL_SZ = 0.38;
@@ -347,14 +347,18 @@ class ushader_group {
 	universe_shader_t planet_shader[2][2][2]; // {without/with rings}x{rocky vs. gas giant}x{without/with craters (moons)} - not all variations used
 	universe_shader_t star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
+	universe_shader_t &get_planet_shader(urev_body const &body, shadow_vars_t const &svars) {
+		return planet_shader[svars.ring_ro > 0.0][body.gas_giant][body.type == UTYPE_MOON];
+	}
+
 public:
 	shader_t nebula_shader, asteroid_shader;
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
 	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) {
-		return planet_shader[svars.ring_ro > 0.0][body.gas_giant][body.type == UTYPE_MOON].enable_planet(body, svars, planet_pos, use_light2);
+		return get_planet_shader(body, svars).enable_planet(body, svars, planet_pos, use_light2);
 	}
-	void disable_planet_shader() {planet_shader[0][0][0].disable_planet();}
+	void disable_planet_shader(urev_body const &body, shadow_vars_t const &svars) {get_planet_shader(body, svars).disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
 	void disable_star_shader() {star_shader.disable_star();}
 	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir) {
@@ -616,6 +620,7 @@ void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const
 
 void ucell::draw_nebulas(ushader_group &usg) const {
 
+	set_fill_mode();
 	point const camera(get_player_pos());
 
 	for (unsigned i = 0; i < galaxies->size(); ++i) { // back-to-front sort not needed?
@@ -818,16 +823,32 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 					glDisable(GL_LIGHTING);
 					
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
-						for (vector<planet_draw_data_t>::const_iterator k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
-							uplanet &planet(sol.planets[k->ix]);
-							planet.ensure_rings_texture();
-							planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1));
+						if (!usg.rings_to_draw.empty()) {
+							glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+							enable_blend();
+							WHITE.do_glColor();
+
+							for (vector<planet_draw_data_t>::const_iterator k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
+								uplanet &planet(sol.planets[k->ix]);
+								planet.ensure_rings_texture();
+								planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1));
+							}
+							usg.disable_ring_shader();
+							disable_blend();
+							glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 						}
-						if (pass == 0) {
+						if (pass == 0 && !usg.atmos_to_draw.empty()) {
+							enable_blend();
+							WHITE.do_glColor();
+							glEnable(GL_CULL_FACE);
+
 							for (vector<planet_draw_data_t>::const_iterator k = usg.atmos_to_draw.begin(); k != usg.atmos_to_draw.end(); ++k) {
 								uplanet const &planet(sol.planets[k->ix]);
 								planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars);
 							}
+							glDisable(GL_CULL_FACE);
+							disable_blend();
+							usg.disable_atmospheric_shader();
 						}
 					}
 				} // sol_draw_pass
@@ -1785,7 +1806,7 @@ void urev_body::create_gas_giant_texture() {
 		}
 		UNROLL_3X(data[3*i+i_] = (unsigned char)(255.0*color[i_]);)
 	}
-	bool const mipmap = 1;
+	bool const mipmap = 1; // Note: somewhat slow when the player is flying by quickly
 	setup_1d_texture(tid, GL_MODULATE, mipmap, 0, 0, 0);
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB8, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
 	if (mipmap) {gen_mipmaps(1);}
@@ -2072,11 +2093,10 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 		}
 	}
 	else { // sphere
-		int ndiv(max(4, min(56, int(NDIV_SIZE_SCALE*sqrt(size)))));
+		int ndiv(max(4, min(56, int(0.5*NDIV_SIZE_SCALE*sqrt(size)))));
 		if (ndiv > 16) {ndiv = ndiv & 0xFFFC;}
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
-		set_fill_mode();
 		glPushMatrix();
 		global_translate(pos_);
 
@@ -2146,7 +2166,6 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 	}
 	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 	assert(ndiv > 0);
-	set_fill_mode();
 	if (texture) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);}
 	glPushMatrix();
 	global_translate(pos_);
@@ -2168,7 +2187,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
 		draw_sphere_dlist(all_zeros, radius, ndiv, texture); // small sphere - use display list
 	}
-	if (texture) {usg.disable_planet_shader();} else {glDisable(GL_LIGHTING);}
+	if (texture) {usg.disable_planet_shader(*this, svars);} else {glDisable(GL_LIGHTING);}
 	glPopMatrix();
 	return 1;
 }
@@ -2334,7 +2353,7 @@ void urev_body::show_colonizable_liveable(point const &pos_, float radius0) cons
 void uplanet::ensure_rings_texture() {
 
 	if (ring_data.empty() || ring_tid > 0) return; // no rings, or texture already created
-	bool const mipmap = 1;
+	bool const mipmap = 1; // Note: somewhat slow when the player is flying by quickly
 	setup_1d_texture(ring_tid, GL_MODULATE, mipmap, 0, 0, 0);
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, RING_TEX_SZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, &ring_data.front());
 	if (mipmap) {gen_mipmaps(1);}
@@ -2344,23 +2363,17 @@ void uplanet::ensure_rings_texture() {
 void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir) const {
 
 	if (ring_data.empty()) return;
-	glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+	assert(ring_ri > 0.0 && ring_ri < ring_ro);
 	assert(ring_tid > 0);
 	bind_1d_texture(ring_tid);
-	assert(ring_ri > 0.0 && ring_ri < ring_ro);
-	usg.enable_ring_shader(*this, make_pt_global(pos_), make_pt_global(sun_pos), sun_radius, dir); // even in !do_texture mode?
-	enable_blend(); // must be drawn last
+	usg.enable_ring_shader(*this, make_pt_global(pos_), make_pt_global(sun_pos), sun_radius, dir);
 	glPushMatrix();
 	global_translate(pos_);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
 	scale_by(rscale);
-	WHITE.do_glColor();
 	plus_z.do_glNormal();
 	draw_tquad(ring_ro, ring_ro, 0.0, 1);
-	usg.disable_ring_shader();
 	glPopMatrix();
-	disable_blend();
-	glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 }
 
 
@@ -2368,18 +2381,11 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
 	if (!usg.enable_atmospheric_shader(*this, make_pt_global(pos_), svars)) return;
-	enable_blend();
-	set_fill_mode();
-	WHITE.do_glColor();
-	glEnable(GL_CULL_FACE);
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
 	draw_sphere_dlist(all_zeros, 1.01*cloud_radius, max(4, min(32, int(4.0*size_))), 1);
 	glPopMatrix();
-	glDisable(GL_CULL_FACE);
-	disable_blend();
-	usg.disable_atmospheric_shader();
 }
 
 
