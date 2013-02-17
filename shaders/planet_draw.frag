@@ -29,7 +29,7 @@ void main()
 	vec3 dir = normalize(vertex); // world space normal
 
 	for (int i = 0; i < 50; ++i) { // Note: inefficient, but fast enough for a single gas giant render
-		vec3 center = vec3(1.0, 1.0, 0.5)*rand_vec3(v0); // rand_vec3() from crater shader
+		vec3 center = vec3(1.0, 1.0, 0.5)*rand_vec3(v0);
 		float dist  = (0.25 + 0.75*rand_01(v0+3.0))*length(vec3(1.0, 1.0, 2.0)*(dir - normalize(center)));
 		tc         += 0.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
 		v0         += 4.0;
@@ -69,9 +69,9 @@ void main()
 	float lscale0  = (dot(norm, ldir0) > 0.0) ? 1.0 : 0.0;
 	float lscale2  = (dot(norm, ldir2) > 0.0) ? 1.0 : 0.0;
 
-#ifndef GAS_GIANT
+#ifdef HAS_CRATERS
 	// facing the sun or planet (reflected light), and not over water (blue)
-	if (crater_val > 0.0 && (lscale0 > 0.0 || lscale2 > 0.0) && (texel.b - texel.r - texel.g) < 0.0) {
+	if ((lscale0 > 0.0 || lscale2 > 0.0) && (texel.b - texel.r - texel.g) < 0.0) {
 		adjust_normal_for_craters(norm, vertex); // add craters by modifying the normal
 	}
 #endif

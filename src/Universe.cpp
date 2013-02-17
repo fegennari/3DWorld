@@ -225,13 +225,18 @@ class universe_shader_t : public shader_t {
 public:
 	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) { // Note: planet_pos unused
 		if (disable_shaders) return 0;
+		bool const has_craters(body.type == UTYPE_MOON);
+		assert(!has_craters || !body.gas_giant);
 
 		if (!is_setup()) {
 			setup_planet_star_shader();
-			if (body.gas_giant) {set_prefix("#define GAS_GIANT", 1);} // FS
+			if (body.gas_giant) {set_prefix("#define GAS_GIANT",   1);} // FS
+			if (has_craters   ) {set_prefix("#define HAS_CRATERS", 1);} // FS
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
+			string frag_shader_str("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+rand_gen.part*");
+			if (has_craters) {frag_shader_str += "+craters.part";}
 			set_vert_shader("planet_draw");
-			set_frag_shader("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+craters.part+planet_draw");
+			set_frag_shader(frag_shader_str+"+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", 1);
 			add_uniform_int("ring_tex",        2);
@@ -247,7 +252,6 @@ public:
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
 			add_uniform_float("water_val",  body.water);
 			add_uniform_float("lava_val",   body.lava);
-			add_uniform_float("crater_val", ((body.type == UTYPE_MOON) ? 1.0 : 0.0));
 		}
 		set_planet_uniforms(body.atmos, svars, use_light2);
 		return 1;
@@ -340,16 +344,17 @@ public:
 
 
 class ushader_group {
-	universe_shader_t planet_shader[2][2], star_shader, ring_shader, cloud_shader, atmospheric_shader;
+	universe_shader_t planet_shader[2][2][2]; // {without/with rings}x{rocky vs. gas giant}x{without/with craters (moons)} - not all variations used
+	universe_shader_t star_shader, ring_shader, cloud_shader, atmospheric_shader;
 
 public:
 	shader_t nebula_shader, asteroid_shader;
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
 	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) {
-		return planet_shader[svars.ring_ro > 0.0][body.gas_giant].enable_planet(body, svars, planet_pos, use_light2);
+		return planet_shader[svars.ring_ro > 0.0][body.gas_giant][body.type == UTYPE_MOON].enable_planet(body, svars, planet_pos, use_light2);
 	}
-	void disable_planet_shader() {planet_shader[0][0].disable_planet();}
+	void disable_planet_shader() {planet_shader[0][0][0].disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
 	void disable_star_shader() {star_shader.disable_star();}
 	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir) {

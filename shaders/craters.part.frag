@@ -1,7 +1,3 @@
-float rand_01  (float val) {return fract(sin(12.9898 * val) * 43758.5453);}
-float rand_pm1 (float val) {return 2.0*(rand_01(val) - 0.5);}
-vec3  rand_vec3(float val) {return vec3(rand_pm1(val), rand_pm1(val+1.0), rand_pm1(val+2.0));}
-
 // add craters by modifying the normal
 // assumes the object center is at (0,0,0) in world space
 // normal is in eye space

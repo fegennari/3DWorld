@@ -880,6 +880,7 @@
     <None Include="shaders\procedural_rock.frag" />
     <None Include="shaders\procedural_rock.vert" />
     <None Include="shaders\procedural_texture.part.frag" />
+    <None Include="shaders\rand_gen.part" />
     <None Include="shaders\shadow_map.part" />
     <None Include="shaders\ship_draw.frag" />
     <None Include="shaders\ship_draw.vert" />
