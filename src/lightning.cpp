@@ -91,10 +91,6 @@ void compute_volume_matrix_if_invalid() {
 
 void lightning::gen() {
 
-	int xpos(0), ypos(0);
-	float max_e(0.0), charge(0);
-	point pt(0, 0, 0);
-	static int l_frame_counter(1);
 	L_STRENGTH_MULT = BASE_L_STRENGTH_MULT*(MESH_Z_SIZE/50.0);
 	L_DAMAGE_MULT   = BASE_L_DAMAGE_MULT  *(MESH_Z_SIZE/50.0);
 	is_cloudy       = 1;
@@ -104,12 +100,12 @@ void lightning::gen() {
 		path.clear();
 		return;
 	}
-	int const rnum(int(fticks*LIGHTNING_FREQ));
-
 	if (!animate2) {
 		draw();
 		return;
 	}
+	int const rnum(int(fticks*LIGHTNING_FREQ));
+
 	if (rnum <= 1 || (rand()%rnum) != 0) {
 		if (enabled == 1) {
 			if (time < int(fticks*((float)LITNING_TIME))) {
@@ -131,6 +127,10 @@ void lightning::gen() {
 		path[i].destroy();
 	}
 	path.clear();
+	int xpos(0), ypos(0);
+	float max_e(0.0), charge(0);
+	point pt(0, 0, 0);
+	static int l_frame_counter(1);
 	int const zpos(MESH_Z_SIZE - 1);
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -170,7 +170,7 @@ void lightning::gen() {
 	litning_pos.z += 0.01;
 	draw();
 	++l_frame_counter;
-	gen_sound(((rand()&1) ? SOUND_THUNDER : SOUND_THUNDER2), litning_pos, 4.0);
+	play_thunder(litning_pos);
 }
 
 

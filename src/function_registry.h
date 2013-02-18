@@ -204,6 +204,7 @@ void draw_billboard(point const &pos, point const &viewer, vector3d const &up_di
 					float xsize, float ysize, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]);
 void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2);
+void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2, bool make_global);
 void begin_line_tquad_draw(bool draw_as_tris=0);
 void end_line_tquad_draw();
 void draw_animated_billboard(point const &pos, float size, float timescale);
@@ -237,6 +238,7 @@ float get_inf_terrain_fog_dist();
 
 // function prototypes - tiled mesh
 float draw_tiled_terrain(bool reflection_pass);
+void draw_tiled_terrain_lightning(bool reflection_pass);
 void clear_tiled_terrain();
 void reset_tiled_terrain_state();
 float get_tiled_terrain_water_level();

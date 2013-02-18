@@ -1078,6 +1078,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	draw_sun_flare();
 	camera_pdu.valid = 1;
 	if (display_mode & 0x40) {draw_cloud_plane(1);} // slower but a nice effect
+	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	// setup above-water clip plane for mesh
 	double const plane[4] = {0.0, 0.0, 1.0, -water_plane_z}; // water at z=-water_z (mirrored)
 	glEnable(GL_CLIP_PLANE0);
@@ -1165,12 +1166,12 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	ocean.z     = water_plane_z;
 	camera_mode = 1;
 	mesh_type   = 0;
-	unsigned reflection_tid(0);
-	
+
 	if (show_fog || underwater) {
 		glClearColor_rgba(set_inf_terrain_fog(underwater, zmin2));
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
+	unsigned reflection_tid(0);
 	if (draw_water && !underwater) reflection_tid = create_reflection();
 
 	if (combined_gu) {
@@ -1189,6 +1190,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (TIMETEST) PRINT_TIME("3.2");
 	calc_cur_ambient_diffuse();
 	if (TIMETEST) PRINT_TIME("3.25");
+	if (show_lightning) {draw_tiled_terrain_lightning(0);}
 	zmin2 = draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.3");
 	if (underwater ) {draw_tiled_terrain_precipitation();}

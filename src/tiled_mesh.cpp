@@ -11,6 +11,7 @@
 #include "scenery.h"
 #include "grass.h"
 #include "tree_3dw.h"
+#include "openal_wrap.h"
 
 
 bool const DEBUG_TILES        = 0;
@@ -35,8 +36,8 @@ float const GRASS_LOD_SCALE   = 16.0;
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees;
-extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width;
+extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks;
 extern point sun_pos, moon_pos, surface_pos;
 extern float h_dirt[];
 extern texture_t textures[];
@@ -981,12 +982,75 @@ public:
 }; // tile_t
 
 
+// FIXME: move to lightning.cpp?
+float const LIGHTNING_FREQ = 200.0;
+float const LITNING_TIME2  = 100.0;
+float const LITNING_DIST   = 1.2;
+
+
+struct lightning_strike_t {
+
+	int time;
+	line3d path;
+
+	lightning_strike_t() : time(0) {}
+	void clear() {path.destroy(); time = 0;}
+		
+	void gen() {
+		float const cloud_zmax(get_cloud_zmax()), hmax(cloud_zmax - water_plane_z);
+		float const gen_radius(LITNING_DIST*get_scaled_tile_radius()), max_dxy(0.05*hmax), max_dz(0.1*hmax);
+		point const camera(get_camera_pos());
+		point pos((camera.x + gen_radius*signed_rand_float()), (camera.y + gen_radius*signed_rand_float()), cloud_zmax);
+		path.points.push_back(pos);
+		
+		while (1) {
+			pos.z -= max_dz*rand_float(); // move down
+			for (unsigned d = 0; d < 2; ++d) {pos[d] += max_dxy*signed_rand_float();}
+			float const mzval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 0)), zstop(max(mzval, water_plane_z));
+			path.points.push_back(pos);
+			if (pos.z < zstop) break; // mesh or water intersection (should the line be clipped?)
+		}
+		assert(path.points.size() >= 2);
+		path.width = 2.0;
+		path.color = LITN_C;
+		time = 1; // nonzero
+		play_thunder(path.points[path.points.size()-2]); // second to the last (above the mesh)
+	}
+
+	void update() {
+		int const rnum(int(fticks*LIGHTNING_FREQ));
+
+		if (time > 0) { // enabled
+			if (time > int(fticks*LITNING_TIME2)) { // check for end time
+				clear();
+			}
+			else if (animate2) {
+				time += iticks;
+			}
+		}
+		else if (animate2 && (rnum <= 1 || (rand()%rnum) == 0)) {
+			gen();
+		}
+	}
+
+	void draw() const {
+		if (time == 0) return;
+		assert(path.points.size() >= 2);
+		//if (animate2) add_dynamic_light(0.6*path.width*lscale, path.points.back(), path.color);
+		glEnable(GL_LINE_SMOOTH);
+		path.draw(0); // draw as in add_lightning_wray()? disable fog?
+		glDisable(GL_LINE_SMOOTH);
+	}
+};
+
+
 class tile_draw_t {
 
 	typedef map<tile_xy_pair, tile_t*> tile_map;
 	tile_map tiles;
 	vector<point> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;
+	lightning_strike_t lightning_strike;
 
 public:
 	tile_draw_t() {
@@ -1336,6 +1400,11 @@ public:
 		grass_tile_manager.end_draw();
 	}
 
+	void update_lightning(bool reflection_pass) {
+		if (!reflection_pass) {lightning_strike.update();}
+		lightning_strike.draw();
+	}
+
 	void clear_vbos_tids(bool vclear, bool tclear) {
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			i->second->clear_vbo_tid(vclear, tclear);
@@ -1382,6 +1451,11 @@ float draw_tiled_terrain(bool reflection_pass) {
 	float const zmin(terrain_tile_draw.draw(reflection_pass));
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	return zmin;
+}
+
+
+void draw_tiled_terrain_lightning(bool reflection_pass) {
+	terrain_tile_draw.update_lightning(reflection_pass);
 }
 
 
