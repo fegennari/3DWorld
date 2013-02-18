@@ -8,9 +8,6 @@
 #include <fstream>
 
 
-bool const USE_LINE3D_TQUADS = 0;
-
-
 extern vector3d up_norm;
 
 
@@ -300,7 +297,7 @@ void shape3d::destroy() {
 // ************** LINE3D *************
 
 
-void line3d::draw() const {
+void line3d::draw(bool draw_as_tquads) const {
 
 	if (points.empty()) return;
 	
@@ -308,11 +305,12 @@ void line3d::draw() const {
 		cout << "Invalid line: Cannot draw." << endl;
 		return;
 	}
-	if (USE_LINE3D_TQUADS) {
+	if (draw_as_tquads) {
 		float const w(0.01*width);
 		begin_line_tquad_draw();
 
 		for (unsigned i = 1; i < points.size(); ++i) {
+			//draw_line_as_tris(points[i-1], points[i], w, w, color, color, 0);
 			draw_line_tquad(points[i-1], points[i], w, w, color, color);
 		}
 		end_line_tquad_draw();

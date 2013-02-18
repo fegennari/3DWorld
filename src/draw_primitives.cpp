@@ -852,6 +852,24 @@ void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, color
 }
 
 
+void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2, bool make_global) {
+
+	assert(w1 > 0.0 && w2 > 0.0 && color1.is_valid() && color2.is_valid()); // validate
+	point pts[5];
+	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
+	pts[4] = p2;
+	int const ptix[9] = {2, 1, 4, 4, 1, 0, 4, 0, 3};
+	float const tc[9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};
+	colorRGBA const color[9] = {color2, color1, color2, color2, color1, color1, color2, color1, color2};
+
+	for (unsigned i = 0; i < 9; ++i) { // draw as 3 triangles
+		color[i].do_glColor();
+		glTexCoord2f(tc[i], 0.5); // 1D blur texture
+		(make_global ? make_pt_global(pts[ptix[i]]) : pts[ptix[i]]).do_glVertex();
+	}
+}
+
+
 void begin_line_tquad_draw(bool draw_as_tris) {
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

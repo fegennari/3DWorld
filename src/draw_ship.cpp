@@ -82,20 +82,8 @@ void free_ship_dlists() {dlist_manager.clear_dlists();}
 void usw_ray::draw() const { // use single sided cylinder with 1D blur rotated towards camera
 
 	// camera view clip?
-	assert(w1 > 0.0 && w2 > 0.0 && color1.is_valid() && color2.is_valid()); // validate
 	//draw_line_tquad(p1, p2, w1, w2, color1, color2);
-	point pts[5];
-	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
-	pts[4] = p2;
-	int const ptix[9] = {2, 1, 4, 4, 1, 0, 4, 0, 3};
-	float const tc[9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};
-	colorRGBA const color[9] = {color2, color1, color2, color2, color1, color1, color2, color1, color2};
-
-	for (unsigned i = 0; i < 9; ++i) { // draw as 3 triangles
-		color[i].do_glColor();
-		glTexCoord2f(tc[i], 0.5); // 1D blur texture
-		make_pt_global(pts[ptix[i]]).do_glVertex();
-	}
+	draw_line_as_tris(p1, p2, w1, w2, color1, color2, 1);
 }
 
 

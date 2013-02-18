@@ -873,8 +873,9 @@ public:
 	colorRGBA color;
 
 	line3d() {}
-	void draw() const;
+	void draw(bool draw_as_tquads=0) const;
 	void destroy();
+	bool empty() const {return points.empty();}
 };
 
 
