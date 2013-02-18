@@ -23,6 +23,9 @@ vector<delayed_sound_t> delayed_sounds;
 extern int frame_counter, iticks;
 extern float CAMERA_RADIUS;
 
+float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {1.0, 0.1, 0.1};
+float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0};
+
 
 // supported: au, wav
 // not supported: mp3, aif
@@ -74,7 +77,7 @@ void setup_sounds() {
 
 	for (unsigned i = 0; i < NUM_LOOP_SOUNDS; ++i) { // looping_source i is bound to sounds buffer i
 		openal_source &source(looping_sources.get_source(i));
-		source.setup(sounds.get_buffer(i), all_zeros, 1.0, 1.0, 1, 1);
+		source.setup(sounds.get_buffer(i), all_zeros, loop_sound_gains[i], loop_sound_pitches[i], 1, 1);
 	}
 }
 
@@ -391,6 +394,11 @@ void proc_delayed_sounds() {
 		delayed_sounds.pop_back();
 		--i; // wraparound ok
 	}
+}
+
+
+void play_thunder(point const &pos) {
+	gen_sound(((rand()&1) ? SOUND_THUNDER : SOUND_THUNDER2), pos, 4.0);
 }
 
 
