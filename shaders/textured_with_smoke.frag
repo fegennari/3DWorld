@@ -15,7 +15,7 @@ const float SMOKE_SCALE = 0.25;
 
 // Note: dynamic point lights use reflection vector for specular, and specular doesn't move when the eye rotates
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
-#define ADD_LIGHT(i) lit_color += add_light_comp(n, i).rgb
+#define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
 vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 	float nscale = (use_shadow_map ? get_shadow_map_weight(epos, 0) : 1.0);

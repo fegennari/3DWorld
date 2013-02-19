@@ -255,6 +255,8 @@ float get_tree_z_bottom(float z, point const &pos) {
 	return ((world_mode == WMODE_GROUND && is_over_mesh(pos)) ? max(zbottom, (z - TREE_DEPTH)) : (z - TREE_DEPTH));
 }
 
+bool lightning_enabled() {return (world_mode == WMODE_INF_TERRAIN && glIsEnabled(GL_LIGHT2));}
+
 
 colorRGBA get_leaf_base_color(int type) {
 
@@ -397,7 +399,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches
 void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS - actually ignored due to custom lighting, but useful to have for reference
-	if (!has_dl_sources)                 {s.set_prefix("#define NO_LEAF_DLIGHTS",     0);} // VS optimization
+	if (!has_dl_sources && !lightning_enabled()) {s.set_prefix("#define NO_LEAF_DLIGHTS", 0);} // VS optimization
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
 	s.setup_enabled_lights(2);
@@ -991,6 +993,9 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 	if (enable_dlights) {
 		num_dlights = enable_dynamic_lights((sphere_center() + xlate), td.sphere_radius);
 		s.add_uniform_int("num_dlights", num_dlights);
+	}
+	else if (lightning_enabled()) {
+		s.add_uniform_int("num_dlights", 1);
 	}
 	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
 	glPushMatrix();

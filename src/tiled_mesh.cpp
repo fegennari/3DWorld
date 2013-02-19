@@ -1001,7 +1001,10 @@ public:
 
 	point get_pos() const {
 		assert(path.points.size() >= 2);
-		return path.points[path.points.size()-2];
+		//return path.points[path.points.size()-2];
+		point avg_pos(all_zeros);
+		for (vector<point>::const_iterator i = path.points.begin(); i != path.points.end(); ++i) {avg_pos += *i;}
+		return avg_pos / path.points.size();
 	}
 		
 	void gen() {
@@ -1054,7 +1057,7 @@ public:
 	}
 
 	void create_gl_light(int light) const {
-		colorRGBA const ambient(path.color*0.25);
+		colorRGBA const ambient(path.color*0.2);
 		float const radius(0.4*get_scaled_tile_radius());
 		set_colors_and_enable_light(light, &ambient.R, &path.color.R);
 		glLightf(light, GL_CONSTANT_ATTENUATION,  0.1);
@@ -1153,11 +1156,17 @@ public:
 		set_multitex(0);
 	}
 
-	// uses texture units 0-9
-	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
+	static void shared_shader_lighting_setup(shader_t &s) {
 		s.setup_enabled_lights(3); // sun, moon, and lightning
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-		s.set_prefix("#define NUM_OCTAVES 4",     1); // FS (for clouds)
+		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
+		s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
+	}
+
+	// uses texture units 0-9
+	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
+		shared_shader_lighting_setup(s);
+		s.set_prefix("#define NUM_OCTAVES 4", 1); // FS (for clouds)
 		s.set_bool_prefix("apply_cloud_shadows", (cloud_shadows_enabled() && !reflection_pass), 1); // FS
 		s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
 		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+tiled_mesh");
@@ -1242,11 +1251,11 @@ public:
 				<< num_trees << ", gpu mem: " << mem/1024/1024 << ", tree mem: " << tree_mem/1024/1024 << endl;
 		}
 		run_post_mesh_draw();
-		lightning_strike.end_draw(); // in case it was enabled
 		if (pine_trees_enabled ()) {draw_pine_trees (to_draw, reflection_pass);}
 		if (decid_trees_enabled()) {draw_decid_trees(to_draw, reflection_pass);}
 		if (scenery_enabled    ()) {draw_scenery    (to_draw, reflection_pass);}
 		if (is_grass_enabled   ()) {draw_grass      (to_draw, reflection_pass);}
+		lightning_strike.end_draw(); // in case it was enabled
 		return zmin;
 	}
 
@@ -1267,10 +1276,7 @@ public:
 	}
 
 	void set_pine_tree_shader(shader_t &s, string const &vs) const {
-		s.set_prefix("#define USE_LIGHT_COLORS",   0); // VS
-		s.set_prefix("#define USE_GOOD_SPECULAR",  0); // VS
-		s.set_prefix("#define USE_QUADRATIC_FOG",  1); // FS
-		s.setup_enabled_lights(2);
+		shared_shader_lighting_setup(s);
 		s.set_vert_shader("ads_lighting.part*+tc_by_vert_id.part+" + vs);
 		s.set_frag_shader("linear_fog.part+pine_tree");
 		s.begin_shader();
@@ -1358,9 +1364,7 @@ public:
 
 	void draw_scenery(draw_vect_t const &to_draw, bool reflection_pass) {
 		shader_t s;
-		s.setup_enabled_lights(2);
-		s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
-		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		shared_shader_lighting_setup(s);
 		s.set_vert_shader("ads_lighting.part*+two_lights_texture");
 		s.set_frag_shader("linear_fog.part+textured_with_fog");
 		s.begin_shader();
@@ -1391,13 +1395,10 @@ public:
 		bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled() && !reflection_pass);
 
 		for (unsigned pass = 0; pass < 2; ++pass) { // wind, no wind
-			s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
-			s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
-			s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			s.set_prefix("#define NUM_OCTAVES 4",     0); // VS (for clouds)
+			shared_shader_lighting_setup(s);
+			s.set_prefix("#define NUM_OCTAVES 4", 0); // VS (for clouds)
 			s.set_bool_prefix("apply_cloud_shadows", use_cloud_shadows, 0); // VS
 			s.set_bool_prefix("enable_grass_wind", (pass == 0), 0); // VS
-			s.setup_enabled_lights(2);
 			s.set_vert_shader("ads_lighting.part*+wind.part*+perlin_clouds.part*+grass_tiled");
 			s.set_frag_shader("linear_fog.part+textured_with_fog");
 			//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
