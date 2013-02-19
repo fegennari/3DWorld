@@ -369,7 +369,7 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 }
 
 
-void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener) {
+void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener) { // delay in seconds
 
 	if (delay == 0.0) {
 		gen_sound(id, pos, gain, pitch, rel_to_listener);
@@ -397,8 +397,8 @@ void proc_delayed_sounds() {
 }
 
 
-void play_thunder(point const &pos) {
-	gen_sound(((rand()&1) ? SOUND_THUNDER : SOUND_THUNDER2), pos, 4.0);
+void play_thunder(point const &pos, float gain, float delay) {
+	gen_delayed_sound(delay, ((rand()&1) ? SOUND_THUNDER : SOUND_THUNDER2), pos, gain);
 }
 
 

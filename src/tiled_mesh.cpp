@@ -982,10 +982,11 @@ public:
 }; // tile_t
 
 
-// FIXME: move to lightning.cpp?
-float const LIGHTNING_FREQ = 200.0;
-float const LITNING_TIME2  = 100.0;
-float const LITNING_DIST   = 1.2;
+// move to lightning.cpp?
+int   const LIGHTNING_LIGHT = 2;
+float const LIGHTNING_FREQ  = 200.0;
+float const LITNING_TIME2   = 100.0;
+float const LITNING_DIST    = 1.2;
 
 
 struct lightning_strike_t {
@@ -1013,8 +1014,10 @@ struct lightning_strike_t {
 		assert(path.points.size() >= 2);
 		path.width = 2.0;
 		path.color = LITN_C;
-		time = 1; // nonzero
-		play_thunder(path.points[path.points.size()-2]); // second to the last (above the mesh)
+		time       = 1; // nonzero
+		point const lightning_pos(path.points[path.points.size()-2]);
+		float const delay(2.0*p2p_dist(camera, lightning_pos)/gen_radius); // max of 2s delay
+		play_thunder(lightning_pos, 10.0, delay); // second to the last (above the mesh)
 	}
 
 	void update() {

@@ -143,7 +143,7 @@ void set_openal_listener_as_player();
 void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
 void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0); // no vel
 void proc_delayed_sounds();
-void play_thunder(point const &pos);
+void play_thunder(point const &pos, float gain, float delay);
 void init_openal(int &argc, char** argv);
 
 

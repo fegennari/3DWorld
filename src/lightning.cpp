@@ -170,7 +170,7 @@ void lightning::gen() {
 	litning_pos.z += 0.01;
 	draw();
 	++l_frame_counter;
-	play_thunder(litning_pos);
+	play_thunder(litning_pos, 4.0, 0.0);
 }
 
 
