@@ -331,7 +331,6 @@ public:
 			assert(adj_sh_out.size() == zvsize);
 			sh_in[!d] = &adj_sh_out.front(); // chain our input to our neighbor's output
 		}
-
 		// calculate shadows of current tile
 		calc_mesh_shadows(l, lpos, &zvals.front(), &smask[l].front(), zvsize, zvsize,
 			sh_in[0], sh_in[1], &sh_out[l][0].front(), &sh_out[l][1].front());
@@ -373,8 +372,9 @@ public:
 		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // calculate mesh shadows for each light source
 			if (!calc_light[l])    continue; // light not enabled
 			if (!smask[l].empty()) continue; // already calculated (cached)
-			smask[l].resize(zvals.size());
+			smask[l].resize(zvals.size(), 0);
 
+			//if (normal_zmin < 1.0 && get_light_pos(l).get_norm().xy_mag() < normal_zmin) { // terrain slope lower than sun slope
 			if (no_push) {
 				calc_shadows_for_light(l);
 			}

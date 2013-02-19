@@ -328,8 +328,8 @@ class mesh_shadow_gen {
 		if (!do_line_clip(v1, v2, d)) return; // edge case ([zmin, zmax] should contain 0.0)
 		int const xa(get_xpos(v1.x)), ya(get_ypos(v1.y)), xb(get_xpos(v2.x)), yb(get_ypos(v2.y));
 		int const dx(xb - xa), dy(yb - ya), steps(max(abs(dx), abs(dy)));
-		double const xinc(dx/(double)steps), yinc(dy/(double)steps);
 		bool const dim(fabs(dir.x) < fabs(dir.y));
+		double const xinc(dx/(double)steps), yinc(dy/(double)steps), dir_ratio(dir.z/dir[dim]);
 		double x(xa), y(ya);
 		bool inited(0);
 		point cur(all_zeros);
@@ -356,7 +356,7 @@ class mesh_shadow_gen {
 					cur    = point(pt.x, pt.y, sh_in_x[xp]);
 					inited = 1;
 				}
-				float const shadow_z((pt[dim] - cur[dim])*dir.z/dir[dim] + cur.z);
+				float const shadow_z((pt[dim] - cur[dim])*dir_ratio + cur.z);
 
 				if (inited && shadow_z > pt.z) { // shadowed
 					smask[yp*xsize+xp] |= MESH_SHADOW;
@@ -405,10 +405,8 @@ void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, uns
 {
 	bool const no_shadow(l == LIGHT_MOON && combined_gu);
 	bool const all_shadowed(!no_shadow && lpos.z < zmin);
-
-	for (int i = 0; i < xsize*ysize; ++i) {
-		smask[i] = (all_shadowed ? MESH_SHADOW : 0);
-	}
+	unsigned char const val(all_shadowed ? MESH_SHADOW : 0);
+	for (int i = 0; i < xsize*ysize; ++i) {smask[i] = val;}
 	if (shadow_detail == 0 || no_shadow || FAST_VISIBILITY_CALC == 3) return;
 	if (lpos.x == 0.0 && lpos.y == 0.0) return; // straight down = no mesh shadows
 	mesh_shadow_gen(mh, smask, xsize, ysize, sh_in_x, sh_in_y, sh_out_x, sh_out_y).run(lpos);
