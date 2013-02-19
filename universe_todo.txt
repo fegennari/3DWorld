@@ -14,5 +14,5 @@ ship, maybe all ships?)
 http://vterrain.org/Plants/Alpha/
 colors for alpha pixels are nearby colors
 
-Tiled terrain perf degredation
 Tiled terrain shadow perf
+Solar flares too large?
