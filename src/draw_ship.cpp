@@ -594,7 +594,7 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 	float const dmag(delta.mag());
 	if (dmag < TOLERANCE) return; // shouldn't happen?
 
-	for (unsigned i = 0; i < num_segments; ++i) {
+	for (unsigned i = 0; i < num_segments; ++i) { // FIXME: connect segments together better somehow so there is no gap or overlap?
 		vadd_rand(delta, 0.25*dmag);
 		delta *= dmag/delta.mag(); // normalize
 		colorRGBA c[2];
@@ -607,7 +607,7 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 		}
 		t_wrays.push_back(usw_ray(w[0], w[1], cur, (cur + delta), c[0], c[1]));
 		cur += delta;
-		// fork - recursive - class?
+		// create recursive forks?
 	}
 }
 

@@ -7,7 +7,8 @@ uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
 uniform vec3 cloud_offset    = vec3(0,0,0);
 uniform sampler2D shadow_normal_tex, noise_tex;
-varying vec3 vertex, epos;
+varying vec3 vertex;
+varying vec4 epos;
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
@@ -32,7 +33,7 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 	float NdotL = dot(normal, lightDir);
 	vec4 light  = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 
-	if (apply_cloud_shadows) {
+	if (apply_cloud_shadows && vertex.z < cloud_plane_z) {
 		vec3 cpos = vertex + cloud_offset;
 		float t = (cloud_plane_z - cpos.z)/(light.z - cpos.z); // sky intersection position along vertex->light vector
 		normal *= 1.0 - 0.75*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
@@ -42,7 +43,7 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 	vec4 diffuse = gl_LightSource[i].diffuse;
 	vec4 ambient = gl_LightSource[i].ambient;
 	vec4 color   = ambient + shadow_weight*max(dot(normal, lightDir), 0.0)*diffuse;
-	if (enable_light0) {color += get_light_specular(normal, lightDir, epos, shadow_weight*spec, shininess);}
+	if (enable_light0) {color += get_light_specular(normal, lightDir, epos.xyz, shadow_weight*spec, shininess);}
 	
 	// apply underwater attenuation
 	// Note: ok if vertex is above the water, dist will come out as 0
@@ -76,6 +77,7 @@ void main()
 		float shininess = 20.0*weights.b + 40.0*weights4;
 		color += add_light_comp(normal, 0, shadow_normal.w, spec, shininess);
 	}
-	if (enable_light1) color += add_light_comp(normal, 1, shadow_normal.w, 0.0, 1.0);
+	if (enable_light1) {color += add_light_comp(normal, 1, shadow_normal.w, 0.0, 1.0);}
+	if (enable_light2) {color += add_light_comp(normal, 2, 1.0, 0.0, 1.0) * calc_light_atten(epos, 2);}
 	gl_FragColor = apply_fog(vec4((texel0.rgb * texel1.rgb * color.rgb), color.a)); // add fog
 }

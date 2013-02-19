@@ -310,11 +310,9 @@ void draw_blasts() {
 void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light) {
 
 	if (color.alpha == 0.0 || color == BLACK) return; // shouldn't get here
-
-	// set color
 	float uambient[4], udiffuse[4];
 
-	for (unsigned d = 0; d < 3; ++d) {
+	for (unsigned d = 0; d < 3; ++d) { // set color
 		uambient[d] = 0.2*color[d];
 		udiffuse[d] = 1.0*color[d];
 	}

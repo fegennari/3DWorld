@@ -983,19 +983,26 @@ public:
 
 
 // move to lightning.cpp?
-int   const LIGHTNING_LIGHT = 2;
-float const LIGHTNING_FREQ  = 200.0;
-float const LITNING_TIME2   = 100.0;
+int   const LIGHTNING_LIGHT = GL_LIGHT2;
+float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
+float const LITNING_TIME2   = 40.0;
 float const LITNING_DIST    = 1.2;
 
 
-struct lightning_strike_t {
+class lightning_strike_t {
 
 	int time;
 	line3d path;
 
+public:
 	lightning_strike_t() : time(0) {}
+	bool enabled() const {return (time > 0);}
 	void clear() {path.destroy(); time = 0;}
+
+	point get_pos() const {
+		assert(path.points.size() >= 2);
+		return path.points[path.points.size()-2];
+	}
 		
 	void gen() {
 		float const cloud_zmax(get_cloud_zmax()), hmax(cloud_zmax - water_plane_z);
@@ -1015,7 +1022,9 @@ struct lightning_strike_t {
 		path.width = 2.0;
 		path.color = LITN_C;
 		time       = 1; // nonzero
-		point const lightning_pos(path.points[path.points.size()-2]);
+
+		// play thunder sound
+		point const lightning_pos(get_pos());
 		float const delay(2.0*p2p_dist(camera, lightning_pos)/gen_radius); // max of 2s delay
 		play_thunder(lightning_pos, 10.0, delay); // second to the last (above the mesh)
 	}
@@ -1023,7 +1032,7 @@ struct lightning_strike_t {
 	void update() {
 		int const rnum(int(fticks*LIGHTNING_FREQ));
 
-		if (time > 0) { // enabled
+		if (enabled()) {
 			if (time > int(fticks*LITNING_TIME2)) { // check for end time
 				clear();
 			}
@@ -1037,12 +1046,25 @@ struct lightning_strike_t {
 	}
 
 	void draw() const {
-		if (time == 0) return;
-		assert(path.points.size() >= 2);
-		//if (animate2) add_dynamic_light(0.6*path.width*lscale, path.points.back(), path.color);
+		if (!enabled()) return;
 		glEnable(GL_LINE_SMOOTH);
-		path.draw(0); // draw as in add_lightning_wray()? disable fog?
+		path.draw(0); // disable fog?
 		glDisable(GL_LINE_SMOOTH);
+		create_gl_light(LIGHTNING_LIGHT);
+	}
+
+	void create_gl_light(int light) const {
+		colorRGBA const ambient(path.color*0.25);
+		float const radius(0.4*get_scaled_tile_radius());
+		set_colors_and_enable_light(light, &ambient.R, &path.color.R);
+		glLightf(light, GL_CONSTANT_ATTENUATION,  0.1);
+		glLightf(light, GL_LINEAR_ATTENUATION,    0.0);
+		glLightf(light, GL_QUADRATIC_ATTENUATION, 1.0/(radius*radius));
+		set_gl_light_pos(light, get_pos(), 1.0); // point light source position
+	}
+
+	void end_draw() const {
+		if (enabled()) {glDisable(LIGHTNING_LIGHT);}
 	}
 };
 
@@ -1133,12 +1155,12 @@ public:
 
 	// uses texture units 0-9
 	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
-		s.setup_enabled_lights();
+		s.setup_enabled_lights(3); // sun, moon, and lightning
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_prefix("#define NUM_OCTAVES 4",     1); // FS (for clouds)
 		s.set_bool_prefix("apply_cloud_shadows", (cloud_shadows_enabled() && !reflection_pass), 1); // FS
 		s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
-		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+tiled_mesh");
+		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+tiled_mesh");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
@@ -1220,6 +1242,7 @@ public:
 				<< num_trees << ", gpu mem: " << mem/1024/1024 << ", tree mem: " << tree_mem/1024/1024 << endl;
 		}
 		run_post_mesh_draw();
+		lightning_strike.end_draw(); // in case it was enabled
 		if (pine_trees_enabled ()) {draw_pine_trees (to_draw, reflection_pass);}
 		if (decid_trees_enabled()) {draw_decid_trees(to_draw, reflection_pass);}
 		if (scenery_enabled    ()) {draw_scenery    (to_draw, reflection_pass);}
