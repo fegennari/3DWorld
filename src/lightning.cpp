@@ -129,7 +129,6 @@ void lightning::gen() {
 	path.clear();
 	int xpos(0), ypos(0);
 	float max_e(0.0), charge(0);
-	point pt(0, 0, 0);
 	static int l_frame_counter(1);
 	int const zpos(MESH_Z_SIZE - 1);
 
@@ -165,7 +164,7 @@ void lightning::gen() {
 	enabled = 1;
 	cells_seen.clear();
 	start.assign(get_xval(xpos), get_yval(ypos), (CLOUD_CEILING + ztop));
-	gen_recur(pt, max_e, xpos, ypos, MESH_Z_SIZE-1, (CLOUD_CEILING + ztop), l_frame_counter);
+	gen_recur(start, max_e, xpos, ypos, MESH_Z_SIZE-1, (CLOUD_CEILING + ztop), l_frame_counter);
 	litning_pos    = end;
 	litning_pos.z += 0.01;
 	draw();
@@ -192,7 +191,7 @@ void add_forks(int lforks[5][2], int &nforks, int val, int zpos, int x, int y) {
 }
 
 
-void lightning::gen_recur(point &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter) {
+void lightning::gen_recur(point const &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter) {
 
 	int i(0), hit_water(0), lforks[5][2];
 	unsigned const path_id((unsigned)path.size());
@@ -204,7 +203,7 @@ void lightning::gen_recur(point &start, float strength, int xpos, int ypos, int 
 	int ptx(xpos), pty(ypos);
 	float const dz((CLOUD_CEILING + ztop - zmin)/MESH_Z_SIZE);
 
-	if (path_id > 0) {
+	if (start != point(get_xval(xpos), get_yval(ypos), zval)) {
 		points[0] = start;
 		++i;
 	}
