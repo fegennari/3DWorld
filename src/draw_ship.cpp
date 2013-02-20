@@ -82,8 +82,8 @@ void free_ship_dlists() {dlist_manager.clear_dlists();}
 void usw_ray::draw() const { // use single sided cylinder with 1D blur rotated towards camera
 
 	// camera view clip?
-	//draw_line_tquad(p1, p2, w1, w2, color1, color2);
-	draw_line_as_tris(p1, p2, w1, w2, color1, color2, 1);
+	//draw_line_tquad(p1, p2, w1, w2, color1, color2, &prev, &next);
+	draw_line_as_tris(p1, p2, w1, w2, color1, color2, &prev, &next, 1);
 }
 
 
@@ -589,12 +589,12 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 	//t_wrays.push_back(usw_ray(width, width, p1, p2, LITN_C, ALPHA0));
 	unsigned const num_segments((rand()&7)+1);
 	float const ns_inv(1.0/num_segments);
-	point cur(p1);
+	point cur(p1), prev(p1);
 	vector3d delta((p2 - p1)*ns_inv);
 	float const dmag(delta.mag());
 	if (dmag < TOLERANCE) return; // shouldn't happen?
 
-	for (unsigned i = 0; i < num_segments; ++i) { // FIXME: connect segments together better somehow so there is no gap or overlap?
+	for (unsigned i = 0; i < num_segments; ++i) {
 		vadd_rand(delta, 0.25*dmag);
 		delta *= dmag/delta.mag(); // normalize
 		colorRGBA c[2];
@@ -605,8 +605,12 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 			c[d].set_valid_color();
 			w[d] = (1.0 - 0.5*(i+d)*ns_inv)*width;
 		}
-		t_wrays.push_back(usw_ray(w[0], w[1], cur, (cur + delta), c[0], c[1]));
-		cur += delta;
+		point const next(cur + delta);
+		if (i > 0) {t_wrays.back().next = next;}
+		t_wrays.push_back(usw_ray(w[0], w[1], cur, next, c[0], c[1]));
+		if (i > 0) {t_wrays.back().prev = prev;}
+		prev = cur;
+		cur  = next;
 		// create recursive forks?
 	}
 }

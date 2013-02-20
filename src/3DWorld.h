@@ -889,7 +889,7 @@ struct lightning { // size = 40
 
 	lightning() : time(0), enabled(-1) {}
 	void gen();
-	void gen_recur(point &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter);
+	void gen_recur(point const &start, float strength, int xpos, int ypos, int zpos, float zval, int l_frame_counter);
 	void draw() const;
 	
 	cell_ix_t get_cell_ix(unsigned const x, unsigned const y, unsigned const z) const {

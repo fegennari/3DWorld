@@ -826,22 +826,42 @@ void draw_billboard(point const &pos, point const &viewer, vector3d const &up_di
 }
 
 
+// ordered p1+, p1-, p2-, p2+
 bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]) {
 
 	int npts(0);
 	vector3d const v1(get_camera_pos(), (p1 + p2)*0.5);
 	vector3d v2;
-	if (v1.mag() > 1.0E5*min(w1, w2)) return 0; // too far away
-	cylinder_quad_projection(pts, cylinder_3dw(p1, p2, w1, w2), v1.get_norm(), v2, npts);
+	float const v1_mag(v1.mag());
+	if (v1_mag > 1.0E5*min(w1, w2)) return 0; // too far away
+	cylinder_quad_projection(pts, cylinder_3dw(p1, p2, w1, w2), v1/v1_mag, v2, npts);
 	assert(npts == 4);
 	return 1;
 }
 
 
-void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2) {
+bool get_line_segment_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4], point const* const prev, point const *const next) {
 
+	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return 0;
+	point pts2[4];
+
+	if (prev && *prev != p1 && get_line_as_quad_pts(*prev, p1, w1, w1, pts2)) {
+		pts[0] = 0.5*(pts[0] + pts2[3]); // average the points
+		pts[1] = 0.5*(pts[1] + pts2[2]); // average the points
+	}
+	if (next && *next != p2 && get_line_as_quad_pts(p2, *next, w2, w2, pts2)) {
+		pts[2] = 0.5*(pts[2] + pts2[1]); // average the points
+		pts[3] = 0.5*(pts[3] + pts2[0]); // average the points
+	}
+	return 1;
+}
+
+
+void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
+	point const* const prev, point const *const next)
+{
 	point pts[4];
-	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
+	if (!get_line_segment_as_quad_pts(p1, p2, w1, w2, pts, prev, next)) return;
 	color1.do_glColor();
 	
 	for (unsigned i = 0; i < 4; ++i) {
@@ -852,11 +872,12 @@ void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, color
 }
 
 
-void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2, bool make_global) {
-
+void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
+	point const* const prev, point const *const next, bool make_global)
+{
 	assert(w1 > 0.0 && w2 > 0.0 && color1.is_valid() && color2.is_valid()); // validate
 	point pts[5];
-	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
+	if (!get_line_segment_as_quad_pts(p1, p2, w1, w2, pts, prev, next)) return;
 	pts[4] = p2;
 	int const ptix[9] = {2, 1, 4, 4, 1, 0, 4, 0, 3};
 	float const tc[9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};

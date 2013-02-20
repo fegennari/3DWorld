@@ -309,8 +309,9 @@ void line3d::draw(bool draw_as_tquads) const {
 		float const w(0.01*width);
 		begin_line_tquad_draw();
 
-		for (unsigned i = 1; i < points.size(); ++i) { // FIXME: connect segments together better somehow so there is no gap or overlap?
-			draw_line_tquad(points[i-1], points[i], w, w, color, color);
+		for (unsigned i = 1; i < points.size(); ++i) {
+			draw_line_tquad(points[i-1], points[i], w, w, color, color,
+				((i > 1) ? &points[i-2] : NULL), ((i+1 < points.size()) ? &points[i+1] : NULL));
 		}
 		end_line_tquad_draw();
 	}

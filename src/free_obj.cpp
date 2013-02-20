@@ -333,10 +333,8 @@ void free_obj::advance_time(float timestep) {
 		dvel      = zero_vector;
 		assert(!is_nan(velocity));
 	}
-	for (unsigned i = 0; i < 3; ++i) {
-		if (fabs(velocity[i]) < TOLERANCE) velocity[i] = 0.0; // fix for denormalized numbers?
-	}
-	//if (is_ship() && !is_player_ship()) velocity = zero_vector; // testing
+	UNROLL_3X(if (fabs(velocity[i_]) < TOLERANCE) {velocity[i_] = 0.0;}) // fix for denormalized numbers?
+	//if (is_ship() && !is_player_ship()) {velocity = zero_vector;} // testing
 	pos += velocity*timestep;
 	assert(!is_nan(pos));
 
