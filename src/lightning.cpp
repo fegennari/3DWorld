@@ -202,13 +202,10 @@ void lightning::gen_recur(point const &start, float strength, int xpos, int ypos
 	vector<point> points(max_points);
 	int ptx(xpos), pty(ypos);
 	float const dz((CLOUD_CEILING + ztop - zmin)/MESH_Z_SIZE);
+	points[0] = start;
 
-	if (start != point(get_xval(xpos), get_yval(ypos), zval)) {
-		points[0] = start;
-		++i;
-	}
 	for (; zpos > 0 && i < max_points-2; --zpos, ++i) {
-		points[i].assign(get_xval(ptx), get_yval(pty), zval);
+		if (i > 0) {points[i].assign(get_xval(ptx), get_yval(pty), zval);}
 		int val(volume_matrix[zpos-1][pty][ptx]), val2(0), nforks(1), nforks2(0), x0(0);
 		lforks[0][0] = ptx;
 		lforks[0][1] = pty;
@@ -315,7 +312,7 @@ void lightning::draw() const {
 	for (unsigned i = 0; i < path.size(); ++i) {
 		assert(!path[i].points.empty());
 		if (animate2) add_dynamic_light(0.6*path[i].width*lscale, path[i].points.back(), LITN_C);
-		path[i].draw();
+		path[i].draw(0);
 	}
 	if (animate2) add_dynamic_light(7.8*lscale, litning_pos, LITN_C);
 	if (smooth_lightning) {disable_blend(); glDisable(GL_LINE_SMOOTH);}
