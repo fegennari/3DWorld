@@ -788,7 +788,8 @@ public:
 		glPushMatrix();
 		vector3d const xlate(scenery_off.get_xlate());
 		translate_to(xlate);
-		if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 1);}
+		float const scale_val(SCENERY_THRESH*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 1, scale_val);}
 		if (draw_leaves) {scenery.draw_plant_leaves  (s, 0, xlate);}
 		glPopMatrix();
 	}

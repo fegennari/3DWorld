@@ -126,6 +126,11 @@ float scenery_obj::get_shadowed_color(point const &p, float eff_radius) const { 
 }
 
 
+float scenery_obj::get_size_scale(float dist_to_camera, float scale_val, float scale_exp) const {
+	return ((scale_val == 0.0) ? 1.0 : min(1.0f, pow(scale_val/dist_to_camera, scale_exp)));
+}
+
+
 colorRGBA scenery_obj::get_atten_color(colorRGBA c) const {
 
 	water_color_atten_at_pos(c, (pos + point(0.0, 0.0, radius)));
@@ -389,7 +394,7 @@ surface_cache surface_rock_cache;
 void surface_rock::create(int x, int y, int use_xy, vbo_vntc_block_manager_t &vbo_manager) {
 
 	gen_spos(x, y, use_xy);
-	radius  = 0.5*rand_uniform2(0.2, 0.8)*rand_float2()/tree_scale;
+	radius  = rand_uniform2(0.1, 0.2)*rand_float2()/tree_scale;
 	dir     = signed_rand_vector2_norm();
 	surface = surface_rock_cache.get_surface();
 	assert(surface);
@@ -410,7 +415,7 @@ void surface_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, vbo_vntc_block_manager_t &vbo_manager) const {
+void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vntc_block_manager_t &vbo_manager) const {
 
 	assert(surface);
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
@@ -424,7 +429,7 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, v
 	color.do_glColor();
 	glPushMatrix();
 	translate_to(pos);
-	uniform_scale(scale);
+	uniform_scale(scale*get_size_scale(dist, scale_val));
 	rotate_into_plus_z(dir);
 
 	if (color == WHITE) { // not shadowed or underwater - vbo colors are correct
@@ -465,7 +470,7 @@ void s_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
+void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const {
 
 	float const rmax(1.3*radius);
 	if (!is_visible(shadow_only, rmax, xlate)) return;
@@ -482,7 +487,7 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
 	translate_to(pos);
 	rotate_about(angle, dir);
 	scale_by(scale);
-	draw_sphere_dlist(all_zeros, size, ndiv, 1);
+	draw_sphere_dlist(all_zeros, size*get_size_scale(dist, scale_val), ndiv, 1);
 	glPopMatrix();
 }
 
@@ -505,7 +510,7 @@ void voxel_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, get_tid()));
 }
 
-void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, shader_t &s) {
+void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, shader_t &s) {
 
 	assert(radius > 0.0);
 	if (!is_visible(shadow_only, radius, xlate)) return;
@@ -513,7 +518,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, sha
 	color.do_glColor();
 	glPushMatrix();
 	translate_to(pos);
-	uniform_scale(radius);
+	uniform_scale(radius*get_size_scale(distance_to_camera(pos+xlate), scale_val));
 	
 	if (s.is_setup()) {
 		model.setup_tex_gen_for_rendering(s);
@@ -570,7 +575,7 @@ void s_log::add_cobjs() {
 	coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
 }
 
-void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
+void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const {
 
 	float const sz(max(length, max(radius, radius2)));
 	point const center((pos + pt2)*0.5 + xlate);
@@ -631,7 +636,7 @@ bool s_stump::check_sphere_coll(point &center, float sphere_radius) const {
 	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.2*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
-void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate) const {
+void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const {
 
 	float const sz(max(height, max(radius, radius2)));
 	point const center(pos + point(0.0, 0.0, 0.5*height) + xlate);
@@ -777,8 +782,8 @@ void s_plant::destroy() {
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
 
 
-template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only, vector3d const &xlate) {
-	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw(sscale, shadow_only, xlate);}
+template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only, vector3d const &xlate, float scale_val) {
+	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw(sscale, shadow_only, xlate, scale_val);}
 }
 
 template<typename T> void add_scenery_vector_cobjs(vector<T> &v) {
@@ -986,7 +991,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 }
 
 
-void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld) {
+void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val) {
 
 	set_fill_mode();
 	glEnable(GL_COLOR_MATERIAL);
@@ -1002,18 +1007,18 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	if (!shadow_only) {select_texture(ROCK_SPHERE_TEX);}
 
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) {
-		surface_rocks[i].draw(sscale, shadow_only, xlate, rock_vbo_manager);
+		surface_rocks[i].draw(sscale, shadow_only, xlate, scale_val, rock_vbo_manager);
 	}
 	rock_vbo_manager.end_render();
 	glEnable(GL_COLOR_MATERIAL);
-	draw_scenery_vector(rocks,  sscale, shadow_only, xlate);
+	draw_scenery_vector(rocks,  sscale, shadow_only, xlate, scale_val);
 
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
-		voxel_rocks[i].draw(sscale, shadow_only, xlate, s);
+		voxel_rocks[i].draw(sscale, shadow_only, xlate, scale_val, s);
 	}
 	gluQuadricTexture(quadric, GL_TRUE);
-	draw_scenery_vector(logs,   sscale, shadow_only, xlate);
-	draw_scenery_vector(stumps, sscale, shadow_only, xlate);
+	draw_scenery_vector(logs,   sscale, shadow_only, xlate, scale_val);
+	draw_scenery_vector(stumps, sscale, shadow_only, xlate, scale_val);
 	gluQuadricTexture(quadric, GL_FALSE);
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
