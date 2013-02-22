@@ -311,7 +311,7 @@ public:
 
 	void calc_shadows_for_light(unsigned l) {
 		assert(!smask[l].empty());
-		tile_xy_pair const tp(x1/(int)size, y1/(int)size);
+		tile_xy_pair const tp(get_tile_xy_pair());
 
 		// pull from adjacent tiles that already had their shadows calculated
 		float const *sh_in[2] = {0, 0};
@@ -384,11 +384,12 @@ public:
 		}
 	}
 
-	tile_t *get_adj_tile(int dx, int dy) const {
-		tile_xy_pair const tp((x1/(int)size)+dx, (y1/(int)size)+dy);
-		return get_tile_from_xy(tp);
+	tile_xy_pair get_tile_xy_pair(int dx=0, int dy=0) const {
+		return tile_xy_pair((x1/(int)size)+dx, (y1/(int)size)+dy);
 	}
-
+	tile_t *get_adj_tile(int dx, int dy) const {
+		return get_tile_from_xy(get_tile_xy_pair(dx, dy));
+	}
 	tile_t *get_adj_tile_smap(int dx, int dy) const {
 		tile_t *adj_tile(get_adj_tile(dx, dy));
 		return ((adj_tile && !adj_tile->tree_map.empty()) ? adj_tile : NULL);
@@ -1186,7 +1187,47 @@ public:
 		setup_terrain_textures(s, 2, 0);
 	}
 
+	typedef set<tile_xy_pair> tile_set_t;
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
+
+	bool can_have_reflection_recur(tile_t const *const tile, point const corners[2], tile_set_t &tile_set, unsigned dim_ix) {
+		point const camera(get_camera_pos());
+		cube_t bcube(tile->get_cube());
+		if (dim_ix < 2 && !check_line_clip(camera, corners[dim_ix], bcube.d)) return 0; // not within the shadow of the original tile
+		if (!tile_set.insert(tile->get_tile_xy_pair()).second) return 0; // already seen
+		int delta[2] = {0,0};
+		tile_t const *adj[3] = {0,0,0}; // {x, y, diag}
+		
+		for (unsigned d = 0; d < 2; ++d) {
+			if      (camera[d] < bcube.d[d][0]) {delta[d] = -1;}
+			else if (camera[d] > bcube.d[d][1]) {delta[d] =  1;}
+		}
+		if (delta[0])             {adj[0] = get_tile_from_xy(tile->get_tile_xy_pair(delta[0], 0       ));} // x
+		if (delta[1])             {adj[1] = get_tile_from_xy(tile->get_tile_xy_pair(0,        delta[1]));} // y
+		if (delta[0] && delta[1]) {adj[2] = get_tile_from_xy(tile->get_tile_xy_pair(delta[0], delta[1]));} // diag
+		bool ret(0);
+
+		for (unsigned i = 0; i < 3 && !ret; ++i) {
+			if (!adj[i] || !adj[i]->is_visible()) continue;
+			ret |= (adj[i]->has_water() || can_have_reflection_recur(adj[i], corners, tile_set, i));
+		}
+		return ret;
+	}
+
+	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set) {
+		if (tile->has_water()) return 1;
+		point const camera(get_camera_pos());
+		cube_t bcube(tile->get_cube());
+		point const center(bcube.get_cube_center());
+		point corners[2];
+
+		for (unsigned d = 0; d < 2; ++d) {
+			corners[ d][d] = bcube.d[d][center[d] < camera[d]]; // 0,0
+			corners[!d][d] = bcube.d[d][center[d] > camera[d]]; // 1,1
+			corners[ d][2] = bcube.d[2][0];
+		}
+		return can_have_reflection_recur(tile, corners, tile_set, 2);
+	}
 
 	float draw(bool reflection_pass) {
 		float zmin(FAR_CLIP);
@@ -1220,7 +1261,12 @@ public:
 			if (!tile->is_visible())    continue;
 			if (pine_trees_enabled() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
 			if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
-			if (reflection_pass && ((tile->contains_camera() && !tile->has_water()) || tile->all_water())) continue;
+			if (reflection_pass && tile->all_water()) continue;
+
+			if (reflection_pass && !tile->has_water()) {
+				tile_set_t tile_set;
+				if (!can_have_reflection(tile, tile_set)) continue;
+			}
 			to_draw.push_back(make_pair(dist, tile));
 		}
 		if (!to_gen_trees.empty()) {
