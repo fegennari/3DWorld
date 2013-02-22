@@ -1193,6 +1193,8 @@ public:
 	bool can_have_reflection_recur(tile_t const *const tile, point const corners[2], tile_set_t &tile_set, unsigned dim_ix) {
 		point const camera(get_camera_pos());
 		cube_t bcube(tile->get_cube());
+		bcube.d[2][0] = min(bcube.d[2][0], zmin); // make sure the line isn't clipped in z
+		bcube.d[2][1] = max(bcube.d[2][1], zmax);
 		if (dim_ix < 2 && !check_line_clip(camera, corners[dim_ix], bcube.d)) return 0; // not within the shadow of the original tile
 		if (!tile_set.insert(tile->get_tile_xy_pair()).second) return 0; // already seen
 		bool ret(0);
