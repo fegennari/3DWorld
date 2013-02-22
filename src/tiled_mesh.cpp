@@ -1195,21 +1195,16 @@ public:
 		cube_t bcube(tile->get_cube());
 		if (dim_ix < 2 && !check_line_clip(camera, corners[dim_ix], bcube.d)) return 0; // not within the shadow of the original tile
 		if (!tile_set.insert(tile->get_tile_xy_pair()).second) return 0; // already seen
-		int delta[2] = {0,0};
-		tile_t const *adj[3] = {0,0,0}; // {x, y, diag}
+		bool ret(0);
 		
 		for (unsigned d = 0; d < 2; ++d) {
+			int delta[2] = {0,0};
 			if      (camera[d] < bcube.d[d][0]) {delta[d] = -1;}
 			else if (camera[d] > bcube.d[d][1]) {delta[d] =  1;}
-		}
-		if (delta[0])             {adj[0] = get_tile_from_xy(tile->get_tile_xy_pair(delta[0], 0       ));} // x
-		if (delta[1])             {adj[1] = get_tile_from_xy(tile->get_tile_xy_pair(0,        delta[1]));} // y
-		if (delta[0] && delta[1]) {adj[2] = get_tile_from_xy(tile->get_tile_xy_pair(delta[0], delta[1]));} // diag
-		bool ret(0);
-
-		for (unsigned i = 0; i < 3 && !ret; ++i) {
-			if (!adj[i] || !adj[i]->is_visible()) continue;
-			ret |= (adj[i]->has_water() || can_have_reflection_recur(adj[i], corners, tile_set, i));
+			else                                {continue;}
+			tile_t const *const adj(get_tile_from_xy(tile->get_tile_xy_pair(delta[0], delta[1])));
+			if (!adj || !adj->is_visible()) continue;
+			ret |= (adj->has_water() || can_have_reflection_recur(adj, corners, tile_set, d));
 		}
 		return ret;
 	}
