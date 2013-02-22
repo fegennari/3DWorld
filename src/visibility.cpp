@@ -91,6 +91,12 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 		near_(n), far_(f), A((a == 0.0) ? double(window_width)/double(window_height) : a), valid(1)
 {
 	assert(near_ >= 0.0 && far_ > 0.0 && far_ > near_);
+	orthogonalize_up_dir();
+}
+
+
+void pos_dir_up::orthogonalize_up_dir() {
+
 	assert(dir != zero_vector);
 	orthogonalize_dir(upv, dir, upv_, 1);
 	cross_product(dir, upv_, cp);

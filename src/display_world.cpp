@@ -1071,12 +1071,15 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	apply_z_mirror(water_plane_z);
+	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
+	camera_pdu.pos.z = 2*water_plane_z - camera_pdu.pos.z;
+	camera_pdu.dir.z = -camera_pdu.dir.z; // mirror
+	camera_pdu.upv_  = -camera_pdu.upv_;
+	camera_pdu.orthogonalize_up_dir();
 
 	// draw partial scene
-	camera_pdu.valid = 0; // disable view frustum culling so that reflected sun/moon don't get clipped
 	if (!combined_gu) {draw_sun_moon_stars();}
 	draw_sun_flare();
-	camera_pdu.valid = 1;
 	if (display_mode & 0x40) {draw_cloud_plane(1);} // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	// setup above-water clip plane for mesh
@@ -1084,6 +1087,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	glEnable(GL_CLIP_PLANE0);
 	glClipPlane(GL_CLIP_PLANE0, plane);
 	draw_tiled_terrain(1);
+	camera_pdu = old_camera_pdu; // restore camera_pdu
 	glDisable(GL_CLIP_PLANE0);
 	// could render more of the scene here
 	glPopMatrix(); // end mirror transform

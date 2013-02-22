@@ -516,6 +516,7 @@ struct pos_dir_up { // defines a view frustum
 
 	pos_dir_up(void) : valid(0) {}
 	pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f, float a=0.0);
+	void orthogonalize_up_dir();
 	bool point_visible_test(point const &pos_) const;
 	bool sphere_visible_test(point const &pos_, float radius) const;
 	bool sphere_completely_visible_test(point const &pos_, float radius) const {return sphere_visible_test(pos_, -radius);}
