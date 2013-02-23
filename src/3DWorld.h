@@ -455,6 +455,12 @@ struct cube_t { // size = 24
 	bool cube_intersection(const cube_t &cube, cube_t &res) const;
 	float get_overlap_volume(const cube_t &cube) const;
 	vector3d closest_side_dir(point const &pos) const;
+	
+	point closest_pt(point const &pos) const {
+		point pt;
+		UNROLL_3X(pt[i_] = max(d[i_][0], min(d[i_][1], pos[i_]));)
+		return pt;
+	}
 	point gen_rand_pt_in_cube() const;
 	int closest_face(point const &pos) const;
 	bool cube_merge(cube_t const &cube);

@@ -1190,14 +1190,21 @@ public:
 	typedef set<tile_xy_pair> tile_set_t;
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
-	bool can_have_reflection_recur(tile_t const *const tile, point const corners[2], tile_set_t &tile_set, unsigned dim_ix) {
+	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix) {
 		point const camera(get_camera_pos());
 		cube_t bcube(tile->get_cube());
 		bcube.d[2][0] = min(bcube.d[2][0], zmin); // make sure the line isn't clipped in z
 		bcube.d[2][1] = max(bcube.d[2][1], zmax);
 		if (dim_ix < 2 && !check_line_clip(camera, corners[dim_ix], bcube.d)) return 0; // not within the shadow of the original tile
+
+		if (tile->has_water()) {
+			//bcube.d[2][0] = bcube.d[2][1] = water_plane_z;
+			//if (camera_pdu.cube_visible(bcube)) {
+			point const closest_pt(bcube.closest_pt(corners[2]));
+			float const z_over_xy((camera.z - water_plane_z)/p2p_dist_xy(camera, closest_pt)); // slope
+			if (water_plane_z + z_over_xy*p2p_dist_xy(corners[2], closest_pt) < corners[2].z) return 1;
+		}
 		if (!tile_set.insert(tile->get_tile_xy_pair()).second) return 0; // already seen
-		bool ret(0);
 		
 		for (unsigned d = 0; d < 2; ++d) {
 			int delta[2] = {0,0};
@@ -1206,9 +1213,9 @@ public:
 			else                                {continue;}
 			tile_t const *const adj(get_tile_from_xy(tile->get_tile_xy_pair(delta[0], delta[1])));
 			if (!adj || !adj->is_visible()) continue;
-			ret |= (adj->has_water() || can_have_reflection_recur(adj, corners, tile_set, d));
+			if (can_have_reflection_recur(adj, corners, tile_set, d)) return 1;
 		}
-		return ret;
+		return 0;
 	}
 
 	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set) {
@@ -1216,13 +1223,15 @@ public:
 		point const camera(get_camera_pos());
 		cube_t bcube(tile->get_cube());
 		point const center(bcube.get_cube_center());
-		point corners[2];
+		point corners[3]; // {x, y, closest}
 
 		for (unsigned d = 0; d < 2; ++d) {
 			corners[ d][d] = bcube.d[d][center[d] < camera[d]]; // 0,0
 			corners[!d][d] = bcube.d[d][center[d] > camera[d]]; // 1,1
 			corners[ d][2] = bcube.d[2][0];
 		}
+		corners[2]   = bcube.closest_pt(camera);
+		corners[2].z = tile->get_zmax();
 		return can_have_reflection_recur(tile, corners, tile_set, 2);
 	}
 
@@ -1260,7 +1269,7 @@ public:
 			if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
 			if (reflection_pass && tile->all_water()) continue;
 
-			if (reflection_pass && !tile->has_water()) {
+			if (reflection_pass && !tile->has_water()) { // skip if the camera's tile contains water?
 				tile_set_t tile_set;
 				if (!can_have_reflection(tile, tile_set)) continue;
 			}
