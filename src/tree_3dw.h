@@ -159,6 +159,9 @@ public:
 	void clear_vbos();
 	unsigned get_gpu_mem() const;
 	int get_tree_type() const {return tree_type;}
+
+	static void pre_draw (bool branches_or_leaves, bool shadow_only);
+	static void post_draw(bool branches_or_leaves, bool shadow_only);
 };
 
 
@@ -193,7 +196,7 @@ class tree
 	void drop_leaves();
 	void remove_leaf(unsigned i, bool update_data);
 	bool damage_leaf(unsigned i, float damage_done);
-	void draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate);
+	void draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc);
 	void draw_tree_leaves(shader_t const &s, float size_scale, vector3d const &xlate);
 	void update_leaf_cobj_color(unsigned i);
 	void copy_color(unsigned i, bool no_mark_changed=0);
@@ -207,7 +210,7 @@ public:
 	void add_tree_collision_objects();
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;
-	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate);
+	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate, int shader_loc);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	void clear_vbo();
 	int delete_tree();

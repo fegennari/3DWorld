@@ -104,7 +104,7 @@ struct indexed_vbo_manager_t {
 		bind_vbo(vbo,  0);
 		bind_vbo(ivbo, 1);
 	}
-	void post_render() const {
+	static void post_render() {
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 	}

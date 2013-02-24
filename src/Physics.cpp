@@ -586,7 +586,7 @@ vector3d get_local_wind(point const &pt, bool no_use_mesh) {
 	float pressure(1.0), hval(0.5);
 	vector3d local_wind(wind);
 
-	if (!no_use_mesh) {
+	if (!no_use_mesh && world_mode == WMODE_GROUND) {
 		if (point_outside_mesh(xpos, ypos)) return wind;
 		// calculate direction of wind based on mesh orientation
 		float const mh(mesh_height[ypos][xpos]);

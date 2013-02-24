@@ -1246,6 +1246,7 @@ public:
 		draw_vect_t to_draw;
 		vector<tile_t *> to_gen_trees;
 
+		// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
 		if (sun_pos != last_sun || moon_pos != last_moon) { // light source change
 			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 				i->second->clear_shadows();

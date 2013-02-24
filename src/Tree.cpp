@@ -9,6 +9,7 @@
 #include "explosion.h"
 #include "physics_objects.h"
 #include "shaders.h"
+#include "sinf.h"
 
 
 float const BURN_RADIUS      = 0.2;
@@ -202,13 +203,14 @@ struct render_tree_to_texture_t : public render_to_texture_t {
 	virtual void draw_geom(bool is_normal_pass) {
 		assert(cur_tree);
 		BLACK.do_glColor();
-		branch_shader[is_normal_pass].enable();
-		cur_tree->draw_tree(branch_shader[is_normal_pass], 1, 0, is_normal_pass, zero_vector); // draw branches
-		branch_shader[is_normal_pass].disable();
+		shader_t &bs(branch_shader[is_normal_pass]), &ls(leaf_shader[is_normal_pass]);
+		bs.enable();
+		cur_tree->draw_tree(bs, 1, 0, is_normal_pass, zero_vector, bs.get_uniform_loc("world_space_offset")); // draw branches
+		bs.disable();
 		disable_multitex_a();
-		tree_cont_t::pre_leaf_draw(leaf_shader[is_normal_pass]);
-		cur_tree->draw_tree(leaf_shader  [is_normal_pass], 0, 1, is_normal_pass, zero_vector); // draw leaves
-		tree_cont_t::post_leaf_draw(leaf_shader[is_normal_pass]);
+		tree_cont_t::pre_leaf_draw(ls);
+		cur_tree->draw_tree(ls, 0, 1, is_normal_pass, zero_vector, -1); // draw leaves
+		tree_cont_t::post_leaf_draw(ls);
 	}
 	void render_tree(tree &t, texture_pair_t &tpair, vector3d const &view_dir, vector3d const &up_dir) {
 		setup_shaders();
@@ -388,11 +390,15 @@ bool tree_cont_t::check_sphere_coll(point &center, float radius) const {
 
 void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate) {
 
+	assert(draw_branches != draw_leaves); // must enable only one
 	BLACK.do_glColor();
+	int const shader_loc((draw_branches && s.is_setup()) ? s.get_uniform_loc("world_space_offset") : -1);
+	tree_data_t::pre_draw(draw_branches, shadow_only);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->draw_tree(s, draw_branches, draw_leaves, shadow_only, xlate);
+		i->draw_tree(s, draw_branches, draw_leaves, shadow_only, xlate, shader_loc);
 	}
+	tree_data_t::post_draw(draw_branches, shadow_only);
 }
 
 
@@ -790,11 +796,28 @@ bool tree::is_visible_to_camera(vector3d const &xlate) const {
 }
 
 
+void tree_data_t::pre_draw(bool branches_or_leaves, bool shadow_only) {
+
+	if (branches_or_leaves) { // branches
+		set_array_client_state(1, !shadow_only, !shadow_only, 0); // vertices only in shadow_only mode
+	}
+	else { // leaves
+		set_array_client_state(1, 0, 1, 1);
+	}
+}
+
+
+void tree_data_t::post_draw(bool branches_or_leaves, bool shadow_only) {
+
+	if (branches_or_leaves && !shadow_only) {bind_vbo(0, 1);} // branch index vbo
+	bind_vbo(0, 0);
+}
+
+
 void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves, int tree_type) const {
 
 	if (draw_branches && branch_vbo_manager.vbo) { // draw branches (untextured)
 		branch_vbo_manager.pre_render();
-		set_array_client_state(1, 0, 0, 0); // vertices only
 		glVertexPointer(3, GL_FLOAT, sizeof(branch_vert_type_t), 0);
 		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num_branch_quads, GL_UNSIGNED_SHORT, 0);
 		branch_vbo_manager.post_render();
@@ -802,14 +825,14 @@ void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves, in
 	if (draw_leaves && leaf_vbo > 0 && !leaves.empty()) { // draw leaves
 		select_texture(tree_types[tree_type].leaf_tex);
 		bind_vbo(leaf_vbo);
+		leaf_vert_type_t::set_vbo_arrays(0, 0); // could also disable normals and colors, but that doesn't seem to help much
 		assert(leaf_data.size() >= 4*leaves.size());
-		leaf_vert_type_t::set_vbo_arrays(); // could also disable normals and colors, but that doesn't seem to help much
 		glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
 	}
 }
 
 
-void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate) {
+void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate, int shader_loc) {
 
 	if (!created) return;
 	tree_data_t &td(tdata());
@@ -840,7 +863,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
 	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(distance_to_camera((sphere_center() + xlate))*DIST_C_SCALE));
-	if (draw_branches) draw_tree_branches(s, size_scale, xlate);
+	if (draw_branches) draw_tree_branches(s, size_scale, xlate, shader_loc);
 	if (draw_leaves && has_leaves) draw_tree_leaves(s, size_scale, xlate);
 }
 
@@ -899,7 +922,7 @@ void tree_data_t::draw_branches(float size_scale) {
 	if (branch_vbo_manager.vbo == 0) { // vbos not yet created
 		assert(branch_vbo_manager.ivbo == 0);
 		assert(num_branch_quads == 0 && num_unique_pts == 0);
-		vector<branch_vert_type_t> data;
+		vector<branch_vert_type_t> data; // static/reused?
 		vector<branch_index_t> idata;
 		create_indexed_quads_for_branches(data, idata);
 		assert(data.size()  == data.capacity());
@@ -909,19 +932,18 @@ void tree_data_t::draw_branches(float size_scale) {
 		branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 	}
 	branch_vbo_manager.pre_render();
-	vert_norm_comp_tc::set_vbo_arrays();
+	vert_norm_comp_tc::set_vbo_arrays(0, 0);
 	unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0); // draw with branch vbos
-	branch_vbo_manager.post_render();
 }
 
 
-void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate) {
+void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc) {
 
 	if (size_scale < 0.05) return; // too far away, don't draw any branches
-	select_texture(tree_types[type].bark_tex);
+	select_texture(tree_types[type].bark_tex, !s.is_setup());
 	set_color(bcolor);
-	if (s.is_setup()) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
+	if (s.is_setup()) {s.set_uniform_vector3d(shader_loc, (tree_center + xlate));}
 	glPushMatrix();
 	translate_to(tree_center + xlate);
 	tdata().draw_branches(size_scale);
@@ -958,10 +980,9 @@ void tree_data_t::draw_leaves(float size_scale) {
 		upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*sizeof(leaf_vert_type_t)); // FIXME: track and update a sub-range?
 	}
 	leaves_changed = 0;
-	leaf_vert_type_t::set_vbo_arrays();
+	leaf_vert_type_t::set_vbo_arrays(0, 0);
 	if (ENABLE_CLIP_LEAVES) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
 	glDrawArrays(GL_QUADS, 0, 4*nl);
-	bind_vbo(0);
 }
 
 
@@ -1013,7 +1034,7 @@ void tree_data_t::bend_leaf(unsigned i, float angle) {
 	point const p1((l.pts[1] + l.pts[2])*0.5); // tip
 	point const p2((l.pts[0] + l.pts[3])*0.5); // base
 	vector3d const orig_dir(p1 - p2); // vector from base to tip
-	vector3d const new_dir(orig_dir*cos(angle) + l.norm*(orig_dir.mag()*sin(angle))); // s=orig_dir.get_norm(), t=l.norm
+	vector3d const new_dir(orig_dir*COSF(angle) + l.norm*(orig_dir.mag()*SINF(angle))); // s=orig_dir.get_norm(), t=l.norm
 	vector3d const delta(new_dir - orig_dir);
 	vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
 	unsigned const ix(i<<2);
