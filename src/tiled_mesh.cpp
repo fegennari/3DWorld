@@ -1385,6 +1385,7 @@ public:
 		draw_pine_tree_bl(to_draw, s, 0, 1, 0, reflection_pass); // near leaves
 		assert(tree_trunk_pts.empty());
 		s.end_shader();
+		glDisable(GL_TEXTURE_2D);
 		set_specular(0.0, 1.0);
 	}
 

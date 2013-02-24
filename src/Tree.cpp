@@ -803,6 +803,7 @@ bool tree::is_visible_to_camera(vector3d const &xlate) const {
 void tree_data_t::pre_draw(bool branches_or_leaves, bool shadow_only) {
 
 	if (branches_or_leaves) { // branches
+		glEnable(GL_CULL_FACE);
 		set_array_client_state(1, !shadow_only, !shadow_only, 0); // vertices only in shadow_only mode
 	}
 	else { // leaves
@@ -813,7 +814,10 @@ void tree_data_t::pre_draw(bool branches_or_leaves, bool shadow_only) {
 
 void tree_data_t::post_draw(bool branches_or_leaves, bool shadow_only) {
 
-	if (branches_or_leaves && !shadow_only) {bind_vbo(0, 1);} // branch index vbo
+	if (branches_or_leaves) {
+		glDisable(GL_CULL_FACE);
+		if (!shadow_only) {bind_vbo(0, 1);} // branch index vbo
+	}
 	bind_vbo(0, 0);
 }
 
