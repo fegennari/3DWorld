@@ -100,7 +100,7 @@ class tile_t {
 		vector3d subtract_from(offset_t const &o) const {return vector3d((o.dxoff - dxoff)*DX_VAL, (o.dyoff - dyoff)*DY_VAL, 0.0);}
 	};
 
-	int x1, y1, x2, y2;
+	int x1, y1, x2, y2, wx1, wy1, wx2, wy2;
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep;
@@ -163,6 +163,7 @@ public:
 		y1 = y*size;
 		x2 = x1 + size;
 		y2 = y1 + size;
+		wx1 = x2; wy1 = y2; wx2 = x1; wy2 = y1; // start denormalized
 		calc_start_step(0, 0);
 		radius = calc_radius();
 		mzmin  = mzmax = ptzmax = dtzmax = get_camera_pos().z;
@@ -183,24 +184,28 @@ public:
 	point get_center() const {
 		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
 	}
-	cube_t get_cube() const {
+	cube_t get_bcube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), z2(get_tile_zmax());
 		return cube_t(xv1-trmax, xv1+(x2-x1)*DX_VAL+trmax, yv1-trmax, yv1+(y2-y1)*DY_VAL+trmax, mzmin, z2);
 	}
+	cube_t get_water_bcube() const {
+		float const xv1(get_xval(wx1 + xoff - xoff2)), yv1(get_yval(wy1 + yoff - yoff2));
+		return cube_t(xv1, xv1+(wx2-wx1)*DX_VAL, yv1, yv1+(wy2-wy1)*DY_VAL, water_plane_z, water_plane_z); // zero area in z
+	}
 	float get_min_dist_to_pt(point const &pt) const {
 		point p1(pt), p2(get_center());
-		bool const ret(do_line_clip(p1, p2, get_cube().d)); // only clip in x and y?
+		bool const ret(do_line_clip(p1, p2, get_bcube().d)); // only clip in x and y?
 		assert(ret);
 		return p2p_dist(pt, p1);
 	}
 	float get_max_xy_dist_to_pt(point const &pt) const {
-		cube_t const bc(get_cube());
+		cube_t const bc(get_bcube());
 		float const dx(max(fabs(pt.x - bc.d[0][0]), fabs(pt.x - bc.d[0][1])));
 		float const dy(max(fabs(pt.y - bc.d[1][0]), fabs(pt.y - bc.d[1][1])));
 		return sqrt(dx*dx + dy*dy);
 	}
 	bool contains_camera() const {
-		return get_cube().contains_pt_xy(get_camera_pos());
+		return get_bcube().contains_pt_xy(get_camera_pos());
 	}
 
 	void calc_start_step(int dx, int dy) {
@@ -283,7 +288,7 @@ public:
 		create_xy_arrays(height_gen, zvsize, 1.0);
 		mzmin =  FAR_CLIP;
 		mzmax = -FAR_CLIP;
-		float const xy_mult(1.0/float(size));
+		float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + OCEAN_WAVE_HEIGHT);
 
 		#pragma omp parallel for schedule(static,1)
 		for (int y = 0; y < (int)zvsize; ++y) {
@@ -296,6 +301,16 @@ public:
 		for (vector<float>::const_iterator i = zvals.begin(); i != zvals.end(); ++i) {
 			mzmin = min(mzmin, *i);
 			mzmax = max(mzmax, *i);
+		}
+		if (mzmin < wpz_max) { // can have water
+			for (unsigned y = 0; y <= size; ++y) {
+				for (unsigned x = 0; x <= size; ++x) {
+					if (zvals[y*zvsize + x] < wpz_max) { // update water bbox
+						wx1 = min(wx1, x1+int(x)); wy1 = min(wy1, y1+int(y));
+						wx2 = max(wx2, x1+int(x)); wy2 = max(wy2, y1+int(y));
+					}
+				}
+			}
 		}
 		assert(mzmin <= mzmax);
 		radius = 0.5*sqrt((xstep*xstep + ystep*ystep)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
@@ -666,7 +681,7 @@ public:
 		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
 		return (dist < DELETE_DIST_TILES);
 	}
-	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_cube());}
+	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_bcube());}
 	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*TILE_RADIUS;}
 	float get_scenery_dist_scale () const {return get_dist_to_camera_in_tiles()/SCENERY_THRESH;}
 	float get_tree_dist_scale    () const {return get_dist_to_camera_in_tiles()/max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
@@ -924,7 +939,7 @@ public:
 		glPopMatrix();
 
 		if (has_water()) { // draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
-			cube_t const bcube(get_cube());
+			cube_t const bcube(get_bcube());
 			glBegin(GL_QUADS);
 
 			for (unsigned dim = 0; dim < 2; ++dim) {
@@ -1192,17 +1207,19 @@ public:
 
 	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix) {
 		point const camera(get_camera_pos());
-		cube_t bcube(tile->get_cube());
+		cube_t bcube(tile->get_bcube());
 		bcube.d[2][0] = min(bcube.d[2][0], zmin); // make sure the line isn't clipped in z
 		bcube.d[2][1] = max(bcube.d[2][1], zmax);
 		if (dim_ix < 2 && !check_line_clip(camera, corners[dim_ix], bcube.d)) return 0; // not within the shadow of the original tile
 
 		if (tile->has_water()) {
-			//bcube.d[2][0] = bcube.d[2][1] = water_plane_z;
-			//if (camera_pdu.cube_visible(bcube)) {
-			point const closest_pt(bcube.closest_pt(corners[2]));
-			float const z_over_xy((camera.z - water_plane_z)/p2p_dist_xy(camera, closest_pt)); // slope
-			if (water_plane_z + z_over_xy*p2p_dist_xy(corners[2], closest_pt) < corners[2].z) return 1;
+			cube_t water_bcube(tile->get_water_bcube());
+
+			if (camera_pdu.cube_visible(water_bcube)) {
+				point const closest_pt(water_bcube.closest_pt(corners[2]));
+				float const z_over_xy((camera.z - water_plane_z)/p2p_dist_xy(camera, closest_pt)); // slope
+				if (water_plane_z + z_over_xy*p2p_dist_xy(corners[2], closest_pt) < corners[2].z) return 1;
+			}
 		}
 		if (!tile_set.insert(tile->get_tile_xy_pair()).second) return 0; // already seen
 		
@@ -1219,9 +1236,11 @@ public:
 	}
 
 	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set) {
+		if (tile->all_water()) return 0;
 		if (tile->has_water()) return 1;
+		// return 1 if the camera's tile contains water?
 		point const camera(get_camera_pos());
-		cube_t bcube(tile->get_cube());
+		cube_t bcube(tile->get_bcube());
 		point const center(bcube.get_cube_center());
 		point corners[3]; // {x, y, closest}
 
@@ -1268,12 +1287,8 @@ public:
 			if (!tile->is_visible())    continue;
 			if (pine_trees_enabled() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
 			if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
-			if (reflection_pass && tile->all_water()) continue;
-
-			if (reflection_pass && !tile->has_water()) { // skip if the camera's tile contains water?
-				tile_set_t tile_set;
-				if (!can_have_reflection(tile, tile_set)) continue;
-			}
+			tile_set_t tile_set;
+			if (reflection_pass && !can_have_reflection(tile, tile_set)) continue;
 			to_draw.push_back(make_pair(dist, tile));
 		}
 		if (!to_gen_trees.empty()) {
