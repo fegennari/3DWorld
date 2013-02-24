@@ -114,7 +114,7 @@ extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, ons
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
-extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width;
+extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale;
 extern point hmv_pos;
 extern int coll_id[];
 extern vector<bbox> team_starts;
@@ -1619,6 +1619,9 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "tree_deadness") {
 			if (!read_float(fp, tree_deadness)) cfg_err("tree deadness command", error);
+		}
+		else if (str == "tree_branch_radius") {
+			if (!read_float(fp, branch_radius_scale) || branch_radius_scale <= 0.0) cfg_err("tree_branch_radius command", error);
 		}
 		else if (str == "leaf_color") {
 			if (fscanf(fp, "%f%f%f%f%f", &leaf_base_color.R, &leaf_base_color.G, &leaf_base_color.B, &leaf_color_coherence, &tree_color_coherence) != 5) {

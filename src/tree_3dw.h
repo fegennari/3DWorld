@@ -99,8 +99,8 @@ class tree_builder_t {
 	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
 	int generate_next_cylin(int cylin_num, int ncib, bool branch_just_created, bool &branch_deflected);
 	void add_leaves_to_cylin(tree_cylin const &cylin, float tsize, float deadness, vector<tree_leaf> &leaves) const;
-	void process_cylins(tree_cylin const *const cylins, unsigned num, int tree_type, float deadness,
-		vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves) const;
+	void process_cylins(tree_cylin *const cylins, unsigned num, int tree_type, float deadness,
+		vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves);
 
 public:
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color);

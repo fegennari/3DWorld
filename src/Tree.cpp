@@ -52,7 +52,7 @@ void rotate_all(point const &rotate, float angle, float x, float y, float z);
 unsigned max_unique_trees(0);
 int tree_mode(1), tree_coll_level(TREE_COLL);
 float tree_temp_matrix[3], i_matrix[9], re_matrix[3];
-float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), leaf_size(0.0);
+float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), leaf_size(0.0), branch_radius_scale(1.0);
 colorRGBA leaf_base_color(BLACK);
 point leaf_points[4]; // z = 0.0 -> -0.05
 tree_data_manager_t tree_data_manager;
@@ -205,11 +205,15 @@ struct render_tree_to_texture_t : public render_to_texture_t {
 		BLACK.do_glColor();
 		shader_t &bs(branch_shader[is_normal_pass]), &ls(leaf_shader[is_normal_pass]);
 		bs.enable();
+		tree_data_t::pre_draw(1, 0);
 		cur_tree->draw_tree(bs, 1, 0, is_normal_pass, zero_vector, bs.get_uniform_loc("world_space_offset")); // draw branches
+		tree_data_t::post_draw(1, 0);
 		bs.disable();
 		disable_multitex_a();
 		tree_cont_t::pre_leaf_draw(ls);
+		tree_data_t::pre_draw(0, 0);
 		cur_tree->draw_tree(ls, 0, 1, is_normal_pass, zero_vector, -1); // draw leaves
+		tree_data_t::post_draw(0, 0);
 		tree_cont_t::post_leaf_draw(ls);
 	}
 	void render_tree(tree &t, texture_pair_t &tpair, vector3d const &view_dir, vector3d const &up_dir) {
@@ -933,7 +937,7 @@ void tree_data_t::draw_branches(float size_scale) {
 	}
 	branch_vbo_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0, 0);
-	unsigned const num(4*min(num_branch_quads, max((num_branch_quads/8), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
+	unsigned const num(4*min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0); // draw with branch vbos
 }
 
@@ -1197,14 +1201,16 @@ void tree_data_t::clear_data() {
 }
 
 
-void tree_builder_t::process_cylins(tree_cylin const *const cylins, unsigned num, int tree_type, float deadness,
-	vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves) const
+void tree_builder_t::process_cylins(tree_cylin *const cylins, unsigned num, int tree_type, float deadness,
+	vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves)
 {
 	float const leaf_size(tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
 
 	for (unsigned i = 0; i < num; ++i) {
 		assert(cylins[i].r1 > 0.0 || cylins[i].r2 > 0.0);
 		assert(cylins[i].p1 != cylins[i].p2);
+		cylins[i].r1 *= branch_radius_scale;
+		cylins[i].r2 *= branch_radius_scale;
 		all_cylins.push_back(cylins[i]);
 
 		if (deadness < 1.0) { // leaves was reserved
@@ -1591,10 +1597,10 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		float const deg_rot(180.0+rand_uniform2(40.0, 50.0));
 		vector3d const dir(sin(theta), cos(theta), 0.0);
 		cylin1.assign_params(1, i, root_radius, 0.75*root_radius, 1.0*base_radius, deg_rot); // level 1, with unique branch_id's
-		cylin1.p1     = cylin1.p2 = point(0.0, 0.0, 0.75*base_radius);
+		cylin1.p1     = cylin1.p2 = point(0.0, 0.0, 0.75*branch_radius_scale*base_radius);
 		cylin1.rotate = dir;
 		rotate_cylin(cylin1);
-		cylin1.p1    += (0.3*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
+		cylin1.p1    += (0.3*branch_radius_scale*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
 		cylin1.p1    *= 2.0;
 		cylin1.p2    *= 1.3;
 
