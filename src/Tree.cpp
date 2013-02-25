@@ -1464,7 +1464,6 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	tree_slimness          = 0;
 	tree_wideness          = 70;
 	branch_curveness       = 90.0;
-	base_var               = 0.8;
 	branch_1_var           = 100.0*0.85;
 	branch_1_rad_var       = 100.0*0.64;
 	branch_1_start         = 0.45;
@@ -1480,6 +1479,8 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	branch_max_angle       = 40.0;
 	max_2_angle_rotate     = 50.0;
 	max_3_angle_rotate     = 50.0;
+	float const base_rad_var = 0.85;
+	float const base_len_var = 0.8;
 	float const branch_1_random_rotate = 40.0;
 	int const min_num_roots(10), max_num_roots(12);
 	base_color = colorRGBA(0.5*signed_rand_float2(), 0.5*signed_rand_float2(), 0.0, 1.0); // no blue
@@ -1518,13 +1519,13 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 
 		if (i == 0) {
 			float const length((base_length_max - base_length_min)/2.0);
-			cylin.assign_params(0, 0, base_radius, base_radius*base_var, length*(num_cylin_factor/base_num_cylins), 0.0);
+			cylin.assign_params(0, 0, base_radius, base_radius*base_rad_var, length*(num_cylin_factor/base_num_cylins), 0.0);
 			cylin.p1 = all_zeros;
 			cylin.rotate.assign(cosf(angle_rotate/TO_DEG), sinf(angle_rotate/TO_DEG), 0.0);
 		}
 		else {
 			tree_cylin &lcylin(base.cylin[i-1]);
-			cylin.assign_params(0, 0, lcylin.r2, lcylin.r2*base_var, lcylin.length*base_var*(base_cylin_factor/base_num_cylins),
+			cylin.assign_params(0, 0, lcylin.r2, lcylin.r2*base_rad_var, lcylin.length*base_len_var*(base_cylin_factor/base_num_cylins),
 				int(sinf(-PI_TWO + i*PI/base_num_cylins)*base_curveness));
 			cylin.rotate.assign(lcylin.rotate.x, lcylin.rotate.y, 0.0);
 			rotate_cylin(lcylin);

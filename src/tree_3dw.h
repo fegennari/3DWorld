@@ -83,7 +83,7 @@ class tree_builder_t {
 	int num_2_branches_min, num_2_branches_max, num_34_branches[2], num_3_branches_min, num_3_branches_max;
 	int tree_slimness, tree_wideness, base_break_off;
 	float base_radius, base_length_min, base_length_max, base_curveness, num_leaves_per_occ;
-	float branch_curveness, branch_upwardness, branch_distribution, branch_1_distribution, base_var, num_cylin_factor, base_cylin_factor;
+	float branch_curveness, branch_upwardness, branch_distribution, branch_1_distribution, num_cylin_factor, base_cylin_factor;
 	float branch_1_var, branch_1_rad_var, branch_1_start, branch_2_var, branch_2_rad_var, branch_2_start, branch_4_max_radius, rotate_factor;
 	float angle_rotate, branch_min_angle, branch_max_angle, branch_4_length;
 	float max_2_angle_rotate, max_3_angle_rotate;  //max angle to rotate 3rd order branches around from the 2nd order branch
