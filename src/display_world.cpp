@@ -1170,6 +1170,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	ocean.z     = water_plane_z;
 	camera_mode = 1;
 	mesh_type   = 0;
+	//update_tiled_terrain_trees();
 
 	if (show_fog || underwater) {
 		glClearColor_rgba(set_inf_terrain_fog(underwater, zmin2));

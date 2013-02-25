@@ -131,7 +131,7 @@ struct render_to_texture_t {
 struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 
 	shader_t leaf_shader[2]; // color, normal
-	tree *cur_tree;
+	tree_data_t *cur_tree;
 
 	render_tree_leaves_to_texture_t(unsigned tsize_) : render_to_texture_t(tsize_), cur_tree(NULL) {}
 
@@ -162,22 +162,38 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 		BLACK.do_glColor();
 		tree_cont_t::pre_leaf_draw(leaf_shader[is_normal_pass]);
 		tree_data_t::pre_draw(0, 0);
-		cur_tree->draw_tree(leaf_shader[is_normal_pass], 0, 1, is_normal_pass, zero_vector, -1); // draw leaves
+		cur_tree->gen_leaf_color();
+		cur_tree->leaf_draw_setup(0);
+		cur_tree->draw_leaves(leaf_shader[is_normal_pass], 0.0);
 		tree_data_t::post_draw(0, 0);
 		tree_cont_t::post_leaf_draw(leaf_shader[is_normal_pass]);
 	}
-	void render_tree(tree &t, texture_pair_t &tpair, vector3d const &view_dir, vector3d const &up_dir) {
+	void render_tree(tree_data_t &t, texture_pair_t &tpair, vector3d const &view_dir, vector3d const &up_dir) {
 		setup_shaders();
 		cur_tree = &t;
 		float const view_dist_mult = 20.0; // ???
-		float const radius(t.get_radius());
-		point const center(t.sphere_center());
-		point const eye(center - view_dist_mult*radius*view_dir.get_norm());
-		render(tpair, eye, center, radius, up_dir);
+		point const center(vector3d(0.0, 0.0, t.sphere_center_zoff));
+		point const eye(center - view_dist_mult*t.sphere_radius*view_dir.get_norm());
+		render(tpair, eye, center, t.sphere_radius, up_dir);
 	}
-	void render_tree_side_view(tree &t, texture_pair_t &tpair) {render_tree(t, tpair, plus_x, plus_z);}
-	void render_tree_top_view (tree &t, texture_pair_t &tpair) {render_tree(t, tpair, vector3d(0.0, 0.0, -1.0), plus_x);}
+	void render_tree_side_view(tree_data_t &t, texture_pair_t &tpair) {
+		render_tree(t, tpair, plus_x, plus_z);
+	}
+	void render_tree_top_view (tree_data_t &t, texture_pair_t &tpair) {
+		render_tree(t, tpair, vector3d(0.0, 0.0, -1.0), plus_x);
+	}
 };
+
+
+// FIXME: move down later
+void tree_data_t::check_leaf_render_texture() {
+
+	if (render_leaf_texture.is_valid()) return; // nothing to do
+	unsigned const tree_leaves_tsize = 256;
+	render_tree_leaves_to_texture_t renderer(tree_leaves_tsize);
+	renderer.render_tree_side_view(*this, render_leaf_texture);
+	cout << "render to texture" << endl;
+}
 
 
 void calc_leaf_points() {
@@ -917,11 +933,16 @@ void tree_data_t::reset_leaf_pos_norm() {
 }
 
 
-void tree_data_t::draw_leaves(float size_scale) {
+void tree_data_t::draw_leaves(shader_t const &s, float size_scale) {
+
+	if (render_leaf_texture.is_valid()) {
+		s.add_uniform_int("tex0", 0);
+		render_leaf_texture.bind_textures();
+	}
 
 	unsigned nl(leaves.size());
 	assert(leaf_data.size() >= 4*nl);
-	if (ENABLE_CLIP_LEAVES) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
+	if (ENABLE_CLIP_LEAVES && size_scale > 0.0) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
 	bool const create_leaf_vbo(leaf_vbo == 0);
 	create_bind_vbo_and_upload(leaf_vbo, leaf_data, 0);
 
@@ -969,7 +990,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
 	glPushMatrix();
 	translate_to(tree_center + xlate);
-	td.draw_leaves(size_scale);
+	td.draw_leaves(s, size_scale);
 	if (enable_dlights) {disable_dynamic_lights(num_dlights);}
 	glPopMatrix();
 }
@@ -2121,6 +2142,10 @@ void tree_cont_t::add_cobjs() {
 
 void tree_cont_t::clear_context() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
+}
+
+void tree_cont_t::check_leaf_render_textures() {
+	for (iterator i = begin(); i != end(); ++i) {i->check_leaf_render_texture();}
 }
 
 

@@ -2037,10 +2037,10 @@ void texture_pair_t::bind_textures() const {
 
 	for (unsigned d = 0; d < 2; ++d) {
 		assert(tids[d]);
+		set_active_texture(d);
 		bind_2d_texture(tids[d]);
-		set_multitex(d);
 	}
-	set_multitex(0);
+	set_active_texture(0);
 }
 
 

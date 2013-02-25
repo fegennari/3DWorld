@@ -25,6 +25,7 @@ struct texture_pair_t {
 	unsigned tids[2]; // color, normal
 
 	texture_pair_t() {tids[0] = tids[1] = 0;}
+	bool is_valid() const {return (tids[0] > 0 && tids[1] > 0);}
 	void free_context();
 	void bind_textures() const;
 	static void ensure_tid(unsigned &tid, unsigned tsize);

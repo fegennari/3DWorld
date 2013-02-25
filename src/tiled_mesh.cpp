@@ -789,6 +789,10 @@ public:
 		decid_trees.draw_branches_and_leaves(s, draw_branches, draw_leaves, 0, dtree_off.get_xlate());
 	}
 
+	void update_decid_trees() {
+		decid_trees.check_leaf_render_textures();
+	}
+
 	// *** scenery ***
 
 	void update_scenery() {
@@ -1404,6 +1408,14 @@ public:
 		set_specular(0.0, 1.0);
 	}
 
+	void update_decid_trees() {
+		if (decid_trees_enabled()) {
+			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
+				i->second->update_decid_trees();
+			}
+		}
+	}
+
 	void draw_decid_tree_bl(draw_vect_t const &to_draw, shader_t &s, bool branches, bool leaves, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
 			to_draw[i].second->draw_decid_trees(s, branches, leaves, reflection_pass);
@@ -1555,7 +1567,6 @@ void draw_tiled_terrain_lightning(bool reflection_pass) {
 	terrain_tile_draw.update_lightning(reflection_pass);
 }
 
-
 void clear_tiled_terrain() {
 	terrain_tile_draw.clear();
 }
@@ -1566,6 +1577,10 @@ void reset_tiled_terrain_state() {
 
 void draw_tiled_terrain_water(float zval) {
 	terrain_tile_draw.draw_water(zval);
+}
+
+void update_tiled_terrain_trees() {
+	terrain_tile_draw.update_decid_trees();
 }
 
 bool check_player_tiled_terrain_collision() {

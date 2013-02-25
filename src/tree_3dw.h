@@ -152,8 +152,9 @@ public:
 	void bend_leaf(unsigned i, float angle);
 	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves, int tree_type) const;
 	void draw_branches(float size_scale);
-	void draw_leaves(float size_scale);
+	void draw_leaves(shader_t const &s, float size_scale);
 	bool leaf_draw_setup(bool leaf_dynamic_en);
+	void check_leaf_render_texture();
 	void update_normal_for_leaf(unsigned i);
 	void reset_leaf_pos_norm();
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
@@ -224,6 +225,7 @@ public:
 	bool get_no_delete()      const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
 	bool operator<(tree const &t) const {return ((type != t.type) ? (type < t.type) : (tree_data < t.tree_data));}
+	void check_leaf_render_texture() {tdata().check_leaf_render_texture();}
 };
 
 
@@ -266,6 +268,7 @@ public:
 	unsigned get_gpu_mem() const;
 	float get_rmax() const;
 	void update_zmax(float &tzmax) const;
+	void check_leaf_render_textures();
 };
 
 
