@@ -2027,3 +2027,28 @@ bool is_billboard_texture_transparent(point const *const points, point const &po
 }
 
 
+void texture_pair_t::free_context() {
+
+	for (unsigned d = 0; d < 2; ++d) {free_texture(tids[d]);}
+}
+
+
+void texture_pair_t::bind_textures() const {
+
+	for (unsigned d = 0; d < 2; ++d) {
+		assert(tids[d]);
+		bind_2d_texture(tids[d]);
+		set_multitex(d);
+	}
+	set_multitex(0);
+}
+
+
+void texture_pair_t::ensure_tid(unsigned &tid, unsigned tsize) {
+
+	if (tid) return; // already created
+	setup_texture(tid, GL_MODULATE, 0, 0, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+}
+
+

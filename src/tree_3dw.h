@@ -7,6 +7,7 @@
 
 #include "3DWorld.h"
 #include "gl_ext_arb.h" // for indexed_vbo_manager_t
+#include "textures_3dw.h" // for texture_pair_t
 
 
 float const TREE_DIST_SCALE = 100.0;
@@ -122,6 +123,7 @@ class tree_data_t {
 	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
 	vector<tree_leaf> leaves;
+	texture_pair_t render_leaf_texture;
 	int last_update_frame;
 	//unsigned ref_count;
 	bool leaves_changed, reset_leaves;
@@ -156,7 +158,7 @@ public:
 	void reset_leaf_pos_norm();
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
 	void clear_data();
-	void clear_vbos();
+	void clear_context();
 	unsigned get_gpu_mem() const;
 	int get_tree_type() const {return tree_type;}
 
@@ -212,7 +214,7 @@ public:
 	bool check_sphere_coll(point &center, float radius) const;
 	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate, int shader_loc);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
-	void clear_vbo();
+	void clear_context();
 	int delete_tree();
 	int get_type()            const {return type;}
 	float get_radius()        const {return tdata().sphere_radius;}
@@ -233,7 +235,7 @@ class tree_data_manager_t : public vector<tree_data_t> {
 public:
 	tree_data_manager_t() : last_tree_scale(1.0), last_rgi(0) {}
 	void ensure_init();
-	void clear_vbos();
+	void clear_context();
 	unsigned get_gpu_mem() const;
 };
 
@@ -259,7 +261,7 @@ public:
 	void gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_);
 	void shift_by(vector3d const &vd);
 	void add_cobjs();
-	void clear_vbos();
+	void clear_context();
 	void clear() {delete_all(); vector<tree>::clear();}
 	unsigned get_gpu_mem() const;
 	float get_rmax() const;
@@ -275,7 +277,7 @@ void delete_trees();
 void regen_trees(bool recalc_shadows, bool keep_old);
 void shift_trees(vector3d const &vd);
 void add_tree_cobjs();
-void clear_tree_vbos();
+void clear_tree_context();
 
 // function prototypes - small trees
 int add_small_tree(point const &pos, float height, float width, int tree_type, bool calc_z);

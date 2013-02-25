@@ -71,34 +71,6 @@ extern coll_obj_group coll_objects;
 extern rand_gen_t global_rand_gen;
 
 
-struct texture_pair_t {
-
-	unsigned tids[2]; // color, normal
-
-	texture_pair_t() {tids[0] = tids[1] = 0;}
-
-	void free_context() {
-		for (unsigned d = 0; d < 2; ++d) {free_texture(tids[d]);}
-	}
-	void bind_textures() const {
-		for (unsigned d = 0; d < 2; ++d) {
-			assert(tids[d]);
-			bind_2d_texture(tids[d]);
-			set_multitex(d);
-		}
-		set_multitex(0);
-	}
-	static void ensure_tid(unsigned &tid, unsigned tsize) {
-		if (tid) return; // already created
-		setup_texture(tid, GL_MODULATE, 0, 0, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	}
-	void ensure_tids(unsigned tsize) {
-		for (unsigned d = 0; d < 2; ++d) {ensure_tid(tids[d], tsize);}
-	}
-};
-
-
 struct render_to_texture_t {
 
 	unsigned tsize;
@@ -156,18 +128,15 @@ struct render_to_texture_t {
 };
 
 
-struct render_tree_to_texture_t : public render_to_texture_t {
+struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 
-	shader_t branch_shader[2], leaf_shader[2]; // color, normal
+	shader_t leaf_shader[2]; // color, normal
 	tree *cur_tree;
 
-	render_tree_to_texture_t(unsigned tsize_) : render_to_texture_t(tsize_), cur_tree(NULL) {}
+	render_tree_leaves_to_texture_t(unsigned tsize_) : render_to_texture_t(tsize_), cur_tree(NULL) {}
 
 	void free_context() {
-		for (unsigned d = 0; d < 2; ++d) {
-			branch_shader[d].end_shader();
-			leaf_shader[d].end_shader();
-		}
+		for (unsigned d = 0; d < 2; ++d) {leaf_shader[d].end_shader();}
 	}
 	void set_leaf_shader_consts(bool ix) {
 		leaf_shader[ix].begin_shader(1);
@@ -177,18 +146,6 @@ struct render_tree_to_texture_t : public render_to_texture_t {
 		leaf_shader[ix].disable();
 	}
 	void setup_shaders() {
-		if (!branch_shader[0].is_setup()) { // colors
-			branch_shader[0].set_vert_shader("no_lighting_tex_coord");
-			branch_shader[0].set_frag_shader("simple_texture");
-			branch_shader[0].begin_shader(1);
-			branch_shader[0].add_uniform_int("tex0", 0);
-			branch_shader[0].disable();
-		}
-		if (!branch_shader[1].is_setup()) { // normals
-			branch_shader[1].set_vert_shader("write_normal");
-			branch_shader[1].set_frag_shader("write_normal");
-			branch_shader[1].begin_shader(0); // begin, but don't enable
-		}
 		if (!leaf_shader[0].is_setup()) { // colors
 			leaf_shader[0].set_vert_shader("tc_by_vert_id.part+tree_leaves_no_lighting");
 			leaf_shader[0].set_frag_shader("simple_texture");
@@ -203,18 +160,11 @@ struct render_tree_to_texture_t : public render_to_texture_t {
 	virtual void draw_geom(bool is_normal_pass) {
 		assert(cur_tree);
 		BLACK.do_glColor();
-		shader_t &bs(branch_shader[is_normal_pass]), &ls(leaf_shader[is_normal_pass]);
-		bs.enable();
-		tree_data_t::pre_draw(1, 0);
-		cur_tree->draw_tree(bs, 1, 0, is_normal_pass, zero_vector, bs.get_uniform_loc("world_space_offset")); // draw branches
-		tree_data_t::post_draw(1, 0);
-		bs.disable();
-		disable_multitex_a();
-		tree_cont_t::pre_leaf_draw(ls);
+		tree_cont_t::pre_leaf_draw(leaf_shader[is_normal_pass]);
 		tree_data_t::pre_draw(0, 0);
-		cur_tree->draw_tree(ls, 0, 1, is_normal_pass, zero_vector, -1); // draw leaves
+		cur_tree->draw_tree(leaf_shader[is_normal_pass], 0, 1, is_normal_pass, zero_vector, -1); // draw leaves
 		tree_data_t::post_draw(0, 0);
-		tree_cont_t::post_leaf_draw(ls);
+		tree_cont_t::post_leaf_draw(leaf_shader[is_normal_pass]);
 	}
 	void render_tree(tree &t, texture_pair_t &tpair, vector3d const &view_dir, vector3d const &up_dir) {
 		setup_shaders();
@@ -225,19 +175,8 @@ struct render_tree_to_texture_t : public render_to_texture_t {
 		point const eye(center - view_dist_mult*radius*view_dir.get_norm());
 		render(tpair, eye, center, radius, up_dir);
 	}
-	void render_tree_side_views(tree &t, vector<texture_pair_t> &tpairs, unsigned num) {
-		assert(num > 0);
-
-		for (unsigned i = 0; i < num; ++i) {
-			float const angle(TWO_PI*((float)i/(float)num));
-			vector3d const view_dir(cosf(angle), sinf(angle), 0.0); // should be normalized
-			tpairs.push_back(texture_pair_t());
-			render_tree(t, tpairs.back(), view_dir, plus_z);
-		}
-	}
-	void render_tree_top_view(tree &t, texture_pair_t &tpair) {
-		render_tree(t, tpair, vector3d(0.0, 0.0, -1.0), plus_x);
-	}
+	void render_tree_side_view(tree &t, texture_pair_t &tpair) {render_tree(t, tpair, plus_x, plus_z);}
+	void render_tree_top_view (tree &t, texture_pair_t &tpair) {render_tree(t, tpair, vector3d(0.0, 0.0, -1.0), plus_x);}
 };
 
 
@@ -779,8 +718,9 @@ void tree_data_t::clear_vbo_ixs() {
 }
 
 
-void tree_data_t::clear_vbos() {
+void tree_data_t::clear_context() {
 
+	render_leaf_texture.free_context();
 	branch_vbo_manager.clear_vbos();
 	delete_vbo(leaf_vbo);
 	clear_vbo_ixs();
@@ -979,9 +919,10 @@ void tree_data_t::reset_leaf_pos_norm() {
 
 void tree_data_t::draw_leaves(float size_scale) {
 
-	bool const create_leaf_vbo(leaf_vbo == 0);
 	unsigned nl(leaves.size());
 	assert(leaf_data.size() >= 4*nl);
+	if (ENABLE_CLIP_LEAVES) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
+	bool const create_leaf_vbo(leaf_vbo == 0);
 	create_bind_vbo_and_upload(leaf_vbo, leaf_data, 0);
 
 	if (!create_leaf_vbo && leaves_changed) {
@@ -989,7 +930,6 @@ void tree_data_t::draw_leaves(float size_scale) {
 	}
 	leaves_changed = 0;
 	leaf_vert_type_t::set_vbo_arrays(0, 0);
-	if (ENABLE_CLIP_LEAVES) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
 	glDrawArrays(GL_QUADS, 0, 4*nl);
 }
 
@@ -1178,15 +1118,15 @@ void delete_trees() {
 }
 
 
-void tree::clear_vbo() {
+void tree::clear_context() {
 	
-	if (td_is_private()) {tdata().clear_vbos();}
+	if (td_is_private()) {tdata().clear_context();}
 }
 
 
 int tree::delete_tree() {
 
-	clear_vbo();
+	clear_context();
 	if (!created)  return 0;
 	if (tree_coll_level) {remove_collision_objects();}
 	if (no_delete) return 0;
@@ -1198,7 +1138,7 @@ int tree::delete_tree() {
 
 void tree_data_t::clear_data() {
 	
-	clear_vbos();
+	clear_context();
 	all_cylins.clear(); remove_excess_cap(all_cylins);
 	leaf_data.clear();  remove_excess_cap(leaf_data);
 	leaves.clear();     remove_excess_cap(leaves); // Note: not present in original delete_trees()
@@ -2144,8 +2084,8 @@ void tree_data_manager_t::ensure_init() {
 	}
 }
 
-void tree_data_manager_t::clear_vbos() {
-	for (iterator i = begin(); i != end(); ++i) {i->clear_vbos();}
+void tree_data_manager_t::clear_context() {
+	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
 }
 
 unsigned tree_data_manager_t::get_gpu_mem() const {
@@ -2179,8 +2119,8 @@ void tree_cont_t::add_cobjs() {
 	for (iterator i = begin(); i != end(); ++i) {i->add_tree_collision_objects();}
 }
 
-void tree_cont_t::clear_vbos() {
-	for (iterator i = begin(); i != end(); ++i) {i->clear_vbo();}
+void tree_cont_t::clear_context() {
+	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
 }
 
 
@@ -2192,9 +2132,9 @@ void shift_trees(vector3d const &vd) {
 void add_tree_cobjs   () {t_trees.add_cobjs();}
 void remove_tree_cobjs() {t_trees.remove_cobjs();}
 
-void clear_tree_vbos() {
-	t_trees.clear_vbos();
-	tree_data_manager.clear_vbos();
+void clear_tree_context() {
+	t_trees.clear_context();
+	tree_data_manager.clear_context();
 }
 
 

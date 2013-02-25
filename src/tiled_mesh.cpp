@@ -270,7 +270,7 @@ public:
 			init_vbo_ids();
 			clear_shadows();
 			pine_trees.clear_vbos();
-			decid_trees.clear_vbos(); // only necessary if not using instancing
+			decid_trees.clear_context(); // only necessary if not using instancing
 			scenery.clear_vbos_and_dlists();
 		}
 		if (tclear) {clear_tids();}

@@ -170,7 +170,7 @@ void clear_context() {
 	reset_snow_vbos();
 	update_grass_vbos();
 	update_tiled_terrain_grass_vbos();
-	clear_tree_vbos();
+	clear_tree_context();
 	clear_sm_tree_vbos();
 	clear_scenery_vbos_and_dlists();
 	reset_tiled_terrain_state();
