@@ -106,7 +106,6 @@ class tree_builder_t {
 public:
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color);
 	void create_all_cylins_and_leaves(int tree_type, float deadness, vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves);
-	float get_bsphere_center_zval() const;
 };
 
 
@@ -150,9 +149,10 @@ public:
 	bool check_if_needs_updated();
 	void remove_leaf_ix(unsigned i, bool update_data);
 	void bend_leaf(unsigned i, float angle);
-	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves, int tree_type) const;
+	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const;
 	void draw_branches(float size_scale);
-	void draw_leaves(shader_t const &s, float size_scale);
+	void draw_leaves(float size_scale);
+	texture_pair_t get_render_leaf_texture() const {return render_leaf_texture;}
 	bool leaf_draw_setup(bool leaf_dynamic_en);
 	void check_leaf_render_texture();
 	void update_normal_for_leaf(unsigned i);

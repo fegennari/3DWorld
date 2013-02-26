@@ -48,6 +48,7 @@ bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 
 float get_scaled_tile_radius  () {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
+float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
 bool is_water_enabled     () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool pine_trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool decid_trees_enabled  () {return ((tree_mode & 1) && vegetation > 0.0);}
@@ -1126,7 +1127,7 @@ public:
 		grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
 		assert(MESH_X_SIZE == MESH_Y_SIZE); // limitation, for now
 		point const camera(get_camera_pos() - point((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
-		int const tile_radius(int(1.5*TILE_RADIUS) + 1);
+		int const tile_radius(int(CREATE_DIST_TILES*TILE_RADIUS) + 1);
 		int const toffx(int(0.5*camera.x/X_SCENE_SIZE)), toffy(int(0.5*camera.y/Y_SCENE_SIZE));
 		int const x1(-tile_radius + toffx), y1(-tile_radius + toffy);
 		int const x2( tile_radius + toffx), y2( tile_radius + toffy);
@@ -1439,12 +1440,33 @@ public:
 
 		// draw leaves
 		shader_t ls;
-		tree_cont_t::pre_leaf_draw(ls);
-		float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
-		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-		draw_decid_tree_bl(to_draw, ls, 0, 1, reflection_pass);
-		ls.add_uniform_color("color_scale", WHITE);
-		tree_cont_t::post_leaf_draw(ls);
+
+		if (0) {
+			set_specular(0.1, 10.0);
+			ls.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+			ls.setup_enabled_lights(2);
+			ls.set_frag_shader("linear_fog.part+tree_leaves_billboard");
+			ls.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves_billboard");
+			ls.begin_shader();
+			ls.setup_fog_scale();
+			ls.add_uniform_int("tex0", 0);
+			WHITE.do_glColor();
+			plus_z.do_glNormal();
+			float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
+			ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
+			draw_decid_tree_bl(to_draw, ls, 0, 1, reflection_pass);
+			ls.disable();
+			set_specular(0.0, 1.0);
+			//glDisable(GL_TEXTURE_2D);
+		}
+		else {
+			tree_cont_t::pre_leaf_draw(ls);
+			float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
+			ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
+			draw_decid_tree_bl(to_draw, ls, 0, 1, reflection_pass);
+			ls.add_uniform_color("color_scale", WHITE);
+			tree_cont_t::post_leaf_draw(ls);
+		}
 		leaf_color_changed = 0; // Note: only visible trees will be updated
 	}
 

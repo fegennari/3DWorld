@@ -70,6 +70,8 @@ extern texture_t textures[];
 extern coll_obj_group coll_objects;
 extern rand_gen_t global_rand_gen;
 
+float get_draw_tile_dist();
+
 
 struct render_to_texture_t {
 
@@ -78,27 +80,21 @@ struct render_to_texture_t {
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
 	virtual ~render_to_texture_t() {}
 
-	void render(texture_pair_t &tpair, point const &eye, point const &center, float radius, vector3d const &up_dir) {
-		assert(eye != center);
+	void render(texture_pair_t &tpair, float radius, vector3d const &view_dir) { // Note: default viewing in -z dir
 		assert(radius > 0.0);
 		assert(tsize > 0);
 
 		// setup matrices
 		glViewport(0, 0, tsize, tsize);
-		glClearColor(0.0, 0.0, 0.0, 0.0); // transparent
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		glPushMatrix();
 		glMatrixMode(GL_PROJECTION);
 		glPushMatrix();
 		glLoadIdentity();
-		float const dist(p2p_dist(eye, center));
-		assert(dist > radius);
-		float const angle(asinf(radius/dist)), near_clip(dist - radius), far_clip(dist + radius);
-		assert(near_clip > 0);
-		gluPerspective(2.0*angle/TO_RADIANS, 1.0, near_clip, far_clip); // gluOrtho2D()?
+		gluOrtho2D(-radius, radius, -radius, radius);
 		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
 		glLoadIdentity();
-		gluLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
+		glTranslatef(0.0, 0.0, -radius); // move to neg z
+		//rotate_from_v2v(vector3d(0.0, 0.0, -1.0), view_dir);
 
 		// render
 		tpair.ensure_tids(tsize);
@@ -106,18 +102,19 @@ struct render_to_texture_t {
 
 		for (unsigned d = 0; d < 2; ++d) {
 			unsigned fbo_id(0);
-			enable_fbo(fbo_id, tpair.tids[d], 0); // FIXME: too slow to create and free fbos every time?
+			enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
+			//glClearColor(0.0, 0.0, 0.0, 0.0); // transparent FIXME: alpha doesn't seem to work in the texture
+			glClearColor(0.0, 0.0, 0.0, 1.0); // black
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			draw_geom(d != 0);
 			free_fbo(fbo_id);
 		}
 
 		// restore state
-		//glMatrixMode(GL_TEXTURE);
-		//glLoadIdentity();
+		glPopMatrix();
 		glMatrixMode(GL_PROJECTION);
 		glPopMatrix();
 		glMatrixMode(GL_MODELVIEW);
-		glPopMatrix();
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glEnable(GL_LIGHTING);
 		disable_fbo();
@@ -160,27 +157,22 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 	virtual void draw_geom(bool is_normal_pass) {
 		assert(cur_tree);
 		BLACK.do_glColor();
-		tree_cont_t::pre_leaf_draw(leaf_shader[is_normal_pass]);
+		select_texture(tree_types[cur_tree->get_tree_type()].leaf_tex, 0, 1);
+		glDisable(GL_NORMALIZE);
+		leaf_shader[is_normal_pass].enable();
 		tree_data_t::pre_draw(0, 0);
 		cur_tree->gen_leaf_color();
 		cur_tree->leaf_draw_setup(0);
-		cur_tree->draw_leaves(leaf_shader[is_normal_pass], 0.0);
+		cur_tree->draw_leaves(0.0);
 		tree_data_t::post_draw(0, 0);
-		tree_cont_t::post_leaf_draw(leaf_shader[is_normal_pass]);
+		leaf_shader[is_normal_pass].disable();
+		glEnable(GL_NORMALIZE);
 	}
-	void render_tree(tree_data_t &t, texture_pair_t &tpair, vector3d const &view_dir, vector3d const &up_dir) {
+	void render_tree(tree_data_t &t, texture_pair_t &tpair) {
 		setup_shaders();
 		cur_tree = &t;
-		float const view_dist_mult = 20.0; // ???
-		point const center(vector3d(0.0, 0.0, t.sphere_center_zoff));
-		point const eye(center - view_dist_mult*t.sphere_radius*view_dir.get_norm());
-		render(tpair, eye, center, t.sphere_radius, up_dir);
-	}
-	void render_tree_side_view(tree_data_t &t, texture_pair_t &tpair) {
-		render_tree(t, tpair, plus_x, plus_z);
-	}
-	void render_tree_top_view (tree_data_t &t, texture_pair_t &tpair) {
-		render_tree(t, tpair, vector3d(0.0, 0.0, -1.0), plus_x);
+		//point const center(0.0, 0.0, t.sphere_center_zoff);
+		render(tpair, t.sphere_radius, plus_x); // top-down view
 	}
 };
 
@@ -188,11 +180,15 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 // FIXME: move down later
 void tree_data_t::check_leaf_render_texture() {
 
+	// problems:
+	// * no depth buffer
+	// * doesn't work with transparent background
+	// * want side view instead of top view?
 	if (render_leaf_texture.is_valid()) return; // nothing to do
-	unsigned const tree_leaves_tsize = 256;
+	unsigned const tree_leaves_tsize = 512;
 	render_tree_leaves_to_texture_t renderer(tree_leaves_tsize);
-	renderer.render_tree_side_view(*this, render_leaf_texture);
-	cout << "render to texture" << endl;
+	renderer.render_tree(*this, render_leaf_texture);
+	//cout << "render to texture" << endl;
 }
 
 
@@ -330,7 +326,7 @@ void tree_cont_t::remove_cobjs() {
 
 bool tree::check_sphere_coll(point &center, float radius) const {
 
-	float const trunk_radius(0.9*branch_radius_scale*tdata().base_radius), trunk_height(1.2*tdata().sphere_center_zoff); // very approximate
+	float const trunk_radius(0.9*branch_radius_scale*tdata().base_radius), trunk_height(tdata().sphere_center_zoff); // very approximate
 	cylinder_3dw const cylin(tree_center, tree_center+vector3d(0.0, 0.0, trunk_height), trunk_radius, trunk_radius);
 	return sphere_vert_cylin_intersect(center, radius, cylin);
 }
@@ -363,7 +359,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches
 
 void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix) {
 
-	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS - actually ignored due to custom lighting, but useful to have for reference
+	//s.set_prefix("#define USE_LIGHT_COLORS", 1); // VS - ignored due to custom lighting
 	if (!has_dl_sources && !lightning_enabled()) {s.set_prefix("#define NO_LEAF_DLIGHTS", 0);} // VS optimization
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
@@ -778,7 +774,7 @@ void tree_data_t::post_draw(bool branches_or_leaves, bool shadow_only) {
 }
 
 
-void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves, int tree_type) const {
+void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const {
 
 	if (draw_branches && branch_vbo_manager.vbo) { // draw branches (untextured)
 		branch_vbo_manager.pre_render();
@@ -805,7 +801,7 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 		if (!is_over_mesh()) return;
 		glPushMatrix();
 		translate_to(tree_center + xlate);
-		td.draw_tree_shadow_only(draw_branches, draw_leaves, type);
+		td.draw_tree_shadow_only(draw_branches, draw_leaves);
 		glPopMatrix();
 		return;
 	}
@@ -826,7 +822,9 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
-	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(distance_to_camera((sphere_center() + xlate))*DIST_C_SCALE));
+	float const dist_to_camera(distance_to_camera((sphere_center() + xlate)));
+	if (world_mode == WMODE_INF_TERRAIN && dist_to_camera > get_draw_tile_dist()) return; // to far away to draw
+	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(dist_to_camera*DIST_C_SCALE));
 	if (draw_branches) draw_tree_branches(s, size_scale, xlate, shader_loc);
 	if (draw_leaves && has_leaves) draw_tree_leaves(s, size_scale, xlate);
 }
@@ -933,12 +931,7 @@ void tree_data_t::reset_leaf_pos_norm() {
 }
 
 
-void tree_data_t::draw_leaves(shader_t const &s, float size_scale) {
-
-	if (render_leaf_texture.is_valid()) {
-		s.add_uniform_int("tex0", 0);
-		render_leaf_texture.bind_textures();
-	}
+void tree_data_t::draw_leaves(float size_scale) {
 
 	unsigned nl(leaves.size());
 	assert(leaf_data.size() >= 4*nl);
@@ -969,6 +962,16 @@ bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
 void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const &xlate) {
 
 	tree_data_t &td(tdata());
+	texture_pair_t const &rltex(td.get_render_leaf_texture());
+
+	if (rltex.is_valid()) {
+		rltex.bind_textures();
+		WHITE.do_glColor();
+		glBegin(GL_QUADS);
+		draw_billboard((sphere_center() + xlate), get_camera_pos(), up_vector, td.sphere_radius, td.sphere_radius);
+		glEnd();
+		return;
+	}
 	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
 	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
 	if (!gen_arrays && leaf_dynamic_en && (!leaf_orients_valid || size_scale > 0.5)) {update_leaf_orients();}
@@ -990,7 +993,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
 	glPushMatrix();
 	translate_to(tree_center + xlate);
-	td.draw_leaves(s, size_scale);
+	td.draw_leaves(size_scale);
 	if (enable_dlights) {disable_dynamic_lights(num_dlights);}
 	glPopMatrix();
 }
@@ -1235,14 +1238,6 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 }
 
 
-float tree_builder_t::get_bsphere_center_zval() const {
-
-	assert(base_num_cylins > 0);
-	assert(base.cylin);
-	return base.cylin[max(0, (base_num_cylins - 2))].p2.z;
-}
-
-
 inline void add_rotation(point &dest, point const &src, float mult) {
 
 	UNROLL_3X(dest[i_] = src[i_] + mult*re_matrix[i_];)
@@ -1419,14 +1414,21 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color);
 	
 	// create leaves and all_cylins
-	sphere_center_zoff = builder.get_bsphere_center_zval();
 	builder.create_all_cylins_and_leaves(tree_type, deadness, all_cylins, leaves);
 
 	// set the bounding sphere center
-	sphere_radius = 0.0;
+	assert(!all_cylins.empty());
+	float zmin(all_cylins.front().p1.z), zmax(zmin);
 
 	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
-		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, vector3d(0.0, 0.0, sphere_center_zoff)));
+		zmin = min(zmin, min(i->p1.z, i->p2.z));
+		zmax = max(zmax, min(i->p1.z, i->p2.z));
+	}
+	sphere_center_zoff = 0.5*(zmin + zmax);
+	sphere_radius      = 0.0;
+
+	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
+		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, point(0.0, 0.0, sphere_center_zoff)));
 	}
 	sphere_radius = sqrt(sphere_radius);
 

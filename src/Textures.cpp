@@ -2048,7 +2048,7 @@ void texture_pair_t::ensure_tid(unsigned &tid, unsigned tsize) {
 
 	if (tid) return; // already created
 	setup_texture(tid, GL_MODULATE, 0, 0, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 }
 
 
