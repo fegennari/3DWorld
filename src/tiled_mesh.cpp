@@ -55,6 +55,7 @@ bool any_trees_enabled    () {return (pine_trees_enabled() || decid_trees_enable
 bool scenery_enabled      () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
 bool is_grass_enabled     () {return ((display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
+bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
 
 
@@ -489,10 +490,10 @@ public:
 		if (shadow_normal_tid) return; // up-to-date
 		setup_texture(shadow_normal_tid, GL_MODULATE, 0, 0, 0, 0, 0);
 		vector<norm_comp_with_shadow> data(stride*stride);
-		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6);
+		bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 		assert(has_sun || has_moon);
 		//RESET_TIME;
-		calc_shadows(has_sun, has_moon);
+		if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
 		//PRINT_TIME("Calc Shadows");
 
 		for (unsigned y = 0; y < stride; ++y) {
@@ -502,7 +503,10 @@ public:
 				UNROLL_3X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0)););
 				unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]);
 
-				if (has_sun && has_moon) {
+				if (!mesh_shadows) {
+					// do nothing
+				}
+				else if (has_sun && has_moon) {
 					bool const no_sun( (smask[LIGHT_SUN ][ix2] & SHADOWED_ALL) != 0);
 					bool const no_moon((smask[LIGHT_MOON][ix2] & SHADOWED_ALL) != 0);
 					shadow_val *= blend_light(light_factor, !no_sun, !no_moon);
@@ -1270,7 +1274,7 @@ public:
 		vector<tile_t *> to_gen_trees;
 
 		// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
-		if (sun_pos != last_sun || moon_pos != last_moon) { // light source change
+		if (mesh_shadows_enabled() && (sun_pos != last_sun || moon_pos != last_moon)) { // light source change
 			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 				i->second->clear_shadows();
 			}
