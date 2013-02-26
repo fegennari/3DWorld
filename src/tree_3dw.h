@@ -162,6 +162,7 @@ public:
 	void clear_context();
 	unsigned get_gpu_mem() const;
 	int get_tree_type() const {return tree_type;}
+	point get_center() const {return point(0.0, 0.0, sphere_center_zoff);}
 
 	static void pre_draw (bool branches_or_leaves, bool shadow_only);
 	static void post_draw(bool branches_or_leaves, bool shadow_only);
@@ -219,7 +220,7 @@ public:
 	int delete_tree();
 	int get_type()            const {return type;}
 	float get_radius()        const {return tdata().sphere_radius;}
-	point sphere_center()     const {return (tree_center + vector3d(0.0, 0.0, tdata().sphere_center_zoff));}
+	point sphere_center()     const {return (tree_center + tdata().get_center());}
 	point const &get_center() const {return tree_center;}
 	unsigned get_gpu_mem()    const {return (td_is_private() ? tdata().get_gpu_mem() : 0);}
 	bool get_no_delete()      const {return no_delete;}

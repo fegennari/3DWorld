@@ -1445,11 +1445,12 @@ public:
 			set_specular(0.1, 10.0);
 			ls.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 			ls.setup_enabled_lights(2);
-			ls.set_frag_shader("linear_fog.part+tree_leaves_billboard");
-			ls.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves_billboard");
+			ls.set_vert_shader("tree_leaves_billboard");
+			ls.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+tree_leaves_billboard");
 			ls.begin_shader();
 			ls.setup_fog_scale();
 			ls.add_uniform_int("tex0", 0);
+			ls.add_uniform_int("normal_map", 1);
 			WHITE.do_glColor();
 			plus_z.do_glNormal();
 			float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
@@ -1457,7 +1458,6 @@ public:
 			draw_decid_tree_bl(to_draw, ls, 0, 1, reflection_pass);
 			ls.disable();
 			set_specular(0.0, 1.0);
-			//glDisable(GL_TEXTURE_2D);
 		}
 		else {
 			tree_cont_t::pre_leaf_draw(ls);

@@ -158,7 +158,6 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 		assert(cur_tree);
 		BLACK.do_glColor();
 		select_texture(tree_types[cur_tree->get_tree_type()].leaf_tex, 0, 1);
-		glDisable(GL_NORMALIZE);
 		leaf_shader[is_normal_pass].enable();
 		tree_data_t::pre_draw(0, 0);
 		cur_tree->gen_leaf_color();
@@ -166,12 +165,10 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 		cur_tree->draw_leaves(0.0);
 		tree_data_t::post_draw(0, 0);
 		leaf_shader[is_normal_pass].disable();
-		glEnable(GL_NORMALIZE);
 	}
 	void render_tree(tree_data_t &t, texture_pair_t &tpair) {
 		setup_shaders();
 		cur_tree = &t;
-		//point const center(0.0, 0.0, t.sphere_center_zoff);
 		render(tpair, t.sphere_radius, plus_x); // top-down view
 	}
 };
@@ -182,7 +179,6 @@ void tree_data_t::check_leaf_render_texture() {
 
 	// problems:
 	// * no depth buffer
-	// * doesn't work with transparent background
 	// * want side view instead of top view?
 	if (render_leaf_texture.is_valid()) return; // nothing to do
 	unsigned const tree_leaves_tsize = 512;
@@ -367,13 +363,13 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 	s.set_frag_shader("linear_fog.part+textured_with_fog");
 
 	if (use_geom_shader) { // unused
-		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tree_leaves_as_pts");
+		s.set_vert_shader("leaf_lighting_comp.part*+leaf_lighting.part+tree_leaves_as_pts");
 		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLE_STRIP, 4);
 		s.begin_shader();
 		//setup_wind_for_shader(s, 1); // FIXME: add wind?
 	}
 	else {
-		s.set_vert_shader("ads_lighting.part*+leaf_lighting.part+tc_by_vert_id.part+tree_leaves");
+		s.set_vert_shader("leaf_lighting_comp.part*+leaf_lighting.part+tc_by_vert_id.part+tree_leaves");
 		s.begin_shader();
 	}
 	s.setup_fog_scale();
@@ -968,7 +964,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 		rltex.bind_textures();
 		WHITE.do_glColor();
 		glBegin(GL_QUADS);
-		draw_billboard((sphere_center() + xlate), get_camera_pos(), up_vector, td.sphere_radius, td.sphere_radius);
+		draw_billboard((sphere_center() + xlate + 0.4*td.get_center()), get_camera_pos(), up_vector, td.sphere_radius, td.sphere_radius);
 		glEnd();
 		return;
 	}
@@ -1428,7 +1424,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 	sphere_radius      = 0.0;
 
 	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
-		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, point(0.0, 0.0, sphere_center_zoff)));
+		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, get_center()));
 	}
 	sphere_radius = sqrt(sphere_radius);
 
