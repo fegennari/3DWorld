@@ -277,8 +277,28 @@ void disable_fbo() {
 
 void free_fbo(unsigned &fbo_id) {
 
-	if (fbo_id > 0) glDeleteFramebuffers(1, &fbo_id);
+	if (fbo_id > 0) {glDeleteFramebuffers(1, &fbo_id);}
 	fbo_id = 0;
+}
+
+
+unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize) {
+
+	unsigned depthrenderbuffer(0);
+	glGenRenderbuffers(1, &depthrenderbuffer);
+	assert(depthrenderbuffer > 0);
+	glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, xsize, ysize);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+	return depthrenderbuffer;
+}
+
+
+void disable_and_free_render_buffer(unsigned &render_buffer) {
+
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	if (render_buffer > 0) {glDeleteRenderbuffers(1, &render_buffer);}
+	render_buffer = 0;
 }
 
 

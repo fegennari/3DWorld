@@ -28,10 +28,10 @@ struct texture_pair_t {
 	bool is_valid() const {return (tids[0] > 0 && tids[1] > 0);}
 	void free_context();
 	void bind_textures() const;
-	static void ensure_tid(unsigned &tid, unsigned tsize);
+	static void ensure_tid(unsigned &tid, unsigned tsize, bool mipmap);
 
-	void ensure_tids(unsigned tsize) {
-		for (unsigned d = 0; d < 2; ++d) {ensure_tid(tids[d], tsize);}
+	void ensure_tids(unsigned tsize, bool mipmap) {
+		for (unsigned d = 0; d < 2; ++d) {ensure_tid(tids[d], tsize, mipmap);}
 	}
 };
 

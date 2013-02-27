@@ -78,9 +78,10 @@ struct render_to_texture_t {
 	unsigned tsize;
 
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
-	virtual ~render_to_texture_t() {}
+	virtual ~render_to_texture_t() {free_context();}
+	virtual void free_context() {} // nothing to do here
 
-	void render(texture_pair_t &tpair, float radius, vector3d const &view_dir) { // Note: default viewing in -z dir
+	void render(texture_pair_t &tpair, float radius, vector3d const &view_dir, bool use_depth_buffer, bool mipmap) { // Note: default viewing in -z dir
 		assert(radius > 0.0);
 		assert(tsize > 0);
 
@@ -97,16 +98,19 @@ struct render_to_texture_t {
 		//rotate_from_v2v(vector3d(0.0, 0.0, -1.0), view_dir);
 
 		// render
-		tpair.ensure_tids(tsize);
+		tpair.ensure_tids(tsize, mipmap);
 		glDisable(GL_LIGHTING);
 
 		for (unsigned d = 0; d < 2; ++d) {
 			unsigned fbo_id(0);
 			enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
+			unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
 			//glClearColor(0.0, 0.0, 0.0, 0.0); // transparent FIXME: alpha doesn't seem to work in the texture
 			glClearColor(0.0, 0.0, 0.0, 1.0); // black
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			draw_geom(d != 0);
+			if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
+			disable_fbo();
 			free_fbo(fbo_id);
 		}
 
@@ -137,7 +141,7 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 	}
 	void set_leaf_shader_consts(bool ix) {
 		leaf_shader[ix].begin_shader(1);
-		leaf_shader[ix].add_uniform_float("min_alpha", 0.75);
+		leaf_shader[ix].add_uniform_float("min_alpha", 0.9);
 		leaf_shader[ix].add_uniform_int("tex0", 0);
 		leaf_shader[ix].add_uniform_int("tc_start_ix", 3);
 		leaf_shader[ix].disable();
@@ -169,7 +173,8 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 	void render_tree(tree_data_t &t, texture_pair_t &tpair) {
 		setup_shaders();
 		cur_tree = &t;
-		render(tpair, t.sphere_radius, plus_x); // top-down view
+		bool const use_depth_buffer(1), mipmap(0);
+		render(tpair, t.sphere_radius, plus_x, use_depth_buffer, mipmap); // top-down view
 	}
 };
 
@@ -178,13 +183,13 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 void tree_data_t::check_leaf_render_texture() {
 
 	// problems:
-	// * no depth buffer
+	// * black border/no transparent background
 	// * want side view instead of top view?
+	// * no mipmaps (need custom alpha)
 	if (render_leaf_texture.is_valid()) return; // nothing to do
-	unsigned const tree_leaves_tsize = 512;
+	unsigned const tree_leaves_tsize = 256;
 	render_tree_leaves_to_texture_t renderer(tree_leaves_tsize);
 	renderer.render_tree(*this, render_leaf_texture);
-	//cout << "render to texture" << endl;
 }
 
 
@@ -322,7 +327,8 @@ void tree_cont_t::remove_cobjs() {
 
 bool tree::check_sphere_coll(point &center, float radius) const {
 
-	float const trunk_radius(0.9*branch_radius_scale*tdata().base_radius), trunk_height(tdata().sphere_center_zoff); // very approximate
+	float const trunk_radius(0.9*branch_radius_scale*tree_types[type].branch_radius*tdata().base_radius);
+	float const trunk_height(tdata().sphere_center_zoff); // very approximate
 	cylinder_3dw const cylin(tree_center, tree_center+vector3d(0.0, 0.0, trunk_height), trunk_radius, trunk_radius);
 	return sphere_vert_cylin_intersect(center, radius, cylin);
 }
@@ -1169,12 +1175,13 @@ void tree_builder_t::process_cylins(tree_cylin *const cylins, unsigned num, int 
 	vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves)
 {
 	float const leaf_size(tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
+	float const br_scale(branch_radius_scale*tree_types[tree_type].branch_radius);
 
 	for (unsigned i = 0; i < num; ++i) {
 		assert(cylins[i].r1 > 0.0 || cylins[i].r2 > 0.0);
 		assert(cylins[i].p1 != cylins[i].p2);
-		cylins[i].r1 *= branch_radius_scale;
-		cylins[i].r2 *= branch_radius_scale;
+		cylins[i].r1 *= br_scale;
+		cylins[i].r2 *= br_scale;
 		all_cylins.push_back(cylins[i]);
 
 		if (deadness < 1.0) { // leaves was reserved
@@ -1553,6 +1560,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 
 	// FIXME: hack to prevent roots from being generated in scenes where trees are user-placed and affect the lighting voxel sparsity
 	root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
+	float const br_scale(branch_radius_scale*tree_types[tree_type].branch_radius);
 
 	for (int i = 0; i < root_num_cylins; i += CYLINS_PER_ROOT) { // add roots
 		tree_cylin &cylin1(roots.cylin[i]), &cylin2(roots.cylin[i+1]), &cylin3(roots.cylin[i+2]);
@@ -1561,10 +1569,10 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		float const deg_rot(180.0+rand_uniform2(40.0, 50.0));
 		vector3d const dir(sin(theta), cos(theta), 0.0);
 		cylin1.assign_params(1, i, root_radius, 0.75*root_radius, 1.0*base_radius, deg_rot); // level 1, with unique branch_id's
-		cylin1.p1     = cylin1.p2 = point(0.0, 0.0, 0.75*branch_radius_scale*base_radius);
+		cylin1.p1     = cylin1.p2 = point(0.0, 0.0, 0.75*br_scale*base_radius);
 		cylin1.rotate = dir;
 		rotate_cylin(cylin1);
-		cylin1.p1    += (0.3*branch_radius_scale*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
+		cylin1.p1    += (0.3*br_scale*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
 		cylin1.p1    *= 2.0;
 		cylin1.p2    *= 1.3;
 

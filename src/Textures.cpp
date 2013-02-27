@@ -2044,11 +2044,12 @@ void texture_pair_t::bind_textures() const {
 }
 
 
-void texture_pair_t::ensure_tid(unsigned &tid, unsigned tsize) {
+void texture_pair_t::ensure_tid(unsigned &tid, unsigned tsize, bool mipmap) {
 
 	if (tid) return; // already created
-	setup_texture(tid, GL_MODULATE, 0, 0, 0);
+	setup_texture(tid, GL_MODULATE, mipmap, 0, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	if (mipmap) {gen_mipmaps(2);}
 }
 
 
