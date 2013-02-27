@@ -113,5 +113,36 @@ struct indexed_vbo_manager_t {
 };
 
 
+struct texture_pair_t {
+
+	unsigned tids[2]; // color, normal
+
+	texture_pair_t() {tids[0] = tids[1] = 0;}
+	bool is_valid() const {return (tids[0] > 0 && tids[1] > 0);}
+	void free_context();
+	void bind_textures() const;
+	static void ensure_tid(unsigned &tid, unsigned tsize, bool mipmap);
+
+	void ensure_tids(unsigned tsize, bool mipmap) {
+		for (unsigned d = 0; d < 2; ++d) {ensure_tid(tids[d], tsize, mipmap);}
+	}
+	bool operator==(texture_pair_t const &tp) const {return (tids[0] == tp.tids[0] && tids[1] == tp.tids[1]);}
+	bool operator< (texture_pair_t const &tp) const {return ((tids[0] == tp.tids[0]) ? (tids[1] < tp.tids[1]) : (tids[0] < tp.tids[0]));}
+};
+
+
+class render_to_texture_t {
+
+	unsigned tsize;
+
+public:
+	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
+	virtual ~render_to_texture_t() {free_context();}
+	virtual void free_context() {} // nothing to do here
+	void render(texture_pair_t &tpair, float radius, vector3d const &view_dir, bool use_depth_buffer, bool mipmap);
+	virtual void draw_geom(bool is_normal_pass) = 0;
+};
+
+
 #endif // _GL_EXT_ARB_H_
 

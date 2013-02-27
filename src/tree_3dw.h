@@ -7,7 +7,6 @@
 
 #include "3DWorld.h"
 #include "gl_ext_arb.h" // for indexed_vbo_manager_t
-#include "textures_3dw.h" // for texture_pair_t
 
 
 float const TREE_DIST_SCALE = 100.0;
@@ -18,6 +17,28 @@ struct blastr; // forward reference
 
 // small tree classes
 enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TREE_CLASS_DETAILED, NUM_TREE_CLASSES};
+
+
+class tree_lod_render_t {
+
+	struct leaf_inst_data_t {
+		point pos;
+		float radius;
+		leaf_inst_data_t(point const &pos_=all_zeros, float radius_=0.0) : pos(pos_), radius(radius_) {}
+	};
+
+	typedef map<texture_pair_t, vector<leaf_inst_data_t> > leaf_map_t;
+	leaf_map_t leaf_map;
+	bool enabled;
+
+public:
+	tree_lod_render_t(bool enabled_) : enabled(enabled_) {}
+	bool is_enabled() const {return enabled;}
+	bool empty() {return leaf_map.empty();}
+	void clear() {leaf_map.clear();}
+	void add_leaves(texture_pair_t const &tp, point const &pos, float radius) ;
+	void render_quads_facing_camera() const;
+};
 
 
 struct tree_leaf { // size = 28 + 48 = 76
@@ -214,7 +235,8 @@ public:
 	void add_tree_collision_objects();
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;
-	void draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate, int shader_loc);
+	void draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
+		bool shadow_only, vector3d const &xlate, int shader_loc);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	void clear_context();
 	int delete_tree();
@@ -253,7 +275,7 @@ public:
 	bool was_generated() const {return generated;}
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
-	void draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate);
+	void draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate);
 	void check_leaf_shadow_change();
 	static void pre_leaf_draw(shader_t &shader);
 	static void post_leaf_draw(shader_t &shader);

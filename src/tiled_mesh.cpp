@@ -789,9 +789,9 @@ public:
 		postproc_trees(decid_trees, dtzmax);
 	}
 
-	void draw_decid_trees(shader_t &s, bool draw_branches, bool draw_leaves, bool reflection_pass) {
+	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass) {
 		if (decid_trees.empty()) return;
-		decid_trees.draw_branches_and_leaves(s, draw_branches, draw_leaves, 0, dtree_off.get_xlate());
+		decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, 0, dtree_off.get_xlate());
 	}
 
 	void update_decid_trees() {
@@ -1415,57 +1415,60 @@ public:
 
 	void update_decid_trees() {
 		if (decid_trees_enabled()) {
+			//RESET_TIME;
 			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 				i->second->update_decid_trees();
 			}
+			//PRINT_TIME("Decid Tree Update");
 		}
 	}
 
-	void draw_decid_tree_bl(draw_vect_t const &to_draw, shader_t &s, bool branches, bool leaves, bool reflection_pass) {
+	void draw_decid_tree_bl(draw_vect_t const &to_draw, shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
-			to_draw[i].second->draw_decid_trees(s, branches, leaves, reflection_pass);
+			to_draw[i].second->draw_decid_trees(s, lod_renderer, branches, leaves, reflection_pass);
 		}
 	}
 
 	void draw_decid_trees(draw_vect_t const &to_draw, bool reflection_pass) {
+		tree_lod_render_t lod_renderer(1); // enabled
+
 		// draw branches
 		shader_t bs;
 		bs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		set_tree_branch_shader(bs, 1, 0, 0);
 		bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
-		draw_decid_tree_bl(to_draw, bs, 1, 0, reflection_pass);
+		draw_decid_tree_bl(to_draw, bs, lod_renderer, 1, 0, reflection_pass);
 		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 		bs.end_shader();
 		disable_multitex_a();
 
 		// draw leaves
 		shader_t ls;
-
-		if (0) {
+		tree_cont_t::pre_leaf_draw(ls);
+		float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
+		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
+		draw_decid_tree_bl(to_draw, ls, lod_renderer, 0, 1, reflection_pass);
+		ls.add_uniform_color("color_scale", WHITE);
+		tree_cont_t::post_leaf_draw(ls);
+		
+		if (!lod_renderer.empty()) {
+			shader_t lrs;
 			set_specular(0.1, 10.0);
-			ls.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			ls.setup_enabled_lights(2);
-			ls.set_vert_shader("tree_leaves_billboard");
-			ls.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+tree_leaves_billboard");
-			ls.begin_shader();
-			ls.setup_fog_scale();
-			ls.add_uniform_int("tex0", 0);
-			ls.add_uniform_int("normal_map", 1);
+			lrs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+			lrs.setup_enabled_lights(2);
+			lrs.set_vert_shader("tree_leaves_billboard");
+			lrs.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+tree_leaves_billboard");
+			lrs.begin_shader();
+			lrs.setup_fog_scale();
+			lrs.add_uniform_int("color_map", 0);
+			lrs.add_uniform_int("normal_map", 1);
 			WHITE.do_glColor();
 			plus_z.do_glNormal();
 			float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
-			ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-			draw_decid_tree_bl(to_draw, ls, 0, 1, reflection_pass);
-			ls.disable();
+			lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
+			lod_renderer.render_quads_facing_camera();
+			lrs.end_shader();
 			set_specular(0.0, 1.0);
-		}
-		else {
-			tree_cont_t::pre_leaf_draw(ls);
-			float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
-			ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-			draw_decid_tree_bl(to_draw, ls, 0, 1, reflection_pass);
-			ls.add_uniform_color("color_scale", WHITE);
-			tree_cont_t::post_leaf_draw(ls);
 		}
 		leaf_color_changed = 0; // Note: only visible trees will be updated
 	}
@@ -1606,7 +1609,7 @@ void draw_tiled_terrain_water(float zval) {
 }
 
 void update_tiled_terrain_trees() {
-	terrain_tile_draw.update_decid_trees();
+	if (display_mode & 0x10) {terrain_tile_draw.update_decid_trees();}
 }
 
 bool check_player_tiled_terrain_collision() {

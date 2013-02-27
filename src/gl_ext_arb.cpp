@@ -30,6 +30,7 @@ unsigned max_used_multitex(0);
 bool multitex_enabled[MAX_MULTITEX] = {0};
 
 bool select_texture(int id, bool enable=1, bool white_tex_default=0);
+void set_standard_viewport();
 
 
 void set_active_texture(unsigned tu_id) {
@@ -299,6 +300,53 @@ void disable_and_free_render_buffer(unsigned &render_buffer) {
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	if (render_buffer > 0) {glDeleteRenderbuffers(1, &render_buffer);}
 	render_buffer = 0;
+}
+
+
+// Note: default viewing in -z dir
+void render_to_texture_t::render(texture_pair_t &tpair, float radius, vector3d const &view_dir, bool use_depth_buffer, bool mipmap) {
+
+	assert(radius > 0.0);
+	assert(tsize > 0);
+
+	// setup matrices
+	glViewport(0, 0, tsize, tsize);
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(-radius, radius, -radius, radius);
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	glTranslatef(0.0, 0.0, -radius); // move to neg z
+	//rotate_from_v2v(vector3d(0.0, 0.0, -1.0), view_dir);
+
+	// render
+	tpair.ensure_tids(tsize, mipmap);
+	glDisable(GL_LIGHTING);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		unsigned fbo_id(0);
+		enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
+		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
+		//glClearColor(0.0, 0.0, 0.0, 0.0); // transparent FIXME: alpha doesn't seem to work in the texture
+		glClearColor(0.0, 0.0, 0.0, 1.0); // black
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		draw_geom(d != 0);
+		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
+		disable_fbo();
+		free_fbo(fbo_id);
+	}
+
+	// restore state
+	glPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glEnable(GL_LIGHTING);
+	disable_fbo();
+	set_standard_viewport();
 }
 
 

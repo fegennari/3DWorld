@@ -83,6 +83,7 @@ void init_models();
 void free_models();
 
 // function prototypes - display_world
+void set_standard_viewport();
 point get_sun_pos();
 point get_moon_pos();
 colorRGBA get_bkg_color(point const &p1, vector3d const &v12);

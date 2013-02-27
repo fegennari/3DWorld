@@ -405,7 +405,7 @@ void create_shadow_map() {
 	}
 
 	// restore old state
-	glViewport(0, 0, window_width, window_height);
+	set_standard_viewport();
 	check_gl_error(200);
 	do_zoom      = do_zoom_;
 	animate2     = animate2_;

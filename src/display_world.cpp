@@ -99,6 +99,12 @@ void calc_moon_atten(float *ambient, float *diffuse, float mlf) {
 }
 
 
+void set_standard_viewport() {
+
+	glViewport(0, 0, window_width, window_height);
+}
+
+
 void set_player_pdu(vector3d const &rv1, vector3d const &rv2) {
 
 	vector3d cview_dir_n(cview_dir), upv(up_vector);
@@ -1102,7 +1108,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
-	glViewport(0, 0, window_width, window_height);
+	set_standard_viewport();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	//PRINT_TIME("Create Reflection Texture");
 }
@@ -1170,7 +1176,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	ocean.z     = water_plane_z;
 	camera_mode = 1;
 	mesh_type   = 0;
-	//update_tiled_terrain_trees();
+	update_tiled_terrain_trees();
 
 	if (show_fog || underwater) {
 		glClearColor_rgba(set_inf_terrain_fog(underwater, zmin2));

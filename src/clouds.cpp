@@ -232,7 +232,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
 	if (USE_CLOUD_FBO) disable_fbo();
-	glViewport(0, 0, window_width, window_height);
+	set_standard_viewport();
 	if (!USE_CLOUD_FBO) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	check_gl_error(802);

@@ -73,61 +73,6 @@ extern rand_gen_t global_rand_gen;
 float get_draw_tile_dist();
 
 
-struct render_to_texture_t {
-
-	unsigned tsize;
-
-	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
-	virtual ~render_to_texture_t() {free_context();}
-	virtual void free_context() {} // nothing to do here
-
-	void render(texture_pair_t &tpair, float radius, vector3d const &view_dir, bool use_depth_buffer, bool mipmap) { // Note: default viewing in -z dir
-		assert(radius > 0.0);
-		assert(tsize > 0);
-
-		// setup matrices
-		glViewport(0, 0, tsize, tsize);
-		glMatrixMode(GL_PROJECTION);
-		glPushMatrix();
-		glLoadIdentity();
-		gluOrtho2D(-radius, radius, -radius, radius);
-		glMatrixMode(GL_MODELVIEW);
-		glPushMatrix();
-		glLoadIdentity();
-		glTranslatef(0.0, 0.0, -radius); // move to neg z
-		//rotate_from_v2v(vector3d(0.0, 0.0, -1.0), view_dir);
-
-		// render
-		tpair.ensure_tids(tsize, mipmap);
-		glDisable(GL_LIGHTING);
-
-		for (unsigned d = 0; d < 2; ++d) {
-			unsigned fbo_id(0);
-			enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
-			unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
-			//glClearColor(0.0, 0.0, 0.0, 0.0); // transparent FIXME: alpha doesn't seem to work in the texture
-			glClearColor(0.0, 0.0, 0.0, 1.0); // black
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			draw_geom(d != 0);
-			if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
-			disable_fbo();
-			free_fbo(fbo_id);
-		}
-
-		// restore state
-		glPopMatrix();
-		glMatrixMode(GL_PROJECTION);
-		glPopMatrix();
-		glMatrixMode(GL_MODELVIEW);
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glEnable(GL_LIGHTING);
-		disable_fbo();
-		glViewport(0, 0, window_width, window_height);
-	}
-
-	virtual void draw_geom(bool is_normal_pass) = 0;
-};
-
 
 struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 
@@ -177,6 +122,32 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 		render(tpair, t.sphere_radius, plus_x, use_depth_buffer, mipmap); // top-down view
 	}
 };
+
+
+void tree_lod_render_t::add_leaves(texture_pair_t const &tp, point const &pos, float radius) {
+
+	assert(tp.is_valid());
+	assert(radius > 0.0);
+	leaf_map[tp].push_back(leaf_inst_data_t(pos, radius));
+}
+
+
+void tree_lod_render_t::render_quads_facing_camera() const {
+
+	point const camera(get_camera_pos());
+	vector3d const cur_up_vector(up_vector); // plus_z?
+
+	for (leaf_map_t::const_iterator i = leaf_map.begin(); i != leaf_map.end(); ++i) {
+		i->first.bind_textures();
+		glBegin(GL_QUADS);
+		assert(!i->second.empty());
+
+		for (vector<leaf_inst_data_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j) {
+			draw_billboard(j->pos, camera, cur_up_vector, j->radius, j->radius);
+		}
+		glEnd();
+	}
+}
 
 
 // FIXME: move down later
@@ -345,7 +316,7 @@ bool tree_cont_t::check_sphere_coll(point &center, float radius) const {
 }
 
 
-void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate) {
+void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate) {
 
 	assert(draw_branches != draw_leaves); // must enable only one
 	BLACK.do_glColor();
@@ -353,7 +324,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, bool draw_branches
 	tree_data_t::pre_draw(draw_branches, shadow_only);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->draw_tree(s, draw_branches, draw_leaves, shadow_only, xlate, shader_loc);
+		i->draw_tree(s, lod_renderer, draw_branches, draw_leaves, shadow_only, xlate, shader_loc);
 	}
 	tree_data_t::post_draw(draw_branches, shadow_only);
 }
@@ -440,12 +411,14 @@ void tree_cont_t::post_leaf_draw(shader_t &shader) {
 
 void tree_cont_t::draw(bool shadow_only) {
 
+	tree_lod_render_t lod_renderer(0); // disabled
+
 	// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
 	// draw branches
 	shader_t bs;
 	bool const branch_smap(1 && !shadow_only); // looks better, but slower
 	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
-	draw_branches_and_leaves(bs, 1, 0, shadow_only, zero_vector);
+	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, zero_vector);
 	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 	bs.end_shader();
 	disable_multitex_a();
@@ -453,7 +426,7 @@ void tree_cont_t::draw(bool shadow_only) {
 	// draw leaves
 	shader_t ls;
 	pre_leaf_draw(ls);
-	draw_branches_and_leaves(ls, 0, 1, shadow_only, zero_vector);
+	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, zero_vector);
 	post_leaf_draw(ls);
 }
 
@@ -794,8 +767,9 @@ void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) co
 }
 
 
-void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate, int shader_loc) {
-
+void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
+	bool shadow_only, vector3d const &xlate, int shader_loc)
+{
 	if (!created) return;
 	tree_data_t &td(tdata());
 
@@ -824,11 +798,23 @@ void tree::draw_tree(shader_t const &s, bool draw_branches, bool draw_leaves, bo
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
-	float const dist_to_camera(distance_to_camera((sphere_center() + xlate)));
+	point const draw_pos(sphere_center() + xlate);
+	float const dist_to_camera(distance_to_camera(draw_pos));
 	if (world_mode == WMODE_INF_TERRAIN && dist_to_camera > get_draw_tile_dist()) return; // to far away to draw
 	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(dist_to_camera*DIST_C_SCALE));
-	if (draw_branches) draw_tree_branches(s, size_scale, xlate, shader_loc);
-	if (draw_leaves && has_leaves) draw_tree_leaves(s, size_scale, xlate);
+	if (draw_branches) {draw_tree_branches(s, size_scale, xlate, shader_loc);}
+	
+	if (draw_leaves && has_leaves) {
+		tree_data_t &td(tdata());
+		texture_pair_t const &rltex(td.get_render_leaf_texture());
+
+		if ((display_mode & 0x10) && size_scale < 0.5 && lod_renderer.is_enabled() && rltex.is_valid()) {
+			lod_renderer.add_leaves(rltex, (draw_pos + 0.4*td.get_center()), td.sphere_radius);
+		}
+		else {
+			draw_tree_leaves(s, size_scale, xlate);
+		}
+	}
 }
 
 
@@ -964,16 +950,6 @@ bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
 void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const &xlate) {
 
 	tree_data_t &td(tdata());
-	texture_pair_t const &rltex(td.get_render_leaf_texture());
-
-	if (rltex.is_valid()) {
-		rltex.bind_textures();
-		WHITE.do_glColor();
-		glBegin(GL_QUADS);
-		draw_billboard((sphere_center() + xlate + 0.4*td.get_center()), get_camera_pos(), up_vector, td.sphere_radius, td.sphere_radius);
-		glEnd();
-		return;
-	}
 	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
 	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
 	if (!gen_arrays && leaf_dynamic_en && (!leaf_orients_valid || size_scale > 0.5)) {update_leaf_orients();}
