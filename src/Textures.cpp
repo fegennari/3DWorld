@@ -1080,6 +1080,13 @@ void texture_t::create_custom_mipmaps() {
 }
 
 
+void texture_t::load_from_gl() { // also set tid?
+
+	alloc();
+	glGetTexImage(GL_TEXTURE_2D, 0, calc_format(), GL_UNSIGNED_BYTE, data);
+}
+
+
 void bind_1d_texture(unsigned tid) {
 
 	glBindTexture(GL_TEXTURE_1D, tid);
@@ -2049,7 +2056,6 @@ void texture_pair_t::ensure_tid(unsigned &tid, unsigned tsize, bool mipmap, bool
 	if (tid) return; // already created
 	setup_texture(tid, GL_MODULATE, mipmap, 0, 0, 0, 0, nearest);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	if (mipmap) {gen_mipmaps(2);}
 }
 
 
@@ -2057,6 +2063,15 @@ void texture_pair_t::ensure_tids(unsigned tsize, bool mipmap, bool nearest_for_n
 
 	ensure_tid(tids[0], tsize, mipmap, 0); // color
 	ensure_tid(tids[1], tsize, mipmap, nearest_for_normal); // normal
+}
+
+
+void texture_pair_t::build_mipmaps(unsigned d, unsigned tsize) {
+
+	assert(d == 0 || d == 1);
+	assert(tids[d] != 0);
+	bind_2d_texture(tids[d]);
+	gen_mipmaps(2); // 2D
 }
 
 

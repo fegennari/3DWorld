@@ -123,7 +123,9 @@ struct texture_pair_t {
 	void bind_textures() const;
 	static void ensure_tid(unsigned &tid, unsigned tsize, bool mipmap, bool nearest);
 	void ensure_tids(unsigned tsize, bool mipmap, bool nearest_for_normal);
+	void build_mipmaps(unsigned d, unsigned tsize);
 	bool operator==(texture_pair_t const &tp) const {return (tids[0] == tp.tids[0] && tids[1] == tp.tids[1]);}
+	bool operator!=(texture_pair_t const &tp) const {return !operator==(tp);}
 	bool operator< (texture_pair_t const &tp) const {return ((tids[0] == tp.tids[0]) ? (tids[1] < tp.tids[1]) : (tids[0] < tp.tids[0]));}
 };
 

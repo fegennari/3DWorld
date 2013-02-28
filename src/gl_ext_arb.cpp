@@ -333,8 +333,9 @@ void render_to_texture_t::render(texture_pair_t &tpair, float radius, vector3d c
 		glClearColor(bkg_color.R, bkg_color.G, bkg_color.B, bkg_color.A);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		draw_geom(d != 0);
-		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
 		disable_fbo();
+		if (mipmap) {tpair.build_mipmaps(d, tsize);}
+		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
 		free_fbo(fbo_id);
 	}
 

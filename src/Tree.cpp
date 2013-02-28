@@ -134,7 +134,7 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 		cur_tree = &t;
 		colorRGBA leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()));
 		leaf_bkg_color.alpha = 0.0; // transparent
-		bool const use_depth_buffer(1), mipmap(0), nearest_for_normal(0);
+		bool const use_depth_buffer(1), mipmap(0), nearest_for_normal(0); // Note: for some reason mipmaps are slow and don't look any better
 		render(tpair, t.sphere_radius, plus_x, leaf_bkg_color, use_depth_buffer, mipmap, nearest_for_normal);
 	}
 };
@@ -156,7 +156,7 @@ void tree_lod_render_t::render_quads_facing_camera() const {
 	texture_pair_t last_tp;
 
 	for (leaf_vect_t::const_iterator i = leaf_vect.begin(); i != leaf_vect.end(); ++i) {
-		if (!(*i == last_tp)) {
+		if (*i != last_tp) {
 			last_tp = *i;
 			if (i != leaf_vect.begin()) {glEnd();}
 			i->bind_textures();
@@ -173,7 +173,6 @@ void tree_data_t::check_leaf_render_texture() {
 
 	// problems:
 	// * want side view instead of top view?
-	// * no mipmaps (need custom alpha)
 	if (render_leaf_texture.is_valid()) return; // nothing to do
 	unsigned const tree_leaves_tsize = 256;
 	render_tree_leaves_to_texture_t renderer(tree_leaves_tsize);
