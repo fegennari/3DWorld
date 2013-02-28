@@ -1460,12 +1460,13 @@ public:
 			lrs.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+tree_leaves_billboard");
 			lrs.begin_shader();
 			lrs.setup_fog_scale();
-			lrs.add_uniform_int("color_map", 0);
+			lrs.add_uniform_int("color_map",  0);
 			lrs.add_uniform_int("normal_map", 1);
 			WHITE.do_glColor();
 			plus_z.do_glNormal();
 			float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
 			lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
+			lod_renderer.finalize();
 			lod_renderer.render_quads_facing_camera();
 			lrs.end_shader();
 			set_specular(0.0, 1.0);

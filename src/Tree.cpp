@@ -144,25 +144,27 @@ void tree_lod_render_t::add_leaves(texture_pair_t const &tp, point const &pos, f
 
 	assert(tp.is_valid());
 	assert(radius > 0.0);
-	leaf_map[tp].push_back(leaf_inst_data_t(pos, radius));
+	leaf_vect.push_back(leaf_entry_t(tp, pos, radius));
 }
 
 
 void tree_lod_render_t::render_quads_facing_camera() const {
 
+	if (empty()) return;
 	point const camera(get_camera_pos());
 	vector3d const cur_up_vector(up_vector); // plus_z?
+	texture_pair_t last_tp;
 
-	for (leaf_map_t::const_iterator i = leaf_map.begin(); i != leaf_map.end(); ++i) {
-		i->first.bind_textures();
-		glBegin(GL_QUADS);
-		assert(!i->second.empty());
-
-		for (vector<leaf_inst_data_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j) {
-			draw_billboard(j->pos, camera, cur_up_vector, j->radius, j->radius);
+	for (leaf_vect_t::const_iterator i = leaf_vect.begin(); i != leaf_vect.end(); ++i) {
+		if (!(*i == last_tp)) {
+			last_tp = *i;
+			if (i != leaf_vect.begin()) {glEnd();}
+			i->bind_textures();
+			glBegin(GL_QUADS);
 		}
-		glEnd();
+		draw_billboard(i->pos, camera, cur_up_vector, i->radius, i->radius);
 	}
+	glEnd();
 }
 
 

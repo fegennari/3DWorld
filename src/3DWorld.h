@@ -681,10 +681,18 @@ struct norm_comp { // size = 4
 };
 
 
-struct vert_wrap_t { // so we can put the vertex first
+struct vert_wrap_t { // size = 12; so we can put the vertex first
 	point v;
 	vert_wrap_t() {}
 	vert_wrap_t(point const &v_) : v(v_) {}
+	void set_state() const;
+};
+
+
+struct vert_tc_t : public vert_wrap_t { // size = 20
+	float t[2];
+	vert_tc_t() {}
+	vert_tc_t(point const &v_, float ts, float tt) : vert_wrap_t(v_) {t[0] = ts; t[1] = tt;}
 	void set_state() const;
 };
 

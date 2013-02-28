@@ -21,22 +21,24 @@ enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TRE
 
 class tree_lod_render_t {
 
-	struct leaf_inst_data_t {
+	struct leaf_entry_t : public texture_pair_t {
 		point pos;
 		float radius;
-		leaf_inst_data_t(point const &pos_=all_zeros, float radius_=0.0) : pos(pos_), radius(radius_) {}
+		leaf_entry_t() {}
+		leaf_entry_t(texture_pair_t const &tp, point const &pos_, float radius_) : texture_pair_t(tp), pos(pos_), radius(radius_) {}
 	};
 
-	typedef map<texture_pair_t, vector<leaf_inst_data_t> > leaf_map_t;
-	leaf_map_t leaf_map;
+	typedef vector<leaf_entry_t> leaf_vect_t;
+	leaf_vect_t leaf_vect;
 	bool enabled;
 
 public:
 	tree_lod_render_t(bool enabled_) : enabled(enabled_) {}
 	bool is_enabled() const {return enabled;}
-	bool empty() {return leaf_map.empty();}
-	void clear() {leaf_map.clear();}
-	void add_leaves(texture_pair_t const &tp, point const &pos, float radius) ;
+	bool empty() const {return leaf_vect.empty();}
+	void clear() {leaf_vect.clear();}
+	void add_leaves(texture_pair_t const &tp, point const &pos, float radius);
+	void finalize() {sort(leaf_vect.begin(), leaf_vect.end());}
 	void render_quads_facing_camera() const;
 };
 
