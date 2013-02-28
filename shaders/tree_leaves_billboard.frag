@@ -6,7 +6,8 @@ varying vec4 eye_space_pos;
 void main()
 {
 	vec4 texel = texture2D(color_map, gl_TexCoord[0].st);
-	if (texel.a == 0.0 || (texel.r + texel.g + texel.b) < 0.5) discard; // background is black
+	if (texel.a < 0.75) discard; // transparent
+	//if (normal.w == 0.0) discard; // normal not written to (uses nearest filter)
 
 	// transform the normal into eye space, but don't normalize because it may be scaled for shadows
 	vec3 normal = 2.0*texture2D(normal_map, gl_TexCoord[0].st).xyz - vec3(1,1,1);

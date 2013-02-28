@@ -74,6 +74,20 @@ float get_draw_tile_dist();
 
 
 
+colorRGBA get_leaf_base_color(int type) {
+
+	colorRGBA color(tree_types[type].leafc);
+	UNROLL_3X(color[i_] = CLIP_TO_01(color[i_] + leaf_base_color[i_]);)
+	return color;
+}
+
+
+colorRGBA get_avg_leaf_color(unsigned type) {
+
+	return get_leaf_base_color(type).modulate_with(texture_color(tree_types[type].leaf_tex));
+}
+
+
 struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 
 	shader_t leaf_shader[2]; // color, normal
@@ -86,7 +100,7 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 	}
 	void set_leaf_shader_consts(bool ix) {
 		leaf_shader[ix].begin_shader(1);
-		leaf_shader[ix].add_uniform_float("min_alpha", 0.9);
+		leaf_shader[ix].add_uniform_float("min_alpha", 0.75);
 		leaf_shader[ix].add_uniform_int("tex0", 0);
 		leaf_shader[ix].add_uniform_int("tc_start_ix", 3);
 		leaf_shader[ix].disable();
@@ -118,8 +132,10 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 	void render_tree(tree_data_t &t, texture_pair_t &tpair) {
 		setup_shaders();
 		cur_tree = &t;
-		bool const use_depth_buffer(1), mipmap(0);
-		render(tpair, t.sphere_radius, plus_x, use_depth_buffer, mipmap); // top-down view
+		colorRGBA leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()));
+		leaf_bkg_color.alpha = 0.0; // transparent
+		bool const use_depth_buffer(1), mipmap(0), nearest_for_normal(0);
+		render(tpair, t.sphere_radius, plus_x, leaf_bkg_color, use_depth_buffer, mipmap, nearest_for_normal);
 	}
 };
 
@@ -154,7 +170,6 @@ void tree_lod_render_t::render_quads_facing_camera() const {
 void tree_data_t::check_leaf_render_texture() {
 
 	// problems:
-	// * black border/no transparent background
 	// * want side view instead of top view?
 	// * no mipmaps (need custom alpha)
 	if (render_leaf_texture.is_valid()) return; // nothing to do
@@ -185,14 +200,6 @@ float get_tree_z_bottom(float z, point const &pos) {
 }
 
 bool lightning_enabled() {return (world_mode == WMODE_INF_TERRAIN && glIsEnabled(GL_LIGHT2));}
-
-
-colorRGBA get_leaf_base_color(int type) {
-
-	colorRGBA color(tree_types[type].leafc);
-	UNROLL_3X(color[i_] = CLIP_TO_01(color[i_] + leaf_base_color[i_]);)
-	return color;
-}
 
 
 bool tree::is_over_mesh() const {
@@ -254,7 +261,7 @@ void tree::add_tree_collision_objects() {
 	}
 	if (tree_coll_level >= 4) {
 		int const ltid(tree_types[type].leaf_tex);
-		colorRGBA lcolor(get_leaf_base_color(type).modulate_with(texture_color(ltid)));
+		colorRGBA lcolor(get_avg_leaf_color(type));
 		lcolor.alpha = 1.0;
 		cobj_params cpl(0.3, lcolor, TEST_RTREE_COBJS, 0, NULL, 0, (TEST_RTREE_COBJS ? -1 : ltid), 1.0, 0, 0);
 		cpl.shadow         = 0;
@@ -808,7 +815,7 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 		tree_data_t &td(tdata());
 		texture_pair_t const &rltex(td.get_render_leaf_texture());
 
-		if ((display_mode & 0x10) && size_scale < 0.5 && lod_renderer.is_enabled() && rltex.is_valid()) {
+		if (((display_mode & 0x10) || size_scale < 0.35) && lod_renderer.is_enabled() && rltex.is_valid()) {
 			lod_renderer.add_leaves(rltex, (draw_pos + 0.4*td.get_center()), td.sphere_radius);
 		}
 		else {

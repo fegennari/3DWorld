@@ -2044,12 +2044,19 @@ void texture_pair_t::bind_textures() const {
 }
 
 
-void texture_pair_t::ensure_tid(unsigned &tid, unsigned tsize, bool mipmap) {
+void texture_pair_t::ensure_tid(unsigned &tid, unsigned tsize, bool mipmap, bool nearest) {
 
 	if (tid) return; // already created
-	setup_texture(tid, GL_MODULATE, mipmap, 0, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	setup_texture(tid, GL_MODULATE, mipmap, 0, 0, 0, 0, nearest);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	if (mipmap) {gen_mipmaps(2);}
+}
+
+
+void texture_pair_t::ensure_tids(unsigned tsize, bool mipmap, bool nearest_for_normal) {
+
+	ensure_tid(tids[0], tsize, mipmap, 0); // color
+	ensure_tid(tids[1], tsize, mipmap, nearest_for_normal); // normal
 }
 
 

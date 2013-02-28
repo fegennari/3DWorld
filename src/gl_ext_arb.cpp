@@ -304,8 +304,9 @@ void disable_and_free_render_buffer(unsigned &render_buffer) {
 
 
 // Note: default viewing in -z dir
-void render_to_texture_t::render(texture_pair_t &tpair, float radius, vector3d const &view_dir, bool use_depth_buffer, bool mipmap) {
-
+void render_to_texture_t::render(texture_pair_t &tpair, float radius, vector3d const &view_dir, colorRGBA const &bkg_color,
+	bool use_depth_buffer, bool mipmap, bool nearest_for_normal)
+{
 	assert(radius > 0.0);
 	assert(tsize > 0);
 
@@ -322,15 +323,14 @@ void render_to_texture_t::render(texture_pair_t &tpair, float radius, vector3d c
 	//rotate_from_v2v(vector3d(0.0, 0.0, -1.0), view_dir);
 
 	// render
-	tpair.ensure_tids(tsize, mipmap);
+	tpair.ensure_tids(tsize, mipmap, nearest_for_normal);
 	glDisable(GL_LIGHTING);
 
 	for (unsigned d = 0; d < 2; ++d) {
 		unsigned fbo_id(0);
 		enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
 		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
-		//glClearColor(0.0, 0.0, 0.0, 0.0); // transparent FIXME: alpha doesn't seem to work in the texture
-		glClearColor(0.0, 0.0, 0.0, 1.0); // black
+		glClearColor(bkg_color.R, bkg_color.G, bkg_color.B, bkg_color.A);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		draw_geom(d != 0);
 		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}

@@ -121,11 +121,8 @@ struct texture_pair_t {
 	bool is_valid() const {return (tids[0] > 0 && tids[1] > 0);}
 	void free_context();
 	void bind_textures() const;
-	static void ensure_tid(unsigned &tid, unsigned tsize, bool mipmap);
-
-	void ensure_tids(unsigned tsize, bool mipmap) {
-		for (unsigned d = 0; d < 2; ++d) {ensure_tid(tids[d], tsize, mipmap);}
-	}
+	static void ensure_tid(unsigned &tid, unsigned tsize, bool mipmap, bool nearest);
+	void ensure_tids(unsigned tsize, bool mipmap, bool nearest_for_normal);
 	bool operator==(texture_pair_t const &tp) const {return (tids[0] == tp.tids[0] && tids[1] == tp.tids[1]);}
 	bool operator< (texture_pair_t const &tp) const {return ((tids[0] == tp.tids[0]) ? (tids[1] < tp.tids[1]) : (tids[0] < tp.tids[0]));}
 };
@@ -139,7 +136,8 @@ public:
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
 	virtual ~render_to_texture_t() {free_context();}
 	virtual void free_context() {} // nothing to do here
-	void render(texture_pair_t &tpair, float radius, vector3d const &view_dir, bool use_depth_buffer, bool mipmap);
+	void render(texture_pair_t &tpair, float radius, vector3d const &view_dir, colorRGBA const &bkg_color,
+		bool use_depth_buffer, bool mipmap, bool nearest_for_normal);
 	virtual void draw_geom(bool is_normal_pass) = 0;
 };
 

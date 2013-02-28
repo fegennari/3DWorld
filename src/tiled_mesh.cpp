@@ -1609,7 +1609,7 @@ void draw_tiled_terrain_water(float zval) {
 }
 
 void update_tiled_terrain_trees() {
-	if (display_mode & 0x10) {terrain_tile_draw.update_decid_trees();}
+	terrain_tile_draw.update_decid_trees();
 }
 
 bool check_player_tiled_terrain_collision() {
