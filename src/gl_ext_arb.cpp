@@ -315,12 +315,12 @@ void render_to_texture_t::render(texture_pair_t &tpair, float radius, vector3d c
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	gluOrtho2D(-radius, radius, -radius, radius);
+	glOrtho(-radius, radius, -radius, radius, -2*radius, 2*radius);
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	glTranslatef(0.0, 0.0, -radius); // move to neg z
 	//rotate_from_v2v(vector3d(0.0, 0.0, -1.0), view_dir);
+	//glRotatef(90.0, 0.0, 1.0, 0.0);
 
 	// render
 	tpair.ensure_tids(tsize, mipmap, nearest_for_normal);
@@ -333,7 +333,6 @@ void render_to_texture_t::render(texture_pair_t &tpair, float radius, vector3d c
 		glClearColor(bkg_color.R, bkg_color.G, bkg_color.B, bkg_color.A);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		draw_geom(d != 0);
-		disable_fbo();
 		if (mipmap) {tpair.build_mipmaps(d, tsize);}
 		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
 		free_fbo(fbo_id);

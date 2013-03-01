@@ -625,7 +625,7 @@ void shift_hmv(vector3d const &vd);
 colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture);
 int get_tree_class_from_height(float zpos, bool pine_trees_only);
 int get_tree_type_from_height(float zpos, rand_gen_t &rgen);
-void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords=0, bool use_geom_shader=0, unsigned tc_start_ix=0);
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords=0, bool use_geom_shader=0, unsigned tc_start_ix=0, bool enable_opacity=0);
 
 // function prototypes - csg
 void get_cube_points(const float d[3][2], point pts[8]);

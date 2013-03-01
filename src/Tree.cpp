@@ -140,15 +140,15 @@ struct render_tree_leaves_to_texture_t : public render_to_texture_t {
 };
 
 
-void tree_lod_render_t::add_leaves(texture_pair_t const &tp, point const &pos, float radius) {
+void tree_lod_render_t::add_leaves(texture_pair_t const &tp, point const &pos, float radius, float opacity) {
 
 	assert(tp.is_valid());
 	assert(radius > 0.0);
-	leaf_vect.push_back(leaf_entry_t(tp, pos, radius));
+	leaf_vect.push_back(leaf_entry_t(tp, pos, radius, opacity));
 }
 
 
-void tree_lod_render_t::render_quads_facing_camera() const {
+void tree_lod_render_t::render_quads_facing_camera(shader_t &shader) const {
 
 	if (empty()) return;
 	point const camera(get_camera_pos());
@@ -162,7 +162,9 @@ void tree_lod_render_t::render_quads_facing_camera() const {
 			i->bind_textures();
 			glBegin(GL_QUADS);
 		}
-		draw_billboard(i->pos, camera, cur_up_vector, i->radius, i->radius);
+		colorRGBA(1.0, 1.0, 1.0, i->opacity).do_glColor();
+		point const pos(i->pos + 0.5*i->radius*(camera - i->pos).get_norm());
+		draw_billboard(pos, camera, cur_up_vector, i->radius, i->radius);
 	}
 	glEnd();
 }
@@ -324,8 +326,9 @@ bool tree_cont_t::check_sphere_coll(point &center, float radius) const {
 }
 
 
-void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate) {
-
+void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer,
+	bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate)
+{
 	assert(draw_branches != draw_leaves); // must enable only one
 	BLACK.do_glColor();
 	int const shader_loc((draw_branches && s.is_setup()) ? s.get_uniform_loc("world_space_offset") : -1);
@@ -338,14 +341,14 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t 
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix) {
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix, bool enable_opacity) {
 
 	//s.set_prefix("#define USE_LIGHT_COLORS", 1); // VS - ignored due to custom lighting
 	if (!has_dl_sources && !lightning_enabled()) {s.set_prefix("#define NO_LEAF_DLIGHTS", 0);} // VS optimization
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
 	s.setup_enabled_lights(2);
-	s.set_frag_shader("linear_fog.part+textured_with_fog");
+	s.set_frag_shader(enable_opacity ? "linear_fog.part+noise_dither.part+textured_with_fog_opacity" : "linear_fog.part+textured_with_fog");
 
 	if (use_geom_shader) { // unused
 		s.set_vert_shader("leaf_lighting_comp.part*+leaf_lighting.part+tree_leaves_as_pts");
@@ -380,9 +383,9 @@ void tree_cont_t::check_leaf_shadow_change() {
 }
 
 
-void tree_cont_t::pre_leaf_draw(shader_t &shader) {
+void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity) {
 
-	if (draw_model == 0) { // solid fill
+	if (draw_model == 0 && !enable_opacity) { // solid fill
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 	}
@@ -395,7 +398,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader) {
 		shader.enable();
 	}
 	else {
-		set_leaf_shader(shader, 0.75, 1, 0, 3);
+		set_leaf_shader(shader, 0.75, 1, 0, 3, enable_opacity);
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
 			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i, 0);
@@ -433,7 +436,7 @@ void tree_cont_t::draw(bool shadow_only) {
 
 	// draw leaves
 	shader_t ls;
-	pre_leaf_draw(ls);
+	pre_leaf_draw(ls, 0);
 	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, zero_vector);
 	post_leaf_draw(ls);
 }
@@ -813,11 +816,19 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 	if (draw_branches) {draw_tree_branches(s, size_scale, xlate, shader_loc);}
 	
 	if (draw_leaves && has_leaves) {
-		tree_data_t &td(tdata());
-		texture_pair_t const &rltex(td.get_render_leaf_texture());
+		if (lod_renderer.is_enabled()) {
+			tree_data_t &td(tdata());
+			texture_pair_t const &rltex(td.get_render_leaf_texture());
+			float geom_opacity(1.0);
 
-		if (((display_mode & 0x10) || size_scale < 0.35) && lod_renderer.is_enabled() && rltex.is_valid()) {
-			lod_renderer.add_leaves(rltex, (draw_pos + 0.4*td.get_center()), td.sphere_radius);
+			if (rltex.is_valid() && size_scale < 0.5) {
+				geom_opacity = max(0.0, 5.0*(size_scale - 0.3));
+				lod_renderer.add_leaves(rltex, (draw_pos + 0.4*td.get_center()), td.sphere_radius, (1.0 - geom_opacity));
+			}
+			if (geom_opacity > 0.0) {
+				s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
+				draw_tree_leaves(s, size_scale, xlate);
+			}
 		}
 		else {
 			draw_tree_leaves(s, size_scale, xlate);
@@ -960,7 +971,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 	tree_data_t &td(tdata());
 	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
 	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
-	if (!gen_arrays && leaf_dynamic_en && (!leaf_orients_valid || size_scale > 0.5)) {update_leaf_orients();}
+	if (!gen_arrays && leaf_dynamic_en && (!leaf_orients_valid || size_scale > 0.75)) {update_leaf_orients();}
 
 	if (gen_arrays || leaf_color_changed) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}

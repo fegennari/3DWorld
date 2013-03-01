@@ -1353,17 +1353,20 @@ public:
 		set_active_texture(0);
 	}
 
-	void set_pine_tree_shader(shader_t &s, string const &vs) const {
+	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id) {
+		set_noise_tex(s, tu_id);
+		s.add_uniform_float("noise_tex_size", get_texture_size(NOISE_GEN_TEX, 0));
+	}
+
+	static void set_pine_tree_shader(shader_t &s, string const &vs) {
 		shared_shader_lighting_setup(s);
 		s.set_vert_shader("ads_lighting.part*+tc_by_vert_id.part+" + vs);
-		s.set_frag_shader("linear_fog.part+pine_tree");
+		s.set_frag_shader("linear_fog.part+noise_dither.part+pine_tree");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int("branch_tex", 0);
 		s.add_uniform_float("min_alpha", 0.75);
-
-		set_noise_tex(s, 1);
-		s.add_uniform_float("noise_tex_size", get_texture_size(NOISE_GEN_TEX, 0));
+		set_tree_dither_noise_tex(s, 1); // TU=1
 		check_gl_error(302);
 	}
 
@@ -1444,8 +1447,10 @@ public:
 
 		// draw leaves
 		shader_t ls;
-		tree_cont_t::pre_leaf_draw(ls);
+		tree_cont_t::pre_leaf_draw(ls, 1);
 		float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
+		lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");
+		set_tree_dither_noise_tex(ls, 1); // TU=1
 		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 		draw_decid_tree_bl(to_draw, ls, lod_renderer, 0, 1, reflection_pass);
 		ls.add_uniform_color("color_scale", WHITE);
@@ -1457,17 +1462,17 @@ public:
 			lrs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 			lrs.setup_enabled_lights(2);
 			lrs.set_vert_shader("tree_leaves_billboard");
-			lrs.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+tree_leaves_billboard");
+			lrs.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+noise_dither.part+tree_leaves_billboard");
 			lrs.begin_shader();
 			lrs.setup_fog_scale();
 			lrs.add_uniform_int("color_map",  0);
 			lrs.add_uniform_int("normal_map", 1);
-			WHITE.do_glColor();
+			set_tree_dither_noise_tex(lrs, 2); // TU=2
 			plus_z.do_glNormal();
 			float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
 			lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 			lod_renderer.finalize();
-			lod_renderer.render_quads_facing_camera();
+			lod_renderer.render_quads_facing_camera(lrs);
 			lrs.end_shader();
 			set_specular(0.0, 1.0);
 		}

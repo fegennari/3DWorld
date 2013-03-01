@@ -23,9 +23,10 @@ class tree_lod_render_t {
 
 	struct leaf_entry_t : public texture_pair_t {
 		point pos;
-		float radius;
+		float radius, opacity;
 		leaf_entry_t() {}
-		leaf_entry_t(texture_pair_t const &tp, point const &pos_, float radius_) : texture_pair_t(tp), pos(pos_), radius(radius_) {}
+		leaf_entry_t(texture_pair_t const &tp, point const &pos_, float radius_, float opacity_)
+			: texture_pair_t(tp), pos(pos_), radius(radius_), opacity(opacity_) {}
 	};
 
 	typedef vector<leaf_entry_t> leaf_vect_t;
@@ -33,13 +34,15 @@ class tree_lod_render_t {
 	bool enabled;
 
 public:
-	tree_lod_render_t(bool enabled_) : enabled(enabled_) {}
+	int leaf_opacity_loc;
+
+	tree_lod_render_t(bool enabled_) : enabled(enabled_), leaf_opacity_loc(-1) {}
 	bool is_enabled() const {return enabled;}
 	bool empty() const {return leaf_vect.empty();}
 	void clear() {leaf_vect.clear();}
-	void add_leaves(texture_pair_t const &tp, point const &pos, float radius);
+	void add_leaves(texture_pair_t const &tp, point const &pos, float radius, float opacity);
 	void finalize() {sort(leaf_vect.begin(), leaf_vect.end());}
-	void render_quads_facing_camera() const;
+	void render_quads_facing_camera(shader_t &shader) const;
 };
 
 
@@ -279,7 +282,7 @@ public:
 	bool check_sphere_coll(point &center, float radius) const;
 	void draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate);
 	void check_leaf_shadow_change();
-	static void pre_leaf_draw(shader_t &shader);
+	static void pre_leaf_draw(shader_t &shader, bool enable_opacity);
 	static void post_leaf_draw(shader_t &shader);
 	void draw(bool shadow_only);
 	unsigned delete_all();
