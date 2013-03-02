@@ -813,12 +813,12 @@ void draw_one_mult_tex_quad(float x1, float y1, float x2, float y2, float z, flo
 }
 
 
-void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir,
-					float xsize, float ysize, float tx1, float ty1, float tx2, float ty2)
+void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir, float xsize, float ysize,
+	float tx1, float ty1, float tx2, float ty2, bool up_is_y)
 {
 	vector3d const vdir(viewer - pos);
 	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // what if colinear?
-	vector3d const v2((cross_product(vdir, v1    ).get_norm())*ysize);
+	vector3d const v2(up_is_y ? up_dir : (cross_product(vdir, v1).get_norm())*ysize);
 	glTexCoord2f(tx1, ty1); (pos - v1 - v2).do_glVertex();
 	glTexCoord2f(tx1, ty2); (pos - v1 + v2).do_glVertex();
 	glTexCoord2f(tx2, ty2); (pos + v1 + v2).do_glVertex();

@@ -21,28 +21,36 @@ enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TRE
 
 class tree_lod_render_t {
 
-	struct leaf_entry_t : public texture_pair_t {
+	struct entry_t : public texture_pair_t {
 		point pos;
 		float radius, opacity;
-		leaf_entry_t() {}
-		leaf_entry_t(texture_pair_t const &tp, point const &pos_, float radius_, float opacity_)
-			: texture_pair_t(tp), pos(pos_), radius(radius_), opacity(opacity_) {}
+		entry_t() {}
+		entry_t(texture_pair_t const &tp, point const &pos_, float radius_, float opacity_)
+			: texture_pair_t(tp), pos(pos_), radius(radius_), opacity(opacity_) {assert(tp.is_valid()); assert(radius > 0.0);}
 	};
 
-	typedef vector<leaf_entry_t> leaf_vect_t;
-	leaf_vect_t leaf_vect;
+	vector<entry_t> leaf_vect, branch_vect;
 	bool enabled;
 
 public:
 	int leaf_opacity_loc;
 
 	tree_lod_render_t(bool enabled_) : enabled(enabled_), leaf_opacity_loc(-1) {}
-	bool is_enabled() const {return enabled;}
-	bool empty() const {return leaf_vect.empty();}
-	void clear() {leaf_vect.clear();}
-	void add_leaves(texture_pair_t const &tp, point const &pos, float radius, float opacity);
-	void finalize() {sort(leaf_vect.begin(), leaf_vect.end());}
-	void render_quads_facing_camera(shader_t &shader) const;
+	bool is_enabled()   const {return enabled;}
+	bool has_leaves()   const {return !leaf_vect.empty();}
+	bool has_branches() const {return !branch_vect.empty();}
+	bool empty()        const {return (!has_leaves() && !has_branches());}
+	void clear() {leaf_vect.clear(); branch_vect.clear();}
+
+	void add_leaves(texture_pair_t const &tp, point const &pos, float radius, float opacity) {
+		leaf_vect.push_back(entry_t(tp, pos, radius, opacity));
+	}
+	void add_branches(texture_pair_t const &tp, point const &pos, float radius, float opacity) {
+		branch_vect.push_back(entry_t(tp, pos, radius, opacity));
+	}
+	void finalize();
+	void render_leaf_quads_facing_camera(shader_t &shader, colorRGBA const &color) const;
+	void render_branch_quads_facing_camera(shader_t &shader, colorRGBA const &color) const;
 };
 
 
@@ -148,7 +156,7 @@ class tree_data_t {
 	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
 	vector<tree_leaf> leaves;
-	texture_pair_t render_leaf_texture;
+	texture_pair_t render_leaf_texture, render_branch_texture;
 	int last_update_frame;
 	//unsigned ref_count;
 	bool leaves_changed, reset_leaves;
@@ -178,9 +186,10 @@ public:
 	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const;
 	void draw_branches(float size_scale);
 	void draw_leaves(float size_scale);
-	texture_pair_t get_render_leaf_texture() const {return render_leaf_texture;}
+	texture_pair_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
+	texture_pair_t const &get_render_branch_texture() const {return render_branch_texture;}
 	bool leaf_draw_setup(bool leaf_dynamic_en);
-	void check_leaf_render_texture();
+	void check_render_textures();
 	void update_normal_for_leaf(unsigned i);
 	void reset_leaf_pos_norm();
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
@@ -253,7 +262,7 @@ public:
 	bool get_no_delete()      const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
 	bool operator<(tree const &t) const {return ((type != t.type) ? (type < t.type) : (tree_data < t.tree_data));}
-	void check_leaf_render_texture() {tdata().check_leaf_render_texture();}
+	void check_render_textures() {tdata().check_render_textures();}
 };
 
 
@@ -296,7 +305,7 @@ public:
 	unsigned get_gpu_mem() const;
 	float get_rmax() const;
 	void update_zmax(float &tzmax) const;
-	void check_leaf_render_textures();
+	void check_render_textures();
 };
 
 

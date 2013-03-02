@@ -19,6 +19,7 @@ bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
 bool const ENABLE_TERRAIN_ENV = 1;
 bool const GRASS_CLOUD_SHADOWS= 1; // slow, but looks nice
+bool const USE_TREE_BILLBOARDS= 1; // decidious trees: faster but lower quality
 int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
 unsigned const NORM_TEXELS    = 512;
@@ -795,7 +796,7 @@ public:
 	}
 
 	void update_decid_trees() {
-		decid_trees.check_leaf_render_textures();
+		decid_trees.check_render_textures();
 	}
 
 	// *** scenery ***
@@ -1433,29 +1434,29 @@ public:
 	}
 
 	void draw_decid_trees(draw_vect_t const &to_draw, bool reflection_pass) {
-		tree_lod_render_t lod_renderer(1); // enabled
-
-		// draw branches
-		shader_t bs;
-		bs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-		set_tree_branch_shader(bs, 1, 0, 0);
-		bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
-		draw_decid_tree_bl(to_draw, bs, lod_renderer, 1, 0, reflection_pass);
-		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
-		bs.end_shader();
-		disable_multitex_a();
-
-		// draw leaves
-		shader_t ls;
-		tree_cont_t::pre_leaf_draw(ls, 1);
+		tree_lod_render_t lod_renderer(USE_TREE_BILLBOARDS); // enabled
 		float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
-		lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");
-		set_tree_dither_noise_tex(ls, 1); // TU=1
-		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-		draw_decid_tree_bl(to_draw, ls, lod_renderer, 0, 1, reflection_pass);
-		ls.add_uniform_color("color_scale", WHITE);
-		tree_cont_t::post_leaf_draw(ls);
-		
+
+		{ // draw branches
+			shader_t bs;
+			bs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+			set_tree_branch_shader(bs, 1, 0, 0);
+			bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
+			draw_decid_tree_bl(to_draw, bs, lod_renderer, 1, 0, reflection_pass);
+			bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
+			bs.end_shader();
+			disable_multitex_a();
+		}
+		{ // draw leaves
+			shader_t ls;
+			tree_cont_t::pre_leaf_draw(ls, USE_TREE_BILLBOARDS);
+			if (USE_TREE_BILLBOARDS) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
+			set_tree_dither_noise_tex(ls, 1); // TU=1
+			ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
+			draw_decid_tree_bl(to_draw, ls, lod_renderer, 0, 1, reflection_pass);
+			ls.add_uniform_color("color_scale", WHITE);
+			tree_cont_t::post_leaf_draw(ls);
+		}
 		if (!lod_renderer.empty()) {
 			shader_t lrs;
 			set_specular(0.1, 10.0);
@@ -1469,10 +1470,11 @@ public:
 			lrs.add_uniform_int("normal_map", 1);
 			set_tree_dither_noise_tex(lrs, 2); // TU=2
 			plus_z.do_glNormal();
-			float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
 			lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 			lod_renderer.finalize();
-			lod_renderer.render_quads_facing_camera(lrs);
+			lod_renderer.render_leaf_quads_facing_camera(lrs, WHITE);
+			lrs.add_uniform_color("color_scale", WHITE); // ???
+			lod_renderer.render_branch_quads_facing_camera(lrs, WHITE);
 			lrs.end_shader();
 			set_specular(0.0, 1.0);
 		}

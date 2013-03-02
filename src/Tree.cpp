@@ -36,7 +36,8 @@ int const ENABLE_CLIP_LEAVES = 1;
 int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
 int const TLEAF_START_TUID   = 9;
 bool const FORCE_TREE_TYPE   = 1;
-unsigned const CYLINS_PER_ROOT = 3;
+unsigned const CYLINS_PER_ROOT     = 3;
+unsigned const TREE_BILLBOARD_SIZE = 256;
 
 
 vector<tree_cylin >   tree_builder_t::cylin_cache;
@@ -88,97 +89,149 @@ colorRGBA get_avg_leaf_color(unsigned type) {
 }
 
 
-struct render_tree_leaves_to_texture_t : public render_to_texture_t {
+struct render_tree_to_texture_t : public render_to_texture_t {
 
-	shader_t leaf_shader[2]; // color, normal
+	shader_t shaders[2]; // color, normal
 	tree_data_t *cur_tree;
 
-	render_tree_leaves_to_texture_t(unsigned tsize_) : render_to_texture_t(tsize_), cur_tree(NULL) {}
+	render_tree_to_texture_t(unsigned tsize_) : render_to_texture_t(tsize_), cur_tree(NULL) {}
 
 	void free_context() {
-		for (unsigned d = 0; d < 2; ++d) {leaf_shader[d].end_shader();}
+		for (unsigned d = 0; d < 2; ++d) {shaders[d].end_shader();}
 	}
-	void set_leaf_shader_consts(bool ix) {
-		leaf_shader[ix].begin_shader(1);
-		leaf_shader[ix].add_uniform_float("min_alpha", 0.75);
-		leaf_shader[ix].add_uniform_int("tex0", 0);
-		leaf_shader[ix].add_uniform_int("tc_start_ix", 3);
-		leaf_shader[ix].disable();
+	tree_type const &get_tree_type() const {
+		assert(cur_tree);
+		return tree_types[cur_tree->get_tree_type()];
 	}
-	void setup_shaders() {
-		if (!leaf_shader[0].is_setup()) { // colors
-			leaf_shader[0].set_vert_shader("tc_by_vert_id.part+tree_leaves_no_lighting");
-			leaf_shader[0].set_frag_shader("simple_texture");
-			set_leaf_shader_consts(0);
-		}
-		if (!leaf_shader[1].is_setup()) { // normals
-			leaf_shader[1].set_vert_shader("tc_by_vert_id.part+tree_leaves_no_lighting");
-			leaf_shader[1].set_frag_shader("write_normal_textured");
-			set_leaf_shader_consts(1);
-		}
+	void setup_shader(string const &vs, string const &fs, bool ix) {
+		shaders[ix].set_vert_shader(vs);
+		shaders[ix].set_frag_shader(fs);
+		shaders[ix].begin_shader(1);
+		shaders[ix].add_uniform_float("min_alpha", 0.75);
+		shaders[ix].add_uniform_int("tex0", 0);
+		set_other_shader_consts(ix);
+		shaders[ix].disable();
+	}
+	virtual void set_other_shader_consts(bool ix) {}
+};
+
+
+struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
+
+	render_tree_leaves_to_texture_t(unsigned tsize_) : render_tree_to_texture_t(tsize_) {}
+
+	void set_other_shader_consts(bool ix) {
+		shaders[ix].add_uniform_int("tc_start_ix", 3);
 	}
 	virtual void draw_geom(bool is_normal_pass) {
-		assert(cur_tree);
 		BLACK.do_glColor();
-		select_texture(tree_types[cur_tree->get_tree_type()].leaf_tex, 0, 1);
-		leaf_shader[is_normal_pass].enable();
+		select_texture(get_tree_type().leaf_tex, 0, 1);
+		shaders[is_normal_pass].enable();
 		tree_data_t::pre_draw(0, 0);
 		cur_tree->gen_leaf_color();
 		cur_tree->leaf_draw_setup(0);
 		cur_tree->draw_leaves(0.0);
 		tree_data_t::post_draw(0, 0);
-		leaf_shader[is_normal_pass].disable();
+		shaders[is_normal_pass].disable();
 	}
 	void render_tree(tree_data_t &t, texture_pair_t &tpair) {
-		setup_shaders();
+		if (!shaders[0].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "simple_texture",        0);} // colors
+		if (!shaders[1].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
 		colorRGBA leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()));
 		leaf_bkg_color.alpha = 0.0; // transparent
 		bool const use_depth_buffer(1), mipmap(0), nearest_for_normal(0); // Note: for some reason mipmaps are slow and don't look any better
-		render(tpair, t.sphere_radius, plus_x, leaf_bkg_color, use_depth_buffer, mipmap, nearest_for_normal);
+		render(tpair, t.sphere_radius, plus_z, leaf_bkg_color, use_depth_buffer, mipmap, nearest_for_normal);
 	}
 };
 
 
-void tree_lod_render_t::add_leaves(texture_pair_t const &tp, point const &pos, float radius, float opacity) {
+struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 
-	assert(tp.is_valid());
-	assert(radius > 0.0);
-	leaf_vect.push_back(leaf_entry_t(tp, pos, radius, opacity));
+	render_tree_branches_to_texture_t(unsigned tsize_) : render_tree_to_texture_t(tsize_) {}
+
+	virtual void draw_geom(bool is_normal_pass) {
+		get_tree_type().barkc.do_glColor();
+		select_texture(get_tree_type().bark_tex, 0, 1);
+		shaders[is_normal_pass].enable();
+		tree_data_t::pre_draw(1, 0);
+		cur_tree->draw_branches(0.0);
+		tree_data_t::post_draw(1, 0);
+		shaders[is_normal_pass].disable();
+	}
+	void render_tree(tree_data_t &t, texture_pair_t &tpair) {
+		if (!shaders[0].is_setup()) {setup_shader("tree_branches_no_lighting", "simple_texture",        0);} // colors
+		if (!shaders[1].is_setup()) {setup_shader("tree_branches_no_lighting", "write_normal_textured", 1);} // normals
+		cur_tree = &t;
+		// Note: doesn't take into account bark color modulation between trees
+		colorRGBA branch_bkg_color(get_tree_type().barkc.modulate_with(texture_color(get_tree_type().bark_tex)));
+		branch_bkg_color.alpha = 0.0; // transparent
+		render(tpair, t.sphere_radius, plus_x, branch_bkg_color, 1, 0, 0);
+	}
+};
+
+
+void tree_lod_render_t::finalize() {
+	
+	sort(leaf_vect.begin(), leaf_vect.end());
+	sort(branch_vect.begin(), branch_vect.end());
 }
 
 
-void tree_lod_render_t::render_quads_facing_camera(shader_t &shader) const {
+void tree_lod_render_t::render_leaf_quads_facing_camera(shader_t &shader, colorRGBA const &color) const {
 
-	if (empty()) return;
+	if (!has_leaves()) return;
 	point const camera(get_camera_pos());
-	vector3d const cur_up_vector(up_vector); // plus_z?
 	texture_pair_t last_tp;
 
-	for (leaf_vect_t::const_iterator i = leaf_vect.begin(); i != leaf_vect.end(); ++i) {
+	for (vector<entry_t>::const_iterator i = leaf_vect.begin(); i != leaf_vect.end(); ++i) {
 		if (*i != last_tp) {
 			last_tp = *i;
 			if (i != leaf_vect.begin()) {glEnd();}
 			i->bind_textures();
 			glBegin(GL_QUADS);
 		}
-		colorRGBA(1.0, 1.0, 1.0, i->opacity).do_glColor();
+		colorRGBA(color.R, color.G, color.B, color.A*i->opacity).do_glColor();
 		point const pos(i->pos + 0.5*i->radius*(camera - i->pos).get_norm());
-		draw_billboard(pos, camera, cur_up_vector, i->radius, i->radius);
+		draw_billboard(pos, camera, up_vector, i->radius, i->radius); // full rotation
+	}
+	glEnd();
+}
+
+
+void tree_lod_render_t::render_branch_quads_facing_camera(shader_t &shader, colorRGBA const &color) const {
+
+	if (!has_branches()) return;
+	point const camera(get_camera_pos());
+	texture_pair_t last_tp;
+
+	for (vector<entry_t>::const_iterator i = branch_vect.begin(); i != branch_vect.end(); ++i) {
+		if (*i != last_tp) {
+			last_tp = *i;
+			if (i != branch_vect.begin()) {glEnd();}
+			i->bind_textures();
+			glBegin(GL_QUADS);
+		}
+		colorRGBA(color.R, color.G, color.B, color.A*i->opacity).do_glColor();
+		draw_billboard(i->pos, camera, up_vector, i->radius, i->radius, 0, 0, 1, 1, 1); // constrained to y=up_dir
 	}
 	glEnd();
 }
 
 
 // FIXME: move down later
-void tree_data_t::check_leaf_render_texture() {
+void tree_data_t::check_render_textures() {
 
 	// problems:
-	// * want side view instead of top view?
-	if (render_leaf_texture.is_valid()) return; // nothing to do
-	unsigned const tree_leaves_tsize = 256;
-	render_tree_leaves_to_texture_t renderer(tree_leaves_tsize);
-	renderer.render_tree(*this, render_leaf_texture);
+	// * want side view instead of top view
+	if (!render_leaf_texture.is_valid()) {
+		render_tree_leaves_to_texture_t renderer(TREE_BILLBOARD_SIZE);
+		renderer.render_tree(*this, render_leaf_texture);
+	}
+	if (!render_branch_texture.is_valid()) {
+		render_tree_branches_to_texture_t renderer(TREE_BILLBOARD_SIZE);
+		renderer.render_tree(*this, render_branch_texture);
+	}
 }
 
 
@@ -719,6 +772,7 @@ void tree_data_t::clear_vbo_ixs() {
 void tree_data_t::clear_context() {
 
 	render_leaf_texture.free_context();
+	render_branch_texture.free_context();
 	branch_vbo_manager.clear_vbos();
 	delete_vbo(leaf_vbo);
 	clear_vbo_ixs();
@@ -813,17 +867,35 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 	float const dist_to_camera(distance_to_camera(draw_pos));
 	if (world_mode == WMODE_INF_TERRAIN && dist_to_camera > get_draw_tile_dist()) return; // to far away to draw
 	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(dist_to_camera*DIST_C_SCALE));
-	if (draw_branches) {draw_tree_branches(s, size_scale, xlate, shader_loc);}
 	
+	if (draw_branches && size_scale > 0.05) { // if too far away, don't draw any branches
+		if (lod_renderer.is_enabled()) {
+			tree_data_t &td(tdata());
+			texture_pair_t const &rtex(td.get_render_branch_texture());
+			float geom_opacity(1.0);
+
+			if (rtex.is_valid() && size_scale < 0.5) {
+				geom_opacity = 0.0;//max(0.0, 5.0*(size_scale - 0.3));
+				lod_renderer.add_branches(rtex, draw_pos, td.sphere_radius, (1.0 - geom_opacity));
+			}
+			if (geom_opacity > 0.0) {
+				//s.set_uniform_float(lod_renderer.branch_opacity_loc, geom_opacity); // FIXME: add opacity to the branch shader
+				draw_tree_branches(s, size_scale, xlate, shader_loc);
+			}
+		}
+		else {
+			draw_tree_branches(s, size_scale, xlate, shader_loc);
+		}
+	}
 	if (draw_leaves && has_leaves) {
 		if (lod_renderer.is_enabled()) {
 			tree_data_t &td(tdata());
-			texture_pair_t const &rltex(td.get_render_leaf_texture());
+			texture_pair_t const &rtex(td.get_render_leaf_texture());
 			float geom_opacity(1.0);
 
-			if (rltex.is_valid() && size_scale < 0.5) {
+			if (rtex.is_valid() && size_scale < 0.5) {
 				geom_opacity = max(0.0, 5.0*(size_scale - 0.3));
-				lod_renderer.add_leaves(rltex, (draw_pos + 0.4*td.get_center()), td.sphere_radius, (1.0 - geom_opacity));
+				lod_renderer.add_leaves(rtex, (draw_pos + 0.4*td.get_center()), td.sphere_radius, (1.0 - geom_opacity));
 			}
 			if (geom_opacity > 0.0) {
 				s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
@@ -902,14 +974,13 @@ void tree_data_t::draw_branches(float size_scale) {
 	}
 	branch_vbo_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0, 0);
-	unsigned const num(4*min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
+	unsigned const num(4*((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale))))); // branch LOD
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0); // draw with branch vbos
 }
 
 
 void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc) {
 
-	if (size_scale < 0.05) return; // too far away, don't draw any branches
 	select_texture(tree_types[type].bark_tex, !s.is_setup());
 	set_color(bcolor);
 	if (s.is_setup()) {s.set_uniform_vector3d(shader_loc, (tree_center + xlate));}
@@ -2146,8 +2217,8 @@ void tree_cont_t::clear_context() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
 }
 
-void tree_cont_t::check_leaf_render_textures() {
-	for (iterator i = begin(); i != end(); ++i) {i->check_leaf_render_texture();}
+void tree_cont_t::check_render_textures() {
+	for (iterator i = begin(); i != end(); ++i) {i->check_render_textures();}
 }
 
 
