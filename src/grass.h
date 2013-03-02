@@ -31,17 +31,17 @@ protected:
 
 	vector<grass_t> grass;
 	unsigned vbo;
-	bool vbo_valid, data_valid;
+	bool data_valid;
 	rand_gen_t rgen;
 	typedef vert_norm_comp_tc_color grass_data_t;
 
 public:
-	grass_manager_t() : vbo(0), vbo_valid(0), data_valid(0) {}
+	grass_manager_t() : vbo(0), data_valid(0) {}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~grass_manager_t() {clear();}
 	size_t size() const {return grass.size ();} // 2 points per grass blade
 	bool empty()  const {return grass.empty();}
-	void invalidate_vbo() {vbo_valid = 0;}
+	void free_vbo();
 	void clear();
 	void add_grass_blade(point const &pos, float cscale);
 	void create_new_vbo();

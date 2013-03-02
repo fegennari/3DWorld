@@ -64,7 +64,7 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 grass_tile_manager_t grass_tile_manager;
 
 void update_tiled_terrain_grass_vbos() {
-	grass_tile_manager.invalidate_vbo();
+	grass_tile_manager.free_vbo();
 }
 
 

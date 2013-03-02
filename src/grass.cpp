@@ -41,12 +41,15 @@ void grass_manager_t::grass_t::merge(grass_t const &g) {
 	w  += g.w; // add widths to preserve surface area
 }
 
-
-void grass_manager_t::clear() {
+void grass_manager_t::free_vbo() {
 
 	delete_vbo(vbo);
 	vbo = 0;
-	invalidate_vbo();
+}
+
+void grass_manager_t::clear() {
+
+	free_vbo();
 	grass.clear();
 }
 
@@ -76,7 +79,6 @@ void grass_manager_t::create_new_vbo() {
 
 	delete_vbo(vbo);
 	vbo        = create_vbo();
-	vbo_valid  = 1;
 	data_valid = 0;
 }
 
@@ -95,7 +97,7 @@ void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &da
 
 void grass_manager_t::begin_draw(float spec_weight) const {
 
-	assert(vbo_valid && vbo > 0);
+	assert(vbo > 0);
 	bind_vbo(vbo);
 	grass_data_t::set_vbo_arrays();
 	select_multitex(GRASS_BLADE_TEX, 0);
@@ -219,9 +221,9 @@ void grass_tile_manager_t::update() { // to be called once per frame
 		clear();
 		return;
 	}
-	if (empty()) {gen_grass();}
-	if (!vbo_valid ) create_new_vbo();
-	if (!data_valid) upload_data();
+	if (empty()    ) {gen_grass();}
+	if (vbo == 0   ) {create_new_vbo();}
+	if (!data_valid) {upload_data();}
 }
 
 
@@ -525,7 +527,7 @@ public:
 				} // for i
 				if (min_up > max_up) continue; // nothing updated
 				modified[ix] |= MOD_GEOM; // usually few duplicates each frame, except for cluster grenade explosions
-				if (vbo_valid) upload_data_to_vbo(min_up, max_up+1, 0);
+				if (vbo > 0) upload_data_to_vbo(min_up, max_up+1, 0);
 				//data_valid = 0;
 			} // for x
 		} // for y
@@ -541,9 +543,9 @@ public:
 	}
 
 	void check_for_updates() {
-		if (!shadows_valid && !shadow_map_enabled()) find_shadows();
-		if (!vbo_valid ) create_new_vbo();
-		if (!data_valid) upload_data();
+		if (!shadows_valid && !shadow_map_enabled()) {find_shadows();}
+		if (vbo == 0   ) {create_new_vbo();}
+		if (!data_valid) {upload_data();}
 	}
 
 	void draw_range(unsigned beg_ix, unsigned end_ix) const {
@@ -693,7 +695,7 @@ void gen_grass(bool full_regen) {
 
 
 void update_grass_vbos() {
-	grass_manager.invalidate_vbo();
+	grass_manager.free_vbo();
 }
 
 void draw_grass() {
