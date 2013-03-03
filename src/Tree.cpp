@@ -151,7 +151,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 	render_tree_branches_to_texture_t(unsigned tsize_) : render_tree_to_texture_t(tsize_) {}
 
 	virtual void draw_geom(bool is_normal_pass) {
-		get_tree_type().barkc.do_glColor();
+		WHITE.do_glColor();
 		select_texture(get_tree_type().bark_tex, 0, 1);
 		shaders[is_normal_pass].enable();
 		tree_data_t::pre_draw(1, 0);
@@ -163,8 +163,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		if (!shaders[0].is_setup()) {setup_shader("tree_branches_no_lighting", "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tree_branches_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
-		// Note: doesn't take into account bark color modulation between trees
-		colorRGBA branch_bkg_color(get_tree_type().barkc.modulate_with(texture_color(get_tree_type().bark_tex)));
+		colorRGBA branch_bkg_color(texture_color(get_tree_type().bark_tex));
 		branch_bkg_color.alpha = 0.0; // transparent
 		render(tpair, t.sphere_radius, plus_x, branch_bkg_color, 1, 0, 0);
 	}
@@ -178,7 +177,7 @@ void tree_lod_render_t::finalize() {
 }
 
 
-void tree_lod_render_t::render_leaf_quads_facing_camera(shader_t &shader, colorRGBA const &color) const {
+void tree_lod_render_t::render_leaf_quads_facing_camera(shader_t &shader) const {
 
 	if (!has_leaves()) return;
 	point const camera(get_camera_pos());
@@ -191,7 +190,7 @@ void tree_lod_render_t::render_leaf_quads_facing_camera(shader_t &shader, colorR
 			i->bind_textures();
 			glBegin(GL_QUADS);
 		}
-		colorRGBA(color.R, color.G, color.B, color.A*i->opacity).do_glColor();
+		colorRGBA(i->color.R, i->color.G, i->color.B, i->color.A*i->opacity).do_glColor();
 		point const pos(i->pos + 0.5*i->radius*(camera - i->pos).get_norm());
 		draw_billboard(pos, camera, up_vector, i->radius, i->radius); // full rotation
 	}
@@ -199,7 +198,7 @@ void tree_lod_render_t::render_leaf_quads_facing_camera(shader_t &shader, colorR
 }
 
 
-void tree_lod_render_t::render_branch_quads_facing_camera(shader_t &shader, colorRGBA const &color) const {
+void tree_lod_render_t::render_branch_quads_facing_camera(shader_t &shader) const {
 
 	if (!has_branches()) return;
 	point const camera(get_camera_pos());
@@ -212,7 +211,7 @@ void tree_lod_render_t::render_branch_quads_facing_camera(shader_t &shader, colo
 			i->bind_textures();
 			glBegin(GL_QUADS);
 		}
-		colorRGBA(color.R, color.G, color.B, color.A*i->opacity).do_glColor();
+		colorRGBA(i->color.R, i->color.G, i->color.B, i->color.A*i->opacity).do_glColor();
 		draw_billboard(i->pos, camera, up_vector, i->radius, i->radius, 0, 0, 1, 1, 1); // constrained to y=up_dir
 	}
 	glEnd();
@@ -224,6 +223,7 @@ void tree_data_t::check_render_textures() {
 
 	// problems:
 	// * want side view instead of top view
+	// * normals should be rotated to the view dir
 	if (!render_leaf_texture.is_valid()) {
 		render_tree_leaves_to_texture_t renderer(TREE_BILLBOARD_SIZE);
 		renderer.render_tree(*this, render_leaf_texture);
@@ -876,7 +876,7 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 
 			if (rtex.is_valid() && size_scale < 0.5) {
 				geom_opacity = 0.0;//max(0.0, 5.0*(size_scale - 0.3));
-				lod_renderer.add_branches(rtex, draw_pos, td.sphere_radius, (1.0 - geom_opacity));
+				lod_renderer.add_branches(rtex, draw_pos, td.sphere_radius, (1.0 - geom_opacity), bcolor);
 			}
 			if (geom_opacity > 0.0) {
 				//s.set_uniform_float(lod_renderer.branch_opacity_loc, geom_opacity); // FIXME: add opacity to the branch shader

@@ -1466,15 +1466,16 @@ public:
 			lrs.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+noise_dither.part+tree_leaves_billboard");
 			lrs.begin_shader();
 			lrs.setup_fog_scale();
+			lrs.add_uniform_vector3d("up_vector", up_vector);
 			lrs.add_uniform_int("color_map",  0);
 			lrs.add_uniform_int("normal_map", 1);
 			set_tree_dither_noise_tex(lrs, 2); // TU=2
 			plus_z.do_glNormal();
 			lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 			lod_renderer.finalize();
-			lod_renderer.render_leaf_quads_facing_camera(lrs, WHITE);
+			lod_renderer.render_leaf_quads_facing_camera(lrs);
 			lrs.add_uniform_color("color_scale", WHITE); // ???
-			lod_renderer.render_branch_quads_facing_camera(lrs, WHITE);
+			lod_renderer.render_branch_quads_facing_camera(lrs);
 			lrs.end_shader();
 			set_specular(0.0, 1.0);
 		}
