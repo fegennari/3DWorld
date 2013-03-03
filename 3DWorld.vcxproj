@@ -896,6 +896,8 @@
     <None Include="shaders\textured_with_fog_opacity.frag" />
     <None Include="shaders\tiled_mesh.frag" />
     <None Include="shaders\tree_branches_as_lines.vert" />
+    <None Include="shaders\tree_branches_billboard.frag" />
+    <None Include="shaders\tree_branches_billboard.vert" />
     <None Include="shaders\tree_branches_no_lighting.vert" />
     <None Include="shaders\tree_leaves_as_pts.vert" />
     <None Include="shaders\tree_leaves_billboard.frag" />

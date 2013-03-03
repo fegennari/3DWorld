@@ -1433,6 +1433,17 @@ public:
 		}
 	}
 
+	static void billboard_tree_shader_setup(shader_t &s) {
+
+		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.setup_enabled_lights(2);
+		s.begin_shader();
+		s.setup_fog_scale();
+		s.add_uniform_int("color_map",  0);
+		s.add_uniform_int("normal_map", 1);
+		set_tree_dither_noise_tex(s, 2); // TU=2
+	}
+
 	void draw_decid_trees(draw_vect_t const &to_draw, bool reflection_pass) {
 		tree_lod_render_t lod_renderer(USE_TREE_BILLBOARDS); // enabled
 		float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
@@ -1457,27 +1468,28 @@ public:
 			ls.add_uniform_color("color_scale", WHITE);
 			tree_cont_t::post_leaf_draw(ls);
 		}
-		if (!lod_renderer.empty()) {
+		lod_renderer.finalize();
+
+		if (lod_renderer.has_leaves()) {
 			shader_t lrs;
-			set_specular(0.1, 10.0);
-			lrs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			lrs.setup_enabled_lights(2);
 			lrs.set_vert_shader("tree_leaves_billboard");
 			lrs.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+noise_dither.part+tree_leaves_billboard");
-			lrs.begin_shader();
-			lrs.setup_fog_scale();
-			lrs.add_uniform_vector3d("up_vector", up_vector);
-			lrs.add_uniform_int("color_map",  0);
-			lrs.add_uniform_int("normal_map", 1);
-			set_tree_dither_noise_tex(lrs, 2); // TU=2
-			plus_z.do_glNormal();
+			billboard_tree_shader_setup(lrs);
 			lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-			lod_renderer.finalize();
+			set_specular(0.1, 10.0);
 			lod_renderer.render_leaf_quads_facing_camera(lrs);
-			lrs.add_uniform_color("color_scale", WHITE); // ???
-			lod_renderer.render_branch_quads_facing_camera(lrs);
-			lrs.end_shader();
 			set_specular(0.0, 1.0);
+			lrs.end_shader();
+		}
+		if (lod_renderer.has_branches()) {
+			shader_t brs;
+			brs.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+			brs.set_vert_shader("tree_branches_billboard");
+			brs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tree_branches_billboard");
+			billboard_tree_shader_setup(brs); // cscale=1.0 ?
+			brs.add_uniform_vector3d("ref_dir", vector3d(-1.0, -1.0, 0.0).get_norm());
+			lod_renderer.render_branch_quads_facing_camera(brs);
+			brs.end_shader();
 		}
 		leaf_color_changed = 0; // Note: only visible trees will be updated
 	}

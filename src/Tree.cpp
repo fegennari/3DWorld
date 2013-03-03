@@ -220,7 +220,7 @@ void tree_lod_render_t::render_branch_quads_facing_camera(shader_t &shader) cons
 void tree_data_t::check_render_textures() {
 
 	// problems:
-	// * normals should be rotated to the view dir
+	// * branch opacity
 	if (!render_leaf_texture.is_valid()) {
 		render_tree_leaves_to_texture_t renderer(TREE_BILLBOARD_SIZE);
 		renderer.render_tree(*this, render_leaf_texture);
