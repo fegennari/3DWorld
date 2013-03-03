@@ -818,7 +818,7 @@ void draw_billboard(point const &pos, point const &viewer, vector3d const &up_di
 {
 	vector3d const vdir(viewer - pos); // z
 	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // x (what if colinear?)
-	vector3d const v2(up_is_y ? up_dir : (cross_product(vdir, v1).get_norm())*ysize); // y
+	vector3d const v2((up_is_y ? up_dir : cross_product(vdir, v1).get_norm())*ysize); // y
 	glTexCoord2f(tx1, ty1); (pos - v1 - v2).do_glVertex();
 	glTexCoord2f(tx1, ty2); (pos - v1 + v2).do_glVertex();
 	glTexCoord2f(tx2, ty2); (pos + v1 + v2).do_glVertex();

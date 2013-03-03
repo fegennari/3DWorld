@@ -3,6 +3,8 @@
 // 4/25/02
 #include "3DWorld.h"
 #include "gl_ext_arb.h"
+#include "function_registry.h"
+#include "inlines.h" // for render_to_texture_t::render() stuff
 
 
 void init_glew() {
@@ -28,9 +30,6 @@ unsigned const MAX_MULTITEX = 32; // max is GL_TEXTURE31
 
 unsigned max_used_multitex(0);
 bool multitex_enabled[MAX_MULTITEX] = {0};
-
-bool select_texture(int id, bool enable=1, bool white_tex_default=0);
-void set_standard_viewport();
 
 
 void set_active_texture(unsigned tu_id) {
@@ -304,8 +303,8 @@ void disable_and_free_render_buffer(unsigned &render_buffer) {
 
 
 // Note: default viewing in -z dir
-void render_to_texture_t::render(texture_pair_t &tpair, float radius, vector3d const &view_dir, colorRGBA const &bkg_color,
-	bool use_depth_buffer, bool mipmap, bool nearest_for_normal)
+void render_to_texture_t::render(texture_pair_t &tpair, float radius, point const &center, vector3d const &view_dir,
+	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap, bool nearest_for_normal)
 {
 	assert(radius > 0.0);
 	assert(tsize > 0);
@@ -319,18 +318,20 @@ void render_to_texture_t::render(texture_pair_t &tpair, float radius, vector3d c
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	//rotate_from_v2v(vector3d(0.0, 0.0, -1.0), view_dir);
-	//glRotatef(90.0, 0.0, 1.0, 0.0);
+	rotate_from_v2v(vector3d(0.0, 0.0, -1.0), view_dir);
+	translate_to(-center);
 
 	// render
 	tpair.ensure_tids(tsize, mipmap, nearest_for_normal);
 	glDisable(GL_LIGHTING);
+	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0);
+	colorRGBA clear_colors[2] = {bkg_color, bkg_color};
 
 	for (unsigned d = 0; d < 2; ++d) {
 		unsigned fbo_id(0);
 		enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
 		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
-		glClearColor(bkg_color.R, bkg_color.G, bkg_color.B, bkg_color.A);
+		glClearColor(clear_colors[d].R, clear_colors[d].G, clear_colors[d].B, clear_colors[d].A);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		draw_geom(d != 0);
 		if (mipmap) {tpair.build_mipmaps(d, tsize);}

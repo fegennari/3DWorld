@@ -138,10 +138,9 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		if (!shaders[0].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
-		colorRGBA leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()));
-		leaf_bkg_color.alpha = 0.0; // transparent
+		colorRGBA leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()), 0.0); // transparent
 		bool const use_depth_buffer(1), mipmap(0), nearest_for_normal(0); // Note: for some reason mipmaps are slow and don't look any better
-		render(tpair, t.sphere_radius, plus_z, leaf_bkg_color, use_depth_buffer, mipmap, nearest_for_normal);
+		render(tpair, t.sphere_radius, 1.5*t.get_center(), -plus_y, leaf_bkg_color, use_depth_buffer, mipmap, nearest_for_normal);
 	}
 };
 
@@ -163,9 +162,8 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		if (!shaders[0].is_setup()) {setup_shader("tree_branches_no_lighting", "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tree_branches_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
-		colorRGBA branch_bkg_color(texture_color(get_tree_type().bark_tex));
-		branch_bkg_color.alpha = 0.0; // transparent
-		render(tpair, t.sphere_radius, plus_x, branch_bkg_color, 1, 0, 0);
+		colorRGBA branch_bkg_color(texture_color(get_tree_type().bark_tex), 0.0); // transparent
+		render(tpair, t.sphere_radius, t.get_center(), plus_y, branch_bkg_color, 1, 0, 0);
 	}
 };
 
@@ -190,7 +188,7 @@ void tree_lod_render_t::render_leaf_quads_facing_camera(shader_t &shader) const 
 			i->bind_textures();
 			glBegin(GL_QUADS);
 		}
-		colorRGBA(i->color.R, i->color.G, i->color.B, i->color.A*i->opacity).do_glColor();
+		i->set_gl_color();
 		point const pos(i->pos + 0.5*i->radius*(camera - i->pos).get_norm());
 		draw_billboard(pos, camera, up_vector, i->radius, i->radius); // full rotation
 	}
@@ -211,7 +209,7 @@ void tree_lod_render_t::render_branch_quads_facing_camera(shader_t &shader) cons
 			i->bind_textures();
 			glBegin(GL_QUADS);
 		}
-		colorRGBA(i->color.R, i->color.G, i->color.B, i->color.A*i->opacity).do_glColor();
+		i->set_gl_color();
 		draw_billboard(i->pos, camera, up_vector, i->radius, i->radius, 0, 0, 1, 1, 1); // constrained to y=up_dir
 	}
 	glEnd();
@@ -222,7 +220,6 @@ void tree_lod_render_t::render_branch_quads_facing_camera(shader_t &shader) cons
 void tree_data_t::check_render_textures() {
 
 	// problems:
-	// * want side view instead of top view
 	// * normals should be rotated to the view dir
 	if (!render_leaf_texture.is_valid()) {
 		render_tree_leaves_to_texture_t renderer(TREE_BILLBOARD_SIZE);
@@ -874,7 +871,7 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 			texture_pair_t const &rtex(td.get_render_branch_texture());
 			float geom_opacity(1.0);
 
-			if (rtex.is_valid() && size_scale < 0.5) {
+			if (rtex.is_valid() && ((display_mode & 0x10) || size_scale < 0.5)) {
 				geom_opacity = 0.0;//max(0.0, 5.0*(size_scale - 0.3));
 				lod_renderer.add_branches(rtex, draw_pos, td.sphere_radius, (1.0 - geom_opacity), bcolor);
 			}
@@ -893,8 +890,8 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 			texture_pair_t const &rtex(td.get_render_leaf_texture());
 			float geom_opacity(1.0);
 
-			if (rtex.is_valid() && size_scale < 0.5) {
-				geom_opacity = max(0.0, 5.0*(size_scale - 0.3));
+			if (rtex.is_valid() && ((display_mode & 0x10) || size_scale < 0.5)) {
+				geom_opacity = ((display_mode & 0x10) ? 0.0 : CLIP_TO_01(5.0f*(size_scale - 0.3f)));
 				lod_renderer.add_leaves(rtex, (draw_pos + 0.4*td.get_center()), td.sphere_radius, (1.0 - geom_opacity));
 			}
 			if (geom_opacity > 0.0) {

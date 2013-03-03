@@ -23,12 +23,13 @@ class tree_lod_render_t {
 
 	struct entry_t : public texture_pair_t {
 		point pos;
-		float radius, opacity;
+		float radius;
 		colorRGBA color;
+
 		entry_t() {}
-		entry_t(texture_pair_t const &tp, point const &pos_, float radius_, float opacity_, colorRGBA const &color_=WHITE)
-			: texture_pair_t(tp), pos(pos_), radius(radius_), opacity(opacity_), color(color_)
-		{assert(tp.is_valid()); assert(radius > 0.0);}
+		entry_t(texture_pair_t const &tp, point const &pos_, float radius_, colorRGBA const &color_)
+			: texture_pair_t(tp), pos(pos_), radius(radius_), color(color_) {assert(tp.is_valid()); assert(radius > 0.0);}
+		void set_gl_color() const {colorRGBA(color.R, color.G, color.B, color.A).do_glColor();}
 	};
 
 	vector<entry_t> leaf_vect, branch_vect;
@@ -45,10 +46,10 @@ public:
 	void clear() {leaf_vect.clear(); branch_vect.clear();}
 
 	void add_leaves(texture_pair_t const &tp, point const &pos, float radius, float opacity) {
-		leaf_vect.push_back(entry_t(tp, pos, radius, opacity));
+		leaf_vect.push_back(entry_t(tp, pos, radius, colorRGBA(1, 1, 1, opacity)));
 	}
 	void add_branches(texture_pair_t const &tp, point const &pos, float radius, float opacity, colorRGBA const &bcolor) {
-		branch_vect.push_back(entry_t(tp, pos, radius, opacity, bcolor));
+		branch_vect.push_back(entry_t(tp, pos, radius, colorRGBA(bcolor, opacity)));
 	}
 	void finalize();
 	void render_leaf_quads_facing_camera(shader_t &shader) const;

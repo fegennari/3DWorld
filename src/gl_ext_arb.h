@@ -138,8 +138,8 @@ public:
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
 	virtual ~render_to_texture_t() {free_context();}
 	virtual void free_context() {} // nothing to do here
-	void render(texture_pair_t &tpair, float radius, vector3d const &view_dir, colorRGBA const &bkg_color,
-		bool use_depth_buffer, bool mipmap, bool nearest_for_normal);
+	void render(texture_pair_t &tpair, float radius, point const &center, vector3d const &view_dir,
+		colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap, bool nearest_for_normal);
 	virtual void draw_geom(bool is_normal_pass) = 0;
 };
 
