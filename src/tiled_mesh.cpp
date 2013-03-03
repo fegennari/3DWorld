@@ -1434,7 +1434,7 @@ public:
 	}
 
 	static void billboard_tree_shader_setup(shader_t &s) {
-
+		s.set_prefix("#define USE_LIGHT_COLORS",   1); // FS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.setup_enabled_lights(2);
 		s.begin_shader();
@@ -1483,11 +1483,10 @@ public:
 		}
 		if (lod_renderer.has_branches()) {
 			shader_t brs;
-			brs.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			brs.set_vert_shader("tree_branches_billboard");
 			brs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tree_branches_billboard");
 			billboard_tree_shader_setup(brs); // cscale=1.0 ?
-			brs.add_uniform_vector3d("ref_dir", vector3d(-1.0, -1.0, 0.0).get_norm());
+			brs.add_uniform_vector3d("ref_dir", plus_y);
 			lod_renderer.render_branch_quads_facing_camera(brs);
 			brs.end_shader();
 		}

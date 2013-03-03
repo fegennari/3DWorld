@@ -14,7 +14,7 @@ void main()
 	vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space
 	vec3 vdir   = normalize(eye.xyz - world_space_pos.xyz);
 	float angle = acos(dot(normalize(ref_dir.xy), normalize(vdir.xy)));
-	if (cross(ref_dir, vdir).z < 0.0) {angle = -angle;} // rotate the other direction
+	if (cross(vdir, ref_dir).z < 0.0) {angle = -angle;} // rotate the other direction
 	mat3 mrot   = mat3(cos(angle), -sin(angle), 0.0,
 			           sin(angle),  cos(angle), 0.0,
 			           0.0,         0.0,        1.0);
