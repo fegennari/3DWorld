@@ -214,7 +214,7 @@ template<typename T> inline void matrix_mult(pointT<T> const &vin, pointT<T> &vo
 
 
 inline vector3d get_poly_dir_norm(vector3d const &norm, point const &p1, vector3d const &v1, float t) {
-	return ((dot_product_ptv(norm, p1, (p1 + v1*t)) < 0.0) ? norm*-1.0 : norm);
+	return ((dot_product_ptv(norm, p1, (p1 + v1*t)) < 0.0) ? -norm : norm);
 }
 
 

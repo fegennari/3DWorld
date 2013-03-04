@@ -1039,7 +1039,7 @@ bool ugalaxy::is_close_to(ugalaxy const &g, float overlap_amount) const {
 
 	vector3d const delta(pos - g.pos);
 	float const dist(delta.mag());
-	return (dist < ((overlap_amount/dist)*(get_radius_at(delta*-1.0) + g.get_radius_at(delta)) + SYSTEM_MIN_SPACING));
+	return (dist < ((overlap_amount/dist)*(get_radius_at(-delta) + g.get_radius_at(delta)) + SYSTEM_MIN_SPACING));
 }
 
 

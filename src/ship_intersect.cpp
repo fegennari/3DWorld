@@ -541,7 +541,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 	if (!dist_less_than(center, cur_pos, cur_radius)) { // not a self-shadow
 		vector3d_d const shadow_dir((center - sun_pos).get_norm());
 		
-		if (!sphere_test_comp(sun_pos, cur_pos, shadow_dir*-1.0, (cur_radius + radius)*(cur_radius + radius))) {
+		if (!sphere_test_comp(sun_pos, cur_pos, -shadow_dir, (cur_radius + radius)*(cur_radius + radius))) {
 			invalid = 1;
 			return;
 		}

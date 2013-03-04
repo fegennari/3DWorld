@@ -311,7 +311,7 @@ int select_dodgeball_texture(int shooter) {
 
 void rotate_into_camera_dir(point const &pos, vector3d const &dir) {
 
-	rotate_by_vector(dir*-1.0, 0.0); // undo rotation
+	rotate_by_vector(-dir, 0.0); // undo rotation
 	rotate_towards_camera(pos);
 }
 

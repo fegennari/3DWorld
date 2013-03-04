@@ -36,7 +36,7 @@ void main()
 		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), 0.2*(1.0 - abs(dot(epos_n, norm))));
 
 		// calculate reflections
-		float reflect_w  = get_fresnel_reflection(-1.0*epos_n, norm, 1.0, 1.333);
+		float reflect_w  = get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
 		vec2 ref_tex_st  = clamp(0.5*proj_pos.xy/proj_pos.w + 0.3*ripple + vec2(0.5, 0.5), 0.0, 1.0);
 		vec4 reflect_tex = vec4(texture2D(reflection_tex, ref_tex_st).rgb, 1.0);
 		color = mix(color, reflect_color * reflect_tex, reflect_w);

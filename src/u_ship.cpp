@@ -957,7 +957,7 @@ void u_ship::ai_action() {
 
 	// too close to the sun or a hot object, or too much gravity from a black hole, move away at full speed
 	if (can_move_ && (is_burning() || (near_b_hole && gvect.mag() > SHIP_GMAX))) {
-		vector3d const orient((is_burning() ? vector3d(pos - tcent) : gvect*-1.0).get_norm());
+		vector3d const orient((is_burning() ? vector3d(pos - tcent) : -gvect).get_norm());
 		if (max_turn > TOLERANCE) do_turn(orient); // a little unstable
 		if (dot_product(dir, orient) > 0.0) thrust(MOVE_FRONT, 1.0, 0);
 		return;
