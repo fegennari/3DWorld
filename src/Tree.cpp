@@ -140,7 +140,7 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		cur_tree = &t;
 		colorRGBA leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()), 0.0); // transparent
 		bool const use_depth_buffer(1), mipmap(0), nearest_for_normal(0); // Note: for some reason mipmaps are slow and don't look any better
-		render(tpair, t.sphere_radius, 1.4*t.get_center(), -plus_y, leaf_bkg_color, use_depth_buffer, mipmap, nearest_for_normal);
+		render(tpair, t.sphere_radius, 1.4*t.get_center(), plus_y, leaf_bkg_color, use_depth_buffer, mipmap, nearest_for_normal);
 	}
 };
 
@@ -163,7 +163,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		if (!shaders[1].is_setup()) {setup_shader("tree_branches_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
 		colorRGBA branch_bkg_color(texture_color(get_tree_type().bark_tex), 0.0); // transparent
-		render(tpair, t.sphere_radius, t.get_center(), -plus_y, branch_bkg_color, 1, 0, 0);
+		render(tpair, t.sphere_radius, t.get_center(), plus_y, branch_bkg_color, 1, 0, 0);
 	}
 };
 
@@ -401,13 +401,13 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 	s.set_frag_shader(enable_opacity ? "linear_fog.part+noise_dither.part+textured_with_fog_opacity" : "linear_fog.part+textured_with_fog");
 
 	if (use_geom_shader) { // unused
-		s.set_vert_shader("leaf_lighting_comp.part*+leaf_lighting.part+tree_leaves_as_pts");
+		s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+leaf_lighting.part+tree_leaves_as_pts");
 		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLE_STRIP, 4);
 		s.begin_shader();
 		//setup_wind_for_shader(s, 1); // FIXME: add wind?
 	}
 	else {
-		s.set_vert_shader("leaf_lighting_comp.part*+leaf_lighting.part+tc_by_vert_id.part+tree_leaves");
+		s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+leaf_lighting.part+tc_by_vert_id.part+tree_leaves");
 		s.begin_shader();
 	}
 	s.setup_fog_scale();

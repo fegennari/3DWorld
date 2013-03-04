@@ -1446,18 +1446,8 @@ public:
 
 	void draw_decid_trees(draw_vect_t const &to_draw, bool reflection_pass) {
 		tree_lod_render_t lod_renderer(USE_TREE_BILLBOARDS); // enabled
-		float const cscale(cloud_shadows_enabled() ? 0.75 : 1.0);
+		float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
 
-		{ // draw branches
-			shader_t bs;
-			bs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-			set_tree_branch_shader(bs, 1, 0, 0);
-			bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
-			draw_decid_tree_bl(to_draw, bs, lod_renderer, 1, 0, reflection_pass);
-			bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
-			bs.end_shader();
-			disable_multitex_a();
-		}
 		{ // draw leaves
 			shader_t ls;
 			tree_cont_t::pre_leaf_draw(ls, USE_TREE_BILLBOARDS);
@@ -1468,9 +1458,19 @@ public:
 			ls.add_uniform_color("color_scale", WHITE);
 			tree_cont_t::post_leaf_draw(ls);
 		}
+		{ // draw branches
+			shader_t bs;
+			bs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+			set_tree_branch_shader(bs, 1, 0, 0);
+			bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
+			draw_decid_tree_bl(to_draw, bs, lod_renderer, 1, 0, reflection_pass);
+			bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
+			bs.end_shader();
+			disable_multitex_a();
+		}
 		lod_renderer.finalize();
 
-		if (lod_renderer.has_leaves()) {
+		if (lod_renderer.has_leaves()) { // draw leaf billboards
 			shader_t lrs;
 			lrs.set_vert_shader("tree_leaves_billboard");
 			lrs.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+noise_dither.part+tree_leaves_billboard");
@@ -1481,7 +1481,7 @@ public:
 			set_specular(0.0, 1.0);
 			lrs.end_shader();
 		}
-		if (lod_renderer.has_branches()) {
+		if (lod_renderer.has_branches()) { // draw branch billboards
 			shader_t brs;
 			brs.set_vert_shader("tree_branches_billboard");
 			brs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tree_branches_billboard");

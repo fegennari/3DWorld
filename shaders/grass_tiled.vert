@@ -37,9 +37,11 @@ void main()
 	vec4 shadow_normal = texture2D(shadow_normal_tex, tc);
 	vec3 normal = normalize(gl_NormalMatrix * (2.0*shadow_normal.xyz - 1.0)); // eye space
 	vec4 color  = gl_Color * gl_LightModel.ambient;
+	//if (grass_weight < noise_weight) {
 	if (enable_light0) {color += add_light_comp(vertex.xyz, normal, epos, 0, shadow_normal.w);}
 	if (enable_light1) {color += add_light_comp(vertex.xyz, normal, epos, 1, shadow_normal.w);}
 	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2);}
+	//}
 	color.a = ((grass_weight < noise_weight) ? 0.0 : color.a); // skip some grass blades by making them transparent
 	gl_FrontColor  = color;
 } 

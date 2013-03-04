@@ -818,7 +818,7 @@ void draw_billboard(point const &pos, point const &viewer, vector3d const &up_di
 {
 	vector3d const vdir(viewer - pos); // z
 	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // x (what if colinear?)
-	vector3d const v2((up_is_y ? -up_dir : cross_product(vdir, v1).get_norm())*ysize); // y FIXME: upside down
+	vector3d const v2((up_is_y ? up_dir : cross_product(v1, vdir).get_norm())*ysize); // y
 	glTexCoord2f(tx1, ty1); (pos - v1 - v2).do_glVertex();
 	glTexCoord2f(tx1, ty2); (pos - v1 + v2).do_glVertex();
 	glTexCoord2f(tx2, ty2); (pos + v1 + v2).do_glVertex();
@@ -918,7 +918,7 @@ void draw_animated_billboard(point const &pos, float size, float timescale) { //
 	int const frame_id(max(0, min(15, int(16*timescale)))), tx(frame_id&3), ty(frame_id>>2);
 	point const camera(get_camera_pos()), gpos(make_pt_global(pos));
 	(camera - pos).do_glNormal();
-	draw_billboard(gpos, (camera + gpos - pos), up_vector*-1.0, size, size, 0.25*tx, 0.25*ty, 0.25*(tx+1), 0.25*(ty+1)); // upside down
+	draw_billboard(gpos, (camera + gpos - pos), up_vector, size, size, 0.25*tx, 0.25*ty, 0.25*(tx+1), 0.25*(ty+1)); // upside down
 }
 
 

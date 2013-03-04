@@ -11,6 +11,7 @@ void main()
 
 	// transform normal into billboard orientation 
 	vec3 normal = 2.0*texture2D(normal_map, gl_TexCoord[0].st).xyz - vec3(1,1,1);
+	normal.y   *= -1.0; // texture is rendered with ybot < ytop
 	vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space
 	vec3 vdir   = normalize(eye.xyz - world_space_pos.xyz);
 	float angle = acos(dot(normalize(ref_dir.xy), normalize(vdir.xy)));
