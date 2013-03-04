@@ -364,7 +364,6 @@ void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color) {
 
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap) {
 
-	unsigned const def_ndiv = 12; // default for geom shader
 	use_smap &= shadow_map_enabled();
 	dlights  &= (dl_tid > 0 && has_dl_sources);
 	common_shader_block_pre(s, dlights, use_smap, 0, 0.0);

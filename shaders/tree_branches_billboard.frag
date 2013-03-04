@@ -1,7 +1,7 @@
 uniform sampler2D color_map, normal_map;
 uniform vec3 ref_dir = vec3(0,1,0);
 
-varying vec4 world_space_pos;
+varying vec4 world_space_pos, eye_space_pos;
 
 void main()
 {
@@ -25,5 +25,6 @@ void main()
 	vec4 color  = gl_Color * gl_LightModel.ambient;
 	if (enable_light0) color += add_light_comp(normal, 0);
 	if (enable_light1) color += add_light_comp(normal, 1);
+	if (enable_light2) color += add_light_comp(normal, 2) * calc_light_atten(eye_space_pos, 2);
 	gl_FragColor = apply_fog(clamp(color, 0.0, 1.0)*vec4(texel.rgb, 1.0));
 }

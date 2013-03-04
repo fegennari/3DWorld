@@ -36,9 +36,9 @@ class tree_lod_render_t {
 	bool enabled;
 
 public:
-	int leaf_opacity_loc;
+	int leaf_opacity_loc, branch_opacity_loc;
 
-	tree_lod_render_t(bool enabled_) : enabled(enabled_), leaf_opacity_loc(-1) {}
+	tree_lod_render_t(bool enabled_) : enabled(enabled_), leaf_opacity_loc(-1), branch_opacity_loc(-1) {}
 	bool is_enabled()   const {return enabled;}
 	bool has_leaves()   const {return !leaf_vect.empty();}
 	bool has_branches() const {return !branch_vect.empty();}

@@ -856,7 +856,7 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 		if (begin_motion && animate2) drop_leaves();
 	}
 	if (TEST_RTREE_COBJS) return;
-	if (!draw_leaves || draw_branches) {not_visible = !is_visible_to_camera(xlate);} // second pass only
+	if (!draw_leaves || draw_branches || world_mode != WMODE_GROUND) {not_visible = !is_visible_to_camera(xlate);} // second pass only
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
@@ -864,20 +864,19 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 	float const dist_to_camera(distance_to_camera(draw_pos));
 	if (world_mode == WMODE_INF_TERRAIN && dist_to_camera > get_draw_tile_dist()) return; // to far away to draw
 	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(dist_to_camera*DIST_C_SCALE));
-	float const lod_start(0.45), lod_end(0.35), lod_denom(lod_start - lod_end);
 	
 	if (draw_branches && size_scale > 0.05) { // if too far away, don't draw any branches
 		if (lod_renderer.is_enabled()) {
-			tree_data_t &td(tdata());
 			texture_pair_t const &rtex(td.get_render_branch_texture());
+			float const lod_start(0.55), lod_end(0.45), lod_denom(lod_start - lod_end);
 			float geom_opacity(1.0);
 
 			if (rtex.is_valid() && ((display_mode & 0x10) || size_scale < lod_start)) {
-				geom_opacity = 0.0;//max(0.0, (size_scale - lod_end)/lod_denom);
+				geom_opacity = ((display_mode & 0x10) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
 				lod_renderer.add_branches(rtex, draw_pos, td.sphere_radius, (1.0 - geom_opacity), bcolor);
 			}
 			if (geom_opacity > 0.0) {
-				//s.set_uniform_float(lod_renderer.branch_opacity_loc, geom_opacity); // FIXME: add opacity to the branch shader
+				s.set_uniform_float(lod_renderer.branch_opacity_loc, geom_opacity);
 				draw_tree_branches(s, size_scale, xlate, shader_loc);
 			}
 		}
@@ -887,8 +886,8 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 	}
 	if (draw_leaves && has_leaves) {
 		if (lod_renderer.is_enabled()) {
-			tree_data_t &td(tdata());
 			texture_pair_t const &rtex(td.get_render_leaf_texture());
+			float const lod_start(0.45), lod_end(0.35), lod_denom(lod_start - lod_end);
 			float geom_opacity(1.0);
 
 			if (rtex.is_valid() && ((display_mode & 0x10) || size_scale < lod_start)) {
