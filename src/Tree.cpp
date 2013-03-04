@@ -474,7 +474,13 @@ void tree_cont_t::draw(bool shadow_only) {
 
 	tree_lod_render_t lod_renderer(0); // disabled
 
-	// draw branches, then leaves: much faster for distant trees, slightly slower for near trees
+	// draw leaves, then branches: much faster for distant trees, slightly slower for near trees
+	// draw leaves
+	shader_t ls;
+	pre_leaf_draw(ls, 0);
+	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, zero_vector);
+	post_leaf_draw(ls);
+
 	// draw branches
 	shader_t bs;
 	bool const branch_smap(1 && !shadow_only); // looks better, but slower
@@ -483,12 +489,6 @@ void tree_cont_t::draw(bool shadow_only) {
 	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 	bs.end_shader();
 	disable_multitex_a();
-
-	// draw leaves
-	shader_t ls;
-	pre_leaf_draw(ls, 0);
-	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, zero_vector);
-	post_leaf_draw(ls);
 }
 
 
@@ -856,7 +856,7 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 		if (begin_motion && animate2) drop_leaves();
 	}
 	if (TEST_RTREE_COBJS) return;
-	if (!draw_leaves || draw_branches || world_mode != WMODE_GROUND) {not_visible = !is_visible_to_camera(xlate);} // second pass only
+	if (draw_leaves || !draw_branches) {not_visible = !is_visible_to_camera(xlate);} // first pass only
 	if (not_visible) return;
 	bool const use_vbos(setup_gen_buffers());
 	assert(use_vbos);
