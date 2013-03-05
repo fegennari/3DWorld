@@ -1106,9 +1106,10 @@ class tile_draw_t {
 	vector<point> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;
 	lightning_strike_t lightning_strike;
+	tree_lod_render_t lod_renderer;
 
 public:
-	tile_draw_t() {
+	tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
 		assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 	}
 	//~tile_draw_t() {clear();}
@@ -1443,8 +1444,8 @@ public:
 	}
 
 	void draw_decid_trees(draw_vect_t const &to_draw, bool reflection_pass) {
-		tree_lod_render_t lod_renderer(USE_TREE_BILLBOARDS); // enabled
 		float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
+		lod_renderer.resize_zero();
 
 		{ // draw leaves
 			shader_t ls;

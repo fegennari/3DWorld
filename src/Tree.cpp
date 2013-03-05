@@ -75,7 +75,7 @@ float get_draw_tile_dist();
 
 
 
-colorRGBA get_leaf_base_color(int type) {
+inline colorRGBA get_leaf_base_color(int type) {
 
 	colorRGBA color(tree_types[type].leafc);
 	UNROLL_3X(color[i_] = CLIP_TO_01(color[i_] + leaf_base_color[i_]);)
@@ -970,7 +970,7 @@ void tree_data_t::draw_branches(float size_scale) {
 		branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 	}
 	branch_vbo_manager.pre_render();
-	vert_norm_comp_tc::set_vbo_arrays(0, 0);
+	vert_norm_comp_tc::set_vbo_arrays(0, 0); // Note: could skip every other vert index for improved perf when distant
 	unsigned const num(4*((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale))))); // branch LOD
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0); // draw with branch vbos
 }

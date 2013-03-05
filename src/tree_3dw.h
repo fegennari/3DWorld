@@ -43,7 +43,8 @@ public:
 	bool has_leaves()   const {return !leaf_vect.empty();}
 	bool has_branches() const {return !branch_vect.empty();}
 	bool empty()        const {return (!has_leaves() && !has_branches());}
-	void clear() {leaf_vect.clear(); branch_vect.clear();}
+	void clear()       {leaf_vect.clear(); branch_vect.clear();}
+	void resize_zero() {leaf_vect.resize(0); branch_vect.resize(0);}
 
 	void add_leaves(texture_pair_t const &tp, point const &pos, float radius, float opacity) {
 		leaf_vect.push_back(entry_t(tp, pos, radius, colorRGBA(1, 1, 1, opacity)));
@@ -83,7 +84,7 @@ struct draw_cylin : public cylinder_3dw { // size = 35 (36)
 	unsigned short branch_id;
 
 	draw_cylin() : level(0), branch_id(0) {}
-	unsigned get_num_div() const {return (N_CYL_SIDES >> 1) - ((level - 1) << 2);}
+	unsigned get_num_div() const {return (N_CYL_SIDES >> 1) - ((level - 1) << 2);} // 0:20 1:16 2:12 3:8 4:4
 	bool can_merge(draw_cylin const &c) const {return (level == c.level && branch_id == c.branch_id);}
 };
 
