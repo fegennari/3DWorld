@@ -1496,7 +1496,7 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "tree_lod_scale") {
 			for (unsigned i = 0; i < 4; ++i) {
-				if (!read_float(fp, tree_lod_scales[i]) || tree_lod_scales[i] <= 0.0) cfg_err("tree_lod_scale", error);
+				if (!read_float(fp, tree_lod_scales[i]) || tree_lod_scales[i] < 0.0) cfg_err("tree_lod_scale", error);
 			}
 			if (tree_lod_scales[0] < tree_lod_scales[1] || tree_lod_scales[2] < tree_lod_scales[3]) {cfg_err("tree_lod_scale values", error);}
 		}

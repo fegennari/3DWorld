@@ -54,7 +54,7 @@ unsigned max_unique_trees(0);
 int tree_mode(1), tree_coll_level(TREE_COLL);
 float tree_temp_matrix[3], i_matrix[9], re_matrix[3];
 float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), leaf_size(0.0), branch_radius_scale(1.0);
-float tree_lod_scales[4] = {0.01, 0.01, 0.01, 0.01}; // branch_start, branch_end, leaf_start, leaf_end
+float tree_lod_scales[4] = {0, 0, 0, 0}; // branch_start, branch_end, leaf_start, leaf_end
 colorRGBA leaf_base_color(BLACK);
 point leaf_points[4]; // z = 0.0 -> -0.05
 tree_data_manager_t tree_data_manager;
