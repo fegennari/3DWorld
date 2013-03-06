@@ -11,3 +11,8 @@ in 3D, and mapped to a sphere
 ship, maybe all ships?)
 * Not sure what to do with colonies
 
+Tile Occlusion?
+cloud_rel_vel
+Branches skip every other vertex when far?
+More optimal billboard size/radius (non 1:1 AR?)
+

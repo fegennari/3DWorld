@@ -216,22 +216,6 @@ void tree_lod_render_t::render_branch_quads_facing_camera(shader_t &shader) cons
 }
 
 
-// FIXME: move down later
-void tree_data_t::check_render_textures() {
-
-	// problems:
-	// * branch opacity
-	if (!render_leaf_texture.is_valid()) {
-		render_tree_leaves_to_texture_t renderer(TREE_BILLBOARD_SIZE);
-		renderer.render_tree(*this, render_leaf_texture);
-	}
-	if (!render_branch_texture.is_valid()) {
-		render_tree_branches_to_texture_t renderer(TREE_BILLBOARD_SIZE);
-		renderer.render_tree(*this, render_branch_texture);
-	}
-}
-
-
 void calc_leaf_points() {
 
 	leaf_size = REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale);
@@ -789,6 +773,19 @@ bool tree::is_visible_to_camera(vector3d const &xlate) const {
 }
 
 
+void tree_data_t::check_render_textures() {
+
+	if (!render_leaf_texture.is_valid()) {
+		render_tree_leaves_to_texture_t renderer(TREE_BILLBOARD_SIZE);
+		renderer.render_tree(*this, render_leaf_texture);
+	}
+	if (!render_branch_texture.is_valid()) {
+		render_tree_branches_to_texture_t renderer(TREE_BILLBOARD_SIZE);
+		renderer.render_tree(*this, render_branch_texture);
+	}
+}
+
+
 void tree_data_t::pre_draw(bool branches_or_leaves, bool shadow_only) {
 
 	if (branches_or_leaves) { // branches
@@ -871,8 +868,8 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 			float const lod_start(0.55), lod_end(0.45), lod_denom(lod_start - lod_end);
 			float geom_opacity(1.0);
 
-			if (rtex.is_valid() && ((display_mode & 0x10) || size_scale < lod_start)) {
-				geom_opacity = ((display_mode & 0x10) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
+			if (rtex.is_valid() && size_scale < lod_start) {
+				geom_opacity = CLIP_TO_01((size_scale - lod_end)/lod_denom);
 				lod_renderer.add_branches(rtex, draw_pos, td.sphere_radius, (1.0 - geom_opacity), bcolor);
 			}
 			if (geom_opacity > 0.0) {
@@ -890,8 +887,8 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 			float const lod_start(0.45), lod_end(0.35), lod_denom(lod_start - lod_end);
 			float geom_opacity(1.0);
 
-			if (rtex.is_valid() && ((display_mode & 0x10) || size_scale < lod_start)) {
-				geom_opacity = ((display_mode & 0x10) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
+			if (rtex.is_valid() && size_scale < lod_start) {
+				geom_opacity = CLIP_TO_01((size_scale - lod_end)/lod_denom);
 				lod_renderer.add_leaves(rtex, (draw_pos + 0.4*td.get_center()), td.sphere_radius, (1.0 - geom_opacity));
 			}
 			if (geom_opacity > 0.0) {
