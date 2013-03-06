@@ -54,6 +54,7 @@ unsigned max_unique_trees(0);
 int tree_mode(1), tree_coll_level(TREE_COLL);
 float tree_temp_matrix[3], i_matrix[9], re_matrix[3];
 float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), leaf_size(0.0), branch_radius_scale(1.0);
+float tree_lod_scales[4] = {0.01, 0.01, 0.01, 0.01}; // branch_start, branch_end, leaf_start, leaf_end
 colorRGBA leaf_base_color(BLACK);
 point leaf_points[4]; // z = 0.0 -> -0.05
 tree_data_manager_t tree_data_manager;
@@ -865,11 +866,11 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 	if (draw_branches && size_scale > 0.05) { // if too far away, don't draw any branches
 		if (lod_renderer.is_enabled()) {
 			texture_pair_t const &rtex(td.get_render_branch_texture());
-			float const lod_start(0.55), lod_end(0.45), lod_denom(lod_start - lod_end);
+			float const lod_start(tree_lod_scales[0]), lod_end(tree_lod_scales[1]), lod_denom(lod_start - lod_end);
 			float geom_opacity(1.0);
 
 			if (rtex.is_valid() && size_scale < lod_start) {
-				geom_opacity = CLIP_TO_01((size_scale - lod_end)/lod_denom);
+				geom_opacity = ((lod_denom == 0.0) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
 				lod_renderer.add_branches(rtex, draw_pos, td.sphere_radius, (1.0 - geom_opacity), bcolor);
 			}
 			if (geom_opacity > 0.0) {
@@ -884,11 +885,11 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 	if (draw_leaves && has_leaves) {
 		if (lod_renderer.is_enabled()) {
 			texture_pair_t const &rtex(td.get_render_leaf_texture());
-			float const lod_start(0.45), lod_end(0.35), lod_denom(lod_start - lod_end);
+			float const lod_start(tree_lod_scales[2]), lod_end(tree_lod_scales[3]), lod_denom(lod_start - lod_end);
 			float geom_opacity(1.0);
 
 			if (rtex.is_valid() && size_scale < lod_start) {
-				geom_opacity = CLIP_TO_01((size_scale - lod_end)/lod_denom);
+				geom_opacity = ((lod_denom == 0.0) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
 				lod_renderer.add_leaves(rtex, (draw_pos + 0.4*td.get_center()), td.sphere_radius, (1.0 - geom_opacity));
 			}
 			if (geom_opacity > 0.0) {

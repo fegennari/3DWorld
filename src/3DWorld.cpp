@@ -117,6 +117,7 @@ extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smi
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale;
 extern point hmv_pos;
 extern int coll_id[];
+extern float tree_lod_scales[4];
 extern vector<bbox> team_starts;
 extern player_state *sstates;
 extern pt_line_drawer obj_pld;
@@ -1492,6 +1493,12 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "nleaves_scale") {
 			if (!read_float(fp, nleaves_scale) || nleaves_scale <= 0.0) cfg_err("nleaves_scale", error);
+		}
+		else if (str == "tree_lod_scale") {
+			for (unsigned i = 0; i < 4; ++i) {
+				if (!read_float(fp, tree_lod_scales[i]) || tree_lod_scales[i] <= 0.0) cfg_err("tree_lod_scale", error);
+			}
+			if (tree_lod_scales[0] < tree_lod_scales[1] || tree_lod_scales[2] < tree_lod_scales[3]) {cfg_err("tree_lod_scale values", error);}
 		}
 		else if (str == "nsmileys") {
 			if (!read_int(fp, num_smileys) || num_smileys < 0) cfg_err("number of smileys", error);
