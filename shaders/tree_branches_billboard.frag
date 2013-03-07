@@ -6,7 +6,7 @@ varying vec4 world_space_pos, eye_space_pos;
 void main()
 {
 	vec4 texel = texture2D(color_map, gl_TexCoord[0].st);
-	if (texel.a < 0.9) discard; // transparent
+	if (texel.a < 0.5) discard; // transparent
 	check_noise_and_maybe_discard(0.0, gl_Color.a);
 
 	// transform normal into billboard orientation 

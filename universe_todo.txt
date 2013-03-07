@@ -15,6 +15,5 @@ Tile Occlusion?
 
 cloud_rel_vel
 
-Branches skip every other vertex when far?
-Tree branch billboard too sparse
+openmp when another process is running?
 
