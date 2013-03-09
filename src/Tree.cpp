@@ -1037,7 +1037,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 	tree_data_t &td(tdata());
 	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
 	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
-	if (!gen_arrays && leaf_dynamic_en && (!leaf_orients_valid || size_scale > 0.75)) {update_leaf_orients();}
+	if (!gen_arrays && leaf_dynamic_en && size_scale > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
 
 	if (gen_arrays || leaf_color_changed) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
