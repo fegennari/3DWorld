@@ -1160,7 +1160,7 @@ public:
 		if (DEBUG_TILES && (tiles.size() != init_tiles || !to_erase.empty())) {
 			cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << to_erase.size() << endl;
 		}
-		//PRINT_TIME("Tiled Terrain Update");
+		//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Tiled Terrain Update");}
 	}
 
 
@@ -1266,6 +1266,7 @@ public:
 	}
 
 	float draw(bool reflection_pass) {
+		//RESET_TIME;
 		float zmin(FAR_CLIP);
 		set_array_client_state(1, 0, 0, 0);
 		unsigned num_drawn(0), num_trees(0);
@@ -1338,6 +1339,7 @@ public:
 		if (scenery_enabled    ()) {draw_scenery    (to_draw, reflection_pass);}
 		if (is_grass_enabled   ()) {draw_grass      (to_draw, reflection_pass);}
 		lightning_strike.end_draw(); // in case it was enabled
+		//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
 		return zmin;
 	}
 
@@ -1420,16 +1422,6 @@ public:
 		set_specular(0.0, 1.0);
 	}
 
-	void update_decid_trees() {
-		if (decid_trees_enabled()) {
-			//RESET_TIME;
-			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
-				i->second->update_decid_trees();
-			}
-			//PRINT_TIME("Decid Tree Update");
-		}
-	}
-
 	void draw_decid_tree_bl(draw_vect_t const &to_draw, shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
 			to_draw[i].second->draw_decid_trees(s, lod_renderer, branches, leaves, reflection_pass);
@@ -1446,6 +1438,13 @@ public:
 	}
 
 	void draw_decid_trees(draw_vect_t const &to_draw, bool reflection_pass) {
+		// don't want the water clip plane enabled when creating the tree fbos (FIXME: better way to control this?)
+		if (reflection_pass) {glDisable(WATER_CLIP_PLANE);}
+
+		for (draw_vect_t::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
+			i->second->update_decid_trees();
+		}
+		if (reflection_pass) {glEnable(WATER_CLIP_PLANE);}
 		float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
 		lod_renderer.resize_zero();
 
@@ -1633,10 +1632,6 @@ void reset_tiled_terrain_state() {
 
 void draw_tiled_terrain_water(float zval) {
 	terrain_tile_draw.draw_water(zval);
-}
-
-void update_tiled_terrain_trees() {
-	terrain_tile_draw.update_decid_trees();
 }
 
 bool check_player_tiled_terrain_collision() {

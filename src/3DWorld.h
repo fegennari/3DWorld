@@ -142,6 +142,8 @@ float const TO_RADIANS      = PI/180.0;
 float const SQRT_ZOOMF      = sqrt(ZOOM_FACTOR);
 float const SQRT_ZOOMF_INV  = 1.0/SQRT_ZOOMF;
 
+int const WATER_CLIP_PLANE  = GL_CLIP_PLANE0;
+
 
 #define CLIP_TO_01(x)  max( 0.0f, min(1.0f, (x)))
 #define CLIP_TO_pm1(x) max(-1.0f, min(1.0f, (x)))

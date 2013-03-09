@@ -1090,11 +1090,11 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	// setup above-water clip plane for mesh
 	double const plane[4] = {0.0, 0.0, 1.0, -water_plane_z}; // water at z=-water_z (mirrored)
-	glEnable(GL_CLIP_PLANE0);
-	glClipPlane(GL_CLIP_PLANE0, plane);
+	glEnable(WATER_CLIP_PLANE);
+	glClipPlane(WATER_CLIP_PLANE, plane);
 	draw_tiled_terrain(1);
 	camera_pdu = old_camera_pdu; // restore camera_pdu
-	glDisable(GL_CLIP_PLANE0);
+	glDisable(WATER_CLIP_PLANE);
 	// could render more of the scene here
 	glPopMatrix(); // end mirror transform
 
@@ -1176,7 +1176,6 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	ocean.z     = water_plane_z;
 	camera_mode = 1;
 	mesh_type   = 0;
-	update_tiled_terrain_trees();
 
 	if (show_fog || underwater) {
 		glClearColor_rgba(set_inf_terrain_fog(underwater, zmin2));
