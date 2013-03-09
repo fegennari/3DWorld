@@ -22,6 +22,6 @@ void calc_leaf_lighting()
 		color += add_pt_light_comp(n, eye_space_pos, i);
 	}
 #endif
-	gl_FrontColor   = clamp(color*color_scale, 0.0, 1.0);
+	gl_FrontColor   = min(2*gl_Color, clamp(color*color_scale, 0.0, 1.0)); // limit lightning color
 	gl_FogFragCoord = length(eye_space_pos.xyz);
 }
