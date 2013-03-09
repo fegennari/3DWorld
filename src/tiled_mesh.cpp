@@ -1275,9 +1275,11 @@ public:
 		static point last_sun(all_zeros), last_moon(all_zeros);
 		draw_vect_t to_draw;
 		vector<tile_t *> to_gen_trees;
+		bool const sun_change (sun_pos  != last_sun  && max(sun_pos.z,  last_sun.z)  > zbottom); // Note: could skip if (sun.get_norm().z > 0.9) or something like that
+		bool const moon_change(moon_pos != last_moon && max(moon_pos.z, last_moon.z) > zbottom);
 
 		// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
-		if (mesh_shadows_enabled() && (sun_pos != last_sun || moon_pos != last_moon)) { // light source change
+		if (mesh_shadows_enabled() && (sun_change || moon_change)) { // light source change
 			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 				i->second->clear_shadows();
 			}
