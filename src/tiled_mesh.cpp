@@ -1191,11 +1191,15 @@ public:
 		s.set_prefix("#define USE_GOOD_SPECULAR", lighting_shader);
 	}
 
+	static void lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows) {
+		shared_shader_lighting_setup(s, lighting_shader);
+		s.set_prefix("#define NUM_OCTAVES 4", lighting_shader); // for clouds
+		s.set_bool_prefix("apply_cloud_shadows", cloud_shadows, lighting_shader); // FS
+	}
+
 	// uses texture units 0-9
 	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
-		shared_shader_lighting_setup(s, 1);
-		s.set_prefix("#define NUM_OCTAVES 4", 1); // FS (for clouds)
-		s.set_bool_prefix("apply_cloud_shadows", (cloud_shadows_enabled() && !reflection_pass), 1); // FS
+		lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
 		s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
 		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+tiled_mesh");
 		s.begin_shader();
@@ -1528,19 +1532,18 @@ public:
 			to_draw[i].second->init_draw_grass();
 		}
 		grass_tile_manager.begin_draw(0.1);
-		shader_t s;
 		bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled() && !reflection_pass);
 
 		for (unsigned pass = 0; pass < 2; ++pass) { // wind, no wind
-			shared_shader_lighting_setup(s, 0);
-			s.set_prefix("#define NUM_OCTAVES 4", 0); // VS (for clouds)
-			s.set_bool_prefix("apply_cloud_shadows", use_cloud_shadows, 0); // VS
-			s.set_bool_prefix("enable_grass_wind", (pass == 0), 0); // VS
+			shader_t s;
+			bool const enable_wind((display_mode & 0x0100) && pass == 0);
+			lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
+			s.set_bool_prefix("enable_grass_wind", enable_wind, 0); // VS
 			s.set_vert_shader("ads_lighting.part*+wind.part*+perlin_clouds.part*+grass_tiled");
 			s.set_frag_shader("linear_fog.part+textured_with_fog");
 			//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
 			s.begin_shader();
-			if (pass == 0) {setup_wind_for_shader(s, 1);}
+			if (enable_wind) {setup_wind_for_shader(s, 1);}
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_int("height_tex", 2);
 			s.add_uniform_int("weight_tex", 3);

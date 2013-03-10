@@ -11,8 +11,8 @@ float get_wind_delta(in vec3 vertex, in float flex_comp) {
 	return flexibility * mag;
 }
 
-vec3 get_grass_wind_delta(in vec3 vertex, in float height) {
-	float motion_val = clamp((1.5 - 2.0*gl_TexCoord[0].s), 0.0, 1.0); // 1.0 for top vertex, 0.0 for bottom vertices
+vec3 get_grass_wind_delta(in vec3 vertex, in float height, in float grass_s_tc) {
+	float motion_val = clamp((1.5 - 2.0*grass_s_tc), 0.0, 1.0); // 1.0 for top vertex, 0.0 for bottom vertices
 	// Note: grass motion amplitude should depend on dot(wind, gl_Normal), but the normal is incorrect
 	float delta = get_wind_delta(vertex, gl_Color.g) * height * motion_val;
 	// apply x/y delta but maintain the existing height
