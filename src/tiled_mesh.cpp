@@ -899,12 +899,12 @@ public:
 		if (vbo) return; // already allocated
 		create_data(data, indices);
 		if (any_trees_enabled()) {apply_tree_ao_shadows();}
-		create_vbo_and_upload(vbo, data, 0, 0);
+		create_vbo_and_upload(vbo, data, 0, 1);
 
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			assert(ivbo[i] == 0);
 			assert(!indices[i].empty());
-			create_vbo_and_upload(ivbo[i], indices[i], 1, 0);
+			create_vbo_and_upload(ivbo[i], indices[i], 1, 1);
 		}
 	}
 
@@ -937,7 +937,7 @@ public:
         }
 		assert(lod_level < NUM_LODS);
 		assert(vbo > 0 && ivbo[lod_level] > 0);
-		bind_vbo(vbo,  0);
+		bind_vbo(vbo, 0);
 		bind_vbo(ivbo[lod_level], 1);
 		unsigned const isz(size >> lod_level), ptr_stride(sizeof(vert_type_t));
 		
