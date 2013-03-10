@@ -1,30 +1,41 @@
-const int NUM_LIGHT_SRC = 2;
 uniform float z_bias = 0.0;
-uniform float sm_scale[NUM_LIGHT_SRC];
-uniform int sm_tu_id[NUM_LIGHT_SRC];
+uniform float sm_scale0, sm_scale1;
+uniform int sm_tu_id0, sm_tu_id1;
 
 #if 1
-uniform sampler2D sm_tex[NUM_LIGHT_SRC];
+uniform sampler2D sm_tex0, sm_tex1;
 
-float get_shadow_map_weight(in vec4 pos, in int light) {
-	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id[light]] * pos;
+float get_shadow_map_weight(in vec4 pos, in float sm_scale, in int sm_tu_id, in sampler2D sm_tex) {
+	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id] * pos;
 	shadow_coord /= shadow_coord.w;
 	shadow_coord.z -= z_bias; // Used to lower moiré pattern and self-shadowing
-	float dist = texture2D(sm_tex[light], shadow_coord.st).z;
-	return sm_scale[light]*((dist < shadow_coord.z) ? 0.0 : 1.0);
+	float dist = texture2D(sm_tex, shadow_coord.st).z;
+	return ((dist < shadow_coord.z) ? 0.0 : sm_scale);
 }
-#else
-uniform sampler2DShadow sm_tex[NUM_LIGHT_SRC];
 
-float get_shadow_map_weight(in vec4 pos, in int light) {
-	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id[light]] * pos;
+#else
+uniform sampler2DShadow sm_tex0, sm_tex1;
+
+float get_shadow_map_weight(in vec4 pos, in float sm_scale, in int sm_tu_id, in sampler2DShadow sm_tex) {
+	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id] * pos;
 	// FIXME: using more than one sampler2DShadow, or having a non-const sampler choice results in a GL error
-	return sm_scale[light]*shadow2DProj(sm_tex[0], shadow_coord + vec4(0, 0, -z_bias*shadow_coord.w, 0)).r;
+	return sm_scale*shadow2DProj(sm_tex, shadow_coord + vec4(0, 0, -z_bias*shadow_coord.w, 0)).r;
 }
 #endif
 
-vec4 add_light_comp_pos_smap(in vec3 normal, in vec4 epos, in int light) {
-	//if (dot((gl_LightSource[light].position.xyz - epos.xyz), n) > 0.0) {} // facing the light
-	if (use_shadow_map) normal *= get_shadow_map_weight(epos, light);
-	return add_light_comp_pos(normal, epos, light);
+float get_shadow_map_weight_light0(in vec4 pos) {
+	return get_shadow_map_weight(pos, sm_scale0, sm_tu_id0, sm_tex0);
+}
+float get_shadow_map_weight_light1(in vec4 pos) {
+	return get_shadow_map_weight(pos, sm_scale1, sm_tu_id1, sm_tex1);
+}
+
+vec4 add_light_comp_pos_smap_light0(in vec3 normal, in vec4 epos) {
+	//if (dot((gl_LightSource[0].position.xyz - epos.xyz), n) > 0.0) {} // facing the light
+	if (use_shadow_map) {normal *= get_shadow_map_weight_light0(epos);}
+	return add_light_comp_pos(normal, epos, 0);
+}
+vec4 add_light_comp_pos_smap_light1(in vec3 normal, in vec4 epos) {
+	if (use_shadow_map) {normal *= get_shadow_map_weight_light1(epos);}
+	return add_light_comp_pos(normal, epos, 1);
 }

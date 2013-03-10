@@ -19,12 +19,12 @@ extern bool disable_shaders;
 // *** uniform variables setup ***
 
 
-char const *append_array_ix(string &s, unsigned i) {
+char const *append_ix(string &s, unsigned i, bool as_array) {
 
 	assert(i <= 9);
-	s.push_back('[');
+	if (as_array) {s.push_back('[');}
 	s.push_back('0'+i);
-	s.push_back(']');
+	if (as_array) {s.push_back(']');}
 	return s.c_str();
 }
 
@@ -253,7 +253,9 @@ void shader_t::setup_fog_scale() const {
 void shader_t::set_prefix(string const &prefix, unsigned shader_type) {
 
 	assert(shader_type < 3);
-	prog_name_suffix += ",s" + ('0'+shader_type) + prefix;
+	prog_name_suffix += ",s";
+	prog_name_suffix.push_back('0'+shader_type);
+	prog_name_suffix += prefix;
 	prepend_string[shader_type] += prefix + '\n';
 }
 

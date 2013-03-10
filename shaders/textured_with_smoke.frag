@@ -18,7 +18,7 @@ const float SMOKE_SCALE = 0.25;
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
 vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
-	float nscale = (use_shadow_map ? get_shadow_map_weight(epos, 0) : 1.0);
+	float nscale = (use_shadow_map ? get_shadow_map_weight_light0(epos) : 1.0);
 
 	if (smoke_enabled && dynamic_smoke_shadows && source != dest && nscale > 0.0) {
 		vec3 dir      = dest - source;
@@ -90,7 +90,7 @@ void main()
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = ((!two_sided_lighting || gl_FrontFacing) ? normalize(eye_norm) : -normalize(eye_norm)); // two-sided lighting
 		if (enable_light0) lit_color += add_light0(n, lpos0, vposl);
-		if (enable_light1) lit_color += add_light_comp_pos_smap(n, epos, 1).rgb;
+		if (enable_light1) lit_color += add_light_comp_pos_smap_light1(n, epos).rgb;
 		if (enable_light2) ADD_LIGHT(2);
 		if (enable_light3) ADD_LIGHT(3);
 		if (enable_light4) ADD_LIGHT(4);

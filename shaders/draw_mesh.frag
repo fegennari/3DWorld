@@ -9,8 +9,8 @@ void main()
 	vec4 texel1 = texture2D(tex1, gl_TexCoord[1].st);
 
 	vec4 lit_color = gl_Color * gl_LightModel.ambient;
-	if (enable_light0) lit_color += add_light_comp_pos_smap(eye_norm, epos, 0);
-	if (enable_light1) lit_color += add_light_comp_pos_smap(eye_norm, epos, 1);
+	if (enable_light0) lit_color += add_light_comp_pos_smap_light0(eye_norm, epos);
+	if (enable_light1) lit_color += add_light_comp_pos_smap_light1(eye_norm, epos);
 	lit_color = clamp(lit_color, 0.0, 1.0);
 
 	if (enable_dlights) lit_color.rgb += add_dlights(dlpos.xyz, normalize(normal), epos.xyz, vec3(1,1,1)); // dynamic lighting

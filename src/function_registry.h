@@ -684,7 +684,7 @@ void disable_dynamic_lights(unsigned num_dlights);
 void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pt, bool split_quads);
 
 // function prototypes - shaders
-char const *append_array_ix(std::string &s, unsigned i);
+char const *append_ix(std::string &s, unsigned i, bool as_array);
 bool setup_shaders();
 void clear_shaders();
 

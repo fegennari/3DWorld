@@ -967,10 +967,12 @@ void tree_data_t::draw_branches(float size_scale) {
 		num_unique_pts   = data.size();
 		branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 	}
+	//glEnableClientState(GL_INDEX_ARRAY);
 	branch_vbo_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0, 0); // Note: could skip every other vert index for improved perf when distant
 	unsigned const num(4*((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale))))); // branch LOD
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0); // draw with branch vbos
+	//glDisableClientState(GL_INDEX_ARRAY);
 }
 
 

@@ -158,9 +158,9 @@ bool set_smap_shader_for_light(shader_t &s, int light, float z_bias) {
 	smap_data_t const &data(smap_data[light]);
 	assert(data.tid > 0);
 	s.add_uniform_float("z_bias", z_bias);
-	s.add_uniform_int  (append_array_ix(std::string("sm_tu_id"), light), data.tu_id);
-	s.add_uniform_int  (append_array_ix(std::string("sm_tex"),   light), data.tu_id);
-	s.add_uniform_float(append_array_ix(std::string("sm_scale"), light), (light_valid(0xFF, light, lpos) ? 1.0 : 0.0));
+	s.add_uniform_int  (append_ix(string("sm_tu_id"), light, 0), data.tu_id);
+	s.add_uniform_int  (append_ix(string("sm_tex"),   light, 0), data.tu_id);
+	s.add_uniform_float(append_ix(string("sm_scale"), light, 0), (light_valid(0xFF, light, lpos) ? 1.0 : 0.0));
 	set_active_texture(data.tu_id);
 	bind_2d_texture(data.tid);
 	set_active_texture(0);

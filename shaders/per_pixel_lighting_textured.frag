@@ -12,8 +12,8 @@ void main()
 	vec3 normal2 = (no_normalize ? normal : normalize(normal)); // renormalize
 	vec4 color = gl_FrontMaterial.emission + gl_FrontMaterial.ambient * gl_LightModel.ambient;
 	if (enable_dlights) color.rgb += add_dlights(dlpos, normalize(dl_normal), eye, vec3(1,1,1)).rgb; // dynamic lighting
-	if (enable_light0 ) color += add_light_comp_pos_smap(normal2, epos, 0);
-	if (enable_light1 ) color += add_light_comp_pos_smap(normal2, epos, 1);
+	if (enable_light0 ) color += add_light_comp_pos_smap_light0(normal2, epos);
+	if (enable_light1 ) color += add_light_comp_pos_smap_light1(normal2, epos);
 	vec4 frag_color = vec4(texel.rgb * color.rgb, texel.a * gl_FrontMaterial.diffuse.a); // use diffuse alpha directly
 	gl_FragColor = apply_fog(frag_color);
 }
