@@ -18,7 +18,6 @@ uniform sampler2DShadow sm_tex0, sm_tex1;
 
 float get_shadow_map_weight(in vec4 pos, in float sm_scale, in int sm_tu_id, in sampler2DShadow sm_tex) {
 	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id] * pos;
-	// FIXME: using more than one sampler2DShadow, or having a non-const sampler choice results in a GL error
 	return sm_scale*shadow2DProj(sm_tex, shadow_coord + vec4(0, 0, -z_bias*shadow_coord.w, 0)).r;
 }
 #endif

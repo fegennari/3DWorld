@@ -7,12 +7,13 @@ uniform vec3 world_space_offset = vec3(0,0,0);
 attribute vec4 tex0_s, tex0_t;
 
 varying vec3 eye, vpos, normal, lpos0, vposl; // world space
+varying vec2 tex_coord; // FIXME: why doesn't gl_TexCoord[0] work?
 // epos and eye_norm come from bump_map.vert
 
 void main()
 {
 	if (use_texgen == 1) {
-		setup_texgen(0);
+		setup_texgen0();
 	}
 	else if (use_texgen == 2) {
 		gl_TexCoord[0].s = dot(gl_Vertex, tex0_s);
@@ -27,6 +28,7 @@ void main()
 		gl_TexCoord[0] = gl_MultiTexCoord0;
 		gl_TexCoord[0].st *= vec2(tex_scale_s, tex_scale_t);
 	}
+	tex_coord = gl_TexCoord[0].st;
 	gl_Position   = ftransform();
 	//gl_Position.z = (2.0*log(gl_Position.w/0.01)/log(100.0/0.01) - 1) * gl_Position.w; // Outerra depth correction (needs to be used in all shaders, problems with large polygons)
 	gl_FrontColor = gl_Color;

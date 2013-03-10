@@ -9,6 +9,7 @@ uniform float cube_bb[6];
 
 // clipped eye position, clipped vertex position
 varying vec3 eye, vpos, normal, lpos0, vposl; // world space
+varying vec2 tex_coord;
 // epos and eye_norm come from bump_map.frag
 
 const float SMOKE_SCALE = 0.25;
@@ -63,7 +64,7 @@ vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 //       but we don't have the tex0 value there and can't determine the full init color
 void main()
 {
-	vec4 texel  = texture2D(tex0, gl_TexCoord[0].st);
+	vec4 texel  = texture2D(tex0, tex_coord);
 	float alpha = gl_Color.a;
 
 	if (do_lt_atten) {

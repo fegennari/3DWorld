@@ -4,8 +4,8 @@ varying vec3 eye_norm;
 
 void main()
 {
-	setup_texgen(0);
-	setup_texgen(1);
+	setup_texgen0();
+	setup_texgen1();
 	gl_Position = ftransform();
 	eye_norm = gl_NormalMatrix * gl_Normal; // eye space
 	normal = normalize(gl_Normal);

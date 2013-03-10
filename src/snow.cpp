@@ -754,7 +754,7 @@ void draw_snow() {
 		bool const use_smap(shadow_map_enabled());
 		s.setup_enabled_lights();
 		set_dlights_booleans(s, ENABLE_SNOW_DLIGHTS, 1); // FS
-		for (unsigned d = 0; d < 2; ++d) s.set_bool_prefix("no_normalize", !use_smap, d); // VS/FS
+		for (unsigned d = 0; d < 2; ++d) {s.set_bool_prefix("no_normalize", !use_smap, d);} // VS/FS
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
 		s.set_vert_shader("texture_gen.part+snow");
