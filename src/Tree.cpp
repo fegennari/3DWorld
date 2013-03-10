@@ -2052,9 +2052,14 @@ void tree_cont_t::post_scroll_remove() {
 void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_) {
 
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
+	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? TREE_DEN_THRESH : 1.0));
+	
+	if (mod_num_trees == 0) { // no trees
+		generated = 1;
+		return;
+	}
 	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
 	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
-	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? TREE_DEN_THRESH : 1.0));
 	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1U, XY_MULT_SIZE/mod_num_trees));
 	unsigned const skip_val(max(1, int(1.0/sqrt(tree_scale)))); // similar to deterministic gen in scenery.cpp
 	shared_tree_data.ensure_init();
