@@ -1,5 +1,6 @@
 varying vec4 epos;
 varying vec3 eye_norm;
+varying vec2 bump_tc;
 
 #ifdef USE_BUMP_MAP
 attribute vec4 tangent;
@@ -16,5 +17,7 @@ void setup_tbn() {
 	ts_pos.x  = dot(epos.xyz, tangent_v);
 	ts_pos.y  = dot(epos.xyz, binorm_v);
 	ts_pos.z  = dot(epos.xyz, eye_norm);
+
+	bump_tc = gl_TexCoord[0].st;
 }
 #endif

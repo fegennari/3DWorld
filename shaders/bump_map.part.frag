@@ -1,5 +1,6 @@
 varying vec4 epos;
 varying vec3 eye_norm;
+varying vec2 bump_tc;
 
 #ifdef USE_BUMP_MAP
 uniform sampler2D bump_map;
@@ -18,6 +19,6 @@ vec3 apply_tbn(in vec3 v) {
 // Note: we use tex coord 0 for the bump map (assuming it's the same tex coord for the regular texture)
 vec3 apply_bump_map(inout vec3 light_dir) {
 	light_dir = apply_tbn(light_dir);
-	return normalize(texture2D(bump_map, gl_TexCoord[0].st).xyz * 2.0 - 1.0);
+	return normalize(texture2D(bump_map, bump_tc).xyz * 2.0 - 1.0);
 }
 #endif
