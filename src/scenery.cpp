@@ -423,7 +423,7 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, f
 	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
-		tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
+		tree_scenery_pld.add_textured_pt(pos+xlate, color, ROCK_SPHERE_TEX);
 		return;
 	}
 	color.do_glColor();
@@ -478,7 +478,7 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float s
 	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
-		tree_scenery_pld.add_textured_pt(pos, color, ROCK_SPHERE_TEX);
+		tree_scenery_pld.add_textured_pt(pos+xlate, color, ROCK_SPHERE_TEX);
 		return;
 	}
 	color.do_glColor();
@@ -584,7 +584,7 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float sc
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
-		tree_scenery_pld.add_textured_line(pos, pt2, color, get_tid());
+		tree_scenery_pld.add_textured_line(pos+xlate, pt2+xlate, color, get_tid());
 		return;
 	}
 	color.do_glColor();
@@ -645,7 +645,7 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
-		tree_scenery_pld.add_textured_line((pos - point(0.0, 0.0, 0.2*height)), (pos + point(0.0, 0.0, height)), color, get_tid());
+		tree_scenery_pld.add_textured_line((pos+xlate - point(0.0, 0.0, 0.2*height)), (pos+xlate + point(0.0, 0.0, height)), color, get_tid());
 		return;
 	}
 	color.do_glColor();
@@ -744,7 +744,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
-		tree_scenery_pld.add_textured_line((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
+		tree_scenery_pld.add_textured_line((pos+xlate - point(0.0, 0.0, 0.1*height)), (pos+xlate + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
 	}
 	else {
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));

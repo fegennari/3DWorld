@@ -30,7 +30,8 @@ float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 1.7;
 float const TREE_LOD_THRESH   = 5.0;
 float const GEOMORPH_THRESH   = 5.0;
-float const SCENERY_THRESH    = 1.6;
+float const SCENERY_THRESH_REF= 1.6;
+float const SCENERY_THRESH    = 4.0;
 float const GRASS_THRESH      = 1.5;
 float const GRASS_LOD_SCALE   = 16.0;
 
@@ -43,6 +44,7 @@ extern point sun_pos, moon_pos, surface_pos;
 extern float h_dirt[];
 extern texture_t textures[];
 extern tree_data_manager_t tree_data_manager;
+extern pt_line_drawer tree_scenery_pld;
 
 bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 
@@ -689,10 +691,11 @@ public:
 	}
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_bcube());}
 	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*TILE_RADIUS;}
-	float get_scenery_dist_scale () const {return get_dist_to_camera_in_tiles()/SCENERY_THRESH;}
-	float get_tree_dist_scale    () const {return get_dist_to_camera_in_tiles()/max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
-	float get_tree_far_weight    () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
-	float get_grass_dist_scale   () const {return get_dist_to_camera_in_tiles()/GRASS_THRESH;}
+	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
+	float get_scenery_dist_scale(bool reflection_pass) const {return get_dist_to_camera_in_tiles()/get_scenery_thresh(reflection_pass);}
+	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
+	float get_tree_far_weight () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
+	float get_grass_dist_scale() const {return get_dist_to_camera_in_tiles()/GRASS_THRESH;}
 
 	// *** pine trees ***
 
@@ -802,20 +805,20 @@ public:
 	// *** scenery ***
 
 	void update_scenery() {
-		float const dist_scale(get_scenery_dist_scale()); // tree_dist_scale should correlate with mesh scale
+		float const dist_scale(get_scenery_dist_scale(0)); // tree_dist_scale should correlate with mesh scale
 		if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
 		if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
 		scenery_off.set_from_xyoff2();
 		scenery.gen(x1+scenery_off.dxoff, y1+scenery_off.dyoff, x2+scenery_off.dxoff, y2+scenery_off.dyoff, vegetation*get_avg_veg());
 	}
 
-	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves) {
-		if (!scenery.generated || get_scenery_dist_scale() > 1.0) return;
+	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass) {
+		if (!scenery.generated || get_scenery_dist_scale(reflection_pass) > 1.0) return;
 		glPushMatrix();
 		vector3d const xlate(scenery_off.get_xlate());
 		translate_to(xlate);
-		float const scale_val(SCENERY_THRESH*(X_SCENE_SIZE + Y_SCENE_SIZE));
-		if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 1, scale_val);}
+		float const scale_val(get_scenery_thresh(reflection_pass)*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 0, scale_val);}
 		if (draw_leaves) {scenery.draw_plant_leaves  (s, 0, xlate);}
 		glPopMatrix();
 	}
@@ -1513,13 +1516,14 @@ public:
 		s.add_uniform_int("tex0", 0);
 		
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->draw_scenery(s, 1, 0); // opaque
+			to_draw[i].second->draw_scenery(s, 1, 0, reflection_pass); // opaque
 		}
+		tree_scenery_pld.draw_and_clear();
 		s.end_shader();
 		set_leaf_shader(s, 0.9, 1, 0);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->draw_scenery(s, 0, 1); // leaves
+			to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass); // leaves
 		}
 		s.end_shader();
 	}
