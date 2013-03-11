@@ -394,14 +394,14 @@ void draw_small_trees(bool shadow_only) {
 	if (small_trees.empty() || !(tree_mode & 2)) return;
 	if (small_trees.size() < 100) {small_trees.sort_by_dist_to_camera();} // shadow_only?
 	shader_t s;
-	bool const can_use_shaders(!disable_shaders), v(!shadow_only);
+	bool const can_use_shaders(!disable_shaders), v(!shadow_only), use_bump_map(USE_BUMP_MAP && v);
 	colorRGBA orig_fog_color;
 
 	if (can_use_shaders) {
-		orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 0, v, v, 0, 0, v, (USE_BUMP_MAP && v), 0, v); // dynamic lights, but no smoke
+		orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 0, v, v, 0, 0, v, use_bump_map, 0, v); // dynamic lights, but no smoke
 		s.add_uniform_float("tex_scale_t", 5.0);
 
-		if (USE_BUMP_MAP) {
+		if (use_bump_map) {
 			vector4d const tangent(0.0, 0.0, 1.0, 1.0); // FIXME: set based on tree trunk direction?
 			int const tangent_loc(s.get_attrib_loc("tangent"));
 			if (tangent_loc >= 0) glVertexAttrib4fv(tangent_loc, &tangent.x);

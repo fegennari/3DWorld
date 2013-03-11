@@ -322,11 +322,6 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	smoke_en       &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
 	dlights        &= (dl_tid > 0 && has_dl_sources);
 	force_tsl      |= two_sided_lighting;
-#if 0
-	unsigned sig = ((min_alpha > 0.0) | (use_texgen<<1)) | (keep_alpha<<2) | (indir_lighting<<3) | (direct_lighting<<4) | (dlights<<5) | (smoke_en<<6) |
-		            (has_lt_atten<<7) | (use_smap<<8) | (use_bmap<<9) | (use_spec_map<<10) | (use_mvm<<11) | (force_tsl<<12) | (glIsEnabled(GL_FOG)<<13);
-	for (unsigned i = 0; i < 8; ++i) {sig |= (glIsEnabled(GL_LIGHT0 + i) << (14+i));}
-#endif
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+tc_by_vert_id.part+no_lt_texgen_smoke");
