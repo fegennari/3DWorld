@@ -15,3 +15,5 @@ Tile Occlusion?
 
 openmp when another process is running?
 
+set_multitex()/select_multitex()/disable_multitex_a()
+

@@ -684,7 +684,7 @@ void draw_water_sides(int check_zvals) {
 }
 
 
-// texture units used: 0: water texture, 1: reflection texture, 2: ripple texture
+// texture units used: 0: water texture, 1: reflection texture, 2: ripple texture, 3: cloud noise texture
 void draw_water_plane(float zval, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
@@ -729,15 +729,15 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		rcolor.alpha = 0.5*(0.5 + color.alpha);
 		set_active_texture(2);
 		select_texture(WATER_TEX, 0);
-		set_active_texture(0);
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.set_prefix("#define NUM_OCTAVES 6",     1); // FS
 		s.set_bool_prefix("reflections", reflections, 1); // FS
 		s.set_bool_prefix("add_waves", add_waves, 1); // FS
 		s.set_bool_prefix("add_noise", rain_mode, 1); // FS
 		s.set_vert_shader("texture_gen.part+water_plane");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+perlin_clouds.part*+water_plane");
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int  ("water_tex",      0);
@@ -748,13 +748,21 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		s.add_uniform_float("ripple_scale", 10.0);
 		s.add_uniform_float("ripple_mag",   2.0);
 
+		// waves (as clouds)
+		s.add_uniform_vector3d("cloud_offset", zero_vector);
+		s.add_uniform_float("cloud_scale", 0.5);
+		select_multitex(NOISE_GEN_TEX, 3, 0);
+		s.add_uniform_int("cloud_noise_tex", 3);
+		float const tscale(4.0E4);
+		s.add_uniform_vector2d("dxy", vector2d(tscale*water_xoff, tscale*water_yoff));
+
 		if (rain_mode) { // rain ripples
 			set_active_texture(3);
 			select_texture(NOISE_GEN_TEX, 0);
-			set_active_texture(0);
 			s.add_uniform_int  ("noise_tex", 3);
-			s.add_uniform_float("time", frame_counter);
+			s.add_uniform_float("noise_time", frame_counter);
 		}
+		set_active_texture(0);
 		set_color(WHITE);
 	}
 	else {
