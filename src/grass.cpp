@@ -368,7 +368,7 @@ public:
 		     + vertex_normals[y0+1][x0+1]*(xpi*ypi);
 	}
 
-	void upload_data_to_vbo(unsigned start, unsigned end, bool create) const {
+	void upload_data_to_vbo(unsigned start, unsigned end, bool alloc_data) const {
 		if (start == end) return; // nothing to update
 		assert(start < end && end <= grass.size());
 		unsigned const num_verts(3*(end - start)), block_size(3*4096); // must be a multiple of 3
@@ -376,7 +376,7 @@ public:
 		unsigned offset(3*start);
 		vector<grass_data_t> data(min(num_verts, block_size));
 		bind_vbo(vbo);
-		if (create) {upload_vbo_data(NULL, 3*grass.size()*vntc_sz);} // initial upload (setup, no data)
+		if (alloc_data) {upload_vbo_data(NULL, 3*grass.size()*vntc_sz);} // initial upload (setup, no data)
 		
 		for (unsigned i = start, ix = 0; i < end; ++i) {
 			//vector3d norm(plus_z); // use grass normal? 2-sided lighting?
@@ -533,19 +533,20 @@ public:
 		} // for y
 	}
 
-	void upload_data() {
+	void upload_data(bool alloc_data) {
 		if (empty()) return;
 		RESET_TIME;
-		upload_data_to_vbo(0, (unsigned)grass.size(), 1);
+		upload_data_to_vbo(0, (unsigned)grass.size(), alloc_data);
 		data_valid = 1;
 		PRINT_TIME("Grass Upload VBO");
 		cout << "mem used: " << grass.size()*sizeof(grass_t) << ", vmem used: " << 3*grass.size()*sizeof(grass_data_t) << endl;
 	}
 
 	void check_for_updates() {
+		bool const vbo_invalid(vbo == 0);
 		if (!shadows_valid && !shadow_map_enabled()) {find_shadows();}
-		if (vbo == 0   ) {create_new_vbo();}
-		if (!data_valid) {upload_data();}
+		if (vbo_invalid) {create_new_vbo();}
+		if (!data_valid) {upload_data(vbo_invalid);}
 	}
 
 	void draw_range(unsigned beg_ix, unsigned end_ix) const {
@@ -647,7 +648,7 @@ public:
 				last_visible = visible;
 			}
 		}
-		if (last_visible) draw_range(beg_ix, (unsigned)grass.size());
+		if (last_visible) {draw_range(beg_ix, (unsigned)grass.size());}
 		s.end_shader();
 		disable_dynamic_lights(num_dlights);
 		end_draw();
