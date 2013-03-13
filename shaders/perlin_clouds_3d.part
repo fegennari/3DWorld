@@ -2,10 +2,8 @@ uniform sampler3D cloud_noise_tex;
 uniform float time = 0.0;
 uniform float noise_scale = 1.0;
 
-float gen_cloud_alpha_time(in vec3 pos, in float time_scale)
+float gen_cloud_alpha_time(in vec3 pos, in vec3 ftime)
 {
-	float t = time_scale*time;
-	vec3 ftime  = vec3(fract(t), fract(0.95*t), fract(0.85*t));
 	float alpha = 0.0;
 	float freq  = 1.0;
 
@@ -16,15 +14,23 @@ float gen_cloud_alpha_time(in vec3 pos, in float time_scale)
 	return 2.0*(0.5*alpha-0.4);
 }
 
+float fract_smooth(in float t) {
+	return 2.0*abs(fract(0.5*t) - 0.5);
+}
+
+vec3 get_ftime() {
+	return vec3(fract_smooth(time), fract_smooth(0.95*time), fract_smooth(0.85*time));
+}
+
 float gen_cloud_alpha(in vec3 pos) {
-	return clamp(gen_cloud_alpha_time(pos, 1.0), 0.0, 1.0);
+	return clamp(gen_cloud_alpha_time(pos, get_ftime()), 0.0, 1.0);
 }
 float gen_cloud_alpha_non_norm(in vec3 pos) {
-	return gen_cloud_alpha_time(pos, 1.0);
+	return gen_cloud_alpha_time(pos, get_ftime());
 }
 float gen_cloud_alpha_static(in vec3 pos) {
-	return clamp(gen_cloud_alpha_time(pos, 0.0), 0.0, 1.0);
+	return clamp(gen_cloud_alpha_time(pos, vec3(0,0,0)), 0.0, 1.0);
 }
 float gen_cloud_alpha_static_non_norm(in vec3 pos) {
-	return gen_cloud_alpha_time(pos, 0.0);
+	return gen_cloud_alpha_time(pos, vec3(0,0,0));
 }
