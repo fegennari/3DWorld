@@ -2,7 +2,6 @@ uniform sampler2D cloud_noise_tex;
 uniform vec2 dxy = vec2(0,0);
 uniform float cloud_scale = 0.5;
 uniform float noise_scale = 0.0012;
-uniform float time = 0.0;
 
 float gen_cloud_alpha_raw(in vec2 pos) {
 	float alpha = 0.0;
