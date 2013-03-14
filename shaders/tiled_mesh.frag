@@ -33,7 +33,7 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 	float NdotL = dot(normal, lightDir);
 	vec4 light  = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 
-	if (apply_cloud_shadows /*&& vertex.z < cloud_plane_z*/) {
+	if (apply_cloud_shadows && vertex.z > water_plane_z/*&& vertex.z < cloud_plane_z*/) {
 		vec3 cpos = vertex + cloud_offset;
 		float t = (cloud_plane_z - cpos.z)/(light.z - cpos.z); // sky intersection position along vertex->light vector
 		normal *= 1.0 - 0.75*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
