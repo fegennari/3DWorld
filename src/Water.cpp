@@ -46,7 +46,6 @@ bool     const DEBUG_RIPPLE_TIME   = 0;
 bool     const FAST_WATER_RIPPLE   = 0;
 bool     const NO_ICE_RIPPLES      = 0;
 bool     const WATER_SHADOW        = 0; // uses mesh shadow, so is only accurate for shallow water
-bool     const WATER_TEXTURE       = 1;
 int      const UPDATE_UW_LANDSCAPE = 2;
 int      const WATER_PRIM_TYPE     = GL_TRIANGLE_STRIP; // GL_QUAD_STRIP
 
@@ -167,17 +166,25 @@ void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 }
 
 
-void select_water_ice_texture(colorRGBA &color, float *use_this_temp) {
+void select_water_ice_texture(colorRGBA &color, float *use_this_temp, bool set_avg_color_instead) {
+
+	int tid(-1);
 
 	if (((use_this_temp != NULL) ? *use_this_temp : temperature) > W_FREEZE_POINT) { // water
-		if (WATER_TEXTURE) select_texture(WATER_TEX); else glDisable(GL_TEXTURE_2D);
+		tid = WATER_TEX;
 		set_specular(w_spec[0][0], w_spec[0][1]);
 		color = WATER_C;
 	}
 	else { // ice
-		if (WATER_TEXTURE) select_texture(ICE_TEX);   else glDisable(GL_TEXTURE_2D);
+		tid = ICE_TEX;
 		set_specular(w_spec[1][0], w_spec[1][1]);
 		color = ICE_C;
+	}
+	if (set_avg_color_instead) {
+		color = color.modulate_with(texture_color(tid));
+	}
+	else {
+		select_texture(tid);
 	}
 	color *= DARK_WATER_ATTEN;
 }

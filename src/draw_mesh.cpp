@@ -684,51 +684,49 @@ void draw_water_sides(int check_zvals) {
 }
 
 
-// texture units used: 0: water texture, 1: reflection texture, 2: ripple texture, 3: cloud noise texture
+// texture units used: 0: reflection texture, 1: ripple texture, 2: water normal map, 3: rain noise texture
 void draw_water_plane(float zval, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE);
 	colorRGBA color;
-	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature));
+	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature), 1);
 	bool const reflections(!(display_mode & 0x20));
+	static float wave_time(0.0);
 	color.alpha *= 0.5;
 
 	if (animate2 && temperature > W_FREEZE_POINT) {
 		water_xoff -= WATER_WIND_EFF*wind.x*fticks;
 		water_yoff -= WATER_WIND_EFF*wind.y*fticks;
+		wave_time  += fticks;
 	}
 	if (light_factor >= 0.4 && get_sun_pos().z < water_plane_z) {set_specular(0.0, 1.0);} // has sun but it's below the water level
 	point const camera(get_camera_pos());
 	vector3d(0.0, 0.0, ((camera.z < zval) ? -1.0 : 1.0)).do_glNormal();
 	set_fill_mode();
 	enable_blend();
-	setup_texgen(tscale, tscale, (tscale*(xoff2 - xoff)*DX_VAL + water_xoff), (tscale*(yoff2 - yoff)*DY_VAL + water_yoff));
+	float const tdx(tscale*(xoff2 - xoff)*DX_VAL + water_xoff), tdy(tscale*(yoff2 - yoff)*DY_VAL + water_yoff);
+	vector3d const wind_xy(vector3d(wind.x, wind.y, 0.0).get_norm()); // wind.z is probably 0.0 anyway (nominal 1,0,0)
+	setup_texgen_full(tscale*wind_xy.x, tscale*wind_xy.y, 0.0, (tdx*wind.x + tdy*wind.y), -tscale*wind_xy.y, tscale*wind_xy.x, 0.0, (tdx*wind.y + tdy*wind.x), GL_EYE_LINEAR);
 	shader_t s;
 
 	if (!disable_shaders) {
-		set_active_texture(1);
+		colorRGBA rcolor;
+		set_active_texture(0);
 
 		if (reflection_tid) {
 			glBindTexture(GL_TEXTURE_2D, reflection_tid);
-		}
-		else {
-			select_texture(WHITE_TEX, 0);
-		}
-		colorRGBA rcolor;
-
-		if (reflection_tid) {
 			rcolor = WHITE;
 		}
 		else {
+			select_texture(WHITE_TEX, 0);
 			glGetFloatv(GL_FOG_COLOR, (float *)&rcolor);
 			//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 		}
-		bool const add_waves((display_mode & 0x0100) != 0);
+		bool const add_waves((display_mode & 0x0100) != 0 && (wind.x != 0.0 || wind.y != 0.0));
 		bool const rain_mode(add_waves && is_rain_enabled());
 		rcolor.alpha = 0.5*(0.5 + color.alpha);
-		set_active_texture(2);
-		select_texture(WATER_TEX, 0);
+		select_multitex(WATER_TEX, 1, 0);
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
@@ -737,28 +735,23 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		s.set_bool_prefix("add_waves", add_waves, 1); // FS
 		s.set_bool_prefix("add_noise", rain_mode, 1); // FS
 		s.set_vert_shader("texture_gen.part+water_plane");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+perlin_clouds.part*+water_plane");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
 		s.begin_shader();
 		s.setup_fog_scale();
-		s.add_uniform_int  ("water_tex",      0);
-		s.add_uniform_int  ("reflection_tex", 1);
-		s.add_uniform_int  ("ripple_tex",     2);
+		s.add_uniform_int  ("reflection_tex", 0);
+		s.add_uniform_int  ("ripple_tex",     1);
 		s.add_uniform_color("water_color",    color);
 		s.add_uniform_color("reflect_color",  rcolor);
 		s.add_uniform_float("ripple_scale", 10.0);
 		s.add_uniform_float("ripple_mag",   2.0);
 
-		// waves (as clouds)
-		s.add_uniform_vector3d("cloud_offset", zero_vector);
-		s.add_uniform_float("cloud_scale", 0.5);
-		select_multitex(NOISE_GEN_TEX, 3, 0);
-		s.add_uniform_int("cloud_noise_tex", 3);
-		float const tscale(4.0E4);
-		s.add_uniform_vector2d("dxy", vector2d(tscale*water_xoff, tscale*water_yoff));
+		// waves (as normal map)
+		select_multitex(WATER_NORMAL_TEX, 2, 0);
+		s.add_uniform_int("water_normal_tex", 2);
+		s.add_uniform_float("wave_time", wave_time);
 
 		if (rain_mode) { // rain ripples
-			set_active_texture(3);
-			select_texture(NOISE_GEN_TEX, 0);
+			select_multitex(NOISE_GEN_TEX, 3, 0);
 			s.add_uniform_int  ("noise_tex", 3);
 			s.add_uniform_float("noise_time", frame_counter);
 		}

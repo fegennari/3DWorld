@@ -464,7 +464,7 @@ bool get_water_enabled(int x, int y);
 bool has_water(int x, int y);
 bool mesh_is_underwater(int x, int y);
 void water_color_atten_at_pos(colorRGBA &c, point const &pos);
-void select_water_ice_texture(colorRGBA &color, float *use_this_temp=NULL);
+void select_water_ice_texture(colorRGBA &color, float *use_this_temp=NULL, bool set_avg_color_instead=0);
 void draw_water();
 void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound);
 bool add_water_section(float x1, float y1, float x2, float y2, float zval, float wvol);
