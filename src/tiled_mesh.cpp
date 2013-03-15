@@ -584,7 +584,9 @@ public:
 			}
 		}
 		assert(sand_tex_ix >= 0 && dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0 && snow_tex_ix >= 0);
+		calc_start_step(0, 0);
 		create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);
+		calc_start_step(mesh_off.dxoff, mesh_off.dyoff); // reset
 
 		//#pragma omp parallel for schedule(static,1)
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) {
