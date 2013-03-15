@@ -1,6 +1,6 @@
 varying vec3 normal;
 varying vec4 epos, proj_pos;
-uniform sampler2D ripple_tex, noise_tex, reflection_tex, water_normal_tex;
+uniform sampler2D reflection_tex, water_normal_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude;
 
@@ -18,20 +18,20 @@ void main()
 	vec3 norm   = normalize(normal); // renormalize
 	vec2 ripple = vec2(0,0);
 
-	if (add_noise) {
-		vec2 st2    = 3.21*proj_pos.xy/proj_pos.w;
-		ripple     += 0.1*vec2(texture2D(noise_tex, (1.1*st2 + 12.34*noise_time)).g, texture2D(ripple_tex, (st2 + vec2(0.5,0.5) + 43.21*noise_time)).g) - 0.05;
-		norm        = normalize(norm + gl_NormalMatrix*vec3(ripple, 0));
+	if (add_noise) { // for rain
+		vec3 wave_n = get_wave_normal(fract(4.61*noise_time)*3.0*proj_pos.xy/proj_pos.w);
+		norm        = normalize(norm + 0.06*gl_NormalMatrix*wave_n);
+		ripple     += 0.025*wave_n.xy;
 	}
 	vec3 light_norm = norm;
 
 	if (add_waves) {
-		// calculate ripple adjustment of normal and reflection based on scaled water texture
-		vec2 st     = gl_TexCoord[0].st;
-		vec2 wave_d = wave_amplitude*(vec2(texture2D(ripple_tex, 11.0*st).g, texture2D(ripple_tex, 10.0*st+vec2(0.5,0.5)).g) - 0.575);
-		ripple     += wave_d;
-		norm        = normalize(norm + gl_NormalMatrix*vec3(clamp(2.0*wave_d, 0, 1), 0));
-		light_norm  = normalize(norm + wave_amplitude*gl_NormalMatrix*get_wave_normal(st));
+		// calculate ripple adjustment of normal and reflection based on scaled water normal map texture
+		vec3 wave_n     = wave_amplitude*get_wave_normal(gl_TexCoord[0].st);
+		vec3 wave_n_eye = gl_NormalMatrix*wave_n;
+		light_norm  = normalize(norm + wave_n_eye);
+		norm        = normalize(norm + 0.1*wave_n_eye); // lower scale for fresnel term
+		ripple     += 0.05*wave_n.xy;
 	}
 
 	// calculate lighting

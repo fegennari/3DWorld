@@ -684,7 +684,7 @@ void draw_water_sides(int check_zvals) {
 }
 
 
-// texture units used: 0: reflection texture, 1: ripple texture, 2: water normal map, 3: rain noise texture
+// texture units used: 0: reflection texture, 1: water normal map
 void draw_water_plane(float zval, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
@@ -727,7 +727,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		bool const add_waves((display_mode & 0x0100) != 0 && wind_xy != zero_vector);
 		bool const rain_mode(add_waves && is_rain_enabled());
 		rcolor.alpha = 0.5*(0.5 + color.alpha);
-		select_multitex(WATER_TEX, 1, 0);
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
@@ -740,23 +739,18 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_int  ("reflection_tex", 0);
-		s.add_uniform_int  ("ripple_tex",     1);
 		s.add_uniform_color("water_color",    color);
 		s.add_uniform_color("reflect_color",  rcolor);
 		s.add_uniform_float("ripple_scale", 10.0);
 		s.add_uniform_float("ripple_mag",   2.0);
 
 		// waves (as normal map)
-		select_multitex(WATER_NORMAL_TEX, 2, 0);
-		s.add_uniform_int("water_normal_tex", 2);
+		select_multitex(WATER_NORMAL_TEX, 1, 0);
+		s.add_uniform_int("water_normal_tex", 1);
 		s.add_uniform_float("wave_time",      wave_time);
-		s.add_uniform_float("wave_amplitude", min(1.0, 1.5*wind_xy.mag()));
+		s.add_uniform_float("wave_amplitude", min(1.0, 1.5*wind_xy.mag())); // No waves if (temperature < W_FREEZE_POINT)?
 
-		if (rain_mode) { // rain ripples
-			select_multitex(NOISE_GEN_TEX, 3, 0);
-			s.add_uniform_int  ("noise_tex", 3);
-			s.add_uniform_float("noise_time", frame_counter);
-		}
+		if (rain_mode) {s.add_uniform_float("noise_time", frame_counter);} // rain ripples
 		set_active_texture(0);
 		set_color(WHITE);
 	}
