@@ -706,8 +706,9 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	set_fill_mode();
 	enable_blend();
 	float const tdx(tscale*(xoff2 - xoff)*DX_VAL + water_xoff), tdy(tscale*(yoff2 - yoff)*DY_VAL + water_yoff);
-	vector3d const wind_xy(vector3d(wind.x, wind.y, 0.0).get_norm()); // wind.z is probably 0.0 anyway (nominal 1,0,0)
-	setup_texgen_full(tscale*wind_xy.x, tscale*wind_xy.y, 0.0, (tdx*wind.x + tdy*wind.y), -tscale*wind_xy.y, tscale*wind_xy.x, 0.0, (tdx*wind.y + tdy*wind.x), GL_EYE_LINEAR);
+	vector3d const wind_xy(wind.x, wind.y, 0.0); // wind.z is probably 0.0 anyway (nominal 1,0,0)
+	vector3d const wdir(wind_xy.get_norm());
+	setup_texgen_full(tscale*wdir.x, tscale*wdir.y, 0.0, (tdx*wdir.x + tdy*wdir.y), -tscale*wdir.y, tscale*wdir.x, 0.0, (-tdx*wdir.y + tdy*wdir.x), GL_EYE_LINEAR);
 	shader_t s;
 
 	if (!disable_shaders) {
@@ -723,7 +724,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 			glGetFloatv(GL_FOG_COLOR, (float *)&rcolor);
 			//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 		}
-		bool const add_waves((display_mode & 0x0100) != 0 && (wind.x != 0.0 || wind.y != 0.0));
+		bool const add_waves((display_mode & 0x0100) != 0 && wind_xy != zero_vector);
 		bool const rain_mode(add_waves && is_rain_enabled());
 		rcolor.alpha = 0.5*(0.5 + color.alpha);
 		select_multitex(WATER_TEX, 1, 0);
@@ -748,7 +749,8 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		// waves (as normal map)
 		select_multitex(WATER_NORMAL_TEX, 2, 0);
 		s.add_uniform_int("water_normal_tex", 2);
-		s.add_uniform_float("wave_time", wave_time);
+		s.add_uniform_float("wave_time",      wave_time);
+		s.add_uniform_float("wave_amplitude", min(1.0, 1.5*wind_xy.mag()));
 
 		if (rain_mode) { // rain ripples
 			select_multitex(NOISE_GEN_TEX, 3, 0);
