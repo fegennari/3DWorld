@@ -1,8 +1,9 @@
 varying vec3 normal;
 varying vec4 epos, proj_pos;
-uniform sampler2D reflection_tex, water_normal_tex;
+uniform sampler2D reflection_tex, water_normal_tex, height_tex;
 uniform vec4 water_color, reflect_color;
-uniform float noise_time, wave_time, wave_amplitude;
+uniform float noise_time, wave_time, wave_amplitude, water_plane_z;
+uniform float x1, y1, x2, y2, zmin, zmax;
 
 vec3 water_normal_lookup(in vec2 tc) {
 	return 2.0*(texture2D(water_normal_tex, 0.5*tc).rgb - 0.5);
@@ -15,6 +16,9 @@ vec3 get_wave_normal(in vec2 tc) {
 
 void main()
 {
+	float mesh_z = zmin + (zmax - zmin)*texture2D(height_tex, gl_TexCoord[1].st).r;
+	if (water_plane_z < mesh_z) discard;
+
 	vec3 norm   = normalize(normal); // renormalize
 	vec2 ripple = vec2(0,0);
 
@@ -36,6 +40,7 @@ void main()
 
 	// calculate lighting
 	vec4 color    = water_color;
+	color.a      *= min(1.0, 20.0*(water_plane_z - mesh_z)); // blend to alpha=0 near the shore
 	vec4 lighting = gl_FrontMaterial.emission + gl_FrontMaterial.ambient * gl_LightModel.ambient;
 	if (enable_light0) {lighting += add_light_comp_pos(light_norm, epos, 0);}
 	if (enable_light1) {lighting += add_light_comp_pos(light_norm, epos, 1);}

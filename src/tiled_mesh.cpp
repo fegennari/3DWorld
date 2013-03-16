@@ -555,6 +555,23 @@ public:
 		//PRINT_TIME("Create Data");
 	}
 
+	void ensure_height_tid() {
+		if (height_tid) return;
+		float const scale(65535/(mzmax - mzmin));
+		assert(zvals.size() == zvsize*zvsize);
+		vector<unsigned short> data(stride*stride);
+
+		for (unsigned y = 0; y < stride; ++y) {
+			for (unsigned x = 0; x < stride; ++x) {
+				data[y*stride+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - mzmin));
+			}
+		}
+		setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	}
+
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 
 	void create_texture(mesh_xy_grid_cache_t &height_gen) {
@@ -686,7 +703,6 @@ public:
 	bool update_range() { // if returns 0, tile will be deleted
 		if (pine_trees_enabled()) {update_pine_tree_state(0);}
 		if (scenery_enabled   ()) {update_scenery();}
-		if (height_tid && !grass_blocks.empty() && get_grass_dist_scale() > 1.2) {free_texture(height_tid);}
 		float const dist(get_rel_dist_to_camera());
 		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
 		return (dist < DELETE_DIST_TILES);
@@ -827,23 +843,6 @@ public:
 
 	// *** grass ***
 
-	void init_draw_grass() {
-		if (height_tid || grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
-		float const scale(65535/(mzmax - mzmin));
-		assert(zvals.size() == zvsize*zvsize);
-		vector<unsigned short> data(stride*stride);
-
-		for (unsigned y = 0; y < stride; ++y) {
-			for (unsigned x = 0; x < stride; ++x) {
-				data[y*stride+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - mzmin));
-			}
-		}
-		setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	}
-
 	void draw_grass(shader_t &s, bool use_cloud_shadows) {
 		if (grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
 		bind_texture_tu(height_tid, 2);
@@ -979,13 +978,18 @@ public:
 		if (weight_tid > 0) disable_textures_texgen();
 	}
 
-	void draw_water(float z) const {
+	void draw_water(shader_t &s, float z) {
 		if (!has_water() || get_rel_dist_to_camera() > DRAW_DIST_TILES || !is_visible()) return;
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*DX_VAL), yv2(yv1+(y2-y1)*DY_VAL);
-		glVertex3f(xv1, yv1, z);
-		glVertex3f(xv1, yv2, z);
-		glVertex3f(xv2, yv2, z);
-		glVertex3f(xv2, yv1, z);
+		bind_texture_tu(height_tid, 2);
+		s.add_uniform_float("zmin", mzmin);
+		s.add_uniform_float("zmax", mzmax);
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0); glVertex3f(xv1, yv1, z);
+		glTexCoord2f(0.0, 1.0); glVertex3f(xv1, yv2, z);
+		glTexCoord2f(1.0, 1.0); glVertex3f(xv2, yv2, z);
+		glTexCoord2f(1.0, 0.0); glVertex3f(xv2, yv1, z);
+		glEnd();
 	}
 
 	bool check_player_collision() const {
@@ -1325,6 +1329,7 @@ public:
 		}
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			to_draw[i].second->ensure_weights(height_gen);
+			to_draw[i].second->ensure_height_tid();
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 		shader_t s;
@@ -1352,13 +1357,10 @@ public:
 		return zmin;
 	}
 
-	void draw_water(float zval) const {
-		glBegin(GL_QUADS);
-
+	void draw_water(shader_t &s, float zval) const {
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-			i->second->draw_water(zval);
+			i->second->draw_water(s, zval);
 		}
-		glEnd();
 	}
 
 	static void set_noise_tex(shader_t &s, unsigned tu_id) {
@@ -1533,10 +1535,6 @@ public:
 	// tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: shadow map, 5: noise, 9: cloud noise
 	void draw_grass(draw_vect_t const &to_draw, bool reflection_pass) {
 		if (reflection_pass) return; // no grass refletion (yet)
-
-		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->init_draw_grass();
-		}
 		grass_tile_manager.begin_draw(0.1);
 		bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled() && !reflection_pass);
 
@@ -1639,8 +1637,8 @@ void reset_tiled_terrain_state() {
 	terrain_tile_draw.clear_vbos_tids(1,1);
 }
 
-void draw_tiled_terrain_water(float zval) {
-	terrain_tile_draw.draw_water(zval);
+void draw_tiled_terrain_water(shader_t &s, float zval) {
+	terrain_tile_draw.draw_water(s, zval);
 }
 
 bool check_player_tiled_terrain_collision() {

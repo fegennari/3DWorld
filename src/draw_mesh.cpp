@@ -684,7 +684,7 @@ void draw_water_sides(int check_zvals) {
 }
 
 
-// texture units used: 0: reflection texture, 1: water normal map
+// texture units used: 0: reflection texture, 1: water normal map, 2: mesh height texture
 void draw_water_plane(float zval, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
@@ -750,6 +750,10 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		s.add_uniform_float("wave_time",      wave_time);
 		s.add_uniform_float("wave_amplitude", min(1.0, 1.5*wind_xy.mag())); // No waves if (temperature < W_FREEZE_POINT)?
 
+		// mesh height texture stuff
+		s.add_uniform_float("water_plane_z", water_plane_z);
+		s.add_uniform_int("height_tex", 2);
+
 		if (rain_mode) {s.add_uniform_float("noise_time", frame_counter);} // rain ripples
 		set_active_texture(0);
 		set_color(WHITE);
@@ -758,7 +762,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		if (reflections) color.alpha *= 1.5;
 		set_color(color);
 	}
-	draw_tiled_terrain_water(zval);
+	draw_tiled_terrain_water(s, zval);
 	s.end_shader();
 	disable_blend();
 	set_specular(0.0, 1.0);
