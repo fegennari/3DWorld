@@ -508,6 +508,7 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 		vector3d norm(0.0, 0.0, 1.0); // MZ
 		rotate_vector3d_by_vr(new_sp, old_sp, norm);
 		mirror_about_plane(norm, player_pos); // FIXME: doesn't use water_plane_z, so can't really be correct?
+		//mirror_about_plane(norm, (player_pos + UNIV_NCLIP_SCALE*norm*(water_plane_z - camera.z)));
 		set_player_dir(get_player_dir() - 2*norm*dot_product(get_player_dir(), norm)); // reflect the player view frustum dir
 		set_univ_pdu();
 	}
@@ -1084,8 +1085,10 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	camera_pdu.orthogonalize_up_dir();
 
 	// draw partial scene
-	if (!combined_gu) {draw_sun_moon_stars();}
-	draw_sun_flare();
+	if (!combined_gu) {
+		draw_sun_moon_stars();
+		draw_sun_flare();
+	}
 	if (display_mode & 0x40) {draw_cloud_plane(1);} // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	// setup above-water clip plane for mesh
