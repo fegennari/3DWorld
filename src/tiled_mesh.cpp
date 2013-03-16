@@ -1196,6 +1196,7 @@ public:
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {
 		s.setup_enabled_lights(3); // sun, moon, and lightning
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1); // FS
 		s.set_prefix("#define USE_LIGHT_COLORS",  lighting_shader);
 		s.set_prefix("#define USE_GOOD_SPECULAR", lighting_shader);
 	}
@@ -1410,6 +1411,7 @@ public:
 		s.end_shader();
 
 		// leaves/distant trunks
+		enable_blend(); // for fog transparency
 		set_pine_tree_shader(s, "pine_tree_billboard");
 		
 		if (!tree_trunk_pts.empty()) { // color/texture already set above
@@ -1431,6 +1433,7 @@ public:
 		s.end_shader();
 		glDisable(GL_TEXTURE_2D);
 		set_specular(0.0, 1.0);
+		disable_blend();
 	}
 
 	void draw_decid_tree_bl(draw_vect_t const &to_draw, shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass) {
@@ -1486,6 +1489,7 @@ public:
 			disable_multitex_a();
 		}
 		lod_renderer.finalize();
+		enable_blend(); // for fog transparency
 
 		if (lod_renderer.has_leaves()) { // draw leaf billboards
 			shader_t lrs;
@@ -1507,6 +1511,7 @@ public:
 			lod_renderer.render_branch_quads_facing_camera(brs);
 			brs.end_shader();
 		}
+		disable_blend();
 		leaf_color_changed = 0; // Note: only visible trees will be updated
 	}
 
