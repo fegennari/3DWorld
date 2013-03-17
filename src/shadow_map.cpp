@@ -262,7 +262,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	if (!tid) {
 		bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
 		setup_texture(tid, GL_MODULATE, 0, 0, 0, 0, 0, nearest);
-		//set_shadow_tex_params();
+		set_shadow_tex_params();
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadow_map_sz, shadow_map_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 	}
 

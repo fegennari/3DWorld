@@ -1,7 +1,8 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform mat4 world_space_mvm;
-uniform float tex_scale_s = 1.0;
-uniform float tex_scale_t = 1.0;
+uniform float tex_scale_s  = 1.0;
+uniform float tex_scale_t  = 1.0;
+uniform float normal_scale = 1.0;
 uniform vec3 world_space_offset = vec3(0,0,0);
 
 attribute vec4 tex0_s, tex0_t;
@@ -47,6 +48,8 @@ void main()
 		normal = normalize(gl_Normal);
 	}
 	setup_indir_lighting(vpos, normal);
+	normal   *= normal_scale;
+	eye_norm *= normal_scale;
 
 #ifdef USE_BUMP_MAP
 	setup_tbn();
