@@ -101,8 +101,7 @@ class cobj_bvh_tree : public cobj_tree_base {
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth, per_thread_data &ptd);
 
 	bool obj_ok(coll_obj const &c) const {
-		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC) ||
-			(!is_static && !is_dynamic && (c.status == COLL_STATIC || c.status == COLL_DYNAMIC))) &&
+		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC) || (!is_static && !is_dynamic)) &&
 			(!occluders_only || c.is_occluder()) && !c.cp.no_coll && (!cubes_only || c.type == COLL_CUBE));
 	}
 
