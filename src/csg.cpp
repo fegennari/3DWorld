@@ -782,6 +782,7 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 
 	if (!MERGE_COBJS) return;
 	RESET_TIME;
+	float const tolerance(-X_SCENE_SIZE*1.0E-6); // tiny negative tolerance to include adjacencies
 	unsigned const ncobjs((unsigned)size());
 	unsigned merged(0);
 	cobj_bvh_tree cube_tree(*this, 0, 0, 0, 1); // cubes only
@@ -792,8 +793,8 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 		if ((*this)[i].type != COLL_CUBE) continue;
 		csg_cube cube((*this)[i]); // remove all other cobjs from cobjs[i] with lower id
 		if (cube.is_zero_area()) continue;
-		cids.clear();
-		cube_tree.get_intersecting_cobjs(cube, cids, i, -SMALL_NUMBER, 0, -1); // small negative tolerance so adjacent cubes are returned
+		cids.resize(0);
+		cube_tree.get_intersecting_cobjs(cube, cids, i, tolerance, 0, -1);
 		unsigned mi(0);
 
 		for (vector<unsigned>::const_iterator it = cids.begin(); it != cids.end(); ++it) {
@@ -823,13 +824,14 @@ void coll_obj_group::remove_overlapping_cubes() { // objects specified later are
 
 	if (!UNOVERLAP_COBJS || empty()) return;
 	RESET_TIME;
+	float const tolerance(X_SCENE_SIZE*1.0E-6); // tiny tolerance to prevent adjacencies
 	unsigned const ncobjs((unsigned)size());
 	cobj_bvh_tree cube_tree(*this, 0, 0, 0, 1); // cubes only
 	cube_tree.add_cobjs(0);
 	vector<pair<unsigned, unsigned> > proc_order;
 		
 	for (unsigned i = 0; i < ncobjs; ++i) {
-		if ((*this)[i].type == COLL_CUBE) proc_order.push_back(make_pair((*this)[i].id, i));
+		if ((*this)[i].type == COLL_CUBE) {proc_order.push_back(make_pair((*this)[i].id, i));}
 	}
 	sort(proc_order.begin(), proc_order.end());
 	bool overlaps(0);
@@ -841,10 +843,10 @@ void coll_obj_group::remove_overlapping_cubes() { // objects specified later are
 		csg_cube const cube((*this)[i]); // remove all other cobjs from cobjs[i] with lower id
 		if (cube.is_zero_area()) continue;
 		bool const neg((*this)[i].status == COLL_NEGATIVE);
-		cids.clear();
-		cube_tree.get_intersecting_cobjs(cube, cids, i, 0.0, 0, -1);
+		cids.resize(0);
+		cube_tree.get_intersecting_cobjs(cube, cids, i, tolerance, 0, -1);
 		if (cids.empty()) continue;
-		cur_cobjs.clear();
+		cur_cobjs.resize(0);
 		cur_cobjs.push_back((*this)[i]); // start with the current cobj
 		bool was_removed(0);
 
@@ -1070,9 +1072,8 @@ void coll_obj_group::subdiv_cubes() {
 			++num_remove;
 		} // for j
 	} // for i
-	cout << ncobjs << " => " << (size() - num_remove) << endl;
-	if (num_remove > 0) remove_invalid_cobjs();
-	cout << (size() - num_remove) << " => " << size() << endl;
+	if (num_remove > 0) {remove_invalid_cobjs();}
+	cout << ncobjs << " => " << size() << endl;
 	PRINT_TIME("Subdiv Cubes");
 }
 
