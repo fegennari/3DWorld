@@ -223,9 +223,10 @@ void draw_select_groups(int solid) {
 	shader_t s;
 	
 	if (!disable_shaders) {
+		bool const force_tsl(0); // FIXME: backwards normals in some cases, so this doesn't work?
 		indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 		cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
-		orig_fog_color    = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1);
+		orig_fog_color    = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl);
 	}
 	select_no_texture();
 	BLACK.do_glColor();
