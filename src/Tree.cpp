@@ -397,7 +397,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 	}
 	s.setup_fog_scale();
 	s.add_uniform_float("min_alpha", min_alpha);
-	set_multitex(0);
+	set_active_texture(0);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tc_start_ix", tc_start_ix);
 	check_gl_error(301);
@@ -473,7 +473,6 @@ void tree_cont_t::draw(bool shadow_only) {
 	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, zero_vector);
 	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 	bs.end_shader();
-	disable_multitex_a();
 }
 
 

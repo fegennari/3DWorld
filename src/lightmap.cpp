@@ -1070,7 +1070,7 @@ void upload_dlights_textures() {
 
 	// step 4: voxel flow
 #if 0
-	set_multitex(5); // texture unit 5
+	set_active_texture(5); // texture unit 5
 
 	if (flow_tid == 0) {
 		flow_tid = upload_voxel_flow_texture();
@@ -1078,6 +1078,7 @@ void upload_dlights_textures() {
 	else { // no dynamic updates
 		bind_3d_texture(flow_tid);
 	}
+	set_active_texture(0);
 #endif
 	//PRINT_TIME("Dlight Texture Upload");
 	//cout << "ndl: " << ndl << ", elix: " << elix << ", gb_sz: " << XY_MULT_SIZE << endl;
@@ -1086,7 +1087,7 @@ void upload_dlights_textures() {
 
 void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name) {
 
-	set_multitex(tu_id); // texture unit
+	set_active_texture(tu_id); // texture unit
 	bind_2d_texture(tid);
 	s.add_uniform_int(name, tu_id);
 }
@@ -1098,6 +1099,7 @@ void setup_dlight_textures(shader_t &s) {
 	set_one_texture(s, elem_tid, 3, "dlelm_tex");
 	set_one_texture(s, gb_tid,   4, "dlgb_tex");
 	//set_one_texture(p, flow_tid, 5, "flow_tex");
+	set_active_texture(0);
 }
 
 

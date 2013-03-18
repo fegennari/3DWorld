@@ -1185,7 +1185,6 @@ void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 		shadow_tid = create_3d_texture(nx, ny, nz, 1, shadow_data, GL_LINEAR, GL_CLAMP_TO_EDGE);
 	}
 	set_3d_texture_as_current(shadow_tid, 10);
-	set_multitex(0);
 }
 
 
@@ -1232,11 +1231,7 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
 	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
 	core_render(s, is_shadow_pass);
-	
-	if (s.is_setup()) {
-		s.end_shader();
-		disable_multitex_a();
-	}
+	if (s.is_setup()) {s.end_shader();}
 	if (group_back_face_cull) glDisable(GL_CULL_FACE);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_TEXTURE_2D);

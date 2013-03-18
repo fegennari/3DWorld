@@ -321,7 +321,6 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	indir_lighting &= have_indir_smoke_tex;
 	smoke_en       &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
 	dlights        &= (dl_tid > 0 && has_dl_sources);
-	force_tsl      |= two_sided_lighting;
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+tc_by_vert_id.part+no_lt_texgen_smoke");
@@ -352,7 +351,6 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color) {
 
 	s.end_shader();
-	disable_multitex_a();
 	glFogfv(GL_FOG_COLOR, (float *)&orig_fog_color); // reset to original value
 }
 
@@ -446,7 +444,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting));
 	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled
 	int last_tid(-1), last_group_id(-1), last_type(-1);
 	

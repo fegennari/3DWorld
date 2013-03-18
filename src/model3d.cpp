@@ -15,7 +15,7 @@ bool const USE_INDEXED_VERTS = 1;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
-extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
+extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, two_sided_lighting;
 extern int display_mode;
 extern float model3d_alpha_thresh;
 extern pos_dir_up orig_camera_pdu;
@@ -748,12 +748,14 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			select_texture(((default_tid >= 0) ? default_tid : WHITE_TEX), 0); // no texture specified - use white texture
 		}
 		if (use_bump_map()) {
-			set_multitex(5);
+			set_active_texture(5);
 			tmgr.bind_texture(bump_tid);
+			set_active_texture(0);
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
-			set_multitex(8);
+			set_active_texture(8);
 			if (s_tid >= 0) tmgr.bind_texture(s_tid); else select_texture(WHITE_TEX);
+			set_active_texture(0);
 		}
 		if (alpha < 1.0 && ni != 1.0) {
 			//shader.add_uniform_float("refract_index", ni); // FIXME: set index of refraction (and reset it at the end)
@@ -1339,7 +1341,7 @@ void model3ds::render(bool is_shadow_pass) {
 	for (unsigned bmap_pass = 0; bmap_pass < (use_shaders ? 2U : 1U); ++bmap_pass) {
 		shader_t s;
 		colorRGBA orig_fog_color;
-		if (use_shaders) orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map());
+		if (use_shaders) orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map(), 0, two_sided_lighting);
 
 		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (bmap_pass != 0));
