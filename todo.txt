@@ -1,0 +1,21 @@
+Tile Occlusion?
+
+Openmp when another process is running?
+
+set_multitex()/select_multitex()/disable_multitex_a()
+
+Smoke texture step size
+Indirect lighting normal/direction
+
+Tree space colonization
+Tree branch/trunk bark bump maps
+
+Fix ship collisions
+
+More grass/plant types
+Leaves on ground (as texture)
+
+Parallax mapping
+
+Back facing grass
+

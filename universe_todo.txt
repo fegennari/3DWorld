@@ -11,9 +11,3 @@ in 3D, and mapped to a sphere
 ship, maybe all ships?)
 * Not sure what to do with colonies
 
-Tile Occlusion?
-
-openmp when another process is running?
-
-set_multitex()/select_multitex()/disable_multitex_a()
-
