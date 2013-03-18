@@ -6,9 +6,9 @@ varying vec3 dl_normal;
 void main()
 {
 	setup_texgen0();
+	dl_normal = normalize(gl_Normal);
 	vec3 n = gl_NormalMatrix * gl_Normal;
-	dl_normal = normalize(n);
-	normal = (no_normalize ? n : dl_normal);
+	normal = (no_normalize ? n : normalize(n));
 	epos   = gl_ModelViewMatrix * gl_Vertex;
 	dlpos  = gl_Vertex.xyz;
 	eye    = gl_ModelViewMatrixInverse[3].xyz; // world space
