@@ -1,7 +1,7 @@
-varying vec4 epos;
-varying vec3 eye, dlpos, normal; // world space
 uniform mat4 world_space_mvm;
-varying vec3 dl_normal;
+varying vec4 epos;
+varying vec3 eye, dlpos, dl_normal; // world space
+varying vec3 normal;
 
 void main()
 {
