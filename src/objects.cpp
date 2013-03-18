@@ -338,7 +338,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			bool const draw_ends(!(cp.surfs & 1)), draw_sides_ends(draw_ends && tid < 0);
 			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader);}
 
-			if (shader && !draw_ends && !glIsEnabled(GL_CULL_FACE)) {
+			if (shader && !draw_ends && !glIsEnabled(GL_CULL_FACE)) { // Note: can probably skip this case if two-sided lighting is used
 				int const faces[2] = {GL_FRONT, GL_BACK};
 				float const norm_scales[2] = {-1.0, 1.0};
 				glEnable(GL_CULL_FACE);

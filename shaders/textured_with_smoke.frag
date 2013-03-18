@@ -87,9 +87,10 @@ void main()
 #endif
 	vec3 lit_color = gl_Color.rgb*base_color_scale; // base color (with some lighting)
 	add_indir_lighting(lit_color);
+	float normal_sign = ((!two_sided_lighting || (dot(eye_norm, epos) < 0.0)) ? 1.0 : -1.0); // two-sided lighting
 	
 	if (direct_lighting) { // directional light sources with no attenuation
-		vec3 n = normalize((!two_sided_lighting || gl_FrontFacing) ? eye_norm : -eye_norm); // two-sided lighting
+		vec3 n = normalize(normal_sign*eye_norm);
 		if (enable_light0) lit_color += add_light0(n, lpos0, vposl);
 		if (enable_light1) lit_color += add_light_comp_pos_smap_light1(n, epos).rgb;
 		if (enable_light2) ADD_LIGHT(2);
@@ -100,7 +101,7 @@ void main()
 		if (enable_light7) ADD_LIGHT(7);
 	}
 	if (enable_dlights) {
-		vec3 n = normalize((!two_sided_lighting || gl_FrontFacing) ? normal : -normal); // two-sided lighting
+		vec3 n = normalize(normal_sign*normal);
 #ifdef USE_LIGHT_COLORS
 		vec3 dlight_color = gl_Color.rgb;
 #else
