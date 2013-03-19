@@ -332,7 +332,6 @@ float get_cloud_zmax() {return get_camera_pos().z + max(zmax, CLOUD_CEILING);}
 void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
 
 	select_multitex(NOISE_GEN_TEX, tu_id, 0);
-	set_multitex(0);
 	s.add_uniform_int("cloud_noise_tex", tu_id);
 	s.add_uniform_vector2d("dxy", cloud_wind_pos);
 }

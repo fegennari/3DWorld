@@ -286,7 +286,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
-	set_multitex(0);
+	set_active_texture(0);
 }
 
 
@@ -1041,7 +1041,7 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 	glEnd();
 	glDisable(GL_ALPHA_TEST);
 	disable_flares();
-	//disable_multitex_a();
+	//disable_multitex(1);
 }
 
 

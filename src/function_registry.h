@@ -200,7 +200,7 @@ void disable_flares();
 void draw_textured_quad(float xsize, float ysize, float z, int tid);
 void draw_tquad(float xsize, float ysize, float z, bool texture, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z, bool texture, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
-void draw_one_mult_tex_quad(float x1, float y1, float x2, float y2, float z, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
+void draw_one_mult_tex_quad(unsigned num_tu_ids, float x1, float y1, float x2, float y2, float z, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir, float xsize, float ysize,
 	float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool up_is_y=0);
 bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]);

@@ -776,7 +776,6 @@ void draw_snow() {
 	setup_texgen(50.0, 50.0, 0.0, 0.0);
 	snow_draw.draw();
 	disable_textures_texgen();
-	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_NORMALIZE);
 	disable_blend();
 	set_specular(0.0, 1.0);

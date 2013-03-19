@@ -100,7 +100,7 @@ void grass_manager_t::begin_draw(float spec_weight) const {
 	assert(vbo > 0);
 	bind_vbo(vbo);
 	grass_data_t::set_vbo_arrays();
-	select_multitex(GRASS_BLADE_TEX, 0);
+	select_texture(GRASS_BLADE_TEX);
 	set_specular(spec_weight, 20.0);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.99);
@@ -114,7 +114,7 @@ void grass_manager_t::end_draw() const {
 	glEnable(GL_NORMALIZE);
 	set_specular(0.0, 1.0);
 	glDisable(GL_ALPHA_TEST);
-	disable_multitex_a();
+	glDisable(GL_TEXTURE_2D);
 	bind_vbo(0);
 	check_gl_error(40);
 }
@@ -667,7 +667,6 @@ void setup_wind_for_shader(shader_t &s, unsigned tu_id) {
 	s.add_uniform_float("wind_y", wind.y);
 	s.add_uniform_int("wind_noise_tex", tu_id);
 	select_multitex(WIND_TEX, tu_id, 0);
-	set_multitex(0);
 }
 
 

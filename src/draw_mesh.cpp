@@ -324,8 +324,9 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty);
 
 	if (use_detail_tex) { // blend in detail nose texture at 30x scale
-		select_multitex(NOISE_TEX, 1);
+		select_multitex(NOISE_TEX, 1, 0, 0);
 		setup_texgen(30.0*tex_scale/TWO_XSS, 30.0*tex_scale/TWO_YSS, 0.0, 0.0);
+		set_active_texture(0);
 	}
 }
 
@@ -463,6 +464,7 @@ void display_mesh() { // fast array version
 		s.end_shader();
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
+	disable_multitex(1, 1);
 	disable_textures_texgen();
 	glDisable(GL_COLOR_MATERIAL);
 	if (!island) draw_sides_and_bottom();
@@ -755,7 +757,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		s.add_uniform_int("height_tex", 2);
 
 		if (rain_mode) {s.add_uniform_float("noise_time", frame_counter);} // rain ripples
-		set_active_texture(0);
 		set_color(WHITE);
 	}
 	else {

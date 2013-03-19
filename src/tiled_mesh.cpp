@@ -975,7 +975,7 @@ public:
 			}
 			glEnd();
 		}
-		if (weight_tid > 0) disable_textures_texgen();
+		if (weight_tid > 0) {disable_textures_texgen();}
 	}
 
 	void draw_water(shader_t &s, float z) {
@@ -1190,7 +1190,6 @@ public:
 			s.add_uniform_float(oss2.str().c_str(), tscale);
 			s.add_uniform_float(oss3.str().c_str(), cscale);
 		}
-		set_multitex(0);
 	}
 
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {

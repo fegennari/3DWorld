@@ -281,9 +281,10 @@ void draw_blasts() {
 					select_multitex(NOISE_TEX, 1);
 					glNormal3f(0.0, 0.0, 1.0);
 					glBegin(GL_QUADS);
-					draw_one_mult_tex_quad(-2.0*size, -2.0*size, 2.0*size, 2.0*size, 0.0);
+					draw_one_mult_tex_quad(2, -2.0*size, -2.0*size, 2.0*size, 2.0*size, 0.0);
 					glEnd();
-					disable_multitex_a();
+					disable_multitex(0);
+					disable_multitex(1);
 				}
 				else {
 					rotate_into_dir(br.dir, pos);

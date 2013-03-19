@@ -28,9 +28,6 @@ void init_glew() {
 
 unsigned const MAX_MULTITEX = 32; // max is GL_TEXTURE31
 
-unsigned max_used_multitex(0);
-bool multitex_enabled[MAX_MULTITEX] = {0};
-
 
 void set_active_texture(unsigned tu_id) {
 
@@ -42,39 +39,27 @@ void set_active_texture(unsigned tu_id) {
 }
 
 
-void set_multitex(unsigned tu_id) {
+void select_multitex(int id, unsigned tu_id, bool enable, bool reset) {
 
-	multitex_enabled[tu_id] = 1;
-	max_used_multitex = max(max_used_multitex, (tu_id+1));
 	set_active_texture(tu_id);
-}
-
-
-void select_multitex(int id, unsigned tu_id, bool enable) {
-
-	set_multitex(tu_id);
 	select_texture(id, enable);
+	if (reset) {set_active_texture(0);}
 }
 
 
-void disable_multitex(unsigned tu_id, bool reset) {
+void disable_multitex(unsigned tu_id, bool do_disable_texgen) {
 
-	assert(tu_id < max_used_multitex);
-	multitex_enabled[tu_id] = 0;
-	if ((tu_id+1) == max_used_multitex) --max_used_multitex;
 	set_active_texture(tu_id);
+	if (do_disable_texgen) {disable_texgen();}
 	glDisable(GL_TEXTURE_2D);
-	if (reset) set_active_texture(0); // end back at texture 0
+	set_active_texture(0); // end back at texture 0
 }
 
 
-void disable_multitex_a() {
+void disable_multitex_range(unsigned tu_id0, unsigned tu_id1) {
 
-	for (unsigned i = 0; i < max_used_multitex; ++i) {
-		if (multitex_enabled[i]) disable_multitex(i, 0);
-	}
-	set_active_texture(0); // end back at texture 0
-	max_used_multitex = 0;
+	assert(tu_id0 < tu_id1 && tu_id1 <= MAX_MULTITEX);
+	for (unsigned i = tu_id0; i < tu_id1; ++i) {disable_multitex(i);}
 }
 
 
@@ -93,16 +78,14 @@ void multitex_coord_n(unsigned tu_id, float const *v, unsigned num) {
 
 void multitex_coord2f(GLfloat s, GLfloat t, unsigned tu_id) {
 
-	assert(tu_id < max_used_multitex);
 	glMultiTexCoord2f((GL_TEXTURE0 + tu_id), s, t);
 }
 
 
-void multitex_coord2f_a(GLfloat s, GLfloat t) {
+void multitex_coord2f_range(GLfloat s, GLfloat t, unsigned tu_id0, unsigned tu_id1) {
 
-	for (unsigned i = 0; i < max_used_multitex; ++i) {
-		if (multitex_enabled[i]) multitex_coord2f(s, t, i);
-	}
+	assert(tu_id0 < tu_id1 && tu_id1 <= MAX_MULTITEX);
+	for (unsigned i = tu_id0; i < tu_id1; ++i) {multitex_coord2f(s, t, i);}
 }
 
 

@@ -26,13 +26,12 @@ void init_glew();
 // multitexture prototypes
 void setup_multitexture();
 void set_active_texture(unsigned tu_id);
-void set_multitex(unsigned tu_id);
-void select_multitex(int id, unsigned tu_id, bool enable=1);
-void disable_multitex(unsigned tu_id, bool reset);
-void disable_multitex_a();
+void select_multitex(int id, unsigned tu_id, bool enable=1, bool reset=1);
+void disable_multitex(unsigned tu_id, bool do_disable_texgen=0);
+void disable_multitex_range(unsigned tu_id0, unsigned tu_id1);
 void multitex_coord_n(unsigned tu_id, float const *v, unsigned num);
 void multitex_coord2f(GLfloat s, GLfloat t, unsigned tu_id=0);
-void multitex_coord2f_a(GLfloat s, GLfloat t);
+void multitex_coord2f_range(GLfloat s, GLfloat t, unsigned tu_id0, unsigned tu_id1);
 
 // 3D texture prototypes
 void bind_3d_texture(unsigned tid);

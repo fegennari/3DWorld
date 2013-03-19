@@ -804,12 +804,12 @@ void draw_one_tquad(float x1, float y1, float x2, float y2, float z, bool textur
 }
 
 
-void draw_one_mult_tex_quad(float x1, float y1, float x2, float y2, float z, float tx1, float ty1, float tx2, float ty2) {
+void draw_one_mult_tex_quad(unsigned num_tu_ids, float x1, float y1, float x2, float y2, float z, float tx1, float ty1, float tx2, float ty2) {
 
-	multitex_coord2f_a(tx1, ty1); glVertex3f(x1, y1, z);
-	multitex_coord2f_a(tx1, ty2); glVertex3f(x1, y2, z);
-	multitex_coord2f_a(tx2, ty2); glVertex3f(x2, y2, z);
-	multitex_coord2f_a(tx2, ty1); glVertex3f(x2, y1, z);
+	multitex_coord2f_range(tx1, ty1, 0, num_tu_ids); glVertex3f(x1, y1, z);
+	multitex_coord2f_range(tx1, ty2, 0, num_tu_ids); glVertex3f(x1, y2, z);
+	multitex_coord2f_range(tx2, ty2, 0, num_tu_ids); glVertex3f(x2, y2, z);
+	multitex_coord2f_range(tx2, ty1, 0, num_tu_ids); glVertex3f(x2, y1, z);
 }
 
 

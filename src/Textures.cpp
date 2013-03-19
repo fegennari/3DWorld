@@ -1962,7 +1962,6 @@ void disable_texgen() {
 
 void disable_textures_texgen() {
 
-	disable_multitex_a();
 	disable_texgen();
 	glDisable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0); // bind to none
