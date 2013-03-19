@@ -406,11 +406,11 @@ vector3d free_obj::get_orient() const {
 	case 0: return dir; // should already be normalized
 	case 1: return velocity.get_norm();
 	case 2:
-		if (time <= ao_s_time) return dir;
-		if (time >= ao_e_time) return velocity.get_norm();
 		{
+			if (time <= ao_s_time) return dir;
 			float const vmag(velocity.mag()); // should already be normalized
-			if (vmag < TOLERANCE) return dir; // stopped
+			if (vmag < TOLERANCE ) return dir; // stopped
+			if (time >= ao_e_time) return velocity/vmag;
 			float const val((float(time - ao_s_time))/ao_d_time);
 			return velocity*(val/vmag) + dir*(1.0 - val); // should be normalized
 		}
@@ -436,7 +436,7 @@ void free_obj::calc_rotation_vectors() const {
 void free_obj::force_calc_rotation_vectors() const {
 
 	// rotate in direction <dir>
-	vector3d const orient(get_orient().get_norm());
+	vector3d const orient(get_orient()); // normalized
 	cross_product(upv0, dir0, rv2); // constant, could be cached?
 	cross_product(rv2, orient, rv1);
 	if (rv1.mag() < TOLERANCE) {rv1 = plus_z;} // otherwise this will assertion fail
@@ -1084,7 +1084,7 @@ float us_projectile::damage(float val, int type, point const &hit_pos, free_obj 
 
 void us_projectile::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 
-	if (specs().auto_orient != 0) ddata.dir = get_orient();
+	if (specs().auto_orient != 0) {ddata.dir = get_orient();}
 	ddata.lifetime = (unsigned)specs().lifetime; // why is lifetime a float?
 
 	switch (wclass) {
