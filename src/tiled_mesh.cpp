@@ -867,7 +867,7 @@ public:
 		int const dx(xoff - xoff2), dy(yoff - yoff2);
 		float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
 		float const lod_scale(1.0/get_scaled_tile_radius());
-		point const camera(get_camera_pos());
+		point const camera(get_camera_pos()), adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
 		glPushMatrix();
 		glTranslatef(llcx, llcy, 0.0);
 
@@ -886,7 +886,7 @@ public:
 				for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) {
 					for (unsigned xx = x*GRASS_BLOCK_SZ; xx <= (x+1)*GRASS_BLOCK_SZ && back_facing; ++xx) {
 						unsigned const ix(yy*zvsize + xx);
-						back_facing &= (dot_product(get_norm(ix), (camera - point(llcx+xx*DX_VAL, llcy+yy*DY_VAL, zvals[ix]))) < 0.0);
+						back_facing &= (dot_product(get_norm(ix), (adj_camera - point(llcx+xx*DX_VAL, llcy+yy*DY_VAL, zvals[ix]))) < 0.0);
 					}
 				}
 				if (back_facing) continue;
@@ -1486,7 +1486,6 @@ public:
 			draw_decid_tree_bl(to_draw, bs, lod_renderer, 1, 0, reflection_pass);
 			bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 			bs.end_shader();
-			disable_multitex_a();
 		}
 		lod_renderer.finalize();
 		enable_blend(); // for fog transparency
