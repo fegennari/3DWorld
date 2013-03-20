@@ -308,13 +308,15 @@ void render_to_texture_t::render(texture_pair_t &tpair, float radius, point cons
 	tpair.ensure_tids(tsize, mipmap, nearest_for_normal);
 	glDisable(GL_LIGHTING);
 	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0);
-	colorRGBA clear_colors[2] = {bkg_color, bkg_color};
+	colorRGBA const clear_colors[2] = {bkg_color, bkg_color};
+	colorRGBA orig_clear_color(BLACK);
+	glGetFloatv(GL_COLOR_CLEAR_VALUE, (float *)&orig_clear_color);
 
 	for (unsigned d = 0; d < 2; ++d) {
 		unsigned fbo_id(0);
 		enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
 		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
-		glClearColor(clear_colors[d].R, clear_colors[d].G, clear_colors[d].B, clear_colors[d].A);
+		glClearColor_rgba(clear_colors[d]);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		draw_geom(d != 0);
 		if (mipmap) {tpair.build_mipmaps(d, tsize);}
@@ -331,6 +333,7 @@ void render_to_texture_t::render(texture_pair_t &tpair, float radius, point cons
 	glEnable(GL_LIGHTING);
 	disable_fbo();
 	set_standard_viewport();
+	glClearColor_rgba(orig_clear_color);
 }
 
 
