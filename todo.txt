@@ -19,6 +19,4 @@ TT Underwater caustics
 
 HRD/Tone Mapping?
 
-Scenery gen lags by a frame
-
 Decid trees low res don't block the sun

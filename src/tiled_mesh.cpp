@@ -701,8 +701,7 @@ public:
 		return max(0.0f, p2p_dist_xy(get_camera_pos(), get_center()) - radius)/get_scaled_tile_radius();
 	}
 	bool update_range() { // if returns 0, tile will be deleted
-		if (pine_trees_enabled()) {update_pine_tree_state(0);}
-		if (scenery_enabled   ()) {update_scenery();}
+		if (pine_trees_enabled()) {update_pine_tree_state(0);} // can free pine tree vbos
 		float const dist(get_rel_dist_to_camera());
 		if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
 		return (dist < DELETE_DIST_TILES);
@@ -1329,6 +1328,7 @@ public:
 			(*i)->ensure_height_tid();
 			if (pine_trees_enabled ()) {(*i)->update_pine_tree_state(1);}
 			if (decid_trees_enabled()) {(*i)->update_decid_trees();}
+			if (scenery_enabled    ()) {(*i)->update_scenery();}
 		}
 	}
 
