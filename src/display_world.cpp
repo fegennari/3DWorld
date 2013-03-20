@@ -60,7 +60,7 @@ void update_sound_loops();
 void calc_cur_ambient_diffuse();
 
 
-inline void glClearColor_rgba(const colorRGBA &color) {
+void glClearColor_rgba(const colorRGBA &color) {
 
 	glClearColor(color.R, color.G, color.B, color.A);
 }
@@ -1065,6 +1065,16 @@ void apply_z_mirror(float zval) {
 void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 
 	//RESET_TIME;
+	// setup reflected camera frustum
+	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
+	camera_pdu.pos.z = 2*water_plane_z - camera_pdu.pos.z;
+	camera_pdu.dir.z = -camera_pdu.dir.z; // mirror
+	camera_pdu.upv_  = -camera_pdu.upv_;
+	camera_pdu.orthogonalize_up_dir();
+	pos_dir_up const refl_camera_pdu(camera_pdu);
+
+	pre_draw_tiled_terrain();
+
 	// setup viewport and projection matrix
 	glViewport(0, 0, xsize, ysize);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -1078,11 +1088,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	apply_z_mirror(water_plane_z);
-	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
-	camera_pdu.pos.z = 2*water_plane_z - camera_pdu.pos.z;
-	camera_pdu.dir.z = -camera_pdu.dir.z; // mirror
-	camera_pdu.upv_  = -camera_pdu.upv_;
-	camera_pdu.orthogonalize_up_dir();
+	camera_pdu = refl_camera_pdu; // reset reflected PDU
 
 	// draw partial scene
 	if (!combined_gu) {
@@ -1096,18 +1102,18 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	glEnable(WATER_CLIP_PLANE);
 	glClipPlane(WATER_CLIP_PLANE, plane);
 	draw_tiled_terrain(1);
-	camera_pdu = old_camera_pdu; // restore camera_pdu
 	glDisable(WATER_CLIP_PLANE);
 	// could render more of the scene here
 	glPopMatrix(); // end mirror transform
 
 	// render reflection to texture
-	glBindTexture(GL_TEXTURE_2D, tid);
+	bind_2d_texture(tid);
 	glReadBuffer(GL_BACK);
 	// glCopyTexSubImage2D copies the frame buffer to the bound texture
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize);
 
 	// reset state
+	camera_pdu = old_camera_pdu; // restore camera_pdu
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
@@ -1143,7 +1149,6 @@ unsigned create_reflection() {
 void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses light params from ground mode)
 
 	static int init_xx(1);
-	static float zmin2(0.0);
 	RESET_TIME;
 
 	if (init_x || init_xx) {
@@ -1161,27 +1166,23 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	apply_camera_offsets(camera);
 	compute_brightness();
 	set_global_state();
-	bool draw_water(0);
 
 	if (init_x && mesh_type != 0) {
 		mesh_type = 0;
 		gen_scene(1, 0, KEEP_MESH, 0, 0);
 		recreated = 1;
 	}
-	if ((display_mode & 0x04) && !DISABLE_WATER) {
-		water_plane_z = get_water_z_height() + get_ocean_wave_height();
-		draw_water    = (water_plane_z >= zmin2);
-	}
-	else {
-		water_plane_z = -10*FAR_CLIP;
-		underwater    = 0;
-	}
-	ocean.z     = water_plane_z;
-	camera_mode = 1;
-	mesh_type   = 0;
+	bool const water_enabled((display_mode & 0x04) && !DISABLE_WATER);
+	water_plane_z = (water_enabled ? (get_water_z_height() + get_ocean_wave_height()) : -10*FAR_CLIP);
+	ocean.z       = water_plane_z;
+	camera_mode   = 1;
+	mesh_type     = 0;
+	float const zmin2(update_tiled_terrain());
+	bool const draw_water(water_enabled && water_plane_z >= zmin2);
 
 	if (show_fog || underwater) {
-		glClearColor_rgba(set_inf_terrain_fog(underwater, zmin2));
+		colorRGBA const fog_color(set_inf_terrain_fog(underwater, zmin2));
+		glClearColor_rgba(fog_color);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 	unsigned reflection_tid(0);
@@ -1204,7 +1205,8 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	calc_cur_ambient_diffuse();
 	if (TIMETEST) PRINT_TIME("3.25");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
-	zmin2 = draw_tiled_terrain(0);
+	pre_draw_tiled_terrain();
+	draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.3");
 	if (underwater ) {draw_tiled_terrain_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, reflection_tid);}

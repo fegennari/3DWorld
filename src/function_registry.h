@@ -83,6 +83,7 @@ void init_models();
 void free_models();
 
 // function prototypes - display_world
+void glClearColor_rgba(const colorRGBA &color);
 void set_standard_viewport();
 point get_sun_pos();
 point get_moon_pos();
@@ -240,7 +241,9 @@ void draw_water_sides(int check_zvals);
 float get_inf_terrain_fog_dist();
 
 // function prototypes - tiled mesh
-float draw_tiled_terrain(bool reflection_pass);
+float update_tiled_terrain();
+void pre_draw_tiled_terrain();
+void draw_tiled_terrain(bool reflection_pass);
 void draw_tiled_terrain_lightning(bool reflection_pass);
 void clear_tiled_terrain();
 void reset_tiled_terrain_state();

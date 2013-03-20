@@ -910,6 +910,7 @@ public:
 			assert(!indices[i].empty());
 			create_vbo_and_upload(ivbo[i], indices[i], 1, 1);
 		}
+		assert(vbo);
 	}
 
 	void ensure_weights(mesh_xy_grid_cache_t &height_gen) {
@@ -1111,7 +1112,11 @@ public:
 class tile_draw_t {
 
 	typedef map<tile_xy_pair, tile_t*> tile_map;
+	typedef set<tile_xy_pair> tile_set_t;
+	typedef vector<pair<float, tile_t *> > draw_vect_t;
+
 	tile_map tiles;
+	draw_vect_t to_draw;
 	vector<point> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;
 	lightning_strike_t lightning_strike;
@@ -1129,12 +1134,15 @@ public:
 			i->second->clear();
 			delete i->second;
 		}
+		to_draw.clear();
 		tiles.clear();
 		tree_trunk_pts.clear();
 	}
 
-	void update() {
+	float update() { // view-independent updates
 		//RESET_TIME;
+		to_draw.clear();
+		float terrain_zmin(FAR_CLIP);
 		grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
 		assert(MESH_X_SIZE == MESH_Y_SIZE); // limitation, for now
 		point const camera(get_camera_pos() - point((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
@@ -1146,10 +1154,16 @@ public:
 		vector<tile_xy_pair> to_erase;
 
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
-			if (!i->second->update_range()) {
+			tile_t *const tile(i->second);
+			assert(tile);
+
+			if (!tile->update_range()) {
 				to_erase.push_back(i->first);
-				i->second->clear();
-				delete i->second;
+				tile->clear();
+				delete tile;
+			}
+			else if (tile->get_rel_dist_to_camera() <= DRAW_DIST_TILES) {
+				terrain_zmin = min(terrain_zmin, tile->get_zmin());
 			}
 		}
 		for (vector<tile_xy_pair>::const_iterator i = to_erase.begin(); i != to_erase.end(); ++i) {
@@ -1169,7 +1183,20 @@ public:
 		if (DEBUG_TILES && (tiles.size() != init_tiles || !to_erase.empty())) {
 			cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << to_erase.size() << endl;
 		}
+		static point last_sun(all_zeros), last_moon(all_zeros);
+		bool const sun_change (sun_pos  != last_sun  && max(sun_pos.z,  last_sun.z)  > zbottom); // Note: could skip if (sun.get_norm().z > 0.9) or something like that
+		bool const moon_change(moon_pos != last_moon && max(moon_pos.z, last_moon.z) > zbottom);
+
+		// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
+		if (mesh_shadows_enabled() && (sun_change || moon_change)) { // light source change
+			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
+				i->second->clear_shadows();
+			}
+			last_sun  = sun_pos;
+			last_moon = moon_pos;
+		}
 		//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Tiled Terrain Update");}
+		return terrain_zmin;
 	}
 
 
@@ -1226,9 +1253,6 @@ public:
 		setup_terrain_textures(s, 2, 0);
 	}
 
-	typedef set<tile_xy_pair> tile_set_t;
-	typedef vector<pair<float, tile_t *> > draw_vect_t;
-
 	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix) {
 		point const camera(get_camera_pos());
 		cube_t bcube(tile->get_bcube());
@@ -1278,45 +1302,19 @@ public:
 		return can_have_reflection_recur(tile, corners, tile_set, 2);
 	}
 
-	float draw(bool reflection_pass) {
-		//RESET_TIME;
-		float zmin(FAR_CLIP);
-		set_array_client_state(1, 0, 0, 0);
-		unsigned num_drawn(0), num_trees(0);
-		unsigned long long mem(grass_tile_manager.get_gpu_mem() + tree_data_manager.get_gpu_mem()), tree_mem(0);
+	void pre_draw() { // view-dependent updates/GPU uploads
 		vector<tile_t::vert_type_t> data;
 		vector<unsigned short> indices[NUM_LODS];
-		static point last_sun(all_zeros), last_moon(all_zeros);
-		draw_vect_t to_draw;
-		vector<tile_t *> to_gen_trees;
-		bool const sun_change (sun_pos  != last_sun  && max(sun_pos.z,  last_sun.z)  > zbottom); // Note: could skip if (sun.get_norm().z > 0.9) or something like that
-		bool const moon_change(moon_pos != last_moon && max(moon_pos.z, last_moon.z) > zbottom);
-
-		// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
-		if (mesh_shadows_enabled() && (sun_change || moon_change)) { // light source change
-			for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
-				i->second->clear_shadows();
-			}
-			last_sun  = sun_pos;
-			last_moon = moon_pos;
-		}
+		vector<tile_t *> to_update, to_gen_trees;
+		
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			tile_t *const tile(i->second);
 			assert(tile);
-			
-			if (DEBUG_TILES) {
-				mem      += tile->get_gpu_mem();
-				tree_mem += tile->get_tree_mem();
-			}
-			float const dist(tile->get_rel_dist_to_camera());
-			if (dist > DRAW_DIST_TILES) continue; // too far to draw
-			zmin = min(zmin, tile->get_zmin());
-			if (!tile->is_visible())    continue;
+			if (tile->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue; // too far to draw
+			if (!tile->is_visible()) continue; // Note: using current camera view frustum
 			if (pine_trees_enabled() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
 			if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
-			tile_set_t tile_set;
-			if (reflection_pass && !can_have_reflection(tile, tile_set)) continue;
-			to_draw.push_back(make_pair(dist, tile));
+			to_update.push_back(tile);
 		}
 		if (!to_gen_trees.empty()) {
 			#pragma omp parallel for schedule(static,1)
@@ -1324,18 +1322,42 @@ public:
 				to_gen_trees[i]->init_pine_tree_draw();
 			}
 		}
-		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->ensure_vbo(data, indices);
+		for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
+			(*i)->ensure_vbo(data, indices);
 		}
-		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->ensure_weights(height_gen);
-			to_draw[i].second->ensure_height_tid();
+		for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
+			(*i)->ensure_weights(height_gen);
+			(*i)->ensure_height_tid();
+			if (pine_trees_enabled ()) {(*i)->update_pine_tree_state(1);}
+			if (decid_trees_enabled()) {(*i)->update_decid_trees();}
+		}
+	}
+
+	void draw(bool reflection_pass) {
+		//RESET_TIME;
+		unsigned num_drawn(0), num_trees(0);
+		unsigned long long mem(grass_tile_manager.get_gpu_mem() + tree_data_manager.get_gpu_mem()), tree_mem(0);
+		to_draw.clear();
+		
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+			tile_t *const tile(i->second);
+			
+			if (DEBUG_TILES) {
+				mem      += tile->get_gpu_mem();
+				tree_mem += tile->get_tree_mem();
+			}
+			float const dist(tile->get_rel_dist_to_camera());
+			if (dist > DRAW_DIST_TILES || !tile->is_visible()) continue;
+			tile_set_t tile_set;
+			if (reflection_pass && !can_have_reflection(tile, tile_set)) continue;
+			to_draw.push_back(make_pair(dist, tile));
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 		shader_t s;
 		setup_mesh_draw_shaders(s, reflection_pass);
 		s.add_uniform_float("spec_scale", 1.0);
 		setup_mesh_lighting();
+		set_array_client_state(1, 0, 0, 0);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			num_trees += to_draw[i].second->num_pine_trees();
@@ -1348,13 +1370,12 @@ public:
 				<< num_trees << ", gpu mem: " << mem/1024/1024 << ", tree mem: " << tree_mem/1024/1024 << endl;
 		}
 		run_post_mesh_draw();
-		if (pine_trees_enabled ()) {draw_pine_trees (to_draw, reflection_pass);}
-		if (decid_trees_enabled()) {draw_decid_trees(to_draw, reflection_pass);}
-		if (scenery_enabled    ()) {draw_scenery    (to_draw, reflection_pass);}
-		if (is_grass_enabled   ()) {draw_grass      (to_draw, reflection_pass);}
+		if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
+		if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
+		if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
+		if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
 		lightning_strike.end_draw(); // in case it was enabled
 		//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
-		return zmin;
 	}
 
 	void draw_water(shader_t &s, float zval) const {
@@ -1387,17 +1408,13 @@ public:
 		check_gl_error(302);
 	}
 
-	void draw_pine_tree_bl(draw_vect_t const &to_draw, shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass) {
+	void draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
 			to_draw[i].second->draw_pine_trees(s, tree_trunk_pts, branches, near_leaves, far_leaves, reflection_pass);
 		}
 	}
 
-	void draw_pine_trees(draw_vect_t const &to_draw, bool reflection_pass) {
-		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			to_draw[i].second->update_pine_tree_state(1);
-		}
-
+	void draw_pine_trees(bool reflection_pass) {
 		// nearby trunks
 		shader_t s;
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
@@ -1405,7 +1422,7 @@ public:
 		s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 		s.add_uniform_float("tex_scale_t", 5.0);
 		set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
-		draw_pine_tree_bl(to_draw, s, 1, 0, 0, reflection_pass); // branches
+		draw_pine_tree_bl(s, 1, 0, 0, reflection_pass); // branches
 		s.add_uniform_float("tex_scale_t", 1.0);
 		s.end_shader();
 
@@ -1424,10 +1441,10 @@ public:
 			tree_trunk_pts.resize(0);
 		}
 		set_specular(0.2, 8.0);
-		draw_pine_tree_bl(to_draw, s, 0, 0, 1, reflection_pass); // far leaves
+		draw_pine_tree_bl(s, 0, 0, 1, reflection_pass); // far leaves
 		s.end_shader();
 		set_pine_tree_shader(s, "pine_tree");
-		draw_pine_tree_bl(to_draw, s, 0, 1, 0, reflection_pass); // near leaves
+		draw_pine_tree_bl(s, 0, 1, 0, reflection_pass); // near leaves
 		assert(tree_trunk_pts.empty());
 		s.end_shader();
 		glDisable(GL_TEXTURE_2D);
@@ -1435,7 +1452,7 @@ public:
 		disable_blend();
 	}
 
-	void draw_decid_tree_bl(draw_vect_t const &to_draw, shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass) {
+	void draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass) {
 		for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
 			to_draw[i].second->draw_decid_trees(s, lod_renderer, branches, leaves, reflection_pass);
 		}
@@ -1450,14 +1467,7 @@ public:
 		set_tree_dither_noise_tex(s, 2); // TU=2
 	}
 
-	void draw_decid_trees(draw_vect_t const &to_draw, bool reflection_pass) {
-		// don't want the water clip plane enabled when creating the tree fbos (FIXME: better way to control this?)
-		if (reflection_pass) {glDisable(WATER_CLIP_PLANE);}
-
-		for (draw_vect_t::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
-			i->second->update_decid_trees();
-		}
-		if (reflection_pass) {glEnable(WATER_CLIP_PLANE);}
+	void draw_decid_trees(bool reflection_pass) {
 		float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
 		lod_renderer.resize_zero();
 
@@ -1467,7 +1477,7 @@ public:
 			if (USE_TREE_BILLBOARDS) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
 			set_tree_dither_noise_tex(ls, 1); // TU=1
 			ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-			draw_decid_tree_bl(to_draw, ls, lod_renderer, 0, 1, reflection_pass);
+			draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass);
 			ls.add_uniform_color("color_scale", WHITE);
 			tree_cont_t::post_leaf_draw(ls);
 		}
@@ -1482,7 +1492,7 @@ public:
 			bs.setup_fog_scale();
 			bs.add_uniform_int("tex0", 0);
 			bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
-			draw_decid_tree_bl(to_draw, bs, lod_renderer, 1, 0, reflection_pass);
+			draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass);
 			bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 			bs.end_shader();
 		}
@@ -1513,7 +1523,7 @@ public:
 		leaf_color_changed = 0; // Note: only visible trees will be updated
 	}
 
-	void draw_scenery(draw_vect_t const &to_draw, bool reflection_pass) {
+	void draw_scenery(bool reflection_pass) {
 		shader_t s;
 		shared_shader_lighting_setup(s, 0);
 		s.set_vert_shader("ads_lighting.part*+two_lights_texture");
@@ -1536,7 +1546,7 @@ public:
 	}
 
 	// tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: shadow map, 5: noise, 9: cloud noise
-	void draw_grass(draw_vect_t const &to_draw, bool reflection_pass) {
+	void draw_grass(bool reflection_pass) {
 		if (reflection_pass) return; // no grass refletion (yet)
 		grass_tile_manager.begin_draw(0.1);
 		bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled() && !reflection_pass);
@@ -1612,19 +1622,25 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp) {
 }
 
 
-float draw_tiled_terrain(bool reflection_pass) {
+float update_tiled_terrain() {
+	return terrain_tile_draw.update();
+}
+
+void pre_draw_tiled_terrain() {
+	terrain_tile_draw.pre_draw();
+}
+
+void draw_tiled_terrain(bool reflection_pass) {
 
 	//RESET_TIME;
 	bool const vbo_supported(setup_gen_buffers());
 		
 	if (!vbo_supported) {
 		cout << "Warning: VBOs not supported, so tiled mesh cannot be drawn." << endl;
-		return zmin;
+		return;
 	}
-	terrain_tile_draw.update();
-	float const zmin(terrain_tile_draw.draw(reflection_pass));
+	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
-	return zmin;
 }
 
 
