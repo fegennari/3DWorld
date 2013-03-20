@@ -1154,16 +1154,10 @@ public:
 		vector<tile_xy_pair> to_erase;
 
 		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
-			tile_t *const tile(i->second);
-			assert(tile);
-
-			if (!tile->update_range()) {
+			if (!i->second->update_range()) {
 				to_erase.push_back(i->first);
-				tile->clear();
-				delete tile;
-			}
-			else if (tile->get_rel_dist_to_camera() <= DRAW_DIST_TILES) {
-				terrain_zmin = min(terrain_zmin, tile->get_zmin());
+				i->second->clear();
+				delete i->second;
 			}
 		}
 		for (vector<tile_xy_pair>::const_iterator i = to_erase.begin(); i != to_erase.end(); ++i) {
@@ -1178,6 +1172,11 @@ public:
 				tile_t *new_tile(new tile_t(tile));
 				new_tile->create_zvals(height_gen);
 				tiles[txy] = new_tile;
+			}
+		}
+		for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // calculate terrain_zmin
+			if (i->second->get_rel_dist_to_camera() <= DRAW_DIST_TILES) {
+				terrain_zmin = min(terrain_zmin, i->second->get_zmin());
 			}
 		}
 		if (DEBUG_TILES && (tiles.size() != init_tiles || !to_erase.empty())) {

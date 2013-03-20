@@ -19,5 +19,6 @@ TT Underwater caustics
 
 HRD/Tone Mapping?
 
-Water Reflection Flash
+Scenery gen lags by a frame
 
+Decid trees low res don't block the sun
