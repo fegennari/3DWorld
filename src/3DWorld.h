@@ -821,6 +821,15 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 };
 
 
+struct vert_tc_color : public vert_tc_t, public color_wrapper { // size = 24
+	typedef vert_tc_t non_color_class;
+	vert_tc_color() {}
+	vert_tc_color(point const &v_, float ts, float tt, colorRGBA const &c_) : vert_tc_t(v_, ts, tt) {set_c4(c_);}
+	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
+	void set_state() const;
+};
+
+
 struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper { // size = 28
 	typedef vert_norm_tc non_color_class;
 	vert_norm_comp_tc_color() {}

@@ -29,7 +29,7 @@ class tree_lod_render_t {
 		entry_t() {}
 		entry_t(texture_pair_t const &tp, point const &pos_, float radius_, colorRGBA const &color_)
 			: texture_pair_t(tp), pos(pos_), radius(radius_), color(color_) {assert(tp.is_valid()); assert(radius > 0.0);}
-		void set_gl_color() const {colorRGBA(color.R, color.G, color.B, color.A).do_glColor();}
+		void set_gl_color() const {color.do_glColor();}
 	};
 
 	vector<entry_t> leaf_vect, branch_vect;
@@ -53,8 +53,7 @@ public:
 		branch_vect.push_back(entry_t(tp, pos, radius, colorRGBA(bcolor, opacity)));
 	}
 	void finalize();
-	void render_leaf_quads_facing_camera(shader_t &shader) const;
-	void render_branch_quads_facing_camera(shader_t &shader) const;
+	void render_billboards(bool render_branches) const;
 };
 
 

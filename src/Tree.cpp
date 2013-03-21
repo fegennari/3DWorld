@@ -176,44 +176,38 @@ void tree_lod_render_t::finalize() {
 }
 
 
-void tree_lod_render_t::render_leaf_quads_facing_camera(shader_t &shader) const {
+void tree_lod_render_t::render_billboards(bool render_branches) const {
 
-	if (!has_leaves()) return;
+	vector<entry_t> const &data(render_branches ? branch_vect : leaf_vect);
+	if (data.empty()) return;
+	vector<vert_tc_color> pts;
 	point const camera(get_camera_pos());
 	texture_pair_t last_tp;
 
-	for (vector<entry_t>::const_iterator i = leaf_vect.begin(); i != leaf_vect.end(); ++i) {
+	for (vector<entry_t>::const_iterator i = data.begin(); i != data.end(); ++i) {
 		if (*i != last_tp) {
 			last_tp = *i;
-			if (i != leaf_vect.begin()) {glEnd();}
+			
+			if (!pts.empty()) {
+				pts.front().set_state();
+				glDrawArrays(GL_QUADS, 0, pts.size());
+			}
 			i->bind_textures();
-			glBegin(GL_QUADS);
+			pts.resize(0);
 		}
-		i->set_gl_color();
-		point const pos(i->pos + 0.5*i->radius*(camera - i->pos).get_norm());
-		draw_billboard(pos, camera, up_vector, i->radius, i->radius); // full rotation
+		point pos(i->pos);
+		if (!render_branches) {pos += 0.5*i->radius*(camera - i->pos).get_norm();}
+		vector3d const vdir(camera - pos); // z
+		vector3d const v1((cross_product(vdir, up_vector).get_norm())*i->radius); // x (what if colinear?)
+		vector3d const v2((render_branches ? up_vector : cross_product(v1, vdir).get_norm())*i->radius); // y
+		pts.push_back(vert_tc_color((pos - v1 - v2), 0.0, 0.0, i->color));
+		pts.push_back(vert_tc_color((pos - v1 + v2), 0.0, 1.0, i->color));
+		pts.push_back(vert_tc_color((pos + v1 + v2), 1.0, 1.0, i->color));
+		pts.push_back(vert_tc_color((pos + v1 - v2), 1.0, 0.0, i->color));
 	}
-	glEnd();
-}
-
-
-void tree_lod_render_t::render_branch_quads_facing_camera(shader_t &shader) const {
-
-	if (!has_branches()) return;
-	point const camera(get_camera_pos());
-	texture_pair_t last_tp;
-
-	for (vector<entry_t>::const_iterator i = branch_vect.begin(); i != branch_vect.end(); ++i) {
-		if (*i != last_tp) {
-			last_tp = *i;
-			if (i != branch_vect.begin()) {glEnd();}
-			i->bind_textures();
-			glBegin(GL_QUADS);
-		}
-		i->set_gl_color();
-		draw_billboard(i->pos, camera, up_vector, i->radius, i->radius, 0, 0, 1, 1, 1); // constrained to y=up_dir
-	}
-	glEnd();
+	assert(!pts.empty());
+	pts.front().set_state();
+	glDrawArrays(GL_QUADS, 0, pts.size());
 }
 
 

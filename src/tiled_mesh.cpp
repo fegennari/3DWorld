@@ -1505,7 +1505,7 @@ public:
 			billboard_tree_shader_setup(lrs);
 			lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 			set_specular(0.1, 10.0);
-			lod_renderer.render_leaf_quads_facing_camera(lrs);
+			lod_renderer.render_billboards(0);
 			set_specular(0.0, 1.0);
 			lrs.end_shader();
 		}
@@ -1515,7 +1515,7 @@ public:
 			brs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tree_branches_billboard");
 			billboard_tree_shader_setup(brs); // cscale=1.0 ?
 			brs.add_uniform_vector3d("ref_dir", plus_y);
-			lod_renderer.render_branch_quads_facing_camera(brs);
+			lod_renderer.render_billboards(1);
 			brs.end_shader();
 		}
 		disable_blend();

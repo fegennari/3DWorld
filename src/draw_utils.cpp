@@ -75,6 +75,14 @@ void vert_norm_tc_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_tc)));
 }
 
+void vert_tc_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
+	if (set_state) {set_array_client_state(1, 1, 0, 1);}
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_tc_color));
+	glVertexPointer  (3, GL_FLOAT, stride, (void *)(0));
+	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(point)));
+	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_tc_t)));
+}
+
 void vert_norm_comp_tc_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 1, 1);}
 	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc_color));
@@ -117,6 +125,14 @@ void vert_norm_tc_color::set_state() const { // typically called on element 0
 	unsigned const stride(sizeof(*this));
 	glVertexPointer  (3, GL_FLOAT,         stride, &v);
 	glNormalPointer  (   GL_FLOAT,         stride, &n);
+	glTexCoordPointer(2, GL_FLOAT,         stride, &t);
+	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, &c);
+}
+
+void vert_tc_color::set_state() const { // typically called on element 0
+	set_array_client_state(1, 1, 0, 1);
+	unsigned const stride(sizeof(*this));
+	glVertexPointer  (3, GL_FLOAT,         stride, &v);
 	glTexCoordPointer(2, GL_FLOAT,         stride, &t);
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, &c);
 }
