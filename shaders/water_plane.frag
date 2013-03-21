@@ -39,17 +39,17 @@ void main()
 	}
 
 	// calculate lighting
+	vec3 epos_n   = normalize(epos.xyz);
+	float cos_view_angle = abs(dot(epos_n, norm));
 	vec4 color    = water_color;
-	color.a      *= min(1.0, 20.0*(water_plane_z - mesh_z)); // blend to alpha=0 near the shore
+	color.a      *= mix(1.0, min(1.0, 20.0*(water_plane_z - mesh_z)), min(1.0, 2.5*cos_view_angle)); // blend to alpha=0 near the shore
 	vec4 lighting = gl_FrontMaterial.emission + gl_FrontMaterial.ambient * gl_LightModel.ambient;
 	if (enable_light0) {lighting += add_light_comp_pos(light_norm, epos, 0);}
 	if (enable_light1) {lighting += add_light_comp_pos(light_norm, epos, 1);}
 
 	if (reflections) {
-		vec3 epos_n = normalize(epos.xyz);
-
 		// add some green at shallow view angles
-		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), 0.2*(1.0 - abs(dot(epos_n, norm))));
+		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), 0.2*(1.0 - cos_view_angle));
 
 		// calculate reflections
 		float reflect_w  = get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);

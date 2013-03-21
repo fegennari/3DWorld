@@ -7,7 +7,7 @@ uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
 uniform vec3 cloud_offset    = vec3(0,0,0);
 uniform sampler2D shadow_normal_tex, noise_tex;
-varying vec3 vertex;
+varying vec3 vertex; // world space
 varying vec4 epos;
 
 // underwater attenuation code
@@ -53,6 +53,10 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 	return color;
 }
 
+float calc_light0_caustics() { // use vertex and water_plane_z
+	return 1.0;
+}
+
 void main()
 {
 	// sand, dirt, grass, rock, snow
@@ -75,7 +79,7 @@ void main()
 	if (enable_light0) {
 		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
 		float shininess = 20.0*weights.b + 40.0*weights4;
-		color += add_light_comp(normal, 0, shadow_normal.w, spec, shininess);
+		color += add_light_comp(normal, 0, shadow_normal.w*calc_light0_caustics(), spec, shininess);
 	}
 	if (enable_light1) {color += add_light_comp(normal, 1, shadow_normal.w, 0.0, 1.0);}
 	if (enable_light2) {color += add_light_comp(normal, 2, 1.0, 0.0, 1.0) * calc_light_atten(epos, 2);}
