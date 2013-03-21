@@ -813,6 +813,7 @@ void display(void) {
 			show_framerate = 2;
 		}
 		if (world_mode == WMODE_GROUND) {process_platforms();} // must be before camera code
+		if (world_mode == WMODE_INF_TERRAIN) {camera_mode = 1;} // force to ground/walking mode
 
 		// camera position code
 		auto_advance_camera();
@@ -1175,7 +1176,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	bool const water_enabled((display_mode & 0x04) && !DISABLE_WATER);
 	water_plane_z = (water_enabled ? (get_water_z_height() + get_ocean_wave_height()) : -10*FAR_CLIP);
 	ocean.z       = water_plane_z;
-	camera_mode   = 1;
+	camera_mode   = 1; // walking on ground
 	mesh_type     = 0;
 	float const zmin2(update_tiled_terrain());
 	bool const draw_water(water_enabled && water_plane_z >= zmin2);
