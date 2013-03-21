@@ -252,6 +252,7 @@ void load_textures() {
 		if (is_tex_disabled(i)) continue; // skip
 		textures[i].init();
 	}
+	textures[TREE_HEMI_TEX].set_color_alpha_to_one();
 	setup_multitexture();
 
 	int max_tc(0), max_tu(0), max_tiu(0), max_ctiu(0);
@@ -451,8 +452,7 @@ void texture_t::calc_color() {
 	float colors[4] = {0.0}, weight(0.0);
 	unsigned const size(num_pixels());
 	bool const has_alpha_comp(ncolors == 4);
-	has_binary_alpha  = 1;
-	has_alpha_not_one = 0;
+	has_binary_alpha = 1;
 
 	for(unsigned i = 0; i < size; ++i) {
 		int const offset(i*ncolors);
@@ -469,12 +469,11 @@ void texture_t::calc_color() {
 				unsigned char const alpha(data[offset+3]);
 				colors[3] += alpha;
 				if (alpha > 0 && alpha < 255) {has_binary_alpha = 0;}
-				if (             alpha < 255) {has_alpha_not_one = 1;}
 			}
 		}
 	}
 	UNROLL_3X(color[i_] = colors[i_]/(255.0*weight);)
-	color.alpha = (has_alpha_comp ? colors[3]/(255.0*weight) : 1.0);
+	color.alpha = (has_alpha_comp ? CLIP_TO_01(colors[3]/(255.0f*size)) : 1.0);
 }
 
 

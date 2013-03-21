@@ -923,7 +923,7 @@ class texture_t { // size = 116
 public:
 	std::string name;
 	char type, format, use_mipmaps;
-	bool wrap, do_compress, has_binary_alpha, has_alpha_not_one;
+	bool wrap, do_compress, has_binary_alpha;
 	int width, height, ncolors, bump_tid, alpha_tid;
 	float anisotropy, mipmap_alpha_weight;
 
@@ -934,13 +934,13 @@ private:
 	vector<unsigned> mm_offsets;
 
 public:
-	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), do_compress(0), has_binary_alpha(0), has_alpha_not_one(0),
+	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), do_compress(0), has_binary_alpha(0),
 		width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1), anisotropy(1.0), mipmap_alpha_weight(1.0),
 		data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
 	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool do_comp=1, float a=1.0, float maw=1.0)
 		: name(n), type(t), format(f), use_mipmaps(um), wrap(wra), do_compress(do_comp), has_binary_alpha(0),
-		has_alpha_not_one(0), width(w), height(h), ncolors(nc), bump_tid(-1), alpha_tid(-1), anisotropy(a),
+		width(w), height(h), ncolors(nc), bump_tid(-1), alpha_tid(-1), anisotropy(a),
 		mipmap_alpha_weight(maw), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	void init();
 	void do_gl_init();
@@ -973,7 +973,8 @@ public:
 	void check_init() {if (tid == 0) do_gl_init();}
 	unsigned num_pixels() const {return width*height;}
 	unsigned num_bytes()  const {return ncolors*num_pixels();}
-	bool has_alpha()    const {return ((ncolors == 4 && has_alpha_not_one) || alpha_tid >= 0);}
+	void set_color_alpha_to_one() {color.alpha = 1.0;} // to make has_alpha() return 0
+	bool has_alpha()    const {return (color.alpha < 1.0 || alpha_tid >= 0);}
 	bool is_bound()     const {return (tid > 0);}
 	bool is_allocated() const {return (data != 0);}
 	colorRGBA get_avg_color() const {return color;}
