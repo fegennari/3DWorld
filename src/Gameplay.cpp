@@ -1898,7 +1898,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	}
 	if (coll && cindex >= 0 && closest < 0) { // hit cobjs (like tree leaves)
 		coll_obj &cobj(coll_objects[cindex]);
-		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), (is_laser ? BEAM : PROJECTILE));
+		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), proj_type);
 
 		if ((!is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
 			bool const is_glass(cobj.cp.is_glass());
@@ -1906,6 +1906,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 			if (wtype == W_M16 && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
 				gen_sound(SOUND_RICOCHET, coll_pos); // ricochet near player
+			}
+			if (is_glass && !is_laser && (rand()&1) == 0) { // projectile, 50% chance of continuing through glass with twice the firing error and 75% the damage
+				float range_unused(0.0);
+				projectile_test(coll_pos, vcf, 2.0*firing_error, 0.75*damage, shooter, range_unused, 1.0, cindex); // return value is unused
 			}
 		}
 		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((rand()%50) == 0)) || (cobj.destroy >= EXPLODEABLE && ((rand()%10) == 0))) {

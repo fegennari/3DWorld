@@ -17,6 +17,8 @@ Parallax mapping
 
 TT Underwater caustics
 
-HRD/Tone Mapping?
+Tighter textures to reduce fill rate (tree leaves/billboards)
 
-Decid trees low res don't block the sun
+Dynamically allocate dlight slots based on influence when more than 64K
+
+TT combined_gu flash
