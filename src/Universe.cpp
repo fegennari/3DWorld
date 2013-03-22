@@ -386,7 +386,7 @@ void draw_universe_plds(bool planets_and_moons) {
 
 
 // no_distant: 0: draw everything, 1: draw current cell, 2: draw current system
-void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant) {
+void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only) {
 
 	//RESET_TIME;
 	if (animate2) {cloud_time += fticks;}
@@ -399,7 +399,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	static colorRGBA last_bkg_color(BLACK);
 	static point last_player_pos(all_zeros);
 	point const player_pos(get_player_pos());
-	bool const cache_stars(dist_less_than(player_pos, last_player_pos, STAR_MAX_SIZE) && bkg_color == last_bkg_color);
+	bool const cache_stars(!gen_only && dist_less_than(player_pos, last_player_pos, STAR_MAX_SIZE) && bkg_color == last_bkg_color);
 	bool const draw_all(cache_stars && universe_pld[2].empty());
 
 	if (cache_stars) { // should be true in combined_gu mode
@@ -418,7 +418,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
 				for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
 					for (cxyz[0] = 0; cxyz[0] < int(U_BLOCKS); ++cxyz[0]) { // x
-						draw_cell(cxyz, usg, clobj, 0, (nebula_pass != 0), no_move, skip_closest, cur_cell_only);
+						draw_cell(cxyz, usg, clobj, 0, (nebula_pass != 0), no_move, skip_closest, cur_cell_only, gen_only);
 					}
 				}
 			}
@@ -426,14 +426,14 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 				player_pdu.valid = 1;
 				universe_pld[2]  = universe_pld[0];
 			}
-			draw_universe_plds(0);
+			if (!gen_only) {draw_universe_plds(0);}
 		}
 	}
 	if (clobj.has_valid_system()) { // in a system
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
-			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest, 0);
+			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest, 0, gen_only);
 		}
-		draw_universe_plds(0);
+		if (!gen_only) {draw_universe_plds(0);}
 	}
 	glEnable(GL_LIGHTING);
 	//PRINT_TIME("Draw Cells");
@@ -609,12 +609,12 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 
 
 void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const &clobj, unsigned pass,
-	bool nebula_pass, bool no_move, bool skip_closest, bool cur_cell_only)
+	bool nebula_pass, bool no_move, bool skip_closest, bool cur_cell_only, bool gen_only)
 {
 	UNROLL_3X(current.cellxyz[i_] = cxyz[i_] + uxyz[i_];)
 	bool const sel_cell(clobj.cellxyz[0] == cxyz[0] && clobj.cellxyz[1] == cxyz[1] && clobj.cellxyz[2] == cxyz[2]);
 	if (cur_cell_only && !sel_cell) return;
-	get_cell(cxyz).draw(usg, clobj, pass, nebula_pass, no_move, skip_closest, sel_cell);
+	get_cell(cxyz).draw(usg, clobj, pass, nebula_pass, no_move, skip_closest, sel_cell, gen_only);
 }
 
 
@@ -634,7 +634,7 @@ void ucell::draw_nebulas(ushader_group &usg) const {
 //  If player's system is none (update: galaxy is none) then stop
 //  1. Draw the player's system except for the player's sobj
 //  2. Draw the player's sobj
-void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest, bool sel_cell) {
+void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only) {
 
 	if (galaxies == NULL) return; // galaxies not yet allocated
 	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
@@ -644,7 +644,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 	// use lower detail when the player is moving quickly in hyperspeed since objects zoom by so quickly
 	float const velocity_mag(get_player_velocity().mag()), sscale_val(1.0/max(1.0f, velocity_mag)); // up to 2.5x lower
 
-	if (nebula_pass) {
+	if (!gen_only && nebula_pass) {
 		draw_nebulas(usg);
 		return;
 	}
@@ -664,7 +664,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 		galaxy.process(*this);
 		set_ambient_color(galaxy.color);
 
-		if (pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
+		if (!gen_only && pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
 			uasteroid_field::begin_render(usg.asteroid_shader);
 
 			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
@@ -707,7 +707,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 				current.cluster = sol.cluster_id;
 
 				for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) {
-					if (sun_visible && sol_draw_pass == unsigned(sel_s)) {
+					if (!gen_only && sun_visible && sol_draw_pass == unsigned(sel_s)) {
 						if (!sol.sun.draw(spos, usg)) continue;
 					}
 					if (planets_visible) sol.process();
@@ -771,7 +771,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 									}
 								}
 							}
-							if (!skip_p && !skip_planet_draw) {
+							if (!gen_only && !skip_p && !skip_planet_draw) {
 								if (!planet.ring_data.empty() && planet.ring_tid > 0) { // setup ring texture so we can create ring shadows
 									set_active_texture(2);
 									bind_1d_texture(planet.ring_tid);
@@ -784,7 +784,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						planet.process();
 						bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
 
-						if (sizep >= 1.0 && !skip_moons && !planet.moons.empty()) {
+						if (!gen_only && sizep >= 1.0 && !skip_moons && !planet.moons.empty()) {
 							int const p_light(GL_LIGHT2);
 
 							if (has_sun && planet.is_ok()) { // setup planet as an additional light source for all moons
@@ -809,7 +809,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 								moon.draw(mpos, usg, svars2, planet.is_ok());
 							}
 						}
-						if (planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
+						if (!gen_only && planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
 							if (!planet.ring_data.empty() && sizep*planet.get_ring_rscale() > 2.5) {
 								usg.rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 							}
