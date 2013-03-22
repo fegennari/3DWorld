@@ -18,5 +18,3 @@ Parallax mapping
 TT Underwater caustics
 
 Tighter textures to reduce fill rate (tree leaves/billboards)
-
-TT combined_gu flash

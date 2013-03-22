@@ -183,7 +183,12 @@ void setup_current_system() {
 
 	if (regen_mesh) {
 		init_terrain_mesh();
-		clear_tiled_terrain();
+
+		if (world_mode == WMODE_INF_TERRAIN) {
+			clear_tiled_terrain();
+			update_tiled_terrain();
+			pre_draw_tiled_terrain();
+		}
 	}
 }
 
