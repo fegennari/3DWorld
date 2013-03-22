@@ -646,7 +646,7 @@ void init_universe_display();
 void set_univ_pdu();
 void setup_current_system();
 void apply_univ_physics();
-void draw_universe(bool static_only=0, bool skip_closest=0, int no_distant=0);
+void draw_universe(bool static_only=0, bool skip_closest=0, int no_distant=0, bool gen_only=0);
 void draw_universe_stats();
 void free_ship_dlists();
 void clear_univ_obj_contexts();

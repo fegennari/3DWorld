@@ -538,6 +538,9 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 		xoff_ = xoff; yoff_ = yoff; xoff2_ = xoff2; yoff2_ = yoff2;
 		camera_pos_ = camera_pos; // fix_player_upv()?
 	}
+	else if (combined_gu) {
+		setup_current_system();
+	}
 	if (!map_mode) reset_offsets(); // ???
 	init_x        = 1;
 	star_init     = 0;
@@ -1003,6 +1006,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 				glDisable(get_universe_ambient_light());
 				calc_visibility(SUN_SHADOW); // reclaculate sun
 				DISABLE_WATER = INIT_DISABLE_WATER;
+			}
+			else { // do a fake draw pass to force the universe to be created so we can determine the closest planet/moon and setup lighting/water/temperature/vegetation/etc.
+				draw_universe(1, 1, 2, 1); // gen_only=1
+				setup_current_system();
 			}
 			create_landscape_texture();
 		}

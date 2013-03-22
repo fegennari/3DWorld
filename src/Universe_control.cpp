@@ -183,12 +183,7 @@ void setup_current_system() {
 
 	if (regen_mesh) {
 		init_terrain_mesh();
-
-		if (world_mode == WMODE_INF_TERRAIN) {
-			clear_tiled_terrain();
-			update_tiled_terrain();
-			pre_draw_tiled_terrain();
-		}
+		clear_tiled_terrain();
 	}
 }
 
@@ -202,10 +197,10 @@ void proc_uobjs_first_frame() {
 }
 
 
-void draw_universe(bool static_only, bool skip_closest, int no_distant) { // should be process_universe()
+void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen_only) { // should be process_universe()
 
 	RESET_TIME;
-	static int inited(0);
+	static int inited(0), first_frame_drawn(0);
 	set_lighting_params();
 	WHITE.do_glColor();
 	do_univ_init();
@@ -245,18 +240,21 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant) { // sho
 	if (!static_only) {setup_universe_fog(clobj0);}
 	glEnable(GL_COLOR_MATERIAL);
 	check_gl_error(120);
-	universe.draw_all_cells(clobj0, skip_closest, skip_closest, no_distant);
+	universe.draw_all_cells(clobj0, skip_closest, skip_closest, no_distant, gen_only);
 	check_gl_error(121);
-
-	if (!static_only) {
-		if (!inited) {proc_uobjs_first_frame();}
+	
+	if (!gen_only && !first_frame_drawn) {
+		proc_uobjs_first_frame();
+		first_frame_drawn = 1;
+	}
+	if (!gen_only && !static_only) {
 		if (TIMETEST) PRINT_TIME(" Universe Draw");
 		check_gl_error(122);
-		draw_univ_objects(all_zeros); // draw free objects
+		if (!gen_only) {draw_univ_objects(all_zeros);} // draw free objects
 		check_gl_error(123);
 		if (TIMETEST) PRINT_TIME(" Free Obj Draw");
-		check_shift_universe();
 	}
+	check_shift_universe();
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(get_universe_ambient_light());
