@@ -48,7 +48,7 @@ float const DARKNESS_THRESH  = 0.1;
 bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), use_dense_voxels(0), has_indir_lighting(0);
 unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
 float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
-float czmin0(0.0), lm_dz_adj(0.0);
+float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
 dls_cell **ldynamic = NULL;
 vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic {cur frame, next frame}
@@ -1048,6 +1048,11 @@ void upload_dlights_textures() {
 			gb_data[gb_ix] += (elix << 16); // end_ix
 		}
 	}
+	if (elix > 0.9*max_gb_entries) {
+		if (elix >= max_gb_entries) {std::cerr << "Warning: Exceeded max number of indexes in dynamic light texture upload" << endl;}
+		//cout << "elix: " << elix << ", dlight_add_thresh: " << dlight_add_thresh << endl;
+		dlight_add_thresh = min(0.25, (dlight_add_thresh + 0.005)); // increase thresh to clip the dynamic lights to a smaller radius
+	}
 	if (elem_tid == 0) {
 		setup_2d_texture(elem_tid);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16UI_EXT, elem_tex_sz, elem_tex_sz, 0, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_SHORT, elem_data);
@@ -1286,6 +1291,7 @@ void add_dynamic_lights() {
 	sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
 	unsigned const ndl((unsigned)dl_sources.size());
 	has_dl_sources = (ndl > 0);
+	dlight_add_thresh *= 0.99;
 	bool first(1);
 
 	for (unsigned i = 0; i < ndl; ++i) {
@@ -1298,7 +1304,7 @@ void add_dynamic_lights() {
 		point bounds[2];
 		int bnds[3][2];
 		unsigned const ix(i);
-		ls.get_bounds(bounds, bnds, 0.0);
+		ls.get_bounds(bounds, bnds, dlight_add_thresh);
 		
 		for (unsigned j = 0; j < 3; ++j) {
 			dlight_bb[j][0] = (first ? bounds[0][j] : min(dlight_bb[j][0], bounds[0][j]));

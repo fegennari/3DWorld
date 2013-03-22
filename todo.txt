@@ -19,6 +19,4 @@ TT Underwater caustics
 
 Tighter textures to reduce fill rate (tree leaves/billboards)
 
-Dynamically allocate dlight slots based on influence when more than 64K
-
 TT combined_gu flash
