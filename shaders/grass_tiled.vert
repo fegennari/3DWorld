@@ -1,6 +1,7 @@
 uniform float height = 1.0;
-uniform float dist_const = 10.0;
-uniform float dist_slope = 0.5;
+uniform float dist_const  = 10.0;
+uniform float dist_slope  = 0.5;
+uniform float cloud_alpha = 1.0;
 uniform float x1, y1, x2, y2, wx2, wy2, zmin, zmax, translate_y;
 uniform sampler2D height_tex, shadow_normal_tex, weight_tex, noise_tex;
 uniform float cloud_plane_z;
@@ -11,7 +12,7 @@ vec4 add_light_comp(in vec3 vertex, in vec3 normal, in vec4 epos, in int i, in f
 		vec4 light = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 		vec3 cpos  = vertex + cloud_offset;
 		float t    = (cloud_plane_z - cpos.z)/(light.z - cpos.z); // sky intersection position along vertex->light vector
-		ds_scale  *= 1.0 - 0.75*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
+		ds_scale  *= 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
 	}
 	return add_light_comp_pos_scaled(normal, epos, i, ds_scale);
 }

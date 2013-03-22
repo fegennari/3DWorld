@@ -39,7 +39,7 @@ float const GRASS_LOD_SCALE   = 16.0;
 extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees;
 extern int xoff, yoff, island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, atmosphere;
 extern point sun_pos, moon_pos, surface_pos;
 extern float h_dirt[];
 extern texture_t textures[];
@@ -1231,6 +1231,13 @@ public:
 		s.set_bool_prefix("apply_cloud_shadows", cloud_shadows, lighting_shader); // FS
 	}
 
+	static void setup_cloud_plane_uniforms(shader_t &s) {
+		set_cloud_uniforms(s, 9);
+		s.add_uniform_float("cloud_scale",   0.535);
+		s.add_uniform_float("cloud_plane_z", get_cloud_zmax());
+		s.add_uniform_float("cloud_alpha",   0.75*atmosphere);
+	}
+
 	// uses texture units 0-9
 	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 		lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
@@ -1245,9 +1252,7 @@ public:
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 		set_noise_tex(s, 8);
-		s.add_uniform_float("cloud_scale", 0.535);
-		s.add_uniform_float("cloud_plane_z", get_cloud_zmax());
-		set_cloud_uniforms(s, 9);
+		setup_cloud_plane_uniforms(s);
 		setup_terrain_textures(s, 2, 0);
 	}
 
@@ -1569,9 +1574,7 @@ public:
 			s.add_uniform_float("height", grass_length);
 			s.add_uniform_float("dist_const", (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH);
 			s.add_uniform_float("dist_slope", 0.25);
-			s.add_uniform_float("cloud_scale", 0.535);
-			s.add_uniform_float("cloud_plane_z", get_cloud_zmax());
-			set_cloud_uniforms(s, 9);
+			setup_cloud_plane_uniforms(s);
 
 			for (unsigned i = 0; i < to_draw.size(); ++i) {
 				if ((to_draw[i].second->get_dist_to_camera_in_tiles() > 0.5) == pass) {
