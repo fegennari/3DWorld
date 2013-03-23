@@ -814,15 +814,28 @@ void draw_one_mult_tex_quad(unsigned num_tu_ids, float x1, float y1, float x2, f
 
 
 void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir, float xsize, float ysize,
-	float tx1, float ty1, float tx2, float ty2, bool up_is_y)
+	float tx1, float ty1, float tx2, float ty2, bool up_is_y, bool minimize_fill)
 {
 	vector3d const vdir(viewer - pos); // z
 	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // x (what if colinear?)
 	vector3d const v2((up_is_y ? up_dir : cross_product(v1, vdir).get_norm())*ysize); // y
-	glTexCoord2f(tx1, ty1); (pos - v1 - v2).do_glVertex();
-	glTexCoord2f(tx1, ty2); (pos - v1 + v2).do_glVertex();
-	glTexCoord2f(tx2, ty2); (pos + v1 + v2).do_glVertex();
-	glTexCoord2f(tx2, ty1); (pos + v1 - v2).do_glVertex();
+
+	if (minimize_fill) { // draw as octagon
+		float const p[8][2] = {{0.7,0.0}, {1.0,0.3}, {1.0,0.7}, {0.7,1.0}, {0.3,1.0}, {0.0,0.7}, {0.0,0.3}, {0.3,0.0}};
+		unsigned const v[18] = {0,1,7 ,1,6,7, 1,2,6, 2,5,6, 2,3,5, 3,4,5};
+
+		for (unsigned i = 0; i < 18; ++i) {
+			float const tcx(p[v[i]][0]), tcy(p[v[i]][1]);
+			glTexCoord2f(tcx, tcy);
+			(pos + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0)).do_glVertex();
+		}
+	}
+	else {
+		glTexCoord2f(tx1, ty1); (pos - v1 - v2).do_glVertex();
+		glTexCoord2f(tx1, ty2); (pos - v1 + v2).do_glVertex();
+		glTexCoord2f(tx2, ty2); (pos + v1 + v2).do_glVertex();
+		glTexCoord2f(tx2, ty1); (pos + v1 - v2).do_glVertex();
+	}
 }
 
 

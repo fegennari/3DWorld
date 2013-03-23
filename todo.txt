@@ -17,4 +17,6 @@ Parallax mapping
 
 TT Underwater caustics
 
-Tighter textures to reduce fill rate (tree leaves/billboards)
+Tighter textures to reduce fill rate by making the texture tighter (tree leaves/billboards)
+
+Draw quads with indices?

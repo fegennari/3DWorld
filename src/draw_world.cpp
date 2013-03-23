@@ -12,6 +12,7 @@
 
 
 bool const DYNAMIC_SMOKE_SHADOWS = 1; // slower, but looks nice
+bool const MIN_PARTICLE_FILL     = 1;
 unsigned const MAX_CFILTERS      = 10;
 float const NDIV_SCALE           = 1.6;
 float const CLOUD_WIND_SPEED     = 0.00015;
@@ -963,7 +964,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
 	c.do_glColor();
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
-	draw_billboard(p, camera, up_vector, 4.0*r, 4.0*r);
+	draw_billboard(p, camera, up_vector, 4.0*r, 4.0*r, 0, 0, 1, 1, 0, MIN_PARTICLE_FILL);
 }
 
 
@@ -1036,7 +1037,7 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 	//select_multitex(CLOUD_TEX, 1);
 	glAlphaFunc(GL_GREATER, 0.01);
 	glEnable(GL_ALPHA_TEST); // makes it faster
-	glBegin(GL_QUADS);
+	glBegin(MIN_PARTICLE_FILL ? GL_TRIANGLES : GL_QUADS);
 	draw_objects(pc);
 	glEnd();
 	glDisable(GL_ALPHA_TEST);
