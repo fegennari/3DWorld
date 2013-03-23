@@ -1935,7 +1935,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 			if (reflects) {
 				if (alpha < 1.0 && refract_ix != 1.0) { // semi-transparent - fresnel reflection
-					reflect = get_reflected_weight(get_fresnel_reflection(vcf*-1, coll_norm, 1.0, refract_ix), alpha);
+					reflect = get_reflected_weight(get_fresnel_reflection(-vcf, coll_norm, 1.0, refract_ix), alpha);
 				}
 				else { // specular + diffuse reflections
 					reflect = CLIP_TO_01(alpha*(specular + (1.0f - specular)*luminance)); // could use red component

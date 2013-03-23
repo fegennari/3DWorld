@@ -61,7 +61,7 @@ texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a ba
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
-// type format width height wrap ncolors use_mipmaps name [do_compress] [anisotropy], [mipmap_alpha_weight]
+// type format width height wrap ncolors use_mipmaps name [do_compress [anisotropy [mipmap_alpha_weight]]]
 //texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
 texture_t(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
@@ -83,13 +83,13 @@ texture_t(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 1, 8.0),
 texture_t(0, 2, 512,  512,  1, 3, 1, "manhole.bmp"),
 texture_t(0, 0, 128,  128,  1, 4, 3, "palmtree.raw"),
-texture_t(1, 0, 256,  256,  1, 4, 1, "@smoke.raw"),  // not real file
-texture_t(1, 0, 64,   64,   1, 4, 1, "@plasma.raw"), // not real file
-texture_t(1, 0, 128,  128,  0, 3, 0, "@gen.raw"),    // not real file - unused
+texture_t(1, 0, 256,  256,  1, 4, 1, "@smoke"),  // not real file
+texture_t(1, 0, 64,   64,   1, 4, 1, "@plasma"), // not real file
+texture_t(1, 0, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
 texture_t(2, 0, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
-texture_t(1, 0, 128,  128,  0, 3, 0, "@tree_end.raw"),  // not real file
-texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi.raw"), // not real file, mipmap for trees?
-texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle.bmp", 1, 8.0), // not real file
+texture_t(1, 0, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
+texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for trees?
+texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle", 1, 8.0), // not real file
 texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw", 1, 16.0),
 texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw", 1, 8.0),
 texture_t(0, 0, 128,  128,  0, 4, 3, "mj_leaf.raw"),
@@ -100,7 +100,7 @@ texture_t(0, 0, 256,  256,  0, 4, 3, "plant1.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant2.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant3.raw"),
 texture_t(0, 0, 64,   64,   0, 4, 3, "hibiscus.raw"),
-texture_t(1, 0, 256,  256,  1, 3, 1, "@fence.raw", 1, 8.0), // not real file, light paneling
+texture_t(1, 0, 256,  256,  1, 3, 1, "@fence", 1, 8.0), // not real file, light paneling
 texture_t(0, 2, 128,  128,  1, 3, 1, "skull.raw"),
 texture_t(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
 texture_t(0, 2, 128,  128,  1, 3, 1, "yuck.raw"),
@@ -116,10 +116,10 @@ texture_t(0, 0, 128,  128,  1, 3, 1, "particleb.raw", 1, 8.0),
 texture_t(0, 0, 128,  128,  1, 3, 1, "plaster.raw"),
 texture_t(0, 0, 256,  256,  1, 3, 1, "tile.raw", 1, 8.0),
 texture_t(0, 2, 256,  32,   1, 3, 1, "CommandCAD.raw"),
-texture_t(1, 0, 32,   32,   1, 4, 1, "@disint.raw"),   // not real file
-texture_t(1, 0, 256,  256,  1, 4, 1, "@blur_inv.raw"), // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe.raw", 1, 8.0), // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe.raw", 1, 8.0), // not real file
+texture_t(1, 0, 32,   32,   1, 4, 1, "@disint"),   // not real file
+texture_t(1, 0, 256,  256,  1, 4, 1, "@blur_inv"), // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe", 1, 8.0), // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe", 1, 8.0), // not real file
 texture_t(0, 0, 512,  512,  1, 3, 1, "bcube.raw"),
 texture_t(0, 0, 512,  512,  0, 4, 1, "explosion.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "shiphull.raw"),
@@ -136,10 +136,10 @@ texture_t(0, 0, 16,   16,   1, 3, 0, "white.raw"),
 texture_t(0, 2, 512,  512,  0, 4, 0, "fire.raw"),
 texture_t(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
-texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center.raw"), // not real file
-texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient.raw"), // not real file
+texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center"), // not real file
+texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient"), // not real file
 texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
-texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture.raw"),  // not real file
+texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture"),  // not real file
 texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg"), // 500x500
 // bark
 texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark1.jpg"), // 600x600
@@ -150,11 +150,11 @@ texture_t(0, 6, 0,    0,    1, 4, 1, "bark/bark_lylejk.png"), // 1024x768
 // normal maps
 texture_t(0, 4, 0,    0,    1, 3, 1, "water_normal.tga", 1, 8.0), // 512x512
 // noise
-texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen.raw"), // not real file
-texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap.raw"), // not real file
-texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse.raw") // not real file
+texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
+texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
+texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse") // not real file
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
-// type format width height wrap ncolors use_mipmaps name [do_compress]
+// type format width height wrap ncolors use_mipmaps name [do_compress [anisotropy [mipmap_alpha_weight]]]
 };
 
 
@@ -1330,6 +1330,48 @@ void gen_wind_texture() {
 		tex_data[i] = tex_data2[(i<<2)+3]; // put alpha in luminance
 	}
 }
+
+
+float wrap_tc(float v) {
+	float const fract(v - int(v));
+	return CLIP_TO_01((v < 0.0) ? (1.0f + fract) : fract); // Note: clamped to allow for fp error
+}
+
+
+/*void gen_water_caustic_texture() {
+
+	RESET_TIME;
+	texture_t const &wnt(textures[WATER_NORMAL_TEX]);
+	texture_t &wct(textures[WATER_CAUSTIC_TEX]);
+	unsigned char const *const wnd(wnt.get_data());
+	unsigned char *const wcd(wct.get_data());
+	assert(wnd && wcd);
+	for (unsigned i = 0; i < wct.num_bytes(); ++i) {wcd[i] = 0;} // clear to black
+	vector3d const light_dir(0.0, 0.0, -1.0);
+	float const mesh_depth(0.0); // relative to texture width/height
+
+	for (int y = 0; y < wnt.height; ++y) {
+		for (int x = 0; x < wnt.width; ++x) {
+			vector3d normal, refract_dir;
+			UNROLL_3X(normal[i_] = -1.0 + 2.0*wnd[wnt.ncolors*(y*wnt.width + x)+i_]/255.0;)
+			normal.normalize();
+			if (!calc_refraction_angle(light_dir, refract_dir, normal, 1.0, WATER_INDEX_REFRACT)) continue; // no refraction
+			assert(refract_dir.z < 0.0);
+			float tx(float(x)/float(wnt.width)  - mesh_depth*refract_dir.x/refract_dir.z);
+			float ty(float(y)/float(wnt.height) - mesh_depth*refract_dir.y/refract_dir.z);
+			tx = wrap_tc(tx); ty = wrap_tc(ty);
+			int const xv(min(wct.width-1, int(tx*wct.width))), yv(min(wct.height-1, int(ty*wct.height)));
+			assert(xv >= 0 && yv >= 0);
+			float const reflect_w(get_fresnel_reflection(-light_dir, normal, 1.0, WATER_INDEX_REFRACT));
+			//if (((x+y)&127) == 0) {cout << reflect_w << " ";}
+			assert(reflect_w >= 0.0 && reflect_w <= 1.0);
+			//float const weight(1.0 - reflect_w); // refracted weight;
+			float const weight(-refract_dir.z);
+			wcd[yv*wct.width + xv] = (unsigned char)(255.0*weight);
+		}
+	}
+	PRINT_TIME("Water caustic texture gen");
+}*/
 
 
 void noise_fill(unsigned char *data, unsigned size) {
