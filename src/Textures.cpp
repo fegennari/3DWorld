@@ -147,8 +147,9 @@ texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark2.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark2-normal.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark_lendrick.jpg"), // 892x892
 texture_t(0, 6, 0,    0,    1, 4, 1, "bark/bark_lylejk.png"), // 1024x768
-// normal maps
+// normal/caustic maps
 texture_t(0, 4, 0,    0,    1, 3, 1, "water_normal.tga", 1, 8.0), // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "caustics.jpg",     1, 8.0), // 800x800
 // noise
 texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
 texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
@@ -1332,46 +1333,10 @@ void gen_wind_texture() {
 }
 
 
-float wrap_tc(float v) {
+float wrap_tc(float v) { // unused
 	float const fract(v - int(v));
 	return CLIP_TO_01((v < 0.0) ? (1.0f + fract) : fract); // Note: clamped to allow for fp error
 }
-
-
-/*void gen_water_caustic_texture() {
-
-	RESET_TIME;
-	texture_t const &wnt(textures[WATER_NORMAL_TEX]);
-	texture_t &wct(textures[WATER_CAUSTIC_TEX]);
-	unsigned char const *const wnd(wnt.get_data());
-	unsigned char *const wcd(wct.get_data());
-	assert(wnd && wcd);
-	for (unsigned i = 0; i < wct.num_bytes(); ++i) {wcd[i] = 0;} // clear to black
-	vector3d const light_dir(0.0, 0.0, -1.0);
-	float const mesh_depth(0.0); // relative to texture width/height
-
-	for (int y = 0; y < wnt.height; ++y) {
-		for (int x = 0; x < wnt.width; ++x) {
-			vector3d normal, refract_dir;
-			UNROLL_3X(normal[i_] = -1.0 + 2.0*wnd[wnt.ncolors*(y*wnt.width + x)+i_]/255.0;)
-			normal.normalize();
-			if (!calc_refraction_angle(light_dir, refract_dir, normal, 1.0, WATER_INDEX_REFRACT)) continue; // no refraction
-			assert(refract_dir.z < 0.0);
-			float tx(float(x)/float(wnt.width)  - mesh_depth*refract_dir.x/refract_dir.z);
-			float ty(float(y)/float(wnt.height) - mesh_depth*refract_dir.y/refract_dir.z);
-			tx = wrap_tc(tx); ty = wrap_tc(ty);
-			int const xv(min(wct.width-1, int(tx*wct.width))), yv(min(wct.height-1, int(ty*wct.height)));
-			assert(xv >= 0 && yv >= 0);
-			float const reflect_w(get_fresnel_reflection(-light_dir, normal, 1.0, WATER_INDEX_REFRACT));
-			//if (((x+y)&127) == 0) {cout << reflect_w << " ";}
-			assert(reflect_w >= 0.0 && reflect_w <= 1.0);
-			//float const weight(1.0 - reflect_w); // refracted weight;
-			float const weight(-refract_dir.z);
-			wcd[yv*wct.width + xv] = (unsigned char)(255.0*weight);
-		}
-	}
-	PRINT_TIME("Water caustic texture gen");
-}*/
 
 
 void noise_fill(unsigned char *data, unsigned size) {
