@@ -806,7 +806,6 @@
     <None Include="config_trees.txt" />
     <None Include="config_water.txt" />
     <None Include="defaults.txt" />
-    <None Include="laptop_overrides.txt" />
     <None Include="mapx\basement.txt" />
     <None Include="mapx\bench.txt" />
     <None Include="mapx\chair.txt" />

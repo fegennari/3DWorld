@@ -22,3 +22,5 @@ Use triangles instead of quads
 Draw quads with indices?
 Remove immediate mode calls
 Remove non-shader rendering
+
+Fix ship specular?

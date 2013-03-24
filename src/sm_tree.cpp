@@ -23,7 +23,7 @@ unsigned const N_PT_RINGS   = 5;
 small_tree_group small_trees;
 pt_line_drawer tree_scenery_pld;
 
-extern bool disable_shaders, has_dir_lights;
+extern bool has_dir_lights;
 extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, OCEAN_DEPTH;
@@ -394,41 +394,35 @@ void draw_small_trees(bool shadow_only) {
 	if (small_trees.empty() || !(tree_mode & 2)) return;
 	if (small_trees.size() < 100) {small_trees.sort_by_dist_to_camera();} // shadow_only?
 	shader_t s;
-	bool const can_use_shaders(!disable_shaders), v(!shadow_only), use_bump_map(USE_BUMP_MAP && v);
-	colorRGBA orig_fog_color;
+	bool const v(!shadow_only), use_bump_map(USE_BUMP_MAP && v);
 
-	if (can_use_shaders) {
-		orig_fog_color = setup_smoke_shaders(s, 0.0, 0, 0, 0, v, v, 0, 0, v, use_bump_map, 0, v); // dynamic lights, but no smoke
-		s.add_uniform_float("tex_scale_t", 5.0);
+	// draw trunks
+	colorRGBA orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, v, v, 0, 0, v, use_bump_map, 0, v)); // dynamic lights, but no smoke
+	s.add_uniform_float("tex_scale_t", 5.0);
 
-		if (use_bump_map) {
-			vector4d const tangent(0.0, 0.0, 1.0, 1.0); // FIXME: set based on tree trunk direction?
-			int const tangent_loc(s.get_attrib_loc("tangent"));
-			if (tangent_loc >= 0) glVertexAttrib4fv(tangent_loc, &tangent.x);
-			set_active_texture(5);
-			select_texture(BARK2_NORMAL_TEX, 0);
-			set_active_texture(0);
-		}
+	if (use_bump_map) {
+		vector4d const tangent(0.0, 0.0, 1.0, 1.0); // FIXME: set based on tree trunk direction?
+		int const tangent_loc(s.get_attrib_loc("tangent"));
+		if (tangent_loc >= 0) glVertexAttrib4fv(tangent_loc, &tangent.x);
+		set_active_texture(5);
+		select_texture(BARK2_NORMAL_TEX, 0);
+		set_active_texture(0);
 	}
 	set_fill_mode();
 	small_trees.draw_branches(shadow_only);
 	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
-	small_trees.vbo_manager[0].upload();
 
-	if (can_use_shaders) {
-		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-		orig_fog_color = setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke
-		s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
-	}
+	// draw leaves
+	small_trees.vbo_manager[0].upload();
+	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+	orig_fog_color = setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke
+	s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
 	set_lighted_sides(2);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
 	small_trees.draw_pine_leaves(shadow_only);
-	
-	if (s.is_setup()) {
-		s.add_uniform_float("base_color_scale", 1.0);
-		end_smoke_shaders(s, orig_fog_color);
-	}
+	s.add_uniform_float("base_color_scale", 1.0);
+	end_smoke_shaders(s, orig_fog_color);
 	small_trees.draw_non_pine_leaves(shadow_only); // not using shaders
 	glDisable(GL_ALPHA_TEST);
 	set_lighted_sides(1);

@@ -68,7 +68,7 @@ universe_t universe; // the top level universe
 pt_line_drawer universe_pld[5]; // 1-pixel stars, 2-pixel stars, cached stars, 1-pixel planets/moons, 2-pixel planets/moons
 
 
-extern bool univ_planet_lod, disable_shaders;
+extern bool univ_planet_lod;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
 extern float tan_term, sin_term, fticks, tfticks;
 extern colorRGBA bkg_color;
@@ -224,7 +224,6 @@ class universe_shader_t : public shader_t {
 
 public:
 	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) { // Note: planet_pos unused
-		if (disable_shaders) return 0;
 		bool const has_craters(body.type == UTYPE_MOON);
 		assert(!has_craters || !body.gas_giant);
 
@@ -264,8 +263,6 @@ public:
 	}
 
 	bool enable_star(colorRGBA const &colorA, colorRGBA const &colorB) { // no lighting
-		if (disable_shaders) return 0;
-
 		if (!is_setup()) {
 			setup_planet_star_shader();
 			set_vert_shader("star_draw");
@@ -285,9 +282,7 @@ public:
 		if (is_setup()) {disable();}
 	}
 
-	bool enable_ring(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir) {
-		if (disable_shaders) return 0;
-		
+	bool enable_ring(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir) {	
 		if (!is_setup()) {
 			set_vert_shader("planet_draw");
 			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+planet_rings");
@@ -320,9 +315,7 @@ public:
 		}
 	}
 
-	bool enable_atmospheric(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {
-		if (disable_shaders) return 0;
-		
+	bool enable_atmospheric(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {	
 		if (!is_setup()) {
 			set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			set_vert_shader("atmosphere");

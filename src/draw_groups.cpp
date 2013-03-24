@@ -35,7 +35,7 @@ pt_line_drawer obj_pld;
 pt_line_drawer_hdr snow_pld;
 
 
-extern bool underwater, disable_shaders;
+extern bool underwater;
 extern int display_mode, num_groups, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, draw_model, animate2;
 extern float fticks, TIMESTEP, base_gravity, leaf_size, brightness, indir_vert_offset, cobj_z_bias;
@@ -219,15 +219,11 @@ void draw_select_groups(int solid) {
 
 	if (!begin_motion) return;
 	float const orig_ivo(indir_vert_offset), orig_czb(cobj_z_bias); // store original variable values FIXME: pass into setup_smoke_shaders?
-	colorRGBA orig_fog_color;
 	shader_t s;
-	
-	if (!disable_shaders) {
-		bool const force_tsl(1);
-		indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
-		cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
-		orig_fog_color    = setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl);
-	}
+	bool const force_tsl(1);
+	indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
+	cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl));
 	select_no_texture();
 	BLACK.do_glColor();
 

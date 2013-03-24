@@ -52,7 +52,6 @@ float align_t_kills[NUM_ALIGNMENT]    = {0};
 float friendly_kills[NUM_ALIGNMENT]   = {0};
 
 
-extern bool disable_shaders;
 extern int show_framerate, display_mode, animate2;
 extern float fticks, tfticks;
 extern unsigned owner_counts[];
@@ -722,7 +721,7 @@ void draw_univ_objects(point const &pos) {
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
 	unsigned const nobjs2((unsigned)sorted.size());
 	//PRINT_TIME("Sort");
-	bool const use_shaders(!disable_shaders && (display_mode & 0x08));
+	bool const use_shaders((display_mode & 0x08) != 0);
 	shader_t s;
 	select_texture(WHITE_TEX, 0); // always textured (see end_texture())
 	set_lighted_sides(2); // doesn't hurt

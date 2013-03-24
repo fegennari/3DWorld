@@ -16,5 +16,4 @@ config.txt
 #model_data/config_soda.txt
 #config_samples.txt
 #config_minecraft.txt
-#laptop_overrides.txt
 
