@@ -779,6 +779,13 @@ void disable_flares() {
 }
 
 
+void draw_quad_from_4_pts(point const *const pts) {
+
+	assert(pts != NULL);
+	for (unsigned i = 0; i < 4; ++i) {pts[i].do_glVertex();}
+}
+
+
 void draw_textured_quad(float xsize, float ysize, float z, int tid) {
 
 	select_texture(tid);
@@ -804,15 +811,21 @@ void draw_one_tquad(float x1, float y1, float x2, float y2, float z, bool textur
 }
 
 
-void draw_one_mult_tex_quad(unsigned num_tu_ids, float x1, float y1, float x2, float y2, float z, float tx1, float ty1, float tx2, float ty2) {
+// Note: drawn as triangles
+void draw_billboard_quad(point const &pos, vector3d const &dx, vector3d const &dy, float tx1, float ty1, float tx2, float ty2) {
 
-	multitex_coord2f_range(tx1, ty1, 0, num_tu_ids); glVertex3f(x1, y1, z);
-	multitex_coord2f_range(tx1, ty2, 0, num_tu_ids); glVertex3f(x1, y2, z);
-	multitex_coord2f_range(tx2, ty2, 0, num_tu_ids); glVertex3f(x2, y2, z);
-	multitex_coord2f_range(tx2, ty1, 0, num_tu_ids); glVertex3f(x2, y1, z);
+	float const p[4][2] = {{0,0}, {0,1}, {1,1}, {1,0}};
+	float const t[4][2] = {{tx1,ty1}, {tx1,ty2}, {tx2,ty2}, {tx2,ty1}};
+	unsigned const v[6] = {0,2,1, 0,3,2};
+
+	for (unsigned i = 0; i < 6; ++i) {
+		glTexCoord2f(t[v[i]][0], t[v[i]][1]);
+		(pos + dx*(2.0*p[v[i]][0] - 1.0) + dy*(2.0*p[v[i]][1] - 1.0)).do_glVertex();
+	}
 }
 
 
+// Note: drawn as triangles
 void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir, float xsize, float ysize,
 	float tx1, float ty1, float tx2, float ty2, bool up_is_y, bool minimize_fill)
 {
@@ -831,15 +844,8 @@ void draw_billboard(point const &pos, point const &viewer, vector3d const &up_di
 			(pos + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0)).do_glVertex();
 		}
 	}
-	else { // draw as quads
-		float const p[4][2] = {{0,0}, {0,1}, {1,1}, {1,0}};
-		float const t[4][2] = {{tx1,ty1}, {tx1,ty2}, {tx2,ty2}, {tx2,ty1}};
-		unsigned const v[6] = {0,2,1, 0,3,2};
-
-		for (unsigned i = 0; i < 6; ++i) {
-			glTexCoord2f(t[v[i]][0], t[v[i]][1]);
-			(pos + v1*(2.0*p[v[i]][0] - 1.0) + v2*(2.0*p[v[i]][1] - 1.0)).do_glVertex();
-		}
+	else { // draw as quad (2 triangles)
+		draw_billboard_quad(pos, v1, v2, tx1, ty1, tx2, ty2);
 	}
 }
 
@@ -957,17 +963,13 @@ void pos_dir_up::draw_frustum() const {
 	
 	// near and far
 	for (unsigned d = 0; d < 2; ++d) {
-		for (unsigned i = 0; i < 4; ++i) {
-			pts[d][i].do_glVertex();
-		}
+		draw_quad_from_4_pts(pts[d]);
 	}
 
 	// sides
 	for (unsigned i = 0; i < 4; ++i) {
-		pts[0][(i+0)&3].do_glVertex();
-		pts[0][(i+1)&3].do_glVertex();
-		pts[1][(i+1)&3].do_glVertex();
-		pts[1][(i+0)&3].do_glVertex();
+		point const side_pts[4] = {pts[0][(i+0)&3], pts[0][(i+1)&3], pts[1][(i+1)&3], pts[1][(i+0)&3]};
+		draw_quad_from_4_pts(side_pts);
 	}
 	glEnd();
 }

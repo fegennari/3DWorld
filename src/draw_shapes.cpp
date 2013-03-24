@@ -181,7 +181,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? 1.0 : -1.0);
 		normal.do_glNormal();
-		for (unsigned j = 0; j < 4; ++j) pts[j].do_glVertex();
+		draw_quad_from_4_pts(pts);
 	}
 	glEnd();
 }

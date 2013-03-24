@@ -986,10 +986,7 @@ public:
 		s.add_uniform_float("zmin", mzmin);
 		s.add_uniform_float("zmax", mzmax);
 		glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(xv1, yv1, z);
-		glTexCoord2f(0.0, 1.0); glVertex3f(xv1, yv2, z);
-		glTexCoord2f(1.0, 1.0); glVertex3f(xv2, yv2, z);
-		glTexCoord2f(1.0, 0.0); glVertex3f(xv2, yv1, z);
+		draw_one_tquad(xv1, yv1, xv2, yv2, z, 1);
 		glEnd();
 	}
 

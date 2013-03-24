@@ -288,18 +288,12 @@ void cloud_manager_t::draw() {
 		s.begin_shader();
 		s.add_uniform_int("tex0", 0);
 
-		glBegin(GL_QUADS);
 		point const camera(get_camera_pos());
 		cube_t const bcube(get_bcube());
 		float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
 		float const xy_exp((cloud_top - frustum_z)/(cloud_bot - frustum_z));
-		
-		for (unsigned d = 0; d < 2; ++d) { // render the bottom face of bcube
-			for (unsigned e = 0; e < 2; ++e) {
-				glTexCoord2f(float(d^e^1), float(d));
-				point(xy_exp*((d^e) ? cloud_xy : -cloud_xy)+camera.x, xy_exp*(d ? cloud_xy : -cloud_xy)+camera.y, cloud_top).do_glVertex();
-			}
-		}
+		glBegin(GL_TRIANGLES);
+		draw_billboard_quad(point(camera.x, camera.y, cloud_top), point(-xy_exp*cloud_xy, 0.0, 0.0), point(0.0, xy_exp*cloud_xy, 0.0));
 		glEnd();
 		s.end_shader();
 		disable_flares();

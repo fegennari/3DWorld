@@ -566,11 +566,15 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 
 	assert(!invalid);
 	assert(npts == 3 || npts == 4);
-	glBegin((npts == 3) ? GL_TRIANGLES : GL_QUADS);
+	glBegin(GL_TRIANGLES);
 
 	for (unsigned i = 0; i < 2; ++i) { // ends (cull faces?)
 		for (unsigned j = 0; j < npts; ++j) {
 			(p[i][i ? j : (npts-j-1)] - pos).do_glVertex();
+		}
+		if (npts == 4) { // complete the triangles from the quads
+			(p[i][i ? 0 : 3] - pos).do_glVertex();
+			(p[i][i ? 2 : 1] - pos).do_glVertex();
 		}
 	}
 	for (unsigned i = 0; i < npts; ++i) { // sides
@@ -579,10 +583,8 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 				(p[j][(i+(k^j))%npts] - pos).do_glVertex();
 			}
 		}
-		if (npts == 3) { // need to draw as triangles (0 and 2)
-			(p[0][i] - pos).do_glVertex();
-			(p[1][(i+1)%npts] - pos).do_glVertex();
-		}
+		(p[0][i] - pos).do_glVertex(); // complete the triangles from the quads
+		(p[1][(i+1)%npts] - pos).do_glVertex();
 	}
 	glEnd();
 }

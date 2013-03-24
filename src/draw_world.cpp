@@ -573,10 +573,7 @@ void portal::draw() const {
 	ALPHA0.do_glColor();
 	//WHITE.do_glColor();
 	glBegin(GL_QUADS);
-
-	for (unsigned i = 0; i < 4; ++i) {
-		pts[i].do_glVertex();
-	}
+	draw_quad_from_4_pts(pts);
 	glEnd();
 };
 
@@ -1239,12 +1236,10 @@ void camera_filter::draw() {
 
 	bool const tex(tid >= 0 && glIsTexture(tid));
 	if (tex) select_texture(tid);
-	glBegin(GL_QUADS);
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(0.5*zval*tan_val), x((y*window_width)/window_height);
 	color.do_glColor();
-	draw_one_tquad(-x, -y, x, y, zval, tex);
-	glEnd();
+	draw_tquad(x, y, zval, tex);
 	if (tex) glDisable(GL_TEXTURE_2D);
 }
 

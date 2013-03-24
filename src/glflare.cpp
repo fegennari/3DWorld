@@ -92,27 +92,13 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 		c.do_glColor();
 
 		// Note logic below to eliminate duplicate texture binds.
-		if (flare[i].type < 0) {
+		if (flare[i].type < 0 || bound_to != flareTex[flare[i].type]) {
 			if (bound_to) glEnd();
-			glBindTexture(GL_TEXTURE_2D, shineTex[0]);
-			bound_to = shineTex[0];
-			glBegin(GL_QUADS);
+			bound_to = ((flare[i].type < 0) ? shineTex[0] : flareTex[flare[i].type]);
+			glBindTexture(GL_TEXTURE_2D, bound_to);
+			glBegin(GL_TRIANGLES);
 		}
-		else if (bound_to != flareTex[flare[i].type]) {
-			if (bound_to) glEnd();
-			glBindTexture(GL_TEXTURE_2D, flareTex[flare[i].type]);
-			bound_to = flareTex[flare[i].type];
-			glBegin(GL_QUADS);
-		}
-		point const position(axis*flare[i].loc + center);
-		glTexCoord2f(0.0, 0.0);
-		(position + sx + sy).do_glVertex();
-		glTexCoord2f(1.0, 0.0);
-		(position - sx + sy).do_glVertex();
-		glTexCoord2f(1.0, 1.0);
-		(position - sx - sy).do_glVertex();
-		glTexCoord2f(0.0, 1.0);
-		(position + sx - sy).do_glVertex();
+		draw_billboard_quad((axis*flare[i].loc + center), sx, sy);
 	}
 	if (bound_to) glEnd();
 	glEnable(GL_DEPTH_TEST);

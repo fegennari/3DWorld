@@ -280,8 +280,15 @@ void draw_blasts() {
 					select_multitex(BLUR_TEX,  0);
 					select_multitex(NOISE_TEX, 1);
 					glNormal3f(0.0, 0.0, 1.0);
-					glBegin(GL_QUADS);
-					draw_one_mult_tex_quad(2, -2.0*size, -2.0*size, 2.0*size, 2.0*size, 0.0);
+					glBegin(GL_TRIANGLES);
+					float const p[4][2] = {{0,0}, {0,1}, {1,1}, {1,0}};
+					unsigned const v[6] = {0,2,1, 0,3,2};
+
+					for (unsigned i = 0; i < 6; ++i) { // draw as two quads
+						float const x(p[v[i]][0]), y(p[v[i]][1]);
+						multitex_coord2f_range(x, y, 0, 2);
+						point(2*size*(2*x-1), 2*size*(2*y-1), 0).do_glVertex();
+					}
 					glEnd();
 					disable_multitex(0);
 					disable_multitex(1);

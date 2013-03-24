@@ -334,11 +334,8 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 		float const v2_mag(v2.mag()), mag(v2.mag()/(dist*dir.mag()));
 		v2 *= escale/v2_mag;
 		vector3d const v1(cross_product(dir, v2).get_norm()*(escale*(1.0 + (ar - 1.0)*mag)));
-		glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); (v1*-1 + v2*-1).do_glVertex();
-		glTexCoord2f(0.0, 1.0); (v1*-1 + v2   ).do_glVertex();
-		glTexCoord2f(1.0, 1.0); (v1    + v2   ).do_glVertex();
-		glTexCoord2f(1.0, 0.0); (v1    + v2*-1).do_glVertex();
+		glBegin(GL_TRIANGLES);
+		draw_billboard_quad(all_zeros, v1, v2);
 		glEnd();
 	}
 	else {
