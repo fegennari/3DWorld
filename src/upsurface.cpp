@@ -451,7 +451,7 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, f
 				ptc.state = 1;
 			}
 			for (unsigned ss = 1; ss < SUBDIV_SECTS+1; ++ss) { // render heightmap on higher resolution mesh
-				glBegin(GL_QUAD_STRIP); // or GL_TRIANGLE_STRIP
+				glBegin(GL_TRIANGLE_STRIP);
 
 				for (unsigned tt = 1; tt <= SUBDIV_SECTS+1; ++tt) {
 					for (unsigned i = 0; i < 2; ++i) {
@@ -536,7 +536,7 @@ void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, fl
 					unsigned const inc(1<<((s+t)%MOD_VAL)); // power of two
 
 					for (unsigned ss = 1; ss < nsubdiv+1; ss += inc) {
-						glBegin(GL_QUAD_STRIP);
+						glBegin(GL_TRIANGLE_STRIP);
 
 						for (unsigned tt = 1; tt <= nsubdiv+1; tt += inc) {
 							for (unsigned k = 0; k < 2; ++k) { // iterate over vertices

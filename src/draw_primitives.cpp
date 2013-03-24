@@ -373,7 +373,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		glEnd();
 	}
 	else {
-		glBegin(GL_QUAD_STRIP);
+		glBegin(GL_TRIANGLE_STRIP);
 
 		for (unsigned S = s0; S <= s1; ++S) {
 			unsigned const s(S%ndiv);
@@ -643,7 +643,7 @@ void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool texture
 
 			for (int s = 0; s < ndiv; ++s) {
 				float const va[2] = {(step*(s+1)-0.5), (step*s-0.5)};
-				glBegin(GL_QUAD_STRIP);
+				glBegin(GL_TRIANGLE_STRIP);
 
 				for (int t = 0; t <= ndiv; ++t) {
 					float s[2];
@@ -692,7 +692,7 @@ void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, bool do_tex)
 	for (unsigned s = 0; s < ndivo; ++s) {
 		float const theta(s*ds), ct(cos(theta)), st(sin(theta));
 		point const pos[2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
-		glBegin(GL_QUAD_STRIP);
+		glBegin(GL_TRIANGLE_STRIP);
 
 		for (unsigned t = 0; t <= ndivi; ++t) {
 			unsigned const t_((t == ndivi) ? 0 : t);
@@ -1077,7 +1077,7 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 
 			for (unsigned s0 = 0; s0 < ndivs[d[0]]; ++s0) {
 				float const va[2] = {steps[d[0]]*(s0 + 1), steps[d[0]]*s0};
-				glBegin(GL_QUAD_STRIP);
+				glBegin(GL_TRIANGLE_STRIP);
 
 				for (unsigned s1 = 0; s1 <= ndivs[d[1]]; ++s1) {
 					pt[d[1]] = steps[d[1]]*s1;

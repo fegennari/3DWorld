@@ -17,4 +17,8 @@ Parallax mapping
 
 Tighter textures to reduce fill rate by making the texture tighter (tree leaves/billboards)
 
+Removed deprecated OpenGL calls:
+Use triangles instead of quads
 Draw quads with indices?
+Remove immediate mode calls
+Remove non-shader rendering

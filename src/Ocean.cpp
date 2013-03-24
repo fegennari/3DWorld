@@ -549,7 +549,7 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 	glEnd();
 	enable_blend();
 
-	glBegin(GL_QUAD_STRIP);
+	glBegin(GL_TRIANGLE_STRIP);
 	float yval(-Y_SCENE_SIZE);
 	float const zscale(0.5/min(MAX_VIS_DEPTH, ocean.z - zmin));
 
@@ -561,7 +561,7 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 			if (i == MESH_Y_SIZE || j == MESH_X_SIZE || z_min_matrix[i][j] <= ocean.z || (i > 0 && j > 0 && z_min_matrix[i-1][j-1] <= ocean.z)) {
 				if (new_strip) {
 					glEnd();
-					glBegin(GL_QUAD_STRIP);
+					glBegin(GL_TRIANGLE_STRIP);
 					color.do_glColor();
 					new_strip = 0;
 					set_ocean_alpha(color, last_alpha, zscale, i, j);

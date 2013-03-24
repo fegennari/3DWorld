@@ -47,7 +47,6 @@ bool     const FAST_WATER_RIPPLE   = 0;
 bool     const NO_ICE_RIPPLES      = 0;
 bool     const WATER_SHADOW        = 0; // uses mesh shadow, so is only accurate for shallow water
 int      const UPDATE_UW_LANDSCAPE = 2;
-int      const WATER_PRIM_TYPE     = GL_TRIANGLE_STRIP; // GL_QUAD_STRIP
 
 float const w_spec[2][2] = {{0.3, 80.0}, {0.4, 70.0}};
 
@@ -422,7 +421,7 @@ void draw_water() {
 					(wminside[i][j+1]   == 2 && water_matrix[i][j+1]   > mesh_height[i][j+1]) ||
 					(wminside[i+1][j+1] == 2 && water_matrix[i+1][j+1] > mesh_height[i+1][j+1])))
 				{
-					if (!last_draw) glBegin(WATER_PRIM_TYPE);
+					if (!last_draw) glBegin(GL_TRIANGLE_STRIP);
 					wsd.draw_water_surface(i, j, color, 0);
 					last_draw = 1;
 				}
@@ -495,7 +494,7 @@ void draw_water() {
 	select_water_ice_texture(color);
 	color *= INT_WATER_ATTEN; // attenuate for interior water
 	colorRGBA wcolor(color);
-	glBegin(WATER_PRIM_TYPE);
+	glBegin(GL_TRIANGLE_STRIP);
 	
 	// draw interior water (ponds)
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -544,7 +543,7 @@ void draw_water() {
 									glEnd();
 									select_texture(SNOW_TEX);
 									set_specular(0.6, 20.0);
-									glBegin(WATER_PRIM_TYPE);
+									glBegin(GL_TRIANGLE_STRIP);
 									last_water = 0;
 									color      = WHITE;
 								}
@@ -553,7 +552,7 @@ void draw_water() {
 								glEnd();
 								select_water_ice_texture(color);
 								color *= INT_WATER_ATTEN; // attenuate for interior water
-								glBegin(WATER_PRIM_TYPE);
+								glBegin(GL_TRIANGLE_STRIP);
 								last_water = 1;
 							}
 							if (wsi != last_wsi) {
@@ -589,7 +588,7 @@ void draw_water() {
 					}
 					glEnd();
 				}
-				if (last_draw || nin == 3) glBegin(WATER_PRIM_TYPE);
+				if (last_draw || nin == 3) glBegin(GL_TRIANGLE_STRIP);
 				last_draw = 0;
 			}
 		} // for j
@@ -1219,7 +1218,7 @@ void draw_spillover(int i, int j, int si, int sj, int index, int vol_over, float
 	int const xs(nov ? -1 : valleys[index].x), ys(nov ? -1 : valleys[index].y);
 	int count(0);
 	enable_blend();
-	glBegin(GL_QUAD_STRIP);
+	glBegin(GL_TRIANGLE_STRIP);
 	up_norm.do_glNormal();
 
 	if (!point_outside_mesh(sj, si)) {

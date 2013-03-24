@@ -421,7 +421,7 @@ void display_mesh() { // fast array version
 		vert_norm::set_vbo_arrays();
 
 		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-			glDrawArrays(GL_QUAD_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
+			glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
 		}
 		bind_vbo(0);
 	}
