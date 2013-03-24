@@ -140,6 +140,7 @@ void draw_cloud_plane(bool reflection_pass);
 void draw_sky(int order);
 void draw_stationary_sky(float radius, float density);
 void compute_brightness();
+void setup_water_plane_texgen(float s_scale, float t_scale);
 void draw_water_plane(float zval, unsigned reflection_tid);
 void draw_bubbles();
 void draw_smoke();

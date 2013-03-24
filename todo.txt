@@ -15,8 +15,8 @@ Leaves on ground (as texture)
 
 Parallax mapping
 
-TT Underwater caustics
-
 Tighter textures to reduce fill rate by making the texture tighter (tree leaves/billboards)
 
 Draw quads with indices?
+
+Blood on Baseball Bat

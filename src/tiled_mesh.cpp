@@ -47,6 +47,7 @@ extern tree_data_manager_t tree_data_manager;
 extern pt_line_drawer tree_scenery_pld;
 
 bool enable_terrain_env(ENABLE_TERRAIN_ENV);
+void set_water_plane_uniforms(shader_t &s);
 
 
 float get_scaled_tile_radius  () {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
@@ -1238,22 +1239,32 @@ public:
 		s.add_uniform_float("cloud_alpha",   0.75*atmosphere);
 	}
 
-	// uses texture units 0-9
+	// uses texture units 0-10
 	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
+		bool const has_water(is_water_enabled() && !reflection_pass);
 		lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
+		if (has_water) {s.set_prefix("#define HAS_WATER", 1);} // FS
 		s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
 		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+tiled_mesh");
 		s.begin_shader();
 		s.setup_fog_scale();
-		s.add_uniform_int("tex0", 0);
-		s.add_uniform_int("tex1", 1);
+		s.add_uniform_int("weights_tex", 0);
+		s.add_uniform_int("detail_tex",  1);
 		s.add_uniform_int("shadow_normal_tex", 7);
-		s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
-		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 		set_noise_tex(s, 8);
 		setup_cloud_plane_uniforms(s);
 		setup_terrain_textures(s, 2, 0);
+
+		if (has_water) {
+			set_water_plane_uniforms(s);
+			s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
+			select_multitex(WATER_CAUSTIC_TEX, 10, 0);
+			s.add_uniform_int("caustic_tex", 10);
+			set_active_texture(2);
+			setup_water_plane_texgen(8.0, 2.5); // tu_id=2; increase texture scale and change AR since the caustics texture is sparser than the water texture
+			set_active_texture(0);
+		}
 	}
 
 	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix) {
@@ -1367,6 +1378,7 @@ public:
 			num_trees += to_draw[i].second->num_pine_trees();
 			if (display_mode & 0x01) {to_draw[i].second->draw(s, reflection_pass);}
 		}
+		disable_multitex(2, 1); // disable texgen on tu_id=2
 		s.end_shader();
 		
 		if (DEBUG_TILES) {

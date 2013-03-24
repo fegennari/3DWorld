@@ -34,7 +34,7 @@ struct fp_ratio {
 // Global Variables
 bool clear_landscape_vbo;
 int island(0);
-float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0);
+float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, draw_mesh_shader, disable_shaders;
@@ -686,15 +686,30 @@ void draw_water_sides(int check_zvals) {
 }
 
 
+void setup_water_plane_texgen(float s_scale, float t_scale) {
+
+	vector3d const wdir(vector3d(wind.x, wind.y, 0.0).get_norm());// wind.z is probably 0.0 anyway (nominal 1,0,0)
+	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), xscale(tscale*wdir.x), yscale(tscale*wdir.y);
+	float const tdx(tscale*(xoff2 - xoff)*DX_VAL + water_xoff), tdy(tscale*(yoff2 - yoff)*DY_VAL + water_yoff);
+	setup_texgen_full(s_scale*xscale, s_scale*yscale, 0.0, s_scale*(tdx*wdir.x + tdy*wdir.y), -t_scale*yscale, t_scale*xscale, 0.0, t_scale*(-tdx*wdir.y + tdy*wdir.x), GL_EYE_LINEAR);
+}
+
+
+void set_water_plane_uniforms(shader_t &s) {
+
+	s.add_uniform_float("wave_time",      wave_time);
+	s.add_uniform_float("wave_amplitude", min(1.0, 1.5*wind.mag())); // No waves if (temperature < W_FREEZE_POINT)?
+	s.add_uniform_float("water_plane_z",  water_plane_z);
+}
+
+
 // texture units used: 0: reflection texture, 1: water normal map, 2: mesh height texture
 void draw_water_plane(float zval, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
-	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE);
 	colorRGBA color;
 	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature), 1);
 	bool const reflections(!(display_mode & 0x20));
-	static float wave_time(0.0);
 	color.alpha *= 0.5;
 
 	if (animate2 && temperature > W_FREEZE_POINT) {
@@ -705,12 +720,9 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	if (light_factor >= 0.4 && get_sun_pos().z < water_plane_z) {set_specular(0.0, 1.0);} // has sun but it's below the water level
 	point const camera(get_camera_pos());
 	vector3d(0.0, 0.0, ((camera.z < zval) ? -1.0 : 1.0)).do_glNormal();
+	setup_water_plane_texgen(1.0, 1.0);
 	set_fill_mode();
 	enable_blend();
-	float const tdx(tscale*(xoff2 - xoff)*DX_VAL + water_xoff), tdy(tscale*(yoff2 - yoff)*DY_VAL + water_yoff);
-	vector3d const wind_xy(wind.x, wind.y, 0.0); // wind.z is probably 0.0 anyway (nominal 1,0,0)
-	vector3d const wdir(wind_xy.get_norm());
-	setup_texgen_full(tscale*wdir.x, tscale*wdir.y, 0.0, (tdx*wdir.x + tdy*wdir.y), -tscale*wdir.y, tscale*wdir.x, 0.0, (-tdx*wdir.y + tdy*wdir.x), GL_EYE_LINEAR);
 	shader_t s;
 
 	if (!disable_shaders) {
@@ -726,13 +738,12 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 			glGetFloatv(GL_FOG_COLOR, (float *)&rcolor);
 			//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 		}
-		bool const add_waves((display_mode & 0x0100) != 0 && wind_xy != zero_vector);
+		bool const add_waves((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);
 		bool const rain_mode(add_waves && is_rain_enabled());
 		rcolor.alpha = 0.5*(0.5 + color.alpha);
 		s.setup_enabled_lights();
 		s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-		s.set_prefix("#define NUM_OCTAVES 6",     1); // FS
 		s.set_bool_prefix("reflections", reflections, 1); // FS
 		s.set_bool_prefix("add_waves", add_waves, 1); // FS
 		s.set_bool_prefix("add_noise", rain_mode, 1); // FS
@@ -743,18 +754,14 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		s.add_uniform_int  ("reflection_tex", 0);
 		s.add_uniform_color("water_color",    color);
 		s.add_uniform_color("reflect_color",  rcolor);
-		s.add_uniform_float("ripple_scale", 10.0);
-		s.add_uniform_float("ripple_mag",   2.0);
+		s.add_uniform_float("ripple_scale",   10.0);
+		s.add_uniform_float("ripple_mag",     2.0);
+		s.add_uniform_int  ("height_tex",     2);
 
 		// waves (as normal map)
 		select_multitex(WATER_NORMAL_TEX, 1, 0);
 		s.add_uniform_int("water_normal_tex", 1);
-		s.add_uniform_float("wave_time",      wave_time);
-		s.add_uniform_float("wave_amplitude", min(1.0, 1.5*wind_xy.mag())); // No waves if (temperature < W_FREEZE_POINT)?
-
-		// mesh height texture stuff
-		s.add_uniform_float("water_plane_z", water_plane_z);
-		s.add_uniform_int("height_tex", 2);
+		set_water_plane_uniforms(s);
 
 		if (rain_mode) {s.add_uniform_float("noise_time", frame_counter);} // rain ripples
 		set_color(WHITE);

@@ -11,7 +11,7 @@ vec3 water_normal_lookup(in vec2 tc) {
 
 vec3 get_wave_normal(in vec2 tc) {
 	float ntime = 2.0*abs(fract(0.005*wave_time) - 0.5);
-	return ntime*water_normal_lookup(tc) + (1.0 - ntime)*water_normal_lookup(tc + vec2(0.3, 0.6));
+	return mix(water_normal_lookup(tc), water_normal_lookup(tc + vec2(0.3, 0.6)), ntime);
 }
 
 void main()
