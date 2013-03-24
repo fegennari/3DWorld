@@ -18,5 +18,3 @@ Parallax mapping
 Tighter textures to reduce fill rate by making the texture tighter (tree leaves/billboards)
 
 Draw quads with indices?
-
-Blood on Baseball Bat

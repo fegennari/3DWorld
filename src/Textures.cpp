@@ -153,7 +153,8 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "caustics.jpg"), // 512x512
 // noise
 texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
 texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
-texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse") // not real file
+texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
+texture_t(1, 0, 128,  128,  1, 3, 1, "@player_bbb_tex") // not real file
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [do_compress [anisotropy [mipmap_alpha_weight]]]
 };
@@ -237,6 +238,7 @@ void load_textures() {
 	gen_disintegrate_texture();
 	gen_shingle_texture();
 	gen_fence_texture();
+	update_player_bbb_texture(0.0, 0);
 	gen_blur_inv_texture(); // must be after BLUR_TEX
 	gen_stripe_texture(HSTRIPE_TEX, 1);
 	gen_stripe_texture(VSTRIPE_TEX, 0);
@@ -1231,6 +1233,34 @@ void gen_fence_texture() {
 
 	for (unsigned i = 0; i < size; ++i) { // convert to lighter color
 		tex_data[i] = (unsigned char)min((unsigned)255, ((unsigned)tex_data2[i]) << 2);
+	}
+}
+
+
+void update_player_bbb_texture(float extra_blood, bool recreate) {
+
+	texture_t const &wood_tex(textures[WOOD_TEX]);
+	texture_t &bbb_tex(textures[PLAYER_BBB_TEX]);
+	assert(wood_tex.width == bbb_tex.width && wood_tex.height == bbb_tex.height && wood_tex.ncolors == bbb_tex.ncolors);
+	unsigned char const *const wood_data(wood_tex.get_data());
+	unsigned char *const bbb_data(bbb_tex.get_data());
+	
+	if (extra_blood == 0.0) { // copy/reset mode, just copy from WOOD_TEX
+		unsigned const size(wood_tex.num_bytes());
+		for (unsigned i = 0; i < size; ++i) {bbb_data[i] = wood_data[i];}
+	}
+	else { // add blood mode
+		assert(bbb_tex.ncolors == 3);
+		unsigned const npixels(wood_tex.num_pixels());
+		unsigned const rval(max(1, round_fp(1.0/extra_blood)));
+
+		for (unsigned i = 0; i < npixels; ++i) {
+			if ((rand() % rval) == 0) {bbb_data[3*i+0] = 255; bbb_data[3*i+1] = 0; bbb_data[3*i+2] = 0;} // make all red
+		}
+	}
+	if (recreate) {
+		bbb_tex.gl_delete();
+		bbb_tex.init(); // unnecessary?
 	}
 }
 

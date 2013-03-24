@@ -1315,7 +1315,8 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 			if (!objg.obj_within_dist(i, pos, rad))  continue;
 
 			if (type == SMILEY) {
-				++sstates[shooter].cb_hurt;
+				if (weapon == W_BLADE) {++sstates[shooter].cb_hurt;}
+				if (weapon == W_BBBAT && shooter == CAMERA_ID) {update_player_bbb_texture(0.05, 1);}
 				smiley_collision(i, shooter, velocity, pos, damage, IMPACT);
 				sound_gain = 0.7;
 			}

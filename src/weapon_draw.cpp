@@ -575,7 +575,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_BBBAT:
 			radius = 0.004;
 			set_color_alpha(LT_BROWN, alpha);
-			select_texture(WOOD_TEX);
+			select_texture(is_camera ? PLAYER_BBB_TEX : WOOD_TEX); // customize the player's baseball bat
 			gluQuadricTexture(quadric, GL_TRUE);
 			glRotatef(45.0, -dir.y, dir.x, 0.0);
 			glTranslatef(tx, ty, 0.0);
