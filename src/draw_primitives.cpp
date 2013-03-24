@@ -743,7 +743,7 @@ void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, floa
 	point const camera(get_camera_pos());
 	select_texture(BLUR_TEX);
 	(camera - pos).do_glNormal();
-	glBegin(GL_QUADS);
+	glBegin(GL_TRIANGLES);
 	draw_billboard(xlate, (camera - pos + xlate), up_vector, xsize, ysize);
 	glEnd();
 	glDepthMask(GL_TRUE);
@@ -821,6 +821,7 @@ void draw_billboard(point const &pos, point const &viewer, vector3d const &up_di
 	vector3d const v2((up_is_y ? up_dir : cross_product(v1, vdir).get_norm())*ysize); // y
 
 	if (minimize_fill) { // draw as octagon
+		assert(tx1 == 0 && ty1 == 0 && tx2 == 1 && ty2 == 1);
 		float const p[8][2] = {{0.7,0.0}, {1.0,0.3}, {1.0,0.7}, {0.7,1.0}, {0.3,1.0}, {0.0,0.7}, {0.0,0.3}, {0.3,0.0}};
 		unsigned const v[18] = {0,1,7 ,1,6,7, 1,2,6, 2,5,6, 2,3,5, 3,4,5};
 
@@ -830,11 +831,15 @@ void draw_billboard(point const &pos, point const &viewer, vector3d const &up_di
 			(pos + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0)).do_glVertex();
 		}
 	}
-	else {
-		glTexCoord2f(tx1, ty1); (pos - v1 - v2).do_glVertex();
-		glTexCoord2f(tx1, ty2); (pos - v1 + v2).do_glVertex();
-		glTexCoord2f(tx2, ty2); (pos + v1 + v2).do_glVertex();
-		glTexCoord2f(tx2, ty1); (pos + v1 - v2).do_glVertex();
+	else { // draw as quads
+		float const p[4][2] = {{0,0}, {0,1}, {1,1}, {1,0}};
+		float const t[4][2] = {{tx1,ty1}, {tx1,ty2}, {tx2,ty2}, {tx2,ty1}};
+		unsigned const v[6] = {0,2,1, 0,3,2};
+
+		for (unsigned i = 0; i < 6; ++i) {
+			glTexCoord2f(t[v[i]][0], t[v[i]][1]);
+			(pos + v1*(2.0*p[v[i]][0] - 1.0) + v2*(2.0*p[v[i]][1] - 1.0)).do_glVertex();
+		}
 	}
 }
 

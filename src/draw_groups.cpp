@@ -525,7 +525,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		else if (type == PARTICLE) {
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.01);
-			glBegin(GL_QUADS);
+			glBegin(GL_TRIANGLES);
 		}
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
@@ -611,7 +611,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			glDepthMask(GL_FALSE);
 			select_texture(BLUR_TEX);
 			glNormal3f(0.0, 0.0, 1.0);
-			glBegin(GL_QUADS);
+			glBegin(GL_TRIANGLES);
 
 			for (vector<puddle_t>::const_iterator p = puddles.begin(); p != puddles.end(); ++p) {
 				set_color_alpha(p->color);

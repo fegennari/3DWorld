@@ -1037,7 +1037,7 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 	//select_multitex(CLOUD_TEX, 1);
 	glAlphaFunc(GL_GREATER, 0.01);
 	glEnable(GL_ALPHA_TEST); // makes it faster
-	glBegin(MIN_PARTICLE_FILL ? GL_TRIANGLES : GL_QUADS);
+	glBegin(GL_TRIANGLES);
 	draw_objects(pc);
 	glEnd();
 	glDisable(GL_ALPHA_TEST);
@@ -1070,7 +1070,7 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.04);
 	select_texture(tid);
-	glBegin(GL_QUADS);
+	glBegin(GL_TRIANGLES);
 
 	for (unsigned j = 0; j < order.size(); ++j) {
 		unsigned const i(order[j].second);
@@ -1142,8 +1142,13 @@ void create_and_draw_cracks() {
 		last_cobj = i->cid;
 		if (skip_cobj) continue;
 		int const face(cobj.closest_face(pos)), dim(face >> 1), dir(face & 1);
-		if ((pos[dim] - camera[dim] < 0) ^ dir) continue; // back facing
-		cpts.push_back(crack_point(pos, i->pos, i->cid, face, i->time, i->get_alpha(), i->color));
+		vector3d dpos(all_zeros);
+		
+		if ((pos[dim] - camera[dim] < 0) ^ dir) { // back facing - render the crack on the other side of the glass
+			dpos = 2*(cobj.get_center_pt() - i->pos);
+			UNROLL_3X(dpos[i_] *= fabs(i->orient[i_]);)
+		}
+		cpts.push_back(crack_point(pos+dpos, i->pos+dpos, i->cid, face, i->time, i->get_alpha(), i->color));
 	}
 	stable_sort(cpts.begin(), cpts.end());
 
@@ -1283,7 +1288,7 @@ void draw_sparks() {
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.01);
 	select_texture(BLUR_TEX);
-	glBegin(GL_QUADS);
+	glBegin(GL_TRIANGLES);
 	draw_objects(sparks);
 	glEnd();
 	glDisable(GL_TEXTURE_2D);

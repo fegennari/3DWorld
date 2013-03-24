@@ -229,7 +229,7 @@ void draw_blasts() {
 			if (br.type == ETYPE_ANIM_FIRE) {
 				glDepthMask(GL_FALSE);
 				select_texture(EXPLOSION_TEX);
-				glBegin(GL_QUADS);
+				glBegin(GL_TRIANGLES);
 				draw_animated_billboard(pos, size, timescale);
 				glEnd();
 				glDepthMask(GL_TRUE);
