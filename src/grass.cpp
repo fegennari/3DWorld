@@ -575,8 +575,7 @@ public:
 		shader_t s;
 
 		if (grass_wind) { // enables lighting and shadows as well
-			s.set_prefix("#define USE_LIGHT_COLORS",  0); // VS
-			s.set_prefix("#define USE_GOOD_SPECULAR", 0); // VS
+			s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 			s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 0); // VS
 #if 0 // per-pixel dynamic lighting - looks better, but slow
 			s.setup_enabled_lights(2); // L0-L1: static directional

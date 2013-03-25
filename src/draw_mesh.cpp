@@ -740,7 +740,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	bool const rain_mode(add_waves && is_rain_enabled());
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
 	s.setup_enabled_lights();
-	s.set_prefix("#define USE_GOOD_SPECULAR", 1); // FS
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	s.set_bool_prefix("reflections", reflections, 1); // FS
 	s.set_bool_prefix("add_waves", add_waves, 1); // FS

@@ -6,7 +6,7 @@ vec4 calc_spec_term(in float NdotHV, in int i) {
 	return spec_color * pow(NdotHV, gl_FrontMaterial.shininess);
 }
 
-vec4 get_light_specular_fast(in vec3 normal, in int i) {
+vec4 get_light_specular_fast(in vec3 normal, in int i) { // unused
 	float NdotHV = max(dot(normal, normalize(gl_LightSource[i].halfVector.xyz)), 0.0);
 	return calc_spec_term(NdotHV, i);
 }
@@ -41,14 +41,10 @@ vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float 
 	vec4 diffuse = gl_FrontLightProduct[i].diffuse;
 	vec4 ambient = gl_FrontLightProduct[i].ambient;
 #endif
-#ifdef USE_GOOD_SPECULAR
-	vec4 specular = get_light_specular(normal, light_dir, eye_pos, i);
-#else
-#ifndef NO_SPECULAR
+#ifdef NO_SPECULAR
 	vec4 specular = vec4(0,0,0,0);
 #else
-	vec4 specular = get_light_specular_fast(normal, i);
-#endif
+	vec4 specular = get_light_specular(normal, light_dir, eye_pos, i);
 #endif
 	return (ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
 }

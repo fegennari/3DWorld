@@ -1217,10 +1217,9 @@ public:
 
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {
 		s.setup_enabled_lights(3); // sun, moon, and lightning
-		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.set_prefix("#define USE_QUADRATIC_FOG",       1); // FS
 		s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1); // FS
-		s.set_prefix("#define USE_LIGHT_COLORS",  lighting_shader);
-		s.set_prefix("#define USE_GOOD_SPECULAR", lighting_shader);
+		s.set_prefix("#define USE_LIGHT_COLORS",        lighting_shader);
 	}
 
 	static void lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows) {
