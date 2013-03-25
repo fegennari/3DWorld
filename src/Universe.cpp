@@ -2099,7 +2099,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 			ca.A *= alpha; cb.A *= alpha;
 			usg.enable_star_shader(ca, cb);
 			enable_blend();
-			if (size > 6.0) {draw_flare_no_blend(pos_, all_zeros, 2.5*radius, 2.5*radius);}
+			if (size > 6.0) {draw_flare_no_blend(pos_, all_zeros, 3.0*radius, 3.0*radius);}
 
 			if (cfr > 2.5) {
 				draw_flare_no_blend(pos_, all_zeros, 0.5*radius, cfr*radius);

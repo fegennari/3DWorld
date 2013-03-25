@@ -18,9 +18,7 @@ Parallax mapping
 Tighter textures to reduce fill rate by making the texture tighter (tree leaves/billboards)
 
 Removed deprecated OpenGL calls:
-Use triangles instead of quads
-Draw quads with indices?
+Use triangles instead of quads (indexed draw for individual/isolated quads)
 Remove immediate mode calls
+- Billboard render manager
 Remove non-shader rendering
-
-Fix ship specular?
