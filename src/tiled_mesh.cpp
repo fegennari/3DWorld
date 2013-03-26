@@ -1349,6 +1349,20 @@ public:
 		unsigned num_drawn(0), num_trees(0);
 		unsigned long long mem(grass_tile_manager.get_gpu_mem() + tree_data_manager.get_gpu_mem()), tree_mem(0);
 		to_draw.clear();
+
+		// determine potential occluders
+		float const OCCLUDER_DIST = 0.5;
+		bool const check_occlusion((display_mode & 0x10) != 0);
+		vector<tile_t *> occluders;
+
+		if (check_occlusion) {
+			for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+				tile_t *const tile(i->second);
+				if (tile->get_rel_dist_to_camera() > OCCLUDER_DIST || !tile->is_visible()) continue;
+				occluders.push_back(tile);
+			}
+			//cout << "occluders: " << occluders.size() << endl;
+		}
 		
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			tile_t *const tile(i->second);
@@ -1361,6 +1375,16 @@ public:
 			if (dist > DRAW_DIST_TILES || !tile->is_visible()) continue;
 			tile_set_t tile_set;
 			if (reflection_pass && !can_have_reflection(tile, tile_set)) continue;
+
+			if (check_occlusion) {
+				cube_t const tile_bcube(tile->get_bcube());
+
+				for (vector<tile_t *>::const_iterator j = occluders.begin(); j != occluders.end(); ++j) {
+					if (*j == tile) continue; // no self-occlusion
+					cube_t const occluder_bcube((*j)->get_bcube());
+					// FIXME: write
+				}
+			}
 			to_draw.push_back(make_pair(dist, tile));
 		}
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
