@@ -566,27 +566,29 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 
 	assert(!invalid);
 	assert(npts == 3 || npts == 4);
-	glBegin(GL_TRIANGLES);
+	vert_wrap_t verts[36];
+	unsigned ix(0);
 
 	for (unsigned i = 0; i < 2; ++i) { // ends (cull faces?)
 		for (unsigned j = 0; j < npts; ++j) {
-			(p[i][i ? j : (npts-j-1)] - pos).do_glVertex();
+			verts[ix++].v = (p[i][i ? j : (npts-j-1)] - pos);
 		}
 		if (npts == 4) { // complete the triangles from the quads
-			(p[i][i ? 0 : 3] - pos).do_glVertex();
-			(p[i][i ? 2 : 1] - pos).do_glVertex();
+			verts[ix++].v = (p[i][i ? 0 : 3] - pos);
+			verts[ix++].v = (p[i][i ? 2 : 1] - pos);
 		}
 	}
 	for (unsigned i = 0; i < npts; ++i) { // sides
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < 2; ++k) {
-				(p[j][(i+(k^j))%npts] - pos).do_glVertex();
+				verts[ix++].v = (p[j][(i+(k^j))%npts] - pos);
 			}
 		}
-		(p[0][i] - pos).do_glVertex(); // complete the triangles from the quads
-		(p[1][(i+1)%npts] - pos).do_glVertex();
+		verts[ix++].v = (p[0][i] - pos); // complete the triangles from the quads
+		verts[ix++].v = (p[1][(i+1)%npts] - pos);
 	}
-	glEnd();
+	verts[0].set_state();
+	glDrawArrays(GL_TRIANGLES, 0, ix);
 }
 
 
@@ -668,23 +670,26 @@ void ushadow_triangle_mesh::set_triangle(unsigned t, upos_point_type const pts[3
 void ushadow_triangle_mesh::draw(upos_point_type const &pos) const {
 
 	assert(!invalid);
-	glBegin(GL_TRIANGLES);
+	if (tris.empty()) return;
+	static vector<vert_wrap_t> verts;
+	verts.resize(0);
 
 	for (tri_vect_t::const_iterator t = tris.begin(); t != tris.end(); ++t) {
 		for (unsigned i = 0; i < 2; ++i) { // ends (cull faces?)
 			for (unsigned j = 0; j < 3; ++j) {
-				(t->p[i][i ? j : (2-j)] - pos).do_glVertex();
+				verts.push_back(vert_wrap_t(t->p[i][i ? j : (2-j)] - pos));
 			}
 		}
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < 2; ++k) {
-				(t->p[j][(k^j)%3] - pos).do_glVertex();
+				verts.push_back(vert_wrap_t(t->p[j][(k^j)%3] - pos));
 			}
 		}
-		(t->p[0][0] - pos).do_glVertex(); // need to draw as triangles (0 and 2)
-		(t->p[1][1] - pos).do_glVertex();
+		verts.push_back(vert_wrap_t(t->p[0][0] - pos)); // need to draw as triangles (0 and 2)
+		verts.push_back(vert_wrap_t(t->p[1][1] - pos));
 	}
-	glEnd();
+	verts.front().set_state();
+	glDrawArrays(GL_TRIANGLES, 0, verts.size());
 }
 
 
