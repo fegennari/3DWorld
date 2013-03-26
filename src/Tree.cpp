@@ -809,7 +809,7 @@ void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) co
 	if (draw_branches && branch_vbo_manager.vbo) { // draw branches (untextured)
 		branch_vbo_manager.pre_render();
 		glVertexPointer(3, GL_FLOAT, sizeof(branch_vert_type_t), 0);
-		glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num_branch_quads, GL_UNSIGNED_SHORT, 0);
+		glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, 6*num_branch_quads, GL_UNSIGNED_SHORT, 0);
 		branch_vbo_manager.post_render();
 	}
 	if (draw_leaves && leaf_vbo > 0 && !leaves.empty()) { // draw leaves
@@ -910,7 +910,7 @@ void tree_data_t::create_indexed_quads_for_branches(vector<branch_vert_type_t> &
 	}
 	assert(data.size() + num_pts < (1 << 8*sizeof(branch_index_t))); // cutting it close with 4th order branches
 	data.reserve(num_pts);
-	idata.reserve(4*num_quads);
+	idata.reserve(6*num_quads);
 
 	for (unsigned i = 0; i < numcylin; i++) {
 		draw_cylin const &cylin(all_cylins[i]);
@@ -940,6 +940,8 @@ void tree_data_t::create_indexed_quads_for_branches(vector<branch_vert_type_t> &
 			idata.push_back(ix+ndiv);
 			idata.push_back(last_edge ? ix+1 : ix+ndiv+1);
 			idata.push_back(last_edge ? ix+1-ndiv : ix+1);
+			idata.push_back(ix);
+			idata.push_back(last_edge ? ix+1 : ix+ndiv+1);
 		}
 		++cylin_id;
 	} // for i
@@ -956,15 +958,15 @@ void tree_data_t::draw_branches(float size_scale) {
 		create_indexed_quads_for_branches(data, idata);
 		assert(data.size()  == data.capacity());
 		assert(idata.size() == idata.capacity());
-		num_branch_quads = idata.size()/4;
+		num_branch_quads = idata.size()/6;
 		num_unique_pts   = data.size();
 		branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 	}
 	//glEnableClientState(GL_INDEX_ARRAY);
 	branch_vbo_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0, 0); // Note: could skip every other vert index for improved perf when distant
-	unsigned const num(4*((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale))))); // branch LOD
-	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0); // draw with branch vbos
+	unsigned const num(6*((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale))))); // branch LOD
+	glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0); // draw with branch vbos
 	//glDisableClientState(GL_INDEX_ARRAY);
 }
 

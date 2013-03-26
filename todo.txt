@@ -26,6 +26,4 @@ Remove non-shader rendering
 Make a backup
 
 Tree billboards use triangles instead of quads
-
-Tree branches use triangles instead of quads (4 => 6 indices)
 Tree leaves use indexed triangles instead of quads (leaf wind modifies vertices, remove modifies both vertices and indices)
