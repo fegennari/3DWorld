@@ -31,9 +31,6 @@ unsigned const MAX_MULTITEX = 32; // max is GL_TEXTURE31
 
 void set_active_texture(unsigned tu_id) {
 
-	static bool inited(0);
-	if (!inited) setup_multitexture();
-	inited = 1;
 	assert(tu_id < MAX_MULTITEX); // Note: Assumes textures are defined sequentially
 	glActiveTexture((GL_TEXTURE0 + tu_id));
 }
@@ -53,50 +50,6 @@ void disable_multitex(unsigned tu_id, bool do_disable_texgen) {
 	if (do_disable_texgen) {disable_texgen();}
 	glDisable(GL_TEXTURE_2D);
 	set_active_texture(0); // end back at texture 0
-}
-
-
-void disable_multitex_range(unsigned tu_id0, unsigned tu_id1) {
-
-	assert(tu_id0 < tu_id1 && tu_id1 <= MAX_MULTITEX);
-	for (unsigned i = tu_id0; i < tu_id1; ++i) {disable_multitex(i);}
-}
-
-
-void multitex_coord_n(unsigned tu_id, float const *v, unsigned num) {
-
-	unsigned const id(GL_TEXTURE0 + tu_id);
-	switch (num) {
-		case 1: glMultiTexCoord1fv(id, v); break;
-		case 2: glMultiTexCoord2fv(id, v); break;
-		case 3: glMultiTexCoord3fv(id, v); break;
-		case 4: glMultiTexCoord4fv(id, v); break;
-		default: assert(0);
-	}
-}
-
-
-void multitex_coord2f(GLfloat s, GLfloat t, unsigned tu_id) {
-
-	glMultiTexCoord2f((GL_TEXTURE0 + tu_id), s, t);
-}
-
-
-void multitex_coord2f_range(GLfloat s, GLfloat t, unsigned tu_id0, unsigned tu_id1) {
-
-	assert(tu_id0 < tu_id1 && tu_id1 <= MAX_MULTITEX);
-	for (unsigned i = tu_id0; i < tu_id1; ++i) {multitex_coord2f(s, t, i);}
-}
-
-
-void setup_multitexture() { // Windows specific
-
-	if (!glMultiTexCoord2f) {
-		cout << "*** Can't find GL_multitexture extension ***" << endl;
-		assert(0);
-	}
-	//glClientActiveTexture(GL_TEXTURE0);
-	//glTexCoordPointer(2, GL_FLOAT, 0, tp0);
 }
 
 

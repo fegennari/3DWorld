@@ -256,7 +256,6 @@ void load_textures() {
 		textures[i].init();
 	}
 	textures[TREE_HEMI_TEX].set_color_alpha_to_one();
-	setup_multitexture();
 
 	int max_tc(0), max_tu(0), max_tiu(0), max_ctiu(0);
 	glGetIntegerv(GL_MAX_TEXTURE_COORDS,      &max_tc);

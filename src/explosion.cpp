@@ -9,6 +9,7 @@
 #include "ship_util.h"
 #include "mesh.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 bool  const NO_NONETYPE_BRS = 0; // faster but fewer lights
@@ -213,6 +214,13 @@ void draw_blasts() {
 	gluQuadricTexture(quadric, GL_TRUE);
 	//glEnable(GL_ALPHA_TEST);
 	//glAlphaFunc(GL_GREATER, 0.05);
+	shader_t s;
+	s.set_vert_shader("multitex_2");
+	s.set_frag_shader("multitex_2");
+	s.begin_shader();
+	s.add_uniform_int("tex0", 0);
+	s.add_uniform_int("tex1", 1);
+	select_multitex(WHITE_TEX, 1, 0);
 
 	for (unsigned i = 0; i < blastrs.size(); ++i) {
 		blastr const &br(blastrs[i]);
@@ -221,91 +229,81 @@ void draw_blasts() {
 		float const size(br.cur_size);
 		point const &pos(br.pos);
 		assert(size > 0.0);
+		if (!(universe ? univ_sphere_vis_dist(pos, size) : sphere_in_camera_view(pos, size, 0))) continue;
+		br.cur_color.do_glColor();
+		float const timescale(((float)br.time)/(float)br.st_time); // 1.0 to 0.0 => 15 to 0
 
-		if (universe ? univ_sphere_vis_dist(pos, size) : sphere_in_camera_view(pos, size, 0)) {
-			br.cur_color.do_glColor();
-			float const timescale(((float)br.time)/(float)br.st_time); // 1.0 to 0.0 => 15 to 0
-
-			if (br.type == ETYPE_ANIM_FIRE) {
-				glDepthMask(GL_FALSE);
-				select_texture(EXPLOSION_TEX);
-				glBegin(GL_TRIANGLES);
-				draw_animated_billboard(pos, size, timescale);
-				glEnd();
-				glDepthMask(GL_TRUE);
-				continue;
-			}
-			// use distance_to_camera() for non-universe mode?
-			//float const sscale(universe ? 2.2/min(0.02f, distance_to_camera(pos)) : 1.0);
-			float const sscale(universe ? 0.4/sqrt(size*distance_to_camera(pos)) : 1.0);
-			int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*size*sscale))));
-
-			switch (br.type) {
-			case ETYPE_FIRE:
-			case ETYPE_PLASMA:
-			case ETYPE_EBURST:
-				select_texture(PLASMA_TEX);
-				//draw_subdiv_sphere(make_pt_global(pos), size, ndiv, 1, 0); // incorrect bfc due to transforms
+		if (br.type == ETYPE_ANIM_FIRE) {
+			glDepthMask(GL_FALSE);
+			select_texture(EXPLOSION_TEX, 0);
+			glBegin(GL_TRIANGLES);
+			draw_animated_billboard(pos, size, timescale);
+			glEnd();
+			glDepthMask(GL_TRUE);
+			continue;
+		}
+		switch (br.type) {
+		case ETYPE_FIRE:
+		case ETYPE_PLASMA:
+		case ETYPE_EBURST:
+			{
+				// use distance_to_camera() for non-universe mode?
+				//float const sscale(universe ? 2.2/min(0.02f, distance_to_camera(pos)) : 1.0);
+				float const sscale(universe ? 0.4/sqrt(size*distance_to_camera(pos)) : 1.0);
+				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*size*sscale))));
+				select_texture(PLASMA_TEX, 0);
 				draw_sphere_at_tc(make_pt_global(pos), size, ndiv, 1, 1);
-				break;
+			}
+			break;
 
-			case ETYPE_ENERGY:
-			case ETYPE_ATOMIC:
-				{
-					select_texture(CLOUD_TEX);
-					glEnable(GL_ALPHA_TEST);
-					glAlphaFunc(GL_GREATER, 0.4*(1.0 - timescale));
-					//glEnable(GL_CULL_FACE);
-					glPushMatrix();
-					global_translate(pos);
-					rotate_about(90.0*timescale, br.dir);
-					draw_sphere_dlist(all_zeros, size, ndiv, 1);
-					glPopMatrix();
-					//glDisable(GL_CULL_FACE);
-					glDisable(GL_ALPHA_TEST);
-				}
-				break;
-
-			case ETYPE_FUSION:
-			case ETYPE_ESTEAL:
-			case ETYPE_STARB:
-			case ETYPE_NUCLEAR:
-			case ETYPE_SIEGE:
-				glDepthMask(GL_FALSE);
+		case ETYPE_ENERGY:
+		case ETYPE_ATOMIC:
+			{
+				float const sscale(universe ? 0.4/sqrt(size*distance_to_camera(pos)) : 1.0);
+				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*size*sscale))));
+				select_texture(CLOUD_TEX, 0);
+				glEnable(GL_ALPHA_TEST);
+				glAlphaFunc(GL_GREATER, 0.4*(1.0 - timescale));
+				//glEnable(GL_CULL_FACE);
 				glPushMatrix();
 				global_translate(pos);
-
-				if (br.type == ETYPE_STARB) {
-					rotate_into_dir((universe ? br.dir : all_zeros), pos);
-					select_multitex(BLUR_TEX,  0);
-					select_multitex(NOISE_TEX, 1);
-					glNormal3f(0.0, 0.0, 1.0);
-					glBegin(GL_TRIANGLES);
-					float const p[4][2] = {{0,0}, {0,1}, {1,1}, {1,0}};
-					unsigned const v[6] = {0,2,1, 0,3,2};
-
-					for (unsigned i = 0; i < 6; ++i) { // draw as two quads
-						float const x(p[v[i]][0]), y(p[v[i]][1]);
-						multitex_coord2f_range(x, y, 0, 2);
-						point(2*size*(2*x-1), 2*size*(2*y-1), 0).do_glVertex();
-					}
-					glEnd();
-					disable_multitex(0);
-					disable_multitex(1);
-				}
-				else {
-					rotate_into_dir(br.dir, pos);
-					draw_textured_quad(2.0*size, 2.0*size, 0.0, BLUR_TEX);
-				}
+				rotate_about(90.0*timescale, br.dir);
+				draw_sphere_dlist(all_zeros, size, ndiv, 1);
 				glPopMatrix();
-				glDepthMask(GL_TRUE);
-				break;
+				//glDisable(GL_CULL_FACE);
+				glDisable(GL_ALPHA_TEST);
+			}
+			break;
 
-			default:
-				assert(0);
-			} // switch
-		} // visibility test
+		case ETYPE_FUSION:
+		case ETYPE_ESTEAL:
+		case ETYPE_STARB:
+		case ETYPE_NUCLEAR:
+		case ETYPE_SIEGE:
+			glDepthMask(GL_FALSE);
+			select_multitex(BLUR_TEX, 0, 0);
+			if (br.type == ETYPE_STARB) {select_multitex(NOISE_TEX, 1, 0);}
+			glNormal3f(0.0, 0.0, 1.0);
+			glBegin(GL_TRIANGLES);
+
+			if (universe) {
+				vector3d const dx(2.0*size*cross_product(plus_z, br.dir).get_norm());
+				vector3d const dy(2.0*size*cross_product(dx,     br.dir).get_norm());
+				draw_billboard_quad(make_pt_global(pos), dx, dy);
+			}
+			else {
+				draw_billboard(pos, get_camera_pos(), plus_z, 2.0*size, 2.0*size);
+			}
+			glEnd();
+			if (br.type == ETYPE_STARB) {select_multitex(WHITE_TEX, 1, 0);} // set back to white
+			glDepthMask(GL_TRUE);
+			break;
+
+		default:
+			assert(0);
+		} // switch
 	} // for i
+	s.end_shader();
 	glDisable(GL_TEXTURE_2D);
 	//glDisable(GL_ALPHA_TEST);
 	gluQuadricTexture(quadric, GL_FALSE);
