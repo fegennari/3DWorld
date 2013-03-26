@@ -25,7 +25,6 @@ Remove non-shader rendering
 
 Make a backup
 
-Tree billboards have non 1:1 AR and use a separate zval for branches and leaves
 Tree billboards use triangles instead of quads
 
 Tree branches use triangles instead of quads (4 => 6 indices)

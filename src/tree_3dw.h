@@ -14,6 +14,7 @@ float const TREE_DEN_THRESH = 0.55;
 
 
 struct blastr; // forward reference
+class tree_data_t;
 
 // small tree classes
 enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TREE_CLASS_DETAILED, NUM_TREE_CLASSES};
@@ -21,15 +22,15 @@ enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TRE
 
 class tree_lod_render_t {
 
-	struct entry_t : public texture_pair_t {
+	struct entry_t {
+		tree_data_t const *td;
 		point pos;
-		float radius;
 		colorRGBA color;
 
-		entry_t() {}
-		entry_t(texture_pair_t const &tp, point const &pos_, float radius_, colorRGBA const &color_)
-			: texture_pair_t(tp), pos(pos_), radius(radius_), color(color_) {assert(tp.is_valid()); assert(radius > 0.0);}
+		entry_t() : td(NULL) {}
+		entry_t(tree_data_t const *td_, point const &pos_, colorRGBA const &color_) : td(td_), pos(pos_), color(color_) {assert(td);}
 		void set_gl_color() const {color.do_glColor();}
+		bool operator<(entry_t const &e) const {return (td < e.td);} // compare tree data pointer values
 	};
 
 	vector<entry_t> leaf_vect, branch_vect;
@@ -46,11 +47,11 @@ public:
 	void clear()       {leaf_vect.clear(); branch_vect.clear();}
 	void resize_zero() {leaf_vect.resize(0); branch_vect.resize(0);}
 
-	void add_leaves(texture_pair_t const &tp, point const &pos, float radius, float opacity) {
-		leaf_vect.push_back(entry_t(tp, pos, radius, colorRGBA(1, 1, 1, opacity)));
+	void add_leaves(tree_data_t const *td, point const &pos, float opacity) {
+		leaf_vect.push_back(entry_t(td, pos, colorRGBA(1, 1, 1, opacity)));
 	}
-	void add_branches(texture_pair_t const &tp, point const &pos, float radius, float opacity, colorRGBA const &bcolor) {
-		branch_vect.push_back(entry_t(tp, pos, radius, colorRGBA(bcolor, opacity)));
+	void add_branches(tree_data_t const *td, point const &pos, float opacity, colorRGBA const &bcolor) {
+		branch_vect.push_back(entry_t(td, pos, colorRGBA(bcolor, opacity)));
 	}
 	void finalize();
 	void render_billboards(bool render_branches) const;
@@ -169,9 +170,11 @@ class tree_data_t {
 
 public:
 	float base_radius, sphere_radius, sphere_center_zoff;
+	float lr_z_cent, lr_y, lr_z, br_y, br_z; // bounding cylinder data for leaves and branches
 
 	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1), last_update_frame(0),
-		leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0) {}
+		leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
+		lr_z_cent(0.0), lr_y(0.0), lr_z(0.0), br_y(0.0), br_z(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}

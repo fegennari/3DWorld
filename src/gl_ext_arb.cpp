@@ -239,10 +239,10 @@ void disable_and_free_render_buffer(unsigned &render_buffer) {
 
 
 // Note: default viewing in -z dir
-void render_to_texture_t::render(texture_pair_t &tpair, float radius, point const &center, vector3d const &view_dir,
+void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
 	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap, bool nearest_for_normal)
 {
-	assert(radius > 0.0);
+	assert(xsize > 0.0 && ysize > 0);
 	assert(tsize > 0);
 
 	// setup matrices
@@ -250,7 +250,7 @@ void render_to_texture_t::render(texture_pair_t &tpair, float radius, point cons
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	glOrtho(-radius, radius, -radius, radius, -2*radius, 2*radius);
+	glOrtho(-xsize, xsize, -ysize, ysize, -(xsize + ysize), (xsize + ysize));
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
