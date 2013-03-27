@@ -829,10 +829,10 @@ void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orien
 
 	switch (type) {
 	case SF_EYE:
-		draw_sphere_at(pos, 1.0*radius, ndiv);
+		draw_sphere_dlist(pos, 1.0*radius, ndiv, 0);
 		break;
 	case SF_NOSE:
-		draw_sphere_at(pos, 1.2*radius, ndiv);
+		draw_sphere_dlist(pos, 1.2*radius, ndiv, 0);
 		break;
 	case SF_TONGUE:
 		glPushMatrix();

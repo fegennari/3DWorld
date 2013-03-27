@@ -264,7 +264,7 @@ bool sphere_visible_to_pt(point const &pt, point const &center, float radius) {
 	point qp[4];
 	unsigned const num_pts((radius < 0.5*HALF_DXY) ? 2 : 4);
 	get_sphere_border_pts(qp, center, pt, radius, num_pts);
-	//set_color(WHITE); for (unsigned i = 0; i < num_pts; ++i) draw_sphere_at(qp[i], 0.01, N_SPHERE_DIV/2);
+	//set_color(WHITE); for (unsigned i = 0; i < num_pts; ++i) draw_sphere_dlist(qp[i], 0.01, N_SPHERE_DIV/2, 0);
 	mesh_intersector mint(pt, pt, 1);
 	return mint.get_any_non_intersection(qp, num_pts); 
 }

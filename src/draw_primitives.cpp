@@ -453,18 +453,6 @@ void draw_trunc_cone(point pos, vector3d v1, float length, float radius, float r
 // ******************** SPHERE ********************
 
 
-void draw_sphere_at(point const &pos, float radius, int ndiv) {
-
-	assert(quadric && radius > 0.0);
-	set_fill_mode(); // might remove later
-	bool const nonzero(pos != all_zeros);
-	if (nonzero) glPushMatrix();
-	if (nonzero) translate_to(pos);
-	gluSphere(quadric, radius, ndiv, ndiv);
-	if (nonzero) glPopMatrix();
-}
-
-
 // back face culling requires the sphere to be untransformed (or the vertices to be per-transformed)
 void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, bool const *const render_map,
 									 float const *const exp_map, point const *const pt_shift, float expand,

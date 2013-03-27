@@ -1,7 +1,5 @@
 Tile Occlusion?
 
-Openmp when another process is running?
-
 Smoke texture step size
 Indirect lighting normal/direction
 
@@ -15,7 +13,7 @@ Leaves on ground (as texture)
 
 Parallax mapping
 
-Tighter textures to reduce fill rate by making the texture tighter (tree leaves/billboards)
+Tighter textures to reduce fill rate by making the texture tighter (tree leaves)
 
 Removed deprecated OpenGL calls:
 Use triangles instead of quads (indexed draw for individual/isolated quads)
@@ -23,7 +21,11 @@ Remove immediate mode calls
 - Billboard render manager
 Remove non-shader rendering
 
+No disable_shaders mode?
+
 Make a backup
 
 Tree billboards use triangles instead of quads
 Tree leaves use indexed triangles instead of quads (leaf wind modifies vertices, remove modifies both vertices and indices)
+
+Better dissolve texture using Perlin noise?
