@@ -38,8 +38,8 @@ pt_line_drawer_hdr snow_pld;
 extern bool underwater;
 extern int display_mode, num_groups, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, draw_model, animate2;
-extern float fticks, TIMESTEP, base_gravity, leaf_size, brightness, indir_vert_offset, cobj_z_bias;
-extern point leaf_points[], star_pts[];
+extern float fticks, TIMESTEP, base_gravity, brightness, indir_vert_offset, cobj_z_bias;
+extern point star_pts[];
 extern vector3d up_norm;
 extern GLUquadricObj* quadric;
 extern vector<spark_t> sparks;
@@ -393,13 +393,14 @@ void draw_group(obj_group &objg, shader_t &s) {
 		static vector<pair<unsigned, unsigned> > ordering;
 		ordering.resize(0);
 		ordering.reserve(objg.end_id);
+		float const leaf_size(get_leaf_size());
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject const &obj(objg.get_obj(j));
 			if (obj.disabled()) continue;
-			float const scale(obj.init_dir.z);
-			assert(scale > 0.0);
-			if (!sphere_in_camera_view(obj.pos, 4.0*scale*leaf_size, clip_level)) continue;
+			float const leaf_scale(2.0*leaf_size*obj.init_dir.z);
+			assert(leaf_scale > 0.0);
+			if (!sphere_in_camera_view(obj.pos, leaf_scale, clip_level)) continue;
 			int const tree_type(obj.source);
 			assert(tree_type >= 0 && tree_type < NUM_TREE_TYPES);
 			int const tid(tree_types[tree_type].leaf_tex);
@@ -424,7 +425,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 		for (unsigned j = 0; j < ordering.size(); ++j) {
 			dwobject &obj(objg.get_obj(ordering[j].second));
-			float const scale(obj.init_dir.z), lsize(scale*leaf_size);
+			float const leaf_scale(2.0*leaf_size*obj.init_dir.z);
 			int const tid(ordering[j].first);
 			
 			if (draw_model == 0 && tid != last_tid) {
@@ -432,23 +433,23 @@ void draw_group(obj_group &objg, shader_t &s) {
 				last_tid = tid;
 			}
 			point pos(obj.pos);
-			if (place_obj_on_grass(pos, lsize)) pos.z = 0.5*(obj.pos.z + pos.z-lsize); // leaf is partially on grass
-			glPushMatrix();
-			translate_to(pos);
-			rotate_about(obj.angle, obj.orientation);
-			glRotatef(TO_DEG*obj.init_dir.x, 0.0, 0.0, 1.0);
-
+			if (place_obj_on_grass(pos, leaf_scale)) {pos.z = 0.5*(obj.pos.z + pos.z-leaf_scale);} // leaf is partially on grass
 			float const t(((float)obj.time)/((float)otype.lifetime));
 			colorRGBA const dry_color(1.0, 0.7, 0.1); // this is the final color, even for partially burnt leaves - oh well
 			colorRGBA leaf_color(WHITE);
 			UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
 			if (leaf_color != BLACK) {blend_color(leaf_color, dry_color, leaf_color, t, 0);}
 			if (use_leaf_shader) {leaf_color.do_glColor();} else {set_color_alpha(leaf_color);}
+
+			glPushMatrix();
+			translate_to(pos);
+			rotate_about(obj.angle, obj.orientation);
+			glRotatef(TO_DEG*obj.init_dir.x, 0.0, 0.0, 1.0);
 			glBegin(GL_QUADS); // Note: needs 2-sided lighting
 
 			for (unsigned k = 0; k < 4; ++k) {
 				glTexCoord2f(float(k>>1), float(k==0||k==3));
-				(scale*leaf_points[k]).do_glVertex();
+				(leaf_scale*leaf_points[k]).do_glVertex();
 			}
 			glEnd();
 			glPopMatrix();

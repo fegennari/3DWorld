@@ -5,6 +5,7 @@
 #include "3DWorld.h"
 #include "mesh.h"
 #include "physics_objects.h"
+#include "tree_leaf.h"
 
 
 float    const SMOKE_ZVEL      = 3.0;
@@ -29,7 +30,6 @@ rand_gen_t global_rand_gen;
 extern int star_init, begin_motion, animate2, show_fog;
 extern float zmax_est, zmax, ztop;
 extern int coll_id[];
-extern point leaf_points[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
 
@@ -332,8 +332,7 @@ void gen_leaf_at(point const *const points, vector3d const &normal, int type, co
 	if (objg.max_objs == 0) return;
 	int const max_t_i(objg.choose_object());
 	point const pos(get_center(points, 4));
-	vector3d const delta(points[1] - points[0]), ldelta(leaf_points[1] - leaf_points[0]);
-	float const leaf_size(delta.mag()/ldelta.mag());
+	float const leaf_size(p2p_dist(points[0], points[1])/(4.0*get_leaf_size()));
 	assert(leaf_size > 0.0);
 	objg.create_object_at(max_t_i, pos);
 	dwobject &obj(objg.get_obj(max_t_i));

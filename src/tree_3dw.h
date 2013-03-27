@@ -123,7 +123,7 @@ class tree_builder_t {
 	float base_radius, base_length_min, base_length_max, base_curveness, num_leaves_per_occ;
 	float branch_curveness, branch_upwardness, branch_distribution, branch_1_distribution, num_cylin_factor, base_cylin_factor;
 	float branch_1_var, branch_1_rad_var, branch_1_start, branch_2_var, branch_2_rad_var, branch_2_start, branch_4_max_radius, rotate_factor;
-	float angle_rotate, branch_min_angle, branch_max_angle, branch_4_length;
+	float angle_rotate, branch_min_angle, branch_max_angle, branch_4_length, leaf_acc;
 	float max_2_angle_rotate, max_3_angle_rotate;  //max angle to rotate 3rd order branches around from the 2nd order branch
 
 	float gen_bc_size(float branch_var);
@@ -137,7 +137,7 @@ class tree_builder_t {
 	void create_4th_order_branches(int nbranches);
 	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
 	int generate_next_cylin(int cylin_num, int ncib, bool branch_just_created, bool &branch_deflected);
-	void add_leaves_to_cylin(tree_cylin const &cylin, float tsize, float deadness, vector<tree_leaf> &leaves) const;
+	void add_leaves_to_cylin(tree_cylin const &cylin, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves);
 	void process_cylins(tree_cylin *const cylins, unsigned num, int tree_type, float deadness,
 		vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves);
 

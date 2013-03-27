@@ -53,10 +53,9 @@ void rotate_all(point const &rotate, float angle, float x, float y, float z);
 unsigned max_unique_trees(0);
 int tree_mode(1), tree_coll_level(TREE_COLL);
 float tree_temp_matrix[3], i_matrix[9], re_matrix[3];
-float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), leaf_size(0.0), branch_radius_scale(1.0);
+float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), branch_radius_scale(1.0);
 float tree_lod_scales[4] = {0, 0, 0, 0}; // branch_start, branch_end, leaf_start, leaf_end
 colorRGBA leaf_base_color(BLACK);
-point leaf_points[4]; // z = 0.0 -> -0.05
 tree_data_manager_t tree_data_manager;
 tree_cont_t t_trees(tree_data_manager);
 
@@ -214,13 +213,9 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 }
 
 
-void calc_leaf_points() {
+float get_leaf_size() {
 
-	leaf_size = REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale);
-	leaf_points[0].assign(-2.0*leaf_size, 0.0, 0.0);
-	leaf_points[1].assign(-2.0*leaf_size, 0.0, 4.0*leaf_size);
-	leaf_points[2].assign( 2.0*leaf_size, 0.0, 4.0*leaf_size);
-	leaf_points[3].assign( 2.0*leaf_size, 0.0, 0.0);
+	return REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale);
 }
 
 
@@ -1232,7 +1227,7 @@ void tree_data_t::clear_data() {
 void tree_builder_t::process_cylins(tree_cylin *const cylins, unsigned num, int tree_type, float deadness,
 	vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves)
 {
-	float const leaf_size(tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
+	float const rel_leaf_size(2.0*get_leaf_size()*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
 	float const br_scale(branch_radius_scale*tree_types[tree_type].branch_radius);
 
 	for (unsigned i = 0; i < num; ++i) {
@@ -1244,7 +1239,7 @@ void tree_builder_t::process_cylins(tree_cylin *const cylins, unsigned num, int 
 
 		if (deadness < 1.0) { // leaves was reserved
 			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
-				add_leaves_to_cylin(cylins[i], leaf_size, deadness, leaves);
+				add_leaves_to_cylin(cylins[i], tree_type, rel_leaf_size, deadness, leaves);
 			}
 		}
 	}
@@ -1462,7 +1457,6 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 
 	tree_type = tree_type_;
 	assert(tree_type < NUM_TREE_TYPES);
-	calc_leaf_points(); // required for placed trees
 	leaf_data.clear();
 	clear_vbo_ixs();
 	float deadness(DISABLE_LEAVES ? 1.0 : tree_deadness);
@@ -1552,6 +1546,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	branch_max_angle       = 40.0;
 	max_2_angle_rotate     = 50.0;
 	max_3_angle_rotate     = 50.0;
+	leaf_acc               = 0.0;
 	float const base_rad_var = 0.85;
 	float const base_len_var = 0.8;
 	float const branch_1_random_rotate = 40.0;
@@ -1950,14 +1945,13 @@ void tree_leaf::create_init_color(bool deterministic) {
 }
 
 
-void tree_builder_t::add_leaves_to_cylin(tree_cylin const &cylin, float tsize, float deadness, vector<tree_leaf> &leaves) const {
+void tree_builder_t::add_leaves_to_cylin(tree_cylin const &cylin, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves) {
 
-	static float acc(0.0);
 	point start;
 	vector3d rotate;
-	acc += num_leaves_per_occ;
-	int const temp((int)acc);
-	acc -= (float)temp;
+	leaf_acc += num_leaves_per_occ;
+	int const temp((int)leaf_acc);
+	leaf_acc -= (float)temp;
 	float const temp_deg(((cylin.rotate.y < 0.0) ? -1.0 : 1.0)*safe_acosf(cylin.rotate.x));
 	float rotate_start(0.0);
 
@@ -1971,11 +1965,12 @@ void tree_builder_t::add_leaves_to_cylin(tree_cylin const &cylin, float tsize, f
 		tree_leaf leaf;
 		int const val(rand_gen(0,60));
 		float const deg_rotate(cylin.deg_rotate + ((cylin.deg_rotate > 0.0) ? val : -val));
-		float const lsize(tsize*(0.7*rand2d() + 0.3));
+		float const lsize(rel_leaf_size*(0.7*rand2d() + 0.3));
 		leaf.create_init_color(1);
 
 		for (int p = 0; p < 4; ++p) {
 			point lpts(leaf_points[p]*lsize);
+			lpts.x *= tree_types[tree_type].leaf_x_ar;
 			rotate_pts_around_axis(lpts, rotate, deg_rotate);
 			add_rotation(leaf.pts[p], start, 1.0);
 		}
@@ -2132,7 +2127,6 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 
 	cout << "vegetation: " << vegetation << endl;
 	RESET_TIME;
-	calc_leaf_points();
 	static int init(0), last_rgi(0), last_xoff2(0), last_yoff2(0);
 	static float last_ts(0.0);
 	if (tree_mode && recalc_shadows) {reset_shadows(OBJECT_SHADOW);}
