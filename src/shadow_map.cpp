@@ -231,7 +231,6 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
 	glDisable(GL_LIGHTING);
 	enable_blend();
-	plus_z.do_glNormal(); // probably not needed
 
 	// draw scene bounds
 	glColor4f(1.0, 1.0, 1.0, 0.25);

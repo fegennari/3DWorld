@@ -283,7 +283,6 @@ void draw_blasts() {
 			glDepthMask(GL_FALSE);
 			select_multitex(BLUR_TEX, 0, 0);
 			if (br.type == ETYPE_STARB) {select_multitex(NOISE_TEX, 1, 0);}
-			glNormal3f(0.0, 0.0, 1.0);
 			glBegin(GL_TRIANGLES);
 
 			if (universe) {

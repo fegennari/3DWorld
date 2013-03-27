@@ -207,7 +207,6 @@ void draw_crosshair(upos_point_type const &pos, float dist, colorRGBA const &col
 	GLboolean blend(glIsEnabled(GL_BLEND));
 	if (!blend) enable_blend();
 	color.do_glColor();
-	glNormal3f(0.0, 0.0, 1.0);
 	glPushMatrix();
 	global_translate(pos);
 	rotate_towards_camera(pos);

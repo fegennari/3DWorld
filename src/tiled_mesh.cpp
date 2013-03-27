@@ -1100,9 +1100,7 @@ public:
 		set_gl_light_pos(light, get_pos(), 1.0); // point light source position
 	}
 
-	void end_draw() const {
-		if (enabled()) {glDisable(LIGHTNING_LIGHT);}
-	}
+	void end_draw() const {glDisable(LIGHTNING_LIGHT);} // even if not currently enabled, in case it was enabled before an update
 };
 
 

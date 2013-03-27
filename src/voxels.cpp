@@ -24,7 +24,7 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 voxel_params_t global_voxel_params;
 voxel_model_ground terrain_voxel_model;
 
-extern bool disable_shaders, group_back_face_cull, scene_dlist_invalid;
+extern bool group_back_face_cull, scene_dlist_invalid;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
 extern coll_obj_group coll_objects;
 
@@ -1208,21 +1208,13 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	if (empty()) return; // nothing to do
 	shader_t s;
 	set_fill_mode();
+	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	
-	if (is_shadow_pass) {
-		glDisable(GL_LIGHTING);
-	}
-	else if (!disable_shaders) {
-		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
+	if (!is_shadow_pass) {
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 		float const min_alpha(0.0); // not needed (yet)
 		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
 		setup_tex_gen_for_rendering(s);
-	}
-	else {
-		set_color_a(WHITE);
-		glEnable(GL_TEXTURE_2D);
-		glEnable(GL_ALPHA_TEST);
 	}
 	BLACK.do_glColor();
 	set_color_d(params.base_color);

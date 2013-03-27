@@ -41,7 +41,7 @@ pt_line_drawer bubble_pld;
 
 extern GLUquadricObj* quadric;
 extern bool have_sun, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists, two_sided_lighting;
-extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, disable_shaders;
+extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu;
 extern int is_cloudy, iticks, display_mode, show_fog, num_groups, island, xoff, yoff;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode;
 extern unsigned smoke_tid, dl_tid, num_stars, create_voxel_landscape;
@@ -584,21 +584,18 @@ void draw_stars(float alpha) {
 	colorRGBA color(BLACK), bkg;
 	UNROLL_3X(bkg[i_] = (1.0 - alpha)*bkg_color[i_];)
 	glPushMatrix();
-	if (camera_mode == 1) translate_to(surface_pos);
-	up_norm.do_glNormal();
+	if (camera_mode == 1) {translate_to(surface_pos);}
 	set_color(BLACK);
 	enable_blend();
 	glPointSize(2.0);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
 	shader_t s;
-	
-	if (!disable_shaders) {
-		s.set_vert_shader("vert_xform_only");
-		s.set_frag_shader("color_only");
-		s.begin_shader();
-	}
-	glBegin(GL_POINTS);
+	s.set_vert_shader("vert_xform_only");
+	s.set_frag_shader("color_only");
+	s.begin_shader();
+	vector<vert_color> pts;
+	pts.reserve(num_stars);
 
 	for (unsigned i = 0; i < num_stars; ++i) {
 		if ((rand()%400) == 0) continue; // flicker out
@@ -607,10 +604,10 @@ void draw_stars(float alpha) {
 			float const c(stars[i].color[j]*stars[i].intensity);
 			color[j] = ((alpha >= 1.0) ? c : (alpha*c + bkg[j]));
 		}
-		color.do_glColor();
-		stars[i].pos.do_glVertex();
+		pts.push_back(vert_color(stars[i].pos, color));
 	}
-	glEnd();
+	pts.front().set_state();
+	glDrawArrays(0, 0, pts.size());
 	s.end_shader();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
@@ -622,31 +619,16 @@ void draw_stars(float alpha) {
 
 void draw_sun() {
 
-	if (!have_sun) return;
 	point const pos(get_sun_pos());
-
-	if (sphere_in_camera_view(pos, sun_radius, 1)) {
-		//select_texture(SUN_TEX);
-		glDisable(GL_LIGHTING);
-		colorRGBA color(SUN_C);
-		apply_red_sky(color);
-		color.do_glColor();
-#if 0
-		unsigned occ_query(0);
-		glGenQueries(1, &occ_query);
-		glBeginQuery(GL_SAMPLES_PASSED, occ_query);
-#endif
-		draw_subdiv_sphere(pos, sun_radius, N_SPHERE_DIV, 1, 0);
-		glEnable(GL_LIGHTING);
-		//glDisable(GL_TEXTURE_2D);
-#if 0
-		glEndQuery(GL_SAMPLES_PASSED);
-		unsigned pixel_count(0);
-		glGetQueryObjectuiv(occ_query, GL_QUERY_RESULT, &pixel_count);
-		glDeleteQueries(1, &occ_query);
-		cout << "pixel count: " << pixel_count << endl;
-#endif
-	}
+	if (!have_sun || !sphere_in_camera_view(pos, sun_radius, 1)) return;
+	//select_texture(SUN_TEX);
+	glDisable(GL_LIGHTING);
+	colorRGBA color(SUN_C);
+	apply_red_sky(color);
+	color.do_glColor();
+	draw_subdiv_sphere(pos, sun_radius, N_SPHERE_DIV, 1, 0);
+	glEnable(GL_LIGHTING);
+	//glDisable(GL_TEXTURE_2D);
 }
 
 

@@ -322,7 +322,6 @@ void line3d::draw(bool draw_as_tquads) const {
 		glDisable(GL_LIGHTING);
 		color.do_glColor();
 		glBegin(GL_LINES);
-		up_norm.do_glNormal();
 
 		for (unsigned i = 1; i < points.size(); ++i) {
 			points[i-1].do_glVertex();
