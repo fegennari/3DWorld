@@ -795,7 +795,6 @@ void draw_sky(int order) {
 	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius)); // GL_EYE_LINEAR
 	set_color_a(cloud_color);
 	set_color_d(cloud_color); // disable lighting (BLACK)?
-	//draw_sphere_at(center, radius, (3*N_SPHERE_DIV)/2);
 	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
 	disable_textures_texgen(); // reset S and T parameters
 	disable_blend();

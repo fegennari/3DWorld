@@ -1251,7 +1251,6 @@ void add_vpls() { // Note: basically unused
 						coll_obj const &cobj(coll_objects[cindex]);
 						colorRGBA const color(base_colors[l].modulate_with(cobj.get_avg_color()));
 						add_dynamic_light(dp*light_size, cpos, color, cnorm, 0.5); // 180 degree point spotlight
-						//set_color(color); draw_sphere_at(cpos, dp*light_size, N_SPHERE_DIV);
 					}
 				}
 			}

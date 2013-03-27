@@ -182,7 +182,6 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture=0);
 void draw_trunc_cone(point pos, vector3d v1, float length, float radius, float radius2, bool is_camera=0);
 void draw_sphere_at(point const &pos, float radius, int ndiv);
-void draw_sphere_at_tc(point const &pos, float radius, int ndiv, bool texture, bool cull);
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,
 						int texture, bool disable_bfc, bool const *const render_map=NULL, float const *const exp_map=NULL,
 						point const *const pt_shift=NULL, float expand=0.0, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);

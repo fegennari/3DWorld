@@ -465,22 +465,11 @@ void draw_sphere_at(point const &pos, float radius, int ndiv) {
 }
 
 
-void draw_sphere_at_tc(point const &pos, float radius, int ndiv, bool texture, bool cull) {
-
-	if (texture) gluQuadricTexture(quadric, GL_TRUE);
-	if (cull)    glEnable(GL_CULL_FACE);
-	draw_sphere_at(pos, radius, ndiv);
-	if (cull)    glDisable(GL_CULL_FACE);
-	if (texture) gluQuadricTexture(quadric, GL_FALSE);
-}
-
-
 // back face culling requires the sphere to be untransformed (or the vertices to be per-transformed)
 void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, bool const *const render_map,
 									 float const *const exp_map, point const *const pt_shift, float expand,
 									 float s_beg, float s_end, float t_beg, float t_end, unsigned sv1) const
 {
-	//draw_sphere_at_tc(pos, radius, spn.ndiv, 1, 0);
 	assert(!render_map || disable_bfc);
 	unsigned const ndiv(spn.ndiv);
 	assert(ndiv > 0 && sv1 > 0);
@@ -1325,7 +1314,6 @@ void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, 
 	}
 	else {
 		draw_subdiv_sphere(pos, radius, ndiv, textured, !bfc);
-		//draw_sphere_at_tc(pos, radius, ndiv, textured, bfc);
 	}
 }
 

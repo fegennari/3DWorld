@@ -2042,7 +2042,6 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 		pos += dir*sstate.dpos;
 	}
 	// always doing damage
-	//draw_sphere_at(pos, 0.01, 16);
 	do_impact_damage(pos, dir, zero_vector, shoot_pos, cradius, shooter, W_BLADE, (1.0 + 0.25*(sstate.dpos > 0)));
 	pos.z += 0.05;
 
