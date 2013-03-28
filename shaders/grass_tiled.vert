@@ -7,6 +7,8 @@ uniform sampler2D height_tex, shadow_normal_tex, weight_tex, noise_tex;
 uniform float cloud_plane_z;
 uniform vec3 cloud_offset = vec3(0,0,0);
 
+varying vec2 tc;
+
 vec4 add_light_comp(in vec3 vertex, in vec3 normal, in vec4 epos, in int i, in float ds_scale) {
 	if (apply_cloud_shadows) {
 		vec4 light = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
@@ -19,7 +21,7 @@ vec4 add_light_comp(in vec3 vertex, in vec3 normal, in vec4 epos, in int i, in f
 
 void main()
 {
-	gl_TexCoord[0] = gl_MultiTexCoord0;
+	tc          = gl_MultiTexCoord0;
 	vec4 vertex = gl_Vertex;
 	vertex.y   += translate_y;
 	vertex.z   += zmin + (zmax - zmin)*texture2D(height_tex, vec2((vertex.x - x1)/(x2 - x1), (vertex.y - y1)/(y2 - y1))).r;

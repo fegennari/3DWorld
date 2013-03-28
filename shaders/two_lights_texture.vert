@@ -1,6 +1,8 @@
+varying vec2 tc;
+
 void main()
 {
-	gl_TexCoord[0] = gl_MultiTexCoord0;
+	tc          = gl_MultiTexCoord0;
 	gl_Position = ftransform();
 	vec3 normal = normalize(gl_NormalMatrix * gl_Normal); // eye space
 	vec3 epos       = (gl_ModelViewMatrix * gl_Vertex).xyz;

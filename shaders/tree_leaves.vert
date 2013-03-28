@@ -1,3 +1,5 @@
+varying vec2 tc;
+
 void main()
 {
 #ifdef GEN_QUAD_TEX_COORDS
@@ -5,6 +7,7 @@ void main()
 #else
 	gl_TexCoord[0] = gl_MultiTexCoord0;
 #endif
+	tc = gl_TexCoord[0].st;
 	gl_Position = ftransform();
 	calc_leaf_lighting();
 } 
