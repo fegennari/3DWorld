@@ -408,24 +408,12 @@ void draw_group(obj_group &objg, shader_t &s) {
 		num_drawn += (unsigned)ordering.size();
 		sort(ordering.begin(), ordering.end()); // sort by texture id
 
-		bool const use_leaf_shader = 0;
-		shader_t ls;
 		int last_tid(-1);
-		enable_blend();
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.75);
 		glNormal3f(0.0, 1.0, 0.0);
 		set_specular(0.1, 10.0);
-
-		if (use_leaf_shader) { // Note: currently does *not* support shadow maps
-			if (s.is_setup()) {s.disable();}
-			set_leaf_shader(ls, 0.75, 0, 0);
-			ls.add_uniform_float("normal_scale", 1.0);
-		}
-		else {
-			colorRGBA(BLACK).do_glColor(); // sets alpha component
-			set_color_a(BLACK);
-		}
+		colorRGBA(BLACK).do_glColor(); // sets alpha component
+		set_color_a(BLACK);
+		
 		for (unsigned j = 0; j < ordering.size(); ++j) {
 			dwobject &obj(objg.get_obj(ordering[j].second));
 			int const tree_type(ordering[j].first), tid(tree_types[tree_type].leaf_tex);
@@ -433,10 +421,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 			assert(tid >= 0);
 			
 			if (draw_model == 0 && tid != last_tid) {
-				//if (j > 0) {glEnd();}
-				select_texture(tid, !use_leaf_shader, 1);
+				select_texture(tid, 0, 1);
 				last_tid = tid;
-				//glBegin(GL_TRIANGLES);
 			}
 			point pos(obj.pos);
 			if (place_obj_on_grass(pos, leaf_scale)) {pos.z = 0.5*(obj.pos.z + pos.z-leaf_scale);} // leaf is partially on grass
@@ -445,7 +431,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			colorRGBA leaf_color(WHITE);
 			UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
 			if (leaf_color != BLACK) {blend_color(leaf_color, dry_color, leaf_color, t, 0);}
-			if (use_leaf_shader) {leaf_color.do_glColor();} else {set_color_d(leaf_color);}
+			set_color_d(leaf_color);
 			vector3d dirs[2] = {(leaf_points[3] - leaf_points[0]), (leaf_points[1] - leaf_points[0])};
 				
 			for (unsigned d = 0; d < 2; ++d) {
@@ -459,15 +445,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			draw_billboard_quad((pos + dirs[1]), dirs[0], -dirs[1]);
 			glEnd();
 		} // for j
-		//glEnd();
-		
-		if (use_leaf_shader) {
-			ls.end_shader(); 
-			if (s.is_setup()) {s.enable();}
-		}
-		disable_blend();
 		set_specular(0.0, 1.0);
-		glDisable(GL_ALPHA_TEST);
 	} // leaf
 	else if (objg.large_radius()) { // large objects
 		vector<wap_obj> wap_vis_objs[2];
