@@ -223,7 +223,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 			float rweight(alpha);
 
 			if (cobj.cp.refract_ix != 1.0) {
-				rweight = get_reflected_weight(get_fresnel_reflection(dir, cnorm*-1, 1.0, cobj.cp.refract_ix), alpha);
+				rweight = get_reflected_weight(get_fresnel_reflection(dir, -cnorm, 1.0, cobj.cp.refract_ix), alpha);
 			}
 			float tweight((1.0 - rweight)*weight); // refracted weight
 			
@@ -243,7 +243,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 							point const p_int(p_end + (p2 - p_end)*t);
 							if (!dist_less_than(p2, p_int, get_step_size())) add_path_to_lmcs(p2, p_int, weight, color, ltype, (depth == 0));
 							
-							if (calc_refraction_angle(v_refract, v_refract2, cnorm2*-1, cobj.cp.refract_ix, 1.0)) {
+							if (calc_refraction_angle(v_refract, v_refract2, -cnorm2, cobj.cp.refract_ix, 1.0)) {
 								p2    = p_int;
 								p_end = p2 + v_refract2*line_length;
 								tweight    *= cobj.get_light_transmit(enter_pt, p_int); // can we use p2p_dist(enter_pt, p_int) directly?
@@ -584,7 +584,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 	for (unsigned n = 0; n < num_rays; ++n) {
 		if (kill_raytrace) break;
 		vector3d const dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
-		float const weight(ray_wt*ls.get_dir_intensity(dir*-1));
+		float const weight(ray_wt*ls.get_dir_intensity(-dir));
 		if (weight == 0.0) continue;
 		point start_pt;
 

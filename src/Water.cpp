@@ -322,7 +322,7 @@ public:
 			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs0, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
 		}
 		if (rcolor.alpha > 0.0) {
-			float const r(get_fresnel_reflection(view_dir*-1, n, 1.0, WATER_INDEX_REFRACT));
+			float const r(get_fresnel_reflection(-view_dir, n, 1.0, WATER_INDEX_REFRACT));
 			rcolor.alpha = 1.0; // transparent objects
 			blend_color(color, rcolor, color, r*rcolor.alpha, 1);
 		}

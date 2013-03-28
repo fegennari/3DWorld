@@ -1130,9 +1130,9 @@ int draw_simple_extruded_polygon(float thick, point const *const points, int npo
 	point pts[2][4];
 	gen_poly_planes(points, npoints, norm, thick, pts);
 	std::reverse(pts[0], pts[0]+npoints);
-	in_cur_prim = draw_simple_polygon(pts[0], npoints, norm*-1, in_cur_prim, no_normals); // draw bottom surface
+	in_cur_prim = draw_simple_polygon(pts[0], npoints, -norm, in_cur_prim, no_normals); // draw bottom surface
 	std::reverse(pts[0], pts[0]+npoints);
-	in_cur_prim = draw_simple_polygon(pts[1], npoints, norm,    in_cur_prim, no_normals); // draw top surface
+	in_cur_prim = draw_simple_polygon(pts[1], npoints,  norm, in_cur_prim, no_normals); // draw top surface
 	
 	for (int i = 0; i < npoints; ++i) { // draw sides
 		int const ii((i+1)%npoints);
