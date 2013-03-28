@@ -391,7 +391,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 	s.add_uniform_float("min_alpha", min_alpha);
 	set_active_texture(0);
 	s.add_uniform_int("tex0", 0);
-	s.add_uniform_int("tc_start_ix", tc_start_ix);
+	if (gen_tex_coords) {s.add_uniform_int("tc_start_ix", tc_start_ix);}
 	check_gl_error(301);
 }
 
@@ -418,7 +418,6 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity) {
 	}
 	set_lighted_sides(2);
 	set_specular(0.1, 10.0);
-	glEnable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
 	
 	if (shader.is_setup()) {
@@ -438,7 +437,6 @@ void tree_cont_t::post_leaf_draw(shader_t &shader) {
 
 	shader.disable();
 	set_lighted_sides(1);
-	glDisable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
 	set_specular(0.0, 1.0);
 	glDisable(GL_ALPHA_TEST);
