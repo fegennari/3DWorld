@@ -1,8 +1,9 @@
 uniform float height = 1.0;
+varying vec2 tc;
 
 void main()
 {
-	gl_TexCoord[0] = gl_MultiTexCoord0;
+	tc          = gl_MultiTexCoord0;
 	vec3 normal = gl_NormalMatrix * gl_Normal; // eye space (not normalized)
 	vec4 vertex = gl_Vertex;
 	vertex.xyz += get_grass_wind_delta(vertex.xyz, height, gl_MultiTexCoord0.s);
