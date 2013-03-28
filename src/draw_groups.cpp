@@ -403,9 +403,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			if (!sphere_in_camera_view(obj.pos, leaf_scale, 0)) continue;
 			int const tree_type(obj.source);
 			assert(tree_type >= 0 && tree_type < NUM_TREE_TYPES);
-			int const tid(tree_types[tree_type].leaf_tex);
-			assert(tid >= 0 && tid < NUM_TEXTURES);
-			ordering.push_back(make_pair(tid, j));
+			ordering.push_back(make_pair(tree_type, j));
 		}
 		num_drawn += (unsigned)ordering.size();
 		sort(ordering.begin(), ordering.end()); // sort by texture id
@@ -430,8 +428,9 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 		for (unsigned j = 0; j < ordering.size(); ++j) {
 			dwobject &obj(objg.get_obj(ordering[j].second));
-			float const leaf_scale(2.0*leaf_size*obj.init_dir.z);
-			int const tid(ordering[j].first);
+			int const tree_type(ordering[j].first), tid(tree_types[tree_type].leaf_tex);
+			float const leaf_scale(2.0*leaf_size*obj.init_dir.z), leaf_x_ar(tree_types[tree_type].leaf_x_ar);
+			assert(tid >= 0);
 			
 			if (draw_model == 0 && tid != last_tid) {
 				//if (j > 0) {glEnd();}
@@ -447,9 +446,11 @@ void draw_group(obj_group &objg, shader_t &s) {
 			UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
 			if (leaf_color != BLACK) {blend_color(leaf_color, dry_color, leaf_color, t, 0);}
 			if (use_leaf_shader) {leaf_color.do_glColor();} else {set_color_d(leaf_color);}
-			vector3d dirs[2] = {0.5*leaf_scale*(leaf_points[3] - leaf_points[0]), 0.5*leaf_scale*(leaf_points[1] - leaf_points[0])};
+			vector3d dirs[2] = {(leaf_points[3] - leaf_points[0]), (leaf_points[1] - leaf_points[0])};
 				
 			for (unsigned d = 0; d < 2; ++d) {
+				dirs[d]   *= 0.5*leaf_scale;
+				dirs[d].x *= leaf_x_ar;
 				rotate_vector3d(plus_z, -obj.init_dir.x, dirs[d]);
 				rotate_vector3d(obj.orientation, -obj.angle/TO_DEG, dirs[d]);
 			}
