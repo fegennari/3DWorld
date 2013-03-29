@@ -151,6 +151,7 @@ texture_t(0, 6, 0,    0,    1, 4, 1, "bark/bark_lylejk.png"), // 1024x768
 texture_t(0, 4, 0,    0,    1, 3, 1, "water_normal.tga", 1, 8.0), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "caustics.jpg"), // 512x512
 // noise
+texture_t(0, 6, 0,    0,    1, 1, 0, "perlin_simplex.png"), // 256x256
 texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
 texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
 texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file

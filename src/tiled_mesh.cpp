@@ -21,6 +21,7 @@ bool const ENABLE_TERRAIN_ENV = 1;
 bool const GRASS_CLOUD_SHADOWS= 1; // slow, but looks nice
 bool const USE_TREE_BILLBOARDS= 1; // decidious trees: faster but lower quality
 int  const TILE_RADIUS        = 6; // in mesh sizes
+int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NUM_LODS       = 5; // > 0
 unsigned const NORM_TEXELS    = 512;
 float const FOG_DIST_TILES    = 1.4;
@@ -1420,14 +1421,14 @@ public:
 
 	static void set_noise_tex(shader_t &s, unsigned tu_id) {
 		set_active_texture(tu_id);
-		select_texture(NOISE_GEN_TEX, 0);
+		select_texture(DITHER_NOISE_TEX, 0);
 		s.add_uniform_int("noise_tex", tu_id);
 		set_active_texture(0);
 	}
 
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id) {
 		set_noise_tex(s, tu_id);
-		s.add_uniform_float("noise_tex_size", get_texture_size(NOISE_GEN_TEX, 0));
+		s.add_uniform_float("noise_tex_size", get_texture_size(DITHER_NOISE_TEX, 0));
 	}
 
 	static void set_pine_tree_shader(shader_t &s, string const &vs) {
@@ -1524,6 +1525,7 @@ public:
 			bs.begin_shader();
 			if (USE_TREE_BILLBOARDS) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
 			bs.setup_fog_scale();
+			set_tree_dither_noise_tex(bs, 1); // TU=1
 			bs.add_uniform_int("tex0", 0);
 			bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 			draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass);
