@@ -757,7 +757,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const {
 
 	point const pos2(pos + xlate);
-	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, (height + radius), 2)) return;
+	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, (height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
 	select_texture(((draw_model == 0) ? pltype[type].tid : WHITE_TEX), 0); // could pre-bind textures and select using shader int, but probably won't improve performance

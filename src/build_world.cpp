@@ -327,7 +327,7 @@ void process_groups() {
 		float const fticks_max(min(4.0f, fticks)); // clamp effective fticks so that we don't slow the framerate down even more
 		unsigned app_rate(unsigned(((float)objg.app_rate)*fticks_max));
 		if (objg.app_rate > 0 && fticks > 0 && app_rate == 0) app_rate = 1;
-		float const time(TIMESTEP*fticks_max), grav_dz(base_gravity*GRAVITY*time*time*otype.gravity);
+		float const time(TIMESTEP*fticks_max), grav_dz(min(otype.terminal_vel*time, base_gravity*GRAVITY*time*time*otype.gravity));
 		cobj_params cp(otype.elasticity, otype.color, 0, 1, coll_func, -1, -1, 1.0, 0, 0);
 		size_t const max_objs(objg.max_objects());
 
@@ -426,7 +426,8 @@ void process_groups() {
 							if (MORE_COLL_TSTEPS && obj.status == 1 && spf < LG_STEPS_PER_FRAME && pos.z < czmax && pos.z > czmin) {
 								point pos2(pos + obj.velocity*time); // makes precipitation slower, but collision detection is more correct
 								pos2.z -= grav_dz; // maybe want to try with and without this?
-								check_coll_line(pos, pos2, cindex, -1, 0, 0); // return value is unused
+								// Note: we only do the line intersection test if the object moves by more than its radius this frame (static leaves don't)
+								if (!dist_less_than(pos, pos2, radius)) {check_coll_line(pos, pos2, cindex, -1, 0, 0);} // return value is unused
 							}
 							assert(spf > 0);
 

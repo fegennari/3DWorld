@@ -31,3 +31,7 @@ Tree leaves use indexed triangles instead of quads (leaf wind modifies vertices,
 Better dissolve texture using Perlin noise?
 
 Faster fallen leaf draw
+
+Leaf - Leaf/Branch overlap
+
+Grass normals change with wind
