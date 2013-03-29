@@ -535,7 +535,7 @@ void process_groups() {
 			if (type == LANDMINE && obj.status == 1 && !(obj.flags & (STATIC_COBJ_COLL | PLATFORM_COLL))) obj.time = 0; // don't start time until it lands
 		} // for jj
 		objg.flags |= WAS_ADVANCED;
-		if (SHOW_PROC_TIME /*|| type == SMILEY*/) {cout << "type = " << type << ", num = " << num_objs << " "; PRINT_TIME("Process");}
+		if (num_objs > 0 && (SHOW_PROC_TIME /*|| type == SMILEY*/)) {cout << "type = " << type << ", num = " << num_objs << " "; PRINT_TIME("Process");}
 	} // for i
 	temp_change = 0;
 	recreated   = 0;

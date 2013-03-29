@@ -4,14 +4,14 @@ varying vec2 tc;
 void main()
 {
 	tc          = gl_MultiTexCoord0;
-	vec3 normal = gl_NormalMatrix * gl_Normal; // eye space (not normalized)
-	vec4 vertex = gl_Vertex;
-	vertex.xyz += get_grass_wind_delta(vertex.xyz, height, gl_MultiTexCoord0.s);
+	vec3 gwdelta= get_grass_wind_delta(gl_Vertex.xyz, height, gl_MultiTexCoord0.s);
+	vec3 n      = gl_NormalMatrix * normalize(normalize(gl_Normal) + gwdelta/height); // eye space (not normalized)
+	vec3 normal = n*length(gl_Normal); // convert to original mag (for shadows)
+	vec4 vertex = gl_Vertex + vec4(gwdelta, 0.0);
 	vec4 epos   = gl_ModelViewMatrix  * vertex;
 	gl_Position = gl_ProjectionMatrix * epos;
 	
 	// calculate lighting: L0-L1 is directional, L2-L7 is point
-	vec3 n = normalize(normal);
 	vec4 color = gl_Color * gl_LightModel.ambient;
 	if (enable_light0) color += add_light_comp_pos_smap_light0(normal, epos);
 	if (enable_light1) color += add_light_comp_pos_smap_light1(normal, epos);

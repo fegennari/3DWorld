@@ -33,5 +33,3 @@ Better dissolve texture using Perlin noise?
 Faster fallen leaf draw
 
 Leaf - Leaf/Branch overlap
-
-Grass normals change with wind
