@@ -92,14 +92,16 @@ texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for
 texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle", 0, 1, 8.0), // not real file
 texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw", 0, 1, 16.0),
 texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw", 0, 1, 8.0),
-texture_t(0, 0, 128,  128,  0, 4, 3, "mj_leaf.raw"),
+texture_t(0, 5, 0,    0,    0, 4, 3, "mj_leaf.jpg", 1), // 128x128
 texture_t(0, 5, 0,    0,    0, 4, 3, "live_oak.jpg", 1), // 80x128
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf2.jpg", 1), // 212x256
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf3c.jpg", 1), // 208x256
-texture_t(0, 0, 256,  256,  0, 4, 3, "plant1.raw"),
+texture_t(0, 5, 0,    0,    0, 4, 3, "plant1.jpg", 1), // 256x256
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant2.raw"),
+//texture_t(0, 5, 0,    0,    0, 4, 3, "plant2.jpg", 1), // 160x256
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant3.raw"),
-texture_t(0, 0, 64,   64,   0, 4, 3, "hibiscus.raw"),
+//texture_t(0, 5, 0,    0,    0, 4, 3, "plant3.jpg", 1), // 176x256
+texture_t(0, 5, 0,    0,    0, 4, 3, "hibiscus.jpg", 1), // 64x64
 texture_t(1, 0, 256,  256,  1, 3, 1, "@fence", 0, 1, 8.0), // not real file, light paneling
 texture_t(0, 0, 128,  128,  1, 3, 1, "skull.raw", 1),
 texture_t(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
@@ -109,6 +111,7 @@ texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade_b.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 1, "blur.raw"),
 texture_t(0, 0, 256,  256,  1, 4, 1, "blur_s.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "pine.raw", 0, 1, 1.0, 0.36),
+//texture_t(0, 5, 0,    0,    0, 4, 3, "pine.jpg", 1, 1, 1.0, 0.36), // 184x256
 texture_t(0, 0, 128,  128,  1, 3, 1, "noise.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "wood.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw", 0, 1, 8.0),

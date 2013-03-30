@@ -11,7 +11,8 @@ More grass/plant types
 
 Parallax mapping
 
-Tighter textures to reduce fill rate by making the texture tighter (tree leaves)
+Tighter plant textures to reduce fill rate
+Convert remaining raw textures to jpeg
 
 Removed deprecated OpenGL calls:
 Use triangles instead of quads (indexed draw for individual/isolated quads):
@@ -28,5 +29,3 @@ Make a backup
 Faster fallen leaf draw
 
 Leaf - Leaf/Branch overlap
-
-Convert remaining raw textures to jpeg
