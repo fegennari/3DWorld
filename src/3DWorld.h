@@ -932,7 +932,7 @@ class texture_t { // size = 116
 public:
 	std::string name;
 	char type, format, use_mipmaps;
-	bool wrap, do_compress, has_binary_alpha;
+	bool wrap, invert_y, do_compress, has_binary_alpha;
 	int width, height, ncolors, bump_tid, alpha_tid;
 	float anisotropy, mipmap_alpha_weight;
 
@@ -943,14 +943,14 @@ private:
 	vector<unsigned> mm_offsets;
 
 public:
-	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), do_compress(0), has_binary_alpha(0),
+	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), invert_y(0), do_compress(0), has_binary_alpha(0),
 		width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1), anisotropy(1.0), mipmap_alpha_weight(1.0),
 		data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
-	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool do_comp=1, float a=1.0, float maw=1.0)
-		: name(n), type(t), format(f), use_mipmaps(um), wrap(wra), do_compress(do_comp), has_binary_alpha(0),
-		width(w), height(h), ncolors(nc), bump_tid(-1), alpha_tid(-1), anisotropy(a),
-		mipmap_alpha_weight(maw), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
+	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0)
+		: name(n), type(t), format(f), use_mipmaps(um), wrap(wra), invert_y(inv), do_compress(do_comp), has_binary_alpha(0),
+		width(w), height(h), ncolors(nc), bump_tid(-1), alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw),
+		data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	void init();
 	void do_gl_init();
 	GLenum calc_internal_format() const;
@@ -968,9 +968,11 @@ public:
 	void gl_delete();
 	void load(int index);
 	void load_raw_bmp(int index);
-	void load_targa();
-	void load_jpeg();
-	void load_png();
+	void load_targa(int index);
+	void load_jpeg(int index);
+	void load_png(int index);
+	void auto_insert_alpha_channel(int index);
+	void do_invert_y();
 	void fix_word_alignment();
 	void add_alpha_channel();
 	void resize(int new_w, int new_h);

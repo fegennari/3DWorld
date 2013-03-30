@@ -59,9 +59,9 @@ struct lspot {
 
 texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
-// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto
+// format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
-// type format width height wrap ncolors use_mipmaps name [do_compress [anisotropy [mipmap_alpha_weight]]]
+// type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
 //texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
 texture_t(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
@@ -80,8 +80,8 @@ texture_t(0, 0, 512,  512,  1, 3, 2, "desert_sand.raw"),
 texture_t(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "camoflage.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
-texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 1, 8.0),
-texture_t(0, 2, 512,  512,  1, 3, 1, "manhole.bmp"),
+texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
+texture_t(0, 0, 512,  512,  1, 3, 1, "manhole.bmp", 1),
 texture_t(0, 0, 128,  128,  1, 4, 3, "palmtree.raw"),
 texture_t(1, 0, 256,  256,  1, 4, 1, "@smoke"),  // not real file
 texture_t(1, 0, 64,   64,   1, 4, 1, "@plasma"), // not real file
@@ -89,9 +89,9 @@ texture_t(1, 0, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
 texture_t(2, 0, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "final1024.raw"), // for loading real landscape texture
 texture_t(1, 0, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
 texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for trees?
-texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle", 1, 8.0), // not real file
-texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw", 1, 16.0),
-texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw", 1, 8.0),
+texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle", 0, 1, 8.0), // not real file
+texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw", 0, 1, 16.0),
+texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw", 0, 1, 8.0),
 texture_t(0, 0, 128,  128,  0, 4, 3, "mj_leaf.raw"),
 texture_t(0, 0, 128,  128,  0, 4, 3, "live_oak.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "leaf2.raw"),
@@ -100,26 +100,26 @@ texture_t(0, 0, 256,  256,  0, 4, 3, "plant1.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant2.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant3.raw"),
 texture_t(0, 0, 64,   64,   0, 4, 3, "hibiscus.raw"),
-texture_t(1, 0, 256,  256,  1, 3, 1, "@fence", 1, 8.0), // not real file, light paneling
-texture_t(0, 2, 128,  128,  1, 3, 1, "skull.raw"),
+texture_t(1, 0, 256,  256,  1, 3, 1, "@fence", 0, 1, 8.0), // not real file, light paneling
+texture_t(0, 0, 128,  128,  1, 3, 1, "skull.raw", 1),
 texture_t(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
-texture_t(0, 2, 128,  128,  1, 3, 1, "yuck.raw"),
+texture_t(0, 0, 128,  128,  1, 3, 1, "yuck.raw", 1),
 texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade_b.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 1, "blur.raw"),
 texture_t(0, 0, 256,  256,  1, 4, 1, "blur_s.raw"),
-texture_t(0, 0, 256,  256,  0, 4, 3, "pine.raw", 1, 1.0, 0.36),
+texture_t(0, 0, 256,  256,  0, 4, 3, "pine.raw", 0, 1, 1.0, 0.36),
 texture_t(0, 0, 128,  128,  1, 3, 1, "noise.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "wood.raw"),
-texture_t(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw", 1, 8.0),
-texture_t(0, 0, 128,  128,  1, 3, 1, "particleb.raw", 1, 8.0),
+texture_t(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw", 0, 1, 8.0),
+texture_t(0, 0, 128,  128,  1, 3, 1, "particleb.raw", 0, 1, 8.0),
 texture_t(0, 0, 128,  128,  1, 3, 1, "plaster.raw"),
-texture_t(0, 0, 256,  256,  1, 3, 1, "tile.raw", 1, 8.0),
-texture_t(0, 2, 256,  32,   1, 3, 1, "CommandCAD.raw"),
+texture_t(0, 0, 256,  256,  1, 3, 1, "tile.raw", 0, 1, 8.0),
+texture_t(0, 0, 256,  32,   1, 3, 1, "CommandCAD.raw", 1),
 texture_t(1, 0, 32,   32,   1, 4, 1, "@disint"),   // not real file
 texture_t(1, 0, 256,  256,  1, 4, 1, "@blur_inv"), // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe", 1, 8.0), // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe", 1, 8.0), // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe", 0, 1, 8.0), // not real file
+texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe", 0, 1, 8.0), // not real file
 texture_t(0, 0, 512,  512,  1, 3, 1, "bcube.raw"),
 texture_t(0, 0, 512,  512,  0, 4, 1, "explosion.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "shiphull.raw"),
@@ -133,7 +133,7 @@ texture_t(0, 0, 512,  512,  1, 3, 1, "ice.2.raw"),
 texture_t(0, 0, 256,  256,  1, 3, 2, "rock.03.raw"),
 texture_t(0, 0, 16,   16,   1, 3, 0, "black.raw"),
 texture_t(0, 0, 16,   16,   1, 3, 0, "white.raw"),
-texture_t(0, 2, 512,  512,  0, 4, 0, "fire.raw"),
+texture_t(0, 0, 512,  512,  0, 4, 0, "fire.raw", 1),
 texture_t(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
 texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center"), // not real file
@@ -142,13 +142,13 @@ texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
 texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture"),  // not real file
 texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg"), // 500x500
 // bark
-texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark1.jpg"), // 600x600
-texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark2.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark2-normal.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    1, 4, 1, "bark/bark_lendrick.jpg"), // 892x892
-texture_t(0, 6, 0,    0,    1, 4, 1, "bark/bark_lylejk.png"), // 1024x768
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark1.jpg"), // 600x600
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg"), // 892x892
+texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png"), // 1024x768
 // normal/caustic maps
-texture_t(0, 4, 0,    0,    1, 3, 1, "water_normal.tga", 1, 8.0), // 512x512
+texture_t(0, 4, 0,    0,    1, 3, 1, "water_normal.tga", 0, 1, 8.0), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "caustics.jpg"), // 512x512
 // noise
 texture_t(0, 6, 0,    0,    1, 1, 0, "perlin_simplex.png"), // 256x256
@@ -157,7 +157,7 @@ texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
 texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
 texture_t(1, 0, 128,  128,  1, 3, 1, "@player_bbb_tex") // not real file
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
-// type format width height wrap ncolors use_mipmaps name [do_compress [anisotropy [mipmap_alpha_weight]]]
+// type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
 };
 
 
@@ -675,14 +675,13 @@ void texture_t::load(int index) {
 		unsigned want_alpha_channel(ncolors == 4);
 
 		switch (format) {
-		case 0: load_raw_bmp(index); break; // raw
-		case 1: load_raw_bmp(index); break; // bmp
-		case 2: load_raw_bmp(index); break; // raw
-		case 3: load_raw_bmp(index); break; // raw
-		case 4: load_targa(); break;
-		case 5: load_jpeg(); break;
-		case 6: load_png(); break;
+		case 0: case 1: case 2: case 3: load_raw_bmp(index); break; // raw
+		case 4: load_targa(index); break;
+		case 5: load_jpeg(index); break;
+		case 6: load_png(index); break;
 		}
+		if (invert_y) {do_invert_y();} // upside down
+
 		if (want_alpha_channel && ncolors < 4) {
 			add_alpha_channel();
 		}
@@ -708,105 +707,43 @@ void texture_t::load_raw_bmp(int index) {
 	unsigned const size(num_pixels());
 	assert(!is_allocated());
 	alloc();
-	float const ssp_inv_sq((SMOOTH_SKY_POLES > 0.0) ? 1.0/(SMOOTH_SKY_POLES*SMOOTH_SKY_POLES) : 0.0);
-	int alpha_white(0);
-	unsigned char buf[4], alpha;
 
 	// read texture data
 	if (ncolors == 4 && format != 3) { // add alpha
-		for(unsigned i = 0; i < size; ++i) {
+		bool const is_blur_tex(index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX);
+
+		for (unsigned i = 0; i < size; ++i) {
+			unsigned char buf[4];
 			int const i4(i << 2);
 			size_t const nread(fread(buf, 3, 1, file)); assert(nread == 1);
 
-			if (index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX) { // could use grayscale texture
+			if (is_blur_tex) { // could use grayscale texture
 				RGBA_BLOCK_ASSIGN((data+i4), 255, 255, 255, buf[0]); // alpha - assumes buf[0] = buf[1] = buf[2]
-				continue;
-			}
-			if (i == 0) { // key off of first (llc) pixel
-				alpha_white = (index == SMILEY_SKULL_TEX) ? 0 : ((int)buf[0] + (int)buf[1] + (int)buf[2] > 400);
-			}
-			if (format == 1) { // BGR => RGB
-				RGB_BLOCK_ASSIGN((data+i4), buf[2], buf[1], buf[0]);
 			}
 			else {
 				RGB_BLOCK_COPY((data+i4), buf);
 			}
-			if (index == CLOUD_TEX || index == CLOUD_RAW_TEX) {
-				// white -> alpha = 255
-				// blue  -> alpha = 0
-				float const val(float(buf[0]) + float(buf[1]));
-				//tex_data[i*4+3] = (unsigned char)(0.5*val);
-				alpha = ((val <= 340.0) ? 0 : ((unsigned char)1.0*(val - 340.0)));
-
-				if (SMOOTH_SKY_POLES > 0.0 && index == CLOUD_TEX) {
-					unsigned const y(i/width);
-					float const dist(float(y)/float(height)), d2(min(dist, (1.0f - dist)));
-					if (d2 < SMOOTH_SKY_POLES) alpha = (unsigned char)(d2*d2*ssp_inv_sq*float(alpha));
-				}
-			}
-			else { // make white/black part transparent, for example leaves
-				float const val(float(buf[0]) + float(buf[1]) + float(buf[2]));
-				
-				if (index == EXPLOSION_TEX || index == FIRE_TEX) { // animated/multipart textures
-					alpha = (unsigned char)(0.333*val);
-				}
-				else {
-					if (alpha_white) {
-						float const thresh((index == LEAF3_TEX) ? 700.0 : 600.0);
-						alpha = ((val > thresh) ? 0 : ((val < thresh-100.0) ? 255 : (unsigned char)(2.55*(thresh - val))));
-					}
-					else {
-						alpha = ((val < ((index == PINE_TEX) ? 65 : 32)) ? 0 : 255);
-					}
-					if (alpha == 0) {
-						// FIXME: fill with the color of nearby pixels so that mipmap generation will work correctly
-					}
-					/*else {
-						colorRGBA c;
-						UNROLL_3X(c[i_] = data[i4+i_]/255.0;)
-						float const background(alpha_white ? 1.0 : 0.0), alpha_val(alpha/255.0), intensity(c.R + c.G + c.B);
-						UNROLL_3X(c[i_] = (background + (c[i_] - background)/alpha_val);)
-						c *= intensity/(c.R + c.G + c.B);
-						UNROLL_3X(data[i4+i_] = (unsigned char)(255.0*c[i_]);)
-					}*/
-				}
-			}
-			data[i4+3] = alpha;
 		}
+		if (!is_blur_tex) {auto_insert_alpha_channel(index);}
 	}
-	else if (ncolors == 1) { // grayscale luminance
+	else if (ncolors == 1) { // grayscale luminance (unused/untested)
 		vector<unsigned char> td2(size);
 		size_t const nread(fread(&td2.front(), size, 1, file)); assert(nread == 1);
-
-		for(unsigned i = 0; i < size; ++i) {
-			RGB_BLOCK_COPY((data+3*i), td2);
-		}
+		for(unsigned i = 0; i < size; ++i) {UNROLL_3X(data[3*i+i_] = td2[i];)}
 	}
 	else {
 		size_t const nread(fread(data, ncolors*size, 1, file)); assert(nread == 1);
-
-		if (format == 1) {
-			for(unsigned i = 0; i < size; ++i) {
-				swap(data[3*i+0], data[3*i+2]); // BGR => RGB
-			}
-		}
 	}
-	if (format == 2) { // upside down
-		unsigned const h2(height >> 1), wc(ncolors*width);
-		
-		for(unsigned i = 0; i < h2; ++i) {
-			unsigned const off1(i*wc), off2((height-i-1)*wc);
-			
-			for(unsigned j = 0; j < wc; ++j) {
-				swap(data[off1+j], data[off2+j]); // invert y
-			}
+	if (format == 1) { // bitmap file
+		for(unsigned i = 0; i < size; ++i) {
+			swap(data[ncolors*i+0], data[ncolors*i+2]); // BGR[A] => RGB[A]
 		}
 	}
 	fclose(file);
 }
 
 
-void texture_t::load_targa() {
+void texture_t::load_targa(int index) {
 
 	assert(!is_allocated());
 	tga_image img;
@@ -844,7 +781,7 @@ void texture_t::load_targa() {
 }
 
 
-void texture_t::load_jpeg() {
+void texture_t::load_jpeg(int index) {
 
 #ifdef ENABLE_JPEG
 	jpeg_decompress_struct cinfo;
@@ -867,6 +804,7 @@ void texture_t::load_jpeg() {
 		assert(width > 0 && height > 0);
 	}
 	assert(cinfo.output_width == width && cinfo.output_height == height);
+	bool const want_alpha_channel(ncolors == 4 && cinfo.output_components == 3);
 	ncolors = cinfo.output_components;
 	unsigned const scanline_size(ncolors*width);
 	alloc();
@@ -878,6 +816,11 @@ void texture_t::load_jpeg() {
 	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
 	fclose(fp);
+
+	if (want_alpha_channel) {
+		add_alpha_channel();
+		auto_insert_alpha_channel(index);
+	}
 #else
 	cerr << "Error loading texture image file " << name << ": jpeg support has not been enabled." << endl;
 	exit(1);
@@ -885,7 +828,7 @@ void texture_t::load_jpeg() {
 }
 
 
-void texture_t::load_png() {
+void texture_t::load_png(int index) {
 
 #ifdef ENABLE_PNG
 	FILE *fp(open_texture_file(name));
@@ -912,7 +855,9 @@ void texture_t::load_png() {
 		assert(width > 0 && height > 0);
 	}
 	assert(w == width && h == height);
-	ncolors = png_get_channels(png_ptr, info_ptr);
+	unsigned const png_ncolors(png_get_channels(png_ptr, info_ptr));
+	bool const want_alpha_channel(ncolors == 4 && png_ncolors == 3);
+	ncolors = png_ncolors;
 	if (bit_depth == 16) png_set_strip_16(png_ptr);
 	if (bit_depth < 8)   png_set_packing(png_ptr);
 	vector<unsigned char *> rows(height);
@@ -926,10 +871,79 @@ void texture_t::load_png() {
 	png_read_end(png_ptr, end_info);
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 	fclose(fp);
+
+	if (want_alpha_channel) {
+		add_alpha_channel();
+		auto_insert_alpha_channel(index);
+	}
 #else
 	cerr << "Error loading texture image file " << name << ": png support has not been enabled." << endl;
 	exit(1);
 #endif
+}
+
+
+void texture_t::auto_insert_alpha_channel(int index) {
+
+	int alpha_white(0);
+	unsigned char alpha(255);
+	unsigned const size(num_pixels());
+	assert(is_allocated());
+
+	for (unsigned i = 0; i < size; ++i) {
+		int const i4(i << 2);
+		unsigned char *buf(data+i4);
+
+		if (index == CLOUD_TEX || index == CLOUD_RAW_TEX) {
+			// white -> alpha = 255
+			// blue  -> alpha = 0
+			float const val(float(buf[0]) + float(buf[1]));
+			alpha = ((val <= 340.0) ? 0 : ((unsigned char)1.0*(val - 340.0)));
+
+			if (SMOOTH_SKY_POLES > 0.0 && index == CLOUD_TEX) {
+				unsigned const y(i/width);
+				float const dist(float(y)/float(height)), d2(min(dist, (1.0f - dist)));
+				if (d2 < SMOOTH_SKY_POLES) {alpha = (unsigned char)(d2*d2*float(alpha)/(SMOOTH_SKY_POLES*SMOOTH_SKY_POLES));}
+			}
+		}
+		else { // make white/black part transparent, for example leaves
+			float const val(float(buf[0]) + float(buf[1]) + float(buf[2]));
+				
+			if (index == EXPLOSION_TEX || index == FIRE_TEX) { // animated/multipart textures
+				alpha = (unsigned char)(0.333*val);
+			}
+			else {
+				if (i == 0) { // key off of first (llc) pixel
+					alpha_white = (index == SMILEY_SKULL_TEX) ? 0 : ((int)buf[0] + (int)buf[1] + (int)buf[2] > 400);
+				}
+				if (alpha_white) {
+					float const thresh((index == LEAF3_TEX) ? 700.0 : 600.0);
+					alpha = ((val > thresh) ? 0 : ((val < thresh-100.0) ? 255 : (unsigned char)(2.55*(thresh - val))));
+				}
+				else {
+					alpha = ((val < ((index == PINE_TEX) ? 65 : 32)) ? 0 : 255);
+				}
+				if (alpha == 0) {
+					// FIXME: fill with the color of nearby pixels so that mipmap generation will work correctly
+				}
+			}
+		}
+		data[i4+3] = alpha;
+	} // for i
+}
+
+
+void texture_t::do_invert_y() {
+
+	unsigned const h2(height >> 1), wc(ncolors*width);
+		
+	for(unsigned i = 0; i < h2; ++i) {
+		unsigned const off1(i*wc), off2((height-i-1)*wc);
+			
+		for(unsigned j = 0; j < wc; ++j) {
+			swap(data[off1+j], data[off2+j]); // invert y
+		}
+	}
 }
 
 
