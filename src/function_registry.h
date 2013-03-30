@@ -736,14 +736,10 @@ float get_voxel_terrain_ao_lighting_val(point const &pos);
 bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
 void proc_voxel_updates();
 
-// function prototypes - screenshot (these are C functions)
-#ifdef ENABLE_JPEG
+// function prototypes - screenshot
 int screenshot(unsigned window_width, unsigned window_height, char *file_path);
 int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
-#else // why compile as C when libjpeg isn't needed?
-int screenshot(unsigned window_width, unsigned window_height, char *file_path);
-int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
-#endif
+int write_jpeg_data(unsigned window_width, unsigned window_height, char *file_path, unsigned char *data);
 
 
 #include "inlines.h"

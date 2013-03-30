@@ -57,16 +57,13 @@ int screenshot(unsigned window_width, unsigned window_height, char *file_path) {
 
 #include "../jpeg-6b/jpeglib.h"
 
-int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
+int write_jpeg_data(unsigned window_width, unsigned window_height, char *file_path, unsigned char *data) {
 
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
 	JSAMPROW row_pointer[1];
 	FILE *fp = open_screenshot_file(file_path, "screenshot.jpg");
 	if (fp == NULL) return 0;
-	unsigned char *buf(new unsigned char[(window_width+1)*(window_height+1)*3]);
-	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, buf);
 
 	unsigned const step_size(3*window_width);
 	JSAMPLE *rgb_row(new JSAMPLE[step_size]);
@@ -81,23 +78,33 @@ int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
 	jpeg_start_compress(&cinfo, TRUE);
 
 	while (cinfo.next_scanline < cinfo.image_height) {
-		row_pointer[0] = &buf[(window_height-cinfo.next_scanline-1)*step_size];
+		row_pointer[0] = &data[(window_height-cinfo.next_scanline-1)*step_size];
 		jpeg_write_scanlines(&cinfo, row_pointer, 1);
 	}
 	jpeg_finish_compress(&cinfo);
 	jpeg_destroy_compress(&cinfo);
 	delete [] rgb_row;
-	delete [] buf;
 	fclose(fp);
 	return 1;
 }
 
 #else
 
-int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
+int write_jpeg_data(unsigned window_width, unsigned window_height, char *file_path, unsigned char *data) {
 
   printf("Error: JPEG support is not enabled.\n");
   return 0;
 }
 
 #endif
+
+
+int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
+
+	unsigned char *buf(new unsigned char[(window_width+1)*(window_height+1)*3]);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, buf);
+	int const ret(write_jpeg_data(window_width, window_height, file_path, buf));
+	delete [] buf;
+	return ret;
+}
