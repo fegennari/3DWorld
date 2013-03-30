@@ -539,6 +539,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 				if (do_texture) {
 					assert(tid >= 0);
 					tcolor = texture_color(tid);
+					tcolor.alpha = 1.0; // don't use texture alpha
 					UNROLL_3X(tcolor[i_] *= color2[i_];)
 				}
 				else {
@@ -617,10 +618,12 @@ void draw_group(obj_group &objg, shader_t &s) {
 			glDisable(GL_ALPHA_TEST);
 		}
 		if (!obj_pld.empty()) {
+			glEnable(GL_COLOR_MATERIAL); // unnecessary?
 			select_no_texture();
-			if (s.is_setup()) s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+			if (s.is_setup()) {s.add_uniform_float("base_color_scale", 0.0);} // hack to force usage of material properties instead of color
 			obj_pld.draw_and_clear();
-			if (s.is_setup()) s.add_uniform_float("base_color_scale", 1.0);
+			if (s.is_setup()) {s.add_uniform_float("base_color_scale", 1.0);}
+			glDisable(GL_COLOR_MATERIAL);
 		}
 	} // small object
 	check_drawing_flags(flags, 0);

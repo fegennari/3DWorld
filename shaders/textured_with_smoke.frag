@@ -49,9 +49,8 @@ vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 	vec3 eye_pos = epos.xyz;
 #endif
 #ifdef USE_LIGHT_COLORS
-	vec3 color   = gl_Color.rgb;
-	vec3 diffuse = color * gl_LightSource[0].diffuse.rgb;
-	vec3 ambient = color * gl_LightSource[0].ambient.rgb;
+	vec3 diffuse = gl_Color.rgb * gl_LightSource[0].diffuse.rgb;
+	vec3 ambient = gl_Color.rgb * gl_LightSource[0].ambient.rgb;
 #else // use light material properties
 	vec3 diffuse = gl_FrontLightProduct[0].diffuse.rgb;
 	vec3 ambient = gl_FrontLightProduct[0].ambient.rgb;
