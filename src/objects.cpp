@@ -115,14 +115,13 @@ void coll_obj::calc_bcube() {
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
 		{
-			float const x1(points[0].x), y1(points[0].y), z1(points[0].z), x2(points[1].x), y2(points[1].y), z2(points[1].z), rmax(max(radius, radius2));
-			bool const vertical(x1 == x2 && y1 == y2);
-			d[0][0] = min(x1, x2) - rmax;
-			d[0][1] = max(x1, x2) + rmax;
-			d[1][0] = min(y1, y2) - rmax;
-			d[1][1] = max(y1, y2) + rmax;
-			d[2][0] = (vertical ? min(z1, z2) : min(z1-radius, z2-radius2));
-			d[2][1] = (vertical ? max(z1, z2) : max(z1+radius, z2+radius2));
+			vector3d const norm((points[1] - points[0]).get_norm());
+			
+			for (unsigned i = 0; i < 3; ++i) {
+				float const ni(sqrt(1.0 - norm[i]*norm[i]));
+				d[i][0] = min((points[0][i] - ni*radius), (points[1][i] - ni*radius2));
+				d[i][1] = max((points[0][i] + ni*radius), (points[1][i] + ni*radius2));
+			}
 			break;
 		}
 	default: assert(0);
