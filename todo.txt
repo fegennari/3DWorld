@@ -28,3 +28,5 @@ Make a backup
 Faster fallen leaf draw
 
 Leaf - Leaf/Branch overlap
+
+Convert remaining raw textures to jpeg

@@ -74,7 +74,7 @@ texture_t(0, 0, 256,  256,  0, 3, 1, "earth.raw"),
 texture_t(0, 0, 64,   64,   1, 3, 1, "ice.raw"), // marble?
 //texture_t(0, 0, 256,  256,  1, 3, 2, "snow.raw"),
 texture_t(0, 7, 0,  0,  1, 3, 2, "snow2.jpg"),
-texture_t(0, 0, 128,  128,  0, 4, 3, "leaf.raw"),
+texture_t(0, 5, 0,    0,    0, 4, 3, "leaf.jpg", 1), // 128x128
 texture_t(0, 0, 128,  128,  1, 3, 0, "bark.raw"), // mipmap?
 texture_t(0, 0, 512,  512,  1, 3, 2, "desert_sand.raw"),
 texture_t(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
@@ -93,9 +93,9 @@ texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle", 0, 1, 8.0), // not real file
 texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw", 0, 1, 16.0),
 texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw", 0, 1, 8.0),
 texture_t(0, 0, 128,  128,  0, 4, 3, "mj_leaf.raw"),
-texture_t(0, 0, 128,  128,  0, 4, 3, "live_oak.raw"),
-texture_t(0, 0, 256,  256,  0, 4, 3, "leaf2.raw"),
-texture_t(0, 0, 256,  256,  0, 4, 3, "leaf3c.raw"),
+texture_t(0, 5, 0,    0,    0, 4, 3, "live_oak.jpg", 1), // 80x128
+texture_t(0, 5, 0,    0,    0, 4, 3, "leaf2.jpg", 1), // 212x256
+texture_t(0, 5, 0,    0,    0, 4, 3, "leaf3c.jpg", 1), // 208x256
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant1.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant2.raw"),
 texture_t(0, 0, 256,  256,  0, 4, 3, "plant3.raw"),
@@ -126,8 +126,9 @@ texture_t(0, 0, 512,  512,  1, 3, 1, "shiphull.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "bcube2.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "bcube_tactical.raw"),
 texture_t(0, 0, 512,  256,  1, 3, 1, "rock_sphere.raw"),
-texture_t(0, 3, 256,  256,  0, 4, 3, "papaya_leaf.raw"),
+texture_t(0, 6, 0,    0,    0, 4, 3, "papaya_leaf.png", 1), // 256x256
 texture_t(0, 3, 256,  256,  0, 4, 3, "coffee_leaf.raw"), // half the texture is wasted, but leaves must be square (for now)
+//texture_t(0, 6, 0,    0,    0, 4, 3, "coffee_leaf.png", 1), // 256x256
 texture_t(0, 0, 256,  256,  1, 4, 0, "smiley_skull.raw"),
 texture_t(0, 0, 512,  512,  1, 3, 1, "ice.2.raw"),
 texture_t(0, 0, 256,  256,  1, 3, 2, "rock.03.raw"),
@@ -805,7 +806,7 @@ void texture_t::load_jpeg(int index) {
 	}
 	assert(cinfo.output_width == width && cinfo.output_height == height);
 	bool const want_alpha_channel(ncolors == 4 && cinfo.output_components == 3);
-	ncolors = cinfo.output_components;
+	ncolors = cinfo.output_components; // Note: can never be 4
 	unsigned const scanline_size(ncolors*width);
 	alloc();
 
