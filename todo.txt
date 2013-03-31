@@ -26,4 +26,3 @@ No disable_shaders mode?
 Leaf - Leaf/Branch overlap
 
 combined_gu tree draw
-Leaf Texture filtering
