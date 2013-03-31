@@ -36,6 +36,7 @@ int const ENABLE_CLIP_LEAVES = 1;
 int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
 int const TLEAF_START_TUID   = 9;
 bool const FORCE_TREE_TYPE   = 1;
+bool const CHECK_LEAF_BRANCH_COLL  = 0;
 unsigned const CYLINS_PER_ROOT     = 3;
 unsigned const TREE_BILLBOARD_SIZE = 256;
 
@@ -1954,7 +1955,7 @@ void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float
 	for (int l = 0; l < temp; l++) {
 		if (deadness > 0 && deadness > rand_float2()) continue;
 		float const rotate_start(360.0*l/temp);
-		unsigned const max_attempts = 8;
+		unsigned const max_attempts = 10;
 
 		for (unsigned attempt = 0; attempt < max_attempts; ++attempt) {
 			point start;
@@ -1973,7 +1974,25 @@ void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float
 				rotate_pts_around_axis(lpts, rotate, deg_rotate);
 				add_rotation(leaf.pts[p], start, 1.0);
 			}
-			//if (coll) {continue;} // FIXME: check for collisions with branches and other leaves here
+			point const center(leaf.get_center());
+			vector3d const xlate(cylin.r1*(center - cylin.p1).get_norm());
+			for (unsigned i = 0; i < 4; ++i) {leaf.pts[i] += xlate;} // move away from the branch centerline by radius
+
+			if (CHECK_LEAF_BRANCH_COLL) { // check for collisions with branches (and other leaves?)
+				bool coll(0);
+				point pts[4];
+
+				for (unsigned i = 0; i < 4; ++i) {
+					pts[i] = center + 0.5*(leaf.pts[i] - center); // inner half of the leaf polygon
+				}
+				for (unsigned i = 0; i < all_cylins.size() && !coll; ++i) {
+					if (i == cylin_ix || i == cylin_ix-1 || i == cylin_ix+1) continue; // don't test the cur cylin or its neighbors
+					if (!pt_line_dist_less_than(center, all_cylins[i].p1, all_cylins[i].p2, (3.0*lsize + max(all_cylins[i].r1, all_cylins[i].r2)))) continue;
+					coll |= approx_poly_cylin_int(pts, 4, all_cylins[i]);
+				}
+				if (coll && attempt+1 < max_attempts) continue; // Note: will never fail to generate a leaf
+				//if (coll) {leaf.lred = 1.0; leaf.lgreen = 0.0;}
+			}
 			point lpts(0.0, 1.0, 0.0); // normal starts off in y-direction
 			rotate_pts_around_axis(lpts, rotate, deg_rotate);
 			leaf.create_init_color(1);

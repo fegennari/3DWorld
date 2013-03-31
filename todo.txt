@@ -23,4 +23,4 @@ Remove non-shader rendering
 
 No disable_shaders mode?
 
-Leaf - Leaf/Branch overlap
+Leaf/Branch overlap
