@@ -39,6 +39,10 @@ public:
 		lines.push_back(vnc(v1, n1, c1));
 		lines.push_back(vnc(v2, n2, c2));
 	}
+	void add_quad(point const v[4], vector3d const &n, colorRGBA const &c) {
+		add_triangle(v[0], v[2], v[1], n, c);
+		add_triangle(v[0], v[3], v[2], n, c);
+	}
 	void add_triangle(point const &v1, point const &v2, point const &v3, vector3d const &n, colorRGBA const &c) {
 		points.push_back(vnc(v1, n, c));
 		points.push_back(vnc(v2, n, c));
@@ -55,6 +59,22 @@ public:
 
 typedef pt_line_drawer_t<color_wrapper      > pt_line_drawer;
 typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
+
+
+struct quad_batch_draw { // Note: might want an indexed version of this
+
+	vector<vert_norm_tc_color> verts;
+
+	void add_quad_pts(point const pts[4], vector3d const &n, colorRGBA const &c, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
+	void add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy, vector3d const &n, colorRGBA const &c,
+		float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0)
+	{
+		point const pts[4] = {(pos - dx - dy), (pos - dx + dy), (pos + dx + dy), (pos + dx - dy)};
+		add_quad_pts(pts, n, c, tx1, ty1, tx2, ty2);
+	}
+	void draw() const;
+	void draw_and_clear() {draw(); verts.clear();}
+};
 
 
 template<typename T> class indexed_mesh_draw { // quads

@@ -205,6 +205,26 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 }
 
 
+void quad_batch_draw::add_quad_pts(point const pts[4], vector3d const &n, colorRGBA const &c, float tx1, float ty1, float tx2, float ty2) {
+
+	float const t[4][2] = {{tx1,ty1}, {tx1,ty2}, {tx2,ty2}, {tx2,ty1}};
+	unsigned const v[6] = {0,2,1, 0,3,2};
+	color_wrapper cw;
+	cw.set_c4(c);
+
+	for (unsigned i = 0; i < 6; ++i) {
+		verts.push_back(vert_norm_tc_color(pts[v[i]], n, t[v[i]][0], t[v[i]][1], cw.c));
+	}
+}
+
+void quad_batch_draw::draw() const {
+
+	if (verts.empty()) return;
+	verts.front().set_state();
+	glDrawArrays(GL_TRIANGLES, 0, verts.size());
+}
+
+
 template<typename T> void indexed_mesh_draw<T>::clear() {
 
 	verts.clear();
