@@ -213,7 +213,7 @@ void quad_batch_draw::add_quad_pts(point const pts[4], vector3d const &n, colorR
 	cw.set_c4(c);
 
 	for (unsigned i = 0; i < 6; ++i) {
-		verts.push_back(vert_norm_tc_color(pts[v[i]], n, t[v[i]][0], t[v[i]][1], cw.c));
+		verts.push_back(vert_norm_tc_color(pts[v[i]], n, t[v[i]][0], t[v[i]][1], cw.c, 1));
 	}
 }
 
