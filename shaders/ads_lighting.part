@@ -1,3 +1,5 @@
+uniform float ambient_scale = 1.0;
+
 vec4 calc_spec_term(in float NdotHV, in int i) {
 	vec4 spec_color = gl_FrontLightProduct[i].specular;
 #ifdef USE_SPEC_MAP
@@ -46,7 +48,7 @@ vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float 
 #else
 	vec4 specular = get_light_specular(normal, light_dir, eye_pos, i);
 #endif
-	return (ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
+	return (ambient_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
 }
 
 vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i) {

@@ -56,7 +56,7 @@ vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 	vec3 ambient = gl_FrontLightProduct[0].ambient.rgb;
 #endif
 	vec3 specular = get_light_specular(normal, light_dir, eye_pos, 0).rgb;
-	return (ambient + max(dot(normal, light_dir), 0.0)*diffuse + specular);
+	return (ambient_scale*ambient + max(dot(normal, light_dir), 0.0)*diffuse + specular);
 }
 
 // Note: This may seem like it can go into the vertex shader as well,
