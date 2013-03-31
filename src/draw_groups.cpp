@@ -407,13 +407,17 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 		num_drawn += (unsigned)ordering.size();
 		sort(ordering.begin(), ordering.end()); // sort by texture id
-
 		int last_tid(-1);
-		glNormal3f(0.0, 1.0, 0.0);
 		set_specular(0.1, 10.0);
-		colorRGBA(BLACK).do_glColor(); // sets alpha component
-		set_color_a(BLACK);
-		
+		if (s.is_setup()) {s.disable();}
+		shader_t ls;
+		ls.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		colorRGBA const orig_fog_color(setup_smoke_shaders(ls, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1)); // TSL=1
+		ls.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+		ls.add_uniform_float("ambient_scale",    0.0);
+		quad_batch_draw qbd;
+		set_color(BLACK);
+
 		for (unsigned j = 0; j < ordering.size(); ++j) {
 			dwobject &obj(objg.get_obj(ordering[j].second));
 			int const tree_type(ordering[j].first), tid(tree_types[tree_type].leaf_tex);
@@ -421,6 +425,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			assert(tid >= 0);
 			
 			if (draw_model == 0 && tid != last_tid) {
+				qbd.draw_and_clear();
 				select_texture(tid, 0, 1);
 				last_tid = tid;
 			}
@@ -431,7 +436,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 			colorRGBA leaf_color(WHITE);
 			UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
 			if (leaf_color != BLACK) {blend_color(leaf_color, dry_color, leaf_color, t, 0);}
-			set_color_d(leaf_color);
 			vector3d dirs[2] = {(leaf_points[3] - leaf_points[0]), (leaf_points[1] - leaf_points[0])};
 				
 			for (unsigned d = 0; d < 2; ++d) {
@@ -440,11 +444,13 @@ void draw_group(obj_group &objg, shader_t &s) {
 				rotate_vector3d(plus_z, -obj.init_dir.x, dirs[d]);
 				rotate_vector3d(obj.orientation, -obj.angle/TO_DEG, dirs[d]);
 			}
-			cross_product(dirs[0], dirs[1]).get_norm().do_glNormal();
-			glBegin(GL_TRIANGLES);
-			draw_billboard_quad((pos + dirs[1]), dirs[0], -dirs[1]);
-			glEnd();
+			qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], cross_product(dirs[0], dirs[1]).get_norm(), leaf_color);
 		} // for j
+		qbd.draw_and_clear();
+		ls.add_uniform_float("base_color_scale", 1.0);
+		ls.add_uniform_float("ambient_scale",    1.0);
+		end_smoke_shaders(ls, orig_fog_color);
+		if (s.is_setup()) {s.enable();} // back to the original shader
 		set_specular(0.0, 1.0);
 	} // leaf
 	else if (objg.large_radius()) { // large objects

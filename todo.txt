@@ -19,13 +19,11 @@ Use triangles instead of quads (indexed draw for individual/isolated quads):
  - Tree billboards
  - Tree leaves
 Remove immediate mode calls
- - Billboard render manager
 Remove non-shader rendering
 
 No disable_shaders mode?
 
-Make a backup
-
-Faster fallen leaf draw
-
 Leaf - Leaf/Branch overlap
+
+combined_gu tree draw
+Leaf Texture filtering
