@@ -137,9 +137,7 @@ class tree_builder_t {
 	void create_4th_order_branches(int nbranches);
 	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
 	int generate_next_cylin(int cylin_num, int ncib, bool branch_just_created, bool &branch_deflected);
-	void add_leaves_to_cylin(tree_cylin const &cylin, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves);
-	void process_cylins(tree_cylin *const cylins, unsigned num, int tree_type, float deadness,
-		vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves);
+	void add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves, vector<draw_cylin> &all_cylins);
 
 public:
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color);

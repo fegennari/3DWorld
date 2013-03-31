@@ -1222,66 +1222,60 @@ void tree_data_t::clear_data() {
 }
 
 
-void tree_builder_t::process_cylins(tree_cylin *const cylins, unsigned num, int tree_type, float deadness,
-	vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves)
-{
-	float const rel_leaf_size(2.0*get_leaf_size()*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
-	float const br_scale(branch_radius_scale*tree_types[tree_type].branch_radius);
+void copy_cylins(tree_cylin *start_cylin, int num, tree_cylin *&cur_cylin) {
 
-	for (unsigned i = 0; i < num; ++i) {
-		assert(cylins[i].r1 > 0.0 || cylins[i].r2 > 0.0);
-		assert(cylins[i].p1 != cylins[i].p2);
-		cylins[i].r1 *= br_scale;
-		cylins[i].r2 *= br_scale;
-		all_cylins.push_back(cylins[i]);
-
-		if (deadness < 1.0) { // leaves was reserved
-			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
-				add_leaves_to_cylin(cylins[i], tree_type, rel_leaf_size, deadness, leaves);
-			}
-		}
-	}
+	for (int i = 0; i < num; ++i) {*cur_cylin = *(start_cylin+i); ++cur_cylin;}
 }
 
 
 void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness, vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves) {
 
-	//process cylinders
+	// compact the cylinders into a contiguous block
 	assert(all_cylins.empty());
-	unsigned num_total_cylins(base_num_cylins + root_num_cylins); // start with trunk and root cylinders
-
-	for (int i = 0; i < num_1_branches; i++) {
-		for (int k = 0; k < (branches[i][0].num_branches + 1); k++) {
-			num_total_cylins += branches[i][k].num_cylins;
-		}
-	}
-	for (unsigned w = 0; w < 2; ++w) {
-		for (int i = 0; i < num_34_branches[w]; i++) {
-			num_total_cylins += branches_34[w][i].num_cylins;
-		}
-	}
-	all_cylins.reserve(num_total_cylins);
-
-	// tree leaf variables
-	if (deadness < 1.0) {
-		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
-		leaves.reserve(nl);
-	}
-	process_cylins(base.cylin,  base_num_cylins, tree_type, deadness, all_cylins, leaves);
-	process_cylins(roots.cylin, root_num_cylins, tree_type, deadness, all_cylins, leaves);
+	tree_cylin *cylins(&cylin_cache.front()), *cur_cylin(cylins);
+	assert(base.cylin == cur_cylin);
+	copy_cylins(base.cylin,  base_num_cylins, cur_cylin);
+	copy_cylins(roots.cylin, root_num_cylins, cur_cylin);
 
 	for (int i = 0; i < num_1_branches; i++) { // add the first order branches
-		process_cylins(branches[i][0].cylin, branches[i][0].num_cylins, tree_type, deadness, all_cylins, leaves);
+		copy_cylins(branches[i][0].cylin, branches[i][0].num_cylins, cur_cylin);
 	}
 	for (int i = 0; i < num_1_branches; i++) { // add second order branches
 		for (int k = 1; k <= branches[i][0].num_branches; k++) {
-			process_cylins(branches[i][k].cylin, branches[i][k].num_cylins, tree_type, deadness, all_cylins, leaves);
+			copy_cylins(branches[i][k].cylin, branches[i][k].num_cylins, cur_cylin);
 		}
 	}
 	for (unsigned w = 0; w < 2; ++w) {
 		for (int i = 0; i < num_34_branches[w]; i++) { // add the third and fourth order branches
-			process_cylins(branches_34[w][i].cylin, branches_34[w][i].num_cylins, tree_type, deadness, all_cylins, leaves);
+			copy_cylins(branches_34[w][i].cylin, branches_34[w][i].num_cylins, cur_cylin);
 		}
+	}
+
+	// create the all_cylins vector
+	unsigned const num_total_cylins(cur_cylin - cylins);
+	all_cylins.reserve(num_total_cylins);
+	float const br_scale(branch_radius_scale*tree_types[tree_type].branch_radius);
+
+	for (unsigned i = 0; i < num_total_cylins; ++i) {
+		assert(cylins[i].r1 > 0.0 || cylins[i].r2 > 0.0);
+		assert(cylins[i].p1 != cylins[i].p2);
+		cylins[i].r1 *= br_scale;
+		cylins[i].r2 *= br_scale;
+		all_cylins.push_back(cylins[i]);
+	}
+
+	// add leaves
+	if (deadness < 1.0) {
+		float const rel_leaf_size(2.0*get_leaf_size()*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
+		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
+		leaves.reserve(nl);
+
+		for (unsigned i = 0; i < num_total_cylins; ++i) {
+			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
+				add_leaves_to_cylin(i, tree_type, rel_leaf_size, deadness, leaves, all_cylins);
+			}
+		}
+		//remove_excess_cap(leaves);
 	}
 
 	// now NULL (pseudo free) the individual branches because they are unneccessary
@@ -1567,16 +1561,22 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	cylin_cache.resize(tot_cylins);
 	base.cylin  = &cylin_cache.front();
 	roots.cylin = base.cylin + base_num_cylins+1;
+	tree_cylin *cur_ptr(roots.cylin + CYLINS_PER_ROOT*max_num_roots);
 
 	for (int i = 0; i < num_1_branches; i++) {
 		branches[i] = branches[0] + i*(num_2_branches_max+1);
-
-		for (int j = 0; j < (num_2_branches_max+1); j++) {
-			branches[i][j].cylin = roots.cylin + CYLINS_PER_ROOT*max_num_roots + (i*(num_2_branches_max+1) + j)*ncib;
+		branches[i][0].cylin = cur_ptr;
+		cur_ptr += ncib;
+	}
+	for (int i = 0; i < num_1_branches; i++) {
+		for (int j = 1; j < (num_2_branches_max+1); j++) {
+			branches[i][j].cylin = cur_ptr;
+			cur_ptr += ncib;
 		}
 	}
 	for (int i = 0; i < nbranches; i++) {
-		branches_34[0][i].cylin = branches[0][0].cylin + (nbr + i)*ncib;
+		branches_34[0][i].cylin = cur_ptr;
+		cur_ptr += ncib;
 	}
 
 	//create tree base -------------------------------------------------------------
@@ -1873,7 +1873,6 @@ void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int num_4_bran
 
 			for (int l = 0; l < num_4_branches; l++) {
 				rotate_start += 360.0/num_4_branches*l + rand_gen(1,30);
-				if (rotate_start > 360.0) rotate_start -= 360.0;
 				generate_4th_order_branch(branch, j, rotate_start, temp_deg, branch_num++);
 			}
 		}
@@ -1943,41 +1942,47 @@ void tree_leaf::create_init_color(bool deterministic) {
 }
 
 
-void tree_builder_t::add_leaves_to_cylin(tree_cylin const &cylin, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves) {
+void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves, vector<draw_cylin> &all_cylins) {
 
-	point start;
-	vector3d rotate;
+	assert(cylin_ix < cylin_cache.size());
+	tree_cylin const &cylin(cylin_cache[cylin_ix]);
 	leaf_acc += num_leaves_per_occ;
 	int const temp((int)leaf_acc);
 	leaf_acc -= (float)temp;
 	float const temp_deg(((cylin.rotate.y < 0.0) ? -1.0 : 1.0)*safe_acosf(cylin.rotate.x));
-	float rotate_start(0.0);
 
 	for (int l = 0; l < temp; l++) {
 		if (deadness > 0 && deadness > rand_float2()) continue;
-		rotate_start += 360.0/temp*l + rand_gen(1,30);
-		if (rotate_start > 360.0) rotate_start -= 360.0;
-		setup_rotate(rotate, rotate_start, temp_deg);
-		rotate_around_axis(cylin);
-		add_rotation(start, cylin.p1, 0.9);
-		tree_leaf leaf;
-		int const val(rand_gen(0,60));
-		float const deg_rotate(cylin.deg_rotate + ((cylin.deg_rotate > 0.0) ? val : -val));
-		float const lsize(rel_leaf_size*(0.7*rand2d() + 0.3));
-		leaf.create_init_color(1);
+		float const rotate_start(360.0*l/temp);
+		unsigned const max_attempts = 8;
 
-		for (int p = 0; p < 4; ++p) {
-			point lpts(leaf_points[p]*lsize);
-			lpts.x *= tree_types[tree_type].leaf_x_ar;
+		for (unsigned attempt = 0; attempt < max_attempts; ++attempt) {
+			point start;
+			vector3d rotate;
+			setup_rotate(rotate, (rotate_start + rand_gen(1,30)), temp_deg);
+			rotate_around_axis(cylin);
+			add_rotation(start, cylin.p1, 0.9);
+			tree_leaf leaf;
+			int const val(rand_gen(0,60));
+			float const deg_rotate(cylin.deg_rotate + ((cylin.deg_rotate > 0.0) ? val : -val));
+			float const lsize(rel_leaf_size*(0.7*rand2d() + 0.3));
+
+			for (int p = 0; p < 4; ++p) {
+				point lpts(leaf_points[p]*lsize);
+				lpts.x *= tree_types[tree_type].leaf_x_ar;
+				rotate_pts_around_axis(lpts, rotate, deg_rotate);
+				add_rotation(leaf.pts[p], start, 1.0);
+			}
+			//if (coll) {continue;} // FIXME: check for collisions with branches and other leaves here
+			point lpts(0.0, 1.0, 0.0); // normal starts off in y-direction
 			rotate_pts_around_axis(lpts, rotate, deg_rotate);
-			add_rotation(leaf.pts[p], start, 1.0);
-		}
-		point lpts(0.0, 1.0, 0.0); // normal starts off in y-direction
-		rotate_pts_around_axis(lpts, rotate, deg_rotate);
-		leaf.norm.assign(re_matrix[0], re_matrix[1], re_matrix[2]);
-		leaf.norm.normalize(); // should already be normalized
-		leaves.push_back(leaf);
-	}
+			leaf.create_init_color(1);
+			leaf.norm.assign(re_matrix[0], re_matrix[1], re_matrix[2]);
+			leaf.norm.normalize(); // should already be normalized
+			leaves.push_back(leaf);
+			break;
+		} // for attempt
+	} // for l
 }
 
 
