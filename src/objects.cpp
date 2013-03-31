@@ -114,16 +114,8 @@ void coll_obj::calc_bcube() {
 		break;
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		{
-			vector3d const norm((points[1] - points[0]).get_norm());
-			
-			for (unsigned i = 0; i < 3; ++i) {
-				float const ni(sqrt(1.0 - norm[i]*norm[i]));
-				d[i][0] = min((points[0][i] - ni*radius), (points[1][i] - ni*radius2));
-				d[i][1] = max((points[0][i] + ni*radius), (points[1][i] + ni*radius2));
-			}
-			break;
-		}
+		cylinder_3dw(points[0], points[1], radius, radius2).calc_bcube(*this);
+		break;
 	default: assert(0);
 	}
 }

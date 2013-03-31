@@ -542,6 +542,7 @@ struct cylinder_3dw : public line_3dw { // size = 32
 
 	cylinder_3dw() : r1(0.0), r2(0.0) {}
 	cylinder_3dw(point const &p1_, point const &p2_, float r1_, float r2_) : line_3dw(p1_, p2_), r1(r1_), r2(r2_) {}
+	void calc_bcube(cube_t &bcube) const;
 };
 
 

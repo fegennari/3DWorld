@@ -832,6 +832,36 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube) {
 }
 
 
+void cylinder_3dw::calc_bcube(cube_t &bcube) const {
+
+	vector3d const norm(get_norm_dir_vect());
+			
+	for (unsigned i = 0; i < 3; ++i) {
+		float const ni(sqrt(1.0 - norm[i]*norm[i]));
+		bcube.d[i][0] = min((p1[i] - ni*r1), (p2[i] - ni*r2));
+		bcube.d[i][1] = max((p1[i] + ni*r1), (p2[i] + ni*r2));
+	}
+}
+
+
+// Note: assumes a planar convex polygon, and assumes the cylinder is closed
+bool approx_poly_cylin_int(point const *const pts, unsigned npts, cylinder_3dw const &cylin) {
+
+	cube_t pbcube, cbcube;
+	pbcube.set_from_points(pts, npts);
+	cylin.calc_bcube(cbcube);
+	if (!pbcube.intersects(cbcube)) return 0; // optimization
+	float t;
+	vector3d const poly_norm(get_poly_norm(pts)); // could factor out and pass in
+	if (line_poly_intersect(cylin.p1, cylin.p2, pts, npts, poly_norm, t)) return 1;
+
+	for (unsigned i = 0; i < npts; ++i) {
+		if (line_intersect_cylinder(pts[i], pts[(i+1)%npts], cylin, 1)) return 1; // check_ends=1
+	}
+	return 0; // inexact, but close
+}
+
+
 // p_int is the location of the sphere at intersection, norm is the normal of the intersected surface
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last, point &p_int,
 						   vector3d &norm, unsigned &cdir, bool check_int, bool skip_z)
