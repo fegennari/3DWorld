@@ -44,7 +44,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	if (verbose) cout << "creating texture " << fn << endl;
 	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
 	// type=read_from_file format=auto width height wrap ncolors use_mipmaps name [do_compress]
-	textures.push_back(texture_t(0, 7, 0, 0, 1, (is_alpha_mask ? 1 : 3), (use_model2d_tex_mipmaps && !is_alpha_mask), fn, compress)); // always RGB wrapped+mipmap
+	textures.push_back(texture_t(0, 7, 0, 0, 1, (is_alpha_mask ? 1 : 3), (use_model2d_tex_mipmaps && !is_alpha_mask), fn, 0, compress)); // always RGB wrapped+mipmap
 	return tid; // can't fail
 }
 
