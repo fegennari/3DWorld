@@ -996,8 +996,17 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case 'U':
 		if (world_mode != WMODE_UNIVERSE) { // toggle universe background mode
 			combined_gu = !combined_gu;
-			if (combined_gu) setup_current_system(); else reset_planet_defaults(); // have to do this so that regen_trees gets correct vegetation
+			
+			if (combined_gu) { // do a fake draw pass to force the universe to be created so we can determine the closest planet/moon and setup lighting/water/temperature/vegetation/etc.
+				draw_universe(1, 1, 2, 1); // gen_only=1
+				setup_current_system();
+			}
+			else {
+				reset_planet_defaults(); // have to do this so that regen_trees gets correct vegetation
+			}
+			remove_tree_cobjs(); // FIXME: make part of regen_trees()?
 			regen_trees(1, 0);
+			build_cobj_tree(); // FIXME: make part of regen_trees()?
 			gen_grass(1);
 			clear_tiled_terrain();
 			
@@ -1006,10 +1015,6 @@ void keyboard_proc(unsigned char key, int x, int y) {
 				glDisable(get_universe_ambient_light());
 				calc_visibility(SUN_SHADOW); // reclaculate sun
 				DISABLE_WATER = INIT_DISABLE_WATER;
-			}
-			else { // do a fake draw pass to force the universe to be created so we can determine the closest planet/moon and setup lighting/water/temperature/vegetation/etc.
-				draw_universe(1, 1, 2, 1); // gen_only=1
-				setup_current_system();
 			}
 			create_landscape_texture();
 		}
