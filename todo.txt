@@ -1,5 +1,3 @@
-Tile Occlusion?
-
 Smoke texture step size
 Indirect lighting normal/direction
 

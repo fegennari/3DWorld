@@ -113,6 +113,7 @@ class tile_t {
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep;
 	bool shadows_invalid, weights_invalid, in_queue;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
+	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
 	vector<unsigned char> tree_map;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
@@ -194,6 +195,16 @@ public:
 	cube_t get_bcube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), z2(get_tile_zmax());
 		return cube_t(xv1-trmax, xv1+(x2-x1)*DX_VAL+trmax, yv1-trmax, yv1+(y2-y1)*DY_VAL+trmax, mzmin, z2);
+	}
+	cube_t get_mesh_bcube() const {
+		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
+		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin, mzmax);
+	}
+	cube_t get_mesh_sub_bcube(unsigned x, unsigned y) const {
+		assert(x < 4 && y < 4);
+		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
+		float const xv2(xv1+(x2-x1)*DX_VAL), yv2(yv1+(y2-y1)*DY_VAL), dx((xv2 - xv1)/4), dy((yv2 - yv1)/4);
+		return cube_t((xv1 + x*dx), (xv1 + (x+1)*dx), (yv1 + y*dy), (yv1 + (y+1)*dy), sub_zmin[y][x], sub_zmax[y][x]);
 	}
 	cube_t get_water_bcube() const {
 		float const xv1(get_xval(wx1 + xoff - xoff2)), yv1(get_yval(wy1 + yoff - yoff2));
@@ -296,6 +307,7 @@ public:
 		mzmin =  FAR_CLIP;
 		mzmax = -FAR_CLIP;
 		float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + OCEAN_WAVE_HEIGHT);
+		unsigned const block_size(zvsize/4);
 
 		#pragma omp parallel for schedule(static,1)
 		for (int y = 0; y < (int)zvsize; ++y) {
@@ -303,6 +315,21 @@ public:
 				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
 				float const hoff(BILINEAR_INTERP(params, hoff, xv, yv)), hscale(BILINEAR_INTERP(params, hscale, xv, yv));
 				zvals[y*zvsize + x] = hoff + hscale*height_gen.eval_index(x, y);
+			}
+		}
+		for (unsigned yy = 0; yy < 4; ++yy) {
+			for (unsigned xx = 0; xx < 4; ++xx) {
+				sub_zmin[yy][xx] =  FAR_CLIP;
+				sub_zmax[yy][xx] = -FAR_CLIP;
+
+				for (unsigned y = yy*block_size; y <= (yy+1)*block_size; ++y) { // misses the last row and column?
+					for (unsigned x = xx*block_size; x <= (xx+1)*block_size; ++x) {
+						assert(x < zvsize && y < zvsize);
+						float const z(zvals[y*zvsize + x]);
+						sub_zmin[yy][xx] = min(sub_zmin[yy][xx], z);
+						sub_zmax[yy][xx] = max(sub_zmax[yy][xx], z);
+					}
+				}
 			}
 		}
 		for (vector<float>::const_iterator i = zvals.begin(); i != zvals.end(); ++i) {
@@ -1343,6 +1370,25 @@ public:
 		}
 	}
 
+	struct occluder_state_t {
+
+		cube_t bcube;
+		point cube_pts[4];
+		bool intersected, occluded;
+
+		occluder_state_t() : intersected(0), occluded(0) {}
+
+		void calc_cube_top_points() { // copied from get_cube_points
+			unsigned i[3] = {0,0,0};
+
+			for (i[0] = 0; i[0] < 2; ++i[0]) {
+				for (i[1] = 0; i[1] < 2; ++i[1]) {
+					UNROLL_3X(cube_pts[(i[0]<<1)+i[1]][i_] = bcube.d[i_][i[i_]];)
+				}
+			}
+		}
+	};
+
 	void draw(bool reflection_pass) {
 		//RESET_TIME;
 		unsigned num_drawn(0), num_trees(0);
@@ -1350,19 +1396,17 @@ public:
 		to_draw.clear();
 
 		// determine potential occluders
-		float const OCCLUDER_DIST = 0.5;
-		bool const check_occlusion((display_mode & 0x10) != 0);
+		float const OCCLUDER_DIST = 0.1;
 		vector<tile_t *> occluders;
+		point const camera(get_camera_pos());
 
-		if (check_occlusion) {
+		if (!reflection_pass && (display_mode & 0x08)) { // check occlusion
 			for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 				tile_t *const tile(i->second);
 				if (tile->get_rel_dist_to_camera() > OCCLUDER_DIST || !tile->is_visible()) continue;
 				occluders.push_back(tile);
 			}
-			//cout << "occluders: " << occluders.size() << endl;
 		}
-		
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			tile_t *const tile(i->second);
 			
@@ -1375,17 +1419,49 @@ public:
 			tile_set_t tile_set;
 			if (reflection_pass && !can_have_reflection(tile, tile_set)) continue;
 
-			if (check_occlusion) {
-				cube_t const tile_bcube(tile->get_bcube());
+			if (!occluders.empty() && dist > OCCLUDER_DIST) {
+				occluder_state_t tile_os, sub_tile_os[16];
+				tile_os.bcube = tile->get_bcube();
+				tile_os.calc_cube_top_points();
 
+				for (unsigned t = 0; t < 16; ++t) {
+					sub_tile_os[t].bcube = tile->get_mesh_sub_bcube((t>>2), (t&3));
+					sub_tile_os[t].calc_cube_top_points();
+				}
 				for (vector<tile_t *>::const_iterator j = occluders.begin(); j != occluders.end(); ++j) {
 					if (*j == tile) continue; // no self-occlusion
-					cube_t const occluder_bcube((*j)->get_bcube());
-					// FIXME: write
-				}
-			}
+					cube_t occluder_bcube((*j)->get_mesh_bcube());
+					occluder_bcube.d[2][0] = zmin; // not required?
+					tile_os.intersected    = 0; // will always be true for the camera's current tile
+
+					for (unsigned d = 0; d < 4 && !tile_os.intersected; ++d) {
+						tile_os.intersected |= check_line_clip(tile_os.cube_pts[d], camera, occluder_bcube.d);
+					}
+					if (!tile_os.intersected) continue; // skip
+
+					for (unsigned s = 0; s < 16 && !tile_os.occluded; ++s) {
+						cube_t occ_sub_bcube((*j)->get_mesh_sub_bcube((s>>2), (s&3)));
+						occ_sub_bcube.d[2][1] = occ_sub_bcube.d[2][0]; // cube below the bcube
+						occ_sub_bcube.d[2][0] = zmin;
+						tile_os.occluded      = 1;
+
+						for (unsigned t = 0; t < 16; ++t) {
+							if (sub_tile_os[t].occluded) continue; // already occluded
+							sub_tile_os[t].occluded = 1;
+
+							for (unsigned d = 0; d < 4 && sub_tile_os[t].occluded; ++d) {
+								sub_tile_os[t].occluded &= check_line_clip(sub_tile_os[t].cube_pts[d], camera, occ_sub_bcube.d);
+							}
+							tile_os.occluded &= sub_tile_os[t].occluded;
+						}
+					} // for s
+					if (tile_os.occluded) break;
+				} // for j
+				//cout << (tile_os.occluded ? "*" : "."); // TESTING
+				if (tile_os.occluded) continue;
+			} // check_occlusion
 			to_draw.push_back(make_pair(dist, tile));
-		}
+		} // for i
 		sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 		shader_t s;
 		setup_mesh_draw_shaders(s, reflection_pass);
