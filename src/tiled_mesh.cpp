@@ -1400,7 +1400,7 @@ public:
 		vector<tile_t *> occluders;
 		point const camera(get_camera_pos());
 
-		if (!reflection_pass && (display_mode & 0x08)) { // check occlusion
+		if (!reflection_pass && (display_mode & 0x08) && (display_mode & 0x01)) { // check occlusion when occlusion checking and mesh are enabled
 			for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 				tile_t *const tile(i->second);
 				if (tile->get_rel_dist_to_camera() > OCCLUDER_DIST || !tile->is_visible()) continue;

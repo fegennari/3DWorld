@@ -405,53 +405,55 @@ void draw_group(obj_group &objg, shader_t &s) {
 			assert(tree_type >= 0 && tree_type < NUM_TREE_TYPES);
 			ordering.push_back(make_pair(tree_type, j));
 		}
-		num_drawn += (unsigned)ordering.size();
-		sort(ordering.begin(), ordering.end()); // sort by texture id
-		int last_tid(-1);
-		set_specular(0.1, 10.0);
-		if (s.is_setup()) {s.disable();}
-		shader_t ls;
-		ls.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-		colorRGBA const orig_fog_color(setup_smoke_shaders(ls, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1)); // TSL=1
-		ls.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
-		ls.add_uniform_float("ambient_scale",    0.0);
-		quad_batch_draw qbd;
-		set_color(BLACK);
+		if (!ordering.empty()) {
+			num_drawn += (unsigned)ordering.size();
+			sort(ordering.begin(), ordering.end()); // sort by texture id
+			int last_tid(-1);
+			set_specular(0.1, 10.0);
+			if (s.is_setup()) {s.disable();}
+			shader_t ls;
+			ls.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+			colorRGBA const orig_fog_color(setup_smoke_shaders(ls, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1)); // TSL=1
+			ls.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+			ls.add_uniform_float("ambient_scale",    0.0);
+			quad_batch_draw qbd;
+			set_color(BLACK);
 
-		for (unsigned j = 0; j < ordering.size(); ++j) {
-			dwobject &obj(objg.get_obj(ordering[j].second));
-			int const tree_type(ordering[j].first), tid(tree_types[tree_type].leaf_tex);
-			float const leaf_scale(2.0*leaf_size*obj.init_dir.z), leaf_x_ar(tree_types[tree_type].leaf_x_ar);
-			assert(tid >= 0);
+			for (unsigned j = 0; j < ordering.size(); ++j) {
+				dwobject &obj(objg.get_obj(ordering[j].second));
+				int const tree_type(ordering[j].first), tid(tree_types[tree_type].leaf_tex);
+				float const leaf_scale(2.0*leaf_size*obj.init_dir.z), leaf_x_ar(tree_types[tree_type].leaf_x_ar);
+				assert(tid >= 0);
 			
-			if (draw_model == 0 && tid != last_tid) {
-				qbd.draw_and_clear();
-				select_texture(tid, 0, 1);
-				last_tid = tid;
-			}
-			point pos(obj.pos);
-			if (place_obj_on_grass(pos, leaf_scale)) {pos.z = 0.5*(obj.pos.z + pos.z-leaf_scale);} // leaf is partially on grass
-			float const t(((float)obj.time)/((float)otype.lifetime));
-			colorRGBA const dry_color(1.0, 0.7, 0.1); // this is the final color, even for partially burnt leaves - oh well
-			colorRGBA leaf_color(WHITE);
-			UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
-			if (leaf_color != BLACK) {blend_color(leaf_color, dry_color, leaf_color, t, 0);}
-			vector3d dirs[2] = {(leaf_points[3] - leaf_points[0]), (leaf_points[1] - leaf_points[0])};
+				if (draw_model == 0 && tid != last_tid) {
+					qbd.draw_and_clear();
+					select_texture(tid, 0, 1);
+					last_tid = tid;
+				}
+				point pos(obj.pos);
+				if (place_obj_on_grass(pos, leaf_scale)) {pos.z = 0.5*(obj.pos.z + pos.z-leaf_scale);} // leaf is partially on grass
+				float const t(((float)obj.time)/((float)otype.lifetime));
+				colorRGBA const dry_color(1.0, 0.7, 0.1); // this is the final color, even for partially burnt leaves - oh well
+				colorRGBA leaf_color(WHITE);
+				UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
+				if (leaf_color != BLACK) {blend_color(leaf_color, dry_color, leaf_color, t, 0);}
+				vector3d dirs[2] = {(leaf_points[3] - leaf_points[0]), (leaf_points[1] - leaf_points[0])};
 				
-			for (unsigned d = 0; d < 2; ++d) {
-				dirs[d]   *= 0.5*leaf_scale;
-				dirs[d].x *= leaf_x_ar;
-				rotate_vector3d(plus_z, -obj.init_dir.x, dirs[d]);
-				rotate_vector3d(obj.orientation, -obj.angle/TO_DEG, dirs[d]);
-			}
-			qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], cross_product(dirs[0], dirs[1]).get_norm(), leaf_color);
-		} // for j
-		qbd.draw_and_clear();
-		ls.add_uniform_float("base_color_scale", 1.0);
-		ls.add_uniform_float("ambient_scale",    1.0);
-		end_smoke_shaders(ls, orig_fog_color);
-		if (s.is_setup()) {s.enable();} // back to the original shader
-		set_specular(0.0, 1.0);
+				for (unsigned d = 0; d < 2; ++d) {
+					dirs[d]   *= 0.5*leaf_scale;
+					dirs[d].x *= leaf_x_ar;
+					rotate_vector3d(plus_z, -obj.init_dir.x, dirs[d]);
+					rotate_vector3d(obj.orientation, -obj.angle/TO_DEG, dirs[d]);
+				}
+				qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], cross_product(dirs[0], dirs[1]).get_norm(), leaf_color);
+			} // for j
+			qbd.draw_and_clear();
+			ls.add_uniform_float("base_color_scale", 1.0);
+			ls.add_uniform_float("ambient_scale",    1.0);
+			end_smoke_shaders(ls, orig_fog_color);
+			if (s.is_setup()) {s.enable();} // back to the original shader
+			set_specular(0.0, 1.0);
+		}
 	} // leaf
 	else if (objg.large_radius()) { // large objects
 		vector<wap_obj> wap_vis_objs[2];
