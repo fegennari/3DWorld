@@ -198,8 +198,7 @@ void draw_quad_from_4_pts(point const *const pts);
 void draw_tquad(float xsize, float ysize, float z, bool texture, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z, bool texture, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_billboard_quad(point const &pos, vector3d const &dx, vector3d const &dy, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
-void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir, float xsize, float ysize,
-	float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool up_is_y=0, bool minimize_fill=0);
+void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir, float xsize, float ysize);
 bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]);
 void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 	point const* const prev=NULL, point const *const next=NULL);
@@ -207,7 +206,6 @@ void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, col
 	point const* const prev=NULL, point const *const next=NULL, bool make_global=0);
 void begin_line_tquad_draw(bool draw_as_tris=0);
 void end_line_tquad_draw();
-void draw_animated_billboard(point const &pos, float size, float timescale);
 int  draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim=PRIM_DISABLED, bool no_normals=0, int eflags=0,
 	float texture_scale=1.0, vector3d const *const view_dir=NULL);
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv=1, bool scale_ndiv=0,

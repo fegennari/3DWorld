@@ -853,11 +853,11 @@ template<typename T> void get_draw_order(vector<T> const &objs, order_vect_t &or
 }
 
 
-void bubble::draw() const {
+void bubble::draw(bool set_liquid_color) const {
 
 	assert(status);
 	colorRGBA color2(color);
-	if (world_mode == WMODE_GROUND) select_liquid_color(color2, pos);
+	if (set_liquid_color) {select_liquid_color(color2, pos);}
 	float const point_dia(NDIV_SCALE*window_width*radius/distance_to_camera(pos));
 
 	if (point_dia < 4.0) {
@@ -874,7 +874,7 @@ void bubble::draw() const {
 order_vect_t particle_cloud::order;
 
 
-void particle_cloud::draw() const {
+void particle_cloud::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
 	float const scale(get_zoom_scale()*0.016*window_width);
@@ -892,7 +892,7 @@ void particle_cloud::draw() const {
 
 	if (parts.empty()) {
 		if (status && sphere_in_camera_view(pos, radius, 0)) {
-			draw_part(pos, radius, color);
+			draw_part(pos, radius, color, qbd);
 		}
 	}
 	else {
@@ -908,13 +908,13 @@ void particle_cloud::draw() const {
 		for (unsigned j = 0; j < order.size(); ++j) {
 			unsigned const i(order[j].second);
 			assert(i < cur_parts.size());
-			draw_part(cur_parts[i].pos, cur_parts[i].radius, color);
+			draw_part(cur_parts[i].pos, cur_parts[i].radius, color, qbd);
 		}
 	}
 }
 
 
-void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
+void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_draw &qbd) const {
 
 	point const camera(get_camera_pos());
 	if (dist_less_than(camera, p, max(NEAR_CLIP, 4.0f*r))) return; // too close to the camera
@@ -939,30 +939,27 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c) const {
 		get_indir_light(c, p, 0, 1, NULL, NULL); // could move outside of the parts loop if too slow
 	}
 	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
-	c.do_glColor();
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
-	draw_billboard(p, camera, up_vector, 4.0*r, 4.0*r, 0, 0, 1, 1, 0, MIN_PARTICLE_FILL);
+	qbd.add_billboard(p, camera, up_vector, plus_z, c, 4.0*r, 4.0*r, 0, 0, 1, 1, MIN_PARTICLE_FILL); // FIXME: cleanup draw_billboard()
 }
 
 
-void fire::set_fire_color() const {
+colorRGBA fire::get_fire_color() const { // unused
 
 	float const alpha(rand_uniform(max(0.3, (0.9 + 0.1*heat)), min(0.9, (0.8 + 0.2*heat))));
-	colorRGBA const color(1.0, 0.4*heat, max(0.0f, 1.2f*(heat-1.0f)), alpha);
-	color.do_glColor();
+	return colorRGBA(1.0, 0.4*heat, max(0.0f, 1.2f*(heat-1.0f)), alpha);
 }
 
 
-void fire::draw() const {
+void fire::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
 	point const pos2(pos + point(0.0, 0.0, 2.0*radius));
-	WHITE.do_glColor();
-	draw_animated_billboard(pos2, 4.0*radius, (time&15)/16.0);
+	qbd.add_animated_billboard(pos2, get_camera_pos(), up_vector, plus_z, WHITE, 4.0*radius, 4.0*radius, (time&15)/16.0);
 }
 
 
-void decal_obj::draw() const {
+void decal_obj::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
 	colorRGBA draw_color(color);
@@ -977,20 +974,19 @@ void decal_obj::draw() const {
 		draw_color.set_valid_color();
 	}
 	draw_color.alpha = get_alpha();
-	draw_color.do_glColor();
 	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
-	draw_billboard(cur_pos, (cur_pos + orient), upv, radius, radius);
+	qbd.add_billboard(cur_pos, (cur_pos + orient), upv, plus_z, draw_color, radius, radius);
 }
 
 
-template<typename T> void draw_objects(vector<T> const &objs) {
+template<typename T, typename ARG> void draw_objects(vector<T> const &objs, ARG &arg) {
 
 	order_vect_t order;
 	get_draw_order(objs, order);
 
 	for (unsigned i = 0; i < order.size(); ++i) {
 		assert(order[i].second < objs.size());
-		objs[order[i].second].draw();
+		objs[order[i].second].draw(arg);
 	}
 }
 
@@ -1001,7 +997,8 @@ void draw_bubbles() {
 	glEnable(GL_CULL_FACE);
 	enable_blend();
 	set_color(WATER_C);
-	draw_objects(bubbles);
+	bool const set_liquid_color(world_mode == WMODE_GROUND);
+	draw_objects(bubbles, set_liquid_color);
 	bubble_pld.draw_and_clear();
 	disable_blend();
 	glDisable(GL_CULL_FACE);
@@ -1014,9 +1011,9 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bo
 	//select_multitex(CLOUD_TEX, 1);
 	glAlphaFunc(GL_GREATER, 0.01);
 	glEnable(GL_ALPHA_TEST); // makes it faster
-	glBegin(GL_TRIANGLES);
-	draw_objects(pc);
-	glEnd();
+	quad_batch_draw qbd;
+	draw_objects(pc, qbd);
+	qbd.draw();
 	glDisable(GL_ALPHA_TEST);
 	disable_flares();
 	//disable_multitex(1);
@@ -1047,14 +1044,14 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.04);
 	select_texture(tid);
-	glBegin(GL_TRIANGLES);
+	quad_batch_draw qbd;
 
 	for (unsigned j = 0; j < order.size(); ++j) {
 		unsigned const i(order[j].second);
 		assert(i < objs.size());
-		objs[i].draw();
+		objs[i].draw(qbd);
 	}
-	glEnd();
+	qbd.draw();
 	end_smoke_shaders(s, orig_fog_color);
 	glDisable(GL_ALPHA_TEST);
 	disable_blend();
@@ -1246,11 +1243,11 @@ void draw_camera_filters(vector<camera_filter> &cfs) {
 float const spark_t::radius = 0.0;
 
 
-void spark_t::draw() const {
+void spark_t::draw(quad_batch_draw &qbd) const {
 
-	c.do_glColor();
+	//c.do_glColor();
 	point const camera(get_camera_pos());
-	draw_billboard((pos + (camera - pos).get_norm()*0.02), camera, up_vector, s, s);
+	qbd.add_billboard((pos + (camera - pos).get_norm()*0.02), camera, up_vector, plus_z, c, s, s);
 }
 
 
@@ -1263,9 +1260,9 @@ void draw_sparks() {
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.01);
 	select_texture(BLUR_TEX);
-	glBegin(GL_TRIANGLES);
-	draw_objects(sparks);
-	glEnd();
+	quad_batch_draw qbd;
+	draw_objects(sparks, qbd);
+	qbd.draw();
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
 	glDisable(GL_ALPHA_TEST);

@@ -769,27 +769,12 @@ void draw_billboard_quad(point const &pos, vector3d const &dx, vector3d const &d
 
 
 // Note: drawn as triangles
-void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir, float xsize, float ysize,
-	float tx1, float ty1, float tx2, float ty2, bool up_is_y, bool minimize_fill)
-{
+void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir, float xsize, float ysize) {
+
 	vector3d const vdir(viewer - pos); // z
 	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // x (what if colinear?)
-	vector3d const v2((up_is_y ? up_dir : cross_product(v1, vdir).get_norm())*ysize); // y
-
-	if (minimize_fill) { // draw as octagon
-		assert(tx1 == 0 && ty1 == 0 && tx2 == 1 && ty2 == 1);
-		float const p[8][2] = {{0.7,0.0}, {1.0,0.3}, {1.0,0.7}, {0.7,1.0}, {0.3,1.0}, {0.0,0.7}, {0.0,0.3}, {0.3,0.0}};
-		unsigned const v[18] = {0,1,7 ,1,6,7, 1,2,6, 2,5,6, 2,3,5, 3,4,5};
-
-		for (unsigned i = 0; i < 18; ++i) {
-			float const tcx(p[v[i]][0]), tcy(p[v[i]][1]);
-			glTexCoord2f(tcx, tcy);
-			(pos + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0)).do_glVertex();
-		}
-	}
-	else { // draw as quad (2 triangles)
-		draw_billboard_quad(pos, v1, v2, tx1, ty1, tx2, ty2);
-	}
+	vector3d const v2(cross_product(v1, vdir).get_norm()*ysize); // y
+	draw_billboard_quad(pos, v1, v2); // draw as quad (2 triangles)
 }
 
 
@@ -877,15 +862,6 @@ void end_line_tquad_draw() {
 	glDisable(GL_TEXTURE_2D);
 	disable_blend();
 	glEnable(GL_LIGHTING);
-}
-
-
-void draw_animated_billboard(point const &pos, float size, float timescale) { // fixed 4x4 animation
-
-	int const frame_id(max(0, min(15, int(16*timescale)))), tx(frame_id&3), ty(frame_id>>2);
-	point const camera(get_camera_pos()), gpos(make_pt_global(pos));
-	(camera - pos).do_glNormal();
-	draw_billboard(gpos, (camera + gpos - pos), up_vector, size, size, 0.25*tx, 0.25*ty, 0.25*(tx+1), 0.25*(ty+1)); // upside down
 }
 
 

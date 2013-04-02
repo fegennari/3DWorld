@@ -5,6 +5,7 @@
 #include "gameplay.h"
 #include "physics_objects.h"
 #include "shaders.h"
+#include "draw_utils.h"
 
 
 vector<int> weap_cobjs;
@@ -50,32 +51,30 @@ void draw_beams() {
 
 void show_blood_on_camera() {
 
-	glColor3f(0.7, 0.0, 0.0);
 	enable_blend();
 	glDisable(GL_LIGHTING);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.5);
 	select_texture(BLUR_TEX);
+	quad_batch_draw qbd;
 	
 	for (unsigned i = 0; i < NUM_BS; ++i) {
-		if (blood_spots[i].time > 0) {
-			blood_spots[i].time  -= max(1, iticks); // shrink blood spot
-			blood_spots[i].size  *= pow(0.99f, fticks);
-			blood_spots[i].pos.y -= 0.00001*sqrt(blood_spots[i].size)*fticks;
+		blood_spot &bs(blood_spots[i]);
+		if (bs.time <= 0) continue;
+		bs.time  -= max(1, iticks); // shrink blood spot
+		bs.size  *= pow(0.99f, fticks);
+		bs.pos.y -= 0.00001*sqrt(bs.size)*fticks;
 
-			if (blood_spots[i].size > 0.1) { // draw it
-				glPushMatrix();
-				translate_to(blood_spots[i].pos);
-				float const size(0.00006*blood_spots[i].size);
-				draw_tquad(size, size, 0.0, 1); // FIXME: factor out the begin/end and translate
-				glPopMatrix();
-			}
-			else {
-				blood_spots[i].size = 0.0;
-				blood_spots[i].time = 0;
-			}
+		if (bs.size > 0.1) { // draw it
+			float const size(0.00006*bs.size);
+			qbd.add_quad_dirs(bs.pos, vector3d(size, 0.0, 0.0), vector3d(0.0, size, 0.0), plus_z, colorRGBA(0.7, 0.0, 0.0));
+		}
+		else {
+			bs.size = 0.0;
+			bs.time = 0;
 		}
 	}
+	qbd.draw();
 	disable_blend();
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_ALPHA_TEST);

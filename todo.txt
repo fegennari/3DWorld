@@ -22,3 +22,5 @@ Remove non-shader rendering
 No disable_shaders mode?
 
 Leaf/Branch overlap
+
+Bullet holes/cracks in sliding glass door

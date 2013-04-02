@@ -13,6 +13,8 @@ float const MAX_PART_CLOUD_RAD = 0.25;
 
 extern float CAMERA_RADIUS, C_STEP_HEIGHT;
 
+struct quad_batch_draw;
+
 
 struct spark_t {
 
@@ -25,7 +27,7 @@ struct spark_t {
 
 	spark_t() {}
 	spark_t(point const &p_, colorRGBA const &c_, float s_) : pos(p_), c(c_), s(s_) {}
-	void draw() const;
+	void draw(quad_batch_draw &qbd) const;
 };
 
 
@@ -72,7 +74,7 @@ struct bubble : public basic_physics_obj { // size = 44
 	colorRGBA color;
 
 	void gen(point const &p, float r=0.0, colorRGBA const &c=WATER_C);
-	void draw() const;
+	void draw(bool set_liquid_color) const;
 	void apply_physics(unsigned i);
 };
 
@@ -95,8 +97,8 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 
 	void gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r,
 		float den, float dark, float dam, int src, int dt, bool as, bool use_parts=1, bool nl=0);
-	void draw() const;
-	void draw_part(point const &p, float r, colorRGBA c) const;
+	void draw(quad_batch_draw &qbd) const;
+	void draw_part(point const &p, float r, colorRGBA c, quad_batch_draw &qbd) const;
 	void apply_physics(unsigned i);
 	float get_rscale() const {return CLIP_TO_01(1.0f - (radius - init_radius)/(MAX_PART_CLOUD_RAD - init_radius));}
 	bool is_fire()     const {return (damage_type == BURNED || damage_type == FIRE);}
@@ -111,8 +113,8 @@ struct fire : public basic_physics_obj { // size = 60
 	vector3d velocity;
 
 	void gen(point const &p, float size, float intensity, int src, bool is_static_, float light_bw);
-	void set_fire_color() const;
-	void draw() const;
+	colorRGBA get_fire_color() const;
+	void draw(quad_batch_draw &qbd) const;
 	void apply_physics(unsigned i);
 	void extinguish();
 };
@@ -129,7 +131,7 @@ struct decal_obj : public basic_physics_obj { // size = 76
 
 	decal_obj() : is_glass(0), cid(-1), radius(0.0), alpha(1.0), color(BLACK) {}
 	void gen(point const &p, float r, vector3d const &o, int cid_=-1, float init_alpha=1.0, colorRGBA const &color_=BLACK, bool is_glass_=0);
-	void draw() const;
+	void draw(quad_batch_draw &qbd) const;
 	bool is_on_cobj(int cobj) const;
 	void check_cobj();
 	void apply_physics(unsigned i);

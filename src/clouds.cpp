@@ -260,7 +260,6 @@ void cloud_manager_t::draw() {
 	if (atmosphere < 0.01) return; // no atmosphere
 	create_clouds();
 	if (empty()) return;
-	//glFinish(); // testing
 	RESET_TIME;
 	glDisable(GL_DEPTH_TEST);
 
@@ -302,7 +301,6 @@ void cloud_manager_t::draw() {
 		draw_part_cloud(*this, get_cloud_color(), 1);
 	}
 	glEnable(GL_DEPTH_TEST);
-	//glFinish(); // testing
 	//PRINT_TIME("Clouds");
 }
 

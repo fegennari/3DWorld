@@ -7,6 +7,7 @@
 #include "textures_3dw.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "draw_utils.h"
 
 
 float const W_TEX_SCALE0     = 1.0;
@@ -471,20 +472,16 @@ void display_mesh() { // fast array version
 	run_post_mesh_draw();
 
 	if (SHOW_NORMALS) {
-		set_color(RED);
-		glNormal3f(0.0, 0.0, 1.0);
-		glBegin(GL_LINES);
+		static pt_line_drawer pld;
 
 		for (int i = 1; i < MESH_Y_SIZE-2; ++i) {
 			for (int j = 1; j < MESH_X_SIZE-1; ++j) {
 				point const pos(get_xval(j), get_yval(i), mesh_height[i][j]);
 				vector3d const norm(vertex_normals[i][j]*0.1);
-				//vector3d const norm(get_local_wind(pos + vector3d(0.0, 0.0, DZ_VAL))*0.1);
-				glVertex3f(pos.x, pos.y, pos.z);
-				glVertex3f(pos.x+norm.x, pos.y+norm.y, pos.z+norm.z);
+				pld.add_line(pos, plus_z, RED, (pos + norm), plus_z, RED);
 			}
 		}
-		glEnd();
+		pld.draw_and_clear();
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Final");
 }

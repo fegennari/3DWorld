@@ -71,8 +71,7 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, unsigned char type);
-void draw_shrapnel(dwobject const &obj, float radius);
-void draw_particle(dwobject const &obj, float radius);
+colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale);
 
 int same_team(int source, int target); // gameplay
 
@@ -512,13 +511,14 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 	} // large objects
 	else { // small objects
+		quad_batch_draw particle_qbd;
+
 		if (type == SHRAPNEL) {
 			glBegin(GL_TRIANGLES);
 		}
 		else if (type == PARTICLE) {
 			glEnable(GL_ALPHA_TEST);
 			glAlphaFunc(GL_GREATER, 0.01);
-			glBegin(GL_TRIANGLES);
 		}
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
@@ -559,15 +559,16 @@ void draw_group(obj_group &objg, shader_t &s) {
 				set_color_v2(color2, obj.status);
 				draw_shell_casing(pos, obj.orientation, obj.init_dir, tradius, obj.angle, cd_scale, obj.direction);
 				break;
-			case SHRAPNEL:
-				draw_shrapnel(obj, tradius);
-				break;
 			case STAR5:
 				set_color_v2(color2, obj.status);
 				draw_star(pos, obj.orientation, obj.init_dir, tradius, obj.angle, 1);
 				break;
+			case SHRAPNEL:
+				set_emissive_color_obj(get_glow_color(obj, 1));
+				draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0);
+				break;
 			case PARTICLE:
-				draw_particle(obj, tradius);
+				particle_qbd.add_billboard(obj.pos, get_camera_pos(), up_vector, plus_z, get_glow_color(obj, 0), 1.2*tradius, 1.2*tradius);
 				break;
 
 			case SAND:
@@ -604,12 +605,12 @@ void draw_group(obj_group &objg, shader_t &s) {
 		if (!puddles.empty()) { // draw puddles
 			glDepthMask(GL_FALSE);
 			select_texture(BLUR_TEX);
-			glNormal3f(0.0, 0.0, 1.0);
+			plus_z.do_glNormal();
 			glBegin(GL_TRIANGLES);
 
 			for (vector<puddle_t>::const_iterator p = puddles.begin(); p != puddles.end(); ++p) {
 				set_color_alpha(p->color);
-				draw_billboard(p->pos, (p->pos + plus_z), vector3d(1.0, 0.0, 0.0), 5.0*p->radius, 5.0*p->radius);
+				draw_billboard(p->pos, (p->pos + plus_z), plus_x, 5.0*p->radius, 5.0*p->radius);
 			}
 			glEnd();
 			glDepthMask(GL_TRUE);
@@ -621,8 +622,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			glEnd();
 		}
 		else if (type == PARTICLE) {
-			clear_emissive_color();
-			glEnd();
+			particle_qbd.draw();
 			glDisable(GL_ALPHA_TEST);
 		}
 		if (!obj_pld.empty()) {
@@ -1384,24 +1384,10 @@ colorRGBA get_glowing_obj_color(point const &pos, int time, int lifetime, float 
 }
 
 
-void set_glow_color(dwobject const &obj, bool shrapnel_cscale) {
+colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale) {
 
 	float stime;
 	colorRGBA color(get_glowing_obj_color(obj.pos, obj.time, object_types[obj.type].lifetime, stime, shrapnel_cscale, ((obj.flags & TYPE_FLAG) != 0)));
 	if (shrapnel_cscale) color *= CLIP_TO_01(1.0f - stime);
-	set_emissive_color_obj(color);
-}
-
-
-void draw_shrapnel(dwobject const &obj, float radius) {
-
-	set_glow_color(obj, 1);
-	draw_rotated_triangle(obj.pos, obj.orientation, radius, obj.angle, 0.0);
-}
-
-
-void draw_particle(dwobject const &obj, float radius) {
-
-	set_glow_color(obj, 0);
-	draw_billboard(obj.pos, get_camera_pos(), up_vector, 1.2*radius, 1.2*radius);
+	return color;
 }

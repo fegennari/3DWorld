@@ -67,11 +67,11 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 
 	void add_quad_pts(point const pts[4], vector3d const &n, colorRGBA const &c, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 	void add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy, vector3d const &n, colorRGBA const &c,
-		float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0)
-	{
-		point const pts[4] = {(pos - dx - dy), (pos - dx + dy), (pos + dx + dy), (pos + dx - dy)};
-		add_quad_pts(pts, n, c, tx1, ty1, tx2, ty2);
-	}
+		float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
+	void add_billboard(point const &pos, point const &viewer, vector3d const &up_dir, vector3d const &n, colorRGBA const &c,
+		float xsize, float ysize, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool minimize_fill=0);
+	void add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir,
+		vector3d const &n, colorRGBA const &c, float xsize, float ysize, float timescale);
 	void draw() const;
 	void draw_and_clear() {draw(); verts.clear();}
 };

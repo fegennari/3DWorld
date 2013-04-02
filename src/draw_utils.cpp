@@ -217,6 +217,48 @@ void quad_batch_draw::add_quad_pts(point const pts[4], vector3d const &n, colorR
 	}
 }
 
+void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
+	vector3d const &n, colorRGBA const &c, float tx1, float ty1, float tx2, float ty2)
+{
+	point const pts[4] = {(pos - dx - dy), (pos - dx + dy), (pos + dx + dy), (pos + dx - dy)};
+	add_quad_pts(pts, n, c, tx1, ty1, tx2, ty2);
+}
+
+void quad_batch_draw::add_billboard(point const &pos, point const &viewer, vector3d const &up_dir,
+	vector3d const &n, colorRGBA const &c, float xsize, float ysize, float tx1, float ty1, float tx2, float ty2, bool minimize_fill)
+{
+	vector3d const vdir(viewer - pos); // z
+	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // x (what if colinear?)
+	vector3d const v2(cross_product(v1, vdir).get_norm()*ysize); // y
+
+	if (minimize_fill) { // draw as octagon
+		assert(tx1 == 0 && ty1 == 0 && tx2 == 1 && ty2 == 1);
+		float const p[8][2] = {{0.7,0.0}, {1.0,0.3}, {1.0,0.7}, {0.7,1.0}, {0.3,1.0}, {0.0,0.7}, {0.0,0.3}, {0.3,0.0}};
+		unsigned const v[18] = {0,1,7 ,1,6,7, 1,2,6, 2,5,6, 2,3,5, 3,4,5};
+		color_wrapper cw;
+		cw.set_c4(c);
+
+		for (unsigned i = 0; i < 18; ++i) {
+			float const tcx(p[v[i]][0]), tcy(p[v[i]][1]);
+			point const pos(pos + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0));
+			verts.push_back(vert_norm_tc_color(pos, n, tcx, tcy, cw.c, 1));
+		}
+	}
+	else { // draw as quad (2 triangles)
+		add_quad_dirs(pos, v1, v2, n, c, tx1, ty1, tx2, ty2);
+	}
+}
+
+void quad_batch_draw::add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir,
+	vector3d const &n, colorRGBA const &c, float xsize, float ysize, float timescale)
+{
+	// fixed 4x4 animation
+	int const frame_id(max(0, min(15, int(16*timescale)))), tx(frame_id&3), ty(frame_id>>2);
+	point const gpos(make_pt_global(pos));
+	(viewer - pos).do_glNormal();
+	add_billboard(gpos, (viewer + gpos - pos), up_dir, n, c, xsize, ysize, 0.25*tx, 0.25*ty, 0.25*(tx+1), 0.25*(ty+1)); // upside down
+}
+
 void quad_batch_draw::draw() const {
 
 	if (verts.empty()) return;
