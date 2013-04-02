@@ -2101,7 +2101,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 			enable_blend();
 			if (size > 6.0) {draw_flare_no_blend(pos_, all_zeros, 3.0*radius, 3.0*radius);}
 
-			if (cfr > 2.5) {
+			if (cfr > 2.5) { // FIXME: factor out shared code?
 				draw_flare_no_blend(pos_, all_zeros, 0.5*radius, cfr*radius);
 				draw_flare_no_blend(pos_, all_zeros, cfr*radius, 0.5*radius);
 			}

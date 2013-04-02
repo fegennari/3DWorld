@@ -696,24 +696,6 @@ void rotate_towards_camera(point const &pos) {
 }
 
 
-void draw_textured_square(float size, float z, int tid) {
-
-	draw_textured_quad(size, size, z, tid);
-}
-
-
-void draw_textured_square_alpha_test(float size, float z, int tid) {
-
-	GLboolean const blend(glIsEnabled(GL_BLEND));
-	if (!blend) enable_blend();
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.001);
-	draw_textured_quad(size, size, z, tid);
-	glDisable(GL_ALPHA_TEST);
-	if (!blend) disable_blend();
-}
-
-
 void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, float ysize) {
 
 	glDepthMask(GL_FALSE);
@@ -725,14 +707,6 @@ void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, floa
 	glEnd();
 	glDepthMask(GL_TRUE);
 	glDisable(GL_TEXTURE_2D);
-}
-
-
-void draw_flare(point const &pos, point const &xlate, float xsize, float ysize) {
-
-	enable_blend();
-	draw_flare_no_blend(pos, xlate, xsize, ysize);
-	disable_blend();
 }
 
 
@@ -760,14 +734,6 @@ void draw_quad_from_4_pts(point const *const pts) {
 
 	assert(pts != NULL);
 	for (unsigned i = 0; i < 4; ++i) {pts[i].do_glVertex();}
-}
-
-
-void draw_textured_quad(float xsize, float ysize, float z, int tid) {
-
-	select_texture(tid);
-	plus_z.do_glNormal();
-	draw_tquad(xsize, ysize, z, 1);
 }
 
 

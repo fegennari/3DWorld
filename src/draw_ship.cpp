@@ -169,11 +169,6 @@ void end_ship_texture() {
 	end_texture();
 }
 
-void draw_ship_flare(point const &pos, point const &xlate, float xsize, float ysize) {
-	draw_flare_no_blend(pos, xlate, xsize, ysize);
-	end_texture();
-}
-
 
 void uobj_draw_data::enable_ship_flares(colorRGBA const &color) {
 
@@ -195,7 +190,8 @@ void uobj_draw_data::disable_ship_flares() {
 void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color) {
 
 	set_emissive_color(color);
-	draw_ship_flare(pos, xlate, xsize, ysize);
+	draw_flare_no_blend(pos, xlate, xsize, ysize);
+	end_texture();
 	clear_emissive_color();
 }
 
@@ -447,14 +443,15 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 	if (!symmetric) glPopMatrix();
 	set_emissive_color(color);
 	draw_sphere_dlist(all_zeros, 0.25, get_ndiv(ndiv/3), 0); // draw central area that shows up when the draw order is incorrect
-	clear_emissive_color();
+	set_emissive_color(color);
 	float angle(TWO_PI*time/TICKS_PER_SECOND);
 
 	for (unsigned i = 0; i < 2; ++i) {
-		float const sx(2.0 + 1.0*sinf(angle)), sy(2.0 + 1.0*cosf(angle));
-		setup_colors_draw_flare(pos, all_zeros, sx, sy, color);
+		draw_flare_no_blend(pos, all_zeros, (2.0 + 1.0*sinf(angle)), (2.0 + 1.0*cosf(angle)));
 		angle += PI;
 	}
+	end_texture();
+	clear_emissive_color();
 	if (!symmetric) glPushMatrix();
 	if (ADD_CFLASH_LIGHTS) add_light_source(pos, 4.0*radius, color);
 }

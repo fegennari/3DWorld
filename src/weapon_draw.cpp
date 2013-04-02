@@ -67,9 +67,7 @@ void show_blood_on_camera() {
 				glPushMatrix();
 				translate_to(blood_spots[i].pos);
 				float const size(0.00006*blood_spots[i].size);
-				//draw_circle_normal(0.0, 0.3*size, N_SPHERE_DIV, 0);
-				//draw_textured_square(size, 0.0, BLUR_TEX);
-				draw_tquad(size, size, 0.0, 1);
+				draw_tquad(size, size, 0.0, 1); // FIXME: factor out the begin/end and translate
 				glPopMatrix();
 			}
 			else {
@@ -427,9 +425,11 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				glAlphaFunc(GL_GREATER, 0.95*alpha);
 				set_specular(0.9, 90.0);
 				float dz((ammo > 1) ? -0.025*radius*ammo : 0.0);
+				plus_z.do_glNormal();
+				select_texture(sb_tex ? SAW_B_TEX : SAW_TEX);
 
 				for (int w = 0; w < max(1, ammo); ++w) { // draw a blade for each ammo
-					draw_textured_square(radius, dz, (sb_tex ? SAW_B_TEX : SAW_TEX));
+					draw_tquad(radius, radius, dz, 1);
 					dz += 0.05*radius;
 				}
 				set_specular(0.0, 0.0);
@@ -645,7 +645,11 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_emissive_color_only(ORANGE);
 				glTranslatef(0.0, 0.0, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
-				draw_textured_square_alpha_test(size, 0.0, BLUR_TEX);
+				glEnable(GL_ALPHA_TEST);
+				glAlphaFunc(GL_GREATER, 0.001);
+				select_texture(BLUR_TEX);
+				draw_tquad(size, size, 0.0, 1);
+				glDisable(GL_ALPHA_TEST);
 				glDisable(GL_TEXTURE_2D);
 				set_color_e(BLACK);
 			}
@@ -656,6 +660,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				radius = 0.0042;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
 				set_emissive_color_only(ORANGE);
+				glEnable(GL_ALPHA_TEST);
+				glAlphaFunc(GL_GREATER, 0.001);
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
 				point const translates[2] = {point(-0.9*rdx, -0.9*rdy, 0.124), point(1.9*rdx, 1.9*rdy, -0.002)};
@@ -664,10 +670,12 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					translate_to(translates[i]);
 					glPushMatrix();
 					if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
-					draw_textured_square_alpha_test(8.0*radius, 0.0, BLUR_TEX); // can't rotate towards camera, already rotated
+					select_texture(BLUR_TEX);
+					draw_tquad(8.0*radius, 8.0*radius, 0.0, 1); // can't rotate towards camera, already rotated
 					glPopMatrix();
 				}
 				set_color_e(BLACK);
+				glDisable(GL_ALPHA_TEST);
 				glDisable(GL_TEXTURE_2D);
 			}
 			break;
