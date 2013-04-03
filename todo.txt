@@ -24,7 +24,5 @@ No disable_shaders mode?
 
 Leaf/Branch overlap
 
-quad_batch_draw with no normals
-
 Change tile occlusion culling loops
 

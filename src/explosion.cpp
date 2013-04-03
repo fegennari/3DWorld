@@ -253,7 +253,7 @@ void draw_blasts() {
 				glDepthMask(GL_FALSE);
 				select_texture(EXPLOSION_TEX, 0);
 			}
-			qbd.add_animated_billboard(br.pos, get_camera_pos(), up_vector, plus_z, br.cur_color, br.cur_size, br.cur_size, timescale);
+			qbd.add_animated_billboard(br.pos, get_camera_pos(), up_vector, br.cur_color, br.cur_size, br.cur_size, timescale);
 			
 			if (end_type) {
 				qbd.draw_and_clear();
@@ -311,10 +311,10 @@ void draw_blasts() {
 			if (universe) {
 				vector3d const dx(2.0*br.cur_size*cross_product(plus_z, br.dir).get_norm());
 				vector3d const dy(2.0*br.cur_size*cross_product(dx,     br.dir).get_norm());
-				qbd.add_quad_dirs(make_pt_global(br.pos), dx, dy, plus_z, br.cur_color);
+				qbd.add_quad_dirs(make_pt_global(br.pos), dx, dy, br.cur_color);
 			}
 			else {
-				qbd.add_billboard(br.pos, get_camera_pos(), plus_z, plus_z, br.cur_color, 2.0*br.cur_size, 2.0*br.cur_size);
+				qbd.add_billboard(br.pos, get_camera_pos(), plus_z, br.cur_color, 2.0*br.cur_size, 2.0*br.cur_size);
 			}
 			if (end_type) {
 				qbd.draw_and_clear();

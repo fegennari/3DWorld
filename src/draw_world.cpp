@@ -940,7 +940,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 	}
 	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
-	qbd.add_billboard(p, camera, up_vector, plus_z, c, 4.0*r, 4.0*r, 0, 0, 1, 1, MIN_PARTICLE_FILL); // FIXME: cleanup draw_billboard()
+	qbd.add_billboard(p, camera, up_vector, c, 4.0*r, 4.0*r, 0, 0, 1, 1, MIN_PARTICLE_FILL); // FIXME: cleanup draw_billboard()
 }
 
 
@@ -955,7 +955,7 @@ void fire::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
 	point const pos2(pos + point(0.0, 0.0, 2.0*radius));
-	qbd.add_animated_billboard(pos2, get_camera_pos(), up_vector, plus_z, WHITE, 4.0*radius, 4.0*radius, (time&15)/16.0);
+	qbd.add_animated_billboard(pos2, get_camera_pos(), up_vector, WHITE, 4.0*radius, 4.0*radius, (time&15)/16.0);
 }
 
 
@@ -975,7 +975,7 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 	}
 	draw_color.alpha = get_alpha();
 	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
-	qbd.add_billboard(cur_pos, (cur_pos + orient), upv, plus_z, draw_color, radius, radius);
+	qbd.add_billboard(cur_pos, (cur_pos + orient), upv, draw_color, radius, radius);
 }
 
 
@@ -1247,7 +1247,7 @@ void spark_t::draw(quad_batch_draw &qbd) const {
 
 	//c.do_glColor();
 	point const camera(get_camera_pos());
-	qbd.add_billboard((pos + (camera - pos).get_norm()*0.02), camera, up_vector, plus_z, c, s, s);
+	qbd.add_billboard((pos + (camera - pos).get_norm()*0.02), camera, up_vector, c, s, s);
 }
 
 

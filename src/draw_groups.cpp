@@ -444,7 +444,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 					rotate_vector3d(plus_z, -obj.init_dir.x, dirs[d]);
 					rotate_vector3d(obj.orientation, -obj.angle/TO_DEG, dirs[d]);
 				}
-				qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], cross_product(dirs[0], dirs[1]).get_norm(), leaf_color);
+				qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], leaf_color, cross_product(dirs[0], dirs[1]).get_norm());
 			} // for j
 			qbd.draw_and_clear();
 			ls.add_uniform_float("base_color_scale", 1.0);
@@ -568,7 +568,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 				draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0);
 				break;
 			case PARTICLE:
-				particle_qbd.add_billboard(obj.pos, get_camera_pos(), up_vector, plus_z, get_glow_color(obj, 0), 1.2*tradius, 1.2*tradius);
+				particle_qbd.add_billboard(obj.pos, get_camera_pos(), up_vector, get_glow_color(obj, 0), 1.2*tradius, 1.2*tradius);
 				break;
 
 			case SAND:

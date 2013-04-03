@@ -205,7 +205,7 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 }
 
 
-void quad_batch_draw::add_quad_pts(point const pts[4], vector3d const &n, colorRGBA const &c, float tx1, float ty1, float tx2, float ty2) {
+void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n, float tx1, float ty1, float tx2, float ty2) {
 
 	float const t[4][2] = {{tx1,ty1}, {tx1,ty2}, {tx2,ty2}, {tx2,ty1}};
 	unsigned const v[6] = {0,2,1, 0,3,2};
@@ -218,18 +218,19 @@ void quad_batch_draw::add_quad_pts(point const pts[4], vector3d const &n, colorR
 }
 
 void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
-	vector3d const &n, colorRGBA const &c, float tx1, float ty1, float tx2, float ty2)
+	colorRGBA const &c, vector3d const &n, float tx1, float ty1, float tx2, float ty2)
 {
 	point const pts[4] = {(pos - dx - dy), (pos - dx + dy), (pos + dx + dy), (pos + dx - dy)};
-	add_quad_pts(pts, n, c, tx1, ty1, tx2, ty2);
+	add_quad_pts(pts, c, n, tx1, ty1, tx2, ty2);
 }
 
 void quad_batch_draw::add_billboard(point const &pos, point const &viewer, vector3d const &up_dir,
-	vector3d const &n, colorRGBA const &c, float xsize, float ysize, float tx1, float ty1, float tx2, float ty2, bool minimize_fill)
+	colorRGBA const &c, float xsize, float ysize, float tx1, float ty1, float tx2, float ty2, bool minimize_fill)
 {
 	vector3d const vdir(viewer - pos); // z
 	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // x (what if colinear?)
 	vector3d const v2(cross_product(v1, vdir).get_norm()*ysize); // y
+	vector3d const normal(vdir.get_norm());
 
 	if (minimize_fill) { // draw as octagon
 		assert(tx1 == 0 && ty1 == 0 && tx2 == 1 && ty2 == 1);
@@ -241,22 +242,20 @@ void quad_batch_draw::add_billboard(point const &pos, point const &viewer, vecto
 		for (unsigned i = 0; i < 18; ++i) {
 			float const tcx(p[v[i]][0]), tcy(p[v[i]][1]);
 			point const pos(pos + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0));
-			verts.push_back(vert_norm_tc_color(pos, n, tcx, tcy, cw.c, 1));
+			verts.push_back(vert_norm_tc_color(pos, normal, tcx, tcy, cw.c, 1));
 		}
 	}
 	else { // draw as quad (2 triangles)
-		add_quad_dirs(pos, v1, v2, n, c, tx1, ty1, tx2, ty2);
+		add_quad_dirs(pos, v1, v2, c, normal, tx1, ty1, tx2, ty2);
 	}
 }
 
-void quad_batch_draw::add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir,
-	vector3d const &n, colorRGBA const &c, float xsize, float ysize, float timescale)
-{
+void quad_batch_draw::add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c, float xsize, float ysize, float timescale) {
+
 	// fixed 4x4 animation
 	int const frame_id(max(0, min(15, int(16*timescale)))), tx(frame_id&3), ty(frame_id>>2);
 	point const gpos(make_pt_global(pos));
-	(viewer - pos).do_glNormal();
-	add_billboard(gpos, (viewer + gpos - pos), up_dir, n, c, xsize, ysize, 0.25*tx, 0.25*ty, 0.25*(tx+1), 0.25*(ty+1)); // upside down
+	add_billboard(gpos, (viewer + gpos - pos), up_dir, c, xsize, ysize, 0.25*tx, 0.25*ty, 0.25*(tx+1), 0.25*(ty+1)); // upside down
 }
 
 void quad_batch_draw::draw() const {

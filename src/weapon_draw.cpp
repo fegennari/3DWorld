@@ -67,7 +67,7 @@ void show_blood_on_camera() {
 
 		if (bs.size > 0.1) { // draw it
 			float const size(0.00006*bs.size);
-			qbd.add_quad_dirs(bs.pos, vector3d(size, 0.0, 0.0), vector3d(0.0, size, 0.0), plus_z, colorRGBA(0.7, 0.0, 0.0));
+			qbd.add_quad_dirs(bs.pos, vector3d(size, 0.0, 0.0), vector3d(0.0, size, 0.0), colorRGBA(0.7, 0.0, 0.0));
 		}
 		else {
 			bs.size = 0.0;
