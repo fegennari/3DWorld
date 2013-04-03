@@ -5,7 +5,6 @@ Fix ship collisions
 
 Tree branch/trunk bark bump maps
 
-
 More grass/plant types
 
 Parallax mapping
@@ -26,4 +25,5 @@ Leaf/Branch overlap
 
 Change tile occlusion culling loops
 
-draw_star()
+Run leak detection
+Run static anaylsis
