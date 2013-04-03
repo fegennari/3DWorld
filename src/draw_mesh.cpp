@@ -472,16 +472,19 @@ void display_mesh() { // fast array version
 	run_post_mesh_draw();
 
 	if (SHOW_NORMALS) {
-		static pt_line_drawer pld;
+		vector<vert_wrap_t> verts;
+		verts.reserve(2*XY_MULT_SIZE);
+		set_color(RED);
 
 		for (int i = 1; i < MESH_Y_SIZE-2; ++i) {
 			for (int j = 1; j < MESH_X_SIZE-1; ++j) {
 				point const pos(get_xval(j), get_yval(i), mesh_height[i][j]);
-				vector3d const norm(vertex_normals[i][j]*0.1);
-				pld.add_line(pos, plus_z, RED, (pos + norm), plus_z, RED);
+				verts.push_back(pos);
+				verts.push_back(pos + 0.1*vertex_normals[i][j]);
 			}
 		}
-		pld.draw_and_clear();
+		verts.front().set_state();
+		glDrawArrays(GL_LINES, 0, verts.size());
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Final");
 }

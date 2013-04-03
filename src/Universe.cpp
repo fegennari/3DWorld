@@ -2074,7 +2074,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 		float const vmag(velocity.mag());
 		bool const small(size < 1.5);
 		bool const draw_as_line(get_pixel_size(vmag, dist)*cross_product(velocity, vcp).mag() > 1.0*vcp_mag*vmag);
-		point const normal(camera - pos_);
+		point const normal(camera - pos_); // Note: normal is unused for lighting
 		pos_ = make_pt_global(pos_);
 
 		if (draw_as_line) { // lines of light - "warp speed"
