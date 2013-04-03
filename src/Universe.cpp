@@ -2365,7 +2365,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	global_translate(pos_);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
 	scale_by(rscale);
-	plus_z.do_glNormal();
+	plus_z.do_glNormal(); // optional?
 	draw_tquad(ring_ro, ring_ro, 0.0, 1);
 	glPopMatrix();
 }

@@ -1336,7 +1336,6 @@ void draw_text(float x, float y, float z, char const *text, float tsize, bool bi
 		glRasterPos3f(x, y, z);
 	}
 	else {
-		up_norm.do_glNormal();
 		glEnable(GL_BLEND);
 		glEnable(GL_LINE_SMOOTH);
 		glPushMatrix();

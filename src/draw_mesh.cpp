@@ -551,7 +551,6 @@ void draw_sides_and_bottom() {
 		yv += DY_VAL;
 	}
 	glEnd();
-	glNormal3f(0.0, 0.0, 1.0);
 	set_lighted_sides(1);
 	glDisable(GL_TEXTURE_2D);
 }
@@ -671,7 +670,6 @@ void water_renderer::draw() { // modifies color
 	for (unsigned i = 0; i < 4; ++i) {
 		draw_sides(sides[i].second); // draw back to front
 	}
-	glNormal3f(0.0, 0.0, 1.0);
 	disable_blend();
 	set_specular(0.0, 1.0);
 	set_lighted_sides(1);

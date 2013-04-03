@@ -26,3 +26,4 @@ Leaf/Branch overlap
 
 Change tile occlusion culling loops
 
+draw_star()

@@ -532,11 +532,6 @@ inline void uniform_scale(float scale) {
 }
 
 
-inline void set_normal_to_face_camera(point const &pos) {
-	(get_camera_pos() - pos).do_glNormal(); // not normalized
-}
-
-
 template<typename T> inline void draw_line(pointT<T> const &p1, pointT<T> const &p2) {
 
 	glBegin(GL_LINES);

@@ -404,7 +404,6 @@ void draw_water() {
 		glDisable(GL_NORMALIZE);
 		enable_blend();
 		enable_point_specular();
-		glNormal3f(0.0, 0.0, 1.0); // probably unnecessary
 		select_water_ice_texture(color);
 		setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 		color.alpha *= 0.5;

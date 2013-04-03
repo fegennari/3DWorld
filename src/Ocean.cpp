@@ -423,7 +423,7 @@ void draw_ocean() {
 		color.do_glColor();
 		draw_ocean2(camera, color, cscale);
 		set_lighted_sides(1);
-		glNormal3f(0.0, 0.0, 1.0);
+		plus_z.do_glNormal();
 		return;
 	}
 	if (ocean_draw == 0) AnimateWater();
@@ -436,7 +436,7 @@ void draw_ocean() {
 	enable_blend();
 	if (show_fog) glDisable(GL_FOG);
 	select_texture(WATER_TEX);
-	glNormal3f(0.0, 0.0, 1.0);
+	plus_z.do_glNormal();
 	glEnable(GL_COLOR_MATERIAL);
 	color.do_glColor();
 	setup_texgen(OCEAN_REPEAT, OCEAN_REPEAT, 0.0, 0.0);
@@ -509,7 +509,7 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 	glDisable(GL_LIGHTING);
 
 	if (SIMPLE_OCEAN) {
-		glNormal3f(0.0, 0.0, 1.0);
+		plus_z.do_glNormal();
 		if (show_fog) glDisable(GL_FOG);
 		select_texture(WATER_TEX);
 		color.do_glColor();

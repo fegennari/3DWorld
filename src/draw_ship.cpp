@@ -175,7 +175,7 @@ void uobj_draw_data::enable_ship_flares(colorRGBA const &color) {
 	set_emissive_color(color);
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	select_texture(BLUR_TEX);
-	glNormal3f(0.0, 0.0, 1.0);
+	plus_z.do_glNormal();
 }
 
 
@@ -485,7 +485,7 @@ void uobj_draw_data::setup_draw_ship() const {
 
 void uobj_draw_data::draw_one_triangle() const {
 
-	glNormal3f(0.0, 0.0, 1.0); // two-sided?
+	plus_z.do_glNormal(); // two-sided?
 	glBegin(GL_TRIANGLES);
 	glVertex3f( 0.0, 1.4, 0.0);
 	glVertex3f( 1.0, 0.0, 0.0);

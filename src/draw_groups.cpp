@@ -1310,10 +1310,9 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate) { // not all variables used
 	
-	radius *= 2.0;
 	glPushMatrix();
 	translate_to(pos);
-	uniform_scale(radius);
+	uniform_scale(2.0*radius);
 	up_norm.do_glNormal();
 
 	if (rotate) {

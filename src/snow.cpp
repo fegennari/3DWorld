@@ -767,7 +767,6 @@ void draw_snow() {
 	}
 	set_specular(0.5, 50.0);
 	set_color(SNOW_COLOR);
-	plus_z.do_glNormal();
 	point const camera(get_camera_pos());
 	enable_blend();
 	glDisable(GL_NORMALIZE);

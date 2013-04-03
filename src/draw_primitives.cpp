@@ -717,7 +717,7 @@ void enable_flares(colorRGBA const &color, bool zoomed) { // alpha test?
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	enable_blend();
 	if (draw_model == 0) select_texture(zoomed ? BLUR_CENT_TEX : BLUR_TEX);
-	glNormal3f(0.0, 0.0, 1.0);
+	plus_z.do_glNormal(); // is this required?
 }
 
 
