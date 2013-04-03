@@ -132,7 +132,7 @@ void coll_obj::create_portal() const {
 				p.pts[i] = points[i]; // ignore thickness - use base polygon only
 			}
 			if (npoints == 3) p.pts[3] = p.pts[2]; // duplicate the last point
-			portals.push_back(p);
+			portals.push_back(p); // Note: p.normal is not set
 			break;
 		}
 	case COLL_CUBE:
@@ -157,7 +157,7 @@ void coll_obj::create_portal() const {
 					}
 				}
 			}
-			if (max_area > 0.0) portals.push_back(p);
+			if (max_area > 0.0) {portals.push_back(p);} // Note: p.normal is not set
 			break;
 		}
 	default:

@@ -1,9 +1,10 @@
 Smoke texture step size
 Indirect lighting normal/direction
+Fix alpha sort order
+Fix ship collisions
 
 Tree branch/trunk bark bump maps
 
-Fix ship collisions
 
 More grass/plant types
 
@@ -23,4 +24,8 @@ No disable_shaders mode?
 
 Leaf/Branch overlap
 
-Bullet holes/cracks in sliding glass door
+pt_line_drawer with no lighting
+quad_batch_draw with no normals
+
+Change tile occlusion culling loops
+

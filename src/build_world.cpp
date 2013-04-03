@@ -1386,7 +1386,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'N': // portal: xyz1 xyz2 xyz3 xyz4
+		case 'N': // portal: xyz1 xyz2 xyz3 xyz4 [nx ny nz]
 			{
 				portal p;
 				for (unsigned i = 0; i < 4; ++i) {
@@ -1395,6 +1395,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					}
 					xf.xform_pos(p.pts[i]);
 				}
+				fscanf(fp, "%f%f%f", &p.normal.x, &p.normal.y, &p.normal.z); // optional/can fail
 				portals.push_back(p);
 			}
 			break;

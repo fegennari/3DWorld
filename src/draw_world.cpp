@@ -560,6 +560,7 @@ bool portal::is_visible() const {
 	point center;
 	float rad;
 	polygon_bounding_sphere(pts, 4, 0.0, center, rad);
+	if (normal != zero_vector && dot_product_ptv(normal, get_camera_pos(), center) < 0.0) return 0; // back facing
 	return sphere_in_camera_view(center, rad, 2);
 }
 
@@ -570,7 +571,6 @@ void portal::draw() const {
 	select_texture(WHITE_TEX, 0);
 	setup_polygon_texgen(plus_z, scale, xlate, zero_vector); // doesn't matter as long as it's set to something
 	ALPHA0.do_glColor();
-	//WHITE.do_glColor();
 	glBegin(GL_QUADS);
 	draw_quad_from_4_pts(pts);
 	glEnd();
