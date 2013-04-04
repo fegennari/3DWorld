@@ -23,7 +23,5 @@ No disable_shaders mode?
 
 Leaf/Branch overlap
 
-Change tile occlusion culling loops
-
 Run leak detection
 Run static anaylsis

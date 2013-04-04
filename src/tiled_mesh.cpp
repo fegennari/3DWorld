@@ -1370,15 +1370,10 @@ public:
 		}
 	}
 
-	struct occluder_state_t {
-
-		cube_t bcube;
+	struct occluder_pts_t {
 		point cube_pts[4];
-		bool intersected, occluded;
 
-		occluder_state_t() : intersected(0), occluded(0) {}
-
-		void calc_cube_top_points() { // copied from get_cube_points
+		void calc_cube_top_points(cube_t const &bcube) { // copied from get_cube_points
 			unsigned i[3] = {0,0,0};
 
 			for (i[0] = 0; i[0] < 2; ++i[0]) {
@@ -1392,15 +1387,17 @@ public:
 	void draw(bool reflection_pass) {
 		//RESET_TIME;
 		unsigned num_drawn(0), num_trees(0);
-		unsigned long long mem(grass_tile_manager.get_gpu_mem() + tree_data_manager.get_gpu_mem()), tree_mem(0);
+		unsigned long long mem(0), tree_mem(0);
+		if (DEBUG_TILES) {mem += grass_tile_manager.get_gpu_mem() + tree_data_manager.get_gpu_mem();}
 		to_draw.clear();
 
 		// determine potential occluders
-		float const OCCLUDER_DIST = 0.1;
+		float const OCCLUDER_DIST = 0.2;
 		vector<tile_t *> occluders;
+		vector<cube_t> test_cubes;
 		point const camera(get_camera_pos());
 
-		if (!reflection_pass && (display_mode & 0x08) && (display_mode & 0x01)) { // check occlusion when occlusion checking and mesh are enabled
+		if ((display_mode & 0x08) && (display_mode & 0x01)) { // check occlusion when occlusion culling and mesh are enabled
 			for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 				tile_t *const tile(i->second);
 				if (tile->get_rel_dist_to_camera() > OCCLUDER_DIST || !tile->is_visible()) continue;
@@ -1409,56 +1406,51 @@ public:
 		}
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			tile_t *const tile(i->second);
-			
-			if (DEBUG_TILES) {
-				mem      += tile->get_gpu_mem();
-				tree_mem += tile->get_tree_mem();
-			}
+			if (DEBUG_TILES) {mem      += tile->get_gpu_mem ();}
+			if (DEBUG_TILES) {tree_mem += tile->get_tree_mem();}
 			float const dist(tile->get_rel_dist_to_camera());
 			if (dist > DRAW_DIST_TILES || !tile->is_visible()) continue;
 			tile_set_t tile_set;
 			if (reflection_pass && !can_have_reflection(tile, tile_set)) continue;
 
-			if (!occluders.empty() && dist > OCCLUDER_DIST) {
-				occluder_state_t tile_os, sub_tile_os[16];
-				tile_os.bcube = tile->get_bcube();
-				tile_os.calc_cube_top_points();
+			if (!occluders.empty()) {
+				occluder_pts_t tile_os, sub_tile_os;
+				tile_os.calc_cube_top_points(tile->get_bcube());
+				bool tile_occluded(1);
+				test_cubes.resize(0);
 
-				for (unsigned t = 0; t < 16; ++t) {
-					sub_tile_os[t].bcube = tile->get_mesh_sub_bcube((t>>2), (t&3));
-					sub_tile_os[t].calc_cube_top_points();
-				}
 				for (vector<tile_t *>::const_iterator j = occluders.begin(); j != occluders.end(); ++j) {
 					if (*j == tile) continue; // no self-occlusion
 					cube_t occluder_bcube((*j)->get_mesh_bcube());
 					occluder_bcube.d[2][0] = zmin; // not required?
-					tile_os.intersected    = 0; // will always be true for the camera's current tile
+					bool intersected(0); // will always be true for the camera's current tile
 
-					for (unsigned d = 0; d < 4 && !tile_os.intersected; ++d) {
-						tile_os.intersected |= check_line_clip(tile_os.cube_pts[d], camera, occluder_bcube.d);
+					for (unsigned d = 0; d < 4 && !intersected; ++d) {
+						intersected |= check_line_clip(tile_os.cube_pts[d], camera, occluder_bcube.d);
 					}
-					if (!tile_os.intersected) continue; // skip
+					if (!intersected) continue; // skip
 
-					for (unsigned s = 0; s < 16 && !tile_os.occluded; ++s) {
-						cube_t occ_sub_bcube((*j)->get_mesh_sub_bcube((s>>2), (s&3)));
-						occ_sub_bcube.d[2][1] = occ_sub_bcube.d[2][0]; // cube below the bcube
-						occ_sub_bcube.d[2][0] = zmin;
-						tile_os.occluded      = 1;
-
-						for (unsigned t = 0; t < 16; ++t) {
-							if (sub_tile_os[t].occluded) continue; // already occluded
-							sub_tile_os[t].occluded = 1;
-
-							for (unsigned d = 0; d < 4 && sub_tile_os[t].occluded; ++d) {
-								sub_tile_os[t].occluded &= check_line_clip(sub_tile_os[t].cube_pts[d], camera, occ_sub_bcube.d);
-							}
-							tile_os.occluded &= sub_tile_os[t].occluded;
-						}
-					} // for s
-					if (tile_os.occluded) break;
+					for (unsigned s = 0; s < 16; ++s) {
+						test_cubes.push_back((*j)->get_mesh_sub_bcube((s>>2), (s&3)));
+						test_cubes.back().d[2][1] = test_cubes.back().d[2][0]; // cube below the bcube
+						test_cubes.back().d[2][0] = zmin;
+					}
 				} // for j
+				for (unsigned t = 0; t < 16; ++t) {
+					sub_tile_os.calc_cube_top_points(tile->get_mesh_sub_bcube((t>>2), (t&3)));
+					bool sub_tile_occluded(0);
+
+					for (vector<cube_t>::const_iterator s = test_cubes.begin(); s != test_cubes.end() && !sub_tile_occluded; ++s) {
+						sub_tile_occluded = 1;
+
+						for (unsigned d = 0; d < 4 && sub_tile_occluded; ++d) {
+							sub_tile_occluded &= check_line_clip(sub_tile_os.cube_pts[d], camera, s->d);
+						}
+					}
+					if (!sub_tile_occluded) {tile_occluded = 0; break;}
+				} // for t
 				//cout << (tile_os.occluded ? "*" : "."); // TESTING
-				if (tile_os.occluded) continue;
+				if (tile_occluded) continue;
 			} // check_occlusion
 			to_draw.push_back(make_pair(dist, tile));
 		} // for i
