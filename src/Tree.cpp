@@ -846,8 +846,6 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 	if (TEST_RTREE_COBJS) return;
 	if (draw_leaves || !draw_branches) {not_visible = !is_visible_to_camera(xlate);} // first pass only
 	if (not_visible) return;
-	bool const use_vbos(setup_gen_buffers());
-	assert(use_vbos);
 	point const draw_pos(sphere_center() + xlate);
 	float const dist_to_camera(distance_to_camera(draw_pos));
 	if (world_mode == WMODE_INF_TERRAIN && dist_to_camera > get_draw_tile_dist()) return; // to far away to draw

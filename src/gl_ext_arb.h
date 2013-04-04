@@ -42,7 +42,6 @@ void enable_fog_coord();
 void disable_fog_coord();
 
 // gl_ext_arb
-bool setup_gen_buffers();
 unsigned create_vbo();
 void bind_vbo(unsigned id, bool is_index=0);
 void delete_vbo(unsigned id);

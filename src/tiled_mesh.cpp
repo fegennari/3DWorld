@@ -1734,16 +1734,9 @@ void pre_draw_tiled_terrain() {
 void draw_tiled_terrain(bool reflection_pass) {
 
 	//RESET_TIME;
-	bool const vbo_supported(setup_gen_buffers());
-		
-	if (!vbo_supported) {
-		cout << "Warning: VBOs not supported, so tiled mesh cannot be drawn." << endl;
-		return;
-	}
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 }
-
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {
 	terrain_tile_draw.update_lightning(reflection_pass);

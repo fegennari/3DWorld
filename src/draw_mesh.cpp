@@ -394,7 +394,7 @@ void display_mesh() { // fast array version
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
 
-	if (ground_effects_level == 0 && setup_gen_buffers()) { // simpler, more efficient mesh draw
+	if (ground_effects_level == 0) { // simpler, more efficient mesh draw
 		static unsigned mesh_vbo(0);
 		
 		if (clear_landscape_vbo) {

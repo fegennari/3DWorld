@@ -692,13 +692,6 @@ bool snow_enabled() {
 void gen_snow_coverage() {
 
 	if (snow_depth <= 0.0 || num_snowflakes == 0) return; // disabled
-	bool const vbo_supported(setup_gen_buffers());
-	
-	if (!vbo_supported) {
-		cout << "Warning: VBOs not supported, so snow cannot be enabled." << endl;
-		num_snowflakes = 0;
-		return;
-	}
 	cout << "Determining Snow Coverage" << endl;
 	voxel_map vmap;
 

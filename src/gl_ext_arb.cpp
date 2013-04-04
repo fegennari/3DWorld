@@ -125,24 +125,9 @@ void disable_fog_coord() {
 // ***************** VBOs *****************
 
 
-bool setup_gen_buffers() {
-
-	static int retval(2);
-	
-	if (retval == 2) { // not yet setup
-		if (!glGenBuffers) {
-			cout << "*** glGenBuffers is not supported ***" << endl;
-			retval = 0;
-		}
-		else {
-			retval = 1;
-		}
-	}
-	return (retval != 0);
-}
-
 unsigned create_vbo() {
 	unsigned id;
+	assert(glGenBuffers);
 	glGenBuffers(1, &id);
 	assert(id > 0);
 	return id;
