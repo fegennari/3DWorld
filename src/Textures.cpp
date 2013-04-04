@@ -138,7 +138,7 @@ texture_t(0, 0, 256,  256,  1, 3, 2, "rock.03.raw"),
 texture_t(0, 0, 16,   16,   1, 3, 0, "black.raw"),
 texture_t(0, 0, 16,   16,   1, 3, 0, "white.raw"),
 texture_t(0, 0, 512,  512,  0, 4, 0, "fire.raw", 1),
-texture_t(0, 0, 1024, 1024, 1, 4, 1, "sky.raw"),
+texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
 texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center"), // not real file
 texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient"), // not real file
