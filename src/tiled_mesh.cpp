@@ -1449,7 +1449,6 @@ public:
 					}
 					if (!sub_tile_occluded) {tile_occluded = 0; break;}
 				} // for t
-				//cout << (tile_os.occluded ? "*" : "."); // TESTING
 				if (tile_occluded) continue;
 			} // check_occlusion
 			to_draw.push_back(make_pair(dist, tile));
