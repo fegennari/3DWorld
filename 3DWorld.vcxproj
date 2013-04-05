@@ -771,6 +771,7 @@
     <ClInclude Include="src\spillover.h" />
     <ClInclude Include="src\subdiv.h" />
     <ClInclude Include="src\Textures_3dw.h" />
+    <ClInclude Include="src\tiled_mesh.h" />
     <ClInclude Include="src\timetest.h" />
     <ClInclude Include="src\transform_obj.h" />
     <ClInclude Include="src\tree_3dw.h" />

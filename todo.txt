@@ -26,5 +26,6 @@ Leaf/Branch overlap
 Run leak detection
 Run static anaylsis
 
-Use scissor test?
 Render large/close objects first
+
+Non-repeating water plane normals
