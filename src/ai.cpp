@@ -1383,6 +1383,16 @@ void free_smiley_textures() {
 }
 
 
+void clear_cached_waypoints() {
+
+	if (sstates == NULL) return;
+
+	for (int i = 0; i < num_smileys; ++i) {
+		sstates[i].last_waypoint = -1;
+	}
+}
+
+
 void init_sstate(int id, bool w_start) {
 
 	assert(sstates != NULL && id >= CAMERA_ID && id < num_smileys);

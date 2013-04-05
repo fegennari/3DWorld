@@ -722,6 +722,7 @@ public:
 void create_waypoints(vector<user_waypt_t> const &user_waypoints) {
 
 	RESET_TIME;
+	clear_cached_waypoints();
 	waypoints.clear();
 	has_user_placed = (!user_waypoints.empty());
 	has_item_placed = 0;

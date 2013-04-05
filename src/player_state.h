@@ -72,6 +72,7 @@ class waypoint_vector : public vector<waypoint_t> {
 public:
 	wpt_ix_t add(waypoint_t const &w);
 	void remove(wpt_ix_t ix);
+	void clear() {vector<waypoint_t>::clear(); free_list.clear();}
 };
 
 

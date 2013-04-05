@@ -585,6 +585,7 @@ int gen_smiley_or_player_pos(point &pos, int index);
 colorRGBA get_smiley_team_color(int smiley_id);
 void select_smiley_texture(int smiley_id);
 void free_smiley_textures();
+void clear_cached_waypoints();
 int get_ammo_or_obj(int wid);
 int wid_need_weapon(int wid);
 
