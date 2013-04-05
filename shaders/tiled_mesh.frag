@@ -47,6 +47,7 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 	
 #ifdef HAS_WATER
 	if (vertex.z < water_plane_z) { // underwater
+#ifdef WATER_CAUSTICS
 		if (i == 0) { // only for light0 (sun)
 			// apply underwater caustics texture
 			float cweight = shadow_weight*wave_amplitude*min(8.0*(water_plane_z - vertex.z), 0.5);
@@ -54,6 +55,7 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 			vec3  cval    = 4.0*mix(texture2D(caustic_tex, gl_TexCoord[2].st).rgb, texture2D(caustic_tex, (gl_TexCoord[2].st + vec2(0.3, 0.6))).rgb, ntime);
 			color.rgb    *= mix(vec3(1,1,1), cval, cweight);
 		}
+#endif
 
 		// apply underwater attenuation
 		// Note: ok if vertex is above the water, dist will come out as 0

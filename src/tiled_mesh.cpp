@@ -1166,7 +1166,9 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 
 	bool const has_water(is_water_enabled() && !reflection_pass);
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
-	if (has_water) {s.set_prefix("#define HAS_WATER", 1);} // FS
+	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100));
+	if (has_water     ) {s.set_prefix("#define HAS_WATER", 1);} // FS
+	if (water_caustics) {s.set_prefix("#define WATER_CAUSTICS", 1);} // FS
 	s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
 	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+tiled_mesh");
 	s.begin_shader();
@@ -1182,8 +1184,11 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	if (has_water) {
 		set_water_plane_uniforms(s);
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
-		select_multitex(WATER_CAUSTIC_TEX, 10, 0);
-		s.add_uniform_int("caustic_tex", 10);
+
+		if (water_caustics) {
+			select_multitex(WATER_CAUSTIC_TEX, 10, 0);
+			s.add_uniform_int("caustic_tex", 10);
+		}
 		set_active_texture(2);
 		setup_water_plane_texgen(8.0, 2.5); // tu_id=2; increase texture scale and change AR since the caustics texture is sparser than the water texture
 		set_active_texture(0);

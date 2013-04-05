@@ -11,7 +11,7 @@
 
 
 float const W_TEX_SCALE0     = 1.0;
-float const WATER_WIND_EFF   = 0.0006;
+float const WATER_WIND_EFF   = 0.0005;
 float const START_OFFSET0    = 0.05;
 float const PRESP_ANGLE_ADJ  = 1.5;
 float const VD_SCALE         = 1.0;
