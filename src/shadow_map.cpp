@@ -306,9 +306,9 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			smap_dlist = glGenLists(1);
 			glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
 		}
-		glEnable(GL_CULL_FACE); glCullFace(GL_FRONT);
+		glEnable(GL_CULL_FACE);
 
-		for (unsigned n = 0; n < 2; ++n) { // {cubes+culling, others+no culling}
+		for (unsigned n = 0; n < 2; ++n) { // {cubes+culling, others+no cuqlling}
 			int in_cur_prim(PRIM_UNSET);
 
 			// FIXME: sort cubes in decreasing z-value?
@@ -326,7 +326,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
 			}
 			if (in_cur_prim >= 0) glEnd();
-			glDisable(GL_CULL_FACE); glCullFace(GL_BACK);
+			glDisable(GL_CULL_FACE);
 		} // for n
 		if (ENABLE_DLIST) glEndList();
 	}
