@@ -312,18 +312,21 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			int in_cur_prim(PRIM_UNSET);
 
 			// FIXME: sort cubes in decreasing z-value?
-			for (coll_obj_group::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
-				if ((i->type == COLL_CUBE) == n)    continue;
-				if (i->no_draw() || i->no_shadow()) continue; // only valid if drawing trees, small trees, and scenery separately
+			// only valid if drawing trees, small trees, and scenery separately
+			for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
+				coll_obj const &c(coll_objects[*i]);
+				assert(c.cp.draw);
+				if ((c.type == COLL_CUBE) == n)   continue;
+				if (c.no_draw() || c.no_shadow()) continue;
 				int ndiv(1);
 
-				if (i->type == COLL_SPHERE) {
-					ndiv = get_smap_ndiv(i->radius);
+				if (c.type == COLL_SPHERE) {
+					ndiv = get_smap_ndiv(c.radius);
 				}
-				else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
-					ndiv = get_smap_ndiv(max(i->radius, i->radius2));
+				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {
+					ndiv = get_smap_ndiv(max(c.radius, c.radius2));
 				}
-				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
+				in_cur_prim = c.simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
 			}
 			if (in_cur_prim >= 0) glEnd();
 			glDisable(GL_CULL_FACE);
