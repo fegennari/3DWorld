@@ -525,10 +525,6 @@ inline void draw_vertex(float x, float y, float z, bool in_y, float tscale=1.0) 
 	glVertex3f(x, y, z);
 }
 
-inline void draw_vertex(vector<vert_norm_tc> &verts, vector3d const &norm, float x, float y, float z, bool in_y, float tscale=1.0) { // xz or zy
-	verts.push_back(vert_norm_tc(point(x, y, z), norm, tscale*(in_y ? z : x), tscale*(in_y ? y : z)));
-}
-
 
 // NOTE: There is a buffer of one unit around the drawn area
 void draw_sides_and_bottom() {
@@ -540,41 +536,7 @@ void draw_sides_and_bottom() {
 	set_color(WHITE);
 	set_lighted_sides(2);
 	set_fill_mode();
-	
 	if (!DISABLE_TEXTURES) select_texture(texture);
-#if 0
-	vector<vert_norm_tc> verts;
-	verts.push_back(vert_norm_tc(point(x1, y1, botz), -plus_z, ts*x1, ts*y1));
-	verts.push_back(vert_norm_tc(point(x1, y2, botz), -plus_z, ts*x1, ts*y2));
-	verts.push_back(vert_norm_tc(point(x2, y2, botz), -plus_z, ts*x2, ts*y2));
-	verts.push_back(vert_norm_tc(point(x2, y1, botz), -plus_z, ts*x2, ts*y1));
-	float xv(x1), yv(y1);
-
-	for (int i = 1; i < MESH_X_SIZE; ++i) { // y sides
-		for (unsigned d = 0; d < 2; ++d) {
-			int const xy_ix(d ? ly : 0);
-			float const limit(d ? y2 : y1);
-			draw_vertex(verts, plus_y, xv,        limit, botz, 0, ts);
-			draw_vertex(verts, plus_y, xv+DX_VAL, limit, botz, 0, ts);
-			draw_vertex(verts, plus_y, xv+DX_VAL, limit, mesh_height[xy_ix][i  ], 0, ts);
-			draw_vertex(verts, plus_y, xv,        limit, mesh_height[xy_ix][i-1], 0, ts);
-		}
-		xv += DX_VAL;
-	}
-	for (int i = 1; i < MESH_Y_SIZE; ++i) { // x sides
-		for (unsigned d = 0; d < 2; ++d) {
-			int const xy_ix(d ? lx : 0);
-			float const limit(d ? x2 : x1);
-			draw_vertex(verts, plus_x, limit, yv,        botz, 1, ts);
-			draw_vertex(verts, plus_x, limit, yv+DY_VAL, botz, 1, ts);
-			draw_vertex(verts, plus_x, limit, yv+DY_VAL, mesh_height[i][xy_ix  ], 1, ts);
-			draw_vertex(verts, plus_x, limit, yv,        mesh_height[i-1][xy_ix], 1, ts);
-		}
-		yv += DY_VAL;
-	}
-	verts.front().set_state();
-	glDrawArrays(GL_QUADS, 0, verts.size());
-#else
 	glBegin(GL_QUADS);
 	glNormal3f(0.0, 0.0, -1.0); // bottom surface
 	draw_one_tquad(x1, y1, x2, y2, botz, 1, ts*x1, ts*y1, ts*x2, ts*y2);
@@ -606,7 +568,6 @@ void draw_sides_and_bottom() {
 		yv += DY_VAL;
 	}
 	glEnd();
-#endif
 	set_lighted_sides(1);
 	glDisable(GL_TEXTURE_2D);
 }
