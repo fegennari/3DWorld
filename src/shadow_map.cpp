@@ -293,6 +293,46 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	WHITE.do_glColor();
 	check_gl_error(202);
 
+	// add static objects
+	if (coll_objects.drawn_ids.empty()) {
+		// do nothing
+	}
+	else if (smap_dlist) {
+		assert(glIsList(smap_dlist));
+		glCallList(smap_dlist);
+	}
+	else {
+		if (ENABLE_DLIST) {
+			smap_dlist = glGenLists(1);
+			glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
+		}
+		glEnable(GL_CULL_FACE); glCullFace(GL_FRONT);
+
+		for (unsigned n = 0; n < 2; ++n) { // {cubes+culling, others+no culling}
+			int in_cur_prim(PRIM_UNSET);
+
+			// FIXME: sort cubes in decreasing z-value?
+			for (coll_obj_group::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
+				if ((i->type == COLL_CUBE) == n)    continue;
+				if (i->no_draw() || i->no_shadow()) continue; // only valid if drawing trees, small trees, and scenery separately
+				int ndiv(1);
+
+				if (i->type == COLL_SPHERE) {
+					ndiv = get_smap_ndiv(i->radius);
+				}
+				else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
+					ndiv = get_smap_ndiv(max(i->radius, i->radius2));
+				}
+				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
+			}
+			if (in_cur_prim >= 0) glEnd();
+			glDisable(GL_CULL_FACE); glCullFace(GL_BACK);
+		} // for n
+		if (ENABLE_DLIST) glEndList();
+	}
+	render_models(1);
+	render_voxel_data(1);
+
 	// add dynamic objects
 	for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 		if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
@@ -306,45 +346,8 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			draw_sphere_dlist(i->pos, i->radius, ndiv, 0); // use circle texture billboards?
 		}
 	}
-	if (coll_objects.drawn_ids.empty()) {
-		// do nothing
-	}
-	else if (smap_dlist) {
-		assert(glIsList(smap_dlist));
-		glCallList(smap_dlist);
-	}
-	else {
-		if (ENABLE_DLIST) {
-			smap_dlist = glGenLists(1);
-			glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
-		}
-		//glEnable(GL_CULL_FACE); glCullFace(GL_FRONT);
-
-		//for (unsigned n = 0; n < 2; ++n) { // {cubes+culling, others+no culling}
-			int in_cur_prim(PRIM_UNSET);
-
-			for (coll_obj_group::const_iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
-				//if ((i->type == COLL_CUBE) == n) continue;
-				if (i->no_draw() || i->no_shadow()) continue; // only valid if drawing trees, small trees, and scenery separately
-				int ndiv(1);
-
-				if (i->type == COLL_SPHERE) {
-					ndiv = get_smap_ndiv(i->radius);
-				}
-				else if (i->type == COLL_CYLINDER || i->type == COLL_CYLINDER_ROT) {
-					ndiv = get_smap_ndiv(max(i->radius, i->radius2));
-				}
-				in_cur_prim = i->simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
-			}
-			if (in_cur_prim >= 0) glEnd();
-			//glDisable(GL_CULL_FACE); glCullFace(GL_BACK);
-		//} // for n
-		if (ENABLE_DLIST) glEndList();
-	}
-	draw_scenery(1, 1, 1);
 	draw_trees(1);
-	render_models(1);
-	render_voxel_data(1);
+	draw_scenery(1, 1, 1);
 
 	if ((display_mode & 0x01) && ground_effects_level != 0) { // draw mesh
 		glPushMatrix();
