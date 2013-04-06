@@ -134,6 +134,7 @@ class mesh_vertex_draw {
 
 	float const healr;
 	vector<vert_norm_color> data;
+	bool shadow_pass;
 
 	struct norm_color_ix {
 		vector3d n;
@@ -203,7 +204,7 @@ class mesh_vertex_draw {
 public:
 	unsigned c;
 
-	mesh_vertex_draw() : healr(fticks*SURF_HEAL_RATE), data(2*(MAX_XY_SIZE+1)), c(0) {
+	mesh_vertex_draw(bool shadow_pass_) : healr(fticks*SURF_HEAL_RATE), data(2*(MAX_XY_SIZE+1)), shadow_pass(shadow_pass_), c(0) {
 		assert(shadow_mask != NULL);
 		assert(!data.empty());
 		last_rows.resize(MESH_X_SIZE+1);
@@ -226,7 +227,7 @@ public:
 				UNROLL_4X(data[c].c[i_] = last_rows[j].c.c[i_];)
 			}
 			else {
-				update_vertex(iinc, j);
+				if (!shadow_pass) {update_vertex(iinc, j);}
 				last_rows[j] = norm_color_ix(data[c], iinc);
 			}
 		}
@@ -337,9 +338,90 @@ void draw_coll_vert(int i, int j) {
 }
 
 
-void display_mesh() { // fast array version
+void draw_mesh_vbo() {
+
+	static unsigned mesh_vbo(0);
+		
+	if (clear_landscape_vbo) {
+		delete_vbo(mesh_vbo);
+		mesh_vbo = 0;
+		clear_landscape_vbo = 0;
+	}
+	if (mesh_vbo == 0) {
+		vector<point> data; // vertex and normals
+		data.reserve(4*MESH_X_SIZE*(MESH_Y_SIZE-1));
+
+		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
+			for (int j = 0; j < MESH_X_SIZE; ++j) {
+				for (unsigned k = 0; k < 2; ++k) {
+					data.push_back(get_mesh_xyz_pos(j, i+k));
+					data.push_back(vertex_normals[i+k][j]);
+				}
+			}
+		}
+		create_vbo_and_upload(mesh_vbo, data, 0, 0);
+	}
+	else {
+		bind_vbo(mesh_vbo);
+	}
+	vert_norm::set_vbo_arrays();
+
+	for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
+		glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
+	}
+	bind_vbo(0);
+}
+
+
+void draw_mesh_mvd(bool shadow_pass) {
+
+	shader_t s;
+
+	if (!shadow_pass && draw_mesh_shader && !disable_shaders) {
+		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		s.setup_enabled_lights();
+		set_dlights_booleans(s, 1, 1); // FS
+		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
+		s.set_vert_shader("texture_gen.part+draw_mesh");
+		s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh");
+		s.begin_shader();
+		if (shadow_map_enabled()) set_smap_shader_for_all_lights(s, 0.001);
+		s.setup_fog_scale();
+		s.add_uniform_int("tex0", 0);
+		s.add_uniform_int("tex1", 1);
+		s.setup_scene_bounds();
+		setup_dlight_textures(s);
+	}
+	float y(-Y_SCENE_SIZE);
+	mesh_vertex_draw mvd(shadow_pass);
+
+	for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
+		float x(-X_SCENE_SIZE);
+		mvd.c = 0;
+
+		for (int j = 0; j < MESH_X_SIZE-1; ++j) {
+			if (!mvd.draw_mesh_vertex_pair(i, j, x, y) && mvd.c > 0) {
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
+				mvd.c = 0;
+			}
+			x += DX_VAL;
+		} // for j
+		mvd.draw_mesh_vertex_pair(i, (MESH_X_SIZE - 1), x, y);
+		if (mvd.c > 1) glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
+		y += DY_VAL;
+	} // for i
+	if (s.is_setup()) {s.end_shader();}
+}
+
+
+void display_mesh(bool shadow_pass) { // fast array version
 
 	if (mesh_height == NULL) return; // no mesh to display
+
+	if (shadow_pass) {
+		draw_mesh_vbo(); //draw_mesh_mvd(1);
+		return;
+	}
 	RESET_TIME;
 
 	if ((display_mode & 0x80) && !DISABLE_WATER && !ocean_set && zmin < max_water_height && ground_effects_level != 0) {
@@ -395,74 +477,10 @@ void display_mesh() { // fast array version
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
 
 	if (ground_effects_level == 0) { // simpler, more efficient mesh draw
-		static unsigned mesh_vbo(0);
-		
-		if (clear_landscape_vbo) {
-			delete_vbo(mesh_vbo);
-			mesh_vbo = 0;
-			clear_landscape_vbo = 0;
-		}
-		if (mesh_vbo == 0) {
-			vector<point> data; // vertex and normals
-			data.reserve(4*MESH_X_SIZE*(MESH_Y_SIZE-1));
-
-			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					for (unsigned k = 0; k < 2; ++k) {
-						data.push_back(get_mesh_xyz_pos(j, i+k));
-						data.push_back(vertex_normals[i+k][j]);
-					}
-				}
-			}
-			create_vbo_and_upload(mesh_vbo, data, 0, 0);
-		}
-		else {
-			bind_vbo(mesh_vbo);
-		}
-		vert_norm::set_vbo_arrays();
-
-		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-			glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
-		}
-		bind_vbo(0);
+		draw_mesh_vbo();
 	}
 	else { // slower mesh draw with more features
-		shader_t s;
-
-		if (draw_mesh_shader && !disable_shaders) {
-			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			s.setup_enabled_lights();
-			set_dlights_booleans(s, 1, 1); // FS
-			s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
-			s.set_vert_shader("texture_gen.part+draw_mesh");
-			s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh");
-			s.begin_shader();
-			if (shadow_map_enabled()) set_smap_shader_for_all_lights(s, 0.001);
-			s.setup_fog_scale();
-			s.add_uniform_int("tex0", 0);
-			s.add_uniform_int("tex1", 1);
-			s.setup_scene_bounds();
-			setup_dlight_textures(s);
-		}
-		float y(-Y_SCENE_SIZE);
-		mesh_vertex_draw mvd;
-
-		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-			float x(-X_SCENE_SIZE);
-			mvd.c = 0;
-
-			for (int j = 0; j < MESH_X_SIZE-1; ++j) {
-				if (!mvd.draw_mesh_vertex_pair(i, j, x, y) && mvd.c > 0) {
-					glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
-					mvd.c = 0;
-				}
-				x += DX_VAL;
-			} // for j
-			mvd.draw_mesh_vertex_pair(i, (MESH_X_SIZE - 1), x, y);
-			if (mvd.c > 1) glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
-			y += DY_VAL;
-		} // for i
-		s.end_shader();
+		draw_mesh_mvd(0);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	disable_multitex(1, 1);
@@ -507,6 +525,10 @@ inline void draw_vertex(float x, float y, float z, bool in_y, float tscale=1.0) 
 	glVertex3f(x, y, z);
 }
 
+inline void draw_vertex(vector<vert_norm_tc> &verts, vector3d const &norm, float x, float y, float z, bool in_y, float tscale=1.0) { // xz or zy
+	verts.push_back(vert_norm_tc(point(x, y, z), norm, tscale*(in_y ? z : x), tscale*(in_y ? y : z)));
+}
+
 
 // NOTE: There is a buffer of one unit around the drawn area
 void draw_sides_and_bottom() {
@@ -520,6 +542,39 @@ void draw_sides_and_bottom() {
 	set_fill_mode();
 	
 	if (!DISABLE_TEXTURES) select_texture(texture);
+#if 0
+	vector<vert_norm_tc> verts;
+	verts.push_back(vert_norm_tc(point(x1, y1, botz), -plus_z, ts*x1, ts*y1));
+	verts.push_back(vert_norm_tc(point(x1, y2, botz), -plus_z, ts*x1, ts*y2));
+	verts.push_back(vert_norm_tc(point(x2, y2, botz), -plus_z, ts*x2, ts*y2));
+	verts.push_back(vert_norm_tc(point(x2, y1, botz), -plus_z, ts*x2, ts*y1));
+	float xv(x1), yv(y1);
+
+	for (int i = 1; i < MESH_X_SIZE; ++i) { // y sides
+		for (unsigned d = 0; d < 2; ++d) {
+			int const xy_ix(d ? ly : 0);
+			float const limit(d ? y2 : y1);
+			draw_vertex(verts, plus_y, xv,        limit, botz, 0, ts);
+			draw_vertex(verts, plus_y, xv+DX_VAL, limit, botz, 0, ts);
+			draw_vertex(verts, plus_y, xv+DX_VAL, limit, mesh_height[xy_ix][i  ], 0, ts);
+			draw_vertex(verts, plus_y, xv,        limit, mesh_height[xy_ix][i-1], 0, ts);
+		}
+		xv += DX_VAL;
+	}
+	for (int i = 1; i < MESH_Y_SIZE; ++i) { // x sides
+		for (unsigned d = 0; d < 2; ++d) {
+			int const xy_ix(d ? lx : 0);
+			float const limit(d ? x2 : x1);
+			draw_vertex(verts, plus_x, limit, yv,        botz, 1, ts);
+			draw_vertex(verts, plus_x, limit, yv+DY_VAL, botz, 1, ts);
+			draw_vertex(verts, plus_x, limit, yv+DY_VAL, mesh_height[i][xy_ix  ], 1, ts);
+			draw_vertex(verts, plus_x, limit, yv,        mesh_height[i-1][xy_ix], 1, ts);
+		}
+		yv += DY_VAL;
+	}
+	verts.front().set_state();
+	glDrawArrays(GL_QUADS, 0, verts.size());
+#else
 	glBegin(GL_QUADS);
 	glNormal3f(0.0, 0.0, -1.0); // bottom surface
 	draw_one_tquad(x1, y1, x2, y2, botz, 1, ts*x1, ts*y1, ts*x2, ts*y2);
@@ -551,6 +606,7 @@ void draw_sides_and_bottom() {
 		yv += DY_VAL;
 	}
 	glEnd();
+#endif
 	set_lighted_sides(1);
 	glDisable(GL_TEXTURE_2D);
 }

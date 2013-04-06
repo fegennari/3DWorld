@@ -230,7 +230,7 @@ float get_cloud_shadow_atten(int x, int y);
 colorRGBA setup_mesh_lighting();
 void run_post_mesh_draw();
 void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex=1);
-void display_mesh();
+void display_mesh(bool shadow_pass=0);
 void draw_water_sides(int check_zvals);
 float get_inf_terrain_fog_dist();
 

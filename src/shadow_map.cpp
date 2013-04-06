@@ -347,14 +347,11 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	render_voxel_data(1);
 
 	if ((display_mode & 0x01) && ground_effects_level != 0) { // draw mesh
-		int const gel(ground_effects_level);
-		ground_effects_level = 0;
 		glPushMatrix();
 		float const val(1.0/dot_product(lpos.get_norm(), plus_z));
 		glTranslatef(0.0, 0.0, -val*approx_pixel_width()); // translate down slightly to reduce shadow aliasing problems
-		display_mesh();
+		display_mesh(1);
 		glPopMatrix();
-		ground_effects_level = gel;
 	}
 	
 	// reset state
