@@ -305,31 +305,37 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			smap_dlist = glGenLists(1);
 			glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
 		}
-		glEnable(GL_CULL_FACE);
+		// only valid if drawing trees, small trees, and scenery separately
+		vector<pair<float, unsigned> > z_sorted;
+		int in_cur_prim(PRIM_UNSET);
 
-		for (unsigned n = 0; n < 2; ++n) { // {cubes+culling, others+no cuqlling}
-			int in_cur_prim(PRIM_UNSET);
+		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
+			coll_obj const &c(coll_objects[*i]);
+			assert(c.cp.draw);
+			if (c.no_shadow_map()) continue;
+			int ndiv(1);
 
-			// FIXME: sort cubes in decreasing z-value?
-			// only valid if drawing trees, small trees, and scenery separately
-			for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
-				coll_obj const &c(coll_objects[*i]);
-				assert(c.cp.draw);
-				if ((c.type == COLL_CUBE) == n) continue;
-				if (c.no_shadow_map())          continue;
-				int ndiv(1);
-
-				if (c.type == COLL_SPHERE) {
-					ndiv = get_smap_ndiv(c.radius);
-				}
-				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {
-					ndiv = get_smap_ndiv(max(c.radius, c.radius2));
-				}
-				in_cur_prim = c.simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
+			if (c.type == COLL_CUBE) {
+				z_sorted.push_back(make_pair(-c.d[2][1], *i));
+				continue;
 			}
-			if (in_cur_prim >= 0) glEnd();
-			glDisable(GL_CULL_FACE);
-		} // for n
+			else if (c.type == COLL_SPHERE) {
+				ndiv = get_smap_ndiv(c.radius);
+			}
+			else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {
+				ndiv = get_smap_ndiv(max(c.radius, c.radius2));
+			}
+			in_cur_prim = c.simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
+		}
+		sort(z_sorted.begin(), z_sorted.end());
+		if (in_cur_prim >= 0) {glEnd(); in_cur_prim = PRIM_UNSET;}
+		glEnable(GL_CULL_FACE); // for cubes only
+
+		for (vector<pair<float, unsigned> >::const_iterator i = z_sorted.begin(); i != z_sorted.end(); ++i) {
+			in_cur_prim = draw_simple_cube(coll_objects[i->second], 0, in_cur_prim, 1, coll_objects[i->second].cp.surfs);
+		}
+		if (in_cur_prim >= 0) {glEnd();}
+		glDisable(GL_CULL_FACE);
 		if (ENABLE_DLIST) glEndList();
 	}
 	render_models(1);
