@@ -449,6 +449,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	int last_tid(-1), last_group_id(-1), last_type(-1);
 	
 	if (draw_solid) {
+		bool const do_z_sort((display_mode & 0x10) != 0);
+		vector<pair<float, int> > occluders;
 		draw_last.resize(0);
 
 		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
@@ -457,7 +459,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			coll_obj const &c(coll_objects[cix]);
 			assert(c.cp.draw);
 			if (c.no_draw()) continue; // can still get here sometimes
-				
+
+			if (do_z_sort && c.is_big_occluder() && c.group_id < 0) {
+				if (camera_pdu.cube_visible(c)) {occluders.push_back(make_pair(distance_to_camera(c.get_center_pt()), *i));}
+				continue;
+			}
 			if (c.is_semi_trans()) { // slow when polygons are grouped
 				float dist(distance_to_camera(c.get_center_pt()));
 
@@ -483,6 +489,12 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			}
 		} // for i
 		end_group(last_group_id);
+		sort(occluders.begin(), occluders.end()); // sort front to back for early z culling
+
+		for (vector<pair<float, int> >::const_iterator i = occluders.begin(); i != occluders.end(); ++i) {
+			unsigned cix(i->second);
+			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, &s);
+		}
 	} // end draw solid
 	if (draw_trans) { // called second
 		if (smoke_exists) {
@@ -491,7 +503,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				draw_last.push_back(make_pair(-distance_to_camera(portals[i].get_center_pt()), -(int)(i+1)));
 			}
 		}
-		sort(draw_last.begin(), draw_last.end()); // sort back to front
+		sort(draw_last.begin(), draw_last.end()); // sort back to front for alpha blending
 		enable_blend();
 		int ulocs[3] = {0};
 		float last_light_atten(-1.0), last_refract_ix(0.0); // set to invalid values to start
