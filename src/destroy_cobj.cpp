@@ -14,7 +14,7 @@ bool const REMOVE_UNANCHORED = 1;
 int destroy_thresh(0);
 vector<unsigned> falling_cobjs;
 
-extern bool scene_dlist_invalid;
+extern bool scene_smap_dlist_invalid;
 extern float tstep, zmin, base_gravity;
 extern int cobj_counter, coll_id[];
 extern obj_type object_types[];
@@ -242,7 +242,6 @@ void add_to_falling_cobjs(set<unsigned> const &ids) {
 void invalidate_static_cobjs() {
 
 	build_cobj_tree(0, 0);
-	scene_dlist_invalid = 1;
 }
 
 
@@ -318,15 +317,16 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	} // for k
 
 	// remove destroyed cobjs
-	for (unsigned i = 0; i < to_remove.size(); ++i) {
-		cobjs[to_remove[i]].remove_waypoint();
-		remove_coll_object(to_remove[i]); // remove old collision object
+	for (vector<int>::const_iterator i = to_remove.begin(); i != to_remove.end(); ++i) {
+		if (!cobjs[*i].no_shadow_map()) {scene_smap_dlist_invalid = 1;}
+		cobjs[*i].remove_waypoint();
+		remove_coll_object(*i); // remove old collision object
 	}
-	if (!to_remove.empty()) invalidate_static_cobjs(); // after destroyed cobj removal
+	if (!to_remove.empty()) {invalidate_static_cobjs();} // after destroyed cobj removal
 
 	// add new waypoints (after build_cobj_tree and end_batch)
-	for (unsigned i = 0; i < just_added.size(); ++i) {
-		cobjs[just_added[i]].add_connect_waypoint(); // slow
+	for (vector<int>::const_iterator i = just_added.begin(); i != just_added.end(); ++i) {
+		cobjs[*i].add_connect_waypoint(); // slow
 	}
 
 	// process unanchored cobjs
@@ -405,7 +405,11 @@ void check_falling_cobjs() {
 	check_cobjs_anchored(falling_cobjs, anchored);
 	falling_cobjs.resize(0);
 	add_to_falling_cobjs(anchored[0]);
-	if (falling_cobjs != last_falling) invalidate_static_cobjs();
+	
+	if (falling_cobjs != last_falling) {
+		invalidate_static_cobjs();
+		scene_smap_dlist_invalid = 1;
+	}
 	//PRINT_TIME("Check Falling Cobjs");
 }
 

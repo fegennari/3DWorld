@@ -24,7 +24,7 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 voxel_params_t global_voxel_params;
 voxel_model_ground terrain_voxel_model;
 
-extern bool group_back_face_cull, scene_dlist_invalid;
+extern bool group_back_face_cull;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
 extern coll_obj_group coll_objects;
 
@@ -980,7 +980,6 @@ void voxel_model::proc_pending_updates() {
 	update_blocks_hook(blocks_to_update, num_added);
 	modified_blocks.clear();
 	volume_added = 0;
-	scene_dlist_invalid = 1;
 	PRINT_TIME("Process Voxel Updates");
 }
 

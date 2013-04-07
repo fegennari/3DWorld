@@ -11,7 +11,7 @@
 
 bool const ENABLE_DLIST = 1;
 
-bool scene_dlist_invalid(0);
+bool scene_smap_dlist_invalid(0);
 unsigned shadow_map_sz(0), smap_dlist(0);
 pos_dir_up orig_camera_pdu;
 
@@ -316,8 +316,8 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
 				coll_obj const &c(coll_objects[*i]);
 				assert(c.cp.draw);
-				if ((c.type == COLL_CUBE) == n)   continue;
-				if (c.no_draw() || c.no_shadow()) continue;
+				if ((c.type == COLL_CUBE) == n) continue;
+				if (c.no_shadow_map())          continue;
 				int ndiv(1);
 
 				if (c.type == COLL_SPHERE) {
@@ -392,9 +392,9 @@ void create_shadow_map() {
 	display_mode &= ~(0x08 | 0x0100); // disable occlusion culling and leaf wind
 
 	// check dlist
-	if (scene_dlist_invalid) {
+	if (scene_smap_dlist_invalid) {
 		free_smap_dlist();
-		scene_dlist_invalid = 0;
+		scene_smap_dlist_invalid = 0;
 	}
 
 	// render shadow maps to textures

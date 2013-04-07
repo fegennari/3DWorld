@@ -122,6 +122,7 @@ public:
 	bool is_invis_player()const;
 	bool truly_static()   const;
 	bool no_shadow()      const {return (status != COLL_STATIC || !cp.shadow || cp.color.alpha < MIN_SHADOW_ALPHA || maybe_is_moving());}
+	bool no_shadow_map()  const {return (no_draw() || no_shadow());}
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
