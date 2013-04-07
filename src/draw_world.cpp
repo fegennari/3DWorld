@@ -175,13 +175,13 @@ int draw_shadowed_objects(int light) {
 
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group const &objg(obj_groups[i]);
-		if (!objg.temperature_ok() || !objg.large_radius()) continue;
+		if (!objg.temperature_ok() || !objg.large_radius() || !objg.enabled) continue;
 		float const radius(object_types[objg.type].radius);
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject const &obj(objg.get_obj(j));
 			if (obj.disabled()) continue;
-			if ((obj.flags & (CAMERA_VIEW | SHADOWED)) || !(obj.shadow & shadow_bit)) continue;
+			if (obj.flags & (CAMERA_VIEW | SHADOWED)) continue;
 			draw_shadow_volume(obj.pos, lpos, radius, inverts);
 		} // for j
 	} // for i

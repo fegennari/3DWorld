@@ -78,7 +78,6 @@ void init_objects() {
 	obj.status      = 1; // starts airborne
 	obj.time        = 0;
 	obj.flags       = 0;
-	obj.shadow      = 0;
 	obj.coll_id     = -1;
 	obj.direction   = 0;
 	obj.source      = -2; // undefined/natural

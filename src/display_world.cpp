@@ -851,8 +851,7 @@ void display(void) {
 		update_cpos();
 		point const camera(get_camera_pos());
 		float depth;
-		underwater     = check_underwater(CAMERA_ID, depth);
-		stencil_shadow = 0;
+		underwater = check_underwater(CAMERA_ID, depth);
 		auto_advance_time();
 		if (animate2) {total_wind += wind*fticks;}
 		check_gl_error(3);

@@ -17,7 +17,7 @@ int const INIT_MESH_TYPE = 0; // 0 = chunk of earth, 1 = island, 2 = tall island
 // Global Variables
 extern bool underwater;
 extern int xoff, yoff, xoff2, yoff2, camera_change, animate, init_x, game_mode, map_mode;
-extern int display_framerate, mesh_type, is_cloudy, recreated, stencil_shadow;
+extern int display_framerate, mesh_type, is_cloudy, recreated;
 extern int displayed, resolution, show_framerate, pause_frame, show_fog, camera_view, camera_mode, camera_surf_collide;
 extern int camera_coll_id, display_mode, frame_counter, ocean_set, island, map_x, map_y, tree_mode;
 extern float temperature, water_plane_z, sm_green_int;

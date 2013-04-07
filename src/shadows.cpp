@@ -29,7 +29,7 @@ point light_pos;
 shad_env s_env[NUM_LIGHT_SRC];
 
 extern bool combined_gu, use_stencil_shadows, draw_mesh_shader;
-extern int stencil_shadow, island, ground_effects_level, scrolling;
+extern int island, ground_effects_level, scrolling;
 extern float sun_rot, moon_rot, zmin, zmax, zbottom, ztop;
 extern point sun_pos, moon_pos, mesh_origin;
 extern vector3d up_norm;
@@ -51,7 +51,6 @@ void create_shadows() {
 	glEnable(GL_STENCIL_TEST);
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
-		if (!(stencil_shadow & (1 << l))) continue;
 		if ((l == LIGHT_SUN && light_factor < 0.5) || (l == LIGHT_MOON && light_factor >= 0.6)) continue;
 		float shadow_alpha;
 
@@ -219,20 +218,12 @@ bool point_to_point_visibility(point const &pos1, point const &pos2, int &xpos, 
 }
 
 
-int camera_shadow(point const &camera) {
-
-	return (has_invisibility(CAMERA_ID) ? 0 : sphere_shadow2(camera, CAMERA_RADIUS, CHECK_ALL_SHADOW, 1, 1));
+void camera_shadow(point const &camera) {
+	if (!has_invisibility(CAMERA_ID)) {sphere_shadow2(camera, CAMERA_RADIUS, CHECK_ALL_SHADOW, 1, 1);}
 }
 
-
-int sphere_shadow2(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality) {
-
-	if (!is_dynamic || !use_stencil_shadows) {
-		sphere_shadow(pos, radius, light_sources, is_dynamic, quality);
-		return 0;
-	}
-	stencil_shadow = 0xFFFF;
-	return stencil_shadow;
+void sphere_shadow2(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality) {
+	if (!is_dynamic || !use_stencil_shadows) {sphere_shadow(pos, radius, light_sources, is_dynamic, quality);}
 }
 
 

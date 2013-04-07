@@ -144,14 +144,14 @@ struct decal_obj : public basic_physics_obj { // size = 76
 struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world object)
 
 	int coll_id;
-	short type, source, flags, shadow;
+	short type, source, flags;
 	unsigned char direction;
 	float health, angle;
 	vector3d velocity, orientation, init_dir, vdeform;
 
 	dwobject() : coll_id(-1) {}
 	dwobject(int type_, point const &pos_, vector3d const &vel_=all_zeros, int status_=0, float health_=0.0)
-		: basic_physics_obj(pos_, status_), coll_id(-1), type(type_), source(-2), flags(0), shadow(0),
+		: basic_physics_obj(pos_, status_), coll_id(-1), type(type_), source(-2), flags(0),
 		direction(0), health(health_), angle(0.0), velocity(vel_), orientation(0.0, 0.0, -1.0),
 		init_dir(0.0, 0.0, -1.0), vdeform(all_zeros) {}
 	float get_true_radius() const;
