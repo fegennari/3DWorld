@@ -889,17 +889,9 @@ order_vect_t particle_cloud::order;
 void particle_cloud::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
-	float const scale(get_zoom_scale()*0.016*window_width);
 	colorRGBA color(base_color);
-
-	if (is_fire()) {
-		color.G *= get_rscale();
-	}
-	else {
-		color *= (0.5*(1.0 - darkness));
-	}
+	if (is_fire()) {color.G *= get_rscale();} else {color *= (0.5*(1.0 - darkness));}
 	color.A *= density;
-	float const dist(distance_to_camera(pos));
 
 	if (parts.empty()) {
 		if (status && sphere_in_camera_view(pos, radius, 0)) {
