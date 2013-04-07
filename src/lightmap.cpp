@@ -1028,7 +1028,8 @@ void upload_dlights_textures() {
 	}
 
 	// step 2: grid bag entries
-	vector<unsigned> gb_data(XY_MULT_SIZE, 0);
+	static vector<unsigned> gb_data;
+	gb_data.resize(XY_MULT_SIZE, 0);
 	unsigned const elem_tex_sz = 256; // must agree with value in shader
 	unsigned const max_gb_entries(elem_tex_sz*elem_tex_sz);
 	unsigned short elem_data[max_gb_entries] = {0};
