@@ -169,7 +169,7 @@ int shader_t::get_attrib_loc(char const *const name, bool allow_fail) const {
 }
 
 
-void shader_t::register_attrib_name(char const *name, unsigned bind_ix) {
+void shader_t::register_attrib_name(char const *const name, unsigned bind_ix) {
 
 	if (disable_shaders) return;
 	assert(bind_ix < 100); // sanity check
@@ -224,13 +224,14 @@ void shader_t::add_attrib_int(unsigned ix, int val) const {
 void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
 	assert(num <= 8);
-	prog_name_suffix += ",el";
-	string name("enable_light0");
+	prog_name_suffix.push_back(',');
+	prog_name_suffix.push_back('L');
+	char name[14] = "enable_light0";
 
 	for (unsigned i = 0; i < num; ++i) { // 0=sun, 1=moon, ...
 		GLboolean const enabled(glIsEnabled(GL_LIGHT0 + i));
-		prog_name_suffix += (enabled ? '1' : '0');
-		name.back() = char('0'+i);
+		prog_name_suffix.push_back(enabled ? '1' : '0');
+		name[12] = char('0'+i);
 		set_bool_prefixes(name, (enabled != 0), shaders_enabled);
 	}
 }
@@ -250,35 +251,39 @@ void shader_t::setup_fog_scale() const {
 }
 
 
-void shader_t::set_prefix(string const &prefix, unsigned shader_type) {
+void shader_t::set_prefix(char const *const prefix, unsigned shader_type) {
 
 	assert(shader_type < 3);
-	prog_name_suffix += ",s";
+	prog_name_suffix.push_back(',');
+	prog_name_suffix.push_back('s');
 	prog_name_suffix.push_back('0'+shader_type);
 	prog_name_suffix += prefix;
-	prepend_string[shader_type] += prefix + '\n';
+	prepend_string[shader_type] += prefix;
+	prepend_string[shader_type].push_back('\n');
 }
 
 
-void shader_t::set_bool_prefix(string const &name, bool val, unsigned shader_type) {
+void shader_t::set_bool_prefix(char const *const name, bool val, unsigned shader_type) {
 	
-	set_prefix((string("const bool ") + name + (val ? " = true;" : " = false;")), shader_type);
+	set_prefix_str((string("const bool ") + name + (val ? " = true;" : " = false;")), shader_type);
 }
 
 
-void shader_t::set_bool_prefixes(string const &name, bool val, unsigned shaders_enabled) {
+void shader_t::set_bool_prefixes(char const *const name, bool val, unsigned shaders_enabled) {
+
+	string const prefix(string("const bool ") + name + (val ? " = true;" : " = false;"));
 
 	for (unsigned s = 0; s < 3; ++s) { // put into correct shader(s): V, F, G
-		if (shaders_enabled & (1<<s)) {set_bool_prefix(name, val, s);}
+		if (shaders_enabled & (1<<s)) {set_prefix_str(prefix, s);}
 	}
 }
 
 
-void shader_t::set_int_prefix(string const &name, int val, unsigned shader_type) {
+void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_type) {
 	
 	ostringstream oss;
 	oss << val;
-	set_prefix((string("const int ") + name + " = " + oss.str() + ";"), shader_type);
+	set_prefix_str((string("const int ") + name + " = " + oss.str() + ";"), shader_type);
 }
 
 

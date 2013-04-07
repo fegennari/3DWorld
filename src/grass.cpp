@@ -578,7 +578,7 @@ public:
 			s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 			s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 0); // VS
 #if 0 // per-pixel dynamic lighting - looks better, but slow
-			s.setup_enabled_lights(2); // L0-L1: static directional
+			s.setup_enabled_lights(2, 1); // VS; L0-L1: static directional
 			set_dlights_booleans(s, 1, 1); // FS
 			s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass_pp_dl");
 			s.set_frag_shader("linear_fog.part+dynamic_lighting.part*+grass_with_dlights");
@@ -586,7 +586,7 @@ public:
 			s.setup_scene_bounds();
 			setup_dlight_textures(s);
 #else // per-vertex dynamic lighting, limited to 6 lights - faster
-			s.setup_enabled_lights(8); // L0-L1: static directional, L2-L7: dynamic point
+			s.setup_enabled_lights(8, 1); // VS; L0-L1: static directional, L2-L7: dynamic point
 			s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass");
 			s.set_frag_shader("linear_fog.part+textured_with_fog");
 			s.begin_shader();

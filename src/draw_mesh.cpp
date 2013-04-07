@@ -379,7 +379,7 @@ void draw_mesh_mvd(bool shadow_pass) {
 
 	if (!shadow_pass && draw_mesh_shader && !disable_shaders) {
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-		s.setup_enabled_lights();
+		s.setup_enabled_lights(2, 2); // FS
 		set_dlights_booleans(s, 1, 1); // FS
 		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 		s.set_vert_shader("texture_gen.part+draw_mesh");
@@ -754,7 +754,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	bool const add_waves((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);
 	bool const rain_mode(add_waves && is_rain_enabled());
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
-	s.setup_enabled_lights();
+	s.setup_enabled_lights(2, 2); // FS
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	s.set_bool_prefix("reflections", reflections, 1); // FS
 	s.set_bool_prefix("add_waves", add_waves, 1); // FS

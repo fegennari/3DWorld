@@ -309,7 +309,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 	for (unsigned i = 0; i < 2; ++i) {
 		if (use_bmap) {s.set_prefix("#define USE_BUMP_MAP", i);} // VS/FS
 	}
-	s.setup_enabled_lights(8);
+	s.setup_enabled_lights(8, 2); // FS
 }
 
 
@@ -378,7 +378,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	dlights        &= (dl_tid > 0 && has_dl_sources);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
-	s.setup_enabled_lights(2); // only 2, but could be up to 8 later
+	s.setup_enabled_lights(2, 2); // FS; only 2, but could be up to 8 later
 	s.set_vert_shader("indir_lighting.part+procedural_gen");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+voxel_texture.part+procedural_gen");
 	s.begin_shader();

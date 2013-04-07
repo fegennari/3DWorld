@@ -248,7 +248,7 @@ void draw_select_groups(int solid) {
 		check_drawing_flags(object_types[SNOW].flags, 1);
 		glDepthMask(GL_FALSE);
 		shader_t s;
-		s.setup_enabled_lights();
+		s.setup_enabled_lights(2, 1); // VS
 		s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 		s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
 		s.set_frag_shader("simple_texture");

@@ -68,7 +68,7 @@ public:
 	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
 	int get_attrib_loc(char const *const name, bool allow_fail=0) const;
-	void register_attrib_name(char const *name, unsigned bind_ix);
+	void register_attrib_name(char const *const name, unsigned bind_ix);
 	void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const;
 	void add_attrib_float      (unsigned ix, float val) const;
 	void add_attrib_int        (unsigned ix, int val) const;
@@ -76,10 +76,11 @@ public:
 	void setup_enabled_lights(unsigned num=2, unsigned shaders_enabled=3);
 	void setup_scene_bounds() const;
 	void setup_fog_scale() const;
-	void set_prefix(string const &prefix, unsigned shader_type);
-	void set_bool_prefix(string const &name, bool val, unsigned shader_type);
-	void set_bool_prefixes(string const &name, bool val, unsigned shaders_enabled=3);
-	void set_int_prefix(string const &name, int val, unsigned shader_type);
+	void set_prefix_str(string const &prefix, unsigned shader_type) {set_prefix(prefix.c_str(), shader_type);}
+	void set_prefix(char const *const prefix, unsigned shader_type);
+	void set_bool_prefix(char const *const name, bool val, unsigned shader_type);
+	void set_bool_prefixes(char const *const name, bool val, unsigned shaders_enabled=3);
+	void set_int_prefix(char const *const name, int val, unsigned shader_type);
 };
 
 #endif // _SHADERS_H_

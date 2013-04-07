@@ -376,7 +376,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 	if (!has_dl_sources && !lightning_enabled()) {s.set_prefix("#define NO_LEAF_DLIGHTS", 0);} // VS optimization
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
-	s.setup_enabled_lights(2);
+	s.setup_enabled_lights(2, 1); // VS
 	s.set_frag_shader(enable_opacity ? "linear_fog.part+noise_dither.part+textured_with_fog_opacity" : "linear_fog.part+textured_with_fog");
 
 	if (use_geom_shader) { // unused

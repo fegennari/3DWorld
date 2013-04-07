@@ -1139,7 +1139,7 @@ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool
 
 void tile_draw_t::shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {
 
-	s.setup_enabled_lights(3); // sun, moon, and lightning
+	s.setup_enabled_lights(3, (1 << lighting_shader)); // sun, moon, and lightning
 	s.set_prefix("#define USE_QUADRATIC_FOG",       1); // FS
 	s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1); // FS
 	s.set_prefix("#define USE_LIGHT_COLORS",        lighting_shader);
@@ -1513,7 +1513,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 	}
 	{ // draw branches
 		shader_t bs;
-		bs.setup_enabled_lights(3); // sun, moon, and lightning
+		bs.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
 		bs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		bs.set_vert_shader("per_pixel_lighting");
 		bs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tiled_tree_branches");
