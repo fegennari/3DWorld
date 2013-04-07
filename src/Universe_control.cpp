@@ -321,9 +321,10 @@ void process_univ_objects() {
 				if (clobj.type == UTYPE_PLANET) {hmap_scale = PLANET_HMAP_SCALE;}
 				float const dist_to_cobj(clobj.dist - (hmap_scale*clobj_radius + radius)); // (1.0 + HMAP_SCALE)*radius?
 				uobj->set_sobj_dist(dist_to_cobj);
-				int coll(0);
 
 				if (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) {
+					int coll(0);
+
 					if (dist_to_cobj < 0.0) { // collision (except for stars)
 						float coll_r;
 						point cpos;
@@ -441,7 +442,7 @@ void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3
 	// test for other ship collisions
 	int const itype(obj_types & ~OBJ_TYPE_UOBJ);
 	free_obj *fobj = NULL;
-	uobject *obj = NULL;
+	uobject const *obj = NULL;
 	float f_dist(0.0);
 
 	if (itype != 0) {
@@ -487,7 +488,7 @@ bool universe_ray_intersect(point const &start, point const &end, int obj_types,
 	line_int_data li_data(start, dir, range, cur, ignore, 0, 0); // not sure how cur and ignore are used, or if it makes sense to pass them in here
 	li_data.even_ncoll = 1;
 	free_obj *fobj = NULL; // unused
-	uobject *uobj(line_intersect_objects(li_data, fobj, obj_types));
+	uobject const *const uobj(line_intersect_objects(li_data, fobj, obj_types));
 	//if (uobj != NULL && uobj != cur && uobj != ignore) {cout << "intersects " << uobj->get_name() << endl;}
 	return (uobj != NULL && uobj != cur && uobj != ignore);
 }

@@ -239,7 +239,7 @@ int get_shape_shadow_bb(point const *points, int npoints, int l, int quality, po
 {
 	assert(points != NULL);
 	int xp, yp, miss(0), ss2(0), saw(0), tot_pts(0);
-	float zval, radius;
+	float zval;
 	point points2[1];
 	xmin = MESH_X_SIZE - SHADOW_BORDER - 1;
 	ymin = MESH_Y_SIZE - SHADOW_BORDER - 1;
@@ -247,6 +247,7 @@ int get_shape_shadow_bb(point const *points, int npoints, int l, int quality, po
 	ymax = SHADOW_BORDER;
 
 	if (quality == 0) {
+		float radius;
 		polygon_bounding_sphere(points, npoints, 0.0, points2[0], radius);
 		vector3d const delta(lpos - points2[0]);
 

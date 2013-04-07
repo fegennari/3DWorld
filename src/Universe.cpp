@@ -153,7 +153,7 @@ uobject *line_intersect_universe(point const &start, vector3d const &dir, float 
 		if (target.is_solid()) {
 			dist = p2p_dist(start, coll);
 			if (target.type == UTYPE_ASTEROID) {return &target.get_asteroid();}
-			if (target.object != NULL) {return (uobject *)target.object;}
+			if (target.object != NULL) {return static_cast<uobject *>(target.object);}
 		}
 	}
 	dist = 0.0;
@@ -385,13 +385,12 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	if (animate2) {cloud_time += fticks;}
 	unpack_color(water_c, P_WATER_C); // recalculate every time
 	unpack_color(ice_c,   P_ICE_C  );
-	int cxyz[3];
 	ushader_group usg;
 	glDisable(GL_LIGHTING);
 
 	static colorRGBA last_bkg_color(BLACK);
 	static point last_player_pos(all_zeros);
-	point const player_pos(get_player_pos());
+	point const &player_pos(get_player_pos());
 	bool const cache_stars(!gen_only && dist_less_than(player_pos, last_player_pos, STAR_MAX_SIZE) && bkg_color == last_bkg_color);
 	bool const draw_all(cache_stars && universe_pld[2].empty());
 
@@ -407,6 +406,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 		for (unsigned nebula_pass = 0; nebula_pass < 2; ++nebula_pass) {
 			if (draw_all && nebula_pass == 0) {player_pdu.valid = 0;}
 			bool const cur_cell_only(no_distant > 0 || (cache_stars && !draw_all && nebula_pass == 0));
+			int cxyz[3];
 
 			for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
 				for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
@@ -614,7 +614,7 @@ void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const
 void ucell::draw_nebulas(ushader_group &usg) const {
 
 	set_fill_mode();
-	point const camera(get_player_pos());
+	point const &camera(get_player_pos());
 
 	for (unsigned i = 0; i < galaxies->size(); ++i) { // back-to-front sort not needed?
 		if ((*galaxies)[i].nebula.is_valid()) {(*galaxies)[i].nebula.draw(rel_center, camera, U_VIEW_DIST, usg.nebula_shader);}
@@ -631,7 +631,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 
 	if (galaxies == NULL) return; // galaxies not yet allocated
 	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
-	point const camera(get_player_pos());
+	point const &camera(get_player_pos());
 	point_d const pos(rel_center);
 
 	// use lower detail when the player is moving quickly in hyperspeed since objects zoom by so quickly
@@ -643,7 +643,6 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 	}
 	assert(!is_nan(camera));
 	bool const p_system(clobj.has_valid_system());
-	float const wwsq((float)window_width*(float)window_width);
 
 	// draw galaxies
 	for (unsigned i = 0; i < galaxies->size(); ++i) { // remember, galaxies can overlap
@@ -744,9 +743,9 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						shadow_vars_t svars(make_pt_global(spos), (has_sun ? sradius : 0.0), all_zeros, 0.0, planet.rscale, planet.ring_ri, planet.ring_ro);
 				
 						if (planet_visible && planet.is_ok()) {
-							float max_overlap(0.0);
-
 							if (has_sun) { // determine if any moons shadow the planet
+								float max_overlap(0.0);
+
 								// Note: if more than one moon shadows the planet, it will be incorrect, but that case is very rare
 								for (unsigned l = 0; l < planet.moons.size(); ++l) {
 									umoon const &moon(planet.moons[l]);
@@ -964,7 +963,6 @@ bool ugalaxy::create(ucell const &cell, int index) {
 	lrq_rad  = 0.0;
 	lrq_pos  = all_zeros;
 	gen_name(current);
-	float const dbase(SYSTEM_MIN_SPACING + radius);
 	cube_t const cube(-radius*scale, radius*scale);
 	point galaxy_ext(all_zeros), pts[8];
 	get_cube_points(cube.d, pts);
@@ -2070,7 +2068,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 		blend_color(ocolor, ocolor, bkg_color, cmult, 1);
 	}
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
-		vector3d const velocity(get_player_velocity());
+		vector3d const &velocity(get_player_velocity());
 		float const vmag(velocity.mag());
 		bool const small(size < 1.5);
 		bool const draw_as_line(get_pixel_size(vmag, dist)*cross_product(velocity, vcp).mag() > 1.0*vcp_mag*vmag);
@@ -2453,7 +2451,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 	for (unsigned gc_ = 0; gc_ < ng && !found_system; ++gc_) { // find galaxy
 		unsigned gc(gc_);
 		if (gc == 0) gc = go; else if (gc == go) gc = 0;
-		ugalaxy const &galaxy((*cell.galaxies)[gc]);
+		ugalaxy &galaxy((*cell.galaxies)[gc]);
 		float const distg(p2p_dist(pos, galaxy.pos));
 		if (distg > g_expand*(galaxy.radius + MAX_SYSTEM_EXTENT)) continue;
 		float const galaxy_radius(galaxy.get_radius_at((pos - galaxy.pos)/distg));
@@ -2499,7 +2497,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 			for (unsigned s_ = cs1; s_ < cs2 && !found_system; ++s_) {
 				unsigned s(s_);
 				if (s == cs1) s = so; else if (s == so) s = cs1;
-				ussystem const &system(galaxy.sols[s]);
+				ussystem &system(galaxy.sols[s]);
 				assert(system.cluster_id == cl); // testing
 				float const dists_sq(p2p_dist_sq(pos, system.pos)), testval(expand*(system.radius + MAX_PLANET_EXTENT));
 				if (dists_sq > testval*testval) continue;
@@ -2521,7 +2519,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 				unsigned const np((unsigned)system.planets.size());
 				
 				for (unsigned pc = 0; pc < np; ++pc) { // find planet
-					uplanet const &planet(system.planets[pc]);
+					uplanet &planet(system.planets[pc]);
 					float distp_sq(p2p_dist_sq(pos, planet.pos));
 					if (distp_sq > pt_sq) continue;
 					float const distp(sqrt(distp_sq) - planet.radius);
@@ -2540,7 +2538,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 					unsigned const nm((unsigned)planet.moons.size());
 					
 					for (unsigned mc = 0; mc < nm; ++mc) { // find moon
-						umoon const &moon(planet.moons[mc]);
+						umoon &moon(planet.moons[mc]);
 						if (!moon.is_ok() && !get_destroyed) continue;
 						float const distm_sq(p2p_dist_sq(pos, moon.pos));
 						if (distm_sq > mt_sq)                continue;
@@ -2662,7 +2660,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 		if (cell->galaxies == NULL) return 0; // galaxies not yet allocated
 		cell_status   = 0;
 		result.galaxy = result.cluster = result.system = result.planet = result.moon = -1;
-		vector<ugalaxy> const &galaxies(*cell->galaxies);
+		vector<ugalaxy> &galaxies(*cell->galaxies);
 		assert(galaxies.size() <= MAX_GALAXIES_PER_CELL); // just a consistency check
 
 		for (unsigned i = 0; i < galaxies.size(); ++i) { // search for galaxies
@@ -2678,7 +2676,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 		std::sort(gv.begin(), gv.end());
 
 		for (unsigned gc = 0; gc < gv.size(); ++gc) {
-			ugalaxy const &galaxy(galaxies[gv[gc].index]);
+			ugalaxy &galaxy(galaxies[gv[gc].index]);
 
 			// asteroid fields
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
@@ -2748,7 +2746,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 			result.galaxy = gv[gc].index;
 
 			for (unsigned sc = 0; sc < sv.size(); ++sc) {
-				ussystem const &system(galaxy.sols[sv[sc].index]);
+				ussystem &system(galaxy.sols[sv[sc].index]);
 				
 				if (system.sun.is_ok() && sv[sc].rad <= system.sun.radius && sv[sc].t > 0.0 && sv[sc].dist <= dist) {
 					if (asteroid_dist == 0.0 || sv[sc].dist < asteroid_dist) { // asteroid is not closer
@@ -2786,7 +2784,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 						coll          = system.sun.pos; // center, not collision point, fix?
 						return 1;
 					}
-					uplanet const &planet(system.planets[pv[pc].index]);
+					uplanet &planet(system.planets[pv[pc].index]);
 
 					if (planet.is_ok() && pv[pc].rad <= planet.radius && pv[pc].t > 0.0 && pv[pc].dist <= dist) {
 						ctest.index = -1; // line intersects planet
@@ -3073,7 +3071,7 @@ void s_object::init() {
 }
 
 
-void s_object::assign(int gc, int cl, int sy, float di, int ty, uobj_solid const *obj) {
+void s_object::assign(int gc, int cl, int sy, float di, int ty, uobj_solid *obj) {
 
 	galaxy  = gc;
 	cluster = cl;

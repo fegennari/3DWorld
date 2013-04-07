@@ -51,12 +51,10 @@ char *dmesh_file       = "mesh.txt";
 char *dcoll_obj_file   = "coll_objs/coll_objs.txt";
 char *dmh_filename_raw = "heightmap.raw";
 char *dmh_filename_bmp = "heightmap.bmp";
-char *ddem_filename    = "dem/bot_fg.dem.txt";
-char *ddem_raw_out     = "dem/bot_dem2.raw";
 char *dship_def_file   = "ship_defs.txt";
 char *state_file(dstate_file), *mesh_file(dmesh_file), *coll_obj_file(dcoll_obj_file);
-char *mh_filename_raw(dmh_filename_raw), *mh_filename_bmp(dmh_filename_bmp), *dem_filename(ddem_filename);
-char *dem_raw_out(ddem_raw_out), *ship_def_file(dship_def_file), *snow_file(NULL);
+char *mh_filename_raw(dmh_filename_raw), *mh_filename_bmp(dmh_filename_bmp);
+char *ship_def_file(dship_def_file), *snow_file(NULL);
 char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
@@ -719,7 +717,6 @@ void change_tree_mode() {
 
 	if (world_mode != WMODE_GROUND && world_mode != WMODE_INF_TERRAIN) return;
 	if (num_trees == 0 && t_trees.empty()) return;
-	int const last_tree_mode(tree_mode);
 	tree_mode = (tree_mode+1)%4; // 0=none, 1=large, 2=small, 3=large+small
 			
 	if (world_mode == WMODE_INF_TERRAIN) {
@@ -1347,7 +1344,7 @@ void exec_text(string const &text) {
 		return;
 	}
 	cout << "Text: " << text << endl;
-	print_text_onscreen(text.c_str(), WHITE, 1.0, TICKS_PER_SECOND, 999);
+	print_text_onscreen(text, WHITE, 1.0, TICKS_PER_SECOND, 999);
 }
 
 
@@ -1810,14 +1807,6 @@ int load_config(string const &config_file) {
 		else if (str == "mh_filename_bmp") {
 			alloc_if_req(mh_filename_bmp, dmh_filename_bmp);
 			if (fscanf(fp, "%s%f%f", mh_filename_bmp, &mesh_file_scale, &mesh_file_tz) != 3) cfg_err("mh_filename_bmp command", error);
-		}
-		else if (str == "dem_filename") {
-			alloc_if_req(dem_filename, ddem_filename);
-			if (!read_str(fp, dem_filename)) cfg_err("dem_filename command", error);
-		}
-		else if (str == "dem_raw_out") {
-			if (ddem_raw_out == ddem_raw_out) dem_raw_out = new char[MAX_CHARS];
-			if (!read_str(fp, dem_raw_out)) cfg_err("dem_raw_out command", error);
 		}
 		else if (str == "ship_def_file") {
 			alloc_if_req(ship_def_file, dship_def_file);

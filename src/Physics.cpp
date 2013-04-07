@@ -775,7 +775,6 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			return;
 		}
 		int const wcoll(check_water_collision(vz_old));
-		float const z_old(pos.z);
 		vector3d cnorm;
 		bool const last_stat_coll((flags & STATIC_COBJ_COLL) != 0);
 		int const coll(check_vert_collision(obj_index, 1, iter, &cnorm));
@@ -993,7 +992,7 @@ int dwobject::check_water_collision(float vz_old) {
 	if (!island && ((pos.z - radius) > max_water_height)) return 0; // quick check for efficiency
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos))                   return 0; // off the mesh
-	bool splash(0), in_ocean(0);
+	bool in_ocean(0);
 	float water_height;
 	vector3d old_v(velocity);
 
@@ -1013,6 +1012,7 @@ int dwobject::check_water_collision(float vz_old) {
 	if (temperature > W_FREEZE_POINT || in_ocean) { // water - object adds to water if precipitation
 		assert(type != SMILEY);
 		bool const no_water_damage((object_types[type].flags & NO_WATER_DAMAGE) != 0);
+		bool splash(0);
 
 		if (!no_water_damage && health <= WATER_DAMAGE) {
 			status = 0; // melts

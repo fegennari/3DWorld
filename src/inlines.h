@@ -584,11 +584,11 @@ inline void fix_nsides(int &nsides) { // use discrete steps
 }
 
 
-inline int get_min_dim(vector3d const v) {
+inline int get_min_dim(vector3d const &v) {
 	return ((fabs(v[0]) < fabs(v[1])) ? ((fabs(v[0]) < fabs(v[2])) ? 0:2) : ((fabs(v[1]) < fabs(v[2])) ? 1:2));
 }
 
-inline int get_max_dim(vector3d const v) {
+inline int get_max_dim(vector3d const &v) {
 	return ((fabs(v[0]) > fabs(v[1])) ? ((fabs(v[0]) > fabs(v[2])) ? 0:2) : ((fabs(v[1]) > fabs(v[2])) ? 1:2));
 }
 

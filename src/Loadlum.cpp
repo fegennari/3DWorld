@@ -30,13 +30,11 @@ struct ImageRec {
 
 static void ConvertShort(unsigned short *array, unsigned length) {
 
-	unsigned short b1, b2;
-	unsigned char *ptr;
-	ptr = (unsigned char *) array;
+	unsigned char *ptr = (unsigned char *) array;
 
 	while (length--) {
-		b1 = *ptr++;
-		b2 = *ptr++;
+		unsigned short b1 = *ptr++;
+		unsigned short b2 = *ptr++;
 		*array++ = (b1 << 8) | (b2);
 	}
 }
@@ -135,7 +133,7 @@ static void ImageGetRow(ImageRec * image, unsigned char *buf, int y, int z) {
 
 unsigned char *load_luminance(std::string const &filename, int *width, int *height, int *components) {
 
-	ImageRec *image = ImageOpen(filename.c_str());
+	ImageRec *image = ImageOpen(filename);
 	if (!image) return NULL;
 	
 	if (image->zsize != 1) {

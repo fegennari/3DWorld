@@ -170,7 +170,6 @@ int draw_shadowed_objects(int light) {
 
 	int inverts(0);
 	point lpos;
-	int const shadow_bit(1 << light);
 	if (!get_light_pos(lpos, light)) return 0;
 
 	for (int i = 0; i < num_groups; ++i) {
@@ -426,7 +425,7 @@ void end_group(int &last_group_id) {
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
-	RESET_TIME;
+	//RESET_TIME;
 	assert(draw_solid || draw_trans);
 	static vector<pair<float, int> > draw_last;
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
@@ -446,12 +445,13 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	shader_t s;
 	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting));
 	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled
-	int last_tid(-1), last_group_id(-1), last_type(-1);
+	int last_tid(-1), last_group_id(-1);
 	
 	if (draw_solid) {
 		bool const do_z_sort((display_mode & 0x10) != 0);
 		vector<pair<float, int> > occluders;
 		draw_last.resize(0);
+		int last_type(-1);
 
 		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
 			unsigned cix(*i);
@@ -652,9 +652,9 @@ void draw_moon() {
 	set_color(WHITE);
 	glDisable(GL_LIGHT0);
 	glDisable(GL_LIGHT1);
-	float const ambient[4] = {0.05, 0.05, 0.05, 1.0}, diffuse[4] = {1.0, 1.0, 1.0, 1.0};
 
 	if (have_sun) {
+		float const ambient[4] = {0.05, 0.05, 0.05, 1.0}, diffuse[4] = {1.0, 1.0, 1.0, 1.0};
 		set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
 		set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
 	}
@@ -900,7 +900,6 @@ void particle_cloud::draw(quad_batch_draw &qbd) const {
 	}
 	color.A *= density;
 	float const dist(distance_to_camera(pos));
-	int const ndiv(max(4, min(16, int(scale/dist))));
 
 	if (parts.empty()) {
 		if (status && sphere_in_camera_view(pos, radius, 0)) {
@@ -933,13 +932,13 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 
 	if (!no_lighting && !is_fire()) { // fire has its own emissive lighting
 		int cindex;
-		float rad, dist, t;
 		point const lpos(get_light_pos());
 	
 		if (!check_coll_line(p, lpos, cindex, -1, 1, 1)) { // not shadowed (slow, especially for lots of smoke near trees)
 			// Note: This can be moved into a shader, but the performance and quality improvement might not be significant
 			vector3d const dir((p - get_camera_pos()).get_norm());
 			float const dp(dot_product_ptv(dir, p, lpos));
+			float rad, dist, t;
 			blend_color(c, WHITE, c, 0.15, 0); // 15% ambient lighting (transmitted/scattered)
 			if (dp > 0.0) blend_color(c, WHITE, c, 0.1*dp/p2p_dist(p, lpos), 0); // 10% diffuse lighting (directional)
 
@@ -1017,7 +1016,7 @@ void draw_bubbles() {
 }
 
 
-void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bool zoomed) {
+void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const &color, bool zoomed) {
 
 	enable_flares(color, zoomed); // color will be set per object
 	//select_multitex(CLOUD_TEX, 1);

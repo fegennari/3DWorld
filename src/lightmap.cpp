@@ -838,7 +838,6 @@ void build_lightmap(bool verbose) {
 						point const p(xv, yv, get_zval(z));
 						float cscale(ls.get_intensity_at(p));
 						if (cscale < CTHRESH) {if (z > cent[2]) break; else continue;}
-						CELL_LOC_T const cur_loc[3] = {x, y, z};
 				
 						if (ls.is_directional()) {
 							cscale *= ls.get_dir_intensity(lpos - p);
@@ -850,7 +849,10 @@ void build_lightmap(bool verbose) {
 							if ((last_cobj >= 0 && coll_objects[last_cobj].line_intersect(lpos, p)) ||
 								check_coll_line(p, lpos, last_cobj, cobj, 1, 3)) flow[0] = 0.0;
 						}
-						if (SLT_FLOW_TEST_WT > 0.0) flow[1] = get_flow_val(cent, cur_loc, 0); // determine flow value to this lmcell
+						if (SLT_FLOW_TEST_WT > 0.0) {
+							CELL_LOC_T const cur_loc[3] = {x, y, z};
+							flow[1] = get_flow_val(cent, cur_loc, 0); // determine flow value to this lmcell
+						}
 						cscale *= SLT_LINE_TEST_WT*flow[0] + SLT_FLOW_TEST_WT*flow[1];
 						if (cscale < CTHRESH) continue;
 						lmcell &lmc(lmap_manager.vlmap[y][x][z]);
@@ -861,10 +863,11 @@ void build_lightmap(bool verbose) {
 		} // for i
 		if (verbose) PRINT_TIME(" Light Source Addition");
 	}
-	float const lscales[4] = {1.0/SQRT3, 1.0/SQRT2, 1.0, 0.0};
 
 	// smoothing passes
 	if (LIGHT_SPREAD > 0.0 && (!raytrace_lights[LIGHTING_SKY] || !raytrace_lights[LIGHTING_LOCAL])) {
+		float const lscales[4] = {1.0/SQRT3, 1.0/SQRT2, 1.0, 0.0};
+
 		for (unsigned n = 0; n < NUM_LT_SMOOTH; ++n) { // low pass filter light, bleed to adjacent cells
 			for (int i = 0; i < MESH_Y_SIZE; ++i) {
 				for (int j = 0; j < MESH_X_SIZE; ++j) {
@@ -982,7 +985,7 @@ unsigned upload_voxel_flow_texture() {
 // 8: reserved for specular maps
 void upload_dlights_textures() {
 
-	RESET_TIME;
+	//RESET_TIME;
 	if (disable_shaders) return;
 	static int supports_tex_int(2); // starts at unknown
 	static bool last_dlights_empty(0);
@@ -1082,7 +1085,7 @@ void upload_dlights_textures() {
 		flow_tid = upload_voxel_flow_texture();
 	}
 	else { // no dynamic updates
-		bind_3d_texture(flow_tid);
+		bind_3d_texture(flow_tid);g
 	}
 	set_active_texture(0);
 #endif
@@ -1399,7 +1402,6 @@ bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 	unsigned const lsz((unsigned)ldv.size());
 	CELL_LOC_T const cl[3] = {x, y, z}; // what about SHIFT_VAL?
 	bool added(0);
-	unsigned index(0);
 
 	for (unsigned l = 0; l < lsz; ++l) {
 		unsigned const ls_ix(ldv.get(l));
@@ -1496,7 +1498,7 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadow
 
 
 // within a sphere, unless radius == 0.0
-unsigned enable_dynamic_lights(point const center, float radius) {
+unsigned enable_dynamic_lights(point const &center, float radius) {
 
 	point const camera(get_camera_pos());
 	vector<pair<float, unsigned> > vis_lights;

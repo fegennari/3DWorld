@@ -142,6 +142,7 @@ class tree_builder_t {
 		vector<draw_cylin> &all_cylins, cobj_bvh_tree const &branch_tree, vector<unsigned> &cobjs);
 
 public:
+	tree_builder_t() : branches(NULL) {branches_34[0] = branches_34[1] = NULL;}
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color);
 	void create_all_cylins_and_leaves(int tree_type, float deadness, vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves);
 };

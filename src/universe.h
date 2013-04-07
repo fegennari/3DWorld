@@ -130,9 +130,9 @@ class named_obj { // size = 16
 
 public:
 	named_obj() : name("Unnamed") {}
-	named_obj(string const name_) : name(name_) {}
+	named_obj(string const &name_) : name(name_) {}
 	void setname(string const &name_) {name = name_;}
-	string getname() const {return name;}
+	string const &getname() const {return name;}
 	void gen_name(s_object const &sobj);
 	bool rename(s_object const &sobj, string const &name_);
 	bool lookup_given_name(s_object const &sobj);
@@ -438,13 +438,13 @@ class s_object { // size = 56
 public:
 	int cellxyz[3], galaxy, cluster, system, planet, moon, asteroid_field, asteroid, type, val, id;
 	float dist;
-	uobj_solid const *object;
+	uobj_solid *object;
 
 	s_object() {init();}
 	bool write(ostream &out) const;
 	bool read(istream &in);
 	void init();
-	void assign(int gc, int cl, int sy, float di, int ty, uobj_solid const *obj);
+	void assign(int gc, int cl, int sy, float di, int ty, uobj_solid *obj);
 	bool operator<(const s_object &I) const;
 	bool bad_cell() const;
 	bool is_solid() const {return (type == UTYPE_STAR || type == UTYPE_PLANET || type == UTYPE_MOON || type == UTYPE_ASTEROID);}

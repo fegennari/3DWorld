@@ -29,11 +29,12 @@ extern obj_type object_types[];
 // if cobj_ix is not NULL, it will be set if and only if the light is present and the result is false
 bool is_visible_to_light_cobj(point const &pos, int light, float radius, int cobj, int skip_dynamic, int *cobj_ix) { // slow...
 
-	int index;
 	point lpos;
 	if (!get_light_pos(lpos, light)) return 0;
 
 	if (lpos.z < czmax || pos.z < czmax) {
+		int index;
+
 		if (!coll_pt_vis_test(pos, lpos, 1.5*radius, index, cobj, skip_dynamic, 3)) { // test alpha?
 			if (cobj_ix) *cobj_ix = index;
 			return 0; // test collision objects

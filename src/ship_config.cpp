@@ -82,15 +82,14 @@ u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, po
 	// check for p2p_dist(pos, get_player_pos2()) > thresh ?
 	assert(sclass < sclasses.size() && align < NUM_ALIGNMENT && (ai & AI_BASE_TYPE) < NUM_AI && targ < NUM_TARGET);
 	assert(!sclasses[sclass].orbiting_dock); // can't add these - must be attached to a planetary body
-	unsigned coll_ix(0);
 	point spos;
 	unsigned const MAXITER(10);
 
 	// check for collisions (invalid starting locations)
 	for (unsigned i = 0; i < MAXITER; ++i) { // Note: This only works for non-new objects so won't work with init objects
-		spos    = pos;
+		spos = pos;
 		if (spread > 0.0) spos += signed_rand_vector_spherical(spread);
-		coll_ix = check_for_obj_coll(spos, sclasses[sclass].calc_cradius()); // what about planet collisions?
+		unsigned const coll_ix(check_for_obj_coll(spos, sclasses[sclass].calc_cradius())); // what about planet collisions?
 		if (coll_ix == 0) break;
 	}
 	return create_ship(sclass, spos, align, ai, targ, 1);
@@ -995,7 +994,6 @@ void add_other_ships(int align, unsigned num, bool initial) {
 	if (num == 0) return;
 	unsigned psum[NUM_US_CLASS];
 	upos_point_type const &player(initial ? ustart_pos : get_player_pos2()); // can't call get_player_pos() while initializing
-	unsigned const NS_NAMES(8);
 
 	for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
 		psum[i] = ship_add_prob[initial][align][i];

@@ -74,26 +74,21 @@ bool mesh_intersector::line_intersect_surface() {
 	int x_steps(x2-x1), y_steps(y2-y1), xs1, xs2, ys1, ys2, xval, yval;
 	double const slope((x_steps == 0) ? 1.0e6 : ((double)y_steps)/((double)x_steps));
 	double const s_inv((y_steps == 0) ? 1.0e6 : ((double)x_steps)/((double)y_steps));
-	double x_stride, y_stride, sd;
 	int const sval(abs(x_steps) > abs(y_steps));
 
 	if (sval) { // |slope| < 1
-		sd       = (double)max(1, abs(y_steps));
-		y_stride = ((y_steps > 0.0) ? 1.0 : -1.0);
-		x_stride = ((double)x_steps)/sd;
-		xpos    += (int)floor(0.5*x_stride + 0.5);
-		ys1      = ys2 = ((y_steps > 0.0) ? 1 : -1);
-		xs1      = (int)floor(x_stride);
-		xs2      = (int)ceil(x_stride);
+		double const x_stride(((double)x_steps)/(double)max(1, abs(y_steps)));
+		xpos += (int)floor(0.5*x_stride + 0.5);
+		ys1   = ys2 = ((y_steps > 0.0) ? 1 : -1);
+		xs1   = (int)floor(x_stride);
+		xs2   = (int)ceil(x_stride);
 	}
 	else { // |slope| >= 1
-		sd       = (double)max(1, abs(x_steps));
-		x_stride = ((x_steps > 0.0) ? 1.0 : -1.0);
-		y_stride = ((double)y_steps)/sd;
-		ypos    += (int)floor(0.5*y_stride + 0.5);
-		xs1      = xs2 = ((x_steps > 0.0) ? 1 : -1);
-		ys1      = (int)floor(y_stride);
-		ys2      = (int)ceil(y_stride);
+		double const y_stride(((double)y_steps)/(double)max(1, abs(x_steps)));
+		ypos += (int)floor(0.5*y_stride + 0.5);
+		xs1   = xs2 = ((x_steps > 0.0) ? 1 : -1);
+		ys1   = (int)floor(y_stride);
+		ys2   = (int)ceil(y_stride);
 	}
 	if (line_intersect_plane(x1-1, xpos, y1-1, ypos)) return 1; // first segment
 	int line_mode(sval);

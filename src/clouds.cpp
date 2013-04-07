@@ -23,7 +23,7 @@ extern vector3d wind;
 extern colorRGBA sun_color;
 
 
-void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const color, bool zoomed);
+void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const &color, bool zoomed);
 
 
 struct cloud_t {
@@ -76,10 +76,11 @@ void cloud_manager_t::update_lighting() {
 	point const sun_pos(get_sun_pos());
 	bool const calc_sun_light(have_sun && light_factor > 0.4);
 	unsigned const num_clouds((unsigned)size());
-	int last_src(0);
 	vector<cloud_t> clouds;
 
 	if (calc_sun_light) {
+		int last_src(0);
+
 		for (unsigned i = 0; i < num_clouds; ++i) {
 			particle_cloud &c((*this)[i]);
 
@@ -260,7 +261,7 @@ void cloud_manager_t::draw() {
 	if (atmosphere < 0.01) return; // no atmosphere
 	create_clouds();
 	if (empty()) return;
-	RESET_TIME;
+	//RESET_TIME;
 	glDisable(GL_DEPTH_TEST);
 
 	// WRITE: wind moves clouds

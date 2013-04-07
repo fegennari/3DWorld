@@ -71,7 +71,7 @@ extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
 extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
 extern point mesh_origin, surface_pos;
-extern char *mh_filename_raw, *mh_filename_bmp, *dem_filename, *dem_raw_out, *mesh_file;
+extern char *mh_filename_raw, *mh_filename_bmp, *dem_filename, *mesh_file;
 extern rand_gen_t global_rand_gen;
 
 
@@ -137,11 +137,12 @@ bool bmp_to_chars(char *fname, char **&data) {
 
 bool verify_bmp_header(FILE *&fp, bool grayscale) { // just assume BMP is correct for now
 
-	char header[56], data[1024]; // 54 vs. 56?
+	char header[56]; // 54 vs. 56?
 	size_t const nread1(fread(header, 54, 1, fp));
 	assert(nread1 == 1); // read BMP header assuming standard 14/16 byte header + 40 byte infoheader
 
 	if (grayscale) {
+		char data[1024]; // 54 vs. 56?
 		size_t const nread2(fread(data, 1024, 1, fp));
 		assert(nread2 == 1);
 	}

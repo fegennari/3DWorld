@@ -715,7 +715,6 @@ void display(void) {
 		return;
 	}
 	RESET_TIME;
-	int timer_b;
 	static int init(0), frame_index(0), time_index(0), global_time(0), tticks(0);
 	static point old_spos(0.0, 0.0, 0.0);
 	proc_kbd_events();
@@ -796,6 +795,7 @@ void display(void) {
 		}
 		
 		// timing and framerate code
+		int timer_b;
 		float const framerate(get_framerate(timer_b));
 		if (global_time == 0) global_time = timer_b;
 		

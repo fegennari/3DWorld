@@ -207,12 +207,12 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 	// determine the tangent points from spos to center with radius ro
 	// http://mathworld.wolfram.com/CircleTangentLine.html
 	double const x0(center.x - spos_xf.x), y0(center.y - spos_xf.y), xy_sq(x0*x0 + y0*y0), r_sq(ro*ro);
-	double dmin(0.0), d[4];
-	unsigned pmin[2] = {0, 0};
 
 	if (xy_sq > r_sq) {
 		double const term1(-ro*x0/xy_sq), term2(y0*sqrt(xy_sq - r_sq)/xy_sq);
-		upos_point_type tpts[4]; 
+		double dmin(0.0), d[4];
+		unsigned pmin[2] = {0, 0};
+		upos_point_type tpts[4];
 
 		for (unsigned i = 0; i < 2; ++i) { // tangents
 			double const val(term1 + (1.0 - 2.0*i)*term2), sin_t(sin(acos(max(-1.0, min(1.0, val)))));
@@ -497,7 +497,6 @@ ushadow_sphere::ushadow_sphere(upos_point_type const &sobj_pos, float sobj_r, up
 	double const dist_to_sun(max(TOLERANCE, p2p_dist(sphere_pos, upos_point_type(sun_pos))));
 	double const dist(dot_product_ptv(shadow_dir, cur_pos, sphere_pos));
 	double const min_dist(max(rmin, MIN_SHADOW_DIST*sobj_r));
-	bool const const_r(cur_radius < 0.05*dist_to_sun);
 	assert(dist_to_sun > TOLERANCE);
 
 	for (unsigned i = 0; i < 2; ++i) {

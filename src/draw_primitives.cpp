@@ -59,7 +59,6 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 	assert(ndiv > 0 && ndiv < 100000);
 	v12 = (ce[1] - ce[0]).get_norm();
 	float const r[2] = {radius1, radius2};
-	float const cs_scale(TWO_PI/(float)ndiv);
 	vector3d vab[2];
 	get_ortho_vectors(v12, vab, force_dim);
 	vector_point_norm &vpn(cylinder_vpn);
@@ -548,7 +547,6 @@ void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const {
 		unsigned const sn((s+1)%ndiv), snt(min((s+1), ndiv));
 
 		for (unsigned t = 0; t < ndiv; ++t) {
-			unsigned const ix(s*(ndiv+1)+t);
 			unsigned const tn(min(t+1, ndiv+1));
 			point          pts[4]     = {points[s][t], points[sn][t], points[sn][tn], points[s][tn]};
 			vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][tn], norms [s][tn]};

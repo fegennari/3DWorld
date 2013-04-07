@@ -1200,7 +1200,6 @@ void init_smiley(int smiley_id) {
 void player_state::check_switch_weapon(int smiley_id) {
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
-	int bbat_iter(0), bb_range(-1);
 	wmode = ((rand()&3) == 0);
 
 	if (game_mode == 2) { // dodgeball mode

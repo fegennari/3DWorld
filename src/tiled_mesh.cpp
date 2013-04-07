@@ -1298,7 +1298,7 @@ void tile_draw_t::occluder_pts_t::calc_cube_top_points(cube_t const &bcube) { //
 void tile_draw_t::draw(bool reflection_pass) {
 
 	//RESET_TIME;
-	unsigned num_drawn(0), num_trees(0);
+	unsigned num_trees(0);
 	unsigned long long mem(0), tree_mem(0);
 	if (DEBUG_TILES) {mem += grass_tile_manager.get_gpu_mem() + tree_data_manager.get_gpu_mem();}
 	to_draw.clear();

@@ -386,7 +386,7 @@ public:
 	ship_cylinder* clone() const {return new ship_cylinder(*this);}
 	void translate(point const &p) {p1 += p; p2 += p;}
 	void draw_cylin(unsigned ndiv, unsigned nsta, bool textured) const;
-	void draw(unsigned ndiv) const {ship_cylinder::draw_cylin(ndiv, 1, 0);}
+	void draw(unsigned ndiv) const {draw_cylin(ndiv, 1, 0);}
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
 	void get_bounding_sphere(point &c, float &r) const;
@@ -943,7 +943,7 @@ public:
 	void reset() {alloc_block = NULL; free_obj::reset();}
 	void set_type(unsigned type);
 	bool dec_ref();
-	us_weapon const &us_projectile::specs() const;
+	us_weapon const &specs() const;
 	float get_max_t() const {return specs().max_t;}
 	float get_mass()  const {return (specs().mass + extra_mass);} // more mass than a ship to give higher collision impact
 	unsigned get_eflags() const;
@@ -1246,7 +1246,7 @@ public:
 	string get_info()   const;
 	bool rename(string const &name_) {name = name_; return 1;}
 	vector3d predict_target_dir(point const &fpos, free_obj const *targ, unsigned wclass=UWEAP_NONE) const;
-	u_ship_base const *get_ship_base() const {return (u_ship_base *)this;}
+	u_ship_base const *get_ship_base() const {return this;}
 
 	bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const;
 	bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params())      const;

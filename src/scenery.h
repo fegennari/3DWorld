@@ -46,7 +46,7 @@ class surface_rock : public scenery_obj { // size = 1456+
 	upsurface *surface;
 
 public:
-	surface_rock() : vbo_mgr_ix(-1), surface(NULL) {}
+	surface_rock() : vbo_mgr_ix(-1), scale(0.0), surface(NULL) {}
 	void create(int x, int y, int use_xy, vbo_vntc_block_manager_t &vbo_manager);
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vntc_block_manager_t &vbo_manager) const;
@@ -60,6 +60,7 @@ class s_rock : public scenery_obj { // size = 48
 	vector3d scale, dir;
 
 public:
+	s_rock() : size(0.0), angle(0.0) {}
 	void create(int x, int y, int use_xy);
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const;
@@ -93,6 +94,7 @@ class s_log : public scenery_obj { // size = 57 (60)
 	int get_tid() const {return get_bark_tex_for_tree_type(type);}
 
 public:
+	s_log() : length(0.0), radius2(0.0) {}
 	bool check_sphere_coll(point &center, float sphere_radius) const {return 0;} // no collisions
 	void shift_by(vector3d const &vd);
 	int create(int x, int y, int use_xy, float minz);
@@ -109,6 +111,7 @@ class s_stump : public scenery_obj { // size = 29 (32)
 	int get_tid() const {return get_bark_tex_for_tree_type(type);}
 
 public:
+	s_stump() : radius2(0.0), height(0.0) {}
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;

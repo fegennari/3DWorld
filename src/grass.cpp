@@ -178,7 +178,7 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 void grass_tile_manager_t::clear() {
 
 	grass_manager_t::clear();
-	for (unsigned lod = 0; lod <= NUM_GRASS_LODS; ++lod) {vbo_offsets[lod].clear();}
+	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {vbo_offsets[lod].clear();}
 }
 
 

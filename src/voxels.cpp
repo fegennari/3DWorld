@@ -363,7 +363,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 	vector<point> updated_pts;
 	vector<block_group_t> groups;
 	unsigned const indiv_cost((2*pad+1)*(2*pad+1)), num_blocks(params.num_blocks);
-	unsigned group_work(0);
+	//unsigned group_work(0);
 
 	for (unsigned i = 0; i < to_proc.size(); ++i) {
 		int const xbix(to_proc[i] % num_blocks), ybix(to_proc[i] / num_blocks);
@@ -392,7 +392,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 	}
 	for (vector<block_group_t>::const_iterator i = groups.begin(); i != groups.end(); ++i) {
 		remove_unconnected_outside_range(1, i->v[0][0]*xblocks, i->v[1][0]*yblocks, min(nx, i->v[0][1]*xblocks), min(ny, i->v[1][1]*yblocks), &xy_updated, &updated_pts);
-		group_work += i->area();
+		//group_work += i->area();
 
 		for (vector<unsigned>::const_iterator i = xy_updated.begin(); i != xy_updated.end(); ++i) {
 			unsigned const x((*i)%nx), y((*i)/nx);
@@ -576,7 +576,6 @@ bool voxel_manager::line_intersect(point const &p1, point const &p2, point *int_
 	assert(step0 > 0);
 	unsigned const num_steps(ceil(dist/step0));
 	assert(num_steps > 0);
-	float const step(dist/num_steps);
 	vector3d const delta((pb - pa)/num_steps);
 	point p(pa + delta); // first point has already been tested
 	

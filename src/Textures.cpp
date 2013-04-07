@@ -1506,19 +1506,15 @@ void create_landscape_texture() {
 	int const width(tex.width), height(tex.height);
 	unsigned char *tex_data(tex.get_data());
 	assert(tex.ncolors == 3);
-	int x1(0), y1(0), x2(width), y2(height);
 	static int tox(0), toy(0);
 	if (!scrolling) cout << "Generating landscape terrain texture." << endl;
 
 	if (scrolling) { // ensure texture alignment when scrolling
-		tox0   = (dx_scroll*width) /MESH_X_SIZE;
-		toy0   = (dy_scroll*height)/MESH_Y_SIZE;
-		tox   += tox0;
-		toy   += toy0;
-		x1     = max(0, -tox0);
-		y1     = max(0, -toy0);
-		x2     = min(width,  width -tox0);
-		y2     = min(height, height-toy0);
+		tox0 = (dx_scroll*width) /MESH_X_SIZE;
+		toy0 = (dy_scroll*height)/MESH_Y_SIZE;
+		tox += tox0;
+		toy += toy0;
+		int const x1(max(0, -tox0)), y1(max(0, -toy0)), x2(min(width, width-tox0)), y2(min(height, height-toy0));
 		scroll = (x1 < x2 && y1 < y2 && abs(tox0) < width && abs(toy0) < height);
 	}
 	float const dz(zmax - zmin), dz_inv(1.0/dz);
@@ -1527,7 +1523,6 @@ void create_landscape_texture() {
 	int   const   NTEX(island ? NTEX_SAND  : NTEX_DIRT);
 	int const mxszm1(MESH_X_SIZE-1), myszm1(MESH_Y_SIZE-1), dxv(width/MESH_X_SIZE), dyv(height/MESH_Y_SIZE);
 	int const NTEXm1(NTEX-1), def_id((default_ground_tex >= 0) ? default_ground_tex : GROUND_TEX);
-	int const id0(lttex[NTEXm1].id);
 	float const xscale(((float)MESH_X_SIZE)/((float)width)), yscale(((float)MESH_Y_SIZE)/((float)height));
 	static char **tids = NULL;
 	if (tids == NULL) matrix_gen_2d(tids);
@@ -1540,7 +1535,7 @@ void create_landscape_texture() {
 			if (keepy && (j+dx_scroll) > 0 && (j+dx_scroll) < MESH_X_SIZE-1) continue;
 			int const i1(min(myszm1, i+1)), j1(min(mxszm1, j+1));
 			float const mh00(mesh_height[i][j]), mh01(mesh_height[i][j1]), mh10(mesh_height[i1][j]), mh11(mesh_height[i1][j1]);
-			float const dist(fabs(mh01 - mh00) + fabs(mh00 - mh10) + fabs(mh01 - mh11) + fabs(mh10 - mh11));
+			//float const dist(fabs(mh01 - mh00) + fabs(mh00 - mh10) + fabs(mh01 - mh11) + fabs(mh10 - mh11));
 			float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
 			float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
 			int k1a, k1b, k2a, k2b;

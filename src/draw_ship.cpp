@@ -315,7 +315,6 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 	if (ar != 1.0) {
 		assert(z_offset == 0.0); // not supported
 		assert(ar > 1.0 && stretch_dir != all_zeros);
-		unsigned const dim(ar > 1.0);
 		point ep[2] = {draw_pos, draw_pos};
 		float const dist(escale*(ar - 1.0));
 		
@@ -1534,7 +1533,6 @@ void uobj_draw_data::draw_nightmare() const {
 void uobj_draw_data::draw_dwcarrier() const {
 
 	unsigned const ndiv35(get_ndiv(3*ndiv/5)), ndiv2(get_ndiv(ndiv/2)), ndiv4(get_ndiv(ndiv/4));
-	unsigned const ndiv8(get_ndiv(ndiv/8));
 	setup_draw_ship();
 	if (powered && first_pass) setup_point_light(point(0.0, 0.4, 0.8), RED, 2.0*radius, GL_LIGHT7);
 

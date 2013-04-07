@@ -1511,7 +1511,6 @@ void create_shell_casing(point const &fpos, vector3d const &dir, int shooter, fl
 void create_shrapnel(point const &pos, vector3d const &dir, float firing_error, unsigned nshots, int shooter, int weapon) {
 
 	unsigned const num(2*nshots + 2);
-	unsigned nobj(0);
 	obj_group &objg(obj_groups[coll_id[SHRAPNEL]]);
 
 	for (unsigned o = 0; o < num; ++o) {

@@ -418,7 +418,6 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 		point pt;
 		pt[i] = bnds.d[i][dir];
 		if (verbose) cout << "Dim " << i+1 << " of 3, num (this thread): " << num_rays << ", progress (of " << 1+num_rays/1000 << "): 0";
-		unsigned num(0);
 
 		if (randomized) {
 			for (unsigned s = 0; s < num_rays; ++s) {
@@ -433,6 +432,7 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 			float const len0(bnds.d[d0][1] - bnds.d[d0][0]), len1(bnds.d[d1][1] - bnds.d[d1][0]);
 			unsigned const n0(max(1U, unsigned(sqrt((float)num_rays)*len0/len1)));
 			unsigned const n1(max(1U, unsigned(sqrt((float)num_rays)*len1/len0)));
+			unsigned num(0);
 
 			//#pragma omp parallel for schedule(static,1)
 			for (unsigned s0 = 0; s0 < n0; ++s0) {
@@ -456,7 +456,7 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 
 	if (pos.z < 0.0 || weight == 0.0 || color.alpha == 0.0) return; // below the horizon or zero weight, skip it
 	assert(ptr);
-	rt_data *data((rt_data *)ptr);
+	rt_data *data(static_cast<rt_data *>(ptr));
 	assert(data->num > 0);
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
@@ -499,7 +499,7 @@ void *trace_ray_block_global(void *ptr) {
 void *trace_ray_block_sky(void *ptr) {
 
 	assert(ptr);
-	rt_data *data((rt_data *)ptr);
+	rt_data *data(static_cast<rt_data *>(ptr));
 	assert(data->num > 0);
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
@@ -611,7 +611,7 @@ void *trace_ray_block_local(void *ptr) {
 
 	assert(ptr);
 	if (LOCAL_RAYS == 0) return 0; // nothing to do
-	rt_data *data((rt_data *)ptr);
+	rt_data *data(static_cast<rt_data *>(ptr));
 	assert(data->num > 0);
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);

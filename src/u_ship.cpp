@@ -971,7 +971,6 @@ void u_ship::ai_action() {
 	}
 	bool const no_ammo(out_of_ammo(0)), boarding(sc.for_boarding && ncrew > sc.ncrew/2), kamikaze((ai_type & AI_KAMIKAZE) != 0);
 	if (no_ammo && !kamikaze && !boarding && target_obj != parent) move_dir = -1; // out of ammo, run away
-	float tdist;
 	vector3d avoid_orient(dir);
 	float const min_attack(get_min_att_dist()), vmag(velocity.mag());
 	float const min_dist((no_ammo || kamikaze || boarding) ? 0.0 : min_attack); // ram the enemy
@@ -1047,6 +1046,7 @@ void u_ship::ai_action() {
 			}
 			if (cur_targ == NULL && sc.decel > 0.0) {
 				bool const use_high_speed(max_sfactor >= FAST_SPEED_FACTOR); // no hope of avoiding a collision
+				float tdist; // value unused
 
 				if (vmag > TOLERANCE) {
 					vector3d const vnorm(velocity/vmag);
@@ -1477,6 +1477,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 	for (unsigned o = 0; o < offsets.size(); ++o) {
 		unsigned nshots(shots_per_round);
 		if (o < remainder) ++nshots;
+		assert(num_shots >= nshots);
 		num_shots -= nshots;
 		assert(nshots > 0);
 		vector3d fdir(fire_dir);
@@ -1637,7 +1638,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 	if (!custom_wpt()) p1 += fdir*(0.5*radius); // move the starting point away from the ship
 	p1 += velocity*fticks; // display hack: adjust for velocity of the next frame
 	line_int_data li_data(fpos, fdir, range, this, NULL, 0, check_parent);
-	uobject *hit_obj(line_intersect_objects(li_data, fobj, intersect_type));
+	uobject const *const hit_obj(line_intersect_objects(li_data, fobj, intersect_type));
 	
 	if (hit_obj != NULL) {
 		unsigned const etype(weap.exp_type);
@@ -1749,7 +1750,7 @@ void u_ship::fire_projectile(point const &fpos, vector3d const &fire_dir) {
 	assert(get_weapon_id() == weapon_id); // sanity check
 	point const ppos(fpos + fire_dir*(1.0*((custom_wpt() ? 0.0 : radius) + weap.radius)));
 	vector3d const pvel((weap.no_ship_vel ? zero_vector : velocity) + fire_dir*weap.speed);
-	us_projectile *proj(create_projectile(weapon_id, this, alignment, ppos, pvel, fire_dir, upv));
+	create_projectile(weapon_id, this, alignment, ppos, pvel, fire_dir, upv); // return value unused
 
 	if (weap.f_inv > 0.0) { // inverse force applied to the shooter (recoil)
 		coll_physics(ppos, pvel*-weap.f_inv, weap.f_inv*weap.mass, weap.radius, NULL, 1.0);

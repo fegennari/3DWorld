@@ -181,7 +181,6 @@ void compute_matrices() {
 
 void update_matrix_element(int i, int j) {
 
-	float const mh(mesh_height[i][j]);
 	water_matrix[i][j]     = ((world_mode == WMODE_INF_TERRAIN) ? water_plane_z : def_water_level);
 	wat_vert_normals[i][j] = plus_z;
 	charge_dist[i][j]      = 0.4 + 0.6*rand_float();

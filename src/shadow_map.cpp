@@ -277,7 +277,6 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glMatrixMode(GL_MODELVIEW);
-	float sradius(0.0);
 	camera_pos = lpos;
 	pdu        = camera_pdu = get_pt_cube_frustum_pdu(lpos, get_scene_bounds(), 1);
 	check_gl_error(201);

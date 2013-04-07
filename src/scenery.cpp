@@ -227,7 +227,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 		for (unsigned i = 0; i < nverts; ++i) {
 			points[i] = gen_rand_vector2(size);
 		}
-		unsigned face(0), tot_used(0);
+		unsigned face(0);
 		vector<unsigned char> used(nverts, 0);
 		edge_seen_set edges_seen;
 		deque<edge> edges; // incomplete faces

@@ -275,10 +275,8 @@ struct wap_obj {
 };
 
 
-void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float radius, const colorRGBA &color,
-			  int ndiv, int j, bool in_ammo) {
+void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float radius, const colorRGBA &color, int ndiv, int j, bool in_ammo) {
 
-	float const cd_scale(NDIV_SCALE*window_width);
 	dwobject const &obj(objg.get_obj(j));
 	point const &pos(obj.pos);
 	bool const cull_face(get_cull_face(type, color));
@@ -419,7 +417,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			set_color(BLACK);
 
 			for (unsigned j = 0; j < ordering.size(); ++j) {
-				dwobject &obj(objg.get_obj(ordering[j].second));
+				dwobject const &obj(objg.get_obj(ordering[j].second));
 				int const tree_type(ordering[j].first), tid(tree_types[tree_type].leaf_tex);
 				float const leaf_scale(2.0*leaf_size*obj.init_dir.z), leaf_x_ar(tree_types[tree_type].leaf_x_ar);
 				assert(tid >= 0);
@@ -461,7 +459,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		vector<unsigned> smiley_weapons_to_draw;
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
-			dwobject &obj(objg.get_obj(j));
+			dwobject const &obj(objg.get_obj(j));
 			if (obj.disabled() || ((obj.flags & CAMERA_VIEW) && type != SMILEY)) continue;
 			point const &pos(obj.pos);
 			if (!sphere_in_camera_view(pos, radius_ext, clip_level)) continue;

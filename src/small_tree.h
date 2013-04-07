@@ -34,7 +34,7 @@ public:
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool pri_dim);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_bark_color() const;
-	void draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const &vbo_manager, vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
+	void draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos() const {return pos;}
@@ -83,9 +83,9 @@ struct small_tree_group : public vector<small_tree> {
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	void translate_by(vector3d const &vd);
-	void draw_branches(bool shadow_only, vector3d const xlate=zero_vector, vector<point> *points=NULL) const;
-	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, vector3d const xlate=zero_vector) const;
-	void draw_non_pine_leaves(bool shadow_only, vector3d const xlate=zero_vector) const;
+	void draw_branches(bool shadow_only, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;
+	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, vector3d const &xlate=zero_vector) const;
+	void draw_non_pine_leaves(bool shadow_only, vector3d const &xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2, float vegetation_);
 	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());}
 	bool is_uploaded(bool low_detail) const {return vbo_manager[low_detail].is_uploaded();}

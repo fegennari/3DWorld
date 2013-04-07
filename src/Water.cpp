@@ -823,7 +823,7 @@ void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound) 
 	if (DISABLE_WATER || !(display_mode & 0x04))  return;
 	if (temperature <= W_FREEZE_POINT && !island) return;
 	int in_wmatrix(0), wsi(0);
-	float water_mix(1.0), blood_mix(0.0), mud_mix(0.0);
+	float water_mix(1.0);
 
 	if (!point_outside_mesh(xpos, ypos) && wminside[ypos][xpos] == 1 && !is_mesh_disabled(xpos, ypos)) {
 		if (water_matrix[ypos][xpos] < (mesh_height[ypos][xpos] - 0.5*radius)) return; // water is too low
@@ -831,9 +831,7 @@ void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound) 
 
 		if (h_collision_matrix[ypos][xpos] < mh_r && water_matrix[ypos][xpos] < (mh_r + MAX_SPLASH_DEPTH)) {
 			wsi        = watershed_matrix[ypos][xpos].wsi;
-			blood_mix  = valleys[wsi].blood_mix;
-			mud_mix    = valleys[wsi].mud_mix;
-			water_mix  = (1.0 - blood_mix);
+			water_mix  = (1.0 - valleys[wsi].blood_mix);
 			in_wmatrix = 1;
 		}
 	}
@@ -853,7 +851,7 @@ void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound) 
 			if (water_matrix[ypos][xpos] >= z_min_matrix[ypos][xpos] && wminside[ypos][xpos]) {
 				if (in_wmatrix) {
 					valleys[wsi].mud_mix += 0.12*sqrt_energy/(valleys[wsi].w_volume + 1.0);
-					valleys[wsi].mud_mix  = mud_mix = min(1.0f, valleys[wsi].mud_mix);
+					valleys[wsi].mud_mix  = min(1.0f, valleys[wsi].mud_mix);
 				}
 				if (wminside[ypos][xpos] == 1) { // dynamic water
 					ndrops = min(ndrops, int(0.25*valleys[watershed_matrix[ypos][xpos].wsi].w_volume));
@@ -1152,10 +1150,11 @@ int draw_spill_section(int x1, int y1, int x2, int y2, float z1, float z2, float
 	float const slope(fabs((z2 - z1)/sqrt((xb - xa)*(xb - xa) + (yb - ya)*(yb - ya))));
 
 	if (UPDATE_UW_LANDSCAPE > 1 && (rand()%5) == 0) {
-		int xv[4] = {x1, x2, x2, x1}, yv[4] = {y1, y1, y2, y2};
 		float const rate(0.01*fticks*slope*sqrt((float)volume));
 
 		if (rate > 0) {
+			int xv[4] = {x1, x2, x2, x1}, yv[4] = {y1, y1, y2, y2};
+
 			for (unsigned i = 0; i < 4; ++i) {
 				add_hole_in_landscape_texture(xv[i], yv[i], rate);
 

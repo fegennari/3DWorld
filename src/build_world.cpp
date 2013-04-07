@@ -154,8 +154,7 @@ void dwobject::add_obj_dynamic_light(int index) const {
 		if (time > 5) {
 			float const radius(object_types[type].radius);
 			float const sensor_height(get_landmine_sensor_height(radius, time) + 0.15*radius);
-			colorRGBA const color(get_landmine_light_color(time));
-			add_dynamic_light(0.3, (pos + point(0.0, 0.0, sensor_height)), color);
+			add_dynamic_light(0.3, (pos + point(0.0, 0.0, sensor_height)), get_landmine_light_color(time));
 		}
 		break;
 	case SHRAPNEL:
@@ -392,13 +391,12 @@ void process_groups() {
 			}
 			else {
 				if (obj.time >= 0) {
-					int cindex(-1);
-
 					if (type == PLASMA && obj.velocity.mag_sq() < 1.0) {
 						obj.disable(); // plasma dies when it stops
 					}
 					else {
 						unsigned spf(1);
+						int cindex(-1);
 
 						// What about rolling objects (type_flags & OBJ_ROLLS) on the ground (status == 3)?
 						if (obj.status == 1 && is_over_mesh(pos) && !((obj_flags & XY_STOPPED) && (obj_flags & Z_STOPPED))) {
@@ -989,13 +987,12 @@ string read_filename(FILE *fp) {
 int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
 
 	assert(coll_obj_file != NULL);
-	char letter, str[MAX_CHARS];
+	char str[MAX_CHARS];
 	unsigned line_num(1), npoints;
 	int end(0), use_z(0), use_vel(0), ivals[3];
 	float fvals[3];
 	point pos(0.0, 0.0, 0.0);
 	vector3d tv0, vel;
-	vector<dwobject> starting_objs; // make this global?
 	polygon_t poly;
 	vector<coll_tquad> ppts;
 	FILE *fp;
@@ -1003,7 +1000,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	
 	while (!end) { // available: Y ...
 		assert(fp != NULL);
-		letter = (char)getc(fp);
+		char letter((char)getc(fp));
 		
 		switch (letter) {
 		case 0:
@@ -1536,7 +1533,6 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		}
 	}
 	if (fp != NULL) fclose(fp);
-	// *** do something with starting_objs? ***
 	return 1;
 }
 

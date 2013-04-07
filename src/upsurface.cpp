@@ -278,7 +278,6 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 	surface->setup(size, max(water, lava), use_heightmap);
 	unsigned const num_sines(surface->num_sines);
 	float const *const rdata(surface->rdata);
-	int const type(surface->type);
 	float const sizef(size/TWO_PI), mt2(0.5*(table_size-1)), scale(1.5/surface->max_mag);
 	float const delta(TWO_PI/size), sin_ds(sin(delta)), cos_ds(cos(delta));
 	unsigned const pole_thresh(size>>3);

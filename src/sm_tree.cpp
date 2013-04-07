@@ -202,7 +202,7 @@ void small_tree_group::translate_by(vector3d const &vd) {
 }
 
 
-void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate, vector<point> *points) const {
+void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, vector<point> *points) const {
 
 	BLACK.do_glColor();
 
@@ -212,7 +212,7 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const xlate, vec
 }
 
 
-void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, vector3d const xlate) const {
+void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, vector3d const &xlate) const {
 
 	vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);
 	vbomgr.begin_render(1);
@@ -234,7 +234,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 }
 
 
-void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const xlate) const {
+void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const &xlate) const {
 
 	enable_blend();
 
@@ -621,7 +621,7 @@ colorRGBA small_tree::get_bark_color() const {
 }
 
 
-void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const &vbo_manager, vector3d const xlate, vector<point> *points) const {
+void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate, vector<point> *points) const {
 
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark

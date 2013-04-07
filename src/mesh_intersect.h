@@ -62,6 +62,9 @@ class mesh_bsp_tree {
 	bsp_tree_node **tree; // {level, y/x}
 	mesh_intersector intersector;
 
+	mesh_bsp_tree(mesh_bsp_tree const &); // forbidden
+	void operator=(mesh_bsp_tree const &); // forbidden
+
 	bool search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level); // could almost be const
 
 public:

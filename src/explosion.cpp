@@ -120,7 +120,7 @@ void blastr::update() {
 }
 
 
-void blastr::process() const { // land mode
+void blastr::process(int &ltime) const { // land mode
 
 	int const x0(get_xpos(pos.x)), y0(get_ypos(pos.y));
 	if (!point_interior_to_mesh(x0, y0)) return;
@@ -128,7 +128,6 @@ void blastr::process() const { // land mode
 	if (type == ETYPE_ANIM_FIRE) blend_color(light_color, YELLOW, RED, float(time)/float(st_time), 1);
 	add_dynamic_light(min(3.5, 4.0*size), pos, light_color);
 	if (!animate2) return;
-	int ltime(0);
 
 	if (damage > 0.0) {
 		float rad(3.0*cur_size/(DX_VAL + DY_VAL));
@@ -159,6 +158,7 @@ void update_blasts() {
 
 	gm_blast = 0;
 	unsigned const nbr((unsigned)blastrs.size());
+	int ltime(0);
 
 	for (unsigned i = 0; i < nbr; ++i) {
 		blastr &br(blastrs[i]);
@@ -188,9 +188,9 @@ void update_blasts() {
 			}
 		}
 		else if (world_mode == WMODE_GROUND && game_mode && br.damage > 0.0) {
-			br.process();
+			br.process(ltime);
 		}
-	}
+	} // for i
 }
 
 

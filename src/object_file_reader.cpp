@@ -48,7 +48,6 @@ protected:
 
 	template<typename T> void read_str_to_newline(T &stream, string &str) const {
 		str.resize(0);
-		bool prev_was_escape(0);
 
 		while (1) {
 			int const c(get_char(stream));

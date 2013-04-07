@@ -275,7 +275,7 @@ void u_ship_base::regen(float rate, u_ship_base *dock) {
 					assert(transfer_ammo > 0);
 					dock->weapons[j].ammo -= transfer_ammo; // take from the dock
 					weapons[i].ammo       += transfer_ammo; // give to the fighter
-					ammo_needed           -= transfer_ammo; // now less ammo is needed
+					ammo_needed           -= transfer_ammo; // now less ammo is needed (Note: ammo_needed is unused beyond this point)
 					//cout << "transfer of " << transfer_ammo << " ammo, left " << dock->weapons[j].ammo << endl;
 				}
 			}

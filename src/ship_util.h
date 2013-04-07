@@ -193,6 +193,8 @@ public:
 template<typename T> class free_obj_allocator {
 
 	free_obj_block<T> *last;
+	free_obj_allocator(free_obj_allocator const &); // forbidden
+	void operator=(free_obj_allocator const &); // forbidden
 public:
 	free_obj_allocator() : last(new free_obj_block<T>) {last->set_in_use(1);}
 

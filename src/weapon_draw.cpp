@@ -342,7 +342,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	}
 	assert(quadric);
 	dir.negate(); // used to be backwards
-	float rot_angle, radius, rxy;
+	float radius, rxy;
 	//glDisable(GL_DEPTH_TEST);
 	gluQuadricNormals(quadric, GLU_SMOOTH);
 	enable_blend();
@@ -355,20 +355,19 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	vector3d v_trans;
 	point const pos0(get_final_pos(pos, dir, cradius, scale, rxy, v_trans));
 	float const tx(-cradius*dir.x/rxy), ty(-cradius*dir.y/rxy);
-	int const light(get_specular_light()); // Note: Doesn't work correctly if more than one light source is enabled
 	
 	if (draw_pass == 0) { // draw solid objects
 		int ndiv(int(get_zoom_scale()*280.0*cradius/(distance_to_camera(pos) + SMALL_NUMBER)));
 		ndiv = min(N_SPHERE_DIV, max(3, ndiv));
 		unsigned const oid(weapons[wid].obj_id);
+		//int const cobj(weapons[wid].need_weapon ? cid : -1);
+		float rot_angle;
 		bool do_texture(0);
 
 		if (oid != UNDEF) {
 			assert(oid < NUM_TOT_OBJS);
 			do_texture = (object_types[oid].tid >= 0);
 		}
-		int const cobj(weapons[wid].need_weapon ? cid : -1);
-
 		switch (wid) {
 		case W_UNARMED:
 			break;

@@ -140,7 +140,7 @@ void distribute_smoke_for_cell(int x, int y, int z) {
 
 void distribute_smoke() { // called at most once per frame
 
-	RESET_TIME;
+	//RESET_TIME;
 	if (!DYNAMIC_SMOKE || !smoke_exists || !animate2) return;
 	assert(SMOKE_SKIPVAL > 0);
 	static int cur_skip(0);

@@ -208,7 +208,6 @@ public:
 		int const dx(xb - xa), dy(yb - ya), steps(max(1, ((abs(dx) > abs(dy)) ? abs(dx): abs(dy))));
 		double const xinc(dx/(double)steps), yinc(dy/(double)steps);
 		double x(xa), y(ya);
-		int bnds[2][2] = {{MESH_X_SIZE,0}, {MESH_Y_SIZE,0}}; // {x,y}{min,max}
 
 		for (int k = 0; k <= steps; ++k) { // DDA algorithm
 			int const xpos(int(x + 0.5)), ypos(int(y + 0.5));

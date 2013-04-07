@@ -211,7 +211,6 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 	assert(num > 0 && (num % npts) == 0);
 	point const &v0(at(ixs.front()).v);
 	cube_t bc(v0, v0);
-	bool make_leaf(0);
 	
 	for (vector<unsigned>::const_iterator i = ixs.begin(); i != ixs.end(); ++i) {
 		bc.union_with_pt(at(*i).v); // update bounding cube
@@ -541,7 +540,6 @@ bool polygon_t::is_coplanar(float thresh) const {
 
 	assert(size() >= 3);
 	if (size() == 3 || thresh == 0.0) return 1;
-	unsigned counts[2] = {0};
 	vector3d n2;
 	get_normal((*this)[0].v, (*this)[2].v, (*this)[3].v, n2, 1);
 	return (dot_product(get_planar_normal(), n2) > thresh);
