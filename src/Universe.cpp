@@ -2994,8 +2994,12 @@ void uobject::add_gravity_vector_base(vector3d &vgravity, point const &mpos, flo
 
 vector3d ustar::get_solar_wind_accel(point const &obj_pos, float obj_mass, float obj_surf_area) const {
 
+	assert(obj_mass > 0.0 && obj_surf_area > 0.0);
+	if (!is_ok()) {return zero_vector;}
 	vector3d const dir_from_sun(obj_pos - pos);
-	return dir_from_sun.get_norm()*(get_energy()*obj_surf_area/(obj_mass*dir_from_sun.mag_sq()));
+	float const mag_sq(dir_from_sun.mag_sq());
+	if (mag_sq < TOLERANCE) {return zero_vector;}
+	return dir_from_sun.get_norm()*(get_energy()*obj_surf_area/(obj_mass*mag_sq));
 }
 
 
