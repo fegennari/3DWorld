@@ -820,7 +820,7 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 }
 
 
-void coll_obj_group::remove_overlapping_cubes() { // objects specified later are the ones that are split/removed
+void coll_obj_group::remove_overlapping_cubes(int min_split_destroy_thresh) { // objects specified later are the ones that are split/removed
 
 	if (!UNOVERLAP_COBJS || empty()) return;
 	RESET_TIME;
@@ -831,7 +831,9 @@ void coll_obj_group::remove_overlapping_cubes() { // objects specified later are
 	vector<pair<unsigned, unsigned> > proc_order;
 		
 	for (unsigned i = 0; i < ncobjs; ++i) {
-		if ((*this)[i].type == COLL_CUBE) {proc_order.push_back(make_pair((*this)[i].id, i));}
+		if ((*this)[i].type == COLL_CUBE && (*this)[i].destroy >= min_split_destroy_thresh) {
+			proc_order.push_back(make_pair((*this)[i].id, i));
+		}
 	}
 	sort(proc_order.begin(), proc_order.end());
 	bool overlaps(0);

@@ -763,11 +763,14 @@ void coll_obj_group::finalize() {
 	}
 	if (has_cubes) { // Note: important to do this test on large polygon-only models
 		if (preproc_cube_cobjs) {
-			remove_overlapping_cubes();
+			remove_overlapping_cubes(NON_DEST);
 			merge_cubes(); // and alpha sort
 			subdiv_cubes();
 		}
-		check_cubes (); // sanity check, should be last
+		else {
+			remove_overlapping_cubes(SHATTERABLE); // always remove overlaps with shatterable or higher cobjs
+		}
+		check_cubes(); // sanity check, should be last
 	}
 	if (any_drawn) sort_cobjs_for_rendering();
 }

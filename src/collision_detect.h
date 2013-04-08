@@ -185,7 +185,7 @@ public:
 	void check_cubes();
 	void merge_cubes();
 	void process_negative_shapes();
-	void remove_overlapping_cubes();
+	void remove_overlapping_cubes(int min_split_destroy_thresh);
 	void subdiv_cubes();
 	void sort_cobjs_for_rendering();
 	void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams);
