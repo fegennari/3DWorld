@@ -448,8 +448,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	int last_tid(-1), last_group_id(-1);
 	
 	if (draw_solid) {
-		bool const do_z_sort((display_mode & 0x10) != 0);
-		vector<pair<float, int> > occluders;
+		vector<pair<float, int> > large_cobjs;
 		draw_last.resize(0);
 		int last_type(-1);
 
@@ -460,9 +459,13 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			assert(c.cp.draw);
 			if (c.no_draw()) continue; // can still get here sometimes
 
-			if (do_z_sort && c.is_big_occluder() && c.group_id < 0) {
-				if (camera_pdu.cube_visible(c)) {occluders.push_back(make_pair(distance_to_camera(c.get_center_pt()), *i));}
-				continue;
+			if (c.is_big_occluder() && c.group_id < 0) {
+				float const dist(distance_to_camera(c.get_center_pt()));
+
+				if (c.get_area()/(dist*dist) > 0.1) {
+					if (camera_pdu.cube_visible(c)) {large_cobjs.push_back(make_pair(dist, *i));}
+					continue;
+				}
 			}
 			if (c.is_semi_trans()) { // slow when polygons are grouped
 				float dist(distance_to_camera(c.get_center_pt()));
@@ -489,9 +492,9 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			}
 		} // for i
 		end_group(last_group_id);
-		sort(occluders.begin(), occluders.end()); // sort front to back for early z culling
+		sort(large_cobjs.begin(), large_cobjs.end()); // sort front to back for early z culling
 
-		for (vector<pair<float, int> >::const_iterator i = occluders.begin(); i != occluders.end(); ++i) {
+		for (vector<pair<float, int> >::const_iterator i = large_cobjs.begin(); i != large_cobjs.end(); ++i) {
 			unsigned cix(i->second);
 			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, &s);
 		}
