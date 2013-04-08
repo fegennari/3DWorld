@@ -1023,29 +1023,14 @@ void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const &color, b
 }
 
 
-void draw_smoke() {
-
-	if (part_clouds.empty()) return; // Note: just because part_clouds is empty doesn't mean there is any enabled smoke
-	set_color(BLACK);
-	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1)); // slow when a lot of smoke is up close
-	draw_part_cloud(part_clouds, WHITE, 0);
-	end_smoke_shaders(s, orig_fog_color);
-}
-
-
 template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int tid) {
 
 	order_vect_t order;
 	get_draw_order(objs, order);
 	if (order.empty()) return;
-	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.04, 0, 1, 0, 0, 0, 1));
 	enable_blend();
 	set_color(BLACK);
 	glDisable(GL_LIGHTING);
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.04);
 	select_texture(tid);
 	quad_batch_draw qbd;
 
@@ -1055,19 +1040,9 @@ template<typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, int
 		objs[i].draw(qbd);
 	}
 	qbd.draw();
-	end_smoke_shaders(s, orig_fog_color);
-	glDisable(GL_ALPHA_TEST);
 	disable_blend();
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
-}
-
-
-void draw_fires() {
-
-	// animated fire textured quad
-	//glDisable(GL_DEPTH_TEST);
-	draw_billboarded_objs(fires, FIRE_TEX);
 }
 
 
@@ -1194,12 +1169,20 @@ void create_and_draw_cracks() {
 }
 
 
-void draw_decals() {
+void draw_cracks_decals_smoke_and_fires() {
 
-	//RESET_TIME;
 	create_and_draw_cracks();
-	//PRINT_TIME("Draw Cracks");
+	if (decals.empty() && part_clouds.empty() && fires.empty()) return; // nothing to draw
+	shader_t s;
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1)); // min_alpha = 0.1-0.4
 	draw_billboarded_objs(decals, BLUR_CENT_TEX);
+
+	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
+		set_color(BLACK);
+		draw_part_cloud(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
+	}
+	draw_billboarded_objs(fires, FIRE_TEX); // animated fire textured quad
+	end_smoke_shaders(s, orig_fog_color);
 }
 
 
