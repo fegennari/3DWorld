@@ -174,9 +174,8 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 void draw_circle_normal_at_z(float z, float r_inner, float r_outer, int ndiv, int invert_normals);
 void draw_rotated_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int nstacks,
 						   bool draw_ends, vector3d const &scale=zero_vector);
-void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends=0,
-						float const *const perturb_map=NULL, bool const *const render_map=NULL, float const *const exp_map=NULL,
-						point const *const pt_shift=NULL, float expand=0.0, float s_beg=0.0, float s_end=1.0);
+void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
+	int draw_sides_ends=0, float const *const perturb_map=NULL);
 void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture=0);
 void draw_trunc_cone(point pos, vector3d v1, float length, float radius, float radius2, bool is_camera=0);
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,

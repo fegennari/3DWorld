@@ -62,10 +62,7 @@ public:
 	void  set_pt(unsigned s, unsigned t, point const &p) {assert(ptsh); ptsh[get_index(s, t)] = p;}
 	point get_pt(unsigned s, unsigned t) const           {assert(ptsh); return ptsh[get_index(s, t)];}
 	unsigned get_size() const {return size;}
-	void draw_perturbed_sphere(point const &pos, float radius, int ndiv, bool tex_coord,
-		float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
-	void draw_perturbed_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv,
-		bool texture, bool draw_ends=0, float s_beg=0.0, float s_end=1.0) const;
+	void draw_perturbed_sphere(point const &pos, float radius, int ndiv, bool tex_coord) const;
 };
 
 

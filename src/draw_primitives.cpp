@@ -317,46 +317,23 @@ void draw_rotated_cylinder(point const &p1, point const &p2, float radius1, floa
 
 
 // draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only
+// Note: using glDrawArrays() here is problematic because the pointer values go into the display lists created in setup_dlists()
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
-						int draw_sides_ends, float const *const perturb_map, bool const *const render_map,
-						float const *const exp_map, point const *const pt_shift, float expand, float s_beg, float s_end)
+						int draw_sides_ends, float const *const perturb_map)
 {
 	assert(radius1 > 0.0 || radius2 > 0.0);
-	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
 	point const ce[2] = {p1, p2};
 	float const ndiv_inv(1.0/ndiv);
 	vector3d v12; // (ce[1] - ce[0]).get_norm()
-	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, perturb_map, s_beg, s_end));
-	if (expand != 0.0) expand *= 0.5; // 1/2, for normalization
-	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end));
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, perturb_map));
 
 	if (draw_sides_ends == 2) {
 		// draw ends only - nothing to do here
 	}
-	else if (use_quads) {
-		glBegin(GL_QUADS);
-		
-		for (unsigned S = s0; S < s1; ++S) {
-			if (render_map && !render_map[S]) continue;
-			float const exp(expand + (exp_map ? exp_map[S] : 0.0));
-			unsigned const s[2] = {S, (S+ndiv-1)%ndiv};
-
-			for (unsigned i = 0; i < 4; ++i) {
-				unsigned const ss(s[i>>1]);
-				if (texture) glTexCoord2f((1.0 - ss*ndiv_inv), float(i==1||i==2));
-				point pt(vpn.p[(ss<<1) + (i==1||i==2)]);
-				if (exp != 0.0) pt += (vpn.n[s[0]] + vpn.n[s[1]])*exp; // average the normals
-				if (pt_shift) pt += pt_shift[S];
-				vpn.n[ss].do_glNormal();
-				pt.do_glVertex();
-			}
-		}
-		glEnd();
-	}
 	else if (radius2 == 0.0) { // cone
 		glBegin(GL_TRIANGLES);
 
-		for (unsigned s = s0; s < s1; ++s) {
+		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
 			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv);
 			//if (texture) glTexCoord2f((1.0 - (s+0.5)*ndiv_inv), 1.0); // small discontinuities at every position
 			if (texture) glTexCoord2f(0.5, 1.0); // one big discontinuity at one position
@@ -374,7 +351,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 	else {
 		glBegin(GL_TRIANGLE_STRIP);
 
-		for (unsigned S = s0; S <= s1; ++S) {
+		for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 			unsigned const s(S%ndiv);
 			(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]).do_glNormal(); // normalize?
 
@@ -386,7 +363,6 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		glEnd();
 	}
 	if (draw_sides_ends != 0) {
-		assert(!render_map && !exp_map && !pt_shift && expand == 0.0 && s0 == 0 && s1 == ndiv); // not yet supported
 		float const r[2] = {radius1, radius2};
 
 		for (unsigned i = 0; i < 2; ++i) {
@@ -396,7 +372,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			if (texture) glTexCoord2f(0.5, 0.5);
 			ce[i].do_glVertex();
 
-			for (unsigned S = s0; S <= s1; ++S) { // ndiv can change
+			for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 				unsigned const ss(S%ndiv), s(i ? (ndiv - ss - 1) : ss);
 				
 				if (texture) { // inefficient
@@ -571,6 +547,7 @@ void sd_sphere_d::draw_ndiv_pow2(unsigned ndiv) const {
 
 
 // non-collision object version
+// Note: using glDrawArrays() here is problematic because the pointer values go into the display lists created in setup_dlists()
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,
 						int texture, bool disable_bfc, bool const *const render_map, float const *const exp_map,
 						point const *const pt_shift, float expand, float s_beg, float s_end, float t_beg, float t_end)

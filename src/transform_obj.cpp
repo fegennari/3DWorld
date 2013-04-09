@@ -135,26 +135,16 @@ void mesh2d::set_rand_translate(point const &tp, unsigned num_trans) {
 }
 
 
-void mesh2d::draw_perturbed_sphere(point const &pos, float radius, int ndiv, bool tex_coord,
-								   float s_beg, float s_end, float t_beg, float t_end) const
-{
+void mesh2d::draw_perturbed_sphere(point const &pos, float radius, int ndiv, bool tex_coord) const {
+
 	if (!pmap && !rmap && !emap && !ptsh && expand == 0.0) {
 		draw_sphere_dlist(pos, radius, ndiv, 1);
 	}
 	else { // ndiv unused
 		if (pmap || rmap || ptsh || emap) assert(size > 0);
 		point const camera(get_camera_all());
-		draw_subdiv_sphere(pos, radius, size, camera, pmap, tex_coord, 1, rmap, emap, ptsh, expand, s_beg, s_end, t_beg, t_end);
+		draw_subdiv_sphere(pos, radius, size, camera, pmap, tex_coord, 1, rmap, emap, ptsh, expand);
 	}
-}
-
-
-// unused so far
-void mesh2d::draw_perturbed_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv,
-									 bool texture, bool draw_ends, float s_beg, float s_end) const
-{
-	int const nd((!pmap && !rmap && !emap && !ptsh && expand == 0.0) ? ndiv : size); // Note: matrices are treated as 1D, not 2D
-	draw_fast_cylinder(p1, p2, radius1, radius2, nd, texture, draw_ends, pmap, rmap, emap, ptsh, expand, s_beg, s_end);
 }
 
 
