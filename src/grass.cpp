@@ -241,6 +241,7 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
 	vector<unsigned char> modified; // only used for shadows
+	mutable vector<grass_data_t> vertex_data_buffer;
 	bool shadows_valid;
 	int last_cobj;
 	int last_light;
@@ -374,7 +375,7 @@ public:
 		unsigned const num_verts(3*(end - start)), block_size(3*4096); // must be a multiple of 3
 		unsigned const vntc_sz(sizeof(grass_data_t));
 		unsigned offset(3*start);
-		vector<grass_data_t> data(min(num_verts, block_size));
+		vertex_data_buffer.resize(min(num_verts, block_size));
 		bind_vbo(vbo);
 		if (alloc_data) {upload_vbo_data(NULL, 3*grass.size()*vntc_sz);} // initial upload (setup, no data)
 		
@@ -383,10 +384,10 @@ public:
 			//vector3d norm(grass[i].n);
 			//vector3d norm(surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]);
 			vector3d norm(interpolate_mesh_normal(grass[i].p));
-			add_to_vbo_data(grass[i], data, ix, norm);
+			add_to_vbo_data(grass[i], vertex_data_buffer, ix, norm);
 
 			if (ix == block_size || i+1 == end) { // filled block or last entry
-				upload_vbo_sub_data(&data.front(), offset*vntc_sz, ix*vntc_sz); // upload part or all of the data
+				upload_vbo_sub_data(&vertex_data_buffer.front(), offset*vntc_sz, ix*vntc_sz); // upload part or all of the data
 				offset += ix;
 				ix = 0; // reset to the beginning of the buffer
 			}
