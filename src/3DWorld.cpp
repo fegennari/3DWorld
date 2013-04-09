@@ -144,7 +144,9 @@ bool check_gl_error(unsigned loc_id) {
 	int const error(glGetError());
 
 	if (error) {
-		cout << "GL Error " << error << " at location id " << loc_id << ": " << gluErrorString(error) << "." << endl;
+		const GLubyte *const error_str(gluErrorString(error));
+		cout << "GL Error " << error << " at location id " << loc_id << ": ";
+		if (error_str) {cout << error_str << "." << endl;} else {cout << "<NULL>." << endl;}
 		assert(0);
 		return 1;
 	}
