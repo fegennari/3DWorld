@@ -93,6 +93,7 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 	vector3d init_vel;
 	colorRGBA base_color;
 	vector<part> parts;
+	mutable vector<part> render_parts;
 	static order_vect_t order;
 
 	void gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r,

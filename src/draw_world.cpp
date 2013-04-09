@@ -903,18 +903,19 @@ void particle_cloud::draw(quad_batch_draw &qbd) const {
 	}
 	else {
 		order.resize(0);
-		vector<part> cur_parts(parts);
+		render_parts.resize(parts.size());
 
-		for (unsigned i = 0; i < cur_parts.size(); ++i) {
-			cur_parts[i].pos     = pos + cur_parts[i].pos*radius;
-			cur_parts[i].radius *= radius;
+		for (unsigned i = 0; i < parts.size(); ++i) {
+			render_parts[i].pos    = pos + parts[i].pos*radius;
+			render_parts[i].radius = parts[i].radius*radius;
+			render_parts[i].status = parts[i].status;
 		}
-		get_draw_order(cur_parts, order);
+		get_draw_order(render_parts, order);
 		
 		for (unsigned j = 0; j < order.size(); ++j) {
 			unsigned const i(order[j].second);
-			assert(i < cur_parts.size());
-			draw_part(cur_parts[i].pos, cur_parts[i].radius, color, qbd);
+			assert(i < render_parts.size());
+			draw_part(render_parts[i].pos, render_parts[i].radius, color, qbd);
 		}
 	}
 }
