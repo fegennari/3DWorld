@@ -140,7 +140,7 @@ void dynamic_particle::add_cobj_shadows() const { // cobjs, dynamic objects
 }
 
 void dynamic_particle::add_mesh_shadows() const {
-	if (shadows) sphere_shadow2(pos, radius, CHECK_ALL_SHADOW, 1, 0); // sphere_shadow? quality?
+	if (shadows) dynamic_sphere_shadow(pos, radius, CHECK_ALL_SHADOW, 0); // sphere_shadow? quality?
 }
 
 void dynamic_particle::add_stencil_shadows(point const &lpos, int &inverts) const {

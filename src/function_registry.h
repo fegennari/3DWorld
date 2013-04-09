@@ -54,7 +54,7 @@ int  get_shape_shadow_bb(point const *points, int npoints, int l, int quality, p
 void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir);
 int  enable_shadow_envelope(point const &pos, float radius, unsigned light_sources, int is_dynamic);
 void disable_shadow_envelope(unsigned light_sources);
-void sphere_shadow2(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality);
+void dynamic_sphere_shadow(point const &pos, float radius, unsigned light_sources, int quality);
 int  sphere_shadow(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality);
 int  cylinder_shadow(point p1, point p2, float radius1, float radius2, unsigned light_sources, int shadow_ends, int is_dynamic, int quality);
 int  polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, unsigned light_sources,

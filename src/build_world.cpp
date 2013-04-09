@@ -476,7 +476,7 @@ void process_groups() {
 						obj.coll_id = add_coll_sphere(pos, radius, cp);
 					}
 					if (type != CHUNK && (type != S_BALL || obj.status == 1) && objg.obj_has_shadow(j)) { // too slow for all chunks and small balls
-						sphere_shadow2(pos, radius, CHECK_ALL_SHADOW, 1, 0);
+						dynamic_sphere_shadow(pos, radius, CHECK_ALL_SHADOW, 0);
 					}
 				}
 				if (obj_flags & CAMERA_VIEW) {

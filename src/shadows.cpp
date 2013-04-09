@@ -219,11 +219,11 @@ bool point_to_point_visibility(point const &pos1, point const &pos2, int &xpos, 
 
 
 void camera_shadow(point const &camera) {
-	if (!has_invisibility(CAMERA_ID)) {sphere_shadow2(camera, CAMERA_RADIUS, CHECK_ALL_SHADOW, 1, 1);}
+	if (!has_invisibility(CAMERA_ID)) {dynamic_sphere_shadow(camera, CAMERA_RADIUS, CHECK_ALL_SHADOW, 1);}
 }
 
-void sphere_shadow2(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality) {
-	if (!is_dynamic || !use_stencil_shadows) {sphere_shadow(pos, radius, light_sources, is_dynamic, quality);}
+void dynamic_sphere_shadow(point const &pos, float radius, unsigned light_sources, int quality) {
+	if (!use_stencil_shadows && !shadow_map_enabled()) {sphere_shadow(pos, radius, light_sources, 1, quality);}
 }
 
 
