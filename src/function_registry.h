@@ -364,6 +364,7 @@ void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, in
 bool check_coll_line(point pos1, point pos2, int &cindex, int c_obj, int skip_dynamic, int test_alpha);
 bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_norm, int &cindex, float splash_val=0.0,
 						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0);
+bool cobj_contained_ref(point pos1, point center, const point *pts, unsigned npts, int cobj, int &last_cobj);
 bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj);
 bool is_pt_inside_or_near_cobj(point const &pt, float dist, int ignore_cobj, bool skip_dynamic);
 bool is_occluded(vector<int> const &occluders, point const *const pts0, int npts, point const &camera);

@@ -26,5 +26,3 @@ Remove stencil shadows?
 Run leak detection
 
 Replace bool with #define in some places
-
-Cache grass occluders

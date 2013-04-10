@@ -20,7 +20,7 @@ unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
 extern bool has_dir_lights, has_snow, disable_shaders, no_sun_lpos_update;
-extern int island, default_ground_tex, read_landscape, display_mode, animate2;
+extern int island, default_ground_tex, read_landscape, display_mode, animate2, frame_counter;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
 extern colorRGBA leaf_base_color;
 extern vector3d wind;
@@ -241,6 +241,7 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
 	vector<unsigned char> modified; // only used for shadows
+	vector<int> last_occluder;
 	mutable vector<grass_data_t> vertex_data_buffer;
 	bool shadows_valid;
 	int last_cobj;
@@ -601,44 +602,41 @@ public:
 		begin_draw(0.2);
 
 		// draw the grass
-		unsigned const BLOCK_SIZE = 4;
-		assert(BLOCK_SIZE <= MESH_X_SIZE && (MESH_X_SIZE%BLOCK_SIZE) == 0);
 		bool last_visible(0);
 		unsigned beg_ix(0);
 		point const camera(get_camera_pos()), adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
+		last_occluder.resize(XY_MULT_SIZE, -1);
+		int last_occluder_used(-1);
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
-			for (int x = 0; x < MESH_X_SIZE; x += BLOCK_SIZE) {
+			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				unsigned const ix(y*MESH_X_SIZE + x);
-				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+BLOCK_SIZE]) continue; // empty section
-				float mzmin(z_min_matrix[y][x]), mzmax(mesh_height[y][x]);
-				bool visible(1), back_facing(1);
+				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+1]) continue; // empty section
+				point const mpos(get_mesh_xyz_pos(x, y));
+				bool visible(1);
 
-				for (int xx = x; xx <= min(x+(int)BLOCK_SIZE, MESH_X_SIZE-1) && back_facing; ++xx) {
-					for (int yy = y; yy <= min(y+1, MESH_Y_SIZE-1) && back_facing; ++yy) {
-						back_facing &= (dot_product(surface_normals[yy][xx], (adj_camera - get_mesh_xyz_pos(xx, yy))) < 0.0);
-					}
-				}
-				if (back_facing) {
+				if (dot_product(surface_normals[y][x], (adj_camera - mpos)) < 0.0) { // back_facing
 					visible = 0;
 				}
 				else {
-					for (int xx = x+1; xx < x+(int)BLOCK_SIZE; ++xx) {
-						mzmin = min(mzmin, z_min_matrix[y][xx]);
-						mzmax = max(mzmax, mesh_height[y][xx]);
-					}
-					float const xval(get_xval(x)), yval(get_yval(y));
-					cube_t const cube(xval-grass_length, xval+BLOCK_SIZE*DX_VAL+grass_length,
-									  yval-grass_length, yval+DY_VAL+grass_length, mzmin, mzmax+grass_length);
+					cube_t const cube(mpos.x-grass_length, mpos.x+DX_VAL+grass_length,
+									  mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], mpos.z+grass_length);
 					visible = camera_pdu.cube_visible(cube); // could use camera_pdu.sphere_and_cube_visible_test()
 				
 					if (visible && (display_mode & 0x08)) {
-						point pts[8];
-						get_cube_points(cube.d, pts);
-						visible &= !cobj_contained(camera, cube.get_cube_center(), pts, 8, -1);
+						int &last_occluder_cobj(last_occluder[y*MESH_X_SIZE + x]);
+
+						if (last_occluder_cobj >= 0 || (frame_counter & 3) == 0) { // only sometimes update if not previously occluded
+							point pts[8];
+							get_cube_points(cube.d, pts);
+							if (last_occluder_cobj <  0) {last_occluder_cobj = last_occluder_used;}
+							visible &= !cobj_contained_ref(camera, cube.get_cube_center(), pts, 8, -1, last_occluder_cobj);
+							if (visible) {last_occluder_cobj = -1;}
+							if (last_occluder_cobj >= 0) {last_occluder_used = last_occluder_cobj;}
+						}
 					}
 				}
-				//if (visible) {draw_range(mesh_to_grass_map[ix], mesh_to_grass_map[ix+BLOCK_SIZE]);}
+				//if (visible) {draw_range(mesh_to_grass_map[ix], mesh_to_grass_map[ix+1]);}
 				if (visible && !last_visible) { // start a segment
 					beg_ix = mesh_to_grass_map[ix];
 				}
