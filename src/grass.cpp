@@ -615,7 +615,11 @@ public:
 				point const mpos(get_mesh_xyz_pos(x, y));
 				bool visible(1);
 
-				if (dot_product(surface_normals[y][x], (adj_camera - mpos)) < 0.0) { // back_facing
+				if (dot_product(surface_normals[y  ][x  ], (adj_camera - mpos                      )) < 0.0 &&
+					dot_product(surface_normals[y  ][x+1], (adj_camera - get_mesh_xyz_pos(x+1, y  ))) < 0.0 &&
+					dot_product(surface_normals[y+1][x+1], (adj_camera - get_mesh_xyz_pos(x+1, y+1))) < 0.0 &&
+					dot_product(surface_normals[y+1][x  ], (adj_camera - get_mesh_xyz_pos(x,   y+1))) < 0.0) // back_facing
+				{
 					visible = 0;
 				}
 				else {
