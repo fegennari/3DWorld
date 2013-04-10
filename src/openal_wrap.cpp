@@ -129,7 +129,7 @@ void openal_buffer::alloc() {
 	assert(is_valid());
 }
 
-void openal_buffer::free() {
+void openal_buffer::free_buffer() {
 	if (is_valid()) alDeleteBuffers(1, &buffer);
 	buffer = 0;
 	time   = 0.0;
@@ -137,7 +137,7 @@ void openal_buffer::free() {
 
 bool openal_buffer::load_check() {
 	if (check_and_print_alut_error()) {
-		free();
+		free_buffer();
 		return 0;
 	}
 	return 1;
@@ -195,7 +195,7 @@ void openal_source::alloc() {
 	assert(is_valid());
 }
 
-void openal_source::free() {
+void openal_source::free_source() {
 	if (is_valid()) {
 		alDeleteSources(1, &source);
 		source = 0;
@@ -304,7 +304,7 @@ openal_source &source_manager_t::get_inactive_source() {
 
 void source_manager_t::clear() {
 	for (unsigned i = 0; i < sources.size(); ++i) {
-		sources[i].free();
+		sources[i].free_source();
 	}
 	sources.clear();
 	next_source = 0;
@@ -409,8 +409,8 @@ void openal_hello_world() {
 	source.alloc();
 	source.set_buffer(buffer);
 	source.blocking_play();
-	source.free();
-	buffer.free();
+	source.free_source();
+	buffer.free_buffer();
 }
 
 

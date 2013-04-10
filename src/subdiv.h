@@ -23,7 +23,7 @@ public:
 	sphere_point_norm() : ndiv(0), points(NULL), norms(NULL) {}
 	void alloc(unsigned ndiv_);
 	void set_pointer_stride(unsigned ndiv_);
-	void free();
+	void free_data();
 };
 
 

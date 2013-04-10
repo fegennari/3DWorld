@@ -2420,12 +2420,12 @@ void change_game_mode() {
 		for (unsigned i = 0; i < ntypes; ++i) {
 			int const group(coll_id[types[i]]);
 			assert(group >= 0 && group < NUM_TOT_OBJS);
-			obj_groups[group].free();
+			obj_groups[group].free_objects();
 		}
 	}
 	else if (game_mode == 0) {
 		assert(coll_id[BALL] >= 0 && coll_id[BALL] < NUM_TOT_OBJS);
-		obj_groups[coll_id[BALL]].free();
+		obj_groups[coll_id[BALL]].free_objects();
 	}
 	if (game_mode) {
 		init_game_mode();

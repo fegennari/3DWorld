@@ -67,7 +67,7 @@ void texture_manager::free_tids() {
 void texture_manager::free_textures() {
 
 	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {
-		t->free();
+		t->free_data();
 	}
 }
 

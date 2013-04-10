@@ -831,7 +831,7 @@ void scenery_group::clear_vbos_and_dlists() {
 
 void scenery_group::clear() {
 
-	free();
+	free_scenery();
 	rock_shapes.clear();
 	surface_rocks.clear();
 	voxel_rocks.clear();
@@ -843,7 +843,7 @@ void scenery_group::clear() {
 	generated = 0;
 }
 
-void scenery_group::free() {
+void scenery_group::free_scenery() {
 
 	free_scenery_vector(rock_shapes);
 	free_scenery_vector(surface_rocks);
@@ -1088,7 +1088,7 @@ void update_scenery_zvals(int x1, int y1, int x2, int y2) {
 }
 
 void free_scenery() {
-	all_scenery.free();
+	all_scenery.free_scenery();
 }
 
 void clear_scenery_vbos_and_dlists() {

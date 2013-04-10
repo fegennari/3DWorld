@@ -248,7 +248,7 @@ upsurface::ptc_block &upsurface::get_ptc(unsigned s, unsigned t, unsigned f) con
 
 upsurface::~upsurface() {
 
-	spn.free();
+	spn.free_data();
 	free_dlist();
 }
 

@@ -49,7 +49,7 @@ public:
 	void apply_physics(point_d const &pos_, point const &camera);
 	void draw(point_d const &pos_, point const &camera, shader_t &s);
 	void destroy_asteroid(unsigned ix);
-	void free() {clear();}
+	void free_uobj() {clear();}
 };
 
 

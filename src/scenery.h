@@ -158,7 +158,7 @@ public:
 	scenery_group() : generated(0) {}
 	void clear_vbos_and_dlists();
 	void clear();
-	void free();
+	void free_scenery();
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	void shift(vector3d const &vd);

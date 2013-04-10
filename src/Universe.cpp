@@ -679,14 +679,14 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 				float const sradius(sol.sun.radius);
 
 				if (max_size*sradius < 0.1*STAR_MAX_SIZE) {
-					if (!sel_g) sol.free();
+					if (!sel_g) sol.free_uobj();
 					continue;
 				}
 				point_d const spos(pos + sol.pos);
 				float const sizes(calc_sphere_size(spos, camera, sradius));
 
 				if (sizes < 0.1) {
-					if (!sel_g) sol.free();
+					if (!sel_g) sol.free_uobj();
 					continue;
 				}
 				bool const update_pass(sel_g && !no_move && ((int(tfticks)+j)&31) == 0);
@@ -731,7 +731,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 						bool skip_draw(!planets_visible);
 
 						if (sclip && sizep < (planet.ring_data.empty() ? 0.6 : 0.3)) {
-							if (!sel_g && sizep < 0.3) planet.free();
+							if (!sel_g && sizep < 0.3) planet.free_uobj();
 							if (update_pass) {skip_draw = 1;} else {continue;}
 						}
 						current.planet = k;
@@ -901,7 +901,7 @@ void universe_t::shift_cells(int dx, int dy, int dz) {
 	for (unsigned i = 0; i < U_BLOCKS; ++i) { // z
 		for (unsigned j = 0; j < U_BLOCKS; ++j) { // y
 			for (unsigned k = 0; k < U_BLOCKS; ++k) { // x
-				if (cells[i][j][k].gen == 0) cells[i][j][k].free();
+				if (cells[i][j][k].gen == 0) cells[i][j][k].free_uobj();
 				cells[i][j][k]     = temp.cells[i][j][k];
 				cells[i][j][k].gen = 0;
 			}
@@ -1942,16 +1942,16 @@ void universe_t::free_textures() { // should be OK even if universe isn't setup
 template<typename T> void free_vector_ptr(vector<T> *&v) {
 
 	if (v != NULL) {
-		for (vector<T>::iterator i = v->begin(); i != v->end(); ++i) {i->free();}
+		for (vector<T>::iterator i = v->begin(); i != v->end(); ++i) {i->free_uobj();}
 		delete v;
 		v = NULL;
 	}
 }
 
-void ucell::free() {
+void ucell::free_uobj() {
 
 	if (galaxies != NULL) {
-		for (vector<ugalaxy>::iterator i = galaxies->begin(); i != galaxies->end(); ++i) {i->free();}
+		for (vector<ugalaxy>::iterator i = galaxies->begin(); i != galaxies->end(); ++i) {i->free_uobj();}
 		delete galaxies;
 		galaxies = NULL;
 	}
@@ -1967,9 +1967,9 @@ void ugalaxy::clear_systems() {
 }
 
 
-void ugalaxy::free() {
+void ugalaxy::free_uobj() {
 
-	for (unsigned i = 0; i < sols.size(); ++i) {sols[i].free();}
+	for (unsigned i = 0; i < sols.size(); ++i) {sols[i].free_uobj();}
 	clear_systems();
 	gen = 0;
 }
@@ -1977,36 +1977,36 @@ void ugalaxy::free() {
 
 void ussystem::free_planets() {
 
-	for (unsigned i = 0; i < planets.size(); ++i) {planets[i].free();}
+	for (unsigned i = 0; i < planets.size(); ++i) {planets[i].free_uobj();}
 }
 
 
-void ussystem::free() {
+void ussystem::free_uobj() {
 
 	if (!planets.empty()) {free_planets();}
 	planets.clear();
-	sun.free();
+	sun.free_uobj();
 	galaxy_color.alpha = 0.0; // set to an invalid state
 	gen = 0;
 }
 
 
-void uplanet::free() {
+void uplanet::free_uobj() {
 
-	for (unsigned i = 0; i < moons.size(); ++i) {moons[i].free();}
+	for (unsigned i = 0; i < moons.size(); ++i) {moons[i].free_uobj();}
 	moons.clear();
 	ring_data.clear();
-	urev_body::free();
+	urev_body::free_uobj();
 }
 
 
-void urev_body::free() {
+void urev_body::free_uobj() {
 
 	if (gen) free_texture();
 	delete surface; // OK if already NULL
 	surface = NULL;
 	//unset_owner();
-	uobj_solid::free();
+	uobj_solid::free_uobj();
 }
 
 

@@ -369,7 +369,7 @@ void free_texture(unsigned &tid) {
 
 void texture_t::alloc() {
 
-	free();
+	free_data();
 	data = new unsigned char[num_bytes()];
 
 	if (SHOW_TEXTURE_MEMORY) {
@@ -395,7 +395,7 @@ void texture_t::free_mm_data() {
 	mm_offsets.clear();
 }
 
-void texture_t::free() {
+void texture_t::free_data() {
 
 	gl_delete(); // ???
 	if (orig_data    != data) delete [] orig_data;
@@ -977,7 +977,7 @@ void texture_t::add_alpha_channel() {
 		UNROLL_3X(new_data[4*i+i_] = (luminance ? data[i] : data[3*i+i_]););
 		new_data[4*i+3] = 255; // alpha of 255
 	}
-	free();
+	free_data();
 	data = new_data;
 }
 
@@ -990,7 +990,7 @@ void texture_t::resize(int new_w, int new_h) {
 	unsigned char *new_data(new unsigned char[new_w*new_h*ncolors]);
 	int const ret(gluScaleImage(calc_format(), width, height, GL_UNSIGNED_BYTE, data, new_w, new_h, GL_UNSIGNED_BYTE, new_data));
 	if (ret) cout << "GLU error during image scale: " << gluErrorString(ret) << "." << endl;
-	free();
+	free_data();
 	data   = new_data;
 	width  = new_w;
 	height = new_h;
@@ -1016,7 +1016,7 @@ void texture_t::try_compact_to_lum() {
 	for (unsigned i = 0; i < npixels; ++i) {
 		new_data[i] = data[3*i];
 	}
-	free();
+	free_data();
 	data = new_data;
 }
 
@@ -1057,7 +1057,7 @@ void texture_t::make_normal_map() {
 			UNROLL_3X(new_data[off+i_] = unsigned char(127.5*(n[i_]+1.0)););
 		}
 	}
-	free();
+	free_data();
 	data = new_data;
 }
 

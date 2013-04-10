@@ -361,7 +361,7 @@ public:
 	bool large_radius() const;
 	void set_enable(bool enabled_) {if (enabled_) enable(); else disable();}
 	void toggle_enable() {set_enable(!enabled);}
-	void free();
+	void free_objects();
 	void shift(vector3d const &vd);
 	transform_data *get_td() {assert(td); return td;}
 	dwobject       &get_obj(unsigned i)       {assert(enabled && i < objects.size()); return objects[i];}

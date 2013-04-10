@@ -50,7 +50,7 @@ class openal_buffer {
 
 public:
 	openal_buffer(unsigned buffer_=0) : buffer(buffer_), time(0.0) {}
-	//~openal_buffer() {free();}
+	//~openal_buffer() {free_buffer();}
 	bool load_check();
 	bool load_from_file(std::string const &fn);
 	bool load_from_file_std_path(std::string const &fn);
@@ -59,7 +59,7 @@ public:
 	bool is_valid() const {return (buffer > 0);}
 	unsigned get_buffer_ix() const {return buffer;}
 	void alloc();
-	void free();
+	void free_buffer();
 };
 
 
@@ -79,7 +79,7 @@ public:
 	unsigned add_file_buffer(std::string const &fn);
 
 	void clear() {
-		for (unsigned i = 0; i < buffers.size(); ++i) buffers[i].free();
+		for (unsigned i = 0; i < buffers.size(); ++i) buffers[i].free_buffer();
 		buffers.clear();
 	}
 };
@@ -92,14 +92,14 @@ class openal_source {
 
 public:
 	openal_source(unsigned source_=0) : source(source_) {}
-	//~openal_source() {free();}
+	//~openal_source() {free_source();}
 	bool is_valid  () const {return (source > 0);}
 	bool is_playing() const;
 	bool is_active () const;
 	float get_loudness() const {return (is_active() ? params.get_loudness() : 0.0);}
 	
 	void alloc();
-	void free();
+	void free_source();
 	void setup(openal_buffer const &buffer, point const &pos, float gain=1.0, float pitch=1.0,
 		bool looping=0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
 	void set_buffer(openal_buffer const &buffer) {set_buffer_ix(buffer.get_buffer_ix());}

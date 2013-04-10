@@ -118,7 +118,7 @@ void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, floa
 	assert(ndiv > 0 && ndiv < 1000); // FIXME: should we refuse to accept (ndiv < 3) ?
 
 	if (cur_spn.points == NULL || ndiv > cur_spn.ndiv) { // allocate all memory
-		if (cur_spn.points != NULL) cur_spn.free(); // already allocated at least once
+		if (cur_spn.points != NULL) cur_spn.free_data(); // already allocated at least once
 		cur_spn.alloc(ndiv);
 	}
 	else {
@@ -221,7 +221,7 @@ void sphere_point_norm::set_pointer_stride(unsigned ndiv_) {
 }
 
 
-void sphere_point_norm::free() {
+void sphere_point_norm::free_data() {
 
 	if (points == NULL) {assert(norms == NULL); return;} // already freed (okay)
 	assert(points && norms && points[0] && norms[0]);

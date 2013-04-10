@@ -176,7 +176,7 @@ public:
 		add_gravity_vector_base(vgravity, mpos, gravity, MAX_SOBJ_GRAVITY);
 	}
 	virtual bool surface_test(float rad, point const &p, float &coll_r, bool simple) const {return 1;}
-	virtual void free() {gen = 0;}
+	virtual void free_uobj() {gen = 0;}
 };
 
 
@@ -252,7 +252,7 @@ public:
 	virtual bool colonizable_int() const = 0;
 	virtual point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
 	virtual void free_texture();
-	virtual void free();
+	virtual void free_uobj();
 };
 
 
@@ -282,7 +282,7 @@ public:
 	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir) const;
 	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const;
 	void free_texture();
-	void free();
+	void free_uobj();
 	float get_hmap_scale () const {return PLANET_HMAP_SCALE;}
 	float get_ring_rscale() const {return max(rscale.x, rscale.y)*ring_ro/radius;}
 	string get_name() const {return "Planet " + getname();}
@@ -356,7 +356,7 @@ public:
 	void calc_color();
 	void process();
 	colorRGBA const &get_galaxy_color();
-	void free();
+	void free_uobj();
 	void free_planets();
 	string get_name() const {return "System " + sun.getname();}
 };
@@ -371,7 +371,7 @@ class unebula : public uobject_base {
 public:
 	void gen(float range, ellipsoid_t const &bounds);
 	void draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const;
-	void free() {points.clear();}
+	void free_uobj() {points.clear();}
 	bool is_valid() const {return !points.empty();}
 };
 
@@ -413,7 +413,7 @@ public:
 	void process(ucell const &cell);
 	bool gen_system_loc(vector<point> const &placed);
 	void clear_systems();
-	void free();
+	void free_uobj();
 	string get_name() const {return "Galaxy " + getname();}
 };
 
@@ -428,7 +428,7 @@ public:
 	void gen_cell(int const ii[3]);
 	void draw_nebulas(ushader_group &usg) const;
 	void draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only);
-	void free();
+	void free_uobj();
 	string get_name() const {return "Universe Cell";}
 };
 

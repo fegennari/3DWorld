@@ -965,7 +965,7 @@ public:
 	void alloc();
 	void bind_gl() const;
 	void free_mm_data();
-	void free();
+	void free_data();
 	void gl_delete();
 	void load(int index);
 	void load_raw_bmp(int index);

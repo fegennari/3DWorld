@@ -760,7 +760,7 @@ void obj_group::disable() {
 }
 
 
-void obj_group::free() {
+void obj_group::free_objects() {
 
 	remove_reset_cobjs();
 	if (!objects.empty()) reset_status(objects);
