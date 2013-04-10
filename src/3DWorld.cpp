@@ -748,6 +748,7 @@ void quit_3dworld() {
 		free_scenery();
 		delete_matrices();
 	}
+	//_CrtDumpMemoryLeaks();
 	exit(0); // quit
 }
 

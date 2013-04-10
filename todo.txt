@@ -26,3 +26,6 @@ Remove stencil shadows?
 Run leak detection
 
 Replace bool with #define in some places
+Rename free() member functions to something else
+
+Cache grass occluders
