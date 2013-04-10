@@ -1099,9 +1099,10 @@ float tile_draw_t::update() { // view-independent updates
 	if (DEBUG_TILES && (tiles.size() != init_tiles || !to_erase.empty())) {
 		cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << to_erase.size() << endl;
 	}
+	// Note: could skip shadow computation (but not weight calc/texture upload) if (max(sun_pos.z,  last_sun.z) > zbottom) or (sun.get_norm().z > 0.9) or something like that
 	static point last_sun(all_zeros), last_moon(all_zeros);
-	bool const sun_change (sun_pos  != last_sun  && max(sun_pos.z,  last_sun.z)  > zbottom); // Note: could skip if (sun.get_norm().z > 0.9) or something like that
-	bool const moon_change(moon_pos != last_moon && max(moon_pos.z, last_moon.z) > zbottom);
+	bool const sun_change (sun_pos  != last_sun  && light_factor >= 0.4);
+	bool const moon_change(moon_pos != last_moon && light_factor <= 0.6);
 
 	// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
 	if (mesh_shadows_enabled() && (sun_change || moon_change)) { // light source change
