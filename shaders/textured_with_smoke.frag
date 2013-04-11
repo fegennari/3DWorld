@@ -66,6 +66,9 @@ vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 void main()
 {
 	vec4 texel  = texture2D(tex0, tex_coord);
+#ifndef NO_ALPHA_TEST
+	if (texel.a < min_alpha) discard; // Note: assumes walls don't have textures with alpha < 1
+#endif
 	float alpha = gl_Color.a;
 
 	if (do_lt_atten) {
@@ -146,6 +149,7 @@ void main()
 		}
 	}
 #ifndef NO_ALPHA_TEST
+	color.a = min(color.a, texel.a); // Note: assumes walls don't have textures with alpha < 1
 	if (color.a <= min_alpha) discard;
 #endif
 #endif

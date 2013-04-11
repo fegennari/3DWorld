@@ -222,7 +222,7 @@ void draw_select_groups(int solid) {
 	bool const force_tsl(1);
 	indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 	cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl));
 	select_no_texture();
 	BLACK.do_glColor();
 
@@ -566,7 +566,10 @@ void draw_group(obj_group &objg, shader_t &s) {
 				draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0);
 				break;
 			case PARTICLE:
-				particle_qbd.add_billboard(obj.pos, get_camera_pos(), up_vector, get_glow_color(obj, 0), 1.2*tradius, 1.2*tradius);
+				{
+					colorRGBA const glow_color(get_glow_color(obj, 0));
+					if (glow_color.alpha > 0.0) {particle_qbd.add_billboard(obj.pos, get_camera_pos(), up_vector, glow_color, 1.2*tradius, 1.2*tradius);}
+				}
 				break;
 
 			case SAND:
