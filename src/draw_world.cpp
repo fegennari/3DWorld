@@ -249,8 +249,8 @@ void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
 
 void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
-	if (!enable) s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type); // if we're not even enabling dlights
-	s.set_bool_prefix("has_dir_lights",  has_dir_lights, shader_type);
+	if (!enable)        {s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type);} // if we're not even enabling dlights
+	if (has_dir_lights) {s.set_prefix("#define HAS_DIR_LIGHTS",    shader_type);}
 	s.set_bool_prefix("enable_dlights",  (enable && dl_tid > 0 && has_dl_sources), shader_type);
 }
 
@@ -300,11 +300,14 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 	s.set_bool_prefix("use_world_space_mvm", use_mvm,     0); // VS
 	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP", 1);} // FS
 
-	// Note: dynamic_smoke_shadows applies to light0 only
-	// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
-	s.set_bool_prefixes("dynamic_smoke_shadows", DYNAMIC_SMOKE_SHADOWS, 3); // VS/FS
-	s.set_bool_prefixes("smoke_enabled",         smoke_enabled,         3); // VS/FS
-	
+	if (smoke_enabled) {
+		// Note: dynamic_smoke_shadows applies to light0 only
+		// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
+		for (unsigned d = 0; d < 2; ++d) { // VS/FS
+			if (DYNAMIC_SMOKE_SHADOWS) {s.set_prefix("#define DYNAMIC_SMOKE_SHADOWS", d);}
+			s.set_prefix("#define SMOKE_ENABLED", d);
+		}
+	}
 	for (unsigned i = 0; i < 2; ++i) {
 		if (use_bmap) {s.set_prefix("#define USE_BUMP_MAP", i);} // VS/FS
 	}

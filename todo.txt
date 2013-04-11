@@ -24,7 +24,5 @@ Remove stencil shadows?
 
 Run leak detection
 
-Replace bool with #define in some places
-
 Multiple decid tree impostor orients
 Decid tree texture atlases

@@ -21,7 +21,8 @@ const float SMOKE_SCALE = 0.25;
 vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 	float nscale = (use_shadow_map ? get_shadow_map_weight_light0(epos) : 1.0);
 
-	if (smoke_enabled && dynamic_smoke_shadows && source != dest && nscale > 0.0) {
+#ifdef DYNAMIC_SMOKE_SHADOWS
+	if (source != dest && nscale > 0.0) {
 		vec3 dir      = dest - source;
 		vec3 pos      = (source - scene_llc)/scene_scale;
 		vec3 delta    = normalize(dir)*step_delta/scene_scale;
@@ -38,6 +39,7 @@ vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 			step_weight = 1.0;
 		}
 	}
+#endif
 	//return add_light_comp_pos(nscale*n, epos, 0).rgb;
 	// special cased add_light_comp_pos - FIXME: find a better way to make the index constant for optimization
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz);
@@ -110,43 +112,42 @@ void main()
 	}
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 
-	if (!smoke_enabled) {
+#ifndef SMOKE_ENABLED
 #ifndef NO_ALPHA_TEST
-		if (color.a <= min_alpha) discard;
+	if (color.a <= min_alpha) discard;
 #endif
 #ifndef NO_FOG
-		color = apply_fog_epos(color, epos); // apply standard fog
+	color = apply_fog_epos(color, epos); // apply standard fog
 #endif
-	}
-	else {
-		pt_pair res = clip_line(vpos, eye, smoke_bb);
-		vec3 eye_c  = res.v1;
-		vec3 vpos_c = res.v2;
+#else
+	pt_pair res = clip_line(vpos, eye, smoke_bb);
+	vec3 eye_c  = res.v1;
+	vec3 vpos_c = res.v2;
 	
-		if (eye_c != vpos_c) { // smoke code
-			vec3 dir      = eye_c - vpos_c;
-			vec3 pos      = (vpos_c - scene_llc)/scene_scale;
-			float nsteps  = length(dir)/step_delta;
-			vec3 delta    = dir/(nsteps*scene_scale);
-			int num_steps = 1 + min(1000, int(nsteps)); // round up
-			float step_weight  = fract(nsteps);
-			float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
+	if (eye_c != vpos_c) { // smoke code
+		vec3 dir      = eye_c - vpos_c;
+		vec3 pos      = (vpos_c - scene_llc)/scene_scale;
+		float nsteps  = length(dir)/step_delta;
+		vec3 delta    = dir/(nsteps*scene_scale);
+		int num_steps = 1 + min(1000, int(nsteps)); // round up
+		float step_weight  = fract(nsteps);
+		float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
 	
-			// smoke volume iteration using 3D texture, pos to eye
-			for (int i = 0; i < num_steps; ++i) {
-				vec4 tex_val  = texture3D(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
-				float smoke   = smoke_sscale*tex_val.a*step_weight;
-				vec3 rgb_comp = (tex_val.rgb * gl_Fog.color.rgb);
-				float alpha   = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
-				float mval    = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
-				color         = mix(color, vec4(rgb_comp, alpha), mval);
-				pos          += delta*step_weight; // should be in [0.0, 1.0] range
-				step_weight   = 1.0;
-			}
+		// smoke volume iteration using 3D texture, pos to eye
+		for (int i = 0; i < num_steps; ++i) {
+			vec4 tex_val  = texture3D(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
+			float smoke   = smoke_sscale*tex_val.a*step_weight;
+			vec3 rgb_comp = (tex_val.rgb * gl_Fog.color.rgb);
+			float alpha   = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
+			float mval    = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
+			color         = mix(color, vec4(rgb_comp, alpha), mval);
+			pos          += delta*step_weight; // should be in [0.0, 1.0] range
+			step_weight   = 1.0;
 		}
-#ifndef NO_ALPHA_TEST
-		if (color.a <= min_alpha) discard;
-#endif
 	}
+#ifndef NO_ALPHA_TEST
+	if (color.a <= min_alpha) discard;
+#endif
+#endif
 	gl_FragColor = color;
 }

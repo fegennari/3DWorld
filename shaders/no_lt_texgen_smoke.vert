@@ -55,13 +55,13 @@ void main()
 	setup_tbn();
 #endif
 
-	if (!smoke_enabled) {
-		gl_FogFragCoord = length(epos.xyz); // set standard fog coord
-	}
-	else if (dynamic_smoke_shadows) {
-		lpos0 = (gl_ModelViewMatrixInverse * gl_LightSource[0].position).xyz;
-		pt_pair res2 = clip_line(vpos, lpos0, smoke_bb);
-		lpos0 = res2.v1;
-		vposl = res2.v2;
-	}
+#ifndef SMOKE_ENABLED
+	gl_FogFragCoord = length(epos.xyz); // set standard fog coord
+#endif
+#ifdef DYNAMIC_SMOKE_SHADOWS
+	lpos0 = (gl_ModelViewMatrixInverse * gl_LightSource[0].position).xyz;
+	pt_pair res2 = clip_line(vpos, lpos0, smoke_bb);
+	lpos0 = res2.v1;
+	vposl = res2.v2;
+#endif
 } 
