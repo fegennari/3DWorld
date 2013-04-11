@@ -222,7 +222,7 @@ void draw_select_groups(int solid) {
 	bool const force_tsl(1);
 	indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 	cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl));
+	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl));
 	select_no_texture();
 	BLACK.do_glColor();
 
@@ -410,7 +410,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			if (s.is_setup()) {s.disable();}
 			shader_t ls;
 			ls.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			colorRGBA const orig_fog_color(setup_smoke_shaders(ls, 0.0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1)); // TSL=1
+			colorRGBA const orig_fog_color(setup_smoke_shaders(ls, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1)); // TSL=1
 			ls.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
 			ls.add_uniform_float("ambient_scale",    0.0);
 			quad_batch_draw qbd;

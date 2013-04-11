@@ -149,7 +149,7 @@ void main()
 		}
 	}
 #ifndef NO_ALPHA_TEST
-	color.a = min(color.a, texel.a); // Note: assumes walls don't have textures with alpha < 1
+	//color.a = min(color.a, texel.a); // Note: assumes walls don't have textures with alpha < 1
 	if (color.a <= min_alpha) discard;
 #endif
 #endif
