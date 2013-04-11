@@ -216,7 +216,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 
 	vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);
 	vbomgr.begin_render(1);
-	select_texture((draw_model != 0) ? WHITE_TEX : stt[T_PINE].leaf_tid);
+	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
 
 	if (draw_all_pine) {
 		vbomgr.render_all(GL_QUADS);
@@ -579,7 +579,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		vbo_mgr_ix = vbo_manager.add_points_with_offset(points, color);
 	}
 	else { // low detail billboard
-		float const nz_avg(0.816), r1(1.7*sz_scale), z1(center.z - 0.55*sz_scale - 0.3*height), z2(center.z + 1.45*sz_scale - 0.1*height);
+		float const nz_avg(0.816), r1(1.5*sz_scale), z1(center.z - 0.55*sz_scale - 0.2*height), z2(center.z + 1.45*sz_scale + 0.1*height);
 		unsigned const d(pri_dim);
 		unsigned ix(0);
 		points.resize(4);
@@ -618,6 +618,14 @@ colorRGBA small_tree::get_bark_color() const {
 	colorRGBA tcolor(stt[type].c);
 	UNROLL_3X(tcolor[i_] = min(1.0f, tcolor[i_]*(0.85f + 0.3f*rv[i_]));)
 	return tcolor;
+}
+
+
+void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager) const { // 30 quads per tree
+
+	assert(is_pine_tree());
+	assert(vbo_mgr_ix >= 0);
+	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
 }
 
 
@@ -667,9 +675,8 @@ void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const 
 		}
 	}
 	if (mode & 2) { // leaves
-		if (pine_tree) { // 30 quads per tree
-			assert(vbo_mgr_ix >= 0);
-			vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
+		if (pine_tree) {
+			draw_pine(vbo_manager);
 		}
 		else { // palm or decidious
 			set_color(color);

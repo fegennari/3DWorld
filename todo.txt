@@ -1,6 +1,5 @@
 Smoke texture step size
 Indirect lighting normal/direction
-Fix alpha sort order
 Fix ship collisions
 
 Tree branch/trunk bark bump maps
@@ -19,10 +18,13 @@ Use triangles instead of quads (indexed draw for individual/isolated quads):
  - Tree leaves
 Remove immediate mode calls
 Remove non-shader rendering
+No disable_shaders mode
 
-No disable_shaders mode?
 Remove stencil shadows?
 
 Run leak detection
 
 Replace bool with #define in some places
+
+Multiple decid tree impostor orients
+Decid tree texture atlases

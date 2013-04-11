@@ -159,7 +159,8 @@ texture_t(0, 6, 0,    0,    1, 1, 0, "perlin_simplex.png"), // 256x256
 texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
 texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
 texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
-texture_t(1, 0, 128,  128,  1, 3, 1, "@player_bbb_tex") // not real file
+texture_t(1, 0, 128,  128,  1, 3, 1, "@player_bbb_tex"), // not real file
+texture_t(0, 5, 0,    0,    0, 4, 3, "pine_tree_leaves.jpg", 1, 0, 1.0, 0.28) // 256x256
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
 };
@@ -925,7 +926,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 					alpha = ((val > thresh) ? 0 : ((val < thresh-100.0) ? 255 : (unsigned char)(2.55*(thresh - val))));
 				}
 				else {
-					alpha = ((val < ((index == PINE_TEX) ? 65 : 32)) ? 0 : 255);
+					alpha = ((val < ((index == PINE_TEX || index == PINE_TREE_TEX) ? 65 : 32)) ? 0 : 255);
 				}
 				if (alpha == 0) {
 					// FIXME: fill with the color of nearby pixels so that mipmap generation will work correctly
