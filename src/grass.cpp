@@ -630,7 +630,7 @@ public:
 					if (visible && (display_mode & 0x08)) {
 						int &last_occluder_cobj(last_occluder[y*MESH_X_SIZE + x]);
 
-						if (last_occluder_cobj >= 0 || (frame_counter & 3) == 0) { // only sometimes update if not previously occluded
+						if (last_occluder_cobj >= 0 || ((frame_counter + y) & 3) == 0) { // only sometimes update if not previously occluded
 							point pts[8];
 							get_cube_points(cube.d, pts);
 							if (last_occluder_cobj <  0) {last_occluder_cobj = last_occluder_used;}
