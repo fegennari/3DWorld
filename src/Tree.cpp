@@ -91,19 +91,15 @@ colorRGBA get_avg_leaf_color(unsigned type) {
 }
 
 
-struct render_tree_to_texture_t : public render_to_texture_t {
+// better place for this?
+struct render_to_texture_shader_t : public render_to_texture_t {
 
 	shader_t shaders[2]; // color, normal
-	tree_data_t *cur_tree;
 
-	render_tree_to_texture_t(unsigned tsize_) : render_to_texture_t(tsize_), cur_tree(NULL) {}
-
+	render_to_texture_shader_t(unsigned tsize_) : render_to_texture_t(tsize_) {}
+	
 	void free_context() {
 		for (unsigned d = 0; d < 2; ++d) {shaders[d].end_shader();}
-	}
-	tree_type const &get_tree_type() const {
-		assert(cur_tree);
-		return tree_types[cur_tree->get_tree_type()];
 	}
 	void setup_shader(string const &vs, string const &fs, bool ix) {
 		shaders[ix].set_vert_shader(vs);
@@ -115,6 +111,18 @@ struct render_tree_to_texture_t : public render_to_texture_t {
 		shaders[ix].disable();
 	}
 	virtual void set_other_shader_consts(bool ix) {}
+};
+
+
+struct render_tree_to_texture_t : public render_to_texture_shader_t {
+
+	tree_data_t *cur_tree;
+	render_tree_to_texture_t(unsigned tsize_) : render_to_texture_shader_t(tsize_), cur_tree(NULL) {}
+
+	tree_type const &get_tree_type() const {
+		assert(cur_tree);
+		return tree_types[cur_tree->get_tree_type()];
+	}
 };
 
 
@@ -161,7 +169,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		shaders[is_normal_pass].disable();
 	}
 	void render_tree(tree_data_t &t, texture_pair_t &tpair) {
-		if (!shaders[0].is_setup()) {setup_shader("tree_branches_no_lighting", "simple_texture",        0);} // colors
+		if (!shaders[0].is_setup()) {setup_shader("no_lighting_tex_coord",     "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tree_branches_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
 		colorRGBA branch_bkg_color(texture_color(get_tree_type().bark_tex), 0.0); // transparent
