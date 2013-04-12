@@ -689,6 +689,7 @@ struct vert_wrap_t { // size = 12; so we can put the vertex first
 	vert_wrap_t() {}
 	vert_wrap_t(point const &v_) : v(v_) {}
 	void set_state() const;
+	static void set_vbo_arrays(bool set_state=1);
 };
 
 

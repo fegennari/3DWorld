@@ -27,6 +27,11 @@ void set_vn_ptrs(unsigned stride, bool comp) {
 	glNormalPointer((comp ? GL_BYTE : GL_FLOAT), stride, (void *)(sizeof(point)));
 }
 
+void vert_wrap_t::set_vbo_arrays(bool set_state) {
+	if (set_state) {set_array_client_state(1, 0, 0, 0);}
+	glVertexPointer(3, GL_FLOAT, sizeof(point), (void *)(0));
+}
+
 void vert_norm::set_vbo_arrays(unsigned force_stride, bool set_state) {
 	if (set_state) {set_array_client_state(1, 0, 1, 0);}
 	set_vn_ptrs((force_stride ? force_stride : sizeof(vert_norm)), 0);
