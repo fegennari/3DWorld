@@ -1026,11 +1026,9 @@ int draw_simple_polygon(point const *const points, int npoints, vector3d const &
 		if (in_cur_prim >= 0) glEnd();
 		glBegin(prim_type);
 	}
-	if (!no_normals) norm.do_glNormal();
+	if (!no_normals) {norm.do_glNormal();}
+	for (int i = 0; i < npoints; ++i) {points[i].do_glVertex();}
 
-	for (int i = 0; i < npoints; ++i) {
-		points[i].do_glVertex();
-	}
 	if (in_cur_prim == PRIM_DISABLED) {
 		glEnd();
 		return in_cur_prim;
@@ -1039,22 +1037,21 @@ int draw_simple_polygon(point const *const points, int npoints, vector3d const &
 }
 
 
-int draw_simple_extruded_polygon(float thick, point const *const points, int npoints, int in_cur_prim, bool no_normals) {
+int draw_extruded_polygon_shadow_pass(float thick, point const *const points, int npoints, int in_cur_prim) {
 
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	thick = fabs(thick);
+	if (thick <= MIN_POLY_THICK) {return draw_simple_polygon(points, npoints, plus_z, in_cur_prim, 1);}
 	vector3d const norm(get_poly_norm(points));
 	point pts[2][4];
 	gen_poly_planes(points, npoints, norm, thick, pts);
-	std::reverse(pts[0], pts[0]+npoints);
-	in_cur_prim = draw_simple_polygon(pts[0], npoints, -norm, in_cur_prim, no_normals); // draw bottom surface
-	std::reverse(pts[0], pts[0]+npoints);
-	in_cur_prim = draw_simple_polygon(pts[1], npoints,  norm, in_cur_prim, no_normals); // draw top surface
+	in_cur_prim = draw_simple_polygon(pts[0], npoints, -norm, in_cur_prim, 1); // draw bottom surface
+	in_cur_prim = draw_simple_polygon(pts[1], npoints,  norm, in_cur_prim, 1); // draw top surface
 	
 	for (int i = 0; i < npoints; ++i) { // draw sides
 		int const ii((i+1)%npoints);
 		point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
-		in_cur_prim = draw_simple_polygon(side_pts, 4, get_poly_norm(side_pts), in_cur_prim, no_normals);
+		in_cur_prim = draw_simple_polygon(side_pts, 4, plus_z, in_cur_prim, 1);
 	}
 	return in_cur_prim;
 }

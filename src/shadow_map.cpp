@@ -9,10 +9,8 @@
 #include "model3d.h"
 
 
-bool const ENABLE_DLIST = 1;
-
 bool scene_smap_dlist_invalid(0);
-unsigned shadow_map_sz(0), smap_dlist(0);
+unsigned shadow_map_sz(0), smap_dlist(0), smap_vbo(0), num_smap_quad_verts(0);
 pos_dir_up orig_camera_pdu;
 
 extern int window_width, window_height, animate2, display_mode, ground_effects_level;
@@ -64,6 +62,8 @@ void free_smap_dlist() {
 
 	if (glIsList(smap_dlist)) glDeleteLists(smap_dlist, 1);
 	smap_dlist = 0;
+	delete_vbo(smap_vbo);
+	smap_vbo = 0;
 }
 
 
@@ -253,6 +253,29 @@ void set_shadow_tex_params() {
 }
 
 
+void get_shadow_cube_verts(cube_t const &c, int eflags, vector<vert_wrap_t> &verts, vector3d const *const view_dir=NULL) {
+
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			if ((eflags & EFLAGS[n][j]) || (view_dir && (((*view_dir)[n] < 0.0) ^ j))) continue; // back facing or disabled
+			point pt;
+			pt[n] = c.d[n][j];
+
+			for (unsigned s = 0; s < 2; ++s) { // d[1] dim
+				pt[d[1]] = c.d[d[1]][s];
+
+				for (unsigned k = 0; k < 2; ++k) { // d[0] dim
+					pt[d[0]] = c.d[d[0]][k^j^s^1]; // need to orient the vertices differently for each side
+					verts.push_back(pt);
+				}
+			}
+		}
+	}
+}
+
+
 void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
 	tu_id = (6 + light); // Note: currently used with 2 lights, up to TU7
@@ -301,10 +324,8 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		glCallList(smap_dlist);
 	}
 	else {
-		if (ENABLE_DLIST) {
-			smap_dlist = glGenLists(1);
-			glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
-		}
+		smap_dlist = glGenLists(1);
+		glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
 		// only valid if drawing trees, small trees, and scenery separately
 		vector<pair<float, unsigned> > z_sorted;
 		int in_cur_prim(PRIM_UNSET);
@@ -325,18 +346,29 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {
 				ndiv = get_smap_ndiv(max(c.radius, c.radius2));
 			}
-			in_cur_prim = c.simple_draw(ndiv, in_cur_prim, 1, ENABLE_DLIST);
-		}
-		sort(z_sorted.begin(), z_sorted.end());
-		if (in_cur_prim >= 0) {glEnd(); in_cur_prim = PRIM_UNSET;}
-		glEnable(GL_CULL_FACE); // for cubes only
-
-		for (vector<pair<float, unsigned> >::const_iterator i = z_sorted.begin(); i != z_sorted.end(); ++i) {
-			in_cur_prim = draw_simple_cube(coll_objects[i->second], 0, in_cur_prim, 1, coll_objects[i->second].cp.surfs);
+			in_cur_prim = c.draw_shadow_pass(ndiv, in_cur_prim);
 		}
 		if (in_cur_prim >= 0) {glEnd();}
+		glEndList();
+		assert(!smap_vbo);
+		sort(z_sorted.begin(), z_sorted.end());
+		vector<vert_wrap_t> verts;
+
+		for (vector<pair<float, unsigned> >::const_iterator i = z_sorted.begin(); i != z_sorted.end(); ++i) {
+			get_shadow_cube_verts(coll_objects[i->second], coll_objects[i->second].cp.surfs, verts, NULL);
+		}
+		if (!verts.empty()) {create_vbo_and_upload(smap_vbo, verts, 0, 0);}
+		num_smap_quad_verts = verts.size();
+	} // end dlist case split
+
+	if (num_smap_quad_verts > 0) {
+		assert(smap_vbo);
+		bind_vbo(smap_vbo);
+		vert_wrap_t::set_vbo_arrays();
+		glEnable(GL_CULL_FACE);
+		glDrawArrays(GL_QUADS, 0, num_smap_quad_verts);
 		glDisable(GL_CULL_FACE);
-		if (ENABLE_DLIST) glEndList();
+		bind_vbo(0);
 	}
 	render_models(1);
 	render_voxel_data(1);
@@ -348,10 +380,10 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
 		if (i->ctype != COLL_SPHERE) {
 			assert((unsigned)i->cid < coll_objects.size());
-			coll_objects[i->cid].simple_draw(ndiv, PRIM_DISABLED, 1, 0);
+			coll_objects[i->cid].draw_shadow_pass(ndiv, PRIM_DISABLED);
 		}
 		else {
-			draw_sphere_dlist(i->pos, i->radius, ndiv, 0); // use circle texture billboards?
+			draw_sphere_dlist(i->pos, i->radius, ndiv, 0);
 		}
 	}
 	draw_trees(1);

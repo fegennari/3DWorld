@@ -209,7 +209,7 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 			   float texture_scale=1.0, bool proportional_texture=0, vector3d const *const view_dir=NULL);
 int draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
 int  draw_simple_polygon(point const *const points, int npoints, vector3d const &norm, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
-int  draw_simple_extruded_polygon(float thick, point const *const points, int npoints, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
+int  draw_extruded_polygon_shadow_pass(float thick, point const *const points, int npoints, int in_cur_prim=PRIM_DISABLED);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
 void free_dlists();

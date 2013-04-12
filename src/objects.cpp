@@ -368,53 +368,30 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 }
 
 
-int coll_obj::simple_draw(int ndiv, int in_cur_prim, bool no_normals, bool in_dlist) const {
+int coll_obj::draw_shadow_pass(int ndiv, int in_cur_prim) const {
 
 	switch (type) {
 	case COLL_CUBE:
-		in_cur_prim = draw_simple_cube(*this, 0, in_cur_prim, no_normals, cp.surfs);
+		in_cur_prim = draw_simple_cube(*this, 0, in_cur_prim, 1, cp.surfs);
 		break;
-
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		{
-			bool const draw_ends(!(cp.surfs & 1));
-
-			if (no_normals && !in_dlist && ndiv == 3 && !draw_ends) { // special case draw as quad
-				in_cur_prim = draw_cylin_quad_proj(cylinder_3dw(points[0], points[1], radius, radius2),
-					((points[0] + points[1])*0.5 - get_camera_pos()), in_cur_prim, 1);
-			}
-			else {
-				if (in_cur_prim != PRIM_DISABLED) {
-					if (in_cur_prim >= 0) glEnd();
-					in_cur_prim = PRIM_UNSET;
-				}
-				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, draw_ends);
-			}
+		if (in_cur_prim != PRIM_DISABLED) {
+			if (in_cur_prim >= 0) glEnd();
+			in_cur_prim = PRIM_UNSET;
 		}
+		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, !(cp.surfs & 1));
 		break;
-
 	case COLL_SPHERE:
 		if (in_cur_prim != PRIM_DISABLED) {
 			if (in_cur_prim >= 0) glEnd();
 			in_cur_prim = PRIM_UNSET;
 		}
-		//if (no_normals && ndiv == 3) {} // draw as circle/texture?
-		if (in_dlist) {
-			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1);
-		}
-		else {
-			draw_sphere_dlist(points[0], radius, ndiv, 0); // faster, but doesn't work when in dlist
-		}
+		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1);
+		//draw_sphere_dlist(points[0], radius, ndiv, 0); // faster, but doesn't work when in dlist
 		break;
-
 	case COLL_POLYGON:
-		if (thickness <= MIN_POLY_THICK) {
-			in_cur_prim = draw_simple_polygon(points, npoints, norm, in_cur_prim, no_normals);
-		}
-		else {
-			in_cur_prim = draw_simple_extruded_polygon(thickness, points, npoints, in_cur_prim, no_normals); // pass in norm?
-		}
+		in_cur_prim = draw_extruded_polygon_shadow_pass(thickness, points, npoints, in_cur_prim);
 		break;
 	}
 	return in_cur_prim;

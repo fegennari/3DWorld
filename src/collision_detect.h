@@ -92,7 +92,7 @@ public:
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
 	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t *shader) const;
-	int  simple_draw(int ndiv, int in_cur_prim=PRIM_DISABLED, bool no_normals=0, bool in_dlist=0) const;
+	int  draw_shadow_pass(int ndiv, int in_cur_prim=PRIM_DISABLED) const;
 	void add_to_vector(coll_obj_group &cobjs, int type_);
 	void check_if_cube();
 	void add_as_fixed_cobj();
