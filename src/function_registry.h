@@ -172,8 +172,7 @@ void draw_cylinder_nstacks(float len, float r1, float r2, int ndiv, int nstacks,
 void draw_cylinder(point const &p1, float length, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends);
 void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals);
 void draw_circle_normal_at_z(float z, float r_inner, float r_outer, int ndiv, int invert_normals);
-void draw_rotated_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int nstacks,
-						   bool draw_ends, vector3d const &scale=zero_vector);
+void draw_rotated_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends);
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
 	int draw_sides_ends=0, float const *const perturb_map=NULL);
 void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture=0);
@@ -218,7 +217,6 @@ void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, bool r
 void draw_sphere_dlist_raw(int ndiv, bool textured, bool half=0);
 void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, bool half=0, bool bfc=0);
 void draw_sphere_dlist_back_to_front(point const &pos, float radius, int ndiv, bool textured, bool half=0);
-void draw_rotated_cylinder_dlist(point const &p1, point const &p2, float r, int ndiv, vector3d const &scale=zero_vector);
 
 // function prototypes - draw mesh
 float integrate_water_dist(point const &targ_pos, point const &src_pos, float const water_z);

@@ -89,7 +89,7 @@ void usw_ray::draw() const { // use single sided cylinder with 1D blur rotated t
 
 void ship_cylinder::draw_cylin(unsigned ndiv, unsigned nsta, bool textured) const {
 
-	if (nsta == 1) { // draw_cylin_fast()?
+	if (nsta == 1) {
 		draw_fast_cylinder(p1, p2, r1, r2, ndiv, textured, check_ends);
 	}
 	else if (p1.x == p2.x && p1.y == p2.y) { // oriented in z direction
@@ -2039,7 +2039,7 @@ void uobj_draw_data::draw_anti_miss() const {
 			
 			if (ndiv > 8) {
 				color_b.do_glColor();
-				draw_rotated_cylinder_dlist(point(0.0, -0.7, 0.0), pt, 0.07, ndiv3);
+				draw_rotated_cylinder(point(0.0, -0.7, 0.0), pt, 0.07, 0.07, ndiv3, 1, 0);
 			}
 		}
 	}

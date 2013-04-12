@@ -12,12 +12,10 @@ enum {DLIST_CYLIN=0, DLIST_CYLIN_T, DLIST_CONE, DLIST_CONE_T, NUM_RES_DLIST};
 
 bool const USE_SPHERE_DLIST = 1;
 bool const USE_CYLIN_DLIST  = 1;
-
-unsigned const NUM_SPH_DLIST(4*N_SPHERE_DIV), NUM_CYLIN_DLIST(N_CYL_SIDES);
+unsigned const NUM_SPH_DLIST(4*N_SPHERE_DIV);
 
 unsigned predef_dlists[NUM_RES_DLIST]   = {0};
 unsigned sphere_dlists[NUM_SPH_DLIST]   = {0};
-unsigned cylin_dlists [NUM_CYLIN_DLIST] = {0};
 vector_point_norm cylinder_vpn;
 
 
@@ -291,27 +289,13 @@ void draw_cylinder(point const &p1, float length, float radius1, float radius2, 
 }
 
 
-void xform_cylinder(point const &p1, point const &p2, vector3d const &scale) {
+void draw_rotated_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends) {
 
+	glPushMatrix();
 	translate_to(p1);
 	vector3d const v2z(p2, p1);
 	rotate_into_plus_z(v2z);
-	
-	if (scale != zero_vector) {
-		vector3d s(scale);
-		rotate_vector3d_by_vr(v2z, plus_z, s);
-		rotate_from_v2v(s, vector3d(1.0, 0.0, 0.0)); // rotate into +x
-		glScalef(s.mag(), 1.0, 1.0);
-	}
-}
-
-
-void draw_rotated_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int nstacks,
-						   bool draw_ends, vector3d const &scale)
-{
-	glPushMatrix();
-	xform_cylinder(p1, p2, scale);
-	draw_cylinder(all_zeros, p2p_dist(p1, p2), radius1, radius2, ndiv, nstacks, draw_ends);
+	draw_cylinder(all_zeros, v2z.mag(), radius1, radius2, ndiv, nstacks, draw_ends);
 	glPopMatrix();
 }
 
@@ -1096,7 +1080,6 @@ void free_dlists() {
 	assert(NUM_RES_DLIST > 0);
 	free_dlist_block(predef_dlists, NUM_RES_DLIST);
 	free_dlist_block(sphere_dlists, NUM_SPH_DLIST);
-	free_dlist_block(cylin_dlists,  NUM_CYLIN_DLIST);
 }
 
 
@@ -1145,19 +1128,6 @@ void setup_dlists() {
 					glEndList();
 				}
 			}
-		}
-	}
-	if (cylin_dlists[0] == 0) {
-		unsigned const dl0(glGenLists(NUM_CYLIN_DLIST));
-		assert(dl0 > 0);
-
-		for (unsigned i = 1; i <= NUM_CYLIN_DLIST; ++i) {
-			unsigned const dl(dl0 + i-1);
-			assert(glIsList(dl));
-			cylin_dlists[i-1] = dl;
-			glNewList(dl, GL_COMPILE);
-			draw_cylinder(1.0, 1.0, 1.0, i, 1, 1);
-			glEndList();
 		}
 	}
 }
@@ -1230,25 +1200,4 @@ void draw_sphere_dlist_back_to_front(point const &pos, float radius, int ndiv, b
 	}
 	glDisable(GL_CULL_FACE);
 }
-
-
-// draw both ends, similar radius, no texture
-void draw_rotated_cylinder_dlist(point const &p1, point const &p2, float r, int ndiv, vector3d const &scale) {
-	
-	assert(ndiv > 0);
-
-	if (!USE_CYLIN_DLIST || ndiv > NUM_CYLIN_DLIST) {
-		draw_rotated_cylinder(p1, p2, r, r, ndiv, 1, 1, scale);
-		return;
-	}
-	glPushMatrix();
-	xform_cylinder(p1, p2, scale);
-	glScalef(r, r, p2p_dist(p1, p2));
-	unsigned const list_id(cylin_dlists[ndiv-1]);
-	assert(glIsList(list_id));
-	glCallList(list_id);
-	glPopMatrix();
-}
-
-
 
