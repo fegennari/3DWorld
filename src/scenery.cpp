@@ -5,10 +5,10 @@
 #include "scenery.h"
 #include "mesh.h"
 #include "shaders.h"
+#include "gl_ext_arb.h"
 
 
 bool     const NO_ISLAND_SCENERY = 1;
-bool     const USE_ROCK_DLISTS   = 1;
 bool     const USE_VOXEL_ROCKS   = 0;
 unsigned const ROCK_NDIV         = 24;
 unsigned const ROCK_VOX_SZ       = 32;
@@ -316,32 +316,30 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 	return 1;
 }
 
-void rock_shape3d::draw(bool shadow_only, bool use_dlist, vector3d const &xlate) const {
+void rock_shape3d::draw(bool shadow_only, vector3d const &xlate) const { // Note: assumes texture is already setup
 
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
 	(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius))).do_glColor();
+	unsigned const vert_size(3*faces.size());
 
-	if (use_dlist) {
-		if (dlist == 0) {
-			dlist = glGenLists(1);
-			glNewList(dlist, GL_COMPILE_AND_EXECUTE);
-		}
-		else {
-			assert(glIsList(dlist));
-			glCallList(dlist);
-			return;
-		}
+	if (vbo == 0) {
+		vector<vert_norm_tc> verts;
+		verts.reserve(vert_size);
+		get_triangle_verts(verts);
+		create_vbo_and_upload(vbo, verts, 0, 0);
 	}
-	shape3d::draw(1);
-	if (use_dlist) {glEndList();}
+	else {
+		bind_vbo(vbo);
+	}
+	vert_norm_tc::set_vbo_arrays();
+	glDrawArrays(GL_TRIANGLES, 0, vert_size);
+	bind_vbo(0);
 }
 
-void rock_shape3d::clear_dlist() {
+void rock_shape3d::clear_vbo() {
 
-	if (dlist != 0) {
-		glDeleteLists(dlist, 1);
-		dlist = 0;
-	}
+	delete_vbo(vbo);
+	vbo = 0;
 }
 
 
@@ -817,10 +815,10 @@ template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int 
 }
 
 
-void scenery_group::clear_vbos_and_dlists() {
+void scenery_group::clear_vbos() {
 	
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
-		rock_shapes[i].clear_dlist();
+		rock_shapes[i].clear_vbo();
 	}
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
 		voxel_rocks[i].free_context();
@@ -839,7 +837,7 @@ void scenery_group::clear() {
 	logs.clear();
 	stumps.clear();
 	plants.clear();
-	clear_vbos_and_dlists();
+	clear_vbos();
 	generated = 0;
 }
 
@@ -998,7 +996,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	select_texture(DARK_ROCK_TEX);
 
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
-		rock_shapes[i].draw(shadow_only, USE_ROCK_DLISTS, xlate);
+		rock_shapes[i].draw(shadow_only, xlate);
 	}
 	assert(quadric != 0);
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
@@ -1091,8 +1089,8 @@ void free_scenery() {
 	all_scenery.free_scenery();
 }
 
-void clear_scenery_vbos_and_dlists() {
-	all_scenery.clear_vbos_and_dlists();
+void clear_scenery_vbos() {
+	all_scenery.clear_vbos();
 }
 
 void do_rock_damage(point const &pos, float radius, float damage) {

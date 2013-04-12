@@ -73,6 +73,7 @@ public:
 	void get_triangle_center(point &center, unsigned face_id, unsigned quality);
 	void add_vertex(unsigned vertex, unsigned face_id, unsigned &face_counter);
 	void draw(bool skip_color_set=0) const;
+	void get_triangle_verts(vector<vert_norm_tc> &verts) const;
 	void add_cobjs(vector<int> &cids, bool draw);
 	void destroy();
 	bool is_allocated() const {return (!points.empty() && !faces.empty());}
@@ -82,16 +83,16 @@ public:
 
 class rock_shape3d : public shape3d { // size = 72
 
-	mutable unsigned dlist;
+	mutable unsigned vbo;
 
 public:
-	rock_shape3d() : dlist(0) {}
+	rock_shape3d() : vbo(0) {}
 	void create(int x, int y, bool use_xy);
 	void gen_rock(unsigned nverts, float size, int rand_seed, int type);
 	void add_cobjs();
 	bool do_impact_damage(point const &pos_, float radius_);
-	void draw(bool shadow_only=0, bool use_dlist=0, vector3d const &xlate=zero_vector) const;
-	void clear_dlist();
+	void draw(bool shadow_only=0, vector3d const &xlate=zero_vector) const;
+	void clear_vbo();
 };
 
 

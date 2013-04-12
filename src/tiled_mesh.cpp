@@ -199,7 +199,7 @@ void tile_t::clear_vbo_tid(bool vclear, bool tclear) {
 		clear_shadows();
 		pine_trees.clear_vbos();
 		decid_trees.clear_context(); // only necessary if not using instancing
-		scenery.clear_vbos_and_dlists();
+		scenery.clear_vbos();
 	}
 	if (tclear) {clear_tids();}
 }

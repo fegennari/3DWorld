@@ -207,14 +207,16 @@ void shape3d::draw(bool skip_color_set) const {
 
 	if (points.empty()) return;
 	
-	if (points.size() < 3 || faces.size() < 1) {
+	if (points.size() < 3 || faces.empty()) {
 		cout << "Invalid shape: Cannot draw." << endl;
 		return;
 	}
+	if (!skip_color_set) {
+		enable_blend();
+		set_color(color);
+	}
 	unsigned lcid(0);
 	if (colors.empty() && tid >= 0) select_texture(tid);
-	enable_blend();
-	if (!skip_color_set) set_color(color);
 	glBegin(GL_TRIANGLES);
 
 	for (unsigned i = 0; i < faces.size(); ++i) {
@@ -231,41 +233,41 @@ void shape3d::draw(bool skip_color_set) const {
 			}
 		}
 		faces[i].norm.do_glNormal();
+		int const max_dim(get_max_dim(faces[i].norm));
 
 		for (unsigned j = 0; j < 3; ++j) {
 			unsigned const index(faces[i].v[j]);
-
-			if (index >= points.size()) {
-				cout << "Error: Illegal point index in draw_shape(): " << index << " of " << points.size() << ", face = " << i << ", point = " << j << "." << endl;
-				assert(0);
-			}
+			assert(index < points.size());
 			point const p(points[index]);
-			float const nx(fabs(faces[i].norm.x)), ny(fabs(faces[i].norm.y)), nz(fabs(faces[i].norm.z));
-
-			if (nx > ny) {
-				if (nz > nx) { // nz
-					glTexCoord2f(tex_scale*p.x, tex_scale*p.y);
-				}
-				else { // nx
-					glTexCoord2f(tex_scale*p.y, tex_scale*p.z);
-				}
-			}
-			else {
-				if (nz > ny) { // nz
-					glTexCoord2f(tex_scale*p.x, tex_scale*p.y);
-				}
-				else { // ny
-					glTexCoord2f(tex_scale*p.x, tex_scale*p.z);
-				}
-			}
-			//p.do_glVertex();
+			int const d1[3] = {1,0,0}, d2[3] = {2,2,1};
+			glTexCoord2f(tex_scale*p[d1[max_dim]], tex_scale*p[d2[max_dim]]);
 			(p*scale + pos).do_glVertex();
 		}
 	}
 	glEnd();
-	disable_blend();
+	if (!skip_color_set) {disable_blend();}
 	if (tid >= 0) glDisable(GL_TEXTURE_2D);
 	if (!colors.empty()) {set_specular(0.0, 0.0);}
+}
+
+
+void shape3d::get_triangle_verts(vector<vert_norm_tc> &verts) const {
+
+	if (points.empty()) return;
+	assert(points.size() >= 3 && !faces.empty());
+	assert(colors.empty()); // not supported
+
+	for (unsigned i = 0; i < faces.size(); ++i) {
+		int const max_dim(get_max_dim(faces[i].norm));
+
+		for (unsigned j = 0; j < 3; ++j) {
+			unsigned const index(faces[i].v[j]);
+			assert(index < points.size());
+			point const p(points[index]);
+			int const d1[3] = {1,0,0}, d2[3] = {2,2,1};
+			verts.push_back(vert_norm_tc((p*scale + pos), faces[i].norm, tex_scale*p[d1[max_dim]], tex_scale*p[d2[max_dim]]));
+		}
+	}
 }
 
 

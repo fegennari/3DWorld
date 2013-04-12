@@ -156,7 +156,7 @@ public:
 	bool generated;
 
 	scenery_group() : generated(0) {}
-	void clear_vbos_and_dlists();
+	void clear_vbos();
 	void clear();
 	void free_scenery();
 	void add_cobjs();
