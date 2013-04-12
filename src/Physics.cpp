@@ -148,7 +148,7 @@ void init_objects() {
 	object_types[LEAF].elasticity          = 0.1;
 	object_types[LEAF].health              = 4000.0;
 	object_types[LEAF].color               = LEAF_C;
-	object_types[LEAF].flags               = BLEND | NO_WATER_DAMAGE | OBJ_IS_FLAT;
+	object_types[LEAF].flags               = NO_WATER_DAMAGE | BLEND | OBJ_IS_FLAT; // BLEND?
 	object_types[LEAF].tid                 = LEAF_TEX;
 
 	object_types[BALL].air_factor          = 0.05;
@@ -223,7 +223,7 @@ void init_objects() {
 	object_types[CHUNK].def_recover        = 0.0;
 	object_types[CHUNK].health             = 250.0;
 	object_types[CHUNK].color              = YELLOW;
-	object_types[CHUNK].flags              = BLEND | DEFORMABLE;
+	object_types[CHUNK].flags              = DEFORMABLE;
 
 	object_types[SFPART].air_factor        = 0.1; // eye, nose, tongue
 	object_types[SFPART].friction_factor   = 0.06;
@@ -233,7 +233,7 @@ void init_objects() {
 	object_types[SFPART].elasticity        = 0.9;
 	object_types[SFPART].health            = 200.0;
 	object_types[SFPART].color             = BLACK;
-	object_types[SFPART].flags             = SPECULAR | BLEND | NO_WATER_DAMAGE;
+	object_types[SFPART].flags             = SPECULAR | NO_WATER_DAMAGE;
 
 	object_types[DROPLET].air_factor       = 0.17; // blood/water
 	object_types[DROPLET].friction_factor  = 0.005;
@@ -425,7 +425,7 @@ void init_objects() {
 	object_types[SHRAPNEL].elasticity      = 0.5;
 	object_types[SHRAPNEL].health          = 1000.0;
 	object_types[SHRAPNEL].color           = BLACK;
-	object_types[SHRAPNEL].flags           = 0;//LOW_SPECULAR | BLEND; // OBJ_IS_FLAT?
+	object_types[SHRAPNEL].flags           = 0; // OBJ_IS_FLAT?
 
 	object_types[SHELLC].air_factor        = 0.12;
 	object_types[SHELLC].friction_factor   = 0.9;
@@ -436,7 +436,7 @@ void init_objects() {
 	object_types[SHELLC].elasticity        = 0.8;
 	object_types[SHELLC].health            = 1000.0;
 	object_types[SHELLC].color             = GOLD;
-	object_types[SHELLC].flags             = SPECULAR | BLEND | OBJ_IS_CYLIN;
+	object_types[SHELLC].flags             = SPECULAR | OBJ_IS_CYLIN;
 
 	object_types[PROJC].air_factor         = 0.0;
 	object_types[PROJC].friction_factor    = 0.0;
@@ -455,7 +455,7 @@ void init_objects() {
 	object_types[SKULL].elasticity         = 0.75;
 	object_types[SKULL].health             = 25.0;
 	object_types[SKULL].color              = LT_GRAY;
-	object_types[SKULL].flags              = SPECULAR | SELECTABLE | BLEND | NO_WATER_DAMAGE;
+	object_types[SKULL].flags              = SPECULAR | SELECTABLE | NO_WATER_DAMAGE;
 	object_types[SKULL].tid                = SMILEY_SKULL_TEX;
 
 	object_types[HEALTH].color             = MAGENTA;

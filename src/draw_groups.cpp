@@ -229,7 +229,7 @@ void draw_select_groups(int solid) {
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
 
-		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) {
+		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) { // should leaves be marked as solid or semi-transparent?
 			if ((objg.large_radius() && !(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {
 				draw_group(objg, s);
 			}
