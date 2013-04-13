@@ -852,6 +852,15 @@ struct vert_norm_color_tangent : public vert_norm_color {
 };
 
 
+template <typename T> void translate_verts(vector<T> &verts, vector3d const &xlate) {
+	for (vector<T>::iterator i = verts.begin(); i != verts.end(); ++i) {i->v += xlate;}
+}
+
+template <typename T> void scale_verts(vector<T> &verts, vector3d const &scale) {
+	for (vector<T>::iterator i = verts.begin(); i != verts.end(); ++i) {i->v *= scale;}
+}
+
+
 template<typename T> struct triangle_t {
 
 	T pts[3];
