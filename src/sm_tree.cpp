@@ -648,7 +648,7 @@ void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const 
 				cylinder_3dw const cylin(get_trunk_cylin());
 
 				if (shadow_only) {
-					draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()), -1);
+					draw_cylin_quad_proj(cylin, ((cylin.p1 + cylin.p2)*0.5 - get_camera_pos()));
 				}
 				else if (LINE_THRESH*zoom_f*(cylin.r1 + cylin.r2) < dist) { // draw as line
 					point const p2((cylin.r2 == 0.0) ? (0.2*cylin.p1 + 0.8*cylin.p2) : cylin.p2);

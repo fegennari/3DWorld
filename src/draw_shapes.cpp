@@ -213,7 +213,10 @@ void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t *shader
 void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d const &normal, shader_t *shader) const { // occlusion culling?
 
 	set_poly_texgen(tid, normal, shader);
-	draw_simple_polygon(points, npoints, get_norm_camera_orient(normal, get_center(points, npoints)));
+	glBegin(GL_TRIANGLES);
+	get_norm_camera_orient(normal, get_center(points, npoints)).do_glNormal();
+	draw_polygon_pts(points, npoints);
+	glEnd();
 }
 
 

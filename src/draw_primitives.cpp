@@ -5,6 +5,7 @@
 #include "subdiv.h"
 #include "upsurface.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 // predefined display lists
@@ -984,40 +985,24 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 }
 
 
-int draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir, int in_cur_prim, bool no_normals) {
+void draw_polygon_pts(point const *const points, int npoints) {
+
+	assert(npoints == 3 || npoints == 4);
+	unsigned const tp[6] = {0,1,2, 0,2,3};
+	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {points[tp[i]].do_glVertex();} // 1-2 triangles
+}
+
+
+void draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir) {
 
 	point pts[4];
 	int npts(0);
 	vector3d v2; // unused
 	cylinder_quad_projection(pts, cylin, view_dir, v2, npts);
-	return draw_simple_polygon(pts, npts, view_dir, in_cur_prim, no_normals);
-}
-
-
-int draw_simple_polygon(point const *const points, int npoints, vector3d const &norm, int in_cur_prim, bool no_normals) {
-
-	int prim_type(-1);
-
-	switch (npoints) {
-		case 0: return in_cur_prim;
-		case 1:  prim_type = GL_POINTS;    break;
-		case 2:  prim_type = GL_LINES;     break;
-		case 3:  prim_type = GL_TRIANGLES; break;
-		case 4:  prim_type = GL_QUADS;     break;
-		default: glBegin(GL_POLYGON);
-	}
-	if (in_cur_prim != prim_type) {
-		if (in_cur_prim >= 0) glEnd();
-		glBegin(prim_type);
-	}
-	if (!no_normals) {norm.do_glNormal();}
-	for (int i = 0; i < npoints; ++i) {points[i].do_glVertex();}
-
-	if (in_cur_prim == PRIM_DISABLED) {
-		glEnd();
-		return in_cur_prim;
-	}
-	return prim_type;
+	glBegin(GL_TRIANGLES);
+	view_dir.do_glNormal();
+	draw_polygon_pts(pts, npts);
+	glEnd();
 }
 
 
@@ -1025,19 +1010,32 @@ int draw_extruded_polygon_shadow_pass(float thick, point const *const points, in
 
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	thick = fabs(thick);
-	if (thick <= MIN_POLY_THICK) {return draw_simple_polygon(points, npoints, plus_z, in_cur_prim, 1);}
-	vector3d const norm(get_poly_norm(points));
-	point pts[2][4];
-	gen_poly_planes(points, npoints, norm, thick, pts);
-	in_cur_prim = draw_simple_polygon(pts[0], npoints, -norm, in_cur_prim, 1); // draw bottom surface
-	in_cur_prim = draw_simple_polygon(pts[1], npoints,  norm, in_cur_prim, 1); // draw top surface
 	
-	for (int i = 0; i < npoints; ++i) { // draw sides
-		int const ii((i+1)%npoints);
-		point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
-		in_cur_prim = draw_simple_polygon(side_pts, 4, plus_z, in_cur_prim, 1);
+	if (in_cur_prim != GL_TRIANGLES) {
+		if (in_cur_prim >= 0) glEnd();
+		glBegin(GL_TRIANGLES);
 	}
-	return in_cur_prim;
+	if (thick <= MIN_POLY_THICK) {
+		draw_polygon_pts(points, npoints);
+	}
+	else {
+		vector3d const norm(get_poly_norm(points));
+		point pts[2][4];
+		gen_poly_planes(points, npoints, norm, thick, pts);
+		draw_polygon_pts(pts[0], npoints); // draw bottom surface
+		draw_polygon_pts(pts[1], npoints); // draw top surface
+	
+		for (int i = 0; i < npoints; ++i) { // draw sides
+			int const ii((i+1)%npoints);
+			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
+			draw_polygon_pts(side_pts, 4);
+		}
+	}
+	if (in_cur_prim == PRIM_DISABLED) {
+		glEnd();
+		return in_cur_prim;
+	}
+	return GL_TRIANGLES;
 }
 
 
@@ -1170,16 +1168,33 @@ void draw_sphere_dlist_raw(int ndiv, bool textured, bool half) {
 }
 
 
-void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc) {
+void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc, int shader_loc) {
 
 	if (USE_SPHERE_DLIST && ndiv <= N_SPHERE_DIV) { // speedup is highly variable
 		assert(ndiv > 0);
 		bool const has_xform(radius != 1.0 || pos != all_zeros);
-		if (has_xform)        glPushMatrix();
-		if (pos != all_zeros) translate_to(pos);
-		if (radius != 1.0)    uniform_scale(radius);
+
+		if (has_xform) {
+			if (shader_loc >= 0) {
+				colorRGBA const v(pos.x, pos.y, pos.z, radius); // Note: packing xlate and scale into color
+				shader_t::set_uniform_color(shader_loc, v);
+			}
+			else {
+				glPushMatrix();
+				if (pos != all_zeros) translate_to(pos);
+				if (radius != 1.0)    uniform_scale(radius);
+			}
+		}
 		draw_sphere_dlist_raw(ndiv, textured, half);
-		if (has_xform)        glPopMatrix();
+		
+		if (has_xform) {
+			if (shader_loc >= 0) {
+				shader_t::set_uniform_color(shader_loc, BLACK); // pos=0,0,0, scale=1.0
+			}
+			else {
+				glPopMatrix();
+			}
+		}
 	}
 	else if (half) {
 		draw_subdiv_sphere_section(pos, radius, ndiv, textured, 0.0, 1.0, 0.0, 0.5);

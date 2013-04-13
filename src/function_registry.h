@@ -206,8 +206,8 @@ int  draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim=PRIM_DISABL
 	float texture_scale=1.0, vector3d const *const view_dir=NULL);
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv=1, bool scale_ndiv=0,
 			   float texture_scale=1.0, bool proportional_texture=0, vector3d const *const view_dir=NULL);
-int draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
-int  draw_simple_polygon(point const *const points, int npoints, vector3d const &norm, int in_cur_prim=PRIM_DISABLED, bool no_normals=0);
+void draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir);
+void draw_polygon_pts(point const *const points, int npoints);
 int  draw_extruded_polygon_shadow_pass(float thick, point const *const points, int npoints, int in_cur_prim=PRIM_DISABLED);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
@@ -215,7 +215,7 @@ void free_dlists();
 void setup_dlists();
 void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, bool restore_matrix, bool r_approx=0);
 void draw_sphere_dlist_raw(int ndiv, bool textured, bool half=0);
-void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, bool half=0, bool bfc=0);
+void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, bool half=0, bool bfc=0, int shader_loc=-1);
 void draw_sphere_dlist_back_to_front(point const &pos, float radius, int ndiv, bool textured, bool half=0);
 
 // function prototypes - draw mesh
