@@ -126,7 +126,7 @@ void ship_torus::draw(unsigned ndiv) const {
 
 	glPushMatrix();
 	translate_to(center);
-	glutSolidTorus(ri, ro, max(3U, ndiv/2U), ndiv);
+	draw_torus(ri, ro, max(3U, ndiv/2U), ndiv, 0);
 	glPopMatrix();
 }
 
@@ -1652,7 +1652,7 @@ void uobj_draw_data::draw_dwexterm() const {
 		glPushMatrix();
 		glTranslatef(0.0, -0.18, 0.04+0.1*i);
 		glScalef(1.4, 0.85, 1.0);
-		glutSolidTorus(0.02, 0.25, ndiv4, ndiv);
+		draw_torus(0.02, 0.25, ndiv4, ndiv, 0);
 		glPopMatrix();
 	}
 	glPushMatrix();
@@ -2378,7 +2378,7 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 	}
 	if (starport && ndiv > 3) {
 		glTranslatef(0.0, 0.0, 0.25); // Note: push/pop not needed since this is the last draw
-		glutSolidTorus(0.2, 1.05, ndiv2, 3*ndiv/2);
+		draw_torus(0.2, 1.05, ndiv2, 3*ndiv/2, textured);
 	}
 	if (textured) end_ship_texture();
 	glPopMatrix();

@@ -389,27 +389,6 @@ void draw_cylindrical_section(point const &pos, float length, float r_inner, flo
 }
 
 
-void draw_trunc_cone(point pos, vector3d v1, float length, float radius, float radius2, bool is_camera) {
-
-	int const nsides(N_CYL_SIDES >> (is_camera ? 0 : 1));
-	glPushMatrix();
-	translate_to(pos);
-	rotate_by_vector(v1, 180.0);
-	gluCylinder(quadric, radius, radius2, length, nsides, 1);
-	if (is_camera || sphere_in_camera_view(pos, radius, 0)) gluDisk(quadric, 0.0, radius, nsides, 1);
-	glPopMatrix();
-	pos += v1*length; // destroys pos
-
-	if (is_camera || sphere_in_camera_view(pos, radius2, 0)) {
-		glPushMatrix();
-		translate_to(pos);
-		rotate_by_vector(v1, 180.0);
-		gluDisk(quadric, 0.0, radius2, nsides, 1);
-		glPopMatrix();
-	}
-}
-
-
 // ******************** SPHERE ********************
 
 

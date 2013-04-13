@@ -156,7 +156,7 @@ void draw_shadow_volume(point const &pos, point const &lpos, float radius, int &
 	if (dotp < 0.0 && (v2 - v1*(dotp/val)).mag_sq() < radius*radius) ++inverts;
 	v1 /= length2;
 	float const length((zmin - pos.z)/v1.z + radius), radius2(radius*((length + length2)/length2));
-	draw_trunc_cone(pos, v1, length, (radius + SMALL_NUMBER), (radius2 + SMALL_NUMBER), 0);
+	draw_fast_cylinder(pos, (pos + v1*length), (radius + SMALL_NUMBER), (radius2 + SMALL_NUMBER), (N_CYL_SIDES >> 1), 0, 1);
 }
 
 

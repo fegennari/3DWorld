@@ -341,11 +341,11 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 			translate_to(pos);
 			scale_by(obj.vdeform);
 			rotate_into_plus_z(obj.orientation); // might be unnesessary
-			gluSphere(quadric, radius, ndiv, ndiv);
+			draw_sphere_dlist(zero_vector, radius, ndiv, 0);
 			glPopMatrix();
 		}
 		else {
-			draw_sphere_dlist(pos, radius, ndiv, 0);
+			draw_sphere_dlist(pos, radius, ndiv, 0); // (object_types[type].tid >= 0)
 		}
 	}
 	if (cull_face) glDisable(GL_CULL_FACE);
@@ -990,7 +990,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		glPushMatrix();
 		glTranslatef(0.0, 0.0, 0.45*radius);
 		glScalef(1.0, 1.0, 0.5);
-		gluSphere(quadric, 0.94*radius, ndiv, ndiv2);
+		draw_sphere_dlist(all_zeros, 0.94*radius, ndiv, 0);
 		glPopMatrix();
 	}
 	// draw unique identifier
@@ -1001,7 +1001,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, 0.8*radius);
 	glScalef(1.0, 1.0, 0.3);
-	gluSphere(quadric, 0.65*radius, ndiv, ndiv2);
+	draw_sphere_dlist(all_zeros, 0.65*radius, ndiv, 0);
 	glPopMatrix();
 	
 	// draw mouth
