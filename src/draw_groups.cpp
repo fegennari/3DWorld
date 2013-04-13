@@ -765,7 +765,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 		switch (atype) {
 		case SHELLC: // M16
 			pos.z -= 0.5*radius;
-			draw_cylinder(pos, 1.0*radius, 0.2*radius, 0.2*radius, ndiv, 1, 1);
+			draw_cylinder(pos, 1.0*radius, 0.2*radius, 0.2*radius, ndiv, 1);
 			pos.z += radius;
 			draw_subdiv_sphere(pos, 0.2*radius, ndiv, 0, 0);
 			break;
@@ -775,16 +775,16 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 				pos2.x += (1.0 - 2.0*n)*0.3*radius;
 				set_color_alpha(RED);
 				pos2.z -= 0.5*radius;
-				draw_cylinder(pos2, 1.2*radius, 0.3*radius, 0.3*radius, ndiv, 1, 1);
+				draw_cylinder(pos2, 1.2*radius, 0.3*radius, 0.3*radius, ndiv, 1);
 				set_color_alpha(GOLD);
 				pos2.z -= 0.2*radius;
-				draw_cylinder(pos2, 0.4*radius, 0.32*radius, 0.32*radius, ndiv, 1, 1);
+				draw_cylinder(pos2, 0.4*radius, 0.32*radius, 0.32*radius, ndiv, 1);
 			}
 			break;
 		case BEAM: // laser
 			set_color_alpha(RED);
 			pos.z -= 0.5*radius;
-			draw_cylinder(pos, 1.0*radius, 0.1*radius, 0.1*radius, ndiv, 1, 1);
+			draw_cylinder(pos, 1.0*radius, 0.1*radius, 0.1*radius, ndiv, 1);
 			break;
 		case STAR5: // throwing star
 			draw_star(pos, obj.orientation, obj.init_dir, 0.4*radius, obj.angle, 0);
@@ -906,9 +906,9 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			set_color_alpha(RED);
 			glPushMatrix();
 			glTranslatef( 0.3*radius, 0.7*radius, 0.6*radius);
-			draw_cylinder(0.6*radius, 0.1*radius, 0.0, ndiv2, 1, 0);
+			draw_cylinder(0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
 			glTranslatef(-0.6*radius, 0.0, 0.0);
-			draw_cylinder(0.6*radius, 0.1*radius, 0.0, ndiv2, 1, 0);
+			draw_cylinder(0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
 			glPopMatrix();
 			break;
 
@@ -932,7 +932,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			set_color_alpha(BLACK);
 			glPushMatrix();
 			glTranslatef(0.0, 0.0, 0.9*radius);
-			draw_cylinder(0.5*radius, 0.05*radius, 0.05*radius, ndiv2, 1, 0);
+			draw_cylinder(0.5*radius, 0.05*radius, 0.05*radius, ndiv2, 0);
 			glTranslatef(0.0, 0.0, 0.5*radius);
 			glRotatef(float((30*time)%360), 0.0, 0.0, 1.0);
 			glScalef(1.0, 0.25, 0.05);
@@ -1129,7 +1129,6 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv) {
 
-	assert(quadric);
 	glPushMatrix();
 	translate_to(pos);
 	rotate_by_vector(orient, 0.0);
@@ -1191,7 +1190,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 		set_color_alpha(GRAY);
 		gluCylinder(quadric, 0.05*radius, 0.05*radius, val, ndiv, 1);
 		if (teams > 1) set_color_alpha(get_smiley_team_color(source)); // use team color
-		gluDisk(quadric, 0, 0.05*radius, ndiv, 1); // sensor
+		draw_circle_normal(0, 0.05*radius, ndiv, 0); // sensor
 	}
 	pos.z += val;
 
@@ -1275,7 +1274,6 @@ void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d cons
 
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade) {
 
-	assert(quadric);
 	glPushMatrix();
 	translate_to(pos);
 	uniform_scale(radius);
@@ -1338,6 +1336,7 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, unsigned char type)
 {
+	assert(type == 0 || type == 1);
 	float const point_size(cd_scale/distance_to_camera(pos));
 	int const ndiv(max(3, min(N_SPHERE_DIV/2, int(point_size))));
 	//glDepthMask(1);
@@ -1350,20 +1349,16 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 
 	if (type == 0) { // M16 shell casing
 		gluCylinder(quadric, 1.0, 1.0, 4.0, ndiv, 1);
-		if (point_size > 1.0) gluDisk(quadric, 0, 1.0, ndiv, 1);
 	}
-	else if (type == 1) { // shotgun shell casing
+	else { // shotgun shell casing
 		set_color_alpha(RED);
 		glTranslatef(0.0, 0.0, -2.0);
 		gluCylinder(quadric, 1.2, 1.2, 4.8, ndiv, 1);
 		set_color_alpha(GOLD);
 		glTranslatef(0.0, 0.0, -0.8);
 		gluCylinder(quadric, 1.28, 1.28, 1.6, ndiv, 1);
-		if (point_size > 1.0) gluDisk(quadric, 0, 1.28, ndiv, 1);
 	}
-	else {
-		assert(0);
-	}
+	if (point_size > 1.0) {draw_circle_normal(0, ((type == 0) ? 1.0 : 1.28), ndiv, 0);}
 	glPopMatrix();
 	//glDepthMask(0);
 }

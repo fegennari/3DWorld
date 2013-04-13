@@ -283,7 +283,6 @@ void set_view_points() {
 
 void draw_sand(colorRGBA &color, float cscale, int mode) {
 
-	assert(quadric);
 	float const oz3(zmin + OCEAN_DEPTH - SAND_DEPTH);
 	(DISABLE_WATER ? WHITE : colorRGBA(0.25*cscale, 0.5*cscale, cscale, 1.0)).do_glColor();
 	plus_z.do_glNormal();

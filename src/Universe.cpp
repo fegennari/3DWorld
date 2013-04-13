@@ -73,7 +73,6 @@ extern int window_width, window_height, animate2, display_mode, onscreen_display
 extern float tan_term, sin_term, fticks, tfticks;
 extern colorRGBA bkg_color;
 extern exp_type_params et_params[];
-extern GLUquadricObj* quadric;
 extern rand_gen_t global_rand_gen;
 
 int gen_rand_seed1(point const &center);

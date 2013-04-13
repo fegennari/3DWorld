@@ -523,9 +523,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				rot_angle = max(0.0, 1.0*fire_val);
 				if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
-				draw_cylinder(point(0.0, 0.0, 0.076), 0.064,     radius,     radius, 2*ndiv, ndiv, 1);
-				draw_cylinder(point(0.0, 0.0, 0.000), 0.076, 2.8*radius, 2.0*radius, 2*ndiv, ndiv, 1);
-				draw_cylinder(point(0.0, 0.0, 0.136), 0.012, 1.5*radius, 1.5*radius, 2*ndiv, ndiv, 1);
+				draw_cylinder(point(0.0, 0.0, 0.076), 0.064,     radius,     radius, 2*ndiv, 1);
+				draw_cylinder(point(0.0, 0.0, 0.000), 0.076, 2.8*radius, 2.0*radius, 2*ndiv, 1);
+				draw_cylinder(point(0.0, 0.0, 0.136), 0.012, 1.5*radius, 1.5*radius, 2*ndiv, 1);
 			}
 			else { // shrapnel chaingun
 				radius = 0.004;
@@ -543,7 +543,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				draw_chaingun_section(-2.0*rdx, -2.0*rdy, radius, ndiv);
 				glTranslatef(rdx, rdy, 0.08);
 				set_color_alpha(colorRGBA(0.3, 0.3, 0.3), alpha);
-				draw_cylinder(0.004, 2.45*radius, 2.45*radius, 2*ndiv, 1, 1); // outer band
+				draw_cylinder(0.004, 2.45*radius, 2.45*radius, 2*ndiv, 1); // outer band
 				glPopMatrix();
 			}
 			set_specular(0.0, 0.0);

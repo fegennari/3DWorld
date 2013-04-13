@@ -27,7 +27,6 @@ extern bool has_dir_lights;
 extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, OCEAN_DEPTH;
-extern GLUquadricObj* quadric;
 
 
 struct sm_tree_type {

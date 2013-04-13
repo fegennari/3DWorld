@@ -23,7 +23,6 @@ vector<unsigned> available;
 vector<explosion> explosions;
 
 extern int iticks, game_mode, display_mode, animate2;
-extern GLUquadricObj* quadric;
 
 
 // duration color1 color2

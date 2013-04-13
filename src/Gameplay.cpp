@@ -65,7 +65,6 @@ extern obj_group obj_groups[];
 extern char player_name[];
 extern texture_t textures[];
 extern coll_obj_group coll_objects;
-extern GLUquadricObj* quadric;
 
 
 

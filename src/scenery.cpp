@@ -654,7 +654,7 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 	gluCylinder(quadric, radius, radius2, 1.2*height, ndiv, 1);
 	if (!shadow_only) select_texture(TREE_END_TEX);
 	glTranslatef(0.0, 0.0, 1.2*height);
-	gluDisk(quadric, 0.0, radius2, ndiv, 1);
+	draw_circle_normal(0.0, radius2, ndiv, 0);
 	glPopMatrix();
 }
 

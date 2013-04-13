@@ -435,7 +435,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	if (!draw_solid && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
 	set_lighted_sides(2);
 	set_fill_mode();
-	gluQuadricTexture(quadric, GL_FALSE);
 	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glEnable(GL_TEXTURE_GEN_S);
@@ -692,7 +691,7 @@ void draw_earth() {
 	if (camera_mode == 1) pos += surface_pos;
 	static float rot_angle(0.0);
 
-	if (quadric != 0 && sphere_in_camera_view(pos, earth_radius, 1)) {
+	if (sphere_in_camera_view(pos, earth_radius, 1)) {
 		set_fill_mode();
 		select_texture(EARTH_TEX);
 		set_color(WHITE);
@@ -1312,7 +1311,7 @@ void draw_splash(float x, float y, float z, float size, colorRGBA color) {
 	translate_to(pos);
 
 	for (unsigned i = 0; i < num_rings; ++i) {
-		gluDisk(quadric, (radius - 0.5*dr), radius, ndiv, 1);
+		draw_circle_normal((radius - 0.5*dr), radius, ndiv, 0);
 		radius += dr;
 	}
 	glPopMatrix();

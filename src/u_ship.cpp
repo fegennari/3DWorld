@@ -63,8 +63,6 @@ extern vector<us_weapon> us_weapons;
 extern vector<usw_ray> b_wrays;
 extern vector<temp_source> temp_sources;
 extern vector<unsigned> build_types[];
-extern GLUquadricObj* quadric;
-
 
 
 // ************ U_SHIP ************

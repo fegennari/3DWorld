@@ -249,16 +249,14 @@ void draw_circle_normal_at_z(float z, float r_inner, float r_outer, int ndiv, in
 }
 
 
-void draw_cylinder(float length, float radius1, float radius2, int ndiv, int nstacks,
-				   bool draw_ends, bool first_end_only, bool last_end_only)
-{ // length can be negative
-	assert(quadric && ndiv > 0 && nstacks > 0);
-	//set_fill_mode(); // too slow? not needed?
-	//if (nstacks == 1) draw_cylin_fast(radius1, radius2, length, ndiv, 0, 1); // tex coords?
-	gluCylinder(quadric, radius1, radius2, length, ndiv, nstacks); // draw quad/triangle if small?
+// length can be negative
+void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool draw_ends, bool first_end_only, bool last_end_only) {
 	
+	assert(ndiv > 0 );
+	draw_cylin_fast(radius1, radius2, length, ndiv, 1, 1); // tex coords?
+
 	if (draw_ends) {
-		if (!last_end_only && radius1 > 0.0) draw_circle_normal(0.0, radius1, ndiv, 1);
+		if (!last_end_only && radius1 > 0.0) {draw_circle_normal(0.0, radius1, ndiv, 1);}
 		
 		if (!first_end_only && radius2 > 0.0) {
 			glPushMatrix();
@@ -270,33 +268,11 @@ void draw_cylinder(float length, float radius1, float radius2, int ndiv, int nst
 }
 
 
-void draw_cylinder_nstacks(float len, float r1, float r2, int ndiv, int nstacks, bool texture) { // no draw_ends
-
-	if (nstacks == 1) {
-		draw_cylin_fast(r1, r2, len, ndiv, texture, 1);
-	}
-	else {
-		draw_cylinder(len, r1, r2, ndiv, nstacks, 0);
-	}
-}
-
-
-void draw_cylinder(point const &p1, float length, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends) {
+void draw_cylinder(point const &p1, float length, float radius1, float radius2, int ndiv, bool draw_ends) {
 
 	glPushMatrix();
 	translate_to(p1);
-	draw_cylinder(length, radius1, radius2, ndiv, nstacks, draw_ends);
-	glPopMatrix();
-}
-
-
-void draw_rotated_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, int nstacks, bool draw_ends) {
-
-	glPushMatrix();
-	translate_to(p1);
-	vector3d const v2z(p2, p1);
-	rotate_into_plus_z(v2z);
-	draw_cylinder(all_zeros, v2z.mag(), radius1, radius2, ndiv, nstacks, draw_ends);
+	draw_cylinder(length, radius1, radius2, ndiv, draw_ends);
 	glPopMatrix();
 }
 
@@ -1068,7 +1044,7 @@ inline void draw_half_subdiv_sphere(unsigned ndiv, bool texture) {
 
 void setup_dlists() {
 
-	assert(quadric && NUM_RES_DLIST > 0 && N_SPHERE_DIV > 0);
+	assert(NUM_RES_DLIST > 0 && N_SPHERE_DIV > 0);
 	
 	if (predef_dlists[0] == 0) {
 		unsigned const dl0(glGenLists(NUM_RES_DLIST));

@@ -362,7 +362,7 @@ public:
 	virtual ship_coll_obj* clone()   const = 0;
 	virtual void translate(point const &p) = 0;
 	virtual void draw(unsigned ndiv) const = 0;
-	virtual void draw_cylin(unsigned ndiv, unsigned nsta, bool textured) const {assert(0);}
+	virtual void draw_cylin(unsigned ndiv, bool textured) const {assert(0);}
 	virtual bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const = 0;
 	virtual bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const = 0;
 	virtual void draw_svol(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool player, bool test,
@@ -385,8 +385,8 @@ public:
 		: cylinder_3dw(p1_, p2_, r1_, r2_), ship_coll_obj(ds), check_ends(check_ends_) {}
 	ship_cylinder* clone() const {return new ship_cylinder(*this);}
 	void translate(point const &p) {p1 += p; p2 += p;}
-	void draw_cylin(unsigned ndiv, unsigned nsta, bool textured) const;
-	void draw(unsigned ndiv) const {draw_cylin(ndiv, 1, 0);}
+	void draw_cylin(unsigned ndiv, bool textured) const;
+	void draw(unsigned ndiv) const {draw_cylin(ndiv, 0);}
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
 	void get_bounding_sphere(point &c, float &r) const;
@@ -466,7 +466,7 @@ public:
 	ship_bounded_cylinder* clone() const {return new ship_bounded_cylinder(*this);}
 	void translate(point const &p) {ship_cylinder::translate(p); bcube.translate(p);}
 	void draw(unsigned ndiv) const;
-	void draw_cylin(unsigned ndiv, unsigned nsta, bool textured) const {assert(0);}
+	void draw_cylin(unsigned ndiv, bool textured) const {assert(0);}
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
 	void get_bounding_sphere(point &c, float &r) const;
