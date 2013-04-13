@@ -40,35 +40,35 @@ int shader_t::get_uniform_loc(char const *const name) const {
 }
 
 
-void shader_t::set_uniform_float_array(int loc, float const *const val, unsigned num) const {
+void shader_t::set_uniform_float_array(int loc, float const *const val, unsigned num) {
 	if (loc >= 0) glUniform1fv(loc, num, val);
 }
 
-void shader_t::set_uniform_float(int loc, float val) const {
+void shader_t::set_uniform_float(int loc, float val) {
 	if (loc >= 0) glUniform1f(loc, val);
 }
 
-void shader_t::set_uniform_int(int loc, int val) const {
+void shader_t::set_uniform_int(int loc, int val) {
 	if (loc >= 0) glUniform1i(loc, val);
 }
 
-void shader_t::set_uniform_vector2d(int loc, vector2d const &val) const {
+void shader_t::set_uniform_vector2d(int loc, vector2d const &val) {
 	if (loc >= 0) glUniform2fv(loc, 1, &val.x);
 }
 
-void shader_t::set_uniform_vector3d(int loc, vector3d const &val) const {
+void shader_t::set_uniform_vector3d(int loc, vector3d const &val) {
 	if (loc >= 0) glUniform3fv(loc, 1, &val.x);
 }
 
-void shader_t::set_uniform_color(int loc, colorRGBA const &val) const {
+void shader_t::set_uniform_color(int loc, colorRGBA const &val) {
 	if (loc >= 0) glUniform4fv(loc, 1, &val.R);
 }
 
-void shader_t::set_uniform_color(int loc, colorRGB  const &val) const {
+void shader_t::set_uniform_color(int loc, colorRGB  const &val) {
 	if (loc >= 0) glUniform3fv(loc, 1, &val.R);
 }
 
-void shader_t::set_uniform_matrid_4x4(int loc, float *m, bool transpose) const {
+void shader_t::set_uniform_matrid_4x4(int loc, float *m, bool transpose) {
 	if (loc >= 0) glUniformMatrix4fv(loc, 1, transpose, m);
 }
 

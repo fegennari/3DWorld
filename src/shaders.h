@@ -48,14 +48,14 @@ public:
 	void end_shader();
 
 	int get_uniform_loc(char const *const name) const;
-	void set_uniform_float_array(int loc, float const *const val, unsigned num) const;
-	void set_uniform_float      (int loc, float val) const;
-	void set_uniform_int        (int loc, int val) const;
-	void set_uniform_vector2d   (int loc, vector2d const &val) const;
-	void set_uniform_vector3d   (int loc, vector3d const &val) const;
-	void set_uniform_color      (int loc, colorRGBA const &val) const;
-	void set_uniform_color      (int loc, colorRGB  const &val) const;
-	void set_uniform_matrid_4x4 (int loc, float *m, bool transpose) const;
+	static void set_uniform_float_array(int loc, float const *const val, unsigned num);
+	static void set_uniform_float      (int loc, float val);
+	static void set_uniform_int        (int loc, int val);
+	static void set_uniform_vector2d   (int loc, vector2d const &val);
+	static void set_uniform_vector3d   (int loc, vector3d const &val);
+	static void set_uniform_color      (int loc, colorRGBA const &val);
+	static void set_uniform_color      (int loc, colorRGB  const &val);
+	static void set_uniform_matrid_4x4 (int loc, float *m, bool transpose);
 
 	void add_uniform_float_array (char const *const name, float const *const val, unsigned num) const;
 	void add_uniform_float       (char const *const name, float val) const;
