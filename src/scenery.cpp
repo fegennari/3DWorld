@@ -35,7 +35,6 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 
 extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, draw_model, DISABLE_WATER;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks;
-extern GLUquadricObj* quadric;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern rand_gen_t global_rand_gen;
 
@@ -996,7 +995,6 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
 		rock_shapes[i].draw(shadow_only, xlate);
 	}
-	assert(quadric != 0);
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	rock_vbo_manager.upload();
 	rock_vbo_manager.begin_render(1);
@@ -1012,10 +1010,8 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
 		voxel_rocks[i].draw(sscale, shadow_only, xlate, scale_val, s);
 	}
-	gluQuadricTexture(quadric, GL_TRUE);
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate, scale_val);
 	draw_scenery_vector(stumps, sscale, shadow_only, xlate, scale_val);
-	gluQuadricTexture(quadric, GL_FALSE);
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
 		plants[i].draw_stem(sscale, shadow_only, xlate);

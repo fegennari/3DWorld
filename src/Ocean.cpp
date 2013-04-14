@@ -39,7 +39,6 @@ struct WAVE {
 extern int island, camera_mode, draw_model, display_mode, show_fog, frame_counter, DISABLE_WATER;
 extern point ocean;
 extern float zmin, light_factor, moon_rot, fticks, XY_SCENE_SIZE, OCEAN_DEPTH;
-extern GLUquadricObj* quadric;
 
 
 // ocean variables

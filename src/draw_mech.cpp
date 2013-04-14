@@ -11,14 +11,12 @@
 int const DRAW_HMV_COBJS = 1;
 float const wheelr       = 0.118;
 
-
 float hmv_scale(1.0);
 point hmv_pos(all_zeros);
 shape3d hmv_shape;
 std::vector<int> hmv_coll_obj;
 
 extern int load_hmv;
-extern GLUquadricObj* quadric;
 
 
 void add_hmv_coll_objs(point &pos, float scale);

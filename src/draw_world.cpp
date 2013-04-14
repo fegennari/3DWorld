@@ -38,8 +38,6 @@ vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
-
-extern GLUquadricObj* quadric;
 extern bool have_sun, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists, two_sided_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu;
 extern int is_cloudy, iticks, display_mode, show_fog, num_groups, island, xoff, yoff;
@@ -1295,7 +1293,7 @@ void mouse_draw_on_ground(int x, int y) {
 
 void draw_splash(float x, float y, float z, float size, colorRGBA color) {
 
-	assert(quadric && size >= 0.0);
+	assert(size >= 0.0);
 	if (size == 0.0 || temperature <= W_FREEZE_POINT && !island) return;
 	if (size > 0.1) size = sqrt(10.0*size)/10.0;
 	unsigned const num_rings(min(10U, (unsigned)ceil(size)));

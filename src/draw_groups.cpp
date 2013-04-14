@@ -41,7 +41,6 @@ extern int window_width, window_height, game_mode, draw_model, animate2;
 extern float fticks, TIMESTEP, base_gravity, brightness, indir_vert_offset, cobj_z_bias;
 extern point star_pts[];
 extern vector3d up_norm;
-extern GLUquadricObj* quadric;
 extern vector<spark_t> sparks;
 extern obj_group obj_groups[];
 extern obj_type object_types[];
@@ -377,7 +376,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 	bool do_texture(select_texture(tid, 1, 1));
 	colorRGBA color(otype.color), tcolor(color);
 	set_color_alpha(color);
-	gluQuadricTexture(quadric, do_texture);
 	check_drawing_flags(flags, 1);
 	int const clip_level((type == SMILEY || type == LANDMINE || type == ROCKET || type == BALL) ? 2 : 0);
 	unsigned num_drawn(0);
@@ -487,7 +485,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 		if (!wap_vis_objs[0].empty() || !wap_vis_objs[1].empty()) {
 			check_drawing_flags(otype.flags, 1);
 			select_texture(tid, 1, 1);
-			gluQuadricTexture(quadric, do_texture);
 		}
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < wap_vis_objs[j].size(); ++k) {
@@ -632,7 +629,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 	} // small object
 	check_drawing_flags(flags, 0);
-	gluQuadricTexture(quadric, GL_FALSE);
 	select_no_texture();
 
 	if (SHOW_DRAW_TIME) {
@@ -752,7 +748,6 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 	if (atype >= 0) {
 		check_drawing_flags(object_types[atype].flags, 1);
 		int const textured(select_texture(object_types[atype].tid, 1, 1));
-		gluQuadricTexture(quadric, textured);
 		set_color_alpha(object_types[atype].color);
 		bool const cull_face(get_cull_face(atype, color));
 		if (cull_face) glEnable(GL_CULL_FACE);

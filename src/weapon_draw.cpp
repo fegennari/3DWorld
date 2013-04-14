@@ -17,7 +17,6 @@ extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPO
 extern float fticks;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
-extern GLUquadricObj* quadric;
 extern vector<spark_t> sparks;
 extern vector<beam3d> beams;
 extern int coll_id[];
@@ -316,7 +315,7 @@ void rotate_into_camera_dir(point const &pos, vector3d const &dir) {
 void draw_chaingun_section(float tx, float ty, float radius, int ndiv) {
 
 	glTranslatef(tx, ty, 0.0);
-	gluCylinder(quadric, radius, radius, 0.11, 2*ndiv, ndiv);
+	draw_cylinder(0.11, radius, radius, 2*ndiv);
 	draw_circle_normal(0.0, radius, ndiv, 1, 0.08);
 }
 
@@ -340,11 +339,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		else if ((wid == W_M16 || wid == W_SHOTGUN) && just_fired) {}
 		else return; // nothing to draw
 	}
-	assert(quadric);
 	dir.negate(); // used to be backwards
 	float radius, rxy;
 	//glDisable(GL_DEPTH_TEST);
-	gluQuadricNormals(quadric, GLU_SMOOTH);
 	enable_blend();
 	set_fill_mode();
 	glPushMatrix();
@@ -444,13 +441,13 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0); // could probably use rotate_into_plus_z()
 			glTranslatef(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0);
-			gluCylinder(quadric, 0.8*radius, 0.8*radius, 6.8*radius, 2*ndiv, ndiv);
+			draw_cylinder(6.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 5.0*radius);
 			// draw the sight
 			glTranslatef(0.8*radius, 0.0, 6.5*radius);
 			glRotatef(90.0, 0.0, 1.0, 0.0);
 			set_color_alpha((wmode&1) ? BLACK : colorRGBA(0.9, 0.65, 0.05), alpha); // black/gold
-			gluCylinder(quadric, 0.15*radius, 0.0, 0.4*radius, ndiv/2, 1);
+			draw_cylinder(0.4*radius, 0.15*radius, 0.0, ndiv);
 			set_specular(0.0, 0.0);
 			break;
 
@@ -461,7 +458,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			rot_angle = max(0.0f, 15.0f*(fire_val - 0.8f));
 			if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
 			glTranslatef(tx, ty, 0.0);
-			gluCylinder(quadric, 0.8*radius, 0.8*radius, 5.8*radius, 2*ndiv, ndiv);
+			draw_cylinder(5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 4.0*radius);
 			set_specular(0.0, 0.0);
 			break;
@@ -490,10 +487,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			draw_circle_normal(0.0075, 0.009, ndiv, 1, 0.15);
 			set_color_alpha(BLACK, alpha);
 			glPushMatrix();
-			gluCylinder(quadric, 0.005, 0.005, 0.15, 2*ndiv, ndiv);
+			draw_cylinder(0.15, 0.005, 0.005, 2*ndiv);
 			glTranslatef(0.0, 0.0, 0.15);
-			gluCylinder(quadric, 0.005, 0.0, 0.07, 2*ndiv, ndiv);
-			//gluCylinder(quadric, radius, radius, 0.18, 2*ndiv, ndiv);
+			draw_cylinder(0.07, 0.005, 0.0, 2*ndiv);
+			//draw_cylinder(0.18, radius, radius, 2*ndiv);
 			{
 				colorRGBA color(0.8, 0.6, 1.0);
 				
@@ -563,7 +560,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				
 				for (unsigned i = 0; i < 2; ++i) {
 					translate_to(translates[i]);
-					gluCylinder(quadric, radius, radius, 0.12, 2*ndiv, ndiv);
+					draw_cylinder(0.12, radius, radius, 2*ndiv);
 					draw_circle_normal(0.0, radius, ndiv, 1, 0.09);
 				}
 				set_specular(0.0, 0.0);
@@ -574,14 +571,12 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			radius = 0.004;
 			set_color_alpha(LT_BROWN, alpha);
 			select_texture(is_camera ? PLAYER_BBB_TEX : WOOD_TEX); // customize the player's baseball bat
-			gluQuadricTexture(quadric, GL_TRUE);
 			glRotatef(45.0, -dir.y, dir.x, 0.0);
 			glTranslatef(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0); // cancel out texture rotation with camera
 			glRotatef(get_bbbat_angle(fire_val), (left_handed ? 0.5 : -0.5), 0.5, 0.0);
-			gluCylinder(quadric, radius, 1.2*radius, 16.0*radius, ndiv, ndiv);
+			draw_cylinder(16.0*radius, radius, 1.2*radius, ndiv);
 			draw_sphere_dlist(point(0.0, 0.0, 16.0*radius), 1.2*radius, ndiv, 1, 0);
-			gluQuadricTexture(quadric, GL_FALSE);
 			glDisable(GL_TEXTURE_2D);
 			break;
 
@@ -593,14 +588,14 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				glTranslatef(0.0, 0.0, 0.148);
 				glRotatef(30.0, -dir.y, dir.x, 0.0);
 				glTranslatef(tx, ty, 0.0);
-				gluCylinder(quadric, 0.0007, 0.0007, 0.103, ndiv, 1);
+				draw_cylinder(0.103, 0.0007, 0.0007, ndiv);
 				set_color_e(BLACK);
 				glPopMatrix();
 			}
 			set_color_alpha(colorRGBA(0.45, 0.45, 0.45), alpha);
 			set_specular(0.8, 50.0);
 			glTranslatef(tx, ty, 0.04);
-			gluCylinder(quadric, 0.006, 0.0015, 0.16, 2*ndiv, ndiv);
+			draw_cylinder(0.16, 0.006, 0.0015, 2*ndiv);
 			draw_sphere_dlist(point(0.0, 0.0, 0.0), 0.006, ndiv, 0);
 			set_specular(0.0, 1.0);
 			break;
@@ -611,13 +606,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_color_alpha(OLIVE*0.7, alpha);
 				set_specular(0.7, 30.0);
 				glTranslatef(tx, ty, 0.0);
-				gluCylinder(quadric, radius, radius, 16.0*radius, 2*ndiv, ndiv);
+				draw_cylinder(16.0*radius, radius, radius, 2*ndiv);
 				draw_circle_normal(0.0, radius, ndiv, 1, 8.0*radius);
 				set_specular(0.0, 0.0);
-				
-				if (wmode & 1) { // add sparks?
-					add_dynamic_light(12.0*radius, (pos0 - dir*(2.5*radius)), ORANGE);
-				}
+				if (wmode & 1) {add_dynamic_light(0.25, (pos0 - dir*(2.5*radius)), ORANGE);} // add sparks?
 			}
 			break;
 
