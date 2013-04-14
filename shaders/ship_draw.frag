@@ -1,7 +1,7 @@
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 varying vec4 epos;
-varying vec3 normal; // world space
+varying vec3 normal; // eye space
 
 void main()
 {

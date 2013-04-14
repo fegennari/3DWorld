@@ -1,5 +1,5 @@
 varying vec4 epos;
-varying vec3 normal; // world space
+varying vec3 normal; // eye space
 
 void main()
 {
