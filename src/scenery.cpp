@@ -593,9 +593,8 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float sc
 	rotate_by_vector(dir, 0.0);
 	gluCylinder(quadric, radius, radius2, length, ndiv, 1);
 	if (!shadow_only) select_texture(TREE_END_TEX);
-	draw_circle_normal(0.0, radius, ndiv, 1);
-	glTranslatef(0.0, 0.0, length);
-	draw_circle_normal(0.0, radius2, ndiv, 0);
+	draw_circle_normal(0.0, radius,  ndiv, 1, 0.0);
+	draw_circle_normal(0.0, radius2, ndiv, 0, length);
 	glPopMatrix();
 }
 
@@ -653,8 +652,7 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 	translate_to(pos - point(0.0, 0.0, 0.2*height));
 	gluCylinder(quadric, radius, radius2, 1.2*height, ndiv, 1);
 	if (!shadow_only) select_texture(TREE_END_TEX);
-	glTranslatef(0.0, 0.0, 1.2*height);
-	draw_circle_normal(0.0, radius2, ndiv, 0);
+	draw_circle_normal(0.0, radius2, ndiv, 0, 1.2*height);
 	glPopMatrix();
 }
 

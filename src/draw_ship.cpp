@@ -789,13 +789,12 @@ void uobj_draw_data::draw_us_frigate() const {
 		for (unsigned i = 0; i < nengines; ++i) {
 			color_b.do_glColor();
 			draw_cylin_fast(0.2, 0.22, 1.1, ndiv2, textured, 1);
-			glTranslatef(0.0, 0.0, 0.1);
 			
 			if (ndiv > 10) {
 				(color_b*0.2).do_glColor();
-				draw_circle_normal(0.0, 0.202, ndiv2, 1);
+				draw_circle_normal(0.0, 0.202, ndiv2, 1, 0.1);
 			}
-			glTranslatef(edx, 0.0, -0.1);
+			glTranslatef(edx, 0.0, 0.0);
 		}
 	}
 	if (textured) end_ship_texture();
@@ -1035,8 +1034,7 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 		glPushMatrix();
 		glTranslatef(0.0, 0.0, -0.09);
 		draw_cylin_fast(0.18, 0.16, 0.09, ndiv, 0, 1); // big center engine
-		glTranslatef(0.0, 0.0, 0.045);
-		if (ndiv > 5) draw_circle_normal(0.0, 0.17, ndiv32, 0);
+		if (ndiv > 5) draw_circle_normal(0.0, 0.17, ndiv32, 0, 0.045);
 		glPopMatrix();
 	}
 	if (ndiv > 6) { // draw engines
@@ -1045,11 +1043,7 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 			glPushMatrix();
 			glTranslatef(epos*sinf(theta), epos*cosf(theta), -0.06);
 			draw_cylin_fast(0.12, 0.10, 0.06, ndiv2, 0, 1);
-			
-			if (ndiv > 8) {
-				glTranslatef(0.0, 0.0, 0.03);
-				draw_circle_normal(0.0, 0.11, ndiv2, 0);
-			}
+			if (ndiv > 8) {draw_circle_normal(0.0, 0.11, ndiv2, 0, 0.03);}
 			glPopMatrix();
 		}
 	}
@@ -1469,11 +1463,7 @@ void uobj_draw_data::draw_gunship() const {
 			glPushMatrix();
 			glTranslatef(0.35*dxy[0][i], 0.35*dxy[1][i], -1.1);
 			gluCylinder(quadric, 0.05, 0.05, 0.25, ndiv2, 1);
-			
-			if (ndiv > 12) {
-				glTranslatef(0.0, 0.0, 0.05);
-				draw_circle_normal(0.0, 0.05, ndiv2, 0);
-			}
+			if (ndiv > 12) {draw_circle_normal(0.0, 0.05, ndiv2, 0, 0.05);}
 			glPopMatrix();
 		}
 	}
@@ -1493,7 +1483,7 @@ void uobj_draw_data::draw_gunship() const {
 
 void uobj_draw_data::draw_nightmare() const {
 
-	unsigned const ndiv2(get_ndiv(ndiv/2));
+	unsigned const ndiv23(get_ndiv(2*ndiv/3));
 	setup_draw_ship();
 	uniform_scale(0.8);
 	draw_sphere_dlist(point(0.0, 0.0, -0.1), 1.0, 3*ndiv/2, 0);
@@ -1511,8 +1501,8 @@ void uobj_draw_data::draw_nightmare() const {
 	
 		GRAY.do_glColor();
 		glTranslatef(0.0, 0.0, -1.2);
-		draw_cylin_fast(0.4, 0.35, 0.2, ndiv2, 0, 1); // engine
-		draw_circle_normal(0.0, 0.4, ndiv2, 0);
+		draw_cylin_fast(0.4, 0.35, 0.2, ndiv23, 0, 1); // engine
+		draw_circle_normal(0.0, 0.4, ndiv23, 0);
 	}
 	glPopMatrix(); // undo invert_z()
 

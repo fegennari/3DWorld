@@ -135,10 +135,6 @@ inline bool get_cull_face(int type, colorRGBA const &color) {
 	return (color.alpha < 1.0 && type != ROCKET && type != STAR5);
 }
 
-void draw_unit_sphere(int ndiv, bool do_texture) {
-	draw_sphere_dlist_raw(ndiv, do_texture);
-}
-
 void select_no_texture() {
 	//glDisable(GL_TEXTURE_2D);
 	select_texture(WHITE_TEX, 0);
@@ -708,10 +704,10 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		vector3d const scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
 		scale_by(scale*radius);
 		glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
-		draw_unit_sphere(ndiv, do_texture);
+		draw_sphere_dlist_raw(ndiv, do_texture);
 		glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
 		glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
-		draw_unit_sphere(ndiv, do_texture);
+		draw_sphere_dlist_raw(ndiv, do_texture);
 	}
 	else {
 		int ndiv(int(4.0*sqrt(point_dia)));
@@ -1120,7 +1116,7 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 	glEnd();
 	set_color_alpha(object_types[ROCKET].color);
 	glScalef(1.0, 1.0, -2.0);
-	draw_unit_sphere(ndiv, 0);
+	draw_sphere_dlist_raw(ndiv, 0);
 	gluCylinder(quadric, 1.0, 1.0, 1.1, ndiv, 1);
 	glPopMatrix();
 	if (type == ROCKET) gen_rocket_smoke(pos, orient, radius);
@@ -1146,7 +1142,7 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 	glRotatef(90.0,  0.0, 1.0, 0.0);
 	set_color_alpha(WHITE);
 	select_texture(SKULL_TEX);
-	draw_unit_sphere(ndiv, 1);
+	draw_sphere_dlist_raw(ndiv, 1);
 	select_no_texture();
 
 	glPopMatrix();
@@ -1189,7 +1185,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 	if (time > 6) {
 		set_color_alpha(GRAY);
 		gluCylinder(quadric, 0.05*radius, 0.05*radius, val, ndiv, 1);
-		if (teams > 1) set_color_alpha(get_smiley_team_color(source)); // use team color
+		if (teams > 1) {set_color_alpha(get_smiley_team_color(source));} // use team color
 		draw_circle_normal(0, 0.05*radius, ndiv, 0); // sensor
 	}
 	pos.z += val;
@@ -1263,11 +1259,11 @@ void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d cons
 	scale_by(scale);
 	glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
 	set_color_alpha((charred ? BLACK : YELLOW));
-	draw_unit_sphere(ndiv, 0);
+	draw_sphere_dlist_raw(ndiv, 0);
 	set_color_alpha((charred ? DK_GRAY : BLOOD_C));
 	glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
 	glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
-	draw_unit_sphere(ndiv, 0);
+	draw_sphere_dlist_raw(ndiv, 0);
 	glPopMatrix();
 }
 
@@ -1280,7 +1276,7 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	glPushMatrix();
 	if (!is_cgrenade) glScalef(0.8, 0.8, 1.2); // rotate also?
 	set_color_alpha(BLACK);
-	draw_unit_sphere(ndiv, 0);
+	draw_sphere_dlist_raw(ndiv, 0);
 	glPopMatrix();
 
 	float const stime(1.0 - float(time)/float(object_types[is_cgrenade ? CGRENADE : GRENADE].lifetime)), sval(0.2 + 0.8*stime);

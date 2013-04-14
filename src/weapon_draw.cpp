@@ -317,7 +317,7 @@ void draw_chaingun_section(float tx, float ty, float radius, int ndiv) {
 
 	glTranslatef(tx, ty, 0.0);
 	gluCylinder(quadric, radius, radius, 0.11, 2*ndiv, ndiv);
-	draw_circle_normal_at_z(0.08, 0.0, radius, ndiv, 1);
+	draw_circle_normal(0.0, radius, ndiv, 1, 0.08);
 }
 
 
@@ -445,7 +445,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			glTranslatef(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0);
 			gluCylinder(quadric, 0.8*radius, 0.8*radius, 6.8*radius, 2*ndiv, ndiv);
-			draw_circle_normal_at_z(5.0*radius, 0.0, 0.8*radius, ndiv, 1);
+			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 5.0*radius);
 			// draw the sight
 			glTranslatef(0.8*radius, 0.0, 6.5*radius);
 			glRotatef(90.0, 0.0, 1.0, 0.0);
@@ -462,7 +462,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
 			glTranslatef(tx, ty, 0.0);
 			gluCylinder(quadric, 0.8*radius, 0.8*radius, 5.8*radius, 2*ndiv, ndiv);
-			draw_circle_normal_at_z(4.0*radius, 0.0, 0.8*radius, ndiv, 1);
+			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 4.0*radius);
 			set_specular(0.0, 0.0);
 			break;
 
@@ -487,7 +487,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			glTranslatef(0.0, 0.0, -0.15);
 			glTranslatef(tx, ty, 0.0);
 			set_color_alpha(GOLD, alpha);
-			draw_circle_normal_at_z(0.15, 0.0075, 0.009, ndiv, 1);
+			draw_circle_normal(0.0075, 0.009, ndiv, 1, 0.15);
 			set_color_alpha(BLACK, alpha);
 			glPushMatrix();
 			gluCylinder(quadric, 0.005, 0.005, 0.15, 2*ndiv, ndiv);
@@ -564,7 +564,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				for (unsigned i = 0; i < 2; ++i) {
 					translate_to(translates[i]);
 					gluCylinder(quadric, radius, radius, 0.12, 2*ndiv, ndiv);
-					draw_circle_normal_at_z(0.09, 0.0, radius, ndiv, 1);
+					draw_circle_normal(0.0, radius, ndiv, 1, 0.09);
 				}
 				set_specular(0.0, 0.0);
 			}
@@ -612,7 +612,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_specular(0.7, 30.0);
 				glTranslatef(tx, ty, 0.0);
 				gluCylinder(quadric, radius, radius, 16.0*radius, 2*ndiv, ndiv);
-				draw_circle_normal_at_z(8.0*radius, 0.0, radius, ndiv, 1);
+				draw_circle_normal(0.0, radius, ndiv, 1, 8.0*radius);
 				set_specular(0.0, 0.0);
 				
 				if (wmode & 1) { // add sparks?

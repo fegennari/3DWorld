@@ -232,20 +232,34 @@ void sphere_point_norm::free_data() {
 // ******************** CYLINDER ********************
 
 
-void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals) {
+void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, float zval) {
 
-	if (invert_normals) gluQuadricOrientation(quadric, GLU_INSIDE);
-	gluDisk(quadric, r_inner, r_outer, ndiv, 1);
-	if (invert_normals) gluQuadricOrientation(quadric, GLU_OUTSIDE);
-}
+	assert(r_outer > 0.0);
+	bool const disk(r_inner > 0.0);
+	glBegin(disk ? GL_TRIANGLE_STRIP : GL_TRIANGLE_FAN);
+	(invert_normals ? -plus_z : plus_z).do_glNormal();
 
+	if (!disk) {
+		glTexCoord2f(0.5, 0.5);
+		point(0.0, 0.0, zval).do_glVertex();
+	}
+	float const css((invert_normals ? 1.0 : -1.0)*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
+	float const inner_tscale(r_inner/r_outer);
+	float sin_s(0.0), cos_s(1.0);
 
-void draw_circle_normal_at_z(float z, float r_inner, float r_outer, int ndiv, int invert_normals) {
+	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
+		float const s(sin_s), c(cos_s);
 
-	glPushMatrix();
-	glTranslatef(0.0, 0.0, z);
-	draw_circle_normal(r_inner, r_outer, ndiv, invert_normals);
-	glPopMatrix();
+		if (disk) {
+			glTexCoord2f(0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c)));
+			point(r_inner*s, r_inner*c, zval).do_glVertex();
+		}
+		glTexCoord2f(0.5*(1.0 + s), (0.5*(1.0 + c)));
+		point(r_outer*s, r_outer*c, zval).do_glVertex();
+		sin_s = s*cos_ds + c*sin_ds;
+		cos_s = c*cos_ds - s*sin_ds;
+	}
+	glEnd();
 }
 
 
@@ -254,17 +268,8 @@ void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool dr
 	
 	assert(ndiv > 0 );
 	draw_cylin_fast(radius1, radius2, length, ndiv, 1, 1); // tex coords?
-
-	if (draw_ends) {
-		if (!last_end_only && radius1 > 0.0) {draw_circle_normal(0.0, radius1, ndiv, 1);}
-		
-		if (!first_end_only && radius2 > 0.0) {
-			glPushMatrix();
-			glTranslatef(0.0, 0.0, length);
-			draw_circle_normal(0.0, radius2, ndiv, 0);
-			glPopMatrix();
-		}
-	}
+	if (draw_ends && !last_end_only  && radius1 > 0.0) {draw_circle_normal(0.0, radius1, ndiv, 1, 0.0);}
+	if (draw_ends && !first_end_only && radius2 > 0.0) {draw_circle_normal(0.0, radius2, ndiv, 0, length);}
 }
 
 
@@ -356,10 +361,9 @@ void draw_cylindrical_section(point const &pos, float length, float r_inner, flo
 	draw_cylin_fast(r_outer, r_outer, length, ndiv, texture, 1);
 
 	if (r_inner != r_outer) {
-		if (r_inner != 0.0) draw_cylin_fast(r_inner, r_inner, length, ndiv, texture, 1);
-		draw_circle_normal(r_inner, r_outer, ndiv, 1); // no texture, could make loops > 1
-		glTranslatef(0.0, 0.0, length);
-		draw_circle_normal(r_inner, r_outer, ndiv, 0); // no texture, could make loops > 1
+		if (r_inner != 0.0) {draw_cylin_fast(r_inner, r_inner, length, ndiv, texture, 1);}
+		draw_circle_normal(r_inner, r_outer, ndiv, 1, 0.0);
+		draw_circle_normal(r_inner, r_outer, ndiv, 0, length);
 	}
 	glPopMatrix();
 }

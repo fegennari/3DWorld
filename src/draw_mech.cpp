@@ -45,9 +45,8 @@ void draw_hmv() {
 		glPushMatrix();
 		glTranslatef((0.19 + (float(i>1))*.62), 0.0, (-(float(i&1))*0.42 - 0.08));
 		gluCylinder(quadric, wheelr, wheelr, 0.08, nsides, 1);
-		draw_circle_normal(0.0, wheelr, nsides, 1);
-		glTranslatef(0.0, 0.0, 0.08);
-		draw_circle_normal(0.0, wheelr, nsides, 0);
+		draw_circle_normal(0.0, wheelr, nsides, 1, 0.0);
+		draw_circle_normal(0.0, wheelr, nsides, 0, 0.08);
 		glPopMatrix();
 	}
 	glPopMatrix();
