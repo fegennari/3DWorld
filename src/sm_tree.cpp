@@ -663,12 +663,8 @@ void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const 
 				else { // draw as cylinder
 					if (world_mode == WMODE_GROUND) {set_color(get_bark_color());}
 					select_texture(stt[type].bark_tid);
-					glPushMatrix();
-					translate_to(cylin.p1);
-					if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
 					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size))));
-					draw_cylin_fast(cylin.r1, cylin.r2, p2p_dist(cylin.p1, cylin.p2), nsides2, 1, 0, 1); // trunk (draw quad if small?)
-					glPopMatrix();
+					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, 1);
 				}
 			}
 		}

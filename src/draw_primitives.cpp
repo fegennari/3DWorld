@@ -21,7 +21,6 @@ vector_point_norm cylinder_vpn;
 
 
 extern int display_mode, draw_model;
-extern GLUquadricObj* quadric;
 
 
 #define NDIV_SCALE(val) unsigned(val*ndiv + 0.5)
@@ -333,15 +332,15 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 
 		for (unsigned i = 0; i < 2; ++i) {
 			if (r[i] == 0.0) continue;
-			(v12*(i ? 1.0 : -1.0)).do_glNormal();
 			glBegin(GL_TRIANGLE_FAN);
+			(v12*(i ? 1.0 : -1.0)).do_glNormal();
 			if (texture) glTexCoord2f(0.5, 0.5);
 			ce[i].do_glVertex();
 
 			for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 				unsigned const ss(S%ndiv), s(i ? (ndiv - ss - 1) : ss);
 				
-				if (texture) { // inefficient
+				if (texture) { // inefficient, but uncommon
 					float const theta(TWO_PI*s/ndiv);
 					glTexCoord2f(0.5*(1.0 + sinf(theta)), (0.5*(1.0 + cosf(theta))));
 				}

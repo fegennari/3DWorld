@@ -308,7 +308,7 @@ int select_dodgeball_texture(int shooter) {
 
 void rotate_into_camera_dir(point const &pos, vector3d const &dir) {
 
-	rotate_by_vector(-dir, 0.0); // undo rotation
+	rotate_by_vector(-dir); // undo rotation
 	rotate_towards_camera(pos);
 }
 
@@ -350,7 +350,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	glPushMatrix();
 	translate_to(pos);
 	uniform_scale(scale);
-	rotate_by_vector(dir, 0.0);
+	rotate_by_vector(dir);
 	assert(wid < NUM_WEAPONS);
 	vector3d v_trans;
 	point const pos0(get_final_pos(pos, dir, cradius, scale, rxy, v_trans));

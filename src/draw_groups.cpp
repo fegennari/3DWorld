@@ -720,10 +720,9 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		}
 		ndiv = max(4, min(ndiv, N_SPHERE_DIV));
 	
-		if (quadric != 0 && ndiv > 3 && tail) { // cone on the tail of the raindrop
-			translate_to(pos);
-			gluCylinder(quadric, radius, 0.0, 2.5*radius, (ndiv>>1), 1);
-			glTranslatef(0.0, 0.0, -0.6*radius);
+		if (ndiv > 3 && tail) { // cone on the tail of the raindrop
+			draw_fast_cylinder(pos, pos+point(0.0, 0.0, 2.5*radius), radius, 0.0, (ndiv>>1), 0);
+			translate_to(pos + vector3d(0.0, 0.0, -0.6*radius));
 			glScalef(1.0, 1.0, 2.0);
 			pos = all_zeros;
 		}
@@ -1103,7 +1102,7 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 
 	glPushMatrix();
 	translate_to(pos);
-	rotate_by_vector(orient, 0.0);
+	rotate_by_vector(orient);
 	set_color_alpha(RED);
 	uniform_scale(radius);
 	glBegin(GL_TRIANGLES);
@@ -1117,7 +1116,7 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 	set_color_alpha(object_types[ROCKET].color);
 	glScalef(1.0, 1.0, -2.0);
 	draw_sphere_dlist_raw(ndiv, 0);
-	gluCylinder(quadric, 1.0, 1.0, 1.1, ndiv, 1);
+	draw_cylinder(1.1, 1.0, 1.0, ndiv);
 	glPopMatrix();
 	if (type == ROCKET) gen_rocket_smoke(pos, orient, radius);
 }
@@ -1127,16 +1126,11 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 
 	glPushMatrix();
 	translate_to(pos);
-	rotate_by_vector(orient, 0.0);
+	rotate_by_vector(orient);
 	uniform_scale(radius);
-	glPushMatrix();
-	glTranslatef(0.0, 0.0, -2.0);
+	draw_fast_cylinder(point(0.0, 0.0, -2.0 ), point(0.0, 0.0, -1.0), 1.0, 0.0, ndiv, 0);
 	set_color_alpha(BLACK);
-	gluCylinder(quadric, 1.0, 0.0, 1.0, ndiv, 1);
-	glTranslatef(0.0, 0.0, -0.25);
-	gluCylinder(quadric, 1.0, 1.0, 0.25, ndiv, 1);
-	glPopMatrix();
-
+	draw_fast_cylinder(point(0.0, 0.0, -2.25), point(0.0, 0.0, -2.0), 1.0, 1.0, ndiv, 0);
 	glScalef(1.0, 1.0, 1.5);
 	glRotatef(90.0, -1.0, 0.0, 0.0);
 	glRotatef(90.0,  0.0, 1.0, 0.0);
@@ -1144,7 +1138,6 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 	select_texture(SKULL_TEX);
 	draw_sphere_dlist_raw(ndiv, 1);
 	select_no_texture();
-
 	glPopMatrix();
 	if (type == SEEK_D) gen_rocket_smoke(pos, orient, radius);
 }
@@ -1184,25 +1177,24 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 
 	if (time > 6) {
 		set_color_alpha(GRAY);
-		gluCylinder(quadric, 0.05*radius, 0.05*radius, val, ndiv, 1);
-		if (teams > 1) {set_color_alpha(get_smiley_team_color(source));} // use team color
-		draw_circle_normal(0, 0.05*radius, ndiv, 0); // sensor
+		draw_cylinder(val, 0.05*radius, 0.05*radius, ndiv/2); // sensor pole
 	}
 	pos.z += val;
 
-	if (time > 20) {
+	if (time > 26) {
 		float val;
 		glTranslatef(0.0, 0.0, 1.4*radius);
-		glRotatef(((time > 26) ? 90.0 : 15.0*(time - 20)), 1.0, 0.0, 0.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
 		
 		if (time > 36) {
 			glRotatef(10.0*(time%36), 0.0, 1.0, 0.0);
 			val = 0.42*radius;
 		}
-		else if (time > 26){
+		else {
 			val = 0.04*radius*(time - 26) + 0.02*radius;
 		}
-		if (time > 26) gluCylinder(quadric, 0.0, val, 0.4*radius, ndiv, 1); // sensor pole
+		if (teams > 1) {set_color_alpha(get_smiley_team_color(source));} // use team color
+		draw_cylinder(0.4*radius, 0.0, val, ndiv); // sensor
 	}
 	glPopMatrix();
 
@@ -1284,12 +1276,9 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	vector3d vd(plus_z);
 	rotate_vector3d_norm(vr, -0.25*PI, vd);
 	rotate_about(45.0, vr);
-	glTranslatef(0.0, 0.0, 0.7);
-	glDisable(GL_CULL_FACE);
-	gluCylinder(quadric, 0.3, 0.3, 0.5, max(3, ndiv/2), 1);
+	draw_fast_cylinder(point(0.0, 0.0, 0.7), point(0.0, 0.0, 1.2), 0.3, 0.3, max(3, ndiv/2), 0);
 	set_color_alpha(GRAY);
-	glTranslatef(0.0, 0.0, 0.3);
-	gluCylinder(quadric, 0.05, 0.05, sval, max(3, ndiv/4), 1); // fuse
+	draw_fast_cylinder(point(0.0, 0.0, 1.0), point(0.0, 0.0, 1.0+sval), 0.05, 0.05, max(3, ndiv/2), 0); // fuse
 	glPopMatrix();
 
 	if (!animate2) return;
@@ -1339,22 +1328,20 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	glPushMatrix();
 	translate_to(pos);
 	glRotatef(TO_DEG*init_dir.x, 0.0, 0.0, 1.0);
-	//rotate_by_vector(init_dir, 0.0);
+	//rotate_by_vector(init_dir);
 	rotate_about(angle, orient);
 	uniform_scale(radius); // Note: needs 2-sided lighting
 
 	if (type == 0) { // M16 shell casing
-		gluCylinder(quadric, 1.0, 1.0, 4.0, ndiv, 1);
+		draw_cylinder(4.0, 1.0, 1.0, ndiv);
 	}
 	else { // shotgun shell casing
 		set_color_alpha(RED);
-		glTranslatef(0.0, 0.0, -2.0);
-		gluCylinder(quadric, 1.2, 1.2, 4.8, ndiv, 1);
+		draw_fast_cylinder(point(0.0, 0.0, -2.0), point(0.0, 0.0,  2.8), 1.2,  1.2,  ndiv, 0);
 		set_color_alpha(GOLD);
-		glTranslatef(0.0, 0.0, -0.8);
-		gluCylinder(quadric, 1.28, 1.28, 1.6, ndiv, 1);
+		draw_fast_cylinder(point(0.0, 0.0, -2.8), point(0.0, 0.0, -1.2), 1.28, 1.28, ndiv, 0);
 	}
-	if (point_size > 1.0) {draw_circle_normal(0, ((type == 0) ? 1.0 : 1.28), ndiv, 0);}
+	if (point_size > 1.0) {draw_circle_normal(0, ((type == 0) ? 1.0 : 1.28), ndiv, 0, ((type == 0) ? 0.0 : -2.8));}
 	glPopMatrix();
 	//glDepthMask(0);
 }

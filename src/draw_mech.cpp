@@ -42,12 +42,8 @@ void draw_hmv() {
 	unsigned const nsides((3*N_CYL_SIDES)/2);
 
 	for (unsigned i = 0; i < 4; ++i) {
-		glPushMatrix();
-		glTranslatef((0.19 + (float(i>1))*.62), 0.0, (-(float(i&1))*0.42 - 0.08));
-		gluCylinder(quadric, wheelr, wheelr, 0.08, nsides, 1);
-		draw_circle_normal(0.0, wheelr, nsides, 1, 0.0);
-		draw_circle_normal(0.0, wheelr, nsides, 0, 0.08);
-		glPopMatrix();
+		point const pos((0.19 + (float(i>1))*.62), 0.0, (-(float(i&1))*0.42 - 0.08));
+		draw_fast_cylinder(pos, pos+vector3d(0.0, 0.0, 0.08), wheelr, wheelr, nsides, 0, 1);
 	}
 	glPopMatrix();
 }

@@ -329,11 +329,8 @@ void draw_sand(colorRGBA &color, float cscale, int mode) {
 	disable_textures_texgen();
 
 	if (!DISABLE_WATER) { // draw ocean barrier as well (upwards normal)
-		glPushMatrix();
-		glTranslatef(0.0, 0.0, oz3);
 		glColor3f(0.3*color.R, color.G, color.B);
-		gluCylinder(quadric, 0.25*FAR_CLIP, 0.25*FAR_CLIP, SAND_DEPTH-MWAVE_HEIGHT, N_CYL_SIDES, 1);
-		glPopMatrix();
+		draw_fast_cylinder(point(0.0, 0.0, oz3), point(0.0, 0.0, oz3+SAND_DEPTH-MWAVE_HEIGHT), 0.25*FAR_CLIP, 0.25*FAR_CLIP, N_CYL_SIDES, 0);
 	}
 }
 

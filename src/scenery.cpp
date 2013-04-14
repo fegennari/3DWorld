@@ -587,14 +587,14 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float sc
 	}
 	color.do_glColor();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
-	if (!shadow_only) select_texture(get_tid());
 	glPushMatrix();
 	translate_to(pos);
-	rotate_by_vector(dir, 0.0);
-	gluCylinder(quadric, radius, radius2, length, ndiv, 1);
+	rotate_by_vector(dir);
 	if (!shadow_only) select_texture(TREE_END_TEX);
 	draw_circle_normal(0.0, radius,  ndiv, 1, 0.0);
 	draw_circle_normal(0.0, radius2, ndiv, 0, length);
+	if (!shadow_only) select_texture(get_tid());
+	draw_cylin_fast(radius, radius2, length, ndiv, 1, 0);
 	glPopMatrix();
 }
 
@@ -647,12 +647,12 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 	}
 	color.do_glColor();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
-	if (!shadow_only) select_texture(get_tid());
 	glPushMatrix();
 	translate_to(pos - point(0.0, 0.0, 0.2*height));
-	gluCylinder(quadric, radius, radius2, 1.2*height, ndiv, 1);
 	if (!shadow_only) select_texture(TREE_END_TEX);
 	draw_circle_normal(0.0, radius2, ndiv, 0, 1.2*height);
+	if (!shadow_only) select_texture(get_tid());
+	draw_cylin_fast(radius, radius2, 1.2*height, ndiv, 1, 0);
 	glPopMatrix();
 }
 
