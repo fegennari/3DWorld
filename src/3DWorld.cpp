@@ -127,6 +127,7 @@ int load_config(string const &config_file);
 
 bool export_modmap(string const &filename);
 void reset_planet_defaults();
+void invalidate_cached_stars();
 
 void verify_wmode(player_state &sstate);
 
@@ -154,8 +155,11 @@ bool check_gl_error(unsigned loc_id) {
 }
 
 
-void post_window_redisplay() {
+void display_window_resized() {
+	invalidate_cached_stars();
+}
 
+void post_window_redisplay() {
 	glutPostWindowRedisplay(curr_window); // Schedule a new display event
 }
 
@@ -178,6 +182,7 @@ void clear_context() {
 	free_cobj_draw_group_dlists();
 	clear_univ_obj_contexts();
 	clear_cached_shaders();
+	invalidate_cached_stars();
 	clear_landscape_vbo = 1;
 }
 
@@ -594,6 +599,7 @@ void resize(int x, int y) {
 	calc_viewing_cone();
 	curr_window = glutGetWindow();
 	post_window_redisplay();
+	display_window_resized();
 }
 
 

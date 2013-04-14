@@ -377,6 +377,11 @@ void draw_universe_plds(bool planets_and_moons) {
 }
 
 
+void invalidate_cached_stars() {
+	universe_pld[2].clear();
+}
+
+
 // no_distant: 0: draw everything, 1: draw current cell, 2: draw current system
 void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only) {
 

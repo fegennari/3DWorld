@@ -282,6 +282,7 @@ void uobj_draw_data::setup_exp_texture() const {
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.9 + 0.05*(1.0 - t_exp));
 		set_ship_texture(DISINT_TEX);
+		set_lighted_sides(2);
 	}
 }
 
@@ -291,6 +292,7 @@ void uobj_draw_data::end_exp_texture() const {
 	if (t_exp > 0.0) {
 		glDisable(GL_ALPHA_TEST);
 		end_ship_texture();
+		set_lighted_sides(1);
 	}
 }
 
@@ -1307,13 +1309,13 @@ void uobj_draw_data::draw_starbase() const {
 
 	// draw center
 	color_b.do_glColor();
-	cobjs[1]->draw_cylin(cyl_ndiv, 0);
+	cobjs[1]->draw_cylin(cyl_ndiv, (t_exp > 0.0));
 
 	// draw spokes
 	set_cloak_color(BRONZE_C);
 
 	for (unsigned i = 2; i < cobjs.size(); ++i) {
-		cobjs[i]->draw_cylin(spoke_ndiv, 0);
+		cobjs[i]->draw_cylin(spoke_ndiv, (t_exp > 0.0));
 	}
 	end_exp_texture();
 }
