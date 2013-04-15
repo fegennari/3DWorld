@@ -593,7 +593,7 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float sc
 	draw_circle_normal(0.0, radius,  ndiv, 1, 0.0);
 	draw_circle_normal(0.0, radius2, ndiv, 0, length);
 	if (!shadow_only) select_texture(get_tid());
-	draw_cylin_fast(radius, radius2, length, ndiv, 1, 0);
+	draw_cylin_fast(radius, radius2, length, ndiv, 1);
 	glPopMatrix();
 }
 
@@ -651,7 +651,7 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 	if (!shadow_only) select_texture(TREE_END_TEX);
 	draw_circle_normal(0.0, radius2, ndiv, 0, 1.2*height);
 	if (!shadow_only) select_texture(get_tid());
-	draw_cylin_fast(radius, radius2, 1.2*height, ndiv, 1, 0);
+	draw_cylin_fast(radius, radius2, 1.2*height, ndiv, 1);
 	glPopMatrix();
 }
 

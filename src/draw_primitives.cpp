@@ -9,14 +9,10 @@
 
 
 // predefined display lists
-enum {DLIST_CYLIN=0, DLIST_CYLIN_T, DLIST_CONE, DLIST_CONE_T, NUM_RES_DLIST};
-
 bool const USE_SPHERE_DLIST = 1;
-bool const USE_CYLIN_DLIST  = 1;
 unsigned const NUM_SPH_DLIST(4*N_SPHERE_DIV);
 
-unsigned predef_dlists[NUM_RES_DLIST]   = {0};
-unsigned sphere_dlists[NUM_SPH_DLIST]   = {0};
+unsigned sphere_dlists[NUM_SPH_DLIST] = {0};
 vector_point_norm cylinder_vpn;
 
 
@@ -266,7 +262,7 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool draw_ends, bool first_end_only, bool last_end_only) {
 	
 	assert(ndiv > 0 );
-	draw_cylin_fast(radius1, radius2, length, ndiv, 1, 1); // tex coords?
+	draw_cylin_fast(radius1, radius2, length, ndiv, 1); // tex coords?
 	if (draw_ends && !last_end_only  && radius1 > 0.0) {draw_circle_normal(0.0, radius1, ndiv, 1, 0.0);}
 	if (draw_ends && !first_end_only && radius2 > 0.0) {draw_circle_normal(0.0, radius2, ndiv, 0, length);}
 }
@@ -295,7 +291,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 	if (draw_sides_ends == 2) {
 		// draw ends only - nothing to do here
 	}
-	else if (radius2 == 0.0) { // cone
+	else if (radius2 == 0.0) { // cone (Note: still not perfect for pine tree trunks and enforcer ships)
 		glBegin(GL_TRIANGLES);
 
 		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
@@ -357,10 +353,10 @@ void draw_cylindrical_section(point const &pos, float length, float r_inner, flo
 	assert(r_outer > 0.0 && r_inner >= 0.0 && length >= 0.0 && ndiv > 0 && r_outer >= r_inner);
 	glPushMatrix();
 	translate_to(pos);
-	draw_cylin_fast(r_outer, r_outer, length, ndiv, texture, 1);
+	draw_cylin_fast(r_outer, r_outer, length, ndiv, texture);
 
 	if (r_inner != r_outer) {
-		if (r_inner != 0.0) {draw_cylin_fast(r_inner, r_inner, length, ndiv, texture, 1);}
+		if (r_inner != 0.0) {draw_cylin_fast(r_inner, r_inner, length, ndiv, texture);}
 		draw_circle_normal(r_inner, r_outer, ndiv, 1, 0.0);
 		draw_circle_normal(r_inner, r_outer, ndiv, 0, length);
 	}
@@ -1022,20 +1018,12 @@ void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // s
 // ******************** DLISTS ********************
 
 
-void free_dlist_block(unsigned *dlists, unsigned num) {
-
-	if (dlists[0] > 0) {
-		glDeleteLists(dlists[0], num);
-		for (unsigned i = 0; i < num; ++i) dlists[i] = 0;
-	}
-}
-
-
 void free_dlists() {
 
-	assert(NUM_RES_DLIST > 0);
-	free_dlist_block(predef_dlists, NUM_RES_DLIST);
-	free_dlist_block(sphere_dlists, NUM_SPH_DLIST);
+	if (sphere_dlists[0] > 0) {
+		glDeleteLists(sphere_dlists[0], NUM_SPH_DLIST);
+		for (unsigned i = 0; i < NUM_SPH_DLIST; ++i) {sphere_dlists[i] = 0;}
+	}
 }
 
 
@@ -1047,72 +1035,35 @@ inline void draw_half_subdiv_sphere(unsigned ndiv, bool texture) {
 
 void setup_dlists() {
 
-	assert(NUM_RES_DLIST > 0 && N_SPHERE_DIV > 0);
-	
-	if (predef_dlists[0] == 0) {
-		unsigned const dl0(glGenLists(NUM_RES_DLIST));
-		assert(dl0 > 0);
+	assert(N_SPHERE_DIV > 0);
+	if (sphere_dlists[0] != 0) return; // already finished
+	unsigned const dl0(glGenLists(NUM_SPH_DLIST));
+	assert(dl0 > 0);
 
-		for (unsigned i = 0; i < NUM_RES_DLIST; ++i) {
-			unsigned const dl(dl0 + i);
-			assert(glIsList(dl));
-			predef_dlists[i] = dl;
-			glNewList(dl, GL_COMPILE);
-			draw_fast_cylinder(all_zeros, point(0.0, 0.0, 1.0), 1.0, ((i == DLIST_CYLIN || i == DLIST_CYLIN_T) ? 1.0 : 0.0),
-				SMALL_NDIV, (i == DLIST_CYLIN_T || i == DLIST_CONE_T));
-			glEndList();
-		}
-	}
-	if (sphere_dlists[0] == 0) {
-		unsigned const dl0(glGenLists(NUM_SPH_DLIST));
-		assert(dl0 > 0);
+	for (unsigned i = 1; i <= N_SPHERE_DIV; ++i) {
+		for (unsigned tex = 0; tex < 2; ++tex) {
+			for (unsigned half = 0; half < 2; ++half) {
+				unsigned const index(((i-1) << 2) + (half << 1) + tex), dl(dl0 + index);
+				assert(glIsList(dl));
+				sphere_dlists[index] = dl;
+				glNewList(dl, GL_COMPILE);
 
-		for (unsigned i = 1; i <= N_SPHERE_DIV; ++i) {
-			for (unsigned tex = 0; tex < 2; ++tex) {
-				for (unsigned half = 0; half < 2; ++half) {
-					unsigned const index(((i-1) << 2) + (half << 1) + tex), dl(dl0 + index);
-					assert(glIsList(dl));
-					sphere_dlists[index] = dl;
-					glNewList(dl, GL_COMPILE);
-
-					if (half) {
-						draw_half_subdiv_sphere(i, (tex != 0));
-					}
-					else {
-						draw_subdiv_sphere(all_zeros, 1.0, i, (tex != 0), 1);
-					}
-					glEndList();
+				if (half) {
+					draw_half_subdiv_sphere(i, (tex != 0));
 				}
+				else {
+					draw_subdiv_sphere(all_zeros, 1.0, i, (tex != 0), 1);
+				}
+				glEndList();
 			}
 		}
 	}
 }
 
 
-void draw_cylin_cone_dlist(float r, float l, bool restore_matrix, int type) {
+void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture) {
 
-	assert(type < NUM_RES_DLIST);
-	if (restore_matrix) glPushMatrix();
-	glScalef(r, r, l);
-	unsigned const list_id(predef_dlists[type]);
-	assert(glIsList(list_id));
-	glCallList(list_id);
-	if (restore_matrix) glPopMatrix();
-}
-
-
-void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, bool restore_matrix, bool r_approx) {
-
-	if (USE_CYLIN_DLIST && ndiv <= SMALL_NDIV && (r1 == r2 || (r_approx && fabs(r2 - r1) < 0.5*max(r1, r2)))) {
-		float const rav(0.5*(r1 + r2)); // inexact
-		draw_cylin_cone_dlist(rav, l, restore_matrix, (texture ? DLIST_CYLIN_T : DLIST_CYLIN));
-	}
-	else if (USE_CYLIN_DLIST && ndiv <= SMALL_NDIV && r2 == 0.0) { // cone pointed up
-		draw_cylin_cone_dlist(r1, l, restore_matrix, (texture ? DLIST_CONE_T : DLIST_CONE));
-	}
-	else {
-		draw_fast_cylinder(all_zeros, point(0.0, 0.0, l), r1, r2, ndiv, texture);
-	}
+	draw_fast_cylinder(all_zeros, point(0.0, 0.0, l), r1, r2, ndiv, texture);
 }
 
 

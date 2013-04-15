@@ -209,7 +209,7 @@ void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
 void free_dlists();
 void setup_dlists();
-void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, bool restore_matrix, bool r_approx=0);
+void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture);
 void draw_sphere_dlist_raw(int ndiv, bool textured, bool half=0);
 void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, bool half=0, bool bfc=0, int shader_loc=-1);
 void draw_sphere_dlist_back_to_front(point const &pos, float radius, int ndiv, bool textured, bool half=0);
