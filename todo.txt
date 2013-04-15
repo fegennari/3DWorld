@@ -25,4 +25,11 @@ Remove stencil shadows?
 Run leak detection
 
 Multiple decid tree impostor orients
-Decid tree texture atlases
+- Decid tree texture atlases
+
+Hardware tessellation
+
+Remove display lists
+Leaves not transparent group?
+
+Minecraft map explosions
