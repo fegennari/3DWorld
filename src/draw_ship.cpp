@@ -16,7 +16,6 @@ bool const ADD_CFLASH_LIGHTS = 1; // slower and uses lights but looks cool
 
 extern int display_mode, animate2, frame_counter; // for testing, etc.
 extern float fticks;
-extern GLUquadricObj* quadric;
 extern vector<usw_ray> t_wrays;
 extern pt_line_drawer emissive_pld;
 
@@ -152,13 +151,13 @@ inline int get_ndiv(int num) {
 }
 
 void set_ship_texture(int tid) {
-	select_texture(tid);
-	gluQuadricTexture(quadric, GL_TRUE);
+	bool const use_shaders((display_mode & 0x08) != 0);
+	select_texture(tid, !use_shaders);
 }
 
 void end_ship_texture() {
-	gluQuadricTexture(quadric, GL_FALSE);
-	end_texture();
+	bool const use_shaders((display_mode & 0x08) != 0);
+	end_texture(!use_shaders);
 }
 
 
@@ -972,7 +971,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	invert_z();
 	draw_sphere_dlist(all_zeros, 0.4, ndiv, textured, 1); // rear
 	invert_z();
-	gluCylinder(quadric, 0.4, 0.3, 0.6, ndiv, 1); // main body
+	draw_cylinder(0.6, 0.4, 0.3, ndiv); // main body
 	glTranslatef(0.0, 0.0, 0.55);
 	glScalef(1.0, 1.0, 3.06);
 	draw_sphere_dlist(all_zeros, 0.3, ndiv, textured, 1); // front
@@ -1025,8 +1024,7 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 	bool const textured(1);
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 	glTranslatef(0.0, 0.0, -1.1);
-	gluCylinder(quadric, 0.65, 0.0, 2.4, ndiv32, 1); // main body
-	draw_circle_normal(0.0, 0.65, ndiv32, 0);
+	draw_cylinder(2.4, 0.65, 0.0, ndiv32, 1); // main body
 	color_b.do_glColor();
 	if (textured) end_ship_texture();
 
@@ -1431,13 +1429,13 @@ void uobj_draw_data::draw_gunship() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -0.95);
 	glScalef(0.25, 1.0, 1.0);
-	gluCylinder(quadric, 0.45, 0.25,  1.6, ndiv2, 1); // main body
+	draw_cylinder(1.6, 0.45, 0.25, ndiv2); // main body
 	glScalef(4.0, 0.25, 1.0);
-	gluCylinder(quadric, 0.45, 0.25,  1.6, ndiv2, 1); // main body
+	draw_cylinder(1.6, 0.45, 0.25, ndiv2); // main body
 	glTranslatef(0.0, 0.0, -0.2);
-	gluCylinder(quadric, 0.00, 0.45,  0.2, ndiv2, 1); // rear
+	draw_cylinder(0.2, 0.00, 0.45, ndiv2); // rear
 	glScalef(0.25, 4.0, 1.0);
-	gluCylinder(quadric, 0.00, 0.45,  0.2, ndiv2, 1); // rear
+	draw_cylinder(0.2, 0.00, 0.45, ndiv2); // rear
 	glPopMatrix();
 	if (textured) end_ship_texture();
 
@@ -1462,7 +1460,7 @@ void uobj_draw_data::draw_gunship() const {
 		for (unsigned i = 0; i < 4; ++i) {
 			glPushMatrix();
 			glTranslatef(0.35*dxy[0][i], 0.35*dxy[1][i], -1.1);
-			gluCylinder(quadric, 0.05, 0.05, 0.25, ndiv2, 1);
+			draw_cylinder(0.25, 0.05, 0.05, ndiv2);
 			if (ndiv > 12) {draw_circle_normal(0.0, 0.05, ndiv2, 0, 0.05);}
 			glPopMatrix();
 		}

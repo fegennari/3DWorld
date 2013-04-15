@@ -91,7 +91,6 @@ float CAMERA_RADIUS(0.06), C_STEP_HEIGHT(0.6), wapypoint_sz_thresh(1.0), model3d
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
-GLUquadricObj* quadric(0);
 colorRGBA bkg_color;
 set<unsigned char> keys, keyset;
 char game_mode_string[256] = {"640x480:32@85"};
@@ -1940,12 +1939,7 @@ int main(int argc, char** argv) {
 	add_uevent_srand(rs);
 	uevent_advance_frame();
 	--frame_counter;
-	quadric = gluNewQuadric();
-	
-	if (quadric == 0) {
-		cout << "Failed to create quadric." << endl;
-		return 1;
-	}
+
 	create_sin_table();
 	gen_gauss_rand_arr();
 	set_scene_constants();

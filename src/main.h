@@ -25,7 +25,6 @@ extern float zcenter, leaf_color_coherence, tree_color_coherence, sun_radius, mo
 extern point ocean;
 extern vector3d wind;
 extern colorRGBA leaf_base_color;
-extern GLUquadricObj* quadric;
 extern lightning l_strike;
 extern obj_group obj_groups[];
 
