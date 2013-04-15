@@ -198,13 +198,11 @@ void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, col
 	point const* const prev=NULL, point const *const next=NULL, bool make_global=0);
 void begin_line_tquad_draw(bool draw_as_tris=0);
 void end_line_tquad_draw();
-int  draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim=PRIM_DISABLED, bool no_normals=0, int eflags=0,
-	float texture_scale=1.0, vector3d const *const view_dir=NULL);
+void draw_simple_cube(cube_t const &c, bool texture);
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv=1, bool scale_ndiv=0,
 			   float texture_scale=1.0, bool proportional_texture=0, vector3d const *const view_dir=NULL);
 void draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir);
 void draw_polygon_pts(point const *const points, int npoints);
-int  draw_extruded_polygon_shadow_pass(float thick, point const *const points, int npoints, int in_cur_prim=PRIM_DISABLED);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
 void free_dlists();

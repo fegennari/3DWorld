@@ -463,27 +463,44 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 
 void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const {
 
-	unsigned const ndiv(spn.ndiv);
-	assert(ndiv > 0);
-	float const ndiv_inv(1.0/float(ndiv)), rv(def_pert + radius), rv_sq(rv*rv);
-	float const toler(1.0E-6*radius*radius + rv_sq), dmax(rv + 0.1*radius), dmax_sq(dmax*dmax);
+	assert(spn.ndiv > 0);
+	float const ndiv_inv(1.0/float(spn.ndiv));
 	point **points   = spn.points;
 	vector3d **norms = spn.norms;
-	if (quad_pts.empty()) {quad_pts.reserve(4*ndiv*ndiv);}
+	if (quad_pts.empty()) {quad_pts.reserve(4*spn.ndiv*spn.ndiv);}
 	
-	for (unsigned s = 0; s < ndiv; ++s) {
-		unsigned const sn((s+1)%ndiv), snt(min((s+1), ndiv));
+	for (unsigned s = 0; s < spn.ndiv; ++s) {
+		unsigned const sn((s+1)%spn.ndiv), snt(min((s+1), spn.ndiv));
 
-		for (unsigned t = 0; t < ndiv; ++t) {
-			unsigned const tn(min(t+1, ndiv+1));
-			point          pts[4]     = {points[s][t], points[sn][t], points[sn][tn], points[s][tn]};
-			vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][tn], norms [s][tn]};
+		for (unsigned t = 0; t < spn.ndiv; ++t) {
+			point          pts[4]     = {points[s][t], points[sn][t], points[sn][t+1], points[s][t+1]};
+			vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][t+1], norms [s][t+1]};
 
 			for (unsigned i = 0; i < 4; ++i) {
-				float const tc[2] = {(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), (1.0f - ((i>>1) ? tn : t)*ndiv_inv)};
+				float const tc[2] = {(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), (1.0f - ((i>>1) ? t+1 : t)*ndiv_inv)};
 				vert_norm_tc v(pts[i], normals[i], tc);
 				quad_pts.push_back(v);
 			}
+		}
+	}
+}
+
+
+void sd_sphere_d::get_triangles(vector<vert_wrap_t> &verts) const {
+
+	assert(spn.ndiv > 0);
+	point **points = spn.points;
+	
+	for (unsigned s = 0; s < spn.ndiv; ++s) {
+		unsigned const sn((s+1)%spn.ndiv);
+
+		for (unsigned t = 0; t < spn.ndiv; ++t) {
+			verts.push_back(points[s ][t  ]); // 0
+			verts.push_back(points[sn][t  ]); // 1
+			verts.push_back(points[sn][t+1]); // 2
+			verts.push_back(points[s ][t  ]); // 0
+			verts.push_back(points[sn][t+1]); // 2
+			verts.push_back(points[s ][t+1]); // 3
 		}
 	}
 }
@@ -821,45 +838,9 @@ void pos_dir_up::draw_frustum() const {
 }
 
 
-int draw_simple_cube(cube_t const &c, bool texture, int in_cur_prim, bool no_normals, int eflags, float texture_scale, vector3d const *const view_dir) {
+void draw_simple_cube(cube_t const &c, bool texture) {
 
-	if (in_cur_prim != GL_QUADS) {
-		if (in_cur_prim >= 0) glEnd();
-		glBegin(GL_QUADS);
-	}
-	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
-
-		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			if ((eflags & EFLAGS[n][j]) || (view_dir && (((*view_dir)[n] < 0.0) ^ j))) continue; // back facing or disabled
-			point pt;
-			pt[n] = c.d[n][j];
-
-			if (!no_normals) {
-				vector3d norm(zero_vector);
-				norm[n] = (2.0*j - 1.0); // -1 or 1
-				norm.do_glNormal();
-			}
-			for (unsigned s = 0; s < 2; ++s) { // d[1] dim
-				pt[d[1]] = c.d[d[1]][s];
-
-				for (unsigned k = 0; k < 2; ++k) { // d[0] dim
-					pt[d[0]] = c.d[d[0]][k^j^s^1]; // need to orient the vertices differently for each side
-						
-					if (texture) {
-						float const s[2] = {texture_scale*pt[d[1]], texture_scale*pt[d[0]]};
-						glTexCoord2fv(s);
-					}
-					pt.do_glVertex();
-				}
-			}
-		}
-	}
-	if (in_cur_prim == PRIM_DISABLED) {
-		glEnd();
-		return in_cur_prim;
-	}
-	return GL_QUADS;
+	draw_cube(c.get_cube_center(), 0.5*(c.d[0][1]-c.d[0][0]), 0.5*(c.d[1][1]-c.d[1][0]), 0.5*(c.d[2][1]-c.d[2][0]), texture);
 }
 
 
@@ -970,39 +951,6 @@ void draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir) {
 	view_dir.do_glNormal();
 	draw_polygon_pts(pts, npts);
 	glEnd();
-}
-
-
-int draw_extruded_polygon_shadow_pass(float thick, point const *const points, int npoints, int in_cur_prim) {
-
-	assert(points != NULL && (npoints == 3 || npoints == 4));
-	thick = fabs(thick);
-	
-	if (in_cur_prim != GL_TRIANGLES) {
-		if (in_cur_prim >= 0) glEnd();
-		glBegin(GL_TRIANGLES);
-	}
-	if (thick <= MIN_POLY_THICK) {
-		draw_polygon_pts(points, npoints);
-	}
-	else {
-		vector3d const norm(get_poly_norm(points));
-		point pts[2][4];
-		gen_poly_planes(points, npoints, norm, thick, pts);
-		draw_polygon_pts(pts[0], npoints); // draw bottom surface
-		draw_polygon_pts(pts[1], npoints); // draw top surface
-	
-		for (int i = 0; i < npoints; ++i) { // draw sides
-			int const ii((i+1)%npoints);
-			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
-			draw_polygon_pts(side_pts, 4);
-		}
-	}
-	if (in_cur_prim == PRIM_DISABLED) {
-		glEnd();
-		return in_cur_prim;
-	}
-	return GL_TRIANGLES;
 }
 
 

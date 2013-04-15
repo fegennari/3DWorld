@@ -10,7 +10,7 @@
 
 
 bool scene_smap_dlist_invalid(0);
-unsigned shadow_map_sz(0), smap_dlist(0), smap_vbo(0), num_smap_quad_verts(0);
+unsigned shadow_map_sz(0);
 pos_dir_up orig_camera_pdu;
 
 extern int window_width, window_height, animate2, display_mode, ground_effects_level;
@@ -36,6 +36,55 @@ struct smap_data_t {
 smap_data_t smap_data[NUM_LIGHT_SRC];
 
 
+class smap_vertex_cache_t {
+
+	unsigned vbo, num_verts1, num_verts2;
+
+public:
+	vector<vert_wrap_t> dverts;
+
+	smap_vertex_cache_t() : vbo(0), num_verts1(0), num_verts2(0) {}
+	bool vbo_valid() const {return (vbo > 0);}
+	void end_block1(unsigned size) {num_verts1 = size;}
+
+	void upload(vector<vert_wrap_t> const &verts) {
+		if (!verts.empty()) {create_vbo_and_upload(vbo, verts, 0, 0);}
+		assert(vbo_valid());
+		num_verts2 = verts.size();
+	}
+	void render() const {
+		if (num_verts2 == 0) return; // empty
+		assert(num_verts1 <= num_verts2);
+		assert(vbo_valid());
+		bind_vbo(vbo);
+		vert_wrap_t::set_vbo_arrays();
+		if (num_verts1 > 0) {glDrawArrays(GL_TRIANGLES, 0, num_verts1);}
+
+		if (num_verts2 > num_verts1) {
+			glEnable(GL_CULL_FACE);
+			glDrawArrays(GL_TRIANGLES, num_verts1, (num_verts2 - num_verts1));
+			glDisable(GL_CULL_FACE);
+		}
+		bind_vbo(0);
+	}
+	void render_dynamic() {
+		if (!dverts.empty()) {
+			dverts.front().set_state();
+			glDrawArrays(GL_TRIANGLES, 0, dverts.size());
+			dverts.resize(0);
+		}
+	}
+	void free() {
+		delete_vbo(vbo);
+		vbo = 0;
+		num_verts1 = num_verts2 = 0;
+		dverts.clear();
+	}
+};
+
+smap_vertex_cache_t smap_vertex_cache;
+
+
 bool shadow_map_enabled() {
 	return (shadow_map_sz > 0);
 }
@@ -57,13 +106,8 @@ int get_smap_ndiv(float radius) {
 	return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width())));
 }
 
-
 void free_smap_dlist() {
-
-	if (glIsList(smap_dlist)) glDeleteLists(smap_dlist, 1);
-	smap_dlist = 0;
-	delete_vbo(smap_vbo);
-	smap_vbo = 0;
+	smap_vertex_cache.free();
 }
 
 
@@ -253,29 +297,6 @@ void set_shadow_tex_params() {
 }
 
 
-void get_shadow_cube_verts(cube_t const &c, int eflags, vector<vert_wrap_t> &verts, vector3d const *const view_dir=NULL) {
-
-	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
-
-		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			if ((eflags & EFLAGS[n][j]) || (view_dir && (((*view_dir)[n] < 0.0) ^ j))) continue; // back facing or disabled
-			point pt;
-			pt[n] = c.d[n][j];
-
-			for (unsigned s = 0; s < 2; ++s) { // d[1] dim
-				pt[d[1]] = c.d[d[1]][s];
-
-				for (unsigned k = 0; k < 2; ++k) { // d[0] dim
-					pt[d[0]] = c.d[d[0]][k^j^s^1]; // need to orient the vertices differently for each side
-					verts.push_back(pt);
-				}
-			}
-		}
-	}
-}
-
-
 void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
 	tu_id = (6 + light); // Note: currently used with 2 lights, up to TU7
@@ -319,16 +340,10 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	if (coll_objects.drawn_ids.empty()) {
 		// do nothing
 	}
-	else if (smap_dlist) {
-		assert(glIsList(smap_dlist));
-		glCallList(smap_dlist);
-	}
-	else {
-		smap_dlist = glGenLists(1);
-		glNewList(smap_dlist, GL_COMPILE_AND_EXECUTE);
+	else if (!smap_vertex_cache.vbo_valid()) {
 		// only valid if drawing trees, small trees, and scenery separately
+		vector<vert_wrap_t> verts;
 		vector<pair<float, unsigned> > z_sorted;
-		int in_cur_prim(PRIM_UNSET);
 
 		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
 			coll_obj const &c(coll_objects[*i]);
@@ -346,46 +361,38 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {
 				ndiv = get_smap_ndiv(max(c.radius, c.radius2));
 			}
-			in_cur_prim = c.draw_shadow_pass(ndiv, in_cur_prim);
+			c.get_shadow_triangle_verts(verts, ndiv);
 		}
-		if (in_cur_prim >= 0) {glEnd();}
-		glEndList();
-		assert(!smap_vbo);
+		smap_vertex_cache.end_block1(verts.size());
 		sort(z_sorted.begin(), z_sorted.end());
-		vector<vert_wrap_t> verts;
 
 		for (vector<pair<float, unsigned> >::const_iterator i = z_sorted.begin(); i != z_sorted.end(); ++i) {
-			get_shadow_cube_verts(coll_objects[i->second], coll_objects[i->second].cp.surfs, verts, NULL);
+			coll_objects[i->second].get_shadow_triangle_verts(verts, 1);
 		}
-		if (!verts.empty()) {create_vbo_and_upload(smap_vbo, verts, 0, 0);}
-		num_smap_quad_verts = verts.size();
+		smap_vertex_cache.upload(verts);
 	} // end dlist case split
-
-	if (num_smap_quad_verts > 0) {
-		assert(smap_vbo);
-		bind_vbo(smap_vbo);
-		vert_wrap_t::set_vbo_arrays();
-		glEnable(GL_CULL_FACE);
-		glDrawArrays(GL_QUADS, 0, num_smap_quad_verts);
-		glDisable(GL_CULL_FACE);
-		bind_vbo(0);
-	}
+	smap_vertex_cache.render();
 	render_models(1);
 	render_voxel_data(1);
 
 	// add dynamic objects
+	vector<vert_wrap_t> &dverts(smap_vertex_cache.dverts);
+
 	for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 		if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
 		int const ndiv(get_smap_ndiv(i->radius));
 
 		if (i->ctype != COLL_SPHERE) {
 			assert((unsigned)i->cid < coll_objects.size());
-			coll_objects[i->cid].draw_shadow_pass(ndiv, PRIM_DISABLED);
+			coll_objects[i->cid].get_shadow_triangle_verts(dverts, ndiv);
 		}
 		else {
-			draw_sphere_dlist(i->pos, i->radius, ndiv, 0);
+			draw_sphere_dlist(i->pos, i->radius, ndiv, 0); // use get_sphere_triangles()?
 		}
 	}
+	smap_vertex_cache.render_dynamic();
+
+	// add trees, scenery, and mesh
 	draw_trees(1);
 	draw_scenery(1, 1, 1);
 

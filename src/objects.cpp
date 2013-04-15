@@ -9,6 +9,7 @@
 #include "physics_objects.h"
 #include "collision_detect.h"
 #include "shaders.h"
+#include "subdiv.h"
 
 
 float const NDIV_SCALE = 200.0;
@@ -368,33 +369,137 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 }
 
 
-int coll_obj::draw_shadow_pass(int ndiv, int in_cur_prim) const {
+void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c, int eflags, vector3d const *const view_dir=NULL) {
+
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			if ((eflags & EFLAGS[n][j]) || (view_dir && (((*view_dir)[n] < 0.0) ^ j))) continue; // back facing or disabled
+			point pt;
+			pt[n] = c.d[n][j];
+
+			for (unsigned s = 0; s < 2; ++s) { // d[1] dim
+				pt[d[1]] = c.d[d[1]][s];
+
+				for (unsigned k = 0; k < 2; ++k) { // d[0] dim
+					pt[d[0]] = c.d[d[0]][k^j^s^1]; // need to orient the vertices differently for each side
+					verts.push_back(pt);
+				}
+			}
+			verts.push_back(verts[verts.size()-4]); // convert quads to triangles
+			verts.push_back(verts[verts.size()-3]);
+		}
+	}
+}
+
+
+void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float radius, int ndiv) {
+
+	sd_sphere_d sd(pos, radius, ndiv);
+	sd.gen_points_norms_static();
+	sd.get_triangles(verts);
+}
+
+
+template<typename T> void tri_strip_push(vector<T> &v) {
+	assert(v.size() >= 3);
+	v.push_back(v[v.size()-2]);
+	v.push_back(v[v.size()-2]);
+}
+
+
+void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point const &p2, float radius1, float radius2, int ndiv, int draw_ends) {
+
+	assert(radius1 > 0.0 || radius2 > 0.0);
+	point const ce[2] = {p1, p2};
+	float const ndiv_inv(1.0/ndiv);
+	vector3d v12; // (ce[1] - ce[0]).get_norm()
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12));
+
+	if (radius2 == 0.0) { // cone (triangles)
+		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
+			verts.push_back(vpn.p[(s<<1)+1]);
+			verts.push_back(vpn.p[(((s+1)%ndiv)<<1)+0]);
+			verts.push_back(vpn.p[(s<<1)+0]);
+		}
+	}
+	else {
+		for (unsigned S = 0; S <= (unsigned)ndiv; ++S) { // triangle strip
+			for (unsigned d = 0; d < 2; ++d) {
+				if ((2*S+d) > 2) {tri_strip_push(verts);}
+				verts.push_back(vpn.p[((S%ndiv)<<1)+d]);
+			}
+		}
+	}
+	if (draw_ends) {
+		float const r[2] = {radius1, radius2};
+
+		for (unsigned i = 0; i < 2; ++i) { // triangle fan
+			if (r[i] == 0.0) continue;
+			unsigned const center_ix(verts.size());
+			verts.push_back(ce[i]);
+
+			for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
+				if (S > 1) { // tri_fan_push
+					verts.push_back(verts[center_ix]);
+					verts.push_back(verts[verts.size()-2]);
+				}
+				verts.push_back(vpn.p[((S%ndiv)<<1)+i]);
+			}
+		}
+	}
+}
+
+
+void get_polygon_triangles(vector<vert_wrap_t> &verts, point const *const points, int npoints) {
+
+	assert(npoints == 3 || npoints == 4);
+	unsigned const tp[6] = {0,1,2, 0,2,3};
+	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(points[tp[i]]);} // 1-2 triangles
+}
+
+
+void get_extruded_polygon_triangles(vector<vert_wrap_t> &verts, float thick, point const *const points, int npoints) {
+
+	assert(points != NULL && (npoints == 3 || npoints == 4));
+	thick = fabs(thick);
+	
+	if (thick <= MIN_POLY_THICK) {
+		get_polygon_triangles(verts, points, npoints);
+	}
+	else {
+		point pts[2][4];
+		gen_poly_planes(points, npoints, get_poly_norm(points), thick, pts);
+		for (unsigned d = 0; d < 2; ++d) {get_polygon_triangles(verts, pts[d], npoints);} // top/bottom surface
+	
+		for (int i = 0; i < npoints; ++i) { // sides
+			int const ii((i+1)%npoints);
+			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
+			get_polygon_triangles(verts, side_pts, 4);
+		}
+	}
+}
+
+
+void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) const {
 
 	switch (type) {
 	case COLL_CUBE:
-		in_cur_prim = draw_simple_cube(*this, 0, in_cur_prim, 1, cp.surfs);
+		get_shadow_cube_triangle_verts(verts, *this, cp.surfs);
 		break;
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		if (in_cur_prim != PRIM_DISABLED) {
-			if (in_cur_prim >= 0) glEnd();
-			in_cur_prim = PRIM_UNSET;
-		}
-		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, !(cp.surfs & 1));
+		get_cylinder_triangles(verts, points[0], points[1], radius, radius2, ndiv, !(cp.surfs & 1));
 		break;
 	case COLL_SPHERE:
-		if (in_cur_prim != PRIM_DISABLED) {
-			if (in_cur_prim >= 0) glEnd();
-			in_cur_prim = PRIM_UNSET;
-		}
-		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1);
-		//draw_sphere_dlist(points[0], radius, ndiv, 0); // faster, but doesn't work when in dlist
+		get_sphere_triangles(verts, points[0], radius, ndiv);
 		break;
 	case COLL_POLYGON:
-		in_cur_prim = draw_extruded_polygon_shadow_pass(thickness, points, npoints, in_cur_prim);
+		get_extruded_polygon_triangles(verts, thickness, points, npoints);
 		break;
 	}
-	return in_cur_prim;
+	assert((verts.size()%3) == 0);
 }
 
 
