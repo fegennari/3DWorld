@@ -110,6 +110,13 @@ void vert_tc_t::set_state() const {
 	glTexCoordPointer(2, GL_FLOAT, stride, &t);
 }
 
+void vert_norm::set_state() const { // typically called on element 0
+	unsigned const stride(sizeof(*this));
+	set_array_client_state(1, 0, 1, 0);
+	glVertexPointer(3, GL_FLOAT, stride, &v);
+	glNormalPointer(   GL_FLOAT, stride, &n);
+}
+
 void vert_norm_comp::set_state() const { // typically called on element 0
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 0, 1, 0);

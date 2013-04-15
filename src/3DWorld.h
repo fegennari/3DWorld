@@ -672,6 +672,7 @@ struct vert_norm { // size = 24
 	void assign(point const &v_, vector3d const &n_) {v = v_; n = n_;}
 	bool operator< (vert_norm const &p) const {return ((v == p.v) ? (n < p.n) : (v < p.v));}
 	bool operator==(vert_norm const &p) const {return (v == p.v && n == p.n);}
+	void set_state() const;
 	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
 };
 

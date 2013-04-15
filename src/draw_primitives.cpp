@@ -287,11 +287,25 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 	float const ndiv_inv(1.0/ndiv);
 	vector3d v12; // (ce[1] - ce[0]).get_norm()
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, perturb_map));
+	static vector<vert_norm_tc> verts;
 
 	if (draw_sides_ends == 2) {
 		// draw ends only - nothing to do here
 	}
 	else if (radius2 == 0.0) { // cone (Note: still not perfect for pine tree trunks and enforcer ships)
+#if 0
+		verts.resize(3*ndiv);
+
+		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
+			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv);
+			//verts[3*s+0] = vert_norm_tc(vpn.p[(s <<1)+1], vpn.n[s], (1.0 - (s+0.5)*ndiv_inv), 1.0); // small discontinuities at every position
+			verts[3*s+0] = vert_norm_tc(vpn.p[(s <<1)+1], vpn.n[s], 0.5, 1.0); // one big discontinuity at one position
+			verts[3*s+1] = vert_norm_tc(vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), 0.0); // normalize?
+			verts[3*s+2] = vert_norm_tc(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), 0.0); // normalize?
+		}
+		verts.front().set_state();
+		glDrawArrays(GL_TRIANGLES, 0, verts.size());
+#else
 		glBegin(GL_TRIANGLES);
 
 		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
@@ -308,20 +322,19 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			vpn.p[(s <<1)+0].do_glVertex();
 		}
 		glEnd();
+#endif
 	}
 	else {
-		glBegin(GL_TRIANGLE_STRIP);
+		verts.resize(2*(ndiv+1));
 
-		for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
+		for (unsigned S = 0; S <= (unsigned)ndiv; ++S) { // Note: always has tex coords
 			unsigned const s(S%ndiv);
-			(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]).do_glNormal(); // normalize?
-
-			for (unsigned i = 0; i < 2; ++i) {
-				if (texture) glTexCoord2f((1.0 - S*ndiv_inv), float(i));
-				vpn.p[(s<<1)+i].do_glVertex();
-			}
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+			verts[2*S+0] = vert_norm_tc(vpn.p[(s<<1)+0], normal, (1.0 - S*ndiv_inv), 0.0);
+			verts[2*S+1] = vert_norm_tc(vpn.p[(s<<1)+1], normal, (1.0 - S*ndiv_inv), 1.0);
 		}
-		glEnd();
+		verts.front().set_state();
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, verts.size());
 	}
 	if (draw_sides_ends != 0) {
 		float const r[2] = {radius1, radius2};
