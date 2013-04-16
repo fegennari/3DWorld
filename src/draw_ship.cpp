@@ -20,61 +20,6 @@ extern vector<usw_ray> t_wrays;
 extern pt_line_drawer emissive_pld;
 
 
-// ******************* dlist_manager_t *******************
-
-
-class dlist_manager_t {
-
-	vector<unsigned> dlists;
-	bool in_dlist;
-
-public:
-	dlist_manager_t(unsigned num) : in_dlist(0) {dlists.resize(num, 0);}
-	~dlist_manager_t() {clear_dlists();}
-
-	void clear_dlists() {
-		assert(!in_dlist);
-
-		for (vector<unsigned>::iterator i = dlists.begin(); i != dlists.end(); ++i) {
-			if (*i > 0) {
-				glDeleteLists(*i, 1);
-				*i = 0;
-			}
-		}
-	}
-
-	// returns true if dlist gets created, false if ir exists and is executed
-	bool create_or_exec_dlist(unsigned sclass) {
-		assert(!in_dlist);
-		assert(sclass < dlists.size());
-		unsigned &dlist(dlists[sclass]);
-
-		if (dlist == 0) { // not yet created
-			dlist = glGenLists(1);
-			assert(glIsList(dlist));
-			glNewList(dlist, GL_COMPILE_AND_EXECUTE);
-			in_dlist = 1;
-			return 1;
-		}
-		else { // already exists
-			assert(glIsList(dlist));
-			glCallList(dlists[sclass]);
-			return 0;
-		}
-	}
-
-	void end_dlist() {
-		assert(in_dlist);
-		glEndList();
-		in_dlist = 0;
-	}
-};
-
-dlist_manager_t dlist_manager(NUM_US_CLASS);
-
-void free_ship_dlists() {dlist_manager.clear_dlists();}
-
-
 // ******************* USW_RAY, and SHIP_COLL_OBJ classes *******************
 
 
@@ -986,26 +931,25 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	glPopMatrix();
 	set_cloak_color(GRAY);
 
-	if (ndiv > 5 && dlist_manager.create_or_exec_dlist(USC_BCRUISER)) {
-		unsigned const ndiv3(FREE_OBJ_MAX_NDIV/3);
+	if (ndiv > 5) {
+		unsigned const ndiv3(get_ndiv(ndiv/3));
 
 		for (unsigned i = 0; i < 2; ++i) { // left, right
 			for (unsigned j = 0; j < 2; ++j) { // bottom, top
-				glPushMatrix();
-				// draw forward weapons
 				point cur(0.08*(2.0*i - 1.0), 0.16*(2.0*j - 1.0), 0.6);
-				draw_fast_cylinder(cur, cur+point(0.0, 0.0, 0.7), 0.04, 0.04, ndiv3, textured, 1);
+				// draw forward weapons
+				if (ndiv > 8) {draw_fast_cylinder(cur, cur+point(0.0, 0.0, 0.7), 0.04, 0.04, ndiv3, textured, ((ndiv > 16) ? 4 : 0));}
 				// draw engines
 				cur += vector3d(0.32*(2.0*i - 1.0), (dy + (1.5*erad - 0.16)*(2.0*j - 1.0)), -1.4);
-				draw_fast_cylinder(cur, cur+point(0.0, 0.0, 0.8), erad, erad, ndiv3, textured, 1);
+				draw_fast_cylinder(cur, cur+point(0.0, 0.0, 0.8), erad, erad, ndiv3, textured, ((ndiv > 12) ? 3 : 0));
 				draw_fast_cylinder(cur+point(0.0, 0.0, -0.2), cur, 0.6*erad, erad, ndiv3, textured);
+				glPushMatrix();
 				translate_to(cur + vector3d(0.0, 0.0, 0.8));
 				glScalef(1.0, 1.0, 1.6);
 				draw_sphere_dlist(all_zeros, erad, ndiv3, textured, 1);
 				glPopMatrix();
 			} // for j
 		} // for i
-		dlist_manager.end_dlist();
 	}
 	if (textured) end_ship_texture();
 	glPopMatrix(); // undo invert_z()

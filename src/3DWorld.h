@@ -861,6 +861,12 @@ template <typename T> void scale_verts(vector<T> &verts, vector3d const &scale) 
 	for (vector<T>::iterator i = verts.begin(); i != verts.end(); ++i) {i->v *= scale;}
 }
 
+template<typename T> void tri_strip_push(vector<T> &v) {
+	assert(v.size() >= 3);
+	v.push_back(v[v.size()-2]);
+	v.push_back(v[v.size()-2]);
+}
+
 
 template<typename T> struct triangle_t {
 

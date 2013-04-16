@@ -394,21 +394,6 @@ void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c,
 }
 
 
-void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float radius, int ndiv) {
-
-	sd_sphere_d sd(pos, radius, ndiv);
-	sd.gen_points_norms_static();
-	sd.get_triangles(verts);
-}
-
-
-template<typename T> void tri_strip_push(vector<T> &v) {
-	assert(v.size() >= 3);
-	v.push_back(v[v.size()-2]);
-	v.push_back(v[v.size()-2]);
-}
-
-
 void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point const &p2, float radius1, float radius2, int ndiv, int draw_ends) {
 
 	assert(radius1 > 0.0 || radius2 > 0.0);

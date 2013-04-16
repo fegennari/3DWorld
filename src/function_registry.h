@@ -173,6 +173,7 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
 	int draw_sides_ends=0, float const *const perturb_map=NULL);
 void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture=0);
+void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float radius, int ndiv);
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,
 						int texture, bool disable_bfc, bool const *const render_map=NULL, float const *const exp_map=NULL,
 						point const *const pt_shift=NULL, float expand=0.0, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);
@@ -635,7 +636,6 @@ void setup_current_system();
 void apply_univ_physics();
 void draw_universe(bool static_only=0, bool skip_closest=0, int no_distant=0, bool gen_only=0);
 void draw_universe_stats();
-void free_ship_dlists();
 void clear_univ_obj_contexts();
 void clear_cached_shaders();
 

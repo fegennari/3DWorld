@@ -566,7 +566,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_specular(0.0, 0.0);
 			}
 			break;
-
+			
 		case W_BBBAT:
 			radius = 0.004;
 			set_color_alpha(LT_BROWN, alpha);

@@ -353,8 +353,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		if (!camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius) || !camera_pdu.cube_visible(bcube)) return; // view frustum culling
 	}
 	unsigned const stride(sizeof(T));
-	bool const have_normals(stride >= sizeof(vert_norm)), have_tex_coords(stride >= sizeof(vert_norm_tc));
-	set_array_client_state(1, (have_tex_coords && !is_shadow_pass), (have_normals && !is_shadow_pass), 0);
+	bool const have_normals(stride >= sizeof(vert_norm) && !is_shadow_pass), have_tex_coords(stride >= sizeof(vert_norm_tc) && !is_shadow_pass);
+	set_array_client_state(1, have_tex_coords, have_normals, 0);
 	int loc(-1);
 	create_bind_vbo_and_upload(vbo, *this, 0);
 

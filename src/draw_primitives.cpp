@@ -277,7 +277,7 @@ void draw_cylinder(point const &p1, float length, float radius1, float radius2, 
 }
 
 
-// draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only
+// draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = pt1 end, 4 = pt2 end
 // Note: using glDrawArrays() here is problematic because the pointer values go into the display lists created in setup_dlists()
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
 						int draw_sides_ends, float const *const perturb_map)
@@ -340,9 +340,9 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		float const r[2] = {radius1, radius2};
 
 		for (unsigned i = 0; i < 2; ++i) {
-			if (r[i] == 0.0) continue;
+			if (r[i] == 0.0 || (draw_sides_ends == 3+(!i))) continue;
 			glBegin(GL_TRIANGLE_FAN);
-			(v12*(i ? 1.0 : -1.0)).do_glNormal();
+			(i ? v12 : -v12).do_glNormal();
 			if (texture) glTexCoord2f(0.5, 0.5);
 			ce[i].do_glVertex();
 
@@ -512,6 +512,14 @@ void sd_sphere_d::draw_ndiv_pow2(unsigned ndiv) const {
 	unsigned skip(1);
 	for (unsigned n = (spn.ndiv >> 1); ndiv < n; n >>= 1, skip <<= 1) {}
 	draw_subdiv_sphere(zero_vector, 1, 1, NULL, NULL, NULL, 0.0, 0.0, 1.0, 0.0, 1.0, skip); // no bfc
+}
+
+
+void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float radius, int ndiv) {
+
+	sd_sphere_d sd(pos, radius, ndiv);
+	sd.gen_points_norms_static();
+	sd.get_triangles(verts);
 }
 
 
