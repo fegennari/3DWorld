@@ -1946,7 +1946,6 @@ int main(int argc, char** argv) {
 	load_top_level_config(defaults_file);
 	load_textures();
 	load_flare_textures(); // Sun Flare
-	setup_dlists();
 	setup_shaders();
 	//cout << "Extensions: " << (char*) glGetString(GL_EXTENSIONS) << endl;
 

@@ -881,7 +881,7 @@ void bubble::draw(bool set_liquid_color) const {
 	else {
 		set_color(color2);
 		int const ndiv(max(4, min(16, int(4.0*sqrt(point_dia)))));
-		draw_sphere_dlist(pos, radius, ndiv, 0, 0);
+		draw_sphere_dlist(pos, radius, ndiv, 0);
 	}
 }
 

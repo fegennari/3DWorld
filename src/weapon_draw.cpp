@@ -503,9 +503,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					set_color_alpha(color, 0.5*alpha);
 				}
 				glScalef(1.0, 1.0, 0.2);
-				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.25), 0.01, ndiv, 0, 0);
-				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.17), 0.01, ndiv, 0, 0);
-				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.09), 0.01, ndiv, 0, 0);
+				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.25), 0.01, ndiv, 0);
+				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.17), 0.01, ndiv, 0);
+				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.09), 0.01, ndiv, 0);
 				if (p_loaded) set_color_e(BLACK);
 			}
 			glPopMatrix();
@@ -576,7 +576,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			rotate_to_dir(dir, 0.0, 1.0); // cancel out texture rotation with camera
 			glRotatef(get_bbbat_angle(fire_val), (left_handed ? 0.5 : -0.5), 0.5, 0.0);
 			draw_cylinder(16.0*radius, radius, 1.2*radius, ndiv);
-			draw_sphere_dlist(point(0.0, 0.0, 16.0*radius), 1.2*radius, ndiv, 1, 0);
+			draw_sphere_dlist(point(0.0, 0.0, 16.0*radius), 1.2*radius, ndiv, 1);
 			glDisable(GL_TEXTURE_2D);
 			break;
 

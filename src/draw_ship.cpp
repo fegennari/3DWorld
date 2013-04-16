@@ -1796,7 +1796,7 @@ void uobj_draw_data::draw_abomination() const {
 	glTranslatef(0.0, 0.0, 2.0);
 
 	WHITE.do_glColor();
-	draw_sphere_dlist(point(0.0, 0.0, 0.45), 0.8, ndiv, 0, 0); // eyeball
+	draw_sphere_dlist(point(0.0, 0.0, 0.45), 0.8, ndiv, 0); // eyeball
 	color_a.do_glColor();
 	draw_sphere_dlist(point(0.0, 0.0, 0.95), 0.4, get_ndiv(3*ndiv/4), 0, 1); // pupil, make move to follow the target
 	
@@ -1925,7 +1925,7 @@ void uobj_draw_data::draw_supply() const {
 		if (light_color == BLACK) light_color = WHITE;
 	}
 	set_emissive_color(light_color);
-	draw_sphere_dlist(point(0.0, 0.0, 1.825), 0.07, get_ndiv(ndiv/4), 0, 0);
+	draw_sphere_dlist(point(0.0, 0.0, 1.825), 0.07, get_ndiv(ndiv/4), 0);
 	clear_emissive_color();
 	glPopMatrix(); // undo invert_z()
 
@@ -1961,7 +1961,7 @@ void uobj_draw_data::draw_anti_miss() const {
 			float const theta(i*TWO_PI/3.0);
 			point const pt(0.84*cosf(theta), -0.8, 0.84*sinf(theta));
 			color_a.do_glColor();
-			draw_sphere_dlist(pt, 0.25, ndiv2, 0, 0);
+			draw_sphere_dlist(pt, 0.25, ndiv2, 0);
 			
 			if (ndiv > 8) {
 				color_b.do_glColor();
@@ -2297,8 +2297,8 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 			glPushMatrix();
 			glTranslatef(x, y, -0.6);
 			draw_cylinder(1.1, 0.2, 0.2, ndiv2, 1, 1, 0);
-			draw_sphere_dlist(point(0.0, 0.0, 0.0), 0.2, ndiv2, textured, 0);
-			draw_sphere_dlist(point(0.0, 0.0, 1.1), 0.2, ndiv2, textured, 0);
+			draw_sphere_dlist(point(0.0, 0.0, 0.0), 0.2, ndiv2, textured);
+			draw_sphere_dlist(point(0.0, 0.0, 1.1), 0.2, ndiv2, textured);
 			glPopMatrix();
 		}
 	}
