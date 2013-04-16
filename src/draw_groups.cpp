@@ -225,7 +225,7 @@ void draw_select_groups(int solid) {
 		obj_group &objg(obj_groups[i]);
 
 		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) { // should leaves be marked as solid or semi-transparent?
-			if ((objg.large_radius() && !(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {
+			if (((objg.large_radius() || objg.type == LEAF) && !(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {
 				draw_group(objg, s);
 			}
 		}
@@ -404,7 +404,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			if (s.is_setup()) {s.disable();}
 			shader_t ls;
 			ls.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			colorRGBA const orig_fog_color(setup_smoke_shaders(ls, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1)); // TSL=1
+			colorRGBA const orig_fog_color(setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1)); // TSL=1
 			ls.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
 			ls.add_uniform_float("ambient_scale",    0.0);
 			quad_batch_draw qbd;

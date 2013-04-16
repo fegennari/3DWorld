@@ -148,7 +148,7 @@ void init_objects() {
 	object_types[LEAF].elasticity          = 0.1;
 	object_types[LEAF].health              = 4000.0;
 	object_types[LEAF].color               = LEAF_C;
-	object_types[LEAF].flags               = NO_WATER_DAMAGE | BLEND | OBJ_IS_FLAT; // BLEND?
+	object_types[LEAF].flags               = NO_WATER_DAMAGE | OBJ_IS_FLAT;
 	object_types[LEAF].tid                 = LEAF_TEX;
 
 	object_types[BALL].air_factor          = 0.05;
