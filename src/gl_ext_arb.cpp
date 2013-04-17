@@ -223,15 +223,13 @@ void disable_and_free_render_buffer(unsigned &render_buffer) {
 }
 
 
-// Note: default viewing in -z dir
-void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
-	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap, bool nearest_for_normal)
-{
+void render_to_texture_t::pre_render(float xsize, float ysize, unsigned nx, unsigned ny, point const &center, vector3d const &view_dir) const {
+
 	assert(xsize > 0.0 && ysize > 0);
-	assert(tsize > 0);
+	assert(tsize > 0 && nx > 0 && ny > 0);
 
 	// setup matrices
-	glViewport(0, 0, tsize, tsize);
+	glViewport(0, 0, nx*tsize, ny*tsize);
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
@@ -239,30 +237,16 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	rotate_from_v2v(vector3d(0.0, 0.0, -1.0), view_dir);
+	rotate_from_v2v(-plus_z, view_dir);
 	translate_to(-center);
 
 	// render
-	tpair.ensure_tids(tsize, mipmap, nearest_for_normal);
 	glDisable(GL_LIGHTING);
-	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0);
-	colorRGBA const clear_colors[2] = {bkg_color, bkg_color};
-	colorRGBA orig_clear_color(BLACK);
-	glGetFloatv(GL_COLOR_CLEAR_VALUE, (float *)&orig_clear_color);
+}
 
-	for (unsigned d = 0; d < 2; ++d) {
-		unsigned fbo_id(0);
-		enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
-		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
-		glClearColor_rgba(clear_colors[d]);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		draw_geom(d != 0);
-		if (mipmap) {tpair.build_mipmaps(d, tsize);}
-		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
-		free_fbo(fbo_id);
-	}
 
-	// restore state
+void post_render() {
+
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
@@ -271,7 +255,63 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 	glEnable(GL_LIGHTING);
 	disable_fbo();
 	set_standard_viewport();
+}
+
+
+void set_temp_clear_color(colorRGBA const &clear_color) {
+
+	colorRGBA orig_clear_color(BLACK);
+	glGetFloatv(GL_COLOR_CLEAR_VALUE, (float *)&orig_clear_color);
+	glClearColor_rgba(clear_color);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glClearColor_rgba(orig_clear_color);
+}
+
+
+// Note: default viewing in -z dir
+void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
+	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap, bool nearest_for_normal)
+{
+	pre_render(xsize, ysize, 1, 1, center, view_dir); // setup matrices, etc.
+	tpair.ensure_tids(tsize, mipmap, nearest_for_normal);
+	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0);
+	colorRGBA const clear_colors[2] = {bkg_color, clear_normal};
+
+	for (unsigned d = 0; d < 2; ++d) {
+		unsigned fbo_id(0);
+		enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
+		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
+		set_temp_clear_color(clear_colors[d]);
+		draw_geom(d != 0);
+		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
+		free_fbo(fbo_id);
+		if (mipmap) {build_texture_mipmaps(tpair.tids[d], 2);}
+	}
+	post_render(); // restore state
+}
+
+
+void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysize, point const &center, vector3d const &view_dir,
+	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap)
+{
+	assert(atlas.nx == 2 && atlas.ny == 1); // for now
+	pre_render(atlas.nx*xsize, atlas.ny*ysize, atlas.nx, atlas.ny, center, view_dir); // setup matrices, etc.
+	atlas.ensure_tid(tsize, mipmap);
+	unsigned fbo_id(0);
+	enable_fbo(fbo_id, atlas.tid, 0); // too slow to create and free fbos every time?
+	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(atlas.nx*tsize, atlas.ny*tsize) : 0);
+	set_temp_clear_color(bkg_color); // FIXME: can only set a single clear color, should we draw a full quad to set the clear normal?
+	vector3d xlate(2.0*xsize, 0.0, 0.0);
+	rotate_vector3d_by_vr(-plus_z, view_dir, xlate);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		draw_geom(d != 0);
+		translate_to(xlate); // shift to next sub-texture region
+	}
+	if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
+	free_fbo(fbo_id);
+	if (mipmap) {build_texture_mipmaps(atlas.tid, 2);} // Note: if mipmapping is enabled, we should use a buffer region between the two sub-textures
+	post_render(); // restore state
 }
 
 

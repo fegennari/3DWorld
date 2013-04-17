@@ -106,6 +106,10 @@ struct indexed_vbo_manager_t {
 };
 
 
+void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest);
+void build_texture_mipmaps(unsigned tid, unsigned dim);
+
+
 struct texture_pair_t {
 
 	unsigned tids[2]; // color, normal
@@ -114,12 +118,25 @@ struct texture_pair_t {
 	bool is_valid() const {return (tids[0] > 0 && tids[1] > 0);}
 	void free_context();
 	void bind_textures() const;
-	static void ensure_tid(unsigned &tid, unsigned tsize, bool mipmap, bool nearest);
 	void ensure_tids(unsigned tsize, bool mipmap, bool nearest_for_normal);
-	void build_mipmaps(unsigned d, unsigned tsize);
 	bool operator==(texture_pair_t const &tp) const {return (tids[0] == tp.tids[0] && tids[1] == tp.tids[1]);}
 	bool operator!=(texture_pair_t const &tp) const {return !operator==(tp);}
 	bool operator< (texture_pair_t const &tp) const {return ((tids[0] == tp.tids[0]) ? (tids[1] < tp.tids[1]) : (tids[0] < tp.tids[0]));}
+};
+
+
+struct texture_atlas_t {
+
+	unsigned tid, nx, ny;
+
+	texture_atlas_t(unsigned nx_=1, unsigned ny_=1) : tid(0), nx(nx_), ny(ny_) {}
+	bool is_valid() const {return (tid > 0);}
+	void free_context();
+	void bind_texture() const;
+	void ensure_tid(unsigned base_tsize, bool mipmap);
+	bool operator==(texture_atlas_t const &tp) const {return (tid == tp.tid && nx == tp.nx && ny == tp.ny);} // do we need to compare nx and ny?
+	bool operator!=(texture_atlas_t const &tp) const {return !operator==(tp);}
+	bool operator< (texture_atlas_t const &tp) const {return (tid < tp.tid);}
 };
 
 
@@ -127,12 +144,16 @@ class render_to_texture_t {
 
 	unsigned tsize;
 
+	void pre_render(float xsize, float ysize, unsigned nx, unsigned ny, point const &center, vector3d const &view_dir) const;
+
 public:
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
 	virtual ~render_to_texture_t() {free_context();}
 	virtual void free_context() {} // nothing to do here
 	void render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
 		colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap, bool nearest_for_normal);
+	void render(texture_atlas_t &atlas, float xsize, float ysize, point const &center, vector3d const &view_dir,
+		colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap);
 	virtual void draw_geom(bool is_normal_pass) = 0;
 };
 

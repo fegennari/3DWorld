@@ -2085,11 +2085,26 @@ bool is_billboard_texture_transparent(point const *const points, point const &po
 }
 
 
-void texture_pair_t::free_context() {
+void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest) { // used with texture_pair_t/render-to-texture
 
-	for (unsigned d = 0; d < 2; ++d) {free_texture(tids[d]);}
+	assert(txsize > 0 && tysize > 0);
+	if (tid) return; // already created
+	setup_texture(tid, GL_MODULATE, mipmap, 0, 0, 0, 0, nearest);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, txsize, tysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 }
 
+
+void build_texture_mipmaps(unsigned tid, unsigned dim) {
+
+	bind_2d_texture(tid);
+	gen_mipmaps(dim);
+}
+
+
+void texture_pair_t::free_context() {
+	free_texture(tids[0]);
+	free_texture(tids[1]);
+}
 
 void texture_pair_t::bind_textures() const {
 
@@ -2101,28 +2116,22 @@ void texture_pair_t::bind_textures() const {
 	set_active_texture(0);
 }
 
-
-void texture_pair_t::ensure_tid(unsigned &tid, unsigned tsize, bool mipmap, bool nearest) {
-
-	if (tid) return; // already created
-	setup_texture(tid, GL_MODULATE, mipmap, 0, 0, 0, 0, nearest);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-}
-
-
 void texture_pair_t::ensure_tids(unsigned tsize, bool mipmap, bool nearest_for_normal) {
-
-	ensure_tid(tids[0], tsize, mipmap, 0); // color
-	ensure_tid(tids[1], tsize, mipmap, nearest_for_normal); // normal
+	ensure_texture_loaded(tids[0], tsize, tsize, mipmap, 0); // color
+	ensure_texture_loaded(tids[1], tsize, tsize, mipmap, nearest_for_normal); // normal
 }
 
 
-void texture_pair_t::build_mipmaps(unsigned d, unsigned tsize) {
+void texture_atlas_t::free_context() {free_texture(tid);}
 
-	assert(d == 0 || d == 1);
-	assert(tids[d] != 0);
-	bind_2d_texture(tids[d]);
-	gen_mipmaps(2); // 2D
+void texture_atlas_t::bind_texture() const {
+	assert(tid);
+	bind_2d_texture(tid);
+}
+
+void texture_atlas_t::ensure_tid(unsigned base_tsize, bool mipmap) {
+	assert(nx > 0 && ny > 0);
+	ensure_texture_loaded(tid, nx*base_tsize, ny*base_tsize, mipmap, 0);
 }
 
 
