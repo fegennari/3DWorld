@@ -384,7 +384,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				if (do_texture) glRotatef(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
 				set_color_alpha(object_types[oid].color, alpha);
 				set_specular(0.8, 40.0);
-				draw_sphere_dlist(all_zeros, radius, ndiv, do_texture);
+				draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);
 				set_specular(0.0, 0.0);
 				if (do_texture) glDisable(GL_TEXTURE_2D);
 			}
@@ -503,9 +503,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					set_color_alpha(color, 0.5*alpha);
 				}
 				glScalef(1.0, 1.0, 0.2);
-				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.25), 0.01, ndiv, 0);
-				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.17), 0.01, ndiv, 0);
-				draw_sphere_dlist_back_to_front(point(0.0, 0.0, -0.09), 0.01, ndiv, 0);
+				draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.25), 0.01, ndiv, 0);
+				draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.17), 0.01, ndiv, 0);
+				draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.09), 0.01, ndiv, 0);
 				if (p_loaded) set_color_e(BLACK);
 			}
 			glPopMatrix();
@@ -576,7 +576,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			rotate_to_dir(dir, 0.0, 1.0); // cancel out texture rotation with camera
 			glRotatef(get_bbbat_angle(fire_val), (left_handed ? 0.5 : -0.5), 0.5, 0.0);
 			draw_cylinder(16.0*radius, radius, 1.2*radius, ndiv);
-			draw_sphere_dlist(point(0.0, 0.0, 16.0*radius), 1.2*radius, ndiv, 1);
+			draw_sphere_vbo(point(0.0, 0.0, 16.0*radius), 1.2*radius, ndiv, 1);
 			glDisable(GL_TEXTURE_2D);
 			break;
 
@@ -596,7 +596,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			set_specular(0.8, 50.0);
 			glTranslatef(tx, ty, 0.04);
 			draw_cylinder(0.16, 0.006, 0.0015, 2*ndiv);
-			draw_sphere_dlist(point(0.0, 0.0, 0.0), 0.006, ndiv, 0);
+			draw_sphere_vbo(point(0.0, 0.0, 0.0), 0.006, ndiv, 0);
 			set_specular(0.0, 1.0);
 			break;
 

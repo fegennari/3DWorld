@@ -864,7 +864,7 @@ void draw_waypoints() {
 		else if (i->user_placed) set_color(YELLOW);
 		else if (i->placed_item) set_color(PURPLE);
 		else                     set_color(WHITE);
-		draw_sphere_dlist(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2, 0);
+		draw_sphere_vbo(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2, 0);
 		if (!SHOW_WAYPOINT_EDGES) continue;
 
 		for (waypt_adj_vect::const_iterator j = i->next_wpts.begin(); j != i->next_wpts.end(); ++j) {

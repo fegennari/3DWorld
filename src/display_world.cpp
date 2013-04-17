@@ -772,7 +772,7 @@ void display(void) {
 	set_lighted_sides(1);
 	displayed = 1;
 	up_vector.assign(0.0, sinf(up_theta), camera_y*cosf(up_theta));
-	setup_dlists();
+	setup_sphere_vbos();
 	check_gl_error(2);
 	update_sound_loops();
 

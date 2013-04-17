@@ -194,7 +194,7 @@ void light_source::draw(int ndiv) const {
 
 	if (radius == 0.0) return;
 	set_color(color);
-	draw_sphere_dlist(center, 0.05*radius, ndiv, 0);
+	draw_sphere_vbo(center, 0.05*radius, ndiv, 0);
 }
 
 

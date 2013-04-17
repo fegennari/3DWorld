@@ -30,7 +30,7 @@ float const NEBULA_PROB      = 0.65;
 bool const USE_HEIGHTMAP     = 1; // for planets/moons/(stars)
 bool const CACHE_SPHERE_DATA = 1; // more memory but much faster rendering
 bool const SHOW_SPHERE_TIME  = 0; // debugging
-bool const USE_SPHERE_DLISTS = 1; // sometimes faster on newer video cards, slower on older ones
+bool const USE_SPHERE_DLISTS = 1; // faster on newer video cards, slower on older ones
 
 unsigned const MAX_TRIES     = 100;
 unsigned const SPHERE_MAX_ND = 256;
@@ -2110,7 +2110,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 			disable_blend();
 		}
 		usg.enable_star_shader(colorA, colorB);
-		draw_sphere_dlist(all_zeros, radius, ndiv, 0); // small sphere - use display list
+		draw_sphere_vbo(all_zeros, radius, ndiv, 0); // small sphere - use display list
 		usg.disable_star_shader();
 		if (world_mode == WMODE_UNIVERSE && size >= 64) {draw_flares(ndiv, 1);}
 		glPopMatrix();
@@ -2133,7 +2133,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		
 	if (universe_mode && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
 		set_owner_color(); // lighting is already disabled
-		draw_sphere_dlist(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
+		draw_sphere_vbo(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
 		return 1;
 	}
 	move_in_front_of_far_clip(pos_, camera, size, vcp_mag, 1.35);
@@ -2180,7 +2180,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 	}
 	else {
 		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
-		draw_sphere_dlist(all_zeros, radius, ndiv, texture); // small sphere - use display list
+		draw_sphere_vbo(all_zeros, radius, ndiv, texture); // small sphere - use display list
 	}
 	if (texture) {usg.disable_planet_shader(*this, svars);} else {glDisable(GL_LIGHTING);}
 	glPopMatrix();
@@ -2341,7 +2341,7 @@ void urev_body::show_colonizable_liveable(point const &pos_, float radius0) cons
 	}
 	glPushMatrix();
 	global_translate(pos_);
-	draw_sphere_dlist(all_zeros, 1.2*radius0, 12, 0);
+	draw_sphere_vbo(all_zeros, 1.2*radius0, 12, 0);
 	glPopMatrix();
 }
 
@@ -2380,7 +2380,7 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
-	draw_sphere_dlist(all_zeros, 1.01*cloud_radius, max(4, min(32, int(4.0*size_))), 1);
+	draw_sphere_vbo(all_zeros, 1.01*cloud_radius, max(4, min(32, int(4.0*size_))), 1);
 	glPopMatrix();
 }
 

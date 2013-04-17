@@ -26,10 +26,6 @@ Run leak detection
 
 Multiple decid tree impostor orients
 - Decid tree texture atlases
+ - Combine color and normal billboard textures
 
 Hardware tessellation
-
-Remove display lists
-Leaves not transparent group?
-
-Minecraft map explosions

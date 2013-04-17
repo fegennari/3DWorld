@@ -698,7 +698,7 @@ void draw_earth() {
 		glRotatef(67.0, 0.6, 0.8, 0.0);
 		glRotatef(rot_angle, 0.0, 0.0, 1.0);
 		glRotatef(180.0, 1.0, 0.0, 0.0);
-		draw_sphere_dlist(all_zeros, earth_radius, N_SPHERE_DIV, 1);
+		draw_sphere_vbo(all_zeros, earth_radius, N_SPHERE_DIV, 1);
 		glPopMatrix();
 		glDisable(GL_TEXTURE_2D);
 	}
@@ -801,7 +801,7 @@ void draw_sky(int order) {
 		apply_red_sky(horizon_color);
 		horizon_color.do_glColor();
 		select_texture(GRADIENT_TEX);
-		draw_sphere_dlist(center, 1.05*radius, N_SPHERE_DIV, 1);
+		draw_sphere_vbo(center, 1.05*radius, N_SPHERE_DIV, 1);
 		glEnable(GL_LIGHTING);
 	}
 	select_texture(CLOUD_TEX);
@@ -881,7 +881,7 @@ void bubble::draw(bool set_liquid_color) const {
 	else {
 		set_color(color2);
 		int const ndiv(max(4, min(16, int(4.0*sqrt(point_dia)))));
-		draw_sphere_dlist(pos, radius, ndiv, 0);
+		draw_sphere_vbo(pos, radius, ndiv, 0);
 	}
 }
 

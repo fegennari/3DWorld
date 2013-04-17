@@ -138,7 +138,7 @@ void mesh2d::set_rand_translate(point const &tp, unsigned num_trans) {
 void mesh2d::draw_perturbed_sphere(point const &pos, float radius, int ndiv, bool tex_coord) const {
 
 	if (!pmap && !rmap && !emap && !ptsh && expand == 0.0) {
-		draw_sphere_dlist(pos, radius, ndiv, 1);
+		draw_sphere_vbo(pos, radius, ndiv, 1);
 	}
 	else { // ndiv unused
 		if (pmap || rmap || ptsh || emap) assert(size > 0);

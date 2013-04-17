@@ -702,7 +702,7 @@ void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const 
 				draw_cube_map_sphere(all_zeros, width, N_SPHERE_DIV/2, 1, 1); // slower, but looks better
 			}
 			else*/ {
-				draw_sphere_dlist(all_zeros, width, nsides, 1, (type == T_PALM));
+				draw_sphere_vbo(all_zeros, width, nsides, 1, (type == T_PALM));
 			}
 			glPopMatrix();
 		} // end pine else

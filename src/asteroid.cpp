@@ -106,7 +106,7 @@ public:
 		}
 		colorRGBA(0.5, 0.45, 0.4, 1.0).do_glColor(); // Note: ignores color_a
 		select_texture(WHITE_TEX);
-		draw_sphere_dlist(all_zeros, 1.0, 3*ddata.ndiv/2, 1);
+		draw_sphere_vbo(all_zeros, 1.0, 3*ddata.ndiv/2, 1);
 		s.disable();
 
 		if (ddata.final_pass) {
@@ -187,7 +187,7 @@ public:
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		ddata.color_a.do_glColor();
 		select_texture(force_tex_id);
-		surface.sd.draw_ndiv_pow2(ddata.ndiv); // use dlist?
+		surface.sd.draw_ndiv_pow2(ddata.ndiv); // use vbo?
 		end_texture();
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
@@ -654,7 +654,7 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 	if (empty()) {gen_asteroids();}
 	/*set_color(WHITE);
 	WHITE.do_glColor();
-	draw_sphere_dlist(make_pt_global(afpos), radius, N_SPHERE_DIV, 0);*/
+	draw_sphere_vbo(make_pt_global(afpos), radius, N_SPHERE_DIV, 0);*/
 	point sun_pos;
 	uobject const *sobj(NULL);
 	set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE);

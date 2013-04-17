@@ -46,6 +46,7 @@ public:
 		float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0, unsigned sv1=1) const;
 	void get_quad_points(vector<vert_norm_tc> &quad_pts) const;
 	void get_triangles(vector<vert_wrap_t> &verts) const;
+	void get_triangles(vector<vert_norm_tc> &verts, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void draw_ndiv_pow2(unsigned ndiv) const;
 	void set_data(point const &p, float r, int n, float const *pm, float dp=0.0, upsurface const *const s=NULL);
 	point    **get_points() const {return spn.points;}

@@ -9,7 +9,7 @@
 #include "model3d.h"
 
 
-bool scene_smap_dlist_invalid(0);
+bool scene_smap_vbo_invalid(0);
 unsigned shadow_map_sz(0);
 pos_dir_up orig_camera_pdu;
 
@@ -106,7 +106,7 @@ int get_smap_ndiv(float radius) {
 	return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width())));
 }
 
-void free_smap_dlist() {
+void free_smap_vbo() {
 	smap_vertex_cache.free();
 }
 
@@ -370,7 +370,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			coll_objects[i->second].get_shadow_triangle_verts(verts, 1);
 		}
 		smap_vertex_cache.upload(verts);
-	} // end dlist case split
+	}
 	smap_vertex_cache.render();
 	render_models(1);
 	render_voxel_data(1);
@@ -387,7 +387,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			coll_objects[i->cid].get_shadow_triangle_verts(dverts, ndiv);
 		}
 		else {
-			draw_sphere_dlist(i->pos, i->radius, ndiv, 0); // use get_sphere_triangles()?
+			draw_sphere_vbo(i->pos, i->radius, ndiv, 0); // use get_sphere_triangles()?
 		}
 	}
 	smap_vertex_cache.render_dynamic();
@@ -435,10 +435,10 @@ void create_shadow_map() {
 	animate2 = 0; // disable any animations or generated effects
 	display_mode &= ~(0x08 | 0x0100); // disable occlusion culling and leaf wind
 
-	// check dlist
-	if (scene_smap_dlist_invalid) {
-		free_smap_dlist();
-		scene_smap_dlist_invalid = 0;
+	// check VBO
+	if (scene_smap_vbo_invalid) {
+		free_smap_vbo();
+		scene_smap_vbo_invalid = 0;
 	}
 
 	// render shadow maps to textures
@@ -467,7 +467,7 @@ void free_shadow_map_textures() {
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		smap_data[l].free_gl_state();
 	}
-	free_smap_dlist();
+	free_smap_vbo();
 }
 
 

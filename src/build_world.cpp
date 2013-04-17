@@ -43,7 +43,7 @@ vector<portal> portals;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, preproc_cube_cobjs, scene_smap_dlist_invalid;
+extern bool clear_landscape_vbo, preproc_cube_cobjs, scene_smap_vbo_invalid;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
@@ -554,7 +554,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	RESET_TIME;
 	static int st_valid(0);
 	bool const inf_terrain(world_mode == WMODE_INF_TERRAIN);
-	scene_smap_dlist_invalid = 1; // probably not necessary, but won't hurt
+	scene_smap_vbo_invalid = 1; // probably not necessary, but won't hurt
 
 	if (!st_valid) {
 		keep_sin_table = 0;

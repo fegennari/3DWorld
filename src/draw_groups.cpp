@@ -336,11 +336,11 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 			translate_to(pos);
 			scale_by(obj.vdeform);
 			rotate_into_plus_z(obj.orientation); // might be unnesessary
-			draw_sphere_dlist(zero_vector, radius, ndiv, 0);
+			draw_sphere_vbo(zero_vector, radius, ndiv, 0);
 			glPopMatrix();
 		}
 		else {
-			draw_sphere_dlist(pos, radius, ndiv, 0); // (object_types[type].tid >= 0)
+			draw_sphere_vbo(pos, radius, ndiv, 0); // (object_types[type].tid >= 0)
 		}
 	}
 	if (cull_face) glDisable(GL_CULL_FACE);
@@ -700,10 +700,10 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		vector3d const scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
 		scale_by(scale*radius);
 		glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
-		draw_sphere_dlist_raw(ndiv, do_texture);
+		draw_sphere_vbo_raw(ndiv, do_texture);
 		glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
 		glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
-		draw_sphere_dlist_raw(ndiv, do_texture);
+		draw_sphere_vbo_raw(ndiv, do_texture);
 	}
 	else {
 		int ndiv(int(4.0*sqrt(point_dia)));
@@ -722,7 +722,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 			glScalef(1.0, 1.0, 2.0);
 			pos = all_zeros;
 		}
-		draw_sphere_dlist(pos, radius, ndiv, do_texture);
+		draw_sphere_vbo(pos, radius, ndiv, do_texture);
 	}
 	if (cull_face) glDisable(GL_CULL_FACE);
 	glPopMatrix();
@@ -820,17 +820,17 @@ void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orien
 
 	switch (type) {
 	case SF_EYE:
-		draw_sphere_dlist(pos, 1.0*radius, ndiv, 0);
+		draw_sphere_vbo(pos, 1.0*radius, ndiv, 0);
 		break;
 	case SF_NOSE:
-		draw_sphere_dlist(pos, 1.2*radius, ndiv, 0);
+		draw_sphere_vbo(pos, 1.2*radius, ndiv, 0);
 		break;
 	case SF_TONGUE:
 		glPushMatrix();
 		translate_to(pos);
 		if (use_orient) rotate_to_dir(orient);
 		glScalef(1.0, 2.0, 0.25);
-		draw_sphere_dlist(all_zeros, 1.5*radius, ndiv, 0);
+		draw_sphere_vbo(all_zeros, 1.5*radius, ndiv, 0);
 		glPopMatrix();
 		break;
 	default: assert(0);
@@ -927,9 +927,9 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			glRotatef(float((30*time)%360), 0.0, 0.0, 1.0);
 			glScalef(1.0, 0.25, 0.05);
 			glTranslatef( 0.5*radius, 0.0, 0.0);
-			draw_sphere_dlist(all_zeros, 0.5*radius, ndiv, 0); // propeller
+			draw_sphere_vbo(all_zeros, 0.5*radius, ndiv, 0); // propeller
 			glTranslatef(-1.0*radius, 0.0, 0.0);
-			draw_sphere_dlist(all_zeros, 0.5*radius, ndiv, 0); // propeller
+			draw_sphere_vbo(all_zeros, 0.5*radius, ndiv, 0); // propeller
 			glPopMatrix();
 			break;
 
@@ -971,7 +971,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		//if (mesh->size > 0) ndiv = mesh->size;
 	}
 	else {
-		draw_sphere_dlist(all_zeros, radius, ndiv, 1);
+		draw_sphere_vbo(all_zeros, radius, ndiv, 1);
 	}
 	select_no_texture();
 
@@ -980,7 +980,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		glPushMatrix();
 		glTranslatef(0.0, 0.0, 0.45*radius);
 		glScalef(1.0, 1.0, 0.5);
-		draw_sphere_dlist(all_zeros, 0.94*radius, ndiv, 0);
+		draw_sphere_vbo(all_zeros, 0.94*radius, ndiv, 0);
 		glPopMatrix();
 	}
 	// draw unique identifier
@@ -991,7 +991,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, 0.8*radius);
 	glScalef(1.0, 1.0, 0.3);
-	draw_sphere_dlist(all_zeros, 0.65*radius, ndiv, 0);
+	draw_sphere_vbo(all_zeros, 0.65*radius, ndiv, 0);
 	glPopMatrix();
 	
 	// draw mouth
@@ -1019,7 +1019,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	if (game_mode == 2 && (sstates[id].p_ammo[W_BALL] > 0 || UNLIMITED_WEAPONS)) { // dodgeball
 		select_texture(select_dodgeball_texture(id), 1, 1);
 		set_color_alpha(mult_alpha(object_types[BALL].color, alpha));
-		draw_sphere_dlist(point(0.0, 1.3*radius, 0.0), 0.8*object_types[BALL].radius, ndiv, 1);
+		draw_sphere_vbo(point(0.0, 1.3*radius, 0.0), 0.8*object_types[BALL].radius, ndiv, 1);
 		select_no_texture();
 	}
 	glPopMatrix();
@@ -1037,14 +1037,14 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		glAlphaFunc(GL_GREATER, 0.05);
 		translate_to(pos);
 		rotate_sphere_tex_to_dir(hit_dir);
-		draw_sphere_dlist(all_zeros, 1.015*radius, ndiv, 1);
+		draw_sphere_vbo(all_zeros, 1.015*radius, ndiv, 1);
 		glDisable(GL_ALPHA_TEST);
 		glPopMatrix();
 
 		if (powerup == PU_SHIELD) {
 			select_texture(PLASMA_TEX);
 			set_color_alpha(PURPLE, alpha); // not scaled
-			draw_sphere_dlist(pos, 1.05*radius, ndiv, 1);
+			draw_sphere_vbo(pos, 1.05*radius, ndiv, 1);
 		}
 		disable_blend();
 		select_no_texture();
@@ -1073,7 +1073,7 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 		if (on_platform) lpos = pos; // reset now so there's no rotation
 		apply_obj_mesh_roll(*matrix, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? 0.2 : 1.0));
 	}
-	draw_sphere_dlist(all_zeros, radius, 2*ndiv, 1);
+	draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);
 	glPopMatrix();
 	lpos = pos;
 }
@@ -1087,7 +1087,7 @@ void draw_skull(point const &pos, vector3d const &orient, float radius, int stat
 	translate_to(pos);
 	rotate_from_v2v(orient, vector3d(0.0, -1.0, 0.0));
 	glRotatef(180.0, 0.0, 1.0, 0.0);
-	draw_sphere_dlist_back_to_front(all_zeros, radius, 2*ndiv, 1);
+	draw_sphere_vbo_back_to_front(all_zeros, radius, 2*ndiv, 1);
 	glPopMatrix();
 	glDisable(GL_ALPHA_TEST);
 }
@@ -1110,7 +1110,7 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 	glEnd();
 	set_color_alpha(object_types[ROCKET].color);
 	glScalef(1.0, 1.0, -2.0);
-	draw_sphere_dlist_raw(ndiv, 0);
+	draw_sphere_vbo_raw(ndiv, 0);
 	draw_cylinder(1.1, 1.0, 1.0, ndiv);
 	glPopMatrix();
 	if (type == ROCKET) gen_rocket_smoke(pos, orient, radius);
@@ -1131,7 +1131,7 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 	glRotatef(90.0,  0.0, 1.0, 0.0);
 	set_color_alpha(WHITE);
 	select_texture(SKULL_TEX);
-	draw_sphere_dlist_raw(ndiv, 1);
+	draw_sphere_vbo_raw(ndiv, 1);
 	select_no_texture();
 	glPopMatrix();
 	if (type == SEEK_D) gen_rocket_smoke(pos, orient, radius);
@@ -1222,7 +1222,7 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	}
 	set_emissive_color_obj(color);
 	if (animate2) radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));
-	draw_sphere_dlist(pos, size*radius, ndiv, 1);
+	draw_sphere_vbo(pos, size*radius, ndiv, 1);
 	clear_emissive_color();
 	disable_texgen();
 	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) gen_particles(part_pos, 1);
@@ -1246,11 +1246,11 @@ void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d cons
 	scale_by(scale);
 	glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
 	set_color_alpha((charred ? BLACK : YELLOW));
-	draw_sphere_dlist_raw(ndiv, 0);
+	draw_sphere_vbo_raw(ndiv, 0);
 	set_color_alpha((charred ? DK_GRAY : BLOOD_C));
 	glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
 	glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
-	draw_sphere_dlist_raw(ndiv, 0);
+	draw_sphere_vbo_raw(ndiv, 0);
 	glPopMatrix();
 }
 
@@ -1263,7 +1263,7 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	glPushMatrix();
 	if (!is_cgrenade) glScalef(0.8, 0.8, 1.2); // rotate also?
 	set_color_alpha(BLACK);
-	draw_sphere_dlist_raw(ndiv, 0);
+	draw_sphere_vbo_raw(ndiv, 0);
 	glPopMatrix();
 
 	float const stime(1.0 - float(time)/float(object_types[is_cgrenade ? CGRENADE : GRENADE].lifetime)), sval(0.2 + 0.8*stime);

@@ -272,7 +272,7 @@ void draw_blasts() {
 				br.cur_color.do_glColor();
 				float const sscale(universe ? 0.4/sqrt(br.cur_size*distance_to_camera(br.pos)) : 1.0);
 				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
-				draw_sphere_dlist(make_pt_global(br.pos), br.cur_size, ndiv, 1);
+				draw_sphere_vbo(make_pt_global(br.pos), br.cur_size, ndiv, 1);
 				if (end_type) {glDisable(GL_CULL_FACE);}
 			}
 			break;
@@ -292,7 +292,7 @@ void draw_blasts() {
 				br.cur_color.do_glColor();
 				float const sscale(universe ? 0.4/sqrt(br.cur_size*distance_to_camera(br.pos)) : 1.0);
 				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
-				draw_sphere_dlist(all_zeros, br.cur_size, ndiv, 1);
+				draw_sphere_vbo(all_zeros, br.cur_size, ndiv, 1);
 				glPopMatrix();
 				if (end_type) {glDisable(GL_ALPHA_TEST);}
 			}

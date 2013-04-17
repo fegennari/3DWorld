@@ -53,7 +53,7 @@ void ship_cube::draw(unsigned ndiv) const { // ndiv is unused
 void ship_sphere::draw(unsigned ndiv) const {
 
 	glEnable(GL_CULL_FACE);
-	draw_sphere_dlist(pos, radius, ndiv, 0);
+	draw_sphere_vbo(pos, radius, ndiv, 0);
 	glDisable(GL_CULL_FACE);
 }
 
@@ -213,7 +213,7 @@ void uobj_draw_data::draw_bounding_sphere(colorRGBA color) const { // unused
 	glEnable(GL_CULL_FACE);
 	color.alpha = 0.25;
 	color.do_glColor();
-	draw_sphere_dlist(all_zeros, crs, ndiv, 0);
+	draw_sphere_vbo(all_zeros, crs, ndiv, 0);
 	glDisable(GL_CULL_FACE);
 }
 
@@ -379,7 +379,7 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 
 	if (!symmetric) glPopMatrix();
 	set_emissive_color(color);
-	draw_sphere_dlist(all_zeros, 0.25, get_ndiv(ndiv/3), 0); // draw central area that shows up when the draw order is incorrect
+	draw_sphere_vbo(all_zeros, 0.25, get_ndiv(ndiv/3), 0); // draw central area that shows up when the draw order is incorrect
 	set_emissive_color(color);
 	float angle(TWO_PI*time/TICKS_PER_SECOND);
 
@@ -441,7 +441,7 @@ void uobj_draw_data::draw_rocket_base(colorRGBA const &cb, colorRGBA const &cn, 
 	if (ndiv > 3) {
 		cn.do_glColor();
 		invert_z(); // draw the correct half
-		draw_sphere_dlist(all_zeros, width, min(ndiv, N_SPHERE_DIV), 0, 1);
+		draw_sphere_vbo(all_zeros, width, min(ndiv, N_SPHERE_DIV), 0, 1);
 	}
 	glPopMatrix(); // remove the rotations
 	glPushMatrix();
@@ -477,7 +477,7 @@ void uobj_draw_data::draw_spherical_shot(colorRGBA const &color) const {
 		return;
 	}
 	set_emissive_color(color);
-	draw_sphere_dlist(all_zeros, 1.0, min(ndiv, N_SPHERE_DIV/2), 0);
+	draw_sphere_vbo(all_zeros, 1.0, min(ndiv, N_SPHERE_DIV/2), 0);
 	clear_emissive_color();
 }
 
@@ -505,7 +505,7 @@ void uobj_draw_data::draw_usw_emp() const {
 	glAlphaFunc(GL_GREATER, 0.01);
 	set_emissive_color(colorRGBA(1.0, 0.9, 0.7, alpha));
 	glRotatef(90.0, 1.0, 0.0, 0.0);
-	draw_sphere_dlist_back_to_front(all_zeros, 1.0, ndiv, 1);
+	draw_sphere_vbo_back_to_front(all_zeros, 1.0, ndiv, 1);
 	glDisable(GL_ALPHA_TEST);
 	end_texture();
 	clear_emissive_color();
@@ -715,13 +715,13 @@ void uobj_draw_data::draw_us_frigate() const {
 
 	glPushMatrix();
 	glScalef(1.6, 0.28, 1.2);
-	draw_sphere_dlist(all_zeros, 1.0, ndiv, textured);
+	draw_sphere_vbo(all_zeros, 1.0, ndiv, textured);
 	glPopMatrix();
 	color_b.do_glColor();
 	glPushMatrix();
 	glScalef(0.9, 0.6, 0.8);
 	if (specular_en) set_specular(0.5, 80.0);
-	draw_sphere_dlist(point(0.0, 0.0, 0.1), 1.0, ndiv, 0); // center
+	draw_sphere_vbo(point(0.0, 0.0, 0.1), 1.0, ndiv, 0); // center
 	end_specular();
 	glPopMatrix();
 	float const edx(1.5/(nengines-1));
@@ -768,12 +768,12 @@ void uobj_draw_data::draw_us_destroyer() const {
 	draw_cylinder(1.7, 0.45, 0.45, ndiv, 1, 1, 0);
 	glPushMatrix();
 	glScalef(1.0, 1.0, 2.0);
-	draw_sphere_dlist(point(0.0, 0.0, 0.85), 0.45, ndiv, textured, 1);
+	draw_sphere_vbo(point(0.0, 0.0, 0.85), 0.45, ndiv, textured, 1);
 	set_cloak_color(RED);
 	
 	if (ndiv > 5) { // nose
 		if (specular_en) set_specular(0.5, 80.0);
-		draw_sphere_dlist(point(0.0, 0.0, 1.13), 0.2, ndiv25, 0, 1);
+		draw_sphere_vbo(point(0.0, 0.0, 1.13), 0.2, ndiv25, 0, 1);
 		end_specular();
 	}
 	color_b.do_glColor();
@@ -828,12 +828,12 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 	glPushMatrix();
 	glScalef(1.0, 1.0, 1.45);
 	invert_z(); // invert for half sphere
-	draw_sphere_dlist(all_zeros, 0.38, ndiv, textured, 1); // back
+	draw_sphere_vbo(all_zeros, 0.38, ndiv, textured, 1); // back
 	glPopMatrix();
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, 1.8);
 	glScalef(1.0, 1.0, 2.12);
-	draw_sphere_dlist(all_zeros, 0.26, ndiv, textured, 1); // front
+	draw_sphere_vbo(all_zeros, 0.26, ndiv, textured, 1); // front
 	glPopMatrix();
 	float const escale(0.4), sz(2.0*escale);
 	point epos[4] = {point(sz, 0, 0.0), point(-2*sz, 0, 0), point(sz, sz, 0), point(0, -2*sz, 0)};
@@ -845,7 +845,7 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 
 	for (unsigned i = 0; i < nengines; ++i) { // draw engine housings
 		pos2 += epos[i];
-		draw_sphere_dlist(pos2, 0.16, ndiv2, textured);
+		draw_sphere_vbo(pos2, 0.16, ndiv2, textured);
 
 		if (ndiv > 8) { // draw engines
 			glPushMatrix();
@@ -879,7 +879,7 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 
 		for (unsigned i = 0; i < 4; ++i) { // draw weapon housings
 			pos2 += epos[i];
-			draw_sphere_dlist(pos2, 0.1, ndiv25, textured);
+			draw_sphere_vbo(pos2, 0.1, ndiv25, textured);
 		}
 	}
 	if (textured) end_ship_texture();
@@ -914,12 +914,12 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	glTranslatef(0.0, 0.0, -0.8);
 	glScalef(0.5, 1.5, 1.5);
 	invert_z();
-	draw_sphere_dlist(all_zeros, 0.4, ndiv, textured, 1); // rear
+	draw_sphere_vbo(all_zeros, 0.4, ndiv, textured, 1); // rear
 	invert_z();
 	draw_cylinder(0.6, 0.4, 0.3, ndiv); // main body
 	glTranslatef(0.0, 0.0, 0.55);
 	glScalef(1.0, 1.0, 3.06);
-	draw_sphere_dlist(all_zeros, 0.3, ndiv, textured, 1); // front
+	draw_sphere_vbo(all_zeros, 0.3, ndiv, textured, 1); // front
 	glPopMatrix();
 
 	// engine support wing
@@ -927,7 +927,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	glPushMatrix();
 	glTranslatef(0.0, dy, -0.2);
 	glScalef(1.1, 0.18, 1.2);
-	draw_sphere_dlist(all_zeros, 0.65, ndiv2, textured);
+	draw_sphere_vbo(all_zeros, 0.65, ndiv2, textured);
 	glPopMatrix();
 	set_cloak_color(GRAY);
 
@@ -946,7 +946,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 				glPushMatrix();
 				translate_to(cur + vector3d(0.0, 0.0, 0.8));
 				glScalef(1.0, 1.0, 1.6);
-				draw_sphere_dlist(all_zeros, erad, ndiv3, textured, 1);
+				draw_sphere_vbo(all_zeros, erad, ndiv3, textured, 1);
 				glPopMatrix();
 			} // for j
 		} // for i
@@ -1037,7 +1037,7 @@ void uobj_draw_data::draw_us_carrier() const {
 		glTranslatef(0.0, 0.0, 0.18);
 		draw_cylin_fast(0.03, 0.03, 0.1, ndiv, 1);
 		if (specular_en) set_specular(0.4, 50.0);
-		draw_sphere_dlist(point(0.0, 0.0, 0.1), 0.07, get_ndiv(ndiv/3), 1); // control tower
+		draw_sphere_vbo(point(0.0, 0.0, 0.1), 0.07, get_ndiv(ndiv/3), 1); // control tower
 		end_specular();
 	}
 	end_ship_texture();
@@ -1076,7 +1076,7 @@ void uobj_draw_data::draw_us_carrier() const {
 	glRotatef(-90.0, 1.0, 0.0, 0.0);
 	if (ndiv > 3) draw_cylin_fast(0.22, 0.22, 0.1, ndiv2, 1); // weapons turret
 	glScalef(1.0, 1.0, 0.5);
-	draw_sphere_dlist(point(0.0, 0.0, 0.2), 0.22, ndiv2, 1, 1);
+	draw_sphere_vbo(point(0.0, 0.0, 0.2), 0.22, ndiv2, 1, 1);
 	glPopMatrix();
 	end_ship_texture();
 
@@ -1093,7 +1093,7 @@ void uobj_draw_data::draw_us_carrier() const {
 		glScalef(2.0, 1.0, 0.4);
 		invert_z();
 		if (ndiv > 24) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe
-		draw_sphere_dlist(point(0.0, 0.0, -0.75), 0.06, get_ndiv(ndiv/3), 0, 1);
+		draw_sphere_vbo(point(0.0, 0.0, -0.75), 0.06, get_ndiv(ndiv/3), 0, 1);
 		if (ndiv > 24) set_fill_mode();
 		glPopMatrix();
 
@@ -1185,12 +1185,12 @@ void uobj_draw_data::draw_us_shadow() const { // could be improved
 	if (cloakval > 0.0) {glEnable(GL_CULL_FACE); glCullFace(GL_BACK);}
 	glPushMatrix();
 	glScalef(0.7, 0.3, 1.2);
-	draw_sphere_dlist(point(0.0, 0.0, 0.2/1.2), 1.0, ndiv, 1);
+	draw_sphere_vbo(point(0.0, 0.0, 0.2/1.2), 1.0, ndiv, 1);
 	glPopMatrix();
 	color_b.do_glColor();
 	select_texture(CAMOFLAGE_TEX);
 	glScalef(0.9, 0.4, 0.8);
-	draw_sphere_dlist(point(0.0, 0.0, -0.6/0.8), 1.0, ndiv, 1);
+	draw_sphere_vbo(point(0.0, 0.0, -0.6/0.8), 1.0, ndiv, 1);
 	end_ship_texture();
 	if (cloakval > 0.0) glDisable(GL_CULL_FACE);
 	glPopMatrix(); // undo invert_z()
@@ -1211,7 +1211,7 @@ void uobj_draw_data::draw_defsat() const {
 	draw_cylin_fast(0.11, 0.0, 1.9, get_ndiv(ndiv/2), 0); // point
 	glScalef(1.0, 1.0, 0.6);
 	color_a.do_glColor();
-	draw_sphere_dlist(point(0.0, 0.0, 1.4), 0.5, ndiv, (t_exp > 0));
+	draw_sphere_vbo(point(0.0, 0.0, 1.4), 0.5, ndiv, (t_exp > 0));
 	glPopMatrix();
 	end_exp_texture();
 
@@ -1271,7 +1271,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 			draw_cube(all_zeros, 1.95, 1.95, 1.95, 1, 1, 0, 1.0, 0, &view_dir);
 		}
 		else {
-			draw_sphere_dlist(all_zeros, 0.97, ndiv2, 1);
+			draw_sphere_vbo(all_zeros, 0.97, ndiv2, 1);
 		}
 	}
 	if (phase2) {
@@ -1285,7 +1285,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 			draw_cube(all_zeros, 2.0, 2.0, 2.0, 1, 1, 0, 1.0, 0, &view_dir);
 		}
 		else {
-			draw_sphere_dlist(all_zeros, 1.0, ndiv2, 1);
+			draw_sphere_vbo(all_zeros, 1.0, ndiv2, 1);
 		}
 		glDisable(GL_ALPHA_TEST);
 	}
@@ -1365,7 +1365,7 @@ void uobj_draw_data::draw_gunship() const {
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 	glPushMatrix();
 	glScalef(1.0, 1.0, 2.0);
-	draw_sphere_dlist(point(0.0, 0.0, 0.325), 0.25, 2*ndiv/3, textured);
+	draw_sphere_vbo(point(0.0, 0.0, 0.325), 0.25, 2*ndiv/3, textured);
 	glPopMatrix();
 
 	// body
@@ -1428,9 +1428,9 @@ void uobj_draw_data::draw_nightmare() const {
 	unsigned const ndiv23(get_ndiv(2*ndiv/3));
 	setup_draw_ship();
 	uniform_scale(0.8);
-	draw_sphere_dlist(point(0.0, 0.0, -0.1), 1.0, 3*ndiv/2, 0);
+	draw_sphere_vbo(point(0.0, 0.0, -0.1), 1.0, 3*ndiv/2, 0);
 	color_b.do_glColor();
-	draw_sphere_dlist(point(0.0, 0.0,  0.1), 1.0, 3*ndiv/2, 0);
+	draw_sphere_vbo(point(0.0, 0.0,  0.1), 1.0, 3*ndiv/2, 0);
 
 	if (ndiv > 3) {
 		// draw points
@@ -1466,7 +1466,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 		if (ndiv > 3) { // command center
 			glPushMatrix();
 			glScalef(1.0, 1.2, 2.8);
-			draw_sphere_dlist(point(0.0, 0.22, -0.2), 0.08, ndiv2, 0);
+			draw_sphere_vbo(point(0.0, 0.22, -0.2), 0.08, ndiv2, 0);
 			glPopMatrix();
 		}
 		color_b.do_glColor();
@@ -1493,7 +1493,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 			}
 			glScalef(1.0, 1.0, 0.36);
 			invert_z();
-			draw_sphere_dlist(all_zeros, 0.72, ndiv35, 0, 1); // rear
+			draw_sphere_vbo(all_zeros, 0.72, ndiv35, 0, 1); // rear
 			glPopMatrix();
 			glTranslatef(0.0, 0.0, 0.01);
 		}
@@ -1516,7 +1516,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 			glScalef(1.0, 1.0, 2.0);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				draw_sphere_dlist(point(0.06*(1.0 - 2.0*i), 0.1, 0.4), 0.025, ndiv4, 0);
+				draw_sphere_vbo(point(0.06*(1.0 - 2.0*i), 0.1, 0.4), 0.025, ndiv4, 0);
 			}
 			glPopMatrix();
 		}
@@ -1537,7 +1537,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 		color_b.do_glColor();
 		glRotatef(10.0, 1.0, 0.0, 0.0); // Note: push/pop not needed since this is the last draw
 		glScalef(0.01, 0.2, 1.0);
-		draw_sphere_dlist(point(0.0, 0.7, -0.1), 1.0, ndiv4, 0);
+		draw_sphere_vbo(point(0.0, 0.7, -0.1), 1.0, ndiv4, 0);
 	}
 	glPopMatrix(); // undo invert_z()
 
@@ -1663,7 +1663,7 @@ void uobj_draw_data::draw_dwexterm() const {
 				translate_to(p);
 				if (half) glRotatef(-90.0, 1.0, 0.0, 0.0);
 				if (half) glScalef(1.0, 1.0, 0.6);
-				draw_sphere_dlist(all_zeros, size, ndiv3, 0, half);
+				draw_sphere_vbo(all_zeros, size, ndiv3, 0, half);
 				glPopMatrix();
 			}
 		}
@@ -1730,10 +1730,10 @@ void uobj_draw_data::draw_wraith_tail(float r, int ndiv2, float rscale) const {
 		}
 		else {
 			if (ndiv <= 12) {
-				draw_sphere_dlist(pos, rs, ndiv2, 1);
+				draw_sphere_vbo(pos, rs, ndiv2, 1);
 			}
 			else {
-				draw_sphere_dlist_back_to_front(pos, rs, ndiv2, 1);
+				draw_sphere_vbo_back_to_front(pos, rs, ndiv2, 1);
 			}
 		}
 		last_pos = pos;
@@ -1749,7 +1749,7 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 	if (phase1) { // draw head - eyes?
 		glPushMatrix();
 		glScalef(0.8, 0.6, 1.0);
-		draw_sphere_dlist(point(0.0, 0.22, 0.9), 0.6, ndiv_head, 0);
+		draw_sphere_vbo(point(0.0, 0.22, 0.9), 0.6, ndiv_head, 0);
 		glPopMatrix();
 	}
 
@@ -1764,10 +1764,10 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 		glScalef(1.3, 0.5, 1.0);
 
 		if (ndiv <= 10) {
-			draw_sphere_dlist(point(0.0, 0.0, 0.75), 0.75, ndiv, 1);
+			draw_sphere_vbo(point(0.0, 0.0, 0.75), 0.75, ndiv, 1);
 		}
 		else {
-			draw_sphere_dlist_back_to_front(point(0.0, 0.0, 0.75), 0.75, ndiv, 1);
+			draw_sphere_vbo_back_to_front(point(0.0, 0.0, 0.75), 0.75, ndiv, 1);
 		}
 		glPopMatrix();
 	}
@@ -1796,9 +1796,9 @@ void uobj_draw_data::draw_abomination() const {
 	glTranslatef(0.0, 0.0, 2.0);
 
 	WHITE.do_glColor();
-	draw_sphere_dlist(point(0.0, 0.0, 0.45), 0.8, ndiv, 0); // eyeball
+	draw_sphere_vbo(point(0.0, 0.0, 0.45), 0.8, ndiv, 0); // eyeball
 	color_a.do_glColor();
-	draw_sphere_dlist(point(0.0, 0.0, 0.95), 0.4, get_ndiv(3*ndiv/4), 0, 1); // pupil, make move to follow the target
+	draw_sphere_vbo(point(0.0, 0.0, 0.95), 0.4, get_ndiv(3*ndiv/4), 0, 1); // pupil, make move to follow the target
 	
 	color_b.do_glColor();
 	assert(obj);
@@ -1848,7 +1848,7 @@ void uobj_draw_data::draw_reaper() const {
 	}
 	color_b.do_glColor();
 	//set_ship_texture(NOISE_TEX);
-	draw_sphere_dlist_back_to_front(all_zeros, 1.0, 3*ndiv/2, 0);
+	draw_sphere_vbo_back_to_front(all_zeros, 1.0, 3*ndiv/2, 0);
 	//end_ship_texture();
 	if (can_have_engine_lights()) clear_colors_and_disable_light(GL_LIGHT7);
 	end_specular();
@@ -1864,7 +1864,7 @@ void uobj_draw_data::draw_death_orb() const {
 
 	if (specular_en) set_specular(0.9, 90.0);
 	setup_draw_ship();
-	if (ndiv > 3) draw_sphere_dlist(all_zeros, 0.5, ndiv, 0);
+	if (ndiv > 3) draw_sphere_vbo(all_zeros, 0.5, ndiv, 0);
 	end_specular();
 	glPopMatrix(); // undo transformations
 
@@ -1908,7 +1908,7 @@ void uobj_draw_data::draw_supply() const {
 	glPopMatrix();
 	glPushMatrix();
 	glScalef(1.0, 1.0, 0.5);
-	draw_sphere_dlist(point(0.0, 0.0, 3.2), 0.45, ndiv, textured, 1); // front sphere
+	draw_sphere_vbo(point(0.0, 0.0, 3.2), 0.45, ndiv, textured, 1); // front sphere
 	glPopMatrix();
 	draw_cube(point(0.0, 0.0, -1.3), 0.6, 0.9, 0.6, textured, 1, 1); // rear
 
@@ -1925,7 +1925,7 @@ void uobj_draw_data::draw_supply() const {
 		if (light_color == BLACK) light_color = WHITE;
 	}
 	set_emissive_color(light_color);
-	draw_sphere_dlist(point(0.0, 0.0, 1.825), 0.07, get_ndiv(ndiv/4), 0);
+	draw_sphere_vbo(point(0.0, 0.0, 1.825), 0.07, get_ndiv(ndiv/4), 0);
 	clear_emissive_color();
 	glPopMatrix(); // undo invert_z()
 
@@ -1940,7 +1940,7 @@ void uobj_draw_data::draw_anti_miss() const {
 	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv3(get_ndiv(ndiv/3));
 	setup_draw_ship();
 	glTranslatef(0.0, 0.36, 0.0);
-	draw_sphere_dlist(all_zeros, 0.75, 3*ndiv/2, 0); // main body
+	draw_sphere_vbo(all_zeros, 0.75, 3*ndiv/2, 0); // main body
 	color_b.do_glColor();
 	
 	if (ndiv > 6) { // weapon
@@ -1961,7 +1961,7 @@ void uobj_draw_data::draw_anti_miss() const {
 			float const theta(i*TWO_PI/3.0);
 			point const pt(0.84*cosf(theta), -0.8, 0.84*sinf(theta));
 			color_a.do_glColor();
-			draw_sphere_dlist(pt, 0.25, ndiv2, 0);
+			draw_sphere_vbo(pt, 0.25, ndiv2, 0);
 			
 			if (ndiv > 8) {
 				color_b.do_glColor();
@@ -1979,13 +1979,13 @@ void uobj_draw_data::draw_juggernaut() const {
 	setup_draw_ship();
 	glPushMatrix();
 	glScalef(0.85, 1.2, 1.0);
-	draw_sphere_dlist(all_zeros, 1.0, ndiv, 0); // main body
+	draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // main body
 	glPopMatrix();
 
 	glPushMatrix();
 	glTranslatef(0.0, 0.5, 0.3);
 	glScalef(0.5, 1.2, 1.2);
-	draw_sphere_dlist(all_zeros, 0.6, ndiv, 0); // head
+	draw_sphere_vbo(all_zeros, 0.6, ndiv, 0); // head
 	glPopMatrix();
 
 	if (ndiv > 8) {
@@ -1994,40 +1994,40 @@ void uobj_draw_data::draw_juggernaut() const {
 		point eyes[3] = {point(0.0, 0.76, 0.96), point(-0.08, 0.6, 0.98), point(0.08, 0.6, 0.98)};
 
 		for (unsigned i = 0; i < 3; ++i) { // eyes
-			draw_sphere_dlist(eyes[i], 0.04, ndiv4, 0); // head
+			draw_sphere_vbo(eyes[i], 0.04, ndiv4, 0); // head
 		}
 	}
 	glPushMatrix();
 	glTranslatef(0.0, 0.05, -0.45);
 	glScalef(0.55, 1.5, 1.0);
 	if (powered) set_emissive_color(color_b); else color_b.do_glColor();
-	draw_sphere_dlist(all_zeros, 0.65, ndiv, 0); // back
+	draw_sphere_vbo(all_zeros, 0.65, ndiv, 0); // back
 	if (powered) clear_emissive_color();
 	glPopMatrix();
 	color_a.do_glColor();
 
 	for (unsigned i = 0; i < 2; ++i) {
 		float const is(i ? 1.0 : -1.0);
-		draw_sphere_dlist(point(0.64*is, -0.8, -0.25), 0.55, ndiv, 0); // bottom
+		draw_sphere_vbo(point(0.64*is, -0.8, -0.25), 0.55, ndiv, 0); // bottom
 		
 		glPushMatrix();
 		glTranslatef(0.9*is, -0.2, 0.5);
 		glScalef(0.8, 0.5, 2.3);
-		draw_sphere_dlist(all_zeros, 0.35, ndiv2, 0); // middle
+		draw_sphere_vbo(all_zeros, 0.35, ndiv2, 0); // middle
 		glPopMatrix();
 		
 		RED.do_glColor();
 		glPushMatrix();
 		glTranslatef(0.9*is, -0.2, 0.65);
 		glScalef(0.7, 0.5, 2.8);
-		draw_sphere_dlist(all_zeros, 0.28, ndiv2, 0); // red part
+		draw_sphere_vbo(all_zeros, 0.28, ndiv2, 0); // red part
 		glPopMatrix();
 
 		color_a.do_glColor();
 		glPushMatrix();
 		glTranslatef(0.66*is, 0.7, 0.1);
 		glScalef(0.9, 0.9, 1.6);
-		draw_sphere_dlist(all_zeros, 0.5, ndiv, 0); // top
+		draw_sphere_vbo(all_zeros, 0.5, ndiv, 0); // top
 		glPopMatrix();
 	}
 	glPopMatrix();
@@ -2048,7 +2048,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	set_ship_texture(SHIP_HULL_TEX);
 	glPushMatrix();
 	glScalef(1.0, 1.0, 0.1);
-	draw_sphere_dlist(all_zeros, 1.0, ndiv32, 1); // center
+	draw_sphere_vbo(all_zeros, 1.0, ndiv32, 1); // center
 	glPopMatrix();
 	draw_cylin_fast(0.95, 0.15, 0.4, ndiv32, 1); // top
 	glPushMatrix();
@@ -2068,7 +2068,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 		}
 		else {
 			glScalef(1.0, 1.0, 0.5);
-			draw_sphere_dlist(all_zeros, 0.15, ndiv2, 0); // topmost sphere
+			draw_sphere_vbo(all_zeros, 0.15, ndiv2, 0); // topmost sphere
 		}
 		glPopMatrix();
 	}
@@ -2079,7 +2079,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 			((i&1) ? colorRGBA(0.5, 0.3, 0.3, 1.0) : (mothership ? colorRGBA(0.8, 0.5, 0.2, 1.0) : colorRGBA(0.3, 0.3, 0.5, 1.0))).do_glColor();
 			float const theta(TWO_PI*i/float(nwpts));
 
-			draw_sphere_dlist(point(0.6*cosf(theta), 0.6*sinf(theta), 0.16), 0.065, ndiv2, 0);
+			draw_sphere_vbo(point(0.6*cosf(theta), 0.6*sinf(theta), 0.16), 0.065, ndiv2, 0);
 		}
 	}
 	if (ndiv > 8) {
@@ -2095,7 +2095,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 			for (unsigned i = 0; i < nlights; ++i) {
 				if ((powered && ((i+(on_time>>2))&3) == 0) != is_lit) continue; // incorrect state
 				float const theta(TWO_PI*i/float(nlights));
-				draw_sphere_dlist(point(cosf(theta), sinf(theta), 0.0), 0.045, ndiv4, 0);
+				draw_sphere_vbo(point(cosf(theta), sinf(theta), 0.0), 0.045, ndiv4, 0);
 			}
 			if (is_lit) clear_emissive_color();
 		}
@@ -2134,7 +2134,7 @@ void uobj_draw_data::draw_headhunter() const {
 	if (specular_en) set_specular(0.9, 90.0);
 	color_b.do_glColor();
 	glScalef(0.2, 0.2, 1.7); // Note: push/pop not needed since this is the last draw
-	draw_sphere_dlist(point(0.0, 0.0, 0.03), 1.0, ndiv, 0);
+	draw_sphere_vbo(point(0.0, 0.0, 0.03), 1.0, ndiv, 0);
 	if (specular_en) set_specular(0.0, 0.0);
 	glPopMatrix(); // undo invert_z()
 
@@ -2158,7 +2158,7 @@ void uobj_draw_data::draw_seige() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, 0.4);
 	glScalef(0.6, 0.2, 1.0);
-	draw_sphere_dlist(all_zeros, 1.0, ndiv, 1);
+	draw_sphere_vbo(all_zeros, 1.0, ndiv, 1);
 	glTranslatef(0.0, 0.0, -0.3);
 	glScalef(1.0, 1.0, 1.5);
 	colorRGBA c(color_b);
@@ -2168,7 +2168,7 @@ void uobj_draw_data::draw_seige() const {
 		c.do_glColor();
 		glScalef(0.7, 1.35, 0.8);
 		glTranslatef(0.0, 0.05*(7.0 - i), 0.0);
-		draw_sphere_dlist(all_zeros, 1.0, ndiv, 1);
+		draw_sphere_vbo(all_zeros, 1.0, ndiv, 1);
 	}
 	glPopMatrix();
 
@@ -2177,7 +2177,7 @@ void uobj_draw_data::draw_seige() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -0.4);
 	glScalef(0.9, 0.25, 0.96);
-	draw_sphere_dlist(all_zeros, 1.0, ndiv, 1);
+	draw_sphere_vbo(all_zeros, 1.0, ndiv, 1);
 	glPopMatrix();
 
 	// draw engines
@@ -2206,7 +2206,7 @@ void uobj_draw_data::draw_seige() const {
 	end_texture();
 	color_a.do_glColor();
 	glScalef(1.0/0.3, 1.0, 1.0);
-	draw_sphere_dlist(point(0.0, 0.0, 1.3), 0.12, ndiv2, 0); // weapon sphere
+	draw_sphere_vbo(point(0.0, 0.0, 1.3), 0.12, ndiv2, 0); // weapon sphere
 	glPopMatrix();
 
 	// draw weapons
@@ -2273,14 +2273,14 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 
 	glPushMatrix();
 	glScalef(1.0, 1.0, 0.5);
-	draw_sphere_dlist(point(0.0, 0.0, 1.0), 1.0, 3*ndiv/2, textured);
+	draw_sphere_vbo(point(0.0, 0.0, 1.0), 1.0, 3*ndiv/2, textured);
 	glPopMatrix();
 	color_b.do_glColor();
 
 	if (armed && ndiv > 4) { // draw weapon
 		glPushMatrix();
 		glTranslatef(0.0, 0.0, 1.0);
-		draw_sphere_dlist(all_zeros, 0.15, ndiv2, 0);
+		draw_sphere_vbo(all_zeros, 0.15, ndiv2, 0);
 
 		if (ndiv > 5) {
 			invert_z();
@@ -2297,8 +2297,8 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 			glPushMatrix();
 			glTranslatef(x, y, -0.6);
 			draw_cylinder(1.1, 0.2, 0.2, ndiv2, 1, 1, 0);
-			draw_sphere_dlist(point(0.0, 0.0, 0.0), 0.2, ndiv2, textured);
-			draw_sphere_dlist(point(0.0, 0.0, 1.1), 0.2, ndiv2, textured);
+			draw_sphere_vbo(point(0.0, 0.0, 0.0), 0.2, ndiv2, textured);
+			draw_sphere_vbo(point(0.0, 0.0, 1.1), 0.2, ndiv2, textured);
 			glPopMatrix();
 		}
 	}
@@ -2314,7 +2314,7 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 void uobj_draw_data::draw_default_ship() const {
 
 	setup_draw_ship();
-	draw_sphere_dlist(all_zeros, 1.0, 2*ndiv, 0);
+	draw_sphere_vbo(all_zeros, 1.0, 2*ndiv, 0);
 	glPopMatrix(); // undo transformations
 }
 
@@ -2326,7 +2326,7 @@ void uobj_draw_data::draw_asteroid(int tex_id) const {
 
 	color_a.do_glColor();
 	select_texture(tex_id);
-	draw_sphere_dlist(all_zeros, 1.0, 3*ndiv/2, 1);
+	draw_sphere_vbo(all_zeros, 1.0, 3*ndiv/2, 1);
 	end_texture();
 }
 
@@ -2334,7 +2334,7 @@ void uobj_draw_data::draw_asteroid(int tex_id) const {
 void uobj_draw_data::draw_black_hole() const { // should be non-rotated
 
 	BLACK.do_glColor();
-	draw_sphere_dlist(all_zeros, 0.3, ndiv, 0);
+	draw_sphere_vbo(all_zeros, 0.3, ndiv, 0);
 	//WHITE.do_glColor();
 	vector3d const player_dir(player_ship().get_pos() - pos);
 	float const dist_to_player(player_dir.mag());

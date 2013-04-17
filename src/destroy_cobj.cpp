@@ -14,7 +14,7 @@ bool const REMOVE_UNANCHORED = 1;
 int destroy_thresh(0);
 vector<unsigned> falling_cobjs;
 
-extern bool scene_smap_dlist_invalid;
+extern bool scene_smap_vbo_invalid;
 extern float tstep, zmin, base_gravity;
 extern int cobj_counter, coll_id[];
 extern obj_type object_types[];
@@ -318,7 +318,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 	// remove destroyed cobjs
 	for (vector<int>::const_iterator i = to_remove.begin(); i != to_remove.end(); ++i) {
-		if (!cobjs[*i].no_shadow_map()) {scene_smap_dlist_invalid = 1;}
+		if (!cobjs[*i].no_shadow_map()) {scene_smap_vbo_invalid = 1;}
 		cobjs[*i].remove_waypoint();
 		remove_coll_object(*i); // remove old collision object
 	}
@@ -408,7 +408,7 @@ void check_falling_cobjs() {
 	
 	if (falling_cobjs != last_falling) {
 		invalidate_static_cobjs();
-		scene_smap_dlist_invalid = 1;
+		scene_smap_vbo_invalid = 1;
 	}
 	//PRINT_TIME("Check Falling Cobjs");
 }

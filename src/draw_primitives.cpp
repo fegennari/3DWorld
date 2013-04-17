@@ -9,10 +9,11 @@
 
 
 // predefined display lists
-bool const USE_SPHERE_DLIST = 1;
-unsigned const NUM_SPH_DLIST(4*N_SPHERE_DIV);
+bool const USE_SPHERE_VBOS = 1;
+unsigned const NUM_PREDEF_SPHERES(4*N_SPHERE_DIV);
 
-unsigned sphere_dlists[NUM_SPH_DLIST] = {0};
+unsigned sphere_vbo_offsets[NUM_PREDEF_SPHERES+1] = {0};
+unsigned predef_sphere_vbo(0);
 vector_point_norm cylinder_vpn;
 
 
@@ -99,6 +100,9 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 }
 
 
+// *** sd_sphere_d ***
+
+
 void sd_sphere_d::gen_points_norms_static(float s_beg, float s_end, float t_beg, float t_end) {
 
 	static sphere_point_norm temp_spn;
@@ -177,9 +181,6 @@ float sd_sphere_d::get_rmax() const { // could calculate this during gen_points_
 	}
 	return sqrt(rmax_sq);
 }
-
-
-// *** sd_sphere_d ***
 
 
 void sd_sphere_d::set_data(point const &p, float r, int n, float const *pm, float dp, upsurface const *const s) {
@@ -278,7 +279,6 @@ void draw_cylinder(point const &p1, float length, float radius1, float radius2, 
 
 
 // draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = pt1 end, 4 = pt2 end
-// Note: using glDrawArrays() here is problematic because the pointer values go into the display lists created in setup_dlists()
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
 						int draw_sides_ends, float const *const perturb_map)
 {
@@ -358,6 +358,12 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			glEnd();
 		}
 	}
+}
+
+
+void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture) {
+
+	draw_fast_cylinder(all_zeros, point(0.0, 0.0, l), r1, r2, ndiv, texture);
 }
 
 
@@ -506,6 +512,32 @@ void sd_sphere_d::get_triangles(vector<vert_wrap_t> &verts) const {
 }
 
 
+// Note: returns quads as triangles
+void sd_sphere_d::get_triangles(vector<vert_norm_tc> &verts, float s_beg, float s_end, float t_beg, float t_end) const {
+
+	unsigned const ndiv(spn.ndiv);
+	assert(ndiv > 0);
+	float const ndiv_inv(1.0/float(ndiv));
+	point **points   = spn.points;
+	vector3d **norms = spn.norms;
+	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
+	
+	for (unsigned s = s0; s < s1; ++s) {
+		unsigned const sn((s+1)%ndiv), snt(s+1);
+
+		for (unsigned t = t0; t < t1; ++t) {
+			unsigned const ix(s*(ndiv+1)+t), tn(t+1);
+			point          pts[4]     = {points[s][t], points[sn][t], points[sn][tn], points[s][tn]};
+			vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][tn], norms [s][tn]};
+			
+			for (unsigned i = 0; i < 4; ++i) {
+				verts.push_back(vert_norm_tc(pts[i], normals[i],(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), (1.0f - ((i>>1) ? tn : t)*ndiv_inv) ));
+			}
+		} // for t
+	} // for s
+}
+
+
 void sd_sphere_d::draw_ndiv_pow2(unsigned ndiv) const {
 
 	ndiv = max(ndiv, 4U);
@@ -524,7 +556,6 @@ void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float ra
 
 
 // non-collision object version
-// Note: using glDrawArrays() here is problematic because the pointer values go into the display lists created in setup_dlists()
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,
 						int texture, bool disable_bfc, bool const *const render_map, float const *const exp_map,
 						point const *const pt_shift, float expand, float s_beg, float s_end, float t_beg, float t_end)
@@ -984,76 +1015,60 @@ void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // s
 }
 
 
-// ******************** DLISTS ********************
+// ******************** Sphere VBOs ********************
 
 
-void free_dlists() {
+void free_sphere_vbos() {
 
-	if (sphere_dlists[0] > 0) {
-		glDeleteLists(sphere_dlists[0], NUM_SPH_DLIST);
-		for (unsigned i = 0; i < NUM_SPH_DLIST; ++i) {sphere_dlists[i] = 0;}
-	}
+	delete_vbo(predef_sphere_vbo);
+	predef_sphere_vbo = 0;
 }
 
 
-inline void draw_half_subdiv_sphere(unsigned ndiv, bool texture) {
-
-	draw_subdiv_sphere_section(all_zeros, 1.0, ndiv, texture, 0.0, 1.0, 0.0, 0.5);
-}
-
-
-void setup_dlists() {
+void setup_sphere_vbos() {
 
 	assert(N_SPHERE_DIV > 0);
-	if (sphere_dlists[0] != 0) return; // already finished
-	unsigned const dl0(glGenLists(NUM_SPH_DLIST));
-	assert(dl0 > 0);
+	if (predef_sphere_vbo > 0) return; // already finished
+	vector<vert_norm_tc> verts;
+	sphere_point_norm spn;
+	sphere_vbo_offsets[0] = 0;
 
 	for (unsigned i = 1; i <= N_SPHERE_DIV; ++i) {
-		for (unsigned tex = 0; tex < 2; ++tex) {
-			for (unsigned half = 0; half < 2; ++half) {
-				unsigned const index(((i-1) << 2) + (half << 1) + tex), dl(dl0 + index);
-				assert(glIsList(dl));
-				sphere_dlists[index] = dl;
-				glNewList(dl, GL_COMPILE);
-
-				if (half) {
-					draw_half_subdiv_sphere(i, (tex != 0));
-				}
-				else {
-					draw_subdiv_sphere(all_zeros, 1.0, i, (tex != 0), 1);
-				}
-				glEndList();
+		for (unsigned half = 0; half < 2; ++half) {
+			for (unsigned tex = 0; tex < 2; ++tex) {
+				sd_sphere_d sd(all_zeros, 1.0, i);
+				sd.gen_points_norms(spn, 0.0, 1.0, 0.0, (half ? 0.5 : 1.0));
+				sd.get_triangles(verts,  0.0, 1.0, 0.0, (half ? 0.5 : 1.0));
+				sphere_vbo_offsets[((i-1) << 2) + (half << 1) + tex] = verts.size();
 			}
 		}
 	}
+	create_vbo_and_upload(predef_sphere_vbo, verts, 0, 1);
 }
 
 
-void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture) {
+void draw_sphere_vbo_raw(int ndiv, bool textured, bool half) {
 
-	draw_fast_cylinder(all_zeros, point(0.0, 0.0, l), r1, r2, ndiv, texture);
+	assert(ndiv > 0 && ndiv <= N_SPHERE_DIV);
+	assert(predef_sphere_vbo > 0);
+	unsigned const ix(((ndiv-1) << 2) + (half << 1) + textured), off1(sphere_vbo_offsets[ix-1]), off2(sphere_vbo_offsets[ix]);
+	assert(off1 < off2);
+	bind_vbo(predef_sphere_vbo);
+	set_array_client_state(1, textured, 1, 0);
+	vert_norm_tc::set_vbo_arrays(0, 0);
+	glDrawArrays(GL_QUADS, off1, (off2 - off1)); // FIXME: use index arrays?
+	bind_vbo(0);
 }
 
 
-void draw_sphere_dlist_raw(int ndiv, bool textured, bool half) {
+void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc, int shader_loc) {
 
-	assert(ndiv <= N_SPHERE_DIV);
-	unsigned const dlist_id(sphere_dlists[((ndiv-1) << 2) + (half << 1) + textured]);
-	assert(dlist_id > 0);
-	//assert(glIsList(dlist_id));
-	glCallList(dlist_id);
-}
-
-
-void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc, int shader_loc) {
-
-	if (USE_SPHERE_DLIST && ndiv <= N_SPHERE_DIV) { // speedup is highly variable
+	if (USE_SPHERE_VBOS && ndiv <= N_SPHERE_DIV) { // speedup is highly variable
 		assert(ndiv > 0);
 		bool const has_xform(radius != 1.0 || pos != all_zeros);
 
 		if (has_xform) {
-			if (shader_loc >= 0) {
+			if (shader_loc >= 0) { // unused/untested mode
 				colorRGBA const v(pos.x, pos.y, pos.z, radius); // Note: packing xlate and scale into color
 				shader_t::set_uniform_color(shader_loc, v);
 			}
@@ -1063,7 +1078,7 @@ void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, 
 				if (radius != 1.0)    uniform_scale(radius);
 			}
 		}
-		draw_sphere_dlist_raw(ndiv, textured, half);
+		draw_sphere_vbo_raw(ndiv, textured, half);
 		
 		if (has_xform) {
 			if (shader_loc >= 0) {
@@ -1083,13 +1098,13 @@ void draw_sphere_dlist(point const &pos, float radius, int ndiv, bool textured, 
 }
 
 
-void draw_sphere_dlist_back_to_front(point const &pos, float radius, int ndiv, bool textured, bool half) {
+void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, bool textured) {
 
 	glEnable(GL_CULL_FACE);
 
 	for (unsigned i = 0; i < 2; ++i) { // kind of slow
 		glCullFace(i ? GL_BACK : GL_FRONT);
-		draw_sphere_dlist(pos, radius, ndiv, textured, half); // cull?, partial sphere?
+		draw_sphere_vbo(pos, radius, ndiv, textured); // cull?, partial sphere?
 	}
 	glDisable(GL_CULL_FACE);
 }
