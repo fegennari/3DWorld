@@ -26,6 +26,7 @@ int      const END_LIGHT     = GL_LIGHT7 + 1;
 unsigned const MAX_LIGHTS    = unsigned(END_LIGHT - START_LIGHT);
 
 float const CTHRESH          = 0.025;
+float const SQRT_CTHRESH     = sqrt(CTHRESH);
 float const Z_WT_SCALE       = 1.0;
 float const XY_WT_SCALE      = 1.0;
 float const LIGHT_OFFSET     = 0.02;
@@ -138,9 +139,9 @@ float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 }
 
 
-void light_source::get_bounds(point bounds[2], int bnds[3][2], float thresh) const {
+void light_source::get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset) const {
 
-	if (radius == 0.0) {
+	if (radius == 0.0) { // global light source
 		for (unsigned d = 0; d < 3; ++d) {
 			bounds[0][d] = -SCENE_SIZE[d];
 			bounds[1][d] =  SCENE_SIZE[d];
@@ -149,12 +150,12 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2], float thresh) con
 		}
 	}
 	else {
-		float const rb(radius*(1.0 - sqrt(thresh)));
+		float const rb(radius*(1.0 - sqrt_thresh));
 
 		for (unsigned d = 0; d < 3; ++d) {
 			for (unsigned j = 0; j < 2; ++j) {
 				bounds[j][d] = center[d] + (j ? rb : -rb);
-				bnds[d][j]   = max(0, min(MESH_SIZE[d]-1, get_dim_pos(bounds[j][d], d)));
+				bnds[d][j]   = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bounds[j][d] + bounds_offset[d]), d)));
 			}
 		}
 	}
@@ -663,7 +664,7 @@ void build_lightmap(bool verbose) {
 	for (unsigned i = 0; i < light_sources.size(); ++i) {
 		point bounds[2];
 		int bnds[3][2];
-		light_sources[i].get_bounds(bounds, bnds, CTHRESH);
+		light_sources[i].get_bounds(bounds, bnds, SQRT_CTHRESH);
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
@@ -825,7 +826,7 @@ void build_lightmap(bool verbose) {
 			point bounds[2];
 			int bnds[3][2], cobj(-1), last_cobj(-1);
 			CELL_LOC_T const *const cent(ls.get_cent());
-			ls.get_bounds(bounds, bnds, CTHRESH);
+			ls.get_bounds(bounds, bnds, SQRT_CTHRESH);
 			if (SLT_LINE_TEST_WT > 0.0) check_coll_line(lpos, lpos, cobj, -1, 1, 2); // check cobj containment and ignore that shape
 
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
@@ -1296,18 +1297,20 @@ void add_dynamic_lights() {
 	has_dl_sources = (ndl > 0);
 	dlight_add_thresh *= 0.99;
 	bool first(1);
+	float const sqrt_dlight_add_thresh(sqrt(dlight_add_thresh));
+	point const dlight_shift(-SHIFT_DX, -SHIFT_DY, 0.0);
 
 	for (unsigned i = 0; i < ndl; ++i) {
 		light_source &ls(dl_sources[i]);
 		if (!ls.is_visible()) continue; // view culling
 		point const &center(ls.get_center());
 		if ((center.z - ls.get_radius()) > max(ztop, czmax)) continue; // above everything, rarely occurs
-		int xcent(get_xpos(center.x)), ycent(get_ypos(center.y));
+		int const xcent(get_xpos(center.x)), ycent(get_ypos(center.y));
 		if (!point_outside_mesh(xcent, ycent) && !ldynamic[ycent][xcent].check_add_light(i)) continue;
 		point bounds[2];
 		int bnds[3][2];
 		unsigned const ix(i);
-		ls.get_bounds(bounds, bnds, dlight_add_thresh);
+		ls.get_bounds(bounds, bnds, sqrt_dlight_add_thresh, dlight_shift);
 		
 		for (unsigned j = 0; j < 3; ++j) {
 			dlight_bb[j][0] = (first ? bounds[0][j] : min(dlight_bb[j][0], bounds[0][j]));
