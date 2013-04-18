@@ -10,6 +10,7 @@ dynamic_mesh_scroll 0
 no_smoke_over_mesh 1
 disable_universe 1
 disable_inf_terrain 1
+fast_water_reflect 1
 disable_water 0
 disable_scenery 1
 read_landscape 0

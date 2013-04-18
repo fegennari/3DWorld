@@ -94,7 +94,7 @@ vector<water_spring> water_springs;
 vector<water_section> wsections;
 spillover spill;
 
-extern bool using_lightmap, has_dl_sources, has_snow;
+extern bool using_lightmap, has_dl_sources, has_snow, fast_water_reflect;
 extern int display_mode, frame_counter, game_mode, TIMESCALE2, I_TIMESCALE2, ocean_set;
 extern int world_mode, island, rand_gen_index, begin_motion, animate, animate2, blood_spilled;
 extern int landscape_changed, xoff2, yoff2, scrolling, dx_scroll, dy_scroll, INIT_DISABLE_WATER;
@@ -261,62 +261,67 @@ public:
 		vector3d dir;
 		calc_reflection_angle(view_dir, dir, n);
 		point vs(v), ve(v + dir*(4.0*XY_SCENE_SIZE/dir.mag()));
-		bool skip_mesh(!do_line_clip_scene(vs, ve, zbottom, max(ztop, czmax)));
 		point vs0(vs), ve0(ve);
-		float const dval[2] = {DX_VAL, DY_VAL};
-		int        uwv  [2] = {(get_xpos(vs.x) >> bs), (get_ypos(vs.y) >> bs)};
-		int const  ve_xy[2] = {(get_xpos(ve.x) >> bs), (get_ypos(ve.y) >> bs)};
-
-		// clip out regions of the ray that are entirely over the water
-		// not entirely correct for dynamic objects since it uses czmin/czmax and skips regions over water
-		while (!skip_mesh) {
-			if (uwv[0] < 0 || uwv[0] >= int(nx) || uwv[1] < 0 || uwv[1] >= int(ny)) {skip_mesh = 1; break;} // all clipped
-			if (!underwater[uwv[0] + nx*uwv[1]]) break;
-			float tmin(1.0);
-			unsigned dim0(0), dir0(0);
-
-			for (unsigned dim = 0; dim < 2; ++dim) {
-				float const delta(ve[dim] - vs[dim]);
-				if (delta == 0.0) continue;
-				bool const d(delta > 0.0);
-				float const t((-SCENE_SIZE[dim] + dval[dim]*((uwv[dim] + d) << bs) - vs[dim])/delta);
-				if (t < tmin) {tmin = t; dim0 = dim; dir0 = d;}
-			}
-			if (tmin == 1.0) break; // can this happen?
-			if (uwv[0] == ve_xy[0] && uwv[1] == ve_xy[1]) {skip_mesh = 1; break;} // reached the end
-			vs        += (ve - vs)*tmin;
-			uwv[dim0] += (dir0 ? 1 : -1);
-		} // while (1)
-		int xpos, ypos;
-		float mesh_zval;
-		int const fast(2); // less accurate but faster
 		colorRGBA rcolor(ALPHA0);
-		bool mesh_int(0);
+		bool mesh_int(0), cobj_int(0);
 
-		if (!skip_mesh && line_intersect_mesh(vs, ve, xpos, ypos, mesh_zval, fast, 1) /*&& mesh_zval > vs.z*/) { // not sure about this last test
-			float const t((fabs(ve0.z - vs0.z) < TOLERANCE) ? 0.0 : (mesh_zval - vs0.z)/(ve0.z - vs0.z));
-			ve0      = (vs0 + (ve0 - vs0)*t);
-			rcolor   = get_landscape_color(xpos, ypos);
-			mesh_int = 1;
+		if (!fast_water_reflect) {
+			bool skip_mesh(!do_line_clip_scene(vs, ve, zbottom, max(ztop, czmax)));
+			vs0 = vs; ve0 = ve;
+			float const dval[2] = {DX_VAL, DY_VAL};
+			int        uwv  [2] = {(get_xpos(vs.x) >> bs), (get_ypos(vs.y) >> bs)};
+			int const  ve_xy[2] = {(get_xpos(ve.x) >> bs), (get_ypos(ve.y) >> bs)};
+
+			// clip out regions of the ray that are entirely over the water
+			// not entirely correct for dynamic objects since it uses czmin/czmax and skips regions over water
+			while (!skip_mesh) {
+				if (uwv[0] < 0 || uwv[0] >= int(nx) || uwv[1] < 0 || uwv[1] >= int(ny)) {skip_mesh = 1; break;} // all clipped
+				if (!underwater[uwv[0] + nx*uwv[1]]) break;
+				float tmin(1.0);
+				unsigned dim0(0), dir0(0);
+
+				for (unsigned dim = 0; dim < 2; ++dim) {
+					float const delta(ve[dim] - vs[dim]);
+					if (delta == 0.0) continue;
+					bool const d(delta > 0.0);
+					float const t((-SCENE_SIZE[dim] + dval[dim]*((uwv[dim] + d) << bs) - vs[dim])/delta);
+					if (t < tmin) {tmin = t; dim0 = dim; dir0 = d;}
+				}
+				if (tmin == 1.0) break; // can this happen?
+				if (uwv[0] == ve_xy[0] && uwv[1] == ve_xy[1]) {skip_mesh = 1; break;} // reached the end
+				vs        += (ve - vs)*tmin;
+				uwv[dim0] += (dir0 ? 1 : -1);
+			} // while (1)
+			int xpos, ypos;
+			float mesh_zval;
+			int const fast(2); // less accurate but faster
+
+			if (!skip_mesh && line_intersect_mesh(vs, ve, xpos, ypos, mesh_zval, fast, 1) /*&& mesh_zval > vs.z*/) { // not sure about this last test
+				float const t((fabs(ve0.z - vs0.z) < TOLERANCE) ? 0.0 : (mesh_zval - vs0.z)/(ve0.z - vs0.z));
+				ve0      = (vs0 + (ve0 - vs0)*t);
+				rcolor   = get_landscape_color(xpos, ypos);
+				mesh_int = 1;
 			
-			if (dir.z < 0.0 && is_underwater(ve0)) {
-				// if mesh int point is underwater, attenuate along light path and blend like we do when drawing the mesh
-				// could calculate approx water intersection and call recursively, but there are too many problems with that approach
-				water_color_atten_pt(&rcolor.R, xpos, ypos, ve0, v, get_light_pos());
-				float const t2((fabs(v.z - ve0.z) < TOLERANCE) ? 0.0 : (water_matrix[ypos][xpos] - ve0.z)/(v.z - ve0.z));
-				ve0 = (ve0 + (v - ve0)*t2); // updated approx water collision point
-				blend_color(rcolor, color, rcolor, 0.5, 1); // add in a watery color
+				if (dir.z < 0.0 && is_underwater(ve0)) {
+					// if mesh int point is underwater, attenuate along light path and blend like we do when drawing the mesh
+					// could calculate approx water intersection and call recursively, but there are too many problems with that approach
+					water_color_atten_pt(&rcolor.R, xpos, ypos, ve0, v, get_light_pos());
+					float const t2((fabs(v.z - ve0.z) < TOLERANCE) ? 0.0 : (water_matrix[ypos][xpos] - ve0.z)/(v.z - ve0.z));
+					ve0 = (ve0 + (v - ve0)*t2); // updated approx water collision point
+					blend_color(rcolor, color, rcolor, 0.5, 1); // add in a watery color
+				}
+			}
+			int cindex;
+			point cpos; // unused
+			vector3d cnorm; // unused
+			assert(!is_nan(vs0) && !is_nan(ve0));
+
+			if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, 0)) {
+				get_object_color(cindex, rcolor);
+				cobj_int = 1;
 			}
 		}
-		int cindex;
-		point cpos; // unused
-		vector3d cnorm; // unused
-		assert(!is_nan(vs0) && !is_nan(ve0));
-
-		if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, 0)) {
-			get_object_color(cindex, rcolor);
-		}
-		else if (!mesh_int) { // no mesh intersect and no cobj intersect
+		if (!mesh_int && !cobj_int) { // no mesh intersect and no cobj intersect
 			vector3d const vdir((ve0 - vs0).get_norm());
 			float const cloud_density(get_cloud_density(vs0, vdir)); // cloud_color vs. bkg_color
 			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs0, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
