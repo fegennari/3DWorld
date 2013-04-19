@@ -601,16 +601,13 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_GASSER:
-			{
-				radius = 0.14*weapons[W_GASSER].blast_radius;
-				set_color_alpha(OLIVE*0.7, alpha);
-				set_specular(0.7, 30.0);
-				glTranslatef(tx, ty, 0.0);
-				draw_cylinder(16.0*radius, radius, radius, 2*ndiv);
-				draw_circle_normal(0.0, radius, ndiv, 1, 8.0*radius);
-				set_specular(0.0, 0.0);
-				if (wmode & 1) {add_dynamic_light(0.25, (pos0 - dir*(2.5*radius)), ORANGE);} // add sparks?
-			}
+			radius = 0.14*weapons[W_GASSER].blast_radius;
+			set_color_alpha(OLIVE*0.7, alpha);
+			set_specular(0.7, 30.0);
+			glTranslatef(tx, ty, 0.0);
+			draw_cylinder(16.0*radius, radius, radius, 2*ndiv);
+			draw_circle_normal(0.0, radius, ndiv, 1, 8.0*radius);
+			set_specular(0.0, 0.0);
 			break;
 
 		default:
@@ -858,10 +855,18 @@ void add_weapon_lights(int shooter) {
 	assert(shooter >= CAMERA_ID && shooter < num_smileys);
 	player_state const &sstate(sstates[shooter]);
 
-	if (sstate.weapon == W_PLASMA && sstate.plasma_loaded) {
-		point pos(get_sstate_draw_pos(shooter));
-		pos.z += 0.22;
-		add_dynamic_light(min(3.5, 45.0*sstate.plasma_size*object_types[PLASMA].radius), pos, get_plasma_color(sstate.plasma_size));
+	switch (sstate.weapon) {
+	case W_PLASMA:
+		if (sstate.plasma_loaded) {
+			point pos(get_sstate_draw_pos(shooter));
+			pos.z += 0.22;
+			add_dynamic_light(min(3.5, 45.0*sstate.plasma_size*object_types[PLASMA].radius), pos, get_plasma_color(sstate.plasma_size));
+		}
+		break;
+	case W_GASSER:
+		if (sstate.wmode & 1) {
+			add_dynamic_light(0.2, (get_sstate_draw_pos(shooter) + get_sstate_dir(shooter)*(16*0.14*weapons[W_GASSER].blast_radius)), ORANGE); // add sparks?
+		}
 	}
 }
 

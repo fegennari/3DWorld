@@ -31,6 +31,4 @@ Multiple decid tree impostor orients
 
 Hardware tessellation
 
-M16 flash tearing
-
 Profiling
