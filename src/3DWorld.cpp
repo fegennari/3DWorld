@@ -16,6 +16,7 @@
 #include "file_utils.h"
 #include "draw_utils.h"
 #include <set>
+#include <GL/wglew.h> // for wglSwapIntervalEXT
 
 using namespace std;
 typedef set<unsigned char>::iterator keyset_it;
@@ -63,7 +64,7 @@ bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), use_stencil_
 bool univ_planet_lod(0), draw_mesh_shader(1), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), player_near_fire(0), global_lighting_update(0), use_waypoint_app_spots(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
-bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0);
+bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
@@ -194,6 +195,7 @@ void init_context() {
 
 void init_window() {
 
+	wglSwapIntervalEXT(vsync_enabled ? 1 : 0);
 	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
 	glutDisplayFunc(display);
     glutReshapeFunc(resize);
@@ -765,7 +767,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	int mtime2;
 	static int lmtype(0);
 
-    switch (key) {
+    switch (key) { // unused: u
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -932,14 +934,12 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (world_mode == WMODE_UNIVERSE) player_ship().switch_weapon(0); else switch_player_weapon(1);
 		break;
 
-		// shadows
-	case 'o':
-		shadow_detail = min(6, shadow_detail+1);
-		cout << "shadow detail = " << shadow_detail << endl;
+	case 'o': // toggle vsync
+		vsync_enabled ^= 1;
+		wglSwapIntervalEXT(vsync_enabled ? 1 : 0);
 		break;
 	case 'u':
-		shadow_detail = max(0, shadow_detail-1);
-		cout << "shadow detail = " << shadow_detail << endl;
+		// *** UNUSED ***
 		break;
 
 	case '=': // increase temp
