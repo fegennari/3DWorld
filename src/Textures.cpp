@@ -2106,7 +2106,7 @@ void texture_pair_t::free_context() {
 	free_texture(tids[1]);
 }
 
-void texture_pair_t::bind_textures() const {
+void texture_pair_t::bind_texture() const {
 
 	for (unsigned d = 0; d < 2; ++d) {
 		assert(tids[d]);
@@ -2116,9 +2116,9 @@ void texture_pair_t::bind_textures() const {
 	set_active_texture(0);
 }
 
-void texture_pair_t::ensure_tids(unsigned tsize, bool mipmap, bool nearest_for_normal) {
+void texture_pair_t::ensure_tid(unsigned tsize, bool mipmap) {
 	ensure_texture_loaded(tids[0], tsize, tsize, mipmap, 0); // color
-	ensure_texture_loaded(tids[1], tsize, tsize, mipmap, nearest_for_normal); // normal
+	ensure_texture_loaded(tids[1], tsize, tsize, mipmap, 0); // normal
 }
 
 

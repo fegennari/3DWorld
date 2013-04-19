@@ -144,13 +144,13 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		tree_data_t::post_draw(0, 0);
 		shaders[is_normal_pass].disable();
 	}
-	void render_tree(tree_data_t &t, texture_pair_t &tpair) {
+	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex) {
 		if (!shaders[0].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
 		colorRGBA leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()), 0.0); // transparent
-		bool const use_depth_buffer(1), mipmap(0), nearest_for_normal(0); // Note: for some reason mipmaps are slow and don't look any better
-		render(tpair, t.lr_y, t.lr_z, vector3d(0.0, 0.0, t.lr_z_cent), plus_y, leaf_bkg_color, use_depth_buffer, mipmap, nearest_for_normal);
+		bool const use_depth_buffer(1), mipmap(0); // Note: for some reason mipmaps are slow and don't look any better
+		render(ttex, t.lr_x, t.lr_z, vector3d(0.0, 0.0, t.lr_z_cent), plus_y, leaf_bkg_color, use_depth_buffer, mipmap);
 	}
 };
 
@@ -168,12 +168,12 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		tree_data_t::post_draw(1, 0);
 		shaders[is_normal_pass].disable();
 	}
-	void render_tree(tree_data_t &t, texture_pair_t &tpair) {
+	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex) {
 		if (!shaders[0].is_setup()) {setup_shader("no_lighting_tex_coord",     "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tree_branches_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
 		colorRGBA branch_bkg_color(texture_color(get_tree_type().bark_tex), 0.0); // transparent
-		render(tpair, t.br_y, t.br_z, t.get_center(), plus_y, branch_bkg_color, 1, 0, 0);
+		render(ttex, t.br_x, t.br_z, t.get_center(), plus_y, branch_bkg_color, 1, 0);
 	}
 };
 
@@ -202,15 +202,15 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 				pts.front().set_state();
 				glDrawArrays(GL_QUADS, 0, pts.size());
 			}
-			texture_pair_t const &tp(render_branches ? i->td->get_render_branch_texture() : i->td->get_render_leaf_texture());
-			assert(tp.is_valid());
-			tp.bind_textures();
+			tree_bb_tex_t const &ttex(render_branches ? i->td->get_render_branch_texture() : i->td->get_render_leaf_texture());
+			assert(ttex.is_valid());
+			ttex.bind_texture();
 			pts.resize(0);
 		}
 		point pos(i->pos);
-		if (!render_branches) {pos += 0.5*i->td->lr_y*(camera - i->pos).get_norm();}
+		if (!render_branches) {pos += 0.5*i->td->lr_x*(camera - i->pos).get_norm();}
 		vector3d const vdir(camera - pos); // z
-		vector3d const v1((cross_product(vdir, up_vector).get_norm())*(render_branches ? i->td->br_y : i->td->lr_y)); // x (what if colinear?)
+		vector3d const v1((cross_product(vdir, up_vector).get_norm())*(render_branches ? i->td->br_x : i->td->lr_x)); // x (what if colinear?)
 		vector3d const v2((render_branches ? up_vector : cross_product(v1, vdir).get_norm())*(render_branches ? i->td->br_z : i->td->lr_z)); // y
 		pts.push_back(vert_tc_color((pos - v1 - v2), 0.0, 0.0, i->color));
 		pts.push_back(vert_tc_color((pos - v1 + v2), 0.0, 1.0, i->color));
@@ -775,10 +775,16 @@ bool tree::is_visible_to_camera(vector3d const &xlate) const {
 void tree_data_t::check_render_textures() {
 
 	if (!render_leaf_texture.is_valid()) {
+#ifdef USE_TREE_BB_TEX_ATLAS
+		render_leaf_texture.nx = 2;
+#endif
 		render_tree_leaves_to_texture_t renderer(TREE_BILLBOARD_SIZE);
 		renderer.render_tree(*this, render_leaf_texture);
 	}
 	if (!render_branch_texture.is_valid()) {
+#ifdef USE_TREE_BB_TEX_ATLAS
+		render_branch_texture.nx = 2;
+#endif
 		render_tree_branches_to_texture_t renderer(TREE_BILLBOARD_SIZE);
 		renderer.render_tree(*this, render_branch_texture);
 	}
@@ -884,7 +890,7 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 
 			if (td.get_render_leaf_texture().is_valid() && size_scale < lod_start) {
 				geom_opacity = ((lod_denom == 0.0) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
-				lod_renderer.add_leaves(&td, (draw_pos + 0.4*td.get_center()), (1.0 - geom_opacity));
+				lod_renderer.add_leaves(&td, (draw_pos + vector3d(0.0, 0.0, (td.lr_z_cent - td.sphere_center_zoff))), (1.0 - geom_opacity));
 			}
 			if (geom_opacity > 0.0) {
 				s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
@@ -1490,6 +1496,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
 		bzmin = min(bzmin, min(i->p1.z, i->p2.z));
 		bzmax = max(bzmax, max(i->p1.z, i->p2.z));
+		br_x  = max(br_x,  max(fabs(i->p1.x), fabs(i->p2.x)));
 		br_y  = max(br_y,  max(fabs(i->p1.y), fabs(i->p2.y)));
 	}
 	sphere_center_zoff = 0.5*(bzmin + bzmax);
@@ -1501,7 +1508,8 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, get_center()));
 	}
 	for (vector<tree_leaf>::const_iterator i = leaves.begin(); i != leaves.end(); ++i) {
-		lr_y  = max(lr_y,  fabs(i->get_center().y));
+		lr_x  = max(lr_x,  max(max(fabs(i->pts[0].x), fabs(i->pts[1].x)), max(fabs(i->pts[2].x), fabs(i->pts[3].x))));
+		lr_y  = max(lr_y,  max(max(fabs(i->pts[0].y), fabs(i->pts[1].y)), max(fabs(i->pts[2].y), fabs(i->pts[3].y))));
 		lr_z1 = min(lr_z1, min(min(i->pts[0].z, i->pts[1].z), min(i->pts[2].z, i->pts[3].z)));
 		lr_z2 = max(lr_z2, max(max(i->pts[0].z, i->pts[1].z), max(i->pts[2].z, i->pts[3].z)));
 	}

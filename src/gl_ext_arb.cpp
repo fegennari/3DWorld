@@ -270,10 +270,10 @@ void set_temp_clear_color(colorRGBA const &clear_color) {
 
 // Note: default viewing in -z dir
 void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
-	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap, bool nearest_for_normal)
+	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap)
 {
 	pre_render(xsize, ysize, 1, 1, center, view_dir); // setup matrices, etc.
-	tpair.ensure_tids(tsize, mipmap, nearest_for_normal);
+	tpair.ensure_tid(tsize, mipmap);
 	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0);
 	colorRGBA const clear_colors[2] = {bkg_color, clear_normal};
 
@@ -303,6 +303,7 @@ void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysiz
 	set_temp_clear_color(bkg_color); // FIXME: can only set a single clear color, should we draw a full quad to set the clear normal?
 	vector3d xlate(2.0*xsize, 0.0, 0.0);
 	rotate_vector3d_by_vr(-plus_z, view_dir, xlate);
+	translate_to(-0.5*xlate);
 
 	for (unsigned d = 0; d < 2; ++d) {
 		draw_geom(d != 0);

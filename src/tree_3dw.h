@@ -148,6 +148,15 @@ public:
 };
 
 
+//#define USE_TREE_BB_TEX_ATLAS
+
+#ifdef USE_TREE_BB_TEX_ATLAS
+typedef texture_atlas_t tree_bb_tex_t;
+#else
+typedef texture_pair_t tree_bb_tex_t;
+#endif
+
+
 class tree_data_t {
 
 	typedef vert_norm_comp_color leaf_vert_type_t;
@@ -161,7 +170,7 @@ class tree_data_t {
 	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
 	vector<tree_leaf> leaves;
-	texture_pair_t render_leaf_texture, render_branch_texture;
+	tree_bb_tex_t render_leaf_texture, render_branch_texture;
 	int last_update_frame;
 	//unsigned ref_count;
 	bool leaves_changed, reset_leaves;
@@ -171,11 +180,11 @@ class tree_data_t {
 
 public:
 	float base_radius, sphere_radius, sphere_center_zoff;
-	float lr_z_cent, lr_y, lr_z, br_y, br_z; // bounding cylinder data for leaves and branches
+	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
 
 	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1), last_update_frame(0),
 		leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
-		lr_z_cent(0.0), lr_y(0.0), lr_z(0.0), br_y(0.0), br_z(0.0) {}
+		lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
@@ -193,8 +202,8 @@ public:
 	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const;
 	void draw_branches(float size_scale);
 	void draw_leaves(float size_scale);
-	texture_pair_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
-	texture_pair_t const &get_render_branch_texture() const {return render_branch_texture;}
+	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
+	tree_bb_tex_t const &get_render_branch_texture() const {return render_branch_texture;}
 	bool leaf_draw_setup(bool leaf_dynamic_en);
 	void check_render_textures();
 	void update_normal_for_leaf(unsigned i);

@@ -1,17 +1,20 @@
 uniform sampler2D color_map, normal_map;
-uniform vec4 color_scale = vec4(1,1,1,1);
+uniform vec4 color_scale     = vec4(1,1,1,1);
+uniform vec2 normal_tc_off   = vec2(0,0);
+uniform vec2 normal_tc_scale = vec2(1,1);
 
 varying vec4 eye_space_pos;
 
 void main()
 {
-	vec4 texel = texture2D(color_map, gl_TexCoord[0].st);
+	vec2 tc_scaled = normal_tc_scale*gl_TexCoord[0].st;
+	vec4 texel = texture2D(color_map, tc_scaled);
 	if (texel.a < 0.75) discard; // transparent
 	//if (normal.w == 0.0) discard; // normal not written to (uses nearest filter)
 	check_noise_and_maybe_discard(0.0, gl_Color.a);
 
 	// transform the normal into eye space, but don't normalize because it may be scaled for shadows
-	vec3 normal = gl_NormalMatrix * (2.0*texture2D(normal_map, gl_TexCoord[0].st).xyz - vec3(1,1,1));
+	vec3 normal = gl_NormalMatrix * (2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1,1,1));
 	if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse (could use faceforward())
 	
 	vec4 color = gl_Color * gl_LightModel.ambient;
