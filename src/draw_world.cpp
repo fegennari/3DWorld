@@ -146,48 +146,6 @@ void draw_camera_weapon(bool want_has_trans) {
 }
 
 
-void draw_shadow_volume(point const &pos, point const &lpos, float radius, int &inverts) {
-
-	// test for camera inside of cylinder and invert stencil
-	vector3d v1(pos - lpos), v2(pos - get_camera_pos());
-	float const dotp(dot_product(v1, v2)), val(v1.mag_sq()), length2(sqrt(val));
-	if (dotp < 0.0 && (v2 - v1*(dotp/val)).mag_sq() < radius*radius) ++inverts;
-	v1 /= length2;
-	float const length((zmin - pos.z)/v1.z + radius), radius2(radius*((length + length2)/length2));
-	draw_fast_cylinder(pos, (pos + v1*length), (radius + SMALL_NUMBER), (radius2 + SMALL_NUMBER), (N_CYL_SIDES >> 1), 0, 1);
-}
-
-
-// fast and good quality but has other problems:
-// 1. slow for many lights (especially double pass mode)
-// 2. camera shadow near clip (single pass mode)
-// 3. double shadows cancel (single pass mode)
-// 4. back faces of objects are double shadowed
-// 5. somewhat incorrect for multiple colored lights
-int draw_shadowed_objects(int light) {
-
-	int inverts(0);
-	point lpos;
-	if (!get_light_pos(lpos, light)) return 0;
-
-	for (int i = 0; i < num_groups; ++i) {
-		obj_group const &objg(obj_groups[i]);
-		if (!objg.temperature_ok() || !objg.large_radius() || !objg.enabled) continue;
-		float const radius(object_types[objg.type].radius);
-
-		for (unsigned j = 0; j < objg.end_id; ++j) {
-			dwobject const &obj(objg.get_obj(j));
-			if (obj.disabled()) continue;
-			if (obj.flags & (CAMERA_VIEW | SHADOWED)) continue;
-			draw_shadow_volume(obj.pos, lpos, radius, inverts);
-		} // for j
-	} // for i
-	if (display_mode & 0x0200) d_part_sys.add_stencil_shadows(lpos, inverts);
-	// loop through cylinders of tree now...or maybe not
-	return inverts;
-}
-
-
 void set_specular(float specularity, float shininess) {
 
 	static float last_shiny(-1.0), last_spec(-1.0);

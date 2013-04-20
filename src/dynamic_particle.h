@@ -24,7 +24,6 @@ public:
 	void add_light() const; // dynamic lights
 	void add_cobj_shadows() const; // cobjs, dynamic objects
 	void add_mesh_shadows() const;
-	void add_stencil_shadows(point const &lpos, int &inverts) const;
 	void add_cobj();
 	void remove_cobj();
 };
@@ -47,7 +46,6 @@ public:
 	void add_light() const;
 	void add_cobj_shadows() const;
 	void add_mesh_shadows() const;
-	void add_stencil_shadows(point const &lpos, int &inverts) const;
 	void build_lookup_matrix();
 };
 

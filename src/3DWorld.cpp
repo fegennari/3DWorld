@@ -60,7 +60,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
 // Global Variables
-bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), use_stencil_shadows(0), univ_stencil_shadows(1);
+bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1);
 bool univ_planet_lod(0), draw_mesh_shader(1), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), player_near_fire(0), global_lighting_update(0), use_waypoint_app_spots(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
@@ -69,7 +69,7 @@ int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), c
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
 int display_framerate(1), init_resize(1), temp_change(0), mesh_type(INIT_MESH_TYPE), mt2(0), is_cloudy(0);
-int star_init(0), recreated(1), stencil_shadow(0), cloud_model(0), force_tree_class(-1);
+int star_init(0), recreated(1), cloud_model(0), force_tree_class(-1);
 int displayed(0), min_time(0), resolution(1+(START_MODE==3)), res_old(1+(START_MODE!=3)), show_framerate(0);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0);
 int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
@@ -1176,13 +1176,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x80;   break;
 	case '9': // toggle ocean waves and leaf wind
 		display_mode ^= 0x0100; break;
-	case '0': // change shadow model (stencil shadows and overhead map shadows)
-		if (world_mode == WMODE_UNIVERSE) {
-			univ_stencil_shadows = !univ_stencil_shadows;
-		}
-		else {
-			use_stencil_shadows  = !use_stencil_shadows;
-		}
+	case '0': // toggle universe stencil shadows
+		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows = !univ_stencil_shadows;}
 		break;
 
 	case '\\': // enable dynamic particles (to test dynamic lighting, dynamic shadows, and collision detection)

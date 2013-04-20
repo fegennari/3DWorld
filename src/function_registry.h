@@ -42,7 +42,6 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius);
 bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int max_level, bool no_frustum_test=0);
 int  get_light_pos(point &lpos, int light);
 void update_sun_shadows();
-void create_shadows();
 void update_sun_and_moon();
 int light_valid(unsigned light_sources, int l, point &lpos);
 
@@ -104,8 +103,6 @@ void draw_solid_object_groups();
 void draw_transparent_object_groups();
 void draw_select_groups(int solid);
 colorRGBA get_powerup_color(int powerup);
-void draw_shadow_volume(point const &pos, point const &lpos, float radius, int &inverts);
-int  draw_shadowed_objects(int light);
 void set_specular(float specularity, float shininess);
 colorRGBA get_glowing_obj_color(point const &pos, int time, int lifetime, float &stime, bool shrapnel_cscale, bool fade);
 colorRGBA const &get_landmine_light_color(int time);

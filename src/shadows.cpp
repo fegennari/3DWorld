@@ -28,7 +28,7 @@ int dshadow_lights(0);
 point light_pos;
 shad_env s_env[NUM_LIGHT_SRC];
 
-extern bool combined_gu, use_stencil_shadows, draw_mesh_shader;
+extern bool combined_gu, draw_mesh_shader;
 extern int island, ground_effects_level, scrolling;
 extern float sun_rot, moon_rot, zmin, zmax, zbottom, ztop;
 extern point sun_pos, moon_pos, mesh_origin;
@@ -38,67 +38,6 @@ extern coll_obj_group coll_objects;
 
 
 int check_shadow_edge_clip(point const &pt, point const &lpos, int &xmin, int &xmax, int &ymin, int &ymax);
-
-
-
-void create_shadows() {
-
-	glClear(GL_STENCIL_BUFFER_BIT);
-	glDisable(GL_LIGHTING);
-	glEnable(GL_DEPTH_TEST);
-	glDepthMask(GL_FALSE);
-	glDepthFunc(GL_LEQUAL);
-	glEnable(GL_STENCIL_TEST);
-
-	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
-		if ((l == LIGHT_SUN && light_factor < 0.5) || (l == LIGHT_MOON && light_factor >= 0.6)) continue;
-		float shadow_alpha;
-
-		if (light_factor <= 0.4 || light_factor >= 0.6) {
-			shadow_alpha = SHADOW_COLOR;
-		}
-		else {
-			if (l == LIGHT_SUN) {
-				shadow_alpha = 10.0*(light_factor - 0.5)*SHADOW_COLOR;
-			}
-			else if (l == LIGHT_MOON) {
-				shadow_alpha = 5.0*(0.6 - light_factor)*SHADOW_COLOR;
-			}
-			else continue;
-		}
-		int inverts(0); // two pass stencil
-		glColorMask(0, 0, 0, 0);
-		glStencilFunc(GL_ALWAYS, 1, ~0);
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK); // could use glFrontFace(GL_CW)
-		glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
-		inverts = draw_shadowed_objects(l); // draw_world.cpp
-		glCullFace(GL_FRONT);
-		glStencilOp(GL_KEEP, GL_KEEP, GL_DECR);
-		draw_shadowed_objects(l); // draw_world.cpp
-		glCullFace(GL_BACK);
-		glDisable(GL_CULL_FACE);
-		glColorMask(1, 1, 1, 1);
-
-		// draw a shadowing rectangle covering the entire screen
-		glColor4f(0.0, 0.0, 0.0, shadow_alpha);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glStencilFunc(((inverts & 1) ? GL_EQUAL : GL_NOTEQUAL), 0, ~0); // test for invert stencil
-		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-		glPushMatrix();
-		glLoadIdentity();
-		vector<camera_filter> cfs;
-		cfs.push_back(camera_filter(colorRGBA(0.0, 0.0, 0.0, shadow_alpha), 1, -1));
-		draw_camera_filters(cfs);
-		glPopMatrix();
-	}
-	glDepthFunc(GL_LEQUAL);
-	glDepthMask(GL_TRUE);
-	glEnable(GL_LIGHTING);
-	glDisable(GL_STENCIL_TEST);
-	glShadeModel(GL_SMOOTH);
-}
 
 
 void update_sun_shadows() {
@@ -223,7 +162,7 @@ void camera_shadow(point const &camera) {
 }
 
 void dynamic_sphere_shadow(point const &pos, float radius, unsigned light_sources, int quality) {
-	if (!use_stencil_shadows && !shadow_map_enabled()) {sphere_shadow(pos, radius, light_sources, 1, quality);}
+	if (!shadow_map_enabled()) {sphere_shadow(pos, radius, light_sources, 1, quality);}
 }
 
 

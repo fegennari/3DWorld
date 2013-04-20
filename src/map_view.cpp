@@ -9,10 +9,11 @@
 #include "physics_objects.h"
 
 
+bool const MAP_VIEW_LIGHTING = 1;
+
 int map_x(0), map_y(0);
 float map_zoom(0.25);
 
-extern bool use_stencil_shadows;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, begin_motion;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter;
 extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex;
@@ -129,7 +130,7 @@ void draw_overhead_map() {
 						float const hval(0.5*(height - map_heights[5])/(map_heights[4] - map_heights[5]));
 						UNROLL_3X(rgb[i_] = (unsigned char)(255.0*(1.0 - hval)*map_colors[5][i_] + hval*rgb[i_]);)
 					}
-					if (!use_stencil_shadows) {
+					if (MAP_VIEW_LIGHTING) {
 						vector3d normal(plus_z);
 
 						if (height > map_heights[4]) {

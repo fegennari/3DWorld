@@ -10,7 +10,6 @@
 float const TOLER_ = 1.0E-6;
 
 
-extern bool use_stencil_shadows;
 extern int begin_motion, num_groups, camera_coll_id, spectate, display_mode, camera_mode, camera_view;
 extern float zmin;
 extern double camera_zh;
@@ -317,7 +316,7 @@ void add_coll_shadow_objs() {
 	
 	//RESET_TIME;
 	shadow_objs.resize(0);
-	if (use_stencil_shadows || !shadow_map_enabled()) return; // if stencil shadows are enabled we don't do them here
+	if (!shadow_map_enabled()) return;
 	point const camera(get_camera_pos());
 
 	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID)) { // shadow the camera even when in the air (but not when dead)

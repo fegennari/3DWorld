@@ -143,10 +143,6 @@ void dynamic_particle::add_mesh_shadows() const {
 	if (shadows) dynamic_sphere_shadow(pos, radius, CHECK_ALL_SHADOW, 0); // sphere_shadow? quality?
 }
 
-void dynamic_particle::add_stencil_shadows(point const &lpos, int &inverts) const {
-	if (shadows) draw_shadow_volume(pos, lpos, radius, inverts);
-}
-
 void dynamic_particle::add_cobj() {
 	if (ADD_DP_COBJS) cid = add_coll_sphere(pos, radius, cobj_params(0.7, color, 0, 1));
 }
@@ -227,16 +223,6 @@ void dynamic_particle_system::add_mesh_shadows() const {
 		particles[i].add_mesh_shadows();
 	}
 	if (DEBUG_TIME && size() > 0) PRINT_TIME("DPS Mesh Shadows");
-}
-
-
-void dynamic_particle_system::add_stencil_shadows(point const &lpos, int &inverts) const {
-	
-	RESET_TIME;
-	for (unsigned i = 0; i < size(); ++i) {
-		particles[i].add_stencil_shadows(lpos, inverts);
-	}
-	if (DEBUG_TIME && size() > 0) PRINT_TIME("DPS Stencil Shadows");
 }
 
 

@@ -40,7 +40,7 @@ float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
 
-extern bool nop_frame, combined_gu, have_sun, use_stencil_shadows, clear_landscape_vbo, show_lightning;
+extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning;
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop;
@@ -63,12 +63,6 @@ void calc_cur_ambient_diffuse();
 void glClearColor_rgba(const colorRGBA &color) {
 
 	glClearColor(color.R, color.G, color.B, color.A);
-}
-
-
-bool shadows_enabled() {
-
-	return (use_stencil_shadows && (sun_pos.z > zmin || moon_pos.z > zmin));
 }
 
 
@@ -922,7 +916,7 @@ void display(void) {
 			if (display_mode & 0x01) {display_mesh();} // draw mesh
 			check_gl_error(7);
 			if (TIMETEST) PRINT_TIME("I");
-			if (!use_stencil_shadows) draw_solid_object_groups();
+			draw_solid_object_groups();
 			check_gl_error(8);
 			if (TIMETEST) PRINT_TIME("J");
 			draw_coll_surfaces(1, 0);
@@ -947,14 +941,7 @@ void display(void) {
 			if (TIMETEST) PRINT_TIME("N");
 			draw_stuff(underwater, timer1);
 			if (TIMETEST) PRINT_TIME("T");
-			bool const shadows(shadows_enabled());
-
-			if (use_stencil_shadows) {
-				if (shadows) create_shadows();
-				draw_solid_object_groups();
-			}
 			draw_game_elements(timer1);
-			if (!use_stencil_shadows && shadows) create_shadows();
 			setup_basic_fog();
 			draw_sky(1);
 			draw_puffy_clouds(1);

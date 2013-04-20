@@ -21,8 +21,6 @@ Remove immediate mode calls
 Remove non-shader rendering
 No disable_shaders mode
 
-Remove stencil shadows?
-
 Run leak detection
 
 Multiple decid tree impostor orients
