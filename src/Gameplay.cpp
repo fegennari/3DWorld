@@ -49,7 +49,7 @@ team_info *teaminfo = NULL;
 vector<bbox> team_starts;
 
 
-extern bool player_near_fire;
+extern bool player_near_fire, vsync_enabled;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, spectate;
@@ -1554,7 +1554,8 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		assert(fire_delay > 0);
 		damage_scale = fticks/fire_delay;
 	}
-	else if (dtime < fire_delay) {
+	else if (dtime < fire_delay) { // add light between firing frames to avoid tearing
+		if (!vsync_enabled && shooter == CAMERA_ID && weapon_id == W_M16) {add_dynamic_light(1.0, fpos, YELLOW);}
 		return 0;
 	}
 	timer = frame_counter;
