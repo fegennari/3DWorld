@@ -214,18 +214,20 @@ void draw_stuff(int draw_uw, int timer1) {
 		draw_snow();
 		draw_trees();
 		check_gl_error(20);
-		if (TIMETEST) PRINT_TIME("9");
+		if (TIMETEST) PRINT_TIME("O");
 		draw_hmv();
 		draw_scenery(0, 1);
 		check_gl_error(21);
-		if (TIMETEST) PRINT_TIME("0");
+		if (TIMETEST) PRINT_TIME("P");
 		draw_coll_surfaces(0, 1);
 		check_gl_error(22);
+		if (TIMETEST) PRINT_TIME("Q");
 		render_models(0);
 		check_gl_error(24);
+		if (TIMETEST) PRINT_TIME("R");
 		render_voxel_data(0);
 		check_gl_error(25);
-		if (TIMETEST) PRINT_TIME("X");
+		if (TIMETEST) PRINT_TIME("S");
 		draw_transparent_object_groups();
 		check_gl_error(26);
 	}
@@ -560,12 +562,12 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 
 void draw_game_elements(int timer1) {
 
-	if (TIMETEST) PRINT_TIME("B");
+	if (TIMETEST) PRINT_TIME("U");
 	draw_camera_weapon(1);
 	draw_projectile_effects();
-	if (TIMETEST) PRINT_TIME("C");
+	if (TIMETEST) PRINT_TIME("V");
 	draw_cracks_decals_smoke_and_fires();
-	if (TIMETEST) PRINT_TIME("D");
+	if (TIMETEST) PRINT_TIME("W");
 	draw_scheduled_weapons();
 }
 
@@ -853,7 +855,7 @@ void display(void) {
 		auto_advance_time();
 		if (animate2) {total_wind += wind*fticks;}
 		check_gl_error(3);
-		if (TIMETEST) PRINT_TIME("\n\n0");
+		if (TIMETEST) PRINT_TIME("\n\nA");
 		
 		if (!combined_gu) {
 			do_look_at();
@@ -863,7 +865,7 @@ void display(void) {
 			setup_lighting(underwater, depth);
 			set_light_atten(GL_LIGHT0, 1.0); // reset light0
 			check_gl_error(4);
-			if (TIMETEST) PRINT_TIME("1");
+			if (TIMETEST) PRINT_TIME("B");
 		}
 		if (world_mode == WMODE_INF_TERRAIN) { // infinite terrain mode
 			display_inf_terrain(depth);
@@ -872,7 +874,7 @@ void display(void) {
 			if (combined_gu) { // light from current system's star
 				draw_universe_bkg(underwater, depth, 0); // infinite universe as background
 			}
-			if (TIMETEST) PRINT_TIME("1.5");
+			if (TIMETEST) PRINT_TIME("C");
 
 			if (mesh_invalidated) {
 				gen_mesh_bsp_tree();
@@ -891,13 +893,13 @@ void display(void) {
 			draw_env_other();
 			reset_shadows(DYNAMIC_SHADOW);
 			check_gl_error(5);
-			if (TIMETEST) PRINT_TIME("2");
+			if (TIMETEST) PRINT_TIME("D");
 			process_groups();
 			check_gl_error(12);
 			if (game_mode && b2down) fire_weapon();
 			proc_voxel_updates();
 			update_weapon_cobjs(); // and update cblade
-			if (TIMETEST) PRINT_TIME("3");
+			if (TIMETEST) PRINT_TIME("E");
 			if (!camera_view) camera_shadow(camera);
 
 			if (underwater) {
@@ -910,23 +912,24 @@ void display(void) {
 				glFogf(GL_FOG_END, fog_dist);
 			}
 			check_gl_error(6);
-			if (TIMETEST) PRINT_TIME("4");
+			if (TIMETEST) PRINT_TIME("F");
 			create_shadow_map(); // where should this go?
+			if (TIMETEST) PRINT_TIME("G");
 			setup_object_render_data();
 			check_gl_error(101);
 			draw_camera_weapon(0);
-			if (TIMETEST) PRINT_TIME("4.5");
+			if (TIMETEST) PRINT_TIME("H");
 			if (display_mode & 0x01) {display_mesh();} // draw mesh
 			check_gl_error(7);
-			if (TIMETEST) PRINT_TIME("5");
+			if (TIMETEST) PRINT_TIME("I");
 			if (!use_stencil_shadows) draw_solid_object_groups();
 			check_gl_error(8);
-			if (TIMETEST) PRINT_TIME("6");
+			if (TIMETEST) PRINT_TIME("J");
 			draw_coll_surfaces(1, 0);
-			if (TIMETEST) PRINT_TIME("6.5");
+			if (TIMETEST) PRINT_TIME("K");
 			draw_scenery(1, 0);
 			draw_grass();
-			if (TIMETEST) PRINT_TIME("6.6");
+			if (TIMETEST) PRINT_TIME("L");
 			draw_stuff(!underwater, timer1);
 
 			if (show_lightning) { // after the water?
@@ -937,13 +940,13 @@ void display(void) {
 					if ((rand()&7) == 0) gen_fire(l_strike.end, 1.0, -2);
 				}
 			}
-			if (TIMETEST) PRINT_TIME("7");
+			if (TIMETEST) PRINT_TIME("M");
 			if (display_mode & 0x04) draw_water(); // must be after process_groups()
 			if (display_mode & 0x01) draw_ocean();
 			check_gl_error(9);
-			if (TIMETEST) PRINT_TIME("8");
+			if (TIMETEST) PRINT_TIME("N");
 			draw_stuff(underwater, timer1);
-			if (TIMETEST) PRINT_TIME("A");
+			if (TIMETEST) PRINT_TIME("T");
 			bool const shadows(shadows_enabled());
 
 			if (use_stencil_shadows) {
@@ -974,7 +977,7 @@ void display(void) {
 		if (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && !game_mode && camera_mode == 1)) {
 			draw_compass_and_alt();
 		}
-		if (TIMETEST) PRINT_TIME("F");
+		if (TIMETEST) PRINT_TIME("X");
 
 		if (dynamic_mesh_scroll && world_mode == WMODE_GROUND && camera_mode == 1 && !island && !camera_view) {
 			float const cdist(max(fabs(camera.x/X_SCENE_SIZE), fabs(camera.y/Y_SCENE_SIZE)));
@@ -983,7 +986,7 @@ void display(void) {
 	} // not universe mode
 	swap_buffers_and_redraw();
 	check_gl_error(11);
-	if (TIMETEST) PRINT_TIME("G");
+	if (TIMETEST) PRINT_TIME("Y");
 }
 
 

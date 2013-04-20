@@ -767,7 +767,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	int mtime2;
 	static int lmtype(0);
 
-    switch (key) { // unused: u
+    switch (key) {
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -874,6 +874,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'f': // print framerate and stats
 		show_framerate = 1;
+		timing_profiler_stats();
 		break;
 	case 'g': // pause/resume playback of eventlist
 		pause_frame = !pause_frame;
@@ -938,8 +939,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		vsync_enabled ^= 1;
 		wglSwapIntervalEXT(vsync_enabled ? 1 : 0);
 		break;
-	case 'u':
-		// *** UNUSED ***
+	case 'u': // toggle timing profiler
+		toggle_timing_profiler();
 		break;
 
 	case '=': // increase temp

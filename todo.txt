@@ -30,5 +30,3 @@ Multiple decid tree impostor orients
  - Combine color and normal billboard textures
 
 Hardware tessellation
-
-Profiling

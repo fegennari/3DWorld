@@ -1174,11 +1174,15 @@ colorRGBA const BACKGROUND_DAY(0.2, 0.3, 0.8, 1.0);
 colorRGBA const BACKGROUND_NIGHT(BLACK);
 
 
+void register_timing_value(const char *str, int delta_time);
+void toggle_timing_profiler();
+void timing_profiler_stats();
+
 // macros
 #define GET_TIME_MS()    glutGet(GLUT_ELAPSED_TIME)
 #define RESET_TIME       int const timer1(GET_TIME_MS());
 #define GET_DELTA_TIME   (GET_TIME_MS() - timer1)
-#define PRINT_TIME(str) {cout << str << " time = " << GET_DELTA_TIME << endl;}
+#define PRINT_TIME(str) {register_timing_value(str, GET_DELTA_TIME);}
 
 #if 0 // still only ms accuracy in windows
 #include <time.h>
