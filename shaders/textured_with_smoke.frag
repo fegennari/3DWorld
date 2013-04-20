@@ -19,7 +19,7 @@ const float SMOKE_SCALE = 0.25;
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
 vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
-	float nscale = (use_shadow_map ? get_shadow_map_weight_light0(epos) : 1.0);
+	float nscale = (use_shadow_map ? get_shadow_map_weight_light0(epos, n) : 1.0);
 
 #ifdef DYNAMIC_SMOKE_SHADOWS
 	if (source != dest && nscale > 0.0) {

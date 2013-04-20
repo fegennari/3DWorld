@@ -297,6 +297,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 	s.set_bool_prefix("two_sided_lighting",  use_tsl,     1); // FS
 	s.set_bool_prefix("use_world_space_mvm", use_mvm,     0); // VS
 	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP", 1);} // FS
+	//s.set_prefix("#define SMAP_MODE0", 1); // FS
 
 	if (smoke_enabled) {
 		// Note: dynamic_smoke_shadows applies to light0 only
