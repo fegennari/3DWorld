@@ -95,7 +95,7 @@ void set_gl_light_pos(int light, point const &pos, float w);
 void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]);
 void clear_colors_and_disable_light(int light);
 int get_light();
-void get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed, bool precip, bool no_dynamic);
+void get_shadowed_color(colorRGBA &color_a, point const &pos, bool no_dynamic);
 bool pt_is_shadowed(point const &pos, int light, float radius, int cid, bool fast, bool use_mesh);
 void set_color_alpha(colorRGBA color, float alpha=1.0);
 void draw_camera_weapon(bool want_has_trans);
@@ -663,7 +663,7 @@ bool is_shadowed_lightmap(point const &p);
 bool is_in_darkness(point const &pos, float radius, int cobj);
 bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
 void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float lightscale, float *ls, vector3d const *const norm, float const *const spec);
-float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec);
+float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, vector3d const *const norm=NULL, float const *const spec=NULL);
 unsigned enable_dynamic_lights(point const &center=all_zeros, float radius=0.0);
 void disable_dynamic_lights(unsigned num_dlights);
 

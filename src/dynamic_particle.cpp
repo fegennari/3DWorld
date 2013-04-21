@@ -66,7 +66,7 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 	else {
 		bool is_shadowed(!is_visible_to_light_cobj(pos, get_light(), radius, -1, 0));
 		colorRGBA a(color);
-		get_shadowed_color(a, pos, is_shadowed, 0, 0);
+		get_shadowed_color(a, pos, 0);
 		set_color_a(a);
 		set_color_d(is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
 	}

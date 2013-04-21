@@ -914,7 +914,7 @@ void build_lightmap(bool verbose) {
 		for (unsigned ltype = 0; ltype < NUM_LIGHTING_TYPES; ++ltype) {
 			if (raytrace_lights[ltype]) {
 				compute_ray_trace_lighting(ltype);
-				if (verbose) PRINT_TIME(type_names[ltype] + " Lightmap Ray Trace");
+				if (verbose) {PRINT_TIME((type_names[ltype] + " Lightmap Ray Trace").c_str());}
 			}
 		}
 	}
@@ -1385,7 +1385,7 @@ inline float add_specular(point const &p, vector3d ldir, vector3d const &norm, f
 bool is_in_darkness(point const &pos, float radius, int cobj) {
 
 	colorRGBA c(WHITE);
-	get_indir_light(c, pos, 0, 1, NULL, NULL); // this is faster so do it first
+	get_indir_light(c, pos, 0); // this is faster so do it first
 	if ((c.R + c.G + c.B) > DARKNESS_THRESH) return 0;
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
@@ -1465,7 +1465,7 @@ void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float li
 }
 
 
-float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, bool shadowed, vector3d const *const norm, float const *const spec) {
+float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, vector3d const *const norm, float const *const spec) {
 
 	float val(get_voxel_terrain_ao_lighting_val(p)); // shift p?
 	if (!lm_alloc) return val;

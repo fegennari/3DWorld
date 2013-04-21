@@ -101,11 +101,10 @@ void set_gl_light_pos(int light, point const &pos, float w) {
 }
 
 
-void get_shadowed_color(colorRGBA &color_a, point const &pos, bool &is_shadowed, bool precip, bool no_dynamic) {
+void get_shadowed_color(colorRGBA &color_a, point const &pos, bool no_dynamic) {
 
 	if ((using_lightmap || create_voxel_landscape || (!no_dynamic && has_dl_sources)) && color_a != BLACK) { // somewhat slow
-		float const val(get_indir_light(color_a, (pos + vector3d(0.0, 0.0, 0.01)), no_dynamic, (is_shadowed || precip), NULL, NULL)); // get above mesh
-		if (precip && val < 1.0) is_shadowed = 1; // if precip, imply shadow status from indirect light value
+		get_indir_light(color_a, (pos + vector3d(0.0, 0.0, 0.01)), no_dynamic); // get above mesh
 	}
 }
 
@@ -121,9 +120,9 @@ bool pt_is_shadowed(point const &pos, int light, float radius, int cid, bool fas
 			//if (is_mesh_disabled(xpos, ypos)) return 0; // assuming not drawing the mesh means it's underneath a cobj
 			return ((shadow_mask[light][ypos][xpos] & SHADOWED_ALL) != 0);
 		}
-		if (fast) return (is_shadowed_lightmap(pos)); // use the precomputed lightmap value
+		if (fast) {return is_shadowed_lightmap(pos);} // use the precomputed lightmap value
 	}
-	return (!is_visible_to_light_cobj(pos, light, radius, cid, 0));
+	return !is_visible_to_light_cobj(pos, light, radius, cid, 0);
 }
 
 
@@ -886,23 +885,29 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 	if (dist_less_than(camera, p, max(NEAR_CLIP, 4.0f*r))) return; // too close to the camera
 
 	if (!no_lighting && !is_fire()) { // fire has its own emissive lighting
-		int cindex;
 		point const lpos(get_light_pos());
-	
-		if (!check_coll_line(p, lpos, cindex, -1, 1, 1)) { // not shadowed (slow, especially for lots of smoke near trees)
+		bool const outside_scene(p.z > czmax || !is_over_mesh(p));
+		bool known_coll(0);
+		static int last_cid(-1);
+		
+		if (!outside_scene && last_cid >= 0) {
+			assert(last_cid < (int)coll_objects.size());
+			known_coll = coll_objects[last_cid].line_intersect(p, lpos);
+		}
+		if (outside_scene || (!known_coll && !check_coll_line(p, lpos, last_cid, -1, 1, 1))) { // not shadowed (slow, especially for lots of smoke near trees)
 			// Note: This can be moved into a shader, but the performance and quality improvement might not be significant
 			vector3d const dir((p - get_camera_pos()).get_norm());
 			float const dp(dot_product_ptv(dir, p, lpos));
 			float rad, dist, t;
 			blend_color(c, WHITE, c, 0.15, 0); // 15% ambient lighting (transmitted/scattered)
-			if (dp > 0.0) blend_color(c, WHITE, c, 0.1*dp/p2p_dist(p, lpos), 0); // 10% diffuse lighting (directional)
+			if (dp > 0.0) {blend_color(c, WHITE, c, 0.1*dp/p2p_dist(p, lpos), 0);} // 10% diffuse lighting (directional)
 
 			if (dp < 0.0 && have_sun && line_intersect_sphere(p, dir, sun_pos, 6*sun_radius, rad, dist, t)) {
 				float const mult(1.0 - max(0.0f, (rad - sun_radius)/(5*sun_radius)));
 				blend_color(c, SUN_C, c, 0.75*mult, 0); // 75% direct sun lighting
 			}
 		}
-		get_indir_light(c, p, 0, 1, NULL, NULL); // could move outside of the parts loop if too slow
+		get_indir_light(c, p, 0); // could move outside of the parts loop if too slow
 	}
 	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
@@ -928,18 +933,21 @@ void fire::draw(quad_batch_draw &qbd) const {
 void decal_obj::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
-	colorRGBA draw_color(color);
 	point const cur_pos(get_pos());
+	if (dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0) return; // back face culling
+	float const alpha_val(get_alpha());
+	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return; // distance culling
+	colorRGBA draw_color(color);
 
 	if (color != BLACK) {
-		bool is_shadowed(pt_is_shadowed(cur_pos, get_light(), radius, -1, 0, 0));
+		bool const is_shadowed(!is_visible_to_light_cobj(cur_pos, get_light(), radius, -1, 0)); // cache shadowing cobj?
 		colorRGBA const d(is_shadowed ? BLACK : draw_color);
 		colorRGBA a(draw_color);
-		get_shadowed_color(a, cur_pos, is_shadowed, 0, 0);
+		get_shadowed_color(a, cur_pos, 0);
 		blend_color(draw_color, a, d, 0.5, 0);
 		draw_color.set_valid_color();
 	}
-	draw_color.alpha = get_alpha();
+	draw_color.alpha = alpha_val;
 	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	qbd.add_billboard(cur_pos, (cur_pos + orient), upv, draw_color, radius, radius);
 }
@@ -971,7 +979,7 @@ void draw_bubbles() {
 }
 
 
-void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const &color, bool zoomed) {
+void draw_part_clouds(vector<particle_cloud> const &pc, colorRGBA const &color, bool zoomed) {
 
 	enable_flares(color, zoomed); // color will be set per object
 	//select_multitex(CLOUD_TEX, 1);
@@ -1142,7 +1150,7 @@ void draw_cracks_decals_smoke_and_fires() {
 
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
 		set_color(BLACK);
-		draw_part_cloud(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
+		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
 	}
 	draw_billboarded_objs(fires, FIRE_TEX); // animated fire textured quad
 	end_smoke_shaders(s, orig_fog_color);

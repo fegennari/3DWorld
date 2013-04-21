@@ -23,7 +23,7 @@ extern vector3d wind;
 extern colorRGBA sun_color;
 
 
-void draw_part_cloud(vector<particle_cloud> const &pc, colorRGBA const &color, bool zoomed);
+void draw_part_clouds(vector<particle_cloud> const &pc, colorRGBA const &color, bool zoomed);
 
 
 struct cloud_t {
@@ -216,7 +216,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	bool const was_valid(camera_pdu.valid);
 	camera_pdu.valid = 0; // disable view frustum culling
 	camera_pos = origin;
-	draw_part_cloud(*this, WHITE, 1); // draw clouds
+	draw_part_clouds(*this, WHITE, 1); // draw clouds
 	camera_pos = orig_cpos;
 	camera_pdu.valid = was_valid;
 	set_red_only(0);
@@ -299,7 +299,7 @@ void cloud_manager_t::draw() {
 		disable_flares();
 	}
 	else {
-		draw_part_cloud(*this, get_cloud_color(), 1);
+		draw_part_clouds(*this, get_cloud_color(), 1);
 	}
 	glEnable(GL_DEPTH_TEST);
 	//PRINT_TIME("Clouds");
