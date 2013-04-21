@@ -216,21 +216,15 @@ class water_surface_draw {
 	};
 
 	vector<color_ix> last_row_colors;
-	bool big_water, inited;
+	bool big_water;
 	unsigned const bs, nx, ny;
 	vector<unsigned char> underwater;
 
 public:
-	water_surface_draw() : big_water(0), inited(0), bs(5), nx(BITSHIFT_CEIL(MESH_X_SIZE, bs)), ny(BITSHIFT_CEIL(MESH_Y_SIZE, bs)) {
+	water_surface_draw() : big_water(0), bs(5), nx(BITSHIFT_CEIL(MESH_X_SIZE, bs)), ny(BITSHIFT_CEIL(MESH_Y_SIZE, bs)) {
+
 		last_row_colors.resize(MESH_X_SIZE);
-	}
-
-	void set_big_water() {big_water = 1;}
-
-	void init() {
-
-		if (inited) return;
-		inited = 1;
+		if (fast_water_reflect) return;
 		underwater.resize(nx*ny, 1);
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
@@ -243,11 +237,11 @@ public:
 			}
 		}
 	}
+	void set_big_water(bool bw) {big_water = bw;}
 
 	void blend_reflection_color(point const &v, colorRGBA &color, vector3d const &n, point const &camera) {
 
 		// Note: what about direct shadows on the water surface?
-		assert(inited);
 		vector3d const view_dir((v - camera).get_norm());
 		
 		if (dot_product(view_dir, n) >= 0.0) { // back facing water
@@ -391,6 +385,7 @@ void draw_water() {
 	float const tx_scale(W_TEX_STRETCH/TWO_XSS), ty_scale(W_TEX_STRETCH/TWO_YSS);
 	process_water_springs();
 	add_waves();
+	if (DEBUG_WATER_TIME) {PRINT_TIME("0 Add Waves");}
 	if (DISABLE_WATER || (island && !w_acc)) return;
 	water_surface_draw wsd;
 	set_fill_mode();
@@ -402,9 +397,11 @@ void draw_water() {
 		tdy -= WATER_WIND_EFF2*wind.y*fticks;
 	}
 	float const tx_val(tx_scale*xoff2*DX_VAL + tdx), ty_val(ty_scale*yoff2*DX_VAL + tdy);
+	if (DEBUG_WATER_TIME) {PRINT_TIME("1 WSD Init");}
 
 	if (!island) { // draw exterior water (oceans)
 		if (camera.z >= water_plane_z) draw_water_sides(1);
+		if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
 		glEnable(GL_COLOR_MATERIAL);
 		glDisable(GL_NORMALIZE);
 		enable_blend();
@@ -412,8 +409,7 @@ void draw_water() {
 		select_water_ice_texture(color);
 		setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 		color.alpha *= 0.5;
-		wsd.init();
-		wsd.set_big_water();
+		wsd.set_big_water(1);
 		//glCullFace(GL_FRONT); // backwards?
 		//glEnable(GL_CULL_FACE);
 
@@ -445,13 +441,9 @@ void draw_water() {
 		disable_textures_texgen();
 		glEnable(GL_NORMALIZE);
 		glDisable(GL_COLOR_MATERIAL);
-		last_draw = 0;
-		if (DEBUG_WATER_TIME) {PRINT_TIME("Water Draw Fixed");}
-		if (camera.z <  water_plane_z) draw_water_sides(1);
+		if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
+		if (camera.z <  water_plane_z) {draw_water_sides(1);}
 	}
-	wsd.init();
-	if (DEBUG_WATER_TIME) {PRINT_TIME("Water Init");}
-
 	if (!no_grass()) {
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
@@ -460,11 +452,11 @@ void draw_water() {
 				}
 			}
 		}
-		if (DEBUG_WATER_TIME) {PRINT_TIME("Grass Update");}
+		if (DEBUG_WATER_TIME) {PRINT_TIME("3 Grass Update");}
 	}
 	glEnable(GL_COLOR_MATERIAL);
 	update_valleys();
-	if (DEBUG_WATER_TIME) {PRINT_TIME("Water Valleys Update");}
+	if (DEBUG_WATER_TIME) {PRINT_TIME("4 Water Valleys Update");}
 
 	// call the function that computes the ripple effect
 	assert(fticks != 0.0);
@@ -486,7 +478,7 @@ void draw_water() {
 		}
 		calc_water_normals();
 	}
-	if (DEBUG_WATER_TIME) {PRINT_TIME("Water Ripple Update");}
+	if (DEBUG_WATER_TIME) {PRINT_TIME("5 Water Ripple Update");}
 	glEnable(GL_TEXTURE_2D);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 	glDisable(GL_NORMALIZE);
@@ -498,6 +490,7 @@ void draw_water() {
 	select_water_ice_texture(color);
 	color *= INT_WATER_ATTEN; // attenuate for interior water
 	colorRGBA wcolor(color);
+	wsd.set_big_water(0);
 	glBegin(GL_TRIANGLE_STRIP);
 	
 	// draw interior water (ponds)
@@ -608,7 +601,7 @@ void draw_water() {
 	if (!lc0 && rand()%5 != 0) landscape_changed = 0; // reset, only update landscape 20% of the time
 	++wcounter;
 	first_water_run = 0;
-	if (DEBUG_WATER_TIME) {PRINT_TIME("Water Draw");}
+	if (DEBUG_WATER_TIME) {PRINT_TIME("6 Water Draw");}
 }
 
 

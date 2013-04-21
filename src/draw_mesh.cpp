@@ -156,9 +156,10 @@ class mesh_vertex_draw {
 		}
 		//data[c].c.set_to_val(color_scale);
 		colorRGB color(color_scale, color_scale, color_scale);
+		bool const apply_dlights(has_dl_sources && !draw_mesh_shader);
 
-		if (DLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) { // somewhat slow
-			get_sd_light(j, i, get_zpos(data[c].v.z), data[c].v, (!has_dl_sources || draw_mesh_shader), DLIGHT_SCALE, &color.R, &surface_normals[i][j], NULL);
+		if (using_lightmap || (DLIGHT_SCALE > 0.0 && apply_dlights)) { // somewhat slow
+			get_sd_light(j, i, get_zpos(data[c].v.z), data[c].v, !apply_dlights, DLIGHT_SCALE, &color.R, &surface_normals[i][j], NULL);
 		}
 		if (shadow_map_enabled() && draw_mesh_shader) {
 			// nothing to do here
