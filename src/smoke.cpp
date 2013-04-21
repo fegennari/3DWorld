@@ -118,26 +118,6 @@ void diffuse_smoke(int x, int y, int z, lmcell &adj, float pos_rate, float neg_r
 }
 
 
-void distribute_smoke_for_cell(int x, int y, int z) {
-
-	if (!lmap_manager.is_valid_cell(x, y, z)) return;
-	lmcell &lmc(lmap_manager.vlmap[y][x][z]);
-	if (lmc.smoke == 0.0) return;
-	if (lmc.smoke < 0.005f) {lmc.smoke = 0.0; return;}
-	int const dx(rand()&1), dy(rand()&1); // randomize the processing order
-	float const xy_rate(SMOKE_DIS_XY*SMOKE_SKIPVAL), z_rate[2] = {SMOKE_DIS_ZU, SMOKE_DIS_ZD};
-	next_smoke_man.add_smoke(x, y, z, lmc.smoke);
-
-	for (unsigned d = 0; d < 2; ++d) { // x/y
-		diffuse_smoke(x+((d^dx) ? 1 : -1), y, z, lmc, xy_rate, xy_rate, 0, (d^dx));
-		diffuse_smoke(x, y+((d^dy) ? 1 : -1), z, lmc, xy_rate, xy_rate, 1, (d^dy));
-	}
-	for (unsigned d = 0; d < 2; ++d) { // up, down
-		diffuse_smoke(x, y, (z + (d ? 1 : -1)),  lmc, z_rate[!d], z_rate[d], 2, d);
-	}
-}
-
-
 void distribute_smoke() { // called at most once per frame
 
 	//RESET_TIME;
@@ -154,15 +134,28 @@ void distribute_smoke() { // called at most once per frame
 		cur_smoke_bb  = smoke_man.bbox; //cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
 		next_smoke_man.reset();
 	}
+	float const xy_rate(SMOKE_DIS_XY*SMOKE_SKIPVAL), z_rate[2] = {SMOKE_DIS_ZU, SMOKE_DIS_ZD};
 	
-	//#pragma omp parallel for schedule(static,1) // only helps when skipval is small
+	// openmp doesn't really help here
 	for (int y = cur_skip; y < MESH_Y_SIZE; y += SMOKE_SKIPVAL) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			lmcell *vldata(lmap_manager.vlmap[y][x]);
 			if (vldata == NULL) continue;
 			
 			for (int z = 0; z < MESH_SIZE[2]; ++z) {
-				distribute_smoke_for_cell(x, y, z);
+				lmcell &lmc(vldata[z]);
+				if (lmc.smoke < 0.005f) {lmc.smoke = 0.0;}
+				if (lmc.smoke == 0.0) continue;
+				int const rv(rand2()), dx(rv & 1), dy((rv & 2) >> 1); // randomize the processing order
+				next_smoke_man.add_smoke(x, y, z, lmc.smoke);
+
+				for (unsigned d = 0; d < 2; ++d) { // x/y
+					diffuse_smoke(x+((d^dx) ? 1 : -1), y, z, lmc, xy_rate, xy_rate, 0, (d^dx));
+					diffuse_smoke(x, y+((d^dy) ? 1 : -1), z, lmc, xy_rate, xy_rate, 1, (d^dy));
+				}
+				for (unsigned d = 0; d < 2; ++d) { // up, down
+					diffuse_smoke(x, y, (z + (d ? 1 : -1)),  lmc, z_rate[!d], z_rate[d], 2, d);
+				}
 			}
 		}
 	}
@@ -238,7 +231,7 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 	default_lmc.set_outside_colors();
 	default_lmc.get_final_color(const_indir_color, 1.0);
 	
-	if (indir_lighting_updated) { // running with multiple threads, don't use openmp
+	if (indir_lighting_updated || !update_lighting) { // running with multiple threads, don't use openmp
 		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
 			update_smoke_row(smoke_tex_data, default_lmc, x_start, x_end, y, update_lighting);
 		}

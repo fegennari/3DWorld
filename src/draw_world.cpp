@@ -357,16 +357,16 @@ void setup_object_render_data() {
 	RESET_TIME;
 	bool const TIMETEST(0);
 	calc_cur_ambient_diffuse();
-	if (TIMETEST) {PRINT_TIME("Init");}
 	distribute_smoke();
+	if (TIMETEST) {PRINT_TIME("1 Distribute Smoke");}
 	upload_smoke_indir_texture();
-	if (TIMETEST) {PRINT_TIME("Distribute Smoke");}
+	if (TIMETEST) {PRINT_TIME("2 Upload Smoke");}
 	add_dynamic_lights();
-	if (TIMETEST) {PRINT_TIME("Add Dlights");}
+	if (TIMETEST) {PRINT_TIME("3 Add Dlights");}
 	upload_dlights_textures();
-	if (TIMETEST) {PRINT_TIME("Dlights Textures");}
+	if (TIMETEST) {PRINT_TIME("4 Dlights Textures");}
 	get_occluders();
-	if (TIMETEST) {PRINT_TIME("Get Occluders");}
+	if (TIMETEST) {PRINT_TIME("5 Get Occluders");}
 }
 
 
