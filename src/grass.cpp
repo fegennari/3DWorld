@@ -559,6 +559,7 @@ public:
 	// texture units used: 0: grass texture, 1: wind texture
 	void draw() {
 		if (empty()) return;
+		//RESET_TIME;
 
 		// determine if ligthing has changed and possibly calculate shadows/upload VBO data
 		int const light(get_light());
@@ -606,7 +607,7 @@ public:
 		unsigned beg_ix(0);
 		point const camera(get_camera_pos()), adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
 		last_occluder.resize(XY_MULT_SIZE, -1);
-		int last_occluder_used(-1);
+		int last_occ_used(-1);
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
@@ -628,15 +629,23 @@ public:
 					visible = camera_pdu.cube_visible(cube); // could use camera_pdu.sphere_and_cube_visible_test()
 				
 					if (visible && (display_mode & 0x08)) {
-						int &last_occluder_cobj(last_occluder[y*MESH_X_SIZE + x]);
+						int &last_occ_cobj(last_occluder[y*MESH_X_SIZE + x]);
 
-						if (last_occluder_cobj >= 0 || ((frame_counter + y) & 3) == 0) { // only sometimes update if not previously occluded
+						if (last_occ_cobj >= 0 || ((frame_counter + y) & 7) == 0) { // only sometimes update if not previously occluded
 							point pts[8];
 							get_cube_points(cube.d, pts);
-							if (last_occluder_cobj <  0) {last_occluder_cobj = last_occluder_used;}
-							visible &= !cobj_contained_ref(camera, cube.get_cube_center(), pts, 8, -1, last_occluder_cobj);
-							if (visible) {last_occluder_cobj = -1;}
-							if (last_occluder_cobj >= 0) {last_occluder_used = last_occluder_cobj;}
+
+							if (x > 0 && last_occ_cobj >= 0 && last_occluder[y*MESH_X_SIZE + x-1] == last_occ_cobj &&
+								!coll_objects[last_occ_cobj].disabled() && coll_objects[last_occ_cobj].intersects_all_pts(camera, (pts+4), 4))
+							{
+								visible = 0; // check last 4 points (first 4 should already be checked from the last grass block)
+							}
+							else {
+								if (last_occ_cobj < 0) {last_occ_cobj = last_occ_used;}
+								visible &= !cobj_contained_ref(camera, cube.get_cube_center(), pts, 8, -1, last_occ_cobj);
+								if (visible) {last_occ_cobj = -1;}
+							}
+							if (last_occ_cobj >= 0) {last_occ_used = last_occ_cobj;}
 						}
 					}
 				}
@@ -654,6 +663,7 @@ public:
 		s.end_shader();
 		disable_dynamic_lights(num_dlights);
 		end_draw();
+		//PRINT_TIME("Draw Grass");
 	}
 };
 
