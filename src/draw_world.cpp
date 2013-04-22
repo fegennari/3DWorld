@@ -904,8 +904,9 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 			vector3d const dir((p - get_camera_pos()).get_norm());
 			float const dp(dot_product_ptv(dir, p, lpos));
 			float rad, dist, t;
-			blend_color(c, WHITE, c, 0.15, 0); // 15% ambient lighting (transmitted/scattered)
-			if (dp > 0.0) {blend_color(c, WHITE, c, 0.1*dp/p2p_dist(p, lpos), 0);} // 10% diffuse lighting (directional)
+			colorRGBA const cloud_color(get_cloud_color());
+			blend_color(c, cloud_color, c, 0.15, 0); // 15% ambient lighting (transmitted/scattered)
+			if (dp > 0.0) {blend_color(c, cloud_color, c, 0.1*dp/p2p_dist(p, lpos), 0);} // 10% diffuse lighting (directional)
 
 			if (dp < 0.0 && have_sun && line_intersect_sphere(p, dir, sun_pos, 6*sun_radius, rad, dist, t)) {
 				float const mult(1.0 - max(0.0f, (rad - sun_radius)/(5*sun_radius)));
