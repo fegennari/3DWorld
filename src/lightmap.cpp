@@ -48,7 +48,7 @@ float const DARKNESS_THRESH  = 0.1;
 
 bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), use_dense_voxels(0), has_indir_lighting(0);
 unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
-float DZ_VAL_INV2(DZ_VAL_SCALE/DZ_VAL), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
+float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
 dls_cell **ldynamic = NULL;
@@ -633,7 +633,8 @@ void build_lightmap(bool verbose) {
 
 	// calculate and allocate some data we need even if the lmap is not used
 	assert(DZ_VAL > 0.0 && Z_LT_ATTEN > 0.0 && Z_LT_ATTEN <= 1.0 && XY_LT_ATTEN > 0.0 && XY_LT_ATTEN <= 1.0);
-	DZ_VAL_INV2   = DZ_VAL_SCALE/DZ_VAL;
+	DZ_VAL2       = DZ_VAL/DZ_VAL_SCALE;
+	DZ_VAL_INV2   = 1.0/DZ_VAL2;
 	SHIFT_DXYZ[0] = SHIFT_DX = SHIFT_VAL*DX_VAL;
 	SHIFT_DXYZ[1] = SHIFT_DY = SHIFT_VAL*DY_VAL;
 	czmin0        = czmin;//max(czmin, zbottom);

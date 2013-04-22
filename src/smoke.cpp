@@ -8,7 +8,7 @@
 
 
 bool const DYNAMIC_SMOKE     = 1; // looks cool
-int const SMOKE_SKIPVAL      = 6;
+int const SMOKE_SKIPVAL      = 8;
 int const SMOKE_SEND_SKIP    = 8;
 int const INDIR_LT_SEND_SKIP = 12;
 
@@ -42,8 +42,8 @@ struct smoke_manager {
 
 	smoke_manager() {reset();}
 
-	bool is_smoke_visible(point const &pos) const {
-		return sphere_in_camera_view(pos, HALF_DXY, 0); // could use cube_visible()
+	inline bool is_smoke_visible(point const &pos) const {
+		return camera_pdu.sphere_visible_test(pos, HALF_DXY); // could use cube_visible()
 	}
 	void reset() {
 		for (unsigned i = 0; i < 3; ++i) { // set backwards so that nothing intersects
@@ -91,7 +91,7 @@ void add_smoke(point const &pos, float val) {
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos) || pos.z >= v_collision_matrix[ypos][xpos].zmax || pos.z < mesh_height[ypos][xpos]) return; // above all cobjs/outside
 	if (no_smoke_over_mesh && !is_mesh_disabled(xpos, ypos)) return;
-	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return;
+	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return; // too slow
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
 	if (smoke_man.is_smoke_visible(pos)) smoke_exists = 1;
 }
@@ -124,6 +124,7 @@ void distribute_smoke() { // called at most once per frame
 	if (!DYNAMIC_SMOKE || !smoke_exists || !animate2) return;
 	assert(SMOKE_SKIPVAL > 0);
 	static int cur_skip(0);
+	static rand_gen_t rgen;
 	
 	if (cur_skip == 0) {
 		//cout << "tot_smoke: " << smoke_man.tot_smoke << ", enabled: " << smoke_exists << ", visible: " << smoke_visible << endl;
@@ -134,7 +135,8 @@ void distribute_smoke() { // called at most once per frame
 		cur_smoke_bb  = smoke_man.bbox; //cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
 		next_smoke_man.reset();
 	}
-	float const xy_rate(SMOKE_DIS_XY*SMOKE_SKIPVAL), z_rate[2] = {SMOKE_DIS_ZU, SMOKE_DIS_ZD};
+	float const xy_rate(SMOKE_DIS_XY*SMOKE_SKIPVAL);
+	int const dx(rgen.rand() & 1), dy(rgen.rand() & 1); // randomize the processing order
 	
 	// openmp doesn't really help here
 	for (int y = cur_skip; y < MESH_Y_SIZE; y += SMOKE_SKIPVAL) { // split the computation across several frames
@@ -146,16 +148,13 @@ void distribute_smoke() { // called at most once per frame
 				lmcell &lmc(vldata[z]);
 				if (lmc.smoke < 0.005f) {lmc.smoke = 0.0;}
 				if (lmc.smoke == 0.0) continue;
-				int const rv(rand2()), dx(rv & 1), dy((rv & 2) >> 1); // randomize the processing order
 				next_smoke_man.add_smoke(x, y, z, lmc.smoke);
-
-				for (unsigned d = 0; d < 2; ++d) { // x/y
-					diffuse_smoke(x+((d^dx) ? 1 : -1), y, z, lmc, xy_rate, xy_rate, 0, (d^dx));
-					diffuse_smoke(x, y+((d^dy) ? 1 : -1), z, lmc, xy_rate, xy_rate, 1, (d^dy));
-				}
-				for (unsigned d = 0; d < 2; ++d) { // up, down
-					diffuse_smoke(x, y, (z + (d ? 1 : -1)),  lmc, z_rate[!d], z_rate[d], 2, d);
-				}
+				diffuse_smoke(x+(dx ?  1 : -1), y, z, lmc, xy_rate, xy_rate, 0,  dx);
+				diffuse_smoke(x+(dx ? -1 :  1), y, z, lmc, xy_rate, xy_rate, 0, !dx);
+				diffuse_smoke(x, y+(dy ?  1 : -1), z, lmc, xy_rate, xy_rate, 1,  dy);
+				diffuse_smoke(x, y+(dy ? -1 :  1), z, lmc, xy_rate, xy_rate, 1, !dy);
+				diffuse_smoke(x, y, (z - 1),  lmc, SMOKE_DIS_ZD, SMOKE_DIS_ZU, 2, 0);
+				diffuse_smoke(x, y, (z + 1),  lmc, SMOKE_DIS_ZU, SMOKE_DIS_ZD, 2, 1);
 			}
 		}
 	}

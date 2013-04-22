@@ -81,7 +81,7 @@ extern int MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, MAX_XY_SIZE, XY_MULT_SIZE, XY_
 extern int MESH_SIZE[];
 extern float DX_VAL, DY_VAL, DZ_VAL, HALF_DXY, DX_VAL_INV, DY_VAL_INV, dxdy, CLOUD_CEILING, LARGE_ZVAL;
 extern float SCENE_SIZE[];
-extern float czmin, DZ_VAL_INV2;
+extern float czmin, DZ_VAL2, DZ_VAL_INV2;
 
 
 // extern global arrays dependent on mesh size
@@ -111,7 +111,7 @@ extern unsigned char ***shadow_mask;
 
 inline float get_xval(int xpos)  {return -X_SCENE_SIZE + DX_VAL*xpos;}
 inline float get_yval(int ypos)  {return -Y_SCENE_SIZE + DY_VAL*ypos;}
-inline float get_zval(int zpos)  {return czmin + zpos/DZ_VAL_INV2;}
+inline float get_zval(int zpos)  {return czmin + DZ_VAL2*zpos;}
 inline float get_zval2(int zpos) {return -Z_SCENE_SIZE + DZ_VAL*zpos;}
 inline float get_zval_min()      {return get_zval(0);}
 inline float get_zval_max()      {return get_zval(max(MESH_SIZE[2], 1));}

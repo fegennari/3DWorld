@@ -696,6 +696,7 @@ bool s_plant::check_sphere_coll(point &center, float sphere_radius) const {
 
 void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 
+	// Note: could scale leaves for different plant types differently in x vs. y to allow for non-square textures (tighter bounds = lower fillrate)
 	if (vbo_mgr_ix >= 0) return; // already generated
 	float const wscale(250.0*radius*tree_scale), theta0((int(1.0E6*height)%360)*TO_RADIANS);
 	unsigned const nlevels(unsigned(36.0*height*tree_scale)), nrings(3);
