@@ -62,7 +62,7 @@ void update_sun_and_moon() {
 }
 
 
-int light_valid(unsigned light_sources, int l, point &lpos) {
+bool light_valid(unsigned light_sources, int l, point &lpos) {
 
 	if (!(light_sources & (1 << l))) return 0;
 	if ((l == LIGHT_SUN && light_factor < 0.4) || (l == LIGHT_MOON && light_factor > 0.6)) return 0;

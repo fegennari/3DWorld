@@ -199,14 +199,22 @@ bool set_smap_shader_for_light(shader_t &s, int light, float z_bias) {
 	assert(light >= 0 && light < NUM_LIGHT_SRC);
 	if (!glIsEnabled(GL_LIGHT0 + light)) return 0;
 	point lpos; // unused
-	smap_data_t const &data(smap_data[light]);
-	assert(data.tid > 0);
+	unsigned const sm_tu_id(get_shadow_map_tu_id(light));
+	bool const light_valid(light_valid(0xFF, light, lpos));
 	s.add_uniform_float("z_bias", z_bias);
-	s.add_uniform_int  (append_ix(string("sm_tu_id"), light, 0), data.tu_id);
-	s.add_uniform_int  (append_ix(string("sm_tex"),   light, 0), data.tu_id);
-	s.add_uniform_float(append_ix(string("sm_scale"), light, 0), (light_valid(0xFF, light, lpos) ? 1.0 : 0.0));
-	set_active_texture(data.tu_id);
-	bind_2d_texture(data.tid);
+	s.add_uniform_int  (append_ix(string("sm_tu_id"), light, 0), sm_tu_id);
+	s.add_uniform_int  (append_ix(string("sm_tex"),   light, 0), sm_tu_id);
+	s.add_uniform_float(append_ix(string("sm_scale"), light, 0), (light_valid ? 1.0 : 0.0));
+	set_active_texture(sm_tu_id);
+
+	if (light_valid) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
+		unsigned const sm_tid(get_shadow_map_tid(light));
+		assert(sm_tid > 0);
+		bind_2d_texture(sm_tid);
+	}
+	else {
+		select_texture(WHITE_TEX, 0); // default wite texture
+	}
 	set_active_texture(0);
 	return 1;
 }
