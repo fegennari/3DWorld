@@ -1,15 +1,14 @@
 Smoke texture step size
 Indirect lighting normal/direction
 Fix ship collisions
-
 Tree branch/trunk bark bump maps
 Leaf/Branch overlap
 
 More grass/plant types
 
 Parallax mapping
+Hardware tessellation
 
-Tighter plant textures to reduce fill rate
 Convert remaining raw textures to jpeg
 
 Removed deprecated OpenGL calls:
@@ -25,6 +24,13 @@ Run leak detection
 
 Multiple decid tree impostor orients
 - Decid tree texture atlases
- - Combine color and normal billboard textures
 
-Hardware tessellation
+ E: 4.3 process_groups()
+ H: 4.4 setup_object_render_data() => 2.0
+ I: 3.5 display_mesh() (normally 2.0) => 2.4
+ J: 2.9 draw_solid_object_groups()
+ K: 5.1 draw_coll_surfaces() (normally 3.1)
+ L: 3.3 draw grass+scenery (house) => 2.5
+ N: 3.0 draw_water() (normally 1.7) => 1.5
+ W: 6.3 draw_cracks_decals_smoke_and_fires() => 3.5
+

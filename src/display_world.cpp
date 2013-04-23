@@ -921,8 +921,8 @@ void display(void) {
 			if (TIMETEST) PRINT_TIME("J");
 			draw_coll_surfaces(1, 0);
 			if (TIMETEST) PRINT_TIME("K");
-			draw_scenery(1, 0);
 			draw_grass();
+			draw_scenery(1, 0);
 			if (TIMETEST) PRINT_TIME("L");
 			draw_stuff(!underwater, timer1);
 
@@ -1194,6 +1194,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (TIMETEST) PRINT_TIME("3.25");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
 	pre_draw_tiled_terrain();
+	if (TIMETEST) PRINT_TIME("3.26");
 	draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.3");
 	if (underwater ) {draw_tiled_terrain_precipitation();}

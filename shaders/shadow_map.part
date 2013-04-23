@@ -19,7 +19,7 @@ float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in i
 uniform sampler2DShadow sm_tex0, sm_tex1;
 
 float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in int sm_tu_id, in sampler2DShadow sm_tex) {
-	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id] * (pos + norm_bias_scale*z_bias*vec4(normal, 0.0));
+	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id] * (pos + vec4(norm_bias_scale*z_bias*normal, 0.0));
 	return sm_scale*shadow2DProj(sm_tex, shadow_coord + vec4(0, 0, -z_bias*shadow_coord.w, 0)).r;
 }
 #endif
@@ -32,7 +32,6 @@ float get_shadow_map_weight_light1(in vec4 pos, in vec3 normal) {
 }
 
 vec4 add_light_comp_pos_smap_light0(in vec3 normal, in vec4 epos) {
-	//if (dot((gl_LightSource[0].position.xyz - epos.xyz), n) > 0.0) {} // facing the light
 	if (use_shadow_map) {normal *= get_shadow_map_weight_light0(epos, normal);}
 	return add_light_comp_pos(normal, epos, 0);
 }
