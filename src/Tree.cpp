@@ -761,7 +761,11 @@ void tree_data_t::clear_context() {
 
 unsigned tree_data_t::get_gpu_mem() const {
 
-	return (branch_vbo_manager.gpu_mem + (leaf_vbo ? leaf_data.size()*sizeof(leaf_vert_type_t) : 0));
+	unsigned mem(branch_vbo_manager.gpu_mem + (leaf_vbo ? leaf_data.size()*sizeof(leaf_vert_type_t) : 0));
+	unsigned const bbsz(TREE_BILLBOARD_SIZE*TREE_BILLBOARD_SIZE*8); // 8 bytes per pixel
+	if (render_leaf_texture.is_valid  ()) {mem += bbsz;}
+	if (render_branch_texture.is_valid()) {mem += bbsz;}
+	return mem;
 }
 
 

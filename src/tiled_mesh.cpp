@@ -1296,12 +1296,14 @@ void tile_draw_t::occluder_pts_t::calc_cube_top_points(cube_t const &bcube) { //
 }
 
 
+unsigned in_mb(unsigned long long v) {return v/1024/1024;}
+
+
 void tile_draw_t::draw(bool reflection_pass) {
 
 	//RESET_TIME;
 	unsigned num_trees(0);
 	unsigned long long mem(0), tree_mem(0);
-	if (DEBUG_TILES) {mem += grass_tile_manager.get_gpu_mem() + tree_data_manager.get_gpu_mem();}
 	to_draw.clear();
 
 	// determine potential occluders
@@ -1374,15 +1376,17 @@ void tile_draw_t::draw(bool reflection_pass) {
 	set_array_client_state(1, 0, 0, 0);
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
-		num_trees += to_draw[i].second->num_pine_trees();
+		num_trees += to_draw[i].second->num_pine_trees() + to_draw[i].second->num_decid_trees();
 		if (display_mode & 0x01) {to_draw[i].second->draw(s, reflection_pass);}
 	}
 	disable_multitex(2, 1); // disable texgen on tu_id=2
 	s.end_shader();
 		
 	if (DEBUG_TILES) {
+		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: "
-			<< num_trees << ", gpu mem: " << mem/1024/1024 << ", tree mem: " << tree_mem/1024/1024 << endl;
+			<< num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + grass_mem) << ", tree mem: " << in_mb(tree_mem)
+			<< ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << endl;
 	}
 	run_post_mesh_draw();
 	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
