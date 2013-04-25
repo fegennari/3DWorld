@@ -574,35 +574,43 @@ public:
 
 		// check for dynamic light sources
 		bool const grass_wind(!disable_shaders && !has_snow && (display_mode & 0x0100));
-		unsigned const num_dlights(enable_dynamic_lights());
+		bool const per_pixel_lighting(display_mode & 0x10);
+		unsigned const num_dlights((!grass_wind || !per_pixel_lighting) ? enable_dynamic_lights() : 0);
 		shader_t s;
 
 		if (grass_wind) { // enables lighting and shadows as well
-			int const lighting_shader((display_mode & 0x10) ? 1 : 0); // 0=VS, 1=FS
-			s.set_prefix("#define USE_LIGHT_COLORS",      lighting_shader);
-			s.set_prefix("#define NO_SMAP_NORMAL_OFFSET", lighting_shader);
-			s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), lighting_shader);
+			int const lighting_shader(0);//(display_mode & 0x10) ? 1 : 0); // 0=VS, 1=FS
 
 			if (lighting_shader == 1) { // use fragment shader for lighting
-				if (!glIsEnabled(GL_FOG)) s.set_prefix("#define NO_FOG", 1); // FS
-				s.setup_enabled_lights(8, 2); // FS; L0-L1: static directional, L2-L7: dynamic point
-				s.set_vert_shader("wind.part*+grass_fs");
+				if (!glIsEnabled(GL_FOG)) {s.set_prefix("#define NO_FOG", 1);} // FS
+				s.set_prefix("#define USE_LIGHT_COLORS", 1);
+				s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1);
+				s.setup_enabled_lights(8, 3); // VS/FS; L0-L1: static directional, L2-L7: dynamic point
+				s.set_vert_shader("wind.part*+ads_lighting.part*+grass_fs");
 				s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+grass_fs");
 			}
 			else { // use vertex shader for lighting
-#if 0 // per-pixel dynamic lighting - looks better, but slow
-				s.setup_enabled_lights(2, 1); // VS; L0-L1: static directional
-				set_dlights_booleans(s, 1, 1); // FS
-				s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass_pp_dl");
-				s.set_frag_shader("linear_fog.part+dynamic_lighting.part*+grass_with_dlights");
-				s.begin_shader();
-				s.setup_scene_bounds();
-				setup_dlight_textures(s);
-#else // per-vertex dynamic lighting, limited to 6 lights - faster
-				s.setup_enabled_lights(8, 1); // VS; L0-L1: static directional, L2-L7: dynamic point
-				s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass");
-				s.set_frag_shader("linear_fog.part+textured_with_fog");
-#endif
+				if (per_pixel_lighting) { // per-pixel dynamic lighting - looks better, but slow
+					s.setup_enabled_lights(2, 2); // FS; L0-L1: static directional
+					set_dlights_booleans(s, 1, 1); // FS
+					if (!glIsEnabled(GL_FOG)) {s.set_prefix("#define NO_FOG", 1);} // FS
+					s.set_prefix("#define NO_DL_SPECULAR",   1); // FS ???
+					s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+					s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
+					s.set_vert_shader("wind.part*+grass_pp_dl");
+					s.set_frag_shader("linear_fog.part+dynamic_lighting.part*+ads_lighting.part*+shadow_map.part*+grass_with_dlights");
+					s.begin_shader();
+					s.setup_scene_bounds();
+					setup_dlight_textures(s);
+				}
+				else { // per-vertex dynamic lighting, limited to 6 lights - faster
+					s.set_prefix("#define NO_SMAP_NORMAL_OFFSET", 0); // VS
+					s.set_prefix("#define USE_LIGHT_COLORS", 0);
+					s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 0);
+					s.setup_enabled_lights(8, 1); // VS; L0-L1: static directional, L2-L7: dynamic point
+					s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass");
+					s.set_frag_shader("linear_fog.part+textured_with_fog");
+				}
 			}
 			s.begin_shader();
 			if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);
@@ -672,7 +680,7 @@ public:
 		}
 		if (last_visible) {draw_range(beg_ix, (unsigned)grass.size());}
 		s.end_shader();
-		disable_dynamic_lights(num_dlights);
+		if (!grass_wind || !per_pixel_lighting) {disable_dynamic_lights(num_dlights);}
 		end_draw();
 		//PRINT_TIME("Draw Grass");
 	}

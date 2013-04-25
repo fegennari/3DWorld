@@ -386,7 +386,7 @@ void draw_mesh_mvd(bool shadow_pass) {
 		s.set_vert_shader("texture_gen.part+draw_mesh");
 		s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh");
 		s.begin_shader();
-		if (shadow_map_enabled()) set_smap_shader_for_all_lights(s, 0.001);
+		if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);
 		s.setup_fog_scale();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
