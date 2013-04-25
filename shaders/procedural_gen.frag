@@ -2,7 +2,6 @@ uniform float min_alpha = 0.0;
 
 // clipped eye position, clipped vertex position
 varying vec3 vpos, normal; // world space
-varying vec4 epos;
 varying vec3 eye_norm;
 
 void main()
@@ -19,6 +18,7 @@ void main()
 	float alpha = gl_Color.a;
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
 	add_indir_lighting(lit_color);
+	vec4 epos = gl_ModelViewMatrix * vec4(vpos, 1.0);
 	
 	// directional light sources with no attenuation (Note: could add other lights later)
 	if (enable_light0)  lit_color += add_light_comp_pos_smap_light0(normalize(eye_norm), epos).rgb;
