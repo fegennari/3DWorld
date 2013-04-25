@@ -25,7 +25,6 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye, in vec3 diff_color)
 	uint st_ix  = (gb_ix & 0xFFFFU);
 	uint end_ix = ((gb_ix >> 16U) & 0xFFFFU);
 	const uint elem_tex_sz = 256;  // must agree with value in C++ code, or can use textureSize()
-	const uint max_dlights = 1024; // must agree with value in C++ code, or can use textureSize()
 	
 	for (uint i = st_ix; i < end_ix; ++i) { // iterate over grid bag elements
 		uint dl_ix  = texelFetch(dlelm_tex,  ivec2((i%elem_tex_sz), (i/elem_tex_sz)), 0).r; // get dynamic light index (uint16)

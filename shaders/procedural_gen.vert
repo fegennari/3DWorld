@@ -1,4 +1,4 @@
-varying vec3 eye, vpos, normal; // world space
+varying vec3 vpos, normal; // world space
 varying vec4 epos;
 varying vec3 eye_norm;
 
@@ -10,7 +10,6 @@ void main()
 	eye_norm = normalize(gl_NormalMatrix * normal);
 	epos     = gl_ModelViewMatrix * gl_Vertex;
 	vpos     = gl_Vertex.xyz;
-	eye      = gl_ModelViewMatrixInverse[3].xyz; // world space
 	setup_indir_lighting(vpos, normal);
 	gl_FogFragCoord = length(epos.xyz); // set standard fog coord
 } 
