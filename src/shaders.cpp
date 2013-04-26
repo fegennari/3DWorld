@@ -251,6 +251,12 @@ void shader_t::setup_fog_scale() const {
 }
 
 
+void shader_t::check_for_fog_disabled() {
+
+	if (!glIsEnabled(GL_FOG)) {set_prefix("#define NO_FOG", 1);} // FS
+}
+
+
 void shader_t::set_prefix(char const *const prefix, unsigned shader_type) {
 
 	assert(shader_type < 3);

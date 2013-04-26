@@ -339,7 +339,7 @@ void draw_coll_vert(int i, int j) {
 }
 
 
-void draw_mesh_vbo() {
+void draw_mesh_vbo() { // Note: uses fixed function pipeline
 
 	static unsigned mesh_vbo(0);
 		
@@ -382,6 +382,7 @@ void draw_mesh_mvd(bool shadow_pass) {
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		s.setup_enabled_lights(2, 2); // FS
 		set_dlights_booleans(s, 1, 1); // FS
+		s.check_for_fog_disabled();
 		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 		s.set_vert_shader("texture_gen.part+draw_mesh");
 		s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh");

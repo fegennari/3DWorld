@@ -582,7 +582,7 @@ public:
 			if (per_pixel_lighting) { // per-pixel dynamic lighting - looks better, but slow
 				s.setup_enabled_lights(2, 2); // FS; L0-L1: static directional
 				set_dlights_booleans(s, 1, 1); // FS
-				if (!glIsEnabled(GL_FOG)) {s.set_prefix("#define NO_FOG", 1);} // FS
+				s.check_for_fog_disabled();
 				s.set_prefix("#define NO_DL_SPECULAR",   1); // FS ???
 				s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 				s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS

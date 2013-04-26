@@ -14,6 +14,9 @@ void main()
 	lit_color = clamp(lit_color, 0.0, 1.0);
 
 	if (enable_dlights) lit_color.rgb += add_dlights(dlpos.xyz, normalize(normal), gl_ModelViewMatrixInverse[3].xyz, vec3(1,1,1)); // dynamic lighting
-	vec4 color   = vec4((texel0.rgb * texel1.rgb * lit_color.rgb), (texel0.a * texel1.a * gl_Color.a));
-	gl_FragColor = apply_fog(color); // add fog
+	vec4 color = vec4((texel0.rgb * texel1.rgb * lit_color.rgb), (texel0.a * texel1.a * gl_Color.a));
+#ifndef NO_FOG
+	color = apply_fog(color);
+#endif
+	gl_FragColor = color;
 }

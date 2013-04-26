@@ -212,8 +212,8 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
 void common_shader_block_pre(shader_t &s, bool dlights, bool use_shadow_map, bool indir_lighting, float min_alpha) {
 
-	if (!glIsEnabled(GL_FOG)) s.set_prefix("#define NO_FOG",        1); // FS
-	if (min_alpha == 0.0)     s.set_prefix("#define NO_ALPHA_TEST", 1); // FS
+	s.check_for_fog_disabled();
+	if (min_alpha == 0.0) {s.set_prefix("#define NO_ALPHA_TEST", 1);} // FS
 	s.set_bool_prefixes("indir_lighting", indir_lighting, 3); // VS/FS
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
 	set_dlights_booleans(s, dlights, 1); // FS

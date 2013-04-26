@@ -76,6 +76,7 @@ public:
 	void setup_enabled_lights(unsigned num=2, unsigned shaders_enabled=3);
 	void setup_scene_bounds() const;
 	void setup_fog_scale() const;
+	void check_for_fog_disabled();
 	void set_prefix_str(string const &prefix, unsigned shader_type) {set_prefix(prefix.c_str(), shader_type);}
 	void set_prefix(char const *const prefix, unsigned shader_type);
 	void set_bool_prefix(char const *const name, bool val, unsigned shader_type);

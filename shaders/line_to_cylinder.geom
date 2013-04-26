@@ -1,6 +1,6 @@
 // input: line as two points {point.xyz, radius, color [,next_dir.xyz]}, ndiv
 // output: textured cylinder/cone as triangles
-varying vec3 eye, normal; // world space
+varying vec3 normal; // world space
 varying vec4 epos;
 varying vec3 eye_norm;
 varying vec3 vpos, spos, lpos0, vposl; // world space, not used
@@ -8,7 +8,6 @@ varying vec3 vpos, spos, lpos0, vposl; // world space, not used
 void main()
 {
 	gl_FrontColor = gl_FrontColorIn[0]; // all colors are the same
-	eye       = gl_ModelViewMatrixInverse[3].xyz; // world space, constant
 	vec4 pos1 = gl_PositionIn[0]; // world space
 	vec4 pos2 = gl_PositionIn[1];
 
