@@ -1,6 +1,7 @@
 uniform float height = 1.0;
 
-varying vec3 dlpos, normal, eye_norm; // world space
+varying vec3 dlpos, normal; // world space
+varying vec3 eye_norm;
 
 void main()
 {

@@ -18,13 +18,13 @@ const float SMOKE_SCALE = 0.25;
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
-vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
+vec3 add_light0(in vec3 n) {
 	float nscale = (use_shadow_map ? get_shadow_map_weight_light0(epos, n) : 1.0);
 
 #ifdef DYNAMIC_SMOKE_SHADOWS
-	if (source != dest && nscale > 0.0) {
-		vec3 dir      = dest - source;
-		vec3 pos      = (source - scene_llc)/scene_scale;
+	if (lpos0 != vposl && nscale > 0.0) {
+		vec3 dir      = vposl - lpos0;
+		vec3 pos      = (lpos0 - scene_llc)/scene_scale;
 		vec3 delta    = normalize(dir)*step_delta/scene_scale;
 		float nsteps  = length(dir)/step_delta;
 		int num_steps = 1 + min(100, int(nsteps)); // round up
@@ -44,10 +44,10 @@ vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 	// special cased add_light_comp_pos - FIXME: find a better way to make the index constant for optimization
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz);
 #ifdef USE_BUMP_MAP
-	vec3 normal  = nscale*apply_bump_map(light_dir);
+	vec3 lnormal  = nscale*apply_bump_map(light_dir);
 	vec3 eye_pos = ts_pos; // convert to tangent space
 #else
-	vec3 normal  = nscale*n;
+	vec3 lnormal  = nscale*n;
 	vec3 eye_pos = epos.xyz;
 #endif
 #ifdef USE_LIGHT_COLORS
@@ -57,8 +57,8 @@ vec3 add_light0(in vec3 n, in vec3 source, in vec3 dest) {
 	vec3 diffuse = gl_FrontLightProduct[0].diffuse.rgb;
 	vec3 ambient = gl_FrontLightProduct[0].ambient.rgb;
 #endif
-	vec3 specular = get_light_specular(normal, light_dir, eye_pos, 0).rgb;
-	return (ambient_scale*ambient + max(dot(normal, light_dir), 0.0)*diffuse + specular);
+	vec3 specular = get_light_specular(lnormal, light_dir, eye_pos, 0).rgb;
+	return (ambient_scale*ambient + max(dot(lnormal, light_dir), 0.0)*diffuse + specular);
 }
 
 // Note: This may seem like it can go into the vertex shader as well,
@@ -95,7 +95,7 @@ void main()
 	
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(normal_sign*eye_norm);
-		if (enable_light0) lit_color += add_light0(n, lpos0, vposl);
+		if (enable_light0) lit_color += add_light0(n);
 		if (enable_light1) lit_color += add_light_comp_pos_smap_light1(n, epos).rgb;
 		if (enable_light2) ADD_LIGHT(2);
 		if (enable_light3) ADD_LIGHT(3);

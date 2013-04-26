@@ -19,8 +19,6 @@ void main()
 	else if (use_texgen == 2) {
 		gl_TexCoord[0].s = dot(gl_Vertex, tex0_s);
 		gl_TexCoord[0].t = dot(gl_Vertex, tex0_t);
-		gl_TexCoord[0].p = 0.0;
-		gl_TexCoord[0].q = 1.0;
 	}
 	else if (use_texgen == 3) {
 		set_tc0_from_vert_id();
@@ -29,12 +27,11 @@ void main()
 		gl_TexCoord[0] = gl_MultiTexCoord0;
 		gl_TexCoord[0].st *= vec2(tex_scale_s, tex_scale_t);
 	}
-	tex_coord = gl_TexCoord[0].st;
+	tex_coord     = gl_TexCoord[0].st;
 	gl_Position   = ftransform();
-	//gl_Position.z = (2.0*log(gl_Position.w/0.01)/log(100.0/0.01) - 1) * gl_Position.w; // Outerra depth correction (needs to be used in all shaders, problems with large polygons)
 	gl_FrontColor = gl_Color;
-	eye_norm = normalize(gl_NormalMatrix * gl_Normal);
-	epos     = gl_ModelViewMatrix * gl_Vertex;
+	eye_norm      = normalize(gl_NormalMatrix * gl_Normal);
+	epos          = gl_ModelViewMatrix * gl_Vertex;
 
 	if (use_world_space_mvm) {
 		normal = normalize((transpose(world_space_mvm) * vec4(eye_norm, 1)).xyz);
