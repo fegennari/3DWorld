@@ -59,12 +59,10 @@ lmap_manager_t lmap_manager;
 
 extern bool disable_shaders;
 extern int animate2, display_mode, frame_counter, read_light_files[], write_light_files[];
-extern unsigned num_vpls;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[];
 extern colorRGBA cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
 extern vector<light_source> enabled_lights;
-extern cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 
 // *** USEFUL INLINES ***
@@ -461,15 +459,13 @@ float get_flow_val(CELL_LOC_T const from[3], CELL_LOC_T const to[3], bool use_fl
 
 bool has_fixed_cobjs(int x, int y) {
 
-	bool has_fixed(0);
 	assert(!point_outside_mesh(x, y));
 	vector<int> const &cvals(v_collision_matrix[y][x].cvals);
-	unsigned const ncv((unsigned)cvals.size());
 
-	for (unsigned k = 0; k < ncv && !has_fixed; ++k) {
-		if (coll_objects[cvals[k]].fixed && coll_objects[cvals[k]].status == COLL_STATIC) has_fixed = 1;
+	for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
+		if (coll_objects[*i].fixed && coll_objects[*i].status == COLL_STATIC) {return 1;}
 	}
-	return has_fixed;
+	return 0;
 }
 
 
@@ -954,27 +950,6 @@ void setup_2d_texture(unsigned &tid) {
 }
 
 
-unsigned upload_voxel_flow_texture() {
-
-	unsigned const zsize(MESH_SIZE[2]), sz(MESH_X_SIZE*MESH_Y_SIZE*zsize), ncomp(3);
-	vector<unsigned char> data(ncomp*sz, 255); // start at max flow
-
-	for (int y = 0; y < MESH_Y_SIZE; ++y) {
-		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			lmcell const *const vlm(lmap_manager.vlmap[y][x]);
-			if (vlm == NULL) continue;
-			unsigned const off(zsize*(y*MESH_X_SIZE + x));
-
-			for (unsigned z = 0; z < zsize; ++z) {
-				unsigned const off2(ncomp*(off + z));
-				UNROLL_3X(data[off2+i_] = vlm[z].lflow[i_];)
-			}
-		}
-	}
-	return create_3d_texture(zsize, MESH_X_SIZE, MESH_Y_SIZE, ncomp, data, GL_LINEAR, GL_CLAMP_TO_EDGE);
-}
-
-
 // texture units used:
 // 0: reserved for object textures
 // 1: reserved for indirect sky lighting and smoke (if enabled)
@@ -1078,19 +1053,6 @@ void upload_dlights_textures() {
 		bind_2d_texture(gb_tid);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MESH_X_SIZE, MESH_Y_SIZE, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT, &gb_data.front());
 	}
-
-	// step 4: voxel flow
-#if 0
-	set_active_texture(5); // texture unit 5
-
-	if (flow_tid == 0) {
-		flow_tid = upload_voxel_flow_texture();
-	}
-	else { // no dynamic updates
-		bind_3d_texture(flow_tid);g
-	}
-	set_active_texture(0);
-#endif
 	//PRINT_TIME("Dlight Texture Upload");
 	//cout << "ndl: " << ndl << ", elix: " << elix << ", gb_sz: " << XY_MULT_SIZE << endl;
 }
@@ -1207,64 +1169,6 @@ bool light_source::try_merge_into(light_source &ls) const {
 }
 
 
-void add_vpls() { // Note: basically unused
-
-	if (num_vpls == 0 || global_cube_lights.empty() || (display_mode & 0x08)) return;
-	float const scene_radius(get_scene_radius());
-	colorRGBA base_colors[NUM_LIGHT_SRC];
-	point lpos;
-
-	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		unsigned const gl_light(GL_LIGHT0 + l);
-		
-		if (!light_valid(0xFF, l, lpos) || !glIsEnabled(gl_light)) {
-			base_colors[l] = BLACK;
-			continue;
-		}
-		colorRGBA ambient, diffuse;
-		glGetLightfv(gl_light, GL_AMBIENT, &ambient.R);
-		glGetLightfv(gl_light, GL_DIFFUSE, &diffuse.R);
-		base_colors[l] = (ambient + diffuse);
-		base_colors[l].set_valid_color();
-	}
-	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
-		// use the ztop plane of the cube for vpls - FIXME: make more dynamic
-		cube_t const &c(i->bounds);
-		float const zval(c.d[2][1]), dx(c.d[0][1] - c.d[0][0]), dy(c.d[1][1] - c.d[1][0]), ar(dy/dx);
-		unsigned const nx(max(1U, (unsigned)(sqrt(num_vpls/ar) + 0.5))), ny(max(1U, (unsigned)(num_vpls/nx)));
-		float const dx_step(dx/nx), dy_step(dy/ny);
-		float const light_size(2.0*(dx_step + dy_step));
-		//float const light_size(12.0*HALF_DXY);
-	
-		for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-			if (base_colors[l] == BLACK) continue; // not enabled
-			
-			for (unsigned y = 0; y < ny; ++y) {
-				for (unsigned x = 0; x < nx; ++x) {
-					point const pt((c.d[0][0] + (x + 0.5)*dx_step), (c.d[1][0] + (y + 0.5)*dy_step), zval);
-					vector3d const dir((pt - lpos).get_norm());
-					point const target(pt + dir*scene_radius);
-					point cpos;
-					vector3d cnorm;
-					int cindex;
-					
-					if (check_coll_line_exact(lpos, target, cpos, cnorm, cindex, 0.0, -1, 1, 1, 1)) { // fast=1
-						float const dp(-dot_product(cnorm, dir));
-						if (dp < 0.0) continue; // can this happen?
-						// add small bias to prevent fp errors in the fragment shader when the light source is on top of a fragment
-						cpos += cnorm*(light_size*0.01);
-						assert(cindex >= 0);
-						coll_obj const &cobj(coll_objects[cindex]);
-						colorRGBA const color(base_colors[l].modulate_with(cobj.get_avg_color()));
-						add_dynamic_light(dp*light_size, cpos, color, cnorm, 0.5); // 180 degree point spotlight
-					}
-				}
-			}
-		}
-	}
-}
-
-
 void clear_dynamic_lights() { // slow for large lights
 
 	//if (!animate2) return;
@@ -1286,7 +1190,6 @@ void add_dynamic_lights() {
 	clear_dynamic_lights();
 	if (CAMERA_CANDLE_LT) add_camera_candlelight();
 	if (CAMERA_FLASH_LT)  add_camera_flashlight();
-	add_vpls();
 	dl_sources.swap(dl_sources2);
 
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
@@ -1345,14 +1248,6 @@ void add_dynamic_lights() {
 }
 
 
-bool is_shadowed_lightmap(point const &p) {
-
-	if (p.z <= czmin0) return is_under_mesh(p);
-	lmcell const *const lmc(lmap_manager.get_lmcell(p));
-	return (lmc ? (lmc->sv < 1.0) : 0);
-}
-
-
 void light_source::pack_to_floatv(float *data) const {
 
 	// store light_source as: {center.xyz, radius}, {color.rgba}, {dir, bwidth}
@@ -1368,13 +1263,10 @@ void light_source::pack_to_floatv(float *data) const {
 }
 
 
-inline float add_specular(point const &p, vector3d ldir, vector3d const &norm, float const *const spec) {
+float add_specular(point const &p, vector3d const &ldir, vector3d const &norm, float const *const spec) {
 
 	if (!spec || spec[0] == 0.0) return 0.0;
-	ldir.normalize();
-	vector3d c2p(get_camera_pos(), p);
-	c2p.normalize();
-	c2p += ldir;
+	vector3d const c2p((get_camera_pos(), p).get_norm() + ldir.get_norm());
 	float dp(dot_product(norm, c2p));
 	if (dp <= 0.0) return 0.0;
 	// Note: we assume exponent (spec[1]) is high, so we can skip if dp is small enough
@@ -1466,15 +1358,14 @@ void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float li
 }
 
 
-float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, vector3d const *const norm, float const *const spec) {
+float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic) {
 
 	float val(get_voxel_terrain_ao_lighting_val(p)); // shift p?
 	if (!lm_alloc) return val;
 	assert(lmap_manager.vlmap);
 	bool outside_mesh(0);
 	colorRGB cscale(cur_ambient);
-	point const p_adj((norm && !has_indir_lighting) ? (p + (*norm)*(0.25*HALF_DXY)) : p);
-	int const x(get_xpos(p_adj.x - SHIFT_DX)), y(get_ypos(p_adj.y - SHIFT_DY)), z(get_zpos(p_adj.z));
+	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
 	
 	if (point_outside_mesh(x, y)) {
 		outside_mesh = 1; // outside the range
@@ -1492,7 +1383,7 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic, vector3d co
 		cscale *= val;
 	}
 	if (!no_dynamic && !outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
-		get_dynamic_light(x, y, z, p, 1.0, (float *)&cscale, norm, spec);
+		get_dynamic_light(x, y, z, p, 1.0, (float *)&cscale, NULL, NULL);
 	}
 	// FIXME: Need to divide by ambient term here because we will be multiplying by it in the lighting computation later
 	// Should this set the emissive term? What about materials that are already emissive? Just use a shader everywhere?
@@ -1507,7 +1398,7 @@ unsigned enable_dynamic_lights(point const &center, float radius) {
 	point const camera(get_camera_pos());
 	vector<pair<float, unsigned> > vis_lights;
 
-	for (unsigned i = 0; i < dl_sources.size(); ++i) {
+	for (unsigned i = 0; i < dl_sources.size(); ++i) { // Note: could use ldynamic for faster queries
 		light_source const &ls(dl_sources[i]);
 		if (ls.is_directional() && radius == 0.0) continue; // directional lights only supported in sphere mode
 		float const ls_radius(ls.get_radius());

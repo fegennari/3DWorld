@@ -11,10 +11,9 @@ Hardware tessellation
 
 Convert remaining raw textures to jpeg
 
-Removed deprecated OpenGL calls:
-Use triangles instead of quads (indexed draw for individual/isolated quads):
- - Tree billboards
- - Tree leaves
+Remove deprecated OpenGL calls:
+Use triangles instead of quads
+ - Tree billboards/leaves
 Remove display lists
 Remove immediate mode calls
 Remove non-shader rendering
@@ -24,6 +23,8 @@ Run leak detection
 
 Multiple decid tree impostor orients
 - Decid tree texture atlases
+
+Shader for water
 
  E: 4.3 process_groups()
  H: 4.4 setup_object_render_data() => 2.0
