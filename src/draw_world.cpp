@@ -109,23 +109,6 @@ void get_shadowed_color(colorRGBA &color_a, point const &pos, bool no_dynamic) {
 }
 
 
-// Note: incorrect if there is both a sun and a moon
-bool pt_is_shadowed(point const &pos, int light, float radius, int cid, bool fast, bool use_mesh) {
-
-	if (use_mesh) {
-		int const xpos(get_ypos(pos.x)), ypos(get_ypos(pos.y));
-		if (point_outside_mesh(xpos, ypos)) return 0;
-
-		if ((pos.z - 1.5*radius) < mesh_height[ypos][xpos]) {
-			//if (is_mesh_disabled(xpos, ypos)) return 0; // assuming not drawing the mesh means it's underneath a cobj
-			return ((shadow_mask[light][ypos][xpos] & SHADOWED_ALL) != 0);
-		}
-		if (fast) {return is_shadowed_lightmap(pos);} // use the precomputed lightmap value
-	}
-	return !is_visible_to_light_cobj(pos, light, radius, cid, 0);
-}
-
-
 void set_color_alpha(colorRGBA color, float alpha) {
 
 	color.alpha *= alpha;

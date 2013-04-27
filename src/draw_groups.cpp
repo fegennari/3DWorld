@@ -347,6 +347,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 }
 
 
+// Note: incorrect if there is both a sun and a moon
 bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) {
 
 	bool is_shadowed((obj.flags & SHADOWED) != 0); // previous value
@@ -354,7 +355,7 @@ bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) {
 	int const skipval(min(20, int(8.0/pt_size)));
 
 	if (skipval <= 1 || (obj.time % skipval) == 0) {
-		is_shadowed = pt_is_shadowed(obj.pos, get_specular_light(), radius, obj.coll_id, 0, (pt_size < 2.0));
+		is_shadowed = !is_visible_to_light_cobj(obj.pos, get_specular_light(), radius, obj.coll_id, 0);
 		if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
 	}
 	return is_shadowed;

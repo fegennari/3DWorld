@@ -96,7 +96,6 @@ void set_colors_and_enable_light(int light, float const ambient[4], float const 
 void clear_colors_and_disable_light(int light);
 int get_light();
 void get_shadowed_color(colorRGBA &color_a, point const &pos, bool no_dynamic);
-bool pt_is_shadowed(point const &pos, int light, float radius, int cid, bool fast, bool use_mesh);
 void set_color_alpha(colorRGBA color, float alpha=1.0);
 void draw_camera_weapon(bool want_has_trans);
 void draw_solid_object_groups();

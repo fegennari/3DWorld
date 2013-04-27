@@ -45,7 +45,6 @@ bool     const DEBUG_WATER_TIME    = 0; // DEBUGGING
 bool     const DEBUG_RIPPLE_TIME   = 0;
 bool     const FAST_WATER_RIPPLE   = 0;
 bool     const NO_ICE_RIPPLES      = 0;
-bool     const WATER_SHADOW        = 0; // uses mesh shadow, so is only accurate for shallow water
 int      const UPDATE_UW_LANDSCAPE = 2;
 
 float const w_spec[2][2] = {{0.3, 80.0}, {0.4, 70.0}};
@@ -340,9 +339,6 @@ public:
 			if (!(display_mode & 0x20) && !has_snow && v.z > mesh_height[i][j]) { // calculate water reflection and blend into color
 				point const camera(get_camera_pos());
 				if (camera.z > v.z) blend_reflection_color(v, color, n, camera); // below the camera
-			}
-			else if (WATER_SHADOW && shadow_mask[get_light()][i][j]) {
-				color *= 0.5;
 			}
 			if (WLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) {
 				float const *const spec(w_spec[(temperature > W_FREEZE_POINT)]);
@@ -1630,13 +1626,14 @@ bool is_underwater(point const &pos, int check_bottom, float *depth) { // or und
 }
 
 
-inline void update_accumulation(int xpos, int ypos) {
+void update_accumulation(int xpos, int ypos) {
 
 	float acc(accumulation_matrix[ypos][xpos]);
 	if (acc <= 0.0) return;
 	w_acc  = 1; // melt snow
 	float melted(((temperature - W_FREEZE_POINT)/MELT_RATE)*(NIGHT_MELT + (1.0 - NIGHT_MELT)*light_factor));
-	if (light_factor >= 0.5 && (shadow_mask[LIGHT_SUN][ypos][xpos] & SHADOWED_ALL)) melted *= SHADE_MELT;
+	// FIXME: shadow_mask may not be valid if shadow maps are being used
+	if (light_factor >= 0.5 && (shadow_mask[LIGHT_SUN][ypos][xpos] & SHADOWED_ALL)) {melted *= SHADE_MELT;}
 	accumulation_matrix[ypos][xpos] = max(0.0f, (acc - melted));
 
 	if (!DISABLE_WATER && wminside[ypos][xpos] == 1) {
