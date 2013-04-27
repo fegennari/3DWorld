@@ -556,31 +556,22 @@ public:
 		if (beg_ix < end_ix) glDrawArrays(GL_TRIANGLES, 3*beg_ix, 3*(end_ix - beg_ix)); // nonempty segment
 	}
 
-	static void setup_shaders(shader_t &s, bool per_pixel_lighting, bool distant) {
-		if (per_pixel_lighting) { // per-pixel dynamic lighting - looks better, but slower
-			s.setup_enabled_lights(2, 2); // FS; L0-L1: static directional
-			set_dlights_booleans(s, 1, 1); // FS
-			s.check_for_fog_disabled();
-			if (distant) {s.set_prefix("#define NO_GRASS_TEXTURE", 1);} // FS
-			s.set_prefix("#define NO_DL_SPECULAR",   1); // FS ???
-			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
-			s.set_vert_shader("wind.part*+grass_pp_dl");
-			s.set_frag_shader("linear_fog.part+dynamic_lighting.part*+ads_lighting.part*+shadow_map.part*+grass_with_dlights");
-			s.begin_shader();
-			s.setup_scene_bounds();
-			setup_dlight_textures(s);
-			s.add_uniform_color("color_scale", (distant ? texture_color(GRASS_BLADE_TEX)*1.06 : WHITE));
-		}
-		else { // per-vertex dynamic lighting, limited to 6 lights - faster
-			s.set_prefix("#define NO_SMAP_NORMAL_OFFSET", 0); // VS
-			s.set_prefix("#define USE_LIGHT_COLORS", 0);
-			s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 0);
-			s.setup_enabled_lights(8, 1); // VS; L0-L1: static directional, L2-L7: dynamic point
-			s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass");
-			s.set_frag_shader("linear_fog.part+textured_with_fog");
-			s.begin_shader();
-		}
+	static void setup_shaders(shader_t &s, bool distant) { // per-pixel dynamic lighting
+		s.setup_enabled_lights(2, 2); // FS; L0-L1: static directional
+		set_dlights_booleans(s, 1, 1); // FS
+		s.check_for_fog_disabled();
+		if (distant) {s.set_prefix("#define NO_GRASS_TEXTURE", 1);} // FS
+		s.set_prefix("#define NO_DL_SPECULAR",   1); // FS ???
+		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
+		s.set_vert_shader("wind.part*+grass_pp_dl");
+		s.set_frag_shader("linear_fog.part+dynamic_lighting.part*+ads_lighting.part*+shadow_map.part*+grass_with_dlights");
+		//s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass");
+		//s.set_frag_shader("linear_fog.part+textured_with_fog");
+		s.begin_shader();
+		s.setup_scene_bounds();
+		setup_dlight_textures(s);
+		s.add_uniform_color("color_scale", (distant ? texture_color(GRASS_BLADE_TEX)*1.06 : WHITE));
 		if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
 		setup_wind_for_shader(s, 1);
 		s.add_uniform_int("tex0", 0);
@@ -605,12 +596,16 @@ public:
 		check_for_updates();
 
 		// check for dynamic light sources
-		bool const grass_wind(!disable_shaders && !has_snow && (display_mode & 0x0100));
-		bool const per_pixel_lighting((display_mode & 0x10) != 0);
-		bool const two_pass(grass_wind && per_pixel_lighting);
-		unsigned const num_dlights((!grass_wind || !per_pixel_lighting) ? enable_dynamic_lights() : 0);
+		bool const use_grass_shader(!disable_shaders && !has_snow && (display_mode & 0x0100));
+		unsigned num_dlights(0);
 		shader_t s;
-		if (grass_wind) {setup_shaders(s, per_pixel_lighting, two_pass);} // enables lighting and shadows as well
+		
+		if (use_grass_shader) { // enables lighting and shadows as well
+			setup_shaders(s, 1);
+		}
+		else {
+			num_dlights = enable_dynamic_lights();
+		}
 		begin_draw(0.2);
 
 		// draw the grass
@@ -661,7 +656,7 @@ public:
 						}
 					}
 				}
-				if (two_pass && visible && dist_less_than(camera, mpos, 500.0*grass_width)) { // nearby grass
+				if (use_grass_shader && visible && dist_less_than(camera, mpos, 500.0*grass_width)) { // nearby grass
 					nearby_ixs.push_back(ix);
 					visible = 0; // drawn in the second pass
 				}
@@ -678,14 +673,14 @@ public:
 
 		if (!nearby_ixs.empty()) {
 			s.end_shader();
-			setup_shaders(s, per_pixel_lighting, 0);
+			setup_shaders(s, 0);
 
 			for (vector<unsigned>::const_iterator i = nearby_ixs.begin(); i != nearby_ixs.end(); ++i) {
-				draw_range(mesh_to_grass_map[*i], mesh_to_grass_map[*i+1]);
+				draw_range(mesh_to_grass_map[*i], mesh_to_grass_map[(*i)+1]);
 			}
 		}
 		s.end_shader();
-		if (!grass_wind || !per_pixel_lighting) {disable_dynamic_lights(num_dlights);}
+		if (!use_grass_shader) {disable_dynamic_lights(num_dlights);}
 		end_draw();
 		//PRINT_TIME("Draw Grass");
 	}
