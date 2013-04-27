@@ -13,7 +13,7 @@ void main()
 	check_noise_and_maybe_discard(0.0, gl_Color.a);
 
 	// transform normal into billboard orientation 
-	vec3 normal = 2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1,1,1);
+	vec3 normal = 2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1.0);
 	normal.y   *= -1.0; // texture is rendered with ybot < ytop
 	vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space
 	vec3 vdir   = normalize(eye.xyz - world_space_pos.xyz);

@@ -13,7 +13,7 @@ void main()
 	if (enable_light1) lit_color += add_light_comp_pos_smap_light1(eye_norm, epos);
 	lit_color = clamp(lit_color, 0.0, 1.0);
 
-	if (enable_dlights) lit_color.rgb += add_dlights(dlpos.xyz, normalize(normal), gl_ModelViewMatrixInverse[3].xyz, vec3(1,1,1)); // dynamic lighting
+	if (enable_dlights) lit_color.rgb += add_dlights(dlpos.xyz, normalize(normal), gl_ModelViewMatrixInverse[3].xyz, vec3(1.0)); // dynamic lighting
 	vec4 color = vec4((texel0.rgb * texel1.rgb * lit_color.rgb), (texel0.a * texel1.a * gl_Color.a));
 #ifndef NO_FOG
 	color = apply_fog(color);

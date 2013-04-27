@@ -15,7 +15,7 @@ void main()
 		float dist = length(vertex)/radius; // 0 at center, 1 at edge
 		if (dist > 1.0) discard;
 		vec3  pos  = vertex + vec3(offset, offset, offset);
-		vec4  val  = vec4(0,0,0,0);
+		vec4  val  = vec4(0.0);
 		float freq = 1.0;
 
 		for (int i = 0; i < NUM_OCTAVES; ++i) {

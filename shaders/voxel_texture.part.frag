@@ -1,5 +1,5 @@
-uniform vec4 color0 = vec4(1,1,1,1);
-uniform vec4 color1 = vec4(1,1,1,1);
+uniform vec4 color0 = vec4(1.0);
+uniform vec4 color1 = vec4(1.0);
 uniform sampler2D tex0, tex1;
 
 vec4 get_texture_val(in vec3 normal, in vec3 pos)

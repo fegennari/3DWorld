@@ -1,6 +1,6 @@
 // Note: Light 0 is the sun (A+D+S point light), light 1 is universe ambient (constant A), light 2 is planet reflection (D point light)
 uniform float atmosphere = 1.0; // technically not needed for gas giants since assumed to be 1.0
-uniform vec3 light_scale = vec3(1,1,1);
+uniform vec3 light_scale = vec3(1.0);
 uniform vec3 sun_pos, ss_pos, rscale;
 uniform float sun_radius, ss_radius, ring_ri, ring_ro;
 uniform mat4 world_space_mvm;

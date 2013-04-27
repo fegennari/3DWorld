@@ -1,6 +1,6 @@
 uniform float noise_scale = 1.0;
 uniform float tex_mix_saturate = 1.0;
-uniform vec3 tex_eval_offset = vec3(0,0,0);
+uniform vec3 tex_eval_offset = vec3(0.0);
 uniform sampler3D noise_tex;
 
 float procedural_eval(in vec3 pos) {

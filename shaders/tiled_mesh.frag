@@ -6,13 +6,13 @@ uniform float water_atten    = 1.0;
 uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
 uniform float cloud_alpha    = 1.0;
-uniform vec3 cloud_offset    = vec3(0,0,0);
+uniform vec3 cloud_offset    = vec3(0.0);
 varying vec3 vertex; // world space
 varying vec4 epos;
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
-	color.rgb *= vec3(1,1,1) - min(vec3(0.98, 0.97, 0.95), vec3(1.5, 0.9, 0.5)*dist*2.0);
+	color.rgb *= vec3(1.0) - min(vec3(0.98, 0.97, 0.95), vec3(1.5, 0.9, 0.5)*dist*2.0);
 }
 
 float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) {
@@ -53,7 +53,7 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 			float cweight = shadow_weight*wave_amplitude*min(8.0*(water_plane_z - vertex.z), 0.5);
 			float ntime   = 2.0*abs(fract(0.005*wave_time) - 0.5);
 			vec3  cval    = 4.0*mix(texture2D(caustic_tex, gl_TexCoord[2].st).rgb, texture2D(caustic_tex, (gl_TexCoord[2].st + vec2(0.3, 0.6))).rgb, ntime);
-			color.rgb    *= mix(vec3(1,1,1), cval, cweight);
+			color.rgb    *= mix(vec3(1.0), cval, cweight);
 		}
 #endif
 

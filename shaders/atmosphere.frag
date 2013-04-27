@@ -1,7 +1,7 @@
 uniform vec3 camera_pos, planet_pos, sun_pos, ss_pos;
 uniform float planet_radius, atmos_radius, sun_radius, ss_radius;
 uniform float atmosphere = 1.0;
-uniform vec3 light_scale = vec3(1,1,1);
+uniform vec3 light_scale = vec3(1.0);
 varying vec4 epos;
 varying vec3 normal, world_space_pos;
 

@@ -5,7 +5,7 @@ uniform float cloud_alpha = 1.0;
 uniform float x1, y1, x2, y2, wx2, wy2, zmin, zmax, translate_y;
 uniform sampler2D height_tex, shadow_normal_tex, weight_tex, noise_tex;
 uniform float cloud_plane_z;
-uniform vec3 cloud_offset = vec3(0,0,0);
+uniform vec3 cloud_offset = vec3(0.0);
 
 varying vec2 tc;
 

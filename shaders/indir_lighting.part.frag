@@ -1,5 +1,5 @@
 uniform sampler3D smoke_and_indir_tex;
-uniform vec3 const_indir_color = vec3(0,0,0);
+uniform vec3 const_indir_color = vec3(0.0);
 
 varying vec3 spos; // world space
 

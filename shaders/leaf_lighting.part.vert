@@ -1,6 +1,6 @@
 uniform int num_dlights = 0;
 uniform float normal_scale = 1.0;
-uniform vec4 color_scale = vec4(1,1,1,1);
+uniform vec4 color_scale = vec4(1.0);
 
 void calc_leaf_lighting()
 {

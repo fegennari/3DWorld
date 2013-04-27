@@ -3,7 +3,7 @@ uniform mat4 world_space_mvm;
 uniform float tex_scale_s  = 1.0;
 uniform float tex_scale_t  = 1.0;
 uniform float normal_scale = 1.0;
-uniform vec3 world_space_offset = vec3(0,0,0);
+uniform vec3 world_space_offset = vec3(0.0);
 
 attribute vec4 tex0_s, tex0_t;
 

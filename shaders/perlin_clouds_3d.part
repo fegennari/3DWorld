@@ -29,8 +29,8 @@ float gen_cloud_alpha_non_norm(in vec3 pos) {
 	return gen_cloud_alpha_time(pos, get_ftime());
 }
 float gen_cloud_alpha_static(in vec3 pos) {
-	return clamp(gen_cloud_alpha_time(pos, vec3(0,0,0)), 0.0, 1.0);
+	return clamp(gen_cloud_alpha_time(pos, vec3(0.0)), 0.0, 1.0);
 }
 float gen_cloud_alpha_static_non_norm(in vec3 pos) {
-	return gen_cloud_alpha_time(pos, vec3(0,0,0));
+	return gen_cloud_alpha_time(pos, vec3(0.0));
 }
