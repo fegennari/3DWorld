@@ -28,7 +28,7 @@ int dshadow_lights(0);
 point light_pos;
 shad_env s_env[NUM_LIGHT_SRC];
 
-extern bool combined_gu, draw_mesh_shader;
+extern bool combined_gu;
 extern int island, ground_effects_level, scrolling;
 extern float sun_rot, moon_rot, zmin, zmax, zbottom, ztop;
 extern point sun_pos, moon_pos, mesh_origin;
@@ -74,7 +74,7 @@ bool light_valid(unsigned light_sources, int l, point &lpos) {
 void coll_obj::add_shadow(unsigned light_sources, bool dynamic) const {
 
 	if (no_shadow() || dynamic != dynamic_shadows_only()) return;
-	if (scrolling && cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && draw_mesh_shader && shadow_map_enabled()) return;
+	if (scrolling && cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && shadow_map_enabled()) return;
 
 	switch (type) {
 	case COLL_CUBE:

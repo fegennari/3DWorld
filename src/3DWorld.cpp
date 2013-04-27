@@ -61,7 +61,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 // Global Variables
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1);
-bool univ_planet_lod(0), draw_mesh_shader(1), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
+bool univ_planet_lod(0), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), player_near_fire(0), global_lighting_update(0), use_waypoint_app_spots(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
 bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0);
@@ -1261,8 +1261,8 @@ void keyboard2(int key, int x, int y) {
 		change_tree_mode();
 		break;
 
-	case GLUT_KEY_F6: // toggle draw_mesh shader
-		draw_mesh_shader ^= 1;
+	case GLUT_KEY_F6: // unused
+		// UNUSED
 		break;
 
 	case GLUT_KEY_F7: // toggle auto time advance

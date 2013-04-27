@@ -38,7 +38,7 @@ int island(0);
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, draw_mesh_shader, disable_shaders;
+extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, disable_shaders;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
@@ -156,12 +156,11 @@ class mesh_vertex_draw {
 		}
 		//data[c].c.set_to_val(color_scale);
 		colorRGB color(color_scale, color_scale, color_scale);
-		bool const apply_dlights(has_dl_sources && !draw_mesh_shader);
 
-		if (using_lightmap || (DLIGHT_SCALE > 0.0 && apply_dlights)) { // somewhat slow
-			get_sd_light(j, i, get_zpos(data[c].v.z), data[c].v, !apply_dlights, DLIGHT_SCALE, &color.R, &surface_normals[i][j], NULL);
+		if (using_lightmap) { // somewhat slow
+			get_sd_light(j, i, get_zpos(data[c].v.z), data[c].v, 1, DLIGHT_SCALE, &color.R, &surface_normals[i][j], NULL);
 		}
-		if (shadow_map_enabled() && draw_mesh_shader) {
+		if (shadow_map_enabled()) {
 			// nothing to do here
 		}
 		else if (light_factor >= 0.6) { // sun shadows
@@ -378,7 +377,7 @@ void draw_mesh_mvd(bool shadow_pass) {
 
 	shader_t s;
 
-	if (!shadow_pass && draw_mesh_shader && !disable_shaders) {
+	if (!shadow_pass && !disable_shaders) {
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		s.setup_enabled_lights(2, 2); // FS
 		set_dlights_booleans(s, 1, 1); // FS
