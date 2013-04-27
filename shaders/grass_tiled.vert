@@ -46,5 +46,5 @@ void main()
 	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2);}
 	//}
 	color.a = ((grass_weight < noise_weight) ? 0.0 : color.a); // skip some grass blades by making them transparent
-	gl_FrontColor  = color;
+	gl_FrontColor = color;
 } 

@@ -1598,7 +1598,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 	if (reflection_pass) return; // no grass refletion (yet)
 	grass_tile_manager.begin_draw(0.1);
-	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled() && !reflection_pass);
+	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 
 	for (unsigned pass = 0; pass < 2; ++pass) { // wind, no wind
 		shader_t s;
@@ -1606,7 +1606,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
 		s.set_bool_prefix("enable_grass_wind", enable_wind, 0); // VS
 		s.set_vert_shader("ads_lighting.part*+wind.part*+perlin_clouds.part*+grass_tiled");
-		s.set_frag_shader("linear_fog.part+textured_with_fog");
+		s.set_frag_shader("linear_fog.part+grass_tiled");
 		//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
 		s.begin_shader();
 		if (enable_wind) {setup_wind_for_shader(s, 1);}
