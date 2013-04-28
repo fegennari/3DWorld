@@ -1415,8 +1415,8 @@ unsigned enable_dynamic_lights(point const &center, float radius) {
 	for (unsigned i = 0; i < num_dlights; ++i) {
 		int const gl_light(START_LIGHT+i);
 		light_source const &ls(dl_sources[vis_lights[i].second]);
-		float udiffuse[4] = {0}; // diffuse = 0 because we don't have correct normals
-		set_colors_and_enable_light(gl_light, (float *)(&ls.get_color()), udiffuse);
+		colorRGBA const &dcolor(ls.get_color()), acolor(dcolor*0.2); // 20% ambient
+		set_colors_and_enable_light(gl_light, (float *)(&acolor), (float *)(&dcolor));
 		glLightf(gl_light, GL_CONSTANT_ATTENUATION,  1.0);
 		glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
 		glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 10.0/(ls.get_radius()*ls.get_radius()));
