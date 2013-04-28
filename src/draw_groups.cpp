@@ -404,10 +404,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 			set_specular(0.1, 10.0);
 			if (s.is_setup()) {s.disable();}
 			shader_t ls;
-			ls.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			colorRGBA const orig_fog_color(setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1)); // TSL=1
-			ls.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
-			ls.add_uniform_float("ambient_scale",    0.0);
+			colorRGBA const orig_fog_color(setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1)); // TSL=1, use light colors
+			ls.add_uniform_float("ambient_scale", 0.0);
 			quad_batch_draw qbd;
 			set_color(BLACK);
 
@@ -440,7 +438,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 				qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], leaf_color, cross_product(dirs[0], dirs[1]).get_norm());
 			} // for j
 			qbd.draw_and_clear();
-			ls.add_uniform_float("base_color_scale", 1.0);
 			ls.add_uniform_float("ambient_scale",    1.0);
 			end_smoke_shaders(ls, orig_fog_color);
 			if (s.is_setup()) {s.enable();} // back to the original shader

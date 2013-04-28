@@ -255,12 +255,13 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map
 colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
-	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl)
+	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, bool use_light_colors)
 {
 	use_smap       &= shadow_map_enabled();
 	indir_lighting &= have_indir_smoke_tex;
 	smoke_en       &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
 	dlights        &= (dl_tid > 0 && has_dl_sources);
+	if (use_light_colors) {s.set_prefix("#define USE_LIGHT_COLORS", 1);} // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+tc_by_vert_id.part+no_lt_texgen_smoke");
@@ -273,6 +274,7 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	}
 	if (use_bmap)     s.add_uniform_int("bump_map", 5);
 	if (use_spec_map) s.add_uniform_int("spec_map", 8);
+	s.add_uniform_float("base_color_scale", (use_light_colors ? 0.0 : 1.0)); // hack to force usage of material properties instead of color
 	common_shader_block_post(s, dlights, use_smap, (smoke_en || indir_lighting), min_alpha);
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);

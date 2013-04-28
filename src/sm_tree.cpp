@@ -413,14 +413,11 @@ void draw_small_trees(bool shadow_only) {
 
 	// draw leaves
 	small_trees.vbo_manager[0].upload();
-	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-	orig_fog_color = setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke
-	s.add_uniform_float("base_color_scale", 0.0); // hack to force usage of material properties instead of color
+	orig_fog_color = setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v, 1); // dynamic lights, but no smoke, use light colors
 	set_lighted_sides(2);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
 	small_trees.draw_pine_leaves(shadow_only);
-	s.add_uniform_float("base_color_scale", 1.0);
 	end_smoke_shaders(s, orig_fog_color);
 	small_trees.draw_non_pine_leaves(shadow_only); // not using shaders
 	glDisable(GL_ALPHA_TEST);
