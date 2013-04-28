@@ -5,12 +5,14 @@ varying vec3 eye_norm;
 void main()
 {
 	setup_texgen0();
+#ifdef HAVE_DETAIL_TEXTURE
 	setup_texgen1();
+#endif
 	gl_Position = ftransform();
 	eye_norm = gl_NormalMatrix * gl_Normal; // eye space
 	normal = normalize(gl_Normal);
 	dlpos  = gl_Vertex;
 	epos   = gl_ModelViewMatrix * gl_Vertex;
-	gl_FrontColor = gl_Color;
+	gl_FrontColor   = gl_Color;
 	gl_FogFragCoord = length(epos.xyz);
 } 

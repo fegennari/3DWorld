@@ -17,7 +17,6 @@ float const PRESP_ANGLE_ADJ  = 1.5;
 float const VD_SCALE         = 1.0;
 float const SURF_HEAL_RATE   = 0.005;
 float const MAX_SURFD        = 20.0;
-float const DLIGHT_SCALE     = 4.0;
 int   const DRAW_BORDER      = 3;
 
 int   const SHOW_MESH_TIME   = 0;
@@ -38,7 +37,7 @@ int island(0);
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, has_dl_sources, combined_gu, has_snow, disable_shaders;
+extern bool using_lightmap, combined_gu, has_snow, disable_shaders;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
@@ -156,10 +155,8 @@ class mesh_vertex_draw {
 		}
 		//data[c].c.set_to_val(color_scale);
 		colorRGB color(color_scale, color_scale, color_scale);
+		if (using_lightmap) {get_sd_light(j, i, get_zpos(data[c].v.z), &color.R);}
 
-		if (using_lightmap) { // somewhat slow
-			get_sd_light(j, i, get_zpos(data[c].v.z), data[c].v, 1, DLIGHT_SCALE, &color.R, &surface_normals[i][j], NULL);
-		}
 		if (shadow_map_enabled()) {
 			// nothing to do here
 		}
@@ -373,25 +370,32 @@ void draw_mesh_vbo() { // Note: uses fixed function pipeline
 }
 
 
+void setup_mesh_and_water_shader(shader_t &s) {
+
+	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+	s.setup_enabled_lights(2, 2); // FS
+	set_dlights_booleans(s, 1, 1); // FS
+	s.check_for_fog_disabled();
+	s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
+	s.set_vert_shader("texture_gen.part+draw_mesh");
+	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh");
+	s.begin_shader();
+	if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);
+	s.setup_fog_scale();
+	s.setup_scene_bounds();
+	setup_dlight_textures(s);
+}
+
+
 void draw_mesh_mvd(bool shadow_pass) {
 
 	shader_t s;
 
 	if (!shadow_pass && !disable_shaders) {
-		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-		s.setup_enabled_lights(2, 2); // FS
-		set_dlights_booleans(s, 1, 1); // FS
-		s.check_for_fog_disabled();
-		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
-		s.set_vert_shader("texture_gen.part+draw_mesh");
-		s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh");
-		s.begin_shader();
-		if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);
-		s.setup_fog_scale();
+		for (unsigned d = 0; d < 2; ++d) {s.set_prefix("#define HAVE_DETAIL_TEXTURE", d);} // VS/FS
+		setup_mesh_and_water_shader(s);
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_int("tex1", 1);
-		s.setup_scene_bounds();
-		setup_dlight_textures(s);
 	}
 	float y(-Y_SCENE_SIZE);
 	mesh_vertex_draw mvd(shadow_pass);
@@ -602,7 +606,7 @@ void water_renderer::draw_vert(float x, float y, float z, bool in_y, bool neg_ed
 		atten_by_water_depth(&c.R, atten);
 		c.A = CLIP_TO_01(atten);
 	}
-	set_color(c);
+	c.do_glColor();
 	draw_vertex(x, y, z, in_y, tex_scale);
 }
 
@@ -613,7 +617,8 @@ void water_renderer::draw_x_sides(bool neg_edge) const {
 	float const limit(neg_edge ? -X_SCENE_SIZE : X_SCENE_SIZE-DX_VAL);
 	float yv(-Y_SCENE_SIZE);
 	bool in_quads(0);
-	glNormal3f(-1.0, 0.0, 0.0);
+	setup_texgen_full(0.0, tex_scale, 0.0, 0.0, 0.0, 0.0, tex_scale, 0.0);
+	glNormal3f((neg_edge ? -1.0 : 1.0), 0.0, 0.0);
 
 	for (int i = 1; i < MESH_Y_SIZE; ++i) { // x sides
 		float const mh1(mesh_height[i][end_val]), mh2(mesh_height[i-1][end_val]);
@@ -638,7 +643,8 @@ void water_renderer::draw_y_sides(bool neg_edge) const {
 	float const limit(neg_edge ? -Y_SCENE_SIZE : Y_SCENE_SIZE-DY_VAL);
 	float xv(-X_SCENE_SIZE);
 	bool in_quads(0);
-	glNormal3f(0.0, 1.0, 0.0);
+	setup_texgen_full(tex_scale, 0.0, 0.0, 0.0, 0.0, 0.0, tex_scale, 0.0);
+	glNormal3f(0.0, (neg_edge ? -1.0 : 1.0), 0.0);
 	
 	for (int i = 1; i < MESH_X_SIZE; ++i) { // y sides
 		float const mh1(mesh_height[end_val][i]), mh2(mesh_height[end_val][i-1]);
@@ -674,7 +680,6 @@ void water_renderer::draw() { // modifies color
 	select_water_ice_texture(color);
 	set_color(color);
 	set_fill_mode();
-	set_lighted_sides(2);
 	enable_blend();
 	point const camera(get_camera_pos());
 	float const pts[4][2] = {{-X_SCENE_SIZE, 0.0}, {X_SCENE_SIZE, 0.0}, {0.0, -Y_SCENE_SIZE}, {0.0, Y_SCENE_SIZE}};
@@ -690,7 +695,6 @@ void water_renderer::draw() { // modifies color
 	}
 	disable_blend();
 	set_specular(0.0, 1.0);
-	set_lighted_sides(1);
 	glDisable(GL_TEXTURE_2D);
 }
 

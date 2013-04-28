@@ -6,6 +6,7 @@
 #include "spillover.h"
 #include "physics_objects.h"
 #include "openal_wrap.h"
+#include "shaders.h"
 
 
 float    const RIPPLE_DAMP1        = 0.95;
@@ -18,7 +19,6 @@ float    const WATER_WIND_EFF2     = 0.0005;
 float    const MIN_SCALED_ALPHA    = 0.6;
 float    const MAX_SCALED_ALPHA    = 1.1;
 float    const SCALED_ALPHA_SLOPE  = 12.0;
-float    const WLIGHT_SCALE        = 3.0; // 0.0 disables
 float    const SNOW_THRESHOLD      = 8.0;
 float    const MELT_RATE           = 10.0;
 float    const SHADE_MELT          = 0.5;
@@ -93,7 +93,7 @@ vector<water_spring> water_springs;
 vector<water_section> wsections;
 spillover spill;
 
-extern bool using_lightmap, has_dl_sources, has_snow, fast_water_reflect;
+extern bool using_lightmap, has_snow, fast_water_reflect;
 extern int display_mode, frame_counter, game_mode, TIMESCALE2, I_TIMESCALE2, ocean_set;
 extern int world_mode, island, rand_gen_index, begin_motion, animate, animate2, blood_spilled;
 extern int landscape_changed, xoff2, yoff2, scrolling, dx_scroll, dy_scroll, INIT_DISABLE_WATER;
@@ -120,8 +120,8 @@ void update_accumulation(int xpos, int ypos);
 void shift_water_springs(vector3d const &vd);
 
 void add_hole_in_landscape_texture(int xpos, int ypos, float blend);
-
 void set_ocean_z();
+void setup_mesh_and_water_shader(shader_t &s);
 
 
 
@@ -340,10 +340,7 @@ public:
 				point const camera(get_camera_pos());
 				if (camera.z > v.z) blend_reflection_color(v, color, n, camera); // below the camera
 			}
-			if (WLIGHT_SCALE > 0.0 && (using_lightmap || has_dl_sources)) {
-				float const *const spec(w_spec[(temperature > W_FREEZE_POINT)]);
-				get_sd_light(j, i, get_zpos(v.z), v, 0, WLIGHT_SCALE, (float *)&color, &n, spec);
-			}
+			if (using_lightmap) {get_sd_light(j, i, get_zpos(v.z), (float *)&color);}
 			last_row_colors[j] = color_ix(color, i);
 		}
 		color.do_glColor(); // note that the texture is blue
@@ -384,7 +381,11 @@ void draw_water() {
 	if (DEBUG_WATER_TIME) {PRINT_TIME("0 Add Waves");}
 	if (DISABLE_WATER || (island && !w_acc)) return;
 	water_surface_draw wsd;
+	shader_t s;
+	setup_mesh_and_water_shader(s);
+	s.add_uniform_int("tex0", 0);
 	set_fill_mode();
+	glEnable(GL_COLOR_MATERIAL);
 	point const camera(get_camera_pos());
 	bool const is_ice(temperature <= W_FREEZE_POINT);
 
@@ -396,9 +397,8 @@ void draw_water() {
 	if (DEBUG_WATER_TIME) {PRINT_TIME("1 WSD Init");}
 
 	if (!island) { // draw exterior water (oceans)
-		if (camera.z >= water_plane_z) draw_water_sides(1);
+		if (camera.z >= water_plane_z) {draw_water_sides(1);}
 		if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
-		glEnable(GL_COLOR_MATERIAL);
 		glDisable(GL_NORMALIZE);
 		enable_blend();
 		enable_point_specular();
@@ -436,9 +436,8 @@ void draw_water() {
 		set_specular(0.0, 1.0);
 		disable_textures_texgen();
 		glEnable(GL_NORMALIZE);
-		glDisable(GL_COLOR_MATERIAL);
 		if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
-		if (camera.z <  water_plane_z) {draw_water_sides(1);}
+		if (camera.z < water_plane_z) {draw_water_sides(1);}
 	}
 	if (!no_grass()) {
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -450,8 +449,9 @@ void draw_water() {
 		}
 		if (DEBUG_WATER_TIME) {PRINT_TIME("3 Grass Update");}
 	}
-	glEnable(GL_COLOR_MATERIAL);
-	update_valleys();
+	s.disable();
+	update_valleys(); // Note: using raw colors, no texture
+	s.enable();
 	if (DEBUG_WATER_TIME) {PRINT_TIME("4 Water Valleys Update");}
 
 	// call the function that computes the ripple effect
@@ -593,6 +593,7 @@ void draw_water() {
 	disable_textures_texgen();
 	glEnable(GL_NORMALIZE);
 	glDisable(GL_COLOR_MATERIAL);
+	s.end_shader();
 	update_water_volumes();
 	if (!lc0 && rand()%5 != 0) landscape_changed = 0; // reset, only update landscape 20% of the time
 	++wcounter;

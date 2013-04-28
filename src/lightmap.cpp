@@ -1347,14 +1347,13 @@ bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 
 
 // used on mesh and water
-void get_sd_light(int x, int y, int z, point const &p, bool no_dynamic, float lightscale, float *ls, vector3d const *const norm, float const *const spec) {
+void get_sd_light(int x, int y, int z, float *ls) {
 
 	if (lm_alloc && using_lightmap && !light_sources.empty() && lmap_manager.is_valid_cell(x, y, z)) {
 		assert(lmap_manager.vlmap);
 		float const *const lcolor(lmap_manager.vlmap[y][x][z].lc);
 		ADD_LIGHT_CONTRIB(lcolor, ls);
 	}
-	if (!no_dynamic && !dl_sources.empty()) get_dynamic_light(x, y, z, p, lightscale, ls, norm, spec);
 }
 
 
