@@ -57,7 +57,11 @@ vec3 add_light0(in vec3 n) {
 	vec3 diffuse = gl_FrontLightProduct[0].diffuse.rgb;
 	vec3 ambient = gl_FrontLightProduct[0].ambient.rgb;
 #endif
+#ifdef NO_SPECULAR
+	vec3 specular = vec3(0.0);
+#else
 	vec3 specular = get_light_specular(lnormal, light_dir, eye_pos, 0).rgb;
+#endif
 	return (ambient_scale*ambient + max(dot(lnormal, light_dir), 0.0)*diffuse + specular);
 }
 

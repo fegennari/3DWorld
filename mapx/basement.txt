@@ -19,8 +19,8 @@ n 0
 m 0.18
 T -6.7  4.55 -0.69  i mapx/exploding_tank.txt
 T -6.4  4.55 -0.69  i mapx/exploding_tank.txt
-T -2.5  5.55 -0.69  i mapx/exploding_tank.txt
-T -3.5  5.55 -0.69  i mapx/exploding_tank.txt
+T -2.55 5.55 -0.69  i mapx/exploding_tank.txt
+T -3.45 5.55 -0.69  i mapx/exploding_tank.txt
 T  0.0  0.0 -0.29
 m 1.0
 e 0

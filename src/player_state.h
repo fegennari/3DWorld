@@ -161,7 +161,8 @@ struct player_state { // size = big
 	};
 
 	bool plasma_loaded, on_waypt_path;
-	int timer, target, objective, weapon, wmode, powerup, powerup_time, kills, deaths, cb_hurt, killer;
+	int timer, target, objective, weapon, wmode, powerup, powerup_time, cb_hurt;
+	int kills, deaths, suicides, team_kills, max_kills, tot_kills, killer;
 	int init_frame, fire_frame, was_hit, hitter, target_visible, kill_time, rot_counter, uw_time;
 	int target_type, stopped_time, last_waypoint;
 	unsigned tid, fall_counter, chunk_index;
@@ -178,9 +179,9 @@ struct player_state { // size = big
 	destination_marker dest_mark;
 
 	player_state() : plasma_loaded(0), on_waypt_path(0), timer(0), target(-1), objective(-1), weapon(0), wmode(0), powerup(0), powerup_time(0),
-		kills(0), deaths(0), cb_hurt(0), killer(NO_SOURCE), init_frame(0), fire_frame(0), was_hit(0), hitter(-2), target_visible(0),
-		kill_time(0), rot_counter(0), uw_time(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0), fall_counter(0),
-		chunk_index(0), shields(0.0), plasma_size(0.0), zvel(0.0), dpos(0.0), last_dz(0.0), last_zvel(0.0), last_wpt_dist(0.0),
+		 cb_hurt(0),kills(0), deaths(0), suicides(0), team_kills(0), max_kills(0), tot_kills(0), killer(NO_SOURCE), init_frame(0), fire_frame(0), was_hit(0),
+		hitter(-2), target_visible(0), kill_time(0), rot_counter(0), uw_time(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0),
+		fall_counter(0), chunk_index(0), shields(0.0), plasma_size(0.0), zvel(0.0), dpos(0.0), last_dz(0.0), last_zvel(0.0), last_wpt_dist(0.0),
 		target_pos(all_zeros), objective_pos(all_zeros), cb_pos(all_zeros), hit_dir(all_zeros), velocity(all_zeros), tdata(NULL) {}
 
 	void init(bool w_start);
@@ -194,6 +195,12 @@ struct player_state { // size = big
 	float get_rspeed_scale() const {return ((powerup == PU_SPEED)  ? 1.5 : 1.0);}
 	float get_fspeed_scale() const {return ((powerup == PU_SPEED)  ? 2.0 : 1.0);}
 	float get_shield_scale() const {return ((powerup == PU_SHIELD) ? 0.5 : 1.0);}
+
+	void register_kill() {++kills; ++tot_kills; max_kills = max(max_kills, kills); kill_time = 0;}
+	void register_team_kill() {++team_kills;}
+	void register_suicide() {++suicides;}
+	void register_death(int killer_) {++deaths; kills = 0; killer = killer_;}
+	int get_score() const {return (tot_kills - deaths - team_kills);}
 	
 	void smiley_fire_weapon(int smiley_id);
 	int find_nearest_enemy(point const &pos, pos_dir_up const &pdu, point const &avoid_dir, int smiley_id,

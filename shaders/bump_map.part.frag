@@ -1,10 +1,10 @@
 varying vec4 epos;
 varying vec3 eye_norm;
-varying vec2 bump_tc;
 
 #ifdef USE_BUMP_MAP
 uniform sampler2D bump_map;
 
+varying vec2 bump_tc;
 varying vec3 tangent_v, binorm_v;
 varying vec3 ts_pos; // tangent space pos
 

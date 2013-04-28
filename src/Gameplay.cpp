@@ -35,7 +35,7 @@ struct text_message_params {
 };
 
 
-int frags(0), tot_frags(0), best_frags(-1), following(0), camera_flight(0), blood_spilled(0);
+int following(0), camera_flight(0), blood_spilled(0);
 int fired(0), camera_invincible(0), br_source(0), UNLIMITED_WEAPONS(0);
 float camera_health(100.0), team_damage(1.0), self_damage(1.0), player_damage(1.0), smiley_damage(1.0);
 point orig_camera(all_zeros), orig_cdir(plus_z);
@@ -52,7 +52,7 @@ vector<bbox> team_starts;
 extern bool player_near_fire, vsync_enabled;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
-extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, spectate;
+extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
 extern unsigned create_voxel_landscape;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_size;
@@ -518,10 +518,8 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		if (camera_health <= 20.0 && last_health > 20.0) gen_sound(SOUND_SCARED, camera); // almost dead
 	}
 	else { // dead
-		if (!spectate) {
-			camera_mode = !camera_mode;
-			reset_camera_pos();
-		}
+		camera_mode = !camera_mode;
+		reset_camera_pos();
 		sstate.powerup         = -1;
 		sstate.powerup_time    = 0;
 		camera_health          = 100.0;
@@ -548,8 +546,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 				default:         str = string("SUICIDE with ") + obj_type_names[type];
 			}
 			print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 3);
-			--sstates[CAMERA_ID].kills;
-			--frags; // suicide
+			sstate.register_suicide();
 		}
 		else {
 			string str;
@@ -565,31 +562,27 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 					get_weapon_qualifier(type, index, source) + " " + obj_type_names[type];
 			}
 			if (same_team(source, CAMERA_ID)) {
-				--sstates[source].kills;
+				sstates[source].register_team_kill();
 				print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 3); // killed by your teammate
 				gen_delayed_sound(1.0, SOUND_DOH, get_sstate_pos(source));
 			}
 			else {
-				++sstates[source].kills;
-				sstates[source].kill_time = 0;
+				sstates[source].register_kill();
 				print_text_onscreen(str, ORANGE, 1.0, MESSAGE_TIME, 3); // killed by an enemy
 			}
 		}
 		if (!same_team(CAMERA_ID, source) && obj_groups[coll_id[SMILEY]].is_enabled()) {
 			update_kill_health(obj_groups[coll_id[SMILEY]].get_obj(source).health);
 		}
-		if (frags > best_frags) best_frags = frags;
 		if (is_blood && !burned) blood_on_camera(rand()%10);
 		sstate.drop_pack(camera);
 		remove_reset_coll_obj(camera_coll_id);
 		init_sstate(CAMERA_ID, 0);
-		sstate.killer = source;
-		frags         = 0;
+		sstate.register_death(source);
 		camera_reset  = 0;
 		b2down        = 0;
 		following     = 0; // ???
 		orig_camera   = camera_origin;
-		++sstates[CAMERA_ID].deaths;
 	}
 	if (cam_filter_color.alpha > 0.0) add_camera_filter(cam_filter_color, CAMERA_SPHERE_TIME, -1, CAM_FILT_DAMAGE);
 	return 1;
@@ -732,17 +725,12 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 
 			if (same_team(source, index)) { // player killed a teammate
 				print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 2);
-				--frags;
-				--sstates[CAMERA_ID].kills;
-				--tot_frags;
+				sstates[source].register_team_kill();
 				gen_delayed_sound(1.0, SOUND_DOH, get_camera_pos());
 			}
 			else { // player killed an enemy
 				print_text_onscreen(str, MAGENTA, 1.0, MESSAGE_TIME, 2);
-				++frags;
-				++sstates[CAMERA_ID].kills;
-				++tot_frags;
-				if (frags > best_frags) best_frags = frags; // not sure this is correct with suicides and team kills
+				sstates[source].register_kill();
 				update_kill_health(camera_health);
 			}
 		}
@@ -763,7 +751,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 							 get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + " " + obj_type_names[type];
 		}
 		print_text_onscreen(str, CYAN, 1.0, MESSAGE_TIME/2, 0);
-		//--ssource.kills;
+		ssource.register_suicide();
 	}
 	else {
 		assert(source < num_smileys && index < num_smileys);
@@ -772,23 +760,19 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		
 		if (same_team(source, index)) { // killed a teammate
 			print_text_onscreen(str, PINK, 1.0, MESSAGE_TIME/2, 0);
-			--ssource.kills;
+			ssource.register_team_kill();
 			gen_delayed_sound(1.0, SOUND_DOH, get_sstate_pos(source), 0.7);
 		}
 		else { // killed an enemy
 			print_text_onscreen(str, YELLOW, 1.0, MESSAGE_TIME/2, 0);
-			
-			if (free_for_all) {
-				++ssource.kills;
-				ssource.kill_time = 0;
-			}
+			//if (free_for_all)
+			ssource.register_kill();
 		}
 		if (!same_team(index, source)) update_kill_health(obj_groups[coll_id[SMILEY]].get_obj(source).health);
 	}
 	sstate.drop_pack(obj_pos);
 	remove_reset_coll_obj(obji.coll_id);
-	++sstate.deaths;
-	sstate.killer = source;
+	sstate.register_death(source);
 	obji.status   = 0;
 	if (game_mode != 2) gen_smoke(position);
 	return 1;
@@ -2067,27 +2051,20 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 // ***********************************
 
 
+struct team_stats_t {
+	int kills, deaths, score;
+	team_stats_t() : kills(0), deaths(0), score(0) {}
+	void add(player_state const &s) {kills += s.tot_kills; deaths += s.deaths; score += s.get_score();}
+};
+
+
 void show_user_stats() {
 
 	bool const is_smiley0(spectate && num_smileys > 0 && obj_groups[coll_id[SMILEY]].enabled);
-	colorRGBA color;
 	player_state &sstate(sstates[is_smiley0 ? 0 : CAMERA_ID]);
-	int nkills(sstate.kills), ndeaths(sstate.deaths);
 	float chealth(is_smiley0 ? obj_groups[coll_id[SMILEY]].get_obj(0).health : camera_health);
 	static char text[MAX_CHARS];
-	static int *team_kills = NULL, *team_deaths = NULL;
-
-	if (teams > 1) {
-		if (team_kills  == NULL) team_kills  = new int[teams];
-		if (team_deaths == NULL) team_deaths = new int[teams];
-		
-		for (unsigned i = 0; i < (unsigned)teams; ++i) {
-			team_kills[i]  = 0;
-			team_deaths[i] = 0;
-		}
-		team_kills[teams-1]  = nkills;
-		team_deaths[teams-1] = ndeaths;
-	}
+	
 	if (camera_mode == 1 && camera_surf_collide) {
 		int const ammo((UNLIMITED_WEAPONS && weapons[sstate.weapon].need_ammo) ? -666 : sstate.p_ammo[sstate.weapon]);
 		RED.do_glColor();
@@ -2095,7 +2072,7 @@ void show_user_stats() {
 			((chealth < 25.0) ? "HEALTH" : "Health"), int(chealth + 0.5),
 			((sstate.shields < 25.0) ? "SHIELDS" : "Shields"), int(sstate.shields + 0.5),
 			((sstate.no_ammo()) ? "AMMO" : "Ammo"), ammo,
-			frags, max(best_frags, -ndeaths), tot_frags, ndeaths);
+			sstate.kills, max(sstate.max_kills, -sstate.deaths), sstate.tot_kills, sstate.deaths);
 		draw_text(-0.014, -0.012, -0.022, text);
 
 		if (sstate.powerup_time > 0 && sstate.powerup >= 0) {
@@ -2106,33 +2083,32 @@ void show_user_stats() {
 		}
 	}
 	if (show_scores) {
-		for (unsigned i = 0; i < (unsigned)num_smileys; ++i) {
-			color = get_smiley_team_color(i);
-			color.do_glColor();
-			sprintf(text, "%s: kills = %i, deaths = %i, score = %i\n",
-				sstates[i].name.c_str(), sstates[i].kills, sstates[i].deaths, sstates[i].kills-sstates[i].deaths);
-			draw_text(-0.008, 0.01-0.0014*i, -0.02, text);
-			nkills  += sstates[i].kills;
-			ndeaths += sstates[i].deaths;
+		team_stats_t tot_stats;
 
-			if (teams > 1) {
-				team_kills[i%teams]  += sstates[i].kills;
-				team_deaths[i%teams] += sstates[i].deaths;
-			}
+		for (int i = CAMERA_ID; i < num_smileys; ++i) {
+			get_smiley_team_color(i).do_glColor();
+			sprintf(text, "%s: K: %i D: %i S: %i TK: %i Score: %i\n",
+				sstates[i].name.c_str(), sstates[i].tot_kills, sstates[i].deaths, sstates[i].suicides, sstates[i].team_kills, sstates[i].get_score());
+			draw_text(-0.008, 0.01-0.0014*(i+1), -0.02, text);
+			tot_stats.add(sstates[i]);
 		}
 		if (teams > 1) {
-			for (unsigned i = 0; i < (unsigned)teams; ++i) {
-				color = get_smiley_team_color(i);
-				color.do_glColor();
-				sprintf(text, "Team %u: kills = %i, deaths = %i, score = %i\n",
-					i, team_kills[i], team_deaths[i], team_kills[i]-team_deaths[i]);
-				draw_text(-0.008, 0.01-0.0014*(i+num_smileys)-0.0008, -0.02, text);
+			vector<team_stats_t> team_stats(teams);
+		
+			for (int i = CAMERA_ID; i < num_smileys; ++i) {
+				team_stats[(i+teams)%teams].add(sstates[i]);
 			}
-		}
+			for (int i = 0; i < teams; ++i) {
+				get_smiley_team_color(i).do_glColor();
+				sprintf(text, "Team %u: Kills: %i Deaths: %i Score: %i\n",
+					i, team_stats[i].kills, team_stats[i].deaths, team_stats[i].score);
+				draw_text(-0.008, 0.01-0.0014*(i+num_smileys+1)-0.0008, -0.02, text);
+			}
+		} // teams > 1
 		WHITE.do_glColor();
-		sprintf(text, "Total: kills = %i, deaths = %i, score = %i\n", nkills, ndeaths, nkills-ndeaths);
-		draw_text(-0.008, 0.01-0.0014*(num_smileys+teams)-0.0016, -0.02, text);
-	}
+		sprintf(text, "Total: Kills: %i Deaths: %i Score: %i\n", tot_stats.kills, tot_stats.deaths, tot_stats.score);
+		draw_text(-0.008, 0.01-0.0014*(num_smileys+teams+1)-0.0016, -0.02, text);
+	} // show_scores
 }
 
 
