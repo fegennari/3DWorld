@@ -1391,23 +1391,22 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic) {
 }
 
 
-// within a sphere, unless radius == 0.0
 unsigned enable_dynamic_lights(point const &center, float radius) {
 
+	assert(radius > 0.0);
 	point const camera(get_camera_pos());
 	vector<pair<float, unsigned> > vis_lights;
 
 	for (unsigned i = 0; i < dl_sources.size(); ++i) { // Note: could use ldynamic for faster queries
 		light_source const &ls(dl_sources[i]);
-		if (ls.is_directional() && radius == 0.0) continue; // directional lights only supported in sphere mode
 		float const ls_radius(ls.get_radius());
 		if (ls_radius == 0.0) continue; // not handling zero radius lights yet
 		point const &ls_center(ls.get_center());
-		if (radius > 0.0 && !dist_less_than(center, ls_center, (radius + ls_radius))) continue;
-		if (ls.is_directional() && ls.get_dir_intensity(ls_center - center) == 0.0)   continue; // wrong direction
+		if (!dist_less_than(center, ls_center, (radius + ls_radius))) continue;
+		if (ls.is_directional() && ls.get_dir_intensity(ls_center - center) == 0.0) continue; // wrong direction
 		if (!sphere_in_camera_view(ls_center, ls_radius, 0)) continue;
 		float weight(p2p_dist(ls_center, camera)); // distance from light to camera
-		if (radius > 0.0) weight += p2p_dist(ls_center, center); // distance from light to object center
+		weight += p2p_dist(ls_center, center); // distance from light to object center
 		vis_lights.push_back(make_pair(weight/ls_radius, i));
 	}
 	sort(vis_lights.begin(), vis_lights.end());

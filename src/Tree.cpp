@@ -380,7 +380,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t 
 
 void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix, bool enable_opacity) {
 
-	//s.set_prefix("#define USE_LIGHT_COLORS", 1); // VS - ignored due to custom lighting
+	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS - required for dynamic lighting
 	if (!has_dl_sources && !lightning_enabled()) {s.set_prefix("#define NO_LEAF_DLIGHTS", 0);} // VS optimization
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
@@ -401,6 +401,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 	s.add_uniform_float("min_alpha", min_alpha);
 	set_active_texture(0);
 	s.add_uniform_int("tex0", 0);
+	s.add_uniform_int("num_dlights", 0);
 	if (gen_tex_coords) {s.add_uniform_int("tc_start_ix", tc_start_ix);}
 	check_gl_error(301);
 }
