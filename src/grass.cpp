@@ -597,15 +597,8 @@ public:
 
 		// check for dynamic light sources
 		bool const use_grass_shader(!disable_shaders && !has_snow && (display_mode & 0x0100));
-		unsigned num_dlights(0);
 		shader_t s;
-		
-		if (use_grass_shader) { // enables lighting and shadows as well
-			setup_shaders(s, 1);
-		}
-		else {
-			num_dlights = enable_dynamic_lights();
-		}
+		if (use_grass_shader) {setup_shaders(s, 1);} // enables lighting and shadows as well
 		begin_draw(0.2);
 
 		// draw the grass
@@ -680,7 +673,6 @@ public:
 			}
 		}
 		s.end_shader();
-		if (!use_grass_shader) {disable_dynamic_lights(num_dlights);}
 		end_draw();
 		//PRINT_TIME("Draw Grass");
 	}
