@@ -1109,7 +1109,7 @@ void exp_damage_groups(point const &pos, int shooter, int chain_level, float dam
 
 	float dist(distance_to_camera(pos)), ssq(size*size);
 
-	if (dist <= size && (type != IMPACT || shooter != CAMERA_ID) && (type != SEEK_D || !cview)) {
+	if (!spectate && dist <= size && (type != IMPACT || shooter != CAMERA_ID) && (type != SEEK_D || !cview)) {
 		if (check_explosion_damage(pos, get_camera_pos(), camera_coll_id)) {
 			br_source = type;
 			camera_collision(type, shooter, zero_vector, pos, damage*(1.02 - dist/size), BLAST_RADIUS);
@@ -1311,7 +1311,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 			}
 		}
 	}
-	if (shooter >= 0) {
+	if (shooter >= 0 && !spectate) {
 		point const camera(get_camera_pos());
 
 		if (dist_less_than(pos, camera, (coll_radius + CAMERA_RADIUS))) {
@@ -1350,7 +1350,7 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 	point camera_pos(get_camera_pos());
 	camera_pos.z -= 0.5*camera_zh; // average/center of camera
 	
-	if (dist_less_than(pos, camera_pos, 4.0*radius)) {
+	if (!spectate && dist_less_than(pos, camera_pos, 4.0*radius)) {
 		if (camera_mode == 1 && dist_less_than(pos, camera_pos, radius)) {
 			if (camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type)) {
 				if (type == FIRE && camera_health > 0.0 && ((rand()&63) == 0)) {gen_sound(SOUND_AGONY, pos);} // skip if player has shielding and self damage?
@@ -1846,7 +1846,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			}
 		}
 	}
-	if (shooter >= 0 || laser_m2) { // check camera/player
+	if ((shooter >= 0 || laser_m2) && !spectate) { // check camera/player
 		point const camera(get_camera_pos());
 		float const dist(distance_to_camera(pos));
 

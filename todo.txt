@@ -25,8 +25,7 @@ Multiple decid tree impostor orients
 - Decid tree texture atlases
 
 Shader for water
-Spectate mode transform bug
-Laser beam damage
+Voxels at mesh border
 
  E: 4.3 process_groups()
  H: 4.4 setup_object_render_data() => 2.0

@@ -390,12 +390,6 @@ inline point get_camera_pos() {
 	return camera_pos;
 }
 
-inline void get_camera_pos_v2(point &camera) {
-
-	camera = camera_origin;
-	if (world_mode != WMODE_UNIVERSE) camera -= vector3d_d(cview_dir)*double(cview_radius);
-}
-
 inline float distance_to_camera(point const &pos) {
 	return p2p_dist(get_camera_pos(), pos);
 }

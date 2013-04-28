@@ -1006,11 +1006,12 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		following     = 1;
 		camera_mode   = 1;
 		orig_cdir     = cview_dir;
-		cview_dir     = obj.orientation; // doesn't seem to actually change the viewing direction
+		assert(obj.orientation != zero_vector);
+		cview_dir     = obj.orientation;
 		camera_origin = obj.pos;
 		update_cpos();
 	}
-	if (is_water_temp && is_underwater(obj.pos, 1) && (rand()&1)) gen_bubble(obj.pos);
+	if (is_water_temp && is_underwater(obj.pos, 1) && (rand()&1)) {gen_bubble(obj.pos);}
 	velocity   = (obj.pos - opos)/(TIMESTEP*fticks);
 	obj.status = 3;
 	return 1;

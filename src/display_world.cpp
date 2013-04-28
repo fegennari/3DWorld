@@ -127,6 +127,8 @@ void do_look_at() {
 	}
 	else {
 		set_camera_pdu();
+		assert(cview_radius > TOLERANCE);
+		assert(cview_dir != zero_vector);
 		cur_origin = all_zeros;
 		center     = camera_origin;
 		center.x  += 0.05*CAMERA_RADIUS*camera_shake;
@@ -134,7 +136,8 @@ void do_look_at() {
 	}
 	camera_shake = -pow(0.95f, fticks)*camera_shake;
 	if (fabs(camera_shake) < 0.1) camera_shake = 0.0;
-	//cout << eye.x << " " << eye.y << " " << eye.z << " " << center.x << " " << center.y << " " << center.z << " " << up_vector.x << " " << up_vector.y << " " << up_vector.z << endl;
+	assert(!dist_less_than(eye, center, TOLERANCE));
+	assert(up_vector != zero_vector);
 	gluLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
 }
 

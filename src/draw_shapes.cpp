@@ -321,7 +321,7 @@ void add_coll_shadow_objs() {
 
 	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID)) { // shadow the camera even when in the air (but not when dead)
 		point camera_pos(camera);
-		if (camera_mode == 1 && !spectate) camera_pos.z -= 0.5*camera_zh; // cancel out the z height that was previously added
+		if (camera_mode == 1 && !spectate) {camera_pos.z -= 0.5*camera_zh;} // cancel out the z height that was previously added
 		add_shadow_obj(camera_pos, CAMERA_RADIUS, camera_coll_id);
 	}
 	if (begin_motion) { // can ignore if behind camera and light in front of camera

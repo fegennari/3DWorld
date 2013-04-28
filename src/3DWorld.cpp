@@ -430,14 +430,11 @@ void update_cpos() {
 
 	if (world_mode != WMODE_UNIVERSE) {
 		if (fabs(c_phi) < 0.001 || fabs(c_phi - PI) < 0.001 || fabs(c_phi - TWO_PI) < 0.001) c_phi += 0.01;
-		
-		if (!spectate) {
-			cview_dir = rtp_to_xyz(1.0, c_theta, c_phi); // spherical coordinates
-			cview_dir.negate();
-		}
+		if (!spectate) {cview_dir = -rtp_to_xyz(1.0, c_theta, c_phi);} // spherical coordinates
 		cview_radius = c_radius;
 	}
-	get_camera_pos_v2(camera_pos);
+	camera_pos = camera_origin;
+	if (world_mode != WMODE_UNIVERSE) {camera_pos -= vector3d_d(cview_dir)*double(cview_radius);}
 }
 
 
