@@ -580,7 +580,9 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		is_snow      = 0;
 		start_ripple = 0;
 	}
-	PRINT_TIME("Collision object cleanup");
+	compute_volume_matrix();
+	calc_motion_direction();
+	PRINT_TIME("Volume+Motion matrix generation");
 	
 	if (num_trees > 0) {
 		if (!inf_terrain && gen_trees) {
@@ -602,12 +604,6 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	}
 	add_all_coll_objects(coll_obj_file, (num_trees == 0));
 	PRINT_TIME("Collision object addition");
-
-	compute_volume_matrix();
-	PRINT_TIME("Volume matrix generation");
-
-	calc_motion_direction();
-	PRINT_TIME("Motion matrix generation");
 
 	if (!inf_terrain && !rgt_only) {
 		calc_watershed();

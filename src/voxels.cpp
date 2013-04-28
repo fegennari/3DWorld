@@ -322,7 +322,7 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 			point const pos(get_pt_at(x, y, 0));
 			int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
 			bool const no_zix(sphere_mode || !use_mesh || point_outside_mesh(xpos, ypos));
-			unsigned const zix(no_zix ? 0 : max(0, int((mesh_height[ypos][xpos] - lo_pos.z)/vsz.z)));
+			unsigned const zix(no_zix ? 0 : max(0, int((z_min_matrix[ypos][xpos] - lo_pos.z)/vsz.z)));
 			
 			for (unsigned z = 0; z < nz; ++z) {
 				calc_outside_val(x, y, z, (z < zix));
