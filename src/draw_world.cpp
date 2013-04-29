@@ -930,7 +930,8 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 	colorRGBA draw_color(color);
 
 	if (color != BLACK) {
-		bool const is_shadowed(!is_visible_to_light_cobj(cur_pos, get_light(), radius, -1, 0)); // cache shadowing cobj?
+		bool const back_facing(dot_product_ptv(orient, cur_pos, get_light_pos()) > 0.0);
+		bool const is_shadowed(back_facing || !is_visible_to_light_cobj(cur_pos, get_light(), radius, -1, 0)); // cache shadowing cobj?
 		colorRGBA const d(is_shadowed ? BLACK : draw_color);
 		colorRGBA a(draw_color);
 		get_shadowed_color(a, cur_pos, 0);
