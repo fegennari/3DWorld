@@ -145,27 +145,6 @@ public:
 };
 
 
-struct flow_cache_e { // size = 16
-
-	CELL_LOC_T f[3], t[3];
-	float val;
-
-	flow_cache_e() : val(0.0) {reset();}
-
-	flow_cache_e(short const *f_, short const *t_, float v=0.0) : val(v) {
-		f[0] = f_[0]; f[1] = f_[1]; f[2] = f_[2]; t[0] = t_[0]; t[1] = t_[1]; t[2] = t_[2];
-	}
-	void reset() {f[0] = f[1] = f[2] = t[0] = t[1] = t[2] = -1;}
-
-	bool operator==(flow_cache_e const &e) const {
-		return (e.f[0] == f[0] && e.f[1] == f[1] && e.f[2] == f[2] && e.t[0] == t[0] && e.t[1] == t[1] && e.t[2] == t[2]);
-	}
-	size_t hash() const {
-		return (10831*f[0] + 12003*f[1] + 15601*f[2] + 18401*t[0] + 19813*t[1] + 21401*t[2]);
-	}
-};
-
-
 struct cube_light_src {
 
 	cube_t bounds;

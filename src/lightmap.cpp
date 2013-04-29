@@ -12,14 +12,11 @@
 bool const CAMERA_CANDLE_LT  = 0;
 bool const CAMERA_FLASH_LT   = 0; // looks cool
 bool const POLY_XY_OVER_CHK  = 0;
-bool const DYNAMIC_LT_FLOW   = 1;
 bool const SHOW_STAT_LIGHTS  = 0; // debugging
 bool const SHOW_DYNA_LIGHTS  = 0; // debugging
 unsigned const NUM_LT_SMOOTH = 2; // nominally 2
 unsigned const NUM_XY_PASSES = 2; // nominally 2
 unsigned const NUM_RAND_LTS  = 0;
-unsigned const FLOW_CACHE_BS = 17;
-unsigned const FLOW_CACHE_SZ = (1 << FLOW_CACHE_BS);
 
 int      const START_LIGHT   = GL_LIGHT2;
 int      const END_LIGHT     = GL_LIGHT7 + 1;
@@ -39,8 +36,6 @@ float const DZ_VAL_SCALE     = 2.0;
 float const SHIFT_VAL        = 0.5; // hack to fix some offset problem
 float const SLT_LINE_TEST_WT = 0.5; // SLT_LINE_TEST_WT + SLT_FLOW_TEST_WT == 1.0
 float const SLT_FLOW_TEST_WT = 0.5;
-float const DLIGHT_AMBIENT   = 0.25; // in range [0.0, 1.0]
-float const DLIGHT_DIFFUSE   = 0.75; // in range [0.0, 1.0], DLIGHT_AMBIENT + DLIGHT_DIFFUSE should be close to 1.0
 float const LT_DIR_FALLOFF   = 0.005;
 float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
 float const DARKNESS_THRESH  = 0.1;
@@ -53,7 +48,6 @@ float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
 dls_cell **ldynamic = NULL;
 vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic {cur frame, next frame}
-flow_cache_e flow_cache[FLOW_CACHE_SZ]; // 2MB
 lmap_manager_t lmap_manager;
 
 
@@ -340,14 +334,6 @@ void reset_cobj_counters() {
 }
 
 
-void reset_flow_cache() {
-
-	for (unsigned i = 0; i < FLOW_CACHE_SZ; ++i) {
-		flow_cache[i].reset();
-	}
-}
-
-
 void lmcell::get_final_color(colorRGB &color, float max_indir, float indir_scale) const {
 
 	float const max_s(max(sc[0], max(sc[1], sc[2])));
@@ -410,12 +396,10 @@ void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, unsigned char **need_
 
 // Note: assumes input ranges are valid
 // from = center, to = query point
-float get_flow_val(CELL_LOC_T const from[3], CELL_LOC_T const to[3], bool use_flow_cache) { // from should be the light source
+float get_flow_val(CELL_LOC_T const from[3], CELL_LOC_T const to[3]) { // 'from' should be the light source
 
 	CELL_LOC_T const dv[3] = {(to[0] - from[0]), (to[1] - from[1]), (to[2] - from[2])};
 	if (dv[0] == 0 && dv[1] == 0 && dv[2] == 0) return 1.0;
-	flow_cache_e ce(from, to), &cached(use_flow_cache ? (flow_cache[ce.hash() & (FLOW_CACHE_SZ-1)]) : flow_cache[0]);
-	if (use_flow_cache && cached == ce) return cached.val; // check if this value is cached
 	CELL_LOC_T cur[3] = {from[0], from[1], from[2]};
 	float mult_flow(1.0), max_flow(1.0), val(1.0);
 
@@ -448,10 +432,6 @@ float get_flow_val(CELL_LOC_T const from[3], CELL_LOC_T const to[3], bool use_fl
 		}
 		if ( positive) ++cur[di]; // calc flow first then step forward
 		val = 0.5*(max_flow + mult_flow); // not sure which is best - max or mult, so choose their average
-	}
-	if (use_flow_cache) {
-		ce.val = val;
-		cached = ce;
 	}
 	return val;
 }
@@ -489,7 +469,6 @@ void regen_lightmap() {
 void clear_lightmap() {
 
 	if (lmap_manager.vlmap == NULL) return;
-	if (using_lightmap) reset_flow_cache();
 	lmap_manager.clear();
 	using_lightmap = 0;
 	lm_alloc       = 0;
@@ -849,7 +828,7 @@ void build_lightmap(bool verbose) {
 						}
 						if (SLT_FLOW_TEST_WT > 0.0) {
 							CELL_LOC_T const cur_loc[3] = {x, y, z};
-							flow[1] = get_flow_val(cent, cur_loc, 0); // determine flow value to this lmcell
+							flow[1] = get_flow_val(cent, cur_loc); // determine flow value to this lmcell
 						}
 						cscale *= SLT_LINE_TEST_WT*flow[0] + SLT_FLOW_TEST_WT*flow[1];
 						if (cscale < CTHRESH) continue;
@@ -1288,16 +1267,14 @@ bool is_in_darkness(point const &pos, float radius, int cobj) {
 }
 
 
-bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls,
-					   vector3d const *const norm, float const *const spec)
-{
-	if (dl_sources.empty()) return 0;
+void get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls) {
+
+	if (dl_sources.empty()) return;
 	assert(!point_outside_mesh(x, y));
 	dls_cell const &ldv(ldynamic[y][x]);
-	if (!ldv.check_z(p[2])) return 0;
+	if (!ldv.check_z(p[2])) return;
 	unsigned const lsz((unsigned)ldv.size());
 	CELL_LOC_T const cl[3] = {x, y, z}; // what about SHIFT_VAL?
-	bool added(0);
 
 	for (unsigned l = 0; l < lsz; ++l) {
 		unsigned const ls_ix(ldv.get(l));
@@ -1305,44 +1282,15 @@ bool get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 		light_source const &lsrc(dl_sources[ls_ix]);
 		float cscale(lightscale*lsrc.get_intensity_at(p));
 		if (cscale < CTHRESH) continue;
-		bool const directional(lsrc.is_directional());
 		point const &lpos(lsrc.get_center());
 		
-		if (norm || directional) {
-			vector3d const dir(lpos, p);
-
-			if (directional) {
-				cscale *= lsrc.get_dir_intensity(dir);
-				if (cscale < CTHRESH) continue;
-			}
-			if (norm) { // ambient + diffuse + specular lighting
-				float const dp(dot_product(*norm, dir));
-				if (dp <= 0.0)        continue; // back facing
-				cscale *= (DLIGHT_AMBIENT + DLIGHT_DIFFUSE*dp*InvSqrt(dir.mag_sq()) + (spec ? add_specular(p, dir, *norm, spec) : 0.0));
-				if (cscale < CTHRESH) continue;
-			}
-		}
-		if (DYNAMIC_LT_FLOW && using_lightmap && z >= 0) { // slow for large lights, and somewhat inaccurate
-			CELL_LOC_T const *const c(lsrc.get_cent());
-			CELL_LOC_T c1[3], c2[3];
-			unsigned equal(0);
-			
-			for (unsigned d = 0; d < 3; ++d) { // take one step towards each side in each direction
-				c1[d] = max(0, min(MESH_SIZE[d]-1, int(cl[d])));
-				c2[d] = max(0, min(MESH_SIZE[d]-1, int(c [d])));
-				if (c1[d] > c2[d]) --c1[d]; else if (c1[d] < c2[d]) ++c1[d];
-				if (c2[d] > c1[d]) --c2[d]; else if (c2[d] < c1[d]) ++c2[d]; else ++equal;
-			}
-			if (equal < 3) {
-				cscale *= get_flow_val(c2, c1, 1);
-				if (cscale < CTHRESH) continue;
-			}
+		if (lsrc.is_directional()) {
+			cscale *= lsrc.get_dir_intensity(lpos - p);
+			if (cscale < CTHRESH) continue;
 		}
 		colorRGBA const &lsc(lsrc.get_color());
 		UNROLL_3X(ls[i_] += lsc[i_]*cscale;)
-		added = 1;
 	}
-	return added;
 }
 
 
@@ -1382,7 +1330,7 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic) {
 		cscale *= val;
 	}
 	if (!no_dynamic && !outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
-		get_dynamic_light(x, y, z, p, 1.0, (float *)&cscale, NULL, NULL);
+		get_dynamic_light(x, y, z, p, 1.0, (float *)&cscale);
 	}
 	// FIXME: Need to divide by ambient term here because we will be multiplying by it in the lighting computation later
 	// Should this set the emissive term? What about materials that are already emissive? Just use a shader everywhere?
