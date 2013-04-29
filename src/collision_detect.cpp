@@ -1442,9 +1442,10 @@ void force_onto_surface_mesh(point &pos) { // for camera
 			camera_in_air  = 0;
 		}
 	}
-	if (camera_coll_smooth) collision_detect_large_sphere(pos, radius, (unsigned char)0);
-	if (temperature > W_FREEZE_POINT && is_underwater(pos, 1) && (rand()&1)) gen_bubble(pos);
-	
+	if (camera_coll_smooth) {collision_detect_large_sphere(pos, radius, (unsigned char)0);}
+	point const adj_pos(pos + vector3d(0.0, 0.0, camera_zh));
+	if (temperature > W_FREEZE_POINT && is_underwater(adj_pos, 1) && (rand()&1)) {gen_bubble(adj_pos);}
+
 	if (!cflight && camera_change == 0 && camera_last_pos.z != 0.0 && (pos.z - camera_last_pos.z) > CAMERA_MESH_DZ &&
 		is_above_mesh(pos) && is_over_mesh(camera_last_pos))
 	{

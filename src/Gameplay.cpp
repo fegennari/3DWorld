@@ -514,8 +514,11 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		else {
 			cam_filter_color.alpha = 0.0;
 		}
-		if (type == FELL) gen_sound(SOUND_SQUISH, camera, 0.3);
-		if (camera_health <= 20.0 && last_health > 20.0) gen_sound(SOUND_SCARED, camera); // almost dead
+		if (type == FELL) {gen_sound(SOUND_SQUISH, camera, 0.3);}
+		
+		if (type != CRUSHED && type != DROWNED && camera_health <= 20.0 && last_health > 20.0) {
+			gen_sound(SOUND_SCARED, camera); // almost dead
+		}
 	}
 	else { // dead
 		camera_mode = !camera_mode;
@@ -1865,7 +1868,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	}
 	if ((intersect || coll) && dist_less_than(coll_pos, pos, (X_SCENE_SIZE + Y_SCENE_SIZE))) { // spark
 		if (!is_underwater(coll_pos)) {
-			colorRGBA const scolor(is_laser ? RED : ORANGE);
+			colorRGBA const scolor(is_laser ? RED : colorRGBA(1.0, 0.7, 0.0, 1.0));
 			float const ssize((is_laser ? ((wmode&1) ? 0.015 : 0.020)*intensity : 0.025)*((closest_t == CAMERA) ? 0.5 : 1.0));
 			sparks.push_back(spark_t(coll_pos, scolor, ssize));
 			point const light_pos(coll_pos - vcf*(0.1*ssize));

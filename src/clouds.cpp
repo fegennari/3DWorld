@@ -17,7 +17,7 @@ vector2d cloud_wind_pos(0.0, 0.0);
 cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
-extern int window_width, window_height, cloud_model, draw_model, display_mode, xoff, yoff, animate2;
+extern int window_width, window_height, cloud_model, draw_model, display_mode, xoff, yoff, animate2, is_cloudy;
 extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
 extern vector3d wind;
 extern colorRGBA sun_color;
@@ -313,7 +313,7 @@ void draw_puffy_clouds(int order) {
 	if (atmosphere < 0.01) {
 		cloud_manager.clear();
 	}
-	else if (display_mode & 0x40) { // key 7
+	else if (((display_mode & 0x40) != 0) ^ is_cloudy) { // key 7
 		cloud_manager.draw();
 	}
 }

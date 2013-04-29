@@ -1399,6 +1399,7 @@ unsigned enable_dynamic_lights(point const &center, float radius) {
 
 	for (unsigned i = 0; i < dl_sources.size(); ++i) { // Note: could use ldynamic for faster queries
 		light_source const &ls(dl_sources[i]);
+		//if (ls.is_directional()) continue; // not correctly handled by GL point lights
 		float const ls_radius(ls.get_radius());
 		if (ls_radius == 0.0) continue; // not handling zero radius lights yet
 		point const &ls_center(ls.get_center());
