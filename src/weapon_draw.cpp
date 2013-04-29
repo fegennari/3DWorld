@@ -634,7 +634,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
 				glEnable(GL_ALPHA_TEST);
 				glAlphaFunc(GL_GREATER, 0.001);
-				select_texture(BLUR_TEX);
+				select_texture(FLARE1_TEX);
 				draw_tquad(size, size, 0.0, 1);
 				glDisable(GL_ALPHA_TEST);
 				glDisable(GL_TEXTURE_2D);
@@ -657,7 +657,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					translate_to(translates[i]);
 					glPushMatrix();
 					if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
-					select_texture(BLUR_TEX);
+					select_texture(FLARE2_TEX);
 					draw_tquad(8.0*radius, 8.0*radius, 0.0, 1); // can't rotate towards camera, already rotated
 					glPopMatrix();
 				}

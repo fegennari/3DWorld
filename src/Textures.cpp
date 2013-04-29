@@ -160,7 +160,9 @@ texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
 texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
 texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
 texture_t(1, 0, 128,  128,  1, 3, 1, "@player_bbb_tex"), // not real file
-texture_t(0, 5, 0,    0,    0, 4, 3, "pine_tree_leaves.jpg", 1, 0, 1.0, 0.28) // 256x256
+texture_t(0, 5, 0,    0,    0, 4, 3, "pine_tree_leaves.jpg", 1, 0, 1.0, 0.28), // 256x256
+texture_t(0, 5, 0,    0,    0, 4, 1, "flare1.jpg"), // 384x384
+texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg") // 128x128
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
 };
@@ -715,21 +717,12 @@ void texture_t::load_raw_bmp(int index) {
 
 	// read texture data
 	if (ncolors == 4 && format != 3) { // add alpha
-		bool const is_blur_tex(index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX);
-
 		for (unsigned i = 0; i < size; ++i) {
 			unsigned char buf[4];
-			int const i4(i << 2);
 			size_t const nread(fread(buf, 3, 1, file)); assert(nread == 1);
-
-			if (is_blur_tex) { // could use grayscale texture
-				RGBA_BLOCK_ASSIGN((data+i4), 255, 255, 255, buf[0]); // alpha - assumes buf[0] = buf[1] = buf[2]
-			}
-			else {
-				RGB_BLOCK_COPY((data+i4), buf);
-			}
+			RGB_BLOCK_COPY((data+(i<<2)), buf);
 		}
-		if (!is_blur_tex) {auto_insert_alpha_channel(index);}
+		auto_insert_alpha_channel(index);
 	}
 	else if (ncolors == 1) { // grayscale luminance (unused/untested)
 		vector<unsigned char> td2(size);
@@ -893,6 +886,8 @@ void texture_t::auto_insert_alpha_channel(int index) {
 	int alpha_white(0);
 	unsigned char alpha(255);
 	unsigned const size(num_pixels());
+	bool const is_alpha_mask(index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX || index == FLARE1_TEX || index == FLARE2_TEX);
+	bool const is_alpha_tex(index == EXPLOSION_TEX || index == FIRE_TEX || is_alpha_mask);
 	assert(is_allocated());
 
 	for (unsigned i = 0; i < size; ++i) {
@@ -914,8 +909,9 @@ void texture_t::auto_insert_alpha_channel(int index) {
 		else { // make white/black part transparent, for example leaves
 			float const val(float(buf[0]) + float(buf[1]) + float(buf[2]));
 				
-			if (index == EXPLOSION_TEX || index == FIRE_TEX) { // animated/multipart textures
+			if (is_alpha_tex) { // animated/multipart textures
 				alpha = (unsigned char)(0.333*val);
+				if (is_alpha_mask) {buf[0] = buf[1] = buf[2] = 255;}
 			}
 			else {
 				if (i == 0) { // key off of first (llc) pixel

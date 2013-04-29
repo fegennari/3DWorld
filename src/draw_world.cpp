@@ -1189,7 +1189,7 @@ void draw_sparks() {
 	enable_blend();
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.01);
-	select_texture(BLUR_TEX);
+	select_texture(FLARE2_TEX);
 	quad_batch_draw qbd;
 	draw_objects(sparks, qbd);
 	qbd.draw();

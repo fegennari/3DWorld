@@ -679,11 +679,11 @@ void rotate_towards_camera(point const &pos) {
 }
 
 
-void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, float ysize) {
+void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, float ysize, int flare_tex) {
 
 	glDepthMask(GL_FALSE);
 	point const camera(get_camera_pos());
-	select_texture(BLUR_TEX);
+	select_texture(flare_tex);
 	(camera - pos).do_glNormal();
 	glBegin(GL_TRIANGLES);
 	draw_billboard(xlate, (camera - pos + xlate), up_vector, xsize, ysize);
