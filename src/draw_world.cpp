@@ -122,9 +122,9 @@ void draw_camera_weapon(bool want_has_trans) {
 
 	if (!game_mode || weap_has_transparent(CAMERA_ID) != want_has_trans) return;
 	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1));
+	setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1);
 	draw_weapon_in_hand(-1);
-	end_smoke_shaders(s, orig_fog_color);
+	s.end_shader();
 }
 
 
@@ -254,7 +254,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map
-colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
+void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
 	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, bool use_light_colors)
 {
 	use_smap       &= shadow_map_enabled();
@@ -279,21 +279,8 @@ colorRGBA setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
-	if (use_mvm) upload_mvm_to_shader(s, "world_space_mvm");
-
-	// setup fog
-	//return change_fog_color(GRAY);
-	colorRGBA old_fog_color;
-	glGetFloatv(GL_FOG_COLOR, (float *)&old_fog_color);
-	if (smoke_en) glFogfv(GL_FOG_COLOR, (float *)&GRAY); // for smoke
-	return old_fog_color;
-}
-
-
-void end_smoke_shaders(shader_t &s, colorRGBA const &orig_fog_color) {
-
-	s.end_shader();
-	glFogfv(GL_FOG_COLOR, (float *)&orig_fog_color); // reset to original value
+	if (use_mvm ) {upload_mvm_to_shader(s, "world_space_mvm");}
+	if (smoke_en) {s.add_uniform_color("smoke_color", colorRGB(GRAY));}
 }
 
 
@@ -385,7 +372,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting));
+	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting);
 	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled
 	int last_tid(-1), last_group_id(-1);
 	
@@ -404,7 +391,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			if (c.is_big_occluder() && c.group_id < 0) {
 				float const dist(distance_to_camera(c.get_center_pt()));
 
-				if (c.get_area()/(dist*dist) > 0.1) {
+				if (c.get_area() > 0.01*dist*dist) { // increases CPU time but decreases GPU time
 					if (camera_pdu.cube_visible(c)) {large_cobjs.push_back(make_pair(dist, *i));}
 					continue;
 				}
@@ -503,7 +490,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		disable_blend();
 		draw_last.resize(0);
 	} // end draw_trans
-	end_smoke_shaders(s, orig_fog_color);
+	s.end_shader();
 	glEnable(GL_LIGHTING);
 	disable_textures_texgen();
 	set_lighted_sides(1);
@@ -1136,7 +1123,7 @@ void draw_cracks_decals_smoke_and_fires() {
 	create_and_draw_cracks();
 	if (decals.empty() && part_clouds.empty() && fires.empty()) return; // nothing to draw
 	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1)); // min_alpha = 0.1-0.4
+	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1); // min_alpha = 0.1-0.4
 	draw_billboarded_objs(decals, BLUR_CENT_TEX);
 
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
@@ -1144,7 +1131,7 @@ void draw_cracks_decals_smoke_and_fires() {
 		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
 	}
 	draw_billboarded_objs(fires, FIRE_TEX); // animated fire textured quad
-	end_smoke_shaders(s, orig_fog_color);
+	s.end_shader();
 }
 
 

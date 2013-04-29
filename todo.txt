@@ -24,6 +24,8 @@ Run leak detection
 Multiple decid tree impostor orients
 - Decid tree texture atlases
 
+Better flare texture for sparks
+
  E: 4.3 process_groups()
  H: 4.4 setup_object_render_data() => 2.0
  I: 3.5 display_mesh() (normally 2.0) => 2.4

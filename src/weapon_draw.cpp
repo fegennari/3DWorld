@@ -754,12 +754,12 @@ void draw_scheduled_weapons() {
 	
 	if (scheduled_weapons.empty()) return;
 	shader_t s;
-	colorRGBA const orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1));
+	setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1);
 
 	for (set<int>::const_iterator i = scheduled_weapons.begin(); i != scheduled_weapons.end(); ++i) {
 		draw_weapon_in_hand_real(*i, 1);
 	}
-	end_smoke_shaders(s, orig_fog_color);
+	s.end_shader();
 	scheduled_weapons.clear();
 }
 

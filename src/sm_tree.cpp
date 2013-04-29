@@ -396,7 +396,7 @@ void draw_small_trees(bool shadow_only) {
 	bool const v(!shadow_only), use_bump_map(USE_BUMP_MAP && v);
 
 	// draw trunks
-	colorRGBA orig_fog_color(setup_smoke_shaders(s, 0.0, 0, 0, 0, v, v, 0, 0, v, use_bump_map, 0, v)); // dynamic lights, but no smoke
+	setup_smoke_shaders(s, 0.0, 0, 0, 0, v, v, 0, 0, v, use_bump_map, 0, v); // dynamic lights, but no smoke
 	s.add_uniform_float("tex_scale_t", 5.0);
 
 	if (use_bump_map) {
@@ -409,16 +409,16 @@ void draw_small_trees(bool shadow_only) {
 	}
 	set_fill_mode();
 	small_trees.draw_branches(shadow_only);
-	if (s.is_setup()) end_smoke_shaders(s, orig_fog_color);
+	s.end_shader();
 
 	// draw leaves
 	small_trees.vbo_manager[0].upload();
-	orig_fog_color = setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v, 1); // dynamic lights, but no smoke, use light colors
+	setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v, 1); // dynamic lights, but no smoke, use light colors
 	set_lighted_sides(2);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
 	small_trees.draw_pine_leaves(shadow_only);
-	end_smoke_shaders(s, orig_fog_color);
+	s.end_shader();
 	small_trees.draw_non_pine_leaves(shadow_only); // not using shaders
 	glDisable(GL_ALPHA_TEST);
 	set_lighted_sides(1);

@@ -1338,13 +1338,12 @@ void model3ds::render(bool is_shadow_pass) {
 
 	for (unsigned bmap_pass = 0; bmap_pass < (use_shaders ? 2U : 1U); ++bmap_pass) {
 		shader_t s;
-		colorRGBA orig_fog_color;
-		if (use_shaders) orig_fog_color = setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map(), 0, two_sided_lighting);
+		if (use_shaders) {setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map(), 0, two_sided_lighting);}
 
 		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (bmap_pass != 0));
 		}
-		if (use_shaders) end_smoke_shaders(s, orig_fog_color);
+		if (use_shaders) {s.end_shader();}
 	}
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_TEXTURE_2D);

@@ -3,7 +3,7 @@ uniform float step_delta, half_dxy;
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 uniform float base_color_scale = 1.0;
-
+uniform vec3 smoke_color;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6];
 
@@ -34,8 +34,8 @@ vec3 add_light0(in vec3 n) {
 		// smoke volume iteration using 3D texture, light0 to vposl
 		for (int i = 0; i < num_steps; ++i) {
 			float smoke = smoke_sscale*texture3D(smoke_and_indir_tex, pos.zxy).a*step_weight;
-			nscale = mix(nscale, 0.0, smoke);
-			pos   += delta*step_weight; // should be in [0.0, 1.0] range
+			nscale     *= (1.0 - smoke);
+			pos        += delta*step_weight; // should be in [0.0, 1.0] range
 			step_weight = 1.0;
 		}
 	}
@@ -142,14 +142,13 @@ void main()
 	
 		// smoke volume iteration using 3D texture, pos to eye
 		for (int i = 0; i < num_steps; ++i) {
-			vec4 tex_val  = texture3D(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
-			float smoke   = smoke_sscale*tex_val.a*step_weight;
-			vec3 rgb_comp = (tex_val.rgb * gl_Fog.color.rgb);
-			float alpha   = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
-			float mval    = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
-			color         = mix(color, vec4(rgb_comp, alpha), mval);
-			pos          += delta*step_weight; // should be in [0.0, 1.0] range
-			step_weight   = 1.0;
+			vec4 tex_val = texture3D(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
+			float smoke  = smoke_sscale*tex_val.a*step_weight;
+			float alpha  = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
+			float mval   = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
+			color        = mix(color, vec4((tex_val.rgb * smoke_color), alpha), mval);
+			pos         += delta*step_weight; // should be in [0.0, 1.0] range
+			step_weight  = 1.0;
 		}
 	}
 #ifndef NO_ALPHA_TEST
