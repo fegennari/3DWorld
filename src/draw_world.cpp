@@ -379,7 +379,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	if (draw_solid) {
 		vector<pair<float, int> > large_cobjs;
 		draw_last.resize(0);
-		int last_type(-1);
 
 		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
 			unsigned cix(*i);
@@ -408,10 +407,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				draw_last.push_back(make_pair(-dist, cix)); // negative distance
 			}
 			else {
-				if (c.type != last_type && c.type == COLL_SPHERE) {
-					glFlush(); // HACK: need a flush before texture matrix updates for spheres - FIXME: better way to do this?
-				}
-				last_type = c.type;
 				c.draw_cobj(cix, last_tid, last_group_id, &s); // i may not be valid after this call
 				
 				if (cix != *i) {

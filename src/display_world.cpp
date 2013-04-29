@@ -394,7 +394,7 @@ void setup_lighting(bool underwater, float depth) {
 	config_bkg_color_and_clear(underwater, depth, 0);
 	
 	// setup light position
-	float const light_pos_scale((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode since 
+	float const light_pos_scale((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode 
 	glDisable(GL_LIGHT0);
 	glDisable(GL_LIGHT1);
 	glDisable(GL_LIGHT2);

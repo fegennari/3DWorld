@@ -61,7 +61,6 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 	
 	if (lighted) { // set emission to color, ambient and diffuse to black
 		set_color_e(color);
-		set_color(RGBA0); // hack to fix material color bug
 	}
 	else {
 		bool is_shadowed(!is_visible_to_light_cobj(pos, get_light(), radius, -1, 0));
