@@ -24,6 +24,9 @@ extern blood_spot blood_spots[];
 extern player_state *sstates;
 
 
+void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
+
+
 
 void beam3d::draw() const {
 
@@ -374,20 +377,28 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_LANDMINE:
 		case W_GRENADE: // draw_grenade()?
 		case W_CGRENADE:
+			if (do_texture) select_texture((wid == W_BALL) ? select_dodgeball_texture(shooter) : object_types[oid].tid);
+			radius = 0.4*object_types[oid].radius;
+			if (wid == W_CGRENADE || (wid == W_GRENADE && (wmode & 1))) radius *= 1.2;
+			translate_to(v_trans);
+			if (do_texture) rotate_to_dir(dir, 90.0, 1.0);  // cancel out texture rotation with camera
+			if (do_texture) glRotatef(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
+			set_color_alpha(object_types[oid].color, alpha);
+			set_specular(0.8, 40.0);
+			draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);
+			set_specular(0.0, 0.0);
+			if (do_texture) glDisable(GL_TEXTURE_2D);
+			break;
+
 		case W_STAR5:
-			{
-				if (do_texture) select_texture((wid == W_BALL) ? select_dodgeball_texture(shooter) : object_types[oid].tid);
-				radius = 0.4*object_types[oid].radius;
-				if (wid == W_CGRENADE || (wid == W_GRENADE && (wmode & 1))) radius *= 1.2;
-				translate_to(v_trans);
-				if (do_texture) rotate_to_dir(dir, 90.0, 1.0);  // cancel out texture rotation with camera
-				if (do_texture) glRotatef(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
-				set_color_alpha(object_types[oid].color, alpha);
-				set_specular(0.8, 40.0);
-				draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);
-				set_specular(0.0, 0.0);
-				if (do_texture) glDisable(GL_TEXTURE_2D);
-			}
+			radius = object_types[oid].radius;
+			translate_to(v_trans);
+			rotate_to_dir(dir, 90.0, 1.0);  // cancel out texture rotation with camera
+			glRotatef(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
+			set_color_alpha(object_types[oid].color, alpha);
+			set_specular(0.8, 40.0);
+			draw_star(zero_vector, zero_vector, zero_vector, radius, 0.0, 0);
+			set_specular(0.0, 0.0);
 			break;
 
 		case W_BLADE:
