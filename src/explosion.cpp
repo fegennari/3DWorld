@@ -305,7 +305,7 @@ void draw_blasts() {
 		case ETYPE_SIEGE:
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
-				select_multitex(BLUR_TEX, 0, disable_shaders);
+				select_multitex(((br.type == ETYPE_FUSION) ? FLARE2_TEX : BLUR_TEX), 0, disable_shaders);
 				if (br.type == ETYPE_STARB) {select_multitex(NOISE_TEX, 1, disable_shaders);}
 			}
 			if (universe) {

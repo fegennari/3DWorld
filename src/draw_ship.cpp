@@ -123,10 +123,10 @@ void uobj_draw_data::disable_ship_flares() {
 }
 
 
-void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color) {
+void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex) {
 
 	set_emissive_color(color);
-	draw_flare_no_blend(pos, xlate, xsize, ysize);
+	draw_flare_no_blend(pos, xlate, xsize, ysize, flare_tex);
 	end_texture();
 	clear_emissive_color();
 }
@@ -384,7 +384,7 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 	float angle(TWO_PI*time/TICKS_PER_SECOND);
 
 	for (unsigned i = 0; i < 2; ++i) {
-		draw_flare_no_blend(pos, all_zeros, (2.0 + 1.0*sinf(angle)), (2.0 + 1.0*cosf(angle)));
+		draw_flare_no_blend(pos, all_zeros, (2.0 + 1.0*sinf(angle)), (2.0 + 1.0*cosf(angle)), FLARE1_TEX);
 		angle += PI;
 	}
 	end_texture();
@@ -446,7 +446,7 @@ void uobj_draw_data::draw_rocket_base(colorRGBA const &cb, colorRGBA const &cn, 
 	glPopMatrix(); // remove the rotations
 	glPushMatrix();
 	vector3d engine_pos(dir*-(1.5*length + 0.1*esize)); // should already be normalized
-	setup_colors_draw_flare(pos, engine_pos, esize, esize, ce); // could use draw_engine()
+	setup_colors_draw_flare(pos, engine_pos, esize, esize, ce, FLARE2_TEX); // could use draw_engine()
 	draw_engine_trail(engine_pos, tailw, 0.8, 1.5, ce);
 }
 
@@ -1869,7 +1869,7 @@ void uobj_draw_data::draw_death_orb() const {
 	glPopMatrix(); // undo transformations
 
 	if (powered) {
-		setup_colors_draw_flare(pos, all_zeros, 2.1, 2.1, color_a);
+		setup_colors_draw_flare(pos, all_zeros, 2.1, 2.1, color_a, FLARE2_TEX);
 		if (ndiv > 3) add_light_source(pos, 6.0*radius, color_a);
 	}
 	if (is_moving() && animate2 && first_pass && ndiv > 4) {

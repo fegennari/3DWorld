@@ -1119,7 +1119,7 @@ void draw_cracks_decals_smoke_and_fires() {
 	if (decals.empty() && part_clouds.empty() && fires.empty()) return; // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1); // min_alpha = 0.1-0.4
-	draw_billboarded_objs(decals, BLUR_CENT_TEX);
+	draw_billboarded_objs(decals, BLUR_CENT_TEX); // FLARE2_TEX?
 
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
 		set_color(BLACK);

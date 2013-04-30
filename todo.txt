@@ -22,7 +22,6 @@ No disable_shaders mode
 
 Run leak detection
 
-Use flare textures for decals, stars, ship projectiles
 Remove unused varying variable computation from vertex shaders
 
  E: 4.3 process_groups()
