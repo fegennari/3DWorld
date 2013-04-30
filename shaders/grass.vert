@@ -1,11 +1,10 @@
-uniform float height = 1.0;
 varying vec2 tc;
 
 void main()
 {
 	tc          = gl_MultiTexCoord0;
-	vec3 gwdelta= get_grass_wind_delta(gl_Vertex.xyz, height, gl_MultiTexCoord0.s);
-	vec3 n      = gl_NormalMatrix * normalize(normalize(gl_Normal) + gwdelta/height); // eye space (not normalized)
+	vec3 gwdelta= get_grass_wind_delta(gl_Vertex.xyz, gl_MultiTexCoord0.s);
+	vec3 n      = gl_NormalMatrix * normalize(normalize(gl_Normal) + gwdelta/height); // eye space (not normalized), height comes from wind.part
 	vec3 normal = n*length(gl_Normal); // convert to original mag (for shadows)
 	vec4 vertex = gl_Vertex + vec4(gwdelta, 0.0);
 	vec4 epos   = gl_ModelViewMatrix  * vertex;
