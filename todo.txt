@@ -23,7 +23,7 @@ No disable_shaders mode
 Run leak detection
 
 Use flare textures for decals, stars, ship projectiles
-Fix smiley, rocket, etc. sphere edge lighting
+Remove unused varying variable computation from vertex shaders
 
  E: 4.3 process_groups()
  H: 4.4 setup_object_render_data() => 2.0

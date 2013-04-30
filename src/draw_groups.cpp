@@ -180,7 +180,7 @@ void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, fl
 		cobj.points[1] = (pos - p1);
 		cobj.points[2] = (pos + p2);
 		cobj.norm      = get_poly_norm(cobj.points);
-		cobj.draw_extruded_polygon(tid, NULL);
+		cobj.draw_extruded_polygon(tid, NULL, 0);
 	}
 	else {
 		cross_product(p2, p1).get_norm().do_glNormal();
@@ -214,6 +214,7 @@ void draw_select_groups(int solid) {
 	if (!begin_motion) return;
 	float const orig_ivo(indir_vert_offset), orig_czb(cobj_z_bias); // store original variable values FIXME: pass into setup_smoke_shaders?
 	shader_t s;
+	s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1); // FS
 	bool const force_tsl(1);
 	indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 	cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
@@ -1285,17 +1286,17 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 }
 
 
-void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate) { // not all variables used
+void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate) {
 	
 	glPushMatrix();
 	translate_to(pos);
 	uniform_scale(2.0*radius);
-	up_norm.do_glNormal();
 
 	if (rotate) {
 		rotate_by_vector(init_dir, -90.0);
 		if (angle != 0.0) rotate_about(angle, orient);
 	}
+	orient.do_glNormal();
 	glBegin(GL_TRIANGLES); // Note: needs 2-sided lighting
 
 	for (int i = N_STAR_POINTS-1; i >= 0; --i) {

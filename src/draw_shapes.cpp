@@ -209,88 +209,93 @@ void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t *shader
 }
 
 
-void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d const &normal, shader_t *shader) const { // occlusion culling?
+void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d const &normal, bool calc_normal_dir, shader_t *shader, bool &in_tris) const {
 
-	set_poly_texgen(tid, normal, shader);
-	glBegin(GL_TRIANGLES);
-	get_norm_camera_orient(normal, get_center(points, npoints)).do_glNormal();
+	if (tid >= 0) { // textured
+		if (in_tris) {glEnd(); in_tris = 0;}
+		set_poly_texgen(tid, normal, shader);
+	}
+	if (!in_tris) {glBegin(GL_TRIANGLES); in_tris = 1;}
+	(calc_normal_dir ? get_norm_camera_orient(normal, get_center(points, npoints)) : normal).do_glNormal();
 	draw_polygon_pts(points, npoints);
-	glEnd();
 }
 
 
-void coll_obj::draw_extruded_polygon(int tid, shader_t *shader) const {
+void coll_obj::draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir) const {
 
+	assert(points != NULL && (npoints == 3 || npoints == 4));
 	float const thick(fabs(thickness));
+	bool in_tris(0);
 	
 	if (thick <= MIN_POLY_THICK) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
-		draw_polygon(tid, points, npoints, norm, shader);
-		return;
+		draw_polygon(tid, points, npoints, norm, calc_normal_dir, shader, in_tris);
 	}
-	assert(points != NULL && (npoints == 3 || npoints == 4));
-	point pts[2][4];
-	gen_poly_planes(points, npoints, norm, thick, pts);
-	bool const bfc(!is_semi_trans()), cbf(camera_back_facing(pts[1], npoints, norm)), back_facing(bfc && cbf);
-	unsigned const nsides(unsigned(npoints)+2);
-	assert(nsides <= 6);
-	pair<int, unsigned> faces[6];
-	for (unsigned i = 0; i < nsides; ++i) faces[i] = make_pair(0, i);
-	point const camera(get_camera_pos());
+	else {
+		point pts[2][4];
+		gen_poly_planes(points, npoints, norm, thick, pts);
+		bool const bfc(!is_semi_trans()), back_facing(bfc && camera_back_facing(pts[1], npoints, norm));
+		unsigned const nsides(unsigned(npoints)+2);
+		assert(nsides <= 6);
+		pair<int, unsigned> faces[6];
+		for (unsigned i = 0; i < nsides; ++i) faces[i] = make_pair(0, i);
+		point const camera(get_camera_pos());
 
-	if (!bfc) { // sort by the number of centerlines crossing the surfaces
-		point centers[6];
+		if (!bfc) { // sort by the number of centerlines crossing the surfaces
+			point centers[6];
 
-		for (unsigned i = 0; i < 2; ++i) { // front and back
-			centers[i] = get_center(pts[i], npoints);
-		}
-		for (int i = 0; i < npoints; ++i) { // sides
-			unsigned const ii((i+1)%npoints);
-			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
-			centers[i+2] = get_center(side_pts, 4);
-		}
-		for (unsigned f = 0; f < nsides; ++f) {
 			for (unsigned i = 0; i < 2; ++i) { // front and back
-				if (i != f && line_poly_intersect((centers[f] - camera), camera, pts[i], npoints)) {
-					--faces[f].first;
-					++faces[i].first;
-				}
+				centers[i] = get_center(pts[i], npoints);
 			}
 			for (int i = 0; i < npoints; ++i) { // sides
 				unsigned const ii((i+1)%npoints);
 				point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
+				centers[i+2] = get_center(side_pts, 4);
+			}
+			for (unsigned f = 0; f < nsides; ++f) {
+				for (unsigned i = 0; i < 2; ++i) { // front and back
+					if (i != f && line_poly_intersect((centers[f] - camera), camera, pts[i], npoints)) {
+						--faces[f].first;
+						++faces[i].first;
+					}
+				}
+				for (int i = 0; i < npoints; ++i) { // sides
+					unsigned const ii((i+1)%npoints);
+					point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
 				
-				if ((i+2) != f && line_poly_intersect((centers[f] - camera), camera, side_pts, 4)) {
-					--faces[f].first;
-					++faces[i+2].first;
+					if ((i+2) != f && line_poly_intersect((centers[f] - camera), camera, side_pts, 4)) {
+						--faces[f].first;
+						++faces[i+2].first;
+					}
+				}
+			}
+			sort(faces, (faces+nsides));
+		}
+		for (unsigned fi = 0; fi < nsides; ++fi) { // draw back to front
+			unsigned const s(faces[fi].second);
+
+			if (s < 2) { // draw front and back
+				if (bfc && (back_facing ^ (s == 0))) continue;
+				vector3d norm2(norm);
+
+				if (!s) {
+					std::reverse(pts[s], pts[s]+npoints);
+					norm2.negate();
+				}
+				draw_polygon(tid, pts[s], npoints, norm2, calc_normal_dir, shader, in_tris); // draw bottom surface
+				if (!s) std::reverse(pts[s], pts[s]+npoints);
+			}
+			else { // draw sides
+				unsigned const i(s-2), ii((i+1)%npoints);
+				point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
+
+				if (!bfc || !camera_behind_polygon(side_pts, 4)) {
+					vector3d const norm2(get_poly_norm(side_pts));
+					draw_polygon(tid, side_pts, 4, norm2, calc_normal_dir, shader, in_tris);
 				}
 			}
 		}
-		sort(faces, (faces+nsides));
-	}
-	for (unsigned fi = 0; fi < nsides; ++fi) { // draw back to front
-		unsigned const s(faces[fi].second);
-
-		if (s < 2) { // draw front and back
-			if (bfc && (back_facing ^ (s == 0))) continue;
-			vector3d norm2(norm);
-
-			if (!s) {
-				std::reverse(pts[s], pts[s]+npoints);
-				norm2.negate();
-			}
-			draw_polygon(tid, pts[s], npoints, norm2, shader); // draw bottom surface
-			if (!s) std::reverse(pts[s], pts[s]+npoints);
-		}
-		else { // draw sides
-			unsigned const i(s-2), ii((i+1)%npoints);
-			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
-
-			if (!bfc || !camera_behind_polygon(side_pts, 4)) {
-				vector3d const norm2(get_poly_norm(side_pts));
-				draw_polygon(tid, side_pts, 4, norm2, shader);
-			}
-		}
-	}
+	} // end thick case
+	if (in_tris) {glEnd();}
 }
 
 

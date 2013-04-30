@@ -95,7 +95,12 @@ void main()
 #endif
 	vec3 lit_color = gl_Color.rgb*base_color_scale; // base color (with some lighting)
 	add_indir_lighting(lit_color);
+
+#ifdef USE_WINDING_RULE_FOR_NORMAL
+	float normal_sign = ((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
+#else
 	float normal_sign = ((!two_sided_lighting || (dot(eye_norm, epos.xyz) < 0.0)) ? 1.0 : -1.0); // two-sided lighting
+#endif
 	
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(normal_sign*eye_norm);
