@@ -922,7 +922,7 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 	}
 	draw_color.alpha = alpha_val;
 	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
-	qbd.add_billboard(cur_pos, (cur_pos + orient), upv, draw_color, radius, radius);
+	qbd.add_billboard((cur_pos + 0.001*orient), (cur_pos + orient), upv, draw_color, radius, radius); // move slightly away from the object to blend properly with cracks
 }
 
 
@@ -1177,7 +1177,7 @@ void spark_t::draw(quad_batch_draw &qbd) const {
 
 	//c.do_glColor();
 	point const camera(get_camera_pos());
-	qbd.add_billboard((pos + (camera - pos).get_norm()*0.02), camera, up_vector, c, s, s);
+	qbd.add_billboard((pos + (camera - pos).get_norm()*0.02), camera, up_vector, c, 0.8*s, 0.8*s);
 }
 
 

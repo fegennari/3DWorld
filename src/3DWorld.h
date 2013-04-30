@@ -1149,7 +1149,6 @@ colorRGBA const LT_GRAY  (0.75, 0.75, 0.75, 1.0);
 colorRGBA const DK_GRAY  (0.25, 0.25, 0.25, 1.0);
 colorRGBA const GRAY_BLACK(0.1, 0.1,  0.1,  1.0);
 colorRGBA const BKGRAY   (0.05, 0.05, 0.05, 1.0);
-colorRGBA const SILVER   (0.15, 0.15, 0.15, 1.0);
 colorRGBA const WATER    (0.35, 0.35, 1.0,  1.0);
 colorRGBA const SUN_C    (1.0,  0.8,  0.5,  1.0);
 colorRGBA const SUN_LT_C (1.0,  1.0,  0.85, 1.0);

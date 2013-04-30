@@ -289,7 +289,7 @@ void init_objects() {
 	object_types[ROCK].density             = 1.8;
 	object_types[ROCK].elasticity          = 0.5;
 	object_types[ROCK].health              = 1000.0;
-	object_types[ROCK].color               = SILVER; // DK_GRAY
+	object_types[ROCK].color               = DK_GRAY;
 	object_types[ROCK].flags               = BLEND;
 	object_types[ROCK].tid                 = ROCK_TEX;
 
@@ -373,7 +373,7 @@ void init_objects() {
 	object_types[STAR5].density            = 1.8;
 	object_types[STAR5].elasticity         = 0.1;
 	object_types[STAR5].health             = 600.0;
-	object_types[STAR5].color              = SILVER;
+	object_types[STAR5].color              = GRAY;
 	object_types[STAR5].flags              = SPECULAR | SELECTABLE; // OBJ_IS_FLAT?
 
 	object_types[PLASMA].air_factor        = 0.012;
