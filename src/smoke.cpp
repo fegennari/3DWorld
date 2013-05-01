@@ -32,7 +32,17 @@ extern int animate2, display_mode;
 extern float czmin0;
 extern colorRGBA cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
+extern vector<cube_t> smoke_bounds;
 
+
+
+bool check_smoke_bounds(point const &pt) {
+
+	for (vector<cube_t>::const_iterator i = smoke_bounds.begin(); i != smoke_bounds.end(); ++i) {
+		if (i->contains_pt(pt)) return 1;
+	}
+	return smoke_bounds.empty(); // if empty we assume unbounded
+}
 
 
 struct smoke_manager {
@@ -57,7 +67,7 @@ struct smoke_manager {
 	void add_smoke(int x, int y, int z, float smoke_amt) {
 		point const pos(get_xval(x), get_yval(y), get_zval(z));
 
-		if (is_smoke_visible(pos)) {
+		if (is_smoke_visible(pos) && check_smoke_bounds(pos)) {
 			bbox.union_with_pt(pos);
 			cur_smoke_bb.union_with_pt(pos);
 			smoke_vis = 1;
@@ -91,6 +101,7 @@ void add_smoke(point const &pos, float val) {
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos) || pos.z >= v_collision_matrix[ypos][xpos].zmax || pos.z < mesh_height[ypos][xpos]) return; // above all cobjs/outside
 	if (no_smoke_over_mesh && !is_mesh_disabled(xpos, ypos)) return;
+	if (!check_smoke_bounds(pos)) return;
 	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return; // too slow
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
 	if (smoke_man.is_smoke_visible(pos)) smoke_exists = 1;
@@ -121,6 +132,7 @@ void diffuse_smoke(int x, int y, int z, lmcell &adj, float pos_rate, float neg_r
 void distribute_smoke() { // called at most once per frame
 
 	//RESET_TIME;
+	//if (display_mode & 0x10) {smoke_exists = 1;}
 	if (!DYNAMIC_SMOKE || !smoke_exists || !animate2) return;
 	assert(SMOKE_SKIPVAL > 0);
 	static int cur_skip(0);
@@ -135,6 +147,7 @@ void distribute_smoke() { // called at most once per frame
 		cur_smoke_bb  = smoke_man.bbox; //cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
 		next_smoke_man.reset();
 	}
+	//if (display_mode & 0x10) {cur_smoke_bb = cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, czmin, czmax);}
 	float const xy_rate(SMOKE_DIS_XY*SMOKE_SKIPVAL);
 	int const dx(rgen.rand() & 1), dy(rgen.rand() & 1); // randomize the processing order
 	
@@ -148,6 +161,7 @@ void distribute_smoke() { // called at most once per frame
 				lmcell &lmc(vldata[z]);
 				if (lmc.smoke < 0.005f) {lmc.smoke = 0.0;}
 				if (lmc.smoke == 0.0) continue;
+				//if (get_zval(z) > v_collision_matrix[y][x].zmax) {lmc.smoke = 0.0; continue;} // open space above - smoke goes up
 				next_smoke_man.add_smoke(x, y, z, lmc.smoke);
 				diffuse_smoke(x+(dx ?  1 : -1), y, z, lmc, xy_rate, xy_rate, 0,  dx);
 				diffuse_smoke(x+(dx ? -1 :  1), y, z, lmc, xy_rate, xy_rate, 0, !dx);
@@ -160,6 +174,11 @@ void distribute_smoke() { // called at most once per frame
 	}
 	cur_skip = (cur_skip+1) % SMOKE_SKIPVAL;
 	//PRINT_TIME("Distribute Smoke");
+#if 0
+	set_color(RED);
+	draw_simple_cube(cur_smoke_bb, 0);
+	//for (vector<cube_t>::const_iterator i = smoke_bounds.begin(); i != smoke_bounds.end(); ++i) {draw_simple_cube(*i, 0);}
+#endif
 }
 
 

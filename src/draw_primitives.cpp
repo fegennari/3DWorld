@@ -879,7 +879,7 @@ void pos_dir_up::draw_frustum() const {
 
 void draw_simple_cube(cube_t const &c, bool texture) {
 
-	draw_cube(c.get_cube_center(), 0.5*(c.d[0][1]-c.d[0][0]), 0.5*(c.d[1][1]-c.d[1][0]), 0.5*(c.d[2][1]-c.d[2][0]), texture);
+	draw_cube(c.get_cube_center(), (c.d[0][1]-c.d[0][0]), (c.d[1][1]-c.d[1][0]), (c.d[2][1]-c.d[2][0]), texture);
 }
 
 

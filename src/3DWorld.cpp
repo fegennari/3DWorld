@@ -96,6 +96,7 @@ colorRGBA bkg_color;
 set<unsigned char> keys, keyset;
 char game_mode_string[256] = {"640x480:32@85"};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
+vector<cube_t> smoke_bounds;
 
 // camera variables
 double c_radius(DEF_CRADIUS), c_theta(DEF_CTHETA), c_phi(DEF_CPHI), up_theta(DEF_UPTHETA), camera_y(DEF_CAMY);
@@ -1814,6 +1815,13 @@ int load_config(string const &config_file) {
 		else if (str == "ship_def_file") {
 			alloc_if_req(ship_def_file, dship_def_file);
 			if (!read_str(fp, ship_def_file)) cfg_err("ship_def_file command", error);
+		}
+		else if (str == "smoke_bounds") {
+			cube_t sb;
+			for (unsigned d = 0; d < 6; ++d) { // x1 x2 y1 y2 z1 z2
+				if (!read_float(fp, sb.d[d>>1][d&1])) cfg_err("smoke_bounds command", error);
+			}
+			smoke_bounds.push_back(sb);
 		}
 
 		// lighting

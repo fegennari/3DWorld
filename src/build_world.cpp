@@ -997,7 +997,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	FILE *fp;
 	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
 	
-	while (!end) { // available: Y ...
+	while (!end) { // available: ?
 		assert(fp != NULL);
 		char letter((char)getc(fp));
 		
