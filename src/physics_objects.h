@@ -124,14 +124,14 @@ struct fire : public basic_physics_obj { // size = 60
 struct decal_obj : public basic_physics_obj { // size = 76
 
 	bool is_glass;
-	int cid;
+	int cid, tid;
 	float radius, alpha;
 	colorRGBA color;
 	point ipos;
 	vector3d orient;
 
-	decal_obj() : is_glass(0), cid(-1), radius(0.0), alpha(1.0), color(BLACK) {}
-	void gen(point const &p, float r, vector3d const &o, int cid_=-1, float init_alpha=1.0, colorRGBA const &color_=BLACK, bool is_glass_=0);
+	decal_obj() : is_glass(0), cid(-1), tid(-1), radius(0.0), alpha(1.0), color(BLACK) {}
+	void gen(point const &p, float r, vector3d const &o, int tid_, int cid_=-1, float init_alpha=1.0, colorRGBA const &color_=BLACK, bool is_glass_=0);
 	void draw(quad_batch_draw &qbd) const;
 	bool is_on_cobj(int cobj) const;
 	void check_cobj();

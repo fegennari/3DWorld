@@ -1,3 +1,4 @@
+// Note: probably okay to only copy the s and t components
 void setup_texgen0() {
 	vec4 ecPosition = gl_ModelViewMatrix * gl_Vertex;
 	gl_TexCoord[0] = vec4(dot(ecPosition, gl_EyePlaneS[0]), dot(ecPosition, gl_EyePlaneT[0]), 0.0, 1.0);

@@ -62,7 +62,9 @@ public:
 
 		if (num_verts2 > num_verts1) {
 			glEnable(GL_CULL_FACE);
+			//glCullFace(GL_FRONT); // faster, but artifacts at surface intersections such as stairs, especially with more z bias
 			glDrawArrays(GL_TRIANGLES, num_verts1, (num_verts2 - num_verts1));
+			//glCullFace(GL_BACK);
 			glDisable(GL_CULL_FACE);
 		}
 		bind_vbo(0);

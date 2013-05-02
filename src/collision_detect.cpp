@@ -1287,14 +1287,14 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			float const sz(5.0*o_radius);
 			float const dmin(min(min((cobj.d[ds][1] - obj.pos[ds]), (obj.pos[ds] - cobj.d[ds][0])),
 					                min((cobj.d[dt][1] - obj.pos[dt]), (obj.pos[dt] - cobj.d[dt][0]))));
-			if (dmin > sz) gen_decal((obj.pos - norm*o_radius), sz, norm, index, 0.75, BLACK);
+			if (dmin > sz) {gen_decal((obj.pos - norm*o_radius), sz, norm, FLARE3_TEX, index, 0.75, BLACK);} // explosion
 		}
 		obj.disable();
 	}
 	if (!obj.disabled() && (fabs(obj.velocity.z) > 1.0 || v0.z > 1.0) && !(obj.flags & STATIC_COBJ_COLL) &&
 		((type == BLOOD && (rand()&1) == 0) || (type == CHUNK && !(obj.flags & TYPE_FLAG))))
 	{
-		gen_decal((obj.pos - norm*o_radius), 2.0*o_radius, norm, index, 1.0, BLOOD_C); // blood/bloody chunk on a non-bottom surface
+		gen_decal((obj.pos - norm*o_radius), 2.0*o_radius, norm, BLUR_CENT_TEX, index, 1.0, BLOOD_C); // blood/bloody chunk on a non-bottom surface
 	}
 	deform_obj(obj, norm, v0);
 	if (cnorm != NULL) *cnorm = norm;
