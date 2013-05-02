@@ -878,27 +878,37 @@ void display(void) {
 				gen_mesh_bsp_tree();
 				mesh_invalidated = 0;
 			}
-			// drawing code
-			if (!combined_gu) draw_sun_moon_stars();
-
-			// Is this correct? Camera smoke is a different kind of fog
-			if (show_fog || underwater) glEnable(GL_FOG);
-			if (!show_lightning) l_strike.enabled = 0;
+			// draw background
+			if (!combined_gu) {draw_sun_moon_stars();}
+			if (show_fog || underwater) {glEnable(GL_FOG);}
+			if (!show_lightning) {l_strike.enabled = 0;}
 			compute_brightness();
-			if (!combined_gu) draw_earth();
+			if (!combined_gu) {draw_earth();}
 			draw_sky(0);
 			draw_puffy_clouds(0);
 			draw_env_other();
-			reset_shadows(DYNAMIC_SHADOW);
 			check_gl_error(5);
 			if (TIMETEST) PRINT_TIME("D");
+
+			// run physics and collision detection
+			reset_shadows(DYNAMIC_SHADOW);
 			process_groups();
 			check_gl_error(12);
+			if (TIMETEST) PRINT_TIME("E");
 			if (game_mode && b2down) fire_weapon();
 			proc_voxel_updates();
 			update_weapon_cobjs(); // and update cblade
-			if (TIMETEST) PRINT_TIME("E");
-			if (!camera_view) camera_shadow(camera);
+			check_gl_error(6);
+			if (TIMETEST) PRINT_TIME("F");
+
+			// create shadow map
+			if (!camera_view) {camera_shadow(camera);}
+			create_shadow_map(); // where should this go?
+			if (TIMETEST) PRINT_TIME("G");
+
+			// send data to GPU
+			setup_object_render_data();
+			check_gl_error(101);
 
 			if (underwater) {
 				bool const is_ice(temperature <= W_FREEZE_POINT && (!island || camera.z > ocean.z));
@@ -909,25 +919,26 @@ void display(void) {
 				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.B)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
 				glFogf(GL_FOG_END, fog_dist);
 			}
-			check_gl_error(6);
-			if (TIMETEST) PRINT_TIME("F");
-			create_shadow_map(); // where should this go?
-			if (TIMETEST) PRINT_TIME("G");
-			setup_object_render_data();
-			check_gl_error(101);
+
+			// draw the scene
 			draw_camera_weapon(0);
 			if (TIMETEST) PRINT_TIME("H");
+
+			draw_coll_surfaces(1, 0);
+			if (TIMETEST) PRINT_TIME("I");
+			
 			if (display_mode & 0x01) {display_mesh();} // draw mesh
 			check_gl_error(7);
-			if (TIMETEST) PRINT_TIME("I");
-			draw_solid_object_groups();
-			check_gl_error(8);
 			if (TIMETEST) PRINT_TIME("J");
-			draw_coll_surfaces(1, 0);
-			if (TIMETEST) PRINT_TIME("K");
+
 			draw_grass();
 			draw_scenery(1, 0);
+			if (TIMETEST) PRINT_TIME("K");
+
+			draw_solid_object_groups();
+			check_gl_error(8);
 			if (TIMETEST) PRINT_TIME("L");
+
 			draw_stuff(!underwater, timer1);
 
 			if (show_lightning) { // after the water?
@@ -939,8 +950,8 @@ void display(void) {
 				}
 			}
 			if (TIMETEST) PRINT_TIME("M");
-			if (display_mode & 0x04) draw_water(); // must be after process_groups()
-			if (display_mode & 0x01) draw_ocean();
+			if (display_mode & 0x04) {draw_water();} // must be after process_groups()
+			if (display_mode & 0x01) {draw_ocean();}
 			check_gl_error(9);
 			if (TIMETEST) PRINT_TIME("N");
 			draw_stuff(underwater, timer1);
