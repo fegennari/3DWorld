@@ -1,4 +1,5 @@
-varying vec4 epos, dlpos;
+varying vec4 epos;
+varying vec3 dlpos;
 varying vec3 normal; // world space
 varying vec3 eye_norm;
 
@@ -11,8 +12,10 @@ void main()
 	gl_Position = ftransform();
 	eye_norm = gl_NormalMatrix * gl_Normal; // eye space
 	normal = normalize(gl_Normal);
-	dlpos  = gl_Vertex;
+	dlpos  = gl_Vertex.xyz;
 	epos   = gl_ModelViewMatrix * gl_Vertex;
 	gl_FrontColor   = gl_Color;
+#ifndef NO_FOG
 	gl_FogFragCoord = length(epos.xyz);
+#endif
 } 

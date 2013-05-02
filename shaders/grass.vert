@@ -21,5 +21,7 @@ void main()
 	if (enable_light6) color += add_pt_light_comp(n, epos, 6);
 	if (enable_light7) color += add_pt_light_comp(n, epos, 7);
 	gl_FrontColor   = color;
+#ifndef NO_FOG
 	gl_FogFragCoord = length(epos.xyz);
+#endif
 } 

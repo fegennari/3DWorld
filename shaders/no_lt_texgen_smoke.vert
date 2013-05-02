@@ -53,7 +53,9 @@ void main()
 #endif
 
 #ifndef SMOKE_ENABLED
+#ifndef NO_FOG
 	gl_FogFragCoord = length(epos.xyz); // set standard fog coord
+#endif
 #endif
 #ifdef DYNAMIC_SMOKE_SHADOWS
 	lpos0 = (gl_ModelViewMatrixInverse * gl_LightSource[0].position).xyz;

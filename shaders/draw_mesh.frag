@@ -1,5 +1,6 @@
 uniform sampler2D tex0, tex1;
-varying vec4 epos, dlpos;
+varying vec4 epos;
+varying vec3 dlpos;
 varying vec3 normal; // world space
 varying vec3 eye_norm;
 
@@ -9,7 +10,7 @@ void main()
 	if (enable_light0) lit_color += add_light_comp_pos_smap_light0(eye_norm, epos);
 	if (enable_light1) lit_color += add_light_comp_pos_smap_light1(eye_norm, epos);
 	lit_color = clamp(lit_color, 0.0, 1.0);
-	if (enable_dlights) lit_color.rgb += add_dlights(dlpos.xyz, normalize(normal), gl_ModelViewMatrixInverse[3].xyz, vec3(1.0)); // dynamic lighting
+	if (enable_dlights) lit_color.rgb += add_dlights(dlpos, normalize(normal), gl_ModelViewMatrixInverse[3].xyz, vec3(1.0)); // dynamic lighting
 
 	lit_color *= texture2D(tex0, gl_TexCoord[0].st);
 #ifdef HAVE_DETAIL_TEXTURE

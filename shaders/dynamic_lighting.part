@@ -18,8 +18,9 @@ float get_intensity_at(in vec3 pos, in vec3 lpos, in float radius) { // Note: do
 }
 
 vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye, in vec3 diff_color) {
+	vec3 color = vec3(0.0);
+#ifndef NO_DYNAMIC_LIGHTS
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
-	vec3 color  = vec3(0.0);
 	uint gb_ix  = texture2D(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
 	uint st_ix  = (gb_ix & 0xFFFFU);
 	uint end_ix = ((gb_ix >> 16U) & 0xFFFFU);
@@ -68,5 +69,6 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye, in vec3 diff_color)
 #endif
 		color += lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
 	}
+#endif
 	return min(color, 1.0);
 }

@@ -253,7 +253,7 @@ void shader_t::setup_fog_scale() const {
 
 void shader_t::check_for_fog_disabled() {
 
-	if (!glIsEnabled(GL_FOG)) {set_prefix("#define NO_FOG", 1);} // FS
+	if (!glIsEnabled(GL_FOG)) {for (unsigned d = 0; d < 2; ++d) {set_prefix("#define NO_FOG", d);}} // VS/FS
 }
 
 
