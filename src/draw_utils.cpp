@@ -219,7 +219,7 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 
 void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n, float tx1, float ty1, float tx2, float ty2) {
 
-	float const t[4][2] = {{tx1,ty1}, {tx1,ty2}, {tx2,ty2}, {tx2,ty1}};
+	float const t[4][2] = {{tx1,ty1}, {tx2,ty1}, {tx2,ty2}, {tx1,ty2}};
 	unsigned const v[6] = {0,2,1, 0,3,2};
 	color_wrapper cw;
 	cw.set_c4(c);
@@ -232,7 +232,7 @@ void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vecto
 void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
 	colorRGBA const &c, vector3d const &n, float tx1, float ty1, float tx2, float ty2)
 {
-	point const pts[4] = {(pos - dx - dy), (pos - dx + dy), (pos + dx + dy), (pos + dx - dy)};
+	point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
 	add_quad_pts(pts, c, n, tx1, ty1, tx2, ty2);
 }
 

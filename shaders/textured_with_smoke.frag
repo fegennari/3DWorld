@@ -44,10 +44,10 @@ vec3 add_light0(in vec3 n) {
 	// special cased add_light_comp_pos - FIXME: find a better way to make the index constant for optimization
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz);
 #ifdef USE_BUMP_MAP
-	vec3 lnormal  = nscale*apply_bump_map(light_dir);
+	vec3 lnormal = nscale*apply_bump_map(light_dir);
 	vec3 eye_pos = ts_pos; // convert to tangent space
 #else
-	vec3 lnormal  = nscale*n;
+	vec3 lnormal = nscale*n;
 	vec3 eye_pos = epos.xyz;
 #endif
 #ifdef USE_LIGHT_COLORS

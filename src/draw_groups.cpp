@@ -19,18 +19,9 @@ bool const SHOW_DRAW_TIME    = 0;
 float const NDIV_SCALE       = 1.6;
 
 
-struct puddle_t {
-	point pos;
-	float radius;
-	colorRGBA color;
-
-	puddle_t() {}
-	puddle_t(point const &pos_, float radius_, colorRGBA const &color_) : pos(pos_), radius(radius_), color(color_) {}
-};
-
 
 // Global Variables
-vector<puddle_t> puddles;
+quad_batch_draw puddle_qbd;
 pt_line_drawer obj_pld;
 pt_line_drawer_hdr snow_pld;
 
@@ -363,6 +354,11 @@ bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) {
 }
 
 
+void set_base_color_scale(shader_t &s, float val) { // hack to force usage of material properties instead of color
+	if (s.is_setup()) {s.add_uniform_float("base_color_scale", val);}
+}
+
+
 void draw_group(obj_group &objg, shader_t &s) {
 
 	RESET_TIME;
@@ -501,6 +497,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 	} // large objects
 	else { // small objects
+		colorRGBA const &base_color(object_types[type].color);
 		quad_batch_draw particle_qbd;
 
 		if (type == SHRAPNEL) {
@@ -528,7 +525,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 				color2 = WHITE;
 			}
 			else {
-				color2 = object_types[obj.type].color;
+				color2 = base_color;
 			}
 			if (type != SHRAPNEL && type != PARTICLE) {
 				if (type == DROPLET) select_liquid_color(color2, pos);
@@ -595,21 +592,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 0);
 			} // switch (type)
 		} // for j
-		if (!puddles.empty()) { // draw puddles
-			glDepthMask(GL_FALSE);
-			select_texture(BLUR_TEX);
-			plus_z.do_glNormal();
-			glBegin(GL_TRIANGLES);
-
-			for (vector<puddle_t>::const_iterator p = puddles.begin(); p != puddles.end(); ++p) {
-				set_color_alpha(p->color);
-				draw_billboard(p->pos, (p->pos + plus_z), plus_x, 5.0*p->radius, 5.0*p->radius);
-			}
-			glEnd();
-			glDepthMask(GL_TRUE);
-			select_no_texture();
-			puddles.resize(0);
-		}
 		if (type == SHRAPNEL) {
 			clear_emissive_color();
 			glEnd();
@@ -618,12 +600,20 @@ void draw_group(obj_group &objg, shader_t &s) {
 			particle_qbd.draw();
 			glDisable(GL_ALPHA_TEST);
 		}
-		if (!obj_pld.empty()) {
-			glEnable(GL_COLOR_MATERIAL); // unnecessary?
+		if (!puddle_qbd.verts.empty() || !obj_pld.empty()) {
+			set_color(base_color); // FIXME: per-object color is ignored?
+			glEnable(GL_COLOR_MATERIAL); // unnecessary/doesn't work?
+			set_base_color_scale(s, 0.0);
+
+			if (!puddle_qbd.verts.empty()) { // draw puddles
+				glDepthMask(GL_FALSE);
+				select_texture(BLUR_TEX);
+				puddle_qbd.draw_and_clear();
+				glDepthMask(GL_TRUE);
+			}
 			select_no_texture();
-			if (s.is_setup()) {s.add_uniform_float("base_color_scale", 0.0);} // hack to force usage of material properties instead of color
-			obj_pld.draw_and_clear();
-			if (s.is_setup()) {s.add_uniform_float("base_color_scale", 1.0);}
+			if (!obj_pld.empty()) {obj_pld.draw_and_clear();}
+			set_base_color_scale(s, 1.0);
 			glDisable(GL_COLOR_MATERIAL);
 		}
 	} // small object
@@ -667,7 +657,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		assert(!do_texture);
 		colorRGBA color2(color);
 		if (type == RAIN) color2.alpha *= 0.5; // rain is mostly transparent when small
-		puddles.push_back(puddle_t(pos, radius, color2));
+		puddle_qbd.add_billboard(pos, (pos + plus_z), plus_x, /*color2*/WHITE, 5.0*radius, 5.0*radius);
 		return;
 	}
 	if (draw_snowflake) { // draw as a point to be converted to a billboard by the geometry shader
