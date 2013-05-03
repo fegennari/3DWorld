@@ -448,7 +448,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 					if (v_collision_matrix[i][j].zmin < v_collision_matrix[i][j].zmax) {
 						point const p1(get_xval(j+0), get_yval(i+0),v_collision_matrix[i][j].zmin);
 						point const p2(get_xval(j+1), get_yval(i+1),v_collision_matrix[i][j].zmax);
-						draw_cube((p1 + p2)*0.5, (p2.x - p1.x), (p2.y - p1.y), (p2.z - p1.z), 0, 1);
+						draw_cube((p1 + p2)*0.5, (p2.x - p1.x), (p2.y - p1.y), (p2.z - p1.z), 0);
 					}
 				}
 			}

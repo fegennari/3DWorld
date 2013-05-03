@@ -121,6 +121,8 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 }
 
 
+void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c, int eflags, vector3d const *const view_dir=NULL);
+
 void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 
 	int const sides((int)cp.surfs);
@@ -141,7 +143,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		}
 	}
 	pair<float, unsigned> faces[6];
-	for (unsigned i = 0; i < 6; ++i) faces[i].second = i;
+	for (unsigned i = 0; i < 6; ++i) {faces[i].second = i;}
 
 	if (!back_face_cull) { // semi-transparent
 		for (unsigned i = 0; i < 6; ++i) {
@@ -167,6 +169,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		p[d0 ] = d[d0][1]; pts[1] = p;
 		p[d1 ] = d[d1][1]; pts[2] = p;
 		p[d0 ] = d[d0][0]; pts[3] = p;
+		if (!dir) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);}
 
 		if (textured) {
 			float a[4] = {0.0}, b[4] = {0.0};

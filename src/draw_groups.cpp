@@ -863,7 +863,6 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		}
 		else {
 			set_color_alpha(BLACK);
-			enable_blend();
 			glLineWidth(min(8.0f, max(1.0f, 6.0f/dist)));
 			glPushMatrix();
 			translate_to(pos2);
@@ -878,7 +877,6 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			glEnd();
 			glPopMatrix();
 			glLineWidth(1.0);
-			disable_blend();
 		}
 		pos2.x *= -1.0;
 	}
@@ -996,7 +994,6 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	// draw mouth
 	float const hval(0.004*(100.0 - min(160.0f, health)));
 	set_color_alpha(mult_alpha(BLACK, alpha));
-	enable_blend();
 	glLineWidth(min(8.0f, max(1.0f, 5.0f/dist)));
 	glPushMatrix();
 	uniform_scale(radius);
@@ -1008,7 +1005,6 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	glEnd();
 	glPopMatrix();
 	glLineWidth(1.0);
-	disable_blend();
 
 	// draw tongue
 	if (sstates[id].kill_time < int(2*TICKS_PER_SECOND) || powerup == PU_DAMAGE) { // stick your tongue out at a dead enemy

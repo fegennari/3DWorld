@@ -195,7 +195,7 @@ void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, col
 void begin_line_tquad_draw(bool draw_as_tris=0);
 void end_line_tquad_draw();
 void draw_simple_cube(cube_t const &c, bool texture);
-void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv=1, bool scale_ndiv=0,
+void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, bool scale_ndiv=0,
 			   float texture_scale=1.0, bool proportional_texture=0, vector3d const *const view_dir=NULL);
 void draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir);
 void draw_polygon_pts(point const *const points, int npoints);

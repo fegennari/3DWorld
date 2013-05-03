@@ -884,59 +884,14 @@ void draw_simple_cube(cube_t const &c, bool texture) {
 
 
 // need to do something with tex coords for scale
-void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, unsigned ndiv, bool scale_ndiv,
+void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, bool scale_ndiv,
 			   float texture_scale, bool proportional_texture, vector3d const *const view_dir)
 {
 	point const scale(sx, sy, sz);
 	point const xlate(pos - 0.5*scale); // move origin from center to min corner
 	float const sizes[3] = {sx, sy, sz};
-
-	if (ndiv == 1) { // non-subdivided version
-		glBegin(GL_QUADS);
+	glBegin(GL_QUADS);
 		
-		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-			unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
-
-			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-				if (view_dir && (((*view_dir)[n] < 0.0) ^ j)) continue; // back facing
-				vector3d norm(zero_vector);
-				point pt;
-				norm[n] = (2.0*j - 1.0); // -1 or 1
-				pt[n]   = j;
-				norm.do_glNormal();
-
-				for (unsigned s1 = 0; s1 < 2; ++s1) {
-					pt[d[1]] = s1;
-
-					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-						pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
-						
-						if (texture) {
-							glTexCoord2f((proportional_texture ? sizes[d[1]] : 1.0)*texture_scale*pt[d[1]],
-										 (proportional_texture ? sizes[d[0]] : 1.0)*texture_scale*pt[d[0]]);
-						}
-						(pt*scale + xlate).do_glVertex();
-					}
-				}
-			} // for j
-		} // for i
-		glEnd();
-		return;
-	}
-	float const step(1.0/float(ndiv));
-	unsigned ndivs[3] = {ndiv, ndiv, ndiv};
-	float    steps[3] = {step, step, step};
-
-	if (scale_ndiv) {
-		float const smax(max(sx, max(sy, sz)));
-
-		for (unsigned i = 0; i < 3; ++i) {
-			if (sizes[i] < smax) {
-				ndivs[i] = max(1U, unsigned(ceil(ndiv*(sizes[i]/smax))));
-				steps[i] = 1.0/float(ndivs[i]);
-			}
-		}
-	}
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
@@ -948,27 +903,22 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, uns
 			pt[n]   = j;
 			norm.do_glNormal();
 
-			for (unsigned s0 = 0; s0 < ndivs[d[0]]; ++s0) {
-				float const va[2] = {steps[d[0]]*(s0 + 1), steps[d[0]]*s0};
-				glBegin(GL_TRIANGLE_STRIP);
+			for (unsigned s1 = 0; s1 < 2; ++s1) {
+				pt[d[1]] = s1;
 
-				for (unsigned s1 = 0; s1 <= ndivs[d[1]]; ++s1) {
-					pt[d[1]] = steps[d[1]]*s1;
-
-					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-						pt[d[0]] = va[k^j]; // need to orient the vertices differently for each side
+				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+					pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
 						
-						if (texture) {
-							glTexCoord2f((proportional_texture ? sizes[d[1]] : 1.0)*texture_scale*pt[d[1]],
-								         (proportional_texture ? sizes[d[0]] : 1.0)*texture_scale*pt[d[0]]);
-						}
-						(pt*scale + xlate).do_glVertex();
+					if (texture) {
+						glTexCoord2f((proportional_texture ? sizes[d[1]] : 1.0)*texture_scale*pt[d[1]],
+										(proportional_texture ? sizes[d[0]] : 1.0)*texture_scale*pt[d[0]]);
 					}
+					(pt*scale + xlate).do_glVertex();
 				}
-				glEnd();
 			}
 		} // for j
 	} // for i
+	glEnd();
 }
 
 
