@@ -834,7 +834,7 @@ void particle_cloud::draw(quad_batch_draw &qbd) const {
 		color.G *= get_rscale();
 	}
 	else {
-		color *= brightness*(0.5*(1.0 - darkness));
+		color *= (no_lighting ? 1.0 : brightness)*(0.5*(1.0 - darkness));
 	}
 	if (parts.empty()) {
 		if (status && sphere_in_camera_view(pos, radius, 0)) {

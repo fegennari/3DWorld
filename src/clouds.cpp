@@ -126,9 +126,11 @@ void cloud_manager_t::update_lighting() {
 					}
 				}
 			}
+			light = max(0.5f, light);
+
 			if (light_factor < 0.6) {
-				float const blend(5.0*(light_factor - 0.4));
-				light = light*blend + 0.25*(1.0 - blend);
+				float const blend(sqrt(5.0*(light_factor - 0.4)));
+				light = light*blend + 0.25f*(1.0 - blend);
 			}
 		}
 		pc.darkness   = 1.0 - 2.0*light;
