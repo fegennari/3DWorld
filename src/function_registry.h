@@ -246,7 +246,7 @@ void gen_bubble(point const &pos, float r=0.0, colorRGBA const &c=WATER_C);
 void gen_line_of_bubbles(point const &p1, point const &p2, float r=0.0, colorRGBA const &c=WATER_C);
 bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 				   float r, float den, float dark, float dam, int src, int dt, bool as);
-void gen_smoke(point const &pos);
+void gen_smoke(point const &pos, float zvel_scale=1.0);
 bool gen_fire(point const &pos, float size, int source, bool allow_close=0, bool is_static=0, float light_bwidth=1.0, float intensity=1.0);
 void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, int cid=-1, float init_alpha=1.0, colorRGBA const &color=BLACK, bool is_glass=0, bool rand_angle=0);
 void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade=0);

@@ -853,7 +853,7 @@ void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius) { 
 
 	if (animate2) {
 		if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {
-			gen_smoke(pos + orient.get_norm()*(2.0*radius));
+			gen_smoke((pos + orient.get_norm()*(2.0*radius)), 0.2);
 		}
 		add_blastr(pos, orient, 2.0*radius, 0.0, 4, -2, WHITE, WHITE, ETYPE_ANIM_FIRE);
 	}
