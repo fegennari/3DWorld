@@ -1130,8 +1130,10 @@ void draw_cracks_decals_smoke_and_fires() {
 		set_color(BLACK);
 		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
 	}
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	order_vect_t fire_order;
 	draw_billboarded_objs(fires, fire_order, FIRE_TEX); // animated fire textured quad
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	s.end_shader();
 }
 
@@ -1195,6 +1197,7 @@ void draw_sparks() {
 	enable_blend();
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.01);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	select_texture(FLARE2_TEX);
 	quad_batch_draw qbd;
 	draw_objects(sparks, qbd);
@@ -1202,6 +1205,7 @@ void draw_sparks() {
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
 	glDisable(GL_ALPHA_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	disable_blend();
 	set_fill_mode();
 	sparks.clear();

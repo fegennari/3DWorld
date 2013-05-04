@@ -306,8 +306,9 @@ void do_lightning_damage(point &pos, float damage, int hit_water) {
 void lightning::draw() const {
 
 	float const lscale(LITNING_LINEAR_I);
-	bool const smooth_lightning(1);
-	if (smooth_lightning) {glEnable(GL_LINE_SMOOTH); enable_blend();}
+	glEnable(GL_LINE_SMOOTH);
+	enable_blend();
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 	for (unsigned i = 0; i < path.size(); ++i) {
 		assert(!path[i].points.empty());
@@ -315,7 +316,9 @@ void lightning::draw() const {
 		path[i].draw(0);
 	}
 	if (animate2) add_dynamic_light(7.8*lscale, litning_pos, LITN_C);
-	if (smooth_lightning) {disable_blend(); glDisable(GL_LINE_SMOOTH);}
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	disable_blend();
+	glDisable(GL_LINE_SMOOTH);
 }
 
 

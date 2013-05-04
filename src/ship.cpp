@@ -769,8 +769,10 @@ void draw_univ_objects(point const &pos) {
 
 	glEnable(GL_LIGHTING);
 	disable_blend();
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	draw_wrays(b_wrays); // draw beam weapons (where should this be?)
 	draw_wrays(t_wrays); // draw engine trails and lightning
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	if (onscreen_display) { // draw player death marker
 		draw_crosshair_from_camera(universe_origin, MAGENTA); // starts off as player start marker - world origin

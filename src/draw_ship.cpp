@@ -111,6 +111,7 @@ void uobj_draw_data::enable_ship_flares(colorRGBA const &color) {
 	set_emissive_color(color);
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	select_texture(BLUR_TEX);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	plus_z.do_glNormal();
 }
 
@@ -119,6 +120,7 @@ void uobj_draw_data::disable_ship_flares() {
 
 	end_texture();
 	glDepthMask(GL_TRUE);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	clear_emissive_color();
 }
 

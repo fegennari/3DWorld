@@ -2101,6 +2101,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 			ca.A *= alpha; cb.A *= alpha;
 			usg.enable_star_shader(ca, cb);
 			enable_blend();
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 			if (size > 6.0) {draw_flare_no_blend(pos_, all_zeros, 3.0*radius, 3.0*radius);}
 
 			if (cfr > 2.4) { // FIXME: factor out shared code?
@@ -2108,6 +2109,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg) {
 				draw_flare_no_blend(pos_, all_zeros, 0.5*radius, cfr*radius);
 				draw_flare_no_blend(pos_, all_zeros, cfr*radius, 0.5*radius);
 			}
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			disable_blend();
 		}
 		usg.enable_star_shader(colorA, colorB);
