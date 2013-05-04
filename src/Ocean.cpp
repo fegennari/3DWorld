@@ -520,6 +520,7 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 	select_texture(WATER_TEX);
 	setup_texgen(OCEAN_REPEAT, OCEAN_REPEAT, 0.0, 0.0);
 	float const OCEAN_SKEW_X(OCEAN_SKEW*X_SCENE_SIZE), OCEAN_SKEW_Y(OCEAN_SKEW*Y_SCENE_SIZE);
+	enable_blend();
 	color.alpha = last_alpha;
 	color.do_glColor();
 	glPushMatrix();
@@ -542,7 +543,6 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 	glVertex2f( X_SCENE_SIZE, -Y_SCENE_SIZE);
 	glVertex2f( ocean.x,      -Y_SCENE_SIZE);
 	glEnd();
-	enable_blend();
 
 	glBegin(GL_TRIANGLE_STRIP);
 	float yval(-Y_SCENE_SIZE);

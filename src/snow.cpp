@@ -762,14 +762,12 @@ void draw_snow() {
 	set_specular(0.5, 50.0);
 	set_color(SNOW_COLOR);
 	point const camera(get_camera_pos());
-	enable_blend();
 	glDisable(GL_NORMALIZE);
 	select_texture(NOISE_TEX);
 	setup_texgen(50.0, 50.0, 0.0, 0.0);
 	snow_draw.draw();
 	disable_textures_texgen();
 	glEnable(GL_NORMALIZE);
-	disable_blend();
 	set_specular(0.0, 1.0);
 	s.end_shader();
 	//PRINT_TIME("Snow Draw");

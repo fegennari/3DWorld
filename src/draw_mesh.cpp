@@ -69,7 +69,7 @@ float camera_min_dist_to_surface() { // min dist of four corners and center
 }
 
 
-colorRGBA setup_mesh_lighting() {
+void setup_mesh_lighting() {
 
 	colorRGBA ambient_color(DEF_AMBIENT, DEF_AMBIENT, DEF_AMBIENT, 1.0);
 	colorRGBA diffuse_color(DEF_DIFFUSE, DEF_DIFFUSE, DEF_DIFFUSE, 1.0);
@@ -78,8 +78,6 @@ colorRGBA setup_mesh_lighting() {
 	glEnable(GL_COLOR_MATERIAL);
 	diffuse_color.do_glColor();
 	set_fill_mode();
-	enable_blend();
-	return diffuse_color;
 }
 
 
@@ -87,7 +85,6 @@ void run_post_mesh_draw() {
 	
 	glEnable(GL_NORMALIZE);
 	glDisable(GL_COLOR_MATERIAL);
-	disable_blend();
 }
 
 

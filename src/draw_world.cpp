@@ -740,20 +740,6 @@ void draw_sky(int order) {
 }
 
 
-void draw_stationary_sky(float radius, float density) {
-
-	colorRGBA color(WHITE);
-	color.alpha = density;
-	set_fill_mode();
-	enable_blend();
-	select_texture(CLOUD_TEX);
-	set_color(color);
-	draw_subdiv_sphere(all_zeros, radius, N_SPHERE_DIV, 1, 0);
-	glDisable(GL_TEXTURE_2D);
-	disable_blend();
-}
-
-
 void compute_brightness() {
 
 	brightness = 0.8 + 0.2*light_factor;

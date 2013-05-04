@@ -345,7 +345,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	dir.negate(); // used to be backwards
 	float radius, rxy;
 	//glDisable(GL_DEPTH_TEST);
-	enable_blend();
+	enable_blend(); // not always necessary
 	set_fill_mode();
 	glPushMatrix();
 	translate_to(pos);

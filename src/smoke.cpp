@@ -18,6 +18,7 @@ float const SMOKE_MAX_VAL    = 100.0;
 float const SMOKE_DIS_XY     = 0.05;
 float const SMOKE_DIS_ZU     = 0.08;
 float const SMOKE_DIS_ZD     = 0.03;
+float const SMOKE_THRESH     = 1.0/255.0;
 
 
 bool smoke_visible(0), smoke_exists(0), have_indir_smoke_tex(0);
@@ -162,7 +163,7 @@ void distribute_smoke() { // called at most once per frame
 			
 			for (int z = 0; z < MESH_SIZE[2]; ++z) {
 				lmcell &lmc(vldata[z]);
-				if (lmc.smoke < 0.005f) {lmc.smoke = 0.0;}
+				if (lmc.smoke < SMOKE_THRESH) {lmc.smoke = 0.0;}
 				if (lmc.smoke == 0.0) continue;
 				//if (get_zval(z) > v_collision_matrix[y][x].zmax) {lmc.smoke = 0.0; continue;} // open space above - smoke goes up
 				next_smoke_man.add_smoke(x, y, z, lmc.smoke);

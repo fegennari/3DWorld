@@ -235,15 +235,12 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 
 void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const &xlate) const {
 
-	enable_blend();
-
 	for (const_iterator i = begin(); i != end(); ++i) {
 		int const type(i->get_type());
 		if (i->is_pine_tree()) continue;
 		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
 		i->draw(2, shadow_only, vbo_manager[0], xlate); // only cull pine tree leaves if there aren't too many
 	}
-	disable_blend();
 }
 
 
