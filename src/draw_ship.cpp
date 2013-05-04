@@ -275,7 +275,6 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 		if (ndiv > 3 && epos != all_zeros) obj->rotate_point_inv(epos);
 		rotate_towards_camera(epos*radius + pos);
 		draw_tquad(escale, escale, z_offset, 1);
-		//draw_billboard(epos, get_camera_pos(), up_vector, escale, escale);
 	}
 	glPopMatrix();
 

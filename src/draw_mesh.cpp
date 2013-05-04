@@ -506,8 +506,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 				verts.push_back(pos + 0.1*vertex_normals[i][j]);
 			}
 		}
-		verts.front().set_state();
-		glDrawArrays(GL_LINES, 0, verts.size());
+		draw_verts(verts, GL_LINES);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Final");
 }

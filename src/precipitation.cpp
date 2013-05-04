@@ -27,8 +27,7 @@ protected:
 		plus_z.do_glNormal();
 		enable_blend(); // split into point smooth and blend?
 		glDisable(GL_LIGHTING);
-		verts.front().set_state();
-		glDrawArrays(type, 0, size()/VERTS_PER_PRIM);
+		draw_verts(verts, type);
 		glEnable(GL_LIGHTING);
 		disable_blend();
 	}

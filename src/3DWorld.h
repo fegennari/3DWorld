@@ -853,6 +853,13 @@ struct vert_norm_color_tangent : public vert_norm_color {
 };
 
 
+template <typename T> void draw_verts(vector<T> const &verts, int gl_type) {
+
+	verts.front().set_state();
+	glDrawArrays(gl_type, 0, (unsigned)verts.size());
+}
+
+
 template <typename T> void translate_verts(vector<T> &verts, vector3d const &xlate) {
 	for (vector<T>::iterator i = verts.begin(); i != verts.end(); ++i) {i->v += xlate;}
 }
@@ -861,7 +868,7 @@ template <typename T> void scale_verts(vector<T> &verts, vector3d const &scale) 
 	for (vector<T>::iterator i = verts.begin(); i != verts.end(); ++i) {i->v *= scale;}
 }
 
-template<typename T> void tri_strip_push(vector<T> &v) {
+template <typename T> void tri_strip_push(vector<T> &v) {
 	assert(v.size() >= 3);
 	v.push_back(v[v.size()-2]);
 	v.push_back(v[v.size()-2]);

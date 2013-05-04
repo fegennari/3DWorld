@@ -70,11 +70,8 @@ public:
 		bind_vbo(0);
 	}
 	void render_dynamic() {
-		if (!dverts.empty()) {
-			dverts.front().set_state();
-			glDrawArrays(GL_TRIANGLES, 0, dverts.size());
-			dverts.resize(0);
-		}
+		if (!dverts.empty()) {draw_verts(dverts, GL_TRIANGLES);}
+		dverts.resize(0);
 	}
 	void free() {
 		delete_vbo(vbo);

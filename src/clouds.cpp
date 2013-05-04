@@ -479,8 +479,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 	s.add_uniform_float("radius", radius);
 	s.add_uniform_float("offset", pos.x);
 	mod_color[0].do_glColor();
-	points.front().set_state();
-	glDrawArrays(GL_QUADS, 0, (unsigned)points.size());
+	draw_verts(points, GL_QUADS);
 	glDepthMask(GL_TRUE);
 	disable_blend();
 	s.disable();

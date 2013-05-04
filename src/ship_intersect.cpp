@@ -687,8 +687,7 @@ void ushadow_triangle_mesh::draw(upos_point_type const &pos) const {
 		verts.push_back(vert_wrap_t(t->p[0][0] - pos)); // need to draw as triangles (0 and 2)
 		verts.push_back(vert_wrap_t(t->p[1][1] - pos));
 	}
-	verts.front().set_state();
-	glDrawArrays(GL_TRIANGLES, 0, verts.size());
+	draw_verts(verts, GL_TRIANGLES);
 }
 
 

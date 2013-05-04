@@ -272,9 +272,7 @@ void quad_batch_draw::add_animated_billboard(point const &pos, point const &view
 
 void quad_batch_draw::draw() const {
 
-	if (verts.empty()) return;
-	verts.front().set_state();
-	glDrawArrays(GL_TRIANGLES, 0, verts.size());
+	if (!verts.empty()) {draw_verts(verts, GL_TRIANGLES);}
 }
 
 
@@ -366,9 +364,7 @@ void vbo_block_manager_t<vert_type_t>::render_range(int gl_type, unsigned six, u
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::draw_no_vbos(int gl_type) const { // unused
 
-	if (pts.empty()) return;
-	pts.front().set_state();
-	glDrawArrays(gl_type, 0, (unsigned)pts.size());
+	if (!pts.empty()) {draw_verts(pts, gl_type);}
 }
 
 template< typename vert_type_t >

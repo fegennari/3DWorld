@@ -545,8 +545,7 @@ void draw_stars(float alpha) {
 		}
 		pts.push_back(vert_color(stars[i].pos, color));
 	}
-	pts.front().set_state();
-	glDrawArrays(0, 0, pts.size());
+	draw_verts(pts, GL_POINTS);
 	s.end_shader();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
@@ -894,7 +893,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 	}
 	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
-	qbd.add_billboard(p, camera, up_vector, c, 4.0*r, 4.0*r, 0, 0, 1, 1, MIN_PARTICLE_FILL); // FIXME: cleanup draw_billboard()
+	qbd.add_billboard(p, camera, up_vector, c, 4.0*r, 4.0*r, 0, 0, 1, 1, MIN_PARTICLE_FILL);
 }
 
 

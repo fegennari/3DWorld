@@ -553,7 +553,7 @@ public:
 
 	void draw_range(unsigned beg_ix, unsigned end_ix) const {
 		assert(beg_ix <= end_ix && end_ix <= grass.size());
-		if (beg_ix < end_ix) glDrawArrays(GL_TRIANGLES, 3*beg_ix, 3*(end_ix - beg_ix)); // nonempty segment
+		if (beg_ix < end_ix) {glDrawArrays(GL_TRIANGLES, 3*beg_ix, 3*(end_ix - beg_ix));} // nonempty segment
 	}
 
 	static void setup_shaders(shader_t &s, bool distant) { // per-pixel dynamic lighting

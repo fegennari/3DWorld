@@ -303,8 +303,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			verts[3*s+1] = vert_norm_tc(vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), 0.0); // normalize?
 			verts[3*s+2] = vert_norm_tc(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), 0.0); // normalize?
 		}
-		verts.front().set_state();
-		glDrawArrays(GL_TRIANGLES, 0, verts.size());
+		draw_verts(verts, GL_TRIANGLES);
 #else
 		glBegin(GL_TRIANGLES);
 
@@ -333,8 +332,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			verts[2*S+0] = vert_norm_tc(vpn.p[(s<<1)+0], normal, (1.0 - S*ndiv_inv), 0.0);
 			verts[2*S+1] = vert_norm_tc(vpn.p[(s<<1)+1], normal, (1.0 - S*ndiv_inv), 1.0);
 		}
-		verts.front().set_state();
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, verts.size());
+		draw_verts(verts, GL_TRIANGLE_STRIP);
 	}
 	if (draw_sides_ends != 0) {
 		float const r[2] = {radius1, radius2};
@@ -684,9 +682,12 @@ void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, floa
 	glDepthMask(GL_FALSE);
 	point const camera(get_camera_pos());
 	select_texture(flare_tex);
-	(camera - pos).do_glNormal();
 	glBegin(GL_TRIANGLES);
-	draw_billboard(xlate, (camera - pos + xlate), up_vector, xsize, ysize);
+	vector3d const vdir(camera - pos); // z
+	vector3d const v1((cross_product(vdir, up_vector).get_norm())*xsize); // x (what if colinear?)
+	vector3d const v2(cross_product(v1, vdir).get_norm()*ysize); // y
+	vdir.do_glNormal();
+	draw_billboard_quad(xlate, v1, v2); // draw as quad (2 triangles)
 	glEnd();
 	glDepthMask(GL_TRUE);
 	glDisable(GL_TEXTURE_2D);
@@ -748,16 +749,6 @@ void draw_billboard_quad(point const &pos, vector3d const &dx, vector3d const &d
 		glTexCoord2f(t[v[i]][0], t[v[i]][1]);
 		(pos + dx*(2.0*p[v[i]][0] - 1.0) + dy*(2.0*p[v[i]][1] - 1.0)).do_glVertex();
 	}
-}
-
-
-// Note: drawn as triangles
-void draw_billboard(point const &pos, point const &viewer, vector3d const &up_dir, float xsize, float ysize) {
-
-	vector3d const vdir(viewer - pos); // z
-	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // x (what if colinear?)
-	vector3d const v2(cross_product(v1, vdir).get_norm()*ysize); // y
-	draw_billboard_quad(pos, v1, v2); // draw as quad (2 triangles)
 }
 
 
