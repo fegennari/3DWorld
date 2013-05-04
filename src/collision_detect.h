@@ -98,7 +98,6 @@ public:
 	void add_as_fixed_cobj();
 	int  add_coll_cobj();
 	void re_add_coll_cobj(int index, int remove_old=1, int dhcm=0);
-	bool subdiv_fixed_cube(coll_obj_group &cobjs);
 	bool subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cube, bool include_polys);
 	int  intersects_cobj(coll_obj const &c, float toler=0.0) const;
 	int  is_anchored() const;

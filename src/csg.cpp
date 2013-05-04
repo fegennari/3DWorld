@@ -959,43 +959,6 @@ void coll_obj_group::process_negative_shapes() { // negtive shapes should be non
 }
 
 
-bool coll_obj::subdiv_fixed_cube(coll_obj_group &cobjs) {
-
-	assert(type == COLL_CUBE);
-	if (platform_id >= 0 || destroy >= SHATTERABLE) return 0; // don't subdivide platforms or shatterable/explodeable cubes
-	float const abs_dmax(get_cube_dmax());
-	int maxdim(0);
-	float dmax(0.0);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		float const len(fabs(d[i][1] - d[i][0]));
-
-		if (i == 0 || len > dmax) {
-			maxdim = i;
-			dmax   = len;
-		}
-	}
-	if (dmax > abs_dmax) { // large cube - split it
-		unsigned char const surfs(cp.surfs);
-		unsigned const ndiv(max((unsigned)2, unsigned(dmax/abs_dmax + 0.5)));
-		float const d0(d[maxdim][0]), d1(d[maxdim][1]);
-
-		for (unsigned i = 0; i < ndiv; ++i) {
-			for (unsigned j = 0; j < 2; ++j) {
-				d[maxdim][j] = ((i+j == ndiv) ? d1 : (d0 + ((i+j)*dmax)/ndiv)); // have to be exact to avoid rounding errors
-			}
-			if (i != 0)      cp.surfs |= EFLAGS[maxdim][0]; // remove interior edges
-			if (i != ndiv-1) cp.surfs |= EFLAGS[maxdim][1];
-			id       = (unsigned)cobjs.size();
-			cobjs.push_back(*this);
-			cp.surfs = surfs; // restore edge flags
-		}
-		return 1;
-	}
-	return 0;
-}
-
-
 unsigned get_closest_val_index(float val, vector<double> const &sval) {
 
 	for (unsigned i = 0; i < sval.size(); ++i) { // inefficient, assumes sval is small
