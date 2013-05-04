@@ -1287,7 +1287,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			float const sz(5.0*o_radius);
 			float const dmin(min(min((cobj.d[ds][1] - obj.pos[ds]), (obj.pos[ds] - cobj.d[ds][0])),
 					                min((cobj.d[dt][1] - obj.pos[dt]), (obj.pos[dt] - cobj.d[dt][0]))));
-			if (dmin > sz) {gen_decal((obj.pos - norm*o_radius), sz, norm, FLARE3_TEX, index, 0.75, BLACK);} // explosion
+			if (dmin > sz) {gen_decal((obj.pos - norm*o_radius), sz, norm, FLARE3_TEX, index, 0.75, BLACK, 0, 1);} // explosion
 		}
 		obj.disable();
 	}

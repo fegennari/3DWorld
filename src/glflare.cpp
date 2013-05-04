@@ -62,7 +62,7 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 	glEnable(GL_TEXTURE_2D);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_DITHER);
-	glEnable(GL_BLEND);
+	enable_blend();
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	// view_dir = normalize(at-from)
@@ -102,8 +102,8 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 	}
 	if (bound_to) glEnd();
 	glEnable(GL_DEPTH_TEST);
-	glDisable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	disable_blend();
+	set_std_blend_mode();
 	glEnable(GL_LIGHTING);
 	glDisable(GL_TEXTURE_2D);
 	//glEnable(GL_DITHER);

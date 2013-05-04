@@ -2654,7 +2654,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		if (SHOW_SHIELDS && show_shields()) { // draw shields if recently hit
 			glPopMatrix();
 			glPushMatrix();
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+			set_additive_blend_mode();
 			glDepthFunc(GL_LEQUAL);
 			assert(last_hit <= SHIELDS_TIME);
 			colorRGBA color_alpha(disabled() ? YELLOW : GREEN);
@@ -2685,7 +2685,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			draw_sphere_vbo_back_to_front(all_zeros, ssize, 3*ndiv/2, has_hit_dir); // partial sphere?
 			glDisable(GL_CULL_FACE);
 			clear_emissive_color();
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			set_std_blend_mode();
 
 			if (has_hit_dir) {
 				end_texture();

@@ -308,7 +308,7 @@ void lightning::draw() const {
 	float const lscale(LITNING_LINEAR_I);
 	glEnable(GL_LINE_SMOOTH);
 	enable_blend();
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	set_additive_blend_mode();
 
 	for (unsigned i = 0; i < path.size(); ++i) {
 		assert(!path[i].points.empty());
@@ -316,7 +316,7 @@ void lightning::draw() const {
 		path[i].draw(0);
 	}
 	if (animate2) add_dynamic_light(7.8*lscale, litning_pos, LITN_C);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	set_std_blend_mode();
 	disable_blend();
 	glDisable(GL_LINE_SMOOTH);
 }

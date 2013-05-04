@@ -695,7 +695,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 			glDepthFunc(GL_EQUAL);
 			glStencilFunc(GL_EQUAL, 0, ~0);
 			glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE); //glBlendFunc(GL_ONE, GL_ONE);
+			set_additive_blend_mode(); //glBlendFunc(GL_ONE, GL_ONE);
 			glCullFace(GL_BACK);
 			glDisable(GL_CULL_FACE);
 
@@ -705,7 +705,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 			glDepthMask(GL_TRUE);
 			glDepthFunc(GL_LEQUAL);
 			glDisable(GL_STENCIL_TEST);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			set_std_blend_mode();
 
 			if (display_mode & 0x10) { // testing
 				set_emissive_color(GREEN); // will be reset

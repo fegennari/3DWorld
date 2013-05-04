@@ -12,6 +12,8 @@
 bool check_gl_error(unsigned loc_id);
 void enable_blend();
 void disable_blend();
+void set_std_blend_mode();
+void set_additive_blend_mode();
 void set_array_client_state(bool va, bool tca, bool na, bool ca);
 void set_lighted_sides(int num);
 void enable_point_specular();
@@ -246,7 +248,7 @@ bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 				   float r, float den, float dark, float dam, int src, int dt, bool as);
 void gen_smoke(point const &pos);
 bool gen_fire(point const &pos, float size, int source, bool allow_close=0, bool is_static=0, float light_bwidth=1.0, float intensity=1.0);
-void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, int cid=-1, float init_alpha=1.0, colorRGBA const &color=BLACK, bool is_glass_=0);
+void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, int cid=-1, float init_alpha=1.0, colorRGBA const &color=BLACK, bool is_glass=0, bool rand_angle=0);
 void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade=0);
 int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,
 	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment);

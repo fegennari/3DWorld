@@ -268,6 +268,15 @@ void disable_blend() {
 }
 
 
+void set_std_blend_mode() {
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void set_additive_blend_mode() {
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+}
+
+
 void set_lighted_sides(int num) {
 
 	assert(num == 1 || num == 2);
@@ -332,7 +341,7 @@ void set_gl_params() {
 	setup_fog_coord();
 	reset_fog();
 	glDepthFunc(GL_LESS);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	set_std_blend_mode();
 	glShadeModel(GL_SMOOTH);
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
     glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, lmodel_localviewer);

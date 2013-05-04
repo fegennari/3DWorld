@@ -148,7 +148,7 @@ void dwobject::add_obj_dynamic_light(int index) const {
 		add_dynamic_light(0.5, pos, ORANGE);
 		break;
 	case SEEK_D:
-		add_dynamic_light(0.6, pos, RED);
+		add_dynamic_light(0.6, pos, colorRGBA(1.0, 0.25, 0.0, 1.0)); // red-orange
 		break;
 	case LANDMINE:
 		if (time > 5) {

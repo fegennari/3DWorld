@@ -924,7 +924,8 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 		draw_color.set_valid_color();
 	}
 	draw_color.alpha = alpha_val;
-	vector3d const upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
+	vector3d upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
+	if (rot_angle != 0.0) {rotate_vector3d(orient, rot_angle, upv);}
 	qbd.add_billboard((cur_pos + 0.001*orient), (cur_pos + orient), upv, draw_color, radius, radius); // move slightly away from the object to blend properly with cracks
 }
 
@@ -1130,10 +1131,10 @@ void draw_cracks_decals_smoke_and_fires() {
 		set_color(BLACK);
 		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
 	}
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	set_additive_blend_mode();
 	order_vect_t fire_order;
 	draw_billboarded_objs(fires, fire_order, FIRE_TEX); // animated fire textured quad
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	set_std_blend_mode();
 	s.end_shader();
 }
 
@@ -1197,7 +1198,7 @@ void draw_sparks() {
 	enable_blend();
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.01);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	set_additive_blend_mode();
 	select_texture(FLARE2_TEX);
 	quad_batch_draw qbd;
 	draw_objects(sparks, qbd);
@@ -1205,7 +1206,7 @@ void draw_sparks() {
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
 	glDisable(GL_ALPHA_TEST);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	set_std_blend_mode();
 	disable_blend();
 	set_fill_mode();
 	sparks.clear();

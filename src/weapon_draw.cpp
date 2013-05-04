@@ -645,9 +645,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
 				glEnable(GL_ALPHA_TEST);
 				glAlphaFunc(GL_GREATER, 0.001);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+				set_additive_blend_mode();
 				select_texture(FLARE1_TEX);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				set_std_blend_mode();
 				draw_tquad(size, size, 0.0, 1);
 				glDisable(GL_ALPHA_TEST);
 				glDisable(GL_TEXTURE_2D);
@@ -662,7 +662,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_emissive_color_only(ORANGE);
 				glEnable(GL_ALPHA_TEST);
 				glAlphaFunc(GL_GREATER, 0.001);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+				set_additive_blend_mode();
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
 				point const translates[2] = {point(-0.9*rdx, -0.9*rdy, 0.124), point(1.9*rdx, 1.9*rdy, -0.002)};
@@ -676,7 +676,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					glPopMatrix();
 				}
 				set_color_e(BLACK);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				set_std_blend_mode();
 				glDisable(GL_ALPHA_TEST);
 				glDisable(GL_TEXTURE_2D);
 			}
@@ -831,7 +831,7 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 	}
 	set_color(LITN_C);
 	set_color_e(LITN_C);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	set_additive_blend_mode();
 
 	for (unsigned i = 0; i < unsigned((rand()%6)-2); ++i) { // do we really want to call rand() every time?
 		bool const hit(min_i >= CAMERA_ID && rand_float() < 0.6);
@@ -861,7 +861,7 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 		glEnd();
 		if (hit) glLineWidth(1.0);
 	}
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	set_std_blend_mode();
 	set_color_e(BLACK);
 }
 

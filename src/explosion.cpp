@@ -220,7 +220,6 @@ void draw_blasts() {
 	bool const universe(world_mode == WMODE_UNIVERSE);
 	glDisable(GL_LIGHTING);
 	enable_blend();
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Note: questionable, maybe should be set per explosion type
 	//glEnable(GL_ALPHA_TEST);
 	//glAlphaFunc(GL_GREATER, 0.05);
 	shader_t s;
@@ -262,6 +261,8 @@ void draw_blasts() {
 			}
 			continue;
 		}
+		if (begin_type) {set_additive_blend_mode();}
+
 		switch (br.type) {
 		case ETYPE_FIRE:
 		case ETYPE_PLASMA:
@@ -327,13 +328,13 @@ void draw_blasts() {
 		default:
 			assert(0);
 		} // switch
+		if (end_type) {set_std_blend_mode();}
 	} // for i
 	s.end_shader();
 	glDisable(GL_TEXTURE_2D);
 	//glDisable(GL_ALPHA_TEST);
 	disable_blend();
 	glEnable(GL_LIGHTING);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//PRINT_TIME("Draw Blasts");
 }
 
