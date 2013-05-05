@@ -890,26 +890,33 @@ colorRGBA fire::get_fire_color() const { // unused
 }
 
 
-void fire::draw(quad_batch_draw &qbd) const {
+void fire::draw(quad_batch_draw &qbd, int &last_in_smoke) const {
 
 	assert(status);
 	point const pos2(pos + point(0.0, 0.0, 2.0*radius));
+	int const in_smoke((get_smoke_at_pos(get_camera_pos()) || get_smoke_at_pos(pos2)) != 0.0);
+
+	if (in_smoke != last_in_smoke) {
+		qbd.draw_and_clear();
+		if (in_smoke) {set_std_blend_mode();} else {set_additive_blend_mode();}
+		last_in_smoke = in_smoke;
+	}
 	qbd.add_animated_billboard(pos2, get_camera_pos(), up_vector, WHITE, 4.0*radius, 4.0*radius, (time&15)/16.0);
 }
 
 
-void decal_obj::draw(quad_batch_draw &qbd) const {
+void decal_obj::draw(quad_batch_draw &qbd, int &last_tid) const {
 
 	assert(status);
 	point const cur_pos(get_pos());
 	if (dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0) return; // back face culling
 	assert(tid >= 0);
 	
-	if (qbd.cur_tid >= 0 && tid != qbd.cur_tid) { // texture change, flush the qbd
-		select_texture(qbd.cur_tid);
+	if (last_tid >= 0 && tid != last_tid) { // texture change, flush the qbd
+		select_texture(last_tid);
 		qbd.draw_and_clear();
 	}
-	qbd.cur_tid = tid;
+	last_tid = tid;
 	float const alpha_val(get_alpha());
 	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return; // distance culling
 	colorRGBA draw_color(color);
@@ -968,28 +975,6 @@ void draw_part_clouds(vector<particle_cloud> const &pc, colorRGBA const &color, 
 	glDisable(GL_ALPHA_TEST);
 	disable_flares();
 	//disable_multitex(1);
-}
-
-
-template<typename S, typename T> void draw_billboarded_objs(obj_vector_t<T> const &objs, vector<S> &order, int tid) {
-
-	get_draw_order(objs, order);
-	if (order.empty()) return;
-	enable_blend();
-	set_color(BLACK);
-	glDisable(GL_LIGHTING);
-	quad_batch_draw qbd(tid);
-
-	for (unsigned j = 0; j < order.size(); ++j) {
-		unsigned const i(order[j].second);
-		assert(i < objs.size());
-		objs[i].draw(qbd);
-	}
-	select_texture(qbd.cur_tid);
-	qbd.draw();
-	disable_blend();
-	glDisable(GL_TEXTURE_2D);
-	glEnable(GL_LIGHTING);
 }
 
 
@@ -1122,18 +1107,39 @@ void draw_cracks_decals_smoke_and_fires() {
 	if (decals.empty() && part_clouds.empty() && fires.empty()) return; // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1); // min_alpha = 0.1-0.4
+	set_color(BLACK);
 	tid_dist_order_vect_t decal_order;
-	glDepthMask(GL_FALSE);
-	draw_billboarded_objs(decals, decal_order, -1); // texture determined by individual decals
-	glDepthMask(GL_TRUE);
-
+	get_draw_order(decals, decal_order);
+	
+	if (!decal_order.empty()) {
+		glDepthMask(GL_FALSE);
+		glDisable(GL_LIGHTING);
+		enable_blend();
+		quad_batch_draw qbd;
+		int last_tid(-1);
+		for (unsigned j = 0; j < decal_order.size(); ++j) {decals[decal_order[j].second].draw(qbd, last_tid);}
+		select_texture(last_tid);
+		qbd.draw();
+		glDepthMask(GL_TRUE);
+	}
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
-		set_color(BLACK);
 		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
 	}
-	set_additive_blend_mode(); // Note: incorrect when viewed through smoke
 	order_vect_t fire_order;
-	draw_billboarded_objs(fires, fire_order, FIRE_TEX); // animated fire textured quad
+	get_draw_order(fires, fire_order);
+	
+	if (!fire_order.empty()) {
+		glDisable(GL_LIGHTING);
+		enable_blend();
+		quad_batch_draw qbd;
+		select_texture(FIRE_TEX);
+		int last_in_smoke(-1);
+		for (unsigned j = 0; j < fire_order.size(); ++j) {fires[fire_order[j].second].draw(qbd, last_in_smoke);}
+		qbd.draw();
+	}
+	disable_blend();
+	glDisable(GL_TEXTURE_2D);
+	glEnable(GL_LIGHTING);
 	set_std_blend_mode();
 	s.end_shader();
 }

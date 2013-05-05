@@ -115,7 +115,7 @@ struct fire : public basic_physics_obj { // size = 60
 
 	void gen(point const &p, float size, float intensity, int src, bool is_static_, float light_bw);
 	colorRGBA get_fire_color() const;
-	void draw(quad_batch_draw &qbd) const;
+	void draw(quad_batch_draw &qbd, int &last_in_smoke) const;
 	void apply_physics(unsigned i);
 	void extinguish();
 };
@@ -132,7 +132,7 @@ struct decal_obj : public basic_physics_obj { // size = 76
 
 	decal_obj() : is_glass(0), cid(-1), tid(-1), radius(0.0), alpha(1.0), rot_angle(0.0), color(BLACK) {}
 	void gen(point const &p, float r, float ang, vector3d const &o, int tid_, int cid_=-1, float init_alpha=1.0, colorRGBA const &color_=BLACK, bool is_glass_=0);
-	void draw(quad_batch_draw &qbd) const;
+	void draw(quad_batch_draw &qbd, int &last_tid) const;
 	bool is_on_cobj(int cobj) const;
 	void check_cobj();
 	void apply_physics(unsigned i);

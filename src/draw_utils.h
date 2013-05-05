@@ -64,9 +64,7 @@ typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
 struct quad_batch_draw { // Note: might want an indexed version of this
 
 	vector<vert_norm_tc_color> verts;
-	int cur_tid;
 
-	quad_batch_draw(int cur_tid_=-1) : cur_tid(cur_tid_) {}
 	void add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n=plus_z, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 	void add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n=plus_z,
 		float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
