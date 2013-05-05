@@ -1131,7 +1131,7 @@ void draw_cracks_decals_smoke_and_fires() {
 		set_color(BLACK);
 		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
 	}
-	set_additive_blend_mode();
+	set_additive_blend_mode(); // Note: incorrect when viewed through smoke
 	order_vect_t fire_order;
 	draw_billboarded_objs(fires, fire_order, FIRE_TEX); // animated fire textured quad
 	set_std_blend_mode();

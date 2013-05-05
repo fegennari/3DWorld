@@ -329,22 +329,8 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 			bool const draw_ends(!(cp.surfs & 1)), draw_sides_ends(draw_ends && tid < 0);
 			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader);}
-
-			if (shader && !draw_ends && !glIsEnabled(GL_CULL_FACE)) { // Note: can probably skip this case if two-sided lighting is used
-				int const faces[2] = {GL_FRONT, GL_BACK};
-				float const norm_scales[2] = {-1.0, 1.0};
-				glEnable(GL_CULL_FACE);
-
-				for (unsigned d = 0; d < 2; ++d) {
-					glCullFace(faces[d]);
-					shader->add_uniform_float("normal_scale", norm_scales[d]);
-					draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, draw_sides_ends); // Note: using texgen, not textured
-				}
-				glDisable(GL_CULL_FACE);
-			}
-			else {
-				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, draw_sides_ends); // Note: using texgen, not textured
-			}
+			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, draw_sides_ends, !draw_ends); // Note: using texgen, not textured
+			
 			if (draw_ends && tid >= 0) { // draw ends with different texture matrix
 				select_texture(tid); // reset texture to fix a texgen bug
 				set_poly_texgen(tid, (points[1] - points[0]).get_norm(), shader);
