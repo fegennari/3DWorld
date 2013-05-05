@@ -1,6 +1,7 @@
 // http://www.opengl.org/resources/features/KilgardTechniques/LensFlare/
 #include "function_registry.h"
 #include "textures_3dw.h"
+#include "draw_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,35 +79,28 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 	// dy = cross(dx,view_dir)
 	vector3d const dy(cross_product(dx2, dx).get_norm());
 	float const cscale(intensity*pow((double)max(brightness, 0.6f), 1.5));
+	quad_batch_draw qbd;
 
 	for (int i = start_ix; i < num_flares; i++) {
 		float const scale(flare[i].scale * global_scale * size);
 		vector3d const sx(dx*scale), sy(dy*scale);
 		colorRGBA c(flare[i].color);
-
-		for (unsigned d = 0; d < 3; ++d) {
-			c[d] += (sun_color[d] - SUN_LT_C[d]);
-			CLIP_TO_01(c[d]);
-		}
-		c *= cscale;
-		c.do_glColor();
+		UNROLL_3X(c[i_] = cscale*CLIP_TO_01(c[i_] + (sun_color[i_] - SUN_LT_C[i_]));)
 
 		// Note logic below to eliminate duplicate texture binds.
 		if (flare[i].type < 0 || bound_to != flareTex[flare[i].type]) {
-			if (bound_to) glEnd();
+			qbd.draw_and_clear();
 			bound_to = ((flare[i].type < 0) ? shineTex[0] : flareTex[flare[i].type]);
-			glBindTexture(GL_TEXTURE_2D, bound_to);
-			glBegin(GL_TRIANGLES);
+			bind_2d_texture(bound_to);
 		}
-		draw_billboard_quad((axis*flare[i].loc + center), sx, sy);
+		qbd.add_quad_dirs((axis*flare[i].loc + center), sx, sy, c);
 	}
-	if (bound_to) glEnd();
+	qbd.draw();
 	glEnable(GL_DEPTH_TEST);
 	disable_blend();
 	set_std_blend_mode();
 	glEnable(GL_LIGHTING);
 	glDisable(GL_TEXTURE_2D);
-	//glEnable(GL_DITHER);
 }
 
 

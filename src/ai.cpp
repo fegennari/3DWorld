@@ -1165,7 +1165,7 @@ void init_smiley_texture(int smiley_id) {
 		setup_texture(sstates[smiley_id].tid, GL_MODULATE, 0, 0, 0);
 	}
 	else {
-		glBindTexture(GL_TEXTURE_2D, sstates[smiley_id].tid);
+		bind_2d_texture(sstates[smiley_id].tid);
 	}
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SMILEY_TEX_SIZE, SMILEY_TEX_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, tdata);
 }
@@ -1369,7 +1369,7 @@ void select_smiley_texture(int smiley_id) {
 	}
 	assert(glIsTexture(sstates[smiley_id].tid));
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, sstates[smiley_id].tid);
+	bind_2d_texture(sstates[smiley_id].tid);
 }
 
 

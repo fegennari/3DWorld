@@ -224,7 +224,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	set_red_only(0);
 
 	if (!USE_CLOUD_FBO) { // render clouds to texture
-		glBindTexture(GL_TEXTURE_2D, cloud_tid);
+		bind_2d_texture(cloud_tid);
 		glReadBuffer(GL_BACK);
 		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize); // copy the frame buffer to the bound texture
 	}

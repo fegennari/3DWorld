@@ -22,6 +22,9 @@ No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
 
 16-bit normals, tangents, and TCs
+glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
+ - grass
+ - pine tree leaves
 
  E: 2.9 process_groups()
  H: 2.1 setup_object_render_data()

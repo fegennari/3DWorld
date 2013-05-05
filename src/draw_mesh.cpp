@@ -360,7 +360,7 @@ void draw_mesh_vbo() { // Note: uses fixed function pipeline
 	}
 	vert_norm::set_vbo_arrays();
 
-	for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
+	for (int i = 0; i < MESH_Y_SIZE-1; ++i) { // use glMultiDrawArrays()?
 		glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
 	}
 	bind_vbo(0);
@@ -744,7 +744,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	set_active_texture(0);
 
 	if (reflection_tid) {
-		glBindTexture(GL_TEXTURE_2D, reflection_tid);
+		bind_2d_texture(reflection_tid);
 		rcolor = WHITE;
 	}
 	else {
