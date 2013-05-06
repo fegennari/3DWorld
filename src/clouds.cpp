@@ -294,9 +294,7 @@ void cloud_manager_t::draw() {
 		cube_t const bcube(get_bcube());
 		float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
 		float const xy_exp((cloud_top - frustum_z)/(cloud_bot - frustum_z));
-		glBegin(GL_TRIANGLES);
 		draw_billboard_quad(point(camera.x, camera.y, cloud_top), point(-xy_exp*cloud_xy, 0.0, 0.0), point(0.0, xy_exp*cloud_xy, 0.0));
-		glEnd();
 		s.end_shader();
 		disable_flares();
 	}

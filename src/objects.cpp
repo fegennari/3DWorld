@@ -349,7 +349,11 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		break;
 
 	case COLL_POLYGON:
-		draw_extruded_polygon(tid, shader, 1);
+		{
+			bool in_tris(0);
+			draw_extruded_polygon(tid, shader, 1, in_tris);
+			if (in_tris) {glEnd();}
+		}
 		break;
 	}
 }

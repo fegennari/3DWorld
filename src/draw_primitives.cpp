@@ -669,13 +669,11 @@ void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, floa
 	glDepthMask(GL_FALSE);
 	point const camera(get_camera_pos());
 	select_texture(flare_tex);
-	glBegin(GL_TRIANGLES);
 	vector3d const vdir(camera - pos); // z
 	vector3d const v1((cross_product(vdir, up_vector).get_norm())*xsize); // x (what if colinear?)
 	vector3d const v2(cross_product(v1, vdir).get_norm()*ysize); // y
 	vdir.do_glNormal();
 	draw_billboard_quad(xlate, v1, v2); // draw as quad (2 triangles)
-	glEnd();
 	glDepthMask(GL_TRUE);
 	glDisable(GL_TEXTURE_2D);
 }
@@ -731,11 +729,13 @@ void draw_billboard_quad(point const &pos, vector3d const &dx, vector3d const &d
 	float const p[4][2] = {{0,0}, {0,1}, {1,1}, {1,0}};
 	float const t[4][2] = {{tx1,ty1}, {tx1,ty2}, {tx2,ty2}, {tx2,ty1}};
 	unsigned const v[6] = {0,2,1, 0,3,2};
+	glBegin(GL_TRIANGLES);
 
 	for (unsigned i = 0; i < 6; ++i) {
 		glTexCoord2f(t[v[i]][0], t[v[i]][1]);
 		(pos + dx*(2.0*p[v[i]][0] - 1.0) + dy*(2.0*p[v[i]][1] - 1.0)).do_glVertex();
 	}
+	glEnd();
 }
 
 

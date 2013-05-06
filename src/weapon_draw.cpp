@@ -919,7 +919,9 @@ void show_crosshair(int in_zoom) {
 		glEnd();
 		glPointSize(1.0);
 	}
-	draw_point(point(0.0, 0.0, zval));
+	glBegin(GL_POINTS);
+	point(0.0, 0.0, zval).do_glVertex();
+	glEnd();
 	disable_blend();
 	glDisable(GL_POINT_SMOOTH);
 	glDisable(GL_LINE_SMOOTH);

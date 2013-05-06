@@ -141,7 +141,7 @@ void scale_color_uw(colorRGBA &color, point const &pos) {
 }
 
 
-void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale,
+void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, bool &in_tris,
 	float thickness=0.0, int tid=-1, colorRGBA const &color=WHITE, bool thick_poly=0)
 {
 	/*
@@ -171,9 +171,10 @@ void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, fl
 		cobj.points[1] = (pos - p1);
 		cobj.points[2] = (pos + p2);
 		cobj.norm      = get_poly_norm(cobj.points);
-		cobj.draw_extruded_polygon(tid, NULL, 0);
+		cobj.draw_extruded_polygon(tid, NULL, 0, in_tris);
 	}
 	else {
+		assert(in_tris);
 		cross_product(p2, p1).get_norm().do_glNormal();
 		float const ts(123.456*radius), tt(654.321*radius);
 		if (tscale != 0.0) glTexCoord2f(ts, tt);
@@ -499,9 +500,11 @@ void draw_group(obj_group &objg, shader_t &s) {
 	else { // small objects
 		colorRGBA const &base_color(object_types[type].color);
 		quad_batch_draw particle_qbd;
+		int last_tid(-1);
+		bool in_tris(0);
 
 		if (type == SHRAPNEL) {
-			glBegin(GL_TRIANGLES);
+			glBegin(GL_TRIANGLES); in_tris = 1;
 		}
 		else if (type == PARTICLE) {
 			glEnable(GL_ALPHA_TEST);
@@ -517,7 +520,12 @@ void draw_group(obj_group &objg, shader_t &s) {
 
 			if (type == FRAGMENT) {
 				tid = -obj.coll_id - 2; // should we sort fragments by texture id?
-				do_texture = select_texture(tid, 1, 1);
+
+				if (tid != last_tid) {
+					if (in_tris) {glEnd(); in_tris = 0;}
+					do_texture = select_texture(tid, 1, 1);
+					last_tid = tid;
+				}
 				UNROLL_3X(color2[i_] = obj.init_dir[i_];)
 				color2.alpha = obj.vdeform.y;
 			}
@@ -552,7 +560,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 				break;
 			case SHRAPNEL:
 				set_emissive_color_obj(get_glow_color(obj, 1));
-				draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0);
+				draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, in_tris);
 				break;
 			case PARTICLE:
 				{
@@ -573,9 +581,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 				if (obj.vdeform.z > 0.0) { // shatterable - use triangle
 					set_color_v2(color2, obj.status);
 					bool const use_thick(tid < 0); // when not textured
-					if (!use_thick) glBegin(GL_TRIANGLES); // Note: needs 2-sided lighting
-					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0), 0.2*tradius, tid, color2, use_thick); // obj.vdeform.z = tscale
-					if (!use_thick) glEnd();
+					if (!in_tris) {glBegin(GL_TRIANGLES); in_tris = 1;} // Note: needs 2-sided lighting
+					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0), in_tris, 0.2*tradius, tid, color2, use_thick); // obj.vdeform.z = tscale
 					break;
 				}
 				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 2);
@@ -592,9 +599,10 @@ void draw_group(obj_group &objg, shader_t &s) {
 				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 0);
 			} // switch (type)
 		} // for j
+		if (in_tris) {glEnd(); in_tris = 0;}
+
 		if (type == SHRAPNEL) {
 			clear_emissive_color();
-			glEnd();
 		}
 		else if (type == PARTICLE) {
 			particle_qbd.draw();
@@ -1283,17 +1291,15 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 		if (angle != 0.0) rotate_about(angle, orient);
 	}
 	orient.do_glNormal();
-	glBegin(GL_TRIANGLES); // Note: needs 2-sided lighting
+	vert_wrap_t points[3*N_STAR_POINTS];
 
-	for (int i = N_STAR_POINTS-1; i >= 0; --i) {
-		int ii((i == 0) ? (N_STAR_POINTS<<1)-1 : (i<<1)-1);
-		star_pts[ii].do_glVertex();
-		ii = (i << 1);
-		star_pts[ii].do_glVertex();
-		++ii;
-		star_pts[ii].do_glVertex();
+	for (int i = N_STAR_POINTS-1, ix = 0; i >= 0; --i) { // Note: needs 2-sided lighting
+		points[ix++] = star_pts[(i == 0) ? (N_STAR_POINTS<<1)-1 : (i<<1)-1];
+		points[ix++] = star_pts[i<<1];
+		points[ix++] = star_pts[(i<<1)+1];
 	}
-	glEnd();
+	points[0].set_state();
+	glDrawArrays(GL_TRIANGLES, 0, 3*N_STAR_POINTS);
 	glPopMatrix();
 }
 

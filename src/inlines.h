@@ -535,14 +535,6 @@ template<typename T> inline void draw_line(pointT<T> const &p1, pointT<T> const 
 }
 
 
-template<typename T> inline void draw_point(pointT<T> const &p) {
-
-	glBegin(GL_POINTS);
-	p.do_glVertex();
-	glEnd();
-}
-
-
 template<typename T> inline void rotate_vector3d(pointT<T> const &vrot, double angle, pointT<T> &vout) { // rotate vout by angle about vrot
 	rotate_vector3d(vout, vrot, angle, vout);
 }

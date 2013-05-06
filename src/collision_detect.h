@@ -152,7 +152,7 @@ public:
 	void draw_coll_cube(int do_fill, int tid, shader_t *shader) const;
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t *shader) const;
 	void draw_polygon(int tid, point const *points, int npoints, vector3d const &normal, bool calc_normal_dir, shader_t *shader, bool &in_tris) const;
-	void draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir) const;
+	void draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir, bool &in_tris) const;
 };
 
 

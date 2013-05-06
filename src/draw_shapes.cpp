@@ -224,11 +224,10 @@ void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d 
 }
 
 
-void coll_obj::draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir) const {
+void coll_obj::draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir, bool &in_tris) const {
 
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	float const thick(fabs(thickness));
-	bool in_tris(0);
 	
 	if (thick <= MIN_POLY_THICK) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
 		draw_polygon(tid, points, npoints, norm, calc_normal_dir, shader, in_tris);
@@ -298,7 +297,6 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal
 			}
 		}
 	} // end thick case
-	if (in_tris) {glEnd();}
 }
 
 
