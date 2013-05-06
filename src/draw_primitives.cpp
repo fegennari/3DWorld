@@ -709,7 +709,7 @@ void draw_quad_from_4_pts(point const *const pts) {
 void draw_tquad(float xsize, float ysize, float z, bool texture, float tx1, float ty1, float tx2, float ty2) {
 
 	glBegin(GL_QUADS);
-	draw_one_tquad(-xsize, -ysize, xsize, ysize, z, texture);
+	draw_one_tquad(-xsize, -ysize, xsize, ysize, z, texture, tx1, ty1, tx2, ty2);
 	glEnd();
 }
 
@@ -724,15 +724,14 @@ void draw_one_tquad(float x1, float y1, float x2, float y2, float z, bool textur
 
 
 // Note: drawn as triangles
-void draw_billboard_quad(point const &pos, vector3d const &dx, vector3d const &dy, float tx1, float ty1, float tx2, float ty2) {
+void draw_billboard_quad(point const &pos, vector3d const &dx, vector3d const &dy) {
 
 	float const p[4][2] = {{0,0}, {0,1}, {1,1}, {1,0}};
-	float const t[4][2] = {{tx1,ty1}, {tx1,ty2}, {tx2,ty2}, {tx2,ty1}};
 	unsigned const v[6] = {0,2,1, 0,3,2};
 	glBegin(GL_TRIANGLES);
 
 	for (unsigned i = 0; i < 6; ++i) {
-		glTexCoord2f(t[v[i]][0], t[v[i]][1]);
+		glTexCoord2f(p[v[i]][0], p[v[i]][1]);
 		(pos + dx*(2.0*p[v[i]][0] - 1.0) + dy*(2.0*p[v[i]][1] - 1.0)).do_glVertex();
 	}
 	glEnd();
@@ -896,27 +895,6 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 			}
 		} // for j
 	} // for i
-	glEnd();
-}
-
-
-void draw_polygon_pts(point const *const points, int npoints) {
-
-	assert(npoints == 3 || npoints == 4);
-	unsigned const tp[6] = {0,1,2, 0,2,3};
-	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {points[tp[i]].do_glVertex();} // 1-2 triangles
-}
-
-
-void draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir) {
-
-	point pts[4];
-	int npts(0);
-	vector3d v2; // unused
-	cylinder_quad_projection(pts, cylin, view_dir, v2, npts);
-	glBegin(GL_TRIANGLES);
-	view_dir.do_glNormal();
-	draw_polygon_pts(pts, npts);
 	glEnd();
 }
 

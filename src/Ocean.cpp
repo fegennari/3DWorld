@@ -361,7 +361,7 @@ void update_incs() {
 }
 
 
-inline void set_ocean_alpha(colorRGBA &color, float &last_alpha, float zscale, int i, int j) {
+void set_ocean_alpha(colorRGBA &color, float &last_alpha, float zscale, int i, int j) {
 
 	if (FORCE_ALPHA_1) {
 		color.alpha = 1.0;
@@ -380,7 +380,7 @@ inline void set_ocean_alpha(colorRGBA &color, float &last_alpha, float zscale, i
 }
 
 
-inline void draw_vertex(int index, float x, float y, float z, colorRGBA &color, float &last_alpha, float zscale) {
+void draw_vertex(int index, float x, float y, float z, colorRGBA &color, float &last_alpha, float zscale) {
 
 	WaterVertNormal[index].do_glNormal();
 	set_ocean_alpha(color, last_alpha, zscale, int((y+Y_SCENE_SIZE)*DY_VAL_INV), int((x+X_SCENE_SIZE)*DX_VAL_INV));

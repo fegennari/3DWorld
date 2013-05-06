@@ -220,7 +220,9 @@ void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d 
 	}
 	if (!in_tris) {glBegin(GL_TRIANGLES); in_tris = 1;}
 	(calc_normal_dir ? get_norm_camera_orient(normal, get_center(points, npoints)) : normal).do_glNormal();
-	draw_polygon_pts(points, npoints);
+	assert(npoints == 3 || npoints == 4);
+	unsigned const tp[6] = {0,1,2, 0,2,3};
+	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {points[tp[i]].do_glVertex();} // 1-2 triangles
 }
 
 

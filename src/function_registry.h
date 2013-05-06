@@ -186,7 +186,7 @@ void disable_flares();
 void draw_quad_from_4_pts(point const *const pts);
 void draw_tquad(float xsize, float ysize, float z, bool texture, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z, bool texture, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
-void draw_billboard_quad(point const &pos, vector3d const &dx, vector3d const &dy, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
+void draw_billboard_quad(point const &pos, vector3d const &dx, vector3d const &dy);
 bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]);
 void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 	point const* const prev=NULL, point const *const next=NULL);
@@ -197,8 +197,6 @@ void end_line_tquad_draw();
 void draw_simple_cube(cube_t const &c, bool texture);
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, bool scale_ndiv=0,
 			   float texture_scale=1.0, bool proportional_texture=0, vector3d const *const view_dir=NULL);
-void draw_cylin_quad_proj(cylinder_3dw const &cylin, vector3d const &view_dir);
-void draw_polygon_pts(point const *const points, int npoints);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
 void free_sphere_vbos();

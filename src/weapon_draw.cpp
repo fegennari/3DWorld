@@ -666,12 +666,12 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
 				point const translates[2] = {point(-0.9*rdx, -0.9*rdy, 0.124), point(1.9*rdx, 1.9*rdy, -0.002)};
+				select_texture(FLARE2_TEX);
 				
 				for (unsigned i = 0; i < 2; ++i) {
 					translate_to(translates[i]);
 					glPushMatrix();
-					if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
-					select_texture(FLARE2_TEX);
+					if (!is_camera) {rotate_into_camera_dir(pos0, dir);} // pos0 is approximate
 					draw_tquad(8.0*radius, 8.0*radius, 0.0, 1); // can't rotate towards camera, already rotated
 					glPopMatrix();
 				}
