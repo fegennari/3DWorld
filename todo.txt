@@ -28,6 +28,7 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
  - draw_torus()
 
 Block draw for portals?
+God Rays
 
  E: 2.9 process_groups()
  H: 2.1 setup_object_render_data()

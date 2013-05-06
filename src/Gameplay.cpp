@@ -49,14 +49,14 @@ team_info *teaminfo = NULL;
 vector<bbox> team_starts;
 
 
-extern bool player_near_fire, vsync_enabled;
+extern bool vsync_enabled;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
 extern unsigned create_voxel_landscape;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_size;
-extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity;
+extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
 extern double camera_zh;
 extern point ocean, surface_pos, camera_last_pos;
 extern int coll_id[];
@@ -1352,18 +1352,19 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 	float const radius(object_types[SMILEY].radius + effect_radius);
 	point camera_pos(get_camera_pos());
 	camera_pos.z -= 0.5*camera_zh; // average/center of camera
-	
-	if (!spectate && dist_less_than(pos, camera_pos, 4.0*radius)) {
-		if (camera_mode == 1 && dist_less_than(pos, camera_pos, radius)) {
-			if (camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type)) {
-				if (type == FIRE && camera_health > 0.0 && ((rand()&63) == 0)) {gen_sound(SOUND_AGONY, pos);} // skip if player has shielding and self damage?
-			}
+
+	if (type == FIRE) {
+		float const dist_sq(p2p_dist_sq(camera_pos, pos));
+		dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
+	}
+	if (!spectate && camera_mode == 1 && dist_less_than(pos, camera_pos, radius)) { // test the player
+		if (camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type)) {
+			if (type == FIRE && camera_health > 0.0 && ((rand()&63) == 0)) {gen_sound(SOUND_AGONY, pos);} // skip if player has shielding and self damage?
 		}
-		if (type == FIRE) player_near_fire = 1;
 	}
 	obj_group const &objg(obj_groups[coll_id[SMILEY]]);
 	
-	if (objg.enabled) {		
+	if (objg.enabled) { // test the smileys
 		for (unsigned i = 0; i < objg.end_id; ++i) {
 			if (!objg.get_obj(i).disabled() && dist_less_than(pos, objg.get_obj(i).pos, radius)) {
 				// test for objects blocking the damage effects?

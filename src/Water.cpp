@@ -837,7 +837,7 @@ void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound) 
 	float const rad(min(4, (int)ceil(0.5*radius/(DX_VAL + DY_VAL)))), radsq(rad*rad);
 	int const droplet_id(coll_id[DROPLET]);
 
-	if (energy > 2.0 && droplet_id >= 0 && temperature > W_FREEZE_POINT) {
+	if (energy > 5.0 && droplet_id >= 0 && temperature > W_FREEZE_POINT) {
 		// splash size = 0.3 - rain, 2.0 - ball, 60.0 - rocket
 		float const sqrt_energy(sqrt(energy));
 		int ndrops(min(MAX_SPLASH_DROP, int((0.5 + 0.2*water_mix)*sqrt_energy)));
@@ -863,7 +863,7 @@ void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound) 
 						objg.get_obj(i).velocity = gen_rand_vector(vz*rand_uniform(0.05, 0.1), 20.0, PI_TWO);
 						vadd_rand(objg.get_obj(i).pos, 1.0*radius);
 					}
-					if (add_sound) gen_sound(SOUND_SPLASH1, pos, min(1.0, 0.1*sqrt_energy));
+					if (add_sound && energy > 10.0) {gen_sound(SOUND_SPLASH1, pos, min(1.0, 0.05*sqrt_energy));}
 				}
 			}
 		}

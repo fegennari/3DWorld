@@ -23,7 +23,7 @@ vector<delayed_sound_t> delayed_sounds;
 extern int frame_counter, iticks;
 extern float CAMERA_RADIUS;
 
-float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {1.0, 0.1, 0.1};
+float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {0.5, 0.1, 0.1};
 float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0};
 
 
@@ -32,9 +32,11 @@ float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0};
 void setup_sounds() {
 
 	cout << endl << "Loading Sounds"; cout.flush();
+	// loop sounds
 	sounds.add_file_buffer("burning.wav"    ); // SOUND_BURNING
 	sounds.add_file_buffer("rain1.wav"      ); // SOUND_RAIN1
 	sounds.add_file_buffer("wind1.wav"      ); // SOUND_WIND1
+	// regular sounds
 	sounds.add_file_buffer("explosion1.au"  ); // SOUND_EXPLODE
 	sounds.add_file_buffer("gunshot.wav"    ); // SOUND_GUNSHOT
 	sounds.add_file_buffer("shotgun.wav"    ); // SOUND_SHOTGUN
@@ -81,8 +83,11 @@ void setup_sounds() {
 	}
 }
 
-void set_sound_loop_state(unsigned id, bool play) {
+void set_sound_loop_state(unsigned id, bool play, float volume) { // volume=0.0 => use previous value
+
+	assert(id < NUM_LOOP_SOUNDS);
 	bool const playing(looping_sources.is_playing(id));
+	if (play && volume > 0.0) {looping_sources.get_source(id).set_gain(CLIP_TO_01(volume)*loop_sound_gains[id]);}
 
 	if (play && !playing) { // start
 		looping_sources.play_source(id);
@@ -214,6 +219,10 @@ void openal_source::setup(openal_buffer const &buffer, point const &pos, float g
 	alSourcei (source, AL_SOURCE_RELATIVE, rel_to_listener);
 	set_buffer_ix(buffer.get_buffer_ix());
 	params = sound_params_t(pos, gain, pitch, rel_to_listener);
+}
+
+void openal_source::set_gain(float gain) {
+	alSourcef (source, AL_GAIN, gain);
 }
 
 void openal_source::set_buffer_ix(unsigned buffer_ix) {alSourcei(source, AL_BUFFER, buffer_ix);}

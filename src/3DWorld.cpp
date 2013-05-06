@@ -62,7 +62,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 // Global Variables
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1);
 bool univ_planet_lod(0), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
-bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), player_near_fire(0), global_lighting_update(0), use_waypoint_app_spots(0);
+bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), use_waypoint_app_spots(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
 bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
@@ -88,7 +88,7 @@ float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-F
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
-float CAMERA_RADIUS(0.06), C_STEP_HEIGHT(0.6), wapypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9);
+float CAMERA_RADIUS(0.06), C_STEP_HEIGHT(0.6), wapypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9), dist_to_fire_sq(0.0);
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
@@ -578,10 +578,11 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 void update_sound_loops() {
 
 	bool const universe(world_mode == WMODE_UNIVERSE);
-	set_sound_loop_state(SOUND_LOOP_FIRE, (!universe && player_near_fire));
+	float const fire_gain(0.1/dist_to_fire_sq);
+	set_sound_loop_state(SOUND_LOOP_FIRE, (!universe && dist_to_fire_sq > 0.0 && dist_to_fire_sq < 2.0), fire_gain);
 	set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && is_rain_enabled()));
 	set_sound_loop_state(SOUND_LOOP_WIND, (!universe && wind.mag() >= 1.0));
-	player_near_fire = 0;
+	dist_to_fire_sq = 0.0;
 	proc_delayed_sounds();
 }
 
