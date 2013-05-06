@@ -71,8 +71,8 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 	void add_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
 		float xsize, float ysize, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool minimize_fill=0);
 	void add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c, float xsize, float ysize, float timescale);
-	void draw() const;
-	void draw_and_clear() {draw(); verts.clear();}
+	void draw(int prim_type=GL_TRIANGLES) const; // GL_QUADS or GL_TRIANGLES
+	void draw_and_clear(int prim_type=GL_TRIANGLES) {draw(prim_type); verts.clear();}
 };
 
 

@@ -270,9 +270,9 @@ void quad_batch_draw::add_animated_billboard(point const &pos, point const &view
 	add_billboard(gpos, (viewer + gpos - pos), up_dir, c, xsize, ysize, 0.25*tx, 0.25*ty, 0.25*(tx+1), 0.25*(ty+1)); // upside down
 }
 
-void quad_batch_draw::draw() const {
+void quad_batch_draw::draw(int prim_type) const {
 
-	if (!verts.empty()) {draw_verts(verts, GL_TRIANGLES);}
+	if (!verts.empty()) {draw_verts(verts, prim_type);}
 }
 
 
