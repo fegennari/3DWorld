@@ -832,15 +832,14 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 	set_color(LITN_C);
 	set_color_e(LITN_C);
 	set_additive_blend_mode();
+	unsigned const num_rays((rand()%6)-2);
 
-	for (unsigned i = 0; i < unsigned((rand()%6)-2); ++i) { // do we really want to call rand() every time?
+	for (unsigned i = 0; i < num_rays; ++i) {
 		bool const hit(min_i >= CAMERA_ID && rand_float() < 0.6);
 		point pos2(pos);
 
 		if (hit) { // targeted to a smiley or the player
-			for (i = 0; i < 3; ++i) {
-				pos2[i] += rand_uniform(0.9, 1.3)*radius*target[i];
-			}
+			UNROLL_3X(pos2[i_] += rand_uniform(0.9, 1.3)*radius*target[i_];)
 			vadd_rand(pos2, 0.5*radius);
 			smiley_collision(min_i, shooter, zero_vector, pos2, PLASMA_LT_DAMAGE, PLASMA_LT_D);
 			glLineWidth(2.0);
@@ -853,9 +852,7 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 		pos2.do_glVertex();
 
 		for (unsigned j = 0; j < unsigned(rand()%15); ++j) { // do we really want to call rand() every time?
-			for (unsigned i = 0; i < 3; ++i) {
-				pos2[i] *= rand_uniform(1.01, 1.2);
-			}
+			UNROLL_3X(pos2[i_] *= rand_uniform(1.01, 1.2);)
 			pos2.do_glVertex();
 		}
 		glEnd();

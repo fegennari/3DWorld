@@ -434,6 +434,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		enable_blend();
 		int ulocs[3] = {0};
 		float last_light_atten(-1.0), last_refract_ix(0.0); // set to invalid values to start
+		bool in_portal(0);
 
 		if (has_lt_atten) {
 			ulocs[0] = s.get_uniform_loc("light_atten");
@@ -455,11 +456,13 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					s.set_uniform_float(ulocs[2], 1.0);
 					last_refract_ix = 1.0;
 				}
+				if (!in_portal) {portal::pre_draw(); in_portal = 1;}
 				unsigned const pix(-(ix+1));
 				assert(pix < portals.size());
 				portals[pix].draw();
 			}
 			else { // cobj
+				if (in_portal) {portal::post_draw(); in_portal = 0;}
 				unsigned cix(ix);
 				assert(cix < coll_objects.size());
 				coll_obj const &c(coll_objects[cix]);
@@ -481,6 +484,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				assert(cix == ix); // should not have changed
 			}
 		} // for i
+		if (in_portal) {portal::post_draw();}
 		end_group(last_group_id);
 		disable_blend();
 		draw_last.resize(0);
@@ -503,16 +507,21 @@ bool portal::is_visible() const {
 	return sphere_in_camera_view(center, rad, 2);
 }
 
-
-void portal::draw() const {
+void portal::pre_draw() {
 
 	float const scale[2] = {0.0, 0.0}, xlate[2] = {0.0, 0.0};
 	select_texture(WHITE_TEX, 0);
 	setup_polygon_texgen(plus_z, scale, xlate, zero_vector); // doesn't matter as long as it's set to something
 	ALPHA0.do_glColor();
 	glBegin(GL_QUADS);
-	draw_quad_from_4_pts(pts);
+}
+
+void portal::post_draw() {
 	glEnd();
+}
+
+void portal::draw() const {
+	draw_quad_from_4_pts(pts); // pre_draw()/post_draw() called externally
 };
 
 

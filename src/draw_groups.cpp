@@ -141,9 +141,8 @@ void scale_color_uw(colorRGBA &color, point const &pos) {
 }
 
 
-void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, bool &in_tris,
-	float thickness=0.0, int tid=-1, colorRGBA const &color=WHITE, bool thick_poly=0)
-{
+// angle is in degrees
+void get_rotation_dirs(vector3d const &o, float angle, vector3d &v1, vector3d &v2) {
 	/*
 	tXX  + c	tXY + sZ	tXZ - sY	0
 	tXY - sZ	tYY + c		tYZ + sX	0
@@ -154,10 +153,19 @@ void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, fl
 	x [ 0, 0, q, 1]^-1 => [tXZ  + sY, tYZ - sX, tZ^2 + c,  1]
 	*/
 	angle *= TO_RADIANS;
-	float const r(1.5*radius), q(3.0*radius); // o must be normalized
 	float const c(cos(angle)), s(sin(angle)), t(1.0 - c);
-	point const p1(r*(t*o.x*o.x + c),     r*(t*o.x*o.y - s*o.z), r*(t*o.x*o.z - s*o.y));
-	point const p2(q*(t*o.x*o.z + s*o.y), q*(t*o.y*o.z - s*o.x), q*(t*o.z*o.z + c));
+	v1 = vector3d((t*o.x*o.x + c),     (t*o.x*o.y - s*o.z), (t*o.x*o.z - s*o.y));
+	v2 = vector3d((t*o.x*o.z + s*o.y), (t*o.y*o.z - s*o.x), (t*o.z*o.z + c));
+}
+
+
+void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, bool &in_tris,
+	float thickness=0.0, int tid=-1, colorRGBA const &color=WHITE, bool thick_poly=0)
+{
+	point p1, p2;
+	get_rotation_dirs(o, angle, p1, p2);
+	p1 *= 1.5*radius;
+	p2 *= 3.0*radius;
 
 	if (thick_poly) {
 		coll_obj cobj;

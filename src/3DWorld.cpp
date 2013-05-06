@@ -1174,7 +1174,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x04;   break;
 	case '4': // toggle occlusion culling and VPLs
 		display_mode ^= 0x08;   break;
-	case '5': // walk on snow/debugging
+	case '5': // walk on snow/ship shadows/debugging
 		display_mode ^= 0x10;   break;
 	case '6': // toggle water reflections and bump maps
 		display_mode ^= 0x20;   break;

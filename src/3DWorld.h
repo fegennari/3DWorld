@@ -1037,6 +1037,8 @@ struct portal {
 	vector3d normal; // for back face determination
 
 	portal() : normal(zero_vector) {}
+	static void pre_draw();
+	static void post_draw();
 	void draw() const;
 	point get_center_pt() const {return (pts[0] + pts[1] + pts[2] + pts[3])*0.25;}
 	bool is_visible() const;

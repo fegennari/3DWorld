@@ -562,7 +562,7 @@ void uobj_draw_data::draw_usw_chaff() const {
 void uobj_draw_data::draw_usw_rfire() const {
 
 	if (1) {
-		if (animate2 && first_pass) add_blastr(pos, dir, 1.5*radius, 0.0, 16, -1, WHITE, WHITE, ETYPE_ANIM_FIRE, obj); // time&1 ?
+		if (animate2 && first_pass) {add_blastr(pos, dir, 1.5*radius, 0.0, 16, -1, WHITE, WHITE, ETYPE_ANIM_FIRE, obj);} // time&1 ?
 		return;
 	}
 	float const ctime(CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
