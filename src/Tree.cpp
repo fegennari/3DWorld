@@ -197,7 +197,7 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 		if (i->td != last_td) {
 			assert(i->td);
 			last_td = i->td;
-			if (!pts.empty()) {draw_verts(pts, GL_QUADS);}
+			draw_verts(pts, GL_QUADS);
 			tree_bb_tex_t const &ttex(render_branches ? i->td->get_render_branch_texture() : i->td->get_render_leaf_texture());
 			assert(ttex.is_valid());
 			ttex.bind_texture();

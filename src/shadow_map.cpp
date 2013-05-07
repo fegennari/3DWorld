@@ -70,8 +70,7 @@ public:
 		bind_vbo(0);
 	}
 	void render_dynamic() {
-		if (!dverts.empty()) {draw_verts(dverts, GL_TRIANGLES);}
-		dverts.resize(0);
+		draw_and_clear_verts(dverts, GL_TRIANGLES);
 	}
 	void free() {
 		delete_vbo(vbo);

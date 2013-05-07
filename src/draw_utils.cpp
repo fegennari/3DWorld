@@ -270,11 +270,6 @@ void quad_batch_draw::add_animated_billboard(point const &pos, point const &view
 	add_billboard(gpos, (viewer + gpos - pos), up_dir, c, xsize, ysize, 0.25*tx, 0.25*ty, 0.25*(tx+1), 0.25*(ty+1)); // upside down
 }
 
-void quad_batch_draw::draw(int prim_type) const {
-
-	if (!verts.empty()) {draw_verts(verts, prim_type);}
-}
-
 
 template<typename T> void indexed_mesh_draw<T>::clear() {
 
@@ -358,13 +353,6 @@ void vbo_block_manager_t<vert_type_t>::render_range(int gl_type, unsigned six, u
 
 	assert(six < eix && eix < offsets.size());
 	glDrawArrays(gl_type, offsets[six], offsets[eix]-offsets[six]);
-}
-
-
-template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::draw_no_vbos(int gl_type) const { // unused
-
-	if (!pts.empty()) {draw_verts(pts, gl_type);}
 }
 
 template< typename vert_type_t >

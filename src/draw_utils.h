@@ -71,7 +71,7 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 	void add_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
 		float xsize, float ysize, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool minimize_fill=0);
 	void add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c, float xsize, float ysize, float timescale);
-	void draw(int prim_type=GL_TRIANGLES) const; // GL_QUADS or GL_TRIANGLES
+	void draw(int prim_type=GL_TRIANGLES) const {draw_verts(verts, prim_type);} // GL_QUADS or GL_TRIANGLES
 	void draw_and_clear(int prim_type=GL_TRIANGLES) {draw(prim_type); verts.clear();}
 };
 
@@ -118,7 +118,7 @@ public:
 	unsigned add_points_with_offset(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color);
 	void render_range(int gl_type, unsigned six, unsigned eix) const;
 	void render_all(int gl_type) const {if (has_data()) {render_range(gl_type, 0, offsets.size()-1);}}
-	void draw_no_vbos(int gl_type) const;
+	void draw_no_vbos(int gl_type) const {draw_verts(pts, gl_type);} // unused
 	bool upload();
 	void begin_render(bool color_mat) const;
 	void end_render() const;

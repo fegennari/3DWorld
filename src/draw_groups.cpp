@@ -173,7 +173,7 @@ void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, fl
 		cobj.thickness = thickness;
 		cobj.npoints   = 3;
 		cobj.cp.color  = color;
-		cobj.cp.tid    = tid;
+		cobj.cp.tid    = tid; // Note: assumes texgen is used, so texturing may be incorrect
 		cobj.cp.tscale = tscale*radius;
 		cobj.points[0] = (pos + p1);
 		cobj.points[1] = (pos - p1);
