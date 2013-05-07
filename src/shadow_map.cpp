@@ -237,26 +237,18 @@ pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds, bool 
 	get_cube_corners(bounds.d, corners);
 	float const radius(bounds.get_bsphere_radius());
 
-#if 1 // tighter bounds / higher quality / slower
+	// tighter bounds / higher quality / slower
 	vector3d dirs[2]; // x, y (up)
 	orthogonalize_dir(up_dir, light_dir, dirs[1], 1);
 	cross_product(light_dir, dirs[1], dirs[0]);
 	float rx(0.0), ry(0.0);
 
 	for (unsigned i = 0; i < 8; ++i) {
-		rx = max(rx, fabs(dot_product(dirs[0], (corners[i] - pos))));
-		ry = max(ry, fabs(dot_product(dirs[1], (corners[i] - pos))));
+		vector3d const delta((corners[i] - pos).get_norm());
+		rx = max(rx, fabs(dot_product(dirs[0], delta)));
+		ry = max(ry, fabs(dot_product(dirs[1], delta)));
 	}
-	float const angle(atan2(ry, dist)), aspect(rx/ry);
-#else
-	float radius2(0.0);
-
-	for (unsigned i = 0; i < 8; ++i) {
-		radius2 = max(radius2, pt_line_dist(corners[i], pos, center));
-	}
-	assert(radius2 <= radius); // can fail for cloud frustum?
-	float const angle(atan2(radius2, dist)), aspect(1.0);
-#endif
+	float const angle(atan2(ry, 1.0f)), aspect(rx/ry);
 	pos_dir_up const pdu(pos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), max(NEAR_CLIP, dist-radius), dist+radius, aspect);
 
 	if (set_matrix) {
