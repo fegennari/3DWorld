@@ -1110,27 +1110,38 @@ void create_and_draw_cracks() {
 }
 
 
-void draw_cracks_decals_smoke_and_fires() {
+void draw_cracks_and_decals() {
 
 	create_and_draw_cracks();
-	if (decals.empty() && part_clouds.empty() && fires.empty()) return; // nothing to draw
+	tid_dist_order_vect_t decal_order;
+	get_draw_order(decals, decal_order);
+	if (decal_order.empty()) {return;} // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1); // min_alpha = 0.1-0.4
 	set_color(BLACK);
-	tid_dist_order_vect_t decal_order;
-	get_draw_order(decals, decal_order);
-	
-	if (!decal_order.empty()) {
-		glDepthMask(GL_FALSE);
-		glDisable(GL_LIGHTING);
-		enable_blend();
-		quad_batch_draw qbd;
-		int last_tid(-1);
-		for (unsigned j = 0; j < decal_order.size(); ++j) {decals[decal_order[j].second].draw(qbd, last_tid);}
-		select_texture(last_tid);
-		qbd.draw();
-		glDepthMask(GL_TRUE);
-	}
+	glDepthMask(GL_FALSE);
+	glDisable(GL_LIGHTING);
+	enable_blend();
+	quad_batch_draw qbd;
+	int last_tid(-1);
+	for (unsigned j = 0; j < decal_order.size(); ++j) {decals[decal_order[j].second].draw(qbd, last_tid);}
+	select_texture(last_tid);
+	qbd.draw();
+	disable_blend();
+	glDepthMask(GL_TRUE);
+	glDisable(GL_TEXTURE_2D);
+	glEnable(GL_LIGHTING);
+	s.end_shader();
+}
+
+
+void draw_smoke_and_fires() {
+
+	if (part_clouds.empty() && fires.empty()) return; // nothing to draw
+	shader_t s;
+	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1); // min_alpha = 0.1-0.4
+	set_color(BLACK);
+
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
 		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
 	}
@@ -1145,11 +1156,11 @@ void draw_cracks_decals_smoke_and_fires() {
 		int last_in_smoke(-1);
 		for (unsigned j = 0; j < fire_order.size(); ++j) {fires[fire_order[j].second].draw(qbd, last_in_smoke);}
 		qbd.draw();
+		set_std_blend_mode();
+		disable_blend();
+		glDisable(GL_TEXTURE_2D);
+		glEnable(GL_LIGHTING);
 	}
-	disable_blend();
-	glDisable(GL_TEXTURE_2D);
-	glEnable(GL_LIGHTING);
-	set_std_blend_mode();
 	s.end_shader();
 }
 

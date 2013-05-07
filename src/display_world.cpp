@@ -226,6 +226,8 @@ void draw_stuff(int draw_uw, int timer1) {
 		render_voxel_data(0);
 		check_gl_error(25);
 		if (TIMETEST) PRINT_TIME("S");
+		draw_cracks_and_decals();
+		if (TIMETEST) PRINT_TIME("S2");
 		draw_transparent_object_groups();
 		check_gl_error(26);
 	}
@@ -564,7 +566,7 @@ void draw_game_elements(int timer1) {
 	draw_camera_weapon(1);
 	draw_projectile_effects();
 	if (TIMETEST) PRINT_TIME("V");
-	draw_cracks_decals_smoke_and_fires();
+	draw_smoke_and_fires();
 	if (TIMETEST) PRINT_TIME("W");
 	draw_scheduled_weapons();
 }
