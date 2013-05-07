@@ -101,12 +101,7 @@ void set_color_by_status(int status) {
 
 void set_color_v2(const colorRGBA &color, int status) {
 
-	if (DEBUG_COLORCODE) {
-		set_color_by_status(status);
-	}
-	else {
-		set_color_alpha(color);
-	}
+	if (DEBUG_COLORCODE) {set_color_by_status(status);} else {set_color_alpha(color);}
 }
 
 
@@ -126,7 +121,6 @@ inline bool get_cull_face(int type, colorRGBA const &color) {
 }
 
 void select_no_texture() {
-	//glDisable(GL_TEXTURE_2D);
 	select_texture(WHITE_TEX, 0);
 }
 
@@ -363,8 +357,16 @@ bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) {
 }
 
 
-void set_base_color_scale(shader_t &s, float val) { // hack to force usage of material properties instead of color
+void set_base_color_scale(shader_t const &s, float val) { // hack to force usage of material properties instead of color
 	if (s.is_setup()) {s.add_uniform_float("base_color_scale", val);}
+}
+
+void make_in_tris(bool &in_tris) {
+	if (!in_tris) {glBegin(GL_TRIANGLES); in_tris = 1;}
+}
+
+void make_not_in_tris(bool &in_tris) {
+	if (in_tris) {glEnd(); in_tris = 0;}
 }
 
 
@@ -507,12 +509,13 @@ void draw_group(obj_group &objg, shader_t &s) {
 	} // large objects
 	else { // small objects
 		colorRGBA const &base_color(object_types[type].color);
+		colorRGBA last_color(ALPHA0);
 		quad_batch_draw particle_qbd;
 		int last_tid(-1);
 		bool in_tris(0);
 
 		if (type == SHRAPNEL) {
-			glBegin(GL_TRIANGLES); in_tris = 1;
+			make_in_tris(in_tris);
 		}
 		else if (type == PARTICLE) {
 			glEnable(GL_ALPHA_TEST);
@@ -530,7 +533,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 				tid = -obj.coll_id - 2; // should we sort fragments by texture id?
 
 				if (tid != last_tid) {
-					if (in_tris) {glEnd(); in_tris = 0;}
+					make_not_in_tris(in_tris);
 					do_texture = select_texture(tid, 1, 1);
 					last_tid = tid;
 				}
@@ -587,13 +590,19 @@ void draw_group(obj_group &objg, shader_t &s) {
 
 			case FRAGMENT: // draw_fragment()?
 				if (obj.vdeform.z > 0.0) { // shatterable - use triangle
-					set_color_v2(color2, obj.status);
+					if (color2 != last_color) { // hack to ensure color is set *outside* the glBegin()/glEnd() pair to work around a driver bug
+						make_not_in_tris(in_tris);
+						set_color_alpha(color2);
+					}
 					bool const use_thick(tid < 0); // when not textured
-					if (!in_tris) {glBegin(GL_TRIANGLES); in_tris = 1;} // Note: needs 2-sided lighting
+					make_in_tris(in_tris); // Note: needs 2-sided lighting
 					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0), in_tris, 0.2*tradius, tid, color2, use_thick); // obj.vdeform.z = tscale
-					break;
 				}
-				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 2);
+				else {
+					make_not_in_tris(in_tris);
+					draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 2);
+				}
+				last_color = color2;
 				break;
 
 			default:
@@ -607,7 +616,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 0);
 			} // switch (type)
 		} // for j
-		if (in_tris) {glEnd(); in_tris = 0;}
+		make_not_in_tris(in_tris);
 
 		if (type == SHRAPNEL) {
 			clear_emissive_color();
@@ -617,8 +626,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 			glDisable(GL_ALPHA_TEST);
 		}
 		if (!puddle_qbd.verts.empty() || !obj_pld.empty()) {
-			set_color(base_color); // FIXME: per-object color is ignored?
 			glEnable(GL_COLOR_MATERIAL); // unnecessary/doesn't work?
+			set_color(base_color); // FIXME: per-object color is ignored?
 			set_base_color_scale(s, 0.0);
 
 			if (!puddle_qbd.verts.empty()) { // draw puddles
