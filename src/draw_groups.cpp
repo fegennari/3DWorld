@@ -124,14 +124,9 @@ void select_no_texture() {
 	select_texture(WHITE_TEX, 0);
 }
 
-
 void scale_color_uw(colorRGBA &color, point const &pos) {
-
 	water_color_atten_at_pos(color, pos); // ???
-	if (!underwater) return;
-	color.R *= 0.45;
-	color.G *= 0.45;
-	color.B *= 0.85;
+	if (underwater) {color.R *= 0.45; color.G *= 0.45; color.B *= 0.85;}
 }
 
 

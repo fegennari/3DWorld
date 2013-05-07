@@ -141,25 +141,21 @@ bool get_water_enabled(int x, int y) {
 
 
 bool has_water(int x, int y) {
-
 	return (world_mode == WMODE_GROUND && !point_outside_mesh(x, y) && wminside[y][x] && get_water_enabled(x, y));
 }
 
-
 bool mesh_is_underwater(int x, int y) {
-
 	return (has_water(x, y) && mesh_height[y][x] < water_matrix[y][x]);
 }
 
 
 void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 
-	if (!DISABLE_WATER && pos.z < ((world_mode == WMODE_GROUND) ? max_water_height : water_plane_z)) {
-		int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
+	if (DISABLE_WATER || pos.z > ((world_mode == WMODE_GROUND) ? max_water_height : water_plane_z)) return;
+	int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
 		
-		if (world_mode != WMODE_GROUND || (!point_outside_mesh(x, y) && pos.z < water_matrix[y][x])) {
-			water_color_atten((float *)&(c.R), x, y, pos);
-		}
+	if (world_mode != WMODE_GROUND || (has_water(x, y) && pos.z < water_matrix[y][x])) {
+		water_color_atten((float *)&(c.R), x, y, pos);
 	}
 }
 
