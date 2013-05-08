@@ -27,7 +27,8 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
  - grass
  - pine tree leaves
 
-draw_rotated_triangle() fix color or use vertex array
+Charred objects appear red?
+Pickup items floating in water
 
  E: 2.9 process_groups()
  H: 2.1 setup_object_render_data()

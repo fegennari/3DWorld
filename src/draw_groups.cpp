@@ -365,11 +365,34 @@ void make_not_in_tris(bool &in_tris) {
 }
 
 
+struct tid_color_to_ix_t {
+	int tid;
+	colorRGBA c;
+	unsigned ix;
+
+	tid_color_to_ix_t(int tid_, colorRGBA const &c_, unsigned ix_) : tid(tid_), c(c_), ix(ix_) {}
+
+	bool operator<(tid_color_to_ix_t const &v) const {
+		if (tid != v.tid) {return (tid < v.tid);}
+		if (c != v.c) {return (c < v.c);}
+		return (ix < v.ix);
+	}
+};
+
+
+colorRGBA get_textured_color(int tid, colorRGBA const &color) {
+
+	if (tid < 0) {return color;}
+	colorRGBA tcolor(texture_color(tid));
+	tcolor.alpha = 1.0; // don't use texture alpha
+	return tcolor.modulate_with(color);
+}
+
+
 void draw_group(obj_group &objg, shader_t &s) {
 
 	RESET_TIME;
 	set_specular(0.0, 1.0); // disable
-	colorRGBA color2;
 	set_fill_mode();
 	glEnable(GL_NORMALIZE);
 	int const type(objg.get_ptype());
@@ -378,7 +401,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 	float const radius(otype.radius), cd_scale(NDIV_SCALE*radius*window_width);
 	unsigned const flags(otype.flags);
 	bool do_texture(select_texture(tid, 1, 1));
-	colorRGBA color(otype.color), tcolor(color);
+	colorRGBA color(otype.color);
 	set_color_alpha(color);
 	check_drawing_flags(flags, 1);
 	int const clip_level((type == SMILEY || type == LANDMINE || type == ROCKET || type == BALL) ? 2 : 0);
@@ -504,13 +527,11 @@ void draw_group(obj_group &objg, shader_t &s) {
 	} // large objects
 	else { // small objects
 		colorRGBA const &base_color(object_types[type].color);
-		colorRGBA last_color(ALPHA0);
 		quad_batch_draw particle_qbd;
-		int last_tid(-1);
-		bool in_tris(0);
+		vector<tid_color_to_ix_t> tri_fragments, sphere_fragments;
 
 		if (type == SHRAPNEL) {
-			make_in_tris(in_tris);
+			glBegin(GL_TRIANGLES);
 		}
 		else if (type == PARTICLE) {
 			glEnable(GL_ALPHA_TEST);
@@ -522,16 +543,11 @@ void draw_group(obj_group &objg, shader_t &s) {
 			if (obj.disabled() || (obj.flags & CAMERA_VIEW))      continue;
 			float const tradius(obj.get_true_radius()); // differs from radius for fragments
 			if (!sphere_in_camera_view(pos, tradius, clip_level)) continue;
+			colorRGBA color2;
 			++num_drawn;
 
 			if (type == FRAGMENT) {
 				tid = -obj.coll_id - 2; // should we sort fragments by texture id?
-
-				if (tid != last_tid) {
-					make_not_in_tris(in_tris);
-					do_texture = select_texture(tid, 1, 1);
-					last_tid = tid;
-				}
 				UNROLL_3X(color2[i_] = obj.init_dir[i_];)
 				color2.alpha = obj.vdeform.y;
 			}
@@ -542,18 +558,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 				color2 = base_color;
 			}
 			if (type != SHRAPNEL && type != PARTICLE) {
-				if (type == DROPLET) select_liquid_color(color2, pos);
+				if (type == DROPLET) {select_liquid_color(color2, pos);}
 				scale_color_uw(color2, pos);
-
-				if (do_texture) {
-					assert(tid >= 0);
-					tcolor = texture_color(tid);
-					tcolor.alpha = 1.0; // don't use texture alpha
-					UNROLL_3X(tcolor[i_] *= color2[i_];)
-				}
-				else {
-					tcolor = color2;
-				}
 			}
 			switch (type) {
 			case SHELLC:
@@ -565,41 +571,31 @@ void draw_group(obj_group &objg, shader_t &s) {
 				draw_star(pos, obj.orientation, obj.init_dir, tradius, obj.angle, 1);
 				break;
 			case SHRAPNEL:
-				set_emissive_color_obj(get_glow_color(obj, 1));
-				draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, in_tris);
-				break;
+				{
+					bool in_tris(1);
+					set_emissive_color_obj(get_glow_color(obj, 1));
+					draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, in_tris);
+					break;
+				}
 			case PARTICLE:
 				{
 					colorRGBA const glow_color(get_glow_color(obj, 0));
 					if (glow_color.alpha > 0.0) {particle_qbd.add_billboard(obj.pos, get_camera_pos(), up_vector, glow_color, 1.2*tradius, 1.2*tradius);}
+					break;
 				}
-				break;
-
 			case SAND:
 			case DIRT:
 			case ROCK:
-				color2 *= obj.orientation.y;
-				if (do_texture) tcolor *= obj.orientation.y;
-				draw_sized_point(obj, tradius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, (type == DIRT || type == ROCK));
-				break;
-
+				{
+					colorRGBA tcolor(get_textured_color(tid, color2));
+					color2 *= obj.orientation.y;
+					if (do_texture) {tcolor *= obj.orientation.y;}
+					draw_sized_point(obj, tradius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, (type == DIRT || type == ROCK));
+					break;
+				}
 			case FRAGMENT: // draw_fragment()?
-				if (obj.vdeform.z > 0.0) { // shatterable - use triangle
-					if (color2 != last_color) { // hack to ensure color is set *outside* the glBegin()/glEnd() pair to work around a driver bug
-						make_not_in_tris(in_tris);
-						set_color_alpha(color2);
-					}
-					bool const use_thick(tid < 0); // when not textured
-					make_in_tris(in_tris); // Note: needs 2-sided lighting
-					draw_rotated_triangle(pos, obj.orientation, tradius, obj.angle, (do_texture ? obj.vdeform.z : 0.0), in_tris, 0.2*tradius, tid, color2, use_thick); // obj.vdeform.z = tscale
-				}
-				else {
-					make_not_in_tris(in_tris);
-					draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 2);
-				}
-				last_color = color2;
+				((obj.vdeform.z > 0.0) ? tri_fragments : sphere_fragments).push_back(tid_color_to_ix_t(tid, color2, j)); // if shatterable, use triangle
 				break;
-
 			default:
 				if (DEBUG_COLOR_COLLS) {
 					int cindex;
@@ -608,12 +604,42 @@ void draw_group(obj_group &objg, shader_t &s) {
 					set_color(check_coll_line(pos, pos2, cindex, -1, 0, 0) ? RED : GREEN);
 					draw_line(pos, pos2);
 				}
-				draw_sized_point(obj, tradius, cd_scale, color2, tcolor, do_texture, 0);
+				draw_sized_point(obj, tradius, cd_scale, color2, get_textured_color(tid, color2), do_texture, 0);
 			} // switch (type)
 		} // for j
-		make_not_in_tris(in_tris);
+		sort(tri_fragments.begin(), tri_fragments.end()); // sort by tid
+		colorRGBA last_color(ALPHA0);
+		int last_tid(-1);
+		bool in_tris(0);
 
+		for (vector<tid_color_to_ix_t>::const_iterator i = tri_fragments.begin(); i != tri_fragments.end(); ++i) {
+			dwobject const &obj(objg.get_obj(i->ix));
+			
+			if (i->tid != last_tid) {
+				make_not_in_tris(in_tris);
+				select_texture(i->tid, 0, 1);
+				last_tid = i->tid;
+			}
+			if (i->c != last_color) { // hack to ensure color is set *outside* the glBegin()/glEnd() pair to work around a driver bug
+				make_not_in_tris(in_tris);
+				set_color_alpha(i->c);
+				last_color = i->c;
+			}
+			bool const use_thick(i->tid < 0); // when not textured
+			float const tradius(obj.get_true_radius());
+			make_in_tris(in_tris); // Note: needs 2-sided lighting
+			draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, ((i->tid >= 0) ? obj.vdeform.z : 0.0), in_tris, 0.2*tradius, i->tid, i->c, use_thick); // obj.vdeform.z = tscale
+		}
+		make_not_in_tris(in_tris);
+		sort(sphere_fragments.begin(), sphere_fragments.end()); // sort by tid
+
+		for (vector<tid_color_to_ix_t>::const_iterator i = sphere_fragments.begin(); i != sphere_fragments.end(); ++i) {
+			dwobject &obj(objg.get_obj(i->ix));
+			select_texture(i->tid, 0, 1);
+			draw_sized_point(obj, obj.get_true_radius(), cd_scale, i->c, get_textured_color(tid, i->c), (i->tid >= 0), 2);
+		}
 		if (type == SHRAPNEL) {
+			glEnd();
 			clear_emissive_color();
 		}
 		else if (type == PARTICLE) {
