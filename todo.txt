@@ -27,7 +27,6 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
  - grass
  - pine tree leaves
 
-Charred objects appear red?
 Pickup items floating in water
 
  E: 2.9 process_groups()

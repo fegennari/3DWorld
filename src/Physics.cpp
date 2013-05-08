@@ -209,7 +209,7 @@ void init_objects() {
 	object_types[CHARRED].density          = 0.9;
 	object_types[CHARRED].elasticity       = 0.5;
 	object_types[CHARRED].health           = 20.0;
-	object_types[CHARRED].color            = BLACK;
+	object_types[CHARRED].color            = colorRGBA(0.01, 0.01, 0.01, 1.0); // nearly BLACK, but that seems to hit a driver bug
 	object_types[CHARRED].flags            = BLEND;
 
 	object_types[CHUNK].air_factor         = 0.08;
