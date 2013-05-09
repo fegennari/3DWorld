@@ -44,6 +44,13 @@ void vert_norm_comp_tc::set_vbo_arrays(unsigned force_stride, bool set_state) {
 	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_norm_comp)));
 }
 
+void vert_norm_comp_tc_comp::set_vbo_arrays(unsigned force_stride, bool set_state) {
+	if (set_state) {set_array_client_state(1, 1, 1, 0);}
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc_comp));
+	set_vn_ptrs(stride, 1);
+	glTexCoordPointer(2, GL_SHORT, stride, (void *)(sizeof(vert_norm_comp)));
+}
+
 void vert_norm_tc::set_vbo_arrays(unsigned force_stride, bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 1, 0);}
 	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_tc));
@@ -94,6 +101,14 @@ void vert_norm_comp_tc_color::set_vbo_arrays(unsigned force_stride, bool set_sta
 	set_vn_ptrs(stride, 1);
 	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(vert_norm_comp)));
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp_tc)));
+}
+
+void vert_norm_comp_tc_comp_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
+	if (set_state) {set_array_client_state(1, 1, 1, 1);}
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc_comp_color));
+	set_vn_ptrs(stride, 1);
+	glTexCoordPointer(2, GL_SHORT,         stride, (void *)(sizeof(vert_norm_comp)));
+	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp_tc_comp)));
 }
 
 

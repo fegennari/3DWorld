@@ -719,6 +719,14 @@ struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 };
 
 
+struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
+	short t[2]; // could even use char
+	vert_norm_comp_tc_comp() {}
+	vert_norm_comp_tc_comp(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = 32767*ts; t[1] = 32767*tt;}
+	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
+};
+
+
 struct vert_norm_tc : public vert_norm { // size = 32
 	float t[2];
 	vert_norm_tc() {}
@@ -839,6 +847,17 @@ struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper 
 	vert_norm_comp_tc_color(vert_norm_comp_tc const &vntc, color_wrapper const &cw) : vert_norm_comp_tc(vntc), color_wrapper(cw) {}
 	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_) {
 		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
+	}
+	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
+};
+
+
+struct vert_norm_comp_tc_comp_color : public vert_norm_comp_tc_comp, public color_wrapper { // size = 24
+	typedef vert_norm_tc non_color_class;
+	vert_norm_comp_tc_comp_color() {}
+	vert_norm_comp_tc_comp_color(vert_norm_comp_tc_comp const &vntc, color_wrapper const &cw) : vert_norm_comp_tc_comp(vntc), color_wrapper(cw) {}
+	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_) {
+		v = v_; set_norm(n_); t[0] = 32767*ts; t[1] = 32767*tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
 	}
 	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
 };

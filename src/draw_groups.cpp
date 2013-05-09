@@ -338,7 +338,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 
 
 // Note: incorrect if there is both a sun and a moon
-bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) {
+bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) { // only used for snowflakes
 
 	bool is_shadowed((obj.flags & SHADOWED) != 0); // previous value
 	float const pt_size(cd_scale/distance_to_camera(obj.pos)); // approx pixel size
