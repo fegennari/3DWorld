@@ -851,12 +851,12 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 		glPopMatrix();
 	}
 	if (temperature > 1.0) {
-		float const glow_weight(CLIP_TO_01(get_true_temp()/40.0f)), z_offset(0.0); // 1.0 if camera is facing the lit side?
+		float const glow_weight(CLIP_TO_01(get_true_temp()/40.0f)); // 1.0 if camera is facing the lit side?
 		colorRGBA color(sun_color), color2(color);
 		color.alpha  = glow_weight;
 		color2.alpha = 0.0;
 		ddata.enable_ship_flares(color);
-		ddata.draw_engine(color, all_zeros, 4.0, 1.0, all_zeros, z_offset); // coma
+		ddata.draw_engine(color, all_zeros, 4.0, 1.0, all_zeros); // coma
 		ddata.disable_ship_flares();
 
 		if (animate2) { // create tails

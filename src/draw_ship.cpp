@@ -112,12 +112,12 @@ void uobj_draw_data::enable_ship_flares(colorRGBA const &color) {
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	select_texture(BLUR_TEX);
 	set_additive_blend_mode();
-	plus_z.do_glNormal();
 }
 
 
 void uobj_draw_data::disable_ship_flares() {
 
+	qbd.draw_and_clear();
 	end_texture();
 	glDepthMask(GL_TRUE);
 	set_std_blend_mode();
@@ -243,17 +243,24 @@ void uobj_draw_data::end_exp_texture() const {
 }
 
 
-void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale,
-								 float ar, vector3d const &stretch_dir, float z_offset) const
-{
-	assert(obj != NULL);
-	glPushMatrix();
-	translate_to(draw_pos);
-	obj->inverse_rotate();
-	point epos;
+quad_batch_draw uobj_draw_data::qbd;
 
-	if (ar != 1.0) {
-		assert(z_offset == 0.0); // not supported
+
+void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale,  float ar, vector3d const &stretch_dir) const {
+
+	assert(obj != NULL);
+	point epos(draw_pos);
+
+	if (ar == 1.0) {
+		point viewer(get_player_pos());
+		if (ndiv > 3) obj->xform_point(viewer);
+		vector3d const up_dir(cross_product((viewer - epos), plus_z).get_norm()); // make orthogonal to view direction
+		qbd.add_billboard(epos, viewer, up_dir, colorRGBA(0.0, 0.0, 0.0, trail_color.alpha), escale, escale); // color is all emissive
+	}
+	else {
+		glPushMatrix();
+		translate_to(draw_pos);
+		obj->inverse_rotate();
 		assert(ar > 1.0 && stretch_dir != all_zeros);
 		point ep[2] = {draw_pos, draw_pos};
 		float const dist(escale*(ar - 1.0));
@@ -268,19 +275,13 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 		float const v2_mag(v2.mag()), mag(v2.mag()/(dist*dir.mag()));
 		v2 *= escale/v2_mag;
 		vector3d const v1(cross_product(dir, v2).get_norm()*(escale*(1.0 + (ar - 1.0)*mag)));
+		plus_z.do_glNormal(); // unnecessary?
 		draw_billboard_quad(all_zeros, v1, v2);
+		glPopMatrix();
 	}
-	else {
-		epos = draw_pos;
-		if (ndiv > 3 && epos != all_zeros) obj->rotate_point_inv(epos);
-		rotate_towards_camera(epos*radius + pos);
-		draw_tquad(escale, escale, z_offset, 1);
-	}
-	glPopMatrix();
-
 	if (ndiv > 3 && trail_color.alpha != 0.0 && vel.mag_sq() > 1.5E-6) {
 		float const dp(dot_product(vel, dir)/vel.mag());
-		if (dp > 0.0) draw_engine_trail(epos, 0.7*escale*sqrt(ar), 0.7, 3.0*dp, trail_color);
+		if (dp > 0.0) {draw_engine_trail(epos, 0.7*escale*sqrt(ar), 0.7, 3.0*dp, trail_color);}
 	}
 }
 

@@ -215,6 +215,7 @@ public:
 	void draw(upos_point_type const &pos) const;
 };
 
+struct quad_batch_draw;
 
 class uobj_draw_data {
 
@@ -228,6 +229,7 @@ public:
 	colorRGBA color_a, color_b;
 	free_obj const *obj;
 	shader_t &shader;
+	static quad_batch_draw qbd;
 
 	uobj_draw_data(free_obj const *const obj_, shader_t &shader_, int ndiv_, unsigned t, bool power, bool spec_en, float texp,
 		upos_point_type const &pos_, vector3d const &vel_, vector3d const &dir_, vector3d const &upv_, float dist_,
@@ -250,7 +252,7 @@ public:
 	void end_specular()      const {if (specular_en) set_specular(0.0, 1.0);}
 	void inverse_rotate()    const;
 	void draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale=1.0,
-		float ar=1.0, vector3d const &stretch_dir=all_zeros, float z_offset=0.0) const;
+		float ar=1.0, vector3d const &stretch_dir=all_zeros) const;
 	void draw_engine_trail(point const &offset, float width, float w2s, float len, colorRGBA const &color) const;
 	void draw_ehousing_pairs(float length, float r1, float r2, float lcone, float dx, float dy, bool texture,
 		point const &offset, point const &per_pair_off=zero_vector, unsigned num_pairs=1) const;
