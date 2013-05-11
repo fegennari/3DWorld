@@ -526,15 +526,6 @@ inline void uniform_scale(float scale) {
 }
 
 
-template<typename T> inline void draw_line(pointT<T> const &p1, pointT<T> const &p2) {
-
-	glBegin(GL_LINES);
-	p1.do_glVertex();
-	p2.do_glVertex();
-	glEnd();
-}
-
-
 template<typename T> inline void rotate_vector3d(pointT<T> const &vrot, double angle, pointT<T> &vout) { // rotate vout by angle about vrot
 	rotate_vector3d(vout, vrot, angle, vout);
 }

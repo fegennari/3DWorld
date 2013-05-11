@@ -602,7 +602,10 @@ void draw_group(obj_group &objg, shader_t &s) {
 					float const time(TIMESTEP*fticks);
 					point const pos2(pos + obj.velocity*time - point(0.0, 0.0, -base_gravity*GRAVITY*time*time*otype.gravity));
 					set_color(check_coll_line(pos, pos2, cindex, -1, 0, 0) ? RED : GREEN);
-					draw_line(pos, pos2);
+					glBegin(GL_LINES);
+					pos.do_glVertex();
+					pos2.do_glVertex();
+					glEnd();
 				}
 				draw_sized_point(obj, tradius, cd_scale, color2, get_textured_color(tid, color2), do_texture, 0);
 			} // switch (type)

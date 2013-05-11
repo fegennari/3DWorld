@@ -486,7 +486,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				draw_circle_normal(0.0175, 0.018, ndiv, 1);
 				rotate_to_dir(dir, 0.0, 1.0);
 				glLineWidth(2.0);
-				draw_line(point(-0.014, 0.01, 0.0), point(-0.01, -0.001, -0.15));
+				glBegin(GL_LINES);
+				point(-0.014, 0.01, 0.0).do_glVertex();
+				point(-0.01, -0.001, -0.15).do_glVertex();
+				glEnd();
 				glLineWidth(1.0);
 				rotate_to_dir(dir, 0.0, -1.0);
 			}
