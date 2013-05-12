@@ -244,7 +244,7 @@ void draw_blasts() {
 
 	for (vector<ix_type_pair>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
 		blastr const &br(blastrs[i->ix]);
-		float const timescale(((float)br.time)/(float)br.st_time); // 1.0 to 0.0 => 15 to 0
+		float const timescale(((float)br.time)/(float)br.st_time);
 		bool const begin_type(i == to_draw.begin() || i->type != (i-1)->type);
 		bool const end_type  (i+1 == to_draw.end() || i->type != (i+1)->type);
 
@@ -284,10 +284,9 @@ void draw_blasts() {
 			{
 				if (begin_type) {
 					select_texture(CLOUD_TEX, disable_shaders);
-					glEnable(GL_ALPHA_TEST);
-					glAlphaFunc(GL_GREATER, 0.4*(1.0 - timescale));
 					//glEnable(GL_CULL_FACE);
 				}
+				s.add_uniform_float("min_alpha", 0.4*(1.0 - timescale));
 				glPushMatrix();
 				global_translate(br.pos);
 				rotate_about(90.0*timescale, br.dir);
@@ -295,8 +294,9 @@ void draw_blasts() {
 				float const sscale(universe ? 0.4/sqrt(br.cur_size*distance_to_camera(br.pos)) : 1.0);
 				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
 				draw_sphere_vbo(all_zeros, br.cur_size, ndiv, 1);
+				//draw_sphere_vbo_back_to_front(all_zeros, br.cur_size, ndiv, 1);
 				glPopMatrix();
-				if (end_type) {glDisable(GL_ALPHA_TEST);}
+				if (end_type) {/*glEnable(GL_CULL_FACE);*/ s.add_uniform_float("min_alpha", 0.0);}
 			}
 			break;
 

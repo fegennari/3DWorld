@@ -2656,6 +2656,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			glPushMatrix();
 			set_additive_blend_mode();
 			glDepthFunc(GL_LEQUAL);
+			//ddata.shader.add_uniform_float("min_alpha", -1.0); // FIXME: disable alpha testing to avoid artifacts at the shields boundary?
 			assert(last_hit <= SHIELDS_TIME);
 			colorRGBA color_alpha(disabled() ? YELLOW : GREEN);
 			color_alpha.alpha = (0.5*last_hit)*min(1.0, 2.5*shields/get_max_shields())/SHIELDS_TIME; // decrease at 40% shields
