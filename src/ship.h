@@ -242,7 +242,7 @@ public:
 	bool can_have_engine_lights() const;
 	bool draw_as_pt() const {return (NDIV_SCALE_U*radius < dist);}
 
-	static void enable_ship_flares(colorRGBA const &color);
+	static void enable_ship_flares(colorRGBA const &color, int tid=BLUR_TEX);
 	static void disable_ship_flares();
 
 	colorRGBA apply_cloak(colorRGBA const &color) const;

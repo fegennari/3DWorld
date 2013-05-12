@@ -162,8 +162,10 @@ texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
 texture_t(1, 0, 128,  128,  1, 3, 1, "@player_bbb_tex"), // not real file
 texture_t(0, 5, 0,    0,    0, 4, 3, "pine_tree_leaves.jpg", 1, 0, 1.0, 0.28), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare1.jpg"), // 384x384
-texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 FIXME: should be at least 256x256?
-texture_t(0, 5, 0,    0,    0, 4, 1, "flare3.jpg") // 256x256
+texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 (Nte: low resolution)
+texture_t(0, 5, 0,    0,    0, 4, 1, "Flare3.jpg"), // 256x256
+texture_t(0, 5, 0,    0,    0, 4, 1, "flare4.jpg"), // 256x256
+texture_t(0, 5, 0,    0,    0, 4, 1, "flare5.jpg") // 256x256
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
 };
@@ -887,7 +889,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 	int alpha_white(0);
 	unsigned char alpha(255);
 	unsigned const size(num_pixels());
-	bool const is_alpha_mask(index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX || index == FLARE1_TEX || index == FLARE2_TEX || index == FLARE3_TEX);
+	bool const is_alpha_mask(index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX || (index >= FLARE1_TEX && index <= FLARE5_TEX));
 	bool const is_alpha_tex(index == EXPLOSION_TEX || index == FIRE_TEX || is_alpha_mask);
 	assert(is_allocated());
 

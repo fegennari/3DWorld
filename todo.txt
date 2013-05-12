@@ -27,7 +27,6 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
  - pine tree leaves
 
 Pickup items floating in water
-
 Faster ship particles
 
  E: 2.9 process_groups()

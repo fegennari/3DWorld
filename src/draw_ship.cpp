@@ -107,11 +107,11 @@ void end_ship_texture() {
 }
 
 
-void uobj_draw_data::enable_ship_flares(colorRGBA const &color) {
+void uobj_draw_data::enable_ship_flares(colorRGBA const &color, int tid) {
 
 	set_emissive_color(color);
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
-	select_texture(BLUR_TEX);
+	select_texture(tid);
 	set_additive_blend_mode();
 }
 
@@ -432,7 +432,7 @@ void uobj_draw_data::draw_rocket_base(colorRGBA const &cb, colorRGBA const &cn, 
 	glPopMatrix(); // remove the rotations
 	glPushMatrix();
 	vector3d engine_pos(dir*-(1.5*length + 0.1*esize)); // should already be normalized
-	setup_colors_draw_flare(pos, engine_pos, esize, esize, ce, FLARE2_TEX); // could use draw_engine()
+	setup_colors_draw_flare(pos, engine_pos, esize, esize, ce, FLARE4_TEX);
 	draw_engine_trail(engine_pos, tailw, 0.8, 1.5, ce);
 }
 
