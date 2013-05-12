@@ -1210,7 +1210,6 @@ float const spark_t::radius = 0.0;
 
 void spark_t::draw(quad_batch_draw &qbd) const {
 
-	//c.do_glColor();
 	point const camera(get_camera_pos());
 	qbd.add_billboard((pos + (camera - pos).get_norm()*0.02), camera, up_vector, c, 0.8*s, 0.8*s);
 }

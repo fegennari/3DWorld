@@ -246,42 +246,28 @@ void uobj_draw_data::end_exp_texture() const {
 quad_batch_draw uobj_draw_data::qbd;
 
 
-void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale,  float ar, vector3d const &stretch_dir) const {
+void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale, float ar, vector3d const &stretch_dir) const {
 
 	assert(obj != NULL);
-	point epos(draw_pos);
+	point viewer(get_player_pos());
+	if (ndiv > 3) obj->xform_point(viewer);
+	vector3d const orient((viewer - draw_pos).get_norm());
+	vector3d up_dir;
+	float mod_ar(1.0);
 
 	if (ar == 1.0) {
-		point viewer(get_player_pos());
-		if (ndiv > 3) obj->xform_point(viewer);
-		vector3d const up_dir(cross_product((viewer - epos), plus_z).get_norm()); // make orthogonal to view direction
-		qbd.add_billboard(epos, viewer, up_dir, colorRGBA(0.0, 0.0, 0.0, trail_color.alpha), escale, escale); // color is all emissive
+		up_dir.assign(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	}
 	else {
-		glPushMatrix();
-		translate_to(draw_pos);
-		obj->inverse_rotate();
 		assert(ar > 1.0 && stretch_dir != all_zeros);
-		point ep[2] = {draw_pos, draw_pos};
-		float const dist(escale*(ar - 1.0));
-		
-		for (unsigned d = 0; d < 2; ++d) {
-			ep[d] += stretch_dir*(0.5*(d ? dist : -dist));
-			obj->rotate_point_inv(ep[d]);
-		}
-		epos = (ep[0] + ep[1])*0.5;
-		vector3d const dir(pos, get_camera_pos());
-		vector3d v2(cross_product(dir, (ep[1] - ep[0])));
-		float const v2_mag(v2.mag()), mag(v2.mag()/(dist*dir.mag()));
-		v2 *= escale/v2_mag;
-		vector3d const v1(cross_product(dir, v2).get_norm()*(escale*(1.0 + (ar - 1.0)*mag)));
-		plus_z.do_glNormal(); // unnecessary?
-		draw_billboard_quad(all_zeros, v1, v2);
-		glPopMatrix();
+		mod_ar = 1.0 + (ar - 1.0)*cross_product(stretch_dir, orient).mag();
+		up_dir = stretch_dir;
 	}
+	qbd.add_billboard(draw_pos, viewer, up_dir, colorRGBA(0.0, 0.0, 0.0, trail_color.alpha), escale, mod_ar*escale); // color is all emissive
+
 	if (ndiv > 3 && trail_color.alpha != 0.0 && vel.mag_sq() > 1.5E-6) {
 		float const dp(dot_product(vel, dir)/vel.mag());
-		if (dp > 0.0) {draw_engine_trail(epos, 0.7*escale*sqrt(ar), 0.7, 3.0*dp, trail_color);}
+		if (dp > 0.0) {draw_engine_trail(draw_pos, 0.7*escale*sqrt(ar), 0.7, 3.0*dp, trail_color);}
 	}
 }
 
