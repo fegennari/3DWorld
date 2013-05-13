@@ -15,7 +15,6 @@ float const MWAVE_HEIGHT  = 0.007;
 float const MWAVE_PERIOD  = 0.05;
 float const OCEAN_SKEW    = 0.99;
 
-int const SIMPLE_OCEAN  = 0;
 int const MOVING_OCEAN  = 1;
 int const FORCE_ALPHA_1 = 0; // dynamic ocean
 int const FIRST_OCEAN   = 1;
@@ -299,8 +298,7 @@ void draw_sand(colorRGBA &color, float cscale, int mode) {
 		glVertex3f(     s0,     s1, zmin);
 	}
 	{
-		float val1(-X_SCENE_SIZE);
-		float limit(-Y_SCENE_SIZE+DY_VAL);
+		float val1(-X_SCENE_SIZE), limit(-Y_SCENE_SIZE+DY_VAL);
 
 		for (unsigned i = 1; i < (unsigned)MESH_X_SIZE; ++i) { // -y edge
 			float const val2(val1 + DX_VAL);
@@ -312,8 +310,7 @@ void draw_sand(colorRGBA &color, float cscale, int mode) {
 		}
 	}
 	{
-		float val1(-Y_SCENE_SIZE);
-		float limit(-X_SCENE_SIZE+DX_VAL);
+		float val1(-Y_SCENE_SIZE), limit(-X_SCENE_SIZE+DX_VAL);
 
 		for (unsigned i = 1; i < (unsigned)MESH_Y_SIZE; ++i) { // -x edge
 			float const val2(val1 + DY_VAL);
@@ -361,7 +358,7 @@ void update_incs() {
 }
 
 
-void set_ocean_alpha(colorRGBA &color, float &last_alpha, float zscale, int i, int j) {
+void set_ocean_alpha(colorRGBA &color, float zscale, int i, int j) {
 
 	if (FORCE_ALPHA_1) {
 		color.alpha = 1.0;
@@ -373,17 +370,14 @@ void set_ocean_alpha(colorRGBA &color, float &last_alpha, float zscale, int i, i
 	else {
 		color.alpha = max(0.4f, min(1.0f, (0.5f + zscale*(ocean.z - mesh_height[i][j]))));
 	}
-	if (fabs(last_alpha - color.alpha) > 0.02) {
-		color.do_glColor();
-		last_alpha = color.alpha;
-	}
+	color.do_glColor();
 }
 
 
-void draw_vertex(int index, float x, float y, float z, colorRGBA &color, float &last_alpha, float zscale) {
+void draw_vertex(int index, float x, float y, float z, colorRGBA &color, float zscale) {
 
 	WaterVertNormal[index].do_glNormal();
-	set_ocean_alpha(color, last_alpha, zscale, int((y+Y_SCENE_SIZE)*DY_VAL_INV), int((x+X_SCENE_SIZE)*DX_VAL_INV));
+	set_ocean_alpha(color, zscale, int((y+Y_SCENE_SIZE)*DY_VAL_INV), int((x+X_SCENE_SIZE)*DX_VAL_INV));
 	glVertex3f(x, y, (z + ocean.z + WaterHeight[index]));
 }
 
@@ -395,7 +389,6 @@ void draw_ocean() {
 		return;
 	}
 	update_incs();
-	float last_alpha(1.0);
 	colorRGBA color(0.1, 0.25, 0.7, 1.0); // ocean color
 	if (display_mode & 0x0100) color.G += 0.1;
 	point camera(get_camera_pos()), pt(all_zeros);
@@ -472,10 +465,10 @@ void draw_ocean() {
 			
 			for (int i = min_startx; i < min_endx; i++) {
 				float const x(incrementx*i + startx);
-				draw_vertex(i+jwx,       x,            y,            0.0, color, last_alpha, zscale);
-				draw_vertex(fx(i+1)+jwx, x+incrementx, y,            0.0, color, last_alpha, zscale);
-				draw_vertex(fx(i+1)+fyj, x+incrementx, y+incrementy, 0.0, color, last_alpha, zscale);
-				draw_vertex(i+fyj,       x,            y+incrementy, 0.0, color, last_alpha, zscale);
+				draw_vertex(i+jwx,       x,            y,            0.0, color, zscale);
+				draw_vertex(fx(i+1)+jwx, x+incrementx, y,            0.0, color, zscale);
+				draw_vertex(fx(i+1)+fyj, x+incrementx, y+incrementy, 0.0, color, zscale);
+				draw_vertex(i+fyj,       x,            y+incrementy, 0.0, color, zscale);
 			}
 		}
 		glEnd();
@@ -492,7 +485,6 @@ void draw_ocean() {
 
 void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 
-	float last_alpha(1.0);
 	static int lfc(0);
 	static float phase(0.0);
 
@@ -502,26 +494,13 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 		lfc      = frame_counter;
 	}
 	glDisable(GL_LIGHTING);
-
-	if (SIMPLE_OCEAN) {
-		plus_z.do_glNormal();
-		if (show_fog) glDisable(GL_FOG);
-		select_texture(WATER_TEX);
-		color.do_glColor();
-		draw_tquad(ocean.x, ocean.y, ocean.z, 1, 0.0, 0.0, 100.0*OCEAN_REPEAT, 100.0*OCEAN_REPEAT);
-		if (show_fog) glEnable(GL_FOG);
-		if (camera.z <= ocean.z + 0.1) draw_sand(color, cscale, 1);
-		glDisable(GL_TEXTURE_2D);
-		glEnable(GL_LIGHTING);
-		return;
-	}
 	draw_sand(color, cscale, (camera.z <= ocean.z + 0.1));
 	if (show_fog) glDisable(GL_FOG);
 	select_texture(WATER_TEX);
 	setup_texgen(OCEAN_REPEAT, OCEAN_REPEAT, 0.0, 0.0);
 	float const OCEAN_SKEW_X(OCEAN_SKEW*X_SCENE_SIZE), OCEAN_SKEW_Y(OCEAN_SKEW*Y_SCENE_SIZE);
 	enable_blend();
-	color.alpha = last_alpha;
+	color.alpha = 1.0;
 	color.do_glColor();
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, ocean.z);
@@ -559,14 +538,14 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 					glBegin(GL_TRIANGLE_STRIP);
 					color.do_glColor();
 					new_strip = 0;
-					set_ocean_alpha(color, last_alpha, zscale, i, j);
+					set_ocean_alpha(color, zscale, i, j);
 					glVertex2f(xval, yval);
-					set_ocean_alpha(color, last_alpha, zscale, i+1, j);
+					set_ocean_alpha(color, zscale, i+1, j);
 					glVertex2f(xval, (yval+DY_VAL));
 				}
-				set_ocean_alpha(color, last_alpha, zscale, i, j+1);
+				set_ocean_alpha(color, zscale, i, j+1);
 				glVertex2f((xval+DX_VAL), yval);
-				set_ocean_alpha(color, last_alpha, zscale, i+1, j+1);
+				set_ocean_alpha(color, zscale, i+1, j+1);
 				glVertex2f((xval+DX_VAL), (yval+DY_VAL));
 			}
 			else {
