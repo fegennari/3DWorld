@@ -194,17 +194,6 @@ void update_blasts() {
 }
 
 
-void rotate_into_dir(vector3d const &dir, point const &pos) {
-
-	if (dir == zero_vector) {
-		rotate_towards_camera(pos);
-	}
-	else {
-		rotate_into_plus_z(dir);
-	}
-}
-
-
 struct ix_type_pair {
 	unsigned ix, type;
 	ix_type_pair() {}

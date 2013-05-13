@@ -294,7 +294,9 @@ void cloud_manager_t::draw() {
 		cube_t const bcube(get_bcube());
 		float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
 		float const xy_exp((cloud_top - frustum_z)/(cloud_bot - frustum_z));
-		draw_billboard_quad(point(camera.x, camera.y, cloud_top), point(-xy_exp*cloud_xy, 0.0, 0.0), point(0.0, xy_exp*cloud_xy, 0.0));
+		quad_batch_draw qbd;
+		qbd.add_quad_dirs(point(camera.x, camera.y, cloud_top), vector3d(-xy_exp*cloud_xy, 0.0, 0.0), vector3d(0.0, xy_exp*cloud_xy, 0.0), WHITE, -plus_z);
+		qbd.draw();
 		s.end_shader();
 		disable_flares();
 	}
