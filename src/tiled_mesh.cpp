@@ -1374,11 +1374,13 @@ void tile_draw_t::draw(bool reflection_pass) {
 	s.add_uniform_float("spec_scale", 1.0);
 	setup_mesh_lighting();
 	set_array_client_state(1, 0, 0, 0);
+	enable_blend(); // for fog transparency
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		num_trees += to_draw[i].second->num_pine_trees() + to_draw[i].second->num_decid_trees();
 		if (display_mode & 0x01) {to_draw[i].second->draw(s, reflection_pass);}
 	}
+	disable_blend();
 	disable_multitex(2, 1); // disable texgen on tu_id=2
 	s.end_shader();
 		
