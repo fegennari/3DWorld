@@ -11,6 +11,7 @@
 
 bool     const USE_CLOUD_FBO    = 1;
 unsigned const CLOUD_GEN_TEX_SZ = 1024;
+unsigned const CLOUD_NUM_DIV = 32;
 
 
 vector2d cloud_wind_pos(0.0, 0.0);
@@ -332,14 +333,38 @@ void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
 }
 
 
+void render_spherical_section(indexed_mesh_draw<vert_wrap_t> &imd, float size, float rval_inv, float z1, float z2) {
+
+	point const camera(get_camera_pos());
+	float const ndiv_inv(1.0/CLOUD_NUM_DIV);
+	float xvals[CLOUD_NUM_DIV+1], yvals[CLOUD_NUM_DIV+1];
+	imd.init(CLOUD_NUM_DIV, CLOUD_NUM_DIV);
+
+	for (unsigned t = 0; t <= CLOUD_NUM_DIV; ++t) {
+		float const angle(TWO_PI*(t*ndiv_inv));
+		xvals[t] = cosf(angle);
+		yvals[t] = sinf(angle);
+	}
+	for (unsigned r = 0; r <= CLOUD_NUM_DIV; ++r) { // spherical section
+		float const radius(size*r*ndiv_inv), zval(z1 + (z2 - z1)*cos(PI_TWO*min(1.0f, radius*rval_inv)));
+
+		for (unsigned t = 0; t <= CLOUD_NUM_DIV; ++t) {
+			imd.set_vert(t, r, point((radius*xvals[t] + camera.x), (radius*yvals[t] + camera.y), zval));
+		}
+	}
+	imd.render();
+}
+
+
+// not a plane, but a spherical section
 void draw_cloud_plane(bool reflection_pass) {
 
-	unsigned const NUM_DIV = 32;
 	float const cloud_rel_vel = 1.0; // relative cloud velocity compared to camera velocity
 	float const size(FAR_CLIP), rval(0.94*size), rval_inv(1.0/rval); // extends to at least the far clipping plane
-	float const z1(zmin), z2(get_cloud_zmax()), ndiv_inv(1.0/NUM_DIV);
+	float const z1(zmin), z2(get_cloud_zmax()), ndiv_inv(1.0/CLOUD_NUM_DIV);
 	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
 	vector3d const offset(-camera + cloud_rel_vel*world_pos);
+	colorRGBA const cloud_color(get_cloud_color());
 	static indexed_mesh_draw<vert_wrap_t> imd;
 	shader_t s;
 	glDepthMask(GL_FALSE);
@@ -347,6 +372,28 @@ void draw_cloud_plane(bool reflection_pass) {
 	if (animate2) {
 		cloud_wind_pos.x -= fticks*wind.x;
 		cloud_wind_pos.y -= fticks*wind.y;
+	}
+
+	// draw a static textured upper cloud layer
+	if (1) {
+		s.set_vert_shader("texture_gen.part+no_lighting_texture_gen");
+		s.set_frag_shader("simple_texture");
+		s.begin_shader();
+		s.add_uniform_int("tex0", 0);
+		enable_blend();
+		select_texture(CLOUD_RAW_TEX, 0);
+		float const xy_scale(0.02), z_offset(0.01*size);
+		float const sx(1.0/(1.0 + min(2.0, 0.5*fabs(wind.x))));
+		float const sy(1.0/(1.0 + min(2.0, 0.5*fabs(wind.y))));
+		vector3d const offset2(xy_scale*(-camera + 0.7*cloud_rel_vel*world_pos));
+		setup_texgen(sx*xy_scale, sy*xy_scale, sx*offset2.x, sy*offset2.y, 0.0);
+		colorRGBA cloud_color2(cloud_color);
+		cloud_color2.alpha *= (is_cloudy ? 1.0 : 0.5);
+		cloud_color2.do_glColor();
+		render_spherical_section(imd, size, rval_inv, z1+z_offset, z2+z_offset);
+		disable_textures_texgen();
+		disable_blend();
+		s.end_shader();
 	}
 
 	// draw a plane at zmin to properly blend the fog
@@ -358,7 +405,7 @@ void draw_cloud_plane(bool reflection_pass) {
 		s.setup_fog_scale();
 		s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
 		BLACK.do_glColor();
-		imd.render_z_plane(-size, -size, size, size, zmin, NUM_DIV, NUM_DIV);
+		imd.render_z_plane(-size, -size, size, size, zmin, CLOUD_NUM_DIV, CLOUD_NUM_DIV);
 		s.end_shader();
 	}
 
@@ -378,25 +425,10 @@ void draw_cloud_plane(bool reflection_pass) {
 	set_cloud_uniforms(s, 0);
 	s.add_uniform_vector3d("cloud_offset", offset);
 	enable_blend();
-	get_cloud_color().do_glColor();
-	imd.init(NUM_DIV, NUM_DIV);
-	float xvals[NUM_DIV+1], yvals[NUM_DIV+1];
-
-	for (unsigned t = 0; t <= NUM_DIV; ++t) {
-		float const angle(TWO_PI*(t*ndiv_inv));
-		xvals[t] = cosf(angle);
-		yvals[t] = sinf(angle);
-	}
-	for (unsigned r = 0; r <= NUM_DIV; ++r) { // spherical section
-		float const radius(size*r*ndiv_inv), zval(z1 + (z2 - z1)*cos(PI_TWO*min(1.0f, radius*rval_inv)));
-
-		for (unsigned t = 0; t <= NUM_DIV; ++t) {
-			imd.set_vert(t, r, point((radius*xvals[t] + camera.x), (radius*yvals[t] + camera.y), zval));
-		}
-	}
-	imd.render();
-	s.end_shader();
+	cloud_color.do_glColor();
+	render_spherical_section(imd, size, rval_inv, z1, z2);
 	disable_blend();
+	s.end_shader();
 	glDepthMask(GL_TRUE);
 }
 
