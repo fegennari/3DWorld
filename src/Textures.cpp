@@ -165,7 +165,8 @@ texture_t(0, 5, 0,    0,    0, 4, 1, "flare1.jpg"), // 384x384
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 (Nte: low resolution)
 texture_t(0, 5, 0,    0,    0, 4, 1, "Flare3.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare4.jpg"), // 256x256
-texture_t(0, 5, 0,    0,    0, 4, 1, "flare5.jpg") // 256x256
+texture_t(0, 5, 0,    0,    0, 4, 1, "flare5.jpg"), // 256x256
+texture_t(0, 5, 0,    0,    0, 3, 1, "foam1.jpg") // 512x512
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
 };
