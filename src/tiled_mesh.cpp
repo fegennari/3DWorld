@@ -207,7 +207,31 @@ void tile_t::clear_vbo_tid(bool vclear, bool tclear) {
 
 void tile_t::create_xy_arrays(mesh_xy_grid_cache_t &height_gen, unsigned xy_size, float xy_scale) {
 
-	height_gen.build_arrays((xy_scale*(xstart - 0.5*xstep)), (xy_scale*(ystart + 0.5*ystep)), xy_scale*xstep, xy_scale*ystep, xy_size, xy_size);
+	height_gen.build_arrays(xy_scale*(xstart - 0.5*xstep), xy_scale*(ystart + 0.5*ystep), xy_scale*xstep, xy_scale*ystep, xy_size, xy_size);
+}
+
+
+#define B 0x100
+#define BM 0xff
+inline float s_curve(float t) {return t*t*(3.0f - 2.0f*t);}
+inline float lerp(float t, float a, float b) {return a + t*(b-a);}
+
+
+float tnoise2(float x, float y, int *p, float *v) {
+
+	int const dx = (int)x;
+	int const dy = (int)y;
+	float const sx = s_curve(x - dx);
+	float const sy = s_curve(y - dy);
+	int const i = p[BM & dx];
+	int const j = p[BM & (dx + 1)];
+	float u0 = v[p[(i + dy) & BM]];
+	float u1 = v[p[(j + dy) & BM]];
+	float const a = lerp(sx, u0, u1);
+	u0 = v[p[(i + dy + 1) & BM]];
+	u1 = v[p[(j + dy + 1) & BM]];
+	float const b = lerp(sx, u0, u1);
+	return lerp(sy, a, b);
 }
 
 
@@ -217,11 +241,41 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	if (enable_terrain_env) {update_terrain_params();}
 	zvals.resize(zvsize*zvsize);
 	calc_start_step(0, 0);
-	create_xy_arrays(height_gen, zvsize, 1.0);
 	mzmin =  FAR_CLIP;
 	mzmax = -FAR_CLIP;
 	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + OCEAN_WAVE_HEIGHT);
 	unsigned const block_size(zvsize/4);
+
+#if 0
+
+	int p[B]; //permutation table
+	float v[B]; //position table
+	rand_gen_t rgen;
+	rgen.set_state(123, 456);
+	
+	for (unsigned i = 0; i <= BM; ++i) {
+		p[i] = rgen.rand() & BM;
+		v[i] = float(i)/BM;
+	}
+	for (int y = 0; y < (int)zvsize; ++y) {
+		for (unsigned x = 0; x < zvsize; ++x) {
+			float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
+			float const hoff(BILINEAR_INTERP(params, hoff, xv, yv)), hscale(BILINEAR_INTERP(params, hscale, xv, yv));
+			float const xval(xstart + (x - 0.5)*xstep), yval(ystart + (y - 0.5)*ystep);
+			float height(0.0), mag(0.1), freq(0.1);
+			unsigned const num_octaves = 8;
+
+			for (unsigned n = 0; n < num_octaves; ++n) {
+				height += mag*tnoise2(freq*xval, freq*yval, p, v);
+				mag    *= 0.5;
+				freq   *= 2.0;
+			}
+			zvals[y*zvsize + x] = hoff + hscale*height;
+		}
+	}
+
+#else
+	create_xy_arrays(height_gen, zvsize, 1.0);
 
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)zvsize; ++y) {
@@ -231,6 +285,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 			zvals[y*zvsize + x] = hoff + hscale*height_gen.eval_index(x, y);
 		}
 	}
+#endif
 	for (unsigned yy = 0; yy < 4; ++yy) {
 		for (unsigned xx = 0; xx < 4; ++xx) {
 			sub_zmin[yy][xx] =  FAR_CLIP;
