@@ -317,7 +317,7 @@ public:
 	void free_data() {
 		for (const_iterator s = begin(); s != end(); ++s) {
 			for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
-				if (s->second.sixs[i]) glDetachShader(s->second.p, s->second.sixs[i]);
+				if (s->second.sixs[i]) {glDetachShader(s->second.p, s->second.sixs[i]);}
 			}
 			glDeleteProgram(s->second.p);
 		}
@@ -392,7 +392,7 @@ bool shader_t::load_shader_file(string const &fname, string &data) const {
 	ifstream in(fname.c_str());
 	if (!in.good()) return 0;
 	string line, file_contents;
-	while (std::getline(in, line)) file_contents += line + '\n';
+	while (std::getline(in, line)) {file_contents += line + '\n';}
 	loaded_files[fname] = file_contents;
 	if (PRINT_SHADER) cout << "shader data:" << endl << file_contents << endl;
 	data += file_contents;
@@ -466,6 +466,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 }
 
 
+// See http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/glsl-core-tutorial-create-a-program/
 bool shader_t::begin_shader(bool do_enable) {
 
 	if (disable_shaders) return 0;
@@ -484,6 +485,7 @@ bool shader_t::begin_shader(bool do_enable) {
 		unsigned shader_ixs[NUM_SHADER_TYPES];
 		
 		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
+			// Note: we *can* attach multiple shaders of the same type to a single program as long as only one has a main()
 			shader_ixs[i] = get_shader(shader_names[i], i);
 			if (shader_ixs[i]) {glAttachShader(program, shader_ixs[i]);}
 		}

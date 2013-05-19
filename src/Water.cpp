@@ -46,6 +46,7 @@ bool     const DEBUG_WATER_TIME    = 0; // DEBUGGING
 bool     const DEBUG_RIPPLE_TIME   = 0;
 bool     const FAST_WATER_RIPPLE   = 0;
 bool     const NO_ICE_RIPPLES      = 0;
+bool     const USE_SEA_FOAM        = 1;
 int      const UPDATE_UW_LANDSCAPE = 2;
 
 float const w_spec[2][2] = {{0.3, 80.0}, {0.4, 70.0}};
@@ -379,7 +380,13 @@ void draw_water() {
 	if (DISABLE_WATER || (island && !w_acc)) return;
 	water_surface_draw wsd;
 	shader_t s;
+
+	if (USE_SEA_FOAM) {
+		s.set_prefix("#define HAVE_DETAIL_TEXTURE", 0); // VS
+		s.set_prefix("#define ADD_DETAIL_TEXTURE", 1); // FS
+	}
 	setup_mesh_and_water_shader(s);
+	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	set_fill_mode();
 	glEnable(GL_COLOR_MATERIAL);
 	point const camera(get_camera_pos());
@@ -405,10 +412,11 @@ void draw_water() {
 		//glCullFace(GL_FRONT); // backwards?
 		//glEnable(GL_CULL_FACE);
 
-		if (0) { // use sea foam texture
+		if (USE_SEA_FOAM) { // use sea foam texture
 			select_multitex(FOAM_TEX, 1, 0, 0);
-			setup_texgen(32.0*tx_scale, 32.0*ty_scale, 0.0, 0.0);
+			setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0);
 			set_active_texture(0);
+			s.add_uniform_float("detail_tex_scale", 1.0);
 		}
 		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
@@ -430,6 +438,7 @@ void draw_water() {
 			}
 		}
 		assert(!last_draw);
+		if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
 		//glDisable(GL_CULL_FACE);
 		//glCullFace(GL_BACK); // backwards?
 		disable_blend();
@@ -591,6 +600,12 @@ void draw_water() {
 	disable_blend();
 	disable_point_specular();
 	set_specular(0.0, 1.0);
+
+	if (USE_SEA_FOAM) {
+		set_active_texture(1);
+		disable_texgen();
+		set_active_texture(0);
+	}
 	disable_textures_texgen();
 	glEnable(GL_NORMALIZE);
 	glDisable(GL_COLOR_MATERIAL);

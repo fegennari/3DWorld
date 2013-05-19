@@ -391,7 +391,8 @@ void draw_mesh_mvd(bool shadow_pass) {
 	shader_t s;
 
 	if (!shadow_pass && !disable_shaders) {
-		for (unsigned d = 0; d < 2; ++d) {s.set_prefix("#define HAVE_DETAIL_TEXTURE", d);} // VS/FS
+		s.set_prefix("#define HAVE_DETAIL_TEXTURE", 0); // VS
+		s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
 		setup_mesh_and_water_shader(s);
 	}
 	float y(-Y_SCENE_SIZE);
