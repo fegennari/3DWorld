@@ -259,7 +259,7 @@ void shader_t::check_for_fog_disabled() {
 
 void shader_t::set_prefix(char const *const prefix, unsigned shader_type) {
 
-	assert(shader_type < 3);
+	assert(shader_type < NUM_SHADER_TYPES);
 	prog_name_suffix.push_back(',');
 	prog_name_suffix.push_back('s');
 	prog_name_suffix.push_back('0'+shader_type);
@@ -279,7 +279,7 @@ void shader_t::set_bool_prefixes(char const *const name, bool val, unsigned shad
 
 	string const prefix(string("const bool ") + name + (val ? " = true;" : " = false;"));
 
-	for (unsigned s = 0; s < 3; ++s) { // put into correct shader(s): V, F, G
+	for (unsigned s = 0; s < NUM_SHADER_TYPES; ++s) { // put into correct shader(s): V, F, G, TC, TE
 		if (shaders_enabled & (1<<s)) {set_prefix_str(prefix, s);}
 	}
 }
@@ -297,8 +297,14 @@ void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_t
 
 
 struct program_t {
-	unsigned p, vs, fs, gs;
-	program_t(unsigned p_=0, unsigned vs_=0, unsigned fs_=0, unsigned gs_=0) : p(p_), vs(vs_), fs(fs_), gs(gs_) {}
+	unsigned p, sixs[NUM_SHADER_TYPES];
+
+	program_t() : p(0) {
+		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {sixs[i] = 0;}
+	}
+	program_t(unsigned p_, unsigned sixs_[NUM_SHADER_TYPES]) : p(p_) {
+		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {sixs[i] = sixs_[i];}
+	}
 };
 
 
@@ -309,11 +315,11 @@ public:
 		map<string, program_t>::clear();
 	}
 	void free_data() {
-		for (const_iterator i = begin(); i != end(); ++i) {
-			if (i->second.vs) glDetachShader(i->second.p, i->second.vs);
-			if (i->second.fs) glDetachShader(i->second.p, i->second.fs);
-			if (i->second.gs) glDetachShader(i->second.p, i->second.gs);
-			glDeleteProgram(i->second.p);
+		for (const_iterator s = begin(); s != end(); ++s) {
+			for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
+				if (s->second.sixs[i]) glDetachShader(s->second.p, s->second.sixs[i]);
+			}
+			glDeleteProgram(s->second.p);
 		}
 	}
 	// can't free in the destructor because the gl context may be destroyed before this point
@@ -339,12 +345,23 @@ public:
 
 
 string_prog_map loaded_programs;
-string_shad_map loaded_shaders[3]; // vertex=0, fragment=1, geometry=3
+string_shad_map loaded_shaders[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4
 map<string, string> loaded_files;
 
 
 bool setup_shaders() {
 
+	if (0) {
+		int max_pv(0), max_level(0), def_o(0), def_i(0);
+		glGetIntegerv(GL_MAX_PATCH_VERTICES, &max_pv);
+		glGetIntegerv(GL_MAX_TESS_GEN_LEVEL, &max_level);
+		glGetIntegerv(GL_PATCH_DEFAULT_OUTER_LEVEL, &def_o);
+		glGetIntegerv(GL_PATCH_DEFAULT_INNER_LEVEL, &def_i);
+		cout << "max_pv: " << max_pv << ", max_level: " << max_level << ", def levels: " << def_o << " " << def_i << endl; // 32 64 1 1
+		//glPatchParameteri(GL_PATCH_VERTICES, v);
+		//glPatchParameteri(GL_PATCH_DEFAULT_OUTER_LEVEL, v);
+		//glPatchParameteri(GL_PATCH_DEFAULT_INNER_LEVEL, v);
+	}
 	cout << "OpenGL Version: " << glGetString(GL_VERSION) << endl;
 	cout << "GLSL Shader Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 	if (GLEW_ARB_vertex_shader && GLEW_ARB_fragment_shader && GL_EXT_geometry_shader4) return 1;
@@ -357,7 +374,7 @@ void clear_shaders() {
 
 	loaded_programs.clear();
 
-	for (unsigned d = 0; d < 3; ++d) {
+	for (unsigned d = 0; d < NUM_SHADER_TYPES; ++d) {
 		loaded_shaders[d].clear();
 	}
 }
@@ -395,12 +412,12 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	
 	//RESET_TIME;
 	if (name.empty()) return 0; // none selected
-	int const shader_type_table   [3] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER_EXT};
-	string const shader_name_table[3] = {"vert", "frag", "geom"};
-	assert(type < 3);
+	int const shader_type_table   [NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER};
+	string const shader_name_table[NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
+	assert(type < NUM_SHADER_TYPES);
 	string const lookup_name(name + prepend_string[type]);
 	string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
-	if (it != loaded_shaders[type].end()) return it->second; // already loaded
+	if (it != loaded_shaders[type].end()) {return it->second;} // already loaded
 	
 	// create a new shader
 	string const version_info("#version 400\n");
@@ -444,7 +461,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	}
 	if (PRINT_LOG) print_shader_info_log(shader);
 	loaded_shaders[type][lookup_name] = shader; // cache the shader
-	//PRINT_TIME("Create Shader"); // 43ms
+	//PRINT_TIME("Create Shader");
 	return shader;
 }
 
@@ -454,7 +471,8 @@ bool shader_t::begin_shader(bool do_enable) {
 	if (disable_shaders) return 0;
 	// get the program
 	//RESET_TIME;
-	string const pname(vs_name + "," + fs_name + "," + gs_name + "," + prog_name_suffix); // unique program identifier
+	string pname(prog_name_suffix);
+	for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {pname += shader_names[i] + ",";} // unique program identifier
 	string_prog_map::const_iterator it(loaded_programs.find(pname));
 	program = 0;
 
@@ -463,18 +481,18 @@ bool shader_t::begin_shader(bool do_enable) {
 	}
 	else { // create a new program
 		program = glCreateProgram();
-		unsigned const vs(get_shader(vs_name, 0));
-		unsigned const fs(get_shader(fs_name, 1));
-		unsigned const gs(get_shader(gs_name, 2));
-		assert(vs && fs); // vertex and fragment shaders are required, geometry shader is optional
-		if (vs) glAttachShader(program, vs);
-		if (fs) glAttachShader(program, fs);
-		if (gs) glAttachShader(program, gs);
+		unsigned shader_ixs[NUM_SHADER_TYPES];
+		
+		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
+			shader_ixs[i] = get_shader(shader_names[i], i);
+			if (shader_ixs[i]) {glAttachShader(program, shader_ixs[i]);}
+		}
+		assert(shader_ixs[0] && shader_ixs[1]); // vertex and fragment shaders are required, geometry shader is optional
 
-		if (gs) { // setup geometry shader
+		if (shader_ixs[2]) { // setup geometry shader
 			// Note: we MUST *NOT* be in a display list when we get here
 			assert(GL_EXT_geometry_shader4);
-			glProgramParameteriEXT(program, GL_GEOMETRY_INPUT_TYPE_EXT, in_prim);
+			glProgramParameteriEXT(program, GL_GEOMETRY_INPUT_TYPE_EXT,  in_prim);
 			glProgramParameteriEXT(program, GL_GEOMETRY_OUTPUT_TYPE_EXT, out_prim);
 			int max_verts_out(0);
 			glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES_EXT, &max_verts_out); // get max
@@ -494,7 +512,7 @@ bool shader_t::begin_shader(bool do_enable) {
 			exit(1);
 		}
 		if (PRINT_LOG) print_program_info_log();
-		loaded_programs[pname] = program_t(program, vs, fs, gs); // cache the program
+		loaded_programs[pname] = program_t(program, shader_ixs); // cache the program
 		//PRINT_TIME("Create Program"); // 90ms
 	}
 	if (do_enable) {enable();}
@@ -535,13 +553,11 @@ void shader_t::end_shader() { // ok to call if not in a shader
 	disable();
 	program = 0;
 	
-	for (unsigned i = 0; i < 3; ++i) {
+	for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
 		prepend_string[i].clear();
+		shader_names[i].clear();
 	}
 	prog_name_suffix.clear();
 	attrib_locs.clear();
-	vs_name.clear();
-	fs_name.clear();
-	gs_name.clear();
 }
 

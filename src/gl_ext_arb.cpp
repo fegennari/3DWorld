@@ -16,10 +16,14 @@ void init_glew() {
 	GLenum const err(glewInit());
 
 	if (GLEW_OK != err) {
-	  fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-	  assert(0);
+		std::cerr << "Error: " << glewGetErrorString(err) << endl;
+		assert(0);
 	}
 #endif
+	if (!glewIsSupported("GL_VERSION_3_3")) {
+		std::cerr << "Error: GL version 3.3 not found" << endl;
+		assert(0);
+    }
 	glEnable(GL_MULTISAMPLE); // only works when using a multisampling graphics context
 }
 

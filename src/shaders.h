@@ -12,16 +12,17 @@ using std::string;
 
 unsigned const TEX0_S_ATTR = 0;
 unsigned const TEX0_T_ATTR = 1;
+unsigned const NUM_SHADER_TYPES = 5;
 
 
 class shader_t {
 
 	unsigned program; // active program
-	string prepend_string[3]; // vertex=0, fragment=1, geometry=3
+	string prepend_string[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4
 	string prog_name_suffix;
 	vector<int> attrib_locs;
 
-	string vs_name, fs_name, gs_name;
+	string shader_names[NUM_SHADER_TYPES];
 	int in_prim, out_prim, verts_out;
 
 	int attrib_loc_by_ix(unsigned ix) const;
@@ -35,11 +36,13 @@ public:
 	shader_t() : program(0), in_prim(0), out_prim(0), verts_out(0) {}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
 
-	void set_vert_shader(string const &vs_name_) {vs_name = vs_name_;}
-	void set_frag_shader(string const &fs_name_) {fs_name = fs_name_;}
+	void set_vert_shader(string const &vs_name_) {shader_names[0] = vs_name_;}
+	void set_frag_shader(string const &fs_name_) {shader_names[1] = fs_name_;}
 	void set_geom_shader(string const &gs_name_, int in_prim_, int out_prim_, int verts_out_) {
-		gs_name = gs_name_; in_prim = in_prim_; out_prim = out_prim_; verts_out = verts_out_;
+		shader_names[2] = gs_name_; in_prim = in_prim_; out_prim = out_prim_; verts_out = verts_out_;
 	}
+	void set_tess_control_shader(string const &tcs_name_) {shader_names[3] = tcs_name_;}
+	void set_tess_eval_shader   (string const &tes_name_) {shader_names[4] = tes_name_;}
 	void init_from_active_shader(shader_t const &s) {assert(s.is_setup()); program = s.program;}
 	bool is_setup() const {return (program > 0);}
 	void enable () const {assert(program); glUseProgram(program);}
