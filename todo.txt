@@ -23,11 +23,12 @@ No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
 
 glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
- - grass
- - pine tree leaves
+Optimize vertex index ordering for model3d files:
+http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
 
 Pickup items floating in water
 Faster ship particles
+Ocean water foam
 
  E: 2.9 process_groups()
  H: 2.1 setup_object_render_data()

@@ -381,6 +381,8 @@ void setup_mesh_and_water_shader(shader_t &s) {
 	s.setup_fog_scale();
 	s.setup_scene_bounds();
 	setup_dlight_textures(s);
+	s.add_uniform_int("tex0", 0);
+	s.add_uniform_int("tex1", 1);
 }
 
 
@@ -391,8 +393,6 @@ void draw_mesh_mvd(bool shadow_pass) {
 	if (!shadow_pass && !disable_shaders) {
 		for (unsigned d = 0; d < 2; ++d) {s.set_prefix("#define HAVE_DETAIL_TEXTURE", d);} // VS/FS
 		setup_mesh_and_water_shader(s);
-		s.add_uniform_int("tex0", 0);
-		s.add_uniform_int("tex1", 1);
 	}
 	float y(-Y_SCENE_SIZE);
 	mesh_vertex_draw mvd(shadow_pass);

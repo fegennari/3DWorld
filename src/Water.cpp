@@ -7,6 +7,7 @@
 #include "physics_objects.h"
 #include "openal_wrap.h"
 #include "shaders.h"
+#include "gl_ext_arb.h"
 
 
 float    const RIPPLE_DAMP1        = 0.95;
@@ -379,7 +380,6 @@ void draw_water() {
 	water_surface_draw wsd;
 	shader_t s;
 	setup_mesh_and_water_shader(s);
-	s.add_uniform_int("tex0", 0);
 	set_fill_mode();
 	glEnable(GL_COLOR_MATERIAL);
 	point const camera(get_camera_pos());
@@ -405,6 +405,11 @@ void draw_water() {
 		//glCullFace(GL_FRONT); // backwards?
 		//glEnable(GL_CULL_FACE);
 
+		if (0) { // use sea foam texture
+			select_multitex(FOAM_TEX, 1, 0, 0);
+			setup_texgen(32.0*tx_scale, 32.0*ty_scale, 0.0, 0.0);
+			set_active_texture(0);
+		}
 		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
 				if (j < MESH_X_SIZE-1 && (
