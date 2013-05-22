@@ -238,16 +238,12 @@ public:
 
 	void blend_reflection_color(point const &v, colorRGBA &color, vector3d const &n, point const &camera) {
 
-		// Note: what about direct shadows on the water surface?
 		vector3d const view_dir((v - camera).get_norm());
-		
-		if (dot_product(view_dir, n) >= 0.0) { // back facing water
-			color = ALPHA0;
-			return;
-		}
+		float const view_dp(dot_product(view_dir, n));
+		//if (view_dp >= 0.0) {color = ALPHA0;return;} // back facing water - not valid (need to check all connected vertices/faces?)
 
 		// add some green at shallow view angles
-		blend_color(color, colorRGBA(0.0, 1.0, 0.5, 1.0), color, 0.25*(1.0 - fabs(dot_product(view_dir, n))), 0);
+		blend_color(color, colorRGBA(0.0, 1.0, 0.5, 1.0), color, 0.25*(1.0 - fabs(view_dp)), 0);
 
 		vector3d dir;
 		calc_reflection_angle(view_dir, dir, n);
@@ -318,7 +314,7 @@ public:
 			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs0, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
 		}
 		if (rcolor.alpha > 0.0) {
-			float const r(get_fresnel_reflection(-view_dir, n, 1.0, WATER_INDEX_REFRACT));
+			float r(CLIP_TO_01(get_fresnel_reflection(-view_dir, n, 1.0, WATER_INDEX_REFRACT))); // maybe incorrect if out of the [0.0, 1.0] range?
 			rcolor.alpha = 1.0; // transparent objects
 			blend_color(color, rcolor, color, r*rcolor.alpha, 1);
 		}
@@ -446,7 +442,8 @@ void draw_water() {
 		}
 		if (1) {
 			// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
-			int const cxpos(max(0, min(xend, get_xpos(camera.x)))), cypos(max(0, min(yend, get_ypos(camera.y))));
+			point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
+			int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
 			draw_outside_water_range(wsd, color, cxpos, cypos, xend, yend,  1,  1);
 			draw_outside_water_range(wsd, color, cxpos, cypos, xend, 0,     1, -1);
 			draw_outside_water_range(wsd, color, cxpos, cypos, 0,    0,    -1, -1);
