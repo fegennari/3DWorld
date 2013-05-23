@@ -19,7 +19,7 @@ void main()
 	lit_color *= texture2D(tex1, gl_TexCoord[1].st);
 #endif
 #ifdef ADD_DETAIL_TEXTURE // for water
-	float slope_scale = clamp(50.0*(1.0 - normal.z), 0.0, 1.0); // normal.z is typically in +z
+	float slope_scale = clamp(50.0*(1.0 - normalize(normal).z), 0.0, 1.0); // normal.z is typically in +z
 	lit_color *= vec4(1,1,1,1) + slope_scale*detail_tex_scale*texture2D(tex1, gl_TexCoord[1].st);
 	lit_color  = clamp(lit_color, 0.0, 1.0);
 #endif

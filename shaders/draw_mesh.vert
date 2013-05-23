@@ -10,7 +10,7 @@ void main()
 	setup_texgen1();
 #endif
 	gl_Position = ftransform();
-	eye_norm = gl_NormalMatrix * gl_Normal; // eye space
+	eye_norm = gl_NormalMatrix * gl_Normal; // eye space, not normalized
 	normal = normalize(gl_Normal);
 	dlpos  = gl_Vertex.xyz;
 	epos   = gl_ModelViewMatrix * gl_Vertex;

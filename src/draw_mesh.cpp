@@ -191,7 +191,7 @@ class mesh_vertex_draw {
 			light_scale *= get_cloud_shadow_atten(j, i);
 		}
 		// Note: normal is never set to zero because we need it for dynamic light sources
-		data[c].n= vertex_normals[i][j]*max(light_scale, 0.01f);
+		data[c].n = vertex_normals[i][j]*max(light_scale, 0.01f);
 		data[c].set_c3(color);
 	}
 

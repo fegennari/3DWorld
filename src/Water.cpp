@@ -446,8 +446,8 @@ void draw_water() {
 			int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
 			draw_outside_water_range(wsd, color, cxpos, cypos, xend, yend,  1,  1);
 			draw_outside_water_range(wsd, color, cxpos, cypos, xend, 0,     1, -1);
-			draw_outside_water_range(wsd, color, cxpos, cypos, 0,    0,    -1, -1);
 			draw_outside_water_range(wsd, color, cxpos, cypos, 0,    yend, -1,  1);
+			draw_outside_water_range(wsd, color, cxpos, cypos, 0,    0,    -1, -1);
 		}
 		else {
 			draw_outside_water_range(wsd, color, 0, 0, xend, yend, 1, 1);
@@ -638,7 +638,7 @@ void calc_water_normals() {
 	if (temperature <= W_FREEZE_POINT) {
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				if (!point_interior_to_mesh(j, i) || wminside[i][j]) wsn1[j] = wat_vert_normals[i][j] = plus_z;
+				if (!point_interior_to_mesh(j, i) || wminside[i][j]) {wsn1[j] = wat_vert_normals[i][j] = plus_z;}
 			} // for j
 			swap(wsn0, wsn1);
 		} // for i
@@ -648,21 +648,22 @@ void calc_water_normals() {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			if (!point_interior_to_mesh(j, i)) {
 				wsn1[j] = wat_vert_normals[i][j] = plus_z;
-				continue;
 			}
-			if (wminside[i][j] && water_matrix[i][j] >= z_min_matrix[i][j]) {
+			else if (wminside[i][j] && water_matrix[i][j] >= z_min_matrix[i][j]) {
 				vector3d nv(get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, i, j));
 				wsn1[j] = nv;
 				
 				if (i > 0) {
 					nv += wsn0[j];
-					if (j > 0) nv += wsn0[j-1];
+					if (j > 0) {nv += wsn0[j-1];}
 				}
-				if (j > 0)  nv    += wsn1[j-1];
-				if (i == 0) nv.z  += 2.0;
-				if (j == 0) nv.z  += 2.0;
+				else {nv.z += 2.0;}
+				if (j > 0) {nv += wsn1[j-1];} else {nv.z += 2.0;}
 				wat_vert_normals[i][j] = nv*0.25;
 			} // inside
+			else {
+				wsn1[j] = wat_vert_normals[i][j] = plus_z;
+			}
 		} // for j
 		swap(wsn0, wsn1);
 	} // for i
