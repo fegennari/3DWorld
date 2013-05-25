@@ -3,6 +3,7 @@ Fix ship collisions
 Tree branch/trunk bark bump maps
 Leaf/Branch overlap
 Multiple decid tree impostor orients
+Pickup items floating in water
 
 More grass/plant types
 
@@ -26,8 +27,8 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 Optimize vertex index ordering for model3d files:
 http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
 
-Pickup items floating in water
 Faster ship particles
+
 
  E: 2.9 process_groups()
  H: 2.1 setup_object_render_data()

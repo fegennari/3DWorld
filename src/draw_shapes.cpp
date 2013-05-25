@@ -89,7 +89,7 @@ bool check_face_containment(cube_t const &cube, int dim, int dir, int cobj) {
 
 	for (unsigned i = 0; i < ncv; ++i) { // test for internal faces to be removed
 		coll_obj const &c(coll_objects[cell.cvals[i]]);
-		if (c.type != COLL_CUBE || !c.fixed || c.status != COLL_STATIC || c.platform_id >= 0)                    continue;
+		if (c.type != COLL_CUBE || !c.fixed || c.status != COLL_STATIC || c.platform_id >= 0 || c.destroy >= SHATTERABLE) continue;
 		if ((int)cell.cvals[i] == cobj || c.is_semi_trans() || fabs(c.d[dim][!dir] - cube.d[dim][dir]) > TOLER_) continue;
 		bool contained(1);
 

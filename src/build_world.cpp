@@ -725,7 +725,7 @@ void check_contained_cube_sides() {
 		for (unsigned dim = 0; dim < 3; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				if (i->cp.surfs & EFLAGS[dim][dir]) continue;
-				if (check_face_containment(*i, dim, dir, (i - coll_objects.begin()))) i->cp.surfs |= EFLAGS[dim][dir]; // unset this flag bit
+				if (check_face_containment(*i, dim, dir, (i - coll_objects.begin()))) {i->cp.surfs |= EFLAGS[dim][dir];} // set this flag bit
 			}
 		}
 	}
