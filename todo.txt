@@ -32,7 +32,6 @@ Cloud shadows on water in tiled terrain mode
 Sparse grass tiles?
 Yellow and white flowers
 Hot glowing and black burned cobj fragments
-Asteroids collide with the bounding sphere with the correct angle : uasteroid::apply_physics
 Mesh height high frequency noise
 
 

@@ -2307,7 +2307,7 @@ void ustar::solar_flare::update(colorRGBA const &color) {
 	if (time >= lifetime) time = lifetime = 0;
 	if (lifetime == 0) gen(color);
 	if (lifetime == 0) return; // gen failed
-	float const fticks_capped(min(fticks, 10.0f));
+	float const fticks_capped(min(fticks, 4.0f));
 	time    = min(lifetime, (time + iticks));
 	length += 0.02*length*fticks_capped;
 	radius += 0.02*radius*fticks_capped;

@@ -693,7 +693,11 @@ void uasteroid::apply_physics(point const &af_pos, float af_radius) {
 	if (vmag > vmax) {velocity *= vmax/vmag;} // clamp max velocity (from collisions)
 	rot_ang += fticks*rot_ang0;
 	pos     += velocity;
-	if (!dist_less_than((pos - af_pos), all_zeros, (af_radius - radius))) {velocity *= -1.0;} // outside asteroid field bounds, reverse
+	
+	if (!dist_less_than((pos - af_pos), all_zeros, (af_radius - radius))) {  // outside asteroid field bounds
+		//velocity *= -1.0; // reverse
+		calc_reflection_angle(velocity, velocity, (af_pos - pos).get_norm()); // reflect
+	}
 }
 
 
