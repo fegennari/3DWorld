@@ -30,12 +30,12 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 // **************** Cobj Destroy Code ****************
 
 
-void destroy_coll_objs(point const &pos, float damage, int shooter, bool big, float force_radius) {
+void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_type, float force_radius) {
 
 	//RESET_TIME;
 	assert(damage >= 0.0);
 	if (damage < 100.0) return;
-	float const radius((force_radius > 0.0) ? force_radius : (big ? 4.0 : 1.0)*sqrt(damage)/650.0);
+	float const radius((force_radius > 0.0) ? force_radius : ((damage_type == BLAST_RADIUS) ? 4.0 : 1.0)*sqrt(damage)/650.0);
 	vector3d cdir;
 	vector<color_tid_vol> cts;
 	int const dmin((damage > 800.0) ? DESTROYABLE : ((damage > 200.0) ? SHATTERABLE : EXPLODEABLE));
@@ -97,7 +97,9 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big, fl
 		//cout << "shattered: " << shattered << ", tri: " << tri_fragments << ", volume: " << cts[i].volume << ", num_parts: " << num_parts << ", num: " << num << ", ss: " << size_scale << endl;
 		bool const non_csg(shattered || cts[i].unanchored);
 		csg_cube frag_cube(cts[i]);
-		if (!non_csg && !cube.cube_intersection(frag_cube, frag_cube)) frag_cube = cts[i]; // intersect frag_cube with cube (should pass)
+		if (!non_csg && !cube.cube_intersection(frag_cube, frag_cube)) {frag_cube = cts[i];} // intersect frag_cube with cube (should pass)
+		bool const blacken(tri_fragments && cts[i].color.alpha == 1.0 && ((damage_type != IMPACT && damage_type != PROJECTILE) || cts[i].destroy >= EXPLODEABLE));
+		float const blacken_radius(2.0*radius);
 
 		for (unsigned o = 0; o < num; ++o) {
 			vector3d velocity(cdir);
@@ -105,11 +107,15 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, bool big, fl
 
 			if (non_csg) {
 				vector3d const vadd(fpos - pos); // average cdir and direction from collision point to fragment location
+				float const vadd_mag(vadd.mag());
 
-				if (vadd.mag() > TOLERANCE) {
-					velocity += vadd.get_norm()*(cdir_mag/vadd.mag());
+				if (vadd_mag > TOLERANCE) {
+					velocity += vadd*(cdir_mag/(vadd_mag*vadd_mag)); // is this double divide by vadd_mag correct?
 					velocity *= 0.5;
 				}
+			}
+			if (blacken && dist_less_than(fpos, pos, blacken_radius)) {
+				cts[i].color *= p2p_dist(fpos, pos)/blacken_radius;
 			}
 			gen_fragment(fpos, velocity, size_scale, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments);
 		}

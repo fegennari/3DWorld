@@ -1382,7 +1382,7 @@ void fire::apply_physics(unsigned i) {
 	}
 	if (!is_static) {
 		object_types[FIRE].radius = 1.75*radius;
-		//destroy_coll_objs(pos, 100000.0*damage, source, 0); // very, very slow
+		//destroy_coll_objs(pos, 100000.0*damage, source, FIRE); // very, very slow
 
 		if (status == 2) {
 			velocity = zero_vector; // above ground - no movement

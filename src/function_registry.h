@@ -682,7 +682,7 @@ void shift_waypoints(vector3d const &vd);
 void draw_waypoints();
 
 // function prototypes - destroy_cobj
-void destroy_coll_objs(point const &pos, float damage, int shooter, bool big, float force_radius=0.0);
+void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_type, float force_radius=0.0);
 void check_falling_cobjs();
 
 // function prototypes - shadow_map
