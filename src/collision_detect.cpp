@@ -38,7 +38,6 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 void free_all_coll_objects();
 
 
-
 bool decal_obj::is_on_cobj(int cobj) const {
 
 	if (cobj < 0) return 0;
@@ -49,7 +48,8 @@ bool decal_obj::is_on_cobj(int cobj) const {
 	point const center(ipos + get_platform_delta());
 	if (!sphere_cube_intersect(center, SMALL_NUMBER, c)) return 0;
 	if (c.type == COLL_CUBE) return 1;
-	float t; // polygon case
+	if (c.thickness > MIN_POLY_THICK) {return (c.sphere_intersects(center, SMALL_NUMBER) == 1);} // thick polygon
+	float t; // thin polygon case
 	point const p1(center - orient*MIN_POLY_THICK), p2(center + orient*MIN_POLY_THICK);
 	return line_poly_intersect(p1, p2, c.points, c.npoints, c.norm, t); // doesn't really work on extruded polygons
 }
