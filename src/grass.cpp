@@ -88,10 +88,9 @@ void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &da
 	vector3d const binorm(cross_product(g.dir, g.n).get_norm());
 	vector3d const delta(binorm*(0.5*g.w));
 	norm *= (g.shadowed ? 0.001 : 1.0);
-	float const tc_adj(0.1); // border around grass blade texture
-	data[ix++].assign(p1-delta, norm, 1.0-tc_adj,     tc_adj, g.c);
-	data[ix++].assign(p1+delta, norm, 1.0-tc_adj, 1.0-tc_adj, g.c);
-	data[ix++].assign(p2,       norm,     tc_adj, 0.5,        g.c);
+	data[ix++].assign(p1-delta, norm, g.c);
+	data[ix++].assign(p1+delta, norm, g.c);
+	data[ix++].assign(p2,       norm, g.c);
 	assert(ix <= data.size());
 }
 
@@ -564,9 +563,9 @@ public:
 		s.set_prefix("#define NO_DL_SPECULAR",   1); // FS ???
 		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
-		s.set_vert_shader("wind.part*+grass_pp_dl");
+		s.set_vert_shader("wind.part*+grass_texture.part+grass_pp_dl");
 		s.set_frag_shader("linear_fog.part+dynamic_lighting.part*+ads_lighting.part*+shadow_map.part*+grass_with_dlights");
-		//s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass");
+		//s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass_texture.part+grass");
 		//s.set_frag_shader("linear_fog.part+textured_with_fog");
 		s.begin_shader();
 		s.setup_scene_bounds();

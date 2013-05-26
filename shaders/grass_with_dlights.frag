@@ -3,6 +3,7 @@ uniform sampler2D tex0;
 
 varying vec3 dlpos, normal; // world space
 varying vec3 eye_norm;
+varying vec2 tc;
 
 void main()
 {
@@ -14,7 +15,7 @@ void main()
 	if (enable_dlights) color.rgb += gl_Color.rgb * add_dlights(dlpos, normal, gl_ModelViewMatrixInverse[3].xyz, vec3(1.0)); // dynamic lighting
 	vec4 fin_color = color_scale*vec4(color.rgb, gl_Color.a);
 #ifndef NO_GRASS_TEXTURE
-	fin_color *= texture2D(tex0, gl_TexCoord[0].st);
+	fin_color *= texture2D(tex0, tc);
 #endif
 #ifndef NO_FOG
 	fin_color = apply_fog(fin_color);

@@ -20,12 +20,12 @@ vec4 add_light_comp(in vec3 vertex, in vec3 normal, in vec4 epos, in int i, in f
 
 void main()
 {
-	tc          = gl_MultiTexCoord0;
+	tc          = get_grass_tc();
 	vec4 vertex = gl_Vertex;
 	vertex.y   += translate_y;
 	vertex.z   += zmin + (zmax - zmin)*texture2D(height_tex, vec2((vertex.x - x1)/(x2 - x1), (vertex.y - y1)/(y2 - y1))).r;
 	vec2 tc2    = vec2(vertex.x/wx2, vertex.y/wy2);
-	if (enable_grass_wind) {vertex.xyz += get_grass_wind_delta(vertex.xyz, gl_MultiTexCoord0.s);}
+	if (enable_grass_wind) {vertex.xyz += get_grass_wind_delta(vertex.xyz, tc.s);}
 
 	vec4 epos   = gl_ModelViewMatrix  * vertex;
 	gl_Position = gl_ProjectionMatrix * epos;

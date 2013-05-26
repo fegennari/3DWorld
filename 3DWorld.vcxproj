@@ -855,6 +855,7 @@
     <None Include="shaders\fog_only.vert" />
     <None Include="shaders\fresnel.part" />
     <None Include="shaders\grass_pp_dl.vert" />
+    <None Include="shaders\grass_texture.part.vert" />
     <None Include="shaders\grass_tiled.frag" />
     <None Include="shaders\grass_tiled.geom" />
     <None Include="shaders\grass_tiled.vert" />

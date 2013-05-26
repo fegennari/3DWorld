@@ -33,7 +33,7 @@ protected:
 	unsigned vbo;
 	bool data_valid;
 	rand_gen_t rgen;
-	typedef vert_norm_comp_tc_color grass_data_t; // could use vert_norm_comp_tc_comp_color, it takes less vmem but is slightly slower
+	typedef vert_norm_comp_color grass_data_t;
 
 public:
 	grass_manager_t() : vbo(0), data_valid(0) {}

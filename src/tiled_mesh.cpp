@@ -1607,7 +1607,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		bool const enable_wind((display_mode & 0x0100) && pass == 0);
 		lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
 		s.set_bool_prefix("enable_grass_wind", enable_wind, 0); // VS
-		s.set_vert_shader("ads_lighting.part*+wind.part*+perlin_clouds.part*+grass_tiled");
+		s.set_vert_shader("ads_lighting.part*+wind.part*+perlin_clouds.part*+grass_texture.part+grass_tiled");
 		s.set_frag_shader("linear_fog.part+grass_tiled");
 		//s.set_geom_shader("ads_lighting.part*+grass_tiled", GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // too slow
 		s.begin_shader();

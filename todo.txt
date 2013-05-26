@@ -30,12 +30,7 @@ http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
 
 * House pond water stability
 * Cloud shadows on water in tiled terrain mode
-
-* Grass TC from vertex ID like tree leaves
-* Tiled grass discard to offscreen vertex
 Sparse grass tiles?
-
-* Decals on polys
 * No plants in snow
 Yellow and white flowers
 * Hot glowing and black burned cobj fragments
