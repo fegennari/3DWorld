@@ -110,6 +110,7 @@ void water_color_atten_pt(float *c, int x, int y, point const &pos, point const 
 
 float get_cloud_shadow_atten(int x, int y) {
 
+	if (ground_effects_level < 2) return 1.0;
 	point const pos(get_xval(x), get_yval(y), mesh_height[y][x]);
 	float sval(0.0);
 	
@@ -187,7 +188,7 @@ class mesh_vertex_draw {
 				light_scale = pow(val, 8);
 			}
 		}
-		if (ground_effects_level >= 2 && !has_snow && light_scale > 0.0) {
+		if (!has_snow && light_scale > 0.0) {
 			light_scale *= get_cloud_shadow_atten(j, i);
 		}
 		// Note: normal is never set to zero because we need it for dynamic light sources
