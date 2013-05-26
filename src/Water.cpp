@@ -205,14 +205,15 @@ void get_object_color(int cindex, colorRGBA &color) {
 
 class water_surface_draw {
 
-	struct color_ix {
+	struct color_scale_ix {
 		colorRGBA c;
+		float s;
 		int ix;
-		color_ix() : ix(-1) {}
-		color_ix(colorRGBA const &c_, int ix_) : c(c_), ix(ix_) {}
+		color_scale_ix() : ix(-1) {}
+		color_scale_ix(colorRGBA const &c_, float s_, int ix_) : c(c_), s(s_), ix(ix_) {}
 	};
 
-	vector<color_ix> last_row_colors;
+	vector<color_scale_ix> last_row_colors;
 	bool big_water;
 	unsigned const bs, nx, ny;
 	vector<unsigned char> underwater;
@@ -326,7 +327,7 @@ public:
 		float const x(get_xval(j)), y(get_yval(i));
 		static float zval2(def_water_level);
 		float const zval1(water_matrix[i][j] - SMALL_NUMBER); // what if wminside[i][j]==0 ?
-		color_ix next_color_ix;
+		color_scale_ix next_color_ix;
 
 		if (i+dy >= 0 && i+dy < MESH_Y_SIZE) {
 			if (big_water || watershed_matrix[i+dy][j].wsi == wsi ||
@@ -341,19 +342,21 @@ public:
 			point const v(x, y+dd*dy*DY_VAL, (dd ? zval2 : zval1));
 			vector3d const &n(wat_vert_normals[ii][j]);
 			colorRGBA color(last_row_colors[j].c);
+			float nscale(last_row_colors[j].s);
 		
 			if (last_row_colors[j].ix != ii) { // gets here about half the time
-				color = color_in;
+				color  = color_in;
+				nscale = get_cloud_shadow_atten(j, i);
 
 				if (!(display_mode & 0x20) && !has_snow && v.z > mesh_height[ii][j]) { // calculate water reflection and blend into color
 					point const camera(get_camera_pos());
 					if (camera.z > v.z) {blend_reflection_color(v, color, n, camera);} // below the camera
 				}
 				if (using_lightmap) {get_sd_light(j, ii, get_zpos(v.z), (float *)&color);}
-				if (dd) {next_color_ix = color_ix(color, ii);}
+				if (dd) {next_color_ix = color_scale_ix(color, nscale, ii);}
 			}
 			color.do_glColor(); // note that the texture is blue
-			n.do_glNormal();
+			(n * nscale).do_glNormal();
 			v.do_glVertex();
 		}
 		last_row_colors[j] = next_color_ix;
@@ -697,7 +700,7 @@ void compute_ripples() {
 
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				if (!wminside[i][j] || water_matrix[i][j] < z_min_matrix[i][j]) continue;
+				if (!wminside[i][j] || water_matrix[i][j] < z_min_matrix[i][j] /*|| !get_water_enabled(j, i)*/) continue;
 				short const i8(watershed_matrix[i][j].inside8);
 				fix_fp_mag(ripples[i][j].rval);
 				float const rmij(ripples[i][j].rval);
@@ -926,7 +929,7 @@ void add_waves() { // add waves due to wind
 	
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			if (!wminside[y][x]) continue; // only in water
+			if (!wminside[y][x] || !get_water_enabled(x, y)) continue; // only in water
 			float const depth(water_matrix[y][x] - mesh_height[y][x]);
 			if (depth < SMALL_NUMBER) continue; // not deep enough for waves
 			point const p(get_xval(x), get_yval(y), water_matrix[y][x]);
