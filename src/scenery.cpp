@@ -662,6 +662,7 @@ int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_
 	type   = rand2()%NUM_PLANT_TYPES;
 	gen_spos(x, y, use_xy);
 	if (pos.z < minz) return 0;
+	if (get_rel_height(pos.z, -zmax_est, zmax_est) > 0.62) return 0; // altitude too high for plants
 	radius = rand_uniform2(0.0025, 0.0045)/tree_scale;
 	height = rand_uniform2(0.2, 0.4)/tree_scale + 0.025;
 	gen_points(vbo_manager);
@@ -931,8 +932,8 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 			rand2_mix();
 			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation_);
 			
-			if (veg && rand2()%100 < 30) {
-				plants.push_back(s_plant()); // 30%
+			if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants
+				plants.push_back(s_plant()); // 35%
 				if (!plants.back().create(j, i, 1, min_plant_z, plant_vbo_manager)) plants.pop_back();
 			}
 			else if (val < 5) { // 3.5%

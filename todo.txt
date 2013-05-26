@@ -27,14 +27,12 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 Optimize vertex index ordering for model3d files:
 http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
 
-
-* House pond water stability
-* Cloud shadows on water in tiled terrain mode
+House pond water stability
+Cloud shadows on water in tiled terrain mode
 Sparse grass tiles?
-* No plants in snow
 Yellow and white flowers
-* Hot glowing and black burned cobj fragments
-* Asteroids collide with the bounding sphere with the correct angle : uasteroid::apply_physics
+Hot glowing and black burned cobj fragments
+Asteroids collide with the bounding sphere with the correct angle : uasteroid::apply_physics
 Mesh height high frequency noise
 
 
