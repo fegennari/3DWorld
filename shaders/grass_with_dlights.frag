@@ -18,7 +18,7 @@ void main()
 	fin_color *= texture2D(tex0, tc);
 #endif
 #ifndef NO_FOG
-	fin_color = apply_fog(fin_color);
+	fin_color = apply_fog_epos(fin_color, epos);
 #endif
 	gl_FragColor = fin_color;
 }
