@@ -16,7 +16,7 @@ void main()
 	if (enable_light1 ) color += add_light_comp_pos_smap_light1(normal2, epos);
 	vec4 frag_color = vec4(texel.rgb * color.rgb, texel.a * gl_FrontMaterial.diffuse.a); // use diffuse alpha directly
 #ifndef NO_FOG
-	frag_color = apply_fog(frag_color);
+	frag_color = apply_fog_epos(frag_color, epos);
 #endif
 	gl_FragColor = frag_color;
 }

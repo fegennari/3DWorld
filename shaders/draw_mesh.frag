@@ -26,7 +26,7 @@ void main()
 
 	vec4 color = vec4(lit_color.rgb, gl_Color.a);
 #ifndef NO_FOG
-	color = apply_fog(color);
+	color = apply_fog_epos(color, epos);
 #endif
 	gl_FragColor = color;
 }

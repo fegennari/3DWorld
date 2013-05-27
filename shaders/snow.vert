@@ -10,7 +10,4 @@ void main()
 	normal = (no_normalize ? n : normalize(n));
 	dlpos  = gl_Vertex.xyz;
 	gl_Position = ftransform();
-#ifndef NO_FOG
-	gl_FogFragCoord = length((gl_ModelViewMatrix * gl_Vertex).xyz);
-#endif
 }
