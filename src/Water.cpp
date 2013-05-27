@@ -523,11 +523,11 @@ void draw_water() {
 			if (wminside[i][j] == 1) {
 				wsi = watershed_matrix[i][j].wsi;
 				assert(size_t(wsi) < valleys.size());
-				float const z_min(z_min_matrix[i][j]), zval(valleys[wsi].zval);
+				float const z_min(z_min_matrix[i][j]), zval(valleys[wsi].zval), wzval(water_matrix[i][j]), wzmax(max(zval, wzval));
 
-				if (zval >= z_min - G_W_STOP_DEPTH && (!island || zval > ocean.z)) {
+				if (wzmax >= z_min - G_W_STOP_DEPTH && (!island || wzmax > ocean.z)) {
 					if (!is_ice && UPDATE_UW_LANDSCAPE && (rand()&63) == 0) {
-						add_hole_in_landscape_texture(j, i, 1.2*fticks*(0.02 + zval - z_min));
+						add_hole_in_landscape_texture(j, i, 1.2*fticks*(0.02 + wzmax - z_min));
 					}
 					float delta_area(1.0);
 
@@ -543,7 +543,7 @@ void draw_water() {
 					}
 					valleys[wsi].area += SQUARE_S_AREA*delta_area;
 					
-					if (zval >= z_min && i < MESH_Y_SIZE-1 && j < MESH_X_SIZE-1) {
+					if (wzmax >= z_min && i < MESH_Y_SIZE-1 && j < MESH_X_SIZE-1) {
 						xin[nin] = j; yin[nin] = i; ++nin;
 
 						for (int ii = i; ii < i+2; ++ii) {
@@ -811,8 +811,13 @@ void compute_ripples() {
 					water_matrix[i][j] = water_plane_z + min(MAX_RIPPLE_HEIGHT, ripple_zval);
 					water_matrix[i][j] = max(water_matrix[i][j], zbottom);
 				}
-				else if (update_iter && get_water_enabled(j, i)) {
-					update_water_edges(i, j);
+				else if (update_iter) {
+					if (get_water_enabled(j, i)) {
+						update_water_edges(i, j);
+					}
+					else {
+						ripples[i][j].rval = 0.0; // not sure if this is correct, or if there is something else that should be done here
+					}
 				}
 			} // for j
 		} // for i
@@ -938,9 +943,14 @@ void add_waves() { // add waves due to wind
 			float const tx(min(0.2f, fabs(local_wind.y))*wind_freq*(x + xoff2)/lwmag - wxoff);
 			float const ty(min(0.2f, fabs(local_wind.x))*wind_freq*(y + yoff2)/lwmag - wyoff);
 			float const val(get_texture_component(WIND_TEX, tx, ty, 0));
-			float wval(wind_amplitude*min(2.5f, sqrt(lwmag))*val*min(depth, 0.1f));
-			if (wminside[y][x] == 2) wval += wave_amplitude*fticks_clamped*sin(wave_freq*wave_time + depth_scale*depth); // outside water (oceans)
-			ripples[y][x].rval += wval;
+			float const wval(wind_amplitude*min(2.5f, sqrt(lwmag))*val*min(depth, 0.1f));
+			
+			if (wminside[y][x] == 2) { // outside water (oceans)
+				ripples[y][x].rval += wval + wave_amplitude*fticks_clamped*sin(wave_freq*wave_time + depth_scale*depth);
+			}
+			else if (fabs(ripples[y][x].rval) < 0.1*wval) { // don't add wind if already rippling to prevent instability
+				ripples[y][x].rval += wval;
+			}
 			start_ripple = 1;
 		}
 	}

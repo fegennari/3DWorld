@@ -5,7 +5,7 @@ Leaf/Branch overlap
 Multiple decid tree impostor orients
 Pickup items floating in water
 
-More grass/plant types
+More grass/plant types: Yellow and white flowers
 
 Parallax mapping
 Hardware tessellation
@@ -27,9 +27,7 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 Optimize vertex index ordering for model3d files:
 http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
 
-House pond water stability
 Cloud shadows on water in tiled terrain mode
-Yellow and white flowers
 Hot glowing burned cobj fragments
 Mesh height high frequency noise
 
