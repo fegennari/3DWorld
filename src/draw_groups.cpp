@@ -594,7 +594,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 					break;
 				}
 			case FRAGMENT: // draw_fragment()?
-				((obj.vdeform.z > 0.0) ? tri_fragments : sphere_fragments).push_back(tid_color_to_ix_t(tid, color2, j)); // if shatterable, use triangle
+				((obj.flags & TYPE_FLAG) ? tri_fragments : sphere_fragments).push_back(tid_color_to_ix_t(tid, color2, j)); // if shatterable, use triangle
 				break;
 			default:
 				if (DEBUG_COLOR_COLLS) {

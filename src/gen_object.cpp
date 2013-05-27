@@ -216,7 +216,7 @@ void decal_obj::gen(point const &p, float r, float ang, vector3d const &o, int t
 
 void gen_bubble(point const &pos, float r, colorRGBA const &c) {
 
-	bubbles[bubbles.choose_element()].gen(pos, r, c);
+	if (animate2) {bubbles[bubbles.choose_element()].gen(pos, r, c);}
 }
 
 
@@ -319,9 +319,10 @@ int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, fl
 	obj.orientation = signed_rand_vector_norm();
 	obj.vdeform.x   = size_mult*(0.5 + rand_float()); // size
 	obj.vdeform.y   = color.alpha;
-	obj.vdeform.z   = fabs(tscale)*(tri_fragment ? 1.0 : -1.0);
+	obj.vdeform.z   = fabs(tscale);
 	obj.time        = int(time_mult*object_types[FRAGMENT].lifetime);
 	obj.source      = source;
+	if (tri_fragment) {obj.flags |= TYPE_FLAG;}
 	return ix;
 }
 
