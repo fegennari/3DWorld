@@ -820,7 +820,7 @@ int damage_done(int type, int index) {
 
 	int const cid(coll_id[type]);
 
-	if (cid >= 0) {
+	if (cid >= 0 && !(type >= HEALTH && type <= WA_PACK)) { // skip pickup items because they're not object-dependent
 		dwobject &obj(obj_groups[cid].get_obj(index));
 		if ((obj.flags & (WAS_PUSHED | FLOATING)) && (type != BALL || game_mode != 2)) return 0; // floating on the water or pushed after stopping, can no longer do damage
 

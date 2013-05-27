@@ -3,7 +3,6 @@ Fix ship collisions
 Tree branch/trunk bark bump maps
 Leaf/Branch overlap
 Multiple decid tree impostor orients
-Pickup items floating in water
 
 More grass/plant types: Yellow and white flowers
 
