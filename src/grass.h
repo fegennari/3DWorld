@@ -66,7 +66,7 @@ public:
 	void upload_data();
 	void gen_grass();
 	void update();
-	void render_block(unsigned block_ix, unsigned lod);
+	void render_block(unsigned block_ix, unsigned lod, float density=1.0);
 };
 
 

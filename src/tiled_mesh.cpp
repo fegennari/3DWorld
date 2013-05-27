@@ -812,7 +812,7 @@ void tile_t::draw_grass(shader_t &s, bool use_cloud_shadows) {
 			if (gb.ix == 0) continue; // empty block
 			cube_t const bcube(llcx+x*dx_step, llcx+(x+1)*dx_step, llcy+y*dy_step, llcy+(y+1)*dy_step, gb.zmin, (gb.zmax + grass_length));
 			point const center(bcube.get_cube_center());
-			if (max(0.0f, p2p_dist_xy(camera, center) - radius)*TILE_RADIUS*lod_scale > GRASS_THRESH) continue;
+			if ((p2p_dist_xy(camera, center) - radius)*TILE_RADIUS*lod_scale > GRASS_THRESH) continue;
 			if (!camera_pdu.cube_visible(bcube)) continue;
 			bool back_facing(1);
 

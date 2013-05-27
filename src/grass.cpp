@@ -226,13 +226,16 @@ void grass_tile_manager_t::update() { // to be called once per frame
 }
 
 
-void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod) {
+// Note: density won't work if grass is spatially sorted, which is currently the case for tiled terrain grass
+void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, float density) {
 
+	assert(density > 0.0 && density <= 1.0);
 	assert(lod < NUM_GRASS_LODS);
 	assert(block_ix+1 < vbo_offsets[lod].size());
 	unsigned const start_ix(vbo_offsets[lod][block_ix]), end_ix(vbo_offsets[lod][block_ix+1]);
 	assert(start_ix < end_ix && end_ix <= grass.size());
-	glDrawArrays(GL_TRIANGLES, 3*start_ix, 3*(end_ix - start_ix));
+	unsigned const num_tris(ceil(density*(end_ix - start_ix)));
+	if(num_tris > 0) {glDrawArrays(GL_TRIANGLES, 3*start_ix, 3*num_tris);}
 }
 
 
