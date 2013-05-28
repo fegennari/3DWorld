@@ -305,7 +305,7 @@ void gen_particles(point const &pos, unsigned num, float lt_scale, bool fade) { 
 
 
 int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,
-	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment)
+	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment, float hotness)
 {
 	obj_group &objg(obj_groups[coll_id[FRAGMENT]]);
 	int const ix(objg.choose_object());
@@ -322,6 +322,7 @@ int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, fl
 	obj.vdeform.z   = fabs(tscale);
 	obj.time        = int(time_mult*object_types[FRAGMENT].lifetime);
 	obj.source      = source;
+	obj.direction   = (unsigned char)(255.0*CLIP_TO_01(hotness));
 	if (tri_fragment) {obj.flags |= TYPE_FLAG;}
 	return ix;
 }

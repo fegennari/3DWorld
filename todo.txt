@@ -27,7 +27,6 @@ Optimize vertex index ordering for model3d files:
 http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
 
 Cloud shadows on water in tiled terrain mode
-Hot glowing burned cobj fragments
 Mesh height high frequency noise
 
 

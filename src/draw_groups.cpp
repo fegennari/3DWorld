@@ -628,10 +628,17 @@ void draw_group(obj_group &objg, shader_t &s) {
 				set_color_alpha(i->c);
 				last_color = i->c;
 			}
+			if (obj.direction > 0) { // hot object, add color
+				colorRGBA gcolor(get_glow_color(obj, 1));
+				gcolor      *= 2.0*(obj.direction/255.0); // can be greater than 1.0
+				gcolor.alpha = i->c.alpha;
+				set_emissive_color_obj(gcolor);
+			}
 			bool const use_thick(i->tid < 0); // when not textured
 			float const tradius(obj.get_true_radius());
 			make_in_tris(in_tris); // Note: needs 2-sided lighting
 			draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, ((i->tid >= 0) ? obj.vdeform.z : 0.0), in_tris, 0.2*tradius, i->tid, i->c, use_thick); // obj.vdeform.z = tscale
+			if (obj.direction > 0) {set_emissive_color_obj(colorRGBA(0.0, 0.0, 0.0, i->c.alpha));}
 		}
 		make_not_in_tris(in_tris);
 		sort(sphere_fragments.begin(), sphere_fragments.end()); // sort by tid

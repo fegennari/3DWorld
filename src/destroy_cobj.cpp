@@ -98,12 +98,14 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 		bool const non_csg(shattered || cts[i].unanchored);
 		csg_cube frag_cube(cts[i]);
 		if (!non_csg && !cube.cube_intersection(frag_cube, frag_cube)) {frag_cube = cts[i];} // intersect frag_cube with cube (should pass)
-		bool const blacken(tri_fragments && cts[i].color.alpha == 1.0 && ((damage_type != IMPACT && damage_type != PROJECTILE) || cts[i].destroy >= EXPLODEABLE));
+		bool const explodeable(0); //cts[i].destroy >= EXPLODEABLE);
+		bool const blacken(tri_fragments && cts[i].color.alpha == 1.0 && ((damage_type != IMPACT && damage_type != PROJECTILE) || explodeable));
 		float const blacken_radius(2.0*radius);
 
 		for (unsigned o = 0; o < num; ++o) {
 			vector3d velocity(cdir);
 			point fpos(frag_cube.gen_rand_pt_in_cube()); // only accurate for COLL_CUBE
+			float hotness(0.0);
 
 			if (non_csg) {
 				vector3d const vadd(fpos - pos); // average cdir and direction from collision point to fragment location
@@ -115,9 +117,11 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 				}
 			}
 			if (blacken && dist_less_than(fpos, pos, blacken_radius)) {
-				cts[i].color *= p2p_dist(fpos, pos)/blacken_radius;
+				hotness = 1.0 - (explodeable ? 0.0 : p2p_dist(fpos, pos)/blacken_radius);
+				cts[i].color *= 1.0 - hotness; // blacken due to heat from explosion
 			}
-			gen_fragment(fpos, velocity, size_scale, 0.5*rand_float(), cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments);
+			float const time_mult((hotness > 0.0) ? 0.0 : 0.5*rand_float());
+			gen_fragment(fpos, velocity, size_scale, time_mult, cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments, hotness);
 		}
 		if (shattered && tri_fragments && cts[i].color.alpha < 0.5) maybe_is_glass = 1;
 	} // for i

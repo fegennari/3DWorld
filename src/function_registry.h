@@ -249,7 +249,7 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close=0, bool
 void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, int cid=-1, float init_alpha=1.0, colorRGBA const &color=BLACK, bool is_glass=0, bool rand_angle=0);
 void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade=0);
 int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,
-	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment);
+	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment, float hotness=0.0);
 void gen_leaf_at(point const *const points, vector3d const &normal, int type, colorRGB const &color);
 void gen_gauss_rand_arr();
 
