@@ -2,11 +2,11 @@ uniform vec3 planet_pos, sun_pos, camera_pos;
 uniform float planet_radius, ring_ri, ring_ro, sun_radius, bf_draw_sign;
 uniform sampler2D noise_tex, particles_tex;
 uniform sampler1D ring_tex;
-varying vec4 epos;
+
 varying vec3 normal, world_space_pos, vertex;
 
 
-vec4 add_light_rings(in vec3 n)
+vec4 add_light_rings(in vec3 n, in vec4 epos)
 {
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz); // normalize the light's direction in eye space
 	vec4 diffuse   = gl_Color * gl_LightSource[0].diffuse;
@@ -26,12 +26,13 @@ void main()
 	if (texel.a == 0.0) discard;
 
 	// alpha lower when viewing edge
+	vec4 epos = gl_ModelViewMatrix * vec4(vertex, 1.0);
 	texel.a *= pow(abs(dot(normal, normalize(epos.xyz))), 0.2); // 5th root
 
 	vec2 tc = 16*gl_TexCoord[0].st;
 	vec3 norm2 = normalize(normal + vec3(texture2D(noise_tex, tc).r-0.5, texture2D(noise_tex, tc+vec2(0.4,0.7)).r-0.5, texture2D(noise_tex, tc+vec2(0.3,0.8)).r-0.5));
 	vec4 color = gl_FrontMaterial.emission;
-	color.rgb += add_light_rings(norm2).rgb; // ambient, diffuse, and specular
+	color.rgb += add_light_rings(norm2, epos).rgb; // ambient, diffuse, and specular
 	color.rgb += (gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
 
 	float alpha = texture2D(particles_tex, 23 *gl_TexCoord[0].st).r;

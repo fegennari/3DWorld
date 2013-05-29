@@ -15,12 +15,12 @@ uniform float crater_val = 0.0;
 uniform sampler2D tex0;
 #endif
 
-varying vec4 epos;
 varying vec3 normal, world_space_pos, vertex;
 
 
 void main()
 {
+	vec4 epos = gl_ModelViewMatrix * vec4(vertex, 1.0);
 	if (dot(normal, epos.xyz) > 0.0) discard; // back facing
 
 #ifdef GAS_GIANT
