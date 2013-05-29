@@ -30,6 +30,12 @@ void main()
 
 	for (int i = 0; i < 50; ++i) { // Note: inefficient, but fast enough for a single gas giant render
 		vec3 center = vec3(1.0, 1.0, 0.5)*rand_vec3(v0);
+#ifdef ANIMATE_STORMS // slow but neat
+		float angle = 50.0*time*rand_pm1(v0+2.5);
+		float st    = sin(angle);
+		float ct    = cos(angle);
+		center.xy   = vec2((center.x*ct - center.y*st), (center.y*ct + center.x*st)); // rotation
+#endif
 		float dist  = (0.25 + 0.75*rand_01(v0+3.0))*length(vec3(1.0, 1.0, 2.0)*(dir - normalize(center)));
 		tc         += 0.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
 		v0         += 4.0;

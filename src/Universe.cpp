@@ -228,8 +228,12 @@ public:
 
 		if (!is_setup()) {
 			setup_planet_star_shader();
-			if (body.gas_giant) {set_prefix("#define GAS_GIANT",   1);} // FS
-			if (has_craters   ) {set_prefix("#define HAS_CRATERS", 1);} // FS
+			
+			if (body.gas_giant) {
+				set_prefix("#define GAS_GIANT", 1); // FS
+				if (!(display_mode & 0x20)) {set_prefix("#define ANIMATE_STORMS", 1);} // FS
+			}
+			if (has_craters) {set_prefix("#define HAS_CRATERS", 1);} // FS
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			string frag_shader_str("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+rand_gen.part*");
 			if (has_craters) {frag_shader_str += "+craters.part";}

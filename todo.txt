@@ -4,6 +4,11 @@ Tree branch/trunk bark bump maps
 Leaf/Branch overlap
 Multiple decid tree impostor orients
 
+Can't reproduce:
+- Black water reflection
+- Black colored blood spots
+- Game mode freeze
+
 More grass/plant types: Yellow and white flowers
 
 Parallax mapping
@@ -28,10 +33,6 @@ http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
 
 Cloud shadows on water in tiled terrain mode
 Mesh height high frequency noise
-Gas giant storm motion
-Black water reflection?
-Black colored blood spots?
-Game mode freeze?
 
 
  E: 2.9 process_groups()
