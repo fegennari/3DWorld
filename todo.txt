@@ -7,7 +7,6 @@ Multiple decid tree impostor orients
 Can't reproduce:
 - Black water reflection
 - Black colored blood spots
-- Game mode freeze
 
 More grass/plant types: Yellow and white flowers
 

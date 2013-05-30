@@ -826,18 +826,15 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 		vector3d const v(get_sstate_dir(shooter));
 		point const apos(get_sstate_pos(shooter));
 		target = apos - spos;
-
-		for (unsigned i = 0; i < 3; ++i) {
-			target[i] -= pos[i]*v[i];
-		}
+		UNROLL_3X(target[i_] -= pos[i_]*v[i_];)
 		target.normalize();
 	}
 	set_color(LITN_C);
 	set_color_e(LITN_C);
 	set_additive_blend_mode();
-	unsigned const num_rays((rand()%6)-2);
+	int const num_rays((rand()%6)-2);
 
-	for (unsigned i = 0; i < num_rays; ++i) {
+	for (int i = 0; i < num_rays; ++i) {
 		bool const hit(min_i >= CAMERA_ID && rand_float() < 0.6);
 		point pos2(pos);
 
@@ -850,15 +847,17 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 		else {
 			vadd_rand(pos2, 1.7*radius);
 		}
-		glBegin(GL_LINE_STRIP);
-		pos.do_glVertex();
-		pos2.do_glVertex();
+		unsigned const npts(rand() & 15);
+		vector<vert_wrap_t> verts(npts + 2);
+		verts[0].v = pos;
+		verts[1].v = pos2;
 
-		for (unsigned j = 0; j < unsigned(rand()%15); ++j) { // do we really want to call rand() every time?
+		for (unsigned j = 0; j < npts; ++j) {
 			UNROLL_3X(pos2[i_] *= rand_uniform(1.01, 1.2);)
-			pos2.do_glVertex();
+			verts[j+2] = pos2;
 		}
-		glEnd();
+		verts[0].set_state();
+		glDrawArrays(GL_LINE_STRIP, 0, verts.size());
 		if (hit) glLineWidth(1.0);
 	}
 	set_std_blend_mode();
