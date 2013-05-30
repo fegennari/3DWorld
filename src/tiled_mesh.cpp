@@ -893,7 +893,8 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 
 	if (has_water()) { // draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
 		cube_t const bcube(get_bcube());
-		glBegin(GL_QUADS);
+		static vector<vert_wrap_t> wverts;
+		wverts.resize(0);
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
@@ -905,14 +906,17 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 				float const dz(water_plane_z - mzmin), zstep(dz/num_steps);
 
 				for (unsigned i = 0; i < num_steps; ++i) {
-					glVertex3f(bcube.d[0][dim ? 0 : dir], bcube.d[1][dim ? dir : 0], mzmin+i*zstep);
-					glVertex3f(bcube.d[0][dim ? 1 : dir], bcube.d[1][dim ? dir : 1], mzmin+i*zstep);
-					glVertex3f(bcube.d[0][dim ? 1 : dir], bcube.d[1][dim ? dir : 1], mzmin+(i+1)*zstep);
-					glVertex3f(bcube.d[0][dim ? 0 : dir], bcube.d[1][dim ? dir : 0], mzmin+(i+1)*zstep);
+					wverts.push_back(vert_wrap_t(point(bcube.d[0][dim ? 0 : dir], bcube.d[1][dim ? dir : 0], mzmin+i*zstep)));
+					wverts.push_back(vert_wrap_t(point(bcube.d[0][dim ? 1 : dir], bcube.d[1][dim ? dir : 1], mzmin+i*zstep)));
+					wverts.push_back(vert_wrap_t(point(bcube.d[0][dim ? 1 : dir], bcube.d[1][dim ? dir : 1], mzmin+(i+1)*zstep)));
+					wverts.push_back(vert_wrap_t(point(bcube.d[0][dim ? 0 : dir], bcube.d[1][dim ? dir : 0], mzmin+(i+1)*zstep)));
 				}
 			}
 		}
-		glEnd();
+		if (!wverts.empty()) {
+			wverts[0].set_state();
+			glDrawArrays(GL_QUADS, 0, wverts.size());
+		}
 	}
 	if (weight_tid > 0) {disable_textures_texgen();}
 }

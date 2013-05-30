@@ -768,6 +768,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	s.add_uniform_float("ripple_scale",   10.0);
 	s.add_uniform_float("ripple_mag",     2.0);
 	s.add_uniform_int  ("height_tex",     2);
+	// Note: we could add procedural cloud soft shadows like in tiled terrain mesh and grass, but it's probably not worth the added complexity and runtime
 
 	// waves (as normal map)
 	select_multitex(WATER_NORMAL_TEX, 1, 0);

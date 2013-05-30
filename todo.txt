@@ -30,7 +30,6 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 Optimize vertex index ordering for model3d files:
 http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
 
-Cloud shadows on water in tiled terrain mode
 Mesh height high frequency noise
 
 
