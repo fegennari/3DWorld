@@ -7,5 +7,4 @@ void main()
 	world_space_pos = gl_Vertex;
 	eye_space_pos   = gl_ModelViewMatrix * gl_Vertex;
 	gl_FrontColor   = gl_Color;
-	gl_FogFragCoord = length(eye_space_pos.xyz);
 } 

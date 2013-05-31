@@ -32,6 +32,8 @@ http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
 
 Mesh height high frequency noise
 
+Stitch triangle strips using degenerate triangles
+
 
  E: 2.9 process_groups()
  H: 2.1 setup_object_render_data()

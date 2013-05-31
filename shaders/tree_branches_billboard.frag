@@ -29,5 +29,5 @@ void main()
 	if (enable_light0) color += add_light_comp(normal, 0);
 	if (enable_light1) color += add_light_comp(normal, 1);
 	if (enable_light2) color += add_light_comp(normal, 2) * calc_light_atten(eye_space_pos, 2);
-	gl_FragColor = apply_fog(clamp(color, 0.0, 1.0)*vec4(texel.rgb, 1.0));
+	gl_FragColor = apply_fog_epos(clamp(color, 0.0, 1.0)*vec4(texel.rgb, 1.0), eye_space_pos);
 }
