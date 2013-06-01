@@ -1175,6 +1175,12 @@ void exp_damage_groups(point const &pos, int shooter, int chain_level, float dam
 						obj.status = 0;
 					}
 				} // health test
+				else if (type2 == LEAF) {
+					obj.vdeform  *= max(0.2, (1.0 - damage2/1000.0));
+				}
+				else if (type2 == FRAGMENT) {
+					obj.init_dir *= max(0.2, (1.0 - damage2/2000.0));
+				}
 			} // SMILEY test
 		} // for i
 	} // for g

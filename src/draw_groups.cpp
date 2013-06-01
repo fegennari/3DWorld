@@ -451,7 +451,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 				float const t(((float)obj.time)/((float)otype.lifetime));
 				colorRGBA const dry_color(1.0, 0.7, 0.1); // this is the final color, even for partially burnt leaves - oh well
 				colorRGBA leaf_color(WHITE);
-				UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform.x is color_scale
+				UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform is the color
 				if (leaf_color != BLACK) {blend_color(leaf_color, dry_color, leaf_color, t, 0);}
 				vector3d dirs[2] = {(leaf_points[3] - leaf_points[0]), (leaf_points[1] - leaf_points[0])};
 				

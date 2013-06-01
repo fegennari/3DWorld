@@ -156,6 +156,8 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		}
 		sort(faces, (faces+6));
 	}
+	// Note: with some amount of complexity, we can group more cube faces into a single draw call to reduce driver overhead
+	//       however, we tend to be GPU/fill rate limited anyway, especially with smoke/dlights, so it makes little difference
 	glBegin(GL_QUADS);
 	
 	for (unsigned i = 0; i < 6; ++i) {
