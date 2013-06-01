@@ -175,7 +175,9 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 		energy *= 0.8*fticks;
 	}
 	else if (type == FRAGMENT) {
-		energy *= obj_groups[coll_id[type]].get_obj(obj_index).vdeform.x;
+		dwobject &obj(obj_groups[coll_id[type]].get_obj(obj_index));
+		energy *= obj.vdeform.x;
+		if (obj.flags & TYPE_FLAG) {obj.init_dir = 0.8*obj.init_dir + 0.2*vector3d(1.0, 0.0, 0.0);} // triangle fragment - make red/bloody
 	}
 	if (sstates[target].powerup == PU_SHIELD) {
 		if (source == target && (type != LANDMINE && type != FELL && type != DROWNED && type != CRUSHED)) return 0;
