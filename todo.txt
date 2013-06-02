@@ -34,9 +34,6 @@ Mesh height high frequency noise
 
 Stitch triangle strips using degenerate triangles
 
-Blood on grass?
-Underwater grass fix
-
 
  E: 2.9 process_groups()
  H: 2.1 setup_object_render_data()

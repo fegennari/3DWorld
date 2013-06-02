@@ -459,9 +459,9 @@ public:
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw) {
+	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw, bool add_blood) {
 		if (burn && is_underwater(pos)) burn = 0;
-		if (!burn && !crush && !cut && !update_mh && !check_uw) return; // nothing left to do
+		if (!burn && !crush && !cut && !update_mh && !check_uw && !add_blood) return; // nothing left to do
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
@@ -513,6 +513,12 @@ public:
 								updated = 1;
 							}
 						}
+					}
+					if (add_blood && !underwater) {
+						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
+						UNROLL_3X(updated |= (g.c[0] < 128 || g.c[1] > 0 || g.c[2] > 0);) // not already red
+						unsigned char const blood_color[3] = {128, 0, 0};
+						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_] + (1.0 - atten_val)*blood_color[i_]);)}
 					}
 					if (burn && !underwater) {
 						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
@@ -721,8 +727,8 @@ void draw_grass() {
 	if (!no_grass() && (display_mode & 0x02)) grass_manager.draw();
 }
 
-void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw) {
-	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw);
+void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw, bool add_blood) {
+	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw, add_blood);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {
