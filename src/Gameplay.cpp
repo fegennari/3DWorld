@@ -281,7 +281,7 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		gen_smoke(pos);
 	}
 	else { // add blood
-		add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, min(4.0, double(sqrt(blood_v)))*radius, 0);
+		add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, min(1.5, 0.4*double(sqrt(blood_v)))*radius);
 	}
 	sstate.chunk_index = (sstate.chunk_index + 1) % NUM_CHUNK_BLOCKS;
 	

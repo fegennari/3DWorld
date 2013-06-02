@@ -1778,7 +1778,7 @@ void add_hole_in_landscape_texture(int xpos, int ypos, float blend) { // for wat
 }
 
 
-void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yval, float radius, int check_unique) {
+void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yval, float radius) {
 
 	int const xpos0(get_xpos(xval)), ypos0(get_ypos(yval));
 	if (point_outside_mesh(xpos0, ypos0)) return; // off the terrain area
@@ -1793,7 +1793,7 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 	int const xpos(int((xval + X_SCENE_SIZE)/(((float)xscale)*DX_VAL) + 0.5));
 	int const ypos(int((yval + Y_SCENE_SIZE)/(((float)yscale)*DY_VAL) + 0.5));
 	if (xpos < 0 || ypos < 0 || xpos >= tex.width || ypos >= tex.height) return;
-	int const rad(max(0, int(5.0*radius/((xscale + yscale)*(DX_VAL + DY_VAL))) - 1)), radsq(max(1, rad*rad)); // size in texture space
+	int const rad(max(0, int(5.0*radius/((xscale + yscale)*(DX_VAL + DY_VAL))) - 1)), rad_sq(max(1, rad*rad)); // size in texture space
 	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad)), x2(min(tex.width-1, xpos+rad)), y2(min(tex.height-1, ypos+rad));
 	unsigned char color_i[3];
 	unpack_color(color_i, color);
@@ -1804,9 +1804,9 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 		for (int j = x1; j <= x2; ++j) {
 			int const dist_sq((yterm + (j - xpos)*(j - xpos)));
 
-			if (dist_sq < radsq) {
+			if (dist_sq < rad_sq) {
 				assert(offset + j <= tsize);
-				float const blend((dist_sq == 0.0) ? 0.8 : min(0.8, 10.0/dist_sq));
+				float const blend(0.8*(1.0 - float(dist_sq)/float(rad_sq)));
 				int const o2(3*(offset + j));
 				assert(o2 + 3 <= maxsize);
 				BLEND_COLOR((tex_data + o2), color_i, (tex_data + o2), blend); // test if this texel is enabled for draw?
@@ -1954,7 +1954,7 @@ int snow_height(point pos) {
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return 0;
 	double const relh(relh_adj_tex + (mesh_height[ypos][xpos] - zmin)/(zmax - zmin));
-	return (island ? (relh > h_sand[2]) : (relh > h_dirt[2]));
+	return (island ? (relh > h_sand[2]) : (relh > h_dirt[3]));
 }
 
 

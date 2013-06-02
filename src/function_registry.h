@@ -489,7 +489,7 @@ void update_lttex_ix(int &ix);
 void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2, float &t);
 void create_landscape_texture();
 float add_crater_to_landscape_texture(float xval, float yval, float radius);
-void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yval, float radius, int check_unique);
+void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yval, float radius);
 void add_snow_to_landscape_texture(point const &pos, float acc);
 void update_landscape_texture();
 void gen_tex_height_tables();

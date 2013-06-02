@@ -1263,7 +1263,7 @@ void mouse_draw_on_ground(int x, int y) {
 	int const ypos(int(((float)y/(float)yscale)*MESH_Y_SIZE));
 	if (point_outside_mesh(xpos, ypos)) return;
 	accumulation_matrix[ypos][xpos] += 1000.0;
-	add_color_to_landscape_texture(WHITE, get_xval(xpos), get_yval(ypos), 1.0, 0);
+	add_color_to_landscape_texture(WHITE, get_xval(xpos), get_yval(ypos), 1.0);
 }
 
 

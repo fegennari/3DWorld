@@ -787,7 +787,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			return;
 		}
 		if (val == 2 && !coll) { // collision with mesh surface but not vertical surface
-			if (iter == 0 && type == BLOOD) surf_collide_obj(); // only supports blood for now
+			if (iter == 0) {surf_collide_obj();} // only supports blood and chunks for now
 			
 			if (object_bounce(0, cnorm, 0.0, 0.0, radius)) {
 				if (radius >= LARGE_OBJ_RAD) modify_grass_at(pos, 2.0*radius, 1, 0, 0, 0); // crush grass a lot
@@ -1137,9 +1137,11 @@ int dwobject::check_water_collision(float vz_old) {
 void dwobject::surf_collide_obj() const {
 
 	switch (type) {
+	case CHUNK:
+		if (flags & TYPE_FLAG) break; // charred, not blood
 	case BLOOD:
 		if (snow_height(pos)) { // in the snow
-			add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, 4.0*object_types[BLOOD].radius, 1);
+			add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, ((type == BLOOD) ? 4.0 : 2.2)*object_types[type].radius);
 		}
 		break;
 	}

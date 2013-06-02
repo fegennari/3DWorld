@@ -34,9 +34,8 @@ Mesh height high frequency noise
 
 Stitch triangle strips using degenerate triangles
 
-Chunks leave big blood spots on mesh
-Blood on tri fragments
 Blood on grass?
+Underwater grass fix
 
 
  E: 2.9 process_groups()
