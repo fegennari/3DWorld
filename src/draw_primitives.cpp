@@ -384,10 +384,10 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 	point **points   = spn.points;
 	vector3d **norms = spn.norms;
 	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
-	if (use_quads) glBegin(GL_QUADS);
 	if (expand != 0.0) expand *= 0.25; // 1/4, for normalization
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
-	
+	glBegin(use_quads ? GL_QUADS : GL_TRIANGLE_STRIP);
+
 	for (unsigned s = s0; s < s1; s += sv1) {
 		s = min(s, s1-1);
 		unsigned const sn((s+sv1)%ndiv), snt(min((s+sv1), s1));
@@ -417,9 +417,10 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 				}
 			} // for t
 		}
-		else { // use triangle strips
-			glBegin(GL_TRIANGLE_STRIP);
-
+		else { // use triangle strip
+			if (s != s0) { // add degenerate triangle to preserve the triangle strip (only slightly faster than using multiple triangle strips)
+				for (unsigned d = 0; d < 2; ++d) {points[s][t0].do_glVertex();}
+			}
 			for (unsigned t = t0; t <= t1; t += sv1) {
 				t = min(t, t1);
 				point    const pts[2]     = {points[s][t], points[sn][t]};
@@ -445,10 +446,9 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 					}
 				}
 			} // for t
-			glEnd();
 		}
 	} // for s
-	if (use_quads) glEnd();
+	glEnd();
 }
 
 
