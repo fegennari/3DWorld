@@ -640,6 +640,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
+    <ClCompile Include="src\triListOpt.cpp" />
     <ClCompile Include="src\u_event.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
@@ -779,6 +780,7 @@
     <ClInclude Include="src\transform_obj.h" />
     <ClInclude Include="src\tree_3dw.h" />
     <ClInclude Include="src\tree_leaf.h" />
+    <ClInclude Include="src\triListOpt.h" />
     <ClInclude Include="src\u_event.h" />
     <ClInclude Include="src\explosion.h" />
     <ClInclude Include="src\obj_sort.h" />

@@ -6,6 +6,7 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "voxels.h"
+#include "triListOpt.h" // for vert_optimizer
 #include <fstream>
 
 bool const USE_SHADERS       = 1;
@@ -240,6 +241,62 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 }
 
 
+unsigned const VBUF_SZ = 32;
+
+class vert_optimizer {
+
+	vector<unsigned> &indices;
+	unsigned num_verts;
+	int prim_type;
+	bool already_opt;
+
+	struct vbuf_entry_t {
+		unsigned ix, pos;
+		vbuf_entry_t() : ix(-1), pos(0) {}
+	};
+
+	bool enabled() const {return (!already_opt && prim_type == GL_TRIANGLES && indices.size() > 1.5*num_verts && num_verts > 2*VBUF_SZ);}
+
+public:
+	vert_optimizer(vector<unsigned> &indices_, unsigned num_verts_, int prim_type_) :
+	  indices(indices_), num_verts(num_verts_), prim_type(prim_type_), already_opt(0) {}
+
+	void run() {
+		if (!enabled()) return;
+		assert((indices.size() % 3) == 0); // must be triangles
+		unsigned const num_tris(indices.size()/3);
+		vector<unsigned> out_indices(indices.size());
+		TriListOpt::OptimizeTriangleOrdering(num_verts, indices.size(), &indices.front(), &out_indices.front());
+		indices.swap(out_indices);
+	}
+
+	void cache_analysis(string const &prefix="") {
+		if (!enabled()) return;
+		vbuf_entry_t vbuf[VBUF_SZ];
+		unsigned num_cm(0); // cache misses
+
+		for (unsigned i = 0; i < indices.size(); ++i) {
+			bool found(0);
+			unsigned best_entry(0), oldest_pos(-1);
+
+			for (unsigned n = 0; n < VBUF_SZ; ++n) {
+				if (vbuf[n].ix == indices[i]) {found = 1; break;}
+				if (vbuf[n].pos < oldest_pos) {best_entry = n; oldest_pos = vbuf[n].pos;}
+			}
+			if (found) continue;
+			vbuf[best_entry].ix  = indices[i];
+			vbuf[best_entry].pos = i;
+			++num_cm;
+		}
+		float const mult((prim_type == GL_QUADS) ? 2.0 : 3.0);
+		float const acmr(mult*float(num_cm)/float(indices.size()));
+		float const perfect_acmr(mult*float(num_verts)/float(indices.size()));
+		cout << prefix << "indices: " << indices.size() << ", verts: " << num_verts << ", ACMR: " << acmr << ", perfect: " << perfect_acmr << endl;
+		if (acmr < 1.05*perfect_acmr) {already_opt = 1;}
+	}
+};
+
+
 template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 
 	if (need_normalize) {
@@ -280,6 +337,13 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 		for (unsigned j = 0; j < npts; ++j) {new_indices[i+j] = indices[vix+j];}
 	}
 	indices.swap(new_indices);
+#endif
+
+#if 0
+	vert_optimizer optimizer(indices, size(), prim_type);
+	optimizer.cache_analysis("pre  ");
+	optimizer.run();
+	optimizer.cache_analysis("post ");
 #endif
 }
 

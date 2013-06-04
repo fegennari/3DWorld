@@ -27,8 +27,11 @@ No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
 
 glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
+
 Optimize vertex index ordering for model3d files:
 http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/vertex-shader/
+* model3d
+* snow
 
 Mesh height high frequency noise
 
