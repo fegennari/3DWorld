@@ -241,37 +241,37 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 }
 
 
-unsigned const VBUF_SZ = 32;
+unsigned const VBUF_SZ   = 32;
+bool const DO_VERT_OPT   = 0;
+bool const OPT_SORT_ONLY = 1;
 
 class vert_optimizer {
 
 	vector<unsigned> &indices;
 	unsigned num_verts;
 	int prim_type;
-	bool already_opt;
 
 	struct vbuf_entry_t {
 		unsigned ix, pos;
 		vbuf_entry_t() : ix(-1), pos(0) {}
 	};
 
-	bool enabled() const {return (!already_opt && prim_type == GL_TRIANGLES && indices.size() > 1.5*num_verts && num_verts > 2*VBUF_SZ);}
+	template<unsigned N> struct vert_block_t {
+		unsigned v[N];
 
-public:
-	vert_optimizer(vector<unsigned> &indices_, unsigned num_verts_, int prim_type_) :
-	  indices(indices_), num_verts(num_verts_), prim_type(prim_type_), already_opt(0) {}
+		unsigned min_ix() const {return min(min(v[0], v[1]), ((N == 3) ? v[2] : min(v[2], v[3])));}
+		bool operator<(vert_block_t<N> const &b) const {return (min_ix() < b.min_ix());}
 
-	void run() {
-		if (!enabled()) return;
-		assert((indices.size() % 3) == 0); // must be triangles
-		unsigned const num_tris(indices.size()/3);
-		vector<unsigned> out_indices(indices.size());
-		TriListOpt::OptimizeTriangleOrdering(num_verts, indices.size(), &indices.front(), &out_indices.front());
-		indices.swap(out_indices);
-	}
+		static void sort_by_min_ix(vector<unsigned> &ixs) {
+			vert_block_t<N> *start((vert_block_t<N> *)(&ixs.front()));
+			vert_block_t<N> *end  ((vert_block_t<N> *)(&ixs.front() + ixs.size()));
+			sort(start, end);
+		}
+	};
 
-	void cache_analysis(string const &prefix="") {
-		if (!enabled()) return;
+	bool enabled() const {return ((OPT_SORT_ONLY || prim_type == GL_TRIANGLES) && indices.size() > 1.5*num_verts && num_verts > 2*VBUF_SZ /*&& num_verts > 100000*/);}
+
+	float calc_acmr() const {
 		vbuf_entry_t vbuf[VBUF_SZ];
 		unsigned num_cm(0); // cache misses
 
@@ -288,11 +288,45 @@ public:
 			vbuf[best_entry].pos = i;
 			++num_cm;
 		}
+		return float(num_cm)/float(indices.size());
+	}
+
+public:
+	vert_optimizer(vector<unsigned> &indices_, unsigned num_verts_, int prim_type_) :
+	  indices(indices_), num_verts(num_verts_), prim_type(prim_type_) {}
+
+	void run(bool verbose=0) {
+		if (!enabled()) return;
+		//RESET_TIME;
 		float const mult((prim_type == GL_QUADS) ? 2.0 : 3.0);
-		float const acmr(mult*float(num_cm)/float(indices.size()));
-		float const perfect_acmr(mult*float(num_verts)/float(indices.size()));
-		cout << prefix << "indices: " << indices.size() << ", verts: " << num_verts << ", ACMR: " << acmr << ", perfect: " << perfect_acmr << endl;
-		if (acmr < 1.05*perfect_acmr) {already_opt = 1;}
+		float const acmr(mult*calc_acmr()), perfect_acmr(mult*float(num_verts)/float(indices.size()));
+		if (acmr < 1.05*perfect_acmr) return;
+		//PRINT_TIME("Calc 1");
+
+		if (OPT_SORT_ONLY) {
+			if (prim_type == GL_TRIANGLES) {
+				vert_block_t<3>::sort_by_min_ix(indices);
+			}
+			else {
+				assert(prim_type == GL_QUADS);
+				vert_block_t<4>::sort_by_min_ix(indices);
+			}
+		}
+		else {
+			assert((indices.size() % 3) == 0); // must be triangles
+			unsigned const num_tris(indices.size()/3);
+			vector<unsigned> out_indices(indices.size());
+			TriListOpt::OptimizeTriangleOrdering(num_verts, indices.size(), &indices.front(), &out_indices.front());
+			indices.swap(out_indices);
+		}
+		//PRINT_TIME("Opt");
+		float const new_acmr(mult*calc_acmr());
+		//PRINT_TIME("Calc 2");
+
+		if (verbose) {
+			cout << "ix: " << indices.size() << ", v: " << num_verts << ", opt: " << perfect_acmr
+				 << ", ACMR: " << acmr << " => " << new_acmr << ", ratio: " << new_acmr/acmr << endl;
+		}
 	}
 };
 
@@ -339,12 +373,10 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 	indices.swap(new_indices);
 #endif
 
-#if 0
-	vert_optimizer optimizer(indices, size(), prim_type);
-	optimizer.cache_analysis("pre  ");
-	optimizer.run();
-	optimizer.cache_analysis("post ");
-#endif
+	if (DO_VERT_OPT) {
+		vert_optimizer optimizer(indices, size(), prim_type);
+		optimizer.run(1);
+	}
 }
 
 
