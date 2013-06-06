@@ -23,7 +23,12 @@
 #ifndef _TRI_LIST_OPT_H_
 #define _TRI_LIST_OPT_H_
 
-#include "3DWorld.h"
+#include "globals.h"
+#include <stdlib.h>
+#include <math.h>
+#include <vector>
+#include <assert.h>
+
 
 namespace TriListOpt
 {
@@ -72,7 +77,7 @@ namespace TriListOpt
 	public:
 		LRUCacheModel() : mCacheHead(NULL) {}
 		~LRUCacheModel();
-		void enforceSize(const dsize_t maxSize, vector<U32> &outTrisToUpdate);
+		void enforceSize(const dsize_t maxSize, std::vector<U32> &outTrisToUpdate);
 		void useVertex(const U32 vIdx, VertData *vData);
 		S32 getCachePosition(const U32 vIdx);
 	};

@@ -34,8 +34,8 @@ namespace TriListOpt
 		//
 		// Step 1: Run through the data, and initialize
 		//
-		vector<VertData> vertexData(numVerts);
-		vector<TriData> triangleData(NumPrimitives);
+		std::vector<VertData> vertexData(numVerts);
+		std::vector<TriData> triangleData(NumPrimitives);
 
 		U32 curIdx = 0;
 		for(U32 tri = 0; tri < NumPrimitives; tri++)
@@ -158,14 +158,14 @@ namespace TriListOpt
 			// Enforce cache size, this will update the cache position of all verts
 			// still in the cache. It will also update the score of the verts in the
 			// cache, and give back a list of triangle indicies that need updating.
-			vector<U32> trisToUpdate;
+			std::vector<U32> trisToUpdate;
 			lruCache.enforceSize(MaxSizeVertexCache, trisToUpdate);
 
 			// Now update scores for triangles that need updates, and find the new best
 			// triangle score/index
 			nextBestTriIdx = -1;
 			nextBestTriScore = -1.0f;
-			for(vector<U32>::iterator itr = trisToUpdate.begin(); itr != trisToUpdate.end(); itr++)
+			for(std::vector<U32>::iterator itr = trisToUpdate.begin(); itr != trisToUpdate.end(); itr++)
 			{
 				TriData &tri = triangleData[*itr];
 
@@ -261,7 +261,7 @@ namespace TriListOpt
 
 	//------------------------------------------------------------------------------
 
-	void LRUCacheModel::enforceSize(const dsize_t maxSize, vector<U32> &outTrisToUpdate)
+	void LRUCacheModel::enforceSize(const dsize_t maxSize, std::vector<U32> &outTrisToUpdate)
 	{
 		// Clear list of triangles to update scores for
 		outTrisToUpdate.clear();
@@ -377,7 +377,7 @@ namespace TriListOpt
 
 			// Bonus points for having a low number of tris still to
 			// use the vert, so we get rid of lone verts quickly.
-			float ValenceBoost = pow(vertexData.numUnaddedReferences, -FindVertexScore::ValenceBoostPower);
+			float ValenceBoost = pow((F32)vertexData.numUnaddedReferences, -FindVertexScore::ValenceBoostPower);
 			Score += FindVertexScore::ValenceBoostScale * ValenceBoost;
 
 			return Score;

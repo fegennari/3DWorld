@@ -657,6 +657,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
+    <ClCompile Include="src\vertex_opt.cpp" />
     <ClCompile Include="src\visibility.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
@@ -789,6 +790,7 @@
     <ClInclude Include="src\universe.h" />
     <ClInclude Include="src\Universe_base.h" />
     <ClInclude Include="src\upsurface.h" />
+    <ClInclude Include="src\vertex_opt.h" />
     <ClInclude Include="src\voxels.h" />
     <ClInclude Include="Targa\targa.h" />
   </ItemGroup>
