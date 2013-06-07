@@ -106,6 +106,7 @@ vector3d cview_dir(all_zeros);
 point camera_origin(all_zeros), surface_pos(all_zeros), cpos2;
 int orig_window, curr_window;
 char player_name[MAX_CHARS] = "Player";
+bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
 extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace;
@@ -1799,6 +1800,11 @@ int load_config(string const &config_file) {
 			if (fscanf(fp, "%i%f%f%f%f", &bb.index, &bb.x1, &bb.y1, &bb.x2, &bb.y2) != 5) cfg_err("team start command", error);
 			if (bb.index < 0 || bb.index >= teams) {cout << "Error: Illegal team specified in team_start command: " << bb.index << " (" << teams << " teams)." << endl; error = 1;}
 			else team_starts.push_back(bb);
+		}
+		else if (str == "vertex_optimize_flags") {
+			for (unsigned i = 0; i < 3; ++i) {
+				if (!read_bool(fp, vert_opt_flags[i])) cfg_err("vertex_optimize_flags command", error);
+			}
 		}
 		else if (str == "coll_obj_file") {
 			alloc_if_req(coll_obj_file, dcoll_obj_file);

@@ -53,6 +53,7 @@ coll_obj_file coll_objs_samples.txt
 num_threads 8
 num_light_rays 1000 1000 0 0
 #lighting_file_sky    lighting.sample.data 1 1.0
+vertex_optimize_flags 0 1 1 # enable full_opt verbose
 
 end
 

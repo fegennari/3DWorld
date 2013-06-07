@@ -545,7 +545,7 @@ public:
 			}
 			pblocks.pop_back();
 		}
-		model.remove_excess_cap();
+		model.optimize(); // optimize vertices and remove excess capacity
 		PRINT_TIME("Model3d Build");
 		
 		if (verbose) {
@@ -587,7 +587,6 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 		}
 		else {
 			check_obj_file_ext(filename, ext);
-
 			if (!reader.read(xf, recalc_normals, verbose)) return 0;
 			
 			if (write_file) {

@@ -64,6 +64,7 @@ lighting_file_sky    sponza/lighting2.data 0 0.5
 lighting_file_global sponza/lighting2.sun.data 0 0.5 0.0
 lighting_file_local  sponza/lighting_local2.data 0 1.0
 indir_light_exp 1.0
+vertex_optimize_flags 1 1 1 # enable full_opt verbose
 
 end
 

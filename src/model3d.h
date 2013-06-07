@@ -156,6 +156,7 @@ public:
 	void add_poly(vntc_vect_t const &poly);
 	void calc_bounding_volumes();
 	cube_t get_bbox() const {return get_polygon_bbox(*this);}
+	void optimize(unsigned npts) {remove_excess_cap();}
 	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
 	void write(ostream &out) const;
 	void read(istream &in);
@@ -182,6 +183,7 @@ public:
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
 	void add_vertex(T const &v, vertex_map_t<T> &vmap);
 	void subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims);
+	void optimize(unsigned npts);
 	void finalize(int prim_type);
 	void clear();
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
@@ -195,7 +197,7 @@ public:
 
 template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t<T> > {
 
-	void remove_excess_cap();
+	void optimize(unsigned npts);
 	void clear() {free_vbos(); deque<indexed_vntc_vect_t<T> >::clear();}
 	void free_vbos();
 	cube_t get_bbox() const;
@@ -219,8 +221,8 @@ template<typename T> struct geometry_t {
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, bool quads_only) const;
 	cube_t get_bbox() const;
-	void remove_excess_cap() {triangles.remove_excess_cap(); quads.remove_excess_cap();}
-	void free_vbos()         {triangles.free_vbos(); quads.free_vbos();}
+	void optimize()  {triangles.optimize(3); quads.optimize(4);}
+	void free_vbos() {triangles.free_vbos(); quads.free_vbos();}
 	void clear();
 	void get_stats(model3d_stats_t &stats) const;
 	bool write(ostream &out) const {return (triangles.write(out) && quads.write(out));}
@@ -331,7 +333,7 @@ public:
 	int get_material_ix(string const &material_name, string const &fn);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
-	void remove_excess_cap();
+	void optimize();
 	void clear();
 	void free_context();
 	void load_all_used_tids();

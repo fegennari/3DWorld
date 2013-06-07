@@ -20,6 +20,7 @@ extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, text
 extern int display_mode;
 extern float model3d_alpha_thresh;
 extern pos_dir_up orig_camera_pdu;
+extern bool vert_opt_flags[3];
 
 
 model3ds all_models;
@@ -241,6 +242,17 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 }
 
 
+template<typename T> void indexed_vntc_vect_t<T>::optimize(unsigned npts) {
+
+	vntc_vect_t<T>::optimize(npts);
+
+	if (vert_opt_flags[0]) { // only if not subdivided?
+		vert_optimizer optimizer(indices, size(), npts);
+		optimizer.run(vert_opt_flags[1], vert_opt_flags[2]);
+	}
+}
+
+
 template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 
 	if (need_normalize) {
@@ -249,10 +261,7 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 	}
 	if (indices.empty() || finalized) return; // nothing to do
 	finalized = 1;
-	// FIXME: move into object file reader so that it can be run once and written to the model3d file
-	// FIXME: only if not subdivided?
-	vert_optimizer optimizer(indices, size(), prim_type);
-	optimizer.run();
+	//optimize(prim_type); // now optimized in the object file loading phase
 	unsigned const npts((prim_type == GL_TRIANGLES) ? 3 : 4), nverts(num_verts()); // triangles or quads
 	assert((nverts % npts) == 0);
 	assert(blocks.empty());
@@ -576,9 +585,9 @@ template struct vntc_vect_block_t<vert_norm_tc>;
 template struct vntc_vect_block_t<vert_norm_tc_tan>;
 
 
-template<typename T> void vntc_vect_block_t<T>::remove_excess_cap() {
+template<typename T> void vntc_vect_block_t<T>::optimize(unsigned npts) {
 
-	for (iterator i = begin(); i != end(); ++i) {i->remove_excess_cap();}
+	for (iterator i = begin(); i != end(); ++i) {i->optimize(npts);}
 }
 
 
@@ -1101,13 +1110,13 @@ void model3d::mark_mat_as_used(int mat_id) {
 }
 
 
-void model3d::remove_excess_cap() {
+void model3d::optimize() {
 
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		m->geom.remove_excess_cap();
-		m->geom_tan.remove_excess_cap();
+		m->geom.optimize();
+		m->geom_tan.optimize();
 	}
-	unbound_geom.remove_excess_cap();
+	unbound_geom.optimize();
 }
 
 

@@ -473,7 +473,6 @@ public:
 	}
 
 	void draw() {
-		//if (!vbo_mgr.vbo) {vert_optimizer optimizer(indices, data.size(), GL_QUADS); optimizer.cache_analysis();}
 		create_vbo_and_upload(vbo_mgr.vbo, data, 0, 0);
 		upload_ivbo();
 		vbo_mgr.pre_render();

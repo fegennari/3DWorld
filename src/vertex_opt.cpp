@@ -5,10 +5,7 @@
 #include "vertex_opt.h"
 #include "triListOpt.h"
 
-unsigned const VBUF_SZ   = 32;
-bool const DO_VERT_OPT   = 1;
-bool const OPT_SORT_ONLY = 1;
-bool const OPT_VERBOSE   = 0;
+unsigned const VBUF_SZ = 32;
 
 
 float vert_optimizer::calc_acmr() const {
@@ -33,25 +30,25 @@ float vert_optimizer::calc_acmr() const {
 }
 
 
-void vert_optimizer::run() {
+void vert_optimizer::run(bool full_opt, bool verbose) {
 
-	if (!DO_VERT_OPT || indices.size() < 1.5*num_verts || num_verts < 2*VBUF_SZ /*|| num_verts < 100000*/) return;
+	assert(npts_per_prim == 3 || npts_per_prim == 4); // triangles or quads
+	if (indices.size() < 1.5*num_verts || num_verts < 2*VBUF_SZ /*|| num_verts < 100000*/) return;
 	//RESET_TIME;
-	float const mult((prim_type == GL_QUADS) ? 2.0 : 3.0);
+	float const mult((npts_per_prim == 4) ? 2.0 : 3.0);
 	float const acmr(mult*calc_acmr()), perfect_acmr(mult*float(num_verts)/float(indices.size()));
 	if (acmr < 1.05*perfect_acmr) return;
 	//PRINT_TIME("Calc 1");
 
-	if (OPT_SORT_ONLY || prim_type != GL_TRIANGLES) {
-		if (prim_type == GL_TRIANGLES) {
+	if (!full_opt || npts_per_prim != 3) { // no full opt or not triangles
+		if (npts_per_prim == 3) {
 			vert_block_t<3>::sort_by_min_ix(indices);
 		}
 		else {
-			assert(prim_type == GL_QUADS);
 			vert_block_t<4>::sort_by_min_ix(indices);
 		}
 	}
-	else {
+	else { // full optimization
 		assert((indices.size() % 3) == 0); // must be triangles
 		unsigned const num_tris(indices.size()/3);
 		vector<unsigned> out_indices(indices.size());
@@ -60,7 +57,7 @@ void vert_optimizer::run() {
 	}
 	//PRINT_TIME("Opt");
 
-	if (OPT_VERBOSE) {
+	if (verbose) { // verbose
 		float const new_acmr(mult*calc_acmr());
 		//PRINT_TIME("Calc 2");
 		cout << "ix: " << indices.size() << ", v: " << num_verts << ", opt: " << perfect_acmr

@@ -11,8 +11,7 @@
 class vert_optimizer {
 
 	vector<unsigned> &indices;
-	unsigned num_verts;
-	int prim_type;
+	unsigned num_verts, npts_per_prim;
 
 	struct vbuf_entry_t {
 		unsigned ix, pos;
@@ -35,9 +34,9 @@ class vert_optimizer {
 	float calc_acmr() const;
 
 public:
-	vert_optimizer(vector<unsigned> &indices_, unsigned num_verts_, int prim_type_) :
-	  indices(indices_), num_verts(num_verts_), prim_type(prim_type_) {}
-	void run();
+	vert_optimizer(vector<unsigned> &indices_, unsigned num_verts_, unsigned npts_per_prim_) :
+	  indices(indices_), num_verts(num_verts_), npts_per_prim(npts_per_prim_) {}
+	void run(bool full_opt, bool verbose);
 };
 
 #endif // _VERT_OPT_H_
