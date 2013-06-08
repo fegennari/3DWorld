@@ -199,7 +199,8 @@ public:
 	bool check_if_needs_updated();
 	void remove_leaf_ix(unsigned i, bool update_data);
 	void bend_leaf(unsigned i, float angle);
-	void draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const;
+	bool draw_tree_shadow_only(bool draw_branches, bool draw_leaves);
+	void ensure_branch_vbo();
 	void draw_branches(float size_scale);
 	void draw_leaves(float size_scale);
 	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}

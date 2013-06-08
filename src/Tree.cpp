@@ -813,21 +813,24 @@ void tree_data_t::post_draw(bool branches_or_leaves, bool shadow_only) {
 }
 
 
-void tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) const {
+bool tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) {
 
-	if (draw_branches && branch_vbo_manager.vbo) { // draw branches (untextured)
-		branch_vbo_manager.pre_render();
-		glVertexPointer(3, GL_FLOAT, sizeof(branch_vert_type_t), 0);
-		glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, 6*num_branch_quads, GL_UNSIGNED_SHORT, 0);
-		branch_vbo_manager.post_render();
-	}
-	if (draw_leaves && leaf_vbo > 0 && !leaves.empty()) { // draw leaves
+	if (draw_leaves && !leaves.empty()) { // draw leaves
+		if (leaf_vbo == 0) return 0; // if the leaf_vbo hasn't been allocated we need to go through the regular rendering path to get the leaf data uploaded
 		select_texture(tree_types[tree_type].leaf_tex);
 		bind_vbo(leaf_vbo);
 		leaf_vert_type_t::set_vbo_arrays(0, 0); // could also disable normals and colors, but that doesn't seem to help much
 		assert(leaf_data.size() >= 4*leaves.size());
 		glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
 	}
+	if (draw_branches) { // draw branches (untextured)
+		ensure_branch_vbo();
+		branch_vbo_manager.pre_render();
+		glVertexPointer(3, GL_FLOAT, sizeof(branch_vert_type_t), 0);
+		glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, 6*num_branch_quads, GL_UNSIGNED_SHORT, 0);
+		branch_vbo_manager.post_render();
+	}
+	return 1;
 }
 
 
@@ -836,14 +839,16 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 {
 	if (!created) return;
 	tree_data_t &td(tdata());
+	bool draw_shadow_leaves(0);
 
 	if (shadow_only) {
 		if (!is_over_mesh()) return;
 		glPushMatrix();
 		translate_to(tree_center + xlate);
-		td.draw_tree_shadow_only(draw_branches, draw_leaves);
+		bool const drawn(td.draw_tree_shadow_only(draw_branches, draw_leaves));
 		glPopMatrix();
-		return;
+		if (drawn) return;
+		draw_shadow_leaves = draw_leaves;
 	}
 	float dc_scale(1.0 - 0.95*damage);
 	bcolor = tree_types[type].barkc;
@@ -857,6 +862,7 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 		if (game_mode && gm_blast)    blast_damage(&latest_blastr);
 		if (begin_motion && animate2) drop_leaves();
 	}
+	if (draw_shadow_leaves) {draw_tree_leaves(s, 0.0, xlate); return;}
 	if (TEST_RTREE_COBJS) return;
 	if (draw_leaves || !draw_branches) {not_visible = !is_visible_to_camera(xlate);} // first pass only
 	if (not_visible) return;
@@ -955,20 +961,25 @@ void tree_data_t::create_indexed_quads_for_branches(vector<branch_vert_type_t> &
 }
 
 
+void tree_data_t::ensure_branch_vbo() {
+
+	if (branch_vbo_manager.vbo != 0) return; // vbos already created
+	assert(branch_vbo_manager.ivbo == 0);
+	assert(num_branch_quads == 0 && num_unique_pts == 0);
+	vector<branch_vert_type_t> data; // static/reused?
+	vector<branch_index_t> idata;
+	create_indexed_quads_for_branches(data, idata);
+	assert(data.size()  == data.capacity());
+	assert(idata.size() == idata.capacity());
+	num_branch_quads = idata.size()/6;
+	num_unique_pts   = data.size();
+	branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
+}
+
+
 void tree_data_t::draw_branches(float size_scale) {
 
-	if (branch_vbo_manager.vbo == 0) { // vbos not yet created
-		assert(branch_vbo_manager.ivbo == 0);
-		assert(num_branch_quads == 0 && num_unique_pts == 0);
-		vector<branch_vert_type_t> data; // static/reused?
-		vector<branch_index_t> idata;
-		create_indexed_quads_for_branches(data, idata);
-		assert(data.size()  == data.capacity());
-		assert(idata.size() == idata.capacity());
-		num_branch_quads = idata.size()/6;
-		num_unique_pts   = data.size();
-		branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
-	}
+	ensure_branch_vbo();
 	//glEnableClientState(GL_INDEX_ARRAY);
 	branch_vbo_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0, 0); // Note: could skip every other vert index for improved perf when distant
@@ -1010,9 +1021,6 @@ void tree_data_t::reset_leaf_pos_norm() {
 
 void tree_data_t::draw_leaves(float size_scale) {
 
-	unsigned nl(leaves.size());
-	assert(leaf_data.size() >= 4*nl);
-	if (ENABLE_CLIP_LEAVES && size_scale > 0.0) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
 	bool const create_leaf_vbo(leaf_vbo == 0);
 	create_bind_vbo_and_upload(leaf_vbo, leaf_data, 0);
 
@@ -1021,6 +1029,9 @@ void tree_data_t::draw_leaves(float size_scale) {
 	}
 	leaves_changed = 0;
 	leaf_vert_type_t::set_vbo_arrays(0, 0);
+	unsigned nl(leaves.size());
+	assert(leaf_data.size() >= 4*nl);
+	if (ENABLE_CLIP_LEAVES && size_scale > 0.0) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
 	glDrawArrays(GL_QUADS, 0, 4*nl);
 }
 
