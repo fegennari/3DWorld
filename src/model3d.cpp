@@ -393,9 +393,6 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		create_bind_vbo_and_upload(ivbo, indices, 1);
 
 		if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
-			// possible optimization:
-			// sort triangles/quads by size, largest to smallest
-			// render a subset of the indices based on size threshold and distance to camera
 			glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
 		}
 		else { // draw each block independently
@@ -651,25 +648,33 @@ template<typename T> bool vntc_vect_block_t<T>::read(istream &in) {
 
 // ************ geometry_t ************
 
-template<> void geometry_t<vert_norm_tc_tan>::calc_tangents() {
 
-	for (vntc_vect_block_t<vert_norm_tc_tan>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		i->calc_tangents(3);
+template<> void geometry_t<vert_norm_tc_tan>::calc_tangents_blocks(vntc_vect_block_t<vert_norm_tc_tan> &blocks, unsigned npts) {
+
+	for (vntc_vect_block_t<vert_norm_tc_tan>::iterator i = blocks.begin(); i != blocks.end(); ++i) {
+		i->calc_tangents(npts);
 	}
-	for (vntc_vect_block_t<vert_norm_tc_tan>::iterator i = quads.begin(); i != quads.end(); ++i) {
-		i->calc_tangents(4);
+}
+
+template<typename T> void geometry_t<T>::calc_tangents() {
+
+	calc_tangents_blocks(triangles, 3);
+	calc_tangents_blocks(quads,     4);
+}
+
+
+template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is_shadow_pass, vntc_vect_block_t<T> &blocks, int prim_type) {
+
+	for (vntc_vect_block_t<T>::iterator i = blocks.begin(); i != blocks.end(); ++i) {
+		i->render(shader, is_shadow_pass, prim_type);
 	}
 }
 
 
 template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow_pass) {
 
-	for (vntc_vect_block_t<T>::iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		i->render(shader, is_shadow_pass, GL_TRIANGLES);
-	}
-	for (vntc_vect_block_t<T>::iterator i = quads.begin(); i != quads.end(); ++i) {
-		i->render(shader, is_shadow_pass, GL_QUADS);
-	}
+	render_blocks(shader, is_shadow_pass, triangles, GL_TRIANGLES);
+	render_blocks(shader, is_shadow_pass, quads,     GL_QUADS);
 }
 
 

@@ -155,7 +155,9 @@ public:
 	void free_vbos();
 	void add_poly(vntc_vect_t const &poly);
 	void calc_bounding_volumes();
-	cube_t get_bbox() const {return get_polygon_bbox(*this);}
+	cube_t get_bbox  () const {return get_polygon_bbox(*this);}
+	point get_center () const {return bsphere.pos;}
+	float get_bradius() const {return bsphere.radius;}
 	void optimize(unsigned npts) {remove_excess_cap();}
 	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
 	void write(ostream &out) const;
@@ -214,7 +216,9 @@ template<typename T> struct geometry_t {
 
 	vntc_vect_block_t<T> triangles, quads;
 
-	void calc_tangents() {assert(0);}
+	void calc_tangents_blocks(vntc_vect_block_t<T> &blocks, unsigned npts) {assert(0);}
+	void calc_tangents();
+	void render_blocks(shader_t &shader, bool is_shadow_pass, vntc_vect_block_t<T> &blocks, int prim_type);
 	void render(shader_t &shader, bool is_shadow_pass);
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
