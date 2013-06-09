@@ -309,7 +309,7 @@ bool no_sparse_smap_update() {
 void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
 	tu_id = (6 + light); // Note: currently used with 2 lights, up to TU7
-	bool const has_dynamic(!tid || no_sparse_smap_update()); // Note: force two frames of updates the first time the smap is created by setting has_dynamic
+	bool const has_dynamic(!tid || scene_smap_vbo_invalid || no_sparse_smap_update()); // Note: force two frames of updates the first time the smap is created by setting has_dynamic
 	bool const update_smap(has_dynamic || last_has_dynamic || lpos != last_lpos); // Note: see view clipping in indexed_vntc_vect_t<T>::render()
 	last_has_dynamic = has_dynamic;
 	last_lpos = lpos;
@@ -452,10 +452,7 @@ void create_shadow_map() {
 	display_mode &= ~(0x08 | 0x0100); // disable occlusion culling and leaf wind
 
 	// check VBO
-	if (scene_smap_vbo_invalid) {
-		free_smap_vbo();
-		scene_smap_vbo_invalid = 0;
-	}
+	if (scene_smap_vbo_invalid) {free_smap_vbo();}
 
 	// render shadow maps to textures
 	add_coll_shadow_objs();
@@ -465,6 +462,7 @@ void create_shadow_map() {
 		if (!light_valid(0xFF, l, lpos) || !glIsEnabled(GL_LIGHT0 + l)) continue;
 		smap_data[l].create_shadow_map_for_light(l, lpos);
 	}
+	scene_smap_vbo_invalid = 0;
 
 	// restore old state
 	set_standard_viewport();

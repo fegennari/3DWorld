@@ -556,7 +556,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	RESET_TIME;
 	static int st_valid(0);
 	bool const inf_terrain(world_mode == WMODE_INF_TERRAIN);
-	scene_smap_vbo_invalid = 1; // probably not necessary, but won't hurt
+	scene_smap_vbo_invalid = 1; // needed to force smap update
 
 	if (!st_valid) {
 		keep_sin_table = 0;
