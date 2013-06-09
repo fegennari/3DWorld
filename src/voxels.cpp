@@ -683,6 +683,7 @@ void voxel_model_ground::clear() {
 // returns true if something was cleared
 bool voxel_model::clear_block(unsigned block_ix) {
 
+	if (tri_data.empty()) return 0; // tri_data was already cleared
 	assert(block_ix < tri_data.size());
 	bool const was_nonempty(!tri_data[block_ix].empty());
 	tri_data[block_ix].clear();
