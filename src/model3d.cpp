@@ -362,7 +362,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (no_vfc) {
 		// do nothing
 	}
-	else if (is_shadow_pass) { // Note: may make shadow map caching difficult/impossible
+	else if (is_shadow_pass) { // Note: makes shadow map caching more difficult
 		if (no_sparse_smap_update() && !orig_camera_pdu.projected_cube_visible(bcube, camera_pdu.pos)) return; // light_pos == camera_pdu.pos for the shadow pass
 	}
 	else if (vbo) { // don't cull if vbo hasn't yet been allocated because this will cause it to be skipped in the shadow pass
@@ -1179,7 +1179,7 @@ void model3d::bind_all_used_tids() {
 }
 
 
-void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { // const?
+void model3d::render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_mask) { // const?
 
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
@@ -1187,7 +1187,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 	if (group_back_face_cull || is_shadow_pass) glEnable(GL_CULL_FACE);
 
 	// render geom that was not bound to a material
-	if (!bmap_pass && unbound_color.alpha > 0.0) { // enabled, not in bump map pass
+	if ((bmap_pass_mask & 1) && unbound_color.alpha > 0.0) { // enabled, not in bump map only pass
 		if (!is_shadow_pass) {
 			assert(unbound_tid >= 0);
 			select_texture(unbound_tid, 0);
@@ -1200,7 +1200,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 	// render all materials (opaque then transparent)
 	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
 		for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-			if (m->is_partial_transparent() == (pass != 0) && m->use_bump_map() == bmap_pass) {
+			if (m->is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(m->use_bump_map())))) {
 				m->render(shader, tmgr, unbound_tid, is_shadow_pass);
 			}
 		}
@@ -1357,7 +1357,7 @@ void model3ds::render(bool is_shadow_pass) {
 		if (use_shaders) {setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map(), 0, two_sided_lighting);}
 
 		for (iterator m = begin(); m != end(); ++m) { // non-const
-			m->render(s, is_shadow_pass, (bmap_pass != 0));
+			m->render(s, is_shadow_pass, (use_shaders ? (1 << bmap_pass) : 3));
 		}
 		if (use_shaders) {s.end_shader();}
 	}

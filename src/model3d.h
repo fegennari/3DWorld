@@ -338,7 +338,7 @@ public:
 	void free_context();
 	void load_all_used_tids();
 	void bind_all_used_tids();
-	void render(shader_t &shader, bool is_shadow_pass, bool bmap_pass); // const?
+	void render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_mask);
 	cube_t const &get_bbox() const {return bbox;}
 	void build_cobj_tree(bool verbose);
 	
