@@ -29,6 +29,7 @@ model3ds all_models;
 bool get_use_shaders() {return (USE_SHADERS && !disable_shaders);}
 bool enable_bump_map() {return (ENABLE_BUMP_MAPS && get_use_shaders() && (display_mode & 0x20) == 0);} // enabled by default
 bool enable_spec_map() {return (ENABLE_SPEC_MAPS && get_use_shaders());}
+bool no_sparse_smap_update();
 
 
 // ************ texture_manager ************
@@ -356,15 +357,15 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (empty()) return;
 	finalize(prim_type);
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
-	if (is_shadow_pass && vbo == 0) return; // don't create the vbo on the shadow pass
+	if (is_shadow_pass && vbo == 0) return; // don't create the vbo on the shadow pass (voxel terrain problems)
 
 	if (no_vfc) {
 		// do nothing
 	}
-	else if (is_shadow_pass) {
-		if (!orig_camera_pdu.projected_cube_visible(bcube, camera_pdu.pos)) return; // light_pos == camera_pdu.pos for the shadow pass
+	else if (is_shadow_pass) { // Note: may make shadow map caching difficult/impossible
+		if (no_sparse_smap_update() && !orig_camera_pdu.projected_cube_visible(bcube, camera_pdu.pos)) return; // light_pos == camera_pdu.pos for the shadow pass
 	}
-	else {
+	else if (vbo) { // don't cull if vbo hasn't yet been allocated because this will cause it to be skipped in the shadow pass
 		if (!camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius) || !camera_pdu.cube_visible(bcube)) return; // view frustum culling
 	}
 	unsigned const stride(sizeof(T));
@@ -1196,7 +1197,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool bmap_pass) { //
 		unbound_geom.render(shader, is_shadow_pass);
 	}
 	
-	// render all materials (opaque then transparen)
+	// render all materials (opaque then transparent)
 	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
 		for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
 			if (m->is_partial_transparent() == (pass != 0) && m->use_bump_map() == bmap_pass) {
