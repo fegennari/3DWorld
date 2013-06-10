@@ -30,7 +30,6 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 
 Mesh height high frequency noise
 
-Sort model3d blocks for front-to-back rendering if non transparent
 Tree branch index array LOD
 
 

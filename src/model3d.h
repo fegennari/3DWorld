@@ -203,6 +203,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void clear() {free_vbos(); deque<indexed_vntc_vect_t<T> >::clear();}
 	void free_vbos();
 	cube_t get_bbox() const;
+	float calc_draw_order_score() const;
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
 	void get_stats(model3d_stats_t &stats) const {stats.blocks += (unsigned)size(); stats.verts += num_unique_verts();}
@@ -271,18 +272,20 @@ struct material_t : public material_params_t {
 
 	bool ignore_ambient;
 	int a_tid, d_tid, s_tid, alpha_tid, bump_tid, refl_tid;
+	float draw_order_score;
 	string name, filename;
 
 	geometry_t<vert_norm_tc> geom;
 	geometry_t<vert_norm_tc_tan> geom_tan;
 
 	material_t(string const &name_=string(), string const &fn=string(), bool ia=0)
-		: ignore_ambient(ia), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), name(name_), filename(fn) {}
+		: ignore_ambient(ia), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), draw_order_score(0.0), name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
 	bool use_bump_map() const;
 	bool use_spec_map() const;
+	void optimize() {geom.optimize(); geom_tan.optimize();}
 	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
 	bool get_needs_alpha_test() const {return (alpha_tid >= 0);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}

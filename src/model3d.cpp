@@ -620,6 +620,19 @@ template<typename T> unsigned vntc_vect_block_t<T>::num_unique_verts() const {
 }
 
 
+template<typename T> float vntc_vect_block_t<T>::calc_draw_order_score() const {
+
+	float area(0.0);
+	unsigned count(0);
+
+	for (const_iterator i = begin(); i != end(); ++i) {
+		count += i->size();
+		area  += i->get_bradius()*i->get_bradius();
+	}
+	return ((count == 0) ? 0.0 : -area/count);
+}
+
+
 template<typename T> void vntc_vect_block_t<T>::get_polygons(vector<coll_tquad> &polygons,
 	colorRGBA const &color, unsigned npts, bool quads_only) const
 {
@@ -746,11 +759,27 @@ template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const
 // ************ material_t ************
 
 
+template<typename T> void update_score(vntc_vect_block_t<T> const &v, float &score, unsigned &num_nonempty) {
+	if (v.empty()) return;
+	score += v.calc_draw_order_score();
+	++num_nonempty;
+}
+
+
 void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
 
 	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
 
+	if (draw_order_score == 0) {
+		unsigned num_nonempty;
+		update_score(geom.triangles,     draw_order_score, num_nonempty);
+		update_score(geom.quads,         draw_order_score, num_nonempty);
+		update_score(geom_tan.triangles, draw_order_score, num_nonempty);
+		update_score(geom_tan.quads,     draw_order_score, num_nonempty);
+		assert(num_nonempty > 0);
+		draw_order_score /= num_nonempty; // take the average
+	}
 	if (is_shadow_pass) {
 		geom.render(shader, 1);
 		geom_tan.render(shader, 1);
@@ -773,7 +802,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
 			set_active_texture(8);
-			if (s_tid >= 0) tmgr.bind_texture(s_tid); else select_texture(WHITE_TEX);
+			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX);}
 			set_active_texture(0);
 		}
 		if (alpha < 1.0 && ni != 1.0) {
@@ -799,7 +828,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (use_bump_map())    disable_multitex(5);
 		if (enable_spec_map()) disable_multitex(8);
 		set_color_e(BLACK);
-		set_specular(0.0, 1.0);
+		if (ns > 0.0) {set_specular(0.0, 1.0);}
 		if (alpha_tid >= 0) disable_blend();
 	}
 }
@@ -1119,8 +1148,7 @@ void model3d::mark_mat_as_used(int mat_id) {
 void model3d::optimize() {
 
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		m->geom.optimize();
-		m->geom_tan.optimize();
+		m->optimize();
 	}
 	unbound_geom.optimize();
 }
@@ -1204,10 +1232,17 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_m
 	
 	// render all materials (opaque then transparent)
 	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
-		for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-			if (m->is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(m->use_bump_map())))) {
-				m->render(shader, tmgr, unbound_tid, is_shadow_pass);
+		vector<pair<float, unsigned> > to_draw;
+
+		for (unsigned i = 0; i < materials.size(); ++i) {
+			if (materials[i].is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(materials[i].use_bump_map())))) {
+				to_draw.push_back(make_pair(materials[i].draw_order_score, i));
 			}
+		}
+		sort(to_draw.begin(), to_draw.end());
+
+		for (unsigned i = 0; i < to_draw.size(); ++i) {
+			materials[to_draw[i].second].render(shader, tmgr, unbound_tid, is_shadow_pass);
 		}
 	}
 	if (group_back_face_cull || is_shadow_pass) glDisable(GL_CULL_FACE);
