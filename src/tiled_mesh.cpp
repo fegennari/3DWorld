@@ -28,7 +28,7 @@ float const LITNING_DIST    = 1.2;
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees;
-extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks;
+extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, frame_counter;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, atmosphere;
 extern point sun_pos, moon_pos, surface_pos;
 extern float h_dirt[];
@@ -74,12 +74,12 @@ void bind_texture_tu(unsigned tid, unsigned tu_id) {
 
 // *** tile_t ***
 
-tile_t::tile_t() : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {
+tile_t::tile_t() : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(0), stride(0), zvsize(0), gen_tsize(0), decid_trees(tree_data_manager), last_occluded_frame(0) {
 	init_vbo_ids();
 }
 
 tile_t::tile_t(unsigned size_, int x, int y) : weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(size_), stride(size+1), zvsize(stride+1),
-	gen_tsize(0), trmax(0.0), shadows_invalid(1), weights_invalid(1), in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	gen_tsize(0), trmax(0.0), shadows_invalid(1), weights_invalid(1), in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager), last_occluded_frame(0)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -1209,7 +1209,7 @@ bool tile_draw_t::can_have_reflection_recur(tile_t const *const tile, point cons
 	bcube.d[2][1] = max(bcube.d[2][1], zmax);
 	if (dim_ix < 2 && !check_line_clip(camera, corners[dim_ix], bcube.d)) return 0; // not within the shadow of the original tile
 
-	if (tile->has_water()) {
+	if (tile->last_occluded_frame != frame_counter && tile->has_water()) {
 		cube_t water_bcube(tile->get_water_bcube());
 
 		if (camera_pdu.cube_visible(water_bcube)) {
@@ -1329,6 +1329,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 		if (DEBUG_TILES) {tree_mem += tile->get_tree_mem();}
 		float const dist(tile->get_rel_dist_to_camera());
 		if (dist > DRAW_DIST_TILES || !tile->is_visible()) continue;
+		if (tile->last_occluded_frame == frame_counter)    continue; // occluded in the shadow pass
 		tile_set_t tile_set;
 		if (reflection_pass && !can_have_reflection(tile, tile_set)) continue;
 
@@ -1368,7 +1369,10 @@ void tile_draw_t::draw(bool reflection_pass) {
 				}
 				if (!sub_tile_occluded) {tile_occluded = 0; break;}
 			} // for t
-			if (tile_occluded) continue;
+			if (tile_occluded) {
+				tile->last_occluded_frame = frame_counter;
+				continue;
+			}
 		} // check_occlusion
 		to_draw.push_back(make_pair(dist, tile));
 	} // for i

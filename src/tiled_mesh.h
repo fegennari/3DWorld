@@ -112,6 +112,7 @@ class tile_t {
 	void update_terrain_params();
 
 public:
+	int last_occluded_frame;
 	typedef point vert_type_t;
 
 	tile_t();
