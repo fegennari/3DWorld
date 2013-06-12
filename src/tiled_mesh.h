@@ -28,7 +28,7 @@ float const SCENERY_THRESH    = 4.0;
 float const GRASS_THRESH      = 1.5;
 
 
-extern int xoff, yoff;
+extern int xoff, yoff, frame_counter;
 extern float grass_length, water_plane_z;
 
 
@@ -75,11 +75,11 @@ class tile_t {
 		vector3d subtract_from(offset_t const &o) const {return vector3d((o.dxoff - dxoff)*DX_VAL, (o.dyoff - dyoff)*DY_VAL, 0.0);}
 	};
 
-	int x1, y1, x2, y2, wx1, wy1, wx2, wy2;
+	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep;
-	bool shadows_invalid, weights_invalid, in_queue;
+	bool shadows_invalid, weights_invalid, in_queue, last_occluded;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
@@ -112,7 +112,6 @@ class tile_t {
 	void update_terrain_params();
 
 public:
-	int last_occluded_frame;
 	typedef point vert_type_t;
 
 	tile_t();
@@ -129,6 +128,9 @@ public:
 	bool pine_trees_generated() const {return pine_trees.generated;}
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
 	float get_avg_veg() const {return 0.25*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
+	void set_last_occluded(bool val) {last_occluded = val; last_occluded_frame = frame_counter;}
+	bool was_last_occluded  () const {return (last_occluded_frame == frame_counter &&  last_occluded);}
+	bool was_last_unoccluded() const {return (last_occluded_frame == frame_counter && !last_occluded);}
 
 	point get_center() const {
 		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
