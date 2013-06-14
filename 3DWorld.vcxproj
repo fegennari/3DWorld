@@ -881,7 +881,7 @@
     <None Include="shaders\pine_tree.frag" />
     <None Include="shaders\pine_tree.geom" />
     <None Include="shaders\pine_tree.vert" />
-    <None Include="shaders\pine_tree_billboard.vert" />
+    <None Include="shaders\pine_tree_billboard_auto_orient.vert" />
     <None Include="shaders\pine_tree_gs.vert" />
     <None Include="shaders\planet_draw.frag" />
     <None Include="shaders\planet_draw.vert" />
@@ -926,6 +926,7 @@
     <None Include="shaders\write_normal.frag" />
     <None Include="shaders\write_normal.vert" />
     <None Include="shaders\write_normal_textured.frag" />
+    <None Include="shaders\xy_billboard.vert" />
     <None Include="shadow_map_issues.txt" />
     <None Include="sponza\coll_objs_sponza.txt" />
     <None Include="sponza\coll_objs_sponza2.txt" />

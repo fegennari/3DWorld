@@ -673,11 +673,7 @@ void tile_t::update_pine_tree_state(bool upload_if_needed) {
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (weights[d] > 0.0) { // needed
-			if (upload_if_needed) {
-				vector3d const delta(get_camera_pos() - get_center());
-				bool const pri_dim(fabs(delta.y) < fabs(delta.x));
-				pine_trees.finalize_upload_and_clear_pts((d != 0), pri_dim); // needed for drawing
-			}
+			if (upload_if_needed) {pine_trees.finalize_upload_and_clear_pts(d != 0);} // needed for drawing
 		}
 		else { // not needed
 			pine_trees.clear_vbo_and_ids_if_needed(d != 0);
@@ -694,6 +690,7 @@ void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_d
 
 
 void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass) const {
+
 	if (pine_trees.empty()) return;
 	glPushMatrix();
 	vector3d const xlate(ptree_off.get_xlate());
@@ -1468,18 +1465,20 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 
 	// leaves/distant trunks
 	enable_blend(); // for fog transparency
-	set_pine_tree_shader(s, "pine_tree_billboard");
 		
 	if (!tree_trunk_pts.empty()) { // color/texture already set above
+		set_pine_tree_shader(s, "xy_billboard");
 		assert(!(tree_trunk_pts.size() & 1));
 		select_texture(WHITE_TEX, 0); // enable=0
 		get_tree_trunk_color(T_PINE, 1).do_glColor();
-		zero_vector.do_glNormal();
 		set_array_client_state(1, 0, 0, 0);
 		glVertexPointer(3, GL_FLOAT, sizeof(point), &tree_trunk_pts.front());
 		glDrawArrays(GL_LINES, 0, (unsigned)tree_trunk_pts.size());
 		tree_trunk_pts.resize(0);
+		s.end_shader();
 	}
+	set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
+	s.add_uniform_float("radius_scale", calc_tree_size());
 	set_specular(0.2, 8.0);
 	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass); // far leaves
 	s.end_shader();

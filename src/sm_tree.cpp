@@ -85,7 +85,7 @@ void small_tree_group::calc_trunk_pts() {
 }
 
 
-void small_tree_group::finalize(bool low_detail, bool pri_dim) {
+void small_tree_group::finalize(bool low_detail) {
 
 	if (empty()) return;
 	assert(!is_uploaded(low_detail));
@@ -93,18 +93,16 @@ void small_tree_group::finalize(bool low_detail, bool pri_dim) {
 	vbo_manager[low_detail].reserve_pts(4*(low_detail ? 1 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->calc_points(vbo_manager[low_detail], low_detail, pri_dim);
+		i->calc_points(vbo_manager[low_detail], low_detail);
 	}
-	last_pri_dim = pri_dim;
 }
 
 
-void small_tree_group::finalize_upload_and_clear_pts(bool low_detail, bool pri_dim) {
+void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) {
 
-	if (low_detail && pri_dim != last_pri_dim) {clear_vbo_and_ids_if_needed(low_detail);}
 	if (empty() || is_uploaded(low_detail)) return;
 	//RESET_TIME;
-	finalize(low_detail, pri_dim);
+	finalize(low_detail);
 	//if (!low_detail) {PRINT_TIME("Finalize");}
 	vbo_manager[low_detail].upload_and_clear_points();
 	//if (!low_detail) {PRINT_TIME("Finalize + Upload");}
@@ -334,7 +332,7 @@ int add_small_tree(point const &pos, float height, float width, int tree_type, b
 
 	assert(height > 0.0 && width > 0.0);
 	small_trees.add_tree(small_tree(pos, height, width, (abs(tree_type)%NUM_ST_TYPES), calc_z, small_trees.rgen)); // could have a type error
-	small_trees.back().calc_points(small_trees.vbo_manager[0], 0, 0);
+	small_trees.back().calc_points(small_trees.vbo_manager[0], 0);
 	return 1; // might return zero in some case
 }
 
@@ -356,7 +354,7 @@ void gen_small_trees() {
 	small_trees.clear_all();
 	small_trees = small_tree_group(); // really force a clear
 	small_trees.gen_trees(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation);
-	small_trees.finalize(0, 0);
+	small_trees.finalize(0);
 	//PRINT_TIME("Gen");
 	small_trees.add_cobjs();
 	//PRINT_TIME("Cobj");
@@ -546,7 +544,7 @@ float small_tree::get_pine_tree_radius() const {
 }
 
 
-void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool pri_dim) {
+void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height), sz_scale(SQRT2*get_pine_tree_radius());
@@ -570,24 +568,12 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		vbo_mgr_ix = vbo_manager.add_points_with_offset(points, color);
 	}
 	else { // low detail billboard
-		float const nz_avg(0.816), r1(1.5*sz_scale), z1(center.z - 0.55*sz_scale - 0.2*height), z2(center.z + 1.45*sz_scale + 0.1*height);
-		unsigned const d(pri_dim);
-		unsigned ix(0);
 		points.resize(4);
-		vert_norm vn;
-		vn.n[!d] = 0.0;
-		vn.n[d]  = -sqrt(1.0 - nz_avg*nz_avg); // partially facing up and partially facing towards the camera
-		vn.n[2]  = nz_avg;
-		vn.v[!d] = pos[!d];
-		vn.v[2]  = z2;
-		vn.v[d]  = pos[d] + r1;
-		points[ix++] = vn;
-		vn.v[d]  = pos[d] - r1;
-		points[ix++] = vn;
-		vn.v[2]  = z1;
-		points[ix++] = vn;
-		vn.v[d]  = pos[d] + r1;
-		points[ix++] = vn;
+		vert_norm vn(pos, vector3d(1.5*sz_scale/calc_tree_size(), 0.0, 0.816));
+		vn.v.z = center.z + 1.45*sz_scale + 0.1*height;
+		points[0] = points[1] = vn; // top two vertices
+		vn.v.z = center.z - 0.55*sz_scale - 0.2*height;
+		points[2] = points[3] = vn; // bottom two vertices
 		vbo_manager.add_points(points, color);
 	}
 }
